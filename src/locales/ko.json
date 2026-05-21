@@ -604,7 +604,8 @@
     "score_submitted": "제출됨",
     "signal_referee": "주심 호출",
     "panel_offline": "패널 오프라인 — 재연결 시 점수가 동기화됩니다.",
-    "score_picker_label": "점수 선택 (0.0 — 10.0, 0.5 단위)"
+    "score_picker_label": "점수 선택 (0.0 — 10.0, 0.5 단위)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "컨트롤 룸",

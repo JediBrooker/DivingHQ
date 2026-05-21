@@ -615,7 +615,8 @@
     "score_submitted": "Lähetetty",
     "signal_referee": "Signaloi ylituomarille",
     "panel_offline": "Paneeli offline — pisteesi synkronoituvat, kun yhteys palautuu.",
-    "score_picker_label": "Valitse pisteet (0,0 — 10,0 puolen pisteen välein)"
+    "score_picker_label": "Valitse pisteet (0,0 — 10,0 puolen pisteen välein)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "Ohjaamo",

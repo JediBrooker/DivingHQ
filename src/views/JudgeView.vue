@@ -99,6 +99,31 @@ const refreshPendingCount = outboxState.refresh
 
 function getOutbox() { return outboxInstance }
 
+// Per-entry view of the outbox queue. Drives the sync-chip strip
+// in the template so a judge sees each individual queued score
+// rather than just a count. Refreshed on every outbox 'change'
+// emission (same trigger as pendingCount) so the list stays in
+// step. Filters to non-terminal states so a long-finished synced
+// entry doesn't clutter the strip.
+const queuedEntries = ref([])
+async function refreshQueuedEntries() {
+  if (!outboxInstance) {
+    queuedEntries.value = []
+    return
+  }
+  const all = await outboxInstance.list({})
+  queuedEntries.value = all.filter((e) =>
+    e.status === 'pending'
+    || e.status === 'inflight'
+    || e.status === 'failed'
+    || e.status === 'conflict'
+  )
+}
+if (outboxInstance) {
+  outboxInstance.on('change', refreshQueuedEntries)
+  refreshQueuedEntries()
+}
+
 // Per-entry send function for outbox.drain. Uses socket.io's
 // ack callback (3rd argument to socket.emit) so the drain protocol
 // has reliable per-submit correlation instead of tuple-matching
@@ -476,6 +501,22 @@ const submitLabel = computed(() => {
       <span class="conn-dot"></span>
       {{ $t('judge.panel_offline') }}
     </div>
+    <!-- Per-entry sync-status strip. Each queued submit gets a
+         chip showing its score + current sync state (pending,
+         inflight, failed, conflict). Synced entries drop off
+         the strip automatically because refreshQueuedEntries
+         filters them out. Empty list → renders nothing. -->
+    <div v-if="OUTBOX_ENABLED && queuedEntries.length > 0" class="queued-strip">
+      <span class="queued-strip-label">{{ $t('judge.queued_label') }}</span>
+      <span v-for="entry in queuedEntries"
+            :key="entry.idempotency_key"
+            class="queued-chip">
+        <SyncStatusBadge :status="entry.status" />
+        <span class="queued-chip-score">
+          {{ Number(entry.payload?.score).toFixed(1) }}
+        </span>
+      </span>
+    </div>
     <!-- Meet-hold banner — Control Room paused the meet. Score
          input is disabled below until the hold lifts. -->
     <div v-if="isHeld" class="hold-banner">
@@ -650,6 +691,40 @@ const submitLabel = computed(() => {
 }
 @keyframes connSlide { from { transform: translateY(-100%); } to { transform: translateY(0); } }
 @keyframes connPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Queued-entries strip. Sits below the OfflineBanner; shows each
+   queued submit_score with a SyncStatusBadge + the score value.
+   Visually quieter than the banner — informational, not alerting.
+   Hides itself when there's nothing in non-terminal states. */
+.queued-strip {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(245, 158, 11, 0.06);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.15);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.queued-strip-label {
+  font-family: var(--font-display);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--text-3);
+  margin-right: 0.2rem;
+}
+.queued-chip {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.05rem 0.35rem 0.05rem 0.1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.queued-chip-score {
+  font-family: var(--font-display);
+  font-size: 12px; font-weight: 800; font-style: italic;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
 
 
 .judge-layout {

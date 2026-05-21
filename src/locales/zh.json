@@ -604,7 +604,8 @@
     "score_submitted": "已提交",
     "signal_referee": "呼叫主裁判",
     "panel_offline": "裁判组离线 — 您的分数将在恢复连接后同步。",
-    "score_picker_label": "选择分数（0.0 — 10.0，以 0.5 为步进）"
+    "score_picker_label": "选择分数（0.0 — 10.0，以 0.5 为步进）",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "控制室",

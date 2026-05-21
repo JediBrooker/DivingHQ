@@ -604,7 +604,8 @@
     "score_submitted": "Terkirim",
     "signal_referee": "Panggil wasit kepala",
     "panel_offline": "Panel offline — skor Anda akan disinkronkan saat tersambung kembali.",
-    "score_picker_label": "Pilih skor (0,0 — 10,0 dengan kelipatan 0,5)"
+    "score_picker_label": "Pilih skor (0,0 — 10,0 dengan kelipatan 0,5)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "Ruang kontrol",

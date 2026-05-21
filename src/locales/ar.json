@@ -604,7 +604,8 @@
     "score_submitted": "أُرسلت",
     "signal_referee": "استدعاء الحكم الرئيسي",
     "panel_offline": "اللجنة غير متصلة — ستتم مزامنة درجاتك عند عودة الاتصال.",
-    "score_picker_label": "اختر درجة (0.0 — 10.0 بخطوات 0.5)"
+    "score_picker_label": "اختر درجة (0.0 — 10.0 بخطوات 0.5)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "غرفة التحكم",

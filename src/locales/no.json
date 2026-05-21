@@ -615,7 +615,8 @@
     "score_submitted": "Sendt",
     "signal_referee": "Varsle overdommer",
     "panel_offline": "Panelet er frakoblet — poengene dine synkroniseres når tilkoblingen er gjenopprettet.",
-    "score_picker_label": "Velg poeng (0,0 — 10,0 i steg på 0,5)"
+    "score_picker_label": "Velg poeng (0,0 — 10,0 i steg på 0,5)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "Kontrollrom",

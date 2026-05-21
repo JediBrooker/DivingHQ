@@ -15,6 +15,7 @@ import { useBroadcastChooser } from '@/composables/useBroadcastChooser'
 import DiverIdentity from '@/components/DiverIdentity.vue'
 import StatusPill from '@/components/StatusPill.vue'
 import JudgeRankingTable from '@/components/JudgeRankingTable.vue'
+import OfflineBanner from '@/components/OfflineBanner.vue'
 import ReadinessChecklist from '@/components/ReadinessChecklist.vue'
 import JudgePanelModal from '@/components/JudgePanelModal.vue'
 import ReflowModal from '@/components/ReflowModal.vue'
@@ -3287,6 +3288,11 @@ onUnmounted(() => {
 
 <template>
   <div :class="['ctrl-layout', opsBroadcast ? 'ctrl-broadcast' : '']">
+    <!-- Offline / sync status. Renders nothing unless the outbox
+         has activity or the socket is disconnected. Operator-side
+         this surfaces "your judge broadcast is offline" before the
+         judges themselves notice. -->
+    <OfflineBanner />
     <!-- Floating exit out of operator broadcast mode. -->
     <RouterLink
       v-if="opsBroadcast"

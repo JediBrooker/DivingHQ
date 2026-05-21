@@ -36,6 +36,7 @@ import { useSocket } from '@/composables/useSocket'
 import { usePush } from '@/composables/usePush'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { showSuccess, showError } from '@/composables/useNotify'
+import OfflineBanner from '@/components/OfflineBanner.vue'
 
 const { t } = useI18n()
 
@@ -249,6 +250,10 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
 
 <template>
   <div class="coach-wrap">
+    <!-- Offline / sync banner. Coaches submitting dive lists on
+         behalf of divers (offline-tolerant per the inventory)
+         benefit from a visible queue state. -->
+    <OfflineBanner />
     <div class="page-header">
       <div>
         <div class="page-label">{{ $t('coach.dashboard.label') }}</div>

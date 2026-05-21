@@ -615,7 +615,8 @@
     "score_submitted": "Gesendet",
     "signal_referee": "Schiedsrichter rufen",
     "panel_offline": "Panel offline — Ihre Wertungen werden bei Wiederverbindung synchronisiert.",
-    "score_picker_label": "Wertung wählen (0,0 — 10,0 in 0,5er-Schritten)"
+    "score_picker_label": "Wertung wählen (0,0 — 10,0 in 0,5er-Schritten)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "Kontrollraum",

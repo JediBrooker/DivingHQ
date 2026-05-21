@@ -615,7 +615,8 @@
     "score_submitted": "Wysłano",
     "signal_referee": "Powiadom sędziego głównego",
     "panel_offline": "Panel offline — Twoje oceny zostaną zsynchronizowane po ponownym połączeniu.",
-    "score_picker_label": "Wybierz ocenę (0,0 — 10,0 co 0,5)"
+    "score_picker_label": "Wybierz ocenę (0,0 — 10,0 co 0,5)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "Pokój kontroli",

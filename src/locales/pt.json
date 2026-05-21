@@ -615,7 +615,8 @@
     "score_submitted": "Submetida",
     "signal_referee": "Sinalizar Árbitro",
     "panel_offline": "Painel offline — as suas notas serão sincronizadas quando voltar a estar ligado.",
-    "score_picker_label": "Escolha uma nota (0,0 — 10,0 em passos de 0,5)"
+    "score_picker_label": "Escolha uma nota (0,0 — 10,0 em passos de 0,5)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "Sala de Controlo",

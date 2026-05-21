@@ -604,7 +604,8 @@
     "score_submitted": "送信済み",
     "signal_referee": "主審を呼ぶ",
     "panel_offline": "パネルがオフラインです — 再接続時に点数が同期されます。",
-    "score_picker_label": "点数を選択（0.0 〜 10.0、0.5 刻み）"
+    "score_picker_label": "点数を選択（0.0 〜 10.0、0.5 刻み）",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "コントロールルーム",

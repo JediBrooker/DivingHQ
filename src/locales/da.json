@@ -615,7 +615,8 @@
     "score_submitted": "Sendt",
     "signal_referee": "Signalér overdommer",
     "panel_offline": "Panelet er offline — dine karakterer synkroniseres, når forbindelsen er genoprettet.",
-    "score_picker_label": "Vælg karakter (0,0 — 10,0 i trin på 0,5)"
+    "score_picker_label": "Vælg karakter (0,0 — 10,0 i trin på 0,5)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "Kontrolrum",

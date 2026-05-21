@@ -604,7 +604,8 @@
     "score_submitted": "Dihantar",
     "signal_referee": "Panggil hakim utama",
     "panel_offline": "Panel di luar talian — markah anda akan disegerakkan apabila tersambung semula.",
-    "score_picker_label": "Pilih markah (0.0 — 10.0 dalam selangan 0.5)"
+    "score_picker_label": "Pilih markah (0.0 — 10.0 dalam selangan 0.5)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "Bilik kawalan",

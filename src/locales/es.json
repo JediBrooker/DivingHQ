@@ -604,7 +604,8 @@
     "score_submitted": "Enviada",
     "signal_referee": "Llamar al árbitro",
     "panel_offline": "Panel sin conexión — tus notas se sincronizarán cuando vuelva la conexión.",
-    "score_picker_label": "Elige una nota (0,0 — 10,0 en pasos de 0,5)"
+    "score_picker_label": "Elige una nota (0,0 — 10,0 en pasos de 0,5)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "Sala de control",

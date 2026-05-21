@@ -615,7 +615,8 @@
     "score_submitted": "Inviato",
     "signal_referee": "Chiama l'arbitro",
     "panel_offline": "Pannello offline — i tuoi voti si sincronizzeranno alla riconnessione.",
-    "score_picker_label": "Scegli un voto (0,0 — 10,0 a passi di 0,5)"
+    "score_picker_label": "Scegli un voto (0,0 — 10,0 a passi di 0,5)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "Sala Controllo",

@@ -8,6 +8,7 @@ import { diveDescription } from '@/composables/useDiveLabel'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { validateDiveList } from '@/lib/round-rules'
+import OfflineBanner from '@/components/OfflineBanner.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -705,6 +706,9 @@ watch(currentEvent, async (ev) => {
 </script>
 
 <template>
+  <!-- Offline / sync banner. Divers editing dive sheets (a
+       phase-4 outbox path) see queued state at the top. -->
+  <OfflineBanner />
   <div class="page-header">
     <h1 style="font-size:32px;font-style:italic">{{ $t('competitor.page_label') }}</h1>
     <RouterLink to="/dashboard" class="btn btn-ghost">← Dashboard</RouterLink>

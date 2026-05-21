@@ -604,7 +604,8 @@
     "score_submitted": "Naisumite",
     "signal_referee": "Tawagin ang referee",
     "panel_offline": "Offline ang panel — magsi-sync ang iyong mga iskor kapag muling nakakonekta.",
-    "score_picker_label": "Pumili ng iskor (0.0 — 10.0 sa 0.5 na pagitan)"
+    "score_picker_label": "Pumili ng iskor (0.0 — 10.0 sa 0.5 na pagitan)",
+    "queued_label": "Queued"
   },
   "control": {
     "page_label": "Control room page",
