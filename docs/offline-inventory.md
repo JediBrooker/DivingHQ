@@ -1,11 +1,12 @@
 # Offline-resilience — write-action inventory
 
-**Status:** Phase 0 draft, 2026-05-21. Lock the columns before any code lands.
+**Status:** Phase 0 complete, 2026-05-21. P1 design lives in
+[offline-p1-design.md](./offline-p1-design.md). Updates to this doc must
+land in the same commit as any behaviour change to the underlying action.
 
-This is the contract for the offline-resilience work. Every write surface the
-codebase exposes is enumerated here with its sync strategy, conflict policy,
-and migration phase. Updates to this doc must land in the same commit as any
-behaviour change to the underlying action.
+This is the contract for the offline-resilience work. Every write surface
+the codebase exposes is enumerated here with its sync strategy, conflict
+policy, and migration phase.
 
 ## Definitions
 
@@ -44,7 +45,48 @@ behaviour change to the underlying action.
 - **P5** — manual fallback mode (week 10-12)
 - **—** — no migration required (action is online-only by design, e.g. login)
 
-## Open UX decisions (referenced by table notes)
+## Resolved policy decisions
+
+These closed out as part of the design review on 2026-05-21:
+
+- **DEC-01 — Stage advancement is online-only.** `POST /api/events/:id/advance`
+  (Prelim → SF → F) stays server-canonical. UI greys out the Advance Event
+  button during a blackout. Operator's choice: wait for network, or run an
+  unofficial intermission.
+
+- **DEC-02 — Sign-off codes during a blackout: `pending_signoff` state.**
+  New value in the `event_status` enum (between `Live` and `Completed`).
+  During an outage the operator can mark an event as ready to sign off;
+  spectators see "results pending official sign-off"; the cryptographic
+  sign-off completes the moment network returns and the referee enters the
+  code. Schema change in migration 054 (see P1 design doc).
+
+- **DEC-03 — Audit clock records both timestamps.** New columns
+  `actor_local_time` (client-claimed) and `server_committed_at` on
+  `audit_log` and `score_audit_log`. Existing rows backfill
+  `server_committed_at` from `created_at`. The `scores` table also gets
+  `actor_local_time` so a per-row replay clock survives audit purges.
+
+- **DEC-04 — Late-arriving submissions: `requireDeadlineWithReview` gate.**
+  Generic server-side gate function applies to every action with a hard
+  temporal cutoff (entry deadlines, change-of-dives windows, synchro
+  substitution). When `actor_local_time < deadline AND
+  server_committed_at ≥ deadline`: ACCEPT the action, set
+  `late_arrival_flag = true`, surface in the Control Room's pending-review
+  tray (P4). Referee adjudicates: approve (keeps edit) or deny (rolls
+  back). Both outcomes audit-logged. A backdated `actor_local_time` claim
+  is caught by the same review path because any late-arrival triggers
+  human review regardless of claimed time.
+
+- **DEC-05 — Mid-meet roster collision: operator-decides.** Two operators
+  both offline-add the same diver to the same event → unique-constraint
+  collision on `(event_id, competitor_id, round_number)` → server emits
+  `conflict_pending`, surfaces in the review tray, operator picks a
+  winner, loser audit-logged.
+
+### Open UX decisions (P4 work)
+
+These aren't blocking P1 but need answers before P4 lands:
 
 - **CONFLICT-UX-001** — Conflicts are batched in a Control Room "pending
   review" tray, not surfaced as interrupt-style modals. Operator under
@@ -247,43 +289,8 @@ possible across users.
 P1+P4 migrates ~29 write surfaces total. P5 adds 1 surface (operator manual
 entry) and reuses the P4 conflict-resolution pipeline.
 
-## Risks surfaced during inventory
-
-1. **`POST /api/events/:id/advance`** is currently online-only because the
-   advancement logic is complex (ranking + reserves + cross-stage point
-   reset). During a meet, this is the transition from Prelim → Semi →
-   Final. If the network drops between stages, the meet stalls until it's
-   back. **Decision needed:** is advancing a stage an offline-tolerable
-   action, or do we accept that stage transitions require a brief online
-   moment?
-
-2. **Sign-off codes** (`POST /api/sign-off/code/verify`,
-   `dive-order/sign-off/code`) are cryptographic and server-canonical.
-   They lock the official result. **Decision needed:** during an extended
-   blackout, can a meet "unofficially" finalise an event (operator marks
-   it done, sign-off happens when network returns)? Or must finalisation
-   wait for network?
-
-3. **Score corrections** (`PUT /api/scores/:id`) are the most-audited
-   write in the system. Outbox-queuing them means a correction issued at
-   16:42 might not land in Postgres until 17:15. The audit log needs to
-   record both the operator's local time and the server-side commit time
-   (the schema change mentioned in the plan).
-
-4. **`POST /api/events/:id/roster`** mid-meet (adding a diver after the
-   meet started). Rare but real. If two operators offline-add the same
-   diver, the dedupe key is `(event_id, competitor_id, round_number)` so
-   the second add would conflict. Operator-decides resolves it cleanly.
-
-5. **Coach-on-behalf submissions** (`POST /api/coach/dive-lists/...`)
-   happen during meets when a diver realises they need to change a dive
-   and the coach edits on their behalf. Migrating to optimistic is right,
-   but the entry-deadline gate (server checks against
-   `entry_deadline_at`) must be re-validated on sync — a coach offline-
-   edit landing past the deadline must be rejected with a clear UX.
-
 ## Next step
 
-Review this doc together. Once we agree on the columns, the policies in
-open UX decisions (CONFLICT-UX-001 etc.), and the answers to the five risks
-above, P1 can start.
+P1 design is locked in [offline-p1-design.md](./offline-p1-design.md). The
+five risks raised in the original Phase 0 draft are resolved above as
+DEC-01 through DEC-05. P1 code is the next deliverable.
