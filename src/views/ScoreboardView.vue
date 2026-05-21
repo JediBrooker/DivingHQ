@@ -11,7 +11,8 @@ import {
   synchroJudgeGroups,
 } from '@/composables/useScoreCategories'
 import { diveDescription } from '@/composables/useDiveLabel'
-import { cachedFetch } from '@/lib/idbCache'
+import { cachedFetch, idbInvalidate } from '@/lib/idbCache'
+import { SCOREBOARD_LIVE_TTL_MS, SCOREBOARD_ARCHIVE_TTL_MS } from '@/lib/cache-policy'
 import { fmtDate } from '@/lib/format'
 import DiverIdentity from '@/components/DiverIdentity.vue'
 import ScoreHistoryButton from '@/components/ScoreHistoryButton.vue'
@@ -578,10 +579,23 @@ async function refreshData() {
   if (!currentEventId.value) return
   try {
     if (isCompleted.value) {
-      const [archive, leaderboard] = await Promise.all([
-        fetch(`/api/archive/${currentEventId.value}/results`).then(r => r.json()),
-        fetch(`/api/scoreboard/${currentEventId.value}/leaderboard`).then(r => r.json()),
+      // Completed events: 24h SWR cache. The standings never change
+      // once Completed is final; socket events (score_corrected)
+      // invalidate on the rare admin-edit case.
+      const [archiveRes, leaderboardRes] = await Promise.all([
+        cachedFetch(
+          `/api/archive/${currentEventId.value}/results`,
+          { credentials: 'same-origin' },
+          { maxAgeMs: SCOREBOARD_ARCHIVE_TTL_MS },
+        ),
+        cachedFetch(
+          `/api/scoreboard/${currentEventId.value}/leaderboard`,
+          { credentials: 'same-origin' },
+          { maxAgeMs: SCOREBOARD_ARCHIVE_TTL_MS },
+        ),
       ])
+      const archive = archiveRes.data || {}
+      const leaderboard = leaderboardRes.data || {}
       archiveResults.value = archive
       standings.value = archive.standings || []
       historyItems.value = []
@@ -601,10 +615,25 @@ async function refreshData() {
       // (rare, but cheap to guard against).
       judgeRankingPayload.value = null
       judgeRankingExpanded.value = false
-      const [scoreboard, leaderboard] = await Promise.all([
-        fetch(`/api/scoreboard/${currentEventId.value}`).then(r => r.json()),
-        fetch(`/api/scoreboard/${currentEventId.value}/leaderboard`).then(r => r.json()),
+      // Live events: 5s hard TTL — matches the server-side cache so
+      // a spectator that just hit reload never sees data older than
+      // the server would have served. Socket-driven invalidation
+      // (score_received) busts the entry the moment a new score
+      // commits, so real freshness comes from there.
+      const [scoreboardRes, leaderboardRes] = await Promise.all([
+        cachedFetch(
+          `/api/scoreboard/${currentEventId.value}`,
+          { credentials: 'same-origin' },
+          { maxAgeMs: SCOREBOARD_LIVE_TTL_MS },
+        ),
+        cachedFetch(
+          `/api/scoreboard/${currentEventId.value}/leaderboard`,
+          { credentials: 'same-origin' },
+          { maxAgeMs: SCOREBOARD_LIVE_TTL_MS },
+        ),
       ])
+      const scoreboard = scoreboardRes.data || {}
+      const leaderboard = leaderboardRes.data || {}
       historyItems.value = scoreboard.history || []
       standings.value = scoreboard.standings || []
       upcoming.value = scoreboard.upcoming || []
@@ -669,6 +698,13 @@ socket.on('state_update', data => {
 // in one at a time and (once the panel is full) shade the high
 // + low as dropped under World Aquatics trim rules.
 socket.on('score_received', data => {
+  // Invalidate the client-side scoreboard cache for this event the
+  // moment a new score commits. Without this, the 5s SWR TTL would
+  // let a freshly-reloaded spectator see standings that lag by up
+  // to one scoreboard tick.
+  if (data?.event_id) {
+    idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
+  }
   if (!currentEventId.value) return
   if (data.event_id !== currentEventId.value) return
   if (!activeDiver.value) return

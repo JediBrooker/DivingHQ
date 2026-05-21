@@ -4,6 +4,8 @@ import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
+import { idbInvalidate } from '@/lib/idbCache'
+import { DIVE_DIRECTORY_TTL_MS, SCOREBOARD_LIVE_TTL_MS } from '@/lib/cache-policy'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { showUndo } from '@/composables/useUndo'
 import { showSuccess, showError, showInfo } from '@/composables/useNotify'
@@ -1745,7 +1747,13 @@ async function openLateEntry() {
   }
   if (!lateDiveDir.value.length) {
     try {
-      lateDiveDir.value = await auth.apiFetch('/api/dive-directory')
+      // Cached read — first open of the late-add modal in a session
+      // hits the network; subsequent opens (same or different meets)
+      // serve from IDB instantly.
+      const result = await auth.cachedApiFetch('/api/dive-directory', {
+        cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS },
+      })
+      lateDiveDir.value = Array.isArray(result.data) ? result.data : []
     } catch { lateDiveDir.value = [] }
   }
   // Teams enrolled in this event — only used when event_type === 'team'
@@ -1927,10 +1935,17 @@ function onGlobalClick(e) {
 async function refreshStandingsPreview() {
   if (!currentEvent.value) return
   try {
-    const data = await auth.apiFetch(`/api/scoreboard/${currentEvent.value.id}`)
-    // Keep all standings rows so the projection logic can find the
-    // active diver even if they're outside the top 5.
-    standingsPreview.value = data.standings || []
+    // SWR cached read with 5s TTL — matches the server-side
+    // scoreboard cache and tolerates a brief blackout. Real
+    // freshness comes from socket-driven invalidation
+    // (score_received → invalidate this URL).
+    const result = await auth.cachedApiFetch(
+      `/api/scoreboard/${currentEvent.value.id}`,
+      { cache: { maxAgeMs: SCOREBOARD_LIVE_TTL_MS, onUpdate: (fresh) => {
+        if (fresh?.standings) standingsPreview.value = fresh.standings
+      } } },
+    )
+    standingsPreview.value = result.data?.standings || []
   } catch { standingsPreview.value = [] }
 }
 
@@ -1990,7 +2005,12 @@ useBodyScrollLock().lockWhile(computed(() =>
 ))
 async function loadDiveDirectory() {
   try {
-    diveDirectory.value = await auth.apiFetch("/api/dive-directory")
+    const result = await auth.cachedApiFetch("/api/dive-directory", {
+      cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS, onUpdate: (fresh) => {
+        if (Array.isArray(fresh)) diveDirectory.value = fresh
+      } },
+    })
+    diveDirectory.value = Array.isArray(result.data) ? result.data : []
   } catch {
     diveDirectory.value = []
   }
@@ -2686,6 +2706,15 @@ socket.on('meet_resumed', (data) => {
 })
 
 socket.on('score_received', (data) => {
+  // Invalidate the client-side scoreboard cache for this event so
+  // the next refreshStandingsPreview() / showLeaderboard() hits
+  // fresh data. Server already invalidates its own cache; the
+  // client cache otherwise serves up to 5s of stale data after
+  // a new score. Fire-and-forget; failure here is harmless.
+  if (data?.event_id) {
+    idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
+  }
+
   if (!currentActive.value) return
   if (data.event_id !== currentActive.value.event_id) return
   if (data.competitor_id !== currentActive.value.competitor_id) return
