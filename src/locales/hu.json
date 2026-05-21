@@ -548,26 +548,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "Függőben",
+    "pending_full": "Sorban — elküldésre kerül újracsatlakozáskor",
+    "inflight": "Küldés alatt",
+    "inflight_full": "Éppen most küldés a szervernek",
+    "synced": "Szinkronizálva",
+    "synced_full": "A szerver fogadta és visszaigazolta",
+    "failed": "Sikertelen",
+    "failed_full": "Többszöri próbálkozás után sem sikerült elküldeni — érintse meg az újrapróbálkozáshoz",
+    "conflict": "Konfliktus",
+    "conflict_full": "A szerver elutasította — a versenyvezetőnek kell felülvizsgálnia"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Offline {duration} óta",
+    "online_with_pending": "Szinkronizálás folyamatban",
+    "queued_one": "1 művelet várakozik",
+    "queued_many": "{n} művelet várakozik",
+    "failed_one": "1 sikertelen művelet",
+    "failed_many": "{n} sikertelen művelet",
+    "conflict_one": "1 konfliktus felülvizsgálatra vár",
+    "conflict_many": "{n} konfliktus felülvizsgálatra vár"
   },
   "inbox": {
     "title": "Bejövő üzenetek",
@@ -616,7 +616,7 @@
     "signal_referee": "Versenybíró jelzése",
     "panel_offline": "A panel offline — a pontok újrakapcsolódáskor szinkronizálódnak.",
     "score_picker_label": "Válasszon pontot (0,0 — 10,0 között, 0,5-ös lépésekben)",
-    "queued_label": "Queued"
+    "queued_label": "Sorban"
   },
   "control": {
     "page_label": "Vezérlőszoba",

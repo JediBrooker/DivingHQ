@@ -548,26 +548,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "Ausstehend",
+    "pending_full": "In der Warteschlange — wird gesendet, sobald die Verbindung wiederhergestellt ist",
+    "inflight": "Wird gesendet",
+    "inflight_full": "Wird gerade an den Server gesendet",
+    "synced": "Synchronisiert",
+    "synced_full": "Vom Server empfangen und bestätigt",
+    "failed": "Fehlgeschlagen",
+    "failed_full": "Nach mehreren Versuchen konnte nicht gesendet werden — tippen Sie, um es erneut zu versuchen",
+    "conflict": "Konflikt",
+    "conflict_full": "Vom Server abgelehnt — ein Wettkampfleiter muss dies prüfen"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Seit {duration} offline",
+    "online_with_pending": "Synchronisierung läuft",
+    "queued_one": "1 Aktion in der Warteschlange",
+    "queued_many": "{n} Aktionen in der Warteschlange",
+    "failed_one": "1 fehlgeschlagen",
+    "failed_many": "{n} fehlgeschlagen",
+    "conflict_one": "1 Konflikt wartet auf Überprüfung",
+    "conflict_many": "{n} Konflikte warten auf Überprüfung"
   },
   "inbox": {
     "title": "Posteingang",
@@ -616,7 +616,7 @@
     "signal_referee": "Schiedsrichter rufen",
     "panel_offline": "Panel offline — Ihre Wertungen werden bei Wiederverbindung synchronisiert.",
     "score_picker_label": "Wertung wählen (0,0 — 10,0 in 0,5er-Schritten)",
-    "queued_label": "Queued"
+    "queued_label": "In der Warteschlange"
   },
   "control": {
     "page_label": "Kontrollraum",

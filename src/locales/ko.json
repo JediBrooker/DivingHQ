@@ -537,26 +537,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "대기 중입니다",
+    "pending_full": "대기열에 있습니다 — 재연결되면 전송됩니다",
+    "inflight": "전송 중입니다",
+    "inflight_full": "지금 서버로 전송 중입니다",
+    "synced": "동기화되었습니다",
+    "synced_full": "서버에서 수신하여 확인되었습니다",
+    "failed": "실패했습니다",
+    "failed_full": "여러 번 재시도한 후에도 전송하지 못했습니다 — 탭하여 다시 시도하십시오",
+    "conflict": "충돌이 발생했습니다",
+    "conflict_full": "서버가 거부했습니다 — 대회 관리자가 검토해야 합니다"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "{duration} 동안 오프라인입니다",
+    "online_with_pending": "동기화 중입니다",
+    "queued_one": "작업 1건이 대기 중입니다",
+    "queued_many": "{n}개의 작업이 대기 중입니다",
+    "failed_one": "1건이 실패했습니다",
+    "failed_many": "{n}건이 실패했습니다",
+    "conflict_one": "충돌 1건이 검토 대기 중입니다",
+    "conflict_many": "{n}건의 충돌이 검토 대기 중입니다"
   },
   "inbox": {
     "title": "받은 편지함",
@@ -605,7 +605,7 @@
     "signal_referee": "주심 호출",
     "panel_offline": "패널 오프라인 — 재연결 시 점수가 동기화됩니다.",
     "score_picker_label": "점수 선택 (0.0 — 10.0, 0.5 단위)",
-    "queued_label": "Queued"
+    "queued_label": "대기 중입니다"
   },
   "control": {
     "page_label": "컨트롤 룸",

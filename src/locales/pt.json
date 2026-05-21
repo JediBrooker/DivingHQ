@@ -548,26 +548,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "Pendente",
+    "pending_full": "Em fila — será enviado quando for restabelecida a ligação",
+    "inflight": "A enviar",
+    "inflight_full": "A enviar para o servidor neste momento",
+    "synced": "Sincronizado",
+    "synced_full": "Servidor recebeu e confirmou",
+    "failed": "Falhou",
+    "failed_full": "Não foi possível enviar após várias tentativas — toque para tentar novamente",
+    "conflict": "Conflito",
+    "conflict_full": "Rejeitado pelo servidor — um responsável da competição precisa de rever"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Sem ligação há {duration}",
+    "online_with_pending": "A sincronizar",
+    "queued_one": "1 ação na fila",
+    "queued_many": "{n} ações na fila",
+    "failed_one": "1 falha",
+    "failed_many": "{n} falhas",
+    "conflict_one": "1 conflito pendente de revisão",
+    "conflict_many": "{n} conflitos pendentes de revisão"
   },
   "inbox": {
     "title": "Caixa de entrada",
@@ -616,7 +616,7 @@
     "signal_referee": "Sinalizar Árbitro",
     "panel_offline": "Painel offline — as suas notas serão sincronizadas quando voltar a estar ligado.",
     "score_picker_label": "Escolha uma nota (0,0 — 10,0 em passos de 0,5)",
-    "queued_label": "Queued"
+    "queued_label": "Em fila"
   },
   "control": {
     "page_label": "Sala de Controlo",

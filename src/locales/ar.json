@@ -537,26 +537,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "قيد الانتظار",
+    "pending_full": "مُدرَج في الطابور — سيتم الإرسال عند استعادة الاتصال",
+    "inflight": "جاري الإرسال",
+    "inflight_full": "يتم الإرسال إلى الخادم الآن",
+    "synced": "تمت المزامنة",
+    "synced_full": "استلم الخادم وتم التأكيد",
+    "failed": "فشل",
+    "failed_full": "تعذر الإرسال بعد عدة محاولات — اضغط لإعادة المحاولة",
+    "conflict": "تعارض",
+    "conflict_full": "رفضه الخادم — يجب على مدير المسابقة مراجعته"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "غير متصل منذ {duration}",
+    "online_with_pending": "جارٍ المزامنة",
+    "queued_one": "1 إجراء قيد الانتظار",
+    "queued_many": "{n} إجراءات قيد الانتظار",
+    "failed_one": "1 فشل",
+    "failed_many": "{n} حالات فشل",
+    "conflict_one": "1 تعارض قيد المراجعة",
+    "conflict_many": "{n} تعارضات قيد المراجعة"
   },
   "inbox": {
     "title": "صندوق الوارد",
@@ -605,7 +605,7 @@
     "signal_referee": "استدعاء الحكم الرئيسي",
     "panel_offline": "اللجنة غير متصلة — ستتم مزامنة درجاتك عند عودة الاتصال.",
     "score_picker_label": "اختر درجة (0.0 — 10.0 بخطوات 0.5)",
-    "queued_label": "Queued"
+    "queued_label": "قيد الانتظار"
   },
   "control": {
     "page_label": "غرفة التحكم",

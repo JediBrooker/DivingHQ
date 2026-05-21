@@ -548,26 +548,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "Очікується",
+    "pending_full": "У черзі — буде надіслано при відновленні з'єднання",
+    "inflight": "Надсилається",
+    "inflight_full": "Зараз надсилається на сервер",
+    "synced": "Синхронізовано",
+    "synced_full": "Сервер отримав і підтвердив",
+    "failed": "Не вдалося",
+    "failed_full": "Не вдалося надіслати після кількох спроб — торкніться, щоб повторити",
+    "conflict": "Конфлікт",
+    "conflict_full": "Сервер відхилив — менеджер змагань має переглянути"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Не в мережі протягом {duration}",
+    "online_with_pending": "Синхронізується",
+    "queued_one": "1 дія у черзі",
+    "queued_many": "{n} дій у черзі",
+    "failed_one": "1 не виконано",
+    "failed_many": "{n} не виконано",
+    "conflict_one": "1 конфлікт чекає на перевірку",
+    "conflict_many": "{n} конфліктів чекають на перевірку"
   },
   "inbox": {
     "title": "Вхідні",
@@ -616,7 +616,7 @@
     "signal_referee": "Сигнал головному судді",
     "panel_offline": "Панель не в мережі — ваші оцінки синхронізуються після відновлення з'єднання.",
     "score_picker_label": "Виберіть оцінку (0,0 — 10,0 з кроком 0,5)",
-    "queued_label": "Queued"
+    "queued_label": "У черзі"
   },
   "control": {
     "page_label": "Пульт керування",

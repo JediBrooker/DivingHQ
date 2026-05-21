@@ -537,26 +537,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "Dalam antrian",
+    "pending_full": "Dalam antrian — akan dihantar semasa bersambung semula",
+    "inflight": "Sedang dihantar",
+    "inflight_full": "Sedang dihantar ke pelayan sekarang",
+    "synced": "Disegerakkan",
+    "synced_full": "Pelayan telah menerima dan mengesahkan",
+    "failed": "Gagal",
+    "failed_full": "Gagal menghantar selepas beberapa percubaan — ketik untuk cuba semula",
+    "conflict": "Konflik",
+    "conflict_full": "Ditolak oleh pelayan — pengurus kejohanan perlu menyemak"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Luar talian selama {duration}",
+    "online_with_pending": "Menyegerakkan",
+    "queued_one": "1 tindakan dalam antrian",
+    "queued_many": "{n} tindakan dalam antrian",
+    "failed_one": "1 tindakan gagal",
+    "failed_many": "{n} tindakan gagal",
+    "conflict_one": "1 konflik menunggu semakan",
+    "conflict_many": "{n} konflik menunggu semakan"
   },
   "inbox": {
     "title": "Peti masuk",
@@ -605,7 +605,7 @@
     "signal_referee": "Panggil hakim utama",
     "panel_offline": "Panel di luar talian — markah anda akan disegerakkan apabila tersambung semula.",
     "score_picker_label": "Pilih markah (0.0 — 10.0 dalam selangan 0.5)",
-    "queued_label": "Queued"
+    "queued_label": "Dalam antrian"
   },
   "control": {
     "page_label": "Bilik kawalan",

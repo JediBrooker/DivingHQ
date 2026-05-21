@@ -537,26 +537,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "На чекању",
+    "pending_full": "У реду чекања — биће послато када се поново успостави веза",
+    "inflight": "Слање",
+    "inflight_full": "Тренутно се шаље на сервер",
+    "synced": "Синхронизовано",
+    "synced_full": "Сервер је примио и потврдио",
+    "failed": "Неуспело",
+    "failed_full": "Није било могуће послати након неколико покушаја — додирните да бисте покушали поново",
+    "conflict": "Конфликт",
+    "conflict_full": "Сервер је одбацио — потребно је да менаџер такмичења прегледа"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Офлајн већ {duration}",
+    "online_with_pending": "Синхронизује се",
+    "queued_one": "1 акција у реду чекања",
+    "queued_many": "{n} акција у реду чекања",
+    "failed_one": "1 неуспело",
+    "failed_many": "{n} неуспело",
+    "conflict_one": "1 конфликт чека на преглед",
+    "conflict_many": "{n} конфликта чекају на преглед"
   },
   "inbox": {
     "title": "Сандуче",
@@ -605,7 +605,7 @@
     "signal_referee": "Позови главног судију",
     "panel_offline": "Панел је ван мреже — ваше оцене ће се синхронизовати када се веза врати.",
     "score_picker_label": "Изабери оцену (0,0 — 10,0 у корацима од 0,5)",
-    "queued_label": "Queued"
+    "queued_label": "У реду чекања"
   },
   "control": {
     "page_label": "Контролна соба",

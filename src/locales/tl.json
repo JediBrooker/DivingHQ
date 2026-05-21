@@ -537,26 +537,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "Naka-pila",
+    "pending_full": "Naka-pila — ipapadala kapag muling nakakonekta",
+    "inflight": "Ipinapadala",
+    "inflight_full": "Ipinapadala ngayon sa server",
+    "synced": "Naka-sinkron",
+    "synced_full": "Natanggap at kinumpirma ng server",
+    "failed": "Nabigo",
+    "failed_full": "Hindi maipadala matapos ang ilang pagtatangka — pindutin upang muling subukan",
+    "conflict": "Konflikto",
+    "conflict_full": "Tinanggihan ng server — kinakailangang suriin ng tagapamahala ng paligsahan"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Walang koneksyon nang {duration}",
+    "online_with_pending": "Sinusinkronisa",
+    "queued_one": "1 aksyon ang naka-pila",
+    "queued_many": "{n} aksyon ang naka-pila",
+    "failed_one": "1 nabigo",
+    "failed_many": "{n} nabigo",
+    "conflict_one": "1 konflikto ang nakabinbin para sa pagsusuri",
+    "conflict_many": "{n} konflikto ang nakabinbin para sa pagsusuri"
   },
   "inbox": {
     "title": "Kahon ng mensahe",
@@ -605,7 +605,7 @@
     "signal_referee": "Tawagin ang referee",
     "panel_offline": "Offline ang panel — magsi-sync ang iyong mga iskor kapag muling nakakonekta.",
     "score_picker_label": "Pumili ng iskor (0.0 — 10.0 sa 0.5 na pagitan)",
-    "queued_label": "Queued"
+    "queued_label": "Naka-pila"
   },
   "control": {
     "page_label": "Control room page",

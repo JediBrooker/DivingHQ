@@ -548,26 +548,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "Oczekujące",
+    "pending_full": "W kolejce — zostanie wysłane po ponownym połączeniu",
+    "inflight": "Wysyłanie",
+    "inflight_full": "Wysyłanie do serwera w tej chwili",
+    "synced": "Zsynchronizowano",
+    "synced_full": "Serwer otrzymał i potwierdził",
+    "failed": "Niepowodzenie",
+    "failed_full": "Nie udało się wysłać po kilku próbach — dotknij, aby spróbować ponownie",
+    "conflict": "Konflikt",
+    "conflict_full": "Serwer odrzucił — kierownik zawodów musi to zweryfikować"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Brak połączenia od {duration}",
+    "online_with_pending": "Trwa synchronizacja",
+    "queued_one": "1 akcja w kolejce",
+    "queued_many": "{n} akcji w kolejce",
+    "failed_one": "1 niepowodzenie",
+    "failed_many": "{n} niepowodzeń",
+    "conflict_one": "1 konflikt oczekuje na weryfikację",
+    "conflict_many": "{n} konfliktów oczekuje na weryfikację"
   },
   "inbox": {
     "title": "Skrzynka odbiorcza",
@@ -616,7 +616,7 @@
     "signal_referee": "Powiadom sędziego głównego",
     "panel_offline": "Panel offline — Twoje oceny zostaną zsynchronizowane po ponownym połączeniu.",
     "score_picker_label": "Wybierz ocenę (0,0 — 10,0 co 0,5)",
-    "queued_label": "Queued"
+    "queued_label": "W kolejce"
   },
   "control": {
     "page_label": "Pokój kontroli",

@@ -548,26 +548,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "Afventer",
+    "pending_full": "I kø — sendes, når forbindelsen genoprettes",
+    "inflight": "Sender",
+    "inflight_full": "Sender til serveren lige nu",
+    "synced": "Synkroniseret",
+    "synced_full": "Serveren har modtaget og bekræftet",
+    "failed": "Mislykkedes",
+    "failed_full": "Kunne ikke sende efter flere forsøg — tryk for at prøve igen",
+    "conflict": "Konflikt",
+    "conflict_full": "Serveren afviste — en stævneleder skal gennemgå det"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Frakoblet i {duration}",
+    "online_with_pending": "Synkroniserer",
+    "queued_one": "1 handling i kø",
+    "queued_many": "{n} handlinger i kø",
+    "failed_one": "1 fejl",
+    "failed_many": "{n} fejl",
+    "conflict_one": "1 konflikt afventer gennemgang",
+    "conflict_many": "{n} konflikter afventer gennemgang"
   },
   "inbox": {
     "title": "Indbakke",
@@ -616,7 +616,7 @@
     "signal_referee": "Signalér overdommer",
     "panel_offline": "Panelet er offline — dine karakterer synkroniseres, når forbindelsen er genoprettet.",
     "score_picker_label": "Vælg karakter (0,0 — 10,0 i trin på 0,5)",
-    "queued_label": "Queued"
+    "queued_label": "Sat i kø"
   },
   "control": {
     "page_label": "Kontrolrum",

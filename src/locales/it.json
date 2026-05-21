@@ -548,26 +548,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "In sospeso",
+    "pending_full": "In coda — verrà inviato quando la connessione sarà ristabilita",
+    "inflight": "Invio in corso",
+    "inflight_full": "Invio al server in corso",
+    "synced": "Sincronizzato",
+    "synced_full": "Il server ha ricevuto e confermato",
+    "failed": "Fallito",
+    "failed_full": "Impossibile inviare dopo diversi tentativi — toccare per riprovare",
+    "conflict": "Conflitto",
+    "conflict_full": "Rigettato dal server — il direttore di gara deve esaminare"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Offline da {duration}",
+    "online_with_pending": "Sincronizzazione in corso",
+    "queued_one": "1 azione in coda",
+    "queued_many": "{n} azioni in coda",
+    "failed_one": "1 operazione non riuscita",
+    "failed_many": "{n} operazioni non riuscite",
+    "conflict_one": "1 conflitto in attesa di revisione",
+    "conflict_many": "{n} conflitti in attesa di revisione"
   },
   "inbox": {
     "title": "Posta in arrivo",
@@ -616,7 +616,7 @@
     "signal_referee": "Chiama l'arbitro",
     "panel_offline": "Pannello offline — i tuoi voti si sincronizzeranno alla riconnessione.",
     "score_picker_label": "Scegli un voto (0,0 — 10,0 a passi di 0,5)",
-    "queued_label": "Queued"
+    "queued_label": "In coda"
   },
   "control": {
     "page_label": "Sala Controllo",
@@ -922,7 +922,7 @@
       "club_name_placeholder": "Club Tuffi Capital",
       "club_code_label": "Codice breve",
       "club_code_label_hint": "(opzionale)",
-      "club_code_placeholder": "CAP",
+      "club_code_placeholder": "COD",
       "club_create_btn": "Crea il club e continua →",
       "club_creating": "Creazione…",
       "club_no_org_error": "Impossibile creare un club — il suo account non ha org_id.",

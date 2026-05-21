@@ -548,26 +548,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "В ожидании",
+    "pending_full": "В очереди — будет отправлено при восстановлении соединения",
+    "inflight": "Отправляется",
+    "inflight_full": "Сейчас отправляется на сервер",
+    "synced": "Синхронизировано",
+    "synced_full": "Сервер получил и подтвердил",
+    "failed": "Не удалось",
+    "failed_full": "Не удалось отправить после нескольких попыток — нажмите, чтобы повторить попытку",
+    "conflict": "Конфликт",
+    "conflict_full": "Отклонено сервером — требуется проверка менеджером соревнований"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Не в сети в течение {duration}",
+    "online_with_pending": "Синхронизируется",
+    "queued_one": "1 действие в очереди",
+    "queued_many": "{n} действий в очереди",
+    "failed_one": "1 не выполнено",
+    "failed_many": "{n} не выполнено",
+    "conflict_one": "1 конфликт ожидает проверки",
+    "conflict_many": "{n} конфликтов ожидают проверки"
   },
   "inbox": {
     "title": "Входящие",
@@ -616,7 +616,7 @@
     "signal_referee": "Сигнал главному судье",
     "panel_offline": "Панель не в сети — ваши оценки синхронизируются после восстановления связи.",
     "score_picker_label": "Выберите оценку (0,0 — 10,0 с шагом 0,5)",
-    "queued_label": "Queued"
+    "queued_label": "В очереди"
   },
   "control": {
     "page_label": "Пульт управления",

@@ -548,26 +548,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "En attente",
+    "pending_full": "En file d'attente — enverra lorsque la connexion sera rétablie",
+    "inflight": "Envoi en cours",
+    "inflight_full": "Envoi vers le serveur en cours",
+    "synced": "Synchronisé",
+    "synced_full": "Reçu et confirmé par le serveur",
+    "failed": "Échec",
+    "failed_full": "Impossible d'envoyer après plusieurs tentatives — appuyez pour réessayer",
+    "conflict": "Conflit",
+    "conflict_full": "Rejeté par le serveur — un responsable de la compétition doit examiner"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Hors ligne depuis {duration}",
+    "online_with_pending": "Synchronisation en cours",
+    "queued_one": "1 action en file d'attente",
+    "queued_many": "{n} actions en file d'attente",
+    "failed_one": "1 échec",
+    "failed_many": "{n} échecs",
+    "conflict_one": "1 conflit en attente d'examen",
+    "conflict_many": "{n} conflits en attente d'examen"
   },
   "inbox": {
     "title": "Boîte de réception",
@@ -616,7 +616,7 @@
     "signal_referee": "Appeler l'arbitre",
     "panel_offline": "Panel hors ligne — vos notes se synchroniseront à la reconnexion.",
     "score_picker_label": "Choisissez une note (0,0 — 10,0 par paliers de 0,5)",
-    "queued_label": "Queued"
+    "queued_label": "En file d'attente"
   },
   "control": {
     "page_label": "Salle de contrôle",

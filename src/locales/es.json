@@ -537,26 +537,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "Pendiente",
+    "pending_full": "En cola — se enviará cuando se reconecte",
+    "inflight": "Enviando",
+    "inflight_full": "Enviando al servidor ahora mismo",
+    "synced": "Sincronizado",
+    "synced_full": "El servidor ha recibido y confirmado",
+    "failed": "Error",
+    "failed_full": "No se pudo enviar tras varios reintentos — toca para reintentar",
+    "conflict": "Conflicto",
+    "conflict_full": "Rechazado por el servidor — un responsable del encuentro necesita revisarlo"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "Sin conexión desde hace {duration}",
+    "online_with_pending": "Sincronizando",
+    "queued_one": "1 acción en cola",
+    "queued_many": "{n} acciones en cola",
+    "failed_one": "1 fallo",
+    "failed_many": "{n} fallos",
+    "conflict_one": "1 conflicto pendiente de revisión",
+    "conflict_many": "{n} conflictos pendientes de revisión"
   },
   "inbox": {
     "title": "Bandeja de entrada",
@@ -605,7 +605,7 @@
     "signal_referee": "Llamar al árbitro",
     "panel_offline": "Panel sin conexión — tus notas se sincronizarán cuando vuelva la conexión.",
     "score_picker_label": "Elige una nota (0,0 — 10,0 en pasos de 0,5)",
-    "queued_label": "Queued"
+    "queued_label": "En cola"
   },
   "control": {
     "page_label": "Sala de control",

@@ -537,26 +537,26 @@
     }
   },
   "sync_badge": {
-    "pending": "Pending",
-    "pending_full": "Queued — will send when reconnected",
-    "inflight": "Sending",
-    "inflight_full": "Sending to the server right now",
-    "synced": "Synced",
-    "synced_full": "Server received and confirmed",
-    "failed": "Failed",
-    "failed_full": "Could not send after several retries — tap to retry",
-    "conflict": "Conflict",
-    "conflict_full": "Server rejected — a meet manager needs to review"
+    "pending": "排队中",
+    "pending_full": "已排队 — 重新连接后将发送",
+    "inflight": "发送中",
+    "inflight_full": "正在发送到服务器",
+    "synced": "已同步",
+    "synced_full": "服务器已接收并确认",
+    "failed": "发送失败",
+    "failed_full": "多次重试后仍无法发送 — 点击重试",
+    "conflict": "冲突",
+    "conflict_full": "服务器已拒绝 — 比赛管理员需要审查"
   },
   "offline_banner": {
-    "offline_since": "Offline for {duration}",
-    "online_with_pending": "Syncing",
-    "queued_one": "1 action queued",
-    "queued_many": "{n} actions queued",
-    "failed_one": "1 failed",
-    "failed_many": "{n} failed",
-    "conflict_one": "1 conflict pending review",
-    "conflict_many": "{n} conflicts pending review"
+    "offline_since": "已离线 {duration}",
+    "online_with_pending": "同步中",
+    "queued_one": "1 个操作已排队",
+    "queued_many": "{n} 个操作已排队",
+    "failed_one": "1 个失败的操作",
+    "failed_many": "{n} 个失败的操作",
+    "conflict_one": "1 个冲突待审查",
+    "conflict_many": "{n} 个冲突待审查"
   },
   "inbox": {
     "title": "收件箱",
@@ -605,7 +605,7 @@
     "signal_referee": "呼叫主裁判",
     "panel_offline": "裁判组离线 — 您的分数将在恢复连接后同步。",
     "score_picker_label": "选择分数（0.0 — 10.0，以 0.5 为步进）",
-    "queued_label": "Queued"
+    "queued_label": "已排队"
   },
   "control": {
     "page_label": "控制室",
