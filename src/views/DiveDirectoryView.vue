@@ -16,6 +16,8 @@ import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
+import { idbInvalidate } from '@/lib/idbCache'
+import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 
 const auth = useAuthStore()
 
@@ -124,7 +126,16 @@ async function loadDives() {
   loading.value = true
   errorMsg.value = ''
   try {
-    dives.value = await auth.apiFetch('/api/dive-directory')
+    // Cached read: serves the previous fetch instantly while a
+    // background revalidation runs. 24h TTL because the catalog
+    // is essentially static — only changes when an org adds a
+    // custom dive (POST below invalidates manually).
+    const result = await auth.cachedApiFetch('/api/dive-directory', {
+      cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS, onUpdate: (fresh) => {
+        if (Array.isArray(fresh)) dives.value = fresh
+      } },
+    })
+    dives.value = Array.isArray(result.data) ? result.data : []
   } catch (err) {
     errorMsg.value = err.message
     dives.value = []
@@ -165,6 +176,10 @@ async function submitCreate() {
       method: 'POST',
       body: JSON.stringify(body),
     })
+    // Invalidate the directory cache across every consumer so the
+    // next load (here + any other open tabs/views) picks up the
+    // new custom dive.
+    await idbInvalidate('/api/dive-directory')
     creating.value = false
     await loadDives()
   } catch (err) {
@@ -206,6 +221,7 @@ async function submitEdit() {
       method: 'PUT',
       body: JSON.stringify(body),
     })
+    await idbInvalidate('/api/dive-directory')
     editing.value = null
     await loadDives()
   } catch (err) {
@@ -229,6 +245,7 @@ async function deleteDive(d) {
   })) return
   try {
     await auth.apiFetch(`/api/dive-directory/${d.id}`, { method: 'DELETE' })
+    await idbInvalidate('/api/dive-directory')
     await loadDives()
     showSuccess(`Deleted ${d.dive_code}${d.position}`)
   } catch (err) {

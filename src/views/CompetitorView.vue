@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
@@ -672,14 +673,18 @@ async function declinePairing(p) {
 }
 
 onMounted(async () => {
-  const [evs, dir] = await Promise.all([
+  const [evs, dirResult] = await Promise.all([
     auth.apiFetch('/api/events'),
-    auth.apiFetch('/api/dive-directory'),
+    auth.cachedApiFetch('/api/dive-directory', {
+      cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS, onUpdate: (fresh) => {
+        if (Array.isArray(fresh)) diveDirectory.value = fresh
+      } },
+    }),
     loadTemplates(),
     loadPendingPairings(),
   ])
   events.value = evs
-  diveDirectory.value = dir
+  diveDirectory.value = Array.isArray(dirResult.data) ? dirResult.data : []
 })
 
 // When the event changes and it's synchro, fetch potential

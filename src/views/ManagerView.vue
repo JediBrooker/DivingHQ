@@ -3,6 +3,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { idbInvalidate } from '@/lib/idbCache'
+import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import StatusPill from '@/components/StatusPill.vue'
@@ -64,7 +66,12 @@ const diveDirectory = ref([])
 
 async function loadDiveDirectory() {
   try {
-    diveDirectory.value = await auth.apiFetch('/api/dive-directory')
+    const result = await auth.cachedApiFetch('/api/dive-directory', {
+      cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS, onUpdate: (fresh) => {
+        if (Array.isArray(fresh)) diveDirectory.value = fresh
+      } },
+    })
+    diveDirectory.value = Array.isArray(result.data) ? result.data : []
   } catch {
     diveDirectory.value = []
   }
@@ -124,6 +131,9 @@ async function submitCreateDive() {
   newDiveBusy.value = true
   try {
     const heightNumeric = parseFloat(newDiveHeight.value)
+    // Adding a dive invalidates the cached catalog so consumers
+    // pick up the new row on next load.
+    await idbInvalidate('/api/dive-directory')
     const created = await auth.apiFetch('/api/dive-directory', {
       method: 'POST',
       body: JSON.stringify({

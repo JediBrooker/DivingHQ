@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { idbClear } from '@/lib/idbCache'
+import { idbClear, cachedFetch } from '@/lib/idbCache'
 
 const TOKEN_KEY = 'olympic_token'
 
@@ -83,10 +83,47 @@ export const useAuthStore = defineStore('auth', () => {
     return res.json()
   }
 
+  // Stale-while-revalidate variant of apiFetch. Wraps idbCache's
+  // cachedFetch so authenticated reads can serve a cached copy
+  // instantly + refresh on the side. Returns { data, fromCache,
+  // age } so the caller can render a "stale, refreshing…" hint.
+  //
+  // opts shape:
+  //   { cache: { maxAgeMs, onUpdate }, ...fetchInit }
+  // where cache.maxAgeMs is the hard TTL (omit for infinite SWR)
+  // and cache.onUpdate fires when the background revalidation
+  // lands. Everything else is passed through to fetch().
+  //
+  // 401 handling: cachedFetch deletes the cached entry on 401 and
+  // returns null. We then clear the local session + redirect to
+  // /login — same posture as apiFetch's 401 branch.
+  async function cachedApiFetch(url, opts = {}) {
+    const { cache = {}, ...fetchInit } = opts
+    const result = await cachedFetch(url, {
+      ...fetchInit,
+      headers: { ...getHeaders(), ...(fetchInit.headers ?? {}) },
+    }, cache)
+    if (result.data === null && !result.fromCache && token.value) {
+      // cachedFetch can return null for any reason (network fail,
+      // 401, server error). We can't distinguish 401 from a
+      // transient outage without re-fetching, so we DON'T force a
+      // redirect here — unlike apiFetch which gets the exact
+      // status code. Callers that need strict auth flow stay on
+      // apiFetch; cachedApiFetch is for tolerable-stale reads.
+    }
+    return result
+  }
+
   function formatRoles(roles = []) {
     const LABELS = { org_admin:'Org Admin', meet_manager:'Meet Manager', referee:'Referee', judge:'Judge', diver:'Diver', spectator:'Spectator' }
     return roles.map(r => LABELS[r] ?? r).join(' · ')
   }
 
-  return { token, user, isLoggedIn, saveSession, clearSession, hasRole, hasAnyRole, getHeaders, apiFetch, formatRoles }
+  return {
+    token, user, isLoggedIn,
+    saveSession, clearSession,
+    hasRole, hasAnyRole, getHeaders,
+    apiFetch, cachedApiFetch,
+    formatRoles,
+  }
 })

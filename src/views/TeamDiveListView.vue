@@ -4,6 +4,7 @@ import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { diveDescription } from '@/composables/useDiveLabel'
 
 const route = useRoute()
@@ -91,7 +92,9 @@ async function load() {
       auth.apiFetch('/api/events'),
       auth.apiFetch(`/api/teams/${teamId.value}/members`),
       auth.apiFetch(`/api/teams/${teamId.value}/events/${eventId.value}/dive-list`),
-      auth.apiFetch('/api/dive-directory'),
+      auth.cachedApiFetch('/api/dive-directory', {
+        cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS },
+      }),
       // Load the team itself by listing the user's org teams; we
       // don't have a direct GET /api/teams/:id endpoint, but we
       // can locate the team via the org listing.
