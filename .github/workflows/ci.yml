@@ -22,6 +22,15 @@ jobs:
     name: Build SPA + lint server
     runs-on: ubuntu-latest
 
+    env:
+      # Outbox feature flag is a build-time Vite constant. Setting
+      # it here bakes outbox=on into the CI bundle so the e2e job
+      # downstream exercises the same code path the canary
+      # federation will hit in production. Production .env keeps
+      # this at 0 until canary signs off. See
+      # docs/offline-p1-design.md §5.
+      VITE_OFFLINE_OUTBOX_ENABLED: "1"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -127,6 +136,10 @@ jobs:
       PGUSER: diver
       PGPASSWORD: diver
       PGDATABASE: divinghq_test
+      # Match the build job so the webServer (which runs
+      # `npm run build && node server.js`) bakes the outbox flag
+      # into the bundle Playwright actually drives.
+      VITE_OFFLINE_OUTBOX_ENABLED: "1"
       # DB_DATABASE explicit so the integration-test fixture
       # (which prefers DB_* over PG*) targets the same database.
       DB_DATABASE: divinghq_test
