@@ -812,6 +812,15 @@ app.use(require("./routes/templates")({ pool, verifyToken }));
 app.use(require("./routes/conflicts")({ pool, requireOrgRole }));
 
 // =============================================================
+// LATE-ARRIVAL REVIEW (P4)
+// =============================================================
+// Operator's tray for rows the deadline-with-review gate flagged
+// (see lib/deadline-gate.js + DEC-04 in offline-inventory.md).
+// Lists pending late-arrival rows + accepts approve/deny.
+// =============================================================
+app.use(require("./routes/late-arrivals")({ pool, requireOrgRole }));
+
+// =============================================================
 // COMPETITOR ROUTES
 // [SECTION: ROUTES — COMPETITOR]
 // /api/competitor/submit-list extracted into routes/competitor.js.

@@ -17,6 +17,8 @@ import DiverIdentity from '@/components/DiverIdentity.vue'
 import StatusPill from '@/components/StatusPill.vue'
 import JudgeRankingTable from '@/components/JudgeRankingTable.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
+import LateArrivalReviewTray from '@/components/LateArrivalReviewTray.vue'
+import ConflictReviewTray from '@/components/ConflictReviewTray.vue'
 import ReadinessChecklist from '@/components/ReadinessChecklist.vue'
 import JudgePanelModal from '@/components/JudgePanelModal.vue'
 import ReflowModal from '@/components/ReflowModal.vue'
@@ -3314,6 +3316,17 @@ onUnmounted(() => {
          this surfaces "your judge broadcast is offline" before the
          judges themselves notice. -->
     <OfflineBanner />
+    <!-- Late-arrival queue (DEC-04). Rows the deadline-with-review
+         gate accepted because actor_local_time was before the
+         deadline even though the server saw the request after.
+         Each row gets an approve/deny button. Renders nothing
+         when the queue is empty. -->
+    <LateArrivalReviewTray :event-id="currentEvent?.id || null" />
+    <!-- Outbox-side conflict queue. Surfaces local entries the
+         server returned 409 for (concurrency race; another
+         device wrote the same target first). Operator picks
+         discard or retry per entry. -->
+    <ConflictReviewTray />
     <!-- Floating exit out of operator broadcast mode. -->
     <RouterLink
       v-if="opsBroadcast"
