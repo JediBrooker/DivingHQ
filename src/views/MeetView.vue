@@ -9,6 +9,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useRoute, RouterLink } from 'vue-router'
 import { fmtDate } from '@/lib/format'
+import { cachedFetch, prefetch } from '@/lib/idbCache'
+import { MEET_METADATA_TTL_MS } from '@/lib/cache-policy'
 import SponsorRotation from '@/components/scoreboard/SponsorRotation.vue'
 
 const route = useRoute()
@@ -77,12 +79,43 @@ async function load(id) {
   meet.value = null
   events.value = []
   try {
-    const r = await fetch(`/api/meets/${id}`)
-    const body = await r.json().catch(() => null)
-    if (!r.ok) throw new Error(body?.error || `Server returned ${r.status}`)
+    // Cached read: opens of the same meet within MEET_METADATA_TTL_MS
+    // (1h) hit IDB instantly while a network revalidation runs.
+    // Returns null on error; we fall through to the catch.
+    const result = await cachedFetch(
+      `/api/meets/${id}`,
+      { credentials: 'same-origin' },
+      {
+        maxAgeMs: MEET_METADATA_TTL_MS,
+        onUpdate: (fresh) => {
+          if (!fresh) return
+          meet.value = fresh.meet
+          events.value = Array.isArray(fresh.events) ? fresh.events : []
+          participatingOrgs.value = Array.isArray(fresh.participating_orgs)
+            ? fresh.participating_orgs : []
+        },
+      },
+    )
+    if (!result.data) {
+      // Network failed and we have no cache. Surface to UX.
+      throw new Error('Failed to load meet')
+    }
+    const body = result.data
     meet.value = body.meet
     events.value = Array.isArray(body.events) ? body.events : []
     participatingOrgs.value = Array.isArray(body.participating_orgs) ? body.participating_orgs : []
+
+    // Warm caches for the views the user is likely to navigate to
+    // next: the dive directory (used by every dive-list editor) +
+    // each live event's scoreboard. Fire-and-forget; failures are
+    // invisible to the meet page itself.
+    const prefetchUrls = ['/api/dive-directory']
+    for (const ev of events.value) {
+      if (ev.status === 'Live') {
+        prefetchUrls.push(`/api/scoreboard/${ev.id}`)
+      }
+    }
+    prefetch(prefetchUrls, { credentials: 'same-origin' })
   } catch (err) {
     error.value = err.message || 'Failed to load meet'
   } finally {
