@@ -25,6 +25,7 @@ const express = require("express");
 const QRCode  = require("qrcode");
 const { publicId } = require("../lib/public-id");
 const { recordAudit, auditFromReq } = require("../lib/audit");
+const createIdempotency = require("../lib/idempotency");
 
 // Light CSV parser. Handles "quoted, fields", "doubled""quotes"
 // inside quoted fields, and trailing/leading whitespace. Doesn't
@@ -83,6 +84,13 @@ module.exports = function createControlRoomRouter({
   // Tuple repeated 7× across the original section. Build it once
   // here so a typo can't drift one route's role gate.
   const requireMeetController = requireOrgRole(["org_admin", "meet_manager", "referee"]);
+
+  // Idempotency middleware for the meet-time HTTP writes the
+  // operator's outbox routes through. The middleware is opt-in
+  // per-route: routes that don't get the helper applied work
+  // exactly as before (legacy direct-call flow). See
+  // docs/offline-p1-design.md §2 for the contract.
+  const { httpMiddleware: idem } = createIdempotency({ pool });
 
   // -------------------------------------------------------------
   // GET /api/events/:id/roster — full dive list + diver metadata
@@ -196,7 +204,7 @@ module.exports = function createControlRoomRouter({
   // PUT /api/dive-lists/:id/order — single-row reorder. Body:
   // { display_order: int | null }. Locked once status != Upcoming.
   // -------------------------------------------------------------
-  router.put("/api/dive-lists/:id/order", requireMeetController, async (req, res) => {
+  router.put("/api/dive-lists/:id/order", requireMeetController, idem("dive_list_reorder_one"), async (req, res) => {
     const { display_order } = req.body || {};
     if (display_order != null && !Number.isInteger(display_order)) {
       return res.status(400).json({ error: "display_order must be an integer or null" });
@@ -244,7 +252,7 @@ module.exports = function createControlRoomRouter({
   // PUT /api/events/:id/dive-lists/reorder — bulk drag-and-drop.
   // Atomic against partial failures. Cap of 500 rows / request.
   // -------------------------------------------------------------
-  router.put("/api/events/:id/dive-lists/reorder", requireMeetController, async (req, res) => {
+  router.put("/api/events/:id/dive-lists/reorder", requireMeetController, idem("dive_list_reorder_bulk"), async (req, res) => {
     const eventId = req.params.id;
     const rows = Array.isArray(req.body?.rows) ? req.body.rows : null;
     if (!rows || !rows.length) {
@@ -307,7 +315,7 @@ module.exports = function createControlRoomRouter({
   // every round they're in, so "Diver Z dives 1st" stays
   // consistent across rounds.
   // -------------------------------------------------------------
-  router.post("/api/events/:id/dive-lists/randomize", requireMeetController, async (req, res) => {
+  router.post("/api/events/:id/dive-lists/randomize", requireMeetController, idem("dive_list_randomize"), async (req, res) => {
     const eventId = req.params.id;
     try {
       const ev = await pool.query(
@@ -440,7 +448,7 @@ module.exports = function createControlRoomRouter({
   // The actual per-diver attendance rows live in event_attendance
   // and are unaffected; this is just the gate signal.
   // -------------------------------------------------------------
-  router.post("/api/events/:id/check-in/confirm", requireMeetController, async (req, res) => {
+  router.post("/api/events/:id/check-in/confirm", requireMeetController, idem("check_in_confirm"), async (req, res) => {
     const eventId = req.params.id;
     try {
       const ev = await pool.query(
@@ -473,7 +481,7 @@ module.exports = function createControlRoomRouter({
   // so the operator can walk the four states again from the top.
   // Used by the "↺ Reset" affordance next to the workflow button.
   // -------------------------------------------------------------
-  router.post("/api/events/:id/dive-order/reset", requireMeetController, async (req, res) => {
+  router.post("/api/events/:id/dive-order/reset", requireMeetController, idem("dive_order_reset"), async (req, res) => {
     const eventId = req.params.id;
     try {
       const ev = await pool.query(
@@ -516,7 +524,7 @@ module.exports = function createControlRoomRouter({
   // manually) and wants to advance to sign-off. Just stamps
   // randomised_at without touching display_order.
   // -------------------------------------------------------------
-  router.post("/api/events/:id/dive-order/confirm", requireMeetController, async (req, res) => {
+  router.post("/api/events/:id/dive-order/confirm", requireMeetController, idem("dive_order_confirm"), async (req, res) => {
     const eventId = req.params.id;
     try {
       const ev = await pool.query(
@@ -1166,7 +1174,7 @@ module.exports = function createControlRoomRouter({
   // { withdrawn: bool }. Standings still attribute prior dives;
   // the active queue excludes them from upcoming rounds.
   // -------------------------------------------------------------
-  router.put("/api/dive-lists/:id/withdraw", requireMeetController, async (req, res) => {
+  router.put("/api/dive-lists/:id/withdraw", requireMeetController, idem("dive_list_withdraw"), async (req, res) => {
     const { withdrawn } = req.body || {};
     try {
       const r = await pool.query(
@@ -1241,7 +1249,7 @@ module.exports = function createControlRoomRouter({
     }
   });
 
-  router.put("/api/events/:id/attendance/:competitorId", requireMeetController, async (req, res) => {
+  router.put("/api/events/:id/attendance/:competitorId", requireMeetController, idem("attendance_set"), async (req, res) => {
     try {
       if (!(await ensureEventOrgGate(req, res, "id"))) return;
       const { status } = req.body || {};
@@ -1279,7 +1287,7 @@ module.exports = function createControlRoomRouter({
   // diver shows up but didn't pre-submit a list. Single-row
   // version of the CSV import.
   // -------------------------------------------------------------
-  router.post("/api/events/:id/roster", requireMeetEditor, async (req, res) => {
+  router.post("/api/events/:id/roster", requireMeetEditor, idem("roster_late_add"), async (req, res) => {
     const { competitor_id, dive_id, round_number, partner_id, team_id } = req.body || {};
     if (!competitor_id || !dive_id || !round_number) {
       return res.status(400).json({

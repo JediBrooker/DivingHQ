@@ -20,6 +20,7 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const { recordAudit, auditFromReq } = require("../../lib/audit");
+const createIdempotency = require("../../lib/idempotency");
 const { getEventReadiness } = require("../../lib/workflow");
 const {
   loadH2hPairResults,
@@ -106,6 +107,14 @@ module.exports = function createEventsRouter({
     throw new Error("createEventsRouter requires { pool, JWT_SECRET, … }");
   }
   const router = express.Router();
+
+  // Idempotency middleware (lib/idempotency.js). Applied to the
+  // status-flip route below since that's a meet-time write the
+  // outbox covers. Other writes in this router are pre-meet
+  // setup (event create / edit / delete / advance / seed) and
+  // stay on the legacy direct path — see DEC-01 and the
+  // "online-only" classification in docs/offline-inventory.md.
+  const { httpMiddleware: idem } = createIdempotency({ pool });
 
   async function notifyEventLive(event) {
     if (!push || typeof push.sendNotification !== "function" || !event?.id) return;
@@ -778,7 +787,7 @@ module.exports = function createEventsRouter({
   // Fires notifications on the meaningful transitions and frees
   // the in-memory state when an event finalises.
   // -------------------------------------------------------------
-  router.put("/api/events/:id/status", requireEventManager(), async (req, res) => {
+  router.put("/api/events/:id/status", requireEventManager(), idem("event_status_flip"), async (req, res) => {
     const { status } = req.body || {};
     const validStatuses = ["Upcoming", "Live", "Completed"];
     if (!validStatuses.includes(status)) {

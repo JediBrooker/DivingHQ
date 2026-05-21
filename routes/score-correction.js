@@ -23,6 +23,7 @@
 //   app.use(require('./routes/score-correction')({ … }))
 
 const express = require("express");
+const createIdempotency = require("../lib/idempotency");
 
 module.exports = function createScoreCorrectionRouter({
   pool,
@@ -34,9 +35,19 @@ module.exports = function createScoreCorrectionRouter({
   if (!pool || !io) throw new Error("createScoreCorrectionRouter requires { pool, io, … }");
   const router = express.Router();
 
+  // Idempotency for the score-correction write. Outbox clients
+  // include an X-Idempotency-Key (or body field) so a retry after
+  // a network blip doesn't double-apply the correction. The
+  // middleware also enforces the same payload on retry — a
+  // second correction with the same key but different new_score
+  // is a client bug (422). See lib/idempotency.js for the
+  // owner-check + payload-hash gates.
+  const { httpMiddleware } = createIdempotency({ pool });
+
   router.put(
     "/api/scores/:id",
     requireOrgRole(["org_admin", "meet_manager", "referee"]),
+    httpMiddleware("score_correction"),
     async (req, res) => {
       const { score, reason } = req.body || {};
       const newScore = Number(score);
