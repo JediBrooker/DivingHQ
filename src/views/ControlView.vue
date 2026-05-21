@@ -4,6 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
+import { useHttpOutbox } from '@/composables/useHttpOutbox'
 import { idbInvalidate } from '@/lib/idbCache'
 import { DIVE_DIRECTORY_TTL_MS, SCOREBOARD_LIVE_TTL_MS } from '@/lib/cache-policy'
 import { diveDescription } from '@/composables/useDiveLabel'
@@ -33,6 +34,11 @@ import {
 const { t } = useI18n()
 const auth = useAuthStore()
 const socket = useSocket()
+// HTTP outbox bridge — queueAction(...) for outbox-eligible
+// writes (score correction, withdraw). When the feature flag is
+// off, queueAction falls through to a direct fetch so the legacy
+// behaviour is preserved.
+const { queueAction } = useHttpOutbox()
 const route = useRoute()
 
 // Operator broadcast mode: /control?broadcast=1 hides the
@@ -480,11 +486,18 @@ async function submitCorrection() {
   }
   correctBusy.value = true
   try {
-    await auth.apiFetch(`/api/scores/${correctTarget.value.score_ids[correctJudgeIdx.value]}`, {
+    // Route through the outbox so a network blip during the
+    // correction doesn't lose the operator's edit. Server-side
+    // idempotency (P4-2) makes a retry safe; the new schema
+    // columns (P4-1 + migration 054) record both clocks.
+    await queueAction({
       method: 'PUT',
-      body: JSON.stringify({ score: newVal, reason: correctReason.value || null }),
+      url: `/api/scores/${correctTarget.value.score_ids[correctJudgeIdx.value]}`,
+      body: { score: newVal, reason: correctReason.value || null },
+      actionType: 'score_correction',
     })
-    // Update locally so the history pane reflects the change
+    // Optimistic local update — the audit row + broadcast will
+    // catch up when drain() succeeds.
     correctTarget.value.scores[correctJudgeIdx.value] = newVal
     correctTarget.value.total = correctTarget.value.scores
       .reduce((a, b) => a + b, 0).toFixed(1)
@@ -1613,8 +1626,11 @@ async function withdrawRosterRow(idx) {
   // endpoint with the opposite withdrawn flag, so a misclick
   // is one tap away from being recovered without an admin.
   try {
-    await auth.apiFetch(`/api/dive-lists/${row.dive_list_id}/withdraw`, {
-      method: 'PUT', body: JSON.stringify({ withdrawn: willWithdraw }),
+    await queueAction({
+      method: 'PUT',
+      url: `/api/dive-lists/${row.dive_list_id}/withdraw`,
+      body: { withdrawn: willWithdraw },
+      actionType: 'dive_list_withdraw',
     })
     row.withdrawn_at = willWithdraw ? new Date().toISOString() : null
     // If the active diver got withdrawn, advance past them.
@@ -1627,8 +1643,13 @@ async function withdrawRosterRow(idx) {
         ? `Withdrew ${row.full_name} from round ${row.round_number}`
         : `Reinstated ${row.full_name} in round ${row.round_number}`,
       onUndo: async () => {
-        await auth.apiFetch(`/api/dive-lists/${row.dive_list_id}/withdraw`, {
-          method: 'PUT', body: JSON.stringify({ withdrawn: !willWithdraw }),
+        // Undo path goes through the outbox too — same retry +
+        // idempotency posture as the forward op.
+        await queueAction({
+          method: 'PUT',
+          url: `/api/dive-lists/${row.dive_list_id}/withdraw`,
+          body: { withdrawn: !willWithdraw },
+          actionType: 'dive_list_withdraw',
         })
         row.withdrawn_at = !willWithdraw ? new Date().toISOString() : null
       },
