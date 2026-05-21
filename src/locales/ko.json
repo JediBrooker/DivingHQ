@@ -536,6 +536,28 @@
       "signoff": "심판이 승인한 이벤트의 최종 점수입니다. 서명 코드(컨트롤 룸 → 서명)는 결과를 잠그어 위키/요약 페이지에서 게시할 수 있게 합니다."
     }
   },
+  "sync_badge": {
+    "pending": "Pending",
+    "pending_full": "Queued — will send when reconnected",
+    "inflight": "Sending",
+    "inflight_full": "Sending to the server right now",
+    "synced": "Synced",
+    "synced_full": "Server received and confirmed",
+    "failed": "Failed",
+    "failed_full": "Could not send after several retries — tap to retry",
+    "conflict": "Conflict",
+    "conflict_full": "Server rejected — a meet manager needs to review"
+  },
+  "offline_banner": {
+    "offline_since": "Offline for {duration}",
+    "online_with_pending": "Syncing",
+    "queued_one": "1 action queued",
+    "queued_many": "{n} actions queued",
+    "failed_one": "1 failed",
+    "failed_many": "{n} failed",
+    "conflict_one": "1 conflict pending review",
+    "conflict_many": "{n} conflicts pending review"
+  },
   "inbox": {
     "title": "받은 편지함",
     "loading": "메시지를 불러오는 중…",

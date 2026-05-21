@@ -6,7 +6,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { showInfo } from '@/composables/useNotify'
-import { createOutbox, createIdbBackend } from '@/lib/outbox'
+import OfflineBanner from '@/components/OfflineBanner.vue'
+import SyncStatusBadge from '@/components/SyncStatusBadge.vue'
+import { useOutbox } from '@/composables/useOutbox'
 
 // Feature flag (P1 of the offline-resilience work; see
 // docs/offline-p1-design.md). Build-time constant via Vite's
@@ -20,15 +22,9 @@ import { createOutbox, createIdbBackend } from '@/lib/outbox'
 // idempotency retention) and replay on reconnect.
 const OUTBOX_ENABLED = import.meta.env.VITE_OFFLINE_OUTBOX_ENABLED === '1'
 
-// Per-user fingerprint so user A's queued entries don't drain
-// after user B signs in on the same device. Same scheme idbCache
-// uses (see src/lib/idbCache.js for the rationale).
-function fingerprintFromToken(token) {
-  if (!token) return 'anon'
-  const parts = String(token).split('.')
-  if (parts.length < 2) return 'anon'
-  return parts[1].slice(0, 24)
-}
+// User fingerprinting lives in src/composables/useOutbox.js; the
+// composable handles outbox creation + identity scoping. Nothing
+// in JudgeView needs to know how the fingerprint is computed.
 
 const { t } = useI18n()
 
@@ -92,30 +88,16 @@ const judgeNumber = ref(null)
 // In outbox mode this stays null and `pendingCount` drives the UI.
 const pendingScore = ref(null)
 
-// Outbox singleton for this view. Lazy-created on first push/drain
-// so a JudgeView that mounts before auth resolves still works.
-// Pending entries persist in IDB across mounts + navigations.
-let outboxInstance = null
-function getOutbox() {
-  if (!OUTBOX_ENABLED) return null
-  if (!outboxInstance) {
-    outboxInstance = createOutbox({
-      backend: createIdbBackend(),
-      userFingerprint: fingerprintFromToken(auth.token),
-    })
-  }
-  return outboxInstance
-}
+// Outbox singleton lives in src/composables/useOutbox.js. The
+// composable returns reactive counts + the underlying outbox
+// instance, so push()/drain() callers go through getOutbox() and
+// UI components (OfflineBanner, SyncStatusBadge) stay declarative.
+const outboxState = useOutbox()
+const outboxInstance = outboxState.outbox
+const pendingCount = outboxState.pendingCount
+const refreshPendingCount = outboxState.refresh
 
-// Reactive pending-count for the UI banner. Refreshed on every
-// outbox state change (push, drain success, conflict, retry).
-const pendingCount = ref(0)
-async function refreshPendingCount() {
-  const ob = getOutbox()
-  if (!ob) return
-  const pending = await ob.list({ status: 'pending' })
-  pendingCount.value = pending.length
-}
+function getOutbox() { return outboxInstance }
 
 // Per-entry send function for outbox.drain. Uses socket.io's
 // ack callback (3rd argument to socket.emit) so the drain protocol
@@ -258,15 +240,10 @@ onMounted(() => {
   acquireWakeLock()
   document.addEventListener('visibilitychange', onVisibilityChange)
 
-  // Outbox: subscribe to state changes for the pending-count UI,
-  // and try a drain on mount in case we connected before this
-  // view loaded.
-  const ob = getOutbox()
-  if (ob) {
-    ob.on('change', refreshPendingCount)
-    refreshPendingCount()
-    if (socket.connected) drainOutbox()
-  }
+  // Outbox: useOutbox() already wires the 'change' listener +
+  // initial refresh. We just kick a drain in case we connected
+  // before this view mounted.
+  if (OUTBOX_ENABLED && socket.connected) drainOutbox()
 })
 
 onBeforeUnmount(() => {
@@ -486,10 +463,16 @@ const submitLabel = computed(() => {
 
 <template>
   <div class="judge-layout">
-    <!-- Connection banner — flips on whenever the socket is
-         disconnected. Critical for poolside wifi reliability:
-         judges need to know if a tap actually sent. -->
-    <div v-if="!socket.isConnected.value" class="conn-banner">
+    <!-- Offline / pending-sync banner. Replaces the old
+         conn-banner (which only showed when the socket was
+         dropped) with a richer signal: also visible when there
+         are pending / failed / conflict entries in the outbox
+         even while online (drain in flight, etc.). Behind the
+         OUTBOX_ENABLED feature flag — falls back to the
+         legacy connection banner when the flag is off so
+         today's pre-outbox behaviour stays identical. -->
+    <OfflineBanner v-if="OUTBOX_ENABLED" />
+    <div v-else-if="!socket.isConnected.value" class="conn-banner">
       <span class="conn-dot"></span>
       {{ $t('judge.panel_offline') }}
     </div>

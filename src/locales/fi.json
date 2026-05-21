@@ -547,6 +547,28 @@
       "signoff": "Erotuomarin hyväksymä lopullinen tapahtuman pistemäärä. Hyväksyntäkoodit (Kontrollihuone → Sign-off) lukitsevat tuloksen, jotta wiki-/yhteenvetosivut voivat julkaista sen."
     }
   },
+  "sync_badge": {
+    "pending": "Pending",
+    "pending_full": "Queued — will send when reconnected",
+    "inflight": "Sending",
+    "inflight_full": "Sending to the server right now",
+    "synced": "Synced",
+    "synced_full": "Server received and confirmed",
+    "failed": "Failed",
+    "failed_full": "Could not send after several retries — tap to retry",
+    "conflict": "Conflict",
+    "conflict_full": "Server rejected — a meet manager needs to review"
+  },
+  "offline_banner": {
+    "offline_since": "Offline for {duration}",
+    "online_with_pending": "Syncing",
+    "queued_one": "1 action queued",
+    "queued_many": "{n} actions queued",
+    "failed_one": "1 failed",
+    "failed_many": "{n} failed",
+    "conflict_one": "1 conflict pending review",
+    "conflict_many": "{n} conflicts pending review"
+  },
   "inbox": {
     "title": "Saapuneet",
     "loading": "Ladataan viestejä…",
