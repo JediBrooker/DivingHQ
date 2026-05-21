@@ -351,12 +351,29 @@ module.exports = function attachSocket({
     // and the audit row records both clocks (migration 054). See
     // docs/offline-p1-design.md §2 for the full design.
     // -----------------------------------------------------------
-    socket.on("submit_score", async (data) => {
+    socket.on("submit_score", async (data, ack) => {
+      // Socket.IO ack callback (3rd argument). When the client
+      // uses the outbox drain protocol, it provides a callback to
+      // correlate "my submit" with "the server confirmed mine" —
+      // tuple-matching the room broadcast would be racy when
+      // multiple devices submit for the same diver. Legacy clients
+      // (no outbox) pass no callback; safeAck is a no-op for them.
+      const safeAck = (response) => {
+        if (typeof ack === "function") {
+          try { ack(response); } catch (err) {
+            console.error("[submit_score] ack failed:", err.message);
+          }
+        }
+      };
+
       // Tiny helper so the metric increment doesn't get
-      // forgotten alongside any of the eight rejection paths.
+      // forgotten alongside any of the eight rejection paths. The
+      // helper also calls safeAck so a single rejection path
+      // delivers both the broadcast event and the per-submit ack.
       const reject = (reason, extra) => {
         metrics?.scoresRejected.inc({ reason });
         socket.emit("score_rejected", { reason, ...(extra || {}) });
+        safeAck({ ok: false, error: reason, ...(extra || {}) });
       };
 
       if (!socket.userId) {
@@ -414,6 +431,7 @@ module.exports = function attachSocket({
           // The original room broadcast already fired on the first
           // submission; replaying it would double-broadcast.
           socket.emit("score_received", cached.response_body);
+          safeAck({ ok: true, response: cached.response_body, replay: true });
           return;
         }
       }
@@ -520,6 +538,10 @@ module.exports = function attachSocket({
         judge_number: judgeNumber,
       };
       io.to(`event:${data.event_id}`).emit("score_received", scoreReceivedBody);
+      // Per-submit ack to the originating socket. The outbox
+      // drain protocol resolves its pending entry on this ack;
+      // legacy clients (no outbox) ignore it.
+      safeAck({ ok: true, response: scoreReceivedBody });
 
       // Cache the response for outbox retries. Fire-and-forget;
       // failures log + continue. The judge's UI doesn't wait for

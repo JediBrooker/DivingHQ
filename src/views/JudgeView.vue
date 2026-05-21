@@ -6,6 +6,29 @@ import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { showInfo } from '@/composables/useNotify'
+import { createOutbox, createIdbBackend } from '@/lib/outbox'
+
+// Feature flag (P1 of the offline-resilience work; see
+// docs/offline-p1-design.md). Build-time constant via Vite's
+// import.meta.env. Default off in production .env; on for CI in
+// .github/workflows/ci.yml + canary federations until proven.
+//
+// When OFF, this view behaves exactly as it did pre-outbox: one
+// in-memory pendingScore slot, drained on socket reconnect.
+// When ON, every submit routes through src/lib/outbox.js —
+// scores survive a tab close + indefinite outage (up to the 72h
+// idempotency retention) and replay on reconnect.
+const OUTBOX_ENABLED = import.meta.env.VITE_OFFLINE_OUTBOX_ENABLED === '1'
+
+// Per-user fingerprint so user A's queued entries don't drain
+// after user B signs in on the same device. Same scheme idbCache
+// uses (see src/lib/idbCache.js for the rationale).
+function fingerprintFromToken(token) {
+  if (!token) return 'anon'
+  const parts = String(token).split('.')
+  if (parts.length < 2) return 'anon'
+  return parts[1].slice(0, 24)
+}
 
 const { t } = useI18n()
 
@@ -65,7 +88,76 @@ const judgeLabel = ref(user?.full_name || 'Judge')
 // composable's + this view's) would race.
 const submitted = ref(false)
 const judgeNumber = ref(null)
+// Legacy single-slot pending (active when OUTBOX_ENABLED is off).
+// In outbox mode this stays null and `pendingCount` drives the UI.
 const pendingScore = ref(null)
+
+// Outbox singleton for this view. Lazy-created on first push/drain
+// so a JudgeView that mounts before auth resolves still works.
+// Pending entries persist in IDB across mounts + navigations.
+let outboxInstance = null
+function getOutbox() {
+  if (!OUTBOX_ENABLED) return null
+  if (!outboxInstance) {
+    outboxInstance = createOutbox({
+      backend: createIdbBackend(),
+      userFingerprint: fingerprintFromToken(auth.token),
+    })
+  }
+  return outboxInstance
+}
+
+// Reactive pending-count for the UI banner. Refreshed on every
+// outbox state change (push, drain success, conflict, retry).
+const pendingCount = ref(0)
+async function refreshPendingCount() {
+  const ob = getOutbox()
+  if (!ob) return
+  const pending = await ob.list({ status: 'pending' })
+  pendingCount.value = pending.length
+}
+
+// Per-entry send function for outbox.drain. Uses socket.io's
+// ack callback (3rd argument to socket.emit) so the drain protocol
+// has reliable per-submit correlation instead of tuple-matching
+// the room broadcast (which is racy when multiple judges submit
+// for the same diver). Server support: routes/socket.js's
+// submit_score handler calls ack() on success/failure paths.
+function sendViaSocket(entry) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), 10000)
+    socket.emit('submit_score', {
+      ...entry.payload,
+      idempotency_key: entry.idempotency_key,
+      actor_local_time: entry.actor_local_time,
+    }, (response) => {
+      clearTimeout(timer)
+      if (response?.ok) {
+        resolve({ ok: true, response: response.response })
+      } else if (response?.conflict) {
+        // Server flagged a conflict (P4 territory — won't fire in
+        // P1 because OFFLINE_CONFLICT_RESOLUTION defaults to auto).
+        // The outbox marks the entry as 'conflict' and the
+        // operator's review tray resolves it.
+        const err = new Error(response.error || 'conflict')
+        err.kind = 'conflict'
+        err.conflict = response.conflict
+        reject(err)
+      } else {
+        // Transient / validation failure. Outbox retries with
+        // exponential backoff up to 5 attempts then marks failed.
+        reject(new Error(response?.error || 'rejected'))
+      }
+    })
+  })
+}
+
+async function drainOutbox() {
+  const ob = getOutbox()
+  if (!ob) return
+  await ob.drain({ send: sendViaSocket })
+  refreshPendingCount()
+}
 // Panel of every judge's score for the current dive — keyed by
 // judge_number, populated as score_received broadcasts arrive.
 // Lets THIS judge see the full panel (e.g. their own 8.5 next
@@ -146,7 +238,12 @@ function joinEventRoom() {
 }
 
 socket.on('connect', () => {
-  if (pendingScore.value) {
+  if (OUTBOX_ENABLED) {
+    // Drain any entries queued while offline (this session or a
+    // prior session that closed before the drain completed).
+    drainOutbox()
+  } else if (pendingScore.value) {
+    // Legacy single-slot pending.
     socket.emit('submit_score', pendingScore.value)
     pendingScore.value = null
   }
@@ -160,6 +257,16 @@ onMounted(() => {
   if (socket.connected) joinEventRoom()
   acquireWakeLock()
   document.addEventListener('visibilitychange', onVisibilityChange)
+
+  // Outbox: subscribe to state changes for the pending-count UI,
+  // and try a drain on mount in case we connected before this
+  // view loaded.
+  const ob = getOutbox()
+  if (ob) {
+    ob.on('change', refreshPendingCount)
+    refreshPendingCount()
+    if (socket.connected) drainOutbox()
+  }
 })
 
 onBeforeUnmount(() => {
@@ -258,7 +365,7 @@ function resetScore() {
   submitted.value = false
 }
 
-function submitScore() {
+async function submitScore() {
   if (!activeDiver.value) {
     showInfo('Waiting for an active diver — please wait for the control room to set the current diver.')
     return
@@ -273,16 +380,51 @@ function submitScore() {
     judge_number: activeDiver.value.judge_number || null,
     score: finalScore,
   }
-  if (socket.connected) {
+
+  // Two short pulses confirms the score landed without the
+  // judge needing to look back at the locked submit button.
+  // Fires the same in both outbox and legacy paths because the
+  // judge's intent is captured the moment they tap.
+  buzz([20, 60, 30])
+  submitted.value = true
+
+  // If the judge had flagged the referee before submitting,
+  // the submission IS the rectification — auto-clear the
+  // signal so the Control Room's auto-advance can resume.
+  // Signal-clear is transient + idempotent; we still send it
+  // direct (not via outbox) since an offline signal-clear has
+  // no meaning to a server that never saw the signal.
+  const clearSignal = signaled.value
+  if (clearSignal) signaled.value = false
+
+  if (OUTBOX_ENABLED) {
+    // Queue the score for delivery. push() returns immediately
+    // (IDB write happens in the background); drain() fires only
+    // if we're online.
+    try {
+      await getOutbox().push('submit_score', payload, { actorLocalTime: new Date() })
+      refreshPendingCount()
+      if (clearSignal && socket.connected) {
+        socket.emit('judge_signal', {
+          event_id:      activeDiver.value.event_id,
+          competitor_id: activeDiver.value.competitor_id,
+          round_number:  activeDiver.value.round_number,
+          judge_id:      user?.id,
+          judge_number:  activeDiver.value.judge_number || null,
+          signaled:      false,
+        })
+      }
+      if (socket.connected) drainOutbox()
+    } catch (err) {
+      // Push failed (oversized payload, IDB unavailable). Surface
+      // to the user; submitted=false so they can retry.
+      submitted.value = false
+      showInfo(`Could not queue score: ${err.message}`)
+    }
+  } else if (socket.connected) {
+    // Legacy online path.
     socket.emit('submit_score', payload)
-    // Two short pulses confirms the score landed without the
-    // judge needing to look back at the locked submit button.
-    buzz([20, 60, 30])
-    // If the judge had flagged the referee before submitting,
-    // the submission IS the rectification — auto-clear the
-    // signal so the Control Room's auto-advance can resume.
-    if (signaled.value) {
-      signaled.value = false
+    if (clearSignal) {
       socket.emit('judge_signal', {
         event_id:      activeDiver.value.event_id,
         competitor_id: activeDiver.value.competitor_id,
@@ -293,9 +435,9 @@ function submitScore() {
       })
     }
   } else {
+    // Legacy offline path — single-slot in-memory.
     pendingScore.value = payload
   }
-  submitted.value = true
 }
 
 // Toggle the "I need the referee's attention" signal. Emits a
@@ -322,6 +464,14 @@ function toggleRefereeSignal() {
 }
 
 const submitLabel = computed(() => {
+  // Outbox mode: surface the queue depth so the judge knows their
+  // taps are landing even when the socket is bouncing.
+  if (OUTBOX_ENABLED && pendingCount.value > 0) {
+    return pendingCount.value === 1
+      ? '⏳ 1 pending — will send when reconnected'
+      : `⏳ ${pendingCount.value} pending — will send when reconnected`
+  }
+  // Legacy single-slot pending state.
   if (pendingScore.value) return '⏳ Reconnecting — will send automatically'
   // Signaled trumps submitted: the judge has flagged a need to
   // correct, so prompt them to enter + submit a fresh score.
