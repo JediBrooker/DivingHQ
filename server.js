@@ -1019,6 +1019,19 @@ async function bootChecks() {
   } catch (err) {
     logger.warn({ err: err.message }, "live-state rehydrate failed");
   }
+
+  // Start the idempotency-keys TTL sweeper (migration 054).
+  // Background interval inside this Node process; deletes rows
+  // older than 72 hours every hour. Safe to call before any
+  // route uses idempotency — if the table doesn't exist yet
+  // the first sweep logs an error and the next deploy applies
+  // the migration. See docs/offline-p1-design.md §2 for the
+  // retention rationale.
+  try {
+    require("./lib/idempotency-sweeper").start({ pool });
+  } catch (err) {
+    logger.warn({ err: err.message }, "idempotency-sweeper start failed");
+  }
   try {
     const v = await pool.query("SELECT version, applied_at FROM schema_meta WHERE id = 1");
     if (v.rows[0]) {
