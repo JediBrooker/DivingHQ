@@ -27,6 +27,7 @@
 // single role-holder can't spam meet_hold cycles.
 
 const jwt = require("jsonwebtoken");
+const createIdempotency = require("../lib/idempotency");
 
 module.exports = function attachSocket({
   io,
@@ -71,6 +72,12 @@ module.exports = function attachSocket({
   // Avoid an unused-var lint warning while still naming the
   // dependency at the call site for clarity.
   void socketRequireRole;
+
+  // Idempotency layer (migration 054 + lib/idempotency.js).
+  // Socket handlers that accept writes call `idem.socketCheck`
+  // on the incoming payload's `idempotency_key` and replay the
+  // cached response on hit. See docs/offline-p1-design.md §2.
+  const idem = createIdempotency({ pool });
 
   // -----------------------------------------------------------
   // Handshake — soft JWT verify
@@ -336,6 +343,13 @@ module.exports = function attachSocket({
     // comes from the DB row, never from the wire. dive_id
     // resolved server-side from competitor_dive_lists so a stale
     // client can't smuggle in the wrong dive's DD.
+    //
+    // Offline-resilience: clients using src/lib/outbox.js include
+    // an `idempotency_key` (UUID v4) + `actor_local_time` (ISO
+    // string of the judge's tap moment). The idempotency layer
+    // caches the response so an outbox retry doesn't double-apply
+    // and the audit row records both clocks (migration 054). See
+    // docs/offline-p1-design.md §2 for the full design.
     // -----------------------------------------------------------
     socket.on("submit_score", async (data) => {
       // Tiny helper so the metric increment doesn't get
@@ -377,6 +391,33 @@ module.exports = function attachSocket({
       }
       const score = Number(data.score);
 
+      // Idempotency check. When the client sends an idempotency_key
+      // (outbox mode), look up any cached response BEFORE doing DB
+      // work. Hash excludes the key itself + actor_local_time so a
+      // retry with the same semantic payload but different wall-clock
+      // claim still matches the cache.
+      const idempotencyKey = data.idempotency_key;
+      const actorLocalTime = data.actor_local_time || null;
+      let payloadHash = null;
+      if (idempotencyKey) {
+        const payloadForHash = { ...data };
+        delete payloadForHash.idempotency_key;
+        delete payloadForHash.actor_local_time;
+        payloadHash = idem.hashPayload(payloadForHash);
+        const cached = await idem.socketCheck(idempotencyKey, judgeId, payloadHash);
+        if (cached?.error) {
+          reject(cached.error, { status: cached.status });
+          return;
+        }
+        if (cached) {
+          // Cache hit — replay the success ack to THIS socket only.
+          // The original room broadcast already fired on the first
+          // submission; replaying it would double-broadcast.
+          socket.emit("score_received", cached.response_body);
+          return;
+        }
+      }
+
       const client = await pool.connect();
       let scoreId, judgeNumber, oldScore = null, isInsert = true;
       try {
@@ -410,31 +451,41 @@ module.exports = function attachSocket({
         isInsert = !existing;
         oldScore = existing ? Number(existing.score) : null;
 
+        // actor_local_time captures the judge's tap moment (when
+        // the client outbox stamped the entry). Falls back to NULL
+        // for legacy clients that don't use the outbox.
         const upsert = await client.query(
-          `INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score)
-           VALUES ($1, $2, $3, $4, $5, $6)
+          `INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score, actor_local_time)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
            ON CONFLICT (event_id, competitor_id, round_number, judge_id)
-           DO UPDATE SET score = EXCLUDED.score, status = 'active'
+           DO UPDATE SET score = EXCLUDED.score, status = 'active',
+                         actor_local_time = EXCLUDED.actor_local_time
            RETURNING id`,
           [
             data.event_id, data.competitor_id, judgeId,
-            resolvedDiveId, round, score,
+            resolvedDiveId, round, score, actorLocalTime,
           ],
         );
         scoreId = upsert.rows[0].id;
 
         if (isInsert || oldScore !== score) {
+          // Audit row records both clocks (migration 054). For
+          // legacy online-only clients actor_local_time is NULL and
+          // server_committed_at is now() — those rows look like the
+          // pre-outbox world. For outbox clients both are populated.
           await client.query(
             `INSERT INTO score_audit_log
                (score_id, event_id, competitor_id, judge_id, round_number,
-                action, old_score, new_score, actor_user_id, ip_address, user_agent)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+                action, old_score, new_score, actor_user_id, ip_address, user_agent,
+                actor_local_time, server_committed_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now())`,
             [
               scoreId, data.event_id, data.competitor_id, judgeId, round,
               isInsert ? "insert" : "update",
               oldScore, score,
               socket.userId, clientIp(socket),
               socket.handshake.headers["user-agent"] || null,
+              actorLocalTime,
             ],
           );
         }
@@ -456,12 +507,30 @@ module.exports = function attachSocket({
       // The TTL would otherwise let viewers stay 5s stale.
       scoreboardCache?.invalidate(data.event_id);
 
-      io.to(`event:${data.event_id}`).emit("score_received", {
+      // Build the score_received payload once so we can both
+      // broadcast it AND cache it in idempotency_keys. Caching the
+      // exact payload (not just "ok: true") means a replay can
+      // tell the judge's UI the same details the original got.
+      const scoreReceivedBody = {
         ...data,
-        dive_id: undefined,         // don't leak whatever the client sent
+        idempotency_key: undefined,  // never leak it back
+        actor_local_time: undefined,
+        dive_id: undefined,           // don't leak whatever the client sent
         judge_id: judgeId,
         judge_number: judgeNumber,
-      });
+      };
+      io.to(`event:${data.event_id}`).emit("score_received", scoreReceivedBody);
+
+      // Cache the response for outbox retries. Fire-and-forget;
+      // failures log + continue. The judge's UI doesn't wait for
+      // this to complete — the broadcast above is the user-facing
+      // ack.
+      if (idempotencyKey && payloadHash) {
+        idem.socketStore(
+          idempotencyKey, judgeId, "submit_score",
+          payloadHash, 200, scoreReceivedBody,
+        );
+      }
 
       // Venue bridge fan-out — refresh the scoreboard_state for
       // hardware boards every time a judge submits.
