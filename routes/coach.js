@@ -666,7 +666,7 @@ module.exports = function createCoachRouter({
     verifyToken,
     async (req, res) => {
       const { event_id, diver_id } = req.params;
-      const { dives, partner_id } = req.body || {};
+      const { dives, partner_id, actor_local_time } = req.body || {};
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
@@ -675,7 +675,13 @@ module.exports = function createCoachRouter({
         // link gate can be scoped to the right federation. Otherwise
         // a coach with a link in Org A could act on the diver in Org
         // B's events (cross-tenant leak).
-        const gate = await loadEventForEntries(client, event_id);
+        // actor_local_time enables the late-arrival gate (DEC-04):
+        // when the coach taps submit before the entry deadline but
+        // the request only arrives after, the gate flags the rows
+        // for referee review instead of returning 409.
+        const gate = await loadEventForEntries(client, event_id, {
+          actorLocalTime: actor_local_time,
+        });
         if (gate.error) {
           await client.query("ROLLBACK");
           return res.status(gate.status).json({ error: gate.error });
@@ -703,6 +709,8 @@ module.exports = function createCoachRouter({
           competitorOrgId: diver.org_id,
           partnerId:       partner_id,
           dives,
+          actorLocalTime:  actor_local_time,
+          lateReview:      gate.lateReview,
         });
 
         // Audit: a coach acted on a diver's list. Operator visibility.
@@ -721,13 +729,20 @@ module.exports = function createCoachRouter({
             diver_id,
             dive_count: Array.isArray(dives) ? dives.length : 0,
             partner_id: partner_id || null,
+            actor_local_time: actor_local_time || null,
+            late_review: gate.lateReview || false,
           },
         });
 
         await client.query("COMMIT");
+        // late_review=true tells the coach UI to surface the
+        // "flagged for referee review" toast.
         res.json({
-          message: `Dive list submitted for ${diver.full_name}`,
+          message: gate.lateReview
+            ? `Dive list submitted for ${diver.full_name} — flagged for referee review (arrived after the entry deadline; the meet manager will confirm or deny)`
+            : `Dive list submitted for ${diver.full_name}`,
           diver_id,
+          late_review: gate.lateReview,
         });
       } catch (err) {
         await client.query("ROLLBACK");

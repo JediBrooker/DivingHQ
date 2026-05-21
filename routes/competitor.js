@@ -36,15 +36,18 @@ module.exports = function createCompetitorRouter({
     bulkWriteLimiter,
     requireOrgRole(["diver"]),
     async (req, res) => {
-      const { event_id, dives, partner_id } = req.body || {};
+      const { event_id, dives, partner_id, actor_local_time } = req.body || {};
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
 
         // Confirm the event exists and is still accepting entries.
-        // Without this gate a diver could keep editing post-start
-        // or after the manager closed registration.
-        const gate = await loadEventForEntries(client, event_id);
+        // Passes actor_local_time so the gate can return a
+        // late_review verdict instead of 409 when the outbox
+        // client claims pre-deadline submission (DEC-04).
+        const gate = await loadEventForEntries(client, event_id, {
+          actorLocalTime: actor_local_time,
+        });
         if (gate.error) {
           await client.query("ROLLBACK");
           return res.status(gate.status).json({ error: gate.error });
@@ -66,6 +69,8 @@ module.exports = function createCompetitorRouter({
           partnerId:       partner_id,
           dives,
           push,
+          actorLocalTime: actor_local_time,
+          lateReview:     gate.lateReview,
         });
 
         await client.query("COMMIT");
@@ -76,15 +81,25 @@ module.exports = function createCompetitorRouter({
           return res.json({
             message: "Pairing request sent — waiting for partner",
             pairing: result.pairing,
+            late_review: gate.lateReview,
           });
         }
         if (result?.pairing?.status === "auto_confirmed") {
           return res.json({
             message: "Synchro pairing confirmed",
             pairing: result.pairing,
+            late_review: gate.lateReview,
           });
         }
-        res.json({ message: "Dive list submitted" });
+        // late_review=true on the response tells the SPA to show a
+        // "submitted, but flagged for referee review" toast instead
+        // of the plain success one.
+        res.json({
+          message: gate.lateReview
+            ? "Dive list submitted — flagged for referee review (arrived after the entry deadline; the meet manager will confirm or deny)"
+            : "Dive list submitted",
+          late_review: gate.lateReview,
+        });
       } catch (err) {
         await client.query("ROLLBACK");
         if (err.status) {
