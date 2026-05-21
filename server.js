@@ -802,6 +802,16 @@ app.use(require("./routes/audit")({
 app.use(require("./routes/templates")({ pool, verifyToken }));
 
 // =============================================================
+// CONFLICT RESOLUTION (P1 stub)
+// =============================================================
+// Companion endpoint to the conflict_pending socket event
+// (routes/socket.js submit_score). P1 stub returns 501; P4
+// wires the actual write + audit-log path. See
+// docs/offline-p1-design.md §4.
+// =============================================================
+app.use(require("./routes/conflicts")({ pool, requireOrgRole }));
+
+// =============================================================
 // COMPETITOR ROUTES
 // [SECTION: ROUTES — COMPETITOR]
 // /api/competitor/submit-list extracted into routes/competitor.js.
