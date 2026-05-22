@@ -2565,14 +2565,14 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text);
-  /* Always-visible chrome at rest. Previously the border was
-     transparent + filled in on hover; that made the dropdown
-     look like static text until the operator hovered over it.
-     With a real meet running there's no time to discover-by-
-     hover — the field needs to read as a control from the
-     moment the page loads. */
-  background: var(--bg-3);
-  border: 1px solid var(--border-2);
+  /* Always-on cyan chrome. The Control Room operator can't
+     afford to discover-by-hover — the event picker is the
+     primary "what am I driving?" control and needs to read
+     as interactive from the moment the page loads. Cyan
+     matches the rest of the app's primary-action language
+     (submit button, active routes, etc.). */
+  background: var(--cyan-dim);
+  border: 1px solid var(--cyan);
   border-radius: var(--radius-sm);
   /* Logical properties so RTL languages (ar) get the chevron
      padding on the correct edge automatically. */
@@ -2583,21 +2583,22 @@
   appearance: none;
   -webkit-appearance: none;
   outline: none;
-  transition: border-color 0.12s, background 0.12s;
+  transition: box-shadow 0.12s;
   max-width: 100%;
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
 }
 .event-title-select:hover {
-  /* Subtle brighten on hover so the affordance still has a
-     hover state — but the baseline border + background are
-     already visible. */
-  border-color: var(--text-3);
+  /* Hover adds a subtle glow on top of the always-on cyan so
+     the operator gets feedback when their pointer crosses the
+     control. Border + background stay constant. */
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.18);
 }
 .event-title-select:focus-visible {
-  border-color: var(--cyan);
-  background: var(--cyan-dim);
+  /* Focus ring uses a stronger glow stacked on top of the
+     always-on cyan border. */
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.35);
 }
 .event-title-select option {
   background: var(--bg-1);
