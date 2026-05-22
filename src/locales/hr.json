@@ -606,9 +606,9 @@
     "panel_offline": "Panel offline — vaše ocjene će se sinkronizirati kad se vrati veza.",
     "score_picker_label": "Odaberi ocjenu (0,0 — 10,0 u koracima od 0,5)",
     "queued_label": "U redu čekanja",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Prikaži uvećano",
+    "show_big_tip": "Ispunite zaslon rezultatom kako bi ga operater mogao pročitati s druge strane prostorije",
+    "tap_to_return": "Dodirnite za povratak"
   },
   "control": {
     "page_label": "Kontrolna soba",

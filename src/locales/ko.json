@@ -606,9 +606,9 @@
     "panel_offline": "패널 오프라인 — 재연결 시 점수가 동기화됩니다.",
     "score_picker_label": "점수 선택 (0.0 — 10.0, 0.5 단위)",
     "queued_label": "대기 중입니다",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "크게 표시합니다",
+    "show_big_tip": "운영자가 반대편에서 읽을 수 있도록 점수를 화면에 가득 표시합니다",
+    "tap_to_return": "돌아가려면 탭하십시오"
   },
   "control": {
     "page_label": "컨트롤 룸",

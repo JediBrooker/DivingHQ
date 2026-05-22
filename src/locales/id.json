@@ -606,9 +606,9 @@
     "panel_offline": "Panel offline — skor Anda akan disinkronkan saat tersambung kembali.",
     "score_picker_label": "Pilih skor (0,0 — 10,0 dengan kelipatan 0,5)",
     "queued_label": "Dalam antrean",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Perbesar tampilan",
+    "show_big_tip": "Isi layar dengan skor agar operator dapat membacanya dari seberang ruangan",
+    "tap_to_return": "Ketuk untuk kembali"
   },
   "control": {
     "page_label": "Ruang kontrol",

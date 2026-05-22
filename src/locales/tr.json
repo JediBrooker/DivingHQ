@@ -606,9 +606,9 @@
     "panel_offline": "Kurul çevrimdışı — bağlantı geri geldiğinde puanlarınız senkronlanacak.",
     "score_picker_label": "Bir puan seçin (0.0 — 10.0 arası 0.5 aralıklarla)",
     "queued_label": "Sırada",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Büyük göster",
+    "show_big_tip": "Görevlinin odanın karşısından okuyabilmesi için skoru ekranı tümüyle kaplayacak şekilde gösterin",
+    "tap_to_return": "Geri dönmek için dokunun"
   },
   "control": {
     "page_label": "Kontrol Odası",

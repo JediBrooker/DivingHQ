@@ -606,9 +606,9 @@
     "panel_offline": "اللجنة غير متصلة — ستتم مزامنة درجاتك عند عودة الاتصال.",
     "score_picker_label": "اختر درجة (0.0 — 10.0 بخطوات 0.5)",
     "queued_label": "قيد الانتظار",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "عرض مكبّر",
+    "show_big_tip": "املأ الشاشة بالنتيجة حتى يتمكن المشغّل من قراءتها من الجانب الآخر من الغرفة",
+    "tap_to_return": "اضغط للعودة"
   },
   "control": {
     "page_label": "غرفة التحكم",

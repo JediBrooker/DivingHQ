@@ -606,9 +606,9 @@
     "panel_offline": "Panel di luar talian — markah anda akan disegerakkan apabila tersambung semula.",
     "score_picker_label": "Pilih markah (0.0 — 10.0 dalam selangan 0.5)",
     "queued_label": "Dalam antrian",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Paparkan dalam saiz besar",
+    "show_big_tip": "Isikan skrin dengan skor agar pengendali dapat membacanya dari seberang dewan",
+    "tap_to_return": "Ketuk untuk kembali"
   },
   "control": {
     "page_label": "Bilik kawalan",

@@ -617,9 +617,9 @@
     "panel_offline": "Панель не в сети — ваши оценки синхронизируются после восстановления связи.",
     "score_picker_label": "Выберите оценку (0,0 — 10,0 с шагом 0,5)",
     "queued_label": "В очереди",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Показать крупно",
+    "show_big_tip": "Заполнить экран счётом, чтобы оператор мог прочитать его с другого конца зала",
+    "tap_to_return": "Коснитесь, чтобы вернуться"
   },
   "control": {
     "page_label": "Пульт управления",

@@ -617,9 +617,9 @@
     "panel_offline": "Panelet er frakoblet — poengene dine synkroniseres når tilkoblingen er gjenopprettet.",
     "score_picker_label": "Velg poeng (0,0 — 10,0 i steg på 0,5)",
     "queued_label": "I kø",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Vis i stort format",
+    "show_big_tip": "Fyll skjermen med resultatet slik at operatøren kan lese det fra andre siden av rommet",
+    "tap_to_return": "Trykk for å gå tilbake"
   },
   "control": {
     "page_label": "Kontrollrom",

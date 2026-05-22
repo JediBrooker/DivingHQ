@@ -617,9 +617,9 @@
     "panel_offline": "Panel hors ligne — vos notes se synchroniseront à la reconnexion.",
     "score_picker_label": "Choisissez une note (0,0 — 10,0 par paliers de 0,5)",
     "queued_label": "En file d'attente",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Afficher en plein écran",
+    "show_big_tip": "Remplissez l'écran avec le score afin que l'opérateur puisse le lire depuis l'autre côté de la salle",
+    "tap_to_return": "Appuyez pour revenir"
   },
   "control": {
     "page_label": "Salle de contrôle",

@@ -617,9 +617,9 @@
     "panel_offline": "Panelet er offline — dine karakterer synkroniseres, når forbindelsen er genoprettet.",
     "score_picker_label": "Vælg karakter (0,0 — 10,0 i trin på 0,5)",
     "queued_label": "Sat i kø",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Vis i stort format",
+    "show_big_tip": "Fyld skærmen med resultatet, så operatøren kan læse det på tværs af rummet",
+    "tap_to_return": "Tryk for at vende tilbage"
   },
   "control": {
     "page_label": "Kontrolrum",

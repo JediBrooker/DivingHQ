@@ -606,9 +606,9 @@
     "panel_offline": "Panel sin conexión — tus notas se sincronizarán cuando vuelva la conexión.",
     "score_picker_label": "Elige una nota (0,0 — 10,0 en pasos de 0,5)",
     "queued_label": "En cola",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Mostrar en grande",
+    "show_big_tip": "Rellena la pantalla con la puntuación para que el operador pueda leerla desde el otro lado de la sala",
+    "tap_to_return": "Toca para volver"
   },
   "control": {
     "page_label": "Sala de control",

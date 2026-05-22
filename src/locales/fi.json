@@ -617,9 +617,9 @@
     "panel_offline": "Paneeli offline — pisteesi synkronoituvat, kun yhteys palautuu.",
     "score_picker_label": "Valitse pisteet (0,0 — 10,0 puolen pisteen välein)",
     "queued_label": "Jonossa",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Näytä isona",
+    "show_big_tip": "Täytä näyttö tuloksella, jotta operaattori voi lukea sen huoneen toiselta puolelta",
+    "tap_to_return": "Napauta palataksesi"
   },
   "control": {
     "page_label": "Ohjaamo",

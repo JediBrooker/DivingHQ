@@ -606,9 +606,9 @@
     "panel_offline": "Offline ang panel — magsi-sync ang iyong mga iskor kapag muling nakakonekta.",
     "score_picker_label": "Pumili ng iskor (0.0 — 10.0 sa 0.5 na pagitan)",
     "queued_label": "Naka-pila",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Ipakita nang malaki",
+    "show_big_tip": "Punuin ang buong screen ng iskor upang mabasa ito ng operator mula sa kabilang dulo ng silid",
+    "tap_to_return": "Pindutin upang bumalik"
   },
   "control": {
     "page_label": "Control room page",

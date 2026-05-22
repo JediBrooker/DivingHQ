@@ -617,9 +617,9 @@
     "panel_offline": "A panel offline — a pontok újrakapcsolódáskor szinkronizálódnak.",
     "score_picker_label": "Válasszon pontot (0,0 — 10,0 között, 0,5-ös lépésekben)",
     "queued_label": "Sorban",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Nagyméretű kijelzés",
+    "show_big_tip": "Töltse ki a képernyőt az eredménnyel, hogy az üzemeltető a terem túloldaláról is el tudja olvasni",
+    "tap_to_return": "Visszalépéshez érintse meg"
   },
   "control": {
     "page_label": "Vezérlőszoba",

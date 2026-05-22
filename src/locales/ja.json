@@ -606,9 +606,9 @@
     "panel_offline": "パネルがオフラインです — 再接続時に点数が同期されます。",
     "score_picker_label": "点数を選択（0.0 〜 10.0、0.5 刻み）",
     "queued_label": "キューに登録されています",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "大きく表示します",
+    "show_big_tip": "画面をスコアでいっぱいに表示し、オペレーターが部屋の向こう側からでも読めるようにします",
+    "tap_to_return": "戻るにはタップしてください"
   },
   "control": {
     "page_label": "コントロールルーム",

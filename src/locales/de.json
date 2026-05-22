@@ -617,9 +617,9 @@
     "panel_offline": "Panel offline — Ihre Wertungen werden bei Wiederverbindung synchronisiert.",
     "score_picker_label": "Wertung wählen (0,0 — 10,0 in 0,5er-Schritten)",
     "queued_label": "In der Warteschlange",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Groß anzeigen",
+    "show_big_tip": "Füllen Sie den Bildschirm mit dem Punktestand, damit der Bediener ihn von der gegenüberliegenden Seite des Raums ablesen kann",
+    "tap_to_return": "Antippen, um zurückzukehren"
   },
   "control": {
     "page_label": "Kontrollraum",

@@ -617,9 +617,9 @@
     "panel_offline": "Панель не в мережі — ваші оцінки синхронізуються після відновлення з'єднання.",
     "score_picker_label": "Виберіть оцінку (0,0 — 10,0 з кроком 0,5)",
     "queued_label": "У черзі",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Показати у великому форматі",
+    "show_big_tip": "Заповніть екран рахунком, щоб оператор міг прочитати його з іншого кінця приміщення",
+    "tap_to_return": "Торкніться, щоб повернутися"
   },
   "control": {
     "page_label": "Пульт керування",

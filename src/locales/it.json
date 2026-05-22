@@ -617,9 +617,9 @@
     "panel_offline": "Pannello offline — i tuoi voti si sincronizzeranno alla riconnessione.",
     "score_picker_label": "Scegli un voto (0,0 — 10,0 a passi di 0,5)",
     "queued_label": "In coda",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Mostrare a tutto schermo",
+    "show_big_tip": "Riempire lo schermo con il punteggio in modo che l'operatore possa leggerlo dall'altra parte della sala",
+    "tap_to_return": "Toccare per tornare"
   },
   "control": {
     "page_label": "Sala Controllo",

@@ -617,9 +617,9 @@
     "panel_offline": "Panelen är offline — dina poäng synkroniseras när uppkopplingen är åter.",
     "score_picker_label": "Välj poäng (0,0 — 10,0 i steg om 0,5)",
     "queued_label": "I kö",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "Visa i helskärm",
+    "show_big_tip": "Fyll skärmen med resultatet så att operatören kan läsa det från andra sidan rummet",
+    "tap_to_return": "Tryck för att återgå"
   },
   "control": {
     "page_label": "Kontrollrum",

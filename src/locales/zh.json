@@ -606,9 +606,9 @@
     "panel_offline": "裁判组离线 — 您的分数将在恢复连接后同步。",
     "score_picker_label": "选择分数（0.0 — 10.0，以 0.5 为步进）",
     "queued_label": "已排队",
-    "show_big": "Show big",
-    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
-    "tap_to_return": "Tap to return"
+    "show_big": "放大显示",
+    "show_big_tip": "将分数充满屏幕，便于操作员从房间对面读取",
+    "tap_to_return": "点按返回"
   },
   "control": {
     "page_label": "控制室",
