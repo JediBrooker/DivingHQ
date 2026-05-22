@@ -809,7 +809,9 @@ app.use(require("./routes/templates")({ pool, verifyToken }));
 // wires the actual write + audit-log path. See
 // docs/offline-p1-design.md §4.
 // =============================================================
-app.use(require("./routes/conflicts")({ pool, requireOrgRole }));
+app.use(require("./routes/conflicts")({
+  pool, io, scoreboardCache, requireOrgRole,
+}));
 
 // =============================================================
 // LATE-ARRIVAL REVIEW (P4)

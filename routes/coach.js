@@ -785,6 +785,11 @@ module.exports = function createCoachRouter({
     async (req, res) => {
       const { event_id, diver_id } = req.params;
       const reason = (req.body?.reason || "").trim().slice(0, 500);
+      // Offline-resilience clock (P4-1 / DEC-04). Captures when
+      // the coach actually tapped Withdraw — useful for forensics
+      // when an outbox-queued withdraw lands minutes after the
+      // diver's first dive of the round.
+      const actorLocalTime = req.body?.actor_local_time || null;
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
@@ -867,6 +872,12 @@ module.exports = function createCoachRouter({
             diver_id,
             row_count: upd.rows.length,
             reason: reason || null,
+            // P4-1 follow-up: capture the actor's wall-clock so a
+            // forensic query can spot withdraws that landed late
+            // (coach tapped at 14:01 offline; server saw it at
+            // 14:35 mid-round, after the diver had already missed
+            // their first dive).
+            actor_local_time: actorLocalTime,
           },
         });
 
