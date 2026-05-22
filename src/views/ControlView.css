@@ -2565,11 +2565,14 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text);
-  background: transparent;
-  /* Transparent border at rest reserves space for the hover
-     border so the title doesn't shift left/right when the
-     operator hovers over it. */
-  border: 1px solid transparent;
+  /* Always-visible chrome at rest. Previously the border was
+     transparent + filled in on hover; that made the dropdown
+     look like static text until the operator hovered over it.
+     With a real meet running there's no time to discover-by-
+     hover — the field needs to read as a control from the
+     moment the page loads. */
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
   border-radius: var(--radius-sm);
   /* Logical properties so RTL languages (ar) get the chevron
      padding on the correct edge automatically. */
@@ -2587,8 +2590,10 @@
   overflow: hidden;
 }
 .event-title-select:hover {
-  border-color: var(--border-2);
-  background: var(--bg-3);
+  /* Subtle brighten on hover so the affordance still has a
+     hover state — but the baseline border + background are
+     already visible. */
+  border-color: var(--text-3);
 }
 .event-title-select:focus-visible {
   border-color: var(--cyan);
