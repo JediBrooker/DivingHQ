@@ -964,7 +964,11 @@ async function runRandomiseDraw() {
 
   try {
     const [, fresh] = await Promise.all([
-      auth.apiFetch(`/api/events/${ev.id}/dive-lists/randomize`, { method: 'POST' }),
+      queueAction({
+        method: 'POST',
+        url: `/api/events/${ev.id}/dive-lists/randomize`,
+        actionType: 'dive_list_randomize',
+      }),
       // Hold the ceremony for the full ANIM_MS even if the
       // server returns faster — the audience needs the full
       // animation to read the moment as a "draw".
@@ -1012,8 +1016,10 @@ async function confirmDiveOrder() {
   })) return
   orderBusy.value = true
   try {
-    await auth.apiFetch(`/api/events/${currentEvent.value.id}/dive-order/confirm`, {
+    await queueAction({
       method: 'POST',
+      url: `/api/events/${currentEvent.value.id}/dive-order/confirm`,
+      actionType: 'dive_order_confirm',
     })
     patchCurrentEvent({
       dive_order_randomised_at: new Date().toISOString(),
@@ -1439,9 +1445,11 @@ async function commitStartEvent() {
   const evName = currentEvent.value.name
   orderBusy.value = true
   try {
-    await auth.apiFetch(`/api/events/${currentEvent.value.id}/status`, {
+    await queueAction({
       method: 'PUT',
-      body: JSON.stringify({ status: 'Live' }),
+      url: `/api/events/${currentEvent.value.id}/status`,
+      body: { status: 'Live' },
+      actionType: 'event_status_flip',
     })
     patchCurrentEvent({ status: 'Live' })
     showSuccess(`"${evName}" is Live — scoreboards broadcasting.`)
@@ -1466,8 +1474,10 @@ async function resetDiveOrderWorkflow() {
   })) return
   orderBusy.value = true
   try {
-    await auth.apiFetch(`/api/events/${currentEvent.value.id}/dive-order/reset`, {
+    await queueAction({
       method: 'POST',
+      url: `/api/events/${currentEvent.value.id}/dive-order/reset`,
+      actionType: 'dive_order_reset',
     })
     patchCurrentEvent({
       check_in_done_at:        null,
@@ -1503,11 +1513,16 @@ async function confirmCheckInComplete() {
   )) return
   orderBusy.value = true
   try {
-    const r = await auth.apiFetch(`/api/events/${currentEvent.value.id}/check-in/confirm`, {
+    await queueAction({
       method: 'POST',
+      url: `/api/events/${currentEvent.value.id}/check-in/confirm`,
+      actionType: 'check_in_confirm',
     })
+    // Optimistic check_in_done_at — the canonical value lands
+    // via the next event refresh; we set client-side now so the
+    // UI advances out of the check-in step immediately.
     patchCurrentEvent({
-      check_in_done_at: r.check_in_done_at || new Date().toISOString(),
+      check_in_done_at: new Date().toISOString(),
     })
     closeCheckIn()
   } catch (err) {
@@ -1591,9 +1606,11 @@ async function onRosterDrop(originalIdx, ev) {
     rowsInRound[i].row.display_order = i
   }
   try {
-    await auth.apiFetch(`/api/events/${currentEvent.value.id}/dive-lists/reorder`, {
+    await queueAction({
       method: 'PUT',
-      body: JSON.stringify({ rows: payload }),
+      url: `/api/events/${currentEvent.value.id}/dive-lists/reorder`,
+      body: { rows: payload },
+      actionType: 'dive_list_reorder_bulk',
     })
   } catch (err) {
     showError('Failed to save order: ' + err.message)
@@ -1626,11 +1643,17 @@ async function reorderRosterRow(idx, dir) {
   // continue to compare correctly).
   try {
     await Promise.all([
-      auth.apiFetch(`/api/dive-lists/${cur.dive_list_id}/order`, {
-        method: 'PUT', body: JSON.stringify({ display_order: targetIdx }),
+      queueAction({
+        method: 'PUT',
+        url: `/api/dive-lists/${cur.dive_list_id}/order`,
+        body: { display_order: targetIdx },
+        actionType: 'dive_list_reorder_one',
       }),
-      auth.apiFetch(`/api/dive-lists/${target.dive_list_id}/order`, {
-        method: 'PUT', body: JSON.stringify({ display_order: idx }),
+      queueAction({
+        method: 'PUT',
+        url: `/api/dive-lists/${target.dive_list_id}/order`,
+        body: { display_order: idx },
+        actionType: 'dive_list_reorder_one',
       }),
     ])
   } catch (err) {
@@ -2709,15 +2732,17 @@ async function submitLateEntry() {
     // again and we backfill the missing rows.
     for (let i = 0; i < lateRounds.value.length; i++) {
       const slot = lateRounds.value[i]
-      await auth.apiFetch(`/api/events/${currentEvent.value.id}/roster`, {
+      await queueAction({
         method: 'POST',
-        body: JSON.stringify({
+        url: `/api/events/${currentEvent.value.id}/roster`,
+        body: {
           competitor_id: lateCompetitorId.value,
           dive_id:       slot.dive.id,
           round_number:  i + 1,
           partner_id:    latePartnerId.value || null,
           team_id:       lateTeamId.value    || null,
-        }),
+        },
+        actionType: 'roster_late_add',
       })
     }
     // Re-pull roster so the new rows appear in the queue with
@@ -3187,9 +3212,14 @@ async function finaliseEvent() {
       message: `Finalised "${evName}" — results published.`,
       timeoutMs: 12000,
       onUndo: async () => {
-        await auth.apiFetch(`/api/events/${evId}/status`, {
+        // Force-back-to-live route — outbox-queue it too so a
+        // network blip during the undo doesn't strand the
+        // operator on the wrong status.
+        await queueAction({
           method: 'PUT',
-          body: JSON.stringify({ status: 'Live' }),
+          url: `/api/events/${evId}/status`,
+          body: { status: 'Live' },
+          actionType: 'event_status_flip',
         })
         if (currentEvent.value && currentEvent.value.id === evId) {
           currentEvent.value.status = 'Live'
