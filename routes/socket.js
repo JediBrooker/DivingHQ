@@ -460,7 +460,7 @@ module.exports = function attachSocket({
         const resolvedDiveId = dvRes.rows[0]?.dive_id ?? data.dive_id ?? null;
 
         const prior = await client.query(
-          `SELECT id, score FROM scores
+          `SELECT id, score, score_source FROM scores
            WHERE event_id=$1 AND competitor_id=$2 AND round_number=$3 AND judge_id=$4
            FOR UPDATE`,
           [data.event_id, data.competitor_id, round, judgeId],
@@ -469,28 +469,118 @@ module.exports = function attachSocket({
         isInsert = !existing;
         oldScore = existing ? Number(existing.score) : null;
 
+        // Manual-fallback reconciliation (P5). If an operator
+        // already typed this judge's score during an outage, the
+        // existing row has score_source='manual_entry'. Two cases:
+        //
+        //   * Match  → silently confirm. Update source to
+        //              'manual_then_reconciled'; the audit row
+        //              captures the digital sync arrival.
+        //   * Mismatch → operator wins (MANUAL-VS-SYNC-001). The
+        //                judge's digital sync is rejected with a
+        //                conflict_pending event so the review tray
+        //                surfaces the mismatch for the referee.
+        let reconciledManual = false;
+        if (existing && existing.score_source === "manual_entry") {
+          if (oldScore === score) {
+            // Same value — reconcile by flipping the source.
+            await client.query(
+              `UPDATE scores SET score_source = 'manual_then_reconciled',
+                                 actor_local_time = $2
+               WHERE id = $1`,
+              [existing.id, actorLocalTime],
+            );
+            scoreId = existing.id;
+            reconciledManual = true;
+          } else {
+            // Different value — operator's manual entry wins. We
+            // DON'T update the score; we audit-log the rejected
+            // digital sync and emit conflict_pending for the
+            // operator's review tray.
+            await client.query(
+              `INSERT INTO score_audit_log
+                 (score_id, event_id, competitor_id, judge_id, round_number,
+                  action, old_score, new_score, actor_user_id, ip_address, user_agent,
+                  reason, actor_local_time, server_committed_at)
+               VALUES ($1,$2,$3,$4,$5,'rejected_duplicate',$6,$7,$8,$9,$10,$11,$12,now())`,
+              [
+                existing.id, data.event_id, data.competitor_id, judgeId, round,
+                oldScore, score,  // old=operator's manual, new=judge's late sync (rejected)
+                socket.userId, clientIp(socket),
+                socket.handshake.headers["user-agent"] || null,
+                "P5 reconciliation: judge digital sync differs from manual entry; operator value retained",
+                actorLocalTime,
+              ],
+            );
+            await client.query("COMMIT");
+            // Emit conflict so the operator can see the mismatch.
+            io.to(`event:${data.event_id}`).emit("conflict_pending", {
+              conflict_id: existing.id,
+              action_type: "submit_score_vs_manual_entry",
+              actor_id: judgeId,
+              actor_local_time: actorLocalTime,
+              target: {
+                event_id: data.event_id,
+                competitor_id: data.competitor_id,
+                round_number: round,
+                judge_id: judgeId,
+              },
+              existing_value: { score: oldScore, source: "manual_entry" },
+              proposed_value: { score, source: "judge_direct" },
+              resolution_required_by: "operator",
+              created_at: new Date().toISOString(),
+            });
+            // Tell the judge their sync landed but was superseded.
+            // The outbox will mark this entry as synced (no retry
+            // needed); the operator decides via the review tray.
+            socket.emit("score_received", {
+              event_id: data.event_id,
+              competitor_id: data.competitor_id,
+              round_number: round,
+              dive_id: undefined,
+              judge_id: judgeId,
+              judge_number: judgeNumber,
+              score: oldScore,            // canonical = operator value
+              superseded_by: "manual_entry",
+            });
+            metrics?.scoresSubmitted.inc();
+            return;
+          }
+        }
+
         // actor_local_time captures the judge's tap moment (when
         // the client outbox stamped the entry). Falls back to NULL
         // for legacy clients that don't use the outbox.
-        const upsert = await client.query(
-          `INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score, actor_local_time)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           ON CONFLICT (event_id, competitor_id, round_number, judge_id)
-           DO UPDATE SET score = EXCLUDED.score, status = 'active',
-                         actor_local_time = EXCLUDED.actor_local_time
-           RETURNING id`,
-          [
-            data.event_id, data.competitor_id, judgeId,
-            resolvedDiveId, round, score, actorLocalTime,
-          ],
-        );
-        scoreId = upsert.rows[0].id;
+        //
+        // Skip the UPSERT when we already handled the reconciliation
+        // branch above (the row exists with the correct value;
+        // we just flipped score_source).
+        if (!reconciledManual) {
+          const upsert = await client.query(
+            `INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score, actor_local_time)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (event_id, competitor_id, round_number, judge_id)
+             DO UPDATE SET score = EXCLUDED.score, status = 'active',
+                           actor_local_time = EXCLUDED.actor_local_time
+             RETURNING id`,
+            [
+              data.event_id, data.competitor_id, judgeId,
+              resolvedDiveId, round, score, actorLocalTime,
+            ],
+          );
+          scoreId = upsert.rows[0].id;
+        }
 
-        if (isInsert || oldScore !== score) {
+        if (isInsert || oldScore !== score || reconciledManual) {
           // Audit row records both clocks (migration 054). For
           // legacy online-only clients actor_local_time is NULL and
           // server_committed_at is now() — those rows look like the
           // pre-outbox world. For outbox clients both are populated.
+          // For reconciled manual entries the action is 'reconcile'
+          // so audit queries can spot the merge cleanly.
+          const auditAction = reconciledManual
+            ? "reconcile_manual"
+            : (isInsert ? "insert" : "update");
           await client.query(
             `INSERT INTO score_audit_log
                (score_id, event_id, competitor_id, judge_id, round_number,
@@ -499,7 +589,7 @@ module.exports = function attachSocket({
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now())`,
             [
               scoreId, data.event_id, data.competitor_id, judgeId, round,
-              isInsert ? "insert" : "update",
+              auditAction,
               oldScore, score,
               socket.userId, clientIp(socket),
               socket.handshake.headers["user-agent"] || null,

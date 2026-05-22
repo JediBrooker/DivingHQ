@@ -821,6 +821,18 @@ app.use(require("./routes/conflicts")({ pool, requireOrgRole }));
 app.use(require("./routes/late-arrivals")({ pool, requireOrgRole }));
 
 // =============================================================
+// MANUAL SCORE ENTRY (P5)
+// =============================================================
+// POST /api/scores/manual-entry — operator types each judge's
+// score during a fallback episode (extended outage; judges
+// showing values on phone screens). See docs/offline-p1-design.md
+// §Phase 5.
+// =============================================================
+app.use(require("./routes/manual-scores")({
+  pool, io, scoreboardCache, requireOrgRole,
+}));
+
+// =============================================================
 // COMPETITOR ROUTES
 // [SECTION: ROUTES — COMPETITOR]
 // /api/competitor/submit-list extracted into routes/competitor.js.
