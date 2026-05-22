@@ -2769,3 +2769,10 @@
   .lb-name    { font-size: 16px; }
   .lb-score   { font-size: 18px; }
 }
+
+/* Manual-entry trigger (P5). Quiet ghost button under the
+   conflict / late-arrival trays. Visible only when a diver is
+   active; opens ManualScoreEntryForm. */
+.manual-entry-trigger {
+  margin: 0.25rem 0 0.75rem;
+}

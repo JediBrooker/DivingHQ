@@ -19,6 +19,7 @@ import JudgeRankingTable from '@/components/JudgeRankingTable.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 import LateArrivalReviewTray from '@/components/LateArrivalReviewTray.vue'
 import ConflictReviewTray from '@/components/ConflictReviewTray.vue'
+import ManualScoreEntryForm from '@/components/ManualScoreEntryForm.vue'
 import ReadinessChecklist from '@/components/ReadinessChecklist.vue'
 import JudgePanelModal from '@/components/JudgePanelModal.vue'
 import ReflowModal from '@/components/ReflowModal.vue'
@@ -84,6 +85,27 @@ const currentEvent = ref(null)
 const scoresThisRound = ref({})
 const historyCards = ref([])
 const judgeTiles = ref([])
+
+// Manual-fallback entry modal state (P5). Opens a form where the
+// operator types each judge's score, one row per panel member.
+// Renders only when currentActive is populated (we need event +
+// competitor + round to address the right scores).
+const manualEntryOpen = ref(false)
+function openManualEntry() {
+  if (!currentActive.value) return
+  manualEntryOpen.value = true
+}
+function closeManualEntry() {
+  manualEntryOpen.value = false
+}
+function onManualEntrySaved(judgeId) {
+  // Mirror what the socket score_received handler does so the
+  // operator sees the panel tile flip immediately — the broadcast
+  // will land too, but for a fallback-mode operator on a flaky
+  // network we don't want to wait for it to round-trip.
+  const tile = judgeTiles.value.find(t => t.judgeId === judgeId)
+  if (tile) tile.scored = true
+}
 const lbShow = ref(false)
 const lbRows = ref([])
 // Judge Ranking Analysis — opens a full-screen modal hosting the
@@ -3327,6 +3349,19 @@ onUnmounted(() => {
          device wrote the same target first). Operator picks
          discard or retry per entry. -->
     <ConflictReviewTray />
+    <!-- Manual-fallback entry trigger (P5). When the operator
+         needs to type each judge's score (judges showing values
+         on phone screens via BigScoreDisplay), tap this to open
+         the per-judge form. Only renders when a diver is active;
+         no dive context means no target tuple to attribute to. -->
+    <div v-if="currentActive" class="manual-entry-trigger">
+      <button class="btn btn-ghost btn-sm"
+              type="button"
+              @click="openManualEntry"
+              v-tip="'Open the manual score-entry form (P5 fallback). Use when judges are showing scores on their phones and the digital broadcast isn\'t getting through.'">
+        ⌨ Manual score entry
+      </button>
+    </div>
     <!-- Floating exit out of operator broadcast mode. -->
     <RouterLink
       v-if="opsBroadcast"
@@ -5915,6 +5950,17 @@ onUnmounted(() => {
       </div>
     </div>
   </div>
+
+  <!-- Manual-entry modal (P5). Mounted at template root so the
+       overlay stacks above every other ControlView surface. -->
+  <ManualScoreEntryForm
+    v-if="manualEntryOpen && currentActive"
+    :event-id="currentActive.event_id"
+    :competitor-id="currentActive.competitor_id"
+    :round-number="Number(currentActive.round_number)"
+    @close="closeManualEntry"
+    @saved="onManualEntrySaved"
+  />
 </template>
 
 <style scoped src="./ControlView.css"></style>
