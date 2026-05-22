@@ -8,6 +8,7 @@ import { diveDescription } from '@/composables/useDiveLabel'
 import { showInfo } from '@/composables/useNotify'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 import SyncStatusBadge from '@/components/SyncStatusBadge.vue'
+import BigScoreDisplay from '@/components/BigScoreDisplay.vue'
 import { useOutbox } from '@/composables/useOutbox'
 
 // Feature flag (P1 of the offline-resilience work; see
@@ -87,6 +88,22 @@ const judgeNumber = ref(null)
 // Legacy single-slot pending (active when OUTBOX_ENABLED is off).
 // In outbox mode this stays null and `pendingCount` drives the UI.
 const pendingScore = ref(null)
+
+// Manual-fallback "big number" mode (P5). When the operator is in
+// fallback mode (typing scores from across the room), the judge
+// taps "Show big" to fill the screen with their submitted score.
+// Tapping anywhere on the big-mode panel returns to normal view.
+// Stays hidden until at least one score has been submitted; before
+// that there's nothing to show.
+const bigDisplayOpen = ref(false)
+const lastSubmittedScore = ref(null)
+function showBigScore() {
+  if (lastSubmittedScore.value == null) return
+  bigDisplayOpen.value = true
+}
+function closeBigScore() {
+  bigDisplayOpen.value = false
+}
 
 // Outbox singleton lives in src/composables/useOutbox.js. The
 // composable returns reactive counts + the underlying outbox
@@ -389,6 +406,10 @@ async function submitScore() {
   // judge's intent is captured the moment they tap.
   buzz([20, 60, 30])
   submitted.value = true
+  // Stash for the big-display fallback (P5). Visible behind a
+  // "Show big" button below the keypad; the judge taps it when
+  // the operator is in manual-entry mode.
+  lastSubmittedScore.value = finalScore
 
   // If the judge had flagged the referee before submitting,
   // the submission IS the rectification — auto-clear the
@@ -652,7 +673,31 @@ const submitLabel = computed(() => {
         @click="submitScore"
       >{{ isHeld ? 'Meet on hold — wait for resume' : submitLabel }}</button>
     </div>
+    <!-- Manual-fallback "Show big" button (P5). Only renders after
+         at least one score has been submitted, and only when the
+         outbox shows pending work OR the socket is offline — i.e.
+         the scenario where the operator might need to read it off
+         the screen. Tap fills the viewport with the score as a
+         giant number; tap again to return. -->
+    <div v-if="lastSubmittedScore != null && (!socket.isConnected.value || pendingCount > 0)"
+         class="big-mode-footer">
+      <button class="big-mode-btn"
+              type="button"
+              @click="showBigScore"
+              v-tip="$t('judge.show_big_tip')">
+        {{ $t('judge.show_big') }}
+      </button>
+    </div>
   </div>
+
+  <!-- Big-mode overlay — full-screen, z-index 1000, fixed. -->
+  <BigScoreDisplay
+    v-if="bigDisplayOpen && lastSubmittedScore != null"
+    :score="lastSubmittedScore"
+    :judge-number="judgeNumber"
+    :judge-name="judgeLabel"
+    @close="closeBigScore"
+  />
 </template>
 
 <style scoped>
@@ -1086,6 +1131,38 @@ const submitLabel = computed(() => {
   margin: 0 auto;
   box-sizing: border-box;
 }
+
+/* Manual-fallback "Show big" button (P5). Sits below the submit
+   button when the judge is offline or has queued scores; a single
+   tap fills the viewport with the score as a giant number so the
+   operator can read it from across the room. */
+.big-mode-footer {
+  padding: 0 0.75rem 0.5rem;
+  max-width: 360px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+.big-mode-btn {
+  width: 100%;
+  background: transparent;
+  color: var(--text-2);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.55rem 0.5rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.big-mode-btn:hover {
+  color: var(--cyan);
+  border-color: rgba(6, 182, 212, 0.55);
+}
+
 .submit-btn {
   width: 100%;
   background: var(--cyan);

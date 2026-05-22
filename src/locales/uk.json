@@ -616,7 +616,10 @@
     "signal_referee": "Сигнал головному судді",
     "panel_offline": "Панель не в мережі — ваші оцінки синхронізуються після відновлення з'єднання.",
     "score_picker_label": "Виберіть оцінку (0,0 — 10,0 з кроком 0,5)",
-    "queued_label": "У черзі"
+    "queued_label": "У черзі",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Пульт керування",

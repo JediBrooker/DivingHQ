@@ -616,7 +616,10 @@
     "signal_referee": "Appeler l'arbitre",
     "panel_offline": "Panel hors ligne — vos notes se synchroniseront à la reconnexion.",
     "score_picker_label": "Choisissez une note (0,0 — 10,0 par paliers de 0,5)",
-    "queued_label": "En file d'attente"
+    "queued_label": "En file d'attente",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Salle de contrôle",

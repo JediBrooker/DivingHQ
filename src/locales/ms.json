@@ -605,7 +605,10 @@
     "signal_referee": "Panggil hakim utama",
     "panel_offline": "Panel di luar talian — markah anda akan disegerakkan apabila tersambung semula.",
     "score_picker_label": "Pilih markah (0.0 — 10.0 dalam selangan 0.5)",
-    "queued_label": "Dalam antrian"
+    "queued_label": "Dalam antrian",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Bilik kawalan",

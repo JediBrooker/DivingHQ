@@ -616,7 +616,10 @@
     "signal_referee": "Powiadom sędziego głównego",
     "panel_offline": "Panel offline — Twoje oceny zostaną zsynchronizowane po ponownym połączeniu.",
     "score_picker_label": "Wybierz ocenę (0,0 — 10,0 co 0,5)",
-    "queued_label": "W kolejce"
+    "queued_label": "W kolejce",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Pokój kontroli",

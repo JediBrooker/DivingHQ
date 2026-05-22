@@ -616,7 +616,10 @@
     "signal_referee": "Chiama l'arbitro",
     "panel_offline": "Pannello offline — i tuoi voti si sincronizzeranno alla riconnessione.",
     "score_picker_label": "Scegli un voto (0,0 — 10,0 a passi di 0,5)",
-    "queued_label": "In coda"
+    "queued_label": "In coda",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Sala Controllo",

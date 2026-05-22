@@ -616,7 +616,10 @@
     "signal_referee": "Sinalizar Árbitro",
     "panel_offline": "Painel offline — as suas notas serão sincronizadas quando voltar a estar ligado.",
     "score_picker_label": "Escolha uma nota (0,0 — 10,0 em passos de 0,5)",
-    "queued_label": "Em fila"
+    "queued_label": "Em fila",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Sala de Controlo",

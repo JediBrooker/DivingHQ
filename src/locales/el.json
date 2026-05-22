@@ -605,7 +605,10 @@
     "signal_referee": "Κλήση διαιτητή",
     "panel_offline": "Η επιτροπή είναι εκτός σύνδεσης — οι βαθμοί σας θα συγχρονιστούν όταν επανέλθει η σύνδεση.",
     "score_picker_label": "Επιλέξτε βαθμό (0,0 — 10,0 με βήματα 0,5)",
-    "queued_label": "Στην ουρά"
+    "queued_label": "Στην ουρά",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Αίθουσα ελέγχου",

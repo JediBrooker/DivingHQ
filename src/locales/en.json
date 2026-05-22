@@ -605,7 +605,10 @@
     "signal_referee": "Signal Referee",
     "panel_offline": "Panel offline — your scores will sync when reconnected.",
     "score_picker_label": "Pick a score (0.0 — 10.0 in 0.5 steps)",
-    "queued_label": "Queued"
+    "queued_label": "Queued",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Control Room",

@@ -616,7 +616,10 @@
     "signal_referee": "Versenybíró jelzése",
     "panel_offline": "A panel offline — a pontok újrakapcsolódáskor szinkronizálódnak.",
     "score_picker_label": "Válasszon pontot (0,0 — 10,0 között, 0,5-ös lépésekben)",
-    "queued_label": "Sorban"
+    "queued_label": "Sorban",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Vezérlőszoba",

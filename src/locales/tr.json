@@ -605,7 +605,10 @@
     "signal_referee": "Baş Hakemi Çağır",
     "panel_offline": "Kurul çevrimdışı — bağlantı geri geldiğinde puanlarınız senkronlanacak.",
     "score_picker_label": "Bir puan seçin (0.0 — 10.0 arası 0.5 aralıklarla)",
-    "queued_label": "Sırada"
+    "queued_label": "Sırada",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Kontrol Odası",

@@ -605,7 +605,10 @@
     "signal_referee": "주심 호출",
     "panel_offline": "패널 오프라인 — 재연결 시 점수가 동기화됩니다.",
     "score_picker_label": "점수 선택 (0.0 — 10.0, 0.5 단위)",
-    "queued_label": "대기 중입니다"
+    "queued_label": "대기 중입니다",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "컨트롤 룸",

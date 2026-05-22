@@ -605,7 +605,10 @@
     "signal_referee": "Позови главног судију",
     "panel_offline": "Панел је ван мреже — ваше оцене ће се синхронизовати када се веза врати.",
     "score_picker_label": "Изабери оцену (0,0 — 10,0 у корацима од 0,5)",
-    "queued_label": "У реду чекања"
+    "queued_label": "У реду чекања",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Контролна соба",

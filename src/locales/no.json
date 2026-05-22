@@ -616,7 +616,10 @@
     "signal_referee": "Varsle overdommer",
     "panel_offline": "Panelet er frakoblet — poengene dine synkroniseres når tilkoblingen er gjenopprettet.",
     "score_picker_label": "Velg poeng (0,0 — 10,0 i steg på 0,5)",
-    "queued_label": "I kø"
+    "queued_label": "I kø",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Kontrollrom",

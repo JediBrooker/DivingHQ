@@ -605,7 +605,10 @@
     "signal_referee": "Tawagin ang referee",
     "panel_offline": "Offline ang panel — magsi-sync ang iyong mga iskor kapag muling nakakonekta.",
     "score_picker_label": "Pumili ng iskor (0.0 — 10.0 sa 0.5 na pagitan)",
-    "queued_label": "Naka-pila"
+    "queued_label": "Naka-pila",
+    "show_big": "Show big",
+    "show_big_tip": "Fill the screen with the score so the operator can read it from across the room",
+    "tap_to_return": "Tap to return"
   },
   "control": {
     "page_label": "Control room page",
