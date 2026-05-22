@@ -914,7 +914,7 @@
       "club_name_placeholder": "首都跳水俱乐部",
       "club_code_label": "短代码",
       "club_code_label_hint": "(可选)",
-      "club_code_placeholder": "CAP",
+      "club_code_placeholder": "示例：CAP",
       "club_create_btn": "创建俱乐部并继续 →",
       "club_creating": "创建中…",
       "club_no_org_error": "无法创建俱乐部 — 您的账户没有 org_id。",
