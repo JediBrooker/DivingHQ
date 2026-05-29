@@ -460,7 +460,13 @@
       "schedule_q": "Hvordan planlægger jeg en hel mesterskabsdag?",
       "schedule_a": "Tilføj planlagte tidspunkter til stævnets konkurrencer, og åbn så <strong>Skema</strong> fra stævnets side som forbundsadmin eller stævneleder. DivingHQ laver en første plan med 45-minutters opvarmninger, konkurrenceblokke og brættildelinger. Slå <strong>Redigeringstilstand</strong> til for at trække, ændre størrelse, indsætte, slette eller duplikere sessioner; konfliktpanelet markerer overlappende brætter, dommere, udspringere og overdommere. Trænere, udspringere og tilskuere kan se den offentlige tidslinje eller abonnere på iCal-feedet.",
       "bug_q": "Hvordan indberetter jeg en fejl?",
-      "bug_a": "Klik på linket <strong>🐛 Rapportér en fejl</strong> i bunden af forsiden eller dit panel. Det åbner et færdigudfyldt GitHub-issue, hvor du kan beskrive problemet. Skærmbilleder hjælper meget."
+      "bug_a": "Klik på linket <strong>🐛 Rapportér en fejl</strong> i bunden af forsiden eller dit panel. Det åbner et færdigudfyldt GitHub-issue, hvor du kan beskrive problemet. Skærmbilleder hjælper meget.",
+      "install_q": "Hvordan installerer jeg DivingHQ som en app?",
+      "install_a": "På iPhone: åbn siden i Safari, tryk på Del-knappen, og vælg så <strong>Føj til hjemmeskærm</strong>. På Android: åbn i Chrome, tryk på menuen, og vælg så <strong>Installér app</strong>. Ikonet starter en fuldskærmsvisning uden browserkrom — hurtigere opstart, ingen browserbjælke.",
+      "tfa_q": "Hvordan slår jeg tofaktorgodkendelse til?",
+      "tfa_a": "Åbn <strong>Min profil</strong> → <strong>Sikkerhed</strong> → <strong>Tofaktorgodkendelse</strong> og scan QR-koden med din godkendelses-app (1Password, Authy, Google Authenticator). Gem gendannelseskoderne et sikkert sted — de er den eneste vej tilbage, hvis du mister din telefon.",
+      "account_q": "Hvordan ændrer jeg min e-mail eller adgangskode, eller sletter min konto?",
+      "account_a": "Alt sammen under <strong>Min profil</strong> → <strong>Kontoindstillinger</strong>. Ændring af e-mail kræver fornyet bekræftelse på den nye adresse. Sletning af din konto er permanent og fjerner dit login; historiske scoringer bliver stående på den offentlige scoringstavle under forbundets registrering (anonymiseres på anmodning — kontakt din forbundsadministrator)."
     },
     "next": {
       "lede": "Brug for den dybdegående version? {wiki_link} dækker hvert skærmbillede, hver rolle, hver World Aquatics-regel som appen har kodet ind. De sider, der er værd at bogmærke:",

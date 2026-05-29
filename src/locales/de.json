@@ -460,7 +460,13 @@
       "schedule_q": "Wie plane ich einen kompletten Meisterschaftstag?",
       "schedule_a": "Fügen Sie den Wettbewerben des Wettkampfs Zeitfenster hinzu und öffnen Sie dann <strong>Zeitplan</strong> auf der Wettkampfseite als Verbandsadmin oder Wettkampfleiter. DivingHQ schlägt einen ersten Plan mit 45-Minuten-Einschwimmblöcken, Wettbewerbsblöcken und Brettzuweisungen vor. Aktivieren Sie den <strong>Bearbeitungsmodus</strong>, um Sessions zu ziehen, zu skalieren, einzufügen, zu löschen oder zu duplizieren; die Konflikt-Schublade weist auf überlappende Bretter, Kampfrichter, Springer und Schiedsrichter hin. Trainer, Springer und Zuschauer sehen den öffentlichen Zeitplan oder abonnieren den iCal-Feed.",
       "bug_q": "Wie melde ich einen Fehler?",
-      "bug_a": "Klicken Sie auf den Link <strong>🐛 Fehler melden</strong> unten auf der Startseite oder Ihrem Dashboard. Das öffnet ein vorgefülltes GitHub-Issue, in dem Sie das Problem beschreiben können. Screenshots helfen sehr."
+      "bug_a": "Klicken Sie auf den Link <strong>🐛 Fehler melden</strong> unten auf der Startseite oder Ihrem Dashboard. Das öffnet ein vorgefülltes GitHub-Issue, in dem Sie das Problem beschreiben können. Screenshots helfen sehr.",
+      "install_q": "Wie installiere ich DivingHQ als App?",
+      "install_a": "Auf dem iPhone: Öffnen Sie die Seite in Safari, tippen Sie auf die Teilen-Schaltfläche und dann auf <strong>Zum Home-Bildschirm</strong>. Auf Android: in Chrome öffnen, auf das Menü tippen und dann auf <strong>App installieren</strong>. Das Symbol startet eine randlose Vollbildansicht — schnellerer Start, keine Browserleiste.",
+      "tfa_q": "Wie aktiviere ich die Zwei-Faktor-Authentifizierung?",
+      "tfa_a": "Öffnen Sie <strong>Mein Profil</strong> → <strong>Sicherheit</strong> → <strong>Zwei-Faktor-Authentifizierung</strong> und scannen Sie den QR-Code mit Ihrer Authenticator-App (1Password, Authy, Google Authenticator). Bewahren Sie die Wiederherstellungscodes an einem sicheren Ort auf — sie sind der einzige Weg zurück, falls Sie Ihr Smartphone verlieren.",
+      "account_q": "Wie ändere ich meine E-Mail, mein Passwort oder lösche mein Konto?",
+      "account_a": "Alles unter <strong>Mein Profil</strong> → <strong>Kontoeinstellungen</strong>. E-Mail-Änderungen erfordern eine erneute Bestätigung an der neuen Adresse. Das Löschen Ihres Kontos ist endgültig und entfernt Ihren Login; historische Wertungen bleiben unter dem Eintrag des Verbands auf der öffentlichen Anzeigetafel (auf Anfrage anonymisiert — wenden Sie sich an Ihren Verbandsadmin)."
     },
     "next": {
       "lede": "Brauchen Sie die ausführliche Version? Das {wiki_link} behandelt jeden Bildschirm, jede Rolle und jede World-Aquatics-Regel, die die App umsetzt. Die Seiten, die einen Lesezeichen wert sind:",

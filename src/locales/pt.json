@@ -460,7 +460,13 @@
       "schedule_q": "Como planeio um dia inteiro de campeonato?",
       "schedule_a": "Adiciona horários programados às provas do encontro e depois abre <strong>Calendário</strong> a partir da página do encontro como admin de organização ou diretor de prova. O DivingHQ gera um primeiro plano com aquecimentos de 45 minutos, blocos de prova e atribuição de pranchas. Ativa o <strong>Modo edição</strong> para arrastar, redimensionar, inserir, apagar ou duplicar sessões; a gaveta de conflitos sinaliza sobreposições de pranchas, juízes, saltadores e árbitros. Treinadores, saltadores e espectadores podem ver o calendário público ou subscrever o feed iCal.",
       "bug_q": "Como reporto um erro?",
-      "bug_a": "Clica no link <strong>🐛 Reportar um erro</strong> no fundo da página inicial ou do teu painel. Abre uma issue do GitHub pré-preenchida, pronta para descreveres o problema. As capturas de ecrã ajudam muito."
+      "bug_a": "Clica no link <strong>🐛 Reportar um erro</strong> no fundo da página inicial ou do teu painel. Abre uma issue do GitHub pré-preenchida, pronta para descreveres o problema. As capturas de ecrã ajudam muito.",
+      "install_q": "Como instalo o DivingHQ como aplicação?",
+      "install_a": "No iPhone: abre o site no Safari, toca no botão Partilhar e depois em <strong>Adicionar ao ecrã principal</strong>. No Android: abre no Chrome, toca no menu e depois em <strong>Instalar app</strong>. O ícone abre uma vista de ecrã inteiro sem barras — arranque mais rápido, sem barra de navegador.",
+      "tfa_q": "Como ativo a autenticação de dois fatores?",
+      "tfa_a": "Abre <strong>O Meu Perfil</strong> → <strong>Segurança</strong> → <strong>Autenticação de dois fatores</strong> e lê o código QR com a tua app de autenticação (1Password, Authy, Google Authenticator). Guarda os códigos de recuperação num sítio seguro — são a única forma de voltar a entrar se perderes o telemóvel.",
+      "account_q": "Como altero o meu email, a palavra-passe, ou elimino a minha conta?",
+      "account_a": "Tudo em <strong>O Meu Perfil</strong> → <strong>Definições da conta</strong>. As alterações de email precisam de nova verificação no novo endereço. Eliminar a conta é permanente e remove o teu acesso; as pontuações históricas mantêm-se no marcador público sob o registo da federação (anonimizadas a pedido — contacta o admin da tua federação)."
     },
     "next": {
       "lede": "Precisas da versão completa? O {wiki_link} cobre cada ecrã, cada papel, cada regra da World Aquatics que a app implementa. As páginas mais úteis para guardar nos favoritos:",

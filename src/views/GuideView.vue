@@ -51,6 +51,7 @@
  */
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 
 const WIKI = 'https://github.com/JediBrooker/DivingHQ/wiki'
 
@@ -148,6 +149,7 @@ onBeforeUnmount(() => observer?.disconnect())
          v-tip:bottom="$t('guide.open_wiki_tip')">
         {{ $t('guide.open_wiki') }}
       </a>
+      <LocaleSwitcher class="guide-nav-locale" />
     </div>
 
     <!-- Hero -->
@@ -376,6 +378,21 @@ onBeforeUnmount(() => observer?.disconnect())
               <summary>{{ $t('guide.faq.bug_q') }}</summary>
               <div class="guide-faq-body" v-html="$t('guide.faq.bug_a')"></div>
             </details>
+
+            <details class="guide-faq-item">
+              <summary>{{ $t('guide.faq.install_q') }}</summary>
+              <div class="guide-faq-body" v-html="$t('guide.faq.install_a')"></div>
+            </details>
+
+            <details class="guide-faq-item">
+              <summary>{{ $t('guide.faq.tfa_q') }}</summary>
+              <div class="guide-faq-body" v-html="$t('guide.faq.tfa_a')"></div>
+            </details>
+
+            <details class="guide-faq-item">
+              <summary>{{ $t('guide.faq.account_q') }}</summary>
+              <div class="guide-faq-body" v-html="$t('guide.faq.account_a')"></div>
+            </details>
           </div>
         </section>
 
@@ -427,9 +444,12 @@ onBeforeUnmount(() => observer?.disconnect())
   padding: 2rem;
 }
 .guide-nav {
-  display: flex; gap: 0.5rem; flex-wrap: wrap;
+  display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;
   margin-bottom: 1.5rem;
 }
+/* Language picker sits at the inline-end of the nav row, opposite
+   the Back / Wiki buttons (RTL-aware). */
+.guide-nav-locale { margin-inline-start: auto; }
 
 /* Hero */
 .guide-hero {

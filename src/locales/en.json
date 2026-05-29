@@ -449,7 +449,13 @@
       "schedule_q": "How do I plan a whole championship day?",
       "schedule_a": "Add scheduled times to the meet's events, then open <strong>Schedule</strong> from the meet page as an org admin or meet manager. DivingHQ seeds a first plan with 45-minute warmups, event blocks, and board assignments. Turn on <strong>Edit mode</strong> to drag, resize, insert, delete, or duplicate sessions; the conflicts drawer flags overlapping boards, judges, divers, and referees. Coaches, divers, and spectators can view the public timeline or subscribe to the iCal feed.",
       "bug_q": "How do I report a bug?",
-      "bug_a": "Click the <strong>🐛 Report a bug</strong> link at the bottom of the home page or your dashboard. It opens a pre-filled GitHub issue ready for you to describe the problem. Screenshots help a lot."
+      "bug_a": "Click the <strong>🐛 Report a bug</strong> link at the bottom of the home page or your dashboard. It opens a pre-filled GitHub issue ready for you to describe the problem. Screenshots help a lot.",
+      "install_q": "How do I install DivingHQ as an app?",
+      "install_a": "On iPhone: open the site in Safari, tap the Share button, then <strong>Add to Home Screen</strong>. On Android: open in Chrome, tap the menu, then <strong>Install app</strong>. The icon launches a chromeless full-screen view — faster startup, no browser bar.",
+      "tfa_q": "How do I enable two-factor authentication?",
+      "tfa_a": "Open <strong>My Profile</strong> → <strong>Security</strong> → <strong>Two-factor authentication</strong> and scan the QR code with your authenticator app (1Password, Authy, Google Authenticator). Save the recovery codes somewhere safe — they're the only way back in if you lose your phone.",
+      "account_q": "How do I change my email, password, or delete my account?",
+      "account_a": "All in <strong>My Profile</strong> → <strong>Account settings</strong>. Email changes need re-verification at the new address. Deleting your account is permanent and removes your sign-in; historical scores stay on the public scoreboard under the federation's record (anonymised on request — contact your federation admin)."
     },
     "next": {
       "lede": "Need the deep-dive version? The {wiki_link} covers every screen, every role, every World Aquatics rule the app encodes. The pages most worth bookmarking:",

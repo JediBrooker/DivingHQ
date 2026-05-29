@@ -460,7 +460,13 @@
       "schedule_q": "Miten suunnittelen koko mestaruuspäivän?",
       "schedule_a": "Lisää aikataulun kellonajat kisan kisalajeihin ja avaa sitten <strong>Aikataulu</strong> kisan sivulta liittokoordinaattorina tai kisanjohtajana. DivingHQ luo pohjasuunnitelman 45 minuutin lämmittelyillä, kisalajilohkoilla ja lautajaolla. Ota käyttöön <strong>Muokkaustila</strong> raahataksesi, muuttaaksesi kokoa, lisätäksesi, poistaaksesi tai monistaaksesi sessioita; konfliktipaneeli merkitsee päällekkäiset laudat, tuomarit, hyppääjät ja ylituomarit. Valmentajat, hyppääjät ja katsojat voivat tarkastella julkista aikajanaa tai tilata iCal-syötteen.",
       "bug_q": "Miten raportoin virheestä?",
-      "bug_a": "Napsauta etusivun tai paneelin alalaidassa olevaa linkkiä <strong>🐛 Raportoi virhe</strong>. Avautuu valmiiksi täytetty GitHub-issue, jossa voit kuvata ongelman. Kuvakaappaukset auttavat paljon."
+      "bug_a": "Napsauta etusivun tai paneelin alalaidassa olevaa linkkiä <strong>🐛 Raportoi virhe</strong>. Avautuu valmiiksi täytetty GitHub-issue, jossa voit kuvata ongelman. Kuvakaappaukset auttavat paljon.",
+      "install_q": "Miten asennan DivingHQ:n sovelluksena?",
+      "install_a": "iPhonella: avaa sivusto Safarissa, napauta Jaa-painiketta ja valitse sitten <strong>Lisää aloitusnäytölle</strong>. Androidilla: avaa Chromessa, napauta valikkoa ja valitse sitten <strong>Asenna sovellus</strong>. Kuvake käynnistää koko ruudun selaimettoman näkymän — nopeampi käynnistys, ei selainpalkkia.",
+      "tfa_q": "Miten otan kaksivaiheisen tunnistuksen käyttöön?",
+      "tfa_a": "Avaa <strong>Oma profiili</strong> → <strong>Turvallisuus</strong> → <strong>Kaksivaiheinen tunnistus</strong> ja skannaa QR-koodi todennussovelluksellasi (1Password, Authy, Google Authenticator). Tallenna palautuskoodit turvalliseen paikkaan — ne ovat ainoa tie takaisin, jos kadotat puhelimesi.",
+      "account_q": "Miten vaihdan sähköpostini tai salasanani tai poistan tilini?",
+      "account_a": "Kaikki kohdassa <strong>Oma profiili</strong> → <strong>Tilin asetukset</strong>. Sähköpostin vaihto vaatii uuden vahvistuksen uudessa osoitteessa. Tilin poistaminen on pysyvää ja poistaa kirjautumisesi; aiemmat pisteet säilyvät julkisella tulostaululla liiton kirjauksen alla (anonymisoidaan pyynnöstä — ota yhteyttä liittokoordinaattoriisi)."
     },
     "next": {
       "lede": "Tarvitsetko syväluotaavaa versiota? {wiki_link} kattaa jokaisen näytön, jokaisen roolin ja jokaisen World Aquatics -säännön, jonka sovellus on koodannut. Kirjanmerkkien arvoiset sivut:",

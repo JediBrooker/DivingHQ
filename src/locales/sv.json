@@ -460,7 +460,13 @@
       "schedule_q": "Hur planerar jag en hel mästerskapsdag?",
       "schedule_a": "Lägg in schemalagda tider på tävlingens grenar och öppna sedan <strong>Schema</strong> från tävlingens sida som förbundsadmin eller tävlingsledare. DivingHQ skapar en första plan med 45-minuters uppvärmningar, grenblock och brädtilldelningar. Slå på <strong>Redigeringsläge</strong> för att dra, ändra storlek, lägga till, ta bort eller duplicera pass; konfliktpanelen flaggar krockande brädor, domare, hoppare och överdomare. Tränare, hoppare och åskådare kan se den publika tidslinjen eller prenumerera på iCal-flödet.",
       "bug_q": "Hur rapporterar jag en bugg?",
-      "bug_a": "Klicka på länken <strong>🐛 Rapportera en bugg</strong> längst ned på hemsidan eller din panel. Den öppnar ett färdigfyllt GitHub-ärende där du kan beskriva problemet. Skärmbilder hjälper mycket."
+      "bug_a": "Klicka på länken <strong>🐛 Rapportera en bugg</strong> längst ned på hemsidan eller din panel. Den öppnar ett färdigfyllt GitHub-ärende där du kan beskriva problemet. Skärmbilder hjälper mycket.",
+      "install_q": "Hur installerar jag DivingHQ som en app?",
+      "install_a": "På iPhone: öppna sidan i Safari, tryck på Dela-knappen och sedan på <strong>Lägg till på hemskärmen</strong>. På Android: öppna i Chrome, tryck på menyn och sedan på <strong>Installera app</strong>. Ikonen startar en helskärmsvy utan webbläsarkrom — snabbare start, ingen webbläsarrad.",
+      "tfa_q": "Hur aktiverar jag tvåfaktorsautentisering?",
+      "tfa_a": "Öppna <strong>Min profil</strong> → <strong>Säkerhet</strong> → <strong>Tvåfaktorsautentisering</strong> och skanna QR-koden med din autentiseringsapp (1Password, Authy, Google Authenticator). Spara återställningskoderna på ett säkert ställe — de är enda vägen tillbaka in om du tappar bort mobilen.",
+      "account_q": "Hur byter jag e-post, lösenord eller tar bort mitt konto?",
+      "account_a": "Allt finns under <strong>Min profil</strong> → <strong>Kontoinställningar</strong>. E-postbyten kräver ny verifiering på den nya adressen. Att ta bort kontot är permanent och tar bort din inloggning; historiska poäng finns kvar på den publika resultattavlan under förbundets post (anonymiseras på begäran — kontakta din förbundsadministratör)."
     },
     "next": {
       "lede": "Vill du ha den fördjupade versionen? {wiki_link} täcker varje skärm, varje roll och varje World Aquatics-regel som appen kodat in. Sidorna värda att bokmärka:",

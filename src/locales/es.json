@@ -449,7 +449,13 @@
       "schedule_q": "¿Cómo planifico una jornada completa de un campeonato?",
       "schedule_a": "Añade horarios programados a los eventos de la competición y luego abre <strong>Calendario</strong> desde la página de la competición como admin de organización o gestor de competición. DivingHQ genera un primer plan con calentamientos de 45 minutos, bloques de evento y asignación de trampolines. Activa el <strong>Modo edición</strong> para arrastrar, redimensionar, insertar, borrar o duplicar sesiones; el cajón de conflictos avisa de solapamientos en trampolines, jueces, saltadores y árbitros. Entrenadores, saltadores y espectadores pueden ver el calendario público o suscribirse al feed iCal.",
       "bug_q": "¿Cómo informo de un error?",
-      "bug_a": "Haz clic en el enlace <strong>🐛 Informar de un error</strong> al pie de la página de inicio o de tu panel. Abrirá un issue de GitHub prerellenado listo para que describas el problema. Las capturas de pantalla ayudan mucho."
+      "bug_a": "Haz clic en el enlace <strong>🐛 Informar de un error</strong> al pie de la página de inicio o de tu panel. Abrirá un issue de GitHub prerellenado listo para que describas el problema. Las capturas de pantalla ayudan mucho.",
+      "install_q": "¿Cómo instalo DivingHQ como aplicación?",
+      "install_a": "En iPhone: abre el sitio en Safari, toca el botón Compartir y luego <strong>Añadir a la pantalla de inicio</strong>. En Android: ábrelo en Chrome, toca el menú y luego <strong>Instalar aplicación</strong>. El icono abre una vista a pantalla completa sin barras del navegador — arranque más rápido, sin barra del navegador.",
+      "tfa_q": "¿Cómo activo la verificación en dos pasos?",
+      "tfa_a": "Abre <strong>Mi Perfil</strong> → <strong>Seguridad</strong> → <strong>Verificación en dos pasos</strong> y escanea el código QR con tu app de autenticación (1Password, Authy, Google Authenticator). Guarda los códigos de recuperación en un lugar seguro — son la única forma de volver a entrar si pierdes el móvil.",
+      "account_q": "¿Cómo cambio mi correo, mi contraseña o elimino mi cuenta?",
+      "account_a": "Todo en <strong>Mi Perfil</strong> → <strong>Ajustes de la cuenta</strong>. Los cambios de correo requieren volver a verificar la nueva dirección. Eliminar tu cuenta es permanente y elimina tu inicio de sesión; los resultados históricos permanecen en el marcador público bajo el registro de la federación (anonimizados si lo solicitas — contacta con el admin de tu federación)."
     },
     "next": {
       "lede": "¿Necesitas la versión en profundidad? El {wiki_link} cubre cada pantalla, cada rol y cada norma de World Aquatics que la app implementa. Las páginas más útiles para guardar como favoritos:",

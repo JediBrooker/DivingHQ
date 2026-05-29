@@ -449,7 +449,13 @@
       "schedule_q": "Paano magpaplano ng isang buong championship day?",
       "schedule_a": "Magdagdag ng scheduled times sa events ng meet, saka buksan ang <strong>Schedule</strong> mula sa meet page bilang org admin o meet manager. Naglalagay ang DivingHQ ng unang plano na may 45-minute warmups, event blocks, at board assignments. Buksan ang <strong>Edit mode</strong> para mag-drag, mag-resize, mag-insert, magbura, o mag-duplicate ng sessions; ipinapakita ng conflicts drawer ang sabay-sabay na boards, judges, divers, at referees. Pwedeng tingnan ng coaches, divers, at spectators ang public timeline o mag-subscribe sa iCal feed.",
       "bug_q": "Paano mag-report ng bug?",
-      "bug_a": "I-click ang <strong>🐛 Report a bug</strong> link sa ibaba ng home page o ng iyong dashboard. Magbubukas ang isang pre-filled GitHub issue na handa mong ilarawan ang problema. Malaking tulong ang screenshots."
+      "bug_a": "I-click ang <strong>🐛 Report a bug</strong> link sa ibaba ng home page o ng iyong dashboard. Magbubukas ang isang pre-filled GitHub issue na handa mong ilarawan ang problema. Malaking tulong ang screenshots.",
+      "install_q": "Paano i-install ang DivingHQ bilang isang app?",
+      "install_a": "Sa iPhone: buksan ang site sa Safari, i-tap ang Share button, saka <strong>Add to Home Screen</strong>. Sa Android: buksan sa Chrome, i-tap ang menu, saka <strong>Install app</strong>. Ang icon ay naglulunsad ng chromeless full-screen view — mas mabilis ang startup, walang browser bar.",
+      "tfa_q": "Paano paganahin ang two-factor authentication?",
+      "tfa_a": "Buksan ang <strong>My Profile</strong> → <strong>Security</strong> → <strong>Two-factor authentication</strong> at i-scan ang QR code gamit ang iyong authenticator app (1Password, Authy, Google Authenticator). I-save ang recovery codes sa ligtas na lugar — iyon lang ang paraan para makabalik kung mawala ang iyong phone.",
+      "account_q": "Paano palitan ang aking email, password, o burahin ang aking account?",
+      "account_a": "Nasa <strong>My Profile</strong> → <strong>Account settings</strong> lahat. Ang pagpalit ng email ay nangangailangan ng muling pag-verify sa bagong address. Permanente ang pagbura ng iyong account at inaalis nito ang iyong sign-in; mananatili ang mga historical na iskor sa public scoreboard sa ilalim ng rekord ng federation (ina-anonymize kapag hiniling — makipag-ugnayan sa iyong federation admin)."
     },
     "next": {
       "lede": "Kailangan ng deep-dive version? Sakop ng {wiki_link} ang bawat screen, bawat role, bawat patakaran ng World Aquatics na encoded ng app. Ang mga page na sulit i-bookmark:",

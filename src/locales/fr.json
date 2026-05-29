@@ -460,7 +460,13 @@
       "schedule_q": "Comment planifier une journée complète de championnat ?",
       "schedule_a": "Ajoute des horaires programmés aux épreuves de la compétition, puis ouvre <strong>Planning</strong> depuis la page de la compétition en tant qu'admin d'organisation ou gestionnaire de compétition. DivingHQ génère un premier planning avec des échauffements de 45 minutes, des blocs d'épreuves et l'affectation des plongeoirs. Active le <strong>Mode édition</strong> pour glisser, redimensionner, insérer, supprimer ou dupliquer des sessions ; le tiroir des conflits signale les chevauchements de plongeoirs, juges, plongeurs et arbitres. Entraîneurs, plongeurs et spectateurs peuvent voir la chronologie publique ou s'abonner au flux iCal.",
       "bug_q": "Comment signaler un bug ?",
-      "bug_a": "Clique sur le lien <strong>🐛 Signaler un bug</strong> en bas de la page d'accueil ou de ton tableau de bord. Cela ouvre un ticket GitHub pré-rempli prêt à décrire le problème. Les captures d'écran aident beaucoup."
+      "bug_a": "Clique sur le lien <strong>🐛 Signaler un bug</strong> en bas de la page d'accueil ou de ton tableau de bord. Cela ouvre un ticket GitHub pré-rempli prêt à décrire le problème. Les captures d'écran aident beaucoup.",
+      "install_q": "Comment installer DivingHQ comme application ?",
+      "install_a": "Sur iPhone : ouvre le site dans Safari, touche le bouton Partager, puis <strong>Sur l'écran d'accueil</strong>. Sur Android : ouvre-le dans Chrome, touche le menu, puis <strong>Installer l'application</strong>. L'icône lance une vue plein écran sans habillage de navigateur — démarrage plus rapide, sans barre de navigateur.",
+      "tfa_q": "Comment activer l'authentification à deux facteurs ?",
+      "tfa_a": "Ouvre <strong>Mon profil</strong> → <strong>Sécurité</strong> → <strong>Authentification à deux facteurs</strong> et scanne le code QR avec ton application d'authentification (1Password, Authy, Google Authenticator). Conserve les codes de récupération en lieu sûr — c'est le seul moyen de te reconnecter si tu perds ton téléphone.",
+      "account_q": "Comment changer mon e-mail, mon mot de passe, ou supprimer mon compte ?",
+      "account_a": "Tout se passe dans <strong>Mon profil</strong> → <strong>Paramètres du compte</strong>. Un changement d'e-mail demande une nouvelle vérification à la nouvelle adresse. Supprimer ton compte est définitif et retire ta connexion ; les scores historiques restent sur le tableau d'affichage public sous le registre de la fédération (anonymisés sur demande — contacte l'admin de ta fédération)."
     },
     "next": {
       "lede": "Besoin de la version détaillée ? Le {wiki_link} couvre chaque écran, chaque rôle, chaque règle World Aquatics que l'app applique. Les pages à mettre en favoris :",

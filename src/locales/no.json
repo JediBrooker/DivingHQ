@@ -460,7 +460,13 @@
       "schedule_q": "Hvordan planlegger jeg en hel mesterskapsdag?",
       "schedule_a": "Legg til planlagte tidspunkter til stevnets konkurranser, og åpne så <strong>Plan</strong> fra stevnets side som forbundsadmin eller stevneleder. DivingHQ lager en første plan med 45-minutters oppvarminger, konkurranseblokker og bretttildelinger. Slå på <strong>Redigeringsmodus</strong> for å dra, endre størrelse, sette inn, slette eller duplisere økter; konfliktpanelet markerer overlappende brett, dommere, stupere og overdommere. Trenere, stupere og tilskuere kan se den offentlige tidslinjen eller abonnere på iCal-feeden.",
       "bug_q": "Hvordan rapporterer jeg en feil?",
-      "bug_a": "Klikk på lenken <strong>🐛 Rapporter en feil</strong> nederst på hjemmesiden eller panelet ditt. Den åpner en forhåndsutfylt GitHub-sak hvor du kan beskrive problemet. Skjermbilder hjelper mye."
+      "bug_a": "Klikk på lenken <strong>🐛 Rapporter en feil</strong> nederst på hjemmesiden eller panelet ditt. Den åpner en forhåndsutfylt GitHub-sak hvor du kan beskrive problemet. Skjermbilder hjelper mye.",
+      "install_q": "Hvordan installerer jeg DivingHQ som en app?",
+      "install_a": "På iPhone: åpne siden i Safari, trykk på Del-knappen, og velg så <strong>Legg til på Hjem-skjerm</strong>. På Android: åpne i Chrome, trykk på menyen, og velg så <strong>Installer app</strong>. Ikonet starter en fullskjermsvisning uten nettleserkrom — raskere oppstart, ingen nettleserlinje.",
+      "tfa_q": "Hvordan slår jeg på tofaktorautentisering?",
+      "tfa_a": "Åpne <strong>Min profil</strong> → <strong>Sikkerhet</strong> → <strong>Tofaktorautentisering</strong> og skann QR-koden med autentiseringsappen din (1Password, Authy, Google Authenticator). Lagre gjenopprettingskodene et trygt sted — de er den eneste veien inn igjen hvis du mister telefonen.",
+      "account_q": "Hvordan endrer jeg e-post eller passord, eller sletter kontoen min?",
+      "account_a": "Alt sammen under <strong>Min profil</strong> → <strong>Kontoinnstillinger</strong>. Endring av e-post krever ny bekreftelse på den nye adressen. Sletting av kontoen er permanent og fjerner innloggingen din; historiske poengsummer blir stående på den offentlige scoretavlen under forbundets registrering (anonymiseres på forespørsel — kontakt forbundsadministratoren din)."
     },
     "next": {
       "lede": "Trenger du den dyptgående versjonen? {wiki_link} dekker hver skjerm, hver rolle, hver World Aquatics-regel som appen har kodet inn. Sidene som er verdt å bokmerke:",

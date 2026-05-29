@@ -460,7 +460,13 @@
       "schedule_q": "Hogyan tervezhetek meg egy egész bajnoki napot?",
       "schedule_a": "Adjon ütemezett időpontokat a verseny eseményeihez, majd nyissa meg az <strong>Ütemtervet</strong> a verseny oldalról szervezeti adminisztrátorként vagy versenyvezetőként. A DivingHQ egy első tervet vet ki 45 perces bemelegítésekkel, eseménytömbökkel és deszka-hozzárendelésekkel. Kapcsolja be a <strong>Szerkesztési módot</strong> az ülések húzásához, átméretezéséhez, beszúrásához, törléséhez vagy duplikálásához; az ütközések fiók jelzi az átfedő deszkákat, pontozóbírókat, műugrókat és versenybírókat. Az edzők, műugrók és nézők megnézhetik a nyilvános idővonalat, vagy feliratkozhatnak az iCal-feedre.",
       "bug_q": "Hogyan jelenthetek hibát?",
-      "bug_a": "Kattintson a <strong>🐛 Hibajelentés</strong> linkre a kezdőlap vagy az irányítópult alján. Megnyit egy előre kitöltött GitHub-issue-t, amelyben leírhatja a problémát. A képernyőképek sokat segítenek."
+      "bug_a": "Kattintson a <strong>🐛 Hibajelentés</strong> linkre a kezdőlap vagy az irányítópult alján. Megnyit egy előre kitöltött GitHub-issue-t, amelyben leírhatja a problémát. A képernyőképek sokat segítenek.",
+      "install_q": "Hogyan telepítem a DivingHQ-t alkalmazásként?",
+      "install_a": "iPhone-on: nyissa meg az oldalt Safariban, koppintson a Megosztás gombra, majd a <strong>Hozzáadás a kezdőképernyőhöz</strong> elemre. Androidon: nyissa meg Chrome-ban, koppintson a menüre, majd az <strong>Alkalmazás telepítése</strong> elemre. Az ikon vezérlőelem-mentes, teljes képernyős nézetet indít — gyorsabb indulás, böngészősáv nélkül.",
+      "tfa_q": "Hogyan kapcsolom be a kétlépcsős hitelesítést?",
+      "tfa_a": "Nyissa meg a <strong>Saját profil</strong> → <strong>Biztonság</strong> → <strong>Kétlépcsős hitelesítés</strong> menüt, és olvassa be a QR-kódot a hitelesítő alkalmazásával (1Password, Authy, Google Authenticator). Mentse a helyreállítási kódokat biztonságos helyre — ezek az egyetlen módja a visszajutásnak, ha elveszíti a telefonját.",
+      "account_q": "Hogyan módosítom az e-mail-címem, a jelszavam, vagy hogyan törlöm a fiókom?",
+      "account_a": "Mind a <strong>Saját profil</strong> → <strong>Fiókbeállítások</strong> alatt. Az e-mail-cím módosításához újra meg kell erősíteni az új címet. A fiók törlése végleges, és eltávolítja a bejelentkezését; a korábbi pontszámok a nyilvános eredménytáblán maradnak a szövetség nyilvántartása alatt (kérésre anonimizálva — vegye fel a kapcsolatot a szövetségi adminisztrátorral)."
     },
     "next": {
       "lede": "Részletes verzióra van szüksége? A {wiki_link} minden képernyőt, minden szerepkört, minden World Aquatics szabályt lefed, amelyet az alkalmazás kódol. A leginkább könyvjelzőzésre érdemes oldalak:",

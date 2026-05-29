@@ -449,7 +449,13 @@
       "schedule_q": "Bagaimana saya merancang sehari kejohanan penuh?",
       "schedule_a": "Tambah masa berjadual pada acara pertandingan, kemudian buka <strong>Jadual</strong> dari halaman pertandingan sebagai pentadbir organisasi atau pengurus pertandingan. DivingHQ membenih pelan awal dengan pemanasan 45-minit, blok acara, dan penugasan papan. Hidupkan <strong>Mod edit</strong> untuk seret, saiz semula, sisip, padam, atau salin sesi; laci konflik menandakan papan, hakim, peterjun, dan hakim utama yang bertindih. Jurulatih, peterjun, dan penonton boleh melihat garis masa awam atau melanggan suapan iCal.",
       "bug_q": "Bagaimana saya melaporkan pepijat?",
-      "bug_a": "Klik pautan <strong>🐛 Laporkan pepijat</strong> di bahagian bawah halaman utama atau papan pemuka anda. Ia membuka isu GitHub yang telah diisi terdahulu sedia untuk anda menerangkan masalah. Tangkapan skrin amat membantu."
+      "bug_a": "Klik pautan <strong>🐛 Laporkan pepijat</strong> di bahagian bawah halaman utama atau papan pemuka anda. Ia membuka isu GitHub yang telah diisi terdahulu sedia untuk anda menerangkan masalah. Tangkapan skrin amat membantu.",
+      "install_q": "Bagaimana saya memasang DivingHQ sebagai aplikasi?",
+      "install_a": "Pada iPhone: buka tapak di Safari, ketik butang Kongsi, kemudian <strong>Tambah ke Skrin Utama</strong>. Pada Android: buka di Chrome, ketik menu, kemudian <strong>Pasang aplikasi</strong>. Ikon tersebut melancarkan paparan skrin penuh tanpa bingkai — permulaan lebih pantas, tiada bar pelayar.",
+      "tfa_q": "Bagaimana saya mengaktifkan pengesahan dua faktor?",
+      "tfa_a": "Buka <strong>Profil Saya</strong> → <strong>Keselamatan</strong> → <strong>Pengesahan dua faktor</strong> dan imbas kod QR dengan aplikasi pengesah anda (1Password, Authy, Google Authenticator). Simpan kod pemulihan di tempat yang selamat — itulah satu-satunya cara masuk semula jika anda kehilangan telefon.",
+      "account_q": "Bagaimana saya menukar e-mel, kata laluan, atau memadam akaun saya?",
+      "account_a": "Kesemuanya dalam <strong>Profil Saya</strong> → <strong>Tetapan akaun</strong>. Perubahan e-mel memerlukan pengesahan semula pada alamat baharu. Memadam akaun anda adalah kekal dan membuang log masuk anda; markah bersejarah kekal pada papan markah awam di bawah rekod persekutuan (dianonimkan atas permintaan — hubungi admin persekutuan anda)."
     },
     "next": {
       "lede": "Perlukan versi terperinci? {wiki_link} merangkumi setiap skrin, setiap peranan, setiap peraturan World Aquatics yang dikodkan oleh aplikasi. Halaman yang paling berbaloi ditanda buku:",
