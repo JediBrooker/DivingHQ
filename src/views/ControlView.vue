@@ -3100,6 +3100,10 @@ function onKeydown(e) {
         closeOverflowMenus()
       }
       break
+    case '?':                 // mirror the toolbar ? button — show/hide the hotkey overlay
+      e.preventDefault()
+      toggleMenu('kbd')
+      break
     case 'ArrowRight':
     case ' ':                 // space = advance — same muscle memory as a remote
       e.preventDefault()
