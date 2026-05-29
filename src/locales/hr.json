@@ -449,7 +449,13 @@
       "schedule_q": "Kako planirati cijeli dan prvenstva?",
       "schedule_a": "Dodajte planirana vremena natjecanjima, a zatim otvorite <strong>Raspored</strong> sa stranice natjecanja kao administrator organizacije ili voditelj natjecanja. DivingHQ generira prvi plan s 45-minutnim zagrijavanjima, blokovima natjecanja i dodjelama dasaka. Uključite <strong>Način uređivanja</strong> za povlačenje, mijenjanje veličine, umetanje, brisanje ili dupliciranje sesija; ladica sukoba ističe preklapajuće daske, suce, skakače i glavne suce. Treneri, skakači i gledatelji mogu pregledati javnu vremensku liniju ili se pretplatiti na iCal feed.",
       "bug_q": "Kako prijaviti grešku?",
-      "bug_a": "Kliknite poveznicu <strong>🐛 Prijavi grešku</strong> na dnu početne stranice ili panela. Otvara se unaprijed popunjen GitHub issue spreman za opisivanje problema. Snimke zaslona puno pomažu."
+      "bug_a": "Kliknite poveznicu <strong>🐛 Prijavi grešku</strong> na dnu početne stranice ili panela. Otvara se unaprijed popunjen GitHub issue spreman za opisivanje problema. Snimke zaslona puno pomažu.",
+      "install_q": "Kako instalirati DivingHQ kao aplikaciju?",
+      "install_a": "Na iPhoneu: otvorite stranicu u Safariju, dodirnite gumb Dijeljenje, zatim <strong>Dodaj na početni zaslon</strong>. Na Androidu: otvorite u Chromeu, dodirnite izbornik, zatim <strong>Instaliraj aplikaciju</strong>. Ikona pokreće prikaz preko cijelog zaslona bez okvira preglednika — brže pokretanje, bez trake preglednika.",
+      "tfa_q": "Kako uključiti dvofaktorsku autentikaciju?",
+      "tfa_a": "Otvorite <strong>Moj profil</strong> → <strong>Sigurnost</strong> → <strong>Dvofaktorska autentikacija</strong> i skenirajte QR kod svojom autentikacijskom aplikacijom (1Password, Authy, Google Authenticator). Spremite kodove za oporavak na sigurno mjesto — to je jedini način povratka ako izgubite telefon.",
+      "account_q": "Kako promijeniti e-mail, lozinku ili obrisati račun?",
+      "account_a": "Sve u <strong>Moj profil</strong> → <strong>Postavke računa</strong>. Promjena e-maila zahtijeva ponovnu provjeru na novoj adresi. Brisanje računa je trajno i uklanja vašu prijavu; povijesni rezultati ostaju na javnom semaforu pod evidencijom federacije (anonimizirani na zahtjev — obratite se administratoru svoje federacije)."
     },
     "next": {
       "lede": "Trebate detaljnu verziju? {wiki_link} pokriva svaki zaslon, svaku ulogu, svako World Aquatics pravilo koje aplikacija kodira. Stranice koje najviše vrijedi zabilježiti:",

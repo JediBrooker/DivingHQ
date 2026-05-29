@@ -460,7 +460,13 @@
       "schedule_q": "Jak zaplanować cały dzień mistrzostw?",
       "schedule_a": "Dodaj zaplanowane godziny do konkurencji mityngu i otwórz <strong>Harmonogram</strong> ze strony mityngu jako administrator organizacji lub dyrektor zawodów. DivingHQ proponuje pierwszy plan z 45-minutowymi rozgrzewkami, blokami konkurencji i przydziałem trampolin. Włącz <strong>Tryb edycji</strong>, aby przeciągać, zmieniać rozmiar, wstawiać, usuwać lub duplikować sesje; szuflada konfliktów wskazuje nakładające się trampoliny, sędziów, skoczków i sędziów głównych. Trenerzy, skoczkowie i widzowie mogą oglądać publiczny harmonogram lub zasubskrybować kanał iCal.",
       "bug_q": "Jak zgłosić błąd?",
-      "bug_a": "Kliknij link <strong>🐛 Zgłoś błąd</strong> u dołu strony głównej lub Twojej tablicy. Otworzy się wstępnie wypełnione zgłoszenie na GitHubie, gotowe, abyś opisał problem. Zrzuty ekranu bardzo pomagają."
+      "bug_a": "Kliknij link <strong>🐛 Zgłoś błąd</strong> u dołu strony głównej lub Twojej tablicy. Otworzy się wstępnie wypełnione zgłoszenie na GitHubie, gotowe, abyś opisał problem. Zrzuty ekranu bardzo pomagają.",
+      "install_q": "Jak zainstalować DivingHQ jako aplikację?",
+      "install_a": "Na iPhonie: otwórz stronę w Safari, dotknij przycisku Udostępnij, a następnie <strong>Dodaj do ekranu początkowego</strong>. Na Androidzie: otwórz w Chrome, dotknij menu, a następnie <strong>Zainstaluj aplikację</strong>. Ikona uruchamia pełnoekranowy widok bez ramek przeglądarki — szybszy start, bez paska adresu.",
+      "tfa_q": "Jak włączyć uwierzytelnianie dwuskładnikowe?",
+      "tfa_a": "Otwórz <strong>Mój profil</strong> → <strong>Bezpieczeństwo</strong> → <strong>Uwierzytelnianie dwuskładnikowe</strong> i zeskanuj kod QR aplikacją uwierzytelniającą (1Password, Authy, Google Authenticator). Zapisz kody odzyskiwania w bezpiecznym miejscu — to jedyna droga powrotu, jeśli zgubisz telefon.",
+      "account_q": "Jak zmienić e-mail, hasło lub usunąć konto?",
+      "account_a": "Wszystko w <strong>Mój profil</strong> → <strong>Ustawienia konta</strong>. Zmiana e-maila wymaga ponownej weryfikacji pod nowym adresem. Usunięcie konta jest trwałe i likwiduje Twój login; historyczne wyniki pozostają na publicznej tablicy wyników w rekordzie federacji (anonimizowane na życzenie — skontaktuj się z administratorem swojej federacji)."
     },
     "next": {
       "lede": "Potrzebujesz pełnej, szczegółowej wersji? {wiki_link} omawia każdy ekran, każdą rolę, każdą regułę World Aquatics, którą wspiera aplikacja. Strony, które warto dodać do zakładek:",

@@ -449,7 +449,13 @@
       "schedule_q": "我如何规划整个锦标赛日?",
       "schedule_a": "为比赛的赛事添加预定时间,然后以组织管理员或赛事经理身份从比赛页面打开 <strong>赛程</strong>。DivingHQ 会生成一个初始计划,包含 45 分钟热身、赛事块和跳板分配。开启 <strong>编辑模式</strong> 来拖拽、调整大小、插入、删除或复制会话;冲突抽屉标记重叠的跳板、裁判、运动员和主裁判。教练、运动员和观众可以查看公开时间线或订阅 iCal 源。",
       "bug_q": "我如何报告 bug?",
-      "bug_a": "点击主页或您的面板底部的 <strong>🐛 报告 bug</strong> 链接。它会打开一个预填好的 GitHub issue 供您描述问题。截图非常有帮助。"
+      "bug_a": "点击主页或您的面板底部的 <strong>🐛 报告 bug</strong> 链接。它会打开一个预填好的 GitHub issue 供您描述问题。截图非常有帮助。",
+      "install_q": "如何将 DivingHQ 安装为应用？",
+      "install_a": "在 iPhone 上：用 Safari 打开本站，点按分享按钮，然后选择 <strong>添加到主屏幕</strong>。在 Android 上：用 Chrome 打开，点按菜单，然后选择 <strong>安装应用</strong>。该图标会启动一个无浏览器外框的全屏视图 — 启动更快，没有浏览器地址栏。",
+      "tfa_q": "如何启用双重验证？",
+      "tfa_a": "打开 <strong>我的资料</strong> → <strong>安全</strong> → <strong>双重验证</strong>，然后用您的身份验证器应用（1Password、Authy、Google Authenticator）扫描 QR 码。请将恢复代码保存在安全的地方 — 万一您丢失手机，它们是唯一的找回方式。",
+      "account_q": "如何更改我的邮箱、密码，或删除我的账户？",
+      "account_a": "全部在 <strong>我的资料</strong> → <strong>账户设置</strong> 中。更改邮箱需要在新地址重新验证。删除账户是永久性的，会移除您的登录方式；历史成绩将以联合会记录的形式保留在公开记分牌上（如需匿名化请提出申请 — 联系您所在联合会的管理员）。"
     },
     "next": {
       "lede": "需要深入版本?{wiki_link} 涵盖每个屏幕、每个角色、应用编码的每条 World Aquatics 规则。最值得收藏的页面:",

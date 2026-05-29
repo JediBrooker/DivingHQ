@@ -449,7 +449,13 @@
       "schedule_q": "Bagaimana cara merencanakan satu hari kejuaraan penuh?",
       "schedule_a": "Tambahkan waktu terjadwal ke acara kompetisi, lalu buka <strong>Jadwal</strong> dari halaman kompetisi sebagai admin organisasi atau pengelola. DivingHQ menyemai rencana awal dengan pemanasan 45 menit, blok acara, dan penugasan papan. Aktifkan <strong>Mode edit</strong> untuk seret, ubah ukuran, sisipkan, hapus, atau gandakan sesi; laci konflik menandai papan, juri, peloncat, dan wasit yang tumpang tindih. Pelatih, peloncat, dan penonton dapat melihat lini masa publik atau berlangganan umpan iCal.",
       "bug_q": "Bagaimana cara melaporkan bug?",
-      "bug_a": "Klik tautan <strong>🐛 Laporkan bug</strong> di bagian bawah halaman beranda atau dasbor Anda. Itu membuka isu GitHub yang sudah terisi siap untuk Anda jelaskan masalahnya. Tangkapan layar sangat membantu."
+      "bug_a": "Klik tautan <strong>🐛 Laporkan bug</strong> di bagian bawah halaman beranda atau dasbor Anda. Itu membuka isu GitHub yang sudah terisi siap untuk Anda jelaskan masalahnya. Tangkapan layar sangat membantu.",
+      "install_q": "Bagaimana cara memasang DivingHQ sebagai aplikasi?",
+      "install_a": "Di iPhone: buka situs di Safari, ketuk tombol Bagikan, lalu <strong>Tambahkan ke Layar Utama</strong>. Di Android: buka di Chrome, ketuk menu, lalu <strong>Pasang aplikasi</strong>. Ikon tersebut meluncurkan tampilan layar penuh tanpa bingkai — startup lebih cepat, tanpa bilah peramban.",
+      "tfa_q": "Bagaimana cara mengaktifkan autentikasi dua faktor?",
+      "tfa_a": "Buka <strong>Profil Saya</strong> → <strong>Keamanan</strong> → <strong>Autentikasi dua faktor</strong> dan pindai kode QR dengan aplikasi autentikator Anda (1Password, Authy, Google Authenticator). Simpan kode pemulihan di tempat yang aman — itulah satu-satunya cara masuk kembali jika Anda kehilangan ponsel.",
+      "account_q": "Bagaimana cara mengubah email, kata sandi, atau menghapus akun saya?",
+      "account_a": "Semuanya ada di <strong>Profil Saya</strong> → <strong>Pengaturan akun</strong>. Perubahan email memerlukan verifikasi ulang di alamat yang baru. Menghapus akun Anda bersifat permanen dan menghapus akses masuk Anda; skor historis tetap ada di papan skor publik dalam catatan federasi (dianonimkan atas permintaan — hubungi admin federasi Anda)."
     },
     "next": {
       "lede": "Butuh versi mendalam? {wiki_link} mencakup setiap layar, setiap peran, setiap aturan World Aquatics yang diterapkan aplikasi. Halaman yang paling layak ditandai:",
