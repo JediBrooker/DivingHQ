@@ -360,22 +360,19 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
       });
       const { token: burstToken } = await setup.loginAs(request, burstReferee.username);
 
-      // Re-seed the score so the 31st blocked attempt is
-      // distinguishable from an UPDATE that simply finds nothing
-      // to do. After 30 successful fires the score is already 0;
-      // we'll bump it back to 8.0 BEFORE firing #31 and verify it
-      // stays at 8.0.
-      await setup.pool.query(
-        `UPDATE scores SET score = 8.0
-          WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-        [world.event.id, world.competitor.userId, 1],
+      // Count ACCEPTED actions via the room broadcast rather than the
+      // score value. The server emits exactly one `referee_action_failed`
+      // per fire that clears the limiter, and stays silent on the
+      // dropped one. The score saturates — the first fire flips it to 0
+      // and the other 29 are no-ops — so polling the score can't tell
+      // "1 processed" from "30 processed", which is what made the old
+      // reset-and-recheck version flaky under CI load. Waiting for all
+      // 30 broadcasts before firing #31 removes the race entirely.
+      const recipient = await connectAndSubscribe(
+        baseURL, world.refereeToken, world.event.id, ["referee_action_failed"],
       );
-
       const burstSock = await setup.openSocket(baseURL, burstToken);
       try {
-        // Fire 30 in a tight burst. Each succeeds; first emit
-        // already flipped score → 0; we don't need expect.poll
-        // here, we'll re-set + assert AFTER firing the 31st.
         for (let i = 0; i < 30; i++) {
           burstSock.emit("referee_failed_dive", {
             event_id: world.event.id,
@@ -383,38 +380,24 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
             round_number: 1,
           });
         }
-        // Let the 30 finish.
-        await expect.poll(async () => {
-          const r = await setup.pool.query(
-            `SELECT score FROM scores
-              WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-            [world.event.id, world.competitor.userId, 1],
-          );
-          return Number(r.rows[0].score);
-        }, { timeout: 5000, intervals: [100, 250, 500] }).toBe(0);
+        // All 30 must clear the limiter (and broadcast) before #31.
+        await expect.poll(
+          () => recipient.received["referee_action_failed"].length,
+          { timeout: 5000, intervals: [100, 250, 500] },
+        ).toBe(30);
 
-        // Reset to 8.0; fire #31 — limiter should drop it. Score
-        // stays at 8.0.
-        await setup.pool.query(
-          `UPDATE scores SET score = 8.0
-            WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-          [world.event.id, world.competitor.userId, 1],
-        );
+        // #31 is over the 30/60s limit → silently dropped: no further
+        // broadcast lands.
         burstSock.emit("referee_failed_dive", {
           event_id: world.event.id,
           competitor_id: world.competitor.userId,
           round_number: 1,
         });
         await sleep(600);
-
-        const r = await setup.pool.query(
-          `SELECT score FROM scores
-            WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-          [world.event.id, world.competitor.userId, 1],
-        );
-        expect(Number(r.rows[0].score)).toBe(8.0);
+        expect(recipient.received["referee_action_failed"]).toHaveLength(30);
       } finally {
         burstSock.disconnect();
+        recipient.sock.disconnect();
       }
     });
   });
@@ -592,16 +575,16 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
       });
       const { token: burstToken } = await setup.loginAs(request, burstReferee.username);
 
-      // Start the score above the cap so each successful fire
-      // pushes it down. Use cap = 6.0 so we can detect mutation
-      // (score goes 8.0 → 6.0). After 30 the score is at 6.0;
-      // we then reset to 8.0 and fire #31 — score must stay 8.0.
-      await setup.pool.query(
-        `UPDATE scores SET score = 8.0
-          WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-        [world.event.id, world.competitor.userId, 1],
+      // Count ACCEPTED caps via the room broadcast rather than the
+      // score value. The server emits one `referee_action_cap` per fire
+      // that clears the limiter, and nothing on the dropped one. The
+      // score saturates (first cap drops 8.0 → 6.0, the rest are
+      // no-ops), so a score poll can't distinguish 1 from 30 processed
+      // — the cause of the old flakiness. Waiting for all 30 broadcasts
+      // before firing #31 removes the race.
+      const recipient = await connectAndSubscribe(
+        baseURL, world.refereeToken, world.event.id, ["referee_action_cap"],
       );
-
       const burstSock = await setup.openSocket(baseURL, burstToken);
       try {
         for (let i = 0; i < 30; i++) {
@@ -612,20 +595,14 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
             cap_value: 6.0,
           });
         }
-        await expect.poll(async () => {
-          const r = await setup.pool.query(
-            `SELECT score FROM scores
-              WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-            [world.event.id, world.competitor.userId, 1],
-          );
-          return Number(r.rows[0].score);
-        }, { timeout: 5000, intervals: [100, 250, 500] }).toBe(6.0);
+        // All 30 must clear the limiter (and broadcast) before #31.
+        await expect.poll(
+          () => recipient.received["referee_action_cap"].length,
+          { timeout: 5000, intervals: [100, 250, 500] },
+        ).toBe(30);
 
-        await setup.pool.query(
-          `UPDATE scores SET score = 8.0
-            WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-          [world.event.id, world.competitor.userId, 1],
-        );
+        // #31 is over the 30/60s limit → silently dropped: no further
+        // broadcast lands.
         burstSock.emit("referee_cap_scores", {
           event_id: world.event.id,
           competitor_id: world.competitor.userId,
@@ -633,15 +610,10 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
           cap_value: 6.0,
         });
         await sleep(600);
-
-        const r = await setup.pool.query(
-          `SELECT score FROM scores
-            WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-          [world.event.id, world.competitor.userId, 1],
-        );
-        expect(Number(r.rows[0].score)).toBe(8.0);
+        expect(recipient.received["referee_action_cap"]).toHaveLength(30);
       } finally {
         burstSock.disconnect();
+        recipient.sock.disconnect();
       }
     });
   });
