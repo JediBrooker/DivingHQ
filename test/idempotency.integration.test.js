@@ -40,6 +40,7 @@ let dbReachable = true;
 let migrationApplied = true;
 let idem;
 let testUserId;
+let testOrgId;
 
 // HTTP harness for the middleware test.
 let httpServer;
@@ -83,14 +84,20 @@ before(async () => {
 
   idem = createIdempotency({ pool });
 
-  // Provision a throwaway user row so foreign-key references are
-  // valid. Cheapest path: insert a row with the bare minimum NOT
-  // NULL columns. Cleaned up in after().
+  // Provision a throwaway org + user so foreign-key references are
+  // valid (users.org_id is NOT NULL). Cleaned up in after().
+  const suffix = crypto.randomBytes(4).toString("hex");
+  const o = await pool.query(
+    `INSERT INTO organisations (name, country_code, slug, status)
+     VALUES ($1, 'XX', $2, 'active') RETURNING id`,
+    [`idem-int-org-${suffix}`, `idem-int-org-${suffix}`],
+  );
+  testOrgId = o.rows[0].id;
   const u = await pool.query(
     `INSERT INTO users (id, username, password, full_name, org_id)
-     VALUES (gen_random_uuid(), $1, 'x', 'Idempotency Integration', NULL)
+     VALUES (gen_random_uuid(), $1, 'x', 'Idempotency Integration', $2)
      RETURNING id`,
-    [`idem-int-${crypto.randomBytes(4).toString("hex")}`],
+    [`idem-int-${crypto.randomBytes(4).toString("hex")}`, testOrgId],
   );
   testUserId = u.rows[0].id;
 
@@ -128,6 +135,7 @@ after(async () => {
     try {
       await pool.query(`DELETE FROM idempotency_keys WHERE user_id = $1`, [testUserId]);
       await pool.query(`DELETE FROM users WHERE id = $1`, [testUserId]);
+      await pool.query(`DELETE FROM organisations WHERE id = $1`, [testOrgId]);
     } catch { /* ignore cleanup failures */ }
   }
   if (pool) await pool.end();
