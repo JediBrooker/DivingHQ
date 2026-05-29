@@ -106,14 +106,17 @@ jobs:
       - name: Apply schema (init.sql)
         run: psql -v ON_ERROR_STOP=1 -h localhost -U diver -d divinghq_test -f init.sql
 
-      # NOTE: deliberately NOT running `npm run migrate` here. The
-      # `npm test` integration specs self-skip when the migration-054
-      # tables are absent (init.sql is pinned at v53), so this job is
-      # green as-is. Forcing migrations on uncovers a separate,
-      # pre-existing fixture bug (idempotency/manual-score specs insert
-      # organisations.country, but the column is country_code) — tracked
-      # separately, out of scope for unblocking e2e. The e2e job below
-      # DOES migrate, because the live server it drives needs v55.
+      # init.sql is pinned at v53; apply the tail migrations so the
+      # integration specs run against the same schema the server uses
+      # (idempotency_keys, actor_local_time, score_source, …) instead of
+      # self-skipping. (The manual-scores integration suite is skipped
+      # in-file pending a fixture rewrite — its fixture predates the
+      # user_org_roles migration.)
+      - name: Apply tail migrations
+        run: npm run migrate
+        env:
+          DATABASE_URL: postgres://diver:diver@localhost:5432/divinghq_test
+
       - name: Run tests
         run: npm test
 
