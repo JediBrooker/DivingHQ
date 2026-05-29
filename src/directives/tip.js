@@ -44,9 +44,10 @@
 //
 // Registration: src/main.js calls app.directive('tip', tipDirective).
 
-function apply(el, value) {
+function apply(el, value, pos) {
   if (value == null || value === "") {
     el.removeAttribute("data-tip");
+    el.removeAttribute("data-tip-pos");
     if (el.__tipAriaApplied) {
       el.removeAttribute("aria-label");
       el.__tipAriaApplied = false;
@@ -55,6 +56,14 @@ function apply(el, value) {
   }
   const text = String(value);
   el.setAttribute("data-tip", text);
+
+  // Optional placement via directive arg: `v-tip:bottom="…"`.
+  // Default (no arg) keeps the historical above-the-host bubble.
+  // `bottom` renders below — use it for tooltips on hosts near
+  // the top of the viewport (e.g. a page's top nav) that would
+  // otherwise be clipped off the top edge. CSS in app.css.
+  if (pos) el.setAttribute("data-tip-pos", pos);
+  else el.removeAttribute("data-tip-pos");
 
   // aria-label management — the subtle part.
   //
@@ -96,10 +105,10 @@ function apply(el, value) {
 }
 
 export const tipDirective = {
-  mounted(el, binding) { apply(el, binding.value); },
+  mounted(el, binding) { apply(el, binding.value, binding.arg); },
   updated(el, binding) {
     if (binding.value === binding.oldValue) return;
-    apply(el, binding.value);
+    apply(el, binding.value, binding.arg);
   },
   unmounted(el) {
     el.removeAttribute("data-tip");

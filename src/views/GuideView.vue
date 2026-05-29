@@ -145,7 +145,7 @@ onBeforeUnmount(() => observer?.disconnect())
       <RouterLink to="/" class="btn btn-ghost btn-sm">{{ $t('guide.back_to_home') }}</RouterLink>
       <a :href="WIKI" target="_blank" rel="noopener"
          class="btn btn-ghost btn-sm"
-         v-tip="$t('guide.open_wiki_tip')">
+         v-tip:bottom="$t('guide.open_wiki_tip')">
         {{ $t('guide.open_wiki') }}
       </a>
     </div>

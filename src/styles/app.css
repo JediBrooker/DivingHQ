@@ -1257,6 +1257,15 @@ h1, h2, h3, h4 {
      through) — the bubble's own text should always be plain. */
   text-decoration: none;
 }
+/* Downward placement — opt in with v-tip:bottom="…" (sets
+   data-tip-pos="bottom"). For hosts near the top of the
+   viewport (e.g. a page's top nav) whose default above-the-host
+   bubble would be clipped off the top edge. Two attribute
+   selectors so this out-specifies the base [data-tip]::after. */
+[data-tip][data-tip-pos="bottom"]::after {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
 /* Show on hover ONLY where hover is actually a thing. On iOS
    Safari (no real hover), tapping a [data-tip] element fired
    both the tooltip-reveal AND consumed the tap event — the
