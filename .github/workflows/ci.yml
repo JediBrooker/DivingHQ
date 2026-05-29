@@ -106,6 +106,14 @@ jobs:
       - name: Apply schema (init.sql)
         run: psql -v ON_ERROR_STOP=1 -h localhost -U diver -d divinghq_test -f init.sql
 
+      # NOTE: deliberately NOT running `npm run migrate` here. The
+      # `npm test` integration specs self-skip when the migration-054
+      # tables are absent (init.sql is pinned at v53), so this job is
+      # green as-is. Forcing migrations on uncovers a separate,
+      # pre-existing fixture bug (idempotency/manual-score specs insert
+      # organisations.country, but the column is country_code) — tracked
+      # separately, out of scope for unblocking e2e. The e2e job below
+      # DOES migrate, because the live server it drives needs v55.
       - name: Run tests
         run: npm test
 
@@ -167,27 +175,41 @@ jobs:
       - name: Apply schema (init.sql)
         run: psql -v ON_ERROR_STOP=1 -h localhost -U diver -d divinghq_test -f init.sql
 
-      # Cache the Chromium binary (~140MB) keyed by the lockfile.
-      # Most runs hit cache and skip the download entirely; runs
-      # that bumped the playwright dep download fresh.
+      # init.sql is a snapshot pinned at schema v53; apply the tail
+      # migrations (054+) so the DB matches what server.js expects
+      # (idempotency_keys, actor_local_time, score_source, …). Without
+      # this the meet-time write endpoints 500 and the diver / coach /
+      # scoring e2e specs fail.
+      - name: Apply tail migrations
+        run: npm run migrate
+        env:
+          DATABASE_URL: postgres://diver:diver@localhost:5432/divinghq_test
+
+      # Cache the Playwright browser binaries (chromium + firefox +
+      # webkit) keyed by the lockfile plus a browser-set marker. Bump
+      # the "-cfw" suffix whenever the installed browser set changes,
+      # so a stale cache can't shadow newly-added browsers (the bug
+      # that left firefox/webkit missing when only chromium was cached).
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-cfw
 
-      # First run: download the browser AND its system deps.
-      # Cached run: only re-install the system deps (apt packages
-      # like libnss3, libatk1.0-0, etc — these aren't in the
-      # ~/.cache path so they re-install every time).
+      # First run: download all three browsers AND their system deps.
+      # No browser argument installs chromium + firefox + webkit, which
+      # matches the projects in playwright.config.js (chromium,
+      # mobile-chrome, firefox, mobile-safari/webkit). Cached run: the
+      # binaries are restored from ~/.cache; only the apt system deps
+      # (which live outside that path) need reinstalling each time.
       - name: Install Playwright (browsers + deps, fresh)
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps
 
       - name: Install Playwright system deps (cache hit)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        run: npx playwright install-deps
 
       # playwright.config.js boots `npm run build && node server.js`
       # itself via webServer — no separate "start the app" step.
