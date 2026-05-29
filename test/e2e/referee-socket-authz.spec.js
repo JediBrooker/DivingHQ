@@ -961,59 +961,49 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
       });
       const { token: burstToken } = await setup.loginAs(request, burstReferee.username);
 
-      // Clear residual state.
-      await setup.pool.query(
-        `UPDATE event_live_state SET on_hold_reason = NULL, hold_since = NULL
-          WHERE event_id = $1`,
-        [world.event.id],
+      // Count ACCEPTED holds via the `meet_held` room broadcast, not
+      // the persisted on_hold_reason. persistMeetHold is fire-and-forget
+      // (lib/live-state.js doesn't await the pool.query), so the DB
+      // row's reason can't be pinned and racing those async writes is
+      // exactly what made the old poll-the-reason version fragile. The
+      // server emits one `meet_held` synchronously per hold that clears
+      // the limiter and nothing on the dropped one, so the broadcast
+      // count is the exact "how many passed the limiter" signal.
+      // (subscribe_event only joins the room; the meet_held replay lives
+      // in the separate get_meet_hold handler — so the recipient sees
+      // only this burst's broadcasts.)
+      const recipient = await connectAndSubscribe(
+        baseURL, world.refereeToken, world.event.id, ["meet_held"],
       );
-
       const burstSock = await setup.openSocket(baseURL, burstToken);
       try {
-        // Fire 10 with varied reasons. persistMeetHold is
-        // fire-and-forget (lib/live-state.js doesn't await the
-        // pool.query), so Postgres can commit these out of order
-        // — we can't pin the on_hold_reason to "hold-9". Instead
-        // we assert (a) the row gained SOME hold (so the limiter
-        // didn't block the first 10), and (b) after firing the
-        // 11th with a sentinel reason, the row's reason is still
-        // one of the first-10 values, not the sentinel.
         for (let i = 0; i < 10; i++) {
           burstSock.emit("meet_hold", {
             event_id: world.event.id,
             reason: `hold-${i}`,
           });
         }
-        // Wait for at least one hold-* to land.
-        await expect.poll(async () => {
-          const r = await setup.pool.query(
-            `SELECT on_hold_reason FROM event_live_state WHERE event_id = $1`,
-            [world.event.id],
-          );
-          return r.rows[0]?.on_hold_reason;
-        }, { timeout: 5000, intervals: [100, 250, 500] }).toMatch(/^hold-\d$/);
+        // All 10 must clear the limiter (and broadcast) before #11.
+        await expect.poll(
+          () => recipient.received["meet_held"].length,
+          { timeout: 5000, intervals: [100, 250, 500] },
+        ).toBe(10);
 
-        // Give the remaining async persistMeetHold writes a beat
-        // to settle so they can't race the post-limit assertion.
-        await sleep(400);
-
-        // Fire #11 with a sentinel reason — must be dropped.
+        // #11 is over the 10/min limit → silently dropped: no further
+        // broadcast lands, and the sentinel reason never enters the
+        // broadcast stream.
         burstSock.emit("meet_hold", {
           event_id: world.event.id,
           reason: "should-not-land",
         });
         await sleep(600);
-
-        const r = await setup.pool.query(
-          `SELECT on_hold_reason FROM event_live_state WHERE event_id = $1`,
-          [world.event.id],
-        );
-        // The reason must still be one of the first-10 accepted
-        // values, never the sentinel from the rate-limited fire.
-        expect(r.rows[0]?.on_hold_reason).toMatch(/^hold-\d$/);
-        expect(r.rows[0]?.on_hold_reason).not.toBe("should-not-land");
+        expect(recipient.received["meet_held"]).toHaveLength(10);
+        expect(
+          recipient.received["meet_held"].some((m) => m.reason === "should-not-land"),
+        ).toBe(false);
       } finally {
         burstSock.disconnect();
+        recipient.sock.disconnect();
       }
     });
   });
