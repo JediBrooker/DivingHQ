@@ -83,80 +83,51 @@ before(async () => {
     return;
   }
 
-  // SKIP pending fixture rewrite. This suite was written against the
-  // pre-`user_org_roles` schema: its fixture inserts `users.org_roles[]`
-  // and `organisations.country`, columns that no longer exist (roles
-  // moved to the user_org_roles join table), so it has never run green
-  // and only ever self-skipped because the CI test DB wasn't migrated.
-  // Now that the e2e/test DB is migrated, the broken fixture would
-  // surface — so skip explicitly until it's rewritten (tracked
-  // separately). Reuses the migrationsApplied guard every test honours.
-  migrationsApplied = false;
-  console.warn("[skip] manual-scores fixture predates user_org_roles — pending rewrite");
-  return;
-
   // Provision fixtures. Minimum bones for the manual-entry path:
   // org → users (operator + judge + competitor) → event → panel
   // → dive directory row → competitor_dive_lists row.
   const suffix = crypto.randomBytes(4).toString("hex");
 
   const org = await pool.query(
-    `INSERT INTO organisations (name, country) VALUES ($1, 'XX') RETURNING id`,
-    [`manual-int-${suffix}`],
+    `INSERT INTO organisations (name, country_code, slug, status)
+     VALUES ($1, 'XX', $2, 'active') RETURNING id`,
+    [`manual-int-${suffix}`, `manual-int-${suffix}`],
   );
   testOrgId = org.rows[0].id;
 
-  const operator = await pool.query(
-    `INSERT INTO users (username, password, full_name, org_id, org_roles, email_verified_at)
-     VALUES ($1, 'x', 'Operator', $2, ARRAY['org_admin']::org_role[], now())
-     RETURNING id`,
-    [`op-${suffix}`, testOrgId],
-  );
-  testOperatorId = operator.rows[0].id;
-
-  const judge = await pool.query(
-    `INSERT INTO users (username, password, full_name, org_id, org_roles, email_verified_at)
-     VALUES ($1, 'x', 'Judge One', $2, ARRAY['judge']::org_role[], now())
-     RETURNING id`,
-    [`j-${suffix}`, testOrgId],
-  );
-  testJudgeId = judge.rows[0].id;
-
-  const competitor = await pool.query(
-    `INSERT INTO users (username, password, full_name, org_id, org_roles, email_verified_at)
-     VALUES ($1, 'x', 'Diver One', $2, ARRAY['diver']::org_role[], now())
-     RETURNING id`,
-    [`d-${suffix}`, testOrgId],
-  );
-  testCompetitorId = competitor.rows[0].id;
-
-  // Dive directory row. Heights are restricted by the board_height
-  // enum; '1m' is always present.
-  const dive = await pool.query(
-    `INSERT INTO dive_directory
-       (org_id, dive_code, position, height, dd, description, is_core)
-     VALUES ($1, '101', 'A', '1m', 1.4, 'Forward dive straight', true)
-     ON CONFLICT DO NOTHING
-     RETURNING id`,
-  // Fallback if the dive already exists from a prior test run with
-  // the same code; just look it up.
-    [testOrgId],
-  );
-  if (dive.rows.length) {
-    testDiveId = dive.rows[0].id;
-  } else {
-    const existing = await pool.query(
-      `SELECT id FROM dive_directory
-       WHERE dive_code = '101' AND position = 'A' AND height = '1m'
-       LIMIT 1`,
+  // Roles live in the user_org_roles join table (not a users column),
+  // so each user is two inserts: the row, then its org role. Mirrors
+  // the pattern in test/e2e/_setup.js insertUser().
+  const mkUser = async (uname, fullName, role) => {
+    const u = await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+       VALUES ($1, 'x', $2, $3, now()) RETURNING id`,
+      [uname, fullName, testOrgId],
     );
-    testDiveId = existing.rows[0].id;
-  }
+    const id = u.rows[0].id;
+    await pool.query(
+      `INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, $3)`,
+      [id, testOrgId, role],
+    );
+    return id;
+  };
+  testOperatorId   = await mkUser(`op-${suffix}`, "Operator", "org_admin");
+  testJudgeId      = await mkUser(`j-${suffix}`, "Judge One", "judge");
+  testCompetitorId = await mkUser(`d-${suffix}`, "Diver One", "diver");
+
+  // Reuse a seeded 1m dive from the World Aquatics catalog (init.sql
+  // seeds dive_directory). competitor_dive_lists.dive_id just needs a
+  // valid directory row — no need to author a custom one (and the
+  // catalog is shared, so nothing to clean up).
+  const dive = await pool.query(
+    `SELECT id FROM dive_directory WHERE height = 1.0 ORDER BY dive_code LIMIT 1`,
+  );
+  testDiveId = dive.rows[0].id;
 
   const event = await pool.query(
     `INSERT INTO events (
-       org_id, name, status, height, event_type, total_rounds, number_of_judges
-     ) VALUES ($1, $2, 'Live', '1m', 'individual', 5, 1)
+       org_id, name, gender, status, height, event_type, total_rounds, number_of_judges
+     ) VALUES ($1, $2, 'Male', 'Live', '1m', 'individual', 5, 3)
      RETURNING id`,
     [testOrgId, `Manual integration ${suffix}`],
   );
