@@ -89,7 +89,7 @@ const trendChart = computed(() => {
 }
 .trend-team-badge {
   font-family: var(--font-display); font-size: 9px; font-weight: 900;
-  letter-spacing: 0.18em; color: #c4b5fd;
+  letter-spacing: 0.18em; color: var(--role-admin-fg);
   background: rgba(139,92,246,0.10); border: 1px solid rgba(139,92,246,0.45);
   border-radius: 3px; padding: 0.1rem 0.4rem; margin-inline-start: 0.4rem;
 }

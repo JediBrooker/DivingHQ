@@ -673,6 +673,123 @@ async function declinePairing(p) {
   }
 }
 
+// =========================================================
+// My club — current club + request-a-change flow.
+// The diver can request to move clubs within their org (or, if
+// the backend resolves a different to_org_id, an org transfer).
+// Current club is sourced pragmatically: if the diver already
+// has a pending request its `from_club_name` is the live truth;
+// otherwise we show the picker without a "current" label since
+// the JWT carries no club info and the clubs list alone can't
+// tell us which one is theirs.
+// =========================================================
+const isDiver = computed(() => auth.user?.org_roles?.includes('diver') ?? false)
+const orgClubs = ref([])               // clubs in the diver's org
+const clubRequests = ref([])           // this diver's club-change requests
+const showClubForm = ref(false)
+const clubChoice = ref('')             // selected to_club_id ('' = no club)
+const clubNote = ref('')
+const clubSubmitting = ref(false)
+const clubError = ref('')
+
+// The diver's own pending request, if any.
+const myPendingClubRequest = computed(() =>
+  clubRequests.value.find(
+    r => r.status === 'pending' && r.user_id === auth.user?.id,
+  ) || null,
+)
+
+// An org transfer awaiting THIS diver's confirmation.
+const needsMyConfirm = computed(() => {
+  const r = myPendingClubRequest.value
+  return !!(r && r.kind === 'org_transfer' && !r.diver_confirmed_at)
+})
+
+// Current club name — from the pending request's source, else the
+// most recent finalised request's source. Null when unknown.
+const currentClubName = computed(() => {
+  if (myPendingClubRequest.value) return myPendingClubRequest.value.from_club_name || null
+  const mine = clubRequests.value
+    .filter(r => r.user_id === auth.user?.id)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  // After a finalised move the target club is current.
+  const finalised = mine.find(r => r.status === 'approved')
+  if (finalised) return finalised.to_club_name || null
+  return mine[0]?.from_club_name || null
+})
+
+const myRequestTargetClub = computed(() => {
+  const r = myPendingClubRequest.value
+  if (!r) return ''
+  if (r.kind === 'org_transfer') {
+    const club = r.to_club_name ? ` · ${r.to_club_name}` : ''
+    return `${r.to_org_name || '—'}${club}`
+  }
+  return r.to_club_name || 'No club'
+})
+
+async function loadOrgClubs() {
+  if (!auth.user?.org_id) { orgClubs.value = []; return }
+  try {
+    const rows = await auth.apiFetch(`/api/orgs/${auth.user.org_id}/clubs`)
+    orgClubs.value = Array.isArray(rows) ? rows : []
+  } catch { orgClubs.value = [] }
+}
+
+async function loadMyClubRequests() {
+  try {
+    const rows = await auth.apiFetch('/api/club-change-requests')
+    clubRequests.value = Array.isArray(rows) ? rows : []
+  } catch { clubRequests.value = [] }
+}
+
+async function submitClubChange() {
+  clubError.value = ''
+  clubSubmitting.value = true
+  try {
+    await auth.apiFetch('/api/club-change-requests', {
+      method: 'POST',
+      body: JSON.stringify({
+        to_club_id: clubChoice.value || null,
+        note: clubNote.value.trim() || null,
+      }),
+    })
+    showClubForm.value = false
+    clubChoice.value = ''
+    clubNote.value = ''
+    await loadMyClubRequests()
+    showSuccess('Club change requested')
+  } catch (err) {
+    clubError.value = err.message || 'Failed to submit request'
+  } finally {
+    clubSubmitting.value = false
+  }
+}
+
+async function cancelClubRequest() {
+  const r = myPendingClubRequest.value
+  if (!r) return
+  try {
+    await auth.apiFetch(`/api/club-change-requests/${r.id}/cancel`, { method: 'POST' })
+    await loadMyClubRequests()
+    showSuccess('Request withdrawn')
+  } catch (err) {
+    showError(err.message || 'Failed to cancel request')
+  }
+}
+
+async function confirmClubTransfer() {
+  const r = myPendingClubRequest.value
+  if (!r) return
+  try {
+    await auth.apiFetch(`/api/club-change-requests/${r.id}/confirm`, { method: 'POST' })
+    await loadMyClubRequests()
+    showSuccess('Transfer confirmed')
+  } catch (err) {
+    showError(err.message || 'Failed to confirm transfer')
+  }
+}
+
 onMounted(async () => {
   const [evs, dirResult] = await Promise.all([
     auth.apiFetch('/api/events'),
@@ -683,6 +800,8 @@ onMounted(async () => {
     }),
     loadTemplates(),
     loadPendingPairings(),
+    loadOrgClubs(),
+    loadMyClubRequests(),
   ])
   events.value = evs
   diveDirectory.value = Array.isArray(dirResult.data) ? dirResult.data : []
@@ -710,7 +829,7 @@ watch(currentEvent, async (ev) => {
        phase-4 outbox path) see queued state at the top. -->
   <OfflineBanner />
   <div class="page-header">
-    <h1 style="font-size:32px;font-style:italic">{{ $t('competitor.page_label') }}</h1>
+    <h1 style="font-size:22px;font-weight:600;letter-spacing:-0.015em">{{ $t('competitor.page_label') }}</h1>
     <RouterLink to="/dashboard" class="btn btn-ghost">← Dashboard</RouterLink>
   </div>
 
@@ -753,6 +872,73 @@ watch(currentEvent, async (ev) => {
           </div>
         </li>
       </ul>
+    </div>
+
+    <!-- My club — current club + request-a-change flow. Divers
+         can move clubs within their org; the org admin reviews
+         the request. Shown only to users holding the diver role. -->
+    <div v-if="isDiver" class="card my-club-card">
+      <div class="my-club-head">
+        <div>
+          <label class="label" style="margin:0">My club</label>
+          <div class="my-club-current">
+            <template v-if="currentClubName">{{ currentClubName }}</template>
+            <template v-else>No club set</template>
+          </div>
+        </div>
+        <button v-if="!myPendingClubRequest && !showClubForm"
+                type="button" class="btn btn-ghost btn-sm"
+                @click="showClubForm = true">
+          Request club change
+        </button>
+      </div>
+
+      <!-- Pending request status — replaces the form while a
+           request is open. -->
+      <div v-if="myPendingClubRequest" class="my-club-pending">
+        <div class="my-club-pending-head">
+          <span class="badge badge-amber">Pending</span>
+          <span class="my-club-pending-text">
+            Requested move to <strong>{{ myRequestTargetClub }}</strong>
+          </span>
+        </div>
+        <div class="my-club-actions">
+          <button v-if="needsMyConfirm" type="button"
+                  class="btn btn-primary btn-sm" @click="confirmClubTransfer">
+            Confirm transfer
+          </button>
+          <button type="button" class="btn btn-danger btn-sm" @click="cancelClubRequest">
+            Cancel request
+          </button>
+        </div>
+      </div>
+
+      <!-- Inline request form. -->
+      <div v-else-if="showClubForm" class="my-club-form">
+        <div class="field">
+          <label class="label">New club</label>
+          <select class="select" v-model="clubChoice">
+            <option value="">— No club —</option>
+            <option v-for="c in orgClubs" :key="c.id" :value="c.id">
+              {{ c.name }}<template v-if="c.short_code"> ({{ c.short_code }})</template>
+            </option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="label">Note (optional)</label>
+          <input class="input" type="text" v-model="clubNote"
+                 placeholder="Reason for the change…" maxlength="280">
+        </div>
+        <div v-if="clubError" class="msg msg-error">{{ clubError }}</div>
+        <div class="my-club-actions">
+          <button type="button" class="btn btn-ghost btn-sm"
+                  @click="showClubForm = false">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm"
+                  :disabled="clubSubmitting" @click="submitClubChange">
+            {{ clubSubmitting ? 'Submitting…' : 'Submit request' }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Empty state — diver landed here but their federation
@@ -984,7 +1170,7 @@ watch(currentEvent, async (ev) => {
 
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
-          <h2 style="font-size:20px;font-style:italic">Step 2 — Your Dive List</h2>
+          <h2 style="font-size:18px;font-weight:600">Step 2 — Your Dive List</h2>
           <div class="total-bar" style="padding:0.5rem 1rem;background:transparent;border:none">
             <div>
               <div class="total-value">{{ totalDD }}</div>
@@ -1084,7 +1270,7 @@ watch(currentEvent, async (ev) => {
     <div class="modal" style="max-width:560px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
         <div style="display:flex;align-items:center;gap:0.75rem">
-          <h3 style="font-size:20px;font-style:italic">Find Dive</h3>
+          <h3 style="font-size:18px;font-weight:600">Find Dive</h3>
           <span v-if="activeEventHeight !== null" class="lock-badge">{{ activeEventHeight }}m board</span>
           <span v-else-if="currentEvent?.is_mixed_height" class="lock-badge mixed-badge">Mixed boards</span>
         </div>
@@ -1130,6 +1316,8 @@ watch(currentEvent, async (ev) => {
 
 <style scoped>
 .page-header{display:flex;align-items:center;justify-content:space-between;padding:1.5rem 2rem;border-bottom:1px solid var(--border);max-width:900px;margin:0 auto;}
+/* Back-to-dashboard is redundant inside the app shell sidebar. */
+.page-header .btn{display:none;}
 .main{max-width:900px;margin:0 auto;padding:2rem;display:flex;flex-direction:column;gap:1.5rem;}
 
 /* Post-advance lock banner — surfaces when the meet manager
@@ -1369,6 +1557,32 @@ watch(currentEvent, async (ev) => {
 .result-height{font-size:10px;color:var(--text-3);margin-top:0.15rem;}
 
 .hint-line { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
+
+/* My club card — current club + request-a-change flow. */
+.my-club-card { padding: 1rem 1.25rem; }
+.my-club-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+}
+.my-club-current {
+  font-family: var(--font-display); font-size: 16px; font-weight: 700;
+  color: var(--text); margin-top: 0.3rem;
+}
+.my-club-pending {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+  margin-top: 0.85rem; padding: 0.7rem 0.85rem;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.my-club-pending-head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.my-club-pending-text { font-size: 13px; color: var(--text-2); }
+.my-club-pending-text strong { color: var(--text); }
+.my-club-form {
+  display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.85rem;
+}
+.my-club-form .field { display: flex; flex-direction: column; gap: 0.35rem; }
+.my-club-actions { display: flex; gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap; }
 .lock-badge{
   display:inline-flex;align-items:center;gap:0.4rem;
   font-family:var(--font-display);font-size:10px;font-weight:700;

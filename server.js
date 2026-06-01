@@ -624,6 +624,9 @@ app.use(require("./routes/users")({
   bulkWriteLimiter,
 }));
 
+// Club-change requests + cross-org transfers (Migration 057).
+app.use(require("./routes/club-changes")({ pool, verifyToken }));
+
 // =============================================================
 // MEET ROUTES
 // [SECTION: ROUTES — MEETS]

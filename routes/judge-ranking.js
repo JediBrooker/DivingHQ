@@ -131,6 +131,42 @@ async function buildAnalysis(pool, eventId) {
   );
   const judges = panelRes.rows;
 
+  // ----------------------------------------------------------------
+  // "Unanimous like J" scaling multiplier.
+  //
+  // judge_total[J][rankee] is ONE judge's contribution: SUM over
+  // rounds of (J's score × DD × synchroScale). The hypothetical the
+  // matrix wants to show is the FULL event total *if every kept
+  // judge had scored exactly like J* — i.e. judge_total × (number of
+  // judges the World-Aquatics trim keeps). calc_event_dive_points
+  // applies that trim (a 5- or 7-judge individual panel keeps the
+  // middle 3; synchro keeps its own subset × 0.6), so we probe it
+  // once with a unanimous all-1.0 panel and DD 1.0:
+  //
+  //   probe = calc_event_dive_points(panel, [1.0…], n_judges, 1.0, type, false)
+  //
+  // For individual/team that returns the kept count (e.g. 3) with
+  // synchroScale = 1.0 → multiplier 3. For synchro it returns
+  // keptCount × 0.6 and synchroScale = 0.6, so the / synchroScale
+  // cancels the 0.6 already baked into judge_total, leaving the pure
+  // kept-judge count. A NULL/0 probe (or a query error) falls back to
+  // multiplier 1 → totals shown unscaled rather than zeroed.
+  let unanimousMultiplier = 1;
+  try {
+    const jnums = judges.map((j) => j.judge_number);
+    const unanimousOnes = jnums.map(() => 1.0);
+    const probeRes = await pool.query(
+      `SELECT calc_event_dive_points($1::int[], $2::numeric[], $3::int, 1.0::numeric, $4, false) AS m`,
+      [jnums, unanimousOnes, event.number_of_judges, event.event_type],
+    );
+    const probe = Number(probeRes.rows[0]?.m);
+    unanimousMultiplier =
+      Number.isFinite(probe) && probe > 0 ? probe / synchroScale : 1;
+  } catch (err) {
+    console.error("[Judge Ranking unanimous-multiplier probe failed]", err.message);
+    unanimousMultiplier = 1;
+  }
+
   // Pre-aggregate per (judge, competitor) judge_total and per
   // (judge, competitor, round) per-round dive points in a single
   // CTE pipeline. The cdl join is by (event_id, competitor_id,
@@ -366,7 +402,12 @@ async function buildAnalysis(pool, eventId) {
         return {
           judge_id: j.judge_id,
           judge_number: j.judge_number,
-          judge_total: hit ? hit.judge_total : 0,
+          // Scale the single judge's contribution up to the full
+          // "if every kept judge scored like J" event total. rank is
+          // left untouched — a positive monotonic scale can't reorder
+          // the per-judge ranking. This single source feeds JSON, CSV
+          // and PDF exports alike.
+          judge_total: hit ? hit.judge_total * unanimousMultiplier : 0,
           rank: hit ? hit.rank : null,
         };
       }),

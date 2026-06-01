@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router'
 import i18n, { initI18n } from './i18n'
 import { tipDirective } from './directives/tip'
+import { useUiStore } from './stores/ui'
 // Global styles. Imported here (not via <link> in index.html) so
 // Vite content-hashes the output filename — any edit to app.css
 // produces a new hashed URL, which makes browser + service-worker
@@ -13,6 +14,10 @@ import './styles/app.css'
 
 const app = createApp(App)
 app.use(createPinia())
+// Bind the persisted colour theme as the runtime source of truth.
+// index.html's inline script already applied data-theme pre-paint;
+// this instantiates the store so later toggles stay in sync.
+useUiStore().applyTheme()
 app.use(router)
 app.use(i18n)
 // v-tip — instant tooltip replacement for `title=`. See

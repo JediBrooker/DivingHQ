@@ -572,7 +572,7 @@ const submitLabel = computed(() => {
             <span>{{ judgeLabel }}</span>
           </div>
           <RouterLink to="/judge-profile" class="btn-back-judge"
-                      v-tip="'See how your scoring tracks against the panel-kept mean'">📊 Analysis</RouterLink>
+                      v-tip="'See how your scoring tracks against the panel-kept mean'">Analysis</RouterLink>
           <RouterLink to="/dashboard" class="btn-back-judge">← Dashboard</RouterLink>
         </div>
       </div>
@@ -661,17 +661,20 @@ const submitLabel = computed(() => {
         v-tip="signaled ? 'Tap to clear the signal' : 'Flag the referee — e.g. did not see the dive, request a review'"
       >
         <span class="signal-dot"></span>
-        {{ signaled ? '✓ Signal sent — tap to cancel' : `🚩 ${$t('judge.signal_referee')}` }}
+        {{ signaled ? '✓ Signal sent — tap to cancel' : `${$t('judge.signal_referee')}` }}
       </button>
     </div>
 
-    <!-- Submit -->
+    <!-- Submit + Clear -->
     <div class="submit-footer">
-      <button
-        :class="['submit-btn', (submitted && !signaled) ? 'locked' : '', isHeld ? 'held' : '']"
-        :disabled="(submitted && !signaled) || isHeld"
-        @click="submitScore"
-      >{{ isHeld ? 'Meet on hold — wait for resume' : submitLabel }}</button>
+      <div class="submit-row">
+        <button class="clear-btn" type="button" :disabled="keypadLocked" @click="resetScore">Clear</button>
+        <button
+          :class="['submit-btn', (submitted && !signaled) ? 'locked' : '', isHeld ? 'held' : '']"
+          :disabled="(submitted && !signaled) || isHeld"
+          @click="submitScore"
+        >{{ isHeld ? 'Meet on hold — wait for resume' : submitLabel }}</button>
+      </div>
     </div>
     <!-- Manual-fallback "Show big" button (P5). Only renders after
          at least one score has been submitted, and only when the
@@ -765,10 +768,10 @@ const submitLabel = computed(() => {
   background: var(--surface);
 }
 .queued-chip-score {
-  font-family: var(--font-display);
-  font-size: 12px; font-weight: 800; font-style: italic;
-  color: var(--text);
-  letter-spacing: 0.02em;
+  font-family: var(--font-mono);
+  font-size: 12px; font-weight: 500; font-style: normal;
+  color: var(--fg);
+  letter-spacing: 0;
 }
 
 
@@ -778,10 +781,15 @@ const submitLabel = computed(() => {
      the window resizes the page like any other. The keypad +
      submit footer flow naturally below the diver header.
      vh fallback first for browsers older than ~Q4-2022. */
-  min-height: 100vh;
-  min-height: 100dvh;
+  /* Fill the viewport exactly and never scroll — the whole pad
+     (header, diver, keypad, submit/clear, signal) fits one screen.
+     position:fixed escapes any global body styling the public auth
+     views inject. The keypad flexes to absorb leftover space. */
+  position: fixed;
+  inset: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   touch-action: manipulation;
   user-select: none;
 }
@@ -811,21 +819,22 @@ const submitLabel = computed(() => {
   margin-bottom: 0.625rem;
 }
 .event-name {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.25em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--cyan);
+  color: var(--accent);
   margin-bottom: 0.25rem;
 }
 .diver-name {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: clamp(18px, 4vw, 26px);
-  font-weight: 900;
-  font-style: italic;
-  color: var(--text);
-  line-height: 1;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  line-height: 1.1;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -854,7 +863,7 @@ const submitLabel = computed(() => {
   border: 1px solid var(--border); background: var(--bg-3); color: var(--text-2);
 }
 .synchro-role strong { color: var(--text); }
-.synchro-role.role-a    { color: #c4b5fd; border-color: rgba(139,92,246,0.45); background: rgba(139,92,246,0.10); }
+.synchro-role.role-a    { color: var(--role-admin-fg); border-color: rgba(139,92,246,0.45); background: rgba(139,92,246,0.10); }
 .synchro-role.role-b    { color: #fbbf24; border-color: rgba(245,158,11,0.45); background: rgba(245,158,11,0.10); }
 .synchro-role.role-sync { color: #34d399; border-color: rgba(16,185,129,0.45); background: rgba(16,185,129,0.10); }
 .judge-team-line {
@@ -862,7 +871,7 @@ const submitLabel = computed(() => {
   font-family: var(--font-display); font-size: 11px; font-weight: 700;
   letter-spacing: 0.15em; text-transform: uppercase;
   padding: 0.3rem 0.7rem; border-radius: 4px;
-  border: 1px solid rgba(139,92,246,0.45); background: rgba(139,92,246,0.10); color: #c4b5fd;
+  border: 1px solid rgba(139,92,246,0.45); background: rgba(139,92,246,0.10); color: var(--role-admin-fg);
 }
 .judge-team-line strong { color: var(--text); }
 .judge-id {
@@ -1020,13 +1029,18 @@ const submitLabel = computed(() => {
      screens but no longer dominate the page on a desktop. Caps
      at a sensible width and height so the layout stays balanced
      against the dive header above. */
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(4, 56px);
-  gap: 0.4rem;
+  /* Cap key height so they don't balloon on tall screens, and
+     centre them in the leftover space (footers stay pinned to
+     the bottom). minmax(0,…) lets them shrink to fit short screens. */
+  grid-template-rows: repeat(4, minmax(0, 84px));
+  align-content: center;
+  gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  max-width: 360px;
+  max-width: 460px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
@@ -1035,10 +1049,10 @@ const submitLabel = computed(() => {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: clamp(18px, 5vw, 26px);
+  font-weight: 600;
+  color: var(--fg);
   cursor: pointer;
   transition: all 0.08s;
   display: flex;
@@ -1047,9 +1061,9 @@ const submitLabel = computed(() => {
   width: 100%;
   height: 100%;
 }
-.key:active { background: var(--cyan); color: var(--bg); border-color: var(--cyan); transform: scale(0.94); }
-.key-half { font-size: 14px; color: var(--cyan); border-color: rgba(6,182,212,0.3); }
-.key-half.active { background: var(--cyan); color: var(--bg); border-color: var(--cyan); }
+.key:active { background: var(--accent); color: var(--fg-on-accent); border-color: var(--accent); transform: scale(0.94); }
+.key-half { font-size: 14px; color: var(--accent); border-color: var(--accent-soft-2); }
+.key-half.active { background: var(--accent); color: var(--fg-on-accent); border-color: var(--accent); }
 /* Disabled key state — engaged once the judge has submitted.
    Greyed-out + non-interactive so an accidental tap doesn't
    look like it landed but actually no-ops. */
@@ -1083,15 +1097,15 @@ const submitLabel = computed(() => {
 .signal-btn {
   width: 100%;
   display: flex; align-items: center; justify-content: center; gap: 0.5rem;
-  background: var(--red-dim);
-  color: var(--red);
-  font-family: var(--font-display);
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+  font-family: var(--font-sans);
   font-size: clamp(13px, 3vw, 15px);
-  font-weight: 900;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  padding: 0.7rem 0.75rem;
-  border: 1px solid rgba(239,68,68,0.4);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 0.75rem;
+  border: 1px solid var(--red-100);
   border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.15s;
@@ -1165,23 +1179,42 @@ const submitLabel = computed(() => {
 
 .submit-btn {
   width: 100%;
-  background: var(--cyan);
-  color: var(--bg);
-  font-family: var(--font-display);
-  font-size: clamp(15px, 4vw, 19px);
-  font-weight: 900;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  padding: 1.1rem;
+  background: var(--accent);
+  color: var(--fg-on-accent);
+  font-family: var(--font-sans);
+  font-size: clamp(15px, 4vw, 18px);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 0.9rem;
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.15s;
 }
-.submit-btn:hover:not(:disabled) { background: #0891b2; }
+.submit-btn:hover:not(:disabled) { background: var(--accent-hover); }
 .submit-btn:active:not(:disabled) { transform: scale(0.98); }
 .submit-btn:disabled,
 .submit-btn.locked { background: var(--surface); color: var(--text-3); border: 1px solid var(--border); cursor: not-allowed; }
+
+/* Bottom buttons: keypad (top, flex) → Submit+Clear → Signal Referee
+   pinned to the very bottom, ordered via flex `order`. */
+.submit-footer { order: 1; }
+.big-mode-footer { order: 2; }
+.signal-footer { order: 3; }
+.submit-row { display: flex; gap: 0.5rem; align-items: stretch; }
+.submit-row .submit-btn { flex: 1; width: auto; }
+.clear-btn {
+  flex: 0 0 auto;
+  background: var(--surface); color: var(--fg-2);
+  font-family: var(--font-sans); font-size: 13px; font-weight: 600;
+  padding: 0 1.2rem;
+  border: 1px solid var(--border-2); border-radius: var(--radius);
+  cursor: pointer; transition: background var(--dur) var(--ease);
+}
+.clear-btn:hover:not(:disabled) { background: var(--surface-hover); }
+.clear-btn:active { transform: scale(0.98); }
+.clear-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* =========================================================
    Phone-deck ergonomics. Judges work poolside on phones held
@@ -1202,19 +1235,17 @@ const submitLabel = computed(() => {
     gap: 0.5rem;
   }
   .keypad {
-    /* Stretch to use the available width, full-bleed gutter
-       so each key is as wide as possible without spilling. */
-    grid-template-rows: repeat(4, minmax(64px, 12vh));
+    grid-template-rows: repeat(4, minmax(0, 72px));
+    align-content: center;
     max-width: none;
-    padding: 0.75rem 0.6rem;
-    gap: 0.55rem;
+    padding: 0.5rem;
+    gap: 0.5rem;
   }
-  .key { font-size: 22px; }
-  .key-half { font-size: 17px; }
+  .key-half { font-size: clamp(16px, 4.5vw, 20px); }
   .signal-footer { max-width: none; padding: 0 0.6rem; }
   .signal-btn { padding: 0.95rem 0.75rem; font-size: 14px; }
-  .submit-footer { padding: 0.6rem 0.6rem calc(0.85rem + env(safe-area-inset-bottom, 0px)); }
-  .submit-btn { padding: 1.3rem 1rem; font-size: 18px; }
+  .submit-footer { padding: 0.5rem 0.6rem; }
+  .submit-btn { padding: 1rem; font-size: 17px; }
   /* Touch-target lift for the small ghost links at the top
      right — at WCAG 2.5.5's 44 px floor a wet thumb still
      lands them reliably. */
@@ -1229,7 +1260,6 @@ const submitLabel = computed(() => {
 /* Small-phone safety net — even the 320px-wide screens that
    still show up on field tablets and old iPhones. */
 @media (max-width: 360px) {
-  .keypad { grid-template-rows: repeat(4, 60px); gap: 0.4rem; }
-  .key { font-size: 19px; }
+  .keypad { grid-template-rows: repeat(4, minmax(0, 60px)); gap: 0.4rem; }
 }
 </style>

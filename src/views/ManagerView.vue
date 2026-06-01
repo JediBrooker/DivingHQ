@@ -36,6 +36,12 @@ const showEditModal = ref(false)
 scrollLock.lockWhile(computed(() =>
   showCreateModal.value || showCreateMeetModal.value || showEditModal.value
 ))
+// When a create/edit form is open it takes over the content area as
+// a full CRM page (toolbar + lists hide) rather than a floating modal.
+const formPageOpen = computed(() =>
+  showCreateModal.value || showEditModal.value ||
+  showCreateMeetModal.value || showEditMeetModal.value
+)
 
 // Create form
 const createName = ref('')
@@ -667,6 +673,72 @@ const filteredManagerEvents = computed(() => {
   }
   return list
 })
+
+// =============================================================
+// Master–detail rail selection. '' = All events (default),
+// 'ungrouped' = standalone events (no meet_id), or a meet id.
+// The right pane's contextual header + the displayedEvents list
+// both key off this.
+// =============================================================
+const selectedMeetId = ref('')
+
+// Events with no meet attribution — drives the rail's "Ungrouped
+// events" count badge.
+const ungroupedCount = computed(() =>
+  events.value.filter(e => !e.meet_id).length,
+)
+
+// The selected meet object (or null for All / Ungrouped views) so
+// the right-pane header can read its name / dates / venue.
+const selectedMeet = computed(() =>
+  meets.value.find(m => m.id === selectedMeetId.value) || null,
+)
+
+// filteredManagerEvents (search + status + org) further narrowed
+// by the rail selection. The event v-for renders over THIS.
+const displayedEvents = computed(() => {
+  const list = filteredManagerEvents.value
+  if (selectedMeetId.value === '') return list
+  if (selectedMeetId.value === 'ungrouped') return list.filter(e => !e.meet_id)
+  return list.filter(e => e.meet_id === selectedMeetId.value)
+})
+
+// Open the New Event form, optionally preset to bundle into a
+// meet. Called from the rail / detail-header "+ New event" /
+// "+ Add event" buttons. Passing '' opens a standalone event.
+function openCreateEvent(meetId = '') {
+  createMeetId.value = meetId || ''
+  showCreateModal.value = true
+}
+
+// Human-readable meet date range for the detail header subline.
+// Dates arrive as ISO-ish strings (YYYY-MM-DD or full ISO); slice
+// to the date portion and format via toLocaleDateString. Returns
+// '' when neither bound is present.
+function formatMeetDates(meet) {
+  if (!meet) return ''
+  const fmt = (d) => {
+    if (!d) return ''
+    const str = String(d)
+    // A bare YYYY-MM-DD is pinned to local noon so it doesn't roll
+    // back a day in negative-offset zones. A full timestamp (what
+    // the API returns) is parsed as-is and converted to the local
+    // date by toLocaleDateString — slicing its date portion would
+    // show the UTC day, off by one from the local date the user
+    // entered.
+    const parsed = /^\d{4}-\d{2}-\d{2}$/.test(str)
+      ? new Date(`${str}T12:00:00`)
+      : new Date(str)
+    if (Number.isNaN(parsed.getTime())) return ''
+    return parsed.toLocaleDateString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric',
+    })
+  }
+  const start = fmt(meet.start_date)
+  const end = fmt(meet.end_date)
+  if (start && end) return start === end ? start : `${start} – ${end}`
+  return start || end || ''
+}
 
 // Candidate parent events for the prelim → semi → final chain.
 // A 'semifinal' can only feed from a 'preliminary'; a 'final'
@@ -1505,33 +1577,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="page-header">
-    <h1 style="font-size:32px;font-style:italic">{{ $t('manager.title') }}</h1>
-    <RouterLink to="/dashboard" class="btn btn-ghost">← Dashboard</RouterLink>
-  </div>
-
   <div class="main">
-    <!-- Top toolbar — "+ New Meet" left, "+ New Event" right.
-         Both forms live in modals below so the inline page can
-         use the full width for the events list. -->
-    <div class="manager-toolbar">
-      <button type="button" class="btn btn-primary"
-              @click="showCreateMeetModal = true">
-        + {{ $t('manager.new_meet') }}
-      </button>
-      <button type="button" class="btn btn-primary"
-              @click="showCreateModal = true">
-        + {{ $t('manager.new_event') }}
-      </button>
-    </div>
-
     <!-- Create form (modal). The whole card is gated on
          showCreateModal so the inline page can use the full
          width for the events list. -->
-    <div v-if="showCreateModal" class="modal-backdrop" @click.self="showCreateModal = false">
-    <div class="modal modal-create-event" @click.stop>
+    <div v-if="showCreateModal" class="mgr-form-page">
+    <div class="mgr-form-card modal-create-event">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap">
-        <h2 style="font-size:22px;font-style:italic">{{ $t('manager.modals.new_event_title') }}</h2>
+        <h2 style="font-size:22px">{{ $t('manager.modals.new_event_title') }}</h2>
         <div style="display:flex;gap:0.5rem">
           <button type="button"
                   class="btn btn-ghost btn-sm"
@@ -1603,6 +1656,20 @@ onUnmounted(() => {
       </div>
 
       <form @submit.prevent="createEvent" class="form-stack">
+        <!-- Add to meet — surfaced at the very top so the operator
+             decides bundling before filling out the detailed
+             fields. Preset by the "+ Add event" button when the
+             form is opened from a selected meet. -->
+        <div class="field">
+          <label class="label">Add to meet</label>
+          <select class="select" v-model="createMeetId">
+            <option value="">Standalone (no meet)</option>
+            <option v-for="m in meets" :key="m.id" :value="m.id">{{ m.name }}</option>
+          </select>
+          <p class="hint">
+            Bundle this event into a multi-event meet, or leave standalone for a one-off.
+          </p>
+        </div>
         <div class="field">
           <label class="label">Event Name</label>
           <input class="input" v-model="createName" placeholder="e.g. Womens 10m Platform" required>
@@ -1784,20 +1851,6 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <!-- Optional meet bundle. Defaults to standalone; pick a
-             meet to file this event under "2026 National Open"
-             etc. so the public meet page surfaces it. -->
-        <div class="field">
-          <label class="label">Meet (optional)</label>
-          <select class="select" v-model="createMeetId">
-            <option value="">— Standalone (no meet) —</option>
-            <option v-for="m in meets" :key="m.id" :value="m.id">{{ m.name }}</option>
-          </select>
-          <p class="hint">
-            Bundle this event into a multi-event meet. Manage meets below.
-          </p>
-        </div>
-
         <!-- Scheduled start. Powers the meet schedule view,
              notifications, and (later) calendar export. -->
         <div class="field">
@@ -1946,106 +1999,174 @@ onUnmounted(() => {
     </div>
     <!-- /modal-create-event -->
 
-    <!-- Meets list — only the existing meets render inline. The
-         "create new meet" form moved into the New Meet modal,
-         triggered from the toolbar at the top. -->
-    <div class="card">
-      <h2 style="font-size:20px;font-style:italic;margin:0 0 0.75rem">{{ $t('manager.modals.meets_section_title') }}</h2>
-      <div class="meet-list">
-        <div v-if="!meets.length" class="hint">
-          {{ $t('manager.modals.meets_empty_prefix') }} <strong>{{ $t('manager.modals.meets_empty_action') }}</strong> {{ $t('manager.modals.meets_empty_suffix') }}
+    <!-- =====================================================
+         Master–detail. Left rail = selectable meet list (All /
+         per-meet / Ungrouped); right pane = contextual header +
+         search/chips + the event list filtered to the selection.
+         Both hidden while a create/edit form page is open.
+         ===================================================== -->
+    <div class="mgr-md" v-show="!formPageOpen">
+      <!-- LEFT RAIL — meet selector -->
+      <aside class="mgr-rail">
+        <nav class="mgr-rail-list">
+          <button type="button"
+                  :class="['mgr-rail-item', { active: selectedMeetId === '' }]"
+                  @click="selectedMeetId = ''">
+            <span class="mgr-rail-label">All events</span>
+            <span class="mgr-rail-count">{{ events.length }}</span>
+          </button>
+
+          <button v-for="m in meets" :key="m.id"
+                  type="button"
+                  :class="['mgr-rail-item', { active: selectedMeetId === m.id }]"
+                  @click="selectedMeetId = m.id">
+            <span class="mgr-rail-label">{{ m.name }}</span>
+            <span class="mgr-rail-aside">
+              <span v-if="m.live_count" class="mgr-rail-live">· {{ m.live_count }} live</span>
+              <span class="mgr-rail-count">{{ m.event_count }}</span>
+            </span>
+          </button>
+
+          <button type="button"
+                  :class="['mgr-rail-item', { active: selectedMeetId === 'ungrouped' }]"
+                  @click="selectedMeetId = 'ungrouped'">
+            <span class="mgr-rail-label">Ungrouped events</span>
+            <span class="mgr-rail-count">{{ ungroupedCount }}</span>
+          </button>
+        </nav>
+
+        <div class="mgr-rail-foot">
+          <button type="button" class="btn btn-meet"
+                  v-tip:bottom="'Create a meet — a banner that bundles several events together'"
+                  @click="showCreateMeetModal = true">+ New meet</button>
         </div>
-        <div v-for="m in meets" :key="m.id" class="meet-row">
-          <div class="meet-row-id">
-            <RouterLink :to="`/meet/${m.id}`" class="meet-row-name">{{ m.name }}</RouterLink>
-            <div class="meet-row-meta">
-              {{ m.event_count }} event{{ m.event_count === 1 ? '' : 's' }}
-              <span v-if="m.live_count" class="meet-live">· {{ m.live_count }} live</span>
+      </aside>
+
+      <!-- RIGHT PANE — contextual header + search/chips + events -->
+      <section class="mgr-detail">
+        <!-- Contextual header keyed off the rail selection. -->
+        <header class="mgr-detail-head">
+          <!-- A meet is selected -->
+          <template v-if="selectedMeet">
+            <div class="mgr-detail-head-text">
+              <h2 class="mgr-detail-title">{{ selectedMeet.name }}</h2>
+              <div class="mgr-detail-sub">
+                <span v-if="formatMeetDates(selectedMeet)">{{ formatMeetDates(selectedMeet) }}</span>
+                <span v-if="selectedMeet.venue">· {{ selectedMeet.venue }}</span>
+                <span>· {{ selectedMeet.event_count }} event{{ selectedMeet.event_count === 1 ? '' : 's' }}</span>
+              </div>
+            </div>
+            <div class="mgr-detail-actions">
+              <button type="button" class="btn btn-primary btn-sm"
+                      v-tip:bottom="'Create an event already bundled into this meet'"
+                      @click="openCreateEvent(selectedMeet.id)">+ Add event</button>
+              <button type="button" class="btn btn-ghost btn-sm"
+                      v-tip="$t('manager.modals.edit_meet_tip')"
+                      @click="openEditMeet(selectedMeet)">{{ $t('manager.modals.edit_label') }}</button>
+              <button type="button" class="btn btn-ghost btn-sm"
+                      @click="deleteMeet(selectedMeet)">{{ $t('manager.modals.delete_label') }}</button>
+            </div>
+          </template>
+
+          <!-- Ungrouped events -->
+          <template v-else-if="selectedMeetId === 'ungrouped'">
+            <div class="mgr-detail-head-text">
+              <h2 class="mgr-detail-title">Ungrouped events</h2>
+              <div class="mgr-detail-sub">
+                <span>Standalone events not bundled into a meet.</span>
+              </div>
+            </div>
+            <div class="mgr-detail-actions">
+              <button type="button" class="btn btn-primary btn-sm"
+                      v-tip:bottom="'Create a single standalone event'"
+                      @click="openCreateEvent('')">+ New event</button>
+            </div>
+          </template>
+
+          <!-- All events (default) -->
+          <template v-else>
+            <div class="mgr-detail-head-text">
+              <h2 class="mgr-detail-title">
+                {{ auth.user?.is_system_admin ? 'All Events' : 'Your Events' }}
+                <span v-if="auth.user?.is_system_admin && events.length" class="events-subcount">
+                  · {{ events.length }} across {{ uniqueOrgCount }} org{{ uniqueOrgCount === 1 ? '' : 's' }}
+                </span>
+              </h2>
+              <!-- Org filter — sysadmin only; narrows the cross-org view. -->
+              <div v-if="auth.user?.is_system_admin && uniqueOrgs.length > 1" class="org-filter">
+                <label class="label">Filter by org</label>
+                <select class="select" v-model="orgFilter">
+                  <option value="">All organisations ({{ events.length }})</option>
+                  <option v-for="o in uniqueOrgs" :key="o.id" :value="o.id">
+                    {{ o.name }}{{ o.country_code ? ` (${o.country_code})` : '' }} ({{ o.count }})
+                  </option>
+                </select>
+              </div>
+            </div>
+            <div class="mgr-detail-actions">
+              <button type="button" class="btn btn-primary btn-sm"
+                      v-tip:bottom="'Create a single event (one discipline / height / category)'"
+                      @click="openCreateEvent('')">+ New event</button>
+            </div>
+          </template>
+        </header>
+
+        <!-- Search + status chips — filter within the current
+             selection. Always visible so any view is searchable. -->
+        <div class="events-toolbar">
+          <input
+            class="input events-search"
+            type="search"
+            v-model="eventSearch"
+            placeholder="Search events…"
+            aria-label="Search events"
+          >
+          <div class="events-status-chips">
+            <button
+              v-for="chip in STATUS_CHIPS"
+              :key="chip.label"
+              type="button"
+              :class="['status-chip', { active: eventStatusFilter === chip.value }]"
+              @click="eventStatusFilter = chip.value"
+              v-tip:bottom="`Show ${chip.label.toLowerCase()} events`"
+            >
+              {{ chip.label }}
+              <span class="status-chip-count">{{ statusChipCount(chip.value) }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="events-list">
+          <!-- First-visit empty state (no events at all). -->
+          <div v-if="!events.length" class="empty-state-card">
+            <div class="empty-state-icon">📅</div>
+            <div class="empty-state-title">{{ $t('manager.empty_state_title') }}</div>
+            <div class="empty-state-body">
+              {{ $t('manager.empty_state_body') }}
             </div>
           </div>
-          <div class="meet-row-actions">
-            <RouterLink :to="`/meet/${m.id}/schedule`"
-                        class="btn btn-ghost btn-sm"
-                        v-tip="$t('scheduler.manager_link_tip')">
-              {{ $t('scheduler.manager_link') }}
-            </RouterLink>
-            <button class="btn btn-ghost btn-sm"
-                    v-tip="$t('manager.modals.edit_meet_tip')"
-                    @click="openEditMeet(m)">{{ $t('manager.modals.edit_label') }}</button>
-            <button class="btn btn-ghost btn-sm" @click="deleteMeet(m)">{{ $t('manager.modals.delete_label') }}</button>
+          <!-- Selection has events globally but none match the
+               current search/status/org filters. -->
+          <div v-else-if="!displayedEvents.length && (eventSearch || eventStatusFilter || orgFilter)" class="empty">
+            <span>No events match the current filters.</span>
+            <button
+              type="button"
+              class="link-btn"
+              @click="eventSearch = ''; eventStatusFilter = null; orgFilter = ''"
+            >Clear filters</button>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Events list -->
-    <div>
-      <h2 style="font-size:20px;font-style:italic;margin-bottom:1rem">
-        {{ auth.user?.is_system_admin ? 'All Events' : 'Your Events' }}
-        <span v-if="auth.user?.is_system_admin && events.length" class="events-subcount">
-          · {{ events.length }} across {{ uniqueOrgCount }} org{{ uniqueOrgCount === 1 ? '' : 's' }}
-        </span>
-      </h2>
-      <!-- Org filter — only useful for sysadmin who sees every
-           org's events. Default 'all' shows the full list. -->
-      <div v-if="auth.user?.is_system_admin && uniqueOrgs.length > 1" class="org-filter">
-        <label class="label">Filter by org</label>
-        <select class="select" v-model="orgFilter">
-          <option value="">All organisations ({{ events.length }})</option>
-          <option v-for="o in uniqueOrgs" :key="o.id" :value="o.id">
-            {{ o.name }}{{ o.country_code ? ` (${o.country_code})` : '' }} ({{ o.count }})
-          </option>
-        </select>
-      </div>
-
-      <!-- Search + status filter chips. Hidden when there are
-           fewer than 4 events — at that scale the list is
-           already easy to scan and the controls are noise. -->
-      <div v-if="events.length >= 4" class="events-toolbar">
-        <input
-          class="input events-search"
-          type="search"
-          v-model="eventSearch"
-          placeholder="Search events…"
-          aria-label="Search events"
-        >
-        <div class="events-status-chips">
-          <button
-            v-for="chip in STATUS_CHIPS"
-            :key="chip.label"
-            type="button"
-            :class="['status-chip', { active: eventStatusFilter === chip.value }]"
-            @click="eventStatusFilter = chip.value"
-            v-tip="`Show ${chip.label.toLowerCase()} events`"
-          >
-            {{ chip.label }}
-            <span class="status-chip-count">{{ statusChipCount(chip.value) }}</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="events-list">
-        <!-- Empty state — first visit shows a richer card with a
-             pointer at the New Event form on the left; an
-             active filter shows a smaller "no matches" line so
-             the operator clears the filter without confusion. -->
-        <div v-if="!filteredManagerEvents.length && !events.length" class="empty-state-card">
-          <div class="empty-state-icon">📅</div>
-          <div class="empty-state-title">{{ $t('manager.empty_state_title') }}</div>
-          <div class="empty-state-body">
-            {{ $t('manager.empty_state_body') }}
+          <!-- Empty meet / ungrouped view (no filters active). -->
+          <div v-else-if="!displayedEvents.length && selectedMeet" class="empty">
+            <span>No events in this meet yet.</span>
+            <button type="button" class="link-btn" @click="openCreateEvent(selectedMeet.id)">+ Add event</button>
           </div>
-        </div>
-        <div v-else-if="!filteredManagerEvents.length" class="empty">
-          <span>No events match the current filters.</span>
-          <button
-            v-if="eventSearch || eventStatusFilter || orgFilter"
-            type="button"
-            class="link-btn"
-            @click="eventSearch = ''; eventStatusFilter = null; orgFilter = ''"
-          >Clear filters</button>
-        </div>
-        <div v-for="ev in filteredManagerEvents" :key="ev.id" class="event-item">
+          <div v-else-if="!displayedEvents.length && selectedMeetId === 'ungrouped'" class="empty">
+            <span>No ungrouped events — every event is filed under a meet.</span>
+          </div>
+          <div v-else-if="!displayedEvents.length" class="empty">
+            <span>No events to show.</span>
+          </div>
+          <div v-for="ev in displayedEvents" :key="ev.id" class="event-item">
           <div style="flex:1;min-width:0">
             <div class="event-name">
               <StatusPill :status="ev.status" size="sm" />
@@ -2203,8 +2324,7 @@ onUnmounted(() => {
                     Edit event
                   </button>
                   <RouterLink :to="`/events/${ev.id}/audit`"
-                              class="dropdown-item"
-                              @click="overflowOpenEventId = null">
+                              class="dropdown-item">
                     Audit log
                   </RouterLink>
                   <button class="dropdown-item"
@@ -2240,15 +2360,20 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+        <!-- /events-list -->
+      </section>
+      <!-- /mgr-detail -->
     </div>
+    <!-- /mgr-md -->
   </div>
+  <!-- /main -->
 
   <!-- Edit modal -->
-  <div v-if="showEditModal" class="modal-backdrop">
-    <div class="modal">
+  <div v-if="showEditModal" class="mgr-form-page">
+    <div class="mgr-form-card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
-        <h2 style="font-size:22px;font-style:italic">{{ $t('manager.modals.edit_event_title') }}</h2>
+        <h2 style="font-size:22px">{{ $t('manager.modals.edit_event_title') }}</h2>
         <button class="btn btn-ghost btn-sm" @click="showEditModal = false">{{ $t('manager.modals.cancel') }}</button>
       </div>
       <form @submit.prevent="saveEdit" class="form-stack">
@@ -2467,7 +2592,7 @@ onUnmounted(() => {
        @click.self="closeCreateDiveModal" style="z-index:1100">
     <div class="modal modal-create-dive" @click.stop style="max-width:480px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-      <h2 style="font-size:20px;font-style:italic">{{ $t('manager.modals.create_dive_title') }}</h2>
+      <h2 style="font-size:20px">{{ $t('manager.modals.create_dive_title') }}</h2>
       <button class="btn btn-ghost btn-sm" @click="closeCreateDiveModal">{{ $t('manager.modals.cancel_x') }}</button>
     </div>
     <p class="hint" style="margin-bottom:1rem">
@@ -2525,11 +2650,10 @@ onUnmounted(() => {
   <!-- New Meet modal — moved out of the inline page so the
        Meet Manager toolbar can offer "+ New Meet" alongside
        "+ New Event" without crowding the main column. -->
-  <div v-if="showCreateMeetModal" class="modal-backdrop"
-       @click.self="showCreateMeetModal = false">
-    <div class="modal modal-create-meet" @click.stop style="max-width:480px">
+  <div v-if="showCreateMeetModal" class="mgr-form-page">
+    <div class="mgr-form-card modal-create-meet" style="max-width:560px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:20px;font-style:italic">{{ $t('manager.modals.new_meet_title') }}</h2>
+        <h2 style="font-size:20px">{{ $t('manager.modals.new_meet_title') }}</h2>
         <button class="btn btn-ghost btn-sm" @click="showCreateMeetModal = false">{{ $t('manager.modals.cancel_x') }}</button>
       </div>
       <p class="hint" style="margin-bottom:1rem">
@@ -2566,11 +2690,10 @@ onUnmounted(() => {
        sponsor branding incl. the new multi-logo manager
        (migration 045). Opened from the per-meet Edit button in
        the Meets list. -->
-  <div v-if="showEditMeetModal" class="modal-backdrop"
-       @click.self="showEditMeetModal = false">
-    <div class="modal modal-edit-meet" @click.stop style="max-width:640px">
+  <div v-if="showEditMeetModal" class="mgr-form-page">
+    <div class="mgr-form-card modal-edit-meet" style="max-width:680px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-        <h2 style="font-size:20px;font-style:italic">{{ $t('manager.modals.edit_meet_title') }}</h2>
+        <h2 style="font-size:20px">{{ $t('manager.modals.edit_meet_title') }}</h2>
         <button class="btn btn-ghost btn-sm" @click="showEditMeetModal = false">{{ $t('manager.modals.cancel_x') }}</button>
       </div>
       <form @submit.prevent="saveMeet" class="form-stack">
@@ -2638,7 +2761,7 @@ onUnmounted(() => {
        @click.self="closeAdvanceModal">
     <div class="modal modal-advance" @click.stop style="max-width:640px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px;font-style:italic">{{ $t('manager.modals.advance_title') }}</h2>
+        <h2 style="font-size:22px">{{ $t('manager.modals.advance_title') }}</h2>
         <button class="btn btn-ghost btn-sm" @click="closeAdvanceModal">{{ $t('manager.modals.cancel_x') }}</button>
       </div>
 
@@ -2728,7 +2851,7 @@ onUnmounted(() => {
   <div v-if="teamsModalOpen" class="modal-backdrop" @click="closeTeamsModal"></div>
   <div v-if="teamsModalOpen" class="modal teams-modal" @click.stop>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-      <h2 style="font-size:20px;font-style:italic">
+      <h2 style="font-size:20px">
         {{ $t('manager.modals.teams_modal_in_event_prefix') }} <span style="color:var(--cyan)">{{ teamsModalEvent?.name }}</span>
       </h2>
       <button class="btn btn-ghost btn-sm" @click="closeTeamsModal">{{ $t('manager.modals.close_x') }}</button>
@@ -2772,7 +2895,7 @@ onUnmounted(() => {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
       <div>
         <div class="teams-section-label">Participating Federations</div>
-        <h2 style="font-size:20px;font-style:italic;line-height:1.1">
+        <h2 style="font-size:20px;line-height:1.1">
           {{ partOrgsModalEvent?.name }}
         </h2>
       </div>
@@ -2820,7 +2943,7 @@ onUnmounted(() => {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
       <div>
         <div class="teams-section-label">{{ $t('manager.modals.roster_import_section_label') }}</div>
-        <h2 style="font-size:20px;font-style:italic;line-height:1">{{ rosterModalEvent?.name }}</h2>
+        <h2 style="font-size:20px;line-height:1">{{ rosterModalEvent?.name }}</h2>
       </div>
       <button class="btn btn-ghost btn-sm" @click="closeRosterImport">{{ $t('manager.modals.close') }}</button>
     </div>

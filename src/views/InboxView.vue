@@ -151,7 +151,6 @@ onMounted(load)
         <button v-if="unreadCount" type="button" class="btn btn-ghost btn-sm" @click="markAllRead">
           {{ $t('inbox.mark_all_read') }}
         </button>
-        <RouterLink to="/dashboard" class="btn btn-ghost btn-sm">← Dashboard</RouterLink>
       </div>
     </div>
 
@@ -241,8 +240,8 @@ onMounted(load)
   margin-bottom: 0.5rem;
 }
 .page-title {
-  font-family: var(--font-display); font-size: 32px; font-weight: 900;
-  font-style: italic; color: var(--text); line-height: 1;
+  font-family: var(--font-sans); font-size: var(--text-h1); font-weight: 600;
+  font-style: normal; letter-spacing: -0.015em; color: var(--fg); line-height: 1.2;
 }
 .page-sub {
   font-family: var(--font-mono); font-size: 12px; color: var(--text-3);
@@ -349,9 +348,9 @@ onMounted(load)
   margin-inline-start: auto;
 }
 .inbox-row-title {
-  font-family: var(--font-display); font-size: 15px; font-weight: 800;
-  font-style: italic; color: var(--text);
-  letter-spacing: 0.02em;
+  font-family: var(--font-sans); font-size: 15px; font-weight: 600;
+  font-style: normal; color: var(--fg);
+  letter-spacing: -0.01em;
 }
 .inbox-row-text {
   font-family: var(--font-mono); font-size: 13px; line-height: 1.5;

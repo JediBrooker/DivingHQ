@@ -14,54 +14,203 @@
    because display=swap means we render with the fallback first.
    ============================================================= */
 
-/* ── Variables ────────────────────────────────────────────── */
+/* =============================================================
+   DESIGN TOKENS — "Marine CRM" redesign
+   Primitive ramps (slate / blue / status hues) stay fixed; the
+   SEMANTIC layer below them is what components reference, and is
+   what [data-theme="dark"] remaps. A COMPATIBILITY BRIDGE at the
+   end aliases the prior dark-v2 token names (--cyan, --text,
+   --bg-2/3, --font-display, status/role singles) onto the new
+   semantic tokens so the existing component + per-view CSS
+   re-skins without a rewrite. Every bridge alias points at a
+   SEMANTIC token, so it follows the dark theme for free.
+   ============================================================= */
 :root {
-  /* Core palette */
-  --bg:          #030712;
-  --bg-2:        #060f1e;
-  --bg-3:        #0a1628;
-  --surface:     #0d1f35;
-  --surface-2:   #112440;
-  --border:      #1a3050;
-  --border-2:    #1e3a5f;
+  /* ── PRIMITIVE · Neutrals (slate) ───────────────────────── */
+  --slate-50:#f8fafc; --slate-100:#f1f5f9; --slate-200:#e2e8f0; --slate-300:#cbd5e1;
+  --slate-400:#94a3b8; --slate-500:#64748b; --slate-600:#475569; --slate-700:#334155;
+  --slate-800:#1e293b; --slate-900:#0f172a; --white:#ffffff;
 
-  /* Accent */
-  --cyan:        #06b6d4;
-  --cyan-dim:    rgba(6, 182, 212, 0.15);
-  --cyan-glow:   0 0 20px rgba(6, 182, 212, 0.3);
+  /* ── PRIMITIVE · Marine blue (brand primary) ────────────── */
+  --blue-50:#ecf6fb; --blue-100:#d2e9f5; --blue-200:#a6d3eb; --blue-300:#6fb6dc;
+  --blue-400:#3994c6; --blue-500:#1577ad; --blue-600:#0b6191; --blue-700:#0a5279;
+  --blue-800:#0c4361; --blue-900:#0d3850;
 
-  /* Text */
-  --text:        #e2eaf4;
-  --text-2:      #7a9bbd;
-  --text-3:      #3d5f7a;
+  /* ── PRIMITIVE · Semantic status hues ───────────────────── */
+  --green-50:#ecfdf5; --green-100:#d1fae5; --green-600:#059669; --green-700:#047857;
+  --amber-50:#fffbeb; --amber-100:#fef3c7; --amber-600:#b45309; --amber-700:#92400e;
+  --red-50:#fef2f2;   --red-100:#fee2e2;   --red-600:#dc2626;   --red-700:#b91c1c;
+  --violet-50:#f5f3ff; --violet-100:#ede9fe; --violet-600:#7c3aed; --violet-700:#6d28d9;
+  --pink-50:#fdf2f8;  --pink-100:#fce7f3;  --pink-600:#db2777;  --pink-700:#be185d;
+  --cyan-50:#ecfeff;  --cyan-100:#cffafe;  --cyan-600:#0891b2;  --cyan-700:#0e7490;
 
-  /* Status */
-  --green:       #10b981;
-  --green-dim:   rgba(16, 185, 129, 0.12);
-  --amber:       #f59e0b;
-  --amber-dim:   rgba(245, 158, 11, 0.12);
-  --red:         #ef4444;
-  --red-dim:     rgba(239, 68, 68, 0.12);
+  /* ── SEMANTIC · Surfaces & text ─────────────────────────── */
+  --bg:           var(--slate-100);
+  --bg-sunken:    var(--slate-200);
+  --surface:      var(--white);
+  --surface-2:    var(--slate-50);
+  --surface-hover:var(--slate-50);
+  --fg:           var(--slate-900);
+  --fg-2:         var(--slate-700);   /* secondary text — kept dark for readability */
+  --fg-3:         var(--slate-600);   /* muted text — grey-on-white must stay dark to read */
+  --fg-on-accent: var(--white);
+  --border:       var(--slate-200);
+  --border-2:     var(--slate-300);
+  --border-focus: var(--blue-600);
 
-  /* Role colours */
-  --role-admin:    #a78bfa;
-  --role-manager:  #f59e0b;
-  --role-referee:  #ef4444;
-  --role-judge:    #06b6d4;
-  --role-coach:    #ec4899;
-  --role-diver:    #10b981;
-  --role-spectator:#64748b;
+  /* ── SEMANTIC · Brand accent ────────────────────────────── */
+  --accent:        var(--blue-600);
+  --accent-hover:  var(--blue-700);
+  --accent-active: var(--blue-800);
+  --accent-soft:   var(--blue-50);
+  --accent-soft-2: var(--blue-100);
+  --accent-ring:   rgba(11, 97, 145, 0.18);
 
-  /* Typography */
-  --font-display: 'Barlow Condensed', sans-serif;
-  --font-mono:    'DM Mono', monospace;
+  /* ── SEMANTIC · Status (bg / fg / solid) ────────────────── */
+  --ok-bg:var(--green-50);   --ok-fg:var(--green-700);   --ok-solid:var(--green-600);
+  --warn-bg:var(--amber-50); --warn-fg:var(--amber-700); --warn-solid:var(--amber-600);
+  --danger-bg:var(--red-50); --danger-fg:var(--red-700); --danger-solid:var(--red-600);
+  --info-bg:var(--blue-50);  --info-fg:var(--blue-700);  --info-solid:var(--blue-600);
 
-  /* Spacing */
-  --radius-sm:   6px;
-  --radius:      12px;
-  --radius-lg:   20px;
-  --radius-xl:   28px;
+  /* ── SEMANTIC · Role colours (fg / bg pairs) ────────────── */
+  --role-admin-fg:var(--violet-700);   --role-admin-bg:var(--violet-50);
+  --role-manager-fg:var(--amber-700);  --role-manager-bg:var(--amber-50);
+  --role-referee-fg:var(--red-700);    --role-referee-bg:var(--red-50);
+  --role-judge-fg:var(--cyan-700);     --role-judge-bg:var(--cyan-50);
+  --role-coach-fg:var(--pink-700);     --role-coach-bg:var(--pink-50);
+  --role-diver-fg:var(--green-700);    --role-diver-bg:var(--green-50);
+  --role-spectator-fg:var(--slate-500);--role-spectator-bg:var(--slate-100);
+
+  /* ── SEMANTIC · World Aquatics judge-score award categories ── */
+  --cat-failed:#dc2626; --cat-deficient:#ea580c; --cat-unsatisfactory:#d97706;
+  --cat-satisfactory:#475569; --cat-good:var(--blue-600); --cat-very-good:#059669; --cat-excellent:#a21caf;
+  --cat-failed-bg:#fee2e2; --cat-failed-bd:#fecaca;
+  --cat-deficient-bg:#ffedd5; --cat-deficient-bd:#fed7aa;
+  --cat-unsatisfactory-bg:#fef3c7; --cat-unsatisfactory-bd:#fde68a;
+  --cat-satisfactory-bg:#f1f5f9; --cat-satisfactory-bd:#e2e8f0;
+  --cat-good-bg:#d2e9f5; --cat-good-bd:#a6d3eb;
+  --cat-very-good-bg:#d1fae5; --cat-very-good-bd:#a7f3d0;
+  --cat-excellent-bg:#fae8ff; --cat-excellent-bd:#f5d0fe;
+
+  /* ── TYPOGRAPHY · Families ──────────────────────────────── */
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ── TYPOGRAPHY · Type scale ────────────────────────────── */
+  --text-display:28px; --lh-display:1.2;  --ls-display:-0.02em;
+  --text-h1:22px;      --lh-h1:1.25;      --ls-h1:-0.015em;
+  --text-h2:18px;      --lh-h2:1.3;       --ls-h2:-0.01em;
+  --text-h3:15px;      --lh-h3:1.35;      --ls-h3:-0.005em;
+  --text-body:14px;    --lh-body:1.55;
+  --text-sm:13px;      --lh-sm:1.5;
+  --text-xs:12px;      --lh-xs:1.45;
+  --text-label:11px;   --lh-label:1.3;    --ls-label:0.06em;
+
+  /* ── SPACING · 4px base scale ───────────────────────────── */
+  --space-1:4px;  --space-2:8px;  --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px;
+  --space-12:48px; --space-16:64px;
+
+  /* ── RADII ──────────────────────────────────────────────── */
+  --radius-xs:3px; --radius-sm:5px; --radius:7px; --radius-lg:10px; --radius-xl:14px; --radius-pill:999px;
+
+  /* ── ELEVATION ──────────────────────────────────────────── */
+  --shadow-xs:0 1px 2px rgba(15,23,42,0.05);
+  --shadow-sm:0 1px 3px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04);
+  --shadow:0 2px 6px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.05);
+  --shadow-md:0 4px 12px rgba(15,23,42,0.08), 0 2px 4px rgba(15,23,42,0.04);
+  --shadow-lg:0 12px 28px rgba(15,23,42,0.12), 0 4px 8px rgba(15,23,42,0.06);
+  --shadow-focus:0 0 0 3px var(--accent-ring);
+
+  /* ── MOTION ─────────────────────────────────────────────── */
+  --ease:cubic-bezier(0.4,0,0.2,1);
+  --dur-fast:110ms; --dur:160ms; --dur-slow:240ms;
+
+  /* ═════════════════════════════════════════════════════════
+     COMPATIBILITY BRIDGE — prior dark-v2 names → new semantic
+     tokens. Lets the existing component + per-view CSS reskin
+     for free; each alias resolves against the SEMANTIC layer so
+     it tracks [data-theme="dark"] automatically.
+     ═════════════════════════════════════════════════════════ */
+  --bg-2:  var(--surface);
+  --bg-3:  var(--bg-sunken);
+  --cyan:      var(--accent);
+  --cyan-dim:  var(--accent-soft);
+  --cyan-glow: none;
+  --text:   var(--fg);
+  --text-1: var(--fg);
+  --text-2: var(--fg-2);
+  --text-3: var(--fg-3);
+  --text-4: var(--fg-3);
+  --green:     var(--ok-solid);   --green-dim: var(--ok-bg);
+  --amber:     var(--warn-solid); --amber-dim: var(--warn-bg);
+  --red:       var(--danger-solid); --red-dim: var(--danger-bg);
+  --role-admin:     var(--role-admin-fg);
+  --role-manager:   var(--role-manager-fg);
+  --role-referee:   var(--role-referee-fg);
+  --role-judge:     var(--role-judge-fg);
+  --role-coach:     var(--role-coach-fg);
+  --role-diver:     var(--role-diver-fg);
+  --role-spectator: var(--role-spectator-fg);
+  --font-display: var(--font-sans);
 }
+
+/* =============================================================
+   DARK THEME — [data-theme="dark"] on <html> flips every
+   SEMANTIC token; primitives stay fixed. A calm nod to the
+   original deep-navy + marine identity, kept readable.
+   ============================================================= */
+[data-theme="dark"] {
+  --bg:#0b111c; --bg-sunken:#070b13; --surface:#131b29; --surface-2:#1a2435; --surface-hover:#1d283a;
+  --fg:#e8eef6; --fg-2:#c4d0e2; --fg-3:#aebcd0; --fg-on-accent:#ffffff;  /* fg-2/3 lifted well off the dark bg for readability */
+  --border:#25324a; --border-2:#324360; --border-focus:#3a9bd1;
+
+  --accent:#2180ba; --accent-hover:#2f93c9; --accent-active:#3aa0d6;
+  --accent-soft:rgba(58,155,209,0.14); --accent-soft-2:rgba(58,155,209,0.26); --accent-ring:rgba(58,155,209,0.40);
+
+  --ok-bg:rgba(16,185,129,0.15);  --ok-fg:#4ade80;  --ok-solid:#10b981;
+  --warn-bg:rgba(245,158,11,0.15); --warn-fg:#fbbf24; --warn-solid:#f59e0b;
+  --danger-bg:rgba(239,68,68,0.15); --danger-fg:#f87171; --danger-solid:#ef4444;
+  --info-bg:rgba(58,155,209,0.16); --info-fg:#6fb6dc; --info-solid:#2180ba;
+
+  --role-admin-fg:#c4b5fd;  --role-admin-bg:rgba(167,139,250,0.15);
+  --role-manager-fg:#fbbf24; --role-manager-bg:rgba(245,158,11,0.15);
+  --role-referee-fg:#f87171; --role-referee-bg:rgba(239,68,68,0.15);
+  --role-judge-fg:#5ec5e0;  --role-judge-bg:rgba(8,145,178,0.18);
+  --role-coach-fg:#f0a8cd;  --role-coach-bg:rgba(219,39,119,0.16);
+  --role-diver-fg:#4ade80;  --role-diver-bg:rgba(16,185,129,0.15);
+  --role-spectator-fg:#94a3b8; --role-spectator-bg:rgba(148,163,184,0.14);
+
+  --cat-failed:#f87171; --cat-deficient:#fb923c; --cat-unsatisfactory:#fbbf24;
+  --cat-satisfactory:#94a3b8; --cat-good:#6fb6dc; --cat-very-good:#34d399; --cat-excellent:#e879f9;
+  --cat-failed-bg:rgba(248,113,113,0.16); --cat-failed-bd:rgba(248,113,113,0.40);
+  --cat-deficient-bg:rgba(251,146,60,0.16); --cat-deficient-bd:rgba(251,146,60,0.40);
+  --cat-unsatisfactory-bg:rgba(251,191,36,0.16); --cat-unsatisfactory-bd:rgba(251,191,36,0.40);
+  --cat-satisfactory-bg:rgba(148,163,184,0.16); --cat-satisfactory-bd:rgba(148,163,184,0.35);
+  --cat-good-bg:rgba(111,182,220,0.18); --cat-good-bd:rgba(111,182,220,0.42);
+  --cat-very-good-bg:rgba(52,211,153,0.16); --cat-very-good-bd:rgba(52,211,153,0.42);
+  --cat-excellent-bg:rgba(232,121,249,0.16); --cat-excellent-bd:rgba(232,121,249,0.42);
+
+  --shadow-xs:0 1px 2px rgba(0,0,0,0.30);
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.40), 0 1px 2px rgba(0,0,0,0.30);
+  --shadow:0 2px 6px rgba(0,0,0,0.40), 0 1px 2px rgba(0,0,0,0.30);
+  --shadow-md:0 6px 16px rgba(0,0,0,0.45), 0 2px 5px rgba(0,0,0,0.35);
+  --shadow-lg:0 16px 36px rgba(0,0,0,0.55), 0 6px 12px rgba(0,0,0,0.40);
+
+  color-scheme: dark;
+}
+
+/* ── Semantic type helper classes (for new shell + screens) ── */
+.ds-display { font-family:var(--font-sans); font-size:var(--text-display); line-height:var(--lh-display); letter-spacing:var(--ls-display); font-weight:600; color:var(--fg); }
+.ds-h1 { font-family:var(--font-sans); font-size:var(--text-h1); line-height:var(--lh-h1); letter-spacing:var(--ls-h1); font-weight:600; color:var(--fg); }
+.ds-h2 { font-family:var(--font-sans); font-size:var(--text-h2); line-height:var(--lh-h2); letter-spacing:var(--ls-h2); font-weight:600; color:var(--fg); }
+.ds-h3 { font-family:var(--font-sans); font-size:var(--text-h3); line-height:var(--lh-h3); letter-spacing:var(--ls-h3); font-weight:600; color:var(--fg); }
+.ds-body { font-family:var(--font-sans); font-size:var(--text-body); line-height:var(--lh-body); font-weight:400; color:var(--fg); }
+.ds-sm { font-family:var(--font-sans); font-size:var(--text-sm); line-height:var(--lh-sm); color:var(--fg-2); }
+.ds-xs { font-family:var(--font-sans); font-size:var(--text-xs); line-height:var(--lh-xs); color:var(--fg-2); }
+.ds-label { font-family:var(--font-sans); font-size:var(--text-label); line-height:var(--lh-label); letter-spacing:var(--ls-label); text-transform:uppercase; font-weight:600; color:var(--fg-3); }
+.ds-mono { font-family:var(--font-mono); font-variant-numeric:tabular-nums; letter-spacing:-0.01em; }
+.ds-score { font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-weight:500; color:var(--fg); }
 
 /* ── Reset ────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -89,9 +238,12 @@ html {
 }
 
 body {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--lh-body);
   background: var(--bg);
-  color: var(--text);
+  color: var(--fg);
+  text-rendering: optimizeLegibility;
   /* dvh, not vh — iOS Safari's collapsing URL bar makes 100vh
      equal the large viewport (bar collapsed). With the bar
      expanded, a 100vh body is taller than the visible area
@@ -105,11 +257,6 @@ body {
      a descendant's intrinsic size can't push the body wider. */
   overflow-x: hidden;
   max-width: 100vw;
-  /* Subtle grid texture */
-  background-image:
-    linear-gradient(rgba(6,182,212,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(6,182,212,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
 }
 
 /* ── Typography ───────────────────────────────────────────── */
@@ -117,20 +264,20 @@ body {
 .font-mono    { font-family: var(--font-mono); }
 
 h1, h2, h3, h4 {
-  font-family: var(--font-display);
-  font-weight: 900;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  line-height: 1;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--fg);
 }
 
 .label {
-  font-family: var(--font-display);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
+  font-family: var(--font-sans);
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--fg-2);
 }
 
 /* ── Layout ───────────────────────────────────────────────── */
@@ -171,21 +318,20 @@ h1, h2, h3, h4 {
 }
 
 .app-logo {
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 900;
-  font-style: italic;
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 700;
+  font-style: normal;
   /* DIVING white, HQ cyan — same colour rhythm as the public
      home page hero so the brand reads identically across the
      surface (the operator just sees a smaller version of the
      mark they saw on the landing page). */
-  color: var(--text);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  color: var(--fg);
+  letter-spacing: -0.01em;
   text-decoration: none;
 }
 
-.app-logo span { color: var(--cyan); }
+.app-logo span { color: var(--accent); }
 
 .app-main { padding: 2.5rem 2rem; }
 
@@ -217,15 +363,15 @@ h1, h2, h3, h4 {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  border: none;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  border: 1px solid transparent;
   border-radius: var(--radius);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform var(--dur-fast) var(--ease);
   text-decoration: none;
   white-space: nowrap;
 }
@@ -233,39 +379,40 @@ h1, h2, h3, h4 {
 .btn:active { transform: scale(0.97); }
 
 .btn-primary {
-  background: var(--cyan);
-  color: var(--bg);
-  padding: 0.875rem 1.75rem;
+  background: var(--accent);
+  color: var(--fg-on-accent);
+  padding: 0.6rem 1.1rem;
 }
-.btn-primary:hover { background: #0891b2; box-shadow: var(--cyan-glow); }
+.btn-primary:hover { background: var(--accent-hover); }
 
 .btn-primary-lg {
-  background: var(--cyan);
-  color: var(--bg);
-  padding: 1.1rem 2rem;
+  background: var(--accent);
+  color: var(--fg-on-accent);
+  padding: 0.85rem 1.5rem;
   font-size: 15px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   width: 100%;
 }
-.btn-primary-lg:hover { background: #0891b2; box-shadow: var(--cyan-glow); }
+.btn-primary-lg:hover { background: var(--accent-hover); }
 
 .btn-ghost {
-  background: transparent;
-  color: var(--text-2);
-  border: 1px solid var(--border);
-  padding: 0.625rem 1.25rem;
-  font-size: 11px;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border-2);
+  box-shadow: var(--shadow-xs);
+  padding: 0.55rem 1rem;
+  font-size: 13px;
 }
-.btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+.btn-ghost:hover { background: var(--surface-hover); border-color: var(--border-2); color: var(--fg); }
 
 .btn-danger {
-  background: var(--red-dim);
-  color: var(--red);
-  border: 1px solid rgba(239,68,68,0.2);
-  padding: 0.625rem 1.25rem;
-  font-size: 11px;
+  background: var(--surface);
+  color: var(--danger-fg);
+  border: 1px solid var(--red-100);
+  padding: 0.55rem 1rem;
+  font-size: 13px;
 }
-.btn-danger:hover { background: var(--red); color: white; }
+.btn-danger:hover { background: var(--danger-bg); border-color: var(--danger-solid); }
 
 .btn-sm {
   padding: 0.5rem 1rem;
@@ -277,19 +424,19 @@ h1, h2, h3, h4 {
 .field { display: flex; flex-direction: column; gap: 0.5rem; }
 
 .input {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 14px;
-  background: var(--bg-3);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--border-2);
   border-radius: var(--radius);
-  padding: 0.875rem 1rem;
-  color: var(--text);
+  padding: 0.6rem 0.75rem;
+  color: var(--fg);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   width: 100%;
 }
-.input:focus { border-color: var(--cyan); }
-.input::placeholder { color: var(--text-3); }
+.input:focus { border-color: var(--border-focus); box-shadow: var(--shadow-focus); }
+.input::placeholder { color: var(--fg-3); }
 
 /* Number-input spinner arrows. Browser defaults render almost
    black-on-black in our dark theme — recolour the chrome so the
@@ -301,71 +448,63 @@ h1, h2, h3, h4 {
    Firefox: doesn't expose the glyph at all; we leave the native
      style and rely on the brighter appearance from `accent-color`. */
 .input[type="number"] {
-  accent-color: var(--cyan);
+  accent-color: var(--accent);
 }
 .input[type="number"]::-webkit-inner-spin-button,
 .input[type="number"]::-webkit-outer-spin-button {
   opacity: 1;
-  /* Force the rendering to honour our dark background — Chromium
-     paints the spinner glyph in `currentColor` only on the dark
-     UA stylesheet path, so giving it a colour the box can
-     contrast with reveals the arrows. */
-  filter: invert(0.85) brightness(1.1);
   cursor: pointer;
-}
-.input[type="number"]:hover::-webkit-inner-spin-button,
-.input[type="number"]:focus::-webkit-inner-spin-button {
-  filter: invert(1) brightness(1.4);
 }
 
 .select {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 14px;
-  background: var(--bg-3);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1px solid var(--border-2);
   border-radius: var(--radius);
-  padding: 0.875rem 1rem;
-  color: var(--text);
+  padding: 0.6rem 0.75rem;
+  color: var(--fg);
   outline: none;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   width: 100%;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233d5f7a' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 1rem center;
-  padding-inline-end: 2.5rem;
+  background-position: right 0.75rem center;
+  padding-inline-end: 2.25rem;
 }
-.select:focus { border-color: var(--cyan); }
+.select:focus { border-color: var(--border-focus); box-shadow: var(--shadow-focus); }
 
 /* ── Status badges ────────────────────────────────────────── */
 .badge {
   display: inline-flex;
   align-items: center;
-  font-family: var(--font-display);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  padding: 0.25rem 0.625rem;
-  border-radius: 4px;
-  border: 1px solid;
+  gap: 5px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  border: none;
 }
 
-.badge-cyan    { background: var(--cyan-dim);  color: var(--cyan);  border-color: rgba(6,182,212,0.3); }
-.badge-green   { background: var(--green-dim); color: var(--green); border-color: rgba(16,185,129,0.3); }
-.badge-amber   { background: var(--amber-dim); color: var(--amber); border-color: rgba(245,158,11,0.3); }
-.badge-red     { background: var(--red-dim);   color: var(--red);   border-color: rgba(239,68,68,0.3); }
-.badge-muted   { background: rgba(61,95,122,0.15); color: var(--text-3); border-color: var(--border); }
+.badge-cyan    { background: var(--info-bg);   color: var(--info-fg); }
+.badge-green   { background: var(--ok-bg);     color: var(--ok-fg); }
+.badge-amber   { background: var(--warn-bg);   color: var(--warn-fg); }
+.badge-red     { background: var(--danger-bg); color: var(--danger-fg); }
+.badge-muted   { background: var(--bg-sunken); color: var(--fg-2); }
 
 /* Role badges */
-.badge-org_admin    { background: rgba(167,139,250,0.12); color: #a78bfa; border-color: rgba(167,139,250,0.3); }
-.badge-meet_manager { background: var(--amber-dim); color: var(--amber); border-color: rgba(245,158,11,0.3); }
-.badge-referee      { background: var(--red-dim); color: var(--red); border-color: rgba(239,68,68,0.3); }
-.badge-judge        { background: var(--cyan-dim); color: var(--cyan); border-color: rgba(6,182,212,0.3); }
-.badge-coach        { background: rgba(236,72,153,0.10); color: #f472b6; border-color: rgba(236,72,153,0.35); }
-.badge-diver        { background: var(--green-dim); color: var(--green); border-color: rgba(16,185,129,0.3); }
-.badge-spectator    { background: rgba(61,95,122,0.15); color: var(--text-3); border-color: var(--border); }
+.badge-org_admin    { background: var(--role-admin-bg);     color: var(--role-admin-fg); }
+.badge-meet_manager { background: var(--role-manager-bg);   color: var(--role-manager-fg); }
+.badge-referee      { background: var(--role-referee-bg);   color: var(--role-referee-fg); }
+.badge-judge        { background: var(--role-judge-bg);     color: var(--role-judge-fg); }
+.badge-coach        { background: var(--role-coach-bg);     color: var(--role-coach-fg); }
+.badge-diver        { background: var(--role-diver-bg);     color: var(--role-diver-fg); }
+.badge-spectator    { background: var(--role-spectator-bg); color: var(--role-spectator-fg); }
 
 /* ── Tables ───────────────────────────────────────────────── */
 .data-table {
@@ -375,26 +514,26 @@ h1, h2, h3, h4 {
 }
 
 .data-table th {
-  font-family: var(--font-display);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
+  font-family: var(--font-sans);
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--fg-3);
   text-align: start;
-  padding: 0.875rem 1.25rem;
+  padding: 0.7rem 1rem;
   border-bottom: 1px solid var(--border);
-  background: var(--bg-3);
+  background: var(--surface-2);
 }
 
 .data-table td {
-  padding: 1rem 1.25rem;
+  padding: 0.8rem 1rem;
   border-bottom: 1px solid var(--border);
-  color: var(--text);
+  color: var(--fg);
 }
 
 .data-table tr:last-child td { border-bottom: none; }
-.data-table tr:hover td { background: rgba(6,182,212,0.03); }
+.data-table tr:hover td { background: var(--surface-hover); }
 
 /* ── Dividers ─────────────────────────────────────────────── */
 .divider {
@@ -454,23 +593,23 @@ h1, h2, h3, h4 {
 
 /* ── Error / success messages ─────────────────────────────── */
 .msg {
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
 }
-.msg-error   { background: var(--red-dim);   color: var(--red);   border-color: rgba(239,68,68,0.3); }
-.msg-success { background: var(--green-dim); color: var(--green); border-color: rgba(16,185,129,0.3); }
+.msg-error   { background: var(--danger-bg); color: var(--danger-fg); border-color: var(--red-100); }
+.msg-success { background: var(--ok-bg);     color: var(--ok-fg);     border-color: var(--green-100); }
 
 /* ── Modal ────────────────────────────────────────────────── */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(3,7,18,0.9);
+  background: rgba(15,23,42,0.45);
   /* -webkit- prefix for iOS 15 + macOS Safari 14. Without it
      the blur silently no-ops on those versions and the modal
      backdrop renders as a flat rectangle. */
@@ -494,9 +633,10 @@ h1, h2, h3, h4 {
 }
 .modal {
   background: var(--surface);
-  border: 1px solid var(--border-2);
+  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  padding: 2.5rem;
+  box-shadow: var(--shadow-lg);
+  padding: 2rem;
   width: 100%;
   max-width: 520px;
   /* No vh cap on the modal itself — its parent .modal-backdrop
@@ -523,28 +663,37 @@ h1, h2, h3, h4 {
    logic in src/composables/useScoreCategories.js
    ========================================================= */
 .j-score {
-  font-family: var(--font-mono); font-size: 11px;
-  padding: 0.1rem 0.4rem; border-radius: 3px;
-  background: var(--bg-3); border: 1px solid var(--border); color: var(--text-2);
+  font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums;
+  padding: 0.1rem 0.45rem; border-radius: var(--radius-sm);
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--fg-2);
   transition: opacity 0.15s, filter 0.15s;
   white-space: nowrap;
 }
-.j-score.j-failed         { color: #fca5a5; border-color: rgba(239,68,68,0.55); background: rgba(239,68,68,0.18); font-weight: 700; }
-.j-score.j-deficient      { color: #fb923c; border-color: rgba(249,115,22,0.45); background: rgba(249,115,22,0.10); }
-.j-score.j-unsatisfactory { color: #fbbf24; border-color: rgba(245,158,11,0.40); background: rgba(245,158,11,0.08); }
-.j-score.j-satisfactory   { color: var(--text-2); border-color: var(--border-2); background: var(--bg-3); }
-.j-score.j-good           { color: #67e8f9; border-color: rgba(6,182,212,0.40); background: rgba(6,182,212,0.10); }
-.j-score.j-very-good      { color: #34d399; border-color: rgba(16,185,129,0.45); background: rgba(16,185,129,0.12); font-weight: 700; }
-.j-score.j-excellent      { color: #f0abfc; border-color: rgba(217,70,239,0.55); background: rgba(217,70,239,0.16); font-weight: 700; }
+/* Judge score chips are intentionally NOT colour-coded by award
+   category — they read as plain tabular mono figures (consistent
+   with the Control Room). Dropped/trimmed scores are conveyed by
+   the strike-through (.j-dropped) below, not by colour. */
+.j-score.j-failed,
+.j-score.j-deficient,
+.j-score.j-unsatisfactory,
+.j-score.j-satisfactory,
+.j-score.j-good,
+.j-score.j-very-good,
+.j-score.j-excellent {
+  color: var(--fg); background: var(--surface-2); border-color: var(--border); font-weight: 500;
+}
 
 /* Dropped by the panel's trim rule — keeps the category colour
    but desaturates and dims so live + counted scores still pop. */
 .j-score.j-dropped {
-  opacity: 0.4;
-  filter: saturate(0.4);
+  opacity: 0.8;
   font-weight: 400;
-  text-decoration: line-through;
-  text-decoration-color: rgba(255,255,255,0.35);
+  color: var(--fg-2);
+  /* !important so the strike survives anchor `text-decoration:none`
+     resets — dropped/trimmed scores are score-history links. */
+  text-decoration: line-through !important;
+  text-decoration-thickness: 2px !important;
+  text-decoration-color: var(--fg-3) !important;
 }
 
 /* =========================================================
@@ -566,17 +715,22 @@ h1, h2, h3, h4 {
   background: var(--bg-2);
 }
 .judge-group-label {
-  font-family: var(--font-display); font-size: 9px; font-weight: 700;
+  font-family: var(--font-display); font-size: 9px; font-weight: 800;
   letter-spacing: 0.18em; text-transform: uppercase;
   margin-inline-end: 0.3rem;
   white-space: nowrap;
 }
-.judge-group.judge-group-a    .judge-group-label { color: #c4b5fd; }
-.judge-group.judge-group-b    .judge-group-label { color: #fbbf24; }
-.judge-group.judge-group-sync .judge-group-label { color: #34d399; }
-.judge-group.judge-group-a    { border-color: rgba(139,92,246,0.35); }
-.judge-group.judge-group-b    { border-color: rgba(245,158,11,0.35); }
-.judge-group.judge-group-sync { border-color: rgba(16,185,129,0.35); }
+/* Exec A / Exec B / Sync keep their WA sub-panel role identity —
+   violet / amber / green — via theme-aware role tokens (a dark hue on
+   light surfaces, a light hue on dark) so they read clearly in both
+   themes instead of the washed-out dark-only hues used before. Each
+   role's label and box border share its colour. */
+.judge-group.judge-group-a    .judge-group-label { color: var(--role-admin-fg); }
+.judge-group.judge-group-b    .judge-group-label { color: var(--role-manager-fg); }
+.judge-group.judge-group-sync .judge-group-label { color: var(--role-diver-fg); }
+.judge-group.judge-group-a    { border-color: var(--role-admin-fg); }
+.judge-group.judge-group-b    { border-color: var(--role-manager-fg); }
+.judge-group.judge-group-sync { border-color: var(--role-diver-fg); }
 
 
 /* =========================================================
@@ -740,8 +894,10 @@ h1, h2, h3, h4 {
     --border:    #cbd5e1;
     --border-2:  #94a3b8;
     --text:      #0f172a;
+    --text-1:    #0f172a;
     --text-2:    #334155;
     --text-3:    #64748b;
+    --text-4:    #64748b;
     --cyan:      #0e7490;
     --cyan-dim:  #ecfeff;
   }
@@ -827,10 +983,10 @@ h1, h2, h3, h4 {
   padding: 3rem 1.5rem;
   margin: 1.5rem auto;
   max-width: 540px;
-  background: var(--bg-3);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  color: var(--text-3);
+  background: var(--surface-2);
+  border: 1px dashed var(--border-2);
+  border-radius: var(--radius-lg);
+  color: var(--fg-3);
 }
 .empty-state-icon {
   font-size: 48px; line-height: 1;
@@ -838,9 +994,9 @@ h1, h2, h3, h4 {
   opacity: 0.85;
 }
 .empty-state-title {
-  font-family: var(--font-display); font-size: 18px; font-weight: 800;
-  font-style: italic; letter-spacing: 0.04em;
-  color: var(--text); margin-bottom: 0.6rem;
+  font-family: var(--font-sans); font-size: 16px; font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg); margin-bottom: 0.6rem;
 }
 .empty-state-body {
   font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6;
@@ -879,9 +1035,9 @@ h1, h2, h3, h4 {
 }
 .panel-section { margin-bottom: 2.25rem; }
 .panel-section-label {
-  font-family: var(--font-display); font-size: 11px; font-weight: 700;
-  letter-spacing: 0.22em; text-transform: uppercase;
-  color: var(--text-3); margin-bottom: 0.85rem;
+  font-family: var(--font-sans); font-size: var(--text-label); font-weight: 600;
+  letter-spacing: var(--ls-label); text-transform: uppercase;
+  color: var(--fg-3); margin-bottom: 0.85rem;
 }
 .panel-section-link {
   display: inline-block; margin-top: 0.5rem;
@@ -932,9 +1088,9 @@ h1, h2, h3, h4 {
 .action-card-pending:hover { border-color: rgba(167,139,250,0.5); background: rgba(167,139,250,0.08); }
 .action-card-icon { font-size: 14px; line-height: 1; flex-shrink: 0; }
 .action-card-title {
-  font-family: var(--font-display); font-size: 14px; font-weight: 800;
-  font-style: italic; letter-spacing: 0.02em;
-  color: var(--text);
+  font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+  font-style: normal; letter-spacing: -0.01em;
+  color: var(--fg);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   flex: 1 1 auto; min-width: 0;
 }
@@ -991,11 +1147,11 @@ h1, h2, h3, h4 {
   align-items: center;
   gap: 0.45rem;
   min-width: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 14px;
-  font-weight: 800;
-  font-style: italic;
-  color: var(--text);
+  font-weight: 600;
+  font-style: normal;
+  color: var(--fg);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1046,7 +1202,7 @@ h1, h2, h3, h4 {
   letter-spacing: 0.04em;
 }
 .activity-text { min-width: 0; }
-.activity-text strong { font-family: var(--font-display); font-style: italic; color: var(--text); }
+.activity-text strong { font-family: var(--font-sans); font-style: normal; font-weight: 600; color: var(--fg); }
 
 /* Event rows (meet manager + judge) */
 .event-row {
@@ -1095,8 +1251,8 @@ h1, h2, h3, h4 {
 }
 .diver-next-card:hover { transform: translateX(2px); border-color: var(--green); }
 .diver-next-name {
-  font-family: var(--font-display); font-size: 22px; font-weight: 800;
-  font-style: italic; color: var(--text); letter-spacing: 0.02em;
+  font-family: var(--font-sans); font-size: 22px; font-weight: 600;
+  font-style: normal; color: var(--fg); letter-spacing: -0.01em;
 }
 .diver-next-meta { font-family: var(--font-mono); font-size: 13px; color: var(--green); }
 .diver-next-arrow {
@@ -1155,10 +1311,10 @@ h1, h2, h3, h4 {
   color: var(--tc, var(--text-2));
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-.goto-tile:hover .goto-icon { background: var(--tc, var(--cyan)); color: var(--bg); border-color: transparent; }
+.goto-tile:hover .goto-icon { background: var(--tc, var(--accent)); color: var(--fg-on-accent); border-color: transparent; }
 .goto-title {
-  font-family: var(--font-display); font-size: 16px; font-weight: 800;
-  font-style: italic; letter-spacing: 0.02em; color: var(--text);
+  font-family: var(--font-sans); font-size: 16px; font-weight: 600;
+  font-style: normal; letter-spacing: -0.01em; color: var(--fg);
 }
 .goto-desc {
   font-family: var(--font-mono); font-size: 11.5px;
@@ -1180,8 +1336,8 @@ h1, h2, h3, h4 {
 }
 .dashboard-panel-empty .empty-state-icon { font-size: 28px; margin-bottom: 0.75rem; }
 .dashboard-panel-empty .empty-state-title {
-  font-family: var(--font-display); font-size: 16px; font-weight: 800;
-  font-style: italic; color: var(--text); margin-bottom: 0.5rem;
+  font-family: var(--font-sans); font-size: 16px; font-weight: 600;
+  font-style: normal; color: var(--fg); margin-bottom: 0.5rem;
 }
 .dashboard-panel-empty .empty-state-body {
   font-family: var(--font-mono); font-size: 13px; line-height: 1.55;
@@ -1221,6 +1377,31 @@ h1, h2, h3, h4 {
 }
 :where([data-tip]) { position: relative; }
 
+/* Fixed-position tooltip (v-tip.fixed) — body-appended so it
+   escapes overflow-clipping ancestors (e.g. the judge-ranking
+   matrix's horizontal scroll). Mirrors the [data-tip] bubble. */
+.tip-fixed {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  white-space: pre-line;
+  text-align: start;
+  background: var(--slate-900, #0f172a);
+  border: 1px solid var(--slate-700, #334155);
+  border-radius: var(--radius-sm, 5px);
+  padding: 0.5rem 0.7rem;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  width: max-content;
+  max-width: 260px;
+  opacity: 0;
+  transition: opacity 0.08s;
+}
+.tip-fixed.tip-fixed-show { opacity: 1; }
 [data-tip]::after {
   content: attr(data-tip);
   position: absolute;
@@ -1232,17 +1413,17 @@ h1, h2, h3, h4 {
      judge analysis"). pre-line preserves them. */
   white-space: pre-line;
   text-align: start;
-  background: var(--bg-2, #0f172a);
-  border: 1px solid var(--cyan, #06b6d4);
-  border-radius: var(--radius-sm, 4px);
+  background: var(--slate-900, #0f172a);
+  border: 1px solid var(--slate-700, #334155);
+  border-radius: var(--radius-sm, 5px);
   padding: 0.5rem 0.7rem;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-weight: 500;
   font-size: 11px;
   font-style: normal;
   line-height: 1.45;
-  color: var(--text, #e2e8f0);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  color: #fff;
+  box-shadow: var(--shadow-md);
   z-index: 100;
   pointer-events: none;
   width: max-content;

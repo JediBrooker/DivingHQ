@@ -3,6 +3,9 @@ import { onMounted } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
+import LogoMark from '@/components/LogoMark.vue'
+import { CircleHelp } from '@lucide/vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -13,502 +16,370 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- Hero -->
-  <section class="hero">
-    <div class="hero-glow"></div>
-    <!-- Top-right locale switcher. The chosen language is
-         written to localStorage by setLocale() in src/i18n,
-         so it carries to every other page automatically — both
-         within the current SPA session (vue-i18n's locale ref is
-         a global reactive) and across page reloads / sign-in. -->
-    <div class="hero-locale">
-      <LocaleSwitcher />
-    </div>
-    <div class="hero-mark">{{ $t('home.hero.mark') }}</div>
-    <div class="hero-logo">DIVING<span>HQ</span></div>
-    <p class="hero-tagline">{{ $t('home.hero.tagline') }}</p>
-    <div class="hero-actions">
-      <RouterLink to="/login" class="hero-btn-primary">{{ $t('home.hero.btn_sign_in') }}</RouterLink>
-      <RouterLink to="/register" class="hero-btn-ghost">{{ $t('home.hero.btn_create_account') }}</RouterLink>
-      <RouterLink to="/scoreboard" class="hero-btn-ghost">{{ $t('home.hero.btn_scoreboard') }}</RouterLink>
-      <RouterLink to="/judges" class="hero-btn-ghost">{{ $t('home.hero.btn_judge_analysis') }}</RouterLink>
-    </div>
-    <!-- New-user primer link. Quiet by design — pitched to
-         someone who's never seen the app and isn't sure where
-         to start, without competing with the primary CTAs. -->
-    <RouterLink to="/guide" class="hero-guide-link">
-      {{ $t('home.hero.guide_link') }}
-    </RouterLink>
-  </section>
+  <div class="lp">
+    <!-- Top nav -->
+    <nav class="nav">
+      <div class="nav-in">
+        <RouterLink to="/" class="brand">
+          <LogoMark :size="28" />
+          <span class="wm">DIVING<span>HQ</span></span>
+        </RouterLink>
+        <div class="nav-right">
+          <ThemeToggle compact />
+          <RouterLink to="/guide" class="nav-help" aria-label="Help & user guide" v-tip:bottom="'Help & user guide'"><CircleHelp /></RouterLink>
+          <LocaleSwitcher />
+          <RouterLink to="/login" class="btn btn-ghost btn-sm">{{ $t('home.hero.btn_sign_in') }}</RouterLink>
+          <RouterLink to="/register" class="btn btn-primary btn-sm">{{ $t('home.hero.btn_create_account') }}</RouterLink>
+        </div>
+      </div>
+    </nav>
 
-  <!-- Live strip -->
-  <div class="live-strip">
-    <div class="live-pill">{{ $t('home.live_strip.pill') }}</div>
-    <span class="live-text">{{ $t('home.live_strip.text') }}</span>
-    <RouterLink to="/scoreboard" class="btn btn-ghost btn-sm">{{ $t('home.live_strip.watch') }}</RouterLink>
+    <!-- Hero -->
+    <header class="hero">
+      <div class="eyebrow">{{ $t('home.hero.mark') }}</div>
+      <h1 class="hero-logo">DIVING<span>HQ</span></h1>
+      <p class="lede">{{ $t('home.hero.tagline') }}</p>
+      <div class="hero-cta">
+        <RouterLink to="/login" class="btn btn-primary btn-lg">{{ $t('home.hero.btn_sign_in') }}</RouterLink>
+        <RouterLink to="/register" class="btn btn-ghost btn-lg">{{ $t('home.hero.btn_create_account') }}</RouterLink>
+        <RouterLink to="/scoreboard" class="btn btn-ghost btn-lg">{{ $t('home.hero.btn_scoreboard') }}</RouterLink>
+        <RouterLink to="/judges" class="btn btn-ghost btn-lg">{{ $t('home.hero.btn_judge_analysis') }}</RouterLink>
+      </div>
+      <RouterLink to="/guide" class="hero-guide-link">{{ $t('home.hero.guide_link') }}</RouterLink>
+
+      <!-- Product-preview mock (decorative) -->
+      <div class="preview" aria-hidden="true">
+        <div class="pf-bar"><span class="pf-dot"></span><span class="pf-dot"></span><span class="pf-dot"></span></div>
+        <div class="pf-body">
+          <div class="pf-side">
+            <div class="pf-item on">Dashboard</div>
+            <div class="pf-item">Meets &amp; events</div>
+            <div class="pf-item">Control Room</div>
+            <div class="pf-item">User Manager</div>
+            <div class="pf-item">Audit Log</div>
+          </div>
+          <div class="pf-main">
+            <div class="pf-stats">
+              <div class="pf-stat"><div class="l">Active meets</div><div class="v">3</div></div>
+              <div class="pf-stat"><div class="l">Members</div><div class="v">248</div></div>
+              <div class="pf-stat"><div class="l">Live now</div><div class="v">1</div></div>
+            </div>
+            <div class="pf-table">
+              <div class="pf-tr head"><span>Meet</span><span>Status</span><span>Divers</span></div>
+              <div class="pf-tr"><span>Women 3m Springboard — Final</span><span class="pf-badge live">Live</span><span class="mono">15</span></div>
+              <div class="pf-tr"><span>2026 National Championships</span><span class="pf-badge warn">Upcoming</span><span class="mono">32</span></div>
+              <div class="pf-tr"><span>2025 Winter Cup — 5m Platform</span><span class="pf-badge ok">Completed</span><span class="mono">18</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Live strip -->
+    <div class="live-strip">
+      <span class="live-pill">{{ $t('home.live_strip.pill') }}</span>
+      <span class="live-text">{{ $t('home.live_strip.text') }}</span>
+      <RouterLink to="/scoreboard" class="btn btn-ghost btn-sm">{{ $t('home.live_strip.watch') }}</RouterLink>
+    </div>
+
+    <!-- Features -->
+    <section class="section">
+      <div class="section-label">{{ $t('home.features.section_label') }}</div>
+      <div class="feature-grid">
+
+        <div class="feat">
+          <div class="fic">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          </div>
+          <div class="feat-title">{{ $t('home.features.diver_portal_title') }}</div>
+          <div class="feat-desc">{{ $t('home.features.diver_portal_desc') }}</div>
+          <div class="feat-tags">
+            <span class="feat-tag" style="color:var(--role-diver-fg);background:var(--role-diver-bg)"><span class="d"></span>{{ $t('role.diver') }}</span>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="fic">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <div class="feat-title">{{ $t('home.features.control_room_title') }}</div>
+          <div class="feat-desc">{{ $t('home.features.control_room_desc') }}</div>
+          <div class="feat-tags">
+            <span class="feat-tag" style="color:var(--role-referee-fg);background:var(--role-referee-bg)"><span class="d"></span>{{ $t('role.referee') }}</span>
+            <span class="feat-tag" style="color:var(--role-manager-fg);background:var(--role-manager-bg)"><span class="d"></span>{{ $t('role.manager') }}</span>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="fic">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
+          </div>
+          <div class="feat-title">{{ $t('home.features.judge_terminal_title') }}</div>
+          <div class="feat-desc">{{ $t('home.features.judge_terminal_desc') }}</div>
+          <div class="feat-tags">
+            <span class="feat-tag" style="color:var(--role-judge-fg);background:var(--role-judge-bg)"><span class="d"></span>{{ $t('role.judge') }}</span>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="fic">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          </div>
+          <div class="feat-title">{{ $t('home.features.scoreboard_title') }}</div>
+          <div class="feat-desc">{{ $t('home.features.scoreboard_desc') }}</div>
+          <div class="feat-tags">
+            <span class="feat-tag" style="color:var(--role-spectator-fg);background:var(--role-spectator-bg)"><span class="d"></span>{{ $t('role.public') }}</span>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="fic">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </div>
+          <div class="feat-title">{{ $t('home.features.meet_manager_title') }}</div>
+          <div class="feat-desc">{{ $t('home.features.meet_manager_desc') }}</div>
+          <div class="feat-tags">
+            <span class="feat-tag" style="color:var(--role-manager-fg);background:var(--role-manager-bg)"><span class="d"></span>{{ $t('role.manager') }}</span>
+            <span class="feat-tag" style="color:var(--role-admin-fg);background:var(--role-admin-bg)"><span class="d"></span>{{ $t('role.admin') }}</span>
+          </div>
+        </div>
+
+        <div class="feat">
+          <div class="fic">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          </div>
+          <div class="feat-title">{{ $t('home.features.user_manager_title') }}</div>
+          <div class="feat-desc">{{ $t('home.features.user_manager_desc') }}</div>
+          <div class="feat-tags">
+            <span class="feat-tag" style="color:var(--role-admin-fg);background:var(--role-admin-bg)"><span class="d"></span>{{ $t('role.admin') }}</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="section how">
+      <div class="section-label">{{ $t('home.how.section_label') }}</div>
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="step-num">01</div>
+          <div class="step-title">{{ $t('home.how.step01_title') }}</div>
+          <div class="step-desc">{{ $t('home.how.step01_desc') }}</div>
+        </div>
+        <div class="how-step">
+          <div class="step-num">02</div>
+          <div class="step-title">{{ $t('home.how.step02_title') }}</div>
+          <div class="step-desc">{{ $t('home.how.step02_desc') }}</div>
+        </div>
+        <div class="how-step">
+          <div class="step-num">03</div>
+          <div class="step-title">{{ $t('home.how.step03_title') }}</div>
+          <div class="step-desc">{{ $t('home.how.step03_desc') }}</div>
+        </div>
+        <div class="how-step">
+          <div class="step-num">04</div>
+          <div class="step-title">{{ $t('home.how.step04_title') }}</div>
+          <div class="step-desc">{{ $t('home.how.step04_desc') }}</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="footer-in">
+        <RouterLink to="/" class="brand">
+          <LogoMark :size="24" />
+          <span class="wm">DIVING<span>HQ</span></span>
+        </RouterLink>
+        <div class="footer-links">
+          <RouterLink to="/login">{{ $t('home.footer.sign_in') }}</RouterLink>
+          <RouterLink to="/register">{{ $t('home.footer.register') }}</RouterLink>
+          <RouterLink to="/register-org">{{ $t('home.footer.register_federation') }}</RouterLink>
+          <RouterLink to="/scoreboard">{{ $t('home.footer.scoreboard') }}</RouterLink>
+          <RouterLink to="/guide">{{ $t('home.footer.user_guide') }}</RouterLink>
+          <a href="https://github.com/JediBrooker/DivingHQ/issues/new?labels=bug&amp;title=Bug%3A%20"
+             target="_blank" rel="noopener" class="footer-bug">{{ $t('home.footer.report_bug') }}</a>
+        </div>
+      </div>
+    </footer>
   </div>
-
-  <!-- Features -->
-  <section class="features">
-    <div class="section-label">{{ $t('home.features.section_label') }}</div>
-    <div class="feature-grid">
-
-      <div class="feat" style="border-color:rgba(16,185,129,0.15)">
-        <div class="feat-icon" style="color:var(--green);background:var(--green-dim);border-color:rgba(16,185,129,0.25)">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-        </div>
-        <div class="feat-title">{{ $t('home.features.diver_portal_title') }}</div>
-        <div class="feat-desc">{{ $t('home.features.diver_portal_desc') }}</div>
-        <div class="feat-tags">
-          <span class="feat-tag" style="color:var(--green);border-color:rgba(16,185,129,0.3);background:var(--green-dim)">{{ $t('role.diver') }}</span>
-        </div>
-      </div>
-
-      <div class="feat" style="border-color:rgba(6,182,212,0.15)">
-        <div class="feat-icon" style="color:var(--cyan);background:var(--cyan-dim);border-color:rgba(6,182,212,0.25)">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        </div>
-        <div class="feat-title">{{ $t('home.features.control_room_title') }}</div>
-        <div class="feat-desc">{{ $t('home.features.control_room_desc') }}</div>
-        <div class="feat-tags">
-          <span class="feat-tag" style="color:var(--red);border-color:rgba(239,68,68,0.3);background:var(--red-dim)">{{ $t('role.referee') }}</span>
-          <span class="feat-tag" style="color:var(--amber);border-color:rgba(245,158,11,0.3);background:var(--amber-dim)">{{ $t('role.manager') }}</span>
-        </div>
-      </div>
-
-      <div class="feat" style="border-color:rgba(6,182,212,0.15)">
-        <div class="feat-icon" style="color:var(--cyan);background:var(--cyan-dim);border-color:rgba(6,182,212,0.25)">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
-        </div>
-        <div class="feat-title">{{ $t('home.features.judge_terminal_title') }}</div>
-        <div class="feat-desc">{{ $t('home.features.judge_terminal_desc') }}</div>
-        <div class="feat-tags">
-          <span class="feat-tag" style="color:var(--cyan);border-color:rgba(6,182,212,0.3);background:var(--cyan-dim)">{{ $t('role.judge') }}</span>
-        </div>
-      </div>
-
-      <div class="feat" style="border-color:rgba(239,68,68,0.15)">
-        <div class="feat-icon" style="color:var(--red);background:var(--red-dim);border-color:rgba(239,68,68,0.25)">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        </div>
-        <div class="feat-title">{{ $t('home.features.scoreboard_title') }}</div>
-        <div class="feat-desc">{{ $t('home.features.scoreboard_desc') }}</div>
-        <div class="feat-tags">
-          <span class="feat-tag" style="color:var(--text-2);border-color:var(--border-2);background:var(--bg-3)">{{ $t('role.public') }}</span>
-        </div>
-      </div>
-
-      <div class="feat" style="border-color:rgba(245,158,11,0.15)">
-        <div class="feat-icon" style="color:var(--amber);background:var(--amber-dim);border-color:rgba(245,158,11,0.25)">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        </div>
-        <div class="feat-title">{{ $t('home.features.meet_manager_title') }}</div>
-        <div class="feat-desc">{{ $t('home.features.meet_manager_desc') }}</div>
-        <div class="feat-tags">
-          <span class="feat-tag" style="color:var(--amber);border-color:rgba(245,158,11,0.3);background:var(--amber-dim)">{{ $t('role.manager') }}</span>
-          <span class="feat-tag" style="color:#a78bfa;border-color:rgba(167,139,250,0.3);background:rgba(167,139,250,0.08)">{{ $t('role.admin') }}</span>
-        </div>
-      </div>
-
-      <div class="feat" style="border-color:rgba(167,139,250,0.15)">
-        <div class="feat-icon" style="color:#a78bfa;background:rgba(167,139,250,0.08);border-color:rgba(167,139,250,0.25)">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-        </div>
-        <div class="feat-title">{{ $t('home.features.user_manager_title') }}</div>
-        <div class="feat-desc">{{ $t('home.features.user_manager_desc') }}</div>
-        <div class="feat-tags">
-          <span class="feat-tag" style="color:#a78bfa;border-color:rgba(167,139,250,0.3);background:rgba(167,139,250,0.08)">{{ $t('role.admin') }}</span>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- How it works -->
-  <section class="how">
-    <div class="section-label">{{ $t('home.how.section_label') }}</div>
-    <div class="how-steps">
-      <div class="how-step">
-        <div class="step-num">01</div>
-        <div class="step-title">{{ $t('home.how.step01_title') }}</div>
-        <div class="step-desc">{{ $t('home.how.step01_desc') }}</div>
-      </div>
-      <div class="how-step">
-        <div class="step-num">02</div>
-        <div class="step-title">{{ $t('home.how.step02_title') }}</div>
-        <div class="step-desc">{{ $t('home.how.step02_desc') }}</div>
-      </div>
-      <div class="how-step">
-        <div class="step-num">03</div>
-        <div class="step-title">{{ $t('home.how.step03_title') }}</div>
-        <div class="step-desc">{{ $t('home.how.step03_desc') }}</div>
-      </div>
-      <div class="how-step">
-        <div class="step-num">04</div>
-        <div class="step-title">{{ $t('home.how.step04_title') }}</div>
-        <div class="step-desc">{{ $t('home.how.step04_desc') }}</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer style="border-top:1px solid var(--border);padding:2rem;">
-    <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
-      <RouterLink to="/" class="footer-logo">DIVING<span>HQ</span></RouterLink>
-      <div class="footer-links">
-        <RouterLink to="/login">{{ $t('home.footer.sign_in') }}</RouterLink>
-        <RouterLink to="/register">{{ $t('home.footer.register') }}</RouterLink>
-        <RouterLink to="/register-org">{{ $t('home.footer.register_federation') }}</RouterLink>
-        <RouterLink to="/scoreboard">{{ $t('home.footer.scoreboard') }}</RouterLink>
-        <!-- Plain-English new-user primer. Linked from both
-             footer slots (home + dashboard) so a confused user
-             always has the same entry point. -->
-        <RouterLink to="/guide">{{ $t('home.footer.user_guide') }}</RouterLink>
-        <!-- Public issue tracker. Pre-fills the title with
-             "Bug:" + a bug label so the report lands tagged
-             without the reporter having to know our taxonomy. -->
-        <a href="https://github.com/JediBrooker/DivingHQ/issues/new?labels=bug&amp;title=Bug%3A%20"
-           target="_blank"
-           rel="noopener"
-           class="footer-bug">{{ $t('home.footer.report_bug') }}</a>
-      </div>
-    </div>
-  </footer>
 </template>
 
 <style scoped>
+.lp { min-height: 100dvh; background: var(--bg); }
+
+/* ── Top nav ── */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.nav-in {
+  max-width: 1200px; margin: 0 auto;
+  height: 60px; display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; padding: 0 1.5rem;
+}
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand img { display: block; }
+.brand .wm { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: var(--fg); }
+.brand .wm span { color: var(--accent); }
+.nav-right { display: flex; align-items: center; gap: 0.6rem; }
+.nav-help {
+  width: 34px; height: 34px; display: inline-grid; place-items: center;
+  border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--surface); color: var(--fg-2);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.nav-help:hover { background: var(--surface-hover); color: var(--fg); }
+.nav-help :deep(svg) { width: 18px; height: 18px; }
+@media (max-width: 640px) {
+  /* Nav CTAs are redundant with the hero CTAs on small screens —
+     drop them so the brand + theme + locale never overflow. */
+  .nav-right .btn { display: none; }
+}
+
+/* ── Hero ── */
 .hero {
-  /* dvh: see LoginView for the iOS Safari rationale — the
-     landing hero CTA buttons sit at the bottom on small
-     phones and 100vh hides them under the address bar.
-     vh fallback first so browsers older than ~Q4-2022 still
-     get a sane min-height; modern browsers use dvh. */
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  max-width: 1000px; margin: 0 auto;
+  padding: 4.5rem 1.5rem 3rem;
   text-align: center;
-  padding: 6rem 2rem 4rem;
-  position: relative;
-  overflow: hidden;
 }
-.hero-locale {
-  position: absolute;
-  top: 1.25rem;
-  inset-inline-end: 1.25rem;
-  z-index: 2;
-}
-@media (max-width: 720px) {
-  .hero-locale { top: 0.75rem; inset-inline-end: 0.75rem; }
-}
-.hero-glow {
-  position: absolute;
-  top: 40%;
-  inset-inline-start: 50%;
-  transform: translate(-50%, -50%);
-  width: 800px;
-  height: 600px;
-  background: radial-gradient(ellipse, rgba(6,182,212,0.10) 0%, transparent 65%);
-  pointer-events: none;
-}
-.hero-mark {
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.4em;
-  text-transform: uppercase;
-  color: var(--cyan);
-  margin-bottom: 2.5rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  animation: fadeUp 0.5s ease both;
-}
-.hero-mark::before,
-.hero-mark::after {
-  content: '';
-  display: block;
-  width: 40px;
-  height: 1px;
-  background: var(--cyan);
-  opacity: 0.4;
+.eyebrow {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 1rem;
 }
 .hero-logo {
-  font-family: var(--font-display);
-  font-size: clamp(80px, 16vw, 168px);
-  font-weight: 900;
-  font-style: italic;
-  line-height: 0.88;
-  color: var(--text);
-  margin-bottom: 2rem;
-  animation: fadeUp 0.5s 0.05s ease both;
+  font-family: var(--font-sans);
+  font-size: clamp(44px, 9vw, 84px);
+  font-weight: 700; font-style: normal;
+  letter-spacing: -0.03em; line-height: 1;
+  color: var(--fg); margin: 0 0 1.25rem;
 }
-.hero-logo span { display: block; color: var(--cyan); }
-.hero-tagline {
-  font-family: var(--font-mono);
-  font-size: clamp(13px, 2vw, 16px);
-  color: var(--text-3);
-  max-width: 560px;
-  line-height: 1.75;
-  margin-bottom: 3rem;
-  animation: fadeUp 0.5s 0.1s ease both;
+.hero-logo span { color: var(--accent); }
+.lede {
+  font-size: clamp(15px, 2vw, 18px); line-height: 1.6;
+  color: var(--fg-2); max-width: 620px; margin: 0 auto 2rem;
 }
-.hero-actions {
-  display: flex;
-  gap: 0.875rem;
-  flex-wrap: wrap;
-  justify-content: center;
-  animation: fadeUp 0.5s 0.15s ease both;
-}
+.hero-cta { display: flex; gap: 0.7rem; flex-wrap: wrap; justify-content: center; }
+.btn-lg { padding: 0.7rem 1.4rem; font-size: 14px; }
 .hero-guide-link {
-  display: inline-block;
-  margin-top: 1.25rem;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-3);
-  text-decoration: none;
-  border-bottom: 1px dashed transparent;
-  transition: color 0.15s, border-color 0.15s;
-  animation: fadeUp 0.5s 0.2s ease both;
+  display: inline-block; margin-top: 1.25rem;
+  font-size: 13px; color: var(--fg-2); text-decoration: none;
+  border-bottom: 1px dashed transparent; transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
-.hero-guide-link:hover {
-  color: var(--cyan);
-  border-bottom-color: var(--cyan);
-}
-.hero-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  background: var(--cyan);
-  color: var(--bg);
-  padding: 1rem 2.25rem;
-  border-radius: var(--radius-lg);
-  text-decoration: none;
-  transition: all 0.15s;
-}
-.hero-btn-primary:hover { background: #0891b2; box-shadow: var(--cyan-glow); }
-.hero-btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  background: transparent;
-  color: var(--text-2);
-  border: 1px solid var(--border);
-  padding: 1rem 2.25rem;
-  border-radius: var(--radius-lg);
-  text-decoration: none;
-  transition: all 0.15s;
-}
-.hero-btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+.hero-guide-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
 
+/* ── Product-preview mock ── */
+.preview {
+  max-width: 880px; margin: 2.75rem auto 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-lg);
+  overflow: hidden; text-align: left;
+}
+.pf-bar { height: 38px; display: flex; align-items: center; gap: 7px; padding: 0 14px;
+  background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.pf-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-2); }
+.pf-body { display: grid; grid-template-columns: 176px 1fr; min-height: 250px; }
+.pf-side { border-right: 1px solid var(--border); padding: 12px; display: flex; flex-direction: column; gap: 3px; }
+.pf-item { font-size: 12.5px; color: var(--fg-2); padding: 8px 10px; border-radius: var(--radius); }
+.pf-item.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.pf-main { padding: 16px; }
+.pf-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.pf-stat { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 11px 13px; }
+.pf-stat .l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--fg-3); }
+.pf-stat .v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 22px; color: var(--fg); margin-top: 5px; }
+.pf-table { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.pf-tr { display: grid; grid-template-columns: 1fr 96px 60px; align-items: center; gap: 8px;
+  padding: 10px 13px; border-bottom: 1px solid var(--border); font-size: 12.5px; color: var(--fg); }
+.pf-tr:last-child { border-bottom: none; }
+.pf-tr.head { background: var(--surface-2); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; color: var(--fg-3); }
+.pf-tr .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--fg-2); }
+.pf-badge { justify-self: start; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: var(--radius-pill); }
+.pf-badge.live { background: var(--danger-bg); color: var(--danger-fg); }
+.pf-badge.warn { background: var(--warn-bg); color: var(--warn-fg); }
+.pf-badge.ok { background: var(--ok-bg); color: var(--ok-fg); }
+@media (max-width: 560px) {
+  .pf-side { display: none; }
+  .pf-body { grid-template-columns: 1fr; }
+}
+
+/* ── Live strip ── */
 .live-strip {
-  background: var(--bg-2);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: 1.25rem 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
-  flex-wrap: wrap;
+  background: var(--surface-2);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 0.9rem 1.5rem;
+  display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap;
 }
 .live-pill {
-  font-family: var(--font-display);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.2em;
-  padding: 0.25rem 0.75rem;
-  background: var(--red);
-  color: white;
-  border-radius: 4px;
-  animation: pulse-red 2s infinite;
-  flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 600;
+  padding: 0.2rem 0.6rem; border-radius: var(--radius-pill);
+  background: var(--danger-bg); color: var(--danger-fg);
 }
-@keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.65} }
-.live-text {
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-2);
-}
+.live-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--danger-solid); animation: pulse-red 2s infinite; }
+@keyframes pulse-red { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.live-text { font-size: 14px; font-weight: 500; color: var(--fg-2); }
 
-.features {
-  padding: 5rem 2rem 4rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
+/* ── Sections ── */
+.section { max-width: 1200px; margin: 0 auto; padding: 4.5rem 1.5rem; }
 .section-label {
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.35em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  text-align: center;
-  margin-bottom: 3rem;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--accent); text-align: center; margin-bottom: 2.5rem;
 }
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.25rem;
-}
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
 .feat {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  padding: 2rem;
-  transition: border-color 0.2s, transform 0.2s;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+  padding: 1.5rem;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
-.feat:hover { transform: translateY(-2px); }
-.feat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius);
-  border: 1px solid;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1.5rem;
+.feat:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.fic {
+  width: 40px; height: 40px; border-radius: var(--radius);
+  background: var(--accent-soft); color: var(--accent);
+  display: grid; place-items: center; margin-bottom: 1.1rem;
 }
-.feat-title {
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 900;
-  font-style: italic;
-  color: var(--text);
-  margin-bottom: 0.5rem;
-  line-height: 1;
-}
-.feat-desc {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-3);
-  line-height: 1.75;
-  margin-bottom: 1.25rem;
-}
+.feat-title { font-size: 16px; font-weight: 600; color: var(--fg); margin-bottom: 0.4rem; }
+.feat-desc { font-size: 13px; color: var(--fg-2); line-height: 1.6; margin-bottom: 1.1rem; }
 .feat-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .feat-tag {
-  font-family: var(--font-display);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  padding: 0.2rem 0.6rem;
-  border-radius: 4px;
-  border: 1px solid;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 600;
+  padding: 0.15rem 0.55rem; border-radius: var(--radius-pill);
 }
+.feat-tag .d { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
-.how {
-  padding: 4rem 2rem 5rem;
-  max-width: 900px;
-  margin: 0 auto;
-}
-.how-steps {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1.5rem;
-  margin-top: 3rem;
-}
-.how-step {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
+/* ── How it works ── */
+.how { max-width: 1000px; }
+.how-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1.5rem; }
+.how-step { display: flex; flex-direction: column; }
 .step-num {
-  font-family: var(--font-display);
-  font-size: 48px;
-  font-weight: 900;
-  font-style: italic;
-  color: var(--border-2);
-  line-height: 1;
+  width: 38px; height: 38px; border-radius: var(--radius);
+  background: var(--accent-soft); color: var(--accent);
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 500;
+  display: grid; place-items: center; margin-bottom: 0.9rem;
 }
-.step-title {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-}
-.step-desc {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-3);
-  line-height: 1.7;
-}
+.step-title { font-size: 15px; font-weight: 600; color: var(--fg); margin-bottom: 0.4rem; }
+.step-desc { font-size: 13px; color: var(--fg-2); line-height: 1.6; }
 
-.footer-logo {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 900;
-  font-style: italic;
-  /* DIVING white, HQ cyan — match the hero wordmark so the
-     brand reads identically across the page. */
-  color: var(--text);
-  text-decoration: none;
+/* ── Footer ── */
+.site-footer { border-top: 1px solid var(--border); padding: 2rem 1.5rem; background: var(--surface); }
+.footer-in {
+  max-width: 1200px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
 }
-.footer-logo span { color: var(--cyan); }
-.footer-links {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
+.footer-links { display: flex; gap: 1.25rem; flex-wrap: wrap; }
 .footer-links a {
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  text-decoration: none;
-  transition: color 0.15s;
+  font-size: 13px; font-weight: 500; color: var(--fg-2); text-decoration: none;
+  transition: color var(--dur) var(--ease);
 }
-.footer-links a:hover { color: var(--cyan); }
+.footer-links a:hover { color: var(--accent); }
 
-/* ── Phone & small-tablet ───────────────────────────────────── */
 @media (max-width: 720px) {
-  .hero { padding: 4rem 1rem 2.5rem; min-height: auto; }
-  .hero-glow { width: 100%; height: 400px; }
-  .hero-mark { font-size: 10px; letter-spacing: 0.3em; margin-bottom: 1.25rem; gap: 0.6rem; }
-  .hero-mark::before, .hero-mark::after { width: 24px; }
-  .hero-logo  { margin-bottom: 1.25rem; }
-  .hero-tagline { font-size: 13px; line-height: 1.65; margin-bottom: 1.75rem; padding: 0 0.5rem; }
-
-  /* 4 buttons stacked at full padding push content off the
-     fold — shrink them so two fit per row. */
-  .hero-actions { gap: 0.5rem; }
-  .hero-btn-primary,
-  .hero-btn-ghost {
-    font-size: 12px;
-    padding: 0.7rem 1.1rem;
-    border-radius: var(--radius);
-  }
-
-  .live-strip { padding: 1rem 1rem; gap: 0.75rem; }
-  .live-text  { font-size: 13px; text-align: center; }
-
-  .features { padding: 3rem 1rem 2.5rem; }
-  .section-label { font-size: 10px; letter-spacing: 0.25em; margin-bottom: 1.5rem; }
-  .feature-grid { grid-template-columns: 1fr; gap: 0.875rem; }
-  .feat { padding: 1.25rem; border-radius: var(--radius-lg); }
-  .feat-icon { width: 36px; height: 36px; margin-bottom: 1rem; }
-  .feat-title { font-size: 20px; }
-  .feat-desc  { font-size: 11.5px; line-height: 1.65; }
-
-  .how { padding: 2.5rem 1rem 3rem; }
-  .how-steps { grid-template-columns: 1fr; gap: 1.25rem; margin-top: 1.75rem; }
-  .step-num { font-size: 36px; }
-  .step-title { font-size: 16px; }
-
-  .footer-links { gap: 0.875rem; }
-  .footer-links a { font-size: 10px; letter-spacing: 0.12em; }
+  .nav-in { padding: 0 1rem; }
+  .hero { padding: 3rem 1rem 2rem; }
+  .section { padding: 3rem 1rem; }
+  .feature-grid { grid-template-columns: 1fr; }
 }
 </style>

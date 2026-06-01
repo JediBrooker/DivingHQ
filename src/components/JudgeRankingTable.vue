@@ -118,52 +118,92 @@ const synchroSegments = computed(() => {
   ].filter((g) => g.judges.length > 0)
 })
 
-// Per-segment ranking: for each diver row, within a given synchro
-// role, the "actual rank" is recomputed from the trimmed sum of
-// that role's per_judge totals (so Exec A only judges Exec A's
-// view of the pairs). Ranks are stable across re-renders because
-// the JS sort is stable + we tie-break by diver display order.
+// Raw per-judge per-round WA dive-points (= score × DD × 3/5; the
+// server bakes in DD and the 0.6 synchro factor). Keyed
+// judge_id:competitor_id:round. This is what the synchro segments
+// trim by, so the role sub-totals follow the rulebook exactly.
+const perDiveRanks = computed(() => payloadView.value?.per_dive_ranks || {})
+const totalRounds = computed(() => Number(payloadView.value?.event?.total_rounds) || 0)
+function divePointsOf(judgeId, competitorId, round) {
+  const e = perDiveRanks.value[`${judgeId}:${competitorId}:${round}`]
+  return e && e.judge_dive_points != null ? Number(e.judge_dive_points) : null
+}
+// WA per-role cancellation: drop one highest + one lowest, sum the
+// rest. (≤2 values → nothing to cancel.) Trimming the dive-points
+// is equivalent to trimming the raw awards since DD is constant
+// within a (pair, round).
+function trimmedSum(vals) {
+  if (vals.length <= 2) return vals.reduce((a, b) => a + b, 0)
+  const sorted = [...vals].sort((a, b) => a - b)
+  return sorted.slice(1, -1).reduce((a, b) => a + b, 0)
+}
+// Awards KEPT in a role after the WA hi/lo cancellation: 3 of the 5
+// synchronisation judges; 1 of each execution sub-panel.
+function roleKeptCount(role) {
+  return role === 'sync' ? 3 : 1
+}
+// RANK() semantics with ties — sort rows by val() DESC (official
+// order as the tie-break) and write the rank back via set().
+function rankInto(rows, val, set) {
+  const sorted = [...rows].sort((a, b) =>
+    val(b) - val(a) || (a.diver.actual_rank - b.diver.actual_rank))
+  let prev = null, prevRank = 0
+  sorted.forEach((r, idx) => {
+    if (prev != null && Math.abs(val(r) - prev) < 1e-9) set(r, prevRank)
+    else { set(r, idx + 1); prevRank = idx + 1 }
+    prev = val(r)
+  })
+}
+// Per-segment rows, computed straight from the per-dive WA points.
+//   • segment_actual_total = the role's WA contribution to the pair
+//     total: Σ over rounds of (the role's awards, hi/lo cancelled,
+//     summed). Exec A + Exec B + Sync therefore add up to the real
+//     pair total.
+//   • cells[judge_id] = "if every judge in THIS role scored like J":
+//     kept-count × that judge's own dive-points total. Ranked within
+//     the segment so each sub-table is self-contained.
 function segmentRows(segment) {
-  const segJudges = segment.judges
-  // Build per-diver role total = sum of segment judges' j_total.
-  const withTotals = divers.value.map((d) => {
-    let total = 0
-    for (const sj of segJudges) {
-      const pj = d.per_judge.find((p) => p.judge_id === sj.judge_id)
-      if (pj?.judge_total != null) total += Number(pj.judge_total)
+  const rounds = totalRounds.value
+  const kept = roleKeptCount(segment.role)
+  const rows = divers.value.map((d) => {
+    let actual = 0
+    const cells = {}
+    for (let rnd = 1; rnd <= rounds; rnd++) {
+      const pts = segment.judges
+        .map((j) => divePointsOf(j.judge_id, d.competitor_id, rnd))
+        .filter((v) => v != null)
+      if (pts.length) actual += trimmedSum(pts)
     }
-    return { diver: d, segment_total: total }
-  })
-  // Rank by segment_total (DESC). Stable: secondary key is the
-  // diver's actual_rank so equal totals fall back to the official
-  // ordering rather than DB row order.
-  const sorted = [...withTotals].sort((a, b) =>
-    b.segment_total - a.segment_total
-    || a.diver.actual_rank - b.diver.actual_rank,
-  )
-  // Assign segment_actual_rank with proper ties (RANK semantics).
-  let prev = null
-  let prevRank = 0
-  sorted.forEach((row, idx) => {
-    if (prev != null && Math.abs(row.segment_total - prev) < 1e-9) {
-      row.segment_actual_rank = prevRank
-    } else {
-      row.segment_actual_rank = idx + 1
-      prevRank = idx + 1
+    for (const j of segment.judges) {
+      let sum = 0, any = false
+      for (let rnd = 1; rnd <= rounds; rnd++) {
+        const p = divePointsOf(j.judge_id, d.competitor_id, rnd)
+        if (p != null) { sum += p; any = true }
+      }
+      cells[j.judge_id] = { total: any ? kept * sum : null, rank: null }
     }
-    prev = row.segment_total
+    return { diver: d, segment_actual_total: actual, cells }
   })
-  // Return in actual_rank order (the rows match the table) but
-  // tag each with its segment-actual rank for the Actual column.
-  const bySeg = new Map(sorted.map((r) => [r.diver.competitor_id, r]));
-  return divers.value.map((d) => {
-    const hit = bySeg.get(d.competitor_id)
-    return {
-      diver: d,
-      segment_actual_rank: hit?.segment_actual_rank ?? null,
-      segment_actual_total: hit?.segment_total ?? 0,
-    }
-  })
+  rankInto(rows, (r) => r.segment_actual_total,
+    (r, rank) => { r.segment_actual_rank = rank })
+  for (const j of segment.judges) {
+    rankInto(
+      rows.filter((r) => r.cells[j.judge_id].total != null),
+      (r) => r.cells[j.judge_id].total,
+      (r, rank) => { r.cells[j.judge_id].rank = rank },
+    )
+  }
+  return rows
+}
+// Tooltip for a synchro segment cell (role-scoped hypothetical).
+function segCellTip(diver, judge, cell, segment) {
+  const role = segment.label.split(' — ')[0]
+  if (!cell || cell.rank == null) return `J${judge.judge_number} — no ${role} score`
+  return [
+    `J${judge.judge_number}${judge.full_name ? ` — ${judge.full_name}` : ''} · ${role}`,
+    `If all ${role} judges scored like this → ranks ${entityLabel(diver)} ${ordinal(cell.rank)}`,
+    `${role} total: ${Number(cell.total).toFixed(2)}`,
+  ].join('\n')
 }
 
 // Outlier = any judge whose hypothetical rank disagrees with the
@@ -247,8 +287,7 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
              eventType === 'synchro_pair' ? 'pair' :
              'diver' }} would hold if every judge had scored
           unanimously like that one judge. Cells where a judge
-          disagrees with the actual rank are tinted — pale cyan for
-          a single-position swap, bright cyan for two or more.
+          disagrees with the actual rank are highlighted in blue.
         </div>
       </div>
       <div class="jra-actions" v-if="payloadView && !error">
@@ -283,10 +322,10 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
               <tr>
                 <th class="jra-th jra-th-diver">Pair</th>
                 <th class="jra-th jra-th-actual"
-                    v-tip="`Rank by this sub-panel's trimmed total — ${seg.label}`">Actual</th>
+                    v-tip.fixed="`Rank by this sub-panel's trimmed total — ${seg.label}`">Actual</th>
                 <th v-for="j in seg.judges" :key="j.judge_id"
                     class="jra-th jra-th-judge"
-                    v-tip="`J${j.judge_number} — ${j.full_name || ''}${j.country_code ? ' · ' + j.country_code : ''}`">
+                    v-tip.fixed="`J${j.judge_number} — ${j.full_name || ''}${j.country_code ? ' · ' + j.country_code : ''}`">
                   <span class="jra-judge-num">J{{ j.judge_number }}</span>
                   <span class="jra-judge-name">{{ j.full_name || '' }}</span>
                   <span v-if="j.country_code" class="jra-judge-cc">{{ j.country_code }}</span>
@@ -314,16 +353,20 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
                   <div v-if="row.diver.club_name" class="jra-diver-club">{{ row.diver.club_name }}</div>
                 </td>
                 <td class="jra-td jra-td-actual">
-                  <span class="jra-actual-rank">{{ row.segment_actual_rank ?? '—' }}</span>
-                  <span class="jra-actual-total">{{ Number(row.segment_actual_total || 0).toFixed(1) }}</span>
+                  <span class="jra-chip">
+                    <span class="jra-actual-rank">{{ row.segment_actual_rank ?? '—' }}</span>
+                    <span class="jra-actual-total">{{ Number(row.segment_actual_total || 0).toFixed(1) }}</span>
+                  </span>
                 </td>
                 <td v-for="j in seg.judges" :key="j.judge_id"
                     :class="['jra-td', 'jra-td-cell',
-                             outlierStrength(perJudgeOf(row.diver, j), row.segment_actual_rank ?? row.diver.actual_rank)]"
-                    v-tip="cellTip(row.diver, j, perJudgeOf(row.diver, j))">
-                  <span class="jra-cell-rank">{{ perJudgeOf(row.diver, j)?.rank ?? '—' }}</span>
-                  <span v-if="perJudgeOf(row.diver, j)?.judge_total != null"
-                        class="jra-cell-total">{{ Number(perJudgeOf(row.diver, j).judge_total).toFixed(1) }}</span>
+                             outlierStrength(row.cells[j.judge_id], row.segment_actual_rank)]"
+                    v-tip.fixed="segCellTip(row.diver, j, row.cells[j.judge_id], seg)">
+                  <span class="jra-chip">
+                    <span class="jra-cell-rank">{{ row.cells[j.judge_id]?.rank ?? '—' }}</span>
+                    <span v-if="row.cells[j.judge_id] && row.cells[j.judge_id].total != null"
+                          class="jra-cell-total">{{ Number(row.cells[j.judge_id].total).toFixed(1) }}</span>
+                  </span>
                 </td>
               </tr>
             </tbody>
@@ -342,12 +385,12 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
               eventType === 'team' ? 'Team' :
               eventType === 'synchro_pair' ? 'Pair' : 'Diver'
             }}</th>
-            <th class="jra-th jra-th-actual" v-tip="'Official panel-trimmed standings'">Actual</th>
+            <th class="jra-th jra-th-actual" v-tip.fixed="'Official panel-trimmed standings'">Actual</th>
             <th
               v-for="j in judges"
               :key="j.judge_id"
               class="jra-th jra-th-judge"
-              v-tip="`J${j.judge_number} — ${j.full_name || ''}${j.country_code ? ' · ' + j.country_code : ''}`">
+              v-tip.fixed="`J${j.judge_number} — ${j.full_name || ''}${j.country_code ? ' · ' + j.country_code : ''}`">
               <span class="jra-judge-num">J{{ j.judge_number }}</span>
               <span class="jra-judge-name">{{ j.full_name || '' }}</span>
               <span v-if="j.country_code" class="jra-judge-cc">{{ j.country_code }}</span>
@@ -375,19 +418,23 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
               </div>
               <div v-if="d.club_name" class="jra-diver-club">{{ d.club_name }}</div>
             </td>
-            <td class="jra-td jra-td-actual" v-tip="actualTip(d)">
-              <span class="jra-actual-rank">{{ d.actual_rank }}</span>
-              <span class="jra-actual-total">{{ Number(d.actual_total).toFixed(1) }}</span>
+            <td class="jra-td jra-td-actual" v-tip.fixed="actualTip(d)">
+              <span class="jra-chip">
+                <span class="jra-actual-rank">{{ d.actual_rank }}</span>
+                <span class="jra-actual-total">{{ Number(d.actual_total).toFixed(1) }}</span>
+              </span>
             </td>
             <td
               v-for="(pj, idx) in d.per_judge"
               :key="judges[idx]?.judge_id || idx"
               :class="['jra-td', 'jra-td-cell',
                        outlierStrength(pj, d.actual_rank)]"
-              v-tip="cellTip(d, judges[idx], pj)">
-              <span class="jra-cell-rank">{{ pj?.rank ?? '—' }}</span>
-              <span v-if="pj?.judge_total != null"
-                    class="jra-cell-total">{{ Number(pj.judge_total).toFixed(1) }}</span>
+              v-tip.fixed="cellTip(d, judges[idx], pj)">
+              <span class="jra-chip">
+                <span class="jra-cell-rank">{{ pj?.rank ?? '—' }}</span>
+                <span v-if="pj?.judge_total != null"
+                      class="jra-cell-total">{{ Number(pj.judge_total).toFixed(1) }}</span>
+              </span>
             </td>
           </tr>
         </tbody>
@@ -449,7 +496,7 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   text-align: center;
   font-size: 13px;
   color: var(--text-3, #94a3b8);
-  background: rgba(15, 23, 42, 0.4);
+  background: var(--surface-2);
   border-radius: var(--radius-sm, 4px);
 }
 .jra-error { color: var(--amber, #f59e0b); }
@@ -479,7 +526,7 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--cyan, #06b6d4);
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--surface-2);
   position: sticky;
   top: 0;
 }
@@ -502,6 +549,9 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 12ch;
+  /* Centre the capped-width name block under the J# label (a bare
+     max-width block left-aligns in the cell otherwise). */
+  margin-inline: auto;
 }
 .jra-judge-cc {
   display: block;
@@ -531,12 +581,28 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   margin-top: 0.1rem;
 }
 .jra-td-actual {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 0.4rem;
+  /* Stays display: table-cell (from .jra-td) so it lands under the
+     ACTUAL header; the inner .jra-chip carries the rank + total on a
+     shared baseline, centred by the inherited text-align. */
   font-weight: 600;
   color: var(--text-1, #f1f5f9);
+}
+/* Score chip — same visual vocabulary as the Control Room / Scoreboard
+   .j-score / .hist-score chips: prominent dark text on a subtle filled
+   surface, bordered, tabular figures. Lives on an INNER span so the
+   <td> stays display: table-cell and the judge columns keep their
+   grid alignment. The flex `gap` provides the rank↔total spacing
+   (replacing the old per-element margin-inline-end hack). */
+.jra-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
 }
 .jra-actual-rank { font-size: 14px; }
 .jra-actual-total {
@@ -548,15 +614,12 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   font-weight: 500;
   color: var(--text-2, #cbd5e1);
   cursor: default;
-  /* Match the Actual column exactly: rank + total on the SAME
-     baseline, total small + muted. The earlier two-line layout
-     made the matrix feel busier than the standings panel
-     beneath. Now the cells read like compact "rank (total)"
-     pairs identical to the Actual column. */
-  display: inline-flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 0.35rem;
+  /* MUST stay display: table-cell (inherited from .jra-td) so each
+     judge's cell lands under its own J# column header. A previous
+     display: inline-flex here pulled the cells out of the table grid,
+     bunching every judge's score on the left instead of in its
+     column. Rank + total render as inline spans on a shared baseline,
+     centred by the inherited text-align. */
 }
 .jra-cell-rank {
   font-size: 14px;
@@ -568,22 +631,26 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   font-weight: 400;
   color: var(--text-3, #94a3b8);
 }
-/* Outliers: a pale tint for ±1 (a real-but-routine disagreement)
-   and a brighter cyan for ≥2 (the kind that re-shuffles the
-   podium). Both keep the rank legible — only the background
-   changes weight. */
-.jra-outlier-mild {
-  background: rgba(6, 182, 212, 0.08);
-  color: var(--cyan, #06b6d4);
+/* Outliers: the <td> carries the outlier class; we tint the inner
+   .jra-chip so the disagreement reads as a coloured score chip.
+   Theme-aware via the accent family (marine blue — dark-on-light,
+   light-on-dark) instead of a hardcoded cyan: a soft fill for ±1
+   (routine disagreement), a stronger fill + heavier weight for ≥2
+   (the kind that re-shuffles the podium). */
+.jra-outlier-mild .jra-chip {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
 }
-.jra-outlier-strong {
-  background: rgba(6, 182, 212, 0.20);
-  color: var(--cyan, #06b6d4);
-  font-weight: 700;
+.jra-outlier-strong .jra-chip {
+  background: var(--accent-soft-2);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 800;
 }
-.jra-outlier-mild .jra-cell-total,
-.jra-outlier-strong .jra-cell-total {
-  color: rgba(6, 182, 212, 0.65);
+.jra-outlier-mild .jra-chip .jra-cell-total,
+.jra-outlier-strong .jra-chip .jra-cell-total {
+  color: var(--accent);
 }
 .jra-diver-amp { color: var(--cyan, #06b6d4); margin: 0 0.2em; font-weight: 400; }
 
@@ -607,12 +674,24 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   background: rgba(6, 182, 212, 0.08);
   color: var(--text-1, #f1f5f9);
 }
-.jra-segment-a .jra-segment-head    { border-color: #c4b5fd; background: rgba(139, 92, 246, 0.10); color: #ddd6fe; }
-.jra-segment-b .jra-segment-head    { border-color: #fbbf24; background: rgba(245, 158, 11, 0.10); color: #fde68a; }
-.jra-segment-sync .jra-segment-head { border-color: #34d399; background: rgba(16, 185, 129, 0.10); color: #6ee7b7; }
+.jra-segment-a .jra-segment-head    { border-color: var(--role-admin-fg);   background: var(--role-admin-bg);   color: var(--role-admin-fg); }
+.jra-segment-b .jra-segment-head    { border-color: var(--role-manager-fg); background: var(--role-manager-bg); color: var(--role-manager-fg); }
+.jra-segment-sync .jra-segment-head { border-color: var(--role-diver-fg);   background: var(--role-diver-bg);   color: var(--role-diver-fg); }
 .jra-row:hover .jra-td { background: rgba(148, 163, 184, 0.05); }
-.jra-row:hover .jra-outlier-mild { background: rgba(6, 182, 212, 0.14); }
-.jra-row:hover .jra-outlier-strong { background: rgba(6, 182, 212, 0.28); }
+/* On hover, deepen the outlier chip's accent tint (theme-aware via
+   the accent family) rather than the old hardcoded cyan. */
+.jra-row:hover .jra-outlier-mild .jra-chip {
+  background: var(--accent-soft-2);
+  border-color: var(--accent);
+}
+.jra-row:hover .jra-outlier-strong .jra-chip {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--fg-on-accent);
+}
+.jra-row:hover .jra-outlier-strong .jra-chip .jra-cell-total {
+  color: var(--fg-on-accent);
+}
 
 /* =========================================================
    Mobile — sticky pair column + tighter cells.
@@ -629,26 +708,19 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
    wide spreadsheets on phones.
    ========================================================= */
 @media (max-width: 720px) {
-  /* CRITICAL: restore `display: table-cell` on the rank cells.
-     Desktop uses `display: flex` / `inline-flex` on .jra-td-actual
-     and .jra-td-cell to centre the rank + total pair on a single
-     baseline. That worked at laptop widths but collides with the
-     new `position: sticky` columns on phones — the flex td drops
-     out of the table-row column flow and the four cells in a row
-     end up stacked vertically inside one visual column.
-     Switch the cells back to native table-cell layout on mobile
-     and recreate the "rank + small muted total" inline pair with
-     plain text-align + inline-block spans. */
+  /* Keep the score-cell <td>s as native table-cell so the
+     `position: sticky` columns below stay in the table-row column
+     flow (a flex/inline-flex td would drop out and stack the four
+     cells vertically in one visual column). The rank + total now
+     live inside the inner `.jra-chip` (inline-flex) which centres
+     them on a shared baseline regardless of the cell's display
+     mode, so no per-span inline/margin overrides are needed here. */
   .jra-td-actual,
   .jra-td-cell {
     display: table-cell;
     text-align: center;
     vertical-align: middle;
   }
-  .jra-actual-rank,
-  .jra-cell-rank   { display: inline; margin-inline-end: 0.3rem; }
-  .jra-actual-total,
-  .jra-cell-total  { display: inline; }
 
   .jra-scroll {
     /* Hint at scrollable content with a subtle shadow on the

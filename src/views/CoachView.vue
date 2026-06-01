@@ -267,7 +267,6 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
         <button class="btn btn-ghost btn-sm" @click="load" :disabled="loading">
           {{ loading ? $t('common.refreshing') : $t('common.refresh') }}
         </button>
-        <RouterLink to="/dashboard" class="btn btn-ghost btn-sm">{{ $t('common.dashboard') }}</RouterLink>
       </div>
     </div>
 
@@ -511,7 +510,7 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
   gap: 1rem; flex-wrap: wrap;
 }
 .page-label { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--cyan); margin-bottom: 0.5rem; }
-.page-title { font-family: var(--font-display); font-size: 36px; font-weight: 900; font-style: italic; color: var(--text); line-height: 1; }
+.page-title { font-family: var(--font-sans); font-size: var(--text-h1); font-weight: 600; font-style: normal; letter-spacing: -0.015em; color: var(--fg); line-height: 1.2; }
 .page-sub   { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); margin-top: 0.5rem; max-width: 600px; line-height: 1.6; }
 .header-actions { display: flex; gap: 0.5rem; align-items: center; }
 
@@ -592,8 +591,8 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
   padding-bottom: 0.35rem; border-bottom: 1px solid var(--border);
 }
 .up-next-eta-value {
-  font-family: var(--font-display); font-size: 22px; font-weight: 900;
-  font-style: italic; line-height: 1; color: var(--text);
+  font-family: var(--font-mono); font-size: 22px; font-weight: 500;
+  font-style: normal; line-height: 1; color: var(--fg);
 }
 .up-next-card.eta-now   .up-next-eta-value { color: #ef4444; }
 .up-next-card.eta-soon  .up-next-eta-value { color: #f59e0b; }
@@ -603,8 +602,8 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
 }
 .up-next-diver { display: flex; align-items: baseline; gap: 0.5rem; }
 .up-next-name {
-  font-family: var(--font-display); font-size: 15px; font-weight: 800;
-  font-style: italic; color: var(--text);
+  font-family: var(--font-sans); font-size: 15px; font-weight: 600;
+  font-style: normal; color: var(--fg);
   flex: 1; min-width: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -639,8 +638,8 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
   padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
 }
 .meet-section-label {
-  font-family: var(--font-display); font-size: 14px; font-weight: 900;
-  font-style: italic; color: var(--text); letter-spacing: 0.02em;
+  font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+  font-style: normal; color: var(--fg); letter-spacing: -0.01em;
 }
 .meet-section-link {
   font-family: var(--font-display); font-size: 10px; font-weight: 700;
@@ -695,8 +694,8 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
 
 .diver-card-head { display: flex; align-items: baseline; gap: 0.5rem; }
 .diver-card-name {
-  font-family: var(--font-display); font-size: 18px; font-weight: 900;
-  font-style: italic; color: var(--text); line-height: 1.1;
+  font-family: var(--font-sans); font-size: 18px; font-weight: 600;
+  font-style: normal; color: var(--fg); line-height: 1.1;
   flex: 1; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }

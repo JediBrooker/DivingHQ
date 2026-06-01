@@ -10,6 +10,10 @@ import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 // Migration 053 surfaces — self-delete + reunite-on-return.
 import DeleteAccountDialog   from '@/components/DeleteAccountDialog.vue'
 import ClaimCandidatesModal  from '@/components/ClaimCandidatesModal.vue'
+// Preferences (own profile) — appearance + language, per the redesign.
+import ThemeToggle from '@/components/ThemeToggle.vue'
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
+import { Palette, Languages } from '@lucide/vue'
 
 // Per-widget components — see src/components/profile-widgets/.
 // Each takes a `data` prop (the relevant analytics / profile
@@ -805,6 +809,35 @@ function onClaimed() {
          someone else's profile. Pinned to the bottom via a high
          CSS order so account-management actions stay below the
          analytics widgets even when widgets get reordered. -->
+    <!-- Preferences (own profile only) — appearance + language.
+         Surfaced here per the redesign; both controls persist
+         globally (theme via the ui store, locale via vue-i18n). -->
+    <section v-if="isSelf" class="pref-section" :style="{ order: 9000 }">
+      <h2 class="pref-title">Preferences</h2>
+      <div class="pref-card">
+        <div class="set-row">
+          <div class="set-row-info">
+            <div class="set-ic"><Palette /></div>
+            <div>
+              <div class="set-title">Appearance</div>
+              <div class="set-desc">Choose a light or dark theme. Applies across DivingHQ on this device.</div>
+            </div>
+          </div>
+          <div class="set-control"><ThemeToggle /></div>
+        </div>
+        <div class="set-row">
+          <div class="set-row-info">
+            <div class="set-ic"><Languages /></div>
+            <div>
+              <div class="set-title">Language</div>
+              <div class="set-desc">Pick the language for the interface. Your choice is remembered on this device.</div>
+            </div>
+          </div>
+          <div class="set-control"><LocaleSwitcher /></div>
+        </div>
+      </div>
+    </section>
+
     <section
       v-if="profile && isSelf"
       class="danger-zone"

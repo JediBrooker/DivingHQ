@@ -4,8 +4,8 @@
   display: flex; align-items: flex-start; justify-content: space-between;
   margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border);
 }
-.page-label { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--cyan); margin-bottom: 0.5rem; }
-.page-title { font-family: var(--font-display); font-size: 40px; font-weight: 900; font-style: italic; color: var(--text); line-height: 1; }
+.page-label { font-family: var(--font-sans); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }
+.page-title { font-family: var(--font-sans); font-size: 28px; font-weight: 600; font-style: normal; letter-spacing: -0.02em; color: var(--fg); line-height: 1.1; }
 .page-sub { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); margin-top: 0.5rem; }
 .page-sub-club { color: var(--text-2); }
 .club-code {
@@ -43,16 +43,29 @@
   border-radius: var(--radius-lg); padding: 1.25rem 1.5rem;
 }
 .stat-num {
-  font-family: var(--font-display); font-size: 36px; font-weight: 900; font-style: italic;
-  color: var(--cyan); line-height: 1;
+  font-family: var(--font-mono); font-size: 32px; font-weight: 500; font-style: normal;
+  color: var(--accent); line-height: 1;
 }
-.stat-label { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-3); margin-top: 0.5rem; }
+.stat-label { font-family: var(--font-sans); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-3); margin-top: 0.5rem; }
 
 /* Per-widget components render inside .widget-slot wrappers so the
    CSS `order` for drag-reorder lives on the wrapper, not the
    widget root. Empty wrappers (e.g. StreakWidget when there's no
    active streak) collapse so the flex gap doesn't leave a hole. */
 .widget-slot:empty { display: none; }
+
+/* Preferences card (own profile) — SettingRow pattern from the redesign. */
+.pref-section { display: flex; flex-direction: column; gap: 0.85rem; }
+.pref-title { font-family: var(--font-sans); font-size: var(--text-h2); font-weight: 600; letter-spacing: -0.01em; color: var(--fg); }
+.pref-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.pref-card .set-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.pref-card .set-row:last-child { border-bottom: none; }
+.pref-card .set-row-info { display: flex; align-items: flex-start; gap: 13px; min-width: 0; }
+.pref-card .set-ic { width: 34px; height: 34px; flex-shrink: 0; border-radius: var(--radius); background: var(--bg-sunken); color: var(--fg-2); display: grid; place-items: center; }
+.pref-card .set-ic svg { width: 17px; height: 17px; }
+.pref-card .set-title { font-size: 14px; font-weight: 600; color: var(--fg); }
+.pref-card .set-desc { font-size: 12.5px; color: var(--fg-3); margin-top: 2px; max-width: 380px; line-height: 1.5; }
+.pref-card .set-control { flex-shrink: 0; }
 
 /* =========================================================
    Modals — Club edit, password, email, 2FA, customize.
@@ -97,8 +110,8 @@
   padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
 }
 .modal-title {
-  font-family: var(--font-display); font-size: 18px; font-weight: 900;
-  font-style: italic; color: var(--text);
+  font-family: var(--font-sans); font-size: 18px; font-weight: 600;
+  font-style: normal; letter-spacing: -0.01em; color: var(--fg);
 }
 .modal-body { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; }

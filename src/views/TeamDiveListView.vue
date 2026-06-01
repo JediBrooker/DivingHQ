@@ -367,7 +367,7 @@ onMounted(load)
 }
 .type-btn:hover { color: var(--text-2); }
 .type-btn.active { background: var(--cyan-dim); color: var(--cyan); }
-.type-btn.active.synchro { background: rgba(139,92,246,0.10); color: #c4b5fd; }
+.type-btn.active.synchro { background: rgba(139,92,246,0.10); color: var(--role-admin-fg); }
 
 .member-pickers { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 .field { display: flex; flex-direction: column; gap: 0.25rem; min-width: 180px; flex: 1; }

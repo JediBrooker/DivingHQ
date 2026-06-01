@@ -4,6 +4,8 @@ import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
+import { CircleHelp } from '@lucide/vue'
 // Migration 053: reunite-on-return prompt fires on every login
 // when there are deleted-account candidates in the user's org
 // with the same name. The modal is dismissable; checking is a
@@ -117,7 +119,11 @@ async function handleSubmit() {
   <div class="login-wrap">
     <div class="login-top">
       <div class="login-mark">DIVING<span>HQ</span></div>
-      <LocaleSwitcher />
+      <div class="login-top-actions">
+        <ThemeToggle compact />
+        <RouterLink to="/guide" class="login-help" aria-label="Help & user guide" v-tip:bottom="'Help & user guide'"><CircleHelp /></RouterLink>
+        <LocaleSwitcher />
+      </div>
     </div>
     <h1>{{ $t('auth.login.title') }}</h1>
     <p class="subtitle">{{ $t('auth.login.subtitle') }}</p>
@@ -189,12 +195,21 @@ async function handleSubmit() {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 2.5rem;
 }
+.login-top-actions { display: flex; align-items: center; gap: 0.5rem; }
+.login-help {
+  width: 34px; height: 34px; display: inline-grid; place-items: center;
+  border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--surface); color: var(--fg-2);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.login-help:hover { background: var(--surface-hover); color: var(--fg); }
+.login-help :deep(svg) { width: 18px; height: 18px; }
 .login-mark {
-  font-family: var(--font-display);
-  font-size: 13px;
+  font-family: var(--font-sans);
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  text-transform: none;
   /* DIVING white, HQ cyan — match the public home page hero
      mark's colour rhythm. The cyan accent on HQ keeps the
      brand recognisable at a glance while the white DIVING
@@ -209,29 +224,31 @@ async function handleSubmit() {
      than "DIVINGHQ". Spacing between the dash (::before) and
      the wordmark is on the dash's margin-inline-end instead. */
 }
-.login-mark span { color: var(--cyan); }
+.login-mark span { color: var(--accent); }
 .login-mark::before {
   content: '';
   display: block;
-  width: 24px;
+  width: 22px;
   height: 2px;
-  margin-inline-end: 0.75rem;
-  background: var(--cyan);
+  margin-inline-end: 0.6rem;
+  background: var(--accent);
 }
 h1 {
-  font-size: 52px;
-  color: var(--text);
-  margin-bottom: 0.25rem;
-  font-style: italic;
+  font-size: 28px;
+  color: var(--fg);
+  margin-bottom: 0.35rem;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 .subtitle {
-  color: var(--text-3);
-  font-size: 12px;
-  letter-spacing: 0.15em;
+  color: var(--fg-2);
+  font-size: 14px;
+  letter-spacing: 0;
   margin-bottom: 2.5rem;
-  font-family: var(--font-display);
-  font-weight: 600;
-  text-transform: uppercase;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  text-transform: none;
 }
 .form-stack { display: flex; flex-direction: column; gap: 1rem; }
 .footer-links {
@@ -242,15 +259,15 @@ h1 {
   text-align: center;
 }
 .footer-links a {
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-3);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg-2);
   text-decoration: none;
   transition: color 0.15s;
 }
-.footer-links a:hover { color: var(--cyan); }
-.footer-links a span { color: var(--cyan); }
+.footer-links a:hover { color: var(--accent); }
+.footer-links a span { color: var(--accent); font-weight: 600; }
 </style>

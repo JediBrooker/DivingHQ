@@ -759,14 +759,16 @@ onMounted(async () => {
   border-bottom: 1px solid var(--border);
   gap: 1rem; flex-wrap: wrap;
 }
+/* Back-to-dashboard is redundant inside the app shell sidebar. */
+.page-header .btn { display: none; }
 .page-label {
-  font-family: var(--font-display); font-size: 11px; font-weight: 700;
-  letter-spacing: 0.3em; text-transform: uppercase;
+  font-family: var(--font-sans); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--cyan); margin-bottom: 0.5rem;
 }
 .page-title {
-  font-family: var(--font-display); font-size: 32px; font-weight: 900;
-  font-style: italic; color: var(--text); line-height: 1;
+  font-family: var(--font-sans); font-size: var(--text-h1); font-weight: 600;
+  font-style: normal; letter-spacing: -0.015em; color: var(--fg); line-height: 1.2;
 }
 .page-sub {
   font-family: var(--font-mono); font-size: 12px;
@@ -781,25 +783,26 @@ onMounted(async () => {
 }
 
 .tabs {
-  display: flex; align-items: center; gap: 0.25rem;
+  display: flex; align-items: center; gap: 1.25rem;
   margin-bottom: 1rem;
   border-bottom: 1px solid var(--border);
 }
 .tab {
   background: transparent; border: 0;
-  padding: 0.7rem 1.1rem;
-  font-family: var(--font-display); font-size: 11px; font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--text-3);
+  padding: 0.6rem 0.25rem;
+  font-family: var(--font-sans); font-size: 13.5px; font-weight: 500;
+  letter-spacing: 0; text-transform: none;
+  color: var(--fg-2);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   transition: color 0.12s, border-color 0.12s;
 }
-.tab:hover { color: var(--text-2); }
+.tab:hover { color: var(--fg); }
 .tab-active {
-  color: var(--cyan);
-  border-bottom-color: var(--cyan);
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
 }
 
 .filters {
@@ -849,8 +852,8 @@ onMounted(async () => {
   text-align: start; font-size: 13px; vertical-align: middle;
 }
 .audit-table th {
-  font-family: var(--font-display); font-size: 10px; font-weight: 700;
-  letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-3);
+  font-family: var(--font-sans); font-size: var(--text-label); font-weight: 600;
+  letter-spacing: var(--ls-label); text-transform: uppercase; color: var(--fg-3);
   background: var(--bg-2);
 }
 .audit-table tbody tr:hover { background: var(--bg-2); }
@@ -907,8 +910,8 @@ onMounted(async () => {
 .arr { color: var(--text-3); margin: 0 0.4rem; }
 .reason {
   font-family: var(--font-mono); font-size: 11.5px;
-  color: var(--text-3);
-  font-style: italic;
+  color: var(--fg-2);
+  font-style: normal;
   margin-top: 0.2rem;
   max-width: 520px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

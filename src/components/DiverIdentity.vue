@@ -226,7 +226,7 @@ const id = computed(() => diverIdentity(props.row))
 .di-team {
   display: inline-block; margin-top: 0.15rem;
   font-family: var(--font-display); font-size: 0.72em; font-weight: 700;
-  letter-spacing: 0.16em; text-transform: uppercase; color: #c4b5fd;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--role-admin-fg);
   background: rgba(139,92,246,0.10); border: 1px solid rgba(139,92,246,0.45);
   border-radius: 3px; padding: 0.1rem 0.45rem;
   align-self: flex-start;

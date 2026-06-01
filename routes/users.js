@@ -338,10 +338,28 @@ module.exports = function createUsersRouter({
             .json({ error: "Club not in your organisation" });
       }
 
+      // Capture the previous club for the audit trail.
+      const prev = await pool.query(
+        "SELECT u.full_name, u.club_id, c.name AS club_name FROM users u LEFT JOIN clubs c ON c.id = u.club_id WHERE u.id = $1",
+        [targetId],
+      );
       await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [
         club_id || null,
         targetId,
       ]);
+      // Audit only when an admin moves someone (not a self-clear) so
+      // the org Audit Log shows who reassigned which diver's club.
+      if (!isSelf || isAdmin) {
+        await recordAudit(pool, {
+          ...auditFromReq(req),
+          org_id: targetOrgId,
+          entity_type: "user",
+          entity_id: targetId,
+          entity_name: prev.rows[0]?.full_name || null,
+          action: "user.club_changed",
+          metadata: { from_club_id: prev.rows[0]?.club_id || null, to_club_id: club_id || null, direct: true },
+        });
+      }
       res.json({ message: "Club updated" });
     } catch (err) {
       console.error("[Update Club Error]", err.message);
