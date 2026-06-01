@@ -134,13 +134,6 @@ test("core operator surfaces match visual snapshots", async ({ request, page, ba
       ],
     });
 
-    // Dashboard structural assertion: the locale switcher lives on
-    // the dashboard (account-actions row), NOT in the control room.
-    // A pixel-only snapshot would miss the regression where the
-    // switcher accidentally moves out of the dashboard header.
-    await expect(page.locator(".locale-switcher")).toBeVisible();
-    await expect(page.locator(".locale-switcher")).toHaveCount(1);
-
     await page.goto(`/control?event=${controlEvent.id}`);
     await expect(page.locator(".ctrl-layout")).toBeVisible();
     await expect(page.locator(".readiness")).toBeVisible();
@@ -164,53 +157,42 @@ test("core operator surfaces match visual snapshots", async ({ request, page, ba
     // antialiasing noise or theme-token churn.
     // -------------------------------------------------------------
 
-    // 1. The .ctrl-header element exists.
+    // 1. The .ctrl-header element exists and is a space-between flex
+    //    row. The marine-CRM refresh replaced the old 3-column grid
+    //    (logo | event | actions) with flex: the connection chip
+    //    moved into the active-diver strip and the logo dropped, so
+    //    the picker pins to the start and the action cluster to the
+    //    end. A pixel snapshot at 2% tolerance would miss the row
+    //    collapsing, so assert the computed layout.
     const ctrlHeader = page.locator(".ctrl-header");
     await expect(ctrlHeader).toBeVisible();
+    const headerLayout = await ctrlHeader.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { display: cs.display, justify: cs.justifyContent };
+    });
+    expect(headerLayout.display).toBe("flex");
+    expect(headerLayout.justify).toBe("space-between");
 
-    // 2. computed grid-template-columns parses to three tracks:
-    //    flexible | content-sized | flexible.
-    const gridCols = await ctrlHeader.evaluate(
-      (el) => getComputedStyle(el).gridTemplateColumns
-    );
-    // Three tracks → three whitespace-separated tokens. The two
-    // flexible tracks resolve to px (since the grid has a
-    // definite inline size), the middle is content-sized.
-    expect(gridCols).toMatch(/^[0-9.]+px\s+\S+\s+[0-9.]+px$/);
-    const tracks = gridCols.split(/\s+/);
-    expect(tracks).toHaveLength(3);
-    // Left + right flexible tracks should be equal-ish (within
-    // 1px) — they're both minmax(0, 1fr), so any asymmetry means
-    // the grid has degraded.
-    const leftPx = parseFloat(tracks[0]);
-    const rightPx = parseFloat(tracks[2]);
-    expect(Math.abs(leftPx - rightPx)).toBeLessThanOrEqual(1);
-
-    // 3. Direct-child column wrappers, in DOM order, render the
-    //    expected pieces.
+    // 2. Direct-child wrappers carry the expected pieces: event
+    //    picker + chevron at the start, the action cluster (⋯ menu)
+    //    at the end, and NO locale switcher leaking in (it was
+    //    removed from every authed surface in the CRM refresh).
     const headerShape = await ctrlHeader.evaluate((el) => {
-      const left = el.querySelector(":scope > .ctrl-header-left");
       const ctx = el.querySelector(":scope > .ctrl-header-ctx");
       const right = el.querySelector(":scope > .ctrl-header-right");
       return {
-        leftHasLogo: !!left?.querySelector(".app-logo"),
-        leftHasConn: !!left?.querySelector(".conn-badge"),
         ctxHasSelect: !!ctx?.querySelector("select.event-title-select"),
         ctxHasChevron: !!ctx?.querySelector(".event-title-chevron"),
         rightHasMenu: !!right?.querySelector(".btn-icon"),
-        // No locale switcher in the control-room header — that
-        // belongs on the dashboard.
         headerHasLocaleSwitcher: !!el.querySelector(".locale-switcher"),
       };
     });
-    expect(headerShape.leftHasLogo).toBe(true);
-    expect(headerShape.leftHasConn).toBe(true);
     expect(headerShape.ctxHasSelect).toBe(true);
     expect(headerShape.ctxHasChevron).toBe(true);
     expect(headerShape.rightHasMenu).toBe(true);
     expect(headerShape.headerHasLocaleSwitcher).toBe(false);
 
-    // 4. Locale switcher is on the dashboard, not the control room.
+    // 3. Locale switcher is absent from the whole control page.
     await expect(page.locator(".locale-switcher")).toHaveCount(0);
 
     // 5. Event-title chevron sits at the inline-end edge of the
