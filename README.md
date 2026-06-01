@@ -1,5 +1,8 @@
 # DivingHQ
 
+> [!WARNING]
+> **Testing phase — data is not persistent.** DivingHQ is currently in a testing phase only. Any data you create or edit in the live app (meets, events, dive lists, scores, accounts) may be reset or deleted at any time without notice. Please don't rely on it for a real competition yet.
+
 📖 **[User Guide → DivingHQ Wiki](https://github.com/JediBrooker/DivingHQ/wiki)** — how to actually use the app: register a federation, run a meet, judge dives, watch the scoreboard, manage admin tasks. This README covers setup, deployment, and architecture.
 
 ---
@@ -326,9 +329,10 @@ npm install
 ```bash
 createdb divinghq
 psql -d divinghq -f init.sql
+npm run migrate          # brings the schema from the init.sql baseline up to latest
 ```
 
-`init.sql` is the single bootstrap script — it creates every table, enum, function and index, loads the full World Aquatics dive directory (~830 dives), and creates a system-admin account so you can sign in immediately. Schema version is logged on server boot.
+`init.sql` is the bootstrap script — it creates every table, enum, function and index, loads the full World Aquatics dive directory (~830 dives), and creates a system-admin account so you can sign in immediately. It's pinned at a schema baseline, so run `npm run migrate` straight after to apply the tail migrations (idempotent). Schema version is logged on server boot.
 
 ### 4. (Optional) Seed test data
 
@@ -336,7 +340,7 @@ psql -d divinghq -f init.sql
 psql -d divinghq -f seed_test_data.sql
 ```
 
-Adds 20 country federations, 80 clubs, 1000 users, 50 individual events, 20 synchronised pair events (11-judge panels with proper World Aquatics scoring) and 10 team events (3 teams of 4 members each), all with dive lists, judge scores, and matching audit history. Useful for stress-testing the archive, scoreboard, and admin views. Idempotent — safe to re-run; deletes the prior seed before re-inserting.
+Loads a small, realistic demo dataset (regenerate any time with `node scripts/generate-seed.js`): **2 federations** (Diving Australia, British Aquatic Sports) with clubs and boards; **65 users** with full profiles and **pre-verified emails** so every persona signs in immediately; **11 judges shared across both federations** (enough to staff 11-judge synchro panels); and **5 meets / 25 events** spanning three years — a mix of individual, synchro-pair and team events that are mostly **Completed** (full judge scores → results, recaps, records and Judge Analysis), plus **Live** and **Upcoming** events so the scoreboard, control room and registration flows aren't empty. Judge scores are realistic — tight panels with a few deliberately erratic judges so the Judge Analysis screens light up — and the data includes records/PBs, a prelim→final progression, a cross-federation meet, and in-flight admin queues (a pending club change, a cross-federation transfer, a role request, a suspended account). Every login uses password `password123`. The full persona list is in [`docs/seed-credentials.csv`](docs/seed-credentials.csv) (and `docs/seed-credentials.xlsx`). Idempotent — safe to re-run; clears the prior seed (and any legacy `bulk-*` seed) before re-inserting, without touching the `admin` account.
 
 ### 5. Configure environment
 
@@ -363,9 +367,13 @@ Without `SMTP_HOST` set, every email helper silently no-ops — registrations an
 | Account | Username | Password |
 |---|---|---|
 | System administrator (created by `init.sql`) | `admin` | `admin` |
-| Any seeded test user (created by `seed_test_data.sql`) | `bulk_user_0001` … `bulk_user_1000` | `password123` |
+| Org admin (one per federation) | `aus.admin`, `gbr.admin` | `password123` |
+| Meet manager / referee (one each per federation) | `aus.manager`, `aus.referee`, `gbr.manager`, `gbr.referee` | `password123` |
+| Judges (shared across both federations) | `judge.01` … `judge.11` | `password123` |
+| Divers (20 per federation) | `aus.diver.01` … `aus.diver.20`, `gbr.diver.01` … `gbr.diver.20` | `password123` |
+| Coaches / spectators | `aus.coach.01`/`02`, `aus.fan.01`/`02`, `gbr.coach.*`, `gbr.fan.*` | `password123` |
 
-Change the `admin` password from the User Manager once you're in.
+Every seeded account shares the password `password123` and ships with a verified email, so you can sign in as any persona straight away. The complete list — with emails and notes (which judge is the erratic one, which diver is suspended, who has a pending transfer) — is in [`docs/seed-credentials.csv`](docs/seed-credentials.csv) / `docs/seed-credentials.xlsx`. Change the `admin` password from the User Manager once you're in.
 
 ### 7. Run
 
@@ -509,8 +517,9 @@ Migrations in this repo are **additive only** (`ADD COLUMN`, `CREATE INDEX`, `AD
 │                                   # function + index + the dive directory
 │                                   # (~830 rows) + the system-admin account.
 │                                   # Stamps schema_meta to the current version.
-├── seed_test_data.sql              # Optional: 20 federations, 80 clubs,
-│                                   # 1000 users, 80 events, 18k scores. Idempotent.
+├── seed_test_data.sql              # Optional demo data: 2 federations, 65 users,
+│                                   # 5 meets / 25 events. Generated by
+│                                   # scripts/generate-seed.js. Idempotent.
 ├── migrations/                     # Append-only schema changes (008 onwards).
 │                                   # Each is idempotent (CREATE … IF NOT EXISTS,
 │                                   # backfills gated on DO blocks).
@@ -518,6 +527,8 @@ Migrations in this repo are **additive only** (`ADD COLUMN`, `CREATE INDEX`, `AD
 ├── scripts/migrate.js              # Migration runner — reads schema_meta.version,
 │                                   # applies pending files in order. Wraps each
 │                                   # file in its own txn. --dry / --to N flags.
+├── scripts/generate-seed.js        # Deterministic generator for seed_test_data.sql
+│                                   # + docs/seed-credentials.csv (the demo dataset).
 │
 ├── deploy.sh                       # Production deploy script: pull → npm ci →
 │                                   # npm test → npm run build → npm run migrate →
