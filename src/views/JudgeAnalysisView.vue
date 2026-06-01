@@ -38,23 +38,29 @@ const completedEvents = computed(() =>
 async function loadEvents() {
   eventsError.value = ''
   try {
-    const list = await auth.apiFetch('/api/events')
+    // Signed-in users get their org's events (every status) from the
+    // authed list. The public can't see that endpoint, so they fall
+    // back to the open archive — every federation's Live + Completed
+    // events — which is exactly the public transparency surface this
+    // page is meant to be. Both shapes carry id / name / status /
+    // created_at, so completedEvents filters to Completed either way.
+    const list = auth.isLoggedIn
+      ? await auth.apiFetch('/api/events')
+      : await auth.apiFetch('/api/archive')
     events.value = Array.isArray(list) ? list : []
-    // Honour ?event=<id> so a public user can be deep-linked to a
-    // specific event's analysis. Only preselect if it's actually a
-    // Completed event we can render.
+    // Honour ?event=<id> so a user can be deep-linked to a specific
+    // event's analysis. Only preselect if it's actually a Completed
+    // event we can render.
     const wanted = route.query.event ? String(route.query.event) : ''
     if (wanted && completedEvents.value.some((e) => String(e.id) === wanted)) {
       selectedEventId.value = wanted
     }
   } catch {
-    // Public / unauthorized — the events list endpoint needs a
-    // session. Don't throw; tell the user how to reach a specific
-    // event's analysis instead (deep-link from the Scoreboard).
-    eventsError.value = 'Sign in to browse completed events here, or '
-      + 'open a specific event from the Scoreboard and use its Judge '
-      + 'Ranking Analysis — that page links back here with the event '
-      + 'preselected.'
+    // Network / server error on whichever list we tried. Don't throw;
+    // point the user at the per-event entry from the Scoreboard.
+    eventsError.value = 'Could not load the event list. Open a specific '
+      + 'event from the Scoreboard and use its Judge Ranking Analysis — '
+      + 'that page links back here with the event preselected.'
   }
 }
 
@@ -203,7 +209,7 @@ onMounted(() => {
             <select class="select" v-model="selectedEventId">
               <option value="">— Select an event —</option>
               <option v-for="e in completedEvents" :key="e.id" :value="String(e.id)">
-                {{ e.name }}<template v-if="e.created_at"> · {{ new Date(e.created_at).getFullYear() }}</template>
+                {{ e.name }}<template v-if="e.org_name"> · {{ e.org_name }}</template><template v-if="e.created_at"> · {{ new Date(e.created_at).getFullYear() }}</template>
               </option>
             </select>
           </label>
