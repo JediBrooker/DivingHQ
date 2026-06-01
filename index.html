@@ -42,20 +42,12 @@
   <!-- Global stylesheet is imported by src/main.js so Vite
        content-hashes the bundled filename. -->
   <!-- Apply the saved theme before first paint so there's no
-       flash of the wrong theme. The Pinia UI store (src/stores/ui.js)
-       reads the same localStorage key and keeps this in sync at
-       runtime; this inline script only handles the very first paint. -->
-  <script>
-    (function () {
-      try {
-        var t = localStorage.getItem('dhq-theme');
-        if (t !== 'light' && t !== 'dark') t = 'light';
-        document.documentElement.dataset.theme = t;
-      } catch (e) {
-        document.documentElement.dataset.theme = 'light';
-      }
-    })();
-  </script>
+       flash of the wrong theme. Kept in an external file (not an
+       inline <script>) so the strict script-src 'self' CSP needs no
+       hash or nonce — see the CSP note in server.js. The Pinia UI
+       store (src/stores/ui.js) reads the same localStorage key and
+       keeps this in sync at runtime. -->
+  <script src="/theme-init.js"></script>
 </head>
 <body>
   <div id="app"></div>

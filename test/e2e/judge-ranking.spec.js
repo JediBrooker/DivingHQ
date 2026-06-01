@@ -17,10 +17,14 @@
 //         J4   9.0  8.0  7.0  6.0  5.0
 //         J5   9.0  8.0  7.0  6.0  5.0
 //
-//     Hypothetical "unanimous J" totals = score × 1.5:
-//       J1   D1=13.5(1)  D2=12.0(2)  D3=10.5(3)  D4=9.0(4)   D5=7.5(5)
-//       J2   D2=13.5(1)  D1=12.0(2)  D3=10.5(3)  D4=9.75(4)  D5=7.5(5)
-//       J3   D3=13.5(1)  D1=11.25(2) D2=10.5(3)  D4=9.75(4)  D5=7.5(5)
+//     Per-judge cell judge_total = the "if every kept judge scored
+//     like J" event total = score × DD × kept-count. This 5-judge
+//     individual panel keeps the middle 3, so judge_total =
+//     score × 1.5 × 3. The scale is monotonic, so the per-column
+//     RANKS are unchanged from a single-judge view:
+//       J1   D1(1) D2(2) D3(3) D4(4) D5(5)
+//       J2   D2(1) D1(2) D3(3) D4(4) D5(5)
+//       J3   D3(1) D1(2) D2(3) D4(4) D5(5)
 //       J4 + J5 same shape as J1.
 //
 //   * Actual standings under WA trim (drop 1 hi + 1 lo of 5):
@@ -142,9 +146,11 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
   // Helper — pull diver D's row under judge J's hypothetical panel.
   const cell = (diver, jn) => diver.per_judge.find((p) => p.judge_number === jn);
 
-  // J1 ranks D1 first (score 9.0 × 1.5 = 13.5 highest of the column).
+  // J1 ranks D1 first. judge_total is the "if every kept judge
+  // scored like J1" total: J1 gave D1 a 9.0, so the kept 3-judge
+  // panel is [9,9,9] = 27 × DD 1.5 = 40.5.
   expect(cell(d1, 1).rank).toBe(1);
-  expect(Number(cell(d1, 1).judge_total)).toBeCloseTo(13.5, 2);
+  expect(Number(cell(d1, 1).judge_total)).toBeCloseTo(40.5, 2);
 
   // J2 swaps D1 and D2 (J2 gave D2 a 9.0, D1 only 8.0).
   expect(cell(d1, 2).rank).toBe(2);

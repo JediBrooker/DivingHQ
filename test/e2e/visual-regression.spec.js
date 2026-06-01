@@ -250,7 +250,7 @@ test("core operator surfaces match visual snapshots", async ({ request, page, ba
     });
 
     await page.goto("/manager");
-    await expect(page.locator(".manager-toolbar")).toBeVisible();
+    await expect(page.getByRole("button", { name: /\+ New Event/i })).toBeVisible();
     await page.getByRole("button", { name: /\+ New Event/i }).click();
     await expect(page.locator(".modal-create-event")).toBeVisible();
     await stabilise(page);
