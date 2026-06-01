@@ -109,6 +109,19 @@ function userPills(userId) {
 const auditEntries = ref([])
 const auditLoading = ref(false)
 
+// Personal & competition details (drawer-scoped). Seeded from
+// drawerUser when the drawer opens; saved as one PUT.
+const drawerFullName = ref('')
+const drawerDob = ref('')               // YYYY-MM-DD or ''
+const drawerGender = ref('')
+const drawerNationality = ref('')
+const drawerProfileSaving = ref(false)
+const drawerProfileStatus = ref('')     // 'saved' | 'error' | ''
+
+// Account lifecycle (drawer-scoped). One in-flight guard across
+// suspend / reactivate / resend-verification / reset-password.
+const drawerAccountBusy = ref(false)
+
 // Club editor state (drawer-scoped)
 const drawerClubs = ref([])             // clubs in target user's org
 const drawerClubChoice = ref('')        // selected club_id or '' (none)
@@ -264,13 +277,26 @@ async function removeCoachLink(id) {
   }
 }
 
+// Seed the editable personal-details form from the open user.
+// Mirrors how loadClubs seeds drawerClubChoice — pulled straight
+// from the cached row so the inputs are populated on open.
+function seedDrawerProfile(u) {
+  drawerFullName.value = u?.full_name || ''
+  drawerDob.value = u?.date_of_birth || ''
+  drawerGender.value = u?.gender || ''
+  drawerNationality.value = u?.nationality || ''
+  drawerProfileStatus.value = ''
+}
+
 function openDrawer(userId) {
   drawerUserId.value = userId
   loadAudit(userId)
   const u = allUsers.value.find(x => x.id === userId)
   loadClubs(u?.org_id, u?.club_id)
   loadCoachLinks(u?.org_id, userId)
+  seedDrawerProfile(u)
   drawerClubStatus.value = ''
+  drawerAccountBusy.value = false
 }
 function closeDrawer() {
   drawerUserId.value = null
@@ -280,6 +306,87 @@ function closeDrawer() {
   drawerOrgUsers.value = []
   drawerLinkError.value = ''
   drawerClubStatus.value = ''
+  drawerProfileStatus.value = ''
+  drawerAccountBusy.value = false
+}
+
+// Save the personal & competition details. Empty strings are sent
+// as null — the backend treats '' / null as clearing the field.
+async function saveDrawerProfile() {
+  if (!drawerUserId.value) return
+  drawerProfileSaving.value = true
+  drawerProfileStatus.value = ''
+  const nz = v => {
+    const s = (v ?? '').trim()
+    return s === '' ? null : s
+  }
+  try {
+    await auth.apiFetch(`/api/users/${drawerUserId.value}/profile`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        full_name:     nz(drawerFullName.value),
+        date_of_birth: nz(drawerDob.value),
+        gender:        nz(drawerGender.value),
+        nationality:   nz(drawerNationality.value)?.toUpperCase() ?? null,
+      }),
+    })
+    // Refresh the source-of-truth list so the table + drawer header
+    // reflect the new name / details immediately.
+    await loadUsers()
+    drawerProfileStatus.value = 'saved'
+    setTimeout(() => { drawerProfileStatus.value = '' }, 1500)
+  } catch (err) {
+    drawerProfileStatus.value = 'error'
+    showError(err.message || t('user_manager.drawer_club_save_failed'))
+  } finally {
+    drawerProfileSaving.value = false
+  }
+}
+
+// --- Account lifecycle actions. Each hits its endpoint then
+// refreshes the user list so suspended_at / email_verified_at
+// flags update in place. ---
+async function runAccountAction(path, successMsg, opts = {}) {
+  if (!drawerUserId.value || drawerAccountBusy.value) return
+  if (opts.confirm && !await confirmAction(opts.confirm)) return
+  drawerAccountBusy.value = true
+  try {
+    await auth.apiFetch(`/api/users/${drawerUserId.value}/${path}`, { method: 'POST' })
+    if (opts.refresh !== false) await loadUsers()
+    showSuccess(successMsg)
+  } catch (err) {
+    showError(err.message || successMsg)
+  } finally {
+    drawerAccountBusy.value = false
+  }
+}
+
+function suspendAccount() {
+  return runAccountAction('suspend', 'Account suspended', {
+    confirm: {
+      title: 'Suspend account?',
+      body: `${drawerUser.value?.full_name || 'This user'} will be unable to sign in until reactivated.`,
+      confirmLabel: 'Suspend',
+      confirmKind: 'danger',
+    },
+  })
+}
+function reactivateAccount() {
+  return runAccountAction('reactivate', 'Account reactivated')
+}
+function resendVerification() {
+  return runAccountAction('resend-verification', 'Verification email sent', { refresh: false })
+}
+function sendPasswordReset() {
+  return runAccountAction('reset-password', 'Password reset email sent', {
+    refresh: false,
+    confirm: {
+      title: 'Send password reset?',
+      body: `A password-reset link will be emailed to ${drawerUser.value?.email || 'this user'}.`,
+      confirmLabel: 'Send reset',
+      confirmKind: 'warn',
+    },
+  })
 }
 
 async function saveDrawerClub() {
@@ -1073,7 +1180,76 @@ onUnmounted(() => {
           <span v-else-if="drawerClubStatus === 'error'" class="club-status-error">{{ $t('user_manager.drawer_club_save_failed') }}</span>
         </div>
 
-        <div class="drawer-section-label" style="margin-top:1.25rem">{{ $t('user_manager.drawer_section_roles') }}</div>
+        <!-- Personal & competition details. Editable form seeded
+             from the user row when the drawer opens; saved as one
+             PUT that clears any field left blank. -->
+        <div class="drawer-section-label" style="margin-top:1.5rem">Personal &amp; competition details</div>
+        <div class="profile-editor">
+          <div class="field">
+            <label class="label">Full name</label>
+            <input class="input" type="text" v-model="drawerFullName">
+          </div>
+          <div class="profile-grid">
+            <div class="field">
+              <label class="label">Date of birth</label>
+              <input class="input" type="date" v-model="drawerDob">
+            </div>
+            <div class="field">
+              <label class="label">Gender</label>
+              <select class="select" v-model="drawerGender">
+                <option value="">—</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">Nationality</label>
+            <input class="input profile-nat" type="text" v-model="drawerNationality"
+                   maxlength="3" placeholder="GBR"
+                   style="text-transform:uppercase">
+          </div>
+          <div class="profile-save-row">
+            <button class="btn btn-primary btn-sm"
+                    :disabled="drawerProfileSaving"
+                    @click="saveDrawerProfile">
+              {{ drawerProfileSaving ? $t('user_manager.drawer_creating') : 'Save details' }}
+            </button>
+            <span v-if="drawerProfileStatus === 'saved'" class="club-status-saved">{{ $t('user_manager.drawer_club_saved') }}</span>
+            <span v-else-if="drawerProfileStatus === 'error'" class="club-status-error">{{ $t('user_manager.drawer_club_save_failed') }}</span>
+          </div>
+        </div>
+
+        <!-- Account lifecycle. Suspend / reactivate, resend
+             verification, and password reset. Each refreshes the
+             user list so the suspended / verified flags update. -->
+        <div class="drawer-section-label" style="margin-top:1.5rem">Account</div>
+        <div class="account-actions">
+          <div v-if="drawerUser.suspended_at" class="account-suspended-row">
+            <span class="badge badge-amber">Suspended</span>
+            <button v-if="!drawerUser.is_system_admin"
+                    class="btn btn-primary btn-sm"
+                    :disabled="drawerAccountBusy"
+                    @click="reactivateAccount">Reactivate</button>
+          </div>
+          <button v-else-if="!drawerUser.is_system_admin"
+                  class="btn btn-danger btn-sm"
+                  :disabled="drawerAccountBusy"
+                  @click="suspendAccount">Suspend account</button>
+
+          <button v-if="drawerUser.email && !drawerUser.email_verified_at"
+                  class="btn btn-ghost btn-sm"
+                  :disabled="drawerAccountBusy"
+                  @click="resendVerification">Resend verification email</button>
+
+          <button class="btn btn-ghost btn-sm"
+                  :disabled="drawerAccountBusy"
+                  @click="sendPasswordReset">Send password reset</button>
+        </div>
+
+        <div class="drawer-section-label" style="margin-top:1.5rem">{{ $t('user_manager.drawer_section_roles') }}</div>
         <div class="drawer-roles">
           <label v-for="role in ALL_ROLES" :key="role"
                  :class="['drawer-role', hasRole(drawerUserId, role) ? 'drawer-role-on' : '']">
@@ -1478,6 +1654,21 @@ onUnmounted(() => {
   padding: 0.15rem 0.5rem; border-radius: 3px;
   background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.4);
 }
+
+/* Personal & competition details editor */
+.profile-editor { display: flex; flex-direction: column; gap: 0.6rem; }
+.profile-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
+}
+.profile-nat { max-width: 120px; letter-spacing: 0.08em; }
+.profile-save-row {
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+  margin-top: 0.15rem;
+}
+
+/* Account lifecycle actions */
+.account-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.account-suspended-row { display: flex; align-items: center; gap: 0.5rem; }
 
 .drawer-roles { display: flex; flex-direction: column; gap: 0.3rem; }
 .drawer-role {

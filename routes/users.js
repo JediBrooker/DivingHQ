@@ -21,6 +21,7 @@
 
 const express = require("express");
 const bcrypt  = require("bcryptjs");
+const jwt     = require("jsonwebtoken");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 
 // Enum values from init.sql's CREATE TYPE org_role. system_admin
@@ -45,6 +46,11 @@ module.exports = function createUsersRouter({
   bumpTokenVersion,
   sendRoleDecisionEmail,
   bulkWriteLimiter,
+  // Migration 058 — org-admin profile edit + account lifecycle.
+  sendVerifyEmailEmail,
+  sendPasswordResetEmail,
+  hashFingerprint,
+  JWT_SECRET,
 }) {
   if (!pool) throw new Error("createUsersRouter requires { pool, … }");
   const router = express.Router();
@@ -63,6 +69,8 @@ module.exports = function createUsersRouter({
       const isSysAdmin = !!req.user.is_system_admin;
       const r = await pool.query(
         `SELECT u.id, u.username, u.full_name, u.is_system_admin,
+                u.email, u.email_verified_at,
+                u.date_of_birth, u.gender, u.nationality, u.suspended_at,
                 u.org_id,  o.name AS org_name,  o.country_code, o.slug AS org_slug,
                 u.club_id, c.name AS club_name, c.short_code AS club_code,
                 COALESCE(
@@ -888,6 +896,157 @@ module.exports = function createUsersRouter({
       );
       res.json(r.rows);
     } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // =============================================================
+  // ORG-ADMIN PROFILE EDIT + ACCOUNT LIFECYCLE  (migration 058)
+  // =============================================================
+
+  // Guard: caller must be sysadmin or an org_admin of the target's
+  // own org. Returns the target row (org_id + a few fields) or null
+  // after sending the appropriate error response.
+  async function loadEditableTarget(req, res, cols = "org_id, full_name") {
+    const t = await pool.query(
+      `SELECT ${cols} FROM users WHERE id = $1`, [req.params.id]);
+    if (!t.rows.length) { res.status(404).json({ error: "User not found" }); return null; }
+    const target = t.rows[0];
+    if (!req.user.is_system_admin && target.org_id !== req.user.org_id) {
+      res.status(403).json({ error: "Cannot manage a user in another organisation" });
+      return null;
+    }
+    return target;
+  }
+
+  // Edit a diver's personal / competition details.
+  router.put("/api/users/:id/profile", requireOrgAdmin, async (req, res) => {
+    const { full_name, date_of_birth, gender, nationality } = req.body || {};
+    try {
+      const target = await loadEditableTarget(req, res, "org_id, full_name");
+      if (!target) return;
+      const sets = [], vals = []; let i = 1;
+      if (full_name !== undefined) {
+        const fn = String(full_name || "").trim();
+        if (!fn || fn.length > 100)
+          return res.status(400).json({ error: "Name must be 1–100 characters" });
+        sets.push(`full_name = $${i++}`); vals.push(fn);
+      }
+      if (date_of_birth !== undefined) {
+        const dob = date_of_birth || null;
+        if (dob && !/^\d{4}-\d{2}-\d{2}$/.test(dob))
+          return res.status(400).json({ error: "Date of birth must be YYYY-MM-DD" });
+        sets.push(`date_of_birth = $${i++}`); vals.push(dob);
+      }
+      if (gender !== undefined) {
+        sets.push(`gender = $${i++}`); vals.push(gender ? String(gender).slice(0, 20) : null);
+      }
+      if (nationality !== undefined) {
+        const nat = nationality ? String(nationality).toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3) : null;
+        if (nat && nat.length !== 3)
+          return res.status(400).json({ error: "Nationality must be a 3-letter country code" });
+        sets.push(`nationality = $${i++}`); vals.push(nat);
+      }
+      if (!sets.length) return res.status(400).json({ error: "No fields to update" });
+      vals.push(req.params.id);
+      await pool.query(`UPDATE users SET ${sets.join(", ")} WHERE id = $${i}`, vals);
+      await recordAudit(pool, {
+        ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
+        entity_id: req.params.id, entity_name: full_name || target.full_name,
+        action: "user.profile_updated",
+        metadata: { full_name, date_of_birth, gender, nationality },
+      });
+      res.json({ message: "Profile updated" });
+    } catch (err) {
+      console.error("[Profile Update]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Suspend an account — blocks login (auth.js gate) until reactivated.
+  router.post("/api/users/:id/suspend", requireOrgAdmin, async (req, res) => {
+    try {
+      const target = await loadEditableTarget(req, res, "org_id, full_name, is_system_admin");
+      if (!target) return;
+      if (target.is_system_admin)
+        return res.status(403).json({ error: "Cannot suspend a system administrator" });
+      if (req.params.id === req.user.id)
+        return res.status(400).json({ error: "You can't suspend your own account" });
+      await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [req.params.id]);
+      if (typeof bumpTokenVersion === "function") await bumpTokenVersion(req.params.id);
+      await recordAudit(pool, {
+        ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
+        entity_id: req.params.id, entity_name: target.full_name, action: "user.suspended",
+      });
+      res.json({ message: "Account suspended" });
+    } catch (err) {
+      console.error("[Suspend]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Lift a suspension.
+  router.post("/api/users/:id/reactivate", requireOrgAdmin, async (req, res) => {
+    try {
+      const target = await loadEditableTarget(req, res, "org_id, full_name");
+      if (!target) return;
+      await pool.query("UPDATE users SET suspended_at = NULL WHERE id = $1", [req.params.id]);
+      await recordAudit(pool, {
+        ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
+        entity_id: req.params.id, entity_name: target.full_name, action: "user.reactivated",
+      });
+      res.json({ message: "Account reactivated" });
+    } catch (err) {
+      console.error("[Reactivate]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Re-send the email-verification link (reuses the register-flow JWT).
+  router.post("/api/users/:id/resend-verification", requireOrgAdmin, async (req, res) => {
+    try {
+      const target = await loadEditableTarget(req, res, "org_id, full_name, email, email_verified_at, deleted_at");
+      if (!target) return;
+      if (target.deleted_at) return res.status(404).json({ error: "User not found" });
+      if (!target.email) return res.status(400).json({ error: "This user has no email on file" });
+      if (target.email_verified_at) return res.status(400).json({ error: "This email is already verified" });
+      if (!JWT_SECRET || typeof sendVerifyEmailEmail !== "function")
+        return res.status(503).json({ error: "Email is not configured on this server" });
+      const token = jwt.sign({ sub: req.params.id, type: "email_verify" }, JWT_SECRET, { expiresIn: "24h" });
+      sendVerifyEmailEmail(req.params.id, token, { req }).catch(() => {});
+      await recordAudit(pool, {
+        ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
+        entity_id: req.params.id, entity_name: target.full_name, action: "user.verification_resent",
+      });
+      res.json({ message: "Verification email sent" });
+    } catch (err) {
+      console.error("[Resend Verification]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Send the user a password-reset link (reuses the forgot-password JWT).
+  router.post("/api/users/:id/reset-password", requireOrgAdmin, async (req, res) => {
+    try {
+      const target = await loadEditableTarget(req, res, "org_id, full_name, email, password, deleted_at");
+      if (!target) return;
+      if (target.deleted_at) return res.status(404).json({ error: "User not found" });
+      if (!target.email) return res.status(400).json({ error: "This user has no email on file" });
+      if (!JWT_SECRET || typeof sendPasswordResetEmail !== "function" || typeof hashFingerprint !== "function")
+        return res.status(503).json({ error: "Email is not configured on this server" });
+      const token = jwt.sign(
+        { sub: req.params.id, type: "password_reset", fp: hashFingerprint(target.password) },
+        JWT_SECRET, { expiresIn: "30m" });
+      sendPasswordResetEmail(
+        { id: req.params.id, full_name: target.full_name, email: target.email },
+        token, { req }).catch(() => {});
+      await recordAudit(pool, {
+        ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
+        entity_id: req.params.id, entity_name: target.full_name, action: "user.password_reset_sent",
+      });
+      res.json({ message: "Password reset email sent" });
+    } catch (err) {
+      console.error("[Admin Reset Password]", err.message);
       res.status(500).json({ error: "Internal server error" });
     }
   });
