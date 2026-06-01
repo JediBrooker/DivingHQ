@@ -11,6 +11,7 @@ const { t } = useI18n()
 const auth = useAuthStore()
 
 const requests = ref([])
+const clubRequests = ref([])     // club-change / org-transfer requests
 const allUsers = ref([])
 
 // View state
@@ -77,8 +78,17 @@ const orgs = computed(() => {
 // Top-of-page stats — instant sense of scale and where to look.
 // We deliberately don't count spectator: every user has it, so a
 // "1,012 spectators" pill is just total membership restated.
+// Pending club-change / org-transfer requests, used by both the
+// Requests tab list and folded into the pending badge count.
+const pendingClubRequests = computed(() =>
+  clubRequests.value.filter(r => r.status === 'pending'),
+)
+
 const stats = computed(() => {
-  const counts = { total: allUsers.value.length, pending: requests.value.length }
+  const counts = {
+    total: allUsers.value.length,
+    pending: requests.value.length + pendingClubRequests.value.length,
+  }
   PRIMARY_ROLES.forEach(r => { counts[r] = 0 })
   for (const u of allUsers.value) {
     for (const r of (u.org_roles || [])) {
@@ -98,6 +108,19 @@ function userPills(userId) {
 // Per-user role audit log loaded lazily when the drawer opens.
 const auditEntries = ref([])
 const auditLoading = ref(false)
+
+// Personal & competition details (drawer-scoped). Seeded from
+// drawerUser when the drawer opens; saved as one PUT.
+const drawerFullName = ref('')
+const drawerDob = ref('')               // YYYY-MM-DD or ''
+const drawerGender = ref('')
+const drawerNationality = ref('')
+const drawerProfileSaving = ref(false)
+const drawerProfileStatus = ref('')     // 'saved' | 'error' | ''
+
+// Account lifecycle (drawer-scoped). One in-flight guard across
+// suspend / reactivate / resend-verification / reset-password.
+const drawerAccountBusy = ref(false)
 
 // Club editor state (drawer-scoped)
 const drawerClubs = ref([])             // clubs in target user's org
@@ -254,13 +277,26 @@ async function removeCoachLink(id) {
   }
 }
 
+// Seed the editable personal-details form from the open user.
+// Mirrors how loadClubs seeds drawerClubChoice — pulled straight
+// from the cached row so the inputs are populated on open.
+function seedDrawerProfile(u) {
+  drawerFullName.value = u?.full_name || ''
+  drawerDob.value = u?.date_of_birth || ''
+  drawerGender.value = u?.gender || ''
+  drawerNationality.value = u?.nationality || ''
+  drawerProfileStatus.value = ''
+}
+
 function openDrawer(userId) {
   drawerUserId.value = userId
   loadAudit(userId)
   const u = allUsers.value.find(x => x.id === userId)
   loadClubs(u?.org_id, u?.club_id)
   loadCoachLinks(u?.org_id, userId)
+  seedDrawerProfile(u)
   drawerClubStatus.value = ''
+  drawerAccountBusy.value = false
 }
 function closeDrawer() {
   drawerUserId.value = null
@@ -270,6 +306,87 @@ function closeDrawer() {
   drawerOrgUsers.value = []
   drawerLinkError.value = ''
   drawerClubStatus.value = ''
+  drawerProfileStatus.value = ''
+  drawerAccountBusy.value = false
+}
+
+// Save the personal & competition details. Empty strings are sent
+// as null — the backend treats '' / null as clearing the field.
+async function saveDrawerProfile() {
+  if (!drawerUserId.value) return
+  drawerProfileSaving.value = true
+  drawerProfileStatus.value = ''
+  const nz = v => {
+    const s = (v ?? '').trim()
+    return s === '' ? null : s
+  }
+  try {
+    await auth.apiFetch(`/api/users/${drawerUserId.value}/profile`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        full_name:     nz(drawerFullName.value),
+        date_of_birth: nz(drawerDob.value),
+        gender:        nz(drawerGender.value),
+        nationality:   nz(drawerNationality.value)?.toUpperCase() ?? null,
+      }),
+    })
+    // Refresh the source-of-truth list so the table + drawer header
+    // reflect the new name / details immediately.
+    await loadUsers()
+    drawerProfileStatus.value = 'saved'
+    setTimeout(() => { drawerProfileStatus.value = '' }, 1500)
+  } catch (err) {
+    drawerProfileStatus.value = 'error'
+    showError(err.message || t('user_manager.drawer_club_save_failed'))
+  } finally {
+    drawerProfileSaving.value = false
+  }
+}
+
+// --- Account lifecycle actions. Each hits its endpoint then
+// refreshes the user list so suspended_at / email_verified_at
+// flags update in place. ---
+async function runAccountAction(path, successMsg, opts = {}) {
+  if (!drawerUserId.value || drawerAccountBusy.value) return
+  if (opts.confirm && !await confirmAction(opts.confirm)) return
+  drawerAccountBusy.value = true
+  try {
+    await auth.apiFetch(`/api/users/${drawerUserId.value}/${path}`, { method: 'POST' })
+    if (opts.refresh !== false) await loadUsers()
+    showSuccess(successMsg)
+  } catch (err) {
+    showError(err.message || successMsg)
+  } finally {
+    drawerAccountBusy.value = false
+  }
+}
+
+function suspendAccount() {
+  return runAccountAction('suspend', 'Account suspended', {
+    confirm: {
+      title: 'Suspend account?',
+      body: `${drawerUser.value?.full_name || 'This user'} will be unable to sign in until reactivated.`,
+      confirmLabel: 'Suspend',
+      confirmKind: 'danger',
+    },
+  })
+}
+function reactivateAccount() {
+  return runAccountAction('reactivate', 'Account reactivated')
+}
+function resendVerification() {
+  return runAccountAction('resend-verification', 'Verification email sent', { refresh: false })
+}
+function sendPasswordReset() {
+  return runAccountAction('reset-password', 'Password reset email sent', {
+    refresh: false,
+    confirm: {
+      title: 'Send password reset?',
+      body: `A password-reset link will be emailed to ${drawerUser.value?.email || 'this user'}.`,
+      confirmLabel: 'Send reset',
+      confirmKind: 'warn',
+    },
+  })
 }
 
 async function saveDrawerClub() {
@@ -382,6 +499,37 @@ watch([searchTerm, orgFilter, roleFilters], () => { currentPage.value = 1 }, { d
 async function loadRequests() {
   try { requests.value = await auth.apiFetch('/api/role-requests') }
   catch { requests.value = [] }
+}
+
+async function loadClubRequests() {
+  try {
+    const rows = await auth.apiFetch('/api/club-change-requests')
+    clubRequests.value = Array.isArray(rows) ? rows : []
+  } catch { clubRequests.value = [] }
+}
+
+// Human-readable summary of where a club/org request is moving the
+// diver. Org transfers read org→org; within-org changes read
+// club→club. "No club" stands in for a null source/target club.
+function clubRequestSummary(rq) {
+  if (rq.kind === 'org_transfer') {
+    const club = rq.to_club_name ? ` · ${rq.to_club_name}` : ''
+    return `${rq.from_org_name || '—'} → ${rq.to_org_name || '—'}${club}`
+  }
+  return `${rq.from_club_name || 'No club'} → ${rq.to_club_name || 'No club'}`
+}
+
+async function reviewClubRequest(id, decision) {
+  try {
+    await auth.apiFetch(`/api/club-change-requests/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ decision }),
+    })
+    // A club move can change the affected user's row — refresh both.
+    await Promise.all([loadClubRequests(), loadUsers()])
+  } catch (err) {
+    showError(err.message)
+  }
 }
 
 async function loadUsers() {
@@ -652,7 +800,7 @@ function pageNums() {
 
 onMounted(async () => {
   window.addEventListener('keydown', onKeyDown)
-  await Promise.all([loadRequests(), loadUsers()])
+  await Promise.all([loadRequests(), loadClubRequests(), loadUsers()])
 })
 
 onUnmounted(() => {
@@ -700,8 +848,10 @@ onUnmounted(() => {
 
     <!-- Requests tab -->
     <div v-if="activeTab === 'requests'" class="card">
-      <div v-if="!requests.length" class="empty-state">{{ $t('user_manager.no_pending') }}</div>
-      <div v-else class="requests-grid">
+      <div v-if="!requests.length && !pendingClubRequests.length" class="empty-state">{{ $t('user_manager.no_pending') }}</div>
+
+      <!-- Role requests -->
+      <div v-if="requests.length" class="requests-grid">
         <div v-for="rq in requests" :key="rq.id" class="request-card">
           <div style="flex:1;min-width:0">
             <div class="request-name">{{ rq.full_name }}</div>
@@ -717,6 +867,39 @@ onUnmounted(() => {
           <div class="request-actions">
             <button class="btn btn-sm btn-approve" @click="reviewRequest(rq.id, 'approved')">{{ $t('user_manager.approve') }}</button>
             <button class="btn btn-danger btn-sm" @click="reviewRequest(rq.id, 'rejected')">{{ $t('user_manager.deny') }}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Club change requests -->
+      <div v-if="pendingClubRequests.length" class="club-requests-block">
+        <div class="club-requests-head">Club change requests</div>
+        <div class="requests-grid">
+          <div v-for="rq in pendingClubRequests" :key="rq.id" class="request-card">
+            <div style="flex:1;min-width:0">
+              <div class="request-name">{{ rq.diver_name }}</div>
+              <div class="request-meta">
+                @{{ rq.diver_username }} ·
+                <span class="badge">{{ rq.kind === 'org_transfer' ? 'transfer' : 'club change' }}</span>
+                {{ clubRequestSummary(rq) }}
+              </div>
+              <!-- Org transfers need three approvals — show which are in. -->
+              <div v-if="rq.kind === 'org_transfer'" class="club-approvals">
+                <span :class="['approval-chip', rq.source_approved_at ? 'approval-on' : 'approval-off']">
+                  Source {{ rq.source_approved_at ? '✓' : '–' }}
+                </span>
+                <span :class="['approval-chip', rq.target_approved_at ? 'approval-on' : 'approval-off']">
+                  Target {{ rq.target_approved_at ? '✓' : '–' }}
+                </span>
+                <span :class="['approval-chip', rq.diver_confirmed_at ? 'approval-on' : 'approval-off']">
+                  Diver {{ rq.diver_confirmed_at ? '✓' : '–' }}
+                </span>
+              </div>
+            </div>
+            <div class="request-actions">
+              <button class="btn btn-sm btn-approve" @click="reviewClubRequest(rq.id, 'approved')">{{ $t('user_manager.approve') }}</button>
+              <button class="btn btn-danger btn-sm" @click="reviewClubRequest(rq.id, 'rejected')">{{ $t('user_manager.deny') }}</button>
+            </div>
           </div>
         </div>
       </div>
@@ -873,13 +1056,15 @@ onUnmounted(() => {
                     </td>
                     <td class="dim">@{{ user.username }}</td>
                     <td>
-                      <div class="roles-checkboxes">
-                        <label v-for="role in ALL_ROLES" :key="role" class="role-label">
-                          <input type="checkbox"
-                                 :checked="hasRole(user.id, role)"
-                                 @change="toggleRole(user.id, role)">
+                      <div class="role-pills">
+                        <span v-for="role in userPills(user.id)" :key="role"
+                              :class="['role-pill', `role-pill-${role}`]">
                           {{ ROLE_LABELS[role] }}
-                        </label>
+                        </span>
+                        <span v-if="!userPills(user.id).length" class="role-pill role-pill-empty">
+                          {{ $t('user_manager.no_roles') }}
+                        </span>
+                        <span class="role-edit-hint">{{ $t('user_manager.edit_hint') }}</span>
                       </div>
                     </td>
                     <td class="status-col" @click.stop>
@@ -995,7 +1180,76 @@ onUnmounted(() => {
           <span v-else-if="drawerClubStatus === 'error'" class="club-status-error">{{ $t('user_manager.drawer_club_save_failed') }}</span>
         </div>
 
-        <div class="drawer-section-label" style="margin-top:1.25rem">{{ $t('user_manager.drawer_section_roles') }}</div>
+        <!-- Personal & competition details. Editable form seeded
+             from the user row when the drawer opens; saved as one
+             PUT that clears any field left blank. -->
+        <div class="drawer-section-label" style="margin-top:1.5rem">Personal &amp; competition details</div>
+        <div class="profile-editor">
+          <div class="field">
+            <label class="label">Full name</label>
+            <input class="input" type="text" v-model="drawerFullName">
+          </div>
+          <div class="profile-grid">
+            <div class="field">
+              <label class="label">Date of birth</label>
+              <input class="input" type="date" v-model="drawerDob">
+            </div>
+            <div class="field">
+              <label class="label">Gender</label>
+              <select class="select" v-model="drawerGender">
+                <option value="">—</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">Nationality</label>
+            <input class="input profile-nat" type="text" v-model="drawerNationality"
+                   maxlength="3" placeholder="GBR"
+                   style="text-transform:uppercase">
+          </div>
+          <div class="profile-save-row">
+            <button class="btn btn-primary btn-sm"
+                    :disabled="drawerProfileSaving"
+                    @click="saveDrawerProfile">
+              {{ drawerProfileSaving ? $t('user_manager.drawer_creating') : 'Save details' }}
+            </button>
+            <span v-if="drawerProfileStatus === 'saved'" class="club-status-saved">{{ $t('user_manager.drawer_club_saved') }}</span>
+            <span v-else-if="drawerProfileStatus === 'error'" class="club-status-error">{{ $t('user_manager.drawer_club_save_failed') }}</span>
+          </div>
+        </div>
+
+        <!-- Account lifecycle. Suspend / reactivate, resend
+             verification, and password reset. Each refreshes the
+             user list so the suspended / verified flags update. -->
+        <div class="drawer-section-label" style="margin-top:1.5rem">Account</div>
+        <div class="account-actions">
+          <div v-if="drawerUser.suspended_at" class="account-suspended-row">
+            <span class="badge badge-amber">Suspended</span>
+            <button v-if="!drawerUser.is_system_admin"
+                    class="btn btn-primary btn-sm"
+                    :disabled="drawerAccountBusy"
+                    @click="reactivateAccount">Reactivate</button>
+          </div>
+          <button v-else-if="!drawerUser.is_system_admin"
+                  class="btn btn-danger btn-sm"
+                  :disabled="drawerAccountBusy"
+                  @click="suspendAccount">Suspend account</button>
+
+          <button v-if="drawerUser.email && !drawerUser.email_verified_at"
+                  class="btn btn-ghost btn-sm"
+                  :disabled="drawerAccountBusy"
+                  @click="resendVerification">Resend verification email</button>
+
+          <button class="btn btn-ghost btn-sm"
+                  :disabled="drawerAccountBusy"
+                  @click="sendPasswordReset">Send password reset</button>
+        </div>
+
+        <div class="drawer-section-label" style="margin-top:1.5rem">{{ $t('user_manager.drawer_section_roles') }}</div>
         <div class="drawer-roles">
           <label v-for="role in ALL_ROLES" :key="role"
                  :class="['drawer-role', hasRole(drawerUserId, role) ? 'drawer-role-on' : '']">
@@ -1091,12 +1345,11 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.page-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 1.5rem 2rem; border-bottom: 1px solid var(--border);
-  max-width: 1400px; margin: 0 auto;
-}
-.page-title { font-size: 36px; font-style: italic; }
+/* Title is redundant with the shell breadcrumb — hidden. */
+.page-header { display: none; }
+/* Back-to-dashboard is redundant inside the app shell sidebar. */
+.page-header .btn { display: none; }
+.page-title { font-size: var(--text-h1); font-weight: 600; font-style: normal; letter-spacing: -0.015em; }
 .main { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
 
 /* Stats strip */
@@ -1114,20 +1367,20 @@ onUnmounted(() => {
 .stat-sep { width: 1px; height: 32px; background: var(--border); margin: 0 0.25rem; }
 
 /* Tabs */
-.tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--border); }
+.tabs { display: flex; gap: 1.25rem; border-bottom: 1px solid var(--border); }
 .tab {
-  font-family: var(--font-display); font-size: 12px; font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  padding: 0.6rem 1rem; cursor: pointer;
-  background: transparent; border: none; color: var(--text-3);
+  font-family: var(--font-sans); font-size: 13.5px; font-weight: 500;
+  letter-spacing: 0; text-transform: none;
+  padding: 0.6rem 0.25rem; cursor: pointer;
+  background: transparent; border: none; color: var(--fg-2);
   border-bottom: 2px solid transparent; margin-bottom: -1px;
 }
 .tab:hover { color: var(--text-2); }
-.tab-active { color: var(--cyan); border-bottom-color: var(--cyan); }
+.tab-active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 .tab-count {
-  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-  letter-spacing: 0; padding: 0.1rem 0.4rem; border-radius: 3px;
-  background: var(--bg-3); border: 1px solid var(--border); color: var(--text-3);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  letter-spacing: 0; padding: 0.05rem 0.45rem; border-radius: var(--radius-pill);
+  background: var(--bg-sunken); border: none; color: var(--fg-2);
   margin-inline-start: 0.4rem; vertical-align: middle;
 }
 .tab-count-active { background: var(--cyan-dim); border-color: rgba(6,182,212,0.4); color: var(--cyan); }
@@ -1165,6 +1418,25 @@ onUnmounted(() => {
 .request-note  { font-size: 11px; color: var(--text-2); margin-top: 0.35rem; font-style: italic; }
 .request-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
 .btn-approve { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+
+/* Club-change request list — sits below role requests in the
+   Requests tab, separated by a faint rule + section heading. */
+.club-requests-block { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.club-requests-block:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.club-requests-head {
+  font-family: var(--font-display); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-3);
+  padding: 0 0.5rem 0.5rem;
+}
+.club-approvals { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.4rem; }
+.approval-chip {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 0.1rem 0.45rem; border-radius: var(--radius-pill);
+  border: 1px solid var(--border); white-space: nowrap;
+}
+.approval-on  { color: var(--ok-fg); background: var(--ok-bg); border-color: var(--ok-solid); }
+.approval-off { color: var(--text-3); background: var(--surface-2); }
 
 /* Members table */
 .user-row { transition: background 0.15s; }
@@ -1294,7 +1566,7 @@ onUnmounted(() => {
   border: 1px solid var(--border); background: var(--bg-3); color: var(--text-2);
   white-space: nowrap;
 }
-.role-pill-org_admin    { color: #c4b5fd; border-color: rgba(139,92,246,0.45); background: rgba(139,92,246,0.10); }
+.role-pill-org_admin    { color: var(--role-admin-fg); border-color: rgba(139,92,246,0.45); background: rgba(139,92,246,0.10); }
 .role-pill-meet_manager { color: #fbbf24; border-color: rgba(245,158,11,0.45); background: rgba(245,158,11,0.10); }
 .role-pill-referee      { color: #fb923c; border-color: rgba(249,115,22,0.45); background: rgba(249,115,22,0.10); }
 .role-pill-judge        { color: #67e8f9; border-color: rgba(6,182,212,0.45);  background: rgba(6,182,212,0.10); }
@@ -1382,6 +1654,21 @@ onUnmounted(() => {
   padding: 0.15rem 0.5rem; border-radius: 3px;
   background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.4);
 }
+
+/* Personal & competition details editor */
+.profile-editor { display: flex; flex-direction: column; gap: 0.6rem; }
+.profile-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
+}
+.profile-nat { max-width: 120px; letter-spacing: 0.08em; }
+.profile-save-row {
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+  margin-top: 0.15rem;
+}
+
+/* Account lifecycle actions */
+.account-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.account-suspended-row { display: flex; align-items: center; gap: 0.5rem; }
 
 .drawer-roles { display: flex; flex-direction: column; gap: 0.3rem; }
 .drawer-role {

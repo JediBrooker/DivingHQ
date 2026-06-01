@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import {
   annotatedScores,
@@ -23,6 +24,7 @@ import SponsorRotation from '@/components/scoreboard/SponsorRotation.vue'
 
 const route  = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const { t } = useI18n()
 const socket = useSocket({ spectator: true })
 
@@ -1063,7 +1065,7 @@ onMounted(async () => {
     <div v-if="!broadcastMode" class="sb-header">
       <template v-if="!currentEventId">
         <div class="header-left">
-          <span class="sb-page-title">Scoreboard &amp; Results</span>
+          <span v-if="!auth.isLoggedIn" class="sb-page-title">Scoreboard &amp; Results</span>
           <span v-if="events.length" class="sb-page-sub">
             <span v-if="liveEvents.length" class="sb-page-sub-live">{{ liveEvents.length }} live now</span>
             <span v-if="liveEvents.length"> · </span>
@@ -1096,7 +1098,7 @@ onMounted(async () => {
           class="btn btn-ghost btn-sm"
           v-tip="'Open the chroma-key overlay (for OBS / streaming). Append &bg=ff00ff for a magenta key colour.'"
         >🎬 {{ $t('scoreboard.stream_overlay') }}</a>
-        <RouterLink to="/dashboard" class="btn btn-ghost btn-sm">Dashboard</RouterLink>
+        <RouterLink v-if="!auth.isLoggedIn" to="/" class="btn btn-ghost btn-sm">Home</RouterLink>
       </div>
     </div>
 

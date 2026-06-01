@@ -63,8 +63,10 @@ for (const locale of ["es", "de", "ar"]) {
 
       await page.goto("/manager");
       await assertHealthyPage(page, `${locale} manager`);
-      await expect(page.locator(".manager-toolbar")).toBeVisible();
-      await expect(page.locator(".manager-toolbar button")).toHaveCount(2);
+      // Master–detail Meet Manager: the "+ New event" action in the
+      // detail header proves the page mounted in this locale (the
+      // button text is not translated, so it's locale-stable).
+      await expect(page.getByRole("button", { name: /\+ New event/i })).toBeVisible();
 
       const dir = await page.evaluate(() => document.documentElement.getAttribute("dir"));
       expect(dir).toBe(locale === "ar" ? "rtl" : "ltr");

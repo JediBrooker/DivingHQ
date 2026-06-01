@@ -91,7 +91,7 @@ module.exports = function createAuthRouter({
       // change that responds with the row directly can't leak the
       // password hash if it was never selected.
       const result = await pool.query(
-        "SELECT id, password, email_verified_at, totp_enabled_at, deleted_at FROM users WHERE username = $1",
+        "SELECT id, password, email_verified_at, totp_enabled_at, deleted_at, suspended_at FROM users WHERE username = $1",
         [username],
       );
       const user = result.rows[0];
@@ -109,6 +109,17 @@ module.exports = function createAuthRouter({
       const passwordOk = await bcrypt.compare(password, hashToCheck || DUMMY_BCRYPT_HASH);
       if (!user || user.deleted_at != null || !passwordOk)
         return res.status(401).json({ error: "Invalid username or password" });
+
+      // Migration 058: an org admin can suspend an account. With a
+      // correct password but a suspended flag, return a clear,
+      // distinct message (the legitimate owner knows the password,
+      // so this leaks nothing useful to an attacker).
+      if (user.suspended_at != null) {
+        return res.status(403).json({
+          error: "Your account has been suspended. Contact your federation administrator.",
+          code: "account_suspended",
+        });
+      }
 
       // Migration 021: registrations must verify their email
       // before they can sign in. Existing users were grandfathered

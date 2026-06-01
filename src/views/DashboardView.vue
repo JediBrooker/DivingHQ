@@ -33,7 +33,7 @@ import { useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { fmtCloses, fmtRelative } from '@/lib/format'
-import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
+
 
 // Per-role panels — async-imported so each tab's chunk only
 // loads when the user activates it. A diver-only account
@@ -1074,36 +1074,7 @@ function attachSocketHandlers() {
             </button>
           </div>
         </div>
-        <!-- Locale switcher — sits alongside the other account-
-             scoped actions. The chosen language persists to
-             localStorage and is read back by detectInitialLocale()
-             on every app boot, so it carries to every page (and
-             every subsequent sign-in) automatically. -->
-        <LocaleSwitcher />
-        <RouterLink to="/inbox" class="btn btn-ghost">{{ $t('dashboard.inbox') }}</RouterLink>
-        <RouterLink to="/profile" class="btn btn-ghost">{{ $t('dashboard.my_profile') }}</RouterLink>
-        <RouterLink to="/guide" class="btn btn-ghost">{{ $t('dashboard.user_guide') }}</RouterLink>
-        <button class="btn btn-ghost" @click="logout">{{ $t('dashboard.sign_out') }}</button>
       </div>
-      <!-- Secondary nav row — right-aligned beneath the account
-           buttons, sitting just above the header bottom border.
-           Scoreboard is the one persistent destination useful to
-           every role (operators want to glance at standings
-           between dives; spectators land here first). Lives in
-           the dashboard chrome rather than a tab so it's
-           reachable regardless of which role tab is active.
-           Styled as a loud cyan button rather than a quiet
-           text link so it actually catches the eye. -->
-      <nav class="header-secondary-nav" aria-label="Secondary">
-        <RouterLink to="/scoreboard" class="header-secondary-link">
-          <span class="header-secondary-link-icon" aria-hidden="true">🏆</span>
-          <span>{{ $t('dashboard.secondary_scoreboard') }}</span>
-        </RouterLink>
-        <RouterLink to="/judges" class="header-secondary-link">
-          <span class="header-secondary-link-icon" aria-hidden="true">⚖️</span>
-          <span>{{ $t('dashboard.secondary_judges') }}</span>
-        </RouterLink>
-      </nav>
     </div>
 
     <!-- Pulse strip — always-visible cross-role digest. Each
@@ -1303,7 +1274,7 @@ function attachSocketHandlers() {
 .header-inner {
   display: flex; align-items: flex-start; justify-content: space-between;
   flex-wrap: wrap; gap: 1rem;
-  padding: 2.5rem 2rem 2rem;
+  padding: 1.75rem 2rem 1.5rem;
   max-width: 1400px; margin: 0 auto;
   border-bottom: 1px solid var(--border);
   min-width: 0;
@@ -1315,18 +1286,20 @@ function attachSocketHandlers() {
   min-width: 0;
   flex: 1 1 auto;
 }
-.welcome-label { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text); margin-bottom: 0.5rem; }
-.welcome-label span { color: var(--cyan); }
+/* Brand lockup is provided by the app shell now — hide the
+   duplicate in the dashboard's own header. */
+.welcome-label { display: none; }
 .welcome-name  {
-  font-family: var(--font-display); font-weight: 900; font-style: italic;
-  line-height: 1; color: var(--text);
-  font-size: clamp(32px, 6vw, 56px);
+  font-family: var(--font-sans); font-weight: 600; font-style: normal;
+  letter-spacing: -0.02em;
+  line-height: 1.1; color: var(--fg);
+  font-size: clamp(24px, 4vw, 34px);
   word-break: break-word;
 }
 .role-line {
-  font-family: var(--font-display); font-size: 11px; font-weight: 600;
-  letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-3);
-  margin-top: 0.5rem;
+  font-family: var(--font-sans); font-size: 13px; font-weight: 400;
+  letter-spacing: 0; text-transform: none; color: var(--fg-2);
+  margin-top: 0.35rem;
   white-space: normal; word-break: break-word;
 }
 
@@ -1343,12 +1316,14 @@ function attachSocketHandlers() {
   gap: 0.85rem;
   margin-top: 0.5rem;
 }
+.header-secondary-link-icon { display: inline-flex; align-items: center; }
+.hs-ic { width: 16px; height: 16px; }
 .header-secondary-link {
   display: inline-flex; align-items: center; gap: 0.5rem;
-  font-family: var(--font-display);
-  font-size: 12px; font-weight: 800;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--cyan);
+  font-family: var(--font-sans);
+  font-size: 12.5px; font-weight: 600;
+  letter-spacing: 0; text-transform: none;
+  color: var(--accent);
   text-decoration: none;
   padding: 0.55rem 1rem;
   border: 1px solid rgba(6,182,212,0.45);
@@ -1387,7 +1362,11 @@ function attachSocketHandlers() {
   gap: 0.5rem;
   flex-shrink: 0;
 }
-.header-account .btn { text-decoration: none; white-space: nowrap; }
+.header-account .btn {
+  /* Redundant inside the app shell — Inbox, My Profile, User Guide
+     and Sign Out are provided by the sidebar + topbar user menu. */
+  display: none;
+}
 
 /* Find Diver — typeahead lives in the top-right account row.
    Wrapper provides the relative-positioning anchor for the
@@ -1753,21 +1732,21 @@ function attachSocketHandlers() {
    not a button. Hover paints a hint so the strip feels
    interactive even before any click. */
 .tab-strip {
-  display: flex; align-items: stretch; gap: 0.15rem;
+  display: flex; align-items: stretch; gap: 0.5rem;
   flex-wrap: wrap;
-  max-width: 1400px; margin: 1.5rem auto 0;
+  max-width: none; margin: 1.5rem 0 0;
   padding: 0 2rem;
   border-bottom: 1px solid var(--border);
 }
 .tab {
   background: transparent; border: 0;
-  padding: 0.95rem 1.4rem;
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 800;
-  font-style: italic;
-  letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--text-3);
+  padding: 0.8rem 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  font-style: normal;
+  letter-spacing: 0; text-transform: none;
+  color: var(--fg-2);
   cursor: pointer;
   border-bottom: 3px solid transparent;
   margin-bottom: -1px;
@@ -1780,14 +1759,15 @@ function attachSocketHandlers() {
   background: var(--bg-3);
 }
 .tab-active {
-  color: var(--cyan);
-  border-bottom-color: var(--cyan);
-  background: rgba(6, 182, 212, 0.06);
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: transparent;
+  font-weight: 600;
 }
 .tab-active:hover {
   /* Don't darken the active tab on hover — it should read as
      "you are here", not "you can click this". */
-  background: rgba(6, 182, 212, 0.06);
+  background: transparent;
 }
 .tab-badge {
   font-family: var(--font-mono);
@@ -1801,8 +1781,9 @@ function attachSocketHandlers() {
   color: inherit;
 }
 .tab-active .tab-badge {
-  background: var(--cyan-dim);
-  border-color: var(--cyan);
+  background: var(--accent-soft);
+  border-color: var(--accent-soft-2);
+  color: var(--accent);
 }
 
 /* Panel + per-role panel CSS lives in public/css/app.css so

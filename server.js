@@ -622,7 +622,15 @@ app.use(require("./routes/users")({
   // Self-delete + claim endpoints (Migration 053) — rate-limited
   // so a hijacked session can't brute-force the password gate.
   bulkWriteLimiter,
+  // Org-admin profile edit + account lifecycle (Migration 058).
+  sendVerifyEmailEmail,
+  sendPasswordResetEmail,
+  hashFingerprint,
+  JWT_SECRET,
 }));
+
+// Club-change requests + cross-org transfers (Migration 057).
+app.use(require("./routes/club-changes")({ pool, verifyToken }));
 
 // =============================================================
 // MEET ROUTES

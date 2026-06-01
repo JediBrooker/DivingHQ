@@ -1957,7 +1957,7 @@ function toggleStandingsProjection() {
 // the always-visible canvas). Each is a simple ref + a small
 // outside-click handler that closes when the user clicks
 // anywhere off the menu's wrapper.
-const headerMenuOpen  = ref(false)   // Hold / Broadcast / Dashboard
+const headerMenuOpen  = ref(false)   // Hold / Sponsor / Finalise-early / Manual
 const adjustMenuOpen  = ref(false)   // Failed Dive / Cap Score / Re-Dive
 const autoNextMenuOpen = ref(false)  // Auto-next: Manual / 5s / 10s / …
 const kbdHintsOpen    = ref(false)   // ? popover with all shortcuts
@@ -1966,6 +1966,19 @@ const kbdHintsOpen    = ref(false)   // ? popover with all shortcuts
 // in the Control Room. The value is the row's originalIdx,
 // or -1 when nothing is open.
 const rosterMenuOpenIdx = ref(-1)
+
+// The ⋯ overflow menu only earns its slot when at least one of
+// its contextual actions is live. Broadcast was promoted to a
+// standalone button (left of the event picker), so on a Completed
+// event with nothing else to offer, the menu — and its ⋯ trigger
+// — disappear entirely. It returns for Live events that expose
+// Hold / Sponsor branding / Finalise-early / Manual score entry.
+const headerMenuHasItems = computed(() =>
+  (!!currentEvent.value && currentEvent.value.status !== 'Completed' && !isHeld.value)
+  || (!!currentEvent.value && !!currentEvent.value.meet_id && !opsBroadcast.value)
+  || finaliseEarlyVisible.value
+  || !!currentActive.value,
+)
 
 function closeOverflowMenus() {
   headerMenuOpen.value = false
@@ -2621,6 +2634,9 @@ const availableRounds = computed(() => {
 const UP_NEXT_DEFAULT_LIMIT = 3
 const upNextShowAll = ref(false)
 const upNextDives = computed(() => {
+  // A finished event has nobody "up next" — the meet is over, so
+  // the queue panel hides entirely (it's gated on length below).
+  if (currentEvent.value?.status === 'Completed') return []
   if (!roster.value.length) return []
   // Start one past the active row. When no row is active (pre-
   // meet, or just after a randomise), start from the beginning.
@@ -2638,6 +2654,7 @@ const upNextDives = computed(() => {
 // (N)" copy on the toggle so the operator knows how much they're
 // expanding into.
 const upNextTotal = computed(() => {
+  if (currentEvent.value?.status === 'Completed') return 0
   if (!roster.value.length) return 0
   const start = currentIndex.value >= 0 ? currentIndex.value + 1 : 0
   let n = 0
@@ -3281,7 +3298,14 @@ async function onEventChange() {
   loadDiveOffs()
   loadTiedSuggestion()
 
-  ;[...histData].reverse().forEach(h => {
+  // The /history endpoint returns dives ascending (round ASC,
+  // name ASC); addHistoryCard() unshifts each card, so iterating
+  // in natural order leaves the last-iterated (latest round /
+  // diver) on TOP — reverse-chronological, matching the live path
+  // where each completed dive is unshifted as it lands. (A stray
+  // .reverse() here used to cancel the unshift and render the
+  // list oldest-first.)
+  ;[...histData].forEach(h => {
     addHistoryCard({
       diverName: h.diverName || h.full_name,
       country_code: h.country_code,
@@ -3313,7 +3337,36 @@ async function onEventChange() {
   socket.emit('get_meet_hold', { event_id: selectedEventId.value })
 
   if (roster.value.length) {
-    setActive(0)
+    if (currentEvent.value.status === 'Completed') {
+      // Finished event — review mode. We deliberately do NOT call
+      // setActive(): that emits set_active_diver to the spectator
+      // scoreboard and starts the 60s shot clock, neither of which
+      // belongs on a completed meet. Instead point the position
+      // counter at the final dive (so the header reads "Round N / N
+      // · Diver M / M" rather than misleadingly claiming we're back
+      // at diver 1 of round 1) and leave currentActive null — that
+      // keeps the shot clock + READY/DIVING status pill hidden and
+      // stops the activeStatus watcher from emitting a live diver.
+      const last = roster.value[roster.value.length - 1]
+      currentIndex.value = roster.value.length - 1
+      currentActive.value = null
+      activeInfo.value = {
+        name: last.full_name,
+        country: last.country_code || null,
+        code: `${last.dive_code}${last.position}`,
+        dd: `DD ${last.dd}`,
+        desc: diveDescription(last) || '—',
+        team_name: last.team_name || null,
+        partner_name: last.partner_name || null,
+        partner_country: last.partner_country || null,
+        round_number: currentEvent.value.total_rounds || last.round_number,
+        club_name: last.club_name || null,
+        club_code: last.club_code || null,
+      }
+      updateNextButton(false)
+    } else {
+      setActive(0)
+    }
   } else {
     activeInfo.value = { name: 'No divers registered', code: '—', dd: 'DD —', desc: 'No competitors have submitted dive lists.' }
   }
@@ -3411,19 +3464,10 @@ onUnmounted(() => {
          "CONNECTED" pill. With grid the three regions occupy real
          columns and can never overlap. -->
     <div class="ctrl-header">
-      <!-- Left: brand + connection chip. Picker moved out of the
-           left group into the centre so the page title (event
-           name) reads as the page title it actually is. -->
-      <div class="ctrl-header-left">
-        <RouterLink to="/dashboard" class="app-logo" style="font-size:16px">DIVING<span>HQ</span></RouterLink>
-        <span class="conn-badge"
-              v-tip="socket.isConnected.value
-                ? 'Live socket connection healthy — score events are streaming in real time'
-                : 'Re-establishing socket connection — incoming scores are queued until this turns green'">
-          <span class="status-dot" :class="{ connected: socket.isConnected.value }"></span>
-          <span class="conn-badge-label">{{ socket.isConnected.value ? 'Connected' : 'Connecting' }}</span>
-        </span>
-      </div>
+      <!-- The connection chip moved into the active-diver strip and
+           the Broadcast launcher moved to the right-hand button
+           cluster, so the header's left side is just the event
+           picker + status now. -->
       <!-- Centre: event picker dressed as the page title. Native
            <select> styled to look like a clickable heading — large
            display font, chevron affordance, hover/focus border.
@@ -3437,7 +3481,7 @@ onUnmounted(() => {
             <select class="event-title-select event-select-sm"
                     v-model="selectedEventId"
                     @change="onEventChange"
-                    v-tip="'Switch to a different event'">
+                    v-tip:bottom="'Switch to a different event'">
               <option value="">— Select Event —</option>
               <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
             </select>
@@ -3471,19 +3515,19 @@ onUnmounted(() => {
           v-if="isHeld"
           class="btn-hold btn-hold-active"
           @click="resumeMeet"
-          v-tip="'Resume the meet (H)'"
+          v-tip:bottom="'Resume the meet (H)'"
         >▶ {{ $t('control.resume') }}</button>
         <!-- Overflow menu — secondary chrome that the operator
              touches infrequently. Clicking the ⋯ toggles a small
              popover; the global mousedown listener closes it on
              outside-click. Each item closes the menu after firing
              so a re-click opens, click-once-action closes. -->
-        <div class="dropdown-host header-menu-host">
+        <div v-if="headerMenuHasItems" class="dropdown-host header-menu-host">
           <button
             class="btn-back btn-icon"
             @click.stop="toggleMenu('header')"
             :aria-expanded="headerMenuOpen"
-            v-tip="'More actions'"
+            v-tip:bottom="'More actions'"
           >⋯</button>
           <div v-if="headerMenuOpen" class="dropdown-menu header-menu">
             <button
@@ -3491,11 +3535,6 @@ onUnmounted(() => {
               class="dropdown-item"
               @click="openHoldPrompt(); headerMenuOpen = false"
             >⏸ {{ $t('control.hold') }}</button>
-            <button
-              v-if="currentEvent && !opsBroadcast"
-              class="dropdown-item"
-              @click="broadcastChoiceOpen = true; headerMenuOpen = false"
-            >📺 {{ $t('control.broadcast_menu') }}</button>
             <!-- Sponsor branding — only when the current event
                  lives inside a meet (sponsor is meet-scoped). -->
             <button
@@ -3519,14 +3558,17 @@ onUnmounted(() => {
               @click="finaliseEvent(); headerMenuOpen = false"
               v-tip="'Finalise the meet now even though dives are still pending. Use sparingly — postponement, equipment failure, etc.'"
             >✓ Finalise event early…</button>
-            <RouterLink to="/dashboard" class="dropdown-item"
-                        @click="headerMenuOpen = false">← Dashboard</RouterLink>
+            <button
+              v-if="currentActive"
+              class="dropdown-item"
+              @click="openManualEntry(); headerMenuOpen = false"
+            >Manual score entry</button>
           </div>
         </div>
         <button
           v-if="finaliseBtnShow"
           class="btn-finalise"
-          v-tip="finaliseBtnTitle"
+          v-tip:bottom="finaliseBtnTitle"
           @click="currentEvent?.status === 'Completed' ? showLeaderboard() : finaliseEvent()"
         >{{ finaliseBtnText }}</button>
         <!-- Judge Ranking Analysis — only relevant for Completed
@@ -3538,9 +3580,18 @@ onUnmounted(() => {
         <button
           v-if="currentEvent?.status === 'Completed'"
           class="btn-finalise btn-judge-ranking"
-          v-tip="'Show how the standings would change if every judge had scored unanimously like one specific judge'"
+          v-tip:bottom="'Show how the standings would change if every judge had scored unanimously like one specific judge'"
           @click="judgeRankingOpen = true"
-        >Judge Ranking Analysis</button>
+        >Judge Analysis</button>
+        <!-- Broadcast launcher — far-right of the header. Opens the
+             broadcast chooser (projector / stream / OBS / venue
+             scoreboard bridge). -->
+        <button
+          v-if="currentEvent && !opsBroadcast"
+          class="btn-back btn-broadcast"
+          @click="broadcastChoiceOpen = true"
+          v-tip:bottom="'Broadcast this event — projector, stream overlay, OBS, or venue scoreboard'"
+        >{{ $t('control.broadcast_menu') }}</button>
       </div>
     </div>
 
@@ -4209,7 +4260,7 @@ onUnmounted(() => {
               <span v-if="card.dd != null" class="hist-dd">DD {{ card.dd.toFixed(1) }}</span>
               <span v-if="card.desc" class="hist-desc">{{ card.desc }}</span>
             </div>
-            <div v-if="card.scores.length" class="hist-scores">
+            <div v-if="card.scores.length" :class="['hist-scores', !isSynchroEvent ? 'hist-scores-box' : '']">
               <!-- Synchro: group scores into Exec A / Exec B / Sync
                    using the same shared helper the Scoreboard view
                    uses. Falls back to flat chips for individual /
@@ -4227,7 +4278,9 @@ onUnmounted(() => {
                 </div>
               </template>
               <template v-else>
-                <span v-for="(s, si) in card.scores" :key="si" class="hist-score">{{ s.toFixed(1) }}</span>
+                <span v-for="(j, si) in annotatedScores(card.scores.join(','), card.scores.length)" :key="si"
+                      :class="['hist-score', j.dropped ? 'j-dropped' : '']"
+                      v-tip="j.dropped ? 'Dropped by trim rule' : ''">{{ j.value.toFixed(1) }}</span>
               </template>
             </div>
           </div>
@@ -4279,6 +4332,16 @@ onUnmounted(() => {
               <span v-if="roster.length">
                 Diver <strong>{{ currentIndex + 1 }}</strong> / {{ roster.length }}
               </span>
+            </span>
+            <!-- Connection chip — relocated here from the header.
+                 margin-auto (CSS) right-aligns it in the strip, ahead
+                 of the shot clock. -->
+            <span class="conn-badge"
+                  v-tip:bottom="socket.isConnected.value
+                    ? 'Live socket connection healthy — score events are streaming in real time'
+                    : 'Re-establishing socket connection — incoming scores are queued until this turns green'">
+              <span class="status-dot" :class="{ connected: socket.isConnected.value }"></span>
+              <span class="conn-badge-label">{{ socket.isConnected.value ? 'Connected' : 'Connecting' }}</span>
             </span>
             <div v-if="currentActive" :class="['shot-clock', shotClockClass]">
               <button class="shot-clock-face" @click="pauseShotClock"
@@ -4600,7 +4663,7 @@ onUnmounted(() => {
              `.dive-order-head`; the duplicate name was shadowing
              its layout rules. -->
         <div class="panel-head pre-meet-head">
-          <div class="pre-meet-title">Pre-Meet</div>
+          <div class="pre-meet-title">{{ orderWorkflowState === 'live' ? 'Live scoring' : 'Pre-Meet' }}</div>
           <!-- Pre-meet workflow stepper — shows all four steps
                with the current one highlighted and completed
                ones ticked. Renders ABOVE the action button so

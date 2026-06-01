@@ -470,12 +470,11 @@ onMounted(loadDives)
 </template>
 
 <style scoped>
-.page-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 1.5rem 2rem; border-bottom: 1px solid var(--border);
-  max-width: 1400px; margin: 0 auto;
-}
-.page-title { font-size: 36px; font-style: italic; }
+/* Title is redundant with the shell breadcrumb — hidden. */
+.page-header { display: none; }
+/* Back-to-dashboard is redundant inside the app shell sidebar. */
+.page-header .btn { display: none; }
+.page-title { font-size: var(--text-h1); font-weight: 600; font-style: normal; letter-spacing: -0.015em; }
 .page-sub {
   max-width: 1400px; margin: 0 auto; padding: 0 2rem;
   color: var(--text-3); font-size: 13px; line-height: 1.6;
@@ -489,7 +488,7 @@ onMounted(loadDives)
   margin-bottom: 1rem;
 }
 .stat { padding: 0.4rem 1rem; }
-.stat-num { font-family: var(--font-display); font-size: 26px; font-weight: 900; font-style: italic; }
+.stat-num { font-family: var(--font-mono); font-size: 26px; font-weight: 500; font-style: normal; }
 .stat-label { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-3); }
 .stat-cyan .stat-num { color: var(--cyan); }
 
@@ -517,7 +516,8 @@ onMounted(loadDives)
   padding: 1.25rem; margin-bottom: 1rem;
 }
 .create-head {
-  font-family: var(--font-display); font-size: 16px; font-weight: 800; font-style: italic;
+  font-family: var(--font-sans); font-size: 16px; font-weight: 600; font-style: normal;
+  letter-spacing: -0.01em;
   margin-bottom: 0.4rem;
 }
 .create-help { font-size: 12px; color: var(--text-3); margin-bottom: 1rem; line-height: 1.6; }

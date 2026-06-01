@@ -104,13 +104,82 @@ function apply(el, value, pos) {
   if (el.hasAttribute("title")) el.removeAttribute("title");
 }
 
+// =============================================================
+// Fixed-position bubble — opt in with `v-tip.fixed="…"`.
+//
+// The default tooltip is a CSS ::after pseudo on the host, which a
+// scrolling/overflow ancestor clips (e.g. the wide judge-ranking
+// matrix uses overflow-x:auto, so cell tooltips get cut off at the
+// container edge). In fixed mode the bubble is a position:fixed
+// node appended to <body>, positioned from the host's bounding
+// rect, so nothing clips it. It sits above the host by default and
+// flips below when it would run off the top of the viewport.
+// =============================================================
+function positionFixedTip(el, bubble) {
+  const r = el.getBoundingClientRect();
+  const bw = bubble.offsetWidth;
+  const bh = bubble.offsetHeight;
+  let top = r.top - bh - 8;
+  if (top < 4) top = r.bottom + 8;
+  let left = r.left + r.width / 2 - bw / 2;
+  left = Math.max(6, Math.min(left, window.innerWidth - bw - 6));
+  bubble.style.top = `${Math.round(top)}px`;
+  bubble.style.left = `${Math.round(left)}px`;
+}
+function showFixedTip(el) {
+  const text = el.getAttribute("data-tip");
+  if (!text) return;
+  hideFixedTip(el);
+  const bubble = document.createElement("div");
+  bubble.className = "tip-fixed";
+  bubble.setAttribute("role", "tooltip");
+  bubble.textContent = text;
+  document.body.appendChild(bubble);
+  el.__tipFixedNode = bubble;
+  positionFixedTip(el, bubble);
+  requestAnimationFrame(() => bubble.classList.add("tip-fixed-show"));
+}
+function hideFixedTip(el) {
+  if (el.__tipFixedNode) {
+    el.__tipFixedNode.remove();
+    el.__tipFixedNode = null;
+  }
+}
+function attachFixed(el) {
+  if (el.__tipFixedHandlers) return;
+  const show = () => showFixedTip(el);
+  const hide = () => hideFixedTip(el);
+  el.addEventListener("mouseenter", show);
+  el.addEventListener("mouseleave", hide);
+  el.addEventListener("focusin", show);
+  el.addEventListener("focusout", hide);
+  // A scroll anywhere can slide the host out from under the bubble.
+  window.addEventListener("scroll", hide, true);
+  el.__tipFixedHandlers = { show, hide };
+}
+function detachFixed(el) {
+  const h = el.__tipFixedHandlers;
+  if (!h) return;
+  el.removeEventListener("mouseenter", h.show);
+  el.removeEventListener("mouseleave", h.hide);
+  el.removeEventListener("focusin", h.show);
+  el.removeEventListener("focusout", h.hide);
+  window.removeEventListener("scroll", h.hide, true);
+  el.__tipFixedHandlers = null;
+  hideFixedTip(el);
+}
+
 export const tipDirective = {
-  mounted(el, binding) { apply(el, binding.value, binding.arg); },
-  updated(el, binding) {
-    if (binding.value === binding.oldValue) return;
+  mounted(el, binding) {
     apply(el, binding.value, binding.arg);
+    if (binding.modifiers && binding.modifiers.fixed) attachFixed(el);
+  },
+  updated(el, binding) {
+    if (binding.value !== binding.oldValue) apply(el, binding.value, binding.arg);
+    if (binding.modifiers && binding.modifiers.fixed) attachFixed(el);
   },
   unmounted(el) {
+    detachFixed(el);
     el.removeAttribute("data-tip");
     if (el.__tipAriaApplied) el.removeAttribute("aria-label");
     delete el.__tipAriaApplied;

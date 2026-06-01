@@ -533,12 +533,10 @@ watch(() => drawerTeam.value, (val) => {
 </template>
 
 <style scoped>
-.page-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 1.5rem 2rem; border-bottom: 1px solid var(--border);
-  max-width: 1400px; margin: 0 auto;
-}
-.page-title { font-size: 36px; font-style: italic; }
+/* Title is redundant with the shell breadcrumb — hidden. */
+.page-header { display: none; }
+.page-header .btn { display: none; }
+.page-title { font-size: var(--text-h1); font-weight: 600; font-style: normal; letter-spacing: -0.015em; }
 .main { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
 
 .stats-strip {
@@ -548,7 +546,7 @@ watch(() => drawerTeam.value, (val) => {
   border-radius: var(--radius-lg);
 }
 .stat { min-width: 70px; }
-.stat-num { font-family: var(--font-display); font-size: 24px; font-weight: 900; font-style: italic; color: var(--text); line-height: 1; }
+.stat-num { font-family: var(--font-mono); font-size: 24px; font-weight: 500; font-style: normal; color: var(--fg); line-height: 1; }
 .stat-amber .stat-num { color: var(--amber); }
 .stat-label { font-family: var(--font-display); font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-3); margin-top: 0.25rem; }
 
@@ -636,7 +634,7 @@ watch(() => drawerTeam.value, (val) => {
   border-bottom: 1px solid var(--border);
 }
 .drawer-id { min-width: 0; }
-.drawer-name { font-family: var(--font-display); font-size: 22px; font-weight: 900; font-style: italic; color: var(--text); line-height: 1.1; }
+.drawer-name { font-family: var(--font-sans); font-size: 22px; font-weight: 600; font-style: normal; letter-spacing: -0.01em; color: var(--fg); line-height: 1.1; }
 .drawer-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); margin-top: 0.4rem; }
 /* `overflow-x: clip` prevents CSS's promote-to-auto from
    making the body silently horizontally scrollable. Bottom

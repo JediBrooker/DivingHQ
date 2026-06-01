@@ -52,6 +52,8 @@
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
+import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe } from '@lucide/vue'
 
 const WIKI = 'https://github.com/JediBrooker/DivingHQ/wiki'
 
@@ -149,7 +151,10 @@ onBeforeUnmount(() => observer?.disconnect())
          v-tip:bottom="$t('guide.open_wiki_tip')">
         {{ $t('guide.open_wiki') }}
       </a>
-      <LocaleSwitcher class="guide-nav-locale" />
+      <div class="guide-nav-locale guide-nav-actions">
+        <ThemeToggle compact />
+        <LocaleSwitcher />
+      </div>
     </div>
 
     <!-- Hero -->
@@ -185,7 +190,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
           <div class="guide-roles">
             <article class="role-card">
-              <div class="role-icon" aria-hidden="true">🏊</div>
+              <div class="role-icon" aria-hidden="true"><Waves /></div>
               <h3 class="role-name">{{ $t('guide.role.diver.name') }}</h3>
               <p class="role-desc" v-html="$t('guide.role.diver.desc')"></p>
               <ol class="role-steps">
@@ -199,7 +204,7 @@ onBeforeUnmount(() => observer?.disconnect())
             </article>
 
             <article class="role-card">
-              <div class="role-icon" aria-hidden="true">🧑‍⚖️</div>
+              <div class="role-icon" aria-hidden="true"><Gavel /></div>
               <h3 class="role-name">{{ $t('guide.role.judge.name') }}</h3>
               <p class="role-desc" v-html="$t('guide.role.judge.desc')"></p>
               <ol class="role-steps">
@@ -213,7 +218,7 @@ onBeforeUnmount(() => observer?.disconnect())
             </article>
 
             <article class="role-card">
-              <div class="role-icon" aria-hidden="true">🎓</div>
+              <div class="role-icon" aria-hidden="true"><GraduationCap /></div>
               <h3 class="role-name">{{ $t('guide.role.coach.name') }}</h3>
               <p class="role-desc" v-html="$t('guide.role.coach.desc')"></p>
               <ol class="role-steps">
@@ -228,7 +233,7 @@ onBeforeUnmount(() => observer?.disconnect())
             </article>
 
             <article class="role-card">
-              <div class="role-icon" aria-hidden="true">🎮</div>
+              <div class="role-icon" aria-hidden="true"><MonitorPlay /></div>
               <h3 class="role-name">{{ $t('guide.role.meet_manager.name') }}</h3>
               <p class="role-desc" v-html="$t('guide.role.meet_manager.desc')"></p>
               <ol class="role-steps">
@@ -243,7 +248,7 @@ onBeforeUnmount(() => observer?.disconnect())
             </article>
 
             <article class="role-card">
-              <div class="role-icon" aria-hidden="true">🏛️</div>
+              <div class="role-icon" aria-hidden="true"><Building2 /></div>
               <h3 class="role-name">{{ $t('guide.role.org_admin.name') }}</h3>
               <p class="role-desc" v-html="$t('guide.role.org_admin.desc')"></p>
               <ol class="role-steps">
@@ -261,7 +266,7 @@ onBeforeUnmount(() => observer?.disconnect())
             </article>
 
             <article class="role-card">
-              <div class="role-icon" aria-hidden="true">🌐</div>
+              <div class="role-icon" aria-hidden="true"><Globe /></div>
               <h3 class="role-name">{{ $t('guide.role.spectator.name') }}</h3>
               <p class="role-desc" v-html="$t('guide.role.spectator.desc')"></p>
               <ol class="role-steps">
@@ -450,6 +455,7 @@ onBeforeUnmount(() => observer?.disconnect())
 /* Language picker sits at the inline-end of the nav row, opposite
    the Back / Wiki buttons (RTL-aware). */
 .guide-nav-locale { margin-inline-start: auto; }
+.guide-nav-actions { display: flex; align-items: center; gap: 0.5rem; }
 
 /* Hero */
 .guide-hero {
@@ -459,17 +465,18 @@ onBeforeUnmount(() => observer?.disconnect())
   scroll-margin-top: 1rem;
 }
 .guide-eyebrow {
-  font-family: var(--font-display);
-  font-size: 11px; font-weight: 700;
-  letter-spacing: 0.3em; text-transform: uppercase;
-  color: var(--cyan);
+  font-family: var(--font-sans);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--accent);
   margin-bottom: 0.75rem;
 }
 .guide-title {
-  font-family: var(--font-display);
-  font-size: clamp(32px, 5vw, 52px);
-  font-weight: 900; font-style: italic;
-  color: var(--text); line-height: 1.05;
+  font-family: var(--font-sans);
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 600; font-style: normal;
+  letter-spacing: -0.02em;
+  color: var(--fg); line-height: 1.15;
   margin: 0 0 1rem;
 }
 /* "Welcome to DivingHQ" — the brand mark sits inside the
@@ -479,9 +486,9 @@ onBeforeUnmount(() => observer?.disconnect())
 .guide-title-brand { color: var(--text); }
 .guide-title-brand span { color: var(--cyan); }
 .guide-lede {
-  font-family: var(--font-mono);
-  font-size: 14px; line-height: 1.7;
-  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: 15px; line-height: 1.6;
+  color: var(--fg-2);
   max-width: 680px;
   margin: 0;
 }
@@ -500,16 +507,16 @@ onBeforeUnmount(() => observer?.disconnect())
   position: sticky;
   top: 1rem;
   align-self: flex-start;
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
   border-inline-start: 1px solid var(--border);
   padding-inline-start: 1rem;
 }
 .guide-toc-label {
-  font-family: var(--font-display);
-  font-size: 10px; font-weight: 700;
-  letter-spacing: 0.3em; text-transform: uppercase;
-  color: var(--text-3);
+  font-family: var(--font-sans);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--fg-3);
   margin-bottom: 0.75rem;
 }
 .guide-toc-list {
@@ -541,15 +548,16 @@ onBeforeUnmount(() => observer?.disconnect())
   scroll-margin-top: 1rem;
 }
 .guide-h2 {
-  font-family: var(--font-display);
-  font-size: 20px; font-weight: 800; font-style: italic;
-  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 20px; font-weight: 600; font-style: normal;
+  letter-spacing: -0.01em;
+  color: var(--fg);
   margin: 0 0 1.25rem;
 }
 .guide-section-lede {
-  font-family: var(--font-mono);
-  font-size: 12.5px; line-height: 1.7;
-  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: 13.5px; line-height: 1.6;
+  color: var(--fg-2);
   margin: 0 0 1.25rem;
   max-width: 680px;
 }
@@ -564,51 +572,54 @@ onBeforeUnmount(() => observer?.disconnect())
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   padding: 1.25rem 1.35rem 1.1rem;
   display: flex; flex-direction: column; gap: 0.65rem;
-  transition: border-color 0.15s, transform 0.15s;
+  transition: box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .role-card:hover {
-  border-color: rgba(6, 182, 212, 0.45);
-  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
-.role-icon { font-size: 28px; line-height: 1; }
+.role-icon { line-height: 1; color: var(--accent); }
+.role-icon svg { width: 28px; height: 28px; }
 .role-name {
-  font-family: var(--font-display);
-  font-size: 18px; font-weight: 900; font-style: italic;
-  color: var(--text); margin: 0;
+  font-family: var(--font-sans);
+  font-size: 16px; font-weight: 600; font-style: normal;
+  letter-spacing: -0.01em;
+  color: var(--fg); margin: 0;
 }
 .role-desc {
-  font-family: var(--font-mono);
-  font-size: 12px; line-height: 1.6;
-  color: var(--text-3); margin: 0;
+  font-family: var(--font-sans);
+  font-size: 13px; line-height: 1.6;
+  color: var(--fg-2); margin: 0;
 }
-.role-desc strong { color: var(--text-2); font-weight: 600; }
+.role-desc strong { color: var(--fg); font-weight: 600; }
 .role-steps {
-  font-family: var(--font-mono);
-  font-size: 12px; line-height: 1.55;
-  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: 13px; line-height: 1.55;
+  color: var(--fg-2);
   margin: 0; padding-inline-start: 1.2rem;
-  display: flex; flex-direction: column; gap: 0.3rem;
+  display: flex; flex-direction: column; gap: 0.35rem;
 }
 .role-steps strong {
-  color: var(--cyan);
-  font-weight: 700;
-  font-family: var(--font-display);
-  letter-spacing: 0.03em;
+  color: var(--fg);
+  font-weight: 600;
+  font-family: var(--font-sans);
+  letter-spacing: 0;
 }
 .role-steps a { color: var(--cyan); text-decoration: none; }
 .role-steps a:hover { text-decoration: underline; }
 .role-cta {
-  font-family: var(--font-display);
-  font-size: 11px; font-weight: 700;
-  letter-spacing: 0.15em; text-transform: uppercase;
-  color: var(--cyan); text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: 12.5px; font-weight: 600;
+  letter-spacing: 0; text-transform: none;
+  color: var(--accent); text-decoration: none;
   margin-top: 0.35rem;
   align-self: flex-start;
   transition: color 0.12s, transform 0.12s;
 }
-.role-cta:hover { color: var(--text); transform: translateX(2px); }
+.role-cta:hover { color: var(--accent-hover); transform: translateX(2px); }
 
 /* Quick-action tiles */
 .guide-tiles {
@@ -624,11 +635,13 @@ onBeforeUnmount(() => observer?.disconnect())
   text-decoration: none;
   color: inherit;
   display: flex; flex-direction: column;
-  transition: border-color 0.15s, transform 0.15s;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .guide-tile:hover {
-  border-color: rgba(6, 182, 212, 0.55);
-  transform: translateY(-1px);
+  border-color: var(--border-2);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 .guide-tile-thumb {
   position: relative;
@@ -662,14 +675,14 @@ onBeforeUnmount(() => observer?.disconnect())
   display: flex; flex-direction: column; gap: 0.2rem;
 }
 .guide-tile-label {
-  font-family: var(--font-display);
-  font-size: 14px; font-weight: 800; font-style: italic;
-  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px; font-weight: 600; font-style: normal;
+  color: var(--fg);
 }
 .guide-tile-sub {
-  font-family: var(--font-mono);
-  font-size: 11px; line-height: 1.5;
-  color: var(--text-3);
+  font-family: var(--font-sans);
+  font-size: 12px; line-height: 1.5;
+  color: var(--fg-2);
 }
 
 /* Keyboard shortcuts */
@@ -700,7 +713,8 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 .guide-shortcut-desc {
   margin: 0;
-  color: var(--text-2);
+  font-family: var(--font-sans);
+  color: var(--fg-2);
   align-self: center;
   line-height: 1.5;
 }
@@ -713,18 +727,18 @@ onBeforeUnmount(() => observer?.disconnect())
   margin: 0;
 }
 .guide-glossary-term {
-  font-family: var(--font-display);
-  font-size: 13px; font-weight: 800; font-style: italic;
-  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 13px; font-weight: 500; font-style: normal;
+  color: var(--accent);
   margin: 0;
   align-self: start;
   padding-top: 0.1rem;
 }
 .guide-glossary-def {
   margin: 0;
-  font-family: var(--font-mono);
-  font-size: 12.5px; line-height: 1.6;
-  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: 13.5px; line-height: 1.6;
+  color: var(--fg-2);
 }
 
 /* FAQ — <details>/<summary> accordion */
@@ -741,9 +755,9 @@ onBeforeUnmount(() => observer?.disconnect())
   cursor: pointer;
   list-style: none;
   padding: 0.9rem 1rem;
-  font-family: var(--font-display);
-  font-size: 14px; font-weight: 800; font-style: italic;
-  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px; font-weight: 600; font-style: normal;
+  color: var(--fg);
   display: flex; align-items: center; justify-content: space-between;
   gap: 1rem;
   transition: background-color 0.12s;
@@ -760,26 +774,26 @@ onBeforeUnmount(() => observer?.disconnect())
   content: '−';
 }
 .guide-faq-item summary:hover {
-  background: rgba(6, 182, 212, 0.04);
+  background: var(--surface-hover);
 }
 .guide-faq-body {
   padding: 0 1rem 1rem;
-  font-family: var(--font-mono);
-  font-size: 12.5px; line-height: 1.7;
-  color: var(--text-2);
-  border-inline-start: 2px solid var(--cyan);
+  font-family: var(--font-sans);
+  font-size: 13.5px; line-height: 1.65;
+  color: var(--fg-2);
+  border-inline-start: 2px solid var(--accent-soft-2);
   margin: 0 1rem 0.6rem;
   padding-inline-start: 1rem;
 }
-.guide-faq-body strong { color: var(--text); font-weight: 600; }
+.guide-faq-body strong { color: var(--fg); font-weight: 600; }
 .guide-faq-body a { color: var(--cyan); text-decoration: none; }
 .guide-faq-body a:hover { text-decoration: underline; }
 
 /* Where-to-next */
 .guide-next-lede {
-  font-family: var(--font-mono);
-  font-size: 13px; line-height: 1.7;
-  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: 14px; line-height: 1.65;
+  color: var(--fg-2);
   margin: 0 0 0.85rem;
 }
 .guide-next-lede a {
@@ -789,9 +803,9 @@ onBeforeUnmount(() => observer?.disconnect())
 .guide-next-list {
   margin: 0 0 1.5rem; padding-inline-start: 1.2rem;
   display: flex; flex-direction: column; gap: 0.5rem;
-  font-family: var(--font-mono);
-  font-size: 12.5px; line-height: 1.6;
-  color: var(--text-2);
+  font-family: var(--font-sans);
+  font-size: 13.5px; line-height: 1.6;
+  color: var(--fg-2);
 }
 .guide-next-list a {
   color: var(--cyan); text-decoration: none; font-weight: 600;

@@ -48,12 +48,12 @@ const routes = [
   {
     path: '/dashboard',
     component: () => import('@/views/DashboardView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, appShell: true },
   },
   {
     path: '/manager',
     component: () => import('@/views/ManagerView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'] },
+    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'], appShell: true },
   },
   {
     // First-run setup wizard — guides a brand-new org admin
@@ -68,12 +68,12 @@ const routes = [
   {
     path: '/competitor',
     component: () => import('@/views/CompetitorView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['diver'] },
+    meta: { requiresAuth: true, requiresRole: ['diver'], appShell: true },
   },
   {
     path: '/coach',
     component: () => import('@/views/CoachView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['coach'] },
+    meta: { requiresAuth: true, requiresRole: ['coach'], appShell: true },
   },
   {
     // Coach-on-behalf-of dive list editor — Phase 2 of the coach
@@ -86,7 +86,7 @@ const routes = [
   {
     path: '/control',
     component: () => import('@/views/ControlView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager', 'referee'] },
+    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager', 'referee'], appShell: true },
   },
   {
     path: '/judge',
@@ -123,6 +123,17 @@ const routes = [
     // /scoreboard/:eventId/broadcast → projector / kiosk mode
     path: '/scoreboard/:eventId?/:mode?',
     component: () => import('@/views/ScoreboardView.vue'),
+    meta: { appShell: true },
+  },
+  {
+    // Judge Analysis — public-accessible landing surface that
+    // composes the per-event ranking matrix (By Event) and the
+    // public judge directory (By Judge). Shell for signed-in
+    // users, standalone for the public — same stance as
+    // /scoreboard (no requiresAuth; appShell flips the CRM shell).
+    path: '/judge-analysis',
+    component: () => import('@/views/JudgeAnalysisView.vue'),
+    meta: { appShell: true },
   },
   {
     // Multi-event broadcast — one display, every currently-Live
@@ -149,17 +160,17 @@ const routes = [
   {
     path: '/users',
     component: () => import('@/views/UserManagerView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin'] },
+    meta: { requiresAuth: true, requiresRole: ['org_admin'], appShell: true },
   },
   {
     path: '/clubs',
     component: () => import('@/views/ClubsView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'] },
+    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'], appShell: true },
   },
   {
     path: '/teams',
     component: () => import('@/views/TeamsView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'] },
+    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'], appShell: true },
   },
   {
     path: '/teams/:teamId/events/:eventId/dive-list',
@@ -179,14 +190,14 @@ const routes = [
     // the guard below redirects in that case.
     path: '/profile/:id?',
     component: () => import('@/views/DiverProfileView.vue'),
-    meta: { requiresAuthIfNoId: true },
+    meta: { requiresAuthIfNoId: true, appShell: true },
   },
   {
     // Side-by-side diver comparison. Diver IDs in the query string
     // (?a=&b=) so the URL is shareable like the rest of the app.
     path: '/compare',
     component: () => import('@/views/CompareView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, appShell: true },
   },
   {
     path: '/events/:id/audit',
@@ -200,7 +211,7 @@ const routes = [
     // an extra "all orgs" filter inside the view.
     path: '/audit',
     component: () => import('@/views/AuditLogView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin'] },
+    meta: { requiresAuth: true, requiresRole: ['org_admin'], appShell: true },
   },
   {
     // Notifications inbox — every push notification + in-app
@@ -208,7 +219,7 @@ const routes = [
     // authenticated user (each row is scoped server-side).
     path: '/inbox',
     component: () => import('@/views/InboxView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, appShell: true },
   },
   {
     // Diver meet-day view — focused phone-deck experience for
@@ -228,7 +239,7 @@ const routes = [
     // gate themselves on row.is_custom + same-org membership.
     path: '/dive-directory',
     component: () => import('@/views/DiveDirectoryView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, appShell: true },
   },
   {
     // Cut 3 referee sign-off — the page where a referee types

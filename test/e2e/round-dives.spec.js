@@ -149,7 +149,9 @@ test("round-dives: New Event modal has + Add Dive flow (no rounds dropdown)", as
   await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
 
   await page.goto("/manager");
-  await expect(page.getByRole("heading", { name: /Meet Manager/i }))
+  // The page title was dropped in the CRM refresh; gate on the
+  // "+ New event" action instead (it's what we click next).
+  await expect(page.getByRole("button", { name: /\+ New Event/i }))
     .toBeVisible({ timeout: 10_000 });
 
   // The "Number of Rounds" dropdown should be gone — the new
@@ -194,7 +196,9 @@ test("round-dives: suggested templates filter by gender + age group and apply on
   await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
 
   await page.goto("/manager");
-  await expect(page.getByRole("heading", { name: /Meet Manager/i }))
+  // The page title was dropped in the CRM refresh; gate on the
+  // "+ New event" action instead (it's what we click next).
+  await expect(page.getByRole("button", { name: /\+ New Event/i }))
     .toBeVisible({ timeout: 10_000 });
   await page.getByRole("button", { name: /\+ New Event/i }).click();
   await expect(page.locator(".modal-create-event")).toBeVisible();

@@ -248,7 +248,9 @@ test("round-rules: section editor exposes the min-distinct-groups field", async 
   await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
 
   await page.goto("/manager");
-  await expect(page.getByRole("heading", { name: /Meet Manager/i }))
+  // The page title was dropped in the CRM refresh; gate on the
+  // "+ New event" action instead (it's what we click next).
+  await expect(page.getByRole("button", { name: /\+ New Event/i }))
     .toBeVisible({ timeout: 10_000 });
 
   // Migration 039: the New Event form lives in a modal now.

@@ -7,34 +7,29 @@
      the *large* viewport (bar collapsed); with the bar expanded
      a 100vh page is taller than the visible area and produces a
      persistent vertical scroll bounce. */
+  /* Fills the app-shell content area (it lives inside the shell
+     now); the 3-column body flexes and the rails scroll internally. */
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
 }
 .ctrl-header {
-  /* 3-column grid. Left and right tracks are `minmax(0, 1fr)` so
-     they happily shrink to make room for the centre title; the
-     centre track is `auto` so it sizes to its content. Previously
-     this was flex + an absolutely-positioned centre, which let
-     the left group's connection chip slide on top of the meet
-     title at viewport widths around 1300-1400px (the screenshot
-     bug). With grid the three regions are real columns and can
-     never overlap. */
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  /* Flex row: event picker + status pinned left, action buttons
+     (View Results / Judge Analysis / Broadcast) pinned right. The
+     connection chip lives in the active-diver strip now, so the
+     header no longer needs the old 3-column grid. */
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
   padding: 0.875rem 1.5rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg-2);
   flex-shrink: 0;
 }
-.ctrl-header-left {
-  display: flex; align-items: center; gap: 1rem;
-  justify-self: start;
-  min-width: 0;
-}
+/* .ctrl-header-left removed — connection chip moved to the active-
+   diver strip, Broadcast moved to the right cluster. */
+.btn-broadcast { flex-shrink: 0; }
 .ctrl-body {
   flex: 1;                              /* fill the layout vertically */
   display: grid;
@@ -176,7 +171,7 @@
    72px max — even on a 1440-wide monitor a 5vw clamp pushed
    the name + DD badges past a screen-height of layout. The
    active block is information dense; let it look that way. */
-.active-name { font-family: var(--font-display); font-size: clamp(22px, 2.6vw, 36px); font-weight: 900; font-style: italic; color: var(--text); line-height: 1.05; margin-bottom: 0.5rem; }
+.active-name { font-family: var(--font-sans); font-size: clamp(22px, 2.6vw, 34px); font-weight: 600; font-style: normal; letter-spacing: -0.02em; color: var(--fg); line-height: 1.1; margin-bottom: 0.5rem; }
 /* Diving start-order ("1.") prefix in front of the active
    diver's name. Cyan + slightly smaller so the name itself
    stays the hero, but the position number is unmissable. */
@@ -187,7 +182,7 @@
 }
 .active-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
 .active-code { font-family: var(--font-mono); font-size: 18px; font-weight: 500; padding: 0.3rem 0.65rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
-.active-dd { font-family: var(--font-display); font-size: 14px; font-weight: 700; padding: 0.3rem 0.65rem; background: var(--cyan-dim); border: 1px solid rgba(6,182,212,0.3); border-radius: var(--radius); color: var(--cyan); }
+.active-dd { font-family: var(--font-mono); font-size: 14px; font-weight: 500; padding: 0.3rem 0.65rem; background: var(--accent-soft); border: 1px solid var(--accent-soft-2); border-radius: var(--radius); color: var(--accent); }
 .active-desc { font-size: 12px; color: var(--text-3); line-height: 1.5; min-height: 22px; margin-bottom: 0.6rem; }
 
 .judge-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
@@ -208,7 +203,7 @@
   background: var(--bg-2);
 }
 .judge-group-col-label {
-  font-family: var(--font-display); font-size: 9px; font-weight: 700;
+  font-family: var(--font-display); font-size: 9px; font-weight: 800;
   letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--text-3);
   margin-bottom: 0.3rem;
@@ -216,21 +211,24 @@
 .judge-group-col-tiles {
   display: flex; flex-wrap: wrap; gap: 0.35rem;
 }
-.judge-group-col.judge-group-a    { border-color: rgba(139, 92,246,0.35); }
-.judge-group-col.judge-group-b    { border-color: rgba(245,158, 11,0.35); }
-.judge-group-col.judge-group-sync { border-color: rgba( 16,185,129,0.35); }
-.judge-group-col.judge-group-a    .judge-group-col-label { color: #c4b5fd; }
-.judge-group-col.judge-group-b    .judge-group-col-label { color: #fbbf24; }
-.judge-group-col.judge-group-sync .judge-group-col-label { color: #34d399; }
+/* Exec A / Exec B / Sync keep their violet / amber / green role
+   identity (theme-aware role tokens), matching the synchro history
+   cards in app.css. */
+.judge-group-col.judge-group-a    { border-color: var(--role-admin-fg); }
+.judge-group-col.judge-group-b    { border-color: var(--role-manager-fg); }
+.judge-group-col.judge-group-sync { border-color: var(--role-diver-fg); }
+.judge-group-col.judge-group-a    .judge-group-col-label { color: var(--role-admin-fg); }
+.judge-group-col.judge-group-b    .judge-group-col-label { color: var(--role-manager-fg); }
+.judge-group-col.judge-group-sync .judge-group-col-label { color: var(--role-diver-fg); }
 .judge-tile {
-  width: 48px; height: 44px;
+  width: 64px; height: 52px;
   border-radius: var(--radius-sm);
   background: var(--surface);
   border: 1px solid var(--border);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   transition: all 0.15s;
 }
-.judge-tile.scored { background: var(--green-dim); border-color: var(--green); box-shadow: 0 0 12px rgba(16,185,129,0.2); }
+.judge-tile.scored { background: var(--green-dim); border-color: var(--green); }
 /* Judge has tapped Signal Referee on their keypad. Bright red
    ring around the tile + pulsing glow draws the operator's eye
    regardless of what's currently scored / unscored on the
@@ -325,8 +323,8 @@
   color: var(--text-3);
 }
 .active-dive-total-value {
-  font-family: var(--font-display); font-size: 20px; font-weight: 900;
-  font-style: italic; color: var(--green);
+  font-family: var(--font-mono); font-size: 20px; font-weight: 500;
+  font-style: normal; color: var(--green);
   line-height: 1;
 }
 
@@ -533,7 +531,7 @@
 .roster-item.active .roster-name { color: var(--cyan); }
 .roster-meta { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-3); margin-top: 0.1rem; font-family: var(--font-mono); }
 .roster-team {
-  font-family: var(--font-mono); font-size: 9px; color: #c4b5fd;
+  font-family: var(--font-mono); font-size: 9px; color: var(--role-admin-fg);
   margin-top: 0.1rem; font-weight: 700; letter-spacing: 0.05em;
 }
 .roster-amp { color: var(--cyan); margin: 0 0.35em; font-weight: 400; }
@@ -548,7 +546,7 @@
 .active-team {
   display: inline-block; margin-bottom: 1rem;
   font-family: var(--font-display); font-size: 13px; font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase; color: #c4b5fd;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--role-admin-fg);
   background: rgba(139,92,246,0.10); border: 1px solid rgba(139,92,246,0.45);
   border-radius: 4px; padding: 0.3rem 0.7rem;
 }
@@ -638,7 +636,15 @@
    card is narrow rather than overflow the column. */
 .hist-desc { font-size: 9px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .hist-scores { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-top: 0.15rem; }
-.hist-score { font-family: var(--font-mono); font-size: 9px; padding: 0.1rem 0.3rem; background: var(--cyan-dim); border: 1px solid rgba(6,182,212,0.2); border-radius: 3px; color: var(--cyan); }
+/* Individual / team events: contain the whole score row in a blue-
+   bordered white box. Synchro events use per-group Exec/Sync boxes
+   instead, so this modifier is only added when !isSynchroEvent. */
+.hist-scores-box { gap: 0.25rem; padding: 0.3rem 0.4rem; background: var(--bg-2); border: 1px solid var(--accent); border-radius: var(--radius-sm); width: fit-content; }
+/* Score chips for individual / team history cards — grey fill, neutral
+   border, sized to match the synchro .j-score chips. The whole row is
+   wrapped in a blue-bordered white box (.hist-scores-box) rather than
+   bordering each chip. */
+.hist-score { font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; padding: 0.1rem 0.45rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--fg); }
 
 .conn-badge { display: flex; align-items: center; gap: 0.4rem; font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; }
 .event-select-sm { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.4rem 0.75rem; font-family: var(--font-mono); font-size: 13px; color: var(--text); outline: none; cursor: pointer; }
@@ -647,7 +653,7 @@
 
 .btn-back { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.5rem 1.1rem; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text-2); text-decoration: none; transition: all 0.15s; }
 .btn-back:hover { background: var(--bg-3); }
-.btn-finalise { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.5rem 1.1rem; border-radius: var(--radius-sm); border: 1px solid rgba(245,158,11,0.4); background: var(--amber-dim); color: var(--amber); cursor: pointer; transition: all 0.15s; }
+.btn-finalise { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.5rem 1.1rem; border-radius: var(--radius-sm); border: 1px solid rgba(245,158,11,0.4); background: var(--amber-dim); color: var(--amber); cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }
 .btn-finalise:hover { background: var(--amber); color: var(--bg); }
 /* Judge Ranking Analysis button reuses the finalise base styling
    but swaps to cyan — it's a navigation affordance for a Completed
@@ -1060,9 +1066,9 @@
   margin-bottom: 0.35rem;
 }
 .preflight-subtitle {
-  font-family: var(--font-display);
-  font-size: 22px; font-weight: 800; font-style: italic;
-  letter-spacing: 0.02em;
+  font-family: var(--font-sans);
+  font-size: 20px; font-weight: 600; font-style: normal;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
 
@@ -1091,9 +1097,9 @@
   line-height: 1.4;
 }
 .preflight-strong {
-  font-family: var(--font-display);
-  font-size: 14px; font-weight: 700; font-style: italic;
-  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px; font-weight: 600; font-style: normal;
+  color: var(--fg);
 }
 .preflight-tick {
   display: inline-flex; align-items: center; justify-content: center;
@@ -1213,7 +1219,7 @@
 }
 .lb-header { padding: 2rem 2rem 1.25rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); display: flex; align-items: flex-start; justify-content: space-between; }
 .lb-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--cyan); margin-bottom: 0.4rem; }
-.lb-event { font-family: var(--font-display); font-size: 26px; font-weight: 900; font-style: italic; color: var(--text); line-height: 1; }
+.lb-event { font-family: var(--font-sans); font-size: 22px; font-weight: 600; font-style: normal; letter-spacing: -0.015em; color: var(--fg); line-height: 1.1; }
 .lb-body { padding: 1.5rem 2rem 2rem; }
 .lb-row { display: flex; align-items: center; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--border); }
 .lb-row:last-child { border-bottom: none; }
@@ -1275,6 +1281,11 @@
   font-family: var(--font-mono); font-size: 11px;
   color: var(--text-3); letter-spacing: 0.04em;
 }
+/* Connection chip pushed to the right of the Round/Diver strip; the
+   shot clock (when present) follows it, with a clear gap so the two
+   never crowd each other. */
+.active-meta .conn-badge { margin-inline-start: auto; margin-inline-end: 0.9rem; flex-shrink: 0; }
+.active-meta .shot-clock { flex-shrink: 0; }
 .active-meta-text strong {
   color: var(--cyan); font-weight: 700;
 }
@@ -1314,7 +1325,7 @@
   font-family: var(--font-display); color: var(--text);
   padding: 0;
 }
-.shot-clock-num { font-size: 22px; font-weight: 900; font-style: italic; line-height: 1; }
+.shot-clock-num { font-family: var(--font-mono); font-size: 22px; font-weight: 500; font-style: normal; line-height: 1; }
 .shot-clock-unit { font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: 0.1em; }
 .shot-clock-reset {
   background: transparent; border: none; cursor: pointer;
@@ -1372,10 +1383,10 @@
   to   { transform: rotate(360deg); }
 }
 .randomise-title {
-  font-family: var(--font-display);
-  font-size: 22px; font-weight: 700;
-  font-style: italic;
-  color: var(--cyan);
+  font-family: var(--font-sans);
+  font-size: 20px; font-weight: 600;
+  font-style: normal;
+  color: var(--accent);
   letter-spacing: 0.02em;
 }
 .randomise-modal.phase-shuffling .randomise-title {
@@ -1807,8 +1818,8 @@
    action. Solid backgrounds (not the usual ghost) so the colour
    carries the meaning even in a noisy header. */
 .wf-btn {
-  font-family: var(--font-display); font-weight: 800; font-style: italic;
-  letter-spacing: 0.06em; text-transform: uppercase;
+  font-family: var(--font-sans); font-weight: 600; font-style: normal;
+  letter-spacing: 0; text-transform: none;
   border-radius: 4px; padding: 0.35rem 0.85rem;
   border: 1px solid; color: var(--bg);
   cursor: pointer; transition: filter 0.15s ease;
@@ -1878,7 +1889,7 @@
 .signoff-actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
 .signoff-waiting {
   text-align: center; padding: 2rem 1rem; color: var(--amber);
-  font-family: var(--font-display); font-size: 14px; font-style: italic;
+  font-family: var(--font-sans); font-size: 14px; font-style: normal;
 }
 .signoff-waiting-pulse {
   font-size: 28px; line-height: 1;
@@ -2427,8 +2438,8 @@
   padding: 0.2rem 0; font-size: 12px;
 }
 .catchup-rank {
-  font-family: var(--font-display); font-weight: 800; font-style: italic;
-  font-size: 11px; letter-spacing: 0.04em; color: var(--text-2);
+  font-family: var(--font-sans); font-weight: 700; font-style: normal;
+  font-size: 11px; letter-spacing: 0; color: var(--fg-2);
 }
 .catchup-name {
   color: var(--text); white-space: nowrap;
@@ -2512,10 +2523,22 @@
   position: relative;
 }
 .judge-tile-name {
-  font-family: var(--font-mono); font-size: 8px;
-  color: var(--text-3); margin-top: 0.05rem;
-  max-width: 44px;
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--text-3); margin-top: 0.1rem;
+  max-width: 60px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Manual score entry moved into the header overflow (⋯) menu. */
+.manual-entry-trigger { display: none; }
+
+/* Dive-history (individual events): strike through trim-dropped scores. */
+.hist-score.j-dropped {
+  opacity: 0.8;
+  color: var(--fg-2);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--fg-3);
 }
 .judge-tile.scored .judge-tile-name { color: var(--green); }
 /* When a score lands, briefly pulse the tile so the operator
@@ -2538,19 +2561,18 @@
    and can never be hidden by the left group's connection chip.
    ========================================================= */
 .ctrl-header-ctx {
-  display: flex; flex-direction: column; align-items: center;
-  justify-self: center;
+  display: flex; flex-direction: column; align-items: flex-start;
   gap: 0.15rem;
   min-width: 0;
   /* Cap so a very long event name truncates inside the <select>
-     rather than blowing the centre column wider than the page. */
-  max-width: min(60vw, 640px);
+     rather than pushing the right-hand action buttons off-page. */
+  max-width: min(55vw, 640px);
 }
 .event-title-row {
   display: flex; align-items: center; gap: 0.6rem;
   min-width: 0;
   width: 100%;
-  justify-content: center;
+  justify-content: flex-start;
 }
 .event-title-wrap {
   position: relative;
@@ -2558,22 +2580,22 @@
   max-width: 100%;
 }
 .event-title-select {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
-  font-style: italic;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--accent);
   /* Always-on cyan chrome. The Control Room operator can't
      afford to discover-by-hover — the event picker is the
      primary "what am I driving?" control and needs to read
      as interactive from the moment the page loads. Cyan
      matches the rest of the app's primary-action language
      (submit button, active routes, etc.). */
-  background: var(--cyan-dim);
-  border: 1px solid var(--cyan);
-  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-soft-2);
+  border-radius: var(--radius);
   /* Logical properties so RTL languages (ar) get the chevron
      padding on the correct edge automatically. */
   padding-block: 0.4rem;
@@ -2650,16 +2672,8 @@
    spans the full width on its own row so a long event name
    doesn't shove the side groups off-screen. */
 @media (max-width: 720px) {
-  .ctrl-header {
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      "left right"
-      "centre centre";
-    row-gap: 0.5rem;
-  }
-  .ctrl-header-left   { grid-area: left; }
-  .ctrl-header-right  { grid-area: right; }
-  .ctrl-header-ctx    { grid-area: centre; max-width: 100%; }
+  .ctrl-header { flex-wrap: wrap; row-gap: 0.5rem; }
+  .ctrl-header-ctx    { max-width: 100%; }
   .event-title-select { font-size: 15px; }
 }
 

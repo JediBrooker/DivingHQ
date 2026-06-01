@@ -86,20 +86,20 @@
 }
 .advance-preview-row.cut .advance-tag { color:var(--text-3); }
 .form-stack{display:flex;flex-direction:column;gap:1rem;}
-.event-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.25rem;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius);transition:border-color 0.2s;animation:fadeUp 0.25s ease;}
+.event-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-xs);transition:border-color 0.2s;animation:fadeUp 0.25s ease;}
 .event-item:hover{border-color:var(--border-2);}
 .event-name{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;}
 .event-meta{font-size:11px;color:var(--text-3);margin-top:0.25rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;}
 .org-badge {
-  font-family: var(--font-display); font-size: 9px; font-weight: 700;
-  letter-spacing: 0.15em; text-transform: uppercase;
-  color: #c4b5fd;
-  background: rgba(139,92,246,0.10); border: 1px solid rgba(139,92,246,0.4);
-  border-radius: 3px; padding: 0.15rem 0.5rem;
+  font-family: var(--font-sans); font-size: 9px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--role-admin-fg);
+  background: var(--role-admin-bg); border: 1px solid var(--role-admin-bg);
+  border-radius: var(--radius-sm); padding: 0.15rem 0.5rem;
 }
 .org-badge-ctry {
-  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
-  color: var(--text-3); margin-inline-start: 0.4rem;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+  color: var(--role-admin-fg); margin-inline-start: 0.4rem;
 }
 .events-subcount {
   font-family: var(--font-mono); font-size: 12px; font-weight: 400;
@@ -303,7 +303,116 @@
   display: flex; align-items: center; gap: 0.85rem;
   flex-wrap: wrap;
   margin-bottom: 1rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+  padding: 0.75rem 1rem;
 }
+.events-toolbar-actions {
+  margin-inline-start: auto;
+  display: flex; gap: 0.5rem; flex-shrink: 0;
+}
+/* New Meet uses a distinct, lighter blue from New Event (accent). */
+/* New meet — a lighter, theme-aware blue so it reads as distinct
+   from the solid "New event" primary. */
+.btn-meet { background: var(--accent-soft-2); color: var(--accent); border-color: var(--accent); }
+.btn-meet:hover { background: var(--accent); color: var(--fg-on-accent); border-color: var(--accent); }
+/* =====================================================================
+   Master–detail layout. Left rail = selectable meet list (All / per-meet
+   / Ungrouped); right pane = contextual header + search/chips + the event
+   list narrowed to the selection. Mirrors the CRM card language used
+   elsewhere in this view — surface/border/radius tokens, accent-soft for
+   the active rail row. Stacks under ~860px (see the responsive block).
+   ===================================================================== */
+.mgr-md {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+/* LEFT RAIL — its own card. */
+.mgr-rail {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: sticky;
+  top: 1rem;
+}
+.mgr-rail-list { display: flex; flex-direction: column; gap: 0.15rem; }
+.mgr-rail-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: start;
+  font: inherit;
+  color: var(--text-2);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.mgr-rail-item:hover { background: var(--bg-3); color: var(--text); }
+.mgr-rail-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.mgr-rail-label {
+  flex: 1; min-width: 0;
+  font-family: var(--font-display); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.02em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mgr-rail-aside { display: inline-flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+.mgr-rail-count {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--text-3);
+  background: var(--bg-3);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  flex-shrink: 0;
+}
+.mgr-rail-item.active .mgr-rail-count {
+  color: var(--accent);
+  background: var(--accent-soft-2);
+}
+.mgr-rail-live {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--red);
+}
+.mgr-rail-foot {
+  border-top: 1px solid var(--border);
+  padding: 0.5rem 0.25rem 0.25rem;
+}
+.mgr-rail-foot .btn { width: 100%; }
+
+/* RIGHT PANE — contextual header + the existing toolbar/list. */
+.mgr-detail { min-width: 0; display: flex; flex-direction: column; }
+.mgr-detail-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.mgr-detail-head-text { min-width: 0; flex: 1; }
+.mgr-detail-title {
+  font-family: var(--font-display); font-size: 20px; font-weight: 700;
+  color: var(--text); margin: 0;
+}
+.mgr-detail-sub {
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-3);
+  margin-top: 0.3rem;
+  display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;
+}
+.mgr-detail-actions { display: flex; gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap; }
+/* Org filter sits inside the detail header for the All-events view;
+   drop its standalone bottom margin so it tucks under the title. */
+.mgr-detail-head-text .org-filter { margin-top: 0.6rem; margin-bottom: 0; }
 .events-search {
   flex: 1 1 220px;
   min-width: 0;
@@ -361,7 +470,7 @@
   color: var(--green); background: var(--green-dim); border-color: rgba(16,185,129,0.4);
 }
 .event-type-pill.age {
-  color: #c4b5fd; background: rgba(139,92,246,0.08); border-color: rgba(139,92,246,0.4);
+  color: var(--role-admin-fg); background: rgba(139,92,246,0.08); border-color: rgba(139,92,246,0.4);
 }
 .event-type-pill.rehearsal {
   color: var(--amber); background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.45);
@@ -440,8 +549,21 @@
 }
 .meet-row-id   { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
 .meet-row-name {
-  font-family: var(--font-display); font-size: 14px; font-weight: 700;
-  font-style: italic; color: var(--text); text-decoration: none;
+  font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+  font-style: normal; color: var(--fg); text-decoration: none;
+}
+
+/* Create/edit forms render as full-page panels in the content area
+   (the sidebar stays visible) rather than floating modal popups. */
+.mgr-form-page { padding: 0 0 2rem; }
+.mgr-form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem 1.75rem 2rem;
+  width: 100%;
+  margin: 0 auto;
 }
 .meet-row-name:hover { color: var(--cyan); }
 .meet-row-meta {
@@ -450,6 +572,21 @@
 .meet-live { color: var(--red); font-weight: 700; margin-inline-start: 0.4rem; }
 .meet-row-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
 
+/* Teams / participating-federations / roster-import modals render as
+   a sibling of an EMPTY .modal-backdrop (not nested inside it), so the
+   global .modal (position: static) drops to the bottom of the long
+   events page instead of centring. Pin these three to the viewport
+   centre, above the backdrop; they scroll internally if tall. */
+.modal.teams-modal,
+.modal.roster-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 201;
+  max-height: 90vh;
+  overflow-y: auto;
+}
 .roster-modal { max-width: 720px; }
 .roster-modal .mono { font-family: var(--font-mono); }
 .roster-modal textarea { resize: vertical; min-height: 180px; }
@@ -530,10 +667,49 @@
    padding so the small-screen org admin can still drive a meet
    from a phone. Outer wrap padding is handled globally by
    src/styles/app.css. */
+/* Stack the master–detail panes once the rail + detail can't sit
+   comfortably side by side. The rail becomes a full-width card above
+   the detail; its item list flows as a horizontal scroll strip so the
+   meet picker stays a single compact row rather than a tall stack. */
+@media (max-width: 860px) {
+  .mgr-md {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .mgr-rail {
+    position: static;
+    flex-direction: column;
+  }
+  .mgr-rail-list {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0.4rem;
+    padding-bottom: 0.25rem;
+  }
+  .mgr-rail-item { width: auto; flex: 0 0 auto; }
+  .mgr-rail-foot {
+    border-top: none;
+    border-inline-start: 1px solid var(--border);
+    padding: 0.25rem 0 0.25rem 0.5rem;
+    margin-inline-start: 0.25rem;
+    display: flex; align-items: center;
+  }
+  .mgr-rail-foot .btn { width: auto; white-space: nowrap; }
+}
+
 @media (max-width: 600px) {
   /* Header — shrink the desktop padding so the title + button row
      doesn't dominate above-the-fold on a phone. */
   .page-header { padding: 1rem; }
+
+  /* Rail foot wraps below the strip on a phone so the chips + the
+     "+ New meet" button each get a full row. */
+  .mgr-rail-foot {
+    border-inline-start: none;
+    margin-inline-start: 0;
+    padding-inline-start: 0;
+  }
 
   /* Event row — drop the side-by-side layout so the action cluster
      can wrap below the event meta instead of squeezing it. */

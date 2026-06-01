@@ -6,6 +6,7 @@ const orgName = ref('')
 const countryCode = ref('')
 const slug = ref('')
 const fullName = ref('')
+const email = ref('')
 const username = ref('')
 const password = ref('')
 const msg = ref('')
@@ -32,6 +33,7 @@ async function handleSubmit() {
       org_name: orgName.value,
       slug: slug.value,
       full_name: fullName.value,
+      email: email.value,
       username: username.value,
       password: password.value,
     }
@@ -89,6 +91,17 @@ async function handleSubmit() {
                card AutoFill chip for the admin's own name. -->
           <input class="input" type="text" v-model="fullName"
                  autocomplete="name" required>
+        </div>
+        <div class="field">
+          <!-- Reuses the auth.register.* email strings (present in every
+               locale) — the org founder's email is required by
+               /api/auth/register-org for the verification mail. -->
+          <label class="label">{{ $t('auth.register.email') }}</label>
+          <input class="input" type="email" v-model="email"
+                 autocomplete="email"
+                 :placeholder="$t('auth.register.email_placeholder')"
+                 autocapitalize="none" autocorrect="off" spellcheck="false"
+                 required>
         </div>
         <div class="field">
           <label class="label">{{ $t('auth.register_org.username') }}</label>
