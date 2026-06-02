@@ -703,6 +703,25 @@ const displayedEvents = computed(() => {
   return list.filter(e => e.meet_id === selectedMeetId.value)
 })
 
+// Meets shown in the left rail. A sysadmin loads every federation's
+// meets (via /api/meets); the shared org filter narrows the rail to
+// one federation so it stays in lock-step with the events list.
+// Everyone else only ever has their own org's meets loaded.
+const railMeets = computed(() => {
+  if (auth.user?.is_system_admin && orgFilter.value) {
+    return meets.value.filter(m => m.org_id === orgFilter.value)
+  }
+  return meets.value
+})
+
+// Org-scoped raw count for the rail's "All events" row, mirroring
+// the per-meet counts (which are unfiltered by status/search).
+const allEventsCount = computed(() =>
+  orgFilter.value
+    ? events.value.filter(e => e.org_id === orgFilter.value).length
+    : events.value.length,
+)
+
 // Open the New Event form, optionally preset to bundle into a
 // meet. Called from the rail / detail-header "+ New event" /
 // "+ Add event" buttons. Passing '' opens a standalone event.
@@ -958,9 +977,16 @@ async function loadEvents() {
 }
 
 async function loadMeets() {
-  if (!auth.user?.org_id) return
+  // Sysadmins manage every federation, so they load all meets across
+  // orgs; everyone else is scoped to their own org's meets.
+  const url = auth.user?.is_system_admin
+    ? '/api/meets'
+    : auth.user?.org_id
+      ? `/api/orgs/${auth.user.org_id}/meets`
+      : null
+  if (!url) return
   try {
-    const body = await auth.apiFetch(`/api/orgs/${auth.user.org_id}/meets`)
+    const body = await auth.apiFetch(url)
     meets.value = Array.isArray(body) ? body : []
   } catch {
     meets.value = []
@@ -2013,14 +2039,14 @@ onUnmounted(() => {
                   :class="['mgr-rail-item', { active: selectedMeetId === '' }]"
                   @click="selectedMeetId = ''">
             <span class="mgr-rail-label">All events</span>
-            <span class="mgr-rail-count">{{ events.length }}</span>
+            <span class="mgr-rail-count">{{ allEventsCount }}</span>
           </button>
 
-          <button v-for="m in meets" :key="m.id"
+          <button v-for="m in railMeets" :key="m.id"
                   type="button"
                   :class="['mgr-rail-item', { active: selectedMeetId === m.id }]"
                   @click="selectedMeetId = m.id">
-            <span class="mgr-rail-label">{{ m.name }}</span>
+            <span class="mgr-rail-label">{{ m.name }}<template v-if="auth.user?.is_system_admin && m.country_code"> · {{ m.country_code }}</template></span>
             <span class="mgr-rail-aside">
               <span v-if="m.live_count" class="mgr-rail-live">· {{ m.live_count }} live</span>
               <span class="mgr-rail-count">{{ m.event_count }}</span>
