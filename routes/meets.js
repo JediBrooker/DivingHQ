@@ -107,6 +107,34 @@ module.exports = function createMeetsRouter({
     }
   });
 
+  // All meets across every federation — sysadmin only. Powers the
+  // Meet Manager's cross-org view so a system admin sees (and can
+  // open) every federation's meets, not just their own org's. The
+  // org_name / country_code let the rail label which federation
+  // each meet belongs to.
+  router.get("/api/meets", maybeAuth, async (req, res) => {
+    if (!req.user?.is_system_admin) {
+      return res.status(403).json([]);
+    }
+    try {
+      const r = await pool.query(
+        `SELECT m.*, o.name AS org_name, o.country_code,
+                COUNT(e.id)::int AS event_count,
+                COUNT(e.id) FILTER (WHERE e.status = 'Live')::int      AS live_count,
+                COUNT(e.id) FILTER (WHERE e.status = 'Completed')::int AS completed_count
+         FROM meets m
+         JOIN organisations o ON o.id = m.org_id
+         LEFT JOIN events e ON e.meet_id = m.id
+         GROUP BY m.id, o.name, o.country_code
+         ORDER BY COALESCE(m.start_date, m.created_at) DESC`,
+      );
+      res.json(r.rows);
+    } catch (err) {
+      console.error("[List All Meets Error]", err.message);
+      res.status(500).json([]);
+    }
+  });
+
   // Public meet detail — meet metadata + every event nested
   // inside, in a shape suitable for the public landing page.
   router.get("/api/meets/:id", maybeAuth, async (req, res) => {
