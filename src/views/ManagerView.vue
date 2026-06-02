@@ -2075,16 +2075,12 @@ onUnmounted(() => {
     </div>
     <!-- /modal-create-event -->
 
-    <!-- Page heading + summary. The shell breadcrumb already names
-         the page, but Meet Manager is dense enough to warrant an
-         explicit title + one-line "what this is" box up top. Hidden
-         while a create/edit form page takes over the view. -->
+    <!-- Page heading + one-line summary, matching the Judge Analysis
+         header: a plain muted sub-paragraph under the title, no box.
+         Hidden while a create/edit form page takes over the view. -->
     <header v-show="!formPageOpen" class="mgr-page-head">
       <h1 class="mgr-page-title">{{ $t('manager.title') }}</h1>
-      <div class="mgr-info" role="note">
-        <span class="mgr-info-icon" aria-hidden="true">ℹ️</span>
-        <p class="mgr-info-text">{{ $t('manager.subtitle') }}</p>
-      </div>
+      <p class="mgr-page-sub">{{ $t('manager.subtitle') }}</p>
     </header>
 
     <!-- Accordion — a vertical list of collapsible sections (All
