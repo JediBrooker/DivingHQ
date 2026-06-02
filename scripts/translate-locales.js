@@ -65,8 +65,19 @@ const path = require("path");
 // installed the script keeps working — env vars set directly in the
 // shell still resolve. dotenv is already a runtime dep of the server
 // so the require should always succeed in a working tree.
-try { require("dotenv").config({ path: path.join(__dirname, "..", ".env") }); }
-catch { /* dotenv not installed — fall through, shell env still works */ }
+try {
+  const result = require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
+  // dotenv won't overwrite a var already present in process.env — correct for
+  // a deliberately-exported value, but an EMPTY pre-existing var (e.g. a shell
+  // profile or sandbox that exports `ANTHROPIC_API_KEY=`) would then shadow a
+  // real key in .env and the script would wrongly report the key as missing.
+  // Treat blank existing vars as unset and backfill them from the parsed .env;
+  // a non-empty exported value still takes precedence.
+  const parsed = (result && result.parsed) || {};
+  for (const [k, v] of Object.entries(parsed)) {
+    if (v && !String(process.env[k] || "").trim()) process.env[k] = v;
+  }
+} catch { /* dotenv not installed — fall through, shell env still works */ }
 
 const LOCALES_DIR = path.join(__dirname, "..", "src", "locales");
 const SOURCE_LOCALE = "en";
@@ -77,6 +88,7 @@ const TARGET_LANGUAGES = {
   it: "Italian (standard Italian)",
   pt: "Portuguese (European Portuguese — Portugal)",
   pl: "Polish (standard Polish)",
+  cs: "Czech (standard Czech, formal vy address)",
   ru: "Russian (standard Russian)",
   uk: "Ukrainian (standard Ukrainian)",
   fi: "Finnish (standard Finnish)",

@@ -1,0 +1,53 @@
+{
+  "errors": {
+    "unauthorized": "Nejste přihlášeni",
+    "forbidden": "Nemáte oprávnění k této akci",
+    "not_found": "Nenalezeno",
+    "rate_limited": "Příliš mnoho požadavků — zpomalte prosím a zkuste to znovu",
+    "validation_failed": "Ověření požadavku se nezdařilo",
+    "server_error": "Chyba serveru — zkuste to prosím znovu"
+  },
+  "emails": {
+    "password_reset": {
+      "subject": "{app_name} — obnovení hesla",
+      "greeting": "Dobrý den {name},",
+      "body": "Někdo (doufáme, že vy) požádal o obnovení vašeho hesla pro {app_name}. Kliknutím na odkaz níže nastavíte nové. Odkaz je platný 30 minut a lze jej použít pouze jednou.",
+      "cta": "Obnovit heslo",
+      "footer": "Pokud jste o to nežádali, můžete tento e-mail bez obav ignorovat — nedošlo k žádné změně."
+    },
+    "email_verify": {
+      "subject": "{app_name} — potvrďte svůj e-mail",
+      "greeting": "Vítejte v {app_name}, {name}!",
+      "body": "Kliknutím na odkaz níže potvrďte svou e-mailovou adresu. Odkaz je platný 24 hodin.",
+      "cta": "Potvrdit e-mail",
+      "footer": "Pokud jste se k {app_name} neregistrovali, můžete tento e-mail ignorovat."
+    },
+    "email_change": {
+      "subject": "{app_name} — potvrďte svůj nový e-mail",
+      "greeting": "Dobrý den {name},",
+      "body": "Požádali jste o změnu e-mailu pro {app_name} na tuto adresu. Kliknutím na odkaz níže ji potvrďte. Odkaz je platný 30 minut a lze jej použít pouze jednou.",
+      "cta": "Potvrdit nový e-mail",
+      "footer": "Pokud jste tuto změnu neprovedli, můžete tento e-mail bez obav ignorovat — váš účet zůstává beze změny."
+    }
+  },
+  "pdf": {
+    "program": {
+      "col_event": "Disciplína",
+      "col_height": "Výška",
+      "col_rounds": "Kola",
+      "col_judges": "Rozhodčí",
+      "col_scheduled": "Plánováno",
+      "col_competitor": "Závodník",
+      "col_round": "Kolo",
+      "col_dive_code": "Kód skoku",
+      "col_position": "Poloha",
+      "col_dd": "DD",
+      "col_description": "Popis",
+      "header_program": "Program závodu",
+      "header_dive_lists": "Seznamy skoků",
+      "header_judge_panel": "Panel rozhodčích",
+      "header_event_schedule": "Harmonogram disciplín",
+      "header_reserves": "Náhradníci"
+    }
+  }
+}

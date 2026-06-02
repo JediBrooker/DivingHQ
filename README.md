@@ -17,7 +17,7 @@ Built around five audiences:
 - **Judges** — Single-purpose phone-friendly view that submits scores back to the server in real time. Synchro panels see role hints (Exec A / Exec B / Sync) so they know which judging slot they're filling. **Judge Analysis** (`/judge-profile`) gives every judge a self-service dashboard showing how their scoring tracks against the panel-kept mean (post World Aquatics trim, PART FOUR Article 13) — overall bias, drop rate (with high vs low split), and breakdowns per board height, dive group, country, club, individual diver, round, and DD difficulty. Fully customisable widget catalogue, mirroring the diver dashboard pattern. A separate per-event **Judge Analysis** matrix (`/judge-analysis` — a tabbed By-Event / By-Judge page, with the app shell for signed-in users and a standalone view for the public) shows how each judge’s calls would have re-ranked the field, with World-Aquatics-correct synchro role breakdowns (Exec A / Exec B / Sync contributions that sum to the pair total, per Article 9.1.5).
 - **Spectators** — Public scoreboard with current performer, live standings, per-round leaderboard with movement arrows, public meet landing pages, and an archive of completed meets.
 
-**🌍 25 languages, switchable in-app.** The whole UI is internationalized — English source plus 24 translations (Spanish, French, German, Italian, Portuguese, Polish, Russian, Ukrainian, Finnish, Swedish, Danish, Norwegian, Hungarian, Croatian, Serbian, Mandarin Chinese, Japanese, Korean, Indonesian, Malay, Tagalog, Arabic, Turkish, Greek). A flag-prefixed dropdown in the header lets any user pick their language; the choice persists across sign-in / sign-out and across devices when signed in. Arabic gets full RTL layout flipping. See [Languages & Translation](https://github.com/JediBrooker/DivingHQ/wiki/Languages) for the full list and how the AI-assisted translation pipeline works.
+**🌍 26 languages, switchable in-app.** The whole UI is internationalized — English source plus 25 translations (Spanish, French, German, Italian, Portuguese, Polish, Czech, Russian, Ukrainian, Finnish, Swedish, Danish, Norwegian, Hungarian, Croatian, Serbian, Mandarin Chinese, Japanese, Korean, Indonesian, Malay, Tagalog, Arabic, Turkish, Greek). A flag-prefixed dropdown in the header lets any user pick their language; the choice persists across sign-in / sign-out and across devices when signed in. Arabic gets full RTL layout flipping. See [Languages & Translation](https://github.com/JediBrooker/DivingHQ/wiki/Languages) for the full list and how the AI-assisted translation pipeline works.
 
 ---
 
@@ -222,7 +222,7 @@ The referee's sign-off page. Pre-meet, the meet manager generates a 6-digit hand
 <details>
 <summary><h2 id="tech-stack">Tech stack</h2></summary>
 
-- **Frontend**: Vue 3 (Composition API, `<script setup>`), Vite 6, Vue Router, Pinia, vue-i18n@11 (25 locales, build-time AST precompilation via `@intlify/unplugin-vue-i18n` so no eval-based message compiler ships to the browser — keeps the strict `script-src 'self'` CSP intact)
+- **Frontend**: Vue 3 (Composition API, `<script setup>`), Vite 6, Vue Router, Pinia, vue-i18n@11 (26 locales, build-time AST precompilation via `@intlify/unplugin-vue-i18n` so no eval-based message compiler ships to the browser — keeps the strict `script-src 'self'` CSP intact)
 - **Backend**: Node 18+, Express 5, Socket.IO 4, [`pg`](https://node-postgres.com/), `pdfkit`, `nodemailer`
 - **Auth**: JSON Web Tokens, bcrypt password hashing, password-reset email flow with single-use tokens
 - **Database**: PostgreSQL 14+ with `uuid-ossp` and `pgcrypto`
@@ -257,7 +257,7 @@ to UDP, TCP, stdout, files, or a serial device. See
 <details>
 <summary><h2 id="languages">Languages</h2></summary>
 
-DivingHQ ships with **25 supported languages** — English source plus 24 translations. A flag-prefixed dropdown in the header on the Home page, the Login page, and the Dashboard lets any user switch language. The choice persists to `localStorage`, applies to every page in the app, and survives sign-in / sign-out.
+DivingHQ ships with **26 supported languages** — English source plus 25 translations. A flag-prefixed dropdown in the header on the Home page, the Login page, and the Dashboard lets any user switch language. The choice persists to `localStorage`, applies to every page in the app, and survives sign-in / sign-out.
 
 | Region | Languages |
 |---|---|
