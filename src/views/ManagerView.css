@@ -317,59 +317,65 @@
 .btn-meet { background: var(--accent-soft-2); color: var(--accent); border-color: var(--accent); }
 .btn-meet:hover { background: var(--accent); color: var(--fg-on-accent); border-color: var(--accent); }
 /* =====================================================================
-   Master–detail layout. Left rail = selectable meet list (All / per-meet
-   / Ungrouped); right pane = contextual header + search/chips + the event
-   list narrowed to the selection. Mirrors the CRM card language used
-   elsewhere in this view — surface/border/radius tokens, accent-soft for
-   the active rail row. Stacks under ~860px (see the responsive block).
+   Accordion layout. A single vertical column of collapsible sections —
+   "All events", one per meet, then "Ungrouped". The header toggles the
+   section; the open one reveals its event list inline. Replaces the old
+   master–detail rail + pane: one layout for every width, so nothing can
+   shear off sideways the way the old fixed grid + horizontal rail strip
+   did on phones. Mirrors the CRM card language used elsewhere here.
    ===================================================================== */
-.mgr-md {
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  gap: 1.25rem;
-  align-items: start;
+.mgr-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
-
-/* LEFT RAIL — its own card. */
-.mgr-rail {
+.mgr-acc-section {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  position: sticky;
-  top: 1rem;
+  overflow: hidden;            /* keep the body's corners inside the radius */
+  transition: border-color 0.15s;
 }
-.mgr-rail-list { display: flex; flex-direction: column; gap: 0.15rem; }
-.mgr-rail-item {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+.mgr-acc-section.open { border-color: var(--accent); }
+
+.mgr-acc-header {
+  display: flex; align-items: center; gap: 0.7rem;
   width: 100%;
-  padding: 0.55rem 0.7rem;
+  padding: 0.85rem 1rem;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border: 0;
   cursor: pointer;
   text-align: start;
   font: inherit;
-  color: var(--text-2);
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  color: var(--text);
+  transition: background 0.12s;
 }
-.mgr-rail-item:hover { background: var(--bg-3); color: var(--text); }
-.mgr-rail-item.active {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: var(--accent);
+.mgr-acc-header:hover { background: var(--bg-3); }
+.mgr-acc-section.open .mgr-acc-header { border-bottom: 1px solid var(--border); }
+
+.mgr-acc-chevron {
+  flex-shrink: 0;
+  font-size: 12px; line-height: 1; color: var(--text-3);
+  transition: transform 0.18s ease, color 0.18s;
 }
-.mgr-rail-label {
+.mgr-acc-section.open .mgr-acc-chevron { transform: rotate(90deg); color: var(--accent); }
+
+.mgr-acc-label {
   flex: 1; min-width: 0;
-  font-family: var(--font-display); font-size: 13px; font-weight: 700;
-  letter-spacing: 0.02em;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--font-display); font-size: 14px; font-weight: 700;
+  letter-spacing: 0.01em; line-height: 1.3;
+  /* Full meet name — wrap rather than truncate. */
+  white-space: normal; overflow-wrap: break-word;
 }
-.mgr-rail-aside { display: inline-flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+.mgr-acc-section.open .mgr-acc-label { color: var(--accent); }
+
+.mgr-acc-aside {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Event-count pill + live tag, reused by the accordion header. */
 .mgr-rail-count {
   font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   color: var(--text-3);
@@ -378,7 +384,7 @@
   padding: 0.1rem 0.45rem;
   flex-shrink: 0;
 }
-.mgr-rail-item.active .mgr-rail-count {
+.mgr-acc-section.open .mgr-rail-count {
   color: var(--accent);
   background: var(--accent-soft-2);
 }
@@ -386,11 +392,20 @@
   font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   color: var(--red);
 }
-.mgr-rail-foot {
-  border-top: 1px solid var(--border);
-  padding: 0.5rem 0.25rem 0.25rem;
+
+/* Expanded body — sits on the page background so the inner toolbar +
+   event cards read as raised surfaces against it. */
+.mgr-acc-body {
+  padding: 1rem;
+  background: var(--bg);
 }
-.mgr-rail-foot .btn { width: 100%; }
+.mgr-acc-bodyhead {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.mgr-acc-foot { margin-top: 0.2rem; }
+.mgr-acc-foot .btn { width: 100%; }
 
 /* RIGHT PANE — contextual header + the existing toolbar/list. */
 .mgr-detail { min-width: 0; display: flex; flex-direction: column; }
@@ -667,49 +682,18 @@
    padding so the small-screen org admin can still drive a meet
    from a phone. Outer wrap padding is handled globally by
    src/styles/app.css. */
-/* Stack the master–detail panes once the rail + detail can't sit
-   comfortably side by side. The rail becomes a full-width card above
-   the detail; its item list flows as a horizontal scroll strip so the
-   meet picker stays a single compact row rather than a tall stack. */
-@media (max-width: 860px) {
-  .mgr-md {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  .mgr-rail {
-    position: static;
-    flex-direction: column;
-  }
-  .mgr-rail-list {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 0.4rem;
-    padding-bottom: 0.25rem;
-  }
-  .mgr-rail-item { width: auto; flex: 0 0 auto; }
-  .mgr-rail-foot {
-    border-top: none;
-    border-inline-start: 1px solid var(--border);
-    padding: 0.25rem 0 0.25rem 0.5rem;
-    margin-inline-start: 0.25rem;
-    display: flex; align-items: center;
-  }
-  .mgr-rail-foot .btn { width: auto; white-space: nowrap; }
-}
-
+/* The accordion is single-column at every width, so it needs no
+   stacking breakpoint — only the phone-specific tightening below. */
 @media (max-width: 600px) {
   /* Header — shrink the desktop padding so the title + button row
      doesn't dominate above-the-fold on a phone. */
   .page-header { padding: 1rem; }
 
-  /* Rail foot wraps below the strip on a phone so the chips + the
-     "+ New meet" button each get a full row. */
-  .mgr-rail-foot {
-    border-inline-start: none;
-    margin-inline-start: 0;
-    padding-inline-start: 0;
-  }
+  /* Accordion body head — stack the meet sub-line above its action
+     buttons so the dates/venue get the full row instead of being
+     squeezed into a narrow column beside the buttons. */
+  .mgr-acc-bodyhead { flex-direction: column; gap: 0.7rem; }
+  .mgr-acc-body { padding: 0.8rem; }
 
   /* Event row — drop the side-by-side layout so the action cluster
      can wrap below the event meta instead of squeezing it. */

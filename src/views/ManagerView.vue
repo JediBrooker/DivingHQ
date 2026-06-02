@@ -722,6 +722,56 @@ const allEventsCount = computed(() =>
     : events.value.length,
 )
 
+// =============================================================
+// Accordion layout. The page is a vertical list of collapsible
+// sections — "All events", one per meet, then "Ungrouped". Only
+// one expands at a time; expanding it reveals that selection's
+// event list inline. `expandedMeetId` drives open/closed (null =
+// everything collapsed, the default so the page opens as a clean
+// meet list); toggleSection also mirrors the key into
+// `selectedMeetId` so the existing selectedMeet / displayedEvents
+// computeds resolve to the open section.
+// =============================================================
+const expandedMeetId = ref(null)
+function toggleSection(key) {
+  if (expandedMeetId.value === key) {
+    expandedMeetId.value = null
+    return
+  }
+  expandedMeetId.value = key
+  selectedMeetId.value = key
+}
+
+// The ordered section list the accordion renders: All events
+// first, every rail meet, Ungrouped last. `kind` drives the
+// per-section header text + body actions.
+const accordionSections = computed(() => {
+  const out = [{
+    key: '',
+    kind: 'all',
+    label: auth.user?.is_system_admin ? 'All events' : 'Your events',
+    count: allEventsCount.value,
+  }]
+  for (const m of railMeets.value) {
+    out.push({
+      key: m.id,
+      kind: 'meet',
+      label: m.name,
+      meet: m,
+      count: m.event_count,
+      live: m.live_count,
+      country: m.country_code,
+    })
+  }
+  out.push({
+    key: 'ungrouped',
+    kind: 'ungrouped',
+    label: 'Ungrouped events',
+    count: ungroupedCount.value,
+  })
+  return out
+})
+
 // Open the New Event form, optionally preset to bundle into a
 // meet. Called from the rail / detail-header "+ New event" /
 // "+ Add event" buttons. Passing '' opens a standalone event.
@@ -2031,111 +2081,74 @@ onUnmounted(() => {
          search/chips + the event list filtered to the selection.
          Both hidden while a create/edit form page is open.
          ===================================================== -->
-    <div class="mgr-md" v-show="!formPageOpen">
-      <!-- LEFT RAIL — meet selector -->
-      <aside class="mgr-rail">
-        <nav class="mgr-rail-list">
-          <button type="button"
-                  :class="['mgr-rail-item', { active: selectedMeetId === '' }]"
-                  @click="selectedMeetId = ''">
-            <span class="mgr-rail-label">All events</span>
-            <span class="mgr-rail-count">{{ allEventsCount }}</span>
-          </button>
+    <div class="mgr-accordion" v-show="!formPageOpen">
+      <!-- Each section = a meet (with "All events" / "Ungrouped"
+           book-ends). The header toggles the section; expanding one
+           reveals that selection's event list inline and collapses
+           the rest. The body is authored once below and rendered
+           only for the open section (expandedMeetId === sec.key). -->
+      <div v-for="sec in accordionSections" :key="sec.key || 'all'"
+           :class="['mgr-acc-section', { open: expandedMeetId === sec.key }]">
+        <button type="button" class="mgr-acc-header"
+                :aria-expanded="expandedMeetId === sec.key"
+                @click="toggleSection(sec.key)">
+          <span class="mgr-acc-chevron" aria-hidden="true">▸</span>
+          <span class="mgr-acc-label">{{ sec.label }}<template v-if="sec.kind === 'meet' && auth.user?.is_system_admin && sec.country"> · {{ sec.country }}</template></span>
+          <span class="mgr-acc-aside">
+            <span v-if="sec.kind === 'meet' && sec.live" class="mgr-rail-live">· {{ sec.live }} live</span>
+            <span class="mgr-rail-count">{{ sec.count }}</span>
+          </span>
+        </button>
 
-          <button v-for="m in railMeets" :key="m.id"
-                  type="button"
-                  :class="['mgr-rail-item', { active: selectedMeetId === m.id }]"
-                  @click="selectedMeetId = m.id">
-            <span class="mgr-rail-label">{{ m.name }}<template v-if="auth.user?.is_system_admin && m.country_code"> · {{ m.country_code }}</template></span>
-            <span class="mgr-rail-aside">
-              <span v-if="m.live_count" class="mgr-rail-live">· {{ m.live_count }} live</span>
-              <span class="mgr-rail-count">{{ m.event_count }}</span>
-            </span>
-          </button>
-
-          <button type="button"
-                  :class="['mgr-rail-item', { active: selectedMeetId === 'ungrouped' }]"
-                  @click="selectedMeetId = 'ungrouped'">
-            <span class="mgr-rail-label">Ungrouped events</span>
-            <span class="mgr-rail-count">{{ ungroupedCount }}</span>
-          </button>
-        </nav>
-
-        <div class="mgr-rail-foot">
-          <button type="button" class="btn btn-meet"
-                  v-tip:bottom="'Create a meet — a banner that bundles several events together'"
-                  @click="showCreateMeetModal = true">+ New meet</button>
-        </div>
-      </aside>
-
-      <!-- RIGHT PANE — contextual header + search/chips + events -->
-      <section class="mgr-detail">
-        <!-- Contextual header keyed off the rail selection. -->
-        <header class="mgr-detail-head">
-          <!-- A meet is selected -->
-          <template v-if="selectedMeet">
+        <!-- Expanded body: contextual actions + search/chips + the
+             event list narrowed to this selection. -->
+        <section v-if="expandedMeetId === sec.key" class="mgr-acc-body">
+          <header class="mgr-acc-bodyhead">
             <div class="mgr-detail-head-text">
-              <h2 class="mgr-detail-title">{{ selectedMeet.name }}</h2>
-              <div class="mgr-detail-sub">
-                <span v-if="formatMeetDates(selectedMeet)">{{ formatMeetDates(selectedMeet) }}</span>
-                <span v-if="selectedMeet.venue">· {{ selectedMeet.venue }}</span>
-                <span>· {{ selectedMeet.event_count }} event{{ selectedMeet.event_count === 1 ? '' : 's' }}</span>
+              <!-- A meet -->
+              <div v-if="sec.kind === 'meet'" class="mgr-detail-sub">
+                <span v-if="formatMeetDates(sec.meet)">{{ formatMeetDates(sec.meet) }}</span>
+                <span v-if="sec.meet.venue">· {{ sec.meet.venue }}</span>
+                <span>· {{ sec.meet.event_count }} event{{ sec.meet.event_count === 1 ? '' : 's' }}</span>
               </div>
-            </div>
-            <div class="mgr-detail-actions">
-              <button type="button" class="btn btn-primary btn-sm"
-                      v-tip:bottom="'Create an event already bundled into this meet'"
-                      @click="openCreateEvent(selectedMeet.id)">+ Add event</button>
-              <button type="button" class="btn btn-ghost btn-sm"
-                      v-tip="$t('manager.modals.edit_meet_tip')"
-                      @click="openEditMeet(selectedMeet)">{{ $t('manager.modals.edit_label') }}</button>
-              <button type="button" class="btn btn-ghost btn-sm"
-                      @click="deleteMeet(selectedMeet)">{{ $t('manager.modals.delete_label') }}</button>
-            </div>
-          </template>
-
-          <!-- Ungrouped events -->
-          <template v-else-if="selectedMeetId === 'ungrouped'">
-            <div class="mgr-detail-head-text">
-              <h2 class="mgr-detail-title">Ungrouped events</h2>
-              <div class="mgr-detail-sub">
+              <!-- Ungrouped -->
+              <div v-else-if="sec.kind === 'ungrouped'" class="mgr-detail-sub">
                 <span>Standalone events not bundled into a meet.</span>
               </div>
+              <!-- All events — sysadmin cross-org subcount + filter -->
+              <template v-else>
+                <div v-if="auth.user?.is_system_admin && events.length" class="mgr-detail-sub">
+                  <span>{{ events.length }} across {{ uniqueOrgCount }} org{{ uniqueOrgCount === 1 ? '' : 's' }}</span>
+                </div>
+                <div v-if="auth.user?.is_system_admin && uniqueOrgs.length > 1" class="org-filter">
+                  <label class="label">Filter by org</label>
+                  <select class="select" v-model="orgFilter">
+                    <option value="">All organisations ({{ events.length }})</option>
+                    <option v-for="o in uniqueOrgs" :key="o.id" :value="o.id">
+                      {{ o.name }}{{ o.country_code ? ` (${o.country_code})` : '' }} ({{ o.count }})
+                    </option>
+                  </select>
+                </div>
+              </template>
             </div>
             <div class="mgr-detail-actions">
-              <button type="button" class="btn btn-primary btn-sm"
-                      v-tip:bottom="'Create a single standalone event'"
-                      @click="openCreateEvent('')">+ New event</button>
+              <template v-if="sec.kind === 'meet'">
+                <button type="button" class="btn btn-primary btn-sm"
+                        v-tip:bottom="'Create an event already bundled into this meet'"
+                        @click="openCreateEvent(sec.meet.id)">+ Add event</button>
+                <button type="button" class="btn btn-ghost btn-sm"
+                        v-tip="$t('manager.modals.edit_meet_tip')"
+                        @click="openEditMeet(sec.meet)">{{ $t('manager.modals.edit_label') }}</button>
+                <button type="button" class="btn btn-ghost btn-sm"
+                        @click="deleteMeet(sec.meet)">{{ $t('manager.modals.delete_label') }}</button>
+              </template>
+              <template v-else>
+                <button type="button" class="btn btn-primary btn-sm"
+                        v-tip:bottom="sec.kind === 'ungrouped' ? 'Create a single standalone event' : 'Create a single event (one discipline / height / category)'"
+                        @click="openCreateEvent('')">+ New event</button>
+              </template>
             </div>
-          </template>
-
-          <!-- All events (default) -->
-          <template v-else>
-            <div class="mgr-detail-head-text">
-              <h2 class="mgr-detail-title">
-                {{ auth.user?.is_system_admin ? 'All Events' : 'Your Events' }}
-                <span v-if="auth.user?.is_system_admin && events.length" class="events-subcount">
-                  · {{ events.length }} across {{ uniqueOrgCount }} org{{ uniqueOrgCount === 1 ? '' : 's' }}
-                </span>
-              </h2>
-              <!-- Org filter — sysadmin only; narrows the cross-org view. -->
-              <div v-if="auth.user?.is_system_admin && uniqueOrgs.length > 1" class="org-filter">
-                <label class="label">Filter by org</label>
-                <select class="select" v-model="orgFilter">
-                  <option value="">All organisations ({{ events.length }})</option>
-                  <option v-for="o in uniqueOrgs" :key="o.id" :value="o.id">
-                    {{ o.name }}{{ o.country_code ? ` (${o.country_code})` : '' }} ({{ o.count }})
-                  </option>
-                </select>
-              </div>
-            </div>
-            <div class="mgr-detail-actions">
-              <button type="button" class="btn btn-primary btn-sm"
-                      v-tip:bottom="'Create a single event (one discipline / height / category)'"
-                      @click="openCreateEvent('')">+ New event</button>
-            </div>
-          </template>
-        </header>
+          </header>
 
         <!-- Search + status chips — filter within the current
              selection. Always visible so any view is searchable. -->
@@ -2388,10 +2401,19 @@ onUnmounted(() => {
         </div>
         </div>
         <!-- /events-list -->
-      </section>
-      <!-- /mgr-detail -->
+        </section>
+        <!-- /mgr-acc-body -->
+      </div>
+      <!-- /mgr-acc-section -->
+
+      <!-- Foot — create a meet (a banner bundling several events). -->
+      <div class="mgr-acc-foot">
+        <button type="button" class="btn btn-meet"
+                v-tip:bottom="'Create a meet — a banner that bundles several events together'"
+                @click="showCreateMeetModal = true">+ New meet</button>
+      </div>
     </div>
-    <!-- /mgr-md -->
+    <!-- /mgr-accordion -->
   </div>
   <!-- /main -->
 
