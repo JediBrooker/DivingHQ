@@ -2075,12 +2075,22 @@ onUnmounted(() => {
     </div>
     <!-- /modal-create-event -->
 
-    <!-- =====================================================
-         Master–detail. Left rail = selectable meet list (All /
-         per-meet / Ungrouped); right pane = contextual header +
-         search/chips + the event list filtered to the selection.
-         Both hidden while a create/edit form page is open.
-         ===================================================== -->
+    <!-- Page heading + summary. The shell breadcrumb already names
+         the page, but Meet Manager is dense enough to warrant an
+         explicit title + one-line "what this is" box up top. Hidden
+         while a create/edit form page takes over the view. -->
+    <header v-show="!formPageOpen" class="mgr-page-head">
+      <h1 class="mgr-page-title">{{ $t('manager.title') }}</h1>
+      <div class="mgr-info" role="note">
+        <span class="mgr-info-icon" aria-hidden="true">ℹ️</span>
+        <p class="mgr-info-text">{{ $t('manager.subtitle') }}</p>
+      </div>
+    </header>
+
+    <!-- Accordion — a vertical list of collapsible sections (All
+         events, one per meet, Ungrouped). Expanding one reveals that
+         selection's event list inline. Hidden while a create/edit
+         form page is open. -->
     <div class="mgr-accordion" v-show="!formPageOpen">
       <!-- Top toolbar — page-level create actions, left-aligned and
            standard button size, matching Clubs / Teams / Dive
