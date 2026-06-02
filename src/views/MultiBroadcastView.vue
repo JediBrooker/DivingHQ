@@ -138,7 +138,7 @@ const gridStyle = computed(() => {
         {{ events.length }} LIVE EVENT{{ events.length === 1 ? '' : 'S' }}
         <span v-if="selectedIds" class="mbcast-stat-sub">· operator-selected subset</span>
       </div>
-      <RouterLink to="/scoreboard" class="mbcast-exit" v-tip="'Exit broadcast'">✕</RouterLink>
+      <RouterLink to="/scoreboard" class="mbcast-exit" v-tip.fixed="'Exit broadcast'">✕</RouterLink>
     </div>
 
     <div v-if="loading && !events.length" class="mbcast-empty">

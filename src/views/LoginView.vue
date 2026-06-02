@@ -121,7 +121,7 @@ async function handleSubmit() {
       <div class="login-mark">DIVING<span>HQ</span></div>
       <div class="login-top-actions">
         <ThemeToggle compact />
-        <RouterLink to="/guide" class="login-help" aria-label="Help & user guide" v-tip:bottom="'Help & user guide'"><CircleHelp /></RouterLink>
+        <RouterLink to="/guide" class="login-help" aria-label="Help & user guide" v-tip:bottom.fixed="'Help & user guide'"><CircleHelp /></RouterLink>
         <LocaleSwitcher />
       </div>
     </div>

@@ -3571,7 +3571,7 @@ onUnmounted(() => {
             class="btn-back btn-icon"
             @click.stop="toggleMenu('header')"
             :aria-expanded="headerMenuOpen"
-            v-tip:bottom="'More actions'"
+            v-tip:bottom.fixed="'More actions'"
           >⋯</button>
           <div v-if="headerMenuOpen" class="dropdown-menu header-menu">
             <button
@@ -3612,7 +3612,7 @@ onUnmounted(() => {
         <button
           v-if="finaliseBtnShow"
           class="btn-finalise"
-          v-tip:bottom="finaliseBtnTitle"
+          v-tip:bottom.fixed="finaliseBtnTitle"
           @click="currentEvent?.status === 'Completed' ? showLeaderboard() : finaliseEvent()"
         >{{ finaliseBtnText }}</button>
         <!-- Judge Ranking Analysis — only relevant for Completed
@@ -3624,7 +3624,7 @@ onUnmounted(() => {
         <button
           v-if="currentEvent?.status === 'Completed'"
           class="btn-finalise btn-judge-ranking"
-          v-tip:bottom="'Show how the standings would change if every judge had scored unanimously like one specific judge'"
+          v-tip:bottom.fixed="'Show how the standings would change if every judge had scored unanimously like one specific judge'"
           @click="judgeRankingOpen = true"
         >Judge Analysis</button>
         <!-- Broadcast launcher — far-right of the header. Opens the
@@ -3634,7 +3634,7 @@ onUnmounted(() => {
           v-if="currentEvent && !opsBroadcast"
           class="btn-back btn-broadcast"
           @click="broadcastChoiceOpen = true"
-          v-tip:bottom="'Broadcast this event — projector, stream overlay, OBS, or venue scoreboard'"
+          v-tip:bottom.fixed="'Broadcast this event — projector, stream overlay, OBS, or venue scoreboard'"
         >{{ $t('control.broadcast_menu') }}</button>
       </div>
     </div>
@@ -4397,7 +4397,7 @@ onUnmounted(() => {
                 <span class="shot-clock-num">{{ shotClock }}</span>
                 <span class="shot-clock-unit">s</span>
               </button>
-              <button class="shot-clock-reset" @click="resetShotClock" v-tip="'Reset to 30s (T)'">↻</button>
+              <button class="shot-clock-reset" @click="resetShotClock" v-tip.fixed="'Reset to 30s (T)'">↻</button>
             </div>
           </div>
           <!-- Referee-signal banner — appears the moment any
@@ -4646,7 +4646,7 @@ onUnmounted(() => {
                   class="btn btn-ghost btn-icon"
                   @click.stop="toggleMenu('kbd')"
                   :aria-expanded="kbdHintsOpen"
-                  v-tip="'Keyboard shortcuts'"
+                  v-tip.fixed="'Keyboard shortcuts'"
                 >?</button>
                 <div v-if="kbdHintsOpen" class="dropdown-menu kbd-menu">
                   <div class="dropdown-section">Keyboard shortcuts</div>
@@ -5180,9 +5180,9 @@ onUnmounted(() => {
               <div class="roster-row-head">
                 <span v-if="canReorderQueue"
                       class="roster-grip"
-                      v-tip="'Drag to reorder within round'">⋮⋮</span>
+                      v-tip.fixed="'Drag to reorder within round'">⋮⋮</span>
                 <span v-else class="roster-grip roster-grip-locked"
-                      v-tip="'Start order locked — event has started'">🔒</span>
+                      v-tip.fixed="'Start order locked — event has started'">🔒</span>
                 <button
                   class="roster-jump"
                   :disabled="!!item.withdrawn_at"
@@ -5224,7 +5224,7 @@ onUnmounted(() => {
                           @click.stop="toggleRosterMenu(item.originalIdx)"
                           :aria-expanded="rosterMenuOpenIdx === item.originalIdx"
                           aria-haspopup="menu"
-                          v-tip="'Row actions'">⋯</button>
+                          v-tip.fixed="'Row actions'">⋯</button>
                   <div v-if="rosterMenuOpenIdx === item.originalIdx"
                        class="roster-menu"
                        role="menu">

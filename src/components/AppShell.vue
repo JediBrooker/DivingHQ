@@ -194,8 +194,8 @@ function closeMobile() { mobileOpen.value = false }
         </button>
         <div class="spacer"></div>
         <ThemeToggle compact />
-        <RouterLink to="/guide" class="icon-btn" aria-label="Help & user guide" v-tip:bottom="'Help & user guide'"><CircleHelp /></RouterLink>
-        <RouterLink to="/inbox" class="icon-btn" aria-label="Notifications" v-tip:bottom="'Notifications'"><Bell /></RouterLink>
+        <RouterLink to="/guide" class="icon-btn" aria-label="Help & user guide" v-tip:bottom.fixed="'Help & user guide'"><CircleHelp /></RouterLink>
+        <RouterLink to="/inbox" class="icon-btn" aria-label="Notifications" v-tip:bottom.fixed="'Notifications'"><Bell /></RouterLink>
       </header>
 
       <div class="shell-content">

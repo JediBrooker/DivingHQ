@@ -598,7 +598,7 @@ onMounted(async () => {
               <span class="new">{{ r.new_score ?? '—' }}</span>
             </td>
             <td class="mono">{{ r.actor_name || '—' }}</td>
-            <td class="reason-cell" v-tip="r.reason || ''">{{ r.reason || '—' }}</td>
+            <td class="reason-cell" v-tip.fixed="r.reason || ''">{{ r.reason || '—' }}</td>
           </tr>
         </tbody>
       </table></div>

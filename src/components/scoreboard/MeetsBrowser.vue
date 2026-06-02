@@ -285,7 +285,7 @@ watch(countryFilter, (val) => {
           v-if="filteredEvents.length"
           class="btn btn-ghost btn-sm"
           @click="exportMeetsCsv"
-          v-tip="'Download the currently-filtered list as CSV'"
+          v-tip.fixed="'Download the currently-filtered list as CSV'"
         >Export CSV</button>
       </div>
     </div>

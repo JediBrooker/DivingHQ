@@ -1027,7 +1027,7 @@ onMounted(async () => {
       v-if="broadcastMode && currentEventId"
       :to="`/scoreboard/${currentEventId}`"
       class="broadcast-exit"
-      v-tip="'Exit broadcast mode'"
+      v-tip.fixed="'Exit broadcast mode'"
     >✕</RouterLink>
     <!-- Sponsor rotation tile. Only rendered when the current
          event is part of a meet (event.meet_id is set) — the
@@ -1089,14 +1089,14 @@ onMounted(async () => {
           v-if="currentEventId && !isCompleted"
           :to="`/scoreboard/${currentEventId}/broadcast`"
           class="btn btn-ghost btn-sm"
-          v-tip="'Open in broadcast / kiosk mode (no page chrome)'"
+          v-tip.fixed="'Open in broadcast / kiosk mode (no page chrome)'"
         >📺 {{ $t('scoreboard.broadcast') }}</RouterLink>
         <a
           v-if="currentEventId && !isCompleted"
           :href="`/scoreboard/${currentEventId}?overlay=1`"
           target="_blank" rel="noopener"
           class="btn btn-ghost btn-sm"
-          v-tip="'Open the chroma-key overlay (for OBS / streaming). Append &bg=ff00ff for a magenta key colour.'"
+          v-tip.fixed="'Open the chroma-key overlay (for OBS / streaming). Append &bg=ff00ff for a magenta key colour.'"
         >🎬 {{ $t('scoreboard.stream_overlay') }}</a>
         <RouterLink v-if="!auth.isLoggedIn" to="/" class="btn btn-ghost btn-sm">Home</RouterLink>
       </div>
