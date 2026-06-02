@@ -827,12 +827,28 @@ module.exports = function createUsersRouter({
         );
         counts.audits += 1;
 
-        // Event attendance and dive-off records. Both ON DELETE
-        // CASCADE on the user FK — moving them preserves the
-        // history rather than losing it when we delete the
-        // shell row below.
+        // Event attendance — ON DELETE CASCADE on the user FK, so
+        // move it to preserve the history rather than losing it when
+        // we delete the shell row below.
         await client.query(
           `UPDATE event_attendance SET competitor_id = $2 WHERE competitor_id = $1`,
+          [oldId, me.id],
+        );
+
+        // Tie-break dive-offs — competitor_a_id / competitor_b_id are
+        // NOT NULL ON DELETE CASCADE, so the shell-row delete below
+        // would otherwise destroy the dive-off record (which this
+        // block's comment always claimed to preserve). Re-point both
+        // sides AND winner_id in ONE UPDATE: the
+        // tiebreak_winner_is_competitor CHECK (winner_id must equal a
+        // or b) is evaluated per-statement, so migrating winner_id in
+        // a separate query would transiently violate it.
+        await client.query(
+          `UPDATE tiebreak_dive_offs
+              SET competitor_a_id = CASE WHEN competitor_a_id = $1 THEN $2 ELSE competitor_a_id END,
+                  competitor_b_id = CASE WHEN competitor_b_id = $1 THEN $2 ELSE competitor_b_id END,
+                  winner_id       = CASE WHEN winner_id       = $1 THEN $2 ELSE winner_id END
+            WHERE competitor_a_id = $1 OR competitor_b_id = $1 OR winner_id = $1`,
           [oldId, me.id],
         );
 
