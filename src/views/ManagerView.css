@@ -311,11 +311,6 @@
   margin-inline-start: auto;
   display: flex; gap: 0.5rem; flex-shrink: 0;
 }
-/* New Meet uses a distinct, lighter blue from New Event (accent). */
-/* New meet — a lighter, theme-aware blue so it reads as distinct
-   from the solid "New event" primary. */
-.btn-meet { background: var(--accent-soft-2); color: var(--accent); border-color: var(--accent); }
-.btn-meet:hover { background: var(--accent); color: var(--fg-on-accent); border-color: var(--accent); }
 /* =====================================================================
    Accordion layout. A single vertical column of collapsible sections —
    "All events", one per meet, then "Ungrouped". The header toggles the
@@ -404,8 +399,9 @@
   gap: 1rem; flex-wrap: wrap;
   margin-bottom: 1rem;
 }
-.mgr-acc-foot { margin-top: 0.2rem; }
-.mgr-acc-foot .btn { width: 100%; }
+/* Top toolbar — left-aligned page actions above the section list.
+   The button keeps its natural (standard) width; no full-bleed. */
+.mgr-acc-toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
 /* RIGHT PANE — contextual header + the existing toolbar/list. */
 .mgr-detail { min-width: 0; display: flex; flex-direction: column; }
