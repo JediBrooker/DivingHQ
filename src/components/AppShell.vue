@@ -37,12 +37,12 @@ const NAV = [
     { to: '/dashboard',      label: 'Dashboard',      icon: LayoutDashboard },
     { to: '/manager',        label: 'Meets & events', labelKey: 'manager.title',         icon: Trophy,        roles: ['org_admin', 'meet_manager'] },
     { to: '/control',        label: 'Control Room',   labelKey: 'control.page_label',     icon: MonitorPlay,   roles: ['org_admin', 'meet_manager', 'referee'] },
-    { to: '/judge',          label: 'Judge terminal', icon: Gavel,         roles: ['judge'] },
     { to: '/competitor',     label: 'Dive Sheets',    icon: Waves,         roles: ['diver'] },
     { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
     { to: '/scoreboard',     label: 'Scoreboard',     labelKey: 'scoreboard.page_label',  icon: ListChecks },
     { to: '/judge-analysis', label: 'Judge Analysis', icon: Scale },
     { to: '/dive-directory', label: 'Dive directory', labelKey: 'dive_directory.title',   icon: BookOpen },
+    { to: '/judge',          label: 'Judge Terminal', icon: Gavel,         roles: ['judge'] },
   ] },
   { group: 'Federation', items: [
     { to: '/users', label: 'User Manager',  labelKey: 'user_manager.title', icon: Users,      roles: ['org_admin'] },
