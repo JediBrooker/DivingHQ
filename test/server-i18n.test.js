@@ -128,14 +128,14 @@ test("serverT(req) stashes the resolved locale on req for downstream code", () =
 test("serverT.list returns the supported locale codes", () => {
   const list = serverT.list();
   assert.ok(Array.isArray(list));
-  assert.equal(list.length, 25);
+  assert.equal(list.length, 26);
   // The major-language hand-translations all need to be present.
   for (const code of ["en", "es", "fr", "de", "it", "pt"]) {
     assert.ok(list.includes(code), `expected ${code} in supported list`);
   }
   // Returned copy — caller can't mutate the source.
   list.pop();
-  assert.equal(serverT.list().length, 25);
+  assert.equal(serverT.list().length, 26);
 });
 
 test("SUPPORTED + DEFAULT_LOCALE exports are sane", () => {

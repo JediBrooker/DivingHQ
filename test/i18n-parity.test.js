@@ -62,13 +62,13 @@ const path = require("node:path");
 const LOCALES_DIR = path.join(__dirname, "..", "src", "locales");
 const SOURCE = "en";
 
-// 24 supported locales (en is the source). Must match the
+// 25 supported locales (en is the source). Must match the
 // SUPPORTED_LOCALES list in src/i18n/index.js. Updating that list
 // requires updating this one too — there is no reflective import
 // because src/i18n/index.js pulls in Vue-side modules a Node test
 // can't load without a bundler.
 const LOCALES = [
-  "es", "fr", "de", "it", "pt", "pl",
+  "es", "fr", "de", "it", "pt", "pl", "cs",
   "ru", "uk",
   "fi", "sv", "da", "no", "hu",
   "hr", "sr",

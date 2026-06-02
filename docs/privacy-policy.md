@@ -57,7 +57,7 @@ When you sign up: **username, full name, email, password (stored hashed, never r
 
 Optional, set later:
 - **Two-factor authentication** — a TOTP secret + bcrypt-hashed recovery codes. We never store the readable codes; you see them once at setup and they're hashed on save.
-- **Language preference** — one of 25 supported locales.
+- **Language preference** — one of 26 supported locales.
 - **Dashboard widgets** — which analytics panels you've pinned.
 
 Self-service updates (name, email, password, 2FA) live on your profile page.
@@ -129,7 +129,7 @@ We don't sell data. We don't run ads. We don't share with third parties for beha
 
 We don't use third-party analytics or marketing tools.
 
-**Translation tooling** (used to maintain the app's UI in 25 languages) processes only the English UI dictionary — never user data, never competition records.
+**Translation tooling** (used to maintain the app's UI in 26 languages) processes only the English UI dictionary — never user data, never competition records.
 
 ## 7. Deleting your account
 
