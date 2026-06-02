@@ -2082,13 +2082,19 @@ onUnmounted(() => {
          Both hidden while a create/edit form page is open.
          ===================================================== -->
     <div class="mgr-accordion" v-show="!formPageOpen">
-      <!-- Top toolbar — page-level "New meet" action, left-aligned and
-           standard button size, matching the create actions on Clubs /
-           Teams / Dive Directory (btn btn-primary btn-sm). -->
+      <!-- Top toolbar — page-level create actions, left-aligned and
+           standard button size, matching Clubs / Teams / Dive
+           Directory (btn btn-primary btn-sm). Both stay visible
+           regardless of which section is expanded, so creating a meet
+           or a standalone event never requires opening a section
+           first. -->
       <div class="mgr-acc-toolbar">
         <button type="button" class="btn btn-primary btn-sm"
                 v-tip:bottom.fixed="'Create a meet — a banner that bundles several events together'"
                 @click="showCreateMeetModal = true">+ New meet</button>
+        <button type="button" class="btn btn-primary btn-sm"
+                v-tip:bottom.fixed="'Create a single standalone event (one discipline / height / category)'"
+                @click="openCreateEvent('')">+ New event</button>
       </div>
 
       <!-- Each section = a meet (with "All events" / "Ungrouped"
@@ -2140,22 +2146,18 @@ onUnmounted(() => {
                 </div>
               </template>
             </div>
-            <div class="mgr-detail-actions">
-              <template v-if="sec.kind === 'meet'">
-                <button type="button" class="btn btn-primary btn-sm"
-                        v-tip:bottom="'Create an event already bundled into this meet'"
-                        @click="openCreateEvent(sec.meet.id)">+ Add event</button>
-                <button type="button" class="btn btn-ghost btn-sm"
-                        v-tip="$t('manager.modals.edit_meet_tip')"
-                        @click="openEditMeet(sec.meet)">{{ $t('manager.modals.edit_label') }}</button>
-                <button type="button" class="btn btn-ghost btn-sm"
-                        @click="deleteMeet(sec.meet)">{{ $t('manager.modals.delete_label') }}</button>
-              </template>
-              <template v-else>
-                <button type="button" class="btn btn-primary btn-sm"
-                        v-tip:bottom="sec.kind === 'ungrouped' ? 'Create a single standalone event' : 'Create a single event (one discipline / height / category)'"
-                        @click="openCreateEvent('')">+ New event</button>
-              </template>
+            <!-- Meet sections get contextual actions (+ Add event
+                 bundles into THIS meet, plus edit/delete). All-events
+                 and Ungrouped rely on the toolbar's "+ New event". -->
+            <div v-if="sec.kind === 'meet'" class="mgr-detail-actions">
+              <button type="button" class="btn btn-primary btn-sm"
+                      v-tip:bottom="'Create an event already bundled into this meet'"
+                      @click="openCreateEvent(sec.meet.id)">+ Add event</button>
+              <button type="button" class="btn btn-ghost btn-sm"
+                      v-tip="$t('manager.modals.edit_meet_tip')"
+                      @click="openEditMeet(sec.meet)">{{ $t('manager.modals.edit_label') }}</button>
+              <button type="button" class="btn btn-ghost btn-sm"
+                      @click="deleteMeet(sec.meet)">{{ $t('manager.modals.delete_label') }}</button>
             </div>
           </header>
 
