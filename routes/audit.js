@@ -44,10 +44,26 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
   }
   const router = express.Router();
 
+  // Guard ?from / ?to so a non-timestamp value returns a clean 400
+  // instead of bubbling a Postgres "invalid input syntax" 500. The
+  // values feed `created_at >= $N` / `<= $N` as bound params, so this
+  // is robustness, not an injection fix.
+  function validAuditDates(req, res) {
+    for (const k of ["from", "to"]) {
+      const v = req.query[k];
+      if (v != null && v !== "" && Number.isNaN(Date.parse(v))) {
+        res.status(400).json({ error: `${k} must be a valid date/timestamp` });
+        return false;
+      }
+    }
+    return true;
+  }
+
   // ---------------------------------------------------------------
   // GET /api/audit/scores — federation-wide score audit
   // ---------------------------------------------------------------
   router.get("/api/audit/scores", requireOrgAdmin, async (req, res) => {
+    if (!validAuditDates(req, res)) return;
     const isSysAdmin = !!req.user.is_system_admin;
     // Build a parameterised WHERE incrementally so a request
     // with no filters falls back to "everything in this org".
@@ -130,6 +146,7 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
   // GET /api/audit/roles — federation-wide role audit
   // ---------------------------------------------------------------
   router.get("/api/audit/roles", requireOrgAdmin, async (req, res) => {
+    if (!validAuditDates(req, res)) return;
     const isSysAdmin = !!req.user.is_system_admin;
     const where = [];
     const params = [];

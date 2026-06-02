@@ -388,6 +388,17 @@ module.exports = function attachSocket({
         reject("insufficient_role");
         return;
       }
+      // Re-check revocation on this long-lived socket. The handshake
+      // ran once, but a judge whose account is suspended or whose
+      // token_version is bumped mid-meet (while still seated on the
+      // panel) must lose submit immediately, not at next reconnect.
+      // O(1) via the 30s auth-state cache. Mirrors socketCanManageEvent.
+      if (typeof socket.userTokenVersion === "number"
+          && !(await isTokenVersionCurrent(socket.userId, socket.userTokenVersion))) {
+        reject("token_revoked", { message: "Your session was revoked — please sign in again." });
+        socket.disconnect(true);
+        return;
+      }
       if (!data?.event_id || !data?.competitor_id) {
         reject("bad_payload");
         return;
@@ -707,6 +718,11 @@ module.exports = function attachSocket({
     socket.on("judge_signal", async (data) => {
       if (!socket.userId) return;
       if (socketActionRateLimited("judge_signal", socket.userId)) return;
+      if (typeof socket.userTokenVersion === "number"
+          && !(await isTokenVersionCurrent(socket.userId, socket.userTokenVersion))) {
+        socket.disconnect(true);
+        return;
+      }
       if (!data?.event_id || !data?.competitor_id) return;
       const round = Number(data.round_number);
       if (!Number.isInteger(round) || round < 1) return;
@@ -738,7 +754,22 @@ module.exports = function attachSocket({
     // submit_score on the same UNIQUE key).
     // -----------------------------------------------------------
     async function applyRefereeAction(action, data, actorUserId) {
-      if (!data?.event_id || !data?.competitor_id || !data?.round_number) return;
+      if (!data?.event_id || !data?.competitor_id) return;
+      // Validate round_number is a positive integer, matching the
+      // submit_score / judge_signal paths. Previously only truthiness
+      // was checked, so a malformed value reached the parameterized
+      // UPDATE and surfaced as a confusing 500 instead of a clean
+      // rejection — an inconsistent input surface across the three
+      // score-mutation paths.
+      const round = Number(data.round_number);
+      if (!Number.isInteger(round) || round < 1) {
+        socket.emit("referee_action_rejected", { reason: "bad_round" });
+        return;
+      }
+      // Use the coerced integer downstream so a value like "3.0"
+      // (passes the integer check but fails a Postgres int cast)
+      // can't reach the parameterized queries below.
+      data.round_number = round;
       let capValue = 2.0;
       if (action === "cap") {
         const raw = Number(data.cap_value);

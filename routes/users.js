@@ -1008,7 +1008,7 @@ module.exports = function createUsersRouter({
   });
 
   // Re-send the email-verification link (reuses the register-flow JWT).
-  router.post("/api/users/:id/resend-verification", requireOrgAdmin, async (req, res) => {
+  router.post("/api/users/:id/resend-verification", writeLimiter, requireOrgAdmin, async (req, res) => {
     try {
       const target = await loadEditableTarget(req, res, "org_id, full_name, email, email_verified_at, deleted_at");
       if (!target) return;
@@ -1031,7 +1031,7 @@ module.exports = function createUsersRouter({
   });
 
   // Send the user a password-reset link (reuses the forgot-password JWT).
-  router.post("/api/users/:id/reset-password", requireOrgAdmin, async (req, res) => {
+  router.post("/api/users/:id/reset-password", writeLimiter, requireOrgAdmin, async (req, res) => {
     try {
       const target = await loadEditableTarget(req, res, "org_id, full_name, email, password, deleted_at");
       if (!target) return;

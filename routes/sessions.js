@@ -1188,6 +1188,27 @@ module.exports = function createSessionsRouter({
       return res.status(500).json({ error: "Internal server error" });
     }
 
+    // An attached referee must hold the referee role in this meet's
+    // org. Editing the session is already gated above, but the
+    // referee_user_id itself was only format-checked — without this a
+    // meet editor could bind an arbitrary or cross-org user as session
+    // referee, polluting referee-conflict detection. (International
+    // meets that need a participating-federation referee would extend
+    // this to the participating-org set; today sessions are scoped to
+    // the meet's own org.)
+    if (body.referee_user_id) {
+      const ref = await pool.query(
+        `SELECT 1 FROM user_org_roles
+          WHERE user_id = $1 AND org_id = $2 AND role = 'referee'`,
+        [body.referee_user_id, access.meet.org_id],
+      );
+      if (!ref.rows.length) {
+        return res.status(400).json({
+          error: "Referee must hold the referee role in this meet's organisation",
+        });
+      }
+    }
+
     if (!sets.length) {
       // No-op — return the current row so the caller gets a
       // predictable shape even when no fields were sent.

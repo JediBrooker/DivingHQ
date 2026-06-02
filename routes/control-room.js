@@ -858,6 +858,18 @@ module.exports = function createControlRoomRouter({
       if (user.org_id !== ev.rows[0].org_id) {
         return res.status(403).json({ error: "Referee is not in this event's org" });
       }
+      // Referee role check — BEFORE the TOTP block so a one-time
+      // recovery code is never consumed for a user who turns out not
+      // to be a referee (a 403 they'd get regardless). Also tightens
+      // the password oracle: a non-referee learns nothing new.
+      const roleQ = await pool.query(
+        `SELECT 1 FROM user_org_roles
+         WHERE user_id = $1 AND org_id = $2 AND role = 'referee' LIMIT 1`,
+        [user.id, ev.rows[0].org_id],
+      );
+      if (!roleQ.rows.length) {
+        return res.status(403).json({ error: "User is not a referee" });
+      }
       // TOTP if enabled.
       if (user.totp_enabled_at) {
         if (!totp) return res.status(503).json({ error: "TOTP verifier not wired" });
@@ -877,15 +889,6 @@ module.exports = function createControlRoomRouter({
           }
         }
         if (!accepted) return res.status(401).json({ error: "Invalid TOTP code" });
-      }
-      // Referee role check.
-      const roleQ = await pool.query(
-        `SELECT 1 FROM user_org_roles
-         WHERE user_id = $1 AND org_id = $2 AND role = 'referee' LIMIT 1`,
-        [user.id, ev.rows[0].org_id],
-      );
-      if (!roleQ.rows.length) {
-        return res.status(403).json({ error: "User is not a referee" });
       }
 
       // Stamp the sign-off in the event row + close any pending
@@ -1308,6 +1311,30 @@ module.exports = function createControlRoomRouter({
       );
       if (!u.rows.length || u.rows[0].org_id !== eventOrgId) {
         return res.status(400).json({ error: "Competitor must belong to this organisation" });
+      }
+
+      // An attached partner / team must belong to the same org as the
+      // event (AGENTS.md isInSameOrg invariant). Without this a meet
+      // manager could splice a cross-org user/team into the roster —
+      // the public GET /api/events/:id/history joins on partner_id and
+      // would leak that foreign user's name + country.
+      if (partner_id) {
+        const p = await pool.query(
+          "SELECT 1 FROM users WHERE id = $1 AND org_id = $2",
+          [partner_id, eventOrgId],
+        );
+        if (!p.rows.length) {
+          return res.status(400).json({ error: "Partner must belong to this organisation" });
+        }
+      }
+      if (team_id) {
+        const tm = await pool.query(
+          "SELECT 1 FROM teams WHERE id = $1 AND org_id = $2",
+          [team_id, eventOrgId],
+        );
+        if (!tm.rows.length) {
+          return res.status(400).json({ error: "Team must belong to this organisation" });
+        }
       }
 
       // xmax=0 on the returning row distinguishes a fresh

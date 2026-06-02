@@ -146,6 +146,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
            FROM events e
            JOIN organisations o ON e.org_id = o.id
            WHERE e.id = $1
+             AND e.status IN ('Live', 'Completed')
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
           [req.params.eventId],
         ),
