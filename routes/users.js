@@ -973,7 +973,12 @@ module.exports = function createUsersRouter({
       if (req.params.id === req.user.id)
         return res.status(400).json({ error: "You can't suspend your own account" });
       await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [req.params.id]);
-      if (typeof bumpTokenVersion === "function") await bumpTokenVersion(req.params.id);
+      // bumpTokenVersion(db, userId) — pass the pool as the first arg.
+      // A single-arg call lands the id in `db`, leaves userId undefined,
+      // and the helper's `if (!userId) return;` guard makes it a silent
+      // no-op — which previously left the suspended user's existing JWT
+      // valid for up to JWT_EXPIRY. Bumping here revokes every session.
+      if (typeof bumpTokenVersion === "function") await bumpTokenVersion(pool, req.params.id);
       await recordAudit(pool, {
         ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
         entity_id: req.params.id, entity_name: target.full_name, action: "user.suspended",
