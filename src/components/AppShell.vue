@@ -14,7 +14,7 @@ import { useI18n } from 'vue-i18n'
 import LogoMark from '@/components/LogoMark.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import {
-  LayoutDashboard, Trophy, MonitorPlay, Gavel, Scale, Waves, GraduationCap,
+  LayoutDashboard, Trophy, MonitorPlay, Calculator, ChartColumn, Waves, GraduationCap,
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical,
@@ -40,9 +40,9 @@ const NAV = [
     { to: '/competitor',     label: 'Dive Sheets',    icon: Waves,         roles: ['diver'] },
     { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
     { to: '/scoreboard',     label: 'Scoreboard',     labelKey: 'scoreboard.page_label',  icon: ListChecks },
-    { to: '/judge-analysis', label: 'Judge Analysis', icon: Scale },
+    { to: '/judge-analysis', label: 'Judge Analysis', icon: ChartColumn },
     { to: '/dive-directory', label: 'Dive directory', labelKey: 'dive_directory.title',   icon: BookOpen },
-    { to: '/judge',          label: 'Judge Terminal', icon: Gavel,         roles: ['judge'] },
+    { to: '/judge',          label: 'Judge Terminal', icon: Calculator,    roles: ['judge'] },
   ] },
   { group: 'Federation', items: [
     { to: '/users', label: 'User Manager',  labelKey: 'user_manager.title', icon: Users,      roles: ['org_admin'] },
