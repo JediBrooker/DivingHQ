@@ -77,6 +77,48 @@ const activeStatus = computed(() => {
 })
 
 const events = ref([])
+
+// Group events by their parent meet so the picker renders an
+// <optgroup> per meet rather than one flat list of every event in
+// the federation. /api/events returns meet_name + meet_start_date
+// (LEFT JOIN meets). Events arrive ordered created_at DESC; we
+// re-group preserving a sensible order — meets by start date (most
+// recent first), events within a meet by their scheduled run time.
+const eventGroups = computed(() => {
+  const groups = new Map()
+  for (const ev of events.value) {
+    const key = ev.meet_id || '__none__'
+    if (!groups.has(key)) {
+      groups.set(key, {
+        meetId: ev.meet_id || null,
+        label: ev.meet_name || 'Other events',
+        meetStart: ev.meet_start_date || null,
+        events: [],
+      })
+    }
+    groups.get(key).events.push(ev)
+  }
+  const list = [...groups.values()]
+  for (const g of list) {
+    g.events.sort((a, b) => {
+      const ta = a.scheduled_at ? Date.parse(a.scheduled_at) : Infinity
+      const tb = b.scheduled_at ? Date.parse(b.scheduled_at) : Infinity
+      if (ta !== tb) return ta - tb
+      return (a.name || '').localeCompare(b.name || '')
+    })
+  }
+  // Meets most-recent-first; the meet-less catch-all group sinks
+  // to the bottom.
+  list.sort((a, b) => {
+    if (!a.meetId) return 1
+    if (!b.meetId) return -1
+    const ta = a.meetStart ? Date.parse(a.meetStart) : 0
+    const tb = b.meetStart ? Date.parse(b.meetStart) : 0
+    return tb - ta
+  })
+  return list
+})
+
 const selectedEventId = ref('')
 const roster = ref([])
 const currentIndex = ref(-1)
@@ -3483,7 +3525,9 @@ onUnmounted(() => {
                     @change="onEventChange"
                     v-tip:bottom="'Switch to a different event'">
               <option value="">— Select Event —</option>
-              <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
+              <optgroup v-for="g in eventGroups" :key="g.meetId || 'none'" :label="g.label">
+                <option v-for="ev in g.events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
+              </optgroup>
             </select>
             <span class="event-title-chevron" aria-hidden="true">▾</span>
           </div>

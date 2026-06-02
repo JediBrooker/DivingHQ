@@ -202,6 +202,7 @@ module.exports = function createEventsRouter({
        // GROUP BY so the rest of the query stays readable.
       const SELECT = `
         SELECT e.*, o.name AS org_name, o.country_code, o.slug AS org_slug,
+               m.name AS meet_name, m.start_date AS meet_start_date,
                COALESCE(
                  (SELECT COUNT(*) FROM event_participating_orgs epo
                    WHERE epo.event_id = e.id),
@@ -209,6 +210,7 @@ module.exports = function createEventsRouter({
                )::int AS participating_orgs_count
         FROM events e
         JOIN organisations o ON o.id = e.org_id
+        LEFT JOIN meets m ON m.id = e.meet_id
       `;
       if (token) {
         let decoded;
