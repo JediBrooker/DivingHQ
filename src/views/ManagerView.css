@@ -312,6 +312,31 @@
   display: flex; gap: 0.5rem; flex-shrink: 0;
 }
 /* =====================================================================
+   Page heading + summary box. Title mirrors the .page-title scale used
+   on Clubs / Teams / Dive Directory; the info box is a soft accent-
+   tinted callout with an icon, giving the dense page a one-line "what
+   this is" up top. */
+.mgr-page-head { display: flex; flex-direction: column; gap: 0.75rem; }
+.mgr-page-title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-h1); line-height: var(--lh-h1); letter-spacing: var(--ls-h1);
+  font-weight: 600; font-style: normal; color: var(--fg);
+}
+.mgr-info {
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--accent-soft, var(--bg-3));
+  border: 1px solid var(--accent-soft-2, var(--border));
+  border-inline-start: 3px solid var(--accent);
+  border-radius: var(--radius);
+}
+.mgr-info-icon { font-size: 14px; line-height: 1.5; flex-shrink: 0; }
+.mgr-info-text {
+  margin: 0;
+  font-size: 13px; line-height: 1.55; color: var(--text-2);
+}
+/* =====================================================================
    Accordion layout. A single vertical column of collapsible sections —
    "All events", one per meet, then "Ungrouped". The header toggles the
    section; the open one reveals its event list inline. Replaces the old
