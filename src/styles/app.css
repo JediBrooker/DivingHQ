@@ -1438,6 +1438,10 @@ h1, h2, h3, h4 {
      through) — the bubble's own text should always be plain. */
   text-decoration: none;
 }
+/* Fixed-mode hosts (v-tip.fixed) render their bubble as a
+   body-appended .tip-fixed node instead, so suppress the CSS
+   ::after — otherwise a partially-clipped host shows both. */
+[data-tip-fixed]::after { content: none; }
 /* Downward placement — opt in with v-tip:bottom="…" (sets
    data-tip-pos="bottom"). For hosts near the top of the
    viewport (e.g. a page's top nav) whose default above-the-host

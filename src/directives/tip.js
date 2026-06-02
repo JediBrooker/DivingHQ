@@ -119,8 +119,18 @@ function positionFixedTip(el, bubble) {
   const r = el.getBoundingClientRect();
   const bw = bubble.offsetWidth;
   const bh = bubble.offsetHeight;
-  let top = r.top - bh - 8;
-  if (top < 4) top = r.bottom + 8;
+  // Honour v-tip:bottom.fixed (data-tip-pos="bottom") so a host near
+  // the top of the page keeps its bubble below it; otherwise default
+  // to above. Each branch flips to the other side if it would run off
+  // the viewport edge.
+  let top;
+  if (el.getAttribute("data-tip-pos") === "bottom") {
+    top = r.bottom + 8;
+    if (top + bh > window.innerHeight - 4) top = r.top - bh - 8;
+  } else {
+    top = r.top - bh - 8;
+    if (top < 4) top = r.bottom + 8;
+  }
   let left = r.left + r.width / 2 - bw / 2;
   left = Math.max(6, Math.min(left, window.innerWidth - bw - 6));
   bubble.style.top = `${Math.round(top)}px`;
@@ -146,6 +156,11 @@ function hideFixedTip(el) {
   }
 }
 function attachFixed(el) {
+  // Mark the host so the CSS ::after bubble is suppressed (see
+  // app.css [data-tip-fixed]). Without this the host would render
+  // BOTH the clipped ::after and the fixed bubble on a partially-
+  // clipped host — a visible double tooltip.
+  el.setAttribute("data-tip-fixed", "");
   if (el.__tipFixedHandlers) return;
   const show = () => showFixedTip(el);
   const hide = () => hideFixedTip(el);
@@ -166,6 +181,7 @@ function detachFixed(el) {
   el.removeEventListener("focusout", h.hide);
   window.removeEventListener("scroll", h.hide, true);
   el.__tipFixedHandlers = null;
+  el.removeAttribute("data-tip-fixed");
   hideFixedTip(el);
 }
 

@@ -2087,7 +2087,7 @@ onUnmounted(() => {
            Teams / Dive Directory (btn btn-primary btn-sm). -->
       <div class="mgr-acc-toolbar">
         <button type="button" class="btn btn-primary btn-sm"
-                v-tip:bottom="'Create a meet — a banner that bundles several events together'"
+                v-tip:bottom.fixed="'Create a meet — a banner that bundles several events together'"
                 @click="showCreateMeetModal = true">+ New meet</button>
       </div>
 
