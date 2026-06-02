@@ -1526,8 +1526,17 @@ function attachSocketHandlers() {
 .pulse-popover {
   position: absolute;
   top: 100%;
-  inset-inline-start: 50%;
-  transform: translateX(-50%);
+  /* Anchor to the chip's start edge, NOT centered. A centered
+     popover (inset-inline-start:50% + translateX(-50%)) pushed
+     the leftmost chip's box ~140px to the left of the chip — off
+     the page's left edge, where the dashboard wrapper's
+     overflow-x:clip sheared the first ~46px of every row off.
+     Start-anchoring opens the popover rightward from the chip, so
+     it always lands inside the clip box. Chips are left-clustered
+     in a 1212px strip, so even the right-most chip's popover
+     (≤420px wide) stays within bounds. Mirrors the
+     rd-pick-popover anchoring pattern. */
+  inset-inline-start: 0;
   margin-top: 0.4rem;                /* visual gap, NOT a hover gap (see ::before) */
   min-width: 280px;
   max-width: min(420px, 90vw);
