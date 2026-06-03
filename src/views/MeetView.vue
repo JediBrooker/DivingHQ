@@ -157,7 +157,11 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
   <div class="meet-wrap">
     <!-- Top nav -->
     <div class="meet-nav">
-      <RouterLink to="/scoreboard" class="btn btn-ghost btn-sm">← All Meets</RouterLink>
+      <nav class="sb-crumbs" aria-label="Breadcrumb">
+        <RouterLink to="/scoreboard" class="sb-crumb-link">All Meets</RouterLink>
+        <span class="sb-crumb-sep" aria-hidden="true">›</span>
+        <span class="sb-crumb-current">{{ meet?.name || 'Meet' }}</span>
+      </nav>
       <button v-if="meet"
               type="button"
               class="btn btn-ghost btn-sm"
@@ -362,7 +366,22 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
 
 <style scoped>
 .meet-wrap { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
-.meet-nav  { margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.meet-nav  { margin-bottom: 1rem; display: flex; gap: 0.6rem 1rem; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+
+/* Breadcrumbs — matches the Scoreboard surfaces (All Meets ›
+   <Meet>) so navigation reads consistently across pages. */
+.sb-crumbs {
+  display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+  min-width: 0; font-family: var(--font-sans); font-size: 15px;
+}
+.sb-crumb-link {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit; color: var(--cyan); text-decoration: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 38vw;
+}
+.sb-crumb-link:hover { text-decoration: underline; }
+.sb-crumb-sep { color: var(--text-3); flex-shrink: 0; }
+.sb-crumb-current { font-weight: 600; color: var(--fg, var(--text)); min-width: 0; }
 .empty     { color: var(--text-3); padding: 3rem 0; text-align: center; font-family: var(--font-mono); font-size: 13px; }
 
 /* Hero */

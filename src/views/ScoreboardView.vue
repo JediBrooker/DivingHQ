@@ -1097,10 +1097,17 @@ onMounted(async () => {
       </template>
       <template v-else>
         <div class="header-left">
-          <button @click="resetToEventPicker" class="btn btn-ghost btn-sm" style="margin-inline-end:0.5rem">← All Meets</button>
+          <nav class="sb-crumbs" aria-label="Breadcrumb">
+            <button @click="resetToEventPicker" class="sb-crumb-link" type="button">All Meets</button>
+            <template v-if="currentEvent?.meet_id">
+              <span class="sb-crumb-sep" aria-hidden="true">›</span>
+              <RouterLink :to="`/meet/${currentEvent.meet_id}`" class="sb-crumb-link sb-crumb-meet">{{ currentEvent.meet_name }}</RouterLink>
+            </template>
+            <span class="sb-crumb-sep" aria-hidden="true">›</span>
+            <span class="sb-crumb-current">{{ currentEvent?.name || (isCompleted ? 'Event Recap' : 'Broadcast Feed') }}</span>
+          </nav>
           <div v-if="isCompleted" class="status-badge done-badge">{{ $t('scoreboard.status_completed') }}</div>
           <div v-else class="status-badge live-badge">{{ $t('scoreboard.status_live') }}</div>
-          <span class="sb-event-name">{{ currentEvent?.name || (isCompleted ? 'Event Recap' : 'Broadcast Feed') }}</span>
         </div>
       </template>
       <div style="display:flex;gap:0.4rem;align-items:center">
