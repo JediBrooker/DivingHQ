@@ -101,7 +101,7 @@
       "missing_token": "Ова страница мора да се отвори из линка у е-поруци за ресетовање.",
       "new_password_label": "Нова лозинка",
       "confirm_password_label": "Потврдите нову лозинку",
-      "min_length_error": "Нова лозинка мора имати најмање 6 знакова",
+      "min_length_error": "Nova lozinka mora imati najmanje 12 znakova i sadržati bar jedno slovo i jednu cifru",
       "mismatch_error": "Лозинке се не подударају",
       "reset_failed": "Ресетовање није успело",
       "success": "Лозинка је ажурирана. Преусмеравамо вас на пријаву…",

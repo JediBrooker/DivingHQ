@@ -101,7 +101,7 @@
       "missing_token": "Esta página debe abrirse desde el enlace de tu correo de restablecimiento.",
       "new_password_label": "Nueva contraseña",
       "confirm_password_label": "Confirma la nueva contraseña",
-      "min_length_error": "La nueva contraseña debe tener al menos 6 caracteres",
+      "min_length_error": "La nueva contraseña debe tener al menos 12 caracteres e incluir al menos una letra y un dígito",
       "mismatch_error": "Las contraseñas no coinciden",
       "reset_failed": "Error al restablecer",
       "success": "Contraseña actualizada. Te llevamos al inicio de sesión…",

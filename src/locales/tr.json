@@ -101,7 +101,7 @@
       "missing_token": "Bu sayfanın, sıfırlama e-postanızdaki bağlantıdan açılması gerekir.",
       "new_password_label": "Yeni şifre",
       "confirm_password_label": "Yeni şifreyi onayla",
-      "min_length_error": "Yeni şifre en az 6 karakter olmalıdır",
+      "min_length_error": "Yeni şifre en az 12 karakter olmalı ve en az bir harf ile bir rakam içermelidir",
       "mismatch_error": "Şifreler eşleşmiyor",
       "reset_failed": "Sıfırlama başarısız",
       "success": "Şifre güncellendi. Sizi giriş ekranına yönlendiriyoruz…",

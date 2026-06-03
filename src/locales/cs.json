@@ -101,7 +101,7 @@
       "missing_token": "Tuto stránku je třeba otevřít z odkazu ve vašem e-mailu pro obnovení.",
       "new_password_label": "Nové heslo",
       "confirm_password_label": "Potvrďte nové heslo",
-      "min_length_error": "Nové heslo musí mít alespoň 6 znaků",
+      "min_length_error": "Nové heslo musí mít alespoň 12 znaků a obsahovat alespoň jedno písmeno a jednu číslici",
       "mismatch_error": "Hesla se neshodují",
       "reset_failed": "Obnovení se nezdařilo",
       "success": "Heslo bylo aktualizováno. Přesměrováváme vás na přihlášení…",

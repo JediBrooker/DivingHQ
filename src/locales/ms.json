@@ -101,7 +101,7 @@
       "missing_token": "Halaman ini perlu dibuka daripada pautan dalam e-mel tetapan semula anda.",
       "new_password_label": "Kata laluan baharu",
       "confirm_password_label": "Sahkan kata laluan baharu",
-      "min_length_error": "Kata laluan baharu mestilah sekurang-kurangnya 6 aksara",
+      "min_length_error": "Kata laluan baharu mestilah sekurang-kurangnya 12 aksara dan mengandungi sekurang-kurangnya satu huruf dan satu digit",
       "mismatch_error": "Kata laluan tidak sepadan",
       "reset_failed": "Tetapan semula gagal",
       "success": "Kata laluan dikemas kini. Mengarahkan anda ke log masuk…",

@@ -101,7 +101,7 @@
       "missing_token": "Diese Seite muss über den Link in Ihrer Zurücksetzungs-E-Mail geöffnet werden.",
       "new_password_label": "Neues Passwort",
       "confirm_password_label": "Neues Passwort bestätigen",
-      "min_length_error": "Das neue Passwort muss mindestens 6 Zeichen lang sein",
+      "min_length_error": "Das neue Passwort muss mindestens 12 Zeichen lang sein und mindestens einen Buchstaben und eine Ziffer enthalten",
       "mismatch_error": "Passwörter stimmen nicht überein",
       "reset_failed": "Zurücksetzen fehlgeschlagen",
       "success": "Passwort aktualisiert. Sie werden zur Anmeldung weitergeleitet…",

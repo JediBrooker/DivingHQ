@@ -101,7 +101,7 @@
       "missing_token": "This page needs to be opened from the link in your reset email.",
       "new_password_label": "New password",
       "confirm_password_label": "Confirm new password",
-      "min_length_error": "New password must be at least 6 characters",
+      "min_length_error": "New password must be at least 12 characters and include at least one letter and one digit",
       "mismatch_error": "Passwords don't match",
       "reset_failed": "Reset failed",
       "success": "Password updated. Redirecting you to sign in…",

@@ -101,7 +101,7 @@
       "missing_token": "Ova stranica mora se otvoriti s poveznice iz e-maila za resetiranje.",
       "new_password_label": "Nova lozinka",
       "confirm_password_label": "Potvrdite novu lozinku",
-      "min_length_error": "Nova lozinka mora imati najmanje 6 znakova",
+      "min_length_error": "Nova lozinka mora imati najmanje 12 znakova i sadržavati barem jedno slovo i jednu znamenku",
       "mismatch_error": "Lozinke se ne podudaraju",
       "reset_failed": "Resetiranje nije uspjelo",
       "success": "Lozinka je ažurirana. Preusmjeravamo vas na prijavu…",

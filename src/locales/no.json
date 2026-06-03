@@ -101,7 +101,7 @@
       "missing_token": "Denne siden må åpnes fra lenken i tilbakestillings-e-posten din.",
       "new_password_label": "Nytt passord",
       "confirm_password_label": "Bekreft nytt passord",
-      "min_length_error": "Det nye passordet må være minst 6 tegn",
+      "min_length_error": "Det nye passordet må være minst 12 tegn og inneholde minst én bokstav og ett siffer",
       "mismatch_error": "Passordene stemmer ikke overens",
       "reset_failed": "Tilbakestillingen mislyktes",
       "success": "Passordet er oppdatert. Sender deg til innloggingen…",

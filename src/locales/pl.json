@@ -101,7 +101,7 @@
       "missing_token": "Tę stronę należy otworzyć z linku w wiadomości resetującej hasło.",
       "new_password_label": "Nowe hasło",
       "confirm_password_label": "Potwierdź nowe hasło",
-      "min_length_error": "Nowe hasło musi mieć co najmniej 6 znaków",
+      "min_length_error": "Nowe hasło musi mieć co najmniej 12 znaków i zawierać co najmniej jedną literę oraz jedną cyfrę",
       "mismatch_error": "Hasła nie pasują do siebie",
       "reset_failed": "Resetowanie nie powiodło się",
       "success": "Hasło zaktualizowane. Przekierowywanie do logowania…",
