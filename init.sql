@@ -1434,9 +1434,11 @@ CREATE INDEX idx_pending_pairings_partner
 -- =============================================================
 -- SCHEMA VERSION STAMP
 -- Single-row table the server reads on boot to log which
--- schema version is deployed. init.sql sets the current baked-in
--- version matching the latest migration; each future migration
--- bumps the value.
+-- schema version is deployed. init.sql is pinned to bootstrap
+-- baseline version 53; after loading it into a fresh database,
+-- run migrations/054* through the latest numbered migration in
+-- order to reach HEAD. Do not bump this stamp unless the later
+-- migrations have also been ported into this file.
 -- =============================================================
 
 CREATE TABLE public.schema_meta (
