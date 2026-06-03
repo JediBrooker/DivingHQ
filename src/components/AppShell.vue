@@ -15,7 +15,7 @@ import LogoMark from '@/components/LogoMark.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import {
   LayoutDashboard, Trophy, MonitorPlay, Calculator, ChartColumn, Waves, GraduationCap,
-  ListChecks, BookOpen, Users, Building2, ScrollText,
+  ListChecks, BookOpen, Users, Building2, ScrollText, Archive,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical,
 } from '@lucide/vue'
@@ -41,6 +41,7 @@ const NAV = [
     { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
     { to: '/scoreboard',     label: 'Scoreboard',     labelKey: 'scoreboard.page_label',  icon: ListChecks },
     { to: '/judge-analysis', label: 'Judge Analysis', icon: ChartColumn },
+    { to: '/results-archive', label: 'Results Archive', icon: Archive },
     { to: '/dive-directory', label: 'Dive directory', labelKey: 'dive_directory.title',   icon: BookOpen },
     { to: '/judge',          label: 'Judge Terminal', icon: Calculator,    roles: ['judge'] },
   ] },

@@ -43,3 +43,6 @@ ops/observability/.env
 # docs/ in RStudio. Pure session debris.
 docs/.Rhistory
 
+
+# DiveRecorder importer local HTML cache
+scripts/.dr-cache/
