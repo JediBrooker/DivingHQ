@@ -16,6 +16,9 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => !!token.value && !!user.value)
 
   function saveSession(data) {
+    if (!data?.token) {
+      throw new Error('Cannot save an authenticated session without a token')
+    }
     // Wipe any cached responses owned by the previous identity
     // before swapping in the new token. Even though cache keys are
     // per-user-fingerprint now, an explicit clear keeps disk usage

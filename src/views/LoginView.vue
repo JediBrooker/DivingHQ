@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { showWarning } from '@/composables/useNotify'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { CircleHelp } from '@lucide/vue'
@@ -19,7 +20,10 @@ const { t } = useI18n()
 
 const username = ref('')
 const password = ref('')
+const totpToken = ref('')
+const totpCode = ref('')
 const errorMsg = ref('')
+const noticeMsg = ref('')
 const loading = ref(false)
 
 // Post-login destination — defaults to the dashboard, but if
@@ -75,6 +79,28 @@ async function checkClaimCandidates() {
   }
 }
 
+async function finishLogin(data) {
+  auth.saveSession(data)
+  if (data.warning) {
+    showWarning(data.warning)
+  }
+  // Before routing to the dashboard, probe for claim
+  // candidates. Hits one tiny endpoint; if there are no
+  // matches we route immediately. The modal handles its own
+  // close + claim transitions back to safeNextPath().
+  const held = await checkClaimCandidates()
+  if (!held) {
+    router.push(safeNextPath())
+  }
+}
+
+function resetTotpChallenge() {
+  totpToken.value = ''
+  totpCode.value = ''
+  noticeMsg.value = ''
+  errorMsg.value = ''
+}
+
 function dismissClaim() {
   sessionStorage.setItem(CLAIM_SEEN_KEY, '1')
   claimCandidates.value = null
@@ -89,6 +115,7 @@ function onClaimDone() {
 
 async function handleSubmit() {
   errorMsg.value = ''
+  noticeMsg.value = ''
   loading.value = true
   try {
     const res = await fetch('/api/auth/login', {
@@ -98,15 +125,35 @@ async function handleSubmit() {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || t('auth.login.submit_failed'))
-    auth.saveSession(data)
-    // Before routing to the dashboard, probe for claim
-    // candidates. Hits one tiny endpoint; if there are no
-    // matches we route immediately. The modal handles its own
-    // close + claim transitions back to safeNextPath().
-    const held = await checkClaimCandidates()
-    if (!held) {
-      router.push(safeNextPath())
+    if (data.needs_totp) {
+      if (!data.totp_token) throw new Error('Second-factor challenge was missing. Try signing in again.')
+      totpToken.value = data.totp_token
+      totpCode.value = ''
+      password.value = ''
+      noticeMsg.value = 'Enter a 6-digit authenticator code or one of your recovery codes.'
+      return
     }
+    await finishLogin(data)
+  } catch (err) {
+    errorMsg.value = err.message
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleTotpSubmit() {
+  errorMsg.value = ''
+  noticeMsg.value = ''
+  loading.value = true
+  try {
+    const res = await fetch('/api/auth/login/totp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ totp_token: totpToken.value, code: totpCode.value.trim() }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Could not verify that code')
+    await finishLogin(data)
   } catch (err) {
     errorMsg.value = err.message
   } finally {
@@ -128,8 +175,9 @@ async function handleSubmit() {
     <h1>{{ $t('auth.login.title') }}</h1>
     <p class="subtitle">{{ $t('auth.login.subtitle') }}</p>
 
-    <form @submit.prevent="handleSubmit" class="form-stack">
-      <div class="field">
+    <form @submit.prevent="totpToken ? handleTotpSubmit() : handleSubmit()" class="form-stack">
+      <template v-if="!totpToken">
+        <div class="field">
         <label class="label">{{ $t('auth.login.username_label') }}</label>
         <!-- iOS Safari capitalises the first letter of any text
              input by default and red-underlines it as a typo.
@@ -139,14 +187,40 @@ async function handleSubmit() {
                autocomplete="username"
                autocapitalize="none" autocorrect="off" spellcheck="false"
                required>
-      </div>
-      <div class="field">
-        <label class="label">{{ $t('auth.login.password_label') }}</label>
-        <input class="input" type="password" v-model="password" autocomplete="current-password" required>
-      </div>
+        </div>
+        <div class="field">
+          <label class="label">{{ $t('auth.login.password_label') }}</label>
+          <input class="input" type="password" v-model="password" autocomplete="current-password" required>
+        </div>
+      </template>
+      <template v-else>
+        <div class="field">
+          <label class="label">Authenticator or recovery code</label>
+          <input
+            class="input"
+            type="text"
+            v-model="totpCode"
+            autocomplete="one-time-code"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+            required
+          >
+        </div>
+      </template>
+      <div v-if="noticeMsg" class="msg login-info">{{ noticeMsg }}</div>
       <div v-if="errorMsg" class="msg msg-error">{{ errorMsg }}</div>
       <button type="submit" class="btn btn-primary-lg" style="margin-top:0.5rem" :disabled="loading">
-        {{ loading ? $t('auth.login.submit_loading') : $t('auth.login.submit_idle') }}
+        {{ loading ? $t('auth.login.submit_loading') : (totpToken ? 'Verify code' : $t('auth.login.submit_idle')) }}
+      </button>
+      <button
+        v-if="totpToken"
+        type="button"
+        class="btn btn-ghost"
+        :disabled="loading"
+        @click="resetTotpChallenge"
+      >
+        Back to password
       </button>
     </form>
 
@@ -204,6 +278,11 @@ async function handleSubmit() {
 }
 .login-help:hover { background: var(--surface-hover); color: var(--fg); }
 .login-help :deep(svg) { width: 18px; height: 18px; }
+.login-info {
+  background: rgba(6, 182, 212, 0.12);
+  color: var(--fg);
+  border-color: rgba(6, 182, 212, 0.35);
+}
 .login-mark {
   font-family: var(--font-sans);
   font-size: 15px;
