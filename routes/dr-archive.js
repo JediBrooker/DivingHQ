@@ -94,6 +94,46 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
     }
   });
 
+  // GET /api/dr-archive/meets-count?q=&nat=&from=&to= — total number
+  // of meets matching the same filters as /meets. Lets the client
+  // render numbered page links (total pages = ceil(count / pageSize)).
+  // Hyphenated path so it never collides with /meets/:id.
+  router.get("/api/dr-archive/meets-count", async (req, res) => {
+    try {
+      const q = (req.query.q || "").toString().trim();
+      const nat = (req.query.nat || "").toString().trim().toUpperCase();
+      const from = (req.query.from || "").toString().trim();
+      const to = (req.query.to || "").toString().trim();
+      const params = [];
+      const conds = [];
+      if (q) {
+        params.push(`%${q}%`);
+        conds.push(`m.name ILIKE $${params.length}`);
+      }
+      if (nat) {
+        params.push(nat);
+        conds.push(`m.country_code = $${params.length}`);
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(from)) {
+        params.push(from);
+        conds.push(`m.meet_date >= $${params.length}`);
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+        params.push(to);
+        conds.push(`m.meet_date <= $${params.length}`);
+      }
+      const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+      const r = await reads.query(
+        `SELECT COUNT(*)::int AS total FROM dr_meets m ${where}`,
+        params,
+      );
+      res.json({ total: r.rows[0]?.total ?? 0 });
+    } catch (err) {
+      console.error("[DR Archive meets-count]", err.message);
+      res.status(500).json({ total: 0 });
+    }
+  });
+
   // GET /api/dr-archive/date-range — earliest + latest meet date in
   // the archive, as plain YYYY-MM-DD. Bounds the date range slider.
   router.get("/api/dr-archive/date-range", async (req, res) => {
