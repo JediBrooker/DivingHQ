@@ -35,6 +35,36 @@ const error = ref('')
 const meets = ref([])
 const countries = ref([])
 const filters = ref({ q: '', nat: '', from: '', to: '' })
+
+// Pagination — the API caps each page; we page through with
+// offset and expose Prev/Next. hasMore is true when the last page
+// came back full (so there's likely another page to fetch).
+const PAGE_SIZE = 50
+const page = ref(0)          // 0-based
+const total = ref(0)         // total meets matching current filters
+const hasMore = ref(false)   // fallback when total is unknown
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
+const rangeStart = computed(() => (meets.value.length ? page.value * PAGE_SIZE + 1 : 0))
+const rangeEnd = computed(() => page.value * PAGE_SIZE + meets.value.length)
+
+// Windowed page tokens: first + last + a few around the current page,
+// with '…' gaps — e.g. [1, '…', 5, 6, 7, '…', 28]. Keeps the control
+// compact even with hundreds of pages.
+const pageItems = computed(() => {
+  const tp = totalPages.value
+  const cur = page.value
+  const wanted = new Set([0, tp - 1])
+  for (let i = cur - 1; i <= cur + 1; i++) if (i >= 0 && i < tp) wanted.add(i)
+  const sorted = [...wanted].filter((n) => n >= 0 && n < tp).sort((a, b) => a - b)
+  const items = []
+  let prev = -1
+  for (const n of sorted) {
+    if (prev >= 0 && n - prev > 1) items.push('…')
+    items.push(n)
+    prev = n
+  }
+  return items
+})
 const event = ref(null)      // { event, results }  — event detail view
 const diver = ref(null)      // { diver, history }   — diver history view
 
@@ -97,14 +127,65 @@ async function loadCountries() {
 }
 
 async function loadMeets() {
-  const p = new URLSearchParams({ limit: '100' })
+  const p = new URLSearchParams({
+    limit: String(PAGE_SIZE),
+    offset: String(page.value * PAGE_SIZE),
+  })
   const { q, nat, from, to } = filters.value
   if (q.trim()) p.set('q', q.trim())
   if (nat) p.set('nat', nat)
   if (from) p.set('from', from)
   if (to) p.set('to', to)
   const rows = await api(`/meets?${p.toString()}`)
-  if (rows) meets.value = rows
+  if (rows) {
+    meets.value = rows
+    hasMore.value = rows.length === PAGE_SIZE
+  }
+}
+
+// Total count for the current filters (drives the numbered page
+// links). Plain fetch — kept off the shared loading spinner so it
+// doesn't race the meets fetch. Non-fatal if it fails.
+async function loadCount() {
+  try {
+    const p = new URLSearchParams()
+    const { q, nat, from, to } = filters.value
+    if (q.trim()) p.set('q', q.trim())
+    if (nat) p.set('nat', nat)
+    if (from) p.set('from', from)
+    if (to) p.set('to', to)
+    const res = await fetch(`/api/dr-archive/meets-count?${p.toString()}`)
+    if (res.ok) total.value = (await res.json()).total ?? 0
+  } catch { /* numbered links just won't show */ }
+}
+
+// Filter changes reset to the first page and refresh the count;
+// Prev/Next/number steps reuse the cached count.
+function reloadFirstPage() {
+  page.value = 0
+  loadCount()
+  loadMeets()
+}
+function scrollToTop() {
+  document.querySelector('.dr-archive')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+function goToPage(n) {
+  if (n === page.value || n < 0 || n >= totalPages.value || loading.value) return
+  page.value = n
+  loadMeets()
+  scrollToTop()
+}
+function nextPage() {
+  if (total.value ? page.value >= totalPages.value - 1 : !hasMore.value) return
+  page.value += 1
+  loadMeets()
+  scrollToTop()
+}
+function prevPage() {
+  if (page.value === 0) return
+  page.value -= 1
+  loadMeets()
+  scrollToTop()
 }
 
 function resetFilters() {
@@ -112,7 +193,7 @@ function resetFilters() {
   meetHits.value = []
   fromIdx.value = 0
   toIdx.value = Math.max(0, months.value.length - 1)
-  loadMeets()
+  reloadFirstPage()
 }
 
 // Build the month track between two ISO dates (inclusive).
@@ -168,7 +249,7 @@ watch([fromIdx, toIdx], ([f, t]) => {
   }
   applySliderToFilters()
   clearTimeout(sliderTimer)
-  sliderTimer = setTimeout(loadMeets, 200)
+  sliderTimer = setTimeout(reloadFirstPage, 200)
 })
 
 const rangeLabel = computed(() => {
@@ -237,6 +318,8 @@ let meetTimer = null
 watch(() => filters.value.q, () => {
   clearTimeout(meetTimer)
   meetTimer = setTimeout(async () => {
+    page.value = 0
+    loadCount()
     await loadMeets()
     const q = filters.value.q.trim()
     meetHits.value = q.length >= 2 ? meets.value.slice(0, 8) : []
@@ -285,6 +368,7 @@ function pollStatus() {
 }
 
 onMounted(() => {
+  loadCount()
   loadMeets()
   loadCountries()
   loadDateRange()
@@ -350,7 +434,7 @@ onMounted(() => {
 
     <!-- MEETS LIST + filters -->
     <section v-if="view === 'meets'">
-      <form class="dr-filter" @submit.prevent="loadMeets">
+      <form class="dr-filter" @submit.prevent="reloadFirstPage">
         <div class="dr-typeahead">
           <input class="input" v-model="filters.q" type="search" placeholder="Filter by meet name…" aria-label="Filter meets" autocomplete="off" />
           <ul v-if="meetHits.length" class="dr-hits dr-hits-inline">
@@ -363,7 +447,7 @@ onMounted(() => {
             </li>
           </ul>
         </div>
-        <select class="select dr-country" v-model="filters.nat" aria-label="Filter by country" @change="loadMeets">
+        <select class="select dr-country" v-model="filters.nat" aria-label="Filter by country" @change="reloadFirstPage">
           <option value="">All countries</option>
           <option v-for="c in countries" :key="c.country_code" :value="c.country_code">
             {{ c.country_name }} ({{ c.meet_count }})
@@ -443,6 +527,29 @@ onMounted(() => {
             />
           </div>
         </div>
+      </div>
+
+      <!-- Pagination — server-paged. Prev/Next plus numbered links
+           (windowed with … gaps) so the user sees how many pages
+           there are and can jump straight to one. -->
+      <div v-if="meets.length && (totalPages > 1 || page > 0 || hasMore)" class="dr-pager">
+        <button class="btn btn-ghost btn-sm" type="button" :disabled="page === 0 || loading" @click="prevPage">← Prev</button>
+        <div v-if="total" class="dr-pages">
+          <template v-for="(it, i) in pageItems" :key="i">
+            <span v-if="it === '…'" class="dr-page-gap">…</span>
+            <button
+              v-else
+              type="button"
+              class="dr-page"
+              :class="{ 'is-current': it === page }"
+              :aria-current="it === page ? 'page' : undefined"
+              :disabled="loading"
+              @click="goToPage(it)"
+            >{{ it + 1 }}</button>
+          </template>
+        </div>
+        <span v-else class="dr-pager-info">{{ rangeStart }}–{{ rangeEnd }}</span>
+        <button class="btn btn-ghost btn-sm" type="button" :disabled="(total ? page >= totalPages - 1 : !hasMore) || loading" @click="nextPage">Next →</button>
       </div>
     </section>
 
@@ -675,6 +782,24 @@ onMounted(() => {
 .meet-acc-count, .meet-acc-date { white-space: nowrap; }
 .meet-acc-body { padding: 0 var(--space-4) var(--space-4); border-top: 1px solid var(--border); }
 .dr-loading-inline { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-3); padding: var(--space-3) 0; margin: 0; }
+
+/* Pagination controls */
+.dr-pager { display: flex; align-items: center; justify-content: center; gap: var(--space-3); margin-top: var(--space-4); flex-wrap: wrap; }
+.dr-pager-info { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-3); min-width: 5rem; text-align: center; }
+.dr-pages { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; justify-content: center; }
+.dr-page {
+  min-width: 2rem; padding: 0.3rem 0.5rem; border-radius: var(--radius-sm);
+  background: none; border: 1px solid transparent; cursor: pointer;
+  font-family: var(--font-mono); font-size: var(--text-sm); color: var(--accent);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.dr-page:hover { background: var(--surface-2); text-decoration: underline; }
+.dr-page.is-current {
+  background: var(--accent); color: var(--fg-on-accent); border-color: var(--accent);
+  font-weight: 700; cursor: default; text-decoration: none;
+}
+.dr-page:disabled { cursor: default; }
+.dr-page-gap { color: var(--fg-3); padding: 0 0.15rem; user-select: none; }
 
 /* Detail headers */
 .dr-back { margin-bottom: var(--space-3); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
