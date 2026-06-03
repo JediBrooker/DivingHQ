@@ -126,6 +126,26 @@
   min-width: 0;
 }
 
+/* Breadcrumbs — consistent nav across the scoreboard surfaces:
+   All Meets › <Meet> › <Event>. Wraps on narrow screens so the
+   event title is never clipped. */
+.sb-crumbs {
+  display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+  min-width: 0;
+  font-family: var(--font-sans); font-size: 15px;
+}
+.sb-crumb-link {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit; color: var(--cyan); text-decoration: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 38vw;
+}
+.sb-crumb-link:hover { text-decoration: underline; }
+.sb-crumb-sep { color: var(--text-3); flex-shrink: 0; }
+.sb-crumb-current {
+  font-weight: 600; color: var(--fg); min-width: 0;
+}
+
 /* List-mode CSS (meets-mode, live-strip, sb-tools / sb-filter-row,
    meets-grid / meet-card, meets-list / meet-row, meets-empty,
    cache-banner / @keyframes cachePulse, plus the sb-year-* group
@@ -1085,6 +1105,7 @@
   .sb-page-title { font-size: 15px; }
   .sb-page-sub   { font-size: 10px; }
   .sb-event-name { font-size: 14px; }
+  .sb-crumbs     { font-size: 13px; gap: 0.3rem; }
   .header-left   { gap: 0.5rem; }
 
   .sb-body {
@@ -1095,17 +1116,33 @@
   .sb-col {
     overflow: visible;
     border-inline-end: none !important;
-    border-bottom: 1px solid var(--border);
   }
-  .sb-col:last-child { border-bottom: none; }
+  /* Live broadcast on a phone: the active diver (the main section)
+     leads at the top; the leaderboard, then the completed dives,
+     condense into neat scroll-cards beneath it. `order` reshuffles
+     the DOM sequence (history · centre · standings) into
+     centre → standings → history without touching the markup. */
+  .sb-body > .active-centre      { order: -1; }
+  .sb-body > .sb-col:last-child  { order: 0; }   /* leaderboard / standings */
+  .sb-body > .sb-col:first-child { order: 1; }   /* completed dives */
+  .sb-body > .sb-col:not(.active-centre) {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-top: 0.85rem;
+    overflow: hidden;
+  }
+  .sb-body > .sb-col:not(.active-centre) .col-head {
+    position: sticky; top: 0; z-index: 1;
+    background: var(--bg-2);
+  }
   /* `.col-body` is shared by the live 3-column layout (.sb-body)
      and the completed-event recap (.sb-completed). On the live
-     view each column needs an internal scrollbox so all three
-     fit in a phone screen at once — that's where the 360px cap
-     comes from. On the recap the whole page should flow so the
-     spectator can simply scroll down the leaderboard. Scope the
-     cap to .sb-body only. */
-  .sb-body .col-body { padding: 0.75rem 1rem; max-height: 360px; }
+     view each secondary column gets an internal scrollbox so the
+     page stays anchored on the active diver. On the recap the
+     whole page should flow so the spectator can simply scroll the
+     leaderboard. Scope the cap to .sb-body only. */
+  .sb-body .col-body { padding: 0.75rem 1rem; }
+  .sb-body > .sb-col:not(.active-centre) .col-body { max-height: 320px; }
   .sb-completed .col-body {
     padding: 0.75rem 1rem;
     max-height: none;
@@ -1148,7 +1185,11 @@
     gap: 0.5rem;
     padding: 0.625rem 0.875rem;
   }
-  .sb-header > div:first-child { gap: 0.6rem !important; }
+  /* Breadcrumb takes the whole first row so the event title is
+     never squeezed; the Broadcast / Stream / Home actions wrap to
+     their own row beneath it. */
+  .sb-header > div:first-child { flex: 1 1 100%; gap: 0.6rem !important; }
+  .sb-crumb-link { max-width: 60vw; }
   .sb-header > div:first-child > span {
     font-size: 13px !important;
     white-space: nowrap;
