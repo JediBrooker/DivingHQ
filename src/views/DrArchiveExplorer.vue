@@ -14,8 +14,18 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { groupArchiveEvents } from '@/composables/useProgressionGroups'
+import MeetEventGrid from '@/components/scoreboard/MeetEventGrid.vue'
 
 const auth = useAuthStore()
+
+// Group a loaded meet's events into progression rows (base
+// discipline name + parsed phase → aligned prelim/semi/final
+// columns). Best-effort, since DiveRecorder only carries a
+// name-parsed phase, not a structural stage link.
+function archiveGroup(meetId) {
+  return groupArchiveEvents(meetEvents.value[meetId] || [])
+}
 const isSysAdmin = ref(!!auth.user?.is_system_admin)
 
 const view = ref('meets') // meets | meet | event | result | diver
@@ -422,29 +432,15 @@ onMounted(() => {
 
           <div v-if="isMeetOpen(m.id)" class="meet-acc-body">
             <p v-if="!meetEvents[m.id]" class="dr-loading-inline">Loading events…</p>
-            <div v-else class="meet-ev-grid">
-              <button
-                v-for="e in meetEvents[m.id]"
-                :key="e.id"
-                class="meet-ev-card"
-                @click="openEvent(e.id)"
-              >
-                <div class="meet-ev-top">
-                  <span class="meet-ev-name">{{ e.name }}</span>
-                </div>
-                <div class="meet-ev-tags">
-                  <span v-if="e.gender" class="meet-tag">{{ e.gender }}</span>
-                  <span v-if="e.height" class="meet-tag">{{ e.height }}</span>
-                  <span v-if="e.phase" class="meet-tag">{{ e.phase }}</span>
-                </div>
-                <div class="meet-ev-foot">
-                  <span v-if="e.result_count" class="meet-ev-divers">
-                    {{ e.result_count }} {{ e.result_count === 1 ? 'diver' : 'divers' }}
-                  </span>
-                  <span class="meet-ev-cta">Results →</span>
-                </div>
-              </button>
-            </div>
+            <!-- One row per discipline; prelim → semi → final grouped
+                 into aligned columns (best-effort from the parsed
+                 phase). Clicking a stage opens its results. -->
+            <MeetEventGrid
+              v-else
+              :rows="archiveGroup(m.id).rows"
+              :max-cols="archiveGroup(m.id).maxCols"
+              @select="openEvent"
+            />
           </div>
         </div>
       </div>
@@ -679,24 +675,6 @@ onMounted(() => {
 .meet-acc-count, .meet-acc-date { white-space: nowrap; }
 .meet-acc-body { padding: 0 var(--space-4) var(--space-4); border-top: 1px solid var(--border); }
 .dr-loading-inline { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-3); padding: var(--space-3) 0; margin: 0; }
-.meet-ev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
-.meet-ev-card {
-  text-align: start; cursor: pointer; background: var(--surface-2);
-  border: 1px solid var(--border); border-radius: var(--radius);
-  padding: var(--space-2) var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);
-  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), transform var(--dur-fast) var(--ease);
-}
-.meet-ev-card:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
-.meet-ev-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
-.meet-ev-name { font-family: var(--font-display); font-size: 14px; font-weight: 800; font-style: italic; color: var(--fg); line-height: 1.2; }
-.meet-ev-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; }
-.meet-tag {
-  font-family: var(--font-mono); font-size: 10px; color: var(--fg-3);
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 0.05rem 0.4rem;
-}
-.meet-ev-foot { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-3); }
-.meet-ev-cta { font-family: var(--font-display); font-weight: 700; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
 
 /* Detail headers */
 .dr-back { margin-bottom: var(--space-3); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }

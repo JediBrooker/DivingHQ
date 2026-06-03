@@ -7,13 +7,16 @@
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
-import { useRoute, RouterLink } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { fmtDate } from '@/lib/format'
 import { cachedFetch, prefetch } from '@/lib/idbCache'
 import { MEET_METADATA_TTL_MS } from '@/lib/cache-policy'
+import { groupScoreboardEvents } from '@/composables/useProgressionGroups'
+import MeetEventGrid from '@/components/scoreboard/MeetEventGrid.vue'
 import SponsorRotation from '@/components/scoreboard/SponsorRotation.vue'
 
 const route = useRoute()
+const router = useRouter()
 
 const meet = ref(null)
 const events = ref([])
@@ -130,6 +133,11 @@ const upcomingCount = computed(() => events.value.filter(e => e.status === 'Upco
 const liveEvents = computed(() => events.value.filter(e => e.status === 'Live'))
 const upcomingEvents = computed(() => events.value.filter(e => e.status === 'Upcoming'))
 const completedEvents = computed(() => events.value.filter(e => e.status === 'Completed'))
+
+// Progression grid — one row per discipline, prelim → semi → final
+// as aligned columns (same layout as the Scoreboard's meet browser).
+const progression = computed(() => groupScoreboardEvents(events.value))
+function openEvent(id) { router.push(`/scoreboard/${id}`) }
 
 // fmtDate imported from @/lib/format — single source of truth.
 
@@ -329,68 +337,20 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
         </div>
       </div>
 
-      <!-- Live events -->
-      <section v-if="liveEvents.length" class="event-section live-section">
+      <!-- Events — one row per discipline, prelim → semi → final
+           grouped into aligned columns (same layout as the
+           Scoreboard's meet browser). Clicking a stage opens its
+           live broadcast or completed recap. -->
+      <section v-if="events.length" class="event-section">
         <div class="section-head">
-          <span class="live-pulse">LIVE NOW</span>
-          <span class="section-title">In progress</span>
+          <span v-if="liveEvents.length" class="live-pulse">LIVE NOW</span>
+          <span class="section-title">Events</span>
         </div>
-        <div class="event-grid">
-          <RouterLink v-for="ev in liveEvents" :key="ev.id"
-                      :to="`/scoreboard/${ev.id}`" class="event-card event-card-live">
-            <div class="event-card-name">{{ ev.name }}</div>
-            <div class="event-card-tags">
-              <span v-if="ev.gender" class="ev-tag">{{ ev.gender }}</span>
-              <span v-if="ev.height" class="ev-tag">{{ ev.height }}</span>
-              <span class="ev-tag">{{ ev.total_rounds }} rds</span>
-              <span v-if="ev.event_type === 'synchro_pair'" class="ev-tag ev-tag-cyan">Synchro</span>
-              <span v-else-if="ev.event_type === 'team'" class="ev-tag ev-tag-cyan">Team</span>
-            </div>
-            <div class="event-card-cta">Watch live →</div>
-          </RouterLink>
-        </div>
-      </section>
-
-      <!-- Upcoming events -->
-      <section v-if="upcomingEvents.length" class="event-section">
-        <div class="section-head">
-          <span class="section-title">Upcoming</span>
-        </div>
-        <div class="event-grid">
-          <div v-for="ev in upcomingEvents" :key="ev.id" class="event-card event-card-upcoming">
-            <div class="event-card-name">{{ ev.name }}</div>
-            <div class="event-card-tags">
-              <span v-if="ev.gender" class="ev-tag">{{ ev.gender }}</span>
-              <span v-if="ev.height" class="ev-tag">{{ ev.height }}</span>
-              <span class="ev-tag">{{ ev.total_rounds }} rds</span>
-              <span v-if="ev.event_type === 'synchro_pair'" class="ev-tag ev-tag-cyan">Synchro</span>
-              <span v-else-if="ev.event_type === 'team'" class="ev-tag ev-tag-cyan">Team</span>
-            </div>
-            <div class="event-card-cta dim">Not started</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Completed events -->
-      <section v-if="completedEvents.length" class="event-section">
-        <div class="section-head">
-          <span class="section-title">Results</span>
-        </div>
-        <div class="event-grid">
-          <RouterLink v-for="ev in completedEvents" :key="ev.id"
-                      :to="`/scoreboard/${ev.id}`" class="event-card event-card-done">
-            <div class="event-card-name">{{ ev.name }}</div>
-            <div class="event-card-tags">
-              <span v-if="ev.gender" class="ev-tag">{{ ev.gender }}</span>
-              <span v-if="ev.height" class="ev-tag">{{ ev.height }}</span>
-              <span class="ev-tag">{{ ev.total_rounds }} rds</span>
-              <span v-if="ev.competitor_count" class="ev-tag">
-                {{ ev.competitor_count }} {{ ev.competitor_count === 1 ? 'diver' : 'divers' }}
-              </span>
-            </div>
-            <div class="event-card-cta">View recap →</div>
-          </RouterLink>
-        </div>
+        <MeetEventGrid
+          :rows="progression.rows"
+          :max-cols="progression.maxCols"
+          @select="openEvent"
+        />
       </section>
 
       <div v-if="!events.length" class="empty">
@@ -528,50 +488,9 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
 }
 @keyframes pulse-red { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
 
-.event-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 0.875rem;
-}
-.event-card {
-  display: flex; flex-direction: column; gap: 0.4rem;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 1rem 1.125rem;
-  text-decoration: none; color: inherit;
-  transition: all 0.15s; min-width: 0;
-}
-.event-card-live      { border-color: rgba(239,68,68,0.35); }
-.event-card-live:hover { border-color: var(--red); background: rgba(239,68,68,0.04); transform: translateY(-1px); }
-.event-card-done:hover { border-color: var(--cyan); background: rgba(6,182,212,0.04); transform: translateY(-1px); }
-.event-card-upcoming  { opacity: 0.85; }
-
-.event-card-name {
-  font-family: var(--font-display); font-size: 16px; font-weight: 900;
-  font-style: italic; color: var(--text); line-height: 1.15;
-}
-.event-card-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
-.ev-tag {
-  font-family: var(--font-mono); font-size: 10px;
-  color: var(--text-3); background: var(--bg-3);
-  border: 1px solid var(--border); border-radius: 3px;
-  padding: 0.1rem 0.4rem;
-}
-.ev-tag-cyan {
-  color: var(--cyan); border-color: rgba(6,182,212,0.3);
-  background: var(--cyan-dim);
-}
-.event-card-cta {
-  font-family: var(--font-display); font-size: 11px; font-weight: 700;
-  letter-spacing: 0.15em; text-transform: uppercase; color: var(--cyan);
-  margin-top: 0.2rem;
-}
-.event-card-cta.dim { color: var(--text-3); }
-.event-card-live .event-card-cta { color: var(--red); }
-
 @media (max-width: 720px) {
   .meet-wrap { padding: 1rem; }
   .hero { padding: 1.25rem; border-radius: var(--radius-lg); }
-  .event-grid { grid-template-columns: 1fr; }
 
   /* Backdrop padding clears iOS Safari's URL/toolbar so the
      bottom of the export-options list + the action buttons

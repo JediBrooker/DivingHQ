@@ -30,10 +30,13 @@
 import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fmtDate } from '@/lib/format'
+import { groupScoreboardEvents } from '@/composables/useProgressionGroups'
+import MeetEventGrid from '@/components/scoreboard/MeetEventGrid.vue'
 
 const props = defineProps({
   events:         { type: Array,   required: true },
   liveEvents:     { type: Array,   required: true },
+  upcomingEvents: { type: Array,   default: () => [] },
   meetsFromCache: { type: Boolean, default: false },
   loadingList:    { type: Boolean, default: false },
   clubsList:      { type: Array,   default: () => [] },
@@ -147,6 +150,9 @@ const meetGroups = computed(() => {
       if (b.status === 'Live' && a.status !== 'Live') return  1
       return (a.name || '').localeCompare(b.name || '')
     })
+    // Group the meet's events into progression rows (prelim → semi
+    // → final as aligned columns) for the event grid.
+    g.progression = groupScoreboardEvents(g.events)
   }
   // Meet order: live meets float to the top (operators landing
   // mid-competition expect "what's on now" first), then the chosen
@@ -220,13 +226,14 @@ const displayRows = computed(() => {
   return meetGroups.value.map(g => ({ type: 'meet', key: g.key, meet: g }))
 })
 
-// LIVE strip, grouped by meet so every live chip shows the meet it
-// belongs to. Reads the server-provided live list (unfiltered) —
-// the strip is a persistent "what's on right now" affordance,
-// independent of the archive filters below it.
-const liveByMeet = computed(() => {
+// Group an event list by meet for the LIVE / UPCOMING strips —
+// each meet heads a row of chips so every chip shows the meet it
+// belongs to. Reads the server-provided lists (unfiltered): the
+// strips are persistent "what's on / what's next" affordances,
+// independent of the archive filters below them.
+function chipsByMeet(list) {
   const groups = new Map()
-  for (const e of props.liveEvents) {
+  for (const e of list || []) {
     const key = meetKeyOf(e)
     let g = groups.get(key)
     if (!g) {
@@ -236,7 +243,13 @@ const liveByMeet = computed(() => {
     g.events.push(e)
   }
   return [...groups.values()]
-})
+}
+const liveByMeet     = computed(() => chipsByMeet(props.liveEvents))
+const upcomingByMeet  = computed(() => chipsByMeet(props.upcomingEvents))
+
+// Live Now + Upcoming strips are collapsible, open by default.
+const liveExpanded     = ref(true)
+const upcomingExpanded = ref(true)
 
 // --- Per-meet expand / collapse ---
 // Meets start collapsed — the page is a tidy list of meets that
@@ -321,20 +334,17 @@ watch(countryFilter, (val) => {
       Showing your last cached meets list — refreshing in the background
     </div>
 
-    <!-- LIVE strip — clickable chips grouped under their parent
-         meet, so each live event makes clear which meet it belongs
-         to (e.g. Men's 3m Springboard sits under "2026 Australian
-         Grand Prix"). Each chip jumps straight into that event's
-         broadcast layout; the ↗ beside a meet name opens the full
-         meet page. -->
+    <!-- LIVE strip — collapsible (open by default). Clickable chips
+         grouped under their parent meet, so each live event makes
+         clear which meet it belongs to. Each chip jumps straight
+         into that event's broadcast; the ↗ opens the full meet page. -->
     <div v-if="liveByMeet.length" class="live-strip">
-      <div class="live-strip-head">
+      <button class="strip-head live-strip-head" :aria-expanded="liveExpanded" @click="liveExpanded = !liveExpanded">
+        <span class="strip-caret" aria-hidden="true">{{ liveExpanded ? '▾' : '▸' }}</span>
         <span class="live-pulse">● LIVE NOW</span>
-        <span class="live-strip-sub">
-          {{ liveEvents.length }} broadcasting · click any to watch
-        </span>
-      </div>
-      <div class="live-strip-groups">
+        <span class="live-strip-sub">{{ liveEvents.length }} broadcasting · click any to watch</span>
+      </button>
+      <div v-if="liveExpanded" class="live-strip-groups">
         <div v-for="g in liveByMeet" :key="g.key" class="live-meet-group">
           <div class="live-meet-label">
             <span class="live-meet-name">{{ g.name }}</span>
@@ -362,6 +372,45 @@ watch(countryFilter, (val) => {
               <span v-if="ev.current_round" class="live-chip-round">
                 R{{ ev.current_round }}/{{ ev.total_rounds }}
               </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPCOMING strip — collapsible (open by default). Events that
+         are scheduled but not yet live, grouped by meet. A chip
+         opens that event's board (it'll read "waiting" until it
+         starts). -->
+    <div v-if="upcomingByMeet.length" class="upcoming-strip">
+      <button class="strip-head upcoming-strip-head" :aria-expanded="upcomingExpanded" @click="upcomingExpanded = !upcomingExpanded">
+        <span class="strip-caret" aria-hidden="true">{{ upcomingExpanded ? '▾' : '▸' }}</span>
+        <span class="upcoming-pulse">◷ UPCOMING</span>
+        <span class="upcoming-strip-sub">{{ upcomingEvents.length }} scheduled next</span>
+      </button>
+      <div v-if="upcomingExpanded" class="live-strip-groups">
+        <div v-for="g in upcomingByMeet" :key="g.key" class="live-meet-group">
+          <div class="live-meet-label">
+            <span class="live-meet-name">{{ g.name }}</span>
+            <span v-if="g.country" class="live-meet-ctry">{{ g.country }}</span>
+            <RouterLink
+              v-if="g.meetId"
+              :to="`/meet/${g.meetId}`"
+              class="live-meet-link"
+              @click.stop
+              v-tip.fixed="'Open the full meet page'"
+            >↗</RouterLink>
+          </div>
+          <div class="live-meet-chips">
+            <button
+              v-for="ev in g.events"
+              :key="ev.id"
+              class="upcoming-chip"
+              @click="emit('select', ev.id)"
+              v-tip="'Not started yet — preview the board'"
+            >
+              <span class="upcoming-chip-dot" aria-hidden="true"></span>
+              <span class="live-chip-name">{{ ev.name }}</span>
             </button>
           </div>
         </div>
@@ -509,38 +558,14 @@ watch(countryFilter, (val) => {
           </button>
 
           <div v-if="isExpanded(row.meet.key)" class="meet-acc-body">
-            <div class="meet-ev-grid">
-              <button
-                v-for="ev in row.meet.events"
-                :key="ev.id"
-                :class="['meet-ev-card', ev.status === 'Live' ? 'is-live' : 'is-done']"
-                @click="emit('select', ev.id)"
-              >
-                <div class="meet-ev-top">
-                  <span class="meet-ev-name">{{ ev.name }}</span>
-                  <span :class="['meet-ev-status', ev.status === 'Live' ? 'live' : 'final']">
-                    {{ ev.status === 'Live' ? 'LIVE' : 'FINAL' }}
-                  </span>
-                </div>
-                <div class="meet-ev-tags">
-                  <span v-if="ev.gender" class="meet-tag">{{ ev.gender }}</span>
-                  <span v-if="ev.height" class="meet-tag">{{ ev.height }}</span>
-                  <span class="meet-tag">{{ ev.total_rounds }} rds</span>
-                  <span class="meet-tag">{{ ev.number_of_judges }}j</span>
-                  <span v-if="ev.event_type === 'synchro_pair'" class="meet-tag meet-tag-cyan">Synchro</span>
-                  <span v-else-if="ev.event_type === 'team'" class="meet-tag meet-tag-cyan">Team</span>
-                </div>
-                <div class="meet-ev-foot">
-                  <span v-if="ev.competitor_count" class="meet-ev-divers">
-                    {{ ev.competitor_count }} {{ ev.competitor_count === 1 ? 'diver' : 'divers' }}
-                  </span>
-                  <span v-if="ev.status === 'Live' && ev.current_round" class="meet-ev-round">
-                    R{{ ev.current_round }}/{{ ev.total_rounds }}
-                  </span>
-                  <span class="meet-ev-cta">{{ ev.status === 'Live' ? 'Watch →' : 'Recap →' }}</span>
-                </div>
-              </button>
-            </div>
+            <!-- One row per discipline; prelim → semi → final spread
+                 across aligned columns (straight finals sit in the
+                 first column). Clicking a stage opens its scoreboard. -->
+            <MeetEventGrid
+              :rows="row.meet.progression.rows"
+              :max-cols="row.meet.progression.maxCols"
+              @select="emit('select', $event)"
+            />
             <RouterLink
               v-if="row.meet.meetId"
               :to="`/meet/${row.meet.meetId}`"
@@ -581,9 +606,17 @@ watch(countryFilter, (val) => {
   padding: 0.75rem 1rem;
   display: flex; flex-direction: column; gap: 0.7rem;
 }
-.live-strip-head {
+/* Collapsible header shared by the Live Now + Upcoming strips. */
+.strip-head {
   display: flex; align-items: center; gap: 0.6rem;
+  width: 100%; padding: 0; border: 0; background: transparent;
+  cursor: pointer; text-align: start;
 }
+.strip-caret {
+  font-family: var(--font-display); font-size: 12px; color: var(--text-3);
+  flex-shrink: 0;
+}
+.strip-head:hover .strip-caret { color: var(--text); }
 .live-pulse {
   font-family: var(--font-display); font-size: 10px; font-weight: 900;
   letter-spacing: 0.2em; padding: 0.25rem 0.65rem;
@@ -596,6 +629,43 @@ watch(countryFilter, (val) => {
 }
 .live-strip-groups {
   display: flex; flex-direction: column; gap: 0.7rem;
+}
+
+/* UPCOMING strip — amber sibling of the live strip. */
+.upcoming-strip {
+  background: linear-gradient(135deg, rgba(245,158,11,0.10), rgba(245,158,11,0.02));
+  border: 1px solid rgba(245,158,11,0.35);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem 1rem;
+  display: flex; flex-direction: column; gap: 0.7rem;
+}
+.upcoming-pulse {
+  font-family: var(--font-display); font-size: 10px; font-weight: 900;
+  letter-spacing: 0.2em; padding: 0.25rem 0.65rem;
+  background: var(--amber); color: white; border-radius: 4px;
+}
+.upcoming-strip-sub {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-3); letter-spacing: 0.04em;
+}
+.upcoming-chip {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.45);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.1s;
+  font-family: var(--font-display); color: var(--text);
+}
+.upcoming-chip:hover {
+  background: rgba(245,158,11,0.18);
+  border-color: var(--amber);
+  transform: translateY(-1px);
+}
+.upcoming-chip-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--amber); flex-shrink: 0;
 }
 .live-meet-group {
   display: flex; flex-direction: column; gap: 0.4rem;
@@ -812,56 +882,12 @@ watch(countryFilter, (val) => {
 .meet-acc-count { white-space: nowrap; }
 .meet-acc-date  { white-space: nowrap; }
 
-/* Expanded body — event cards, live first, like the meet page. */
+/* Expanded body — the meet's events as a progression grid
+   (see MeetEventGrid.vue). */
 .meet-acc-body {
   padding: 0 1.05rem 1rem;
   border-top: 1px solid var(--border);
 }
-.meet-ev-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 0.7rem;
-  margin-top: 0.85rem;
-}
-.meet-ev-card {
-  text-align: start; cursor: pointer;
-  background: var(--bg-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.75rem 0.85rem;
-  display: flex; flex-direction: column; gap: 0.45rem;
-  transition: border-color 0.13s, background 0.13s, transform 0.1s; min-width: 0;
-}
-.meet-ev-card:hover { border-color: var(--cyan); background: rgba(6,182,212,0.06); transform: translateY(-1px); }
-.meet-ev-card.is-live          { border-color: rgba(239,68,68,0.35); }
-.meet-ev-card.is-live:hover    { border-color: var(--red); background: rgba(239,68,68,0.06); }
-.meet-ev-top {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem;
-}
-.meet-ev-name {
-  font-family: var(--font-display); font-size: 14px; font-weight: 800;
-  font-style: italic; color: var(--text); line-height: 1.15;
-  flex: 1; min-width: 0;
-}
-.meet-ev-status {
-  font-family: var(--font-display); font-size: 9px; font-weight: 900;
-  letter-spacing: 0.16em; padding: 0.12rem 0.4rem; border-radius: 3px;
-  flex-shrink: 0;
-}
-.meet-ev-status.live  { background: var(--red); color: white; animation: pulse-red 2s infinite; }
-.meet-ev-status.final { background: var(--surface); color: var(--text-3); border: 1px solid var(--border); }
-.meet-ev-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
-.meet-ev-foot {
-  display: flex; align-items: baseline; gap: 0.5rem;
-  font-family: var(--font-mono); font-size: 10.5px; color: var(--text-3);
-}
-.meet-ev-round { color: var(--red); font-weight: 700; }
-.meet-ev-cta {
-  margin-inline-start: auto;
-  font-family: var(--font-display); font-size: 10px; font-weight: 700;
-  letter-spacing: 0.12em; text-transform: uppercase; color: var(--cyan);
-}
-.meet-ev-card.is-live .meet-ev-cta { color: var(--red); }
 
 .meet-acc-pagelink {
   display: inline-flex; align-items: center; gap: 0.3rem;
@@ -872,29 +898,27 @@ watch(countryFilter, (val) => {
 }
 .meet-acc-pagelink:hover { text-decoration: underline; }
 
-/* Shared event-tag chips (gender / height / rounds / synchro…). */
-.meet-tag {
-  font-family: var(--font-mono); font-size: 10px;
-  color: var(--text-3); background: var(--bg-3);
-  border: 1px solid var(--border); border-radius: 3px;
-  padding: 0.1rem 0.4rem;
-}
-.meet-tag-cyan {
-  color: var(--cyan); border-color: rgba(6,182,212,0.3);
-  background: var(--cyan-dim);
-}
-
-/* Event-tag chips inside an expanded meet sit on the sunken
-   .meet-ev-card, so flip them to the raised surface for contrast. */
-.meet-ev-card .meet-tag { background: var(--surface); }
-
 @media (max-width: 720px) {
+  /* Two-row header: caret + title get the full width on top, the
+     meta (LIVE badge + event count) drops to its own row beneath —
+     so a long meet title is no longer squeezed into an ellipsis by
+     the badge. The title wraps instead of truncating. */
   .meet-acc-head,
-  .meet-acc-solo { grid-template-columns: 18px minmax(0, 1fr) auto; gap: 0.5rem; padding: 0.75rem 0.85rem; }
-  .meet-acc-name { font-size: 14px; }
+  .meet-acc-solo {
+    grid-template-columns: 18px 1fr;
+    grid-template-areas:
+      "caret titles"
+      "caret meta";
+    column-gap: 0.5rem; row-gap: 0.3rem;
+    padding: 0.75rem 0.85rem;
+    align-items: start;
+  }
+  .meet-acc-caret  { grid-area: caret; align-self: center; }
+  .meet-acc-titles { grid-area: titles; }
+  .meet-acc-meta   { grid-area: meta; justify-content: flex-start; flex-wrap: wrap; }
+  .meet-acc-name   { font-size: 14px; white-space: normal; }   /* wrap, don't truncate */
   .meet-acc-date { display: none; }       /* keep the live badge + count; date is the least useful here */
   .meet-acc-body { padding-inline: 0.85rem; }
-  .meet-ev-grid  { grid-template-columns: 1fr; }
 
   /* iOS Safari auto-zooms whenever an <input>/<select> with
      font-size < 16px receives focus. Bump the meets-browser

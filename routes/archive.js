@@ -54,6 +54,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
       const events = await reads.query(
         `SELECT e.id, e.name, e.gender, e.height, e.total_rounds, e.number_of_judges,
                 e.event_type, e.status,
+                e.event_format, e.parent_event_id,
                 e.created_at, o.id AS org_id, o.name AS org_name, o.country_code,
                 e.meet_id, m.name AS meet_name,
                 m.start_date AS meet_start_date, m.end_date AS meet_end_date,
@@ -87,10 +88,12 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
            FROM scores s
            WHERE s.event_id = e.id
          ) live ON e.status = 'Live'
-         WHERE e.status IN ('Live', 'Completed')
+         WHERE e.status IN ('Live', 'Upcoming', 'Completed')
            AND COALESCE(e.is_rehearsal, FALSE) = FALSE
          ORDER BY
-           CASE e.status WHEN 'Live' THEN 0 ELSE 1 END,    -- live meets float to the top
+           CASE e.status                                   -- live first, then upcoming, then completed
+             WHEN 'Live' THEN 0 WHEN 'Upcoming' THEN 1 ELSE 2
+           END,
            e.created_at DESC`,
       );
       res.json(events.rows);

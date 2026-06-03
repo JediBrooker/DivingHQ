@@ -26,6 +26,23 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
   const reads = readPool || pool;
   const router = express.Router();
 
+  // GET /api/dr-archive/stats — headline totals for the archive
+  // (events + meets). Cheap COUNT(*)s; used by the public Scoreboard
+  // header to surface "N archived" alongside the live/completed
+  // operational counts.
+  router.get("/api/dr-archive/stats", async (_req, res) => {
+    try {
+      const { rows } = await reads.query(
+        `SELECT (SELECT COUNT(*) FROM dr_events)::int AS events,
+                (SELECT COUNT(*) FROM dr_meets)::int  AS meets`,
+      );
+      res.json(rows[0] || { events: 0, meets: 0 });
+    } catch (err) {
+      console.error("[DrArchive stats]", err.message);
+      res.status(500).json({ events: 0, meets: 0 });
+    }
+  });
+
   // GET /api/dr-archive/meets?q=&nat=&from=&to=&limit=&offset=
   // Filters: name search (q), country code (nat), and a meet-date
   // range (from/to, ISO yyyy-mm-dd). All optional and combinable.
