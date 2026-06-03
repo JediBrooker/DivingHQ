@@ -136,6 +136,14 @@ const routes = [
     meta: { appShell: true },
   },
   {
+    // Results Archive — public, read-only browse of historical
+    // results mined from DiveRecorder Meet Explorer into the dr_*
+    // tables. Same public/appShell stance as /scoreboard.
+    path: '/results-archive',
+    component: () => import('@/views/DrArchiveExplorer.vue'),
+    meta: { appShell: true },
+  },
+  {
     // Multi-event broadcast — one display, every currently-Live
     // event side by side. Auto-grids by event count (1 fills the
     // screen, 2 splits horizontally, 3-4 form a 2×2 …). Refreshes

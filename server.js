@@ -990,6 +990,28 @@ setInterval(() => {
 // =============================================================
 app.use(exportLimiter, require("./routes/archive")({ pool, readPool }));
 
+// DiveRecorder mined archive (dr_* tables) — public, read-only
+// browse of historical results imported from diverecorder.co.uk.
+// Anonymous-readable like the live archive; throttled with the same
+// public-read limiter.
+app.use(searchLimiter, require("./routes/dr-archive")({ pool, readPool, requireSystemAdmin }));
+
+// Optional scheduled DiveRecorder incremental sync. Off by default;
+// set DR_IMPORT_SYNC_HOURS=24 (or any positive number) to pull newly
+// published meets on that cadence. onlyNew mode keeps each run cheap.
+// Uses the same single-flight runner as the sysadmin "import now"
+// button, so a manual run and the schedule never overlap.
+{
+  const syncHours = Number(process.env.DR_IMPORT_SYNC_HOURS || 0);
+  if (syncHours > 0) {
+    const { startImport } = require("./lib/diverecorder-import-runner");
+    logger.info({ syncHours }, "DiveRecorder scheduled sync enabled");
+    setInterval(() => {
+      startImport(pool, { onlyNew: true, trigger: "schedule" });
+    }, syncHours * 60 * 60 * 1000).unref();
+  }
+}
+
 // =============================================================
 // PDF + CSV EXPORT
 // [SECTION: ROUTES — PDF EXPORT]

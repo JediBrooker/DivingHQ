@@ -1089,6 +1089,15 @@ onMounted(async () => {
         </div>
       </template>
       <div style="display:flex;gap:0.4rem;align-items:center">
+        <!-- Results Archive — historical results mined from
+             DiveRecorder. Shown while browsing (list mode) so the
+             archive is reachable from the public Scoreboard. -->
+        <RouterLink
+          v-if="!currentEventId"
+          to="/results-archive"
+          class="btn btn-ghost btn-sm"
+          v-tip.fixed="'Browse historical results imported from DiveRecorder'"
+        >📚 Results Archive</RouterLink>
         <!-- Broadcast / kiosk mode toggle. Visible only when an
              event is selected; flips into a chromeless layout
              suitable for a venue projector. -->
