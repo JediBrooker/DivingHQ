@@ -170,6 +170,7 @@ module.exports = function createMeetsRouter({
       const eventsRes = await pool.query(
         `SELECT e.id, e.name, e.gender, e.height, e.total_rounds,
                 e.number_of_judges, e.event_type, e.status, e.created_at,
+                e.event_format, e.parent_event_id,
                 COALESCE(stat.competitor_count, 0)::int AS competitor_count
          FROM events e
          LEFT JOIN LATERAL (

@@ -53,6 +53,10 @@ const overlayBg   = computed(() => {
 // into either the live broadcast layout or the recap layout.
 const events = ref([])
 const clubsList = ref([])
+// Total events sitting in the DiveRecorder results archive — shown
+// in the header next to the live/completed operational counts, and
+// links through to /results-archive. Null until the count lands.
+const archiveTotal = ref(null)
 const loadingList = ref(false)
 const meetsFromCache = ref(false)
 
@@ -68,6 +72,8 @@ const currentEvent = computed(() => events.value.find(e => String(e.id) === Stri
 // summary line "{n} live now" reads it too).
 
 const liveEvents = computed(() => events.value.filter(e => e.status === 'Live'))
+const upcomingEvents = computed(() => events.value.filter(e => e.status === 'Upcoming'))
+const completedEvents = computed(() => events.value.filter(e => e.status === 'Completed'))
 
 // Up Next: filter the server's queue to skip the current active
 // diver (so they don't appear as both "current performer" and
@@ -1012,6 +1018,13 @@ onMounted(async () => {
     if (Array.isArray(cls.data)) {
       clubsList.value = cls.data
     }
+    // Headline count of the DiveRecorder results archive for the
+    // header line. Fire-and-forget — a failure just hides the
+    // "N archived" link, it never blocks the live list.
+    fetch('/api/dr-archive/stats', { credentials: 'same-origin' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(s => { if (s && Number.isFinite(s.events)) archiveTotal.value = s.events })
+      .catch(() => {})
   } finally {
     loadingList.value = false
   }
@@ -1075,8 +1088,10 @@ onMounted(async () => {
           <span v-if="!auth.isLoggedIn" class="sb-page-title">Scoreboard &amp; Results</span>
           <span v-if="events.length" class="sb-page-sub">
             <span v-if="liveEvents.length" class="sb-page-sub-live">{{ liveEvents.length }} live now</span>
-            <span v-if="liveEvents.length"> · </span>
-            {{ events.length - liveEvents.length }} archived
+            <span v-if="liveEvents.length && upcomingEvents.length"> · </span>
+            <span v-if="upcomingEvents.length" class="sb-page-sub-upcoming">{{ upcomingEvents.length }} upcoming</span>
+            <template v-if="liveEvents.length || upcomingEvents.length"> · </template>
+            {{ completedEvents.length.toLocaleString() }} completed<template v-if="archiveTotal"> · <RouterLink to="/results-archive" class="sb-page-sub-archive">{{ archiveTotal.toLocaleString() }} archived</RouterLink></template>
           </span>
         </div>
       </template>
@@ -1131,6 +1146,7 @@ onMounted(async () => {
       v-if="!currentEventId"
       :events="events"
       :live-events="liveEvents"
+      :upcoming-events="upcomingEvents"
       :meets-from-cache="meetsFromCache"
       :loading-list="loadingList"
       :clubs-list="clubsList"

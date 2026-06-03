@@ -112,6 +112,13 @@
 .sb-page-sub-live {
   color: var(--red); font-weight: 700;
 }
+.sb-page-sub-upcoming {
+  color: var(--amber); font-weight: 700;
+}
+.sb-page-sub-archive {
+  color: var(--cyan); font-weight: 700; text-decoration: none;
+}
+.sb-page-sub-archive:hover { text-decoration: underline; }
 .sb-event-name {
   font-family: var(--font-sans); font-size: 16px; font-weight: 600;
   font-style: normal; letter-spacing: -0.01em; color: var(--fg);
