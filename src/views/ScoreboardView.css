@@ -980,6 +980,77 @@
   color: var(--text); text-align: end;
 }
 
+/* Condensed final standings — the default Final-tab view (toggle
+   ON). One row per diver / pair / team: rank · identity · total.
+   Switching the toggle off swaps this for the per-diver
+   dive-by-dive scoresheet (.diver-block) below. */
+.final-standings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.fs-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center; gap: 0.75rem;
+  padding: 0.6rem 0.25rem;
+  border-top: 1px solid var(--border);
+}
+.fs-row:first-child { border-top: none; }
+.fs-rank {
+  font-family: var(--font-display); font-size: 13px; font-weight: 800;
+  font-style: italic; color: var(--text-3); text-align: center;
+  width: 26px; height: 26px; line-height: 26px; border-radius: 6px;
+  background: var(--bg-3);
+}
+.fs-rank.gold   { color: #f59e0b; background: rgba(234,179,8,0.10); }
+.fs-rank.silver { color: #94a3b8; background: rgba(148,163,184,0.10); }
+.fs-rank.bronze { color: #b45309; background: rgba(180,83,9,0.10); }
+.fs-id { min-width: 0; }
+.fs-name {
+  font-family: var(--font-display); font-size: 14px; font-weight: 700;
+  color: var(--text); line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fs-club { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-3); margin-top: 0.1rem; }
+.fs-total {
+  font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+  color: var(--cyan); text-align: end; white-space: nowrap;
+}
+
+/* Score-density toggle bar — the "Final scores only" switch above
+   the recap standings / scoresheet. */
+.breakdown-toggle-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.5rem 1rem; flex-wrap: wrap;
+  padding: 0.1rem 0.25rem 0.7rem;
+  margin-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.score-toggle {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  cursor: pointer; user-select: none;
+}
+.score-toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.score-toggle-track {
+  position: relative; width: 34px; height: 19px; flex-shrink: 0;
+  border-radius: 999px; background: var(--bg-3);
+  border: 1px solid var(--border);
+  transition: background 0.15s, border-color 0.15s;
+}
+.score-toggle-thumb {
+  position: absolute; top: 2px; inset-inline-start: 2px;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--text-3);
+  transition: transform 0.15s, background 0.15s;
+}
+.score-toggle input:checked + .score-toggle-track { background: var(--cyan-dim); border-color: var(--cyan); }
+.score-toggle input:checked + .score-toggle-track .score-toggle-thumb { transform: translateX(15px); background: var(--cyan); }
+[dir="rtl"] .score-toggle input:checked + .score-toggle-track .score-toggle-thumb { transform: translateX(-15px); }
+.score-toggle input:focus-visible + .score-toggle-track { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.score-toggle-text {
+  font-family: var(--font-display); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-2);
+}
+.score-toggle:hover .score-toggle-text { color: var(--text); }
+.score-toggle-hint { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-3); }
+
 /* Tighter screens */
 @media (max-width: 1100px) {
   .completed-recap { padding: 0.75rem 0.875rem 1.5rem; gap: 1rem; }
