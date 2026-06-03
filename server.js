@@ -598,8 +598,14 @@ app.use(require("./routes/coach")({
 // Companion to the `venue.scoreboard_state` socket event
 // emitted from routes/socket.js. See lib/venue-state.js for
 // the canonical payload spec.
+//
+// Wrapped in searchLimiter (60/min/IP): the endpoint is anonymous
+// and each call runs buildScoreboardState's aggregate CTEs over the
+// event's scores, so without a cap a single client could saturate
+// the read pool. 60/min is comfortably above a bridge's legitimate
+// poll cadence (the socket subscribe_venue is the real-time path).
 // =============================================================
-app.use(require("./routes/venue")({ pool }));
+app.use(searchLimiter, require("./routes/venue")({ pool }));
 
 // Cross-org diver search + browse + orgs/all live in routes/
 // diver-search.js — extracted to keep server.js manageable. See
@@ -870,8 +876,13 @@ app.use(require("./routes/dive-directory")({ pool, verifyToken, requireOrgRole }
 // extracted into routes/diver-profile.js along with the local
 // canViewDiverProfile / canViewDiverPrivate helpers and the
 // KNOWN_WIDGETS whitelist.
+//
+// Wrapped in searchLimiter (60/min/IP) to match its sibling
+// judge-analytics: the /analytics endpoint is anonymous-readable
+// and fans out ~12 multi-join aggregate CTEs per request, so an
+// unauth client could otherwise saturate the read pool.
 // =============================================================
-app.use(require("./routes/diver-profile")({
+app.use(searchLimiter, require("./routes/diver-profile")({
   pool,
   readPool,
   verifyToken,

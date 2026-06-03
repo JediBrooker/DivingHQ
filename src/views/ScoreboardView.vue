@@ -186,6 +186,13 @@ const upcomingPreview = computed(() =>
 const leaderboardRounds = ref([])     // [{ round_number, rankings: [...] }]
 const standingsTab = ref('final')     // 'final' | 'by-round'
 const expandedRound = ref(null)       // currently expanded round in by-round view
+// Recap density toggle. ON by default → the Final tab shows only
+// the final standings (rank · diver · total points), the calm
+// audience-facing summary. Toggling it OFF expands every diver
+// into their full dive-by-dive scoresheet (dive code, DD, each
+// judge's score, dive total). Scoped to the Final tab — the
+// By-Round tab is its own cumulative leaderboard.
+const finalScoresOnly = ref(true)
 const activeDiver = ref(null)
 // Per-judge scores arriving live for the active diver, in
 // judge_number order. Pushed by score_received, cleared whenever
@@ -1677,6 +1684,54 @@ onMounted(async () => {
           <div class="col-body">
             <template v-if="standingsTab === 'final'">
               <p v-if="!divesByDiver.length" style="color:var(--text-3);font-size:12px;text-align:center;padding:2rem">No dive data recorded</p>
+              <template v-else>
+              <!-- Dive-by-dive toggle. ON by default → the recap
+                   shows only the final standings (rank · diver ·
+                   total). Toggling OFF expands every diver into
+                   their full per-dive scoresheet (code, DD, each
+                   judge's score, dive total). -->
+              <div class="breakdown-toggle-bar">
+                <label class="score-toggle">
+                  <input type="checkbox" v-model="finalScoresOnly">
+                  <span class="score-toggle-track"><span class="score-toggle-thumb"></span></span>
+                  <span class="score-toggle-text">Final scores only</span>
+                </label>
+                <span class="score-toggle-hint">
+                  {{ finalScoresOnly
+                    ? 'Final standings only — switch off for each diver’s dives'
+                    : 'Showing every dive' }}
+                </span>
+              </div>
+
+              <!-- Default: condensed final standings, one row per
+                   diver / pair / team in rank order. -->
+              <ol v-if="finalScoresOnly" class="final-standings">
+                <li v-for="block in divesByDiver" :key="block.name" class="fs-row">
+                  <div class="fs-rank" :class="rankClass(block.rank - 1)">{{ block.rank }}</div>
+                  <div class="fs-id">
+                    <div class="fs-name">
+                      <RouterLink v-if="!block.isTeam && block.dives[0]?.competitor_id"
+                                  :to="`/profile/${block.dives[0].competitor_id}`"
+                                  class="diver-link">{{ block.name }}</RouterLink>
+                      <template v-else>{{ block.name }}</template>
+                      <span v-if="block.country" class="diver-country">{{ block.country }}</span>
+                      <template v-if="block.partner">
+                        <span class="diver-amp">&amp;</span>
+                        <RouterLink v-if="block.partner_id"
+                                    :to="`/profile/${block.partner_id}`"
+                                    class="diver-link">{{ block.partner }}</RouterLink>
+                        <template v-else>{{ block.partner }}</template>
+                        <span v-if="block.partner_country" class="diver-country">{{ block.partner_country }}</span>
+                      </template>
+                    </div>
+                    <div v-if="block.club" class="fs-club">{{ block.club }}</div>
+                  </div>
+                  <div class="fs-total" v-if="block.total != null">{{ parseFloat(block.total).toFixed(1) }}</div>
+                </li>
+              </ol>
+
+              <!-- Toggled off: full per-diver dive-by-dive breakdown. -->
+              <template v-else>
               <div v-for="block in divesByDiver" :key="block.name" class="diver-block">
                 <div class="diver-head">
                   <div class="diver-rank-badge" :class="rankClass(block.rank - 1)">{{ block.rank }}</div>
@@ -1790,6 +1845,8 @@ onMounted(async () => {
                   </div>
                 </div>
               </div>
+              </template>
+              </template>
             </template>
 
             <!-- Round-by-round leaderboard with movement arrows -->

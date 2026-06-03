@@ -49,6 +49,13 @@ module.exports = function createScoreCorrectionRouter({
     requireOrgRole(["org_admin", "meet_manager", "referee"]),
     httpMiddleware("score_correction"),
     async (req, res) => {
+      // Validate the score id shape before it reaches the query —
+      // a non-UUID would otherwise surface as a Postgres "invalid
+      // input syntax for type uuid" 500 instead of a clean 400
+      // (matches the sibling conflicts.js guard).
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(req.params.id))) {
+        return res.status(400).json({ error: "Invalid score id" });
+      }
       const { score, reason } = req.body || {};
       const newScore = Number(score);
       if (Number.isNaN(newScore) || newScore < 0 || newScore > 10) {

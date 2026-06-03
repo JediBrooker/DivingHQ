@@ -133,3 +133,38 @@ test("accepts ISO string timestamps for both clocks", () => {
   });
   assert.equal(r.verdict, "late_review");
 });
+
+test("rejected: on-time actor claim but server is past the late-review window", () => {
+  // Client claims it submitted 10 min before the deadline, but the
+  // request only lands 2 days later — beyond the default 24h window,
+  // so the "I was on time" claim is no longer credible.
+  const r = evaluateDeadline({
+    deadline: DEADLINE,
+    actorLocalTime: BEFORE,
+    serverNow: new Date(DEADLINE.getTime() + 48 * 60 * 60 * 1000),
+  });
+  assert.equal(r.verdict, "rejected");
+  assert.equal(r.reason, "late_review_window_expired");
+});
+
+test("late_review still granted just inside the window", () => {
+  const r = evaluateDeadline({
+    deadline: DEADLINE,
+    actorLocalTime: BEFORE,
+    serverNow: new Date(DEADLINE.getTime() + 23 * 60 * 60 * 1000),  // 23h < 24h default
+  });
+  assert.equal(r.verdict, "late_review");
+});
+
+test("maxLateReviewMs is configurable", () => {
+  // A tight 5-min window rejects a server that's 10 min past the
+  // deadline even with an on-time actor claim.
+  const r = evaluateDeadline({
+    deadline: DEADLINE,
+    actorLocalTime: BEFORE,
+    serverNow: AFTER,  // 10 min past deadline
+    maxLateReviewMs: 5 * 60 * 1000,
+  });
+  assert.equal(r.verdict, "rejected");
+  assert.equal(r.reason, "late_review_window_expired");
+});

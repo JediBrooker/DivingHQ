@@ -827,12 +827,28 @@ module.exports = function createUsersRouter({
         );
         counts.audits += 1;
 
-        // Event attendance and dive-off records. Both ON DELETE
-        // CASCADE on the user FK — moving them preserves the
-        // history rather than losing it when we delete the
-        // shell row below.
+        // Event attendance — ON DELETE CASCADE on the user FK, so
+        // move it to preserve the history rather than losing it when
+        // we delete the shell row below.
         await client.query(
           `UPDATE event_attendance SET competitor_id = $2 WHERE competitor_id = $1`,
+          [oldId, me.id],
+        );
+
+        // Tie-break dive-offs — competitor_a_id / competitor_b_id are
+        // NOT NULL ON DELETE CASCADE, so the shell-row delete below
+        // would otherwise destroy the dive-off record (which this
+        // block's comment always claimed to preserve). Re-point both
+        // sides AND winner_id in ONE UPDATE: the
+        // tiebreak_winner_is_competitor CHECK (winner_id must equal a
+        // or b) is evaluated per-statement, so migrating winner_id in
+        // a separate query would transiently violate it.
+        await client.query(
+          `UPDATE tiebreak_dive_offs
+              SET competitor_a_id = CASE WHEN competitor_a_id = $1 THEN $2 ELSE competitor_a_id END,
+                  competitor_b_id = CASE WHEN competitor_b_id = $1 THEN $2 ELSE competitor_b_id END,
+                  winner_id       = CASE WHEN winner_id       = $1 THEN $2 ELSE winner_id END
+            WHERE competitor_a_id = $1 OR competitor_b_id = $1 OR winner_id = $1`,
           [oldId, me.id],
         );
 
@@ -973,7 +989,12 @@ module.exports = function createUsersRouter({
       if (req.params.id === req.user.id)
         return res.status(400).json({ error: "You can't suspend your own account" });
       await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [req.params.id]);
-      if (typeof bumpTokenVersion === "function") await bumpTokenVersion(req.params.id);
+      // bumpTokenVersion(db, userId) — pass the pool as the first arg.
+      // A single-arg call lands the id in `db`, leaves userId undefined,
+      // and the helper's `if (!userId) return;` guard makes it a silent
+      // no-op — which previously left the suspended user's existing JWT
+      // valid for up to JWT_EXPIRY. Bumping here revokes every session.
+      if (typeof bumpTokenVersion === "function") await bumpTokenVersion(pool, req.params.id);
       await recordAudit(pool, {
         ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
         entity_id: req.params.id, entity_name: target.full_name, action: "user.suspended",
@@ -1003,7 +1024,7 @@ module.exports = function createUsersRouter({
   });
 
   // Re-send the email-verification link (reuses the register-flow JWT).
-  router.post("/api/users/:id/resend-verification", requireOrgAdmin, async (req, res) => {
+  router.post("/api/users/:id/resend-verification", writeLimiter, requireOrgAdmin, async (req, res) => {
     try {
       const target = await loadEditableTarget(req, res, "org_id, full_name, email, email_verified_at, deleted_at");
       if (!target) return;
@@ -1026,7 +1047,7 @@ module.exports = function createUsersRouter({
   });
 
   // Send the user a password-reset link (reuses the forgot-password JWT).
-  router.post("/api/users/:id/reset-password", requireOrgAdmin, async (req, res) => {
+  router.post("/api/users/:id/reset-password", writeLimiter, requireOrgAdmin, async (req, res) => {
     try {
       const target = await loadEditableTarget(req, res, "org_id, full_name, email, password, deleted_at");
       if (!target) return;
