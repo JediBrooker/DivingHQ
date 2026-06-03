@@ -785,36 +785,70 @@ module.exports = function attachSocket({
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
+        const auditReason = `referee:${action}` + (action === "cap" ? `(${capValue})` : "");
         if (action === "failed") {
           await client.query(
-            `UPDATE scores SET score = 0
-             WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-            [data.event_id, data.competitor_id, data.round_number],
+            `WITH prior AS (
+               SELECT id, score AS old_score
+               FROM scores
+               WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3
+               FOR UPDATE
+             ),
+             updated AS (
+               UPDATE scores s
+               SET score = 0
+               FROM prior p
+               WHERE s.id = p.id
+               RETURNING s.id, s.event_id, s.competitor_id, s.judge_id,
+                         s.round_number, p.old_score, s.score AS new_score
+             )
+             INSERT INTO score_audit_log
+               (score_id, event_id, competitor_id, judge_id, round_number,
+                action, old_score, new_score, actor_user_id, ip_address, user_agent, reason)
+             SELECT id, event_id, competitor_id, judge_id, round_number,
+                    'update', old_score, new_score,
+                    $4, $5, $6, $7
+             FROM updated`,
+            [
+              data.event_id, data.competitor_id, data.round_number,
+              actorUserId || null,
+              clientIp(socket),
+              socket.handshake.headers["user-agent"] || null,
+              auditReason,
+            ],
           );
         } else if (action === "cap") {
           await client.query(
-            `UPDATE scores SET score = LEAST(score, $4::numeric)
-             WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
-            [data.event_id, data.competitor_id, data.round_number, capValue],
+            `WITH prior AS (
+               SELECT id, score AS old_score
+               FROM scores
+               WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3
+               FOR UPDATE
+             ),
+             updated AS (
+               UPDATE scores s
+               SET score = LEAST(s.score, $4::numeric)
+               FROM prior p
+               WHERE s.id = p.id
+               RETURNING s.id, s.event_id, s.competitor_id, s.judge_id,
+                         s.round_number, p.old_score, s.score AS new_score
+             )
+             INSERT INTO score_audit_log
+               (score_id, event_id, competitor_id, judge_id, round_number,
+                action, old_score, new_score, actor_user_id, ip_address, user_agent, reason)
+             SELECT id, event_id, competitor_id, judge_id, round_number,
+                    'update', old_score, new_score,
+                    $5, $6, $7, $8
+             FROM updated`,
+            [
+              data.event_id, data.competitor_id, data.round_number, capValue,
+              actorUserId || null,
+              clientIp(socket),
+              socket.handshake.headers["user-agent"] || null,
+              auditReason,
+            ],
           );
         }
-        await client.query(
-          `INSERT INTO score_audit_log
-             (score_id, event_id, competitor_id, judge_id, round_number,
-              action, old_score, new_score, actor_user_id, ip_address, user_agent, reason)
-           SELECT s.id, s.event_id, s.competitor_id, s.judge_id, s.round_number,
-                  'update', s.score, s.score,
-                  $4, $5, $6, $7
-           FROM scores s
-           WHERE s.event_id = $1 AND s.competitor_id = $2 AND s.round_number = $3`,
-          [
-            data.event_id, data.competitor_id, data.round_number,
-            actorUserId || null,
-            clientIp(socket),
-            socket.handshake.headers["user-agent"] || null,
-            `referee:${action}` + (action === "cap" ? `(${capValue})` : ""),
-          ],
-        );
         await client.query("COMMIT");
       } catch (err) {
         await client.query("ROLLBACK");
