@@ -848,6 +848,28 @@ module.exports = function attachSocket({
               auditReason,
             ],
           );
+        } else if (action === "redive") {
+          // Redive changes no score (the diver's new dive overwrites
+          // the round via submit_score on the same UNIQUE key), but we
+          // still record the referee action so the audit trail shows
+          // it. No UPDATE → old_score == new_score == current score.
+          await client.query(
+            `INSERT INTO score_audit_log
+               (score_id, event_id, competitor_id, judge_id, round_number,
+                action, old_score, new_score, actor_user_id, ip_address, user_agent, reason)
+             SELECT s.id, s.event_id, s.competitor_id, s.judge_id, s.round_number,
+                    'update', s.score, s.score,
+                    $4, $5, $6, $7
+             FROM scores s
+             WHERE s.event_id = $1 AND s.competitor_id = $2 AND s.round_number = $3`,
+            [
+              data.event_id, data.competitor_id, data.round_number,
+              actorUserId || null,
+              clientIp(socket),
+              socket.handshake.headers["user-agent"] || null,
+              auditReason,
+            ],
+          );
         }
         await client.query("COMMIT");
       } catch (err) {
