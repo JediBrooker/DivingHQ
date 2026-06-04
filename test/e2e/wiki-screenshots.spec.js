@@ -1,6 +1,6 @@
 // Wiki / README screenshot harness.
 //
-// Captures the 23 PNGs referenced by docs/ and the GitHub wiki.
+// Captures the 27 PNGs referenced by docs/ and the GitHub wiki.
 // Manual-run-only — `npm run test:e2e` excludes this spec by
 // virtue of nobody chaining it into CI; run it explicitly when
 // the UI rebrands, the home hero shifts, or a wiki page needs
@@ -15,10 +15,10 @@
 // wiki / README to be useful.
 //
 // Design choice: one big spec, serial mode, shared beforeAll
-// fixture. The 23 screenshots all need the same "live federation
+// fixture. The 27 screenshots all need the same "live federation
 // with 3 events at different statuses, real divers, real judges,
 // scored dives" world; spinning that up once and screenshotting
-// it 23 times is ~10x cheaper than 23 isolated tests. The trade-
+// it 27 times is ~10x cheaper than 27 isolated tests. The trade-
 // off is that a fixture bug breaks every screenshot — acceptable
 // because the spec is meant to be run interactively and looked
 // at by a human anyway.
@@ -595,6 +595,19 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
   await page.goto("/manager");
   await settle(page);
   await snap(page, "meet-manager");
+
+  // 4. new-event-modal.png — the create-event modal opened over
+  //    /manager. Mirrors the selector the visual-regression spec
+  //    uses (the "+ New Event" button → .modal-create-event).
+  await page.getByRole("button", { name: /\+ New Event/i }).click();
+  await expect(page.locator(".modal-create-event")).toBeVisible({
+    timeout: 10_000,
+  });
+  await settle(page, 800);
+  await page.screenshot({
+    path: `${SCREENSHOT_DIR}/new-event-modal.png`,
+    fullPage: false,
+  });
 });
 
 // =============================================================
@@ -673,6 +686,22 @@ test("diver+coach: profile / competitor / compare / coach", async ({ page }) => 
   await settle(page, 1200);
   await snap(page, "competitor");
 
+  // 2b. meet-day.png — the focused phone-style meet-day view for
+  //     an entrant diver. diver[0] is rostered into the Live
+  //     event, so MeetDayView renders the "your next dive" card +
+  //     current rank rather than the not-entered placeholder.
+  await page.goto(`/me/meet/${world.liveEvent.id}`);
+  await settle(page, 1200);
+  await snap(page, "meet-day");
+
+  // 2c. inbox.png — the notifications inbox. Available to any
+  //     authenticated user; capture it while still signed in as
+  //     the diver. May render the empty-state if no notifications
+  //     have fanned out yet — still a useful reference frame.
+  await page.goto("/inbox");
+  await settle(page);
+  await snap(page, "inbox");
+
   // 3. compare.png — signed in, comparing 2 divers.
   await page.goto(
     `/compare?a=${world.subjectDiverId}&b=${world.compareDiverId}`,
@@ -686,6 +715,14 @@ test("diver+coach: profile / competitor / compare / coach", async ({ page }) => 
   await page.goto("/coach");
   await settle(page);
   await snap(page, "coach");
+
+  // 5. coach-dive-lists.png — the on-behalf-of squad dive-list
+  //    editor. The coach is linked to divers[1] + divers[2], both
+  //    rostered into the Live event, so this event's editor lists
+  //    real squad rows rather than an empty state.
+  await page.goto(`/coach/dive-lists/${world.liveEvent.id}`);
+  await settle(page, 1200);
+  await snap(page, "coach-dive-lists");
 });
 
 // =============================================================
