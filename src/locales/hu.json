@@ -288,7 +288,7 @@
       "other_surfaces": "Egyéb felületek"
     },
     "tiles": {
-      "manager_title": "Meet Manager",
+      "manager_title": "Versenyigazgató",
       "manager_desc": "Versenyek és események létrehozása, a zsűri kijelölése, névlisták összeállítása.",
       "control_title": "Irányító központ",
       "control_desc": "Irányítsa a pontozást a verseny napján — aktív ugró, időmérő, tartások.",
@@ -339,7 +339,7 @@
     },
     "referee": {
       "signoff_requested_by": "Jóváhagyást kért: {name}",
-      "meet_manager_fallback": "meet manager"
+      "meet_manager_fallback": "versenyigazgató"
     },
     "judge_panel": {
       "analysis_title": "Bírói elemzés",
@@ -698,7 +698,49 @@
     "mark_all_read": "Összes olvasottnak jelölése",
     "filter_unread": "Csak olvasatlanok",
     "filter_all": "Összes",
-    "filter_category": "Kategória"
+    "filter_category": "Kategória",
+    "heading": "Értesítések",
+    "subtitle": "Minden push-értesítés + alkalmazáson belüli banner, amelyet az Ön fiókjára küldtek, megőrzésre kerül a megőrzési időszak alatt, így egy kihagyott telefonos push sem vész el.",
+    "unread_count": "{count} olvasatlan",
+    "show": "Megjelenítés",
+    "lanes_aria": "Értesítési sávok",
+    "lane_all": "Összes",
+    "lane_action": "Művelet szükséges",
+    "lane_team": "Edző & csapat",
+    "lane_results": "Eredmények",
+    "lane_ops": "Műveletek",
+    "open_dashboard": "Irányítópult megnyitása",
+    "caught_up_title": "Minden elolvasva",
+    "caught_up_body": "Nincs olvasatlan. Kapcsolja be a fenti Összes szűrőt, hogy újra megtekinthesse azokat, amelyeket már tudomásul vett.",
+    "no_match": "Egyetlen értesítés sem felel meg a jelenlegi szűrőknek.",
+    "open": "Megnyitás",
+    "open_path": "Megnyitás: {path}",
+    "unread_aria": "Olvasatlan",
+    "load_failed": "Nem sikerült betölteni a beérkező értesítéseket: {error}",
+    "marked_read": "{count} olvasottként megjelölve",
+    "mark_read_failed": "Nem sikerült olvasottként megjelölni",
+    "ack_partial_failed": "Néhány visszaigazolás sikertelen — frissítse az oldalt a legfrissebb állapot megtekintéséhez",
+    "cat": {
+      "signoff_request": "Jóváhagyás",
+      "role_decision": "Szerep",
+      "role_request": "Szerepkérelem",
+      "event_started": "Esemény",
+      "event_live": "Esemény élőben",
+      "event_results_posted": "Eredmények",
+      "international_invite": "Meghívás",
+      "referee_signoff": "Jóváhagyás",
+      "coach_diver_up_next": "Következik",
+      "coach_dive_list_submitted": "Edzői lista",
+      "coach_dive_list_withdrawn": "Edzői visszavonás",
+      "synchro_partner_invite": "Szinkró párosítás",
+      "dive_list_advanced": "Előrehaladott",
+      "dive_list_reserve": "Tartalék",
+      "reserve_promoted": "Tartalék előléptetve",
+      "h2h_seeded": "H2H kiemelt",
+      "sf_seeded": "Elődöntő kiemelt",
+      "f_seeded": "Döntő kiemelt",
+      "generic": "Értesítés"
+    }
   },
   "compare": {
     "title": "Műugrók összehasonlítása",

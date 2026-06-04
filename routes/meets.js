@@ -16,6 +16,29 @@ const express = require("express");
 const { buildReadinessFromRow } = require("../lib/workflow");
 const { detectConflicts } = require("../lib/schedule-conflicts");
 
+// Render one CSV cell. Two concerns layered here:
+//   1. RFC-4180 quoting — wrap in double-quotes (and double any
+//      embedded quote) when the value contains a quote, comma or
+//      newline.
+//   2. Formula-injection neutralisation (OWASP) — a cell whose
+//      first character is one of = + - @ \t \r is interpreted as a
+//      formula by Excel / Google Sheets / LibreOffice on open.
+//      Org / federation / diver / event names are user-controlled
+//      and flow into this export, so a name like
+//      `=HYPERLINK("http://evil","click")` would execute. Prefix a
+//      single apostrophe so the spreadsheet treats it as literal
+//      text. The apostrophe itself trips the quoting rule below
+//      only if other special chars are present; on its own it's a
+//      harmless leading character the spreadsheet strips on display.
+const CSV_FORMULA_TRIGGERS = new Set(["=", "+", "-", "@", "\t", "\r"]);
+function csvCell(value) {
+  let s = value == null ? "" : String(value);
+  if (s.length && CSV_FORMULA_TRIGGERS.has(s[0])) {
+    s = `'${s}`;
+  }
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
 module.exports = function createMeetsRouter({
   pool,
   optionalAuth,
@@ -28,11 +51,6 @@ module.exports = function createMeetsRouter({
 
   function hasOwn(obj, key) {
     return Object.prototype.hasOwnProperty.call(obj || {}, key);
-  }
-
-  function csvCell(value) {
-    const s = value == null ? "" : String(value);
-    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   }
 
   function sendReadinessCsv(res, report) {
@@ -160,8 +178,16 @@ module.exports = function createMeetsRouter({
           ORDER BY rsr.event_id, rsr.created_at DESC
        ),
        federation_rows AS (
+         -- org_id is the diver's home federation. The LEFT JOINs keep a
+         -- row even for an orphaned entry whose user/org is missing (a
+         -- defensive case FK integrity normally prevents); such rows get
+         -- org_id = NULL and bucket together under 'Unknown federation'.
+         -- We emit NULL rather than a synthetic id (an earlier version
+         -- substituted the event id, which read like a real org_id and
+         -- could mislead a consumer). Postgres groups NULLs as one bucket,
+         -- so the per-event orphan grouping is unchanged.
          SELECT cdl.event_id,
-                COALESCE(u.org_id, ve.id) AS org_id,
+                u.org_id AS org_id,
                 COALESCE(o.name, 'Unknown federation') AS org_name,
                 o.country_code,
                 COUNT(DISTINCT cdl.competitor_id)
@@ -172,7 +198,7 @@ module.exports = function createMeetsRouter({
            JOIN visible_events ve ON ve.id = cdl.event_id
            LEFT JOIN users u ON u.id = cdl.competitor_id
            LEFT JOIN organisations o ON o.id = u.org_id
-          GROUP BY cdl.event_id, COALESCE(u.org_id, ve.id), COALESCE(o.name, 'Unknown federation'), o.country_code
+          GROUP BY cdl.event_id, u.org_id, COALESCE(o.name, 'Unknown federation'), o.country_code
        ),
        federation_incomplete AS (
          SELECT event_id, org_id, COUNT(*)::int AS incomplete_diver_count
@@ -1072,3 +1098,8 @@ module.exports = function createMeetsRouter({
 
   return router;
 };
+
+// Exposed for unit testing the CSV-injection neutralisation +
+// RFC-4180 quoting in isolation (test/meets-csv.test.js). The
+// router factory above closes over the same module-scope helper.
+module.exports.csvCell = csvCell;
