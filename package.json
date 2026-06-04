@@ -18,6 +18,7 @@
     "test:e2e:cross-browser": "playwright test --project=mobile-safari --project=mobile-chrome --project=firefox",
     "test:e2e:profile": "PLAYWRIGHT_JSON_OUTPUT_NAME=/tmp/divinghq-playwright-profile.json playwright test --reporter=json",
     "test:e2e:headed": "PW_SLOWMO=300 playwright test --headed",
+    "verify:local": "node scripts/verify-local.js",
     "migrate": "node scripts/migrate.js",
     "translate": "node scripts/translate-locales.js",
     "venue:daktronics": "node scripts/venue-daktronics-bridge.js",

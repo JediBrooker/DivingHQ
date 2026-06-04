@@ -69,6 +69,15 @@ test("seed_test_data.sql exists and is non-empty", () => {
   assert.ok(stat.size > 1000);
 });
 
+test("verify:local script is wired to the local verification runner", () => {
+  const root = path.join(__dirname, "..");
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+  const scriptPath = path.join(root, "scripts", "verify-local.js");
+  assert.equal(pkg.scripts?.["verify:local"], "node scripts/verify-local.js");
+  assert.ok(fs.existsSync(scriptPath), "scripts/verify-local.js should exist");
+  execSync(`node --check ${scriptPath}`, { stdio: "pipe" });
+});
+
 test("init.sql declares schema version 53", () => {
   const sql = fs.readFileSync(path.join(__dirname, "..", "init.sql"), "utf8");
   assert.match(sql, /INSERT INTO public\.schema_meta \(id, version\) VALUES \(1, 53\)/);
