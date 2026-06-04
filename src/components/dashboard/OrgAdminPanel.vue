@@ -51,7 +51,9 @@ function scoreVerb(action) {
         :to="card.to"
         :class="['action-card', `action-card-${card.kind}`]"
       >
-        <span class="action-card-icon">{{ card.icon }}</span>
+        <span class="action-card-icon" aria-hidden="true">
+          <component :is="card.icon" />
+        </span>
         <span class="action-card-title">{{ card.title }}</span>
         <span v-if="card.meta" class="action-card-meta">{{ card.meta }}</span>
         <span class="action-card-arrow" aria-hidden="true">→</span>

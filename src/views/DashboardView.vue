@@ -34,6 +34,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { fmtCloses, fmtRelative } from '@/lib/format'
+import { Building2, Calendar, MonitorPlay, UserCog } from '@lucide/vue'
 
 
 // Per-role panels — async-imported so each tab's chunk only
@@ -685,7 +686,7 @@ const attentionCards = computed(() => {
     cards.push({
       id: 'live-' + ev.id,
       kind: 'live',
-      icon: '🔴',
+      icon: MonitorPlay,
       title: t('dashboard.attention.live', { name: ev.name }),
       meta: null,
       to: `/control?event=${ev.id}`,
@@ -702,7 +703,7 @@ const attentionCards = computed(() => {
     cards.push({
       id: 'upcoming-' + ev.id,
       kind: 'upcoming',
-      icon: '📅',
+      icon: Calendar,
       title: t('dashboard.attention.prepare', { name: ev.name }),
       meta: fmtCloses(ev.entries_close_at) || t('dashboard.attention.prepare_meta'),
       to: `/control?event=${ev.id}`,
@@ -713,7 +714,7 @@ const attentionCards = computed(() => {
     cards.push({
       id:    'pending-roles',
       kind:  'pending',
-      icon:  '👥',
+      icon:  UserCog,
       title: t(n === 1 ? 'dashboard.attention.role_requests_one' : 'dashboard.attention.role_requests_many', { count: n }),
       meta:  t('dashboard.attention.role_requests_meta'),
       to:    '/users',
@@ -724,7 +725,7 @@ const attentionCards = computed(() => {
     cards.push({
       id:    'pending-orgs',
       kind:  'pending',
-      icon:  '🏛',
+      icon:  Building2,
       title: t(n === 1 ? 'dashboard.attention.orgs_one' : 'dashboard.attention.orgs_many', { count: n }),
       meta:  t('dashboard.attention.orgs_meta'),
       to:    '/users',
