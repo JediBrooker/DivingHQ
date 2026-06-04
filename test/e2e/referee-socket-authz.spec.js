@@ -221,13 +221,14 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
         // score_audit_log row per existing scores row. We seeded
         // one judge → one audit row.
         const audit = await setup.pool.query(
-          `SELECT action, new_score, reason, actor_user_id
+          `SELECT action, old_score, new_score, reason, actor_user_id
              FROM score_audit_log
             WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3
             ORDER BY created_at DESC LIMIT 1`,
           [world.event.id, world.competitor.userId, 1],
         );
         expect(audit.rows[0].action).toBe("update");
+        expect(Number(audit.rows[0].old_score)).toBe(8.0);
         expect(Number(audit.rows[0].new_score)).toBe(0);
         expect(audit.rows[0].reason).toBe("referee:failed");
         expect(audit.rows[0].actor_user_id).toBe(world.referee.userId);
@@ -454,13 +455,14 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
 
         // (c) Audit row — reason captures the cap value.
         const audit = await setup.pool.query(
-          `SELECT action, new_score, reason, actor_user_id
+          `SELECT action, old_score, new_score, reason, actor_user_id
              FROM score_audit_log
             WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3
             ORDER BY created_at DESC LIMIT 1`,
           [world.event.id, world.competitor.userId, 1],
         );
         expect(audit.rows[0].action).toBe("update");
+        expect(Number(audit.rows[0].old_score)).toBe(8.0);
         expect(Number(audit.rows[0].new_score)).toBe(6.0);
         expect(audit.rows[0].reason).toBe("referee:cap(6)");
         expect(audit.rows[0].actor_user_id).toBe(world.referee.userId);
