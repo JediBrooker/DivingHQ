@@ -36,6 +36,7 @@ import { useSocket } from '@/composables/useSocket'
 import { usePush } from '@/composables/usePush'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { showSuccess, showError } from '@/composables/useNotify'
+import EmptyState from '@/components/EmptyState.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 
 const { t } = useI18n()
@@ -312,12 +313,22 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
     </div>
 
     <div v-if="loading && !rows.length" class="empty">{{ $t('coach.dashboard.loading') }}</div>
-    <div v-else-if="error" class="msg msg-error">{{ error }}</div>
-    <div v-else-if="!rows.length" class="empty-state-card">
-      <div class="empty-state-icon">🤝</div>
-      <div class="empty-state-title">{{ $t('coach.dashboard.no_divers_title') }}</div>
-      <div class="empty-state-body">{{ $t('coach.dashboard.no_divers_body') }}</div>
-    </div>
+    <EmptyState
+      v-else-if="error"
+      icon="!"
+      title="Could not load coach dashboard"
+      :body="error"
+      action-label="Retry"
+      :on-action="load"
+    />
+    <EmptyState
+      v-else-if="!rows.length"
+      icon="🤝"
+      :title="$t('coach.dashboard.no_divers_title')"
+      :body="$t('coach.dashboard.no_divers_body')"
+      action-label="Open guide"
+      action-to="/guide"
+    />
 
     <template v-else>
       <!-- UP NEXT STRIP — squad members in the next ~20 min,
