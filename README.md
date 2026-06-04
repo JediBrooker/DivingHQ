@@ -93,11 +93,15 @@ When a meet is over, the Scoreboard switches to a recap layout: podium spotlight
 
 ![Completed Meet Recap](./docs/screenshots/scoreboard.png)
 
-#### Results Archive
+#### Completed Meets Index
 
-Browse every completed meet across the platform. Filter by country, year, height, club, or just search across event / org / country. Each event card shows competitor and club counts so you can see meet size at a glance, and per-event PDFs (program, start list, score sheet, results) plus a CSV export of the filtered list are one click away.
+The `/scoreboard` index (no event id) browses every meet **run on DivingHQ itself**. Filter by country, year, height, club, or just search across event / org / country. Each event card shows competitor and club counts so you can see meet size at a glance, and per-event PDFs (program, start list, score sheet, results) plus a CSV export of the filtered list are one click away.
 
-![Results Archive](./docs/screenshots/results-archive.png)
+![Completed Meets Index](./docs/screenshots/results-archive.png)
+
+#### Results Archive (DiveRecorder)
+
+A separate surface at `/results-archive` (the **Results Archive** sidebar item) browses decades of historical UK/AUS results imported from the [DiveRecorder Meet Explorer](https://www.diverecorder.co.uk/) into the `dr_*` tables (migrations 059/060, `/api/dr-archive/*`). Public and read-only: browse meets with a name / country / date-range filter and drill meet → event → result → a diver's full divesheet, or jump straight to one athlete via "Find a diver by name". A system-admin-only **Import new meets** panel pulls newly-published meets from DiveRecorder.
 
 ### Operators (Meet Manager + Org Admin)
 
