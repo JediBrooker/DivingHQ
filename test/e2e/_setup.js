@@ -282,6 +282,18 @@ async function createEvent(request, { adminToken, ...overrides }) {
   return await r.json();   // full event row
 }
 
+// Add a federation to an event's participating-org list. The host
+// org is intentionally not represented in this table; callers use
+// this helper for the invited / cross-federation side only.
+async function addParticipatingOrg({ eventId, orgId, addedBy = null }) {
+  await pool.query(
+    `INSERT INTO event_participating_orgs (event_id, org_id, added_by)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (event_id, org_id) DO NOTHING`,
+    [eventId, orgId, addedBy],
+  );
+}
+
 // Replace the panel for an event. Order matters — judge_number
 // is assigned by position in the array.
 async function assignJudges(request, { adminToken, eventId, judgeIds }) {
@@ -390,6 +402,132 @@ async function addEventManager({ eventId, userId }) {
      ON CONFLICT DO NOTHING`,
     [eventId, userId],
   );
+}
+
+// Higher-level event fixture for tests that need the same shape:
+// a host federation, optional invited competitor federation, one
+// event, one competitor, optional coach link, optional judges, and
+// optional pre-seeded dive-list rows. Returns a cleanup() hook that
+// deletes every org the helper created.
+async function createEventScenario(request, opts = {}) {
+  const {
+    crossFederation = false,
+    withCoach = true,
+    withDiveList = true,
+    judgeCount = 0,
+    event: eventOverrides = {},
+    hostOrg: hostOrgOverrides = {},
+    competitorOrg: competitorOrgOverrides = {},
+    competitor: competitorOverrides = {},
+    coach: coachOverrides = {},
+    dive: diveQuery = {},
+    diveListRounds = null,
+  } = opts;
+
+  const createdOrgs = [];
+  const hostOrg = await createOrgAndAdmin(request, {
+    orgName: "E2E Host Org",
+    countryCode: "HST",
+    ...hostOrgOverrides,
+  });
+  createdOrgs.push(hostOrg);
+
+  let competitorOrg = hostOrg;
+  if (crossFederation) {
+    competitorOrg = await createOrgAndAdmin(request, {
+      orgName: "E2E Guest Org",
+      countryCode: "GST",
+      ...competitorOrgOverrides,
+    });
+    createdOrgs.push(competitorOrg);
+  }
+
+  const event = await createEvent(request, {
+    adminToken: hostOrg.adminToken,
+    total_rounds: 1,
+    number_of_judges: judgeCount || 5,
+    height: "3m",
+    ...eventOverrides,
+  });
+
+  if (competitorOrg.orgId !== hostOrg.orgId) {
+    await addParticipatingOrg({
+      eventId: event.id,
+      orgId: competitorOrg.orgId,
+      addedBy: hostOrg.adminId,
+    });
+  }
+
+  const diveId = await pickDiveId(diveQuery);
+  const competitor = await insertUser({
+    orgId: competitorOrg.orgId,
+    role: "diver",
+    fullName: "Scenario Diver",
+    ...competitorOverrides,
+  });
+
+  if (withDiveList) {
+    const rounds = diveListRounds || Array.from(
+      { length: Number(event.total_rounds) || 1 },
+      (_, i) => i + 1,
+    );
+    await insertDiveList({
+      eventId: event.id,
+      competitorId: competitor.userId,
+      dives: rounds.map((round_number) => ({ round_number, dive_id: diveId })),
+    });
+  }
+
+  let coach = null;
+  if (withCoach) {
+    const coachUser = await insertUser({
+      orgId: competitorOrg.orgId,
+      role: "coach",
+      fullName: "Scenario Coach",
+      ...coachOverrides,
+    });
+    await linkCoach({
+      coachId: coachUser.userId,
+      diverId: competitor.userId,
+      orgId: competitorOrg.orgId,
+    });
+    const session = await loginAs(request, coachUser.username);
+    coach = { ...coachUser, token: session.token };
+  }
+
+  const judges = [];
+  if (judgeCount > 0) {
+    for (let i = 0; i < judgeCount; i++) {
+      const judge = await insertUser({
+        orgId: hostOrg.orgId,
+        role: "judge",
+        fullName: `Scenario Judge ${i + 1}`,
+      });
+      judges.push(judge);
+    }
+    await assignJudges(request, {
+      adminToken: hostOrg.adminToken,
+      eventId: event.id,
+      judgeIds: judges.map((j) => j.userId),
+    });
+  }
+
+  async function cleanup() {
+    for (const org of [...createdOrgs].reverse()) {
+      await deleteOrg(org.orgId);
+    }
+  }
+
+  return {
+    hostOrg,
+    competitorOrg,
+    event,
+    diveId,
+    competitor,
+    coach,
+    judges,
+    cleanup,
+  };
 }
 
 // Direct DB cleanup for a parallel-safe per-test teardown.
@@ -593,6 +731,7 @@ module.exports = {
   insertClub,
   loginAs,
   createEvent,
+  addParticipatingOrg,
   assignJudges,
   insertDiveList,
   pickDiveId,
@@ -600,6 +739,7 @@ module.exports = {
   linkCoach,
   insertScore,
   addEventManager,
+  createEventScenario,
   deleteOrg,
   installDialogDelay,
   installClickHighlight,
