@@ -40,6 +40,60 @@ function totpFor(secret) {
   });
 }
 
+function fakeSessionToken() {
+  const header = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({
+    id: "00000000-0000-4000-8000-000000000001",
+    username: "totp-ui-admin",
+    full_name: "TOTP UI Admin",
+    org_id: "00000000-0000-4000-8000-000000000002",
+    org_roles: ["org_admin"],
+    is_system_admin: false,
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  })).toString("base64url");
+  return `${header}.${payload}.signature`;
+}
+
+async function exerciseLoginTotpUi(page, code, responseExtras = {}) {
+  let totpPayload = null;
+
+  await page.route("**/api/auth/login", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ needs_totp: true, totp_token: "challenge-token" }),
+    });
+  });
+  await page.route("**/api/auth/login/totp", async (route) => {
+    totpPayload = route.request().postDataJSON();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ token: fakeSessionToken(), ...responseExtras }),
+    });
+  });
+  await page.route("**/api/users/me/claim-candidates", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ candidates: [] }),
+    });
+  });
+
+  await page.goto("/login?next=/guide");
+  await page.locator('input[autocomplete="username"]').fill("totp-ui-admin");
+  await page.locator('input[autocomplete="current-password"]').fill("correct-password");
+  await page.getByRole("button", { name: /sign in/i }).click();
+
+  const secondFactorInput = page.locator('input[autocomplete="one-time-code"]');
+  await expect(secondFactorInput).toBeVisible();
+  await secondFactorInput.fill(code);
+  await page.getByRole("button", { name: /verify code/i }).click();
+  await expect(page).toHaveURL(/\/guide$/);
+
+  expect(totpPayload).toEqual({ totp_token: "challenge-token", code });
+}
+
 test("admin enables 2FA, logs in via TOTP and via recovery code", async ({
   request,
 }) => {
@@ -148,6 +202,17 @@ test("admin enables 2FA, logs in via TOTP and via recovery code", async ({
 
   // ---- Cleanup ----
   await setup.deleteOrg(orgId);
+});
+
+test("login UI completes the second factor with a 6-digit TOTP", async ({ page }) => {
+  await exerciseLoginTotpUi(page, "123456");
+});
+
+test("login UI completes the second factor with a recovery code", async ({ page }) => {
+  await exerciseLoginTotpUi(page, "abcde-12345", {
+    warning: "Recovery code consumed; 9 recovery codes remain.",
+  });
+  await expect(page.getByText(/recovery code consumed/i)).toBeVisible();
 });
 
 // pool teardown left to process exit (Playwright tears down the

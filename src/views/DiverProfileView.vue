@@ -393,7 +393,7 @@ async function confirmTfaSetup() {
     // call doesn't 401 silently.
     tfaToast.value = '2FA enabled. You\'ll be asked for a code on your next login.'
     tfaStage.value = 'idle'
-    setTimeout(() => { auth.logout(); window.location.assign('/login') }, 2000)
+    setTimeout(() => { auth.clearSession(); window.location.assign('/login') }, 2000)
   } catch (err) {
     tfaError.value = err.message || 'Could not confirm 2FA'
   } finally {
