@@ -197,17 +197,20 @@ const exportLimiter = rateLimit({
 // Search-class read endpoints (diver search, paginated diver
 // browse). Authenticated but every signed-in user can call them,
 // which means a freshly-registered spectator can enumerate the
-// federation roster at full speed without this. 60/min/IP is
-// well clear of legitimate typeahead use (debounced at ~180ms
-// per the SPA = ~5 RPS at most).
-const searchLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 60,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: { error: "Too many search requests, please slow down." },
-  skip: skipWhenDisabled,
-});
+// federation roster at full speed without this. Use a fresh limiter
+// per router mount; reusing one limiter object across unrelated
+// routers makes a normal refresh in one feature spend quota for all
+// the others and can surface a misleading "search requests" 429.
+function createSearchLimiter() {
+  return rateLimit({
+    windowMs: 60 * 1000,
+    limit: 60,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "Too many search requests, please slow down." },
+    skip: skipWhenDisabled,
+  });
+}
 
 // =============================================================
 // EMAIL
@@ -606,12 +609,12 @@ app.use(require("./routes/coach")({
 // the read pool. 60/min is comfortably above a bridge's legitimate
 // poll cadence (the socket subscribe_venue is the real-time path).
 // =============================================================
-app.use(searchLimiter, require("./routes/venue")({ pool }));
+app.use(createSearchLimiter(), require("./routes/venue")({ pool }));
 
 // Cross-org diver search + browse + orgs/all live in routes/
 // diver-search.js — extracted to keep server.js manageable. See
 // AGENTS.md for the modularisation plan.
-app.use(searchLimiter, require("./routes/diver-search")({ pool, verifyToken }));
+app.use(createSearchLimiter(), require("./routes/diver-search")({ pool, verifyToken }));
 
 // =============================================================
 // USER & ROLE MANAGEMENT ROUTES
@@ -883,7 +886,7 @@ app.use(require("./routes/dive-directory")({ pool, verifyToken, requireOrgRole }
 // and fans out ~12 multi-join aggregate CTEs per request, so an
 // unauth client could otherwise saturate the read pool.
 // =============================================================
-app.use(searchLimiter, require("./routes/diver-profile")({
+app.use(createSearchLimiter(), require("./routes/diver-profile")({
   pool,
   readPool,
   verifyToken,
@@ -912,7 +915,7 @@ app.use(searchLimiter, require("./routes/diver-profile")({
 // COUNT(*) over all scores. Both are public; without a limiter an
 // unauth client can saturate the read pool. searchLimiter (60/min/
 // IP) is well above any legitimate typeahead use of the directory.
-app.use(searchLimiter, require("./routes/judge-analytics")({
+app.use(createSearchLimiter(), require("./routes/judge-analytics")({
   pool,
   readPool,
   verifyToken,
@@ -995,7 +998,7 @@ app.use(exportLimiter, require("./routes/archive")({ pool, readPool }));
 // browse of historical results imported from diverecorder.co.uk.
 // Anonymous-readable like the live archive; throttled with the same
 // public-read limiter.
-app.use(searchLimiter, require("./routes/dr-archive")({ pool, readPool, requireSystemAdmin }));
+app.use(createSearchLimiter(), require("./routes/dr-archive")({ pool, readPool, requireSystemAdmin }));
 
 // Optional scheduled DiveRecorder incremental sync. Off by default;
 // set DR_IMPORT_SYNC_HOURS=24 (or any positive number) to pull newly
