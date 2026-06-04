@@ -8,6 +8,7 @@ import { diveDescription } from '@/composables/useDiveLabel'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { validateDiveList } from '@/lib/round-rules'
+import EmptyState from '@/components/EmptyState.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 
 const { t } = useI18n()
@@ -34,6 +35,8 @@ const searchInput = ref('')
 const activeHeightFilter = ref(null)
 const submitErr = ref('')
 const loading = ref(false)
+const eventLoading = ref(false)
+const eventLoadError = ref('')
 
 // Drives the dropdown + the submit-button gate. An event accepts
 // dive-list submissions when its lifecycle is still 'Upcoming' AND
@@ -790,22 +793,33 @@ async function confirmClubTransfer() {
   }
 }
 
-onMounted(async () => {
-  const [evs, dirResult] = await Promise.all([
-    auth.apiFetch('/api/events'),
-    auth.cachedApiFetch('/api/dive-directory', {
-      cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS, onUpdate: (fresh) => {
-        if (Array.isArray(fresh)) diveDirectory.value = fresh
-      } },
-    }),
-    loadTemplates(),
-    loadPendingPairings(),
-    loadOrgClubs(),
-    loadMyClubRequests(),
-  ])
-  events.value = evs
-  diveDirectory.value = Array.isArray(dirResult.data) ? dirResult.data : []
-})
+async function loadEntryData() {
+  eventLoading.value = true
+  eventLoadError.value = ''
+  try {
+    const [evs, dirResult] = await Promise.all([
+      auth.apiFetch('/api/events'),
+      auth.cachedApiFetch('/api/dive-directory', {
+        cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS, onUpdate: (fresh) => {
+          if (Array.isArray(fresh)) diveDirectory.value = fresh
+        } },
+      }),
+      loadTemplates(),
+      loadPendingPairings(),
+      loadOrgClubs(),
+      loadMyClubRequests(),
+    ])
+    events.value = Array.isArray(evs) ? evs : []
+    diveDirectory.value = Array.isArray(dirResult.data) ? dirResult.data : []
+  } catch (err) {
+    eventLoadError.value = err.message || 'Could not load events for entries.'
+    events.value = []
+  } finally {
+    eventLoading.value = false
+  }
+}
+
+onMounted(loadEntryData)
 
 // When the event changes and it's synchro, fetch potential
 // partners — other divers in the user's org.
@@ -946,16 +960,23 @@ watch(currentEvent, async (ev) => {
          at all). The form is useless without a pickable event,
          so explain what's missing rather than show an empty
          dropdown. -->
-    <div v-if="!eventOptions.open.length && !eventOptions.closed.length" class="empty-state-card">
-      <div class="empty-state-icon">📭</div>
-      <div class="empty-state-title">No events open for entries</div>
-      <div class="empty-state-body">
-        Your federation hasn't opened any events for entries yet. When the
-        meet manager creates an upcoming event, it'll appear here and
-        you'll be able to submit your dive list. Check back later, or ask
-        your meet manager when entries open.
-      </div>
-    </div>
+    <div v-if="eventLoading && !events.length" class="empty">Loading events…</div>
+    <EmptyState
+      v-else-if="eventLoadError"
+      icon="!"
+      title="Could not load entry events"
+      :body="eventLoadError"
+      action-label="Retry"
+      :on-action="loadEntryData"
+    />
+    <EmptyState
+      v-else-if="!eventOptions.open.length && !eventOptions.closed.length"
+      icon="📭"
+      title="No events open for entries"
+      body="Your federation hasn't opened any events for entries yet. When the meet manager creates an upcoming event, it'll appear here and you'll be able to submit your dive list."
+      action-label="Open guide"
+      action-to="/guide"
+    />
 
     <div v-else class="card">
       <label class="label" style="margin-bottom:0.75rem;display:block">Step 1 — Select Event</label>

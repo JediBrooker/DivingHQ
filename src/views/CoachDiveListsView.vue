@@ -26,6 +26,7 @@ import { useAuthStore } from '@/stores/auth'
 import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { confirmAction } from '@/composables/useConfirm'
+import EmptyState from '@/components/EmptyState.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -298,7 +299,14 @@ onMounted(load)
     </div>
 
     <div v-if="loading && !event" class="empty">Loading dive lists…</div>
-    <div v-else-if="error" class="msg msg-error">{{ error }}</div>
+    <EmptyState
+      v-else-if="error"
+      icon="!"
+      title="Could not load dive lists"
+      :body="error"
+      action-label="Retry"
+      :on-action="load"
+    />
 
     <template v-else-if="event">
       <!-- Deadline / lock banner -->
@@ -308,14 +316,14 @@ onMounted(load)
       </div>
 
       <!-- Empty state — coach has no linked divers -->
-      <div v-if="!divers.length" class="empty-state-card">
-        <div class="empty-state-icon">🤝</div>
-        <div class="empty-state-title">No linked divers</div>
-        <div class="empty-state-body">
-          You don't have any divers linked yet. Ask your org admin to add
-          coach links in the User Manager.
-        </div>
-      </div>
+      <EmptyState
+        v-if="!divers.length"
+        icon="🤝"
+        title="No linked divers"
+        body="You don't have any divers linked yet. Ask your org admin to add coach links in the User Manager."
+        action-label="Back to coach dashboard"
+        action-to="/coach"
+      />
 
       <!-- Per-diver rows -->
       <div v-else class="diver-list">
