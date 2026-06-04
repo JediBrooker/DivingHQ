@@ -21,7 +21,7 @@ async function onChange(e) {
 </script>
 
 <template>
-  <label class="locale-switcher" :title="$t('locale.switcher_label')">
+  <label class="locale-switcher" v-tip:bottom="$t('locale.switcher_label')">
     <!-- Standalone flag shows the CURRENT selection. The native
          <select>'s rendered text is just the language name — if
          we also embed the flag inside <option>, the selected

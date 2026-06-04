@@ -288,7 +288,7 @@ onMounted(load)
               <button v-if="!editing[diver.diver_id] && !diver.withdrawn_at && diver.dives.length"
                       class="btn btn-ghost btn-sm withdraw-btn"
                       @click="withdrawDiver(diver)"
-                      title="Scratch this diver from the event">
+                      v-tip="'Scratch this diver from the event'">
                 Withdraw
               </button>
             </div>

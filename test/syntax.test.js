@@ -74,6 +74,37 @@ test("init.sql declares schema version 53", () => {
   assert.match(sql, /INSERT INTO public\.schema_meta \(id, version\) VALUES \(1, 53\)/);
 });
 
+test("Vue templates use v-tip instead of native title attributes", () => {
+  const srcDir = path.join(__dirname, "..", "src");
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile() && entry.name.endsWith(".vue")) files.push(full);
+    }
+  };
+  walk(srcDir);
+
+  const offenders = [];
+  for (const file of files) {
+    const rel = path.relative(path.join(__dirname, ".."), file);
+    const text = fs.readFileSync(file, "utf8");
+    const stripped = text.replace(/<!--[\s\S]*?-->/g, "");
+    const re = /<([a-z][a-z0-9-]*)[^>]*\s(?::title|title)\s*=/g;
+    let match;
+    while ((match = re.exec(stripped))) {
+      // <iframe> is the one allowed exception: it's a replaced element,
+      // so v-tip's ::after tooltip bubble can't render on it, and `title`
+      // is the correct accessibility mechanism for an iframe (WCAG H64).
+      if (match[1] === "iframe") continue;
+      const line = stripped.slice(0, match.index).split("\n").length;
+      offenders.push(`${rel}:${line}`);
+    }
+  }
+  assert.deepEqual(offenders, []);
+});
+
 test("scoreCategory boundaries match World Aquatics buckets", () => {
   // We can't import the .js composable directly under CommonJS, so
   // re-implement the same boundaries here. If they ever drift, this
