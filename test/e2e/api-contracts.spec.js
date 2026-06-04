@@ -21,6 +21,15 @@ function expectNullableString(value) {
   expect(value === null || typeof value === "string").toBe(true);
 }
 function expectArray(value) { expect(Array.isArray(value)).toBe(true); }
+function expectCoachEligibility(value) {
+  expect(value && typeof value === "object").toBe(true);
+  expect(typeof value.host_federation).toBe("boolean");
+  expect(typeof value.invited_federation).toBe("boolean");
+  expect(typeof value.can_submit).toBe("boolean");
+  expect(typeof value.can_withdraw).toBe("boolean");
+  expect(typeof value.read_only).toBe("boolean");
+  expect(value.read_only).toBe(!value.can_submit && !value.can_withdraw);
+}
 
 function expectScoreboardPayload(body) {
   expectArray(body.standings);
@@ -66,6 +75,7 @@ function expectCoachEventRow(row) {
   expectNullableString(row.dive_list_locks_at ?? null);
   expectNumber(row.total_rounds);
   expectNumber(row.squad_entered_count);
+  expectCoachEligibility(row.coach_eligibility);
 }
 
 function expectCoachDiveListsResponse(body) {
@@ -80,6 +90,7 @@ function expectCoachDiveListsResponse(body) {
   expectNullableString(body.event.dive_list_locks_at ?? null);
   expectNullableString(body.event.meet_id ?? null);
   expectNullableString(body.event.meet_name ?? null);
+  expectCoachEligibility(body.event.coach_eligibility);
   expectArray(body.event.prescribed_rounds);
   expectArray(body.divers);
 
@@ -97,6 +108,7 @@ function expectCoachDiveListsResponse(body) {
   expectNullableString(diver.withdrawn_at ?? null);
   expect(typeof diver.is_reserve).toBe("boolean");
   expect(diver.reserve_position === null || typeof diver.reserve_position === "number").toBe(true);
+  expectCoachEligibility(diver.coach_eligibility);
 
   const dive = diver.dives[0];
   expectNumber(dive.round_number);
@@ -172,6 +184,13 @@ test.describe.serial("API response contracts", () => {
     const row = rows.find((item) => item.event_id === event.id);
     expect(row).toBeTruthy();
     expectCoachEventRow(row);
+    expect(row.coach_eligibility).toMatchObject({
+      host_federation: true,
+      invited_federation: false,
+      can_submit: true,
+      can_withdraw: true,
+      read_only: false,
+    });
   });
 
   test("/api/coach/dive-lists/:event_id returns the coach editor contract", async ({ request }) => {
@@ -182,7 +201,21 @@ test.describe.serial("API response contracts", () => {
     const body = await res.json();
     expectCoachDiveListsResponse(body);
     expect(body.event.id).toBe(event.id);
+    expect(body.event.coach_eligibility).toMatchObject({
+      host_federation: true,
+      invited_federation: false,
+      can_submit: true,
+      can_withdraw: true,
+      read_only: false,
+    });
     expect(body.divers[0].diver_id).toBe(diver.userId);
+    expect(body.divers[0].coach_eligibility).toMatchObject({
+      host_federation: true,
+      invited_federation: false,
+      can_submit: true,
+      can_withdraw: true,
+      read_only: false,
+    });
     expect(body.divers[0].dives[0].dive_id).toBe(diveId);
   });
 });

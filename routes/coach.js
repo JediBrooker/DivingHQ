@@ -90,6 +90,31 @@ module.exports = function createCoachRouter({
     return r.rows[0];
   }
 
+  function coachEventAcceptsEntries(event) {
+    if (!event || event.status !== "Upcoming") return false;
+    const now = Date.now();
+    if (event.entries_close_at && new Date(event.entries_close_at).getTime() <= now) return false;
+    if (event.dive_list_locks_at && new Date(event.dive_list_locks_at).getTime() <= now) return false;
+    return true;
+  }
+
+  function buildCoachEligibility({
+    hostFederation = false,
+    invitedFederation = false,
+    canSubmit = false,
+    canWithdraw = false,
+  }) {
+    const submit = Boolean(canSubmit);
+    const withdraw = Boolean(canWithdraw);
+    return {
+      host_federation: Boolean(hostFederation),
+      invited_federation: Boolean(invitedFederation),
+      can_submit: submit,
+      can_withdraw: withdraw,
+      read_only: !submit && !withdraw,
+    };
+  }
+
   // -------------------------------------------------------------
   // GET /api/coach/dashboard — for every linked diver, return the
   // next dive they have in any Live event (round, dive code, DD)
@@ -425,7 +450,7 @@ module.exports = function createCoachRouter({
   // Returns one row per event with:
   //   { event_id, event_name, height, event_type, status, meet_id,
   //     meet_name, entries_close_at, dive_list_locks_at,
-  //     total_rounds, squad_entered_count }
+  //     total_rounds, squad_entered_count, coach_eligibility }
   //
   // The Coach console uses this to drive the meet-day "Dive lists"
   // sub-page: pick an event → see your squad → edit per-diver list.
@@ -433,8 +458,10 @@ module.exports = function createCoachRouter({
   router.get("/api/coach/events", verifyToken, async (req, res) => {
     try {
       const r = await pool.query(
-        `WITH my_divers AS (
-           SELECT u.id AS diver_id, u.org_id
+        `WITH my_links AS (
+           SELECT u.id AS diver_id,
+                  u.org_id AS diver_org_id,
+                  link.org_id AS link_org_id
              FROM coach_diver_links link
              JOIN users u ON u.id = link.diver_id
             WHERE link.coach_id = $1
@@ -443,7 +470,7 @@ module.exports = function createCoachRouter({
            SELECT DISTINCT e.id AS event_id, COUNT(DISTINCT cdl.competitor_id) AS squad_count
              FROM events e
              JOIN competitor_dive_lists cdl ON cdl.event_id = e.id
-            WHERE cdl.competitor_id IN (SELECT diver_id FROM my_divers)
+            WHERE cdl.competitor_id IN (SELECT diver_id FROM my_links)
               AND cdl.withdrawn_at IS NULL
               AND e.status IN ('Upcoming', 'Live')
             GROUP BY e.id
@@ -451,27 +478,64 @@ module.exports = function createCoachRouter({
          open_for_entry AS (
            SELECT DISTINCT e.id AS event_id
              FROM events e
+             JOIN my_links ml ON TRUE
+             LEFT JOIN event_participating_orgs epo
+                    ON epo.event_id = e.id
+                   AND epo.org_id = ml.diver_org_id
             WHERE e.status = 'Upcoming'
               AND (e.entries_close_at IS NULL OR e.entries_close_at > now())
               AND (e.dive_list_locks_at IS NULL OR e.dive_list_locks_at > now())
-              AND EXISTS (
-                SELECT 1 FROM my_divers md
-                 WHERE md.org_id = e.org_id
-                    OR EXISTS (
-                      SELECT 1 FROM event_participating_orgs epo
-                       WHERE epo.event_id = e.id AND epo.org_id = md.org_id
-                    )
+              AND (
+                ml.diver_org_id = e.org_id
+                OR epo.org_id IS NOT NULL
+                OR ml.link_org_id = e.org_id
               )
+         ),
+         write_scope AS (
+           SELECT e.id AS event_id,
+                  BOOL_OR(ml.link_org_id = e.org_id) AS coach_host_federation,
+                  BOOL_OR(
+                    epo.org_id IS NOT NULL
+                    AND ml.link_org_id = ml.diver_org_id
+                    AND ml.diver_org_id <> e.org_id
+                  ) AS coach_invited_federation,
+                  BOOL_OR(
+                    (
+                      ml.link_org_id = e.org_id
+                      OR (
+                        epo.org_id IS NOT NULL
+                        AND ml.link_org_id = ml.diver_org_id
+                      )
+                    )
+                    AND active_cdl.competitor_id IS NOT NULL
+                  ) AS coach_has_withdrawable_entry
+             FROM events e
+             JOIN my_links ml ON TRUE
+             LEFT JOIN event_participating_orgs epo
+                    ON epo.event_id = e.id
+                   AND epo.org_id = ml.diver_org_id
+             LEFT JOIN competitor_dive_lists active_cdl
+                    ON active_cdl.event_id = e.id
+                   AND active_cdl.competitor_id = ml.diver_id
+                   AND active_cdl.withdrawn_at IS NULL
+            WHERE ml.diver_org_id = e.org_id
+               OR epo.org_id IS NOT NULL
+               OR ml.link_org_id = e.org_id
+            GROUP BY e.id
          )
          SELECT e.id AS event_id, e.name AS event_name,
                 e.height, e.event_type, e.status,
                 e.meet_id, m.name AS meet_name,
                 e.entries_close_at, e.dive_list_locks_at,
                 e.total_rounds,
-                COALESCE(ent.squad_count, 0)::int AS squad_entered_count
+                COALESCE(ent.squad_count, 0)::int AS squad_entered_count,
+                COALESCE(ws.coach_host_federation, false) AS coach_host_federation,
+                COALESCE(ws.coach_invited_federation, false) AS coach_invited_federation,
+                COALESCE(ws.coach_has_withdrawable_entry, false) AS coach_has_withdrawable_entry
            FROM events e
            LEFT JOIN meets m ON m.id = e.meet_id
            LEFT JOIN entered ent ON ent.event_id = e.id
+           LEFT JOIN write_scope ws ON ws.event_id = e.id
           WHERE e.id IN (SELECT event_id FROM entered)
              OR e.id IN (SELECT event_id FROM open_for_entry)
           ORDER BY
@@ -479,7 +543,24 @@ module.exports = function createCoachRouter({
             COALESCE(e.entries_close_at, e.scheduled_at, e.created_at) ASC`,
         [req.user.id],
       );
-      res.json(r.rows);
+      res.json(r.rows.map((row) => {
+        const {
+          coach_host_federation,
+          coach_invited_federation,
+          coach_has_withdrawable_entry,
+          ...eventRow
+        } = row;
+        const writable = coach_host_federation || coach_invited_federation;
+        return {
+          ...eventRow,
+          coach_eligibility: buildCoachEligibility({
+            hostFederation: coach_host_federation,
+            invitedFederation: coach_invited_federation,
+            canSubmit: writable && coachEventAcceptsEntries(row),
+            canWithdraw: row.status !== "Completed" && coach_has_withdrawable_entry,
+          }),
+        };
+      }));
     } catch (err) {
       console.error("[Coach Events Error]", err.message);
       res.status(500).json([]);
@@ -535,6 +616,7 @@ module.exports = function createCoachRouter({
           WHERE link.coach_id = $1
             AND (
               u.org_id = $2
+              OR link.org_id = $2
               OR EXISTS (
                 SELECT 1 FROM event_participating_orgs epo
                  WHERE epo.event_id = $3 AND epo.org_id = u.org_id
@@ -559,7 +641,16 @@ module.exports = function createCoachRouter({
           `WITH my_divers AS (
              SELECT u.id, u.full_name, u.org_id,
                     o.country_code,
-                    cl.name AS club_name, cl.short_code AS club_code
+                    cl.name AS club_name, cl.short_code AS club_code,
+                    BOOL_OR(link.org_id = $3) AS coach_host_federation,
+                    BOOL_OR(
+                      link.org_id = u.org_id
+                      AND u.org_id <> $3
+                      AND EXISTS (
+                        SELECT 1 FROM event_participating_orgs epo
+                         WHERE epo.event_id = $2 AND epo.org_id = u.org_id
+                      )
+                    ) AS coach_invited_federation
                FROM coach_diver_links link
                JOIN users u ON u.id = link.diver_id
                JOIN organisations o ON o.id = u.org_id
@@ -567,11 +658,14 @@ module.exports = function createCoachRouter({
               WHERE link.coach_id = $1
                 AND (
                   u.org_id = $3
+                  OR link.org_id = $3
                   OR EXISTS (
                     SELECT 1 FROM event_participating_orgs epo
                      WHERE epo.event_id = $2 AND epo.org_id = u.org_id
                   )
                 )
+              GROUP BY u.id, u.full_name, u.org_id,
+                       o.country_code, cl.name, cl.short_code
            ),
            diver_dives AS (
              SELECT cdl.competitor_id,
@@ -589,6 +683,8 @@ module.exports = function createCoachRouter({
            )
            SELECT md.id AS diver_id, md.full_name, md.country_code,
                   md.club_name, md.club_code, md.org_id,
+                  md.coach_host_federation,
+                  md.coach_invited_federation,
                   /* aggregate to one row per diver with their dive_list as a JSON array */
                   COALESCE(json_agg(
                     json_build_object(
@@ -608,12 +704,16 @@ module.exports = function createCoachRouter({
                   MAX(dd.partner_name) AS partner_name,
                   MAX(dd.confirmed_at) AS confirmed_at,
                   MAX(dd.withdrawn_at) AS withdrawn_at,
+                  COUNT(dd.round_number) FILTER (
+                    WHERE dd.round_number IS NOT NULL AND dd.withdrawn_at IS NULL
+                  )::int AS active_dive_row_count,
                   BOOL_OR(dd.is_reserve)         AS is_reserve,
                   MIN(dd.reserve_position)::int  AS reserve_position
              FROM my_divers md
              LEFT JOIN diver_dives dd ON dd.competitor_id = md.id
             GROUP BY md.id, md.full_name, md.country_code,
-                     md.club_name, md.club_code, md.org_id
+                     md.club_name, md.club_code, md.org_id,
+                     md.coach_host_federation, md.coach_invited_federation
             ORDER BY md.full_name`,
           [req.user.id, req.params.event_id, event.org_id],
         ),
@@ -634,9 +734,36 @@ module.exports = function createCoachRouter({
       );
       const exposeBodyFields = sameOrg || anyEntered;
 
+      const submitOpen = coachEventAcceptsEntries(event);
+      const decoratedDivers = diverRes.rows.map((row) => {
+        const {
+          coach_host_federation,
+          coach_invited_federation,
+          active_dive_row_count,
+          ...diverRow
+        } = row;
+        const writable = coach_host_federation || coach_invited_federation;
+        return {
+          ...diverRow,
+          is_reserve: Boolean(diverRow.is_reserve),
+          coach_eligibility: buildCoachEligibility({
+            hostFederation: coach_host_federation,
+            invitedFederation: coach_invited_federation,
+            canSubmit: writable && submitOpen && !diverRow.withdrawn_at,
+            canWithdraw: writable && event.status !== "Completed" && Number(active_dive_row_count || 0) > 0,
+          }),
+        };
+      });
+      const eventCoachEligibility = buildCoachEligibility({
+        hostFederation: decoratedDivers.some((row) => row.coach_eligibility.host_federation),
+        invitedFederation: decoratedDivers.some((row) => row.coach_eligibility.invited_federation),
+        canSubmit: decoratedDivers.some((row) => row.coach_eligibility.can_submit),
+        canWithdraw: decoratedDivers.some((row) => row.coach_eligibility.can_withdraw),
+      });
+
       const divers = exposeBodyFields
-        ? diverRes.rows
-        : diverRes.rows.map((row) => ({
+        ? decoratedDivers
+        : decoratedDivers.map((row) => ({
             ...row,
             // No linked divers entered AND we're cross-fed —
             // strip partner_name (it can identify another federation's
@@ -659,6 +786,7 @@ module.exports = function createCoachRouter({
           dive_list_locks_at: event.dive_list_locks_at,
           meet_id: event.meet_id,
           meet_name: event.meet_name,
+          coach_eligibility: eventCoachEligibility,
           prescribed_rounds: exposeBodyFields ? prescribedRes.rows : [],
         },
         divers,
