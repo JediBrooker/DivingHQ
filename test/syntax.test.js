@@ -91,9 +91,13 @@ test("Vue templates use v-tip instead of native title attributes", () => {
     const rel = path.relative(path.join(__dirname, ".."), file);
     const text = fs.readFileSync(file, "utf8");
     const stripped = text.replace(/<!--[\s\S]*?-->/g, "");
-    const re = /<[a-z][^>]*\s(?::title|title)\s*=/g;
+    const re = /<([a-z][a-z0-9-]*)[^>]*\s(?::title|title)\s*=/g;
     let match;
     while ((match = re.exec(stripped))) {
+      // <iframe> is the one allowed exception: it's a replaced element,
+      // so v-tip's ::after tooltip bubble can't render on it, and `title`
+      // is the correct accessibility mechanism for an iframe (WCAG H64).
+      if (match[1] === "iframe") continue;
       const line = stripped.slice(0, match.index).split("\n").length;
       offenders.push(`${rel}:${line}`);
     }
