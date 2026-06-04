@@ -101,7 +101,7 @@
       "missing_token": "Esta página tem de ser aberta a partir do link do email de reposição.",
       "new_password_label": "Nova palavra-passe",
       "confirm_password_label": "Confirme a nova palavra-passe",
-      "min_length_error": "A nova palavra-passe deve ter pelo menos 6 caracteres",
+      "min_length_error": "A nova palavra-passe deve ter pelo menos 12 caracteres e incluir pelo menos uma letra e um algarismo",
       "mismatch_error": "As palavras-passe não coincidem",
       "reset_failed": "Falha na reposição",
       "success": "Palavra-passe atualizada. A redirecionar para o início de sessão…",

@@ -101,7 +101,7 @@
       "missing_token": "Kailangang buksan ang pahinang ito mula sa link sa iyong reset email.",
       "new_password_label": "Bagong password",
       "confirm_password_label": "Kumpirmahin ang bagong password",
-      "min_length_error": "Ang bagong password ay dapat hindi bababa sa 6 na karakter",
+      "min_length_error": "Ang bagong password ay dapat hindi bababa sa 12 karakter at may kahit isang titik at isang digit",
       "mismatch_error": "Hindi magkatugma ang mga password",
       "reset_failed": "Hindi nagtagumpay ang pag-reset",
       "success": "Na-update ang password. Ire-redirect ka sa sign in…",

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { cachedFetch, idbDelete } from '@/lib/idbCache'
+import { isValidPassword } from '@/lib/passwordPolicy'
 import { showSuccess } from '@/composables/useNotify'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
@@ -440,8 +441,8 @@ function closePasswordEditor() {
 }
 async function savePassword() {
   pwError.value = ''
-  if (pwNew.value.length < 6) {
-    pwError.value = 'New password must be at least 6 characters'
+  if (!isValidPassword(pwNew.value)) {
+    pwError.value = t('auth.reset.min_length_error')
     return
   }
   if (pwNew.value !== pwConfirm.value) {
@@ -985,6 +986,7 @@ function onClaimed() {
           <div class="field">
             <label class="label">New password</label>
             <input class="input" type="password" autocomplete="new-password" v-model="pwNew">
+            <p class="modal-hint">{{ $t('auth.reset.min_length_error') }}</p>
           </div>
           <div class="field">
             <label class="label">Confirm new password</label>

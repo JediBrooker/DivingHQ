@@ -101,7 +101,7 @@
       "missing_token": "Cette page doit être ouverte depuis le lien de votre e-mail de réinitialisation.",
       "new_password_label": "Nouveau mot de passe",
       "confirm_password_label": "Confirmer le nouveau mot de passe",
-      "min_length_error": "Le nouveau mot de passe doit comporter au moins 6 caractères",
+      "min_length_error": "Le nouveau mot de passe doit comporter au moins 12 caractères et inclure au moins une lettre et un chiffre",
       "mismatch_error": "Les mots de passe ne correspondent pas",
       "reset_failed": "Échec de la réinitialisation",
       "success": "Mot de passe mis à jour. Redirection vers la connexion…",

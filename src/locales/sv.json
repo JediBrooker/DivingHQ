@@ -101,7 +101,7 @@
       "missing_token": "Den här sidan måste öppnas via länken i ditt återställningsmejl.",
       "new_password_label": "Nytt lösenord",
       "confirm_password_label": "Bekräfta nytt lösenord",
-      "min_length_error": "Det nya lösenordet måste vara minst 6 tecken",
+      "min_length_error": "Det nya lösenordet måste vara minst 12 tecken långt och innehålla minst en bokstav och en siffra",
       "mismatch_error": "Lösenorden matchar inte",
       "reset_failed": "Återställning misslyckades",
       "success": "Lösenordet uppdaterat. Skickar dig till inloggningen…",

@@ -101,7 +101,7 @@
       "missing_token": "Denne side skal åbnes fra linket i din nulstillingsmail.",
       "new_password_label": "Ny adgangskode",
       "confirm_password_label": "Bekræft ny adgangskode",
-      "min_length_error": "Den nye adgangskode skal være mindst 6 tegn",
+      "min_length_error": "Den nye adgangskode skal være på mindst 12 tegn og indeholde mindst ét bogstav og ét tal",
       "mismatch_error": "Adgangskoderne stemmer ikke overens",
       "reset_failed": "Nulstilling mislykkedes",
       "success": "Adgangskoden er opdateret. Sender dig til login…",

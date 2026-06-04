@@ -101,7 +101,7 @@
       "missing_token": "Questa pagina va aperta dal link nella tua e-mail di reset.",
       "new_password_label": "Nuova password",
       "confirm_password_label": "Conferma nuova password",
-      "min_length_error": "La nuova password deve essere di almeno 6 caratteri",
+      "min_length_error": "La nuova password deve contenere almeno 12 caratteri e includere almeno una lettera e una cifra",
       "mismatch_error": "Le password non corrispondono",
       "reset_failed": "Reset non riuscito",
       "success": "Password aggiornata. Reindirizzamento all'accesso…",

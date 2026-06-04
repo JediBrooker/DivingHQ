@@ -101,7 +101,7 @@
       "missing_token": "Halaman ini harus dibuka dari tautan di email pengaturan ulang Anda.",
       "new_password_label": "Kata sandi baru",
       "confirm_password_label": "Konfirmasi kata sandi baru",
-      "min_length_error": "Kata sandi baru harus minimal 6 karakter",
+      "min_length_error": "Kata sandi baru harus minimal 12 karakter dan menyertakan setidaknya satu huruf dan satu digit",
       "mismatch_error": "Kata sandi tidak cocok",
       "reset_failed": "Pengaturan ulang gagal",
       "success": "Kata sandi diperbarui. Mengarahkan Anda ke halaman masuk…",

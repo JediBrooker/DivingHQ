@@ -101,7 +101,7 @@
       "missing_token": "Ezt az oldalt a visszaállítási e-mailben kapott linkről kell megnyitni.",
       "new_password_label": "Új jelszó",
       "confirm_password_label": "Új jelszó megerősítése",
-      "min_length_error": "Az új jelszónak legalább 6 karakterből kell állnia",
+      "min_length_error": "Az új jelszónak legalább 12 karakterből kell állnia, és tartalmaznia kell legalább egy betűt és egy számjegyet",
       "mismatch_error": "A jelszavak nem egyeznek",
       "reset_failed": "A visszaállítás sikertelen",
       "success": "Jelszó frissítve. Átirányítás a bejelentkezéshez…",

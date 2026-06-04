@@ -101,3 +101,11 @@ test("scoreCategory boundaries match World Aquatics buckets", () => {
   assert.equal(cat(9.5), "very-good");
   assert.equal(cat(10), "excellent");
 });
+
+test("client password policy mirrors the server minimum", async () => {
+  const { isValidPassword } = await import("../src/lib/passwordPolicy.js");
+  assert.equal(isValidPassword("abc123"), false);
+  assert.equal(isValidPassword("abcdefghijkl"), false);
+  assert.equal(isValidPassword("123456789012"), false);
+  assert.equal(isValidPassword("abcdefghijk1"), true);
+});

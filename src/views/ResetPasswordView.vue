@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { isValidPassword } from '@/lib/passwordPolicy'
 
 // Step 2 of the password-reset flow. The link in the email is
 // /reset-password?token=<jwt>. We POST that token + the new
@@ -29,7 +30,7 @@ onMounted(() => {
 
 async function submit() {
   error.value = ''
-  if (newPassword.value.length < 6) {
+  if (!isValidPassword(newPassword.value)) {
     error.value = t('auth.reset.min_length_error')
     return
   }
@@ -75,6 +76,7 @@ async function submit() {
       <div class="field">
         <label class="label">{{ $t('auth.reset.new_password_label') }}</label>
         <input class="input" type="password" autocomplete="new-password" v-model="newPassword" required>
+        <p class="password-hint">{{ $t('auth.reset.min_length_error') }}</p>
       </div>
       <div class="field">
         <label class="label">{{ $t('auth.reset.confirm_password_label') }}</label>
@@ -105,6 +107,12 @@ async function submit() {
   padding: 1.5rem;
 }
 .reset-wrap { width: 100%; max-width: 420px; animation: fadeUp 0.4s ease; }
+.password-hint {
+  margin: 0.35rem 0 0;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.45;
+}
 .reset-mark {
   font-family: var(--font-display); font-size: 13px; font-weight: 700;
   letter-spacing: 0.3em; text-transform: uppercase; color: var(--text);

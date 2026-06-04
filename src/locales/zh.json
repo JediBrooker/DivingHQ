@@ -101,7 +101,7 @@
       "missing_token": "本页面需通过重置邮件中的链接打开。",
       "new_password_label": "新密码",
       "confirm_password_label": "确认新密码",
-      "min_length_error": "新密码至少需要 6 个字符",
+      "min_length_error": "新密码至少需要 12 个字符，并且包含至少一个字母和一个数字",
       "mismatch_error": "两次输入的密码不一致",
       "reset_failed": "重置失败",
       "success": "密码已更新。正在将您重定向至登录页面…",

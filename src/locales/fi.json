@@ -101,7 +101,7 @@
       "missing_token": "Tämä sivu täytyy avata salasanan palautusviestin linkistä.",
       "new_password_label": "Uusi salasana",
       "confirm_password_label": "Vahvista uusi salasana",
-      "min_length_error": "Uuden salasanan on oltava vähintään 6 merkkiä",
+      "min_length_error": "Uuden salasanan on oltava vähintään 12 merkkiä ja siinä on oltava vähintään yksi kirjain ja yksi numero",
       "mismatch_error": "Salasanat eivät täsmää",
       "reset_failed": "Palautus epäonnistui",
       "success": "Salasana päivitetty. Ohjataan kirjautumiseen…",

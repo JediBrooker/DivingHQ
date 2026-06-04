@@ -101,7 +101,7 @@
       "missing_token": "このページはリセットメール内のリンクから開く必要があります。",
       "new_password_label": "新しいパスワード",
       "confirm_password_label": "新しいパスワードの確認",
-      "min_length_error": "新しいパスワードは 6 文字以上でなければなりません",
+      "min_length_error": "新しいパスワードは12文字以上で、少なくとも1つの文字と1つの数字を含める必要があります",
       "mismatch_error": "パスワードが一致しません",
       "reset_failed": "リセットに失敗しました",
       "success": "パスワードを更新しました。サインインに移動します…",
