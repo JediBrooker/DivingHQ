@@ -90,6 +90,7 @@ ship code (or docs) that misrepresents the rule.
 | `scripts/migrate.js`  | Migration runner. Reads `schema_meta.version`, applies pending files in order. `npm run migrate -- --dry` for plan-only. |
 | `src/types.js`        | JSDoc `@typedef`s for every API response shape. Reference via `/** @type {import('@/types').DiverProfile} */`. |
 | `src/composables/`    | Vue composables. **ESM** (sub-package.json `type: module`). Pure logic ones (`useScoreTrim`, `useScoreCategories`) are unit-tested in `test/score-trim.test.js`. |
+| `docs/design-system.md` | Frontend token/component conventions. Read before adding new view CSS, shared UI classes, or reusable components. |
 | `docs/socket-events.md` | Socket.IO event registry — every event the server listens for or emits, the role gate, and the payload shape. **Update this in the same commit when you add or change an event.** |
 | `test/`               | `node:test` suites. `syntax`, `calc`, `score-trim` run without a DB; `integration` skips when DB unreachable. |
 
@@ -210,6 +211,7 @@ above it.
 | Bucket a score into a World Aquatics category | `scoreCategory(s)` | `src/composables/useScoreCategories.js` |
 | Judge analytics — one row per (judge, dive) with kept-mean + drop flags | `JUDGE_PER_DIVE` CTE | `db/queries.js` |
 | Instant tooltip (no native `title` lag) | `v-tip="…"` directive | `src/directives/tip.js` + `src/styles/app.css` |
+| Shared frontend tokens and primitives | Design-system guide | `docs/design-system.md` + `src/styles/app.css` |
 
 If you write the third copy of any of these, **stop and consolidate** into
 a helper. The repo has bled time on duplicated patterns.

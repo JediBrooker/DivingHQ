@@ -132,8 +132,12 @@
      for free; each alias resolves against the SEMANTIC layer so
      it tracks [data-theme="dark"] automatically.
      ═════════════════════════════════════════════════════════ */
+  --bg-1:  var(--bg);
   --bg-2:  var(--surface);
   --bg-3:  var(--bg-sunken);
+  --panel: var(--surface);
+  --panel-elev: var(--surface-2);
+  --border-subtle: var(--border);
   --cyan:      var(--accent);
   --cyan-dim:  var(--accent-soft);
   --cyan-glow: none;
@@ -142,9 +146,12 @@
   --text-2: var(--fg-2);
   --text-3: var(--fg-3);
   --text-4: var(--fg-3);
+  --muted:  var(--fg-3);
   --green:     var(--ok-solid);   --green-dim: var(--ok-bg);
   --amber:     var(--warn-solid); --amber-dim: var(--warn-bg);
   --red:       var(--danger-solid); --red-dim: var(--danger-bg);
+  --danger:   var(--danger-solid);
+  --violet:   var(--role-admin-fg);
   --role-admin:     var(--role-admin-fg);
   --role-manager:   var(--role-manager-fg);
   --role-referee:   var(--role-referee-fg);
@@ -152,6 +159,7 @@
   --role-coach:     var(--role-coach-fg);
   --role-diver:     var(--role-diver-fg);
   --role-spectator: var(--role-spectator-fg);
+  --radius-md: var(--radius);
   --font-display: var(--font-sans);
 }
 
