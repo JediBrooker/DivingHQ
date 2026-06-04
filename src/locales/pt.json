@@ -255,7 +255,121 @@
     "tab_spectator": "Espectador",
     "tab_other": "Mais",
     "go_to_section": "Ir para",
-    "loading_data": "A carregar…"
+    "loading_data": "A carregar…",
+    "empty": {
+      "meet_manager_title": "Ainda não há eventos",
+      "meet_manager_body": "Crie o seu primeiro evento no Meet Manager. O fluxo de trabalho pré-competição orienta-o através do check-in, aleatorização, confirmação e início.",
+      "coach_title": "Ainda sem mergulhadores associados",
+      "coach_body": "Peça ao administrador da sua organização para o ligar aos mergulhadores que orienta. Depois de aprovado, verá aqui os respetivos perfis, PBs e análises.",
+      "diver_title": "Sem provas marcadas",
+      "diver_body": "Quando a sua federação publicar um evento futuro, este surgirá aqui com uma contagem decrescente \"encerramento das inscrições\". Abra o Portal do Mergulhador para ver todos os eventos que a sua federação está a organizar.",
+      "judge_title": "Ainda sem eventos atribuídos",
+      "judge_body": "O gestor do evento irá adicioná-lo a um painel antes do próximo evento. Verá aqui as suas colocações quando isso acontecer.",
+      "org_admin_title": "Tudo calmo",
+      "org_admin_body": "Sem eventos ao vivo, sem provas futuras dentro da janela de encerramento de inscrições e sem pedidos de função pendentes. Utilize os links \"Ir para\" abaixo para começar."
+    },
+    "sections": {
+      "next_actions": "Próximas ações",
+      "your_events": "Os seus eventos",
+      "go_to": "Ir para",
+      "live_squad": "Equipa em direto",
+      "dive_list_workbench": "Área de trabalho da lista de saltos",
+      "your_divers": "Os seus mergulhadores ({count})",
+      "waiting_for_you": "À sua espera",
+      "live_now": "Ao vivo agora",
+      "as_referee": "Como árbitro",
+      "your_tools": "As suas ferramentas",
+      "your_assigned_events": "Os seus eventos atribuídos",
+      "meet_day_live": "Dia da prova · ao vivo agora",
+      "your_next_meet": "A sua próxima prova",
+      "attention": "O que requer a sua atenção",
+      "event_readiness": "Preparação do evento",
+      "recent_activity": "Atividade recente (7 dias)",
+      "other_surfaces": "Outras superfícies"
+    },
+    "tiles": {
+      "manager_title": "Gestor de Competições",
+      "manager_desc": "Crie provas e eventos, defina o painel, construa os plantéis.",
+      "control_title": "Sala de Controlo",
+      "control_desc": "Regule a pontuação no dia — atleta ativo, cronómetro, pausas.",
+      "assign_judges_title": "Atribuir juízes",
+      "assign_judges_desc": "Atribua painéis a eventos antes da prova.",
+      "users_title": "Gestor de Utilizadores",
+      "users_desc": "Atribua funções, ligue treinadores a mergulhadores, gere contas.",
+      "audit_title": "Registo de Auditoria",
+      "audit_desc": "Atividade a nível da federação — pontuações, alterações de funções, edições.",
+      "clubs_title": "Clubes",
+      "clubs_desc": "Gerir os clubes da sua federação.",
+      "teams_title": "Equipas",
+      "teams_desc": "Configure plantéis para eventos de equipa e listas de saltos por equipa.",
+      "coach_title": "Painel do Treinador",
+      "coach_desc": "Análises por mergulhador, tendências de pontuações, modelos de lista de saltos.",
+      "compare_title": "Comparar Mergulhadores",
+      "compare_desc": "Dois mergulhadores lado a lado — estatísticas e diferenças de PBs.",
+      "competitor_title": "Submeter Listas de Saltos",
+      "competitor_desc": "Escolha os seus saltos por ronda antes do prazo de inscrição de cada evento.",
+      "profile_title": "O meu perfil",
+      "profile_desc": "As suas pontuações, PBs e painel de análise com 13 widgets.",
+      "scoreboard_title": "Quadro de Pontuações & Resultados",
+      "scoreboard_desc": "Assista a provas ao vivo ou consulte resumos de provas concluídas.",
+      "dive_directory_title": "Diretório de Saltos",
+      "dive_directory_desc": "Procure DDs no catálogo da World Aquatics.",
+      "sign_off_title": "Códigos de confirmação",
+      "sign_off_desc": "Introduza o código de transferência de 6 dígitos do Meet Manager para confirmar o Cut 3."
+    },
+    "actions": {
+      "ready": "Pronto",
+      "left": "{count} restantes",
+      "live": "Ao vivo",
+      "fix_list": "Corrigir lista",
+      "review": "Rever",
+      "sign_off": "Assinar",
+      "open_event": "Abrir evento",
+      "completed": "Concluído",
+      "open_control": "Abrir Sala de Controlo",
+      "rehearsal": "Ensaio"
+    },
+    "blurbs": {
+      "coach_divers": "Abra o Painel do Treinador para obter análises completas por mergulhador, tendências de pontuações e modelos.",
+      "referee": "Os gestores de prova enviam pedidos de Sign Off para o seu dispositivo quando o seu fluxo de trabalho pré-competição atinge a etapa amarela Sign Off. Também pode introduzir um código de passagem de 6 dígitos no seu próprio dispositivo através do link abaixo."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} rondas",
+      "closing_soon": "{event} · inscrições a encerrar em breve"
+    },
+    "referee": {
+      "signoff_requested_by": "Pedido de Sign Off por {name}",
+      "meet_manager_fallback": "gestor do evento"
+    },
+    "judge_panel": {
+      "analysis_title": "Análise dos Juízes",
+      "analysis_desc": "Veja como se situa face à média mantida pelo painel — viés, taxa de discrepância, por país / clube / altura / grupo de saltos.",
+      "rounds_judges": "{rounds} rondas · {judges} juízes"
+    },
+    "diver_panel": {
+      "live_meta": "Toque para ver o seu próximo salto, classificação atual e o que precisa para pontuar",
+      "next_fallback": "Percorra o construtor de listas de saltos"
+    },
+    "activity": {
+      "view_full_log": "Ver registo de auditoria completo →",
+      "competitor_fallback": "Competidor",
+      "score_update": "pontuação alterada em",
+      "score_delete": "pontuação eliminada em",
+      "score_add": "pontuação adicionada em",
+      "role_to": "para",
+      "role_from": "de"
+    },
+    "attention": {
+      "live": "{name} está AO VIVO",
+      "prepare": "Preparar {name}",
+      "prepare_meta": "Siga o fluxo de trabalho pré-competição",
+      "role_requests_one": "{count} pedido de função à espera",
+      "role_requests_many": "{count} pedidos de função à espera",
+      "role_requests_meta": "Revise pedidos de função no Gestor de Utilizadores",
+      "orgs_one": "{count} federação à espera de aprovação",
+      "orgs_many": "{count} federações à espera de aprovação",
+      "orgs_meta": "Revise no Gestor de Utilizadores → filtro de organização"
+    }
   },
   "role": {
     "public": "Público",

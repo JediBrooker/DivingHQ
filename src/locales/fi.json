@@ -255,7 +255,121 @@
     "tab_spectator": "Katsoja",
     "tab_other": "Lisää",
     "go_to_section": "Siirry",
-    "loading_data": "Ladataan…"
+    "loading_data": "Ladataan…",
+    "empty": {
+      "meet_manager_title": "Ei tapahtumia vielä",
+      "meet_manager_body": "Luo ensimmäinen tapahtumanne Meet Managerissa. Ennakkotapahtuman työnkulku opastaa ilmoittautumisen, satunnaistamisen, hyväksynnän ja aloituksen läpi.",
+      "coach_title": "Ei vielä liitettyjä sukeltajia",
+      "coach_body": "Pyydä organisaationne ylläpitäjää yhdistämään teidät mentoroimiinne sukeltajiin. Hyväksynnän jälkeen heidän profiilinsa, henkilökohtaiset ennätyksensä ja analytiikkansa näkyvät täällä.",
+      "diver_title": "Ei tulevia kilpailuja",
+      "diver_body": "Kun liittonne listaa tulevan tapahtuman, se näkyy täällä kohdassa \"ilmoittautumiset sulkeutuvat\" olevan ajastimen kanssa. Avaa Sukeltajan portaali nähdäksesi kaikki liittonne järjestämät tapahtumat.",
+      "judge_title": "Ei vielä määrättyjä tapahtumia",
+      "judge_body": "Meet Manager lisää teidät tuomaristoon ennen seuraavaa tapahtumaa. Nimitykset näkyvät täällä, kun niin tapahtuu.",
+      "org_admin_title": "Kaikki hiljaista",
+      "org_admin_body": "Ei käynnissä olevia tapahtumia, ei tulevia kilpailuja ilmoittautumisen sulkeutumisen aikavälillä eikä odottavia roolipyyntöjä. Käytä alla olevia SIIRRY-linkkejä ryhtyäksesi toimiin."
+    },
+    "sections": {
+      "next_actions": "Seuraavat toimenpiteet",
+      "your_events": "Tapahtumanne",
+      "go_to": "Siirry",
+      "live_squad": "Live-joukkue",
+      "dive_list_workbench": "Hyppylistan työpöytä",
+      "your_divers": "Sukeltajanne ({count})",
+      "waiting_for_you": "Odottaa teitä",
+      "live_now": "Käynnissä nyt",
+      "as_referee": "Tuomarina",
+      "your_tools": "Työkalunne",
+      "your_assigned_events": "Teille nimetyt tapahtumat",
+      "meet_day_live": "Kilpailupäivä · käynnissä nyt",
+      "your_next_meet": "Seuraava kilpailunne",
+      "attention": "Mikä vaatii huomiotanne",
+      "event_readiness": "Tapahtuman valmius",
+      "recent_activity": "Viimeaikainen toiminta (7 päivää)",
+      "other_surfaces": "Muut alustat"
+    },
+    "tiles": {
+      "manager_title": "Kilpailunjohtaja",
+      "manager_desc": "Luo kilpailuja ja tapahtumia, määritä tuomaristo, kokoa kokoonpanot.",
+      "control_title": "Ohjauskeskus",
+      "control_desc": "Hallinnoi pisteiden laskentaa kilpailupäivänä — aktiivinen hyppääjä, aikakello, pidätykset.",
+      "assign_judges_title": "Nimeä tuomarit",
+      "assign_judges_desc": "Aseta tuomaristot tapahtumiin ennen kilpailua.",
+      "users_title": "Käyttäjien hallinta",
+      "users_desc": "Myönnä rooleja, yhdistä valmentajat sukeltajiin, hallinnoi käyttäjätilejä.",
+      "audit_title": "Audit-loki",
+      "audit_desc": "Liiton laajuinen toiminta — pisteet, roolimuutokset, muokkaukset.",
+      "clubs_title": "Seurat",
+      "clubs_desc": "Hallitse liittosi seuroja.",
+      "teams_title": "Joukkueet",
+      "teams_desc": "Luo joukkuetapahtumien kokoonpanot ja joukkuekohtaiset hyppylistat.",
+      "coach_title": "Valmentajan kojelauta",
+      "coach_desc": "Sukeltajakohtaiset analyysit, pistetrendit, hyppylistamallit.",
+      "compare_title": "Vertaa sukeltajia",
+      "compare_desc": "Kaksi sukeltajaa rinnakkain — tilastot ja henkilökohtaisten ennätysten erot.",
+      "competitor_title": "Toimita hyppylistat",
+      "competitor_desc": "Valitse hyppysi jokaista erää varten ennen tapahtuman ilmoittautumisajan päättymistä.",
+      "profile_title": "Profiilini",
+      "profile_desc": "Pisteesi, henkilökohtaiset ennätyksesi ja 13-widgetin analytiikkapaneeli.",
+      "scoreboard_title": "Tulostaulu ja tulokset",
+      "scoreboard_desc": "Seuraa suoria kilpailuja tai selaa päättyneiden kilpailujen yhteenvetoja.",
+      "dive_directory_title": "Hyppyhakemisto",
+      "dive_directory_desc": "Etsi vaikeusasteita (DD) World Aquaticsin luettelosta.",
+      "sign_off_title": "Hyväksyntäkoodit",
+      "sign_off_desc": "Syötä Meet Managerin 6-numeroinen luovutuskoodi vahvistaaksesi Cut 3."
+    },
+    "actions": {
+      "ready": "Valmis",
+      "left": "{count} jäljellä",
+      "live": "Käynnissä",
+      "fix_list": "Korjaa lista",
+      "review": "Tarkista",
+      "sign_off": "Hyväksy",
+      "open_event": "Avaa tapahtuma",
+      "completed": "Suoritettu",
+      "open_control": "Avaa ohjauskeskus",
+      "rehearsal": "Harjoitus"
+    },
+    "blurbs": {
+      "coach_divers": "Avaa valmentajan kojelauta saadaksesi täydelliset sukeltajakohtaiset analyysit, pistetrendit ja mallipohjat.",
+      "referee": "Meet Managerit lähettävät hyväksyntäpyyntöjä laitteeseenne, kun heidän ennakkotapahtuman työnkulunsa saavuttaa keltaisen Hyväksy-vaiheen. Voitte myös syöttää 6-numeroisen luovutuskoodin omalla laitteellanne alla olevan linkin kautta."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} erää",
+      "closing_soon": "{event} · ilmoittautumiset sulkeutuvat pian"
+    },
+    "referee": {
+      "signoff_requested_by": "Hyväksyntää pyydetty käyttäjältä {name}",
+      "meet_manager_fallback": "tapahtuman järjestäjä"
+    },
+    "judge_panel": {
+      "analysis_title": "Tuomarianalyysi",
+      "analysis_desc": "Näe, miten suoriudut paneelin keskiarvoon nähden — puolueellisuus, pudotusprosentti sekä jaoteltuna maa-/seura-/korkeus-/hyppyryhmittäin.",
+      "rounds_judges": "{rounds} erää · {judges} tuomaria"
+    },
+    "diver_panel": {
+      "live_meta": "Napauta nähdäksesi seuraavan hyppysi, nykyisen sijoituksesi ja mitä sinun tarvitsee tehdä saadaksesi pisteitä",
+      "next_fallback": "Käy hyppylistan rakentaja läpi"
+    },
+    "activity": {
+      "view_full_log": "Näytä koko audit-loki →",
+      "competitor_fallback": "Kilpailija",
+      "score_update": "pisteitä muutettu kohteessa",
+      "score_delete": "piste poistettu kohteessa",
+      "score_add": "piste lisätty kohteeseen",
+      "role_to": "kohteeseen",
+      "role_from": "kohteesta"
+    },
+    "attention": {
+      "live": "{name} on KÄYNNISSÄ",
+      "prepare": "Valmistele {name}",
+      "prepare_meta": "Käy ennakkotapahtuman työnkulku läpi",
+      "role_requests_one": "{count} roolipyyntö odottaa",
+      "role_requests_many": "{count} roolipyyntöä odottaa",
+      "role_requests_meta": "Tarkastele roolipyyntöjä Käyttäjien hallinnassa",
+      "orgs_one": "{count} liitto odottaa hyväksyntää",
+      "orgs_many": "{count} liittoa odottaa hyväksyntää",
+      "orgs_meta": "Tarkastele Käyttäjien hallinnassa → organisaatiosuodatin"
+    }
   },
   "role": {
     "public": "Julkinen",

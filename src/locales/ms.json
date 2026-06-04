@@ -255,7 +255,121 @@
     "tab_spectator": "Penonton",
     "tab_other": "Lainnya",
     "go_to_section": "Pergi ke",
-    "loading_data": "Memuatkan…"
+    "loading_data": "Memuatkan…",
+    "empty": {
+      "meet_manager_title": "Belum ada acara",
+      "meet_manager_body": "Bina acara pertama anda dalam Meet Manager. Aliran kerja pra-acara akan membimbing anda melalui daftar masuk, pengacakan, pengesahan, dan permulaan.",
+      "coach_title": "Belum ada penyelam dipautkan lagi",
+      "coach_body": "Minta pentadbir organisasi anda untuk memautkan anda kepada penyelam yang anda bimbing. Setelah diluluskan, anda akan melihat profil, PBs, dan analitik mereka di sini.",
+      "diver_title": "Tiada acara akan datang",
+      "diver_body": "Apabila persekutuan anda menyenaraikan acara yang akan datang, ia akan dipaparkan di sini dengan kiraan masa \"penyertaan ditutup dalam\". Buka Portal Penyelam untuk melihat semua acara yang dianjurkan oleh persekutuan anda.",
+      "judge_title": "Belum ada acara ditugaskan lagi",
+      "judge_body": "Pengurus acara akan menambah anda ke panel sebelum acara seterusnya. Anda akan melihat tugasan di sini apabila itu berlaku.",
+      "org_admin_title": "Semua tenang",
+      "org_admin_body": "Tiada acara langsung, tiada acara akan datang dalam tetingkap penutupan penyertaan, dan tiada permintaan peranan menunggu. Gunakan pautan 'Pergi ke' di bawah untuk menerokai."
+    },
+    "sections": {
+      "next_actions": "Tindakan seterusnya",
+      "your_events": "Acara anda",
+      "go_to": "Pergi ke",
+      "live_squad": "Skuad langsung",
+      "dive_list_workbench": "Bengkel senarai terjun",
+      "your_divers": "Penyelam anda ({count})",
+      "waiting_for_you": "Menunggu anda",
+      "live_now": "Sedang berlangsung",
+      "as_referee": "Sebagai pengadil",
+      "your_tools": "Alat anda",
+      "your_assigned_events": "Acara yang ditugaskan kepada anda",
+      "meet_day_live": "Hari acara · sedang berlangsung",
+      "your_next_meet": "Acara anda yang seterusnya",
+      "attention": "Apa yang memerlukan perhatian anda",
+      "event_readiness": "Kesiapsiagaan acara",
+      "recent_activity": "Aktiviti terkini (7 hari)",
+      "other_surfaces": "Permukaan lain"
+    },
+    "tiles": {
+      "manager_title": "Meet Manager",
+      "manager_desc": "Cipta pertemuan dan acara, tetapkan panel, bina senarai peserta.",
+      "control_title": "Bilik Kawalan",
+      "control_desc": "Mengurus pengiraan markah pada hari acara — penyelam aktif, jam masa, tahanan.",
+      "assign_judges_title": "Tugaskan Pengadil",
+      "assign_judges_desc": "Tempatkan panel pada acara sebelum pertemuan.",
+      "users_title": "Pengurus Pengguna",
+      "users_desc": "Berikan peranan, pautkan jurulatih kepada penyelam, urus akaun.",
+      "audit_title": "Log Audit",
+      "audit_desc": "Aktiviti seluruh persekutuan — markah, perubahan peranan, suntingan.",
+      "clubs_title": "Kelab",
+      "clubs_desc": "Urus kelab dalam persekutuan anda.",
+      "teams_title": "Pasukan",
+      "teams_desc": "Setkan senarai peserta acara berpasukan dan senarai terjun setiap pasukan.",
+      "coach_title": "Papan Pemuka Jurulatih",
+      "coach_desc": "Analitik per-penyelam, tren markah, templat senarai terjun.",
+      "compare_title": "Bandingkan Penyelam",
+      "compare_desc": "Dua penyelam sebelah menyebelah — statistik dan beza PB.",
+      "competitor_title": "Hantar Lembaran Terjun",
+      "competitor_desc": "Pilih terjun anda bagi setiap pusingan sebelum tarikh akhir penyertaan setiap acara.",
+      "profile_title": "Profil Saya",
+      "profile_desc": "Markah anda, PBs, dan papan pemuka analitik 13-wiget.",
+      "scoreboard_title": "Paparan Markah & Keputusan",
+      "scoreboard_desc": "Tonton pertemuan secara langsung atau semak ulangkaji pertemuan yang selesai.",
+      "dive_directory_title": "Direktori Terjun",
+      "dive_directory_desc": "Cari DD di seluruh katalog World Aquatics.",
+      "sign_off_title": "Kod Pengesahan",
+      "sign_off_desc": "Masukkan kod serahan 6-digit pengurus acara untuk mengesahkan Cut 3."
+    },
+    "actions": {
+      "ready": "Sedia",
+      "left": "{count} tinggal",
+      "live": "Langsung",
+      "fix_list": "Betulkan senarai",
+      "review": "Semak",
+      "sign_off": "Sahkan",
+      "open_event": "Buka acara",
+      "completed": "Selesai",
+      "open_control": "Buka Bilik Kawalan",
+      "rehearsal": "Raptis"
+    },
+    "blurbs": {
+      "coach_divers": "Buka Papan Pemuka Jurulatih untuk analitik penuh setiap penyelam, tren markah, dan templat.",
+      "referee": "Pengurus pertemuan menghantar permintaan Sign Off ke peranti anda apabila aliran kerja pra-pertemuan mereka mencapai langkah Sign Off berwarna kuning. Anda juga boleh memasukkan kod serahan 6-digit pada peranti anda sendiri melalui pautan di bawah."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} pusingan",
+      "closing_soon": "{event} · penyertaan ditutup tidak lama lagi"
+    },
+    "referee": {
+      "signoff_requested_by": "Permintaan Sign Off daripada {name}",
+      "meet_manager_fallback": "meet manager"
+    },
+    "judge_panel": {
+      "analysis_title": "Analisis Pengadil",
+      "analysis_desc": "Lihat bagaimana anda dibandingkan dengan purata panel — bias, kadar drop, mengikut negara / kelab / ketinggian / kumpulan terjun.",
+      "rounds_judges": "{rounds} pusingan · {judges} pengadil"
+    },
+    "diver_panel": {
+      "live_meta": "Ketuk untuk melihat terjunan anda seterusnya, kedudukan semasa, dan apa yang anda perlu capai untuk memperoleh markah",
+      "next_fallback": "Ikuti pembina senarai terjun"
+    },
+    "activity": {
+      "view_full_log": "Lihat log audit penuh →",
+      "competitor_fallback": "Pesaing",
+      "score_update": "markah dipinda dalam",
+      "score_delete": "markah dipadam dalam",
+      "score_add": "markah ditambah dalam",
+      "role_to": "kepada",
+      "role_from": "daripada"
+    },
+    "attention": {
+      "live": "{name} SEDANG BERLANGSUNG",
+      "prepare": "Sediakan {name}",
+      "prepare_meta": "Ikuti aliran kerja pra-acara",
+      "role_requests_one": "{count} permintaan peranan menunggu",
+      "role_requests_many": "{count} permintaan peranan menunggu",
+      "role_requests_meta": "Semak permintaan peranan dalam Pengurus Pengguna",
+      "orgs_one": "{count} persekutuan menunggu kelulusan",
+      "orgs_many": "{count} persekutuan menunggu kelulusan",
+      "orgs_meta": "Semak dalam Pengurus Pengguna → penapis organisasi"
+    }
   },
   "profile": {
     "title": "Profil saya",

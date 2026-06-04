@@ -255,7 +255,121 @@
     "tab_spectator": "Tilskuer",
     "tab_other": "Mere",
     "go_to_section": "Gå til",
-    "loading_data": "Indlæser…"
+    "loading_data": "Indlæser…",
+    "empty": {
+      "meet_manager_title": "Ingen begivenheder endnu",
+      "meet_manager_body": "Opret jeres første begivenhed i Meet Manager. For-konkurrencearbejdsgangen guider jer gennem check-in, randomisering, sign-off og start.",
+      "coach_title": "Ingen springere tilknyttet endnu",
+      "coach_body": "Bed jeres organisationsadministrator om at tilknytte jer de springere, I vejleder. Når det er godkendt, vil I se deres profiler, PB'er og analyser her.",
+      "diver_title": "Ingen kommende konkurrencer",
+      "diver_body": "Når jeres forbund lister en kommende begivenhed, vises den her med en \"entries close in\" nedtælling. Åbn Diver Portal for at se alle begivenheder, som jeres forbund afholder.",
+      "judge_title": "Ingen begivenheder tildelt endnu",
+      "judge_body": "Meet Manager vil tilføje jer til et panel forud for den næste begivenhed. I vil se tildelinger her, når det sker.",
+      "org_admin_title": "Alt er stille",
+      "org_admin_body": "Ingen livebegivenheder, ingen kommende konkurrencer inden for tilmeldingsfristen, og ingen rolleanmodninger venter. Brug GO TO-linksene nedenfor for at gå i gang."
+    },
+    "sections": {
+      "next_actions": "Næste skridt",
+      "your_events": "Dine begivenheder",
+      "go_to": "Gå til",
+      "live_squad": "Live-hold",
+      "dive_list_workbench": "Diveliste-værksted",
+      "your_divers": "Dine springere ({count})",
+      "waiting_for_you": "Venter på jer",
+      "live_now": "Live nu",
+      "as_referee": "Som dommer",
+      "your_tools": "Dine værktøjer",
+      "your_assigned_events": "Dine tildelte begivenheder",
+      "meet_day_live": "Konkurrencedag · live nu",
+      "your_next_meet": "Din næste konkurrence",
+      "attention": "Hvad kræver jeres opmærksomhed",
+      "event_readiness": "Arrangementsberedskab",
+      "recent_activity": "Seneste aktivitet (7 dage)",
+      "other_surfaces": "Andre platforme"
+    },
+    "tiles": {
+      "manager_title": "Meet Manager",
+      "manager_desc": "Opret konkurrencer og begivenheder, udpeg panelet, opret deltagerlister.",
+      "control_title": "Kontrolrum",
+      "control_desc": "Styr scoringen på dagen — aktiv springer, shot clock, holds.",
+      "assign_judges_title": "Tildel dommere",
+      "assign_judges_desc": "Placer paneler på begivenheder forud for konkurrencen.",
+      "users_title": "Brugeradministration",
+      "users_desc": "Tildel roller, forbind trænere med springere, administrer konti.",
+      "audit_title": "Revisionslog",
+      "audit_desc": "Forbundets aktiviteter — resultater, rolleændringer, redigeringer.",
+      "clubs_title": "Klubber",
+      "clubs_desc": "Administrer klubberne i jeres forbund.",
+      "teams_title": "Hold",
+      "teams_desc": "Opsæt deltagerlister til holdkonkurrencer og hopelister for hvert hold.",
+      "coach_title": "Trænerpanel",
+      "coach_desc": "Analyse per springer, scoretendenser, skabeloner til hopelister.",
+      "compare_title": "Sammenlign springere",
+      "compare_desc": "To springere side om side — statistikker og PB-forskelle.",
+      "competitor_title": "Indsend hopelister",
+      "competitor_desc": "Vælg dine spring per runde inden tilmeldingsfristens udløb for hver begivenhed.",
+      "profile_title": "Min profil",
+      "profile_desc": "Dine resultater, PB'er og et 13-widget analysepanel.",
+      "scoreboard_title": "Resultattavle & resultater",
+      "scoreboard_desc": "Se live-konkurrencer eller gennemse opsummeringer af afsluttede konkurrencer.",
+      "dive_directory_title": "Hoperegister",
+      "dive_directory_desc": "Slå DD'er op i World Aquatics-kataloget.",
+      "sign_off_title": "Sign-off-koder",
+      "sign_off_desc": "Indtast meet managerens 6-cifrede overførselskode for at bekræfte Cut 3."
+    },
+    "actions": {
+      "ready": "Klar",
+      "left": "{count} tilbage",
+      "live": "Live",
+      "fix_list": "Ret liste",
+      "review": "Gennemgå",
+      "sign_off": "Godkend",
+      "open_event": "Åbn begivenhed",
+      "completed": "Afsluttet",
+      "open_control": "Åbn Kontrolrum",
+      "rehearsal": "Generalprøve"
+    },
+    "blurbs": {
+      "coach_divers": "Åbn Trænerpanelet for fuld analyse per springer, scoretendenser og skabeloner.",
+      "referee": "Meet Managers sender sign-off-anmodninger til jeres enhed, når deres for-konkurrencearbejdsgang når det gule 'Sign Off'-trin. I kan også indtaste en 6-cifret overførselskode på jeres egen enhed via linket nedenfor."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} runder",
+      "closing_soon": "{event} · tilmeldinger lukker snart"
+    },
+    "referee": {
+      "signoff_requested_by": "Sign-off anmodet af {name}",
+      "meet_manager_fallback": "meet manager"
+    },
+    "judge_panel": {
+      "analysis_title": "Dommeranalyse",
+      "analysis_desc": "Se, hvordan I ligger i forhold til panelets gennemsnit — bias, frafaldsrate, pr. land/klub/højde/springgruppe.",
+      "rounds_judges": "{rounds} runder · {judges} dommere"
+    },
+    "diver_panel": {
+      "live_meta": "Tryk for at se dit næste spring, nuværende placering og hvad du skal score",
+      "next_fallback": "Gennemgå hopelistebyggeren"
+    },
+    "activity": {
+      "view_full_log": "Se fuld revisionslog →",
+      "competitor_fallback": "Konkurrent",
+      "score_update": "score ændret i",
+      "score_delete": "score slettet i",
+      "score_add": "score i",
+      "role_to": "til",
+      "role_from": "fra"
+    },
+    "attention": {
+      "live": "{name} er LIVE",
+      "prepare": "Forbered {name}",
+      "prepare_meta": "Gennemfør for-konkurrencearbejdsgangen",
+      "role_requests_one": "{count} rolleanmodning venter",
+      "role_requests_many": "{count} rolleanmodninger venter",
+      "role_requests_meta": "Gennemse rolleanmodninger i Brugeradministration",
+      "orgs_one": "{count} forbund afventer godkendelse",
+      "orgs_many": "{count} forbund afventer godkendelse",
+      "orgs_meta": "Gennemse i Brugeradministration → org-filter"
+    }
   },
   "role": {
     "public": "Offentlig",

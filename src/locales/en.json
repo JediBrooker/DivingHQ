@@ -255,7 +255,121 @@
     "tab_spectator": "Spectator",
     "tab_other": "More",
     "go_to_section": "Go to",
-    "loading_data": "Loading…"
+    "loading_data": "Loading…",
+    "empty": {
+      "meet_manager_title": "No events yet",
+      "meet_manager_body": "Build your first event in Meet Manager. The pre-meet workflow walks you through check-in, randomise, sign-off, and start.",
+      "coach_title": "No divers linked yet",
+      "coach_body": "Ask your org admin to link you to the divers you mentor. Once approved you'll see their profiles, PBs, and analytics here.",
+      "diver_title": "No upcoming meets",
+      "diver_body": "When your federation lists an upcoming event, it'll show up here with an \"entries close in\" countdown. Open the Diver Portal to see all events your federation is running.",
+      "judge_title": "No events assigned yet",
+      "judge_body": "The meet manager will add you to a panel ahead of the next event. You'll see assignments here when that happens.",
+      "org_admin_title": "All quiet",
+      "org_admin_body": "No live events, no upcoming meets within the entries-close window, and no role requests waiting. Use the GO TO links below to dive in."
+    },
+    "sections": {
+      "next_actions": "Next actions",
+      "your_events": "Your events",
+      "go_to": "Go to",
+      "live_squad": "Live squad",
+      "dive_list_workbench": "Dive list workbench",
+      "your_divers": "Your divers ({count})",
+      "waiting_for_you": "Waiting for you",
+      "live_now": "Live now",
+      "as_referee": "As a referee",
+      "your_tools": "Your tools",
+      "your_assigned_events": "Your assigned events",
+      "meet_day_live": "Meet day · live now",
+      "your_next_meet": "Your next meet",
+      "attention": "What needs your attention",
+      "event_readiness": "Event readiness",
+      "recent_activity": "Recent activity (7 days)",
+      "other_surfaces": "Other surfaces"
+    },
+    "tiles": {
+      "manager_title": "Meet Manager",
+      "manager_desc": "Create meets and events, set the panel, build rosters.",
+      "control_title": "Control Room",
+      "control_desc": "Drive scoring on the day — active diver, shot clock, holds.",
+      "assign_judges_title": "Assign Judges",
+      "assign_judges_desc": "Seat panels onto events ahead of the meet.",
+      "users_title": "User Manager",
+      "users_desc": "Grant roles, link coaches to divers, manage accounts.",
+      "audit_title": "Audit Log",
+      "audit_desc": "Federation-wide activity — scores, role changes, edits.",
+      "clubs_title": "Clubs",
+      "clubs_desc": "Manage the clubs in your federation.",
+      "teams_title": "Teams",
+      "teams_desc": "Set up team-event rosters and per-team dive lists.",
+      "coach_title": "Coach Dashboard",
+      "coach_desc": "Per-diver analytics, score trends, dive list templates.",
+      "compare_title": "Compare Divers",
+      "compare_desc": "Two divers side-by-side — stats and PB diffs.",
+      "competitor_title": "Submit Dive Sheets",
+      "competitor_desc": "Pick your dives per round before each event's entry deadline.",
+      "profile_title": "My Profile",
+      "profile_desc": "Your scores, PBs, and 13-widget analytics dashboard.",
+      "scoreboard_title": "Scoreboard & Results",
+      "scoreboard_desc": "Watch live meets or browse completed-meet recaps.",
+      "dive_directory_title": "Dive Directory",
+      "dive_directory_desc": "Look up DDs across the World Aquatics catalog.",
+      "sign_off_title": "Sign-Off Codes",
+      "sign_off_desc": "Enter the meet manager's 6-digit handoff code to confirm Cut 3."
+    },
+    "actions": {
+      "ready": "Ready",
+      "left": "{count} left",
+      "live": "Live",
+      "fix_list": "Fix list",
+      "review": "Review",
+      "sign_off": "Sign off",
+      "open_event": "Open event",
+      "completed": "Completed",
+      "open_control": "Open Control Room",
+      "rehearsal": "Rehearsal"
+    },
+    "blurbs": {
+      "coach_divers": "Open the Coach Dashboard for full per-diver analytics, score trends, and templates.",
+      "referee": "Meet managers send sign-off requests to your device when their pre-meet workflow reaches the yellow Sign Off step. You can also enter a 6-digit handoff code on your own device via the link below."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} rounds",
+      "closing_soon": "{event} · entries closing soon"
+    },
+    "referee": {
+      "signoff_requested_by": "Sign off requested by {name}",
+      "meet_manager_fallback": "meet manager"
+    },
+    "judge_panel": {
+      "analysis_title": "Judge Analysis",
+      "analysis_desc": "See how you track against the panel-kept mean — bias, drop rate, per-country / club / height / dive group.",
+      "rounds_judges": "{rounds} rounds · {judges} judges"
+    },
+    "diver_panel": {
+      "live_meta": "Tap to see your next dive, current rank, and what you need to score",
+      "next_fallback": "Walk through the dive list builder"
+    },
+    "activity": {
+      "view_full_log": "View full audit log →",
+      "competitor_fallback": "Competitor",
+      "score_update": "score amended in",
+      "score_delete": "score deleted in",
+      "score_add": "score in",
+      "role_to": "to",
+      "role_from": "from"
+    },
+    "attention": {
+      "live": "{name} is LIVE",
+      "prepare": "Prepare {name}",
+      "prepare_meta": "Walk through the pre-meet workflow",
+      "role_requests_one": "{count} role request waiting",
+      "role_requests_many": "{count} role requests waiting",
+      "role_requests_meta": "Review role requests in User Manager",
+      "orgs_one": "{count} federation awaiting approval",
+      "orgs_many": "{count} federations awaiting approval",
+      "orgs_meta": "Review in User Manager → org filter"
+    }
   },
   "profile": {
     "title": "My Profile",

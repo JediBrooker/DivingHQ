@@ -255,7 +255,121 @@
     "tab_spectator": "Seyirci",
     "tab_other": "Daha fazla",
     "go_to_section": "Şuraya git",
-    "loading_data": "Yükleniyor…"
+    "loading_data": "Yükleniyor…",
+    "empty": {
+      "meet_manager_title": "Henüz etkinlik yok",
+      "meet_manager_body": "Meet Manager'da ilk etkinliğinizi oluşturun. Ön-etkinlik iş akışı; giriş, rastgeleleştirme, onay ve başlatma adımlarında sizi yönlendirir.",
+      "coach_title": "Henüz ilişkilendirilmiş dalgıç yok",
+      "coach_body": "Mentörlüğünü yaptığınız dalgıçlarla sizi ilişkilendirmesi için organizasyon yöneticinizden istekte bulunun. Onaylandıktan sonra profillerini, PB'lerini ve analizlerini burada göreceksiniz.",
+      "diver_title": "Yaklaşan etkinlik yok",
+      "diver_body": "Federasyonunuz bir yaklaşan etkinlik listelediğinde, buraya \"kayıtların kapanmasına\" dair bir geri sayım ile görünecektir. Federasyonunuzun düzenlediği tüm etkinlikleri görmek için Diver Portal'ı açın.",
+      "judge_title": "Henüz atanan etkinlik yok",
+      "judge_body": "Meet Manager sizi bir panele bir sonraki etkinlikten önce ekleyecektir. Bu gerçekleştiğinde atamalarınızı burada göreceksiniz.",
+      "org_admin_title": "Her şey sakin",
+      "org_admin_body": "Canlı etkinlik yok, kayıtların kapanma penceresi içinde yaklaşan etkinlik yok ve bekleyen rol isteği yok. Aşağıdaki 'Git' bağlantılarını kullanarak başlayın."
+    },
+    "sections": {
+      "next_actions": "Sonraki adımlar",
+      "your_events": "Etkinlikleriniz",
+      "go_to": "Git",
+      "live_squad": "Canlı ekip",
+      "dive_list_workbench": "Atlayış listesi çalışma alanı",
+      "your_divers": "Dalgıçlarınız ({count})",
+      "waiting_for_you": "Sizden bekleniyor",
+      "live_now": "Şimdi canlı",
+      "as_referee": "Hakem olarak",
+      "your_tools": "Araçlarınız",
+      "your_assigned_events": "Atandığınız etkinlikler",
+      "meet_day_live": "Müsabaka günü · şimdi canlı",
+      "your_next_meet": "Bir sonraki müsabakanız",
+      "attention": "Dikkatinizi gerektirenler",
+      "event_readiness": "Etkinlik hazırlığı",
+      "recent_activity": "Son etkinlikler (7 gün)",
+      "other_surfaces": "Diğer yüzeyler"
+    },
+    "tiles": {
+      "manager_title": "Meet Manager",
+      "manager_desc": "Müsabakalar ve etkinlikler oluşturun, jüriyi belirleyin, kadroları oluşturun.",
+      "control_title": "Kontrol Odası",
+      "control_desc": "Gün içinde puanlamayı yönetin — aktif dalgıç, shot clock, duraklatmalar.",
+      "assign_judges_title": "Hakem Atama",
+      "assign_judges_desc": "Müsabakadan önce jüri panellerini etkinliklere atayın.",
+      "users_title": "Kullanıcı Yönetimi",
+      "users_desc": "Roller verin, antrenörleri dalgıçlara bağlayın, hesapları yönetin.",
+      "audit_title": "Denetim Günlüğü",
+      "audit_desc": "Federasyon çapında etkinlikler — puanlar, rol değişiklikleri, düzenlemeler.",
+      "clubs_title": "Kulüpler",
+      "clubs_desc": "Federasyonunuzdaki kulüpleri yönetin.",
+      "teams_title": "Takımlar",
+      "teams_desc": "Takım-etkinlik kadrolarını ve takım başına atlayış listelerini oluşturun.",
+      "coach_title": "Antrenör Panosu",
+      "coach_desc": "Her dalgıç için analizler, puan eğilimleri, atlayış listesi şablonları.",
+      "compare_title": "Dalgıç Karşılaştırma",
+      "compare_desc": "Yan yana iki dalgıç — istatistikler ve PB farkları.",
+      "competitor_title": "Atlayış Listesi Gönder",
+      "competitor_desc": "Her etkinliğin kayıt son tarihinden önce turlar için atlayışlarınızı seçin.",
+      "profile_title": "Profilim",
+      "profile_desc": "Puanlarınız, PB'leriniz ve 13 widget'lı analiz panosu.",
+      "scoreboard_title": "Skor Tablosu & Sonuçlar",
+      "scoreboard_desc": "Canlı müsabakaları izleyin veya tamamlanmış müsabaka özetlerine göz atın.",
+      "dive_directory_title": "Atlayış Dizini",
+      "dive_directory_desc": "World Aquatics kataloğundaki DD'leri arayın.",
+      "sign_off_title": "Onay Kodları",
+      "sign_off_desc": "Cut 3'ü onaylamak için Meet Manager'ın 6 haneli devretme kodunu girin."
+    },
+    "actions": {
+      "ready": "Hazır",
+      "left": "{count} kaldı",
+      "live": "Canlı",
+      "fix_list": "Listeyi düzelt",
+      "review": "İncele",
+      "sign_off": "Onayla",
+      "open_event": "Etkinliği aç",
+      "completed": "Tamamlandı",
+      "open_control": "Kontrol Odasını aç",
+      "rehearsal": "Prova"
+    },
+    "blurbs": {
+      "coach_divers": "Her dalgıç için kapsamlı analizler, puan eğilimleri ve şablonlar için Antrenör Panosunu açın.",
+      "referee": "Meet yöneticileri, ön-etkinlik iş akışları sarı Onay (Sign Off) adımına ulaştığında onay taleplerini cihazınıza gönderir. Ayrıca aşağıdaki bağlantı aracılığıyla kendi cihazınızda 6 haneli devretme kodu da girebilirsiniz."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} tur",
+      "closing_soon": "{event} · kayıtlar yakında kapanıyor"
+    },
+    "referee": {
+      "signoff_requested_by": "{name} tarafından onay istendi",
+      "meet_manager_fallback": "Meet Manager"
+    },
+    "judge_panel": {
+      "analysis_title": "Hakem Analizi",
+      "analysis_desc": "Panelin tuttuğu ortalamaya karşı nasıl performans sergilediğinizi görün — önyargı, puan düşürme oranı, ülke / kulüp / yükseklik / atlayış grubu bazında.",
+      "rounds_judges": "{rounds} tur · {judges} hakem"
+    },
+    "diver_panel": {
+      "live_meta": "Bir sonraki atlayışınızı, mevcut sıralamanızı ve hangi puana ihtiyacınız olduğunu görmek için dokunun",
+      "next_fallback": "Atlayış listesi oluşturucusunu adım adım inceleyin"
+    },
+    "activity": {
+      "view_full_log": "Tam denetim günlüğünü görüntüle →",
+      "competitor_fallback": "Sporcu",
+      "score_update": "puan düzeltildi",
+      "score_delete": "puan silindi",
+      "score_add": "puan eklendi",
+      "role_to": "→",
+      "role_from": "←"
+    },
+    "attention": {
+      "live": "{name} CANLI",
+      "prepare": "{name} için hazırlayın",
+      "prepare_meta": "Ön-etkinlik iş akışını adım adım yürütün",
+      "role_requests_one": "{count} rol isteği bekliyor",
+      "role_requests_many": "{count} rol isteği bekliyor",
+      "role_requests_meta": "Kullanıcı Yönetimi'nde rol isteklerini inceleyin",
+      "orgs_one": "{count} federasyon onay bekliyor",
+      "orgs_many": "{count} federasyon onay bekliyor",
+      "orgs_meta": "Kullanıcı Yönetimi'nde inceleyin → org filtresi"
+    }
   },
   "profile": {
     "title": "Profilim",

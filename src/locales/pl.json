@@ -255,7 +255,121 @@
     "tab_spectator": "Widz",
     "tab_other": "Więcej",
     "go_to_section": "Przejdź do",
-    "loading_data": "Ładowanie…"
+    "loading_data": "Ładowanie…",
+    "empty": {
+      "meet_manager_title": "Brak wydarzeń",
+      "meet_manager_body": "Utwórz swoje pierwsze wydarzenie w Meet Manager. Przedzawodowy przebieg poprowadzi Państwa przez odprawę, losowanie, zatwierdzenie oraz rozpoczęcie.",
+      "coach_title": "Brak powiązanych skoczków",
+      "coach_body": "Należy poprosić administratora organizacji o powiązanie konta z zawodnikami, którymi się opiekujesz. Po zatwierdzeniu ich profile, rekordy życiowe i analizy będą tutaj widoczne.",
+      "diver_title": "Brak nadchodzących zawodów",
+      "diver_body": "Gdy Państwa federacja opublikuje nadchodzące wydarzenie, pojawi się ono tutaj z odliczaniem \"entries close in\". Otwórz Portal Zawodnika, aby zobaczyć wszystkie wydarzenia organizowane przez Państwa federację.",
+      "judge_title": "Brak przypisanych wydarzeń",
+      "judge_body": "Organizator zawodów przypisze Państwa do składu sędziowskiego przed kolejnym wydarzeniem. Gdy to nastąpi, zobaczą Państwo tutaj przydziały.",
+      "org_admin_title": "Wszystko spokojnie",
+      "org_admin_body": "Brak wydarzeń na żywo, brak nadchodzących zawodów w okresie zamykania zgłoszeń oraz brak oczekujących próśb o role. Skorzystaj z linków GO TO poniżej, aby przejść dalej."
+    },
+    "sections": {
+      "next_actions": "Kolejne kroki",
+      "your_events": "Państwa wydarzenia",
+      "go_to": "Przejdź do",
+      "live_squad": "Skład na żywo",
+      "dive_list_workbench": "Warsztat listy skoków",
+      "your_divers": "Państwa skoczkowie ({count})",
+      "waiting_for_you": "Oczekuje na Państwa",
+      "live_now": "Na żywo",
+      "as_referee": "Jako sędzia",
+      "your_tools": "Narzędzia",
+      "your_assigned_events": "Przypisane wydarzenia",
+      "meet_day_live": "Dzień zawodów · na żywo",
+      "your_next_meet": "Następne zawody",
+      "attention": "Co wymaga Państwa uwagi",
+      "event_readiness": "Gotowość wydarzenia",
+      "recent_activity": "Ostatnia aktywność (7 dni)",
+      "other_surfaces": "Inne powierzchnie"
+    },
+    "tiles": {
+      "manager_title": "Menedżer zawodów",
+      "manager_desc": "Twórz zawody i wydarzenia, ustawiaj skład sędziowski i twórz listy uczestników.",
+      "control_title": "Sala kontrolna",
+      "control_desc": "Zarządzaj punktacją w dniu zawodów — aktywny skoczek, zegar odliczający, przerwy.",
+      "assign_judges_title": "Przydziel sędziów",
+      "assign_judges_desc": "Przydzielaj składy sędziowskie do wydarzeń przed zawodami.",
+      "users_title": "Menedżer użytkowników",
+      "users_desc": "Nadaj role, powiąż trenerów ze skoczkami, zarządzaj kontami.",
+      "audit_title": "Dziennik audytu",
+      "audit_desc": "Działania w skali federacji — wyniki, zmiany ról, edycje.",
+      "clubs_title": "Kluby",
+      "clubs_desc": "Zarządzaj klubami w Państwa federacji.",
+      "teams_title": "Drużyny",
+      "teams_desc": "Utwórz składy drużynowe i listy skoków dla każdej drużyny.",
+      "coach_title": "Panel trenera",
+      "coach_desc": "Analizy dla każdego zawodnika, trendy wyników i szablony list skoków.",
+      "compare_title": "Porównaj skoczków",
+      "compare_desc": "Dwóch zawodników obok siebie — statystyki i różnice PB.",
+      "competitor_title": "Zgłoś listę skoków",
+      "competitor_desc": "Wybierz skoki na każdą serię przed terminem zgłoszeń do wydarzenia.",
+      "profile_title": "Mój profil",
+      "profile_desc": "Twoje wyniki, rekordy życiowe oraz 13-widżetowy pulpit analityczny.",
+      "scoreboard_title": "Tablica wyników i wyniki",
+      "scoreboard_desc": "Oglądaj zawody na żywo lub przeglądaj podsumowania zakończonych zawodów.",
+      "dive_directory_title": "Katalog skoków",
+      "dive_directory_desc": "Wyszukaj DD w katalogu World Aquatics.",
+      "sign_off_title": "Kody zatwierdzenia",
+      "sign_off_desc": "Wprowadź 6-cyfrowy kod przekazania od Meet Manager, aby potwierdzić Cut 3."
+    },
+    "actions": {
+      "ready": "Gotowe",
+      "left": "{count} pozostało",
+      "live": "Na żywo",
+      "fix_list": "Popraw listę",
+      "review": "Przejrzyj",
+      "sign_off": "Zatwierdź",
+      "open_event": "Otwórz wydarzenie",
+      "completed": "Zakończone",
+      "open_control": "Otwórz Salę kontrolną",
+      "rehearsal": "Próba"
+    },
+    "blurbs": {
+      "coach_divers": "Otwórz Panel trenera, aby uzyskać pełne analizy poszczególnych zawodników, trendy wyników i szablony.",
+      "referee": "Kierownicy zawodów wysyłają prośby o zatwierdzenie na Państwa urządzenie, gdy ich przedzawodowy przebieg osiągnie żółty krok „Zatwierdź”. Można również wprowadzić 6-cyfrowy kod przekazania na własnym urządzeniu za pomocą poniższego linku."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} serii",
+      "closing_soon": "{event} · termin zgłoszeń wkrótce"
+    },
+    "referee": {
+      "signoff_requested_by": "Prośba o zatwierdzenie od {name}",
+      "meet_manager_fallback": "kierownik zawodów"
+    },
+    "judge_panel": {
+      "analysis_title": "Analiza sędziów",
+      "analysis_desc": "Zobacz, jak Państwo wypadają względem średniej panelu — stronniczość, wskaźnik odrzucenia, według kraju / klubu / wzrostu / grupy skoków.",
+      "rounds_judges": "{rounds} serii · {judges} sędziów"
+    },
+    "diver_panel": {
+      "live_meta": "Stuknij, aby zobaczyć następny skok, aktualną pozycję i jaki wynik musisz uzyskać",
+      "next_fallback": "Skorzystaj z kreatora listy skoków"
+    },
+    "activity": {
+      "view_full_log": "Zobacz pełny dziennik audytu →",
+      "competitor_fallback": "Zawodnik",
+      "score_update": "wynik zmieniony w",
+      "score_delete": "wynik usunięty w",
+      "score_add": "wynik dodany w",
+      "role_to": "do",
+      "role_from": "od"
+    },
+    "attention": {
+      "live": "{name} jest NA ŻYWO",
+      "prepare": "Przygotuj {name}",
+      "prepare_meta": "Przejdź przez przedzawodowy przebieg",
+      "role_requests_one": "{count} prośba o rolę oczekuje",
+      "role_requests_many": "{count} próśb o rolę oczekuje",
+      "role_requests_meta": "Przejrzyj prośby o role w Menedżerze użytkowników",
+      "orgs_one": "{count} federacja oczekuje na zatwierdzenie",
+      "orgs_many": "{count} federacje oczekują na zatwierdzenie",
+      "orgs_meta": "Przejrzyj w Menedżerze użytkowników → filtr organizacji"
+    }
   },
   "role": {
     "public": "Publiczny",

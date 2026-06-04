@@ -30,6 +30,7 @@
 // /setup — happens before the tab logic runs.
 import { ref, onMounted, onUnmounted, computed, watch, defineAsyncComponent } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { fmtCloses, fmtRelative } from '@/lib/format'
@@ -48,6 +49,7 @@ const OtherPanel       = defineAsyncComponent(() => import('@/components/dashboa
 
 const router = useRouter()
 const auth = useAuthStore()
+const { t } = useI18n()
 
 // ---- Tabs ---------------------------------------------------
 // Order matters: tabs render in this order (left → right).
@@ -659,26 +661,11 @@ function onDiverSearchBlur() {
 
 // ---- Tile catalog (now role-scoped per panel) --------------
 // The flat allTiles config of the previous layout is gone; each
-// panel renders its own role-scoped "GO TO" group. The Other
+// panel renders its own role-scoped "GO TO" group via the shared
+// GotoTile component, importing its own Lucide icons. The Other
 // tab carries the utility surfaces that don't belong to any
-// single role. SVG icons from the old config preserved as-is so
-// the visual language stays familiar.
-const ICONS = {
-  manager:        '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>',
-  control:        '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>',
-  judges:         '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>',
-  users:          '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>',
-  audit:          '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>',
-  clubs:          '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-1a4 4 0 014-4h4a4 4 0 014 4v1M21 21v-1a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75M9 11a4 4 0 100-8 4 4 0 000 8z"/></svg>',
-  teams:          '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>',
-  scoreboard:     '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>',
-  diveDir:        '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 17l2 2 4-4"/></svg>',
-  signOff:        '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-1.105.895-2 2-2s2 .895 2 2-.895 2-2 2-2-.895-2-2zM5 7a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10h.01M9 14h.01M13 14h.01"/></svg>',
-  profile:        '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8a6 6 0 11-12 0 6 6 0 0112 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 22a9 9 0 0118 0H3z"/></svg>',
-  diver:          '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>',
-  coach:          '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2a4 4 0 100-8 4 4 0 000 8zm6-4a4 4 0 100-8 4 4 0 000 8z"/></svg>',
-  compare:        '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l3-3m0 0l3 3m-3-3v12m9-12l3 3m0 0l-3 3m3-3H9"/></svg>',
-}
+// single role. (The old hand-rolled SVG ICONS map + v-html
+// threading lived here — replaced by @lucide/vue components.)
 
 // ---- Static data ------------------------------------------
 const welcomeName = computed(() => auth.user?.full_name?.toUpperCase() || '—')
@@ -699,7 +686,7 @@ const attentionCards = computed(() => {
       id: 'live-' + ev.id,
       kind: 'live',
       icon: '🔴',
-      title: `${ev.name} is LIVE`,
+      title: t('dashboard.attention.live', { name: ev.name }),
       meta: null,
       to: `/control?event=${ev.id}`,
     })
@@ -716,8 +703,8 @@ const attentionCards = computed(() => {
       id: 'upcoming-' + ev.id,
       kind: 'upcoming',
       icon: '📅',
-      title: `Prepare ${ev.name}`,
-      meta: fmtCloses(ev.entries_close_at) || 'Walk through the pre-meet workflow',
+      title: t('dashboard.attention.prepare', { name: ev.name }),
+      meta: fmtCloses(ev.entries_close_at) || t('dashboard.attention.prepare_meta'),
       to: `/control?event=${ev.id}`,
     })
   }
@@ -727,8 +714,8 @@ const attentionCards = computed(() => {
       id:    'pending-roles',
       kind:  'pending',
       icon:  '👥',
-      title: `${n} role request${n === 1 ? '' : 's'} waiting`,
-      meta:  'Review role requests in User Manager',
+      title: t(n === 1 ? 'dashboard.attention.role_requests_one' : 'dashboard.attention.role_requests_many', { count: n }),
+      meta:  t('dashboard.attention.role_requests_meta'),
       to:    '/users',
     })
   }
@@ -738,8 +725,8 @@ const attentionCards = computed(() => {
       id:    'pending-orgs',
       kind:  'pending',
       icon:  '🏛',
-      title: `${n} federation${n === 1 ? '' : 's'} awaiting approval`,
-      meta:  'Review in User Manager → org filter',
+      title: t(n === 1 ? 'dashboard.attention.orgs_one' : 'dashboard.attention.orgs_many', { count: n }),
+      meta:  t('dashboard.attention.orgs_meta'),
       to:    '/users',
     })
   }
@@ -1193,43 +1180,29 @@ function attachSocketHandlers() {
       :attention-cards="attentionCards"
       :workflow-actions="workflowActions"
       :recent-activity="recentActivity"
-      :fmt-relative="fmtRelative"
-      :icons="ICONS"
-    />
+      :fmt-relative="fmtRelative"    />
     <MeetManagerPanel
       v-else-if="activeTab === 'meet_manager'"
       :operator-events="operatorEvents"
       :workflow-actions="workflowActions"
-      :fmt-closes="fmtCloses"
-      :icons="ICONS"
-    />
+      :fmt-closes="fmtCloses"    />
     <RefereePanel
       v-else-if="activeTab === 'referee'"
-      :referee-desk="refereeDesk"
-      :icons="ICONS"
-    />
+      :referee-desk="refereeDesk"    />
     <JudgePanel
       v-else-if="activeTab === 'judge'"
-      :judge-events="judgeEvents"
-      :icons="ICONS"
-    />
+      :judge-events="judgeEvents"    />
     <CoachPanel
       v-else-if="activeTab === 'coach'"
       :coach-data="coachData"
-      :coach-workbench="coachWorkbench"
-      :icons="ICONS"
-    />
+      :coach-workbench="coachWorkbench"    />
     <DiverPanel
       v-else-if="activeTab === 'diver'"
       :diver-next-meet="diverNextMeet"
       :diver-live-meet="diverLiveMeet"
-      :fmt-closes="fmtCloses"
-      :icons="ICONS"
-    />
+      :fmt-closes="fmtCloses"    />
     <OtherPanel
-      v-else-if="activeTab === 'other'"
-      :icons="ICONS"
-    />
+      v-else-if="activeTab === 'other'"    />
 
     <!-- Dashboard footer — single muted strip below the active
          role panel. Two affordances: the plain-English user

@@ -255,7 +255,121 @@
     "tab_spectator": "Spectateur",
     "tab_other": "Plus",
     "go_to_section": "Aller à",
-    "loading_data": "Chargement…"
+    "loading_data": "Chargement…",
+    "empty": {
+      "meet_manager_title": "Aucun événement pour l'instant",
+      "meet_manager_body": "Créez votre premier événement dans le Gestionnaire de rencontre. Le flux de travail pré-compétition vous guide à travers l'enregistrement, le tirage au sort, la validation et le démarrage.",
+      "coach_title": "Aucun plongeur lié pour le moment",
+      "coach_body": "Demandez à l'administrateur de votre organisation de vous lier aux plongeurs que vous encadrez. Une fois approuvé, vous verrez leurs profils, leurs PB et leurs analyses ici.",
+      "diver_title": "Aucune compétition à venir",
+      "diver_body": "Lorsque votre fédération publiera un événement à venir, il apparaîtra ici avec un compte à rebours « entries close in ». Ouvrez le Portail du plongeur pour voir tous les événements organisés par votre fédération.",
+      "judge_title": "Aucun événement attribué pour le moment",
+      "judge_body": "Le gestionnaire de rencontre vous ajoutera à un jury avant le prochain événement. Vous verrez les affectations ici lorsqu'elles auront lieu.",
+      "org_admin_title": "Tout est calme",
+      "org_admin_body": "Aucun événement en direct, aucune compétition à venir dans la fenêtre de clôture des inscriptions, et aucune demande de rôle en attente. Utilisez les liens ALLER À ci‑dessous pour commencer."
+    },
+    "sections": {
+      "next_actions": "Actions suivantes",
+      "your_events": "Vos événements",
+      "go_to": "Accéder à",
+      "live_squad": "Équipe en direct",
+      "dive_list_workbench": "Atelier des listes de plongeons",
+      "your_divers": "Vos plongeurs ({count})",
+      "waiting_for_you": "En attente de votre action",
+      "live_now": "En direct maintenant",
+      "as_referee": "En tant qu'arbitre",
+      "your_tools": "Vos outils",
+      "your_assigned_events": "Événements qui vous sont attribués",
+      "meet_day_live": "Jour de la compétition · en direct maintenant",
+      "your_next_meet": "Votre prochaine compétition",
+      "attention": "Ce qui requiert votre attention",
+      "event_readiness": "Préparation de l'événement",
+      "recent_activity": "Activité récente (7 jours)",
+      "other_surfaces": "Autres surfaces"
+    },
+    "tiles": {
+      "manager_title": "Gestionnaire de rencontre",
+      "manager_desc": "Créez des rencontres et des épreuves, désignez le jury, constituez les listes.",
+      "control_title": "Salle de contrôle",
+      "control_desc": "Gérez le scoring le jour — plongeur actif, chronomètre, interruptions.",
+      "assign_judges_title": "Attribuer des juges",
+      "assign_judges_desc": "Attribuez les jurys aux épreuves avant la rencontre.",
+      "users_title": "Gestion des utilisateurs",
+      "users_desc": "Attribuez des rôles, liez des entraîneurs aux plongeurs, gérez les comptes.",
+      "audit_title": "Journal d'audit",
+      "audit_desc": "Activité à l'échelle de la fédération — scores, changements de rôle, modifications.",
+      "clubs_title": "Clubs",
+      "clubs_desc": "Gérez les clubs de votre fédération.",
+      "teams_title": "Équipes",
+      "teams_desc": "Configurez les listes d'équipes pour les épreuves et les listes de plongeons par équipe.",
+      "coach_title": "Tableau de bord de l'entraîneur",
+      "coach_desc": "Analyses par plongeur, tendances des scores, modèles de listes de plongeons.",
+      "compare_title": "Comparer les plongeurs",
+      "compare_desc": "Deux plongeurs côte à côte — statistiques et différences de PB.",
+      "competitor_title": "Soumettre les listes de plongeons",
+      "competitor_desc": "Choisissez vos plongeons par manche avant la date limite d'inscription de chaque épreuve.",
+      "profile_title": "Mon profil",
+      "profile_desc": "Vos scores, PB et tableau de bord analytique à 13 widgets.",
+      "scoreboard_title": "Tableau d'affichage & Résultats",
+      "scoreboard_desc": "Suivez des compétitions en direct ou consultez les récapitulatifs des compétitions terminées.",
+      "dive_directory_title": "Répertoire des plongeons",
+      "dive_directory_desc": "Recherchez les DD dans le catalogue World Aquatics.",
+      "sign_off_title": "Codes de validation",
+      "sign_off_desc": "Saisissez le code de transfert à 6 chiffres du Meet Manager pour confirmer Cut 3."
+    },
+    "actions": {
+      "ready": "Prêt",
+      "left": "{count} restant(s)",
+      "live": "En direct",
+      "fix_list": "Corriger la liste",
+      "review": "Examiner",
+      "sign_off": "Valider",
+      "open_event": "Ouvrir l'événement",
+      "completed": "Terminé",
+      "open_control": "Ouvrir la salle de contrôle",
+      "rehearsal": "Répétition"
+    },
+    "blurbs": {
+      "coach_divers": "Ouvrez le tableau de bord de l'entraîneur pour des analyses complètes par plongeur, les tendances des scores et des modèles.",
+      "referee": "Les gestionnaires de rencontre envoient des demandes de validation à votre appareil lorsque leur flux de travail pré-compétition atteint l'étape jaune « Sign Off ». Vous pouvez également saisir un code de transfert à 6 chiffres sur votre propre appareil via le lien ci‑dessous."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} manches",
+      "closing_soon": "{event} · clôture des inscriptions bientôt"
+    },
+    "referee": {
+      "signoff_requested_by": "Validation demandée par {name}",
+      "meet_manager_fallback": "gestionnaire de la rencontre"
+    },
+    "judge_panel": {
+      "analysis_title": "Analyse des juges",
+      "analysis_desc": "Voyez comment vous vous situez par rapport à la moyenne tenue par le jury — biais, taux d'abandon, par pays / club / hauteur / groupe de plongeons.",
+      "rounds_judges": "{rounds} manches · {judges} juges"
+    },
+    "diver_panel": {
+      "live_meta": "Touchez pour voir votre prochain plongeon, votre classement actuel et ce qu'il vous faut marquer",
+      "next_fallback": "Parcourez le générateur de listes de plongeons"
+    },
+    "activity": {
+      "view_full_log": "Voir le journal d'audit complet →",
+      "competitor_fallback": "Compétiteur",
+      "score_update": "score modifié dans",
+      "score_delete": "score supprimé dans",
+      "score_add": "score ajouté dans",
+      "role_to": "à",
+      "role_from": "de"
+    },
+    "attention": {
+      "live": "{name} est EN DIRECT",
+      "prepare": "Préparez {name}",
+      "prepare_meta": "Parcourez le flux de travail pré-compétition",
+      "role_requests_one": "{count} demande de rôle en attente",
+      "role_requests_many": "{count} demandes de rôle en attente",
+      "role_requests_meta": "Examinez les demandes de rôle dans le Gestionnaire d'utilisateurs",
+      "orgs_one": "{count} fédération en attente d'approbation",
+      "orgs_many": "{count} fédérations en attente d'approbation",
+      "orgs_meta": "Examinez dans le Gestionnaire d'utilisateurs → filtre d'organisation"
+    }
   },
   "role": {
     "public": "Accès public",

@@ -255,7 +255,121 @@
     "tab_spectator": "Tilskuer",
     "tab_other": "Mer",
     "go_to_section": "Gå til",
-    "loading_data": "Laster…"
+    "loading_data": "Laster…",
+    "empty": {
+      "meet_manager_title": "Ingen arrangementer ennå",
+      "meet_manager_body": "Opprett ditt første arrangement i Meet Manager. Pre-meet-arbeidsflyten veileder deg gjennom innsjekk, tilfeldig rekkefølge, signering og start.",
+      "coach_title": "Ingen stupere er koblet ennå",
+      "coach_body": "Be organisasjonsadministratoren om å koble deg til stupere du veileder. Når det er godkjent vil du se deres profiler, PB-er og analyser her.",
+      "diver_title": "Ingen kommende stevner",
+      "diver_body": "Når forbundet deres lister et kommende arrangement, vises det her med en \"entries close in\"-nedtelling. Åpne Diver Portal for å se alle arrangementer forbundet deres arrangerer.",
+      "judge_title": "Ingen arrangementer tildelt ennå",
+      "judge_body": "Meet Manager vil legge deg til i et panel før neste arrangement. Du vil se tildelinger her når det skjer.",
+      "org_admin_title": "Rolig for øyeblikket",
+      "org_admin_body": "Ingen live-arrangementer, ingen kommende stevner innen påmeldingsfristen, og ingen rolleforespørsler som venter. Bruk GÅ TIL-lenkene nedenfor for å gå videre."
+    },
+    "sections": {
+      "next_actions": "Neste handlinger",
+      "your_events": "Dine arrangementer",
+      "go_to": "Gå til",
+      "live_squad": "Live-tropp",
+      "dive_list_workbench": "Stupeliste-arbeidsbenk",
+      "your_divers": "Dine stupere ({count})",
+      "waiting_for_you": "Venter på deg",
+      "live_now": "Live nå",
+      "as_referee": "Som dommer",
+      "your_tools": "Dine verktøy",
+      "your_assigned_events": "Dine tildelte arrangementer",
+      "meet_day_live": "Stevnedag · live nå",
+      "your_next_meet": "Ditt neste stevne",
+      "attention": "Hva som krever din oppmerksomhet",
+      "event_readiness": "Klargjøring av arrangement",
+      "recent_activity": "Nylig aktivitet (7 dager)",
+      "other_surfaces": "Andre overflater"
+    },
+    "tiles": {
+      "manager_title": "Meet Manager",
+      "manager_desc": "Opprett stevner og arrangementer, konfigurer panelet, og opprett deltakerlister.",
+      "control_title": "Kontrollrom",
+      "control_desc": "Styr poenggivningen på dagen — aktiv hopper, tidtaker, pauser.",
+      "assign_judges_title": "Tildel dommere",
+      "assign_judges_desc": "Plasser paneler på arrangementer før stevnet.",
+      "users_title": "Brukeradministrasjon",
+      "users_desc": "Tildel roller, koble trenere til stupere, administrer kontoer.",
+      "audit_title": "Revisjonslogg",
+      "audit_desc": "Forbundsomfattende aktivitet — poeng, rolleendringer, redigeringer.",
+      "clubs_title": "Klubber",
+      "clubs_desc": "Administrer klubbene i forbundet ditt.",
+      "teams_title": "Lag",
+      "teams_desc": "Konfigurer lagoppstillinger for lagkonkurranser og stupelister per lag.",
+      "coach_title": "Trenerdashbord",
+      "coach_desc": "Analyser per hopper, poengtrender, maler for stupelister.",
+      "compare_title": "Sammenlign stupere",
+      "compare_desc": "To stupere side om side — statistikk og PB‑forskjeller.",
+      "competitor_title": "Send inn stupelister",
+      "competitor_desc": "Velg dine stup per runde før påmeldingsfristen for hvert arrangement.",
+      "profile_title": "Min profil",
+      "profile_desc": "Dine poeng, PB-er og 13-widget analysetavle.",
+      "scoreboard_title": "Poengtavle & resultater",
+      "scoreboard_desc": "Se live-stevner eller bla gjennom oppsummeringer fra fullførte stevner.",
+      "dive_directory_title": "Stupkatalog",
+      "dive_directory_desc": "Søk opp DD-er i World Aquatics-katalogen.",
+      "sign_off_title": "Sign-off-koder",
+      "sign_off_desc": "Skriv inn Meet Manager sin 6-sifrede overleveringskode for å bekrefte Cut 3."
+    },
+    "actions": {
+      "ready": "Klar",
+      "left": "{count} igjen",
+      "live": "Live",
+      "fix_list": "Korriger liste",
+      "review": "Gjennomgå",
+      "sign_off": "Godkjenn",
+      "open_event": "Åpne arrangement",
+      "completed": "Fullført",
+      "open_control": "Åpne Kontrollrom",
+      "rehearsal": "Generalprøve"
+    },
+    "blurbs": {
+      "coach_divers": "Åpne Trenerdashbordet for fullstendige analyser per hopper, poengtrender og maler.",
+      "referee": "Meet Manager sender sign-off-forespørsler til enheten deres når deres pre-meet-arbeidsflyt når det gule Sign Off-trinnet. Dere kan også skrive inn en 6-sifret overleveringskode på egen enhet via lenken nedenfor."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} runder",
+      "closing_soon": "{event} · påmeldingen avsluttes snart"
+    },
+    "referee": {
+      "signoff_requested_by": "Sign-off forespurt av {name}",
+      "meet_manager_fallback": "Meet Manager"
+    },
+    "judge_panel": {
+      "analysis_title": "Dommeranalyse",
+      "analysis_desc": "Se hvordan du står i forhold til panelets gjennomsnitt — skjevhet, frafallsrate, per land / klubb / høyde / stupgruppe.",
+      "rounds_judges": "{rounds} runder · {judges} dommere"
+    },
+    "diver_panel": {
+      "live_meta": "Trykk for å se ditt neste stup, nåværende plassering, og hva du trenger for å få poeng",
+      "next_fallback": "Gå gjennom stupelistebyggeren"
+    },
+    "activity": {
+      "view_full_log": "Se full revisjonslogg →",
+      "competitor_fallback": "Utøver",
+      "score_update": "poeng endret i",
+      "score_delete": "poeng slettet i",
+      "score_add": "poeng lagt til i",
+      "role_to": "til",
+      "role_from": "fra"
+    },
+    "attention": {
+      "live": "{name} er LIVE",
+      "prepare": "Forbered {name}",
+      "prepare_meta": "Gå gjennom pre-meet-arbeidsflyten",
+      "role_requests_one": "{count} rolleforespørsel venter",
+      "role_requests_many": "{count} rolleforespørsler venter",
+      "role_requests_meta": "Gå gjennom rolleforespørsler i Brukeradministrasjon",
+      "orgs_one": "{count} forbund venter på godkjenning",
+      "orgs_many": "{count} forbund venter på godkjenning",
+      "orgs_meta": "Gå gjennom i Brukeradministrasjon → org-filter"
+    }
   },
   "role": {
     "public": "Offentlig",

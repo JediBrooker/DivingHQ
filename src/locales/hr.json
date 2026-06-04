@@ -255,7 +255,121 @@
     "tab_spectator": "Gledatelj",
     "tab_other": "Više",
     "go_to_section": "Idi na",
-    "loading_data": "Učitavanje…"
+    "loading_data": "Učitavanje…",
+    "empty": {
+      "meet_manager_title": "Još nema događaja",
+      "meet_manager_body": "Stvorite svoj prvi događaj u Meet Manageru. Predsastavni tijek rada vodi vas kroz prijavu, nasumično raspoređivanje, potvrdu i početak.",
+      "coach_title": "Još nema povezanih skakača",
+      "coach_body": "Zamolite administratora vaše organizacije da vas poveže sa skakačima koje mentorirate. Nakon odobrenja ovdje ćete vidjeti njihove profile, osobne rekorde (PB) i analitiku.",
+      "diver_title": "Nema nadolazećih natjecanja",
+      "diver_body": "Kada vaša federacija objavi nadolazeći događaj, on će se ovdje prikazati s odbrojavanjem \"prijave se uskoro zatvaraju\". Otvorite Portal ronioca da vidite sva događanja koja vaša federacija organizira.",
+      "judge_title": "Za sada nema dodijeljenih događaja",
+      "judge_body": "Meet Manager će vas dodati u panel prije sljedećeg događaja. Vidjet ćete ovdje dodjele kada se to dogodi.",
+      "org_admin_title": "Sve mirno",
+      "org_admin_body": "Nema aktivnih događaja, nema nadolazećih natjecanja unutar roka zatvaranja prijava i nema zahtjeva za uloge na čekanju. Upotrijebite poveznice 'GO TO' u nastavku da biste se uključili."
+    },
+    "sections": {
+      "next_actions": "Sljedeći koraci",
+      "your_events": "Vaši događaji",
+      "go_to": "Idite na",
+      "live_squad": "Aktivna postava",
+      "dive_list_workbench": "Radna ploča za listu skokova",
+      "your_divers": "Vaši skakači ({count})",
+      "waiting_for_you": "Čeka na vas",
+      "live_now": "Uživo sada",
+      "as_referee": "Kao sudac",
+      "your_tools": "Vaši alati",
+      "your_assigned_events": "Dodijeljeni vam događaji",
+      "meet_day_live": "Dan natjecanja · uživo sada",
+      "your_next_meet": "Vaše sljedeće natjecanje",
+      "attention": "Što zahtijeva vašu pažnju",
+      "event_readiness": "Spremnost događaja",
+      "recent_activity": "Nedavna aktivnost (7 dana)",
+      "other_surfaces": "Ostale površine"
+    },
+    "tiles": {
+      "manager_title": "Meet Manager",
+      "manager_desc": "Kreirajte natjecanja i događaje, postavite sastav sudaca i izradite popise.",
+      "control_title": "Kontrolna soba",
+      "control_desc": "Upravljajte bodovanjem na dan natjecanja — aktivni skakač, tajmer za početak, zadržavanja.",
+      "assign_judges_title": "Dodijelite suce",
+      "assign_judges_desc": "Rasporedite sastave sudaca na događaje prije natjecanja.",
+      "users_title": "Upravitelj korisnika",
+      "users_desc": "Dodijelite uloge, povežite trenere sa skakačima i upravljajte računima.",
+      "audit_title": "Dnevnik revizije",
+      "audit_desc": "Aktivnosti na razini federacije — rezultati, promjene uloga, izmjene.",
+      "clubs_title": "Klubovi",
+      "clubs_desc": "Upravljajte klubovima u vašoj federaciji.",
+      "teams_title": "Timovi",
+      "teams_desc": "Postavite popise za timske događaje i liste skokova po timu.",
+      "coach_title": "Nadzorna ploča trenera",
+      "coach_desc": "Analitika po skakaču, trendovi rezultata, predlošci lista skokova.",
+      "compare_title": "Usporedi skakače",
+      "compare_desc": "Dva skakača usporedo — statistika i razlike u osobnim rekordima.",
+      "competitor_title": "Pošaljite listu skokova",
+      "competitor_desc": "Odaberite svoje skokove po rundi prije roka prijave za svaki događaj.",
+      "profile_title": "Moj profil",
+      "profile_desc": "Vaši rezultati, osobni rekordi (PB) i analitička ploča sa 13 widgeta.",
+      "scoreboard_title": "Ljestvica i rezultati",
+      "scoreboard_desc": "Gledajte natjecanja uživo ili pregledajte sažetke završenih natjecanja.",
+      "dive_directory_title": "Katalog skokova",
+      "dive_directory_desc": "Potražite DD-ove u katalogu World Aquatics.",
+      "sign_off_title": "Kodovi potvrde",
+      "sign_off_desc": "Unesite 6-znamenkasti kod primopredaje Meet Managera kako biste potvrdili Cut 3."
+    },
+    "actions": {
+      "ready": "Spremno",
+      "left": "{count} preostalo",
+      "live": "Uživo",
+      "fix_list": "Ispravi listu",
+      "review": "Pregled",
+      "sign_off": "Potvrdi",
+      "open_event": "Otvori događaj",
+      "completed": "Dovršeno",
+      "open_control": "Otvori kontrolnu sobu",
+      "rehearsal": "Vježba"
+    },
+    "blurbs": {
+      "coach_divers": "Otvorite Nadzornu ploču trenera za cjelovitu analitiku po skakaču, trendove rezultata i predloške.",
+      "referee": "Meet Manageri šalju zahtjeve za potvrdom na vaš uređaj kada njihov predsastavni tijek rada dosegne žuti korak Sign Off. Također možete unijeti šesteroznamenkasti kod primopredaje na vlastitom uređaju putem donje poveznice."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} rundi",
+      "closing_soon": "{event} · prijave se uskoro zatvaraju"
+    },
+    "referee": {
+      "signoff_requested_by": "Zahtjev za potvrdu od {name}",
+      "meet_manager_fallback": "Meet Manager"
+    },
+    "judge_panel": {
+      "analysis_title": "Analiza sudaca",
+      "analysis_desc": "Pogledajte kako se uspoređujete s prosjekom panela — pristranost, stopa izostavljanja, po državi / klubu / visini / skupini skokova.",
+      "rounds_judges": "{rounds} rundi · {judges} sudaca"
+    },
+    "diver_panel": {
+      "live_meta": "Dodirnite da biste vidjeli svoj sljedeći skok, trenutni plasman i što vam treba za bodove",
+      "next_fallback": "Prođite kroz alat za izradu liste skokova"
+    },
+    "activity": {
+      "view_full_log": "Prikaži cijeli dnevnik revizije →",
+      "competitor_fallback": "Natjecatelj",
+      "score_update": "rezultat izmijenjen u",
+      "score_delete": "rezultat obrisan u",
+      "score_add": "rezultat dodan u",
+      "role_to": "u",
+      "role_from": "od"
+    },
+    "attention": {
+      "live": "{name} je UŽIVO",
+      "prepare": "Pripremite {name}",
+      "prepare_meta": "Prođite kroz predsastavni tijek rada",
+      "role_requests_one": "{count} zahtjev za ulogu na čekanju",
+      "role_requests_many": "{count} zahtjeva za uloge na čekanju",
+      "role_requests_meta": "Pregledajte zahtjeve za uloge u Upravitelju korisnika",
+      "orgs_one": "{count} federacija čeka odobrenje",
+      "orgs_many": "{count} federacija čeka odobrenje",
+      "orgs_meta": "Pregledajte u Upravitelju korisnika → filtar organizacije"
+    }
   },
   "profile": {
     "title": "Moj profil",

@@ -255,7 +255,121 @@
     "tab_spectator": "Néző",
     "tab_other": "Több",
     "go_to_section": "Ugrás:",
-    "loading_data": "Betöltés…"
+    "loading_data": "Betöltés…",
+    "empty": {
+      "meet_manager_title": "Még nincs esemény",
+      "meet_manager_body": "Hozza létre első eseményét a Meet Managerben. Az előversenyes munkafolyamat végigvezeti a bejelentkezésen, a véletlenszerűsítésen, a jóváhagyáson és az indításon.",
+      "coach_title": "Még nincs hozzárendelt ugró",
+      "coach_body": "Kérje szervezete adminisztrátorát, hogy kapcsolja Önhöz az Ön által edzett ugrókat. Miután jóváhagyták, itt megtekintheti profiljaikat, egyéni csúcsaikat (PB-k) és az elemzéseket.",
+      "diver_title": "Nincsenek közelgő versenyek",
+      "diver_body": "Ha szövetsége felsorol egy közelgő eseményt, az itt megjelenik egy \"nevezések lezárásáig\" visszaszámlálóval. Nyissa meg a Versenyzői portált, hogy megtekinthesse a szövetsége által rendezett összes eseményt.",
+      "judge_title": "Még nincs hozzárendelt esemény",
+      "judge_body": "A meet manager a következő esemény előtt hozzárendeli Önt egy zsűrihez. Amikor ez megtörténik, itt megjelennek a beosztásai.",
+      "org_admin_title": "Minden csendes",
+      "org_admin_body": "Nincsenek élő események, a nevezési határidőn belül nincs közelgő verseny, és nincs függő szerepkérelem. Használja az alábbi GO TO linkeket a folytatáshoz."
+    },
+    "sections": {
+      "next_actions": "Következő lépések",
+      "your_events": "Az Ön eseményei",
+      "go_to": "Ugrás",
+      "live_squad": "Élő csapat",
+      "dive_list_workbench": "Ugrólista munkapult",
+      "your_divers": "Az Ön ugrói ({count})",
+      "waiting_for_you": "Önre várnak",
+      "live_now": "Most élő",
+      "as_referee": "Bíróként",
+      "your_tools": "Az Ön eszközei",
+      "your_assigned_events": "Az Önnek kiosztott események",
+      "meet_day_live": "Versenynap · most élő",
+      "your_next_meet": "Az Ön következő versenye",
+      "attention": "Mi igényli figyelmét",
+      "event_readiness": "Esemény előkészítettsége",
+      "recent_activity": "Legutóbbi tevékenységek (7 nap)",
+      "other_surfaces": "Egyéb felületek"
+    },
+    "tiles": {
+      "manager_title": "Meet Manager",
+      "manager_desc": "Versenyek és események létrehozása, a zsűri kijelölése, névlisták összeállítása.",
+      "control_title": "Irányító központ",
+      "control_desc": "Irányítsa a pontozást a verseny napján — aktív ugró, időmérő, tartások.",
+      "assign_judges_title": "Bírók kijelölése",
+      "assign_judges_desc": "Zsűrik előzetes kijelölése az eseményekre.",
+      "users_title": "Felhasználókezelő",
+      "users_desc": "Szerepkörök kiosztása, edzők kapcsolása ugrókhoz, fiókok kezelése.",
+      "audit_title": "Audit napló",
+      "audit_desc": "Szövetségi szintű tevékenység — pontok, szerepváltozások, szerkesztések.",
+      "clubs_title": "Klubok",
+      "clubs_desc": "Kezelje a szövetségében lévő klubokat.",
+      "teams_title": "Csapatok",
+      "teams_desc": "Csapatverseny névlistáinak és csapatonkénti ugrólistáinak beállítása.",
+      "coach_title": "Edzői irányítópult",
+      "coach_desc": "Ugrónkénti elemzések, ponttrendek, ugrólista sablonok.",
+      "compare_title": "Ugrók összehasonlítása",
+      "compare_desc": "Két ugró egymás mellett — statisztikák és egyéni csúcsok különbségei.",
+      "competitor_title": "Ugrólisták beküldése",
+      "competitor_desc": "Válassza ki ugrásait körönként minden esemény nevezési határideje előtt.",
+      "profile_title": "Saját profil",
+      "profile_desc": "Pontjai, egyéni csúcsai (PB-k) és a 13-widgetes analitikai irányítópult.",
+      "scoreboard_title": "Eredményjelző és eredmények",
+      "scoreboard_desc": "Nézze élőben a versenyeket, vagy böngésszen befejezett versenyek összefoglalóit.",
+      "dive_directory_title": "Ugráskatalógus",
+      "dive_directory_desc": "Keressen DD-ket a World Aquatics katalógusában.",
+      "sign_off_title": "Jóváhagyó kódok",
+      "sign_off_desc": "Adja meg a meet manager 6 számjegyű átadási kódját a Cut 3 megerősítéséhez."
+    },
+    "actions": {
+      "ready": "Kész",
+      "left": "{count} maradt",
+      "live": "Élő",
+      "fix_list": "Lista javítása",
+      "review": "Áttekintés",
+      "sign_off": "Jóváhagyás",
+      "open_event": "Esemény megnyitása",
+      "completed": "Befejezett",
+      "open_control": "Irányító központ megnyitása",
+      "rehearsal": "Próba"
+    },
+    "blurbs": {
+      "coach_divers": "Nyissa meg az Edzői irányítópultot az ugrónkénti teljes elemzések, ponttrendek és sablonok megtekintéséhez.",
+      "referee": "A meet managerek jóváhagyási kérelmeket küldenek az Ön eszközére, amikor előversenyes munkafolyamatuk eléri a sárga Jóváhagyás lépést. Ön saját eszközén is megadhat egy 6 számjegyű átadási kódot az alábbi hivatkozáson keresztül."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} forduló",
+      "closing_soon": "{event} · a nevezések hamarosan lezárulnak"
+    },
+    "referee": {
+      "signoff_requested_by": "Jóváhagyást kért: {name}",
+      "meet_manager_fallback": "meet manager"
+    },
+    "judge_panel": {
+      "analysis_title": "Bírói elemzés",
+      "analysis_desc": "Tekintse meg, hogyan viszonyul a zsűri által számított átlaghoz — elfogultság, kiesési arány, ország/klub/magasság/ugrócsoport szerinti bontás.",
+      "rounds_judges": "{rounds} forduló · {judges} bíró"
+    },
+    "diver_panel": {
+      "live_meta": "Koppintson a következő ugrás, az aktuális helyezés és a szükséges pontszám megtekintéséhez.",
+      "next_fallback": "Lépjen végig az ugrólista-készítőn."
+    },
+    "activity": {
+      "view_full_log": "Teljes audit napló megtekintése →",
+      "competitor_fallback": "Versenyző",
+      "score_update": "pont módosítva",
+      "score_delete": "pont törölve",
+      "score_add": "pont hozzáadva",
+      "role_to": "→",
+      "role_from": "←"
+    },
+    "attention": {
+      "live": "{name} most élő",
+      "prepare": "Készítse elő {name}",
+      "prepare_meta": "Vezesse végig az előversenyes munkafolyamatot",
+      "role_requests_one": "{count} szerepkérelem várakozik",
+      "role_requests_many": "{count} szerepkérelem várakozik",
+      "role_requests_meta": "Tekintse át a szerepkérelemeket a Felhasználókezelőben.",
+      "orgs_one": "{count} szövetség vár jóváhagyásra",
+      "orgs_many": "{count} szövetség vár jóváhagyásra",
+      "orgs_meta": "Tekintse át a Felhasználókezelőben → szervezet-szűrő"
+    }
   },
   "role": {
     "public": "Nyilvános",

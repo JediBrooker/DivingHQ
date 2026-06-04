@@ -255,7 +255,121 @@
     "tab_spectator": "Åskådare",
     "tab_other": "Mer",
     "go_to_section": "Gå till",
-    "loading_data": "Laddar…"
+    "loading_data": "Laddar…",
+    "empty": {
+      "meet_manager_title": "Inga evenemang ännu",
+      "meet_manager_body": "Skapa ert första evenemang i Meet Manager. För-mötesflödet leder er genom incheckning, slumpning, godkännande och start.",
+      "coach_title": "Inga hoppare länkade ännu",
+      "coach_body": "Be er organisationsadministratör att länka er till de hoppare ni handleder. När detta har godkänts ser ni deras profiler, personbästa och analyser här.",
+      "diver_title": "Inga kommande tävlingar",
+      "diver_body": "När er federation listar ett kommande evenemang visas det här med en nedräkning märkt \"entries close in\". Öppna Diver-portalen för att se alla evenemang som er federation arrangerar.",
+      "judge_title": "Inga tilldelade evenemang ännu",
+      "judge_body": "Meet Manager kommer att lägga till er i en panel inför nästa evenemang. Ni ser tilldelningarna här när det sker.",
+      "org_admin_title": "Allt lugnt",
+      "org_admin_body": "Inga pågående evenemang, inga kommande tävlingar inom anmälningsstoppets fönster och inga rollförfrågningar väntande. Använd GO TO-länkarna nedan för att gå vidare."
+    },
+    "sections": {
+      "next_actions": "Nästa åtgärder",
+      "your_events": "Era evenemang",
+      "go_to": "Gå till",
+      "live_squad": "Livetrupp",
+      "dive_list_workbench": "Arbetsyta för hopplistor",
+      "your_divers": "Era hoppare ({count})",
+      "waiting_for_you": "Väntar på er",
+      "live_now": "Pågår nu",
+      "as_referee": "Som domare",
+      "your_tools": "Era verktyg",
+      "your_assigned_events": "Era tilldelade evenemang",
+      "meet_day_live": "Tävlingsdag · pågår nu",
+      "your_next_meet": "Er nästa tävling",
+      "attention": "Vad som kräver er uppmärksamhet",
+      "event_readiness": "Evenemangsberedskap",
+      "recent_activity": "Senaste aktivitet (7 dagar)",
+      "other_surfaces": "Andra ytor"
+    },
+    "tiles": {
+      "manager_title": "Meet Manager",
+      "manager_desc": "Skapa tävlingar och evenemang, tilldela panelen och skapa laguppställningar.",
+      "control_title": "Kontrollrum",
+      "control_desc": "Hantera poängsättning på tävlingsdagen — aktiv hoppare, nedräkningstid, pauser.",
+      "assign_judges_title": "Tilldela domare",
+      "assign_judges_desc": "Tilldela paneler till evenemang inför tävlingen.",
+      "users_title": "Användarhantering",
+      "users_desc": "Tilldela roller, länka tränare till hoppare, hantera konton.",
+      "audit_title": "Revisionslogg",
+      "audit_desc": "Federationsomfattande aktivitet — poäng, rolländringar, redigeringar.",
+      "clubs_title": "Klubbar",
+      "clubs_desc": "Hantera klubbarna i er federation.",
+      "teams_title": "Lag",
+      "teams_desc": "Skapa laguppställningar för lagtävlingar och hopplistor per lag.",
+      "coach_title": "Tränarpanel",
+      "coach_desc": "Analys per hoppare, poängtrender och mallar för hopplistor.",
+      "compare_title": "Jämför hoppare",
+      "compare_desc": "Två hoppare sida vid sida — statistik och skillnader i personbästa.",
+      "competitor_title": "Lämna in hopplistor",
+      "competitor_desc": "Välj era hopp per omgång före varje evenemangs anmälningsstopp.",
+      "profile_title": "Min profil",
+      "profile_desc": "Poäng, personbästa och analysöversikt med 13 widgets.",
+      "scoreboard_title": "Resultattavla och resultat",
+      "scoreboard_desc": "Se tävlingar live eller bläddra i sammanfattningar från avslutade tävlingar.",
+      "dive_directory_title": "Hoppkatalog",
+      "dive_directory_desc": "Sök upp DD:n i World Aquatics-katalogen.",
+      "sign_off_title": "Sign-off-koder",
+      "sign_off_desc": "Ange Meet Managers 6-siffriga överlämningskod för att bekräfta Cut 3."
+    },
+    "actions": {
+      "ready": "Klar",
+      "left": "{count} kvar",
+      "live": "Live",
+      "fix_list": "Korrigera lista",
+      "review": "Granska",
+      "sign_off": "Godkänn",
+      "open_event": "Öppna evenemang",
+      "completed": "Avslutad",
+      "open_control": "Öppna Kontrollrum",
+      "rehearsal": "Genrep"
+    },
+    "blurbs": {
+      "coach_divers": "Öppna Tränarpanelen för fullständig analys per hoppare, poängtrender och mallar.",
+      "referee": "Meet managers skickar sign-off-förfrågningar till er enhet när deras för-mötesflöde når det gula Sign Off-steget. Ni kan också ange en 6-siffrig överlämningskod på er egen enhet via länken nedan."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} omgångar",
+      "closing_soon": "{event} · anmälningar stänger snart"
+    },
+    "referee": {
+      "signoff_requested_by": "Sign-off begärd av {name}",
+      "meet_manager_fallback": "meet manager"
+    },
+    "judge_panel": {
+      "analysis_title": "Domaranalys",
+      "analysis_desc": "Se hur ni står er i förhållande till panelens genomsnitt — bias, bortfallsfrekvens, per land/klubb/höjd/hoppgrupp.",
+      "rounds_judges": "{rounds} omgångar · {judges} domare"
+    },
+    "diver_panel": {
+      "live_meta": "Tryck för att se nästa hopp, aktuell placering och vad som krävs för att få poäng",
+      "next_fallback": "Gå igenom byggaren för hopplistor"
+    },
+    "activity": {
+      "view_full_log": "Visa hela revisionsloggen →",
+      "competitor_fallback": "Tävlande",
+      "score_update": "poäng ändrad i",
+      "score_delete": "poäng borttagen i",
+      "score_add": "poäng tillagd i",
+      "role_to": "till",
+      "role_from": "från"
+    },
+    "attention": {
+      "live": "{name} är LIVE",
+      "prepare": "Förbered {name}",
+      "prepare_meta": "Gå igenom för-mötesflödet",
+      "role_requests_one": "{count} rollförfrågan väntar",
+      "role_requests_many": "{count} rollförfrågningar väntar",
+      "role_requests_meta": "Granska rollförfrågningar i Användarhantering",
+      "orgs_one": "{count} federation väntar på godkännande",
+      "orgs_many": "{count} federationer väntar på godkännande",
+      "orgs_meta": "Granska i Användarhantering → organisationsfilter"
+    }
   },
   "role": {
     "public": "Offentlig",

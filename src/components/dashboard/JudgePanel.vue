@@ -1,9 +1,16 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
+import EventRow from './EventRow.vue'
 
 defineProps({
   judgeEvents: { type: Array, default: () => [] },
-  icons:       { type: Object, required: true },
+})
+
+const { t } = useI18n()
+
+const roundsJudges = (ev) => t('dashboard.judge_panel.rounds_judges', {
+  rounds: ev.total_rounds, judges: ev.number_of_judges,
 })
 </script>
 
@@ -11,11 +18,8 @@ defineProps({
   <section class="panel">
     <div v-if="!judgeEvents.length" class="dashboard-panel-empty">
       <div class="empty-state-icon">⚖️</div>
-      <div class="empty-state-title">No events assigned yet</div>
-      <div class="empty-state-body">
-        The meet manager will add you to a panel ahead of the next event.
-        You'll see assignments here when that happens.
-      </div>
+      <div class="empty-state-title">{{ $t('dashboard.empty.judge_title') }}</div>
+      <div class="empty-state-body">{{ $t('dashboard.empty.judge_body') }}</div>
     </div>
 
     <!-- Self-service Judge Analysis link — surfaces independently of
@@ -24,37 +28,27 @@ defineProps({
          award against the panel-kept mean (post World Aquatics trim,
          PART FOUR Article 13). -->
     <div class="panel-section">
-      <div class="panel-section-label">Your tools</div>
+      <div class="panel-section-label">{{ $t('dashboard.sections.your_tools') }}</div>
       <RouterLink to="/judge-profile" class="judge-tool-row">
         <span class="judge-tool-icon">📊</span>
         <span class="judge-tool-text">
-          <span class="judge-tool-title">Judge Analysis</span>
-          <span class="judge-tool-desc">
-            See how you track against the panel-kept mean — bias,
-            drop rate, per-country / club / height / dive group.
-          </span>
+          <span class="judge-tool-title">{{ $t('dashboard.judge_panel.analysis_title') }}</span>
+          <span class="judge-tool-desc">{{ $t('dashboard.judge_panel.analysis_desc') }}</span>
         </span>
         <span class="event-row-arrow" aria-hidden="true">→</span>
       </RouterLink>
     </div>
 
     <div v-if="judgeEvents.length" class="panel-section">
-      <div class="panel-section-label">Your assigned events</div>
-      <RouterLink
+      <div class="panel-section-label">{{ $t('dashboard.sections.your_assigned_events') }}</div>
+      <EventRow
         v-for="ev in judgeEvents"
         :key="ev.id"
         :to="`/judge?event=${ev.id}`"
-        :class="['event-row', `event-row-${ev.status.toLowerCase()}`]"
-      >
-        <span :class="['event-row-status', `evrs-${ev.status.toLowerCase()}`]">
-          {{ ev.status === 'Live' ? '🔴 LIVE' : ev.status === 'Upcoming' ? '📅' : '✓' }}
-        </span>
-        <span class="event-row-name">{{ ev.name }}</span>
-        <span class="event-row-meta">
-          {{ ev.total_rounds }} rounds · {{ ev.number_of_judges }} judges
-        </span>
-        <span class="event-row-arrow" aria-hidden="true">→</span>
-      </RouterLink>
+        :status="ev.status"
+        :name="ev.name"
+        :meta="roundsJudges(ev)"
+      />
     </div>
   </section>
 </template>

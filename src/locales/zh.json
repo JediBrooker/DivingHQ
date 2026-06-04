@@ -255,7 +255,121 @@
     "tab_spectator": "观众",
     "tab_other": "更多",
     "go_to_section": "前往",
-    "loading_data": "加载中…"
+    "loading_data": "加载中…",
+    "empty": {
+      "meet_manager_title": "暂无赛事",
+      "meet_manager_body": "在赛会管理器中创建您的第一个赛事。赛前工作流程会引导您完成签到、随机化、签核和开赛等步骤。",
+      "coach_title": "尚未关联任何跳水员",
+      "coach_body": "请让您机构的管理员将您关联到所指导的跳水员。一旦批准，您将在此查看他们的资料、最好成绩和分析数据。",
+      "diver_title": "暂无即将举行的比赛",
+      "diver_body": "当您的协会列出即将举行的赛事时，它会在此显示并带有一个 \"报名前关闭\" 的倒计时。打开跳水员门户以查看您的协会正在举办的所有赛事。",
+      "judge_title": "尚未分配任何赛事",
+      "judge_body": "赛会管理器将在下一场赛事之前将您加入评审小组。当发生分配时，您将在此看到相关信息。",
+      "org_admin_title": "一切平静",
+      "org_admin_body": "暂无正在进行的赛事、在报名截止窗口内的即将举行赛事，且无待处理的角色申请。使用下方的“前往”链接开始操作。"
+    },
+    "sections": {
+      "next_actions": "下一步操作",
+      "your_events": "您的赛事",
+      "go_to": "前往",
+      "live_squad": "现场队员",
+      "dive_list_workbench": "跳表工作台",
+      "your_divers": "您的跳水员 ({count})",
+      "waiting_for_you": "等待您的处理",
+      "live_now": "正在进行",
+      "as_referee": "作为裁判",
+      "your_tools": "您的工具",
+      "your_assigned_events": "分配给您的赛事",
+      "meet_day_live": "赛日 · 正在进行",
+      "your_next_meet": "您的下一个赛事",
+      "attention": "需要您关注的事项",
+      "event_readiness": "赛事准备情况",
+      "recent_activity": "近期活动（7 天）",
+      "other_surfaces": "其他场地"
+    },
+    "tiles": {
+      "manager_title": "赛会管理器",
+      "manager_desc": "创建赛会与赛事，设置评审小组，建立参赛名册。",
+      "control_title": "控制室",
+      "control_desc": "比赛当日掌控计分——激活参赛者、计时器、暂停与继续。",
+      "assign_judges_title": "安排裁判",
+      "assign_judges_desc": "在赛会前将裁判安排到各赛事座位。",
+      "users_title": "用户管理",
+      "users_desc": "授予角色、将教练与跳水员关联、管理账户。",
+      "audit_title": "审计日志",
+      "audit_desc": "协会范围的活动记录——得分、角色变更、编辑操作。",
+      "clubs_title": "俱乐部",
+      "clubs_desc": "管理您协会内的俱乐部。",
+      "teams_title": "队伍",
+      "teams_desc": "设置队伍赛事名册及每队的跳表。",
+      "coach_title": "教练面板",
+      "coach_desc": "按跳水员的完整分析、得分趋势与跳表模板。",
+      "compare_title": "比较跳水员",
+      "compare_desc": "并排比较两名跳水员——统计与最好成绩差异。",
+      "competitor_title": "提交跳表",
+      "competitor_desc": "在每场赛事的报名截止前，为每轮选择您的动作。",
+      "profile_title": "我的资料",
+      "profile_desc": "您的得分、最好成绩与 13 个小部件的分析面板。",
+      "scoreboard_title": "记分牌与成绩",
+      "scoreboard_desc": "观看直播赛事或浏览已完成赛事的回顾。",
+      "dive_directory_title": "动作目录",
+      "dive_directory_desc": "查找世界游泳动作目录中的难度系数（DD）。",
+      "sign_off_title": "签核代码",
+      "sign_off_desc": "输入赛会管理器的六位移交代码以确认 Cut 3。"
+    },
+    "actions": {
+      "ready": "已准备",
+      "left": "{count} 剩余",
+      "live": "进行中",
+      "fix_list": "修正列表",
+      "review": "审核",
+      "sign_off": "签核",
+      "open_event": "打开赛事",
+      "completed": "已完成",
+      "open_control": "打开控制室",
+      "rehearsal": "彩排"
+    },
+    "blurbs": {
+      "coach_divers": "打开教练面板以查看每位跳水员的完整分析、得分趋势和模板。",
+      "referee": "当赛会管理器的赛前工作流程进入黄色的签核步骤时，会向您的设备发送签核请求。您也可以通过下方链接，在您自己的设备上输入六位数的移交代码。"
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} 轮次",
+      "closing_soon": "{event} · 报名即将截止"
+    },
+    "referee": {
+      "signoff_requested_by": "由 {name} 请求签核",
+      "meet_manager_fallback": "赛会管理器"
+    },
+    "judge_panel": {
+      "analysis_title": "裁判分析",
+      "analysis_desc": "查看您相对于小组均值的表现 — 偏差、弃评率，以及按国家 / 俱乐部 / 身高 / 动作组的分析。",
+      "rounds_judges": "{rounds} 轮次 · {judges} 名裁判"
+    },
+    "diver_panel": {
+      "live_meta": "点击查看您的下一跳、当前名次，以及您需要的得分",
+      "next_fallback": "逐步使用跳表生成器"
+    },
+    "activity": {
+      "view_full_log": "查看完整审计日志 →",
+      "competitor_fallback": "参赛者",
+      "score_update": "得分已在",
+      "score_delete": "得分已在",
+      "score_add": "得分于",
+      "role_to": "至",
+      "role_from": "从"
+    },
+    "attention": {
+      "live": "{name} 正在进行",
+      "prepare": "准备 {name}",
+      "prepare_meta": "逐步完成赛前工作流程",
+      "role_requests_one": "有 {count} 条角色请求待处理",
+      "role_requests_many": "有 {count} 条角色请求待处理",
+      "role_requests_meta": "在用户管理中审核角色请求",
+      "orgs_one": "有 {count} 个协会等待批准",
+      "orgs_many": "有 {count} 个协会等待批准",
+      "orgs_meta": "在用户管理中审核 → 组织筛选"
+    }
   },
   "profile": {
     "title": "我的资料",
