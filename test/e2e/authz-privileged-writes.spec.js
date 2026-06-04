@@ -13,8 +13,9 @@
 //     isn't accidentally over-permissive
 //   * wrong-role: a user with no relevant role gets 403
 //   * cross-tenant: a same-role caller in another org gets 403
-//   * (coach-only) cross-federation: a coach with a link in Org A
-//     can't reach a target in Org B even though the link exists
+//   * (coach-only) cross-federation: a home-federation coach can
+//     write only when the diver's home org is on the event's
+//     participating list; wrong-org links still fail closed
 //
 // Serial because the helpers create org + users via the public
 // API which is rate-limited per-IP; running these in parallel
@@ -177,7 +178,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
     let orgA, orgB;
     let event, diver, diveId, coachOkToken, coachOkUserId;
     let stranger; // coach with no link
-    let crossFedCoachToken;
+    let wrongOrgCoachToken;
 
     test.beforeAll(async ({ request }) => {
       ({ orgA, orgB } = await buildTwoOrgFixture(request));
@@ -201,14 +202,13 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       // Stranger coach: same org, no link.
       stranger = await setup.insertUser({ orgId: orgA.orgId, role: "coach", fullName: "Stranger Coach" });
 
-      // Cross-fed coach: link exists, but it's pinned to Org B (a
+      // Wrong-org coach: link exists, but it's pinned to Org B (a
       // bogus link the operator over-shared). Even though the link
       // row exists, the coach.js gate scopes the lookup by event
-      // org → no match → 403. This is the post-sprint regression
-      // gate.
-      const crossFed = await setup.insertUser({ orgId: orgB.orgId, role: "coach", fullName: "CrossFed Coach" });
-      await setup.linkCoach({ coachId: crossFed.userId, diverId: diver.userId, orgId: orgB.orgId });
-      ({ token: crossFedCoachToken } = await setup.loginAs(request, crossFed.username));
+      // org or the diver's participating home org → no match → 403.
+      const wrongOrg = await setup.insertUser({ orgId: orgB.orgId, role: "coach", fullName: "Wrong Org Coach" });
+      await setup.linkCoach({ coachId: wrongOrg.userId, diverId: diver.userId, orgId: orgB.orgId });
+      ({ token: wrongOrgCoachToken } = await setup.loginAs(request, wrongOrg.username));
     });
 
     test.afterAll(async () => {
@@ -216,7 +216,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       if (orgB) await setup.deleteOrg(orgB.orgId);
     });
 
-    test("happy: linked coach submits a list — row count matches + stale rounds cleared", async ({ request }) => {
+    test("host-org happy: linked coach submits a list — row count matches + stale rounds cleared", async ({ request }) => {
       // Pre-seed an orphan round 2. We then submit only round 1
       // → the dive-list-submit helper should DELETE the stale R2
       // row so the diver isn't left with a ghost round.
@@ -276,12 +276,13 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       expect((await r.json()).error).toMatch(/linked/i);
     });
 
-    test("cross-fed link: coach with link in Org B can't touch event in Org A — regression gate", async ({ request }) => {
+    test("wrong-org link: coach with link in Org B can't touch Org A event — regression gate", async ({ request }) => {
       // The coach DOES have a coach_diver_links row for this diver
-      // — just in the wrong org. Before the sprint fix, the gate
-      // would have let this through.
+      // — just in the wrong org. The widened cross-fed branch must
+      // still fail closed unless link.org_id matches the diver's
+      // participating home org.
       const r = await request.post(`/api/coach/dive-lists/${event.id}/${diver.userId}`, {
-        headers: auth(crossFedCoachToken),
+        headers: auth(wrongOrgCoachToken),
         data: { dives: [{ round_number: 1, dive_id: diveId }] },
       });
       expect(r.status()).toBe(403);
@@ -308,7 +309,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
   test.describe("POST /api/coach/.../withdraw", () => {
     let orgA, orgB;
     let event, diver, diveId, coachToken, coachUserId;
-    let strangerToken, crossFedCoachToken;
+    let strangerToken, wrongOrgCoachToken;
 
     test.beforeAll(async ({ request }) => {
       ({ orgA, orgB } = await buildTwoOrgFixture(request));
@@ -335,9 +336,9 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       const stranger = await setup.insertUser({ orgId: orgA.orgId, role: "coach", fullName: "Stranger Coach W" });
       ({ token: strangerToken } = await setup.loginAs(request, stranger.username));
 
-      const crossFed = await setup.insertUser({ orgId: orgB.orgId, role: "coach", fullName: "CrossFed W" });
-      await setup.linkCoach({ coachId: crossFed.userId, diverId: diver.userId, orgId: orgB.orgId });
-      ({ token: crossFedCoachToken } = await setup.loginAs(request, crossFed.username));
+      const wrongOrg = await setup.insertUser({ orgId: orgB.orgId, role: "coach", fullName: "Wrong Org W" });
+      await setup.linkCoach({ coachId: wrongOrg.userId, diverId: diver.userId, orgId: orgB.orgId });
+      ({ token: wrongOrgCoachToken } = await setup.loginAs(request, wrongOrg.username));
     });
 
     test.afterAll(async () => {
@@ -360,14 +361,14 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       expect(check.rows[0].n).toBe(0);
     });
 
-    test("cross-fed link: rejected even with a real link in Org B", async ({ request }) => {
+    test("wrong-org link: rejected even with a real link in Org B", async ({ request }) => {
       const r = await request.post(`/api/coach/dive-lists/${event.id}/${diver.userId}/withdraw`, {
-        headers: auth(crossFedCoachToken), data: { reason: "wrong org link" },
+        headers: auth(wrongOrgCoachToken), data: { reason: "wrong org link" },
       });
       expect(r.status()).toBe(403);
     });
 
-    test("happy: linked coach withdraws — every row marked, audit logged", async ({ request }) => {
+    test("host-org happy: linked coach withdraws — every row marked, audit logged", async ({ request }) => {
       const r = await request.post(`/api/coach/dive-lists/${event.id}/${diver.userId}/withdraw`, {
         headers: auth(coachToken), data: { reason: "shoulder injury" },
       });
@@ -437,7 +438,133 @@ test.describe.serial("Privileged writes — authz boundary", () => {
   });
 
   // -------------------------------------------------------------
-  // 4. GET /api/coach/dive-lists/:event_id — cross-fed body-field
+  // 4. POST /api/coach/dive-lists/... — cross-federation coach
+  //    writes. A coach linked in the diver's home org can submit
+  //    and withdraw when that org is on event_participating_orgs;
+  //    a link in any other org still fails closed.
+  // -------------------------------------------------------------
+  test.describe("coach cross-federation write boundary", () => {
+    let homeOrg, hostOrg, otherOrg;
+    let event, diver, diveId, homeCoachUserId;
+    let homeCoachToken, wrongOrgCoachToken, noLinkCoachToken;
+
+    test.beforeAll(async ({ request }) => {
+      homeOrg = await setup.createOrgAndAdmin(request, { orgName: "Authz CrossFed Home", countryCode: "AUS" });
+      hostOrg = await setup.createOrgAndAdmin(request, { orgName: "Authz CrossFed Host", countryCode: "NZL" });
+      otherOrg = await setup.createOrgAndAdmin(request, { orgName: "Authz CrossFed Other", countryCode: "USA" });
+
+      event = await setup.createEvent(request, {
+        adminToken: hostOrg.adminToken,
+        name: "Authz Coach CrossFed",
+        total_rounds: 1,
+        number_of_judges: 5,
+        height: "3m",
+      });
+      await setup.pool.query(
+        `INSERT INTO event_participating_orgs (event_id, org_id)
+         VALUES ($1, $2)
+         ON CONFLICT (event_id, org_id) DO NOTHING`,
+        [event.id, homeOrg.orgId],
+      );
+
+      diveId = await setup.pickDiveId({ height: 3.0, dive_code: "101", position: "B" });
+      diver = await setup.insertUser({ orgId: homeOrg.orgId, role: "diver", fullName: "CrossFed Diver" });
+
+      const homeCoach = await setup.insertUser({ orgId: homeOrg.orgId, role: "coach", fullName: "CrossFed Home Coach" });
+      await setup.linkCoach({ coachId: homeCoach.userId, diverId: diver.userId, orgId: homeOrg.orgId });
+      homeCoachUserId = homeCoach.userId;
+      ({ token: homeCoachToken } = await setup.loginAs(request, homeCoach.username));
+
+      const wrongOrgCoach = await setup.insertUser({ orgId: otherOrg.orgId, role: "coach", fullName: "CrossFed Wrong Org Coach" });
+      await setup.linkCoach({ coachId: wrongOrgCoach.userId, diverId: diver.userId, orgId: otherOrg.orgId });
+      ({ token: wrongOrgCoachToken } = await setup.loginAs(request, wrongOrgCoach.username));
+
+      const noLinkCoach = await setup.insertUser({ orgId: homeOrg.orgId, role: "coach", fullName: "CrossFed No Link Coach" });
+      ({ token: noLinkCoachToken } = await setup.loginAs(request, noLinkCoach.username));
+    });
+
+    test.afterAll(async () => {
+      if (homeOrg) await setup.deleteOrg(homeOrg.orgId);
+      if (hostOrg) await setup.deleteOrg(hostOrg.orgId);
+      if (otherOrg) await setup.deleteOrg(otherOrg.orgId);
+    });
+
+    test("cross-fed coach submits under diver home org, then withdraws", async ({ request }) => {
+      const submit = await request.post(`/api/coach/dive-lists/${event.id}/${diver.userId}`, {
+        headers: auth(homeCoachToken),
+        data: { dives: [{ round_number: 1, dive_id: diveId }] },
+      });
+      expect(submit.status()).toBe(200);
+
+      // competitor_dive_lists has no org column: the entry is
+      // bound by competitor_id. The persisted competitor remains
+      // the home-org diver while the event remains hosted elsewhere,
+      // matching the diver-self cross-federation entry model.
+      const entry = await setup.pool.query(
+        `SELECT cdl.round_number,
+                cdl.withdrawn_at,
+                u.org_id AS competitor_org_id,
+                e.org_id AS event_org_id
+           FROM competitor_dive_lists cdl
+           JOIN users u ON u.id = cdl.competitor_id
+           JOIN events e ON e.id = cdl.event_id
+          WHERE cdl.event_id = $1 AND cdl.competitor_id = $2`,
+        [event.id, diver.userId],
+      );
+      expect(entry.rows).toHaveLength(1);
+      expect(entry.rows[0].round_number).toBe(1);
+      expect(entry.rows[0].withdrawn_at).toBeNull();
+      expect(entry.rows[0].competitor_org_id).toBe(homeOrg.orgId);
+      expect(entry.rows[0].event_org_id).toBe(hostOrg.orgId);
+
+      const withdraw = await request.post(`/api/coach/dive-lists/${event.id}/${diver.userId}/withdraw`, {
+        headers: auth(homeCoachToken),
+        data: { reason: "cross-fed scratch" },
+      });
+      expect(withdraw.status()).toBe(200);
+      expect((await withdraw.json()).rows_updated).toBe(1);
+
+      const withdrawn = await setup.pool.query(
+        `SELECT withdrawn_by_user_id, withdrawn_reason
+           FROM competitor_dive_lists
+          WHERE event_id = $1 AND competitor_id = $2`,
+        [event.id, diver.userId],
+      );
+      expect(withdrawn.rows[0].withdrawn_by_user_id).toBe(homeCoachUserId);
+      expect(withdrawn.rows[0].withdrawn_reason).toBe("cross-fed scratch");
+    });
+
+    test("unrelated link: non-host, non-participating org still gets 403 for submit and withdraw", async ({ request }) => {
+      const submit = await request.post(`/api/coach/dive-lists/${event.id}/${diver.userId}`, {
+        headers: auth(wrongOrgCoachToken),
+        data: { dives: [{ round_number: 1, dive_id: diveId }] },
+      });
+      expect(submit.status()).toBe(403);
+
+      const withdraw = await request.post(`/api/coach/dive-lists/${event.id}/${diver.userId}/withdraw`, {
+        headers: auth(wrongOrgCoachToken),
+        data: { reason: "wrong org link" },
+      });
+      expect(withdraw.status()).toBe(403);
+    });
+
+    test("no link: coach still gets 403 for submit and withdraw", async ({ request }) => {
+      const submit = await request.post(`/api/coach/dive-lists/${event.id}/${diver.userId}`, {
+        headers: auth(noLinkCoachToken),
+        data: { dives: [{ round_number: 1, dive_id: diveId }] },
+      });
+      expect(submit.status()).toBe(403);
+
+      const withdraw = await request.post(`/api/coach/dive-lists/${event.id}/${diver.userId}/withdraw`, {
+        headers: auth(noLinkCoachToken),
+        data: { reason: "no link" },
+      });
+      expect(withdraw.status()).toBe(403);
+    });
+  });
+
+  // -------------------------------------------------------------
+  // 5. GET /api/coach/dive-lists/:event_id — cross-fed body-field
   //    redaction. A coach with no diver actually entered AND in
   //    another federation must NOT see round_rules /
   //    prescribed_rounds / partner_name.
@@ -533,7 +660,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
   });
 
   // -------------------------------------------------------------
-  // 5. GET /api/coach/up-next — only returns rows for coach's
+  // 6. GET /api/coach/up-next — only returns rows for coach's
   //    linked divers. A coach with NO links gets an empty rows
   //    array even when another coach's divers are live.
   // -------------------------------------------------------------

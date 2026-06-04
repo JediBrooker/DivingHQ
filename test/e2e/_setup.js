@@ -345,11 +345,9 @@ async function setEventStatus(request, { adminToken, eventId, status }) {
   }
 }
 
-// Insert a coach_diver_links row. The link is scoped to an org
-// — the coach.js routes' tenant-boundary check requires the link's
-// org_id to match the event's org_id, so callers that want to
-// exercise the cross-federation gate pass the event's org here
-// rather than the coach's home org.
+// Insert a coach_diver_links row. The link is scoped to an org:
+// coach writes accept either the event host org or, for an invited
+// cross-federation diver, the diver's participating home org.
 async function linkCoach({ coachId, diverId, orgId, note = null }) {
   const r = await pool.query(
     `INSERT INTO coach_diver_links (coach_id, diver_id, org_id, note)

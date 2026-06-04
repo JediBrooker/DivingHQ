@@ -36,9 +36,10 @@ module.exports = function createCoachRouter({
   const router = express.Router();
 
   // Helper: assert that the logged-in coach has a coach_diver_links
-  // row for the target diver WITHIN the given event's org. Returns
-  // the diver row (with org_id) on success; throws an http-shaped
-  // error otherwise.
+  // row for the target diver within the event's host org, or within
+  // the diver's home federation when that federation is explicitly
+  // participating in this event. Returns the diver row (with org_id)
+  // on success; throws an http-shaped error otherwise.
   //
   // Tenant-boundary note: `coach_diver_links` is scoped per-org —
   // the same coach/diver pair can have separate link rows in
@@ -46,11 +47,22 @@ module.exports = function createCoachRouter({
   // coach with one legitimate link in Org A act on that diver in
   // Org B's events, where the coach has no granted authority.
   // The third arg (the event's org_id) is required and parameterised
-  // into the SELECT so the link MUST be in the same org as the
-  // event being acted on.
-  async function requireCoachLink(coachId, diverId, eventOrgId) {
+  // into the SELECT so the existing host-org branch still requires
+  // the link to be in the same org as the event being acted on.
+  //
+  // Cross-federation exception: if the diver's home federation is
+  // on event_participating_orgs, a coach link in that same home
+  // federation can act too. The participating org, diver's home org,
+  // and coach link org must all be the same value; do not collapse
+  // this into "any link to this diver".
+  async function requireCoachLink(coachId, diverId, eventOrgId, eventId) {
     if (!eventOrgId) {
       const err = new Error("requireCoachLink: eventOrgId is required");
+      err.status = 500;
+      throw err;
+    }
+    if (!eventId) {
+      const err = new Error("requireCoachLink: eventId is required");
       err.status = 500;
       throw err;
     }
@@ -59,8 +71,16 @@ module.exports = function createCoachRouter({
          FROM coach_diver_links link
          JOIN users u ON u.id = link.diver_id
         WHERE link.coach_id = $1 AND link.diver_id = $2
-          AND link.org_id   = $3`,
-      [coachId, diverId, eventOrgId],
+          AND (
+            link.org_id = $3
+            OR EXISTS (
+              SELECT 1 FROM event_participating_orgs epo
+               WHERE epo.event_id = $4
+                 AND epo.org_id   = u.org_id
+                 AND link.org_id  = u.org_id
+            )
+          )`,
+      [coachId, diverId, eventOrgId, eventId],
     );
     if (!r.rows.length) {
       const err = new Error("You aren't linked to this diver as a coach in this event's federation");
@@ -690,7 +710,7 @@ module.exports = function createCoachRouter({
         // Coach → diver link gate, scoped to the event's org.
         let diver;
         try {
-          diver = await requireCoachLink(req.user.id, diver_id, gate.event.org_id);
+          diver = await requireCoachLink(req.user.id, diver_id, gate.event.org_id, gate.event.id);
         } catch (err) {
           await client.query("ROLLBACK");
           return res.status(err.status || 500).json({ error: err.message });
@@ -817,7 +837,7 @@ module.exports = function createCoachRouter({
         // Org B's event.
         let diver;
         try {
-          diver = await requireCoachLink(req.user.id, diver_id, ev.rows[0].org_id);
+          diver = await requireCoachLink(req.user.id, diver_id, ev.rows[0].org_id, ev.rows[0].id);
         } catch (err) {
           await client.query("ROLLBACK");
           return res.status(err.status || 500).json({ error: err.message });
