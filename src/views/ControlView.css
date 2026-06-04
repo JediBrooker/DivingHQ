@@ -95,6 +95,118 @@
    consistent. */
 .pre-meet-head .wf-stepper { margin-bottom: 0; }
 
+.inline-audit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.inline-audit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.inline-audit-title {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-3);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.inline-audit-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-3);
+  color: var(--text-2);
+  font: inherit;
+  cursor: pointer;
+}
+.inline-audit-refresh:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--cyan);
+}
+.inline-audit-refresh:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.inline-audit-state {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+}
+.inline-audit-state.is-error {
+  color: var(--warn-fg);
+}
+.inline-audit-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+.inline-audit-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-3);
+}
+.inline-audit-row.is-score {
+  border-inline-start-color: var(--cyan);
+}
+.inline-audit-row.is-activity {
+  border-inline-start-color: var(--amber);
+}
+.inline-audit-kind {
+  align-self: start;
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.inline-audit-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.inline-audit-action {
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 800;
+  font-style: italic;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-audit-meta {
+  overflow: hidden;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .workflow-mode-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2290,6 +2402,66 @@
 }
 .dive-order-body {
   display: flex; flex-direction: column; min-height: 0;
+}
+.federation-roster-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 0.25rem;
+}
+.federation-roster-card {
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-3);
+  padding: 0.55rem 0.65rem;
+  min-width: 0;
+}
+.federation-roster-card.is-host {
+  border-inline-start-color: var(--cyan);
+}
+.federation-roster-card.is-participating {
+  border-inline-start-color: var(--amber);
+}
+.federation-roster-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.federation-roster-name {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  font-style: italic;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.federation-roster-scope {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.federation-roster-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-2);
+}
+.federation-roster-missing {
+  color: var(--ok-fg);
+}
+.federation-roster-missing.has-missing {
+  color: var(--warn-fg);
 }
 
 /* =========================================================

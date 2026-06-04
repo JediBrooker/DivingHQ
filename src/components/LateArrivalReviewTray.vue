@@ -12,13 +12,14 @@
  * Visibility: renders nothing when there are no pending rows, so
  * a quiet meet shows no chrome.
  */
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps({
   /** Scope the queue to a single event. Omit to show every flagged row in the operator's org. */
   eventId: { type: String, default: null },
 })
+const emit = defineEmits(['loaded'])
 
 const auth = useAuthStore()
 const rows = ref([])
@@ -37,6 +38,11 @@ async function loadRows() {
     errMsg.value = err.message
     rows.value = []
   } finally {
+    emit('loaded', {
+      eventId: props.eventId,
+      count: rows.value.length,
+      rows: rows.value,
+    })
     loading.value = false
   }
 }
@@ -60,6 +66,9 @@ let pollTimer = null
 onMounted(() => {
   loadRows()
   pollTimer = setInterval(loadRows, 30000)
+})
+watch(() => props.eventId, () => {
+  loadRows()
 })
 onBeforeUnmount(() => {
   if (pollTimer) clearInterval(pollTimer)

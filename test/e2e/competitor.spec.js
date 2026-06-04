@@ -125,6 +125,9 @@ test("diver registers, gates on email verification, then submits a dive list", a
   const roster = await rosterRead.json();
   expect(roster).toHaveLength(2);
   expect(roster[0].full_name).toBe("Diver Self-Reg");
+  expect(roster[0].competitor_org_id).toBe(orgId);
+  expect(typeof roster[0].competitor_org_name).toBe("string");
+  expect(roster[0].competitor_org_name.length).toBeGreaterThan(0);
   expect(Number(roster[0].round_number)).toBe(1);
   expect(roster[0].dive_code).toBe("101");
   expect(Number(roster[1].round_number)).toBe(2);

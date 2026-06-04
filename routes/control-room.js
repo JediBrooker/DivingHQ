@@ -10,6 +10,7 @@
 //   PUT    /api/events/:id/attendance/:competitorId  set status
 //   POST   /api/events/:id/roster                late-entry add
 //   POST   /api/events/:id/roster/import         CSV bulk import
+//   GET    /api/events/:id/audit-recent          risky workflow audit rows
 //   GET    /api/events/:id/history               public dive history
 //
 // Reorder + randomize are locked once an event flips out of
@@ -144,7 +145,10 @@ module.exports = function createControlRoomRouter({
          SELECT cdl.id AS dive_list_id,
                 cdl.display_order, cdl.withdrawn_at,
                 COALESCE(ordered.round_order, NULL) AS round_order,
-                u.id AS competitor_id, u.full_name, o.country_code,
+                u.id AS competitor_id, u.full_name,
+                o.id AS competitor_org_id,
+                o.name AS competitor_org_name,
+                o.country_code,
                 cl.name AS club_name, cl.short_code AS club_code,
                 cdl.partner_id, pu.full_name AS partner_name, po.country_code AS partner_country,
                 cdl.team_id, t.name AS team_name, t.short_code AS team_code,
@@ -197,6 +201,102 @@ module.exports = function createControlRoomRouter({
     } catch (err) {
       console.error("[Roster Error]", err.message);
       res.status(500).json([]);
+    }
+  });
+
+  // -------------------------------------------------------------
+  // GET /api/events/:id/audit-recent — event-scoped audit rows
+  // for Control Room risky workflows. The org-wide audit feed is
+  // org-admin only; Control Room operators also include meet
+  // managers/referees, so this route keeps the same event-org
+  // gate as roster mutations and exposes only rows tied to the
+  // selected event.
+  // -------------------------------------------------------------
+  router.get("/api/events/:id/audit-recent", requireMeetController, async (req, res) => {
+    try {
+      if (!(await ensureEventOrgGate(req, res, "id"))) return;
+      const limit = clampAuditLimit(req.query.limit);
+      const r = await pool.query(
+        `WITH score_rows AS (
+           SELECT
+             'score'::text AS kind,
+             a.id::text AS id,
+             a.created_at,
+             a.action::text AS action,
+             a.reason,
+             a.round_number,
+             a.old_score,
+             a.new_score,
+             comp.full_name AS competitor_name,
+             jud.full_name AS judge_name,
+             act.full_name AS actor_name,
+             NULL::text AS entity_type,
+             NULL::text AS entity_name,
+             NULL::jsonb AS metadata
+           FROM score_audit_log a
+           LEFT JOIN users comp ON comp.id = a.competitor_id
+           LEFT JOIN users jud  ON jud.id  = a.judge_id
+           LEFT JOIN users act  ON act.id  = a.actor_user_id
+           WHERE a.event_id = $1
+             AND a.action::text <> 'insert'
+         ),
+         activity_rows AS (
+           SELECT
+             'activity'::text AS kind,
+             a.id::text AS id,
+             a.created_at,
+             a.action,
+             a.note AS reason,
+             NULL::int AS round_number,
+             NULL::numeric AS old_score,
+             NULL::numeric AS new_score,
+             NULL::text AS competitor_name,
+             NULL::text AS judge_name,
+             act.full_name AS actor_name,
+             a.entity_type,
+             a.entity_name,
+             a.metadata
+           FROM audit_log a
+           LEFT JOIN users act ON act.id = a.actor_id
+           WHERE (
+             a.entity_id = $1
+             OR (
+               (a.metadata->>'event_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+               AND (a.metadata->>'event_id')::uuid = $1
+             )
+           )
+             AND (
+               a.action IN (
+                 'coach.submit_dive_list',
+                 'coach.withdraw_dive_list',
+                 'event.workflow_reset',
+                 'late_arrival.allowed',
+                 'late_arrival.denied',
+                 'reserve.promoted',
+                 'reserve.replaced_diver',
+                 'roster.dive_edited',
+                 'roster.late_entry_added',
+                 'roster.reinstated',
+                 'roster.withdrew'
+               )
+               OR a.action LIKE 'event.dive_off_%'
+               OR a.action LIKE 'event.%_seeded'
+             )
+         )
+         SELECT *
+         FROM (
+           SELECT * FROM score_rows
+           UNION ALL
+           SELECT * FROM activity_rows
+         ) rows
+         ORDER BY created_at DESC, id DESC
+         LIMIT $2`,
+        [req.params.id, limit],
+      );
+      res.json(r.rows);
+    } catch (err) {
+      console.error("[Control Audit Recent Error]", err.message);
+      res.status(500).json({ error: "Failed to load recent audit" });
     }
   });
 
@@ -1574,3 +1674,9 @@ module.exports = function createControlRoomRouter({
 
   return router;
 };
+
+function clampAuditLimit(v) {
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n)) return 12;
+  return Math.min(50, Math.max(1, n));
+}

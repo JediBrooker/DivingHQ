@@ -78,9 +78,23 @@ test("admin creates event, adds roster, flips status, reads it back", async ({
   expect(roster).toHaveLength(1);
   const row = roster[0];
   expect(row.full_name).toBe("Diver Late-Add");
+  expect(row.competitor_org_id).toBe(orgId);
+  expect(typeof row.competitor_org_name).toBe("string");
+  expect(row.competitor_org_name.length).toBeGreaterThan(0);
   expect(row.dive_code).toBe("101");
   expect(row.position).toBe("B");
   expect(Number(row.round_number)).toBe(1);
+
+  const auditRead = await request.get(`/api/events/${eventId}/audit-recent?limit=5`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  expect(auditRead.status()).toBe(200);
+  const auditRows = await auditRead.json();
+  expect(auditRows.some((auditRow) =>
+    auditRow.kind === "activity" &&
+    auditRow.action === "roster.late_entry_added" &&
+    auditRow.metadata?.event_id === eventId,
+  )).toBeTruthy();
 
   // ---- Flip to Completed and confirm the status sticks ----
   await setup.setEventStatus(request, { adminToken, eventId, status: "Completed" });

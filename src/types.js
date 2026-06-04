@@ -248,6 +248,8 @@
  * @property {string|null} withdrawn_at      ISO timestamp or null
  * @property {string}      competitor_id
  * @property {string}      full_name
+ * @property {string}      competitor_org_id
+ * @property {string}      competitor_org_name
  * @property {string}      [country_code]
  * @property {string}      [club_name]
  * @property {string}      [club_code]
@@ -273,6 +275,30 @@
  * @property {string}      position
  * @property {string}      event_type
  * @property {number}      number_of_judges
+ */
+
+// ---- /api/events/:id/audit-recent -------------------------------
+
+/**
+ * @typedef {Object} ControlAuditRow
+ * Recent event-scoped audit row shown in Control Room next to risky
+ * workflows. Score rows come from score_audit_log; activity rows come
+ * from audit_log.
+ *
+ * @property {'score'|'activity'} kind
+ * @property {string}      id
+ * @property {string}      created_at
+ * @property {string}      action
+ * @property {string|null} [reason]
+ * @property {number|null} [round_number]
+ * @property {number|null} [old_score]
+ * @property {number|null} [new_score]
+ * @property {string|null} [competitor_name]
+ * @property {string|null} [judge_name]
+ * @property {string|null} [actor_name]
+ * @property {string|null} [entity_type]
+ * @property {string|null} [entity_name]
+ * @property {Object|null} [metadata]
  */
 
 /**
