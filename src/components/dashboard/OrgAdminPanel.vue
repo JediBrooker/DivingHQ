@@ -9,6 +9,7 @@ import { RouterLink } from 'vue-router'
 import { Calendar, MonitorPlay, UserCog, ScrollText, Building2, Users, Gavel } from '@lucide/vue'
 import GotoTile from './GotoTile.vue'
 import WorkflowCard from './WorkflowCard.vue'
+import DashboardEmptyState from './DashboardEmptyState.vue'
 
 const props = defineProps({
   attentionCards:  { type: Array, default: () => [] },
@@ -35,11 +36,12 @@ function scoreVerb(action) {
 
 <template>
   <section class="panel">
-    <div v-if="!attentionCards.length && !workflowActions.length && !recentActivity.length" class="dashboard-panel-empty">
-      <div class="empty-state-icon">📊</div>
-      <div class="empty-state-title">{{ $t('dashboard.empty.org_admin_title') }}</div>
-      <div class="empty-state-body">{{ $t('dashboard.empty.org_admin_body') }}</div>
-    </div>
+    <DashboardEmptyState
+      v-if="!attentionCards.length && !workflowActions.length && !recentActivity.length"
+      :icon="Building2"
+      :title="$t('dashboard.empty.org_admin_title')"
+      :body="$t('dashboard.empty.org_admin_body')"
+    />
 
     <div v-if="attentionCards.length" class="panel-section">
       <div class="panel-section-label">{{ $t('dashboard.sections.attention') }}</div>

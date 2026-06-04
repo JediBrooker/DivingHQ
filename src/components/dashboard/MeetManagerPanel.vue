@@ -4,6 +4,7 @@ import { Calendar, MonitorPlay, Gavel } from '@lucide/vue'
 import GotoTile from './GotoTile.vue'
 import WorkflowCard from './WorkflowCard.vue'
 import EventRow from './EventRow.vue'
+import DashboardEmptyState from './DashboardEmptyState.vue'
 
 const props = defineProps({
   operatorEvents: { type: Array, default: () => [] },
@@ -32,11 +33,12 @@ function eventMeta(ev) {
 
 <template>
   <section class="panel">
-    <div v-if="!operatorEvents.length && !workflowActions.length" class="dashboard-panel-empty">
-      <div class="empty-state-icon">📅</div>
-      <div class="empty-state-title">{{ $t('dashboard.empty.meet_manager_title') }}</div>
-      <div class="empty-state-body">{{ $t('dashboard.empty.meet_manager_body') }}</div>
-    </div>
+    <DashboardEmptyState
+      v-if="!operatorEvents.length && !workflowActions.length"
+      :icon="Calendar"
+      :title="$t('dashboard.empty.meet_manager_title')"
+      :body="$t('dashboard.empty.meet_manager_body')"
+    />
 
     <div v-if="workflowActions.length" class="panel-section">
       <div class="panel-section-label">{{ $t('dashboard.sections.next_actions') }}</div>
