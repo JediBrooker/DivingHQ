@@ -431,6 +431,20 @@ Project lives at `~/Code/DivingHQ` (local disk, not Google
 Drive — an earlier copy on Drive caused 2-5 min Node module-load
 hangs). Cold boot is ~1 second; full local-CI cycle is ~3 min.
 
+The fast local verification wrapper is:
+
+```bash
+npm run verify:local
+```
+
+It runs `npm run lint`, `npm run build`, and `npm run test:safe`
+in sequence. To append a focused Playwright check, pass `--e2e`
+followed by normal Playwright args:
+
+```bash
+npm run verify:local -- --e2e test/e2e/authz-privileged-writes.spec.js --project=chromium
+```
+
 The local equivalent of `.github/workflows/ci.yml`:
 
 ```bash
