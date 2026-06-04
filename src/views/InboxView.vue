@@ -22,6 +22,7 @@
 // ?since_id=<uuid>.
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { showError, showSuccess } from '@/composables/useNotify'
 import EmptyState from '@/components/EmptyState.vue'
@@ -29,6 +30,7 @@ import { fmtRelative } from '@/lib/format'
 
 const auth = useAuthStore()
 const router = useRouter()
+const { t } = useI18n()
 
 const rows         = ref([])
 const loading      = ref(false)
@@ -36,12 +38,14 @@ const showRead     = ref(false)
 const categoryFilter = ref('all')
 const laneFilter = ref('all')
 
+// Lane labels resolve through i18n in laneCounts (below) so a
+// locale switch re-renders them; keep only the stable id + key here.
 const LANE_DEFS = [
-  { id: 'all', label: 'All' },
-  { id: 'action', label: 'Action required' },
-  { id: 'team', label: 'Coach & team' },
-  { id: 'results', label: 'Results' },
-  { id: 'ops', label: 'Operations' },
+  { id: 'all', labelKey: 'inbox.lane_all' },
+  { id: 'action', labelKey: 'inbox.lane_action' },
+  { id: 'team', labelKey: 'inbox.lane_team' },
+  { id: 'results', labelKey: 'inbox.lane_results' },
+  { id: 'ops', labelKey: 'inbox.lane_ops' },
 ]
 
 const CATEGORY_LANES = {
@@ -68,7 +72,7 @@ async function load() {
   try {
     rows.value = await auth.apiFetch('/api/notifications/me?limit=100')
   } catch (err) {
-    showError(`Failed to load inbox: ${err.message}`)
+    showError(t('inbox.load_failed', { error: err.message }))
   } finally {
     loading.value = false
   }
@@ -90,7 +94,11 @@ const laneCounts = computed(() => {
     const lane = CATEGORY_LANES[row.category] || 'ops'
     counts.set(lane, (counts.get(lane) || 0) + 1)
   }
-  return LANE_DEFS.map((lane) => ({ ...lane, count: counts.get(lane.id) || 0 }))
+  return LANE_DEFS.map((lane) => ({
+    id: lane.id,
+    label: t(lane.labelKey),
+    count: counts.get(lane.id) || 0,
+  }))
 })
 
 const filtered = computed(() => {
@@ -121,7 +129,7 @@ async function markRead(row) {
   } catch {
     row.status = 'sent'
     row.acknowledged_at = null
-    showError('Failed to mark as read')
+    showError(t('inbox.mark_read_failed'))
   }
 }
 
@@ -138,9 +146,9 @@ async function markAllRead() {
         auth.apiFetch(`/api/notifications/${r.id}/acknowledge`, { method: 'POST' }),
       ),
     )
-    showSuccess(`Marked ${unread.length} notification${unread.length === 1 ? '' : 's'} read`)
+    showSuccess(t('inbox.marked_read', { count: unread.length }))
   } catch {
-    showError('Some acknowledgements failed — refresh to see latest state')
+    showError(t('inbox.ack_partial_failed'))
   }
 }
 
@@ -160,29 +168,35 @@ function clickRow(row) {
 // uses. Reuse the shared helper from @/lib/format.
 const fmtTime = fmtRelative
 
+// Category → i18n leaf under inbox.cat.*. The keys are sanitised
+// (dots → underscores) because the raw category ids contain dots
+// (e.g. "coach.diver_up_next") which vue-i18n would read as a
+// nested path. Unknown categories fall back to the raw id.
+const CATEGORY_LABEL_KEYS = {
+  signoff_request:             'signoff_request',
+  role_decision:               'role_decision',
+  role_request:                'role_request',
+  event_started:               'event_started',
+  event_live:                  'event_live',
+  event_results_posted:        'event_results_posted',
+  international_invite:         'international_invite',
+  referee_signoff:             'referee_signoff',
+  'coach.diver_up_next':       'coach_diver_up_next',
+  'coach.dive_list_submitted': 'coach_dive_list_submitted',
+  'coach.dive_list_withdrawn': 'coach_dive_list_withdrawn',
+  'synchro.partner_invite':    'synchro_partner_invite',
+  dive_list_advanced:          'dive_list_advanced',
+  dive_list_reserve:           'dive_list_reserve',
+  reserve_promoted:            'reserve_promoted',
+  h2h_seeded:                  'h2h_seeded',
+  sf_seeded:                   'sf_seeded',
+  f_seeded:                    'f_seeded',
+  generic:                     'generic',
+}
+
 function categoryLabel(cat) {
-  const map = {
-    signoff_request:        'Sign-off',
-    role_decision:          'Role',
-    role_request:           'Role request',
-    event_started:          'Event',
-    event_live:             'Event live',
-    event_results_posted:   'Results',
-    international_invite:   'Invitation',
-    referee_signoff:        'Sign-off',
-    'coach.diver_up_next':  'Up next',
-    'coach.dive_list_submitted': 'Coach list',
-    'coach.dive_list_withdrawn': 'Coach withdrawal',
-    'synchro.partner_invite': 'Synchro pairing',
-    dive_list_advanced:     'Advanced',
-    dive_list_reserve:      'Reserve',
-    reserve_promoted:       'Reserve promoted',
-    h2h_seeded:             'H2H seeded',
-    sf_seeded:              'Semi seeded',
-    f_seeded:               'Final seeded',
-    generic:                'Notice',
-  }
-  return map[cat] || cat
+  const key = CATEGORY_LABEL_KEYS[cat]
+  return key ? t(`inbox.cat.${key}`) : cat
 }
 
 onMounted(load)
@@ -193,11 +207,10 @@ onMounted(load)
     <div class="page-header">
       <div>
         <div class="page-label">{{ $t('inbox.title') }}</div>
-        <h1 class="page-title">Notifications</h1>
+        <h1 class="page-title">{{ $t('inbox.heading') }}</h1>
         <div class="page-sub">
-          Every push notification + in-app banner sent to your account, kept
-          for the retention window so a missed phone push isn't lost.
-          <span v-if="unreadCount" class="page-sub-strong"> · {{ unreadCount }} unread</span>
+          {{ $t('inbox.subtitle') }}
+          <span v-if="unreadCount" class="page-sub-strong"> · {{ $t('inbox.unread_count', { count: unreadCount }) }}</span>
         </div>
       </div>
       <div class="header-actions">
@@ -207,7 +220,7 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="lane-strip" aria-label="Notification lanes">
+    <div class="lane-strip" :aria-label="$t('inbox.lanes_aria')">
       <button v-for="lane in laneCounts" :key="lane.id"
               type="button"
               :class="['lane-card', laneFilter === lane.id ? 'active' : '']"
@@ -219,7 +232,7 @@ onMounted(load)
 
     <div class="filters">
       <div class="field-inline">
-        <span class="filter-label">Show</span>
+        <span class="filter-label">{{ $t('inbox.show') }}</span>
         <button type="button"
                 :class="['chip', !showRead ? 'chip-active' : '']"
                 @click="showRead = false">
@@ -253,19 +266,18 @@ onMounted(load)
       icon="📭"
       v-tip="$t('inbox.empty_title')"
       :body="$t('inbox.empty_body')"
-      action-label="Open dashboard"
+      :action-label="$t('inbox.open_dashboard')"
       action-to="/dashboard"
     />
     <EmptyState
       v-else-if="!filtered.length && !showRead && !unreadCount"
       icon="✓"
-      v-tip="'All caught up'"
-      body="Nothing unread. Toggle the All filter above to revisit
-            anything you've already acknowledged."
+      v-tip="$t('inbox.caught_up_title')"
+      :body="$t('inbox.caught_up_body')"
       variant="inline"
     />
     <div v-else-if="!filtered.length" class="empty">
-      No notifications match the current filters.
+      {{ $t('inbox.no_match') }}
     </div>
 
     <ul v-else class="inbox-list">
@@ -277,11 +289,11 @@ onMounted(load)
           <div class="inbox-row-head">
             <span class="inbox-row-cat">{{ categoryLabel(r.category) }}</span>
             <span class="inbox-row-time">{{ fmtTime(r.created_at) }}</span>
-            <span v-if="r.status !== 'acknowledged'" class="inbox-unread-dot" aria-label="Unread"></span>
+            <span v-if="r.status !== 'acknowledged'" class="inbox-unread-dot" :aria-label="$t('inbox.unread_aria')"></span>
           </div>
           <div class="inbox-row-title">{{ r.title }}</div>
           <div v-if="r.body" class="inbox-row-text">{{ r.body }}</div>
-          <div v-if="r.action_url" class="inbox-row-action">{{ r.action_url.startsWith('/') ? `Open ${r.action_url}` : 'Open' }} →</div>
+          <div v-if="r.action_url" class="inbox-row-action">{{ r.action_url.startsWith('/') ? $t('inbox.open_path', { path: r.action_url }) : $t('inbox.open') }} →</div>
         </div>
       </li>
     </ul>

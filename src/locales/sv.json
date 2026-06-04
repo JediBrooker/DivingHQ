@@ -288,7 +288,7 @@
       "other_surfaces": "Andra ytor"
     },
     "tiles": {
-      "manager_title": "Meet Manager",
+      "manager_title": "Tävlingsansvarig",
       "manager_desc": "Skapa tävlingar och evenemang, tilldela panelen och skapa laguppställningar.",
       "control_title": "Kontrollrum",
       "control_desc": "Hantera poängsättning på tävlingsdagen — aktiv hoppare, nedräkningstid, pauser.",
@@ -339,7 +339,7 @@
     },
     "referee": {
       "signoff_requested_by": "Sign-off begärd av {name}",
-      "meet_manager_fallback": "meet manager"
+      "meet_manager_fallback": "tävlingsansvarig"
     },
     "judge_panel": {
       "analysis_title": "Domaranalys",
@@ -698,7 +698,49 @@
     "mark_all_read": "Markera allt som läst",
     "filter_unread": "Endast olästa",
     "filter_all": "Alla",
-    "filter_category": "Kategori"
+    "filter_category": "Kategori",
+    "heading": "Meddelanden",
+    "subtitle": "Varje pushavisering och in‑app-banner som skickas till ert konto sparas under bevarandeperioden så att en missad push inte går förlorad.",
+    "unread_count": "{count} olästa",
+    "show": "Visa",
+    "lanes_aria": "Notifieringskanaler",
+    "lane_all": "Alla",
+    "lane_action": "Åtgärd krävs",
+    "lane_team": "Tränare & lag",
+    "lane_results": "Resultat",
+    "lane_ops": "Operationer",
+    "open_dashboard": "Öppna instrumentpanelen",
+    "caught_up_title": "Allt läst",
+    "caught_up_body": "Inget oläst. Växla filtret 'Alla' ovan för att återbesöka något ni redan har bekräftat.",
+    "no_match": "Inga meddelanden matchar de aktuella filtren.",
+    "open": "Öppna",
+    "open_path": "Öppna {path}",
+    "unread_aria": "Oläst",
+    "load_failed": "Kunde inte ladda inkorgen: {error}",
+    "marked_read": "Markerade {count} som lästa",
+    "mark_read_failed": "Kunde inte markera som läst",
+    "ack_partial_failed": "Vissa bekräftelser misslyckades — uppdatera för att se senaste statusen",
+    "cat": {
+      "signoff_request": "Godkännande",
+      "role_decision": "Roll",
+      "role_request": "Begäran om roll",
+      "event_started": "Evenemang",
+      "event_live": "Evenemang pågår",
+      "event_results_posted": "Resultat",
+      "international_invite": "Inbjudan",
+      "referee_signoff": "Godkännande",
+      "coach_diver_up_next": "Nästa",
+      "coach_dive_list_submitted": "Tränarlista",
+      "coach_dive_list_withdrawn": "Tränarlista indragen",
+      "synchro_partner_invite": "Synkroparning",
+      "dive_list_advanced": "Avancerad",
+      "dive_list_reserve": "Reserv",
+      "reserve_promoted": "Reserv uppflyttad",
+      "h2h_seeded": "H2H seedad",
+      "sf_seeded": "Semi seedad",
+      "f_seeded": "Final seedad",
+      "generic": "Meddelande"
+    }
   },
   "compare": {
     "title": "Jämför hoppare",

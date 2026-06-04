@@ -492,9 +492,25 @@ module.exports = function createCoachRouter({
                 OR ml.link_org_id = e.org_id
               )
          ),
+         -- write_scope deliberately MIRRORS the requireCoachLink write
+         -- gate (see ~line 59): a coach may write when their link is in
+         -- the event's host org, OR when the diver's home federation is
+         -- invited and the coach's link lives in that same home org.
+         -- This CTE only computes the eligibility BADGES the SPA shows;
+         -- the actual write is still gated by requireCoachLink on every
+         -- submit/withdraw. Keep the two in lock-step — if they drift,
+         -- a badge will promise a write the gate then rejects (or hide
+         -- one it would allow). It is advisory, never authoritative.
          write_scope AS (
            SELECT e.id AS event_id,
+                  -- Coach's link is in the event's HOST org → host-fed coach.
                   BOOL_OR(ml.link_org_id = e.org_id) AS coach_host_federation,
+                  -- Genuine cross-federation coach: the diver's home org is
+                  -- on the participating list (epo.org_id IS NOT NULL), the
+                  -- coach's link lives in that SAME home org (link = diver
+                  -- org), and that org is NOT the host (else it's just the
+                  -- host-fed case above). All three must hold together — do
+                  -- not collapse to "any link to this diver".
                   BOOL_OR(
                     epo.org_id IS NOT NULL
                     AND ml.link_org_id = ml.diver_org_id
