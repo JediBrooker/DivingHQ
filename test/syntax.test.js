@@ -105,6 +105,42 @@ test("Vue templates use v-tip instead of native title attributes", () => {
   assert.deepEqual(offenders, []);
 });
 
+test("CSS custom properties used by Vue/CSS files are defined", () => {
+  const srcDir = path.join(__dirname, "..", "src");
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile() && /\.(css|vue)$/.test(entry.name)) files.push(full);
+    }
+  };
+  walk(srcDir);
+
+  const defined = new Set();
+  const used = new Map();
+  for (const file of files) {
+    const rel = path.relative(path.join(__dirname, ".."), file);
+    const text = fs.readFileSync(file, "utf8");
+    for (const match of text.matchAll(/var\(\s*(--[a-zA-Z0-9_-]+)/g)) {
+      if (!used.has(match[1])) used.set(match[1], []);
+      used.get(match[1]).push(rel);
+    }
+    for (const match of text.matchAll(/(?:^|[;{\s])(--[a-zA-Z0-9_-]+)\s*:/g)) {
+      defined.add(match[1]);
+    }
+    for (const match of text.matchAll(/['"](--[a-zA-Z0-9_-]+)['"]\s*:/g)) {
+      defined.add(match[1]);
+    }
+  }
+
+  const missing = [...used.keys()]
+    .filter((name) => !defined.has(name))
+    .sort()
+    .map((name) => `${name}: ${[...new Set(used.get(name))].sort().join(", ")}`);
+  assert.deepEqual(missing, []);
+});
+
 test("scoreCategory boundaries match World Aquatics buckets", () => {
   // We can't import the .js composable directly under CommonJS, so
   // re-implement the same boundaries here. If they ever drift, this
