@@ -334,6 +334,15 @@
 // ---- /api/coach/events ------------------------------------------
 
 /**
+ * @typedef {Object} CoachEligibility
+ * @property {boolean}     host_federation
+ * @property {boolean}     invited_federation
+ * @property {boolean}     can_submit
+ * @property {boolean}     can_withdraw
+ * @property {boolean}     read_only
+ */
+
+/**
  * @typedef {Object} CoachEventRow
  * @property {string}      event_id
  * @property {string}      event_name
@@ -346,6 +355,7 @@
  * @property {string|null} [dive_list_locks_at]
  * @property {number}      total_rounds
  * @property {number}      squad_entered_count
+ * @property {CoachEligibility} coach_eligibility
  */
 
 // ---- /api/coach/dive-lists/:event_id ----------------------------
@@ -375,6 +385,7 @@
  * @property {string|null} [withdrawn_at]
  * @property {boolean}     is_reserve
  * @property {number|null} [reserve_position]
+ * @property {CoachEligibility} coach_eligibility
  */
 
 /**
@@ -391,6 +402,7 @@
  * @property {string|null} [event.dive_list_locks_at]
  * @property {string|null} [event.meet_id]
  * @property {string|null} [event.meet_name]
+ * @property {CoachEligibility} event.coach_eligibility
  * @property {Array<{round_number:number,dive_id:string|null,height:number|null}>} event.prescribed_rounds
  * @property {CoachDiveListDiver[]} divers
  */

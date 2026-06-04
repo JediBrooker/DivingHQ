@@ -489,6 +489,52 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       if (otherOrg) await setup.deleteOrg(otherOrg.orgId);
     });
 
+    test("eligibility metadata marks invited writable links and unrelated read-only links", async ({ request }) => {
+      const homeEvents = await request.get("/api/coach/events", {
+        headers: auth(homeCoachToken),
+      });
+      expect(homeEvents.status()).toBe(200);
+      const homeEventRow = (await homeEvents.json()).find((row) => row.event_id === event.id);
+      expect(homeEventRow).toBeTruthy();
+      expect(homeEventRow.coach_eligibility).toMatchObject({
+        host_federation: false,
+        invited_federation: true,
+        can_submit: true,
+        can_withdraw: false,
+        read_only: false,
+      });
+
+      const homeLists = await request.get(`/api/coach/dive-lists/${event.id}`, {
+        headers: auth(homeCoachToken),
+      });
+      expect(homeLists.status()).toBe(200);
+      const homeBody = await homeLists.json();
+      expect(homeBody.event.coach_eligibility).toMatchObject(homeEventRow.coach_eligibility);
+      expect(homeBody.divers[0].coach_eligibility).toMatchObject(homeEventRow.coach_eligibility);
+
+      const wrongEvents = await request.get("/api/coach/events", {
+        headers: auth(wrongOrgCoachToken),
+      });
+      expect(wrongEvents.status()).toBe(200);
+      const wrongEventRow = (await wrongEvents.json()).find((row) => row.event_id === event.id);
+      expect(wrongEventRow).toBeTruthy();
+      expect(wrongEventRow.coach_eligibility).toMatchObject({
+        host_federation: false,
+        invited_federation: false,
+        can_submit: false,
+        can_withdraw: false,
+        read_only: true,
+      });
+
+      const wrongLists = await request.get(`/api/coach/dive-lists/${event.id}`, {
+        headers: auth(wrongOrgCoachToken),
+      });
+      expect(wrongLists.status()).toBe(200);
+      const wrongBody = await wrongLists.json();
+      expect(wrongBody.event.coach_eligibility).toMatchObject(wrongEventRow.coach_eligibility);
+      expect(wrongBody.divers[0].coach_eligibility).toMatchObject(wrongEventRow.coach_eligibility);
+    });
+
     test("cross-fed coach submits under diver home org, then withdraws", async ({ request }) => {
       const submit = await request.post(`/api/coach/dive-lists/${event.id}/${diver.userId}`, {
         headers: auth(homeCoachToken),

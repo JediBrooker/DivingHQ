@@ -87,6 +87,57 @@ const prescribedByRound = computed(() => {
   return map
 })
 
+const eventEligibilityBadges = computed(() => coachEligibilityBadges(event.value?.coach_eligibility))
+
+function coachEligibilityBadges(eligibility) {
+  if (!eligibility) return []
+  const badges = []
+  if (eligibility.host_federation) {
+    badges.push({
+      label: 'Host federation',
+      tone: 'cyan',
+      tip: 'Your coach link is in the event host federation.',
+    })
+  }
+  if (eligibility.invited_federation) {
+    badges.push({
+      label: 'Invited federation',
+      tone: 'amber',
+      tip: "Your coach link matches the diver's invited federation.",
+    })
+  }
+  if (eligibility.can_submit) {
+    badges.push({
+      label: 'Can submit',
+      tone: 'green',
+      tip: 'You can submit or edit dive lists while entries are open.',
+    })
+  }
+  if (eligibility.can_withdraw) {
+    badges.push({
+      label: 'Can withdraw',
+      tone: 'green',
+      tip: 'You can withdraw entered divers from this event.',
+    })
+  }
+  if (eligibility.read_only) {
+    badges.push({
+      label: 'Read only',
+      tone: 'muted',
+      tip: 'You can view this event, but writes are closed or not permitted by your coach link.',
+    })
+  }
+  return badges
+}
+
+function canSubmitDiver(diver) {
+  return Boolean(diver?.coach_eligibility?.can_submit) && !diver.withdrawn_at
+}
+
+function canWithdrawDiver(diver) {
+  return Boolean(diver?.coach_eligibility?.can_withdraw) && !diver.withdrawn_at && diver.dives.length
+}
+
 function diveLabel(d) {
   if (!d) return ''
   const code = `${d.dive_code}${d.position || ''}`
@@ -229,6 +280,14 @@ onMounted(load)
           <span v-if="event.total_rounds"> · {{ event.total_rounds }} rounds</span>
           <span v-if="event.meet_name"> · {{ event.meet_name }}</span>
         </div>
+        <div v-if="eventEligibilityBadges.length" class="eligibility-strip" aria-label="Coach write eligibility">
+          <span v-for="badge in eventEligibilityBadges"
+                :key="badge.label"
+                :class="['badge', `badge-${badge.tone}`, 'eligibility-badge']"
+                v-tip="badge.tip">
+            {{ badge.label }}
+          </span>
+        </div>
       </div>
       <div class="header-actions">
         <button class="btn btn-ghost btn-sm" @click="load" :disabled="loading">
@@ -272,6 +331,12 @@ onMounted(load)
               </span>
               <span v-if="diver.is_reserve" class="diver-reserve">RESERVE</span>
               <span v-if="diver.withdrawn_at" class="diver-withdrawn">WITHDRAWN</span>
+              <span v-for="badge in coachEligibilityBadges(diver.coach_eligibility)"
+                    :key="`${diver.diver_id}-${badge.label}`"
+                    :class="['badge', `badge-${badge.tone}`, 'eligibility-badge']"
+                    v-tip="badge.tip">
+                {{ badge.label }}
+              </span>
             </div>
             <div class="diver-actions">
               <span v-if="diver.confirmed_at && !editing[diver.diver_id]" class="diver-status confirmed">
@@ -280,12 +345,12 @@ onMounted(load)
               <span v-else-if="!diver.confirmed_at && !editing[diver.diver_id]" class="diver-status pending">
                 Not submitted
               </span>
-              <button v-if="!editing[diver.diver_id] && !diver.withdrawn_at"
+              <button v-if="!editing[diver.diver_id] && canSubmitDiver(diver)"
                       class="btn btn-primary btn-sm"
                       @click="startEdit(diver)">
                 {{ diver.confirmed_at ? 'Edit list' : 'Submit list' }}
               </button>
-              <button v-if="!editing[diver.diver_id] && !diver.withdrawn_at && diver.dives.length"
+              <button v-if="!editing[diver.diver_id] && canWithdrawDiver(diver)"
                       class="btn btn-ghost btn-sm withdraw-btn"
                       @click="withdrawDiver(diver)"
                       v-tip="'Scratch this diver from the event'">
@@ -379,6 +444,15 @@ onMounted(load)
 .page-title { font-family: var(--font-display); font-size: 32px; font-weight: 900; font-style: italic; color: var(--text); line-height: 1; }
 .page-sub { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); margin-top: 0.5rem; }
 .header-actions { display: flex; gap: 0.5rem; }
+.eligibility-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+.eligibility-badge {
+  white-space: nowrap;
+}
 
 .empty { color: var(--text-3); padding: 3rem 0; text-align: center; font-family: var(--font-mono); font-size: 13px; }
 
