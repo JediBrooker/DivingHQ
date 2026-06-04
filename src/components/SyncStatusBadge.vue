@@ -44,7 +44,7 @@ const tone = computed(() => props.status)
 
 <template>
   <span :class="['sync-badge', `sync-badge--${tone}`]"
-        :title="$t(`sync_badge.${status}_full`)"
+        v-tip="$t(`sync_badge.${status}_full`)"
         :aria-label="$t(`sync_badge.${status}_full`)">
     <span class="sync-badge-icon" aria-hidden="true">{{ icon }}</span>
     <span v-if="count > 1" class="sync-badge-count">{{ count }}</span>

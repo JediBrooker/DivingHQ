@@ -177,7 +177,7 @@ const gridStyle = computed(() => {
         <iframe
           :src="`/scoreboard/${ev.id}/broadcast`"
           class="mbcast-frame"
-          :title="ev.name"
+          v-tip="ev.name"
           referrerpolicy="same-origin"
         />
       </div>
