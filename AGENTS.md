@@ -86,7 +86,7 @@ ship code (or docs) that misrepresents the rule.
 | `lib/middleware.js`   | The auth + RBAC + payload-validation perimeter. Every gate the API uses to reject a request lives here. **Read this whole file** when reviewing security. |
 | `db/queries.js`       | Shared SQL CTE templates (`PER_DIVE`, `FULL_FIELD_RANKING`). Used by the analytics endpoint. |
 | `migrations/`         | Numbered SQL migration files (`0NN_*.sql`). Run via `npm run migrate`. |
-| `init.sql`            | Schema bootstrap from empty. Bumps `schema_meta.version` at the bottom. |
+| `init.sql`            | Schema bootstrap baseline from empty, currently pinned at version 53; run migrations above that baseline to reach HEAD. Do not bump `schema_meta.version` unless the later migrations are ported into this file. |
 | `scripts/migrate.js`  | Migration runner. Reads `schema_meta.version`, applies pending files in order. `npm run migrate -- --dry` for plan-only. |
 | `src/types.js`        | JSDoc `@typedef`s for every API response shape. Reference via `/** @type {import('@/types').DiverProfile} */`. |
 | `src/composables/`    | Vue composables. **ESM** (sub-package.json `type: module`). Pure logic ones (`useScoreTrim`, `useScoreCategories`) are unit-tested in `test/score-trim.test.js`. |
@@ -170,13 +170,15 @@ Socket paths must agree, otherwise one becomes a back-door.
 
 Every change goes in **two** places:
 
-1. **`init.sql`** — the bootstrap-from-empty source of truth. Update column
-   defs, indexes, and the `INSERT INTO public.schema_meta (id, version)`
-   line at the bottom.
-2. **`migrations/0NN_<name>.sql`** — a numbered file that brings an existing
+1. **`migrations/0NN_<name>.sql`** — a numbered file that brings an existing
    DB up to the same version. Idempotent (`IF NOT EXISTS`, `ON CONFLICT`).
    End with the standard `INSERT INTO schema_meta … ON CONFLICT (id) DO
    UPDATE` block bumping `version`.
+2. **`init.sql`** — today this is a pinned bootstrap baseline, not HEAD.
+   Do not change the version stamp unless you also port every later migration
+   into the file. If a task explicitly moves the baseline forward, update the
+   column defs, indexes, and `INSERT INTO public.schema_meta (id, version)`
+   line together.
 
 Run `npm run migrate` against a target DB to apply pending migrations in
 order. The runner reads `schema_meta.version` and applies any numbered file
