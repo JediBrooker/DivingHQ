@@ -34,6 +34,34 @@ const rows         = ref([])
 const loading      = ref(false)
 const showRead     = ref(false)
 const categoryFilter = ref('all')
+const laneFilter = ref('all')
+
+const LANE_DEFS = [
+  { id: 'all', label: 'All' },
+  { id: 'action', label: 'Action required' },
+  { id: 'team', label: 'Coach & team' },
+  { id: 'results', label: 'Results' },
+  { id: 'ops', label: 'Operations' },
+]
+
+const CATEGORY_LANES = {
+  signoff_request:          'action',
+  referee_signoff:          'action',
+  role_request:             'action',
+  international_invite:     'action',
+  'synchro.partner_invite': 'action',
+  'coach.diver_up_next':    'team',
+  'coach.dive_list_submitted': 'team',
+  'coach.dive_list_withdrawn': 'team',
+  dive_list_advanced:       'team',
+  dive_list_reserve:        'team',
+  reserve_promoted:         'team',
+  event_results_posted:     'results',
+  event_live:               'ops',
+  h2h_seeded:               'ops',
+  sf_seeded:                'ops',
+  f_seeded:                 'ops',
+}
 
 async function load() {
   loading.value = true
@@ -55,6 +83,16 @@ const categories = computed(() => {
   return [...seen.entries()].map(([cat, n]) => ({ id: cat, count: n }))
 })
 
+const laneCounts = computed(() => {
+  const counts = new Map(LANE_DEFS.map((lane) => [lane.id, 0]))
+  for (const row of rows.value) {
+    counts.set('all', (counts.get('all') || 0) + 1)
+    const lane = CATEGORY_LANES[row.category] || 'ops'
+    counts.set(lane, (counts.get(lane) || 0) + 1)
+  }
+  return LANE_DEFS.map((lane) => ({ ...lane, count: counts.get(lane.id) || 0 }))
+})
+
 const filtered = computed(() => {
   let list = rows.value
   if (!showRead.value) {
@@ -62,6 +100,9 @@ const filtered = computed(() => {
   }
   if (categoryFilter.value !== 'all') {
     list = list.filter((r) => r.category === categoryFilter.value)
+  }
+  if (laneFilter.value !== 'all') {
+    list = list.filter((r) => (CATEGORY_LANES[r.category] || 'ops') === laneFilter.value)
   }
   return list
 })
@@ -125,8 +166,20 @@ function categoryLabel(cat) {
     role_decision:          'Role',
     role_request:           'Role request',
     event_started:          'Event',
+    event_live:             'Event live',
     event_results_posted:   'Results',
     international_invite:   'Invitation',
+    referee_signoff:        'Sign-off',
+    'coach.diver_up_next':  'Up next',
+    'coach.dive_list_submitted': 'Coach list',
+    'coach.dive_list_withdrawn': 'Coach withdrawal',
+    'synchro.partner_invite': 'Synchro pairing',
+    dive_list_advanced:     'Advanced',
+    dive_list_reserve:      'Reserve',
+    reserve_promoted:       'Reserve promoted',
+    h2h_seeded:             'H2H seeded',
+    sf_seeded:              'Semi seeded',
+    f_seeded:               'Final seeded',
     generic:                'Notice',
   }
   return map[cat] || cat
@@ -152,6 +205,16 @@ onMounted(load)
           {{ $t('inbox.mark_all_read') }}
         </button>
       </div>
+    </div>
+
+    <div class="lane-strip" aria-label="Notification lanes">
+      <button v-for="lane in laneCounts" :key="lane.id"
+              type="button"
+              :class="['lane-card', laneFilter === lane.id ? 'active' : '']"
+              @click="laneFilter = lane.id">
+        <span>{{ lane.label }}</span>
+        <strong>{{ lane.count }}</strong>
+      </button>
     </div>
 
     <div class="filters">
@@ -250,6 +313,38 @@ onMounted(load)
 .page-sub-strong { color: var(--cyan); font-weight: 700; }
 .header-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
+.lane-strip {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem; margin-bottom: 1rem;
+}
+.lane-card {
+  min-width: 0; text-align: start;
+  padding: 0.65rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.lane-card:hover,
+.lane-card.active {
+  border-color: var(--cyan);
+  background: var(--cyan-dim);
+}
+.lane-card span {
+  display: block;
+  font-family: var(--font-display); font-size: 9px; font-weight: 800;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-3);
+}
+.lane-card strong {
+  display: block; margin-top: 0.2rem;
+  font-family: var(--font-display); font-size: 20px; line-height: 1;
+  color: var(--text);
+}
+.lane-card.active span,
+.lane-card.active strong { color: var(--cyan); }
+
 .filters {
   display: flex; align-items: center; gap: 1.4rem; flex-wrap: wrap;
   margin-bottom: 1rem;
@@ -318,11 +413,23 @@ onMounted(load)
   background: var(--cyan);
 }
 .inbox-row-bar[data-cat="signoff_request"]      { background: var(--amber); }
+.inbox-row-bar[data-cat="referee_signoff"]      { background: var(--amber); }
 .inbox-row-bar[data-cat="role_decision"]        { background: var(--green); }
 .inbox-row-bar[data-cat="international_invite"] { background: #67e8f9; }
 .inbox-row-bar[data-cat="role_request"]         { background: #a78bfa; }
 .inbox-row-bar[data-cat="event_started"]        { background: var(--red); }
+.inbox-row-bar[data-cat="event_live"]           { background: var(--red); }
 .inbox-row-bar[data-cat="event_results_posted"] { background: var(--green); }
+.inbox-row-bar[data-cat="coach.diver_up_next"]  { background: var(--cyan); }
+.inbox-row-bar[data-cat="coach.dive_list_submitted"] { background: var(--green); }
+.inbox-row-bar[data-cat="coach.dive_list_withdrawn"] { background: var(--red); }
+.inbox-row-bar[data-cat="synchro.partner_invite"] { background: var(--amber); }
+.inbox-row-bar[data-cat="dive_list_advanced"],
+.inbox-row-bar[data-cat="dive_list_reserve"],
+.inbox-row-bar[data-cat="reserve_promoted"] { background: #38bdf8; }
+.inbox-row-bar[data-cat="h2h_seeded"],
+.inbox-row-bar[data-cat="sf_seeded"],
+.inbox-row-bar[data-cat="f_seeded"] { background: #a78bfa; }
 
 .inbox-row-body {
   flex: 1; min-width: 0;
@@ -360,5 +467,9 @@ onMounted(load)
   font-family: var(--font-mono); font-size: 11px;
   color: var(--cyan);
   margin-top: 0.2rem;
+}
+
+@media (max-width: 760px) {
+  .lane-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>

@@ -93,6 +93,147 @@ module.exports = function createControlRoomRouter({
   // docs/offline-p1-design.md §2 for the contract.
   const { httpMiddleware: idem } = createIdempotency({ pool });
 
+  function importErr(status, message) {
+    const err = new Error(message);
+    err.status = status;
+    return err;
+  }
+
+  async function buildRosterImportPlan(client, event, csv, { commit = false } = {}) {
+    const heightNumeric = event.height ? parseFloat(event.height) : null;
+    const rows = parseCsv(csv);
+    if (!rows.length) throw importErr(400, "CSV had no data rows");
+
+    const header = rows.shift().map((h) => h.trim().toLowerCase());
+    const userIdx = header.indexOf("username");
+    const partnerIdx = header.indexOf("partner_username");
+    if (userIdx < 0) throw importErr(400, 'CSV must include a "username" column');
+
+    const roundCols = [];
+    for (let n = 1; n <= 12; n++) {
+      const ci = header.indexOf(`round_${n}_code`);
+      const pi = header.indexOf(`round_${n}_pos`);
+      if (ci >= 0 && pi >= 0) roundCols.push({ round: n, codeIdx: ci, posIdx: pi });
+    }
+    if (!roundCols.length) {
+      throw importErr(400, 'CSV must include at least one round_N_code + round_N_pos pair');
+    }
+
+    const stats = {
+      preview: !commit,
+      added: 0,
+      skipped: 0,
+      rounds_written: 0,
+      errors: [],
+      rows: [],
+    };
+
+    for (const row of rows) {
+      const username = (row[userIdx] || "").trim();
+      if (!username) {
+        stats.skipped++;
+        continue;
+      }
+
+      const previewRow = {
+        username,
+        full_name: null,
+        partner_username: null,
+        partner_name: null,
+        rounds: [],
+      };
+
+      try {
+        const u = await client.query(
+          "SELECT id, full_name FROM users WHERE username = $1 AND org_id = $2",
+          [username, event.org_id],
+        );
+        if (!u.rows.length) {
+          stats.errors.push({ username, error: "User not found in this org" });
+          stats.rows.push(previewRow);
+          continue;
+        }
+        const competitorId = u.rows[0].id;
+        previewRow.full_name = u.rows[0].full_name;
+
+        let partnerId = null;
+        if (partnerIdx >= 0) {
+          const partnerName = (row[partnerIdx] || "").trim();
+          if (partnerName) {
+            previewRow.partner_username = partnerName;
+            const p = await client.query(
+              "SELECT id, full_name FROM users WHERE username = $1 AND org_id = $2",
+              [partnerName, event.org_id],
+            );
+            if (!p.rows.length) {
+              stats.errors.push({ username, error: `Partner ${partnerName} not found` });
+              stats.rows.push(previewRow);
+              continue;
+            }
+            partnerId = p.rows[0].id;
+            previewRow.partner_name = p.rows[0].full_name;
+          }
+        }
+
+        for (const { round, codeIdx, posIdx } of roundCols) {
+          const code = (row[codeIdx] || "").trim();
+          const pos = (row[posIdx] || "").trim().toUpperCase();
+          if (!code || !pos) continue;
+          const d = await client.query(
+            `SELECT id FROM dive_directory
+             WHERE dive_code = $1 AND position = $2::dive_position
+               AND ($3::numeric IS NULL OR height = $3::numeric)`,
+            [code, pos, heightNumeric],
+          );
+          if (!d.rows.length) {
+            stats.errors.push({
+              username,
+              error: `Round ${round}: ${code}${pos} not in directory${heightNumeric ? ` for ${event.height}` : ""}`,
+            });
+            continue;
+          }
+
+          const existing = await client.query(
+            `SELECT cdl.id, dd.dive_code, dd.position
+               FROM competitor_dive_lists cdl
+               LEFT JOIN dive_directory dd ON dd.id = cdl.dive_id
+              WHERE cdl.event_id = $1
+                AND cdl.competitor_id = $2
+                AND cdl.round_number = $3`,
+            [event.id, competitorId, round],
+          );
+          previewRow.rounds.push({
+            round_number: round,
+            dive_code: code,
+            position: pos,
+            action: existing.rows.length ? "update" : "insert",
+            current: existing.rows.length
+              ? `${existing.rows[0].dive_code || "empty"}${existing.rows[0].position || ""}`
+              : null,
+          });
+
+          if (commit) {
+            await client.query(
+              `INSERT INTO competitor_dive_lists (event_id, competitor_id, partner_id, dive_id, round_number)
+               VALUES ($1, $2, $3, $4, $5)
+               ON CONFLICT (event_id, competitor_id, round_number)
+               DO UPDATE SET dive_id = EXCLUDED.dive_id, partner_id = EXCLUDED.partner_id`,
+              [event.id, competitorId, partnerId, d.rows[0].id, round],
+            );
+          }
+          stats.rounds_written++;
+        }
+        stats.added++;
+        stats.rows.push(previewRow);
+      } catch (rowErr) {
+        stats.errors.push({ username, error: rowErr.message });
+        stats.rows.push(previewRow);
+      }
+    }
+
+    return stats;
+  }
+
   // -------------------------------------------------------------
   // GET /api/events/:id/roster — full dive list + diver metadata
   // for the Control Room queue. Withdrawn rows are returned but
@@ -1495,7 +1636,7 @@ module.exports = function createControlRoomRouter({
     bulkWriteLimiter,
     requireMeetEditor,
     async (req, res) => {
-      const { csv } = req.body || {};
+      const { csv, preview, dry_run } = req.body || {};
       if (typeof csv !== "string" || !csv.trim()) {
         return res.status(400).json({ error: "csv body field is required" });
       }
@@ -1503,6 +1644,7 @@ module.exports = function createControlRoomRouter({
         return res.status(413).json({ error: "CSV is too large (max ~200KB / a few thousand rows)." });
       }
       const client = await pool.connect();
+      let inTransaction = false;
       try {
         const ev = await client.query(
           "SELECT id, org_id, height, total_rounds, event_type FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
@@ -1512,100 +1654,22 @@ module.exports = function createControlRoomRouter({
           return res.status(404).json({ error: "Event not found" });
         }
         const event = ev.rows[0];
-        const heightNumeric = event.height ? parseFloat(event.height) : null;
-
-        const rows = parseCsv(csv);
-        if (!rows.length) {
-          return res.status(400).json({ error: "CSV had no data rows" });
+        const commit = !(preview === true || dry_run === true);
+        if (commit) {
+          await client.query("BEGIN");
+          inTransaction = true;
         }
-        const header = rows.shift().map((h) => h.trim().toLowerCase());
-        const userIdx     = header.indexOf("username");
-        const partnerIdx  = header.indexOf("partner_username");
-        if (userIdx < 0) {
-          return res
-            .status(400)
-            .json({ error: 'CSV must include a "username" column' });
+        const stats = await buildRosterImportPlan(client, event, csv, { commit });
+        if (commit) {
+          await client.query("COMMIT");
+          inTransaction = false;
         }
-        const roundCols = [];
-        for (let n = 1; n <= 12; n++) {
-          const ci = header.indexOf(`round_${n}_code`);
-          const pi = header.indexOf(`round_${n}_pos`);
-          if (ci >= 0 && pi >= 0) roundCols.push({ round: n, codeIdx: ci, posIdx: pi });
-        }
-        if (!roundCols.length) {
-          return res
-            .status(400)
-            .json({ error: 'CSV must include at least one round_N_code + round_N_pos pair' });
-        }
-
-        const stats = { added: 0, skipped: 0, errors: [] };
-        await client.query("BEGIN");
-
-        for (const row of rows) {
-          const username = (row[userIdx] || "").trim();
-          if (!username) { stats.skipped++; continue; }
-          try {
-            const u = await client.query(
-              "SELECT id FROM users WHERE username = $1 AND org_id = $2",
-              [username, event.org_id],
-            );
-            if (!u.rows.length) {
-              stats.errors.push({ username, error: "User not found in this org" });
-              continue;
-            }
-            const competitorId = u.rows[0].id;
-
-            let partnerId = null;
-            if (partnerIdx >= 0) {
-              const partnerName = (row[partnerIdx] || "").trim();
-              if (partnerName) {
-                const p = await client.query(
-                  "SELECT id FROM users WHERE username = $1 AND org_id = $2",
-                  [partnerName, event.org_id],
-                );
-                if (!p.rows.length) {
-                  stats.errors.push({ username, error: `Partner ${partnerName} not found` });
-                  continue;
-                }
-                partnerId = p.rows[0].id;
-              }
-            }
-
-            for (const { round, codeIdx, posIdx } of roundCols) {
-              const code = (row[codeIdx] || "").trim();
-              const pos  = (row[posIdx]  || "").trim().toUpperCase();
-              if (!code || !pos) continue;
-              const d = await client.query(
-                `SELECT id FROM dive_directory
-                 WHERE dive_code = $1 AND position = $2::dive_position
-                   AND ($3::numeric IS NULL OR height = $3::numeric)`,
-                [code, pos, heightNumeric],
-              );
-              if (!d.rows.length) {
-                stats.errors.push({
-                  username,
-                  error: `Round ${round}: ${code}${pos} not in directory${heightNumeric ? ` for ${event.height}` : ""}`,
-                });
-                continue;
-              }
-              await client.query(
-                `INSERT INTO competitor_dive_lists (event_id, competitor_id, partner_id, dive_id, round_number)
-                 VALUES ($1, $2, $3, $4, $5)
-                 ON CONFLICT (event_id, competitor_id, round_number)
-                 DO UPDATE SET dive_id = EXCLUDED.dive_id, partner_id = EXCLUDED.partner_id`,
-                [event.id, competitorId, partnerId, d.rows[0].id, round],
-              );
-            }
-            stats.added++;
-          } catch (rowErr) {
-            stats.errors.push({ username, error: rowErr.message });
-          }
-        }
-
-        await client.query("COMMIT");
         res.json(stats);
       } catch (err) {
-        await client.query("ROLLBACK");
+        if (inTransaction) await client.query("ROLLBACK");
+        if (err.status) {
+          return res.status(err.status).json({ error: err.message });
+        }
         console.error("[Roster Import Error]", err.message);
         res.status(500).json({ error: "Internal server error" });
       } finally {

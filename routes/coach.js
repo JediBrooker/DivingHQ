@@ -31,6 +31,7 @@ module.exports = function createCoachRouter({
   requireOrgAdmin,
   bulkWriteLimiter,
   loadEventForEntries,
+  push,
 }) {
   if (!pool) throw new Error("createCoachRouter requires { pool, … }");
   const router = express.Router();
@@ -883,6 +884,24 @@ module.exports = function createCoachRouter({
         });
 
         await client.query("COMMIT");
+        if (push && typeof push.sendNotification === "function") {
+          try {
+            await push.sendNotification([diver_id], {
+              category: "coach.dive_list_submitted",
+              title: `${req.user.full_name || "Your coach"} submitted your dive list`,
+              body: `${gate.event.name} · ${Array.isArray(dives) ? dives.length : 0} dive${Array.isArray(dives) && dives.length === 1 ? "" : "s"}`,
+              data: {
+                event_id,
+                coach_id: req.user.id,
+                diver_id,
+                late_review: gate.lateReview || false,
+              },
+              action_url: "/competitor",
+            });
+          } catch (notifErr) {
+            console.error("[Coach Submit Notification Skipped]", notifErr.message);
+          }
+        }
         // late_review=true tells the coach UI to surface the
         // "flagged for referee review" toast.
         res.json({
@@ -1030,6 +1049,26 @@ module.exports = function createCoachRouter({
         });
 
         await client.query("COMMIT");
+        if (push && typeof push.sendNotification === "function") {
+          try {
+            await push.sendNotification([diver_id], {
+              category: "coach.dive_list_withdrawn",
+              title: `${req.user.full_name || "Your coach"} withdrew you`,
+              body: reason
+                ? `${ev.rows[0].name} · ${reason}`
+                : ev.rows[0].name,
+              data: {
+                event_id,
+                coach_id: req.user.id,
+                diver_id,
+                reason: reason || null,
+              },
+              action_url: "/competitor",
+            });
+          } catch (notifErr) {
+            console.error("[Coach Withdraw Notification Skipped]", notifErr.message);
+          }
+        }
         res.json({
           message: `${diver.full_name} withdrawn from ${ev.rows[0].name}`,
           diver_id,

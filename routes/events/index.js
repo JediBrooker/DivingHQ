@@ -179,6 +179,24 @@ module.exports = function createEventsRouter({
     }
   }
 
+  async function orgAdminIds(orgId) {
+    const admins = await pool.query(
+      `SELECT DISTINCT u.id
+         FROM user_org_roles r
+         JOIN users u ON u.id = r.user_id
+        WHERE r.org_id = $1 AND r.role = 'org_admin'`,
+      [orgId],
+    );
+    return admins.rows.map((row) => row.id);
+  }
+
+  async function notifyOrgAdmins(orgId, payload) {
+    if (!push || typeof push.sendNotification !== "function") return;
+    const ids = await orgAdminIds(orgId);
+    if (!ids.length) return;
+    await push.sendNotification(ids, payload);
+  }
+
   // -------------------------------------------------------------
   // GET /api/events — list events visible to the caller.
   //
@@ -1048,6 +1066,233 @@ module.exports = function createEventsRouter({
     } catch (err) {
       console.error("[Participating Orgs List Error]", err.message);
       res.status(500).json([]);
+    }
+  });
+
+  router.get("/api/events/:id/participation-requests", requireOrgAdmin, async (req, res) => {
+    try {
+      const ev = await pool.query(
+        "SELECT id, org_id, name FROM events WHERE id = $1",
+        [req.params.id],
+      );
+      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
+      const isSysAdmin = !!req.user.is_system_admin;
+      const isHostAdmin = ev.rows[0].org_id === req.user.org_id;
+      const visibleSql = (isSysAdmin || isHostAdmin)
+        ? "r.event_id = $1"
+        : "r.event_id = $1 AND r.org_id = $2";
+      const params = (isSysAdmin || isHostAdmin)
+        ? [req.params.id]
+        : [req.params.id, req.user.org_id];
+      if (!isSysAdmin && !isHostAdmin && ev.rows[0].org_id !== req.user.org_id) {
+        // Visiting org admins can only see their own invite row.
+        // If none exists, this returns [] rather than leaking that
+        // another federation was invited.
+      }
+      const r = await pool.query(
+        `SELECT r.id, r.event_id, r.org_id, r.status, r.requested_at,
+                r.responded_at, r.note,
+                o.name AS org_name, o.country_code, o.slug AS org_slug,
+                req.full_name AS requested_by_name,
+                resp.full_name AS responded_by_name
+           FROM event_participation_requests r
+           JOIN organisations o ON o.id = r.org_id
+           LEFT JOIN users req ON req.id = r.requested_by
+           LEFT JOIN users resp ON resp.id = r.responded_by
+          WHERE ${visibleSql}
+          ORDER BY r.requested_at DESC`,
+        params,
+      );
+      res.json(r.rows);
+    } catch (err) {
+      console.error("[Participation Requests List Error]", err.message);
+      res.status(500).json([]);
+    }
+  });
+
+  router.post("/api/events/:id/participation-requests", requireOrgAdmin, async (req, res) => {
+    const { org_id, note } = req.body || {};
+    if (!org_id) return res.status(400).json({ error: "org_id is required" });
+    try {
+      const ev = await pool.query(
+        "SELECT id, org_id, name, status FROM events WHERE id = $1",
+        [req.params.id],
+      );
+      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
+      if (!req.user.is_system_admin && ev.rows[0].org_id !== req.user.org_id) {
+        return res.status(403).json({ error: "You don't host this event" });
+      }
+      if (ev.rows[0].status === "Completed") {
+        return res.status(409).json({
+          error: "Event is already Completed — re-open it before inviting more federations",
+        });
+      }
+      if (org_id === ev.rows[0].org_id) {
+        return res.status(400).json({
+          error: "Host org is implicit — don't list it as a participating org",
+        });
+      }
+      const target = await pool.query(
+        "SELECT id, name, status FROM organisations WHERE id = $1",
+        [org_id],
+      );
+      if (!target.rows.length) return res.status(404).json({ error: "Target org not found" });
+      if (target.rows[0].status !== "active") {
+        return res.status(409).json({
+          error: `${target.rows[0].name} is ${target.rows[0].status}; only active orgs can participate`,
+        });
+      }
+      const accepted = await pool.query(
+        "SELECT 1 FROM event_participating_orgs WHERE event_id = $1 AND org_id = $2",
+        [req.params.id, org_id],
+      );
+      if (accepted.rows.length) {
+        return res.status(409).json({ error: `${target.rows[0].name} is already participating` });
+      }
+      const request = await pool.query(
+        `INSERT INTO event_participation_requests
+           (event_id, org_id, status, requested_by, requested_at, note)
+         VALUES ($1, $2, 'pending', $3, now(), $4)
+         ON CONFLICT (event_id, org_id) DO UPDATE
+           SET status = 'pending',
+               requested_by = EXCLUDED.requested_by,
+               requested_at = now(),
+               responded_by = NULL,
+               responded_at = NULL,
+               note = EXCLUDED.note
+         RETURNING *`,
+        [req.params.id, org_id, req.user.id, note || null],
+      );
+      try {
+        await recordAudit(pool, {
+          ...auditFromReq(req),
+          org_id: ev.rows[0].org_id,
+          entity_type: "event",
+          entity_id: ev.rows[0].id,
+          entity_name: ev.rows[0].name,
+          action: "event.participation_request.created",
+          metadata: {
+            request_id: request.rows[0].id,
+            participating_org_id: org_id,
+            participating_org_name: target.rows[0].name,
+          },
+        });
+      } catch (auditErr) {
+        console.error("[Participation Request Audit Skipped]", auditErr.message);
+      }
+      try {
+        const hostOrg = await pool.query(
+          "SELECT name FROM organisations WHERE id = $1",
+          [ev.rows[0].org_id],
+        );
+        await notifyOrgAdmins(org_id, {
+          category: "international_invite",
+          title: `${hostOrg.rows[0]?.name || "A host federation"} invited you to "${ev.rows[0].name}"`,
+          body: "Open Meet Manager to accept or decline participation.",
+          data: {
+            request_id: request.rows[0].id,
+            event_id: ev.rows[0].id,
+            host_org_id: ev.rows[0].org_id,
+          },
+          action_url: `/manager?event=${ev.rows[0].id}`,
+        });
+      } catch (notifErr) {
+        console.error("[Participation Request Notification Skipped]", notifErr.message);
+      }
+      res.status(201).json(request.rows[0]);
+    } catch (err) {
+      console.error("[Create Participation Request Error]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  router.post("/api/events/:id/participation-requests/:request_id/respond", requireOrgAdmin, async (req, res) => {
+    const decision = String(req.body?.decision || "").toLowerCase();
+    if (!["accepted", "declined"].includes(decision)) {
+      return res.status(400).json({ error: "decision must be accepted or declined" });
+    }
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const reqRow = await client.query(
+        `SELECT r.*, e.name AS event_name, e.org_id AS host_org_id,
+                o.name AS org_name
+           FROM event_participation_requests r
+           JOIN events e ON e.id = r.event_id
+           JOIN organisations o ON o.id = r.org_id
+          WHERE r.id = $1 AND r.event_id = $2
+          FOR UPDATE`,
+        [req.params.request_id, req.params.id],
+      );
+      if (!reqRow.rows.length) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Participation request not found" });
+      }
+      const row = reqRow.rows[0];
+      if (!req.user.is_system_admin && row.org_id !== req.user.org_id) {
+        await client.query("ROLLBACK");
+        return res.status(403).json({ error: "Only the invited federation can respond" });
+      }
+      if (row.status !== "pending") {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ error: `Request is already ${row.status}` });
+      }
+      const updated = await client.query(
+        `UPDATE event_participation_requests
+            SET status = $1,
+                responded_by = $2,
+                responded_at = now()
+          WHERE id = $3
+          RETURNING *`,
+        [decision, req.user.id, row.id],
+      );
+      if (decision === "accepted") {
+        await client.query(
+          `INSERT INTO event_participating_orgs (event_id, org_id, added_by)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (event_id, org_id) DO NOTHING`,
+          [row.event_id, row.org_id, req.user.id],
+        );
+      }
+      await recordAudit(client, {
+        org_id: row.host_org_id,
+        actor_id: req.user.id,
+        entity_type: "event",
+        entity_id: row.event_id,
+        entity_name: row.event_name,
+        action: `event.participation_request.${decision}`,
+        metadata: {
+          request_id: row.id,
+          participating_org_id: row.org_id,
+          participating_org_name: row.org_name,
+        },
+      });
+      await client.query("COMMIT");
+      try {
+        await notifyOrgAdmins(row.host_org_id, {
+          category: "international_invite",
+          title: `${row.org_name} ${decision === "accepted" ? "accepted" : "declined"} "${row.event_name}"`,
+          body: decision === "accepted"
+            ? "Their divers can now enter under their home federation."
+            : "They will not participate unless you send a new invite.",
+          data: {
+            request_id: row.id,
+            event_id: row.event_id,
+            participating_org_id: row.org_id,
+            decision,
+          },
+          action_url: `/manager?event=${row.event_id}`,
+        });
+      } catch (notifErr) {
+        console.error("[Participation Response Notification Skipped]", notifErr.message);
+      }
+      res.json(updated.rows[0]);
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("[Participation Request Response Error]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    } finally {
+      client.release();
     }
   });
 

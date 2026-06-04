@@ -277,6 +277,37 @@
  * @property {number}      number_of_judges
  */
 
+/**
+ * @typedef {Object} RosterImportRoundPreview
+ * @property {number} round_number
+ * @property {string} dive_code
+ * @property {string} position
+ * @property {'insert'|'update'} action
+ * @property {string|null} current
+ */
+
+/**
+ * @typedef {Object} RosterImportRowPreview
+ * @property {string} username
+ * @property {string|null} full_name
+ * @property {string|null} partner_username
+ * @property {string|null} partner_name
+ * @property {RosterImportRoundPreview[]} rounds
+ */
+
+/**
+ * @typedef {Object} RosterImportResult
+ * Returned by POST /api/events/:id/roster/import for both preview
+ * and commit. `preview=true` means no database rows were written.
+ *
+ * @property {boolean} preview
+ * @property {number} added
+ * @property {number} skipped
+ * @property {number} rounds_written
+ * @property {Array<{username:string,error:string}>} errors
+ * @property {RosterImportRowPreview[]} rows
+ */
+
 // ---- /api/events/:id/audit-recent -------------------------------
 
 /**
@@ -299,6 +330,69 @@
  * @property {string|null} [entity_type]
  * @property {string|null} [entity_name]
  * @property {Object|null} [metadata]
+ */
+
+// ---- /api/meets/:id/readiness-report ----------------------------
+
+/**
+ * @typedef {Object} MeetReadinessFederation
+ * @property {string} org_id
+ * @property {string} org_name
+ * @property {string|null} [country_code]
+ * @property {number} active_diver_count
+ * @property {number} missing_dive_rows
+ * @property {number} incomplete_diver_count
+ */
+
+/**
+ * @typedef {Object} MeetReadinessEvent
+ * @property {string} event_id
+ * @property {string} event_name
+ * @property {string} status
+ * @property {boolean} ready
+ * @property {Array<{key:string,label:string,hint:string,to:string,owner:string}>} blockers
+ * @property {Object|null} next_action
+ * @property {number} active_diver_count
+ * @property {number} incomplete_diver_count
+ * @property {number} missing_dive_rows
+ * @property {number} judge_count
+ * @property {number} required_judges
+ * @property {number} late_arrival_pending_count
+ * @property {number} synchro_pending_count
+ * @property {MeetReadinessFederation[]} federations
+ */
+
+/**
+ * @typedef {Object} MeetReadinessReport
+ * @property {Object} meet
+ * @property {Object} summary
+ * @property {number} summary.event_count
+ * @property {number} summary.ready_count
+ * @property {number} summary.blocker_count
+ * @property {number} summary.late_arrival_pending_count
+ * @property {number} summary.synchro_pending_count
+ * @property {number} summary.hard_conflict_count
+ * @property {number} summary.soft_conflict_count
+ * @property {MeetReadinessEvent[]} events
+ * @property {Object[]} conflicts
+ */
+
+// ---- /api/events/:id/participation-requests ---------------------
+
+/**
+ * @typedef {Object} EventParticipationRequest
+ * @property {string} id
+ * @property {string} event_id
+ * @property {string} org_id
+ * @property {'pending'|'accepted'|'declined'|'cancelled'} status
+ * @property {string} requested_at
+ * @property {string|null} [responded_at]
+ * @property {string|null} [note]
+ * @property {string} org_name
+ * @property {string|null} [country_code]
+ * @property {string|null} [org_slug]
+ * @property {string|null} [requested_by_name]
+ * @property {string|null} [responded_by_name]
  */
 
 /**

@@ -12,9 +12,12 @@ const allJudges = ref([])
 const selectedEventId = ref('')
 const currentEvent = ref(null)
 const panel = ref([]) // array of judge objects or null
+const originalPanel = ref([]) // judge ids as loaded from the server
 const judgeSearch = ref('')
 const saveMsg = ref('')
 const saveMsgType = ref('')
+const reviewOpen = ref(false)
+const savingPanel = ref(false)
 
 const panelSize = computed(() => currentEvent.value?.number_of_judges || 5)
 
@@ -40,6 +43,24 @@ const filteredJudges = computed(() => {
   })
 })
 
+const panelReviewRows = computed(() => {
+  const rows = []
+  for (let idx = 0; idx < panelSize.value; idx++) {
+    const beforeId = originalPanel.value[idx] || null
+    const afterJudge = panel.value[idx] || null
+    const afterId = afterJudge?.id || null
+    if (beforeId === afterId) continue
+    const beforeJudge = allJudges.value.find(j => j.id === beforeId)
+    rows.push({
+      slot: idx + 1,
+      before: beforeJudge?.full_name || 'Empty',
+      after: afterJudge?.full_name || 'Empty',
+      kind: beforeId && afterId ? 'change' : beforeId ? 'remove' : 'add',
+    })
+  }
+  return rows
+})
+
 async function onEventChange() {
   saveMsg.value = ''
   if (!selectedEventId.value) {
@@ -51,6 +72,7 @@ async function onEventChange() {
   if (!currentEvent.value) return
 
   panel.value = Array(panelSize.value).fill(null)
+  originalPanel.value = Array(panelSize.value).fill(null)
 
   try {
     // Use the event-scoped picker so participating federations'
@@ -68,10 +90,12 @@ async function onEventChange() {
       const judge = allJudges.value.find(j => j.id === a.judge_id)
       if (judge && a.judge_number >= 1 && a.judge_number <= panelSize.value) {
         panel.value[a.judge_number - 1] = judge
+        originalPanel.value[a.judge_number - 1] = judge.id
       }
     })
   } catch {
     panel.value = Array(panelSize.value).fill(null)
+    originalPanel.value = Array(panelSize.value).fill(null)
   }
 }
 
@@ -94,7 +118,7 @@ function judgeSlotNum(judgeId) {
   return panel.value.findIndex(p => p?.id === judgeId)
 }
 
-async function savePanel() {
+function requestSavePanel() {
   saveMsg.value = ''
   const filled = panel.value.filter(Boolean).length
   if (filled !== panelSize.value) {
@@ -102,17 +126,26 @@ async function savePanel() {
     saveMsgType.value = 'error'
     return
   }
+  reviewOpen.value = true
+}
+
+async function savePanel() {
+  savingPanel.value = true
   try {
     await auth.apiFetch(`/api/events/${selectedEventId.value}/judges`, {
       method: 'POST',
       body: JSON.stringify({ judgeIds: panel.value.map(j => j.id) }),
     })
+    originalPanel.value = panel.value.map(j => j?.id || null)
+    reviewOpen.value = false
     saveMsg.value = `Panel saved. Judges numbered J1–J${panelSize.value}.`
     saveMsgType.value = 'success'
     setTimeout(() => { saveMsg.value = '' }, 3000)
   } catch (err) {
     saveMsg.value = err.message
     saveMsgType.value = 'error'
+  } finally {
+    savingPanel.value = false
   }
 }
 
@@ -165,7 +198,7 @@ onMounted(async () => {
           </div>
           <div style="display:flex;gap:0.75rem;align-items:center">
             <div v-if="saveMsg" :class="['msg', saveMsgType === 'success' ? 'msg-success' : 'msg-error']">{{ saveMsg }}</div>
-            <button class="btn btn-primary" @click="savePanel">Save Panel</button>
+            <button class="btn btn-primary" @click="requestSavePanel">Save Panel</button>
           </div>
         </div>
 
@@ -228,6 +261,39 @@ onMounted(async () => {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="reviewOpen" class="modal-backdrop" @click.self="reviewOpen = false">
+    <div class="panel-review-modal" @click.stop>
+      <div class="panel-review-head">
+        <div>
+          <div class="col-label">Panel Preview</div>
+          <h2>Confirm judge assignment</h2>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" @click="reviewOpen = false">Cancel ✕</button>
+      </div>
+      <p class="hint">
+        Saving replaces the whole panel for {{ currentEvent?.name }} and renumbers judges J1–J{{ panelSize }} in slot order.
+      </p>
+      <div v-if="!panelReviewRows.length" class="panel-review-empty">
+        No slot changes from the current saved panel.
+      </div>
+      <ul v-else class="panel-review-list">
+        <li v-for="row in panelReviewRows" :key="row.slot" class="panel-review-row">
+          <span class="panel-review-slot">J{{ row.slot }}</span>
+          <span class="panel-review-before">{{ row.before }}</span>
+          <span class="panel-review-arrow">→</span>
+          <span class="panel-review-after">{{ row.after }}</span>
+          <span :class="['panel-review-kind', row.kind]">{{ row.kind }}</span>
+        </li>
+      </ul>
+      <div class="panel-review-actions">
+        <button type="button" class="btn btn-ghost" @click="reviewOpen = false">Back</button>
+        <button type="button" class="btn btn-primary" :disabled="savingPanel" @click="savePanel">
+          {{ savingPanel ? 'Saving…' : 'Confirm save' }}
+        </button>
       </div>
     </div>
   </div>
@@ -341,4 +407,76 @@ onMounted(async () => {
 
 .search-wrap { margin-bottom: 0.75rem; }
 .empty { color: var(--text-3); font-size: 12px; text-align: center; padding: 2rem; }
+
+.panel-review-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 301;
+  width: min(620px, calc(100vw - 2rem));
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-lg);
+}
+.panel-review-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 0.75rem;
+}
+.panel-review-head h2 {
+  font-size: 20px; line-height: 1.15; color: var(--text);
+}
+.panel-review-empty {
+  margin-top: 0.8rem; padding: 0.75rem;
+  border: 1px dashed var(--border); border-radius: var(--radius-sm);
+  color: var(--text-3); font-family: var(--font-mono); font-size: 12px;
+}
+.panel-review-list {
+  list-style: none; padding: 0; margin: 0.9rem 0 0;
+  display: flex; flex-direction: column; gap: 0.4rem;
+}
+.panel-review-row {
+  display: grid; grid-template-columns: 42px 1fr 20px 1fr auto;
+  gap: 0.5rem; align-items: center;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-3);
+}
+.panel-review-slot {
+  font-family: var(--font-display); font-weight: 900; color: var(--cyan);
+}
+.panel-review-before,
+.panel-review-after {
+  min-width: 0; font-family: var(--font-display); font-size: 12px;
+  font-weight: 700; color: var(--text);
+}
+.panel-review-before { color: var(--text-3); }
+.panel-review-arrow { color: var(--text-3); text-align: center; }
+.panel-review-kind {
+  padding: 0.12rem 0.35rem; border-radius: 999px;
+  font-family: var(--font-display); font-size: 9px; font-weight: 800;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-3); background: var(--surface);
+}
+.panel-review-kind.add { color: var(--green); }
+.panel-review-kind.remove { color: var(--red); }
+.panel-review-kind.change { color: var(--amber); }
+.panel-review-actions {
+  display: flex; justify-content: flex-end; gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 560px) {
+  .panel-review-row {
+    grid-template-columns: 38px 1fr;
+  }
+  .panel-review-arrow,
+  .panel-review-kind {
+    grid-column: 2;
+  }
+}
 </style>

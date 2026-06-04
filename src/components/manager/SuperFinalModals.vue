@@ -21,6 +21,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess } from '@/composables/useNotify'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { RULE_REFERENCES } from '@/lib/ruleReferences'
 
 const auth = useAuthStore()
 
@@ -244,7 +245,7 @@ defineExpose({
       <p class="hint" style="margin-bottom:1rem" v-if="h2hEvent">
         Seed <strong>"{{ h2hEvent.name }}"</strong> from the Stop-1 ranking
         — pairs are 12v1, 11v2, 10v3, 9v4, 8v5, 7v6
-        (Appendix 3 §2.1.1; max {{ h2hMaxPerOrg }} per Federation per WC Rule 1.4).
+        ({{ RULE_REFERENCES.superFinalH2H }}; max {{ h2hMaxPerOrg }} per Federation).
       </p>
 
       <div v-if="h2hErr" class="msg msg-error" style="margin-bottom:0.75rem">{{ h2hErr }}</div>
@@ -260,9 +261,9 @@ defineExpose({
           <label class="advance-field">
             <span class="label">Dive-list lock (minutes)</span>
             <input class="input" type="number" min="0" max="120" v-model="h2hLockMinutes">
-            <span class="hint" style="margin-top:0.25rem">
-              WA Article 6.7.3 — change-of-dives window after the previous stage ended.
-            </span>
+        <span class="hint" style="margin-top:0.25rem">
+          {{ RULE_REFERENCES.changeWindow }} after the previous stage ended.
+        </span>
           </label>
         </div>
 
@@ -328,7 +329,7 @@ defineExpose({
 
       <p class="hint" style="margin-bottom:1rem" v-if="h2hEvent">
         <strong>"{{ h2hEvent.name }}"</strong> — winners advance to the Semi Final.
-        Tied pairs need a dive-off (Appendix 3 §6).
+        Tied pairs need a dive-off under DWC Appendix 3 §6.
       </p>
       <div v-if="h2hErr" class="msg msg-error" style="margin-bottom:0.75rem">{{ h2hErr }}</div>
 
@@ -359,7 +360,7 @@ defineExpose({
       </div>
       <p class="hint" style="margin-bottom:1rem" v-if="sfSeedEvent">
         Seed <strong>"{{ sfSeedEvent.name }}"</strong> with the 6 H2H winners.
-        Scores from H2H carry forward (Appendix 3 §3.1).
+        Scores from H2H carry forward. {{ RULE_REFERENCES.superFinalSemi }}.
         Starting order is reversed within each group (lowest H2H total dives first).
       </p>
       <div v-if="sfSeedErr" class="msg msg-error" style="margin-bottom:0.75rem">{{ sfSeedErr }}</div>
@@ -367,7 +368,7 @@ defineExpose({
         <span class="label">Dive-list lock (minutes)</span>
         <input class="input" type="number" min="0" max="120" v-model="sfSeedLockMin">
         <span class="hint" style="margin-top:0.25rem">
-          WA Article 6.7.3 — change-of-dives window. Default 30 min.
+          {{ RULE_REFERENCES.changeWindow }}. Default 30 min.
         </span>
       </label>
       <div style="display:flex;gap:0.5rem;margin-top:1.25rem">
@@ -388,14 +389,14 @@ defineExpose({
       </div>
       <p class="hint" style="margin-bottom:1rem" v-if="fSeedEvent">
         Seed <strong>"{{ fSeedEvent.name }}"</strong> with the top 2 from each SF group.
-        Scores reset (Appendix 3 §3.2). Highest cumulative SF score dives last.
+        Scores reset. Highest cumulative SF score dives last. {{ RULE_REFERENCES.superFinalFinal }}.
       </p>
       <div v-if="fSeedErr" class="msg msg-error" style="margin-bottom:0.75rem">{{ fSeedErr }}</div>
       <label class="advance-field">
         <span class="label">Lock window (minutes)</span>
         <input class="input" type="number" min="5" max="60" v-model="fSeedLockMin">
         <span class="hint" style="margin-top:0.25rem">
-          Appendix 3 §4.1 — 15-min break between SF and F; change requests
+          {{ RULE_REFERENCES.superFinalFinal }}: 15-min break between SF and F; change requests
           must be made at LATEST 5 minutes before the Final. The effective
           lock is set to NOW() + (this − 5) minutes.
         </span>
@@ -417,7 +418,7 @@ defineExpose({
         <button class="btn btn-ghost btn-sm" @click="closeSuperFinalRankingsModal">Close ✕</button>
       </div>
       <p class="hint" style="margin-bottom:1rem">
-        Per Appendix 3 §7: positions 1-4 from the Final stage; 5-6 from
+        {{ RULE_REFERENCES.superFinalRankings }}: positions 1-4 from the Final stage; 5-6 from
         H2H + SF cumulative (the SF non-finalists); 7-12 from H2H total only
         (the H2H non-advancers).
       </p>

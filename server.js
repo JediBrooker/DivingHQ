@@ -588,6 +588,7 @@ app.use(require("./routes/coach")({
   requireOrgAdmin,
   bulkWriteLimiter,
   loadEventForEntries,
+  push,
 }));
 
 // =============================================================
