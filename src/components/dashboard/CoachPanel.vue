@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n'
 import { GraduationCap, GitCompare } from '@lucide/vue'
 import GotoTile from './GotoTile.vue'
 import WorkflowCard from './WorkflowCard.vue'
+import DashboardEmptyState from './DashboardEmptyState.vue'
 
 defineProps({
   coachData:      { type: Object, default: null },
@@ -19,11 +20,12 @@ const closingMeta = (row) => t('dashboard.coach.closing_soon', { event: row.even
 
 <template>
   <section class="panel">
-    <div v-if="!coachData?.divers?.length" class="dashboard-panel-empty">
-      <div class="empty-state-icon">🎓</div>
-      <div class="empty-state-title">{{ $t('dashboard.empty.coach_title') }}</div>
-      <div class="empty-state-body">{{ $t('dashboard.empty.coach_body') }}</div>
-    </div>
+    <DashboardEmptyState
+      v-if="!coachData?.divers?.length"
+      :icon="GraduationCap"
+      :title="$t('dashboard.empty.coach_title')"
+      :body="$t('dashboard.empty.coach_body')"
+    />
     <div v-if="coachData?.divers?.length" class="panel-section">
       <div class="panel-section-label">{{ $t('dashboard.sections.your_divers', { count: coachData.divers.length }) }}</div>
       <p class="panel-blurb">{{ $t('dashboard.blurbs.coach_divers') }}</p>

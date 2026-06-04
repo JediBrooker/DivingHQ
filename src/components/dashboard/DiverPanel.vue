@@ -2,6 +2,7 @@
 import { RouterLink } from 'vue-router'
 import { Waves, User, GitCompare } from '@lucide/vue'
 import GotoTile from './GotoTile.vue'
+import DashboardEmptyState from './DashboardEmptyState.vue'
 
 defineProps({
   diverNextMeet: { type: Object, default: null },
@@ -40,11 +41,12 @@ defineProps({
         <div class="diver-next-arrow" aria-hidden="true">→</div>
       </RouterLink>
     </div>
-    <div v-else-if="!diverLiveMeet" class="dashboard-panel-empty">
-      <div class="empty-state-icon">🤿</div>
-      <div class="empty-state-title">{{ $t('dashboard.empty.diver_title') }}</div>
-      <div class="empty-state-body">{{ $t('dashboard.empty.diver_body') }}</div>
-    </div>
+    <DashboardEmptyState
+      v-else-if="!diverLiveMeet"
+      :icon="Waves"
+      :title="$t('dashboard.empty.diver_title')"
+      :body="$t('dashboard.empty.diver_body')"
+    />
 
     <div class="panel-section">
       <div class="panel-section-label">{{ $t('dashboard.sections.go_to') }}</div>

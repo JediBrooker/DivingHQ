@@ -1343,6 +1343,11 @@ h1, h2, h3, h4 {
   max-width: 640px;
 }
 .dashboard-panel-empty .empty-state-icon { font-size: 28px; margin-bottom: 0.75rem; }
+.dashboard-panel-empty .empty-state-icon svg {
+  width: 28px;
+  height: 28px;
+  stroke-width: 1.8;
+}
 .dashboard-panel-empty .empty-state-title {
   font-family: var(--font-sans); font-size: 16px; font-weight: 600;
   font-style: normal; color: var(--fg); margin-bottom: 0.5rem;

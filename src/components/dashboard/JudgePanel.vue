@@ -1,7 +1,9 @@
 <script setup>
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
+import { Gavel } from '@lucide/vue'
 import EventRow from './EventRow.vue'
+import DashboardEmptyState from './DashboardEmptyState.vue'
 
 defineProps({
   judgeEvents: { type: Array, default: () => [] },
@@ -16,11 +18,12 @@ const roundsJudges = (ev) => t('dashboard.judge_panel.rounds_judges', {
 
 <template>
   <section class="panel">
-    <div v-if="!judgeEvents.length" class="dashboard-panel-empty">
-      <div class="empty-state-icon">⚖️</div>
-      <div class="empty-state-title">{{ $t('dashboard.empty.judge_title') }}</div>
-      <div class="empty-state-body">{{ $t('dashboard.empty.judge_body') }}</div>
-    </div>
+    <DashboardEmptyState
+      v-if="!judgeEvents.length"
+      :icon="Gavel"
+      :title="$t('dashboard.empty.judge_title')"
+      :body="$t('dashboard.empty.judge_body')"
+    />
 
     <!-- Self-service Judge Analysis link — surfaces independently of
          live assignments so a judge can review their tracking
