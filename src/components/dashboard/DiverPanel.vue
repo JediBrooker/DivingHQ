@@ -1,5 +1,7 @@
 <script setup>
 import { RouterLink } from 'vue-router'
+import { Waves, User, GitCompare } from '@lucide/vue'
+import GotoTile from './GotoTile.vue'
 
 defineProps({
   diverNextMeet: { type: Object, default: null },
@@ -10,7 +12,6 @@ defineProps({
      happens server-side rather than via a client predicate. */
   diverLiveMeet: { type: Object, default: null },
   fmtCloses:     { type: Function, required: true },
-  icons:         { type: Object, required: true },
 })
 </script>
 
@@ -21,54 +22,39 @@ defineProps({
          and gets a focused "next dive / rank / what to score"
          view that beats refreshing the public scoreboard. -->
     <div v-if="diverLiveMeet" class="panel-section">
-      <div class="panel-section-label">Meet day · live now</div>
+      <div class="panel-section-label">{{ $t('dashboard.sections.meet_day_live') }}</div>
       <RouterLink :to="`/me/meet/${diverLiveMeet.id}`" class="diver-next-card md-cta">
         <div class="diver-next-name">{{ diverLiveMeet.name }}</div>
-        <div class="diver-next-meta">
-          Tap to see your next dive, current rank, and what you need to score
-        </div>
+        <div class="diver-next-meta">{{ $t('dashboard.diver_panel.live_meta') }}</div>
         <div class="diver-next-arrow" aria-hidden="true">→</div>
       </RouterLink>
     </div>
 
     <div v-if="diverNextMeet" class="panel-section">
-      <div class="panel-section-label">Your next meet</div>
+      <div class="panel-section-label">{{ $t('dashboard.sections.your_next_meet') }}</div>
       <RouterLink to="/competitor" class="diver-next-card">
         <div class="diver-next-name">{{ diverNextMeet.name }}</div>
         <div class="diver-next-meta">
-          {{ fmtCloses(diverNextMeet.entries_close_at) || 'Walk through the dive list builder' }}
+          {{ fmtCloses(diverNextMeet.entries_close_at) || $t('dashboard.diver_panel.next_fallback') }}
         </div>
         <div class="diver-next-arrow" aria-hidden="true">→</div>
       </RouterLink>
     </div>
     <div v-else-if="!diverLiveMeet" class="dashboard-panel-empty">
       <div class="empty-state-icon">🤿</div>
-      <div class="empty-state-title">No upcoming meets</div>
-      <div class="empty-state-body">
-        When your federation lists an upcoming event, it'll show up here with
-        an "entries close in" countdown. Open the Diver Portal to see all
-        events your federation is running.
-      </div>
+      <div class="empty-state-title">{{ $t('dashboard.empty.diver_title') }}</div>
+      <div class="empty-state-body">{{ $t('dashboard.empty.diver_body') }}</div>
     </div>
 
     <div class="panel-section">
-      <div class="panel-section-label">Go to</div>
+      <div class="panel-section-label">{{ $t('dashboard.sections.go_to') }}</div>
       <div class="goto-grid">
-        <RouterLink to="/competitor" class="goto-tile tile-green">
-          <div class="goto-icon" v-html="icons.diver"></div>
-          <div class="goto-title">Submit Dive Sheets</div>
-          <div class="goto-desc">Pick your dives per round before each event's entry deadline.</div>
-        </RouterLink>
-        <RouterLink to="/profile" class="goto-tile tile-cyan">
-          <div class="goto-icon" v-html="icons.profile"></div>
-          <div class="goto-title">My Profile</div>
-          <div class="goto-desc">Your scores, PBs, and 13-widget analytics dashboard.</div>
-        </RouterLink>
-        <RouterLink to="/compare" class="goto-tile tile-amber">
-          <div class="goto-icon" v-html="icons.compare"></div>
-          <div class="goto-title">Compare Divers</div>
-          <div class="goto-desc">Two divers side-by-side — stats and PB diffs.</div>
-        </RouterLink>
+        <GotoTile to="/competitor" tone="green" :icon="Waves"
+          :title="$t('dashboard.tiles.competitor_title')" :desc="$t('dashboard.tiles.competitor_desc')" />
+        <GotoTile to="/profile" tone="cyan" :icon="User"
+          :title="$t('dashboard.tiles.profile_title')" :desc="$t('dashboard.tiles.profile_desc')" />
+        <GotoTile to="/compare" tone="amber" :icon="GitCompare"
+          :title="$t('dashboard.tiles.compare_title')" :desc="$t('dashboard.tiles.compare_desc')" />
       </div>
     </div>
   </section>

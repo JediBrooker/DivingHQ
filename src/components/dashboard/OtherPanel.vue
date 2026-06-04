@@ -1,31 +1,19 @@
 <script setup>
-import { RouterLink } from 'vue-router'
-
-defineProps({
-  icons: { type: Object, required: true },
-})
+import { Trophy, BookOpen, GitCompare } from '@lucide/vue'
+import GotoTile from './GotoTile.vue'
 </script>
 
 <template>
   <section class="panel">
     <div class="panel-section">
-      <div class="panel-section-label">Other surfaces</div>
+      <div class="panel-section-label">{{ $t('dashboard.sections.other_surfaces') }}</div>
       <div class="goto-grid">
-        <RouterLink to="/scoreboard" class="goto-tile tile-red">
-          <div class="goto-icon" v-html="icons.scoreboard"></div>
-          <div class="goto-title">Scoreboard &amp; Results</div>
-          <div class="goto-desc">Watch live meets or browse completed-meet recaps.</div>
-        </RouterLink>
-        <RouterLink to="/dive-directory" class="goto-tile tile-cyan">
-          <div class="goto-icon" v-html="icons.diveDir"></div>
-          <div class="goto-title">Dive Directory</div>
-          <div class="goto-desc">Look up DDs across the World Aquatics catalog.</div>
-        </RouterLink>
-        <RouterLink to="/compare" class="goto-tile tile-amber">
-          <div class="goto-icon" v-html="icons.compare"></div>
-          <div class="goto-title">Compare Divers</div>
-          <div class="goto-desc">Two divers side-by-side — stats and PB diffs.</div>
-        </RouterLink>
+        <GotoTile to="/scoreboard" tone="red" :icon="Trophy"
+          :title="$t('dashboard.tiles.scoreboard_title')" :desc="$t('dashboard.tiles.scoreboard_desc')" />
+        <GotoTile to="/dive-directory" tone="cyan" :icon="BookOpen"
+          :title="$t('dashboard.tiles.dive_directory_title')" :desc="$t('dashboard.tiles.dive_directory_desc')" />
+        <GotoTile to="/compare" tone="amber" :icon="GitCompare"
+          :title="$t('dashboard.tiles.compare_title')" :desc="$t('dashboard.tiles.compare_desc')" />
       </div>
     </div>
   </section>
