@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
@@ -43,6 +43,7 @@ const socket = useSocket()
 // behaviour is preserved.
 const { queueAction } = useHttpOutbox()
 const route = useRoute()
+const router = useRouter()
 
 // Operator broadcast mode: /control?broadcast=1 hides the
 // chrome (header buttons, queue controls) and renders a
@@ -127,6 +128,208 @@ const currentEvent = ref(null)
 const scoresThisRound = ref({})
 const historyCards = ref([])
 const judgeTiles = ref([])
+const scheduleConflicts = ref([])
+const scheduleConflictsLoading = ref(false)
+const scheduleConflictsError = ref('')
+const lateArrivalReviewCount = ref(0)
+const recentAuditRows = ref([])
+const recentAuditLoading = ref(false)
+const recentAuditError = ref('')
+const canReadScheduleConflicts = computed(() =>
+  auth.hasRole('meet_manager') || auth.hasRole('org_admin'),
+)
+
+const rosterFederationGroups = computed(() => {
+  const groups = new Map()
+  const entries = new Map()
+  for (const row of roster.value) {
+    const entryKey = row.team_id || row.competitor_id
+    if (!entryKey) continue
+    if (!entries.has(entryKey)) entries.set(entryKey, [])
+    entries.get(entryKey).push(row)
+  }
+
+  for (const rowsForEntry of entries.values()) {
+    const row = rowsForEntry[0]
+    const orgId = row.competitor_org_id || 'unknown'
+    if (!groups.has(orgId)) {
+      const isHost = !!currentEvent.value?.org_id && orgId === currentEvent.value.org_id
+      groups.set(orgId, {
+        org_id: orgId,
+        name: row.competitor_org_name || row.country_code || 'Unknown federation',
+        country_code: row.country_code || '',
+        is_host: isHost,
+        active_count: 0,
+        withdrawn_count: 0,
+        missing_list_count: 0,
+      })
+    }
+    const group = groups.get(orgId)
+    const isWithdrawn = rowsForEntry.every((candidate) => candidate.withdrawn_at)
+    if (isWithdrawn) group.withdrawn_count += 1
+    else group.active_count += 1
+    if (!isWithdrawn && rowsForEntry.some((candidate) => !candidate.dive_id)) {
+      group.missing_list_count += 1
+    }
+  }
+  return [...groups.values()].sort((a, b) => {
+    if (a.is_host !== b.is_host) return a.is_host ? -1 : 1
+    return (a.country_code || a.name).localeCompare(b.country_code || b.name)
+  })
+})
+
+const federationGroupsMissingLists = computed(() =>
+  rosterFederationGroups.value.filter((group) => group.missing_list_count > 0),
+)
+
+const synchroPendingEntryCount = computed(() => {
+  if (currentEvent.value?.event_type !== 'synchro_pair') return 0
+  const entries = new Set()
+  for (const row of roster.value) {
+    if (row.withdrawn_at || row.partner_id) continue
+    const entryKey = row.team_id || row.competitor_id
+    if (entryKey) entries.add(entryKey)
+  }
+  return entries.size
+})
+
+const eventScheduleConflicts = computed(() => {
+  const eventId = currentEvent.value?.id
+  if (!eventId) return []
+  return scheduleConflicts.value.filter((conflict) => {
+    if (conflict.dismissed) return false
+    return conflict.block_a?.event_id === eventId || conflict.block_b?.event_id === eventId
+  })
+})
+
+const eventScheduleConflictCounts = computed(() => {
+  const counts = { hard: 0, soft: 0 }
+  for (const conflict of eventScheduleConflicts.value) {
+    if (conflict.severity === 'soft') counts.soft += 1
+    else counts.hard += 1
+  }
+  return counts
+})
+
+const scheduleConflictHint = computed(() => {
+  if (scheduleConflictsLoading.value) return 'Checking schedule'
+  if (scheduleConflictsError.value) return 'Could not load schedule conflicts'
+  const { hard, soft } = eventScheduleConflictCounts.value
+  if (!hard && !soft) return 'No active schedule conflicts'
+  return [
+    hard ? `${hard} hard` : '',
+    soft ? `${soft} soft` : '',
+  ].filter(Boolean).join(' · ')
+})
+
+const inlineAuditRows = computed(() => recentAuditRows.value.slice(0, 6))
+
+async function loadScheduleConflictsForEvent() {
+  const event = currentEvent.value
+  if (!event?.meet_id || !canReadScheduleConflicts.value) {
+    scheduleConflicts.value = []
+    scheduleConflictsError.value = ''
+    scheduleConflictsLoading.value = false
+    return
+  }
+  const eventId = event.id
+  scheduleConflictsLoading.value = true
+  scheduleConflictsError.value = ''
+  try {
+    const body = await auth.apiFetch(`/api/meets/${event.meet_id}/conflicts`)
+    if (currentEvent.value?.id !== eventId) return
+    scheduleConflicts.value = Array.isArray(body?.conflicts) ? body.conflicts : []
+  } catch (err) {
+    if (currentEvent.value?.id !== eventId) return
+    scheduleConflicts.value = []
+    scheduleConflictsError.value = err.message || 'Failed to load schedule conflicts'
+  } finally {
+    if (currentEvent.value?.id === eventId) scheduleConflictsLoading.value = false
+  }
+}
+
+async function loadRecentAuditRows() {
+  const eventId = currentEvent.value?.id
+  if (!eventId) {
+    recentAuditRows.value = []
+    recentAuditError.value = ''
+    recentAuditLoading.value = false
+    return
+  }
+  recentAuditLoading.value = true
+  recentAuditError.value = ''
+  try {
+    const rows = await auth.apiFetch(`/api/events/${eventId}/audit-recent?limit=10`)
+    if (currentEvent.value?.id !== eventId) return
+    recentAuditRows.value = Array.isArray(rows) ? rows : []
+  } catch (err) {
+    if (currentEvent.value?.id !== eventId) return
+    recentAuditRows.value = []
+    recentAuditError.value = err.message || 'Failed to load recent audit'
+  } finally {
+    if (currentEvent.value?.id === eventId) recentAuditLoading.value = false
+  }
+}
+
+function refreshRecentAuditSoon(delay = 350) {
+  window.setTimeout(() => {
+    loadRecentAuditRows()
+  }, delay)
+}
+
+function openScheduleForEvent() {
+  if (!currentEvent.value?.meet_id) return
+  router.push(`/meet/${currentEvent.value.meet_id}/schedule`)
+}
+
+function onLateArrivalRowsLoaded(payload) {
+  if (!payload?.eventId || payload.eventId !== currentEvent.value?.id) return
+  const previous = lateArrivalReviewCount.value
+  lateArrivalReviewCount.value = Number(payload.count) || 0
+  if (lateArrivalReviewCount.value !== previous) loadRecentAuditRows()
+}
+
+function auditTitle(row) {
+  if (row.kind === 'score') {
+    const name = row.competitor_name || 'Competitor'
+    if (row.reason?.startsWith('referee:failed')) return `${name} marked failed`
+    if (row.reason?.startsWith('referee:cap')) return `${name} scores capped`
+    if (row.reason?.startsWith('referee:redive')) return `${name} redive recorded`
+    return `${name} score ${row.action === 'delete' ? 'deleted' : 'corrected'}`
+  }
+  const action = row.action || ''
+  if (action === 'coach.submit_dive_list') return 'Coach submitted dive list'
+  if (action === 'coach.withdraw_dive_list') return 'Coach withdrew diver'
+  if (action === 'roster.withdrew') return `${row.entity_name || 'Diver'} withdrawn`
+  if (action === 'roster.reinstated') return `${row.entity_name || 'Diver'} reinstated`
+  if (action === 'roster.late_entry_added') return 'Late entry added'
+  if (action === 'roster.dive_edited') return 'Dive list edited'
+  if (action.startsWith('late_arrival.')) {
+    return action === 'late_arrival.allowed'
+      ? 'Late submission approved'
+      : 'Late submission denied'
+  }
+  if (action === 'event.workflow_reset') return 'Pre-meet workflow reset'
+  return action.replace(/[._]/g, ' ')
+}
+
+function auditMeta(row) {
+  const actor = row.actor_name || 'System'
+  const when = row.created_at ? new Date(row.created_at).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  }) : ''
+  if (row.kind === 'score') {
+    const scoreChange = row.old_score != null && row.new_score != null
+      ? `${Number(row.old_score).toFixed(1)} -> ${Number(row.new_score).toFixed(1)}`
+      : 'Score trail'
+    return [scoreChange, row.round_number ? `Round ${row.round_number}` : '', actor, when]
+      .filter(Boolean)
+      .join(' · ')
+  }
+  const note = row.reason || row.metadata?.reason || ''
+  return [actor, when, note].filter(Boolean).join(' · ')
+}
 
 // Manual-fallback entry modal state (P5). Opens a form where the
 // operator types each judge's score, one row per panel member.
@@ -568,6 +771,7 @@ async function submitCorrection() {
     correctTarget.value.total = correctTarget.value.scores
       .reduce((a, b) => a + b, 0).toFixed(1)
     closeCorrection()
+    refreshRecentAuditSoon()
   } catch (err) {
     correctErr.value = err.message
   } finally {
@@ -1403,13 +1607,14 @@ const readinessItems = computed(() => {
   const summary = preFlightSummary.value
   if (!ev || !summary) return []
   const panelReady = summary.judgeCount > 0 && summary.judges.length >= summary.judgeCount
-  return [
+  const items = [
     {
       key: 'roster',
       label: 'Roster has competitors',
       done: summary.diverCount > 0,
       hint: 'Add or import competitors',
       onFix: openLateEntry,
+      severity: 'critical',
     },
     {
       key: 'dive_lists',
@@ -1419,6 +1624,7 @@ const readinessItems = computed(() => {
         ? `${summary.incompleteDivers.length} incomplete`
         : 'Review the dive order',
       onFix: openDiveOrderChecklistTarget,
+      severity: 'critical',
     },
     {
       key: 'panel',
@@ -1426,6 +1632,7 @@ const readinessItems = computed(() => {
       done: panelReady,
       hint: `${summary.judges.length}/${summary.judgeCount} seats filled`,
       onFix: openJudgePanelModal,
+      severity: 'critical',
     },
     {
       key: 'check_in',
@@ -1433,6 +1640,7 @@ const readinessItems = computed(() => {
       done: !!ev.check_in_done_at,
       hint: 'Mark present, late, or DNS',
       onFix: startCheckInStep,
+      severity: 'critical',
     },
     {
       key: 'order',
@@ -1440,6 +1648,7 @@ const readinessItems = computed(() => {
       done: !!ev.dive_order_randomised_at,
       hint: 'Randomise or use current order',
       onFix: orderWorkflowState.value === 'random' ? confirmDiveOrder : openDiveOrderChecklistTarget,
+      severity: 'critical',
     },
     {
       key: 'sign_off',
@@ -1447,13 +1656,65 @@ const readinessItems = computed(() => {
       done: !!ev.dive_order_signed_off_at,
       hint: 'Send request or sign off',
       onFix: signOffDiveOrder,
+      severity: 'critical',
     },
   ]
+  if (ev.meet_id && canReadScheduleConflicts.value) {
+    const { hard, soft } = eventScheduleConflictCounts.value
+    items.push({
+      key: 'schedule_conflicts',
+      label: 'Schedule conflicts clear',
+      done: !hard && !soft && !scheduleConflictsError.value,
+      hint: scheduleConflictHint.value,
+      onFix: openScheduleForEvent,
+      severity: hard ? 'critical' : (soft || scheduleConflictsError.value ? 'warning' : 'info'),
+      blocking: hard > 0 || !!scheduleConflictsError.value,
+    })
+  }
+  if (lateArrivalReviewCount.value > 0) {
+    items.push({
+      key: 'late_arrivals',
+      label: 'Late submissions reviewed',
+      done: false,
+      hint: `${lateArrivalReviewCount.value} pending referee review`,
+      severity: 'warning',
+    })
+  }
+  if (ev.event_type === 'synchro_pair') {
+    items.push({
+      key: 'synchro_pairs',
+      label: 'Synchro pairs confirmed',
+      done: synchroPendingEntryCount.value === 0,
+      hint: synchroPendingEntryCount.value
+        ? `${synchroPendingEntryCount.value} missing partner`
+        : 'Partners confirmed',
+      onFix: openDiveOrderChecklistTarget,
+      severity: 'critical',
+    })
+  }
+  if (rosterFederationGroups.value.length > 1) {
+    const missingGroups = federationGroupsMissingLists.value
+    items.push({
+      key: 'federation_readiness',
+      label: 'Federations ready',
+      done: missingGroups.length === 0,
+      hint: missingGroups.length
+        ? missingGroups
+          .slice(0, 2)
+          .map((group) => `${group.country_code || group.name}: ${group.missing_list_count}`)
+          .join(' · ')
+        : `${rosterFederationGroups.value.length} federations complete`,
+      onFix: openDiveOrderChecklistTarget,
+      severity: missingGroups.length ? 'warning' : 'info',
+      blocking: false,
+    })
+  }
+  return items
 })
 
 const startBlockers = computed(() =>
   readinessItems.value
-    .filter(item => !item.done)
+    .filter(item => !item.done && item.blocking !== false)
     .map(item => item.hint ? `${item.label}: ${item.hint}` : item.label),
 )
 const startBlocked = computed(() =>
@@ -1727,6 +1988,8 @@ async function withdrawRosterRow(idx) {
       const next = roster.value.findIndex((r, i) => i > idx && !r.withdrawn_at)
       if (next >= 0) setActive(next)
     }
+    refreshRecentAuditSoon()
+    loadScheduleConflictsForEvent()
     showUndo({
       message: willWithdraw
         ? `Withdrew ${row.full_name} from round ${row.round_number}`
@@ -1741,6 +2004,8 @@ async function withdrawRosterRow(idx) {
           actionType: 'dive_list_withdraw',
         })
         row.withdrawn_at = !willWithdraw ? new Date().toISOString() : null
+        refreshRecentAuditSoon()
+        loadScheduleConflictsForEvent()
       },
     })
   } catch (err) {
@@ -2809,6 +3074,8 @@ async function submitLateEntry() {
     const fresh = await auth.apiFetch(`/api/events/${currentEvent.value.id}/roster`)
     roster.value = fresh
     lateOpen.value = false
+    refreshRecentAuditSoon()
+    loadScheduleConflictsForEvent()
   } catch (err) {
     lateErr.value = err.message
   } finally {
@@ -3095,6 +3362,7 @@ function refAction(type) {
   if (type === 'failed') socket.emit('referee_failed_dive', payload)
   if (type === 'cap') socket.emit('referee_cap_scores', { ...payload, cap_value: 2.0 })
   if (type === 'redive') socket.emit('referee_redive', payload)
+  refreshRecentAuditSoon(700)
 }
 
 async function nextDiver() {
@@ -3318,7 +3586,12 @@ async function onEventChange() {
   if (!currentEvent.value) return
   meetName.value = currentEvent.value.name
   historyCards.value = []
+  lateArrivalReviewCount.value = 0
+  recentAuditRows.value = []
+  scheduleConflicts.value = []
   initJudgeTiles(currentEvent.value.number_of_judges)
+  loadScheduleConflictsForEvent()
+  loadRecentAuditRows()
 
   const [rosterData, histData, judgesData] = await Promise.all([
     auth.apiFetch(`/api/events/${selectedEventId.value}/roster`),
@@ -3472,7 +3745,10 @@ onUnmounted(() => {
          deadline even though the server saw the request after.
          Each row gets an approve/deny button. Renders nothing
          when the queue is empty. -->
-    <LateArrivalReviewTray :event-id="currentEvent?.id || null" />
+    <LateArrivalReviewTray
+      :event-id="currentEvent?.id || null"
+      @loaded="onLateArrivalRowsLoaded"
+    />
     <!-- Outbox-side conflict queue. Surfaces local entries the
          server returned 409 for (concurrency race; another
          device wrote the same target first). Operator picks
@@ -4829,10 +5105,45 @@ onUnmounted(() => {
             <button v-if="currentEvent" class="btn btn-ghost btn-sm" @click="openLateEntry"
                     v-tip="'Add a late-arriving diver'">+ Add</button>
           </div>
-        </div>
+	        </div>
 
-        <!-- Up Next — primary right-panel surface during live
-             scoring. Shows the next 3 divers / pairs by default;
+	        <section v-if="currentEvent && !opsBroadcast"
+	                 class="inline-audit-panel"
+	                 aria-label="Recent event audit">
+	          <div class="inline-audit-head">
+	            <span class="inline-audit-title">Recent changes</span>
+	            <button class="inline-audit-refresh"
+	                    type="button"
+	                    :disabled="recentAuditLoading"
+	                    @click="loadRecentAuditRows"
+	                    v-tip="'Refresh recent changes'">
+	              ↻
+	            </button>
+	          </div>
+	          <div v-if="recentAuditLoading" class="inline-audit-state">
+	            Loading changes…
+	          </div>
+	          <div v-else-if="recentAuditError" class="inline-audit-state is-error">
+	            {{ recentAuditError }}
+	          </div>
+	          <div v-else-if="!inlineAuditRows.length" class="inline-audit-state">
+	            No recent risky changes.
+	          </div>
+	          <ul v-else class="inline-audit-list">
+	            <li v-for="row in inlineAuditRows"
+	                :key="`${row.kind}-${row.id}`"
+	                :class="['inline-audit-row', `is-${row.kind}`]">
+	              <span class="inline-audit-kind">{{ row.kind === 'score' ? 'Score' : 'Audit' }}</span>
+	              <span class="inline-audit-copy">
+	                <span class="inline-audit-action">{{ auditTitle(row) }}</span>
+	                <span class="inline-audit-meta">{{ auditMeta(row) }}</span>
+	              </span>
+	            </li>
+	          </ul>
+	        </section>
+
+	        <!-- Up Next — primary right-panel surface during live
+	             scoring. Shows the next 3 divers / pairs by default;
              a "Show N more ↓" toggle rendered INSIDE the list
              after row 3 expands to the full set without moving
              the toggle off-screen. Withdrawn rows are skipped
@@ -5131,6 +5442,29 @@ onUnmounted(() => {
             </span>
           </button>
           <div v-if="diveOrderOpen" class="dive-order-body">
+            <div v-if="rosterFederationGroups.length" class="federation-roster-summary"
+                 aria-label="Roster by federation">
+              <div v-for="group in rosterFederationGroups"
+                   :key="group.org_id"
+                   :class="['federation-roster-card', group.is_host ? 'is-host' : 'is-participating']">
+                <div class="federation-roster-head">
+                  <span class="federation-roster-name">
+                    {{ group.country_code || group.name }}
+                  </span>
+                  <span class="federation-roster-scope">
+                    {{ group.is_host ? 'Host federation' : 'Participating federation' }}
+                  </span>
+                </div>
+                <div class="federation-roster-meta">
+                  <span>{{ group.active_count }} active</span>
+                  <span v-if="group.withdrawn_count">{{ group.withdrawn_count }} withdrawn</span>
+                  <span :class="['federation-roster-missing', group.missing_list_count ? 'has-missing' : '']">
+                    {{ group.missing_list_count ? `${group.missing_list_count} missing list${group.missing_list_count === 1 ? '' : 's'}` : 'Lists complete' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <!-- Search + jump-to-round chips -->
             <div class="queue-filters">
               <input

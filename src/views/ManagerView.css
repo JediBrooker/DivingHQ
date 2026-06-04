@@ -603,6 +603,7 @@
    global .modal (position: static) drops to the bottom of the long
    events page instead of centring. Pin these three to the viewport
    centre, above the backdrop; they scroll internally if tall. */
+.modal.readiness-modal,
 .modal.teams-modal,
 .modal.roster-modal {
   position: fixed;
@@ -624,6 +625,29 @@
 }
 
 .roster-result { margin-top: 0.75rem; }
+.roster-preview-list {
+  display: flex; flex-direction: column; gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+.roster-preview-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.75rem; padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-3);
+}
+.roster-preview-name {
+  min-width: 0; font-family: var(--font-display); font-size: 12px;
+  font-weight: 700; color: var(--text);
+}
+.roster-preview-name em {
+  display: block; margin-top: 0.1rem;
+  font-family: var(--font-mono); font-size: 10.5px;
+  font-style: normal; color: var(--text-3);
+}
+.roster-preview-actions {
+  flex-shrink: 0; font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--cyan);
+}
 .roster-errors {
   margin-top: 0.4rem;
   background: var(--bg-3); border: 1px solid var(--border);
@@ -638,6 +662,87 @@
 .roster-error-list li { margin: 0.15rem 0; }
 
 .teams-modal { max-width: 560px; }
+.readiness-modal { max-width: 860px; }
+.readiness-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: 1rem;
+}
+.readiness-title {
+  font-size: 22px; line-height: 1.15; color: var(--text);
+}
+.readiness-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.readiness-summary {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem; margin: 0.85rem 0 1rem;
+}
+.readiness-stat {
+  min-width: 0; padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-3);
+}
+.readiness-stat span {
+  display: block; font-family: var(--font-display); font-size: 18px;
+  font-weight: 800; color: var(--text);
+}
+.readiness-stat strong {
+  display: block; margin-top: 0.15rem;
+  font-family: var(--font-display); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-3);
+}
+.readiness-note {
+  padding: 0.55rem 0.75rem; border-inline-start: 3px solid var(--amber);
+  background: rgba(245, 158, 11, 0.08); border-radius: 4px;
+}
+.readiness-event-list {
+  list-style: none; padding: 0; margin: 0.85rem 0 0;
+  display: flex; flex-direction: column; gap: 0.55rem;
+}
+.readiness-event-row {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.75rem; background: var(--surface);
+}
+.readiness-event-row.ready { border-color: rgba(16, 185, 129, 0.35); }
+.readiness-event-row.blocked { border-color: rgba(245, 158, 11, 0.35); }
+.readiness-event-main {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 0.8rem;
+}
+.readiness-event-name {
+  font-family: var(--font-display); font-size: 14px; font-weight: 800;
+  color: var(--text);
+}
+.readiness-event-meta {
+  margin-top: 0.2rem; font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-3);
+}
+.readiness-state-chip {
+  flex-shrink: 0; padding: 0.2rem 0.45rem; border-radius: 999px;
+  font-family: var(--font-display); font-size: 9px; font-weight: 800;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.readiness-state-chip.ok {
+  color: var(--green); background: rgba(16, 185, 129, 0.12);
+}
+.readiness-state-chip.warn {
+  color: var(--amber); background: rgba(245, 158, 11, 0.12);
+}
+.readiness-blockers,
+.readiness-feds {
+  display: flex; flex-wrap: wrap; gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+.readiness-blockers.secondary { opacity: 0.9; }
+.readiness-blocker,
+.readiness-fed {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.22rem 0.45rem; border: 1px solid var(--border);
+  border-radius: 999px; background: var(--bg-3);
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--text-2);
+}
+.readiness-fed strong { color: var(--cyan); }
+.readiness-fed em {
+  font-style: normal; color: var(--amber);
+}
 .teams-section-label {
   font-family: var(--font-display); font-size: 10px; font-weight: 700;
   letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-3);
@@ -655,6 +760,27 @@
   letter-spacing: 0.05em; color: var(--cyan);
   background: var(--cyan-dim); border: 1px solid rgba(6,182,212,0.3);
   border-radius: 3px; padding: 0.1rem 0.4rem; margin-inline-start: 0.5rem;
+}
+.pending-invite-row { align-items: flex-start; }
+.invite-status-chip {
+  display: inline-flex; align-items: center;
+  margin-inline-start: 0.45rem; padding: 0.1rem 0.4rem;
+  border-radius: 999px; background: rgba(245, 158, 11, 0.12);
+  color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.3);
+  font-family: var(--font-display); font-size: 9px; font-weight: 800;
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+.invite-status-chip.accepted {
+  color: var(--green); border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.12);
+}
+.invite-status-chip.declined,
+.invite-status-chip.cancelled {
+  color: var(--red); border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.1);
+}
+.invite-response-actions {
+  display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end;
 }
 .enrolled-empty { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); padding: 0.4rem 0; font-style: italic; }
 .add-team-row { display: flex; gap: 0.5rem; align-items: center; }
@@ -732,10 +858,18 @@
   .modal,
   .modal-create-event,
   .modal-create-dive,
+  .readiness-modal,
   .roster-modal,
   .teams-modal {
     max-width: 100%;
     width: 100%;
+  }
+
+  .readiness-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .readiness-event-main {
+    flex-direction: column;
   }
 
   /* Meet row — name + meta stack above the action chips. */

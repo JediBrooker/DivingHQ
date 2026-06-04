@@ -13,6 +13,8 @@
 //   app.use(require('./routes/meets')({ … }))
 
 const express = require("express");
+const { buildReadinessFromRow } = require("../lib/workflow");
+const { detectConflicts } = require("../lib/schedule-conflicts");
 
 module.exports = function createMeetsRouter({
   pool,
@@ -26,6 +28,241 @@ module.exports = function createMeetsRouter({
 
   function hasOwn(obj, key) {
     return Object.prototype.hasOwnProperty.call(obj || {}, key);
+  }
+
+  function csvCell(value) {
+    const s = value == null ? "" : String(value);
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+
+  function sendReadinessCsv(res, report) {
+    const header = [
+      "event",
+      "status",
+      "ready",
+      "next_action",
+      "blockers",
+      "active_divers",
+      "incomplete_divers",
+      "missing_dive_rows",
+      "judges",
+      "required_judges",
+      "late_arrivals_pending",
+      "synchro_pairs_pending",
+      "federations",
+    ];
+    const lines = [header.map(csvCell).join(",")];
+    for (const row of report.events) {
+      lines.push([
+        row.event_name,
+        row.status,
+        row.ready ? "yes" : "no",
+        row.next_action?.label || "",
+        row.blockers.map((b) => b.label).join("; "),
+        row.active_diver_count,
+        row.incomplete_diver_count,
+        row.missing_dive_rows,
+        row.judge_count,
+        row.required_judges,
+        row.late_arrival_pending_count,
+        row.synchro_pending_count,
+        row.federations.map((f) =>
+          `${f.org_name}${f.country_code ? ` (${f.country_code})` : ""}: ${f.active_diver_count} active, ${f.incomplete_diver_count} incomplete`
+        ).join("; "),
+      ].map(csvCell).join(","));
+    }
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="meet-readiness-${report.meet.id}.csv"`,
+    );
+    res.send(`${lines.join("\n")}\n`);
+  }
+
+  async function buildMeetReadinessReport(db, meetId, user) {
+    const meetRes = await db.query(
+      `SELECT m.id, m.name, m.venue, m.start_date, m.end_date,
+              m.org_id, o.name AS org_name, o.country_code
+         FROM meets m
+         JOIN organisations o ON o.id = m.org_id
+        WHERE m.id = $1
+          AND ($2::boolean OR m.org_id = $3)`,
+      [meetId, !!user.is_system_admin, user.org_id],
+    );
+    if (!meetRes.rows.length) return null;
+
+    const rows = await db.query(
+      `WITH visible_events AS (
+         SELECT e.id, e.name, e.status, e.number_of_judges,
+                e.total_rounds, e.event_type,
+                e.scheduled_at, e.entries_close_at, e.is_rehearsal,
+                e.check_in_done_at, e.dive_order_randomised_at,
+                e.dive_order_signed_off_at, e.created_at
+           FROM events e
+          WHERE e.meet_id = $1
+            AND ($2::boolean OR e.org_id = $3)
+       ),
+       roster AS (
+         SELECT cdl.event_id,
+                COUNT(DISTINCT cdl.competitor_id)
+                  FILTER (WHERE cdl.withdrawn_at IS NULL AND cdl.is_reserve = FALSE)::int AS active_diver_count,
+                COUNT(DISTINCT cdl.competitor_id)
+                  FILTER (WHERE cdl.withdrawn_at IS NULL AND cdl.is_reserve = TRUE)::int AS reserve_count,
+                COUNT(DISTINCT cdl.competitor_id)
+                  FILTER (WHERE cdl.withdrawn_at IS NOT NULL)::int AS withdrawn_count,
+                COUNT(*)
+                  FILTER (WHERE cdl.withdrawn_at IS NULL AND cdl.is_reserve = FALSE AND cdl.dive_id IS NULL)::int AS missing_dive_rows,
+                COUNT(DISTINCT cdl.competitor_id)
+                  FILTER (
+                    WHERE cdl.withdrawn_at IS NULL
+                      AND cdl.is_reserve = FALSE
+                      AND cdl.late_arrival_flag = TRUE
+                      AND COALESCE(cdl.late_arrival_decision, 'pending') = 'pending'
+                  )::int AS late_arrival_pending_count,
+                COUNT(DISTINCT cdl.competitor_id)
+                  FILTER (
+                    WHERE cdl.withdrawn_at IS NULL
+                      AND cdl.is_reserve = FALSE
+                      AND ve.event_type::text = 'synchro_pair'
+                      AND cdl.partner_id IS NULL
+                  )::int AS synchro_pending_count
+           FROM competitor_dive_lists cdl
+           JOIN visible_events ve ON ve.id = cdl.event_id
+          GROUP BY cdl.event_id
+       ),
+       incomplete AS (
+         SELECT event_id, COUNT(*)::int AS incomplete_diver_count
+           FROM (
+             SELECT cdl.event_id, cdl.competitor_id
+               FROM competitor_dive_lists cdl
+               JOIN visible_events ve ON ve.id = cdl.event_id
+              WHERE cdl.withdrawn_at IS NULL
+                AND cdl.is_reserve = FALSE
+              GROUP BY cdl.event_id, cdl.competitor_id, ve.total_rounds
+             HAVING COUNT(*) < ve.total_rounds
+                 OR COUNT(*) FILTER (WHERE cdl.dive_id IS NULL) > 0
+           ) x
+          GROUP BY event_id
+       ),
+       judges AS (
+         SELECT ej.event_id, COUNT(*)::int AS judge_count
+           FROM event_judges ej
+           JOIN visible_events ve ON ve.id = ej.event_id
+          GROUP BY ej.event_id
+       ),
+       pending_signoff AS (
+         SELECT DISTINCT ON (rsr.event_id)
+                rsr.event_id, u.full_name AS pending_signoff_referee_name
+           FROM referee_signoff_requests rsr
+           JOIN users u ON u.id = rsr.target_referee_id
+           JOIN visible_events ve ON ve.id = rsr.event_id
+          WHERE rsr.status = 'pending'
+          ORDER BY rsr.event_id, rsr.created_at DESC
+       ),
+       federation_rows AS (
+         SELECT cdl.event_id,
+                COALESCE(u.org_id, ve.id) AS org_id,
+                COALESCE(o.name, 'Unknown federation') AS org_name,
+                o.country_code,
+                COUNT(DISTINCT cdl.competitor_id)
+                  FILTER (WHERE cdl.withdrawn_at IS NULL AND cdl.is_reserve = FALSE)::int AS active_diver_count,
+                COUNT(DISTINCT cdl.competitor_id)
+                  FILTER (WHERE cdl.withdrawn_at IS NULL AND cdl.is_reserve = FALSE AND cdl.dive_id IS NULL)::int AS missing_dive_rows
+           FROM competitor_dive_lists cdl
+           JOIN visible_events ve ON ve.id = cdl.event_id
+           LEFT JOIN users u ON u.id = cdl.competitor_id
+           LEFT JOIN organisations o ON o.id = u.org_id
+          GROUP BY cdl.event_id, COALESCE(u.org_id, ve.id), COALESCE(o.name, 'Unknown federation'), o.country_code
+       ),
+       federation_incomplete AS (
+         SELECT event_id, org_id, COUNT(*)::int AS incomplete_diver_count
+           FROM (
+             SELECT cdl.event_id, u.org_id, cdl.competitor_id
+               FROM competitor_dive_lists cdl
+               JOIN visible_events ve ON ve.id = cdl.event_id
+               JOIN users u ON u.id = cdl.competitor_id
+              WHERE cdl.withdrawn_at IS NULL
+                AND cdl.is_reserve = FALSE
+              GROUP BY cdl.event_id, u.org_id, cdl.competitor_id, ve.total_rounds
+             HAVING COUNT(*) < ve.total_rounds
+                 OR COUNT(*) FILTER (WHERE cdl.dive_id IS NULL) > 0
+           ) x
+          GROUP BY event_id, org_id
+       ),
+       federations AS (
+         SELECT fr.event_id,
+                COALESCE(json_agg(json_build_object(
+                  'org_id', fr.org_id,
+                  'org_name', fr.org_name,
+                  'country_code', fr.country_code,
+                  'active_diver_count', fr.active_diver_count,
+                  'missing_dive_rows', fr.missing_dive_rows,
+                  'incomplete_diver_count', COALESCE(fi.incomplete_diver_count, 0)
+                ) ORDER BY fr.org_name), '[]'::json) AS federation_readiness
+           FROM federation_rows fr
+           LEFT JOIN federation_incomplete fi
+             ON fi.event_id = fr.event_id AND fi.org_id = fr.org_id
+          GROUP BY fr.event_id
+       )
+       SELECT ve.id, ve.name, ve.status, ve.number_of_judges,
+              ve.scheduled_at, ve.entries_close_at, ve.is_rehearsal,
+              ve.check_in_done_at, ve.dive_order_randomised_at,
+              ve.dive_order_signed_off_at,
+              COALESCE(roster.active_diver_count, 0)::int AS active_diver_count,
+              COALESCE(roster.reserve_count, 0)::int AS reserve_count,
+              COALESCE(roster.withdrawn_count, 0)::int AS withdrawn_count,
+              COALESCE(roster.missing_dive_rows, 0)::int AS missing_dive_rows,
+              COALESCE(roster.late_arrival_pending_count, 0)::int AS late_arrival_pending_count,
+              COALESCE(roster.synchro_pending_count, 0)::int AS synchro_pending_count,
+              COALESCE(incomplete.incomplete_diver_count, 0)::int AS incomplete_diver_count,
+              COALESCE(judges.judge_count, 0)::int AS judge_count,
+              pending_signoff.pending_signoff_referee_name,
+              COALESCE(federations.federation_readiness, '[]'::json) AS federation_readiness
+         FROM visible_events ve
+         LEFT JOIN roster ON roster.event_id = ve.id
+         LEFT JOIN incomplete ON incomplete.event_id = ve.id
+         LEFT JOIN judges ON judges.event_id = ve.id
+         LEFT JOIN pending_signoff ON pending_signoff.event_id = ve.id
+         LEFT JOIN federations ON federations.event_id = ve.id
+        ORDER BY ve.scheduled_at NULLS LAST, ve.created_at ASC`,
+      [meetId, !!user.is_system_admin, user.org_id],
+    );
+
+    const events = rows.rows.map((row) => {
+      const readiness = buildReadinessFromRow(row);
+      return {
+        ...readiness,
+        incomplete_diver_count: Number(row.incomplete_diver_count || 0),
+        missing_dive_rows: Number(row.missing_dive_rows || 0),
+        late_arrival_pending_count: Number(row.late_arrival_pending_count || 0),
+        synchro_pending_count: Number(row.synchro_pending_count || 0),
+        federations: Array.isArray(row.federation_readiness) ? row.federation_readiness : [],
+      };
+    });
+
+    let conflicts = [];
+    try {
+      conflicts = await detectConflicts(meetId, db);
+    } catch (err) {
+      console.error("[Meet Readiness Conflicts Skipped]", err.message);
+    }
+    const hardConflicts = conflicts.filter((c) => c.severity === "hard").length;
+    const softConflicts = conflicts.filter((c) => c.severity !== "hard").length;
+
+    return {
+      meet: meetRes.rows[0],
+      summary: {
+        event_count: events.length,
+        ready_count: events.filter((event) => event.ready).length,
+        blocker_count: events.reduce((sum, event) => sum + event.blockers.length, 0),
+        late_arrival_pending_count: events.reduce((sum, event) => sum + event.late_arrival_pending_count, 0),
+        synchro_pending_count: events.reduce((sum, event) => sum + event.synchro_pending_count, 0),
+        hard_conflict_count: hardConflicts,
+        soft_conflict_count: softConflicts,
+      },
+      events,
+      conflicts,
+    };
   }
 
   async function requireEditableMeet(db, req, res) {
@@ -248,6 +485,20 @@ module.exports = function createMeetsRouter({
     } catch (err) {
       console.error("[Meet Detail Error]", err.message);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  router.get("/api/meets/:id/readiness-report", requireMeetEditor, async (req, res) => {
+    try {
+      const report = await buildMeetReadinessReport(pool, req.params.id, req.user);
+      if (!report) return res.status(404).json({ error: "Meet not found" });
+      if (String(req.query.format || "").toLowerCase() === "csv") {
+        return sendReadinessCsv(res, report);
+      }
+      res.json(report);
+    } catch (err) {
+      console.error("[Meet Readiness Report Error]", err.message);
+      res.status(500).json({ error: "Failed to load meet readiness report" });
     }
   });
 
