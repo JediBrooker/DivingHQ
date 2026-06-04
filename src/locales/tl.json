@@ -255,7 +255,121 @@
     "tab_spectator": "Manonood",
     "tab_other": "Iba pa",
     "go_to_section": "Pumunta sa",
-    "loading_data": "Naglo-load…"
+    "loading_data": "Naglo-load…",
+    "empty": {
+      "meet_manager_title": "Wala pang kaganapan",
+      "meet_manager_body": "Buuin ninyo ang inyong unang kaganapan sa Meet Manager. Ang pre-meet workflow ay gagabay sa inyo sa check-in, pag-randomize, pag-sign-off, at pagsisimula.",
+      "coach_title": "Wala pang mga diver na naka-link",
+      "coach_body": "Hilingin sa admin ng inyong organisasyon na i-link kayo sa mga diver na inyong isinasanay. Kapag naaprubahan, makikita ninyo dito ang kanilang mga profile, PB, at analytics.",
+      "diver_title": "Walang paparating na paligsahan",
+      "diver_body": "Kapag inilista ng inyong pederasyon ang isang paparating na kaganapan, lalabas ito rito na may countdown na \"entries close in\". Buksan ang Diver Portal upang makita ang lahat ng kaganapang pinapatakbo ng inyong pederasyon.",
+      "judge_title": "Wala pang naitalagang kaganapan",
+      "judge_body": "Idadagdag kayo ng Meet Manager sa panel bago ang susunod na kaganapan. Makikita ninyo rito ang mga itinalagang tungkulin kapag nangyari iyon.",
+      "org_admin_title": "Tahimik",
+      "org_admin_body": "Walang live na kaganapan, walang paparating na meet na nasa loob ng entries-close window, at walang naghihintay na mga kahilingan ng tungkulin. Gamitin ang mga link na GO TO sa ibaba para magsimula."
+    },
+    "sections": {
+      "next_actions": "Mga susunod na hakbang",
+      "your_events": "Ang inyong mga kaganapan",
+      "go_to": "Pumunta sa",
+      "live_squad": "Live squad",
+      "dive_list_workbench": "Workbench ng dive list",
+      "your_divers": "Ang inyong mga divers ({count})",
+      "waiting_for_you": "Naghihintay sa inyo",
+      "live_now": "Live na ngayon",
+      "as_referee": "Bilang referee",
+      "your_tools": "Ang inyong mga kasangkapan",
+      "your_assigned_events": "Ang inyong mga itinalagang kaganapan",
+      "meet_day_live": "Araw ng paligsahan · live na ngayon",
+      "your_next_meet": "Ang inyong susunod na paligsahan",
+      "attention": "Mga nangangailangan ng inyong pansin",
+      "event_readiness": "Kahandaan ng kaganapan",
+      "recent_activity": "Mga kamakailang aktibidad (7 araw)",
+      "other_surfaces": "Ibang surface"
+    },
+    "tiles": {
+      "manager_title": "Meet Manager",
+      "manager_desc": "Lumikha ng mga meet at kaganapan, itakda ang panel, bumuo ng mga roster.",
+      "control_title": "Silid ng Kontrol",
+      "control_desc": "Pamahalaan ang pag-score sa mismong araw — aktibong diver, shot clock, holds.",
+      "assign_judges_title": "Magtalaga ng mga Hukom",
+      "assign_judges_desc": "Italaga ang mga panel sa mga kaganapan bago ang paligsahan.",
+      "users_title": "Tagapamahala ng Mga Gumagamit",
+      "users_desc": "Magbigay ng mga tungkulin, i-link ang mga coach sa mga diver, pamahalaan ang mga account.",
+      "audit_title": "Audit Log",
+      "audit_desc": "Mga aktibidad sa buong pederasyon — mga iskor, pagbabago ng tungkulin, mga pag-edit.",
+      "clubs_title": "Mga Club",
+      "clubs_desc": "Pamahalaan ang mga club sa inyong pederasyon.",
+      "teams_title": "Mga Koponan",
+      "teams_desc": "I-set up ang mga roster ng koponan para sa mga kaganapan at mga dive list para sa bawat koponan.",
+      "coach_title": "Dashboard ng Coach",
+      "coach_desc": "Analytics bawat diver, trend ng iskor, mga template ng dive list.",
+      "compare_title": "Ihambing ang mga diver",
+      "compare_desc": "Dalawang diver na magkatabi — mga estadistika at pagkakaiba ng PB.",
+      "competitor_title": "Ipasa ang mga dive sheet",
+      "competitor_desc": "Piliin ang inyong mga dives bawat round bago ang deadline ng entry para sa bawat kaganapan.",
+      "profile_title": "Aking Profile",
+      "profile_desc": "Ang inyong mga iskor, PB, at 13-widget analytics dashboard.",
+      "scoreboard_title": "Scoreboard at Resulta",
+      "scoreboard_desc": "Manood ng live na meet o tingnan ang mga recap ng mga natapos na meet.",
+      "dive_directory_title": "Direktoryo ng Dives",
+      "dive_directory_desc": "Hanapin ang mga DD sa buong katalogo ng World Aquatics.",
+      "sign_off_title": "Mga Sign-Off Code",
+      "sign_off_desc": "Ipasok ang 6-digit na handoff code mula sa Meet Manager upang kumpirmahin ang Cut 3."
+    },
+    "actions": {
+      "ready": "Handa",
+      "left": "{count} natitira",
+      "live": "Live",
+      "fix_list": "Ayusin ang listahan",
+      "review": "Suriin",
+      "sign_off": "Mag-sign off",
+      "open_event": "Buksan ang kaganapan",
+      "completed": "Natapos",
+      "open_control": "Buksan ang Control Room",
+      "rehearsal": "Pagsasanay"
+    },
+    "blurbs": {
+      "coach_divers": "Buksan ang Coach Dashboard para sa kumpletong analytics bawat diver, mga trend ng iskor, at mga template.",
+      "referee": "Nagpapadala ang mga meet manager ng mga kahilingan para sa sign-off sa inyong device kapag umabot ang kanilang pre-meet workflow sa dilaw na hakbang na Sign Off. Maaari rin kayong maglagay ng 6-digit na handoff code sa inyong sariling device sa pamamagitan ng link sa ibaba."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} rounds",
+      "closing_soon": "{event} · malapit nang magsara ang mga entry"
+    },
+    "referee": {
+      "signoff_requested_by": "Humiling ng sign-off mula kay {name}",
+      "meet_manager_fallback": "Meet Manager"
+    },
+    "judge_panel": {
+      "analysis_title": "Pagsusuri ng mga Hukom",
+      "analysis_desc": "Tingnan kung paano kayo nakatapat sa mean na itinatakda ng panel — bias, drop rate, ayon sa bansa / club / height / dive group.",
+      "rounds_judges": "{rounds} rounds · {judges} hukom"
+    },
+    "diver_panel": {
+      "live_meta": "I-tap upang makita ang inyong susunod na dive, kasalukuyang ranggo, at kung ano ang kailangan ninyo para makapuntos",
+      "next_fallback": "Sundan ang dive list builder"
+    },
+    "activity": {
+      "view_full_log": "Tingnan ang buong audit log →",
+      "competitor_fallback": "Kalahok",
+      "score_update": "binago ang iskor sa",
+      "score_delete": "binura ang iskor sa",
+      "score_add": "idagdag ang iskor sa",
+      "role_to": "sa",
+      "role_from": "mula sa"
+    },
+    "attention": {
+      "live": "{name} ay LIVE",
+      "prepare": "Ihanda ang {name}",
+      "prepare_meta": "Sundan ang pre-meet workflow",
+      "role_requests_one": "{count} kahilingan sa tungkulin ang naghihintay",
+      "role_requests_many": "{count} kahilingan sa tungkulin ang naghihintay",
+      "role_requests_meta": "Suriin ang mga kahilingan ng tungkulin sa User Manager",
+      "orgs_one": "{count} pederasyon ang naghihintay ng pag-apruba",
+      "orgs_many": "{count} mga pederasyon ang naghihintay ng pag-apruba",
+      "orgs_meta": "Suriin sa User Manager → org filter"
+    }
   },
   "profile": {
     "title": "Aking Profile",

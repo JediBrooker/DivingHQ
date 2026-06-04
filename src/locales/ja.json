@@ -255,7 +255,121 @@
     "tab_spectator": "観戦者",
     "tab_other": "その他",
     "go_to_section": "移動先",
-    "loading_data": "読み込み中…"
+    "loading_data": "読み込み中…",
+    "empty": {
+      "meet_manager_title": "まだイベントがありません",
+      "meet_manager_body": "Meet Managerで最初のイベントを作成してください。プレミートのワークフローでは、チェックイン、ランダマイズ、サインオフ、開始までの手順を案内します。",
+      "coach_title": "まだダイバーが紐付けられていません",
+      "coach_body": "組織の管理者に、指導しているダイバーとの紐付けを依頼してください。承認されると、ここでプロフィール、自己ベスト（PB）、および分析を確認できます。",
+      "diver_title": "今後の大会はありません",
+      "diver_body": "連盟が今後のイベントを掲載すると、ここに「entries close in」のカウントダウンとともに表示されます。Diver Portalを開いて、連盟が運営するすべてのイベントをご確認ください。",
+      "judge_title": "まだイベントが割り当てられていません",
+      "judge_body": "次のイベント前に、ミートマネージャーがあなたをパネルに追加します。追加されると、ここに割り当てが表示されます。",
+      "org_admin_title": "特にお知らせはありません",
+      "org_admin_body": "ライブイベントはなく、エントリー締切期間内の今後の大会もなく、保留中の役割リクエストもありません。下の GO TO リンクからご確認ください。"
+    },
+    "sections": {
+      "next_actions": "次のアクション",
+      "your_events": "あなたのイベント",
+      "go_to": "移動",
+      "live_squad": "ライブチーム",
+      "dive_list_workbench": "ダイブリストワークベンチ",
+      "your_divers": "あなたのダイバー ({count})",
+      "waiting_for_you": "あなたの対応を待っています",
+      "live_now": "ライブ中",
+      "as_referee": "審判として",
+      "your_tools": "あなたのツール",
+      "your_assigned_events": "あなたに割り当てられたイベント",
+      "meet_day_live": "大会当日 · ライブ中",
+      "your_next_meet": "あなたの次の大会",
+      "attention": "対応が必要な事項",
+      "event_readiness": "大会の準備状況",
+      "recent_activity": "最近の活動 (7日)",
+      "other_surfaces": "その他の会場"
+    },
+    "tiles": {
+      "manager_title": "Meet Manager",
+      "manager_desc": "大会やイベントの作成、パネルの設定、ロースターの作成が行えます。",
+      "control_title": "Control Room",
+      "control_desc": "当日の採点を管理します — アクティブダイバー、ショットクロック、ホールド。",
+      "assign_judges_title": "ジャッジの割り当て",
+      "assign_judges_desc": "大会前にイベントへパネルを配置します。",
+      "users_title": "ユーザー管理",
+      "users_desc": "役割の付与、コーチとダイバーの紐付け、アカウント管理を行います。",
+      "audit_title": "監査ログ",
+      "audit_desc": "連盟全体の活動 — スコア、役割変更、編集履歴。",
+      "clubs_title": "クラブ",
+      "clubs_desc": "連盟内のクラブを管理します。",
+      "teams_title": "チーム",
+      "teams_desc": "チームイベントのロースターおよびチームごとのダイブリストを設定します。",
+      "coach_title": "コーチダッシュボード",
+      "coach_desc": "ダイバー別の分析、スコアの傾向、ダイブリストのテンプレート。",
+      "compare_title": "ダイバー比較",
+      "compare_desc": "2人のダイバーを並べて比較 — 統計とPBの差分。",
+      "competitor_title": "ダイブシートを提出する",
+      "competitor_desc": "各イベントのエントリー締切前に、ラウンドごとのダイブを選択してください。",
+      "profile_title": "プロフィール",
+      "profile_desc": "あなたのスコア、PB、および13ウィジェットの分析ダッシュボード。",
+      "scoreboard_title": "スコアボードと結果",
+      "scoreboard_desc": "ライブ大会を観るか、完了した大会のまとめを閲覧できます。",
+      "dive_directory_title": "ダイブディレクトリ",
+      "dive_directory_desc": "World Aquaticsのカタログ全体でDDを検索します。",
+      "sign_off_title": "サインオフコード",
+      "sign_off_desc": "Cut 3を確定するために、Meet Managerの6桁のハンドオフコードを入力してください。"
+    },
+    "actions": {
+      "ready": "準備完了",
+      "left": "{count} 残り",
+      "live": "ライブ",
+      "fix_list": "リストを修正",
+      "review": "確認",
+      "sign_off": "サインオフ",
+      "open_event": "イベントを開く",
+      "completed": "完了",
+      "open_control": "コントロールルームを開く",
+      "rehearsal": "リハーサル"
+    },
+    "blurbs": {
+      "coach_divers": "コーチダッシュボードを開くと、ダイバー別の詳細な分析、スコアの傾向、テンプレートをご覧いただけます。",
+      "referee": "ミートマネージャーは、プレミートのワークフローが黄色の Sign Off ステップに到達すると、あなたの端末にサインオフ要求を送信します。下のリンクから、ご自身の端末で6桁のハンドオフコードを入力することもできます。"
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} ラウンド",
+      "closing_soon": "{event} · エントリーの締切が間もなくです"
+    },
+    "referee": {
+      "signoff_requested_by": "{name} によってサインオフが要求されました",
+      "meet_manager_fallback": "ミートマネージャー"
+    },
+    "judge_panel": {
+      "analysis_title": "審判分析",
+      "analysis_desc": "パネルの平均と比較したあなたの傾向を確認できます — バイアス、ドロップ率、国別／クラブ別／高さ別／ダイブグループ別。",
+      "rounds_judges": "{rounds} ラウンド · {judges} 審判"
+    },
+    "diver_panel": {
+      "live_meta": "タップして次のダイブ、現在の順位、および必要な得点を確認してください",
+      "next_fallback": "ダイブリストビルダーの手順を順に進めてください"
+    },
+    "activity": {
+      "view_full_log": "監査ログ全体を表示 →",
+      "competitor_fallback": "競技者",
+      "score_update": "でスコアが修正されました",
+      "score_delete": "でスコアが削除されました",
+      "score_add": "でスコアが追加されました",
+      "role_to": "に",
+      "role_from": "から"
+    },
+    "attention": {
+      "live": "{name} はライブ中です",
+      "prepare": "{name} の準備をしてください",
+      "prepare_meta": "プレミートのワークフローを順に進めてください",
+      "role_requests_one": "{count} 件の役割リクエストが保留中です",
+      "role_requests_many": "{count} 件の役割リクエストが保留中です",
+      "role_requests_meta": "ユーザー管理で役割リクエストを確認してください",
+      "orgs_one": "{count} 件の連盟が承認待ちです",
+      "orgs_many": "{count} 件の連盟が承認待ちです",
+      "orgs_meta": "ユーザー管理で確認してください → 組織フィルター"
+    }
   },
   "profile": {
     "title": "マイプロフィール",

@@ -255,7 +255,121 @@
     "tab_spectator": "Spettatore",
     "tab_other": "Altro",
     "go_to_section": "Vai a",
-    "loading_data": "Caricamento…"
+    "loading_data": "Caricamento…",
+    "empty": {
+      "meet_manager_title": "Nessun evento al momento",
+      "meet_manager_body": "Crea il tuo primo evento in Meet Manager. Il flusso di lavoro pre-gara ti guida attraverso il check-in, la randomizzazione, la conferma e l'avvio.",
+      "coach_title": "Nessun tuffatore collegato al momento",
+      "coach_body": "Si rivolga all'amministratore della sua organizzazione per essere collegato ai tuffatori che allena. Una volta approvata la richiesta, vedrà qui i loro profili, i PB e le analisi.",
+      "diver_title": "Nessuna gara imminente",
+      "diver_body": "Quando la sua federazione inserirà un evento imminente, questo comparirà qui con un conto alla rovescia per la chiusura iscrizioni. Apra il Portale del Tuffatore per vedere tutte le gare organizzate dalla sua federazione.",
+      "judge_title": "Nessun evento assegnato al momento",
+      "judge_body": "Il meet manager la aggiungerà a una giuria prima del prossimo evento. Vedrà le assegnazioni qui quando ciò avverrà.",
+      "org_admin_title": "Tutto in ordine",
+      "org_admin_body": "Nessun evento in diretta, nessuna gara imminente entro la finestra di chiusura iscrizioni e nessuna richiesta di ruolo in attesa. Utilizzi i link \"Vai a\" qui sotto per entrare."
+    },
+    "sections": {
+      "next_actions": "Prossime azioni",
+      "your_events": "I suoi eventi",
+      "go_to": "Vai a",
+      "live_squad": "Squadra in diretta",
+      "dive_list_workbench": "Banco di lavoro per le liste di tuffi",
+      "your_divers": "I suoi tuffatori ({count})",
+      "waiting_for_you": "In attesa della sua azione",
+      "live_now": "In diretta ora",
+      "as_referee": "In qualità di arbitro",
+      "your_tools": "I suoi strumenti",
+      "your_assigned_events": "Eventi a lei assegnati",
+      "meet_day_live": "Giornata di gara · in diretta ora",
+      "your_next_meet": "La sua prossima gara",
+      "attention": "Cosa richiede la sua attenzione",
+      "event_readiness": "Prontezza dell'evento",
+      "recent_activity": "Attività recente (7 giorni)",
+      "other_surfaces": "Altre superfici"
+    },
+    "tiles": {
+      "manager_title": "Direttore di Gara",
+      "manager_desc": "Crea gare ed eventi, imposta la giuria e compila le liste dei partecipanti.",
+      "control_title": "Sala di controllo",
+      "control_desc": "Gestisca la rilevazione dei punteggi durante la gara — tuffatore attivo, cronometro, sospensioni.",
+      "assign_judges_title": "Assegna giudici",
+      "assign_judges_desc": "Assegni le giurie agli eventi prima della gara.",
+      "users_title": "Gestione utenti",
+      "users_desc": "Assegni ruoli, colleghi gli allenatori ai tuffatori, gestisca gli account.",
+      "audit_title": "Registro audit",
+      "audit_desc": "Attività a livello federale — punteggi, cambi di ruolo, modifiche.",
+      "clubs_title": "Club",
+      "clubs_desc": "Gestisca i club nella sua federazione.",
+      "teams_title": "Squadre",
+      "teams_desc": "Configuri gli organici per le gare a squadre e le liste di tuffi per ciascuna squadra.",
+      "coach_title": "Dashboard allenatore",
+      "coach_desc": "Analisi per tuffatore, trend dei punteggi, modelli di liste di tuffi.",
+      "compare_title": "Confronta tuffatori",
+      "compare_desc": "Due tuffatori affiancati — statistiche e differenze di PB.",
+      "competitor_title": "Invia liste di tuffi",
+      "competitor_desc": "Scegli i tuoi tuffi per ogni round prima della scadenza delle iscrizioni per l'evento.",
+      "profile_title": "Il mio profilo",
+      "profile_desc": "I suoi punteggi, i PB e una dashboard analitica con 13 widget.",
+      "scoreboard_title": "Classifica e risultati",
+      "scoreboard_desc": "Segua gare in diretta o consulti i resoconti delle gare concluse.",
+      "dive_directory_title": "Catalogo tuffi",
+      "dive_directory_desc": "Cerca i DD nel catalogo World Aquatics.",
+      "sign_off_title": "Codici di conferma",
+      "sign_off_desc": "Inserisca il codice di trasferimento a 6 cifre del meet manager per confermare il Cut 3."
+    },
+    "actions": {
+      "ready": "Pronto",
+      "left": "{count} rimanenti",
+      "live": "In diretta",
+      "fix_list": "Correggi lista",
+      "review": "Rivedi",
+      "sign_off": "Conferma",
+      "open_event": "Apri evento",
+      "completed": "Completato",
+      "open_control": "Apri Sala di controllo",
+      "rehearsal": "Prova"
+    },
+    "blurbs": {
+      "coach_divers": "Apra la Dashboard dell'allenatore per analisi complete per tuffatore, trend dei punteggi e modelli.",
+      "referee": "I meet manager inviano richieste di conferma al suo dispositivo quando il loro flusso di lavoro pre-gara raggiunge lo step giallo \"Conferma\". Può anche inserire un codice di trasferimento a 6 cifre sul suo dispositivo tramite il link sottostante."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} turni",
+      "closing_soon": "{event} · chiusura iscrizioni imminente"
+    },
+    "referee": {
+      "signoff_requested_by": "Richiesta di conferma da {name}",
+      "meet_manager_fallback": "direttore di gara"
+    },
+    "judge_panel": {
+      "analysis_title": "Analisi dei giudici",
+      "analysis_desc": "Veda come si posiziona rispetto alla media mantenuta dalla giuria — bias, tasso di scarto, per paese / club / altezza / gruppo di tuffi.",
+      "rounds_judges": "{rounds} turni · {judges} giudici"
+    },
+    "diver_panel": {
+      "live_meta": "Tocchi per vedere il suo prossimo tuffo, la classifica attuale e cosa deve fare per ottenere il punteggio.",
+      "next_fallback": "Segua il generatore di liste di tuffi"
+    },
+    "activity": {
+      "view_full_log": "Visualizzi il registro audit completo →",
+      "competitor_fallback": "Atleta",
+      "score_update": "punteggio modificato in",
+      "score_delete": "punteggio cancellato in",
+      "score_add": "punteggio aggiunto in",
+      "role_to": "a",
+      "role_from": "da"
+    },
+    "attention": {
+      "live": "{name} è IN DIRETTA",
+      "prepare": "Prepari {name}",
+      "prepare_meta": "Segua il flusso di lavoro pre-gara",
+      "role_requests_one": "{count} richiesta di ruolo in attesa",
+      "role_requests_many": "{count} richieste di ruolo in attesa",
+      "role_requests_meta": "Esamini le richieste di ruolo in Gestione utenti",
+      "orgs_one": "{count} federazione in attesa di approvazione",
+      "orgs_many": "{count} federazioni in attesa di approvazione",
+      "orgs_meta": "Verifichi in Gestione utenti → filtro organizzazioni"
+    }
   },
   "role": {
     "public": "Pubblico",

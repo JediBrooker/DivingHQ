@@ -255,7 +255,121 @@
     "tab_spectator": "Espectador",
     "tab_other": "Más",
     "go_to_section": "Ir a",
-    "loading_data": "Cargando…"
+    "loading_data": "Cargando…",
+    "empty": {
+      "meet_manager_title": "Aún no hay eventos",
+      "meet_manager_body": "Cread vuestro primer evento en Meet Manager. El flujo de trabajo previo al evento os guía por el registro, la aleatorización, la aprobación y el inicio.",
+      "coach_title": "Aún no hay saltadores vinculados",
+      "coach_body": "Pídele al administrador de vuestra organización que os vincule a los saltadores a los que entrenáis. Una vez aprobado, veréis aquí sus perfiles, sus mejores marcas (PB) y analíticas.",
+      "diver_title": "No hay competiciones próximas",
+      "diver_body": "Cuando vuestra federación liste un evento próximo, aparecerá aquí con una cuenta atrás de \"cierre de inscripciones\". Abrid el Portal del Saltador para ver todos los eventos que organiza vuestra federación.",
+      "judge_title": "Aún no hay eventos asignados",
+      "judge_body": "El responsable del evento os añadirá a un panel antes del próximo evento. Veréis las asignaciones aquí cuando eso ocurra.",
+      "org_admin_title": "Sin novedades",
+      "org_admin_body": "No hay eventos en directo, no hay competiciones próximas dentro del periodo de cierre de inscripciones, y no hay solicitudes de rol pendientes. Usad los enlaces IR A de abajo para empezar."
+    },
+    "sections": {
+      "next_actions": "Próximas acciones",
+      "your_events": "Vuestros eventos",
+      "go_to": "Ir a",
+      "live_squad": "Equipo en directo",
+      "dive_list_workbench": "Área de trabajo de la lista de saltos",
+      "your_divers": "Vuestros saltadores ({count})",
+      "waiting_for_you": "Esperando vuestra acción",
+      "live_now": "En directo ahora",
+      "as_referee": "Como árbitro",
+      "your_tools": "Vuestras herramientas",
+      "your_assigned_events": "Vuestros eventos asignados",
+      "meet_day_live": "Día de la competición · en directo ahora",
+      "your_next_meet": "Vuestra próxima competición",
+      "attention": "Lo que requiere vuestra atención",
+      "event_readiness": "Preparación del evento",
+      "recent_activity": "Actividad reciente (7 días)",
+      "other_surfaces": "Otras superficies"
+    },
+    "tiles": {
+      "manager_title": "Gestor de competición",
+      "manager_desc": "Crear competiciones y eventos, configurar el panel y elaborar las listas de inscritos.",
+      "control_title": "Sala de control",
+      "control_desc": "Gestionar la puntuación el día del evento — saltador activo, reloj de tiempo, pausas.",
+      "assign_judges_title": "Asignar jueces",
+      "assign_judges_desc": "Asignar paneles de jueces a los eventos antes de la competición.",
+      "users_title": "Gestor de usuarios",
+      "users_desc": "Conceder roles, vincular entrenadores con saltadores, gestionar cuentas.",
+      "audit_title": "Registro de auditoría",
+      "audit_desc": "Actividad a nivel de federación — puntuaciones, cambios de roles, ediciones.",
+      "clubs_title": "Clubes",
+      "clubs_desc": "Gestionar los clubes de vuestra federación.",
+      "teams_title": "Equipos",
+      "teams_desc": "Configurar las listas de inscritos por equipo y las listas de saltos por equipo.",
+      "coach_title": "Panel del entrenador",
+      "coach_desc": "Analíticas por saltador, tendencias de puntuación, plantillas de lista de saltos.",
+      "compare_title": "Comparar saltadores",
+      "compare_desc": "Dos saltadores lado a lado — estadísticas y diferencias de mejores marcas (PB).",
+      "competitor_title": "Enviar hojas de saltos",
+      "competitor_desc": "Seleccionad vuestros saltos por ronda antes de la fecha límite de inscripción de cada evento.",
+      "profile_title": "Mi perfil",
+      "profile_desc": "Vuestras puntuaciones, mejores marcas (PB) y panel analítico de 13 widgets.",
+      "scoreboard_title": "Marcador y resultados",
+      "scoreboard_desc": "Ver competiciones en directo o consultar resúmenes de competiciones finalizadas.",
+      "dive_directory_title": "Directorio de saltos",
+      "dive_directory_desc": "Consulta los grados de dificultad (DD) en todo el catálogo de World Aquatics.",
+      "sign_off_title": "Códigos de firma",
+      "sign_off_desc": "Introducid el código de traspaso de 6 dígitos del Meet Manager para confirmar el Corte 3."
+    },
+    "actions": {
+      "ready": "Listo",
+      "left": "{count} restantes",
+      "live": "En directo",
+      "fix_list": "Corregir lista",
+      "review": "Revisar",
+      "sign_off": "Aprobar",
+      "open_event": "Abrir evento",
+      "completed": "Completado",
+      "open_control": "Abrir Sala de control",
+      "rehearsal": "Ensayo"
+    },
+    "blurbs": {
+      "coach_divers": "Abrid el Panel del Entrenador para acceder a analíticas completas por saltador, tendencias de puntuación y plantillas.",
+      "referee": "Los meet managers envían solicitudes de firma a vuestro dispositivo cuando su flujo de trabajo previo al evento alcanza el paso amarillo de Firma. También podéis introducir un código de traspaso de 6 dígitos en vuestro propio dispositivo a través del enlace de abajo."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} rondas",
+      "closing_soon": "{event} · cierre de inscripciones pronto"
+    },
+    "referee": {
+      "signoff_requested_by": "Firma solicitada por {name}",
+      "meet_manager_fallback": "gestor del evento"
+    },
+    "judge_panel": {
+      "analysis_title": "Análisis de jueces",
+      "analysis_desc": "Consultad cómo os situáis respecto a la media del panel — sesgo, tasa de descarte, por país / club / altura / grupo de saltos.",
+      "rounds_judges": "{rounds} rondas · {judges} jueces"
+    },
+    "diver_panel": {
+      "live_meta": "Tocad para ver vuestro siguiente salto, la posición actual y lo que necesitáis para puntuar",
+      "next_fallback": "Recorred el asistente de creación de listas de saltos"
+    },
+    "activity": {
+      "view_full_log": "Ver el registro de auditoría completo →",
+      "competitor_fallback": "Competidor",
+      "score_update": "puntuación modificada en",
+      "score_delete": "puntuación eliminada en",
+      "score_add": "puntuación en",
+      "role_to": "a",
+      "role_from": "de"
+    },
+    "attention": {
+      "live": "{name} está EN DIRECTO",
+      "prepare": "Preparad a {name}",
+      "prepare_meta": "Recorred el flujo de trabajo previo al evento",
+      "role_requests_one": "{count} solicitud de rol en espera",
+      "role_requests_many": "{count} solicitudes de rol en espera",
+      "role_requests_meta": "Revisad las solicitudes de rol en el Gestor de usuarios",
+      "orgs_one": "{count} federación pendiente de aprobación",
+      "orgs_many": "{count} federaciones pendientes de aprobación",
+      "orgs_meta": "Revisad en Gestor de usuarios → filtro de organización"
+    }
   },
   "profile": {
     "title": "Mi Perfil",

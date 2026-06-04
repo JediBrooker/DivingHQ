@@ -255,7 +255,121 @@
     "tab_spectator": "관중",
     "tab_other": "더보기",
     "go_to_section": "이동",
-    "loading_data": "불러오는 중…"
+    "loading_data": "불러오는 중…",
+    "empty": {
+      "meet_manager_title": "아직 이벤트가 없습니다",
+      "meet_manager_body": "Meet Manager에서 첫 이벤트를 만드세요. 사전 대회 워크플로우가 체크인, 무작위 배정, 서명, 시작 과정을 안내합니다.",
+      "coach_title": "아직 연결된 다이버가 없습니다",
+      "coach_body": "기관 관리자에게 귀하가 멘토하는 다이버와 연결해 달라고 요청하세요. 승인되면 이곳에서 프로필, 개인 최고 기록(PB) 및 분석을 볼 수 있습니다.",
+      "diver_title": "예정된 대회가 없습니다",
+      "diver_body": "연맹에서 예정된 이벤트를 등록하면, 이곳에 \"entries close in\" 카운트다운과 함께 표시됩니다. Diver Portal을 열어 귀하의 연맹이 주최하는 모든 이벤트를 확인하세요.",
+      "judge_title": "아직 배정된 이벤트가 없습니다",
+      "judge_body": "Meet Manager가 다음 이벤트 전에 귀하를 패널에 추가할 것입니다. 추가되면 이곳에서 배정을 확인할 수 있습니다.",
+      "org_admin_title": "특이사항이 없습니다",
+      "org_admin_body": "진행 중인 이벤트 없음, entries-close 창 내 예정된 대회 없음, 대기 중인 역할 요청 없음. 아래의 GO TO 링크를 사용하여 확인하세요."
+    },
+    "sections": {
+      "next_actions": "다음 작업",
+      "your_events": "귀하의 이벤트",
+      "go_to": "이동",
+      "live_squad": "실시간 스쿼드",
+      "dive_list_workbench": "다이브 리스트 작업대",
+      "your_divers": "귀하의 다이버 ({count})",
+      "waiting_for_you": "귀하의 처리 대기",
+      "live_now": "지금 진행 중",
+      "as_referee": "심판으로서",
+      "your_tools": "귀하의 도구",
+      "your_assigned_events": "귀하에게 배정된 이벤트",
+      "meet_day_live": "대회 당일 · 지금 진행 중",
+      "your_next_meet": "귀하의 다음 대회",
+      "attention": "주의가 필요한 사항",
+      "event_readiness": "대회 준비 상태",
+      "recent_activity": "최근 활동 (7일)",
+      "other_surfaces": "기타 종목"
+    },
+    "tiles": {
+      "manager_title": "Meet Manager",
+      "manager_desc": "대회 및 이벤트를 생성하고, 패널을 설정하며, 명단을 구성하세요.",
+      "control_title": "Control Room",
+      "control_desc": "대회 당일 채점 운영 — 활성 다이버, 샷클락, 홀드.",
+      "assign_judges_title": "심판 배정",
+      "assign_judges_desc": "대회에 앞서 이벤트에 패널을 배정하세요.",
+      "users_title": "사용자 관리",
+      "users_desc": "역할 부여, 코치와 다이버 연결, 계정 관리를 수행하세요.",
+      "audit_title": "감사 로그",
+      "audit_desc": "연맹 전반 활동 — 점수, 역할 변경, 편집.",
+      "clubs_title": "클럽",
+      "clubs_desc": "연맹 내 클럽을 관리하세요.",
+      "teams_title": "팀",
+      "teams_desc": "팀 이벤트 명단 및 팀별 다이브 리스트를 설정하세요.",
+      "coach_title": "코치 대시보드",
+      "coach_desc": "다이버별 분석, 점수 추세, 다이브 목록 템플릿",
+      "compare_title": "다이버 비교",
+      "compare_desc": "두 다이버를 나란히 비교 — 통계 및 PB 차이",
+      "competitor_title": "다이브 시트 제출",
+      "competitor_desc": "각 이벤트의 참가 마감 전 라운드별 다이브를 선택하세요.",
+      "profile_title": "내 프로필",
+      "profile_desc": "귀하의 점수, 개인 최고 기록(PB) 및 13개 위젯 분석 대시보드.",
+      "scoreboard_title": "점수판 및 결과",
+      "scoreboard_desc": "라이브 대회를 시청하거나 완료된 대회 요약을 찾아보세요.",
+      "dive_directory_title": "다이브 디렉토리",
+      "dive_directory_desc": "World Aquatics 카탈로그 전반에서 난도(DD)를 조회하세요.",
+      "sign_off_title": "서명 코드",
+      "sign_off_desc": "Cut 3을 확정하려면 Meet Manager의 6자리 인수 코드(handoff code)를 입력하세요."
+    },
+    "actions": {
+      "ready": "준비됨",
+      "left": "{count} 남음",
+      "live": "라이브",
+      "fix_list": "목록 수정",
+      "review": "검토",
+      "sign_off": "서명",
+      "open_event": "이벤트 열기",
+      "completed": "완료됨",
+      "open_control": "컨트롤 룸 열기",
+      "rehearsal": "리허설"
+    },
+    "blurbs": {
+      "coach_divers": "코치 대시보드를 열어 다이버별 분석, 점수 추세 및 템플릿을 확인하세요.",
+      "referee": "Meet Manager가 사전 대회 워크플로우가 노란색 'Sign Off' 단계에 도달하면 귀하의 기기로 서명 요청을 보냅니다. 아래 링크를 통해 귀하의 기기에 6자리 인수 코드를 입력할 수도 있습니다."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} 라운드",
+      "closing_soon": "{event} · 참가 접수가 곧 마감됩니다."
+    },
+    "referee": {
+      "signoff_requested_by": "{name}님이 서명을 요청했습니다",
+      "meet_manager_fallback": "Meet Manager"
+    },
+    "judge_panel": {
+      "analysis_title": "심판 분석",
+      "analysis_desc": "패널 평균과 비교한 자신의 성과를 확인하세요 — 편향, 낙하 비율, 국가/클럽/높이/다이브 그룹별.",
+      "rounds_judges": "{rounds} 라운드 · {judges} 심판"
+    },
+    "diver_panel": {
+      "live_meta": "다음 다이브, 현재 순위 및 필요한 점수를 확인하려면 탭하세요.",
+      "next_fallback": "다이브 목록 빌더를 통해 진행하세요."
+    },
+    "activity": {
+      "view_full_log": "전체 감사 로그 보기 →",
+      "competitor_fallback": "선수",
+      "score_update": "점수 수정됨",
+      "score_delete": "점수 삭제됨",
+      "score_add": "점수 추가됨",
+      "role_to": "에게",
+      "role_from": "에서"
+    },
+    "attention": {
+      "live": "{name}님이 라이브 중입니다",
+      "prepare": "{name}을 준비하세요",
+      "prepare_meta": "사전 대회 워크플로우를 진행하세요",
+      "role_requests_one": "{count}개의 역할 요청이 대기 중입니다",
+      "role_requests_many": "{count}개의 역할 요청이 대기 중입니다",
+      "role_requests_meta": "사용자 관리에서 역할 요청을 검토하세요",
+      "orgs_one": "{count}개의 연맹 승인 대기 중입니다",
+      "orgs_many": "{count}개의 연맹 승인 대기 중입니다",
+      "orgs_meta": "사용자 관리에서 검토 → org 필터"
+    }
   },
   "profile": {
     "title": "내 프로필",

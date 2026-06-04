@@ -255,7 +255,121 @@
     "tab_spectator": "Zuschauer",
     "tab_other": "Mehr",
     "go_to_section": "Gehe zu",
-    "loading_data": "Lädt…"
+    "loading_data": "Lädt…",
+    "empty": {
+      "meet_manager_title": "Noch keine Veranstaltungen",
+      "meet_manager_body": "Erstellen Sie Ihre erste Veranstaltung im Meet Manager. Der Pre-Meet-Workflow führt Sie durch Check-in, Randomisierung, Sign-off und Start.",
+      "coach_title": "Noch keine Springer verknüpft",
+      "coach_body": "Bitten Sie Ihren Organisationsadministrator, Sie mit den Springern zu verknüpfen, die Sie betreuen. Nach Genehmigung sehen Sie hier deren Profile, PBs und Analysen.",
+      "diver_title": "Keine anstehenden Wettkämpfe",
+      "diver_body": "Wenn Ihre Föderation eine bevorstehende Veranstaltung aufführt, wird sie hier mit einem \"entries close in\"-Countdown angezeigt. Öffnen Sie das Diver Portal, um alle Veranstaltungen zu sehen, die Ihre Föderation durchführt.",
+      "judge_title": "Noch keine Veranstaltungen zugewiesen",
+      "judge_body": "Der Meet Manager wird Sie vor der nächsten Veranstaltung einem Panel hinzufügen. Sie sehen hier die Zuweisungen, sobald das geschieht.",
+      "org_admin_title": "Alles ruhig",
+      "org_admin_body": "Keine Live-Veranstaltungen, keine bevorstehenden Wettkämpfe innerhalb des entries-close-Fensters und keine ausstehenden Rollenanforderungen. Verwenden Sie die untenstehenden GO TO-Links, um einzusteigen."
+    },
+    "sections": {
+      "next_actions": "Nächste Schritte",
+      "your_events": "Ihre Veranstaltungen",
+      "go_to": "Aufrufen",
+      "live_squad": "Live-Team",
+      "dive_list_workbench": "Arbeitsbereich für Sprunglisten",
+      "your_divers": "Ihre Springer ({count})",
+      "waiting_for_you": "Warten auf Sie",
+      "live_now": "Jetzt live",
+      "as_referee": "Als Kampfrichter",
+      "your_tools": "Ihre Werkzeuge",
+      "your_assigned_events": "Ihnen zugewiesene Veranstaltungen",
+      "meet_day_live": "Wettkampftag · jetzt live",
+      "your_next_meet": "Ihr nächster Wettkampf",
+      "attention": "Was Ihre Aufmerksamkeit erfordert",
+      "event_readiness": "Veranstaltungsbereitschaft",
+      "recent_activity": "Aktivitäten der letzten 7 Tage",
+      "other_surfaces": "Andere Sprungflächen"
+    },
+    "tiles": {
+      "manager_title": "Wettkampf-Manager",
+      "manager_desc": "Erstellen Sie Meets und Veranstaltungen, legen Sie das Panel fest, erstellen Sie Startlisten.",
+      "control_title": "Kontrollraum",
+      "control_desc": "Steuern Sie das Scoring am Veranstaltungstag — aktiver Springer, Shot Clock, Holds.",
+      "assign_judges_title": "Richter zuweisen",
+      "assign_judges_desc": "Weisen Sie Panels im Vorfeld den Veranstaltungen zu.",
+      "users_title": "Benutzerverwaltung",
+      "users_desc": "Vergeben Sie Rollen, verknüpfen Sie Trainer mit Springern, verwalten Sie Konten.",
+      "audit_title": "Audit-Log",
+      "audit_desc": "Föderationsweite Aktivitäten — Wertungen, Rollenänderungen, Bearbeitungen.",
+      "clubs_title": "Vereine",
+      "clubs_desc": "Verwalten Sie die Vereine in Ihrer Föderation.",
+      "teams_title": "Mannschaften",
+      "teams_desc": "Richten Sie Startlisten für Teamwettbewerbe und pro Team Sprunglisten ein.",
+      "coach_title": "Trainer-Dashboard",
+      "coach_desc": "Analysen pro Springer, Wertungstrends, Vorlagen für Sprunglisten.",
+      "compare_title": "Springer vergleichen",
+      "compare_desc": "Zwei Springer nebeneinander — Statistiken und PB-Differenzen.",
+      "competitor_title": "Sprunglisten einreichen",
+      "competitor_desc": "Wählen Sie Ihre Sprünge pro Runde vor Ablauf der Meldefrist jeder Veranstaltung.",
+      "profile_title": "Mein Profil",
+      "profile_desc": "Ihre Wertungen, PBs und ein 13-Widget-Analyse-Dashboard.",
+      "scoreboard_title": "Anzeigetafel & Ergebnisse",
+      "scoreboard_desc": "Sehen Sie Live-Meets oder durchsuchen Sie Zusammenfassungen abgeschlossener Veranstaltungen.",
+      "dive_directory_title": "Sprungverzeichnis",
+      "dive_directory_desc": "Suchen Sie DDs im World Aquatics-Katalog.",
+      "sign_off_title": "Sign-Off-Codes",
+      "sign_off_desc": "Geben Sie den 6-stelligen Übergabecode des Meet Managers ein, um Cut 3 zu bestätigen."
+    },
+    "actions": {
+      "ready": "Bereit",
+      "left": "{count} verbleibend",
+      "live": "Live",
+      "fix_list": "Liste fixieren",
+      "review": "Überprüfen",
+      "sign_off": "Abzeichnen",
+      "open_event": "Veranstaltung öffnen",
+      "completed": "Abgeschlossen",
+      "open_control": "Kontrollraum öffnen",
+      "rehearsal": "Probe"
+    },
+    "blurbs": {
+      "coach_divers": "Öffnen Sie das Trainer-Dashboard für vollständige Analysen pro Springer, Wertungstrends und Vorlagen.",
+      "referee": "Die Meet Manager senden Sign-off-Anfragen an Ihr Gerät, wenn ihr Pre-Meet-Workflow den gelben Schritt Sign Off erreicht. Sie können auch über den untenstehenden Link auf Ihrem eigenen Gerät einen 6-stelligen Übergabecode eingeben."
+    },
+    "coach": {
+      "rounds_meta": "{event} · {entered}/{total} Runden",
+      "closing_soon": "{event} · Anmeldungen schließen bald"
+    },
+    "referee": {
+      "signoff_requested_by": "Abzeichnung angefordert von {name}",
+      "meet_manager_fallback": "Meet Manager"
+    },
+    "judge_panel": {
+      "analysis_title": "Richteranalyse",
+      "analysis_desc": "Sehen Sie, wie Sie im Vergleich zum vom Panel ermittelten Mittelwert abschneiden — Bias, Drop-Rate, nach Land / Verein / Höhe / Sprunggruppe.",
+      "rounds_judges": "{rounds} Runden · {judges} Kampfrichter"
+    },
+    "diver_panel": {
+      "live_meta": "Tippen Sie, um Ihren nächsten Sprung, die aktuelle Platzierung und Ihre erforderliche Punktzahl zu sehen",
+      "next_fallback": "Führen Sie den Sprunglisten-Generator durch"
+    },
+    "activity": {
+      "view_full_log": "Vollständiges Audit-Log anzeigen →",
+      "competitor_fallback": "Wettkämpfer",
+      "score_update": "Wertung geändert in",
+      "score_delete": "Wertung gelöscht in",
+      "score_add": "Wertung hinzugefügt in",
+      "role_to": "an",
+      "role_from": "von"
+    },
+    "attention": {
+      "live": "{name} ist LIVE",
+      "prepare": "Bereiten Sie {name} vor",
+      "prepare_meta": "Führen Sie den Pre-Meet-Workflow durch",
+      "role_requests_one": "{count} Rollenanfrage wartet",
+      "role_requests_many": "{count} Rollenanfragen warten",
+      "role_requests_meta": "Prüfen Sie Rollenanfragen in der Benutzerverwaltung",
+      "orgs_one": "{count} Föderation wartet auf Genehmigung",
+      "orgs_many": "{count} Föderationen warten auf Genehmigung",
+      "orgs_meta": "Prüfen Sie in der Benutzerverwaltung → Organisationsfilter"
+    }
   },
   "role": {
     "public": "Öffentlich",
