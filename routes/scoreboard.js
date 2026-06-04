@@ -262,7 +262,7 @@ module.exports = function createScoreboardRouter({
                   upcoming-dives queue. */
                AND cdl.is_reserve = FALSE
            )
-           SELECT ordered.round_number, ordered.round_order,
+           SELECT ordered.round_number, ordered.round_order::int AS round_order,
                   ordered.competitor_id, ordered.partner_id,
                   u.full_name, o.country_code,
                   cl.name AS club_name,

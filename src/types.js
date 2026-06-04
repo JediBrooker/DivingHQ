@@ -290,6 +290,111 @@
  *                                             but were separated by World Aquatics tie-break.
  */
 
+/**
+ * @typedef {Object} ScoreboardPanelRow
+ * One judge row from /api/scoreboard/:eventId.panel.
+ *
+ * @property {string}      judge_id
+ * @property {number}      judge_number
+ * @property {string}      full_name
+ * @property {string|null} [country_code]
+ * @property {string}      org_name
+ * @property {string|null} [club_name]
+ * @property {string|null} [club_code]
+ */
+
+/**
+ * @typedef {Object} ScoreboardUpcomingRow
+ * One row from /api/scoreboard/:eventId.upcoming.
+ *
+ * @property {number}      round_number
+ * @property {number}      round_order
+ * @property {string}      competitor_id
+ * @property {string|null} [partner_id]
+ * @property {string}      full_name
+ * @property {string|null} [country_code]
+ * @property {string|null} [club_name]
+ * @property {string|null} [partner_name]
+ * @property {string|null} [partner_country]
+ * @property {string|null} [team_name]
+ * @property {string|null} [dive_code]
+ * @property {string|null} [position]
+ * @property {string|null} [description]
+ * @property {number|string|null} [dd] PostgreSQL numeric fields may arrive as text.
+ */
+
+/**
+ * @typedef {Object} ScoreboardPayload
+ * @property {StandingsRow[]}      standings
+ * @property {Object[]}            history
+ * @property {ScoreboardUpcomingRow[]} upcoming
+ * @property {ScoreboardPanelRow[]} panel
+ */
+
+// ---- /api/coach/events ------------------------------------------
+
+/**
+ * @typedef {Object} CoachEventRow
+ * @property {string}      event_id
+ * @property {string}      event_name
+ * @property {string}      height
+ * @property {string}      event_type
+ * @property {string}      status
+ * @property {string|null} [meet_id]
+ * @property {string|null} [meet_name]
+ * @property {string|null} [entries_close_at]
+ * @property {string|null} [dive_list_locks_at]
+ * @property {number}      total_rounds
+ * @property {number}      squad_entered_count
+ */
+
+// ---- /api/coach/dive-lists/:event_id ----------------------------
+
+/**
+ * @typedef {Object} CoachDiveListDive
+ * @property {number}      round_number
+ * @property {string|null} [dive_id]
+ * @property {string|null} [dive_code]
+ * @property {string|null} [position]
+ * @property {number|string|null} [dd] PostgreSQL numeric fields may arrive as text.
+ * @property {string|null} [description]
+ */
+
+/**
+ * @typedef {Object} CoachDiveListDiver
+ * @property {string}      diver_id
+ * @property {string}      full_name
+ * @property {string|null} [country_code]
+ * @property {string|null} [club_name]
+ * @property {string|null} [club_code]
+ * @property {string}      org_id
+ * @property {CoachDiveListDive[]} dives
+ * @property {string|null} [partner_id]
+ * @property {string|null} [partner_name]
+ * @property {string|null} [confirmed_at]
+ * @property {string|null} [withdrawn_at]
+ * @property {boolean}     is_reserve
+ * @property {number|null} [reserve_position]
+ */
+
+/**
+ * @typedef {Object} CoachDiveListsResponse
+ * @property {Object}      event
+ * @property {string}      event.id
+ * @property {string}      event.name
+ * @property {string}      event.height
+ * @property {string}      event.event_type
+ * @property {string}      event.status
+ * @property {number}      event.total_rounds
+ * @property {Object|null} [event.round_rules]
+ * @property {string|null} [event.entries_close_at]
+ * @property {string|null} [event.dive_list_locks_at]
+ * @property {string|null} [event.meet_id]
+ * @property {string|null} [event.meet_name]
+ * @property {Array<{round_number:number,dive_id:string|null,height:number|null}>} event.prescribed_rounds
+ * @property {CoachDiveListDiver[]} divers
+ */
+
 // Force this file to be a module so import('@/types') works in
 // editors that need an export to consider it an importable module.
 export {}
