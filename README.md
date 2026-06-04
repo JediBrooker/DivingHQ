@@ -119,6 +119,10 @@ Form layout is ordered so the operator's flow reads top-to-bottom: Event Name �
 
 ![Meet Manager](./docs/screenshots/meet-manager.png)
 
+The `+ New Event` button opens the create-event modal — suggested templates, meet bundling, event type / gender / age group / board height, judge panel size, and the Round dives + Round structure editors all in one full-width surface. The Edit Event modal mirrors the same UI.
+
+![New Event modal](./docs/screenshots/new-event-modal.png)
+
 #### Control Room
 
 The operator's cockpit during a live meet, deliberately pared back so only the things you need every dive are visible at rest — secondary actions live behind small popovers. Left column is the running history of completed dives (click any card to open the **Score Correction modal**, which now shows a live preview of trim sum + dive points + delta as you type). Centre column is the active diver — name, country chip, club affiliation, dive code + DD + description, the live judge tile strip, an inline auto-cycling status pill (READY / DIVING / JUDGING), and the 60-second WA post-warning shot clock anchored top-right. The bottom action row reads `← Prev · Adjust ▾ · Next Diver → ▾ · ?` — Adjust houses Failed Dive / Cap Score / Re-Dive; Next Diver's `▾` opens the Auto-next picker; `?` reveals every keyboard shortcut. Right column is **Pre-Meet** at the top (4-pip stepper `✓ Check-in ── ✓ Randomise ── (3) Sign Off ── (4) Start` above the colour-coded workflow button so a new operator sees the whole flow at a glance) plus Up Next visible and Top 5 Right Now + Dive Order panels as collapsed accordions. Clicking the green Start Event button opens the **Pre-Flight Review modal** — last-chance summary of roster / panel / referee status with warnings for misconfigurations (synchro on a 5-judge panel, divers with incomplete dive lists, partial panel). Header `⋯` menu houses Hold / Broadcast mode / Dashboard / Finalise event early (during Live).
@@ -165,6 +169,8 @@ Phone-deck experience for athletes mid-competition. Lives at `/me/meet/:eventId`
 
 Real-time: subscribes to the event-room socket; `score_received` / `state_update` / `score_corrected` trigger a 250 ms-debounced bundle refetch. Endpoint: `GET /api/events/:id/me-meet-day`, gated on `competitor_dive_lists` membership (403s for non-entrants).
 
+![Diver Meet Day View](./docs/screenshots/meet-day.png)
+
 #### Diver Profile
 
 Per-diver stats: meets entered, dives performed, average DD attempted, best single dive, an SVG sparkline of total scores across meets, and a personal-bests table keyed by dive code + position + height. The Customize modal lets each diver pick which of 10+ analytics widgets to show (Recent Form, Medal Counts, Height Breakdown, Round-by-Round Form with stamina insight, DD Risk Profile, Compare-to-Peers, Year-over-Year, etc.) — the choices persist per-user. Cmd-P / Ctrl-P prints the dashboard to PDF; `/compare?a=&b=` puts two divers side-by-side.
@@ -182,6 +188,18 @@ Side-by-side at `/compare?a=<id>&b=<id>` — two divers' headline stats in two c
 A coach's hub: their roster of linked divers (subject to org-admin approval) with one-click access to each diver's profile + analytics. Templates the coach saves on a diver's behalf are scoped per board height and per diver.
 
 ![Coach Dashboard](./docs/screenshots/coach.png)
+
+#### Coach Dive Lists (on-behalf-of)
+
+From a linked diver's event, a coach opens the per-event dive-list editor at `/coach/dive-lists/:event_id` to build or edit every squad member's list in one view — each diver's rounds, dive codes + DD, submission status, and withdraw control. Round rules and operator-pinned dives are enforced exactly as they are in the diver's own portal.
+
+![Coach Dive Lists](./docs/screenshots/coach-dive-lists.png)
+
+#### Notifications Inbox
+
+Available to every signed-in user at `/inbox` (bell icon in the header). It keeps every push notification + in-app banner the account received, retained past the moment of the live push so a missed phone alert isn't lost. Filter by category (Action required, Coach & team, Results, Operations), toggle unread-only, and one-click **Mark all read**; each row deep-links to the relevant scoreboard, event, or approval queue.
+
+![Notifications Inbox](./docs/screenshots/inbox.png)
 
 ### Admins
 
