@@ -320,7 +320,7 @@
     "actions": {
       "ready": "Klar",
       "left": "{count} kvar",
-      "live": "Live",
+      "live": "Direkt",
       "fix_list": "Korrigera lista",
       "review": "Granska",
       "sign_off": "Godkänn",

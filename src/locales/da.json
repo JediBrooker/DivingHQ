@@ -288,7 +288,7 @@
       "other_surfaces": "Andre platforme"
     },
     "tiles": {
-      "manager_title": "Meet Manager",
+      "manager_title": "Stævneansvarlig",
       "manager_desc": "Opret konkurrencer og begivenheder, udpeg panelet, opret deltagerlister.",
       "control_title": "Kontrolrum",
       "control_desc": "Styr scoringen på dagen — aktiv springer, shot clock, holds.",
@@ -320,7 +320,7 @@
     "actions": {
       "ready": "Klar",
       "left": "{count} tilbage",
-      "live": "Live",
+      "live": "Direkte",
       "fix_list": "Ret liste",
       "review": "Gennemgå",
       "sign_off": "Godkend",
@@ -339,7 +339,7 @@
     },
     "referee": {
       "signoff_requested_by": "Sign-off anmodet af {name}",
-      "meet_manager_fallback": "meet manager"
+      "meet_manager_fallback": "stævneansvarlig"
     },
     "judge_panel": {
       "analysis_title": "Dommeranalyse",

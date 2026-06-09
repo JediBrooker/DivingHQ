@@ -320,7 +320,7 @@
     "actions": {
       "ready": "Handa",
       "left": "{count} natitira",
-      "live": "Live",
+      "live": "Direkta",
       "fix_list": "Ayusin ang listahan",
       "review": "Suriin",
       "sign_off": "Mag-sign off",
