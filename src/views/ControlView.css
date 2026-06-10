@@ -297,67 +297,8 @@
 .active-dd { font-family: var(--font-mono); font-size: 14px; font-weight: 500; padding: 0.3rem 0.65rem; background: var(--accent-soft); border: 1px solid var(--accent-soft-2); border-radius: var(--radius); color: var(--accent); }
 .active-desc { font-size: 12px; color: var(--text-3); line-height: 1.5; min-height: 22px; margin-bottom: 0.6rem; }
 
-.judge-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
-
-/* Synchro variant of the judge grid — three labelled columns
-   (Exec A / Exec B / Sync) so the operator sees who's scoring
-   what role at a glance. Border colour echoes the per-group
-   accents the Scoreboard view uses for its score chips, so the
-   visual vocabulary stays consistent between the two surfaces. */
-.judge-groups-grid {
-  display: flex; gap: 0.5rem; margin-bottom: 0.5rem;
-  flex-wrap: wrap;
-}
-.judge-group-col {
-  flex: 1 1 auto; min-width: 0;
-  padding: 0.35rem 0.5rem 0.45rem;
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  background: var(--bg-2);
-}
-.judge-group-col-label {
-  font-family: var(--font-display); font-size: 9px; font-weight: 800;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--text-3);
-  margin-bottom: 0.3rem;
-}
-.judge-group-col-tiles {
-  display: flex; flex-wrap: wrap; gap: 0.35rem;
-}
-/* Exec A / Exec B / Sync keep their violet / amber / green role
-   identity (theme-aware role tokens), matching the synchro history
-   cards in app.css. */
-.judge-group-col.judge-group-a    { border-color: var(--role-admin-fg); }
-.judge-group-col.judge-group-b    { border-color: var(--role-manager-fg); }
-.judge-group-col.judge-group-sync { border-color: var(--role-diver-fg); }
-.judge-group-col.judge-group-a    .judge-group-col-label { color: var(--role-admin-fg); }
-.judge-group-col.judge-group-b    .judge-group-col-label { color: var(--role-manager-fg); }
-.judge-group-col.judge-group-sync .judge-group-col-label { color: var(--role-diver-fg); }
-.judge-tile {
-  width: 64px; height: 52px;
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  transition: all 0.15s;
-}
-.judge-tile.scored { background: var(--green-dim); border-color: var(--green); }
-/* Judge has tapped Signal Referee on their keypad. Bright red
-   ring around the tile + pulsing glow draws the operator's eye
-   regardless of what's currently scored / unscored on the
-   panel. Wins over .scored when both are set (a judge can
-   submit AND signal — e.g. they want a video review of the
-   dive they just judged). */
-.judge-tile.signaled {
-  border-color: var(--red);
-  box-shadow: 0 0 0 2px var(--red), 0 0 18px rgba(239,68,68,0.5);
-  animation: judgeSignalPulse 1.4s ease-in-out infinite;
-}
-@keyframes judgeSignalPulse {
-  0%, 100% { box-shadow: 0 0 0 2px var(--red), 0 0 18px rgba(239,68,68,0.5); }
-  50%      { box-shadow: 0 0 0 2px var(--red), 0 0 6px  rgba(239,68,68,0.2); }
-}
-.judge-tile.signaled .judge-tile-label,
-.judge-tile.signaled .judge-tile-score { color: var(--red); }
+/* The judge-tile grid + its synchro variant moved to
+   src/components/control/JudgePanelGrid.vue (scoped). */
 
 /* Referee-signal banner — appears in the centre column the
    moment any judge taps "Signal Referee" on their keypad.
@@ -398,10 +339,6 @@
   margin-top: 0.25rem;
   font-style: italic;
 }
-.judge-tile-label { font-family: var(--font-display); font-size: 8px; font-weight: 700; letter-spacing: 0.1em; color: var(--text-3); text-transform: uppercase; }
-.judge-tile.scored .judge-tile-label { color: var(--green); }
-.judge-tile-score { font-family: var(--font-mono); font-size: 14px; font-weight: 500; color: var(--text-3); }
-.judge-tile.scored .judge-tile-score { color: var(--text); }
 
 /* Wrapper around the judge grid + the reserved dive-total
    slot. Kept as a single block so the bottom controls (pinned
@@ -1874,22 +1811,6 @@
   flex: 1; font-size: 11px; padding: 0.35rem 0.5rem;
 }
 
-/* =========================================================
-   Judge tile fine-tuning + name label under each. The base
-   .judge-tile rule sets the box at 48×44; this block adds the
-   submitter name (truncated) underneath and a position:relative
-   for the signal-active ring overlay.
-   ========================================================= */
-.judge-tile {
-  position: relative;
-}
-.judge-tile-name {
-  font-family: var(--font-mono); font-size: 9px;
-  color: var(--text-3); margin-top: 0.1rem;
-  max-width: 60px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
 /* Manual score entry moved into the header overflow (⋯) menu. */
 .manual-entry-trigger { display: none; }
 
@@ -1901,17 +1822,8 @@
   text-decoration-thickness: 2px;
   text-decoration-color: var(--fg-3);
 }
-.judge-tile.scored .judge-tile-name { color: var(--green); }
-/* When a score lands, briefly pulse the tile so the operator
-   sees incoming submissions even from across the deck. */
-.judge-tile.scored {
-  animation: tilePulse 0.4s ease-out;
-}
-@keyframes tilePulse {
-  0%   { transform: scale(1); box-shadow: 0 0 0 rgba(16,185,129,0); }
-  50%  { transform: scale(1.06); box-shadow: 0 0 18px rgba(16,185,129,0.5); }
-  100% { transform: scale(1); box-shadow: 0 0 12px rgba(16,185,129,0.2); }
-}
+/* Judge-tile name/scored/pulse styling moved to
+   src/components/control/JudgePanelGrid.vue (scoped). */
 
 /* =========================================================
    Header centre — event picker styled as the page title, with
@@ -2066,8 +1978,10 @@
 .ctrl-broadcast .ctrl-panel { display: none; }
 .ctrl-broadcast .active-zone { padding: 3rem; }
 .ctrl-broadcast .active-name { font-size: clamp(56px, 9vw, 140px); }
-.ctrl-broadcast .judge-tile  { width: 110px; height: 110px; }
-.ctrl-broadcast .judge-tile-score { font-size: 32px; }
+/* Projection mode scales the tiles up. :deep() reaches into the
+   JudgePanelGrid child, which owns the base .judge-tile rules. */
+.ctrl-broadcast :deep(.judge-tile)  { width: 110px; height: 110px; }
+.ctrl-broadcast :deep(.judge-tile-score) { font-size: 32px; }
 .ctrl-broadcast .ref-actions,
 .ctrl-broadcast .nav-btns,
 .ctrl-broadcast .kbd-hints { display: none; }
@@ -2118,9 +2032,8 @@
   .active-code { font-size: 20px; padding: 0.4rem 0.75rem; }
   .active-dd   { font-size: 16px; padding: 0.4rem 0.75rem; }
 
-  /* Judge-tile grid: 60×60 tiles wrap fine but reducing them
-     a touch lets a 7- or 11-judge panel land on one row. */
-  .judge-tile { width: 52px; height: 52px; }
+  /* Judge-tile @720px shrink moved into JudgePanelGrid.vue (it
+     owns the .judge-tile box; the rule is scoped to the child). */
 
   /* Referee actions: 3 buttons → 2-up + 1 below to fit narrow widths. */
   .ref-actions { grid-template-columns: 1fr 1fr; }
