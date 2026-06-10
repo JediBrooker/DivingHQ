@@ -18,7 +18,6 @@
 //   app.use(require('./routes/events')({ … }))
 
 const express = require("express");
-const jwt = require("jsonwebtoken");
 const { recordAudit, auditFromReq } = require("../../lib/audit");
 const createIdempotency = require("../../lib/idempotency");
 const { getEventReadiness } = require("../../lib/workflow");
@@ -26,6 +25,8 @@ const {
   loadH2hPairResults,
   loadSfCumulative,
 } = require("../../lib/super-final-helpers");
+const { perDivePointsCte } = require("../../lib/scoring-sql");
+const archiveCache = require("../../lib/archive-cache");
 const {
   buildReflowProposal,
   stampActualStart,
@@ -81,6 +82,18 @@ function hasOwn(obj, key) {
   return Object.prototype.hasOwnProperty.call(obj || {}, key);
 }
 
+// Valid event_format stages. Six values:
+//   preliminary → semifinal → final         (standard chain)
+//   super_final_h2h → super_final_semi
+//                  → super_final_final      (Diving World Cup
+//                                             Super Final 2026,
+//                                             Appendix 3)
+// 'final' is the default for standalone events. Module scope so
+// the POST-create and PUT-update validators share one list and
+// can't drift.
+const SUPER_FINAL_FORMATS = ["super_final_h2h", "super_final_semi", "super_final_final"];
+const ALLOWED_FORMATS = ["preliminary", "semifinal", "final", ...SUPER_FINAL_FORMATS];
+
 module.exports = function createEventsRouter({
   pool,
   JWT_SECRET,
@@ -102,9 +115,14 @@ module.exports = function createEventsRouter({
   // to a silent skip if the push engine isn't wired (the
   // notification row will simply not be created).
   push,
+  // lib/middleware.js optionalAuth — decodes a valid JWT into
+  // req.user (running the token-version / deleted_at /
+  // suspended_at revocation checks) and treats anything else as
+  // anonymous.
+  optionalAuth,
 }) {
-  if (!pool || !JWT_SECRET) {
-    throw new Error("createEventsRouter requires { pool, JWT_SECRET, … }");
+  if (!pool || !JWT_SECRET || !optionalAuth) {
+    throw new Error("createEventsRouter requires { pool, JWT_SECRET, optionalAuth, … }");
   }
   const router = express.Router();
 
@@ -197,6 +215,33 @@ module.exports = function createEventsRouter({
     await push.sendNotification(ids, payload);
   }
 
+  // Stamp (or clear) dive_list_locks_at on an event. World
+  // Aquatics Article 6.7.3: a change-of-dives form must be
+  // submitted "no later than thirty (30) minutes after the end of
+  // the previous stage", so the advance/seed endpoints call this
+  // right after reseeding — NOW() approximates when the previous
+  // stage ended. lockMin = 0 means "no auto-lock" and clears any
+  // stale value left by a prior advance/seed. Runs on the caller's
+  // open transaction client. Returns the new lock as an ISO
+  // string, or null when cleared.
+  async function stampDiveListLock(client, eventId, lockMin) {
+    if (lockMin > 0) {
+      const lockRes = await client.query(
+        `UPDATE events
+            SET dive_list_locks_at = NOW() + ($2::int || ' minutes')::interval
+          WHERE id = $1
+          RETURNING dive_list_locks_at`,
+        [eventId, lockMin],
+      );
+      return lockRes.rows[0]?.dive_list_locks_at?.toISOString() || null;
+    }
+    await client.query(
+      "UPDATE events SET dive_list_locks_at = NULL WHERE id = $1",
+      [eventId],
+    );
+    return null;
+  }
+
   // -------------------------------------------------------------
   // GET /api/events — list events visible to the caller.
   //
@@ -204,20 +249,56 @@ module.exports = function createEventsRouter({
   //   * sysadmin    → every event in every org
   //   * regular user → events in caller's org
   //
+  // Optional query params:
+  //   * status — comma-separated event_status values; narrows
+  //     WITHIN the caller's visibility, never widens it (an
+  //     anonymous caller asking for Upcoming gets [], not a leak).
+  //   * limit  — positive integer, capped at 500.
+  //
   // 401-on-bad-JWT (rather than silent downgrade to public)
   // landed in Migration 021 — if the caller sent a bad token they
   // meant to be authed, so the SPA needs the signal to prompt
-  // re-login.
+  // re-login. optionalAuth leaves req.user unset for a bad token,
+  // so the presence of an Authorization header is the signal; a
+  // revoked / deleted / suspended session gets the same 401
+  // (optionalAuth runs the token-version checks the old inline
+  // jwt.verify peek skipped).
   // -------------------------------------------------------------
-  router.get("/api/events", async (req, res) => {
+  router.get("/api/events", optionalAuth, async (req, res) => {
     try {
       const authHeader = req.headers["authorization"];
       const token = authHeader && authHeader.split(" ")[1];
-      let result;
+      if (token && !req.user) {
+        return res.status(401).json({ error: "Token expired or invalid; please sign in again" });
+      }
+
+      // Values mirror init.sql's event_status enum.
+      const EVENT_STATUSES = ["Upcoming", "Live", "Completed"];
+      let statusFilter = null;
+      if (req.query.status !== undefined) {
+        statusFilter = String(req.query.status)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (!statusFilter.length || statusFilter.some((s) => !EVENT_STATUSES.includes(s))) {
+          return res.status(400).json({
+            error: `status must be a comma-separated list of: ${EVENT_STATUSES.join(", ")}`,
+          });
+        }
+      }
+      let limit = null;
+      if (req.query.limit !== undefined) {
+        const n = Number(req.query.limit);
+        if (!Number.isInteger(n) || n < 1) {
+          return res.status(400).json({ error: "limit must be a positive integer" });
+        }
+        limit = Math.min(n, 500);
+      }
+
       // participating_orgs_count > 0 → international event (the
-       // SPA renders a 🌐 chip and the federations modal pre-loads
-       // the invited list). Subselect rather than LEFT JOIN +
-       // GROUP BY so the rest of the query stays readable.
+      // SPA renders a 🌐 chip and the federations modal pre-loads
+      // the invited list). Subselect rather than LEFT JOIN +
+      // GROUP BY so the rest of the query stays readable.
       const SELECT = `
         SELECT e.*, o.name AS org_name, o.country_code, o.slug AS org_slug,
                m.name AS meet_name, m.start_date AS meet_start_date,
@@ -230,40 +311,39 @@ module.exports = function createEventsRouter({
         JOIN organisations o ON o.id = e.org_id
         LEFT JOIN meets m ON m.id = e.meet_id
       `;
-      if (token) {
-        let decoded;
-        try {
-          decoded = jwt.verify(token, JWT_SECRET);
-        } catch {
-          return res.status(401).json({ error: "Token expired or invalid; please sign in again" });
-        }
-        if (decoded.is_system_admin) {
-          result = await pool.query(`${SELECT} ORDER BY e.created_at DESC`);
-        } else {
-          // Show events the caller's org hosts OR events that
-          // explicitly invited the caller's org via
-          // event_participating_orgs. The EXISTS subquery is
-          // short-circuited by the OR — domestic-only orgs pay
-          // no extra cost. Sysadmin already bypassed above.
-          result = await pool.query(
-            `${SELECT}
-             WHERE e.org_id = $1
+      const where = [];
+      const params = [];
+      if (req.user?.is_system_admin) {
+        // Sysadmin sees every event in every org — no scope clause.
+      } else if (req.user) {
+        // Show events the caller's org hosts OR events that
+        // explicitly invited the caller's org via
+        // event_participating_orgs. The EXISTS subquery is
+        // short-circuited by the OR — domestic-only orgs pay
+        // no extra cost. Sysadmin already bypassed above.
+        params.push(req.user.org_id);
+        const p = `$${params.length}`;
+        where.push(`(e.org_id = ${p}
                 OR EXISTS (
                   SELECT 1 FROM event_participating_orgs epo
-                   WHERE epo.event_id = e.id AND epo.org_id = $1
-                )
-             ORDER BY e.created_at DESC`,
-            [decoded.org_id],
-          );
-        }
+                   WHERE epo.event_id = e.id AND epo.org_id = ${p}
+                ))`);
       } else {
-        result = await pool.query(
-          `${SELECT}
-           WHERE e.status IN ('Live','Completed')
-             AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-           ORDER BY e.created_at DESC`,
-        );
+        where.push(`e.status IN ('Live','Completed')`);
+        where.push(`COALESCE(e.is_rehearsal, FALSE) = FALSE`);
       }
+      if (statusFilter) {
+        params.push(statusFilter);
+        where.push(`e.status = ANY($${params.length}::event_status[])`);
+      }
+      let sql = `${SELECT}
+           ${where.length ? `WHERE ${where.join("\n             AND ")}` : ""}
+           ORDER BY e.created_at DESC`;
+      if (limit != null) {
+        params.push(limit);
+        sql += ` LIMIT $${params.length}`;
+      }
+      const result = await pool.query(sql, params);
       res.json(result.rows);
     } catch (err) {
       console.error("[Events List Error]", err.message);
@@ -352,15 +432,7 @@ module.exports = function createEventsRouter({
         error: "Synchronised pair events require 7, 9 or 11 judges",
       });
     }
-    // Validate event_format. Six valid stages:
-    //   preliminary → semifinal → final         (standard chain)
-    //   super_final_h2h → super_final_semi
-    //                  → super_final_final      (Diving World Cup
-    //                                             Super Final 2026,
-    //                                             Appendix 3)
-    // 'final' is the default for standalone events.
-    const SUPER_FINAL_FORMATS = ['super_final_h2h', 'super_final_semi', 'super_final_final'];
-    const ALLOWED_FORMATS = ['preliminary', 'semifinal', 'final', ...SUPER_FINAL_FORMATS];
+    // Validate event_format — see ALLOWED_FORMATS at module scope.
     const fmt = event_format || "final";
     if (!ALLOWED_FORMATS.includes(fmt)) {
       return res
@@ -571,12 +643,10 @@ module.exports = function createEventsRouter({
         error: "Synchronised pair events require 7, 9 or 11 judges",
       });
     }
-    if (event_format && !["preliminary", "semifinal", "final",
-                          "super_final_h2h", "super_final_semi", "super_final_final"
-                         ].includes(event_format)) {
+    if (event_format && !ALLOWED_FORMATS.includes(event_format)) {
       return res
         .status(400)
-        .json({ error: "event_format must be 'preliminary', 'semifinal' or 'final'" });
+        .json({ error: `event_format must be one of: ${ALLOWED_FORMATS.join(', ')}` });
     }
     // Validate round_dives shape if supplied. When round_dives is
     // a non-empty array, it becomes the canonical total_rounds.
@@ -624,90 +694,105 @@ module.exports = function createEventsRouter({
             .json({ error: "Parent event not found in this org" });
         }
       }
-      // entries_close_at uses tri-state semantics. Pass a boolean
-      // sentinel + the actual value so the SQL can express both
-      // "leave untouched" and "set to NULL" in one statement.
-      const closeUntouched = entries_close_at === undefined;
-      const closeValue = closeUntouched ? null : (entries_close_at || null);
-      // Tri-state on the two new boolean flags too: undefined =
-      // leave untouched, true/false = set explicitly. Done with
-      // CASE so a partial PUT body doesn't accidentally flip a
-      // flag back to its default.
-      const enforceUntouched = enforce_referee_signoff === undefined;
-      const mixedUntouched   = is_mixed_height          === undefined;
-      const rehearsalUntouched = is_rehearsal           === undefined;
+      // ---- SET clause assembly (field-descriptor style — same
+      // idiom as PUT /api/blocks/:id in routes/sessions.js). Each
+      // field keeps the exact update semantics of the old
+      // 31-positional-param statement:
+      //   * truthy-set fields (the old COALESCE($n, col) columns):
+      //     a truthy body value sets, anything falsy leaves alone.
+      //   * key-presence tri-state fields (the old CASE WHEN
+      //     $untouched columns): key absent → leave alone,
+      //     null → clear, value → set.
+      const sets = [];
+      const args = [];
+      const addSet = (column, value, cast = "") => {
+        args.push(value);
+        sets.push(`${column} = $${args.length}${cast}`);
+      };
+
+      // Truthy-set fields. "" / 0 / null all mean "leave alone".
+      if (name) addSet("name", name);
+      if (gender) addSet("gender", gender);
+      if (number_of_judges) addSet("number_of_judges", number_of_judges);
+      if (event_type) addSet("event_type", event_type);
+      if (event_format) addSet("event_format", event_format);
+      if (advance_count) addSet("advance_count", advance_count);
       // total_rounds: when round_dives is a non-empty array its
       // length wins; an empty array (`[]` = clear) reverts to the
       // body's total_rounds (or untouched if neither is set).
+      // Falsy total_rounds (0 / null) also leaves the column alone.
       const totalRoundsForUpdate =
         Array.isArray(round_dives) && round_dives.length
           ? round_dives.length
           : (hasOwn(body, "total_rounds") ? (total_rounds || null) : null);
+      if (totalRoundsForUpdate != null) addSet("total_rounds", totalRoundsForUpdate);
+      // dd_limit_rounds sets on any non-nullish value — 0 is a
+      // meaningful "no limit-rounds" value here, unlike the truthy
+      // fields above.
+      if (dd_limit_rounds != null) addSet("dd_limit_rounds", dd_limit_rounds);
+
+      // height: flipping is_mixed_height on force-clears the column
+      // (informational-only for mixed-board events — see the POST
+      // handler); otherwise key-presence tri-state with "" → NULL.
       const heightClearedByMixed = hasOwn(body, "is_mixed_height") && !!is_mixed_height;
-      const heightUntouched = !hasOwn(body, "height") && !heightClearedByMixed;
-      const heightValue = heightClearedByMixed
-        ? null
-        : (hasOwn(body, "height") ? (height || null) : null);
-      const ageGroupUntouched = !hasOwn(body, "age_group");
-      const parentUntouched = !hasOwn(body, "parent_event_id");
-      const ddLimitValueUntouched = !hasOwn(body, "dd_limit_value");
-      const scheduledUntouched = !hasOwn(body, "scheduled_at");
-      const r = await client.query(
-        `UPDATE events SET
-           name             = COALESCE($1, name),
-           gender           = COALESCE($2, gender),
-           number_of_judges = COALESCE($3, number_of_judges),
-           total_rounds     = COALESCE($4, total_rounds),
-           height           = CASE WHEN $5::boolean THEN height ELSE $6::board_height END,
-           event_type       = COALESCE($7, event_type),
-           age_group        = CASE WHEN $8::boolean THEN age_group ELSE $9 END,
-           event_format     = COALESCE($10, event_format),
-           parent_event_id  = CASE WHEN $11::boolean THEN parent_event_id ELSE $12::uuid END,
-           advance_count    = COALESCE($13, advance_count),
-           dd_limit_rounds  = COALESCE($14, dd_limit_rounds),
-           dd_limit_value   = CASE WHEN $15::boolean THEN dd_limit_value ELSE $16::numeric END,
-           scheduled_at     = CASE WHEN $17::boolean THEN scheduled_at ELSE $18::timestamptz END,
-           entries_close_at = CASE WHEN $19::boolean THEN entries_close_at ELSE $20::timestamptz END,
-           enforce_referee_signoff = CASE WHEN $24::boolean THEN enforce_referee_signoff ELSE $25::boolean END,
-           is_mixed_height         = CASE WHEN $26::boolean THEN is_mixed_height         ELSE $27::boolean END,
-           round_rules             = CASE WHEN $28::boolean THEN round_rules ELSE $29::jsonb END,
-           is_rehearsal            = CASE WHEN $30::boolean THEN is_rehearsal ELSE $31::boolean END
-         WHERE id=$21 AND ($22::boolean OR org_id=$23) RETURNING *`,
-        [
-          name || null,
-          gender || null,
-          number_of_judges || null,
-          totalRoundsForUpdate,
-          heightUntouched,
-          heightValue,
-          event_type || null,
-          ageGroupUntouched,
-          age_group ?? null,
-          event_format || null,
-          parentUntouched,
-          parent_event_id ?? null,
-          advance_count || null,
-          dd_limit_rounds ?? null,
-          ddLimitValueUntouched,
-          dd_limit_value ?? null,
-          scheduledUntouched,
-          scheduled_at ?? null,
-          closeUntouched,
-          closeValue,
-          req.params.id,
-          !!req.user.is_system_admin,
-          req.user.org_id,
-          enforceUntouched, !!enforce_referee_signoff,
-          mixedUntouched,   !!is_mixed_height,
-          // Tri-state: undefined → leave alone, null → clear,
-          // {sections} → JSON-stringify and set.
-          round_rules === undefined,
-          round_rules === undefined || round_rules === null
-            ? null
-            : JSON.stringify(round_rules),
-          rehearsalUntouched, !!is_rehearsal,
-        ],
-      );
+      if (heightClearedByMixed) {
+        addSet("height", null, "::board_height");
+      } else if (hasOwn(body, "height")) {
+        addSet("height", height || null, "::board_height");
+      }
+
+      // Key-presence tri-state fields: absent → untouched,
+      // null → clear, value → set.
+      if (hasOwn(body, "age_group")) addSet("age_group", age_group ?? null);
+      if (hasOwn(body, "parent_event_id")) addSet("parent_event_id", parent_event_id ?? null, "::uuid");
+      if (hasOwn(body, "dd_limit_value")) addSet("dd_limit_value", dd_limit_value ?? null, "::numeric");
+      if (hasOwn(body, "scheduled_at")) addSet("scheduled_at", scheduled_at ?? null, "::timestamptz");
+      // entries_close_at additionally treats "" as clear — "no
+      // value sent" and "explicitly cleared" mean different things
+      // on a nullable timestamp.
+      if (entries_close_at !== undefined) {
+        addSet("entries_close_at", entries_close_at || null, "::timestamptz");
+      }
+
+      // Boolean flags: undefined = leave untouched, anything else =
+      // set to its truthiness — a partial PUT body must not flip a
+      // flag back to its default.
+      if (enforce_referee_signoff !== undefined) {
+        addSet("enforce_referee_signoff", !!enforce_referee_signoff);
+      }
+      if (is_mixed_height !== undefined) addSet("is_mixed_height", !!is_mixed_height);
+      if (is_rehearsal !== undefined) addSet("is_rehearsal", !!is_rehearsal);
+
+      // round_rules tri-state: undefined → leave alone, null →
+      // clear (fall back to legacy dd_limit_*), {sections} →
+      // JSON-stringify and set.
+      if (round_rules !== undefined) {
+        addSet(
+          "round_rules",
+          round_rules === null ? null : JSON.stringify(round_rules),
+          "::jsonb",
+        );
+      }
+
+      let r;
+      if (sets.length) {
+        args.push(req.params.id, !!req.user.is_system_admin, req.user.org_id);
+        r = await client.query(
+          `UPDATE events SET ${sets.join(", ")}
+            WHERE id = $${args.length - 2}
+              AND ($${args.length - 1}::boolean OR org_id = $${args.length})
+            RETURNING *`,
+          args,
+        );
+      } else {
+        // Nothing to update (the old statement still ran with every
+        // field on its "leave alone" branch) — preserve the
+        // row-returning response and the 404 on a cross-org id.
+        r = await client.query(
+          "SELECT * FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
+          [req.params.id, !!req.user.is_system_admin, req.user.org_id],
+        );
+      }
       if (!r.rows.length) {
         await client.query("ROLLBACK");
         return res.status(404).json({ error: "Event not found" });
@@ -783,6 +868,10 @@ module.exports = function createEventsRouter({
         });
       }
       await pool.query("DELETE FROM events WHERE id = $1", [ev.id]);
+      // A Live/Completed event may sit in the cached public
+      // archive listing for up to 60s — bust it so the deleted
+      // event drops out immediately.
+      archiveCache.invalidate();
       // Audit. status preserved in metadata so a sysadmin
       // investigation can spot "this event was deleted while
       // it was Live" patterns.
@@ -816,28 +905,55 @@ module.exports = function createEventsRouter({
         .json({ error: `Status must be one of: ${validStatuses.join(", ")}` });
     }
     try {
-      // Read the previous status before the update so we know
-      // which notification (if any) to fire.
-      const prior = await pool.query(
-        "SELECT status, is_rehearsal FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
-        [req.params.id, !!req.user.is_system_admin, req.user.org_id],
-      );
-      const previousStatus = prior.rows[0]?.status;
-
+      // Atomic read-prev + flip in ONE statement. The previous
+      // two-query version let two concurrent flips both observe
+      // the same previousStatus and double-fire emails / push /
+      // audit. The FOR UPDATE subquery serialises racers; the
+      // loser re-evaluates prev_status against the committed row,
+      // matches zero rows, and skips every transition side effect.
       const r = await pool.query(
-        "UPDATE events SET status = $1 WHERE id = $2 AND ($3::boolean OR org_id = $4) RETURNING *",
+        `UPDATE events SET status = $1
+           FROM (SELECT id, status AS prev_status FROM events
+                  WHERE id = $2 AND ($3::boolean OR org_id = $4)
+                    FOR UPDATE) prior
+          WHERE events.id = prior.id AND prior.prev_status <> $1
+          RETURNING events.*, prior.prev_status`,
         [status, req.params.id, !!req.user.is_system_admin, req.user.org_id],
       );
-      if (!r.rows.length)
-        return res.status(404).json({ error: "Event not found" });
+
+      let event, previousStatus;
+      if (r.rows.length) {
+        ({ prev_status: previousStatus, ...event } = r.rows[0]);
+      } else {
+        // Zero rows = the event isn't visible to the caller (404)
+        // OR it's already at the target status. The no-op case
+        // preserves the old response shape — return the row and
+        // skip the transition side effects below (previousStatus
+        // === status keeps every guard false).
+        const cur = await pool.query(
+          "SELECT * FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
+          [req.params.id, !!req.user.is_system_admin, req.user.org_id],
+        );
+        if (!cur.rows.length)
+          return res.status(404).json({ error: "Event not found" });
+        event = cur.rows[0];
+        previousStatus = event.status;
+      }
 
       // Notify competitors on the meaningful transitions.
       // Best-effort, never blocks the response.
       if (previousStatus !== status) {
-        if (!r.rows[0].is_rehearsal) {
-          if (status === "Live")      sendEventStartedEmails(r.rows[0]).catch(() => {});
-          if (status === "Completed") sendEventResultsEmails(r.rows[0]).catch(() => {});
-          if (status === "Live")      notifyEventLive(r.rows[0]).catch(() => {});
+        // The public archive listing caches event statuses for
+        // 60s, and the SPA picks the live-vs-recap scoreboard
+        // layout from that field — bust it so a spectator
+        // deep-linking right after this flip can't get the wrong
+        // page mode.
+        archiveCache.invalidate();
+
+        if (!event.is_rehearsal) {
+          if (status === "Live")      sendEventStartedEmails(event).catch(() => {});
+          if (status === "Completed") sendEventResultsEmails(event).catch(() => {});
+          if (status === "Live")      notifyEventLive(event).catch(() => {});
         }
 
         // Real-time push for the dashboard pulse strip — emit
@@ -849,8 +965,8 @@ module.exports = function createEventsRouter({
         if (io && typeof io.emit === "function") {
           try {
             io.emit("event_status_changed", {
-              event_id: r.rows[0].id,
-              org_id:   r.rows[0].org_id,
+              event_id: event.id,
+              org_id:   event.org_id,
               from:     previousStatus,
               to:       status,
             });
@@ -869,10 +985,10 @@ module.exports = function createEventsRouter({
         else if (previousStatus === "Completed" && status === "Live") action = "event.unfinalised";
         await recordAudit(pool, {
           ...auditFromReq(req),
-          org_id:      r.rows[0].org_id,
+          org_id:      event.org_id,
           entity_type: "event",
-          entity_id:   r.rows[0].id,
-          entity_name: r.rows[0].name,
+          entity_id:   event.id,
+          entity_name: event.name,
           action,
           metadata: { from: previousStatus, to: status },
         });
@@ -886,19 +1002,19 @@ module.exports = function createEventsRouter({
       // bridge sequence counter for the same reason — otherwise
       // the per-event Map grows unbounded over a meet-week.
       if (status === "Completed") {
-        delete activeDivers[r.rows[0].id];
-        delete meetHolds[r.rows[0].id];
+        delete activeDivers[event.id];
+        delete meetHolds[event.id];
         if (typeof persistClearAll === "function") {
-          persistClearAll(r.rows[0].id);
+          persistClearAll(event.id);
         }
         try {
-          require("../../lib/venue-state").pruneSequenceForEvent(r.rows[0].id);
+          require("../../lib/venue-state").pruneSequenceForEvent(event.id);
         } catch (_e) { /* best-effort cleanup */ }
         // Drop the coach-alerts dedupe entry too — otherwise the
         // per-process Map would accumulate stale (event_id → key)
         // entries across a meet-week. Best-effort, never throws.
         try {
-          require("../../lib/coach-alerts").pruneCompletedEvent(r.rows[0].id);
+          require("../../lib/coach-alerts").pruneCompletedEvent(event.id);
         } catch (_e) { /* best-effort cleanup */ }
       }
 
@@ -927,11 +1043,10 @@ module.exports = function createEventsRouter({
       let reflow = null;
       if (previousStatus !== status) {
         try {
-          const evRow = r.rows[0];
           if (status === "Live") {
-            await stampActualStart(pool, evRow.id, new Date());
+            await stampActualStart(pool, event.id, new Date());
           } else if (status === "Completed") {
-            reflow = await buildReflowProposal(pool, evRow.id, new Date());
+            reflow = await buildReflowProposal(pool, event.id, new Date());
           }
         } catch (reflowErr) {
           // Don't let a scheduler-side failure (missing tables on
@@ -941,7 +1056,7 @@ module.exports = function createEventsRouter({
         }
       }
 
-      res.json({ ...r.rows[0], reflow });
+      res.json({ ...event, reflow });
     } catch (err) {
       console.error("[Status Update Error]", err.message);
       res.status(500).json({ error: "Internal server error" });
@@ -973,19 +1088,13 @@ module.exports = function createEventsRouter({
   // (mirrors the GET /api/events visibility contract — operators
   // shouldn't have their pre-meet bulletin leaked).
   // -------------------------------------------------------------
-  router.get("/api/events/:id/round-dives", async (req, res) => {
+  router.get("/api/events/:id/round-dives", optionalAuth, async (req, res) => {
     try {
-      const authHeader = req.headers["authorization"];
-      const token = authHeader && authHeader.split(" ")[1];
-      let callerOrgId = null;
-      let callerIsSys = false;
-      if (token) {
-        try {
-          const decoded = require("jsonwebtoken").verify(token, JWT_SECRET);
-          callerOrgId = decoded.org_id;
-          callerIsSys = !!decoded.is_system_admin;
-        } catch { /* anonymous */ }
-      }
+      // optionalAuth: a bad/revoked/suspended token reads as
+      // anonymous — same floor as the old inline peek, but the
+      // token-version / deleted_at / suspended_at checks now apply.
+      const callerOrgId = req.user?.org_id || null;
+      const callerIsSys = !!req.user?.is_system_admin;
       const ev = await pool.query(
         "SELECT org_id, status FROM events WHERE id = $1",
         [req.params.id],
@@ -1026,22 +1135,13 @@ module.exports = function createEventsRouter({
   // reveals the event itself). Authed callers in the host org
   // (or sysadmin) bypass the status filter so the Federations
   // modal works pre-meet.
-  router.get("/api/events/:id/participating-orgs", async (req, res) => {
+  router.get("/api/events/:id/participating-orgs", optionalAuth, async (req, res) => {
     try {
-      // Inline auth peek — no shared optionalAuth helper here,
-      // and we don't need a full JWT verify for this gate; just
-      // identifying the caller's org is enough.
-      const authHeader = req.headers["authorization"];
-      const token = authHeader && authHeader.split(" ")[1];
-      let callerOrgId = null;
-      let callerIsSys = false;
-      if (token) {
-        try {
-          const decoded = require("jsonwebtoken").verify(token, JWT_SECRET);
-          callerOrgId = decoded.org_id;
-          callerIsSys = !!decoded.is_system_admin;
-        } catch { /* anonymous */ }
-      }
+      // optionalAuth: a bad/revoked/suspended token reads as
+      // anonymous — same floor as the old inline peek, but the
+      // token-version / deleted_at / suspended_at checks now apply.
+      const callerOrgId = req.user?.org_id || null;
+      const callerIsSys = !!req.user?.is_system_admin;
       const ev = await pool.query(
         "SELECT org_id, status FROM events WHERE id = $1",
         [req.params.id],
@@ -1078,17 +1178,15 @@ module.exports = function createEventsRouter({
       if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
       const isSysAdmin = !!req.user.is_system_admin;
       const isHostAdmin = ev.rows[0].org_id === req.user.org_id;
+      // Visiting org admins can only see their own invite row. If
+      // none exists, this returns [] rather than leaking that
+      // another federation was invited.
       const visibleSql = (isSysAdmin || isHostAdmin)
         ? "r.event_id = $1"
         : "r.event_id = $1 AND r.org_id = $2";
       const params = (isSysAdmin || isHostAdmin)
         ? [req.params.id]
         : [req.params.id, req.user.org_id];
-      if (!isSysAdmin && !isHostAdmin && ev.rows[0].org_id !== req.user.org_id) {
-        // Visiting org admins can only see their own invite row.
-        // If none exists, this returns [] rather than leaking that
-        // another federation was invited.
-      }
       const r = await pool.query(
         `SELECT r.id, r.event_id, r.org_id, r.status, r.requested_at,
                 r.responded_at, r.note,
@@ -1610,25 +1708,10 @@ module.exports = function createEventsRouter({
     // round, and display_order from the parent event so the
     // 'inherit' dive-order mode can carry it forward.
     const r = await client.query(
-      `WITH dive_totals AS (
-         SELECT s.competitor_id, s.round_number,
-                calc_event_dive_points(
-                  array_agg(ej.judge_number ORDER BY ej.judge_number),
-                  array_agg(s.score ORDER BY ej.judge_number),
-                  e.number_of_judges, MAX(d.dd), e.event_type,
-                  BOOL_OR(cdl.partner_id IS NOT NULL)
-                ) AS round_total
-         FROM scores s
-         JOIN events e ON e.id = s.event_id
-         LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-         LEFT JOIN competitor_dive_lists cdl
-           ON cdl.event_id = s.event_id
-          AND cdl.competitor_id = s.competitor_id
-          AND cdl.round_number = s.round_number
-         LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-         WHERE s.event_id = $1
-         GROUP BY s.competitor_id, s.round_number, e.number_of_judges, e.event_type
-       ),
+      `WITH ${perDivePointsCte({
+         name:        "dive_totals",
+         pointsAlias: "round_total",
+       })},
        cumulative AS (
          SELECT competitor_id,
                 SUM(round_total) AS total,
@@ -1870,74 +1953,66 @@ module.exports = function createEventsRouter({
         );
 
         const childRounds = child.total_rounds;
-        async function insertDiverRows(diver, { isReserve, reservePos, displayOrder }) {
+        // One multi-row INSERT for the whole reseed (primaries then
+        // reserves, same row order the per-row loop produced). The
+        // UNNEST arrays stay aligned by index.
+        const seedRows = {
+          competitor_ids: [], dive_ids: [], round_numbers: [],
+          display_orders: [], is_reserves: [], reserve_positions: [],
+        };
+        function pushDiverRows(diver, { isReserve, reservePos, displayOrder }) {
           const dives = Array.isArray(diver.dives) ? diver.dives : [];
           const byRound = new Map(dives.map((d) => [d.round_number, d.dive_id]));
           for (let r = 1; r <= childRounds; r++) {
             const diveId = prescribedByRound.has(r)
               ? prescribedByRound.get(r)
               : (byRound.get(r) || null);
-            await client.query(
-              `INSERT INTO competitor_dive_lists
-                (event_id, competitor_id, dive_id, round_number,
-                 display_order, is_reserve, reserve_position)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-              [
-                child.id,
-                diver.competitor_id,
-                diveId,
-                r,
-                isReserve ? null : displayOrder,
-                isReserve,
-                isReserve ? reservePos : null,
-              ],
-            );
+            seedRows.competitor_ids.push(diver.competitor_id);
+            seedRows.dive_ids.push(diveId);
+            seedRows.round_numbers.push(r);
+            seedRows.display_orders.push(isReserve ? null : displayOrder);
+            seedRows.is_reserves.push(isReserve);
+            seedRows.reserve_positions.push(isReserve ? reservePos : null);
           }
         }
 
         for (const diver of primaries) {
-          await insertDiverRows(diver, {
+          pushDiverRows(diver, {
             isReserve: false,
             reservePos: null,
             displayOrder: displayOrderByCompetitor.get(diver.competitor_id),
           });
         }
         for (let i = 0; i < reserveRows.length; i++) {
-          await insertDiverRows(reserveRows[i], {
+          pushDiverRows(reserveRows[i], {
             isReserve: true,
             reservePos: i + 1,
             displayOrder: null,
           });
         }
+        await client.query(
+          `INSERT INTO competitor_dive_lists
+            (event_id, competitor_id, dive_id, round_number,
+             display_order, is_reserve, reserve_position)
+           SELECT $1::uuid, t.competitor_id, t.dive_id, t.round_number,
+                  t.display_order, t.is_reserve, t.reserve_position
+           FROM UNNEST($2::uuid[], $3::uuid[], $4::int[], $5::int[],
+                       $6::boolean[], $7::int[])
+             AS t(competitor_id, dive_id, round_number, display_order,
+                  is_reserve, reserve_position)`,
+          [
+            child.id,
+            seedRows.competitor_ids, seedRows.dive_ids, seedRows.round_numbers,
+            seedRows.display_orders, seedRows.is_reserves, seedRows.reserve_positions,
+          ],
+        );
 
-        // Stamp the dive-list lock on the child event. World
-        // Aquatics Article 6.7.3: a change-of-dives form must
-        // be submitted "no later than thirty (30) minutes after
-        // the end of the previous stage of the event". The
-        // advance endpoint runs after the parent is Completed
-        // (we already gate on this above), so NOW() is
-        // approximately when the previous stage ended →
-        // dive_list_locks_at = NOW() + lock_minutes accurately
-        // reflects the WA window. Operator can disable with
-        // lock_minutes = 0.
-        let lockAtIso = null;
-        if (lockMin > 0) {
-          const lockRes = await client.query(
-            `UPDATE events
-                SET dive_list_locks_at = NOW() + ($2::int || ' minutes')::interval
-              WHERE id = $1
-              RETURNING dive_list_locks_at`,
-            [child.id, lockMin],
-          );
-          lockAtIso = lockRes.rows[0]?.dive_list_locks_at?.toISOString() || null;
-        } else {
-          // Explicit 0 means "no auto-lock" — clear any stale
-          // value left from a prior advance.
-          await client.query(
-            "UPDATE events SET dive_list_locks_at = NULL WHERE id = $1",
-            [child.id],
-          );
-        }
+        // Stamp the dive-list lock on the child event. The advance
+        // endpoint runs after the parent is Completed (we already
+        // gate on this above), so NOW() is approximately when the
+        // previous stage ended — see stampDiveListLock for the WA
+        // Article 6.7.3 window.
+        const lockAtIso = await stampDiveListLock(client, child.id, lockMin);
 
         await recordAudit(client, {
           ...auditFromReq(req),
@@ -2096,25 +2171,10 @@ module.exports = function createEventsRouter({
     // org_id projection so the per-Federation cap can run before
     // the top-12 cut.
     const r = await client.query(
-      `WITH dive_totals AS (
-         SELECT s.competitor_id, s.round_number,
-                calc_event_dive_points(
-                  array_agg(ej.judge_number ORDER BY ej.judge_number),
-                  array_agg(s.score ORDER BY ej.judge_number),
-                  e.number_of_judges, MAX(d.dd), e.event_type,
-                  BOOL_OR(cdl.partner_id IS NOT NULL)
-                ) AS round_total
-         FROM scores s
-         JOIN events e ON e.id = s.event_id
-         LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-         LEFT JOIN competitor_dive_lists cdl
-           ON cdl.event_id = s.event_id
-          AND cdl.competitor_id = s.competitor_id
-          AND cdl.round_number = s.round_number
-         LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-         WHERE s.event_id = $1
-         GROUP BY s.competitor_id, s.round_number, e.number_of_judges, e.event_type
-       ),
+      `WITH ${perDivePointsCte({
+         name:        "dive_totals",
+         pointsAlias: "round_total",
+       })},
        cumulative AS (
          SELECT competitor_id,
                 SUM(round_total) AS total,
@@ -2451,24 +2511,9 @@ module.exports = function createEventsRouter({
           );
         }
 
-        // Lock the dive list (WA Article 6.7.3 — 30-min window
-        // for change-of-dives after the previous stage ends).
-        let lockAtIso = null;
-        if (lockMin > 0) {
-          const lockRes = await client.query(
-            `UPDATE events
-                SET dive_list_locks_at = NOW() + ($2::int || ' minutes')::interval
-              WHERE id = $1
-              RETURNING dive_list_locks_at`,
-            [ev.id, lockMin],
-          );
-          lockAtIso = lockRes.rows[0]?.dive_list_locks_at?.toISOString() || null;
-        } else {
-          await client.query(
-            "UPDATE events SET dive_list_locks_at = NULL WHERE id = $1",
-            [ev.id],
-          );
-        }
+        // Lock the dive list — see stampDiveListLock for the WA
+        // Article 6.7.3 window.
+        const lockAtIso = await stampDiveListLock(client, ev.id, lockMin);
 
         await recordAudit(client, {
           ...auditFromReq(req),
@@ -2570,110 +2615,35 @@ module.exports = function createEventsRouter({
           return res.status(400).json({ error: "Event is not a Super Final H2H stage" });
         }
 
-        // Per-diver totals over all rounds in the H2H event,
-        // grouped into pairs by display_order parity within
-        // each group.
-        const r = await pool.query(
-          `WITH per_dive AS (
-             SELECT s.competitor_id, s.round_number,
-                    calc_event_dive_points(
-                      array_agg(ej.judge_number ORDER BY ej.judge_number),
-                      array_agg(s.score ORDER BY ej.judge_number),
-                      e.number_of_judges, MAX(d.dd), e.event_type,
-                      BOOL_OR(cdl.partner_id IS NOT NULL)
-                    ) AS dive_points
-             FROM scores s
-             JOIN events e ON e.id = s.event_id
-             LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-             LEFT JOIN competitor_dive_lists cdl
-               ON cdl.event_id = s.event_id
-              AND cdl.competitor_id = s.competitor_id
-              AND cdl.round_number = s.round_number
-             LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-             WHERE s.event_id = $1
-             GROUP BY s.competitor_id, s.round_number, e.number_of_judges, e.event_type
-           ),
-           competitor AS (
-             SELECT pd.competitor_id,
-                    SUM(pd.dive_points) AS total
-             FROM per_dive pd
-             GROUP BY pd.competitor_id
-           )
-           SELECT cdl.competitor_id,
-                  cdl.group_number,
-                  MIN(cdl.display_order) AS display_order,
-                  u.full_name,
-                  o.country_code,
-                  COALESCE(c.total, 0) AS total
-             FROM competitor_dive_lists cdl
-             JOIN users u ON u.id = cdl.competitor_id
-             JOIN organisations o ON o.id = u.org_id
-             LEFT JOIN competitor c ON c.competitor_id = cdl.competitor_id
-            WHERE cdl.event_id = $1
-              AND cdl.is_reserve = FALSE
-              AND cdl.withdrawn_at IS NULL
-            GROUP BY cdl.competitor_id, cdl.group_number, u.full_name, o.country_code, c.total`,
-          [req.params.id],
-        );
-
-        // Reconstruct pair structure from group_number + display_order.
-        // Within a group the divers are ordered: pair0_a, pair0_b,
-        // pair1_a, pair1_b, pair2_a, pair2_b. So the 6 rows in
-        // each group split into 3 pairs by index/2.
-        const byGroup = { 1: [], 2: [] };
-        for (const row of r.rows) {
-          if (row.group_number == null) continue;
-          byGroup[row.group_number] = byGroup[row.group_number] || [];
-          byGroup[row.group_number].push(row);
-        }
-        for (const g of [1, 2]) {
-          byGroup[g].sort((a, b) =>
-            (a.display_order ?? Infinity) - (b.display_order ?? Infinity));
-        }
-        const pairs = [];
-        // Spec: G1 has pairs indexed 0, 3, 4 (12v1, 9v4, 8v5);
-        //       G2 has pairs indexed 1, 2, 5 (11v2, 10v3, 7v6).
-        const G1_PAIR_INDEXES = [0, 3, 4];
-        const G2_PAIR_INDEXES = [1, 2, 5];
+        // Same pair reconstruction (group bucketing, display_order
+        // sort, G1/G2 pair indexes, tie detection) as the seed-semi
+        // flow — one algorithm in lib/super-final-helpers.js. Only
+        // the wire shape lives here: the public contract is flat
+        // *_a/*_b keys plus seeds derived from pair_index per
+        // Appendix 3 §2.1.1, and the SPA + external consumers
+        // parse exactly that.
+        const pairs = await loadH2hPairResults(pool, req.params.id);
         const SEEDS_BY_PAIR_INDEX = [
           [12, 1], [11, 2], [10, 3], [9, 4], [8, 5], [7, 6],
         ];
-        for (const g of [1, 2]) {
-          const indexes = g === 1 ? G1_PAIR_INDEXES : G2_PAIR_INDEXES;
-          for (let p = 0; p < 3; p++) {
-            const a = byGroup[g][p * 2];
-            const b = byGroup[g][p * 2 + 1];
-            if (!a || !b) continue;
-            const totalA = Number(a.total);
-            const totalB = Number(b.total);
-            const tied = totalA === totalB;
-            const winnerId = tied
-              ? null
-              : (totalA > totalB ? a.competitor_id : b.competitor_id);
-            const pairIndex = indexes[p];
-            const [seedA, seedB] = SEEDS_BY_PAIR_INDEX[pairIndex];
-            pairs.push({
-              pair_index:      pairIndex,
-              group_number:    g,
-              seed_a:          seedA,
-              seed_b:          seedB,
-              competitor_a_id: a.competitor_id,
-              competitor_b_id: b.competitor_id,
-              full_name_a:     a.full_name,
-              full_name_b:     b.full_name,
-              country_code_a:  a.country_code,
-              country_code_b:  b.country_code,
-              total_a:         totalA,
-              total_b:         totalB,
-              winner_id:       winnerId,
-              tied,
-            });
-          }
-        }
-        // Stable sort by pair_index for a predictable response.
-        pairs.sort((a, b) => a.pair_index - b.pair_index);
-
-        res.json({ pairs });
+        res.json({
+          pairs: pairs.map((p) => ({
+            pair_index:      p.pair_index,
+            group_number:    p.group_number,
+            seed_a:          SEEDS_BY_PAIR_INDEX[p.pair_index][0],
+            seed_b:          SEEDS_BY_PAIR_INDEX[p.pair_index][1],
+            competitor_a_id: p.competitor_a.id,
+            competitor_b_id: p.competitor_b.id,
+            full_name_a:     p.competitor_a.full_name,
+            full_name_b:     p.competitor_b.full_name,
+            country_code_a:  p.competitor_a.country_code,
+            country_code_b:  p.competitor_b.country_code,
+            total_a:         p.competitor_a.total,
+            total_b:         p.competitor_b.total,
+            winner_id:       p.winner_id,
+            tied:            p.tied,
+          })),
+        });
       } catch (err) {
         console.error("[H2H Results Error]", err.message);
         res.status(500).json({ error: "Internal server error" });
@@ -2850,27 +2820,38 @@ module.exports = function createEventsRouter({
         // round_number r in the SF event uses the Stop-1
         // submission's round (3 + r) — i.e. SF round 1 → Stop-1
         // round 4, SF round 2 → Stop-1 round 5, SF round 3
-        // (men only) → Stop-1 round 6.
+        // (men only) → Stop-1 round 6. One multi-row INSERT; the
+        // UNNEST arrays stay aligned by index.
+        const seedRows = {
+          competitor_ids: [], dive_ids: [], round_numbers: [],
+          display_orders: [], group_numbers: [],
+        };
         for (const w of winners) {
           const stop1Map = stop1ByCompetitor.get(w.competitor_id) || new Map();
           for (let r = 1; r <= expectedSfRounds; r++) {
             const stop1Round = 3 + r; // SF r=1 → parent r=4, etc.
-            await client.query(
-              `INSERT INTO competitor_dive_lists
-                (event_id, competitor_id, dive_id, round_number,
-                 display_order, group_number, is_reserve)
-               VALUES ($1, $2, $3, $4, $5, $6, FALSE)`,
-              [
-                ev.id,
-                w.competitor_id,
-                stop1Map.get(stop1Round) || null,
-                r,
-                orderByCompetitor.get(w.competitor_id),
-                w.group_number,
-              ],
-            );
+            seedRows.competitor_ids.push(w.competitor_id);
+            seedRows.dive_ids.push(stop1Map.get(stop1Round) || null);
+            seedRows.round_numbers.push(r);
+            seedRows.display_orders.push(orderByCompetitor.get(w.competitor_id));
+            seedRows.group_numbers.push(w.group_number);
           }
         }
+        await client.query(
+          `INSERT INTO competitor_dive_lists
+            (event_id, competitor_id, dive_id, round_number,
+             display_order, group_number, is_reserve)
+           SELECT $1::uuid, t.competitor_id, t.dive_id, t.round_number,
+                  t.display_order, t.group_number, FALSE
+           FROM UNNEST($2::uuid[], $3::uuid[], $4::int[], $5::int[], $6::int[])
+             AS t(competitor_id, dive_id, round_number, display_order,
+                  group_number)`,
+          [
+            ev.id,
+            seedRows.competitor_ids, seedRows.dive_ids, seedRows.round_numbers,
+            seedRows.display_orders, seedRows.group_numbers,
+          ],
+        );
 
         // Set score_carry_from so standings include H2H
         // (Appendix 3 §3.1 — "H2H scores carry forward to SF").
@@ -2882,22 +2863,7 @@ module.exports = function createEventsRouter({
         // Lock window — same WA Article 6.7.3 default as
         // /advance, but this stage runs immediately after H2H so
         // the operator may want a tighter window. Default 30.
-        let lockAtIso = null;
-        if (lockMin > 0) {
-          const lockRes = await client.query(
-            `UPDATE events
-                SET dive_list_locks_at = NOW() + ($2::int || ' minutes')::interval
-              WHERE id = $1
-              RETURNING dive_list_locks_at`,
-            [ev.id, lockMin],
-          );
-          lockAtIso = lockRes.rows[0]?.dive_list_locks_at?.toISOString() || null;
-        } else {
-          await client.query(
-            "UPDATE events SET dive_list_locks_at = NULL WHERE id = $1",
-            [ev.id],
-          );
-        }
+        const lockAtIso = await stampDiveListLock(client, ev.id, lockMin);
 
         await recordAudit(client, {
           ...auditFromReq(req),
@@ -3119,24 +3085,35 @@ module.exports = function createEventsRouter({
           [ev.id],
         );
 
+        // One multi-row INSERT; the UNNEST arrays stay aligned by
+        // index. group_number is NULL in the F event — groups only
+        // exist in the H2H / SF stages.
+        const seedRows = {
+          competitor_ids: [], dive_ids: [], round_numbers: [], display_orders: [],
+        };
         for (const f of finalists) {
           const stop1Map = stop1ByCompetitor.get(f.competitor_id) || new Map();
           for (let r = 1; r <= expectedFRounds; r++) {
-            await client.query(
-              `INSERT INTO competitor_dive_lists
-                (event_id, competitor_id, dive_id, round_number,
-                 display_order, group_number, is_reserve)
-               VALUES ($1, $2, $3, $4, $5, NULL, FALSE)`,
-              [
-                ev.id,
-                f.competitor_id,
-                stop1Map.get(r) || null,
-                r,
-                orderByCompetitor.get(f.competitor_id),
-              ],
-            );
+            seedRows.competitor_ids.push(f.competitor_id);
+            seedRows.dive_ids.push(stop1Map.get(r) || null);
+            seedRows.round_numbers.push(r);
+            seedRows.display_orders.push(orderByCompetitor.get(f.competitor_id));
           }
         }
+        await client.query(
+          `INSERT INTO competitor_dive_lists
+            (event_id, competitor_id, dive_id, round_number,
+             display_order, group_number, is_reserve)
+           SELECT $1::uuid, t.competitor_id, t.dive_id, t.round_number,
+                  t.display_order, NULL::int, FALSE
+           FROM UNNEST($2::uuid[], $3::uuid[], $4::int[], $5::int[])
+             AS t(competitor_id, dive_id, round_number, display_order)`,
+          [
+            ev.id,
+            seedRows.competitor_ids, seedRows.dive_ids,
+            seedRows.round_numbers, seedRows.display_orders,
+          ],
+        );
 
         // F resets scores (Appendix 3 §3.2). Make sure
         // score_carry_from is NULL.
@@ -3148,23 +3125,8 @@ module.exports = function createEventsRouter({
         // Lock window — Appendix 3 §4.1: 15-min break between
         // SF and F, change-of-dives must be made up to "5
         // minutes before the Final" → effective lock = NOW() +
-        // (lock_minutes - 5).
-        let lockAtIso = null;
-        if (lockMin > 0) {
-          const lockRes = await client.query(
-            `UPDATE events
-                SET dive_list_locks_at = NOW() + ($2::int || ' minutes')::interval
-              WHERE id = $1
-              RETURNING dive_list_locks_at`,
-            [ev.id, lockMin],
-          );
-          lockAtIso = lockRes.rows[0]?.dive_list_locks_at?.toISOString() || null;
-        } else {
-          await client.query(
-            "UPDATE events SET dive_list_locks_at = NULL WHERE id = $1",
-            [ev.id],
-          );
-        }
+        // (lock_minutes - 5), already folded into lockMin above.
+        const lockAtIso = await stampDiveListLock(client, ev.id, lockMin);
 
         await recordAudit(client, {
           ...auditFromReq(req),

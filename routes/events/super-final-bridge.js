@@ -31,6 +31,7 @@ const {
   loadH2hPairResults,
   loadSfCumulative,
 } = require("../../lib/super-final-helpers");
+const { perDivePointsCte } = require("../../lib/scoring-sql");
 
 module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManager }) {
   if (!pool || !requireEventManager) {
@@ -115,25 +116,13 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         const orgRanks = new Map(); // org_id → { best_synchro_rank, best_synchro_event_id, pair_competitor_ids }
         for (const sev of synchroEvents) {
           const standings = await client.query(
-            `WITH per_dive AS (
-               SELECT cdl.competitor_id, cdl.partner_id,
-                      calc_event_dive_points(
-                        array_agg(ej.judge_number ORDER BY ej.judge_number),
-                        array_agg(s.score ORDER BY ej.judge_number),
-                        e.number_of_judges, MAX(d.dd), e.event_type,
-                        BOOL_OR(cdl.partner_id IS NOT NULL)
-                      ) AS dive_points
-               FROM scores s
-               JOIN events e ON e.id = s.event_id
-               LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-               LEFT JOIN competitor_dive_lists cdl
-                 ON cdl.event_id = s.event_id
-                AND cdl.competitor_id = s.competitor_id
-                AND cdl.round_number = s.round_number
-               LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-               WHERE s.event_id = $1
-               GROUP BY cdl.competitor_id, cdl.partner_id, s.round_number, e.number_of_judges, e.event_type
-             ),
+            `WITH ${perDivePointsCte({
+               // Pair-level keys come from cdl (the synchro list
+               // row), but grouping still includes s.round_number
+               // so the UDF runs once per dive.
+               select:  ["cdl.competitor_id", "cdl.partner_id"],
+               groupBy: ["cdl.competitor_id", "cdl.partner_id", "s.round_number"],
+             })},
              totals AS (
                SELECT competitor_id, partner_id,
                       SUM(dive_points) AS total
@@ -543,25 +532,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         // for men). Tests only checked rank ordering (which the
         // uniform inflation preserved) so the bug shipped green.
         const fTier = await client.query(
-          `WITH per_dive AS (
-             SELECT s.competitor_id, s.round_number,
-                    calc_event_dive_points(
-                      array_agg(ej.judge_number ORDER BY ej.judge_number),
-                      array_agg(s.score ORDER BY ej.judge_number),
-                      e.number_of_judges, MAX(d.dd), e.event_type,
-                      BOOL_OR(cdl.partner_id IS NOT NULL)
-                    ) AS dive_points
-             FROM scores s
-             JOIN events e ON e.id = s.event_id
-             LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-             LEFT JOIN competitor_dive_lists cdl
-               ON cdl.event_id = s.event_id
-              AND cdl.competitor_id = s.competitor_id
-              AND cdl.round_number = s.round_number
-             LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-             WHERE s.event_id = $1
-             GROUP BY s.competitor_id, s.round_number, e.number_of_judges, e.event_type
-           ),
+          `WITH ${perDivePointsCte()},
            per_competitor AS (
              SELECT competitor_id,
                     COALESCE(SUM(dive_points), 0) AS total,

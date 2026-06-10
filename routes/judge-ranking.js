@@ -61,6 +61,7 @@
 
 const express = require("express");
 const PDFDocument = require("pdfkit");
+const { perDivePointsCte } = require("../lib/scoring-sql");
 
 // CSV escaping + spreadsheet-formula-injection guard. Identical to
 // the helpers in routes/pdf.js — kept inline rather than extracted
@@ -155,6 +156,9 @@ async function buildAnalysis(pool, eventId) {
   try {
     const jnums = judges.map((j) => j.judge_number);
     const unanimousOnes = jnums.map(() => 1.0);
+    // Direct scalar UDF probe with synthetic arrays — NOT the
+    // per-dive scores-join shape, so lib/scoring-sql's builders
+    // deliberately don't apply here.
     const probeRes = await pool.query(
       `SELECT calc_event_dive_points($1::int[], $2::numeric[], $3::int, 1.0::numeric, $4, false) AS m`,
       [jnums, unanimousOnes, event.number_of_judges, event.event_type],
@@ -254,27 +258,10 @@ async function buildAnalysis(pool, eventId) {
   // events. dives_desc preserves the WA tie-break ordering.
   const standingsRes = isTeam
     ? await pool.query(
-        `WITH per_dive AS (
-           SELECT cdl.team_id, s.round_number,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score        ORDER BY ej.judge_number),
-                    e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-                  ) AS dive_points
-             FROM scores s
-             JOIN events e ON e.id = s.event_id
-             LEFT JOIN event_judges ej
-               ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-             LEFT JOIN competitor_dive_lists cdl
-               ON  cdl.event_id      = s.event_id
-               AND cdl.competitor_id = s.competitor_id
-               AND cdl.round_number  = s.round_number
-             LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-            WHERE s.event_id = $1
-            GROUP BY cdl.team_id, s.competitor_id, s.round_number,
-                     e.number_of_judges, e.event_type
-         ),
+        `WITH ${perDivePointsCte({
+           select:  ["cdl.team_id", "s.round_number"],
+           groupBy: ["cdl.team_id", "s.competitor_id", "s.round_number"],
+         })},
          totals AS (
            SELECT team_id,
                   SUM(dive_points)::numeric(10,2) AS total,
@@ -298,26 +285,7 @@ async function buildAnalysis(pool, eventId) {
         [eventId],
       )
     : await pool.query(
-        `WITH per_dive AS (
-           SELECT s.competitor_id, s.round_number,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score        ORDER BY ej.judge_number),
-                    e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-                  ) AS dive_points
-             FROM scores s
-             JOIN events e ON e.id = s.event_id
-             LEFT JOIN event_judges ej
-               ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-             LEFT JOIN competitor_dive_lists cdl
-               ON  cdl.event_id      = s.event_id
-               AND cdl.competitor_id = s.competitor_id
-               AND cdl.round_number  = s.round_number
-             LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-            WHERE s.event_id = $1
-            GROUP BY s.competitor_id, s.round_number, e.number_of_judges, e.event_type
-         ),
+        `WITH ${perDivePointsCte()},
          totals AS (
            SELECT competitor_id,
                   SUM(dive_points)::numeric(10,2) AS total,

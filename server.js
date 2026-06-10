@@ -52,7 +52,7 @@ const { Pool } = require("pg");
 const cors = require("cors");
 const helmet = require("helmet");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
@@ -60,6 +60,19 @@ const logger = require("./lib/logger");
 const metrics = require("./lib/metrics");
 
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
+
+// Refuse to boot a production deployment with a wildcard CORS
+// origin — '*' is passed straight to both the Express cors
+// middleware and the Socket.IO server below, which would let any
+// website script the API/socket with a victim's credentials.
+// Same fail-closed posture as the JWT_SECRET check further down;
+// dev keeps working (NODE_ENV unset) for local wildcard setups.
+if (process.env.NODE_ENV === "production" && CORS_ORIGIN === "*") {
+  console.error(
+    "FATAL: CORS_ORIGIN must not be '*' in production — set it to the app's public origin. Refusing to start.",
+  );
+  process.exit(1);
+}
 
 // [SECTION: BOOTSTRAP]
 const app = express();
@@ -241,10 +254,20 @@ app.use(express.static(path.join(__dirname, 'dist')))
 const POOL_APP_NAME_WRITER = "dive-recorder-writer";
 const POOL_APP_NAME_READER = "dive-recorder-reader";
 
+// Explicit pool cap — node-postgres defaults to max 10, which the
+// socket scoring path (routes/socket.js submit_score) SHARES with
+// every HTTP route on this writer pool; a single heavy fan-out
+// (analytics, archive) could otherwise starve live scoring of
+// connections. 20 is comfortable for a meet-day node; override
+// via PG_POOL_MAX for constrained Postgres plans (mind the
+// server-side max_connections when raising it).
+const PG_POOL_MAX = Number(process.env.PG_POOL_MAX) || 20;
+
 const pool = process.env.DATABASE_URL
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
       application_name: POOL_APP_NAME_WRITER,
+      max: PG_POOL_MAX,
     })
   : new Pool({
       user:     process.env.DB_USER     || process.env.PGUSER,
@@ -253,6 +276,7 @@ const pool = process.env.DATABASE_URL
       password: process.env.DB_PASSWORD || process.env.PGPASSWORD,
       port:     process.env.DB_PORT     || process.env.PGPORT,
       application_name: POOL_APP_NAME_WRITER,
+      max: PG_POOL_MAX,
     });
 
 // -------------------------------------------------------------
@@ -270,10 +294,13 @@ const pool = process.env.DATABASE_URL
 // single-node deployments keep working with no config change. The
 // factory pattern means a route's code is identical regardless of
 // whether the dep is the writer or a replica.
+// Same explicit cap as the writer (PG_READ_POOL_MAX to size the
+// replica side independently; falls back to PG_POOL_MAX's value).
 const readPool = process.env.DATABASE_READ_URL
   ? new Pool({
       connectionString: process.env.DATABASE_READ_URL,
       application_name: POOL_APP_NAME_READER,
+      max: Number(process.env.PG_READ_POOL_MAX) || PG_POOL_MAX,
     })
   : pool;
 if (readPool !== pool) {
@@ -282,11 +309,12 @@ if (readPool !== pool) {
 }
 
 // Refuse to boot with no JWT secret or the well-known placeholder —
-// either case means tokens are trivially forgeable. We DON'T fail on
-// short-but-unique secrets: existing deployments may have a working
-// 12-20 char string set, and crashing those on upgrade is worse than
-// nudging them to rotate. We do print a loud warning so it shows up
-// in PM2 logs and the operator can fix it on their next pass.
+// either case means tokens are trivially forgeable. Short secrets
+// (< 32 chars) are a hard fail in production too: a brute-forceable
+// secret means forgeable sessions, and that's not a "fix on your
+// next pass" problem on a deployment serving real traffic. Dev
+// keeps the warn-only behaviour so a local 12-20 char string
+// doesn't block iteration.
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET === "change_this_secret_in_production") {
   console.error(
@@ -295,6 +323,12 @@ if (!JWT_SECRET || JWT_SECRET === "change_this_secret_in_production") {
   process.exit(1);
 }
 if (JWT_SECRET.length < 32) {
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      `FATAL: JWT_SECRET is only ${JWT_SECRET.length} chars — production requires ≥32 random chars (short secrets are brute-forceable, which makes every session forgeable). Refusing to start.`,
+    );
+    process.exit(1);
+  }
   console.warn(
     `[security] JWT_SECRET is only ${JWT_SECRET.length} chars. Rotate to ≥32 random chars when convenient — short secrets are easier to brute force.`,
   );
@@ -685,6 +719,11 @@ app.use(require("./routes/sessions")({
 app.use(require("./routes/events")({
   pool,
   JWT_SECRET,
+  // Shared middleware instance: the router's anonymous-peek
+  // endpoints run the token-version / deleted_at / suspended_at
+  // revocation checks through the same 30s cache as every other
+  // mount (no second cache to go stale independently).
+  optionalAuth,
   io,
   verifyToken,
   requireOrgAdmin,
@@ -736,6 +775,10 @@ app.use(require("./routes/control-room")({
   push,
   bcrypt,
   totp: require("./lib/totp"),
+  // Shared pre-meet gate (stashes req.event, same 409 contract
+  // everywhere) — keeps the dive-order routes on the exact same
+  // message/shape as the rest of the app.
+  ensureEventPreMeet,
 }));
 
 // =============================================================
@@ -1087,6 +1130,33 @@ app.use((req, res) => {
 // Both queries are best-effort: a failure (e.g. running against
 // an old DB that pre-dates migration 008) just logs a warning.
 async function bootChecks() {
+  // Refuse to serve a production deployment whose bootstrap
+  // system_admin still answers to the well-known init.sql
+  // credentials (admin / admin) — anyone who can reach the login
+  // page owns the platform until that password is rotated. One
+  // bcrypt.compare against the stored hash at boot; NOT best-
+  // effort: a match is a fatal log + exit. Dev / test installs
+  // (NODE_ENV unset) and the intentional fixtures in
+  // seed_test_data.sql are unaffected. A query error (e.g. half-
+  // migrated DB) only warns — the other boot checks below stay
+  // best-effort and fail-open on infrastructure trouble.
+  if (process.env.NODE_ENV === "production") {
+    try {
+      const r = await pool.query(
+        "SELECT password FROM users WHERE username = 'admin' AND is_system_admin = TRUE",
+      );
+      const hash = r.rows[0]?.password;
+      if (hash && (await bcrypt.compare("admin", hash))) {
+        logger.fatal(
+          "the bootstrap system_admin 'admin' still has the default password from init.sql — sign in, rotate it via the User Manager, then redeploy. Refusing to serve.",
+        );
+        process.exit(1);
+      }
+    } catch (err) {
+      logger.warn({ err: err.message }, "default-admin-password boot check failed; continuing");
+    }
+  }
+
   // Rehydrate live-state cache from event_live_state. Best-
   // effort — if the table doesn't exist yet (DB pre-dates
   // migration 034) the helper logs and returns. After

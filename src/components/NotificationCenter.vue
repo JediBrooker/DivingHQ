@@ -8,25 +8,51 @@
 // judge_call etc. will follow) wire those actions through to the
 // component-defined handler map. Everything else renders as a
 // passive "click to open" banner.
-import { computed } from 'vue'
+import { computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePush } from '@/composables/usePush'
+import { usePush, bindPushSocket } from '@/composables/usePush'
 import { useAuthStore } from '@/stores/auth'
-import { useSocket } from '@/composables/useSocket'
+import { acquireSocket } from '@/composables/useSocket'
 import { showError } from '@/composables/useNotify'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-// One socket per logged-in tab — used for live notification
-// receipt + the notification:ack emit. Anonymous tabs don't get
-// a socket here (auth gate).
-let socket = null
-if (auth.isLoggedIn) {
-  socket = useSocket()
-}
+const { notifications, ack } = usePush()
 
-const { notifications, ack } = usePush({ socket })
+// One socket per logged-in identity — used for live notification
+// receipt + the notification:ack emit. Anonymous sessions get no
+// socket (auth gate). Login/logout navigate via router.push with
+// NO page reload, so the socket has to follow the auth identity:
+// a boot-time acquire would leave a mid-session sign-in with no
+// socket, and a sign-out → sign-in with a socket still
+// authenticated as the previous user. On every token change we
+// release the old pooled lease, acquire one keyed to the new
+// token, and rebind the shared notification listener.
+let releaseSocket = null
+watch(() => auth.token, (token) => {
+  if (releaseSocket) {
+    releaseSocket()
+    releaseSocket = null
+  }
+  if (token) {
+    const lease = acquireSocket({ token })
+    releaseSocket = lease.release
+    bindPushSocket(lease.socket)
+  } else {
+    bindPushSocket(null)
+  }
+}, { immediate: true })
+
+// Mounted for the app's lifetime in practice, but release
+// defensively so a remount can't double-acquire.
+onUnmounted(() => {
+  if (releaseSocket) {
+    releaseSocket()
+    releaseSocket = null
+  }
+  bindPushSocket(null)
+})
 
 // Newest 3 in the floating banner stack — anything older lives
 // in the inbox the user can open from the nav (future feature).

@@ -31,60 +31,11 @@
    src/components/manager/RoundDivesEditor.vue (scoped) when the
    editor was extracted from this view. */
 
-/* Advance to next stage — modal layout. The right side surfaces
-   a live preview of the ranked divers split into Primaries /
-   Reserves / Cut so the operator can see exactly who'll
-   progress before clicking the button. */
-.modal-advance .advance-form { display:flex; flex-direction:column; gap:0.75rem; }
-.advance-field-row { display:flex; gap:0.75rem; }
-.advance-field { display:flex; flex-direction:column; flex:1; }
-.advance-field .label { margin-bottom:0.4rem; }
-.advance-radio {
-  display:flex; align-items:flex-start; gap:0.5rem;
-  padding:0.5rem 0.6rem; border:1px solid var(--border); border-radius:var(--radius-sm);
-  margin-top:0.4rem; cursor:pointer; font-size:13px;
-}
-.advance-radio:hover { border-color: var(--cyan); }
-.advance-radio input { margin-top:3px; }
-.advance-radio em { color:var(--text-3); font-style:italic; }
-
-.advance-preview {
-  margin-top:1rem;
-  border:1px solid var(--border); border-radius:var(--radius-sm);
-  max-height:280px; overflow-y:auto;
-  background:var(--bg-3);
-}
-.advance-preview-head {
-  padding:0.5rem 0.75rem;
-  font-family:var(--font-display); font-size:11px; font-weight:700;
-  letter-spacing:0.08em; text-transform:uppercase; color:var(--cyan);
-  border-bottom:1px solid var(--border);
-  position:sticky; top:0; background:var(--bg-3); z-index:1;
-}
-.advance-preview-row {
-  display:grid; grid-template-columns: 38px 1fr 60px 80px;
-  align-items:center; gap:0.5rem;
-  padding:0.4rem 0.75rem;
-  border-top:1px solid var(--border);
-  font-family:var(--font-mono); font-size:12px;
-}
-.advance-preview-row:first-of-type { border-top:none; }
-.advance-preview-row.primary { color:var(--text); }
-.advance-preview-row.primary .advance-rank { color:var(--cyan); font-weight:bold; }
-.advance-preview-row.reserve {
-  color:var(--text-2);
-  background:rgba(255, 200, 87, 0.04);
-}
-.advance-preview-row.reserve .advance-rank { color:#ffc857; }
-.advance-preview-row.cut { color:var(--text-3); opacity:0.6; }
-.advance-rank { text-align:center; }
-.advance-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.advance-total { text-align: end; font-variant-numeric:tabular-nums; }
-.advance-tag {
-  text-align: end; font-size:10px; text-transform:uppercase;
-  letter-spacing:0.06em; color:#ffc857;
-}
-.advance-preview-row.cut .advance-tag { color:var(--text-3); }
+/* Advance-stage modal styles — the .modal-advance / .advance-field*
+   / .advance-radio / .advance-preview* rules moved into
+   src/components/manager/AdvanceStageModal.vue (scoped) when the
+   modal was extracted from this view. The .advance-btn event-row
+   button (below) stays. */
 .form-stack{display:flex;flex-direction:column;gap:1rem;}
 .event-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-xs);transition:border-color 0.2s;animation:fadeUp 0.25s ease;}
 .event-item:hover{border-color:var(--border-2);}
@@ -598,193 +549,14 @@
 .meet-live { color: var(--red); font-weight: 700; margin-inline-start: 0.4rem; }
 .meet-row-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
 
-/* Teams / participating-federations / roster-import modals render as
-   a sibling of an EMPTY .modal-backdrop (not nested inside it), so the
-   global .modal (position: static) drops to the bottom of the long
-   events page instead of centring. Pin these three to the viewport
-   centre, above the backdrop; they scroll internally if tall. */
-.modal.readiness-modal,
-.modal.teams-modal,
-.modal.roster-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 201;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-.roster-modal { max-width: 720px; }
-.roster-modal .mono { font-family: var(--font-mono); }
-.roster-modal textarea { resize: vertical; min-height: 180px; }
-.roster-modal .hint code {
-  font-family: var(--font-mono); font-size: 10.5px;
-  background: var(--bg-2); border: 1px solid var(--border);
-  padding: 0.05rem 0.3rem; border-radius: 3px;
-  color: var(--cyan);
-}
-
-.roster-result { margin-top: 0.75rem; }
-.roster-preview-list {
-  display: flex; flex-direction: column; gap: 0.35rem;
-  margin-top: 0.55rem;
-}
-.roster-preview-row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 0.75rem; padding: 0.4rem 0.55rem;
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  background: var(--bg-3);
-}
-.roster-preview-name {
-  min-width: 0; font-family: var(--font-display); font-size: 12px;
-  font-weight: 700; color: var(--text);
-}
-.roster-preview-name em {
-  display: block; margin-top: 0.1rem;
-  font-family: var(--font-mono); font-size: 10.5px;
-  font-style: normal; color: var(--text-3);
-}
-.roster-preview-actions {
-  flex-shrink: 0; font-family: var(--font-mono); font-size: 10.5px;
-  color: var(--cyan);
-}
-.roster-errors {
-  margin-top: 0.4rem;
-  background: var(--bg-3); border: 1px solid var(--border);
-  border-inline-start: 3px solid var(--amber); border-radius: 3px;
-  padding: 0.6rem 0.8rem;
-}
-.roster-error-list {
-  list-style: disc; padding-inline-start: 1.25rem; margin: 0;
-  font-family: var(--font-mono); font-size: 11.5px; color: var(--text-2);
-  max-height: 200px; overflow-y: auto;
-}
-.roster-error-list li { margin: 0.15rem 0; }
-
-.teams-modal { max-width: 560px; }
-.readiness-modal { max-width: 860px; }
-.readiness-head {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 1rem; margin-bottom: 1rem;
-}
-.readiness-title {
-  font-size: 22px; line-height: 1.15; color: var(--text);
-}
-.readiness-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-.readiness-summary {
-  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.55rem; margin: 0.85rem 0 1rem;
-}
-.readiness-stat {
-  min-width: 0; padding: 0.65rem 0.75rem;
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  background: var(--bg-3);
-}
-.readiness-stat span {
-  display: block; font-family: var(--font-display); font-size: 18px;
-  font-weight: 800; color: var(--text);
-}
-.readiness-stat strong {
-  display: block; margin-top: 0.15rem;
-  font-family: var(--font-display); font-size: 9px; font-weight: 700;
-  letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-3);
-}
-.readiness-note {
-  padding: 0.55rem 0.75rem; border-inline-start: 3px solid var(--amber);
-  background: rgba(245, 158, 11, 0.08); border-radius: 4px;
-}
-.readiness-event-list {
-  list-style: none; padding: 0; margin: 0.85rem 0 0;
-  display: flex; flex-direction: column; gap: 0.55rem;
-}
-.readiness-event-row {
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 0.75rem; background: var(--surface);
-}
-.readiness-event-row.ready { border-color: rgba(16, 185, 129, 0.35); }
-.readiness-event-row.blocked { border-color: rgba(245, 158, 11, 0.35); }
-.readiness-event-main {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 0.8rem;
-}
-.readiness-event-name {
-  font-family: var(--font-display); font-size: 14px; font-weight: 800;
-  color: var(--text);
-}
-.readiness-event-meta {
-  margin-top: 0.2rem; font-family: var(--font-mono); font-size: 11px;
-  color: var(--text-3);
-}
-.readiness-state-chip {
-  flex-shrink: 0; padding: 0.2rem 0.45rem; border-radius: 999px;
-  font-family: var(--font-display); font-size: 9px; font-weight: 800;
-  letter-spacing: 0.12em; text-transform: uppercase;
-}
-.readiness-state-chip.ok {
-  color: var(--green); background: rgba(16, 185, 129, 0.12);
-}
-.readiness-state-chip.warn {
-  color: var(--amber); background: rgba(245, 158, 11, 0.12);
-}
-.readiness-blockers,
-.readiness-feds {
-  display: flex; flex-wrap: wrap; gap: 0.35rem;
-  margin-top: 0.55rem;
-}
-.readiness-blockers.secondary { opacity: 0.9; }
-.readiness-blocker,
-.readiness-fed {
-  display: inline-flex; align-items: center; gap: 0.35rem;
-  padding: 0.22rem 0.45rem; border: 1px solid var(--border);
-  border-radius: 999px; background: var(--bg-3);
-  font-family: var(--font-mono); font-size: 10.5px; color: var(--text-2);
-}
-.readiness-fed strong { color: var(--cyan); }
-.readiness-fed em {
-  font-style: normal; color: var(--amber);
-}
-.teams-section-label {
-  font-family: var(--font-display); font-size: 10px; font-weight: 700;
-  letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-3);
-  margin-bottom: 0.6rem;
-}
-.enrolled-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; }
-.enrolled-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--radius-sm);
-}
-.enrolled-name { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--text); }
-.enrolled-code {
-  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
-  letter-spacing: 0.05em; color: var(--cyan);
-  background: var(--cyan-dim); border: 1px solid rgba(6,182,212,0.3);
-  border-radius: 3px; padding: 0.1rem 0.4rem; margin-inline-start: 0.5rem;
-}
-.pending-invite-row { align-items: flex-start; }
-.invite-status-chip {
-  display: inline-flex; align-items: center;
-  margin-inline-start: 0.45rem; padding: 0.1rem 0.4rem;
-  border-radius: 999px; background: rgba(245, 158, 11, 0.12);
-  color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.3);
-  font-family: var(--font-display); font-size: 9px; font-weight: 800;
-  letter-spacing: 0.1em; text-transform: uppercase;
-}
-.invite-status-chip.accepted {
-  color: var(--green); border-color: rgba(16, 185, 129, 0.35);
-  background: rgba(16, 185, 129, 0.12);
-}
-.invite-status-chip.declined,
-.invite-status-chip.cancelled {
-  color: var(--red); border-color: rgba(239, 68, 68, 0.35);
-  background: rgba(239, 68, 68, 0.1);
-}
-.invite-response-actions {
-  display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end;
-}
-.enrolled-empty { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); padding: 0.4rem 0; font-style: italic; }
-.add-team-row { display: flex; gap: 0.5rem; align-items: center; }
-.add-team-row .select { flex: 1; }
+/* Modal styles moved out with their components when each was
+   extracted from this view (all scoped):
+   - .roster-*                → src/components/manager/RosterImportModal.vue
+   - .readiness-*             → src/components/manager/MeetReadinessModal.vue
+   - .teams-modal / .enrolled-* / .add-team-row /
+     .teams-section-label     → TeamsEnrolmentModal.vue +
+                                ParticipatingOrgsModal.vue (copies — keep in sync)
+   - .invite-* / .pending-invite-row → ParticipatingOrgsModal.vue */
 
 /* Field-bottom checkbox row + a small help pill that toggles a
    nearby explainer block. Used by the Migration 031 sign-off
@@ -842,34 +614,13 @@
   }
   .actions { flex-wrap: wrap; }
 
-  /* Advance preview rows — 38+60+80 = 178px of fixed cols is too
-     greedy on 360px; let the name eat the row, rank pins to the
-     left and tag/total wrap underneath. */
-  .advance-preview-row {
-    grid-template-columns: 32px 1fr auto;
-    row-gap: 0.15rem;
-    column-gap: 0.4rem;
-    padding: 0.45rem 0.6rem;
-  }
-  .advance-preview { max-height: 220px; }
-
   /* Modals — full-bleed so the inner grids and forms have the
      entire viewport to play with. Keep a tiny inset. */
   .modal,
   .modal-create-event,
-  .modal-create-dive,
-  .readiness-modal,
-  .roster-modal,
-  .teams-modal {
+  .modal-create-dive {
     max-width: 100%;
     width: 100%;
-  }
-
-  .readiness-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .readiness-event-main {
-    flex-direction: column;
   }
 
   /* Meet row — name + meta stack above the action chips. */

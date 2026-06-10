@@ -23,13 +23,34 @@
 
 const express = require("express");
 const sharp = require("sharp");
+const { perDivePointsCte } = require("../lib/scoring-sql");
 
 // In-memory cache of rendered OG cards. Each crawler hits the
 // og:image once per share-to-cache (Twitter / FB / LinkedIn all
-// behave this way), so a small LRU is plenty. Bounded by the
-// 1h TTL + the on-demand recomputation when stats change.
+// behave this way), so a small LRU is plenty.
+//
+// Bounded two ways — each PNG is ~100-300KB, so an unbounded Map
+// pins real memory:
+//   * a periodic sweep deletes expired entries (the read path
+//     only BYPASSED them before, so a crawler sweep over many
+//     profiles left every stale buffer resident forever);
+//   * a hard entry cap with oldest-first eviction (Map iteration
+//     order is insertion order) so even a burst of fresh slugs
+//     inside one TTL window can't grow past ~60MB worst case.
 const ogCardCache = new Map();   // public_slug → { png, expiresAt }
 const OG_CARD_TTL_MS = 60 * 60 * 1000;
+const OG_CARD_CACHE_MAX = 200;
+
+// Sweep cadence mirrors lib/scoreboard-cache.js (a fraction of
+// the TTL is plenty of resolution); unref()'d so the timer never
+// holds the process open — same posture as the idempotency
+// sweeper's interval.
+setInterval(() => {
+  const now = Date.now();
+  for (const [slug, entry] of ogCardCache.entries()) {
+    if (entry.expiresAt <= now) ogCardCache.delete(slug);
+  }
+}, 5 * 60 * 1000).unref?.();
 
 // Crawler UA detection. Matched anywhere in the User-Agent
 // string. Conservative — we'd rather mis-serve OG-tagged HTML
@@ -104,27 +125,14 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
       // Stats query — same shape as /api/divers/:id/profile but
       // without the date filter (public profile is "all time").
       const stats = await reads.query(
-        `WITH dive_totals AS (
-           SELECT s.event_id, s.round_number,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score ORDER BY ej.judge_number),
-                    e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-                  ) AS dive_total,
-                  MAX(d.dd) AS dd
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-           LEFT JOIN competitor_dive_lists cdl
-             ON cdl.event_id = s.event_id
-            AND cdl.competitor_id = s.competitor_id
-            AND cdl.round_number = s.round_number
-           LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-           WHERE s.competitor_id = $1
-             AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-           GROUP BY s.event_id, s.round_number, e.number_of_judges, e.event_type
-         )
+        `WITH ${perDivePointsCte({
+           name:        "dive_totals",
+           select:      ["s.event_id", "s.round_number"],
+           pointsAlias: "dive_total",
+           selectExtra: ["MAX(d.dd) AS dd"],
+           where: `s.competitor_id = $1
+             AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
+         })}
          SELECT
            COUNT(DISTINCT event_id)::int AS total_meets,
            COUNT(*)::int                 AS total_dives,
@@ -138,31 +146,17 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
       // ranking shape as the analytics dashboard's recent_form,
       // simplified for public consumption.
       const recent = await reads.query(
-        `WITH per_dive AS (
-           SELECT s.event_id, s.competitor_id, s.round_number,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score ORDER BY ej.judge_number),
-                    e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-                  ) AS pts
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-           LEFT JOIN competitor_dive_lists cdl
-             ON cdl.event_id = s.event_id
-            AND cdl.competitor_id = s.competitor_id
-            AND cdl.round_number = s.round_number
-           LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-           WHERE s.event_id IN (
+        `WITH ${perDivePointsCte({
+           select:      ["s.event_id", "s.competitor_id", "s.round_number"],
+           pointsAlias: "pts",
+           where: `s.event_id IN (
              SELECT DISTINCT s0.event_id
              FROM scores s0
              JOIN events e0 ON e0.id = s0.event_id
              WHERE s0.competitor_id = $1
                AND COALESCE(e0.is_rehearsal, FALSE) = FALSE
-           )
-           GROUP BY s.event_id, s.competitor_id, s.round_number, e.number_of_judges, e.event_type
-         ),
+           )`,
+         })},
          totals AS (
            SELECT event_id, competitor_id, SUM(pts) AS total
            FROM per_dive GROUP BY event_id, competitor_id
@@ -224,12 +218,17 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
     const slug = req.params.public_slug;
     if (!/^[0-9a-f]{32}$/i.test(slug)) return res.status(404).end();
 
-    // Cache hit — serve straight from memory.
+    // Cache hit — serve straight from memory. An expired entry is
+    // deleted on sight (not just bypassed) so the ~quarter-MB
+    // buffer is reclaimable before the next sweep.
     const cached = ogCardCache.get(slug);
-    if (cached && cached.expiresAt > Date.now()) {
-      res.set("Content-Type", "image/png");
-      res.set("Cache-Control", "public, max-age=3600");
-      return res.end(cached.png);
+    if (cached) {
+      if (cached.expiresAt > Date.now()) {
+        res.set("Content-Type", "image/png");
+        res.set("Cache-Control", "public, max-age=3600");
+        return res.end(cached.png);
+      }
+      ogCardCache.delete(slug);
     }
 
     try {
@@ -251,25 +250,13 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
       const d = r.rows[0];
 
       const stat = await reads.query(
-        `WITH per_dive AS (
-           SELECT calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score ORDER BY ej.judge_number),
-                    e.number_of_judges, MAX(dd.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-                  ) AS dive_total
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-           LEFT JOIN competitor_dive_lists cdl
-             ON cdl.event_id = s.event_id
-            AND cdl.competitor_id = s.competitor_id
-            AND cdl.round_number = s.round_number
-           LEFT JOIN dive_directory dd ON dd.id = COALESCE(s.dive_id, cdl.dive_id)
-           WHERE s.competitor_id = $1
-             AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-           GROUP BY s.event_id, s.round_number, e.number_of_judges, e.event_type
-         )
+        `WITH ${perDivePointsCte({
+           select:      [],
+           pointsAlias: "dive_total",
+           where: `s.competitor_id = $1
+             AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
+           groupBy:     ["s.event_id", "s.round_number"],
+         })}
          SELECT MAX(dive_total)::numeric(6,2) AS best
          FROM per_dive`,
         [d.id],
@@ -319,6 +306,13 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
 </svg>`;
 
       const png = await sharp(Buffer.from(svg)).png().toBuffer();
+      // Hard cap: evict oldest-first until there's room. A
+      // crawler enumerating thousands of profiles in one sweep
+      // now recycles the same 200 slots instead of growing the
+      // Map without bound.
+      while (ogCardCache.size >= OG_CARD_CACHE_MAX) {
+        ogCardCache.delete(ogCardCache.keys().next().value);
+      }
       ogCardCache.set(slug, { png, expiresAt: Date.now() + OG_CARD_TTL_MS });
       res.set("Content-Type", "image/png");
       res.set("Cache-Control", "public, max-age=3600");

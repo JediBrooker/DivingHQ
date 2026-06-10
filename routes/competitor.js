@@ -17,6 +17,7 @@
 //   app.use(require('./routes/competitor')({ … }))
 
 const express = require("express");
+const { perDivePointsCte } = require("../lib/scoring-sql");
 
 module.exports = function createCompetitorRouter({
   pool,
@@ -301,27 +302,7 @@ module.exports = function createCompetitorRouter({
       // 3. Standings — same per-dive math as the public scoreboard,
       //    rolled up per competitor. Rank ties share (World Aquatics practice).
       const standRes = await pool.query(
-        `WITH per_dive AS (
-           SELECT s.competitor_id, s.round_number,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score        ORDER BY ej.judge_number),
-                    e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-                  ) AS dive_points
-             FROM scores s
-             JOIN events e ON e.id = s.event_id
-             LEFT JOIN event_judges ej
-               ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-             LEFT JOIN competitor_dive_lists cdl
-               ON cdl.event_id = s.event_id
-              AND cdl.competitor_id = s.competitor_id
-              AND cdl.round_number = s.round_number
-             LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-            WHERE s.event_id = $1
-            GROUP BY s.competitor_id, s.round_number,
-                     e.number_of_judges, e.event_type
-         ), totals AS (
+        `WITH ${perDivePointsCte()}, totals AS (
            SELECT competitor_id, SUM(dive_points)::numeric AS total
              FROM per_dive
             GROUP BY competitor_id

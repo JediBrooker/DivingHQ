@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { diveDescription } from '@/composables/useDiveLabel'
+import { useDiveSearch } from '@/composables/useDiveSearch'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { validateDiveList } from '@/lib/round-rules'
@@ -442,14 +443,10 @@ const roundRulesSections = computed(() => {
   })
 })
 
-const searchResults = computed(() => {
-  const term = searchInput.value.toLowerCase().trim()
-  return diveDirectory.value.filter(d => {
-    const combined = (d.dive_code + d.position).toLowerCase()
-    const textMatch = !term || combined.includes(term) || d.description.toLowerCase().includes(term)
-    const heightMatch = activeHeightFilter.value === null || parseFloat(d.height) === activeHeightFilter.value
-    return textMatch && heightMatch
-  }).slice(0, 15)
+const searchResults = useDiveSearch(diveDirectory, {
+  term: searchInput,
+  height: activeHeightFilter,
+  limit: 15,
 })
 
 async function onEventChange() {

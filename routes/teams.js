@@ -409,6 +409,44 @@ module.exports = function createTeamsRouter({
           return res.status(err.status || 500).json(body);
         }
 
+        // The UNIQUE (event_id, competitor_id, round_number)
+        // constraint spans team AND individual entries: a member
+        // who already self-entered this event (team_id IS NULL) —
+        // or who sits on another team's list — collides with the
+        // rows below, and the DELETE in the transaction only clears
+        // THIS team's rows. Surface the collision as a 409 naming
+        // the diver + round (same contract as the claim-flow merge
+        // conflict in routes/users.js) instead of a constraint 500.
+        const conflict = await client.query(
+          `SELECT u.full_name, cdl.competitor_id, cdl.round_number
+             FROM competitor_dive_lists cdl
+             JOIN UNNEST($2::uuid[], $3::int[]) AS d(competitor_id, round_number)
+               ON d.competitor_id = cdl.competitor_id
+              AND d.round_number  = cdl.round_number
+             JOIN users u ON u.id = cdl.competitor_id
+            WHERE cdl.event_id = $1
+              AND (cdl.team_id IS NULL OR cdl.team_id <> $4)
+            ORDER BY u.full_name, cdl.round_number
+            LIMIT 1`,
+          [
+            event_id,
+            validatedDives.map((d) => d.competitor_id),
+            validatedDives.map((d) => Number(d.round_number)),
+            req.params.teamId,
+          ],
+        );
+        if (conflict.rows.length) {
+          const c = conflict.rows[0];
+          return res.status(409).json({
+            error:
+              `Cannot save: ${c.full_name} already has an entry for round ` +
+              `${c.round_number} of this event outside this team. Withdraw ` +
+              `that entry first, then re-save the team list.`,
+            competitor_id: c.competitor_id,
+            round_number: c.round_number,
+          });
+        }
+
         await client.query("BEGIN");
         // Replace existing rows for this (team, event)
         await client.query(
@@ -441,6 +479,18 @@ module.exports = function createTeamsRouter({
         res.json({ message: "Team dive list saved", count: dives.length });
       } catch (err) {
         await client.query("ROLLBACK").catch(() => {});
+        // Backstop for the race the pre-check can't close: a row
+        // landed between the SELECT above and the INSERTs (e.g. the
+        // diver self-submitted concurrently). Same 409 contract,
+        // just without the diver lookup.
+        if (err.code === "23505") {
+          return res.status(409).json({
+            error:
+              "A diver on this team already has an entry for one of these " +
+              "rounds in this event outside this team. Withdraw that entry " +
+              "first, then re-save the team list.",
+          });
+        }
         console.error("[Team Dive List Error]", err);
         res.status(500).json({ error: "Failed to save team dive list" });
       } finally {

@@ -26,17 +26,17 @@ const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
 
-// Wait long enough for a fresh 30s TOTP window. The server's
-// verify uses ±1 step (±30s), so once a code is generated it's
-// good for ~60s. We don't need to wait between codes — same
-// step number returns the same digits — but we DO need to make
-// sure we never reuse a code in the same place where the server
-// would reject it. /confirm and /login/totp both accept the
-// "current" code, so back-to-back is fine.
-function totpFor(secret) {
+// The server's verify uses ±1 step (±30s) AND a replay guard
+// (migration 063): each accepted code consumes its time-step,
+// and any code at or below the consumed step is rejected. So
+// back-to-back verifications need codes from ADVANCING steps —
+// pass stepOffset=1 to mint the next window's code (still inside
+// the ±1 verify window, but strictly newer than the last one).
+function totpFor(secret, stepOffset = 0) {
   return speakeasy.totp({
     secret,
     encoding: "base32",
+    time: Math.floor(Date.now() / 1000) + stepOffset * 30,
   });
 }
 
@@ -144,7 +144,9 @@ test("admin enables 2FA, logs in via TOTP and via recovery code", async ({
   const stepTwo = await request.post("/api/auth/login/totp", {
     data: {
       totp_token: stepOneBody.totp_token,
-      code:       totpFor(setupBody.base32),
+      // One step ahead of the /confirm code — same-step reuse is
+      // now a rejected replay.
+      code:       totpFor(setupBody.base32, 1),
     },
   });
   expect(stepTwo.status()).toBe(200);
@@ -187,7 +189,12 @@ test("admin enables 2FA, logs in via TOTP and via recovery code", async ({
     headers: { Authorization: `Bearer ${sessionToken}` },
     data: {
       password: setup.TEST_PASSWORD,
-      code:     totpFor(setupBody.base32),
+      // A fresh recovery code, not a TOTP: /confirm consumed
+      // step 0 and the login consumed step +1, which exhausts
+      // the ±1 verify window until the wall clock advances —
+      // exactly what the replay guard is for. Recovery codes
+      // are single-use but not time-stepped.
+      code:     setupBody.recovery_codes[1],
     },
   });
   expect(disableRes.status()).toBe(200);

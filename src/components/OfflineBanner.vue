@@ -44,43 +44,43 @@ const offlineDurationLabel = computed(() => {
 
 <template>
   <Transition name="offline-banner">
-    <div v-if="enabled && hasActivity.value"
+    <div v-if="enabled && hasActivity"
          :class="['offline-banner', {
-           'offline-banner--offline': isOffline.value,
-           'offline-banner--conflict': conflictCount.value > 0,
-           'offline-banner--failed': failedCount.value > 0 && conflictCount.value === 0,
+           'offline-banner--offline': isOffline,
+           'offline-banner--conflict': conflictCount > 0,
+           'offline-banner--failed': failedCount > 0 && conflictCount === 0,
          }]"
          role="status"
          aria-live="polite">
       <div class="offline-banner-pulse" aria-hidden="true"></div>
       <div class="offline-banner-text">
-        <strong v-if="isOffline.value">
+        <strong v-if="isOffline">
           {{ $t('offline_banner.offline_since', { duration: offlineDurationLabel }) }}
         </strong>
         <strong v-else>
           {{ $t('offline_banner.online_with_pending') }}
         </strong>
         <span class="offline-banner-meta">
-          <template v-if="pendingCount.value > 0">
+          <template v-if="pendingCount > 0">
             ·
-            {{ pendingCount.value === 1
+            {{ pendingCount === 1
               ? $t('offline_banner.queued_one')
-              : $t('offline_banner.queued_many', { n: pendingCount.value }) }}
+              : $t('offline_banner.queued_many', { n: pendingCount }) }}
           </template>
-          <template v-if="failedCount.value > 0">
+          <template v-if="failedCount > 0">
             ·
             <span class="offline-banner-failed">
-              {{ failedCount.value === 1
+              {{ failedCount === 1
                 ? $t('offline_banner.failed_one')
-                : $t('offline_banner.failed_many', { n: failedCount.value }) }}
+                : $t('offline_banner.failed_many', { n: failedCount }) }}
             </span>
           </template>
-          <template v-if="conflictCount.value > 0">
+          <template v-if="conflictCount > 0">
             ·
             <span class="offline-banner-conflict">
-              {{ conflictCount.value === 1
+              {{ conflictCount === 1
                 ? $t('offline_banner.conflict_one')
-                : $t('offline_banner.conflict_many', { n: conflictCount.value }) }}
+                : $t('offline_banner.conflict_many', { n: conflictCount }) }}
             </span>
           </template>
         </span>

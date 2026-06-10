@@ -24,6 +24,7 @@
  * isn't hit twice.
  */
 import { ref, onMounted, computed, watch } from 'vue'
+import { ordinal } from '@/lib/format'
 
 // Two ways the component can get its data:
 //
@@ -261,12 +262,6 @@ function cellTip(diver, judge, pj) {
 function actualTip(diver) {
   return `Official rank: ${ordinal(diver.actual_rank)}\n`
     + `Panel-trimmed total: ${Number(diver.actual_total).toFixed(2)}`
-}
-
-function ordinal(n) {
-  const s = ['th', 'st', 'nd', 'rd']
-  const v = n % 100
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
 }
 
 // URLs for the export buttons. The CSV / PDF endpoints share the

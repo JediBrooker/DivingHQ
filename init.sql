@@ -179,6 +179,12 @@ CREATE TABLE public.users (
     -- setup doesn't lock the user out.
     totp_secret         varchar(64),
     totp_enabled_at     timestamptz,
+    -- Replay guard (Migration 063) — absolute 30s time-step of the
+    -- most recently accepted TOTP code. Login/step-up flows only
+    -- accept codes whose step is strictly greater, so a code can't
+    -- be presented twice inside the validity window. NULL = no
+    -- code consumed yet; reset alongside totp_secret on disable.
+    totp_last_used_step bigint,
     -- Array of bcrypt hashes of one-time recovery codes. Plaintext
     -- shown to the user once at setup; we never store the readable
     -- form. A used code is removed from the array on consume.
@@ -1165,6 +1171,10 @@ CREATE INDEX idx_event_teams_team       ON public.event_teams (team_id);
 -- which groups by (event_id, round_number).
 CREATE INDEX idx_scores_event_round     ON public.scores (event_id, round_number);
 CREATE INDEX idx_scores_competitor      ON public.scores (competitor_id);
+-- Migration 062: judge analytics + public judges directory filter
+-- scores by judge_id alone; none of the indexes above lead with
+-- it, so those rollups sequential-scanned the whole table.
+CREATE INDEX idx_scores_judge           ON public.scores (judge_id);
 CREATE INDEX idx_score_audit_event_round   ON public.score_audit_log (event_id, round_number);
 CREATE INDEX idx_score_audit_event_created ON public.score_audit_log (event_id, created_at DESC);
 CREATE INDEX idx_score_audit_competitor    ON public.score_audit_log (competitor_id);
@@ -2635,10 +2645,22 @@ INSERT INTO dive_directory (dive_code, height, position, dd, description) VALUES
 --   username: admin
 --   password: admin
 --
+-- ⚠ DEV / BOOTSTRAP ONLY. These are well-known credentials —
+-- anyone who can reach the login page owns the platform until
+-- they're rotated. Replace the password from the User Manager
+-- as the FIRST thing you do after signing in.
+--
+-- PRODUCTION BEHAVIOUR: server.js refuses to serve when
+-- NODE_ENV=production and this account still answers to the
+-- default password — the boot check bcrypt.compares 'admin'
+-- against the stored hash and exits with a fatal log if it
+-- matches. Dev / test installs (NODE_ENV unset) are unaffected,
+-- as are the intentional dev fixtures in seed_test_data.sql and
+-- docs/seed-credentials.csv.
+--
 -- The bcrypt hash below was generated with the same cost factor
 -- (12) the server uses for live registrations:
 --     node -e "console.log(require('bcryptjs').hashSync('admin', 12))"
--- Replace the password from the User Manager once you sign in.
 -- =============================================================
 
 INSERT INTO public.organisations (id, name, country_code, slug, status, created_at)

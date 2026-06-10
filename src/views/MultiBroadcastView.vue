@@ -72,7 +72,12 @@ let refreshTimer = null
 
 async function loadEvents() {
   try {
-    const res = await fetch('/api/events', { credentials: 'same-origin' })
+    // ?status=Live so the server only sends what this grid can
+    // show — the full /api/events payload grows with every
+    // archived season. The client-side filter stays as a belt-
+    // and-braces guard (and covers servers predating the filter,
+    // which ignore the query param).
+    const res = await fetch('/api/events?status=Live', { credentials: 'same-origin' })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()
     liveEvents.value = (data || []).filter((e) => e.status === 'Live')

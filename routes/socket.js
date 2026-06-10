@@ -452,13 +452,27 @@ module.exports = function attachSocket({
       try {
         await client.query("BEGIN");
 
+        // events.status rides along on the panel lookup so the
+        // Live gate below costs no extra round-trip.
         const jnRes = await client.query(
-          "SELECT judge_number FROM event_judges WHERE event_id = $1 AND judge_id = $2",
+          `SELECT ej.judge_number, e.status AS event_status
+           FROM event_judges ej
+           JOIN events e ON e.id = ej.event_id
+           WHERE ej.event_id = $1 AND ej.judge_id = $2`,
           [data.event_id, judgeId],
         );
         if (!jnRes.rows.length) {
           await client.query("ROLLBACK");
           reject("not_on_panel", { message: "You're not on the judging panel for this event." });
+          return;
+        }
+        // Scores only land while the event is Live. Without this a
+        // panel judge could write into an Upcoming event or
+        // overwrite a finalised Completed one (stale keypad tab,
+        // late outbox replay after finalise).
+        if (jnRes.rows[0].event_status !== "Live") {
+          await client.query("ROLLBACK");
+          reject("event_not_live", { message: "Scores can only be submitted while the event is Live." });
           return;
         }
         judgeNumber = jnRes.rows[0].judge_number;
@@ -468,7 +482,12 @@ module.exports = function attachSocket({
            WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
           [data.event_id, data.competitor_id, round],
         );
-        const resolvedDiveId = dvRes.rows[0]?.dive_id ?? data.dive_id ?? null;
+        // dive_id comes from the server-side dive list ONLY. When
+        // the diver has no row for this round, store NULL and let
+        // the operator fix the list — falling back to the wire
+        // value would let a stale client smuggle in the wrong
+        // dive's DD.
+        const resolvedDiveId = dvRes.rows[0]?.dive_id ?? null;
 
         const prior = await client.query(
           `SELECT id, score, score_source FROM scores

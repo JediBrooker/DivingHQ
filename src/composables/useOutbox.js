@@ -18,30 +18,21 @@
 // but all values stay at zero / null / online. Components show
 // nothing because there's nothing to show.
 
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, effectScope } from 'vue'
 import { createOutbox, createIdbBackend, STATUSES } from '@/lib/outbox'
+import { fingerprintFromToken } from '@/lib/userFingerprint'
 import { useSocket } from './useSocket'
 import { useAuthStore } from '@/stores/auth'
 
 const OUTBOX_ENABLED = import.meta.env.VITE_OFFLINE_OUTBOX_ENABLED === '1'
 
-// Per-user fingerprint helper. Same scheme as idbCache (24 chars
-// of the JWT payload segment). Kept inline here so the composable
-// is self-contained; a shared util across outbox + idbCache is on
-// the cleanup list.
-function fingerprintFromToken(token) {
-  if (!token) return 'anon'
-  const parts = String(token).split('.')
-  if (parts.length < 2) return 'anon'
-  return parts[1].slice(0, 24)
-}
-
 // ---- Singleton state ------------------------------------------
-// Created on first useOutbox() call. Module-scope so multiple
+// Created on the first getOutbox() call. Module-scope so multiple
 // component mounts share one instance.
 
 let instance = null
 let refreshTimer = null
+let offlineScope = null   // detached effectScope owning the socket watch
 
 const counts = ref({ pending: 0, inflight: 0, synced: 0, conflict: 0, failed: 0 })
 const offlineSince = ref(null)        // Date | null — set on disconnect, cleared on reconnect
@@ -61,6 +52,38 @@ async function refresh() {
   }
   counts.value = next
   lastSyncedAt.value = latest ? new Date(latest) : null
+}
+
+// THE outbox instance — shared by useOutbox (reactive counts) and
+// useHttpOutbox (HTTP write queueing). Both composables sit over
+// the same IndexedDB store; two createOutbox() instances would
+// split the 'change' event stream, so a write queued through one
+// wouldn't update counts watched on the other until the 30s poll.
+// Returns null when the feature flag is off.
+export function getOutbox() {
+  if (!OUTBOX_ENABLED) return null
+  if (!instance) {
+    const auth = useAuthStore()
+    instance = createOutbox({
+      backend: createIdbBackend(),
+      userFingerprint: fingerprintFromToken(auth.token),
+    })
+
+    // Refresh counts on every outbox state change. push/drain/
+    // resolveConflict all emit 'change'.
+    instance.on('change', refresh)
+
+    // Initial scan. The outbox might have entries from a prior
+    // session that didn't drain before the tab closed.
+    refresh()
+
+    // Periodic refresh as a safety net in case a 'change' event
+    // is dropped (e.g., the page was hidden and Visibility-paused).
+    // 30s is cheap and bounded — list() is O(n) over a small queue.
+    refreshTimer = setInterval(refresh, 30000)
+    if (typeof refreshTimer.unref === 'function') refreshTimer.unref()
+  }
+  return instance
 }
 
 // ---- Public composable ----------------------------------------
@@ -83,44 +106,33 @@ export function useOutbox() {
     }
   }
 
-  if (!instance) {
-    const auth = useAuthStore()
+  const outbox = getOutbox()
+
+  if (!offlineScope) {
     const socket = useSocket()
-    instance = createOutbox({
-      backend: createIdbBackend(),
-      userFingerprint: fingerprintFromToken(auth.token),
-    })
-
-    // Refresh counts on every outbox state change. push/drain/
-    // resolveConflict all emit 'change'.
-    instance.on('change', refresh)
-
     // Track offline duration via the existing socket singleton.
     // We watch isConnected rather than subscribing to connect/
     // disconnect events directly so we don't race with the
-    // composable's own listeners.
-    watch(socket.isConnected, (connected, was) => {
-      if (!connected && was !== false) {
-        offlineSince.value = new Date()
-      } else if (connected) {
-        offlineSince.value = null
-      }
-    }, { immediate: true })
-
-    // Initial scan. The outbox might have entries from a prior
-    // session that didn't drain before the tab closed.
-    refresh()
-
-    // Periodic refresh as a safety net in case a 'change' event
-    // is dropped (e.g., the page was hidden and Visibility-paused).
-    // 30s is cheap and bounded — list() is O(n) over a small queue.
-    refreshTimer = setInterval(refresh, 30000)
-    if (typeof refreshTimer.unref === 'function') refreshTimer.unref()
+    // composable's own listeners. The watcher lives in a DETACHED
+    // effect scope: it's created during the first consumer's
+    // setup, and a component-scoped watcher would die when that
+    // component unmounts while the singleton state lives on —
+    // silently killing offline tracking for every later consumer.
+    offlineScope = effectScope(true)
+    offlineScope.run(() => {
+      watch(socket.isConnected, (connected, was) => {
+        if (!connected && was !== false) {
+          offlineSince.value = new Date()
+        } else if (connected) {
+          offlineSince.value = null
+        }
+      }, { immediate: true })
+    })
   }
 
   return {
     enabled: true,
-    outbox: instance,
+    outbox,
     counts,
     offlineSince,
     lastSyncedAt,
@@ -150,6 +162,10 @@ export function _resetOutboxForTests() {
   if (refreshTimer) {
     clearInterval(refreshTimer)
     refreshTimer = null
+  }
+  if (offlineScope) {
+    offlineScope.stop()
+    offlineScope = null
   }
   instance = null
   counts.value = { pending: 0, inflight: 0, synced: 0, conflict: 0, failed: 0 }

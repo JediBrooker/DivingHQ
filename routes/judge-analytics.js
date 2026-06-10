@@ -257,6 +257,30 @@ module.exports = function createJudgeAnalyticsRouter({
 
       const baseParams = [id, fromDate, toDate];
 
+      // Run the widget rollups in bounded batches instead of one
+      // big Promise.all: 16 concurrent queries from a single
+      // request would check out most of the pg pool at once
+      // (default max 10), starving the live scoring path for the
+      // duration. 4-at-a-time keeps the wall-clock close to fully
+      // parallel while never holding more than 4 pool slots.
+      //
+      // TODO(perf): each rollup re-materialises the JUDGE_PER_DIVE
+      // CTE (db/queries.js) from scratch — ~16 evaluations of the
+      // same per-dive panel math per request. A single-query
+      // rewrite that computes per_dive once and fans the widgets
+      // out of it would cut that to 1, but it's a large, risky
+      // refactor of every widget's SQL; the bounded batching above
+      // + the scores(judge_id) index (migration 062) are the
+      // mitigation until then.
+      const runBatched = async (tasks, batchSize = 4) => {
+        const results = [];
+        for (let i = 0; i < tasks.length; i += batchSize) {
+          const batch = tasks.slice(i, i + batchSize);
+          results.push(...(await Promise.all(batch.map((t) => t()))));
+        }
+        return results;
+      };
+
       const [
         bias_summary,
         deviation_distribution,
@@ -274,14 +298,14 @@ module.exports = function createJudgeAnalyticsRouter({
         panel_compare,
         panel_deviation_summary,
         panel_deviation_per_event,
-      ] = await Promise.all([
+      ] = await runBatched([
         // ---- bias_summary: a one-row "headline" widget. The
         // bias number tells the judge whether they trend high
         // (positive) or low (negative) vs panel kept-mean. The
         // MAD tells them how tight their calls are around the
         // panel — a low MAD with high signed deviation means
         // they're consistently off by the same amount.
-        runQuery("bias_summary",
+        () => runQuery("bias_summary",
           `WITH per_dive AS (${JUDGE_PER_DIVE})
            SELECT
              COUNT(*) FILTER (
@@ -305,7 +329,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // deviation buckets (≤−1.5, −1.0, −0.5, 0.0, +0.5,
         // +1.0, +1.5+). Lets the judge see the SHAPE of their
         // deviation curve — symmetric around 0 vs. skewed.
-        runQuery("deviation_distribution",
+        () => runQuery("deviation_distribution",
           `WITH per_dive AS (${JUDGE_PER_DIVE}),
            buckets AS (
              SELECT
@@ -342,7 +366,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // the lowest score increment WA recognises (Article
         // 7.9.4 — half-points), so within ±0.5 means "the
         // judge agreed within one increment of the panel".
-        runQuery("agreement_rate",
+        () => runQuery("agreement_rate",
           `WITH per_dive AS (${JUDGE_PER_DIVE}),
            comparable AS (
              SELECT my_score - panel_kept_mean AS delta
@@ -370,7 +394,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // an outlier on either end. A skewed split (e.g. 50%
         // dropped on the high end, 5% on the low) is the
         // hi-bias pattern Article 8.4.9 cares about.
-        runQuery("drop_rate",
+        () => runQuery("drop_rate",
           `WITH per_dive AS (${JUDGE_PER_DIVE})
            SELECT
              COUNT(*) FILTER (WHERE is_dropped IS NOT NULL)::int        AS sample_size,
@@ -393,7 +417,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // ---- height_breakdown: deviation per board height. A
         // judge who's strict on 10m platform but lenient on 1m
         // will show up here.
-        runQuery("height_breakdown",
+        () => runQuery("height_breakdown",
           `WITH per_dive AS (${JUDGE_PER_DIVE})
            SELECT
              dive_height AS height,
@@ -415,7 +439,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // first digit of dive_code maps to forward / back /
         // reverse / inward / twisting / armstand (1..6 — see
         // PART FOUR Article 5 for the dive-number coding).
-        runQuery("group_breakdown",
+        () => runQuery("group_breakdown",
           `WITH per_dive AS (${JUDGE_PER_DIVE})
            SELECT
              dive_group,
@@ -440,7 +464,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // athletes; this rollup helps identify a judge whose
         // calls disproportionately favour a single country
         // before they're seated on a final panel.
-        runQuery("country_breakdown",
+        () => runQuery("country_breakdown",
           `WITH per_dive AS (${JUDGE_PER_DIVE})
            SELECT
              diver_country_code AS country_code,
@@ -463,7 +487,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // shape as country_breakdown but at club granularity
         // (a federation-internal bias signal). HAVING ≥3
         // filters out single-encounter noise.
-        runQuery("club_breakdown",
+        () => runQuery("club_breakdown",
           `WITH per_dive AS (${JUDGE_PER_DIVE})
            SELECT
              diver_club_id AS club_id,
@@ -486,7 +510,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // ---- diver_breakdown: top 12 individual divers the
         // judge has scored, ordered by absolute deviation. Used
         // to spot per-diver bias.
-        runQuery("diver_breakdown",
+        () => runQuery("diver_breakdown",
           `WITH per_dive AS (${JUDGE_PER_DIVE})
            SELECT
              competitor_id AS diver_id,
@@ -509,7 +533,7 @@ module.exports = function createJudgeAnalyticsRouter({
 
         // ---- round_breakdown: deviation per round_number. Do
         // you tighten up or drift in later rounds?
-        runQuery("round_breakdown",
+        () => runQuery("round_breakdown",
           `WITH per_dive AS (${JUDGE_PER_DIVE})
            SELECT
              round_number,
@@ -527,7 +551,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // ---- dd_breakdown: deviation by DD bucket (low/mid/
         // high). Some judges are stricter on harder dives;
         // this surfaces the pattern.
-        runQuery("dd_breakdown",
+        () => runQuery("dd_breakdown",
           `WITH per_dive AS (${JUDGE_PER_DIVE}),
            bucketed AS (
              SELECT
@@ -562,7 +586,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // ---- recent_meets: last 10 events officiated, with
         // mean signed deviation + dive count + drop rate per
         // event. Drives the "Recent Meets" widget.
-        runQuery("recent_meets",
+        () => runQuery("recent_meets",
           `WITH per_dive AS (${JUDGE_PER_DIVE})
            SELECT
              p.event_id,
@@ -587,7 +611,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // ---- score_trend: weekly mean signed deviation, oldest
         // first. Shows whether a judge is drifting or holding
         // steady over time.
-        runQuery("score_trend",
+        () => runQuery("score_trend",
           `WITH per_dive AS (${JUDGE_PER_DIVE})
            SELECT
              date_trunc('week', created_at)::date AS week,
@@ -605,7 +629,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // ---- panel_compare: this judge's average score vs
         // the average panel kept-mean across all comparable
         // dives. A simple two-bar widget.
-        runQuery("panel_compare",
+        () => runQuery("panel_compare",
           `WITH per_dive AS (${JUDGE_PER_DIVE})
            SELECT
              COUNT(*)::int                                              AS dives,
@@ -632,7 +656,7 @@ module.exports = function createJudgeAnalyticsRouter({
         //     the routine ±0.5 noise WA expects from the panel).
         // Both metrics scoped to comparable dives (event_type
         // <> 'synchro_pair' AND panel_kept_mean IS NOT NULL).
-        runQuery("panel_deviation_summary",
+        () => runQuery("panel_deviation_summary",
           `WITH per_dive AS (${JUDGE_PER_DIVE}),
            kept_bounds AS (
              /* For each comparable dive: lowest + highest score
@@ -678,7 +702,7 @@ module.exports = function createJudgeAnalyticsRouter({
         // per event so the judge can see whether one specific
         // meet drove the headline rate. ORDER BY most-recent-
         // first; cap at 10 to keep the widget compact.
-        runQuery("panel_deviation_per_event",
+        () => runQuery("panel_deviation_per_event",
           `WITH per_dive AS (${JUDGE_PER_DIVE}),
            per_event AS (
              SELECT pd.event_id, e.name AS event_name, e.created_at,

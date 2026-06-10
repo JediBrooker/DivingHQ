@@ -9,8 +9,13 @@ import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import StatusPill from '@/components/StatusPill.vue'
 import SuperFinalModals from '@/components/manager/SuperFinalModals.vue'
+import RosterImportModal from '@/components/manager/RosterImportModal.vue'
+import MeetReadinessModal from '@/components/manager/MeetReadinessModal.vue'
+import TeamsEnrolmentModal from '@/components/manager/TeamsEnrolmentModal.vue'
+import ParticipatingOrgsModal from '@/components/manager/ParticipatingOrgsModal.vue'
+import AdvanceStageModal from '@/components/manager/AdvanceStageModal.vue'
 import RoundDivesEditor from '@/components/manager/RoundDivesEditor.vue'
-import SponsorLogosManager from '@/components/manager/SponsorLogosManager.vue'
+import EditMeetModal from '@/components/manager/EditMeetModal.vue'
 import { filterStandardTemplates } from '@/lib/standard-templates'
 import { RULE_REFERENCES } from '@/lib/ruleReferences'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
@@ -41,7 +46,7 @@ scrollLock.lockWhile(computed(() =>
 // a full CRM page (toolbar + lists hide) rather than a floating modal.
 const formPageOpen = computed(() =>
   showCreateModal.value || showEditModal.value ||
-  showCreateMeetModal.value || showEditMeetModal.value
+  showCreateMeetModal.value || !!editingMeet.value
 )
 
 // Create form
@@ -472,106 +477,24 @@ async function deleteEventTemplate(t) {
   }
 }
 
-// True if some other event in the visible list points at `ev`
-// as its parent_event_id. Used to decide whether to render the
-// Stage-progression modal state. Opens when the operator clicks
+// Stage-progression modal — opens when the operator clicks
 // "Advance to next stage →" on a Completed prelim/semifinal row.
-const advanceModalOpen   = ref(false)
-scrollLock.lockWhile(advanceModalOpen)
-const advanceParent      = ref(null)
-const advanceChild       = ref(null)
-const advanceRanked      = ref([])
-const advanceTopN        = ref(12)
-// Default 4 reserves — typical at WA-sanctioned events so the
-// referee has a buffer if multiple primaries withdraw before
-// the next stage begins. Operator can override per advance.
-const advanceReserves    = ref(4)
-const advanceDiveOrder   = ref('inherit')   // 'inherit' | 'reverse' | 'random'
-const advanceLoading     = ref(false)
-const advanceErr         = ref('')
+// Preview/topN/reserves/dive-order state and the confirm handler
+// live in <AdvanceStageModal>; v-if mount re-fetches the preview
+// per open. Non-null = open. The scroll lock stays here so it
+// sits beside the other modal locks.
+const advanceModalEvent = ref(null)
+scrollLock.lockWhile(computed(() => !!advanceModalEvent.value))
 
+// True if some other event in the visible list points at `ev` as
+// its parent_event_id. Gates the row button — the modal itself
+// re-checks via the server preview.
 function eventHasNextStage(ev) {
   return events.value.some(other => other.parent_event_id === ev.id)
 }
 
-async function openAdvanceModal(ev) {
-  advanceParent.value    = ev
-  advanceChild.value     = null
-  advanceRanked.value    = []
-  advanceErr.value       = ''
-  advanceTopN.value      = ev.advance_count || 12
-  advanceReserves.value  = 4
-  // Default to 'inherit' for semifinal targets (carry the prelim
-  // start order forward minus non-progressors) and 'reverse' for
-  // final targets (top diver dives last — the showcase ordering).
-  const downstream = events.value.find(o => o.parent_event_id === ev.id)
-  // World Aquatics Article 4.1.8 (semi) + 4.1.10 (subsequent
-  // stages): both semi-final and final use REVERSE-RANK start
-  // order based on the previous stage's results. Default the
-  // dive_order picker to 'reverse' regardless of stage; the
-  // operator can still override to 'inherit' or 'random' for
-  // non-WA-sanctioned events.
-  advanceDiveOrder.value = 'reverse'
-  advanceModalOpen.value = true
-  advanceLoading.value   = true
-  try {
-    const preview = await auth.apiFetch(`/api/events/${ev.id}/advance/preview`)
-    advanceChild.value  = preview.child
-    advanceRanked.value = Array.isArray(preview.ranked) ? preview.ranked : []
-    if (!advanceChild.value) {
-      advanceErr.value = 'No downstream event linked. Create the next stage event first.'
-    }
-  } catch (err) {
-    advanceErr.value = err.message || 'Failed to load preview'
-  } finally {
-    advanceLoading.value = false
-  }
-}
-
-function closeAdvanceModal() {
-  advanceModalOpen.value = false
-  advanceParent.value = null
-  advanceChild.value = null
-  advanceRanked.value = []
-}
-
-async function confirmAdvance() {
-  advanceErr.value = ''
-  const parent = advanceParent.value
-  if (!parent) return
-  const topN = parseInt(advanceTopN.value)
-  const reserves = parseInt(advanceReserves.value) || 0
-  if (!Number.isInteger(topN) || topN < 1) {
-    advanceErr.value = 'Top N must be a positive integer'
-    return
-  }
-  if (topN + reserves > advanceRanked.value.length) {
-    advanceErr.value = `Only ${advanceRanked.value.length} divers were scored — top + reserves can't exceed that`
-    return
-  }
-  advanceLoading.value = true
-  try {
-    const result = await auth.apiFetch(`/api/events/${parent.id}/advance`, {
-      method: 'POST',
-      body: JSON.stringify({
-        top_n: topN,
-        reserves,
-        dive_order: advanceDiveOrder.value,
-      }),
-    })
-    const targetLabel = advanceChild.value?.format === 'final' ? 'final' : 'semi-final'
-    showSuccess(
-      `Advanced ${result.advanced} diver${result.advanced === 1 ? '' : 's'} to the ${targetLabel}` +
-      (result.reserves ? ` (+${result.reserves} reserve${result.reserves === 1 ? '' : 's'})` : '') +
-      '.'
-    )
-    closeAdvanceModal()
-    await loadEvents()
-  } catch (err) {
-    advanceErr.value = err.message || 'Failed to advance'
-  } finally {
-    advanceLoading.value = false
-  }
+function openAdvanceModal(ev) {
+  advanceModalEvent.value = ev
 }
 
 // Super Final modals (DWC 2026 Appendix 3) — five dialogs that
@@ -917,119 +840,27 @@ function buildEditRoundRulesPayload() {
     })),
   }
 }
-// Team enrolment modal — open when "Teams" clicked on a team-event row
-const teamsModalOpen = ref(false)
+// Team enrolment modal — open when "Teams" clicked on a team-event
+// row. Lists + busy state live in <TeamsEnrolmentModal>; v-if
+// mount re-fetches per open. Non-null = open.
 const teamsModalEvent = ref(null)
-const teamsInEvent = ref([])
-const orgTeams = ref([])
-const teamToAdd = ref('')
-const teamsBusy = ref(false)
 
 // Participating-orgs modal — open when "Federations" clicked on
 // any event row by an org admin. Lists OTHER federations whose
-// divers can self-enter the event. Empty list = domestic-only.
-// All endpoints live in routes/events.js (migration 036).
-const partOrgsModalOpen  = ref(false)
+// divers can self-enter the event. All list/invite state lives in
+// <ParticipatingOrgsModal>; v-if mount re-fetches per open.
+// Non-null = open. The component emits `count-changed` so the
+// row's 🌐 chip stays in sync (see bumpParticipatingCount).
 const partOrgsModalEvent = ref(null)
-const partOrgsInEvent    = ref([])    // currently invited
-const partOrgRequests    = ref([])    // pending / accepted / declined workflow rows
-const partOrgsAvailable  = ref([])    // active orgs not yet invited (excl. host)
-const partOrgsToAdd      = ref('')
-const partOrgsBusy       = ref(false)
-const partOrgPendingRequests = computed(() =>
-  partOrgRequests.value.filter(r => r.status === 'pending'),
-)
-const partOrgPastRequests = computed(() =>
-  partOrgRequests.value.filter(r => r.status !== 'pending'),
-)
 
 // Roster import modal — opened from the per-event "Import
-// Roster" button. Manager pastes a CSV; backend parses, looks
-// up each diver by username, validates dives in the directory,
-// and bulk-creates dive list rows. Per-row errors are reported
-// without failing the whole import.
-const rosterModalOpen = ref(false)
+// Roster" button. All CSV / preview / import state and handlers
+// live in <RosterImportModal>; v-if mount means every open
+// starts from a blank CSV. Non-null = open.
 const rosterModalEvent = ref(null)
-const rosterCsv = ref('')
-const rosterBusy = ref(false)
-const rosterResult = ref(null)   // { added, skipped, errors }
-const rosterPreview = ref(null)
-const rosterPreviewSource = ref('')
-const rosterErr = ref('')
-const rosterPreviewReady = computed(() =>
-  !!rosterPreview.value && rosterPreviewSource.value === rosterCsv.value,
-)
 
 function openRosterImport(ev) {
   rosterModalEvent.value = ev
-  rosterCsv.value = ''
-  rosterResult.value = null
-  rosterPreview.value = null
-  rosterPreviewSource.value = ''
-  rosterErr.value = ''
-  rosterModalOpen.value = true
-}
-
-function closeRosterImport() {
-  rosterModalOpen.value = false
-  rosterModalEvent.value = null
-}
-
-async function previewRosterImport() {
-  if (!rosterCsv.value.trim()) {
-    rosterErr.value = 'Paste a CSV first'
-    return
-  }
-  rosterBusy.value = true
-  rosterErr.value = ''
-  rosterResult.value = null
-  rosterPreview.value = null
-  try {
-    rosterPreview.value = await auth.apiFetch(
-      `/api/events/${rosterModalEvent.value.id}/roster/import`,
-      { method: 'POST', body: JSON.stringify({ csv: rosterCsv.value, preview: true }) },
-    )
-    rosterPreviewSource.value = rosterCsv.value
-  } catch (err) {
-    rosterErr.value = err.message
-  } finally {
-    rosterBusy.value = false
-  }
-}
-
-async function submitRosterImport() {
-  if (!rosterPreviewReady.value) {
-    rosterErr.value = 'Preview the current CSV before importing'
-    return
-  }
-  rosterBusy.value = true
-  rosterErr.value = ''
-  rosterResult.value = null
-  try {
-    rosterResult.value = await auth.apiFetch(
-      `/api/events/${rosterModalEvent.value.id}/roster/import`,
-      { method: 'POST', body: JSON.stringify({ csv: rosterCsv.value }) },
-    )
-    rosterPreview.value = null
-    rosterPreviewSource.value = ''
-  } catch (err) {
-    rosterErr.value = err.message
-  } finally {
-    rosterBusy.value = false
-  }
-}
-
-// Build a sample CSV header that matches the event's round count
-// so the manager has a starting template.
-function rosterTemplateHeader(ev) {
-  if (!ev) return ''
-  const rounds = ev.total_rounds || 6
-  const cols = ['username']
-  if (ev.event_type === 'synchro_pair') cols.push('partner_username')
-  for (let n = 1; n <= rounds; n++) {
-    cols.push(`round_${n}_code`, `round_${n}_pos`)
-  }
-  return cols.join(',')
 }
 
 const HEIGHT_LABELS = {
@@ -1107,84 +938,43 @@ async function createMeet() {
 }
 
 // =============================================================
-// Edit Meet — sponsor branding + the meet's core fields.
-// `editMeetForm` mirrors the row shape from /api/meets/:id;
-// `showEditMeetModal` toggles the dialog; `editingMeetId`
-// drives the sponsor-logos manager (which is self-fetching).
+// Edit Meet — sponsor branding + the meet's core fields. The
+// editable form copy / save handler / sponsor-logos manager all
+// live in <EditMeetModal>; this view fetches the full meet row
+// first (the org meets list lacks description + sponsor fields)
+// and only opens the dialog once that succeeds. Non-null = open:
+// { id, form }.
 // =============================================================
-const showEditMeetModal = ref(false)
-scrollLock.lockWhile(showEditMeetModal)
-const editingMeetId = ref(null)
-const editMeetForm = ref({
-  name: '', venue: '', start_date: '', end_date: '',
-  description: '',
-  sponsor_name: '', sponsor_link_url: '',
-})
-const editMeetErr = ref('')
-const editMeetSaving = ref(false)
+const editingMeet = ref(null)
+scrollLock.lockWhile(computed(() => !!editingMeet.value))
 
-const readinessModalOpen = ref(false)
-scrollLock.lockWhile(readinessModalOpen)
+// Meet readiness report — fetch/CSV-export state and handlers
+// live in <MeetReadinessModal>; v-if mount re-fetches per open.
+// Non-null = open. The scroll lock stays here so it sits beside
+// the other modal locks.
 const readinessMeet = ref(null)
-const readinessReport = ref(null)
-const readinessLoading = ref(false)
-const readinessCsvBusy = ref(false)
-const readinessErr = ref('')
+scrollLock.lockWhile(computed(() => !!readinessMeet.value))
 
 async function openEditMeet(meet) {
-  editMeetErr.value = ''
-  editingMeetId.value = meet.id
   // Pull the full meet row so we have the description + sponsor
   // fields that the org meets list doesn't include.
   try {
     const body = await auth.apiFetch(`/api/meets/${meet.id}`)
     const m = body.meet
-    editMeetForm.value = {
-      name:             m.name || '',
-      venue:            m.venue || '',
-      start_date:       m.start_date ? String(m.start_date).slice(0, 10) : '',
-      end_date:         m.end_date   ? String(m.end_date).slice(0, 10)   : '',
-      description:      m.description || '',
-      sponsor_name:     m.sponsor_name || '',
-      sponsor_link_url: m.sponsor_link_url || '',
+    editingMeet.value = {
+      id: meet.id,
+      form: {
+        name:             m.name || '',
+        venue:            m.venue || '',
+        start_date:       m.start_date ? String(m.start_date).slice(0, 10) : '',
+        end_date:         m.end_date   ? String(m.end_date).slice(0, 10)   : '',
+        description:      m.description || '',
+        sponsor_name:     m.sponsor_name || '',
+        sponsor_link_url: m.sponsor_link_url || '',
+      },
     }
-    showEditMeetModal.value = true
   } catch (err) {
     showError(`Failed to load meet: ${err.message || err}`)
-  }
-}
-
-async function saveMeet() {
-  editMeetErr.value = ''
-  if (!editMeetForm.value.name.trim()) {
-    editMeetErr.value = 'Meet name is required'
-    return
-  }
-  editMeetSaving.value = true
-  try {
-    await auth.apiFetch(`/api/meets/${editingMeetId.value}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        name:             editMeetForm.value.name.trim(),
-        venue:            editMeetForm.value.venue.trim() || null,
-        start_date:       editMeetForm.value.start_date || null,
-        end_date:         editMeetForm.value.end_date   || null,
-        description:      editMeetForm.value.description.trim() || null,
-        sponsor_name:     editMeetForm.value.sponsor_name.trim() || null,
-        // The legacy `sponsor_logo_url` field is left untouched —
-        // the new sponsor-logos table is the source of truth.
-        // We keep `sponsor_link_url` on the meet row for the
-        // pre-045 fallback path.
-        sponsor_link_url: editMeetForm.value.sponsor_link_url.trim() || null,
-      }),
-    })
-    showSuccess('Meet updated')
-    showEditMeetModal.value = false
-    await loadMeets()
-  } catch (err) {
-    editMeetErr.value = err.message
-  } finally {
-    editMeetSaving.value = false
   }
 }
 
@@ -1209,55 +999,8 @@ async function deleteMeet(meet) {
   }
 }
 
-async function openMeetReadinessReport(meet) {
+function openMeetReadinessReport(meet) {
   readinessMeet.value = meet
-  readinessReport.value = null
-  readinessErr.value = ''
-  readinessModalOpen.value = true
-  readinessLoading.value = true
-  try {
-    readinessReport.value = await auth.apiFetch(`/api/meets/${meet.id}/readiness-report`)
-  } catch (err) {
-    readinessErr.value = err.message || 'Failed to load readiness report'
-  } finally {
-    readinessLoading.value = false
-  }
-}
-
-function closeMeetReadinessReport() {
-  readinessModalOpen.value = false
-  readinessMeet.value = null
-  readinessReport.value = null
-  readinessErr.value = ''
-}
-
-async function downloadMeetReadinessCsv() {
-  if (!readinessMeet.value) return
-  readinessCsvBusy.value = true
-  try {
-    const res = await fetch(
-      `/api/meets/${readinessMeet.value.id}/readiness-report?format=csv`,
-      { headers: auth.getHeaders() },
-    )
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      throw new Error(body.error || res.statusText)
-    }
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `meet-readiness-${readinessMeet.value.id}.csv`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
-    showSuccess('Readiness CSV downloaded')
-  } catch (err) {
-    showError(err.message || 'Failed to download readiness CSV')
-  } finally {
-    readinessCsvBusy.value = false
-  }
 }
 
 async function assignEventToMeet(event, meetId) {
@@ -1519,72 +1262,13 @@ async function deleteEvent(id) {
 
 // ---- Team enrolment ----------------------------------------
 
-async function openTeamsModal(ev) {
+function openTeamsModal(ev) {
   teamsModalEvent.value = ev
-  teamsModalOpen.value = true
-  teamToAdd.value = ''
-  teamsBusy.value = true
-  try {
-    const [entered, available] = await Promise.all([
-      auth.apiFetch(`/api/events/${ev.id}/teams`),
-      auth.apiFetch(`/api/orgs/${ev.org_id || auth.user?.org_id}/teams`),
-    ])
-    teamsInEvent.value = entered
-    orgTeams.value = available
-  } catch (err) {
-    teamsInEvent.value = []
-    orgTeams.value = []
-  } finally {
-    teamsBusy.value = false
-  }
-}
-
-function closeTeamsModal() {
-  teamsModalOpen.value = false
-  teamsModalEvent.value = null
-  teamsInEvent.value = []
-  orgTeams.value = []
 }
 
 // ---- Participating orgs (international event support) ------
-async function openPartOrgsModal(ev) {
+function openPartOrgsModal(ev) {
   partOrgsModalEvent.value = ev
-  partOrgsModalOpen.value  = true
-  partOrgsToAdd.value      = ''
-  partOrgsBusy.value       = true
-  try {
-    const [invited, requests, allOrgs] = await Promise.all([
-      auth.apiFetch(`/api/events/${ev.id}/participating-orgs`),
-      auth.apiFetch(`/api/events/${ev.id}/participation-requests`).catch(() => []),
-      auth.apiFetch(`/api/orgs/active`),
-    ])
-    partOrgsInEvent.value = invited
-    partOrgRequests.value = Array.isArray(requests) ? requests : []
-    // Available = every active org except the host and any
-    // already invited or currently pending.
-    const invitedSet = new Set(invited.map(o => o.org_id))
-    const pendingSet = new Set(partOrgRequests.value
-      .filter(r => r.status === 'pending')
-      .map(r => r.org_id))
-    partOrgsAvailable.value = (Array.isArray(allOrgs) ? allOrgs : [])
-      .filter(o => o.id !== ev.org_id && !invitedSet.has(o.id) && !pendingSet.has(o.id))
-  } catch (err) {
-    showError(err.message)
-    partOrgsInEvent.value = []
-    partOrgRequests.value = []
-    partOrgsAvailable.value = []
-  } finally {
-    partOrgsBusy.value = false
-  }
-}
-
-function closePartOrgsModal() {
-  partOrgsModalOpen.value  = false
-  partOrgsModalEvent.value = null
-  partOrgsInEvent.value    = []
-  partOrgRequests.value    = []
-  partOrgsAvailable.value  = []
-  partOrgsToAdd.value      = ''
 }
 
 // Patch the participating_orgs_count on a single event row in
@@ -1593,53 +1277,6 @@ function closePartOrgsModal() {
 function bumpParticipatingCount(eventId, newCount) {
   const row = events.value.find(e => e.id === eventId)
   if (row) row.participating_orgs_count = newCount
-}
-
-async function addPartOrg() {
-  if (!partOrgsToAdd.value || !partOrgsModalEvent.value) return
-  const ev = partOrgsModalEvent.value
-  partOrgsBusy.value = true
-  try {
-    await auth.apiFetch(`/api/events/${ev.id}/participation-requests`, {
-      method: 'POST',
-      body: JSON.stringify({ org_id: partOrgsToAdd.value }),
-    })
-    partOrgRequests.value = await auth.apiFetch(`/api/events/${ev.id}/participation-requests`)
-    const pendingSet = new Set(partOrgRequests.value
-      .filter(r => r.status === 'pending')
-      .map(r => r.org_id))
-    partOrgsAvailable.value = partOrgsAvailable.value.filter(o => !pendingSet.has(o.id))
-    partOrgsToAdd.value = ''
-    showSuccess('Invite sent — waiting for the federation to accept')
-  } catch (err) {
-    showError(err.message)
-  } finally {
-    partOrgsBusy.value = false
-  }
-}
-
-async function respondPartOrgRequest(request, decision) {
-  const ev = partOrgsModalEvent.value
-  if (!ev) return
-  partOrgsBusy.value = true
-  try {
-    await auth.apiFetch(`/api/events/${ev.id}/participation-requests/${request.id}/respond`, {
-      method: 'POST',
-      body: JSON.stringify({ decision }),
-    })
-    const [invited, requests] = await Promise.all([
-      auth.apiFetch(`/api/events/${ev.id}/participating-orgs`),
-      auth.apiFetch(`/api/events/${ev.id}/participation-requests`),
-    ])
-    partOrgsInEvent.value = invited
-    partOrgRequests.value = requests
-    bumpParticipatingCount(ev.id, partOrgsInEvent.value.length)
-    showSuccess(decision === 'accepted' ? 'Participation accepted' : 'Participation declined')
-  } catch (err) {
-    showError(err.message)
-  } finally {
-    partOrgsBusy.value = false
-  }
 }
 
 // Visiting org self-withdraws from a foreign-hosted event. Used
@@ -1669,85 +1306,6 @@ async function selfWithdrawFromEvent(ev) {
     await loadEvents()
   } catch (err) {
     showError(err.message)
-  }
-}
-
-async function removePartOrg(org) {
-  if (!await confirmAction({
-    title: `Remove ${org.org_name} from this event?`,
-    body:  `Divers from ${org.country_code || org.org_name} can no longer self-enter. Existing dive list rows from their divers stay intact.`,
-    consequences: [
-      'Their divers stay on the roster if already entered',
-      'New entries from this federation will be rejected after removal',
-    ],
-    confirmLabel: 'Remove federation',
-    confirmKind:  'danger',
-  })) return
-  const ev = partOrgsModalEvent.value
-  partOrgsBusy.value = true
-  try {
-    await auth.apiFetch(`/api/events/${ev.id}/participating-orgs/${org.org_id}`, {
-      method: 'DELETE',
-    })
-    partOrgsInEvent.value = partOrgsInEvent.value.filter(o => o.org_id !== org.org_id)
-    // Make the org re-selectable in the dropdown.
-    partOrgsAvailable.value = [
-      ...partOrgsAvailable.value,
-      { id: org.org_id, name: org.org_name, country_code: org.country_code },
-    ].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-    bumpParticipatingCount(ev.id, partOrgsInEvent.value.length)
-    showSuccess(`Removed ${org.org_name}`)
-  } catch (err) {
-    showError(err.message)
-  } finally {
-    partOrgsBusy.value = false
-  }
-}
-
-const addableTeams = computed(() => {
-  const have = new Set(teamsInEvent.value.map(t => t.id))
-  return orgTeams.value.filter(t => !have.has(t.id))
-})
-
-async function addTeamToEvent() {
-  if (!teamToAdd.value || !teamsModalEvent.value) return
-  teamsBusy.value = true
-  try {
-    await auth.apiFetch(`/api/events/${teamsModalEvent.value.id}/teams`, {
-      method: 'POST',
-      body: JSON.stringify({ team_id: teamToAdd.value }),
-    })
-    teamsInEvent.value = await auth.apiFetch(`/api/events/${teamsModalEvent.value.id}/teams`)
-    teamToAdd.value = ''
-  } catch (err) {
-    showError(err.message)
-  } finally {
-    teamsBusy.value = false
-  }
-}
-
-async function removeTeamFromEvent(team) {
-  if (!await confirmAction({
-    title: `Remove "${team.name}" from this event?`,
-    body:  'Unlinks the team from the event roster.',
-    consequences: [
-      'Existing dive list rows lose their team attribution',
-      'Per-dive scores and history stay intact — only the team grouping is removed',
-    ],
-    confirmLabel: 'Remove team',
-    confirmKind:  'danger',
-  })) return
-  teamsBusy.value = true
-  try {
-    await auth.apiFetch(`/api/events/${teamsModalEvent.value.id}/teams/${team.id}`, {
-      method: 'DELETE',
-    })
-    teamsInEvent.value = teamsInEvent.value.filter(t => t.id !== team.id)
-    showSuccess(`Removed "${team.name}" from event`)
-  } catch (err) {
-    showError(err.message)
-  } finally {
-    teamsBusy.value = false
   }
 }
 
@@ -2874,496 +2432,69 @@ onUnmounted(() => {
   </div>
 
   <!-- Edit Meet modal — name / dates / venue / description /
-       sponsor branding incl. the new multi-logo manager
-       (migration 045). Opened from the per-meet Edit button in
-       the Meets list. -->
-  <div v-if="showEditMeetModal" class="mgr-form-page">
-    <div class="mgr-form-card modal-edit-meet" style="max-width:680px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-        <h2 style="font-size:20px">{{ $t('manager.modals.edit_meet_title') }}</h2>
-        <button class="btn btn-ghost btn-sm" @click="showEditMeetModal = false">{{ $t('manager.modals.cancel_x') }}</button>
-      </div>
-      <form @submit.prevent="saveMeet" class="form-stack">
-        <div class="field">
-          <label class="label">Meet Name</label>
-          <input class="input" v-model="editMeetForm.name" required>
-        </div>
-        <div class="field">
-          <label class="label">Venue (optional)</label>
-          <input class="input" v-model="editMeetForm.venue">
-        </div>
-        <div class="field" style="display:flex;gap:0.5rem">
-          <div style="flex:1; min-width:0">
-            <label class="label">Start Date</label>
-            <input class="input" type="date" v-model="editMeetForm.start_date">
-          </div>
-          <div style="flex:1; min-width:0">
-            <label class="label">End Date</label>
-            <input class="input" type="date" v-model="editMeetForm.end_date">
-          </div>
-        </div>
-        <div class="field">
-          <label class="label">Description (optional)</label>
-          <textarea class="input" rows="2" v-model="editMeetForm.description"
-                    placeholder="Public meet blurb — shown on the meet landing page."></textarea>
-        </div>
-
-        <hr style="border:0;border-top:1px solid var(--border);margin:0.5rem 0 0">
-
-        <div class="field">
-          <label class="label">Sponsor name (optional)</label>
-          <input class="input" v-model="editMeetForm.sponsor_name"
-                 placeholder='e.g. "Powered by Speedo"'>
-          <p class="hint">Plain text shown on the public meet page when no logo is uploaded.</p>
-        </div>
-        <div class="field">
-          <label class="label">Sponsor link (optional)</label>
-          <input class="input" type="url" v-model="editMeetForm.sponsor_link_url"
-                 placeholder="https://…">
-          <p class="hint">Where the "Powered by" name links to. Per-logo links override this on the new uploads.</p>
-        </div>
-
-        <!-- The multi-logo manager loads its own data from the
-             sponsor-logos endpoints. -->
-        <div class="field" style="margin-top:0.25rem">
-          <SponsorLogosManager v-if="editingMeetId" :meet-id="editingMeetId" />
-        </div>
-
-        <div v-if="editMeetErr" class="msg msg-error">{{ editMeetErr }}</div>
-        <div style="display:flex;justify-content:flex-end;gap:0.5rem">
-          <button type="button" class="btn btn-ghost" @click="showEditMeetModal = false">{{ $t('manager.modals.cancel') }}</button>
-          <button type="submit" class="btn btn-primary" :disabled="editMeetSaving">
-            {{ editMeetSaving ? $t('manager.modals.saving') : $t('manager.modals.edit_meet_submit') }}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
+       sponsor branding incl. the multi-logo manager (migration
+       045). Opened from the per-meet Edit button; openEditMeet
+       fetches the full row first, then mounts the component with
+       the hydrated form. `saved` triggers a meets reload. -->
+  <EditMeetModal
+    v-if="editingMeet"
+    :meet-id="editingMeet.id"
+    :initial-form="editingMeet.form"
+    @close="editingMeet = null"
+    @saved="loadMeets"
+  />
 
   <!-- Advance to next stage modal — opens from the prelim/semi
-       row's Completed-state action. Lets the operator pick top
-       N + reserves + dive-order mode, with a live preview of
-       which divers will progress. -->
-  <div v-if="advanceModalOpen" class="modal-backdrop"
-       @click.self="closeAdvanceModal">
-    <div class="modal modal-advance" @click.stop style="max-width:640px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px">{{ $t('manager.modals.advance_title') }}</h2>
-        <button class="btn btn-ghost btn-sm" @click="closeAdvanceModal">{{ $t('manager.modals.cancel_x') }}</button>
-      </div>
-
-      <p class="hint" style="margin-bottom:1rem" v-if="advanceParent">
-        Seed
-        <strong>{{
-          advanceChild?.format === 'final' ? 'the final'
-          : advanceChild?.format === 'semifinal' ? 'the semi-final'
-          : 'the next stage'
-        }}</strong>
-        from <strong>"{{ advanceParent.name }}"</strong> based on the World Aquatics tie-break ranking.
-        {{ RULE_REFERENCES.withdrawalAdvancement }}.
-      </p>
-
-      <div v-if="advanceErr" class="msg msg-error" style="margin-bottom:0.75rem">{{ advanceErr }}</div>
-      <div v-if="advanceLoading" class="hint" style="margin-bottom:0.75rem">Loading preview…</div>
-
-      <div v-if="!advanceLoading && advanceChild" class="advance-form">
-        <div class="advance-field-row">
-          <label class="advance-field">
-            <span class="label">Top N (primaries)</span>
-            <input class="input" type="number" min="1" max="50" v-model="advanceTopN">
-          </label>
-          <label class="advance-field">
-            <span class="label">Reserves</span>
-            <input class="input" type="number" min="0" max="50" v-model="advanceReserves">
-            <span class="hint" style="margin-top:0.25rem">
-              Default 4 reserves (WA-typical buffer). Reserves carry forward
-              but don't compete unless promoted from Control Room.
-            </span>
-          </label>
-        </div>
-
-        <div class="advance-field" style="margin-top:1rem">
-          <span class="label">Dive order in {{ advanceChild.format === 'final' ? 'the final' : 'the next stage' }}</span>
-          <label class="advance-radio">
-            <input type="radio" value="inherit" v-model="advanceDiveOrder">
-            <span><strong>Inherit</strong> — carry the parent's dive order forward, drop non-progressors. <em>Override for non-WA-sanctioned events.</em></span>
-          </label>
-          <label class="advance-radio">
-            <input type="radio" value="reverse" v-model="advanceDiveOrder">
-            <span><strong>Reverse</strong> — top diver dives last. <em>{{ RULE_REFERENCES.stageStartOrder }}.</em></span>
-          </label>
-          <label class="advance-radio">
-            <input type="radio" value="random" v-model="advanceDiveOrder">
-            <span><strong>Random</strong> — re-randomise primaries.</span>
-          </label>
-        </div>
-
-        <!-- Preview ranking -->
-        <div class="advance-preview" v-if="advanceRanked.length">
-          <div class="advance-preview-head">
-            Preview · {{ advanceRanked.length }} scored diver{{ advanceRanked.length === 1 ? '' : 's' }}
-          </div>
-          <div v-for="(d, i) in advanceRanked" :key="d.competitor_id"
-               :class="['advance-preview-row',
-                        i < parseInt(advanceTopN) ? 'primary'
-                        : i < parseInt(advanceTopN) + parseInt(advanceReserves) ? 'reserve'
-                        : 'cut']">
-            <span class="advance-rank">{{ d.rnk }}</span>
-            <span class="advance-name">{{ d.full_name }}</span>
-            <span class="advance-total">{{ Number(d.total).toFixed(2) }}</span>
-            <span class="advance-tag">
-              {{ i < parseInt(advanceTopN) ? '' :
-                 i < parseInt(advanceTopN) + parseInt(advanceReserves) ? `Reserve ${i - parseInt(advanceTopN) + 1}` :
-                 'cut' }}
-            </span>
-          </div>
-        </div>
-
-        <div style="display:flex;gap:0.5rem;margin-top:1.25rem">
-          <button type="button" class="btn btn-ghost" @click="closeAdvanceModal">{{ $t('manager.modals.cancel') }}</button>
-          <button type="button" class="btn btn-primary" :disabled="advanceLoading"
-                  @click="confirmAdvance">
-            {{ advanceLoading ? $t('manager.modals.advance_loading') : $t('manager.modals.advance_submit') }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+       row's Completed-state action. Preview + confirm state live
+       in the component; v-if mount re-fetches per open. A
+       successful advance changes statuses/rosters server-side, so
+       `advanced` triggers a full event reload. -->
+  <AdvanceStageModal
+    v-if="advanceModalEvent"
+    :event="advanceModalEvent"
+    @close="advanceModalEvent = null"
+    @advanced="loadEvents"
+  />
 
   <!-- Super Final modals (DWC 2026 Appendix 3). The five SF
        dialogs live in their own component; this view holds a
        template ref so the event-row buttons can call into them. -->
   <SuperFinalModals ref="superFinalModals" @refresh-events="loadEvents" />
 
-  <!-- Meet readiness report -->
-  <div v-if="readinessModalOpen" class="modal-backdrop" @click.self="closeMeetReadinessReport"></div>
-  <div v-if="readinessModalOpen" class="modal readiness-modal" @click.stop>
-    <div class="readiness-head">
-      <div>
-        <div class="teams-section-label">Meet Readiness</div>
-        <h2 class="readiness-title">{{ readinessMeet?.name }}</h2>
-      </div>
-      <div class="readiness-actions">
-        <button class="btn btn-ghost btn-sm"
-                :disabled="readinessCsvBusy || !readinessReport"
-                @click="downloadMeetReadinessCsv">
-          {{ readinessCsvBusy ? 'Exporting…' : 'Export CSV' }}
-        </button>
-        <button class="btn btn-ghost btn-sm" @click="closeMeetReadinessReport">{{ $t('manager.modals.close_x') }}</button>
-      </div>
-    </div>
+  <!-- Meet readiness report — state + fetch live in the component;
+       v-if mount re-fetches per open. -->
+  <MeetReadinessModal
+    v-if="readinessMeet"
+    :meet="readinessMeet"
+    @close="readinessMeet = null"
+  />
 
-    <div v-if="readinessErr" class="msg msg-error">{{ readinessErr }}</div>
-    <div v-if="readinessLoading" class="hint">Loading readiness report…</div>
+  <!-- Team enrolment modal — lists + busy state live in the
+       component; v-if mount re-fetches per open. -->
+  <TeamsEnrolmentModal
+    v-if="teamsModalEvent"
+    :event="teamsModalEvent"
+    @close="teamsModalEvent = null"
+  />
 
-    <template v-if="readinessReport && !readinessLoading">
-      <div class="readiness-summary">
-        <div class="readiness-stat">
-          <span>{{ readinessReport.summary.ready_count }}/{{ readinessReport.summary.event_count }}</span>
-          <strong>ready</strong>
-        </div>
-        <div class="readiness-stat">
-          <span>{{ readinessReport.summary.blocker_count }}</span>
-          <strong>blockers</strong>
-        </div>
-        <div class="readiness-stat">
-          <span>{{ readinessReport.summary.hard_conflict_count }}</span>
-          <strong>hard conflicts</strong>
-        </div>
-        <div class="readiness-stat">
-          <span>{{ readinessReport.summary.late_arrival_pending_count }}</span>
-          <strong>late reviews</strong>
-        </div>
-        <div class="readiness-stat">
-          <span>{{ readinessReport.summary.synchro_pending_count }}</span>
-          <strong>synchro pending</strong>
-        </div>
-      </div>
+  <!-- Participating-orgs modal — invite OTHER federations' divers
+       to enter this event. List/invite state lives in the
+       component; v-if mount re-fetches per open. `count-changed`
+       keeps the row's 🌐 chip in sync without a full refetch. -->
+  <ParticipatingOrgsModal
+    v-if="partOrgsModalEvent"
+    :event="partOrgsModalEvent"
+    @close="partOrgsModalEvent = null"
+    @count-changed="bumpParticipatingCount(partOrgsModalEvent.id, $event)"
+  />
 
-      <div v-if="readinessReport.summary.soft_conflict_count" class="hint readiness-note">
-        {{ readinessReport.summary.soft_conflict_count }} soft schedule warning{{ readinessReport.summary.soft_conflict_count === 1 ? '' : 's' }} also detected.
-      </div>
-
-      <div v-if="!readinessReport.events.length" class="enrolled-empty">
-        This meet has no events yet.
-      </div>
-      <ul v-else class="readiness-event-list">
-        <li v-for="event in readinessReport.events" :key="event.event_id"
-            :class="['readiness-event-row', event.ready ? 'ready' : 'blocked']">
-          <div class="readiness-event-main">
-            <div>
-              <div class="readiness-event-name">{{ event.event_name }}</div>
-              <div class="readiness-event-meta">
-                {{ event.active_diver_count }} active ·
-                {{ event.judge_count }}/{{ event.required_judges }} judges ·
-                {{ event.federations.length || 1 }} federation{{ (event.federations.length || 1) === 1 ? '' : 's' }}
-              </div>
-            </div>
-            <span :class="['readiness-state-chip', event.ready ? 'ok' : 'warn']">
-              {{ event.ready ? 'Ready' : `${event.blockers.length} blocker${event.blockers.length === 1 ? '' : 's'}` }}
-            </span>
-          </div>
-
-          <div v-if="event.blockers.length" class="readiness-blockers">
-            <span v-for="blocker in event.blockers" :key="blocker.key" class="readiness-blocker">
-              {{ blocker.label }}
-            </span>
-          </div>
-
-          <div v-if="event.late_arrival_pending_count || event.synchro_pending_count" class="readiness-blockers secondary">
-            <span v-if="event.late_arrival_pending_count" class="readiness-blocker">
-              {{ event.late_arrival_pending_count }} late arrival{{ event.late_arrival_pending_count === 1 ? '' : 's' }}
-            </span>
-            <span v-if="event.synchro_pending_count" class="readiness-blocker">
-              {{ event.synchro_pending_count }} synchro partner{{ event.synchro_pending_count === 1 ? '' : 's' }} missing
-            </span>
-          </div>
-
-          <div v-if="event.federations.length > 1" class="readiness-feds">
-            <span v-for="fed in event.federations" :key="fed.org_id" class="readiness-fed">
-              {{ fed.country_code || fed.org_name }}
-              <strong>{{ fed.active_diver_count }}</strong>
-              <em v-if="fed.incomplete_diver_count">{{ fed.incomplete_diver_count }} incomplete</em>
-            </span>
-          </div>
-        </li>
-      </ul>
-    </template>
-  </div>
-
-  <!-- Team enrolment modal -->
-  <div v-if="teamsModalOpen" class="modal-backdrop" @click="closeTeamsModal"></div>
-  <div v-if="teamsModalOpen" class="modal teams-modal" @click.stop>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-      <h2 style="font-size:20px">
-        {{ $t('manager.modals.teams_modal_in_event_prefix') }} <span style="color:var(--cyan)">{{ teamsModalEvent?.name }}</span>
-      </h2>
-      <button class="btn btn-ghost btn-sm" @click="closeTeamsModal">{{ $t('manager.modals.close_x') }}</button>
-    </div>
-
-    <div class="teams-section-label">Currently enrolled ({{ teamsInEvent.length }})</div>
-    <ul v-if="teamsInEvent.length" class="enrolled-list">
-      <li v-for="t in teamsInEvent" :key="t.id" class="enrolled-row">
-        <span class="enrolled-name">
-          {{ t.name }}<span v-if="t.short_code" class="enrolled-code">{{ t.short_code }}</span>
-        </span>
-        <button class="btn btn-danger btn-sm" :disabled="teamsBusy"
-                @click="removeTeamFromEvent(t)">Remove</button>
-      </li>
-    </ul>
-    <div v-else class="enrolled-empty">No teams enrolled yet.</div>
-
-    <div class="teams-section-label" style="margin-top:1.25rem">Add a team</div>
-    <div class="add-team-row">
-      <select class="select" v-model="teamToAdd">
-        <option value="">— Select a team —</option>
-        <option v-for="t in addableTeams" :key="t.id" :value="t.id">
-          {{ t.name }}{{ t.short_code ? ' (' + t.short_code + ')' : '' }}{{ t.member_count != null ? ' · ' + t.member_count + ' members' : '' }}
-        </option>
-      </select>
-      <button class="btn btn-primary btn-sm"
-              :disabled="!teamToAdd || teamsBusy"
-              @click="addTeamToEvent">Add</button>
-    </div>
-    <p v-if="!addableTeams.length && !teamsBusy" class="hint-line">
-      No more teams available — every team in the org is already enrolled, or the org has no teams. Create teams from
-      <RouterLink to="/teams" style="color:var(--cyan)">/teams</RouterLink>.
-    </p>
-  </div>
-
-  <!-- Participating-orgs modal — invite OTHER federations'
-       divers to enter this event. Empty list = domestic-only.
-       Endpoints in routes/events.js (migration 036). -->
-  <div v-if="partOrgsModalOpen" class="modal-backdrop" @click="closePartOrgsModal"></div>
-  <div v-if="partOrgsModalOpen" class="modal teams-modal" @click.stop>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
-      <div>
-        <div class="teams-section-label">Participating Federations</div>
-        <h2 style="font-size:20px;line-height:1.1">
-          {{ partOrgsModalEvent?.name }}
-        </h2>
-      </div>
-      <button class="btn btn-ghost btn-sm" @click="closePartOrgsModal">{{ $t('manager.modals.close_x') }}</button>
-    </div>
-    <p class="hint" style="margin-bottom:1rem;line-height:1.5">
-      Accepted federations can self-enter divers without a shadow account. Their results count toward <strong>their home federation's</strong> records, not yours. The host federation ({{ partOrgsModalEvent?.org_name || 'this org' }}) is implicit — don't add it.
-    </p>
-
-    <div class="teams-section-label">Currently participating ({{ partOrgsInEvent.length }})</div>
-    <ul v-if="partOrgsInEvent.length" class="enrolled-list">
-      <li v-for="o in partOrgsInEvent" :key="o.org_id" class="enrolled-row">
-        <span class="enrolled-name">
-          {{ o.org_name }}
-          <span v-if="o.country_code" class="enrolled-code">{{ o.country_code }}</span>
-        </span>
-        <button class="btn btn-danger btn-sm" :disabled="partOrgsBusy"
-                @click="removePartOrg(o)">Remove</button>
-      </li>
-    </ul>
-    <div v-else class="enrolled-empty">
-      Domestic-only event — only {{ partOrgsModalEvent?.org_name || 'host' }} divers can enter.
-    </div>
-
-    <div class="teams-section-label" style="margin-top:1.25rem">Pending invitations ({{ partOrgPendingRequests.length }})</div>
-    <ul v-if="partOrgPendingRequests.length" class="enrolled-list">
-      <li v-for="req in partOrgPendingRequests" :key="req.id" class="enrolled-row pending-invite-row">
-        <span class="enrolled-name">
-          {{ req.org_name }}
-          <span v-if="req.country_code" class="enrolled-code">{{ req.country_code }}</span>
-          <span class="invite-status-chip">waiting</span>
-        </span>
-        <span v-if="req.org_id !== auth.user?.org_id" class="hint-line">Sent {{ req.requested_at ? new Date(req.requested_at).toLocaleDateString() : '' }}</span>
-        <span v-else class="invite-response-actions">
-          <button class="btn btn-primary btn-sm" :disabled="partOrgsBusy"
-                  @click="respondPartOrgRequest(req, 'accepted')">Accept</button>
-          <button class="btn btn-ghost btn-sm" :disabled="partOrgsBusy"
-                  @click="respondPartOrgRequest(req, 'declined')">Decline</button>
-        </span>
-      </li>
-    </ul>
-    <div v-else class="enrolled-empty">No pending federation invitations.</div>
-
-    <div v-if="partOrgPastRequests.length" class="teams-section-label" style="margin-top:1.25rem">Recent responses</div>
-    <ul v-if="partOrgPastRequests.length" class="enrolled-list">
-      <li v-for="req in partOrgPastRequests.slice(0, 4)" :key="req.id" class="enrolled-row">
-        <span class="enrolled-name">
-          {{ req.org_name }}
-          <span v-if="req.country_code" class="enrolled-code">{{ req.country_code }}</span>
-          <span :class="['invite-status-chip', req.status]">{{ req.status }}</span>
-        </span>
-        <span class="hint-line">{{ req.responded_at ? new Date(req.responded_at).toLocaleDateString() : '' }}</span>
-      </li>
-    </ul>
-
-    <div class="teams-section-label" style="margin-top:1.25rem">Invite a federation</div>
-    <div class="add-team-row">
-      <select class="select" v-model="partOrgsToAdd" :disabled="partOrgsBusy">
-        <option value="">— Select a federation —</option>
-        <option v-for="o in partOrgsAvailable" :key="o.id" :value="o.id">
-          {{ o.name }}{{ o.country_code ? ` (${o.country_code})` : '' }}
-        </option>
-      </select>
-      <button class="btn btn-primary btn-sm"
-              :disabled="!partOrgsToAdd || partOrgsBusy"
-              @click="addPartOrg">Send invite</button>
-    </div>
-    <p v-if="!partOrgsAvailable.length && !partOrgsBusy" class="hint-line">
-      Every active federation is already participating, pending a response, or there are no other federations on this server.
-    </p>
-  </div>
-
-  <!-- Roster CSV import modal -->
-  <div v-if="rosterModalOpen" class="modal-backdrop" @click="closeRosterImport"></div>
-  <div v-if="rosterModalOpen" class="modal roster-modal" @click.stop>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-      <div>
-        <div class="teams-section-label">{{ $t('manager.modals.roster_import_section_label') }}</div>
-        <h2 style="font-size:20px;line-height:1">{{ rosterModalEvent?.name }}</h2>
-      </div>
-      <button class="btn btn-ghost btn-sm" @click="closeRosterImport">{{ $t('manager.modals.close') }}</button>
-    </div>
-
-    <p class="hint" style="margin-bottom:0.75rem">
-      Paste a CSV with one diver per row. First row must be a header.
-      Required columns: <code>username</code>,
-      <code>round_1_code</code>, <code>round_1_pos</code>, …
-      <span v-if="rosterModalEvent?.event_type === 'synchro_pair'">
-        Synchro events also accept <code>partner_username</code>.
-      </span>
-      Existing dive list rows for the same diver + round are
-      overwritten (idempotent re-runs).
-    </p>
-
-    <div class="field">
-      <label class="label">Template header for this event</label>
-      <input class="input mono"
-             type="text"
-             :value="rosterTemplateHeader(rosterModalEvent)"
-             readonly
-             style="font-size:11px"
-             v-tip="'Click to select; copy as the first row of your CSV'">
-    </div>
-
-    <div class="field">
-      <label class="label">CSV</label>
-      <textarea
-        class="input mono"
-        v-model="rosterCsv"
-        rows="10"
-        style="font-size:12px"
-        placeholder="username,round_1_code,round_1_pos,round_2_code,round_2_pos&#10;phoenix.patel,5132,D,107,B&#10;..."
-      ></textarea>
-    </div>
-
-    <div v-if="rosterErr" class="msg msg-error">{{ rosterErr }}</div>
-
-    <div v-if="rosterPreview" class="roster-result roster-preview">
-      <div class="msg msg-warn" v-if="!rosterPreviewReady">
-        CSV changed after preview — preview again before importing.
-      </div>
-      <div class="msg msg-success" v-else>
-        Preview ready:
-        <strong>{{ rosterPreview.added }}</strong>
-        diver{{ rosterPreview.added === 1 ? '' : 's' }},
-        <strong>{{ rosterPreview.rounds_written }}</strong>
-        round{{ rosterPreview.rounds_written === 1 ? '' : 's' }} to write<span v-if="rosterPreview.skipped">, skipped {{ rosterPreview.skipped }}</span>.
-      </div>
-      <div v-if="rosterPreview.rows?.length" class="roster-preview-list">
-        <div v-for="(row, i) in rosterPreview.rows.slice(0, 8)" :key="`${row.username}-${i}`" class="roster-preview-row">
-          <span class="roster-preview-name">
-            {{ row.full_name || row.username }}
-            <em v-if="row.partner_name">with {{ row.partner_name }}</em>
-          </span>
-          <span class="roster-preview-actions">
-            {{ row.rounds.filter(r => r.action === 'insert').length }} new ·
-            {{ row.rounds.filter(r => r.action === 'update').length }} update
-          </span>
-        </div>
-        <div v-if="rosterPreview.rows.length > 8" class="hint">
-          Showing first 8 of {{ rosterPreview.rows.length }} rows.
-        </div>
-      </div>
-      <div v-if="rosterPreview.errors?.length" class="roster-errors">
-        <div class="teams-section-label" style="margin-top:0.6rem">{{ rosterPreview.errors.length }} preview error(s)</div>
-        <ul class="roster-error-list">
-          <li v-for="(e, i) in rosterPreview.errors" :key="i">
-            <strong>{{ e.username }}</strong>: {{ e.error }}
-          </li>
-        </ul>
-      </div>
-    </div>
-
-    <div v-if="rosterResult" class="roster-result">
-      <div class="msg msg-success">
-        Added / updated rosters for <strong>{{ rosterResult.added }}</strong>
-        diver{{ rosterResult.added === 1 ? '' : 's' }}
-        and <strong>{{ rosterResult.rounds_written }}</strong>
-        round{{ rosterResult.rounds_written === 1 ? '' : 's' }}<span v-if="rosterResult.skipped">, skipped {{ rosterResult.skipped }}</span>.
-      </div>
-      <div v-if="rosterResult.errors?.length" class="roster-errors">
-        <div class="teams-section-label" style="margin-top:0.6rem">{{ rosterResult.errors.length }} row error(s)</div>
-        <ul class="roster-error-list">
-          <li v-for="(e, i) in rosterResult.errors" :key="i">
-            <strong>{{ e.username }}</strong>: {{ e.error }}
-          </li>
-        </ul>
-      </div>
-    </div>
-
-    <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1rem">
-      <button class="btn btn-ghost btn-sm" @click="closeRosterImport">{{ $t('manager.modals.done') }}</button>
-      <button class="btn btn-ghost btn-sm"
-              :disabled="rosterBusy || !rosterCsv.trim()"
-              @click="previewRosterImport">
-        {{ rosterBusy ? 'Checking…' : 'Preview changes' }}
-      </button>
-      <button class="btn btn-primary btn-sm"
-              :disabled="rosterBusy || !rosterPreviewReady"
-              @click="submitRosterImport">
-        {{ rosterBusy ? $t('manager.modals.roster_importing') : 'Confirm import' }}
-      </button>
-    </div>
-  </div>
+  <!-- Roster CSV import modal — state + handlers live in the
+       component; v-if mount resets it per open. -->
+  <RosterImportModal
+    v-if="rosterModalEvent"
+    :event="rosterModalEvent"
+    @close="rosterModalEvent = null"
+  />
 </template>
 
 <style scoped src="./ManagerView.css"></style>

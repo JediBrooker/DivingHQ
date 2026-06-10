@@ -26,6 +26,7 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
+import { ordinal as fmtOrdinal } from '@/lib/format'
 import StatusPill from '@/components/StatusPill.vue'
 
 const { t } = useI18n()
@@ -121,11 +122,10 @@ const movement = computed(() => {
   return null
 })
 
+// Shared ordinal from @/lib/format, with this view's em-dash
+// placeholder for a not-yet-known rank (format.js returns '').
 function ordinal(n) {
-  if (n == null) return '—'
-  const s = ['th', 'st', 'nd', 'rd']
-  const v = n % 100
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
+  return n == null ? '—' : fmtOrdinal(n)
 }
 
 function formatTarget(t, label) {

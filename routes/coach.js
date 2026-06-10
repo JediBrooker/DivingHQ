@@ -24,6 +24,7 @@
 const express = require("express");
 const { recordAudit } = require("../lib/audit");
 const submitDiveList = require("../lib/dive-list-submit");
+const { perDivePointsCte } = require("../lib/scoring-sql");
 
 module.exports = function createCoachRouter({
   pool,
@@ -219,25 +220,11 @@ module.exports = function createCoachRouter({
             We carry round_number through so we can also surface
             the per-round dive total for the "last completed dive"
             display below. */
-         per_dive AS (
-           SELECT s.event_id, s.competitor_id, s.round_number,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score        ORDER BY ej.judge_number),
-                    e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-                  ) AS pts
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-           LEFT JOIN competitor_dive_lists cdl
-             ON cdl.event_id = s.event_id
-            AND cdl.competitor_id = s.competitor_id
-            AND cdl.round_number = s.round_number
-           LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-           WHERE s.event_id IN (SELECT event_id FROM upcoming_raw)
-           GROUP BY s.event_id, s.competitor_id, s.round_number, e.number_of_judges, e.event_type
-         ),
+         ${perDivePointsCte({
+           select:      ["s.event_id", "s.competitor_id", "s.round_number"],
+           pointsAlias: "pts",
+           where:       "s.event_id IN (SELECT event_id FROM upcoming_raw)",
+         })},
          totals AS (
            SELECT event_id, competitor_id, SUM(pts)::numeric(8,2) AS total
            FROM per_dive GROUP BY event_id, competitor_id

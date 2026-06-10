@@ -36,7 +36,10 @@ test("edit-dive: existing row updates audit as dive_edited; new row audits as la
     name: "E2E Edit-Dive",
     height: "3m",
     number_of_judges: 5,
-    total_rounds: 2,
+    // 3 rounds so the round-3 add below is a legitimate fresh
+    // INSERT — the roster upsert now bounds-checks round_number
+    // against total_rounds (phantom rounds are rejected with 400).
+    total_rounds: 3,
   });
 
   const diver = await setup.insertUser({
@@ -98,10 +101,9 @@ test("edit-dive: existing row updates audit as dive_edited; new row audits as la
   expect(editAudit.rows[0].metadata.round_number).toBe(1);
   expect(editAudit.rows[0].metadata.dive_id).toBe(dive107B);
 
-  // ---- Add a NEW round-3 row (event has total_rounds=2 but
-  // the upsert doesn't validate total_rounds — that's a
-  // pre-existing limitation, not something this test fights).
-  // Use round 3 to force a fresh INSERT path.
+  // ---- Add a NEW round-3 row. The diver only has a round-1
+  // entry, so round 3 forces the fresh INSERT path (and stays
+  // within the event's total_rounds=3 bound the upsert enforces).
   const addRes = await request.post(
     `/api/events/${event.id}/roster`,
     {

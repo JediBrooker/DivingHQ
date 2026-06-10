@@ -33,6 +33,24 @@ const ready = ref(false)
 let initialised = false
 let socket = null         // socket.io-client passed in by the caller
 
+// Named so bindPushSocket can move it between sockets without
+// orphaning a closure on the old one.
+const onNotification = (n) => pushIntoList(n)
+
+// Bind (or rebind) the socket the shared notification stream
+// listens on. The pooled socket object is different per auth
+// token, so a set-once guard would keep listening on the
+// PREVIOUS user's socket after sign-out → sign-in.
+// NotificationCenter calls this whenever the auth identity
+// changes; pass null to detach (sign-out).
+export function bindPushSocket(sock) {
+  const next = sock || null
+  if (next === socket) return
+  if (socket) socket.off('notification', onNotification)
+  socket = next
+  if (socket) socket.on('notification', onNotification)
+}
+
 // Most browsers refuse to subscribe to push from an http:// origin.
 // Skip the whole flow when serviceWorker / PushManager are missing.
 function pushApiAvailable() {
@@ -67,10 +85,7 @@ function pushIntoList(n) {
 
 export function usePush({ socket: sock } = {}) {
   const auth = useAuthStore()
-  if (sock && !socket) {
-    socket = sock
-    socket.on('notification', (n) => pushIntoList(n))
-  }
+  if (sock) bindPushSocket(sock)
 
   // Service worker postMessage — fired when the user taps a
   // system notification while the SPA tab is open.

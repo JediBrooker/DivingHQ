@@ -27,6 +27,15 @@ const QRCode  = require("qrcode");
 const { publicId } = require("../lib/public-id");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const createIdempotency = require("../lib/idempotency");
+const { t } = require("../lib/server-i18n");
+const { perDiveSelect } = require("../lib/scoring-sql");
+
+// Mirrors init.sql's dive_position enum. Pre-validating each CSV
+// cell keeps a bad value from ever reaching the ::dive_position
+// cast — in commit mode that cast error would abort the whole
+// import transaction (see the SAVEPOINT fence in
+// buildRosterImportPlan).
+const DIVE_POSITIONS = new Set(["A", "B", "C", "D"]);
 
 // Light CSV parser. Handles "quoted, fields", "doubled""quotes"
 // inside quoted fields, and trailing/leading whitespace. Doesn't
@@ -70,6 +79,11 @@ module.exports = function createControlRoomRouter({
   requireMeetEditor,
   bulkWriteLimiter,
   ensureEventOrgGate,
+  // lib/middleware.js exports the canonical pre-meet ("Upcoming")
+  // gate; the server.js mount doesn't pass it yet, so the factory
+  // falls back to a behaviour-identical local twin below when
+  // absent. Optional so existing mounts keep working unchanged.
+  ensureEventPreMeet,
   // Cut 2 deps: push for the request → notify hop, bcrypt + totp
   // for the credential-fallback verification path. All three are
   // optional in the factory signature so existing test setups
@@ -79,7 +93,9 @@ module.exports = function createControlRoomRouter({
   bcrypt,
   totp,
 }) {
-  if (!pool) throw new Error("createControlRoomRouter requires { pool, … }");
+  if (!pool || !ensureEventPreMeet) {
+    throw new Error("createControlRoomRouter requires { pool, ensureEventPreMeet, … }");
+  }
   const router = express.Router();
 
   // Tuple repeated 7× across the original section. Build it once
@@ -128,6 +144,7 @@ module.exports = function createControlRoomRouter({
       rows: [],
     };
 
+    let rowN = 0;
     for (const row of rows) {
       const username = (row[userIdx] || "").trim();
       if (!username) {
@@ -143,6 +160,13 @@ module.exports = function createControlRoomRouter({
         rounds: [],
       };
 
+      // Row-level fence (commit mode only). An unexpected DB error
+      // below — bad cast, FK violation — would otherwise abort the
+      // surrounding transaction: every later row then fails with
+      // "current transaction is aborted", COMMIT quietly becomes a
+      // rollback, and the route still returns 200 with bogus counts.
+      rowN++;
+      if (commit) await client.query(`SAVEPOINT row_${rowN}`);
       try {
         const u = await client.query(
           "SELECT id, full_name FROM users WHERE username = $1 AND org_id = $2",
@@ -179,6 +203,15 @@ module.exports = function createControlRoomRouter({
           const code = (row[codeIdx] || "").trim();
           const pos = (row[posIdx] || "").trim().toUpperCase();
           if (!code || !pos) continue;
+          // Whitelist before the ::dive_position cast below — see
+          // the DIVE_POSITIONS note at the top of the file.
+          if (!DIVE_POSITIONS.has(pos)) {
+            stats.errors.push({
+              username,
+              error: `Round ${round}: "${pos}" is not a valid position (${[...DIVE_POSITIONS].join(", ")})`,
+            });
+            continue;
+          }
           const d = await client.query(
             `SELECT id FROM dive_directory
              WHERE dive_code = $1 AND position = $2::dive_position
@@ -226,8 +259,16 @@ module.exports = function createControlRoomRouter({
         stats.added++;
         stats.rows.push(previewRow);
       } catch (rowErr) {
+        // Roll back just this row's writes; the savepoint restores
+        // the transaction so later rows still commit.
+        if (commit) await client.query(`ROLLBACK TO SAVEPOINT row_${rowN}`);
         stats.errors.push({ username, error: rowErr.message });
         stats.rows.push(previewRow);
+      } finally {
+        // ROLLBACK TO keeps the savepoint defined; RELEASE here
+        // closes the subtransaction on every exit path (success,
+        // row error, or an in-row `continue`).
+        if (commit) await client.query(`RELEASE SAVEPOINT row_${rowN}`);
       }
     }
 
@@ -452,7 +493,7 @@ module.exports = function createControlRoomRouter({
     }
     try {
       const owner = await pool.query(
-        `SELECT e.id, e.status, e.name, e.org_id
+        `SELECT e.id, e.org_id
          FROM competitor_dive_lists cdl
          JOIN events e ON e.id = cdl.event_id
          WHERE cdl.id = $1`,
@@ -465,15 +506,7 @@ module.exports = function createControlRoomRouter({
       if (!req.user.is_system_admin && ev.org_id !== req.user.org_id) {
         return res.status(403).json({ error: "Event is not in your organisation" });
       }
-      if (ev.status !== "Upcoming") {
-        return res.status(409).json({
-          error:
-            `Cannot change the dive order once "${ev.name}" has started ` +
-            `(status is ${ev.status}). Withdraw a diver instead if they ` +
-            `need to be skipped.`,
-          event_status: ev.status,
-        });
-      }
+      if (!(await ensureEventPreMeet(req, res, ev.id))) return;
       const r = await pool.query(
         `UPDATE competitor_dive_lists cdl
          SET display_order = $1
@@ -512,22 +545,16 @@ module.exports = function createControlRoomRouter({
     try {
       await client.query("BEGIN");
       const ev = await client.query(
-        "SELECT id, status, name FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
+        "SELECT id FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
         [eventId, !!req.user.is_system_admin, req.user.org_id],
       );
       if (!ev.rows.length) {
         await client.query("ROLLBACK");
         return res.status(404).json({ error: "Event not found" });
       }
-      if (ev.rows[0].status !== "Upcoming") {
+      if (!(await ensureEventPreMeet(req, res, eventId, client))) {
         await client.query("ROLLBACK");
-        return res.status(409).json({
-          error:
-            `Cannot re-order divers once "${ev.rows[0].name}" has started ` +
-            `(status is ${ev.rows[0].status}). Withdraw a diver instead if they ` +
-            `need to be skipped.`,
-          event_status: ev.rows[0].status,
-        });
+        return;
       }
       let updated = 0;
       for (const r of rows) {
@@ -558,19 +585,23 @@ module.exports = function createControlRoomRouter({
   // -------------------------------------------------------------
   router.post("/api/events/:id/dive-lists/randomize", requireMeetController, idem("dive_list_randomize"), async (req, res) => {
     const eventId = req.params.id;
+    // One transaction for the shuffle + the workflow stamp below —
+    // a crash between the two must not leave a re-shuffled order
+    // still carrying the previous shuffle's referee sign-off.
+    const client = await pool.connect();
     try {
-      const ev = await pool.query(
-        "SELECT id, status, name FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
+      await client.query("BEGIN");
+      const ev = await client.query(
+        "SELECT id FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
         [eventId, !!req.user.is_system_admin, req.user.org_id],
       );
-      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
-      if (ev.rows[0].status !== "Upcoming") {
-        return res.status(409).json({
-          error:
-            `Cannot randomise the start order once "${ev.rows[0].name}" has started ` +
-            `(status is ${ev.rows[0].status}). The published order is now fixed.`,
-          event_status: ev.rows[0].status,
-        });
+      if (!ev.rows.length) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Event not found" });
+      }
+      if (!(await ensureEventPreMeet(req, res, eventId, client))) {
+        await client.query("ROLLBACK");
+        return;
       }
 
       // Pick a random ordering of the unique competitors, then
@@ -586,7 +617,7 @@ module.exports = function createControlRoomRouter({
       // values like 4 / 6 / 9 instead of 1 / 2 / 3. Splitting the
       // DISTINCT into its own subquery first guarantees we
       // ROW_NUMBER over UNIQUE competitors only.
-      const r = await pool.query(
+      const r = await client.query(
         `WITH shuffled AS (
            SELECT competitor_id,
                   ROW_NUMBER() OVER (ORDER BY random()) AS pos
@@ -612,7 +643,7 @@ module.exports = function createControlRoomRouter({
       // Pre-meet workflow: the order has changed, so stamp
       // randomised_at and clear any prior sign-off — the referee
       // signs off on the FINAL order, not a previous shuffle.
-      await pool.query(
+      await client.query(
         `UPDATE events
          SET dive_order_randomised_at = now(),
              dive_order_signed_off_at = NULL,
@@ -621,10 +652,14 @@ module.exports = function createControlRoomRouter({
         [eventId],
       );
 
+      await client.query("COMMIT");
       res.json({ ok: true, updated: r.rowCount });
     } catch (err) {
+      await client.query("ROLLBACK");
       console.error("[Randomize Order Error]", err.message);
       res.status(500).json({ error: "Internal server error" });
+    } finally {
+      client.release();
     }
   });
 
@@ -1116,7 +1151,26 @@ module.exports = function createControlRoomRouter({
         if (!totp) return res.status(503).json({ error: "TOTP verifier not wired" });
         if (!code) return res.status(401).json({ error: "TOTP code required", needs_totp: true });
         const looksLikeTotp = typeof code === "string" && /^\d{6}$/.test(code);
-        let accepted = looksLikeTotp && totp.verifyToken(user.totp_secret, code);
+        // Replay guard (migration 063), same shape as the main
+        // login flow: consume the matched time-step via a
+        // conditional UPDATE so a code observed during this
+        // sign-off can't mint a second use within the ~90s
+        // verify window.
+        let accepted = false;
+        if (looksLikeTotp) {
+          const matchedStep = totp.verifyTokenDelta(user.totp_secret, code);
+          if (matchedStep != null) {
+            const consumed = await pool.query(
+              `UPDATE users
+               SET totp_last_used_step = $1
+               WHERE id = $2
+                 AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)
+               RETURNING id`,
+              [matchedStep, user.id],
+            );
+            accepted = consumed.rowCount > 0;
+          }
+        }
         if (!accepted) {
           const recovery = await totp.consumeRecoveryCode(
             user.totp_recovery_codes || [], code,
@@ -1540,11 +1594,21 @@ module.exports = function createControlRoomRouter({
     }
     try {
       const ev = await pool.query(
-        "SELECT id, org_id, name FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
+        "SELECT id, org_id, name, total_rounds FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
         [req.params.id, !!req.user.is_system_admin, req.user.org_id],
       );
       if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
       const eventOrgId = ev.rows[0].org_id;
+
+      // Bounds-check against the event's round count BEFORE the
+      // INSERT — a non-integer would otherwise surface as a
+      // Postgres cast error (500) instead of a validation 400.
+      const totalRounds = ev.rows[0].total_rounds;
+      if (!Number.isInteger(round_number) || round_number < 1 || round_number > totalRounds) {
+        return res.status(400).json({
+          error: `round_number must be an integer between 1 and ${totalRounds}`,
+        });
+      }
 
       const u = await pool.query(
         "SELECT id, org_id, full_name FROM users WHERE id = $1",
@@ -1685,47 +1749,45 @@ module.exports = function createControlRoomRouter({
   // -------------------------------------------------------------
   router.get("/api/events/:id/history", async (req, res) => {
     try {
+      // Dive-by-dive scope: d.dd is a grouping column, so it
+      // feeds the UDF directly (no MAX() wrapper).
       const r = await pool.query(
-        `SELECT u.full_name AS "diverName", o.country_code,
-                cl.name AS club_name, cl.short_code AS club_code,
-                pu.full_name AS partner_name,
-                po.country_code AS partner_country,
-                t.name AS team_name, t.short_code AS team_code,
-                s.competitor_id, s.event_id, s.round_number,
-                d.dive_code, d.position, d.dd, d.description,
-                calc_event_dive_points(
-                  array_agg(ej.judge_number ORDER BY ej.judge_number),
-                  array_agg(s.score ORDER BY ej.judge_number),
-                  e.number_of_judges, d.dd, e.event_type,
-                  BOOL_OR(cdl.partner_id IS NOT NULL)
-                ) AS total_points,
-                /* Three parallel arrays — same ordering across all
-                   three so consumers can zip them. ej.judge_number
-                   (panel position 1..N) gives the canonical order;
-                   s.judge_id (UUID) does not. */
-                JSON_AGG(s.score        ORDER BY ej.judge_number) AS judge_scores,
-                JSON_AGG(s.id           ORDER BY ej.judge_number) AS score_ids,
-                JSON_AGG(ej.judge_number ORDER BY ej.judge_number) AS judge_numbers
-         FROM scores s
-         JOIN events e ON e.id = s.event_id
-         JOIN users u ON s.competitor_id = u.id
-         JOIN organisations o ON u.org_id = o.id
-         LEFT JOIN clubs cl ON cl.id = u.club_id
-         LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-         LEFT JOIN competitor_dive_lists cdl
-           ON s.competitor_id = cdl.competitor_id
-          AND s.event_id = cdl.event_id
-          AND s.round_number = cdl.round_number
-         LEFT JOIN dive_directory d ON COALESCE(s.dive_id, cdl.dive_id) = d.id
-         LEFT JOIN users pu ON pu.id = cdl.partner_id
-         LEFT JOIN organisations po ON po.id = pu.org_id
-         LEFT JOIN teams t ON t.id = cdl.team_id
-         WHERE s.event_id = $1
-         GROUP BY u.full_name, o.country_code, cl.name, cl.short_code,
-                  pu.full_name, po.country_code, t.name, t.short_code,
-                  s.competitor_id, s.event_id, s.round_number,
-                  d.dive_code, d.position, d.dd, d.description,
-                  e.number_of_judges, e.event_type
+        `${perDiveSelect({
+          select: [
+            `u.full_name AS "diverName"`, "o.country_code",
+            "cl.name AS club_name", "cl.short_code AS club_code",
+            "pu.full_name AS partner_name",
+            "po.country_code AS partner_country",
+            "t.name AS team_name", "t.short_code AS team_code",
+            "s.competitor_id", "s.event_id", "s.round_number",
+            "d.dive_code", "d.position", "d.dd", "d.description",
+          ],
+          dd:          "d.dd",
+          pointsAlias: "total_points",
+          selectExtra: [
+            `/* Three parallel arrays — same ordering across all
+                three so consumers can zip them. ej.judge_number
+                (panel position 1..N) gives the canonical order;
+                s.judge_id (UUID) does not. */
+             JSON_AGG(s.score        ORDER BY ej.judge_number) AS judge_scores`,
+            "JSON_AGG(s.id           ORDER BY ej.judge_number) AS score_ids",
+            "JSON_AGG(ej.judge_number ORDER BY ej.judge_number) AS judge_numbers",
+          ],
+          extraJoins: [
+            "JOIN users u ON s.competitor_id = u.id",
+            "JOIN organisations o ON u.org_id = o.id",
+            "LEFT JOIN clubs cl ON cl.id = u.club_id",
+            "LEFT JOIN users pu ON pu.id = cdl.partner_id",
+            "LEFT JOIN organisations po ON po.id = pu.org_id",
+            "LEFT JOIN teams t ON t.id = cdl.team_id",
+          ],
+          groupBy: [
+            "u.full_name", "o.country_code", "cl.name", "cl.short_code",
+            "pu.full_name", "po.country_code", "t.name", "t.short_code",
+            "s.competitor_id", "s.event_id", "s.round_number",
+            "d.dive_code", "d.position", "d.dd", "d.description",
+          ],
+        })}
          ORDER BY s.round_number ASC, u.full_name ASC`,
         [req.params.id],
       );
