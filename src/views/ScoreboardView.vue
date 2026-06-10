@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
+import { useSocketEvent } from '@/composables/useSocketEvent'
 import {
   annotatedScores,
   groupedSynchroScoresForDisplay,
@@ -14,7 +15,7 @@ import {
 import { diveDescription } from '@/composables/useDiveLabel'
 import { cachedFetch, idbInvalidate } from '@/lib/idbCache'
 import { SCOREBOARD_LIVE_TTL_MS, SCOREBOARD_ARCHIVE_TTL_MS } from '@/lib/cache-policy'
-import { fmtDate } from '@/lib/format'
+import { fmtDate, ordinal, rankClass } from '@/lib/format'
 import DiverIdentity from '@/components/DiverIdentity.vue'
 import ScoreHistoryButton from '@/components/ScoreHistoryButton.vue'
 import JargonTip from '@/components/JargonTip.vue'
@@ -263,17 +264,6 @@ async function loadJudgeRankingPayload() {
   }
 }
 
-// Ordinal helper for the chip-tooltip line (the view already
-// defines a separate `ordinal()` further down for the "Currently
-// Nth" line under the active diver; both round to the same
-// answer but live in different scopes — renamed here to avoid
-// the redeclare).
-function ordinalShort(n) {
-  const s = ['th', 'st', 'nd', 'rd']
-  const v = n % 100
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
-}
-
 // Compose the judge tooltip line shown on every score chip.
 // Mentions the click action explicitly so a viewer who's never
 // followed the link knows why the chip is interactive.
@@ -297,7 +287,7 @@ function judgeTooltip(judge, opts = {}) {
     const round = opts.roundNumber
     const tail = round ? ` in round ${round}` : ''
     parts.push(
-      `Ranked this dive ${ordinalShort(opts.perDiveRank.rank)} of `
+      `Ranked this dive ${ordinal(opts.perDiveRank.rank)} of `
       + `${opts.perDiveRank.total_in_round}${tail}`,
     )
   }
@@ -548,6 +538,9 @@ function selectEvent(id, { pushUrl = true } = {}) {
 }
 
 function resetToEventPicker({ pushUrl = true } = {}) {
+  // Invalidate any in-flight refreshData so a late response can't
+  // repopulate the panels we're about to clear.
+  refreshSeq++
   currentEventId.value = null
   activeDiver.value = null
   historyItems.value = []
@@ -590,8 +583,17 @@ watch(() => currentEvent.value?.status, (status, prev) => {
   if (status && prev && status !== prev) refreshData()
 })
 
+// Stale-response guard for refreshData. Rapid event switching (or
+// a status flip mid-flight) can leave an older request's slower
+// response landing after a newer one — without the guard it would
+// overwrite the newer event's standings/history/archive panels.
+// Each call takes a fresh token; writes after an await bail if a
+// newer call has started.
+let refreshSeq = 0
+
 async function refreshData() {
   if (!currentEventId.value) return
+  const seq = ++refreshSeq
   try {
     if (isCompleted.value) {
       // Completed events: 24h SWR cache. The standings never change
@@ -609,6 +611,7 @@ async function refreshData() {
           { maxAgeMs: SCOREBOARD_ARCHIVE_TTL_MS },
         ),
       ])
+      if (seq !== refreshSeq) return
       const archive = archiveRes.data || {}
       const leaderboard = leaderboardRes.data || {}
       archiveResults.value = archive
@@ -647,6 +650,7 @@ async function refreshData() {
           { maxAgeMs: SCOREBOARD_LIVE_TTL_MS },
         ),
       ])
+      if (seq !== refreshSeq) return
       const scoreboard = scoreboardRes.data || {}
       const leaderboard = leaderboardRes.data || {}
       historyItems.value = scoreboard.history || []
@@ -689,7 +693,10 @@ function movementSymbol(m) {
 // for record_broken and pick a presentation that doesn't sit on
 // top of the standings.
 
-socket.on('state_update', data => {
+// All listeners below go through useSocketEvent so they're torn
+// down with the view rather than relying on the spectator pool's
+// refcount happening to hit zero.
+useSocketEvent(socket, 'state_update', data => {
   // Ignore broadcasts until the user has picked an event, and
   // ignore broadcasts for events other than the current one. This
   // prevents stale state from another event leaking into the
@@ -712,7 +719,7 @@ socket.on('state_update', data => {
 // inline-under-active-diver display can show the lights coming
 // in one at a time and (once the panel is full) shade the high
 // + low as dropped under World Aquatics trim rules.
-socket.on('score_received', data => {
+useSocketEvent(socket, 'score_received', data => {
   // Invalidate the client-side scoreboard cache for this event the
   // moment a new score commits. Without this, the 5s SWR TTL would
   // let a freshly-reloaded spectator see standings that lag by up
@@ -738,7 +745,7 @@ socket.on('score_received', data => {
 // event is already selected. Covers the case where the socket
 // drops mid-session and the in-memory state was unchanged on
 // the server but our local state went stale.
-socket.on('connect', () => {
+useSocketEvent(socket, 'connect', () => {
   if (currentEventId.value) {
     socket.emit('get_active_diver', { event_id: currentEventId.value })
     socket.emit('get_meet_hold',    { event_id: currentEventId.value })
@@ -748,12 +755,12 @@ socket.on('connect', () => {
 // Hold-state propagation. The Control Room dispatches meet_hold
 // + meet_resume; we set a banner accordingly. Per-event check so
 // a hold on a different meet doesn't bleed into this scoreboard.
-socket.on('meet_held', (data) => {
+useSocketEvent(socket, 'meet_held', (data) => {
   if (data.event_id !== currentEventId.value) return
   isHeld.value = true
   holdReason.value = data.reason || ''
 })
-socket.on('meet_resumed', (data) => {
+useSocketEvent(socket, 'meet_resumed', (data) => {
   if (data.event_id !== currentEventId.value) return
   isHeld.value = false
   holdReason.value = ''
@@ -762,12 +769,12 @@ socket.on('meet_resumed', (data) => {
 // Score corrections fired by the Control Room: re-pull the
 // scoreboard so totals reflect the amendment. Cheap full-pull
 // is fine — score corrections are rare events.
-socket.on('score_corrected', (data) => {
+useSocketEvent(socket, 'score_corrected', (data) => {
   if (data.event_id !== currentEventId.value) return
   refreshData()
 })
 
-socket.on('final_score_announced', () => {
+useSocketEvent(socket, 'final_score_announced', () => {
   // Was a 4-second fullscreen overlay. The audience now sees
   // the dive total inline under the active-diver block (computed
   // from the score_received pills × DD), so just trigger a
@@ -775,21 +782,8 @@ socket.on('final_score_announced', () => {
   refreshData()
 })
 
-function rankClass(i) {
-  if (i === 0) return 'gold'
-  if (i === 1) return 'silver'
-  if (i === 2) return 'bronze'
-  return ''
-}
-
-// English ordinal for a 1-based rank (1 → "1st", 2 → "2nd", …).
-// Used by the "Currently Nth" line under the active diver.
-function ordinal(n) {
-  if (n == null) return ''
-  const s = ['th', 'st', 'nd', 'rd']
-  const v = n % 100
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
-}
+// rankClass + ordinal imported from @/lib/format — single source
+// of truth for the podium classes and the "Currently Nth" line.
 
 // Per-judge pills for the current active diver, annotated with
 // scoreCategory + dropped-under-trim flag. Reuses the same helper

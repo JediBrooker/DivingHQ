@@ -31,7 +31,7 @@ const fakeEvents = [
 // scoreboard broadcast URL each cell loads so the iframes don't
 // stall waiting on real data.
 async function installMocks(page) {
-  await page.route('**/api/events', async (route) => {
+  await page.route('**/api/events*', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

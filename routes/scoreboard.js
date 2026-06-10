@@ -19,6 +19,7 @@
 
 const express = require("express");
 const { publicId } = require("../lib/public-id");
+const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 
 module.exports = function createScoreboardRouter({
   pool,
@@ -85,32 +86,17 @@ module.exports = function createScoreboardRouter({
         // losers (who aren't on the SF roster) don't pollute the
         // SF standings.
         pool.query(
-          `WITH per_dive AS (
-             SELECT s.competitor_id, cdl.team_id, s.event_id, s.round_number,
-                    calc_event_dive_points(
-                      array_agg(ej.judge_number ORDER BY ej.judge_number),
-                      array_agg(s.score ORDER BY ej.judge_number),
-                      e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-    ) AS dive_points
-             FROM scores s
-             JOIN events e ON e.id = s.event_id
-             LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-             LEFT JOIN competitor_dive_lists cdl
-               ON cdl.event_id = s.event_id
-              AND cdl.competitor_id = s.competitor_id
-              AND cdl.round_number = s.round_number
-             LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-             WHERE (s.event_id = $1
+          `WITH ${perDivePointsCte({
+             select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
+             where: `(s.event_id = $1
                     OR s.event_id = (SELECT score_carry_from FROM events WHERE id = $1))
                AND s.competitor_id IN (
                  SELECT competitor_id FROM competitor_dive_lists
                   WHERE event_id = $1
                     AND withdrawn_at IS NULL
                     AND is_reserve = FALSE
-               )
-             GROUP BY s.competitor_id, cdl.team_id, s.event_id, s.round_number, e.number_of_judges, e.event_type
-           ),
+               )`,
+           })},
            /* Team-event branch: aggregate by team. dives_desc is
               the descending-sorted array of dive points used as the
               World Aquatics tie-break key when two teams share a raw total.
@@ -188,42 +174,41 @@ module.exports = function createScoreboardRouter({
         // History: each row is a fully-judged dive with its
         // official dive points.
         pool.query(
-          `SELECT s.competitor_id, u.full_name, o.country_code, cl.name AS club_name,
-                  pu.id AS partner_id, pu.full_name AS partner_name, pl.country_code AS partner_country,
-                  t.id AS team_id, t.name AS team_name,
-                  d.dive_code, d.position, d.description, d.dd, s.round_number,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score ORDER BY ej.judge_number),
-                    e.number_of_judges, d.dd, e.event_type,
-                  BOOL_OR(cdl.partner_id IS NOT NULL)
-    ) AS total_dive_score,
-                  STRING_AGG(s.score::text, ',' ORDER BY ej.judge_number) AS judge_array,
-                  /* Parallel array — same ordering as judge_array,
-                     so consumers can zip score chip i with
-                     judge_numbers[i] then look up identity from
-                     the top-level panel array. Robust to panels
-                     with sparse judge_number sequences. */
-                  JSON_AGG(ej.judge_number ORDER BY ej.judge_number) AS judge_numbers
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           JOIN users u ON s.competitor_id = u.id
-           JOIN organisations o ON u.org_id = o.id
-           LEFT JOIN clubs cl ON cl.id = u.club_id
-           LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-           LEFT JOIN competitor_dive_lists cdl
-             ON s.competitor_id = cdl.competitor_id
-            AND s.event_id = cdl.event_id
-            AND s.round_number = cdl.round_number
-           LEFT JOIN dive_directory d ON COALESCE(s.dive_id, cdl.dive_id) = d.id
-           LEFT JOIN users pu ON pu.id = cdl.partner_id
-           LEFT JOIN organisations pl ON pl.id = pu.org_id
-           LEFT JOIN teams t ON t.id = cdl.team_id
-           WHERE s.event_id = $1
-           GROUP BY s.competitor_id, u.full_name, o.country_code, cl.name,
-                    pu.id, pu.full_name, pl.country_code, t.id, t.name,
-                    d.dive_code, d.position, d.description, d.dd,
-                    s.round_number, e.number_of_judges, e.event_type
+          // Dive-by-dive scope: d.dd is a grouping column, so it
+          // feeds the UDF directly (no MAX() wrapper).
+          `${perDiveSelect({
+            select: [
+              "s.competitor_id", "u.full_name", "o.country_code", "cl.name AS club_name",
+              "pu.id AS partner_id", "pu.full_name AS partner_name", "pl.country_code AS partner_country",
+              "t.id AS team_id", "t.name AS team_name",
+              "d.dive_code", "d.position", "d.description", "d.dd", "s.round_number",
+            ],
+            dd:          "d.dd",
+            pointsAlias: "total_dive_score",
+            selectExtra: [
+              "STRING_AGG(s.score::text, ',' ORDER BY ej.judge_number) AS judge_array",
+              `/* Parallel array — same ordering as judge_array,
+                  so consumers can zip score chip i with
+                  judge_numbers[i] then look up identity from
+                  the top-level panel array. Robust to panels
+                  with sparse judge_number sequences. */
+               JSON_AGG(ej.judge_number ORDER BY ej.judge_number) AS judge_numbers`,
+            ],
+            extraJoins: [
+              "JOIN users u ON s.competitor_id = u.id",
+              "JOIN organisations o ON u.org_id = o.id",
+              "LEFT JOIN clubs cl ON cl.id = u.club_id",
+              "LEFT JOIN users pu ON pu.id = cdl.partner_id",
+              "LEFT JOIN organisations pl ON pl.id = pu.org_id",
+              "LEFT JOIN teams t ON t.id = cdl.team_id",
+            ],
+            groupBy: [
+              "s.competitor_id", "u.full_name", "o.country_code", "cl.name",
+              "pu.id", "pu.full_name", "pl.country_code", "t.id", "t.name",
+              "d.dive_code", "d.position", "d.description", "d.dd",
+              "s.round_number",
+            ],
+          })}
            ORDER BY MAX(s.created_at) DESC LIMIT 10`,
           [req.params.eventId],
         ),
@@ -346,29 +331,35 @@ module.exports = function createScoreboardRouter({
   // cumulative totals and the movement (change in rank) since the
   // previous round. Used by the scoreboard to render ↑/↓ arrows
   // next to the standings.
+  //
+  // Cached under the same per-event bucket as the main scoreboard
+  // payload (lib/scoreboard-cache.js, derived key "leaderboard") —
+  // the query below re-materialises every dive's trim UDF, so the
+  // post-score viewer stampede the cache header comment describes
+  // hits this endpoint just as hard as the sibling. The existing
+  // invalidation hooks (socket submit_score, HTTP score
+  // correction) call invalidate(eventId), which clears derived
+  // keys too — no new hook needed.
   router.get("/api/scoreboard/:eventId/leaderboard", maybeAuth, async (req, res) => {
+    const eventId = req.params.eventId;
     try {
-      if (!(await ensureScoreboardVisible(req, res, req.params.eventId))) return;
+      if (!(await ensureScoreboardVisible(req, res, eventId))) return;
+      // ?cache=skip forces a rebuild — same escape hatch as the
+      // main scoreboard endpoint above.
+      if (scoreboardCache?.getDerived && req.query.cache !== "skip") {
+        const hit = scoreboardCache.getDerived(eventId, "leaderboard");
+        if (hit) {
+          metrics?.scoreboardCacheHits.inc();
+          res.set("X-Scoreboard-Cache", "hit");
+          return res.json(hit);
+        }
+      }
+      metrics?.scoreboardCacheMisses.inc();
       const r = await pool.query(
-        `WITH dive_totals AS (
-           SELECT s.competitor_id, s.round_number,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score ORDER BY ej.judge_number),
-                    e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-  ) AS round_total
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-           LEFT JOIN competitor_dive_lists cdl
-             ON cdl.event_id = s.event_id
-            AND cdl.competitor_id = s.competitor_id
-            AND cdl.round_number = s.round_number
-           LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-           WHERE s.event_id = $1
-           GROUP BY s.competitor_id, s.round_number, e.number_of_judges, e.event_type
-         ),
+        `WITH ${perDivePointsCte({
+           name:        "dive_totals",
+           pointsAlias: "round_total",
+         })},
          /* SUPER FINAL CARRY: when this event has score_carry_from
             set, prepend each diver's carried total as round 0 so
             the cumulative SUM OVER (ORDER BY round_number) picks
@@ -379,31 +370,22 @@ module.exports = function createScoreboardRouter({
             losers don't appear in the SF's leaderboard.
             For non-super-final events (score_carry_from NULL) the
             CTE is empty and behaviour is unchanged. */
-         carry_rounds AS (
-           SELECT s.competitor_id, 0 AS round_number,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score ORDER BY ej.judge_number),
-                    e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-                  ) AS round_total
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-           LEFT JOIN competitor_dive_lists cdl
-             ON cdl.event_id = s.event_id
-            AND cdl.competitor_id = s.competitor_id
-            AND cdl.round_number = s.round_number
-           LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-           WHERE s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)
+         ${perDivePointsCte({
+           name:        "carry_rounds",
+           // round 0 is the synthetic carry row; grouping stays
+           // per-(competitor, source round) so the UDF runs once
+           // per carried dive.
+           select:      ["s.competitor_id", "0 AS round_number"],
+           groupBy:     ["s.competitor_id", "s.round_number"],
+           pointsAlias: "round_total",
+           where: `s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)
              AND s.competitor_id IN (
                SELECT competitor_id FROM competitor_dive_lists
                 WHERE event_id = $1
                   AND withdrawn_at IS NULL
                   AND is_reserve = FALSE
-             )
-           GROUP BY s.competitor_id, s.round_number, e.number_of_judges, e.event_type
-         ),
+             )`,
+         })},
          carry_totals AS (
            SELECT competitor_id, 0 AS round_number,
                   SUM(round_total) AS round_total
@@ -493,7 +475,12 @@ module.exports = function createScoreboardRouter({
         .sort((a, b) => a - b)
         .map((n) => ({ round_number: n, rankings: byRound[n] }));
 
-      res.json({ rounds });
+      const payload = { rounds };
+      if (scoreboardCache?.setDerived) {
+        scoreboardCache.setDerived(eventId, "leaderboard", payload);
+      }
+      res.set("X-Scoreboard-Cache", "miss");
+      res.json(payload);
     } catch (err) {
       console.error("[Leaderboard Error]", err.message);
       res.status(500).json({ rounds: [] });

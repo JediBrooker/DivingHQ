@@ -25,6 +25,7 @@
 
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../../lib/audit");
+const { perDivePointsCte } = require("../../lib/scoring-sql");
 
 module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
   if (!pool || !requireEventManager) {
@@ -175,25 +176,14 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
         if (!confirm_tied) {
           // Compute current totals.
           const tot = await client.query(
-            `WITH per_dive AS (
-               SELECT s.competitor_id,
-                      calc_event_dive_points(
-                        array_agg(ej.judge_number ORDER BY ej.judge_number),
-                        array_agg(s.score ORDER BY ej.judge_number),
-                        e.number_of_judges, MAX(d.dd), e.event_type,
-                        BOOL_OR(cdl.partner_id IS NOT NULL)
-                      ) AS dive_points
-               FROM scores s
-               JOIN events e ON e.id = s.event_id
-               LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-               LEFT JOIN competitor_dive_lists cdl
-                 ON cdl.event_id = s.event_id
-                AND cdl.competitor_id = s.competitor_id
-                AND cdl.round_number = s.round_number
-               LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-               WHERE s.event_id = $1 AND s.competitor_id = ANY($2::uuid[])
-               GROUP BY s.competitor_id, s.round_number, e.number_of_judges, e.event_type
-             )
+            `WITH ${perDivePointsCte({
+               // Grouping stays per-(competitor, round) — one UDF
+               // call per dive — though only competitor_id is
+               // projected.
+               select:  ["s.competitor_id"],
+               groupBy: ["s.competitor_id", "s.round_number"],
+               where:   "s.event_id = $1 AND s.competitor_id = ANY($2::uuid[])",
+             })}
              SELECT competitor_id, COALESCE(SUM(dive_points), 0) AS total
                FROM per_dive
               GROUP BY competitor_id`,

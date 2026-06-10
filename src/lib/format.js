@@ -84,3 +84,27 @@ export function fmtCloses(input) {
   }
   return `entries close ${d.toLocaleString(undefined, { month: 'short', day: 'numeric' })}`
 }
+
+/**
+ * English ordinal for a 1-based rank: 1 → "1st", 2 → "2nd",
+ * 11 → "11th", 21 → "21st". Returns '' for null/undefined.
+ */
+export function ordinal(n) {
+  if (n == null) return ''
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}
+
+/**
+ * Podium CSS class for a ZERO-based standings index: 0 → 'gold',
+ * 1 → 'silver', 2 → 'bronze', '' otherwise. (placeColor in
+ * profile-helpers.js is the 1-based variant with 'place-*'
+ * class names.)
+ */
+export function rankClass(i) {
+  if (i === 0) return 'gold'
+  if (i === 1) return 'silver'
+  if (i === 2) return 'bronze'
+  return ''
+}

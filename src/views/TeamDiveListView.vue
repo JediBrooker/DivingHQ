@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { diveDescription } from '@/composables/useDiveLabel'
+import { useDiveSearch } from '@/composables/useDiveSearch'
 
 const route = useRoute()
 const router = useRouter()
@@ -61,16 +62,10 @@ const closedReason = computed(() => {
   return ''
 })
 
-const filteredDives = computed(() => {
-  const term = diveSearch.value.trim().toLowerCase()
-  return directory.value.filter(d => {
-    if (eventHeight.value !== null && parseFloat(d.height) !== eventHeight.value) return false
-    if (!term) return true
-    return (
-      (d.dive_code + d.position).toLowerCase().includes(term) ||
-      (d.description || '').toLowerCase().includes(term)
-    )
-  }).slice(0, 30)
+const filteredDives = useDiveSearch(directory, {
+  term: diveSearch,
+  height: eventHeight,
+  limit: 30,
 })
 
 // One row per round. Each row holds: type, divers, dive.

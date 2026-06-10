@@ -36,6 +36,11 @@
 //     dive directory + roster + panel + schedule before the
 //     user lands on any view that consumes them.
 
+// Explicit .js extension — this module is also loaded by the
+// node:test suite, where extensionless ESM specifiers don't
+// resolve.
+import { fingerprintFromToken } from './userFingerprint.js'
+
 const DB_NAME = 'dive-recorder-cache'
 const STORE   = 'api'
 const VERSION = 1
@@ -107,23 +112,8 @@ export async function idbClear() {
   })
 }
 
-// Cheap, deterministic per-user prefix derived from the JWT. We
-// don't need a cryptographic mapping — we just need a stable
-// fingerprint that changes on logout/login. Slicing the JWT's
-// payload segment (the middle dot-separated chunk) gives us that
-// without pulling in a crypto dependency. Returns 'anon' when no
-// token is present.
-function userFingerprint(token) {
-  if (!token) return 'anon'
-  const parts = String(token).split('.')
-  if (parts.length < 2) return 'anon'
-  // 24 chars of the payload is more than enough for collision
-  // resistance across realistic numbers of users on one device.
-  return parts[1].slice(0, 24)
-}
-
 function keyFor(token, url) {
-  return `${userFingerprint(token)}:${url}`
+  return `${fingerprintFromToken(token)}:${url}`
 }
 
 // Pure helper: is a cached entry past its hard TTL?

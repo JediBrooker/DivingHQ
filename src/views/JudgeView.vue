@@ -4,6 +4,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
+import { useSocketEvent } from '@/composables/useSocketEvent'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { showInfo } from '@/composables/useNotify'
 import OfflineBanner from '@/components/OfflineBanner.vue'
@@ -261,7 +262,11 @@ function joinEventRoom() {
   socket.emit('get_meet_hold',    { event_id: evId })
 }
 
-socket.on('connect', () => {
+// All socket listeners go through useSocketEvent — the pooled
+// socket outlives this view, so bare socket.on registrations
+// would stack a duplicate panel/keypad handler every time the
+// judge navigates back here.
+useSocketEvent(socket, 'connect', () => {
   if (OUTBOX_ENABLED) {
     // Drain any entries queued while offline (this session or a
     // prior session that closed before the drain completed).
@@ -297,18 +302,18 @@ onBeforeUnmount(() => {
 // judges shouldn't accidentally submit during a video review.
 const isHeld = ref(false)
 const holdReason = ref('')
-socket.on('meet_held', (data) => {
+useSocketEvent(socket, 'meet_held', (data) => {
   if (activeDiver.value && data.event_id !== activeDiver.value.event_id) return
   isHeld.value = true
   holdReason.value = data.reason || ''
 })
-socket.on('meet_resumed', (data) => {
+useSocketEvent(socket, 'meet_resumed', (data) => {
   if (activeDiver.value && data.event_id !== activeDiver.value.event_id) return
   isHeld.value = false
   holdReason.value = ''
 })
 
-socket.on('state_update', async (data) => {
+useSocketEvent(socket, 'state_update', async (data) => {
   activeDiver.value = data
   resetScore()
   // New diver / round → previous panel + referee signal are
@@ -320,15 +325,12 @@ socket.on('state_update', async (data) => {
 
   if (data.event_id) {
     try {
-      const res = await fetch(`/api/events/${data.event_id}/my-judge-number`, {
-        headers: { Authorization: `Bearer ${auth.token}` },
-      })
-      if (res.ok) {
-        const { judge_number } = await res.json()
-        judgeNumber.value = judge_number
-        activeDiver.value = { ...activeDiver.value, judge_number }
-        judgeLabel.value = `${user?.full_name} — J${judge_number}`
-      }
+      // auth.apiFetch rather than a raw fetch — same headers, plus
+      // the store's expired-session (401 → /login) handling.
+      const { judge_number } = await auth.apiFetch(`/api/events/${data.event_id}/my-judge-number`)
+      judgeNumber.value = judge_number
+      activeDiver.value = { ...activeDiver.value, judge_number }
+      judgeLabel.value = `${user?.full_name} — J${judge_number}`
     } catch { /* show name only */ }
   }
 })
@@ -338,7 +340,7 @@ socket.on('state_update', async (data) => {
 // banner surfaces telling THIS judge that someone else needs
 // the referee. Resets to false when a judge clears their flag
 // (or auto-clears when they submit a fresh score, server-side).
-socket.on('judge_signal', (data) => {
+useSocketEvent(socket, 'judge_signal', (data) => {
   if (!activeDiver.value) return
   if (data.event_id      !== activeDiver.value.event_id)      return
   if (data.competitor_id !== activeDiver.value.competitor_id) return
@@ -354,7 +356,7 @@ socket.on('judge_signal', (data) => {
 // The judge sees the panel build up in real time — their own
 // score lights up first when they hit Submit, then the rest
 // trickle in as the other panel members lock theirs in.
-socket.on('score_received', (data) => {
+useSocketEvent(socket, 'score_received', (data) => {
   if (!activeDiver.value) return
   if (data.event_id      !== activeDiver.value.event_id)      return
   if (data.competitor_id !== activeDiver.value.competitor_id) return

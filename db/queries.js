@@ -13,6 +13,8 @@
 // outer queries that compose multiple CTEs need to control the
 // numbering. See server.js' /api/divers/:id/analytics for usage.
 
+const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
+
 // =====================================================================
 // PER_DIVE — one row per dive the diver performed.
 //
@@ -28,33 +30,24 @@
 //   $2 = from_date (date or null)
 //   $3 = to_date   (date or null)
 // =====================================================================
-const PER_DIVE = `
-  SELECT s.event_id, s.competitor_id, s.round_number,
-         d.dive_code, d.position, d.height, d.dd, d.description,
-         e.event_type::text AS event_type, e.created_at,
-         calc_event_dive_points(
-           array_agg(ej.judge_number ORDER BY ej.judge_number),
-           array_agg(s.score        ORDER BY ej.judge_number),
-           e.number_of_judges, MAX(d.dd), e.event_type,
-           BOOL_OR(cdl.partner_id IS NOT NULL)
-         ) AS dive_total,
-         AVG(s.score) AS avg_judge_score
-  FROM scores s
-  JOIN events e ON e.id = s.event_id
-  LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-  LEFT JOIN competitor_dive_lists cdl
-    ON cdl.event_id = s.event_id
-   AND cdl.competitor_id = s.competitor_id
-   AND cdl.round_number = s.round_number
-  LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-  WHERE s.competitor_id = $1
+const PER_DIVE = perDiveSelect({
+  select: [
+    "s.event_id", "s.competitor_id", "s.round_number",
+    "d.dive_code", "d.position", "d.height", "d.dd", "d.description",
+    "e.event_type::text AS event_type", "e.created_at",
+  ],
+  pointsAlias: "dive_total",
+  selectExtra: ["AVG(s.score) AS avg_judge_score"],
+  where: `s.competitor_id = $1
     AND COALESCE(e.is_rehearsal, FALSE) = FALSE
     AND ($2::date IS NULL OR e.created_at >= $2::date)
-    AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')
-  GROUP BY s.event_id, s.competitor_id, s.round_number,
-           d.dive_code, d.position, d.height, d.dd, d.description,
-           e.number_of_judges, e.event_type, e.created_at
-`;
+    AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')`,
+  groupBy: [
+    "s.event_id", "s.competitor_id", "s.round_number",
+    "d.dive_code", "d.position", "d.height", "d.dd", "d.description",
+  ],
+  groupByExtra: ["e.created_at"],
+});
 
 // =====================================================================
 // FULL_FIELD_RANKING — for queries that need the diver's RANK against
@@ -99,26 +92,11 @@ const FULL_FIELD_RANKING = `
       AND ($2::date IS NULL OR e.created_at >= $2::date)
       AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')
   ),
-  all_per_dive AS (
-    SELECT s.event_id, s.competitor_id, s.round_number,
-           calc_event_dive_points(
-             array_agg(ej.judge_number ORDER BY ej.judge_number),
-             array_agg(s.score        ORDER BY ej.judge_number),
-             e.number_of_judges, MAX(d.dd), e.event_type,
-             BOOL_OR(cdl.partner_id IS NOT NULL)
-           ) AS dive_points
-    FROM scores s
-    JOIN events e ON e.id = s.event_id
-    LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-    LEFT JOIN competitor_dive_lists cdl
-      ON cdl.event_id = s.event_id
-     AND cdl.competitor_id = s.competitor_id
-     AND cdl.round_number = s.round_number
-    LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-    WHERE s.event_id IN (SELECT event_id FROM diver_events)
-    GROUP BY s.event_id, s.competitor_id, s.round_number,
-             e.number_of_judges, e.event_type
-  ),
+  ${perDivePointsCte({
+    name:   "all_per_dive",
+    select: ["s.event_id", "s.competitor_id", "s.round_number"],
+    where:  "s.event_id IN (SELECT event_id FROM diver_events)",
+  })},
   event_totals AS (
     SELECT event_id, competitor_id,
            SUM(dive_points) AS total,

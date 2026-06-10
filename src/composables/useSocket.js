@@ -26,7 +26,10 @@ function acquire({ spectator, token }) {
   let entry = pool.get(key)
   if (!entry) {
     const socket = io({ auth: { token: spectator ? 'spectator' : (token || 'spectator') } })
-    const isConnected = ref(true)
+    // Initialise from the socket's real state — io() connects
+    // asynchronously, so a hardcoded `true` would report
+    // "connected" before the first connect event ever fires.
+    const isConnected = ref(socket.connected)
     socket.on('connect',       () => { isConnected.value = true })
     socket.on('disconnect',    () => { isConnected.value = false })
     socket.on('connect_error', () => { isConnected.value = false })
@@ -45,6 +48,25 @@ function release(key) {
   if (entry.refs <= 0) {
     try { entry.socket.disconnect() } catch { /* ignore */ }
     pool.delete(key)
+  }
+}
+
+// Manual lease on a pooled socket, for consumers whose socket
+// lifetime is tied to something other than a component unmount —
+// NotificationCenter swaps sockets whenever the auth identity
+// changes mid-session (login/logout navigate without a reload).
+// Returns the pooled socket plus an idempotent release().
+export function acquireSocket({ spectator = false, token = null } = {}) {
+  const key = poolKey({ spectator, token })
+  const entry = acquire({ spectator, token })
+  let released = false
+  return {
+    socket: entry.socket,
+    release() {
+      if (released) return
+      released = true
+      release(key)
+    },
   }
 }
 

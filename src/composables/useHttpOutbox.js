@@ -22,36 +22,27 @@
 // Callers don't need a separate "is the feature on" check at
 // every call site.
 
-import { createOutbox, createIdbBackend } from '@/lib/outbox'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from './useSocket'
+import { getOutbox } from './useOutbox'
 
 const OUTBOX_ENABLED = import.meta.env.VITE_OFFLINE_OUTBOX_ENABLED === '1'
 
-// Per-user fingerprint helper. Same scheme as idbCache (first 24
-// chars of the JWT payload segment). Kept inline so the composable
-// doesn't depend on yet another helper module.
-function fingerprintFromToken(token) {
-  if (!token) return 'anon'
-  const parts = String(token).split('.')
-  if (parts.length < 2) return 'anon'
-  return parts[1].slice(0, 24)
-}
-
-// Singleton across all useHttpOutbox callers. Multiple components
-// asking for queueAction share the same outbox instance + drain
-// lock; the IDB-side keyspace is already user-fingerprint-scoped.
-let outbox = null
+// The outbox instance is shared with useOutbox (getOutbox) — both
+// composables sit over the same IndexedDB store, and a separate
+// instance here would emit 'change' on an object no UI counts
+// watch. Multiple components asking for queueAction share the
+// same instance + drain lock; the IDB-side keyspace is already
+// user-fingerprint-scoped.
 let drainScheduled = false
 
-function ensureOutbox(auth) {
-  if (outbox) return outbox
-  outbox = createOutbox({
-    backend: createIdbBackend(),
-    userFingerprint: fingerprintFromToken(auth.token),
-  })
-  return outbox
-}
+// Sockets that already carry the connect→drain hook. Registering
+// inside useHttpOutbox() unconditionally would stack one
+// listener per component mount, never removed (the pooled socket
+// outlives the views). WeakSet so a released pooled socket
+// doesn't pin memory; a re-acquired pool entry is a new socket
+// object and gets its own hook.
+const drainHookSockets = new WeakSet()
 
 // fetch() wrapper used as the outbox's send callback for HTTP
 // entries. Walks the payload's method/url/body, injects auth +
@@ -114,6 +105,7 @@ async function httpSend(auth, entry) {
 // Schedule a drain on the next tick. Coalesces multiple
 // queueAction calls in a single sync block into one drain pass.
 function scheduleDrain(auth) {
+  const outbox = getOutbox()
   if (drainScheduled || !outbox) return
   drainScheduled = true
   Promise.resolve().then(async () => {
@@ -138,7 +130,8 @@ export function useHttpOutbox() {
   // separate window.online listener and avoids the false-positive
   // case where the browser thinks it's online but the server is
   // unreachable.
-  if (OUTBOX_ENABLED) {
+  if (OUTBOX_ENABLED && !drainHookSockets.has(socket)) {
+    drainHookSockets.add(socket)
     socket.on('connect', () => scheduleDrain(auth))
   }
 
@@ -176,17 +169,17 @@ export function useHttpOutbox() {
       return null
     }
 
-    const ob = ensureOutbox(auth)
+    const ob = getOutbox()
     const key = await ob.push(actionType, { method, url, body })
     scheduleDrain(auth)
     return key
   }
 
-  return { queueAction, outbox: OUTBOX_ENABLED ? ensureOutbox(auth) : null }
+  return { queueAction, outbox: getOutbox() }
 }
 
-// Test-only escape hatch.
+// Test-only escape hatch. The shared instance itself is reset via
+// useOutbox's _resetOutboxForTests.
 export function _resetHttpOutboxForTests() {
-  outbox = null
   drainScheduled = false
 }

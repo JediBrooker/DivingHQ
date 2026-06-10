@@ -24,6 +24,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
+import { useDiveSearch } from '@/composables/useDiveSearch'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { confirmAction } from '@/composables/useConfirm'
 import EmptyState from '@/components/EmptyState.vue'
@@ -68,13 +69,11 @@ async function load() {
 
 // Filter the dive directory to entries valid at the event's
 // height. Server enforces this too; the dropdown just stops the
-// coach from picking something that'll fail.
-const validDives = computed(() => {
-  const h = event.value?.height ? Number(event.value.height) : null
-  return diveDirectory.value
-    .filter(d => !h || Number(d.height) === h)
-    .sort((a, b) => a.dive_code.localeCompare(b.dive_code) ||
-                    (a.position || '').localeCompare(b.position || ''))
+// coach from picking something that'll fail. No `term` — this is
+// the deliberately-flat dropdown, not the search picker.
+const validDives = useDiveSearch(diveDirectory, {
+  height: computed(() => event.value?.height ? Number(event.value.height) : null),
+  sort: true,
 })
 
 // Per-event, the operator can pin a specific dive (or just a

@@ -332,6 +332,15 @@ module.exports = function createSessionsRouter({
     const boardByHeight = new Map();
     for (const b of boardsRes.rows) boardByHeight.set(b.height, b.id);
 
+    // One multi-row INSERT for the whole seed (2 rows per event:
+    // warmup then event_start, same order the per-row loop used).
+    // The UNNEST arrays stay aligned by index. board_ids is uuid[]
+    // per row but the seed only ever pins zero-or-one board, so a
+    // scalar board_id column is re-wrapped to the array form in SQL.
+    const blockRows = {
+      session_ids: [], block_types: [], labels: [],
+      starts: [], ends: [], board_ids: [], event_ids: [],
+    };
     for (const ev of eventsRes.rows) {
       const sessionId = dayBuckets.get(ev.scheduled_at.toISOString().slice(0, 10));
       const startsAt = new Date(ev.scheduled_at);
@@ -340,22 +349,31 @@ module.exports = function createSessionsRouter({
           estimateEventDurationMs(ev.total_rounds, ev.competitor_count),
       );
       const warmupStarts = new Date(startsAt.getTime() - WARMUP_MINUTES * 60 * 1000);
-      const boardId = ev.board_id || (ev.height ? boardByHeight.get(ev.height) : null);
-      const boardArray = boardId ? [boardId] : [];
+      const boardId = ev.board_id || (ev.height ? boardByHeight.get(ev.height) : null) || null;
 
-      await client.query(
-        `INSERT INTO schedule_blocks
-           (session_id, block_type, label, starts_at, ends_at, board_ids, event_id)
-         VALUES ($1, 'warmup', $2, $3, $4, $5::uuid[], NULL)`,
-        [sessionId, `Warmup — ${ev.name}`, warmupStarts, startsAt, boardArray],
-      );
-      await client.query(
-        `INSERT INTO schedule_blocks
-           (session_id, block_type, label, starts_at, ends_at, board_ids, event_id)
-         VALUES ($1, 'event_start', $2, $3, $4, $5::uuid[], $6)`,
-        [sessionId, ev.name, startsAt, endsAt, boardArray, ev.id],
-      );
+      blockRows.session_ids.push(sessionId, sessionId);
+      blockRows.block_types.push("warmup", "event_start");
+      blockRows.labels.push(`Warmup — ${ev.name}`, ev.name);
+      blockRows.starts.push(warmupStarts, startsAt);
+      blockRows.ends.push(startsAt, endsAt);
+      blockRows.board_ids.push(boardId, boardId);
+      blockRows.event_ids.push(null, ev.id);
     }
+    await client.query(
+      `INSERT INTO schedule_blocks
+         (session_id, block_type, label, starts_at, ends_at, board_ids, event_id)
+       SELECT t.session_id, t.block_type::schedule_block_type, t.label,
+              t.starts_at, t.ends_at,
+              CASE WHEN t.board_id IS NULL THEN '{}'::uuid[] ELSE ARRAY[t.board_id] END,
+              t.event_id
+       FROM UNNEST($1::uuid[], $2::text[], $3::text[], $4::timestamptz[],
+                   $5::timestamptz[], $6::uuid[], $7::uuid[])
+         AS t(session_id, block_type, label, starts_at, ends_at, board_id, event_id)`,
+      [
+        blockRows.session_ids, blockRows.block_types, blockRows.labels,
+        blockRows.starts, blockRows.ends, blockRows.board_ids, blockRows.event_ids,
+      ],
+    );
   }
 
   // -------------------------------------------------------------
@@ -1451,19 +1469,24 @@ module.exports = function createSessionsRouter({
     if (Number.isNaN(at.getTime())) {
       return res.status(400).json({ error: "`at` is not a valid timestamp" });
     }
-    // Round the cache key to the nearest minute so two rapid opens
-    // from the same panel-row collapse onto one cached plan even if
-    // the client used Date.now() to fill `at`.
-    const minuteKey = Math.floor(at.getTime() / 60000) * 60000;
-    const cacheKey = `${meetId}:${minuteKey}`;
-    const cached = availabilityCache.get(cacheKey);
-    if (cached && Date.now() - cached.at <= AVAILABILITY_TTL_MS) {
-      return res.json({ judges: cached.value, cached: true });
-    }
-
     try {
+      // Ownership gate BEFORE the cache lookup — within the 5s TTL
+      // a cached entry must not be served to a caller who merely
+      // shares the cache key but can't edit the meet (would leak
+      // another org's judge availability). Mirrors the ordering in
+      // GET /api/meets/:meetId/conflicts.
       const meet = await requireMeetEdit(pool, req, res, meetId);
       if (!meet) return;
+
+      // Round the cache key to the nearest minute so two rapid opens
+      // from the same panel-row collapse onto one cached plan even if
+      // the client used Date.now() to fill `at`.
+      const minuteKey = Math.floor(at.getTime() / 60000) * 60000;
+      const cacheKey = `${meetId}:${minuteKey}`;
+      const cached = availabilityCache.get(cacheKey);
+      if (cached && Date.now() - cached.at <= AVAILABILITY_TTL_MS) {
+        return res.json({ judges: cached.value, cached: true });
+      }
 
       // For each judge currently on any event panel in this meet,
       // find whether they're seated for an event whose schedule

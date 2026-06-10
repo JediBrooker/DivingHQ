@@ -157,7 +157,7 @@ function fetchJson(method, path, { body, token } = {}) {
 // to populate the analytics queries; the endpoints under test are
 // the read paths.
 // =====================================================================
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 
 async function insertUser({ orgId, username, fullName, role }) {
   const hash = await bcrypt.hash("not-used-here", 4); // cost 4 — fixture only

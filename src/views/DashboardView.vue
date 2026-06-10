@@ -893,6 +893,7 @@ onMounted(async () => {
 onUnmounted(() => {
   stopPulsePolling()
   stopTicker()
+  detachSocketHandlers()
 })
 
 // ---- Live polling ------------------------------------------
@@ -985,31 +986,41 @@ const tickerActivity = computed(() => {
 // the next polling tick. The 30 s polling stays as a safety
 // net for socket-disconnected edge cases.
 const dashboardSocket = useSocket()
+
+// Named handlers + explicit off — the pooled socket outlives this
+// view, so anonymous listeners would stack one copy per dashboard
+// visit. (useSocketEvent isn't usable here: attachSocketHandlers
+// runs after an await in onMounted, outside the setup scope.)
+//
+// Generic dashboard refresh signals. Server-side emits these at
+// key moments (event flip Live → Completed, role-request
+// creation). Keeps the chip counts in sync without client-side
+// polling latency.
+function onPulseSignal() { refetchPulseData() }
+// Score events also bump recent-activity for the ticker; they
+// don't move the count chips but they keep the ticker current.
+function onScoreActivity() {
+  if (auth.hasRole('org_admin')) {
+    auth.apiFetch('/api/audit/recent?limit=10&days=7')
+      .then((rs) => { recentActivity.value = rs })
+      .catch(() => {})
+  }
+}
+
 function attachSocketHandlers() {
   if (!dashboardSocket) return
-  // Generic dashboard refresh signals. Server-side emits
-  // these at key moments (event flip Live → Completed,
-  // role-request creation). Keeps the chip counts in sync
-  // without client-side polling latency.
-  dashboardSocket.on('event_status_changed', () => { refetchPulseData() })
-  dashboardSocket.on('role_request_created', () => { refetchPulseData() })
-  // Score events also bump recent-activity for the ticker;
-  // they don't move the count chips but they keep the ticker
-  // current.
-  dashboardSocket.on('score_committed', () => {
-    if (auth.hasRole('org_admin')) {
-      auth.apiFetch('/api/audit/recent?limit=10&days=7')
-        .then((rs) => { recentActivity.value = rs })
-        .catch(() => {})
-    }
-  })
-  dashboardSocket.on('score_corrected', () => {
-    if (auth.hasRole('org_admin')) {
-      auth.apiFetch('/api/audit/recent?limit=10&days=7')
-        .then((rs) => { recentActivity.value = rs })
-        .catch(() => {})
-    }
-  })
+  dashboardSocket.on('event_status_changed', onPulseSignal)
+  dashboardSocket.on('role_request_created', onPulseSignal)
+  dashboardSocket.on('score_committed', onScoreActivity)
+  dashboardSocket.on('score_corrected', onScoreActivity)
+}
+
+function detachSocketHandlers() {
+  if (!dashboardSocket) return
+  dashboardSocket.off('event_status_changed', onPulseSignal)
+  dashboardSocket.off('role_request_created', onPulseSignal)
+  dashboardSocket.off('score_committed', onScoreActivity)
+  dashboardSocket.off('score_corrected', onScoreActivity)
 }
 </script>
 

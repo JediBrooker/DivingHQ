@@ -36,13 +36,15 @@ import { useSocket } from '@/composables/useSocket'
 import { usePush } from '@/composables/usePush'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { showSuccess, showError } from '@/composables/useNotify'
+import { ordinal } from '@/lib/format'
+import { placeColor } from '@/lib/profile-helpers'
 import EmptyState from '@/components/EmptyState.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 
 const { t } = useI18n()
 
 const auth = useAuthStore()
-const { socket } = useSocket()
+const socket = useSocket()
 const push = usePush({ socket })
 
 // Coach alert preferences — Phase 3 of the coach bundle. The
@@ -173,17 +175,9 @@ onUnmounted(() => {
 
 // ---------- Display helpers ----------
 
-function fmtRank(n) {
-  if (n == null) return ''
-  const s = ['th', 'st', 'nd', 'rd'], v = n % 100
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
-}
-function placeColor(n) {
-  if (n === 1) return 'place-gold'
-  if (n === 2) return 'place-silver'
-  if (n === 3) return 'place-bronze'
-  return ''
-}
+// ordinal + placeColor imported from the shared libs — same
+// implementations the scoreboard + profile widgets use.
+
 function fmtEta(seconds) {
   if (seconds == null || seconds < 0) return ''
   if (seconds < 60) return t('coach.dashboard.up_next_now')
@@ -395,7 +389,7 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
                 <span class="diver-card-name">{{ r.full_name }}</span>
                 <span v-if="r.country_code" class="diver-card-ctry">{{ r.country_code }}</span>
                 <span v-if="r.current_rank" :class="['diver-card-rank', placeColor(r.current_rank)]">
-                  {{ fmtRank(r.current_rank) }}<span class="dim"> / {{ r.field_size }}</span>
+                  {{ ordinal(r.current_rank) }}<span class="dim"> / {{ r.field_size }}</span>
                 </span>
               </div>
               <div v-if="r.club_name" class="diver-card-club">

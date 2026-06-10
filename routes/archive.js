@@ -16,6 +16,18 @@
 //   app.use(require('./routes/archive')({ pool }))
 
 const express = require("express");
+const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
+
+// Short-TTL cache for the two unbounded all-time aggregations
+// (/api/archive and /api/archive/clubs). Lives in
+// lib/archive-cache.js because the listing's `status` field is
+// load-bearing for the SPA's live-vs-recap layout choice — the
+// event status-flip route invalidates it on every successful
+// transition; the TTL only bounds the harmless fields
+// (current_round, last_diver_name, counts).
+const archiveCache = require("../lib/archive-cache");
+const archiveCacheGet = archiveCache.get;
+const archiveCacheSet = archiveCache.set;
 
 module.exports = function createArchiveRouter({ pool, readPool }) {
   if (!pool) throw new Error("createArchiveRouter requires { pool }");
@@ -32,9 +44,44 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   // facets the unified Scoreboard's filter strip needs:
   // competitor_count, club_count, club_ids[], plus current_round
   // + last_diver_name for Live entries.
+  //
+  // Optional pagination (additive — the default request returns
+  // the same full array the SPA consumes today):
+  //   ?limit=N    cap the result count (clamped to 1..500)
+  //   ?before=ISO cursor — only events created strictly before
+  //               this timestamp. Pass the created_at of the last
+  //               row from the previous page to fetch the next
+  //               one. (Live/Upcoming rows sort first regardless
+  //               of age, so a cursored page is most useful for
+  //               walking the Completed back-catalogue.)
   // -------------------------------------------------------------
   router.get("/api/archive", async (req, res) => {
     try {
+      // Parse the optional pagination params up front. limit is
+      // clamped (same convention as /api/judges/directory); an
+      // unparseable `before` cursor is a hard 400 — silently
+      // ignoring it would quietly return the full unpaged set.
+      const limit = req.query.limit != null
+        ? Math.min(Math.max(Number(req.query.limit) || 0, 1), 500)
+        : null;
+      let before = null;
+      if (req.query.before != null) {
+        const t = Date.parse(req.query.before);
+        if (Number.isNaN(t)) {
+          return res.status(400).json({ error: "before must be an ISO timestamp" });
+        }
+        before = new Date(t).toISOString();
+      }
+
+      // Cache only the default (un-paginated) request — that's
+      // the one every first-time scoreboard visitor fires, and
+      // skipping arbitrary cursor variants keeps the key space
+      // bounded.
+      const cacheable = limit == null && before == null;
+      if (cacheable) {
+        const hit = archiveCacheGet("archive");
+        if (hit) return res.json(hit);
+      }
       // Each event row gains a competitor count, a club count, and
       // the list of distinct club ids that participated. The list
       // is what powers the client-side "filter by club" dropdown
@@ -90,12 +137,16 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
          ) live ON e.status = 'Live'
          WHERE e.status IN ('Live', 'Upcoming', 'Completed')
            AND COALESCE(e.is_rehearsal, FALSE) = FALSE
+           AND ($1::timestamptz IS NULL OR e.created_at < $1::timestamptz)
          ORDER BY
            CASE e.status                                   -- live first, then upcoming, then completed
              WHEN 'Live' THEN 0 WHEN 'Upcoming' THEN 1 ELSE 2
            END,
-           e.created_at DESC`,
+           e.created_at DESC
+         LIMIT $2`,
+        [before, limit],
       );
+      if (cacheable) archiveCacheSet("archive", events.rows);
       res.json(events.rows);
     } catch (err) {
       console.error("[Archive Error]", err.message);
@@ -107,9 +158,24 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   // GET /api/archive/clubs — distinct clubs that have appeared
   // in any live or completed meet. Drives the club filter
   // dropdown on the unified Scoreboard.
+  //
+  // Optional ?limit=N (clamped to 1..500) caps the result count —
+  // additive, same convention as /api/archive above; the default
+  // request still returns the full set the dropdown consumes.
   // -------------------------------------------------------------
   router.get("/api/archive/clubs", async (req, res) => {
     try {
+      const limit = req.query.limit != null
+        ? Math.min(Math.max(Number(req.query.limit) || 0, 1), 500)
+        : null;
+      // Cache only the default (un-capped) request — same posture
+      // as /api/archive: arbitrary limit variants stay out of the
+      // key space.
+      const cacheable = limit == null;
+      if (cacheable) {
+        const hit = archiveCacheGet("clubs");
+        if (hit) return res.json(hit);
+      }
       const r = await reads.query(
         `SELECT DISTINCT cl.id, cl.name, cl.short_code,
                 cl.org_id, o.name AS org_name, o.country_code
@@ -120,8 +186,11 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
           AND e.status IN ('Live', 'Completed')
           AND COALESCE(e.is_rehearsal, FALSE) = FALSE
          JOIN organisations o ON o.id = cl.org_id
-         ORDER BY o.country_code ASC, cl.name ASC`,
+         ORDER BY o.country_code ASC, cl.name ASC
+         LIMIT $1`,
+        [limit],
       );
+      if (cacheable) archiveCacheSet("clubs", r.rows);
       res.json(r.rows);
     } catch (err) {
       console.error("[Archive Clubs Error]", err.message);
@@ -154,26 +223,11 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
           [req.params.eventId],
         ),
         reads.query(
-          `WITH per_dive AS (
-             SELECT s.competitor_id, cdl.team_id, s.round_number,
-                    calc_event_dive_points(
-                      array_agg(ej.judge_number ORDER BY ej.judge_number),
-                      array_agg(s.score ORDER BY ej.judge_number),
-                      e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-    ) AS dive_points
-             FROM scores s
-             JOIN events e ON e.id = s.event_id
-             LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-             LEFT JOIN competitor_dive_lists cdl
-               ON cdl.event_id = s.event_id
-              AND cdl.competitor_id = s.competitor_id
-              AND cdl.round_number = s.round_number
-             LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-             WHERE s.event_id = $1
-               AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-             GROUP BY s.competitor_id, cdl.team_id, s.round_number, e.number_of_judges, e.event_type
-           ),
+          `WITH ${perDivePointsCte({
+             select: ["s.competitor_id", "cdl.team_id", "s.round_number"],
+             where: `s.event_id = $1
+               AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
+           })},
            team_standings AS (
              SELECT t.name AS full_name,
                     NULL::char(3) AS country_code,
@@ -240,43 +294,44 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
              separate. STRING_AGG ordered by judge_number (panel
              position), not judge_id (random UUID), so the chip
              order matches the actual panel layout the audience saw. */
-          `SELECT u.id AS competitor_id, u.full_name, o.country_code, cl.name AS club_name,
-                  pu.id AS partner_id, pu.full_name AS partner_name, pl.country_code AS partner_country,
-                  t.id AS team_id, t.name AS team_name,
-                  s.round_number,
-                  d.dive_code, d.position, d.description, d.dd,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score ORDER BY ej.judge_number),
-                    e.number_of_judges, d.dd, e.event_type,
-                  BOOL_OR(cdl.partner_id IS NOT NULL)
-    ) AS total_dive_score,
-                  STRING_AGG(s.score::text, ',' ORDER BY ej.judge_number) AS judge_scores,
-                  /* Parallel array — same order as judge_scores so
+          // Dive-by-dive scope: d.dd is a grouping column, so it
+          // feeds the UDF directly (no MAX() wrapper).
+          `${perDiveSelect({
+            select: [
+              "u.id AS competitor_id", "u.full_name", "o.country_code", "cl.name AS club_name",
+              "pu.id AS partner_id", "pu.full_name AS partner_name", "pl.country_code AS partner_country",
+              "t.id AS team_id", "t.name AS team_name",
+              "s.round_number",
+              "d.dive_code", "d.position", "d.description", "d.dd",
+            ],
+            dd:          "d.dd",
+            pointsAlias: "total_dive_score",
+            selectExtra: [
+              "STRING_AGG(s.score::text, ',' ORDER BY ej.judge_number) AS judge_scores",
+              `/* Parallel array — same order as judge_scores so
                      the SPA can zip chip i with judge_numbers[i]
                      and look up identity from the top-level
                      panel array. Robust to events where the
                      panel was edited mid-meet (sparse positions). */
-                  JSON_AGG(ej.judge_number ORDER BY ej.judge_number) AS judge_numbers
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           JOIN users u ON s.competitor_id = u.id
-           JOIN organisations o ON u.org_id = o.id
-           LEFT JOIN clubs cl ON cl.id = u.club_id
-           LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-           LEFT JOIN competitor_dive_lists cdl
-             ON s.competitor_id = cdl.competitor_id AND s.event_id = cdl.event_id AND s.round_number = cdl.round_number
-           LEFT JOIN dive_directory d ON COALESCE(s.dive_id, cdl.dive_id) = d.id
-           LEFT JOIN users pu ON pu.id = cdl.partner_id
-           LEFT JOIN organisations pl ON pl.id = pu.org_id
-           LEFT JOIN teams t ON t.id = cdl.team_id
-           WHERE s.event_id = $1
-             AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-           GROUP BY u.id, u.full_name, o.country_code, cl.name,
-                    pu.id, pu.full_name, pl.country_code,
-                    t.id, t.name,
-                    s.round_number, d.dive_code, d.position, d.description, d.dd,
-                    e.number_of_judges, e.event_type
+                  JSON_AGG(ej.judge_number ORDER BY ej.judge_number) AS judge_numbers`,
+            ],
+            extraJoins: [
+              "JOIN users u ON s.competitor_id = u.id",
+              "JOIN organisations o ON u.org_id = o.id",
+              "LEFT JOIN clubs cl ON cl.id = u.club_id",
+              "LEFT JOIN users pu ON pu.id = cdl.partner_id",
+              "LEFT JOIN organisations pl ON pl.id = pu.org_id",
+              "LEFT JOIN teams t ON t.id = cdl.team_id",
+            ],
+            where: `s.event_id = $1
+             AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
+            groupBy: [
+              "u.id", "u.full_name", "o.country_code", "cl.name",
+              "pu.id", "pu.full_name", "pl.country_code",
+              "t.id", "t.name",
+              "s.round_number", "d.dive_code", "d.position", "d.description", "d.dd",
+            ],
+          })}
            ORDER BY u.full_name ASC, u.id ASC, s.round_number ASC`,
           [req.params.eventId],
         ),

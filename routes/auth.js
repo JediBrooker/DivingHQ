@@ -10,7 +10,7 @@
 // Every route here was moved verbatim — no behaviour changes.
 
 const express = require("express");
-const bcrypt  = require("bcryptjs");
+const bcrypt  = require("bcrypt");
 const jwt     = require("jsonwebtoken");
 const crypto  = require("node:crypto");
 const totp    = require("../lib/totp");
@@ -198,7 +198,26 @@ module.exports = function createAuthRouter({
       let accepted = false;
       let consumedRecovery = false;
       if (looksLikeTotp) {
-        accepted = totp.verifyToken(user.totp_secret, code);
+        // Replay guard (migration 063): the ±1-step verify window
+        // keeps a code valid for ~90s, so a just-consumed code
+        // could otherwise mint a second session. verifyTokenDelta
+        // returns the absolute time-step the code matched; the
+        // conditional UPDATE below persists it and only succeeds
+        // when it's strictly newer than the stored last-used step
+        // — a replay (or a concurrent presentation of the same
+        // code) loses the race and is rejected like any bad code.
+        const matchedStep = totp.verifyTokenDelta(user.totp_secret, code);
+        if (matchedStep != null) {
+          const consumed = await pool.query(
+            `UPDATE users
+             SET totp_last_used_step = $1
+             WHERE id = $2
+               AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)
+             RETURNING id`,
+            [matchedStep, user.id],
+          );
+          accepted = consumed.rowCount > 0;
+        }
       }
       if (!accepted) {
         const { matched, remainingHashes } = await totp.consumeRecoveryCode(
@@ -259,7 +278,7 @@ module.exports = function createAuthRouter({
   //   POST /api/auth/2fa/disable — { password, code? }. Requires
   //                                 the password (proof of access)
   //                                 + a current TOTP / recovery code.
-  //                                 Clears all three columns.
+  //                                 Clears every totp_* column.
   //
   //   GET  /api/auth/2fa/status  — { enabled: bool, recovery_codes_remaining: int|null }.
   //                                 Lets the SPA's Profile page show
@@ -299,17 +318,23 @@ module.exports = function createAuthRouter({
         });
       }
       const { base32, otpauth_url, qr_data_url } = await totp.generateSecret(user.username);
-      const { plain, hashes } = totp.generateRecoveryCodes(10);
+      // generateRecoveryCodes is async (10 bcrypt hashes ≈ 1s of
+      // CPU — hashing off the event loop keeps concurrent
+      // requests, including live scoring, unaffected).
+      const { plain, hashes } = await totp.generateRecoveryCodes(10);
       // Save the secret + provisional recovery hashes. We DON'T
       // set totp_enabled_at — until the user verifies a code via
       // /confirm, login still bypasses 2FA. This means a half-
       // finished setup (browser tab closed at the QR screen)
-      // doesn't lock the user out.
+      // doesn't lock the user out. totp_last_used_step resets
+      // with the secret — the replay guard's bookkeeping belongs
+      // to the old secret (migration 063).
       await pool.query(
         `UPDATE users
          SET totp_secret = $1,
              totp_recovery_codes = $2::jsonb,
-             totp_enabled_at = NULL
+             totp_enabled_at = NULL,
+             totp_last_used_step = NULL
          WHERE id = $3`,
         [base32, JSON.stringify(hashes), req.user.id],
       );
@@ -342,15 +367,24 @@ module.exports = function createAuthRouter({
       if (user.totp_enabled_at != null) {
         return res.status(409).json({ error: "2FA already enabled" });
       }
-      if (!totp.verifyToken(user.totp_secret, code)) {
+      const matchedStep = totp.verifyTokenDelta(user.totp_secret, code);
+      if (matchedStep == null) {
         return res.status(401).json({ error: "Code didn't verify against the new secret. Check your authenticator clock and try again." });
       }
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
+        // Record the consumed step alongside the enable stamp so
+        // the very first login can't replay the confirm code
+        // within its ~90s verify window (migration 063). GREATEST
+        // guards the (unlikely) case of an older value surviving
+        // — the step only ever moves forward.
         await client.query(
-          "UPDATE users SET totp_enabled_at = now() WHERE id = $1",
-          [req.user.id],
+          `UPDATE users
+           SET totp_enabled_at = now(),
+               totp_last_used_step = GREATEST(COALESCE(totp_last_used_step, 0), $2)
+           WHERE id = $1`,
+          [req.user.id, matchedStep],
         );
         // Bump token_version so every device this user is signed
         // in on is forced through the new 2FA flow on next request.
@@ -397,7 +431,21 @@ module.exports = function createAuthRouter({
       const looksLikeTotp = typeof code === "string" && /^\d{6}$/.test(code);
       let codeOk = false;
       if (looksLikeTotp) {
-        codeOk = totp.verifyToken(user.totp_secret, code);
+        // Same single-use guard as the login exchange (migration
+        // 063): a code that already minted a session can't be
+        // replayed to tear the second factor down.
+        const matchedStep = totp.verifyTokenDelta(user.totp_secret, code);
+        if (matchedStep != null) {
+          const consumed = await pool.query(
+            `UPDATE users
+             SET totp_last_used_step = $1
+             WHERE id = $2
+               AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)
+             RETURNING id`,
+            [matchedStep, req.user.id],
+          );
+          codeOk = consumed.rowCount > 0;
+        }
       } else {
         const { matched } = await totp.consumeRecoveryCode(
           user.totp_recovery_codes || [],
@@ -417,7 +465,8 @@ module.exports = function createAuthRouter({
           `UPDATE users
            SET totp_secret = NULL,
                totp_enabled_at = NULL,
-               totp_recovery_codes = NULL
+               totp_recovery_codes = NULL,
+               totp_last_used_step = NULL
            WHERE id = $1`,
           [req.user.id],
         );
@@ -448,7 +497,7 @@ module.exports = function createAuthRouter({
   function safeText(input, maxLen = 100) {
     if (typeof input !== "string") return null;
     // Strip all control chars (incl. CR, LF, tab, BOM) and trim.
-    const cleaned = input.replace(/[ -​-‏﻿]/g, "").trim();
+    const cleaned = input.replace(/[\x00-\x1f\x7f​-‏﻿]/g, "").trim();
     if (!cleaned) return null;
     return cleaned.slice(0, maxLen);
   }

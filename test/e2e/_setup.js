@@ -14,7 +14,7 @@
 // a per-test random slug so two parallel tests never collide.
 
 const crypto = require("node:crypto");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const { Pool } = require("pg");
 const { io } = require("socket.io-client");
 require("dotenv").config();
