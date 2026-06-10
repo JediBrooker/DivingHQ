@@ -4,15 +4,17 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
+import { useSocketEvent } from '@/composables/useSocketEvent'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
 import { idbInvalidate } from '@/lib/idbCache'
 import { DIVE_DIRECTORY_TTL_MS, SCOREBOARD_LIVE_TTL_MS } from '@/lib/cache-policy'
+import { rankClass } from '@/lib/format'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { showUndo } from '@/composables/useUndo'
 import { showSuccess, showError, showInfo } from '@/composables/useNotify'
 import { confirmAction } from '@/composables/useConfirm'
 import { useShotClock } from '@/composables/useShotClock'
-import { useBroadcastChooser } from '@/composables/useBroadcastChooser'
+import { useMeetHold } from '@/composables/useMeetHold'
 import DiverIdentity from '@/components/DiverIdentity.vue'
 import StatusPill from '@/components/StatusPill.vue'
 import JudgeRankingTable from '@/components/JudgeRankingTable.vue'
@@ -24,6 +26,13 @@ import ReadinessChecklist from '@/components/ReadinessChecklist.vue'
 import JudgePanelModal from '@/components/JudgePanelModal.vue'
 import ReflowModal from '@/components/ReflowModal.vue'
 import SponsorLogosManager from '@/components/manager/SponsorLogosManager.vue'
+import SuperFinalPanels from '@/components/control/SuperFinalPanels.vue'
+import SignoffModal from '@/components/control/SignoffModal.vue'
+import BroadcastModal from '@/components/control/BroadcastModal.vue'
+import LateEntryModal from '@/components/control/LateEntryModal.vue'
+import RandomiseDrawModal from '@/components/control/RandomiseDrawModal.vue'
+import CheckInModal from '@/components/control/CheckInModal.vue'
+import ScoreCorrectionModal from '@/components/control/ScoreCorrectionModal.vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import {
   annotatedScores,
@@ -359,104 +368,12 @@ const lbRows = ref([])
 // the button that flips this is gated on currentEvent.status.
 const judgeRankingOpen = ref(false)
 
-// Broadcast launcher state — the chooser modal's projector /
-// stream overlay choices live in @/composables/useBroadcastChooser.
-// `closeHeaderMenu` is a closure capturing `headerMenuOpen`,
-// which is declared further down the file. It's safe because the
-// callback only fires after user interaction, by which time the
-// binding is initialized.
-const {
-  broadcastChoiceOpen,
-  broadcastPickerOpen,
-  broadcastLiveEvents,
-  broadcastLiveLoading,
-  broadcastLiveError,
-  broadcastSelection,
-  broadcastOpenDisabled,
-  obsInstructionsOpen,
-  openBroadcastInNewWindow,
-  pickBroadcastAll,
-  toggleBroadcastSelection,
-  broadcastSelectAll,
-  broadcastSelectNone,
-  confirmBroadcastPicker,
-} = useBroadcastChooser({
-  closeHeaderMenu: () => { headerMenuOpen.value = false },
-})
-
-// OBS / streaming-app instructions panel — option 4 in the
-// broadcast chooser. The chroma-key overlay URL is the existing
-// `/scoreboard/<id>?overlay=1` endpoint; we surface it here as
-// an absolute URL the operator can paste straight into OBS
-// Studio's Browser Source dialog. `obsCopyState` drives the
-// transient "Copied!" feedback on the copy button.
-const obsCopyState = ref('idle') // 'idle' | 'copied' | 'failed'
-const obsOverlayUrl = computed(() => {
-  const id = currentEvent.value?.id
-  if (!id) return ''
-  // Absolute URL — when pasted into OBS it has to resolve from
-  // outside this app context, so build from window.location.
-  const origin = typeof window !== 'undefined' && window.location
-    ? window.location.origin
-    : ''
-  return `${origin}/scoreboard/${id}?overlay=1`
-})
-async function copyObsUrl() {
-  const url = obsOverlayUrl.value
-  if (!url) return
-  try {
-    await navigator.clipboard.writeText(url)
-    obsCopyState.value = 'copied'
-  } catch {
-    obsCopyState.value = 'failed'
-  }
-  setTimeout(() => { obsCopyState.value = 'idle' }, 1800)
-}
-
-// Venue hardware bridge instructions — option 5 in the
-// Broadcast chooser. The browser cannot start a process on the
-// venue laptop, so this panel turns the selected event into
-// copyable bridge commands and a direct diagnostic URL.
-const daktronicsInstructionsOpen = ref(false)
-const daktronicsCopyState = ref('') // '' | 'dry' | 'udp' | 'json' | 'snapshot' | 'failed'
-const bridgeAppUrl = computed(() => (
-  typeof window !== 'undefined' && window.location
-    ? window.location.origin
-    : ''
-))
-const venueStateUrl = computed(() => {
-  const id = currentEvent.value?.id
-  if (!id || !bridgeAppUrl.value) return ''
-  return `${bridgeAppUrl.value}/api/venue/scoreboard-state/${id}`
-})
-const bridgeBaseCommand = computed(() => {
-  const id = currentEvent.value?.id
-  if (!id || !bridgeAppUrl.value) return ''
-  return `npm run venue:daktronics -- --app-url ${bridgeAppUrl.value} --event-id ${id}`
-})
-const daktronicsDryRunCommand = computed(() => (
-  bridgeBaseCommand.value ? `${bridgeBaseCommand.value} --once` : ''
-))
-const daktronicsUdpCommand = computed(() => (
-  bridgeBaseCommand.value
-    ? `${bridgeBaseCommand.value} --transport udp --host 192.168.0.255 --broadcast --data-source 0`
-    : ''
-))
-const daktronicsJsonCommand = computed(() => (
-  bridgeBaseCommand.value
-    ? `${bridgeBaseCommand.value} --transport tcp --host 192.168.1.50 --port 21000 --format json`
-    : ''
-))
-async function copyDaktronicsText(kind, text) {
-  if (!text) return
-  try {
-    await navigator.clipboard.writeText(text)
-    daktronicsCopyState.value = kind
-  } catch {
-    daktronicsCopyState.value = 'failed'
-  }
-  setTimeout(() => { daktronicsCopyState.value = '' }, 1800)
-}
+// Broadcast launcher — the chooser modal plus the OBS / venue-
+// bridge panels live in @/components/control/BroadcastModal.vue
+// (which calls useBroadcastChooser itself). The header button
+// opens it through this template ref; the modal owns its own
+// body-scroll lock terms.
+const broadcastModal = ref(null)
 
 // Sponsor branding modal — hosts the SponsorLogosManager from
 // Phase 2 so the operator can swap a logo / fix alt text / pause
@@ -612,171 +529,45 @@ watch(activeStatus, (newStatus) => {
 
 // =============================================================
 // HOLD / RESUME — broadcast pause state to judges + scoreboard.
+// State, prompt, and the meet_held / meet_resumed listeners
+// live in @/composables/useMeetHold (registered synchronously
+// here, so they keep the auto-cleanup-on-unmount property).
+// The get_meet_hold replay request stays in onEventChange.
 // =============================================================
-const isHeld = ref(false)
-const holdReason = ref('')
-const holdPromptOpen = ref(false)
-const holdReasonInput = ref('')
-
-function openHoldPrompt() {
-  holdReasonInput.value = ''
-  holdPromptOpen.value = true
-}
-function confirmHold() {
-  if (!currentEvent.value) return
-  isHeld.value = true
-  holdReason.value = holdReasonInput.value.trim()
-  socket.emit('meet_hold', {
-    event_id: currentEvent.value.id,
-    reason: holdReason.value || null,
-  })
-  holdPromptOpen.value = false
-  // Pause the shot clock — diver can't be "on the clock" during a hold
-  if (shotClockRunning.value) stopShotClock()
-}
-function resumeMeet() {
-  if (!currentEvent.value) return
-  isHeld.value = false
-  holdReason.value = ''
-  socket.emit('meet_resume', { event_id: currentEvent.value.id })
-}
+const {
+  isHeld,
+  holdReason,
+  holdPromptOpen,
+  holdReasonInput,
+  openHoldPrompt,
+  confirmHold,
+  resumeMeet,
+} = useMeetHold({
+  socket,
+  event: () => currentEvent.value,
+  // Pause the shot clock — diver can't be "on the clock"
+  // during a hold.
+  onHold: () => { if (shotClockRunning.value) stopShotClock() },
+})
 
 // =============================================================
-// SCORE CORRECTION — manager-amend on a finalised dive.
+// SCORE CORRECTION — manager-amend on a finalised dive. The
+// modal (judge picker, live trim/points preview, outbox-queued
+// PUT) lives in @/components/control/ScoreCorrectionModal.vue;
+// it mutates the clicked history card in place on save, same
+// as the inline version. The view owns the open flag + the
+// clicked-card pointer (body-scroll lock + history click).
 // =============================================================
 const correctOpen = ref(false)
 const correctTarget = ref(null)        // historyCard the operator clicked
-const correctJudgeIdx = ref(0)
-const correctNewScore = ref('')
-const correctReason = ref('')
-const correctBusy = ref(false)
-const correctErr = ref('')
 
 function openCorrection(card) {
   correctTarget.value = card
-  correctJudgeIdx.value = 0
-  correctNewScore.value = card.scores?.[0]?.toFixed?.(1) || ''
-  correctReason.value = ''
-  correctErr.value = ''
   correctOpen.value = true
 }
 function closeCorrection() {
   correctOpen.value = false
   correctTarget.value = null
-}
-
-// Live preview for the correction modal — recomputes the trim
-// sum + dive points the moment the operator types a new score
-// so they see the impact before clicking Save.
-//
-// The trim follows the same rule the live scoring uses
-// (trimCount(numJudges)), and synchro pairs multiply by the WA
-// 0.6 factor. Returns null when the input is invalid so the
-// preview block hides cleanly until a usable score is in.
-const correctPreview = computed(() => {
-  const card = correctTarget.value
-  if (!card || !Array.isArray(card.scores) || !card.scores.length) return null
-  const newVal = parseFloat(correctNewScore.value)
-  if (Number.isNaN(newVal) || newVal < 0 || newVal > 10 || ((newVal * 2) % 1) !== 0) {
-    return null
-  }
-  const idx = correctJudgeIdx.value
-  const oldScores = card.scores.map(s => parseFloat(s))
-  if (idx < 0 || idx >= oldScores.length) return null
-  const newScores = oldScores.slice()
-  newScores[idx] = newVal
-
-  const ev = currentEvent.value
-  const numJudges = parseInt(ev?.number_of_judges) || oldScores.length
-  const k = trimCount(numJudges)
-  const factor = ev?.event_type === 'synchro_pair' ? 0.6 : 1
-  const dd = parseFloat(card.dd) || 0
-
-  function trimSum(scores) {
-    const sorted = [...scores].sort((a, b) => a - b)
-    const kept = k > 0 && sorted.length > k * 2
-      ? sorted.slice(k, sorted.length - k)
-      : sorted
-    return kept.reduce((a, b) => a + b, 0)
-  }
-
-  const oldTrim   = trimSum(oldScores)
-  const newTrim   = trimSum(newScores)
-  const oldPoints = oldTrim * dd * factor
-  const newPoints = newTrim * dd * factor
-  const delta     = newPoints - oldPoints
-
-  // Flag when the edit changes which judge gets dropped — e.g.,
-  // pulling a 9.0 down to 5.0 means a different score is now
-  // trimmed at the top end. Useful so the operator understands
-  // why the trim sum moved more than they'd expect.
-  const dropChanged = (() => {
-    if (k <= 0) return false
-    const oldSorted = [...oldScores].map((s, i) => ({ s, i }))
-      .sort((a, b) => a.s - b.s || a.i - b.i)
-    const newSorted = [...newScores].map((s, i) => ({ s, i }))
-      .sort((a, b) => a.s - b.s || a.i - b.i)
-    const oldDropped = new Set([
-      ...oldSorted.slice(0, k).map(r => r.i),
-      ...oldSorted.slice(-k).map(r => r.i),
-    ])
-    const newDropped = new Set([
-      ...newSorted.slice(0, k).map(r => r.i),
-      ...newSorted.slice(-k).map(r => r.i),
-    ])
-    if (oldDropped.size !== newDropped.size) return true
-    for (const i of oldDropped) if (!newDropped.has(i)) return true
-    return false
-  })()
-
-  return {
-    judgeIdx: idx,
-    oldScore: oldScores[idx],
-    newScore: newVal,
-    oldTrim, newTrim,
-    oldPoints, newPoints,
-    delta,
-    dropChanged,
-    dd,
-    unchanged: oldScores[idx] === newVal,
-  }
-})
-
-async function submitCorrection() {
-  correctErr.value = ''
-  const newVal = parseFloat(correctNewScore.value)
-  if (Number.isNaN(newVal) || newVal < 0 || newVal > 10 || ((newVal * 2) % 1) !== 0) {
-    correctErr.value = 'Score must be 0–10 in 0.5 increments'
-    return
-  }
-  if (!correctTarget.value?.score_ids?.[correctJudgeIdx.value]) {
-    correctErr.value = 'Score id missing — refresh and try again'
-    return
-  }
-  correctBusy.value = true
-  try {
-    // Route through the outbox so a network blip during the
-    // correction doesn't lose the operator's edit. Server-side
-    // idempotency (P4-2) makes a retry safe; the new schema
-    // columns (P4-1 + migration 054) record both clocks.
-    await queueAction({
-      method: 'PUT',
-      url: `/api/scores/${correctTarget.value.score_ids[correctJudgeIdx.value]}`,
-      body: { score: newVal, reason: correctReason.value || null },
-      actionType: 'score_correction',
-    })
-    // Optimistic local update — the audit row + broadcast will
-    // catch up when drain() succeeds.
-    correctTarget.value.scores[correctJudgeIdx.value] = newVal
-    correctTarget.value.total = correctTarget.value.scores
-      .reduce((a, b) => a + b, 0).toFixed(1)
-    closeCorrection()
-    refreshRecentAuditSoon()
-  } catch (err) {
-    correctErr.value = err.message
-  } finally {
-    correctBusy.value = false
-  }
 }
 
 // =============================================================
@@ -1085,65 +876,12 @@ function patchCurrentEvent(patch) {
 
 // =============================================================
 // RANDOM DIVE-ORDER DRAW (WA Article 4.1.6)
-//
-// The draw is a public ceremony at the Technical / Team
-// Leaders' Meeting; this modal is designed to be shown on the
-// projector front-and-centre so the room can watch.
-//
-// Three phases:
-//   * 'preview'  — shows the CURRENT order, "Start the draw"
-//                  button. Operator confirms before any
-//                  randomisation happens.
-//   * 'shuffling'— 5-second animated reel. Names cycle through
-//                  random permutations every ~140ms. Server-side
-//                  randomise fires in parallel, but the result
-//                  is held until the 5-sec floor elapses so the
-//                  audience sees the full ceremony.
-//   * 'done'     — final server-determined order. Operator
-//                  picks "Confirm" to close, or "Re-shuffle"
-//                  to run the draw again.
-//
-// The displayed list ALWAYS reflects roster.value while the
-// modal is open — during 'shuffling' we render an overlay of
-// randomly-permuted copies; on 'done' roster.value is updated
-// from the server response.
+// The ceremony modal (preview → 5-sec shuffle reel → done)
+// lives in @/components/control/RandomiseDrawModal.vue. The
+// view keeps the open flag (body-scroll lock), the queue-lock
+// guard, and applies the emitted result.
 // =============================================================
-const randomiseModalOpen   = ref(false)
-const randomiseStage       = ref('preview')   // 'preview' | 'shuffling' | 'done'
-const randomiseShufflePreview = ref([])       // overlay rows during 'shuffling'
-let randomiseShuffleTimer  = null
-
-const ANIM_MS = 5000   // user spec: 5 seconds
-const TICK_MS = 140    // 140ms per permutation → ~36 ticks across the run
-
-// Rows the modal should render — preview reads from roster,
-// shuffling reads from the cycling overlay, done reads from
-// roster again (now the post-randomise one).
-//
-// Start order is per-diver, not per-(diver, round) — every
-// round dives in the SAME order. So we dedupe roster.value
-// by competitor_id (the roster endpoint returns one row per
-// diver-round combination, and display_order is identical
-// across rounds for the same diver). Reserves are also
-// excluded — they're not in the start order until promoted.
-const randomiseDisplayRows = computed(() => {
-  if (randomiseStage.value === 'shuffling') {
-    return randomiseShufflePreview.value
-  }
-  const seen = new Set()
-  const unique = []
-  for (const r of roster.value) {
-    if (r.is_reserve || r.withdrawn_at) continue
-    if (seen.has(r.competitor_id)) continue
-    seen.add(r.competitor_id)
-    unique.push({ ...r })
-  }
-  // Sort by display_order so the rendered list reads 1..N.
-  unique.sort((a, b) =>
-    (a.display_order ?? Infinity) - (b.display_order ?? Infinity),
-  )
-  return unique
-})
+const randomiseModalOpen = ref(false)
 
 function openRandomiseDraw() {
   if (!currentEvent.value) return
@@ -1151,96 +889,20 @@ function openRandomiseDraw() {
     showInfo('The dive order is locked once the event has started.')
     return
   }
-  randomiseStage.value = 'preview'
-  randomiseShufflePreview.value = []
   randomiseModalOpen.value = true
 }
 
-function closeRandomiseModal() {
-  if (randomiseShuffleTimer) {
-    clearInterval(randomiseShuffleTimer)
-    randomiseShuffleTimer = null
-  }
-  randomiseModalOpen.value = false
-  randomiseStage.value = 'preview'
-  randomiseShufflePreview.value = []
-}
-
-// Called from the modal's "Start the draw" button (and from
-// "Re-shuffle"). Runs the 5-sec animation + parallel server
-// randomise, then settles the final order.
-async function runRandomiseDraw() {
-  const ev = currentEvent.value
-  if (!ev) return
-
-  // Start order is per-diver, applied identically across every
-  // round (Article 4.1.6). Snapshot ONE row per unique diver
-  // (excluding reserves + withdrawn) — that's the list the
-  // animation cycles. Server-side, the randomize endpoint
-  // assigns the same display_order to every round-row of a
-  // given diver, so there's no need for the animation to think
-  // in (diver, round) tuples.
-  const seen = new Set()
-  const baseRoster = []
-  for (const r of roster.value) {
-    if (r.is_reserve || r.withdrawn_at) continue
-    if (seen.has(r.competitor_id)) continue
-    seen.add(r.competitor_id)
-    baseRoster.push({ ...r })
-  }
-
-  function shuffleTick() {
-    // Fisher-Yates the diver list, then re-stamp display_order
-    // so the rendered position pills also cycle (1, 2, 3…).
-    const arr = baseRoster.map(r => ({ ...r }))
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[arr[i], arr[j]] = [arr[j], arr[i]]
-    }
-    arr.forEach((row, idx) => {
-      row.display_order = idx + 1
-      row.round_order = idx + 1
-    })
-    randomiseShufflePreview.value = arr
-  }
-
-  randomiseStage.value = 'shuffling'
-  shuffleTick()
-  randomiseShuffleTimer = setInterval(shuffleTick, TICK_MS)
-
-  try {
-    const [, fresh] = await Promise.all([
-      queueAction({
-        method: 'POST',
-        url: `/api/events/${ev.id}/dive-lists/randomize`,
-        actionType: 'dive_list_randomize',
-      }),
-      // Hold the ceremony for the full ANIM_MS even if the
-      // server returns faster — the audience needs the full
-      // animation to read the moment as a "draw".
-      new Promise((resolve) => setTimeout(resolve, ANIM_MS)).then(() =>
-        auth.apiFetch(`/api/events/${ev.id}/roster`),
-      ),
-    ])
-    roster.value = fresh
-    currentIndex.value = -1
-    currentActive.value = null
-    patchCurrentEvent({
-      dive_order_randomised_at: new Date().toISOString(),
-      dive_order_signed_off_at: null,
-      dive_order_signed_off_by: null,
-    })
-    randomiseStage.value = 'done'
-  } catch (err) {
-    showError('Randomise failed: ' + err.message)
-    randomiseStage.value = 'preview'
-  } finally {
-    if (randomiseShuffleTimer) {
-      clearInterval(randomiseShuffleTimer)
-      randomiseShuffleTimer = null
-    }
-    randomiseShufflePreview.value = []
-  }
+// Applies a completed draw: same assignments the inline
+// runRandomiseDraw used to make, in the same order.
+function onRandomised(freshRoster) {
+  roster.value = freshRoster
+  currentIndex.value = -1
+  currentActive.value = null
+  patchCurrentEvent({
+    dive_order_randomised_at: new Date().toISOString(),
+    dive_order_signed_off_at: null,
+    dive_order_signed_off_by: null,
+  })
 }
 
 // Backwards-compatible alias — the workflow button still calls
@@ -1277,225 +939,18 @@ async function confirmDiveOrder() {
   }
 }
 
-// Sign-off modal state — four tabs:
-//   'push'         send a push notification to a chosen referee's
-//                  device. Lives until the referee approves/denies
-//                  or 5 minutes elapse.
-//   'code'         Cut 3: server generates a 6-digit code, manager
-//                  reads it to the referee, referee types it on
-//                  their own /sign-off-codes page.
-//   'credential'   referee enters their own username + password
-//                  (+ TOTP) on this device. No JWT swap; the
-//                  manager's session is untouched.
-//   'manager'      manager attests on referee's behalf. Hidden +
-//                  refused server-side when the event has
-//                  enforce_referee_signoff = TRUE.
-const signoffOpen        = ref(false)
-const signoffMode        = ref('push')   // 'push' | 'code' | 'credential' | 'manager'
-const signoffReferees    = ref([])
-const signoffPickedRefId = ref('')
-const signoffWaiting     = ref(null)     // push: { request_id, expires_at, referee_name }
-const signoffCode        = ref(null)     // code: { request_id, code, expires_at, referee_name }
-const signoffError       = ref('')
-const credUsername       = ref('')
-const credPassword       = ref('')
-const credCode           = ref('')
-const credNeedsTotp      = ref(false)
+// Referee sign-off — flow + state live in
+// @/components/control/SignoffModal.vue now. The view only
+// tracks the open flag (drives the body-scroll lock + the
+// v-if mount) and applies the event-row patch the modal
+// emits on success.
+const signoffOpen = ref(false)
 
-// Whether the simple manager-attests path is allowed for the
-// current event. Server enforces too; this just hides the tab
-// when the event was created with enforce_referee_signoff = TRUE.
-const enforceSignoff = computed(() =>
-  !!currentEvent.value?.enforce_referee_signoff
-)
-// Origin string for the code-handoff hint copy. window isn't
-// available in the SSR-style template scope so we capture it via
-// a computed wrapper.
-const appOrigin = computed(() =>
-  typeof window !== 'undefined' ? window.location.origin : ''
-)
-
-async function signOffDiveOrder() {
+// Still a named function — the readiness checklist onFix and
+// the pre-meet workflow button both reference it.
+function signOffDiveOrder() {
   if (!currentEvent.value) return
   signoffOpen.value = true
-  signoffMode.value = 'push'
-  signoffError.value = ''
-  signoffWaiting.value = null
-  signoffCode.value = null
-  signoffPickedRefId.value = ''
-  credUsername.value = ''
-  credPassword.value = ''
-  credCode.value = ''
-  credNeedsTotp.value = false
-  // Pull the referee list once when the modal opens. Best-effort —
-  // if it fails the modal still works via the credential tab.
-  try {
-    signoffReferees.value = await auth.apiFetch(
-      `/api/events/${currentEvent.value.id}/referees`,
-    )
-  } catch {
-    signoffReferees.value = []
-  }
-}
-
-function closeSignoffModal() {
-  signoffOpen.value = false
-  signoffWaiting.value = null
-  signoffCode.value = null
-  signoffError.value = ''
-}
-
-async function sendSignoffPush() {
-  if (!currentEvent.value || !signoffPickedRefId.value) return
-  signoffError.value = ''
-  orderBusy.value = true
-  try {
-    const r = await auth.apiFetch(
-      `/api/events/${currentEvent.value.id}/dive-order/sign-off/request`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ referee_id: signoffPickedRefId.value }),
-      },
-    )
-    const refRow = signoffReferees.value.find(x => x.id === signoffPickedRefId.value)
-    signoffWaiting.value = {
-      request_id: r.request_id,
-      expires_at: r.expires_at,
-      referee_name: refRow?.full_name || 'the referee',
-    }
-  } catch (err) {
-    signoffError.value = err.message
-  } finally {
-    orderBusy.value = false
-  }
-}
-
-async function submitCredentialSignoff() {
-  if (!currentEvent.value) return
-  signoffError.value = ''
-  orderBusy.value = true
-  try {
-    const body = {
-      username: credUsername.value.trim(),
-      password: credPassword.value,
-    }
-    if (credNeedsTotp.value && credCode.value) body.code = credCode.value.trim()
-    await auth.apiFetch(
-      `/api/events/${currentEvent.value.id}/dive-order/sign-off/credential`,
-      { method: 'POST', body: JSON.stringify(body) },
-    )
-    // Server stamped the sign-off in the same transaction. Mirror
-    // locally so the workflow button flips green immediately.
-    patchCurrentEvent({
-      dive_order_signed_off_at: new Date().toISOString(),
-    })
-    closeSignoffModal()
-  } catch (err) {
-    // Server signals "TOTP required" by returning needs_totp:true.
-    // Surface the second-factor field rather than a vague 401.
-    const msg = err.message || ''
-    if (/totp/i.test(msg) || /code/i.test(msg)) {
-      credNeedsTotp.value = true
-      signoffError.value = credCode.value
-        ? 'Invalid TOTP code'
-        : 'TOTP code required'
-    } else {
-      signoffError.value = msg || 'Sign-off failed'
-    }
-  } finally {
-    orderBusy.value = false
-  }
-}
-
-// Listen for the response broadcast the server fires when the
-// referee taps Approve/Deny on their device, AND when they
-// type a Cut 3 handoff code on their own /sign-off-codes page
-// (server fires the same broadcast). Wired in onMounted further
-// down via socket.on('referee_signoff_response', ...).
-function onRefereeSignoffResponse(data) {
-  // Match against either the push-waiting request OR the code-
-  // waiting request — both store request_id and only one is
-  // active at a time per modal session.
-  const waitingId = signoffWaiting.value?.request_id || signoffCode.value?.request_id
-  if (!waitingId || data?.request_id !== waitingId) return
-  if (data.decision === 'approved') {
-    patchCurrentEvent({
-      dive_order_signed_off_at: new Date().toISOString(),
-      dive_order_signed_off_by: data.by_user_id,
-    })
-    closeSignoffModal()
-  } else {
-    const refereeName =
-      signoffWaiting.value?.referee_name || signoffCode.value?.referee_name || 'The referee'
-    signoffError.value = `${refereeName} declined the request.`
-    signoffWaiting.value = null
-    signoffCode.value = null
-  }
-}
-
-// Cut 3: ask the server for a 6-digit handoff code for the
-// chosen referee. Display it; the referee types it on their own
-// /sign-off-codes page on their already-signed-in device.
-async function generateSignoffCode() {
-  if (!currentEvent.value || !signoffPickedRefId.value) return
-  signoffError.value = ''
-  orderBusy.value = true
-  try {
-    const r = await auth.apiFetch(
-      `/api/events/${currentEvent.value.id}/dive-order/sign-off/code`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ referee_id: signoffPickedRefId.value }),
-      },
-    )
-    const refRow = signoffReferees.value.find(x => x.id === signoffPickedRefId.value)
-    signoffCode.value = {
-      request_id:  r.request_id,
-      code:        r.code,
-      expires_at:  r.expires_at,
-      qr_data_url: r.qr_data_url || null,
-      deep_link:   r.deep_link   || null,
-      referee_name: refRow?.full_name || 'the referee',
-    }
-  } catch (err) {
-    signoffError.value = err.message
-  } finally {
-    orderBusy.value = false
-  }
-}
-
-// Manager-attests path. Fires the simple endpoint (which the
-// server refuses if the event has enforce_referee_signoff = TRUE).
-// Hidden in the UI under the same condition; this is the
-// belt-and-braces server-trip.
-async function managerAttestSignoff() {
-  if (!currentEvent.value) return
-  if (!await confirmAction({
-    title: 'Sign off as meet manager?',
-    body:  `Use this fallback only when you've already confirmed the dive order with the referee verbally.`,
-    consequences: [
-      `Your name (${auth.user?.full_name || 'manager'}) is recorded against the event audit trail`,
-      'The referee can countersign later if your federation requires it',
-    ],
-    confirmLabel: 'Attest sign-off',
-    confirmKind:  'warn',
-  })) return
-  orderBusy.value = true
-  try {
-    const r = await auth.apiFetch(
-      `/api/events/${currentEvent.value.id}/dive-order/sign-off`,
-      { method: 'POST' },
-    )
-    patchCurrentEvent({
-      dive_order_signed_off_at: r.dive_order_signed_off_at || new Date().toISOString(),
-      dive_order_signed_off_by: r.dive_order_signed_off_by,
-    })
-    closeSignoffModal()
-  } catch (err) {
-    signoffError.value = err.message
-  } finally {
-    orderBusy.value = false
-  }
 }
 
 // Pre-flight review modal — shown when the operator clicks the
@@ -1797,42 +1252,11 @@ async function resetDiveOrderWorkflow() {
 
 // State 1 click handler. Doesn't stamp on click — opens the
 // check-in modal so the operator can mark each diver. The
-// modal's "Confirm Check-in Complete" footer button (see
-// confirmCheckInComplete below) is what stamps check_in_done_at
-// and advances the workflow to state 2.
+// modal's "Confirm Check-in Complete" footer button (now inside
+// CheckInModal) is what stamps check_in_done_at — emitted back
+// here and applied via patchCurrentEvent — advancing to state 2.
 function startCheckInStep() {
   openCheckIn()
-}
-
-async function confirmCheckInComplete() {
-  if (!currentEvent.value) return
-  // Friendly nudge if no diver has been ticked off yet — the
-  // operator can still proceed, but they're advancing on an
-  // empty list which is usually a mistake.
-  const anyMarked = (checkInRows.value || []).some(r => r.status)
-  if (!anyMarked && !confirm(
-    `No divers have been marked yet for "${currentEvent.value.name}". ` +
-    `Confirm check-in complete anyway?`
-  )) return
-  orderBusy.value = true
-  try {
-    await queueAction({
-      method: 'POST',
-      url: `/api/events/${currentEvent.value.id}/check-in/confirm`,
-      actionType: 'check_in_confirm',
-    })
-    // Optimistic check_in_done_at — the canonical value lands
-    // via the next event refresh; we set client-side now so the
-    // UI advances out of the check-in step immediately.
-    patchCurrentEvent({
-      check_in_done_at: new Date().toISOString(),
-    })
-    closeCheckIn()
-  } catch (err) {
-    showError('Failed to advance workflow: ' + err.message)
-  } finally {
-    orderBusy.value = false
-  }
 }
 
 // =========================================================
@@ -2015,210 +1439,37 @@ async function withdrawRosterRow(idx) {
 
 // =============================================================
 // LATE ENTRY — manager adds a diver from the Control Room.
-//
-// A late-arriving diver still has to compete every round of the
-// event, so the modal asks for ALL rounds at once (matching the
-// pattern in CompetitorView's submit-list flow). Each round gets
-// an autocomplete input that accepts the full code+position
-// concatenated (e.g. "5132D") — fast for an operator who knows
-// the codes by heart, and validates against the dive directory at
-// the event's height before the submit fires.
+// Form, autocompletes + once-per-session caches live in
+// @/components/control/LateEntryModal.vue (always mounted so
+// the cached dive directory / diver list survive reopen). The
+// view owns the open flag (body-scroll lock reads it) and
+// applies the fresh roster the modal emits after a save.
 // =============================================================
 const lateOpen = ref(false)
-const lateBusy = ref(false)
-const lateErr = ref('')
-const lateDivers  = ref([])          // candidate divers in the org
-const lateDiveDir = ref([])          // full dive directory (filtered to height in lateDiveOptions)
-const latePartnerId = ref('')        // synchro-pair only
-const lateTeamId    = ref('')        // team events only
-const lateTeams     = ref([])        // teams enrolled in the event
-
-// One slot per round. Each slot holds the typed input string
-// (`text`) and the resolved dive directory entry (`dive`, may be
-// null until the input matches a known code+position).
-const lateRounds = ref([])
-const lateActiveSlot = ref(-1)        // which slot's autocomplete dropdown is open
+function openLateEntry() {
+  lateOpen.value = true
+}
+function onLateEntryAdded(freshRoster) {
+  // Same post-add refresh the inline submit used to run.
+  roster.value = freshRoster
+  refreshRecentAuditSoon()
+  loadScheduleConflictsForEvent()
+}
 
 // =============================================================
 // CHECK-IN PANEL (#2 from the feature roadmap)
-// Pre-meet door pass: each unique diver in the event gets a
-// Present / Late / DNS chip. Reduces start delays and lets the
-// announcer call divers who are confirmed on the deck.
+// List, Present / Late / DNS chips, and the confirm-complete
+// step live in @/components/control/CheckInModal.vue. The view
+// owns the open flag (body-scroll lock reads it) and applies
+// the emitted check_in_done_at stamp via patchCurrentEvent.
 // =============================================================
 const checkInOpen = ref(false)
-const checkInRows = ref([])
-const checkInLoading = ref(false)
-const checkInErr = ref('')
 
-async function openCheckIn() {
+function openCheckIn() {
   if (!currentEvent.value) return
   checkInOpen.value = true
-  await refreshCheckIn()
-}
-function closeCheckIn() { checkInOpen.value = false }
-
-async function refreshCheckIn() {
-  if (!currentEvent.value) return
-  checkInLoading.value = true
-  checkInErr.value = ''
-  try {
-    checkInRows.value = await auth.apiFetch(
-      `/api/events/${currentEvent.value.id}/attendance`,
-    )
-  } catch (err) {
-    checkInErr.value = err.message
-    checkInRows.value = []
-  } finally {
-    checkInLoading.value = false
-  }
 }
 
-// Set a diver's status. Optimistic — we update the local row
-// then fire the PUT; on failure we revert and surface the error.
-async function setAttendance(row, status) {
-  const prev = row.status
-  // Toggle: clicking the same chip twice clears the status.
-  const next = prev === status ? null : status
-  row.status = next
-  try {
-    const r = await auth.apiFetch(
-      `/api/events/${currentEvent.value.id}/attendance/${row.competitor_id}`,
-      { method: 'PUT', body: JSON.stringify({ status: next }) },
-    )
-    row.status = r.status   // server is source of truth
-    row.set_at = r.set_at
-  } catch (err) {
-    row.status = prev
-    checkInErr.value = err.message
-  }
-}
-
-const checkInCounts = computed(() => {
-  const out = { present: 0, late: 0, absent: 0, pending: 0 }
-  for (const r of checkInRows.value) {
-    if (r.status === 'present')      out.present++
-    else if (r.status === 'late')    out.late++
-    else if (r.status === 'absent')  out.absent++
-    else                              out.pending++
-  }
-  return out
-})
-
-async function openLateEntry() {
-  lateErr.value = ''
-  lateBusy.value = false
-  latePartnerId.value = ''
-  lateTeamId.value = ''
-  lateActiveSlot.value = -1
-  // Build N empty slots based on the event's total_rounds. Default
-  // to 6 if the event metadata hasn't loaded yet (rare).
-  const totalRounds = Number(currentEvent.value?.total_rounds) || 6
-  lateRounds.value = Array.from({ length: totalRounds }, () => ({ text: '', dive: null, competitorId: '' }))
-  lateOpen.value = true
-  // Lazy-load org divers + dive directory once per session
-  if (!lateDivers.value.length) {
-    try {
-      lateDivers.value = await auth.apiFetch(`/api/orgs/${auth.user.org_id}/divers`)
-    } catch { lateDivers.value = [] }
-  }
-  if (!lateDiveDir.value.length) {
-    try {
-      // Cached read — first open of the late-add modal in a session
-      // hits the network; subsequent opens (same or different meets)
-      // serve from IDB instantly.
-      const result = await auth.cachedApiFetch('/api/dive-directory', {
-        cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS },
-      })
-      lateDiveDir.value = Array.isArray(result.data) ? result.data : []
-    } catch { lateDiveDir.value = [] }
-  }
-  // Teams enrolled in this event — only used when event_type === 'team'
-  if (currentEvent.value?.event_type === 'team' && !lateTeams.value.length) {
-    try {
-      lateTeams.value = await auth.apiFetch(`/api/events/${currentEvent.value.id}/teams`)
-    } catch { lateTeams.value = [] }
-  }
-}
-
-// The diver shown in the picker. Stored at the form level rather
-// than per-round because all rounds belong to the same diver.
-const lateCompetitorId = ref('')
-
-// Dive directory filtered to the event's height. Re-used by every
-// round's autocomplete; matching is on `dive_code + position` so
-// "5132D" finds the dive even when the user hasn't typed a space.
-const lateDiveOptions = computed(() => {
-  const eventHeight = currentEvent.value?.height
-  const heightNumeric = eventHeight ? parseFloat(eventHeight) : null
-  return lateDiveDir.value.filter(d =>
-    heightNumeric === null || parseFloat(d.height) === heightNumeric,
-  )
-})
-
-// Autocomplete results for a single round's input. Caps at 8 so
-// the dropdown never overflows the modal. Empty input = empty list.
-function lateMatchesFor(idx) {
-  const term = (lateRounds.value[idx]?.text || '').toLowerCase().trim()
-  if (!term) return []
-  return lateDiveOptions.value.filter(d => {
-    const combined = (d.dive_code + d.position).toLowerCase()
-    return combined.includes(term) || (d.description || '').toLowerCase().includes(term)
-  }).slice(0, 8)
-}
-
-// Try to resolve the typed text directly against the directory
-// (no dropdown needed). Used when the user tabs out — if they
-// typed exactly "5132D" we silently lock it in. Returns the dive
-// or null.
-function resolveTypedDive(text) {
-  if (!text) return null
-  const norm = text.toUpperCase().trim()
-  // Match against (dive_code + position) concatenated, OR just
-  // dive_code if position is empty (rare for diving).
-  return lateDiveOptions.value.find(d =>
-    (d.dive_code + d.position).toUpperCase() === norm,
-  ) || null
-}
-
-function lateOnInput(idx) {
-  // Open this row's dropdown; close any other.
-  lateActiveSlot.value = idx
-  // If the typed text matches an entry exactly, lock it in. The
-  // dropdown still shows in case the operator wants to pick a
-  // similar one, but submit will already work.
-  const slot = lateRounds.value[idx]
-  slot.dive = resolveTypedDive(slot.text)
-}
-
-function latePickDive(idx, dive) {
-  lateRounds.value[idx].dive = dive
-  lateRounds.value[idx].text = `${dive.dive_code}${dive.position}`
-  lateActiveSlot.value = -1
-  // Move focus to the next empty round if there is one — fast
-  // entry workflow for the operator typing through a list.
-  const nextIdx = lateRounds.value.findIndex((s, i) => i > idx && !s.dive)
-  if (nextIdx >= 0) {
-    requestAnimationFrame(() => {
-      const el = document.querySelector(`#late-round-${nextIdx}`)
-      if (el) el.focus()
-    })
-  }
-}
-
-function lateCloseDropdown(idx) {
-  // setTimeout so a click on a result registers before blur tears
-  // down the dropdown.
-  setTimeout(() => {
-    if (lateActiveSlot.value === idx) lateActiveSlot.value = -1
-  }, 150)
-}
-
-const lateAllFilled = computed(() =>
-  lateRounds.value.length > 0 && lateRounds.value.every(s => !!s.dive),
-)
-const lateTotalDD = computed(() =>
-  lateRounds.value.reduce((sum, s) => sum + (s.dive ? Number(s.dive.dd) : 0), 0).toFixed(1),
-)
 
 // =============================================================
 // JUDGE PANEL — names + ids loaded once per event so the tile
@@ -2377,9 +1628,7 @@ const editDiveErr    = ref("")
 useBodyScrollLock().lockWhile(computed(() =>
   lbShow.value ||
   judgeRankingOpen.value ||
-  broadcastChoiceOpen.value ||
   sponsorBrandingOpen.value ||
-  daktronicsInstructionsOpen.value ||
   reflowOpen.value ||
   holdPromptOpen.value ||
   correctOpen.value ||
@@ -2532,212 +1781,12 @@ async function promoteReserve(competitorId) {
   }
 }
 
-// Super Final dive-offs (Appendix 3 §6). Visible on
-// super_final_h2h or super_final_semi events. The operator
-// creates a tie-break record when two divers are tied at the
-// end of the stage; once both pick a previously-performed dive
-// and re-do it, the operator records the scores + winner.
-const diveOffs           = ref([])
-const diveOffModalOpen   = ref(false)
-const diveOffEditing     = ref(null)   // existing row OR null = create
-const diveOffForm        = ref({
-  competitor_a_id: '',
-  competitor_b_id: '',
-  dive_a_id:       '',
-  dive_b_id:       '',
-  score_a:         '',
-  score_b:         '',
-  winner_id:       '',
-  notes:           '',
-  confirm_tied:    false,
-})
-const diveOffBusy        = ref(false)
-const diveOffErr         = ref('')
-
-const isSuperFinalH2hOrSemi = computed(() => {
-  const fmt = currentEvent.value?.event_format
-  return fmt === 'super_final_h2h' || fmt === 'super_final_semi'
-})
-
-async function loadDiveOffs() {
-  if (!currentEvent.value || !isSuperFinalH2hOrSemi.value) {
-    diveOffs.value = []
-    return
-  }
-  try {
-    const r = await auth.apiFetch(`/api/events/${currentEvent.value.id}/dive-offs`)
-    diveOffs.value = Array.isArray(r.dive_offs) ? r.dive_offs : []
-  } catch {
-    diveOffs.value = []
-  }
-}
-
-function openCreateDiveOff() {
-  diveOffEditing.value = null
-  diveOffForm.value = {
-    competitor_a_id: '',
-    competitor_b_id: '',
-    dive_a_id:       '',
-    dive_b_id:       '',
-    score_a:         '',
-    score_b:         '',
-    winner_id:       '',
-    notes:           '',
-    confirm_tied:    false,
-  }
-  diveOffErr.value = ''
-  diveOffModalOpen.value = true
-}
-
-function openEditDiveOff(row) {
-  diveOffEditing.value = row
-  diveOffForm.value = {
-    competitor_a_id: row.competitor_a_id,
-    competitor_b_id: row.competitor_b_id,
-    dive_a_id:       row.dive_a_id || '',
-    dive_b_id:       row.dive_b_id || '',
-    score_a:         row.score_a == null ? '' : String(row.score_a),
-    score_b:         row.score_b == null ? '' : String(row.score_b),
-    winner_id:       row.winner_id || '',
-    notes:           row.notes || '',
-    confirm_tied:    true,
-  }
-  diveOffErr.value = ''
-  diveOffModalOpen.value = true
-}
-
-function closeDiveOffModal() {
-  diveOffModalOpen.value = false
-  diveOffEditing.value = null
-  diveOffErr.value = ''
-}
-
-async function saveDiveOff() {
-  if (!currentEvent.value) return
-  diveOffBusy.value = true
-  diveOffErr.value = ''
-  try {
-    const f = diveOffForm.value
-    // Auto-fill winner_id from scores if both are present and
-    // operator hasn't picked one explicitly.
-    let winnerId = f.winner_id
-    if (!winnerId && f.score_a !== '' && f.score_b !== '') {
-      const sa = Number(f.score_a), sb = Number(f.score_b)
-      if (sa > sb) winnerId = f.competitor_a_id
-      else if (sb > sa) winnerId = f.competitor_b_id
-    }
-    const body = {
-      competitor_a_id: f.competitor_a_id || null,
-      competitor_b_id: f.competitor_b_id || null,
-      dive_a_id:       f.dive_a_id || null,
-      dive_b_id:       f.dive_b_id || null,
-      score_a:         f.score_a === '' ? null : Number(f.score_a),
-      score_b:         f.score_b === '' ? null : Number(f.score_b),
-      winner_id:       winnerId || null,
-      notes:           f.notes || null,
-      confirm_tied:    !!f.confirm_tied,
-    }
-    if (diveOffEditing.value) {
-      // PATCH — drop competitors from body (they're immutable).
-      delete body.competitor_a_id
-      delete body.competitor_b_id
-      delete body.confirm_tied
-      await auth.apiFetch(
-        `/api/events/${currentEvent.value.id}/dive-offs/${diveOffEditing.value.id}`,
-        { method: 'PATCH', body: JSON.stringify(body) },
-      )
-      showSuccess('Dive-off updated.')
-    } else {
-      await auth.apiFetch(`/api/events/${currentEvent.value.id}/dive-offs`, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      })
-      showSuccess('Dive-off created.')
-    }
-    closeDiveOffModal()
-    await loadDiveOffs()
-  } catch (err) {
-    diveOffErr.value = err.message || 'Failed to save dive-off'
-  } finally {
-    diveOffBusy.value = false
-  }
-}
-
-// Synchro reserve replacement (Appendix 3 §5.1). Visible on
-// Upcoming super_final_h2h events. Loads /synchro-reserve-pool
-// and lets the operator swap a Top-12 diver for a synchro
-// reserve, keeping the same display_order slot so the bracket
-// stays intact.
-const synchroPoolModalOpen = ref(false)
-const synchroPool          = ref(null)
-const synchroPoolErr       = ref('')
-const synchroSwapForm      = ref({
-  withdraw_competitor_id:    '',
-  replacement_competitor_id: '',
-})
-const synchroSwapBusy      = ref(false)
-
-const isH2hUpcoming = computed(() => {
-  const ev = currentEvent.value
-  return ev?.event_format === 'super_final_h2h' && ev.status === 'Upcoming'
-})
-
-async function openSynchroPoolModal() {
-  synchroPool.value = null
-  synchroPoolErr.value = ''
-  synchroSwapForm.value = { withdraw_competitor_id: '', replacement_competitor_id: '' }
-  synchroPoolModalOpen.value = true
-  if (!currentEvent.value) return
-  try {
-    synchroPool.value = await auth.apiFetch(
-      `/api/events/${currentEvent.value.id}/synchro-reserve-pool`)
-  } catch (err) {
-    synchroPoolErr.value = err.message || 'Failed to load synchro pool'
-  }
-}
-function closeSynchroPoolModal() {
-  synchroPoolModalOpen.value = false
-  synchroPool.value = null
-}
-
-async function confirmSynchroReplacement() {
-  if (!currentEvent.value) return
-  synchroSwapBusy.value = true
-  synchroPoolErr.value = ''
-  try {
-    await auth.apiFetch(`/api/events/${currentEvent.value.id}/replace-from-synchro`, {
-      method: 'POST',
-      body: JSON.stringify(synchroSwapForm.value),
-    })
-    showSuccess('Synchro replacement complete.')
-    closeSynchroPoolModal()
-    await onEventChange()
-  } catch (err) {
-    synchroPoolErr.value = err.message || 'Failed to replace from synchro pool'
-  } finally {
-    synchroSwapBusy.value = false
-  }
-}
-
-// Suggest tied pairs for a quick-pick dropdown. For H2H, the
-// h2h-results endpoint already flags tied=true; for SF we surface
-// the within-group standings so the operator can pick.
-const tiedPairsSuggestion = ref([])
-async function loadTiedSuggestion() {
-  tiedPairsSuggestion.value = []
-  if (!currentEvent.value) return
-  if (currentEvent.value.event_format === 'super_final_h2h') {
-    try {
-      const r = await auth.apiFetch(`/api/events/${currentEvent.value.id}/super-final/h2h-results`)
-      tiedPairsSuggestion.value = (r.pairs || []).filter(p => p.tied).map(p => ({
-        competitor_a_id: p.competitor_a_id,
-        competitor_b_id: p.competitor_b_id,
-        full_name_a:     p.full_name_a,
-        full_name_b:     p.full_name_b,
-      }))
-    } catch { /* swallow — best-effort */ }
-  }
-}
+// Super Final surfaces (dive-offs, synchro reserve pool, tied-
+// pair suggestions) live in @/components/control/
+// SuperFinalPanels.vue. The template ref lets onEventChange
+// trigger its per-event reload at the same point the inline
+// loaders used to run.
+const superFinalPanels = ref(null)
 
 // "Anna Smith & Bella Jones" for a synchro pair, just the lead's
 // full name otherwise. Used everywhere a standings row needs a
@@ -3021,88 +2070,17 @@ const historyDivers = computed(() => {
   return [...set].sort()
 })
 
-async function submitLateEntry() {
-  lateErr.value = ''
-  if (!lateCompetitorId.value) { lateErr.value = 'Pick a diver'; return }
-
-  // Re-resolve any rows where the operator typed but didn't click
-  // a result — gives them one last chance before we error.
-  for (const slot of lateRounds.value) {
-    if (!slot.dive && slot.text) slot.dive = resolveTypedDive(slot.text)
-  }
-  const missing = lateRounds.value
-    .map((s, i) => ({ s, i }))
-    .filter(({ s }) => !s.dive)
-  if (missing.length) {
-    lateErr.value = `Missing dive for round${missing.length > 1 ? 's' : ''} ` +
-      missing.map(m => m.i + 1).join(', ')
-    return
-  }
-  // Synchro events need a partner; team events need a team.
-  if (currentEvent.value?.event_type === 'synchro_pair' && !latePartnerId.value) {
-    lateErr.value = 'Synchronised events need a partner.'
-    return
-  }
-  if (currentEvent.value?.event_type === 'team' && !lateTeamId.value) {
-    lateErr.value = 'Team events need a team.'
-    return
-  }
-
-  lateBusy.value = true
-  try {
-    // POST one row per round. The endpoint upserts on
-    // (event_id, competitor_id, round_number) so a re-run after
-    // a partial failure is safe — the operator just clicks Add
-    // again and we backfill the missing rows.
-    for (let i = 0; i < lateRounds.value.length; i++) {
-      const slot = lateRounds.value[i]
-      await queueAction({
-        method: 'POST',
-        url: `/api/events/${currentEvent.value.id}/roster`,
-        body: {
-          competitor_id: lateCompetitorId.value,
-          dive_id:       slot.dive.id,
-          round_number:  i + 1,
-          partner_id:    latePartnerId.value || null,
-          team_id:       lateTeamId.value    || null,
-        },
-        actionType: 'roster_late_add',
-      })
-    }
-    // Re-pull roster so the new rows appear in the queue with
-    // their dive_list_ids and display order.
-    const fresh = await auth.apiFetch(`/api/events/${currentEvent.value.id}/roster`)
-    roster.value = fresh
-    lateOpen.value = false
-    refreshRecentAuditSoon()
-    loadScheduleConflictsForEvent()
-  } catch (err) {
-    lateErr.value = err.message
-  } finally {
-    lateBusy.value = false
-  }
-}
 
 // Connection state is exposed by the composable as
 // socket.isConnected — no parallel listeners here.
 
-// Hold-state sync — for multi-operator setups + late-joining
-// Control Room sessions. The server replays meet_held when we
-// ask for it.
-socket.on('meet_held', (data) => {
-  if (currentEvent.value && data.event_id === currentEvent.value.id) {
-    isHeld.value = true
-    holdReason.value = data.reason || ''
-  }
-})
-socket.on('meet_resumed', (data) => {
-  if (currentEvent.value && data.event_id === currentEvent.value.id) {
-    isHeld.value = false
-    holdReason.value = ''
-  }
-})
+// Live listeners below all go through useSocketEvent so they're
+// torn down with the view. The pooled socket survives navigation
+// (NotificationCenter holds a ref), so a bare socket.on here
+// would leave a dead Control Room instance still receiving
+// score_received — and its auto-advance could move a live meet.
 
-socket.on('score_received', (data) => {
+useSocketEvent(socket, 'score_received', (data) => {
   // Invalidate the client-side scoreboard cache for this event so
   // the next refreshStandingsPreview() / showLeaderboard() hits
   // fresh data. Server already invalidates its own cache; the
@@ -3174,7 +2152,7 @@ socket.on('score_received', (data) => {
   }
 })
 
-socket.on('live_result_calculated', (data) => {
+useSocketEvent(socket, 'live_result_calculated', (data) => {
   addHistoryCard(data)
   resetJudgeTiles()
 })
@@ -3183,7 +2161,7 @@ socket.on('live_result_calculated', (data) => {
 // keypad (or tapped again to clear). Match to the active dive
 // + judge_number, flip the tile's signaled flag. The tile
 // renders a red ring when the flag is on.
-socket.on('judge_signal', (data) => {
+useSocketEvent(socket, 'judge_signal', (data) => {
   if (!currentActive.value) return
   if (data.event_id      !== currentActive.value.event_id)      return
   if (data.competitor_id !== currentActive.value.competitor_id) return
@@ -3572,15 +2550,11 @@ async function onEventChange() {
   // dialog, or a stale round-end prompt from the prior event.
   // Each helper is a no-op when the modal isn't open.
   closeCorrection()
-  if (typeof closeSignoffModal === 'function') closeSignoffModal()
+  signoffOpen.value = false
   holdPromptOpen.value = false
   roundEndPromptOpen.value = false
-  // Reset score-correction draft fields too — the modal is gone
-  // but their refs would otherwise pre-populate the next dialog
-  // with the previous event's score values.
-  correctNewScore.value = ''
-  correctReason.value = ''
-  correctJudgeIdx.value = -1
+  // (Score-correction draft fields now live inside
+  // ScoreCorrectionModal and die with its v-if unmount.)
 
   currentEvent.value = events.value.find(e => e.id == selectedEventId.value) || null
   if (!currentEvent.value) return
@@ -3608,10 +2582,9 @@ async function onEventChange() {
   loadReserves()
 
   // Super Final dive-offs panel + tied-pair suggestions —
-  // only meaningful on H2H or SF stages but the loader is a
-  // no-op on other formats.
-  loadDiveOffs()
-  loadTiedSuggestion()
+  // owned by SuperFinalPanels now; reload() keeps the original
+  // per-event-change cadence (no-op on other formats).
+  superFinalPanels.value?.reload()
 
   // The /history endpoint returns dives ascending (round ASC,
   // name ASC); addHistoryCard() unshifts each card, so iterating
@@ -3690,12 +2663,7 @@ async function onEventChange() {
   // needed when the event changes.
 }
 
-function rankClass(i) {
-  if (i === 0) return 'gold'
-  if (i === 1) return 'silver'
-  if (i === 2) return 'bronze'
-  return ''
-}
+// rankClass imported from @/lib/format — single source of truth.
 const medals = ['🥇', '🥈', '🥉']
 
 onMounted(async () => {
@@ -3718,19 +2686,13 @@ onMounted(async () => {
   // sees the event and would otherwise close the menu it just
   // opened. The trigger buttons stop propagation explicitly.
   window.addEventListener('mousedown', onGlobalClick, true)
-  // Cut 2 — listen for the server's response broadcast when the
-  // referee taps Approve/Deny on their device. Lives on the same
-  // event-room subscription the rest of the Control Room uses;
-  // the manager's socket joins the room when an event is
-  // selected via subscribe_event.
-  socket.on('referee_signoff_response', onRefereeSignoffResponse)
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
   window.removeEventListener('mousedown', onGlobalClick, true)
   cancelAutoAdvance()
-  socket.off('referee_signoff_response', onRefereeSignoffResponse)
 })
+
 </script>
 
 <template>
@@ -3909,7 +2871,7 @@ onUnmounted(() => {
         <button
           v-if="currentEvent && !opsBroadcast"
           class="btn-back btn-broadcast"
-          @click="broadcastChoiceOpen = true"
+          @click="broadcastModal?.open()"
           v-tip:bottom.fixed="'Broadcast this event — projector, stream overlay, OBS, or venue scoreboard'"
         >{{ $t('control.broadcast_menu') }}</button>
       </div>
@@ -4085,395 +3047,15 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Broadcast chooser. Covers the realistic operator scenarios:
-         kiosk this screen, audience projector, multi-event projector,
-         streaming overlay, and venue hardware bridge setup. -->
-    <div v-if="broadcastChoiceOpen" class="lb-backdrop"
-         @mousedown.self="broadcastChoiceOpen = false; broadcastPickerOpen = false; obsInstructionsOpen = false; daktronicsInstructionsOpen = false">
-      <div class="lb-modal broadcast-chooser">
-        <div class="lb-header">
-          <div>
-            <div class="lb-title">{{ $t('control.modals.broadcast_title') }}</div>
-            <div class="lb-event">
-              <template v-if="broadcastPickerOpen">{{ $t('control.modals.broadcast_sub_picker') }}</template>
-              <template v-else-if="obsInstructionsOpen">{{ $t('control.modals.broadcast_sub_obs') }}</template>
-              <template v-else-if="daktronicsInstructionsOpen">{{ $t('control.modals.broadcast_sub_dak') }}</template>
-              <template v-else>{{ $t('control.modals.broadcast_sub_default') }}</template>
-            </div>
-          </div>
-          <button class="btn btn-ghost btn-sm"
-                  @click="broadcastChoiceOpen = false; broadcastPickerOpen = false; obsInstructionsOpen = false; daktronicsInstructionsOpen = false">{{ $t('control.modals.close') }}</button>
-        </div>
-        <!-- Default chooser body. Hidden while either sub-panel
-             (multi-event picker, OBS instructions, venue hardware
-             instructions) is open so the operator sees one panel
-             at a time. -->
-        <div v-if="!broadcastPickerOpen && !obsInstructionsOpen && !daktronicsInstructionsOpen" class="lb-body broadcast-chooser-body">
-          <!-- 1. Operator broadcast — inline on this screen. -->
-          <RouterLink
-            to="/control?broadcast=1"
-            class="broadcast-option"
-            @click="broadcastChoiceOpen = false; headerMenuOpen = false">
-            <div class="broadcast-option-glyph">🖥️</div>
-            <div class="broadcast-option-text">
-              <div class="broadcast-option-title">{{ $t('control.modals.broadcast_option_operator_title') }}</div>
-              <div class="broadcast-option-desc">
-                {{ $t('control.modals.broadcast_option_operator_desc') }}
-              </div>
-            </div>
-          </RouterLink>
-
-          <!-- 2. Audience broadcast for THIS event in a new window. -->
-          <button class="broadcast-option"
-                  type="button"
-                  @click="openBroadcastInNewWindow(`/scoreboard/${currentEvent.id}/broadcast`)">
-            <div class="broadcast-option-glyph">📡</div>
-            <div class="broadcast-option-text">
-              <div class="broadcast-option-title">{{ $t('control.modals.broadcast_option_event_title') }}</div>
-              <div class="broadcast-option-desc">
-                {{ $t('control.modals.broadcast_option_event_desc_prefix') }}
-                <strong>{{ currentEvent?.name || $t('control.modals.broadcast_option_event_fallback') }}</strong>
-                {{ $t('control.modals.broadcast_option_event_desc_suffix') }}
-              </div>
-            </div>
-          </button>
-
-          <!-- 3. Multi-event audience broadcast. Expands an inline
-               sub-picker so the operator can tick the subset of
-               Live events to project. With 0 or 1 Live events the
-               picker is skipped (handled in pickBroadcastAll). -->
-          <button class="broadcast-option"
-                  type="button"
-                  :disabled="broadcastLiveLoading"
-                  @click="pickBroadcastAll">
-            <div class="broadcast-option-glyph">📺</div>
-            <div class="broadcast-option-text">
-              <div class="broadcast-option-title">
-                {{ $t('control.modals.broadcast_option_pick_title') }}
-              </div>
-              <div class="broadcast-option-desc">
-                <template v-if="broadcastLiveLoading">{{ $t('control.modals.broadcast_option_pick_loading') }}</template>
-                <template v-else>
-                  {{ $t('control.modals.broadcast_option_pick_desc') }}
-                </template>
-              </div>
-              <div v-if="broadcastLiveError" class="broadcast-picker-error">
-                {{ broadcastLiveError }}
-              </div>
-            </div>
-          </button>
-
-          <!-- 4. OBS / live-streaming setup instructions. Doesn't
-               open a new window — expands an inline sub-panel
-               with the chroma-key overlay URL and a Browser
-               Source how-to. Disabled when no event is selected
-               (the overlay URL needs an event id to compose). -->
-          <button class="broadcast-option"
-                  type="button"
-                  :disabled="!currentEvent"
-                  @click="obsInstructionsOpen = true">
-            <div class="broadcast-option-glyph">🎬</div>
-            <div class="broadcast-option-text">
-              <div class="broadcast-option-title">
-                {{ $t('control.modals.broadcast_option_obs_title') }}
-              </div>
-              <div class="broadcast-option-desc">
-                {{ $t('control.modals.broadcast_option_obs_desc') }}
-              </div>
-            </div>
-          </button>
-
-          <!-- 5. Venue hardware bridge setup. Expands an inline
-               panel with copyable commands for the local bridge
-               process that feeds Daktronics RTD / ERTD ingest. -->
-          <button class="broadcast-option"
-                  type="button"
-                  :disabled="!currentEvent"
-                  @click="daktronicsInstructionsOpen = true">
-            <div class="broadcast-option-glyph">▣</div>
-            <div class="broadcast-option-text">
-              <div class="broadcast-option-title">
-                {{ $t('control.modals.broadcast_option_dak_title') }}
-              </div>
-              <div class="broadcast-option-desc">
-                {{ $t('control.modals.broadcast_option_dak_desc') }}
-              </div>
-            </div>
-          </button>
-        </div>
-
-        <!-- Sub-picker: appears when the operator clicks option 3
-             and there are 2+ Live events. Every Live event ticked
-             by default so the operator unticks what they don't
-             want. "Select all / None" affordances at the top. -->
-        <div v-else-if="broadcastPickerOpen" class="lb-body broadcast-picker">
-          <div class="broadcast-picker-head">
-            <span class="broadcast-picker-count">
-              {{ $t('control.modals.picker_selected_count', { selected: broadcastSelection.size, total: broadcastLiveEvents.length }) }}
-            </span>
-            <div class="broadcast-picker-bulk">
-              <button class="btn btn-ghost btn-sm" type="button"
-                      :disabled="broadcastSelection.size === broadcastLiveEvents.length"
-                      @click="broadcastSelectAll">{{ $t('control.modals.picker_select_all') }}</button>
-              <button class="btn btn-ghost btn-sm" type="button"
-                      :disabled="broadcastSelection.size === 0"
-                      @click="broadcastSelectNone">{{ $t('control.modals.picker_select_none') }}</button>
-            </div>
-          </div>
-          <ul class="broadcast-picker-list">
-            <li v-for="ev in broadcastLiveEvents" :key="ev.id">
-              <label class="broadcast-picker-row">
-                <input type="checkbox"
-                       :checked="broadcastSelection.has(String(ev.id))"
-                       @change="toggleBroadcastSelection(ev.id)">
-                <span class="broadcast-picker-name">{{ ev.name }}</span>
-                <span v-if="ev.height" class="broadcast-picker-meta">{{ ev.height }}</span>
-                <span v-if="ev.gender" class="broadcast-picker-meta">{{ ev.gender }}</span>
-              </label>
-            </li>
-          </ul>
-          <div class="broadcast-picker-actions">
-            <button class="btn btn-ghost" type="button"
-                    @click="broadcastPickerOpen = false">{{ $t('control.modals.back') }}</button>
-            <button class="btn btn-primary" type="button"
-                    :disabled="broadcastOpenDisabled"
-                    @click="confirmBroadcastPicker">
-              {{ $t('control.modals.picker_open_btn', { n: broadcastSelection.size }) }}
-            </button>
-          </div>
-        </div>
-
-        <!-- OBS / streaming-app setup panel: appears when the
-             operator clicks option 4. Shows the chroma-key overlay
-             URL with a one-click Copy button, plus the standard
-             OBS Studio Browser Source steps. The same URL works
-             in any tool that supports Browser Source / web overlay
-             (Streamlabs, vMix, Restream Studio, …). -->
-        <div v-else-if="obsInstructionsOpen" class="lb-body obs-instructions">
-          <p class="obs-lead">
-            {{ $t('control.modals.obs_lead_html_prefix') }} <strong>{{ $t('control.modals.obs_lead_chroma_key') }}</strong>
-            {{ $t('control.modals.obs_lead_html_suffix') }}
-          </p>
-
-          <div class="obs-url-block">
-            <label class="obs-url-label">{{ $t('control.modals.obs_overlay_url_label_prefix') }}
-              <strong>{{ currentEvent?.name || $t('control.modals.obs_overlay_event_fallback') }}</strong></label>
-            <div class="obs-url-row">
-              <input class="obs-url-input"
-                     type="text"
-                     readonly
-                     :value="obsOverlayUrl"
-                     @focus="$event.target.select()">
-              <button class="btn btn-primary btn-sm obs-url-copy"
-                      type="button"
-                      @click="copyObsUrl">
-                <template v-if="obsCopyState === 'copied'">{{ $t('control.modals.obs_copied') }}</template>
-                <template v-else-if="obsCopyState === 'failed'">{{ $t('control.modals.obs_copy_failed') }}</template>
-                <template v-else>{{ $t('control.modals.obs_copy') }}</template>
-              </button>
-            </div>
-            <p class="obs-url-hint">
-              {{ $t('control.modals.obs_url_hint') }}
-            </p>
-          </div>
-
-          <ol class="obs-steps">
-            <li class="obs-step">
-              <span class="obs-step-num">1</span>
-              <div class="obs-step-text">
-                <div class="obs-step-title">{{ $t('control.modals.obs_step1_title') }}</div>
-                <div class="obs-step-desc">
-                  {{ $t('control.modals.obs_step1_desc') }}
-                </div>
-              </div>
-            </li>
-            <li class="obs-step">
-              <span class="obs-step-num">2</span>
-              <div class="obs-step-text">
-                <div class="obs-step-title">{{ $t('control.modals.obs_step2_title') }}</div>
-                <div class="obs-step-desc">
-                  {{ $t('control.modals.obs_step2_desc') }}
-                </div>
-              </div>
-            </li>
-            <li class="obs-step">
-              <span class="obs-step-num">3</span>
-              <div class="obs-step-text">
-                <div class="obs-step-title">{{ $t('control.modals.obs_step3_title') }}</div>
-                <div class="obs-step-desc">
-                  {{ $t('control.modals.obs_step3_desc') }}
-                </div>
-              </div>
-            </li>
-            <li class="obs-step">
-              <span class="obs-step-num">4</span>
-              <div class="obs-step-text">
-                <div class="obs-step-title">{{ $t('control.modals.obs_step4_title') }}</div>
-                <div class="obs-step-desc">
-                  {{ $t('control.modals.obs_step4_desc') }}
-                </div>
-              </div>
-            </li>
-            <li class="obs-step">
-              <span class="obs-step-num">5</span>
-              <div class="obs-step-text">
-                <div class="obs-step-title">{{ $t('control.modals.obs_step5_title') }}</div>
-                <div class="obs-step-desc">
-                  {{ $t('control.modals.obs_step5_desc') }}
-                </div>
-              </div>
-            </li>
-          </ol>
-
-          <div class="obs-help-note">
-            {{ $t('control.modals.obs_help_note') }}
-          </div>
-
-          <div class="broadcast-picker-actions">
-            <button class="btn btn-ghost" type="button"
-                    @click="obsInstructionsOpen = false">{{ $t('control.modals.back') }}</button>
-            <a class="btn btn-primary" target="_blank" rel="noopener"
-               :href="obsOverlayUrl || '#'"
-               :class="{ disabled: !obsOverlayUrl }"
-               @click="!obsOverlayUrl && $event.preventDefault()">
-              {{ $t('control.modals.obs_preview_btn') }}
-            </a>
-          </div>
-        </div>
-
-        <!-- Daktronics / venue hardware setup panel: appears when
-             the operator clicks option 5. This does not launch the
-             bridge from the browser; it gives the venue technician
-             the exact event-specific command to run on the bridge
-             laptop connected to the display network. -->
-        <div v-else-if="daktronicsInstructionsOpen" class="lb-body obs-instructions venue-bridge-instructions">
-          <p class="obs-lead">
-            {{ $t('control.modals.dak_lead') }}
-          </p>
-
-          <div class="obs-url-block">
-            <label class="obs-url-label">{{ $t('control.modals.dak_snapshot_label_prefix') }}
-              <strong>{{ currentEvent?.name || $t('control.modals.dak_snapshot_event_fallback') }}</strong></label>
-            <div class="obs-url-row">
-              <input class="obs-url-input"
-                     type="text"
-                     readonly
-                     :value="venueStateUrl"
-                     @focus="$event.target.select()">
-              <button class="btn btn-primary btn-sm obs-url-copy"
-                      type="button"
-                      @click="copyDaktronicsText('snapshot', venueStateUrl)">
-                <template v-if="daktronicsCopyState === 'snapshot'">{{ $t('control.modals.obs_copied') }}</template>
-                <template v-else-if="daktronicsCopyState === 'failed'">{{ $t('control.modals.obs_copy_failed') }}</template>
-                <template v-else>{{ $t('control.modals.obs_copy') }}</template>
-              </button>
-            </div>
-            <p class="obs-url-hint">
-              {{ $t('control.modals.dak_url_hint') }}
-            </p>
-          </div>
-
-          <div class="venue-command-grid">
-            <section class="venue-command-block">
-              <div class="venue-command-head">
-                <div>
-                  <div class="venue-command-title">{{ $t('control.modals.dak_block1_title') }}</div>
-                  <p>{{ $t('control.modals.dak_block1_desc') }}</p>
-                </div>
-                <button class="btn btn-ghost btn-sm" type="button"
-                        @click="copyDaktronicsText('dry', daktronicsDryRunCommand)">
-                  <template v-if="daktronicsCopyState === 'dry'">{{ $t('control.modals.obs_copied') }}</template>
-                  <template v-else>{{ $t('control.modals.obs_copy') }}</template>
-                </button>
-              </div>
-              <pre class="venue-command"><code>{{ daktronicsDryRunCommand }}</code></pre>
-            </section>
-
-            <section class="venue-command-block">
-              <div class="venue-command-head">
-                <div>
-                  <div class="venue-command-title">{{ $t('control.modals.dak_block2_title') }}</div>
-                  <p>{{ $t('control.modals.dak_block2_desc') }}</p>
-                </div>
-                <button class="btn btn-ghost btn-sm" type="button"
-                        @click="copyDaktronicsText('udp', daktronicsUdpCommand)">
-                  <template v-if="daktronicsCopyState === 'udp'">{{ $t('control.modals.obs_copied') }}</template>
-                  <template v-else>{{ $t('control.modals.obs_copy') }}</template>
-                </button>
-              </div>
-              <pre class="venue-command"><code>{{ daktronicsUdpCommand }}</code></pre>
-            </section>
-
-            <section class="venue-command-block">
-              <div class="venue-command-head">
-                <div>
-                  <div class="venue-command-title">{{ $t('control.modals.dak_block3_title') }}</div>
-                  <p>{{ $t('control.modals.dak_block3_desc') }}</p>
-                </div>
-                <button class="btn btn-ghost btn-sm" type="button"
-                        @click="copyDaktronicsText('json', daktronicsJsonCommand)">
-                  <template v-if="daktronicsCopyState === 'json'">{{ $t('control.modals.obs_copied') }}</template>
-                  <template v-else>{{ $t('control.modals.obs_copy') }}</template>
-                </button>
-              </div>
-              <pre class="venue-command"><code>{{ daktronicsJsonCommand }}</code></pre>
-            </section>
-          </div>
-
-          <ol class="obs-steps">
-            <li class="obs-step">
-              <span class="obs-step-num">1</span>
-              <div class="obs-step-text">
-                <div class="obs-step-title">{{ $t('control.modals.dak_step1_title') }}</div>
-                <div class="obs-step-desc">
-                  {{ $t('control.modals.dak_step1_desc') }}
-                </div>
-              </div>
-            </li>
-            <li class="obs-step">
-              <span class="obs-step-num">2</span>
-              <div class="obs-step-text">
-                <div class="obs-step-title">{{ $t('control.modals.dak_step2_title') }}</div>
-                <div class="obs-step-desc">
-                  {{ $t('control.modals.dak_step2_desc') }}
-                </div>
-              </div>
-            </li>
-            <li class="obs-step">
-              <span class="obs-step-num">3</span>
-              <div class="obs-step-text">
-                <div class="obs-step-title">{{ $t('control.modals.dak_step3_title') }}</div>
-                <div class="obs-step-desc">
-                  {{ $t('control.modals.dak_step3_desc') }}
-                </div>
-              </div>
-            </li>
-            <li class="obs-step">
-              <span class="obs-step-num">4</span>
-              <div class="obs-step-text">
-                <div class="obs-step-title">{{ $t('control.modals.dak_step4_title') }}</div>
-                <div class="obs-step-desc">
-                  {{ $t('control.modals.dak_step4_desc') }}
-                </div>
-              </div>
-            </li>
-          </ol>
-
-          <div class="obs-help-note">
-            {{ $t('control.modals.dak_help_note') }}
-          </div>
-
-          <div class="broadcast-picker-actions">
-            <button class="btn btn-ghost" type="button"
-                    @click="daktronicsInstructionsOpen = false">{{ $t('control.modals.back') }}</button>
-            <a class="btn btn-primary" target="_blank" rel="noopener"
-               href="https://github.com/JediBrooker/DivingHQ/wiki/Venue-Integration">
-              {{ $t('control.modals.dak_open_guide') }}
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Broadcast chooser — extracted to BroadcastModal (owns
+         the chooser / OBS / venue-bridge panels and its own
+         body-scroll lock). Opened imperatively from the header
+         Broadcast button via the template ref. -->
+    <BroadcastModal
+      ref="broadcastModal"
+      :event="currentEvent"
+      @close-header-menu="headerMenuOpen = false"
+    />
 
     <!-- Phase 4 — Reflow modal. Mounted once at the Control Room
          root so the operator can finalise an event and confirm
@@ -5261,67 +3843,16 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- Super Final — Synchro reserve replacement (Appendix 3
-             §5.1). Visible only on Upcoming H2H events — once
-             the event goes Live, the bracket is locked and
-             withdrawals route through the standard reserve flow. -->
-        <div v-if="isH2hUpcoming" class="reserves-panel">
-          <div class="reserves-head" style="cursor:default">
-            <span class="reserves-head-label">🔄 Synchro reserve pool</span>
-            <button class="btn btn-primary btn-sm"
-                    style="margin-inline-start:auto"
-                    @click="openSynchroPoolModal"
-                    v-tip="'Replace a Top-12 individual who withdrew with a synchro reserve from the same meet (Appendix 3 §5.1)'">
-              Replace from synchro pool
-            </button>
-          </div>
-        </div>
-
-        <!-- Super Final — Dive-offs panel (Appendix 3 §6).
-             Visible on H2H + SF stages. Lists existing dive-offs
-             with status (pending / resolved) and a "Create
-             dive-off" button that opens the modal. -->
-        <div v-if="isSuperFinalH2hOrSemi" class="reserves-panel">
-          <div class="reserves-head" style="cursor:default">
-            <span class="reserves-head-label">🥊 Dive-offs</span>
-            <span class="reserves-head-count">{{ diveOffs.length }}</span>
-            <button class="btn btn-primary btn-sm"
-                    style="margin-inline-start:auto"
-                    @click="openCreateDiveOff"
-                    v-tip="'Record a tie-break dive-off (Appendix 3 §6)'">
-              + Create
-            </button>
-          </div>
-          <div v-if="tiedPairsSuggestion.length" class="hint" style="padding:0.5rem 0.75rem;color:var(--cyan)">
-            Tied pairs flagged by H2H results: {{ tiedPairsSuggestion.length }} — resolve before seeding SF.
-          </div>
-          <div class="reserves-list">
-            <div v-for="d in diveOffs" :key="d.id" class="reserves-row">
-              <div class="reserves-row-head">
-                <span class="reserves-row-pos" :style="{ background: d.resolved_at ? 'var(--green, #16a34a)' : 'var(--amber, #f59e0b)', color: '#fff' }">
-                  {{ d.resolved_at ? '✓' : '…' }}
-                </span>
-                <span class="reserves-row-name">
-                  {{ d.competitor_a_name }} vs {{ d.competitor_b_name }}
-                  <span v-if="d.score_a != null && d.score_b != null" class="hint">
-                    · {{ Number(d.score_a).toFixed(2) }} : {{ Number(d.score_b).toFixed(2) }}
-                  </span>
-                  <span v-if="d.winner_name" class="hint" style="color:var(--cyan)">
-                    · winner: {{ d.winner_name }}
-                  </span>
-                </span>
-              </div>
-              <div class="reserves-row-actions">
-                <button type="button" class="btn btn-ghost btn-sm" @click="openEditDiveOff(d)">
-                  {{ d.resolved_at ? 'View / edit' : 'Record result' }}
-                </button>
-              </div>
-            </div>
-            <div v-if="!diveOffs.length" class="hint" style="padding:0.5rem 0.75rem">
-              No dive-offs yet. Create one when two divers tie at the end of the stage.
-            </div>
-          </div>
-        </div>
+        <!-- Super Final surfaces — synchro reserve pool +
+             dive-offs panels and their modals, extracted to
+             SuperFinalPanels. Self-gating on event format, so
+             mounting is unconditional; reload() is driven from
+             onEventChange. -->
+        <SuperFinalPanels
+          ref="superFinalPanels"
+          :event="currentEvent"
+          @refresh="onEventChange"
+        />
 
         <!-- Standings + projected leader — top 5 inline so the
              meet referee always knows the running state. Mirrors
@@ -5605,81 +4136,17 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <!-- Random Dive-Order Draw modal (WA Article 4.1.6).
-       Centred + projector-friendly so it can be shown to the
-       room during the Technical/Team Leaders' Meeting. Three
-       phases: preview the current order, animate the shuffle
-       for 5 sec, then confirm or re-shuffle. -->
-  <div v-if="randomiseModalOpen" class="lb-backdrop"
-       @click.self="randomiseStage !== 'shuffling' && closeRandomiseModal()"></div>
-  <div v-if="randomiseModalOpen"
-       :class="['lb-modal', 'randomise-modal', `phase-${randomiseStage}`]"
-       @click.stop>
-    <div class="randomise-head">
-      <div class="randomise-icon">🎲</div>
-      <div>
-        <div class="randomise-title">
-          <template v-if="randomiseStage === 'preview'">Random Dive-Order Draw</template>
-          <template v-else-if="randomiseStage === 'shuffling'">Drawing dive order…</template>
-          <template v-else>Final dive order</template>
-        </div>
-        <div class="randomise-sub">
-          <template v-if="currentEvent">
-            {{ currentEvent.name }} ·
-            <em>WA Article 4.1.6 (random draw at the Technical/Team Leaders' Meeting)</em>
-          </template>
-        </div>
-      </div>
-    </div>
-
-    <p class="randomise-body-text">
-      <template v-if="randomiseStage === 'preview'">
-        The current dive order is shown below. Click <strong>Start the draw</strong>
-        when the room is ready — the draw will animate for 5 seconds before
-        the new order is revealed.
-      </template>
-      <template v-else-if="randomiseStage === 'shuffling'">
-        Watch the draw. The reel cycles through random permutations until the
-        official order is locked in.
-      </template>
-      <template v-else>
-        Below is the dive order for <strong>{{ currentEvent?.name }}</strong>.
-        Confirm to lock it in, or re-shuffle if the room agrees.
-      </template>
-    </p>
-
-    <!-- Single list of divers — start order is per-diver, the
-         same across every round (Article 4.1.6). -->
-    <div class="randomise-list">
-      <div v-for="item in randomiseDisplayRows"
-           :key="item.competitor_id"
-           :class="['randomise-row', randomiseStage === 'shuffling' ? 'is-shuffling' : '']">
-        <span class="randomise-row-pos">{{ item.display_order ?? '?' }}</span>
-        <span class="randomise-row-name">
-          {{ item.full_name }}<span v-if="item.country_code" class="randomise-row-country">{{ item.country_code }}</span>
-        </span>
-        <span v-if="item.club_code" class="randomise-row-club">{{ item.club_code }}</span>
-      </div>
-    </div>
-
-    <div class="randomise-actions">
-      <template v-if="randomiseStage === 'preview'">
-        <button type="button" class="btn btn-ghost" @click="closeRandomiseModal">Cancel</button>
-        <button type="button" class="btn btn-primary-lg randomise-go" @click="runRandomiseDraw">
-          🎲  Start the draw
-        </button>
-      </template>
-      <template v-else-if="randomiseStage === 'shuffling'">
-        <div class="randomise-progress">Drawing…</div>
-      </template>
-      <template v-else>
-        <button type="button" class="btn btn-ghost" @click="runRandomiseDraw">Re-shuffle</button>
-        <button type="button" class="btn btn-primary-lg" @click="closeRandomiseModal">
-          ✓  Confirm dive order
-        </button>
-      </template>
-    </div>
-  </div>
+  <!-- Random Dive-Order Draw modal (WA Article 4.1.6) — the
+       ceremony flow is extracted to RandomiseDrawModal. The
+       parent applies the fresh roster + workflow stamps it
+       emits on success. -->
+  <RandomiseDrawModal
+    v-if="randomiseModalOpen"
+    :event="currentEvent"
+    :roster="roster"
+    @close="randomiseModalOpen = false"
+    @randomised="onRandomised"
+  />
 
   <!-- Edit Dive modal — meet manager swaps a roster row's
        dive mid-event. WA Article 6.7.4 / 6.8: changes go via
@@ -5753,489 +4220,48 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <!-- Score correction modal -->
-  <div v-if="correctOpen" class="lb-backdrop" @click="closeCorrection"></div>
-  <div v-if="correctOpen && correctTarget" class="lb-modal correct-modal" @click.stop>
-    <div class="lb-header">
-      <div>
-        <div class="lb-title">Amend Score</div>
-        <div class="lb-event">{{ correctTarget.name }} · Round {{ correctTarget.round }} · {{ correctTarget.dive_code }}{{ correctTarget.position }}</div>
-      </div>
-      <button class="btn btn-ghost btn-sm" @click="closeCorrection">Cancel</button>
-    </div>
-    <div class="lb-body">
-      <div class="field">
-        <label class="label">Judge</label>
-        <select class="select" v-model="correctJudgeIdx">
-          <option v-for="(s, i) in correctTarget.scores" :key="i" :value="i">
-            J{{ i + 1 }} — currently {{ s.toFixed(1) }}
-          </option>
-        </select>
-      </div>
-      <div class="field">
-        <label class="label">New score (0–10, 0.5 increments)</label>
-        <input class="input" type="number" min="0" max="10" step="0.5"
-               v-model="correctNewScore"
-               @keyup.enter="submitCorrection">
-      </div>
-      <!-- Live preview of the correction's impact. Recomputes
-           on every keystroke so the operator sees how the edit
-           moves the trim sum + dive points BEFORE clicking
-           Save. -->
-      <div v-if="correctPreview" class="correct-preview"
-           :class="{ 'correct-preview-noop': correctPreview.unchanged }">
-        <div class="correct-preview-row">
-          <span class="correct-preview-label">Judge {{ correctPreview.judgeIdx + 1 }}</span>
-          <span class="correct-preview-old">{{ correctPreview.oldScore.toFixed(1) }}</span>
-          <span class="correct-preview-arrow">→</span>
-          <span class="correct-preview-new">{{ correctPreview.newScore.toFixed(1) }}</span>
-        </div>
-        <div class="correct-preview-row">
-          <span class="correct-preview-label">Trim sum</span>
-          <span class="correct-preview-old">{{ correctPreview.oldTrim.toFixed(1) }}</span>
-          <span class="correct-preview-arrow">→</span>
-          <span class="correct-preview-new">{{ correctPreview.newTrim.toFixed(1) }}</span>
-        </div>
-        <div class="correct-preview-row preview-points">
-          <span class="correct-preview-label">Dive points <span class="correct-preview-dd">× DD {{ correctPreview.dd.toFixed(1) }}</span></span>
-          <span class="correct-preview-old">{{ correctPreview.oldPoints.toFixed(2) }}</span>
-          <span class="correct-preview-arrow">→</span>
-          <span class="correct-preview-new">{{ correctPreview.newPoints.toFixed(2) }}</span>
-          <span v-if="!correctPreview.unchanged"
-                :class="['correct-preview-delta',
-                         correctPreview.delta > 0 ? 'pos'
-                       : correctPreview.delta < 0 ? 'neg' : '']">
-            {{ correctPreview.delta > 0 ? '+' : '' }}{{ correctPreview.delta.toFixed(2) }}
-          </span>
-        </div>
-        <div v-if="correctPreview.dropChanged" class="correct-preview-note">
-          ↻ The trim selection changes — a different judge's score is now dropped.
-        </div>
-        <div v-if="correctPreview.unchanged" class="correct-preview-note">
-          No change — score matches the existing value.
-        </div>
-      </div>
+  <!-- Score correction modal — extracted to
+       ScoreCorrectionModal. Mounted per open so the draft
+       fields reset like the inline openCorrection() did;
+       mutates the clicked card in place on save. -->
+  <ScoreCorrectionModal
+    v-if="correctOpen && correctTarget"
+    :card="correctTarget"
+    :event="currentEvent"
+    @close="closeCorrection"
+    @saved="refreshRecentAuditSoon()"
+  />
 
-      <div class="field">
-        <label class="label">Reason (logged in audit trail)</label>
-        <input class="input" type="text" v-model="correctReason"
-               placeholder='e.g. "Judge typo — verified with video"'>
-      </div>
-      <div v-if="correctErr" class="msg msg-error">{{ correctErr }}</div>
-      <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1rem">
-        <button class="btn btn-ghost btn-sm" @click="closeCorrection">Cancel</button>
-        <button class="btn btn-primary btn-sm" :disabled="correctBusy" @click="submitCorrection">
-          {{ correctBusy ? 'Saving…' : 'Save correction' }}
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- Check-in modal — extracted to CheckInModal. The confirm
+       footer emits the check_in_done_at stamp; the parent
+       applies it via patchCurrentEvent. -->
+  <CheckInModal
+    v-if="checkInOpen && currentEvent"
+    :event="currentEvent"
+    :workflow-state="orderWorkflowState"
+    @close="checkInOpen = false"
+    @confirmed="patchCurrentEvent"
+  />
 
-  <!-- Check-in / accreditation modal -->
-  <div v-if="checkInOpen" class="lb-backdrop" @click="closeCheckIn"></div>
-  <div v-if="checkInOpen" class="lb-modal checkin-modal" @click.stop>
-    <div class="lb-header">
-      <div>
-        <div class="lb-title">Check-in</div>
-        <div class="lb-event">
-          {{ currentEvent?.name }}
-          <span class="checkin-tally">
-            <span class="tally-present">✓ {{ checkInCounts.present }}</span>
-            <span class="tally-late">⏱ {{ checkInCounts.late }}</span>
-            <span class="tally-absent">✕ {{ checkInCounts.absent }}</span>
-            <span class="tally-pending">— {{ checkInCounts.pending }}</span>
-          </span>
-        </div>
-      </div>
-      <button class="btn btn-ghost btn-sm" @click="closeCheckIn">Close ✕</button>
-    </div>
-    <div class="lb-body">
-      <p class="hint" style="margin-bottom: 0.6rem">
-        Tap a chip to set the diver's status. Clicking the same chip again clears it
-        (back to pending). Updates persist instantly and broadcast to other operators.
-      </p>
-      <div v-if="checkInLoading" class="empty-mini">Loading…</div>
-      <div v-else-if="!checkInRows.length" class="empty-mini">
-        No divers entered for this event yet.
-      </div>
-      <div v-else class="checkin-list">
-        <div v-for="row in checkInRows" :key="row.competitor_id"
-             :class="['checkin-row', `checkin-${row.status || 'pending'}`]">
-          <div class="checkin-name">
-            {{ row.full_name }}
-            <span v-if="row.country_code" class="checkin-country">{{ row.country_code }}</span>
-            <div v-if="row.club_name" class="checkin-club">
-              {{ row.club_name }}<span v-if="row.club_code" class="checkin-club-code">{{ row.club_code }}</span>
-            </div>
-          </div>
-          <div class="checkin-chips">
-            <button :class="['chip', 'chip-present', row.status === 'present' ? 'is-active' : '']"
-                    @click="setAttendance(row, 'present')"
-                    v-tip="'Mark present'">✓ Present</button>
-            <button :class="['chip', 'chip-late', row.status === 'late' ? 'is-active' : '']"
-                    @click="setAttendance(row, 'late')"
-                    v-tip="'Mark late'">⏱ Late</button>
-            <button :class="['chip', 'chip-absent', row.status === 'absent' ? 'is-active' : '']"
-                    @click="setAttendance(row, 'absent')"
-                    v-tip="'Mark absent / DNS'">✕ DNS</button>
-          </div>
-        </div>
-      </div>
-      <div v-if="checkInErr" class="msg msg-error">{{ checkInErr }}</div>
-    </div>
-    <!-- Footer: confirm-and-advance button when the workflow is
-         on state 1 (no check_in_done_at stamp yet). After confirm
-         the modal closes and the workflow button flips to orange
-         "Randomise". When the operator reopens the modal mid-meet
-         to adjust attendance, this footer is hidden because the
-         workflow has already moved past check-in. -->
-    <div v-if="orderWorkflowState === 'check-in'" class="lb-footer">
-      <span class="checkin-footer-hint">
-        Mark each diver, then confirm to advance the workflow.
-      </span>
-      <button class="btn btn-sm wf-btn wf-btn-red"
-              :disabled="orderBusy || checkInLoading"
-              @click="confirmCheckInComplete"
-              v-tip="'Stamp check-in complete and advance to Randomise.'">
-        ✓ Check-in Complete — Continue
-      </button>
-    </div>
-  </div>
+  <!-- Referee sign-off modal — flow extracted to SignoffModal.
+       Mounted on demand so its referee_signoff_response socket
+       listener only lives while a request can be pending. -->
+  <SignoffModal
+    v-if="signoffOpen"
+    :event="currentEvent"
+    @close="signoffOpen = false"
+    @signed-off="patchCurrentEvent"
+  />
 
-  <!-- Referee sign-off modal (Cut 2). Two paths: send a push
-       notification to a chosen referee's device (the primary
-       flow), or have the referee enter their own credentials
-       on the manager's device when the push isn't viable
-       (no notification permission, no registered device). -->
-  <div v-if="signoffOpen" class="lb-backdrop" @click="closeSignoffModal"></div>
-  <div v-if="signoffOpen" class="lb-modal signoff-modal" @click.stop>
-    <div class="lb-header">
-      <div>
-        <div class="lb-title">Referee Sign-Off</div>
-        <div class="lb-event">{{ currentEvent?.name }}</div>
-      </div>
-      <button class="btn btn-ghost btn-sm" @click="closeSignoffModal">Close ✕</button>
-    </div>
-    <div class="lb-body">
-      <!-- Enforcement banner: visible when the event was created
-           with enforce_referee_signoff = TRUE so the operator
-           understands why the manager-attests tab isn't there. -->
-      <div v-if="enforceSignoff" class="signoff-enforced-banner">
-        🔒 Referee sign-off is enforced for this event. Only the
-        referee's own approval — push, code, or credential — counts.
-      </div>
-
-      <!-- Tab strip — push (primary), Cut 3 code, credential
-           (fallback at this device), and the manager-attests
-           shortcut (hidden when sign-off is enforced). -->
-      <div class="signoff-tabs">
-        <button :class="['signoff-tab', signoffMode === 'push' ? 'is-active' : '']"
-                @click="signoffMode = 'push'; signoffError = ''"
-                :disabled="!!signoffWaiting || !!signoffCode"
-                v-tip="(!!signoffWaiting || !!signoffCode)
-                  ? 'A request is already pending — close it (Cancel) before switching modes'
-                  : 'Push a notification to the referee’s phone for them to approve'">
-          📱 Send to referee's device
-        </button>
-        <button :class="['signoff-tab', signoffMode === 'code' ? 'is-active' : '']"
-                @click="signoffMode = 'code'; signoffError = ''"
-                :disabled="!!signoffWaiting || !!signoffCode"
-                v-tip="(!!signoffWaiting || !!signoffCode)
-                  ? 'A request is already pending — close it (Cancel) before switching modes'
-                  : 'Generate a 6-digit code + QR for the referee to enter on their phone'">
-          🔢 Code on referee's device
-        </button>
-        <button :class="['signoff-tab', signoffMode === 'credential' ? 'is-active' : '']"
-                @click="signoffMode = 'credential'; signoffError = ''"
-                :disabled="!!signoffWaiting || !!signoffCode"
-                v-tip="(!!signoffWaiting || !!signoffCode)
-                  ? 'A request is already pending — close it (Cancel) before switching modes'
-                  : 'Hand the laptop to the referee — they sign in with their own credentials'">
-          🔐 Sign at this device
-        </button>
-        <button v-if="!enforceSignoff"
-                :class="['signoff-tab', signoffMode === 'manager' ? 'is-active' : '']"
-                @click="signoffMode = 'manager'; signoffError = ''"
-                :disabled="!!signoffWaiting || !!signoffCode">
-          ✓ I'll attest
-        </button>
-      </div>
-
-      <!-- Push path -->
-      <div v-if="signoffMode === 'push'" class="signoff-pane">
-        <p class="hint">
-          Pick the referee — they'll get a push notification on their phone /
-          laptop with Approve / Deny buttons. The request times out after 5
-          minutes. If they can't get the notification, switch to the other
-          tab to sign on this device.
-        </p>
-        <template v-if="!signoffWaiting">
-          <div v-if="!signoffReferees.length" class="empty-mini">
-            No referees in this org yet. Use the credential tab instead.
-          </div>
-          <select v-else class="select" v-model="signoffPickedRefId" :disabled="orderBusy">
-            <option value="">— Pick a referee —</option>
-            <option v-for="r in signoffReferees" :key="r.id" :value="r.id">
-              {{ r.full_name }}
-            </option>
-          </select>
-          <div class="signoff-actions">
-            <button class="btn btn-primary"
-                    :disabled="orderBusy || !signoffPickedRefId"
-                    v-tip="!signoffPickedRefId ? 'Select a referee from the list above first' : ''"
-                    @click="sendSignoffPush">
-              {{ orderBusy ? 'Sending…' : 'Send sign-off request' }}
-            </button>
-          </div>
-        </template>
-        <div v-else class="signoff-waiting">
-          <div class="signoff-waiting-pulse">●</div>
-          Waiting for {{ signoffWaiting.referee_name }} to approve…
-          <div class="signoff-waiting-hint">
-            Or switch tabs and have them sign here on this device.
-          </div>
-        </div>
-      </div>
-
-      <!-- Code path (Cut 3) -->
-      <div v-else-if="signoffMode === 'code'" class="signoff-pane">
-        <p class="hint">
-          Pick the referee. Server generates a 6-digit code; read it to
-          the referee, who types it on their own device at
-          <code>/sign-off-codes</code>. The code is good for 5 minutes.
-        </p>
-        <template v-if="!signoffCode">
-          <div v-if="!signoffReferees.length" class="empty-mini">
-            No referees in this org yet.
-          </div>
-          <select v-else class="select" v-model="signoffPickedRefId" :disabled="orderBusy">
-            <option value="">— Pick a referee —</option>
-            <option v-for="r in signoffReferees" :key="r.id" :value="r.id">
-              {{ r.full_name }}
-            </option>
-          </select>
-          <div class="signoff-actions">
-            <button class="btn btn-primary"
-                    :disabled="orderBusy || !signoffPickedRefId"
-                    v-tip="!signoffPickedRefId ? 'Select a referee from the list above first' : ''"
-                    @click="generateSignoffCode">
-              {{ orderBusy ? 'Generating…' : 'Generate code' }}
-            </button>
-          </div>
-        </template>
-        <div v-else class="signoff-code-display">
-          <div class="signoff-code-label">Show this to {{ signoffCode.referee_name }}</div>
-          <!-- Two-column hand-off: QR on the left, typeable code
-               on the right. Whichever the referee can use first
-               wins — both feed the same /sign-off/code/verify
-               endpoint, so this panel updates the moment either
-               path completes. The QR encodes the same code as a
-               deep link into /sign-off-codes; scan-then-tap is
-               faster than dictating six digits across a venue. -->
-          <div class="signoff-code-grid">
-            <div v-if="signoffCode.qr_data_url" class="signoff-code-qr-block">
-              <img
-                class="signoff-code-qr"
-                :src="signoffCode.qr_data_url"
-                alt="QR code for referee sign-off"
-              />
-              <div class="signoff-code-qr-caption">Scan to sign off</div>
-            </div>
-            <div class="signoff-code-divider" v-if="signoffCode.qr_data_url">or</div>
-            <div class="signoff-code-text-block">
-              <div class="signoff-code-value">{{ signoffCode.code }}</div>
-              <div class="signoff-code-text-caption">Enter at <code>/sign-off-codes</code></div>
-            </div>
-          </div>
-          <div class="signoff-code-hint">
-            This panel updates the moment {{ signoffCode.referee_name }} confirms — by scan or
-            by code.
-          </div>
-        </div>
-      </div>
-
-      <!-- Manager-attests path. Hidden in template when enforced;
-           server gate refuses too. -->
-      <div v-else-if="signoffMode === 'manager'" class="signoff-pane">
-        <p class="hint">
-          You're attesting that you've already confirmed the dive order
-          with the referee verbally. Your name is what gets stamped on
-          the audit trail — pick this only when you've genuinely got
-          the referee's go-ahead.
-        </p>
-        <div class="signoff-actions">
-          <button class="btn btn-primary"
-                  :disabled="orderBusy"
-                  @click="managerAttestSignoff">
-            {{ orderBusy ? 'Recording…' : "I'll attest — sign off" }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Credential path -->
-      <div v-else class="signoff-pane">
-        <p class="hint">
-          Hand the laptop to the referee. They sign in with their own
-          username + password (and TOTP if enabled). Your manager session
-          stays put.
-        </p>
-        <div class="cred-fields">
-          <div class="field">
-            <label class="label">Referee username</label>
-            <input class="input" type="text" v-model="credUsername"
-                   autocomplete="off" :disabled="orderBusy">
-          </div>
-          <div class="field">
-            <label class="label">Password</label>
-            <!-- current-password (not new-password): this is a re-auth
-                 prompt for an EXISTING referee account, not a new-account
-                 creation form. iOS Safari only surfaces AutoFill on
-                 current-password fields; new-password suppresses it and
-                 forces manual entry of a (usually complex) referee
-                 password on a borrowed device mid-meet. -->
-            <input class="input" type="password" v-model="credPassword"
-                   autocomplete="current-password" :disabled="orderBusy">
-          </div>
-          <div v-if="credNeedsTotp" class="field">
-            <label class="label">TOTP / recovery code</label>
-            <input class="input" type="text" v-model="credCode"
-                   autocomplete="one-time-code" inputmode="numeric"
-                   :disabled="orderBusy">
-          </div>
-        </div>
-        <div class="signoff-actions">
-          <button class="btn btn-primary"
-                  :disabled="orderBusy || !credUsername.trim() || !credPassword"
-                  v-tip="!credUsername.trim() ? 'Enter the referee’s username'
-                    : (!credPassword ? 'Enter the referee’s password' : '')"
-                  @click="submitCredentialSignoff">
-            {{ orderBusy ? 'Verifying…' : 'Sign off' }}
-          </button>
-        </div>
-      </div>
-
-      <div v-if="signoffError" class="msg msg-error">{{ signoffError }}</div>
-    </div>
-  </div>
-
-  <!-- Late-entry modal — N autocomplete inputs, one per round.
-       The diver competes in every round of the event, so the
-       operator types the full code+position (e.g. "5132D") into
-       each row. The dive directory is filtered to the event's
-       height before matching. Same submit pattern as the diver
-       portal's CompetitorView, just with inline autocompletes
-       instead of click-to-open modals. -->
-  <div v-if="lateOpen" class="lb-backdrop" @click="lateOpen = false"></div>
-  <div v-if="lateOpen" class="lb-modal late-modal" @click.stop>
-    <div class="lb-header">
-      <div>
-        <div class="lb-title">Add Late Diver</div>
-        <div class="lb-event">{{ currentEvent?.name }}</div>
-      </div>
-      <button class="btn btn-ghost btn-sm" @click="lateOpen = false">Cancel</button>
-    </div>
-    <div class="lb-body">
-      <div class="field">
-        <label class="label">Diver</label>
-        <select class="select" v-model="lateCompetitorId">
-          <option value="">— Pick a diver —</option>
-          <option v-for="d in lateDivers" :key="d.id" :value="d.id">{{ d.full_name }}</option>
-        </select>
-      </div>
-
-      <!-- Synchro pair partner picker — only shown for synchro_pair events. -->
-      <div v-if="currentEvent?.event_type === 'synchro_pair'" class="field">
-        <label class="label">Partner</label>
-        <select class="select" v-model="latePartnerId">
-          <option value="">— Pick partner —</option>
-          <option v-for="d in lateDivers"
-                  :key="d.id"
-                  :value="d.id"
-                  :disabled="d.id === lateCompetitorId">
-            {{ d.full_name }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Team picker — only shown for team events. -->
-      <div v-if="currentEvent?.event_type === 'team'" class="field">
-        <label class="label">Team</label>
-        <select class="select" v-model="lateTeamId">
-          <option value="">— Pick team —</option>
-          <option v-for="t in lateTeams" :key="t.id" :value="t.id">
-            {{ t.name }}<span v-if="t.short_code"> ({{ t.short_code }})</span>
-          </option>
-        </select>
-      </div>
-
-      <div class="late-rounds">
-        <div class="late-rounds-head">
-          <span class="late-rounds-label">
-            {{ lateRounds.length }}-round dive list
-            <span v-if="currentEvent?.height" class="late-rounds-height">{{ currentEvent.height }} board</span>
-          </span>
-          <span class="late-rounds-dd">Total DD <strong>{{ lateTotalDD }}</strong></span>
-        </div>
-        <div
-          v-for="(slot, idx) in lateRounds"
-          :key="idx"
-          class="late-row"
-        >
-          <span class="late-row-num">{{ idx + 1 }}</span>
-          <div class="late-row-input-wrap">
-            <input
-              class="input"
-              type="text"
-              :id="`late-round-${idx}`"
-              v-model="slot.text"
-              :placeholder="`e.g. 5132D`"
-              autocomplete="off"
-              maxlength="8"
-              @input="lateOnInput(idx)"
-              @focus="lateActiveSlot = idx"
-              @blur="lateCloseDropdown(idx)"
-            >
-            <span v-if="slot.dive" class="late-row-resolved" v-tip="'Dive matched in directory'">✓</span>
-            <ul v-if="lateActiveSlot === idx && lateMatchesFor(idx).length"
-                class="late-autocomplete">
-              <li v-for="d in lateMatchesFor(idx)"
-                  :key="d.id"
-                  class="late-autocomplete-item"
-                  @mousedown.prevent="latePickDive(idx, d)">
-                <span class="late-ac-code">{{ d.dive_code }}<span class="late-ac-pos">{{ d.position }}</span></span>
-                <span class="late-ac-desc">{{ diveDescription(d) }}</span>
-                <span class="late-ac-dd">DD {{ d.dd }}</span>
-              </li>
-            </ul>
-          </div>
-          <span class="late-row-meta">
-            <template v-if="slot.dive">
-              <span class="late-row-desc">{{ diveDescription(slot.dive) }}</span>
-              <span class="late-row-dd">DD {{ slot.dive.dd }}</span>
-            </template>
-            <template v-else>
-              <span class="dim">—</span>
-            </template>
-          </span>
-        </div>
-      </div>
-
-      <p class="hint" v-if="lateDiveOptions.length">
-        {{ lateDiveOptions.length }} dives available at {{ currentEvent?.height }}. Type a dive code + position (e.g. <strong>5132D</strong>) and pick from the list, or hit ✓ when an exact match auto-resolves.
-      </p>
-      <div v-if="lateErr" class="msg msg-error">{{ lateErr }}</div>
-      <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-top:1rem">
-        <button class="btn btn-ghost btn-sm" @click="lateOpen = false">Cancel</button>
-        <button class="btn btn-primary btn-sm"
-                :disabled="lateBusy || !lateAllFilled || !lateCompetitorId"
-                v-tip="!lateCompetitorId ? 'Pick a diver from the list above first'
-                  : (!lateAllFilled ? 'Fill in a dive for every round before submitting' : '')"
-                @click="submitLateEntry">
-          {{ lateBusy ? 'Adding…' : `Add ${lateRounds.length}-round list` }}
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- Late-entry modal — extracted to LateEntryModal. Mounted
+       permanently (not v-if) so its lazy-loaded dive-directory /
+       org-diver caches keep their once-per-session behaviour. -->
+  <LateEntryModal
+    :open="lateOpen"
+    :event="currentEvent"
+    @close="lateOpen = false"
+    @added="onLateEntryAdded"
+  />
 
   <!-- Round-end transition prompt -->
   <div v-if="roundEndPromptOpen" class="lb-backdrop" @click="roundEndPromptOpen = false"></div>
@@ -6264,167 +4290,6 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <!-- Super Final — Synchro reserve replacement modal
-       (Appendix 3 §5.1). Lists eligible federations + their
-       synchro divers; the operator picks one to swap into a
-       Top-12 slot. -->
-  <div v-if="synchroPoolModalOpen" class="lb-backdrop" @click.self="closeSynchroPoolModal">
-    <div class="lb-modal" style="max-width:680px">
-      <div class="lb-head">
-        <div>
-          <div class="lb-title">🔄 Synchro reserve replacement</div>
-          <div class="lb-event">Appendix 3 §5.1 — pre-H2H replacement only.</div>
-        </div>
-        <button class="btn btn-ghost btn-sm" @click="closeSynchroPoolModal">Close ✕</button>
-      </div>
-      <div class="lb-body">
-        <div v-if="synchroPoolErr" class="msg msg-error" style="margin-bottom:0.75rem">{{ synchroPoolErr }}</div>
-
-        <div v-if="synchroPool && synchroPool.reserve_pool" style="display:grid;gap:0.5rem;margin-bottom:1rem">
-          <p class="hint" style="margin:0">
-            Eligible reserve federations (best synchro rank first;
-            already-2-individuals federations excluded):
-          </p>
-          <div v-for="entry in synchroPool.reserve_pool" :key="entry.org_id"
-               style="border:1px solid var(--border, #333); padding:0.5rem 0.75rem; border-radius:6px">
-            <div style="display:flex;align-items:center;gap:0.5rem">
-              <strong>#{{ entry.synchro_rank }}</strong>
-              <span style="flex:1">
-                {{ entry.org_name }}
-                <span v-if="entry.country_code" class="hint">· {{ entry.country_code }}</span>
-              </span>
-              <span class="hint">currently {{ entry.current_individual_count }} individual{{ entry.current_individual_count === 1 ? '' : 's' }}</span>
-            </div>
-            <div v-for="d in entry.eligible_divers" :key="d.competitor_id"
-                 style="display:flex;align-items:center;gap:0.5rem;padding:0.25rem 0">
-              <input type="radio" :value="d.competitor_id" v-model="synchroSwapForm.replacement_competitor_id">
-              <span>{{ d.full_name }}</span>
-            </div>
-          </div>
-          <div v-if="!synchroPool.reserve_pool.length" class="hint">
-            No eligible synchro reserves at this meet.
-          </div>
-        </div>
-
-        <label style="display:block;margin-bottom:0.75rem">
-          <span class="hint">Withdraw competitor (UUID of the Top-12 diver to remove)</span>
-          <input class="input" type="text" v-model="synchroSwapForm.withdraw_competitor_id">
-        </label>
-
-        <div style="display:flex;justify-content:flex-end;gap:0.5rem">
-          <button class="btn btn-ghost btn-sm" @click="closeSynchroPoolModal">Cancel</button>
-          <button class="btn btn-primary btn-sm"
-                  :disabled="synchroSwapBusy
-                             || !synchroSwapForm.withdraw_competitor_id
-                             || !synchroSwapForm.replacement_competitor_id"
-                  @click="confirmSynchroReplacement">
-            {{ synchroSwapBusy ? 'Swapping…' : 'Confirm swap' }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Super Final — Dive-off modal (Appendix 3 §6).
-       Operator records a tie-break dive-off after two divers
-       picked their previously-performed dives + re-dove them. -->
-  <div v-if="diveOffModalOpen" class="lb-backdrop" @click.self="closeDiveOffModal">
-    <div class="lb-modal" style="max-width:560px">
-      <div class="lb-head">
-        <div>
-          <div class="lb-title">{{ diveOffEditing ? 'Dive-off — record result' : 'Create dive-off' }}</div>
-          <div class="lb-event">Tie-break (Appendix 3 §6) — doesn't affect official scores.</div>
-        </div>
-        <button class="btn btn-ghost btn-sm" @click="closeDiveOffModal">Close ✕</button>
-      </div>
-      <div class="lb-body">
-        <div v-if="diveOffErr" class="msg msg-error" style="margin-bottom:0.75rem">{{ diveOffErr }}</div>
-
-        <!-- Suggest tied pairs from H2H. -->
-        <div v-if="!diveOffEditing && tiedPairsSuggestion.length"
-             class="hint" style="margin-bottom:0.5rem">
-          Tied H2H pairs:
-          <button v-for="(p, i) in tiedPairsSuggestion" :key="i"
-                  type="button"
-                  class="btn btn-ghost btn-sm"
-                  style="margin-block:0 0.25rem;margin-inline:0 0.25rem"
-                  @click="diveOffForm.competitor_a_id = p.competitor_a_id;
-                          diveOffForm.competitor_b_id = p.competitor_b_id">
-            {{ p.full_name_a }} vs {{ p.full_name_b }}
-          </button>
-        </div>
-
-        <div v-if="!diveOffEditing" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.75rem">
-          <label>
-            <span class="hint">Diver A (lower seed)</span>
-            <input class="input" type="text" v-model="diveOffForm.competitor_a_id"
-                   placeholder="competitor_id (UUID)">
-          </label>
-          <label>
-            <span class="hint">Diver B (higher seed)</span>
-            <input class="input" type="text" v-model="diveOffForm.competitor_b_id"
-                   placeholder="competitor_id (UUID)">
-          </label>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.75rem">
-          <label>
-            <span class="hint">Dive A id (optional)</span>
-            <input class="input" type="text" v-model="diveOffForm.dive_a_id">
-          </label>
-          <label>
-            <span class="hint">Dive B id (optional)</span>
-            <input class="input" type="text" v-model="diveOffForm.dive_b_id">
-          </label>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.75rem">
-          <label>
-            <span class="hint">Score A</span>
-            <input class="input" type="number" step="0.01" v-model="diveOffForm.score_a">
-          </label>
-          <label>
-            <span class="hint">Score B</span>
-            <input class="input" type="number" step="0.01" v-model="diveOffForm.score_b">
-          </label>
-        </div>
-
-        <label style="display:block;margin-bottom:0.75rem">
-          <span class="hint">Winner — defaults to higher score if blank</span>
-          <select class="select" v-model="diveOffForm.winner_id">
-            <option value="">— Auto from scores —</option>
-            <option :value="diveOffForm.competitor_a_id">A wins</option>
-            <option :value="diveOffForm.competitor_b_id">B wins</option>
-          </select>
-        </label>
-
-        <label style="display:block;margin-bottom:0.75rem">
-          <span class="hint">Notes</span>
-          <textarea class="input" rows="2" v-model="diveOffForm.notes"
-                    placeholder="Referee notes — chosen dive, witness, etc."></textarea>
-        </label>
-
-        <label v-if="!diveOffEditing" style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem">
-          <input type="checkbox" v-model="diveOffForm.confirm_tied">
-          <span class="hint">
-            Confirm these divers are tied (server otherwise refuses
-            if computed totals differ — useful when a corrective
-            re-score has just landed but the operator wants to
-            create the record anyway).
-          </span>
-        </label>
-
-        <div style="display:flex;justify-content:flex-end;gap:0.5rem">
-          <button class="btn btn-ghost btn-sm" @click="closeDiveOffModal">Cancel</button>
-          <button class="btn btn-primary btn-sm"
-                  :disabled="diveOffBusy"
-                  @click="saveDiveOff">
-            {{ diveOffBusy ? 'Saving…' : (diveOffEditing ? 'Save' : 'Create') }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Manual-entry modal (P5). Mounted at template root so the
        overlay stacks above every other ControlView surface. -->
