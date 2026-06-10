@@ -27,6 +27,7 @@ import JudgePanelModal from '@/components/JudgePanelModal.vue'
 import ReflowModal from '@/components/ReflowModal.vue'
 import SponsorLogosManager from '@/components/manager/SponsorLogosManager.vue'
 import SuperFinalPanels from '@/components/control/SuperFinalPanels.vue'
+import JudgePanelGrid from '@/components/control/JudgePanelGrid.vue'
 import SignoffModal from '@/components/control/SignoffModal.vue'
 import BroadcastModal from '@/components/control/BroadcastModal.vue'
 import LateEntryModal from '@/components/control/LateEntryModal.vue'
@@ -3327,62 +3328,16 @@ onUnmounted(() => {
 
           <div class="judge-block">
             <div style="font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-3);margin-bottom:0.625rem">Judge Scores</div>
-            <!-- Synchro: split the live judge tiles into the WA
-                 panel groups (Exec A / Exec B / Sync) so the
-                 operator sees who's scoring what role at a glance.
-                 Each group gets a labelled column; the tiles
-                 themselves are unchanged so Score-by-judge wiring
-                 (signal flag, scored class, name tooltip) stays
-                 identical with the flat layout. -->
-            <div v-if="judgeTilesByGroup" class="judge-groups-grid">
-              <div v-for="g in judgeTilesByGroup"
-                   :key="g.role"
-                   :class="['judge-group-col', `judge-group-${g.role}`]">
-                <div class="judge-group-col-label">{{ g.label }}</div>
-                <div class="judge-group-col-tiles">
-                  <div
-                    v-for="tile in g.tiles"
-                    :key="tile.judgeIndex"
-                    :class="[
-                      'judge-tile',
-                      tile.scored ? 'scored' : '',
-                      tile.signaled ? 'signaled' : '',
-                    ]"
-                    v-tip="tile.signaled
-                      ? `${judgeNameByNumber[tile.judgeIndex] || 'Judge'} ${tile.judgeIndex} — wants the referee`
-                      : (judgeNameByNumber[tile.judgeIndex] || `Judge ${tile.judgeIndex}`)"
-                  >
-                    <div class="judge-tile-label">J{{ tile.judgeIndex }}</div>
-                    <div class="judge-tile-score">{{ tile.score }}</div>
-                    <div v-if="judgeNameByNumber[tile.judgeIndex]" class="judge-tile-name">
-                      {{ judgeNameByNumber[tile.judgeIndex].split(' ').slice(-1)[0] }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div v-else class="judge-grid">
-              <div
-                v-for="tile in judgeTiles"
-                :key="tile.judgeIndex"
-                :class="[
-                  'judge-tile',
-                  tile.scored ? 'scored' : '',
-                  tile.signaled ? 'signaled' : '',
-                ]"
-                v-tip="tile.signaled
-                  ? `${judgeNameByNumber[tile.judgeIndex] || 'Judge'} ${tile.judgeIndex} — wants the referee`
-                  : (judgeNameByNumber[tile.judgeIndex] || `Judge ${tile.judgeIndex}`)"
-              >
-                <div class="judge-tile-label">J{{ tile.judgeIndex }}</div>
-                <div class="judge-tile-score">{{ tile.score }}</div>
-                <!-- Judge name surfaces under the tile so a slow
-                     submitter is identifiable at a glance. -->
-                <div v-if="judgeNameByNumber[tile.judgeIndex]" class="judge-tile-name">
-                  {{ judgeNameByNumber[tile.judgeIndex].split(' ').slice(-1)[0] }}
-                </div>
-              </div>
-            </div>
+            <!-- Live judge tiles. Synchro events render Exec A /
+                 Exec B / Sync columns (tilesByGroup); everyone else
+                 gets the flat grid. ControlView owns the tile state
+                 and mutates it on score_received / judge_signal; the
+                 component is pure display. -->
+            <JudgePanelGrid
+              :tiles="judgeTiles"
+              :tiles-by-group="judgeTilesByGroup"
+              :judge-names="judgeNameByNumber"
+            />
             <!-- Reserved slot for the computed dive total. Always
                  present so the controls below it never shift; the
                  inner row uses v-show so it stays measurable but
