@@ -24,6 +24,7 @@
 const express = require("express");
 const { PER_DIVE: SHARED_PER_DIVE, FULL_FIELD_RANKING } =
   require("../db/queries");
+const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 
 // Catalog of widget IDs the diver can enable on their dashboard.
 // Validated against the inbound array so a typo can't poison the
@@ -123,28 +124,15 @@ module.exports = function createDiverProfileRouter({
       // Top-level stats: total events, total dives, average DD,
       // best single dive total.
       const stats = await reads.query(
-        `WITH dive_totals AS (
-           SELECT s.event_id, s.round_number,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score ORDER BY ej.judge_number),
-                    e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-                  ) AS dive_total,
-                  MAX(d.dd) AS dd
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-           LEFT JOIN competitor_dive_lists cdl
-             ON cdl.event_id = s.event_id
-            AND cdl.competitor_id = s.competitor_id
-            AND cdl.round_number = s.round_number
-           LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-           WHERE s.competitor_id = $1
+        `WITH ${perDivePointsCte({
+           name:        "dive_totals",
+           select:      ["s.event_id", "s.round_number"],
+           pointsAlias: "dive_total",
+           selectExtra: ["MAX(d.dd) AS dd"],
+           where: `s.competitor_id = $1
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-           ${DATE_FILTER}
-           GROUP BY s.event_id, s.round_number, e.number_of_judges, e.event_type
-         )
+           ${DATE_FILTER}`,
+         })}
          SELECT
            COUNT(DISTINCT event_id)::int AS total_meets,
            COUNT(*)::int                 AS total_dives,
@@ -155,35 +143,26 @@ module.exports = function createDiverProfileRouter({
       );
 
       // Personal best per (dive code + position + height), under
-      // World Aquatics trim + DD rules.
+      // World Aquatics trim + DD rules. The canonical chain LEFT
+      // JOINs cdl + dive_directory — a withdrawn-then-deleted
+      // competitor_dive_lists row would otherwise drop the diver's
+      // historical scores from PB calculations. Dive-by-dive scope:
+      // d.dd is a grouping column, so it feeds the UDF directly
+      // (no MAX() wrapper).
       const pb = await reads.query(
-        `WITH dive_totals AS (
-           SELECT s.event_id, s.round_number,
-                  d.dive_code, d.position, d.height, d.dd, d.description,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score ORDER BY ej.judge_number),
-                    e.number_of_judges, d.dd, e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-                  ) AS dive_total
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-           /* LEFT JOIN cdl + dive_directory — a withdrawn-then-
-              deleted competitor_dive_lists row would otherwise drop
-              the diver's historical scores from PB calculations. */
-           LEFT JOIN competitor_dive_lists cdl
-             ON cdl.event_id = s.event_id
-            AND cdl.competitor_id = s.competitor_id
-            AND cdl.round_number = s.round_number
-           LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-           WHERE s.competitor_id = $1
+        `WITH ${perDivePointsCte({
+           name: "dive_totals",
+           select: [
+             "s.event_id", "s.round_number",
+             "d.dive_code", "d.position", "d.height", "d.dd", "d.description",
+           ],
+           dd:          "d.dd",
+           pointsAlias: "dive_total",
+           where: `s.competitor_id = $1
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE
              AND d.id IS NOT NULL
-           ${DATE_FILTER}
-           GROUP BY s.event_id, s.round_number,
-                    d.dive_code, d.position, d.height, d.dd, d.description, e.number_of_judges, e.event_type
-         ),
+           ${DATE_FILTER}`,
+         })},
          ranked AS (
            SELECT dt.*, e.name AS event_name, e.created_at,
                   ROW_NUMBER() OVER (
@@ -217,26 +196,11 @@ module.exports = function createDiverProfileRouter({
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE
            ${DATE_FILTER}
          ),
-         per_dive AS (
-           SELECT s.event_id, s.competitor_id, s.round_number,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score ORDER BY ej.judge_number),
-                    e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-                  ) AS dive_points
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-           LEFT JOIN competitor_dive_lists cdl
-             ON cdl.event_id = s.event_id
-            AND cdl.competitor_id = s.competitor_id
-            AND cdl.round_number = s.round_number
-           LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-           WHERE s.event_id IN (SELECT event_id FROM diver_events)
-             AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-           GROUP BY s.event_id, s.competitor_id, s.round_number, e.number_of_judges, e.event_type
-         ),
+         ${perDivePointsCte({
+           select: ["s.event_id", "s.competitor_id", "s.round_number"],
+           where: `s.event_id IN (SELECT event_id FROM diver_events)
+             AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
+         })},
          all_event_totals AS (
            SELECT event_id, competitor_id, SUM(dive_points) AS total
            FROM per_dive
@@ -476,31 +440,17 @@ module.exports = function createDiverProfileRouter({
 
         runQuery("compare_peers",
           `WITH me_dives AS (${PER_DIVE}),
-           peer_dives AS (
-             SELECT s.event_id, s.competitor_id, s.round_number, d.dd,
-                    calc_event_dive_points(
-                      array_agg(ej.judge_number ORDER BY ej.judge_number),
-                      array_agg(s.score ORDER BY ej.judge_number),
-                      e.number_of_judges, MAX(d.dd), e.event_type,
-                      BOOL_OR(cdl.partner_id IS NOT NULL)
-                    ) AS dive_total
-             FROM scores s
-             JOIN users u ON u.id = s.competitor_id
-             JOIN events e ON e.id = s.event_id
-             LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-             LEFT JOIN competitor_dive_lists cdl
-               ON cdl.event_id = s.event_id
-              AND cdl.competitor_id = s.competitor_id
-              AND cdl.round_number = s.round_number
-             LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-             WHERE u.org_id = $4
+           ${perDivePointsCte({
+             name:        "peer_dives",
+             select:      ["s.event_id", "s.competitor_id", "s.round_number", "d.dd"],
+             pointsAlias: "dive_total",
+             extraJoins:  ["JOIN users u ON u.id = s.competitor_id"],
+             where: `u.org_id = $4
                AND s.competitor_id <> $1
                AND COALESCE(e.is_rehearsal, FALSE) = FALSE
                AND ($2::date IS NULL OR e.created_at >= $2::date)
-               AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')
-             GROUP BY s.event_id, s.competitor_id, s.round_number,
-                      d.dd, e.number_of_judges, e.event_type
-           )
+               AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')`,
+           })}
            SELECT
              (SELECT AVG(dd)::numeric(4,2)         FROM me_dives)   AS my_avg_dd,
              (SELECT AVG(dd)::numeric(4,2)         FROM peer_dives) AS peer_avg_dd,
@@ -578,35 +528,29 @@ module.exports = function createDiverProfileRouter({
       if (recent.length) {
         const eventIds = recent.map((r) => r.event_id);
         const diveDetails = await runQuery("recent_form_dives",
-          `SELECT s.event_id, s.round_number,
-                  d.dive_code, d.position, d.height, d.dd, d.description,
-                  e.number_of_judges, e.event_type::text AS event_type,
-                  calc_event_dive_points(
-                    array_agg(ej.judge_number ORDER BY ej.judge_number),
-                    array_agg(s.score ORDER BY ej.judge_number),
-                    e.number_of_judges, MAX(d.dd), e.event_type,
-                    BOOL_OR(cdl.partner_id IS NOT NULL)
-                  ) AS dive_total,
-                  json_agg(
+          `${perDiveSelect({
+            select: [
+              "s.event_id", "s.round_number",
+              "d.dive_code", "d.position", "d.height", "d.dd", "d.description",
+              "e.number_of_judges", "e.event_type::text AS event_type",
+            ],
+            pointsAlias: "dive_total",
+            selectExtra: [
+              `json_agg(
                     json_build_object(
                       'judge_number', ej.judge_number,
                       'score',        s.score
                     ) ORDER BY ej.judge_number
-                  ) AS judges
-           FROM scores s
-           JOIN events e ON e.id = s.event_id
-           LEFT JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id
-           LEFT JOIN competitor_dive_lists cdl
-             ON cdl.event_id = s.event_id
-            AND cdl.competitor_id = s.competitor_id
-            AND cdl.round_number = s.round_number
-           LEFT JOIN dive_directory d ON d.id = COALESCE(s.dive_id, cdl.dive_id)
-           WHERE s.competitor_id = $1
+                  ) AS judges`,
+            ],
+            where: `s.competitor_id = $1
              AND s.event_id = ANY($2::uuid[])
-             AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-           GROUP BY s.event_id, s.round_number,
-                    d.dive_code, d.position, d.height, d.dd, d.description,
-                    e.number_of_judges, e.event_type
+             AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
+            groupBy: [
+              "s.event_id", "s.round_number",
+              "d.dive_code", "d.position", "d.height", "d.dd", "d.description",
+            ],
+          })}
            ORDER BY s.round_number ASC`,
           [id, eventIds],
         );
