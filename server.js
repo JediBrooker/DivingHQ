@@ -50,6 +50,7 @@ const path = require("path");
 const { Server } = require("socket.io");
 const { Pool } = require("pg");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
@@ -96,7 +97,11 @@ app.set("trust proxy", TRUST_PROXY === "false" ? false
   : TRUST_PROXY);
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: CORS_ORIGIN } });
+// credentials: true so the browser sends the httpOnly session cookie
+// on the WebSocket handshake (and on cross-origin XHR if CORS_ORIGIN is
+// a real origin). With credentials on, the origin can never be "*" —
+// the production guard above already enforces that.
+const io = new Server(server, { cors: { origin: CORS_ORIGIN, credentials: true } });
 
 // Standard HTTP-security headers. The SPA is served via the same
 // origin as the API, so one CSP covers both.
@@ -144,7 +149,14 @@ app.use(helmet({
   strictTransportSecurity: process.env.RATE_LIMIT_DISABLED !== "true",
   crossOriginEmbedderPolicy: false,
 }));
-app.use(cors({ origin: CORS_ORIGIN }));
+// credentials: true so the browser attaches the httpOnly session
+// cookie to API requests. Requires an explicit CORS_ORIGIN (never "*"),
+// which the production boot guard above enforces.
+app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
+// Parse cookies into req.cookies so the auth middleware can read the
+// httpOnly session cookie (the JWT no longer rides the Authorization
+// header for the SPA). Mounted before any route that authenticates.
+app.use(cookieParser());
 // Bound the JSON body size — the largest legitimate payload is the
 // CSV roster import, which never approaches 256kb. Anything bigger
 // is either a bug or an abuse attempt.
@@ -567,6 +579,7 @@ app.use(
     io,
     authLimiter,
     verifyToken,
+    optionalAuth,
     buildTokenPayload,
     hashFingerprint,
     sendWelcomeEmail,

@@ -14,6 +14,15 @@ const bcrypt  = require("bcrypt");
 const jwt     = require("jsonwebtoken");
 const crypto  = require("node:crypto");
 const totp    = require("../lib/totp");
+const { SESSION_COOKIE, cookieOptions } = require("../lib/session-cookie");
+
+// Plant the JWT in the httpOnly session cookie. The login/2FA/
+// password/locale responses still return the token in their body for
+// API clients + the e2e harness, but the SPA ignores that and relies
+// on this cookie (which browser JS cannot read or exfiltrate).
+function setSessionCookie(res, token) {
+  res.cookie(SESSION_COOKIE, token, cookieOptions());
+}
 
 // Pre-computed dummy bcrypt hash used by the login flow to keep
 // the timing constant when the username doesn't exist. Without
@@ -63,6 +72,7 @@ module.exports = function createAuthRouter({
   io,
   authLimiter,
   verifyToken,
+  optionalAuth,
   buildTokenPayload,
   hashFingerprint,
   sendWelcomeEmail,
@@ -77,6 +87,39 @@ module.exports = function createAuthRouter({
   JWT_EXPIRY,
 }) {
   const router = express.Router();
+
+  // -------------------------------------------------------------
+  // GET /api/auth/me — rehydrate the signed-in identity from the
+  // httpOnly session cookie. The SPA calls this on boot because the
+  // JWT now lives in a cookie its JS can't read/decode. Returns the
+  // same user payload shape the login response carries. 401 when
+  // anonymous (no / expired / revoked cookie) — a normal first-visit
+  // state, not an error.
+  // -------------------------------------------------------------
+  router.get("/api/auth/me", optionalAuth, async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: "Not authenticated" });
+    try {
+      // Rebuild from the DB so a role/locale change since the cookie
+      // was minted is reflected without forcing a re-login.
+      const payload = await buildTokenPayload(req.user.id);
+      res.json({ user: payload });
+    } catch (err) {
+      console.error("[Auth Me Error]", err.message);
+      res.status(500).json({ error: "Failed to load session" });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // POST /api/auth/logout — clear the session cookie. JS can't delete
+  // an httpOnly cookie, so sign-out has to round-trip the server. We
+  // deliberately don't bump token_version (that would sign the user
+  // out on every device); clearing the cookie + the JWT's own exp
+  // bound this session. No auth gate — clearing a cookie is harmless.
+  // -------------------------------------------------------------
+  router.post("/api/auth/logout", (req, res) => {
+    res.clearCookie(SESSION_COOKIE, cookieOptions());
+    res.json({ ok: true });
+  });
 
   router.post("/api/auth/login", authLimiter, async (req, res) => {
     const { username, password } = req.body || {};
@@ -148,7 +191,8 @@ module.exports = function createAuthRouter({
 
       const payload = await buildTokenPayload(user.id);
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      res.json({ token, ...payload });
+      setSessionCookie(res, token);
+      res.json({ token, user: payload, ...payload });
     } catch (err) {
       console.error("[Login Error]", err.message);
       res.status(500).json({ error: "Login failed" });
@@ -239,8 +283,10 @@ module.exports = function createAuthRouter({
 
       const payload = await buildTokenPayload(user.id);
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+      setSessionCookie(res, token);
       res.json({
         token,
+        user: payload,
         ...payload,
         ...(consumedRecovery
           ? { warning: "Recovery code consumed. Re-generate your recovery codes when convenient." }
@@ -840,7 +886,8 @@ module.exports = function createAuthRouter({
       sendPasswordChangedEmail(user.id).catch(() => {});
       const payload = await buildTokenPayload(user.id);
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      res.json({ ok: true, token, ...payload });
+      setSessionCookie(res, token);
+      res.json({ ok: true, token, user: payload, ...payload });
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
       console.error("[Change Password Error]", err.message);
@@ -890,7 +937,8 @@ module.exports = function createAuthRouter({
       // than falling through to Accept-Language.
       const payload = await buildTokenPayload(req.user.id);
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
-      res.json({ ok: true, locale: cleared ? null : raw, token, ...payload });
+      setSessionCookie(res, token);
+      res.json({ ok: true, locale: cleared ? null : raw, token, user: payload, ...payload });
     } catch (err) {
       console.error("[Set Locale Error]", err.message);
       res.status(500).json({

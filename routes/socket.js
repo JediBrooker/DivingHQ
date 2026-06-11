@@ -28,6 +28,7 @@
 
 const jwt = require("jsonwebtoken");
 const createIdempotency = require("../lib/idempotency");
+const { readSessionCookie } = require("../lib/session-cookie");
 
 module.exports = function attachSocket({
   io,
@@ -86,8 +87,19 @@ module.exports = function attachSocket({
   // valid token is present we stash the user id on the socket so
   // privileged events can be attributed to a verified user.
   io.use(async (socket, next) => {
-    const raw = socket.handshake.auth?.token;
-    if (raw && raw !== "spectator") {
+    // Auth source, in order:
+    //   * auth.token === 'spectator' → explicit anonymous opt-out
+    //     (a logged-in user viewing a public board), ignore the cookie.
+    //   * auth.token === <jwt>       → API clients + the e2e harness.
+    //   * else                       → the SPA's httpOnly session cookie,
+    //                                   which rides the handshake headers
+    //                                   (browser JS can't read it to pass
+    //                                   it via auth.token anymore).
+    const authToken = socket.handshake.auth?.token;
+    const raw = authToken === "spectator"
+      ? null
+      : (authToken || readSessionCookie(socket.handshake.headers?.cookie));
+    if (raw) {
       try {
         const decoded = jwt.verify(raw, JWT_SECRET);
         // Validate tv via the same 30s cache the HTTP path uses.
