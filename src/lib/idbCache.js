@@ -112,10 +112,6 @@ export async function idbClear() {
   })
 }
 
-function keyFor(token, url) {
-  return `${fingerprintFromToken(token)}:${url}`
-}
-
 // Pure helper: is a cached entry past its hard TTL?
 // Exposed for unit tests.
 export function isCacheExpired(cached, maxAgeMs, now = Date.now()) {
@@ -140,15 +136,21 @@ export function isCacheExpired(cached, maxAgeMs, now = Date.now()) {
 // entries older than maxAgeMs are NOT served — we await the
 // network instead. Use for reads where serving very stale data
 // would mislead (active scoreboard, judge panel state).
-export async function cachedFetch(url, fetchOptions = {}, { onUpdate, maxAgeMs } = {}) {
-  // Derive the per-user cache key from the Authorization header so
-  // user A's cached responses are invisible to user B. Falls back
-  // to 'anon' when there's no auth header (public endpoints).
-  const authHeader =
-    (fetchOptions.headers && (fetchOptions.headers.Authorization
-      || fetchOptions.headers.authorization)) || ''
-  const token = String(authHeader).replace(/^Bearer\s+/i, '')
-  const key = keyFor(token, url)
+export async function cachedFetch(url, fetchOptions = {}, { onUpdate, maxAgeMs, fingerprint } = {}) {
+  // Per-user cache key so user A's cached responses are invisible to
+  // user B. Since the cookie migration the auth store passes the
+  // identity fingerprint in explicitly (the JWT is no longer readable
+  // from JS to derive one); fall back to the Authorization header for
+  // any caller that still sends a Bearer token, then 'anon' for public
+  // reads.
+  let fp = fingerprint
+  if (fp == null) {
+    const authHeader =
+      (fetchOptions.headers && (fetchOptions.headers.Authorization
+        || fetchOptions.headers.authorization)) || ''
+    fp = fingerprintFromToken(String(authHeader).replace(/^Bearer\s+/i, ''))
+  }
+  const key = `${fp}:${url}`
   const cached = await idbGet(key)
   const expired = isCacheExpired(cached, maxAgeMs)
   let returned = false

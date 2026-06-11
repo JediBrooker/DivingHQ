@@ -204,6 +204,7 @@ async function createOrgAndAdmin(request, opts = {}) {
     throw new Error(`login ${login.status()}: ${await login.text()}`);
   }
   const { token: adminToken } = await login.json();
+  await dropSessionCookie(request);
 
   return { orgId, adminId, adminToken, slug, username, countryCode };
 }
@@ -248,6 +249,21 @@ async function insertClub({ orgId, name, shortCode = null }) {
   return { clubId: r.rows[0].id, name, shortCode };
 }
 
+// The login endpoints now ALSO set an httpOnly session cookie (for the
+// browser SPA). Playwright's APIRequestContext captures Set-Cookie and
+// re-sends it on every later request — which would ambiently
+// authenticate a request a test means to be anonymous, breaking
+// "no auth → 401/403" and "anonymous sees public-only" assertions.
+//
+// This harness is a header-based, multi-identity API client: it carries
+// each identity's JWT in `Authorization` per call (see header-first
+// precedence in lib/middleware.js). So after every login we drop the
+// session cookie, restoring the pre-cookie model where the request
+// context holds no ambient auth.
+async function dropSessionCookie(request) {
+  await request.post("/api/auth/logout").catch(() => {});
+}
+
 // Log in via the public API. Wraps the JSON response shape so a
 // caller can pull out the token without re-implementing the
 // boilerplate.
@@ -258,7 +274,9 @@ async function loginAs(request, username, password = TEST_PASSWORD) {
   if (r.status() !== 200) {
     throw new Error(`login ${username}: ${r.status()} ${await r.text()}`);
   }
-  return await r.json();   // { token, ... } OR { needs_totp, totp_token }
+  const body = await r.json();   // { token, ... } OR { needs_totp, totp_token }
+  await dropSessionCookie(request);
+  return body;
 }
 
 // Create an event via the public API. Caller passes the admin

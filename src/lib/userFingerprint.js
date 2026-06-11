@@ -15,3 +15,14 @@ export function fingerprintFromToken(token) {
   // resistance across realistic numbers of users on one device.
   return parts[1].slice(0, 24)
 }
+
+// Per-user fingerprint derived from the signed-in identity instead of
+// the JWT. Used since the cookie migration: the token now lives in an
+// httpOnly cookie the client JS can't read, so the user id (already a
+// UUID, stable per identity) is the keyspace prefix. Returns 'anon'
+// when signed out — matching fingerprintFromToken's empty case so the
+// two schemes share the public-cache namespace.
+export function fingerprintFromUser(user) {
+  if (!user || !user.id) return 'anon'
+  return String(user.id).slice(0, 24)
+}

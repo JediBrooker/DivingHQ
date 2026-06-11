@@ -26,17 +26,20 @@ const { notifications, ack } = usePush()
 // NO page reload, so the socket has to follow the auth identity:
 // a boot-time acquire would leave a mid-session sign-in with no
 // socket, and a sign-out → sign-in with a socket still
-// authenticated as the previous user. On every token change we
-// release the old pooled lease, acquire one keyed to the new
-// token, and rebind the shared notification listener.
+// authenticated as the previous user. On every identity change we
+// release the old pooled lease, acquire one keyed to the new user
+// id, and rebind the shared notification listener.
 let releaseSocket = null
-watch(() => auth.token, (token) => {
+watch(() => auth.user?.id, (userId) => {
   if (releaseSocket) {
     releaseSocket()
     releaseSocket = null
   }
-  if (token) {
-    const lease = acquireSocket({ token })
+  if (userId) {
+    // No token passed — the socket authenticates off the httpOnly
+    // session cookie on its handshake. The lease is keyed by user id
+    // so a sign-out → sign-in as a different user swaps the socket.
+    const lease = acquireSocket({ userId })
     releaseSocket = lease.release
     bindPushSocket(lease.socket)
   } else {

@@ -20,7 +20,7 @@
 
 import { ref, computed, watch, effectScope } from 'vue'
 import { createOutbox, createIdbBackend, STATUSES } from '@/lib/outbox'
-import { fingerprintFromToken } from '@/lib/userFingerprint'
+import { fingerprintFromUser } from '@/lib/userFingerprint'
 import { useSocket } from './useSocket'
 import { useAuthStore } from '@/stores/auth'
 
@@ -66,7 +66,7 @@ export function getOutbox() {
     const auth = useAuthStore()
     instance = createOutbox({
       backend: createIdbBackend(),
-      userFingerprint: fingerprintFromToken(auth.token),
+      userFingerprint: fingerprintFromUser(auth.user),
     })
 
     // Refresh counts on every outbox state change. push/drain/

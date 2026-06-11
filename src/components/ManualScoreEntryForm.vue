@@ -114,10 +114,9 @@ async function submitOne(judge) {
   try {
     const res = await fetch('/api/scores/manual-entry', {
       method: 'POST',
-      credentials: 'same-origin',
+      credentials: 'same-origin',  // sends the httpOnly session cookie
       headers: {
         'Content-Type': 'application/json',
-        ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
       },
       body: JSON.stringify({
         event_id:      props.eventId,

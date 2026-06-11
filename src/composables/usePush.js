@@ -103,7 +103,7 @@ export function usePush({ socket: sock } = {}) {
   // Subscribe to push. Safe to call multiple times — duplicates
   // collapse on the endpoint UNIQUE.
   async function subscribe() {
-    if (!pushApiAvailable() || !auth.token) {
+    if (!pushApiAvailable() || !auth.isLoggedIn) {
       ready.value = true
       return { ok: false, reason: 'unavailable' }
     }
@@ -170,7 +170,7 @@ export function usePush({ socket: sock } = {}) {
   }
 
   async function recent() {
-    if (!auth.token) return
+    if (!auth.isLoggedIn) return
     try {
       const rows = await auth.apiFetch('/api/notifications/me?limit=20')
       // Filter out anything already acknowledged — those don't
@@ -181,11 +181,11 @@ export function usePush({ socket: sock } = {}) {
     } catch { /* silent */ }
   }
 
-  // Auto-subscribe on login — once. The watcher fires when token
-  // appears (after a fresh login) and is wrapped to avoid a
-  // duplicate subscribe on hot module reload.
-  watch(() => auth.token, (token, prev) => {
-    if (token && !prev) {
+  // Auto-subscribe on login — once. The watcher fires when the user
+  // identity appears (after a fresh login or the boot-time /me probe)
+  // and is wrapped to avoid a duplicate subscribe on hot module reload.
+  watch(() => auth.user?.id, (id, prev) => {
+    if (id && !prev) {
       subscribe().catch(() => {})
       recent().catch(() => {})
     }
