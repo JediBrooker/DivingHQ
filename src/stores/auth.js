@@ -1,40 +1,76 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { idbClear, cachedFetch } from '@/lib/idbCache'
-
-const TOKEN_KEY = 'olympic_token'
+import { fingerprintFromUser } from '@/lib/userFingerprint'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref(sessionStorage.getItem(TOKEN_KEY))
+  // The session credential (the JWT) now lives in an httpOnly cookie
+  // the browser sends automatically and JS cannot read — closing the
+  // XSS token-theft vector the old sessionStorage token left open.
+  //
+  // What we keep here is only the decoded IDENTITY (id, org_roles,
+  // locale…), delivered in the login/refresh response bodies and
+  // rehydrated from /api/auth/me on boot. The server re-verifies the
+  // cookie on every request, so `user` is display/routing state, never
+  // a credential — tampering with it changes UI hints, never access.
+  const user = ref(null)
 
-  const user = computed(() => {
-    if (!token.value) return null
-    try { return JSON.parse(atob(token.value.split('.')[1])) }
-    catch { return null }
-  })
+  const isLoggedIn = computed(() => !!user.value)
 
-  const isLoggedIn = computed(() => !!token.value && !!user.value)
+  // Stable per-identity key for scoping client-side caches (idbCache,
+  // outbox) so a shared device never serves one user's data to the
+  // next. Derived from the user id now that the token is unreadable.
+  const fingerprint = computed(() => fingerprintFromUser(user.value))
 
+  // Accept either { user } (the new explicit shape) or a flat payload
+  // carrying a top-level id (the login/refresh responses still spread
+  // the payload for API clients). Any `token` field is ignored — the
+  // cookie is the session.
   function saveSession(data) {
-    if (!data?.token) {
-      throw new Error('Cannot save an authenticated session without a token')
+    const next = data?.user || (data && data.id ? data : null)
+    if (!next) {
+      throw new Error('Cannot save a session without a user identity')
     }
-    // Wipe any cached responses owned by the previous identity
-    // before swapping in the new token. Even though cache keys are
-    // per-user-fingerprint now, an explicit clear keeps disk usage
-    // bounded across many sign-in/out cycles on the same device.
+    // Wipe any cached responses owned by the previous identity before
+    // swapping. Keeps disk usage bounded across sign-in/out cycles on
+    // a shared device even though cache keys are per-fingerprint.
     idbClear().catch(() => {})
-    token.value = data.token
-    sessionStorage.setItem(TOKEN_KEY, data.token)
+    user.value = next
   }
 
   function clearSession() {
-    token.value = null
-    sessionStorage.clear()
-    // Belt-and-braces: drop every cached API payload. Without this,
-    // the next user on a shared device could be served the previous
-    // user's cached profile / dashboard / club lists.
+    user.value = null
+    // Clear the httpOnly cookie server-side — JS can't delete it. Fire-
+    // and-forget with keepalive so it still completes if the caller
+    // navigates away (hard redirect to /login) in the same tick.
+    try {
+      fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+        keepalive: true,
+      }).catch(() => {})
+    } catch { /* navigation already tore down fetch — cookie still clears server-side */ }
+    try { sessionStorage.clear() } catch { /* private mode */ }
+    // Belt-and-braces: drop every cached API payload so the next user
+    // on a shared device can't be served the previous user's data.
     idbClear().catch(() => {})
+  }
+
+  // Rehydrate identity from the httpOnly session cookie on app boot.
+  // 401 = anonymous (no / expired / revoked cookie) — a normal first-
+  // visit state, not an error. Never throws so boot can't be blocked.
+  async function fetchMe() {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'same-origin' })
+      if (res.ok) {
+        const body = await res.json().catch(() => null)
+        user.value = body?.user || null
+      } else {
+        user.value = null
+      }
+    } catch {
+      user.value = null
+    }
   }
 
   function hasRole(role) {
@@ -48,33 +84,26 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function getHeaders() {
-    // Only attach Authorization when we actually have a token.
-    // Sending "Bearer null" would trigger the 401-on-bad-JWT path
-    // on /api/events (and could trip future tightenings elsewhere)
-    // — turning a clean public GET into a forced re-login for
-    // anonymous spectators. Letting the header drop entirely
-    // matches the server-side "no auth header → anonymous" branch.
-    const h = { 'Content-Type': 'application/json' }
-    if (token.value) h.Authorization = `Bearer ${token.value}`
-    return h
+    // No Authorization header any more — the httpOnly session cookie
+    // carries the credential and rides every same-origin request. We
+    // still set Content-Type for JSON bodies.
+    return { 'Content-Type': 'application/json' }
   }
 
   async function apiFetch(url, options = {}) {
     const res = await fetch(url, {
       ...options,
+      // Send the session cookie on every request.
+      credentials: 'same-origin',
       headers: { ...getHeaders(), ...(options.headers ?? {}) },
     })
-    // 401 = token expired or revoked. Clear the session so the
-    // router guard sends the user back to /login, instead of every
-    // page just throwing red errors with a stale-but-present token.
-    // Skip the redirect for users who weren't authenticated to
-    // begin with (no token) — a 401 there is the public endpoint
+    // 401 = cookie expired or revoked. Clear the session so the router
+    // guard sends the user back to /login instead of every page
+    // throwing red errors. Skip the redirect for viewers who weren't
+    // signed in to begin with — a 401 there is a public endpoint
     // genuinely refusing them, not a session-expiry signal.
-    if (res.status === 401 && token.value) {
+    if (res.status === 401 && isLoggedIn.value) {
       clearSession()
-      // Best-effort hash-route redirect. Direct router import would
-      // create a circular import in the SPA bundle, so we go through
-      // window.location which is fine for a hard "your session ended".
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
         window.location.href = '/login'
       }
@@ -88,32 +117,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Stale-while-revalidate variant of apiFetch. Wraps idbCache's
   // cachedFetch so authenticated reads can serve a cached copy
-  // instantly + refresh on the side. Returns { data, fromCache,
-  // age } so the caller can render a "stale, refreshing…" hint.
-  //
-  // opts shape:
-  //   { cache: { maxAgeMs, onUpdate }, ...fetchInit }
-  // where cache.maxAgeMs is the hard TTL (omit for infinite SWR)
-  // and cache.onUpdate fires when the background revalidation
-  // lands. Everything else is passed through to fetch().
-  //
-  // 401 handling: cachedFetch deletes the cached entry on 401 and
-  // returns null. We then clear the local session + redirect to
-  // /login — same posture as apiFetch's 401 branch.
+  // instantly + refresh on the side. Returns { data, fromCache, age }.
+  // The per-user cache fingerprint is passed in explicitly now that
+  // the token isn't readable from the Authorization header.
   async function cachedApiFetch(url, opts = {}) {
     const { cache = {}, ...fetchInit } = opts
     const result = await cachedFetch(url, {
       ...fetchInit,
+      credentials: 'same-origin',
       headers: { ...getHeaders(), ...(fetchInit.headers ?? {}) },
-    }, cache)
-    if (result.data === null && !result.fromCache && token.value) {
-      // cachedFetch can return null for any reason (network fail,
-      // 401, server error). We can't distinguish 401 from a
-      // transient outage without re-fetching, so we DON'T force a
-      // redirect here — unlike apiFetch which gets the exact
-      // status code. Callers that need strict auth flow stay on
-      // apiFetch; cachedApiFetch is for tolerable-stale reads.
-    }
+    }, { ...cache, fingerprint: fingerprint.value })
     return result
   }
 
@@ -123,8 +136,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    token, user, isLoggedIn,
-    saveSession, clearSession,
+    user, isLoggedIn, fingerprint,
+    saveSession, clearSession, fetchMe,
     hasRole, hasAnyRole, getHeaders,
     apiFetch, cachedApiFetch,
     formatRoles,

@@ -483,13 +483,15 @@ async function load() {
     const result = await cachedFetch(
       url,
       {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
-        },
-        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',  // sends the httpOnly session cookie
       },
       {
+        // Scope the cache to the signed-in identity so an owner's
+        // private profile fields never get served to the next viewer
+        // on a shared device (the fingerprint used to come off the
+        // Authorization header, which the cookie replaced).
+        fingerprint: auth.fingerprint,
         onUpdate(fresh) {
           profile.value = fresh
           fromCache.value = false
@@ -520,13 +522,11 @@ async function loadAnalytics() {
     const result = await cachedFetch(
       `/api/divers/${targetId.value}/analytics${dateQS()}`,
       {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
-        },
-        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',  // sends the httpOnly session cookie
       },
       {
+        fingerprint: auth.fingerprint,
         onUpdate(fresh) { analytics.value = fresh },
       },
     )

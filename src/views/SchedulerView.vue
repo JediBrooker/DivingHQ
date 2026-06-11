@@ -168,7 +168,7 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const body = auth.token
+    const body = auth.isLoggedIn
       ? await auth.apiFetch(`/api/meets/${meetId.value}/sessions`)
       : await fetchJson(`/api/meets/${meetId.value}/sessions`)
     sessions.value = Array.isArray(body?.sessions) ? body.sessions : []

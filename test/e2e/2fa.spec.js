@@ -40,15 +40,23 @@ function totpFor(secret, stepOffset = 0) {
   });
 }
 
+// The identity the SPA stores after a successful login. Since the
+// httpOnly-cookie migration the client reads this from the response
+// body's `user` field (it can no longer decode the JWT itself), so the
+// mocked /login/totp response must carry it.
+const FAKE_SESSION_USER = {
+  id: "00000000-0000-4000-8000-000000000001",
+  username: "totp-ui-admin",
+  full_name: "TOTP UI Admin",
+  org_id: "00000000-0000-4000-8000-000000000002",
+  org_roles: ["org_admin"],
+  is_system_admin: false,
+};
+
 function fakeSessionToken() {
   const header = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
   const payload = Buffer.from(JSON.stringify({
-    id: "00000000-0000-4000-8000-000000000001",
-    username: "totp-ui-admin",
-    full_name: "TOTP UI Admin",
-    org_id: "00000000-0000-4000-8000-000000000002",
-    org_roles: ["org_admin"],
-    is_system_admin: false,
+    ...FAKE_SESSION_USER,
     exp: Math.floor(Date.now() / 1000) + 3600,
   })).toString("base64url");
   return `${header}.${payload}.signature`;
@@ -69,7 +77,7 @@ async function exerciseLoginTotpUi(page, code, responseExtras = {}) {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ token: fakeSessionToken(), ...responseExtras }),
+      body: JSON.stringify({ token: fakeSessionToken(), user: FAKE_SESSION_USER, ...responseExtras }),
     });
   });
   await page.route("**/api/users/me/claim-candidates", async (route) => {

@@ -31,6 +31,7 @@
   "dependencies": {
     "@lucide/vue": "^1.17.0",
     "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

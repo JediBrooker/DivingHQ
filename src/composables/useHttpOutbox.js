@@ -50,11 +50,12 @@ const drainHookSockets = new WeakSet()
 // outbox state machine recognises.
 async function httpSend(auth, entry) {
   const { method, url, body } = entry.payload
+  // No Authorization header — the httpOnly session cookie rides the
+  // request via credentials:'same-origin' below.
   const headers = {
     'Content-Type': 'application/json',
     'X-Idempotency-Key': entry.idempotency_key,
   }
-  if (auth.token) headers.Authorization = `Bearer ${auth.token}`
 
   let res
   try {
@@ -153,8 +154,8 @@ export function useHttpOutbox() {
     if (!OUTBOX_ENABLED) {
       // Legacy direct path: just fetch and let the caller handle
       // success/failure. Matches the pre-outbox behaviour exactly.
+      // Auth rides the httpOnly cookie (credentials:'same-origin').
       const headers = { 'Content-Type': 'application/json' }
-      if (auth.token) headers.Authorization = `Bearer ${auth.token}`
       const res = await fetch(url, {
         method,
         headers,
