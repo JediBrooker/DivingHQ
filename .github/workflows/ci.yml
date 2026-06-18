@@ -38,10 +38,22 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
+      # Cache node_modules (including compiled native deps: bcrypt,
+      # sharp, esbuild) keyed on the lockfile. On a hit we skip npm ci
+      # entirely; the runner OS is constant so the cached binaries are
+      # safe to reuse. Shared across the build/test/e2e jobs.
+      - name: Cache node_modules
+        id: npm-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Lint (syntax-check)
@@ -50,10 +62,22 @@ jobs:
       - name: Build SPA
         run: npm run build
 
+      # Hand the built SPA to the e2e job so it doesn't rebuild from
+      # scratch on the critical path. See the e2e job's download step
+      # and PW_SKIP_BUILD in playwright.config.js.
+      - name: Upload SPA build
+        uses: actions/upload-artifact@v4
+        with:
+          name: spa-dist
+          path: dist/
+          retention-days: 1
+
   test:
     name: Tests against Postgres
     runs-on: ubuntu-latest
-    needs: build
+    # No dependency on `build`: these are Node API/unit tests that never
+    # touch the SPA bundle, so they run in parallel with the build job
+    # instead of waiting behind it.
 
     services:
       postgres:
@@ -97,10 +121,18 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
+      - name: Cache node_modules
+        id: npm-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Apply schema (init.sql)
@@ -169,11 +201,28 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
+      - name: Cache node_modules
+        id: npm-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm ci
+
+      # Pull in the SPA bundle built by the `build` job so the
+      # Playwright webServer can boot `node server.js` directly
+      # (PW_SKIP_BUILD below) instead of rebuilding it here.
+      - name: Download SPA build
+        uses: actions/download-artifact@v4
+        with:
+          name: spa-dist
+          path: dist/
 
       - name: Apply schema (init.sql)
         run: psql -v ON_ERROR_STOP=1 -h localhost -U diver -d divinghq_test -f init.sql
@@ -214,13 +263,31 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps
 
-      # playwright.config.js boots `npm run build && node server.js`
-      # itself via webServer — no separate "start the app" step.
-      # process.env.CI flips the config to retries=2 + GitHub
-      # reporter + single worker.
-      - name: Run e2e
-        if: github.event.inputs.update_snapshots != 'true'
+      # playwright.config.js boots the app via webServer — no separate
+      # "start the app" step. With PW_SKIP_BUILD set it runs
+      # `node server.js` against the downloaded dist/ instead of
+      # rebuilding. process.env.CI flips the config to retries=2 +
+      # GitHub reporter + 3 workers.
+      # On pull requests, gate with chromium only — the cross-browser /
+      # mobile projects (firefox, mobile-chrome, mobile-safari) rarely
+      # catch PR-specific regressions and roughly quadruple e2e time.
+      # Pushes to main and manual dispatches run the full project matrix.
+      - name: Run e2e (chromium only — pull request)
+        if: github.event.inputs.update_snapshots != 'true' && github.event_name == 'pull_request'
+        run: npm run test:e2e -- --project=chromium
+        env:
+          PW_SKIP_BUILD: "1"
+          # Browser specs are render/network-bound, so oversubscribing
+          # the runner's cores shortens wall-clock. playwright.config.js
+          # reads PW_WORKERS (default 3).
+          PW_WORKERS: "4"
+
+      - name: Run e2e (full browser matrix)
+        if: github.event.inputs.update_snapshots != 'true' && github.event_name != 'pull_request'
         run: npm run test:e2e
+        env:
+          PW_SKIP_BUILD: "1"
+          PW_WORKERS: "4"
 
       # When dispatched with update_snapshots=true, run Playwright
       # with --update-snapshots so visual-regression baselines get
