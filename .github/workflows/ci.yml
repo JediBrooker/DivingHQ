@@ -44,11 +44,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint (syntax-check)
+      - name: Lint (server syntax + frontend ESLint)
         run: npm run lint
 
       - name: Build SPA
         run: npm run build
+
+      - name: Bundle-size budget
+        run: npm run check:size
+
+      - name: Reduced-motion guard
+        run: npm run check:motion
 
   test:
     name: Tests against Postgres

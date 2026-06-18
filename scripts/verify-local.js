@@ -21,7 +21,9 @@ Runs:
   1. npm run lint
   2. npm run build
   3. npm run test:safe
-  4. optional: npx playwright test [playwright args...]`);
+  4. npm run check:motion
+  5. npm run check:size
+  6. optional: npx playwright test [playwright args...]`);
   process.exit(0);
 }
 
@@ -52,6 +54,10 @@ function run(label, command, commandArgs) {
 run("lint", "npm", ["run", "lint"]);
 run("build", "npm", ["run", "build"]);
 run("test:safe", "npm", ["run", "test:safe"]);
+// Gates added in P0 of the meet-day redesign. check:size reads the
+// dist/ that the build step above just produced.
+run("check:motion", "npm", ["run", "check:motion"]);
+run("check:size", "npm", ["run", "check:size"]);
 
 if (e2eArgs) {
   run(

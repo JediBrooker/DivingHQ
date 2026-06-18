@@ -1,0 +1,8 @@
+node_modules/
+dist/
+playwright-report/
+test-results/
+coverage/
+wiki/
+*.min.js
+src/locales/
