@@ -28,6 +28,15 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true,
+    "esbuild@0.25.12": true,
+    "sharp@0.34.5": true,
+    "vue-demi@0.14.10": true
+  },
   "dependencies": {
     "@lucide/vue": "^1.17.0",
     "bcrypt": "^6.0.0",
