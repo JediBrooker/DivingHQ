@@ -706,6 +706,14 @@ const submitLabel = computed(() => {
 </template>
 
 <style scoped>
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
+   reinforces the global guard in app.css). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 /* Meet-hold banner — surfaced when the Control Room pauses
    the meet. Same shape on Scoreboard + Control. */
 .hold-banner {

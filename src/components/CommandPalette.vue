@@ -23,6 +23,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { onOpenCommandPalette, replayRoleTour } from '@/composables/useAppChannel'
 
 const router = useRouter()
 const auth   = useAuthStore()
@@ -54,7 +55,7 @@ const STATIC_ENTRIES = [
   { kind:'go', label:'Assign Judges',  sub:'Match panels to events',    to:'/assign-judges', roles:['org_admin','meet_manager'], icon:'⚖️' },
   { kind:'go', label:'Replay tour',    sub:'See the role-specific intro again', to:null,    roles:null,           icon:'🎬',
     action: () => {
-      if (typeof window !== 'undefined' && window.__replayRoleTour) window.__replayRoleTour()
+      replayRoleTour()
     } },
   { kind:'go', label:'Sign Out',       sub:'End your session',          to:null,             roles:null,           icon:'🚪',
     action: () => { auth.clearSession(); router.push('/login') } },
@@ -248,15 +249,16 @@ function pick(entry) {
 }
 
 // ----- Mount ---------------------------------------------------
+let offOpenChannel = null
 onMounted(() => {
   window.addEventListener('keydown', onGlobalKey)
-  // Also expose openPalette on window so other surfaces (e.g.
-  // a header "Search" button) can trigger without importing.
-  window.__openCommandPalette = openPalette
+  // Other surfaces (e.g. the topbar Search button) open the palette via
+  // the app channel — no window global, no mount-order coupling.
+  offOpenChannel = onOpenCommandPalette(openPalette)
 })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onGlobalKey)
-  delete window.__openCommandPalette
+  if (offOpenChannel) offOpenChannel()
 })
 </script>
 

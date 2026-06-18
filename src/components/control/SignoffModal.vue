@@ -438,6 +438,14 @@ async function managerAttestSignoff() {
 </template>
 
 <style scoped>
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
+   reinforces the global guard in app.css). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 /* Sign-off styles MOVED from ControlView.css (exclusive to this
    modal). The .lb-* modal frame below is COPIED — the pattern is
    shared by the modals that remain in ControlView. */

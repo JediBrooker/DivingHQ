@@ -230,6 +230,15 @@ async function runRandomiseDraw() {
 </template>
 
 <style scoped>
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
+   reinforces the global guard in app.css). Reduced -> the reel resolves
+   to its final order without the shuffle; the draw logic is untouched. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 /* Randomise-draw styles MOVED from ControlView.css (exclusive to
    this modal). The .lb-* modal frame at the bottom is COPIED —
    the pattern is shared by the modals that remain in

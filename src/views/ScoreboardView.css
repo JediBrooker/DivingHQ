@@ -94,6 +94,15 @@
   border-radius: 4px; color: white;
 }
 .live-badge { background: var(--red); animation: pulse-red 2s infinite; }
+
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
+   reinforces the global guard in app.css). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 .done-badge { background: var(--text-2); color: var(--bg); }
 @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.7} }
 

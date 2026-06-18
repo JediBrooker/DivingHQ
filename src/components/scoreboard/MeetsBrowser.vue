@@ -581,6 +581,14 @@ watch(countryFilter, (val) => {
 </template>
 
 <style scoped>
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
+   reinforces the global guard in app.css). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 /* List mode (browsable meets) — no special handling needed
    anymore; .sb-layout defaults to natural document flow. The
    :has(.meets-mode) override is gone with the height:100vh lock

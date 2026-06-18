@@ -1,36 +1,11 @@
 {
   "generated": "P0 baseline",
-  "count": 30,
+  "count": 5,
   "sites": [
-    "components/control/JudgePanelGrid.vue::animation: judgeSignalPulse 1.4s ease-in-out infinite",
-    "components/control/RandomiseDrawModal.vue::animation: rd-icon-spin 0.9s linear infinite",
-    "components/control/RandomiseDrawModal.vue::animation: rd-title-pulse 1.0s ease-in-out infinite alternate",
-    "components/control/RandomiseDrawModal.vue::animation: rd-title-pulse 1.4s ease-in-out infinite alternate",
-    "components/control/SignoffModal.vue::animation: signoff-pulse 1.5s ease-in-out infinite",
-    "components/scoreboard/MeetEventGrid.vue::.ev-cell-badge.live { background: var(--red); color: #fff; animation: ev-pulse 2s infinite; }",
-    "components/scoreboard/MeetsBrowser.vue::animation: pulse-red 1.5s infinite",
-    "components/scoreboard/MeetsBrowser.vue::animation: pulse-red 2s infinite",
-    "components/scoreboard/MeetsBrowser.vue::animation: pulse-red 2s infinite; white-space: nowrap",
-    "components/scoreboard/MeetsBrowser.vue::background: var(--amber); animation: cachePulse 1.2s infinite",
     "views/CompetitorView.vue::animation: superFinalLockPulse 2.5s ease-in-out infinite",
-    "views/ControlView.css::.shot-clock.shot-clock-warn .shot-clock-num { color: var(--red); animation: shotPulse 0.5s infinite; }",
-    "views/ControlView.css::.status-pill.status-diving { background: var(--cyan); color: var(--bg); animation: pulse-cyan 1s infinite; }",
-    "views/ControlView.css::animation: btnPulse 1s ease-in-out infinite",
-    "views/ControlView.css::animation: pulse-amber 2s infinite",
-    "views/ControlView.css::animation: refereeSignalPulse 1.4s ease-in-out infinite",
-    "views/DashboardView.vue::animation: pulseLiveBreathing 3.2s ease-in-out infinite",
-    "views/DashboardView.vue::animation: pulseSkeletonSweep 1.4s ease-in-out infinite",
     "views/DiverProfileView.css::background: var(--amber); animation: cachePulse 1.2s infinite",
     "views/DrArchiveExplorer.vue::animation: dr-spin 0.7s linear infinite",
     "views/HomeView.vue::.live-pill::before { content: \"\"; width: 7px; height: 7px; border-radius: 50%; background: var(--danger-solid); animation: pulse-red 2s infinite; }",
-    "views/JudgeView.vue::animation: judgePanelSignalPulse 1.4s ease-in-out infinite",
-    "views/JudgeView.vue::animation: judgePanelSignalPulse 1.4s ease-in-out infinite",
-    "views/JudgeView.vue::animation: signalBtnPulse 1.4s ease-in-out infinite",
-    "views/JudgeView.vue::background: var(--bg); animation: connPulse 1s infinite",
-    "views/ManagerView.css::animation: pulse-live 2.4s ease-in-out infinite",
-    "views/MeetDayView.vue::animation: queue-pulse 1.6s ease-in-out infinite",
-    "views/MeetView.vue::animation: pulse-red 2s infinite",
-    "views/ScoreboardView.css::.live-badge { background: var(--red); animation: pulse-red 2s infinite; }",
-    "views/ScoreboardView.css::background: var(--bg); animation: connPulse 1s infinite"
+    "views/MeetView.vue::animation: pulse-red 2s infinite"
   ]
 }

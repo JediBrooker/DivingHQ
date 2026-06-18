@@ -1507,4 +1507,16 @@ h1, h2, h3, h4 {
 }
 @media (prefers-reduced-motion: reduce) {
   [data-tip]::after { transition: none; }
+  /* P1: one global motion guard. Neutralise every animation and
+     transition app-wide for users who asked for less motion, while
+     keeping animation/transitionend handlers firing (near-zero
+     duration, not `none`) so nothing that waits on them stalls. The
+     per-surface guards in the meet-day views/components reinforce this
+     and let the P0 reduced-motion scanner track each file on its own. */
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

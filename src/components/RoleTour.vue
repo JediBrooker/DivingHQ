@@ -20,6 +20,7 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { onReplayRoleTour } from '@/composables/useAppChannel'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -142,6 +143,7 @@ function replayTour(forceRole = null) {
   open.value   = true
 }
 
+let offReplayChannel = null
 // Auto-start on first dashboard mount post-login. We listen to
 // route changes via the router instance because the SPA mounts
 // this component once at the app root.
@@ -153,7 +155,11 @@ onMounted(() => {
   router.afterEach((to) => {
     if (to.path === '/dashboard' && !open.value) startIfFresh()
   })
-  window.__replayRoleTour = replayTour
+  offReplayChannel = onReplayRoleTour(replayTour)
+})
+
+onBeforeUnmount(() => {
+  if (offReplayChannel) offReplayChannel()
 })
 
 // Watch for sign-out → bail.

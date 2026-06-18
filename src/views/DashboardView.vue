@@ -1238,6 +1238,14 @@ function detachSocketHandlers() {
 </template>
 
 <style scoped>
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
+   reinforces the global guard in app.css). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 /* Dashboard wrapper — clamps horizontal overflow at the page
    level. */
 .dashboard {
