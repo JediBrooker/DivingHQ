@@ -525,20 +525,29 @@ app.get("/api/health", async (_req, res) => {
 // counters only (no PII), but route names and request volume are
 // still operational intel worth not handing out anonymously.
 //
-// Auth model — opt-in, back-compat:
-//   * METRICS_TOKEN unset (default): no auth gate. Same behaviour
-//     as before; relies on firewall / reverse-proxy ACL to keep
-//     /metrics off the public internet. Suitable for single-node
-//     deployments where Prometheus runs on localhost.
+// Auth model:
 //   * METRICS_TOKEN set: requires `Authorization: Bearer <token>`.
 //     Comparison is constant-time via crypto.timingSafeEqual so
 //     a probing client can't binary-search the token.
+//   * METRICS_TOKEN unset, NODE_ENV !== "production" (or METRICS_PUBLIC
+//     === "true"): no auth gate. Suitable for dev and single-node
+//     setups where Prometheus scrapes localhost behind a firewall /
+//     reverse-proxy ACL.
+//   * METRICS_TOKEN unset in production WITHOUT METRICS_PUBLIC=true:
+//     fail closed (401). Prevents a forgotten token + missing network
+//     ACL from silently exposing /metrics to the public internet.
 //
 // lib/metrics.js documents the cardinality discipline each metric
 // follows.
 const METRICS_TOKEN = process.env.METRICS_TOKEN || null;
+const METRICS_PUBLIC = process.env.METRICS_PUBLIC === "true";
 function metricsAuthOk(req) {
-  if (!METRICS_TOKEN) return true;
+  if (!METRICS_TOKEN) {
+    // Fail closed in production unless explicitly opted public, so a
+    // missing token doesn't quietly expose the scrape endpoint.
+    if (process.env.NODE_ENV === "production" && !METRICS_PUBLIC) return false;
+    return true;
+  }
   const header = req.headers["authorization"];
   if (typeof header !== "string" || !header.startsWith("Bearer ")) return false;
   const presented = header.slice(7);
