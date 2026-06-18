@@ -218,7 +218,7 @@ module.exports = function createAuthRouter({
     }
     let decoded;
     try {
-      decoded = jwt.verify(totp_token, JWT_SECRET);
+      decoded = jwt.verify(totp_token, JWT_SECRET, { algorithms: ["HS256"] });
     } catch {
       return res.status(401).json({ error: "TOTP step-up token is invalid or expired" });
     }
@@ -708,7 +708,7 @@ module.exports = function createAuthRouter({
     if (!token) return res.status(400).json({ error: "Verification token required" });
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
     } catch {
       return res.status(400).json({ error: "Verification link is invalid or has expired" });
     }
@@ -1231,7 +1231,7 @@ module.exports = function createAuthRouter({
     try {
       let decoded;
       try {
-        decoded = jwt.verify(token, JWT_SECRET);
+        decoded = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
       } catch {
         return res.status(400).json({ error: "Reset link is invalid or has expired" });
       }

@@ -101,7 +101,7 @@ module.exports = function attachSocket({
       : (authToken || readSessionCookie(socket.handshake.headers?.cookie));
     if (raw) {
       try {
-        const decoded = jwt.verify(raw, JWT_SECRET);
+        const decoded = jwt.verify(raw, JWT_SECRET, { algorithms: ["HS256"] });
         // Validate tv via the same 30s cache the HTTP path uses.
         // A revoked session must lose its socket privileges too.
         const tvOk = await isTokenVersionCurrent(decoded.id, decoded.tv);
