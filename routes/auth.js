@@ -16,12 +16,25 @@ const crypto  = require("node:crypto");
 const totp    = require("../lib/totp");
 const { SESSION_COOKIE, cookieOptions } = require("../lib/session-cookie");
 
-// Plant the JWT in the httpOnly session cookie. The login/2FA/
-// password/locale responses still return the token in their body for
-// API clients + the e2e harness, but the SPA ignores that and relies
-// on this cookie (which browser JS cannot read or exfiltrate).
+// Plant the JWT in the httpOnly session cookie. This is the SPA's
+// session of record — browser JS can neither read nor exfiltrate it.
 function setSessionCookie(res, token) {
   res.cookie(SESSION_COOKIE, token, cookieOptions());
+}
+
+// Decide whether to include the bearer token in a JSON auth response.
+// The SPA authenticates via the httpOnly session cookie and ignores any
+// body token, so we omit it from BROWSER requests — that way XSS active
+// during login / token refresh can't read the token from the response
+// body and replay it off-origin (defeating one goal of the cookie
+// migration). Non-browser API clients (the e2e harness, integration
+// tests, programmatic Bearer clients) don't send Fetch-Metadata
+// headers, so they still receive the token. Browsers always attach
+// Sec-Fetch-* to fetch/XHR and JS cannot forge or strip it (it's a
+// forbidden header), so its presence is a reliable "this is a browser"
+// signal; absence safely falls back to the legacy token-in-body shape.
+function includeBodyToken(req) {
+  return !req.get("sec-fetch-site");
 }
 
 // Pre-computed dummy bcrypt hash used by the login flow to keep
@@ -192,7 +205,9 @@ module.exports = function createAuthRouter({
       const payload = await buildTokenPayload(user.id);
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
       setSessionCookie(res, token);
-      res.json({ token, user: payload, ...payload });
+      const resBody = { user: payload, ...payload };
+      if (includeBodyToken(req)) resBody.token = token;
+      res.json(resBody);
     } catch (err) {
       console.error("[Login Error]", err.message);
       res.status(500).json({ error: "Login failed" });
@@ -284,14 +299,15 @@ module.exports = function createAuthRouter({
       const payload = await buildTokenPayload(user.id);
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
       setSessionCookie(res, token);
-      res.json({
-        token,
+      const resBody = {
         user: payload,
         ...payload,
         ...(consumedRecovery
           ? { warning: "Recovery code consumed. Re-generate your recovery codes when convenient." }
           : {}),
-      });
+      };
+      if (includeBodyToken(req)) resBody.token = token;
+      res.json(resBody);
     } catch (err) {
       console.error("[Login TOTP Error]", err.message);
       res.status(500).json({ error: "TOTP login failed" });
@@ -887,7 +903,9 @@ module.exports = function createAuthRouter({
       const payload = await buildTokenPayload(user.id);
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
       setSessionCookie(res, token);
-      res.json({ ok: true, token, user: payload, ...payload });
+      const resBody = { ok: true, user: payload, ...payload };
+      if (includeBodyToken(req)) resBody.token = token;
+      res.json(resBody);
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
       console.error("[Change Password Error]", err.message);
@@ -938,7 +956,9 @@ module.exports = function createAuthRouter({
       const payload = await buildTokenPayload(req.user.id);
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
       setSessionCookie(res, token);
-      res.json({ ok: true, locale: cleared ? null : raw, token, user: payload, ...payload });
+      const resBody = { ok: true, locale: cleared ? null : raw, user: payload, ...payload };
+      if (includeBodyToken(req)) resBody.token = token;
+      res.json(resBody);
     } catch (err) {
       console.error("[Set Locale Error]", err.message);
       res.status(500).json({
@@ -1280,3 +1300,7 @@ module.exports = function createAuthRouter({
 
   return router;
 };
+
+// Exposed for unit testing the response-token content-negotiation
+// (same pattern as lib/idempotency.js's helper export).
+module.exports.includeBodyToken = includeBodyToken;
