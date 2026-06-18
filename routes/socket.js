@@ -231,6 +231,19 @@ module.exports = function attachSocket({
   const EVENT_UUID_RE =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+  // Per-IP concurrent connection cap. Defence-in-depth so a single
+  // client can't open thousands of sockets to exhaust file descriptors
+  // / memory. Generous by default because an entire venue of spectators
+  // can share one NAT public IP; tune via MAX_SOCKETS_PER_IP
+  // (0 disables the cap).
+  const MAX_SOCKETS_PER_IP = (() => {
+    const raw = process.env.MAX_SOCKETS_PER_IP;
+    if (raw === undefined || raw === "") return 200;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : 200;
+  })();
+  const socketIpConnCounts = new Map();   // ip → live socket count
+
   // Periodic cleanup so the maps don't grow forever.
   setInterval(() => {
     const cutoff = Date.now() - SCORE_WINDOW_MS;
@@ -259,10 +272,31 @@ module.exports = function attachSocket({
   // Connection
   // -----------------------------------------------------------
   io.on("connection", (socket) => {
+    // Per-IP concurrent connection cap (defence-in-depth; 0 disables).
+    // Count + reject before any wiring so a flood can't accumulate
+    // handlers/rooms. The symmetric inc-here / dec-on-disconnect keeps
+    // the map self-cleaning (entries drop to 0 and are deleted).
+    if (MAX_SOCKETS_PER_IP > 0) {
+      const ip = clientIp(socket);
+      if (ip) {
+        const n = (socketIpConnCounts.get(ip) || 0) + 1;
+        if (n > MAX_SOCKETS_PER_IP) {
+          socket.disconnect(true);
+          return;
+        }
+        socketIpConnCounts.set(ip, n);
+        socket._ipCounted = ip;
+      }
+    }
     console.log(`[Socket] Connected: ${socket.id}`);
     metrics?.socketConnections.inc();
     socket.on("disconnect", () => {
       metrics?.socketConnections.dec();
+      if (socket._ipCounted) {
+        const n = (socketIpConnCounts.get(socket._ipCounted) || 1) - 1;
+        if (n <= 0) socketIpConnCounts.delete(socket._ipCounted);
+        else socketIpConnCounts.set(socket._ipCounted, n);
+      }
     });
 
     // Per-user room — the push engine `io.to(\`user:<id>\`)` fans
