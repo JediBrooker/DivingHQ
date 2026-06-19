@@ -85,7 +85,15 @@ const routes = [
   },
   {
     path: '/control',
-    component: () => import('@/views/ControlView.vue'),
+    // Flag-gated resolver (P5): VITE_CONTROL_V2_ENABLED=1 serves the
+    // Stage-Rail ControlViewV2; unset/0 serves the untouched
+    // ControlView.vue (the instant rollback). Route-split so V1 and V2
+    // never co-bundle. meta is byte-identical so the beforeEach gate,
+    // role checks, and App.vue useShell are unchanged.
+    component: () =>
+      import.meta.env.VITE_CONTROL_V2_ENABLED === '1'
+        ? import('@/views/ControlViewV2.vue')
+        : import('@/views/ControlView.vue'),
     meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager', 'referee'], appShell: true },
   },
   {
