@@ -21,17 +21,12 @@
  *      each with a thumbnail screenshot served from
  *      /public/guide-screenshots/. Lazy-loaded so the page above
  *      the fold stays cheap.
- *   4. Keyboard shortcuts — the Control Room hotkeys an operator
- *      needs after their first meet. Universal symbols (Space,
- *      T, F, ←, →) are hardcoded in the template so they don't
- *      multiply the i18n key count for what is already universal
- *      across keyboards. Only the per-row descriptions are i18n'd.
- *   5. Glossary — diving-specific vocabulary (DD, trim, synchro,
+ *   4. Glossary — diving-specific vocabulary (DD, trim, synchro,
  *      redive, board heights) that newcomers will hit on day one.
- *   6. FAQ — common first questions, now a <details>/<summary>
+ *   5. FAQ — common first questions, now a <details>/<summary>
  *      accordion so users can scan questions without scrolling
  *      past every answer.
- *   7. Wiki — links to the deep-dive material.
+ *   6. Wiki — links to the deep-dive material.
  *
  * Navigation:
  *   • A sticky table-of-contents sits on the left on desktop;
@@ -64,7 +59,6 @@ const SECTIONS = [
   { id: 'overview',      key: 'overview' },
   { id: 'roles',         key: 'roles' },
   { id: 'quick-actions', key: 'quick_actions' },
-  { id: 'shortcuts',     key: 'shortcuts' },
   { id: 'glossary',      key: 'glossary' },
   { id: 'faq',           key: 'faq' },
   { id: 'wiki',          key: 'wiki' },
@@ -83,22 +77,6 @@ const TILES = [
   { id: 'coach',          to: '/coach',           img: '/guide-screenshots/coach.png',          glyph: '🎓' },
   { id: 'meet_manager',   to: '/manager',         img: '/guide-screenshots/meet-manager.png',   glyph: '📋' },
   { id: 'dive_directory', to: '/dive-directory',  img: '/guide-screenshots/dive-directory.png', glyph: '📖' },
-]
-
-// Control Room hotkeys. Keys are universal (Space, ←, →, single
-// letters) so they're hardcoded in the template. The description
-// half is i18n'd. Source of truth: see Control Room composable
-// `useControlRoomShortcuts` — if hotkeys change there, mirror
-// the change here.
-const SHORTCUTS = [
-  { keys: ['Space'],     descKey: 'next_diver' },
-  { keys: ['T'],         descKey: 'top_of_round' },
-  { keys: ['F'],         descKey: 'fail' },
-  { keys: ['R'],         descKey: 'redive' },
-  { keys: ['H'],         descKey: 'hold' },
-  { keys: ['L'],         descKey: 'live_toggle' },
-  { keys: ['←', '→'],    descKey: 'queue_nav' },
-  { keys: ['?'],         descKey: 'help_overlay' },
 ]
 
 // Glossary of diving-specific terms. Term labels are universal
@@ -306,24 +284,6 @@ onBeforeUnmount(() => observer?.disconnect())
               </div>
             </RouterLink>
           </div>
-        </section>
-
-        <!-- Keyboard shortcuts — Control Room hotkeys. Live in
-             the guide rather than only the in-app `?` overlay so
-             a meet manager can study them before the meet from
-             a different device. -->
-        <section id="shortcuts" class="guide-section">
-          <h2 class="guide-h2">{{ $t('guide.section_shortcuts') }}</h2>
-          <p class="guide-section-lede">{{ $t('guide.shortcuts.lede') }}</p>
-
-          <dl class="guide-shortcuts">
-            <template v-for="row in SHORTCUTS" :key="row.descKey">
-              <dt class="guide-shortcut-keys">
-                <kbd v-for="k in row.keys" :key="k">{{ k }}</kbd>
-              </dt>
-              <dd class="guide-shortcut-desc">{{ $t(`guide.shortcut.${row.descKey}`) }}</dd>
-            </template>
-          </dl>
         </section>
 
         <!-- Glossary — diving-specific vocabulary. Terms are

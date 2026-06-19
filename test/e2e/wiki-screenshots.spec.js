@@ -542,7 +542,7 @@ test("spectator: scoreboard list + live + archive + meet", async ({ page, reques
 // PHASE 4 — Operator views: dashboard / control room / meet
 // manager (signed in as admin).
 // =============================================================
-test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL }) => {
+test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL, request }) => {
   test.setTimeout(120_000);
   await page.setViewportSize(VIEWPORT);
   await signIn(page, world.adminUsername);
@@ -601,6 +601,66 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
     path: `${SCREENSHOT_DIR}/new-event-modal.png`,
     fullPage: false,
   });
+
+  // 5. control-room-simultaneous.png — TWO Live events running at once.
+  //    Spin up a second Live event (created last so the single-event
+  //    control-room.png + meet-manager.png above stay one-Live), then
+  //    open the Control Room: the side columns auto-collapse to drawers
+  //    and each Live event renders as its own pool card.
+  const diveId = await setup.pickDiveId({ height: 3.0, dive_code: "101", position: "B" });
+  const liveB = await setup.createEvent(request, {
+    adminToken: world.adminToken,
+    name: "Men 3m Springboard — Final",
+    gender: "Male",
+    number_of_judges: 5,
+    total_rounds: 3,
+    height: "3m",
+    event_type: "individual",
+  });
+  await request.put(`/api/events/${liveB.id}/meet`, {
+    headers: { Authorization: `Bearer ${world.adminToken}` },
+    data: { meet_id: world.meetId },
+  });
+  for (const diver of world.divers.slice(0, 4)) {
+    await setup.insertDiveList({
+      eventId: liveB.id,
+      competitorId: diver.userId,
+      dives: [{ round_number: 1, dive_id: diveId }],
+    });
+  }
+  await setup.assignJudges(request, {
+    adminToken: world.adminToken,
+    eventId: liveB.id,
+    judgeIds: world.judges.map((j) => j.userId),
+  });
+  await setup.setEventStatus(request, {
+    adminToken: world.adminToken,
+    eventId: liveB.id,
+    status: "Live",
+  });
+
+  // Re-announce the first event's mid-meet diver so its pool reads live.
+  const simSocket = await openSocket(baseURL || world.baseURL, world.adminToken);
+  simSocket.emit("subscribe_event", { event_id: world.liveEvent.id });
+  simSocket.emit("set_active_diver", {
+    event_id:      world.liveEvent.id,
+    competitor_id: world.thirdDiverId,
+    diverName:     world.liveDivers[2].fullName,
+    full_name:     world.liveDivers[2].fullName,
+    round_number:  2,
+    diveCode:      "201B",
+    dd:            1.8,
+    description:   "Back Dive",
+    position:      "B",
+    eventName:     world.liveEvent.name,
+  });
+
+  await page.goto(`/control?event=${world.liveEvent.id}`);
+  await expect(page.locator(".cv2-pool")).toHaveCount(2, { timeout: 15_000 });
+  await expect(page.locator(".cv2-pool .cv2-live-diver").first()).toBeVisible({ timeout: 15_000 });
+  await settle(page, 1500);
+  await snap(page, "control-room-simultaneous");
+  simSocket.disconnect();
 });
 
 // =============================================================

@@ -204,7 +204,7 @@
       "diver_portal_title": "Diver Portal",
       "diver_portal_desc": "Submit your dive list ahead of competition. DD requirements are validated automatically against the official directory.",
       "control_room_title": "Control Room",
-      "control_room_desc": "Advance through the dive order, monitor incoming judge scores in real time, and issue referee rulings without leaving the screen.",
+      "control_room_desc": "Advance through the dive order, monitor incoming judge scores in real time, and issue referee rulings without leaving the screen — and run two or more events at once from a single window, each pool with its own shot clock and controls.",
       "judge_terminal_title": "Judge Terminal",
       "judge_terminal_desc": "Touch-optimised scoring interface. Tap a score and submit — synced instantly to the control room and scoreboard.",
       "scoreboard_title": "Scoreboard & Results",
@@ -610,7 +610,7 @@
       },
       "control_room": {
         "label": "Control Room",
-        "sub": "Operator console — drive scoring, run the shot clock, hold the meet."
+        "sub": "Operator console — drive scoring, run the shot clock, hold the meet, and run several events at once."
       },
       "judge": {
         "label": "Judge Terminal",
