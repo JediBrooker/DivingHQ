@@ -682,8 +682,8 @@ h1, h2, h3, h4 {
    with the Control Room). Dropped/trimmed scores are conveyed by
    the strike-through (.j-dropped) below, not by colour. */
 .j-score.j-failed,
+.j-score.j-very-deficient,
 .j-score.j-deficient,
-.j-score.j-unsatisfactory,
 .j-score.j-satisfactory,
 .j-score.j-good,
 .j-score.j-very-good,

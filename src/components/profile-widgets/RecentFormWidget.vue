@@ -178,8 +178,8 @@ function scoreClass(s) {
 .j-chip.j-dropped { text-decoration: line-through; opacity: 0.55; }
 /* Per-category chip backgrounds — match the live scoreboard. */
 .j-chip.qs-failed         { background: rgba(239,68,68,0.18);   border-color: rgba(239,68,68,0.45);   color: #fecaca; }
-.j-chip.qs-deficient      { background: rgba(251,146,60,0.18);  border-color: rgba(251,146,60,0.45);  color: #fed7aa; }
-.j-chip.qs-unsatisfactory { background: rgba(251,191,36,0.18);  border-color: rgba(251,191,36,0.45);  color: #fde68a; }
+.j-chip.qs-very-deficient { background: rgba(251,146,60,0.18);  border-color: rgba(251,146,60,0.45);  color: #fed7aa; }
+.j-chip.qs-deficient      { background: rgba(251,191,36,0.18);  border-color: rgba(251,191,36,0.45);  color: #fde68a; }
 .j-chip.qs-satisfactory   { background: rgba(71,85,105,0.30);   border-color: rgba(71,85,105,0.55);   color: var(--text-2); }
 .j-chip.qs-good           { background: rgba(6,182,212,0.18);   border-color: rgba(6,182,212,0.45);   color: #a5f3fc; }
 .j-chip.qs-very-good      { background: rgba(16,185,129,0.18);  border-color: rgba(16,185,129,0.45);  color: #a7f3d0; }

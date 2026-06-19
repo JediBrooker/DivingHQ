@@ -157,20 +157,21 @@ test("scoreCategory boundaries match World Aquatics buckets", () => {
   const cat = (s) => {
     if (s == null || Number.isNaN(s)) return null;
     if (s === 0) return "failed";
-    if (s <= 2.0) return "deficient";
-    if (s <= 4.5) return "unsatisfactory";
-    if (s <= 6.0) return "satisfactory";
+    if (s <= 2.0) return "very-deficient";
+    if (s <= 4.5) return "deficient";
+    if (s <= 6.5) return "satisfactory";
     if (s <= 8.0) return "good";
     if (s <= 9.5) return "very-good";
     return "excellent";
   };
   assert.equal(cat(0), "failed");
-  assert.equal(cat(1), "deficient");
-  assert.equal(cat(2), "deficient");
-  assert.equal(cat(2.5), "unsatisfactory");
-  assert.equal(cat(4.5), "unsatisfactory");
+  assert.equal(cat(1), "very-deficient");
+  assert.equal(cat(2), "very-deficient");
+  assert.equal(cat(2.5), "deficient");
+  assert.equal(cat(4.5), "deficient");
   assert.equal(cat(5), "satisfactory");
   assert.equal(cat(6), "satisfactory");
+  assert.equal(cat(6.5), "satisfactory");
   assert.equal(cat(7), "good");
   assert.equal(cat(8), "good");
   assert.equal(cat(9), "very-good");

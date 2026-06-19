@@ -380,10 +380,10 @@ module.exports = function createDiverProfileRouter({
         runQuery("quality_mix",
           `SELECT
              COUNT(*) FILTER (WHERE s.score = 0)::int                       AS failed,
-             COUNT(*) FILTER (WHERE s.score > 0   AND s.score <= 2.0)::int AS deficient,
-             COUNT(*) FILTER (WHERE s.score > 2.0 AND s.score <= 4.5)::int AS unsatisfactory,
-             COUNT(*) FILTER (WHERE s.score > 4.5 AND s.score <= 6.0)::int AS satisfactory,
-             COUNT(*) FILTER (WHERE s.score > 6.0 AND s.score <= 8.0)::int AS good,
+             COUNT(*) FILTER (WHERE s.score > 0   AND s.score <= 2.0)::int AS very_deficient,
+             COUNT(*) FILTER (WHERE s.score > 2.0 AND s.score <= 4.5)::int AS deficient,
+             COUNT(*) FILTER (WHERE s.score > 4.5 AND s.score <= 6.5)::int AS satisfactory,
+             COUNT(*) FILTER (WHERE s.score > 6.5 AND s.score <= 8.0)::int AS good,
              COUNT(*) FILTER (WHERE s.score > 8.0 AND s.score <= 9.5)::int AS very_good,
              COUNT(*) FILTER (WHERE s.score > 9.5)::int                     AS excellent,
              COUNT(*)::int                                                  AS total
@@ -597,7 +597,7 @@ module.exports = function createDiverProfileRouter({
         height_breakdown: heights,
         round_stamina: rounds,
         quality_mix: quality[0] || {
-          failed: 0, deficient: 0, unsatisfactory: 0, satisfactory: 0,
+          failed: 0, very_deficient: 0, deficient: 0, satisfactory: 0,
           good: 0, very_good: 0, excellent: 0, total: 0,
         },
         dd_risk: ddRisk[0] || {

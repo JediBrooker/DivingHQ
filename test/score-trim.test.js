@@ -34,12 +34,13 @@ function panel(scores) {
 
 test("scoreCategory returns the expected World Aquatics bucket", () => {
   assert.equal(scoreCategory(0),    "failed");
-  assert.equal(scoreCategory(1),    "deficient");
-  assert.equal(scoreCategory(2.0),  "deficient");
-  assert.equal(scoreCategory(2.5),  "unsatisfactory");
-  assert.equal(scoreCategory(4.5),  "unsatisfactory");
+  assert.equal(scoreCategory(1),    "very-deficient");
+  assert.equal(scoreCategory(2.0),  "very-deficient");
+  assert.equal(scoreCategory(2.5),  "deficient");
+  assert.equal(scoreCategory(4.5),  "deficient");
   assert.equal(scoreCategory(5.0),  "satisfactory");
   assert.equal(scoreCategory(6.0),  "satisfactory");
+  assert.equal(scoreCategory(6.5),  "satisfactory");
   assert.equal(scoreCategory(7.0),  "good");
   assert.equal(scoreCategory(8.0),  "good");
   assert.equal(scoreCategory(9.0),  "very-good");
@@ -104,28 +105,42 @@ test("tie at the cut: lowest judge_number wins on the kept side", () => {
 
 // =====================================================================
 // Synchro sub-panel boundaries — 7-judge: 4 execution judges
-// (1+2 exec A, 3+4 exec B) and 3 sync judges (5..7).
-// 9-judge: 1+2 exec A, 3+4 exec B, 5..9 sync.
-// 11-judge: 1..3 exec A, 4..6 exec B, 7..11 sync. Drops are
-// computed WITHIN each sub-panel.
+// (1+2 exec A, 3+4 exec B) and 3 sync judges (5..7). Like the 9-judge
+// panel, execution drops 1 high + 1 low ACROSS both Athletes' four
+// marks (keep 2); the 3 sync marks are all kept (a 3-judge group has
+// nothing to drop). 9-judge: same execution rule, plus the 5-judge
+// sync group drops 1 high + 1 low (keep 3). Per WA Art 9.1.5.4.
+// 11-judge: 1..3 exec A, 4..6 exec B, 7..11 sync — drops computed
+// WITHIN each sub-panel.
 // =====================================================================
 
-test("synchro 7-judge — 4 execution judges and 3 sync judges keep all scores", () => {
+test("synchro 7-judge — exec drops 1+1 across both divers, all 3 sync kept", () => {
   const judges = panel([7, 8,    7, 8,    5, 7, 9]);
   const out = annotateJudgeRows(judges, 7, "synchro_pair");
-  assert.deepEqual(out.map(o => o.dropped),
-    [false, false, false, false, false, false, false]);
+  // Exec pool across both divers = judges 1-4 scores [7,8,7,8]. Drop
+  // 1 low + 1 high; on the tie the lower judge_number stays kept, so
+  // judge 1 (low, 7) and judge 4 (high, 8) are cancelled.
+  assert.equal(out[0].dropped, true,  "exec low (judge 1) dropped");
+  assert.equal(out[1].dropped, false, "judge 2 kept");
+  assert.equal(out[2].dropped, false, "judge 3 kept");
+  assert.equal(out[3].dropped, true,  "exec high (judge 4) dropped");
+  // Sync (5..7): only 3 marks → all kept.
+  assert.equal(out[4].dropped, false);
+  assert.equal(out[5].dropped, false);
+  assert.equal(out[6].dropped, false);
 });
 
-test("synchro 9-judge — exec sub-panels keep both, sync drops 1+1", () => {
+test("synchro 9-judge — exec drops 1+1 across both divers, sync drops 1+1", () => {
   const judges = panel([7, 8,    7, 8,    5, 6, 7, 8, 9]);
   const out = annotateJudgeRows(judges, 9, "synchro_pair");
-  // Exec A (1, 2): no drops (size 2)
-  assert.equal(out[0].dropped, false);
-  assert.equal(out[1].dropped, false);
-  // Exec B (3, 4): no drops
-  assert.equal(out[2].dropped, false);
-  assert.equal(out[3].dropped, false);
+  // Execution pool across both divers = judges 1-4 scores [7,8,7,8].
+  // WA Art 9.1.5.4: drop the single low + single high. On the tie the
+  // lower judge_number stays kept, so judge 1 (low, 7) and judge 4
+  // (high, 8) are cancelled; judge 2 (8) and judge 3 (7) are kept.
+  assert.equal(out[0].dropped, true,  "exec low (judge 1) dropped");
+  assert.equal(out[1].dropped, false, "judge 2 kept");
+  assert.equal(out[2].dropped, false, "judge 3 kept");
+  assert.equal(out[3].dropped, true,  "exec high (judge 4) dropped");
   // Sync (5..9): drop low (5) + high (9), keep 6, 7, 8
   assert.equal(out[4].dropped, true,  "sync low dropped");
   assert.equal(out[5].dropped, false);

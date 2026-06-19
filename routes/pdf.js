@@ -1150,7 +1150,8 @@ module.exports = function createPdfRouter({ pool }) {
       // Compute final placings up front so the CSV's per-dive rows
       // can carry both the dive total and the diver's final rank.
       // Keyed by competitor_id (not full_name) so two same-named
-      // divers don't collide; World Aquatics tie-break applied via dives_desc.
+      // divers don't collide. World Aquatics Art 4.1.5: equal totals
+      // share a place, so RANK() over total alone gives the placing.
       const totalsRes = await pool.query(
         `WITH ${perDivePointsCte({
            select:      ["s.competitor_id"],
@@ -1158,13 +1159,12 @@ module.exports = function createPdfRouter({ pool }) {
            groupBy:     ["s.competitor_id", "s.round_number"],
          })},
          totals AS (
-           SELECT competitor_id, SUM(pts)::numeric(8,2) AS total,
-                  array_agg(pts ORDER BY pts DESC) AS dives_desc
+           SELECT competitor_id, SUM(pts)::numeric(8,2) AS total
            FROM per_dive GROUP BY competitor_id
          )
          SELECT u.id AS competitor_id, u.full_name AS diver_name,
                 t.total,
-                RANK() OVER (ORDER BY t.total DESC, t.dives_desc DESC) AS final_rank
+                RANK() OVER (ORDER BY t.total DESC) AS final_rank
          FROM totals t
          JOIN users u ON u.id = t.competitor_id`,
         [req.params.id],
@@ -1221,7 +1221,7 @@ module.exports = function createPdfRouter({ pool }) {
            SELECT u.full_name, o.country_code, cl.name AS club_name,
                   pu.full_name AS partner_name,
                   SUM(pd.dive_points) AS total,
-                  array_agg(pd.dive_points ORDER BY pd.dive_points DESC) AS dives_desc
+                  RANK() OVER (ORDER BY SUM(pd.dive_points) DESC) AS rank
            FROM per_dive pd
            JOIN users u ON u.id = pd.competitor_id
            JOIN organisations o ON o.id = u.org_id
@@ -1233,9 +1233,10 @@ module.exports = function createPdfRouter({ pool }) {
            ) p ON true
            LEFT JOIN users pu ON pu.id = p.partner_id
            GROUP BY u.id, u.full_name, o.country_code, cl.name, pu.full_name
-           /* World Aquatics tie-break: highest single dive, then second-
-              highest, etc. Element-wise array DESC ordering. */
-           ORDER BY total DESC, dives_desc DESC`,
+           /* World Aquatics Art 4.1.5: equal totals share a place.
+              RANK() over total gives the shared placing; rows ordered
+              by total then name for a stable display order. */
+           ORDER BY total DESC, full_name ASC`,
           [req.params.id],
         ),
         pool.query(
@@ -1295,8 +1296,8 @@ module.exports = function createPdfRouter({ pool }) {
       // Standings
       doc.fontSize(13).font("Helvetica-Bold").text("Final Standings");
       doc.moveDown(0.3);
-      standings.rows.forEach((row, i) => {
-        const rank = i + 1;
+      standings.rows.forEach((row) => {
+        const rank = row.rank;
         const total = Number(row.total).toFixed(2);
         doc.fontSize(10).font(rank <= 3 ? "Helvetica-Bold" : "Helvetica")
           .text(`${rank}.  ${row.full_name}${row.country_code ? "  " + row.country_code : ""}`, 50, doc.y, { continued: true, width: 350 })

@@ -39,14 +39,26 @@ export function annotateJudgeRows(judges, numJudges, eventType) {
   if (eventType === 'synchro_pair') {
     const groups = synchroJudgeGroups(numJudges)
     if (groups) {
-      // Drop within each sub-panel. 7-judge synchro keeps its
-      // 2/2/3 grouping intact; 9/11 panels trim the larger sync
-      // group, and 11 also trims each 3-judge exec group.
-      for (const [role, subPanel] of Object.entries(groups)) {
-        const size = subPanel.length
-        const dropCount = synchroGroupDropCount(role, numJudges)
-        if (dropCount > 0 && size > dropCount * 2) {
-          dropEndsByJudgeNumber(rows, subPanel, dropCount, dropCount)
+      if (numJudges === 7 || numJudges === 9) {
+        // WA Art 9.1.5.4 execution rule, applied to both the 9-judge
+        // and (non-WA) 7-judge panels — they share a 2+2 execution
+        // layout: cancel one high + one low execution mark ACROSS both
+        // Athletes' four marks (not within each 2-judge pair). The sync
+        // group drops high+low only when it has five judges (9-judge);
+        // the 7-judge panel's three sync marks are all kept. Both land
+        // on five counted marks (× 0.6 → the individual scale).
+        dropEndsByJudgeNumber(rows, [...groups.a, ...groups.b], 1, 1)
+        const syncDrop = synchroGroupDropCount('sync', numJudges)
+        if (syncDrop > 0) dropEndsByJudgeNumber(rows, groups.sync, syncDrop, syncDrop)
+      } else {
+        // 11-judge panel: drops computed within each sub-panel (each
+        // 3-judge exec group and the 5-judge sync group).
+        for (const [role, subPanel] of Object.entries(groups)) {
+          const size = subPanel.length
+          const dropCount = synchroGroupDropCount(role, numJudges)
+          if (dropCount > 0 && size > dropCount * 2) {
+            dropEndsByJudgeNumber(rows, subPanel, dropCount, dropCount)
+          }
         }
       }
       return rows

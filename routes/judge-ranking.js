@@ -248,14 +248,13 @@ async function buildAnalysis(pool, eventId) {
     [eventId, synchroScale, isTeam],
   );
 
-  // Pre-aggregate the actual standings using the same WA tie-break
-  // the scoreboard / archive uses: total DESC, then per-dive
-  // descending-sorted array DESC. calc_event_dive_points handles
-  // the panel-trim + scaling for the official total.
-  // Actual standings. The WHEN branches keep the row shape stable
-  // across event types: lead competitor (with optional partner)
-  // for individual + synchro, team id with team name for team
-  // events. dives_desc preserves the WA tie-break ordering.
+  // Pre-aggregate the actual standings the same way the scoreboard /
+  // archive do: total DESC, with World Aquatics Art 4.1.5 shared-place
+  // ties (RANK() over total alone, so equal totals share a rank).
+  // calc_event_dive_points handles the panel-trim + scaling for the
+  // official total. The WHEN branches keep the row shape stable across
+  // event types: lead competitor (with optional partner) for
+  // individual + synchro, team id with team name for team events.
   const standingsRes = isTeam
     ? await pool.query(
         `WITH ${perDivePointsCte({
@@ -264,8 +263,7 @@ async function buildAnalysis(pool, eventId) {
          })},
          totals AS (
            SELECT team_id,
-                  SUM(dive_points)::numeric(10,2) AS total,
-                  array_agg(dive_points ORDER BY dive_points DESC) AS dives_desc
+                  SUM(dive_points)::numeric(10,2) AS total
              FROM per_dive
             WHERE team_id IS NOT NULL
             GROUP BY team_id
@@ -278,7 +276,7 @@ async function buildAnalysis(pool, eventId) {
                 NULL::uuid AS partner_id,
                 NULL::varchar AS partner_name,
                 t.total AS actual_total,
-                RANK() OVER (ORDER BY t.total DESC, t.dives_desc DESC)::int AS actual_rank
+                RANK() OVER (ORDER BY t.total DESC)::int AS actual_rank
            FROM totals t
            JOIN teams tm ON tm.id = t.team_id
           ORDER BY actual_rank ASC, tm.name ASC`,
@@ -288,8 +286,7 @@ async function buildAnalysis(pool, eventId) {
         `WITH ${perDivePointsCte()},
          totals AS (
            SELECT competitor_id,
-                  SUM(dive_points)::numeric(10,2) AS total,
-                  array_agg(dive_points ORDER BY dive_points DESC) AS dives_desc
+                  SUM(dive_points)::numeric(10,2) AS total
              FROM per_dive
             GROUP BY competitor_id
          )
@@ -303,7 +300,7 @@ async function buildAnalysis(pool, eventId) {
                 pp.partner_id,
                 pu.full_name AS partner_name,
                 t.total AS actual_total,
-                RANK() OVER (ORDER BY t.total DESC, t.dives_desc DESC)::int AS actual_rank
+                RANK() OVER (ORDER BY t.total DESC)::int AS actual_rank
            FROM totals t
            JOIN users u ON u.id = t.competitor_id
            JOIN organisations o ON o.id = u.org_id
