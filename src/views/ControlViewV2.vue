@@ -20,7 +20,8 @@ import StageRail from '@/components/control/StageRail.vue'
 import StatusPill from '@/components/StatusPill.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
-import { useLivePools, initJudgeTiles } from '@/composables/useLivePools'
+import { useLivePools, selectDiver, deriveStatus } from '@/composables/useLivePools'
+import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
 
 const route = useRoute()
@@ -63,6 +64,19 @@ const centerMode = computed(() => (recoveryOpen.value ? 'recovery' : workflowMod
 // The focused pool's live state (active diver + judge tiles), or null.
 const livePool = computed(() => (currentEvent.value ? pools[currentEvent.value.id] : null))
 
+// CURRENT STATE: the READY/JUDGING/DIVING pill, re-derived per focused
+// pool off its own scores. clockExpired (the DIVING transition) wires in
+// with the focused-pool shot clock in P6.2.
+const liveStatus = computed(() => {
+  const p = livePool.value
+  if (!p) return 'ready'
+  return deriveStatus({
+    hasActive: !!p.currentActive,
+    scoresInCount: Object.keys(p.scoresThisRound || {}).length,
+    clockExpired: false,
+  })
+})
+
 function numberOfJudgesFor(eventId) {
   const ev = events.value.find((e) => String(e.id) === String(eventId))
   return parseInt(ev?.number_of_judges) || 0
@@ -75,18 +89,18 @@ function numberOfJudgesFor(eventId) {
 async function setupLivePool(ev) {
   socket.emit('subscribe_event', { event_id: ev.id })
   const pool = poolFor(ev.id)
-  pool.judgeTiles = initJudgeTiles(ev.number_of_judges)
   try {
     const roster = await auth.apiFetch(`/api/events/${ev.id}/roster`)
-    pool.currentActive = Array.isArray(roster) && roster.length ? roster[0] : null
-    // Tell the server who is up in THIS pool (event-scoped), so judge
-    // scores for it are accepted + broadcast back as score_received --
-    // for every Live pool, not just the focused one.
-    if (pool.currentActive) {
+    pool.roster = Array.isArray(roster) ? roster : []
+    // Active diver on load = the first dive in the server-ordered queue.
+    // (The Completed-review + empty-roster branches are P6.2/P8.)
+    if (pool.roster.length && selectDiver(pool, 0, ev.number_of_judges, diveDescription)) {
+      // Tell the server who is up in THIS pool (event-scoped) so judge
+      // scores for it are accepted + broadcast -- for every Live pool.
       socket.emit('set_active_diver', { ...pool.currentActive, status: 'ready' })
     }
   } catch {
-    pool.currentActive = null
+    pool.roster = []
   }
 }
 
@@ -146,8 +160,20 @@ onMounted(async () => {
           <p class="cv2-mode-state">Next step: {{ orderWorkflowState || '—' }}</p>
         </section>
         <section v-else-if="centerMode === 'meet'" class="cv2-mode" aria-label="Live">
-          <div v-if="livePool && livePool.currentActive" class="cv2-live">
-            <p class="cv2-live-diver">{{ livePool.currentActive.full_name }}</p>
+          <div v-if="livePool && livePool.activeInfo" class="cv2-live">
+            <div class="cv2-live-head">
+              <span class="cv2-live-status" :class="`cv2-status-${liveStatus}`">{{ liveStatus.toUpperCase() }}</span>
+              <span class="cv2-live-round">Round {{ livePool.activeInfo.round_number }} / {{ currentEvent.total_rounds }}</span>
+            </div>
+            <p class="cv2-live-diver">
+              {{ livePool.activeInfo.name }}
+              <span v-if="livePool.activeInfo.country" class="cv2-live-country">{{ livePool.activeInfo.country }}</span>
+            </p>
+            <p v-if="livePool.activeInfo.code || livePool.activeInfo.desc" class="cv2-live-dive">
+              <span v-if="livePool.activeInfo.code">{{ livePool.activeInfo.code }}</span>
+              <span v-if="livePool.activeInfo.dd"> · {{ livePool.activeInfo.dd }}</span>
+              <span v-if="livePool.activeInfo.desc"> · {{ livePool.activeInfo.desc }}</span>
+            </p>
             <div class="cv2-tiles" aria-label="Judge scores">
               <div
                 v-for="t in livePool.judgeTiles"
@@ -156,7 +182,7 @@ onMounted(async () => {
                 :class="{ scored: t.scored, signaled: t.signaled }"
               >{{ t.scored ? t.score : '—' }}</div>
             </div>
-            <p class="cv2-mode-note">Live — active diver + judge tiles route per-pool. Full screen (queue, shot clock, primary action): P6.</p>
+            <p class="cv2-mode-note">Live current-state (P6.1). Next: bottom-pinned primary + shot clock (P6.2), blockers strip (P6.3).</p>
           </div>
           <p v-else class="cv2-mode-note">Live — loading the active diver… (Full live screen: P6.)</p>
         </section>
@@ -189,7 +215,17 @@ onMounted(async () => {
 }
 .cv2-mode-note { margin: 0 0 0.4rem; font-family: var(--font-mono); font-size: 13px; }
 .cv2-mode-state { margin: 0; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
-.cv2-live-diver { margin: 0 0 1rem; font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--fg); }
+.cv2-live-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.cv2-live-status {
+  font-family: var(--font-display); font-size: 11px; font-weight: 800; letter-spacing: 0.18em;
+  padding: 0.2rem 0.6rem; border-radius: 999px; background: var(--bg-3); color: var(--text-2);
+}
+.cv2-status-diving { color: var(--cyan); background: rgba(6, 182, 212, 0.12); }
+.cv2-status-judging { color: var(--amber); background: rgba(245, 158, 11, 0.12); }
+.cv2-live-round { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+.cv2-live-diver { margin: 0 0 0.4rem; font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--fg); }
+.cv2-live-country { font-family: var(--font-mono); font-size: 13px; font-weight: 400; color: var(--text-3); margin-inline-start: 0.5rem; }
+.cv2-live-dive { margin: 0 0 1rem; font-family: var(--font-mono); font-size: 13px; color: var(--text-2); }
 .cv2-tiles { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .cv2-tile {
   width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;

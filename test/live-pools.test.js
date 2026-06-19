@@ -6,11 +6,12 @@ const { test, before } = require('node:test')
 const assert = require('node:assert/strict')
 
 let useLivePools, makePoolState, initJudgeTiles, applyScore
+let selectDiver, buildActiveInfo, deriveStatus
 
 before(async () => {
-  ;({ useLivePools, makePoolState, initJudgeTiles, applyScore } = await import(
-    '../src/composables/useLivePools.js'
-  ))
+  const mod = await import('../src/composables/useLivePools.js')
+  ;({ useLivePools, makePoolState, initJudgeTiles, applyScore } = mod)
+  ;({ selectDiver, buildActiveInfo, deriveStatus } = mod)
 })
 
 function activeFor(eventId, n) {
@@ -93,6 +94,45 @@ test('judge_signal flips the right pool\'s tile only', () => {
   assert.equal(ok, true)
   assert.equal(pools.B.judgeTiles[1].signaled, true)
   assert.equal(pools.A.judgeTiles.every((t) => !t.signaled), true)
+})
+
+test('deriveStatus: JUDGING wins over DIVING wins over READY (verbatim ladder)', () => {
+  assert.equal(deriveStatus({ hasActive: false, scoresInCount: 0, clockExpired: true }), 'ready')
+  assert.equal(deriveStatus({ hasActive: true, scoresInCount: 0, clockExpired: false }), 'ready')
+  assert.equal(deriveStatus({ hasActive: true, scoresInCount: 0, clockExpired: true }), 'diving')
+  // a single score wins even with the clock expired
+  assert.equal(deriveStatus({ hasActive: true, scoresInCount: 1, clockExpired: true }), 'judging')
+})
+
+test('buildActiveInfo: flat header object; null row -> null', () => {
+  assert.equal(buildActiveInfo(null), null)
+  const info = buildActiveInfo(
+    { full_name: 'Avery', country_code: 'AUS', dive_code: '101', position: 'B', dd: 2.4, round_number: 1 },
+    (row) => `desc-${row.dive_code}`,
+  )
+  assert.equal(info.name, 'Avery')
+  assert.equal(info.code, '101B')
+  assert.equal(info.dd, 'DD 2.4')
+  assert.equal(info.desc, 'desc-101') // diveDescription (frozen seam) reused
+  assert.equal(info.round_number, 1)
+})
+
+test('selectDiver: moves the cursor, clears scores, re-inits tiles, builds info', () => {
+  const pool = makePoolState()
+  pool.roster = [
+    { competitor_id: 'd1', round_number: 1, full_name: 'One', dive_code: '101', position: 'B', dd: 2 },
+    { competitor_id: 'd2', round_number: 1, full_name: 'Two', dive_code: '201', position: 'B', dd: 2 },
+  ]
+  pool.scoresThisRound = { x: 5 } // stale
+  assert.equal(selectDiver(pool, 1, 5), true)
+  assert.equal(pool.currentIndex, 1)
+  assert.equal(pool.currentActive.full_name, 'Two')
+  assert.deepEqual(pool.scoresThisRound, {})
+  assert.equal(pool.judgeTiles.length, 5)
+  assert.equal(pool.activeInfo.name, 'Two')
+  // out-of-range is a no-op
+  assert.equal(selectDiver(pool, 9, 5), false)
+  assert.equal(pool.currentIndex, 1)
 })
 
 test('applyScore tile-matches by judge_number, then judge_id, then first unscored', () => {

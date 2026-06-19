@@ -20,11 +20,62 @@ import { reactive } from 'vue'
 
 export function makePoolState() {
   return {
-    currentActive: null, // { event_id, competitor_id, round_number, full_name, ... }
+    roster: [], // the live QUEUE for this event (server-ordered: round, order)
+    currentIndex: -1, // cursor into roster[]; -1 = nothing active
+    currentActive: null, // roster[currentIndex] -- the live row
+    activeInfo: null, // flat display object for the stage header
     scoresThisRound: {}, // judge_id -> numeric score
     judgeTiles: [], // [{ judgeIndex, judgeId, score, scored, signaled }]
     advanceArmed: false, // set when the active dive's last score lands
   }
+}
+
+// The stage-header display object setActive builds in V1
+// (ControlView.vue:2260-2275). Pure rename/copy; diveDescription (frozen
+// seam #2, src/composables/useDiveLabel.js) is passed in by the caller so
+// this stays dependency-free + unit-testable.
+export function buildActiveInfo(row, diveDescription) {
+  if (!row) return null
+  return {
+    name: row.full_name,
+    country: row.country_code || null,
+    code: `${row.dive_code || ''}${row.position || ''}`,
+    dd: row.dd != null && row.dd !== '' ? `DD ${row.dd}` : '',
+    desc: typeof diveDescription === 'function' ? diveDescription(row) : row.description || '',
+    round_number: row.round_number,
+    club_name: row.club_name || null,
+    club_code: row.club_code || null,
+    partner_name: row.partner_name || null,
+    partner_country: row.partner_country || null,
+    team_name: row.team_name || null,
+    team_code: row.team_code || null,
+  }
+}
+
+// The READY/JUDGING/DIVING precedence ladder, lifted verbatim from
+// ControlView.vue:78-88 (JUDGING wins over DIVING wins over READY). Pure
+// helper so V1's inline computed and V2's per-pool computed can't drift.
+export function deriveStatus({ hasActive, scoresInCount, clockExpired }) {
+  if (!hasActive) return 'ready'
+  if (scoresInCount > 0) return 'judging'
+  if (clockExpired) return 'diving'
+  return 'ready'
+}
+
+// Move a pool's cursor to roster[idx]: the pure part of V1's setActive
+// funnel (ControlView.vue:2246-2309) -- set the cursor, resolve the
+// active row, clear scores, re-init tiles, build the header info. The
+// SIDE-EFFECTS (set_active_diver emit, shot clock) stay in the caller.
+export function selectDiver(pool, idx, numberOfJudges, diveDescription) {
+  if (!pool || !Array.isArray(pool.roster)) return false
+  if (idx < 0 || idx >= pool.roster.length) return false
+  pool.currentIndex = idx
+  pool.currentActive = pool.roster[idx]
+  pool.scoresThisRound = {}
+  pool.judgeTiles = initJudgeTiles(numberOfJudges)
+  pool.activeInfo = buildActiveInfo(pool.currentActive, diveDescription)
+  pool.advanceArmed = false
+  return true
 }
 
 export function initJudgeTiles(n) {
