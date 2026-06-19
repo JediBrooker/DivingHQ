@@ -162,6 +162,9 @@ test("round-dives: New Event modal has + Add Dive flow (no rounds dropdown)", as
   await page.getByRole("button", { name: /\+ New Event/i }).click();
   await expect(page.locator(".modal-create-event")).toBeVisible();
 
+  // The create form is a wizard now — step to "Rounds" for the dives editor.
+  await page.getByRole("button", { name: /Next/ }).click();
+
   // Add 3 round-dive rows via the "+ Add Dive" button.
   const addDiveBtn = page.getByRole("button", { name: /^\+ Add Dive$/i });
   await addDiveBtn.click();

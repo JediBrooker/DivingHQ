@@ -37,6 +37,14 @@ const editErr = ref('')
 const scrollLock = useBodyScrollLock()
 
 const showCreateModal = ref(false)     // New Event form lives in a modal
+// P10 Cluster 1: the create-event form is an in-panel StageStep wizard
+// (Details -> Rounds -> Structure -> Schedule & rules -> Review). Steps
+// are v-show panels so every field stays mounted (createEvent reads them
+// all on submit); navigation is free (Next/Back never gated) and the
+// only required-field check is a JS guard that jumps back to the step.
+const CREATE_STEPS = ['Details', 'Rounds', 'Structure', 'Schedule & rules', 'Review']
+const createStep = ref(0)
+const lastCreateStep = CREATE_STEPS.length - 1
 const showCreateMeetModal = ref(false) // New Meet form (was inline)
 const showEditModal = ref(false)
 scrollLock.lockWhile(computed(() =>
@@ -701,6 +709,7 @@ const accordionSections = computed(() => {
 // "+ Add event" buttons. Passing '' opens a standalone event.
 function openCreateEvent(meetId = '') {
   createMeetId.value = meetId || ''
+  createStep.value = 0
   showCreateModal.value = true
 }
 
@@ -1019,13 +1028,23 @@ async function assignEventToMeet(event, meetId) {
 
 async function createEvent() {
   formErr.value = ''
+  // Name is required — validated here (not via the native attribute) so a
+  // field hidden in another wizard step can't trap submit focus. Jump the
+  // wizard to the step holding each invalid field so the operator sees it.
+  if (!createName.value.trim()) {
+    formErr.value = 'Give the event a name'
+    createStep.value = 0
+    return
+  }
   // Synchro panels must have a defined exec/sync grouping.
   if (createType.value === 'synchro_pair' && ![7, 9, 11].includes(parseInt(createJudges.value))) {
     formErr.value = 'Synchronised pair events require 7, 9 or 11 judges'
+    createStep.value = 0
     return
   }
   if (!createRoundDives.value.length) {
     formErr.value = 'Add at least one dive (or free slot) so the event has rounds'
+    createStep.value = 1
     return
   }
   try {
@@ -1416,6 +1435,22 @@ onUnmounted(() => {
       </div>
 
       <form @submit.prevent="createEvent" class="form-stack">
+        <!-- Wizard progress — click a pip to jump; steps are v-show so
+             every field stays mounted for the single createEvent submit. -->
+        <ol class="wizard-steps" aria-label="Create event progress">
+          <li v-for="(label, i) in CREATE_STEPS" :key="label"
+              :class="['wizard-pip', { 'is-current': createStep === i, 'is-done': createStep > i }]">
+            <button type="button" class="wizard-pip-btn"
+                    :aria-current="createStep === i ? 'step' : undefined"
+                    @click="createStep = i">
+              <span class="wizard-pip-num">{{ i + 1 }}</span>
+              <span class="wizard-pip-label">{{ label }}</span>
+            </button>
+          </li>
+        </ol>
+
+        <!-- Step 1 — Details -->
+        <div v-show="createStep === 0" class="wizard-step">
         <!-- Add to meet — surfaced at the very top so the operator
              decides bundling before filling out the detailed
              fields. Preset by the "+ Add event" button when the
@@ -1432,7 +1467,7 @@ onUnmounted(() => {
         </div>
         <div class="field">
           <label class="label">Event Name</label>
-          <input class="input" v-model="createName" placeholder="e.g. Womens 10m Platform" required>
+          <input class="input" v-model="createName" placeholder="e.g. Womens 10m Platform">
         </div>
         <div class="field">
           <label class="label">Event Type</label>
@@ -1527,6 +1562,10 @@ onUnmounted(() => {
             <option value="11">11 Judges</option>
           </select>
         </div>
+        </div>
+
+        <!-- Step 2 — Rounds -->
+        <div v-show="createStep === 1" class="wizard-step">
         <!-- Round dives (migration 039). Each row is one round in
              the event. Pinning a dive to a row makes it a
              "prescribed" dive — the diver must submit exactly that
@@ -1544,6 +1583,10 @@ onUnmounted(() => {
           @request-new-dive="onRequestNewDive('create', $event)"
         />
 
+        </div>
+
+        <!-- Step 3 — Structure -->
+        <div v-show="createStep === 2" class="wizard-step">
         <!-- Round structure (migration 038). Sections of rounds
              with their own DD-sum cap and min-distinct-groups
              rule. Lives directly under the Round dives editor so
@@ -1611,6 +1654,10 @@ onUnmounted(() => {
           </p>
         </div>
 
+        </div>
+
+        <!-- Step 4 — Schedule & rules -->
+        <div v-show="createStep === 3" class="wizard-step">
         <!-- Scheduled start. Powers the meet schedule view,
              notifications, and (later) calendar export. -->
         <div class="field">
@@ -1752,8 +1799,38 @@ onUnmounted(() => {
           </p>
         </div>
 
+        </div>
+
+        <!-- Step 5 — Review & create -->
+        <div v-show="createStep === 4" class="wizard-step">
+          <div class="wizard-review">
+            <h3 class="wizard-review-title">Review</h3>
+            <dl class="wizard-review-grid">
+              <div><dt>Name</dt><dd>{{ createName || '—' }}</dd></div>
+              <div><dt>Type</dt><dd>{{ createType }}</dd></div>
+              <div><dt>Gender</dt><dd>{{ createGender }}</dd></div>
+              <div v-if="createAgeGroup"><dt>Age group</dt><dd>{{ createAgeGroup }}</dd></div>
+              <div><dt>Height</dt><dd>{{ createMixedHeight ? 'Mixed-board' : (createHeight || '—') }}</dd></div>
+              <div><dt>Judges</dt><dd>{{ createJudges }}</dd></div>
+              <div><dt>Rounds</dt><dd>{{ createRoundDives.length }}</dd></div>
+              <div><dt>Format</dt><dd>{{ createFormat }}</dd></div>
+              <div v-if="createMeetId"><dt>Meet</dt><dd>{{ (meets.find(m => m.id === createMeetId) || {}).name || '—' }}</dd></div>
+            </dl>
+            <p class="hint">Step back to change anything, then create the event.</p>
+          </div>
+        </div>
+
         <div v-if="formErr" class="msg msg-error">{{ formErr }}</div>
-        <button type="submit" class="btn btn-primary-lg" style="margin-top:0.25rem">{{ $t('manager.modals.new_event_submit') }}</button>
+
+        <!-- Wizard footer — Back / Next, Create on the final step. -->
+        <div class="wizard-footer">
+          <button type="button" class="btn btn-ghost" v-show="createStep > 0"
+                  @click="createStep = createStep - 1">← Back</button>
+          <span class="wizard-footer-spacer"></span>
+          <button type="button" class="btn btn-primary" v-show="createStep < lastCreateStep"
+                  @click="createStep = createStep + 1">Next →</button>
+          <button type="submit" class="btn btn-primary-lg" v-show="createStep === lastCreateStep">{{ $t('manager.modals.new_event_submit') }}</button>
+        </div>
       </form>
     </div>
     </div>
