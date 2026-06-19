@@ -177,13 +177,9 @@ module.exports = defineConfig({
       // For e2e, force the helper into documented dev no-op mode:
       // no DNS lookups, no noisy best-effort mailer failures.
       SMTP_HOST: "",
-      // Control Room cutover flag (P9): on | cohort | off. The TEST
-      // webServer defaults to "off" (the V1 build) so the existing
-      // control suite + the V1-only legacy specs stay green by default;
-      // VITE_CONTROL_V2=on builds + serves V2 for control-v2-*.spec.js.
-      // Production defaults the OTHER way (unset -> V2) via the router
-      // resolver — the two defaults are intentionally opposite so the
-      // rollback path keeps its regression coverage through the soak.
+      // Control Room view flag. The all-in-one ControlView is the default
+      // (in tests AND production); VITE_CONTROL_V2=on builds + serves the
+      // experimental ControlViewV2 for the control-v2-*.spec.js suite.
       VITE_CONTROL_V2: process.env.VITE_CONTROL_V2 || "off",
     },
   },
