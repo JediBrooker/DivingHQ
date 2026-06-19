@@ -1,12 +1,16 @@
 <script setup>
-// SetupStage (P7) — the pre-meet readiness for an Upcoming event: what's
-// blocking go-live, read from the server's canonical readiness
-// (/api/events/:id/readiness -> lib/workflow.js buildReadinessFromRow,
-// the same source the dashboard workflow_actions use). Read-only here;
-// the workflow-step actions (check-in / randomise / sign-off / start,
-// reusing the P2-migrated modals) land in the next slice.
-import { ref, watch } from 'vue'
+// SetupStage (P7) — the pre-meet stage for an Upcoming event: the
+// readiness checklist (what's blocking go-live, from /api/events/:id/
+// readiness) PLUS the one workflow-step action that drives the meet to
+// live (check-in -> randomise -> sign-off -> start), reusing the
+// P2-migrated modals. Mutates the shared event object's workflow stamps
+// so the V2 stage derivation (orderWorkflowState) advances in place.
+import { ref, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { orderWorkflowStateFor } from '@/composables/useControlStage'
+import CheckInModal from '@/components/control/CheckInModal.vue'
+import RandomiseDrawModal from '@/components/control/RandomiseDrawModal.vue'
+import SignoffModal from '@/components/control/SignoffModal.vue'
 
 const props = defineProps({ event: { type: Object, required: true } })
 const auth = useAuthStore()
@@ -14,8 +18,25 @@ const auth = useAuthStore()
 const readiness = ref(null)
 const loading = ref(false)
 const error = ref('')
+const busy = ref(false)
+const roster = ref([])
 
-async function load() {
+const checkInOpen = ref(false)
+const randomiseOpen = ref(false)
+const signoffOpen = ref(false)
+
+const stage = computed(() => orderWorkflowStateFor(props.event))
+const stepLabel = computed(
+  () =>
+    ({
+      'check-in': '✓ Check In Divers',
+      random: '🎲 Randomise Dive Order',
+      'sign-off': '📋 Referee Sign Off',
+      start: '▶ Start Event',
+    })[stage.value] || '',
+)
+
+async function loadReadiness() {
   if (!props.event?.id) return
   loading.value = true
   error.value = ''
@@ -29,8 +50,60 @@ async function load() {
   }
 }
 
-watch(() => props.event?.id, load, { immediate: true })
-defineExpose({ reload: load })
+async function loadRoster() {
+  try {
+    const r = await auth.apiFetch(`/api/events/${props.event.id}/roster`)
+    roster.value = Array.isArray(r) ? r : []
+  } catch {
+    roster.value = []
+  }
+}
+
+async function startEvent() {
+  busy.value = true
+  try {
+    await auth.apiFetch(`/api/events/${props.event.id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: 'Live' }),
+    })
+    props.event.status = 'Live' // -> workflowMode flips to meet (Live)
+  } catch (err) {
+    error.value = err?.message || 'Failed to start event'
+  } finally {
+    busy.value = false
+  }
+}
+
+async function runStep() {
+  const s = stage.value
+  if (s === 'check-in') checkInOpen.value = true
+  else if (s === 'random') {
+    await loadRoster()
+    randomiseOpen.value = true
+  } else if (s === 'sign-off') signoffOpen.value = true
+  else if (s === 'start') await startEvent()
+}
+
+function onCheckInConfirmed(patch) {
+  if (patch) Object.assign(props.event, patch)
+  checkInOpen.value = false
+  loadReadiness()
+}
+function onRandomised() {
+  props.event.dive_order_randomised_at = new Date().toISOString()
+  props.event.dive_order_signed_off_at = null
+  randomiseOpen.value = false
+  loadReadiness()
+}
+function onSignedOff(patch) {
+  if (patch && typeof patch === 'object') Object.assign(props.event, patch)
+  else props.event.dive_order_signed_off_at = new Date().toISOString()
+  signoffOpen.value = false
+  loadReadiness()
+}
+
+watch(() => props.event?.id, loadReadiness, { immediate: true })
+defineExpose({ reload: loadReadiness })
 </script>
 
 <template>
@@ -54,6 +127,31 @@ defineExpose({ reload: load })
         </li>
       </ul>
     </template>
+
+    <div v-if="stepLabel" class="setup-primary-slot">
+      <button type="button" class="setup-primary" :disabled="busy" @click="runStep">{{ stepLabel }}</button>
+    </div>
+
+    <CheckInModal
+      v-if="checkInOpen"
+      :event="event"
+      :workflow-state="stage"
+      @close="checkInOpen = false"
+      @confirmed="onCheckInConfirmed"
+    />
+    <RandomiseDrawModal
+      v-if="randomiseOpen"
+      :event="event"
+      :roster="roster"
+      @close="randomiseOpen = false"
+      @randomised="onRandomised"
+    />
+    <SignoffModal
+      v-if="signoffOpen"
+      :event="event"
+      @close="signoffOpen = false"
+      @signed-off="onSignedOff"
+    />
   </div>
 </template>
 
@@ -79,4 +177,13 @@ defineExpose({ reload: load })
 .setup-step-hint { font-size: 11px; color: var(--text-3); }
 .setup-msg { padding: 2rem; text-align: center; color: var(--text-3); font-family: var(--font-mono); }
 .setup-error { color: var(--red); }
+.setup-primary-slot { position: sticky; bottom: 0; margin-top: 1.5rem; padding-top: 1rem; background: linear-gradient(to top, var(--bg) 72%, transparent); }
+.setup-primary {
+  width: 100%; padding: 0.85rem 1.5rem;
+  font-family: var(--font-display); font-size: 14px; font-weight: 700;
+  border-radius: var(--radius); border: 1px solid var(--cyan); background: var(--cyan); color: var(--bg);
+  cursor: pointer; transition: filter 0.12s;
+}
+.setup-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.setup-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
