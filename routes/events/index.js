@@ -1722,7 +1722,7 @@ module.exports = function createEventsRouter({
        ),
        ranked AS (
          SELECT competitor_id, total,
-                RANK() OVER (ORDER BY total DESC) AS rnk
+                RANK() OVER (ORDER BY total DESC)::int AS rnk
          FROM cumulative
        )
        SELECT r.competitor_id, r.total, r.rnk,
@@ -1900,11 +1900,14 @@ module.exports = function createEventsRouter({
         // on total (equal totals share a rank), so we keep every diver
         // whose rank is at or better than the diver on the boundary.
         const boundaryRank = ranked[topN - 1]?.rnk ?? null;
+        // rnk comes back as a number (RANK()::int), but coerce
+        // defensively so the comparison can never become a string
+        // compare ("2" <= "13" is false and would drop tied divers).
         const primaries = boundaryRank == null
           ? ranked.slice(0, topN)
-          : ranked.filter((r) => r.rnk <= boundaryRank);
+          : ranked.filter((r) => Number(r.rnk) <= Number(boundaryRank));
         const reserveRows = ranked
-          .filter((r) => boundaryRank == null || r.rnk > boundaryRank)
+          .filter((r) => boundaryRank == null || Number(r.rnk) > Number(boundaryRank))
           .slice(0, resN);
 
         // Compute display_order for primaries per the chosen mode.
