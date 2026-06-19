@@ -21,6 +21,7 @@ import StatusPill from '@/components/StatusPill.vue'
 import SetupStage from '@/components/control/SetupStage.vue'
 import ReviewStage from '@/components/control/ReviewStage.vue'
 import DrawerPanel from '@/components/control/DrawerPanel.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import { useI18n } from 'vue-i18n'
@@ -370,7 +371,17 @@ onMounted(async () => {
       </div>
       <p v-if="loadError" class="cv2-msg cv2-error">{{ loadError }}</p>
       <p v-else-if="loading" class="cv2-msg">Loading…</p>
-      <p v-else-if="!currentEvent" class="cv2-msg">Pick a stage from the rail to begin.</p>
+      <div v-else-if="!currentEvent" class="cv2-empty">
+        <EmptyState
+          icon="🏁"
+          :title="events.length ? 'No stage selected' : 'No meets yet'"
+          :body="events.length
+            ? 'Pick a meet stage from the rail to run setup, go live, or review results.'
+            : 'Create an event to start running it from the Control Room.'"
+          :action-label="events.length ? null : 'Create an event'"
+          :action-to="events.length ? null : '/manager?new=1'"
+        />
+      </div>
 
       <div v-else class="cv2-stage" :data-mode="centerMode">
         <header class="cv2-stage-head">
@@ -605,7 +616,27 @@ onMounted(async () => {
 .cv2-msg { padding: 3rem; text-align: center; color: var(--text-3); font-family: var(--font-mono); }
 .cv2-error { color: var(--red); }
 @media (max-width: 860px) {
+  /* Single column: the rail collapses to a horizontal stage strip above
+     the center, which then fills the screen. The strip scrolls sideways
+     internally so the PAGE never gains a horizontal scrollbar. */
   .cv2 { grid-template-columns: 1fr; }
+  .cv2 :deep(.stage-rail) {
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--border);
+    overflow-y: visible;
+  }
+  .cv2 :deep(.stage-rail-list) {
+    display: flex; gap: 0.4rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 0.4rem 0.5rem;
+  }
+  .cv2 :deep(.stage-rail-list)::-webkit-scrollbar { display: none; }
+  .cv2 :deep(.stage-rail-list > li) { flex: 0 0 auto; }
+  .cv2 :deep(.stage-row) { width: auto; white-space: nowrap; }
+  .cv2-center { padding: 1rem; }
+  .cv2-stage-head { flex-wrap: wrap; }
 }
 
 .cv2-recovery-toggle {

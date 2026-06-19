@@ -258,4 +258,20 @@ onBeforeUnmount(() => {
   font-family: var(--font-mono); font-size: 12px; color: var(--text-3);
   padding: 0.3rem 0.25rem; border-bottom: 1px solid var(--border-2);
 }
+
+/* Phone: the drawer becomes a bottom sheet (dvh-bound, safe-area padded)
+   so it's thumb-reachable and never forces a horizontal scrollbar. */
+@media (max-width: 600px) {
+  .cv2-drawer-overlay { align-items: flex-end; }
+  .cv2-drawer {
+    width: 100%;
+    height: auto;
+    max-height: 85vh;
+    max-height: 85dvh;
+    border-inline-start: 0;
+    border-top: 1px solid var(--border-2);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+}
 </style>
