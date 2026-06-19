@@ -27,6 +27,7 @@ import { useLivePools, selectDiver, deriveStatus } from '@/composables/useLivePo
 import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
 import { useShotClock } from '@/composables/useShotClock'
+import { useMeetHold } from '@/composables/useMeetHold'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
 import { confirmAction } from '@/composables/useConfirm'
 import { showUndo } from '@/composables/useUndo'
@@ -77,6 +78,13 @@ const currentEvent = computed(
   () => events.value.find((e) => String(e.id) === String(selectedEventId.value)) || null,
 )
 const { workflowMode } = useControlStage(currentEvent)
+
+// SAFE RECOVERY: meet hold/resume on the focused event (useMeetHold,
+// reused as-is; one instance keyed to currentEvent, meet-wide). Holding
+// pauses the focused diver's shot clock. Instantiated AFTER socket +
+// currentEvent exist so neither is referenced in a temporal dead zone.
+const { isHeld, holdReason, holdPromptOpen, holdReasonInput, openHoldPrompt, confirmHold, resumeMeet } =
+  useMeetHold({ socket, event: () => currentEvent.value, onHold: () => resetShotClock() })
 
 // Recovery is the one explicit cross-cutting mode (offer-not-seize);
 // P7 fills it. Off by default so the center always shows the stage mode.
@@ -317,6 +325,10 @@ onMounted(async () => {
     />
 
     <section class="cv2-center" aria-label="Current stage">
+      <div v-if="isHeld" class="cv2-hold-banner" role="status">
+        <span>⏸ Meet held<template v-if="holdReason"> — {{ holdReason }}</template></span>
+        <button type="button" @click="resumeMeet">Resume</button>
+      </div>
       <p v-if="loadError" class="cv2-msg cv2-error">{{ loadError }}</p>
       <p v-else-if="loading" class="cv2-msg">Loading…</p>
       <p v-else-if="!currentEvent" class="cv2-msg">Pick a stage from the rail to begin.</p>
@@ -325,6 +337,13 @@ onMounted(async () => {
         <header class="cv2-stage-head">
           <StatusPill :status="currentEvent.status" size="md" />
           <h1 ref="stageTitleEl" tabindex="-1" class="cv2-stage-title">{{ currentEvent.name }}</h1>
+          <button
+            type="button"
+            class="cv2-recovery-toggle"
+            :class="{ 'is-active': recoveryOpen }"
+            :aria-pressed="recoveryOpen"
+            @click="recoveryOpen = !recoveryOpen"
+          >⛑ Recovery</button>
         </header>
 
         <!-- Center mode-switch: EXACTLY ONE mode per stage. The bodies
@@ -382,7 +401,21 @@ onMounted(async () => {
           <ReviewStage :event="currentEvent" />
         </section>
         <section v-else class="cv2-mode" aria-label="Recovery">
-          <p class="cv2-mode-note">Recovery — hold, correction, withdraw, offline/conflict. (Built in P7.)</p>
+          <p class="cv2-mode-note">Recovery — pause the meet to deal with an issue, then resume. (Score correction + offline/conflict trays: later slice.)</p>
+          <div class="cv2-recovery-actions">
+            <button v-if="!isHeld" type="button" class="cv2-recovery-btn" @click="openHoldPrompt">⏸ Hold meet</button>
+            <button v-else type="button" class="cv2-recovery-btn is-resume" @click="resumeMeet">▶ Resume meet</button>
+            <button type="button" class="cv2-recovery-back" @click="recoveryOpen = false">← Back to stage</button>
+          </div>
+          <div v-if="holdPromptOpen" class="cv2-hold-prompt">
+            <label class="cv2-hold-label">Reason (optional)
+              <input v-model="holdReasonInput" type="text" class="cv2-hold-input" placeholder="e.g. pool maintenance" />
+            </label>
+            <div class="cv2-hold-prompt-actions">
+              <button type="button" @click="holdPromptOpen = false">Cancel</button>
+              <button type="button" class="cv2-hold-confirm" @click="confirmHold">Hold meet</button>
+            </div>
+          </div>
         </section>
       </div>
     </section>
@@ -462,4 +495,31 @@ onMounted(async () => {
 @media (max-width: 860px) {
   .cv2 { grid-template-columns: 1fr; }
 }
+
+.cv2-recovery-toggle {
+  margin-inline-start: auto;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  padding: 0.3rem 0.7rem; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2); background: transparent; color: var(--text-2); cursor: pointer;
+}
+.cv2-recovery-toggle.is-active, .cv2-recovery-toggle:hover { border-color: var(--amber); color: var(--amber); }
+.cv2-recovery-actions { display: flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap; }
+.cv2-recovery-btn {
+  padding: 0.65rem 1.2rem; font-family: var(--font-display); font-weight: 700; font-size: 13px;
+  border-radius: var(--radius); border: 1px solid var(--amber); background: var(--amber); color: var(--bg); cursor: pointer;
+}
+.cv2-recovery-btn.is-resume { border-color: var(--green); background: var(--green); }
+.cv2-recovery-back { padding: 0.65rem 1.2rem; background: transparent; border: 1px solid var(--border-2); color: var(--text-2); border-radius: var(--radius); cursor: pointer; font: inherit; }
+.cv2-hold-prompt { margin-top: 1rem; padding: 1rem; border: 1px solid var(--border-2); border-radius: var(--radius); background: var(--bg-3); max-width: 420px; }
+.cv2-hold-label { display: block; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+.cv2-hold-input { display: block; width: 100%; margin-top: 0.4rem; padding: 0.5rem; background: var(--bg); border: 1px solid var(--border-2); border-radius: var(--radius-sm); color: var(--fg); font: inherit; }
+.cv2-hold-prompt-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; }
+.cv2-hold-prompt-actions button { padding: 0.4rem 0.9rem; border-radius: var(--radius-sm); border: 1px solid var(--border-2); background: transparent; color: var(--text-2); cursor: pointer; font: inherit; }
+.cv2-hold-confirm { background: var(--amber) !important; border-color: var(--amber) !important; color: var(--bg) !important; }
+.cv2-hold-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  margin-bottom: 1rem; padding: 0.6rem 1rem; border-radius: var(--radius-sm);
+  background: var(--amber); color: var(--bg); font-family: var(--font-display); font-weight: 700; font-size: 13px;
+}
+.cv2-hold-banner button { padding: 0.3rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--bg); background: transparent; color: var(--bg); cursor: pointer; font: inherit; font-weight: 700; }
 </style>
