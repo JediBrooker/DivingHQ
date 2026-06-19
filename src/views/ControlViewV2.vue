@@ -19,6 +19,7 @@ import { useControlStage } from '@/composables/useControlStage'
 import StageRail from '@/components/control/StageRail.vue'
 import StatusPill from '@/components/StatusPill.vue'
 import SetupStage from '@/components/control/SetupStage.vue'
+import ReviewStage from '@/components/control/ReviewStage.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import { useI18n } from 'vue-i18n'
@@ -378,7 +379,7 @@ onMounted(async () => {
           <p v-else class="cv2-mode-note">Live — loading the active diver… (Full live screen: P6.)</p>
         </section>
         <section v-else-if="centerMode === 'review'" class="cv2-mode" aria-label="Review">
-          <p class="cv2-mode-note">Review — standings, judge ranking, recap. (Built in P8.)</p>
+          <ReviewStage :event="currentEvent" />
         </section>
         <section v-else class="cv2-mode" aria-label="Recovery">
           <p class="cv2-mode-note">Recovery — hold, correction, withdraw, offline/conflict. (Built in P7.)</p>
