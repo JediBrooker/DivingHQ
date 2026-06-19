@@ -33,6 +33,7 @@ import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
+import { contributesToDiverChip } from '@/composables/useAttention'
 import { fmtCloses, fmtRelative } from '@/lib/format'
 import { Building2, Calendar, MonitorPlay, UserCog } from '@lucide/vue'
 
@@ -137,6 +138,10 @@ const diverEntryCloseDays = computed(() => {
   let nearest = Infinity
   for (const ev of events.value) {
     if (ev.status !== 'Upcoming' || !ev.entries_close_at) continue
+    // Only events the diver is actually entered in (gated on
+    // diver_event_ids via the shared attention selector), so this chip
+    // agrees with diverNextMeet. null bundle => entered, so no blink.
+    if (!contributesToDiverChip(ev.id, diverEventIds.value)) continue
     const t = +new Date(ev.entries_close_at)
     if (t > now && t - now < nearest) nearest = t - now
   }
@@ -305,6 +310,7 @@ const pulseChips = computed(() => {
     const now = Date.now()
     const upcoming = events.value
       .filter((e) => e.status === 'Upcoming' && e.entries_close_at)
+      .filter((e) => contributesToDiverChip(e.id, diverEventIds.value))
       .sort((a, b) => +new Date(a.entries_close_at) - +new Date(b.entries_close_at))
     chips.push({
       id:           'diver-entries',
