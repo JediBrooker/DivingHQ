@@ -1,78 +1,158 @@
 <script setup>
-// ControlViewV2 — the flag-gated Stage-Rail Control Room shell (P5).
+// ControlViewV2 — the Stage-Rail Control Room (the only Control Room; the
+// legacy all-in-one ControlView was removed at cutover).
 //
-// Parallel to the UNTOUCHED ControlView.vue (the instant rollback). This
-// phase stands up the FRAME only: a meet/event RAIL + a CENTER
-// mode-switch (Setup / Live / Review, plus a Recovery cross-cut) + a
-// drawer stub. Exactly one mode renders per stage, chosen by the shared
-// useControlStage derivation. The mode bodies are placeholders here;
-// P6 (Live) / P7 (Setup + Recovery) / P8 (Review + drawer) rebuild the
-// real panels into them. Live score handling + the concurrent-pool
-// per-event live-state map is the next P5 slice.
-//
-// Resolved when VITE_CONTROL_V2 !== 'off' (router resolver; on is the default);
-// same /control URL, same ?event= deep-link, same role gate + AppShell.
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+// A top event bar (switch + actions) + a CENTER mode-switch (Setup / Live
+// / Review, plus a Recovery cross-cut). Live mode is the three-column
+// board (History · concurrent pool cards · Standings) with per-pool
+// controllers + meet-day tools; the mode is chosen by the shared
+// useControlStage derivation. Same /control URL, ?event= deep-link, role
+// gate + AppShell as before.
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useControlStage } from '@/composables/useControlStage'
-import StageRail from '@/components/control/StageRail.vue'
-import StatusPill from '@/components/StatusPill.vue'
+import ControlTopBar from '@/components/control/ControlTopBar.vue'
 import SetupStage from '@/components/control/SetupStage.vue'
 import ReviewStage from '@/components/control/ReviewStage.vue'
+import LivePoolCard from '@/components/control/LivePoolCard.vue'
+import ScoreCorrectionModal from '@/components/control/ScoreCorrectionModal.vue'
 import DrawerPanel from '@/components/control/DrawerPanel.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
-import { useI18n } from 'vue-i18n'
-import { useLivePools, selectDiver, deriveStatus } from '@/composables/useLivePools'
+import { useLivePools, selectDiver, rosterIndexForActive } from '@/composables/useLivePools'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
-import { useShotClock } from '@/composables/useShotClock'
+import { makeTokenBucket } from '@/lib/token-bucket'
 import { useMeetHold } from '@/composables/useMeetHold'
-import { useAutoAdvance } from '@/composables/useAutoAdvance'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
 import { confirmAction } from '@/composables/useConfirm'
 import { showUndo } from '@/composables/useUndo'
-import { showError } from '@/composables/useNotify'
+import { showError, showSuccess } from '@/composables/useNotify'
 
 const route = useRoute()
 const auth = useAuthStore()
-const { t } = useI18n()
 const { queueAction } = useHttpOutbox()
-
-// ONE shot clock bound to the FOCUSED pool (WA 8.5.5 60s window; frozen
-// composable, reused as-is). Only the centered diver is on the clock; a
-// non-focused Live pool can sit at READY/JUDGING without its own clock.
-// Per-pool multi-clocks are a later slice.
-const { shotClock, shotClockExpired, shotClockClass, startShotClock, stopShotClock, resetShotClock } =
-  useShotClock()
 
 // Socket + the concurrent-pool live-state engine are hoisted ABOVE the
 // mode switch: ONE subscription for the shell's lifetime routes every
 // score_received / judge_signal to the matching pool by event_id, so a
 // non-focused Live pool still updates its own tiles (useLivePools). The
 // frozen trim/sync math is untouched -- only WHERE the result lands is
-// per-pool. useSocketEvent auto-cleans on unmount so no dead instance
-// can keep advancing a meet.
+// per-pool. The shot clock + auto-advance now live PER-POOL inside each
+// LivePoolCard (driven off its pool state), so the shell just routes
+// scores and refreshes side-panel data on completion.
 const socket = useSocket()
 const { pools, poolFor, routeScore, routeSignal } = useLivePools()
 
 useSocketEvent(socket, 'score_received', (data) => {
   if (data?.event_id) idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
   const res = routeScore(data, numberOfJudgesFor)
-  // Focused-pool shot clock stops when ITS dive completes; a non-focused
-  // pool's completion arms its own advance and never touches the clock.
-  if (res.allScoresIn && currentEvent.value && String(data.event_id) === String(currentEvent.value.id)) {
-    stopShotClock()
-    // Focused pool's panel just completed -> arm the auto-advance
-    // countdown (frozen V1 contract). Finalise is never auto-fired.
-    if (!nextBtnComplete.value) startAutoAdvance(advancePrimary)
-  }
+  // A completed dive changes that pool's history + standings -> refresh
+  // its side-panel data (for whichever pool, focused or not). Each card
+  // watches its own pool to stop its clock + arm its own auto-advance.
+  if (res.allScoresIn) loadPoolPanels(data.event_id)
 })
 useSocketEvent(socket, 'judge_signal', (data) => {
   routeSignal(data)
 })
+
+// AUTHORITATIVE active-diver restore. The server replays state_update on
+// (re)connect and in reply to get_active_diver, carrying the diver it
+// currently has live per event. We record it and snap the matching pool
+// to that diver -- WITHOUT emitting -- so reopening the Control Room
+// mid-meet never yanks the judges' panel back to roster[0]. Only a
+// genuinely fresh event (no server diver) announces, in setupLivePool.
+const pendingActive = {} // event_id -> latest server state_update payload
+const pendingSeed = new Set() // events optimistically seeded, awaiting the server's verdict
+const seedTimers = new Set() // fallback timers, cleared on unmount
+const SEED_GRACE_MS = 1500
+
+// #7 RATE-LIMIT + DROP-DETECTION. set_active_diver is capped server-side
+// at 60/min/user and over-budget emits are dropped SILENTLY -- so a diver
+// change can fail to reach the judges. The token bucket staggers bursts
+// under the budget; drop-detection waits for the server's state_update
+// echo and flags the pool (a Retry on its card) if the change never
+// confirms. unconfirmed is reactive so the card can surface the warning.
+const activeDiverBucket = makeTokenBucket({ capacity: 40, refillPerMin: 40 })
+const pendingConfirm = {} // event_id -> { competitor_id, round_number }
+const unconfirmed = reactive({}) // event_id -> true when a set_active_diver wasn't echoed
+const confirmTimers = new Set()
+const CONFIRM_TIMEOUT_MS = 4000
+
+// LEASE conflict state: event_id -> true when another socket (operator or
+// window) is also controlling this event (server claim_event_control).
+const conflicts = reactive({})
+
+useSocketEvent(socket, 'state_update', (data) => {
+  if (!data?.event_id) return
+  pendingActive[data.event_id] = data
+  // Drop-detection: a state_update matching our pending diver confirms the
+  // set_active_diver landed -> clear the warning.
+  const pc = pendingConfirm[data.event_id]
+  if (pc && String(pc.competitor_id) === String(data.competitor_id) && Number(pc.round_number) === Number(data.round_number)) {
+    delete pendingConfirm[data.event_id]
+    delete unconfirmed[data.event_id]
+  }
+  seedPoolFromServer(data.event_id)
+})
+
+// Lease: the server warns when a second socket drives the same event.
+useSocketEvent(socket, 'event_control_conflict', (d) => {
+  if (d?.event_id) conflicts[d.event_id] = d.sameUser ? 'another window' : 'another operator'
+})
+useSocketEvent(socket, 'event_control_contested', (d) => {
+  if (d?.event_id) conflicts[d.event_id] = d.sameUser ? 'another window' : 'another operator'
+})
+useSocketEvent(socket, 'event_control_granted', (d) => {
+  if (d?.event_id) delete conflicts[d.event_id]
+})
+
+// Emit set_active_diver for a pool THROUGH the token bucket, then watch
+// for the server's echo; if it doesn't arrive within the window, flag the
+// pool as unconfirmed so the operator can retry (judges may be on a stale
+// diver). The lone funnel for every set_active_diver the shell sends.
+function emitActiveDiver(ev) {
+  const p = pools[ev.id]
+  const a = p && p.currentActive
+  if (!a) return
+  pendingConfirm[ev.id] = { competitor_id: a.competitor_id, round_number: a.round_number }
+  delete unconfirmed[ev.id] // re-attempt clears any stale warning
+  const payload = { ...a, status: 'ready' }
+  activeDiverBucket(() => {
+    socket.emit('set_active_diver', payload)
+    const tid = setTimeout(() => {
+      confirmTimers.delete(tid)
+      const pc = pendingConfirm[ev.id]
+      if (pc && String(pc.competitor_id) === String(a.competitor_id) && Number(pc.round_number) === Number(a.round_number)) {
+        unconfirmed[ev.id] = true
+      }
+    }, CONFIRM_TIMEOUT_MS)
+    confirmTimers.add(tid)
+  })
+}
+
+// Snap an optimistically-seeded pool to the server's authoritative active
+// diver (no emit), but ONLY while it is still awaiting the server's
+// verdict (pendingSeed) -- so a routine state echo during live operation
+// can never wipe the operator's in-progress pool. Clearing pendingSeed
+// marks the event server-resolved, so the roster[0] announce fallback
+// won't fire for it. A payload we can't map to a roster row (-1) still
+// resolves: we leave the optimistic roster[0] in place but never announce
+// over the server's diver.
+function seedPoolFromServer(eventId) {
+  if (!pendingSeed.has(eventId)) return
+  const pool = pools[eventId]
+  const active = pendingActive[eventId]
+  if (!pool || !active) return
+  if (!Array.isArray(pool.roster) || !pool.roster.length) return
+  const idx = rosterIndexForActive(pool.roster, active)
+  if (idx >= 0 && idx !== pool.currentIndex) {
+    selectDiver(pool, idx, numberOfJudgesFor(eventId), diveDescription)
+  }
+  pendingSeed.delete(eventId)
+}
 
 const events = ref([])
 const selectedEventId = ref('')
@@ -85,138 +165,126 @@ const currentEvent = computed(
 )
 const { workflowMode } = useControlStage(currentEvent)
 
-// SAFE RECOVERY: meet hold/resume on the focused event (useMeetHold,
-// reused as-is; one instance keyed to currentEvent, meet-wide). Holding
-// pauses the focused diver's shot clock. Instantiated AFTER socket +
-// currentEvent exist so neither is referenced in a temporal dead zone.
+// SAFE RECOVERY: meet hold/resume on the FOCUSED event, driving the
+// recovery center mode + the focused hold banner. Per-pool hold (from any
+// card) lives inside LivePoolCard; this focused instance mirrors the same
+// server meet_held/meet_resumed broadcasts so the two stay in sync. The
+// focused pool's clock is paused by its own card's hold instance, so
+// onHold here is a no-op.
 const { isHeld, holdReason, holdPromptOpen, holdReasonInput, openHoldPrompt, confirmHold, resumeMeet } =
-  useMeetHold({ socket, event: () => currentEvent.value, onHold: () => resetShotClock() })
+  useMeetHold({ socket, event: () => currentEvent.value, onHold: () => {} })
 
-// Recovery is the one explicit cross-cutting mode (offer-not-seize);
-// P7 fills it. Off by default so the center always shows the stage mode.
+// Recovery is the one explicit cross-cutting mode (offer-not-seize).
+// Off by default so the center always shows the stage mode.
 const recoveryOpen = ref(false)
 const drawerOpen = ref(false)
 const centerMode = computed(() => (recoveryOpen.value ? 'recovery' : workflowMode.value))
 
-// The focused pool's live state (active diver + judge tiles), or null.
-const livePool = computed(() => (currentEvent.value ? pools[currentEvent.value.id] : null))
-
-// CURRENT STATE: the READY/JUDGING/DIVING pill, re-derived per focused
-// pool off its own scores. clockExpired (the DIVING transition) wires in
-// with the focused-pool shot clock in P6.2.
-const liveStatus = computed(() => {
-  const p = livePool.value
-  if (!p) return 'ready'
-  return deriveStatus({
-    hasActive: !!p.currentActive,
-    scoresInCount: Object.keys(p.scoresThisRound || {}).length,
-    clockExpired: shotClockExpired.value,
-  })
-})
-
-// BLOCKERS (live): "what's stopping me", surfaced on-canvas instead of
-// hidden in the primary's tooltip -- partial scores + a judge signaling
-// the referee, derived from the focused pool's tiles (no new fetch).
-const liveBlockers = computed(() => {
-  const p = livePool.value
-  const ev = currentEvent.value
-  if (!p || !p.currentActive || !ev) return []
-  const out = []
-  const total = numberOfJudgesFor(ev.id) || 0
-  const scoresIn = Object.keys(p.scoresThisRound || {}).length
-  if (total > 0 && scoresIn > 0 && scoresIn < total) {
-    const remaining = total - scoresIn
-    out.push({ kind: 'partial', label: `Waiting for ${remaining} more judge score${remaining === 1 ? '' : 's'}` })
-  }
-  const signaling = (p.judgeTiles || []).filter((t) => t.signaled).map((t) => t.judgeIndex)
-  if (signaling.length) {
-    out.push({ kind: 'signal', label: `Judge ${signaling.join(', ')} signaling the referee` })
-  }
-  return out
-})
-
-// AUTO-ADVANCE (P6.4): once the focused pool's panel completes, a
-// countdown moves the meet to the next diver without a click. A judge
-// flagging the referee blocks/cancels it (frozen V1 contract); finalise
-// is never auto-fired. Manual (0s) is the safe default. Per-pool clocks
-// are a later slice -- this drives the FOCUSED pool only.
-const liveSignaling = computed(() =>
-  (livePool.value?.judgeTiles || []).some((t) => t.signaled),
+// Every currently-Live event, paired with its pool -> the multi-pool grid
+// in the center renders one LivePoolCard per entry. With one Live event
+// it's the classic single 3-column board; with two or three the cards sit
+// side by side so the operator sees every pool at a glance.
+const livePools = computed(() =>
+  events.value
+    .filter((e) => e.status === 'Live')
+    .map((e) => ({ event: e, pool: poolFor(e.id) })),
 )
-const autoNextOptions = [
-  { v: 0, label: 'Manual' },
-  { v: 5, label: '5 seconds' },
-  { v: 10, label: '10 seconds' },
-  { v: 15, label: '15 seconds' },
-  { v: 20, label: '20 seconds' },
-  { v: 25, label: '25 seconds' },
-  { v: 30, label: '30 seconds' },
-]
-const autoNextMenuOpen = ref(false)
-const { autoAdvanceSeconds, autoAdvanceCountdown, startAutoAdvance, cancelAutoAdvance } =
-  useAutoAdvance({ isSignaling: () => liveSignaling.value })
 
-// Re-arm when a referee signal clears (panel already complete, not at
-// finalise); kill the in-flight countdown the moment a signal raises.
-watch(liveSignaling, (now, prev) => {
-  if (prev && !now && !nextBtnDisabled.value && !nextBtnComplete.value) {
-    startAutoAdvance(advancePrimary)
-  }
-  if (now) cancelAutoAdvance()
-})
+// History + standings for the FOCUSED pool feed the side columns. Kept in
+// the view (not the pure useLivePools engine): fetched per pool on setup
+// and refreshed when that pool completes a dive.
+const histories = reactive({}) // event_id -> completed-dive cards, newest first
+const standingsByEvent = reactive({}) // event_id -> standings rows, total desc
+const focusedHistory = computed(() => histories[selectedEventId.value] || [])
+const focusedStandings = computed(() => standingsByEvent[selectedEventId.value] || [])
 
-// NEXT ACTION: one bottom-pinned primary scoped to the focused pool,
-// reproducing updateNextButton (ControlView.vue:2311-2328) + nextBtn*
-// per pool. disabled until that pool's last score lands (advanceArmed);
-// on the last dive it morphs to Finalise.
-const isLastInPool = computed(() => {
-  const p = livePool.value
-  return !!p && p.currentIndex >= p.roster.length - 1
-})
-const nextBtnComplete = computed(() => !!livePool.value?.advanceArmed && isLastInPool.value)
-const nextBtnDisabled = computed(() => !livePool.value?.advanceArmed)
-const nextBtnText = computed(() =>
-  nextBtnComplete.value
-    ? `✓ ${t('control.finalise')} & ${t('control.view_results')}`
-    : `${t('control.next_diver')} →`,
+// Collapsible side columns. One Live event -> both open (the full
+// 3-column board). Two or more -> auto-collapse to edge drawers so the
+// pool cards get the width; the operator can still peek either panel for
+// the focused pool. Manual toggles hold until the Live-event count
+// changes.
+const historyOpen = ref(true)
+const standingsOpen = ref(true)
+watch(
+  () => livePools.value.length,
+  (n) => {
+    const multi = n > 1
+    historyOpen.value = !multi
+    standingsOpen.value = !multi
+  },
 )
-const nextBtnTitle = computed(() => {
-  if (!nextBtnDisabled.value) {
-    return nextBtnComplete.value
-      ? 'All rounds complete — finalise the event'
-      : 'Advance to the next diver'
-  }
-  const p = livePool.value
-  if (!p?.currentActive) return 'Pick an active diver from the queue first'
-  const need = numberOfJudgesFor(currentEvent.value?.id) || 5
-  const have = Object.keys(p.scoresThisRound || {}).length
-  const remaining = Math.max(0, need - have)
-  return remaining === 0 ? 'Loading…' : `Waiting for ${remaining} more judge score${remaining === 1 ? '' : 's'}`
-})
 
-function syncShotClock() {
-  const p = livePool.value
-  if (p && p.currentActive && currentEvent.value?.status === 'Live') startShotClock()
-  else resetShotClock()
+async function loadPoolPanels(eventId) {
+  if (!eventId) return
+  try {
+    const h = await auth.apiFetch(`/api/events/${eventId}/history`)
+    // /history is round ASC, name ASC; reverse so the latest dive is on top.
+    histories[eventId] = Array.isArray(h) ? h.slice().reverse() : []
+  } catch { /* leave prior history in place */ }
+  try {
+    const sb = await auth.apiFetch(`/api/scoreboard/${eventId}`)
+    standingsByEvent[eventId] = Array.isArray(sb?.standings) ? sb.standings : []
+  } catch { /* leave prior standings in place */ }
 }
 
-// The nextDiver funnel (ControlView.vue:2347-2378), per focused pool:
-// partial-scores confirm, then advance the pool's cursor OR finalise.
-async function advancePrimary() {
-  // A manual advance cancels any in-flight countdown so the operator's
-  // click wins the race with the timer.
-  cancelAutoAdvance()
-  const p = livePool.value
+function fmtTotal(v) {
+  const n = parseFloat(v)
+  return Number.isFinite(n) ? n.toFixed(2) : '—'
+}
+
+// SCORE CORRECTION (#9): clicking a completed dive in the focused pool's
+// History column opens the manager-amend modal. /history rows carry
+// judge_scores + score_ids; the modal wants `scores`, so map across.
+const correctOpen = ref(false)
+const correctTarget = ref(null)
+function openCorrection(row) {
+  if (!row?.score_ids?.length) return
+  correctTarget.value = {
+    name: row.diverName,
+    round: row.round_number,
+    dive_code: row.dive_code,
+    position: row.position,
+    dd: row.dd,
+    scores: (row.judge_scores || []).map((s) => parseFloat(s)),
+    score_ids: row.score_ids,
+    competitor_id: row.competitor_id,
+    event_id: row.event_id,
+  }
+  correctOpen.value = true
+}
+function closeCorrection() {
+  correctOpen.value = false
+  correctTarget.value = null
+}
+
+// ANNOUNCE (#9): push the focused pool's standings to the spectator
+// scoreboard ("say it on screen"), reproducing the V1 announce_score emit.
+function announceFocused() {
   const ev = currentEvent.value
-  if (!p || !ev) return
+  if (!ev || !focusedStandings.value.length) return
+  socket.emit('announce_score', { standings: focusedStandings.value, eventId: ev.id })
+  showSuccess(`Announced "${ev.name}" standings on the scoreboard.`)
+}
+
+// The nextDiver funnel (ControlView.vue:2347-2378), generalized to ANY
+// pool so each card's primary advances its OWN event: partial-scores
+// confirm, then advance that pool's cursor OR finalise. The per-pool shot
+// clock + auto-advance live in each card, which re-arms its clock when its
+// active diver changes here.
+async function advancePool(ev) {
+  if (!ev) return
+  const p = pools[ev.id]
+  if (!p) return
   const totalJudges = numberOfJudgesFor(ev.id) || 0
   const scoresIn = Object.keys(p.scoresThisRound || {}).length
+  const isLast = p.currentIndex >= (p.roster?.length || 0) - 1
+  const isComplete = !!p.advanceArmed && isLast
   const partial = totalJudges > 0 && scoresIn > 0 && scoresIn < totalJudges
-  if (!nextBtnComplete.value && partial) {
+  if (!isComplete && partial) {
     if (
       !(await confirmAction({
         title: 'Skip ahead with partial scores?',
-        body: `Only ${scoresIn} of ${totalJudges} judges have submitted for this dive.`,
+        body: `Only ${scoresIn} of ${totalJudges} judges have submitted for this dive in "${ev.name}".`,
         consequences: [
           'The dive will close with whatever scores arrived',
           'Missing judges can still amend via score correction afterwards',
@@ -228,22 +296,28 @@ async function advancePrimary() {
       return
     }
   }
-  if (nextBtnComplete.value) {
-    await finaliseFocusedPool()
+  if (isComplete) {
+    await finalisePool(ev)
   } else if (selectDiver(p, p.currentIndex + 1, totalJudges, diveDescription)) {
-    socket.emit('set_active_diver', { ...p.currentActive, status: 'ready' })
-    startShotClock()
+    // The pool's currentActive changed -> its card re-arms the shot clock.
+    // Routed through the bucket + drop-detection (#7).
+    emitActiveDiver(ev)
   }
 }
 
-// finaliseEvent (ControlView.vue:2470-2545), reproduced for the focused
-// pool: same consequences/confirm/PUT/undo. (The reflow modal is drawer
-// plumbing, deferred to P8; an event with no long-run candidates -- the
-// common case -- never opens it.)
-async function finaliseFocusedPool() {
-  const ev = currentEvent.value
-  const p = livePool.value
+// Re-announce the focused/named pool's current active diver (the card's
+// "Retry" after a dropped set_active_diver).
+function retryActiveDiver(ev) {
+  if (ev) emitActiveDiver(ev)
+}
+
+// finaliseEvent (ControlView.vue:2470-2545), per pool: same
+// consequences/confirm/PUT/undo. (The reflow modal is drawer plumbing,
+// deferred to P8; an event with no long-run candidates -- the common
+// case -- never opens it.)
+async function finalisePool(ev) {
   if (!ev) return
+  const p = pools[ev.id]
   const diverIds = new Set()
   for (const r of p?.roster || []) {
     if (r.withdrawn_at) continue
@@ -277,7 +351,8 @@ async function finaliseFocusedPool() {
     })
     const target = events.value.find((e) => String(e.id) === String(evId))
     if (target) target.status = 'Completed' // -> workflowMode flips to review
-    resetShotClock()
+    // The card unmounts from the live grid (status no longer Live) and its
+    // own onUnmounted stops its shot clock; nothing to reset here.
     showUndo({
       message: `Finalised "${evName}" — results published.`,
       timeoutMs: 12000,
@@ -302,23 +377,55 @@ function numberOfJudgesFor(eventId) {
   return parseInt(ev?.number_of_judges) || 0
 }
 
-// Stand up a per-event live pool: subscribe to its room, seed the judge
-// tiles, set the active diver from the roster. Per-pool, so two Live
-// pools stay independent. Minimal active diver here (first dive in the
-// order); the full setActive / auto-advance derivation is P6.
+// Stand up a per-event live pool: join its room, load the roster, and put
+// an active diver on the stage. Per-pool, so two Live pools stay
+// independent.
+//
+// Active-diver seeding restores the meet's REAL state rather than resetting
+// it. The old version blindly emitted set_active_diver for roster[0] on
+// mount for EVERY Live event -- so merely opening the Control Room yanked
+// every judge's panel (even another operator's) back to diver 1, round 1.
+// Now we:
+//   1. optimistically select roster[0] LOCALLY (no emit) so the stage
+//      isn't blank and a non-focused pool's scores route the instant they
+//      arrive (applyScore matches on the client's currentActive);
+//   2. ask the server who is actually live (get_active_diver). If it has a
+//      diver, the state_update echo snaps us to it via seedPoolFromServer
+//      -- still no emit, so the judges are never reset;
+//   3. only when the server has NO diver (a freshly-Live event nobody has
+//      started) announce roster[0] -- the lone load path that emits.
 async function setupLivePool(ev) {
   socket.emit('subscribe_event', { event_id: ev.id })
+  // Claim the control lease so a second operator/window driving this same
+  // event gets warned (advisory; never blocks).
+  socket.emit('claim_event_control', { event_id: ev.id })
   const pool = poolFor(ev.id)
   try {
     const roster = await auth.apiFetch(`/api/events/${ev.id}/roster`)
     pool.roster = Array.isArray(roster) ? roster : []
-    // Active diver on load = the first dive in the server-ordered queue.
-    // (The Completed-review + empty-roster branches are P6.2/P8.)
-    if (pool.roster.length && selectDiver(pool, 0, ev.number_of_judges, diveDescription)) {
-      // Tell the server who is up in THIS pool (event-scoped) so judge
-      // scores for it are accepted + broadcast -- for every Live pool.
-      socket.emit('set_active_diver', { ...pool.currentActive, status: 'ready' })
-    }
+    // History + standings for the side columns (fire-and-forget; refreshed
+    // again whenever this pool completes a dive).
+    loadPoolPanels(ev.id)
+    if (!pool.roster.length) return
+    selectDiver(pool, 0, ev.number_of_judges, diveDescription)
+    pendingSeed.add(ev.id)
+    // Pull the authoritative active diver. The echo (or a connect replay
+    // that landed before the roster finished loading) snaps us to it.
+    socket.emit('get_active_diver', { event_id: ev.id })
+    seedPoolFromServer(ev.id)
+    // Fallback: the server never answered within the grace window -> this
+    // event is freshly Live with nobody up, so announce roster[0]. Guarded
+    // on pendingSeed (cleared once the server resolves it) + a live socket
+    // so we never clobber an existing diver or announce blind while
+    // disconnected.
+    const tid = setTimeout(() => {
+      seedTimers.delete(tid)
+      if (pendingSeed.has(ev.id) && socket.isConnected.value && pool.currentActive) {
+        pendingSeed.delete(ev.id)
+        emitActiveDiver(ev)
+      }
+    }, SEED_GRACE_MS)
+    seedTimers.add(tid)
   } catch {
     pool.roster = []
   }
@@ -326,9 +433,8 @@ async function setupLivePool(ev) {
 
 async function selectEvent(id) {
   selectedEventId.value = String(id)
-  syncShotClock()
-  // Roving focus rail -> center heading (a11y: the selection moves focus
-  // into the focused stage, not back to the top of the rail).
+  // Roving focus: move into the (visually-hidden) stage heading so the
+  // switch lands the operator on the focused board, not back in the bar.
   await nextTick()
   stageTitleEl.value?.focus()
 }
@@ -351,17 +457,32 @@ onMounted(async () => {
   for (const ev of events.value) {
     if (ev.status === 'Live') setupLivePool(ev)
   }
-  syncShotClock()
+})
+
+// Clear any in-flight seed-fallback timers so a pool can't be announced
+// after the view is gone. (useSocketEvent already auto-cleans the socket
+// listeners on unmount.)
+onUnmounted(() => {
+  seedTimers.forEach(clearTimeout)
+  seedTimers.clear()
+  confirmTimers.forEach(clearTimeout)
+  confirmTimers.clear()
 })
 </script>
 
 <template>
   <div class="cv2">
-    <StageRail
+    <ControlTopBar
       :events="events"
       :selected-id="selectedEventId"
-      :loading="loading"
+      :history-open="historyOpen"
+      :standings-open="standingsOpen"
+      :recovery-open="recoveryOpen"
       @select="selectEvent"
+      @toggle-history="historyOpen = !historyOpen"
+      @toggle-standings="standingsOpen = !standingsOpen"
+      @toggle-recovery="recoveryOpen = !recoveryOpen"
+      @open-tools="drawerOpen = true"
     />
 
     <section class="cv2-center" aria-label="Current stage">
@@ -374,9 +495,9 @@ onMounted(async () => {
       <div v-else-if="!currentEvent" class="cv2-empty">
         <EmptyState
           icon="🏁"
-          :title="events.length ? 'No stage selected' : 'No meets yet'"
+          :title="events.length ? 'No event selected' : 'No meets yet'"
           :body="events.length
-            ? 'Pick a meet stage from the rail to run setup, go live, or review results.'
+            ? 'Pick an event from the bar above to run setup, go live, or review results.'
             : 'Create an event to start running it from the Control Room.'"
           :action-label="events.length ? null : 'Create an event'"
           :action-to="events.length ? null : '/manager?new=1'"
@@ -384,107 +505,105 @@ onMounted(async () => {
       </div>
 
       <div v-else class="cv2-stage" :data-mode="centerMode">
-        <header class="cv2-stage-head">
-          <StatusPill :status="currentEvent.status" size="md" />
-          <h1 ref="stageTitleEl" tabindex="-1" class="cv2-stage-title">{{ currentEvent.name }}</h1>
-          <button
-            type="button"
-            class="cv2-recovery-toggle"
-            :class="{ 'is-active': recoveryOpen }"
-            :aria-pressed="recoveryOpen"
-            @click="recoveryOpen = !recoveryOpen"
-          >⛑ Recovery</button>
-          <button
-            type="button"
-            class="cv2-tools-toggle"
-            :class="{ 'is-active': drawerOpen }"
-            :aria-pressed="drawerOpen"
-            @click="drawerOpen = true"
-          >🧰 Tools</button>
-        </header>
+        <!-- The focused event's NAME now lives only in the top bar. This
+             visually-hidden heading is the roving-focus target on switch
+             and gives screen readers the stage context. -->
+        <h1 ref="stageTitleEl" tabindex="-1" class="cv2-sr-title">{{ currentEvent.name }} — {{ currentEvent.status }}</h1>
 
         <!-- Center mode-switch: EXACTLY ONE mode per stage. The bodies
              are placeholders; P6-P8 rebuild the real panels here. -->
         <section v-if="centerMode === 'setup'" class="cv2-mode" aria-label="Setup">
           <SetupStage :event="currentEvent" />
         </section>
-        <section v-else-if="centerMode === 'meet'" class="cv2-mode" aria-label="Live">
-          <div v-if="livePool && livePool.activeInfo" class="cv2-live">
-            <div class="cv2-live-head">
-              <span class="cv2-live-status" :class="`cv2-status-${liveStatus}`">{{ liveStatus.toUpperCase() }}</span>
-              <span class="cv2-live-round">Round {{ livePool.activeInfo.round_number }} / {{ currentEvent.total_rounds }}</span>
-              <span class="cv2-shotclock" :class="shotClockClass" aria-label="Shot clock">{{ shotClock }}s</span>
+        <section v-else-if="centerMode === 'meet'" class="cv2-live-layout" aria-label="Live">
+          <!-- HISTORY (left). One Live event -> a full column; two or more
+               -> a collapsed edge drawer the operator peeks per focused pool. -->
+          <aside v-if="historyOpen" class="cv2-side cv2-side-history" aria-label="History">
+            <div class="cv2-side-head">
+              <span class="cv2-side-title">History</span>
+              <button type="button" class="cv2-side-collapse" aria-label="Collapse history" @click="historyOpen = false">‹</button>
             </div>
-            <p class="cv2-live-diver">
-              {{ livePool.activeInfo.name }}
-              <span v-if="livePool.activeInfo.country" class="cv2-live-country">{{ livePool.activeInfo.country }}</span>
-            </p>
-            <p v-if="livePool.activeInfo.code || livePool.activeInfo.desc" class="cv2-live-dive">
-              <span v-if="livePool.activeInfo.code">{{ livePool.activeInfo.code }}</span>
-              <span v-if="livePool.activeInfo.dd"> · {{ livePool.activeInfo.dd }}</span>
-              <span v-if="livePool.activeInfo.desc"> · {{ livePool.activeInfo.desc }}</span>
-            </p>
-            <div class="cv2-tiles" aria-label="Judge scores">
-              <div
-                v-for="t in livePool.judgeTiles"
-                :key="t.judgeIndex"
-                class="cv2-tile"
-                :class="{ scored: t.scored, signaled: t.signaled }"
-              >{{ t.scored ? t.score : '—' }}</div>
-            </div>
-            <div v-if="liveBlockers.length" class="cv2-blockers" role="status" aria-label="Blockers">
-              <span
-                v-for="b in liveBlockers"
-                :key="b.kind"
-                class="cv2-blocker"
-                :class="`cv2-blocker-${b.kind}`"
-              >{{ b.label }}</span>
-            </div>
-            <div class="cv2-primary-slot">
-              <div class="cv2-split">
-                <button
-                  type="button"
-                  class="cv2-primary"
-                  :class="{ 'is-finalise': nextBtnComplete, 'is-counting': autoAdvanceCountdown > 0 }"
-                  :disabled="nextBtnDisabled"
-                  v-tip="nextBtnTitle"
-                  @click="advancePrimary"
-                >
-                  {{ nextBtnText }}
-                  <span v-if="autoAdvanceCountdown > 0" class="cv2-autopill">{{ autoAdvanceCountdown }}s</span>
-                </button>
-                <!-- The picker is NOT gated on nextBtnDisabled: the
-                     operator sets Auto-next at any point, even before the
-                     first diver or while waiting on scores. -->
-                <button
-                  type="button"
-                  class="cv2-split-aside"
-                  :class="{ 'is-finalise': nextBtnComplete }"
-                  :aria-expanded="autoNextMenuOpen"
-                  v-tip="`Auto-next: ${autoAdvanceSeconds === 0 ? 'Manual' : autoAdvanceSeconds + 's'}`"
-                  @click.stop="autoNextMenuOpen = !autoNextMenuOpen"
-                >▾</button>
-                <div v-if="autoNextMenuOpen" class="cv2-autonext-menu" role="menu">
-                  <div class="cv2-autonext-head">Auto-next after the panel completes</div>
-                  <button
-                    v-for="opt in autoNextOptions"
-                    :key="opt.v"
-                    type="button"
-                    role="menuitemradio"
-                    :aria-checked="autoAdvanceSeconds === opt.v"
-                    class="cv2-autonext-item"
-                    :class="{ 'is-active': autoAdvanceSeconds === opt.v }"
-                    @click="autoAdvanceSeconds = opt.v; autoNextMenuOpen = false"
-                  >
-                    <span>{{ opt.label }}</span>
-                    <span v-if="autoAdvanceSeconds === opt.v" aria-hidden="true">✓</span>
-                  </button>
+            <div class="cv2-side-body">
+              <p v-if="!focusedHistory.length" class="cv2-side-empty">No completed dives yet.</p>
+              <component
+                :is="h.score_ids && h.score_ids.length ? 'button' : 'div'"
+                v-for="(h, i) in focusedHistory"
+                :key="`${h.competitor_id}-${h.round_number}-${i}`"
+                type="button"
+                class="cv2-hcard"
+                :class="{ 'is-clickable': h.score_ids && h.score_ids.length }"
+                v-tip="h.score_ids && h.score_ids.length ? 'Amend a judge score on this dive' : null"
+                @click="openCorrection(h)"
+              >
+                <span class="cv2-hcard-round">R{{ h.round_number }}</span>
+                <div class="cv2-hcard-main">
+                  <span class="cv2-hcard-name">{{ h.diverName }}</span>
+                  <span class="cv2-hcard-dive">{{ h.dive_code }}{{ h.position }}</span>
                 </div>
+                <span class="cv2-hcard-total">{{ fmtTotal(h.total_points) }}</span>
+              </component>
+            </div>
+          </aside>
+          <button
+            v-else
+            type="button"
+            class="cv2-side-tab"
+            aria-label="Open history drawer"
+            @click="historyOpen = true"
+          ><span class="cv2-side-tab-label">History</span> ›</button>
+
+          <!-- CENTER: one LivePoolCard per Live event. Single Live event
+               -> the classic full board; two or three -> side-by-side. -->
+          <div class="cv2-pools" :data-count="Math.min(livePools.length, 3)">
+            <LivePoolCard
+              v-for="lp in livePools"
+              :key="lp.event.id"
+              :event="lp.event"
+              :pool="lp.pool"
+              :focused="String(lp.event.id) === String(selectedEventId)"
+              :total-judges="numberOfJudgesFor(lp.event.id)"
+              :socket="socket"
+              :unconfirmed="!!unconfirmed[lp.event.id]"
+              :conflict="conflicts[lp.event.id] || null"
+              @focus="selectEvent"
+              @advance="advancePool(lp.event)"
+              @retry-active="retryActiveDiver(lp.event)"
+            />
+          </div>
+
+          <!-- STANDINGS (right). Same collapse behaviour as History. -->
+          <aside v-if="standingsOpen" class="cv2-side cv2-side-standings" aria-label="Standings">
+            <div class="cv2-side-head">
+              <button type="button" class="cv2-side-collapse" aria-label="Collapse standings" @click="standingsOpen = false">›</button>
+              <span class="cv2-side-title">Standings</span>
+              <button
+                type="button"
+                class="cv2-announce"
+                :disabled="!focusedStandings.length"
+                v-tip="'Announce these standings on the spectator scoreboard'"
+                @click="announceFocused"
+              >Announce</button>
+            </div>
+            <div class="cv2-side-body">
+              <p v-if="!focusedStandings.length" class="cv2-side-empty">No scores yet.</p>
+              <div
+                v-for="(s, i) in focusedStandings.slice(0, 12)"
+                :key="`${s.competitor_id || s.public_id || i}`"
+                class="cv2-srow"
+              >
+                <span class="cv2-srow-rank">{{ i + 1 }}</span>
+                <span class="cv2-srow-name">{{ s.full_name }}</span>
+                <span class="cv2-srow-total">{{ fmtTotal(s.total) }}</span>
               </div>
             </div>
-            <p class="cv2-mode-note">Live current state, next action + auto-advance (P6.4).</p>
-          </div>
-          <p v-else class="cv2-mode-note">Live — loading the active diver… (Full live screen: P6.)</p>
+          </aside>
+          <button
+            v-else
+            type="button"
+            class="cv2-side-tab"
+            aria-label="Open standings drawer"
+            @click="standingsOpen = true"
+          >‹ <span class="cv2-side-tab-label">Standings</span></button>
         </section>
         <section v-else-if="centerMode === 'review'" class="cv2-mode" aria-label="Review">
           <ReviewStage :event="currentEvent" />
@@ -513,16 +632,28 @@ onMounted(async () => {
          in a closed-by-default drawer. v-if-gated so a resting Live canvas
          never mounts this markup (the #9 subtraction). -->
     <DrawerPanel v-if="drawerOpen" :event="currentEvent" @close="drawerOpen = false" />
+
+    <!-- Score correction (#9): amend a judge score on a completed dive in
+         the focused pool's History. Mounted per-open so its draft fields
+         reset from the clicked card. -->
+    <ScoreCorrectionModal
+      v-if="correctOpen && correctTarget"
+      :card="correctTarget"
+      :event="currentEvent"
+      @close="closeCorrection"
+      @saved="loadPoolPanels(selectedEventId)"
+    />
   </div>
 </template>
 
 <style scoped>
-.cv2 { display: grid; grid-template-columns: 280px minmax(0, 1fr); min-height: 100%; }
-.cv2-center { padding: 1.5rem 2rem; min-width: 0; }
-.cv2-stage-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; }
-.cv2-stage-title {
-  margin: 0; font-family: var(--font-display); font-size: 24px; font-weight: 700;
-  color: var(--fg); outline: none;
+.cv2 { display: flex; flex-direction: column; min-height: 100%; }
+.cv2-center { padding: 1.5rem 2rem; min-width: 0; flex: 1; }
+/* The event name lives in the top bar now; this heading is the
+   visually-hidden roving-focus target on event switch. */
+.cv2-sr-title {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 .cv2-mode {
   padding: 1.5rem; border: 1px dashed var(--border-2);
@@ -530,128 +661,77 @@ onMounted(async () => {
 }
 .cv2-mode-note { margin: 0 0 0.4rem; font-family: var(--font-mono); font-size: 13px; }
 .cv2-mode-state { margin: 0; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
-.cv2-live-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
-.cv2-live-status {
-  font-family: var(--font-display); font-size: 11px; font-weight: 800; letter-spacing: 0.18em;
-  padding: 0.2rem 0.6rem; border-radius: 999px; background: var(--bg-3); color: var(--text-2);
+/* Live mode: History | pool grid | Standings. The center holds one
+   LivePoolCard per Live event (its own scoped styles). */
+.cv2-live-layout { display: flex; gap: 1rem; align-items: stretch; min-height: 62vh; }
+.cv2-pools { flex: 1; min-width: 0; display: grid; gap: 1rem; align-content: start; }
+.cv2-pools[data-count="1"] { grid-template-columns: minmax(0, 1fr); }
+.cv2-pools[data-count="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cv2-pools[data-count="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.cv2-side {
+  flex: 0 0 clamp(220px, 24%, 300px);
+  display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid var(--border-2); border-radius: var(--radius-lg); background: var(--bg-2);
 }
-.cv2-status-diving { color: var(--cyan); background: rgba(6, 182, 212, 0.12); }
-.cv2-status-judging { color: var(--amber); background: rgba(245, 158, 11, 0.12); }
-.cv2-live-round { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
-.cv2-live-diver { margin: 0 0 0.4rem; font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--fg); }
-.cv2-live-country { font-family: var(--font-mono); font-size: 13px; font-weight: 400; color: var(--text-3); margin-inline-start: 0.5rem; }
-.cv2-live-dive { margin: 0 0 1rem; font-family: var(--font-mono); font-size: 13px; color: var(--text-2); }
-.cv2-shotclock {
-  margin-inline-start: auto;
-  font-family: var(--font-mono); font-size: 16px; font-weight: 700;
-  padding: 0.15rem 0.6rem; border-radius: var(--radius-sm);
-  border: 1px solid var(--border-2); color: var(--text-2);
+.cv2-side-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-2);
 }
-.cv2-shotclock.shot-clock-amber { color: var(--amber); border-color: var(--amber); }
-.cv2-shotclock.shot-clock-warn { color: var(--red); border-color: var(--red); }
-.cv2-shotclock.shot-clock-expired { color: var(--red); background: rgba(239, 68, 68, 0.12); border-color: var(--red); }
-.cv2-primary-slot {
-  position: sticky; bottom: 0; margin-top: 1.5rem; padding-top: 1rem;
-  background: linear-gradient(to top, var(--bg) 72%, transparent);
+.cv2-side-title { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 0.04em; color: var(--text-2); flex: 1; }
+.cv2-side-collapse { border: 0; background: transparent; color: var(--text-3); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 0.25rem; }
+.cv2-side-collapse:hover { color: var(--fg); }
+.cv2-announce {
+  flex: none; padding: 0.25rem 0.6rem; border: 1px solid var(--border-2); border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-2); cursor: pointer;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
 }
-.cv2-primary {
-  width: 100%; padding: 0.85rem 1.5rem;
-  font-family: var(--font-display); font-size: 14px; font-weight: 700;
-  border-radius: var(--radius); border: 1px solid var(--cyan);
-  background: var(--cyan); color: var(--bg); cursor: pointer;
-  transition: filter 0.12s;
+.cv2-announce:hover:not(:disabled) { color: var(--cyan); border-color: var(--cyan); }
+.cv2-announce:disabled { opacity: 0.45; cursor: not-allowed; }
+.cv2-side-body { padding: 0.6rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.4rem; }
+.cv2-side-empty { margin: 0.5rem; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+
+.cv2-hcard {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border-2); border-radius: var(--radius-sm); background: var(--bg-3);
+  width: 100%; text-align: start; font: inherit; color: var(--text-2);
 }
-.cv2-primary:hover:not(:disabled) { filter: brightness(1.08); }
-.cv2-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.cv2-primary.is-finalise { background: var(--green); border-color: var(--green); }
-.cv2-split { display: flex; gap: 2px; position: relative; }
-.cv2-split .cv2-primary { width: auto; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
-.cv2-split-aside {
-  flex: 0 0 auto; width: 2.75rem; padding: 0.85rem 0;
-  font-family: var(--font-display); font-size: 14px; font-weight: 700;
-  border-radius: var(--radius); border: 1px solid var(--cyan);
-  background: var(--cyan); color: var(--bg); cursor: pointer; transition: filter 0.12s;
+.cv2-hcard.is-clickable { cursor: pointer; }
+.cv2-hcard.is-clickable:hover { border-color: var(--cyan); }
+.cv2-hcard-round { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--text-3); flex: none; width: 28px; }
+.cv2-hcard-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.cv2-hcard-name { font-size: 13px; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cv2-hcard-dive { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
+.cv2-hcard-total { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--cyan); flex: none; }
+
+.cv2-srow { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.55rem; border-radius: var(--radius-sm); }
+.cv2-srow:nth-child(odd) { background: var(--bg-3); }
+.cv2-srow-rank { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-3); width: 18px; flex: none; text-align: center; }
+.cv2-srow-name { font-size: 13px; color: var(--fg); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cv2-srow-total { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--fg); flex: none; }
+
+.cv2-side-tab {
+  flex: 0 0 auto; align-self: stretch; width: 2.5rem;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  border: 1px dashed var(--border-2); border-radius: var(--radius-lg); background: var(--bg-2);
+  color: var(--text-3); cursor: pointer; font-family: var(--font-display); font-weight: 700; font-size: 12px;
 }
-.cv2-split-aside:hover { filter: brightness(1.08); }
-.cv2-split-aside.is-finalise { background: var(--green); border-color: var(--green); }
-.cv2-primary.is-counting { background: var(--amber); border-color: var(--amber); }
-.cv2-autopill {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
-  padding: 0.05rem 0.4rem; border-radius: 999px;
-  background: rgba(0, 0, 0, 0.18); color: inherit;
-}
-.cv2-autonext-menu {
-  position: absolute; bottom: calc(100% + 6px); inset-inline-end: 0; z-index: 20;
-  min-width: 13rem; padding: 0.4rem;
-  background: var(--bg-2); border: 1px solid var(--border-2); border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-.cv2-autonext-head {
-  font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
-  padding: 0.3rem 0.5rem 0.4rem;
-}
-.cv2-autonext-item {
-  display: flex; justify-content: space-between; align-items: center; width: 100%;
-  padding: 0.45rem 0.5rem; border: none; background: transparent; cursor: pointer;
-  font-family: var(--font-mono); font-size: 13px; color: var(--text-2); border-radius: var(--radius-sm);
-}
-.cv2-autonext-item:hover { background: var(--bg-3); color: var(--fg); }
-.cv2-autonext-item.is-active { color: var(--cyan); }
-.cv2-tiles { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
-.cv2-blockers { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-.cv2-blocker {
-  font-family: var(--font-mono); font-size: 12px;
-  padding: 0.3rem 0.7rem; border-radius: var(--radius-sm);
-  border: 1px solid var(--amber); color: var(--amber); background: rgba(245, 158, 11, 0.08);
-}
-.cv2-blocker-signal { border-color: var(--red); color: var(--red); background: rgba(239, 68, 68, 0.08); }
-.cv2-tile {
-  width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border-2); border-radius: var(--radius-sm);
-  background: var(--bg-3); color: var(--text-3);
-  font-family: var(--font-mono); font-size: 16px;
-}
-.cv2-tile.scored { color: var(--cyan); border-color: var(--cyan); }
-.cv2-tile.signaled { box-shadow: 0 0 0 2px var(--red); }
+.cv2-side-tab:hover { color: var(--fg); border-color: var(--cyan); }
+.cv2-side-tab-label { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 0.08em; }
+
 .cv2-msg { padding: 3rem; text-align: center; color: var(--text-3); font-family: var(--font-mono); }
 .cv2-error { color: var(--red); }
 @media (max-width: 860px) {
-  /* Single column: the rail collapses to a horizontal stage strip above
-     the center, which then fills the screen. The strip scrolls sideways
-     internally so the PAGE never gains a horizontal scrollbar. */
-  .cv2 { grid-template-columns: 1fr; }
-  .cv2 :deep(.stage-rail) {
-    border-inline-end: 0;
-    border-bottom: 1px solid var(--border);
-    overflow-y: visible;
-  }
-  .cv2 :deep(.stage-rail-list) {
-    display: flex; gap: 0.4rem;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding: 0.4rem 0.5rem;
-  }
-  .cv2 :deep(.stage-rail-list)::-webkit-scrollbar { display: none; }
-  .cv2 :deep(.stage-rail-list > li) { flex: 0 0 auto; }
-  .cv2 :deep(.stage-row) { width: auto; white-space: nowrap; }
+  /* The top bar already wraps; just tighten the center and stack the live
+     board so nothing overflows sideways. */
   .cv2-center { padding: 1rem; }
-  .cv2-stage-head { flex-wrap: wrap; }
+  /* Stack the live board on narrow screens: side columns and pools go
+     full-width, one above the other, so nothing overflows sideways. */
+  .cv2-live-layout { flex-direction: column; min-height: 0; }
+  .cv2-side { flex-basis: auto; }
+  .cv2-pools[data-count] { grid-template-columns: 1fr; }
 }
 
-.cv2-recovery-toggle {
-  margin-inline-start: auto;
-  font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-  padding: 0.3rem 0.7rem; border-radius: var(--radius-sm);
-  border: 1px solid var(--border-2); background: transparent; color: var(--text-2); cursor: pointer;
-}
-.cv2-recovery-toggle.is-active, .cv2-recovery-toggle:hover { border-color: var(--amber); color: var(--amber); }
-.cv2-tools-toggle {
-  font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-  padding: 0.3rem 0.7rem; border-radius: var(--radius-sm);
-  border: 1px solid var(--border-2); background: transparent; color: var(--text-2); cursor: pointer;
-}
-.cv2-tools-toggle.is-active, .cv2-tools-toggle:hover { border-color: var(--cyan); color: var(--cyan); }
 .cv2-recovery-actions { display: flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap; }
 .cv2-recovery-btn {
   padding: 0.65rem 1.2rem; font-family: var(--font-display); font-weight: 700; font-size: 13px;

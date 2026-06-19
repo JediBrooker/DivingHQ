@@ -4,9 +4,6 @@ const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
-test.beforeEach(() => {
-  test.skip(process.env.VITE_CONTROL_V2 !== "on", "V2 flag off; recovery is a V2-only surface");
-});
 
 async function signIn(page, username) {
   await page.goto("/login");
@@ -33,10 +30,10 @@ test("recovery: hold the meet shows a banner; resume clears it", async ({ reques
   await signIn(page, username);
   await page.goto("/control");
   await page.waitForLoadState("networkidle");
-  await page.locator(".stage-row", { hasText: "Recovery Event" }).click();
+  await setup.selectControlEvent(page, "Recovery Event");
 
-  // Enter recovery from the stage header.
-  await page.locator(".cv2-recovery-toggle").click();
+  // Enter recovery from the top control bar.
+  await page.locator(".cv2-act-recovery").click();
   await expect(page.locator('.cv2-mode[aria-label="Recovery"]')).toBeVisible();
 
   // Hold the meet -> prompt -> confirm -> banner.

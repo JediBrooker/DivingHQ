@@ -27,37 +27,38 @@ function iconFor(kind) { return ICONS[kind] ?? '' }
 </script>
 
 <template>
-  <Transition name="notify-bar">
+  <TransitionGroup name="notify-bar" tag="div" class="notify-stack">
     <div
-      v-if="state"
-      :key="state.id"
-      :class="['notify-bar', `notify-bar-${state.kind}`]"
+      v-for="t in state"
+      :key="t.id"
+      :class="['notify-bar', `notify-bar-${t.kind}`]"
       role="status"
       aria-live="polite"
     >
-      <span v-if="iconFor(state.kind)" class="notify-bar-icon">{{ iconFor(state.kind) }}</span>
-      <span class="notify-bar-message">{{ state.message }}</span>
+      <span v-if="iconFor(t.kind)" class="notify-bar-icon">{{ iconFor(t.kind) }}</span>
+      <span class="notify-bar-message">{{ t.message }}</span>
       <button
-        v-if="state.onAction && state.actionLabel"
+        v-if="t.onAction && t.actionLabel"
         class="notify-bar-action"
-        @click="fireAction"
-        v-tip="`${state.actionLabel} the last action`"
-      >{{ state.actionLabel }}</button>
+        @click="fireAction(t.id)"
+        v-tip="`${t.actionLabel} this action`"
+      >{{ t.actionLabel }}</button>
       <button
         class="notify-bar-close"
-        @click="dismissNotify"
+        @click="dismissNotify(t.id)"
         v-tip="'Dismiss'"
         aria-label="Dismiss"
       >✕</button>
     </div>
-  </Transition>
+  </TransitionGroup>
 </template>
 
 <style scoped>
-/* Bottom-centre snackbar — high z-index so it floats above
-   modals and dropdowns, fixed to the viewport so it survives
-   route changes inside the app shell. */
-.notify-bar {
+/* Bottom-centre snackbar STACK — high z-index so it floats above
+   modals and dropdowns, fixed to the viewport so it survives route
+   changes inside the app shell. column-reverse keeps the newest toast
+   lowest (where a single toast used to sit) and stacks older ones above. */
+.notify-stack {
   position: fixed;
   inset-inline-start: 50%;
   /* Sit above the iOS home-indicator gesture zone on notch
@@ -65,6 +66,11 @@ function iconFor(kind) { return ICONS[kind] ?? '' }
   bottom: max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem));
   transform: translateX(-50%);
   z-index: 1000;
+  display: flex; flex-direction: column-reverse; align-items: center; gap: 0.5rem;
+  pointer-events: none;
+}
+.notify-bar {
+  pointer-events: auto;
   display: flex; align-items: center; gap: 0.7rem;
   padding-block: 0.7rem;
   padding-inline: 1.1rem 1rem;
@@ -133,10 +139,10 @@ function iconFor(kind) { return ICONS[kind] ?? '' }
 }
 .notify-bar-enter-from {
   opacity: 0;
-  transform: translate(-50%, 12px);
+  transform: translateY(12px);
 }
 .notify-bar-leave-to {
   opacity: 0;
-  transform: translate(-50%, 8px);
+  transform: translateY(8px);
 }
 </style>

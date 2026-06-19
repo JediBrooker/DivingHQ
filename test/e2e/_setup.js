@@ -736,11 +736,26 @@ async function installClickHighlight(page) {
   });
 }
 
+// Select an event in the V2 Control Room top bar (the replacement for the
+// removed left rail's .stage-row). Clicks the event's chip if one is
+// showing (Live events + the focused event), otherwise opens the
+// "All events" dropdown and picks it there (Upcoming / Completed).
+async function selectControlEvent(page, name) {
+  const chip = page.locator(".cv2-chip", { hasText: name });
+  if (await chip.count()) {
+    await chip.first().click();
+    return;
+  }
+  await page.locator(".cv2-allbtn").click();
+  await page.locator(".cv2-allitem", { hasText: name }).click();
+}
+
 module.exports = {
   pool,
   TEST_PASSWORD,
   rand,
   openSocket,
+  selectControlEvent,
   submitJudgeScore,
   submitPanelScores,
   collectApiErrors,

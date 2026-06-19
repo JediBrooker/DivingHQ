@@ -6,9 +6,6 @@ const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
-test.beforeEach(() => {
-  test.skip(process.env.VITE_CONTROL_V2 !== "on", "V2 flag off; setup actions are a V2-only surface");
-});
 
 async function signIn(page, username) {
   await page.goto("/login");
@@ -34,7 +31,7 @@ test("check-in: the workflow primary opens the modal; confirm advances to Random
   await signIn(page, username);
   await page.goto("/control");
   await page.waitForLoadState("networkidle");
-  await page.locator(".stage-row", { hasText: "Flow Event" }).click();
+  await setup.selectControlEvent(page, "Flow Event");
 
   // Stage = check-in -> primary opens the check-in modal.
   const primary = page.locator(".setup-primary");

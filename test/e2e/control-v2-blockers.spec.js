@@ -6,9 +6,6 @@ const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
-test.beforeEach(() => {
-  test.skip(process.env.VITE_CONTROL_V2 !== "on", "V2 flag off; live blockers are a V2-only surface");
-});
 
 async function signIn(page, username) {
   await page.goto("/login");
@@ -42,7 +39,7 @@ test("a partial panel surfaces 'Waiting for N more judge scores' on-canvas", asy
   await signIn(page, username);
   await page.goto("/control");
   await page.waitForLoadState("networkidle");
-  await page.locator(".stage-row", { hasText: "Live Blockers" }).click();
+  await setup.selectControlEvent(page, "Live Blockers");
 
   // No blockers yet (no scores in).
   await expect(page.locator(".cv2-blockers")).toHaveCount(0);

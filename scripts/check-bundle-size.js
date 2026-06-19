@@ -25,9 +25,8 @@ const CHUNKS = {
   "vendor-vue": /^vendor-vue-.*\.js$/,
   "vendor-i18n": /^vendor-i18n-.*\.js$/,
   "vendor-socket": /^vendor-socket-.*\.js$/,
-  // Matches the per-route Control Room chunk in EITHER build: the V2
-  // ControlViewV2 (the cutover default) or the legacy ControlView (the
-  // VITE_CONTROL_V2=off rollback). Only one ships per build.
+  // The per-route Control Room chunk (ControlViewV2; the optional V2
+  // suffix also tolerates a future rename back to ControlView).
   control: /^ControlView(V2)?-.*\.js$/,
 };
 

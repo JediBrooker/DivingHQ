@@ -17,10 +17,11 @@ import { ref, watch, onUnmounted, getCurrentInstance } from 'vue'
 export const AUTO_ADVANCE_KEY = 'dr_control_auto_advance_seconds'
 
 // Pure helper so the unit test can assert the persisted seconds parse
-// (bad/empty localStorage -> Manual) without a component.
-export function readAutoAdvanceSeconds(store) {
+// (bad/empty localStorage -> Manual) without a component. `key` defaults
+// to the legacy single key for back-compat.
+export function readAutoAdvanceSeconds(store, key = AUTO_ADVANCE_KEY) {
   try {
-    return parseInt((store && store.getItem(AUTO_ADVANCE_KEY)) || '0', 10) || 0
+    return parseInt((store && store.getItem(key)) || '0', 10) || 0
   } catch {
     return 0
   }
@@ -28,14 +29,16 @@ export function readAutoAdvanceSeconds(store) {
 
 // isSignaling: () => boolean -- true while a judge is flagging the
 // referee; the countdown will not start (and re-arms when it clears).
-// tick: optional injectable interval scheduler for tests (defaults to
-// setInterval/clearInterval).
-export function useAutoAdvance({ isSignaling = () => false, scheduler } = {}) {
+// storageKey: localStorage key for the seconds preference. Per-pool
+// callers namespace it by event id so two pools' cadences don't clobber
+// each other; defaults to the shared legacy key.
+// scheduler: optional injectable interval scheduler for tests.
+export function useAutoAdvance({ isSignaling = () => false, scheduler, storageKey = AUTO_ADVANCE_KEY } = {}) {
   const setI = (scheduler && scheduler.setInterval) || ((fn, ms) => setInterval(fn, ms))
   const clearI = (scheduler && scheduler.clearInterval) || ((id) => clearInterval(id))
 
   const store = typeof localStorage !== 'undefined' ? localStorage : null
-  const autoAdvanceSeconds = ref(readAutoAdvanceSeconds(store))
+  const autoAdvanceSeconds = ref(readAutoAdvanceSeconds(store, storageKey))
   const autoAdvanceCountdown = ref(0) // remaining seconds; 0 = idle
   let timer = null
   let fire = null
@@ -63,7 +66,7 @@ export function useAutoAdvance({ isSignaling = () => false, scheduler } = {}) {
   }
 
   watch(autoAdvanceSeconds, (s) => {
-    try { if (store) store.setItem(AUTO_ADVANCE_KEY, String(s)) } catch { /* private mode */ }
+    try { if (store) store.setItem(storageKey, String(s)) } catch { /* private mode */ }
     // Editing the preference mid-countdown respects the operator's intent.
     cancelAutoAdvance()
   })

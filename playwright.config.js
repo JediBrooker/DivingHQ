@@ -183,10 +183,6 @@ module.exports = defineConfig({
       // For e2e, force the helper into documented dev no-op mode:
       // no DNS lookups, no noisy best-effort mailer failures.
       SMTP_HOST: "",
-      // Control Room view flag. The all-in-one ControlView is the default
-      // (in tests AND production); VITE_CONTROL_V2=on builds + serves the
-      // experimental ControlViewV2 for the control-v2-*.spec.js suite.
-      VITE_CONTROL_V2: process.env.VITE_CONTROL_V2 || "off",
     },
   },
 });
