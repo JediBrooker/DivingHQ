@@ -24,6 +24,9 @@ const { getEventReadiness } = require("../../lib/workflow");
 const {
   loadH2hPairResults,
   loadSfCumulative,
+  loadResolvedDiveOffs,
+  compareSfFinalists,
+  diveOffPairKey,
 } = require("../../lib/super-final-helpers");
 const { perDivePointsCte } = require("../../lib/scoring-sql");
 const archiveCache = require("../../lib/archive-cache");
@@ -2199,9 +2202,11 @@ module.exports = function createEventsRouter({
          /* World Aquatics Art 4.1.5: equal totals share a rank.
             The 12-slot H2H bracket still needs a strict 1..12 order,
             so rows are ordered deterministically by name within a
-            shared rank. A genuine tie on the seeding cut-off must be
-            resolved by a referee dive-off (tiebreak_dive_offs), per
-            WC §1.4.2.2 — not by a points-based tie-break. */
+            shared rank. (Dive-offs only resolve ties INSIDE the Super
+            Final — H2H pairs and SF groups, Appendix 3 §6 — not this
+            Stop-1 seeding cut, so there's no dive-off to consult here;
+            WC §1.4.2.2 resolves Stop-1 ranking ties by the furthest-
+            level scores, which is already the total being ranked.) */
          SELECT competitor_id, total,
                 RANK() OVER (ORDER BY total DESC) AS rnk
          FROM cumulative
@@ -2661,6 +2666,8 @@ module.exports = function createEventsRouter({
             total_b:         p.competitor_b.total,
             winner_id:       p.winner_id,
             tied:            p.tied,
+            tied_on_total:   p.tied_on_total,
+            resolved_by:     p.resolved_by,
           })),
         });
       } catch (err) {
@@ -3048,17 +3055,32 @@ module.exports = function createEventsRouter({
             error: "SF stage has no scored divers — cannot seed F",
           });
         }
-        // Top 2 per group on cumulative_total. Tie-break: higher
-        // cumulative; if those tied, dive_off is the resolution
-        // (Appendix 3 §6) — but the SQL here uses cumulative DESC
-        // and trusts the operator to have run a dive-off if
-        // needed.
+        // Top 2 per group on cumulative_total. A within-group tie on
+        // the qualifying cut-off is broken by the recorded SF dive-off
+        // (Appendix 3 §6); if two divers are tied across the 2nd/3rd
+        // boundary with no dive-off, refuse — the same gate seed-semi
+        // applies to H2H pairs.
+        const sfDiveOffs = await loadResolvedDiveOffs(client, sf.id);
         const finalists = [];
+        const unresolvedGroups = [];
         for (const g of [1, 2]) {
           const inGroup = sfRows
             .filter((r) => r.group_number === g)
-            .sort((a, b) => b.cumulative_total - a.cumulative_total);
+            .sort((a, b) => compareSfFinalists(a, b, sfDiveOffs));
+          if (
+            inGroup.length > 2 &&
+            inGroup[1].cumulative_total === inGroup[2].cumulative_total &&
+            !sfDiveOffs.get(diveOffPairKey(inGroup[1].competitor_id, inGroup[2].competitor_id))
+          ) {
+            unresolvedGroups.push(g);
+          }
           finalists.push(...inGroup.slice(0, 2));
+        }
+        if (unresolvedGroups.length) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            error: `Resolve dive-offs first — SF group ${unresolvedGroups.join(" & ")} ${unresolvedGroups.length === 1 ? "has a tie" : "have ties"} at the qualifying cut-off`,
+          });
         }
         if (finalists.length !== 4) {
           await client.query("ROLLBACK");
