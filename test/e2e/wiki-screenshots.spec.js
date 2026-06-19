@@ -576,17 +576,10 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
   });
 
   await page.goto(`/control?event=${world.liveEvent.id}`);
-  // Wait for either the event-picker to settle or the Up Next
-  // panel to populate.
-  await expect(
-    page.locator(".event-select-sm:not(.auto-advance-select)"),
-  ).toBeVisible({ timeout: 15_000 });
-  // Belt-and-braces: explicitly select the event in case the
-  // ?event= deep-link didn't auto-fire.
-  await page
-    .locator(".event-select-sm:not(.auto-advance-select)")
-    .selectOption(world.liveEvent.id)
-    .catch(() => {});
+  // V2 auto-focuses the ?event= deep-link; wait for its top-bar chip to
+  // show as focused and the live board to render before snapping.
+  await expect(page.locator(".cv2-chip.is-focused")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(".cv2-live-diver")).toBeVisible({ timeout: 15_000 });
   await settle(page, 1200);
   await snap(page, "control-room");
   adminSocket.disconnect();

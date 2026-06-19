@@ -6,9 +6,6 @@ const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
-test.beforeEach(() => {
-  test.skip(process.env.VITE_CONTROL_V2 !== "on", "V2 flag off; the drawer is a V2-only surface");
-});
 
 async function signIn(page, username) {
   await page.goto("/login");
@@ -30,7 +27,7 @@ test("the drawer is closed by default, opens from Tools, lazy-mounts sections, c
   await signIn(page, username);
   await page.goto("/control");
   await page.waitForLoadState("networkidle");
-  await page.locator(".stage-row", { hasText: "Drawer Event" }).click();
+  await setup.selectControlEvent(page, "Drawer Event");
 
   // Closed by default: NONE of the drawer markup is in the DOM.
   await expect(page.locator(".cv2-drawer")).toHaveCount(0);

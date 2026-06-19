@@ -86,6 +86,24 @@ export function initJudgeTiles(n) {
   return tiles
 }
 
+// Find the roster row that matches the server's AUTHORITATIVE active-diver
+// payload (the set_active_diver shape persisted in event_live_state and
+// replayed via state_update / get_active_diver). Match by competitor +
+// round -- unique within an event (one dive per competitor per round).
+// Returns the roster index, or -1 when there is no payload or it can't be
+// mapped (roster/payload drift). Pure -> lets ControlViewV2 restore a
+// reopened mid-meet pool to the diver who is actually live instead of
+// resetting the judges' panel to roster[0]. Unit-tested.
+export function rosterIndexForActive(roster, active) {
+  if (!Array.isArray(roster) || !active || active.competitor_id == null) return -1
+  return roster.findIndex(
+    (r) =>
+      r &&
+      String(r.competitor_id) === String(active.competitor_id) &&
+      Number(r.round_number) === Number(active.round_number),
+  )
+}
+
 // Apply a score_received to ONE pool's state. Mirrors the V1 handler
 // (ControlView.vue:2098-2115) exactly, minus the focused-event
 // short-circuit. Returns { matched, allScoresIn } so the caller can run

@@ -7,9 +7,6 @@ const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
-test.beforeEach(() => {
-  test.skip(process.env.VITE_CONTROL_V2 !== "on", "V2 flag off; live mode is a V2-only surface");
-});
 
 async function signIn(page, username) {
   await page.goto("/login");
@@ -57,7 +54,7 @@ test("the primary arms on a full score then advances to the next diver", async (
   await signIn(page, username);
   await page.goto("/control");
   await page.waitForLoadState("networkidle");
-  await page.locator(".stage-row", { hasText: "Live Advance" }).click();
+  await setup.selectControlEvent(page, "Live Advance");
 
   // roster[0] = "AAA Diver" (server order; alphabetical with no dive order).
   await expect(page.locator(".cv2-live-diver")).toContainText("AAA Diver");
@@ -91,7 +88,7 @@ test("auto-advance: set Auto-next to 5s; a full panel arms a countdown that adva
   await signIn(page, username);
   await page.goto("/control");
   await page.waitForLoadState("networkidle");
-  await page.locator(".stage-row", { hasText: "Auto Advance" }).click();
+  await setup.selectControlEvent(page, "Auto Advance");
   await expect(page.locator(".cv2-live-diver")).toContainText("AAA Diver");
 
   // Open the Auto-next picker and choose 5 seconds (default is Manual).
@@ -124,8 +121,8 @@ test("the last dive morphs the primary to Finalise; confirming flips to Review",
   await signIn(page, username);
   await page.goto("/control");
   await page.waitForLoadState("networkidle");
-  await page.locator(".stage-row", { hasText: "Live Finalise" }).click();
-  await expect(page.locator('.cv2-mode[aria-label="Live"]')).toBeVisible();
+  await setup.selectControlEvent(page, "Live Finalise");
+  await expect(page.locator('.cv2-live-layout[aria-label="Live"]')).toBeVisible();
 
   // Score the only (= last) dive -> primary morphs to Finalise.
   await setup.submitPanelScores({

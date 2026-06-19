@@ -6,12 +6,12 @@ const { test, before } = require('node:test')
 const assert = require('node:assert/strict')
 
 let useLivePools, makePoolState, initJudgeTiles, applyScore
-let selectDiver, buildActiveInfo, deriveStatus
+let selectDiver, buildActiveInfo, deriveStatus, rosterIndexForActive
 
 before(async () => {
   const mod = await import('../src/composables/useLivePools.js')
   ;({ useLivePools, makePoolState, initJudgeTiles, applyScore } = mod)
-  ;({ selectDiver, buildActiveInfo, deriveStatus } = mod)
+  ;({ selectDiver, buildActiveInfo, deriveStatus, rosterIndexForActive } = mod)
 })
 
 function activeFor(eventId, n) {
@@ -133,6 +133,40 @@ test('selectDiver: moves the cursor, clears scores, re-inits tiles, builds info'
   // out-of-range is a no-op
   assert.equal(selectDiver(pool, 9, 5), false)
   assert.equal(pool.currentIndex, 1)
+})
+
+test('rosterIndexForActive: a mid-meet pool restores to the live diver, NOT roster[0]', () => {
+  // A roster spanning rounds (server order: round ASC). The match keys on
+  // competitor AND round, so the same diver in different rounds is distinct.
+  const roster = [
+    { competitor_id: 'd1', round_number: 1 },
+    { competitor_id: 'd2', round_number: 1 },
+    { competitor_id: 'd1', round_number: 2 },
+    { competitor_id: 'd2', round_number: 2 }, // <- the live diver
+    { competitor_id: 'd1', round_number: 3 },
+    { competitor_id: 'd2', round_number: 3 },
+  ]
+  // The server's authoritative active diver (set_active_diver payload shape).
+  const serverActive = { event_id: 'E', competitor_id: 'd2', round_number: 2, status: 'judging' }
+  // Must resolve to index 3 -- the SAME diver/round the server has live --
+  // so reopening the Control Room never reseeds the judges to roster[0].
+  assert.equal(rosterIndexForActive(roster, serverActive), 3)
+  // The same competitor in a different round is NOT a match.
+  assert.equal(rosterIndexForActive(roster, { competitor_id: 'd2', round_number: 3 }), 5)
+})
+
+test('rosterIndexForActive: no payload / unmappable payload / empty roster -> -1', () => {
+  const roster = [{ competitor_id: 'd1', round_number: 1 }]
+  assert.equal(rosterIndexForActive(roster, null), -1) // fresh event: no server diver
+  assert.equal(rosterIndexForActive(roster, {}), -1) // payload missing competitor_id
+  assert.equal(rosterIndexForActive(roster, { competitor_id: 'ghost', round_number: 1 }), -1) // drift
+  assert.equal(rosterIndexForActive([], { competitor_id: 'd1', round_number: 1 }), -1)
+  assert.equal(rosterIndexForActive(null, { competitor_id: 'd1', round_number: 1 }), -1)
+})
+
+test('rosterIndexForActive: id type coercion (string vs number competitor ids)', () => {
+  const roster = [{ competitor_id: 101, round_number: '2' }]
+  assert.equal(rosterIndexForActive(roster, { competitor_id: '101', round_number: 2 }), 0)
 })
 
 test('applyScore tile-matches by judge_number, then judge_id, then first unscored', () => {

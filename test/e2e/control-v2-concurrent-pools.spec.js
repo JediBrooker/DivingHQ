@@ -1,16 +1,13 @@
 // P5: concurrent multi-pool Live. Flag-on only (V2). Two events in one
-// org both Live; a full panel of scores for the NON-focused pool routes
-// to THAT pool and fills its tiles, WITHOUT moving the operator's center
-// focus -- the property V1 cannot give (it drops non-focused scores at
-// ControlView.vue:2094-2095). Selecting the other pool then shows its
-// already-filled tiles (state was kept, not rebuilt -> no focus thrash).
+// org both Live render as side-by-side pool cards. A full panel of scores
+// for the NON-focused pool fills THAT card's tiles while it stays on
+// screen -- the property V1 cannot give (it drops non-focused scores at
+// ControlView.vue:2094-2095). Each card is scoped by [data-event-id], so
+// a score lands only in its own pool and never bleeds into the other.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
-test.beforeEach(() => {
-  test.skip(process.env.VITE_CONTROL_V2 !== "on", "V2 flag off; concurrent pools are a V2-only surface");
-});
 
 async function signIn(page, username) {
   await page.goto("/login");
@@ -56,29 +53,31 @@ test("a non-focused Live pool's scores route to it without thrashing the focused
   await page.goto("/control");
   await page.waitForLoadState("networkidle");
 
-  // The rail shows both Live pools.
-  await expect(page.locator(".stage-row")).toHaveCount(2);
+  // The top bar shows both Live pools as chips.
+  await expect(page.locator(".cv2-chip")).toHaveCount(2);
 
-  // Focus Pool A; its tiles start empty.
-  await page.locator(".stage-row", { hasText: "Pool A" }).click();
-  await expect(page.locator(".cv2-stage-title")).toHaveText("Pool A");
-  await expect(page.locator(".cv2-tile.scored")).toHaveCount(0);
+  // Focus Pool A; BOTH pools render as cards, side by side.
+  await setup.selectControlEvent(page, "Pool A");
+  await expect(page.locator(".cv2-chip.is-focused")).toContainText("Pool A");
+  await expect(page.locator(".cv2-pool")).toHaveCount(2);
+  const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
+  const cardB = page.locator(`.cv2-pool[data-event-id="${B.event.id}"]`);
+  await expect(cardA.locator(".cv2-tile.scored")).toHaveCount(0);
+  await expect(cardB.locator(".cv2-tile.scored")).toHaveCount(0);
 
   // Inject a full 5-judge panel for Pool B (the NON-focused pool).
   await setup.submitPanelScores({
     baseURL, judges: B.judges, eventId: B.event.id,
     competitorId: B.diver.userId, roundNumber: 1, diveId: B.diveId,
   });
-  // Let the score_received broadcasts arrive + route.
-  await page.waitForTimeout(1500);
 
-  // Center STILL on Pool A (no focus thrash); Pool A's tiles untouched.
-  await expect(page.locator(".cv2-stage-title")).toHaveText("Pool A");
-  await expect(page.locator(".cv2-tile.scored")).toHaveCount(0);
+  // Pool B's card fills IN PLACE -- no focus thrash, no bleed into A.
+  await expect(cardB.locator(".cv2-tile.scored")).toHaveCount(5, { timeout: 6_000 });
+  await expect(page.locator(".cv2-chip.is-focused")).toContainText("Pool A");
+  await expect(cardA.locator(".cv2-tile.scored")).toHaveCount(0);
 
-  // Select Pool B -> its tiles are ALREADY filled (state kept while
-  // non-focused, not rebuilt on select).
-  await page.locator(".stage-row", { hasText: "Pool B" }).click();
-  await expect(page.locator(".cv2-stage-title")).toHaveText("Pool B");
-  await expect(page.locator(".cv2-tile.scored")).toHaveCount(5);
+  // Focusing Pool B keeps its filled tiles (state kept, not rebuilt).
+  await setup.selectControlEvent(page, "Pool B");
+  await expect(page.locator(".cv2-chip.is-focused")).toContainText("Pool B");
+  await expect(cardB.locator(".cv2-tile.scored")).toHaveCount(5);
 });

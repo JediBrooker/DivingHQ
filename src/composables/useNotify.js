@@ -1,6 +1,9 @@
-// Global toast / notify composable. One snackbar visible at a
-// time at the bottom of the viewport — any view can fire one
-// without prop-drilling.
+// Global toast / notify composable. A small STACK of snackbars at the
+// bottom of the viewport (newest lowest) — any view can fire one without
+// prop-drilling. A stack (not a single slot) is what lets two Live pools
+// each surface a toast without the second silently dropping the first's
+// action: e.g. pool A's 12s "undo finalise" survives when pool B toasts
+// within the window. Capped so the screen never fills up.
 //
 // Three flavours of API:
 //
@@ -31,10 +34,12 @@
 
 import { ref } from 'vue'
 
-// Shared reactive payload — one toast at a time. A second call
-// preempts the first (its action handle is dropped).
-const notifyState = ref(null)
-let timeoutHandle = null
+// Shared reactive stack — newest LAST. Each toast owns its own
+// auto-dismiss timer (keyed by id) so they expire independently.
+const toasts = ref([])
+const timers = new Map() // id -> setTimeout handle
+const MAX_TOASTS = 3
+let seq = 0
 
 // Kind → default auto-dismiss in ms. Errors stick around longer
 // because the operator may need to read them; success toasts
@@ -59,58 +64,81 @@ const DEFAULT_TIMEOUTS = {
  */
 export function showNotify(opts = {}) {
   const message = opts.message
-  if (!message) return
+  if (!message) return null
   const kind = normaliseKind(opts.kind)
   const timeoutMs = Number.isFinite(opts.timeoutMs)
     ? opts.timeoutMs
     : DEFAULT_TIMEOUTS[kind] ?? 5000
 
-  // A new toast preempts whatever's currently showing.
-  if (timeoutHandle) {
-    clearTimeout(timeoutHandle)
-    timeoutHandle = null
-  }
-  notifyState.value = {
+  const id = ++seq
+  toasts.value.push({
+    id,
     message,
     kind,
     actionLabel: opts.actionLabel || null,
     onAction:    typeof opts.onAction === 'function' ? opts.onAction : null,
-    id:          Date.now(),
+  })
+  // Cap the stack. Evict the OLDEST toast that carries no action first,
+  // so an Undo handle is never silently dropped while plain toasts pile
+  // up; only if every toast carries an action do we drop the oldest.
+  while (toasts.value.length > MAX_TOASTS) {
+    let idx = toasts.value.findIndex((t) => !t.onAction)
+    if (idx === -1) idx = 0
+    removeAt(idx)
   }
   if (timeoutMs > 0) {
-    timeoutHandle = setTimeout(dismissNotify, timeoutMs)
+    timers.set(id, setTimeout(() => dismissNotify(id), timeoutMs))
   }
+  return id
 }
 
-export function dismissNotify() {
-  if (timeoutHandle) {
-    clearTimeout(timeoutHandle)
-    timeoutHandle = null
-  }
-  notifyState.value = null
-}
-
-// Read-only handle for the renderer to subscribe to.
-export function useNotifyState() {
-  return notifyState
+function removeAt(idx) {
+  const t = toasts.value[idx]
+  if (!t) return
+  const h = timers.get(t.id)
+  if (h) { clearTimeout(h); timers.delete(t.id) }
+  toasts.value.splice(idx, 1)
 }
 
 /**
- * Run the stored action handler then dismiss. Errors surface as
- * a fresh error toast so the operator notices instead of
- * silently losing the click.
+ * Dismiss a toast by id. With no id, clears the whole stack
+ * (back-compat with the old single-toast dismiss).
  */
-export async function fireAction() {
-  const state = notifyState.value
-  if (!state || !state.onAction) return
+export function dismissNotify(id) {
+  if (id == null) {
+    for (const h of timers.values()) clearTimeout(h)
+    timers.clear()
+    toasts.value = []
+    return
+  }
+  const idx = toasts.value.findIndex((t) => t.id === id)
+  if (idx !== -1) removeAt(idx)
+}
+
+// Read-only handle (the toast stack) for the renderer to subscribe to.
+export function useNotifyState() {
+  return toasts
+}
+
+/**
+ * Run a toast's action handler then dismiss it. With no id, fires the
+ * newest actionable toast (back-compat). Errors surface as a fresh
+ * error toast so the operator notices instead of silently losing the click.
+ */
+export async function fireAction(id) {
+  const list = toasts.value
+  const t = id == null
+    ? [...list].reverse().find((x) => x.onAction)
+    : list.find((x) => x.id === id)
+  if (!t || !t.onAction) return
   // Optimistically dismiss first so the operator doesn't see a
   // stuck "running…" state if the handler is async.
-  dismissNotify()
+  dismissNotify(t.id)
   try {
-    await state.onAction()
+    await t.onAction()
   } catch (err) {
     showNotify({
-      message: `${state.actionLabel || 'Action'} failed: ${err?.message || 'Unknown error'}`,
+      message: `${t.actionLabel || 'Action'} failed: ${err?.message || 'Unknown error'}`,
       kind:    'error',
       timeoutMs: 6000,
     })

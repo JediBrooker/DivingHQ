@@ -46,6 +46,10 @@ module.exports = function attachSocket({
   // From lib/live-state:
   activeDivers,
   meetHolds,
+  // Per-event control lease (advisory; warns on double-driving).
+  getEventController,
+  setEventController,
+  clearEventControllersBySocket,
   // Persistence helpers — fire-and-forget DB writes that
   // mirror the in-memory map mutations so a server restart
   // mid-meet doesn't leak the live state.
@@ -297,6 +301,11 @@ module.exports = function attachSocket({
         if (n <= 0) socketIpConnCounts.delete(socket._ipCounted);
         else socketIpConnCounts.set(socket._ipCounted, n);
       }
+      // Release any event-control leases this socket held so the events
+      // are free for another operator to claim.
+      if (typeof clearEventControllersBySocket === "function") {
+        clearEventControllersBySocket(socket.id);
+      }
     });
 
     // Per-user room — the push engine `io.to(\`user:<id>\`)` fans
@@ -327,6 +336,34 @@ module.exports = function attachSocket({
       socket.join(`event:${eventId}`);
     }
     socket.on("subscribe_event", (data) => joinEvent(data?.event_id));
+
+    // Per-event control LEASE (advisory). A Control Room claims control of
+    // each event it drives. The lease never BLOCKS an action (a crashed
+    // operator must never lock an event) — it just warns when a second
+    // socket (another operator, or the same operator in another window)
+    // is also driving the same event, so set_active_diver clobbering is
+    // surfaced instead of silent. First claim wins; the claimant is the
+    // one warned. Both sides are notified so neither drives blind.
+    socket.on("claim_event_control", async (data) => {
+      const eventId = data?.event_id;
+      if (!eventId || !socket.userId) return;
+      // Only real controllers can hold a lease (same gate as the actions).
+      if (!(await socketCanManageEvent(socket, eventId,
+                                       ["meet_manager", "referee", "org_admin"]))) return;
+      if (typeof getEventController !== "function") return;
+      const cur = getEventController(eventId);
+      const holderLive = cur && io.sockets.sockets.has(cur.socketId);
+      if (!cur || !holderLive || cur.socketId === socket.id) {
+        // Free (or stale, or already ours) -> grant.
+        setEventController(eventId, { socketId: socket.id, userId: socket.userId });
+        socket.emit("event_control_granted", { event_id: eventId });
+        return;
+      }
+      // Held by another live socket -> warn both, don't steal.
+      const sameUser = String(cur.userId) === String(socket.userId);
+      socket.emit("event_control_conflict", { event_id: eventId, sameUser });
+      io.to(cur.socketId).emit("event_control_contested", { event_id: eventId, sameUser });
+    });
 
     // Venue bridge subscription. Hardware bridges (Daktronics,
     // Colorado Time Systems, OmegaTiming, etc.) join `venue:<id>`

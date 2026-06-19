@@ -85,18 +85,12 @@ const routes = [
   },
   {
     path: '/control',
-    // Control Room resolver: the all-in-one ControlView.vue is the
-    // DEFAULT (unset / off / anything). Only an explicit build-time
-    // VITE_CONTROL_V2=on serves the experimental Stage-Rail ControlViewV2.
-    // The default was briefly flipped to V2 (P9 cutover) but reverted --
-    // V2's mode-switch is not the wanted UX; the page must stay all-in-one.
-    // The `=== 'on'` test constant-folds at build time so V1 and V2 never
-    // co-bundle. meta is byte-identical so the beforeEach gate, role
-    // checks, and App.vue useShell are unchanged.
-    component: () =>
-      import.meta.env.VITE_CONTROL_V2 === 'on'
-        ? import('@/views/ControlViewV2.vue')
-        : import('@/views/ControlView.vue'),
+    // Control Room — the Stage-Rail multi-event ControlViewV2 is now the
+    // only Control Room (the legacy all-in-one ControlView was removed at
+    // cutover). It runs the meet-day board: a top event bar, the three
+    // columns (History · pools · Standings), concurrent live pools with
+    // per-pool controllers + meet-day tools, and an advisory operator lease.
+    component: () => import('@/views/ControlViewV2.vue'),
     meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager', 'referee'], appShell: true },
   },
   {

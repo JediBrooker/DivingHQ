@@ -5,9 +5,6 @@ const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
-test.beforeEach(() => {
-  test.skip(process.env.VITE_CONTROL_V2 !== "on", "V2 flag off; review mode is a V2-only surface");
-});
 
 async function signIn(page, username) {
   await page.goto("/login");
@@ -42,7 +39,7 @@ test("a Completed event shows the final standings", async ({ request, page, base
   await signIn(page, username);
   await page.goto("/control");
   await page.waitForLoadState("networkidle");
-  await page.locator(".stage-row", { hasText: "Review Event" }).click();
+  await setup.selectControlEvent(page, "Review Event");
 
   await expect(page.locator('.cv2-mode[aria-label="Review"]')).toBeVisible();
   await expect(page.locator(".review-row")).toHaveCount(1);

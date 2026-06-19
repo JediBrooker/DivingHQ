@@ -266,13 +266,11 @@ know X":
    modals were migrated onto it in the meet-day redesign (P2) and the
    Manager dialogs in P10. The global `.lb-*` frame rules were re-homed
    from `ControlView.css` to `src/styles/lb-modal.css` (imported in
-   `main.js`), so every BaseModal consumer is styled regardless of the
-   legacy view. **Control Room view:** `/control` serves the all-in-one
-   `ControlView.vue` by DEFAULT. The Stage-Rail `ControlViewV2.vue` was
-   trialled as the default (P9) and reverted — its mode-switch is not the
-   wanted UX — so it stays behind an explicit `VITE_CONTROL_V2=on`
-   build-time flag (constant-folded so V1 and V2 never co-bundle).
-   `control-v2-*.spec.js` runs only under `=on`.
+   `main.js`), so every BaseModal consumer is styled. **Control Room view:**
+   `/control` serves the Stage-Rail `ControlViewV2.vue` — now the only
+   Control Room. The legacy all-in-one `ControlView.vue` (+ `.css`) and the
+   `VITE_CONTROL_V2` build flag were removed at cutover; `control-v2-*.spec.js`
+   is the full Control Room suite.
    Historical hand-rolled pattern: commit `e45c227`.
 7. **The IndexedDB cache is keyed per-user.** Don't write a frontend that
    bypasses `cachedFetch` for a sensitive endpoint without thinking about
