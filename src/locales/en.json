@@ -583,7 +583,7 @@
       "bookmark_faq": "FAQ & troubleshooting",
       "bookmark_faq_desc": "answers to \"why is this greyed out / not showing\"",
       "bookmark_shortcuts": "Keyboard shortcuts",
-      "bookmark_shortcuts_desc": "← / → / Space / T / F / R / H / L for the Control Room",
+      "bookmark_shortcuts_desc": "1–9 / Space / H / L / F / R / C for the Control Room",
       "cta_register": "Create an account",
       "cta_scoreboard": "Browse scoreboard →"
     },
@@ -630,17 +630,16 @@
       }
     },
     "shortcuts": {
-      "lede": "Keyboard hotkeys for the Control Room. Press ? in-app to open the cheat sheet overlay."
+      "lede": "Keyboard hotkeys for the Control Room. Every action runs on the focused pool; the number keys switch which pool that is. Hotkeys are ignored while you're typing in a field or the command palette."
     },
     "shortcut": {
-      "next_diver": "Advance to the next diver in the queue.",
-      "top_of_round": "Snap the queue back to the top of the current round.",
-      "fail": "Mark the current dive as failed (0 across the board).",
-      "redive": "Grant the current diver a redive.",
-      "hold": "Hold the meet — pauses the clock and active-diver banner.",
-      "live_toggle": "Toggle the live-broadcast flag for the meet's public scoreboard.",
-      "queue_nav": "Move the cursor through the on-deck queue.",
-      "help_overlay": "Open the in-app keyboard cheat sheet."
+      "focus_pool": "Switch the focused pool. With two or more events live, 1 is the first pool, 2 the second, and so on.",
+      "next_diver": "Advance the focused pool to the next diver.",
+      "hold": "Hold or resume the focused pool — pauses its shot clock and active-diver banner.",
+      "announce": "Announce — push the focused pool's standings to the public scoreboard.",
+      "fail": "Mark the focused pool's current dive as failed (0 across the board).",
+      "redive": "Grant the focused pool's current diver a redive.",
+      "cap": "Cap the focused pool's current dive scores (referee 2.0 cap)."
     },
     "glossary": {
       "lede": "Diving vocabulary you'll hit on day one.",

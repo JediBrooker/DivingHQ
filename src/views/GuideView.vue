@@ -59,6 +59,7 @@ const SECTIONS = [
   { id: 'overview',      key: 'overview' },
   { id: 'roles',         key: 'roles' },
   { id: 'quick-actions', key: 'quick_actions' },
+  { id: 'shortcuts',     key: 'shortcuts' },
   { id: 'glossary',      key: 'glossary' },
   { id: 'faq',           key: 'faq' },
   { id: 'wiki',          key: 'wiki' },
@@ -77,6 +78,21 @@ const TILES = [
   { id: 'coach',          to: '/coach',           img: '/guide-screenshots/coach.png',          glyph: '🎓' },
   { id: 'meet_manager',   to: '/manager',         img: '/guide-screenshots/meet-manager.png',   glyph: '📋' },
   { id: 'dive_directory', to: '/dive-directory',  img: '/guide-screenshots/dive-directory.png', glyph: '📖' },
+]
+
+// Control Room hotkeys (the multi-event console). Keys mirror
+// src/composables/useControlKeymap.js — if the key map changes
+// there, mirror it here. Every action runs on the FOCUSED pool;
+// the number keys are the only ones that switch which pool that
+// is. Keys are universal glyphs; only the descriptions are i18n'd.
+const SHORTCUTS = [
+  { keys: ['1', '…', '9'], descKey: 'focus_pool' },
+  { keys: ['Space', '→'],  descKey: 'next_diver' },
+  { keys: ['H'],           descKey: 'hold' },
+  { keys: ['L'],           descKey: 'announce' },
+  { keys: ['F'],           descKey: 'fail' },
+  { keys: ['R'],           descKey: 'redive' },
+  { keys: ['C'],           descKey: 'cap' },
 ]
 
 // Glossary of diving-specific terms. Term labels are universal
@@ -284,6 +300,24 @@ onBeforeUnmount(() => observer?.disconnect())
               </div>
             </RouterLink>
           </div>
+        </section>
+
+        <!-- Keyboard shortcuts — the multi-event Control Room
+             hotkeys. The key glyphs are universal so they stay
+             hardcoded; only the per-row descriptions are i18n'd.
+             Mirrors src/composables/useControlKeymap.js. -->
+        <section id="shortcuts" class="guide-section">
+          <h2 class="guide-h2">{{ $t('guide.section_shortcuts') }}</h2>
+          <p class="guide-section-lede">{{ $t('guide.shortcuts.lede') }}</p>
+
+          <dl class="guide-shortcuts">
+            <template v-for="row in SHORTCUTS" :key="row.descKey">
+              <dt class="guide-shortcut-keys">
+                <kbd v-for="k in row.keys" :key="k">{{ k }}</kbd>
+              </dt>
+              <dd class="guide-shortcut-desc">{{ $t(`guide.shortcut.${row.descKey}`) }}</dd>
+            </template>
+          </dl>
         </section>
 
         <!-- Glossary — diving-specific vocabulary. Terms are
