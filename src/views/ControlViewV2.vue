@@ -18,6 +18,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useControlStage } from '@/composables/useControlStage'
 import StageRail from '@/components/control/StageRail.vue'
 import StatusPill from '@/components/StatusPill.vue'
+import SetupStage from '@/components/control/SetupStage.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import { useI18n } from 'vue-i18n'
@@ -74,7 +75,7 @@ const stageTitleEl = ref(null)
 const currentEvent = computed(
   () => events.value.find((e) => String(e.id) === String(selectedEventId.value)) || null,
 )
-const { workflowMode, orderWorkflowState } = useControlStage(currentEvent)
+const { workflowMode } = useControlStage(currentEvent)
 
 // Recovery is the one explicit cross-cutting mode (offer-not-seize);
 // P7 fills it. Off by default so the center always shows the stage mode.
@@ -328,8 +329,7 @@ onMounted(async () => {
         <!-- Center mode-switch: EXACTLY ONE mode per stage. The bodies
              are placeholders; P6-P8 rebuild the real panels here. -->
         <section v-if="centerMode === 'setup'" class="cv2-mode" aria-label="Setup">
-          <p class="cv2-mode-note">Setup — pre-meet workflow. (Built in P7.)</p>
-          <p class="cv2-mode-state">Next step: {{ orderWorkflowState || '—' }}</p>
+          <SetupStage :event="currentEvent" />
         </section>
         <section v-else-if="centerMode === 'meet'" class="cv2-mode" aria-label="Live">
           <div v-if="livePool && livePool.activeInfo" class="cv2-live">
