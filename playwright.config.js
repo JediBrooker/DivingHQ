@@ -156,7 +156,13 @@ module.exports = defineConfig({
   // env so the e2e suite uses the same Postgres the integration
   // tests use (divinghq_test).
   webServer: {
-    command: "npm run build && PORT=3097 node server.js",
+    // Skip the SPA build when PW_SKIP_BUILD is set — CI downloads a
+    // prebuilt dist/ artifact from the `build` job, so rebuilding here
+    // would just repeat work already on the critical path. Locally
+    // (flag unset) we always build so dist/ stays fresh.
+    command: process.env.PW_SKIP_BUILD
+      ? "PORT=3097 node server.js"
+      : "npm run build && PORT=3097 node server.js",
     url: "http://127.0.0.1:3097/api/health",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

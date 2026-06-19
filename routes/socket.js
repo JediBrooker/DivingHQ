@@ -101,7 +101,7 @@ module.exports = function attachSocket({
       : (authToken || readSessionCookie(socket.handshake.headers?.cookie));
     if (raw) {
       try {
-        const decoded = jwt.verify(raw, JWT_SECRET);
+        const decoded = jwt.verify(raw, JWT_SECRET, { algorithms: ["HS256"] });
         // Validate tv via the same 30s cache the HTTP path uses.
         // A revoked session must lose its socket privileges too.
         const tvOk = await isTokenVersionCurrent(decoded.id, decoded.tv);
@@ -196,6 +196,54 @@ module.exports = function attachSocket({
     return false;
   }
 
+  // Per-IP limiter for the unauthenticated, expensive read events.
+  // socketActionRateLimited above is keyed on userId and no-ops for
+  // anonymous spectators/bridges (userId is null), so the public reads
+  // that trigger real DB work need an IP-keyed guard of their own —
+  // the socket analogue of server.js's HTTP exportLimiter. Today only
+  // subscribe_venue qualifies: it runs the multi-CTE leaderboard build
+  // in lib/venue-state.js. Cheap room-join reads (subscribe_event,
+  // get_active_diver, get_meet_hold) don't touch the DB, so they're
+  // left out — a connection cap is the right control for those.
+  const SOCKET_IP_LIMITS = {
+    subscribe_venue: { limit: 30, windowMs: 60 * 1000 },
+  };
+  const socketIpWindows = new Map();   // `${action}:${ip}` → [t,…]
+
+  function socketIpRateLimited(action, ip) {
+    const cfg = SOCKET_IP_LIMITS[action];
+    if (!cfg || !ip) return false;     // unknown IP → can't key, fail open
+    const key = `${action}:${ip}`;
+    const now = Date.now();
+    const cutoff = now - cfg.windowMs;
+    const arr = (socketIpWindows.get(key) || []).filter((t) => t > cutoff);
+    if (arr.length >= cfg.limit) {
+      socketIpWindows.set(key, arr);
+      return true;
+    }
+    arr.push(now);
+    socketIpWindows.set(key, arr);
+    return false;
+  }
+
+  // events.id is a UUID; reject anything else before doing DB work.
+  // Same lenient shape used for event ids elsewhere (lib/records.js).
+  const EVENT_UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  // Per-IP concurrent connection cap. Defence-in-depth so a single
+  // client can't open thousands of sockets to exhaust file descriptors
+  // / memory. Generous by default because an entire venue of spectators
+  // can share one NAT public IP; tune via MAX_SOCKETS_PER_IP
+  // (0 disables the cap).
+  const MAX_SOCKETS_PER_IP = (() => {
+    const raw = process.env.MAX_SOCKETS_PER_IP;
+    if (raw === undefined || raw === "") return 200;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : 200;
+  })();
+  const socketIpConnCounts = new Map();   // ip → live socket count
+
   // Periodic cleanup so the maps don't grow forever.
   setInterval(() => {
     const cutoff = Date.now() - SCORE_WINDOW_MS;
@@ -211,16 +259,44 @@ module.exports = function attachSocket({
       if (fresh.length === 0) socketActionWindows.delete(key);
       else socketActionWindows.set(key, fresh);
     }
+    const ipMaxWindow = Math.max(...Object.values(SOCKET_IP_LIMITS).map(c => c.windowMs));
+    const ipCutoff = Date.now() - ipMaxWindow;
+    for (const [key, arr] of socketIpWindows.entries()) {
+      const fresh = arr.filter((t) => t > ipCutoff);
+      if (fresh.length === 0) socketIpWindows.delete(key);
+      else socketIpWindows.set(key, fresh);
+    }
   }, 5 * 60 * 1000).unref?.();
 
   // -----------------------------------------------------------
   // Connection
   // -----------------------------------------------------------
   io.on("connection", (socket) => {
+    // Per-IP concurrent connection cap (defence-in-depth; 0 disables).
+    // Count + reject before any wiring so a flood can't accumulate
+    // handlers/rooms. The symmetric inc-here / dec-on-disconnect keeps
+    // the map self-cleaning (entries drop to 0 and are deleted).
+    if (MAX_SOCKETS_PER_IP > 0) {
+      const ip = clientIp(socket);
+      if (ip) {
+        const n = (socketIpConnCounts.get(ip) || 0) + 1;
+        if (n > MAX_SOCKETS_PER_IP) {
+          socket.disconnect(true);
+          return;
+        }
+        socketIpConnCounts.set(ip, n);
+        socket._ipCounted = ip;
+      }
+    }
     console.log(`[Socket] Connected: ${socket.id}`);
     metrics?.socketConnections.inc();
     socket.on("disconnect", () => {
       metrics?.socketConnections.dec();
+      if (socket._ipCounted) {
+        const n = (socketIpConnCounts.get(socket._ipCounted) || 1) - 1;
+        if (n <= 0) socketIpConnCounts.delete(socket._ipCounted);
+        else socketIpConnCounts.set(socket._ipCounted, n);
+      }
     });
 
     // Per-user room — the push engine `io.to(\`user:<id>\`)` fans
@@ -268,7 +344,18 @@ module.exports = function attachSocket({
     }
     socket.on("subscribe_venue", async (data) => {
       const eventId = data?.event_id;
-      if (!eventId) return;
+      // Validate shape before any work: events.id is a UUID, so a
+      // malformed id is junk — reject it without joining a room or
+      // touching the DB. (Also short-circuits a missing id.)
+      if (!EVENT_UUID_RE.test(String(eventId ?? ""))) return;
+      // Per-IP throttle. subscribe_venue triggers emitVenueState, which
+      // runs the most expensive query in the app (the multi-CTE
+      // leaderboard build in lib/venue-state.js). The per-(action,user)
+      // limiter no-ops for anonymous bridges, so guard on IP here just
+      // like the HTTP exportLimiter guards expensive anonymous reads. A
+      // real bridge subscribes a handful of times on (re)connect, far
+      // below 30/min/IP; a spam loop is far above it.
+      if (socketIpRateLimited("subscribe_venue", clientIp(socket))) return;
       joinVenue(eventId);
       // Immediately emit a fresh snapshot so the bridge has full
       // state to render — important after a bridge restart.
