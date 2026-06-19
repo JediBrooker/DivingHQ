@@ -22,6 +22,25 @@ export function orderWorkflowStateFor(ev) {
   return 'start'
 }
 
+// Canonical pool order: oldest-created first, so the first event to go
+// Live is "Pool 1", the next "Pool 2", and so on -- stable as events
+// come and go. The SAME order drives the center pool grid, the top-bar
+// switch chips, AND the number-key focus map, so chip position N, grid
+// card N and the "N" hotkey always point at the same pool.
+export function compareByCreation(a, b) {
+  const ta = a?.created_at || ''
+  const tb = b?.created_at || ''
+  if (ta !== tb) return ta < tb ? -1 : 1
+  return Number(a?.id) - Number(b?.id)
+}
+
+// Every Live event in canonical order (a fresh array; never mutates input).
+export function liveEventsInOrder(events) {
+  return (Array.isArray(events) ? events : [])
+    .filter((e) => e.status === 'Live')
+    .sort(compareByCreation)
+}
+
 // The top-level center mode: Live -> meet, Completed -> review,
 // everything else (Upcoming/Setup) -> setup.
 export function workflowModeFor(ev) {
