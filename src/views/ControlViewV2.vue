@@ -20,12 +20,27 @@ import StageRail from '@/components/control/StageRail.vue'
 import StatusPill from '@/components/StatusPill.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
+import { useI18n } from 'vue-i18n'
 import { useLivePools, selectDiver, deriveStatus } from '@/composables/useLivePools'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
+import { useShotClock } from '@/composables/useShotClock'
+import { useHttpOutbox } from '@/composables/useHttpOutbox'
+import { confirmAction } from '@/composables/useConfirm'
+import { showUndo } from '@/composables/useUndo'
+import { showError } from '@/composables/useNotify'
 
 const route = useRoute()
 const auth = useAuthStore()
+const { t } = useI18n()
+const { queueAction } = useHttpOutbox()
+
+// ONE shot clock bound to the FOCUSED pool (WA 8.5.5 60s window; frozen
+// composable, reused as-is). Only the centered diver is on the clock; a
+// non-focused Live pool can sit at READY/JUDGING without its own clock.
+// Per-pool multi-clocks are a later slice.
+const { shotClock, shotClockExpired, shotClockClass, startShotClock, stopShotClock, resetShotClock } =
+  useShotClock()
 
 // Socket + the concurrent-pool live-state engine are hoisted ABOVE the
 // mode switch: ONE subscription for the shell's lifetime routes every
@@ -39,7 +54,12 @@ const { pools, poolFor, routeScore, routeSignal } = useLivePools()
 
 useSocketEvent(socket, 'score_received', (data) => {
   if (data?.event_id) idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
-  routeScore(data, numberOfJudgesFor)
+  const res = routeScore(data, numberOfJudgesFor)
+  // Focused-pool shot clock stops when ITS dive completes; a non-focused
+  // pool's completion arms its own advance and never touches the clock.
+  if (res.allScoresIn && currentEvent.value && String(data.event_id) === String(currentEvent.value.id)) {
+    stopShotClock()
+  }
 })
 useSocketEvent(socket, 'judge_signal', (data) => {
   routeSignal(data)
@@ -73,9 +93,138 @@ const liveStatus = computed(() => {
   return deriveStatus({
     hasActive: !!p.currentActive,
     scoresInCount: Object.keys(p.scoresThisRound || {}).length,
-    clockExpired: false,
+    clockExpired: shotClockExpired.value,
   })
 })
+
+// NEXT ACTION: one bottom-pinned primary scoped to the focused pool,
+// reproducing updateNextButton (ControlView.vue:2311-2328) + nextBtn*
+// per pool. disabled until that pool's last score lands (advanceArmed);
+// on the last dive it morphs to Finalise.
+const isLastInPool = computed(() => {
+  const p = livePool.value
+  return !!p && p.currentIndex >= p.roster.length - 1
+})
+const nextBtnComplete = computed(() => !!livePool.value?.advanceArmed && isLastInPool.value)
+const nextBtnDisabled = computed(() => !livePool.value?.advanceArmed)
+const nextBtnText = computed(() =>
+  nextBtnComplete.value
+    ? `✓ ${t('control.finalise')} & ${t('control.view_results')}`
+    : `${t('control.next_diver')} →`,
+)
+const nextBtnTitle = computed(() => {
+  if (!nextBtnDisabled.value) {
+    return nextBtnComplete.value
+      ? 'All rounds complete — finalise the event'
+      : 'Advance to the next diver'
+  }
+  const p = livePool.value
+  if (!p?.currentActive) return 'Pick an active diver from the queue first'
+  const need = numberOfJudgesFor(currentEvent.value?.id) || 5
+  const have = Object.keys(p.scoresThisRound || {}).length
+  const remaining = Math.max(0, need - have)
+  return remaining === 0 ? 'Loading…' : `Waiting for ${remaining} more judge score${remaining === 1 ? '' : 's'}`
+})
+
+function syncShotClock() {
+  const p = livePool.value
+  if (p && p.currentActive && currentEvent.value?.status === 'Live') startShotClock()
+  else resetShotClock()
+}
+
+// The nextDiver funnel (ControlView.vue:2347-2378), per focused pool:
+// partial-scores confirm, then advance the pool's cursor OR finalise.
+async function advancePrimary() {
+  const p = livePool.value
+  const ev = currentEvent.value
+  if (!p || !ev) return
+  const totalJudges = numberOfJudgesFor(ev.id) || 0
+  const scoresIn = Object.keys(p.scoresThisRound || {}).length
+  const partial = totalJudges > 0 && scoresIn > 0 && scoresIn < totalJudges
+  if (!nextBtnComplete.value && partial) {
+    if (
+      !(await confirmAction({
+        title: 'Skip ahead with partial scores?',
+        body: `Only ${scoresIn} of ${totalJudges} judges have submitted for this dive.`,
+        consequences: [
+          'The dive will close with whatever scores arrived',
+          'Missing judges can still amend via score correction afterwards',
+        ],
+        confirmLabel: 'Move on',
+        confirmKind: 'warn',
+      }))
+    ) {
+      return
+    }
+  }
+  if (nextBtnComplete.value) {
+    await finaliseFocusedPool()
+  } else if (selectDiver(p, p.currentIndex + 1, totalJudges, diveDescription)) {
+    socket.emit('set_active_diver', { ...p.currentActive, status: 'ready' })
+    startShotClock()
+  }
+}
+
+// finaliseEvent (ControlView.vue:2470-2545), reproduced for the focused
+// pool: same consequences/confirm/PUT/undo. (The reflow modal is drawer
+// plumbing, deferred to P8; an event with no long-run candidates -- the
+// common case -- never opens it.)
+async function finaliseFocusedPool() {
+  const ev = currentEvent.value
+  const p = livePool.value
+  if (!ev) return
+  const diverIds = new Set()
+  for (const r of p?.roster || []) {
+    if (r.withdrawn_at) continue
+    diverIds.add(r.competitor_id || r.diver_id || r.dive_list_id)
+  }
+  const n = diverIds.size
+  if (
+    !(await confirmAction({
+      title: 'Finalise event?',
+      body: `"${ev.name}" will flip to Completed and the recap publishes.`,
+      consequences: [
+        'Public scoreboard switches to recap mode (podium + full standings)',
+        'Event lands in the public Results Archive',
+        n
+          ? `"Results posted" emails go out to ${n} competitor${n === 1 ? '' : 's'} (if SMTP is configured)`
+          : '"Results posted" emails go out to every competitor (if SMTP is configured)',
+        'Reversible by an org admin via Meet Manager → set status back to Live',
+      ],
+      confirmLabel: 'Finalise & publish',
+      confirmKind: 'primary',
+    }))
+  ) {
+    return
+  }
+  const evId = ev.id
+  const evName = ev.name
+  try {
+    await auth.apiFetch(`/api/events/${evId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: 'Completed' }),
+    })
+    const target = events.value.find((e) => String(e.id) === String(evId))
+    if (target) target.status = 'Completed' // -> workflowMode flips to review
+    resetShotClock()
+    showUndo({
+      message: `Finalised "${evName}" — results published.`,
+      timeoutMs: 12000,
+      onUndo: async () => {
+        await queueAction({
+          method: 'PUT',
+          url: `/api/events/${evId}/status`,
+          body: { status: 'Live' },
+          actionType: 'event_status_flip',
+        })
+        const back = events.value.find((e) => String(e.id) === String(evId))
+        if (back) back.status = 'Live'
+      },
+    })
+  } catch (err) {
+    showError('Failed to finalise: ' + err.message)
+  }
+}
 
 function numberOfJudgesFor(eventId) {
   const ev = events.value.find((e) => String(e.id) === String(eventId))
@@ -106,6 +255,7 @@ async function setupLivePool(ev) {
 
 async function selectEvent(id) {
   selectedEventId.value = String(id)
+  syncShotClock()
   // Roving focus rail -> center heading (a11y: the selection moves focus
   // into the focused stage, not back to the top of the rail).
   await nextTick()
@@ -130,6 +280,7 @@ onMounted(async () => {
   for (const ev of events.value) {
     if (ev.status === 'Live') setupLivePool(ev)
   }
+  syncShotClock()
 })
 </script>
 
@@ -164,6 +315,7 @@ onMounted(async () => {
             <div class="cv2-live-head">
               <span class="cv2-live-status" :class="`cv2-status-${liveStatus}`">{{ liveStatus.toUpperCase() }}</span>
               <span class="cv2-live-round">Round {{ livePool.activeInfo.round_number }} / {{ currentEvent.total_rounds }}</span>
+              <span class="cv2-shotclock" :class="shotClockClass" aria-label="Shot clock">{{ shotClock }}s</span>
             </div>
             <p class="cv2-live-diver">
               {{ livePool.activeInfo.name }}
@@ -182,7 +334,17 @@ onMounted(async () => {
                 :class="{ scored: t.scored, signaled: t.signaled }"
               >{{ t.scored ? t.score : '—' }}</div>
             </div>
-            <p class="cv2-mode-note">Live current-state (P6.1). Next: bottom-pinned primary + shot clock (P6.2), blockers strip (P6.3).</p>
+            <div class="cv2-primary-slot">
+              <button
+                type="button"
+                class="cv2-primary"
+                :class="{ 'is-finalise': nextBtnComplete }"
+                :disabled="nextBtnDisabled"
+                v-tip="nextBtnTitle"
+                @click="advancePrimary"
+              >{{ nextBtnText }}</button>
+            </div>
+            <p class="cv2-mode-note">Live current-state + next action (P6.2). Next: blockers strip (P6.3).</p>
           </div>
           <p v-else class="cv2-mode-note">Live — loading the active diver… (Full live screen: P6.)</p>
         </section>
@@ -226,6 +388,29 @@ onMounted(async () => {
 .cv2-live-diver { margin: 0 0 0.4rem; font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--fg); }
 .cv2-live-country { font-family: var(--font-mono); font-size: 13px; font-weight: 400; color: var(--text-3); margin-inline-start: 0.5rem; }
 .cv2-live-dive { margin: 0 0 1rem; font-family: var(--font-mono); font-size: 13px; color: var(--text-2); }
+.cv2-shotclock {
+  margin-inline-start: auto;
+  font-family: var(--font-mono); font-size: 16px; font-weight: 700;
+  padding: 0.15rem 0.6rem; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2); color: var(--text-2);
+}
+.cv2-shotclock.shot-clock-amber { color: var(--amber); border-color: var(--amber); }
+.cv2-shotclock.shot-clock-warn { color: var(--red); border-color: var(--red); }
+.cv2-shotclock.shot-clock-expired { color: var(--red); background: rgba(239, 68, 68, 0.12); border-color: var(--red); }
+.cv2-primary-slot {
+  position: sticky; bottom: 0; margin-top: 1.5rem; padding-top: 1rem;
+  background: linear-gradient(to top, var(--bg) 72%, transparent);
+}
+.cv2-primary {
+  width: 100%; padding: 0.85rem 1.5rem;
+  font-family: var(--font-display); font-size: 14px; font-weight: 700;
+  border-radius: var(--radius); border: 1px solid var(--cyan);
+  background: var(--cyan); color: var(--bg); cursor: pointer;
+  transition: filter 0.12s;
+}
+.cv2-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.cv2-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.cv2-primary.is-finalise { background: var(--green); border-color: var(--green); }
 .cv2-tiles { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .cv2-tile {
   width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
