@@ -16,6 +16,8 @@
  */
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import BaseModal from '@/components/BaseModal.vue'
+import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
   event: { type: Object, required: true },
@@ -93,16 +95,10 @@ function rosterTemplateHeader(ev) {
 </script>
 
 <template>
-  <div class="modal-backdrop" @click="$emit('close')"></div>
-  <div class="modal roster-modal" @click.stop role="dialog" aria-modal="true" aria-labelledby="mgr-roster-title">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-      <div>
-        <div class="teams-section-label">{{ $t('manager.modals.roster_import_section_label') }}</div>
-        <h2 id="mgr-roster-title" style="font-size:20px;line-height:1">{{ event?.name }}</h2>
-      </div>
-      <button class="btn btn-ghost btn-sm" @click="$emit('close')">{{ $t('manager.modals.close') }}</button>
-    </div>
-
+  <BaseModal max-width="720px" @close="$emit('close')">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" :title="$t('manager.modals.roster_import_section_label')" :subtitle="event?.name" @close="$emit('close')" />
+      <div class="lb-body">
     <p class="hint" style="margin-bottom:0.75rem">
       Paste a CSV with one diver per row. First row must be a header.
       Required columns: <code>username</code>,
@@ -203,7 +199,9 @@ function rosterTemplateHeader(ev) {
         {{ rosterBusy ? $t('manager.modals.roster_importing') : 'Confirm import' }}
       </button>
     </div>
-  </div>
+      </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
@@ -213,20 +211,6 @@ function rosterTemplateHeader(ev) {
    (shared with the teams / federations / readiness modals and the
    rest of the manager page). */
 
-/* The modal renders as a sibling of an EMPTY .modal-backdrop (not
-   nested inside it), so the global .modal (position: static) would
-   drop to the bottom of the long events page instead of centring.
-   Pin to the viewport centre, above the backdrop; scrolls
-   internally if tall. */
-.modal.roster-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 201;
-  max-height: 90vh;
-  overflow-y: auto;
-}
 .roster-modal { max-width: 720px; }
 .roster-modal .mono { font-family: var(--font-mono); }
 .roster-modal textarea { resize: vertical; min-height: 180px; }
@@ -285,14 +269,5 @@ function rosterTemplateHeader(ev) {
   font-size: 11px; color: var(--text-3); line-height: 1.5;
   padding: 0.6rem 0.75rem; margin-top: 0.4rem;
   background: var(--bg-3); border-inline-start: 3px solid var(--cyan); border-radius: 3px;
-}
-
-/* Phone full-bleed — copied from ManagerView.css's 600px block. */
-@media (max-width: 600px) {
-  .modal,
-  .roster-modal {
-    max-width: 100%;
-    width: 100%;
-  }
 }
 </style>
