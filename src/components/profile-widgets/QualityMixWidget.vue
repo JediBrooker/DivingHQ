@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  // { total, failed, deficient, unsatisfactory, satisfactory,
+  // { total, failed, very_deficient, deficient, satisfactory,
   // good, very_good, excellent }. From analytics.quality_mix.
   // Null while loading.
   data: { type: Object, default: null },
@@ -13,13 +13,13 @@ const props = defineProps({
 const qualityBuckets = computed(() => {
   const q = props.data || {}
   return [
-    { id: 'failed',         label: 'Failed (0)',           count: q.failed         || 0 },
-    { id: 'deficient',      label: 'Deficient (≤2.0)',     count: q.deficient      || 0 },
-    { id: 'unsatisfactory', label: 'Unsat. (≤4.5)',        count: q.unsatisfactory || 0 },
-    { id: 'satisfactory',   label: 'Satisfactory (≤6.0)',  count: q.satisfactory   || 0 },
-    { id: 'good',           label: 'Good (≤8.0)',          count: q.good           || 0 },
-    { id: 'very_good',      label: 'Very Good (≤9.5)',     count: q.very_good      || 0 },
-    { id: 'excellent',      label: 'Excellent (10)',       count: q.excellent      || 0 },
+    { id: 'failed',         label: 'Failed (0)',             count: q.failed         || 0 },
+    { id: 'very_deficient', label: 'Very Deficient (≤2.0)',  count: q.very_deficient || 0 },
+    { id: 'deficient',      label: 'Deficient (≤4.5)',       count: q.deficient      || 0 },
+    { id: 'satisfactory',   label: 'Satisfactory (≤6.5)',    count: q.satisfactory   || 0 },
+    { id: 'good',           label: 'Good (≤8.0)',            count: q.good           || 0 },
+    { id: 'very_good',      label: 'Very Good (≤9.5)',       count: q.very_good      || 0 },
+    { id: 'excellent',      label: 'Excellent (10)',         count: q.excellent      || 0 },
   ]
 })
 </script>
@@ -55,8 +55,8 @@ const qualityBuckets = computed(() => {
 }
 .quality-seg { transition: width 0.2s; min-width: 1px; }
 .quality-seg.quality-failed         { background: #ef4444; }
-.quality-seg.quality-deficient      { background: #fb923c; }
-.quality-seg.quality-unsatisfactory { background: #fbbf24; }
+.quality-seg.quality-very_deficient { background: #fb923c; }
+.quality-seg.quality-deficient      { background: #fbbf24; }
 .quality-seg.quality-satisfactory   { background: #475569; }
 .quality-seg.quality-good           { background: #06b6d4; }
 .quality-seg.quality-very_good      { background: #10b981; }
@@ -70,8 +70,8 @@ const qualityBuckets = computed(() => {
 }
 .quality-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
 .quality-dot.quality-failed         { background: #ef4444; }
-.quality-dot.quality-deficient      { background: #fb923c; }
-.quality-dot.quality-unsatisfactory { background: #fbbf24; }
+.quality-dot.quality-very_deficient { background: #fb923c; }
+.quality-dot.quality-deficient      { background: #fbbf24; }
 .quality-dot.quality-satisfactory   { background: #475569; }
 .quality-dot.quality-good           { background: #06b6d4; }
 .quality-dot.quality-very_good      { background: #10b981; }
@@ -96,8 +96,8 @@ const qualityBuckets = computed(() => {
 
 @media print {
   .quality-seg.quality-failed         { background: #c0392b !important; }
-  .quality-seg.quality-deficient      { background: #e67e22 !important; }
-  .quality-seg.quality-unsatisfactory { background: #f1c40f !important; }
+  .quality-seg.quality-very_deficient { background: #e67e22 !important; }
+  .quality-seg.quality-deficient      { background: #f1c40f !important; }
   .quality-seg.quality-satisfactory   { background: #7f8c8d !important; }
   .quality-seg.quality-good           { background: #16a085 !important; }
   .quality-seg.quality-very_good      { background: #27ae60 !important; }

@@ -1702,11 +1702,13 @@ module.exports = function createEventsRouter({
   // when a primary withdraws.
   // -------------------------------------------------------------
   async function rankedDiversForAdvance(client, parentEventId) {
-    // Re-uses the same WA tie-break the live scoreboard does
-    // (cumulative_total DESC, dives_so_far_desc DESC). Returns one
-    // row per diver with their final cumulative rank, dive_id by
-    // round, and display_order from the parent event so the
-    // 'inherit' dive-order mode can carry it forward.
+    // Ranks divers by cumulative total with World Aquatics Art 4.1.5
+    // shared-place ties (equal totals share a rank). Returns one row
+    // per diver with their final cumulative rank, dive_id by round,
+    // and display_order from the parent event so the 'inherit'
+    // dive-order mode can carry it forward. The advance cut-off keeps
+    // every diver sharing the boundary rank (WC §1.5.1: all tied
+    // divers advance).
     const r = await client.query(
       `WITH ${perDivePointsCte({
          name:        "dive_totals",
@@ -1714,14 +1716,13 @@ module.exports = function createEventsRouter({
        })},
        cumulative AS (
          SELECT competitor_id,
-                SUM(round_total) AS total,
-                array_agg(round_total ORDER BY round_total DESC, round_number) AS dives_desc
+                SUM(round_total) AS total
          FROM dive_totals
          GROUP BY competitor_id
        ),
        ranked AS (
          SELECT competitor_id, total,
-                RANK() OVER (ORDER BY total DESC, dives_desc DESC) AS rnk
+                RANK() OVER (ORDER BY total DESC) AS rnk
          FROM cumulative
        )
        SELECT r.competitor_id, r.total, r.rnk,
@@ -1893,8 +1894,18 @@ module.exports = function createEventsRouter({
             error: "Parent event has no scored divers to advance",
           });
         }
-        const primaries = ranked.slice(0, topN);
-        const reserveRows = ranked.slice(topN, topN + resN);
+        // Diving World Cup §1.5.1 (and WA Art 4.1.9.3): when a tie
+        // straddles the advance cut-off, ALL tied divers advance — so
+        // the primary count can exceed top_n. `ranked` is RANK()-ordered
+        // on total (equal totals share a rank), so we keep every diver
+        // whose rank is at or better than the diver on the boundary.
+        const boundaryRank = ranked[topN - 1]?.rnk ?? null;
+        const primaries = boundaryRank == null
+          ? ranked.slice(0, topN)
+          : ranked.filter((r) => r.rnk <= boundaryRank);
+        const reserveRows = ranked
+          .filter((r) => boundaryRank == null || r.rnk > boundaryRank)
+          .slice(0, resN);
 
         // Compute display_order for primaries per the chosen mode.
         // 'inherit' — copy parent_display_order, then re-number 1..N
@@ -2177,17 +2188,22 @@ module.exports = function createEventsRouter({
        })},
        cumulative AS (
          SELECT competitor_id,
-                SUM(round_total) AS total,
-                array_agg(round_total ORDER BY round_total DESC, round_number) AS dives_desc
+                SUM(round_total) AS total
          FROM dive_totals
          GROUP BY competitor_id
        ),
        ranked AS (
-         SELECT competitor_id, total, dives_desc,
-                RANK() OVER (ORDER BY total DESC, dives_desc DESC) AS rnk
+         /* World Aquatics Art 4.1.5: equal totals share a rank.
+            The 12-slot H2H bracket still needs a strict 1..12 order,
+            so rows are ordered deterministically by name within a
+            shared rank. A genuine tie on the seeding cut-off must be
+            resolved by a referee dive-off (tiebreak_dive_offs), per
+            WC §1.4.2.2 — not by a points-based tie-break. */
+         SELECT competitor_id, total,
+                RANK() OVER (ORDER BY total DESC) AS rnk
          FROM cumulative
        )
-       SELECT r.competitor_id, r.total, r.rnk, r.dives_desc,
+       SELECT r.competitor_id, r.total, r.rnk,
               u.org_id, u.full_name, u.username,
               o.country_code,
               MIN(cdl.display_order) AS parent_display_order,
@@ -2196,7 +2212,7 @@ module.exports = function createEventsRouter({
                 'dive_id',      cdl.dive_id
               ) ORDER BY cdl.round_number) FILTER (WHERE cdl.dive_id IS NOT NULL) AS dives,
               ROW_NUMBER() OVER (PARTITION BY u.org_id
-                                 ORDER BY r.total DESC, r.dives_desc DESC) AS org_rank
+                                 ORDER BY r.total DESC, u.full_name ASC) AS org_rank
          FROM ranked r
          JOIN users u ON u.id = r.competitor_id
          JOIN organisations o ON o.id = u.org_id
@@ -2204,7 +2220,7 @@ module.exports = function createEventsRouter({
            ON cdl.event_id = $1
           AND cdl.competitor_id = r.competitor_id
           AND cdl.withdrawn_at IS NULL
-        GROUP BY r.competitor_id, r.total, r.rnk, r.dives_desc,
+        GROUP BY r.competitor_id, r.total, r.rnk,
                  u.org_id, u.full_name, u.username, o.country_code
         ORDER BY r.rnk ASC, u.full_name ASC`,
       [parentEventId],

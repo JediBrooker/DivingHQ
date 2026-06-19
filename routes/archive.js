@@ -252,8 +252,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
                     u.full_name, o.country_code, cl.name AS club_name,
                     p.partner_id AS partner_id,
                     pu.full_name AS partner_name, pl.country_code AS partner_country,
-                    SUM(pd.dive_points) AS total,
-                    array_agg(pd.dive_points ORDER BY pd.dive_points DESC) AS dives_desc
+                    SUM(pd.dive_points) AS total
              FROM per_dive pd
              JOIN users u ON u.id = pd.competitor_id
              JOIN organisations o ON o.id = u.org_id
@@ -273,20 +272,22 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
              /* Pad the team-standings shape so the UNION below
                 aligns: team rows have no individual competitor
                 so competitor_id is NULL. */
-             SELECT NULL::uuid AS competitor_id, * , NULL::numeric[] AS dives_desc
+             SELECT NULL::uuid AS competitor_id, *
              FROM team_standings
            )
            SELECT competitor_id, full_name, country_code, club_name,
-                  partner_id, partner_name, partner_country, total
+                  partner_id, partner_name, partner_country, total,
+                  RANK() OVER (ORDER BY total DESC) AS rank
            FROM (
              SELECT * FROM team_standings_padded
              UNION ALL
              SELECT * FROM comp_standings
            ) merged
-           /* World Aquatics tie-break: highest single dive desc, then second
-              highest, etc. team rows have NULL dives_desc which
-              sorts last with NULLS LAST (default DESC). */
-           ORDER BY total DESC, dives_desc DESC NULLS LAST`,
+           /* World Aquatics Art 4.1.5: equal totals share a place, so
+              RANK() over total alone gives the shared placing. Rows are
+              ordered by total then name for a stable, rank-neutral
+              display order. */
+           ORDER BY total DESC, full_name ASC`,
           [req.params.eventId],
         ),
         reads.query(

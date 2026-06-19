@@ -1512,7 +1512,7 @@ onMounted(async () => {
           <template v-if="standingsTab === 'final'">
             <p v-if="!standings.length" style="color:var(--text-3);font-size:12px;text-align:center;padding:2rem">No standings yet</p>
             <div v-for="(s, i) in standings" :key="i" class="standing">
-              <div :class="['standing-rank', rankClass(i)]">{{ i + 1 }}</div>
+              <div :class="['standing-rank', rankClass((s.rank ?? i + 1) - 1)]">{{ s.rank ?? i + 1 }}</div>
               <div class="standing-id">
                 <div class="standing-name">
                   <RouterLink v-if="s.competitor_id"
@@ -1532,13 +1532,12 @@ onMounted(async () => {
                 <div v-if="s.club_name" class="standing-club">{{ s.club_name }}</div>
               </div>
               <div class="standing-score">
-                <!-- "=" marker when two divers shared the raw total
-                     but were separated by the World Aquatics tie-break rule
-                     (highest single dive, then second-highest, …).
-                     Spectators and coaches see this and understand
-                     why two identical totals weren't a literal tie. -->
+                <!-- "=" marker when two or more divers share this place
+                     on an equal total. Per World Aquatics Art 4.1.5 they
+                     share the placing (no tie-break) — the marker tells
+                     spectators the identical totals are a genuine tie. -->
                 <span v-if="s.is_tied_on_total" class="tie-marker"
-                      v-tip="'Tied on total — separated by World Aquatics tie-break (highest single dive, then second-highest, etc.)'">=</span>
+                      v-tip="'Tied on total — shares this place (World Aquatics Art 4.1.5: equal totals are a tie)'">=</span>
                 {{ parseFloat(s.total).toFixed(1) }}
               </div>
             </div>

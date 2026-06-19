@@ -489,9 +489,13 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
   //
   // Cross-tier ties are impossible by construction (a position-1
   // diver can't tie a position-7 diver — they're in different
-  // pools). Within-tier ties resolve by the WA tie-break key
-  // (cumulative_total DESC, dives_desc DESC) — same shape the
-  // standard scoreboard uses.
+  // pools). Within a tier, rows are ordered by total then name for a
+  // stable, rank-neutral order (World Aquatics Art 4.1.5 declares
+  // equal totals a tie rather than splitting them on a points-based
+  // tie-break). NOTE: the assembled 1-12 SF ranking still labels each
+  // tier position strictly by index; surfacing shared placings for a
+  // genuine within-tier tie (relevant to WC §3.1.2 prize splitting)
+  // is a separate follow-up.
   router.get(
     "/api/events/:id/super-final/rankings",
     async (req, res) => {
@@ -535,14 +539,12 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
           `WITH ${perDivePointsCte()},
            per_competitor AS (
              SELECT competitor_id,
-                    COALESCE(SUM(dive_points), 0) AS total,
-                    array_agg(dive_points ORDER BY dive_points DESC NULLS LAST) AS dives_desc
+                    COALESCE(SUM(dive_points), 0) AS total
                FROM per_dive
               GROUP BY competitor_id
            )
            SELECT cdl.competitor_id, u.full_name, o.country_code, cl.name AS club_name,
-                  COALESCE(MAX(pc.total), 0) AS total,
-                  COALESCE(MAX(pc.dives_desc), ARRAY[]::numeric[]) AS dives_desc
+                  COALESCE(MAX(pc.total), 0) AS total
              FROM competitor_dive_lists cdl
              JOIN users u ON u.id = cdl.competitor_id
              JOIN organisations o ON o.id = u.org_id
@@ -552,8 +554,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
               AND cdl.withdrawn_at IS NULL
               AND cdl.is_reserve = FALSE
             GROUP BY cdl.competitor_id, u.full_name, o.country_code, cl.name
-            ORDER BY COALESCE(MAX(pc.total), 0) DESC,
-                     COALESCE(MAX(pc.dives_desc), ARRAY[]::numeric[]) DESC`,
+            ORDER BY COALESCE(MAX(pc.total), 0) DESC, u.full_name ASC`,
           [req.params.id],
         );
         const finalistIds = new Set(fTier.rows.map((r) => r.competitor_id));

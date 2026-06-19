@@ -107,36 +107,40 @@ test("calc_dive_points: empty scores returns 0", async (t) => {
 // calc_synchro_dive_points — synchronised pairs
 // ─────────────────────────────────────────────────────────────
 
-test("synchro: 9-judge panel, no drops on exec, drop high+low on sync", async (t) => {
+test("synchro: 9-judge panel, cancel hi+lo exec across both divers, drop hi+lo sync", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
-  // Judges 1-2 score Diver A exec, 3-4 score Diver B, 5-9 sync.
-  // Exec A: 7+8 = 15
-  // Exec B: 7+8 = 15
+  // WA Article 9.1.5.4: judges 1-2 score Diver A exec, 3-4 Diver B,
+  // 5-9 sync. Execution is cancelled BETWEEN BOTH Athletes — pool the
+  // four exec marks, drop one high + one low, keep the middle two.
+  // Exec pool: [7,8,7,8] → sorted [7,7,8,8] → drop 7 + 8 → keep 7+8 = 15
   // Sync: [5,6,7,8,9] → drop 5+9 → 6+7+8 = 21
-  // Sum = 51, × DD 2.0 × 0.6 = 61.2
+  // Sum = 36, × DD 2.0 × 0.6 = 43.2
   const v = await synchroValue(
     [1, 2, 3, 4, 5, 6, 7, 8, 9],
     [7, 8, 7, 8, 5, 6, 7, 8, 9],
     9,
     2.0,
   );
-  assert.equal(v, 61.2);
+  assert.equal(v, 43.2);
 });
 
-test("synchro: 7-judge panel, all grouped scores count", async (t) => {
+test("synchro: 7-judge panel, cancel hi+lo exec across both divers, keep all 3 sync", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   // Judges 1-2 score Diver A exec, 3-4 score Diver B, 5-7 sync.
-  // Exec A: 7+8 = 15
-  // Exec B: 6+7 = 13
+  // The 7-judge panel mirrors the 9-judge execution rule (it has the
+  // same 2+2 layout): pool the four exec marks, drop 1 high + 1 low,
+  // keep the middle 2. The 3 sync marks are all kept. Five counted
+  // marks keep the panel on the same × 0.6 scale as the 9/11-judge.
+  // Exec pool: [7,8,6,7] → sorted [6,7,7,8] → drop 6 + 8 → keep 7+7 = 14
   // Sync: 5+7+9 = 21
-  // Sum = 49, × DD 2.0 × 0.6 = 58.8
+  // Sum = 35, × DD 2.0 × 0.6 = 42.0
   const v = await synchroValue(
     [1, 2, 3, 4, 5, 6, 7],
     [7, 8, 6, 7, 5, 7, 9],
     7,
     2.0,
   );
-  assert.equal(v, 58.8);
+  assert.equal(v, 42.0);
 });
 
 test("synchro: 11-judge panel, middle 1 of 3 exec, middle 3 of 5 sync", async (t) => {

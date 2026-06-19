@@ -97,13 +97,11 @@ module.exports = function createScoreboardRouter({
                     AND is_reserve = FALSE
                )`,
            })},
-           /* Team-event branch: aggregate by team. dives_desc is
-              the descending-sorted array of dive points used as the
-              World Aquatics tie-break key when two teams share a raw total.
-              public_id is computed in Node from team_id below — we
-              expose team_id here so the router can hash it. The
-              spectator-facing JSON drops team_id and only emits
-              public_id, so internal UUIDs still aren't leaked. */
+           /* Team-event branch: aggregate by team. public_id is
+              computed in Node from team_id below — we expose team_id
+              here so the router can hash it. The spectator-facing
+              JSON drops team_id and only emits public_id, so internal
+              UUIDs still aren't leaked. */
            team_standings AS (
              SELECT t.id AS team_id,
                     t.name AS full_name,
@@ -112,8 +110,7 @@ module.exports = function createScoreboardRouter({
                     NULL::varchar AS partner_name,
                     NULL::uuid AS partner_id,
                     NULL::char(3) AS partner_country,
-                    SUM(pd.dive_points) AS total,
-                    array_agg(pd.dive_points ORDER BY pd.dive_points DESC) AS dives_desc
+                    SUM(pd.dive_points) AS total
              FROM per_dive pd
              JOIN teams t ON t.id = pd.team_id
              WHERE (SELECT event_type FROM events WHERE id = $1) = 'team'
@@ -128,8 +125,7 @@ module.exports = function createScoreboardRouter({
                     u.full_name, o.country_code, cl.name AS club_name,
                     p.partner_id AS partner_id,
                     pu.full_name AS partner_name, pl.country_code AS partner_country,
-                    SUM(pd.dive_points) AS total,
-                    array_agg(pd.dive_points ORDER BY pd.dive_points DESC) AS dives_desc
+                    SUM(pd.dive_points) AS total
              FROM per_dive pd
              JOIN users u ON u.id = pd.competitor_id
              JOIN organisations o ON o.id = u.org_id
@@ -150,25 +146,27 @@ module.exports = function createScoreboardRouter({
            merged AS (
              SELECT competitor_id, NULL::uuid AS team_id,
                     full_name, country_code, club_name,
-                    partner_id, partner_name, partner_country, total, dives_desc
+                    partner_id, partner_name, partner_country, total
              FROM comp_standings
              UNION ALL
              SELECT NULL::uuid AS competitor_id, team_id,
                     full_name, country_code, club_name,
-                    partner_id, partner_name, partner_country, total, dives_desc
+                    partner_id, partner_name, partner_country, total
              FROM team_standings
            )
-           /* World Aquatics tie-break ordering: total desc, then highest dive,
-              then second-highest, etc. (Postgres element-wise array
-              comparison gives that.) is_tied_on_total flags pairs
-              that shared the raw total but were separated by the
-              tie-break, so the UI can hint at why. */
+           /* World Aquatics Art 4.1.5: equal totals share a place.
+              RANK() gives shared-place semantics (two divers on the
+              same total both get the same rank; the next rank skips).
+              is_tied_on_total flags rows sharing a place so the UI
+              can mark the tie. Rows are ordered by total desc then
+              name for a stable, rank-neutral display order. */
            SELECT competitor_id, team_id,
                   full_name, country_code, club_name,
                   partner_id, partner_name, partner_country, total,
+                  RANK() OVER (ORDER BY total DESC) AS rank,
                   COUNT(*) OVER (PARTITION BY total) > 1 AS is_tied_on_total
            FROM merged
-           ORDER BY total DESC, dives_desc DESC`,
+           ORDER BY total DESC, full_name ASC`,
           [req.params.eventId],
         ),
         // History: each row is a fully-judged dive with its
@@ -403,29 +401,18 @@ module.exports = function createScoreboardRouter({
                     PARTITION BY competitor_id
                     ORDER BY round_number
                     ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-                  ) AS cumulative_total,
-                  /* All dives this competitor has done up to AND
-                     including this round, sorted desc — the World Aquatics
-                     tie-break key (highest single dive, then
-                     second-highest, etc.). Postgres element-wise
-                     array DESC ordering gives the World Aquatics semantics. */
-                  array_agg(round_total) OVER (
-                    PARTITION BY competitor_id
-                    ORDER BY round_total DESC, round_number
-                    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-                  ) AS dives_so_far_desc
+                  ) AS cumulative_total
            FROM dive_totals_with_carry
          ),
          ranked AS (
-           /* Apply World Aquatics tie-break to per-round rankings so the
-              up/down movement arrows on the live scoreboard match
-              what the standings panel shows. Previously the
-              leaderboard ordered by total DESC only, disagreeing
-              with the standings panel right next to it. */
+           /* World Aquatics Art 4.1.5: equal cumulative totals share a
+              place. RANK() over cumulative_total alone gives shared-
+              place semantics, matching the standings panel beside it
+              (two divers level on total both get the same rank). */
            SELECT *,
                   RANK() OVER (
                     PARTITION BY round_number
-                    ORDER BY cumulative_total DESC, dives_so_far_desc DESC
+                    ORDER BY cumulative_total DESC
                   ) AS rnk
            FROM cumulative
          ),

@@ -175,8 +175,8 @@
 /**
  * @typedef {Object} QualityMix
  * @property {number} failed
+ * @property {number} very_deficient
  * @property {number} deficient
- * @property {number} unsatisfactory
  * @property {number} satisfactory
  * @property {number} good
  * @property {number} very_good
