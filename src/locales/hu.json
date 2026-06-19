@@ -645,13 +645,12 @@
     },
     "shortcut": {
       "next_diver": "Tovább a sor következő ugrójára.",
-      "top_of_round": "Állítsa vissza a sort az aktuális forduló tetejére.",
       "fail": "Jelölje meg az aktuális ugrást sikertelennek (minden bíró 0 pont).",
       "redive": "Engedélyezze az aktuális ugrónak az ismételt ugrást.",
       "hold": "Szüneteltesse a versenyt — megállítja az órát és az aktív ugró sávot.",
-      "live_toggle": "Váltja az esemény nyilvános eredményjelzőjének élő közvetítés jelzőjét.",
-      "queue_nav": "Mozgassa a kurzort a várakozók sorában.",
-      "help_overlay": "Nyissa meg az alkalmazáson belüli billentyűparancs segédtáblát."
+      "focus_pool": "Váltson a fókuszban lévő medencére. Két vagy több élő versenyszám esetén az 1 az első medence, a 2 a második, és így tovább.",
+      "announce": "Közlés — küldje át a fókuszban lévő medence állásait a nyilvános eredménytáblára.",
+      "cap": "Zárja le a fókuszban lévő medence aktuális ugrások pontszámait (referee 2.0 cap)."
     },
     "glossary": {
       "lede": "A műugrás szókincse, amivel már az első napon találkozni fog.",

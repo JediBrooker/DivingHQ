@@ -634,13 +634,12 @@
     },
     "shortcut": {
       "next_diver": "Prijeđite na sljedećeg ronioca u redu.",
-      "top_of_round": "Vratite red na početak trenutnog kola.",
       "fail": "Označite trenutni skok kao neuspješan (0 kod svih sudaca).",
       "redive": "Dodijelite trenutnom roniocu ponovni pokušaj.",
       "hold": "Zaustavite natjecanje — pauzira sat i banner aktivnog ronioca.",
-      "live_toggle": "Uključite/isključite prijenos uživo na javnom semaforu natjecanja.",
-      "queue_nav": "Pomaknite kursor kroz red pripravnosti.",
-      "help_overlay": "Otvorite preklopni list s prečacima tipkovnice unutar aplikacije."
+      "focus_pool": "Prebacite fokusirani bazen. Ako su uživo dva ili više događaja, 1 označava prvi bazen, 2 drugi, i tako dalje.",
+      "announce": "Objavite — pošaljite poredak fokusiranog bazena na javni prikaz rezultata.",
+      "cap": "Ograničite trenutne bodove skokova fokusiranog bazena (referee 2.0 cap)."
     },
     "glossary": {
       "lede": "Pojmovnik skokova koji ćete susresti prvog dana.",

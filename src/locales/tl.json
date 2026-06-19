@@ -634,13 +634,12 @@
     },
     "shortcut": {
       "next_diver": "Lumipat sa susunod na diver sa pila.",
-      "top_of_round": "Ibalik ang pila sa simula ng kasalukuyang round.",
       "fail": "Markahan ang kasalukuyang dive bilang nabigo (0 sa lahat ng hurado).",
       "redive": "Ibigay sa kasalukuyang diver ang isang redive.",
       "hold": "Pansamantalang itigil ang paligsahan — pinapahinto ang orasan at ang banner ng aktibong diver.",
-      "live_toggle": "I-toggle ang flag ng live-broadcast para sa pampublikong scoreboard ng paligsahan.",
-      "queue_nav": "Ilipat ang cursor sa pila ng on-deck.",
-      "help_overlay": "Buksan ang cheat sheet ng keyboard sa loob ng app."
+      "focus_pool": "Palitan ang naka-focus na pool. Kapag may dalawa o higit pang live na kaganapan, ang 1 ang unang pool, ang 2 ang pangalawa, at iba pa.",
+      "announce": "Ianunsyo — ilabas sa pampublikong scoreboard ang mga ranggo ng naka-focus na pool.",
+      "cap": "Itakda ang limitasyon sa kasalukuyang puntos ng dive ng naka-focus na pool (referee 2.0 cap)."
     },
     "glossary": {
       "lede": "Talasalitaan ng diving na makikilala ninyo sa unang araw.",

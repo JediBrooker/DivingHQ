@@ -645,13 +645,12 @@
     },
     "shortcut": {
       "next_diver": "Zum nächsten Springer in der Warteschlange wechseln.",
-      "top_of_round": "Die Warteschlange auf den Anfang der aktuellen Runde zurücksetzen.",
       "fail": "Den aktuellen Sprung als fehlgeschlagen markieren (alle Richter: 0 Punkte).",
       "redive": "Dem aktuellen Springer eine Wiederholung gewähren.",
       "hold": "Den Wettkampf anhalten — pausiert die Uhr und das Banner des aktiven Springers.",
-      "live_toggle": "Den Live-Übertragungsstatus für die öffentliche Anzeigetafel des Wettkampfs umschalten.",
-      "queue_nav": "Den Cursor durch die Warteschlange der nächsten Springer bewegen.",
-      "help_overlay": "Das In-App-Overlay mit den Tastenkürzeln öffnen."
+      "focus_pool": "Wechseln Sie das fokussierte Becken. Bei zwei oder mehr gleichzeitig laufenden Veranstaltungen ist 1 das erste Becken, 2 das zweite usw.",
+      "announce": "Ankündigen — Übertragen Sie die Rangliste des fokussierten Beckens auf die öffentliche Anzeigetafel.",
+      "cap": "Begrenzen Sie die aktuellen Wertungen der Sprünge des fokussierten Beckens (Referee 2.0 Cap)."
     },
     "glossary": {
       "lede": "Sprungterminologie, der Sie am ersten Tag begegnen werden.",

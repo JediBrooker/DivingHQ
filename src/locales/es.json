@@ -634,13 +634,12 @@
     },
     "shortcut": {
       "next_diver": "Avanza al siguiente clavadista en la cola.",
-      "top_of_round": "Restablece la cola al inicio de la ronda actual.",
       "fail": "Marca el salto actual como fallido (0 en todas las puntuaciones).",
       "redive": "Concede al clavadista actual una repetición.",
       "hold": "Pausa la competición — detiene el cronómetro y el banner del clavadista activo.",
-      "live_toggle": "Activa/desactiva la bandera de emisión en directo para el marcador público de la competición.",
-      "queue_nav": "Mueve el cursor por la cola de próximos.",
-      "help_overlay": "Abre la hoja de atajos del teclado en la aplicación."
+      "focus_pool": "Cambiar la piscina seleccionada. Con dos o más eventos en directo, 1 es la primera piscina, 2 la segunda, y así sucesivamente.",
+      "announce": "Anunciar — enviar la clasificación de la piscina seleccionada al marcador público.",
+      "cap": "Aplicar un tope a las puntuaciones actuales de los saltos de la piscina seleccionada (tope del árbitro 2.0)."
     },
     "glossary": {
       "lede": "Vocabulario de clavados con el que te toparás desde el primer día.",

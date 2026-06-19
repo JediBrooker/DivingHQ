@@ -645,13 +645,12 @@
     },
     "shortcut": {
       "next_diver": "Przejdź do następnego zawodnika w kolejce.",
-      "top_of_round": "Przywróć kolejkę na początek bieżącej rundy.",
       "fail": "Oznacz bieżący skok jako nieudany (0 u wszystkich sędziów).",
       "redive": "Przyznaj bieżącemu zawodnikowi powtórkę skoku.",
       "hold": "Wstrzymaj zawody — pauzuje zegar i baner aktywnego zawodnika.",
-      "live_toggle": "Przełącz znacznik transmisji na żywo dla publicznej tablicy wyników zawodów.",
-      "queue_nav": "Przemieszczaj kursor po kolejce gotowych zawodników.",
-      "help_overlay": "Otwórz wbudowaną nakładkę z podpowiedziami skrótów klawiaturowych."
+      "focus_pool": "Przełącz aktualnie wybraną pulę. Jeśli na żywo są dwa lub więcej wydarzeń, 1 oznacza pierwszą pulę, 2 drugą i tak dalej.",
+      "announce": "Ogłoś — opublikuj klasyfikację aktualnie wybranej puli na publicznej tablicy wyników.",
+      "cap": "Zablokuj bieżące noty skoków wybranej puli (referee 2.0 cap)."
     },
     "glossary": {
       "lede": "Terminologia skoków, z którą zetkną się Państwo już pierwszego dnia.",

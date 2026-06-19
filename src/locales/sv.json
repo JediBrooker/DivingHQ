@@ -645,13 +645,12 @@
     },
     "shortcut": {
       "next_diver": "Gå vidare till nästa dykare i kön.",
-      "top_of_round": "Återställ kön till början av aktuell omgång.",
       "fail": "Markera det aktuella hoppet som underkänt (0 från alla domare).",
       "redive": "Bevilja den aktuella dykaren ett omhopp.",
       "hold": "Pausa tävlingen — pausar klockan och bannern för aktiv dykare.",
-      "live_toggle": "Slå på/av livesändningsflaggan för tävlingens publika resultattavla.",
-      "queue_nav": "Flytta markören genom kön för dykare på tur.",
-      "help_overlay": "Öppna appens snabbreferens för tangentbordet."
+      "focus_pool": "Växla vilken pool som är i fokus. När två eller flera evenemang pågår är 1 den första poolen, 2 den andra, och så vidare.",
+      "announce": "Annonsera — skicka den fokuserade poolens ställning till den publika resultattavlan.",
+      "cap": "Sätt ett tak för den fokuserade poolens nuvarande dykpoäng (referee 2.0 cap)."
     },
     "glossary": {
       "lede": "Dyktermer som ni stöter på redan första dagen.",

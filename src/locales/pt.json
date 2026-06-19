@@ -645,13 +645,12 @@
     },
     "shortcut": {
       "next_diver": "Avançar para o próximo mergulhador na fila.",
-      "top_of_round": "Repor a fila no início da ronda atual.",
       "fail": "Assinalar o mergulho atual como falhado (0 por todos os juízes).",
       "redive": "Conceder ao mergulhador atual uma repetição do mergulho.",
       "hold": "Suspender a competição — pausa o cronómetro e a faixa do mergulhador em destaque.",
-      "live_toggle": "Alternar a bandeira de transmissão em direto do quadro público de resultados da competição.",
-      "queue_nav": "Mover o cursor pela fila de preparação.",
-      "help_overlay": "Abrir a sobreposição com o resumo de atalhos do teclado na aplicação."
+      "focus_pool": "Alterar a piscina em foco. Com dois ou mais eventos em direto, 1 é a primeira piscina, 2 a segunda, e assim sucessivamente.",
+      "announce": "Anunciar — enviar a classificação da piscina em foco para o placar público.",
+      "cap": "Limitar as pontuações atuais dos saltos da piscina em foco (cap do árbitro 2.0)."
     },
     "glossary": {
       "lede": "Vocabulário de saltos com que se deparará no primeiro dia.",

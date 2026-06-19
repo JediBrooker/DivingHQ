@@ -634,13 +634,12 @@
     },
     "shortcut": {
       "next_diver": "Lanjutkan ke penyelam berikutnya dalam antrean.",
-      "top_of_round": "Kembalikan antrean ke awal putaran saat ini.",
       "fail": "Tandai lompatan saat ini sebagai gagal (0 dari semua juri).",
       "redive": "Berikan redive kepada penyelam saat ini.",
       "hold": "Tahan pertandingan — menjeda jam dan spanduk penyelam aktif.",
-      "live_toggle": "Alihkan bendera siaran langsung untuk papan skor publik pertandingan.",
-      "queue_nav": "Pindahkan kursor melalui antrean on-deck.",
-      "help_overlay": "Buka lembar contekan keyboard di aplikasi."
+      "focus_pool": "Beralih ke kolam yang difokuskan. Jika dua atau lebih acara sedang berlangsung, 1 adalah kolam pertama, 2 adalah kolam kedua, dan seterusnya.",
+      "announce": "Umumkan — tampilkan peringkat kolam yang difokuskan di papan skor publik.",
+      "cap": "Batasi skor lompatan saat ini pada kolam yang difokuskan (pembatas referee 2.0)."
     },
     "glossary": {
       "lede": "Kosakata diving yang akan Anda temui sejak hari pertama.",

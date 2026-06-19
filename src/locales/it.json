@@ -645,13 +645,12 @@
     },
     "shortcut": {
       "next_diver": "Passare al tuffatore successivo in coda.",
-      "top_of_round": "Riportare la coda all'inizio del round corrente.",
       "fail": "Segnare il tuffo corrente come fallito (0 da tutti i giudici).",
       "redive": "Concedere al tuffatore corrente una ripetizione.",
       "hold": "Mettere in pausa la gara — sospende il cronometro e il banner del tuffatore attivo.",
-      "live_toggle": "Attivare/disattivare la modalità di trasmissione live per il tabellone pubblico della gara.",
-      "queue_nav": "Spostare il cursore attraverso la coda dei tuffatori in attesa.",
-      "help_overlay": "Aprire la guida rapida dei tasti integrata nell'app."
+      "focus_pool": "Cambia il pool focalizzato. Con due o più eventi in diretta, 1 è il primo pool, 2 il secondo, e così via.",
+      "announce": "Annuncia — invia la classifica del pool focalizzato al tabellone pubblico.",
+      "cap": "Applica il cap ai punteggi correnti dei tuffi del pool focalizzato (cap arbitro 2.0)."
     },
     "glossary": {
       "lede": "Vocabolario dei tuffi che incontrerete fin dal primo giorno.",
