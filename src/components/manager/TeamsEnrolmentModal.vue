@@ -97,9 +97,9 @@ async function removeTeamFromEvent(team) {
 
 <template>
   <div class="modal-backdrop" @click="$emit('close')"></div>
-  <div class="modal teams-modal" @click.stop>
+  <div class="modal teams-modal" @click.stop role="dialog" aria-modal="true" aria-labelledby="mgr-teams-title">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-      <h2 style="font-size:20px">
+      <h2 id="mgr-teams-title" style="font-size:20px">
         {{ $t('manager.modals.teams_modal_in_event_prefix') }} <span style="color:var(--cyan)">{{ event?.name }}</span>
       </h2>
       <button class="btn btn-ghost btn-sm" @click="$emit('close')">{{ $t('manager.modals.close_x') }}</button>

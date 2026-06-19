@@ -74,11 +74,11 @@ async function downloadMeetReadinessCsv() {
 
 <template>
   <div class="modal-backdrop" @click.self="$emit('close')"></div>
-  <div class="modal readiness-modal" @click.stop>
+  <div class="modal readiness-modal" @click.stop role="dialog" aria-modal="true" aria-labelledby="mgr-readiness-title">
     <div class="readiness-head">
       <div>
         <div class="teams-section-label">Meet Readiness</div>
-        <h2 class="readiness-title">{{ meet?.name }}</h2>
+        <h2 id="mgr-readiness-title" class="readiness-title">{{ meet?.name }}</h2>
       </div>
       <div class="readiness-actions">
         <button class="btn btn-ghost btn-sm"

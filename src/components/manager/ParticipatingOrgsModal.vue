@@ -148,11 +148,11 @@ async function removePartOrg(org) {
 
 <template>
   <div class="modal-backdrop" @click="$emit('close')"></div>
-  <div class="modal teams-modal" @click.stop>
+  <div class="modal teams-modal" @click.stop role="dialog" aria-modal="true" aria-labelledby="mgr-orgs-title">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
       <div>
         <div class="teams-section-label">Participating Federations</div>
-        <h2 style="font-size:20px;line-height:1.1">
+        <h2 id="mgr-orgs-title" style="font-size:20px;line-height:1.1">
           {{ event?.name }}
         </h2>
       </div>

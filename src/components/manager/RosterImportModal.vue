@@ -94,11 +94,11 @@ function rosterTemplateHeader(ev) {
 
 <template>
   <div class="modal-backdrop" @click="$emit('close')"></div>
-  <div class="modal roster-modal" @click.stop>
+  <div class="modal roster-modal" @click.stop role="dialog" aria-modal="true" aria-labelledby="mgr-roster-title">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
       <div>
         <div class="teams-section-label">{{ $t('manager.modals.roster_import_section_label') }}</div>
-        <h2 style="font-size:20px;line-height:1">{{ event?.name }}</h2>
+        <h2 id="mgr-roster-title" style="font-size:20px;line-height:1">{{ event?.name }}</h2>
       </div>
       <button class="btn btn-ghost btn-sm" @click="$emit('close')">{{ $t('manager.modals.close') }}</button>
     </div>

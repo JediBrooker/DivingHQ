@@ -236,9 +236,9 @@ defineExpose({
   <!-- Super Final — Seed Head-to-Head modal. Mirrors the
        advance modal: preview + a single confirm action. -->
   <div v-if="h2hModalOpen" class="modal-backdrop" @click.self="closeH2hModal">
-    <div class="modal modal-advance" @click.stop style="max-width:720px">
+    <div class="modal modal-advance" @click.stop style="max-width:720px" role="dialog" aria-modal="true" aria-labelledby="mgr-sf-h2h-title">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px;font-style:italic">🥊 Seed Head-to-Head</h2>
+        <h2 id="mgr-sf-h2h-title" style="font-size:22px;font-style:italic">🥊 Seed Head-to-Head</h2>
         <button class="btn btn-ghost btn-sm" @click="closeH2hModal">Cancel ✕</button>
       </div>
 
@@ -321,9 +321,9 @@ defineExpose({
   <!-- Super Final — H2H pair results modal. Read-only,
        opens on Live/Completed super_final_h2h events. -->
   <div v-if="h2hResultsModalOpen" class="modal-backdrop" @click.self="closeH2hResultsModal">
-    <div class="modal modal-advance" @click.stop style="max-width:720px">
+    <div class="modal modal-advance" @click.stop style="max-width:720px" role="dialog" aria-modal="true" aria-labelledby="mgr-sf-h2hres-title">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px;font-style:italic">H2H — pair results</h2>
+        <h2 id="mgr-sf-h2hres-title" style="font-size:22px;font-style:italic">H2H — pair results</h2>
         <button class="btn btn-ghost btn-sm" @click="closeH2hResultsModal">Close ✕</button>
       </div>
 
@@ -353,9 +353,9 @@ defineExpose({
 
   <!-- Super Final — Seed Semi Final modal. -->
   <div v-if="sfSeedModalOpen" class="modal-backdrop" @click.self="closeSfSeedModal">
-    <div class="modal modal-advance" @click.stop style="max-width:520px">
+    <div class="modal modal-advance" @click.stop style="max-width:520px" role="dialog" aria-modal="true" aria-labelledby="mgr-sf-semi-title">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px;font-style:italic">Seed Semi Final</h2>
+        <h2 id="mgr-sf-semi-title" style="font-size:22px;font-style:italic">Seed Semi Final</h2>
         <button class="btn btn-ghost btn-sm" @click="closeSfSeedModal">Cancel ✕</button>
       </div>
       <p class="hint" style="margin-bottom:1rem" v-if="sfSeedEvent">
@@ -382,9 +382,9 @@ defineExpose({
 
   <!-- Super Final — Seed Final modal. -->
   <div v-if="fSeedModalOpen" class="modal-backdrop" @click.self="closeFSeedModal">
-    <div class="modal modal-advance" @click.stop style="max-width:520px">
+    <div class="modal modal-advance" @click.stop style="max-width:520px" role="dialog" aria-modal="true" aria-labelledby="mgr-sf-final-title">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px;font-style:italic">Seed Final</h2>
+        <h2 id="mgr-sf-final-title" style="font-size:22px;font-style:italic">Seed Final</h2>
         <button class="btn btn-ghost btn-sm" @click="closeFSeedModal">Cancel ✕</button>
       </div>
       <p class="hint" style="margin-bottom:1rem" v-if="fSeedEvent">
@@ -412,9 +412,9 @@ defineExpose({
 
   <!-- Super Final — Official 1-12 rankings (Appendix 3 §7). -->
   <div v-if="superFinalRankingsModalOpen" class="modal-backdrop" @click.self="closeSuperFinalRankingsModal">
-    <div class="modal modal-advance" @click.stop style="max-width:680px">
+    <div class="modal modal-advance" @click.stop style="max-width:680px" role="dialog" aria-modal="true" aria-labelledby="mgr-sf-rankings-title">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px;font-style:italic">Super Final — Official Rankings</h2>
+        <h2 id="mgr-sf-rankings-title" style="font-size:22px;font-style:italic">Super Final — Official Rankings</h2>
         <button class="btn btn-ghost btn-sm" @click="closeSuperFinalRankingsModal">Close ✕</button>
       </div>
       <p class="hint" style="margin-bottom:1rem">

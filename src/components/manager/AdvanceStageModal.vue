@@ -104,9 +104,9 @@ async function confirmAdvance() {
 
 <template>
   <div class="modal-backdrop" @click.self="$emit('close')">
-    <div class="modal modal-advance" @click.stop style="max-width:640px">
+    <div class="modal modal-advance" @click.stop style="max-width:640px" role="dialog" aria-modal="true" aria-labelledby="mgr-advance-title">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px">{{ $t('manager.modals.advance_title') }}</h2>
+        <h2 id="mgr-advance-title" style="font-size:22px">{{ $t('manager.modals.advance_title') }}</h2>
         <button class="btn btn-ghost btn-sm" @click="$emit('close')">{{ $t('manager.modals.cancel_x') }}</button>
       </div>
 
