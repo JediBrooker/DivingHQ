@@ -256,6 +256,6 @@ onBeforeUnmount(() => {
 .cv2-drawer-promote:disabled { opacity: 0.5; cursor: not-allowed; }
 .cv2-drawer-audit-row {
   font-family: var(--font-mono); font-size: 12px; color: var(--text-3);
-  padding: 0.3rem 0.25rem; border-bottom: 1px solid var(--border-1, var(--border-2));
+  padding: 0.3rem 0.25rem; border-bottom: 1px solid var(--border-2);
 }
 </style>

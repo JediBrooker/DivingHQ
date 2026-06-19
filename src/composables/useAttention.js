@@ -89,3 +89,31 @@ export function contributesToDiverChip(eventId, diverEventIds) {
   if (diverEventIds == null) return true
   return diverEventIds.includes(eventId)
 }
+
+// P4 (2/2): rank the Dashboard pulse chips into a needs-attention lane so
+// the MOST urgent category floats to the top instead of a fixed role
+// order. Pure + DB-less (pinned by test/dashboard-attention.test.js).
+// Reuses the SAME P3 item urgency markers -- no new semantics:
+//   live (0)  > urgent / closing <24h (1) > overdue >7d (2) > rest (3)
+export const ATTENTION_RANK = { live: 0, urgent: 1, overdue: 2, none: 3 }
+
+// The rank of a single chip = its most urgent signal. A 'live' chip is
+// always rank 0; otherwise the strongest urgency among its items wins.
+export function chipUrgencyRank(chip) {
+  if (!chip) return ATTENTION_RANK.none
+  if (chip.kind === 'live') return ATTENTION_RANK.live
+  const urgencies = (chip.items || []).map((i) => i && i.urgency).filter(Boolean)
+  if (urgencies.includes('live')) return ATTENTION_RANK.live
+  if (urgencies.includes('urgent')) return ATTENTION_RANK.urgent
+  if (urgencies.includes('overdue')) return ATTENTION_RANK.overdue
+  return ATTENTION_RANK.none
+}
+
+// Stable sort by urgency rank; ties keep the source (role) order so the
+// lane is deterministic and the count is preserved exactly.
+export function rankAttentionChips(chips) {
+  return (chips || [])
+    .map((chip, i) => ({ chip, i, rank: chipUrgencyRank(chip) }))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i)
+    .map((x) => x.chip)
+}
