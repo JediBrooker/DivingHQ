@@ -186,22 +186,16 @@ test("super-final full 12-diver walkthrough: H2H + tie + SF + F + rankings", asy
   );
   expect(resolveDoRes.status()).toBe(200);
 
-  // ---- Force-resolve the on-field tie by adjusting the
-  //      tied pair's scores so h2h-results returns a winner.
-  //      In a real meet the dive-off result manually breaks the
-  //      tie; for the seed-semi gate we need the totals to
-  //      differ. Bump pair-5's competitor_b score by 0.5 in
-  //      round 1 so its total exceeds A's. ----
-  await setup.pool.query(
-    `UPDATE scores SET score = score + 0.5
-       WHERE event_id = $1 AND competitor_id = $2 AND round_number = 1`,
-    [h2h.id, tiedPair.competitor_b_id],
-  );
+  // The resolved dive-off (winner = competitor_b) now breaks the
+  // on-field tie directly — h2h-results consumes tiebreak_dive_offs,
+  // so no manual score adjustment is needed (it used to be required
+  // because the dive-off winner wasn't read).
 
-  // ---- Verify h2h-results: 6 winners. ----
+  // ---- Verify h2h-results: 6 winners, one resolved by the dive-off. ----
   const h2hResultsRes = await request.get(`/api/events/${h2h.id}/super-final/h2h-results`);
   const h2hResults = await h2hResultsRes.json();
   expect(h2hResults.pairs.filter((p) => !p.tied)).toHaveLength(6);
+  expect(h2hResults.pairs.some((p) => p.resolved_by === "dive_off")).toBe(true);
 
   // Mark H2H Completed.
   await setup.setEventStatus(request, { adminToken: fedHost.adminToken, eventId: h2h.id, status: "Live" });

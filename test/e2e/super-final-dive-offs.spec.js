@@ -265,6 +265,20 @@ test("super-final dive-offs: create / validate / resolve", async ({ request }) =
   expect(Number(resolved.score_a)).toBe(8.5);
   expect(Number(resolved.score_b)).toBe(8.0);
 
+  // ---- Integration: the resolved dive-off now drives h2h-results ----
+  // Previously the winner was recorded but never consumed — the pair
+  // stayed tied=true with winner_id null. Now the formerly-tied pair
+  // reports the dive-off winner and is no longer flagged unresolved.
+  const afterRes = await request.get(`/api/events/${h2hEvent.id}/super-final/h2h-results`);
+  expect(afterRes.status()).toBe(200);
+  const after = await afterRes.json();
+  const resolvedPair = after.pairs.find((p) => p.pair_index === tiedPair.pair_index);
+  expect(resolvedPair.tied).toBe(false);
+  expect(resolvedPair.winner_id).toBe(tiedPair.competitor_a_id);
+  expect(resolvedPair.tied_on_total).toBe(true);
+  expect(resolvedPair.resolved_by).toBe("dive_off");
+  expect(after.pairs.filter((p) => p.tied)).toHaveLength(0);
+
   // ---- Cleanup ----
   for (const fed of feds) await setup.deleteOrg(fed.orgId);
 });
