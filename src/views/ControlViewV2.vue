@@ -10,7 +10,7 @@
 // real panels into them. Live score handling + the concurrent-pool
 // per-event live-state map is the next P5 slice.
 //
-// Resolved only when VITE_CONTROL_V2_ENABLED === '1' (router resolver);
+// Resolved when VITE_CONTROL_V2 !== 'off' (router resolver; on is the default);
 // same /control URL, same ?event= deep-link, same role gate + AppShell.
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'

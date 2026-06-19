@@ -6,6 +6,13 @@
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
+test.beforeEach(() => {
+  test.skip(
+    process.env.VITE_CONTROL_V2 === "on",
+    "Legacy V1 control surface; skipped in the V2 build (default/off build serves V1).",
+  );
+});
+
 const STABLE_STYLE = `
   *, *::before, *::after {
     animation: none !important;

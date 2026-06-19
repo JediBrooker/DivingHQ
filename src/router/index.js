@@ -85,15 +85,22 @@ const routes = [
   },
   {
     path: '/control',
-    // Flag-gated resolver (P5): VITE_CONTROL_V2_ENABLED=1 serves the
-    // Stage-Rail ControlViewV2; unset/0 serves the untouched
-    // ControlView.vue (the instant rollback). Route-split so V1 and V2
-    // never co-bundle. meta is byte-identical so the beforeEach gate,
-    // role checks, and App.vue useShell are unchanged.
+    // Cutover resolver (P9): build-time VITE_CONTROL_V2 flag.
+    //   off                    -> the untouched ControlView.vue (the
+    //                             instant rollback)
+    //   anything else (DEFAULT, // incl. unset / on / cohort)
+    //                          -> the Stage-Rail ControlViewV2
+    // The `=== 'off'` test is written so Vite constant-folds it at build
+    // time (import.meta.env is statically inlined) and tree-shakes the
+    // unused view -- V1 and V2 NEVER co-bundle. A true per-browser cohort
+    // would need a runtime check (and thus co-bundling); a build-time flag
+    // can't express it, so `cohort` is reserved and currently serves V2.
+    // meta is byte-identical so the beforeEach gate, role checks, and
+    // App.vue useShell are unchanged.
     component: () =>
-      import.meta.env.VITE_CONTROL_V2_ENABLED === '1'
-        ? import('@/views/ControlViewV2.vue')
-        : import('@/views/ControlView.vue'),
+      import.meta.env.VITE_CONTROL_V2 === 'off'
+        ? import('@/views/ControlView.vue')
+        : import('@/views/ControlViewV2.vue'),
     meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager', 'referee'], appShell: true },
   },
   {

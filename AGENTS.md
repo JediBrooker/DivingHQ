@@ -263,10 +263,18 @@ know X":
    `.lb-*` frame. BaseModal supports both `v-if` and always-mounted
    (`:open`) consumers, takes a `max-width` prop, and does NOT own
    scroll-lock (the parent refcounts `useBodyScrollLock`). The 7 control
-   modals were migrated onto it in the meet-day redesign (P2); the frozen
-   `ControlView.vue` still carries inline `.lb-*` frames pending the V2
-   rebuild, so the global `.lb-*` rules stay in `ControlView.css` until
-   then. Historical hand-rolled pattern: commit `e45c227`.
+   modals were migrated onto it in the meet-day redesign (P2) and the
+   Manager dialogs in P10. The global `.lb-*` frame rules were re-homed
+   from `ControlView.css` to `src/styles/lb-modal.css` (imported in
+   `main.js`), so every BaseModal consumer is styled regardless of the
+   legacy view. **Control Room cutover (P9):** `/control` resolves to
+   `ControlViewV2.vue` (Stage-Rail) by default; build with
+   `VITE_CONTROL_V2=off` to serve the legacy `ControlView.vue` as the
+   instant rollback (`cohort` = V2 only for browsers with
+   `localStorage.dr_control_v2_optin=1`). The Playwright webServer
+   defaults to the off/V1 build so the legacy + V1-only specs stay green;
+   `VITE_CONTROL_V2=on` builds V2 and runs `control-v2-*.spec.js`.
+   Historical hand-rolled pattern: commit `e45c227`.
 7. **The IndexedDB cache is keyed per-user.** Don't write a frontend that
    bypasses `cachedFetch` for a sensitive endpoint without thinking about
    the leak window between user A logout and user B login.

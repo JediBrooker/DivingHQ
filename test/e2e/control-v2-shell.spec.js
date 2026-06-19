@@ -1,4 +1,4 @@
-// P5: ControlViewV2 shell. Runs ONLY when VITE_CONTROL_V2_ENABLED=1 (the
+// P5: ControlViewV2 shell. Runs ONLY when VITE_CONTROL_V2=on (the
 // webServer builds + serves V2 then). With the flag off, the whole
 // existing control suite runs against the untouched ControlView.vue --
 // that flag-off run IS the fallback/regression proof, so this spec skips
@@ -8,7 +8,7 @@ const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
 test.beforeEach(() => {
-  test.skip(process.env.VITE_CONTROL_V2_ENABLED !== "1", "V2 flag off; V1 suite is the fallback proof");
+  test.skip(process.env.VITE_CONTROL_V2 !== "on", "V2 flag off; V1 suite is the fallback proof");
 });
 
 async function signIn(page, username) {

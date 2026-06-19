@@ -228,6 +228,15 @@ jobs:
         if: github.event.inputs.update_snapshots != 'true'
         run: npm run test:e2e
 
+      # Second pass: build + serve ControlViewV2 (the cutover default in
+      # production) and run the V2-only control suite, which the default
+      # V1 build above skips. Boots a fresh webServer with the flag on.
+      - name: Run e2e (Control Room V2)
+        if: github.event.inputs.update_snapshots != 'true'
+        run: npx playwright test test/e2e/control-v2-*.spec.js --project=chromium
+        env:
+          VITE_CONTROL_V2: "on"
+
       # When dispatched with update_snapshots=true, run Playwright
       # with --update-snapshots so visual-regression baselines get
       # (re)generated against this exact runner image. The artifact

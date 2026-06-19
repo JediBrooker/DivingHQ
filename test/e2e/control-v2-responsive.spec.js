@@ -9,7 +9,7 @@ const setup = require("./_setup");
 test.describe.configure({ mode: "serial" });
 test.use({ viewport: { width: 390, height: 844 } }); // iPhone-ish width
 test.beforeEach(() => {
-  test.skip(process.env.VITE_CONTROL_V2_ENABLED !== "1", "V2 flag off; the collapse is a V2-only surface");
+  test.skip(process.env.VITE_CONTROL_V2 !== "on", "V2 flag off; the collapse is a V2-only surface");
 });
 
 async function signIn(page, username) {

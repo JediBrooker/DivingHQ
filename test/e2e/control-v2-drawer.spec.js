@@ -7,7 +7,7 @@ const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
 test.beforeEach(() => {
-  test.skip(process.env.VITE_CONTROL_V2_ENABLED !== "1", "V2 flag off; the drawer is a V2-only surface");
+  test.skip(process.env.VITE_CONTROL_V2 !== "on", "V2 flag off; the drawer is a V2-only surface");
 });
 
 async function signIn(page, username) {

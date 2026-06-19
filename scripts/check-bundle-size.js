@@ -25,7 +25,10 @@ const CHUNKS = {
   "vendor-vue": /^vendor-vue-.*\.js$/,
   "vendor-i18n": /^vendor-i18n-.*\.js$/,
   "vendor-socket": /^vendor-socket-.*\.js$/,
-  control: /^ControlView-.*\.js$/,
+  // Matches the per-route Control Room chunk in EITHER build: the V2
+  // ControlViewV2 (the cutover default) or the legacy ControlView (the
+  // VITE_CONTROL_V2=off rollback). Only one ships per build.
+  control: /^ControlView(V2)?-.*\.js$/,
 };
 
 function measure(assetsDir) {

@@ -10,6 +10,13 @@ const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
 
+test.beforeEach(() => {
+  test.skip(
+    process.env.VITE_CONTROL_V2 === "on",
+    "Legacy V1 control surface; skipped in the V2 build (default/off build serves V1).",
+  );
+});
+
 function headers(token) {
   return { Authorization: `Bearer ${token}` };
 }
