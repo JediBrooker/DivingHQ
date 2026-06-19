@@ -1974,56 +1974,6 @@ onUnmounted(() => {
                into the ⋯ overflow menu so they don't compete
                with the primary affordance. -->
           <div class="actions">
-            <!-- Optional context-specific secondaries — only
-                 surface when relevant to this event. -->
-            <button v-if="ev.event_type === 'team'"
-                    class="btn btn-ghost btn-sm"
-                    @click="openTeamsModal(ev)">Teams</button>
-            <button v-if="(ev.event_format === 'preliminary' || ev.event_format === 'semifinal')
-                          && eventHasNextStage(ev)
-                          && ev.status === 'Completed'"
-                    class="btn btn-primary btn-sm advance-btn"
-                    @click="openAdvanceModal(ev)"
-                    v-tip="'Open the modal to choose top N + reserves + dive order, preview the ranking, and seed the next stage'">
-              Advance to next stage →
-            </button>
-            <!-- Super Final H2H — Diving World Cup 2026 Appendix 3.
-                 Seed button is only meaningful pre-Live; once the
-                 event has gone Live, switch to "View pair results"
-                 so the operator can see who advances to SF. -->
-            <button v-if="ev.event_format === 'super_final_h2h' && ev.status === 'Upcoming'"
-                    class="btn btn-primary btn-sm advance-btn"
-                    @click="superFinalModals?.openH2hModal(ev)"
-                    v-tip="`Seed the 6 H2H pairs from the Stop-1 ranking. ${RULE_REFERENCES.superFinalH2H}`">
-              🥊 Seed Head-to-Head
-            </button>
-            <button v-if="ev.event_format === 'super_final_h2h' && ev.status !== 'Upcoming'"
-                    class="btn btn-ghost btn-sm"
-                    @click="superFinalModals?.openH2hResultsModal(ev)"
-                    v-tip="'See pair-by-pair winners — divers who advance to the Semi Final'">
-              View pair results
-            </button>
-            <!-- Super Final SF — seed from H2H winners. -->
-            <button v-if="ev.event_format === 'super_final_semi' && ev.status === 'Upcoming'"
-                    class="btn btn-primary btn-sm advance-btn"
-                    @click="superFinalModals?.openSfSeedModal(ev)"
-                    v-tip="`Seed the Semi Final from the 6 H2H winners. ${RULE_REFERENCES.superFinalSemi}`">
-              Seed Semi Final
-            </button>
-            <!-- Super Final F — seed top-2-per-group from SF cumulative. -->
-            <button v-if="ev.event_format === 'super_final_final' && ev.status === 'Upcoming'"
-                    class="btn btn-primary btn-sm advance-btn"
-                    @click="superFinalModals?.openFSeedModal(ev)"
-                    v-tip="`Seed the Final with the top 2 from each SF group. ${RULE_REFERENCES.superFinalFinal}`">
-              Seed Final
-            </button>
-            <!-- Super Final F — official 1-12 rankings (post-event). -->
-            <button v-if="ev.event_format === 'super_final_final' && ev.status === 'Completed'"
-                    class="btn btn-ghost btn-sm"
-                    @click="superFinalModals?.openSuperFinalRankingsModal(ev)"
-                    v-tip="`Official Super Final rankings. ${RULE_REFERENCES.superFinalRankings}`">
-              View Super Final rankings
-            </button>
             <!-- Status-aware primary action. Each path deep-
                  links into the screen the operator's most
                  likely to want next. -->
@@ -2056,6 +2006,51 @@ onUnmounted(() => {
                       v-tip="'More actions'"
                       @click.stop="toggleOverflow(ev.id)">⋯</button>
               <div v-if="overflowOpenEventId === ev.id" class="event-overflow-menu">
+                <!-- State-relevant actions for this event (seed / advance /
+                     teams / view results), moved off the row so the
+                     status-aware primary stands alone. Same conditions +
+                     handlers as before — one click away in the menu. -->
+                <button v-if="ev.event_type === 'team'"
+                        class="dropdown-item"
+                        @click="openTeamsModal(ev); overflowOpenEventId = null">Teams…</button>
+                <button v-if="(ev.event_format === 'preliminary' || ev.event_format === 'semifinal')
+                              && eventHasNextStage(ev)
+                              && ev.status === 'Completed'"
+                        class="dropdown-item"
+                        @click="openAdvanceModal(ev); overflowOpenEventId = null"
+                        v-tip="'Choose top N + reserves + dive order, preview the ranking, and seed the next stage'">
+                  Advance to next stage →
+                </button>
+                <button v-if="ev.event_format === 'super_final_h2h' && ev.status === 'Upcoming'"
+                        class="dropdown-item"
+                        @click="superFinalModals?.openH2hModal(ev); overflowOpenEventId = null"
+                        v-tip="`Seed the 6 H2H pairs from the Stop-1 ranking. ${RULE_REFERENCES.superFinalH2H}`">
+                  🥊 Seed Head-to-Head
+                </button>
+                <button v-if="ev.event_format === 'super_final_h2h' && ev.status !== 'Upcoming'"
+                        class="dropdown-item"
+                        @click="superFinalModals?.openH2hResultsModal(ev); overflowOpenEventId = null"
+                        v-tip="'See pair-by-pair winners — divers who advance to the Semi Final'">
+                  View pair results
+                </button>
+                <button v-if="ev.event_format === 'super_final_semi' && ev.status === 'Upcoming'"
+                        class="dropdown-item"
+                        @click="superFinalModals?.openSfSeedModal(ev); overflowOpenEventId = null"
+                        v-tip="`Seed the Semi Final from the 6 H2H winners. ${RULE_REFERENCES.superFinalSemi}`">
+                  Seed Semi Final
+                </button>
+                <button v-if="ev.event_format === 'super_final_final' && ev.status === 'Upcoming'"
+                        class="dropdown-item"
+                        @click="superFinalModals?.openFSeedModal(ev); overflowOpenEventId = null"
+                        v-tip="`Seed the Final with the top 2 from each SF group. ${RULE_REFERENCES.superFinalFinal}`">
+                  Seed Final
+                </button>
+                <button v-if="ev.event_format === 'super_final_final' && ev.status === 'Completed'"
+                        class="dropdown-item"
+                        @click="superFinalModals?.openSuperFinalRankingsModal(ev); overflowOpenEventId = null"
+                        v-tip="`Official Super Final rankings. ${RULE_REFERENCES.superFinalRankings}`">
+                  View Super Final rankings
+                </button>
                 <!-- Host-side actions (event belongs to caller's
                      org or sysadmin). Visiting orgs see only the
                      "Withdraw participation" item since they
