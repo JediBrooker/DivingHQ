@@ -7,6 +7,13 @@
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
+test.beforeEach(() => {
+  test.skip(
+    process.env.VITE_CONTROL_V2 === "on",
+    "Legacy V1 control surface; skipped in the V2 build (default/off build serves V1).",
+  );
+});
+
 async function signIn(page, username) {
   await page.addInitScript(() => {
     localStorage.setItem("locale", "en");

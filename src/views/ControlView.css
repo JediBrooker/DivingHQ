@@ -1961,6 +1961,15 @@
 }
 .status-pill.status-ready   { background: var(--bg-3); color: var(--text-2); border-color: var(--border); }
 .status-pill.status-diving  { background: var(--cyan); color: var(--bg); animation: pulse-cyan 1s infinite; }
+
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
+   reinforces the global guard in app.css). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 .status-pill.status-judging { background: var(--amber); color: var(--bg); }
 @keyframes pulse-cyan { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
 

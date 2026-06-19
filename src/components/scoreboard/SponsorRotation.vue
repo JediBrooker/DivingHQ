@@ -32,6 +32,7 @@
  * path needed.
  */
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { reduceMotion } from '@/composables/useReducedMotion'
 
 const props = defineProps({
   // ID of the meet whose logos to fetch. null/undefined = no
@@ -102,6 +103,11 @@ function startCycle() {
   if (props.placement === 'inline') return
   cycleTimer = setInterval(() => {
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return
+    }
+    if (reduceMotion()) {
+      // Reduced motion: advance instantly, no 200ms cross-fade.
+      currentIdx.value = (currentIdx.value + 1) % logos.value.length
       return
     }
     fading.value = true

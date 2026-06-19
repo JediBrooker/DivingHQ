@@ -1,0 +1,11 @@
+{
+  "generated": "P0 baseline",
+  "count": 5,
+  "sites": [
+    "views/CompetitorView.vue::animation: superFinalLockPulse 2.5s ease-in-out infinite",
+    "views/DiverProfileView.css::background: var(--amber); animation: cachePulse 1.2s infinite",
+    "views/DrArchiveExplorer.vue::animation: dr-spin 0.7s linear infinite",
+    "views/HomeView.vue::.live-pill::before { content: \"\"; width: 7px; height: 7px; border-radius: 50%; background: var(--danger-solid); animation: pulse-red 2s infinite; }",
+    "views/MeetView.vue::animation: pulse-red 2s infinite"
+  ]
+}

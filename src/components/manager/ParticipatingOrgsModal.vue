@@ -20,6 +20,8 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
+import BaseModal from '@/components/BaseModal.vue'
+import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
   event: { type: Object, required: true },
@@ -147,17 +149,10 @@ async function removePartOrg(org) {
 </script>
 
 <template>
-  <div class="modal-backdrop" @click="$emit('close')"></div>
-  <div class="modal teams-modal" @click.stop>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
-      <div>
-        <div class="teams-section-label">Participating Federations</div>
-        <h2 style="font-size:20px;line-height:1.1">
-          {{ event?.name }}
-        </h2>
-      </div>
-      <button class="btn btn-ghost btn-sm" @click="$emit('close')">{{ $t('manager.modals.close_x') }}</button>
-    </div>
+  <BaseModal max-width="560px" @close="$emit('close')">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" title="Participating Federations" :subtitle="event?.name" @close="$emit('close')" />
+      <div class="lb-body">
     <p class="hint" style="margin-bottom:1rem;line-height:1.5">
       Accepted federations can self-enter divers without a shadow account. Their results count toward <strong>their home federation's</strong> records, not yours. The host federation ({{ event?.org_name || 'this org' }}) is implicit — don't add it.
     </p>
@@ -223,7 +218,9 @@ async function removePartOrg(org) {
     <p v-if="!partOrgsAvailable.length && !partOrgsBusy" class="hint-line">
       Every active federation is already participating, pending a response, or there are no other federations on this server.
     </p>
-  </div>
+      </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
@@ -232,20 +229,8 @@ async function removePartOrg(org) {
    .invite-response-actions). The .teams-modal frame, .enrolled-*
    list, .add-team-row, section label, and hint blocks are COPIED
    — shared with TeamsEnrolmentModal.vue (keep the two in sync).
-   The .modal.teams-modal viewport pin exists because the modal
-   renders as a sibling of an EMPTY .modal-backdrop, so the global
-   .modal (position: static) would drop to the bottom of the long
-   events page instead of centring. */
-.modal.teams-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 201;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-.teams-modal { max-width: 560px; }
+   BaseModal owns the frame: pin/centre/size + max-width (560px via
+   the prop). */
 .teams-section-label {
   font-family: var(--font-display); font-size: 10px; font-weight: 700;
   letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-3);
@@ -296,14 +281,5 @@ async function removePartOrg(org) {
 }
 .invite-response-actions {
   display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end;
-}
-
-/* Phone full-bleed — copied from ManagerView.css's 600px block. */
-@media (max-width: 600px) {
-  .modal,
-  .teams-modal {
-    max-width: 100%;
-    width: 100%;
-  }
 }
 </style>

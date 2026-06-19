@@ -38,6 +38,15 @@
    button (below) stays. */
 .form-stack{display:flex;flex-direction:column;gap:1rem;}
 .event-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-xs);transition:border-color 0.2s;animation:fadeUp 0.25s ease;}
+
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
+   reinforces the global guard in app.css). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 .event-item:hover{border-color:var(--border-2);}
 .event-name{font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;}
 .event-meta{font-size:11px;color:var(--text-3);margin-top:0.25rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;}
@@ -641,4 +650,57 @@
 
   /* Empty-state copy gets a lot of vertical space at 2rem; trim. */
   .empty { padding: 1.25rem; }
+}
+
+/* P10 Cluster 1 — create-event wizard (in-panel StageStep sequence). */
+.wizard-steps {
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  list-style: none; margin: 0 0 0.5rem; padding: 0;
+}
+.wizard-pip { flex: 1 1 auto; min-width: 0; }
+.wizard-pip-btn {
+  display: flex; align-items: center; gap: 0.5rem; width: 100%;
+  padding: 0.5rem 0.7rem; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--bg-2);
+  color: var(--text-3); cursor: pointer; transition: border-color 0.12s, color 0.12s;
+  font-family: var(--font-display); font-size: 12px; font-weight: 600;
+}
+.wizard-pip-btn:hover { color: var(--fg); }
+.wizard-pip.is-current .wizard-pip-btn { border-color: var(--cyan); color: var(--cyan); }
+.wizard-pip.is-done .wizard-pip-btn { color: var(--green); border-color: rgba(16, 185, 129, 0.4); }
+.wizard-pip-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.4rem; height: 1.4rem; flex-shrink: 0;
+  border-radius: 999px; background: var(--bg-3);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+}
+.wizard-pip.is-current .wizard-pip-num { background: var(--cyan); color: var(--bg); }
+.wizard-pip.is-done .wizard-pip-num { background: var(--green); color: var(--bg); }
+.wizard-pip-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wizard-step { display: flex; flex-direction: column; gap: 1rem; }
+.wizard-footer {
+  display: flex; align-items: center; gap: 0.6rem;
+  margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--border);
+}
+.wizard-footer-spacer { flex: 1 1 auto; }
+.wizard-review { display: flex; flex-direction: column; gap: 0.6rem; }
+.wizard-review-title {
+  margin: 0; font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--fg);
+}
+.wizard-review-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.5rem 1.25rem; margin: 0;
+}
+.wizard-review-grid > div { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.wizard-review-grid dt {
+  font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-3);
+}
+.wizard-review-grid dd {
+  margin: 0; font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--fg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+@media (max-width: 600px) {
+  .wizard-pip { flex: 0 0 auto; }
+  .wizard-pip-label { display: none; }
 }

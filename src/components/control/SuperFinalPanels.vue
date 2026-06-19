@@ -18,6 +18,8 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess, showError } from '@/composables/useNotify'
+import BaseModal from '@/components/BaseModal.vue'
+import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
   event: { type: Object, default: null },
@@ -311,15 +313,14 @@ defineExpose({ reload })
        (Appendix 3 §5.1). Lists eligible federations + their
        synchro divers; the operator picks one to swap into a
        Top-12 slot. -->
-  <div v-if="synchroPoolModalOpen" class="lb-backdrop" @click.self="closeSynchroPoolModal">
-    <div class="lb-modal" style="max-width:680px">
-      <div class="lb-head">
-        <div>
-          <div class="lb-title">🔄 Synchro reserve replacement</div>
-          <div class="lb-event">Appendix 3 §5.1 — pre-H2H replacement only.</div>
-        </div>
-        <button class="btn btn-ghost btn-sm" @click="closeSynchroPoolModal">Close ✕</button>
-      </div>
+  <BaseModal :open="synchroPoolModalOpen" max-width="680px" @close="closeSynchroPoolModal">
+    <template #default="{ titleId }">
+      <ModalHeader
+        :title-id="titleId"
+        title="🔄 Synchro reserve replacement"
+        subtitle="Appendix 3 §5.1 — pre-H2H replacement only."
+        @close="closeSynchroPoolModal"
+      />
       <div class="lb-body">
         <div v-if="synchroPoolErr" class="msg msg-error" style="margin-bottom:0.75rem">{{ synchroPoolErr }}</div>
 
@@ -365,21 +366,20 @@ defineExpose({ reload })
           </button>
         </div>
       </div>
-    </div>
-  </div>
+    </template>
+  </BaseModal>
 
   <!-- Super Final — Dive-off modal (Appendix 3 §6).
        Operator records a tie-break dive-off after two divers
        picked their previously-performed dives + re-dove them. -->
-  <div v-if="diveOffModalOpen" class="lb-backdrop" @click.self="closeDiveOffModal">
-    <div class="lb-modal" style="max-width:560px">
-      <div class="lb-head">
-        <div>
-          <div class="lb-title">{{ diveOffEditing ? 'Dive-off — record result' : 'Create dive-off' }}</div>
-          <div class="lb-event">Tie-break (Appendix 3 §6) — doesn't affect official scores.</div>
-        </div>
-        <button class="btn btn-ghost btn-sm" @click="closeDiveOffModal">Close ✕</button>
-      </div>
+  <BaseModal :open="diveOffModalOpen" max-width="560px" @close="closeDiveOffModal">
+    <template #default="{ titleId }">
+      <ModalHeader
+        :title-id="titleId"
+        :title="diveOffEditing ? 'Dive-off — record result' : 'Create dive-off'"
+        subtitle="Tie-break (Appendix 3 §6) — doesn't affect official scores."
+        @close="closeDiveOffModal"
+      />
       <div class="lb-body">
         <div v-if="diveOffErr" class="msg msg-error" style="margin-bottom:0.75rem">{{ diveOffErr }}</div>
 
@@ -466,8 +466,8 @@ defineExpose({ reload })
           </button>
         </div>
       </div>
-    </div>
-  </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>

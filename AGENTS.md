@@ -256,10 +256,24 @@ know X":
 5. **`helmet` is a runtime dependency.** If a deploy didn't run
    `npm install`, the server crashes on require. Always
    `git pull && npm install && pm2 restart`.
-6. **Modal CSS pattern.** `.lb-backdrop` is `position: fixed`. Sibling
-   `.lb-modal` needs its own `position: fixed; z-index: 301; transform:
-   translate(-50%, -50%)`. Don't write a new modal that nests differently
-   from this — see commit `e45c227`.
+6. **Modal pattern — wrap `BaseModal`.** New dialogs wrap
+   `src/components/BaseModal.vue` (Teleport + the `.lb-backdrop`/`.lb-modal`
+   frame + `role=dialog`/`aria-modal`, focus-trap, Esc-to-close,
+   focus-restore) with `<ModalHeader>` for the header — don't hand-roll a
+   `.lb-*` frame. BaseModal supports both `v-if` and always-mounted
+   (`:open`) consumers, takes a `max-width` prop, and does NOT own
+   scroll-lock (the parent refcounts `useBodyScrollLock`). The 7 control
+   modals were migrated onto it in the meet-day redesign (P2) and the
+   Manager dialogs in P10. The global `.lb-*` frame rules were re-homed
+   from `ControlView.css` to `src/styles/lb-modal.css` (imported in
+   `main.js`), so every BaseModal consumer is styled regardless of the
+   legacy view. **Control Room view:** `/control` serves the all-in-one
+   `ControlView.vue` by DEFAULT. The Stage-Rail `ControlViewV2.vue` was
+   trialled as the default (P9) and reverted — its mode-switch is not the
+   wanted UX — so it stays behind an explicit `VITE_CONTROL_V2=on`
+   build-time flag (constant-folded so V1 and V2 never co-bundle).
+   `control-v2-*.spec.js` runs only under `=on`.
+   Historical hand-rolled pattern: commit `e45c227`.
 7. **The IndexedDB cache is keyed per-user.** Don't write a frontend that
    bypasses `cachedFetch` for a sensitive endpoint without thinking about
    the leak window between user A logout and user B login.

@@ -1,0 +1,52 @@
+/* Shared modal frame + leaderboard-row rules (the "lb-*" family).
+ *
+ * These were authored inside ControlView.css (scoped to ControlView.vue)
+ * but are consumed app-wide by every BaseModal-based dialog (the control
+ * modals, and — from P10 — the Manager dialogs) via ModalHeader's
+ * .lb-header/.lb-title/.lb-event and the .lb-body padding wrapper.
+ * Re-homed here as a GLOBAL stylesheet (imported in main.js) so those
+ * dialogs stay correctly styled independently of ControlView.css — which
+ * lets the legacy ControlView.vue/.css be deleted at cutover without
+ * unstyling any surviving modal. `fadeUp` is a global keyframe (app.css).
+ */
+.lb-backdrop { position: fixed; inset: 0; background: rgba(3,7,18,0.95); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); z-index: 300; }
+.lb-modal {
+  position: fixed; top: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%);
+  z-index: 301;
+  background: var(--surface); border: 1px solid var(--border-2); border-radius: 28px;
+  width: calc(100% - 3rem); max-width: 560px;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto; animation: fadeUp 0.3s ease;
+  overflow-x: clip;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.55);
+}
+.lb-header { padding: 2rem 2rem 1.25rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); display: flex; align-items: flex-start; justify-content: space-between; }
+.lb-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--cyan); margin-bottom: 0.4rem; }
+.lb-event { font-family: var(--font-sans); font-size: 22px; font-weight: 600; font-style: normal; letter-spacing: -0.015em; color: var(--fg); line-height: 1.1; }
+.lb-body { padding: 1.5rem 2rem 2rem; }
+.lb-row { display: flex; align-items: center; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--border); }
+.lb-row:last-child { border-bottom: none; }
+.lb-rank { font-family: var(--font-display); font-size: 28px; font-weight: 900; width: 44px; text-align: end; flex-shrink: 0; color: var(--text-3); }
+.lb-rank.gold { color: #f59e0b; }
+.lb-rank.silver { color: #94a3b8; }
+.lb-rank.bronze { color: #b45309; }
+.lb-medal { font-size: 20px; flex-shrink: 0; }
+.lb-name { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text); flex: 1; }
+.lb-score { font-family: var(--font-mono); font-size: 22px; font-weight: 500; color: var(--cyan); flex-shrink: 0; }
+.lb-winner { background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.03)); border-radius: var(--radius); padding: 0 0.75rem; margin: 0 -0.75rem; }
+
+@media (max-width: 720px) {
+  .lb-modal {
+    max-height: calc(100vh - 1.5rem);   /* fallback */
+    max-height: calc(100dvh - 1.5rem);  /* preferred */
+    border-radius: var(--radius-lg);
+  }
+  .lb-header  { padding: 1.25rem 1.25rem 1rem; }
+  .lb-event   { font-size: 22px; }
+  .lb-body    { padding: 1rem 1.25rem 1.5rem; }
+  .lb-row     { padding: 0.75rem 0; gap: 0.75rem; }
+  .lb-rank    { font-size: 22px; width: 32px; }
+  .lb-name    { font-size: 16px; }
+  .lb-score   { font-size: 18px; }
+}

@@ -20,6 +20,8 @@ import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess } from '@/composables/useNotify'
 import { RULE_REFERENCES } from '@/lib/ruleReferences'
+import BaseModal from '@/components/BaseModal.vue'
+import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
   // The FEEDER event (preliminary or semifinal) being advanced.
@@ -103,13 +105,10 @@ async function confirmAdvance() {
 </script>
 
 <template>
-  <div class="modal-backdrop" @click.self="$emit('close')">
-    <div class="modal modal-advance" @click.stop style="max-width:640px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px">{{ $t('manager.modals.advance_title') }}</h2>
-        <button class="btn btn-ghost btn-sm" @click="$emit('close')">{{ $t('manager.modals.cancel_x') }}</button>
-      </div>
-
+  <BaseModal max-width="640px" @close="$emit('close')">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" :title="$t('manager.modals.advance_title')" @close="$emit('close')" />
+      <div class="lb-body">
       <p class="hint" style="margin-bottom:1rem">
         Seed
         <strong>{{
@@ -185,8 +184,9 @@ async function confirmAdvance() {
           </button>
         </div>
       </div>
-    </div>
-  </div>
+      </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
@@ -201,7 +201,7 @@ async function confirmAdvance() {
    a live preview of the ranked divers split into Primaries /
    Reserves / Cut so the operator can see exactly who'll
    progress before clicking the button. */
-.modal-advance .advance-form { display:flex; flex-direction:column; gap:0.75rem; }
+.advance-form { display:flex; flex-direction:column; gap:0.75rem; }
 .advance-field-row { display:flex; gap:0.75rem; }
 .advance-field { display:flex; flex-direction:column; flex:1; }
 .advance-field .label { margin-bottom:0.4rem; }
@@ -272,10 +272,5 @@ async function confirmAdvance() {
     padding: 0.45rem 0.6rem;
   }
   .advance-preview { max-height: 220px; }
-
-  .modal {
-    max-width: 100%;
-    width: 100%;
-  }
 }
 </style>

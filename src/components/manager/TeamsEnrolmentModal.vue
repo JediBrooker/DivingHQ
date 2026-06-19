@@ -15,6 +15,8 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
+import BaseModal from '@/components/BaseModal.vue'
+import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
   event: { type: Object, required: true },
@@ -96,63 +98,47 @@ async function removeTeamFromEvent(team) {
 </script>
 
 <template>
-  <div class="modal-backdrop" @click="$emit('close')"></div>
-  <div class="modal teams-modal" @click.stop>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-      <h2 style="font-size:20px">
-        {{ $t('manager.modals.teams_modal_in_event_prefix') }} <span style="color:var(--cyan)">{{ event?.name }}</span>
-      </h2>
-      <button class="btn btn-ghost btn-sm" @click="$emit('close')">{{ $t('manager.modals.close_x') }}</button>
-    </div>
+  <BaseModal max-width="560px" @close="$emit('close')">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" :title="$t('manager.modals.teams_modal_in_event_prefix')" :subtitle="event?.name" @close="$emit('close')" />
+      <div class="lb-body">
+        <div class="teams-section-label">Currently enrolled ({{ teamsInEvent.length }})</div>
+        <ul v-if="teamsInEvent.length" class="enrolled-list">
+          <li v-for="t in teamsInEvent" :key="t.id" class="enrolled-row">
+            <span class="enrolled-name">
+              {{ t.name }}<span v-if="t.short_code" class="enrolled-code">{{ t.short_code }}</span>
+            </span>
+            <button class="btn btn-danger btn-sm" :disabled="teamsBusy"
+                    @click="removeTeamFromEvent(t)">Remove</button>
+          </li>
+        </ul>
+        <div v-else class="enrolled-empty">No teams enrolled yet.</div>
 
-    <div class="teams-section-label">Currently enrolled ({{ teamsInEvent.length }})</div>
-    <ul v-if="teamsInEvent.length" class="enrolled-list">
-      <li v-for="t in teamsInEvent" :key="t.id" class="enrolled-row">
-        <span class="enrolled-name">
-          {{ t.name }}<span v-if="t.short_code" class="enrolled-code">{{ t.short_code }}</span>
-        </span>
-        <button class="btn btn-danger btn-sm" :disabled="teamsBusy"
-                @click="removeTeamFromEvent(t)">Remove</button>
-      </li>
-    </ul>
-    <div v-else class="enrolled-empty">No teams enrolled yet.</div>
-
-    <div class="teams-section-label" style="margin-top:1.25rem">Add a team</div>
-    <div class="add-team-row">
-      <select class="select" v-model="teamToAdd">
-        <option value="">— Select a team —</option>
-        <option v-for="t in addableTeams" :key="t.id" :value="t.id">
-          {{ t.name }}{{ t.short_code ? ' (' + t.short_code + ')' : '' }}{{ t.member_count != null ? ' · ' + t.member_count + ' members' : '' }}
-        </option>
-      </select>
-      <button class="btn btn-primary btn-sm"
-              :disabled="!teamToAdd || teamsBusy"
-              @click="addTeamToEvent">Add</button>
-    </div>
-    <p v-if="!addableTeams.length && !teamsBusy" class="hint-line">
-      No more teams available — every team in the org is already enrolled, or the org has no teams. Create teams from
-      <RouterLink to="/teams" style="color:var(--cyan)">/teams</RouterLink>.
-    </p>
-  </div>
+        <div class="teams-section-label" style="margin-top:1.25rem">Add a team</div>
+        <div class="add-team-row">
+          <select class="select" v-model="teamToAdd">
+            <option value="">— Select a team —</option>
+            <option v-for="t in addableTeams" :key="t.id" :value="t.id">
+              {{ t.name }}{{ t.short_code ? ' (' + t.short_code + ')' : '' }}{{ t.member_count != null ? ' · ' + t.member_count + ' members' : '' }}
+            </option>
+          </select>
+          <button class="btn btn-primary btn-sm"
+                  :disabled="!teamToAdd || teamsBusy"
+                  @click="addTeamToEvent">Add</button>
+        </div>
+        <p v-if="!addableTeams.length && !teamsBusy" class="hint-line">
+          No more teams available — every team in the org is already enrolled, or the org has no teams. Create teams from
+          <RouterLink to="/teams" style="color:var(--cyan)">/teams</RouterLink>.
+        </p>
+      </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
-/* Modal frame + enrolment-list styles COPIED from ManagerView.css
-   — shared with ParticipatingOrgsModal.vue (keep the two in
-   sync). The .modal.teams-modal viewport pin exists because the
-   modal renders as a sibling of an EMPTY .modal-backdrop, so the
-   global .modal (position: static) would drop to the bottom of
-   the long events page instead of centring. */
-.modal.teams-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 201;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-.teams-modal { max-width: 560px; }
+/* Enrolment-list styles COPIED from ManagerView.css — shared with
+   ParticipatingOrgsModal.vue (keep the two in sync). The modal
+   frame (pin/centre/size) now lives in BaseModal.vue. */
 .teams-section-label {
   font-family: var(--font-display); font-size: 10px; font-weight: 700;
   letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-3);
@@ -175,13 +161,4 @@ async function removeTeamFromEvent(team) {
 .add-team-row { display: flex; gap: 0.5rem; align-items: center; }
 .add-team-row .select { flex: 1; }
 .hint-line { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); margin-top: 0.5rem; }
-
-/* Phone full-bleed — copied from ManagerView.css's 600px block. */
-@media (max-width: 600px) {
-  .modal,
-  .teams-modal {
-    max-width: 100%;
-    width: 100%;
-  }
-}
 </style>

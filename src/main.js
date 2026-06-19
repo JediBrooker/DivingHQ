@@ -12,6 +12,7 @@ import { useAuthStore } from './stores/auth'
 // caches transparent rather than something we have to manually
 // bust.
 import './styles/app.css'
+import './styles/lb-modal.css'
 
 const app = createApp(App)
 app.use(createPinia())

@@ -24,8 +24,9 @@ import UndoBar from '@/components/UndoBar.vue'
 // @/composables/useConfirm; this renders the dialog.
 import ConfirmModal from '@/components/ConfirmModal.vue'
 // Cmd-K command palette. Single global instance; opens on
-// ⌘K / Ctrl-K from anywhere, or via window.__openCommandPalette()
-// for header buttons that want a click-to-open affordance.
+// ⌘K / Ctrl-K from anywhere, or via the useAppChannel
+// openCommandPalette() helper for header buttons that want a
+// click-to-open affordance.
 import CommandPalette from '@/components/CommandPalette.vue'
 // First-login per-role tour. The setup wizard onboards fresh
 // org admins; this fills the gap for the more common arrival

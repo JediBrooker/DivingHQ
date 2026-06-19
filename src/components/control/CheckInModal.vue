@@ -18,6 +18,9 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
 import { showError } from '@/composables/useNotify'
+import { confirmAction } from '@/composables/useConfirm'
+import BaseModal from '@/components/BaseModal.vue'
+import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
   event:         { type: Object, required: true },
@@ -90,10 +93,15 @@ async function confirmCheckInComplete() {
   // operator can still proceed, but they're advancing on an
   // empty list which is usually a mistake.
   const anyMarked = (checkInRows.value || []).some(r => r.status)
-  if (!anyMarked && !confirm(
-    `No divers have been marked yet for "${props.event.name}". ` +
-    `Confirm check-in complete anyway?`
-  )) return
+  if (!anyMarked && !await confirmAction({
+    title: 'Confirm check-in complete?',
+    body:
+      `No divers have been marked yet for "${props.event.name}". ` +
+      `Confirm check-in complete anyway?`,
+    confirmLabel: 'Confirm anyway',
+    cancelLabel: 'Go back',
+    confirmKind: 'warn',
+  })) return
   busy.value = true
   try {
     await queueAction({
@@ -115,75 +123,69 @@ async function confirmCheckInComplete() {
 </script>
 
 <template>
-  <div class="lb-backdrop" @click="$emit('close')"></div>
-  <div class="lb-modal checkin-modal" @click.stop>
-    <div class="lb-header">
-      <div>
-        <div class="lb-title">Check-in</div>
-        <div class="lb-event">
-          {{ event?.name }}
-          <span class="checkin-tally">
-            <span class="tally-present">✓ {{ checkInCounts.present }}</span>
-            <span class="tally-late">⏱ {{ checkInCounts.late }}</span>
-            <span class="tally-absent">✕ {{ checkInCounts.absent }}</span>
-            <span class="tally-pending">— {{ checkInCounts.pending }}</span>
-          </span>
+  <BaseModal max-width="720px" @close="$emit('close')">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" title="Check-in" :subtitle="event?.name" @close="$emit('close')">
+        <span class="checkin-tally">
+          <span class="tally-present">✓ {{ checkInCounts.present }}</span>
+          <span class="tally-late">⏱ {{ checkInCounts.late }}</span>
+          <span class="tally-absent">✕ {{ checkInCounts.absent }}</span>
+          <span class="tally-pending">— {{ checkInCounts.pending }}</span>
+        </span>
+      </ModalHeader>
+      <div class="lb-body">
+        <p class="hint" style="margin-bottom: 0.6rem">
+          Tap a chip to set the diver's status. Clicking the same chip again clears it
+          (back to pending). Updates persist instantly and broadcast to other operators.
+        </p>
+        <div v-if="checkInLoading" class="empty-mini">Loading…</div>
+        <div v-else-if="!checkInRows.length" class="empty-mini">
+          No divers entered for this event yet.
         </div>
-      </div>
-      <button class="btn btn-ghost btn-sm" @click="$emit('close')">Close ✕</button>
-    </div>
-    <div class="lb-body">
-      <p class="hint" style="margin-bottom: 0.6rem">
-        Tap a chip to set the diver's status. Clicking the same chip again clears it
-        (back to pending). Updates persist instantly and broadcast to other operators.
-      </p>
-      <div v-if="checkInLoading" class="empty-mini">Loading…</div>
-      <div v-else-if="!checkInRows.length" class="empty-mini">
-        No divers entered for this event yet.
-      </div>
-      <div v-else class="checkin-list">
-        <div v-for="row in checkInRows" :key="row.competitor_id"
-             :class="['checkin-row', `checkin-${row.status || 'pending'}`]">
-          <div class="checkin-name">
-            {{ row.full_name }}
-            <span v-if="row.country_code" class="checkin-country">{{ row.country_code }}</span>
-            <div v-if="row.club_name" class="checkin-club">
-              {{ row.club_name }}<span v-if="row.club_code" class="checkin-club-code">{{ row.club_code }}</span>
+        <div v-else class="checkin-list">
+          <div v-for="row in checkInRows" :key="row.competitor_id"
+               :class="['checkin-row', `checkin-${row.status || 'pending'}`]">
+            <div class="checkin-name">
+              {{ row.full_name }}
+              <span v-if="row.country_code" class="checkin-country">{{ row.country_code }}</span>
+              <div v-if="row.club_name" class="checkin-club">
+                {{ row.club_name }}<span v-if="row.club_code" class="checkin-club-code">{{ row.club_code }}</span>
+              </div>
+            </div>
+            <div class="checkin-chips">
+              <button :class="['chip', 'chip-present', row.status === 'present' ? 'is-active' : '']"
+                      @click="setAttendance(row, 'present')"
+                      v-tip="'Mark present'">✓ Present</button>
+              <button :class="['chip', 'chip-late', row.status === 'late' ? 'is-active' : '']"
+                      @click="setAttendance(row, 'late')"
+                      v-tip="'Mark late'">⏱ Late</button>
+              <button :class="['chip', 'chip-absent', row.status === 'absent' ? 'is-active' : '']"
+                      @click="setAttendance(row, 'absent')"
+                      v-tip="'Mark absent / DNS'">✕ DNS</button>
             </div>
           </div>
-          <div class="checkin-chips">
-            <button :class="['chip', 'chip-present', row.status === 'present' ? 'is-active' : '']"
-                    @click="setAttendance(row, 'present')"
-                    v-tip="'Mark present'">✓ Present</button>
-            <button :class="['chip', 'chip-late', row.status === 'late' ? 'is-active' : '']"
-                    @click="setAttendance(row, 'late')"
-                    v-tip="'Mark late'">⏱ Late</button>
-            <button :class="['chip', 'chip-absent', row.status === 'absent' ? 'is-active' : '']"
-                    @click="setAttendance(row, 'absent')"
-                    v-tip="'Mark absent / DNS'">✕ DNS</button>
-          </div>
         </div>
+        <div v-if="checkInErr" class="msg msg-error">{{ checkInErr }}</div>
       </div>
-      <div v-if="checkInErr" class="msg msg-error">{{ checkInErr }}</div>
-    </div>
-    <!-- Footer: confirm-and-advance button when the workflow is
-         on state 1 (no check_in_done_at stamp yet). After confirm
-         the modal closes and the workflow button flips to orange
-         "Randomise". When the operator reopens the modal mid-meet
-         to adjust attendance, this footer is hidden because the
-         workflow has already moved past check-in. -->
-    <div v-if="workflowState === 'check-in'" class="lb-footer">
-      <span class="checkin-footer-hint">
-        Mark each diver, then confirm to advance the workflow.
-      </span>
-      <button class="btn btn-sm wf-btn wf-btn-red"
-              :disabled="busy || checkInLoading"
-              @click="confirmCheckInComplete"
-              v-tip="'Stamp check-in complete and advance to Randomise.'">
-        ✓ Check-in Complete — Continue
-      </button>
-    </div>
-  </div>
+      <!-- Footer: confirm-and-advance button when the workflow is
+           on state 1 (no check_in_done_at stamp yet). After confirm
+           the modal closes and the workflow button flips to orange
+           "Randomise". When the operator reopens the modal mid-meet
+           to adjust attendance, this footer is hidden because the
+           workflow has already moved past check-in. -->
+      <div v-if="workflowState === 'check-in'" class="lb-footer">
+        <span class="checkin-footer-hint">
+          Mark each diver, then confirm to advance the workflow.
+        </span>
+        <button class="btn btn-sm wf-btn wf-btn-red"
+                :disabled="busy || checkInLoading"
+                @click="confirmCheckInComplete"
+                v-tip="'Stamp check-in complete and advance to Randomise.'">
+          ✓ Check-in Complete — Continue
+        </button>
+      </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
@@ -197,7 +199,6 @@ async function confirmCheckInComplete() {
    diver's name + chip group. The chip colour leans on the
    status semantics (cyan = present, amber = late, red = DNS).
    ========================================================= */
-.checkin-modal { max-width: 720px; }
 .lb-footer {
   display: flex; align-items: center; justify-content: space-between;
   gap: 1rem; padding: 1rem 2rem; border-top: 1px solid var(--border);
@@ -285,32 +286,6 @@ async function confirmCheckInComplete() {
 .wf-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .wf-btn-red    { background: var(--red);   border-color: var(--red); }
 
-/* Modal frame — copied from ControlView.css (see AGENTS.md
-   "Modal CSS pattern"). */
-.lb-backdrop { position: fixed; inset: 0; background: rgba(3,7,18,0.95); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); z-index: 300; }
-.lb-modal {
-  position: fixed; top: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%);
-  z-index: 301;
-  background: var(--surface); border: 1px solid var(--border-2); border-radius: 28px;
-  width: calc(100% - 3rem); max-width: 560px;
-  max-height: 90vh;
-  max-height: 90dvh;
-  overflow-y: auto; animation: fadeUp 0.3s ease;
-  overflow-x: clip;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.55);
-}
-.lb-header { padding: 2rem 2rem 1.25rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); display: flex; align-items: flex-start; justify-content: space-between; }
-.lb-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--cyan); margin-bottom: 0.4rem; }
-.lb-event { font-family: var(--font-sans); font-size: 22px; font-weight: 600; font-style: normal; letter-spacing: -0.015em; color: var(--fg); line-height: 1.1; }
-.lb-body { padding: 1.5rem 2rem 2rem; }
-@media (max-width: 720px) {
-  .lb-modal {
-    max-height: calc(100vh - 1.5rem);   /* fallback */
-    max-height: calc(100dvh - 1.5rem);  /* preferred */
-    border-radius: var(--radius-lg);
-  }
-  .lb-header  { padding: 1.25rem 1.25rem 1rem; }
-  .lb-event   { font-size: 22px; }
-  .lb-body    { padding: 1rem 1.25rem 1.5rem; }
-}
+/* The lb-* modal frame now lives in BaseModal.vue (frame) + the global
+   lb-header/lb-title/lb-event/lb-body in ControlView.css (P2). */
 </style>

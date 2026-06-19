@@ -17,6 +17,8 @@
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess, showError } from '@/composables/useNotify'
+import BaseModal from '@/components/BaseModal.vue'
+import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
   meet: { type: Object, required: true },
@@ -73,27 +75,20 @@ async function downloadMeetReadinessCsv() {
 </script>
 
 <template>
-  <div class="modal-backdrop" @click.self="$emit('close')"></div>
-  <div class="modal readiness-modal" @click.stop>
-    <div class="readiness-head">
-      <div>
-        <div class="teams-section-label">Meet Readiness</div>
-        <h2 class="readiness-title">{{ meet?.name }}</h2>
-      </div>
-      <div class="readiness-actions">
+  <BaseModal max-width="860px" @close="$emit('close')">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" title="Meet Readiness" :subtitle="meet?.name" @close="$emit('close')">
         <button class="btn btn-ghost btn-sm"
                 :disabled="readinessCsvBusy || !readinessReport"
                 @click="downloadMeetReadinessCsv">
           {{ readinessCsvBusy ? 'Exporting…' : 'Export CSV' }}
         </button>
-        <button class="btn btn-ghost btn-sm" @click="$emit('close')">{{ $t('manager.modals.close_x') }}</button>
-      </div>
-    </div>
+      </ModalHeader>
+      <div class="lb-body">
+        <div v-if="readinessErr" class="msg msg-error">{{ readinessErr }}</div>
+        <div v-if="readinessLoading" class="hint">Loading readiness report…</div>
 
-    <div v-if="readinessErr" class="msg msg-error">{{ readinessErr }}</div>
-    <div v-if="readinessLoading" class="hint">Loading readiness report…</div>
-
-    <template v-if="readinessReport && !readinessLoading">
+        <template v-if="readinessReport && !readinessLoading">
       <div class="readiness-summary">
         <div class="readiness-stat">
           <span>{{ readinessReport.summary.ready_count }}/{{ readinessReport.summary.event_count }}</span>
@@ -165,8 +160,10 @@ async function downloadMeetReadinessCsv() {
           </div>
         </li>
       </ul>
+        </template>
+      </div>
     </template>
-  </div>
+  </BaseModal>
 </template>
 
 <style scoped>
@@ -176,21 +173,6 @@ async function downloadMeetReadinessCsv() {
    COPIED from ManagerView.css (shared with the teams /
    federations modals and the rest of the manager page). */
 
-/* The modal renders as a sibling of an EMPTY .modal-backdrop (not
-   nested inside it), so the global .modal (position: static) would
-   drop to the bottom of the long events page instead of centring.
-   Pin to the viewport centre, above the backdrop; scrolls
-   internally if tall. */
-.modal.readiness-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 201;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-.readiness-modal { max-width: 860px; }
 .readiness-head {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 1rem; margin-bottom: 1rem;
@@ -288,11 +270,6 @@ async function downloadMeetReadinessCsv() {
 
 /* Phone — copied from ManagerView.css's 600px block. */
 @media (max-width: 600px) {
-  .modal,
-  .readiness-modal {
-    max-width: 100%;
-    width: 100%;
-  }
   .readiness-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

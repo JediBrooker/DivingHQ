@@ -13,6 +13,7 @@ import { useUiStore } from '@/stores/ui'
 import { useI18n } from 'vue-i18n'
 import LogoMark from '@/components/LogoMark.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import { openCommandPalette } from '@/composables/useAppChannel'
 import {
   LayoutDashboard, Trophy, MonitorPlay, Calculator, ChartColumn, Waves, GraduationCap,
   ListChecks, BookOpen, Users, Building2, ScrollText, Archive,
@@ -99,11 +100,10 @@ function signOut() {
   router.push('/login')
 }
 
-// Search → reuse the global command palette (⌘K).
+// Search → reuse the global command palette (⌘K) via the app channel
+// (no window global; mount-order independent).
 function openSearch() {
-  if (typeof window !== 'undefined' && typeof window.__openCommandPalette === 'function') {
-    window.__openCommandPalette()
-  }
+  openCommandPalette()
 }
 
 // Collapse / responsive. Desktop: shrink the grid (persisted).
@@ -128,6 +128,7 @@ function closeMobile() { mobileOpen.value = false }
 
 <template>
   <div class="app-shell" :class="{ collapsed, mobile: isMobile, 'mobile-open': isMobile && mobileOpen }">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <!-- Sidebar -->
     <aside class="sidebar">
       <RouterLink to="/dashboard" class="sb-brand">
@@ -135,7 +136,7 @@ function closeMobile() { mobileOpen.value = false }
         <span class="wm">DIVING<span>HQ</span></span>
       </RouterLink>
 
-      <nav class="sb-nav">
+      <nav class="sb-nav" aria-label="Primary">
         <template v-for="g in visibleGroups" :key="g.group">
           <div class="sb-group">{{ g.group }}</div>
           <RouterLink
@@ -199,14 +200,31 @@ function closeMobile() { mobileOpen.value = false }
         <RouterLink to="/inbox" class="icon-btn" aria-label="Notifications" v-tip:bottom.fixed="'Notifications'"><Bell /></RouterLink>
       </header>
 
-      <div class="shell-content">
+      <main id="main-content" class="shell-content" tabindex="-1" :aria-label="currentLabel">
         <slot />
-      </div>
+      </main>
     </div>
   </div>
 </template>
 
 <style scoped>
+/* P1: skip-to-content link — off-screen until focused, then pinned
+   top-left. The first focusable element on every shelled page. */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -52px;
+  z-index: 1000;
+  padding: 8px 14px;
+  background: var(--surface);
+  color: var(--fg);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-sm, 6px);
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: 8px; outline: none; }
+
 /* position:fixed + inset:0 makes the shell own the full viewport
    regardless of any body styling (some public auth views set
    `body { display:flex; padding }` globally, which would otherwise

@@ -261,6 +261,10 @@ test("round-rules: section editor exposes the min-distinct-groups field", async 
   // The Quick preset is gone — make sure it doesn't sneak back in.
   await expect(page.getByRole("button", { name: /Quick: 4 @ 7\.6/ })).toHaveCount(0);
 
+  // The create form is a wizard now — step Details -> Rounds -> Structure.
+  await page.getByRole("button", { name: /Next/ }).click();
+  await page.getByRole("button", { name: /Next/ }).click();
+
   // Add a single section via the + Add section button.
   await page.getByRole("button", { name: /\+ Add section/i }).click();
   await expect(page.locator(".rr-section")).toHaveCount(1);

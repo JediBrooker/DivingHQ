@@ -22,6 +22,8 @@ import { useAuthStore } from '@/stores/auth'
 import { showSuccess } from '@/composables/useNotify'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { RULE_REFERENCES } from '@/lib/ruleReferences'
+import BaseModal from '@/components/BaseModal.vue'
+import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const auth = useAuthStore()
 
@@ -235,13 +237,14 @@ defineExpose({
 <template>
   <!-- Super Final — Seed Head-to-Head modal. Mirrors the
        advance modal: preview + a single confirm action. -->
-  <div v-if="h2hModalOpen" class="modal-backdrop" @click.self="closeH2hModal">
-    <div class="modal modal-advance" @click.stop style="max-width:720px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px;font-style:italic">🥊 Seed Head-to-Head</h2>
-        <button class="btn btn-ghost btn-sm" @click="closeH2hModal">Cancel ✕</button>
-      </div>
-
+  <BaseModal v-if="h2hModalOpen" max-width="720px" @close="closeH2hModal">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" @close="closeH2hModal">
+        <template #title>
+          <span style="font-size:22px;font-style:italic">🥊 Seed Head-to-Head</span>
+        </template>
+      </ModalHeader>
+      <div class="lb-body">
       <p class="hint" style="margin-bottom:1rem" v-if="h2hEvent">
         Seed <strong>"{{ h2hEvent.name }}"</strong> from the Stop-1 ranking
         — pairs are 12v1, 11v2, 10v3, 9v4, 8v5, 7v6
@@ -315,18 +318,20 @@ defineExpose({
           </button>
         </div>
       </div>
-    </div>
-  </div>
+      </div>
+    </template>
+  </BaseModal>
 
   <!-- Super Final — H2H pair results modal. Read-only,
        opens on Live/Completed super_final_h2h events. -->
-  <div v-if="h2hResultsModalOpen" class="modal-backdrop" @click.self="closeH2hResultsModal">
-    <div class="modal modal-advance" @click.stop style="max-width:720px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px;font-style:italic">H2H — pair results</h2>
-        <button class="btn btn-ghost btn-sm" @click="closeH2hResultsModal">Close ✕</button>
-      </div>
-
+  <BaseModal v-if="h2hResultsModalOpen" max-width="720px" @close="closeH2hResultsModal">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" @close="closeH2hResultsModal">
+        <template #title>
+          <span style="font-size:22px;font-style:italic">H2H — pair results</span>
+        </template>
+      </ModalHeader>
+      <div class="lb-body">
       <p class="hint" style="margin-bottom:1rem" v-if="h2hEvent">
         <strong>"{{ h2hEvent.name }}"</strong> — winners advance to the Semi Final.
         Tied pairs need a dive-off under DWC Appendix 3 §6.
@@ -348,16 +353,19 @@ defineExpose({
         </div>
       </div>
       <div v-else-if="!h2hErr" class="hint">Loading…</div>
-    </div>
-  </div>
+      </div>
+    </template>
+  </BaseModal>
 
   <!-- Super Final — Seed Semi Final modal. -->
-  <div v-if="sfSeedModalOpen" class="modal-backdrop" @click.self="closeSfSeedModal">
-    <div class="modal modal-advance" @click.stop style="max-width:520px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px;font-style:italic">Seed Semi Final</h2>
-        <button class="btn btn-ghost btn-sm" @click="closeSfSeedModal">Cancel ✕</button>
-      </div>
+  <BaseModal v-if="sfSeedModalOpen" max-width="520px" @close="closeSfSeedModal">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" @close="closeSfSeedModal">
+        <template #title>
+          <span style="font-size:22px;font-style:italic">Seed Semi Final</span>
+        </template>
+      </ModalHeader>
+      <div class="lb-body">
       <p class="hint" style="margin-bottom:1rem" v-if="sfSeedEvent">
         Seed <strong>"{{ sfSeedEvent.name }}"</strong> with the 6 H2H winners.
         Scores from H2H carry forward. {{ RULE_REFERENCES.superFinalSemi }}.
@@ -377,16 +385,19 @@ defineExpose({
           {{ sfSeedLoading ? 'Seeding…' : 'Confirm seed' }}
         </button>
       </div>
-    </div>
-  </div>
+      </div>
+    </template>
+  </BaseModal>
 
   <!-- Super Final — Seed Final modal. -->
-  <div v-if="fSeedModalOpen" class="modal-backdrop" @click.self="closeFSeedModal">
-    <div class="modal modal-advance" @click.stop style="max-width:520px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px;font-style:italic">Seed Final</h2>
-        <button class="btn btn-ghost btn-sm" @click="closeFSeedModal">Cancel ✕</button>
-      </div>
+  <BaseModal v-if="fSeedModalOpen" max-width="520px" @close="closeFSeedModal">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" @close="closeFSeedModal">
+        <template #title>
+          <span style="font-size:22px;font-style:italic">Seed Final</span>
+        </template>
+      </ModalHeader>
+      <div class="lb-body">
       <p class="hint" style="margin-bottom:1rem" v-if="fSeedEvent">
         Seed <strong>"{{ fSeedEvent.name }}"</strong> with the top 2 from each SF group.
         Scores reset. Highest cumulative SF score dives last. {{ RULE_REFERENCES.superFinalFinal }}.
@@ -407,16 +418,19 @@ defineExpose({
           {{ fSeedLoading ? 'Seeding…' : 'Confirm seed' }}
         </button>
       </div>
-    </div>
-  </div>
+      </div>
+    </template>
+  </BaseModal>
 
   <!-- Super Final — Official 1-12 rankings (Appendix 3 §7). -->
-  <div v-if="superFinalRankingsModalOpen" class="modal-backdrop" @click.self="closeSuperFinalRankingsModal">
-    <div class="modal modal-advance" @click.stop style="max-width:680px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
-        <h2 style="font-size:22px;font-style:italic">Super Final — Official Rankings</h2>
-        <button class="btn btn-ghost btn-sm" @click="closeSuperFinalRankingsModal">Close ✕</button>
-      </div>
+  <BaseModal v-if="superFinalRankingsModalOpen" max-width="680px" @close="closeSuperFinalRankingsModal">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" @close="closeSuperFinalRankingsModal">
+        <template #title>
+          <span style="font-size:22px;font-style:italic">Super Final — Official Rankings</span>
+        </template>
+      </ModalHeader>
+      <div class="lb-body">
       <p class="hint" style="margin-bottom:1rem">
         {{ RULE_REFERENCES.superFinalRankings }}: positions 1-4 from the Final stage; 5-6 from
         H2H + SF cumulative (the SF non-finalists); 7-12 from H2H total only
@@ -443,8 +457,9 @@ defineExpose({
         </div>
       </div>
       <div v-else-if="!superFinalRankingsErr" class="hint">Loading…</div>
-    </div>
-  </div>
+      </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>

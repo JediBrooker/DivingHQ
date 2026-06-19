@@ -75,6 +75,14 @@ function cellClass(cell) {
 </template>
 
 <style scoped>
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
+   reinforces the global guard in app.css). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 .ev-grid { display: flex; flex-direction: column; gap: 0.45rem; }
 
 /* Each row is its own grid sharing an identical column template

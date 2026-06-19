@@ -21,6 +21,8 @@ import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useBroadcastChooser } from '@/composables/useBroadcastChooser'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import BaseModal from '@/components/BaseModal.vue'
+import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
   event: { type: Object, default: null },
@@ -139,22 +141,19 @@ defineExpose({ open })
   <!-- Broadcast chooser. Covers the realistic operator scenarios:
        kiosk this screen, audience projector, multi-event projector,
        streaming overlay, and venue hardware bridge setup. -->
-  <div v-if="broadcastChoiceOpen" class="lb-backdrop"
-       @mousedown.self="broadcastChoiceOpen = false; broadcastPickerOpen = false; obsInstructionsOpen = false; daktronicsInstructionsOpen = false">
-    <div class="lb-modal broadcast-chooser">
-      <div class="lb-header">
-        <div>
-          <div class="lb-title">{{ $t('control.modals.broadcast_title') }}</div>
-          <div class="lb-event">
-            <template v-if="broadcastPickerOpen">{{ $t('control.modals.broadcast_sub_picker') }}</template>
-            <template v-else-if="obsInstructionsOpen">{{ $t('control.modals.broadcast_sub_obs') }}</template>
-            <template v-else-if="daktronicsInstructionsOpen">{{ $t('control.modals.broadcast_sub_dak') }}</template>
-            <template v-else>{{ $t('control.modals.broadcast_sub_default') }}</template>
-          </div>
-        </div>
-        <button class="btn btn-ghost btn-sm"
-                @click="broadcastChoiceOpen = false; broadcastPickerOpen = false; obsInstructionsOpen = false; daktronicsInstructionsOpen = false">{{ $t('control.modals.close') }}</button>
-      </div>
+  <BaseModal :open="broadcastChoiceOpen" max-width="min(96vw, 760px)"
+             @close="broadcastChoiceOpen = false; broadcastPickerOpen = false; obsInstructionsOpen = false; daktronicsInstructionsOpen = false">
+    <template #default="{ titleId }">
+      <ModalHeader
+        :title-id="titleId"
+        :title="$t('control.modals.broadcast_title')"
+        @close="broadcastChoiceOpen = false; broadcastPickerOpen = false; obsInstructionsOpen = false; daktronicsInstructionsOpen = false"
+      >
+        <template v-if="broadcastPickerOpen">{{ $t('control.modals.broadcast_sub_picker') }}</template>
+        <template v-else-if="obsInstructionsOpen">{{ $t('control.modals.broadcast_sub_obs') }}</template>
+        <template v-else-if="daktronicsInstructionsOpen">{{ $t('control.modals.broadcast_sub_dak') }}</template>
+        <template v-else>{{ $t('control.modals.broadcast_sub_default') }}</template>
+      </ModalHeader>
       <!-- Default chooser body. Hidden while either sub-panel
            (multi-event picker, OBS instructions, venue hardware
            instructions) is open so the operator sees one panel
@@ -523,8 +522,8 @@ defineExpose({ open })
           </a>
         </div>
       </div>
-    </div>
-  </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
@@ -534,8 +533,8 @@ defineExpose({ open })
    modals that remain in ControlView. */
 
 /* Broadcast chooser modal — big tappable rows so the
-   operator picks the right destination at a glance. */
-.broadcast-chooser { max-width: min(96vw, 760px) !important; }
+   operator picks the right destination at a glance. The modal
+   width (min(96vw, 760px)) now rides BaseModal's max-width prop. */
 .broadcast-chooser-body {
   display: flex;
   flex-direction: column;
@@ -881,32 +880,6 @@ defineExpose({ open })
   .venue-command-head { grid-template-columns: 1fr; }
 }
 
-/* Modal frame — copied from ControlView.css (see AGENTS.md
-   "Modal CSS pattern"). */
-.lb-backdrop { position: fixed; inset: 0; background: rgba(3,7,18,0.95); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); z-index: 300; }
-.lb-modal {
-  position: fixed; top: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%);
-  z-index: 301;
-  background: var(--surface); border: 1px solid var(--border-2); border-radius: 28px;
-  width: calc(100% - 3rem); max-width: 560px;
-  max-height: 90vh;
-  max-height: 90dvh;
-  overflow-y: auto; animation: fadeUp 0.3s ease;
-  overflow-x: clip;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.55);
-}
-.lb-header { padding: 2rem 2rem 1.25rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); display: flex; align-items: flex-start; justify-content: space-between; }
-.lb-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--cyan); margin-bottom: 0.4rem; }
-.lb-event { font-family: var(--font-sans); font-size: 22px; font-weight: 600; font-style: normal; letter-spacing: -0.015em; color: var(--fg); line-height: 1.1; }
-.lb-body { padding: 1.5rem 2rem 2rem; }
-@media (max-width: 720px) {
-  .lb-modal {
-    max-height: calc(100vh - 1.5rem);   /* fallback */
-    max-height: calc(100dvh - 1.5rem);  /* preferred */
-    border-radius: var(--radius-lg);
-  }
-  .lb-header  { padding: 1.25rem 1.25rem 1rem; }
-  .lb-event   { font-size: 22px; }
-  .lb-body    { padding: 1rem 1.25rem 1.5rem; }
-}
+/* The lb-* modal frame now lives in BaseModal.vue (frame) + the global
+   lb-header/lb-title/lb-event/lb-body in ControlView.css (P2). */
 </style>

@@ -23,6 +23,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import { confirmAction } from '@/composables/useConfirm'
+import BaseModal from '@/components/BaseModal.vue'
+import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
   event: { type: Object, required: true },
@@ -225,16 +227,10 @@ async function managerAttestSignoff() {
 </script>
 
 <template>
-  <div class="lb-backdrop" @click="close"></div>
-  <div class="lb-modal signoff-modal" @click.stop>
-    <div class="lb-header">
-      <div>
-        <div class="lb-title">Referee Sign-Off</div>
-        <div class="lb-event">{{ event?.name }}</div>
-      </div>
-      <button class="btn btn-ghost btn-sm" @click="close">Close ✕</button>
-    </div>
-    <div class="lb-body">
+  <BaseModal max-width="540px" @close="close">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" title="Referee Sign-Off" :subtitle="event?.name" @close="close" />
+      <div class="lb-body">
       <!-- Enforcement banner: visible when the event was created
            with enforce_referee_signoff = TRUE so the operator
            understands why the manager-attests tab isn't there. -->
@@ -434,14 +430,20 @@ async function managerAttestSignoff() {
 
       <div v-if="signoffError" class="msg msg-error">{{ signoffError }}</div>
     </div>
-  </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
-/* Sign-off styles MOVED from ControlView.css (exclusive to this
-   modal). The .lb-* modal frame below is COPIED — the pattern is
-   shared by the modals that remain in ControlView. */
-.signoff-modal { max-width: 540px; }
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
+   reinforces the global guard in app.css). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+/* Sign-off styles MOVED from ControlView.css (exclusive to this modal). */
 .signoff-tabs {
   display: flex; gap: 0.4rem; margin-bottom: 1rem;
   border-bottom: 1px solid var(--border);
@@ -546,32 +548,6 @@ async function managerAttestSignoff() {
   50%      { opacity: 1;   transform: scale(1.15); }
 }
 
-/* Modal frame — copied from ControlView.css (see AGENTS.md
-   "Modal CSS pattern": fixed backdrop + sibling fixed modal). */
-.lb-backdrop { position: fixed; inset: 0; background: rgba(3,7,18,0.95); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); z-index: 300; }
-.lb-modal {
-  position: fixed; top: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%);
-  z-index: 301;
-  background: var(--surface); border: 1px solid var(--border-2); border-radius: 28px;
-  width: calc(100% - 3rem); max-width: 560px;
-  max-height: 90vh;
-  max-height: 90dvh;
-  overflow-y: auto; animation: fadeUp 0.3s ease;
-  overflow-x: clip;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.55);
-}
-.lb-header { padding: 2rem 2rem 1.25rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); display: flex; align-items: flex-start; justify-content: space-between; }
-.lb-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--cyan); margin-bottom: 0.4rem; }
-.lb-event { font-family: var(--font-sans); font-size: 22px; font-weight: 600; font-style: normal; letter-spacing: -0.015em; color: var(--fg); line-height: 1.1; }
-.lb-body { padding: 1.5rem 2rem 2rem; }
-@media (max-width: 720px) {
-  .lb-modal {
-    max-height: calc(100vh - 1.5rem);   /* fallback */
-    max-height: calc(100dvh - 1.5rem);  /* preferred */
-    border-radius: var(--radius-lg);
-  }
-  .lb-header  { padding: 1.25rem 1.25rem 1rem; }
-  .lb-event   { font-size: 22px; }
-  .lb-body    { padding: 1rem 1.25rem 1.5rem; }
-}
+/* The lb-* modal frame now lives in BaseModal.vue (frame) + the global
+   lb-header/lb-title/lb-event/lb-body in ControlView.css. */
 </style>

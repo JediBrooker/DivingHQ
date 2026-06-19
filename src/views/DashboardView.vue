@@ -33,6 +33,8 @@ import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
+import { contributesToDiverChip, rankAttentionChips } from '@/composables/useAttention'
+import AttentionLane from '@/components/dashboard/AttentionLane.vue'
 import { fmtCloses, fmtRelative } from '@/lib/format'
 import { Building2, Calendar, MonitorPlay, UserCog } from '@lucide/vue'
 
@@ -137,6 +139,10 @@ const diverEntryCloseDays = computed(() => {
   let nearest = Infinity
   for (const ev of events.value) {
     if (ev.status !== 'Upcoming' || !ev.entries_close_at) continue
+    // Only events the diver is actually entered in (gated on
+    // diver_event_ids via the shared attention selector), so this chip
+    // agrees with diverNextMeet. null bundle => entered, so no blink.
+    if (!contributesToDiverChip(ev.id, diverEventIds.value)) continue
     const t = +new Date(ev.entries_close_at)
     if (t > now && t - now < nearest) nearest = t - now
   }
@@ -305,6 +311,7 @@ const pulseChips = computed(() => {
     const now = Date.now()
     const upcoming = events.value
       .filter((e) => e.status === 'Upcoming' && e.entries_close_at)
+      .filter((e) => contributesToDiverChip(e.id, diverEventIds.value))
       .sort((a, b) => +new Date(a.entries_close_at) - +new Date(b.entries_close_at))
     chips.push({
       id:           'diver-entries',
@@ -374,6 +381,11 @@ const pulseChips = computed(() => {
 
   return chips
 })
+
+// P4 (2/2): the ranked needs-attention lane -- the same chips, but the
+// most urgent category first (live > closing<24h > overdue>7d) instead of
+// a fixed role order. The popover drill + deep links are unchanged.
+const attentionLane = computed(() => rankAttentionChips(pulseChips.value))
 
 // Which chip's popover is currently open via tap. Mobile-only
 // affordance — desktop uses :hover to reveal the popover so
@@ -886,13 +898,10 @@ onMounted(async () => {
   // emits so the strip updates the moment something happens.
   // Polling continues as a fallback.
   attachSocketHandlers()
-  // Activity ticker: kicks off the cycle through recent-
-  // activity rows. Pauses on hover via the @mouseenter handler.
-  startTicker()
+  // (P4) the activity ticker was removed; nothing to start here.
 })
 onUnmounted(() => {
   stopPulsePolling()
-  stopTicker()
   detachSocketHandlers()
 })
 
@@ -924,60 +933,11 @@ async function refetchPulseData() {
 // before the real data crossfades in.
 const pulseInitiallyLoaded = ref(false)
 
-// ---- Latest-activity ticker -------------------------------
-// Auto-cycles every TICKER_MS through the most-recent rows in
-// recentActivity (loaded for org admins via /api/audit/recent).
-// Hover pauses the cycle. Each item is a one-line description
-// of the audit row so the strip shows a Twitter-style stream
-// of federation activity. Click → /audit.
-const TICKER_MS = 9000
-const tickerIndex = ref(0)
-const tickerPaused = ref(false)
-let tickerTimer = null
-function pauseTicker() { tickerPaused.value = true }
-function resumeTicker() { tickerPaused.value = false }
-function startTicker() {
-  if (tickerTimer) clearInterval(tickerTimer)
-  tickerTimer = setInterval(() => {
-    if (tickerPaused.value) return
-    const items = tickerSource.value
-    if (!items.length) return
-    tickerIndex.value = (tickerIndex.value + 1) % items.length
-  }, TICKER_MS)
-}
-function stopTicker() {
-  if (tickerTimer) { clearInterval(tickerTimer); tickerTimer = null }
-}
-
-// Format an audit row into a one-liner for the ticker strip.
-// Three kinds (score / role / activity) each get a different
-// shape; the strip is too narrow for everything, so we keep
-// it tight and trust the click-through to /audit for detail.
-function tickerTextFor(r) {
-  if (!r) return ''
-  if (r.kind === 'score') {
-    if (r.action === 'update') {
-      return `${r.competitor_name || 'Competitor'} score amended in ${r.event_name || 'event'}`
-    }
-    if (r.action === 'delete') {
-      return `${r.competitor_name || 'Competitor'} score deleted in ${r.event_name || 'event'}`
-    }
-    return `${r.competitor_name || 'Competitor'} scored ${r.new_score ?? '?'} in ${r.event_name || 'event'}`
-  }
-  if (r.kind === 'role') {
-    return `${r.role || 'Role'} ${r.action} ${r.action === 'granted' ? 'to' : 'from'} ${r.target_name || 'user'}`
-  }
-  // activity row
-  const verb = (r.action || '').replace(/^[a-z_]+\./, '').replace(/_/g, ' ')
-  return `${r.entity_name || r.entity_type || 'Entity'} · ${verb}`
-}
-const tickerSource = computed(() => recentActivity.value.slice(0, 5))
-const tickerActivity = computed(() => {
-  const items = tickerSource.value
-  if (!items.length) return null
-  const r = items[tickerIndex.value % items.length] || items[0]
-  return { ...r, text: tickerTextFor(r) }
-})
+// ---- Latest-activity ticker (removed in P4) ---------------
+// The auto-cycling 9s ticker was idle motion with no ranking. The
+// most-recent audit rows still render as a STATIC list in
+// OrgAdminPanel (via :recent-activity); onScoreActivity keeps
+// recentActivity fresh for it, and full detail stays at /audit.
 
 // ---- Socket subscription ----------------------------------
 // Real-time push: when the server emits an event status change
@@ -1082,88 +1042,13 @@ function detachSocketHandlers() {
          a list of the actual items behind the count, each
          clickable to navigate directly to that thing). Polled
          every 30s; counts that change flash briefly. -->
-    <div class="pulse-strip">
-      <!-- Skeleton placeholder while the initial pulse fetches.
-           Three ghost chips so the strip has visual mass before
-           the real data lands; prevents the brief flicker
-           "All quiet" → real chips that the prior layout had. -->
-      <template v-if="!pulseInitiallyLoaded">
-        <span v-for="n in 3" :key="`sk-${n}`" class="pulse-skeleton" aria-hidden="true"></span>
-      </template>
-      <template v-else>
-        <!-- Chip is a role="button" div (NOT a <button>) because
-             it nests <RouterLink> popover items, and an anchor
-             inside a button is invalid HTML — browsers handle
-             that inconsistently and the inner navigation can
-             get swallowed. Keyboard handlers below preserve the
-             button-like Enter/Space activation. -->
-        <div
-          v-for="chip in pulseChips"
-          :key="chip.id"
-          role="button"
-          tabindex="0"
-          :class="[
-            'pulse-chip',
-            `pulse-${chip.kind}`,
-            flashingChips.has(chip.id) ? 'pulse-flash' : '',
-            openChipId === chip.id ? 'is-open' : '',
-          ]"
-          :aria-label="`${chip.popoverTitle} — click to view in ${chip.targetTab.replace('_', ' ')} tab`"
-          @click="onPulseChipClick(chip)"
-          @keydown.enter.prevent="onPulseChipClick(chip)"
-          @keydown.space.prevent="onPulseChipClick(chip)"
-        >
-          <span v-if="chip.glyph" class="pulse-glyph" aria-hidden="true">{{ chip.glyph }}</span>
-          <template v-if="chip.layout === 'count-after'">
-            <span class="pulse-text">{{ chip.label }}</span>
-            <span class="pulse-num">{{ chip.number }}</span>
-          </template>
-          <template v-else>
-            <span class="pulse-num">{{ chip.number }}</span>
-            <span class="pulse-text">{{ chip.label }}</span>
-          </template>
-          <!-- Hover/focus popover. items.length === 0 hides it
-               entirely — falling back to a simple chip. -->
-          <div v-if="chip.items.length" class="pulse-popover" role="menu">
-            <div class="pulse-popover-head">{{ chip.popoverTitle }}</div>
-            <RouterLink
-              v-for="item in chip.items"
-              :key="item.id"
-              :to="item.to"
-              :class="['pulse-popover-item', item.urgency ? `pulse-popover-${item.urgency}` : '']"
-              role="menuitem"
-              @click.stop
-            >
-              <span class="pulse-popover-item-title">{{ item.title }}</span>
-              <span v-if="item.meta" class="pulse-popover-item-meta">{{ item.meta }}</span>
-              <span v-if="item.urgency === 'urgent'" class="pulse-urgency-pill pulse-urgency-urgent">closing soon</span>
-              <span v-else-if="item.urgency === 'overdue'" class="pulse-urgency-pill pulse-urgency-overdue">overdue</span>
-              <span v-else-if="item.urgency === 'live'" class="pulse-urgency-pill pulse-urgency-live">live</span>
-            </RouterLink>
-          </div>
-        </div>
-
-        <!-- Latest-activity ticker. Shows for org admins (the
-             role that's most likely to want a live federation
-             pulse). Auto-cycles every 10s through the most-
-             recent activity rows; hover pauses the cycle.
-             Click → /audit. -->
-        <RouterLink
-          v-if="tickerActivity"
-          to="/audit"
-          class="pulse-ticker"
-          v-tip="`${tickerActivity.kind === 'score' ? 'Score' : tickerActivity.kind === 'role' ? 'Role change' : 'Activity'} — click to open Audit Log`"
-          @mouseenter="pauseTicker"
-          @mouseleave="resumeTicker"
-        >
-          <span class="pulse-ticker-bolt" aria-hidden="true">⚡</span>
-          <span class="pulse-ticker-text">{{ tickerActivity.text }}</span>
-          <span class="pulse-ticker-time">{{ fmtRelative(tickerActivity.created_at) }}</span>
-        </RouterLink>
-
-        <span v-if="!pulseChips.length && !tickerActivity" class="pulse-quiet">All quiet — nothing pending.</span>
-      </template>
-    </div>
+    <AttentionLane
+      :chips="attentionLane"
+      :open-id="openChipId"
+      :flashing="flashingChips"
+      :loading="!pulseInitiallyLoaded"
+      @chip-click="onPulseChipClick"
+    />
 
     <!-- Tab strip — one tab per visible role + Other. -->
     <div class="tab-strip" role="tablist">
@@ -1238,6 +1123,14 @@ function detachSocketHandlers() {
 </template>
 
 <style scoped>
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
+   reinforces the global guard in app.css). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 /* Dashboard wrapper — clamps horizontal overflow at the page
    level. */
 .dashboard {
@@ -1418,307 +1311,6 @@ function detachSocketHandlers() {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .find-diver-club-code { font-weight: 700; color: var(--cyan); margin-inline-start: 0.4rem; }
 
-/* Pulse strip — always-visible cross-role digest. Sits above
-   the tabs so a multi-role user sees activity in roles other
-   than their active tab without switching. Width math: the
-   strip's outer edges align with the inner-content edges of
-   the surrounding sections (which use `padding: 0 2rem` inside
-   a 1400px max-width). 1400 - (2 × 2rem) = 1400px - 4rem. */
-.pulse-strip {
-  display: flex; align-items: center; flex-wrap: wrap;
-  gap: 0.45rem 1.1rem;
-  width: calc(100% - 4rem);
-  max-width: calc(1400px - 4rem);
-  margin: 1.25rem auto 0;
-  padding: 0.75rem 1rem;
-  background: var(--bg-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-family: var(--font-display);
-  font-size: 11px; font-weight: 700;
-  letter-spacing: 0.16em; text-transform: uppercase;
-  color: var(--text-3);
-}
-/* Chip — button + popover container. Chips are clickable to
-   switch tabs; hovering / focusing reveals a popover listing
-   the actual items behind the count, each clickable as a
-   RouterLink. */
-.pulse-chip {
-  position: relative;
-  display: inline-flex; align-items: center; gap: 0.4rem;
-  background: transparent; border: 0;
-  padding: 0.2rem 0.4rem;
-  margin: -0.2rem -0.4rem;
-  border-radius: 4px;
-  font: inherit;
-  color: inherit;
-  letter-spacing: inherit;
-  cursor: pointer;
-  transition: background 0.12s, transform 0.12s;
-}
-.pulse-chip:hover  { background: rgba(255, 255, 255, 0.04); }
-.pulse-chip:focus  { outline: none; }
-.pulse-chip:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
-.pulse-text { font-style: normal; }
-
-.pulse-num {
-  font-family: var(--font-mono);
-  font-size: 13px; font-weight: 800;
-  letter-spacing: 0;
-  padding: 0.05rem 0.5rem;
-  border-radius: 3px;
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  transition: transform 0.18s, box-shadow 0.18s;
-}
-.pulse-glyph {
-  display: inline-flex; align-items: center;
-  font-size: 14px; line-height: 1;
-  margin-inline-end: 0.05rem;
-}
-.pulse-live     .pulse-num { color: var(--red);   border-color: rgba(239,68,68,0.4);   background: rgba(239,68,68,0.08); }
-.pulse-upcoming .pulse-num { color: var(--cyan);  border-color: rgba(6,182,212,0.4);   background: rgba(6,182,212,0.08); }
-.pulse-pending  .pulse-num { color: #a78bfa;      border-color: rgba(167,139,250,0.4); background: rgba(167,139,250,0.08); }
-.pulse-diver    .pulse-num { color: var(--green); border-color: rgba(16,185,129,0.4);  background: rgba(16,185,129,0.08); }
-.pulse-judge    .pulse-num { color: var(--amber); border-color: rgba(245,158,11,0.4);  background: rgba(245,158,11,0.08); }
-.pulse-coach    .pulse-num { color: #f472b6;      border-color: rgba(244,114,182,0.4); background: rgba(244,114,182,0.08); }
-
-/* Flash — fires for ~1.4s after a count changes (live polling
-   picked up a new event / role request / etc.). The pulse-num
-   chip pulses up + glows briefly so the operator's eye lands
-   on the change without it being intrusive. */
-@keyframes pulseFlash {
-  0%   { transform: scale(1);    box-shadow: 0 0 0 0 currentColor; }
-  20%  { transform: scale(1.18); box-shadow: 0 0 0 6px rgba(6, 182, 212, 0.15); }
-  100% { transform: scale(1);    box-shadow: 0 0 0 0 transparent; }
-}
-.pulse-chip.pulse-flash .pulse-num {
-  animation: pulseFlash 1.4s ease-out;
-}
-
-.pulse-quiet {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 500;
-  letter-spacing: 0.04em; text-transform: none; color: var(--text-3);
-  font-style: italic;
-}
-
-/* Popover — shows on hover or keyboard focus of the chip.
-   Lists the actual items behind the count as clickable rows.
-   Anchored flush with the chip's bottom edge (top: 100%) so
-   the mouse can move from chip → popover without crossing a
-   hover-killing gap. The visual breathing room comes from
-   the popover's ::before bridge + internal padding instead. */
-.pulse-popover {
-  position: absolute;
-  top: 100%;
-  /* Anchor to the chip's start edge, NOT centered. A centered
-     popover (inset-inline-start:50% + translateX(-50%)) pushed
-     the leftmost chip's box ~140px to the left of the chip — off
-     the page's left edge, where the dashboard wrapper's
-     overflow-x:clip sheared the first ~46px of every row off.
-     Start-anchoring opens the popover rightward from the chip, so
-     it always lands inside the clip box. Chips are left-clustered
-     in a 1212px strip, so even the right-most chip's popover
-     (≤420px wide) stays within bounds. Mirrors the
-     rd-pick-popover anchoring pattern. */
-  inset-inline-start: 0;
-  margin-top: 0.4rem;                /* visual gap, NOT a hover gap (see ::before) */
-  min-width: 280px;
-  max-width: min(420px, 90vw);
-  z-index: 100;
-  background: var(--surface);
-  border: 1px solid var(--border-2);
-  border-radius: var(--radius);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
-  padding: 0.45rem 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s;
-  letter-spacing: 0;
-  text-transform: none;
-}
-/* Invisible bridge between the chip and the popover. The
-   popover has a 0.4rem margin-top for breathing room, but the
-   ::before extends back up over that margin so the mouse can
-   traverse from chip → popover without ever leaving a hover
-   surface. Without this bridge, :hover stops matching mid-
-   traversal, the popover gets pointer-events:none, and the
-   item click fails to register. Standard CSS dropdown trick. */
-.pulse-popover::before {
-  content: '';
-  position: absolute;
-  top: -0.5rem;
-  inset-inline-start: 0; inset-inline-end: 0;
-  height: 0.5rem;
-  /* invisible — purely a hover-continuation surface */
-}
-.pulse-chip:hover .pulse-popover,
-.pulse-chip:focus-within .pulse-popover,
-/* `.is-open` is added by the click handler on tap (touch-only
-   devices) — see onPulseChipClick. Without this rule touch
-   users never see the popover, since :hover never matches and
-   :focus-within loses focus the moment the chip's child is
-   clicked (the click target is the chip itself, not the
-   popover anchor). */
-.pulse-chip.is-open .pulse-popover {
-  opacity: 1;
-  pointer-events: auto;
-}
-/* Mobile sheet animations — referenced by the .is-open rules
-   inside the @media (max-width: 600px) block below. Declared
-   at module scope so the @keyframes name resolves. */
-@keyframes pulse-sheet-up {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
-@keyframes pulse-sheet-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-.pulse-popover-head {
-  font-family: var(--font-display);
-  font-size: 10px; font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--text-3);
-  padding: 0.45rem 0.95rem 0.55rem;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 0.35rem;
-}
-.pulse-popover-item {
-  display: flex; flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.5rem 0.95rem;
-  text-decoration: none;
-  text-align: start;
-  transition: background 0.12s;
-}
-.pulse-popover-item:hover {
-  background: var(--bg-3);
-}
-.pulse-popover-item-title {
-  font-family: var(--font-display);
-  font-size: 13px; font-weight: 700;
-  font-style: italic;
-  letter-spacing: 0.02em;
-  color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.pulse-popover-item-meta {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-3);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-
-/* Urgency markers — surface the genuinely time-sensitive
-   items inside a popover so an operator can scan the list and
-   spot the 2 of 60 things that need attention now. Three
-   levels: urgent (closing soon / live), overdue (older than 7d
-   pending). The pill sits at the right of the row; the row's
-   left border picks up the urgency colour too. */
-.pulse-popover-urgent {
-  border-inline-start: 3px solid var(--amber);
-}
-.pulse-popover-overdue {
-  border-inline-start: 3px solid var(--red);
-}
-.pulse-popover-live {
-  border-inline-start: 3px solid var(--red);
-}
-.pulse-urgency-pill {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  padding: 0.1rem 0.45rem;
-  border-radius: 999px;
-  margin-top: 0.25rem;
-  align-self: flex-start;
-}
-.pulse-urgency-urgent  { color: var(--amber); background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.35); }
-.pulse-urgency-overdue { color: var(--red);   background: rgba(239,68,68,0.12);  border: 1px solid rgba(239,68,68,0.35); }
-.pulse-urgency-live    { color: var(--red);   background: rgba(239,68,68,0.12);  border: 1px solid rgba(239,68,68,0.4); }
-
-/* Skeleton ghost chips — shown briefly on first mount before
-   real pulse data arrives, so the strip never flashes "All
-   quiet" before the actual chips appear. Three placeholder
-   widths so it looks like real chip variation. */
-.pulse-skeleton {
-  display: inline-block;
-  width: 110px;
-  height: 22px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, var(--bg-2), var(--bg-3), var(--bg-2));
-  background-size: 200% 100%;
-  animation: pulseSkeletonSweep 1.4s ease-in-out infinite;
-}
-.pulse-skeleton:nth-child(2) { width: 140px; }
-.pulse-skeleton:nth-child(3) { width: 90px; }
-@keyframes pulseSkeletonSweep {
-  0%   { background-position: 200% 0; opacity: 0.55; }
-  50%  { opacity: 0.85; }
-  100% { background-position: -200% 0; opacity: 0.55; }
-}
-
-/* Breathing animation on the LIVE chip — slow opacity loop
-   reinforces "this is happening right now" without being
-   distracting. Only fires when there are live events (the
-   chip itself only renders then). */
-@keyframes pulseLiveBreathing {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-  50%      { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.10); }
-}
-.pulse-chip.pulse-live {
-  animation: pulseLiveBreathing 3.2s ease-in-out infinite;
-}
-/* When the LIVE chip is also flashing (count just changed),
-   suppress the breathing for the duration of the flash so
-   the two animations don't fight. */
-.pulse-chip.pulse-live.pulse-flash {
-  animation: pulseFlash 1.4s ease-out;
-}
-
-/* Latest-activity ticker — auto-cycling chip on the right of
-   the strip showing the most recent audit row. Hover (handled
-   in JS via @mouseenter) pauses the cycle. Click → /audit. */
-.pulse-ticker {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  margin-inline-start: auto;                  /* pushes it to the right edge of the strip */
-  padding-block: 0.2rem;
-  padding-inline: 0.5rem 0.7rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  color: var(--text-2);
-  text-decoration: none;
-  max-width: min(40vw, 460px);
-  transition: background 0.15s, border-color 0.15s;
-}
-.pulse-ticker:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: var(--border-2);
-  color: var(--text);
-}
-.pulse-ticker-bolt {
-  font-size: 12px;
-  color: var(--cyan);
-}
-.pulse-ticker-text {
-  flex: 1 1 auto; min-width: 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  letter-spacing: 0;
-}
-.pulse-ticker-time {
-  flex-shrink: 0;
-  color: var(--text-3);
-  font-size: 10.5px;
-}
-
 /* Tab strip — primary navigation, so styled with the same
    display-italic typography the rest of the dashboard uses
    for "important things". Active tab gets a subtle cyan tint
@@ -1833,16 +1425,6 @@ function detachSocketHandlers() {
     justify-content: center;
     min-width: 0;
   }
-  .pulse-strip {
-    /* Tighter gaps + less vertical noise. min-width:0 is
-       belt-and-braces against Safari reporting the chip row's
-       min-content width upward. */
-    width: calc(100% - 2.5rem);
-    max-width: calc(1400px - 2.5rem);
-    padding: 0.6rem 0.85rem;
-    gap: 0.4rem 0.85rem;
-    min-width: 0;
-  }
   .tab-strip {
     padding: 0 1.25rem;
     /* Horizontal scroll instead of wrap — keeps the strip a
@@ -1897,106 +1479,6 @@ function detachSocketHandlers() {
     padding: 0.5rem 0.75rem;
   }
   .find-diver-wrapper { flex: 1 1 100%; }
-  .pulse-strip {
-    margin: 0.85rem auto 0;
-    width: calc(100% - 2rem);
-    padding: 0.55rem 0.7rem;
-    /* Allow horizontal scroll for the chips so the user can
-       still see all of them without forcing line-wrap that
-       eats vertical space. */
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-    min-width: 0;
-  }
-  .pulse-strip::-webkit-scrollbar { display: none; }
-  .pulse-chip { flex-shrink: 0; }
-  /* Slightly smaller chip numerals on phones so a 5-chip row
-     ("LIVE / UPCOMING / INVITED / PENDING / …") fits more of
-     its content on-screen before the scroll kicks in. */
-  .pulse-num { font-size: 13px; padding: 0.1rem 0.45rem; }
-  /* On phones the chip's popover can't be anchored below the
-     chip the way it is on desktop — the parent .pulse-strip
-     has overflow-x:auto for horizontal scrolling and clips its
-     descendants in both axes (a CSS spec quirk: setting one
-     overflow axis to anything other than `visible` forces the
-     other axis to clip too). An absolutely-positioned popover
-     inside the strip would be cut off below the chip line.
-
-     Float the popover out as a bottom sheet — slides up from
-     the bottom edge of the screen, fills the lower half. Tap
-     anywhere outside (handled in JS) dismisses it. This is the
-     same pattern Twitter, Linear, and Stripe Dashboard use for
-     phone-width disclosure menus. */
-  .pulse-chip.is-open .pulse-popover {
-    position: fixed;
-    top: auto;
-    inset-inline-start: 0;
-    inset-inline-end: 0;
-    bottom: 0;
-    transform: none;
-    margin-top: 0;
-    min-width: 0;
-    max-width: none;
-    width: 100%;
-    /* dvh, not vh — iOS Safari toolbar collapse + bottom-sheet
-       layout. Adds env(safe-area-inset-bottom) so the last row
-       in the sheet clears the home-indicator gesture zone.
-       vh fallback first for browsers older than ~Q4-2022. */
-    max-height: 70vh;
-    max-height: 70dvh;
-    overflow-y: auto;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    border-bottom: 0;
-    box-shadow: 0 -16px 36px rgba(0, 0, 0, 0.55);
-    z-index: 200;
-    padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom, 0px));
-    animation: pulse-sheet-up 0.2s ease-out;
-  }
-  /* Backdrop dimming when a chip popover is open. The pseudo
-     element sits inside .pulse-chip but uses position:fixed so
-     it covers the whole viewport. */
-  .pulse-chip.is-open::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: rgba(3, 7, 18, 0.55);
-    -webkit-backdrop-filter: blur(4px);  /* iOS Safari */
-    backdrop-filter: blur(4px);
-    z-index: 150;
-    animation: pulse-sheet-fade 0.2s ease-out;
-  }
-  /* The popover-head doubles as a sheet handle on mobile —
-     widen the bottom border so it reads as a drag affordance. */
-  .pulse-chip.is-open .pulse-popover-head {
-    text-align: center;
-    padding: 0.85rem 1rem 0.7rem;
-    position: relative;
-  }
-  .pulse-chip.is-open .pulse-popover-head::before {
-    content: '';
-    position: absolute;
-    top: 0.45rem;
-    inset-inline-start: 50%;
-    transform: translateX(-50%);
-    width: 40px;
-    height: 4px;
-    background: var(--border-2, var(--border));
-    border-radius: 999px;
-  }
-  /* Popover items use bigger tap targets in sheet mode. */
-  .pulse-chip.is-open .pulse-popover-item {
-    padding: 0.85rem 1rem;
-    min-height: 48px;
-  }
-  .pulse-ticker {
-    /* Hide the ticker on phones — it competes with the
-       chips for the (now scrollable) strip width and the
-       chips are more important. The activity feed is still
-       reachable via /audit. */
-    display: none;
-  }
   .tab-strip { padding: 0 1rem; }
   .tab {
     padding: 0.7rem 0.8rem;
