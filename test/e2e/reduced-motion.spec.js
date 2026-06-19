@@ -81,11 +81,21 @@ test("meet-day surfaces honour prefers-reduced-motion", async ({ request, page }
 
 test("skip link + topbar Search work via the app channel (no window globals)", async ({ request, page }) => {
   test.setTimeout(60_000);
+  // Reduced motion holds the layout still so the topbar can't jitter
+  // under Playwright's actionability check; the palette + skip link
+  // don't depend on motion.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   const { username } = await setup.createOrgAndAdmin(request, {
     countryCode: "AUS",
     orgName: "App Channel Diving",
   });
   await signIn(page, username);
+  // A brand-new org lands on the setup wizard at /dashboard (not
+  // AppShell-shelled) and the role tour only auto-starts there. Use
+  // /control -- a shelled route gated by neither -- so the AppShell
+  // skip link + topbar are the page chrome, then let it settle.
+  await page.goto("/control");
+  await page.waitForLoadState("networkidle");
 
   // The skip link is the first focusable element on a shelled page.
   await page.keyboard.press("Tab");
@@ -97,6 +107,8 @@ test("skip link + topbar Search work via the app channel (no window globals)", a
   expect(firstFocus.text).toBe("Skip to main content");
 
   // Topbar Search opens the palette via useAppChannel.openCommandPalette().
-  await page.locator(".topbar-search").click();
+  const search = page.locator(".topbar-search");
+  await search.waitFor({ state: "visible" });
+  await search.click({ force: true });
   await expect(page.locator('.cmdk-backdrop[role="dialog"] .cmdk-input')).toBeVisible({ timeout: 5_000 });
 });
