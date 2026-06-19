@@ -33,6 +33,31 @@ const {
 } = require("../../lib/super-final-helpers");
 const { perDivePointsCte } = require("../../lib/scoring-sql");
 
+// World Aquatics Art 4.1.5 / Diving World Cup §3.1.2: within a Super-
+// Final tier (finalists at positions 1-4, SF non-finalists 5-6, H2H
+// losers 7-12) competitors on an equal total SHARE a placing — and
+// split any prize for that position. Assign standard competition ranks
+// ("1, 2, 2, 4") offset by the tier's base position; `rows` must be
+// sorted by total descending. Returns { row, rank, is_tied } per entry.
+// Tiers are structural pools, so the caller advances the next tier's
+// base by rows.length — a shared placing still consumes a slot.
+function assignSharedTierRanks(rows, base, getTotal) {
+  let prevTotal = null;
+  let prevRank = base;
+  const ranked = rows.map((row, i) => {
+    const total = Number(getTotal(row));
+    const rank = prevTotal !== null && Math.abs(total - prevTotal) < 1e-9
+      ? prevRank
+      : base + i;
+    prevTotal = total;
+    prevRank = rank;
+    return { row, rank };
+  });
+  const counts = new Map();
+  for (const r of ranked) counts.set(r.rank, (counts.get(r.rank) || 0) + 1);
+  return ranked.map((r) => ({ ...r, is_tied: counts.get(r.rank) > 1 }));
+}
+
 module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManager }) {
   if (!pool || !requireEventManager) {
     throw new Error("createSuperFinalBridgeRoutes requires { pool, requireEventManager }");
@@ -488,14 +513,12 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
   //                   ranked by H2H total only.
   //
   // Cross-tier ties are impossible by construction (a position-1
-  // diver can't tie a position-7 diver — they're in different
-  // pools). Within a tier, rows are ordered by total then name for a
-  // stable, rank-neutral order (World Aquatics Art 4.1.5 declares
-  // equal totals a tie rather than splitting them on a points-based
-  // tie-break). NOTE: the assembled 1-12 SF ranking still labels each
-  // tier position strictly by index; surfacing shared placings for a
-  // genuine within-tier tie (relevant to WC §3.1.2 prize splitting)
-  // is a separate follow-up.
+  // diver can't tie a position-7 diver — they're in different pools).
+  // Within a tier, equal totals SHARE a placing per World Aquatics
+  // Art 4.1.5 (and split any prize for that position, WC §3.1.2):
+  // assignSharedTierRanks gives standard "1, 2, 2, 4" competition
+  // ranks offset by the tier's base, and each row carries an is_tied
+  // flag for the UI.
   router.get(
     "/api/events/:id/super-final/rankings",
     async (req, res) => {
@@ -618,12 +641,18 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
           .sort((a, b) => b.total - a.total)
           .slice(0, 6);
 
-        // Build merged rankings.
+        // Build merged rankings. Each tier shares placings on equal
+        // totals (assignSharedTierRanks) and the next tier's base
+        // advances by the tier's competitor count — a shared placing
+        // still consumes a slot, so the tier boundaries stay 1-4 / 5-6
+        // / 7-12 in a clean run.
         const rankings = [];
-        let pos = 1;
-        for (const r of fTier.rows.slice(0, 4)) {
+        let base = 1;
+
+        const fRanked = assignSharedTierRanks(fTier.rows.slice(0, 4), base, (r) => r.total);
+        for (const { row: r, rank, is_tied } of fRanked) {
           rankings.push({
-            rank:          pos++,
+            rank, is_tied,
             source:        "final",
             competitor_id: r.competitor_id,
             full_name:     r.full_name,
@@ -632,9 +661,12 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
             total:         Number(r.total),
           });
         }
-        for (const r of sfTier) {
+        base += fRanked.length;
+
+        const sfRanked = assignSharedTierRanks(sfTier, base, (r) => r.cumulative_total);
+        for (const { row: r, rank, is_tied } of sfRanked) {
           rankings.push({
-            rank:          pos++,
+            rank, is_tied,
             source:        "h2h+semi",
             competitor_id: r.competitor_id,
             full_name:     r.full_name,
@@ -643,10 +675,13 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
             total:         r.cumulative_total,
           });
         }
-        for (const r of h2hTier) {
+        base += sfRanked.length;
+
+        const h2hRanked = assignSharedTierRanks(h2hTier, base, (r) => r.total);
+        for (const { row: r, rank, is_tied } of h2hRanked) {
           const meta = loserMeta.get(r.competitor_id);
           rankings.push({
-            rank:          pos++,
+            rank, is_tied,
             source:        "h2h",
             competitor_id: r.competitor_id,
             full_name:     r.full_name,
@@ -668,3 +703,6 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
 
   return router;
 };
+
+// Exported for unit testing of the within-tier shared-place ranking.
+module.exports.assignSharedTierRanks = assignSharedTierRanks;

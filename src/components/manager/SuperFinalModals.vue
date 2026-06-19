@@ -440,12 +440,14 @@ defineExpose({
         {{ superFinalRankingsErr }}
       </div>
       <div v-if="superFinalRankings && superFinalRankings.rankings" class="advance-preview">
-        <div v-for="r in superFinalRankings.rankings" :key="r.rank"
+        <div v-for="r in superFinalRankings.rankings" :key="r.competitor_id"
              :class="['advance-preview-row', 'sf-ranking-row',
                       r.source === 'final' ? 'primary'
                       : r.source === 'h2h+semi' ? 'reserve'
                       : 'cut']">
-          <span class="advance-rank">#{{ r.rank }}</span>
+          <span class="advance-rank">#{{ r.rank }}<span
+            v-if="r.is_tied" class="tie-marker"
+            v-tip="'Tied — shares this place (World Aquatics Art 4.1.5)'">=</span></span>
           <span class="advance-name">
             {{ r.full_name }}
             <span v-if="r.country_code" class="hint">· {{ r.country_code }}</span>
@@ -463,6 +465,14 @@ defineExpose({
 </template>
 
 <style scoped>
+/* Shared-place marker for tied Super-Final placings (WA Art 4.1.5). */
+.tie-marker {
+  display: inline-block;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--cyan); margin-inline-start: 0.15rem;
+  cursor: help;
+}
+
 /* The shared .advance-preview-row class (in ManagerView.css)
    uses a 4-col grid sized for advance-modal rank/name/total/tag.
    The H2H + rankings modals need different column profiles, so
