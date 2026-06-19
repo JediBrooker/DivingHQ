@@ -892,13 +892,10 @@ onMounted(async () => {
   // emits so the strip updates the moment something happens.
   // Polling continues as a fallback.
   attachSocketHandlers()
-  // Activity ticker: kicks off the cycle through recent-
-  // activity rows. Pauses on hover via the @mouseenter handler.
-  startTicker()
+  // (P4) the activity ticker was removed; nothing to start here.
 })
 onUnmounted(() => {
   stopPulsePolling()
-  stopTicker()
   detachSocketHandlers()
 })
 
@@ -930,60 +927,11 @@ async function refetchPulseData() {
 // before the real data crossfades in.
 const pulseInitiallyLoaded = ref(false)
 
-// ---- Latest-activity ticker -------------------------------
-// Auto-cycles every TICKER_MS through the most-recent rows in
-// recentActivity (loaded for org admins via /api/audit/recent).
-// Hover pauses the cycle. Each item is a one-line description
-// of the audit row so the strip shows a Twitter-style stream
-// of federation activity. Click → /audit.
-const TICKER_MS = 9000
-const tickerIndex = ref(0)
-const tickerPaused = ref(false)
-let tickerTimer = null
-function pauseTicker() { tickerPaused.value = true }
-function resumeTicker() { tickerPaused.value = false }
-function startTicker() {
-  if (tickerTimer) clearInterval(tickerTimer)
-  tickerTimer = setInterval(() => {
-    if (tickerPaused.value) return
-    const items = tickerSource.value
-    if (!items.length) return
-    tickerIndex.value = (tickerIndex.value + 1) % items.length
-  }, TICKER_MS)
-}
-function stopTicker() {
-  if (tickerTimer) { clearInterval(tickerTimer); tickerTimer = null }
-}
-
-// Format an audit row into a one-liner for the ticker strip.
-// Three kinds (score / role / activity) each get a different
-// shape; the strip is too narrow for everything, so we keep
-// it tight and trust the click-through to /audit for detail.
-function tickerTextFor(r) {
-  if (!r) return ''
-  if (r.kind === 'score') {
-    if (r.action === 'update') {
-      return `${r.competitor_name || 'Competitor'} score amended in ${r.event_name || 'event'}`
-    }
-    if (r.action === 'delete') {
-      return `${r.competitor_name || 'Competitor'} score deleted in ${r.event_name || 'event'}`
-    }
-    return `${r.competitor_name || 'Competitor'} scored ${r.new_score ?? '?'} in ${r.event_name || 'event'}`
-  }
-  if (r.kind === 'role') {
-    return `${r.role || 'Role'} ${r.action} ${r.action === 'granted' ? 'to' : 'from'} ${r.target_name || 'user'}`
-  }
-  // activity row
-  const verb = (r.action || '').replace(/^[a-z_]+\./, '').replace(/_/g, ' ')
-  return `${r.entity_name || r.entity_type || 'Entity'} · ${verb}`
-}
-const tickerSource = computed(() => recentActivity.value.slice(0, 5))
-const tickerActivity = computed(() => {
-  const items = tickerSource.value
-  if (!items.length) return null
-  const r = items[tickerIndex.value % items.length] || items[0]
-  return { ...r, text: tickerTextFor(r) }
-})
+// ---- Latest-activity ticker (removed in P4) ---------------
+// The auto-cycling 9s ticker was idle motion with no ranking. The
+// most-recent audit rows still render as a STATIC list in
+// OrgAdminPanel (via :recent-activity); onScoreActivity keeps
+// recentActivity fresh for it, and full detail stays at /audit.
 
 // ---- Socket subscription ----------------------------------
 // Real-time push: when the server emits an event status change
@@ -1149,25 +1097,7 @@ function detachSocketHandlers() {
           </div>
         </div>
 
-        <!-- Latest-activity ticker. Shows for org admins (the
-             role that's most likely to want a live federation
-             pulse). Auto-cycles every 10s through the most-
-             recent activity rows; hover pauses the cycle.
-             Click → /audit. -->
-        <RouterLink
-          v-if="tickerActivity"
-          to="/audit"
-          class="pulse-ticker"
-          v-tip="`${tickerActivity.kind === 'score' ? 'Score' : tickerActivity.kind === 'role' ? 'Role change' : 'Activity'} — click to open Audit Log`"
-          @mouseenter="pauseTicker"
-          @mouseleave="resumeTicker"
-        >
-          <span class="pulse-ticker-bolt" aria-hidden="true">⚡</span>
-          <span class="pulse-ticker-text">{{ tickerActivity.text }}</span>
-          <span class="pulse-ticker-time">{{ fmtRelative(tickerActivity.created_at) }}</span>
-        </RouterLink>
-
-        <span v-if="!pulseChips.length && !tickerActivity" class="pulse-quiet">All quiet — nothing pending.</span>
+        <span v-if="!pulseChips.length" class="pulse-quiet">All quiet — nothing pending.</span>
       </template>
     </div>
 
@@ -1665,72 +1595,24 @@ function detachSocketHandlers() {
   border-radius: 4px;
   background: linear-gradient(90deg, var(--bg-2), var(--bg-3), var(--bg-2));
   background-size: 200% 100%;
-  animation: pulseSkeletonSweep 1.4s ease-in-out infinite;
+  /* P4: static dimmed placeholder (was the pulseSkeletonSweep loop). */
+  opacity: 0.55;
 }
 .pulse-skeleton:nth-child(2) { width: 140px; }
 .pulse-skeleton:nth-child(3) { width: 90px; }
-@keyframes pulseSkeletonSweep {
-  0%   { background-position: 200% 0; opacity: 0.55; }
-  50%  { opacity: 0.85; }
-  100% { background-position: -200% 0; opacity: 0.55; }
-}
 
 /* Breathing animation on the LIVE chip — slow opacity loop
    reinforces "this is happening right now" without being
    distracting. Only fires when there are live events (the
    chip itself only renders then). */
-@keyframes pulseLiveBreathing {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-  50%      { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.10); }
-}
-.pulse-chip.pulse-live {
-  animation: pulseLiveBreathing 3.2s ease-in-out infinite;
-}
+/* P4: the LIVE chip is a static red pill at rest (was an infinite
+   pulseLiveBreathing loop). It still flashes once on a real count
+   delta via .pulse-chip.pulse-live.pulse-flash below. */
 /* When the LIVE chip is also flashing (count just changed),
    suppress the breathing for the duration of the flash so
    the two animations don't fight. */
 .pulse-chip.pulse-live.pulse-flash {
   animation: pulseFlash 1.4s ease-out;
-}
-
-/* Latest-activity ticker — auto-cycling chip on the right of
-   the strip showing the most recent audit row. Hover (handled
-   in JS via @mouseenter) pauses the cycle. Click → /audit. */
-.pulse-ticker {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  margin-inline-start: auto;                  /* pushes it to the right edge of the strip */
-  padding-block: 0.2rem;
-  padding-inline: 0.5rem 0.7rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  color: var(--text-2);
-  text-decoration: none;
-  max-width: min(40vw, 460px);
-  transition: background 0.15s, border-color 0.15s;
-}
-.pulse-ticker:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: var(--border-2);
-  color: var(--text);
-}
-.pulse-ticker-bolt {
-  font-size: 12px;
-  color: var(--cyan);
-}
-.pulse-ticker-text {
-  flex: 1 1 auto; min-width: 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  letter-spacing: 0;
-}
-.pulse-ticker-time {
-  flex-shrink: 0;
-  color: var(--text-3);
-  font-size: 10.5px;
 }
 
 /* Tab strip — primary navigation, so styled with the same
