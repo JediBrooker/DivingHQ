@@ -128,3 +128,36 @@ onBeforeUnmount(() => {
     </template>
   </Teleport>
 </template>
+
+<style scoped>
+/* lb-* frame lifted verbatim from the control modals (P2). Self-
+   contained so BaseModal works outside the Control Room too (V2 /
+   Manager). The header/title/event/body INSIDE the dialog stay styled
+   by the consumer (ModalHeader + the global lb-* in ControlView.css)
+   until those rules are pulled out in a later phase. fadeUp is a global
+   keyframe and is one-shot, so the P1 reduced-motion guard handles it. */
+.lb-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(3, 7, 18, 0.95);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  z-index: 300;
+}
+.lb-modal {
+  position: fixed; top: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%);
+  z-index: 301;
+  background: var(--surface); border: 1px solid var(--border-2); border-radius: 28px;
+  width: calc(100% - 3rem); max-width: 560px;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto; animation: fadeUp 0.3s ease;
+  overflow-x: clip;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55);
+}
+@media (max-width: 720px) {
+  .lb-modal {
+    max-height: calc(100vh - 1.5rem);
+    max-height: calc(100dvh - 1.5rem);
+    border-radius: var(--radius-lg);
+  }
+}
+</style>
