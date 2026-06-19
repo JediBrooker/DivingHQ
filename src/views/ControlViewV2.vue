@@ -97,6 +97,27 @@ const liveStatus = computed(() => {
   })
 })
 
+// BLOCKERS (live): "what's stopping me", surfaced on-canvas instead of
+// hidden in the primary's tooltip -- partial scores + a judge signaling
+// the referee, derived from the focused pool's tiles (no new fetch).
+const liveBlockers = computed(() => {
+  const p = livePool.value
+  const ev = currentEvent.value
+  if (!p || !p.currentActive || !ev) return []
+  const out = []
+  const total = numberOfJudgesFor(ev.id) || 0
+  const scoresIn = Object.keys(p.scoresThisRound || {}).length
+  if (total > 0 && scoresIn > 0 && scoresIn < total) {
+    const remaining = total - scoresIn
+    out.push({ kind: 'partial', label: `Waiting for ${remaining} more judge score${remaining === 1 ? '' : 's'}` })
+  }
+  const signaling = (p.judgeTiles || []).filter((t) => t.signaled).map((t) => t.judgeIndex)
+  if (signaling.length) {
+    out.push({ kind: 'signal', label: `Judge ${signaling.join(', ')} signaling the referee` })
+  }
+  return out
+})
+
 // NEXT ACTION: one bottom-pinned primary scoped to the focused pool,
 // reproducing updateNextButton (ControlView.vue:2311-2328) + nextBtn*
 // per pool. disabled until that pool's last score lands (advanceArmed);
@@ -334,6 +355,14 @@ onMounted(async () => {
                 :class="{ scored: t.scored, signaled: t.signaled }"
               >{{ t.scored ? t.score : '—' }}</div>
             </div>
+            <div v-if="liveBlockers.length" class="cv2-blockers" role="status" aria-label="Blockers">
+              <span
+                v-for="b in liveBlockers"
+                :key="b.kind"
+                class="cv2-blocker"
+                :class="`cv2-blocker-${b.kind}`"
+              >{{ b.label }}</span>
+            </div>
             <div class="cv2-primary-slot">
               <button
                 type="button"
@@ -412,6 +441,13 @@ onMounted(async () => {
 .cv2-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .cv2-primary.is-finalise { background: var(--green); border-color: var(--green); }
 .cv2-tiles { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.cv2-blockers { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+.cv2-blocker {
+  font-family: var(--font-mono); font-size: 12px;
+  padding: 0.3rem 0.7rem; border-radius: var(--radius-sm);
+  border: 1px solid var(--amber); color: var(--amber); background: rgba(245, 158, 11, 0.08);
+}
+.cv2-blocker-signal { border-color: var(--red); color: var(--red); background: rgba(239, 68, 68, 0.08); }
 .cv2-tile {
   width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
   border: 1px solid var(--border-2); border-radius: var(--radius-sm);
