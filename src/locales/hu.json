@@ -879,7 +879,7 @@
       "dak_url_hint": "Először nyissa meg ezt az URL-t, hogy megerősítse, a kiválasztott esemény közzétesz helyszíni állapotot, mielőtt egy táblát ráirányítana.",
       "dak_block1_title": "1. Teszt-kimenet",
       "dak_block1_desc": "Egy RTD frame kinyomtatása a Terminalban a tábla érintése nélkül.",
-      "dak_block2_title": "2. All Sport Pro / ERTD UDP",
+      "dak_block2_title": "2. Minden Sport Pro / ERTD UDP",
       "dak_block2_desc": "Alapértelmezett helyszíni tábla mód. Módosítsa a host és data-source értékeket, hogy megfeleljen a Daktronics beállításnak.",
       "dak_block3_title": "Opcionális: JSON TCP felett",
       "dak_block3_desc": "Csak akkor használja, ha a helyszín Data Studio munkafolyamata JSON mezőket vár.",

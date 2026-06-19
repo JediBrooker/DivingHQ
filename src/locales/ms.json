@@ -868,7 +868,7 @@
       "dak_url_hint": "Buka URL ini dahulu untuk mengesahkan acara yang dipilih sedang menerbitkan keadaan tempat sebelum anda mengarahkan papan ke situ.",
       "dak_block1_title": "1. Uji output",
       "dak_block1_desc": "Cetak satu bingkai RTD di Terminal tanpa menyentuh papan.",
-      "dak_block2_title": "2. All Sport Pro / ERTD UDP",
+      "dak_block2_title": "2. Semua Sport Pro / ERTD UDP",
       "dak_block2_desc": "Mod papan tempat lalai. Tukar host dan data-source supaya sepadan dengan persediaan Daktronics.",
       "dak_block3_title": "Pilihan: JSON melalui TCP",
       "dak_block3_desc": "Gunakan sahaja jika aliran kerja Data Studio tempat memerlukan medan JSON.",
