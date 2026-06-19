@@ -20,6 +20,7 @@ import StageRail from '@/components/control/StageRail.vue'
 import StatusPill from '@/components/StatusPill.vue'
 import SetupStage from '@/components/control/SetupStage.vue'
 import ReviewStage from '@/components/control/ReviewStage.vue'
+import DrawerPanel from '@/components/control/DrawerPanel.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import { useI18n } from 'vue-i18n'
@@ -93,6 +94,7 @@ const { isHeld, holdReason, holdPromptOpen, holdReasonInput, openHoldPrompt, con
 // Recovery is the one explicit cross-cutting mode (offer-not-seize);
 // P7 fills it. Off by default so the center always shows the stage mode.
 const recoveryOpen = ref(false)
+const drawerOpen = ref(false)
 const centerMode = computed(() => (recoveryOpen.value ? 'recovery' : workflowMode.value))
 
 // The focused pool's live state (active diver + judge tiles), or null.
@@ -381,6 +383,13 @@ onMounted(async () => {
             :aria-pressed="recoveryOpen"
             @click="recoveryOpen = !recoveryOpen"
           >⛑ Recovery</button>
+          <button
+            type="button"
+            class="cv2-tools-toggle"
+            :class="{ 'is-active': drawerOpen }"
+            :aria-pressed="drawerOpen"
+            @click="drawerOpen = true"
+          >🧰 Tools</button>
         </header>
 
         <!-- Center mode-switch: EXACTLY ONE mode per stage. The bodies
@@ -489,9 +498,10 @@ onMounted(async () => {
       </div>
     </section>
 
-    <!-- Drawer stub — broadcast handoff / reserves / audit / sponsor;
-         lazy-mounted in P8. Closed by default. -->
-    <aside class="cv2-drawer" aria-label="Secondary actions" hidden></aside>
+    <!-- Secondary surfaces (broadcast / reserves / audit / sponsor) live
+         in a closed-by-default drawer. v-if-gated so a resting Live canvas
+         never mounts this markup (the #9 subtraction). -->
+    <DrawerPanel v-if="drawerOpen" :event="currentEvent" @close="drawerOpen = false" />
   </div>
 </template>
 
@@ -605,6 +615,12 @@ onMounted(async () => {
   border: 1px solid var(--border-2); background: transparent; color: var(--text-2); cursor: pointer;
 }
 .cv2-recovery-toggle.is-active, .cv2-recovery-toggle:hover { border-color: var(--amber); color: var(--amber); }
+.cv2-tools-toggle {
+  font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  padding: 0.3rem 0.7rem; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2); background: transparent; color: var(--text-2); cursor: pointer;
+}
+.cv2-tools-toggle.is-active, .cv2-tools-toggle:hover { border-color: var(--cyan); color: var(--cyan); }
 .cv2-recovery-actions { display: flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap; }
 .cv2-recovery-btn {
   padding: 0.65rem 1.2rem; font-family: var(--font-display); font-weight: 700; font-size: 13px;
