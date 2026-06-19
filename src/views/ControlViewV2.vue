@@ -12,7 +12,7 @@
 //
 // Resolved only when VITE_CONTROL_V2_ENABLED === '1' (router resolver);
 // same /control URL, same ?event= deep-link, same role gate + AppShell.
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useControlStage } from '@/composables/useControlStage'
@@ -28,6 +28,7 @@ import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
 import { useShotClock } from '@/composables/useShotClock'
 import { useMeetHold } from '@/composables/useMeetHold'
+import { useAutoAdvance } from '@/composables/useAutoAdvance'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
 import { confirmAction } from '@/composables/useConfirm'
 import { showUndo } from '@/composables/useUndo'
@@ -62,6 +63,9 @@ useSocketEvent(socket, 'score_received', (data) => {
   // pool's completion arms its own advance and never touches the clock.
   if (res.allScoresIn && currentEvent.value && String(data.event_id) === String(currentEvent.value.id)) {
     stopShotClock()
+    // Focused pool's panel just completed -> arm the auto-advance
+    // countdown (frozen V1 contract). Finalise is never auto-fired.
+    if (!nextBtnComplete.value) startAutoAdvance(advancePrimary)
   }
 })
 useSocketEvent(socket, 'judge_signal', (data) => {
@@ -128,6 +132,36 @@ const liveBlockers = computed(() => {
   return out
 })
 
+// AUTO-ADVANCE (P6.4): once the focused pool's panel completes, a
+// countdown moves the meet to the next diver without a click. A judge
+// flagging the referee blocks/cancels it (frozen V1 contract); finalise
+// is never auto-fired. Manual (0s) is the safe default. Per-pool clocks
+// are a later slice -- this drives the FOCUSED pool only.
+const liveSignaling = computed(() =>
+  (livePool.value?.judgeTiles || []).some((t) => t.signaled),
+)
+const autoNextOptions = [
+  { v: 0, label: 'Manual' },
+  { v: 5, label: '5 seconds' },
+  { v: 10, label: '10 seconds' },
+  { v: 15, label: '15 seconds' },
+  { v: 20, label: '20 seconds' },
+  { v: 25, label: '25 seconds' },
+  { v: 30, label: '30 seconds' },
+]
+const autoNextMenuOpen = ref(false)
+const { autoAdvanceSeconds, autoAdvanceCountdown, startAutoAdvance, cancelAutoAdvance } =
+  useAutoAdvance({ isSignaling: () => liveSignaling.value })
+
+// Re-arm when a referee signal clears (panel already complete, not at
+// finalise); kill the in-flight countdown the moment a signal raises.
+watch(liveSignaling, (now, prev) => {
+  if (prev && !now && !nextBtnDisabled.value && !nextBtnComplete.value) {
+    startAutoAdvance(advancePrimary)
+  }
+  if (now) cancelAutoAdvance()
+})
+
 // NEXT ACTION: one bottom-pinned primary scoped to the focused pool,
 // reproducing updateNextButton (ControlView.vue:2311-2328) + nextBtn*
 // per pool. disabled until that pool's last score lands (advanceArmed);
@@ -166,6 +200,9 @@ function syncShotClock() {
 // The nextDiver funnel (ControlView.vue:2347-2378), per focused pool:
 // partial-scores confirm, then advance the pool's cursor OR finalise.
 async function advancePrimary() {
+  // A manual advance cancels any in-flight countdown so the operator's
+  // click wins the race with the timer.
+  cancelAutoAdvance()
   const p = livePool.value
   const ev = currentEvent.value
   if (!p || !ev) return
@@ -384,16 +421,48 @@ onMounted(async () => {
               >{{ b.label }}</span>
             </div>
             <div class="cv2-primary-slot">
-              <button
-                type="button"
-                class="cv2-primary"
-                :class="{ 'is-finalise': nextBtnComplete }"
-                :disabled="nextBtnDisabled"
-                v-tip="nextBtnTitle"
-                @click="advancePrimary"
-              >{{ nextBtnText }}</button>
+              <div class="cv2-split">
+                <button
+                  type="button"
+                  class="cv2-primary"
+                  :class="{ 'is-finalise': nextBtnComplete, 'is-counting': autoAdvanceCountdown > 0 }"
+                  :disabled="nextBtnDisabled"
+                  v-tip="nextBtnTitle"
+                  @click="advancePrimary"
+                >
+                  {{ nextBtnText }}
+                  <span v-if="autoAdvanceCountdown > 0" class="cv2-autopill">{{ autoAdvanceCountdown }}s</span>
+                </button>
+                <!-- The picker is NOT gated on nextBtnDisabled: the
+                     operator sets Auto-next at any point, even before the
+                     first diver or while waiting on scores. -->
+                <button
+                  type="button"
+                  class="cv2-split-aside"
+                  :class="{ 'is-finalise': nextBtnComplete }"
+                  :aria-expanded="autoNextMenuOpen"
+                  v-tip="`Auto-next: ${autoAdvanceSeconds === 0 ? 'Manual' : autoAdvanceSeconds + 's'}`"
+                  @click.stop="autoNextMenuOpen = !autoNextMenuOpen"
+                >▾</button>
+                <div v-if="autoNextMenuOpen" class="cv2-autonext-menu" role="menu">
+                  <div class="cv2-autonext-head">Auto-next after the panel completes</div>
+                  <button
+                    v-for="opt in autoNextOptions"
+                    :key="opt.v"
+                    type="button"
+                    role="menuitemradio"
+                    :aria-checked="autoAdvanceSeconds === opt.v"
+                    class="cv2-autonext-item"
+                    :class="{ 'is-active': autoAdvanceSeconds === opt.v }"
+                    @click="autoAdvanceSeconds = opt.v; autoNextMenuOpen = false"
+                  >
+                    <span>{{ opt.label }}</span>
+                    <span v-if="autoAdvanceSeconds === opt.v" aria-hidden="true">✓</span>
+                  </button>
+                </div>
+              </div>
             </div>
-            <p class="cv2-mode-note">Live current-state + next action (P6.2). Next: blockers strip (P6.3).</p>
+            <p class="cv2-mode-note">Live current state, next action + auto-advance (P6.4).</p>
           </div>
           <p v-else class="cv2-mode-note">Live — loading the active diver… (Full live screen: P6.)</p>
         </section>
@@ -474,6 +543,39 @@ onMounted(async () => {
 .cv2-primary:hover:not(:disabled) { filter: brightness(1.08); }
 .cv2-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .cv2-primary.is-finalise { background: var(--green); border-color: var(--green); }
+.cv2-split { display: flex; gap: 2px; position: relative; }
+.cv2-split .cv2-primary { width: auto; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
+.cv2-split-aside {
+  flex: 0 0 auto; width: 2.75rem; padding: 0.85rem 0;
+  font-family: var(--font-display); font-size: 14px; font-weight: 700;
+  border-radius: var(--radius); border: 1px solid var(--cyan);
+  background: var(--cyan); color: var(--bg); cursor: pointer; transition: filter 0.12s;
+}
+.cv2-split-aside:hover { filter: brightness(1.08); }
+.cv2-split-aside.is-finalise { background: var(--green); border-color: var(--green); }
+.cv2-primary.is-counting { background: var(--amber); border-color: var(--amber); }
+.cv2-autopill {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  padding: 0.05rem 0.4rem; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18); color: inherit;
+}
+.cv2-autonext-menu {
+  position: absolute; bottom: calc(100% + 6px); inset-inline-end: 0; z-index: 20;
+  min-width: 13rem; padding: 0.4rem;
+  background: var(--bg-2); border: 1px solid var(--border-2); border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.cv2-autonext-head {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
+  padding: 0.3rem 0.5rem 0.4rem;
+}
+.cv2-autonext-item {
+  display: flex; justify-content: space-between; align-items: center; width: 100%;
+  padding: 0.45rem 0.5rem; border: none; background: transparent; cursor: pointer;
+  font-family: var(--font-mono); font-size: 13px; color: var(--text-2); border-radius: var(--radius-sm);
+}
+.cv2-autonext-item:hover { background: var(--bg-3); color: var(--fg); }
+.cv2-autonext-item.is-active { color: var(--cyan); }
 .cv2-tiles { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .cv2-blockers { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
 .cv2-blocker {

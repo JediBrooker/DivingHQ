@@ -78,6 +78,39 @@ test("the primary arms on a full score then advances to the next diver", async (
   await expect(page.locator(".cv2-primary")).toBeDisabled();
 });
 
+test("auto-advance: set Auto-next to 5s; a full panel arms a countdown that advances unaided", async ({ request, page, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, {
+    countryCode: "AUS", orgName: "V2 Auto Advance Diving",
+  });
+  await setup.insertClub({ orgId, name: "AA Club", shortCode: "AAC" });
+  const { event, diveId, divers, judges } = await liveEvent(request, {
+    orgId, adminToken, name: "Auto Advance", diverNames: ["AAA Diver", "ZZZ Diver"],
+  });
+
+  await signIn(page, username);
+  await page.goto("/control");
+  await page.waitForLoadState("networkidle");
+  await page.locator(".stage-row", { hasText: "Auto Advance" }).click();
+  await expect(page.locator(".cv2-live-diver")).toContainText("AAA Diver");
+
+  // Open the Auto-next picker and choose 5 seconds (default is Manual).
+  await page.locator(".cv2-split-aside").click();
+  await page.getByRole("menuitemradio", { name: "5 seconds", exact: true }).click();
+  await expect(page.locator(".cv2-autonext-menu")).toHaveCount(0);
+
+  // A full panel arms the countdown -> the pill appears WITHOUT a click.
+  await setup.submitPanelScores({
+    baseURL, judges, eventId: event.id,
+    competitorId: divers[0].userId, roundNumber: 1, diveId,
+  });
+  await expect(page.locator(".cv2-autopill")).toBeVisible({ timeout: 6_000 });
+
+  // The countdown fires on its own and advances the focused pool's cursor
+  // -- no operator click.
+  await expect(page.locator(".cv2-live-diver")).toContainText("ZZZ Diver", { timeout: 12_000 });
+});
+
 test("the last dive morphs the primary to Finalise; confirming flips to Review", async ({ request, page, baseURL }) => {
   test.setTimeout(120_000);
   const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, {
