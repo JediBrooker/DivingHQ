@@ -634,13 +634,12 @@
     },
     "shortcut": {
       "next_diver": "Sıradaki dalgıca geçin.",
-      "top_of_round": "Sırayı mevcut turun en başına geri alın.",
       "fail": "Mevcut dalışı başarısız olarak işaretleyin (tüm hakemler 0).",
       "redive": "Mevcut dalışçıya yeniden dalış hakkı verin.",
       "hold": "Müsabakayı bekletin — saati ve aktif dalgıç afişini duraklatır.",
-      "live_toggle": "Müsabakanın halka açık skor tablosu için canlı yayın bayrağını açıp kapatın.",
-      "queue_nav": "İmleci sıradaki kuyrukta hareket ettirin.",
-      "help_overlay": "Uygulama içi klavye kısayolları kılavuzunu açın."
+      "focus_pool": "Seçili havuzu değiştirin. İki veya daha fazla etkinlik canlıyken, 1 birinci havuzdur, 2 ikinci havuzdur ve bu şekilde devam eder.",
+      "announce": "Duyuru — seçili havuzun sıralamasını halka açık skor tahtasına gönderin.",
+      "cap": "Seçili havuzun mevcut dalış puanlarını sınırlandırın (referee 2.0 cap)."
     },
     "glossary": {
       "lede": "İlk günden karşılaşacağınız dalış terimleri.",

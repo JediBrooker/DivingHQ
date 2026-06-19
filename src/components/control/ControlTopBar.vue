@@ -10,7 +10,7 @@
 // selector so a chip flags 'live' or 'needs action' like the old rail row.
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { attentionMarker } from '@/composables/useAttention'
-import { orderWorkflowStateFor } from '@/composables/useControlStage'
+import { orderWorkflowStateFor, liveEventsInOrder } from '@/composables/useControlStage'
 
 const props = defineProps({
   events: { type: Array, default: () => [] },
@@ -28,17 +28,16 @@ const focusedEvent = computed(
   () => props.events.find((e) => String(e.id) === String(props.selectedId)) || null,
 )
 
-// Chips = the focused event first (so its name is always visible, even
-// when it's not Live), then every other Live event for one-tap switching.
+// Chips = every Live event in canonical order (oldest first), so chip N
+// lines up with grid card N and the "N" focus hotkey. The focused chip is
+// highlighted in place -- never reordered to the front. A focused event
+// that ISN'T Live (Upcoming/Completed) isn't in that list, so we surface
+// it first purely so its name stays visible.
 const chips = computed(() => {
-  const live = props.events.filter((e) => e.status === 'Live')
+  const live = liveEventsInOrder(props.events)
   const f = focusedEvent.value
-  const out = []
-  if (f) out.push(f)
-  for (const e of live) {
-    if (!f || String(e.id) !== String(f.id)) out.push(e)
-  }
-  return out
+  if (f && f.status !== 'Live') return [f, ...live]
+  return live
 })
 
 function isFocused(ev) {

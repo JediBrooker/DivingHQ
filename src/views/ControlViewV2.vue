@@ -11,7 +11,7 @@
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useControlStage } from '@/composables/useControlStage'
+import { useControlStage, liveEventsInOrder } from '@/composables/useControlStage'
 import ControlTopBar from '@/components/control/ControlTopBar.vue'
 import SetupStage from '@/components/control/SetupStage.vue'
 import ReviewStage from '@/components/control/ReviewStage.vue'
@@ -22,6 +22,9 @@ import EmptyState from '@/components/EmptyState.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import { useLivePools, selectDiver, rosterIndexForActive } from '@/composables/useLivePools'
+import { annotateJudgeRows } from '@/composables/useScoreTrim'
+import { synchroJudgeGroups } from '@/composables/useScoreCategories'
+import { controlKeyIntent, isTypingTarget } from '@/composables/useControlKeymap'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
 import { makeTokenBucket } from '@/lib/token-bucket'
@@ -184,10 +187,10 @@ const centerMode = computed(() => (recoveryOpen.value ? 'recovery' : workflowMod
 // in the center renders one LivePoolCard per entry. With one Live event
 // it's the classic single 3-column board; with two or three the cards sit
 // side by side so the operator sees every pool at a glance.
+// Canonical order (oldest-Live first) so grid card N, top-bar chip N and
+// the "N" focus hotkey all address the same pool. See useControlStage.
 const livePools = computed(() =>
-  events.value
-    .filter((e) => e.status === 'Live')
-    .map((e) => ({ event: e, pool: poolFor(e.id) })),
+  liveEventsInOrder(events.value).map((e) => ({ event: e, pool: poolFor(e.id) })),
 )
 
 // History + standings for the FOCUSED pool feed the side columns. Kept in
@@ -230,6 +233,37 @@ async function loadPoolPanels(eventId) {
 function fmtTotal(v) {
   const n = parseFloat(v)
   return Number.isFinite(n) ? n.toFixed(2) : '—'
+}
+
+// Per-judge score chips for a History row. /history carries judge_scores +
+// judge_numbers as parallel arrays (ordered by judge_number); zip them into
+// the {judge_number, score} shape annotateJudgeRows wants, and let it apply
+// the WA trim (kept/dropped) using the focused event's panel size + type.
+// Returns [{ judge_number, score, dropped, category }] in judge order.
+function historyJudgeRows(row) {
+  const scores = row?.judge_scores || []
+  const nums = row?.judge_numbers || []
+  if (!scores.length) return []
+  const judges = scores.map((s, i) => ({ judge_number: Number(nums[i] ?? i + 1), score: Number(s) }))
+  return annotateJudgeRows(judges, numberOfJudgesFor(selectedEventId.value) || judges.length, currentEvent.value?.event_type)
+}
+
+// Synchro: split a History row's annotated chips into Exec A / Exec B /
+// Sync clusters using the canonical panel-role mapping (synchroJudgeGroups,
+// the same rule the server scoring uses). Returns null for non-synchro or
+// unrecognised panel sizes -> the template falls back to a flat strip.
+const SYNCHRO_LABELS = { a: 'Exec A', b: 'Exec B', sync: 'Sync' }
+function historySynchroGroups(row) {
+  const groups = synchroJudgeGroups(numberOfJudgesFor(selectedEventId.value))
+  if (!groups) return null
+  const rows = historyJudgeRows(row)
+  if (!rows.length) return null
+  const byJn = new Map(rows.map((r) => [r.judge_number, r]))
+  return ['a', 'b', 'sync'].map((role) => ({
+    role,
+    label: SYNCHRO_LABELS[role],
+    scores: groups[role].map((jn) => byJn.get(jn)).filter(Boolean),
+  }))
 }
 
 // SCORE CORRECTION (#9): clicking a completed dive in the focused pool's
@@ -309,6 +343,39 @@ async function advancePool(ev) {
 // "Retry" after a dropped set_active_diver).
 function retryActiveDiver(ev) {
   if (ev) emitActiveDiver(ev)
+}
+
+// Referee call for the FOCUSED pool's active diver — the keyboard path
+// (the per-card buttons emit the same events from LivePoolCard). Acts only
+// on currentEvent so a hotkey never touches a background pool.
+function refActionFocused(type) {
+  const ev = currentEvent.value
+  const a = ev && pools[ev.id]?.currentActive
+  if (!a) return
+  const payload = { event_id: a.event_id, competitor_id: a.competitor_id, round_number: a.round_number }
+  if (type === 'failed') socket.emit('referee_failed_dive', payload)
+  else if (type === 'cap') socket.emit('referee_cap_scores', { ...payload, cap_value: 2.0 })
+  else if (type === 'redive') socket.emit('referee_redive', payload)
+}
+
+// Per-pool keyboard control. A single window listener; controlKeyIntent
+// maps the key, isTypingTarget keeps it out of inputs/modals, and every
+// action resolves through the FOCUSED pool (number keys only switch focus).
+function onKeydown(e) {
+  if (isTypingTarget(e.target)) return
+  const intent = controlKeyIntent(e, livePools.value.length)
+  if (!intent) return
+  if (intent.action === 'focus') {
+    const lp = livePools.value[intent.arg - 1]
+    if (lp) { e.preventDefault(); selectEvent(lp.event.id) }
+    return
+  }
+  if (!currentEvent.value) return
+  e.preventDefault()
+  if (intent.action === 'advance') advancePool(currentEvent.value)
+  else if (intent.action === 'announce') announceFocused()
+  else if (intent.action === 'hold') isHeld.value ? resumeMeet() : confirmHold()
+  else if (intent.action === 'ref') refActionFocused(intent.arg)
 }
 
 // finaliseEvent (ControlView.vue:2470-2545), per pool: same
@@ -457,6 +524,8 @@ onMounted(async () => {
   for (const ev of events.value) {
     if (ev.status === 'Live') setupLivePool(ev)
   }
+  // Per-pool operator hotkeys (focused pool only).
+  window.addEventListener('keydown', onKeydown)
 })
 
 // Clear any in-flight seed-fallback timers so a pool can't be announced
@@ -467,6 +536,7 @@ onUnmounted(() => {
   seedTimers.clear()
   confirmTimers.forEach(clearTimeout)
   confirmTimers.clear()
+  window.removeEventListener('keydown', onKeydown)
 })
 </script>
 
@@ -541,6 +611,36 @@ onUnmounted(() => {
                   <span class="cv2-hcard-dive">{{ h.dive_code }}{{ h.position }}</span>
                 </div>
                 <span class="cv2-hcard-total">{{ fmtTotal(h.total_points) }}</span>
+                <!-- Per-judge scores. Synchro events group into Exec A /
+                     Exec B / Sync; everything else shows a flat strip.
+                     Kept/dropped trim + categories reuse the global j-* CSS. -->
+                <div
+                  v-if="currentEvent.event_type === 'synchro_pair' && historySynchroGroups(h)"
+                  class="cv2-hcard-judges judge-groups"
+                >
+                  <div
+                    v-for="g in historySynchroGroups(h)"
+                    :key="g.role"
+                    class="judge-group"
+                    :class="`judge-group-${g.role}`"
+                  >
+                    <span class="judge-group-label">{{ g.label }}</span>
+                    <span
+                      v-for="(j, ji) in g.scores"
+                      :key="ji"
+                      class="j-score"
+                      :class="[`j-${j.category}`, { 'j-dropped': j.dropped }]"
+                    >{{ Number(j.score).toFixed(1) }}</span>
+                  </div>
+                </div>
+                <div v-else-if="historyJudgeRows(h).length" class="cv2-hcard-judges">
+                  <span
+                    v-for="(j, ji) in historyJudgeRows(h)"
+                    :key="ji"
+                    class="j-score"
+                    :class="[`j-${j.category}`, { 'j-dropped': j.dropped }]"
+                  >{{ Number(j.score).toFixed(1) }}</span>
+                </div>
               </component>
             </div>
           </aside>
@@ -692,12 +792,14 @@ onUnmounted(() => {
 .cv2-side-empty { margin: 0.5rem; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
 
 .cv2-hcard {
-  display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.55rem;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0.5rem; padding: 0.45rem 0.55rem;
   border: 1px solid var(--border-2); border-radius: var(--radius-sm); background: var(--bg-3);
   width: 100%; text-align: start; font: inherit; color: var(--text-2);
 }
 .cv2-hcard.is-clickable { cursor: pointer; }
 .cv2-hcard.is-clickable:hover { border-color: var(--cyan); }
+/* Judge-score chip strip wraps onto its own line under the name/total row. */
+.cv2-hcard-judges { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; flex-basis: 100%; }
 .cv2-hcard-round { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--text-3); flex: none; width: 28px; }
 .cv2-hcard-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .cv2-hcard-name { font-size: 13px; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

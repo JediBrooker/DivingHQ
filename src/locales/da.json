@@ -645,13 +645,12 @@
     },
     "shortcut": {
       "next_diver": "Gå videre til næste dykker i køen.",
-      "top_of_round": "Sæt køen tilbage til toppen af den aktuelle runde.",
       "fail": "Marker det aktuelle spring som mislykket (0 fra alle dommere).",
       "redive": "Tildel den aktuelle dykker et omspring.",
       "hold": "Sæt stævnet på pause — standser uret og banneret for aktiv dykker.",
-      "live_toggle": "Skift flaget for live-transmission af stævnets offentlige resultattavle.",
-      "queue_nav": "Flyt markøren gennem køen af næste dykkere.",
-      "help_overlay": "Åbn genvejsoverlayet i appen."
+      "focus_pool": "Skift den fokuserede pulje. Når to eller flere begivenheder er i gang, er 1 den første pulje, 2 den anden og så videre.",
+      "announce": "Annoncer — send den fokuserede puljes stilling til den offentlige resultattavle.",
+      "cap": "Begræns den fokuserede puljes aktuelle dykkerresultater (dommer 2.0-cap)."
     },
     "glossary": {
       "lede": "Dykterminologi, som man støder på allerede den første dag.",

@@ -645,13 +645,12 @@
     },
     "shortcut": {
       "next_diver": "Siirry jonon seuraavaan sukeltajaan.",
-      "top_of_round": "Palauta jono nykyisen kierroksen alkuun.",
       "fail": "Merkitse nykyinen hyppy epäonnistuneeksi (kaikki pisteet 0).",
       "redive": "Myönnä nykyiselle sukeltajalle uusinta.",
       "hold": "Pysäytä kilpailu — pysäyttää kellon ja aktiivisen sukeltajan bannerin.",
-      "live_toggle": "Vaihda kilpailun julkisen tulostaulun live‑lähetys-asetusta.",
-      "queue_nav": "Siirrä kohdistinta valmistautujien jonossa.",
-      "help_overlay": "Avaa sovelluksen pikanäppäinten ohje."
+      "focus_pool": "Vaihda valittua allasta. Kun kaksi tai useampi tapahtuma on käynnissä, 1 on ensimmäinen allas, 2 toinen, ja niin edelleen.",
+      "announce": "Julkaise — päivitä valitun altaan sijoitukset julkiselle tulostaululle.",
+      "cap": "Lukitse valitun altaan nykyiset sukelluspisteet (tuomari 2.0 -rajoitus)."
     },
     "glossary": {
       "lede": "Sukellustermit, joita tulette kohtaamaan ensimmäisenä päivänä.",

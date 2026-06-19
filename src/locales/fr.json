@@ -645,13 +645,12 @@
     },
     "shortcut": {
       "next_diver": "Passer au plongeur suivant dans la file d'attente.",
-      "top_of_round": "Remettre la file d'attente en tête pour la manche en cours.",
       "fail": "Marquer le plongeon en cours comme manqué (0 pour tous les juges).",
       "redive": "Accorder un nouveau plongeon au plongeur en cours.",
       "hold": "Suspendre la compétition — met le chronomètre et la bannière du plongeur actif en pause.",
-      "live_toggle": "Basculer le statut de diffusion en direct du tableau public de la compétition.",
-      "queue_nav": "Déplacer le curseur dans la file des plongeurs prêts.",
-      "help_overlay": "Ouvrir la feuille de référence des raccourcis dans l'application."
+      "focus_pool": "Changer la poule ciblée. Lorsqu'il y a deux événements ou plus en direct, 1 correspond à la première poule, 2 à la seconde, et ainsi de suite.",
+      "announce": "Publier — envoyer le classement de la poule ciblée vers le tableau d'affichage public.",
+      "cap": "Verrouiller les scores de plongeon actuels de la poule ciblée (verrouillage arbitre 2.0)."
     },
     "glossary": {
       "lede": "Vocabulaire de plongeon que vous rencontrerez dès le premier jour.",

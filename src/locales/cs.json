@@ -634,13 +634,12 @@
     },
     "shortcut": {
       "next_diver": "Přejít na dalšího skokana ve frontě.",
-      "top_of_round": "Vrátit frontu na začátek aktuálního kola.",
       "fail": "Označit aktuální skok jako neplatný (0 od všech rozhodčích).",
       "redive": "Udělit aktuálnímu skokanovi opakování skoku.",
       "hold": "Pozastavit závod — pozastaví časomíru a banner aktivního skokana.",
-      "live_toggle": "Přepnout příznak živého vysílání pro veřejnou výsledkovou tabuli závodu.",
-      "queue_nav": "Posouvat kurzor frontou připravených.",
-      "help_overlay": "Otevřít vestavěný přehled klávesových zkratek."
+      "focus_pool": "Přepněte zaměřený bazén. Při dvou nebo více současně probíhajících událostech je 1 první bazén, 2 druhý a tak dále.",
+      "announce": "Oznámte — odešlete pořadí zaměřeného bazénu na veřejnou výsledkovou tabuli.",
+      "cap": "Uzavřete aktuální skóre skoků zaměřeného bazénu (referee 2.0 cap)."
     },
     "glossary": {
       "lede": "Slovník skoků, na který narazíte hned první den.",

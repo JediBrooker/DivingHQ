@@ -634,13 +634,12 @@
     },
     "shortcut": {
       "next_diver": "Majukan kepada penyelam seterusnya dalam barisan.",
-      "top_of_round": "Kembalikan barisan ke permulaan pusingan semasa.",
       "fail": "Tandakan selaman semasa sebagai gagal (0 untuk semua hakim).",
       "redive": "Berikan peluang selaman semula kepada penyelam semasa.",
       "hold": "Tangguhkan pertemuan — menjeda jam dan sepanduk penyelam aktif.",
-      "live_toggle": "Tukar penanda siaran langsung untuk papan markah awam pertemuan.",
-      "queue_nav": "Gerakkan kursor melalui barisan sedia.",
-      "help_overlay": "Buka helaian ringkasan pintasan papan kekunci dalam aplikasi."
+      "focus_pool": "Tukar kolam yang sedang difokuskan. Jika dua atau lebih acara sedang berlangsung, 1 ialah kolam pertama, 2 ialah kolam kedua, dan seterusnya.",
+      "announce": "Umumkan — hantar kedudukan kolam yang sedang difokuskan ke papan skor awam.",
+      "cap": "Hadkan skor selaman semasa kolam yang sedang difokuskan (had pengadil 2.0)."
     },
     "glossary": {
       "lede": "Perbendaharaan kata selaman yang akan anda temui pada hari pertama.",

@@ -21,17 +21,12 @@
  *      each with a thumbnail screenshot served from
  *      /public/guide-screenshots/. Lazy-loaded so the page above
  *      the fold stays cheap.
- *   4. Keyboard shortcuts — the Control Room hotkeys an operator
- *      needs after their first meet. Universal symbols (Space,
- *      T, F, ←, →) are hardcoded in the template so they don't
- *      multiply the i18n key count for what is already universal
- *      across keyboards. Only the per-row descriptions are i18n'd.
- *   5. Glossary — diving-specific vocabulary (DD, trim, synchro,
+ *   4. Glossary — diving-specific vocabulary (DD, trim, synchro,
  *      redive, board heights) that newcomers will hit on day one.
- *   6. FAQ — common first questions, now a <details>/<summary>
+ *   5. FAQ — common first questions, now a <details>/<summary>
  *      accordion so users can scan questions without scrolling
  *      past every answer.
- *   7. Wiki — links to the deep-dive material.
+ *   6. Wiki — links to the deep-dive material.
  *
  * Navigation:
  *   • A sticky table-of-contents sits on the left on desktop;
@@ -85,20 +80,19 @@ const TILES = [
   { id: 'dive_directory', to: '/dive-directory',  img: '/guide-screenshots/dive-directory.png', glyph: '📖' },
 ]
 
-// Control Room hotkeys. Keys are universal (Space, ←, →, single
-// letters) so they're hardcoded in the template. The description
-// half is i18n'd. Source of truth: see Control Room composable
-// `useControlRoomShortcuts` — if hotkeys change there, mirror
-// the change here.
+// Control Room hotkeys (the multi-event console). Keys mirror
+// src/composables/useControlKeymap.js — if the key map changes
+// there, mirror it here. Every action runs on the FOCUSED pool;
+// the number keys are the only ones that switch which pool that
+// is. Keys are universal glyphs; only the descriptions are i18n'd.
 const SHORTCUTS = [
-  { keys: ['Space'],     descKey: 'next_diver' },
-  { keys: ['T'],         descKey: 'top_of_round' },
-  { keys: ['F'],         descKey: 'fail' },
-  { keys: ['R'],         descKey: 'redive' },
-  { keys: ['H'],         descKey: 'hold' },
-  { keys: ['L'],         descKey: 'live_toggle' },
-  { keys: ['←', '→'],    descKey: 'queue_nav' },
-  { keys: ['?'],         descKey: 'help_overlay' },
+  { keys: ['1', '…', '9'], descKey: 'focus_pool' },
+  { keys: ['Space', '→'],  descKey: 'next_diver' },
+  { keys: ['H'],           descKey: 'hold' },
+  { keys: ['L'],           descKey: 'announce' },
+  { keys: ['F'],           descKey: 'fail' },
+  { keys: ['R'],           descKey: 'redive' },
+  { keys: ['C'],           descKey: 'cap' },
 ]
 
 // Glossary of diving-specific terms. Term labels are universal
@@ -308,10 +302,10 @@ onBeforeUnmount(() => observer?.disconnect())
           </div>
         </section>
 
-        <!-- Keyboard shortcuts — Control Room hotkeys. Live in
-             the guide rather than only the in-app `?` overlay so
-             a meet manager can study them before the meet from
-             a different device. -->
+        <!-- Keyboard shortcuts — the multi-event Control Room
+             hotkeys. The key glyphs are universal so they stay
+             hardcoded; only the per-row descriptions are i18n'd.
+             Mirrors src/composables/useControlKeymap.js. -->
         <section id="shortcuts" class="guide-section">
           <h2 class="guide-h2">{{ $t('guide.section_shortcuts') }}</h2>
           <p class="guide-section-lede">{{ $t('guide.shortcuts.lede') }}</p>

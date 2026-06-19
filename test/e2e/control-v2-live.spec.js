@@ -68,6 +68,13 @@ test("the primary arms on a full score then advances to the next diver", async (
   });
   await expect(page.locator(".cv2-primary")).toBeEnabled({ timeout: 6_000 });
 
+  // The completed dive lands in History with its per-judge score chips:
+  // a 5-judge panel renders 5 chips, two struck through (high + low trimmed).
+  const hcard = page.locator(".cv2-hcard", { hasText: "AAA Diver" }).first();
+  await expect(hcard).toBeVisible({ timeout: 6_000 });
+  await expect(hcard.locator(".j-score")).toHaveCount(5);
+  await expect(hcard.locator(".j-score.j-dropped")).toHaveCount(2);
+
   // Click Next -> the cursor advances to the second diver.
   await page.locator(".cv2-primary").click();
   await expect(page.locator(".cv2-live-diver")).toContainText("ZZZ Diver");

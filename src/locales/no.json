@@ -645,13 +645,12 @@
     },
     "shortcut": {
       "next_diver": "Gå videre til neste deltaker i køen.",
-      "top_of_round": "Sett køen tilbake til starten av gjeldende runde.",
       "fail": "Marker gjeldende stup som mislykket (0 fra alle dommere).",
       "redive": "Gi gjeldende stuper en omstup.",
       "hold": "Sett stevnet på pause — pauser klokken og banneret for aktiv stuper.",
-      "live_toggle": "Slå direktesending av/på for stevnets offentlige resultattavle.",
-      "queue_nav": "Flytt markøren gjennom på-dekk-køen.",
-      "help_overlay": "Åpne den innebygde tastatur-hurtigguiden."
+      "focus_pool": "Bytt det fokuserte bassenget. Ved to eller flere aktive øvelser er 1 det første bassenget, 2 det andre, og så videre.",
+      "announce": "Kunngjør — publiser det fokuserte bassengets resultater på den offentlige resultattavlen.",
+      "cap": "Begrens de nåværende poengsummene for hopp i det fokuserte bassenget (referee 2.0 cap)."
     },
     "glossary": {
       "lede": "Stupevokabular du møter allerede første dag.",
