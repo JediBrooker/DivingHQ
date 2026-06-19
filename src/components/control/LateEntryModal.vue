@@ -20,6 +20,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
 import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { diveDescription } from '@/composables/useDiveLabel'
+import BaseModal from '@/components/BaseModal.vue'
+import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
   open:  { type: Boolean, default: false },
@@ -228,15 +230,9 @@ async function submitLateEntry() {
 </script>
 
 <template>
-  <div v-if="open" class="lb-backdrop" @click="$emit('close')"></div>
-  <div v-if="open" class="lb-modal late-modal" @click.stop>
-    <div class="lb-header">
-      <div>
-        <div class="lb-title">Add Late Diver</div>
-        <div class="lb-event">{{ event?.name }}</div>
-      </div>
-      <button class="btn btn-ghost btn-sm" @click="$emit('close')">Cancel</button>
-    </div>
+  <BaseModal :open="open" max-width="600px" @close="$emit('close')">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" title="Add Late Diver" :subtitle="event?.name" @close="$emit('close')" />
     <div class="lb-body">
       <div class="field">
         <label class="label">Diver</label>
@@ -338,21 +334,20 @@ async function submitLateEntry() {
         </button>
       </div>
     </div>
-  </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
 /* Late-entry styles MOVED from ControlView.css (exclusive to
-   this modal). The .lb-* modal frame at the bottom is COPIED —
-   the pattern is shared by the modals that remain in
-   ControlView. */
-.late-modal { max-width: 600px; }
-.late-modal .hint {
+   this modal). The lb-* frame now lives in BaseModal + the global
+   lb-* in ControlView.css (max-width passed via BaseModal). */
+.hint {
   font-size: 11px; color: var(--text-3); line-height: 1.5;
   padding: 0.5rem 0.7rem; margin-top: 0.4rem;
   background: var(--bg-3); border-inline-start: 3px solid var(--cyan); border-radius: 3px;
 }
-.late-modal .hint strong { color: var(--cyan); font-family: var(--font-mono); }
+.hint strong { color: var(--cyan); font-family: var(--font-mono); }
 
 /* Per-round dive list inside the late-entry modal. One row per
    round of the event; each row has a number gutter, an autocomplete
@@ -435,7 +430,6 @@ async function submitLateEntry() {
 .late-ac-dd   { color: var(--cyan); font-weight: 700; }
 
 @media (max-width: 720px) {
-  .late-modal { max-width: calc(100vw - 1.5rem); }
   .late-row { grid-template-columns: 24px 1fr; }
   .late-row-meta {
     grid-column: 1 / -1; padding-inline-start: 30px;
@@ -443,32 +437,6 @@ async function submitLateEntry() {
   }
 }
 
-/* Modal frame — copied from ControlView.css (see AGENTS.md
-   "Modal CSS pattern"). */
-.lb-backdrop { position: fixed; inset: 0; background: rgba(3,7,18,0.95); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); z-index: 300; }
-.lb-modal {
-  position: fixed; top: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%);
-  z-index: 301;
-  background: var(--surface); border: 1px solid var(--border-2); border-radius: 28px;
-  width: calc(100% - 3rem); max-width: 560px;
-  max-height: 90vh;
-  max-height: 90dvh;
-  overflow-y: auto; animation: fadeUp 0.3s ease;
-  overflow-x: clip;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.55);
-}
-.lb-header { padding: 2rem 2rem 1.25rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); display: flex; align-items: flex-start; justify-content: space-between; }
-.lb-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--cyan); margin-bottom: 0.4rem; }
-.lb-event { font-family: var(--font-sans); font-size: 22px; font-weight: 600; font-style: normal; letter-spacing: -0.015em; color: var(--fg); line-height: 1.1; }
-.lb-body { padding: 1.5rem 2rem 2rem; }
-@media (max-width: 720px) {
-  .lb-modal {
-    max-height: calc(100vh - 1.5rem);   /* fallback */
-    max-height: calc(100dvh - 1.5rem);  /* preferred */
-    border-radius: var(--radius-lg);
-  }
-  .lb-header  { padding: 1.25rem 1.25rem 1rem; }
-  .lb-event   { font-size: 22px; }
-  .lb-body    { padding: 1rem 1.25rem 1.5rem; }
-}
+/* The lb-* modal frame now lives in BaseModal.vue (frame) + the global
+   lb-header/lb-title/lb-event/lb-body in ControlView.css (P2). */
 </style>

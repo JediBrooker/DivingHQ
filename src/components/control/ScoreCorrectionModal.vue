@@ -17,6 +17,8 @@
 import { ref, computed } from 'vue'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
 import { trimCount } from '@/composables/useScoreCategories'
+import BaseModal from '@/components/BaseModal.vue'
+import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
   card:  { type: Object, required: true },  // historyCard the operator clicked
@@ -148,15 +150,11 @@ async function submitCorrection() {
 </script>
 
 <template>
-  <div class="lb-backdrop" @click="$emit('close')"></div>
-  <div class="lb-modal correct-modal" @click.stop>
-    <div class="lb-header">
-      <div>
-        <div class="lb-title">Amend Score</div>
-        <div class="lb-event">{{ card.name }} · Round {{ card.round }} · {{ card.dive_code }}{{ card.position }}</div>
-      </div>
-      <button class="btn btn-ghost btn-sm" @click="$emit('close')">Cancel</button>
-    </div>
+  <BaseModal max-width="520px" @close="$emit('close')">
+    <template #default="{ titleId }">
+      <ModalHeader :title-id="titleId" title="Amend Score" @close="$emit('close')">
+        {{ card.name }} · Round {{ card.round }} · {{ card.dive_code }}{{ card.position }}
+      </ModalHeader>
     <div class="lb-body">
       <div class="field">
         <label class="label">Judge</label>
@@ -223,15 +221,14 @@ async function submitCorrection() {
         </button>
       </div>
     </div>
-  </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
 /* Correction styles MOVED from ControlView.css (exclusive to
-   this modal). The .lb-* modal frame at the bottom is COPIED —
-   the pattern is shared by the modals that remain in
-   ControlView. */
-.correct-modal { max-width: 520px; }
+   this modal). The modal's 520px max-width now rides the
+   BaseModal max-width prop (was .correct-modal). */
 
 /* Score-correction live preview — refreshes on every keystroke
    so the operator can see the impact of the edit (trim-sum
@@ -305,32 +302,7 @@ async function submitCorrection() {
   line-height: 1.45;
 }
 
-/* Modal frame — copied from ControlView.css (see AGENTS.md
-   "Modal CSS pattern"). */
-.lb-backdrop { position: fixed; inset: 0; background: rgba(3,7,18,0.95); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); z-index: 300; }
-.lb-modal {
-  position: fixed; top: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%);
-  z-index: 301;
-  background: var(--surface); border: 1px solid var(--border-2); border-radius: 28px;
-  width: calc(100% - 3rem); max-width: 560px;
-  max-height: 90vh;
-  max-height: 90dvh;
-  overflow-y: auto; animation: fadeUp 0.3s ease;
-  overflow-x: clip;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.55);
-}
-.lb-header { padding: 2rem 2rem 1.25rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); display: flex; align-items: flex-start; justify-content: space-between; }
-.lb-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--cyan); margin-bottom: 0.4rem; }
-.lb-event { font-family: var(--font-sans); font-size: 22px; font-weight: 600; font-style: normal; letter-spacing: -0.015em; color: var(--fg); line-height: 1.1; }
-.lb-body { padding: 1.5rem 2rem 2rem; }
-@media (max-width: 720px) {
-  .lb-modal {
-    max-height: calc(100vh - 1.5rem);   /* fallback */
-    max-height: calc(100dvh - 1.5rem);  /* preferred */
-    border-radius: var(--radius-lg);
-  }
-  .lb-header  { padding: 1.25rem 1.25rem 1rem; }
-  .lb-event   { font-size: 22px; }
-  .lb-body    { padding: 1rem 1.25rem 1.5rem; }
-}
+/* The lb-* modal frame (.lb-backdrop/.lb-modal/.lb-header/.lb-title/.lb-event/.lb-body
+   + their 720px counterparts) now lives in BaseModal.vue (frame) + the global
+   lb-header/lb-title/lb-event/lb-body in ControlView.css. */
 </style>

@@ -21,6 +21,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
 import { showError } from '@/composables/useNotify'
+import BaseModal from '@/components/BaseModal.vue'
 
 const props = defineProps({
   event:  { type: Object, default: null },
@@ -157,15 +158,18 @@ async function runRandomiseDraw() {
 </script>
 
 <template>
-  <div class="lb-backdrop"
-       @click.self="randomiseStage !== 'shuffling' && close()"></div>
-  <div
-       :class="['lb-modal', 'randomise-modal', `phase-${randomiseStage}`]"
-       @click.stop>
+  <BaseModal
+    max-width="760px"
+    :close-on-backdrop="randomiseStage !== 'shuffling'"
+    :close-on-esc="randomiseStage !== 'shuffling'"
+    @close="close"
+  >
+    <template #default="{ titleId }">
+    <div :class="['randomise-modal', `phase-${randomiseStage}`]">
     <div class="randomise-head">
       <div class="randomise-icon">🎲</div>
       <div>
-        <div class="randomise-title">
+        <div class="randomise-title" :id="titleId || null">
           <template v-if="randomiseStage === 'preview'">Random Dive-Order Draw</template>
           <template v-else-if="randomiseStage === 'shuffling'">Drawing dive order…</template>
           <template v-else>Final dive order</template>
@@ -226,7 +230,9 @@ async function runRandomiseDraw() {
         </button>
       </template>
     </div>
-  </div>
+    </div>
+    </template>
+  </BaseModal>
 </template>
 
 <style scoped>
@@ -371,25 +377,6 @@ async function runRandomiseDraw() {
   animation: rd-title-pulse 1.0s ease-in-out infinite alternate;
 }
 
-/* Modal frame — copied from ControlView.css (see AGENTS.md
-   "Modal CSS pattern"). */
-.lb-backdrop { position: fixed; inset: 0; background: rgba(3,7,18,0.95); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); z-index: 300; }
-.lb-modal {
-  position: fixed; top: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%);
-  z-index: 301;
-  background: var(--surface); border: 1px solid var(--border-2); border-radius: 28px;
-  width: calc(100% - 3rem); max-width: 560px;
-  max-height: 90vh;
-  max-height: 90dvh;
-  overflow-y: auto; animation: fadeUp 0.3s ease;
-  overflow-x: clip;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.55);
-}
-@media (max-width: 720px) {
-  .lb-modal {
-    max-height: calc(100vh - 1.5rem);   /* fallback */
-    max-height: calc(100dvh - 1.5rem);  /* preferred */
-    border-radius: var(--radius-lg);
-  }
-}
+/* Modal frame (.lb-backdrop / .lb-modal + the 720px frame media query)
+   now lives in BaseModal.vue; the global lb-* in ControlView.css. */
 </style>
