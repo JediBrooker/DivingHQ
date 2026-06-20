@@ -269,12 +269,12 @@ done
 #     file — old logs accumulate, prune them with logrotate or
 #     cron if that becomes an issue.
 #   * Skipped entirely on no-op deploys (no code change → no new
-#     keys could have been added) and on dry-run. If a translator
-#     dies mid-flight, the resulting dirty locale files block
-#     `git pull --ff-only` on the next deploy anyway, so retrying
-#     the translator from a no-op deploy isn't a real recovery
-#     path — you commit manually, push, then the next code-change
-#     deploy picks up the remaining stuck keys.
+#     keys could have been added) and on dry-run. The box never ends
+#     up on a dirty or diverged main: a translator that dies
+#     mid-flight has its partial writes discarded, and a push-back
+#     that fails (or races a PR merged on origin) resets to the
+#     commit we just built. Stuck keys are simply re-derived on a
+#     later deploy, so nothing is permanently lost.
 #   * Skipped silently if neither OPENAI_API_KEY nor
 #     ANTHROPIC_API_KEY is set in .env — same gate as the inline
 #     version had.
@@ -317,7 +317,8 @@ if [[ $HEALTHY -eq 1 && $NOOP -eq 0 && $DRY_RUN -eq 0 ]]; then
 
     log "${STUCK_TOTAL} stuck key(s) total — running translator"
     if ! npm run translate; then
-      log "WARNING — translator failed, leaving translations as-is"
+      log "WARNING — translator failed; discarding partial writes to keep the next deploy clean"
+      git checkout -- src/locales/ 2>/dev/null || true
       exit 0
     fi
 
@@ -330,6 +331,13 @@ if [[ $HEALTHY -eq 1 && $NOOP -eq 0 && $DRY_RUN -eq 0 ]]; then
     fi
 
     log "auto-committing fresh translations"
+    # Remember exactly what we built/migrated/restarted so we can
+    # always snap back to it. The box must never be left on a main
+    # that diverges from origin (breaks the next `git pull --ff-only`)
+    # or runs ahead of what we built (makes the next deploy a no-op
+    # that silently skips build + migrate). Both states wedge future
+    # deploys — which is precisely how this box wedged before.
+    BUILT_SHA="$(git rev-parse HEAD)"
     git add src/locales/
     # Don't sign the commit (no GPG on the deploy box); use a clear
     # marker so the auto-commit is easy to spot in git log.
@@ -338,14 +346,33 @@ if [[ $HEALTHY -eq 1 && $NOOP -eq 0 && $DRY_RUN -eq 0 ]]; then
       exit 0
     fi
 
-    # Push back to origin/main is best-effort. If the deploy box
-    # doesn't have push permission (no SSH key, branch protection,
-    # etc.) we keep the translations local — they're already on
-    # disk, so the NEXT deploy here will pick them up.
-    if git push origin HEAD:main 2>&1; then
-      log "pushed to origin/main"
+    # Only ever push a clean fast-forward. Fetch first so the
+    # ancestry test below sees the real state of origin/main.
+    git fetch --quiet origin main || true
+    if git merge-base --is-ancestor origin/main HEAD; then
+      # origin/main hasn't moved since we built → our commit
+      # fast-forwards it. Push it.
+      if git push origin HEAD:main 2>&1; then
+        log "pushed to origin/main"
+      else
+        # Almost always missing push credentials on the box (HTTPS
+        # remote with no token, or a deploy key without write access).
+        # Reset so we don't strand a local commit that diverges main
+        # and wedges the next deploy. Fix push auth (add a deploy key
+        # with write access) and this branch stops firing.
+        log "WARNING — push to origin/main failed (check push credentials); resetting to ${BUILT_SHA} to stay deployable"
+        git reset --hard "$BUILT_SHA"
+      fi
     else
-      log "WARNING — push back to origin failed; commit is local-only"
+      # origin/main advanced while we were translating (a PR merged
+      # mid-run). Don't try to absorb those commits here — rebasing
+      # them in would leave the running build behind its own working
+      # tree, and the no-op next deploy would skip building/migrating
+      # them. Defer: drop our commit and snap back to what we built;
+      # the next deploy pulls + rebuilds the new code, and the
+      # translator re-fills these keys on top of it.
+      log "origin/main moved during translate — deferring to next deploy; resetting to ${BUILT_SHA}"
+      git reset --hard "$BUILT_SHA"
     fi
   ) >"$TRANSLATE_LOG" 2>&1 </dev/null &
   disown
