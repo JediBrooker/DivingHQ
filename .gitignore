@@ -46,3 +46,9 @@ docs/.Rhistory
 
 # DiveRecorder importer local HTML cache
 scripts/.dr-cache/
+
+# Local DB backups written by scripts/reset-db*.sh before a wipe.
+# These live in the repo root by default; left untracked they would
+# wedge deploy.sh's strict dirty-tree check on the next deploy.
+backup-before-reset-*.sql
+
