@@ -14,6 +14,24 @@
 # upgrade path. Persistent state (Loki indices, Prometheus TSDB,
 # Grafana DB) lives in named volumes so a `docker compose down`
 # doesn't drop your dashboards.
+#
+# AUTO-UPDATES: every image below is pinned to `latest`, and the
+# watchtower service at the bottom polls Docker Hub on a schedule
+# (4 AM daily) and pulls newer images automatically, restarting
+# only the containers it manages. Watchtower is SCOPED via the
+# `com.centurylinklabs.watchtower.enable=true` label, so it only
+# touches the four services here — nothing else on the box.
+#
+#   ⚠ Trade-off: `latest` + unattended updates means a MAJOR
+#     version bump can land without you watching. Grafana, Loki and
+#     Prometheus all migrate their on-disk state on a major upgrade,
+#     and some migrations are one-way. Watchtower does NOT back up
+#     first. Mitigations:
+#       * Keep a periodic backup of the named volumes (esp.
+#         grafana-data) — see ops/observability/README.md.
+#       * To freeze any single service, pin it back to an explicit
+#         tag (e.g. grafana/grafana:13.1.0) OR drop its
+#         watchtower.enable label so Watchtower skips it.
 
 services:
   # -----------------------------------------------------------
@@ -22,13 +40,15 @@ services:
   # multiple instances, swap in S3 + memberlist.
   # -----------------------------------------------------------
   loki:
-    image: grafana/loki:3.0.0
+    image: grafana/loki:latest
     container_name: dive-recorder-loki
     ports: ["127.0.0.1:3100:3100"]
     volumes:
       - ./loki/local-config.yaml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
     command: -config.file=/etc/loki/local-config.yaml
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
     restart: unless-stopped
 
   # -----------------------------------------------------------
@@ -36,9 +56,14 @@ services:
   # line as JSON (Pino output), pushes to Loki. Runs in network
   # 'host' mode so it can read the host's filesystem AND reach
   # loki:3100 via the docker network at the same time.
+  #
+  # NOTE: Promtail is in maintenance mode upstream — Grafana
+  # Alloy is its successor. `latest` still resolves to the final
+  # 3.x line; if a future `latest` ever stops shipping Promtail,
+  # migrate to grafana/alloy.
   # -----------------------------------------------------------
   promtail:
-    image: grafana/promtail:3.0.0
+    image: grafana/promtail:latest
     container_name: dive-recorder-promtail
     volumes:
       - ./promtail/config.yml:/etc/promtail/config.yml:ro
@@ -51,6 +76,8 @@ services:
       - promtail-positions:/var/lib/promtail
     command: -config.file=/etc/promtail/config.yml
     depends_on: [loki]
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
     restart: unless-stopped
 
   # -----------------------------------------------------------
@@ -59,9 +86,8 @@ services:
   # extend with --storage.tsdb.retention.time if you want more.
   # -----------------------------------------------------------
   prometheus:
-    image: prom/prometheus:v2.55.0
+    image: prom/prometheus:latest
     container_name: dive-recorder-prometheus
-    ports: ["127.0.0.1:9090:9090"]
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -76,6 +102,8 @@ services:
       # /metrics endpoint lives. On Docker Desktop (Mac/Win) this
       # is automatic; on Linux Docker engine we map it explicitly.
       - "host.docker.internal:host-gateway"
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
     restart: unless-stopped
 
   # -----------------------------------------------------------
@@ -86,7 +114,7 @@ services:
   # compose file; change it on first login.
   # -----------------------------------------------------------
   grafana:
-    image: grafana/grafana:11.1.0
+    image: grafana/grafana:latest
     container_name: dive-recorder-grafana
     # Grafana is the only UI surface in the stack — the others
     # (loki, prometheus, promtail) stay 127.0.0.1-bound; Grafana
@@ -113,6 +141,52 @@ services:
       # catalog" home page we'd never use.
       GF_AUTH_DISABLE_LOGIN_FORM: "false"
     depends_on: [loki, prometheus]
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    restart: unless-stopped
+
+  # -----------------------------------------------------------
+  # Watchtower — watches the four services above (label-scoped)
+  # and pulls newer `latest` images automatically.
+  #
+  #   * WATCHTOWER_LABEL_ENABLE — only act on containers carrying
+  #     com.centurylinklabs.watchtower.enable=true. Watchtower
+  #     itself is unlabelled, so it won't update itself, and it
+  #     ignores every other container on the host.
+  #   * WATCHTOWER_SCHEDULE — 6-field cron. "0 0 4 * * *" = 04:00
+  #     daily, in the container's timezone (UTC unless you set TZ
+  #     below). Off-hours so an update never bounces Grafana mid-
+  #     meet. Swap for WATCHTOWER_POLL_INTERVAL=86400 if you'd
+  #     rather poll every 24h from container start instead.
+  #   * WATCHTOWER_CLEANUP — delete the old image after a
+  #     successful pull so /var/lib/docker doesn't grow unbounded.
+  #   * WATCHTOWER_ROLLING_RESTART — update one container at a
+  #     time rather than stopping the whole set at once.
+  #
+  # SECURITY: mounting the docker socket gives this container
+  # root-equivalent control of the host. That's inherent to how
+  # Watchtower works; it's acceptable on a single-tenant VPS you
+  # own, but don't expose it and don't run untrusted images.
+  # -----------------------------------------------------------
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: dive-recorder-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_ROLLING_RESTART: "true"
+      WATCHTOWER_SCHEDULE: "0 0 4 * * *"
+      WATCHTOWER_TIMEOUT: "30s"
+      # Set your timezone so the 4 AM schedule fires at LOCAL time
+      # (otherwise it's UTC). e.g. TZ: "Australia/Sydney"
+      # TZ: "Etc/UTC"
+      #
+      # Optional: get a ping when something updates. Watchtower
+      # supports shoutrrr URLs (Slack, Discord, email, ntfy…):
+      # WATCHTOWER_NOTIFICATIONS: "shoutrrr"
+      # WATCHTOWER_NOTIFICATION_URL: "discord://token@channel"
     restart: unless-stopped
 
 volumes:
