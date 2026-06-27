@@ -1,7 +1,7 @@
 # DivingHQ
 
 > [!WARNING]
-> **Testing phase — data is not persistent.** DivingHQ is currently in a testing phase only. Any data you create or edit in the live app (meets, events, dive lists, scores, accounts) at [https://diving.jedibrooker.com](https://diving.jedibrooker.com) may be reset or deleted at any time without notice. Please don't rely on it for a real competition yet. I do plan on migrating this to a production server once testing is complete. Do not ask for an ETA, it will be ready when it's ready.
+> **Testing phase — data is not persistent.** DivingHQ is currently in a testing phase only. Any data you create or edit in the live app (meets, events, dive lists, scores, accounts) at [https://divinghq.app](https://divinghq.app) may be reset or deleted at any time without notice. Please don't rely on it for a real competition yet. I do plan on migrating this to a production server once testing is complete. Do not ask for an ETA, it will be ready when it's ready.
 
 📖 **[User Guide → DivingHQ Wiki](https://github.com/JediBrooker/DivingHQ/wiki)** — how to actually use the app: register a federation, run a meet, judge dives, watch the scoreboard, manage admin tasks. This README covers setup, deployment, and architecture.
 
