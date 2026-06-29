@@ -39,9 +39,11 @@ onMounted(async () => {
       <select id="late-trigger" class="trigger-select" v-model="trigger">
         <option v-for="t in TRIGGERS" :key="t.key" :value="t.key">{{ t.label }}</option>
       </select>
+      <span class="trigger-note">— applied when you press Save below.</span>
     </div>
     <FeeEditor
       v-if="ready"
+      flat
       title="Late entry fee"
       :load-url="`/api/events/${eventId}/late-fee/config`"
       :save-url="`/api/events/${eventId}/late-fee`"
@@ -55,6 +57,7 @@ onMounted(async () => {
 .hint { font-size: .8rem; color: var(--muted, #777); margin: 0; }
 .trigger-row { display: flex; align-items: center; gap: .5rem; }
 .trigger-label { font-size: .85rem; color: var(--fg-2, #555); }
+.trigger-note { font-size: .78rem; color: var(--muted, #777); }
 .trigger-select {
   padding: .35rem .6rem; border: 1px solid var(--border, #ddd); border-radius: .5rem;
   background: transparent; color: var(--fg, #222); font-size: .85rem;

@@ -33,6 +33,7 @@ let clubId;
 let meetId;
 let lateEventId;
 let lastRefundArgs = null;
+let lastExpireArgs = null;
 
 // Fake Stripe — captures args, returns canned objects.
 const fakePayments = {
@@ -43,6 +44,7 @@ const fakePayments = {
     configuration: { merchant: { capabilities: { card_payments: { status: "active" } } } },
   }),
   createCheckoutSession: async () => ({ id: "cs_" + crypto.randomUUID().slice(0, 8), url: "https://stripe.test/pay" }),
+  expireCheckoutSession: async (args) => { lastExpireArgs = args; return { status: "expired" }; },
   createRefund: async (args) => { lastRefundArgs = args; return { amount: args.amountCents }; },
   // Tests POST a JSON body; treat it as the already-verified event.
   constructWebhookEvent: (raw) => JSON.parse(Buffer.isBuffer(raw) ? raw.toString() : raw),
@@ -345,7 +347,18 @@ test("late fee is shown but NOT applied before the deadline", async (t) => {
   assert.equal(fee.total_cents, 6000);
 });
 
-test("late fee applies once entries close, and checkout charges base + late", async (t) => {
+let earlyPaymentId;
+test("a diver who checks out before the deadline pays the base price only", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/events/${lateEventId}/checkout`, {});
+  assert.equal(res.status, 200);
+  earlyPaymentId = (await res.json()).payment_id;
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [earlyPaymentId])).rows[0];
+  assert.equal(row.amount_cents, 6000); // base only — deadline not reached
+  assert.equal(row.status, "pending");
+});
+
+test("once entries close, a re-checkout retires the stale base session and charges base + late", async (t) => {
   if (!ready) return t.skip();
   await pool.query("UPDATE events SET entries_close_at = now() - interval '1 hour' WHERE id = $1", [lateEventId]);
 
@@ -354,13 +367,47 @@ test("late fee applies once entries close, and checkout charges base + late", as
   assert.equal(fee.late_fee.applies, true);
   assert.equal(fee.total_cents, 7500);
 
+  lastExpireArgs = null;
   res = await api("POST", `/api/events/${lateEventId}/checkout`, {});
   assert.equal(res.status, 200);
   const latePaymentId = (await res.json()).payment_id;
+  assert.notEqual(latePaymentId, earlyPaymentId);
+
+  // The stale, under-priced pending session was expired + failed...
+  assert.ok(lastExpireArgs, "expireCheckoutSession should have been called");
+  const stale = (await pool.query("SELECT status FROM payments WHERE id = $1", [earlyPaymentId])).rows[0];
+  assert.equal(stale.status, "failed");
+  // ...and the fresh row carries base + late with the 15% on the total.
   const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [latePaymentId])).rows[0];
   assert.equal(row.amount_cents, 7500);        // 6000 base + 1500 late
   assert.equal(row.platform_fee_cents, 1125);  // 15% of 7500
   assert.equal(row.subject_type, "event_entry");
+});
+
+test("a member-only / windowed late price is coerced to a flat 'all' surcharge", async (t) => {
+  if (!ready) return t.skip();
+  // A manager mis-configures the late fee with an audience + a closed window;
+  // the server must flatten it so the surcharge can't silently vanish.
+  const res = await api("PUT", `/api/events/${lateEventId}/late-fee`, {
+    currency: "GBP", late_fee_trigger: "entries_close_at",
+    prices: [{ label: "late", amount_cents: 2000, audience: "member", starts_at: "2020-01-01", ends_at: "2020-02-01" }],
+  });
+  assert.equal(res.status, 200);
+  // Deadline is already in the past → the (flattened) surcharge still applies.
+  const read = await api("GET", `/api/events/${lateEventId}/fee`);
+  const fee = (await read.json()).fee;
+  assert.equal(fee.late_fee.applies, true);
+  assert.equal(fee.late_fee.surcharge_cents, 2000);
+  // The stored variant was forced to audience 'all' with no window.
+  const variant = (await pool.query(
+    `SELECT fp.audience, fp.starts_at, fp.ends_at
+       FROM fee_prices fp JOIN fee_definitions fd ON fd.id = fp.fee_definition_id
+      WHERE fd.event_id = $1 AND fd.scope = 'late_entry' AND fd.active`,
+    [lateEventId],
+  )).rows[0];
+  assert.equal(variant.audience, "all");
+  assert.equal(variant.starts_at, null);
+  assert.equal(variant.ends_at, null);
 });
 
 // ---- Club affiliation (federation charges the CLUB) ----------------

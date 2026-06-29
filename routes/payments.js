@@ -268,6 +268,35 @@ module.exports = function createPaymentsRouter({
       feePayer: fee.fee_payer,
     });
 
+    // If a late surcharge now applies, retire any stale pending payment that
+    // was opened (and priced) BEFORE the deadline — otherwise the diver could
+    // return to that cheaper, still-valid Checkout session and dodge the
+    // surcharge. Expire its Stripe session and free the one-live-payment slot
+    // so the fresh, correctly-priced row can be inserted. Same-priced pending
+    // rows are left alone (they collide → 409 "in progress", which is right).
+    if (surchargeCents > 0 && subjectType === "event_entry") {
+      const stale = (await pool.query(
+        `SELECT id, stripe_checkout_session, amount_cents FROM payments
+          WHERE event_id = $1 AND payer_user_id = $2 AND fee_definition_id = $3
+            AND subject_type = 'event_entry' AND status = 'pending'
+          LIMIT 1`,
+        [eventId, userId, fee.id],
+      )).rows[0];
+      if (stale && stale.amount_cents < chargeAmountCents) {
+        if (stale.stripe_checkout_session) {
+          try {
+            await payments.expireCheckoutSession({
+              connectedAccountId: org.stripe_account_id,
+              sessionId: stale.stripe_checkout_session,
+            });
+          } catch (e) {
+            logger.warn({ err: e.message }, "[payments] could not expire stale checkout session");
+          }
+        }
+        await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [stale.id]);
+      }
+    }
+
     // Record the pending payment first. The unique partial index blocks
     // a second live entry payment for the same diver+event.
     let paymentId;
@@ -643,13 +672,28 @@ module.exports = function createPaymentsRouter({
     const v = validatePrices(body.prices);
     if (v.error) return res.status(400).json({ error: v.error });
     try {
+      // A late fee is a single FLAT surcharge whose timing is governed by
+      // the trigger, NOT by audience tiers or price windows. Force the
+      // stored variant to audience 'all' with no window so it can never be
+      // silently suppressed at resolve time (resolveLateFee resolves with
+      // isMember:false at now — a 'member'/windowed variant would vanish and
+      // the diver would dodge the surcharge).
+      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
+      // Keep the surcharge in the SAME currency as the base entry fee — they
+      // are summed into one charge at checkout. Inherit it when a base fee
+      // exists so the two can never diverge.
+      const baseCurrency = (await pool.query(
+        "SELECT currency FROM fee_definitions WHERE event_id = $1 AND scope = 'event_entry' AND active LIMIT 1",
+        [eventId],
+      )).rows[0]?.currency;
+      const feeBody = baseCurrency ? { ...body, currency: baseCurrency } : body;
       const feeId = await upsertFee({
         orgId,
         scope: "late_entry",
         eventId,
         name: "Late entry fee",
-        body,
-        cleanPrices: v.prices,
+        body: feeBody,
+        cleanPrices: [flatPrice],
       });
       return res.json({ id: feeId });
     } catch (err) {
