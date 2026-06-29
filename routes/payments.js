@@ -121,17 +121,34 @@ module.exports = function createPaymentsRouter({
   }
 
   // Upsert a single active fee_definition (+ replace its price variants)
-  // for an (org, scope, event). Runs in one transaction. Returns feeId.
-  async function upsertFee({ orgId, scope, eventId, name, body, cleanPrices }) {
+  // for an (org, scope, + entity/qualifier tuple). The identity tuple is
+  // (org, scope, event_id, meet_id, club_id, role_type, discipline, tier)
+  // — matching Migration 067's unique index — so e.g. one event can carry
+  // a separate entry fee per discipline, and one org a separate membership
+  // fee per tier. Runs in one transaction. Returns feeId.
+  async function upsertFee({
+    orgId, scope, name, body, cleanPrices,
+    eventId = null, meetId = null, clubId = null,
+    roleType = null, discipline = null, tier = null,
+  }) {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
       const existing = await client.query(
         `SELECT id FROM fee_definitions
           WHERE org_id = $1 AND scope = $2 AND active
-            AND ($3::uuid IS NULL OR event_id = $3) LIMIT 1`,
-        [orgId, scope, eventId || null],
+            AND event_id   IS NOT DISTINCT FROM $3
+            AND meet_id    IS NOT DISTINCT FROM $4
+            AND club_id    IS NOT DISTINCT FROM $5
+            AND role_type  IS NOT DISTINCT FROM $6
+            AND discipline IS NOT DISTINCT FROM $7
+            AND tier       IS NOT DISTINCT FROM $8
+          LIMIT 1`,
+        [orgId, scope, eventId, meetId, clubId, roleType, discipline, tier],
       );
+      const membershipPeriod = scope === "membership" ? body.membership_period || "annual" : null;
+      const lateFeeTrigger = body.late_fee_trigger || null;
+      const suggested = Array.isArray(body.suggested_amounts) ? body.suggested_amounts : null;
       let feeId;
       if (existing.rows.length) {
         feeId = existing.rows[0].id;
@@ -141,37 +158,26 @@ module.exports = function createPaymentsRouter({
                   fee_payer = COALESCE($3, fee_payer),
                   refund_policy = COALESCE($4, refund_policy),
                   refund_deadline = $5,
-                  membership_period = $6
+                  membership_period = $6,
+                  late_fee_trigger = $7,
+                  suggested_amounts = $8
             WHERE id = $1`,
-          [
-            feeId,
-            body.currency || null,
-            body.fee_payer || null,
-            body.refund_policy || null,
-            body.refund_deadline || null,
-            scope === "membership" ? body.membership_period || "annual" : null,
-          ],
+          [feeId, body.currency || null, body.fee_payer || null, body.refund_policy || null,
+           body.refund_deadline || null, membershipPeriod, lateFeeTrigger, suggested],
         );
         await client.query("DELETE FROM fee_prices WHERE fee_definition_id = $1", [feeId]);
       } else {
         const ins = await client.query(
           `INSERT INTO fee_definitions
-              (org_id, scope, event_id, name, currency, fee_payer,
-               refund_policy, refund_deadline, membership_period)
-           VALUES ($1, $2, $3, $4, $5, COALESCE($6,'absorb'),
-                   COALESCE($7,'full'), $8, $9)
+              (org_id, scope, event_id, meet_id, club_id, role_type, discipline, tier,
+               name, currency, fee_payer, refund_policy, refund_deadline,
+               membership_period, late_fee_trigger, suggested_amounts)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, COALESCE($11,'absorb'),
+                   COALESCE($12,'full'), $13, $14, $15, $16)
            RETURNING id`,
-          [
-            orgId,
-            scope,
-            eventId || null,
-            name,
-            body.currency || null,
-            body.fee_payer || null,
-            body.refund_policy || null,
-            body.refund_deadline || null,
-            scope === "membership" ? body.membership_period || "annual" : null,
-          ],
+          [orgId, scope, eventId, meetId, clubId, roleType, discipline, tier,
+           name, body.currency || null, body.fee_payer || null, body.refund_policy || null,
+           body.refund_deadline || null, membershipPeriod, lateFeeTrigger, suggested],
         );
         feeId = ins.rows[0].id;
       }
@@ -368,11 +374,13 @@ module.exports = function createPaymentsRouter({
     const v = validatePrices(body.prices);
     if (v.error) return res.status(400).json({ error: v.error });
     try {
+      const discipline = body.discipline ? String(body.discipline).slice(0, 40) : null;
       const feeId = await upsertFee({
         orgId,
         scope: "event_entry",
         eventId,
-        name: "Entry fee",
+        discipline,
+        name: discipline ? `Entry fee (${discipline})` : "Entry fee",
         body,
         cleanPrices: v.prices,
       });
@@ -395,11 +403,12 @@ module.exports = function createPaymentsRouter({
     const v = validatePrices(body.prices);
     if (v.error) return res.status(400).json({ error: v.error });
     try {
+      const tier = body.tier ? String(body.tier).slice(0, 40) : null;
       const feeId = await upsertFee({
         orgId,
         scope: "membership",
-        eventId: null,
-        name: body.name || "Membership",
+        tier,
+        name: body.name || (tier ? `Membership (${tier})` : "Membership"),
         body,
         cleanPrices: v.prices,
       });
@@ -417,9 +426,12 @@ module.exports = function createPaymentsRouter({
       const ev = await pool.query("SELECT org_id FROM events WHERE id = $1", [eventId]);
       if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
       const orgId = ev.rows[0].org_id;
+      const discipline = req.query.discipline || null;
       const feeRes = await pool.query(
-        "SELECT * FROM fee_definitions WHERE event_id = $1 AND scope = 'event_entry' AND active LIMIT 1",
-        [eventId],
+        `SELECT * FROM fee_definitions
+          WHERE event_id = $1 AND scope = 'event_entry' AND active
+            AND discipline IS NOT DISTINCT FROM $2 LIMIT 1`,
+        [eventId, discipline],
       );
       if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       const def = feeRes.rows[0];
@@ -458,8 +470,10 @@ module.exports = function createPaymentsRouter({
   router.get("/api/events/:id/fee/config", requireEventManager(), async (req, res) => {
     try {
       const feeRes = await pool.query(
-        "SELECT * FROM fee_definitions WHERE event_id = $1 AND scope = 'event_entry' AND active LIMIT 1",
-        [req.params.id],
+        `SELECT * FROM fee_definitions
+          WHERE event_id = $1 AND scope = 'event_entry' AND active
+            AND discipline IS NOT DISTINCT FROM $2 LIMIT 1`,
+        [req.params.id, req.query.discipline || null],
       );
       if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]), payments_enabled: payments.enabled });
@@ -475,14 +489,56 @@ module.exports = function createPaymentsRouter({
     if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
     try {
       const feeRes = await pool.query(
-        "SELECT * FROM fee_definitions WHERE org_id = $1 AND scope = 'membership' AND active LIMIT 1",
-        [orgId],
+        `SELECT * FROM fee_definitions
+          WHERE org_id = $1 AND scope = 'membership' AND active
+            AND tier IS NOT DISTINCT FROM $2 LIMIT 1`,
+        [orgId, req.query.tier || null],
       );
       if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]), payments_enabled: payments.enabled });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] read membership fee failed");
       return res.status(500).json({ error: "Failed to read the membership fee." });
+    }
+  });
+
+  // Diver-facing: what would membership (optionally a given tier) cost me?
+  // Mirrors GET /api/events/:id/fee — resolved price, no admin gate.
+  router.get("/api/orgs/:id/membership", optionalAuth, async (req, res) => {
+    const orgId = req.params.id;
+    try {
+      const tier = req.query.tier || null;
+      const feeRes = await pool.query(
+        `SELECT * FROM fee_definitions
+          WHERE org_id = $1 AND scope = 'membership' AND active
+            AND tier IS NOT DISTINCT FROM $2 LIMIT 1`,
+        [orgId, tier],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
+      const def = feeRes.rows[0];
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
+      const chosen = resolvePrice(prices, { isMember: false });
+      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const alreadyMember = req.user
+        ? (await pool.query(
+            `SELECT 1 FROM memberships
+              WHERE org_id = $1 AND user_id = $2 AND status = 'active' AND period_end > now()
+                AND tier IS NOT DISTINCT FROM $3 LIMIT 1`,
+            [orgId, req.user.id, tier],
+          )).rows.length > 0
+        : false;
+      return res.json({
+        fee: {
+          currency: def.currency || org?.default_currency || null,
+          tier: def.tier,
+          already_member: alreadyMember,
+          price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+        },
+        payments_enabled: payments.enabled,
+      });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read membership (diver) failed");
+      return res.status(500).json({ error: "Failed to read membership." });
     }
   });
 

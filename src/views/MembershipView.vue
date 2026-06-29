@@ -1,0 +1,53 @@
+<script setup>
+// Diver-facing membership page (/membership). Shows what membership will
+// cost (per tier) with a contextual "coming soon" preview until online
+// payments are switched on. Each card reads the resolved price from the
+// diver-facing GET /api/orgs/:orgId/membership endpoint (no admin gate).
+import { computed } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import FeePreviewCard from '@/components/payments/FeePreviewCard.vue'
+import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
+
+const auth = useAuthStore()
+const orgId = computed(() => auth.user?.org_id)
+
+// '' = the Standard (ageless) membership; the others are age tiers. Cards
+// for tiers a federation hasn't set will simply show "not set yet".
+const TIERS = [
+  { key: '', label: 'Standard' },
+  { key: 'junior', label: 'Junior' },
+  { key: 'senior', label: 'Senior' },
+  { key: 'masters', label: 'Masters' },
+]
+</script>
+
+<template>
+  <section class="membership-view">
+    <h1>Membership</h1>
+    <p class="lede">
+      Membership unlocks members-only entry prices. It isn't required to enter
+      competitions.
+    </p>
+    <ComingSoonBanner
+      message="Online membership payments are coming soon — here's what membership will cost."
+    />
+    <div class="tiers" v-if="orgId">
+      <div v-for="tr in TIERS" :key="tr.key" class="tier-card">
+        <h3>{{ tr.label }}</h3>
+        <FeePreviewCard
+          :title="`${tr.label} membership`"
+          :load-url="`/api/orgs/${orgId}/membership?tier=${tr.key}`"
+          coming-soon-message="Membership payments are coming soon."
+        />
+      </div>
+    </div>
+  </section>
+</template>
+
+<style scoped>
+.membership-view { display: flex; flex-direction: column; gap: 1rem; max-width: 60rem; margin: 0 auto; padding: 1rem; }
+.lede { color: var(--muted, #777); margin: 0; }
+.tiers { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1rem; }
+.tier-card { border: 1px solid var(--border, #ddd); border-radius: .75rem; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: .5rem; }
+.tier-card h3 { margin: 0; }
+</style>
