@@ -88,8 +88,8 @@ onMounted(loadStatus)
 .card { border: 1px solid var(--border, #ddd); border-radius: .75rem; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: .5rem; }
 .btn { align-self: flex-start; padding: .5rem 1rem; border: 0; border-radius: .5rem; background: var(--accent, #3b6); color: #fff; cursor: pointer; }
 .btn:disabled { opacity: .6; }
-.ok { color: var(--success, #2a7); margin: 0; }
-.warn { color: var(--warning, #b70); margin: 0; }
-.muted { color: var(--text-muted, #777); }
+.ok { color: var(--green, #2a7); margin: 0; }
+.warn { color: var(--amber, #b70); margin: 0; }
+.muted { color: var(--muted, #777); }
 .coming-soon { margin: 0; padding: .5rem .75rem; border-radius: .5rem; background: var(--accent-soft, #eef); color: var(--accent, #3b6); font-weight: 600; font-size: .9rem; }
 </style>

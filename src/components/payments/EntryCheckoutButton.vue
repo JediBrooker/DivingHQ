@@ -77,9 +77,9 @@ onMounted(load)
 .entry-checkout { display: flex; flex-direction: column; gap: .5rem; }
 .price { margin: 0; }
 .badge { margin-left: .5rem; font-size: .75rem; padding: .1rem .4rem; border-radius: .4rem; background: var(--accent-soft, #eef); }
-.muted { color: var(--text-muted, #777); }
+.muted { color: var(--muted, #777); }
 .coming-soon { margin: 0; color: var(--accent, #3b6); font-weight: 600; }
-.paid { color: var(--success, #2a7); margin: 0; font-weight: 600; }
+.paid { color: var(--green, #2a7); margin: 0; font-weight: 600; }
 .btn-pay { align-self: flex-start; padding: .5rem 1rem; border: 0; border-radius: .5rem; background: var(--accent, #3b6); color: #fff; cursor: pointer; }
 .btn-pay:disabled { opacity: .6; cursor: default; }
 </style>

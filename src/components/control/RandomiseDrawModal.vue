@@ -211,7 +211,7 @@ async function runRandomiseDraw() {
         </span>
         <span v-if="item.club_code" class="randomise-row-club">{{ item.club_code }}</span>
         <span v-if="item.paid_entry" class="randomise-row-paid"
-              :style="{ marginLeft: 'auto', fontSize: '.72rem', fontWeight: 600, color: 'var(--success,#2a7)' }">
+              :style="{ marginLeft: 'auto', fontSize: '.72rem', fontWeight: 600, color: 'var(--green,#2a7)' }">
           Paid
         </span>
       </div>
