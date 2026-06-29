@@ -319,7 +319,12 @@ module.exports = function createPaymentsRouter({
     "/api/orgs/:id/payments/status",
     requireOrgRole(["org_admin"]),
     async (req, res) => {
-      if (!ensurePayments(res)) return;
+      // Coming-soon state: when payments aren't configured, report a
+      // clean disabled status (not a 503) so the UI can show a friendly
+      // "feature incoming" notice instead of an error.
+      if (!payments.enabled) {
+        return res.json({ enabled: false, onboarded: false, charges_enabled: false, payouts_enabled: false });
+      }
       const orgId = req.params.id;
       if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
       try {
@@ -330,7 +335,7 @@ module.exports = function createPaymentsRouter({
         if (!orgRes.rows.length) return res.status(404).json({ error: "Organisation not found" });
         const accountId = orgRes.rows[0].stripe_account_id;
         if (!accountId) {
-          return res.json({ onboarded: false, charges_enabled: false, payouts_enabled: false });
+          return res.json({ enabled: true, onboarded: false, charges_enabled: false, payouts_enabled: false });
         }
         const account = await payments.retrieveAccount(accountId);
         // Defensive parse — confirm the exact shape against test mode.
@@ -341,7 +346,7 @@ module.exports = function createPaymentsRouter({
           "UPDATE organisations SET stripe_charges_enabled = $1, stripe_payouts_enabled = $2 WHERE id = $3",
           [chargesEnabled, payoutsEnabled, orgId],
         );
-        return res.json({ onboarded: true, charges_enabled: chargesEnabled, payouts_enabled: payoutsEnabled });
+        return res.json({ enabled: true, onboarded: true, charges_enabled: chargesEnabled, payouts_enabled: payoutsEnabled });
       } catch (err) {
         logger.error({ err: err.message }, "[payments] status failed");
         return res.status(err.status || 500).json({ error: err.message || "Status check failed" });
@@ -416,7 +421,7 @@ module.exports = function createPaymentsRouter({
         "SELECT * FROM fee_definitions WHERE event_id = $1 AND scope = 'event_entry' AND active LIMIT 1",
         [eventId],
       );
-      if (!feeRes.rows.length) return res.json({ fee: null });
+      if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       const def = feeRes.rows[0];
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
@@ -441,6 +446,7 @@ module.exports = function createPaymentsRouter({
           already_paid: alreadyPaid,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
         },
+        payments_enabled: payments.enabled,
       });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] read event fee failed");
@@ -455,8 +461,8 @@ module.exports = function createPaymentsRouter({
         "SELECT * FROM fee_definitions WHERE event_id = $1 AND scope = 'event_entry' AND active LIMIT 1",
         [req.params.id],
       );
-      if (!feeRes.rows.length) return res.json({ fee: null });
-      return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]) });
+      if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
+      return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]), payments_enabled: payments.enabled });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] read event fee config failed");
       return res.status(500).json({ error: "Failed to read the entry fee." });
@@ -472,8 +478,8 @@ module.exports = function createPaymentsRouter({
         "SELECT * FROM fee_definitions WHERE org_id = $1 AND scope = 'membership' AND active LIMIT 1",
         [orgId],
       );
-      if (!feeRes.rows.length) return res.json({ fee: null });
-      return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]) });
+      if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
+      return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]), payments_enabled: payments.enabled });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] read membership fee failed");
       return res.status(500).json({ error: "Failed to read the membership fee." });

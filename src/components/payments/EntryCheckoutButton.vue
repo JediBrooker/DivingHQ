@@ -12,6 +12,7 @@ const props = defineProps({ eventId: { type: String, required: true } })
 const auth = useAuthStore()
 
 const fee = ref(null)
+const comingSoon = ref(false)
 const loading = ref(true)
 const busy = ref(false)
 
@@ -29,6 +30,7 @@ async function load() {
   try {
     const r = await auth.apiFetch(`/api/events/${props.eventId}/fee`)
     fee.value = r.fee
+    comingSoon.value = r.payments_enabled === false
   } catch (e) {
     showError(e.message || 'Could not load the entry fee')
   } finally {
@@ -56,6 +58,7 @@ onMounted(load)
 <template>
   <div class="entry-checkout">
     <p v-if="loading" class="muted">Loading…</p>
+    <p v-else-if="comingSoon" class="coming-soon">💳 Online entry-fee payments are coming soon.</p>
     <p v-else-if="!fee || !fee.price" class="muted">No entry fee is required for this event.</p>
     <p v-else-if="fee.already_paid" class="paid">✓ Entry fee paid</p>
     <template v-else>
@@ -75,6 +78,7 @@ onMounted(load)
 .price { margin: 0; }
 .badge { margin-left: .5rem; font-size: .75rem; padding: .1rem .4rem; border-radius: .4rem; background: var(--accent-soft, #eef); }
 .muted { color: var(--text-muted, #777); }
+.coming-soon { margin: 0; color: var(--accent, #3b6); font-weight: 600; }
 .paid { color: var(--success, #2a7); margin: 0; font-weight: 600; }
 .btn-pay { align-self: flex-start; padding: .5rem 1rem; border: 0; border-radius: .5rem; background: var(--accent, #3b6); color: #fff; cursor: pointer; }
 .btn-pay:disabled { opacity: .6; cursor: default; }

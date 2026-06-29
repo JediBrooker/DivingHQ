@@ -19,6 +19,7 @@ const auth = useAuthStore()
 
 const loading = ref(true)
 const busy = ref(false)
+const comingSoon = ref(false)
 const currency = ref('GBP')
 const feePayer = ref('absorb')
 const refundPolicy = ref('full')
@@ -40,7 +41,9 @@ function removePrice(i) { prices.value.splice(i, 1) }
 async function load() {
   loading.value = true
   try {
-    const { fee } = await auth.apiFetch(props.loadUrl)
+    const r = await auth.apiFetch(props.loadUrl)
+    comingSoon.value = r.payments_enabled === false
+    const fee = r.fee
     if (fee) {
       currency.value = fee.currency || 'GBP'
       feePayer.value = fee.fee_payer || 'absorb'
@@ -63,6 +66,7 @@ async function load() {
 }
 
 async function save() {
+  if (comingSoon.value) return
   busy.value = true
   try {
     const payload = {
@@ -95,6 +99,7 @@ onMounted(load)
   <form class="fee-editor" @submit.prevent="save">
     <p v-if="loading" class="muted">Loading…</p>
     <template v-else>
+      <p v-if="comingSoon" class="coming-soon">🚧 Coming soon — preview the setup here; it goes live once online payments are switched on.</p>
       <div class="row">
         <label>Currency
           <input v-model="currency" maxlength="3" class="cur" />
@@ -144,7 +149,7 @@ onMounted(load)
       <button type="button" class="link" @click="addPrice">+ Add a price variant</button>
 
       <div class="actions">
-        <button type="submit" class="btn" :disabled="busy">{{ busy ? 'Saving…' : 'Save' }}</button>
+        <button type="submit" class="btn" :disabled="busy || comingSoon">{{ busy ? 'Saving…' : (comingSoon ? 'Coming soon' : 'Save') }}</button>
       </div>
       <p class="hint">
         Amounts are tax-inclusive. At checkout the cheapest variant the buyer is
@@ -167,5 +172,6 @@ onMounted(load)
 .link { background: none; border: 0; color: var(--accent, #3b6); cursor: pointer; padding: .2rem; }
 .link:disabled { opacity: .5; cursor: default; }
 .muted { color: var(--text-muted, #777); }
+.coming-soon { margin: 0; padding: .5rem .75rem; border-radius: .5rem; background: var(--accent-soft, #eef); color: var(--accent, #3b6); font-weight: 600; font-size: .85rem; }
 .hint { font-size: .8rem; color: var(--text-muted, #777); margin: 0; }
 </style>

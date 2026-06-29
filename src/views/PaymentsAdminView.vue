@@ -15,6 +15,7 @@ const orgId = computed(() => auth.user?.org_id)
 const status = ref(null)
 const loading = ref(true)
 const busy = ref(false)
+const comingSoon = computed(() => status.value && status.value.enabled === false)
 
 async function loadStatus() {
   if (!orgId.value) return
@@ -52,6 +53,9 @@ onMounted(loadStatus)
     <div class="card">
       <h2>Payouts</h2>
       <p v-if="loading" class="muted">Checking…</p>
+      <template v-else-if="comingSoon">
+        <p class="coming-soon">🚧 Payments are coming soon. This is where you'll connect Stripe to take entry fees and pay out — the feature is built and switches on shortly.</p>
+      </template>
       <template v-else>
         <p v-if="status && status.charges_enabled" class="ok">
           ✓ Connected — you can take entry fees and receive payouts.
@@ -87,4 +91,5 @@ onMounted(loadStatus)
 .ok { color: var(--success, #2a7); margin: 0; }
 .warn { color: var(--warning, #b70); margin: 0; }
 .muted { color: var(--text-muted, #777); }
+.coming-soon { margin: 0; padding: .5rem .75rem; border-radius: .5rem; background: var(--accent-soft, #eef); color: var(--accent, #3b6); font-weight: 600; font-size: .9rem; }
 </style>
