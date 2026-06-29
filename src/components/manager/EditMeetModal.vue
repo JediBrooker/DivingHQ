@@ -20,6 +20,7 @@ import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess } from '@/composables/useNotify'
 import SponsorLogosManager from '@/components/manager/SponsorLogosManager.vue'
+import MeetFeesEditor from '@/components/manager/MeetFeesEditor.vue'
 
 const props = defineProps({
   meetId:      { type: String, required: true },
@@ -122,6 +123,11 @@ async function saveMeet() {
              sponsor-logos endpoints. -->
         <div class="field" style="margin-top:0.25rem">
           <SponsorLogosManager :meet-id="meetId" />
+        </div>
+
+        <div class="field" style="margin-top:0.25rem">
+          <label class="label">Registration fees</label>
+          <MeetFeesEditor :meet-id="meetId" />
         </div>
 
         <div v-if="editMeetErr" class="msg msg-error">{{ editMeetErr }}</div>

@@ -89,6 +89,7 @@ module.exports = function createPaymentsRouter({
   optionalAuth,
   requireOrgRole,
   requireEventManager,
+  requireMeetEditor,
   logger,
   payments,
 }) {
@@ -480,6 +481,103 @@ module.exports = function createPaymentsRouter({
     } catch (err) {
       logger.error({ err: err.message }, "[payments] read event fee config failed");
       return res.status(500).json({ error: "Failed to read the entry fee." });
+    }
+  });
+
+  // ---- Meet-level registration fees -------------------------------
+  // Enter the whole meet (any events), optionally priced per discipline.
+  // requireMeetEditor is role+TOTP only, so each handler also checks the
+  // meet belongs to the caller's org (sysadmin bypasses via ownsOrg).
+
+  router.put("/api/meets/:id/fees", requireMeetEditor, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const meetId = req.params.id;
+    try {
+      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
+      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
+      const orgId = m.rows[0].org_id;
+      if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+      const body = req.body || {};
+      if (!Array.isArray(body.prices) || !body.prices.length) {
+        return res.status(400).json({ error: "At least one price variant is required." });
+      }
+      const v = validatePrices(body.prices);
+      if (v.error) return res.status(400).json({ error: v.error });
+      const discipline = body.discipline ? String(body.discipline).slice(0, 40) : null;
+      const feeId = await upsertFee({
+        orgId, scope: "event_entry", meetId, discipline,
+        name: discipline ? `Meet registration (${discipline})` : "Meet registration",
+        body, cleanPrices: v.prices,
+      });
+      return res.json({ id: feeId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] set meet fee failed");
+      return res.status(500).json({ error: "Failed to save the meet registration fee." });
+    }
+  });
+
+  // Full meet-fee config (all variants) for the manager's editor.
+  router.get("/api/meets/:id/fees/config", requireMeetEditor, async (req, res) => {
+    const meetId = req.params.id;
+    try {
+      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
+      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
+      if (!ownsOrg(req, m.rows[0].org_id)) return res.status(403).json({ error: "Forbidden" });
+      const feeRes = await pool.query(
+        `SELECT * FROM fee_definitions
+          WHERE meet_id = $1 AND scope = 'event_entry' AND active
+            AND discipline IS NOT DISTINCT FROM $2 LIMIT 1`,
+        [meetId, req.query.discipline || null],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
+      return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]), payments_enabled: payments.enabled });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read meet fee config failed");
+      return res.status(500).json({ error: "Failed to read the meet fee." });
+    }
+  });
+
+  // Diver-facing: what would registering for this meet cost me?
+  router.get("/api/meets/:id/fees", optionalAuth, async (req, res) => {
+    const meetId = req.params.id;
+    try {
+      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
+      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
+      const orgId = m.rows[0].org_id;
+      const discipline = req.query.discipline || null;
+      const feeRes = await pool.query(
+        `SELECT * FROM fee_definitions
+          WHERE meet_id = $1 AND scope = 'event_entry' AND active
+            AND discipline IS NOT DISTINCT FROM $2 LIMIT 1`,
+        [meetId, discipline],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
+      const def = feeRes.rows[0];
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
+      const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
+      const chosen = resolvePrice(prices, { isMember: member });
+      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const alreadyPaid = req.user
+        ? (await pool.query(
+            `SELECT 1 FROM payments
+              WHERE meet_id = $1 AND payer_user_id = $2
+                AND subject_type = 'event_entry' AND status = 'paid' LIMIT 1`,
+            [meetId, req.user.id],
+          )).rows.length > 0
+        : false;
+      return res.json({
+        fee: {
+          currency: def.currency || org?.default_currency || null,
+          discipline: def.discipline,
+          is_member: member,
+          already_paid: alreadyPaid,
+          price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+        },
+        payments_enabled: payments.enabled,
+      });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read meet fee failed");
+      return res.status(500).json({ error: "Failed to read the meet fee." });
     }
   });
 

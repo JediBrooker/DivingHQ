@@ -14,6 +14,7 @@ import { MEET_METADATA_TTL_MS } from '@/lib/cache-policy'
 import { groupScoreboardEvents } from '@/composables/useProgressionGroups'
 import MeetEventGrid from '@/components/scoreboard/MeetEventGrid.vue'
 import SponsorRotation from '@/components/scoreboard/SponsorRotation.vue'
+import FeePreviewCard from '@/components/payments/FeePreviewCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -340,6 +341,18 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
                 class="sponsor-name">{{ meet.sponsor_name }}</span>
         </div>
       </div>
+
+      <!-- Meet registration fee — diver-facing preview. Stays hidden
+           (hide-when-unset) until a federation sets a registration fee;
+           then shows the price with a coming-soon pay action. -->
+      <section v-if="meet" class="meet-reg-section">
+        <FeePreviewCard
+          hide-when-unset
+          title="Meet registration"
+          :load-url="`/api/meets/${meet.id}/fees`"
+          coming-soon-message="Online meet registration is coming soon."
+        />
+      </section>
 
       <!-- Events — one row per discipline, prelim → semi → final
            grouped into aligned columns (same layout as the
