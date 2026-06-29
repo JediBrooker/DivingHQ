@@ -171,7 +171,7 @@ onMounted(load)
 .btn:disabled { opacity: .6; }
 .link { background: none; border: 0; color: var(--accent, #3b6); cursor: pointer; padding: .2rem; }
 .link:disabled { opacity: .5; cursor: default; }
-.muted { color: var(--text-muted, #777); }
+.muted { color: var(--muted, #777); }
 .coming-soon { margin: 0; padding: .5rem .75rem; border-radius: .5rem; background: var(--accent-soft, #eef); color: var(--accent, #3b6); font-weight: 600; font-size: .85rem; }
-.hint { font-size: .8rem; color: var(--text-muted, #777); margin: 0; }
+.hint { font-size: .8rem; color: var(--muted, #777); margin: 0; }
 </style>
