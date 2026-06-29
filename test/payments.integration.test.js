@@ -64,12 +64,17 @@ function buildApp() {
     req.event = r.rows[0];
     next();
   };
+  // Meet-fee endpoints (Phase 1b) gate on requireMeetEditor — in prod an
+  // array guard, here a passthrough that sets req.user. Must be a real
+  // function or Express throws "argument handler must be a function" when
+  // the router registers the route (the bug that broke CI on PR #83).
+  const requireMeetEditor = setUser;
 
   const app = express();
   app.use((req, res, next) =>
     req.path === "/webhooks/stripe" ? next() : express.json()(req, res, next));
   app.use(createPaymentsRouter({
-    pool, verifyToken, optionalAuth, requireOrgRole, requireEventManager,
+    pool, verifyToken, optionalAuth, requireOrgRole, requireEventManager, requireMeetEditor,
     logger: silentLogger, payments: fakePayments,
   }));
   app.post("/webhooks/stripe", express.raw({ type: "application/json" }),
