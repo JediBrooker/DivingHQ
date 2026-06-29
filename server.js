@@ -369,6 +369,7 @@ const {
   requireOrgRole,
   requireSystemAdmin,
   requireEventManager,
+  requireClubAdmin,
   ensureEventOrgGate,
   ensureEventPreMeet,
   isInSameOrg,
@@ -655,6 +656,7 @@ app.use(require("./routes/payments")({
   requireOrgRole,
   requireEventManager,
   requireMeetEditor,
+  requireClubAdmin,
   logger,
   payments,
 }));

@@ -90,10 +90,18 @@ module.exports = function createPaymentsRouter({
   requireOrgRole,
   requireEventManager,
   requireMeetEditor,
+  requireClubAdmin,
   logger,
   payments,
 }) {
   const router = express.Router();
+
+  // club_affiliation / club_accreditation share all plumbing and differ
+  // only by scope + the club_affiliations.kind they grant. One mapper
+  // keeps the URL `kind` param and the DB scope in lockstep.
+  function clubScope(kind) {
+    return kind === "accreditation" ? "club_accreditation" : "club_affiliation";
+  }
 
   // Refuse every payment route cleanly when Stripe isn't configured,
   // rather than 500-ing deeper in.
@@ -275,6 +283,97 @@ module.exports = function createPaymentsRouter({
       await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
       throw err;
     }
+  }
+
+  // Club-payer checkout core. A CLUB (not an individual) pays the
+  // federation an affiliation/accreditation fee. payer_type='club' with
+  // no payer_user_id, so this can't reuse startCheckout (which is the
+  // member-aware individual path). The connected account is still the
+  // federation's — the club pays the federation, DivingHQ skims its cut.
+  async function startClubCheckout({ req, org, club, fee, prices, kind }) {
+    const chosen = resolvePrice(prices, { isMember: false });
+    if (!chosen) {
+      const err = new Error("This isn't open for purchase right now.");
+      err.status = 409;
+      throw err;
+    }
+    const currency = fee.currency || org.default_currency;
+    if (!currency) {
+      const err = new Error("The federation's currency is not configured.");
+      err.status = 409;
+      throw err;
+    }
+    const subjectType = clubScope(kind);
+    const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
+    const { chargeAmountCents, applicationFeeCents } = priceCharge({
+      baseAmountCents: chosen.amount_cents,
+      feeBps,
+      feePayer: fee.fee_payer,
+    });
+
+    // payer_club_id = the paying club; club_id = the subject club (same
+    // here). The one-live-club partial index blocks a second live payment
+    // for the same club+fee.
+    let paymentId;
+    try {
+      const ins = await pool.query(
+        `INSERT INTO payments
+            (org_id, fee_definition_id, payer_type, payer_club_id, club_id, subject_type,
+             amount_cents, platform_fee_cents, currency, fee_payer, status)
+         VALUES ($1, $2, 'club', $3, $3, $4, $5, $6, $7, $8, 'pending')
+         RETURNING id`,
+        [org.id, fee.id, club.id, subjectType, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
+      );
+      paymentId = ins.rows[0].id;
+    } catch (e) {
+      if (e.code === "23505") {
+        const err = new Error("This club already has a payment in progress or completed for this.");
+        err.status = 409;
+        throw err;
+      }
+      throw e;
+    }
+
+    try {
+      const session = await payments.createCheckoutSession({
+        connectedAccountId: org.stripe_account_id,
+        currency,
+        chargeAmountCents,
+        applicationFeeCents,
+        productName: `${org.name} club ${kind} — ${club.name}`,
+        customerEmail: req.user.email,
+        clientReferenceId: paymentId,
+        metadata: {
+          payment_id: paymentId,
+          scope: subjectType,
+          org_id: org.id,
+          club_id: club.id,
+          initiated_by: req.user.id,
+        },
+        successUrl: `${APP_BASE_URL}/clubs/${club.id}?paid=1`,
+        cancelUrl: `${APP_BASE_URL}/clubs/${club.id}?canceled=1`,
+      });
+      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
+      return { url: session.url, paymentId };
+    } catch (err) {
+      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
+      throw err;
+    }
+  }
+
+  // Resolve the club fee that applies to one club: prefer a club-specific
+  // definition, else the org-wide template (club_id NULL). Returns the
+  // fee_definitions row or null.
+  async function resolveClubFee(db, orgId, scope, clubId) {
+    const r = await db.query(
+      `SELECT * FROM fee_definitions
+        WHERE org_id = $1 AND scope = $2 AND active
+          AND (club_id = $3 OR club_id IS NULL)
+        ORDER BY club_id NULLS LAST
+        LIMIT 1`,
+      [orgId, scope, clubId],
+    );
+    return r.rows[0] || null;
   }
 
   // ---- Federation onboarding --------------------------------------
@@ -640,6 +739,103 @@ module.exports = function createPaymentsRouter({
     }
   });
 
+  // ---- Club affiliation / accreditation fees ----------------------
+  // The FEDERATION (org_admin) sets the price its clubs pay; the CLUB
+  // (requireClubAdmin — org_admin of the club's org OR a club_admins row)
+  // pays it. One org-wide fee per kind (club_id NULL) for this first cut;
+  // the schema also allows per-club overrides.
+
+  // Federation sets/updates a club affiliation or accreditation fee.
+  router.put("/api/orgs/:id/club-fee", requireOrgRole(["org_admin"]), async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    const body = req.body || {};
+    if (!Array.isArray(body.prices) || !body.prices.length) {
+      return res.status(400).json({ error: "At least one price variant is required." });
+    }
+    const v = validatePrices(body.prices);
+    if (v.error) return res.status(400).json({ error: v.error });
+    try {
+      const scope = clubScope(body.kind);
+      const feeId = await upsertFee({
+        orgId,
+        scope,
+        name: body.name || (scope === "club_accreditation" ? "Club accreditation" : "Club affiliation"),
+        body,
+        cleanPrices: v.prices,
+      });
+      return res.json({ id: feeId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] set club fee failed");
+      return res.status(500).json({ error: "Failed to save the club fee." });
+    }
+  });
+
+  // Full club-fee config (all variants) for the federation's editor.
+  router.get("/api/orgs/:id/club-fee", requireOrgRole(["org_admin"]), async (req, res) => {
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    try {
+      const scope = clubScope(req.query.kind);
+      const feeRes = await pool.query(
+        `SELECT * FROM fee_definitions
+          WHERE org_id = $1 AND scope = $2 AND active AND club_id IS NULL LIMIT 1`,
+        [orgId, scope],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
+      return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]), payments_enabled: payments.enabled });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read club fee config failed");
+      return res.status(500).json({ error: "Failed to read the club fee." });
+    }
+  });
+
+  // Club-facing: what does affiliation/accreditation cost this club, and
+  // is it currently active? Readable by the club's admins and the
+  // federation (requireClubAdmin allows both). req.club is stashed by the
+  // guard.
+  router.get("/api/clubs/:id/affiliation", requireClubAdmin(), async (req, res) => {
+    const clubId = req.params.id;
+    const orgId = req.club.org_id;
+    try {
+      const kind = req.query.kind === "accreditation" ? "accreditation" : "affiliation";
+      const scope = clubScope(kind);
+      const def = await resolveClubFee(pool, orgId, scope, clubId);
+      const club = (await pool.query("SELECT name FROM clubs WHERE id = $1", [clubId])).rows[0];
+      const current = (await pool.query(
+        `SELECT status, period_end FROM club_affiliations
+          WHERE org_id = $1 AND club_id = $2 AND kind = $3
+            AND status = 'active' AND period_end > CURRENT_DATE
+          ORDER BY period_end DESC LIMIT 1`,
+        [orgId, clubId, kind],
+      )).rows[0];
+      if (!def) {
+        return res.json({
+          fee: { kind, club_name: club?.name || null, active: !!current, period_end: current?.period_end || null, price: null },
+          payments_enabled: payments.enabled,
+        });
+      }
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
+      const chosen = resolvePrice(prices, { isMember: false });
+      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      return res.json({
+        fee: {
+          kind,
+          club_name: club?.name || null,
+          currency: def.currency || org?.default_currency || null,
+          active: !!current,
+          period_end: current?.period_end || null,
+          price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+        },
+        payments_enabled: payments.enabled,
+      });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read club affiliation failed");
+      return res.status(500).json({ error: "Failed to read the club fee." });
+    }
+  });
+
   // ---- Checkout ----------------------------------------------------
 
   // Diver pays the entry fee for an event.
@@ -724,6 +920,39 @@ module.exports = function createPaymentsRouter({
       return res.json({ url, payment_id: paymentId });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] membership checkout failed");
+      return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
+    }
+  });
+
+  // A club admin pays the federation's affiliation/accreditation fee on
+  // behalf of the club. payer_type='club'; the connected account is the
+  // federation's.
+  router.post("/api/clubs/:id/affiliation/checkout", requireClubAdmin(), async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const clubId = req.params.id;
+    const orgId = req.club.org_id; // stashed by requireClubAdmin
+    try {
+      const kind = (req.body && req.body.kind) === "accreditation" ? "accreditation" : "affiliation";
+      const org = (
+        await pool.query(
+          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
+             FROM organisations WHERE id = $1`,
+          [orgId],
+        )
+      ).rows[0];
+      if (!org) return res.status(404).json({ error: "Organisation not found" });
+      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
+        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
+      }
+      const fee = await resolveClubFee(pool, orgId, clubScope(kind), clubId);
+      if (!fee) return res.status(409).json({ error: `No ${kind} fee is set for this federation.` });
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
+      const club = (await pool.query("SELECT id, name FROM clubs WHERE id = $1", [clubId])).rows[0];
+
+      const { url, paymentId } = await startClubCheckout({ req, org, club, fee, prices, kind });
+      return res.json({ url, payment_id: paymentId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] club checkout failed");
       return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
     }
   });

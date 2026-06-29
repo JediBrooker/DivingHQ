@@ -153,7 +153,17 @@ module.exports = function createOrgsRouter({
       const r = await pool.query(
         `SELECT cl.id, cl.name, cl.short_code, cl.created_at,
                 cl.org_id, o.name AS org_name, o.country_code,
-                COALESCE(stat.member_count, 0)::int AS member_count
+                COALESCE(stat.member_count, 0)::int AS member_count,
+                EXISTS (
+                  SELECT 1 FROM club_affiliations ca
+                   WHERE ca.club_id = cl.id AND ca.kind = 'affiliation'
+                     AND ca.status = 'active' AND ca.period_end > CURRENT_DATE
+                ) AS affiliation_active,
+                EXISTS (
+                  SELECT 1 FROM club_affiliations ca
+                   WHERE ca.club_id = cl.id AND ca.kind = 'accreditation'
+                     AND ca.status = 'active' AND ca.period_end > CURRENT_DATE
+                ) AS accreditation_active
          FROM clubs cl
          JOIN organisations o ON o.id = cl.org_id
          LEFT JOIN LATERAL (
