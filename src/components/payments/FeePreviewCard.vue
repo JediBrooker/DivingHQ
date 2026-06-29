@@ -16,6 +16,9 @@ const props = defineProps({
   checkoutUrl: { type: String, default: '' },    // POST -> { url }; only used once payments are live
   title: { type: String, default: 'Fee' },
   comingSoonMessage: { type: String, default: 'Online payments are coming soon.' },
+  // When true, render nothing if no fee is configured (keeps public pages
+  // clean until a federation sets one). Default shows a "not set" note.
+  hideWhenUnset: { type: Boolean, default: false },
 })
 
 const auth = useAuthStore()
@@ -76,7 +79,7 @@ onMounted(load)
       </button>
       <ComingSoonBanner v-if="!enabled" :message="comingSoonMessage" />
     </template>
-    <p v-else class="muted">No {{ title.toLowerCase() }} is set for this yet.</p>
+    <p v-else-if="!hideWhenUnset" class="muted">No {{ title.toLowerCase() }} is set for this yet.</p>
   </div>
 </template>
 

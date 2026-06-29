@@ -654,6 +654,7 @@ app.use(require("./routes/payments")({
   optionalAuth,
   requireOrgRole,
   requireEventManager,
+  requireMeetEditor,
   logger,
   payments,
 }));
