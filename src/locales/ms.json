@@ -1075,7 +1075,7 @@
       "club_name_placeholder": "Kelab Terjun Ibu Negara",
       "club_code_label": "Kod singkat",
       "club_code_label_hint": "(pilihan)",
-      "club_code_placeholder": "CAP",
+      "club_code_placeholder": "KOD",
       "club_create_btn": "Cipta kelab & teruskan →",
       "club_creating": "Mencipta…",
       "club_no_org_error": "Tidak dapat mencipta kelab — akaun anda tiada org_id.",
