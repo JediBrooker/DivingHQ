@@ -383,7 +383,7 @@ onMounted(() => {
         <h1 class="dr-title">Results Archive</h1>
         <p class="dr-sub">Historical diving results imported from DiveRecorder Meet Explorer.</p>
       </div>
-      <RouterLink to="/" class="btn btn-ghost btn-sm">Home</RouterLink>
+      <RouterLink to="/scoreboard" class="btn btn-ghost btn-sm">← Back to Scoreboard &amp; Results</RouterLink>
     </header>
 
     <p v-if="error" class="dr-error">{{ error }}</p>

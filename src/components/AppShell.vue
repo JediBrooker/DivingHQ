@@ -16,7 +16,7 @@ import ThemeToggle from '@/components/ThemeToggle.vue'
 import { openCommandPalette } from '@/composables/useAppChannel'
 import {
   LayoutDashboard, Trophy, MonitorPlay, Calculator, ChartColumn, Waves, GraduationCap,
-  ListChecks, BookOpen, Users, Building2, ScrollText, Archive,
+  ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard,
 } from '@lucide/vue'
@@ -40,9 +40,8 @@ const NAV = [
     { to: '/control',        label: 'Control Room',   labelKey: 'control.page_label',     icon: MonitorPlay,   roles: ['org_admin', 'meet_manager', 'referee'] },
     { to: '/competitor',     label: 'Dive Sheets',    icon: Waves,         roles: ['diver'] },
     { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
-    { to: '/scoreboard',     label: 'Scoreboard',     labelKey: 'scoreboard.page_label',  icon: ListChecks },
+    { to: '/scoreboard',     label: 'Scoreboard & Results', labelKey: 'scoreboard.page_label',  icon: ListChecks },
     { to: '/judge-analysis', label: 'Judge Analysis', icon: ChartColumn },
-    { to: '/results-archive', label: 'Results Archive', icon: Archive },
     { to: '/dive-directory', label: 'Dive directory', labelKey: 'dive_directory.title',   icon: BookOpen },
     { to: '/judge',          label: 'Judge Terminal', icon: Calculator,    roles: ['judge'] },
   ] },

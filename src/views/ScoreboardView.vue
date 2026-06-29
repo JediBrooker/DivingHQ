@@ -1113,7 +1113,7 @@ onMounted(async () => {
           to="/results-archive"
           class="btn btn-ghost btn-sm"
           v-tip.fixed="'Browse historical results imported from DiveRecorder'"
-        >📚 Results Archive</RouterLink>
+        >📚 DR Results Archive</RouterLink>
         <!-- Broadcast / kiosk mode toggle. Visible only when an
              event is selected; flips into a chromeless layout
              suitable for a venue projector. -->
