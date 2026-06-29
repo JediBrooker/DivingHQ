@@ -7,12 +7,16 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess, showError } from '@/composables/useNotify'
+import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
 
 const props = defineProps({
   loadUrl: { type: String, required: true },
   saveUrl: { type: String, required: true },
   title: { type: String, default: 'Fee' },
   showMembershipPeriod: { type: Boolean, default: false },
+  // Extra fields merged into the PUT body — lets wrappers send the fee's
+  // identity qualifiers, e.g. { tier: 'junior' } or { discipline: '3m' }.
+  extraPayload: { type: Object, default: () => ({}) },
 })
 const emit = defineEmits(['saved'])
 const auth = useAuthStore()
@@ -70,6 +74,7 @@ async function save() {
   busy.value = true
   try {
     const payload = {
+      ...props.extraPayload,
       currency: currency.value.toUpperCase(),
       fee_payer: feePayer.value,
       refund_policy: refundPolicy.value,
@@ -99,7 +104,7 @@ onMounted(load)
   <form class="fee-editor" @submit.prevent="save">
     <p v-if="loading" class="muted">Loading…</p>
     <template v-else>
-      <p v-if="comingSoon" class="coming-soon">🚧 Coming soon — preview the setup here; it goes live once online payments are switched on.</p>
+      <ComingSoonBanner v-if="comingSoon" message="Preview the setup here; it goes live once online payments are switched on." />
       <div class="row">
         <label>Currency
           <input v-model="currency" maxlength="3" class="cur" />

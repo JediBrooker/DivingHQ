@@ -7,7 +7,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
-import FeeEditor from '@/components/payments/FeeEditor.vue'
+import MembershipFeeEditor from '@/components/payments/MembershipFeeEditor.vue'
 
 const auth = useAuthStore()
 const orgId = computed(() => auth.user?.org_id)
@@ -72,13 +72,7 @@ onMounted(loadStatus)
       <p class="muted">
         Members get any “Members only” entry prices. Membership is not required to enter competitions.
       </p>
-      <FeeEditor
-        v-if="orgId"
-        title="Membership"
-        :show-membership-period="true"
-        :load-url="`/api/orgs/${orgId}/membership-fee`"
-        :save-url="`/api/orgs/${orgId}/membership-fee`"
-      />
+      <MembershipFeeEditor v-if="orgId" :org-id="orgId" />
     </div>
   </section>
 </template>

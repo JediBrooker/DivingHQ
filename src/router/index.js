@@ -76,6 +76,11 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['diver'], appShell: true },
   },
   {
+    path: '/membership',
+    component: () => import('@/views/MembershipView.vue'),
+    meta: { requiresAuth: true, requiresRole: ['diver'], appShell: true },
+  },
+  {
     path: '/coach',
     component: () => import('@/views/CoachView.vue'),
     meta: { requiresAuth: true, requiresRole: ['coach'], appShell: true },
