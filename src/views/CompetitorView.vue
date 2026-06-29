@@ -11,6 +11,7 @@ import { showSuccess, showError } from '@/composables/useNotify'
 import { validateDiveList } from '@/lib/round-rules'
 import EmptyState from '@/components/EmptyState.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
+import EntryCheckoutButton from '@/components/payments/EntryCheckoutButton.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -1196,6 +1197,7 @@ watch(currentEvent, async (ev) => {
             </div>
           </div>
         </div>
+        <EntryCheckoutButton v-if="currentEvent" :event-id="currentEvent.id" />
         <!-- Round-rules summary strip — only when the event
              carries a structured round_rules object (migration
              038). Shows each section's running totals so the

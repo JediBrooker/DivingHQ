@@ -18,7 +18,7 @@ import {
   LayoutDashboard, Trophy, MonitorPlay, Calculator, ChartColumn, Waves, GraduationCap,
   ListChecks, BookOpen, Users, Building2, ScrollText, Archive,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
-  Bell, User, Inbox, LogOut, EllipsisVertical,
+  Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -50,6 +50,7 @@ const NAV = [
     { to: '/users', label: 'User Manager',  labelKey: 'user_manager.title', icon: Users,      roles: ['org_admin'] },
     { to: '/clubs', label: 'Clubs & teams', labelKey: 'clubs.title',        icon: Building2,  roles: ['org_admin', 'meet_manager'] },
     { to: '/audit', label: 'Audit Log',     labelKey: 'audit.page_label',   icon: ScrollText, roles: ['org_admin'] },
+    { to: '/payments', label: 'Payments',   icon: CreditCard, roles: ['org_admin'] },
   ] },
 ]
 

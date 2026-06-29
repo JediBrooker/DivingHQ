@@ -160,7 +160,14 @@ app.use(cookieParser());
 // Bound the JSON body size — the largest legitimate payload is the
 // CSV roster import, which never approaches 256kb. Anything bigger
 // is either a bug or an abuse attempt.
-app.use(express.json({ limit: "256kb" }));
+//
+// Stripe webhooks are the one exception: signature verification needs
+// the untouched raw bytes, so /webhooks/stripe SKIPS the JSON parser
+// here and uses express.raw on its own route (see the mount below).
+const jsonBodyParser = express.json({ limit: "256kb" });
+app.use((req, res, next) =>
+  req.path === "/webhooks/stripe" ? next() : jsonBodyParser(req, res, next),
+);
 
 // Migration 052: server-side i18n. Attaches req.t + req.locale so
 // any downstream handler can produce localized error messages,
@@ -620,6 +627,41 @@ app.use(require("./routes/orgs")({
   requireSystemAdmin,
   requireMeetEditor,
 }));
+
+// =============================================================
+// PAYMENTS ROUTES (Stripe Connect — Migration 066)
+// [SECTION: ROUTES — PAYMENTS]
+// Federation onboarding, fee config, diver/member checkout, and
+// refunds. Direct charges: the federation is the merchant of record
+// and DivingHQ skims an application fee. `payments` (lib/stripe) is
+// constructed once and shared with the webhook handler. When
+// STRIPE_SECRET_KEY is unset, payments.enabled is false and every
+// payment route 503s rather than half-working.
+//
+// The webhook is mounted with express.raw (the global JSON parser
+// skips /webhooks/stripe above) so Stripe's signature can be verified
+// against the untouched body.
+// =============================================================
+const payments = require("./lib/stripe")();
+if (!payments.enabled) {
+  logger.warn(
+    "Payments disabled — STRIPE_SECRET_KEY unset. Onboarding + checkout routes will return 503.",
+  );
+}
+app.use(require("./routes/payments")({
+  pool,
+  verifyToken,
+  optionalAuth,
+  requireOrgRole,
+  requireEventManager,
+  logger,
+  payments,
+}));
+app.post(
+  "/webhooks/stripe",
+  express.raw({ type: "application/json" }),
+  require("./routes/stripe-webhook")({ pool, logger, payments }),
+);
 
 // =============================================================
 // TEAM ROUTES

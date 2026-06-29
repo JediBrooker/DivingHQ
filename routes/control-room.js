@@ -342,7 +342,17 @@ module.exports = function createControlRoomRouter({
                    (see publicId() below). */
                 cdl.event_id, cdl.round_number, cdl.dive_id,
                 d.dive_code, d.description, d.dd, d.position,
-                e.event_type, e.number_of_judges
+                e.event_type, e.number_of_judges,
+                /* Payments (Migration 066): is this diver's entry paid?
+                   Correlated EXISTS, not a JOIN — the roster is the
+                   scoring queue, so it must never multiply rows. */
+                EXISTS (
+                  SELECT 1 FROM payments p
+                   WHERE p.event_id = cdl.event_id
+                     AND p.payer_user_id = cdl.competitor_id
+                     AND p.subject_type = 'event_entry'
+                     AND p.status = 'paid'
+                ) AS paid_entry
          FROM users u
          JOIN competitor_dive_lists cdl ON u.id = cdl.competitor_id
          /* LEFT JOIN ordered — withdrawn rows aren't in the CTE
