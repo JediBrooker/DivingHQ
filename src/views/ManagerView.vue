@@ -11,6 +11,7 @@ import StatusPill from '@/components/StatusPill.vue'
 import SuperFinalModals from '@/components/manager/SuperFinalModals.vue'
 import RosterImportModal from '@/components/manager/RosterImportModal.vue'
 import EntryFeeEditor from '@/components/payments/EntryFeeEditor.vue'
+import LateFeeEditor from '@/components/payments/LateFeeEditor.vue'
 import MeetReadinessModal from '@/components/manager/MeetReadinessModal.vue'
 import TeamsEnrolmentModal from '@/components/manager/TeamsEnrolmentModal.vue'
 import ParticipatingOrgsModal from '@/components/manager/ParticipatingOrgsModal.vue'
@@ -2396,6 +2397,7 @@ onUnmounted(() => {
           </p>
         </div>
         <EntryFeeEditor v-if="editId" :event-id="editId" />
+        <LateFeeEditor v-if="editId" :event-id="editId" />
         <div v-if="editErr" class="msg msg-error">{{ editErr }}</div>
         <button type="submit" class="btn btn-primary-lg">{{ $t('manager.modals.edit_event_submit') }}</button>
       </form>

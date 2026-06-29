@@ -31,6 +31,7 @@ let userId;
 let eventId;
 let clubId;
 let meetId;
+let lateEventId;
 let lastRefundArgs = null;
 
 // Fake Stripe — captures args, returns canned objects.
@@ -138,6 +139,13 @@ before(async () => {
   meetId = (await pool.query(
     "INSERT INTO meets (org_id, name) VALUES ($1, $2) RETURNING id",
     [orgId, `Test Meet ${suffix}`],
+  )).rows[0].id;
+  // Separate event for late-fee tests; deadline starts in the future so the
+  // surcharge is dormant, then a test moves it into the past.
+  lateEventId = (await pool.query(
+    `INSERT INTO events (org_id, name, gender, number_of_judges, entries_close_at)
+     VALUES ($1, '3m Springboard (late-test)', 'Female', 5, now() + interval '1 day') RETURNING id`,
+    [orgId],
   )).rows[0].id;
 
   server = http.createServer(buildApp());
@@ -298,6 +306,61 @@ test("federation sets a meet registration fee", async (t) => {
   const fee = (await read.json()).fee;
   assert.equal(fee.price.amount_cents, 4000);
   assert.equal(fee.currency, "GBP");
+});
+
+// ---- Late entry fee (surcharge after a deadline) -------------------
+
+test("federation sets a base entry fee + a late fee on the late-test event", async (t) => {
+  if (!ready) return t.skip();
+  let res = await api("PUT", `/api/events/${lateEventId}/fee`, {
+    currency: "GBP",
+    prices: [{ label: "standard", amount_cents: 6000, audience: "all" }],
+  });
+  assert.equal(res.status, 200);
+  res = await api("PUT", `/api/events/${lateEventId}/late-fee`, {
+    currency: "GBP", late_fee_trigger: "entries_close_at",
+    prices: [{ label: "late", amount_cents: 1500, audience: "all" }],
+  });
+  assert.equal(res.status, 200);
+  assert.ok((await res.json()).id);
+});
+
+test("an invalid late_fee_trigger is rejected", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/events/${lateEventId}/late-fee`, {
+    currency: "GBP", late_fee_trigger: "whenever",
+    prices: [{ label: "late", amount_cents: 1500, audience: "all" }],
+  });
+  assert.equal(res.status, 400);
+});
+
+test("late fee is shown but NOT applied before the deadline", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("GET", `/api/events/${lateEventId}/fee`);
+  const fee = (await res.json()).fee;
+  assert.equal(fee.price.amount_cents, 6000);
+  assert.ok(fee.late_fee);
+  assert.equal(fee.late_fee.applies, false);
+  assert.equal(fee.late_fee.surcharge_cents, 1500);
+  assert.equal(fee.total_cents, 6000);
+});
+
+test("late fee applies once entries close, and checkout charges base + late", async (t) => {
+  if (!ready) return t.skip();
+  await pool.query("UPDATE events SET entries_close_at = now() - interval '1 hour' WHERE id = $1", [lateEventId]);
+
+  let res = await api("GET", `/api/events/${lateEventId}/fee`);
+  const fee = (await res.json()).fee;
+  assert.equal(fee.late_fee.applies, true);
+  assert.equal(fee.total_cents, 7500);
+
+  res = await api("POST", `/api/events/${lateEventId}/checkout`, {});
+  assert.equal(res.status, 200);
+  const latePaymentId = (await res.json()).payment_id;
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [latePaymentId])).rows[0];
+  assert.equal(row.amount_cents, 7500);        // 6000 base + 1500 late
+  assert.equal(row.platform_fee_cents, 1125);  // 15% of 7500
+  assert.equal(row.subject_type, "event_entry");
 });
 
 // ---- Club affiliation (federation charges the CLUB) ----------------

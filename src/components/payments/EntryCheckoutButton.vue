@@ -4,7 +4,7 @@
 //   <EntryCheckoutButton :event-id="event.id" />
 // It shows the price the signed-in diver would pay (member-aware) and
 // hands off to Stripe Checkout. The webhook records payment server-side.
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 
@@ -15,6 +15,12 @@ const fee = ref(null)
 const comingSoon = ref(false)
 const loading = ref(true)
 const busy = ref(false)
+
+// Human label for the late-fee trigger, used in the badge + early-pay nudge.
+const lateBadge = computed(() =>
+  fee.value?.late_fee?.trigger === 'dive_list_locks_at' ? 'dive list locked' : 'entries closed')
+const lateWhen = computed(() =>
+  fee.value?.late_fee?.trigger === 'dive_list_locks_at' ? 'once the dive list locks' : 'once entries close')
 
 function money(cents, currency) {
   if (cents == null) return ''
@@ -66,6 +72,16 @@ onMounted(load)
         Entry fee: <strong>{{ money(fee.price.amount_cents, fee.currency) }}</strong>
         <span v-if="fee.is_member" class="badge">member price</span>
       </p>
+      <template v-if="fee.late_fee && fee.late_fee.applies">
+        <p class="late">
+          + Late entry fee: <strong>{{ money(fee.late_fee.surcharge_cents, fee.currency) }}</strong>
+          <span class="badge late-badge">{{ lateBadge }}</span>
+        </p>
+        <p class="total">Total now: <strong>{{ money(fee.total_cents, fee.currency) }}</strong></p>
+      </template>
+      <p v-else-if="fee.late_fee" class="late-warn">
+        ⏰ Pay now to avoid a {{ money(fee.late_fee.surcharge_cents, fee.currency) }} late fee {{ lateWhen }}.
+      </p>
       <button class="btn-pay" :disabled="busy" @click="pay">
         {{ busy ? 'Redirecting…' : 'Pay & enter' }}
       </button>
@@ -76,7 +92,11 @@ onMounted(load)
 <style scoped>
 .entry-checkout { display: flex; flex-direction: column; gap: .5rem; }
 .price { margin: 0; }
+.late { margin: 0; color: var(--amber, #b70); }
+.total { margin: 0; }
+.late-warn { margin: 0; font-size: .85rem; color: var(--amber, #b70); }
 .badge { margin-left: .5rem; font-size: .75rem; padding: .1rem .4rem; border-radius: .4rem; background: var(--accent-soft, #eef); }
+.late-badge { background: var(--amber-dim, #fdf0d5); color: var(--amber, #b70); }
 .muted { color: var(--muted, #777); }
 .coming-soon { margin: 0; color: var(--accent, #3b6); font-weight: 600; }
 .paid { color: var(--green, #2a7); margin: 0; font-weight: 600; }
