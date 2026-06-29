@@ -210,6 +210,10 @@ async function runRandomiseDraw() {
           {{ item.full_name }}<span v-if="item.country_code" class="randomise-row-country">{{ item.country_code }}</span>
         </span>
         <span v-if="item.club_code" class="randomise-row-club">{{ item.club_code }}</span>
+        <span class="randomise-row-paid"
+              :style="{ marginLeft: 'auto', fontSize: '.72rem', fontWeight: 600, color: item.paid_entry ? 'var(--success,#2a7)' : 'var(--warning,#b70)' }">
+          {{ item.paid_entry ? 'Paid' : 'Unpaid' }}
+        </span>
       </div>
     </div>
 

@@ -1,0 +1,620 @@
+// routes/payments.js — Stripe Connect payment endpoints.
+//
+// Federation onboarding, fee configuration, diver/member checkout, and
+// refunds. DivingHQ is the Connect platform; federations are connected
+// accounts; charges are DIRECT (federation = merchant of record) with a
+// platform application fee. See Migration 066 and lib/stripe.js for the
+// fund-flow model and lib/fee-pricing.js for the price + fee math.
+//
+// Factory pattern (matches the other route modules). The Stripe webhook
+// lives in routes/stripe-webhook.js — it needs the raw body, so it
+// can't share this JSON-parsed router.
+//
+// Auth model:
+//   * Onboarding + membership-fee config → org_admin of that org.
+//   * Event entry-fee config             → requireEventManager.
+//   * Read "what will this cost me?"      → optionalAuth (member-aware).
+//   * Checkout                           → any signed-in user (the payer).
+//   * Refunds                            → org_admin / meet_manager.
+// Org-scoped routes use the sysadmin-bypass pattern: sysadmin passes,
+// otherwise the URL's org must equal req.user.org_id.
+
+const express = require("express");
+const { resolvePrice, priceCharge } = require("../lib/fee-pricing");
+
+const APP_BASE_URL =
+  process.env.APP_BASE_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
+
+// Country codes in the DB are ISO 3166-1 alpha-3 (e.g. 'GBR'); Stripe's
+// v2 accounts want alpha-2 (e.g. 'gb'). Map the common federation
+// nations; the onboarding endpoint also accepts an explicit alpha-2
+// `country` in the body to cover anything not listed here.
+const ALPHA3_TO_ALPHA2 = {
+  GBR: "gb", USA: "us", AUS: "au", CAN: "ca", NZL: "nz", IRL: "ie",
+  FRA: "fr", DEU: "de", ESP: "es", ITA: "it", NLD: "nl", SWE: "se",
+  NOR: "no", DNK: "dk", CHE: "ch", AUT: "at", BEL: "be", PRT: "pt",
+  ZAF: "za", JPN: "jp", SGP: "sg",
+};
+function alpha3ToAlpha2(code) {
+  return code ? ALPHA3_TO_ALPHA2[String(code).toUpperCase()] || null : null;
+}
+
+// Validate + normalise an incoming price-variant array. Returns
+// { prices } or { error }.
+function validatePrices(prices) {
+  const AUDIENCES = ["all", "member", "non_member"];
+  const out = [];
+  for (const p of prices) {
+    const amount = Number(p.amount_cents);
+    if (!Number.isInteger(amount) || amount < 0) {
+      return { error: "Each price needs an integer amount_cents >= 0." };
+    }
+    const label = String(p.label || "standard").slice(0, 40);
+    const audience = AUDIENCES.includes(p.audience) ? p.audience : "all";
+    out.push({
+      label,
+      amount_cents: amount,
+      audience,
+      starts_at: p.starts_at || null,
+      ends_at: p.ends_at || null,
+    });
+  }
+  return { prices: out };
+}
+
+// Shape a fee_definition (+ all its variants) for the admin editors,
+// which need the full config, not just the buyer's resolved price.
+async function feeConfigResponse(db, feeRow) {
+  const prices = (
+    await db.query(
+      `SELECT id, label, amount_cents, audience, starts_at, ends_at
+         FROM fee_prices WHERE fee_definition_id = $1 ORDER BY amount_cents`,
+      [feeRow.id],
+    )
+  ).rows;
+  return {
+    id: feeRow.id,
+    currency: feeRow.currency,
+    fee_payer: feeRow.fee_payer,
+    refund_policy: feeRow.refund_policy,
+    refund_deadline: feeRow.refund_deadline,
+    membership_period: feeRow.membership_period,
+    prices,
+  };
+}
+
+module.exports = function createPaymentsRouter({
+  pool,
+  verifyToken,
+  optionalAuth,
+  requireOrgRole,
+  requireEventManager,
+  logger,
+  payments,
+}) {
+  const router = express.Router();
+
+  // Refuse every payment route cleanly when Stripe isn't configured,
+  // rather than 500-ing deeper in.
+  function ensurePayments(res) {
+    if (!payments.enabled) {
+      res.status(503).json({ error: "Payments are not configured on this server." });
+      return false;
+    }
+    return true;
+  }
+
+  function ownsOrg(req, orgId) {
+    return req.user.is_system_admin || req.user.org_id === orgId;
+  }
+
+  // Is this user an active member of the org right now?
+  async function isActiveMember(db, orgId, userId) {
+    if (!userId) return false;
+    const r = await db.query(
+      `SELECT 1 FROM memberships
+        WHERE org_id = $1 AND user_id = $2 AND status = 'active' AND period_end > now()
+        LIMIT 1`,
+      [orgId, userId],
+    );
+    return r.rows.length > 0;
+  }
+
+  // Upsert a single active fee_definition (+ replace its price variants)
+  // for an (org, scope, event). Runs in one transaction. Returns feeId.
+  async function upsertFee({ orgId, scope, eventId, name, body, cleanPrices }) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const existing = await client.query(
+        `SELECT id FROM fee_definitions
+          WHERE org_id = $1 AND scope = $2 AND active
+            AND ($3::uuid IS NULL OR event_id = $3) LIMIT 1`,
+        [orgId, scope, eventId || null],
+      );
+      let feeId;
+      if (existing.rows.length) {
+        feeId = existing.rows[0].id;
+        await client.query(
+          `UPDATE fee_definitions
+              SET currency = $2,
+                  fee_payer = COALESCE($3, fee_payer),
+                  refund_policy = COALESCE($4, refund_policy),
+                  refund_deadline = $5,
+                  membership_period = $6
+            WHERE id = $1`,
+          [
+            feeId,
+            body.currency || null,
+            body.fee_payer || null,
+            body.refund_policy || null,
+            body.refund_deadline || null,
+            scope === "membership" ? body.membership_period || "annual" : null,
+          ],
+        );
+        await client.query("DELETE FROM fee_prices WHERE fee_definition_id = $1", [feeId]);
+      } else {
+        const ins = await client.query(
+          `INSERT INTO fee_definitions
+              (org_id, scope, event_id, name, currency, fee_payer,
+               refund_policy, refund_deadline, membership_period)
+           VALUES ($1, $2, $3, $4, $5, COALESCE($6,'absorb'),
+                   COALESCE($7,'full'), $8, $9)
+           RETURNING id`,
+          [
+            orgId,
+            scope,
+            eventId || null,
+            name,
+            body.currency || null,
+            body.fee_payer || null,
+            body.refund_policy || null,
+            body.refund_deadline || null,
+            scope === "membership" ? body.membership_period || "annual" : null,
+          ],
+        );
+        feeId = ins.rows[0].id;
+      }
+      for (const p of cleanPrices) {
+        await client.query(
+          `INSERT INTO fee_prices
+              (fee_definition_id, label, amount_cents, audience, starts_at, ends_at)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [feeId, p.label, p.amount_cents, p.audience, p.starts_at, p.ends_at],
+        );
+      }
+      await client.query("COMMIT");
+      return feeId;
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Shared checkout core. Resolves the price for the payer, records a
+  // pending payment, and opens a Checkout Session on the federation's
+  // connected account. Returns { url, paymentId } or throws.
+  async function startCheckout({ req, org, fee, prices, subjectType, eventId, productName, successUrl, cancelUrl }) {
+    const userId = req.user.id;
+    const member = await isActiveMember(pool, org.id, userId);
+    // A payer buying membership isn't a member yet — resolve at the
+    // 'all' tier; entry checkout is member-aware.
+    const chosen = resolvePrice(prices, { isMember: subjectType === "membership" ? false : member });
+    if (!chosen) {
+      const err = new Error("This isn't open for purchase right now.");
+      err.status = 409;
+      throw err;
+    }
+    const currency = fee.currency || org.default_currency;
+    if (!currency) {
+      const err = new Error("The federation's currency is not configured.");
+      err.status = 409;
+      throw err;
+    }
+    const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
+    const { chargeAmountCents, applicationFeeCents } = priceCharge({
+      baseAmountCents: chosen.amount_cents,
+      feeBps,
+      feePayer: fee.fee_payer,
+    });
+
+    // Record the pending payment first. The unique partial index blocks
+    // a second live entry payment for the same diver+event.
+    let paymentId;
+    try {
+      const ins = await pool.query(
+        `INSERT INTO payments
+            (org_id, fee_definition_id, payer_user_id, subject_type, event_id,
+             amount_cents, platform_fee_cents, currency, fee_payer, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+         RETURNING id`,
+        [org.id, fee.id, userId, subjectType, eventId || null, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
+      );
+      paymentId = ins.rows[0].id;
+    } catch (e) {
+      if (e.code === "23505") {
+        const err = new Error("You already have a payment in progress or completed for this.");
+        err.status = 409;
+        throw err;
+      }
+      throw e;
+    }
+
+    try {
+      const session = await payments.createCheckoutSession({
+        connectedAccountId: org.stripe_account_id,
+        currency,
+        chargeAmountCents,
+        applicationFeeCents,
+        productName,
+        customerEmail: req.user.email,
+        clientReferenceId: paymentId,
+        metadata: {
+          payment_id: paymentId,
+          scope: subjectType,
+          org_id: org.id,
+          user_id: userId,
+          ...(eventId ? { event_id: eventId } : {}),
+        },
+        successUrl,
+        cancelUrl,
+      });
+      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
+      return { url: session.url, paymentId };
+    } catch (err) {
+      // Stripe failed after we inserted the row — release the slot.
+      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
+      throw err;
+    }
+  }
+
+  // ---- Federation onboarding --------------------------------------
+
+  // Begin/continue Stripe onboarding for a federation. Creates the
+  // connected account on first call, then returns a fresh hosted
+  // onboarding link.
+  router.post(
+    "/api/orgs/:id/payments/onboard",
+    requireOrgRole(["org_admin"]),
+    async (req, res) => {
+      if (!ensurePayments(res)) return;
+      const orgId = req.params.id;
+      if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+      try {
+        const orgRes = await pool.query(
+          "SELECT id, name, country_code, default_currency, stripe_account_id FROM organisations WHERE id = $1",
+          [orgId],
+        );
+        if (!orgRes.rows.length) return res.status(404).json({ error: "Organisation not found" });
+        const org = orgRes.rows[0];
+
+        let accountId = org.stripe_account_id;
+        if (!accountId) {
+          const country = (req.body && req.body.country) || alpha3ToAlpha2(org.country_code);
+          if (!country) {
+            return res.status(400).json({ error: "A 2-letter country code is required to start onboarding." });
+          }
+          const account = await payments.createConnectedAccount({
+            country,
+            currency: org.default_currency,
+            email: req.user.email,
+            orgName: org.name,
+          });
+          accountId = account.id;
+          await pool.query("UPDATE organisations SET stripe_account_id = $1 WHERE id = $2", [accountId, orgId]);
+        }
+        const link = await payments.createOnboardingLink({ accountId });
+        return res.json({ url: link.url });
+      } catch (err) {
+        logger.error({ err: err.message }, "[payments] onboard failed");
+        return res.status(err.status || 500).json({ error: err.message || "Onboarding failed" });
+      }
+    },
+  );
+
+  // Sync + report the federation's payout-readiness.
+  router.get(
+    "/api/orgs/:id/payments/status",
+    requireOrgRole(["org_admin"]),
+    async (req, res) => {
+      if (!ensurePayments(res)) return;
+      const orgId = req.params.id;
+      if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+      try {
+        const orgRes = await pool.query(
+          "SELECT stripe_account_id FROM organisations WHERE id = $1",
+          [orgId],
+        );
+        if (!orgRes.rows.length) return res.status(404).json({ error: "Organisation not found" });
+        const accountId = orgRes.rows[0].stripe_account_id;
+        if (!accountId) {
+          return res.json({ onboarded: false, charges_enabled: false, payouts_enabled: false });
+        }
+        const account = await payments.retrieveAccount(accountId);
+        // Defensive parse — confirm the exact shape against test mode.
+        const card = account?.configuration?.merchant?.capabilities?.card_payments;
+        const chargesEnabled = card?.status === "active";
+        const payoutsEnabled = chargesEnabled;
+        await pool.query(
+          "UPDATE organisations SET stripe_charges_enabled = $1, stripe_payouts_enabled = $2 WHERE id = $3",
+          [chargesEnabled, payoutsEnabled, orgId],
+        );
+        return res.json({ onboarded: true, charges_enabled: chargesEnabled, payouts_enabled: payoutsEnabled });
+      } catch (err) {
+        logger.error({ err: err.message }, "[payments] status failed");
+        return res.status(err.status || 500).json({ error: err.message || "Status check failed" });
+      }
+    },
+  );
+
+  // ---- Fee configuration ------------------------------------------
+
+  // Federation sets/updates the entry fee for one event.
+  router.put("/api/events/:id/fee", requireEventManager(), async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const eventId = req.params.id;
+    const orgId = req.event.org_id; // stashed by requireEventManager
+    const body = req.body || {};
+    if (!Array.isArray(body.prices) || !body.prices.length) {
+      return res.status(400).json({ error: "At least one price variant is required." });
+    }
+    const v = validatePrices(body.prices);
+    if (v.error) return res.status(400).json({ error: v.error });
+    try {
+      const feeId = await upsertFee({
+        orgId,
+        scope: "event_entry",
+        eventId,
+        name: "Entry fee",
+        body,
+        cleanPrices: v.prices,
+      });
+      return res.json({ id: feeId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] set event fee failed");
+      return res.status(500).json({ error: "Failed to save the entry fee." });
+    }
+  });
+
+  // Federation sets/updates its membership fee.
+  router.put("/api/orgs/:id/membership-fee", requireOrgRole(["org_admin"]), async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    const body = req.body || {};
+    if (!Array.isArray(body.prices) || !body.prices.length) {
+      return res.status(400).json({ error: "At least one price variant is required." });
+    }
+    const v = validatePrices(body.prices);
+    if (v.error) return res.status(400).json({ error: v.error });
+    try {
+      const feeId = await upsertFee({
+        orgId,
+        scope: "membership",
+        eventId: null,
+        name: body.name || "Membership",
+        body,
+        cleanPrices: v.prices,
+      });
+      return res.json({ id: feeId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] set membership fee failed");
+      return res.status(500).json({ error: "Failed to save the membership fee." });
+    }
+  });
+
+  // What will entry to this event cost the caller right now?
+  router.get("/api/events/:id/fee", optionalAuth, async (req, res) => {
+    const eventId = req.params.id;
+    try {
+      const ev = await pool.query("SELECT org_id FROM events WHERE id = $1", [eventId]);
+      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
+      const orgId = ev.rows[0].org_id;
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE event_id = $1 AND scope = 'event_entry' AND active LIMIT 1",
+        [eventId],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null });
+      const def = feeRes.rows[0];
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
+      const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
+      const chosen = resolvePrice(prices, { isMember: member });
+      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      // "Submit, then pay": the dive-list entry exists independently; an
+      // entry is confirmed once a paid payment exists for this diver.
+      const alreadyPaid = req.user
+        ? (await pool.query(
+            `SELECT 1 FROM payments
+              WHERE event_id = $1 AND payer_user_id = $2
+                AND subject_type = 'event_entry' AND status = 'paid' LIMIT 1`,
+            [eventId, req.user.id],
+          )).rows.length > 0
+        : false;
+      return res.json({
+        fee: {
+          currency: def.currency || org?.default_currency || null,
+          fee_payer: def.fee_payer,
+          refund_policy: def.refund_policy,
+          is_member: member,
+          already_paid: alreadyPaid,
+          price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+        },
+      });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read event fee failed");
+      return res.status(500).json({ error: "Failed to read the entry fee." });
+    }
+  });
+
+  // Full entry-fee config (all variants) for the manager's editor.
+  router.get("/api/events/:id/fee/config", requireEventManager(), async (req, res) => {
+    try {
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE event_id = $1 AND scope = 'event_entry' AND active LIMIT 1",
+        [req.params.id],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null });
+      return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]) });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read event fee config failed");
+      return res.status(500).json({ error: "Failed to read the entry fee." });
+    }
+  });
+
+  // Full membership-fee config (all variants) for the org admin's editor.
+  router.get("/api/orgs/:id/membership-fee", requireOrgRole(["org_admin"]), async (req, res) => {
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    try {
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE org_id = $1 AND scope = 'membership' AND active LIMIT 1",
+        [orgId],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null });
+      return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]) });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read membership fee failed");
+      return res.status(500).json({ error: "Failed to read the membership fee." });
+    }
+  });
+
+  // ---- Checkout ----------------------------------------------------
+
+  // Diver pays the entry fee for an event.
+  router.post("/api/events/:id/checkout", verifyToken, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const eventId = req.params.id;
+    try {
+      const ev = await pool.query("SELECT id, name, org_id FROM events WHERE id = $1", [eventId]);
+      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
+      const orgId = ev.rows[0].org_id;
+      const org = (
+        await pool.query(
+          `SELECT id, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
+             FROM organisations WHERE id = $1`,
+          [orgId],
+        )
+      ).rows[0];
+      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
+        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
+      }
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE event_id = $1 AND scope = 'event_entry' AND active LIMIT 1",
+        [eventId],
+      );
+      if (!feeRes.rows.length) return res.status(409).json({ error: "No entry fee is set for this event." });
+      const fee = feeRes.rows[0];
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
+
+      const { url, paymentId } = await startCheckout({
+        req,
+        org,
+        fee,
+        prices,
+        subjectType: "event_entry",
+        eventId,
+        productName: `Entry — ${ev.rows[0].name}`,
+        successUrl: `${APP_BASE_URL}/events/${eventId}?paid=1`,
+        cancelUrl: `${APP_BASE_URL}/events/${eventId}?canceled=1`,
+      });
+      return res.json({ url, payment_id: paymentId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] event checkout failed");
+      return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
+    }
+  });
+
+  // User pays the federation's membership fee.
+  router.post("/api/orgs/:id/membership/checkout", verifyToken, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const orgId = req.params.id;
+    try {
+      const org = (
+        await pool.query(
+          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
+             FROM organisations WHERE id = $1`,
+          [orgId],
+        )
+      ).rows[0];
+      if (!org) return res.status(404).json({ error: "Organisation not found" });
+      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
+        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
+      }
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE org_id = $1 AND scope = 'membership' AND active LIMIT 1",
+        [orgId],
+      );
+      if (!feeRes.rows.length) return res.status(409).json({ error: "No membership fee is set for this federation." });
+      const fee = feeRes.rows[0];
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
+
+      const { url, paymentId } = await startCheckout({
+        req,
+        org,
+        fee,
+        prices,
+        subjectType: "membership",
+        eventId: null,
+        productName: `${org.name} membership`,
+        successUrl: `${APP_BASE_URL}/membership?paid=1`,
+        cancelUrl: `${APP_BASE_URL}/membership?canceled=1`,
+      });
+      return res.json({ url, payment_id: paymentId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] membership checkout failed");
+      return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
+    }
+  });
+
+  // ---- Refunds -----------------------------------------------------
+
+  // Federation refunds a payment. refund_application_fee is always true
+  // (see lib/stripe.js) so the federation isn't left short DivingHQ's
+  // cut. Omit amount_cents for a full refund.
+  router.post(
+    "/api/payments/:id/refund",
+    requireOrgRole(["org_admin", "meet_manager"]),
+    async (req, res) => {
+      if (!ensurePayments(res)) return;
+      const paymentId = req.params.id;
+      try {
+        const r = await pool.query("SELECT * FROM payments WHERE id = $1", [paymentId]);
+        if (!r.rows.length) return res.status(404).json({ error: "Payment not found" });
+        const p = r.rows[0];
+        if (!ownsOrg(req, p.org_id)) return res.status(403).json({ error: "Forbidden" });
+        if (!["paid", "partially_refunded"].includes(p.status)) {
+          return res.status(409).json({ error: `Cannot refund a payment that is ${p.status}.` });
+        }
+        if (!p.stripe_payment_intent) {
+          return res.status(409).json({ error: "This payment has no charge to refund yet." });
+        }
+        const org = (await pool.query("SELECT stripe_account_id FROM organisations WHERE id = $1", [p.org_id])).rows[0];
+        const requested = req.body && Number(req.body.amount_cents) > 0 ? Math.floor(Number(req.body.amount_cents)) : undefined;
+
+        const refund = await payments.createRefund({
+          connectedAccountId: org.stripe_account_id,
+          paymentIntentId: p.stripe_payment_intent,
+          amountCents: requested,
+        });
+
+        const refunded = Math.min(
+          (p.refunded_amount_cents || 0) + (refund.amount || requested || p.amount_cents),
+          p.amount_cents,
+        );
+        const status = refunded >= p.amount_cents ? "refunded" : "partially_refunded";
+        await pool.query(
+          "UPDATE payments SET status = $1, refunded_amount_cents = $2, refunded_at = now() WHERE id = $3",
+          [status, refunded, paymentId],
+        );
+        return res.json({ status, refunded_amount_cents: refunded });
+      } catch (err) {
+        logger.error({ err: err.message }, "[payments] refund failed");
+        return res.status(err.status || 500).json({ error: err.message || "Refund failed" });
+      }
+    },
+  );
+
+  return router;
+};

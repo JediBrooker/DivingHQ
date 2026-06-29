@@ -56,6 +56,11 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'], appShell: true },
   },
   {
+    path: '/payments',
+    component: () => import('@/views/PaymentsAdminView.vue'),
+    meta: { requiresAuth: true, requiresRole: ['org_admin'], appShell: true },
+  },
+  {
     // First-run setup wizard — guides a brand-new org admin
     // through creating a club, sharing the invite link, and
     // opening Meet Manager. DashboardView auto-redirects here

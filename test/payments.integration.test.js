@@ -1,0 +1,256 @@
+// Integration tests for the Stripe Connect payment flow (routes +
+// webhook) against a real Postgres (Migration 066). A FAKE Stripe is
+// injected so no network/keys are needed — we're testing OUR money
+// logic + DB transitions, not Stripe's API.
+//
+// Self-skips when Postgres is unreachable or Migration 066 hasn't been
+// applied, mirroring the other *.integration.test.js files. Seeds its
+// own org/event/user with unique slugs and tears them down after.
+
+const { test, before, after } = require("node:test");
+const assert = require("node:assert/strict");
+const http = require("node:http");
+const crypto = require("node:crypto");
+const express = require("express");
+const { Pool } = require("pg");
+
+require("dotenv").config();
+
+const createPaymentsRouter = require("../routes/payments");
+const createStripeWebhook = require("../routes/stripe-webhook");
+
+const silentLogger = { warn() {}, error() {}, info() {} };
+const suffix = crypto.randomUUID().slice(0, 8);
+
+let pool;
+let ready = false;
+let server;
+let base;
+let orgId;
+let userId;
+let eventId;
+let lastRefundArgs = null;
+
+// Fake Stripe — captures args, returns canned objects.
+const fakePayments = {
+  enabled: true,
+  createConnectedAccount: async () => ({ id: "acct_test" }),
+  createOnboardingLink: async () => ({ url: "https://stripe.test/onboard" }),
+  retrieveAccount: async () => ({
+    configuration: { merchant: { capabilities: { card_payments: { status: "active" } } } },
+  }),
+  createCheckoutSession: async () => ({ id: "cs_" + crypto.randomUUID().slice(0, 8), url: "https://stripe.test/pay" }),
+  createRefund: async (args) => { lastRefundArgs = args; return { amount: args.amountCents }; },
+  // Tests POST a JSON body; treat it as the already-verified event.
+  constructWebhookEvent: (raw) => JSON.parse(Buffer.isBuffer(raw) ? raw.toString() : raw),
+};
+
+// Stub auth: every request acts as our seeded user, who holds the roles
+// the routes require. requireEventManager loads req.event like the real
+// gate does.
+function buildApp() {
+  const TEST_USER = () => ({
+    id: userId, org_id: orgId,
+    org_roles: ["org_admin", "meet_manager", "diver"],
+    is_system_admin: false, email: "diver@test.local",
+  });
+  const setUser = (req, _res, next) => { req.user = TEST_USER(); next(); };
+  const verifyToken = setUser;
+  const optionalAuth = setUser;
+  const requireOrgRole = () => setUser;
+  const requireEventManager = () => async (req, res, next) => {
+    req.user = TEST_USER();
+    const r = await pool.query("SELECT id, org_id FROM events WHERE id = $1", [req.params.id || req.body.eventId]);
+    req.event = r.rows[0];
+    next();
+  };
+
+  const app = express();
+  app.use((req, res, next) =>
+    req.path === "/webhooks/stripe" ? next() : express.json()(req, res, next));
+  app.use(createPaymentsRouter({
+    pool, verifyToken, optionalAuth, requireOrgRole, requireEventManager,
+    logger: silentLogger, payments: fakePayments,
+  }));
+  app.post("/webhooks/stripe", express.raw({ type: "application/json" }),
+    createStripeWebhook({ pool, logger: silentLogger, payments: fakePayments }));
+  return app;
+}
+
+const api = (method, path, body) =>
+  fetch(`${base}${path}`, {
+    method,
+    headers: body !== undefined
+      ? { "content-type": "application/json", ...(path === "/webhooks/stripe" ? { "stripe-signature": "t" } : {}) }
+      : {},
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+
+before(async () => {
+  pool = new Pool({
+    user: process.env.DB_USER || process.env.PGUSER,
+    host: process.env.DB_HOST || process.env.PGHOST,
+    database: process.env.DB_DATABASE || process.env.PGDATABASE,
+    password: process.env.DB_PASSWORD || process.env.PGPASSWORD,
+    port: Number(process.env.DB_PORT || process.env.PGPORT || 5432),
+  });
+  try {
+    const r = await pool.query("SELECT to_regclass('public.payments') AS t");
+    if (!r.rows[0].t) { console.warn("[skip] payments table missing — apply migration 066"); return; }
+  } catch (err) {
+    console.warn(`[skip] Postgres not reachable: ${err.message}`);
+    return;
+  }
+
+  orgId = (await pool.query(
+    `INSERT INTO organisations (name, slug, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled)
+     VALUES ($1, $2, 'GBP', 1500, 'acct_test', true) RETURNING id`,
+    [`Test Fed ${suffix}`, `test-fed-${suffix}`],
+  )).rows[0].id;
+  userId = (await pool.query(
+    "INSERT INTO users (username, full_name, org_id) VALUES ($1, $2, $3) RETURNING id",
+    [`diver-${suffix}`, "Test Diver", orgId],
+  )).rows[0].id;
+  eventId = (await pool.query(
+    "INSERT INTO events (org_id, name, gender, number_of_judges) VALUES ($1, '10m Platform', 'Male', 5) RETURNING id",
+    [orgId],
+  )).rows[0].id;
+
+  server = http.createServer(buildApp());
+  await new Promise((res) => server.listen(0, res));
+  base = `http://127.0.0.1:${server.address().port}`;
+  ready = true;
+});
+
+after(async () => {
+  if (server) await new Promise((res) => server.close(res));
+  if (orgId) {
+    await pool.query("DELETE FROM payments WHERE org_id = $1", [orgId]);
+    await pool.query("DELETE FROM memberships WHERE org_id = $1", [orgId]);
+    await pool.query("DELETE FROM fee_prices WHERE fee_definition_id IN (SELECT id FROM fee_definitions WHERE org_id = $1)", [orgId]);
+    await pool.query("DELETE FROM fee_definitions WHERE org_id = $1", [orgId]);
+    await pool.query("DELETE FROM events WHERE org_id = $1", [orgId]);
+    await pool.query("DELETE FROM users WHERE org_id = $1", [orgId]);
+    await pool.query("DELETE FROM organisations WHERE id = $1", [orgId]);
+  }
+  if (pool) await pool.end();
+});
+
+test("federation sets an entry fee with member + standard variants", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/events/${eventId}/fee`, {
+    currency: "GBP",
+    prices: [
+      { label: "standard", amount_cents: 5000, audience: "all" },
+      { label: "member", amount_cents: 3500, audience: "member" },
+    ],
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.id);
+});
+
+test("a non-member sees the standard £50 price", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("GET", `/api/events/${eventId}/fee`);
+  const body = await res.json();
+  assert.equal(body.fee.is_member, false);
+  assert.equal(body.fee.price.amount_cents, 5000);
+  assert.equal(body.fee.currency, "GBP");
+});
+
+let paymentId;
+test("checkout records a pending payment with the 15% application fee", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/events/${eventId}/checkout`, {});
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.url);
+  paymentId = body.payment_id;
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [paymentId])).rows[0];
+  assert.equal(row.status, "pending");
+  assert.equal(row.amount_cents, 5000);
+  assert.equal(row.platform_fee_cents, 750);
+  assert.equal(row.subject_type, "event_entry");
+});
+
+test("a second checkout for the same event is blocked while one is live", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/events/${eventId}/checkout`, {});
+  assert.equal(res.status, 409);
+});
+
+test("webhook marks the payment paid, and is idempotent on re-delivery", async (t) => {
+  if (!ready) return t.skip();
+  const event = {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_done", client_reference_id: paymentId, payment_intent: "pi_done" } },
+  };
+  const first = await api("POST", "/webhooks/stripe", event);
+  assert.equal(first.status, 200);
+  let row = (await pool.query("SELECT * FROM payments WHERE id = $1", [paymentId])).rows[0];
+  assert.equal(row.status, "paid");
+  assert.equal(row.stripe_payment_intent, "pi_done");
+  assert.ok(row.paid_at);
+
+  // Re-deliver — must stay paid, no error, no duplicate side effects.
+  const second = await api("POST", "/webhooks/stripe", event);
+  assert.equal(second.status, 200);
+  row = (await pool.query("SELECT * FROM payments WHERE id = $1", [paymentId])).rows[0];
+  assert.equal(row.status, "paid");
+});
+
+test("the fee read now reports the diver's entry as paid (submit-then-pay)", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("GET", `/api/events/${eventId}/fee`);
+  const fee = (await res.json()).fee;
+  assert.equal(fee.already_paid, true);
+});
+
+test("refund reverses the charge and the application fee", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/payments/${paymentId}/refund`, {});
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.status, "refunded");
+  assert.equal(body.refunded_amount_cents, 5000);
+  // The route delegated to lib/stripe with the federation's account; the
+  // lib pins refund_application_fee:true (asserted in stripe-lib.test.js).
+  assert.equal(lastRefundArgs.connectedAccountId, "acct_test");
+  assert.equal(lastRefundArgs.paymentIntentId, "pi_done");
+  const row = (await pool.query("SELECT status FROM payments WHERE id = $1", [paymentId])).rows[0];
+  assert.equal(row.status, "refunded");
+});
+
+test("membership purchase grants membership and unlocks member pricing", async (t) => {
+  if (!ready) return t.skip();
+  // Federation sets a membership fee.
+  let res = await api("PUT", `/api/orgs/${orgId}/membership-fee`, {
+    currency: "GBP", membership_period: "annual",
+    prices: [{ label: "standard", amount_cents: 2000, audience: "all" }],
+  });
+  assert.equal(res.status, 200);
+
+  // User checks out membership.
+  res = await api("POST", `/api/orgs/${orgId}/membership/checkout`, {});
+  assert.equal(res.status, 200);
+  const memPaymentId = (await res.json()).payment_id;
+
+  // Webhook completes it → membership row created.
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_mem", client_reference_id: memPaymentId, payment_intent: "pi_mem" } },
+  });
+  const mem = (await pool.query(
+    "SELECT * FROM memberships WHERE org_id = $1 AND user_id = $2 AND status = 'active'",
+    [orgId, userId],
+  )).rows;
+  assert.equal(mem.length, 1);
+  assert.ok(new Date(mem[0].period_end) > new Date(mem[0].period_start));
+
+  // The same diver now resolves to the member entry price.
+  res = await api("GET", `/api/events/${eventId}/fee`);
+  const fee = (await res.json()).fee;
+  assert.equal(fee.is_member, true);
+  assert.equal(fee.price.amount_cents, 3500);
+});
