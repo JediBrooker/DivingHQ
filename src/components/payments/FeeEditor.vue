@@ -17,6 +17,10 @@ const props = defineProps({
   // Extra fields merged into the PUT body — lets wrappers send the fee's
   // identity qualifiers, e.g. { tier: 'junior' } or { discipline: '3m' }.
   extraPayload: { type: Object, default: () => ({}) },
+  // Flat mode: a single amount, audience 'all', no time windows. Used for
+  // late-entry surcharges whose timing is governed by a trigger, not by
+  // audience tiers / price windows (which would silently suppress them).
+  flat: { type: Boolean, default: false },
 })
 const emit = defineEmits(['saved'])
 const auth = useAuthStore()
@@ -62,6 +66,7 @@ async function load() {
       }))
     }
     if (!prices.value.length) prices.value = [blankPrice()]
+    if (props.flat) prices.value = prices.value.slice(0, 1)
   } catch (e) {
     showError(e.message || 'Could not load the fee')
   } finally {
@@ -79,12 +84,12 @@ async function save() {
       fee_payer: feePayer.value,
       refund_policy: refundPolicy.value,
       ...(props.showMembershipPeriod ? { membership_period: membershipPeriod.value } : {}),
-      prices: prices.value.map(p => ({
+      prices: (props.flat ? prices.value.slice(0, 1) : prices.value).map(p => ({
         label: p.label || 'standard',
         amount_cents: Math.round(parseFloat(p.amount || '0') * 100),
-        audience: p.audience,
-        starts_at: p.starts_at || null,
-        ends_at: p.ends_at || null,
+        audience: props.flat ? 'all' : p.audience,
+        starts_at: props.flat ? null : (p.starts_at || null),
+        ends_at: props.flat ? null : (p.ends_at || null),
       })),
     }
     await auth.apiFetch(props.saveUrl, { method: 'PUT', body: JSON.stringify(payload) })
@@ -132,33 +137,37 @@ onMounted(load)
 
       <table class="prices">
         <thead>
-          <tr><th>Label</th><th>Amount</th><th>Who</th><th>From</th><th>Until</th><th></th></tr>
+          <tr>
+            <th>Label</th><th>Amount</th>
+            <th v-if="!flat">Who</th><th v-if="!flat">From</th><th v-if="!flat">Until</th><th v-if="!flat"></th>
+          </tr>
         </thead>
         <tbody>
           <tr v-for="(p, i) in prices" :key="i">
             <td><input v-model="p.label" placeholder="standard" /></td>
             <td><input v-model="p.amount" type="number" min="0" step="0.01" placeholder="0.00" /></td>
-            <td>
+            <td v-if="!flat">
               <select v-model="p.audience">
                 <option v-for="a in AUDIENCES" :key="a.value" :value="a.value">{{ a.label }}</option>
               </select>
             </td>
-            <td><input v-model="p.starts_at" type="date" /></td>
-            <td><input v-model="p.ends_at" type="date" /></td>
-            <td>
+            <td v-if="!flat"><input v-model="p.starts_at" type="date" /></td>
+            <td v-if="!flat"><input v-model="p.ends_at" type="date" /></td>
+            <td v-if="!flat">
               <button type="button" class="link" :disabled="prices.length === 1" @click="removePrice(i)">Remove</button>
             </td>
           </tr>
         </tbody>
       </table>
-      <button type="button" class="link" @click="addPrice">+ Add a price variant</button>
+      <button v-if="!flat" type="button" class="link" @click="addPrice">+ Add a price variant</button>
 
       <div class="actions">
         <button type="submit" class="btn" :disabled="busy || comingSoon">{{ busy ? 'Saving…' : (comingSoon ? 'Coming soon' : 'Save') }}</button>
       </div>
       <p class="hint">
-        Amounts are tax-inclusive. At checkout the cheapest variant the buyer is
-        eligible for applies; a “Members only” variant needs an active membership.
+        <template v-if="flat">A single flat surcharge, tax-inclusive, charged in the entry fee's currency once the trigger above is reached.</template>
+        <template v-else>Amounts are tax-inclusive. At checkout the cheapest variant the buyer is
+        eligible for applies; a “Members only” variant needs an active membership.</template>
       </p>
     </template>
   </form>

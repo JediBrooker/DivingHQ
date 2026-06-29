@@ -79,6 +79,7 @@ async function feeConfigResponse(db, feeRow) {
     refund_policy: feeRow.refund_policy,
     refund_deadline: feeRow.refund_deadline,
     membership_period: feeRow.membership_period,
+    late_fee_trigger: feeRow.late_fee_trigger,
     prices,
   };
 }
@@ -208,10 +209,42 @@ module.exports = function createPaymentsRouter({
     }
   }
 
+  // Resolve an event's late-entry surcharge, if one is configured AND its
+  // trigger moment has passed. The late_entry fee is a flat surcharge
+  // (audience 'all') added on top of the base entry fee once the chosen
+  // event deadline (entries close / dive list locks) is reached. Returns
+  // { feeId, surchargeCents, applies, trigger, triggerAt } or null when no
+  // late fee exists. `applies` requires the event to actually carry the
+  // trigger timestamp and now to be at/after it — mirroring the deadline
+  // check in routes/coach.js.
+  async function resolveLateFee(db, eventId) {
+    const r = await db.query(
+      `SELECT fd.id, fd.late_fee_trigger, e.entries_close_at, e.dive_list_locks_at
+         FROM fee_definitions fd
+         JOIN events e ON e.id = fd.event_id
+        WHERE fd.event_id = $1 AND fd.scope = 'late_entry' AND fd.active
+        LIMIT 1`,
+      [eventId],
+    );
+    if (!r.rows.length) return null;
+    const def = r.rows[0];
+    const prices = (await db.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
+    const chosen = resolvePrice(prices, { isMember: false });
+    if (!chosen) return null;
+    const triggerAt = def.late_fee_trigger === "dive_list_locks_at"
+      ? def.dive_list_locks_at
+      : def.entries_close_at;
+    const applies = !!triggerAt && Date.now() >= new Date(triggerAt).getTime();
+    return { feeId: def.id, surchargeCents: chosen.amount_cents, applies, trigger: def.late_fee_trigger, triggerAt };
+  }
+
   // Shared checkout core. Resolves the price for the payer, records a
   // pending payment, and opens a Checkout Session on the federation's
-  // connected account. Returns { url, paymentId } or throws.
-  async function startCheckout({ req, org, fee, prices, subjectType, eventId, productName, successUrl, cancelUrl }) {
+  // connected account. An optional `surchargeCents` (the late-entry fee)
+  // is added to the resolved base price before the platform-fee math, so
+  // the whole charge — base + surcharge — flows through one payment and
+  // DivingHQ's cut applies to the total. Returns { url, paymentId } or throws.
+  async function startCheckout({ req, org, fee, prices, subjectType, eventId, productName, successUrl, cancelUrl, surchargeCents = 0 }) {
     const userId = req.user.id;
     const member = await isActiveMember(pool, org.id, userId);
     // A payer buying membership isn't a member yet — resolve at the
@@ -230,10 +263,39 @@ module.exports = function createPaymentsRouter({
     }
     const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
     const { chargeAmountCents, applicationFeeCents } = priceCharge({
-      baseAmountCents: chosen.amount_cents,
+      baseAmountCents: chosen.amount_cents + (surchargeCents || 0),
       feeBps,
       feePayer: fee.fee_payer,
     });
+
+    // If a late surcharge now applies, retire any stale pending payment that
+    // was opened (and priced) BEFORE the deadline — otherwise the diver could
+    // return to that cheaper, still-valid Checkout session and dodge the
+    // surcharge. Expire its Stripe session and free the one-live-payment slot
+    // so the fresh, correctly-priced row can be inserted. Same-priced pending
+    // rows are left alone (they collide → 409 "in progress", which is right).
+    if (surchargeCents > 0 && subjectType === "event_entry") {
+      const stale = (await pool.query(
+        `SELECT id, stripe_checkout_session, amount_cents FROM payments
+          WHERE event_id = $1 AND payer_user_id = $2 AND fee_definition_id = $3
+            AND subject_type = 'event_entry' AND status = 'pending'
+          LIMIT 1`,
+        [eventId, userId, fee.id],
+      )).rows[0];
+      if (stale && stale.amount_cents < chargeAmountCents) {
+        if (stale.stripe_checkout_session) {
+          try {
+            await payments.expireCheckoutSession({
+              connectedAccountId: org.stripe_account_id,
+              sessionId: stale.stripe_checkout_session,
+            });
+          } catch (e) {
+            logger.warn({ err: e.message }, "[payments] could not expire stale checkout session");
+          }
+        }
+        await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [stale.id]);
+      }
+    }
 
     // Record the pending payment first. The unique partial index blocks
     // a second live entry payment for the same diver+event.
@@ -549,6 +611,10 @@ module.exports = function createPaymentsRouter({
             [eventId, req.user.id],
           )).rows.length > 0
         : false;
+      // Late-entry surcharge: surfaced even before it bites so divers can
+      // pay early to avoid it; folded into total_cents once it applies.
+      const late = await resolveLateFee(pool, eventId);
+      const baseCents = chosen ? chosen.amount_cents : 0;
       return res.json({
         fee: {
           currency: def.currency || org?.default_currency || null,
@@ -557,6 +623,10 @@ module.exports = function createPaymentsRouter({
           is_member: member,
           already_paid: alreadyPaid,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+          late_fee: late
+            ? { surcharge_cents: late.surchargeCents, applies: late.applies, trigger: late.trigger }
+            : null,
+          total_cents: baseCents + (late && late.applies ? late.surchargeCents : 0),
         },
         payments_enabled: payments.enabled,
       });
@@ -580,6 +650,70 @@ module.exports = function createPaymentsRouter({
     } catch (err) {
       logger.error({ err: err.message }, "[payments] read event fee config failed");
       return res.status(500).json({ error: "Failed to read the entry fee." });
+    }
+  });
+
+  // ---- Late-entry surcharge ---------------------------------------
+  // A flat surcharge added to the entry fee once the chosen trigger moment
+  // (entries close / dive list locks) has passed. Configured per event by
+  // the event manager, alongside the base entry fee.
+
+  router.put("/api/events/:id/late-fee", requireEventManager(), async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const eventId = req.params.id;
+    const orgId = req.event.org_id; // stashed by requireEventManager
+    const body = req.body || {};
+    if (!["entries_close_at", "dive_list_locks_at"].includes(body.late_fee_trigger)) {
+      return res.status(400).json({ error: "A valid late_fee_trigger is required." });
+    }
+    if (!Array.isArray(body.prices) || !body.prices.length) {
+      return res.status(400).json({ error: "At least one price variant is required." });
+    }
+    const v = validatePrices(body.prices);
+    if (v.error) return res.status(400).json({ error: v.error });
+    try {
+      // A late fee is a single FLAT surcharge whose timing is governed by
+      // the trigger, NOT by audience tiers or price windows. Force the
+      // stored variant to audience 'all' with no window so it can never be
+      // silently suppressed at resolve time (resolveLateFee resolves with
+      // isMember:false at now — a 'member'/windowed variant would vanish and
+      // the diver would dodge the surcharge).
+      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
+      // Keep the surcharge in the SAME currency as the base entry fee — they
+      // are summed into one charge at checkout. Inherit it when a base fee
+      // exists so the two can never diverge.
+      const baseCurrency = (await pool.query(
+        "SELECT currency FROM fee_definitions WHERE event_id = $1 AND scope = 'event_entry' AND active LIMIT 1",
+        [eventId],
+      )).rows[0]?.currency;
+      const feeBody = baseCurrency ? { ...body, currency: baseCurrency } : body;
+      const feeId = await upsertFee({
+        orgId,
+        scope: "late_entry",
+        eventId,
+        name: "Late entry fee",
+        body: feeBody,
+        cleanPrices: [flatPrice],
+      });
+      return res.json({ id: feeId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] set late fee failed");
+      return res.status(500).json({ error: "Failed to save the late entry fee." });
+    }
+  });
+
+  // Full late-fee config (all variants + trigger) for the manager's editor.
+  router.get("/api/events/:id/late-fee/config", requireEventManager(), async (req, res) => {
+    try {
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE event_id = $1 AND scope = 'late_entry' AND active LIMIT 1",
+        [req.params.id],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
+      return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]), payments_enabled: payments.enabled });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read late fee config failed");
+      return res.status(500).json({ error: "Failed to read the late entry fee." });
     }
   });
 
@@ -864,6 +998,10 @@ module.exports = function createPaymentsRouter({
       const fee = feeRes.rows[0];
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
 
+      // Fold in the late-entry surcharge when the event's deadline has passed.
+      const late = await resolveLateFee(pool, eventId);
+      const surchargeCents = late && late.applies ? late.surchargeCents : 0;
+
       const { url, paymentId } = await startCheckout({
         req,
         org,
@@ -871,7 +1009,10 @@ module.exports = function createPaymentsRouter({
         prices,
         subjectType: "event_entry",
         eventId,
-        productName: `Entry — ${ev.rows[0].name}`,
+        surchargeCents,
+        productName: surchargeCents
+          ? `Entry (incl. late fee) — ${ev.rows[0].name}`
+          : `Entry — ${ev.rows[0].name}`,
         successUrl: `${APP_BASE_URL}/events/${eventId}?paid=1`,
         cancelUrl: `${APP_BASE_URL}/events/${eventId}?canceled=1`,
       });
