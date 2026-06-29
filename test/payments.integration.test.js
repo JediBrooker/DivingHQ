@@ -29,6 +29,8 @@ let base;
 let orgId;
 let userId;
 let eventId;
+let clubId;
+let meetId;
 let lastRefundArgs = null;
 
 // Fake Stripe — captures args, returns canned objects.
@@ -69,12 +71,21 @@ function buildApp() {
   // function or Express throws "argument handler must be a function" when
   // the router registers the route (the bug that broke CI on PR #83).
   const requireMeetEditor = setUser;
+  // Club-payer endpoints (affiliation/accreditation) gate on
+  // requireClubAdmin — stash req.club like the real guard so handlers can
+  // read req.club.org_id.
+  const requireClubAdmin = () => async (req, res, next) => {
+    req.user = TEST_USER();
+    const r = await pool.query("SELECT id, org_id FROM clubs WHERE id = $1", [req.params.id || req.body.clubId]);
+    req.club = r.rows[0];
+    next();
+  };
 
   const app = express();
   app.use((req, res, next) =>
     req.path === "/webhooks/stripe" ? next() : express.json()(req, res, next));
   app.use(createPaymentsRouter({
-    pool, verifyToken, optionalAuth, requireOrgRole, requireEventManager, requireMeetEditor,
+    pool, verifyToken, optionalAuth, requireOrgRole, requireEventManager, requireMeetEditor, requireClubAdmin,
     logger: silentLogger, payments: fakePayments,
   }));
   app.post("/webhooks/stripe", express.raw({ type: "application/json" }),
@@ -120,6 +131,14 @@ before(async () => {
     "INSERT INTO events (org_id, name, gender, number_of_judges) VALUES ($1, '10m Platform', 'Male', 5) RETURNING id",
     [orgId],
   )).rows[0].id;
+  clubId = (await pool.query(
+    "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, $2, 'TC') RETURNING id",
+    [orgId, `Test Club ${suffix}`],
+  )).rows[0].id;
+  meetId = (await pool.query(
+    "INSERT INTO meets (org_id, name) VALUES ($1, $2) RETURNING id",
+    [orgId, `Test Meet ${suffix}`],
+  )).rows[0].id;
 
   server = http.createServer(buildApp());
   await new Promise((res) => server.listen(0, res));
@@ -131,9 +150,12 @@ after(async () => {
   if (server) await new Promise((res) => server.close(res));
   if (orgId) {
     await pool.query("DELETE FROM payments WHERE org_id = $1", [orgId]);
+    await pool.query("DELETE FROM club_affiliations WHERE org_id = $1", [orgId]);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM memberships WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM fee_prices WHERE fee_definition_id IN (SELECT id FROM fee_definitions WHERE org_id = $1)", [orgId]);
     await pool.query("DELETE FROM fee_definitions WHERE org_id = $1", [orgId]);
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM events WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM users WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM organisations WHERE id = $1", [orgId]);
@@ -258,4 +280,85 @@ test("membership purchase grants membership and unlocks member pricing", async (
   const fee = (await res.json()).fee;
   assert.equal(fee.is_member, true);
   assert.equal(fee.price.amount_cents, 3500);
+});
+
+// Regression: meet-level event_entry (event_id NULL, meet_id set) was
+// rejected by the stale fee_definitions_scope_event_check until migration
+// 068 dropped it. This path had no test, which is how the bug shipped.
+test("federation sets a meet registration fee", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/meets/${meetId}/fees`, {
+    currency: "GBP",
+    prices: [{ label: "standard", amount_cents: 4000, audience: "all" }],
+  });
+  assert.equal(res.status, 200);
+  assert.ok((await res.json()).id);
+
+  const read = await api("GET", `/api/meets/${meetId}/fees`);
+  const fee = (await read.json()).fee;
+  assert.equal(fee.price.amount_cents, 4000);
+  assert.equal(fee.currency, "GBP");
+});
+
+// ---- Club affiliation (federation charges the CLUB) ----------------
+
+test("federation sets a club affiliation fee", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/orgs/${orgId}/club-fee`, {
+    kind: "affiliation", currency: "GBP",
+    prices: [{ label: "annual", amount_cents: 12000, audience: "all" }],
+  });
+  assert.equal(res.status, 200);
+  assert.ok((await res.json()).id);
+});
+
+test("a club sees its affiliation price and inactive status", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("GET", `/api/clubs/${clubId}/affiliation?kind=affiliation`);
+  assert.equal(res.status, 200);
+  const fee = (await res.json()).fee;
+  assert.equal(fee.kind, "affiliation");
+  assert.equal(fee.price.amount_cents, 12000);
+  assert.equal(fee.active, false);
+});
+
+let clubAffPaymentId;
+test("club affiliation checkout records a pending CLUB payment with the 15% fee", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/clubs/${clubId}/affiliation/checkout`, { kind: "affiliation" });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.url);
+  clubAffPaymentId = body.payment_id;
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [clubAffPaymentId])).rows[0];
+  assert.equal(row.status, "pending");
+  assert.equal(row.payer_type, "club");
+  assert.equal(row.payer_club_id, clubId);
+  assert.equal(row.payer_user_id, null);
+  assert.equal(row.amount_cents, 12000);
+  assert.equal(row.platform_fee_cents, 1800);
+  assert.equal(row.subject_type, "club_affiliation");
+});
+
+test("a second club affiliation checkout is blocked while one is live", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/clubs/${clubId}/affiliation/checkout`, { kind: "affiliation" });
+  assert.equal(res.status, 409);
+});
+
+test("webhook activates the club affiliation period and the read flips to active", async (t) => {
+  if (!ready) return t.skip();
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_club", client_reference_id: clubAffPaymentId, payment_intent: "pi_club" } },
+  });
+  const aff = (await pool.query(
+    "SELECT * FROM club_affiliations WHERE club_id = $1 AND kind = 'affiliation' AND status = 'active'",
+    [clubId],
+  )).rows;
+  assert.equal(aff.length, 1);
+  assert.ok(new Date(aff[0].period_end) > new Date(aff[0].period_start));
+
+  const res = await api("GET", `/api/clubs/${clubId}/affiliation?kind=affiliation`);
+  assert.equal((await res.json()).fee.active, true);
 });

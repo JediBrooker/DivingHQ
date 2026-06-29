@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
 
 const { t } = useI18n()
 import { confirmAction } from '@/composables/useConfirm'
@@ -32,6 +33,9 @@ const editing = ref(null)          // { id, name, short_code }
 const editBusy = ref(false)
 
 const isSysAdmin = computed(() => !!auth.user?.is_system_admin)
+// Only the federation admin configures club fees; meet managers can view
+// the roster + who's paid but not the billing setup.
+const isOrgAdmin = computed(() => (auth.user?.org_roles || []).includes('org_admin'))
 
 const clubOrgs = computed(() => {
   const seen = new Map()
@@ -200,6 +204,14 @@ onMounted(async () => {
       <span v-if="isSysAdmin" class="sys-badge" style="margin-inline-start:auto">System Admin · all orgs</span>
     </div>
 
+    <!-- Club billing (affiliation + accreditation) — coming soon -->
+    <ComingSoonBanner
+      title="Club billing — coming soon."
+      :message="isOrgAdmin
+        ? 'Set your clubs’ affiliation and accreditation prices in Payments. Clubs will pay you online here shortly — the Billing column shows who’s paid once it’s live.'
+        : 'Clubs will soon pay their affiliation and accreditation fees online. The Billing column shows who’s paid once it’s live.'"
+    />
+
     <!-- Filters + create -->
     <div class="toolbar">
       <input class="input" type="text" v-model="searchTerm" :placeholder="$t('clubs.search')">
@@ -258,19 +270,20 @@ onMounted(async () => {
             <th>{{ $t('clubs.col_code') }}</th>
             <th v-if="isSysAdmin">Organisation</th>
             <th class="num-col">{{ $t('clubs.col_members') }}</th>
+            <th class="affil-head">Billing</th>
             <th>{{ $t('clubs.col_created') }}</th>
             <th class="actions-col">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td :colspan="isSysAdmin ? 6 : 5" class="empty-state">Loading…</td>
+            <td :colspan="isSysAdmin ? 7 : 6" class="empty-state">Loading…</td>
           </tr>
           <tr v-else-if="errorMsg">
-            <td :colspan="isSysAdmin ? 6 : 5" class="empty-state">{{ errorMsg }}</td>
+            <td :colspan="isSysAdmin ? 7 : 6" class="empty-state">{{ errorMsg }}</td>
           </tr>
           <tr v-else-if="!filteredClubs.length && !clubs.length">
-            <td :colspan="isSysAdmin ? 6 : 5">
+            <td :colspan="isSysAdmin ? 7 : 6">
               <div class="empty-state-card">
                 <div class="empty-state-icon">🏢</div>
                 <div class="empty-state-title">No clubs yet</div>
@@ -285,7 +298,7 @@ onMounted(async () => {
             </td>
           </tr>
           <tr v-else-if="!filteredClubs.length">
-            <td :colspan="isSysAdmin ? 6 : 5" class="empty-state">
+            <td :colspan="isSysAdmin ? 7 : 6" class="empty-state">
               No clubs match the current filter.
             </td>
           </tr>
@@ -305,6 +318,12 @@ onMounted(async () => {
                 <span v-if="c.member_count" class="member-count">{{ c.member_count }}</span>
                 <span v-else class="empty-pill">empty</span>
               </td>
+              <td class="affil-cell">
+                <span class="affil-pill" :class="c.affiliation_active ? 'on' : 'off'"
+                      v-tip="'Annual affiliation'">Affil {{ c.affiliation_active ? '✓' : '—' }}</span>
+                <span class="affil-pill" :class="c.accreditation_active ? 'on' : 'off'"
+                      v-tip="'Accreditation'">Accred {{ c.accreditation_active ? '✓' : '—' }}</span>
+              </td>
               <td class="dim">{{ fmtDate(c.created_at) }}</td>
               <td class="actions-col">
                 <button class="btn btn-ghost btn-sm" @click="openEdit(c)">Rename</button>
@@ -323,6 +342,7 @@ onMounted(async () => {
               </td>
               <td v-if="isSysAdmin" class="dim">{{ c.org_name }}</td>
               <td class="num-col dim">{{ c.member_count }}</td>
+              <td class="dim">—</td>
               <td class="dim">{{ fmtDate(c.created_at) }}</td>
               <td class="actions-col">
                 <button class="btn btn-ghost btn-sm" @click="cancelEdit">Cancel</button>
@@ -411,6 +431,19 @@ onMounted(async () => {
   color: var(--text-3); font-style: italic;
 }
 .empty-state { color: var(--text-3); font-size: 12px; padding: 1.5rem 0; text-align: center; }
+
+/* Affiliation / accreditation billing status pills */
+.affil-head { width: 170px; }
+.affil-cell { white-space: nowrap; }
+.affil-pill {
+  display: inline-block; font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.04em; border-radius: 3px; padding: 0.12rem 0.4rem;
+  border: 1px solid var(--border); color: var(--text-3); background: var(--bg-2);
+}
+.affil-pill + .affil-pill { margin-inline-start: 0.3rem; }
+.affil-pill.on {
+  color: var(--green); border-color: var(--green); background: var(--cyan-dim);
+}
 
 .org-cell { white-space: nowrap; }
 .org-name { font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--text-2); }

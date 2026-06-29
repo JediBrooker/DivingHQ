@@ -8,6 +8,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 import MembershipFeeEditor from '@/components/payments/MembershipFeeEditor.vue'
+import ClubFeesEditor from '@/components/payments/ClubFeesEditor.vue'
 
 const auth = useAuthStore()
 const orgId = computed(() => auth.user?.org_id)
@@ -73,6 +74,15 @@ onMounted(loadStatus)
         Members get any “Members only” entry prices. Membership is not required to enter competitions.
       </p>
       <MembershipFeeEditor v-if="orgId" :org-id="orgId" />
+    </div>
+
+    <div class="card">
+      <h2>Club fees</h2>
+      <p class="muted">
+        Affiliation and accreditation fees your clubs pay you each year.
+        Set them here; track who's paid in the Clubs list.
+      </p>
+      <ClubFeesEditor v-if="orgId" :org-id="orgId" />
     </div>
   </section>
 </template>
