@@ -104,6 +104,11 @@ module.exports = function createPaymentsRouter({
     return kind === "accreditation" ? "club_accreditation" : "club_affiliation";
   }
 
+  // Roles an official can be accredited for. Matches fee_definitions.role_type
+  // (migration 067) and the org_roles the app issues. Allowlisted so a fee or
+  // checkout can't be created for an arbitrary role string.
+  const OFFICIAL_ROLES = ["judge", "referee", "coach", "meet_manager"];
+
   // Refuse every payment route cleanly when Stripe isn't configured,
   // rather than 500-ing deeper in.
   function ensurePayments(res) {
@@ -436,6 +441,91 @@ module.exports = function createPaymentsRouter({
       [orgId, scope, clubId],
     );
     return r.rows[0] || null;
+  }
+
+  // Resolve the org-wide accreditation fee for a role (meet_id NULL = annual,
+  // org-wide). Returns the fee_definitions row or null.
+  async function resolveOfficialFee(db, orgId, roleType) {
+    const r = await db.query(
+      `SELECT * FROM fee_definitions
+        WHERE org_id = $1 AND scope = 'official_accreditation' AND active
+          AND role_type = $2 AND meet_id IS NULL
+        LIMIT 1`,
+      [orgId, roleType],
+    );
+    return r.rows[0] || null;
+  }
+
+  // Official self-pays the federation for a role accreditation. payer_type
+  // 'official_role' carries the role on the payment (payer_role_type), and the
+  // one-live-official index blocks a second live payment for the same
+  // user+role+fee. Connected account is the federation's.
+  async function startOfficialCheckout({ req, org, fee, prices, roleType }) {
+    const userId = req.user.id;
+    const chosen = resolvePrice(prices, { isMember: false });
+    if (!chosen) {
+      const err = new Error("This isn't open for purchase right now.");
+      err.status = 409;
+      throw err;
+    }
+    const currency = fee.currency || org.default_currency;
+    if (!currency) {
+      const err = new Error("The federation's currency is not configured.");
+      err.status = 409;
+      throw err;
+    }
+    const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
+    const { chargeAmountCents, applicationFeeCents } = priceCharge({
+      baseAmountCents: chosen.amount_cents,
+      feeBps,
+      feePayer: fee.fee_payer,
+    });
+
+    let paymentId;
+    try {
+      const ins = await pool.query(
+        `INSERT INTO payments
+            (org_id, fee_definition_id, payer_type, payer_user_id, payer_role_type, subject_type,
+             amount_cents, platform_fee_cents, currency, fee_payer, status)
+         VALUES ($1, $2, 'official_role', $3, $4, 'official_accreditation', $5, $6, $7, $8, 'pending')
+         RETURNING id`,
+        [org.id, fee.id, userId, roleType, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
+      );
+      paymentId = ins.rows[0].id;
+    } catch (e) {
+      if (e.code === "23505") {
+        const err = new Error("You already have a payment in progress or completed for this accreditation.");
+        err.status = 409;
+        throw err;
+      }
+      throw e;
+    }
+
+    try {
+      const session = await payments.createCheckoutSession({
+        connectedAccountId: org.stripe_account_id,
+        currency,
+        chargeAmountCents,
+        applicationFeeCents,
+        productName: `${org.name} ${roleType} accreditation`,
+        customerEmail: req.user.email,
+        clientReferenceId: paymentId,
+        metadata: {
+          payment_id: paymentId,
+          scope: "official_accreditation",
+          org_id: org.id,
+          user_id: userId,
+          role_type: roleType,
+        },
+        successUrl: `${APP_BASE_URL}/accreditation?paid=1`,
+        cancelUrl: `${APP_BASE_URL}/accreditation?canceled=1`,
+      });
+      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
+      return { url: session.url, paymentId };
+    } catch (err) {
+      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
+      throw err;
+    }
   }
 
   // ---- Federation onboarding --------------------------------------
@@ -970,6 +1060,105 @@ module.exports = function createPaymentsRouter({
     }
   });
 
+  // ---- Official / coach accreditation fees ------------------------
+  // The FEDERATION (org_admin) sets a per-role accreditation price; an
+  // OFFICIAL self-pays it. Org-wide annual for this cut (meet_id NULL); the
+  // schema also allows per-meet passes. One flat price per role.
+
+  // Federation sets/updates the accreditation fee for a role.
+  router.put("/api/orgs/:id/official-fee", requireOrgRole(["org_admin"]), async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    const body = req.body || {};
+    if (!OFFICIAL_ROLES.includes(body.role_type)) {
+      return res.status(400).json({ error: "A valid role_type is required." });
+    }
+    if (!Array.isArray(body.prices) || !body.prices.length) {
+      return res.status(400).json({ error: "At least one price variant is required." });
+    }
+    const v = validatePrices(body.prices);
+    if (v.error) return res.status(400).json({ error: v.error });
+    try {
+      // A flat per-role price (audience 'all', no window) — accreditation
+      // isn't member-tiered, and a member/windowed variant would silently
+      // vanish at resolve time (resolveOfficialFee resolves isMember:false).
+      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
+      const feeId = await upsertFee({
+        orgId,
+        scope: "official_accreditation",
+        roleType: body.role_type,
+        name: `${body.role_type} accreditation`,
+        body,
+        cleanPrices: [flatPrice],
+      });
+      return res.json({ id: feeId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] set official fee failed");
+      return res.status(500).json({ error: "Failed to save the accreditation fee." });
+    }
+  });
+
+  // Full accreditation-fee config (all variants) for the federation's editor.
+  router.get("/api/orgs/:id/official-fee", requireOrgRole(["org_admin"]), async (req, res) => {
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    if (!OFFICIAL_ROLES.includes(req.query.role_type)) {
+      return res.status(400).json({ error: "A valid role_type is required." });
+    }
+    try {
+      const def = await resolveOfficialFee(pool, orgId, req.query.role_type);
+      if (!def) return res.json({ fee: null, payments_enabled: payments.enabled });
+      return res.json({ fee: await feeConfigResponse(pool, def), payments_enabled: payments.enabled });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read official fee config failed");
+      return res.status(500).json({ error: "Failed to read the accreditation fee." });
+    }
+  });
+
+  // Official-facing: what does accreditation for this role cost me, and am I
+  // currently accredited? Scoped to the caller's own org.
+  router.get("/api/orgs/:id/official-accreditation", verifyToken, async (req, res) => {
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    const roleType = req.query.role_type;
+    if (!OFFICIAL_ROLES.includes(roleType)) {
+      return res.status(400).json({ error: "A valid role_type is required." });
+    }
+    try {
+      const def = await resolveOfficialFee(pool, orgId, roleType);
+      const current = (await pool.query(
+        `SELECT status, period_end FROM official_accreditations
+          WHERE org_id = $1 AND user_id = $2 AND role_type = $3 AND meet_id IS NULL
+            AND status = 'active' AND (period_end IS NULL OR period_end > CURRENT_DATE)
+          ORDER BY period_end DESC NULLS LAST LIMIT 1`,
+        [orgId, req.user.id, roleType],
+      )).rows[0];
+      if (!def) {
+        return res.json({
+          fee: { role_type: roleType, active: !!current, period_end: current?.period_end || null, price: null },
+          payments_enabled: payments.enabled,
+        });
+      }
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
+      const chosen = resolvePrice(prices, { isMember: false });
+      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      return res.json({
+        fee: {
+          role_type: roleType,
+          currency: def.currency || org?.default_currency || null,
+          active: !!current,
+          period_end: current?.period_end || null,
+          price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+        },
+        payments_enabled: payments.enabled,
+      });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read official accreditation failed");
+      return res.status(500).json({ error: "Failed to read the accreditation fee." });
+    }
+  });
+
   // ---- Checkout ----------------------------------------------------
 
   // Diver pays the entry fee for an event.
@@ -1094,6 +1283,39 @@ module.exports = function createPaymentsRouter({
       return res.json({ url, payment_id: paymentId });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] club checkout failed");
+      return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
+    }
+  });
+
+  // An official self-pays the federation for a role accreditation.
+  router.post("/api/orgs/:id/official-accreditation/checkout", verifyToken, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    const roleType = (req.query && req.query.role_type) || (req.body && req.body.role_type);
+    if (!OFFICIAL_ROLES.includes(roleType)) {
+      return res.status(400).json({ error: "A valid role_type is required." });
+    }
+    try {
+      const org = (
+        await pool.query(
+          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
+             FROM organisations WHERE id = $1`,
+          [orgId],
+        )
+      ).rows[0];
+      if (!org) return res.status(404).json({ error: "Organisation not found" });
+      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
+        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
+      }
+      const fee = await resolveOfficialFee(pool, orgId, roleType);
+      if (!fee) return res.status(409).json({ error: `No ${roleType} accreditation fee is set for this federation.` });
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
+
+      const { url, paymentId } = await startOfficialCheckout({ req, org, fee, prices, roleType });
+      return res.json({ url, payment_id: paymentId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] official checkout failed");
       return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
     }
   });

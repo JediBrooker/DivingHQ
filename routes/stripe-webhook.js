@@ -61,6 +61,8 @@ async function onCheckoutCompleted(pool, logger, session) {
       payment.subject_type === "club_accreditation"
     ) {
       await grantClubAffiliation(client, payment);
+    } else if (payment.subject_type === "official_accreditation") {
+      await grantOfficialAccreditation(client, payment);
     }
     // For 'event_entry' the payment is now recorded as paid. Actually
     // building/confirming the diver's dive list stays in the entry flow
@@ -99,6 +101,18 @@ async function grantMembership(client, payment) {
 // the source of truth for "is this club affiliated right now"). Idempotent
 // via the caller: it only runs while transitioning the payment out of
 // 'pending' under the row lock, so a re-delivery never inserts twice.
+// Record a paid official/coach accreditation period (12 months, org-wide).
+// Idempotent via the caller: runs only while the payment transitions out of
+// 'pending' under the row lock, so a re-delivery never inserts twice.
+async function grantOfficialAccreditation(client, payment) {
+  await client.query(
+    `INSERT INTO official_accreditations
+        (org_id, user_id, role_type, fee_definition_id, payment_id, period_start, period_end, status)
+     VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, (CURRENT_DATE + interval '12 months')::date, 'active')`,
+    [payment.org_id, payment.payer_user_id, payment.payer_role_type, payment.fee_definition_id, payment.id],
+  );
+}
+
 async function grantClubAffiliation(client, payment) {
   const kind = payment.subject_type === "club_accreditation" ? "accreditation" : "affiliation";
   await client.query(

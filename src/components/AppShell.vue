@@ -18,7 +18,7 @@ import {
   LayoutDashboard, Trophy, MonitorPlay, Calculator, ChartColumn, Waves, GraduationCap,
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
-  Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard,
+  Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -41,6 +41,7 @@ const NAV = [
     { to: '/competitor',     label: 'Dive Sheets',    icon: Waves,         roles: ['diver'] },
     { to: '/membership',     label: 'Membership',     icon: CreditCard,    roles: ['diver'] },
     { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
+    { to: '/accreditation',  label: 'Accreditation',  icon: Award,         roles: ['judge', 'referee', 'coach', 'meet_manager'] },
     { to: '/scoreboard',     label: 'Scoreboard & Results', labelKey: 'scoreboard.page_label',  icon: ListChecks },
     { to: '/judge-analysis', label: 'Judge Analysis', icon: ChartColumn },
     { to: '/dive-directory', label: 'Dive directory', labelKey: 'dive_directory.title',   icon: BookOpen },
