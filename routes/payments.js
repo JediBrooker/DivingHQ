@@ -109,6 +109,13 @@ module.exports = function createPaymentsRouter({
   // checkout can't be created for an arbitrary role string.
   const OFFICIAL_ROLES = ["judge", "referee", "coach", "meet_manager"];
 
+  // Entry-penalty kinds. The scope/subject_type IS the kind. Admin-issued
+  // debits (entry_charges), settled out-of-band by the entrant or waived.
+  const PENALTY_KINDS = ["scratch", "no_show"];
+  function penaltyLabel(kind) {
+    return kind === "no_show" ? "No-show penalty" : "Scratch penalty";
+  }
+
   // Refuse every payment route cleanly when Stripe isn't configured,
   // rather than 500-ing deeper in.
   function ensurePayments(res) {
@@ -528,6 +535,75 @@ module.exports = function createPaymentsRouter({
     }
   }
 
+  // The entrant pays an owed scratch/no-show charge. Unlike the other
+  // checkouts the amount is the SNAPSHOT taken at issuance (entry_charges
+  // .amount_cents), not a re-resolved price — the debit is fixed when issued.
+  // Links the new payment back onto the charge; the webhook marks it paid.
+  async function startChargeCheckout({ req, org, charge, fee }) {
+    const userId = req.user.id;
+    const currency = fee.currency || org.default_currency;
+    if (!currency) {
+      const err = new Error("The federation's currency is not configured.");
+      err.status = 409;
+      throw err;
+    }
+    const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
+    const { chargeAmountCents, applicationFeeCents } = priceCharge({
+      baseAmountCents: charge.amount_cents,
+      feeBps,
+      feePayer: fee.fee_payer,
+    });
+
+    let paymentId;
+    try {
+      const ins = await pool.query(
+        `INSERT INTO payments
+            (org_id, fee_definition_id, payer_user_id, subject_type, event_id,
+             amount_cents, platform_fee_cents, currency, fee_payer, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+         RETURNING id`,
+        [org.id, fee.id, userId, charge.kind, charge.event_id, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
+      );
+      paymentId = ins.rows[0].id;
+    } catch (e) {
+      if (e.code === "23505") {
+        const err = new Error("You already have a payment in progress or completed for this charge.");
+        err.status = 409;
+        throw err;
+      }
+      throw e;
+    }
+
+    try {
+      const session = await payments.createCheckoutSession({
+        connectedAccountId: org.stripe_account_id,
+        currency,
+        chargeAmountCents,
+        applicationFeeCents,
+        productName: `${penaltyLabel(charge.kind)} — ${org.name}`,
+        customerEmail: req.user.email,
+        clientReferenceId: paymentId,
+        metadata: {
+          payment_id: paymentId,
+          scope: charge.kind,
+          org_id: org.id,
+          user_id: userId,
+          event_id: charge.event_id,
+          entry_charge_id: charge.id,
+        },
+        successUrl: `${APP_BASE_URL}/charges?paid=1`,
+        cancelUrl: `${APP_BASE_URL}/charges?canceled=1`,
+      });
+      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
+      // Link the payment onto the charge so the webhook can settle it.
+      await pool.query("UPDATE entry_charges SET payment_id = $1 WHERE id = $2", [paymentId, charge.id]);
+      return { url: session.url, paymentId };
+    } catch (err) {
+      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
+      throw err;
+    }
+  }
+
   // ---- Federation onboarding --------------------------------------
 
   // Begin/continue Stripe onboarding for a federation. Creates the
@@ -804,6 +880,61 @@ module.exports = function createPaymentsRouter({
     } catch (err) {
       logger.error({ err: err.message }, "[payments] read late fee config failed");
       return res.status(500).json({ error: "Failed to read the late entry fee." });
+    }
+  });
+
+  // ---- Scratch / no-show penalty fees -----------------------------
+  // Per-event flat penalties an admin can issue against an entrant who
+  // withdraws (scratch) or doesn't show (no_show). Configured here; issued +
+  // collected via the entry-charges endpoints below.
+
+  router.put("/api/events/:id/penalty-fee", requireEventManager(), async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const eventId = req.params.id;
+    const orgId = req.event.org_id; // stashed by requireEventManager
+    const body = req.body || {};
+    if (!PENALTY_KINDS.includes(body.kind)) {
+      return res.status(400).json({ error: "A valid penalty kind is required." });
+    }
+    if (!Array.isArray(body.prices) || !body.prices.length) {
+      return res.status(400).json({ error: "At least one price variant is required." });
+    }
+    const v = validatePrices(body.prices);
+    if (v.error) return res.status(400).json({ error: v.error });
+    try {
+      // Flat penalty (audience 'all', no window) — like late fees, a
+      // member/windowed variant would silently vanish at resolve time.
+      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
+      const feeId = await upsertFee({
+        orgId,
+        scope: body.kind,
+        eventId,
+        name: penaltyLabel(body.kind),
+        body,
+        cleanPrices: [flatPrice],
+      });
+      return res.json({ id: feeId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] set penalty fee failed");
+      return res.status(500).json({ error: "Failed to save the penalty fee." });
+    }
+  });
+
+  // Full penalty-fee config (all variants) for the manager's editor.
+  router.get("/api/events/:id/penalty-fee", requireEventManager(), async (req, res) => {
+    if (!PENALTY_KINDS.includes(req.query.kind)) {
+      return res.status(400).json({ error: "A valid penalty kind is required." });
+    }
+    try {
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE event_id = $1 AND scope = $2 AND active LIMIT 1",
+        [req.params.id, req.query.kind],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
+      return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]), payments_enabled: payments.enabled });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read penalty fee config failed");
+      return res.status(500).json({ error: "Failed to read the penalty fee." });
     }
   });
 
@@ -1321,6 +1452,150 @@ module.exports = function createPaymentsRouter({
       return res.json({ url, payment_id: paymentId });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] official checkout failed");
+      return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
+    }
+  });
+
+  // ---- Entry charges (scratch / no-show debits) -------------------
+  // Admin issues a charge against an entrant; it sits 'owed' until the
+  // entrant pays it or an admin waives it. The amount is snapshotted from
+  // the configured penalty fee at issuance, so a later fee change doesn't
+  // move an already-issued debit.
+
+  // Issue a scratch / no-show charge against an entrant.
+  router.post("/api/events/:id/entry-charges", requireEventManager(), async (req, res) => {
+    const eventId = req.params.id;
+    const orgId = req.event.org_id; // stashed by requireEventManager
+    const body = req.body || {};
+    if (!PENALTY_KINDS.includes(body.kind)) {
+      return res.status(400).json({ error: "A valid penalty kind is required." });
+    }
+    if (!body.entrant_user_id) {
+      return res.status(400).json({ error: "entrant_user_id is required." });
+    }
+    try {
+      const entrant = (await pool.query(
+        "SELECT id FROM users WHERE id = $1 AND org_id = $2",
+        [body.entrant_user_id, orgId],
+      )).rows[0];
+      if (!entrant) return res.status(404).json({ error: "Entrant not found in this organisation." });
+
+      const fee = (await pool.query(
+        "SELECT * FROM fee_definitions WHERE event_id = $1 AND scope = $2 AND active LIMIT 1",
+        [eventId, body.kind],
+      )).rows[0];
+      if (!fee) return res.status(409).json({ error: `No ${body.kind === "no_show" ? "no-show" : "scratch"} fee is set for this event.` });
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
+      const chosen = resolvePrice(prices, { isMember: false });
+      if (!chosen) return res.status(409).json({ error: "The penalty fee has no usable price." });
+
+      let chargeId;
+      try {
+        const ins = await pool.query(
+          `INSERT INTO entry_charges
+              (org_id, event_id, entrant_user_id, kind, fee_definition_id, amount_cents, triggered_by, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 'owed')
+           RETURNING id`,
+          [orgId, eventId, body.entrant_user_id, body.kind, fee.id, chosen.amount_cents, req.user.id],
+        );
+        chargeId = ins.rows[0].id;
+      } catch (e) {
+        if (e.code === "23505") {
+          return res.status(409).json({ error: "This entrant already owes a charge of this kind for this event." });
+        }
+        throw e;
+      }
+      return res.json({ id: chargeId, amount_cents: chosen.amount_cents });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] issue entry charge failed");
+      return res.status(500).json({ error: "Failed to issue the charge." });
+    }
+  });
+
+  // List an event's entry charges (admin view).
+  router.get("/api/events/:id/entry-charges", requireEventManager(), async (req, res) => {
+    try {
+      const rows = (await pool.query(
+        `SELECT ec.id, ec.kind, ec.amount_cents, ec.status, ec.triggered_at,
+                ec.entrant_user_id, u.full_name AS entrant_name,
+                fd.currency
+           FROM entry_charges ec
+           JOIN users u ON u.id = ec.entrant_user_id
+           LEFT JOIN fee_definitions fd ON fd.id = ec.fee_definition_id
+          WHERE ec.event_id = $1
+          ORDER BY ec.triggered_at DESC`,
+        [req.params.id],
+      )).rows;
+      return res.json({ charges: rows, payments_enabled: payments.enabled });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] list entry charges failed");
+      return res.status(500).json({ error: "Failed to list charges." });
+    }
+  });
+
+  // Waive an owed charge (admin). Gated by org role + same-org check.
+  router.post("/api/entry-charges/:id/waive", requireOrgRole(["org_admin", "meet_manager"]), async (req, res) => {
+    try {
+      const charge = (await pool.query("SELECT id, org_id, status FROM entry_charges WHERE id = $1", [req.params.id])).rows[0];
+      if (!charge) return res.status(404).json({ error: "Charge not found" });
+      if (!ownsOrg(req, charge.org_id)) return res.status(403).json({ error: "Forbidden" });
+      if (charge.status !== "owed") {
+        return res.status(409).json({ error: `Cannot waive a charge that is ${charge.status}.` });
+      }
+      await pool.query("UPDATE entry_charges SET status = 'waived' WHERE id = $1 AND status = 'owed'", [req.params.id]);
+      return res.json({ status: "waived" });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] waive charge failed");
+      return res.status(500).json({ error: "Failed to waive the charge." });
+    }
+  });
+
+  // Diver-facing: the charges I currently owe (across all my events).
+  router.get("/api/me/charges", verifyToken, async (req, res) => {
+    try {
+      const rows = (await pool.query(
+        `SELECT ec.id, ec.kind, ec.amount_cents, ec.status, ec.event_id,
+                e.name AS event_name, fd.currency
+           FROM entry_charges ec
+           JOIN events e ON e.id = ec.event_id
+           LEFT JOIN fee_definitions fd ON fd.id = ec.fee_definition_id
+          WHERE ec.entrant_user_id = $1 AND ec.status = 'owed'
+          ORDER BY ec.triggered_at DESC`,
+        [req.user.id],
+      )).rows;
+      return res.json({ charges: rows, payments_enabled: payments.enabled });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read my charges failed");
+      return res.status(500).json({ error: "Failed to read your charges." });
+    }
+  });
+
+  // The entrant pays one of their owed charges.
+  router.post("/api/entry-charges/:id/checkout", verifyToken, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    try {
+      const charge = (await pool.query("SELECT * FROM entry_charges WHERE id = $1", [req.params.id])).rows[0];
+      if (!charge) return res.status(404).json({ error: "Charge not found" });
+      if (charge.entrant_user_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+      if (charge.status !== "owed") return res.status(409).json({ error: `This charge is ${charge.status}.` });
+
+      const org = (
+        await pool.query(
+          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
+             FROM organisations WHERE id = $1`,
+          [charge.org_id],
+        )
+      ).rows[0];
+      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
+        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
+      }
+      const fee = (await pool.query("SELECT * FROM fee_definitions WHERE id = $1", [charge.fee_definition_id])).rows[0];
+      if (!fee) return res.status(409).json({ error: "The penalty fee is no longer configured." });
+
+      const { url, paymentId } = await startChargeCheckout({ req, org, charge, fee });
+      return res.json({ url, payment_id: paymentId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] charge checkout failed");
       return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
     }
   });

@@ -63,6 +63,12 @@ async function onCheckoutCompleted(pool, logger, session) {
       await grantClubAffiliation(client, payment);
     } else if (payment.subject_type === "official_accreditation") {
       await grantOfficialAccreditation(client, payment);
+    } else if (payment.subject_type === "scratch" || payment.subject_type === "no_show") {
+      // Settle the entry-charge debit this payment was raised for.
+      await client.query(
+        "UPDATE entry_charges SET status = 'paid' WHERE payment_id = $1 AND status = 'owed'",
+        [payment.id],
+      );
     }
     // For 'event_entry' the payment is now recorded as paid. Actually
     // building/confirming the diver's dive list stays in the entry flow
