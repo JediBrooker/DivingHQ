@@ -116,6 +116,14 @@ module.exports = function createPaymentsRouter({
     return kind === "no_show" ? "No-show penalty" : "Scratch penalty";
   }
 
+  // Meet-level access purchases (a signed-in buyer pays the federation).
+  const ACCESS_KINDS = ["spectator_ticket", "livestream", "programme"];
+  const ACCESS_LABELS = {
+    spectator_ticket: "Spectator ticket",
+    livestream: "Livestream access",
+    programme: "Programme",
+  };
+
   // Refuse every payment route cleanly when Stripe isn't configured,
   // rather than 500-ing deeper in.
   function ensurePayments(res) {
@@ -256,7 +264,7 @@ module.exports = function createPaymentsRouter({
   // is added to the resolved base price before the platform-fee math, so
   // the whole charge — base + surcharge — flows through one payment and
   // DivingHQ's cut applies to the total. Returns { url, paymentId } or throws.
-  async function startCheckout({ req, org, fee, prices, subjectType, eventId, productName, successUrl, cancelUrl, surchargeCents = 0 }) {
+  async function startCheckout({ req, org, fee, prices, subjectType, eventId, meetId = null, productName, successUrl, cancelUrl, surchargeCents = 0 }) {
     const userId = req.user.id;
     const member = await isActiveMember(pool, org.id, userId);
     // A payer buying membership isn't a member yet — resolve at the
@@ -315,11 +323,11 @@ module.exports = function createPaymentsRouter({
     try {
       const ins = await pool.query(
         `INSERT INTO payments
-            (org_id, fee_definition_id, payer_user_id, subject_type, event_id,
+            (org_id, fee_definition_id, payer_user_id, subject_type, event_id, meet_id,
              amount_cents, platform_fee_cents, currency, fee_payer, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
          RETURNING id`,
-        [org.id, fee.id, userId, subjectType, eventId || null, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
+        [org.id, fee.id, userId, subjectType, eventId || null, meetId || null, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
       );
       paymentId = ins.rows[0].id;
     } catch (e) {
@@ -346,6 +354,7 @@ module.exports = function createPaymentsRouter({
           org_id: org.id,
           user_id: userId,
           ...(eventId ? { event_id: eventId } : {}),
+          ...(meetId ? { meet_id: meetId } : {}),
         },
         successUrl,
         cancelUrl,
@@ -1032,6 +1041,155 @@ module.exports = function createPaymentsRouter({
     } catch (err) {
       logger.error({ err: err.message }, "[payments] read meet fee failed");
       return res.status(500).json({ error: "Failed to read the meet fee." });
+    }
+  });
+
+  // ---- Meet access (spectator ticket / livestream / programme) -----
+  // Meet-level purchases a signed-in buyer makes. Federation sets a flat
+  // price per kind; the buyer pays the federation. One purchase per buyer
+  // per meet per kind (multi-quantity is a later feature). NOTE: requires a
+  // signed-in buyer — anonymous/guest checkout would need a new payer type.
+
+  // Federation sets/updates a meet access fee for one kind.
+  router.put("/api/meets/:id/access-fee", requireMeetEditor, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const meetId = req.params.id;
+    const body = req.body || {};
+    if (!ACCESS_KINDS.includes(body.kind)) {
+      return res.status(400).json({ error: "A valid access kind is required." });
+    }
+    try {
+      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
+      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
+      const orgId = m.rows[0].org_id;
+      if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+      if (!Array.isArray(body.prices) || !body.prices.length) {
+        return res.status(400).json({ error: "At least one price variant is required." });
+      }
+      const v = validatePrices(body.prices);
+      if (v.error) return res.status(400).json({ error: v.error });
+      // Flat price (audience 'all', no window) — access isn't member-tiered.
+      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
+      const feeId = await upsertFee({
+        orgId, scope: body.kind, meetId,
+        name: `${ACCESS_LABELS[body.kind]} (meet)`,
+        body, cleanPrices: [flatPrice],
+      });
+      return res.json({ id: feeId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] set meet access fee failed");
+      return res.status(500).json({ error: "Failed to save the access fee." });
+    }
+  });
+
+  // Full access-fee config (all variants) for the manager's editor.
+  router.get("/api/meets/:id/access-fee", requireMeetEditor, async (req, res) => {
+    const meetId = req.params.id;
+    if (!ACCESS_KINDS.includes(req.query.kind)) {
+      return res.status(400).json({ error: "A valid access kind is required." });
+    }
+    try {
+      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
+      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
+      if (!ownsOrg(req, m.rows[0].org_id)) return res.status(403).json({ error: "Forbidden" });
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE meet_id = $1 AND scope = $2 AND active LIMIT 1",
+        [meetId, req.query.kind],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
+      return res.json({ fee: await feeConfigResponse(pool, feeRes.rows[0]), payments_enabled: payments.enabled });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read meet access config failed");
+      return res.status(500).json({ error: "Failed to read the access fee." });
+    }
+  });
+
+  // Buyer-facing: what does this meet access cost, and have I already bought it?
+  router.get("/api/meets/:id/access", optionalAuth, async (req, res) => {
+    const meetId = req.params.id;
+    if (!ACCESS_KINDS.includes(req.query.kind)) {
+      return res.status(400).json({ error: "A valid access kind is required." });
+    }
+    try {
+      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
+      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
+      const orgId = m.rows[0].org_id;
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE meet_id = $1 AND scope = $2 AND active LIMIT 1",
+        [meetId, req.query.kind],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
+      const def = feeRes.rows[0];
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
+      const chosen = resolvePrice(prices, { isMember: false });
+      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const alreadyPaid = req.user
+        ? (await pool.query(
+            `SELECT 1 FROM payments
+              WHERE meet_id = $1 AND payer_user_id = $2 AND subject_type = $3 AND status = 'paid' LIMIT 1`,
+            [meetId, req.user.id, req.query.kind],
+          )).rows.length > 0
+        : false;
+      return res.json({
+        fee: {
+          kind: req.query.kind,
+          currency: def.currency || org?.default_currency || null,
+          already_paid: alreadyPaid,
+          price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+        },
+        payments_enabled: payments.enabled,
+      });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read meet access failed");
+      return res.status(500).json({ error: "Failed to read the access fee." });
+    }
+  });
+
+  // A signed-in buyer purchases meet access (ticket / stream / programme).
+  router.post("/api/meets/:id/access/checkout", verifyToken, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const meetId = req.params.id;
+    const kind = (req.query && req.query.kind) || (req.body && req.body.kind);
+    if (!ACCESS_KINDS.includes(kind)) {
+      return res.status(400).json({ error: "A valid access kind is required." });
+    }
+    try {
+      const m = await pool.query("SELECT id, name, org_id FROM meets WHERE id = $1", [meetId]);
+      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
+      const orgId = m.rows[0].org_id;
+      const org = (
+        await pool.query(
+          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
+             FROM organisations WHERE id = $1`,
+          [orgId],
+        )
+      ).rows[0];
+      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
+        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
+      }
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE meet_id = $1 AND scope = $2 AND active LIMIT 1",
+        [meetId, kind],
+      );
+      if (!feeRes.rows.length) return res.status(409).json({ error: `No ${ACCESS_LABELS[kind].toLowerCase()} is on sale for this meet.` });
+      const fee = feeRes.rows[0];
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
+
+      const { url, paymentId } = await startCheckout({
+        req,
+        org,
+        fee,
+        prices,
+        subjectType: kind,
+        meetId,
+        productName: `${ACCESS_LABELS[kind]} — ${m.rows[0].name}`,
+        successUrl: `${APP_BASE_URL}/meets/${meetId}?paid=1`,
+        cancelUrl: `${APP_BASE_URL}/meets/${meetId}?canceled=1`,
+      });
+      return res.json({ url, payment_id: paymentId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] meet access checkout failed");
+      return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
     }
   });
 

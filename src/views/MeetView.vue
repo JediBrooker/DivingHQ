@@ -19,6 +19,13 @@ import FeePreviewCard from '@/components/payments/FeePreviewCard.vue'
 const route = useRoute()
 const router = useRouter()
 
+// Public access purchases shown on the meet page (each hidden until on sale).
+const accessKinds = [
+  { kind: 'spectator_ticket', title: 'Spectator ticket' },
+  { kind: 'livestream', title: 'Livestream access' },
+  { kind: 'programme', title: 'Programme' },
+]
+
 const meet = ref(null)
 const events = ref([])
 const participatingOrgs = ref([])
@@ -351,6 +358,17 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
           title="Meet registration"
           :load-url="`/api/meets/${meet.id}/fees`"
           coming-soon-message="Online meet registration is coming soon."
+        />
+        <!-- Public access purchases — each hidden until the federation puts
+             it on sale, then shown with a coming-soon pay action. -->
+        <FeePreviewCard
+          v-for="a in accessKinds"
+          :key="a.kind"
+          hide-when-unset
+          :title="a.title"
+          :load-url="`/api/meets/${meet.id}/access?kind=${a.kind}`"
+          :checkout-url="`/api/meets/${meet.id}/access/checkout?kind=${a.kind}`"
+          coming-soon-message="Online sales are coming soon."
         />
       </section>
 

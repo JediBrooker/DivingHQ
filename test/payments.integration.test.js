@@ -703,3 +703,66 @@ test("webhook activates the accreditation and the official read flips to active"
   const res = await api("GET", `/api/orgs/${orgId}/official-accreditation?role_type=judge`);
   assert.equal((await res.json()).fee.active, true);
 });
+
+// ---- Meet access (spectator ticket / livestream / programme) --------
+
+test("federation sets a spectator ticket fee for a meet", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/meets/${meetId}/access-fee`, {
+    kind: "spectator_ticket", currency: "GBP",
+    prices: [{ label: "day", amount_cents: 1500, audience: "all" }],
+  });
+  assert.equal(res.status, 200);
+  assert.ok((await res.json()).id);
+});
+
+test("an invalid access kind is rejected", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/meets/${meetId}/access-fee`, {
+    kind: "vip_lounge", currency: "GBP",
+    prices: [{ label: "x", amount_cents: 1000, audience: "all" }],
+  });
+  assert.equal(res.status, 400);
+});
+
+test("a buyer sees the spectator ticket price and not-yet-purchased", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("GET", `/api/meets/${meetId}/access?kind=spectator_ticket`);
+  assert.equal(res.status, 200);
+  const fee = (await res.json()).fee;
+  assert.equal(fee.kind, "spectator_ticket");
+  assert.equal(fee.price.amount_cents, 1500);
+  assert.equal(fee.already_paid, false);
+});
+
+let accessPaymentId;
+test("buying meet access records a payment with meet_id and the 15% fee", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/meets/${meetId}/access/checkout?kind=spectator_ticket`, {});
+  assert.equal(res.status, 200);
+  accessPaymentId = (await res.json()).payment_id;
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [accessPaymentId])).rows[0];
+  assert.equal(row.subject_type, "spectator_ticket");
+  assert.equal(row.meet_id, meetId);
+  assert.equal(row.payer_user_id, userId);
+  assert.equal(row.amount_cents, 1500);
+  assert.equal(row.platform_fee_cents, 225); // 15% of 1500
+});
+
+test("a second purchase of the same access is blocked while one is live", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/meets/${meetId}/access/checkout?kind=spectator_ticket`, {});
+  assert.equal(res.status, 409);
+});
+
+test("the webhook marks access paid and the read flips to purchased", async (t) => {
+  if (!ready) return t.skip();
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_access", client_reference_id: accessPaymentId, payment_intent: "pi_access" } },
+  });
+  const row = (await pool.query("SELECT status FROM payments WHERE id = $1", [accessPaymentId])).rows[0];
+  assert.equal(row.status, "paid");
+  const res = await api("GET", `/api/meets/${meetId}/access?kind=spectator_ticket`);
+  assert.equal((await res.json()).fee.already_paid, true);
+});
