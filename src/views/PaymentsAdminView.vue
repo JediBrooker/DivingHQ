@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 import MembershipFeeEditor from '@/components/payments/MembershipFeeEditor.vue'
 import ClubFeesEditor from '@/components/payments/ClubFeesEditor.vue'
+import OfficialFeesEditor from '@/components/payments/OfficialFeesEditor.vue'
 
 const auth = useAuthStore()
 const orgId = computed(() => auth.user?.org_id)
@@ -83,6 +84,15 @@ onMounted(loadStatus)
         Set them here; track who's paid in the Clubs list.
       </p>
       <ClubFeesEditor v-if="orgId" :org-id="orgId" />
+    </div>
+
+    <div class="card">
+      <h2>Accreditation fees</h2>
+      <p class="muted">
+        Annual accreditation fees for officials and coaches, per role.
+        They pay from their own Accreditation page.
+      </p>
+      <OfficialFeesEditor v-if="orgId" :org-id="orgId" />
     </div>
   </section>
 </template>

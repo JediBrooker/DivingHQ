@@ -161,6 +161,7 @@ after(async () => {
   if (orgId) {
     await pool.query("DELETE FROM payments WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM club_affiliations WHERE org_id = $1", [orgId]);
+    await pool.query("DELETE FROM official_accreditations WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM clubs WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM memberships WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM fee_prices WHERE fee_definition_id IN (SELECT id FROM fee_definitions WHERE org_id = $1)", [orgId]);
@@ -470,5 +471,75 @@ test("webhook activates the club affiliation period and the read flips to active
   assert.ok(new Date(aff[0].period_end) > new Date(aff[0].period_start));
 
   const res = await api("GET", `/api/clubs/${clubId}/affiliation?kind=affiliation`);
+  assert.equal((await res.json()).fee.active, true);
+});
+
+// ---- Official / coach accreditation --------------------------------
+
+test("federation sets a judge accreditation fee", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/orgs/${orgId}/official-fee`, {
+    role_type: "judge", currency: "GBP",
+    prices: [{ label: "annual", amount_cents: 4000, audience: "all" }],
+  });
+  assert.equal(res.status, 200);
+  assert.ok((await res.json()).id);
+});
+
+test("an invalid official role_type is rejected", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/orgs/${orgId}/official-fee`, {
+    role_type: "wizard", currency: "GBP",
+    prices: [{ label: "annual", amount_cents: 4000, audience: "all" }],
+  });
+  assert.equal(res.status, 400);
+});
+
+test("an official sees the accreditation price and inactive status", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("GET", `/api/orgs/${orgId}/official-accreditation?role_type=judge`);
+  assert.equal(res.status, 200);
+  const fee = (await res.json()).fee;
+  assert.equal(fee.role_type, "judge");
+  assert.equal(fee.price.amount_cents, 4000);
+  assert.equal(fee.active, false);
+});
+
+let officialPaymentId;
+test("official accreditation checkout records an official_role payment with the 15% fee", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/orgs/${orgId}/official-accreditation/checkout?role_type=judge`, {});
+  assert.equal(res.status, 200);
+  officialPaymentId = (await res.json()).payment_id;
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [officialPaymentId])).rows[0];
+  assert.equal(row.status, "pending");
+  assert.equal(row.payer_type, "official_role");
+  assert.equal(row.payer_user_id, userId);
+  assert.equal(row.payer_role_type, "judge");
+  assert.equal(row.amount_cents, 4000);
+  assert.equal(row.platform_fee_cents, 600);  // 15% of 4000
+  assert.equal(row.subject_type, "official_accreditation");
+});
+
+test("a second accreditation checkout for the same role is blocked while one is live", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/orgs/${orgId}/official-accreditation/checkout?role_type=judge`, {});
+  assert.equal(res.status, 409);
+});
+
+test("webhook activates the accreditation and the official read flips to active", async (t) => {
+  if (!ready) return t.skip();
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_off", client_reference_id: officialPaymentId, payment_intent: "pi_off" } },
+  });
+  const acc = (await pool.query(
+    "SELECT * FROM official_accreditations WHERE org_id = $1 AND user_id = $2 AND role_type = 'judge' AND status = 'active'",
+    [orgId, userId],
+  )).rows;
+  assert.equal(acc.length, 1);
+  assert.ok(new Date(acc[0].period_end) > new Date(acc[0].period_start));
+
+  const res = await api("GET", `/api/orgs/${orgId}/official-accreditation?role_type=judge`);
   assert.equal((await res.json()).fee.active, true);
 });
