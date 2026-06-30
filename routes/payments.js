@@ -982,12 +982,17 @@ module.exports = function createPaymentsRouter({
     if (v.error) return res.status(400).json({ error: v.error });
     try {
       const scope = clubScope(body.kind);
+      // A club fee is a single FLAT price — the payer is a CLUB, never a
+      // "member", so audience tiers / time windows are meaningless and would
+      // only let the fee silently vanish at resolve time (resolveClubFee
+      // resolves isMember:false at now). Force audience 'all', no window.
+      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
       const feeId = await upsertFee({
         orgId,
         scope,
         name: body.name || (scope === "club_accreditation" ? "Club accreditation" : "Club affiliation"),
         body,
-        cleanPrices: v.prices,
+        cleanPrices: [flatPrice],
       });
       return res.json({ id: feeId });
     } catch (err) {

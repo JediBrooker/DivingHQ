@@ -474,6 +474,31 @@ test("webhook activates the club affiliation period and the read flips to active
   assert.equal((await res.json()).fee.active, true);
 });
 
+test("a member-only / windowed club fee is coerced to a flat 'all' price", async (t) => {
+  if (!ready) return t.skip();
+  // A federation mis-configures the (accreditation) club fee with an audience
+  // + a closed window; clubs are never "members", so the server must flatten
+  // it or the fee would silently vanish at resolve time.
+  const res = await api("PUT", `/api/orgs/${orgId}/club-fee`, {
+    kind: "accreditation", currency: "GBP",
+    prices: [{ label: "annual", amount_cents: 9000, audience: "member", starts_at: "2020-01-01", ends_at: "2020-02-01" }],
+  });
+  assert.equal(res.status, 200);
+  // The club can still see the price despite the member/window input.
+  const read = await api("GET", `/api/clubs/${clubId}/affiliation?kind=accreditation`);
+  assert.equal((await read.json()).fee.price.amount_cents, 9000);
+  // The stored variant was forced to audience 'all' with no window.
+  const variant = (await pool.query(
+    `SELECT fp.audience, fp.starts_at, fp.ends_at
+       FROM fee_prices fp JOIN fee_definitions fd ON fd.id = fp.fee_definition_id
+      WHERE fd.org_id = $1 AND fd.scope = 'club_accreditation' AND fd.active`,
+    [orgId],
+  )).rows[0];
+  assert.equal(variant.audience, "all");
+  assert.equal(variant.starts_at, null);
+  assert.equal(variant.ends_at, null);
+});
+
 // ---- Official / coach accreditation --------------------------------
 
 test("federation sets a judge accreditation fee", async (t) => {
