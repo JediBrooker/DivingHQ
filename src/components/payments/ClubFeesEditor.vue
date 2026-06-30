@@ -41,6 +41,7 @@ const saveUrl = computed(() => `/api/orgs/${props.orgId}/club-fee`)
     </div>
     <FeeEditor
       :key="active"
+      flat
       :title="`Club ${activeLabel}`"
       :load-url="loadUrl"
       :save-url="saveUrl"
