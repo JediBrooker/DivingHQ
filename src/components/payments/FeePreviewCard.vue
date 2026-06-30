@@ -6,7 +6,7 @@
 // go live and a `checkoutUrl` is supplied, the button becomes a real
 // "Pay" that hands off to Stripe. One card reused across membership,
 // club affiliation, fines, spectator access, owed entry charges, etc.
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
@@ -26,6 +26,16 @@ const fee = ref(null)
 const enabled = ref(true)
 const loading = ref(true)
 const busy = ref(false)
+
+// The buyer already holds this (paid / member / active accreditation) — show
+// a confirmed state instead of an actionable Pay button. The flag name
+// varies by endpoint, so accept any of them.
+const owned = computed(() => !!(fee.value && (fee.value.already_paid || fee.value.already_member || fee.value.active)))
+const ownedLabel = computed(() => {
+  if (fee.value?.already_member) return '✓ Member'
+  if (fee.value?.active) return '✓ Active'
+  return '✓ Purchased'
+})
 
 function money(cents, currency) {
   if (cents == null) return ''
@@ -74,10 +84,13 @@ onMounted(load)
         <span v-if="fee.is_member" class="fp-badge">member</span>
         <span v-else-if="fee.tier" class="fp-badge">{{ fee.tier }}</span>
       </p>
-      <button class="fp-pay" :disabled="!enabled || busy || !checkoutUrl" @click="pay">
-        {{ !enabled ? 'Coming soon' : (busy ? 'Redirecting…' : 'Pay') }}
-      </button>
-      <ComingSoonBanner v-if="!enabled" :message="comingSoonMessage" />
+      <p v-if="owned" class="fp-owned">{{ ownedLabel }}</p>
+      <template v-else>
+        <button class="fp-pay" :disabled="!enabled || busy || !checkoutUrl" @click="pay">
+          {{ !enabled ? 'Coming soon' : (busy ? 'Redirecting…' : 'Pay') }}
+        </button>
+        <ComingSoonBanner v-if="!enabled" :message="comingSoonMessage" />
+      </template>
     </template>
     <p v-else-if="!hideWhenUnset" class="muted">No {{ title.toLowerCase() }} is set for this yet.</p>
   </div>
@@ -90,5 +103,6 @@ onMounted(load)
 .fp-badge { margin-left: .4rem; font-size: .72rem; padding: .05rem .4rem; border-radius: .4rem; background: var(--accent-soft, #eef); color: var(--accent, #3b6); text-transform: capitalize; }
 .fp-pay { align-self: flex-start; padding: .5rem 1rem; border: 0; border-radius: .5rem; background: var(--accent, #3b6); color: #fff; cursor: pointer; }
 .fp-pay:disabled { opacity: .6; cursor: default; }
+.fp-owned { align-self: flex-start; margin: 0; color: var(--green, #2a7); font-weight: 600; }
 .muted { color: var(--muted, #777); }
 </style>
