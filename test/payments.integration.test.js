@@ -160,6 +160,7 @@ after(async () => {
   if (server) await new Promise((res) => server.close(res));
   if (orgId) {
     await pool.query("DELETE FROM payments WHERE org_id = $1", [orgId]);
+    await pool.query("DELETE FROM entry_charges WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM club_affiliations WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM official_accreditations WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM clubs WHERE org_id = $1", [orgId]);
@@ -497,6 +498,140 @@ test("a member-only / windowed club fee is coerced to a flat 'all' price", async
   assert.equal(variant.audience, "all");
   assert.equal(variant.starts_at, null);
   assert.equal(variant.ends_at, null);
+});
+
+// ---- Scratch / no-show penalties (entry_charges) -------------------
+
+test("federation sets a scratch penalty fee", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/events/${lateEventId}/penalty-fee`, {
+    kind: "scratch", currency: "GBP",
+    prices: [{ label: "scratch", amount_cents: 2500, audience: "all" }],
+  });
+  assert.equal(res.status, 200);
+  assert.ok((await res.json()).id);
+});
+
+let scratchChargeId;
+test("an admin issues a scratch charge against an entrant", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/events/${lateEventId}/entry-charges`, {
+    entrant_user_id: userId, kind: "scratch",
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  scratchChargeId = body.id;
+  assert.equal(body.amount_cents, 2500);
+  const row = (await pool.query("SELECT * FROM entry_charges WHERE id = $1", [scratchChargeId])).rows[0];
+  assert.equal(row.status, "owed");
+  assert.equal(row.entrant_user_id, userId);
+  assert.equal(row.triggered_by, userId);
+});
+
+test("re-issuing the same scratch charge is blocked", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/events/${lateEventId}/entry-charges`, {
+    entrant_user_id: userId, kind: "scratch",
+  });
+  assert.equal(res.status, 409);
+});
+
+test("the event's charge list shows the owed scratch", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("GET", `/api/events/${lateEventId}/entry-charges`);
+  const charges = (await res.json()).charges;
+  const mine = charges.find((c) => c.id === scratchChargeId);
+  assert.ok(mine);
+  assert.equal(mine.kind, "scratch");
+  assert.equal(mine.status, "owed");
+  assert.equal(mine.amount_cents, 2500);
+  assert.equal(mine.entrant_name, "Test Diver");
+});
+
+test("the diver sees the owed charge under /api/me/charges", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("GET", "/api/me/charges");
+  const charges = (await res.json()).charges;
+  assert.ok(charges.some((c) => c.id === scratchChargeId && c.status === "owed"));
+});
+
+let chargePaymentId;
+test("paying a charge records a scratch payment with the 15% fee and links it", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/entry-charges/${scratchChargeId}/checkout`, {});
+  assert.equal(res.status, 200);
+  chargePaymentId = (await res.json()).payment_id;
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [chargePaymentId])).rows[0];
+  assert.equal(row.subject_type, "scratch");
+  assert.equal(row.payer_user_id, userId);
+  assert.equal(row.event_id, lateEventId);
+  assert.equal(row.amount_cents, 2500);
+  assert.equal(row.platform_fee_cents, 375); // 15% of 2500
+  const ec = (await pool.query("SELECT payment_id, status FROM entry_charges WHERE id = $1", [scratchChargeId])).rows[0];
+  assert.equal(ec.payment_id, chargePaymentId);
+  assert.equal(ec.status, "owed"); // not settled until the webhook
+});
+
+test("the webhook settles the charge to paid", async (t) => {
+  if (!ready) return t.skip();
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_charge", client_reference_id: chargePaymentId, payment_intent: "pi_charge" } },
+  });
+  const ec = (await pool.query("SELECT status FROM entry_charges WHERE id = $1", [scratchChargeId])).rows[0];
+  assert.equal(ec.status, "paid");
+  // It drops off the diver's outstanding list.
+  const res = await api("GET", "/api/me/charges");
+  assert.ok(!(await res.json()).charges.some((c) => c.id === scratchChargeId));
+});
+
+test("a full refund re-opens the paid charge as owed", async (t) => {
+  if (!ready) return t.skip();
+  await api("POST", "/webhooks/stripe", {
+    type: "charge.refunded",
+    data: { object: { payment_intent: "pi_charge", amount_refunded: 2500 } },
+  });
+  const p = (await pool.query("SELECT status FROM payments WHERE id = $1", [chargePaymentId])).rows[0];
+  assert.equal(p.status, "refunded");
+  const ec = (await pool.query("SELECT status FROM entry_charges WHERE id = $1", [scratchChargeId])).rows[0];
+  assert.equal(ec.status, "owed");
+});
+
+test("waiving a charge with a checkout in flight kills the session and can't be paid", async (t) => {
+  if (!ready) return t.skip();
+  await api("PUT", `/api/events/${lateEventId}/penalty-fee`, {
+    kind: "no_show", currency: "GBP",
+    prices: [{ label: "no_show", amount_cents: 1000, audience: "all" }],
+  });
+  const issued = await api("POST", `/api/events/${lateEventId}/entry-charges`, {
+    entrant_user_id: userId, kind: "no_show",
+  });
+  const chargeId = (await issued.json()).id;
+
+  // Entrant opens checkout — a pending payment is linked to the charge.
+  const co = await api("POST", `/api/entry-charges/${chargeId}/checkout`, {});
+  assert.equal(co.status, 200);
+  const payId = (await co.json()).payment_id;
+
+  // Admin waives — the in-flight session must be expired + the payment failed.
+  lastExpireArgs = null;
+  const res = await api("POST", `/api/entry-charges/${chargeId}/waive`, {});
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).status, "waived");
+  assert.ok(lastExpireArgs, "the open session should be expired on waive");
+  const p = (await pool.query("SELECT status FROM payments WHERE id = $1", [payId])).rows[0];
+  assert.equal(p.status, "failed");
+  let ec = (await pool.query("SELECT status FROM entry_charges WHERE id = $1", [chargeId])).rows[0];
+  assert.equal(ec.status, "waived");
+
+  // A late webhook completion for the killed session is a no-op (payment is
+  // failed, not pending), so the charge stays waived and money is never taken.
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_waived", client_reference_id: payId, payment_intent: "pi_waived" } },
+  });
+  ec = (await pool.query("SELECT status FROM entry_charges WHERE id = $1", [chargeId])).rows[0];
+  assert.equal(ec.status, "waived");
 });
 
 // ---- Official / coach accreditation --------------------------------
