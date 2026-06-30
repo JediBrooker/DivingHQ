@@ -1570,7 +1570,15 @@ module.exports = function createPaymentsRouter({
               logger.warn({ err: e.message }, "[payments] could not expire session on waive");
             }
           }
-          await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [p.id]);
+          const upd = await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [p.id]);
+          if (upd.rowCount === 0) {
+            // The payment left 'pending' between our read and the update — if
+            // the webhook just settled it, don't waive a now-paid charge.
+            const fresh = (await pool.query("SELECT status FROM payments WHERE id = $1", [p.id])).rows[0];
+            if (fresh && fresh.status === "paid") {
+              return res.status(409).json({ error: "A payment just completed for this charge — refund it instead of waiving." });
+            }
+          }
         }
       }
       await pool.query("UPDATE entry_charges SET status = 'waived' WHERE id = $1 AND status = 'owed'", [req.params.id]);
