@@ -17,6 +17,8 @@ const entrants = ref([])
 const enabled = ref(true)
 const loading = ref(true)
 const busy = ref(false)
+const loadError = ref(false)
+const entrantsError = ref(false)
 const form = ref({ entrant_user_id: '', kind: 'scratch' })
 
 const KIND_LABELS = { scratch: 'Scratch', no_show: 'No-show' }
@@ -33,11 +35,13 @@ function money(cents, currency) {
 const canIssue = computed(() => enabled.value && form.value.entrant_user_id && !busy.value)
 
 async function loadCharges() {
+  loadError.value = false
   try {
     const r = await auth.apiFetch(`/api/events/${props.eventId}/entry-charges`)
     charges.value = r.charges || []
     enabled.value = r.payments_enabled !== false
   } catch (e) {
+    loadError.value = true
     showError(e.message || 'Could not load charges')
   }
 }
@@ -55,6 +59,7 @@ async function loadEntrants() {
     entrants.value = [...seen.values()].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   } catch {
     entrants.value = []
+    entrantsError.value = true
   }
 }
 
@@ -104,6 +109,7 @@ onMounted(async () => {
       message="Penalty charges are coming soon. Set the prices above, then you'll be able to issue them here."
     />
     <p v-if="loading" class="muted">Loading…</p>
+    <p v-else-if="loadError" class="err">Couldn't load charges. Close and reopen this event to retry.</p>
     <template v-else>
       <!-- Issue a new charge -->
       <div class="issue-row">
@@ -117,6 +123,7 @@ onMounted(async () => {
         </select>
         <button type="button" class="btn" :disabled="!canIssue" @click="issue">Issue charge</button>
       </div>
+      <p v-if="entrantsError" class="err">Couldn't load the entrant list — you may not have roster access for this event.</p>
 
       <!-- Existing charges -->
       <table v-if="charges.length" class="charges">
@@ -143,6 +150,7 @@ onMounted(async () => {
 <style scoped>
 .penalties-panel { display: flex; flex-direction: column; gap: .5rem; }
 .muted { color: var(--muted, #777); font-size: .85rem; }
+.err { color: var(--danger, #c33); font-size: .85rem; margin: 0; }
 .issue-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .ctl { padding: .35rem .6rem; border: 1px solid var(--border, #ddd); border-radius: .5rem; background: transparent; color: var(--fg, #222); font-size: .85rem; }
 .btn { padding: .4rem .8rem; border: 0; border-radius: .5rem; background: var(--accent, #3b6); color: #fff; cursor: pointer; font-size: .85rem; }

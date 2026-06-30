@@ -161,6 +161,18 @@ async function onChargeRefunded(pool, charge) {
         AND status IN ('paid', 'partially_refunded')`,
     [pi, charge.amount_refunded || 0],
   );
+  // A fully-refunded penalty re-opens its entry-charge: the money was
+  // returned, so the debit is owed again (an admin can then waive it if the
+  // refund was meant as forgiveness). Only full refunds flip the payment to
+  // 'refunded', so this scopes itself to those.
+  await pool.query(
+    `UPDATE entry_charges SET status = 'owed'
+      WHERE status = 'paid'
+        AND payment_id IN (
+          SELECT id FROM payments WHERE stripe_payment_intent = $1 AND status = 'refunded'
+        )`,
+    [pi],
+  );
 }
 
 module.exports = function createStripeWebhook({ pool, logger, payments }) {

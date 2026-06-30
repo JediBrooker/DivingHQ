@@ -585,7 +585,19 @@ test("the webhook settles the charge to paid", async (t) => {
   assert.ok(!(await res.json()).charges.some((c) => c.id === scratchChargeId));
 });
 
-test("an admin can waive an owed no-show charge", async (t) => {
+test("a full refund re-opens the paid charge as owed", async (t) => {
+  if (!ready) return t.skip();
+  await api("POST", "/webhooks/stripe", {
+    type: "charge.refunded",
+    data: { object: { payment_intent: "pi_charge", amount_refunded: 2500 } },
+  });
+  const p = (await pool.query("SELECT status FROM payments WHERE id = $1", [chargePaymentId])).rows[0];
+  assert.equal(p.status, "refunded");
+  const ec = (await pool.query("SELECT status FROM entry_charges WHERE id = $1", [scratchChargeId])).rows[0];
+  assert.equal(ec.status, "owed");
+});
+
+test("waiving a charge with a checkout in flight kills the session and can't be paid", async (t) => {
   if (!ready) return t.skip();
   await api("PUT", `/api/events/${lateEventId}/penalty-fee`, {
     kind: "no_show", currency: "GBP",
@@ -595,10 +607,30 @@ test("an admin can waive an owed no-show charge", async (t) => {
     entrant_user_id: userId, kind: "no_show",
   });
   const chargeId = (await issued.json()).id;
+
+  // Entrant opens checkout — a pending payment is linked to the charge.
+  const co = await api("POST", `/api/entry-charges/${chargeId}/checkout`, {});
+  assert.equal(co.status, 200);
+  const payId = (await co.json()).payment_id;
+
+  // Admin waives — the in-flight session must be expired + the payment failed.
+  lastExpireArgs = null;
   const res = await api("POST", `/api/entry-charges/${chargeId}/waive`, {});
   assert.equal(res.status, 200);
   assert.equal((await res.json()).status, "waived");
-  const ec = (await pool.query("SELECT status FROM entry_charges WHERE id = $1", [chargeId])).rows[0];
+  assert.ok(lastExpireArgs, "the open session should be expired on waive");
+  const p = (await pool.query("SELECT status FROM payments WHERE id = $1", [payId])).rows[0];
+  assert.equal(p.status, "failed");
+  let ec = (await pool.query("SELECT status FROM entry_charges WHERE id = $1", [chargeId])).rows[0];
+  assert.equal(ec.status, "waived");
+
+  // A late webhook completion for the killed session is a no-op (payment is
+  // failed, not pending), so the charge stays waived and money is never taken.
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_waived", client_reference_id: payId, payment_intent: "pi_waived" } },
+  });
+  ec = (await pool.query("SELECT status FROM entry_charges WHERE id = $1", [chargeId])).rows[0];
   assert.equal(ec.status, "waived");
 });
 

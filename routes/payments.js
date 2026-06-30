@@ -559,10 +559,10 @@ module.exports = function createPaymentsRouter({
       const ins = await pool.query(
         `INSERT INTO payments
             (org_id, fee_definition_id, payer_user_id, subject_type, event_id,
-             amount_cents, platform_fee_cents, currency, fee_payer, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+             amount_cents, platform_fee_cents, currency, fee_payer, entry_charge_id, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
          RETURNING id`,
-        [org.id, fee.id, userId, charge.kind, charge.event_id, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
+        [org.id, fee.id, userId, charge.kind, charge.event_id, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer, charge.id],
       );
       paymentId = ins.rows[0].id;
     } catch (e) {
@@ -1536,11 +1536,42 @@ module.exports = function createPaymentsRouter({
   // Waive an owed charge (admin). Gated by org role + same-org check.
   router.post("/api/entry-charges/:id/waive", requireOrgRole(["org_admin", "meet_manager"]), async (req, res) => {
     try {
-      const charge = (await pool.query("SELECT id, org_id, status FROM entry_charges WHERE id = $1", [req.params.id])).rows[0];
+      const charge = (await pool.query(
+        "SELECT id, org_id, status, payment_id FROM entry_charges WHERE id = $1",
+        [req.params.id],
+      )).rows[0];
       if (!charge) return res.status(404).json({ error: "Charge not found" });
       if (!ownsOrg(req, charge.org_id)) return res.status(403).json({ error: "Forbidden" });
       if (charge.status !== "owed") {
         return res.status(409).json({ error: `Cannot waive a charge that is ${charge.status}.` });
+      }
+      // Kill any in-flight checkout for this charge BEFORE waiving — otherwise
+      // the entrant could complete a still-valid Stripe session and pay a
+      // debit that's been waived (money captured, charge says 'waived', no
+      // refund). Expire the session + fail the pending payment. A payment
+      // that's already 'paid' means the charge would be 'paid' (settled by
+      // the webhook), so the status guard above already blocked it.
+      if (charge.payment_id) {
+        const p = (await pool.query(
+          "SELECT id, status, stripe_checkout_session FROM payments WHERE id = $1",
+          [charge.payment_id],
+        )).rows[0];
+        if (p && p.status === "paid") {
+          return res.status(409).json({ error: "This charge has already been paid — refund it instead of waiving." });
+        }
+        if (p && p.status === "pending") {
+          const acct = (await pool.query(
+            "SELECT stripe_account_id FROM organisations WHERE id = $1", [charge.org_id],
+          )).rows[0]?.stripe_account_id;
+          if (payments.enabled && p.stripe_checkout_session && acct) {
+            try {
+              await payments.expireCheckoutSession({ connectedAccountId: acct, sessionId: p.stripe_checkout_session });
+            } catch (e) {
+              logger.warn({ err: e.message }, "[payments] could not expire session on waive");
+            }
+          }
+          await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [p.id]);
+        }
       }
       await pool.query("UPDATE entry_charges SET status = 'waived' WHERE id = $1 AND status = 'owed'", [req.params.id]);
       return res.json({ status: "waived" });
