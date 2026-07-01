@@ -138,6 +138,38 @@ module.exports = function createPaymentsRouter({
     return req.user.is_system_admin || req.user.org_id === orgId;
   }
 
+  // Balance (minor units) the platform still owes a federation: net of all
+  // collected payments (fee prorated on partial refunds, clamped >= 0) minus
+  // everything already withdrawn (pending + paid payouts). Runs on `db` so it
+  // can share a transaction / row-lock with a withdrawal insert.
+  async function orgBalancesByCurrency(orgId, db = pool) {
+    // Net owed PER CURRENCY: collected (fee prorated on partial refunds,
+    // clamped >= 0) minus what's already withdrawn, grouped by currency so a
+    // federation that took payments in more than one currency is never summed
+    // into one meaningless number or paid out in the wrong currency.
+    const collected = (await db.query(
+      `SELECT currency, COALESCE(SUM(GREATEST(0,
+          CASE status
+            WHEN 'paid' THEN amount_cents - platform_fee_cents
+            WHEN 'partially_refunded' THEN ROUND(
+              (amount_cents - platform_fee_cents)::numeric
+                * (amount_cents - COALESCE(refunded_amount_cents, 0)) / NULLIF(amount_cents, 0))
+            ELSE 0 END)), 0)::bigint AS net
+         FROM payments WHERE org_id = $1 GROUP BY currency`,
+      [orgId],
+    )).rows;
+    const paid = (await db.query(
+      `SELECT currency, COALESCE(SUM(amount_cents), 0)::bigint AS n
+         FROM payouts WHERE org_id = $1 AND status IN ('pending', 'paid') GROUP BY currency`,
+      [orgId],
+    )).rows;
+    const paidByCur = new Map(paid.map((r) => [r.currency, Number(r.n)]));
+    return collected
+      .map((r) => ({ currency: r.currency, cents: Number(r.net) - (paidByCur.get(r.currency) || 0) }))
+      .filter((b) => b.cents > 0)
+      .sort((a, b) => b.cents - a.cents);
+  }
+
   // Is this user an active member of the org right now?
   async function isActiveMember(db, orgId, userId) {
     if (!userId) return false;
@@ -724,7 +756,9 @@ module.exports = function createPaymentsRouter({
     if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
     try {
       const org = (await pool.query(
-        "SELECT payout_account_name, payout_account_details, default_currency FROM organisations WHERE id = $1",
+        `SELECT payout_account_name, payout_account_details, default_currency,
+                auto_withdraw_enabled, auto_withdraw_min_cents
+           FROM organisations WHERE id = $1`,
         [orgId],
       )).rows[0];
       if (!org) return res.status(404).json({ error: "Organisation not found" });
@@ -732,31 +766,23 @@ module.exports = function createPaymentsRouter({
         payout_details_set: !!(org.payout_account_name && org.payout_account_details),
         account_name: org.payout_account_name || null,
         currency: org.default_currency || null,
+        auto_withdraw_enabled: !!org.auto_withdraw_enabled,
+        auto_withdraw_min_cents: org.auto_withdraw_min_cents ?? null,
       };
-      // Coming-soon: report payout details (they don't need Stripe) but no
-      // balance until payments are switched on.
-      if (!payments.enabled) return res.json({ enabled: false, ...base, balance_cents: 0 });
-      // Net owed per payment: full net when paid; on a PARTIAL refund the fee
-      // is prorated to the retained portion (so the platform's take stays 15%
-      // of retained revenue, not 15% of the whole); clamped at >= 0 so an
-      // over-refund can't drive a row negative. Fully-refunded/failed/pending
-      // and amount-0 bundle grants contribute 0.
-      const collected = (await pool.query(
-        `SELECT COALESCE(SUM(GREATEST(0,
-            CASE status
-              WHEN 'paid' THEN amount_cents - platform_fee_cents
-              WHEN 'partially_refunded' THEN ROUND(
-                (amount_cents - platform_fee_cents)::numeric
-                  * (amount_cents - COALESCE(refunded_amount_cents, 0)) / NULLIF(amount_cents, 0))
-              ELSE 0 END)), 0)::bigint AS net
-           FROM payments WHERE org_id = $1`,
-        [orgId],
-      )).rows[0].net;
-      const paidOut = (await pool.query(
-        "SELECT COALESCE(SUM(amount_cents), 0)::bigint AS n FROM payouts WHERE org_id = $1 AND status IN ('pending', 'paid')",
-        [orgId],
-      )).rows[0].n;
-      return res.json({ enabled: true, ...base, balance_cents: Number(collected) - Number(paidOut) });
+      // Coming-soon: report payout + auto-withdraw settings (they don't need
+      // Stripe) but no balance until payments are switched on.
+      if (!payments.enabled) return res.json({ enabled: false, ...base, balances: [], balance_cents: 0 });
+      const balances = await orgBalancesByCurrency(orgId);
+      const primary = balances[0] || null;
+      return res.json({
+        enabled: true,
+        ...base,
+        // Per-currency amounts owed; the UI renders each in its own currency.
+        balances,
+        // Convenience for the common single-currency case: the largest bucket.
+        balance_cents: primary ? primary.cents : 0,
+        currency: primary ? primary.currency : base.currency,
+      });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] payout status failed");
       return res.status(err.status || 500).json({ error: err.message || "Status check failed" });
@@ -779,6 +805,107 @@ module.exports = function createPaymentsRouter({
     } catch (err) {
       logger.error({ err: err.message }, "[payments] save payout details failed");
       return res.status(500).json({ error: "Failed to save payout details." });
+    }
+  });
+
+  // Federation saves its automatic-withdrawal preference. Savable any time
+  // (even in coming-soon mode) so it's ready when payments go live — the
+  // auto-payout job reads these columns then. A threshold (minor units) is
+  // required when enabled.
+  router.put("/api/orgs/:id/withdrawal-settings", requireOrgRole(["org_admin"]), async (req, res) => {
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    const body = req.body || {};
+    const enabled = body.auto_withdraw_enabled === true;
+    let minCents = null;
+    if (enabled) {
+      minCents = Math.floor(Number(body.auto_withdraw_min_cents));
+      if (!Number.isFinite(minCents) || minCents < 100) {
+        return res.status(400).json({ error: "Set an automatic-withdrawal threshold of at least 1.00." });
+      }
+      if (minCents > 100000000) {
+        return res.status(400).json({ error: "That threshold is too large." });
+      }
+    }
+    try {
+      await pool.query(
+        "UPDATE organisations SET auto_withdraw_enabled = $1, auto_withdraw_min_cents = $2 WHERE id = $3",
+        [enabled, minCents, orgId],
+      );
+      return res.json({ ok: true, auto_withdraw_enabled: enabled, auto_withdraw_min_cents: minCents });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] save withdrawal settings failed");
+      return res.status(500).json({ error: "Failed to save withdrawal settings." });
+    }
+  });
+
+  // Federation's withdrawal (payout) history — most recent first.
+  router.get("/api/orgs/:id/withdrawals", requireOrgRole(["org_admin"]), async (req, res) => {
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    try {
+      const r = await pool.query(
+        `SELECT id, amount_cents, currency, status, note, created_at, paid_at
+           FROM payouts WHERE org_id = $1 ORDER BY created_at DESC LIMIT 100`,
+        [orgId],
+      );
+      return res.json(r.rows);
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] list withdrawals failed");
+      return res.status(500).json({ error: "Failed to load withdrawals." });
+    }
+  });
+
+  // Federation requests a withdrawal of its owed balance. Only meaningful once
+  // payments are live (nothing to withdraw while dormant, so ensurePayments
+  // 503s). The org row is locked FOR UPDATE so two concurrent requests can't
+  // both read the same balance and over-withdraw. Records one pending
+  // payout PER CURRENCY; the actual bank transfer is settled out-of-band.
+  router.post("/api/orgs/:id/withdrawals", requireOrgRole(["org_admin"]), async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const org = (await client.query(
+        "SELECT payout_account_name, payout_account_details FROM organisations WHERE id = $1 FOR UPDATE",
+        [orgId],
+      )).rows[0];
+      if (!org) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Organisation not found" });
+      }
+      if (!org.payout_account_name || !org.payout_account_details) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ error: "Add your payout bank details before withdrawing." });
+      }
+      const note = ((req.body || {}).note || "").toString().trim().slice(0, 200) || null;
+      const balances = await orgBalancesByCurrency(orgId, client);
+      if (!balances.length) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ error: "You have no balance to withdraw." });
+      }
+      // One pending payout per currency, each stamped with ITS own currency
+      // and amount — never a cross-currency sum booked in the wrong currency.
+      const payouts = [];
+      for (const b of balances) {
+        const row = (await client.query(
+          `INSERT INTO payouts (org_id, amount_cents, currency, status, note)
+           VALUES ($1, $2, $3, 'pending', $4)
+           RETURNING id, amount_cents, currency, status, note, created_at, paid_at`,
+          [orgId, b.cents, b.currency, note],
+        )).rows[0];
+        payouts.push(row);
+      }
+      await client.query("COMMIT");
+      return res.status(201).json(payouts);
+    } catch (err) {
+      await client.query("ROLLBACK").catch(() => {});
+      logger.error({ err: err.message }, "[payments] withdrawal request failed");
+      return res.status(err.status || 500).json({ error: err.message || "Withdrawal failed." });
+    } finally {
+      client.release();
     }
   });
 
