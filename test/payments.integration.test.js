@@ -844,3 +844,18 @@ test("the webhook expands the bundle into a paid entry for each event", async (t
   const res = await api("GET", `/api/meets/${meetId}/bundle`);
   assert.equal((await res.json()).fee.already_paid, true);
 });
+
+test("refunding the bundle revokes the granted per-event entries", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/payments/${bundlePaymentId}/refund`, {});
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).status, "refunded");
+  for (const evId of [bundleEvA, bundleEvB]) {
+    const r = await pool.query(
+      "SELECT status FROM payments WHERE event_id = $1 AND payer_user_id = $2 AND subject_type = 'event_entry' AND amount_cents = 0",
+      [evId, userId],
+    );
+    assert.equal(r.rows.length, 1);
+    assert.equal(r.rows[0].status, "refunded"); // no longer counts as entered
+  }
+});

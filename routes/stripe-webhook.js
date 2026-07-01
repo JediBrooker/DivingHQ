@@ -128,8 +128,10 @@ async function grantOfficialAccreditation(client, payment) {
 // per-event entries keyed on event_id, and stamping the shared meet_id would
 // collide them all on idx_payments_one_live_meet_entry (meet_id,
 // payer_user_id, fee_definition_id) — which ignores event_id — so only one
-// event would survive. ON CONFLICT DO NOTHING keeps it idempotent against
-// re-delivery and any pre-existing paid entry for the same event.
+// event would survive. ON CONFLICT DO NOTHING dedupes only against a
+// re-delivery of THIS bundle (same event_id + bundle fee_definition_id); it
+// does NOT dedupe against a separately-purchased per-event entry, which uses
+// a different fee_definition_id (see the known double-purchase limitation).
 async function grantMeetBundle(client, payment) {
   await client.query(
     `INSERT INTO payments
@@ -184,6 +186,18 @@ async function onChargeRefunded(pool, charge) {
       WHERE stripe_payment_intent = $1
         AND status IN ('paid', 'partially_refunded')`,
     [pi, charge.amount_refunded || 0],
+  );
+  // A fully-refunded meet_bundle un-grants the per-event entries it expanded
+  // into (the amount-0 event_entry rows carrying the bundle's
+  // fee_definition_id), so the diver stops counting as entered.
+  await pool.query(
+    `UPDATE payments SET status = 'refunded', refunded_at = now()
+      WHERE subject_type = 'event_entry' AND amount_cents = 0 AND status = 'paid'
+        AND (payer_user_id, fee_definition_id) IN (
+          SELECT payer_user_id, fee_definition_id FROM payments
+           WHERE stripe_payment_intent = $1 AND subject_type = 'meet_bundle' AND status = 'refunded'
+        )`,
+    [pi],
   );
   // A fully-refunded penalty re-opens its entry-charge: the money was
   // returned, so the debit is owed again (an admin can then waive it if the

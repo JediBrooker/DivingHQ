@@ -1301,6 +1301,9 @@ module.exports = function createPaymentsRouter({
           ORDER BY e.name`,
         [def.id],
       )).rows;
+      // A bundle with no events (half-configured) reads as no bundle, so the
+      // public card hides itself rather than offering an empty purchase.
+      if (!events.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
       const alreadyPaid = req.user
         ? (await pool.query(
@@ -1348,6 +1351,13 @@ module.exports = function createPaymentsRouter({
       );
       if (!feeRes.rows.length) return res.status(409).json({ error: "No bundle is on sale for this meet." });
       const fee = feeRes.rows[0];
+      // Guard against a half-configured bundle (fee saved but no event set,
+      // e.g. a crash between the fee upsert and the items write) — an item-less
+      // bundle would take money and grant nothing.
+      const itemCount = (await pool.query(
+        "SELECT COUNT(*)::int AS n FROM meet_bundle_items WHERE fee_definition_id = $1", [fee.id],
+      )).rows[0].n;
+      if (!itemCount) return res.status(409).json({ error: "This bundle has no events yet." });
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
 
       const { url, paymentId } = await startCheckout({
@@ -2009,6 +2019,17 @@ module.exports = function createPaymentsRouter({
           "UPDATE payments SET status = $1, refunded_amount_cents = $2, refunded_at = now() WHERE id = $3",
           [status, refunded, paymentId],
         );
+        // A fully-refunded meet_bundle must un-grant the per-event entries it
+        // expanded into (the amount-0 event_entry rows carrying the bundle's
+        // fee_definition_id), so the diver stops counting as entered.
+        if (status === "refunded" && p.subject_type === "meet_bundle") {
+          await pool.query(
+            `UPDATE payments SET status = 'refunded', refunded_at = now()
+              WHERE payer_user_id = $1 AND fee_definition_id = $2
+                AND subject_type = 'event_entry' AND amount_cents = 0 AND status = 'paid'`,
+            [p.payer_user_id, p.fee_definition_id],
+          );
+        }
         return res.json({ status, refunded_amount_cents: refunded });
       } catch (err) {
         logger.error({ err: err.message }, "[payments] refund failed");
