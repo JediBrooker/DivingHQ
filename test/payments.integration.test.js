@@ -859,3 +859,47 @@ test("refunding the bundle revokes the granted per-event entries", async (t) => 
     assert.equal(r.rows[0].status, "refunded"); // no longer counts as entered
   }
 });
+
+// ---- Donations ------------------------------------------------------
+
+test("federation configures donations with preset amounts", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/orgs/${orgId}/donation`, {
+    currency: "GBP", suggested_amounts: [500, 1000, 2500],
+  });
+  assert.equal(res.status, 200);
+  assert.deepEqual((await res.json()).suggested_amounts, [500, 1000, 2500]);
+});
+
+test("the public donation read returns the presets", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("GET", `/api/orgs/${orgId}/donation`);
+  const d = (await res.json()).donation;
+  assert.equal(d.currency, "GBP");
+  assert.deepEqual(d.suggested_amounts, [500, 1000, 2500]);
+  assert.equal(d.min_amount_cents, 100);
+});
+
+test("a tiny donation amount is rejected", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/orgs/${orgId}/donate/checkout`, { amount_cents: 50 });
+  assert.equal(res.status, 400);
+});
+
+test("an oversized donation amount is rejected (not an int4-overflow 500)", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/orgs/${orgId}/donate/checkout`, { amount_cents: 3000000000 });
+  assert.equal(res.status, 400);
+});
+
+test("donating a chosen amount records a donation payment with the 15% fee", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/orgs/${orgId}/donate/checkout`, { amount_cents: 3000 });
+  assert.equal(res.status, 200);
+  const payId = (await res.json()).payment_id;
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [payId])).rows[0];
+  assert.equal(row.subject_type, "donation");
+  assert.equal(row.payer_user_id, userId);
+  assert.equal(row.amount_cents, 3000);
+  assert.equal(row.platform_fee_cents, 450); // 15% of 3000
+});
