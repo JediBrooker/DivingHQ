@@ -613,6 +613,54 @@ module.exports = function createPaymentsRouter({
     }
   }
 
+  // A signed-in supporter donates a chosen amount to the federation. The
+  // amount is buyer-picked (a preset or custom), not a fixed fee_price, so
+  // this doesn't resolve a price. No one-live guard — repeat donations are
+  // fine.
+  async function startDonationCheckout({ req, org, fee, amountCents }) {
+    const userId = req.user.id;
+    const currency = fee.currency || org.default_currency;
+    if (!currency) {
+      const err = new Error("The federation's currency is not configured.");
+      err.status = 409;
+      throw err;
+    }
+    const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
+    const { chargeAmountCents, applicationFeeCents } = priceCharge({
+      baseAmountCents: amountCents,
+      feeBps,
+      feePayer: fee.fee_payer,
+    });
+    const ins = await pool.query(
+      `INSERT INTO payments
+          (org_id, fee_definition_id, payer_user_id, subject_type,
+           amount_cents, platform_fee_cents, currency, fee_payer, status)
+       VALUES ($1, $2, $3, 'donation', $4, $5, $6, $7, 'pending')
+       RETURNING id`,
+      [org.id, fee.id, userId, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
+    );
+    const paymentId = ins.rows[0].id;
+    try {
+      const session = await payments.createCheckoutSession({
+        connectedAccountId: org.stripe_account_id,
+        currency,
+        chargeAmountCents,
+        applicationFeeCents,
+        productName: `Donation to ${org.name}`,
+        customerEmail: req.user.email,
+        clientReferenceId: paymentId,
+        metadata: { payment_id: paymentId, scope: "donation", org_id: org.id, user_id: userId },
+        successUrl: `${APP_BASE_URL}/donate?paid=1`,
+        cancelUrl: `${APP_BASE_URL}/donate?canceled=1`,
+      });
+      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
+      return { url: session.url, paymentId };
+    } catch (err) {
+      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
+      throw err;
+    }
+  }
+
   // ---- Federation onboarding --------------------------------------
 
   // Begin/continue Stripe onboarding for a federation. Creates the
@@ -1431,6 +1479,100 @@ module.exports = function createPaymentsRouter({
     } catch (err) {
       logger.error({ err: err.message }, "[payments] read membership (diver) failed");
       return res.status(500).json({ error: "Failed to read membership." });
+    }
+  });
+
+  // ---- Donations --------------------------------------------------
+  // A federation accepts fundraising donations with optional preset amounts;
+  // any signed-in supporter donates a chosen amount. Org-level; the amount is
+  // buyer-picked, so there's no fixed fee_price (upsertFee with no prices).
+
+  const MIN_DONATION_CENTS = 100;
+
+  // Federation configures donations (currency + suggested preset amounts).
+  router.put("/api/orgs/:id/donation", requireOrgRole(["org_admin"]), async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    const body = req.body || {};
+    // Sanitise presets to positive integer minor-unit amounts (max 8).
+    const suggested = Array.isArray(body.suggested_amounts)
+      ? body.suggested_amounts
+          .map((n) => Math.floor(Number(n)))
+          .filter((n) => Number.isInteger(n) && n >= MIN_DONATION_CENTS)
+          .slice(0, 8)
+      : [];
+    try {
+      const feeId = await upsertFee({
+        orgId,
+        scope: "donation",
+        name: "Donation",
+        body: { currency: body.currency, suggested_amounts: suggested, fee_payer: body.fee_payer },
+        cleanPrices: [],
+      });
+      return res.json({ id: feeId, suggested_amounts: suggested });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] set donation failed");
+      return res.status(500).json({ error: "Failed to save donation settings." });
+    }
+  });
+
+  // Public: is this federation accepting donations, and what presets?
+  router.get("/api/orgs/:id/donation", optionalAuth, async (req, res) => {
+    const orgId = req.params.id;
+    try {
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE org_id = $1 AND scope = 'donation' AND active LIMIT 1",
+        [orgId],
+      );
+      if (!feeRes.rows.length) return res.json({ donation: null, payments_enabled: payments.enabled });
+      const def = feeRes.rows[0];
+      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      return res.json({
+        donation: {
+          currency: def.currency || org?.default_currency || null,
+          suggested_amounts: def.suggested_amounts || [],
+          min_amount_cents: MIN_DONATION_CENTS,
+        },
+        payments_enabled: payments.enabled,
+      });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read donation failed");
+      return res.status(500).json({ error: "Failed to read donation settings." });
+    }
+  });
+
+  // A supporter donates a chosen amount.
+  router.post("/api/orgs/:id/donate/checkout", verifyToken, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const orgId = req.params.id;
+    const amountCents = Math.floor(Number((req.body || {}).amount_cents));
+    if (!Number.isInteger(amountCents) || amountCents < MIN_DONATION_CENTS) {
+      return res.status(400).json({ error: "Please enter a valid donation amount." });
+    }
+    try {
+      const org = (
+        await pool.query(
+          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
+             FROM organisations WHERE id = $1`,
+          [orgId],
+        )
+      ).rows[0];
+      if (!org) return res.status(404).json({ error: "Organisation not found" });
+      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
+        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
+      }
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE org_id = $1 AND scope = 'donation' AND active LIMIT 1",
+        [orgId],
+      );
+      if (!feeRes.rows.length) return res.status(409).json({ error: "This federation isn't accepting donations." });
+
+      const { url, paymentId } = await startDonationCheckout({ req, org, fee: feeRes.rows[0], amountCents });
+      return res.json({ url, payment_id: paymentId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] donation checkout failed");
+      return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
     }
   });
 

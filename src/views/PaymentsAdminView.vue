@@ -10,6 +10,7 @@ import { showError } from '@/composables/useNotify'
 import MembershipFeeEditor from '@/components/payments/MembershipFeeEditor.vue'
 import ClubFeesEditor from '@/components/payments/ClubFeesEditor.vue'
 import OfficialFeesEditor from '@/components/payments/OfficialFeesEditor.vue'
+import DonationEditor from '@/components/payments/DonationEditor.vue'
 
 const auth = useAuthStore()
 const orgId = computed(() => auth.user?.org_id)
@@ -93,6 +94,14 @@ onMounted(loadStatus)
         They pay from their own Accreditation page.
       </p>
       <OfficialFeesEditor v-if="orgId" :org-id="orgId" />
+    </div>
+
+    <div class="card">
+      <h2>Donations</h2>
+      <p class="muted">
+        Accept fundraising donations from supporters, with suggested amounts.
+      </p>
+      <DonationEditor v-if="orgId" :org-id="orgId" />
     </div>
   </section>
 </template>
