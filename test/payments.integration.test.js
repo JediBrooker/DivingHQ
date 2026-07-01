@@ -1076,3 +1076,43 @@ test("empty payout details are rejected", async (t) => {
   const res = await api("PUT", `/api/orgs/${orgId}/payout-details`, { account_name: "", account_details: "" });
   assert.equal(res.status, 400);
 });
+
+test("auto-withdraw settings save and reflect in status", async (t) => {
+  if (!ready) return t.skip();
+  let res = await api("PUT", `/api/orgs/${orgId}/withdrawal-settings`, { auto_withdraw_enabled: true, auto_withdraw_min_cents: 5000 });
+  assert.equal(res.status, 200);
+  let s = await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json();
+  assert.equal(s.auto_withdraw_enabled, true);
+  assert.equal(s.auto_withdraw_min_cents, 5000);
+  // Enabling without a usable threshold is rejected.
+  res = await api("PUT", `/api/orgs/${orgId}/withdrawal-settings`, { auto_withdraw_enabled: true, auto_withdraw_min_cents: 10 });
+  assert.equal(res.status, 400);
+  // Disabling clears the stored threshold.
+  res = await api("PUT", `/api/orgs/${orgId}/withdrawal-settings`, { auto_withdraw_enabled: false });
+  assert.equal(res.status, 200);
+  s = await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json();
+  assert.equal(s.auto_withdraw_enabled, false);
+  assert.equal(s.auto_withdraw_min_cents, null);
+});
+
+test("withdrawing the balance records a pending payout and zeroes the balance", async (t) => {
+  if (!ready) return t.skip();
+  const before = await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json();
+  assert.ok(before.balance_cents > 0, "expected a positive balance from earlier paid payments");
+  const res = await api("POST", `/api/orgs/${orgId}/withdrawals`, {});
+  assert.equal(res.status, 201);
+  const payout = await res.json();
+  assert.equal(payout.amount_cents, before.balance_cents);
+  assert.equal(payout.status, "pending");
+  const after = await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json();
+  assert.equal(after.balance_cents, 0);
+  const list = await (await api("GET", `/api/orgs/${orgId}/withdrawals`)).json();
+  assert.ok(list.some((w) => w.id === payout.id && w.status === "pending"), "new payout shows in history");
+});
+
+test("withdrawing with no balance is rejected", async (t) => {
+  if (!ready) return t.skip();
+  // Balance was fully withdrawn by the previous test.
+  const res = await api("POST", `/api/orgs/${orgId}/withdrawals`, {});
+  assert.equal(res.status, 409);
+});
