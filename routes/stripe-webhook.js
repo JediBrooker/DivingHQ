@@ -69,6 +69,8 @@ async function onCheckoutCompleted(pool, logger, session) {
         "UPDATE entry_charges SET status = 'paid' WHERE payment_id = $1 AND status = 'owed'",
         [payment.id],
       );
+    } else if (payment.subject_type === "meet_bundle") {
+      await grantMeetBundle(client, payment);
     }
     // For 'event_entry' the payment is now recorded as paid. Actually
     // building/confirming the diver's dive list stays in the entry flow
@@ -119,6 +121,30 @@ async function grantOfficialAccreditation(client, payment) {
   );
 }
 
+// Expand a paid meet_bundle into a paid event_entry for every event the
+// bundle covers, so the existing "entry confirmed once a paid event_entry
+// payment exists" logic treats the diver as entered in each. Amount 0 (they
+// paid via the bundle). meet_id is deliberately LEFT NULL: these are
+// per-event entries keyed on event_id, and stamping the shared meet_id would
+// collide them all on idx_payments_one_live_meet_entry (meet_id,
+// payer_user_id, fee_definition_id) — which ignores event_id — so only one
+// event would survive. ON CONFLICT DO NOTHING dedupes only against a
+// re-delivery of THIS bundle (same event_id + bundle fee_definition_id); it
+// does NOT dedupe against a separately-purchased per-event entry, which uses
+// a different fee_definition_id (see the known double-purchase limitation).
+async function grantMeetBundle(client, payment) {
+  await client.query(
+    `INSERT INTO payments
+        (org_id, fee_definition_id, payer_user_id, subject_type, event_id,
+         amount_cents, platform_fee_cents, currency, fee_payer, status, paid_at)
+     SELECT $1, $2, $3, 'event_entry', mbi.event_id, 0, 0, $4, 'absorb', 'paid', now()
+       FROM meet_bundle_items mbi
+      WHERE mbi.fee_definition_id = $2
+     ON CONFLICT DO NOTHING`,
+    [payment.org_id, payment.fee_definition_id, payment.payer_user_id, payment.currency || "GBP"],
+  );
+}
+
 async function grantClubAffiliation(client, payment) {
   const kind = payment.subject_type === "club_accreditation" ? "accreditation" : "affiliation";
   await client.query(
@@ -160,6 +186,18 @@ async function onChargeRefunded(pool, charge) {
       WHERE stripe_payment_intent = $1
         AND status IN ('paid', 'partially_refunded')`,
     [pi, charge.amount_refunded || 0],
+  );
+  // A fully-refunded meet_bundle un-grants the per-event entries it expanded
+  // into (the amount-0 event_entry rows carrying the bundle's
+  // fee_definition_id), so the diver stops counting as entered.
+  await pool.query(
+    `UPDATE payments SET status = 'refunded', refunded_at = now()
+      WHERE subject_type = 'event_entry' AND amount_cents = 0 AND status = 'paid'
+        AND (payer_user_id, fee_definition_id) IN (
+          SELECT payer_user_id, fee_definition_id FROM payments
+           WHERE stripe_payment_intent = $1 AND subject_type = 'meet_bundle' AND status = 'refunded'
+        )`,
+    [pi],
   );
   // A fully-refunded penalty re-opens its entry-charge: the money was
   // returned, so the debit is owed again (an admin can then waive it if the

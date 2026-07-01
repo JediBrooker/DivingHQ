@@ -766,3 +766,96 @@ test("the webhook marks access paid and the read flips to purchased", async (t) 
   const res = await api("GET", `/api/meets/${meetId}/access?kind=spectator_ticket`);
   assert.equal((await res.json()).fee.already_paid, true);
 });
+
+// ---- Meet bundle (discounted whole-meet package) --------------------
+
+let bundleEvA;
+let bundleEvB;
+let bundlePaymentId;
+test("federation sets a meet bundle over two events", async (t) => {
+  if (!ready) return t.skip();
+  bundleEvA = (await pool.query(
+    "INSERT INTO events (org_id, meet_id, name, gender, number_of_judges) VALUES ($1, $2, 'Bundle 1m', 'Male', 5) RETURNING id",
+    [orgId, meetId],
+  )).rows[0].id;
+  bundleEvB = (await pool.query(
+    "INSERT INTO events (org_id, meet_id, name, gender, number_of_judges) VALUES ($1, $2, 'Bundle 3m', 'Male', 5) RETURNING id",
+    [orgId, meetId],
+  )).rows[0].id;
+  const res = await api("PUT", `/api/meets/${meetId}/bundle`, {
+    currency: "GBP",
+    event_ids: [bundleEvA, bundleEvB],
+    prices: [{ label: "bundle", amount_cents: 9000, audience: "all" }],
+  });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).event_ids.length, 2);
+});
+
+test("a bundle with no events is rejected", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/meets/${meetId}/bundle`, {
+    currency: "GBP", event_ids: [], prices: [{ label: "x", amount_cents: 1000, audience: "all" }],
+  });
+  assert.equal(res.status, 400);
+});
+
+test("a buyer sees the bundle price and its events", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("GET", `/api/meets/${meetId}/bundle`);
+  const fee = (await res.json()).fee;
+  assert.equal(fee.price.amount_cents, 9000);
+  assert.equal(fee.events.length, 2);
+  assert.equal(fee.already_paid, false);
+});
+
+test("buying the bundle records a meet_bundle payment with the 15% fee", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/meets/${meetId}/bundle/checkout`, {});
+  assert.equal(res.status, 200);
+  bundlePaymentId = (await res.json()).payment_id;
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [bundlePaymentId])).rows[0];
+  assert.equal(row.subject_type, "meet_bundle");
+  assert.equal(row.meet_id, meetId);
+  assert.equal(row.amount_cents, 9000);
+  assert.equal(row.platform_fee_cents, 1350); // 15% of 9000
+});
+
+test("a second bundle purchase for the same meet is blocked while one is live", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/meets/${meetId}/bundle/checkout`, {});
+  assert.equal(res.status, 409);
+});
+
+test("the webhook expands the bundle into a paid entry for each event", async (t) => {
+  if (!ready) return t.skip();
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_bundle", client_reference_id: bundlePaymentId, payment_intent: "pi_bundle" } },
+  });
+  for (const evId of [bundleEvA, bundleEvB]) {
+    const r = await pool.query(
+      `SELECT amount_cents, status FROM payments
+        WHERE event_id = $1 AND payer_user_id = $2 AND subject_type = 'event_entry' AND status = 'paid'`,
+      [evId, userId],
+    );
+    assert.equal(r.rows.length, 1);
+    assert.equal(r.rows[0].amount_cents, 0); // granted by the bundle
+  }
+  const res = await api("GET", `/api/meets/${meetId}/bundle`);
+  assert.equal((await res.json()).fee.already_paid, true);
+});
+
+test("refunding the bundle revokes the granted per-event entries", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/payments/${bundlePaymentId}/refund`, {});
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).status, "refunded");
+  for (const evId of [bundleEvA, bundleEvB]) {
+    const r = await pool.query(
+      "SELECT status FROM payments WHERE event_id = $1 AND payer_user_id = $2 AND subject_type = 'event_entry' AND amount_cents = 0",
+      [evId, userId],
+    );
+    assert.equal(r.rows.length, 1);
+    assert.equal(r.rows[0].status, "refunded"); // no longer counts as entered
+  }
+});

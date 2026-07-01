@@ -15,6 +15,7 @@ import { groupScoreboardEvents } from '@/composables/useProgressionGroups'
 import MeetEventGrid from '@/components/scoreboard/MeetEventGrid.vue'
 import SponsorRotation from '@/components/scoreboard/SponsorRotation.vue'
 import FeePreviewCard from '@/components/payments/FeePreviewCard.vue'
+import MeetBundleCard from '@/components/payments/MeetBundleCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -370,6 +371,8 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
           :checkout-url="`/api/meets/${meet.id}/access/checkout?kind=${a.kind}`"
           coming-soon-message="Online sales are coming soon."
         />
+        <!-- Discounted whole-meet bundle (hidden until a federation sets one). -->
+        <MeetBundleCard :meet-id="meet.id" />
       </section>
 
       <!-- Events — one row per discipline, prelim → semi → final

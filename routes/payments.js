@@ -1193,6 +1193,188 @@ module.exports = function createPaymentsRouter({
     }
   });
 
+  // ---- Meet bundle (discounted whole-meet package) ----------------
+  // A federation offers a discounted price to enter a chosen SET of the
+  // meet's events at once. On payment the webhook expands the bundle into a
+  // paid event_entry for each included event, so the diver counts as entered.
+
+  // Federation sets the bundle price + which events it covers.
+  router.put("/api/meets/:id/bundle", requireMeetEditor, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const meetId = req.params.id;
+    const body = req.body || {};
+    if (!Array.isArray(body.event_ids) || !body.event_ids.length) {
+      return res.status(400).json({ error: "Select at least one event for the bundle." });
+    }
+    if (!Array.isArray(body.prices) || !body.prices.length) {
+      return res.status(400).json({ error: "At least one price variant is required." });
+    }
+    try {
+      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
+      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
+      const orgId = m.rows[0].org_id;
+      if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+      // Only events that actually belong to this meet can be bundled.
+      const validEvents = (await pool.query(
+        "SELECT id FROM events WHERE meet_id = $1 AND id = ANY($2::uuid[])",
+        [meetId, body.event_ids],
+      )).rows.map((r) => r.id);
+      if (!validEvents.length) return res.status(400).json({ error: "None of those events belong to this meet." });
+      const v = validatePrices(body.prices);
+      if (v.error) return res.status(400).json({ error: v.error });
+      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
+      const feeId = await upsertFee({
+        orgId, scope: "meet_bundle", meetId,
+        name: "Meet bundle", body, cleanPrices: [flatPrice],
+      });
+      // Replace the bundle's event set atomically.
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query("DELETE FROM meet_bundle_items WHERE fee_definition_id = $1", [feeId]);
+        for (const evId of validEvents) {
+          await client.query(
+            "INSERT INTO meet_bundle_items (fee_definition_id, event_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            [feeId, evId],
+          );
+        }
+        await client.query("COMMIT");
+      } catch (e) {
+        await client.query("ROLLBACK");
+        throw e;
+      } finally {
+        client.release();
+      }
+      return res.json({ id: feeId, event_ids: validEvents });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] set meet bundle failed");
+      return res.status(500).json({ error: "Failed to save the meet bundle." });
+    }
+  });
+
+  // Full bundle config (price + selected event ids) for the manager's editor.
+  router.get("/api/meets/:id/bundle/config", requireMeetEditor, async (req, res) => {
+    const meetId = req.params.id;
+    try {
+      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
+      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
+      if (!ownsOrg(req, m.rows[0].org_id)) return res.status(403).json({ error: "Forbidden" });
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE meet_id = $1 AND scope = 'meet_bundle' AND active LIMIT 1",
+        [meetId],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null, event_ids: [], payments_enabled: payments.enabled });
+      const eventIds = (await pool.query(
+        "SELECT event_id FROM meet_bundle_items WHERE fee_definition_id = $1",
+        [feeRes.rows[0].id],
+      )).rows.map((r) => r.event_id);
+      return res.json({
+        fee: await feeConfigResponse(pool, feeRes.rows[0]),
+        event_ids: eventIds,
+        payments_enabled: payments.enabled,
+      });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read bundle config failed");
+      return res.status(500).json({ error: "Failed to read the meet bundle." });
+    }
+  });
+
+  // Buyer-facing: bundle price + the events it covers + already-bought flag.
+  router.get("/api/meets/:id/bundle", optionalAuth, async (req, res) => {
+    const meetId = req.params.id;
+    try {
+      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
+      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
+      const orgId = m.rows[0].org_id;
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE meet_id = $1 AND scope = 'meet_bundle' AND active LIMIT 1",
+        [meetId],
+      );
+      if (!feeRes.rows.length) return res.json({ fee: null, payments_enabled: payments.enabled });
+      const def = feeRes.rows[0];
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
+      const chosen = resolvePrice(prices, { isMember: false });
+      const events = (await pool.query(
+        `SELECT e.id, e.name FROM meet_bundle_items mbi
+           JOIN events e ON e.id = mbi.event_id
+          WHERE mbi.fee_definition_id = $1
+          ORDER BY e.name`,
+        [def.id],
+      )).rows;
+      // A bundle with no events (half-configured) reads as no bundle, so the
+      // public card hides itself rather than offering an empty purchase.
+      if (!events.length) return res.json({ fee: null, payments_enabled: payments.enabled });
+      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const alreadyPaid = req.user
+        ? (await pool.query(
+            `SELECT 1 FROM payments
+              WHERE meet_id = $1 AND payer_user_id = $2 AND subject_type = 'meet_bundle' AND status = 'paid' LIMIT 1`,
+            [meetId, req.user.id],
+          )).rows.length > 0
+        : false;
+      return res.json({
+        fee: {
+          currency: def.currency || org?.default_currency || null,
+          already_paid: alreadyPaid,
+          events,
+          price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+        },
+        payments_enabled: payments.enabled,
+      });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read meet bundle failed");
+      return res.status(500).json({ error: "Failed to read the meet bundle." });
+    }
+  });
+
+  // A signed-in diver buys the whole-meet bundle.
+  router.post("/api/meets/:id/bundle/checkout", verifyToken, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const meetId = req.params.id;
+    try {
+      const m = await pool.query("SELECT id, name, org_id FROM meets WHERE id = $1", [meetId]);
+      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
+      const orgId = m.rows[0].org_id;
+      const org = (
+        await pool.query(
+          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
+             FROM organisations WHERE id = $1`,
+          [orgId],
+        )
+      ).rows[0];
+      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
+        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
+      }
+      const feeRes = await pool.query(
+        "SELECT * FROM fee_definitions WHERE meet_id = $1 AND scope = 'meet_bundle' AND active LIMIT 1",
+        [meetId],
+      );
+      if (!feeRes.rows.length) return res.status(409).json({ error: "No bundle is on sale for this meet." });
+      const fee = feeRes.rows[0];
+      // Guard against a half-configured bundle (fee saved but no event set,
+      // e.g. a crash between the fee upsert and the items write) — an item-less
+      // bundle would take money and grant nothing.
+      const itemCount = (await pool.query(
+        "SELECT COUNT(*)::int AS n FROM meet_bundle_items WHERE fee_definition_id = $1", [fee.id],
+      )).rows[0].n;
+      if (!itemCount) return res.status(409).json({ error: "This bundle has no events yet." });
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
+
+      const { url, paymentId } = await startCheckout({
+        req, org, fee, prices,
+        subjectType: "meet_bundle",
+        meetId,
+        productName: `Meet bundle — ${m.rows[0].name}`,
+        successUrl: `${APP_BASE_URL}/meets/${meetId}?paid=1`,
+        cancelUrl: `${APP_BASE_URL}/meets/${meetId}?canceled=1`,
+      });
+      return res.json({ url, payment_id: paymentId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] meet bundle checkout failed");
+      return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
+    }
+  });
+
   // Full membership-fee config (all variants) for the org admin's editor.
   router.get("/api/orgs/:id/membership-fee", requireOrgRole(["org_admin"]), async (req, res) => {
     const orgId = req.params.id;
@@ -1837,6 +2019,17 @@ module.exports = function createPaymentsRouter({
           "UPDATE payments SET status = $1, refunded_amount_cents = $2, refunded_at = now() WHERE id = $3",
           [status, refunded, paymentId],
         );
+        // A fully-refunded meet_bundle must un-grant the per-event entries it
+        // expanded into (the amount-0 event_entry rows carrying the bundle's
+        // fee_definition_id), so the diver stops counting as entered.
+        if (status === "refunded" && p.subject_type === "meet_bundle") {
+          await pool.query(
+            `UPDATE payments SET status = 'refunded', refunded_at = now()
+              WHERE payer_user_id = $1 AND fee_definition_id = $2
+                AND subject_type = 'event_entry' AND amount_cents = 0 AND status = 'paid'`,
+            [p.payer_user_id, p.fee_definition_id],
+          );
+        }
         return res.json({ status, refunded_amount_cents: refunded });
       } catch (err) {
         logger.error({ err: err.message }, "[payments] refund failed");
