@@ -16,7 +16,9 @@
 BEGIN;
 
 -- Payout bank details for recipients (free-text for now: account name +
--- IBAN or sort/account). Federation- and club-level.
+-- IBAN or sort/account). Federation now; the CLUB columns + payouts.club_id
+-- are the recipient scaffold for the upcoming club-payments feature (a club
+-- admin will set details + see a balance there) — unwired until then.
 ALTER TABLE public.organisations
   ADD COLUMN IF NOT EXISTS payout_account_name    text,
   ADD COLUMN IF NOT EXISTS payout_account_details text;
@@ -31,7 +33,7 @@ CREATE TABLE IF NOT EXISTS public.payouts (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id       uuid REFERENCES public.organisations(id) ON DELETE CASCADE,
   club_id      uuid REFERENCES public.clubs(id) ON DELETE CASCADE,
-  amount_cents integer NOT NULL,
+  amount_cents integer NOT NULL CHECK (amount_cents >= 0),
   currency     varchar(10) NOT NULL,
   status       varchar(20) NOT NULL DEFAULT 'pending'
                  CHECK (status IN ('pending', 'paid', 'failed')),

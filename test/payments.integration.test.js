@@ -1056,6 +1056,21 @@ test("saving payout details and reading status + balance", async (t) => {
   assert.ok(s.balance_cents >= 0);
 });
 
+test("partial refund prorates the platform fee in the payout balance", async (t) => {
+  if (!ready) return t.skip();
+  const before = (await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json()).balance_cents;
+  // A £100 payment, 15% (£15) fee, £40 refunded → £60 retained. The federation is
+  // owed £60 minus the fee PRORATED to the retained portion (£15 × 60% = £9) =
+  // £51 — NOT £60 − the full £15 = £45 (the over-deduction this guards against).
+  await pool.query(
+    `INSERT INTO payments (org_id, payer_user_id, subject_type, amount_cents, platform_fee_cents, currency, status, refunded_amount_cents)
+     VALUES ($1, $2, 'donation', 10000, 1500, 'GBP', 'partially_refunded', 4000)`,
+    [orgId, userId],
+  );
+  const after = (await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json()).balance_cents;
+  assert.equal(after - before, 5100);
+});
+
 test("empty payout details are rejected", async (t) => {
   if (!ready) return t.skip();
   const res = await api("PUT", `/api/orgs/${orgId}/payout-details`, { account_name: "", account_details: "" });

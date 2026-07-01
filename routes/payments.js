@@ -720,10 +720,6 @@ module.exports = function createPaymentsRouter({
 
   // Payout status + balance owed for a federation.
   router.get("/api/orgs/:id/payments/status", requireOrgRole(["org_admin"]), async (req, res) => {
-    if (!payments.enabled) {
-      // Coming-soon: clean disabled status (not a 503) for the UI notice.
-      return res.json({ enabled: false, payout_details_set: false, account_name: null, balance_cents: 0 });
-    }
     const orgId = req.params.id;
     if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
     try {
@@ -732,12 +728,27 @@ module.exports = function createPaymentsRouter({
         [orgId],
       )).rows[0];
       if (!org) return res.status(404).json({ error: "Organisation not found" });
+      const base = {
+        payout_details_set: !!(org.payout_account_name && org.payout_account_details),
+        account_name: org.payout_account_name || null,
+        currency: org.default_currency || null,
+      };
+      // Coming-soon: report payout details (they don't need Stripe) but no
+      // balance until payments are switched on.
+      if (!payments.enabled) return res.json({ enabled: false, ...base, balance_cents: 0 });
+      // Net owed per payment: full net when paid; on a PARTIAL refund the fee
+      // is prorated to the retained portion (so the platform's take stays 15%
+      // of retained revenue, not 15% of the whole); clamped at >= 0 so an
+      // over-refund can't drive a row negative. Fully-refunded/failed/pending
+      // and amount-0 bundle grants contribute 0.
       const collected = (await pool.query(
-        `SELECT COALESCE(SUM(
+        `SELECT COALESCE(SUM(GREATEST(0,
             CASE status
               WHEN 'paid' THEN amount_cents - platform_fee_cents
-              WHEN 'partially_refunded' THEN (amount_cents - COALESCE(refunded_amount_cents, 0)) - platform_fee_cents
-              ELSE 0 END), 0)::bigint AS net
+              WHEN 'partially_refunded' THEN ROUND(
+                (amount_cents - platform_fee_cents)::numeric
+                  * (amount_cents - COALESCE(refunded_amount_cents, 0)) / NULLIF(amount_cents, 0))
+              ELSE 0 END)), 0)::bigint AS net
            FROM payments WHERE org_id = $1`,
         [orgId],
       )).rows[0].net;
@@ -745,13 +756,7 @@ module.exports = function createPaymentsRouter({
         "SELECT COALESCE(SUM(amount_cents), 0)::bigint AS n FROM payouts WHERE org_id = $1 AND status IN ('pending', 'paid')",
         [orgId],
       )).rows[0].n;
-      return res.json({
-        enabled: true,
-        payout_details_set: !!(org.payout_account_name && org.payout_account_details),
-        account_name: org.payout_account_name || null,
-        currency: org.default_currency || null,
-        balance_cents: Number(collected) - Number(paidOut),
-      });
+      return res.json({ enabled: true, ...base, balance_cents: Number(collected) - Number(paidOut) });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] payout status failed");
       return res.status(err.status || 500).json({ error: err.message || "Status check failed" });
@@ -2350,9 +2355,11 @@ module.exports = function createPaymentsRouter({
 
   // ---- Refunds -----------------------------------------------------
 
-  // Federation refunds a payment. refund_application_fee is always true
-  // (see lib/stripe.js) so the federation isn't left short DivingHQ's
-  // cut. Omit amount_cents for a full refund.
+  // Refund a payment on the platform account (DivingHQ is the merchant of
+  // record). There's no Stripe fee reversal — the platform's cut lives in our
+  // payout ledger, so a refund just reduces what the federation/club is owed
+  // (the balance query prorates the retained fee on partial refunds). Omit
+  // amount_cents for a full refund.
   router.post(
     "/api/payments/:id/refund",
     requireOrgRole(["org_admin", "meet_manager"]),
@@ -2370,7 +2377,6 @@ module.exports = function createPaymentsRouter({
         if (!p.stripe_payment_intent) {
           return res.status(409).json({ error: "This payment has no charge to refund yet." });
         }
-        const org = (await pool.query("SELECT stripe_account_id FROM organisations WHERE id = $1", [p.org_id])).rows[0];
         const requested = req.body && Number(req.body.amount_cents) > 0 ? Math.floor(Number(req.body.amount_cents)) : undefined;
 
         const refund = await payments.createRefund({
