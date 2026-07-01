@@ -886,6 +886,12 @@ test("a tiny donation amount is rejected", async (t) => {
   assert.equal(res.status, 400);
 });
 
+test("an oversized donation amount is rejected (not an int4-overflow 500)", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/orgs/${orgId}/donate/checkout`, { amount_cents: 3000000000 });
+  assert.equal(res.status, 400);
+});
+
 test("donating a chosen amount records a donation payment with the 15% fee", async (t) => {
   if (!ready) return t.skip();
   const res = await api("POST", `/api/orgs/${orgId}/donate/checkout`, { amount_cents: 3000 });

@@ -62,7 +62,7 @@ onMounted(load)
 <template>
   <div class="donation-editor">
     <p class="hint">Accept fundraising donations. Set suggested amounts supporters can pick from — they can also enter their own.</p>
-    <ComingSoonBanner v-if="!enabled" message="Donations are coming soon. Set them up here; they go live once online payments are switched on." />
+    <ComingSoonBanner v-if="!enabled" message="Preview the setup here; donations go live once online payments are switched on." />
     <p v-if="loading" class="muted">Loading…</p>
     <template v-else>
       <div class="row">

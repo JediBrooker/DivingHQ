@@ -1488,6 +1488,10 @@ module.exports = function createPaymentsRouter({
   // buyer-picked, so there's no fixed fee_price (upsertFee with no prices).
 
   const MIN_DONATION_CENTS = 100;
+  // Upper bound so an oversized amount is a clean 400, not an int4-overflow
+  // 500. £1,000,000 leaves headroom under int4 max even once a pass-to-payer
+  // fee is added on top.
+  const MAX_DONATION_CENTS = 100000000;
 
   // Federation configures donations (currency + suggested preset amounts).
   router.put("/api/orgs/:id/donation", requireOrgRole(["org_admin"]), async (req, res) => {
@@ -1547,7 +1551,7 @@ module.exports = function createPaymentsRouter({
     if (!ensurePayments(res)) return;
     const orgId = req.params.id;
     const amountCents = Math.floor(Number((req.body || {}).amount_cents));
-    if (!Number.isInteger(amountCents) || amountCents < MIN_DONATION_CENTS) {
+    if (!Number.isInteger(amountCents) || amountCents < MIN_DONATION_CENTS || amountCents > MAX_DONATION_CENTS) {
       return res.status(400).json({ error: "Please enter a valid donation amount." });
     }
     try {
