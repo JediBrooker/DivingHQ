@@ -247,16 +247,14 @@ test("the fee read now reports the diver's entry as paid (submit-then-pay)", asy
   assert.equal(fee.already_paid, true);
 });
 
-test("refund reverses the charge and the application fee", async (t) => {
+test("refund reverses the charge", async (t) => {
   if (!ready) return t.skip();
   const res = await api("POST", `/api/payments/${paymentId}/refund`, {});
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.equal(body.status, "refunded");
   assert.equal(body.refunded_amount_cents, 5000);
-  // The route delegated to lib/stripe with the federation's account; the
-  // lib pins refund_application_fee:true (asserted in stripe-lib.test.js).
-  assert.equal(lastRefundArgs.connectedAccountId, "acct_test");
+  // The route delegated to lib/stripe (refund on the platform account).
   assert.equal(lastRefundArgs.paymentIntentId, "pi_done");
   const row = (await pool.query("SELECT status FROM payments WHERE id = $1", [paymentId])).rows[0];
   assert.equal(row.status, "refunded");
@@ -1039,4 +1037,27 @@ test("appealing a fine with a checkout in flight kills the session; a late webho
     data: { object: { id: "cs_race", client_reference_id: payId, payment_intent: "pi_race" } },
   });
   assert.equal((await pool.query("SELECT status FROM fines WHERE id = $1", [id])).rows[0].status, "appealed");
+});
+
+// ---- Payouts (platform is merchant of record) -----------------------
+
+test("saving payout details and reading status + balance", async (t) => {
+  if (!ready) return t.skip();
+  let res = await api("PUT", `/api/orgs/${orgId}/payout-details`, { account_name: "Test Fed", account_details: "GB00 TEST 0000" });
+  assert.equal(res.status, 200);
+  res = await api("GET", `/api/orgs/${orgId}/payments/status`);
+  const s = await res.json();
+  assert.equal(s.enabled, true);
+  assert.equal(s.payout_details_set, true);
+  assert.equal(s.account_name, "Test Fed");
+  // Balance = net (amount - our 15%) of paid payments minus payouts; the suite
+  // has several paid payments, so it's a non-negative number.
+  assert.equal(typeof s.balance_cents, "number");
+  assert.ok(s.balance_cents >= 0);
+});
+
+test("empty payout details are rejected", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/orgs/${orgId}/payout-details`, { account_name: "", account_details: "" });
+  assert.equal(res.status, 400);
 });
