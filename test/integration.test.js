@@ -48,6 +48,10 @@ const http   = require("node:http");
 const crypto = require("node:crypto");
 
 require("dotenv").config();
+// Public signups are gated OFF by default (coming-soon launch). This suite
+// drives register-org / register as the system under test, so switch them on
+// before server.js is required below.
+process.env.SIGNUPS_ENABLED = "true";
 const { Pool } = require("pg");
 
 const TEST_PASSWORD = "integration-test-password-1234";
@@ -277,6 +281,27 @@ async function teardownFixture(state) {
 // =====================================================================
 // Tests
 // =====================================================================
+
+test("account creation is gated off when signups are disabled", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  // The rest of the suite runs with SIGNUPS_ENABLED=true (set at module top);
+  // flip it off just for this test to prove the coming-soon gate, then restore.
+  const prev = process.env.SIGNUPS_ENABLED;
+  process.env.SIGNUPS_ENABLED = "false";
+  try {
+    const status = await fetchJson("GET", "/api/auth/signups-status");
+    assert.equal(status.body.enabled, false);
+    const reg = await fetchJson("POST", "/api/auth/register-org", { body: { org_name: "x" } });
+    assert.equal(reg.status, 403, `expected 403, got ${reg.status}: ${JSON.stringify(reg.body)}`);
+    assert.equal(reg.body.code, "signups_disabled");
+    const self = await fetchJson("POST", "/api/auth/register", { body: { username: "x" } });
+    assert.equal(self.status, 403);
+    assert.equal(self.body.code, "signups_disabled");
+  } finally {
+    process.env.SIGNUPS_ENABLED = prev;
+  }
+});
 
 test("end-to-end happy path", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");

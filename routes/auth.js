@@ -568,7 +568,19 @@ module.exports = function createAuthRouter({
   // verification (Migration 021) is now mandatory: the user is
   // created with email_verified_at = NULL and login is blocked
   // until they click the link in the verification email.
+  // Public account creation (self-register + found-an-org) is OFF by default
+  // so the live site is "coming soon" until we're ready to open it; set
+  // SIGNUPS_ENABLED=true to turn it on (the test env does). Login and every
+  // existing-account flow (password reset, email change, 2FA) are NEVER gated
+  // — the super admin must always be able to sign in.
+  router.get("/api/auth/signups-status", (req, res) => {
+    res.json({ enabled: process.env.SIGNUPS_ENABLED === "true" });
+  });
+
   router.post("/api/auth/register", authLimiter, async (req, res) => {
+    if (process.env.SIGNUPS_ENABLED !== "true") {
+      return res.status(403).json({ error: "Account creation is coming soon.", code: "signups_disabled" });
+    }
     const {
       username, password, email, org_id, requested_role, note,
       club_id, new_club_name, new_club_short_code,
@@ -749,6 +761,9 @@ module.exports = function createAuthRouter({
 
   // Register a new organisation + its founding org_admin
   router.post("/api/auth/register-org", authLimiter, async (req, res) => {
+    if (process.env.SIGNUPS_ENABLED !== "true") {
+      return res.status(403).json({ error: "Account creation is coming soon.", code: "signups_disabled" });
+    }
     const { org_name, country_code, slug, username, password, full_name, email } =
       req.body || {};
 

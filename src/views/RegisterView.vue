@@ -27,7 +27,18 @@ const msg = ref('')
 const msgType = ref('')
 const loading = ref(false)
 
+// Public signups are gated OFF by default (coming-soon launch). null = still
+// checking, true = open (show the form), false = closed (show the notice).
+const signupsEnabled = ref(null)
+
 onMounted(async () => {
+  try {
+    const res = await fetch('/api/auth/signups-status')
+    signupsEnabled.value = !!(await res.json()).enabled
+  } catch {
+    signupsEnabled.value = false
+  }
+  if (!signupsEnabled.value) return
   try {
     const res = await fetch('/api/orgs/active')
     orgs.value = await res.json()
@@ -93,6 +104,15 @@ async function handleSubmit() {
 <template>
   <div class="wrap">
     <div class="login-mark">DIVING<span>HQ</span></div>
+
+    <template v-if="signupsEnabled === false">
+      <h1>{{ $t('auth.register.title') }}</h1>
+      <p class="subtitle">Coming soon</p>
+      <p class="note">Account sign-ups aren't open just yet — we're putting the finishing touches on DivingHQ. Please check back soon.</p>
+      <p class="footer-link">{{ $t('auth.register.already_have_account') }} <RouterLink to="/login">{{ $t('auth.register.sign_in_link') }}</RouterLink></p>
+    </template>
+
+    <template v-else-if="signupsEnabled === true">
     <h1>{{ $t('auth.register.title') }}</h1>
     <p class="subtitle">{{ $t('auth.register.subtitle') }}</p>
 
@@ -188,6 +208,7 @@ async function handleSubmit() {
       </button>
     </form>
     <p class="footer-link">{{ $t('auth.register.already_have_account') }} <RouterLink to="/login">{{ $t('auth.register.sign_in_link') }}</RouterLink></p>
+    </template>
   </div>
 </template>
 

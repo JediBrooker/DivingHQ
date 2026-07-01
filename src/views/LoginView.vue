@@ -46,8 +46,19 @@ function safeNextPath() {
   return raw
 }
 
-onMounted(() => {
-  if (auth.isLoggedIn) router.push(safeNextPath())
+// Hide the sign-up links while public account creation is closed
+// (coming-soon launch). Defaults to hidden until confirmed open; login
+// itself is never gated.
+const signupsEnabled = ref(false)
+
+onMounted(async () => {
+  if (auth.isLoggedIn) { router.push(safeNextPath()); return }
+  try {
+    const res = await fetch('/api/auth/signups-status')
+    signupsEnabled.value = !!(await res.json()).enabled
+  } catch {
+    signupsEnabled.value = false
+  }
 })
 
 // Claim-candidates state (Migration 053). When non-empty the
@@ -226,8 +237,8 @@ async function handleTotpSubmit() {
 
     <div class="footer-links">
       <RouterLink to="/forgot-password">{{ $t('auth.login.forgot_password') }} <span>{{ $t('auth.login.forgot_password_action') }}</span></RouterLink>
-      <RouterLink to="/register">{{ $t('auth.login.no_account') }} <span>{{ $t('auth.login.no_account_action') }}</span></RouterLink>
-      <RouterLink to="/register-org">{{ $t('auth.login.register_federation') }} <span>{{ $t('auth.login.register_federation_action') }}</span></RouterLink>
+      <RouterLink v-if="signupsEnabled" to="/register">{{ $t('auth.login.no_account') }} <span>{{ $t('auth.login.no_account_action') }}</span></RouterLink>
+      <RouterLink v-if="signupsEnabled" to="/register-org">{{ $t('auth.login.register_federation') }} <span>{{ $t('auth.login.register_federation_action') }}</span></RouterLink>
       <RouterLink to="/guide">{{ $t('auth.login.new_here') }} <span>{{ $t('auth.login.new_here_action') }}</span></RouterLink>
       <a href="https://github.com/JediBrooker/DivingHQ/issues/new?labels=bug&title=Bug%3A%20"
          target="_blank"

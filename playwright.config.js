@@ -178,6 +178,9 @@ module.exports = defineConfig({
       // poisons the rest with 429s. The bypass is opt-in via env
       // var — production .env never sets it.
       RATE_LIMIT_DISABLED: "true",
+      // Public signups are OFF by default (coming-soon launch); the e2e
+      // specs register orgs + divers as their fixtures, so open them here.
+      SIGNUPS_ENABLED: "true",
       // Local .env often points SMTP_HOST at smtp.example.com so
       // registration tests can exercise email-triggering paths.
       // For e2e, force the helper into documented dev no-op mode:
