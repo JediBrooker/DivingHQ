@@ -18,7 +18,7 @@ import {
   LayoutDashboard, Trophy, MonitorPlay, Calculator, ChartColumn, Waves, GraduationCap,
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
-  Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award, Receipt, Heart, Gavel,
+  Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award, Gavel,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -39,11 +39,8 @@ const NAV = [
     { to: '/manager',        label: 'Meets & events', labelKey: 'manager.title',         icon: Trophy,        roles: ['org_admin', 'meet_manager'] },
     { to: '/control',        label: 'Control Room',   labelKey: 'control.page_label',     icon: MonitorPlay,   roles: ['org_admin', 'meet_manager', 'referee'] },
     { to: '/competitor',     label: 'Dive Sheets',    icon: Waves,         roles: ['diver'] },
-    { to: '/membership',     label: 'Membership',     icon: CreditCard,    roles: ['diver'] },
     { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
     { to: '/accreditation',  label: 'Accreditation',  icon: Award,         roles: ['judge', 'referee', 'coach', 'meet_manager'] },
-    { to: '/charges',        label: 'Charges',        icon: Receipt },
-    { to: '/donate',         label: 'Donate',         icon: Heart },
     { to: '/fines',          label: 'Fines',          icon: Gavel,         roles: ['referee', 'org_admin'] },
     { to: '/scoreboard',     label: 'Scoreboard & Results', labelKey: 'scoreboard.page_label',  icon: ListChecks },
     { to: '/judge-analysis', label: 'Judge Analysis', icon: ChartColumn },
