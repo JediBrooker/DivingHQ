@@ -142,23 +142,32 @@ module.exports = function createPaymentsRouter({
   // collected payments (fee prorated on partial refunds, clamped >= 0) minus
   // everything already withdrawn (pending + paid payouts). Runs on `db` so it
   // can share a transaction / row-lock with a withdrawal insert.
-  async function orgBalanceCents(orgId, db = pool) {
+  async function orgBalancesByCurrency(orgId, db = pool) {
+    // Net owed PER CURRENCY: collected (fee prorated on partial refunds,
+    // clamped >= 0) minus what's already withdrawn, grouped by currency so a
+    // federation that took payments in more than one currency is never summed
+    // into one meaningless number or paid out in the wrong currency.
     const collected = (await db.query(
-      `SELECT COALESCE(SUM(GREATEST(0,
+      `SELECT currency, COALESCE(SUM(GREATEST(0,
           CASE status
             WHEN 'paid' THEN amount_cents - platform_fee_cents
             WHEN 'partially_refunded' THEN ROUND(
               (amount_cents - platform_fee_cents)::numeric
                 * (amount_cents - COALESCE(refunded_amount_cents, 0)) / NULLIF(amount_cents, 0))
             ELSE 0 END)), 0)::bigint AS net
-         FROM payments WHERE org_id = $1`,
+         FROM payments WHERE org_id = $1 GROUP BY currency`,
       [orgId],
-    )).rows[0].net;
-    const paidOut = (await db.query(
-      "SELECT COALESCE(SUM(amount_cents), 0)::bigint AS n FROM payouts WHERE org_id = $1 AND status IN ('pending', 'paid')",
+    )).rows;
+    const paid = (await db.query(
+      `SELECT currency, COALESCE(SUM(amount_cents), 0)::bigint AS n
+         FROM payouts WHERE org_id = $1 AND status IN ('pending', 'paid') GROUP BY currency`,
       [orgId],
-    )).rows[0].n;
-    return Number(collected) - Number(paidOut);
+    )).rows;
+    const paidByCur = new Map(paid.map((r) => [r.currency, Number(r.n)]));
+    return collected
+      .map((r) => ({ currency: r.currency, cents: Number(r.net) - (paidByCur.get(r.currency) || 0) }))
+      .filter((b) => b.cents > 0)
+      .sort((a, b) => b.cents - a.cents);
   }
 
   // Is this user an active member of the org right now?
@@ -762,8 +771,18 @@ module.exports = function createPaymentsRouter({
       };
       // Coming-soon: report payout + auto-withdraw settings (they don't need
       // Stripe) but no balance until payments are switched on.
-      if (!payments.enabled) return res.json({ enabled: false, ...base, balance_cents: 0 });
-      return res.json({ enabled: true, ...base, balance_cents: await orgBalanceCents(orgId) });
+      if (!payments.enabled) return res.json({ enabled: false, ...base, balances: [], balance_cents: 0 });
+      const balances = await orgBalancesByCurrency(orgId);
+      const primary = balances[0] || null;
+      return res.json({
+        enabled: true,
+        ...base,
+        // Per-currency amounts owed; the UI renders each in its own currency.
+        balances,
+        // Convenience for the common single-currency case: the largest bucket.
+        balance_cents: primary ? primary.cents : 0,
+        currency: primary ? primary.currency : base.currency,
+      });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] payout status failed");
       return res.status(err.status || 500).json({ error: err.message || "Status check failed" });
@@ -840,8 +859,8 @@ module.exports = function createPaymentsRouter({
   // Federation requests a withdrawal of its owed balance. Only meaningful once
   // payments are live (nothing to withdraw while dormant, so ensurePayments
   // 503s). The org row is locked FOR UPDATE so two concurrent requests can't
-  // both read the same balance and over-withdraw. Records a pending payout;
-  // the actual bank transfer is settled out-of-band by the platform.
+  // both read the same balance and over-withdraw. Records one pending
+  // payout PER CURRENCY; the actual bank transfer is settled out-of-band.
   router.post("/api/orgs/:id/withdrawals", requireOrgRole(["org_admin"]), async (req, res) => {
     if (!ensurePayments(res)) return;
     const orgId = req.params.id;
@@ -850,7 +869,7 @@ module.exports = function createPaymentsRouter({
     try {
       await client.query("BEGIN");
       const org = (await client.query(
-        "SELECT payout_account_name, payout_account_details, default_currency FROM organisations WHERE id = $1 FOR UPDATE",
+        "SELECT payout_account_name, payout_account_details FROM organisations WHERE id = $1 FOR UPDATE",
         [orgId],
       )).rows[0];
       if (!org) {
@@ -861,24 +880,26 @@ module.exports = function createPaymentsRouter({
         await client.query("ROLLBACK");
         return res.status(409).json({ error: "Add your payout bank details before withdrawing." });
       }
-      const balance = await orgBalanceCents(orgId, client);
-      if (balance <= 0) {
+      const note = ((req.body || {}).note || "").toString().trim().slice(0, 200) || null;
+      const balances = await orgBalancesByCurrency(orgId, client);
+      if (!balances.length) {
         await client.query("ROLLBACK");
         return res.status(409).json({ error: "You have no balance to withdraw." });
       }
-      const requested = req.body && Number(req.body.amount_cents) > 0
-        ? Math.floor(Number(req.body.amount_cents))
-        : balance;
-      const amount = Math.min(requested, balance);
-      const note = ((req.body || {}).note || "").toString().trim().slice(0, 200) || null;
-      const payout = (await client.query(
-        `INSERT INTO payouts (org_id, amount_cents, currency, status, note)
-         VALUES ($1, $2, $3, 'pending', $4)
-         RETURNING id, amount_cents, currency, status, note, created_at, paid_at`,
-        [orgId, amount, org.default_currency, note],
-      )).rows[0];
+      // One pending payout per currency, each stamped with ITS own currency
+      // and amount — never a cross-currency sum booked in the wrong currency.
+      const payouts = [];
+      for (const b of balances) {
+        const row = (await client.query(
+          `INSERT INTO payouts (org_id, amount_cents, currency, status, note)
+           VALUES ($1, $2, $3, 'pending', $4)
+           RETURNING id, amount_cents, currency, status, note, created_at, paid_at`,
+          [orgId, b.cents, b.currency, note],
+        )).rows[0];
+        payouts.push(row);
+      }
       await client.query("COMMIT");
-      return res.status(201).json(payout);
+      return res.status(201).json(payouts);
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
       logger.error({ err: err.message }, "[payments] withdrawal request failed");

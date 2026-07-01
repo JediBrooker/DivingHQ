@@ -32,12 +32,15 @@ const savingAuto = ref(false)
 const withdrawing = ref(false)
 const payoutForm = ref({ account_name: '', account_details: '' })
 const autoForm = ref({ enabled: false, threshold: '' })
-const withdrawAmount = ref('')
 const withdrawals = ref([])
 
 const comingSoon = computed(() => status.value && status.value.enabled === false)
 const currency = computed(() => (status.value && status.value.currency) || 'GBP')
-const balanceCents = computed(() => (status.value && status.value.balance_cents) || 0)
+const balances = computed(() => (status.value && status.value.balances) || [])
+const hasBalance = computed(() => balances.value.length > 0)
+const balanceLabel = computed(() =>
+  balances.value.length ? balances.value.map((b) => money(b.cents, b.currency)).join('  +  ') : money(0),
+)
 const payoutSet = computed(() => !!(status.value && status.value.payout_details_set))
 const autoThresholdOk = computed(() => Number(autoForm.value.threshold) >= 1)
 
@@ -123,14 +126,11 @@ async function saveAuto() {
 async function requestWithdrawal() {
   withdrawing.value = true
   try {
-    const body = {}
-    if (withdrawAmount.value) body.amount_cents = Math.round(Number(withdrawAmount.value) * 100)
     await auth.apiFetch(`/api/orgs/${orgId.value}/withdrawals`, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify({}),
     })
     showSuccess('Withdrawal requested')
-    withdrawAmount.value = ''
     await Promise.all([loadStatus(), loadWithdrawals()])
   } catch (e) {
     showError(e.message || 'Could not request withdrawal')
@@ -166,7 +166,7 @@ onMounted(async () => {
         <div class="grid">
           <div class="stat">
             <span class="stat-label">Balance owed to you</span>
-            <span class="stat-value">{{ comingSoon ? '—' : money(balanceCents) }}</span>
+            <span class="stat-value">{{ comingSoon ? '—' : balanceLabel }}</span>
           </div>
           <div class="stat">
             <span class="stat-label">Payout details</span>
@@ -213,14 +213,11 @@ onMounted(async () => {
       <div v-show="tab === 'withdrawals'" class="panel">
         <div class="card">
           <h2>Balance &amp; withdrawals</h2>
-          <p class="balance-line">Balance owed to you: <strong>{{ comingSoon ? '—' : money(balanceCents) }}</strong></p>
+          <p class="balance-line">Balance owed to you: <strong>{{ comingSoon ? '—' : balanceLabel }}</strong></p>
           <p v-if="comingSoon" class="muted">Withdrawals open when payments go live. You can set up automatic withdrawals below now.</p>
           <template v-else>
-            <div class="field">
-              <label>Amount to withdraw (leave blank for the full balance)</label>
-              <input class="in" type="number" min="0" step="0.01" v-model="withdrawAmount" :placeholder="money(balanceCents)" />
-            </div>
-            <button class="btn" :disabled="withdrawing || balanceCents <= 0 || !payoutSet" @click="requestWithdrawal">
+            <p class="muted">Withdraw your full available balance to the bank details on file. We settle the transfer out-of-band.</p>
+            <button class="btn" :disabled="withdrawing || !hasBalance || !payoutSet" @click="requestWithdrawal">
               {{ withdrawing ? 'Requesting…' : 'Withdraw now' }}
             </button>
             <p v-if="!payoutSet" class="warn small">Add your payout details first (Account details tab).</p>
