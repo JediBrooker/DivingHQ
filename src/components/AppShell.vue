@@ -19,6 +19,7 @@ import {
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award, Gavel,
+  Wallet, History, Receipt, Heart,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -40,7 +41,13 @@ const NAV = [
     { to: '/control',        label: 'Control Room',   labelKey: 'control.page_label',     icon: MonitorPlay,   roles: ['org_admin', 'meet_manager', 'referee'] },
     { to: '/competitor',     label: 'Dive Sheets',    icon: Waves,         roles: ['diver'] },
     { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
-    { to: '/accreditation',  label: 'Accreditation',  icon: Award,         roles: ['judge', 'referee', 'coach', 'meet_manager'] },
+    { menu: 'user-payments', label: 'User Payments', labelKey: 'payments.menu', icon: Wallet, children: [
+      { to: '/membership',      label: 'Membership',      labelKey: 'payments.membership',    icon: CreditCard, roles: ['diver'] },
+      { to: '/accreditation',   label: 'Accreditation',   labelKey: 'payments.accreditation', icon: Award,      roles: ['judge', 'referee', 'coach', 'meet_manager'] },
+      { to: '/charges',         label: 'Charges',         labelKey: 'payments.charges',       icon: Receipt },
+      { to: '/donate',          label: 'Donate',          labelKey: 'payments.donate',        icon: Heart },
+      { to: '/payment-history', label: 'Payment History', labelKey: 'payments.history',       icon: History },
+    ] },
     { to: '/fines',          label: 'Fines',          icon: Gavel,         roles: ['referee', 'org_admin'] },
     { to: '/scoreboard',     label: 'Scoreboard & Results', labelKey: 'scoreboard.page_label',  icon: ListChecks },
     { to: '/judge-analysis', label: 'Judge Analysis', icon: ChartColumn },
@@ -59,15 +66,36 @@ function navLabel(it) {
   return it.labelKey ? t(it.labelKey) : it.label
 }
 
+function childVisible(c) {
+  return !c.roles || c.roles.some((r) => auth.hasRole(r))
+}
 function itemVisible(it) {
+  if (it.children) return it.children.some(childVisible)
   return !it.roles || it.roles.some((r) => auth.hasRole(r))
 }
+// A nested item (children) is shown if any child is visible; its child
+// list is filtered to the roles the user actually has.
 const visibleGroups = computed(() =>
-  NAV.map((g) => ({ ...g, items: g.items.filter(itemVisible) })).filter((g) => g.items.length),
+  NAV.map((g) => ({
+    ...g,
+    items: g.items
+      .filter(itemVisible)
+      .map((it) => (it.children ? { ...it, children: it.children.filter(childVisible) } : it)),
+  })).filter((g) => g.items.length),
 )
+
+// Nested-menu expansion. Hover expands it on desktop (CSS); this click
+// state keeps it open on touch and after a tap.
+const openMenu = ref(null)
+function toggleMenu(key) {
+  openMenu.value = openMenu.value === key ? null : key
+}
 
 function isActive(to) {
   return route.path === to || route.path.startsWith(to + '/')
+}
+function isParentActive(it) {
+  return !!it.children && it.children.some((c) => isActive(c.to))
 }
 // Sub-routes that aren't a nav item still deserve a real breadcrumb
 // label; reuse existing translated keys.
@@ -77,7 +105,13 @@ const SUBROUTE_LABELS = {
   '/inbox': 'dashboard.inbox',
 }
 const currentLabel = computed(() => {
-  for (const g of NAV) for (const it of g.items) if (isActive(it.to)) return navLabel(it)
+  for (const g of NAV) for (const it of g.items) {
+    if (it.children) {
+      for (const c of it.children) if (isActive(c.to)) return navLabel(c)
+    } else if (isActive(it.to)) {
+      return navLabel(it)
+    }
+  }
   for (const [p, k] of Object.entries(SUBROUTE_LABELS)) if (route.path.startsWith(p)) return t(k)
   return 'DivingHQ'
 })
@@ -141,17 +175,45 @@ function closeMobile() { mobileOpen.value = false }
       <nav class="sb-nav" aria-label="Primary">
         <template v-for="g in visibleGroups" :key="g.group">
           <div class="sb-group">{{ g.group }}</div>
-          <RouterLink
-            v-for="it in g.items"
-            :key="it.to"
-            :to="it.to"
-            class="sb-item"
-            :class="{ active: isActive(it.to) }"
-            @click="closeMobile"
-          >
-            <component :is="it.icon" class="sb-ic" />
-            <span class="sb-label">{{ navLabel(it) }}</span>
-          </RouterLink>
+          <template v-for="it in g.items" :key="it.to || it.menu">
+            <!-- Nested menu: hover (desktop) or tap expands the sub-items -->
+            <div v-if="it.children" class="sb-parent" :class="{ open: openMenu === it.menu }">
+              <button
+                type="button"
+                class="sb-item sb-parent-btn"
+                :class="{ active: isParentActive(it) }"
+                :aria-expanded="openMenu === it.menu ? 'true' : 'false'"
+                @click="toggleMenu(it.menu)"
+              >
+                <component :is="it.icon" class="sb-ic" />
+                <span class="sb-label">{{ navLabel(it) }}</span>
+                <ChevronRight class="sb-caret" />
+              </button>
+              <div class="sb-sub">
+                <RouterLink
+                  v-for="c in it.children"
+                  :key="c.to"
+                  :to="c.to"
+                  class="sb-item sb-subitem"
+                  :class="{ active: isActive(c.to) }"
+                  @click="closeMobile"
+                >
+                  <component :is="c.icon" class="sb-ic" />
+                  <span class="sb-label">{{ navLabel(c) }}</span>
+                </RouterLink>
+              </div>
+            </div>
+            <RouterLink
+              v-else
+              :to="it.to"
+              class="sb-item"
+              :class="{ active: isActive(it.to) }"
+              @click="closeMobile"
+            >
+              <component :is="it.icon" class="sb-ic" />
+              <span class="sb-label">{{ navLabel(it) }}</span>
+            </RouterLink>
+          </template>
         </template>
       </nav>
 
@@ -272,6 +334,20 @@ function closeMobile() { mobileOpen.value = false }
 .sb-item .sb-ic { width: 17px; height: 17px; flex-shrink: 0; stroke-width: 1.9; }
 .sb-item:hover { background: var(--surface-hover); color: var(--fg); }
 .sb-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+/* Nested 'User Payments' menu — inline accordion, opens on hover or tap. */
+.sb-parent { display: flex; flex-direction: column; }
+.sb-parent-btn { border: none; background: none; cursor: pointer; font: inherit; text-align: left; }
+.sb-caret { width: 15px; height: 15px; margin-left: auto; flex-shrink: 0; stroke-width: 2;
+  color: var(--fg-3); transition: transform var(--dur-fast) var(--ease); }
+.sb-parent:hover .sb-caret,
+.sb-parent.open .sb-caret { transform: rotate(90deg); }
+.sb-sub { display: none; flex-direction: column; gap: 1px;
+  margin: 2px 0 4px 16px; padding-left: 8px; border-left: 1px solid var(--border); }
+.sb-parent:hover .sb-sub,
+.sb-parent.open .sb-sub { display: flex; }
+.sb-subitem { font-size: 12.5px; padding: 6px 10px; }
+.sb-subitem .sb-ic { width: 15px; height: 15px; }
 
 .sb-foot { padding: 10px 12px; border-top: 1px solid var(--border); }
 .sb-user-wrap { position: relative; }

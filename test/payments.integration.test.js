@@ -1142,3 +1142,34 @@ test("withdrawal creates one payout per currency (no cross-currency mixing)", as
   const after = await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json();
   assert.equal(after.balances.length, 0, "both currencies fully withdrawn");
 });
+
+test("GET /api/me/payments returns the caller's payments (incl. accreditation) and excludes others", async (t) => {
+  if (!ready) return t.skip();
+  // An official_accreditation the caller paid — payer_user_id is set, so it
+  // must appear in their history.
+  await pool.query(
+    `INSERT INTO payments (org_id, payer_user_id, payer_type, payer_role_type, subject_type, amount_cents, platform_fee_cents, currency, status)
+     VALUES ($1, $2, 'official_role', 'judge', 'official_accreditation', 3000, 450, 'GBP', 'paid')`,
+    [orgId, userId],
+  );
+  // Another user's donation — must NOT appear in the caller's history.
+  const other = (await pool.query(
+    "INSERT INTO users (username, full_name, org_id) VALUES ($1, $2, $3) RETURNING id",
+    [`ph-other-${suffix}`, "PH Other", orgId],
+  )).rows[0].id;
+  await pool.query(
+    `INSERT INTO payments (org_id, payer_user_id, subject_type, amount_cents, platform_fee_cents, currency, status)
+     VALUES ($1, $2, 'donation', 1234, 185, 'GBP', 'paid')`,
+    [orgId, other],
+  );
+  const res = await api("GET", "/api/me/payments");
+  assert.equal(res.status, 200);
+  const { payments: list } = await res.json();
+  assert.ok(Array.isArray(list) && list.length > 0);
+  const acc = list.find((p) => p.subject_type === "official_accreditation");
+  assert.ok(acc, "caller's accreditation payment is returned");
+  for (const k of ["id", "created_at", "subject_type", "status", "amount_cents", "currency"]) {
+    assert.ok(k in acc, `row missing ${k}`);
+  }
+  assert.ok(!list.some((p) => p.amount_cents === 1234), "excludes other users' payments");
+});
