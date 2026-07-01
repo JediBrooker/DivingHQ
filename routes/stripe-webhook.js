@@ -69,6 +69,8 @@ async function onCheckoutCompleted(pool, logger, session) {
         "UPDATE entry_charges SET status = 'paid' WHERE payment_id = $1 AND status = 'owed'",
         [payment.id],
       );
+    } else if (payment.subject_type === "meet_bundle") {
+      await grantMeetBundle(client, payment);
     }
     // For 'event_entry' the payment is now recorded as paid. Actually
     // building/confirming the diver's dive list stays in the entry flow
@@ -116,6 +118,28 @@ async function grantOfficialAccreditation(client, payment) {
         (org_id, user_id, role_type, fee_definition_id, payment_id, period_start, period_end, status)
      VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, (CURRENT_DATE + interval '12 months')::date, 'active')`,
     [payment.org_id, payment.payer_user_id, payment.payer_role_type, payment.fee_definition_id, payment.id],
+  );
+}
+
+// Expand a paid meet_bundle into a paid event_entry for every event the
+// bundle covers, so the existing "entry confirmed once a paid event_entry
+// payment exists" logic treats the diver as entered in each. Amount 0 (they
+// paid via the bundle). meet_id is deliberately LEFT NULL: these are
+// per-event entries keyed on event_id, and stamping the shared meet_id would
+// collide them all on idx_payments_one_live_meet_entry (meet_id,
+// payer_user_id, fee_definition_id) — which ignores event_id — so only one
+// event would survive. ON CONFLICT DO NOTHING keeps it idempotent against
+// re-delivery and any pre-existing paid entry for the same event.
+async function grantMeetBundle(client, payment) {
+  await client.query(
+    `INSERT INTO payments
+        (org_id, fee_definition_id, payer_user_id, subject_type, event_id,
+         amount_cents, platform_fee_cents, currency, fee_payer, status, paid_at)
+     SELECT $1, $2, $3, 'event_entry', mbi.event_id, 0, 0, $4, 'absorb', 'paid', now()
+       FROM meet_bundle_items mbi
+      WHERE mbi.fee_definition_id = $2
+     ON CONFLICT DO NOTHING`,
+    [payment.org_id, payment.fee_definition_id, payment.payer_user_id, payment.currency || "GBP"],
   );
 }
 
