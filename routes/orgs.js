@@ -125,6 +125,28 @@ module.exports = function createOrgsRouter({
     }
   });
 
+  // All members of the org (id + name only), for pickers that aren't
+  // diver-specific — e.g. the fines desk, which can fine any member. Same
+  // credential-safe projection as /divers (no username).
+  router.get("/api/orgs/:id/members", verifyToken, async (req, res) => {
+    if (!req.user.is_system_admin && req.params.id !== req.user.org_id) {
+      return res.status(403).json({ error: "Cannot list members in other organisations" });
+    }
+    try {
+      const r = await pool.query(
+        `SELECT u.id, u.full_name
+           FROM users u
+          WHERE u.org_id = $1 AND u.deleted_at IS NULL
+          ORDER BY u.full_name ASC`,
+        [req.params.id],
+      );
+      res.json(r.rows);
+    } catch (err) {
+      console.error("[Org Members Error]", err.message);
+      res.status(500).json([]);
+    }
+  });
+
   // -------- Clubs --------
   // Clubs in an organisation. Public — used by the registration
   // form's club picker before the user has an account.
