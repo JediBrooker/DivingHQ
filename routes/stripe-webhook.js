@@ -72,8 +72,11 @@ async function onCheckoutCompleted(pool, logger, session) {
     } else if (payment.subject_type === "meet_bundle") {
       await grantMeetBundle(client, payment);
     } else if (payment.subject_type === "fine") {
+      // Settle from owed OR appealed: if a payment completes for a fine that
+      // slipped into 'appealed' during an in-flight checkout, the money was
+      // taken, so the payment wins and the fine is paid.
       await client.query(
-        "UPDATE fines SET status = 'paid' WHERE id = $1 AND status = 'owed'",
+        "UPDATE fines SET status = 'paid' WHERE id = $1 AND status IN ('owed', 'appealed')",
         [payment.fine_id],
       );
     }

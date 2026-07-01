@@ -43,7 +43,7 @@ async function loadFines() {
 }
 async function loadPeople() {
   try {
-    people.value = await auth.apiFetch(`/api/orgs/${orgId.value}/divers`)
+    people.value = await auth.apiFetch(`/api/orgs/${orgId.value}/members`)
   } catch {
     people.value = []
   }

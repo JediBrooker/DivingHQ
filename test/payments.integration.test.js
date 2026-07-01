@@ -944,6 +944,9 @@ test("the person appeals, and payment is then blocked", async (t) => {
 
 test("an org admin dismisses the appeal, restoring 'owed'", async (t) => {
   if (!ready) return t.skip();
+  // A real adjudicator isn't the issuer; detach the (test-user) issuer so the
+  // separation-of-duties guard doesn't fire (that guard has its own test).
+  await pool.query("UPDATE fines SET issued_by = NULL WHERE id = $1", [fineId]);
   const res = await api("POST", `/api/fines/${fineId}/appeal/review`, { decision: "dismissed" });
   assert.equal(res.status, 200);
   const row = (await pool.query("SELECT status, appeal_status FROM fines WHERE id = $1", [fineId])).rows[0];
@@ -981,6 +984,7 @@ test("an upheld appeal waives the fine", async (t) => {
   const issued = await api("POST", "/api/fines", { liable_user_id: userId, amount_cents: 2000, reason: "Late" });
   const id2 = (await issued.json()).id;
   await api("POST", `/api/fines/${id2}/appeal`, { reason: "Traffic" });
+  await pool.query("UPDATE fines SET issued_by = NULL WHERE id = $1", [id2]);
   const res = await api("POST", `/api/fines/${id2}/appeal/review`, { decision: "upheld" });
   assert.equal(res.status, 200);
   const row = (await pool.query("SELECT status, appeal_status FROM fines WHERE id = $1", [id2])).rows[0];
@@ -996,4 +1000,43 @@ test("a referee can waive an owed fine", async (t) => {
   assert.equal(res.status, 200);
   const row = (await pool.query("SELECT status FROM fines WHERE id = $1", [id3])).rows[0];
   assert.equal(row.status, "waived");
+});
+
+test("cannot appeal/pay a fine you're not liable for, nor review your own", async (t) => {
+  if (!ready) return t.skip();
+  // A fine against SOMEONE ELSE, issued by the test user.
+  const other = (await pool.query(
+    "INSERT INTO users (username, full_name, org_id) VALUES ($1, $2, $3) RETURNING id",
+    [`other-${suffix}`, "Other Person", orgId],
+  )).rows[0].id;
+  const issued = await api("POST", "/api/fines", { liable_user_id: other, amount_cents: 2500, reason: "Conduct" });
+  const id = (await issued.json()).id;
+  // The (stubbed) caller is NOT the liable person: can't appeal or pay it.
+  let res = await api("POST", `/api/fines/${id}/appeal`, { reason: "not me" });
+  assert.equal(res.status, 403);
+  res = await api("POST", `/api/fines/${id}/checkout`, {});
+  assert.equal(res.status, 403);
+  // Separation of duties: the issuer (the caller) can't review its appeal.
+  await pool.query("UPDATE fines SET status = 'appealed', appeal_status = 'pending' WHERE id = $1", [id]);
+  res = await api("POST", `/api/fines/${id}/appeal/review`, { decision: "dismissed" });
+  assert.equal(res.status, 403);
+});
+
+test("appealing a fine with a checkout in flight kills the session; a late webhook can't pay it", async (t) => {
+  if (!ready) return t.skip();
+  const issued = await api("POST", "/api/fines", { liable_user_id: userId, amount_cents: 4000, reason: "Race" });
+  const id = (await issued.json()).id;
+  const co = await api("POST", `/api/fines/${id}/checkout`, {});
+  const payId = (await co.json()).payment_id;
+  lastExpireArgs = null;
+  const res = await api("POST", `/api/fines/${id}/appeal`, { reason: "changed my mind" });
+  assert.equal(res.status, 200);
+  assert.ok(lastExpireArgs, "the open session should be expired on appeal");
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [payId])).rows[0].status, "failed");
+  // A late completion for the killed session is a no-op (payment failed).
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_race", client_reference_id: payId, payment_intent: "pi_race" } },
+  });
+  assert.equal((await pool.query("SELECT status FROM fines WHERE id = $1", [id])).rows[0].status, "appealed");
 });

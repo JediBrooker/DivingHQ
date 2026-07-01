@@ -1657,6 +1657,29 @@ module.exports = function createPaymentsRouter({
     };
   }
 
+  // Retire any in-flight checkout for a fine before appealing/waiving it, so a
+  // still-open Stripe session can't settle a fine that's no longer owed.
+  // Returns "paid" if the linked payment already completed (caller should 409).
+  // Requires fine.{payment_id, org_id}.
+  async function retireInFlightFinePayment(fine) {
+    if (!fine.payment_id) return null;
+    const p = (await pool.query("SELECT id, status, stripe_checkout_session FROM payments WHERE id = $1", [fine.payment_id])).rows[0];
+    if (!p) return null;
+    if (p.status === "paid") return "paid";
+    if (p.status === "pending") {
+      const acct = (await pool.query("SELECT stripe_account_id FROM organisations WHERE id = $1", [fine.org_id])).rows[0]?.stripe_account_id;
+      if (payments.enabled && p.stripe_checkout_session && acct) {
+        try {
+          await payments.expireCheckoutSession({ connectedAccountId: acct, sessionId: p.stripe_checkout_session });
+        } catch (e) {
+          logger.warn({ err: e.message }, "[payments] could not expire in-flight fine session");
+        }
+      }
+      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [p.id]);
+    }
+    return null;
+  }
+
   // Referee / org_admin issues a fine against a person in their org.
   router.post("/api/fines", requireOrgRole(["referee", "org_admin"]), async (req, res) => {
     if (!ensurePayments(res)) return;
@@ -1679,7 +1702,8 @@ module.exports = function createPaymentsRouter({
       let eventId = null;
       if (body.event_id) {
         const ev = (await pool.query("SELECT id FROM events WHERE id = $1 AND org_id = $2", [body.event_id, orgId])).rows[0];
-        eventId = ev ? ev.id : null;
+        if (!ev) return res.status(400).json({ error: "That event isn't in this federation." });
+        eventId = ev.id;
       }
       const ins = await pool.query(
         `INSERT INTO fines (org_id, liable_user_id, issued_by, event_id, amount_cents, currency, reason, status)
@@ -1737,10 +1761,15 @@ module.exports = function createPaymentsRouter({
     const reason = ((req.body || {}).reason || "").toString().trim();
     if (!reason) return res.status(400).json({ error: "An appeal reason is required." });
     try {
-      const f = (await pool.query("SELECT id, liable_user_id, status FROM fines WHERE id = $1", [req.params.id])).rows[0];
+      const f = (await pool.query("SELECT id, org_id, liable_user_id, status, payment_id FROM fines WHERE id = $1", [req.params.id])).rows[0];
       if (!f) return res.status(404).json({ error: "Fine not found" });
       if (f.liable_user_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
       if (f.status !== "owed") return res.status(409).json({ error: `Cannot appeal a fine that is ${f.status}.` });
+      // Don't let an appeal race an in-flight checkout — retire it, or block
+      // the appeal if the payment already settled.
+      if ((await retireInFlightFinePayment(f)) === "paid") {
+        return res.status(409).json({ error: "This fine has already been paid." });
+      }
       await pool.query(
         "UPDATE fines SET status = 'appealed', appeal_status = 'pending', appeal_reason = $2 WHERE id = $1 AND status = 'owed'",
         [req.params.id, reason],
@@ -1759,9 +1788,13 @@ module.exports = function createPaymentsRouter({
       return res.status(400).json({ error: "decision must be 'upheld' or 'dismissed'." });
     }
     try {
-      const f = (await pool.query("SELECT id, org_id, status FROM fines WHERE id = $1", [req.params.id])).rows[0];
+      const f = (await pool.query("SELECT id, org_id, status, issued_by FROM fines WHERE id = $1", [req.params.id])).rows[0];
       if (!f) return res.status(404).json({ error: "Fine not found" });
       if (!ownsOrg(req, f.org_id)) return res.status(403).json({ error: "Forbidden" });
+      // Separation of duties: the issuer can't adjudicate their own fine.
+      if (f.issued_by === req.user.id && !req.user.is_system_admin) {
+        return res.status(403).json({ error: "You cannot review an appeal on a fine you issued." });
+      }
       if (f.status !== "appealed") return res.status(409).json({ error: `No pending appeal on a fine that is ${f.status}.` });
       // Upheld = the appeal succeeds => the fine is waived. Dismissed = it
       // stands => back to owed.
@@ -1787,22 +1820,8 @@ module.exports = function createPaymentsRouter({
         return res.status(409).json({ error: `Cannot waive a fine that is ${f.status}.` });
       }
       // Kill any in-flight checkout so the person can't pay a waived fine.
-      if (f.payment_id) {
-        const p = (await pool.query("SELECT id, status, stripe_checkout_session FROM payments WHERE id = $1", [f.payment_id])).rows[0];
-        if (p && p.status === "paid") {
-          return res.status(409).json({ error: "This fine has already been paid — refund it instead of waiving." });
-        }
-        if (p && p.status === "pending") {
-          const acct = (await pool.query("SELECT stripe_account_id FROM organisations WHERE id = $1", [f.org_id])).rows[0]?.stripe_account_id;
-          if (payments.enabled && p.stripe_checkout_session && acct) {
-            try {
-              await payments.expireCheckoutSession({ connectedAccountId: acct, sessionId: p.stripe_checkout_session });
-            } catch (e) {
-              logger.warn({ err: e.message }, "[payments] could not expire session on fine waive");
-            }
-          }
-          await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [p.id]);
-        }
+      if ((await retireInFlightFinePayment(f)) === "paid") {
+        return res.status(409).json({ error: "This fine has already been paid — refund it instead of waiving." });
       }
       await pool.query("UPDATE fines SET status = 'waived' WHERE id = $1 AND status IN ('owed', 'appealed')", [req.params.id]);
       return res.json({ status: "waived" });
