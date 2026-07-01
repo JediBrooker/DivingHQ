@@ -160,6 +160,7 @@ after(async () => {
   if (server) await new Promise((res) => server.close(res));
   if (orgId) {
     await pool.query("DELETE FROM payments WHERE org_id = $1", [orgId]);
+    await pool.query("DELETE FROM fines WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM entry_charges WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM club_affiliations WHERE org_id = $1", [orgId]);
     await pool.query("DELETE FROM official_accreditations WHERE org_id = $1", [orgId]);
@@ -902,4 +903,97 @@ test("donating a chosen amount records a donation payment with the 15% fee", asy
   assert.equal(row.payer_user_id, userId);
   assert.equal(row.amount_cents, 3000);
   assert.equal(row.platform_fee_cents, 450); // 15% of 3000
+});
+
+// ---- Fines (disciplinary, appealable) -------------------------------
+
+let fineId;
+let finePaymentId;
+test("a referee issues a fine", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", "/api/fines", { liable_user_id: userId, amount_cents: 5000, reason: "Unsporting conduct" });
+  assert.equal(res.status, 200);
+  fineId = (await res.json()).id;
+  const row = (await pool.query("SELECT * FROM fines WHERE id = $1", [fineId])).rows[0];
+  assert.equal(row.status, "owed");
+  assert.equal(row.liable_user_id, userId);
+  assert.equal(row.amount_cents, 5000);
+  assert.equal(row.issued_by, userId);
+});
+
+test("a fine with no reason is rejected", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", "/api/fines", { liable_user_id: userId, amount_cents: 5000, reason: "   " });
+  assert.equal(res.status, 400);
+});
+
+test("the person sees the fine under /api/me/fines", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("GET", "/api/me/fines");
+  assert.ok((await res.json()).fines.some((f) => f.id === fineId && f.status === "owed"));
+});
+
+test("the person appeals, and payment is then blocked", async (t) => {
+  if (!ready) return t.skip();
+  let res = await api("POST", `/api/fines/${fineId}/appeal`, { reason: "It wasn't me" });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).status, "appealed");
+  res = await api("POST", `/api/fines/${fineId}/checkout`, {});
+  assert.equal(res.status, 409); // can't pay a fine under appeal
+});
+
+test("an org admin dismisses the appeal, restoring 'owed'", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/fines/${fineId}/appeal/review`, { decision: "dismissed" });
+  assert.equal(res.status, 200);
+  const row = (await pool.query("SELECT status, appeal_status FROM fines WHERE id = $1", [fineId])).rows[0];
+  assert.equal(row.status, "owed");
+  assert.equal(row.appeal_status, "dismissed");
+});
+
+test("the person pays the fine (15% fee, linked)", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("POST", `/api/fines/${fineId}/checkout`, {});
+  assert.equal(res.status, 200);
+  finePaymentId = (await res.json()).payment_id;
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [finePaymentId])).rows[0];
+  assert.equal(row.subject_type, "fine");
+  assert.equal(row.payer_user_id, userId);
+  assert.equal(row.liable_user_id, userId);
+  assert.equal(row.amount_cents, 5000);
+  assert.equal(row.platform_fee_cents, 750); // 15% of 5000
+  const f = (await pool.query("SELECT payment_id FROM fines WHERE id = $1", [fineId])).rows[0];
+  assert.equal(f.payment_id, finePaymentId);
+});
+
+test("the webhook settles the fine to paid", async (t) => {
+  if (!ready) return t.skip();
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_fine", client_reference_id: finePaymentId, payment_intent: "pi_fine" } },
+  });
+  const row = (await pool.query("SELECT status FROM fines WHERE id = $1", [fineId])).rows[0];
+  assert.equal(row.status, "paid");
+});
+
+test("an upheld appeal waives the fine", async (t) => {
+  if (!ready) return t.skip();
+  const issued = await api("POST", "/api/fines", { liable_user_id: userId, amount_cents: 2000, reason: "Late" });
+  const id2 = (await issued.json()).id;
+  await api("POST", `/api/fines/${id2}/appeal`, { reason: "Traffic" });
+  const res = await api("POST", `/api/fines/${id2}/appeal/review`, { decision: "upheld" });
+  assert.equal(res.status, 200);
+  const row = (await pool.query("SELECT status, appeal_status FROM fines WHERE id = $1", [id2])).rows[0];
+  assert.equal(row.status, "waived");
+  assert.equal(row.appeal_status, "upheld");
+});
+
+test("a referee can waive an owed fine", async (t) => {
+  if (!ready) return t.skip();
+  const issued = await api("POST", "/api/fines", { liable_user_id: userId, amount_cents: 1500, reason: "Misconduct" });
+  const id3 = (await issued.json()).id;
+  const res = await api("POST", `/api/fines/${id3}/waive`, {});
+  assert.equal(res.status, 200);
+  const row = (await pool.query("SELECT status FROM fines WHERE id = $1", [id3])).rows[0];
+  assert.equal(row.status, "waived");
 });

@@ -71,6 +71,11 @@ async function onCheckoutCompleted(pool, logger, session) {
       );
     } else if (payment.subject_type === "meet_bundle") {
       await grantMeetBundle(client, payment);
+    } else if (payment.subject_type === "fine") {
+      await client.query(
+        "UPDATE fines SET status = 'paid' WHERE id = $1 AND status = 'owed'",
+        [payment.fine_id],
+      );
     }
     // For 'event_entry' the payment is now recorded as paid. Actually
     // building/confirming the diver's dive list stays in the entry flow
@@ -197,6 +202,15 @@ async function onChargeRefunded(pool, charge) {
           SELECT payer_user_id, fee_definition_id FROM payments
            WHERE stripe_payment_intent = $1 AND subject_type = 'meet_bundle' AND status = 'refunded'
         )`,
+    [pi],
+  );
+  // A fully-refunded fine goes back to 'owed' (and frees its payment link so
+  // it can be re-paid).
+  await pool.query(
+    `UPDATE fines SET status = 'owed', payment_id = NULL
+      WHERE status = 'paid' AND payment_id IN (
+        SELECT id FROM payments WHERE stripe_payment_intent = $1 AND subject_type = 'fine' AND status = 'refunded'
+      )`,
     [pi],
   );
   // A fully-refunded penalty re-opens its entry-charge: the money was

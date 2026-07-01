@@ -661,6 +661,64 @@ module.exports = function createPaymentsRouter({
     }
   }
 
+  // The fined person pays their own fine (payer_user_id = liable_user_id).
+  // The amount is fixed on the fine row (referee-set), not a fee_price, and
+  // fines carry no fee_definition. One-live guard is per-fine (fine_id).
+  async function startFineCheckout({ req, org, fine }) {
+    const userId = req.user.id;
+    const currency = fine.currency || org.default_currency;
+    if (!currency) {
+      const err = new Error("The federation's currency is not configured.");
+      err.status = 409;
+      throw err;
+    }
+    const feeBps = org.platform_fee_bps;
+    const { chargeAmountCents, applicationFeeCents } = priceCharge({
+      baseAmountCents: fine.amount_cents,
+      feeBps,
+      feePayer: "absorb",
+    });
+    let paymentId;
+    try {
+      const ins = await pool.query(
+        `INSERT INTO payments
+            (org_id, payer_user_id, liable_user_id, subject_type,
+             amount_cents, platform_fee_cents, currency, fee_payer, fine_id, status)
+         VALUES ($1, $2, $2, 'fine', $3, $4, $5, 'absorb', $6, 'pending')
+         RETURNING id`,
+        [org.id, userId, chargeAmountCents, applicationFeeCents, currency, fine.id],
+      );
+      paymentId = ins.rows[0].id;
+    } catch (e) {
+      if (e.code === "23505") {
+        const err = new Error("You already have a payment in progress or completed for this fine.");
+        err.status = 409;
+        throw err;
+      }
+      throw e;
+    }
+    try {
+      const session = await payments.createCheckoutSession({
+        connectedAccountId: org.stripe_account_id,
+        currency,
+        chargeAmountCents,
+        applicationFeeCents,
+        productName: `Fine — ${org.name}`,
+        customerEmail: req.user.email,
+        clientReferenceId: paymentId,
+        metadata: { payment_id: paymentId, scope: "fine", org_id: org.id, user_id: userId, fine_id: fine.id },
+        successUrl: `${APP_BASE_URL}/charges?paid=1`,
+        cancelUrl: `${APP_BASE_URL}/charges?canceled=1`,
+      });
+      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
+      await pool.query("UPDATE fines SET payment_id = $1 WHERE id = $2", [paymentId, fine.id]);
+      return { url: session.url, paymentId };
+    } catch (err) {
+      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
+      throw err;
+    }
+  }
+
   // ---- Federation onboarding --------------------------------------
 
   // Begin/continue Stripe onboarding for a federation. Creates the
@@ -1580,6 +1638,206 @@ module.exports = function createPaymentsRouter({
     }
   });
 
+  // ---- Fines (disciplinary, referee-issued, appealable) -----------
+  // A referee (or org_admin) issues a fine against a person; the person pays
+  // or appeals it; an org_admin adjudicates the appeal (upheld => waived,
+  // dismissed => back to owed). Paying is blocked while an appeal is pending.
+
+  const FINE_MIN_CENTS = 100;
+  const FINE_MAX_CENTS = 100000000;
+
+  // Shape a fine row for the API (no raw internals).
+  function fineOut(f) {
+    return {
+      id: f.id, amount_cents: f.amount_cents, currency: f.currency, reason: f.reason,
+      status: f.status, appeal_status: f.appeal_status, appeal_reason: f.appeal_reason,
+      event_id: f.event_id, issued_at: f.issued_at,
+      liable_user_id: f.liable_user_id, liable_name: f.liable_name,
+      issued_by_name: f.issued_by_name,
+    };
+  }
+
+  // Referee / org_admin issues a fine against a person in their org.
+  router.post("/api/fines", requireOrgRole(["referee", "org_admin"]), async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const body = req.body || {};
+    const amountCents = Math.floor(Number(body.amount_cents));
+    if (!Number.isInteger(amountCents) || amountCents < FINE_MIN_CENTS || amountCents > FINE_MAX_CENTS) {
+      return res.status(400).json({ error: "A valid fine amount is required." });
+    }
+    if (!body.liable_user_id) return res.status(400).json({ error: "Who the fine is for is required." });
+    const reason = (body.reason || "").toString().trim();
+    if (!reason) return res.status(400).json({ error: "A reason for the fine is required." });
+    try {
+      const liable = (await pool.query("SELECT id, org_id FROM users WHERE id = $1", [body.liable_user_id])).rows[0];
+      if (!liable) return res.status(404).json({ error: "Person not found." });
+      const orgId = liable.org_id;
+      if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "You can only fine people in your own federation." });
+      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const currency = org?.default_currency;
+      if (!currency) return res.status(409).json({ error: "The federation's currency is not configured." });
+      let eventId = null;
+      if (body.event_id) {
+        const ev = (await pool.query("SELECT id FROM events WHERE id = $1 AND org_id = $2", [body.event_id, orgId])).rows[0];
+        eventId = ev ? ev.id : null;
+      }
+      const ins = await pool.query(
+        `INSERT INTO fines (org_id, liable_user_id, issued_by, event_id, amount_cents, currency, reason, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'owed') RETURNING id`,
+        [orgId, body.liable_user_id, req.user.id, eventId, amountCents, currency, reason],
+      );
+      return res.json({ id: ins.rows[0].id, amount_cents: amountCents });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] issue fine failed");
+      return res.status(500).json({ error: "Failed to issue the fine." });
+    }
+  });
+
+  // Referee / org_admin lists their org's fines.
+  router.get("/api/fines", requireOrgRole(["referee", "org_admin"]), async (req, res) => {
+    try {
+      const isSys = req.user.is_system_admin;
+      const rows = (await pool.query(
+        `SELECT f.*, lu.full_name AS liable_name, iu.full_name AS issued_by_name
+           FROM fines f
+           JOIN users lu ON lu.id = f.liable_user_id
+           LEFT JOIN users iu ON iu.id = f.issued_by
+          WHERE ($2::boolean OR f.org_id = $1)
+          ORDER BY f.issued_at DESC`,
+        [req.user.org_id, isSys],
+      )).rows;
+      return res.json({ fines: rows.map(fineOut), payments_enabled: payments.enabled });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] list fines failed");
+      return res.status(500).json({ error: "Failed to list fines." });
+    }
+  });
+
+  // The person's own fines (to pay or appeal).
+  router.get("/api/me/fines", verifyToken, async (req, res) => {
+    try {
+      const rows = (await pool.query(
+        `SELECT f.*, lu.full_name AS liable_name, iu.full_name AS issued_by_name
+           FROM fines f
+           JOIN users lu ON lu.id = f.liable_user_id
+           LEFT JOIN users iu ON iu.id = f.issued_by
+          WHERE f.liable_user_id = $1 AND f.status IN ('owed', 'appealed')
+          ORDER BY f.issued_at DESC`,
+        [req.user.id],
+      )).rows;
+      return res.json({ fines: rows.map(fineOut), payments_enabled: payments.enabled });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read my fines failed");
+      return res.status(500).json({ error: "Failed to read your fines." });
+    }
+  });
+
+  // The fined person appeals an owed fine.
+  router.post("/api/fines/:id/appeal", verifyToken, async (req, res) => {
+    const reason = ((req.body || {}).reason || "").toString().trim();
+    if (!reason) return res.status(400).json({ error: "An appeal reason is required." });
+    try {
+      const f = (await pool.query("SELECT id, liable_user_id, status FROM fines WHERE id = $1", [req.params.id])).rows[0];
+      if (!f) return res.status(404).json({ error: "Fine not found" });
+      if (f.liable_user_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+      if (f.status !== "owed") return res.status(409).json({ error: `Cannot appeal a fine that is ${f.status}.` });
+      await pool.query(
+        "UPDATE fines SET status = 'appealed', appeal_status = 'pending', appeal_reason = $2 WHERE id = $1 AND status = 'owed'",
+        [req.params.id, reason],
+      );
+      return res.json({ status: "appealed" });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] appeal fine failed");
+      return res.status(500).json({ error: "Failed to file the appeal." });
+    }
+  });
+
+  // An org_admin adjudicates a pending appeal.
+  router.post("/api/fines/:id/appeal/review", requireOrgRole(["org_admin"]), async (req, res) => {
+    const decision = (req.body || {}).decision;
+    if (!['upheld', 'dismissed'].includes(decision)) {
+      return res.status(400).json({ error: "decision must be 'upheld' or 'dismissed'." });
+    }
+    try {
+      const f = (await pool.query("SELECT id, org_id, status FROM fines WHERE id = $1", [req.params.id])).rows[0];
+      if (!f) return res.status(404).json({ error: "Fine not found" });
+      if (!ownsOrg(req, f.org_id)) return res.status(403).json({ error: "Forbidden" });
+      if (f.status !== "appealed") return res.status(409).json({ error: `No pending appeal on a fine that is ${f.status}.` });
+      // Upheld = the appeal succeeds => the fine is waived. Dismissed = it
+      // stands => back to owed.
+      const newStatus = decision === "upheld" ? "waived" : "owed";
+      await pool.query(
+        "UPDATE fines SET status = $2, appeal_status = $3, appeal_reviewed_by = $4 WHERE id = $1 AND status = 'appealed'",
+        [req.params.id, newStatus, decision, req.user.id],
+      );
+      return res.json({ status: newStatus, appeal_status: decision });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] review appeal failed");
+      return res.status(500).json({ error: "Failed to review the appeal." });
+    }
+  });
+
+  // Referee / org_admin waives a fine (owed or under appeal).
+  router.post("/api/fines/:id/waive", requireOrgRole(["referee", "org_admin"]), async (req, res) => {
+    try {
+      const f = (await pool.query("SELECT id, org_id, status, payment_id FROM fines WHERE id = $1", [req.params.id])).rows[0];
+      if (!f) return res.status(404).json({ error: "Fine not found" });
+      if (!ownsOrg(req, f.org_id)) return res.status(403).json({ error: "Forbidden" });
+      if (!['owed', 'appealed'].includes(f.status)) {
+        return res.status(409).json({ error: `Cannot waive a fine that is ${f.status}.` });
+      }
+      // Kill any in-flight checkout so the person can't pay a waived fine.
+      if (f.payment_id) {
+        const p = (await pool.query("SELECT id, status, stripe_checkout_session FROM payments WHERE id = $1", [f.payment_id])).rows[0];
+        if (p && p.status === "paid") {
+          return res.status(409).json({ error: "This fine has already been paid — refund it instead of waiving." });
+        }
+        if (p && p.status === "pending") {
+          const acct = (await pool.query("SELECT stripe_account_id FROM organisations WHERE id = $1", [f.org_id])).rows[0]?.stripe_account_id;
+          if (payments.enabled && p.stripe_checkout_session && acct) {
+            try {
+              await payments.expireCheckoutSession({ connectedAccountId: acct, sessionId: p.stripe_checkout_session });
+            } catch (e) {
+              logger.warn({ err: e.message }, "[payments] could not expire session on fine waive");
+            }
+          }
+          await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [p.id]);
+        }
+      }
+      await pool.query("UPDATE fines SET status = 'waived' WHERE id = $1 AND status IN ('owed', 'appealed')", [req.params.id]);
+      return res.json({ status: "waived" });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] waive fine failed");
+      return res.status(500).json({ error: "Failed to waive the fine." });
+    }
+  });
+
+  // The fined person pays an owed fine (blocked while under appeal).
+  router.post("/api/fines/:id/checkout", verifyToken, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    try {
+      const fine = (await pool.query("SELECT * FROM fines WHERE id = $1", [req.params.id])).rows[0];
+      if (!fine) return res.status(404).json({ error: "Fine not found" });
+      if (fine.liable_user_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+      if (fine.status !== "owed") return res.status(409).json({ error: `This fine is ${fine.status}.` });
+      const org = (
+        await pool.query(
+          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
+             FROM organisations WHERE id = $1`,
+          [fine.org_id],
+        )
+      ).rows[0];
+      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
+        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
+      }
+      const { url, paymentId } = await startFineCheckout({ req, org, fine });
+      return res.json({ url, payment_id: paymentId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] fine checkout failed");
+      return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
+    }
+  });
+
   // ---- Club affiliation / accreditation fees ----------------------
   // The FEDERATION (org_admin) sets the price its clubs pay; the CLUB
   // (requireClubAdmin — org_admin of the club's org OR a club_admins row)
@@ -2174,6 +2432,13 @@ module.exports = function createPaymentsRouter({
               WHERE payer_user_id = $1 AND fee_definition_id = $2
                 AND subject_type = 'event_entry' AND amount_cents = 0 AND status = 'paid'`,
             [p.payer_user_id, p.fee_definition_id],
+          );
+        }
+        // A fully-refunded fine goes back to 'owed' so it's still trackable.
+        if (status === "refunded" && p.subject_type === "fine" && p.fine_id) {
+          await pool.query(
+            "UPDATE fines SET status = 'owed', payment_id = NULL WHERE id = $1 AND status = 'paid'",
+            [p.fine_id],
           );
         }
         return res.json({ status, refunded_amount_cents: refunded });

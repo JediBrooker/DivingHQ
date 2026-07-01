@@ -86,9 +86,16 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['judge', 'referee', 'coach', 'meet_manager'], appShell: true },
   },
   {
+    // Broadened to all signed-in users: penalties are diver-only but
+    // disciplinary fines can be issued against anyone.
     path: '/charges',
     component: () => import('@/views/ChargesView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['diver'], appShell: true },
+    meta: { requiresAuth: true, appShell: true },
+  },
+  {
+    path: '/fines',
+    component: () => import('@/views/FinesView.vue'),
+    meta: { requiresAuth: true, requiresRole: ['referee', 'org_admin'], appShell: true },
   },
   {
     path: '/donate',
