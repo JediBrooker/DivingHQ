@@ -10,10 +10,13 @@
 // session's client_reference_id / metadata) and only transition a row
 // out of 'pending' once.
 //
-// Direct charges mean these are CONNECT webhooks (events fire on the
-// connected accounts, with event.account set). Register the endpoint as
-// a Connect webhook in the Stripe dashboard and put its signing secret
-// in STRIPE_WEBHOOK_SECRET.
+// PLATFORM-account webhooks: DivingHQ is the merchant of record, so charges
+// fire on the PLATFORM's own account — these are STANDARD account events (no
+// event.account), NOT Connect events. In the Stripe dashboard register a
+// standard webhook endpoint for the platform account and put its signing
+// secret in STRIPE_WEBHOOK_SECRET. (The handlers key off
+// client_reference_id/metadata and never read event.account; a Connect-only
+// subscription would deliver none of these and silently no-op every payment.)
 
 // Advance a pending payment to 'paid' exactly once, and fulfil it
 // (grant membership for a membership payment; entry confirmation is

@@ -306,7 +306,6 @@ module.exports = function createPaymentsRouter({
         if (stale.stripe_checkout_session) {
           try {
             await payments.expireCheckoutSession({
-              connectedAccountId: org.stripe_account_id,
               sessionId: stale.stripe_checkout_session,
             });
           } catch (e) {
@@ -341,7 +340,6 @@ module.exports = function createPaymentsRouter({
 
     try {
       const session = await payments.createCheckoutSession({
-        connectedAccountId: org.stripe_account_id,
         currency,
         chargeAmountCents,
         applicationFeeCents,
@@ -419,7 +417,6 @@ module.exports = function createPaymentsRouter({
 
     try {
       const session = await payments.createCheckoutSession({
-        connectedAccountId: org.stripe_account_id,
         currency,
         chargeAmountCents,
         applicationFeeCents,
@@ -519,7 +516,6 @@ module.exports = function createPaymentsRouter({
 
     try {
       const session = await payments.createCheckoutSession({
-        connectedAccountId: org.stripe_account_id,
         currency,
         chargeAmountCents,
         applicationFeeCents,
@@ -585,7 +581,6 @@ module.exports = function createPaymentsRouter({
 
     try {
       const session = await payments.createCheckoutSession({
-        connectedAccountId: org.stripe_account_id,
         currency,
         chargeAmountCents,
         applicationFeeCents,
@@ -642,7 +637,6 @@ module.exports = function createPaymentsRouter({
     const paymentId = ins.rows[0].id;
     try {
       const session = await payments.createCheckoutSession({
-        connectedAccountId: org.stripe_account_id,
         currency,
         chargeAmountCents,
         applicationFeeCents,
@@ -699,7 +693,6 @@ module.exports = function createPaymentsRouter({
     }
     try {
       const session = await payments.createCheckoutSession({
-        connectedAccountId: org.stripe_account_id,
         currency,
         chargeAmountCents,
         applicationFeeCents,
@@ -719,89 +712,75 @@ module.exports = function createPaymentsRouter({
     }
   }
 
-  // ---- Federation onboarding --------------------------------------
+  // ---- Payout setup (platform is merchant of record) --------------
+  // Federations/clubs don't onboard with Stripe. They give us payout bank
+  // details; the platform collects on its own account and pays them out. The
+  // balance owed = net (amount - our 15%) of their paid payments, minus what
+  // we've already paid out.
 
-  // Begin/continue Stripe onboarding for a federation. Creates the
-  // connected account on first call, then returns a fresh hosted
-  // onboarding link.
-  router.post(
-    "/api/orgs/:id/payments/onboard",
-    requireOrgRole(["org_admin"]),
-    async (req, res) => {
-      if (!ensurePayments(res)) return;
-      const orgId = req.params.id;
-      if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
-      try {
-        const orgRes = await pool.query(
-          "SELECT id, name, country_code, default_currency, stripe_account_id FROM organisations WHERE id = $1",
-          [orgId],
-        );
-        if (!orgRes.rows.length) return res.status(404).json({ error: "Organisation not found" });
-        const org = orgRes.rows[0];
+  // Payout status + balance owed for a federation.
+  router.get("/api/orgs/:id/payments/status", requireOrgRole(["org_admin"]), async (req, res) => {
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    try {
+      const org = (await pool.query(
+        "SELECT payout_account_name, payout_account_details, default_currency FROM organisations WHERE id = $1",
+        [orgId],
+      )).rows[0];
+      if (!org) return res.status(404).json({ error: "Organisation not found" });
+      const base = {
+        payout_details_set: !!(org.payout_account_name && org.payout_account_details),
+        account_name: org.payout_account_name || null,
+        currency: org.default_currency || null,
+      };
+      // Coming-soon: report payout details (they don't need Stripe) but no
+      // balance until payments are switched on.
+      if (!payments.enabled) return res.json({ enabled: false, ...base, balance_cents: 0 });
+      // Net owed per payment: full net when paid; on a PARTIAL refund the fee
+      // is prorated to the retained portion (so the platform's take stays 15%
+      // of retained revenue, not 15% of the whole); clamped at >= 0 so an
+      // over-refund can't drive a row negative. Fully-refunded/failed/pending
+      // and amount-0 bundle grants contribute 0.
+      const collected = (await pool.query(
+        `SELECT COALESCE(SUM(GREATEST(0,
+            CASE status
+              WHEN 'paid' THEN amount_cents - platform_fee_cents
+              WHEN 'partially_refunded' THEN ROUND(
+                (amount_cents - platform_fee_cents)::numeric
+                  * (amount_cents - COALESCE(refunded_amount_cents, 0)) / NULLIF(amount_cents, 0))
+              ELSE 0 END)), 0)::bigint AS net
+           FROM payments WHERE org_id = $1`,
+        [orgId],
+      )).rows[0].net;
+      const paidOut = (await pool.query(
+        "SELECT COALESCE(SUM(amount_cents), 0)::bigint AS n FROM payouts WHERE org_id = $1 AND status IN ('pending', 'paid')",
+        [orgId],
+      )).rows[0].n;
+      return res.json({ enabled: true, ...base, balance_cents: Number(collected) - Number(paidOut) });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] payout status failed");
+      return res.status(err.status || 500).json({ error: err.message || "Status check failed" });
+    }
+  });
 
-        let accountId = org.stripe_account_id;
-        if (!accountId) {
-          const country = (req.body && req.body.country) || alpha3ToAlpha2(org.country_code);
-          if (!country) {
-            return res.status(400).json({ error: "A 2-letter country code is required to start onboarding." });
-          }
-          const account = await payments.createConnectedAccount({
-            country,
-            currency: org.default_currency,
-            email: req.user.email,
-            orgName: org.name,
-          });
-          accountId = account.id;
-          await pool.query("UPDATE organisations SET stripe_account_id = $1 WHERE id = $2", [accountId, orgId]);
-        }
-        const link = await payments.createOnboardingLink({ accountId });
-        return res.json({ url: link.url });
-      } catch (err) {
-        logger.error({ err: err.message }, "[payments] onboard failed");
-        return res.status(err.status || 500).json({ error: err.message || "Onboarding failed" });
-      }
-    },
-  );
-
-  // Sync + report the federation's payout-readiness.
-  router.get(
-    "/api/orgs/:id/payments/status",
-    requireOrgRole(["org_admin"]),
-    async (req, res) => {
-      // Coming-soon state: when payments aren't configured, report a
-      // clean disabled status (not a 503) so the UI can show a friendly
-      // "feature incoming" notice instead of an error.
-      if (!payments.enabled) {
-        return res.json({ enabled: false, onboarded: false, charges_enabled: false, payouts_enabled: false });
-      }
-      const orgId = req.params.id;
-      if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
-      try {
-        const orgRes = await pool.query(
-          "SELECT stripe_account_id FROM organisations WHERE id = $1",
-          [orgId],
-        );
-        if (!orgRes.rows.length) return res.status(404).json({ error: "Organisation not found" });
-        const accountId = orgRes.rows[0].stripe_account_id;
-        if (!accountId) {
-          return res.json({ enabled: true, onboarded: false, charges_enabled: false, payouts_enabled: false });
-        }
-        const account = await payments.retrieveAccount(accountId);
-        // Defensive parse — confirm the exact shape against test mode.
-        const card = account?.configuration?.merchant?.capabilities?.card_payments;
-        const chargesEnabled = card?.status === "active";
-        const payoutsEnabled = chargesEnabled;
-        await pool.query(
-          "UPDATE organisations SET stripe_charges_enabled = $1, stripe_payouts_enabled = $2 WHERE id = $3",
-          [chargesEnabled, payoutsEnabled, orgId],
-        );
-        return res.json({ enabled: true, onboarded: true, charges_enabled: chargesEnabled, payouts_enabled: payoutsEnabled });
-      } catch (err) {
-        logger.error({ err: err.message }, "[payments] status failed");
-        return res.status(err.status || 500).json({ error: err.message || "Status check failed" });
-      }
-    },
-  );
+  // Federation saves its payout bank details.
+  router.put("/api/orgs/:id/payout-details", requireOrgRole(["org_admin"]), async (req, res) => {
+    const orgId = req.params.id;
+    if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+    const name = ((req.body || {}).account_name || "").toString().trim();
+    const details = ((req.body || {}).account_details || "").toString().trim();
+    if (!name || !details) return res.status(400).json({ error: "Account name and details are required." });
+    try {
+      await pool.query(
+        "UPDATE organisations SET payout_account_name = $1, payout_account_details = $2 WHERE id = $3",
+        [name.slice(0, 200), details.slice(0, 500), orgId],
+      );
+      return res.json({ ok: true });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] save payout details failed");
+      return res.status(500).json({ error: "Failed to save payout details." });
+    }
+  });
 
   // ---- Fee configuration ------------------------------------------
 
@@ -1270,9 +1249,6 @@ module.exports = function createPaymentsRouter({
           [orgId],
         )
       ).rows[0];
-      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
-        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
-      }
       const feeRes = await pool.query(
         "SELECT * FROM fee_definitions WHERE meet_id = $1 AND scope = $2 AND active LIMIT 1",
         [meetId, kind],
@@ -1448,9 +1424,6 @@ module.exports = function createPaymentsRouter({
           [orgId],
         )
       ).rows[0];
-      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
-        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
-      }
       const feeRes = await pool.query(
         "SELECT * FROM fee_definitions WHERE meet_id = $1 AND scope = 'meet_bundle' AND active LIMIT 1",
         [meetId],
@@ -1621,9 +1594,6 @@ module.exports = function createPaymentsRouter({
         )
       ).rows[0];
       if (!org) return res.status(404).json({ error: "Organisation not found" });
-      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
-        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
-      }
       const feeRes = await pool.query(
         "SELECT * FROM fee_definitions WHERE org_id = $1 AND scope = 'donation' AND active LIMIT 1",
         [orgId],
@@ -1667,10 +1637,11 @@ module.exports = function createPaymentsRouter({
     if (!p) return null;
     if (p.status === "paid") return "paid";
     if (p.status === "pending") {
-      const acct = (await pool.query("SELECT stripe_account_id FROM organisations WHERE id = $1", [fine.org_id])).rows[0]?.stripe_account_id;
-      if (payments.enabled && p.stripe_checkout_session && acct) {
+      // Expire on the PLATFORM account (we're the merchant of record) so the
+      // payer can't complete a session for a fine that's no longer owed.
+      if (payments.enabled && p.stripe_checkout_session) {
         try {
-          await payments.expireCheckoutSession({ connectedAccountId: acct, sessionId: p.stripe_checkout_session });
+          await payments.expireCheckoutSession({ sessionId: p.stripe_checkout_session });
         } catch (e) {
           logger.warn({ err: e.message }, "[payments] could not expire in-flight fine session");
         }
@@ -1846,9 +1817,6 @@ module.exports = function createPaymentsRouter({
           [fine.org_id],
         )
       ).rows[0];
-      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
-        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
-      }
       const { url, paymentId } = await startFineCheckout({ req, org, fine });
       return res.json({ url, payment_id: paymentId });
     } catch (err) {
@@ -2075,9 +2043,6 @@ module.exports = function createPaymentsRouter({
           [orgId],
         )
       ).rows[0];
-      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
-        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
-      }
       const feeRes = await pool.query(
         "SELECT * FROM fee_definitions WHERE event_id = $1 AND scope = 'event_entry' AND active LIMIT 1",
         [eventId],
@@ -2124,9 +2089,6 @@ module.exports = function createPaymentsRouter({
         )
       ).rows[0];
       if (!org) return res.status(404).json({ error: "Organisation not found" });
-      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
-        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
-      }
       const feeRes = await pool.query(
         "SELECT * FROM fee_definitions WHERE org_id = $1 AND scope = 'membership' AND active LIMIT 1",
         [orgId],
@@ -2170,9 +2132,6 @@ module.exports = function createPaymentsRouter({
         )
       ).rows[0];
       if (!org) return res.status(404).json({ error: "Organisation not found" });
-      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
-        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
-      }
       const fee = await resolveClubFee(pool, orgId, clubScope(kind), clubId);
       if (!fee) return res.status(409).json({ error: `No ${kind} fee is set for this federation.` });
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
@@ -2204,9 +2163,6 @@ module.exports = function createPaymentsRouter({
         )
       ).rows[0];
       if (!org) return res.status(404).json({ error: "Organisation not found" });
-      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
-        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
-      }
       const fee = await resolveOfficialFee(pool, orgId, roleType);
       if (!fee) return res.status(409).json({ error: `No ${roleType} accreditation fee is set for this federation.` });
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
@@ -2323,12 +2279,10 @@ module.exports = function createPaymentsRouter({
           return res.status(409).json({ error: "This charge has already been paid — refund it instead of waiving." });
         }
         if (p && p.status === "pending") {
-          const acct = (await pool.query(
-            "SELECT stripe_account_id FROM organisations WHERE id = $1", [charge.org_id],
-          )).rows[0]?.stripe_account_id;
-          if (payments.enabled && p.stripe_checkout_session && acct) {
+          // Expire on the PLATFORM account (merchant of record).
+          if (payments.enabled && p.stripe_checkout_session) {
             try {
-              await payments.expireCheckoutSession({ connectedAccountId: acct, sessionId: p.stripe_checkout_session });
+              await payments.expireCheckoutSession({ sessionId: p.stripe_checkout_session });
             } catch (e) {
               logger.warn({ err: e.message }, "[payments] could not expire session on waive");
             }
@@ -2388,9 +2342,6 @@ module.exports = function createPaymentsRouter({
           [charge.org_id],
         )
       ).rows[0];
-      if (!org.stripe_account_id || !org.stripe_charges_enabled) {
-        return res.status(409).json({ error: "This federation hasn't finished payment setup yet." });
-      }
       const fee = (await pool.query("SELECT * FROM fee_definitions WHERE id = $1", [charge.fee_definition_id])).rows[0];
       if (!fee) return res.status(409).json({ error: "The penalty fee is no longer configured." });
 
@@ -2404,9 +2355,11 @@ module.exports = function createPaymentsRouter({
 
   // ---- Refunds -----------------------------------------------------
 
-  // Federation refunds a payment. refund_application_fee is always true
-  // (see lib/stripe.js) so the federation isn't left short DivingHQ's
-  // cut. Omit amount_cents for a full refund.
+  // Refund a payment on the platform account (DivingHQ is the merchant of
+  // record). There's no Stripe fee reversal — the platform's cut lives in our
+  // payout ledger, so a refund just reduces what the federation/club is owed
+  // (the balance query prorates the retained fee on partial refunds). Omit
+  // amount_cents for a full refund.
   router.post(
     "/api/payments/:id/refund",
     requireOrgRole(["org_admin", "meet_manager"]),
@@ -2424,11 +2377,9 @@ module.exports = function createPaymentsRouter({
         if (!p.stripe_payment_intent) {
           return res.status(409).json({ error: "This payment has no charge to refund yet." });
         }
-        const org = (await pool.query("SELECT stripe_account_id FROM organisations WHERE id = $1", [p.org_id])).rows[0];
         const requested = req.body && Number(req.body.amount_cents) > 0 ? Math.floor(Number(req.body.amount_cents)) : undefined;
 
         const refund = await payments.createRefund({
-          connectedAccountId: org.stripe_account_id,
           paymentIntentId: p.stripe_payment_intent,
           amountCents: requested,
         });

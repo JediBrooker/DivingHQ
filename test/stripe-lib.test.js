@@ -1,10 +1,9 @@
-// Unit tests for lib/stripe.js — the Connect fund-flow helpers.
+// Unit tests for lib/stripe.js — the platform fund-flow helpers.
 //
-// We inject a fake Stripe client (the `clientFactory` hook) and assert
-// the helpers build the right calls — most importantly that refunds
-// ALWAYS carry refund_application_fee:true (so a federation is never
-// left short DivingHQ's cut) and that checkout is a DIRECT charge on the
-// connected account with an application fee. No network, no real keys.
+// We inject a fake Stripe client (the `clientFactory` hook) and assert the
+// helpers charge/refund on the PLATFORM's own account (DivingHQ is the
+// merchant of record) — no connected account, no application_fee; the 15%
+// cut is stamped on the PaymentIntent for reconciliation only. No network.
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
@@ -45,35 +44,26 @@ test("disabled when no secret key; every call throws 503", async () => {
   await assert.rejects(() => s.createRefund({}), (e) => e.status === 503 && e.code === "payments_disabled");
 });
 
-test("createRefund ALWAYS sets refund_application_fee:true on the connected account", async () => {
+test("createRefund refunds on the platform account, no application-fee reversal", async () => {
   const { s, calls } = withFake();
-  await s.createRefund({ connectedAccountId: "acct_9", paymentIntentId: "pi_9" });
-  assert.equal(calls().refund.p.refund_application_fee, true);
+  await s.createRefund({ paymentIntentId: "pi_9" });
   assert.equal(calls().refund.p.payment_intent, "pi_9");
-  assert.deepEqual(calls().refund.o, { stripeAccount: "acct_9" });
+  assert.equal(calls().refund.p.refund_application_fee, undefined); // platform is MoR
+  assert.equal(calls().refund.o, undefined);                        // not on a connected account
 });
 
-test("createCheckoutSession is a direct charge with an application fee", async () => {
+test("createCheckoutSession charges on the platform account (no connected account / app fee)", async () => {
   const { s, calls } = withFake();
   await s.createCheckoutSession({
-    connectedAccountId: "acct_9", currency: "GBP", chargeAmountCents: 5000,
+    currency: "GBP", chargeAmountCents: 5000,
     applicationFeeCents: 750, productName: "Entry", successUrl: "s", cancelUrl: "c",
   });
   const { p, o } = calls().session;
-  assert.equal(o.stripeAccount, "acct_9");                       // direct charge on the federation
-  assert.equal(p.payment_intent_data.application_fee_amount, 750); // our 15%
+  assert.equal(o, undefined);                                          // platform account, no stripeAccount
+  assert.equal(p.payment_intent_data.application_fee_amount, undefined);
+  assert.equal(p.payment_intent_data.metadata.platform_fee_cents, 750); // stamped for reconciliation
   assert.equal(p.line_items[0].price_data.unit_amount, 5000);
   assert.equal(p.line_items[0].price_data.currency, "gbp");
-});
-
-test("createConnectedAccount requests direct-charge responsibilities", async () => {
-  const { s, calls } = withFake();
-  await s.createConnectedAccount({ country: "GB", currency: "GBP", orgName: "Fed" });
-  const p = calls().accountCreate;
-  assert.equal(p.identity.country, "gb");
-  assert.equal(p.defaults.responsibilities.losses_collector, "account");
-  assert.equal(p.defaults.responsibilities.fees_collector, "account");
-  assert.equal(p.configuration.merchant.capabilities.card_payments.requested, true);
 });
 
 test("constructWebhookEvent requires a webhook secret", () => {

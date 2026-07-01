@@ -6,7 +6,7 @@
 // <EntryFeeEditor :event-id="…" />.
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { showError } from '@/composables/useNotify'
+import { showError, showSuccess } from '@/composables/useNotify'
 import MembershipFeeEditor from '@/components/payments/MembershipFeeEditor.vue'
 import ClubFeesEditor from '@/components/payments/ClubFeesEditor.vue'
 import OfficialFeesEditor from '@/components/payments/OfficialFeesEditor.vue'
@@ -18,30 +18,44 @@ const orgId = computed(() => auth.user?.org_id)
 const status = ref(null)
 const loading = ref(true)
 const busy = ref(false)
+const form = ref({ account_name: '', account_details: '' })
 const comingSoon = computed(() => status.value && status.value.enabled === false)
+
+function money(cents, currency) {
+  if (cents == null) return ''
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'GBP' }).format(cents / 100)
+  } catch {
+    return `${(cents / 100).toFixed(2)} ${currency || ''}`.trim()
+  }
+}
 
 async function loadStatus() {
   if (!orgId.value) return
   loading.value = true
   try {
     status.value = await auth.apiFetch(`/api/orgs/${orgId.value}/payments/status`)
+    form.value.account_name = status.value.account_name || ''
   } catch (e) {
-    showError(e.message || 'Could not load payment status')
+    showError(e.message || 'Could not load payout status')
   } finally {
     loading.value = false
   }
 }
 
-async function onboard() {
+async function savePayout() {
   busy.value = true
   try {
-    const { url } = await auth.apiFetch(`/api/orgs/${orgId.value}/payments/onboard`, {
-      method: 'POST',
-      body: JSON.stringify({}),
+    await auth.apiFetch(`/api/orgs/${orgId.value}/payout-details`, {
+      method: 'PUT',
+      body: JSON.stringify(form.value),
     })
-    window.location.href = url
+    showSuccess('Payout details saved')
+    form.value.account_details = ''
+    await loadStatus()
   } catch (e) {
-    showError(e.message || 'Could not start onboarding')
+    showError(e.message || 'Could not save payout details')
+  } finally {
     busy.value = false
   }
 }
@@ -55,17 +69,28 @@ onMounted(loadStatus)
 
     <div class="card">
       <h2>Payouts</h2>
+      <p class="muted">
+        DivingHQ collects payments and pays out your share (we keep 15%). No Stripe
+        account needed — just add the bank details we should send your money to.
+      </p>
       <p v-if="loading" class="muted">Checking…</p>
-      <template v-else-if="comingSoon">
-        <p class="coming-soon">🚧 Payments are coming soon. This is where you'll connect Stripe to take entry fees and pay out — the feature is built and switches on shortly.</p>
-      </template>
       <template v-else>
-        <p v-if="status && status.charges_enabled" class="ok">
-          ✓ Connected — you can take entry fees and receive payouts.
+        <p v-if="comingSoon" class="coming-soon">🚧 Payments are coming soon. Add your payout bank details here now — we'll pay out your share the moment it's switched on.</p>
+        <p v-else-if="status && status.payout_details_set" class="ok">
+          ✓ Payout details on file{{ status.account_name ? ` — ${status.account_name}` : '' }}.
         </p>
-        <p v-else class="warn">Not ready to take payments yet — finish onboarding to start.</p>
-        <button class="btn" :disabled="busy" @click="onboard">
-          {{ busy ? 'Opening…' : (status && status.onboarded ? 'Continue Stripe onboarding' : 'Set up payouts with Stripe') }}
+        <p v-else class="warn">Add your payout bank details so we can pay you.</p>
+        <p v-if="!comingSoon" class="muted">Balance owed to you: <strong>{{ money(status && status.balance_cents, status && status.currency) }}</strong></p>
+        <div class="field">
+          <label>Account name</label>
+          <input class="in" v-model="form.account_name" placeholder="e.g. Sydney Diving Club" />
+        </div>
+        <div class="field">
+          <label>Bank details (IBAN, or sort code + account number)</label>
+          <input class="in" v-model="form.account_details" placeholder="GB00 XXXX 0000 0000 0000 00" />
+        </div>
+        <button class="btn" :disabled="busy || !form.account_name || !form.account_details" @click="savePayout">
+          {{ busy ? 'Saving…' : 'Save payout details' }}
         </button>
       </template>
     </div>
@@ -114,5 +139,7 @@ onMounted(loadStatus)
 .ok { color: var(--green, #2a7); margin: 0; }
 .warn { color: var(--amber, #b70); margin: 0; }
 .muted { color: var(--muted, #777); }
+.field { display: flex; flex-direction: column; gap: .25rem; font-size: .85rem; color: var(--fg-2, #555); }
+.in { padding: .4rem .6rem; border: 1px solid var(--border, #ddd); border-radius: .5rem; background: transparent; color: var(--fg, #222); }
 .coming-soon { margin: 0; padding: .5rem .75rem; border-radius: .5rem; background: var(--accent-soft, #eef); color: var(--accent, #3b6); font-weight: 600; font-size: .9rem; }
 </style>
