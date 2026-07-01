@@ -103,6 +103,12 @@ const routes = [
     meta: { requiresAuth: true, appShell: true },
   },
   {
+    // Every signed-in user can see their own payment history + export it.
+    path: '/payment-history',
+    component: () => import('@/views/PaymentHistoryView.vue'),
+    meta: { requiresAuth: true, appShell: true },
+  },
+  {
     path: '/coach',
     component: () => import('@/views/CoachView.vue'),
     meta: { requiresAuth: true, requiresRole: ['coach'], appShell: true },

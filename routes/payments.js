@@ -2453,6 +2453,38 @@ module.exports = function createPaymentsRouter({
     }
   });
 
+  // A member's own payment history — every payment they made (club-paid
+  // rows are excluded; those belong to club billing). Read-only; drives the
+  // Payment History page + its CSV/PDF export. Returns raw fields so the SPA
+  // localises the description/status client-side (fully i18n).
+  router.get("/api/me/payments", verifyToken, async (req, res) => {
+    try {
+      const rows = (await pool.query(
+        `SELECT p.id, p.created_at, p.paid_at, p.subject_type, p.status,
+                p.amount_cents, p.currency, p.payer_role_type,
+                e.name  AS event_name,
+                m.name  AS meet_name,
+                f.reason AS fine_reason,
+                fd.tier AS membership_tier,
+                fd.name AS fee_name
+           FROM payments p
+           LEFT JOIN events e           ON e.id  = p.event_id
+           LEFT JOIN meets  m           ON m.id  = p.meet_id
+           LEFT JOIN fines  f           ON f.id  = p.fine_id
+           LEFT JOIN fee_definitions fd ON fd.id = p.fee_definition_id
+          WHERE p.payer_user_id = $1
+            AND COALESCE(p.payer_type, 'user') <> 'club'
+          ORDER BY p.created_at DESC
+          LIMIT 500`,
+        [req.user.id],
+      )).rows;
+      return res.json({ payments: rows, payments_enabled: payments.enabled });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] read my payments failed");
+      return res.status(500).json({ error: "Failed to read your payment history." });
+    }
+  });
+
   // The entrant pays one of their owed charges.
   router.post("/api/entry-charges/:id/checkout", verifyToken, async (req, res) => {
     if (!ensurePayments(res)) return;
