@@ -39,8 +39,9 @@ function statusLabel(status) {
   return val === key ? humanize(status) : val
 }
 
-// Human detail per row — the entity name (event/meet/fine reason/tier). This
-// is user data, not translated; the TYPE prefix is.
+// Human detail per row. Free-text/user data (event, meet, fine reason) is
+// shown as-is; enum fields (membership tier, official role) are humanised
+// so 'meet_manager' -> 'Meet manager' rather than a raw slug.
 function detailFor(p) {
   switch (p.subject_type) {
     case 'event_entry':
@@ -54,9 +55,9 @@ function detailFor(p) {
     case 'programme':
       return p.meet_name || ''
     case 'membership':
-      return p.membership_tier || ''
+      return humanize(p.membership_tier)
     case 'official_accreditation':
-      return p.payer_role_type || ''
+      return humanize(p.payer_role_type)
     case 'fine':
       return p.fine_reason || ''
     default:
