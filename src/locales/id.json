@@ -1507,6 +1507,36 @@
     "no_available_classes": "Tidak ada kelas yang tersedia untuk diikuti saat ini.",
     "already_enrolled": "Anda sudah terdaftar.",
     "enrol": "Daftar",
-    "enrol_pending": "Pendaftaran diajukan — pembayaran belum aktif, jadi Anda masuk dalam daftar sebagai menunggu."
+    "enrol_pending": "Pendaftaran diajukan — pembayaran belum aktif, jadi Anda masuk dalam daftar sebagai menunggu.",
+    "payouts": {
+      "account_details": "Detail rekening bank pencairan dana",
+      "account_details_hint": "Rekening tujuan DivingHQ mengirimkan bagian klub Anda dari pembayaran pendaftaran kelas. Tidak perlu akun Stripe.",
+      "details_on_file": "✓ Tersimpan — {name}",
+      "details_missing": "Tambahkan detail rekening bank pencairan dana Anda agar kami dapat membayar Anda.",
+      "field_account_name": "Nama pemilik rekening",
+      "field_account_details": "Detail bank (IBAN, atau kode sortir + nomor rekening)",
+      "saved": "Tersimpan",
+      "error_load": "Tidak dapat memuat status pencairan dana.",
+      "error_save": "Tidak dapat menyimpan.",
+      "balance": "Saldo",
+      "balance_owed": "Saldo yang harus dibayarkan ke klub Anda",
+      "withdraw_now": "Cairkan sekarang",
+      "withdrawal_requested": "Permintaan pencairan dana terkirim",
+      "error_withdraw": "Tidak dapat meminta pencairan dana.",
+      "auto_withdraw": "Pencairan dana otomatis",
+      "auto_withdraw_hint": "Dapatkan pembayaran secara otomatis setelah saldo Anda melewati ambang batas tertentu.",
+      "auto_withdraw_enable": "Cairkan secara otomatis",
+      "field_threshold": "Cairkan dana saat saldo mencapai",
+      "threshold_invalid": "Masukkan ambang batas minimal 1,00.",
+      "history": "Riwayat pencairan dana",
+      "history_empty": "Belum ada pencairan dana.",
+      "dormant_note": "Pembayaran akan segera hadir. Tambahkan detail pencairan dana dan preferensi pencairan otomatis Anda sekarang — kami akan mencairkan dana segera setelah fitur ini diaktifkan."
+    },
+    "col_date": "Tanggal",
+    "col_amount": "Jumlah",
+    "pay_now": "Bayar sekarang",
+    "error_checkout": "Tidak dapat memulai checkout.",
+    "subtab_classes": "Kelas",
+    "subtab_payouts": "Pencairan Dana"
   }
 }

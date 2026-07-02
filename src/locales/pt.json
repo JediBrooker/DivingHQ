@@ -1507,6 +1507,36 @@
     "no_available_classes": "De momento não há aulas disponíveis para inscrição.",
     "already_enrolled": "Já está inscrito.",
     "enrol": "Inscrever",
-    "enrol_pending": "Inscrição pedida — os pagamentos ainda não estão ativos, pelo que ficará na lista como pendente."
+    "enrol_pending": "Inscrição pedida — os pagamentos ainda não estão ativos, pelo que ficará na lista como pendente.",
+    "payouts": {
+      "account_details": "Dados bancários para pagamento",
+      "account_details_hint": "Para onde a DivingHQ envia a parte do clube nos pagamentos de inscrições nas aulas. Não é necessária uma conta Stripe.",
+      "details_on_file": "✓ Registados — {name}",
+      "details_missing": "Adicione os dados bancários para recebimento para que possamos pagar ao clube.",
+      "field_account_name": "Nome da conta",
+      "field_account_details": "Dados bancários (IBAN, ou código do balcão + número de conta)",
+      "saved": "Guardado",
+      "error_load": "Não foi possível carregar o estado dos pagamentos.",
+      "error_save": "Não foi possível guardar.",
+      "balance": "Saldo",
+      "balance_owed": "Saldo devido ao clube",
+      "withdraw_now": "Levantar agora",
+      "withdrawal_requested": "Levantamento solicitado",
+      "error_withdraw": "Não foi possível solicitar o levantamento.",
+      "auto_withdraw": "Levantamentos automáticos",
+      "auto_withdraw_hint": "Receba automaticamente assim que o saldo ultrapassar um limite definido.",
+      "auto_withdraw_enable": "Levantar automaticamente",
+      "field_threshold": "Levantar quando o saldo atingir",
+      "threshold_invalid": "Introduza um limite de, pelo menos, 1,00.",
+      "history": "Histórico de levantamentos",
+      "history_empty": "Ainda não há levantamentos.",
+      "dormant_note": "Os pagamentos estarão brevemente disponíveis. Adicione já os seus dados de recebimento e a preferência de levantamento automático — pagaremos ao clube assim que a funcionalidade for ativada."
+    },
+    "col_date": "Data",
+    "col_amount": "Montante",
+    "pay_now": "Pagar agora",
+    "error_checkout": "Não foi possível iniciar o pagamento.",
+    "subtab_classes": "Aulas",
+    "subtab_payouts": "Pagamentos"
   }
 }

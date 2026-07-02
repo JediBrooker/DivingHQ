@@ -1507,6 +1507,36 @@
     "no_available_classes": "Şu anda katılabileceğiniz bir sınıf yok.",
     "already_enrolled": "Zaten kayıtlısınız.",
     "enrol": "Kayıt ol",
-    "enrol_pending": "Kayıt talebiniz alındı — ödeme sistemi henüz aktif olmadığından, beklemede olarak listeye eklendiniz."
+    "enrol_pending": "Kayıt talebiniz alındı — ödeme sistemi henüz aktif olmadığından, beklemede olarak listeye eklendiniz.",
+    "payouts": {
+      "account_details": "Ödeme banka bilgileri",
+      "account_details_hint": "DivingHQ, kulübünüzün kurs kayıt ödemelerinden alacağı payı buraya gönderir. Stripe hesabı gerekmez.",
+      "details_on_file": "✓ Kayıtlı — {name}",
+      "details_missing": "Ödemenizi yapabilmemiz için banka bilgilerinizi ekleyin.",
+      "field_account_name": "Hesap adı",
+      "field_account_details": "Banka bilgileri (IBAN veya banka kodu + hesap numarası)",
+      "saved": "Kaydedildi",
+      "error_load": "Ödeme durumu yüklenemedi.",
+      "error_save": "Kaydedilemedi.",
+      "balance": "Bakiye",
+      "balance_owed": "Kulübünüze borçlu olunan bakiye",
+      "withdraw_now": "Şimdi çek",
+      "withdrawal_requested": "Para çekme talebi oluşturuldu",
+      "error_withdraw": "Para çekme talebi oluşturulamadı.",
+      "auto_withdraw": "Otomatik para çekme",
+      "auto_withdraw_hint": "Bakiyeniz belirli bir eşiği aştığında otomatik olarak ödeme alın.",
+      "auto_withdraw_enable": "Otomatik olarak çek",
+      "field_threshold": "Bakiye şu tutara ulaştığında çek",
+      "threshold_invalid": "En az 1,00 tutarında bir eşik girin.",
+      "history": "Para çekme geçmişi",
+      "history_empty": "Henüz para çekme işlemi yok.",
+      "dormant_note": "Ödemeler yakında etkinleştirilecek. Ödeme bilgilerinizi ve otomatik para çekme tercihinizi şimdiden ekleyin — özellik açılır açılmaz ödemenizi yapacağız."
+    },
+    "col_date": "Tarih",
+    "col_amount": "Tutar",
+    "pay_now": "Şimdi öde",
+    "error_checkout": "Ödeme işlemi başlatılamadı.",
+    "subtab_classes": "Kurslar",
+    "subtab_payouts": "Ödemeler"
   }
 }

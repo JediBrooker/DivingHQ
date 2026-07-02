@@ -1507,6 +1507,36 @@
     "no_available_classes": "Al momento non ci sono lezioni disponibili a cui iscriversi.",
     "already_enrolled": "Sei già iscritto.",
     "enrol": "Iscriviti",
-    "enrol_pending": "Iscrizione richiesta — i pagamenti non sono ancora attivi, quindi sei in lista come in attesa."
+    "enrol_pending": "Iscrizione richiesta — i pagamenti non sono ancora attivi, quindi sei in lista come in attesa.",
+    "payouts": {
+      "account_details": "Coordinate bancarie per i pagamenti",
+      "account_details_hint": "Dove DivingHQ invia la quota spettante al tuo club sui pagamenti delle iscrizioni ai corsi. Non serve un account Stripe.",
+      "details_on_file": "✓ Registrate — {name}",
+      "details_missing": "Aggiungi le coordinate bancarie per i pagamenti così possiamo pagarti.",
+      "field_account_name": "Intestatario del conto",
+      "field_account_details": "Coordinate bancarie (IBAN, oppure codice ABI/CAB e numero di conto)",
+      "saved": "Salvato",
+      "error_load": "Impossibile caricare lo stato dei pagamenti.",
+      "error_save": "Impossibile salvare.",
+      "balance": "Saldo",
+      "balance_owed": "Saldo dovuto al tuo club",
+      "withdraw_now": "Preleva ora",
+      "withdrawal_requested": "Prelievo richiesto",
+      "error_withdraw": "Impossibile richiedere il prelievo.",
+      "auto_withdraw": "Prelievi automatici",
+      "auto_withdraw_hint": "Ricevi il pagamento automaticamente quando il saldo supera una soglia.",
+      "auto_withdraw_enable": "Preleva automaticamente",
+      "field_threshold": "Preleva quando il saldo raggiunge",
+      "threshold_invalid": "Inserisci una soglia di almeno 1,00.",
+      "history": "Cronologia prelievi",
+      "history_empty": "Nessun prelievo effettuato finora.",
+      "dormant_note": "I pagamenti saranno presto disponibili. Aggiungi ora le tue coordinate bancarie e le preferenze di prelievo automatico: ti pagheremo non appena la funzione sarà attivata."
+    },
+    "col_date": "Data",
+    "col_amount": "Importo",
+    "pay_now": "Paga ora",
+    "error_checkout": "Impossibile avviare il pagamento.",
+    "subtab_classes": "Corsi",
+    "subtab_payouts": "Pagamenti"
   }
 }

@@ -1507,6 +1507,36 @@
     "no_available_classes": "Walang klaseng maaaring sumalihan sa ngayon.",
     "already_enrolled": "Naka-enrol ka na.",
     "enrol": "Mag-enrol",
-    "enrol_pending": "Naipasa na ang request para mag-enrol — hindi pa live ang bayad, kaya nasa listahan ka bilang naghihintay."
+    "enrol_pending": "Naipasa na ang request para mag-enrol — hindi pa live ang bayad, kaya nasa listahan ka bilang naghihintay.",
+    "payouts": {
+      "account_details": "Detalye ng bank account para sa payout",
+      "account_details_hint": "Dito ipinapadala ng DivingHQ ang bahagi ng inyong club sa mga bayad sa pag-enrol sa klase. Hindi kailangan ng Stripe account.",
+      "details_on_file": "✓ Nakarehistro — {name}",
+      "details_missing": "Idagdag ang detalye ng inyong bank account para sa payout upang mabayaran namin kayo.",
+      "field_account_name": "Pangalan ng account",
+      "field_account_details": "Detalye ng bangko (IBAN, o sort code + account number)",
+      "saved": "Na-save",
+      "error_load": "Hindi na-load ang status ng payout.",
+      "error_save": "Hindi na-save.",
+      "balance": "Balanse",
+      "balance_owed": "Balanseng utang sa inyong club",
+      "withdraw_now": "Mag-withdraw na ngayon",
+      "withdrawal_requested": "Naiproseso na ang kahilingan sa pag-withdraw",
+      "error_withdraw": "Hindi maisagawa ang kahilingan sa pag-withdraw.",
+      "auto_withdraw": "Awtomatikong pag-withdraw",
+      "auto_withdraw_hint": "Awtomatikong mababayaran kapag lumampas na sa itinakdang threshold ang inyong balanse.",
+      "auto_withdraw_enable": "Mag-withdraw nang awtomatiko",
+      "field_threshold": "Mag-withdraw kapag umabot ang balanse sa",
+      "threshold_invalid": "Maglagay ng threshold na hindi bababa sa 1.00.",
+      "history": "Kasaysayan ng pag-withdraw",
+      "history_empty": "Wala pang mga withdrawal.",
+      "dormant_note": "Malapit nang magamit ang mga pagbabayad. Idagdag na ngayon ang inyong detalye ng payout at kagustuhan sa awtomatikong pag-withdraw — babayaran namin kayo agad kapag na-activate na ito."
+    },
+    "col_date": "Petsa",
+    "col_amount": "Halaga",
+    "pay_now": "Magbayad na ngayon",
+    "error_checkout": "Hindi masimulan ang checkout.",
+    "subtab_classes": "Mga Klase",
+    "subtab_payouts": "Mga Payout"
   }
 }

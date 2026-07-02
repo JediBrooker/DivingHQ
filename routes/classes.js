@@ -17,12 +17,50 @@
 
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
+const { priceCharge } = require("../lib/fee-pricing");
 
-module.exports = function createClassesRouter({ pool, verifyToken, requireClubAdminOnly, logger }) {
+const APP_BASE_URL =
+  process.env.APP_BASE_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
+
+module.exports = function createClassesRouter({ pool, verifyToken, requireClubAdminOnly, logger, payments }) {
   if (!pool) throw new Error("createClassesRouter requires { pool, … }");
   const router = express.Router();
 
   const log = logger || { error: () => {}, warn: () => {} };
+
+  function ensurePayments(res) {
+    if (!payments || !payments.enabled) {
+      res.status(503).json({ error: "Payments are not configured on this server." });
+      return false;
+    }
+    return true;
+  }
+
+  // Don't let a class-enrolment status change (cancel, or a future admin
+  // action) race an in-flight Stripe checkout — expire the session and mark
+  // the payment failed so a stale session can't complete after the fact and
+  // strand a paid-but-orphaned payment (mirrors retireInFlightFinePayment in
+  // routes/payments.js). Returns "paid" if the payment had already settled
+  // before we could retire it, so the caller can refuse the status change
+  // instead of silently cancelling underneath a successful payment.
+  async function retireInFlightClassEnrolmentPayment(enrolmentId) {
+    const p = (await pool.query(
+      "SELECT id, status, stripe_checkout_session FROM payments WHERE class_enrolment_id = $1 AND status IN ('pending', 'paid') ORDER BY created_at DESC LIMIT 1",
+      [enrolmentId],
+    )).rows[0];
+    if (!p) return null;
+    if (p.status === "paid") return "paid";
+    // p.status === "pending"
+    if (payments && payments.enabled && p.stripe_checkout_session) {
+      try {
+        await payments.expireCheckoutSession({ sessionId: p.stripe_checkout_session });
+      } catch (e) {
+        log.warn({ err: e.message }, "[classes] could not expire in-flight enrolment session");
+      }
+    }
+    await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [p.id]);
+    return null;
+  }
 
   // ---- validation helpers ----------------------------------------
   function cleanName(v, max) {
@@ -393,6 +431,14 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         if (!["pending", "active", "inactive", "cancelled"].includes(body.status)) {
           return res.status(400).json({ error: "Invalid status." });
         }
+        // Same in-flight-checkout race as the DELETE endpoint: retire a
+        // pending session before cancelling so a stale one can't complete
+        // afterwards and strand a paid-but-orphaned payment.
+        if (body.status === "cancelled" && enr.status !== "cancelled") {
+          if ((await retireInFlightClassEnrolmentPayment(enr.id)) === "paid") {
+            return res.status(409).json({ error: "This enrolment was just paid for — refresh instead of cancelling it." });
+          }
+        }
         status = body.status;
       }
       let priceOptionId = enr.price_option_id;
@@ -439,6 +485,12 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
+      // Retire any in-flight checkout FIRST — otherwise a diver could complete
+      // a stale Stripe session after this cancels, settling a payment for an
+      // enrolment nothing on the roster reflects anymore.
+      if ((await retireInFlightClassEnrolmentPayment(req.params.enrolId)) === "paid") {
+        return res.status(409).json({ error: "This enrolment was just paid for — refresh the roster instead of removing it." });
+      }
       const r = await pool.query(
         "UPDATE class_enrolments SET status = 'cancelled', updated_at = now() WHERE id = $1 AND class_id = $2 RETURNING id",
         [req.params.enrolId, cls.id],
@@ -453,6 +505,158 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     } catch (err) {
       log.error({ err: err.message }, "[classes] enrolment remove failed");
       return res.status(500).json({ error: "Failed to remove the enrolment." });
+    }
+  });
+
+  // ---- payouts (club-private — the federation never sees this) ----
+  //
+  // Net owed to the CLUB per currency: class-enrolment payments collected
+  // (fee prorated on partial refunds, clamped >= 0) minus what's already
+  // withdrawn. Scoped by recipient_type = 'club' so club_affiliation/
+  // accreditation payments (which also carry this club's id, but as the
+  // SUBJECT being charged, not the recipient) are never counted here —
+  // those pay the federation and are covered by orgBalancesByCurrency.
+  async function clubBalancesByCurrency(clubId, db = pool) {
+    const collected = (await db.query(
+      `SELECT currency, COALESCE(SUM(GREATEST(0,
+          CASE status
+            WHEN 'paid' THEN amount_cents - platform_fee_cents
+            WHEN 'partially_refunded' THEN ROUND(
+              (amount_cents - platform_fee_cents)::numeric
+                * (amount_cents - COALESCE(refunded_amount_cents, 0)) / NULLIF(amount_cents, 0))
+            ELSE 0 END)), 0)::bigint AS net
+         FROM payments WHERE club_id = $1 AND recipient_type = 'club' GROUP BY currency`,
+      [clubId],
+    )).rows;
+    const paid = (await db.query(
+      `SELECT currency, COALESCE(SUM(amount_cents), 0)::bigint AS n
+         FROM payouts WHERE club_id = $1 AND status IN ('pending', 'paid') GROUP BY currency`,
+      [clubId],
+    )).rows;
+    const paidByCur = new Map(paid.map((r) => [r.currency, Number(r.n)]));
+    return collected
+      .map((r) => ({ currency: r.currency, cents: Number(r.net) - (paidByCur.get(r.currency) || 0) }))
+      .filter((b) => b.cents > 0)
+      .sort((a, b) => b.cents - a.cents);
+  }
+
+  router.get("/api/clubs/:id/payments/status", requireClubAdminOnly(), async (req, res) => {
+    try {
+      const club = (await pool.query(
+        `SELECT payout_account_name, payout_account_details, auto_withdraw_enabled, auto_withdraw_min_cents
+           FROM clubs WHERE id = $1`,
+        [req.club.id],
+      )).rows[0];
+      const base = {
+        payout_details_set: !!(club.payout_account_name && club.payout_account_details),
+        account_name: club.payout_account_name || null,
+        auto_withdraw_enabled: !!club.auto_withdraw_enabled,
+        auto_withdraw_min_cents: club.auto_withdraw_min_cents ?? null,
+      };
+      if (!payments || !payments.enabled) return res.json({ enabled: false, ...base, balances: [], balance_cents: 0 });
+      const balances = await clubBalancesByCurrency(req.club.id);
+      const primary = balances[0] || null;
+      return res.json({
+        enabled: true, ...base, balances,
+        balance_cents: primary ? primary.cents : 0,
+        currency: primary ? primary.currency : null,
+      });
+    } catch (err) {
+      log.error({ err: err.message }, "[classes] club payout status failed");
+      return res.status(500).json({ error: "Failed to load payout status." });
+    }
+  });
+
+  router.put("/api/clubs/:id/payout-details", requireClubAdminOnly(), async (req, res) => {
+    const name = ((req.body || {}).account_name || "").toString().trim();
+    const details = ((req.body || {}).account_details || "").toString().trim();
+    if (!name || !details) return res.status(400).json({ error: "Account name and details are required." });
+    try {
+      await pool.query(
+        "UPDATE clubs SET payout_account_name = $1, payout_account_details = $2 WHERE id = $3",
+        [name.slice(0, 200), details.slice(0, 500), req.club.id],
+      );
+      return res.json({ ok: true });
+    } catch (err) {
+      log.error({ err: err.message }, "[classes] save club payout details failed");
+      return res.status(500).json({ error: "Failed to save payout details." });
+    }
+  });
+
+  router.put("/api/clubs/:id/withdrawal-settings", requireClubAdminOnly(), async (req, res) => {
+    const body = req.body || {};
+    const enabled = body.auto_withdraw_enabled === true;
+    let minCents = null;
+    if (enabled) {
+      minCents = Math.floor(Number(body.auto_withdraw_min_cents));
+      if (!Number.isFinite(minCents) || minCents < 100) {
+        return res.status(400).json({ error: "Set an automatic-withdrawal threshold of at least 1.00." });
+      }
+      if (minCents > 100000000) return res.status(400).json({ error: "That threshold is too large." });
+    }
+    try {
+      await pool.query(
+        "UPDATE clubs SET auto_withdraw_enabled = $1, auto_withdraw_min_cents = $2 WHERE id = $3",
+        [enabled, minCents, req.club.id],
+      );
+      return res.json({ ok: true, auto_withdraw_enabled: enabled, auto_withdraw_min_cents: minCents });
+    } catch (err) {
+      log.error({ err: err.message }, "[classes] save club withdrawal settings failed");
+      return res.status(500).json({ error: "Failed to save withdrawal settings." });
+    }
+  });
+
+  router.get("/api/clubs/:id/withdrawals", requireClubAdminOnly(), async (req, res) => {
+    try {
+      const r = await pool.query(
+        `SELECT id, amount_cents, currency, status, note, created_at, paid_at
+           FROM payouts WHERE club_id = $1 ORDER BY created_at DESC LIMIT 100`,
+        [req.club.id],
+      );
+      return res.json(r.rows);
+    } catch (err) {
+      log.error({ err: err.message }, "[classes] list club withdrawals failed");
+      return res.status(500).json({ error: "Failed to load withdrawals." });
+    }
+  });
+
+  router.post("/api/clubs/:id/withdrawals", requireClubAdminOnly(), async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const club = (await client.query(
+        "SELECT payout_account_name, payout_account_details FROM clubs WHERE id = $1 FOR UPDATE",
+        [req.club.id],
+      )).rows[0];
+      if (!club.payout_account_name || !club.payout_account_details) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ error: "Add your payout bank details before withdrawing." });
+      }
+      const note = ((req.body || {}).note || "").toString().trim().slice(0, 200) || null;
+      const balances = await clubBalancesByCurrency(req.club.id, client);
+      if (!balances.length) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ error: "You have no balance to withdraw." });
+      }
+      const payouts = [];
+      for (const b of balances) {
+        const row = (await client.query(
+          `INSERT INTO payouts (club_id, amount_cents, currency, status, note)
+           VALUES ($1, $2, $3, 'pending', $4)
+           RETURNING id, amount_cents, currency, status, note, created_at, paid_at`,
+          [req.club.id, b.cents, b.currency, note],
+        )).rows[0];
+        payouts.push(row);
+      }
+      await client.query("COMMIT");
+      return res.status(201).json(payouts);
+    } catch (err) {
+      await client.query("ROLLBACK").catch(() => {});
+      log.error({ err: err.message }, "[classes] club withdrawal request failed");
+      return res.status(err.status || 500).json({ error: err.message || "Withdrawal failed." });
+    } finally {
+      client.release();
     }
   });
 
@@ -572,6 +776,72 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       if (err.code === "23505") return res.status(409).json({ error: "You're already enrolled in this class." });
       log.error({ err: err.message }, "[classes] self-enrol failed");
       return res.status(500).json({ error: "Failed to enrol." });
+    }
+  });
+
+  // The diver pays for their OWN pending enrolment. Never reachable for
+  // another diver's enrolment (403) or a non-pending one (409). If a manual
+  // discount fully covers the price, there's nothing to charge — activate
+  // directly rather than open a $0 Stripe session. The club (not the
+  // federation) is the payment's recipient.
+  router.post("/api/me/class-enrolments/:enrolId/checkout", verifyToken, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    try {
+      const enr = (await pool.query(
+        `SELECT e.*, c.name AS class_name, o.default_currency, o.platform_fee_bps
+           FROM class_enrolments e
+           JOIN classes c ON c.id = e.class_id
+           JOIN organisations o ON o.id = e.org_id
+          WHERE e.id = $1`,
+        [req.params.enrolId],
+      )).rows[0];
+      if (!enr) return res.status(404).json({ error: "Enrolment not found" });
+      if (enr.diver_user_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+      if (enr.status !== "pending") return res.status(409).json({ error: `This enrolment is ${enr.status}.` });
+      const baseAmountCents = (enr.amount_cents || 0) - (enr.discount_cents || 0);
+      if (baseAmountCents <= 0) {
+        await pool.query("UPDATE class_enrolments SET status = 'active', updated_at = now() WHERE id = $1", [enr.id]);
+        return res.json({ status: "active" });
+      }
+      const currency = enr.currency || enr.default_currency;
+      if (!currency) return res.status(409).json({ error: "The federation's currency is not configured." });
+      const { chargeAmountCents, applicationFeeCents } = priceCharge({
+        baseAmountCents, feeBps: enr.platform_fee_bps, feePayer: "absorb",
+      });
+      let paymentId;
+      try {
+        const ins = await pool.query(
+          `INSERT INTO payments
+              (org_id, payer_user_id, payer_type, subject_type, club_id, recipient_type,
+               class_enrolment_id, amount_cents, platform_fee_cents, currency, fee_payer, status)
+           VALUES ($1, $2, 'user', 'class_enrolment', $3, 'club', $4, $5, $6, $7, 'absorb', 'pending')
+           RETURNING id`,
+          [enr.org_id, req.user.id, enr.club_id, enr.id, chargeAmountCents, applicationFeeCents, currency],
+        );
+        paymentId = ins.rows[0].id;
+      } catch (e) {
+        if (e.code === "23505") return res.status(409).json({ error: "You already have a payment in progress for this class." });
+        throw e;
+      }
+      const session = await payments.createCheckoutSession({
+        currency,
+        chargeAmountCents,
+        applicationFeeCents,
+        productName: `Class: ${enr.class_name}`,
+        customerEmail: req.user.email,
+        clientReferenceId: paymentId,
+        metadata: { payment_id: paymentId, class_enrolment_id: enr.id },
+        successUrl: `${APP_BASE_URL}/classes?paid=1`,
+        cancelUrl: `${APP_BASE_URL}/classes?canceled=1`,
+      });
+      await pool.query(
+        "UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2",
+        [session.id, paymentId],
+      );
+      return res.json({ url: session.url, payment_id: paymentId });
+    } catch (err) {
+      log.error({ err: err.message }, "[classes] enrolment checkout failed");
+      return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
     }
   });
 

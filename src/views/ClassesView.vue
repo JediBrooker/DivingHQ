@@ -12,6 +12,7 @@ import { showError } from '@/composables/useNotify'
 import ClubClassesManager from '@/components/classes/ClubClassesManager.vue'
 import CoachClassesView from '@/components/classes/CoachClassesView.vue'
 import MyClassesView from '@/components/classes/MyClassesView.vue'
+import ClubPayoutsPanel from '@/components/classes/ClubPayoutsPanel.vue'
 import { Layers } from '@lucide/vue'
 
 const auth = useAuthStore()
@@ -21,6 +22,7 @@ const loading = ref(true)
 const adminClubs = ref([])
 const isCoach = computed(() => auth.hasRole('coach'))
 const selectedClubId = ref(null)
+const manageSubTab = ref('classes')
 
 const TABS = computed(() => {
   const list = []
@@ -69,7 +71,12 @@ onMounted(async () => {
             <option v-for="c in adminClubs" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
         </div>
-        <ClubClassesManager v-if="selectedClubId" :key="selectedClubId" :club-id="selectedClubId" />
+        <nav class="subtabs">
+          <button type="button" :class="['subtab', { active: manageSubTab === 'classes' }]" @click="manageSubTab = 'classes'">{{ t('classes.subtab_classes') }}</button>
+          <button type="button" :class="['subtab', { active: manageSubTab === 'payouts' }]" @click="manageSubTab = 'payouts'">{{ t('classes.subtab_payouts') }}</button>
+        </nav>
+        <ClubClassesManager v-if="selectedClubId && manageSubTab === 'classes'" :key="'cls-' + selectedClubId" :club-id="selectedClubId" />
+        <ClubPayoutsPanel v-if="selectedClubId && manageSubTab === 'payouts'" :key="'pay-' + selectedClubId" :club-id="selectedClubId" />
       </div>
 
       <div v-else-if="tab === 'coach'" class="panel">
@@ -96,4 +103,7 @@ onMounted(async () => {
 .panel { display: flex; flex-direction: column; gap: 1rem; }
 .club-picker { display: flex; align-items: center; gap: .5rem; font-size: .88rem; color: var(--fg-2, #555); }
 .club-picker .in { padding: .35rem .5rem; border: 1px solid var(--border, #ddd); border-radius: var(--radius, .5rem); background: transparent; color: var(--fg, #222); font: inherit; }
+.subtabs { display: flex; gap: .3rem; }
+.subtab { appearance: none; border: 1px solid var(--border, #ddd); background: transparent; padding: .35rem .75rem; border-radius: 999px; cursor: pointer; color: var(--fg-2, #555); font: inherit; font-size: .85rem; }
+.subtab.active { background: var(--accent-soft, #eef); color: var(--accent, #3b6); border-color: var(--accent, #3b6); font-weight: 600; }
 </style>

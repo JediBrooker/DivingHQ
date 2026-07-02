@@ -147,6 +147,10 @@ module.exports = function createPaymentsRouter({
     // clamped >= 0) minus what's already withdrawn, grouped by currency so a
     // federation that took payments in more than one currency is never summed
     // into one meaningless number or paid out in the wrong currency.
+    // recipient_type = 'org' excludes class_enrolment payments — those carry
+    // this same org_id (the diver's federation) for reporting, but the MONEY
+    // is owed to the class's club, not the federation. Without this filter a
+    // class enrolment payment would double-count into both balances.
     const collected = (await db.query(
       `SELECT currency, COALESCE(SUM(GREATEST(0,
           CASE status
@@ -155,7 +159,7 @@ module.exports = function createPaymentsRouter({
               (amount_cents - platform_fee_cents)::numeric
                 * (amount_cents - COALESCE(refunded_amount_cents, 0)) / NULLIF(amount_cents, 0))
             ELSE 0 END)), 0)::bigint AS net
-         FROM payments WHERE org_id = $1 GROUP BY currency`,
+         FROM payments WHERE org_id = $1 AND recipient_type = 'org' GROUP BY currency`,
       [orgId],
     )).rows;
     const paid = (await db.query(

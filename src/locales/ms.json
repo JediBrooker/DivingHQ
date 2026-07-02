@@ -1507,6 +1507,36 @@
     "no_available_classes": "Tiada kelas yang tersedia untuk disertai buat masa ini.",
     "already_enrolled": "Anda sudah pun berdaftar.",
     "enrol": "Daftar",
-    "enrol_pending": "Permohonan pendaftaran dihantar — pembayaran belum aktif lagi, jadi anda disenaraikan sebagai menunggu."
+    "enrol_pending": "Permohonan pendaftaran dihantar — pembayaran belum aktif lagi, jadi anda disenaraikan sebagai menunggu.",
+    "payouts": {
+      "account_details": "Butiran bank pembayaran keluar",
+      "account_details_hint": "Ke mana DivingHQ menghantar bahagian kelab anda daripada bayaran pendaftaran kelas. Tiada akaun Stripe diperlukan.",
+      "details_on_file": "✓ Direkodkan — {name}",
+      "details_missing": "Tambahkan butiran bank pembayaran keluar anda supaya kami boleh membayar anda.",
+      "field_account_name": "Nama akaun",
+      "field_account_details": "Butiran bank (IBAN, atau kod bank + nombor akaun)",
+      "saved": "Disimpan",
+      "error_load": "Tidak dapat memuatkan status pembayaran keluar.",
+      "error_save": "Tidak dapat menyimpan.",
+      "balance": "Baki",
+      "balance_owed": "Baki terhutang kepada kelab anda",
+      "withdraw_now": "Keluarkan sekarang",
+      "withdrawal_requested": "Permintaan pengeluaran dihantar",
+      "error_withdraw": "Tidak dapat memohon pengeluaran.",
+      "auto_withdraw": "Pengeluaran automatik",
+      "auto_withdraw_hint": "Terima bayaran secara automatik sebaik sahaja baki anda melepasi ambang tertentu.",
+      "auto_withdraw_enable": "Keluarkan secara automatik",
+      "field_threshold": "Keluarkan apabila baki mencapai",
+      "threshold_invalid": "Masukkan ambang sekurang-kurangnya 1.00.",
+      "history": "Sejarah pengeluaran",
+      "history_empty": "Belum ada pengeluaran.",
+      "dormant_note": "Pembayaran akan hadir tidak lama lagi. Tambahkan butiran pembayaran keluar dan keutamaan pengeluaran automatik anda sekarang — kami akan membayar anda sebaik sahaja ciri ini diaktifkan."
+    },
+    "col_date": "Tarikh",
+    "col_amount": "Jumlah",
+    "pay_now": "Bayar sekarang",
+    "error_checkout": "Tidak dapat memulakan pembayaran.",
+    "subtab_classes": "Kelas",
+    "subtab_payouts": "Pembayaran keluar"
   }
 }

@@ -1507,6 +1507,36 @@
     "no_available_classes": "Trenutno nema dostupnih skupina za upis.",
     "already_enrolled": "Već ste upisani.",
     "enrol": "Upiši se",
-    "enrol_pending": "Zahtjev za upis poslan — plaćanje još nije aktivno, pa ste na popisu kao na čekanju."
+    "enrol_pending": "Zahtjev za upis poslan — plaćanje još nije aktivno, pa ste na popisu kao na čekanju.",
+    "payouts": {
+      "account_details": "Podaci za isplatu na račun",
+      "account_details_hint": "Na ovaj račun DivingHQ šalje udio vašeg kluba u uplatama za upis u treninge. Stripe račun nije potreban.",
+      "details_on_file": "✓ Uneseno — {name}",
+      "details_missing": "Dodajte podatke bankovnog računa za isplatu kako bismo vam mogli isplatiti sredstva.",
+      "field_account_name": "Naziv računa",
+      "field_account_details": "Podaci računa (IBAN ili poslovni broj banke i broj računa)",
+      "saved": "Spremljeno",
+      "error_load": "Status isplata nije bilo moguće učitati.",
+      "error_save": "Spremanje nije uspjelo.",
+      "balance": "Stanje",
+      "balance_owed": "Stanje koje se duguje vašem klubu",
+      "withdraw_now": "Isplati sada",
+      "withdrawal_requested": "Isplata zatražena",
+      "error_withdraw": "Zahtjev za isplatu nije uspio.",
+      "auto_withdraw": "Automatske isplate",
+      "auto_withdraw_hint": "Sredstva primite automatski čim stanje prijeđe zadani prag.",
+      "auto_withdraw_enable": "Isplati automatski",
+      "field_threshold": "Isplati kada stanje dosegne",
+      "threshold_invalid": "Unesite prag od najmanje 1,00.",
+      "history": "Povijest isplata",
+      "history_empty": "Još nema isplata.",
+      "dormant_note": "Plaćanja uskoro stižu. Unesite podatke za isplatu i postavke automatske isplate već sada — isplatit ćemo vam sredstva čim značajka bude uključena."
+    },
+    "col_date": "Datum",
+    "col_amount": "Iznos",
+    "pay_now": "Plati sada",
+    "error_checkout": "Naplatu nije bilo moguće pokrenuti.",
+    "subtab_classes": "Treninzi",
+    "subtab_payouts": "Isplate"
   }
 }

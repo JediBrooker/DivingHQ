@@ -1507,6 +1507,36 @@
     "no_available_classes": "Der er ingen hold at tilmelde sig lige nu.",
     "already_enrolled": "Du er allerede tilmeldt.",
     "enrol": "Tilmeld",
-    "enrol_pending": "Tilmelding anmodet — betaling er endnu ikke aktiveret, så du står på listen som afventende."
+    "enrol_pending": "Tilmelding anmodet — betaling er endnu ikke aktiveret, så du står på listen som afventende.",
+    "payouts": {
+      "account_details": "Bankoplysninger til udbetaling",
+      "account_details_hint": "Hertil sender DivingHQ jeres klubs andel af betalinger for holdtilmeldinger. Ingen Stripe-konto er nødvendig.",
+      "details_on_file": "✓ Registreret — {name}",
+      "details_missing": "Tilføj jeres bankoplysninger til udbetaling, så vi kan betale jer.",
+      "field_account_name": "Kontonavn",
+      "field_account_details": "Bankoplysninger (IBAN eller registreringsnummer + kontonummer)",
+      "saved": "Gemt",
+      "error_load": "Kunne ikke indlæse udbetalingsstatus.",
+      "error_save": "Kunne ikke gemme.",
+      "balance": "Saldo",
+      "balance_owed": "Saldo, der skyldes jeres klub",
+      "withdraw_now": "Hæv nu",
+      "withdrawal_requested": "Udbetaling anmodet",
+      "error_withdraw": "Kunne ikke anmode om udbetaling.",
+      "auto_withdraw": "Automatiske udbetalinger",
+      "auto_withdraw_hint": "Få automatisk udbetalt, når jeres saldo overstiger en tærskel.",
+      "auto_withdraw_enable": "Udbetal automatisk",
+      "field_threshold": "Udbetal, når saldoen når",
+      "threshold_invalid": "Angiv en tærskel på mindst 1,00.",
+      "history": "Udbetalingshistorik",
+      "history_empty": "Ingen udbetalinger endnu.",
+      "dormant_note": "Betalinger lanceres snart. Tilføj jeres oplysninger til udbetaling og indstilling for automatisk udbetaling nu — vi udbetaler, så snart det bliver aktiveret."
+    },
+    "col_date": "Dato",
+    "col_amount": "Beløb",
+    "pay_now": "Betal nu",
+    "error_checkout": "Kunne ikke starte betaling.",
+    "subtab_classes": "Hold",
+    "subtab_payouts": "Udbetalinger"
   }
 }

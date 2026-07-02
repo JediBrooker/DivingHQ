@@ -1507,6 +1507,36 @@
     "no_available_classes": "Momentálně nejsou k dispozici žádné kurzy k přihlášení.",
     "already_enrolled": "Už jste přihlášeni.",
     "enrol": "Přihlásit se",
-    "enrol_pending": "Přihlášení odesláno — platby zatím nejsou spuštěny, takže jste zatím na seznamu jako čekající."
+    "enrol_pending": "Přihlášení odesláno — platby zatím nejsou spuštěny, takže jste zatím na seznamu jako čekající.",
+    "payouts": {
+      "account_details": "Bankovní údaje pro výplaty",
+      "account_details_hint": "Sem DivingHQ posílá podíl vašeho klubu z plateb za přihlášky do kurzů. Účet Stripe není potřeba.",
+      "details_on_file": "✓ Uloženo — {name}",
+      "details_missing": "Přidejte bankovní údaje pro výplaty, abychom vám mohli platit.",
+      "field_account_name": "Název účtu",
+      "field_account_details": "Bankovní údaje (IBAN nebo kód banky a číslo účtu)",
+      "saved": "Uloženo",
+      "error_load": "Stav výplat se nepodařilo načíst.",
+      "error_save": "Uložení se nezdařilo.",
+      "balance": "Zůstatek",
+      "balance_owed": "Zůstatek dlužný vašemu klubu",
+      "withdraw_now": "Vybrat nyní",
+      "withdrawal_requested": "Výběr byl vyžádán",
+      "error_withdraw": "Výběr se nepodařilo vyžádat.",
+      "auto_withdraw": "Automatické výběry",
+      "auto_withdraw_hint": "Peníze vám budou vyplaceny automaticky, jakmile zůstatek překročí stanovenou hranici.",
+      "auto_withdraw_enable": "Vybírat automaticky",
+      "field_threshold": "Vybrat, jakmile zůstatek dosáhne",
+      "threshold_invalid": "Zadejte hranici alespoň 1,00.",
+      "history": "Historie výběrů",
+      "history_empty": "Zatím žádné výběry.",
+      "dormant_note": "Platby budou brzy spuštěny. Přidejte nyní své bankovní údaje pro výplaty a nastavení automatického výběru — jakmile funkci zapneme, ihned vám vyplatíme peníze."
+    },
+    "col_date": "Datum",
+    "col_amount": "Částka",
+    "pay_now": "Zaplatit",
+    "error_checkout": "Platbu se nepodařilo zahájit.",
+    "subtab_classes": "Kurzy",
+    "subtab_payouts": "Výplaty"
   }
 }

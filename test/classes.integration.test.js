@@ -18,10 +18,25 @@ require("dotenv").config();
 
 const createMiddleware = require("../lib/middleware");
 const createClassesRouter = require("../routes/classes");
+const createStripeWebhook = require("../routes/stripe-webhook");
 
 const silent = { warn() {}, error() {}, info() {} };
 const suffix = crypto.randomUUID().slice(0, 8);
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Fake Stripe — captures args, returns canned objects. Mirrors the harness
+// in test/payments.integration.test.js; a real Stripe key is never needed.
+let lastCheckoutArgs = null;
+const fakePayments = {
+  enabled: true,
+  createCheckoutSession: async (args) => {
+    lastCheckoutArgs = args;
+    return { id: "cs_" + crypto.randomUUID().slice(0, 8), url: "https://stripe.test/pay" };
+  },
+  expireCheckoutSession: async () => ({ status: "expired" }),
+  createRefund: async (args) => ({ amount: args.amountCents }),
+  constructWebhookEvent: (raw) => JSON.parse(Buffer.isBuffer(raw) ? raw.toString() : raw),
+};
 
 let pool;
 let ready = false;
@@ -107,9 +122,15 @@ before(async () => {
   U.foreignDiver = await seedUser("foreign", ["diver"], null, org2Id);
 
   const app = express();
-  app.use(express.json());
+  app.use((req, res, next) =>
+    req.path === "/webhooks/stripe" ? next() : express.json()(req, res, next));
   const mw = createMiddleware({ pool, JWT_SECRET });
-  app.use(createClassesRouter({ pool, verifyToken: mw.verifyToken, requireClubAdminOnly: mw.requireClubAdminOnly, logger: silent }));
+  app.use(createClassesRouter({
+    pool, verifyToken: mw.verifyToken, requireClubAdminOnly: mw.requireClubAdminOnly,
+    logger: silent, payments: fakePayments,
+  }));
+  app.post("/webhooks/stripe", express.raw({ type: "application/json" }),
+    createStripeWebhook({ pool, logger: silent, payments: fakePayments }));
   server = http.createServer(app);
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   base = `http://127.0.0.1:${server.address().port}`;
@@ -121,6 +142,13 @@ after(async () => {
   if (pool) {
     for (const id of [orgId, org2Id]) {
       if (!id) continue;
+      // payments.org_id is ON DELETE RESTRICT (so a payer never loses their
+      // own receipt just because an org is torn down elsewhere) — without
+      // deleting these first, DELETE FROM organisations below silently fails
+      // via the .catch(), orphaning the org AND leaving stripe_payment_intent
+      // literals (e.g. "pi_test") permanently squatting on idx_payments_pi
+      // for every future test run.
+      await pool.query("DELETE FROM payments WHERE org_id = $1", [id]).catch(() => {});
       await pool.query("DELETE FROM classes WHERE org_id = $1", [id]).catch(() => {});
       await pool.query("DELETE FROM club_admins WHERE org_id = $1", [id]).catch(() => {});
       await pool.query("DELETE FROM user_org_roles WHERE org_id = $1", [id]).catch(() => {});
@@ -319,4 +347,209 @@ test("PUT enrolment re-validates a stale discount when the price is lowered", as
   const res = await api("PUT", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enr.id}`,
     { price_option_id: cheap }, tok);
   assert.equal(res.status, 400, JSON.stringify(res.body));
+});
+
+// ---- enrolment payments (fake Stripe) ----------------------------
+test("diver checks out a priced pending enrolment; webhook activates it", async (t) => {
+  if (!ready) return t.skip();
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Checkout Class",
+    price_options: [{ label: "Monthly", amount_cents: 3000, currency: "GBP" }],
+  }, tokenFor(U.clubAdmin))).body;
+  const priceId = cls.price_options[0].id;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: priceId }, tokenFor(U.diver1));
+  assert.equal(enrol.body.status, "pending");
+  const enrolId = enrol.body.id;
+
+  const co = await api("POST", `/api/me/class-enrolments/${enrolId}/checkout`, {}, tokenFor(U.diver1));
+  assert.equal(co.status, 200, JSON.stringify(co.body));
+  assert.ok(co.body.url);
+  const paymentId = co.body.payment_id;
+
+  const pay = (await pool.query("SELECT * FROM payments WHERE id = $1", [paymentId])).rows[0];
+  assert.equal(pay.subject_type, "class_enrolment");
+  assert.equal(pay.recipient_type, "club");
+  assert.equal(pay.club_id, clubId);
+  assert.equal(pay.class_enrolment_id, enrolId);
+  assert.equal(pay.amount_cents, 3000);
+  assert.equal(pay.platform_fee_cents, 450); // 15% of 3000
+
+  const wh = await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_test", client_reference_id: paymentId, payment_intent: "pi_test" } },
+  }, null);
+  assert.equal(wh.status, 200);
+
+  const enrRow = (await pool.query("SELECT status, payment_id FROM class_enrolments WHERE id = $1", [enrolId])).rows[0];
+  assert.equal(enrRow.status, "active");
+  assert.equal(enrRow.payment_id, paymentId);
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [paymentId])).rows[0].status, "paid");
+});
+
+test("checkout is forbidden for someone else's enrolment", async (t) => {
+  if (!ready) return t.skip();
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Forbidden Class", price_options: [{ label: "Fee", amount_cents: 1000, currency: "GBP" }],
+  }, tokenFor(U.clubAdmin))).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver1));
+  const res = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver2));
+  assert.equal(res.status, 403);
+});
+
+test("checkout on a non-pending enrolment is rejected", async (t) => {
+  if (!ready) return t.skip();
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, { name: "Free Class" }, tokenFor(U.clubAdmin))).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, {}, tokenFor(U.diver1));
+  assert.equal(enrol.body.status, "active"); // no price -> instantly active
+  const res = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  assert.equal(res.status, 409);
+});
+
+test("a fully-discounted pending enrolment activates without opening a Stripe session", async (t) => {
+  if (!ready) return t.skip();
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Discount Class", price_options: [{ label: "Fee", amount_cents: 2000, currency: "GBP" }],
+  }, tokenFor(U.clubAdmin))).body;
+  const priceId = cls.price_options[0].id;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: priceId }, tokenFor(U.diver1));
+  assert.equal(enrol.body.status, "pending");
+  // Club admin applies a discount that fully covers the price.
+  await api("PUT", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`,
+    { discount_cents: 2000 }, tokenFor(U.clubAdmin));
+  const res = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  assert.equal(res.status, 200);
+  assert.equal(res.body.status, "active");
+  assert.equal(res.body.url, undefined, "no Stripe session opened for a $0 charge");
+});
+
+test("a second checkout attempt while one is in flight is blocked", async (t) => {
+  if (!ready) return t.skip();
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "In-flight Class", price_options: [{ label: "Fee", amount_cents: 1500, currency: "GBP" }],
+  }, tokenFor(U.clubAdmin))).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver1));
+  const first = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  assert.equal(first.status, 200);
+  const second = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  assert.equal(second.status, 409);
+});
+
+test("webhook full refund reverts an active enrolment to pending and clears payment_id", async (t) => {
+  if (!ready) return t.skip();
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Refund Class", price_options: [{ label: "Fee", amount_cents: 5000, currency: "GBP" }],
+  }, tokenFor(U.clubAdmin))).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver1));
+  const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_refund", client_reference_id: co.body.payment_id, payment_intent: "pi_refund" } },
+  }, null);
+  assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "active");
+
+  await api("POST", "/webhooks/stripe", {
+    type: "charge.refunded",
+    data: { object: { payment_intent: "pi_refund", amount_refunded: 5000 } },
+  }, null);
+  const after = (await pool.query("SELECT status, payment_id FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0];
+  assert.equal(after.status, "pending");
+  assert.equal(after.payment_id, null);
+  assert.equal((await pool.query(
+    "SELECT status FROM payments WHERE class_enrolment_id = $1 ORDER BY created_at DESC LIMIT 1", [enrol.body.id],
+  )).rows[0].status, "refunded");
+});
+
+// ---- club payouts (club-private) ---------------------------------
+test("club payout status/details/withdrawals are club-private (federation blocked)", async (t) => {
+  if (!ready) return t.skip();
+  for (const [method, path, body] of [
+    ["GET", `/api/clubs/${clubId}/payments/status`, null],
+    ["PUT", `/api/clubs/${clubId}/payout-details`, { account_name: "x", account_details: "y" }],
+    ["GET", `/api/clubs/${clubId}/withdrawals`, null],
+    ["POST", `/api/clubs/${clubId}/withdrawals`, {}],
+  ]) {
+    const res = await api(method, path, body, tokenFor(U.fedAdmin));
+    assert.equal(res.status, 403, `${method} ${path} expected 403, got ${res.status}`);
+  }
+});
+
+test("club admin saves payout details, sees balance, and withdraws (one payout, club_id set)", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.clubAdmin);
+  const save = await api("PUT", `/api/clubs/${clubId}/payout-details`,
+    { account_name: "Club Account", account_details: "GB00 CLUB 0000" }, tok);
+  assert.equal(save.status, 200);
+
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Payout Class", price_options: [{ label: "Fee", amount_cents: 8000, currency: "GBP" }],
+  }, tok)).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver2));
+  const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver2));
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_payout", client_reference_id: co.body.payment_id, payment_intent: "pi_payout" } },
+  }, null);
+
+  const status = await api("GET", `/api/clubs/${clubId}/payments/status`, null, tok);
+  assert.equal(status.status, 200);
+  assert.equal(status.body.payout_details_set, true);
+  assert.ok(status.body.balance_cents >= 6800, JSON.stringify(status.body)); // 8000 - 15% = 6800
+
+  const wd = await api("POST", `/api/clubs/${clubId}/withdrawals`, {}, tok);
+  assert.equal(wd.status, 201, JSON.stringify(wd.body));
+  assert.equal(wd.body[0].status, "pending");
+  const row = (await pool.query("SELECT club_id, org_id FROM payouts WHERE id = $1", [wd.body[0].id])).rows[0];
+  assert.equal(row.org_id, null);
+  assert.equal(row.club_id, clubId);
+});
+
+test("cancelling an enrolment with an in-flight checkout retires the payment; a late webhook can't reactivate it", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.clubAdmin);
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Cancel Race Class", price_options: [{ label: "Fee", amount_cents: 2500, currency: "GBP" }],
+  }, tok)).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver1));
+  const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  assert.equal(co.status, 200);
+  const paymentId = co.body.payment_id;
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [paymentId])).rows[0].status, "pending");
+
+  const del = await api("DELETE", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`, null, tok);
+  assert.equal(del.status, 200);
+  assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "cancelled");
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [paymentId])).rows[0].status, "failed",
+    "the in-flight payment was retired (marked failed) by the cancellation");
+
+  // A late webhook delivery for the now-retired session must be a no-op —
+  // the payment's idempotency guard (status must still be 'pending') blocks it.
+  const wh = await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_stale", client_reference_id: paymentId, payment_intent: "pi_stale_cancel" } },
+  }, null);
+  assert.equal(wh.status, 200);
+  assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "cancelled",
+    "the stale webhook did not reactivate the cancelled enrolment");
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [paymentId])).rows[0].status, "failed",
+    "the stale webhook did not flip the retired payment back to paid");
+});
+
+test("cancelling an already-paid enrolment is rejected, not silently overwritten", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.clubAdmin);
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Already Paid Class", price_options: [{ label: "Fee", amount_cents: 1800, currency: "GBP" }],
+  }, tok)).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver1));
+  const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_paid_first", client_reference_id: co.body.payment_id, payment_intent: "pi_paid_first" } },
+  }, null);
+  assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "active");
+
+  const del = await api("DELETE", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`, null, tok);
+  assert.equal(del.status, 409, JSON.stringify(del.body));
+  assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "active",
+    "the paid enrolment was NOT cancelled underneath the successful payment");
 });

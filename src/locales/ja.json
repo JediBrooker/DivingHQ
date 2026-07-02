@@ -1507,6 +1507,36 @@
     "no_available_classes": "現在申し込めるクラスはありません。",
     "already_enrolled": "すでに申し込み済みです。",
     "enrol": "申し込む",
-    "enrol_pending": "申込を受け付けました — 決済機能はまだ利用できないため、保留リストに登録されています。"
+    "enrol_pending": "申込を受け付けました — 決済機能はまだ利用できないため、保留リストに登録されています。",
+    "payouts": {
+      "account_details": "振込先の銀行口座情報",
+      "account_details_hint": "DivingHQがクラブの受講料収益分をお振込みする口座です。Stripeアカウントは不要です。",
+      "details_on_file": "✓ 登録済み — {name}",
+      "details_missing": "お支払いのため、振込先の銀行口座情報を登録してください。",
+      "field_account_name": "口座名義",
+      "field_account_details": "銀行口座情報（IBAN、または支店コードと口座番号）",
+      "saved": "保存しました",
+      "error_load": "振込状況を読み込めませんでした。",
+      "error_save": "保存できませんでした。",
+      "balance": "残高",
+      "balance_owed": "クラブへのお支払い残高",
+      "withdraw_now": "今すぐ引き出す",
+      "withdrawal_requested": "引き出しをリクエストしました",
+      "error_withdraw": "引き出しをリクエストできませんでした。",
+      "auto_withdraw": "自動引き出し",
+      "auto_withdraw_hint": "残高が設定した金額を超えると自動的にお支払いします。",
+      "auto_withdraw_enable": "自動的に引き出す",
+      "field_threshold": "残高が次の金額に達したら引き出す",
+      "threshold_invalid": "1.00以上のしきい値を入力してください。",
+      "history": "引き出し履歴",
+      "history_empty": "引き出し履歴はまだありません。",
+      "dormant_note": "お支払い機能は近日公開予定です。今のうちに振込先情報と自動引き出しの設定を登録しておくと、機能が有効になり次第すぐにお支払いします。"
+    },
+    "col_date": "日付",
+    "col_amount": "金額",
+    "pay_now": "今すぐ支払う",
+    "error_checkout": "決済を開始できませんでした。",
+    "subtab_classes": "クラス",
+    "subtab_payouts": "振込"
   }
 }
