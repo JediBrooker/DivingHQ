@@ -68,6 +68,28 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       FROM class_price_options po WHERE po.class_id = c.id AND po.active), '[]'::json)`;
 
   // ================================================================
+  // CONTEXT DISCOVERY — lets the SPA pick which panel(s) to show without
+  // guessing from JWT roles alone (club-admin-ness isn't in the JWT: it's
+  // a club_admins row, not an org role).
+  // ================================================================
+  router.get("/api/me/club-admin-clubs", verifyToken, async (req, res) => {
+    try {
+      const r = await pool.query(
+        `SELECT cl.id, cl.name
+           FROM club_admins ca
+           JOIN clubs cl ON cl.id = ca.club_id
+          WHERE ca.user_id = $1
+          ORDER BY lower(cl.name)`,
+        [req.user.id],
+      );
+      return res.json(r.rows);
+    } catch (err) {
+      log.error({ err: err.message }, "[classes] club-admin-clubs failed");
+      return res.status(500).json({ error: "Failed to load your club admin memberships." });
+    }
+  });
+
+  // ================================================================
   // CLUB ADMIN — manage classes (club-private; excludes federation)
   // ================================================================
 
@@ -89,6 +111,23 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     } catch (err) {
       log.error({ err: err.message }, "[classes] list failed");
       return res.status(500).json({ error: "Failed to load classes." });
+    }
+  });
+
+  // Club's own members, for the "add diver to class" picker. Credential-safe
+  // projection (id + name only, no username) — mirrors GET /api/orgs/:id/members.
+  router.get("/api/clubs/:id/members", requireClubAdminOnly(), async (req, res) => {
+    try {
+      const r = await pool.query(
+        `SELECT id, full_name FROM users
+          WHERE club_id = $1 AND deleted_at IS NULL
+          ORDER BY lower(full_name)`,
+        [req.club.id],
+      );
+      return res.json(r.rows);
+    } catch (err) {
+      log.error({ err: err.message }, "[classes] club members failed");
+      return res.status(500).json({ error: "Failed to load club members." });
     }
   });
 
