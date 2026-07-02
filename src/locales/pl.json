@@ -1538,7 +1538,17 @@
       "history_empty": "Brak wypłat.",
       "dormant_note": "Płatności będą dostępne wkrótce. Dodaj teraz dane do wypłat oraz preferencje automatycznej wypłaty — wypłacimy środki natychmiast po uruchomieniu tej funkcji.",
       "federation_fees": "Opłaty na rzecz federacji",
-      "federation_fees_hint": "Roczne opłaty afiliacyjne i akredytacyjne, które Twój klub płaci federacji."
+      "federation_fees_hint": "Roczne opłaty afiliacyjne i akredytacyjne, które Twój klub płaci federacji.",
+      "onboard_hint": "DivingHQ płaci Ci przez Stripe. Zarejestruj się raz — dodaj konto bankowe i zweryfikuj tożsamość na bezpiecznej stronie Stripe. Twoje dane bankowe pozostają w Stripe, nigdy u nas.",
+      "payouts_ready": "Wypłaty są skonfigurowane — możesz wypłacać.",
+      "onboard_incomplete": "Rejestracja rozpoczęta, ale niedokończona — potrzeba jeszcze kilku danych.",
+      "onboard_needed": "Jeszcze nieskonfigurowane — połącz bank, abyśmy mogli Ci płacić.",
+      "onboard_needed_short": "Skonfiguruj wypłaty, aby wypłacić.",
+      "onboard_start": "Skonfiguruj wypłaty",
+      "onboard_resume": "Dokończ konfigurację wypłat",
+      "error_onboard": "Nie udało się rozpocząć rejestracji wypłat",
+      "withdrawal_sent": "W drodze — Twoja wypłata została wysłana do banku.",
+      "withdrawal_failed": "Przelew się nie powiódł — saldo zostało przywrócone. Sprawdź konfigurację wypłat i spróbuj ponownie."
     },
     "col_date": "Data",
     "col_amount": "Kwota",

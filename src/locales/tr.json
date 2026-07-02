@@ -1538,7 +1538,17 @@
       "history_empty": "Henüz para çekme işlemi yok.",
       "dormant_note": "Ödemeler yakında etkinleştirilecek. Ödeme bilgilerinizi ve otomatik para çekme tercihinizi şimdiden ekleyin — özellik açılır açılmaz ödemenizi yapacağız.",
       "federation_fees": "Federasyon ücretleri",
-      "federation_fees_hint": "Kulübünüzün federasyona ödediği yıllık üyelik ve akreditasyon ücretleri."
+      "federation_fees_hint": "Kulübünüzün federasyona ödediği yıllık üyelik ve akreditasyon ücretleri.",
+      "onboard_hint": "DivingHQ size Stripe üzerinden ödeme yapar. Bir kez kaydolun — banka hesabınızı ekleyin ve kimliğinizi Stripe'ın güvenli sayfasında doğrulayın. Banka bilgileriniz Stripe'da kalır, bizde asla.",
+      "payouts_ready": "Ödemeler ayarlandı — para çekmeye hazırsınız.",
+      "onboard_incomplete": "Kayıt başladı ama tamamlanmadı — hâlâ birkaç bilgi gerekiyor.",
+      "onboard_needed": "Henüz ayarlanmadı — size ödeme yapabilmemiz için bankanızı bağlayın.",
+      "onboard_needed_short": "Para çekmek için ödemeleri ayarlayın.",
+      "onboard_start": "Ödemeleri ayarla",
+      "onboard_resume": "Ödeme ayarını tamamla",
+      "error_onboard": "Ödeme kaydı başlatılamadı",
+      "withdrawal_sent": "Yolda — ödemeniz bankanıza gönderildi.",
+      "withdrawal_failed": "Bir transfer başarısız oldu — bakiyeniz geri yüklendi. Ödeme ayarınızı kontrol edip tekrar deneyin."
     },
     "col_date": "Tarih",
     "col_amount": "Tutar",

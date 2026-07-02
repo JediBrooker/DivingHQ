@@ -19,6 +19,7 @@ const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { priceCharge } = require("../lib/fee-pricing");
 const ledger = require("../lib/payout-ledger");
+const { toAlpha2 } = require("../lib/stripe");
 const { retirePendingPayment, resumeOrRetireCheckout } = require("../lib/payment-lifecycle");
 
 const APP_BASE_URL =
@@ -616,13 +617,25 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   router.get("/api/clubs/:id/payments/status", requireClubAdminOnly(), async (req, res) => {
     try {
       const club = (await pool.query(
-        `SELECT payout_account_name, payout_account_details, auto_withdraw_enabled, auto_withdraw_min_cents
+        `SELECT stripe_account_id, stripe_payouts_enabled, auto_withdraw_enabled, auto_withdraw_min_cents
            FROM clubs WHERE id = $1`,
         [req.club.id],
       )).rows[0];
+      let payoutsReady = !!club.stripe_payouts_enabled;
+      if (payments && payments.enabled && club.stripe_account_id) {
+        try {
+          const st = await payments.retrieveAccountStatus({ accountId: club.stripe_account_id });
+          payoutsReady = st.payoutsEnabled;
+          if (st.payoutsEnabled !== club.stripe_payouts_enabled) {
+            await pool.query("UPDATE clubs SET stripe_payouts_enabled = $2 WHERE id = $1", [req.club.id, st.payoutsEnabled]);
+          }
+        } catch (e) {
+          log.warn({ err: e.message, club: req.club.id }, "[classes] account status refresh failed");
+        }
+      }
       const base = {
-        payout_details_set: !!(club.payout_account_name && club.payout_account_details),
-        account_name: club.payout_account_name || null,
+        connected: !!club.stripe_account_id,
+        payouts_ready: payoutsReady,
         auto_withdraw_enabled: !!club.auto_withdraw_enabled,
         auto_withdraw_min_cents: club.auto_withdraw_min_cents ?? null,
       };
@@ -640,31 +653,48 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     }
   });
 
-  router.put("/api/clubs/:id/payout-details", requireClubAdminOnly(), async (req, res) => {
-    const name = ((req.body || {}).account_name || "").toString().trim();
-    const details = ((req.body || {}).account_details || "").toString().trim();
-    if (!name || !details) return res.status(400).json({ error: "Account name and details are required." });
+  // Club starts (or resumes) Stripe-hosted payout onboarding. Creates a
+  // recipient connected account on first call (in the club's own country,
+  // inherited from its federation), then returns a fresh onboarding link.
+  // Bank details live at Stripe — never in our DB.
+  router.post("/api/clubs/:id/connect/onboard", requireClubAdminOnly(), async (req, res) => {
+    if (!ensurePayments(res)) return;
     try {
-      await pool.query(
-        "UPDATE clubs SET payout_account_name = $1, payout_account_details = $2 WHERE id = $3",
-        [name.slice(0, 200), details.slice(0, 500), req.club.id],
-      );
-      // Audit the change but never the details themselves (matches the org
-      // endpoint) — a silent bank-detail swap redirects payouts.
-      recordAudit(pool, {
-        ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
-        // federation's org_id surface in the org-admin audit log, leaking
-        // club-private class/payout activity (#98's boundary). Sysadmin
-        // tooling finds these via metadata.club_id.
-        org_id: null,
-        entity_type: "club", entity_id: req.club.id,
-        action: "payout_details.updated", metadata: { club_id: req.club.id, account_name: name.slice(0, 200) },
-      }).catch(() => {});
-      return res.json({ ok: true });
+      const club = (await pool.query(
+        `SELECT c.id, c.name, c.stripe_account_id, o.default_currency, o.country_code
+           FROM clubs c JOIN organisations o ON o.id = c.org_id WHERE c.id = $1`,
+        [req.club.id],
+      )).rows[0];
+      let accountId = club.stripe_account_id;
+      if (!accountId) {
+        const country = toAlpha2(club.country_code);
+        // Stripe requires a contact email on the recipient account; the JWT
+        // doesn't carry one, so fetch the acting admin's.
+        const contactEmail = (await pool.query("SELECT email FROM users WHERE id = $1", [req.user.id])).rows[0]?.email
+          || process.env.PLATFORM_OPS_EMAIL || process.env.EMAIL_FROM;
+        const acct = await payments.createRecipientAccount({
+          country, email: contactEmail, name: club.name, currency: club.default_currency,
+        });
+        accountId = acct.id;
+        await pool.query(
+          "UPDATE clubs SET stripe_account_id = $2, stripe_account_country = $3 WHERE id = $1",
+          [req.club.id, accountId, country],
+        );
+        recordAudit(pool, {
+          ...auditFromReq(req), org_id: null,
+          entity_type: "club", entity_id: req.club.id,
+          action: "connect.account_created", metadata: { club_id: req.club.id, account_id: accountId, country },
+        }).catch(() => {});
+      }
+      const url = await payments.createOnboardingLink({
+        accountId,
+        returnUrl: `${APP_BASE_URL}/classes?onboarding=complete`,
+        refreshUrl: `${APP_BASE_URL}/classes?onboarding=refresh`,
+      });
+      return res.json({ url });
     } catch (err) {
-      log.error({ err: err.message }, "[classes] save club payout details failed");
-      return res.status(500).json({ error: "Failed to save payout details." });
+      log.error({ err: err.message }, "[classes] club onboarding failed");
+      return res.status(err.status || 500).json({ error: err.message || "Could not start payout onboarding." });
     }
   });
 
@@ -720,9 +750,11 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     if (!ensurePayments(res)) return;
     try {
       const note = ((req.body || {}).note || "").toString().trim().slice(0, 200) || null;
-      // lib/payout-ledger locks the club row FOR UPDATE and books one pending
-      // payout per currency; the platform operator is notified to fulfil it.
-      const payouts = await ledger.createWithdrawal(pool, { clubId: req.club.id, note });
+      // Book the payout under a row lock, then fire the real Stripe transfer
+      // to the club's recipient account — success settles 'paid', any Stripe
+      // error 'failed' (balance auto-restores). No operator step.
+      const { payouts, accountId } = await ledger.createWithdrawal(pool, { clubId: req.club.id, note });
+      const settled = await ledger.executePayouts(pool, payments, payouts, accountId, { logger: log });
       recordAudit(pool, {
         ...auditFromReq(req),
         // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
@@ -730,12 +762,12 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         // club-private class/payout activity (#98's boundary). Sysadmin
         // tooling finds these via metadata.club_id.
         org_id: null,
-        entity_type: "payout", entity_id: payouts[0]?.id || null,
-        action: "payout.requested",
-        metadata: { club_id: req.club.id, payouts: payouts.map((p) => ({ id: p.id, amount_cents: p.amount_cents, currency: p.currency })) },
+        entity_type: "payout", entity_id: settled[0]?.id || null,
+        action: "payout.executed",
+        metadata: { club_id: req.club.id, payouts: settled.map((p) => ({ id: p.id, amount_cents: p.amount_cents, currency: p.currency, status: p.status })) },
       }).catch(() => {});
-      email?.sendPayoutRequestedEmail({ clubId: req.club.id, payouts });
-      return res.status(201).json(payouts);
+      email?.sendPayoutFailedEmail({ clubId: req.club.id, payouts: settled });
+      return res.status(201).json(settled);
     } catch (err) {
       log.error({ err: err.message }, "[classes] club withdrawal request failed");
       return res.status(err.status || 500).json({ error: err.message || "Withdrawal failed." });

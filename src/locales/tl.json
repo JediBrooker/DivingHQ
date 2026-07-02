@@ -1538,7 +1538,17 @@
       "history_empty": "Wala pang mga withdrawal.",
       "dormant_note": "Malapit nang magamit ang mga pagbabayad. Idagdag na ngayon ang inyong detalye ng payout at kagustuhan sa awtomatikong pag-withdraw — babayaran namin kayo agad kapag na-activate na ito.",
       "federation_fees": "Mga bayarin sa pederasyon",
-      "federation_fees_hint": "Taunang bayarin sa affiliation at accreditation na binabayaran ng inyong club sa pederasyon."
+      "federation_fees_hint": "Taunang bayarin sa affiliation at accreditation na binabayaran ng inyong club sa pederasyon.",
+      "onboard_hint": "Nagbabayad sa iyo ang DivingHQ sa pamamagitan ng Stripe. Mag-onboard nang isang beses — idagdag ang iyong bank account at i-verify ang iyong pagkakakilanlan sa secure na pahina ng Stripe. Nasa Stripe ang iyong mga detalye ng bangko, hindi kailanman sa amin.",
+      "payouts_ready": "Naka-set up na ang mga payout — handa ka nang mag-withdraw.",
+      "onboard_incomplete": "Nagsimula ang onboarding ngunit hindi natapos — kailangan pa ng ilang detalye.",
+      "onboard_needed": "Hindi pa naka-set up — ikonekta ang iyong bangko para mabayaran ka namin.",
+      "onboard_needed_short": "Mag-set up ng mga payout para makapag-withdraw.",
+      "onboard_start": "Mag-set up ng mga payout",
+      "onboard_resume": "Tapusin ang pag-set up ng payout",
+      "error_onboard": "Hindi masimulan ang onboarding ng payout",
+      "withdrawal_sent": "Papunta na — naipadala na ang iyong payout sa iyong bangko.",
+      "withdrawal_failed": "Nabigo ang isang transfer — naibalik ang iyong balanse. Suriin ang iyong pag-set up ng payout at subukang muli."
     },
     "col_date": "Petsa",
     "col_amount": "Halaga",

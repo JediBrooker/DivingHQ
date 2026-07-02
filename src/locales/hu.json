@@ -1538,7 +1538,17 @@
       "history_empty": "Még nincs kifizetés.",
       "dormant_note": "A fizetési funkció hamarosan elérhető. Add meg most a kifizetési adataidat és az automatikus kifizetési beállításaidat — amint a funkció aktiválódik, azonnal utaljuk a kifizetést.",
       "federation_fees": "Szövetségi díjak",
-      "federation_fees_hint": "Éves tagsági és akkreditációs díjak, amelyeket klubja a szövetségnek fizet."
+      "federation_fees_hint": "Éves tagsági és akkreditációs díjak, amelyeket klubja a szövetségnek fizet.",
+      "onboard_hint": "A DivingHQ a Stripe-on keresztül fizet Önnek. Regisztráljon egyszer — adja meg bankszámláját, és igazolja személyazonosságát a Stripe biztonságos oldalán. Banki adatai a Stripe-nál maradnak, soha nem nálunk.",
+      "payouts_ready": "A kifizetések be vannak állítva — mostantól kivehet pénzt.",
+      "onboard_incomplete": "A regisztráció elkezdődött, de nem fejeződött be — még néhány adat szükséges.",
+      "onboard_needed": "Még nincs beállítva — kösse össze bankját, hogy fizethessünk Önnek.",
+      "onboard_needed_short": "Állítsa be a kifizetéseket a kivételhez.",
+      "onboard_start": "Kifizetések beállítása",
+      "onboard_resume": "Kifizetés beállításának befejezése",
+      "error_onboard": "Nem sikerült elindítani a kifizetési regisztrációt",
+      "withdrawal_sent": "Úton van — kifizetését elküldtük a bankjának.",
+      "withdrawal_failed": "Egy átutalás sikertelen volt — egyenlege helyreállt. Ellenőrizze a kifizetési beállításokat, és próbálja újra."
     },
     "col_date": "Dátum",
     "col_amount": "Összeg",

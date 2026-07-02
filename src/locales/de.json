@@ -1538,7 +1538,17 @@
       "history_empty": "Noch keine Auszahlungen.",
       "dormant_note": "Zahlungen sind bald verfügbar. Hinterlegt schon jetzt eure Auszahlungsdaten und eure Einstellung für automatische Auszahlungen — wir zahlen aus, sobald die Funktion aktiviert ist.",
       "federation_fees": "Verbandsgebühren",
-      "federation_fees_hint": "Jährliche Mitglieds- und Akkreditierungsgebühren, die Ihr Verein an den Verband zahlt."
+      "federation_fees_hint": "Jährliche Mitglieds- und Akkreditierungsgebühren, die Ihr Verein an den Verband zahlt.",
+      "onboard_hint": "DivingHQ zahlt Sie über Stripe aus. Einmalige Einrichtung — fügen Sie Ihr Bankkonto hinzu und bestätigen Sie Ihre Identität auf Stripes sicherer Seite. Ihre Bankdaten bleiben bei Stripe, nie bei uns.",
+      "payouts_ready": "Auszahlungen sind eingerichtet — Sie können abheben.",
+      "onboard_incomplete": "Einrichtung begonnen, aber nicht abgeschlossen — es fehlen noch einige Angaben.",
+      "onboard_needed": "Noch nicht eingerichtet — verbinden Sie Ihre Bank, damit wir Sie bezahlen können.",
+      "onboard_needed_short": "Richten Sie Auszahlungen ein, um abzuheben.",
+      "onboard_start": "Auszahlungen einrichten",
+      "onboard_resume": "Auszahlungseinrichtung abschließen",
+      "error_onboard": "Auszahlungs-Onboarding konnte nicht gestartet werden",
+      "withdrawal_sent": "Unterwegs — Ihre Auszahlung wurde an Ihre Bank gesendet.",
+      "withdrawal_failed": "Eine Überweisung ist fehlgeschlagen — Ihr Guthaben wurde wiederhergestellt. Prüfen Sie Ihre Auszahlungseinrichtung und versuchen Sie es erneut."
     },
     "col_date": "Datum",
     "col_amount": "Betrag",

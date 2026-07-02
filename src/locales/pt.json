@@ -1538,7 +1538,17 @@
       "history_empty": "Ainda não há levantamentos.",
       "dormant_note": "Os pagamentos estarão brevemente disponíveis. Adicione já os seus dados de recebimento e a preferência de levantamento automático — pagaremos ao clube assim que a funcionalidade for ativada.",
       "federation_fees": "Taxas da federação",
-      "federation_fees_hint": "Taxas anuais de filiação e acreditação que o seu clube paga à federação."
+      "federation_fees_hint": "Taxas anuais de filiação e acreditação que o seu clube paga à federação.",
+      "onboard_hint": "A DivingHQ paga-lhe através do Stripe. Registe-se uma vez — adicione a sua conta bancária e verifique a sua identidade na página segura do Stripe. Os seus dados bancários ficam no Stripe, nunca connosco.",
+      "payouts_ready": "Os pagamentos estão configurados — pode levantar.",
+      "onboard_incomplete": "Registo iniciado mas não concluído — ainda são necessários alguns dados.",
+      "onboard_needed": "Ainda não configurado — ligue o seu banco para podermos pagar-lhe.",
+      "onboard_needed_short": "Configure os pagamentos para levantar.",
+      "onboard_start": "Configurar pagamentos",
+      "onboard_resume": "Concluir configuração de pagamentos",
+      "error_onboard": "Não foi possível iniciar o registo de pagamentos",
+      "withdrawal_sent": "A caminho — o seu pagamento foi enviado para o seu banco.",
+      "withdrawal_failed": "Uma transferência falhou — o seu saldo foi restaurado. Verifique a configuração de pagamentos e tente novamente."
     },
     "col_date": "Data",
     "col_amount": "Montante",

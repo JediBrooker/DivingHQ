@@ -1538,7 +1538,17 @@
       "history_empty": "引き出し履歴はまだありません。",
       "dormant_note": "お支払い機能は近日公開予定です。今のうちに振込先情報と自動引き出しの設定を登録しておくと、機能が有効になり次第すぐにお支払いします。",
       "federation_fees": "連盟への費用",
-      "federation_fees_hint": "クラブが連盟に支払う年間の加盟料・認定料です。"
+      "federation_fees_hint": "クラブが連盟に支払う年間の加盟料・認定料です。",
+      "onboard_hint": "DivingHQ は Stripe を通じてお支払いします。一度オンボーディングし、Stripe の安全なページで銀行口座を追加して本人確認を行ってください。銀行情報は Stripe が保持し、当社は保持しません。",
+      "payouts_ready": "支払いの設定が完了しました。出金できます。",
+      "onboard_incomplete": "オンボーディングは開始されましたが未完了です。あと少し情報が必要です。",
+      "onboard_needed": "まだ設定されていません。お支払いできるよう銀行を接続してください。",
+      "onboard_needed_short": "出金するには支払いを設定してください。",
+      "onboard_start": "支払いを設定",
+      "onboard_resume": "支払い設定を完了",
+      "error_onboard": "支払いオンボーディングを開始できませんでした",
+      "withdrawal_sent": "送金中 — お支払いを銀行に送金しました。",
+      "withdrawal_failed": "送金に失敗しました。残高は復元されました。支払い設定を確認して再度お試しください。"
     },
     "col_date": "日付",
     "col_amount": "金額",

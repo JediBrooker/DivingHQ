@@ -1282,7 +1282,7 @@ async function bootChecks() {
   // dormant the settings endpoints just save the preference for later.
   if (payments.enabled) {
     try {
-      require("./lib/auto-withdraw").start({ pool, logger, email });
+      require("./lib/auto-withdraw").start({ pool, payments, logger, email });
     } catch (err) {
       logger.warn({ err: err.message }, "auto-withdraw sweeper start failed");
     }

@@ -1538,7 +1538,17 @@
       "history_empty": "Ei vielä nostoja.",
       "dormant_note": "Maksut ovat tulossa pian. Lisää tilityksen tiedot ja automaattisen noston asetukset jo nyt — maksamme heti, kun ominaisuus otetaan käyttöön.",
       "federation_fees": "Liiton maksut",
-      "federation_fees_hint": "Vuosittaiset jäsenyys- ja akkreditointimaksut, jotka seurasi maksaa liitolle."
+      "federation_fees_hint": "Vuosittaiset jäsenyys- ja akkreditointimaksut, jotka seurasi maksaa liitolle.",
+      "onboard_hint": "DivingHQ maksaa sinulle Stripen kautta. Rekisteröidy kerran — lisää pankkitilisi ja vahvista henkilöllisyytesi Stripen suojatulla sivulla. Pankkitietosi pysyvät Stripellä, eivät koskaan meillä.",
+      "payouts_ready": "Maksut on määritetty — voit nostaa varoja.",
+      "onboard_incomplete": "Rekisteröinti aloitettu mutta kesken — muutamia tietoja puuttuu vielä.",
+      "onboard_needed": "Ei vielä määritetty — yhdistä pankkisi, jotta voimme maksaa sinulle.",
+      "onboard_needed_short": "Määritä maksut nostaaksesi.",
+      "onboard_start": "Määritä maksut",
+      "onboard_resume": "Viimeistele maksujen määritys",
+      "error_onboard": "Maksujen rekisteröintiä ei voitu aloittaa",
+      "withdrawal_sent": "Matkalla — maksusi on lähetetty pankkiisi.",
+      "withdrawal_failed": "Siirto epäonnistui — saldosi palautettiin. Tarkista maksuasetukset ja yritä uudelleen."
     },
     "col_date": "Päivämäärä",
     "col_amount": "Summa",

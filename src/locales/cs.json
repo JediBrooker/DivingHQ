@@ -1538,7 +1538,17 @@
       "history_empty": "Zatím žádné výběry.",
       "dormant_note": "Platby budou brzy spuštěny. Přidejte nyní své bankovní údaje pro výplaty a nastavení automatického výběru — jakmile funkci zapneme, ihned vám vyplatíme peníze.",
       "federation_fees": "Poplatky federaci",
-      "federation_fees_hint": "Roční poplatky za přidružení a akreditaci, které váš klub platí federaci."
+      "federation_fees_hint": "Roční poplatky za přidružení a akreditaci, které váš klub platí federaci.",
+      "onboard_hint": "DivingHQ vám platí přes Stripe. Zaregistrujte se jednou — přidejte bankovní účet a ověřte totožnost na zabezpečené stránce Stripe. Vaše bankovní údaje zůstávají u Stripe, nikdy u nás.",
+      "payouts_ready": "Výplaty jsou nastaveny — můžete vybírat.",
+      "onboard_incomplete": "Registrace začala, ale nebyla dokončena — stále je potřeba několik údajů.",
+      "onboard_needed": "Zatím nenastaveno — připojte banku, abychom vám mohli platit.",
+      "onboard_needed_short": "Pro výběr nastavte výplaty.",
+      "onboard_start": "Nastavit výplaty",
+      "onboard_resume": "Dokončit nastavení výplat",
+      "error_onboard": "Nepodařilo se spustit registraci výplat",
+      "withdrawal_sent": "Na cestě — vaše výplata byla odeslána do banky.",
+      "withdrawal_failed": "Převod selhal — váš zůstatek byl obnoven. Zkontrolujte nastavení výplat a zkuste to znovu."
     },
     "col_date": "Datum",
     "col_amount": "Částka",

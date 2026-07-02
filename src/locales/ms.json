@@ -1538,7 +1538,17 @@
       "history_empty": "Belum ada pengeluaran.",
       "dormant_note": "Pembayaran akan hadir tidak lama lagi. Tambahkan butiran pembayaran keluar dan keutamaan pengeluaran automatik anda sekarang — kami akan membayar anda sebaik sahaja ciri ini diaktifkan.",
       "federation_fees": "Yuran persekutuan",
-      "federation_fees_hint": "Yuran gabungan dan akreditasi tahunan yang dibayar kelab anda kepada persekutuan."
+      "federation_fees_hint": "Yuran gabungan dan akreditasi tahunan yang dibayar kelab anda kepada persekutuan.",
+      "onboard_hint": "DivingHQ membayar anda melalui Stripe. Daftar sekali — tambah akaun bank anda dan sahkan identiti anda di halaman selamat Stripe. Butiran bank anda kekal dengan Stripe, bukan dengan kami.",
+      "payouts_ready": "Pembayaran telah disediakan — anda boleh mengeluarkan wang.",
+      "onboard_incomplete": "Pendaftaran dimulakan tetapi belum selesai — beberapa butiran masih diperlukan.",
+      "onboard_needed": "Belum disediakan — sambungkan bank anda supaya kami boleh membayar anda.",
+      "onboard_needed_short": "Sediakan pembayaran untuk mengeluarkan wang.",
+      "onboard_start": "Sediakan pembayaran",
+      "onboard_resume": "Selesaikan penyediaan pembayaran",
+      "error_onboard": "Tidak dapat memulakan pendaftaran pembayaran",
+      "withdrawal_sent": "Dalam perjalanan — pembayaran anda telah dihantar ke bank anda.",
+      "withdrawal_failed": "Pemindahan gagal — baki anda dipulihkan. Semak penyediaan pembayaran dan cuba lagi."
     },
     "col_date": "Tarikh",
     "col_amount": "Jumlah",

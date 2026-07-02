@@ -1538,7 +1538,17 @@
       "history_empty": "Inga uttag ännu.",
       "dormant_note": "Betalningar kommer snart. Lägg till era utbetalningsuppgifter och inställningar för automatiskt uttag redan nu — vi betalar ut så snart funktionen är aktiverad.",
       "federation_fees": "Förbundsavgifter",
-      "federation_fees_hint": "Årliga anslutnings- och ackrediteringsavgifter som din klubb betalar till förbundet."
+      "federation_fees_hint": "Årliga anslutnings- och ackrediteringsavgifter som din klubb betalar till förbundet.",
+      "onboard_hint": "DivingHQ betalar dig via Stripe. Registrera dig en gång — lägg till ditt bankkonto och verifiera din identitet på Stripes säkra sida. Dina bankuppgifter stannar hos Stripe, aldrig hos oss.",
+      "payouts_ready": "Utbetalningar är konfigurerade — du kan ta ut.",
+      "onboard_incomplete": "Registrering påbörjad men inte slutförd — några uppgifter saknas fortfarande.",
+      "onboard_needed": "Inte konfigurerat än — anslut din bank så att vi kan betala dig.",
+      "onboard_needed_short": "Konfigurera utbetalningar för att ta ut.",
+      "onboard_start": "Konfigurera utbetalningar",
+      "onboard_resume": "Slutför utbetalningskonfiguration",
+      "error_onboard": "Det gick inte att starta utbetalningsregistrering",
+      "withdrawal_sent": "På väg — din utbetalning har skickats till din bank.",
+      "withdrawal_failed": "En överföring misslyckades — ditt saldo återställdes. Kontrollera din utbetalningskonfiguration och försök igen."
     },
     "col_date": "Datum",
     "col_amount": "Belopp",
