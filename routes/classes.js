@@ -117,14 +117,24 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   // ================================================================
   router.get("/api/me/club-admin-clubs", verifyToken, async (req, res) => {
     try {
-      const r = await pool.query(
-        `SELECT cl.id, cl.name
-           FROM club_admins ca
-           JOIN clubs cl ON cl.id = ca.club_id
-          WHERE ca.user_id = $1
-          ORDER BY lower(cl.name)`,
-        [req.user.id],
-      );
+      // Sysadmin manages every club (requireClubAdminOnly already lets them
+      // through each club endpoint — without this, the SPA never shows the
+      // Manage tab because they hold no club_admins rows). Labelled with the
+      // federation since a platform operator sees clubs across all orgs.
+      const r = req.user.is_system_admin
+        ? await pool.query(
+            `SELECT cl.id, cl.name || ' — ' || o.name AS name
+               FROM clubs cl JOIN organisations o ON o.id = cl.org_id
+              ORDER BY lower(o.name), lower(cl.name)`,
+          )
+        : await pool.query(
+            `SELECT cl.id, cl.name
+               FROM club_admins ca
+               JOIN clubs cl ON cl.id = ca.club_id
+              WHERE ca.user_id = $1
+              ORDER BY lower(cl.name)`,
+            [req.user.id],
+          );
       return res.json(r.rows);
     } catch (err) {
       log.error({ err: err.message }, "[classes] club-admin-clubs failed");
