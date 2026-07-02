@@ -370,6 +370,7 @@ const {
   requireSystemAdmin,
   requireEventManager,
   requireClubAdmin,
+  requireClubAdminOnly,
   ensureEventOrgGate,
   ensureEventPreMeet,
   isInSameOrg,
@@ -696,6 +697,20 @@ app.use(require("./routes/coach")({
   bulkWriteLimiter,
   loadEventForEntries,
   push,
+}));
+
+// =============================================================
+// CLASS ROUTES (club-private training classes)
+// [SECTION: ROUTES — CLASSES]
+// /api/clubs/:id/classes[/...], /api/coach/classes, /api/me/classes,
+// /api/me/available-classes — see routes/classes.js. Club-private:
+// requireClubAdminOnly keeps the federation org_admin out.
+// =============================================================
+app.use(require("./routes/classes")({
+  pool,
+  verifyToken,
+  requireClubAdminOnly,
+  logger,
 }));
 
 // =============================================================
