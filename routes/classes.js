@@ -370,9 +370,12 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       if (body.discount_cents !== undefined) {
         discount = intOrNull(body.discount_cents) || 0;
         if (discount < 0) return res.status(400).json({ error: "Discount can't be negative." });
-        if (amount != null && discount > amount) {
-          return res.status(400).json({ error: "Discount can't exceed the price." });
-        }
+      }
+      // Re-check against the RESOLVED amount, even when only the price option
+      // changed: switching to a cheaper option could leave a stale discount
+      // above the new price.
+      if (amount != null && discount > amount) {
+        return res.status(400).json({ error: "Discount can't exceed the price." });
       }
       const r = await pool.query(
         `UPDATE class_enrolments

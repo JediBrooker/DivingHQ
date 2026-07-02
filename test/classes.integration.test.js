@@ -277,3 +277,25 @@ test("club admin cancels an enrolment, freeing the slot", async (t) => {
   assert.equal((await api("POST", `/api/clubs/${clubId}/classes/${classId}/enrolments`,
     { diver_user_id: U.diver1.id }, tokenFor(U.clubAdmin))).status, 201);
 });
+
+test("PUT enrolment re-validates a stale discount when the price is lowered", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.clubAdmin);
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Downgrade test",
+    price_options: [
+      { label: "Cheap", amount_cents: 4000, currency: "GBP" },
+      { label: "Pricey", amount_cents: 12000, currency: "GBP" },
+    ],
+  }, tok)).body;
+  const cheap = cls.price_options.find((p) => p.label === "Cheap").id;
+  const pricey = cls.price_options.find((p) => p.label === "Pricey").id;
+  const enr = (await api("POST", `/api/clubs/${clubId}/classes/${cls.id}/enrolments`,
+    { diver_user_id: U.diver2.id, price_option_id: pricey, discount_cents: 5000 }, tok)).body;
+  assert.ok(enr.id);
+  // Switch to the cheaper option WITHOUT resending discount: the stale 5000
+  // discount now exceeds the 4000 price and must be rejected.
+  const res = await api("PUT", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enr.id}`,
+    { price_option_id: cheap }, tok);
+  assert.equal(res.status, 400, JSON.stringify(res.body));
+});
