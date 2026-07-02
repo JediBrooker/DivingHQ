@@ -431,14 +431,6 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         if (!["pending", "active", "inactive", "cancelled"].includes(body.status)) {
           return res.status(400).json({ error: "Invalid status." });
         }
-        // Same in-flight-checkout race as the DELETE endpoint: retire a
-        // pending session before cancelling so a stale one can't complete
-        // afterwards and strand a paid-but-orphaned payment.
-        if (body.status === "cancelled" && enr.status !== "cancelled") {
-          if ((await retireInFlightClassEnrolmentPayment(enr.id)) === "paid") {
-            return res.status(409).json({ error: "This enrolment was just paid for — refresh instead of cancelling it." });
-          }
-        }
         status = body.status;
       }
       let priceOptionId = enr.price_option_id;
@@ -461,6 +453,26 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       // above the new price.
       if (amount != null && discount > amount) {
         return res.status(400).json({ error: "Discount can't exceed the price." });
+      }
+      // A 'pending' row may have an in-flight (or abandoned) Stripe checkout
+      // for its CURRENT price. Retire it before committing any edit that
+      // would make a stale session's completion wrong: leaving 'pending' for
+      // any other status (a stale session could re-activate a row the admin
+      // just cancelled/paused, or — worse — double-charge a diver whose
+      // payment the admin just resolved manually by setting 'active'
+      // directly), or changing price/discount while staying 'pending' (a
+      // stale session would settle at the OLD price, leaving the payment
+      // that actually funded activation mismatched against the edited
+      // snapshot). Not needed once the row is already active/inactive/
+      // cancelled — there's no live checkout left to race by then.
+      if (enr.status === "pending") {
+        const priceChanging = body.price_option_id !== undefined && priceOptionId !== enr.price_option_id;
+        const discountChanging = body.discount_cents !== undefined && discount !== enr.discount_cents;
+        if (status !== "pending" || priceChanging || discountChanging) {
+          if ((await retireInFlightClassEnrolmentPayment(enr.id)) === "paid") {
+            return res.status(409).json({ error: "This enrolment was just paid for — refresh before making changes." });
+          }
+        }
       }
       const r = await pool.query(
         `UPDATE class_enrolments

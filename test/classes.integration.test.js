@@ -553,3 +553,105 @@ test("cancelling an already-paid enrolment is rejected, not silently overwritten
   assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "active",
     "the paid enrolment was NOT cancelled underneath the successful payment");
 });
+
+test("editing the price option on a pending enrolment retires a stale in-flight checkout", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.clubAdmin);
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Reprice Class",
+    price_options: [
+      { label: "Cheap", amount_cents: 1000, currency: "GBP" },
+      { label: "Pricey", amount_cents: 5000, currency: "GBP" },
+    ],
+  }, tok)).body;
+  const cheap = cls.price_options.find((p) => p.label === "Cheap").id;
+  const pricey = cls.price_options.find((p) => p.label === "Pricey").id;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cheap }, tokenFor(U.diver1));
+  const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  assert.equal(co.status, 200);
+  const stalePaymentId = co.body.payment_id;
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [stalePaymentId])).rows[0].status, "pending");
+
+  // Admin reprices the still-pending enrolment.
+  const put = await api("PUT", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`,
+    { price_option_id: pricey }, tok);
+  assert.equal(put.status, 200, JSON.stringify(put.body));
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [stalePaymentId])).rows[0].status, "failed",
+    "the stale (old-price) checkout was retired by the reprice");
+
+  // The stale session completing afterward must not activate at the old price.
+  const wh = await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_stale_reprice", client_reference_id: stalePaymentId, payment_intent: "pi_stale_reprice" } },
+  }, null);
+  assert.equal(wh.status, 200);
+  const after = (await pool.query("SELECT status, amount_cents FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0];
+  assert.equal(after.status, "pending", "still awaiting a fresh checkout at the new price");
+  assert.equal(after.amount_cents, 5000);
+});
+
+test("editing the discount on a pending enrolment retires a stale in-flight checkout", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.clubAdmin);
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Redisc Class", price_options: [{ label: "Fee", amount_cents: 4000, currency: "GBP" }],
+  }, tok)).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver1));
+  const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  const stalePaymentId = co.body.payment_id;
+
+  const put = await api("PUT", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`,
+    { discount_cents: 1000 }, tok);
+  assert.equal(put.status, 200);
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [stalePaymentId])).rows[0].status, "failed");
+});
+
+test("manually activating a pending enrolment retires any in-flight checkout (prevents a double charge)", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.clubAdmin);
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Manual Activate Class", price_options: [{ label: "Fee", amount_cents: 3000, currency: "GBP" }],
+  }, tok)).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver1));
+  const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  const stalePaymentId = co.body.payment_id;
+
+  // Admin marks the enrolment active directly (e.g. collected payment offline).
+  const put = await api("PUT", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`,
+    { status: "active" }, tok);
+  assert.equal(put.status, 200);
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [stalePaymentId])).rows[0].status, "failed",
+    "the stale online checkout was retired so the diver can't be charged again for an already-resolved enrolment");
+
+  // A late webhook for the retired session must not touch anything (idempotency guard).
+  const wh = await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_double_charge", client_reference_id: stalePaymentId, payment_intent: "pi_double_charge" } },
+  }, null);
+  assert.equal(wh.status, 200);
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [stalePaymentId])).rows[0].status, "failed");
+  assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "active");
+});
+
+test("editing an already-active (paid) enrolment's price/discount is a normal, unguarded edit", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.clubAdmin);
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Race Edit Class", price_options: [{ label: "Fee", amount_cents: 2200, currency: "GBP" }],
+  }, tok)).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver1));
+  const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_race_edit", client_reference_id: co.body.payment_id, payment_intent: "pi_race_edit" } },
+  }, null);
+  assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "active");
+
+  // Note: at this point the DB row is 'active', so this PUT wouldn't even
+  // reach the retire guard (enr.status !== 'pending') — this instead proves
+  // editing an already-settled enrolment is a normal, unguarded update (no
+  // stale in-flight payment exists to protect against), and does not error.
+  const put = await api("PUT", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`,
+    { discount_cents: 500 }, tok);
+  assert.equal(put.status, 200);
+});
