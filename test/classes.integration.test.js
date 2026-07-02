@@ -137,6 +137,7 @@ before(async () => {
   U.diver1 = await seedUser("diver1", ["diver"], clubId);
   U.diver2 = await seedUser("diver2", ["diver"], clubId);
   U.fedAdmin = await seedUser("fedadmin", ["org_admin"], null);
+  U.sysAdmin = { ...(await seedUser("sysadmin", [], null)), is_system_admin: true };
   U.otherAdmin = await seedUser("otheradmin", [], otherClubId);
   await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [otherClubId, U.otherAdmin.id, orgId]);
   U.foreignDiver = await seedUser("foreign", ["diver"], null, org2Id);
@@ -497,6 +498,25 @@ test("webhook full refund reverts an active enrolment to pending and clears paym
 });
 
 // ---- club payouts (club-private) ---------------------------------
+test("sysadmin sees every club in club-admin-clubs (org-labelled) and passes the club-private gate", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.sysAdmin);
+  // Discovery: the platform operator gets ALL clubs, labelled with their org
+  // (a real club admin still only gets their own — asserted below).
+  const all = await api("GET", "/api/me/club-admin-clubs", null, tok);
+  assert.equal(all.status, 200);
+  const names = all.body.map((c) => c.name);
+  assert.ok(all.body.some((c) => c.id === clubId), "seeded club listed for sysadmin");
+  assert.ok(all.body.some((c) => c.id === otherClubId), "other club listed too");
+  assert.ok(names.every((n) => n.includes(" — ")), "club names carry the org label");
+  // Club-private endpoints admit the sysadmin (requireClubAdminOnly bypass).
+  const list = await api("GET", `/api/clubs/${clubId}/classes`, null, tok);
+  assert.equal(list.status, 200);
+  // A real club admin's discovery stays scoped to their own club.
+  const own = await api("GET", "/api/me/club-admin-clubs", null, tokenFor(U.clubAdmin));
+  assert.deepEqual(own.body.map((c) => c.id), [clubId], "club admin sees only their club");
+});
+
 test("club payout status/onboard/withdrawals are club-private (federation blocked)", async (t) => {
   if (!ready) return t.skip();
   for (const [method, path, body] of [
