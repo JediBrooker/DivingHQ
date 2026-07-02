@@ -19,7 +19,7 @@ import {
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award, Gavel,
-  Wallet, History, Receipt, Heart, Layers,
+  History, Receipt, Heart, Layers,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -35,31 +35,47 @@ const { t } = useI18n()
 // adding new keys. The few role-specific items without a clean key
 // fall back to English via `label`.
 const NAV = [
-  { group: 'Competition', items: [
+  // Header-less lead item — Dashboard is the universal home, not a
+  // "Competition" tool, so it sits above the first section header.
+  { group: '', items: [
     { to: '/dashboard',      label: 'Dashboard',      icon: LayoutDashboard },
+  ] },
+  // Live-competition workflow, roughly in the order it's used:
+  // set up → run → participate → judge → results → analysis → reference.
+  { group: 'Competition', items: [
     { to: '/manager',        label: 'Meets & events', labelKey: 'manager.title',         icon: Trophy,        roles: ['org_admin', 'meet_manager'] },
     { to: '/control',        label: 'Control Room',   labelKey: 'control.page_label',     icon: MonitorPlay,   roles: ['org_admin', 'meet_manager', 'referee'] },
     { to: '/competitor',     label: 'Dive Sheets',    icon: Waves,         roles: ['diver'] },
-    { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
-    { to: '/classes',        label: 'Classes',        labelKey: 'classes.menu', icon: Layers },
-    { menu: 'user-payments', label: 'User Payments', labelKey: 'payments.menu', icon: Wallet, children: [
-      { to: '/membership',      label: 'Membership',      labelKey: 'payments.membership',    icon: CreditCard, roles: ['diver'] },
-      { to: '/accreditation',   label: 'Accreditation',   labelKey: 'payments.accreditation', icon: Award,      roles: ['judge', 'referee', 'coach', 'meet_manager'] },
-      { to: '/charges',         label: 'Charges',         labelKey: 'payments.charges',       icon: Receipt },
-      { to: '/donate',          label: 'Donate',          labelKey: 'payments.donate',        icon: Heart },
-      { to: '/payment-history', label: 'Payment History', labelKey: 'payments.history',       icon: History },
-    ] },
-    { to: '/fines',          label: 'Fines',          icon: Gavel,         roles: ['referee', 'org_admin'] },
+    { to: '/judge',          label: 'Judge Terminal', icon: Calculator,    roles: ['judge'] },
     { to: '/scoreboard',     label: 'Scoreboard & Results', labelKey: 'scoreboard.page_label',  icon: ListChecks },
     { to: '/judge-analysis', label: 'Judge Analysis', icon: ChartColumn },
     { to: '/dive-directory', label: 'Dive directory', labelKey: 'dive_directory.title',   icon: BookOpen },
-    { to: '/judge',          label: 'Judge Terminal', icon: Calculator,    roles: ['judge'] },
   ] },
+  // Club training — distinct from competition; context-adaptive per role.
+  { group: 'Training', items: [
+    { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
+    { to: '/classes',        label: 'Classes',        labelKey: 'classes.menu', icon: Layers },
+  ] },
+  // Personal money — everything the signed-in user pays or is owed.
+  // Flattened out of the old nested "User Payments" menu: money screens
+  // are important enough to be one click, not two, and this removes the
+  // name clash with the Federation admin payments hub below.
+  { group: 'Payments', items: [
+    { to: '/charges',         label: 'Charges',         labelKey: 'payments.charges',       icon: Receipt },
+    { to: '/membership',      label: 'Membership',      labelKey: 'payments.membership',    icon: CreditCard, roles: ['diver'] },
+    { to: '/accreditation',   label: 'Accreditation',   labelKey: 'payments.accreditation', icon: Award,      roles: ['judge', 'referee', 'coach', 'meet_manager'] },
+    { to: '/payment-history', label: 'Payment History', labelKey: 'payments.history',       icon: History },
+    { to: '/donate',          label: 'Donate',          labelKey: 'payments.donate',        icon: Heart },
+  ] },
+  // Federation governance + the org money hub (fees config, withdrawals,
+  // payout queue) — renamed "Payments & payouts" to disambiguate from the
+  // personal section above.
   { group: 'Federation', items: [
-    { to: '/users', label: 'User Manager',  labelKey: 'user_manager.title', icon: Users,      roles: ['org_admin'] },
-    { to: '/clubs', label: 'Clubs & teams', labelKey: 'clubs.title',        icon: Building2,  roles: ['org_admin', 'meet_manager'] },
-    { to: '/audit', label: 'Audit Log',     labelKey: 'audit.page_label',   icon: ScrollText, roles: ['org_admin'] },
-    { to: '/payments', label: 'Payments',   icon: CreditCard, roles: ['org_admin'] },
+    { to: '/users',    label: 'User Manager',       labelKey: 'user_manager.title', icon: Users,      roles: ['org_admin'] },
+    { to: '/clubs',    label: 'Clubs & teams',      labelKey: 'clubs.title',        icon: Building2,  roles: ['org_admin', 'meet_manager'] },
+    { to: '/fines',    label: 'Fines',              icon: Gavel,      roles: ['referee', 'org_admin'] },
+    { to: '/payments', label: 'Payments & payouts', icon: CreditCard, roles: ['org_admin'] },
+    { to: '/audit',    label: 'Audit Log',          labelKey: 'audit.page_label',   icon: ScrollText, roles: ['org_admin'] },
   ] },
 ]
 
@@ -174,8 +190,8 @@ function closeMobile() { mobileOpen.value = false }
       </RouterLink>
 
       <nav class="sb-nav" aria-label="Primary">
-        <template v-for="g in visibleGroups" :key="g.group">
-          <div class="sb-group">{{ g.group }}</div>
+        <template v-for="g in visibleGroups" :key="g.group || 'root'">
+          <div v-if="g.group" class="sb-group">{{ g.group }}</div>
           <template v-for="it in g.items" :key="it.to || it.menu">
             <!-- Nested menu: hover (desktop) or tap expands the sub-items -->
             <div v-if="it.children" class="sb-parent" :class="{ open: openMenu === it.menu }">
