@@ -36,6 +36,32 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     return true;
   }
 
+  // Don't let a class-enrolment status change (cancel, or a future admin
+  // action) race an in-flight Stripe checkout — expire the session and mark
+  // the payment failed so a stale session can't complete after the fact and
+  // strand a paid-but-orphaned payment (mirrors retireInFlightFinePayment in
+  // routes/payments.js). Returns "paid" if the payment had already settled
+  // before we could retire it, so the caller can refuse the status change
+  // instead of silently cancelling underneath a successful payment.
+  async function retireInFlightClassEnrolmentPayment(enrolmentId) {
+    const p = (await pool.query(
+      "SELECT id, status, stripe_checkout_session FROM payments WHERE class_enrolment_id = $1 AND status IN ('pending', 'paid') ORDER BY created_at DESC LIMIT 1",
+      [enrolmentId],
+    )).rows[0];
+    if (!p) return null;
+    if (p.status === "paid") return "paid";
+    // p.status === "pending"
+    if (payments && payments.enabled && p.stripe_checkout_session) {
+      try {
+        await payments.expireCheckoutSession({ sessionId: p.stripe_checkout_session });
+      } catch (e) {
+        log.warn({ err: e.message }, "[classes] could not expire in-flight enrolment session");
+      }
+    }
+    await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [p.id]);
+    return null;
+  }
+
   // ---- validation helpers ----------------------------------------
   function cleanName(v, max) {
     const s = (v == null ? "" : String(v)).trim();
@@ -405,6 +431,14 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         if (!["pending", "active", "inactive", "cancelled"].includes(body.status)) {
           return res.status(400).json({ error: "Invalid status." });
         }
+        // Same in-flight-checkout race as the DELETE endpoint: retire a
+        // pending session before cancelling so a stale one can't complete
+        // afterwards and strand a paid-but-orphaned payment.
+        if (body.status === "cancelled" && enr.status !== "cancelled") {
+          if ((await retireInFlightClassEnrolmentPayment(enr.id)) === "paid") {
+            return res.status(409).json({ error: "This enrolment was just paid for — refresh instead of cancelling it." });
+          }
+        }
         status = body.status;
       }
       let priceOptionId = enr.price_option_id;
@@ -451,6 +485,12 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
+      // Retire any in-flight checkout FIRST — otherwise a diver could complete
+      // a stale Stripe session after this cancels, settling a payment for an
+      // enrolment nothing on the roster reflects anymore.
+      if ((await retireInFlightClassEnrolmentPayment(req.params.enrolId)) === "paid") {
+        return res.status(409).json({ error: "This enrolment was just paid for — refresh the roster instead of removing it." });
+      }
       const r = await pool.query(
         "UPDATE class_enrolments SET status = 'cancelled', updated_at = now() WHERE id = $1 AND class_id = $2 RETURNING id",
         [req.params.enrolId, cls.id],

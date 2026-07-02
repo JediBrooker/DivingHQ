@@ -502,3 +502,54 @@ test("club admin saves payout details, sees balance, and withdraws (one payout, 
   assert.equal(row.org_id, null);
   assert.equal(row.club_id, clubId);
 });
+
+test("cancelling an enrolment with an in-flight checkout retires the payment; a late webhook can't reactivate it", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.clubAdmin);
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Cancel Race Class", price_options: [{ label: "Fee", amount_cents: 2500, currency: "GBP" }],
+  }, tok)).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver1));
+  const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  assert.equal(co.status, 200);
+  const paymentId = co.body.payment_id;
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [paymentId])).rows[0].status, "pending");
+
+  const del = await api("DELETE", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`, null, tok);
+  assert.equal(del.status, 200);
+  assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "cancelled");
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [paymentId])).rows[0].status, "failed",
+    "the in-flight payment was retired (marked failed) by the cancellation");
+
+  // A late webhook delivery for the now-retired session must be a no-op —
+  // the payment's idempotency guard (status must still be 'pending') blocks it.
+  const wh = await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_stale", client_reference_id: paymentId, payment_intent: "pi_stale_cancel" } },
+  }, null);
+  assert.equal(wh.status, 200);
+  assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "cancelled",
+    "the stale webhook did not reactivate the cancelled enrolment");
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [paymentId])).rows[0].status, "failed",
+    "the stale webhook did not flip the retired payment back to paid");
+});
+
+test("cancelling an already-paid enrolment is rejected, not silently overwritten", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.clubAdmin);
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "Already Paid Class", price_options: [{ label: "Fee", amount_cents: 1800, currency: "GBP" }],
+  }, tok)).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver1));
+  const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_paid_first", client_reference_id: co.body.payment_id, payment_intent: "pi_paid_first" } },
+  }, null);
+  assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "active");
+
+  const del = await api("DELETE", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`, null, tok);
+  assert.equal(del.status, 409, JSON.stringify(del.body));
+  assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "active",
+    "the paid enrolment was NOT cancelled underneath the successful payment");
+});
