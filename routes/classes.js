@@ -50,7 +50,9 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     )).rows[0];
     if (!p) return null;
     if (p.status === "paid") return "paid";
-    // p.status === "pending"
+    // p.status === "pending" — expire the Stripe session. This is a network
+    // round-trip: a webhook can land and settle the payment to 'paid' WHILE
+    // we're waiting on it, so we can't assume it's still pending afterward.
     if (payments && payments.enabled && p.stripe_checkout_session) {
       try {
         await payments.expireCheckoutSession({ sessionId: p.stripe_checkout_session });
@@ -58,7 +60,19 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         log.warn({ err: e.message }, "[classes] could not expire in-flight enrolment session");
       }
     }
-    await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [p.id]);
+    // RETURNING proves whether our write actually landed. If a webhook won
+    // the race and flipped the payment to 'paid' during the expire call
+    // above, this matches zero rows — re-check and report "paid" so the
+    // caller refuses the status change instead of reading null as "safely
+    // retired" and clobbering the roster row the webhook just activated.
+    const upd = await pool.query(
+      "UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending' RETURNING id",
+      [p.id],
+    );
+    if (upd.rows.length === 0) {
+      const recheck = (await pool.query("SELECT status FROM payments WHERE id = $1", [p.id])).rows[0];
+      if (recheck && recheck.status === "paid") return "paid";
+    }
     return null;
   }
 
@@ -474,16 +488,23 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
           }
         }
       }
+      // Defence in depth: guard on the status we read at the top of this
+      // handler. If a webhook (or a concurrent request) changed it in
+      // between — e.g. it just activated on payment — this becomes a no-op
+      // instead of silently overwriting a row that moved on without us.
       const r = await pool.query(
         `UPDATE class_enrolments
             SET status = $1, price_option_id = $2, amount_cents = $3, currency = $4,
                 discount_cents = $5, note = $6, updated_at = now()
-          WHERE id = $7 AND class_id = $8
+          WHERE id = $7 AND class_id = $8 AND status = $9
           RETURNING id, status, amount_cents, discount_cents, currency`,
         [status, priceOptionId, amount, currency, discount,
          body.note === undefined ? enr.note : cleanName(body.note, 500),
-         req.params.enrolId, cls.id],
+         req.params.enrolId, cls.id, enr.status],
       );
+      if (!r.rows.length) {
+        return res.status(409).json({ error: "This enrolment changed — refresh and try again." });
+      }
       return res.json(r.rows[0]);
     } catch (err) {
       if (err.code === "23505") return res.status(409).json({ error: "That diver already has a live enrolment in this class." });
@@ -497,17 +518,27 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
+      const before = (await pool.query(
+        "SELECT status FROM class_enrolments WHERE id = $1 AND class_id = $2",
+        [req.params.enrolId, cls.id],
+      )).rows[0];
+      if (!before) return res.status(404).json({ error: "Enrolment not found" });
       // Retire any in-flight checkout FIRST — otherwise a diver could complete
       // a stale Stripe session after this cancels, settling a payment for an
       // enrolment nothing on the roster reflects anymore.
       if ((await retireInFlightClassEnrolmentPayment(req.params.enrolId)) === "paid") {
         return res.status(409).json({ error: "This enrolment was just paid for — refresh the roster instead of removing it." });
       }
+      // Defence in depth: guard on the status we just read. If a webhook (or
+      // a concurrent request) changed it in between, this becomes a no-op
+      // instead of silently cancelling a row that moved on without us.
       const r = await pool.query(
-        "UPDATE class_enrolments SET status = 'cancelled', updated_at = now() WHERE id = $1 AND class_id = $2 RETURNING id",
-        [req.params.enrolId, cls.id],
+        "UPDATE class_enrolments SET status = 'cancelled', updated_at = now() WHERE id = $1 AND class_id = $2 AND status = $3 RETURNING id",
+        [req.params.enrolId, cls.id, before.status],
       );
-      if (!r.rows.length) return res.status(404).json({ error: "Enrolment not found" });
+      if (!r.rows.length) {
+        return res.status(409).json({ error: "This enrolment changed — refresh and try again." });
+      }
       await recordAudit(pool, {
         ...auditFromReq(req), org_id: req.club.org_id,
         entity_type: "class_enrolment", entity_id: req.params.enrolId, entity_name: cls.name,

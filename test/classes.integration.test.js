@@ -27,13 +27,18 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // Fake Stripe — captures args, returns canned objects. Mirrors the harness
 // in test/payments.integration.test.js; a real Stripe key is never needed.
 let lastCheckoutArgs = null;
+// Indirection so a single test can swap the expire behaviour (e.g. to
+// simulate a webhook landing DURING the network round-trip) without
+// touching every other test's happy-path mock.
+let lastExpireArgs = null;
+let expireCheckoutSessionImpl = async (args) => { lastExpireArgs = args; return { status: "expired" }; };
 const fakePayments = {
   enabled: true,
   createCheckoutSession: async (args) => {
     lastCheckoutArgs = args;
     return { id: "cs_" + crypto.randomUUID().slice(0, 8), url: "https://stripe.test/pay" };
   },
-  expireCheckoutSession: async () => ({ status: "expired" }),
+  expireCheckoutSession: (...args) => expireCheckoutSessionImpl(...args),
   createRefund: async (args) => ({ amount: args.amountCents }),
   constructWebhookEvent: (raw) => JSON.parse(Buffer.isBuffer(raw) ? raw.toString() : raw),
 };
@@ -513,13 +518,17 @@ test("cancelling an enrolment with an in-flight checkout retires the payment; a 
   const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
   assert.equal(co.status, 200);
   const paymentId = co.body.payment_id;
-  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [paymentId])).rows[0].status, "pending");
+  const beforePay = (await pool.query("SELECT status, stripe_checkout_session FROM payments WHERE id = $1", [paymentId])).rows[0];
+  assert.equal(beforePay.status, "pending");
 
+  lastExpireArgs = null;
   const del = await api("DELETE", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`, null, tok);
   assert.equal(del.status, 200);
   assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "cancelled");
   assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [paymentId])).rows[0].status, "failed",
     "the in-flight payment was retired (marked failed) by the cancellation");
+  assert.ok(lastExpireArgs, "Stripe was actually asked to expire the session");
+  assert.equal(lastExpireArgs.sessionId, beforePay.stripe_checkout_session, "the CORRECT stale session was expired");
 
   // A late webhook delivery for the now-retired session must be a no-op —
   // the payment's idempotency guard (status must still be 'pending') blocks it.
@@ -570,14 +579,18 @@ test("editing the price option on a pending enrolment retires a stale in-flight 
   const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
   assert.equal(co.status, 200);
   const stalePaymentId = co.body.payment_id;
-  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [stalePaymentId])).rows[0].status, "pending");
+  const beforePay = (await pool.query("SELECT status, stripe_checkout_session FROM payments WHERE id = $1", [stalePaymentId])).rows[0];
+  assert.equal(beforePay.status, "pending");
 
   // Admin reprices the still-pending enrolment.
+  lastExpireArgs = null;
   const put = await api("PUT", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`,
     { price_option_id: pricey }, tok);
   assert.equal(put.status, 200, JSON.stringify(put.body));
   assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [stalePaymentId])).rows[0].status, "failed",
     "the stale (old-price) checkout was retired by the reprice");
+  assert.ok(lastExpireArgs, "Stripe was actually asked to expire the stale-price session");
+  assert.equal(lastExpireArgs.sessionId, beforePay.stripe_checkout_session);
 
   // The stale session completing afterward must not activate at the old price.
   const wh = await api("POST", "/webhooks/stripe", {
@@ -615,13 +628,17 @@ test("manually activating a pending enrolment retires any in-flight checkout (pr
   const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver1));
   const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
   const stalePaymentId = co.body.payment_id;
+  const beforePay = (await pool.query("SELECT stripe_checkout_session FROM payments WHERE id = $1", [stalePaymentId])).rows[0];
 
   // Admin marks the enrolment active directly (e.g. collected payment offline).
+  lastExpireArgs = null;
   const put = await api("PUT", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`,
     { status: "active" }, tok);
   assert.equal(put.status, 200);
   assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [stalePaymentId])).rows[0].status, "failed",
     "the stale online checkout was retired so the diver can't be charged again for an already-resolved enrolment");
+  assert.ok(lastExpireArgs, "Stripe was actually asked to expire the stale online session");
+  assert.equal(lastExpireArgs.sessionId, beforePay.stripe_checkout_session);
 
   // A late webhook for the retired session must not touch anything (idempotency guard).
   const wh = await api("POST", "/webhooks/stripe", {
@@ -654,4 +671,79 @@ test("editing an already-active (paid) enrolment's price/discount is a normal, u
   const put = await api("PUT", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`,
     { discount_cents: 500 }, tok);
   assert.equal(put.status, 200);
+});
+
+test("a webhook landing DURING the retire's Stripe round-trip is still detected — no clobber", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.clubAdmin);
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "TOCTOU Class", price_options: [{ label: "Fee", amount_cents: 6000, currency: "GBP" }],
+  }, tok)).body;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cls.price_options[0].id }, tokenFor(U.diver1));
+  const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  assert.equal(co.status, 200);
+  const paymentId = co.body.payment_id;
+
+  // Simulate the exact race the review found: the webhook delivery lands
+  // WHILE retireInFlightClassEnrolmentPayment is awaiting the Stripe expire
+  // call, settling the payment to 'paid' + activating the enrolment BEFORE
+  // the retire helper's own "mark failed" UPDATE runs.
+  const prevImpl = expireCheckoutSessionImpl;
+  expireCheckoutSessionImpl = async (...args) => {
+    await api("POST", "/webhooks/stripe", {
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_race", client_reference_id: paymentId, payment_intent: "pi_toctou_race" } },
+    }, null);
+    return { status: "expired" };
+  };
+  try {
+    const del = await api("DELETE", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`, null, tok);
+    assert.equal(del.status, 409, JSON.stringify(del.body));
+  } finally {
+    expireCheckoutSessionImpl = prevImpl;
+  }
+
+  const finalEnr = (await pool.query("SELECT status, payment_id FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0];
+  assert.equal(finalEnr.status, "active", "the webhook's activation was NOT clobbered by the cancellation");
+  assert.equal(finalEnr.payment_id, paymentId);
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [paymentId])).rows[0].status, "paid",
+    "the payment that won the race stays paid, not incorrectly marked failed");
+});
+
+test("the same webhook-during-retire race is caught on the PUT edit path too", async (t) => {
+  if (!ready) return t.skip();
+  const tok = tokenFor(U.clubAdmin);
+  const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
+    name: "TOCTOU Edit Class",
+    price_options: [
+      { label: "Cheap", amount_cents: 1500, currency: "GBP" },
+      { label: "Pricey", amount_cents: 9000, currency: "GBP" },
+    ],
+  }, tok)).body;
+  const cheap = cls.price_options.find((p) => p.label === "Cheap").id;
+  const pricey = cls.price_options.find((p) => p.label === "Pricey").id;
+  const enrol = await api("POST", `/api/me/classes/${cls.id}/enrol`, { price_option_id: cheap }, tokenFor(U.diver1));
+  const co = await api("POST", `/api/me/class-enrolments/${enrol.body.id}/checkout`, {}, tokenFor(U.diver1));
+  const paymentId = co.body.payment_id;
+
+  const prevImpl = expireCheckoutSessionImpl;
+  expireCheckoutSessionImpl = async (...args) => {
+    await api("POST", "/webhooks/stripe", {
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_race2", client_reference_id: paymentId, payment_intent: "pi_toctou_race_2" } },
+    }, null);
+    return { status: "expired" };
+  };
+  try {
+    const put = await api("PUT", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`,
+      { price_option_id: pricey }, tok);
+    assert.equal(put.status, 409, JSON.stringify(put.body));
+  } finally {
+    expireCheckoutSessionImpl = prevImpl;
+  }
+
+  const finalEnr = (await pool.query("SELECT status, price_option_id, amount_cents FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0];
+  assert.equal(finalEnr.status, "active");
+  assert.equal(finalEnr.price_option_id, cheap, "the admin's stale reprice did NOT overwrite the price the diver actually paid");
+  assert.equal(finalEnr.amount_cents, 1500);
 });
