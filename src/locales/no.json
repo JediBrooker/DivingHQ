@@ -1447,7 +1447,13 @@
     "type_donation": "Gave",
     "type_fine": "Bot",
     "type_scratch": "Strykningsgebyr",
-    "type_no_show": "Gebyr for uteblivelse"
+    "type_no_show": "Gebyr for uteblivelse",
+    "return_paid_title": "Betaling mottatt",
+    "return_paid_body": "Takk — betalingen din gikk gjennom. Det kan ta noen øyeblikk før den bekreftes på kontoen din, så oppdater siden om litt hvis noe fortsatt vises som ubetalt.",
+    "return_canceled_title": "Betaling avbrutt",
+    "return_canceled_body": "Du er ikke belastet. Du kan prøve igjen når du vil.",
+    "return_continue": "Fortsett",
+    "return_history": "Se betalingshistorikk"
   },
   "classes": {
     "menu": "Klasser",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Angi en grenseverdi på minst 1,00.",
       "history": "Uttakshistorikk",
       "history_empty": "Ingen uttak ennå.",
-      "dormant_note": "Betalinger kommer snart. Legg til klubbens utbetalingsopplysninger og preferanse for automatisk uttak nå — vi betaler ut i det øyeblikket det slås på."
+      "dormant_note": "Betalinger kommer snart. Legg til klubbens utbetalingsopplysninger og preferanse for automatisk uttak nå — vi betaler ut i det øyeblikket det slås på.",
+      "federation_fees": "Forbundsavgifter",
+      "federation_fees_hint": "Årlige tilknytnings- og akkrediteringsavgifter klubben din betaler til forbundet."
     },
     "col_date": "Dato",
     "col_amount": "Beløp",
     "pay_now": "Betal nå",
     "error_checkout": "Kunne ikke starte betaling.",
     "subtab_classes": "Klasser",
-    "subtab_payouts": "Utbetalinger"
+    "subtab_payouts": "Utbetalinger",
+    "confirm_refund": "Refundere {amount} til {name}? Påmeldingen går tilbake til ubetalt.",
+    "refunded": "Refusjon utført",
+    "error_refund": "Kunne ikke refundere betalingen",
+    "refund": "Refunder",
+    "paid_online": "Betalt på nett",
+    "paid_online_tip": "Denne påmeldingen ble betalt med nettbetaling",
+    "request_payment": "Be om nettbetaling fra stuperen"
   }
 }

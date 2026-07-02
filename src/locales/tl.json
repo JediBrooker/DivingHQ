@@ -1447,7 +1447,13 @@
     "type_donation": "Donasyon",
     "type_fine": "Multa",
     "type_scratch": "Multa sa scratch",
-    "type_no_show": "Multa sa no-show"
+    "type_no_show": "Multa sa no-show",
+    "return_paid_title": "Natanggap ang bayad",
+    "return_paid_body": "Salamat — matagumpay ang iyong bayad. Maaaring tumagal nang ilang sandali bago ito makumpirma sa iyong account; i-refresh ang pahina mamaya kung may nakikita ka pa ring hindi bayad.",
+    "return_canceled_title": "Kinansela ang pagbabayad",
+    "return_canceled_body": "Hindi ka siningil. Maaari kang sumubok muli anumang oras.",
+    "return_continue": "Magpatuloy",
+    "return_history": "Tingnan ang kasaysayan ng pagbabayad"
   },
   "classes": {
     "menu": "Mga Klase",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Maglagay ng threshold na hindi bababa sa 1.00.",
       "history": "Kasaysayan ng pag-withdraw",
       "history_empty": "Wala pang mga withdrawal.",
-      "dormant_note": "Malapit nang magamit ang mga pagbabayad. Idagdag na ngayon ang inyong detalye ng payout at kagustuhan sa awtomatikong pag-withdraw — babayaran namin kayo agad kapag na-activate na ito."
+      "dormant_note": "Malapit nang magamit ang mga pagbabayad. Idagdag na ngayon ang inyong detalye ng payout at kagustuhan sa awtomatikong pag-withdraw — babayaran namin kayo agad kapag na-activate na ito.",
+      "federation_fees": "Mga bayarin sa pederasyon",
+      "federation_fees_hint": "Taunang bayarin sa affiliation at accreditation na binabayaran ng inyong club sa pederasyon."
     },
     "col_date": "Petsa",
     "col_amount": "Halaga",
     "pay_now": "Magbayad na ngayon",
     "error_checkout": "Hindi masimulan ang checkout.",
     "subtab_classes": "Mga Klase",
-    "subtab_payouts": "Mga Payout"
+    "subtab_payouts": "Mga Payout",
+    "confirm_refund": "I-refund ang {amount} kay {name}? Babalik sa hindi bayad ang enrolment.",
+    "refunded": "Naisagawa ang refund",
+    "error_refund": "Hindi ma-refund ang bayad",
+    "refund": "I-refund",
+    "paid_online": "Bayad online",
+    "paid_online_tip": "Binayaran ang enrolment na ito sa online na pagbabayad",
+    "request_payment": "Humiling ng online na bayad mula sa maninisid"
   }
 }

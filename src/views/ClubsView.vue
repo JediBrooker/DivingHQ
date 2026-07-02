@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
 
 const { t } = useI18n()
 import { confirmAction } from '@/composables/useConfirm'
@@ -204,13 +203,12 @@ onMounted(async () => {
       <span v-if="isSysAdmin" class="sys-badge" style="margin-inline-start:auto">System Admin · all orgs</span>
     </div>
 
-    <!-- Club billing (affiliation + accreditation) — coming soon -->
-    <ComingSoonBanner
-      title="Club billing — coming soon."
-      :message="isOrgAdmin
-        ? 'Set your clubs’ affiliation and accreditation prices in Payments. Clubs will pay you online here shortly — the Billing column shows who’s paid once it’s live.'
-        : 'Clubs will soon pay their affiliation and accreditation fees online. The Billing column shows who’s paid once it’s live.'"
-    />
+    <!-- Club billing (affiliation + accreditation) -->
+    <p v-if="isOrgAdmin" class="billing-note">
+      Set your clubs’ affiliation and accreditation prices in Payments →
+      Fees &amp; pricing. Club admins pay from their club’s Classes → Payouts
+      page; the Billing column below shows who’s paid.
+    </p>
 
     <!-- Filters + create -->
     <div class="toolbar">
@@ -361,6 +359,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.billing-note { margin: 0; padding: .6rem .85rem; border-radius: .5rem; background: var(--accent-soft, #eef); color: var(--fg-2, #555); font-size: .9rem; }
 /* Title is redundant with the shell breadcrumb — hidden. */
 .page-header { display: none; }
 /* Back-to-dashboard is redundant inside the app shell sidebar. */

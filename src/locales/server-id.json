@@ -28,6 +28,31 @@
       "body": "Anda meminta untuk mengubah email {app_name} Anda menjadi alamat ini. Klik tautan di bawah untuk mengonfirmasi. Tautan berlaku selama 30 menit dan hanya dapat digunakan sekali.",
       "cta": "Konfirmasi email baru",
       "footer": "Jika Anda tidak membuat perubahan ini, Anda dapat mengabaikan email ini — akun Anda tidak berubah."
+    },
+    "common": {
+      "greeting": "Halo {name},"
+    },
+    "payment_receipt": {
+      "subject": "Pembayaran diterima — {app_name}",
+      "body": "Kami telah menerima pembayaran Anda sebesar {amount} untuk: {description}.",
+      "footer": "Lihat riwayat pembayaran Anda kapan saja: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Pembayaran dikembalikan — {app_name}",
+      "body": "{amount} dari pembayaran Anda untuk: {description} telah dikembalikan. Pengembalian dana biasanya muncul di rekening Anda dalam 5–10 hari kerja."
+    },
+    "fine_issued": {
+      "subject": "Anda dikenai denda — {app_name}",
+      "body": "Anda dikenai denda sebesar {amount}. Alasan: {reason}",
+      "footer": "Bayar atau ajukan banding di sini: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Banding Anda diterima — {app_name}",
+      "body": "Banding Anda atas denda sebesar {amount} diterima. Denda dibatalkan — tidak ada tagihan."
+    },
+    "appeal_dismissed": {
+      "subject": "Banding Anda ditolak — {app_name}",
+      "body": "Banding Anda atas denda sebesar {amount} ditolak dan denda kembali harus dibayar. Anda dapat membayarnya di sini: {link}"
     }
   },
   "pdf": {

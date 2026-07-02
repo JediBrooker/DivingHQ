@@ -1447,7 +1447,13 @@
     "type_donation": "Derma",
     "type_fine": "Denda",
     "type_scratch": "Penalti tarik diri",
-    "type_no_show": "Penalti tidak hadir"
+    "type_no_show": "Penalti tidak hadir",
+    "return_paid_title": "Pembayaran diterima",
+    "return_paid_body": "Terima kasih — pembayaran anda berjaya. Pengesahan pada akaun anda mungkin mengambil sedikit masa; muat semula halaman sebentar lagi jika masih ada yang dipaparkan sebagai belum dibayar.",
+    "return_canceled_title": "Pembayaran dibatalkan",
+    "return_canceled_body": "Anda tidak dikenakan sebarang caj. Anda boleh mencuba lagi pada bila-bila masa.",
+    "return_continue": "Teruskan",
+    "return_history": "Lihat sejarah pembayaran"
   },
   "classes": {
     "menu": "Kelas",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Masukkan ambang sekurang-kurangnya 1.00.",
       "history": "Sejarah pengeluaran",
       "history_empty": "Belum ada pengeluaran.",
-      "dormant_note": "Pembayaran akan hadir tidak lama lagi. Tambahkan butiran pembayaran keluar dan keutamaan pengeluaran automatik anda sekarang — kami akan membayar anda sebaik sahaja ciri ini diaktifkan."
+      "dormant_note": "Pembayaran akan hadir tidak lama lagi. Tambahkan butiran pembayaran keluar dan keutamaan pengeluaran automatik anda sekarang — kami akan membayar anda sebaik sahaja ciri ini diaktifkan.",
+      "federation_fees": "Yuran persekutuan",
+      "federation_fees_hint": "Yuran gabungan dan akreditasi tahunan yang dibayar kelab anda kepada persekutuan."
     },
     "col_date": "Tarikh",
     "col_amount": "Jumlah",
     "pay_now": "Bayar sekarang",
     "error_checkout": "Tidak dapat memulakan pembayaran.",
     "subtab_classes": "Kelas",
-    "subtab_payouts": "Pembayaran keluar"
+    "subtab_payouts": "Pembayaran keluar",
+    "confirm_refund": "Pulangkan {amount} kepada {name}? Pendaftaran akan kembali kepada belum dibayar.",
+    "refunded": "Bayaran balik dikeluarkan",
+    "error_refund": "Bayaran tidak dapat dipulangkan",
+    "refund": "Bayaran balik",
+    "paid_online": "Dibayar dalam talian",
+    "paid_online_tip": "Pendaftaran ini dibayar melalui pembayaran dalam talian",
+    "request_payment": "Minta pembayaran dalam talian daripada penerjun"
   }
 }

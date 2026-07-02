@@ -348,10 +348,14 @@ module.exports = function createControlRoomRouter({
                    scoring queue, so it must never multiply rows. */
                 EXISTS (
                   SELECT 1 FROM payments p
-                   WHERE p.event_id = cdl.event_id
-                     AND p.payer_user_id = cdl.competitor_id
+                   WHERE p.payer_user_id = cdl.competitor_id
                      AND p.subject_type = 'event_entry'
                      AND p.status = 'paid'
+                     /* per-event entry OR a meet-level registration
+                        covering every event of this meet (POST
+                        /api/meets/:id/checkout) */
+                     AND (p.event_id = cdl.event_id
+                          OR (p.meet_id IS NOT NULL AND p.meet_id = e.meet_id))
                 ) AS paid_entry
          FROM users u
          JOIN competitor_dive_lists cdl ON u.id = cdl.competitor_id

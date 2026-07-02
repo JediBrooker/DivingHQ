@@ -28,6 +28,31 @@
       "body": "{app_name} 이메일을 이 주소로 변경 요청하셨습니다. 아래 링크를 클릭하여 확인해 주세요. 링크는 30분간 유효하며 한 번만 사용할 수 있습니다.",
       "cta": "새 이메일 확인",
       "footer": "본인이 변경한 것이 아니라면 이 메일을 무시해 주세요 — 계정에는 변경 사항이 없습니다."
+    },
+    "common": {
+      "greeting": "{name} 님, 안녕하세요."
+    },
+    "payment_receipt": {
+      "subject": "결제가 접수되었습니다 — {app_name}",
+      "body": "{description}에 대한 {amount} 결제를 받았습니다.",
+      "footer": "결제 내역은 언제든지 확인할 수 있습니다: {link}"
+    },
+    "payment_refunded": {
+      "subject": "결제가 환불되었습니다 — {app_name}",
+      "body": "{description}에 대한 결제 중 {amount}이(가) 환불되었습니다. 환불은 보통 영업일 기준 5–10일 이내에 명세서에 표시됩니다."
+    },
+    "fine_issued": {
+      "subject": "벌금이 부과되었습니다 — {app_name}",
+      "body": "{amount}의 벌금이 부과되었습니다. 사유: {reason}",
+      "footer": "여기에서 납부하거나 이의를 제기할 수 있습니다: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "이의 제기가 받아들여졌습니다 — {app_name}",
+      "body": "{amount} 벌금에 대한 이의 제기가 받아들여졌습니다. 벌금이 면제되어 납부할 금액이 없습니다."
+    },
+    "appeal_dismissed": {
+      "subject": "이의 제기가 기각되었습니다 — {app_name}",
+      "body": "{amount} 벌금에 대한 이의 제기가 기각되어 벌금을 다시 납부해야 합니다. 여기에서 납부할 수 있습니다: {link}"
     }
   },
   "pdf": {

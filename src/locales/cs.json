@@ -1447,7 +1447,13 @@
     "type_donation": "Dar",
     "type_fine": "Pokuta",
     "type_scratch": "Pokuta za odhlášení",
-    "type_no_show": "Pokuta za neúčast"
+    "type_no_show": "Pokuta za neúčast",
+    "return_paid_title": "Platba přijata",
+    "return_paid_body": "Děkujeme — vaše platba proběhla úspěšně. Potvrzení na vašem účtu může trvat několik okamžiků; pokud se něco stále zobrazuje jako nezaplacené, stránku za chvíli obnovte.",
+    "return_canceled_title": "Platba zrušena",
+    "return_canceled_body": "Nic vám nebylo účtováno. Můžete to zkusit znovu, kdykoli budete chtít.",
+    "return_continue": "Pokračovat",
+    "return_history": "Zobrazit historii plateb"
   },
   "classes": {
     "menu": "Kurzy",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Zadejte hranici alespoň 1,00.",
       "history": "Historie výběrů",
       "history_empty": "Zatím žádné výběry.",
-      "dormant_note": "Platby budou brzy spuštěny. Přidejte nyní své bankovní údaje pro výplaty a nastavení automatického výběru — jakmile funkci zapneme, ihned vám vyplatíme peníze."
+      "dormant_note": "Platby budou brzy spuštěny. Přidejte nyní své bankovní údaje pro výplaty a nastavení automatického výběru — jakmile funkci zapneme, ihned vám vyplatíme peníze.",
+      "federation_fees": "Poplatky federaci",
+      "federation_fees_hint": "Roční poplatky za přidružení a akreditaci, které váš klub platí federaci."
     },
     "col_date": "Datum",
     "col_amount": "Částka",
     "pay_now": "Zaplatit",
     "error_checkout": "Platbu se nepodařilo zahájit.",
     "subtab_classes": "Kurzy",
-    "subtab_payouts": "Výplaty"
+    "subtab_payouts": "Výplaty",
+    "confirm_refund": "Vrátit {amount} osobě {name}? Zápis se vrátí do stavu nezaplaceno.",
+    "refunded": "Platba vrácena",
+    "error_refund": "Platbu se nepodařilo vrátit",
+    "refund": "Vrátit platbu",
+    "paid_online": "Zaplaceno online",
+    "paid_online_tip": "Tento zápis byl zaplacen online",
+    "request_payment": "Požádat plavce o online platbu"
   }
 }

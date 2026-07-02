@@ -28,6 +28,31 @@
       "body": "Pyysit vaihtamaan {app_name}-tilisi sähköpostiosoitteeksi tämän osoitteen. Vahvista alla olevasta linkistä. Linkki on voimassa 30 minuuttia ja sen voi käyttää vain kerran.",
       "cta": "Vahvista uusi sähköposti",
       "footer": "Jos et tehnyt tätä muutosta, voit jättää viestin huomiotta — tiliäsi ei ole muutettu."
+    },
+    "common": {
+      "greeting": "Hei {name},"
+    },
+    "payment_receipt": {
+      "subject": "Maksu vastaanotettu — {app_name}",
+      "body": "Saimme maksusi {amount} kohteesta: {description}.",
+      "footer": "Voit tarkastella maksuhistoriaasi milloin tahansa: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Maksu palautettu — {app_name}",
+      "body": "{amount} maksustasi kohteesta: {description} on palautettu. Palautukset näkyvät tiliotteellasi yleensä 5–10 arkipäivän kuluessa."
+    },
+    "fine_issued": {
+      "subject": "Sinulle on määrätty sakko — {app_name}",
+      "body": "Sinulle on määrätty {amount} sakko. Syy: {reason}",
+      "footer": "Maksa se tai tee valitus täällä: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Valituksesi hyväksyttiin — {app_name}",
+      "body": "Valituksesi {amount} sakosta hyväksyttiin. Sakko on peruttu — mitään ei ole maksettavana."
+    },
+    "appeal_dismissed": {
+      "subject": "Valituksesi hylättiin — {app_name}",
+      "body": "Valituksesi {amount} sakosta hylättiin, ja sakko on jälleen maksettava. Voit maksaa sen täällä: {link}"
     }
   },
   "pdf": {

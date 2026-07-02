@@ -28,6 +28,31 @@
       "body": "Du har bedt om å endre e-postadressen på {app_name} til denne adressen. Klikk på lenken nedenfor for å bekrefte. Lenken er gyldig i 30 minutter og kan bare brukes én gang.",
       "cta": "Bekreft ny e-post",
       "footer": "Hvis du ikke har gjort denne endringen, kan du trygt se bort fra denne e-posten — kontoen din er uendret."
+    },
+    "common": {
+      "greeting": "Hei {name},"
+    },
+    "payment_receipt": {
+      "subject": "Betaling mottatt — {app_name}",
+      "body": "Vi har mottatt betalingen din på {amount} for: {description}.",
+      "footer": "Se betalingshistorikken din når som helst: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Betaling refundert — {app_name}",
+      "body": "{amount} av betalingen din for: {description} er refundert. Refusjoner vises vanligvis på kontoutskriften innen 5–10 virkedager."
+    },
+    "fine_issued": {
+      "subject": "Du har fått en bot — {app_name}",
+      "body": "Du har fått en bot på {amount}. Årsak: {reason}",
+      "footer": "Betal den eller klag her: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Klagen din ble tatt til følge — {app_name}",
+      "body": "Klagen din på boten på {amount} ble tatt til følge. Boten er frafalt — du skylder ingenting."
+    },
+    "appeal_dismissed": {
+      "subject": "Klagen din ble avvist — {app_name}",
+      "body": "Klagen din på boten på {amount} ble avvist, og boten forfaller på nytt. Du kan betale den her: {link}"
     }
   },
   "pdf": {

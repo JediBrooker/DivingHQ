@@ -28,6 +28,31 @@
       "body": "{app_name} e-posta adresinizi bu adresle değiştirmek istediniz. Onaylamak için aşağıdaki bağlantıya tıklayın. Bağlantı 30 dakika boyunca geçerlidir ve yalnızca bir kez kullanılabilir.",
       "cta": "Yeni e-postayı doğrula",
       "footer": "Bu değişikliği siz yapmadıysanız, bu e-postayı dikkate almayabilirsiniz — hesabınızda değişiklik yok."
+    },
+    "common": {
+      "greeting": "Merhaba {name},"
+    },
+    "payment_receipt": {
+      "subject": "Ödeme alındı — {app_name}",
+      "body": "{description} için {amount} tutarındaki ödemenizi aldık.",
+      "footer": "Ödeme geçmişinizi istediğiniz zaman görüntüleyebilirsiniz: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Ödeme iade edildi — {app_name}",
+      "body": "{description} için yaptığınız ödemenin {amount} tutarı iade edildi. İadeler genellikle 5–10 iş günü içinde ekstrenizde görünür."
+    },
+    "fine_issued": {
+      "subject": "Size para cezası kesildi — {app_name}",
+      "body": "Size {amount} tutarında para cezası kesildi. Gerekçe: {reason}",
+      "footer": "Buradan ödeyebilir veya itiraz edebilirsiniz: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "İtirazınız kabul edildi — {app_name}",
+      "body": "{amount} tutarındaki cezaya itirazınız kabul edildi. Ceza iptal edildi — borcunuz yok."
+    },
+    "appeal_dismissed": {
+      "subject": "İtirazınız reddedildi — {app_name}",
+      "body": "{amount} tutarındaki cezaya itirazınız reddedildi ve ceza yeniden ödenmesi gereken duruma geldi. Buradan ödeyebilirsiniz: {link}"
     }
   },
   "pdf": {

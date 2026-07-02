@@ -1447,7 +1447,13 @@
     "type_donation": "Donasi",
     "type_fine": "Denda",
     "type_scratch": "Denda pengunduran diri",
-    "type_no_show": "Denda tidak hadir"
+    "type_no_show": "Denda tidak hadir",
+    "return_paid_title": "Pembayaran diterima",
+    "return_paid_body": "Terima kasih — pembayaran Anda berhasil. Konfirmasi di akun Anda mungkin memerlukan beberapa saat; segarkan halaman sebentar lagi jika masih ada yang tampil belum dibayar.",
+    "return_canceled_title": "Pembayaran dibatalkan",
+    "return_canceled_body": "Anda tidak dikenai biaya. Anda dapat mencoba lagi kapan saja.",
+    "return_continue": "Lanjutkan",
+    "return_history": "Lihat riwayat pembayaran"
   },
   "classes": {
     "menu": "Kelas",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Masukkan ambang batas minimal 1,00.",
       "history": "Riwayat pencairan dana",
       "history_empty": "Belum ada pencairan dana.",
-      "dormant_note": "Pembayaran akan segera hadir. Tambahkan detail pencairan dana dan preferensi pencairan otomatis Anda sekarang — kami akan mencairkan dana segera setelah fitur ini diaktifkan."
+      "dormant_note": "Pembayaran akan segera hadir. Tambahkan detail pencairan dana dan preferensi pencairan otomatis Anda sekarang — kami akan mencairkan dana segera setelah fitur ini diaktifkan.",
+      "federation_fees": "Biaya federasi",
+      "federation_fees_hint": "Biaya afiliasi dan akreditasi tahunan yang dibayar klub Anda kepada federasi."
     },
     "col_date": "Tanggal",
     "col_amount": "Jumlah",
     "pay_now": "Bayar sekarang",
     "error_checkout": "Tidak dapat memulai checkout.",
     "subtab_classes": "Kelas",
-    "subtab_payouts": "Pencairan Dana"
+    "subtab_payouts": "Pencairan Dana",
+    "confirm_refund": "Kembalikan {amount} kepada {name}? Pendaftaran akan kembali menjadi belum dibayar.",
+    "refunded": "Pengembalian dana diterbitkan",
+    "error_refund": "Tidak dapat mengembalikan pembayaran",
+    "refund": "Kembalikan dana",
+    "paid_online": "Dibayar online",
+    "paid_online_tip": "Pendaftaran ini dibayar melalui pembayaran online",
+    "request_payment": "Minta pembayaran online dari penyelam"
   }
 }

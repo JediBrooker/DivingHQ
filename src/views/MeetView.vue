@@ -358,6 +358,7 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
           hide-when-unset
           title="Meet registration"
           :load-url="`/api/meets/${meet.id}/fees`"
+          :checkout-url="`/api/meets/${meet.id}/checkout`"
           coming-soon-message="Online meet registration is coming soon."
         />
         <!-- Public access purchases — each hidden until the federation puts

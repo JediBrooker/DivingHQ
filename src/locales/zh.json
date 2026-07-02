@@ -1447,7 +1447,13 @@
     "type_donation": "捐赠",
     "type_fine": "罚款",
     "type_scratch": "退赛罚款",
-    "type_no_show": "缺席罚款"
+    "type_no_show": "缺席罚款",
+    "return_paid_title": "已收到付款",
+    "return_paid_body": "谢谢——您的付款已成功。账户确认可能需要片刻，如仍显示未支付，请稍后刷新页面。",
+    "return_canceled_title": "付款已取消",
+    "return_canceled_body": "您未被扣款。您可以随时重试。",
+    "return_continue": "继续",
+    "return_history": "查看付款记录"
   },
   "classes": {
     "menu": "课程",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "请输入至少为 1.00 的阈值。",
       "history": "提现记录",
       "history_empty": "暂无提现记录。",
-      "dormant_note": "支付功能即将上线。请先添加您的提现信息和自动提现偏好设置——功能开通后我们将立即为您付款。"
+      "dormant_note": "支付功能即将上线。请先添加您的提现信息和自动提现偏好设置——功能开通后我们将立即为您付款。",
+      "federation_fees": "联合会费用",
+      "federation_fees_hint": "贵俱乐部每年向联合会支付的加盟费和认证费。"
     },
     "col_date": "日期",
     "col_amount": "金额",
     "pay_now": "立即支付",
     "error_checkout": "无法开始结账。",
     "subtab_classes": "课程",
-    "subtab_payouts": "提现"
+    "subtab_payouts": "提现",
+    "confirm_refund": "向 {name} 退款 {amount}？该报名将恢复为未支付状态。",
+    "refunded": "退款已发出",
+    "error_refund": "无法退款",
+    "refund": "退款",
+    "paid_online": "已在线支付",
+    "paid_online_tip": "该报名已通过在线支付完成",
+    "request_payment": "向运动员发起在线付款请求"
   }
 }

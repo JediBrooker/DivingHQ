@@ -76,6 +76,19 @@ async function load() {
 
 async function save() {
   if (comingSoon.value) return
+  // Blank rows are dropped, not saved as 0.00 — a silently-parsed £0 variant
+  // would win "cheapest applicable price" for every buyer. The server also
+  // refuses amounts under 1.00 (free = no fee configured at all).
+  const usable = (props.flat ? prices.value.slice(0, 1) : prices.value)
+    .filter(p => String(p.amount ?? '').trim() !== '')
+  if (!usable.length) {
+    showError('Enter at least one price (or leave the fee unset for free).')
+    return
+  }
+  if (usable.some(p => !(parseFloat(p.amount) >= 1))) {
+    showError('Each price must be at least 1.00.')
+    return
+  }
   busy.value = true
   try {
     const payload = {
@@ -84,9 +97,9 @@ async function save() {
       fee_payer: feePayer.value,
       refund_policy: refundPolicy.value,
       ...(props.showMembershipPeriod ? { membership_period: membershipPeriod.value } : {}),
-      prices: (props.flat ? prices.value.slice(0, 1) : prices.value).map(p => ({
+      prices: usable.map(p => ({
         label: p.label || 'standard',
-        amount_cents: Math.round(parseFloat(p.amount || '0') * 100),
+        amount_cents: Math.round(parseFloat(p.amount) * 100),
         audience: props.flat ? 'all' : p.audience,
         starts_at: props.flat ? null : (p.starts_at || null),
         ends_at: props.flat ? null : (p.ends_at || null),
@@ -145,7 +158,7 @@ onMounted(load)
         <tbody>
           <tr v-for="(p, i) in prices" :key="i">
             <td><input v-model="p.label" placeholder="standard" /></td>
-            <td><input v-model="p.amount" type="number" min="0" step="0.01" placeholder="0.00" /></td>
+            <td><input v-model="p.amount" type="number" min="1" step="0.01" placeholder="10.00" /></td>
             <td v-if="!flat">
               <select v-model="p.audience">
                 <option v-for="a in AUDIENCES" :key="a.value" :value="a.value">{{ a.label }}</option>

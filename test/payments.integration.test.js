@@ -34,6 +34,9 @@ let meetId;
 let lateEventId;
 let lastRefundArgs = null;
 let lastExpireArgs = null;
+let lastCheckoutArgs = null;
+let retrieveCheckoutSessionImpl = async (args) => ({ id: args.sessionId, status: "open", url: "https://stripe.test/resume" });
+let expireCheckoutSessionImpl = async (args) => { lastExpireArgs = args; return { status: "expired" }; };
 
 // Fake Stripe — captures args, returns canned objects.
 const fakePayments = {
@@ -43,12 +46,32 @@ const fakePayments = {
   retrieveAccount: async () => ({
     configuration: { merchant: { capabilities: { card_payments: { status: "active" } } } },
   }),
-  createCheckoutSession: async () => ({ id: "cs_" + crypto.randomUUID().slice(0, 8), url: "https://stripe.test/pay" }),
-  expireCheckoutSession: async (args) => { lastExpireArgs = args; return { status: "expired" }; },
+  // REAL Checkout Session ids are ~66 chars ("cs_live_" + 58); the fake
+  // matches that length so the schema can never regress to a column too
+  // narrow for production ids (the varchar(64) bug migration 079 fixed —
+  // short fake ids were exactly why the suite missed it).
+  createCheckoutSession: async (args) => {
+    lastCheckoutArgs = args;
+    return {
+      id: ("cs_test_" + crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "")).slice(0, 66),
+      url: "https://stripe.test/pay",
+    };
+  },
+  expireCheckoutSession: (...a) => expireCheckoutSessionImpl(...a),
+  // Blocking-checkout lookups: default to a still-OPEN session so a second
+  // checkout attempt RESUMES the first (returns its url) rather than
+  // retiring it — mirrors the common real-world case and keeps this
+  // order-dependent suite's payment rows stable across tests.
+  retrieveCheckoutSession: async (args) => retrieveCheckoutSessionImpl(args),
   createRefund: async (args) => { lastRefundArgs = args; return { amount: args.amountCents }; },
   // Tests POST a JSON body; treat it as the already-verified event.
   constructWebhookEvent: (raw) => JSON.parse(Buffer.isBuffer(raw) ? raw.toString() : raw),
 };
+
+// Fake operator-notification mailer — captures the last payout email so the
+// withdrawal tests can assert the platform operator is actually told.
+let lastPayoutEmail = null;
+const fakeEmail = { sendPayoutRequestedEmail: (args) => { lastPayoutEmail = args; } };
 
 // Stub auth: every request acts as our seeded user, who holds the roles
 // the routes require. requireEventManager loads req.event like the real
@@ -84,12 +107,20 @@ function buildApp() {
     next();
   };
 
+  // The payout back-office is platform-operator-only in prod; the stub
+  // grants is_system_admin so those routes are testable here.
+  const requireSystemAdmin = (req, _res, next) => {
+    req.user = { ...TEST_USER(), is_system_admin: true };
+    next();
+  };
+
   const app = express();
   app.use((req, res, next) =>
     req.path === "/webhooks/stripe" ? next() : express.json()(req, res, next));
   app.use(createPaymentsRouter({
     pool, verifyToken, optionalAuth, requireOrgRole, requireEventManager, requireMeetEditor, requireClubAdmin,
-    logger: silentLogger, payments: fakePayments,
+    requireSystemAdmin,
+    logger: silentLogger, payments: fakePayments, email: fakeEmail,
   }));
   app.post("/webhooks/stripe", express.raw({ type: "application/json" }),
     createStripeWebhook({ pool, logger: silentLogger, payments: fakePayments }));
@@ -214,10 +245,13 @@ test("checkout records a pending payment with the 15% application fee", async (t
   assert.equal(row.subject_type, "event_entry");
 });
 
-test("a second checkout for the same event is blocked while one is live", async (t) => {
+test("a second checkout for the same event resumes the still-open session", async (t) => {
   if (!ready) return t.skip();
   const res = await api("POST", `/api/events/${eventId}/checkout`, {});
-  assert.equal(res.status, 409);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.url, "https://stripe.test/resume", "payer is sent back into the SAME session, not charged a second slot");
+  assert.equal(body.payment_id, paymentId, "no new payment row was created");
 });
 
 test("webhook marks the payment paid, and is idempotent on re-delivery", async (t) => {
@@ -451,10 +485,11 @@ test("club affiliation checkout records a pending CLUB payment with the 15% fee"
   assert.equal(row.subject_type, "club_affiliation");
 });
 
-test("a second club affiliation checkout is blocked while one is live", async (t) => {
+test("a second club affiliation checkout resumes the still-open session", async (t) => {
   if (!ready) return t.skip();
   const res = await api("POST", `/api/clubs/${clubId}/affiliation/checkout`, { kind: "affiliation" });
-  assert.equal(res.status, 409);
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).url, "https://stripe.test/resume", "same session resumed, no duplicate slot");
 });
 
 test("webhook activates the club affiliation period and the read flips to active", async (t) => {
@@ -680,10 +715,11 @@ test("official accreditation checkout records an official_role payment with the 
   assert.equal(row.subject_type, "official_accreditation");
 });
 
-test("a second accreditation checkout for the same role is blocked while one is live", async (t) => {
+test("a second accreditation checkout for the same role resumes the still-open session", async (t) => {
   if (!ready) return t.skip();
   const res = await api("POST", `/api/orgs/${orgId}/official-accreditation/checkout?role_type=judge`, {});
-  assert.equal(res.status, 409);
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).url, "https://stripe.test/resume", "same session resumed, no duplicate slot");
 });
 
 test("webhook activates the accreditation and the official read flips to active", async (t) => {
@@ -748,10 +784,11 @@ test("buying meet access records a payment with meet_id and the 15% fee", async 
   assert.equal(row.platform_fee_cents, 225); // 15% of 1500
 });
 
-test("a second purchase of the same access is blocked while one is live", async (t) => {
+test("a second purchase of the same access resumes the still-open session", async (t) => {
   if (!ready) return t.skip();
   const res = await api("POST", `/api/meets/${meetId}/access/checkout?kind=spectator_ticket`, {});
-  assert.equal(res.status, 409);
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).url, "https://stripe.test/resume", "same session resumed, no duplicate slot");
 });
 
 test("the webhook marks access paid and the read flips to purchased", async (t) => {
@@ -819,10 +856,11 @@ test("buying the bundle records a meet_bundle payment with the 15% fee", async (
   assert.equal(row.platform_fee_cents, 1350); // 15% of 9000
 });
 
-test("a second bundle purchase for the same meet is blocked while one is live", async (t) => {
+test("a second bundle purchase for the same meet resumes the still-open session", async (t) => {
   if (!ready) return t.skip();
   const res = await api("POST", `/api/meets/${meetId}/bundle/checkout`, {});
-  assert.equal(res.status, 409);
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).url, "https://stripe.test/resume", "same session resumed, no duplicate slot");
 });
 
 test("the webhook expands the bundle into a paid entry for each event", async (t) => {
@@ -1197,4 +1235,404 @@ test("GET /api/me/payments returns the caller's payments (incl. accreditation) a
     assert.ok(k in acc, `row missing ${k}`);
   }
   assert.ok(!list.some((p) => p.amount_cents === 1234), "excludes other users' payments");
+});
+
+// ---- Payout back-office (platform operator) --------------------------
+// Withdrawals are fulfilled by a real-world bank transfer the operator
+// makes, then records via /api/admin/payouts. Before these endpoints
+// existed a payout could never leave 'pending' and nobody could read the
+// bank details a transfer should go to.
+
+const orgStatus = async () => await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json();
+
+test("payout back-office: pending queue exposes fulfilment details; settle transitions exactly once", async (t) => {
+  if (!ready) return t.skip();
+  // Earlier withdrawal tests left pending payouts in the queue.
+  const balBefore = (await orgStatus()).balance_cents;
+  let res = await api("GET", "/api/admin/payouts");
+  assert.equal(res.status, 200);
+  const { payouts } = await res.json();
+  const mine = payouts.filter((p) => p.org_id === orgId);
+  assert.ok(mine.length >= 1, "this org's pending payouts are visible");
+  assert.equal(mine[0].recipient_type, "org");
+  assert.equal(mine[0].payout_account_name, "Test Fed");
+  assert.ok(mine[0].payout_account_details, "bank details available for fulfilment");
+  // Record the bank transfer as made.
+  res = await api("POST", `/api/admin/payouts/${mine[0].id}/settle`, { status: "paid" });
+  assert.equal(res.status, 200);
+  const settled = await res.json();
+  assert.equal(settled.status, "paid");
+  assert.ok(settled.paid_at, "paid_at stamped");
+  // A settled payout can't be settled again.
+  res = await api("POST", `/api/admin/payouts/${mine[0].id}/settle`, { status: "failed" });
+  assert.equal(res.status, 409);
+  // Paid still counts against the balance exactly as pending did — settling
+  // must not change what's withdrawable (no double-withdraw window).
+  assert.equal((await orgStatus()).balance_cents, balBefore);
+});
+
+test("a failed payout returns the money to the withdrawable balance (and the operator is emailed)", async (t) => {
+  if (!ready) return t.skip();
+  await pool.query(
+    `INSERT INTO payments (org_id, payer_user_id, subject_type, amount_cents, platform_fee_cents, currency, status)
+     VALUES ($1, $2, 'donation', 10000, 1500, 'GBP', 'paid')`,
+    [orgId, userId],
+  );
+  const before = (await orgStatus()).balance_cents;
+  assert.ok(before >= 8500);
+  lastPayoutEmail = null;
+  const res = await api("POST", `/api/orgs/${orgId}/withdrawals`, {});
+  assert.equal(res.status, 201);
+  const [payout] = await res.json();
+  assert.equal(lastPayoutEmail?.orgId, orgId, "operator notified of the withdrawal request");
+  assert.equal((await orgStatus()).balance_cents, 0);
+  // Bank transfer bounced (e.g. bad details) → failed → withdrawable again.
+  const settle = await api("POST", `/api/admin/payouts/${payout.id}/settle`, { status: "failed" });
+  assert.equal(settle.status, 200);
+  assert.equal((await orgStatus()).balance_cents, before, "failed payout restores the balance");
+});
+
+test("auto-withdraw sweeper books a payout only once the threshold is met", async (t) => {
+  if (!ready) return t.skip();
+  const { sweepOnce } = require("../lib/auto-withdraw");
+  const bal = (await orgStatus()).balance_cents; // restored by the failed payout above
+  assert.ok(bal > 0);
+  // Threshold above the balance → the sweep must not touch it.
+  await pool.query(
+    "UPDATE organisations SET auto_withdraw_enabled = true, auto_withdraw_min_cents = $2 WHERE id = $1",
+    [orgId, bal + 1],
+  );
+  await sweepOnce({ pool, logger: silentLogger, email: fakeEmail });
+  assert.equal((await orgStatus()).balance_cents, bal, "below-threshold balance is untouched");
+  // Threshold met → the sweep books the withdrawal and notifies the operator.
+  await pool.query("UPDATE organisations SET auto_withdraw_min_cents = $2 WHERE id = $1", [orgId, bal]);
+  lastPayoutEmail = null;
+  await sweepOnce({ pool, logger: silentLogger, email: fakeEmail });
+  assert.equal((await orgStatus()).balance_cents, 0, "balance auto-withdrawn");
+  assert.equal(lastPayoutEmail?.orgId, orgId, "operator notified of the auto-withdrawal");
+  const list = await (await api("GET", `/api/orgs/${orgId}/withdrawals`)).json();
+  assert.ok(list.some((w) => w.note === "auto-withdrawal" && w.amount_cents === bal), "auto payout recorded");
+  // Leave the flag off so this suite stays re-runnable.
+  await pool.query("UPDATE organisations SET auto_withdraw_enabled = false, auto_withdraw_min_cents = NULL WHERE id = $1", [orgId]);
+});
+
+// ---- Pre-deploy hardening regressions (audit round 2) -----------------
+
+test("validatePrices refuses sub-1.00 amounts (blank rows can't become winning £0 variants)", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("PUT", `/api/orgs/${orgId}/membership-fee`, {
+    prices: [{ label: "oops", amount_cents: 50, audience: "all" }],
+  });
+  assert.equal(res.status, 400);
+});
+
+test("payer_total_cents quotes the pass_to_payer uplift the buyer is actually charged", async (t) => {
+  if (!ready) return t.skip();
+  await api("PUT", `/api/events/${eventId}/fee`, {
+    fee_payer: "pass_to_payer",
+    prices: [{ label: "standard", amount_cents: 10000, audience: "all" }],
+  });
+  const fee = (await (await api("GET", `/api/events/${eventId}/fee`)).json()).fee;
+  assert.equal(fee.price.amount_cents, 10000);
+  assert.equal(fee.payer_total_cents, 11500, "base + the org's 15% platform fee");
+  // back to absorb so later tests see the original semantics
+  await api("PUT", `/api/events/${eventId}/fee`, {
+    fee_payer: "absorb",
+    prices: [{ label: "standard", amount_cents: 10000, audience: "all" }],
+  });
+});
+
+test("meet registration checkout works end-to-end and sends the right amount to Stripe", async (t) => {
+  if (!ready) return t.skip();
+  // The meet fee (4000, absorb) was configured earlier in the suite.
+  lastCheckoutArgs = null;
+  const res = await api("POST", `/api/meets/${meetId}/checkout`, {});
+  assert.equal(res.status, 200, JSON.stringify(await res.clone?.().json?.() || {}));
+  const body = await res.json();
+  assert.ok(body.url && body.payment_id);
+  assert.equal(lastCheckoutArgs.chargeAmountCents, 4000, "Stripe is asked for exactly the configured price");
+  assert.equal(lastCheckoutArgs.applicationFeeCents, 600, "15% platform fee stamped for reconciliation");
+  // Webhook settles it.
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_meet_reg", client_reference_id: body.payment_id, payment_intent: "pi_meet_reg" } },
+  });
+  const p = (await pool.query("SELECT status, meet_id, event_id FROM payments WHERE id = $1", [body.payment_id])).rows[0];
+  assert.equal(p.status, "paid");
+  assert.equal(p.meet_id, meetId);
+  assert.equal(p.event_id, null, "meet-level registration carries meet_id, not event_id");
+});
+
+test("an abandoned (expired) checkout is retired and retried instead of 409ing for 24h", async (t) => {
+  if (!ready) return t.skip();
+  // A pending accreditation payment exists? Create a fresh referee-fee flow:
+  await api("PUT", `/api/orgs/${orgId}/official-fee`, {
+    role_type: "referee", prices: [{ label: "annual", amount_cents: 2500, audience: "all" }],
+  });
+  const first = await api("POST", `/api/orgs/${orgId}/official-accreditation/checkout?role_type=referee`, {});
+  assert.equal(first.status, 200);
+  const firstId = (await first.json()).payment_id;
+  // The payer abandoned it and the session eventually EXPIRED at Stripe.
+  const prevRetrieve = retrieveCheckoutSessionImpl;
+  retrieveCheckoutSessionImpl = async (args) => ({ id: args.sessionId, status: "expired" });
+  try {
+    const second = await api("POST", `/api/orgs/${orgId}/official-accreditation/checkout?role_type=referee`, {});
+    assert.equal(second.status, 200);
+    const body = await second.json();
+    assert.equal(body.url, "https://stripe.test/pay", "a FRESH session was created");
+    assert.notEqual(body.payment_id, firstId, "a fresh payment row took the slot");
+  } finally {
+    retrieveCheckoutSessionImpl = prevRetrieve;
+  }
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [firstId])).rows[0].status, "failed",
+    "the dead attempt was retired");
+});
+
+test("waiving a fine whose payment settles DURING the retire round-trip is refused (409), not silently waived", async (t) => {
+  if (!ready) return t.skip();
+  const fineId = (await pool.query(
+    `INSERT INTO fines (org_id, liable_user_id, issued_by, amount_cents, currency, reason, status)
+     VALUES ($1, $2, $2, 3000, 'GBP', 'race test', 'owed') RETURNING id`,
+    [orgId, userId],
+  )).rows[0].id;
+  const co = await api("POST", `/api/fines/${fineId}/checkout`, {});
+  assert.equal(co.status, 200);
+  const payId = (await co.json()).payment_id;
+  // The webhook lands WHILE the waive's expire call is on the wire.
+  const prevExpire = expireCheckoutSessionImpl;
+  expireCheckoutSessionImpl = async () => {
+    await api("POST", "/webhooks/stripe", {
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_fine_race2", client_reference_id: payId, payment_intent: "pi_fine_race2" } },
+    });
+    return { status: "expired" };
+  };
+  try {
+    const waive = await api("POST", `/api/fines/${fineId}/waive`, {});
+    assert.equal(waive.status, 409, "the waive must refuse a fine that just got paid");
+  } finally {
+    expireCheckoutSessionImpl = prevExpire;
+  }
+  assert.equal((await pool.query("SELECT status FROM fines WHERE id = $1", [fineId])).rows[0].status, "paid",
+    "the fine stays paid — the money was captured");
+});
+
+test("delayed payment methods: completed(unpaid) holds; async_payment_succeeded fulfils; async_payment_failed frees", async (t) => {
+  if (!ready) return t.skip();
+  const mk = async () => (await pool.query(
+    `INSERT INTO payments (org_id, payer_user_id, subject_type, amount_cents, platform_fee_cents, currency, status)
+     VALUES ($1, $2, 'donation', 7000, 1050, 'GBP', 'pending') RETURNING id`,
+    [orgId, userId],
+  )).rows[0].id;
+  const a = await mk();
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_async_a", client_reference_id: a, payment_intent: "pi_async_a", payment_status: "unpaid" } },
+  });
+  let row = (await pool.query("SELECT status, stripe_payment_intent FROM payments WHERE id = $1", [a])).rows[0];
+  assert.equal(row.status, "pending", "no fulfilment before the money actually arrives");
+  assert.equal(row.stripe_payment_intent, "pi_async_a", "linkage stored for the follow-up event");
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.async_payment_succeeded",
+    data: { object: { id: "cs_async_a", client_reference_id: a, payment_intent: "pi_async_a", payment_status: "paid" } },
+  });
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [a])).rows[0].status, "paid");
+
+  const b = await mk();
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.async_payment_failed",
+    data: { object: { id: "cs_async_b", client_reference_id: b } },
+  });
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [b])).rows[0].status, "failed");
+});
+
+test("charge.refunded landing before checkout.session.completed still applies (metadata fallback)", async (t) => {
+  if (!ready) return t.skip();
+  const id = (await pool.query(
+    `INSERT INTO payments (org_id, payer_user_id, subject_type, amount_cents, platform_fee_cents, currency, status)
+     VALUES ($1, $2, 'donation', 4200, 630, 'GBP', 'pending') RETURNING id`,
+    [orgId, userId],
+  )).rows[0].id;
+  // Refund webhook first — the PI was never stored on the row.
+  await api("POST", "/webhooks/stripe", {
+    type: "charge.refunded",
+    data: { object: { payment_intent: "pi_early_refund", currency: "gbp", amount_refunded: 4200, metadata: { payment_id: id } } },
+  });
+  let row = (await pool.query("SELECT status, refunded_amount_cents, stripe_payment_intent FROM payments WHERE id = $1", [id])).rows[0];
+  assert.equal(row.status, "refunded");
+  assert.equal(row.refunded_amount_cents, 4200);
+  assert.equal(row.stripe_payment_intent, "pi_early_refund");
+  // The straggling completed event must NOT resurrect or grant anything.
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_late_done", client_reference_id: id, payment_intent: "pi_early_refund" } },
+  });
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [id])).rows[0].status, "refunded");
+});
+
+test("a LOST chargeback debits the ledger once (redelivery-safe) and reopens the debt", async (t) => {
+  if (!ready) return t.skip();
+  const before = (await orgStatus()).balance_cents;
+  const payId = (await pool.query(
+    `INSERT INTO payments (org_id, payer_user_id, subject_type, amount_cents, platform_fee_cents, currency, status, stripe_payment_intent)
+     VALUES ($1, $2, 'donation', 10000, 1500, 'GBP', 'paid', 'pi_dispute') RETURNING id`,
+    [orgId, userId],
+  )).rows[0].id;
+  assert.equal((await orgStatus()).balance_cents, before + 8500);
+  // Dispute opened: informational only — the ledger must NOT move yet.
+  await api("POST", "/webhooks/stripe", {
+    type: "charge.dispute.created",
+    data: { object: { id: "dp_1", payment_intent: "pi_dispute", reason: "fraudulent", amount: 10000, currency: "gbp" } },
+  });
+  assert.equal((await orgStatus()).balance_cents, before + 8500);
+  // Dispute LOST: refund semantics applied additively.
+  const lost = {
+    type: "charge.dispute.closed",
+    data: { object: { id: "dp_1", payment_intent: "pi_dispute", status: "lost", amount: 10000, currency: "gbp" } },
+  };
+  await api("POST", "/webhooks/stripe", lost);
+  const row = (await pool.query("SELECT status, refunded_amount_cents FROM payments WHERE id = $1", [payId])).rows[0];
+  assert.equal(row.status, "refunded");
+  assert.equal(row.refunded_amount_cents, 10000);
+  assert.equal((await orgStatus()).balance_cents, before, "the recipient's credit is clawed back");
+  // Stripe redelivers — the additive update must NOT double-debit.
+  await api("POST", "/webhooks/stripe", lost);
+  assert.equal((await orgStatus()).balance_cents, before, "redelivery is a no-op");
+});
+
+test("membership renewal: blocked while active (outside the window), allowed near expiry, and the grant EXTENDS", async (t) => {
+  if (!ready) return t.skip();
+  // Earlier in the suite the webhook granted a 12-month membership — a fresh
+  // purchase must be refused as premature.
+  let res = await api("POST", `/api/orgs/${orgId}/membership/checkout`, {});
+  assert.equal(res.status, 409);
+  assert.match((await res.json()).error, /renewals open/i);
+  // Bring the membership inside the 30-day renewal window.
+  await pool.query(
+    `UPDATE memberships SET period_start = CURRENT_DATE - interval '355 days',
+            period_end = (CURRENT_DATE + interval '10 days')::date
+      WHERE org_id = $1 AND user_id = $2 AND status = 'active'`,
+    [orgId, userId],
+  );
+  const oldEnd = (await pool.query(
+    "SELECT MAX(period_end) AS pe FROM memberships WHERE org_id = $1 AND user_id = $2 AND status = 'active'",
+    [orgId, userId],
+  )).rows[0].pe;
+  res = await api("POST", `/api/orgs/${orgId}/membership/checkout`, {});
+  assert.equal(res.status, 200, JSON.stringify(await res.clone?.().json?.() || {}));
+  const payId = (await res.json()).payment_id;
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_renewal", client_reference_id: payId, payment_intent: "pi_renewal" } },
+  });
+  const rows = (await pool.query(
+    "SELECT period_start, period_end, payment_id FROM memberships WHERE org_id = $1 AND user_id = $2 AND status = 'active' ORDER BY period_end DESC",
+    [orgId, userId],
+  )).rows;
+  assert.equal(rows.length, 2, "renewal adds a second active period");
+  assert.equal(String(rows[0].period_start).slice(0, 10), String(oldEnd).slice(0, 10),
+    "the renewal starts where the current period ends — early renewal loses no paid-for days");
+
+  // Refunding the RENEWAL revokes exactly that grant.
+  const refund = await api("POST", `/api/payments/${payId}/refund`, {});
+  assert.equal(refund.status, 200);
+  const after = (await pool.query(
+    "SELECT status FROM memberships WHERE payment_id = $1", [payId],
+  )).rows[0];
+  assert.equal(after.status, "cancelled", "a refunded membership no longer grants anything");
+});
+
+test("partial refunds are capped at the remaining refundable amount", async (t) => {
+  if (!ready) return t.skip();
+  const payId = (await pool.query(
+    `INSERT INTO payments (org_id, payer_user_id, subject_type, amount_cents, platform_fee_cents, currency, status, stripe_payment_intent)
+     VALUES ($1, $2, 'donation', 6000, 900, 'GBP', 'paid', 'pi_partial_cap') RETURNING id`,
+    [orgId, userId],
+  )).rows[0].id;
+  let res = await api("POST", `/api/payments/${payId}/refund`, { amount_cents: 4000 });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).status, "partially_refunded");
+  // Only 2000 remains — asking for 3000 must be a clean 400, not a Stripe error.
+  res = await api("POST", `/api/payments/${payId}/refund`, { amount_cents: 3000 });
+  assert.equal(res.status, 400);
+  res = await api("POST", `/api/payments/${payId}/refund`, { amount_cents: 2000 });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).status, "refunded");
+});
+
+test("club-recipient payments cannot be refunded by the federation — only the club's own admins", async (t) => {
+  if (!ready) return t.skip();
+  const cls = (await pool.query(
+    "INSERT INTO classes (club_id, org_id, name) VALUES ($1, $2, 'Refund Authz Class') RETURNING id",
+    [clubId, orgId],
+  )).rows[0].id;
+  const enr = (await pool.query(
+    `INSERT INTO class_enrolments (class_id, diver_user_id, club_id, org_id, status)
+     VALUES ($1, $2, $3, $4, 'active') RETURNING id`,
+    [cls, userId, clubId, orgId],
+  )).rows[0].id;
+  const payId = (await pool.query(
+    `INSERT INTO payments
+        (org_id, payer_user_id, payer_type, subject_type, club_id, recipient_type,
+         class_enrolment_id, amount_cents, platform_fee_cents, currency, status, stripe_payment_intent)
+     VALUES ($1, $2, 'user', 'class_enrolment', $3, 'club', $4, 5000, 750, 'GBP', 'paid', 'pi_club_refund')
+     RETURNING id`,
+    [orgId, userId, clubId, enr],
+  )).rows[0].id;
+  // The stubbed caller is an org_admin/meet_manager in this org but NOT a
+  // club admin — the club-private boundary must hold.
+  let res = await api("POST", `/api/payments/${payId}/refund`, {});
+  assert.equal(res.status, 403, "federation admins cannot touch a club's class revenue");
+  // Grant the caller club-admin status → the club CAN refund its own revenue.
+  await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", [clubId, userId, orgId]);
+  res = await api("POST", `/api/payments/${payId}/refund`, {});
+  assert.equal(res.status, 200, JSON.stringify(await res.clone?.().json?.() || {}));
+  await pool.query("DELETE FROM club_admins WHERE club_id = $1 AND user_id = $2", [clubId, userId]);
+});
+
+test("GET /api/me/fines includes resolved fines so appeal outcomes stay visible", async (t) => {
+  if (!ready) return t.skip();
+  const fineId = (await pool.query(
+    `INSERT INTO fines (org_id, liable_user_id, issued_by, amount_cents, currency, reason, status, appeal_status)
+     VALUES ($1, $2, $2, 1500, 'GBP', 'visibility test', 'waived', 'upheld') RETURNING id`,
+    [orgId, userId],
+  )).rows[0].id;
+  const { fines } = await (await api("GET", "/api/me/fines")).json();
+  const mine = fines.find((f) => f.id === fineId);
+  assert.ok(mine, "waived fines are returned");
+  assert.equal(mine.status, "waived");
+  assert.equal(mine.appeal_status, "upheld");
+});
+
+test("retire when the session already COMPLETED at Stripe (expire fails): the action is refused, nothing is clobbered", async (t) => {
+  if (!ready) return t.skip();
+  const fineId = (await pool.query(
+    `INSERT INTO fines (org_id, liable_user_id, issued_by, amount_cents, currency, reason, status)
+     VALUES ($1, $2, $2, 2200, 'GBP', 'race b test', 'owed') RETURNING id`,
+    [orgId, userId],
+  )).rows[0].id;
+  const co = await api("POST", `/api/fines/${fineId}/checkout`, {});
+  const payId = (await co.json()).payment_id;
+  // Stripe refuses to expire a completed session; retrieve reveals it is
+  // 'complete' — the money is captured, the webhook just hasn't landed yet.
+  const prevExpire = expireCheckoutSessionImpl;
+  const prevRetrieve = retrieveCheckoutSessionImpl;
+  expireCheckoutSessionImpl = async () => { const e = new Error("Session is already complete"); throw e; };
+  retrieveCheckoutSessionImpl = async (args) => ({ id: args.sessionId, status: "complete" });
+  try {
+    const waive = await api("POST", `/api/fines/${fineId}/waive`, {});
+    assert.equal(waive.status, 409, "waive must refuse — the payer's money is captured");
+  } finally {
+    expireCheckoutSessionImpl = prevExpire;
+    retrieveCheckoutSessionImpl = prevRetrieve;
+  }
+  // The payment row was left PENDING for the webhook to settle — never
+  // force-failed, which used to drop the fulfilment and strand the money.
+  assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [payId])).rows[0].status, "pending");
+  await api("POST", "/webhooks/stripe", {
+    type: "checkout.session.completed",
+    data: { object: { id: "cs_raceb", client_reference_id: payId, payment_intent: "pi_raceb" } },
+  });
+  assert.equal((await pool.query("SELECT status FROM fines WHERE id = $1", [fineId])).rows[0].status, "paid",
+    "the late webhook settles normally — money and roster agree");
 });

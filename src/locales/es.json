@@ -1447,7 +1447,13 @@
     "type_donation": "Donación",
     "type_fine": "Multa",
     "type_scratch": "Penalización por retirada",
-    "type_no_show": "Penalización por incomparecencia"
+    "type_no_show": "Penalización por incomparecencia",
+    "return_paid_title": "Pago recibido",
+    "return_paid_body": "Gracias — tu pago se ha realizado correctamente. La confirmación en tu cuenta puede tardar unos momentos; actualiza la página en breve si algo sigue apareciendo como pendiente de pago.",
+    "return_canceled_title": "Pago cancelado",
+    "return_canceled_body": "No se te ha cobrado nada. Puedes intentarlo de nuevo cuando quieras.",
+    "return_continue": "Continuar",
+    "return_history": "Ver historial de pagos"
   },
   "classes": {
     "menu": "Clases",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Introduce un umbral de al menos 1,00.",
       "history": "Historial de retiros",
       "history_empty": "Aún no hay retiros.",
-      "dormant_note": "Los pagos estarán disponibles próximamente. Añade ya tus datos de pago y tu preferencia de retiro automático; te pagaremos en cuanto se active."
+      "dormant_note": "Los pagos estarán disponibles próximamente. Añade ya tus datos de pago y tu preferencia de retiro automático; te pagaremos en cuanto se active.",
+      "federation_fees": "Cuotas de la federación",
+      "federation_fees_hint": "Cuotas anuales de afiliación y acreditación que tu club paga a la federación."
     },
     "col_date": "Fecha",
     "col_amount": "Importe",
     "pay_now": "Pagar ahora",
     "error_checkout": "No se pudo iniciar el pago.",
     "subtab_classes": "Clases",
-    "subtab_payouts": "Pagos"
+    "subtab_payouts": "Pagos",
+    "confirm_refund": "¿Reembolsar {amount} a {name}? La inscripción volverá a estar pendiente de pago.",
+    "refunded": "Reembolso emitido",
+    "error_refund": "No se pudo reembolsar el pago",
+    "refund": "Reembolsar",
+    "paid_online": "Pagado en línea",
+    "paid_online_tip": "Esta inscripción se pagó mediante pago en línea",
+    "request_payment": "Solicitar pago en línea al saltador"
   }
 }

@@ -1447,7 +1447,13 @@
     "type_donation": "Adomány",
     "type_fine": "Bírság",
     "type_scratch": "Visszalépési díj",
-    "type_no_show": "Meg nem jelenési díj"
+    "type_no_show": "Meg nem jelenési díj",
+    "return_paid_title": "Fizetés beérkezett",
+    "return_paid_body": "Köszönjük — a fizetés sikeres volt. A megerősítés a fiókjában eltarthat néhány pillanatig; frissítse az oldalt hamarosan, ha valami továbbra is fizetetlenként jelenik meg.",
+    "return_canceled_title": "Fizetés megszakítva",
+    "return_canceled_body": "Nem terheltünk semmit. Bármikor újra próbálkozhat.",
+    "return_continue": "Folytatás",
+    "return_history": "Fizetési előzmények megtekintése"
   },
   "classes": {
     "menu": "Órák",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Adj meg legalább 1,00 összegű küszöbértéket.",
       "history": "Kifizetési előzmények",
       "history_empty": "Még nincs kifizetés.",
-      "dormant_note": "A fizetési funkció hamarosan elérhető. Add meg most a kifizetési adataidat és az automatikus kifizetési beállításaidat — amint a funkció aktiválódik, azonnal utaljuk a kifizetést."
+      "dormant_note": "A fizetési funkció hamarosan elérhető. Add meg most a kifizetési adataidat és az automatikus kifizetési beállításaidat — amint a funkció aktiválódik, azonnal utaljuk a kifizetést.",
+      "federation_fees": "Szövetségi díjak",
+      "federation_fees_hint": "Éves tagsági és akkreditációs díjak, amelyeket klubja a szövetségnek fizet."
     },
     "col_date": "Dátum",
     "col_amount": "Összeg",
     "pay_now": "Fizetés most",
     "error_checkout": "Nem sikerült elindítani a fizetést.",
     "subtab_classes": "Foglalkozások",
-    "subtab_payouts": "Kifizetések"
+    "subtab_payouts": "Kifizetések",
+    "confirm_refund": "Visszatéríti {amount} összeget {name} részére? A jelentkezés újra fizetetlen lesz.",
+    "refunded": "Visszatérítés elindítva",
+    "error_refund": "A fizetést nem sikerült visszatéríteni",
+    "refund": "Visszatérítés",
+    "paid_online": "Online fizetve",
+    "paid_online_tip": "Ezt a jelentkezést online fizetéssel rendezték",
+    "request_payment": "Online fizetés kérése a versenyzőtől"
   }
 }

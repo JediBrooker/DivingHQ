@@ -112,15 +112,20 @@ onMounted(async () => {
     <p v-if="loading" class="muted">Loading…</p>
     <template v-else>
       <div class="issue">
-        <select v-model="form.liable_user_id" class="ctl" :disabled="!enabled">
+        <select v-model="form.liable_user_id" class="ctl" :disabled="!enabled" aria-label="Who is being fined">
           <option value="">Who is being fined…</option>
           <option v-for="p in people" :key="p.id" :value="p.id">{{ p.full_name }}</option>
         </select>
-        <input v-model="form.amount" type="number" min="1" step="0.01" placeholder="Amount" class="ctl amt" :disabled="!enabled" />
-        <input v-model="form.reason" type="text" placeholder="Reason" class="ctl reason" :disabled="!enabled" />
+        <label class="ctl-label">Amount
+          <input v-model="form.amount" type="number" min="1" step="0.01" placeholder="50.00" class="ctl amt" :disabled="!enabled" />
+        </label>
+        <label class="ctl-label reason-label">Reason
+          <input v-model="form.reason" type="text" placeholder="e.g. unsportsmanlike conduct" class="ctl reason" :disabled="!enabled" />
+        </label>
         <button type="button" class="btn" :disabled="!canIssue" @click="issue">Issue fine</button>
       </div>
 
+      <div class="table-scroll">
       <table v-if="fines.length" class="fines">
         <thead>
           <tr><th>Person</th><th>Amount</th><th>Reason</th><th>Status</th><th class="act"></th></tr>
@@ -141,7 +146,8 @@ onMounted(async () => {
           </tr>
         </tbody>
       </table>
-      <p v-else class="muted">No fines issued yet.</p>
+      </div>
+      <p v-if="!fines.length" class="muted">No fines issued yet.</p>
     </template>
   </section>
 </template>
@@ -150,7 +156,10 @@ onMounted(async () => {
 .fines-view { display: flex; flex-direction: column; gap: 1rem; max-width: 60rem; margin: 0 auto; padding: 1rem; }
 .lede { color: var(--muted, #777); margin: 0; }
 .muted { color: var(--muted, #777); }
-.issue { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.issue { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-end; }
+.ctl-label { display: flex; flex-direction: column; gap: .2rem; font-size: .78rem; color: var(--fg-2, #555); }
+.ctl-label.reason-label { flex: 1; min-width: 12rem; }
+.table-scroll { overflow-x: auto; }
 .ctl { padding: .4rem .6rem; border: 1px solid var(--border, #ddd); border-radius: .5rem; background: transparent; color: var(--fg, #222); font-size: .85rem; }
 .ctl.amt { width: 7rem; }
 .ctl.reason { flex: 1; min-width: 12rem; }

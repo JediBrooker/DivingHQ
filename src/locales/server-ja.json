@@ -28,6 +28,31 @@
       "body": "{app_name} のメールアドレスをこのアドレスへ変更するリクエストを受け付けました。下のリンクをクリックして確認してください。このリンクは30分間有効で、一度のみ使用できます。",
       "cta": "新しいメールを確認",
       "footer": "この変更に心当たりがない場合は、このメールを無視してください。アカウントは変更されていません。"
+    },
+    "common": {
+      "greeting": "{name} 様"
+    },
+    "payment_receipt": {
+      "subject": "お支払いを受領しました — {app_name}",
+      "body": "{description} に対するお支払い {amount} を受領しました。",
+      "footer": "お支払い履歴はいつでもご確認いただけます: {link}"
+    },
+    "payment_refunded": {
+      "subject": "返金のお知らせ — {app_name}",
+      "body": "{description} に対するお支払いのうち {amount} が返金されました。返金は通常 5〜10 営業日以内に明細に反映されます。"
+    },
+    "fine_issued": {
+      "subject": "罰金が科されました — {app_name}",
+      "body": "{amount} の罰金が科されました。理由: {reason}",
+      "footer": "こちらからお支払いまたは不服申し立てができます: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "不服申し立てが認められました — {app_name}",
+      "body": "{amount} の罰金に対する不服申し立てが認められました。罰金は取り消され、お支払いは不要です。"
+    },
+    "appeal_dismissed": {
+      "subject": "不服申し立てが却下されました — {app_name}",
+      "body": "{amount} の罰金に対する不服申し立ては却下され、罰金は再び支払い対象となりました。こちらからお支払いいただけます: {link}"
     }
   },
   "pdf": {

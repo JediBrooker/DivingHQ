@@ -66,8 +66,54 @@ test("createCheckoutSession charges on the platform account (no connected accoun
   assert.equal(p.line_items[0].price_data.currency, "gbp");
 });
 
-test("constructWebhookEvent requires a webhook secret", () => {
-  const s = createStripe({ secretKey: "sk_test_x", clientFactory: () => fakeClient() });
-  assert.throws(() => s.constructWebhookEvent(Buffer.from("{}"), "sig"),
-    (e) => e.code === "webhook_secret_missing");
+test("secret key without webhook secret refuses to construct (boot guard)", () => {
+  // A half-configured deployment would CHARGE payers while every completion
+  // webhook 400s — money taken, nothing fulfilled. Fail at boot instead.
+  assert.throws(
+    () => createStripe({ secretKey: "sk_test_x", webhookSecret: "", clientFactory: () => fakeClient() }),
+    /STRIPE_WEBHOOK_SECRET/,
+  );
+});
+
+// ---- currency-unit conversion at the Stripe boundary ----------------
+// The app stores hundredths uniformly; Stripe wants each currency's own
+// minor unit. Without conversion a ¥5,000 fee (stored 500000) charges
+// ¥500,000.
+
+test("zero-decimal currencies convert hundredths → whole units on checkout", async () => {
+  const { s, calls } = withFake();
+  await s.createCheckoutSession({
+    currency: "JPY", chargeAmountCents: 500000,
+    applicationFeeCents: 75000, productName: "Entry", successUrl: "s", cancelUrl: "c",
+  });
+  assert.equal(calls().session.p.line_items[0].price_data.unit_amount, 5000); // ¥5,000
+});
+
+test("non-representable zero-decimal amounts are refused with a 400", async () => {
+  const { s } = withFake();
+  await assert.rejects(
+    () => s.createCheckoutSession({
+      currency: "JPY", chargeAmountCents: 500050, // ¥5,000.50 doesn't exist
+      applicationFeeCents: 0, productName: "Entry", successUrl: "s", cancelUrl: "c",
+    }),
+    (e) => e.status === 400,
+  );
+});
+
+test("createRefund converts partial amounts to Stripe units", async () => {
+  const { s, calls } = withFake();
+  await s.createRefund({ paymentIntentId: "pi_9", amountCents: 200000, currency: "JPY" });
+  assert.equal(calls().refund.p.amount, 2000); // ¥2,000, not 200000
+  await s.createRefund({ paymentIntentId: "pi_9", amountCents: 2000, currency: "GBP" });
+  assert.equal(calls().refund.p.amount, 2000); // two-decimal: identity
+});
+
+test("toStripeAmount / fromStripeAmount round-trip per currency class", () => {
+  assert.equal(createStripe.toStripeAmount("gbp", 12345), 12345);
+  assert.equal(createStripe.fromStripeAmount("gbp", 12345), 12345);
+  assert.equal(createStripe.toStripeAmount("jpy", 500000), 5000);
+  assert.equal(createStripe.fromStripeAmount("jpy", 5000), 500000);
+  assert.equal(createStripe.toStripeAmount("kwd", 12345), 123450);  // three-decimal ×10
+  assert.equal(createStripe.fromStripeAmount("kwd", 123450), 12345);
+  assert.throws(() => createStripe.toStripeAmount("jpy", 550), (e) => e.status === 400);
 });

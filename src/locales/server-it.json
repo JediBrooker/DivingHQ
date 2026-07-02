@@ -28,6 +28,31 @@
       "body": "Hai chiesto di cambiare il tuo indirizzo email di {app_name} con questo. Fai clic sul link qui sotto per confermare. Il link è valido per 30 minuti e può essere usato una sola volta.",
       "cta": "Conferma nuovo indirizzo",
       "footer": "Se non hai fatto questa modifica, puoi ignorare l'email senza problemi — il tuo account non è cambiato."
+    },
+    "common": {
+      "greeting": "Ciao {name},"
+    },
+    "payment_receipt": {
+      "subject": "Pagamento ricevuto — {app_name}",
+      "body": "Abbiamo ricevuto il tuo pagamento di {amount} per: {description}.",
+      "footer": "Puoi consultare la cronologia dei pagamenti in qualsiasi momento: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Pagamento rimborsato — {app_name}",
+      "body": "{amount} del tuo pagamento per: {description} è stato rimborsato. I rimborsi compaiono di solito sull'estratto conto entro 5–10 giorni lavorativi."
+    },
+    "fine_issued": {
+      "subject": "Ti è stata inflitta una multa — {app_name}",
+      "body": "Ti è stata inflitta una multa di {amount}. Motivo: {reason}",
+      "footer": "Pagala o presenta ricorso qui: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Il tuo ricorso è stato accolto — {app_name}",
+      "body": "Il tuo ricorso contro la multa di {amount} è stato accolto. La multa è stata annullata — non devi nulla."
+    },
+    "appeal_dismissed": {
+      "subject": "Il tuo ricorso è stato respinto — {app_name}",
+      "body": "Il tuo ricorso contro la multa di {amount} è stato respinto e la multa è di nuovo dovuta. Puoi pagarla qui: {link}"
     }
   },
   "pdf": {

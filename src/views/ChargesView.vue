@@ -3,7 +3,7 @@
 // scratch / no-show penalty charges (divers) AND disciplinary fines, each
 // with a Pay action and the contextual "coming soon" preview. Fines can also
 // be appealed here. Reads GET /api/me/charges + GET /api/me/fines.
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showError, showSuccess } from '@/composables/useNotify'
 import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
@@ -20,6 +20,21 @@ const appealingId = ref('')
 const appealReason = ref('')
 
 const KIND_LABELS = { scratch: 'Scratch (withdrawal)', no_show: 'No-show (DNS)' }
+
+// /api/me/fines now returns EVERY fine (so appeal outcomes are visible) —
+// split live debts from resolved history.
+const openFines = computed(() => fines.value.filter((f) => ['owed', 'appealed'].includes(f.status)))
+const resolvedFines = computed(() => fines.value.filter((f) => !['owed', 'appealed'].includes(f.status)))
+function fineOutcome(f) {
+  if (f.status === 'waived' && f.appeal_status === 'upheld') return 'Waived — your appeal was upheld'
+  if (f.status === 'waived') return 'Waived'
+  if (f.status === 'paid') return 'Paid'
+  return f.status
+}
+function fineNote(f) {
+  if (f.status === 'owed' && f.appeal_status === 'dismissed') return 'Your appeal was dismissed — the fine is owed again.'
+  return ''
+}
 
 function money(cents, currency) {
   if (cents == null) return ''
@@ -116,14 +131,15 @@ onMounted(load)
       </div>
 
       <!-- Disciplinary fines -->
-      <div v-if="fines.length" class="charge-list">
+      <div v-if="openFines.length" class="charge-list">
         <h2 class="section-h">Fines</h2>
-        <div v-for="f in fines" :key="f.id" class="fine-wrap">
+        <div v-for="f in openFines" :key="f.id" class="fine-wrap">
           <div class="charge-card">
             <div class="charge-main">
               <div class="charge-title">Fine</div>
               <div class="charge-event">{{ f.reason }}</div>
               <div v-if="f.status === 'appealed'" class="appeal-tag">Under appeal — awaiting a decision</div>
+              <div v-if="fineNote(f)" class="appeal-tag dismissed">{{ fineNote(f) }}</div>
             </div>
             <div class="charge-amount">{{ money(f.amount_cents, f.currency) }}</div>
             <div v-if="f.status === 'owed'" class="fine-actions">
@@ -143,7 +159,20 @@ onMounted(load)
         </div>
       </div>
 
-      <p v-if="!charges.length && !fines.length" class="muted">You're all clear — no outstanding charges. 🎉</p>
+      <p v-if="!charges.length && !openFines.length" class="muted">You're all clear — no outstanding charges. 🎉</p>
+
+      <!-- Resolved fines — the outcome of every appeal/payment stays visible -->
+      <div v-if="resolvedFines.length" class="charge-list">
+        <h2 class="section-h">Resolved</h2>
+        <div v-for="f in resolvedFines" :key="f.id" class="charge-card resolved">
+          <div class="charge-main">
+            <div class="charge-title">Fine</div>
+            <div class="charge-event">{{ f.reason }}</div>
+          </div>
+          <div class="charge-amount muted">{{ money(f.amount_cents, f.currency) }}</div>
+          <span class="outcome-pill" :class="f.status">{{ fineOutcome(f) }}</span>
+        </div>
+      </div>
     </template>
   </section>
 </template>
@@ -166,6 +195,11 @@ onMounted(load)
 .section-h { font-size: 1rem; margin: .5rem 0 .25rem; }
 .fine-wrap { display: flex; flex-direction: column; gap: .5rem; }
 .appeal-tag { color: var(--accent, #3b6); font-size: .8rem; margin-top: .2rem; }
+.appeal-tag.dismissed { color: var(--amber, #b70); }
+.charge-card.resolved { opacity: .85; }
+.outcome-pill { padding: .15rem .6rem; border-radius: 999px; font-size: .78rem; background: var(--bg-2, #eee); color: var(--fg-2, #555); white-space: nowrap; }
+.outcome-pill.paid { background: var(--accent-soft, #dfe); color: var(--green, #2a7); }
+.outcome-pill.waived { background: var(--accent-soft, #eef); color: var(--accent, #3b6); }
 .fine-actions { display: flex; gap: .5rem; }
 .btn-appeal { padding: .5rem 1rem; border: 1px solid var(--border, #ddd); border-radius: .5rem; background: transparent; color: var(--fg-2, #555); cursor: pointer; }
 .btn-appeal:disabled { opacity: .6; cursor: default; }

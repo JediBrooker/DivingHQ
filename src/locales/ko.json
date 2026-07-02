@@ -1447,7 +1447,13 @@
     "type_donation": "기부",
     "type_fine": "벌금",
     "type_scratch": "기권 위약금",
-    "type_no_show": "불참 위약금"
+    "type_no_show": "불참 위약금",
+    "return_paid_title": "결제가 완료되었습니다",
+    "return_paid_body": "감사합니다 — 결제가 정상적으로 처리되었습니다. 계정에 반영되기까지 잠시 걸릴 수 있으니, 아직 미결제로 표시되면 잠시 후 페이지를 새로고침해 주세요.",
+    "return_canceled_title": "결제가 취소되었습니다",
+    "return_canceled_body": "요금이 청구되지 않았습니다. 언제든지 다시 시도할 수 있습니다.",
+    "return_continue": "계속",
+    "return_history": "결제 내역 보기"
   },
   "classes": {
     "menu": "클래스",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "최소 1.00 이상의 기준 금액을 입력하세요.",
       "history": "출금 내역",
       "history_empty": "아직 출금 내역이 없습니다.",
-      "dormant_note": "결제 기능은 곧 제공될 예정입니다. 지금 정산 계좌 정보와 자동 출금 설정을 등록해 두시면, 기능이 활성화되는 즉시 정산해 드립니다."
+      "dormant_note": "결제 기능은 곧 제공될 예정입니다. 지금 정산 계좌 정보와 자동 출금 설정을 등록해 두시면, 기능이 활성화되는 즉시 정산해 드립니다.",
+      "federation_fees": "연맹 비용",
+      "federation_fees_hint": "클럽이 연맹에 납부하는 연간 가입비 및 인증비입니다."
     },
     "col_date": "날짜",
     "col_amount": "금액",
     "pay_now": "지금 결제",
     "error_checkout": "결제를 시작할 수 없습니다.",
     "subtab_classes": "클래스",
-    "subtab_payouts": "정산"
+    "subtab_payouts": "정산",
+    "confirm_refund": "{name}에게 {amount}을(를) 환불할까요? 등록은 미결제 상태로 돌아갑니다.",
+    "refunded": "환불이 처리되었습니다",
+    "error_refund": "결제를 환불할 수 없습니다",
+    "refund": "환불",
+    "paid_online": "온라인 결제됨",
+    "paid_online_tip": "이 등록은 온라인 결제로 지불되었습니다",
+    "request_payment": "다이버에게 온라인 결제 요청"
   }
 }

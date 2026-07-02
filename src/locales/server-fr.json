@@ -28,6 +28,31 @@
       "body": "Vous avez demandé à remplacer votre adresse e-mail {app_name} par celle-ci. Cliquez sur le lien ci-dessous pour confirmer. Le lien est valable 30 minutes et ne peut être utilisé qu'une seule fois.",
       "cta": "Confirmer la nouvelle adresse",
       "footer": "Si vous n'avez pas demandé ce changement, ignorez ce message — votre compte n'a pas été modifié."
+    },
+    "common": {
+      "greeting": "Bonjour {name},"
+    },
+    "payment_receipt": {
+      "subject": "Paiement reçu — {app_name}",
+      "body": "Nous avons bien reçu votre paiement de {amount} pour : {description}.",
+      "footer": "Consultez votre historique de paiements à tout moment : {link}"
+    },
+    "payment_refunded": {
+      "subject": "Paiement remboursé — {app_name}",
+      "body": "{amount} de votre paiement pour : {description} a été remboursé. Les remboursements apparaissent généralement sur votre relevé sous 5 à 10 jours ouvrés."
+    },
+    "fine_issued": {
+      "subject": "Une amende vous a été infligée — {app_name}",
+      "body": "Une amende de {amount} vous a été infligée. Motif : {reason}",
+      "footer": "Payez-la ou faites appel ici : {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Votre appel a été accepté — {app_name}",
+      "body": "Votre appel contre l'amende de {amount} a été accepté. L'amende est annulée — vous ne devez plus rien."
+    },
+    "appeal_dismissed": {
+      "subject": "Votre appel a été rejeté — {app_name}",
+      "body": "Votre appel contre l'amende de {amount} a été rejeté et l'amende est de nouveau due. Vous pouvez la payer ici : {link}"
     }
   },
   "pdf": {
