@@ -48,8 +48,9 @@ async function load() {
   }
 }
 
+let draftPriceSeq = 0
 function addPriceRow() {
-  form.value.prices.push({ label: '', amount: '', currency: 'GBP' })
+  form.value.prices.push({ _key: ++draftPriceSeq, label: '', amount: '', currency: 'GBP' })
 }
 function removePriceRow(i) {
   form.value.prices.splice(i, 1)
@@ -212,6 +213,11 @@ async function deleteClass(cls) {
 
 // ---- roster (expanded class) ------------------------------------
 async function toggleRoster(cls) {
+  // Always close any open add-diver form when the expanded class changes —
+  // it's keyed off expandedId in the template, so leaving it open would
+  // otherwise resurface under whichever class is expanded next, still
+  // holding the previous class's price-option selection.
+  showAdd.value = false
   if (expandedId.value === cls.id) {
     expandedId.value = null
     return
@@ -307,9 +313,9 @@ onMounted(load)
           </div>
           <div class="class-actions">
             <button class="btn ghost sm" type="button" @click="toggleRoster(cls)"><Users class="ic" />{{ t('classes.roster') }}</button>
-            <button class="btn ghost sm" type="button" @click="openEdit(cls)"><Pencil class="ic" /></button>
+            <button class="btn ghost sm" type="button" :aria-label="t('classes.edit_class')" v-tip="t('classes.edit_class')" @click="openEdit(cls)"><Pencil class="ic" /></button>
             <button class="btn ghost sm" type="button" @click="toggleActive(cls)">{{ cls.active ? t('classes.deactivate') : t('classes.activate') }}</button>
-            <button class="btn ghost sm danger" type="button" @click="deleteClass(cls)"><Trash2 class="ic" /></button>
+            <button class="btn ghost sm danger" type="button" :aria-label="t('common.delete')" v-tip="t('common.delete')" @click="deleteClass(cls)"><Trash2 class="ic" /></button>
           </div>
         </div>
 
@@ -331,7 +337,7 @@ onMounted(load)
                     <span v-if="enr.discount_cents">&minus;{{ money(enr.discount_cents, enr.currency) }}</span>
                   </td>
                   <td><span class="pill" :class="enr.status">{{ t(`classes.status_${enr.status}`) }}</span></td>
-                  <td><button class="btn ghost sm danger" type="button" @click="removeEnrolment(cls, enr)"><X class="ic" /></button></td>
+                  <td><button class="btn ghost sm danger" type="button" :aria-label="t('actions.remove')" v-tip="t('actions.remove')" @click="removeEnrolment(cls, enr)"><X class="ic" /></button></td>
                 </tr>
               </tbody>
             </table>
@@ -360,7 +366,7 @@ onMounted(load)
     <div v-if="showCreate" class="editor-panel">
       <div class="editor-head">
         <strong>{{ editingId ? t('classes.edit_class') : t('classes.new_class') }}</strong>
-        <button class="btn ghost sm" type="button" @click="closeForm"><X class="ic" /></button>
+        <button class="btn ghost sm" type="button" :aria-label="t('common.close')" v-tip="t('common.close')" @click="closeForm"><X class="ic" /></button>
       </div>
       <div class="field"><label>{{ t('classes.field_name') }}</label><input class="in" v-model="form.name" /></div>
       <div class="grid-2">
@@ -373,11 +379,11 @@ onMounted(load)
       <template v-if="!editingId">
         <label class="field-label">{{ t('classes.price_options') }}</label>
         <p class="muted small">{{ t('classes.price_options_hint') }}</p>
-        <div v-for="(p, i) in form.prices" :key="i" class="price-row">
+        <div v-for="(p, i) in form.prices" :key="p._key" class="price-row">
           <input class="in" :placeholder="t('classes.price_label_placeholder')" v-model="p.label" />
           <input class="in" type="number" min="0" step="0.01" :placeholder="t('classes.price_amount_placeholder')" v-model="p.amount" />
           <input class="in currency" maxlength="3" v-model="p.currency" />
-          <button class="btn ghost sm danger" type="button" @click="removePriceRow(i)"><X class="ic" /></button>
+          <button class="btn ghost sm danger" type="button" :aria-label="t('actions.remove')" v-tip="t('actions.remove')" @click="removePriceRow(i)"><X class="ic" /></button>
         </div>
         <button class="btn ghost sm" type="button" @click="addPriceRow"><Plus class="ic" />{{ t('classes.add_price_option') }}</button>
       </template>
@@ -389,14 +395,14 @@ onMounted(load)
           <input class="in" :placeholder="t('classes.price_label_placeholder')" v-model="p.label" />
           <input class="in" type="number" min="0" step="0.01" :placeholder="t('classes.price_amount_placeholder')" v-model="p.amount" />
           <input class="in currency" maxlength="3" v-model="p.currency" />
-          <button class="btn ghost sm" type="button" :disabled="savingPriceId === p.id" @click="saveEditPrice(p)"><Check class="ic" /></button>
-          <button class="btn ghost sm danger" type="button" @click="removeEditPrice(p)"><X class="ic" /></button>
+          <button class="btn ghost sm" type="button" :disabled="savingPriceId === p.id" :aria-label="t('common.save')" v-tip="t('common.save')" @click="saveEditPrice(p)"><Check class="ic" /></button>
+          <button class="btn ghost sm danger" type="button" :aria-label="t('actions.remove')" v-tip="t('actions.remove')" @click="removeEditPrice(p)"><X class="ic" /></button>
         </div>
         <div class="price-row">
           <input class="in" :placeholder="t('classes.price_label_placeholder')" v-model="newEditPrice.label" />
           <input class="in" type="number" min="0" step="0.01" :placeholder="t('classes.price_amount_placeholder')" v-model="newEditPrice.amount" />
           <input class="in currency" maxlength="3" v-model="newEditPrice.currency" />
-          <button class="btn ghost sm" type="button" :disabled="addingPrice" @click="addEditPrice"><Plus class="ic" /></button>
+          <button class="btn ghost sm" type="button" :disabled="addingPrice" :aria-label="t('classes.add_price_option')" v-tip="t('classes.add_price_option')" @click="addEditPrice"><Plus class="ic" /></button>
         </div>
       </template>
 
