@@ -19,7 +19,7 @@ import {
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award, Gavel,
-  History, Receipt, Heart, Layers,
+  History, Receipt, Heart, Layers, Wallet,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -34,15 +34,18 @@ const { t } = useI18n()
 // cleanly exists — keeps the strict i18n-parity gate happy without
 // adding new keys. The few role-specific items without a clean key
 // fall back to English via `label`.
+// Each group carries a `key` (stable v-for key) and an `icon` — the icon
+// is the group's face in the collapsed icon rail, where the whole group
+// condenses to one button whose hover/focus flyout lists its items.
 const NAV = [
   // Header-less lead item — Dashboard is the universal home, not a
   // "Competition" tool, so it sits above the first section header.
-  { group: '', items: [
+  { key: 'home', group: '', icon: LayoutDashboard, items: [
     { to: '/dashboard',      label: 'Dashboard',      icon: LayoutDashboard },
   ] },
   // Live-competition workflow, roughly in the order it's used:
   // set up → run → participate → judge → results → analysis → reference.
-  { group: 'Competition', items: [
+  { key: 'competition', group: 'Competition', icon: Trophy, items: [
     { to: '/manager',        label: 'Meets & events', labelKey: 'manager.title',         icon: Trophy,        roles: ['org_admin', 'meet_manager'] },
     { to: '/control',        label: 'Control Room',   labelKey: 'control.page_label',     icon: MonitorPlay,   roles: ['org_admin', 'meet_manager', 'referee'] },
     { to: '/competitor',     label: 'Dive Sheets',    icon: Waves,         roles: ['diver'] },
@@ -52,7 +55,7 @@ const NAV = [
     { to: '/dive-directory', label: 'Dive directory', labelKey: 'dive_directory.title',   icon: BookOpen },
   ] },
   // Club training — distinct from competition; context-adaptive per role.
-  { group: 'Training', items: [
+  { key: 'training', group: 'Training', icon: GraduationCap, items: [
     { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
     { to: '/classes',        label: 'Classes',        labelKey: 'classes.menu', icon: Layers },
   ] },
@@ -60,7 +63,7 @@ const NAV = [
   // Flattened out of the old nested "User Payments" menu: money screens
   // are important enough to be one click, not two, and this removes the
   // name clash with the Federation admin payments hub below.
-  { group: 'Payments', items: [
+  { key: 'payments', group: 'Payments', icon: Wallet, items: [
     { to: '/charges',         label: 'Charges',         labelKey: 'payments.charges',       icon: Receipt },
     { to: '/membership',      label: 'Membership',      labelKey: 'payments.membership',    icon: CreditCard, roles: ['diver'] },
     { to: '/accreditation',   label: 'Accreditation',   labelKey: 'payments.accreditation', icon: Award,      roles: ['judge', 'referee', 'coach', 'meet_manager'] },
@@ -70,7 +73,7 @@ const NAV = [
   // Federation governance + the org money hub (fees config, withdrawals,
   // payout queue) — renamed "Payments & payouts" to disambiguate from the
   // personal section above.
-  { group: 'Federation', items: [
+  { key: 'federation', group: 'Federation', icon: Building2, items: [
     { to: '/users',    label: 'User Manager',       labelKey: 'user_manager.title', icon: Users,      roles: ['org_admin'] },
     { to: '/clubs',    label: 'Clubs & teams',      labelKey: 'clubs.title',        icon: Building2,  roles: ['org_admin', 'meet_manager'] },
     { to: '/fines',    label: 'Fines',              icon: Gavel,      roles: ['referee', 'org_admin'] },
@@ -113,6 +116,11 @@ function isActive(to) {
 }
 function isParentActive(it) {
   return !!it.children && it.children.some((c) => isActive(c.to))
+}
+// A whole group is "active" (highlights its rail icon) when the current
+// route is one of its items.
+function groupActive(g) {
+  return g.items.some((it) => isActive(it.to))
 }
 // Sub-routes that aren't a nav item still deserve a real breadcrumb
 // label; reuse existing translated keys.
@@ -172,6 +180,10 @@ onMounted(() => { syncViewport(); window.addEventListener('resize', syncViewport
 onBeforeUnmount(() => window.removeEventListener('resize', syncViewport))
 
 const collapsed = computed(() => (isMobile.value ? !mobileOpen.value : ui.sidebarCollapsed))
+// Desktop collapse = a slim icon rail (not hidden): each group condenses
+// to one icon whose hover/focus flyout lists its items. Mobile keeps the
+// off-canvas overlay, so the rail is desktop-only.
+const railMode = computed(() => ui.sidebarCollapsed && !isMobile.value)
 function toggleSidebar() {
   if (isMobile.value) mobileOpen.value = !mobileOpen.value
   else ui.toggleSidebar()
@@ -189,7 +201,44 @@ function closeMobile() { mobileOpen.value = false }
         <span class="wm">DIVING<span>HQ</span></span>
       </RouterLink>
 
-      <nav class="sb-nav" aria-label="Primary">
+      <nav class="sb-nav" :class="{ rail: railMode }" aria-label="Primary">
+        <!-- COLLAPSED ICON RAIL: one button per group; the flyout (hover
+             or keyboard focus) lists that group's items. Single-item
+             groups (Dashboard) link directly. -->
+        <template v-if="railMode">
+          <div v-for="g in visibleGroups" :key="g.key" class="sb-rail-group">
+            <RouterLink
+              v-if="!g.group"
+              :to="g.items[0].to"
+              class="sb-rail-btn"
+              :class="{ active: isActive(g.items[0].to) }"
+              v-tip:right.fixed="navLabel(g.items[0])"
+            >
+              <component :is="g.items[0].icon" class="sb-ic" />
+            </RouterLink>
+            <div v-else class="sb-rail-group-wrap">
+              <button type="button" class="sb-rail-btn" :class="{ active: groupActive(g) }" :aria-label="g.group">
+                <component :is="g.icon" class="sb-ic" />
+              </button>
+              <div class="sb-flyout" role="menu" :aria-label="g.group">
+                <div class="sb-flyout-head">{{ g.group }}</div>
+                <RouterLink
+                  v-for="it in g.items"
+                  :key="it.to"
+                  :to="it.to"
+                  class="sb-item sb-flyout-item"
+                  :class="{ active: isActive(it.to) }"
+                  role="menuitem"
+                >
+                  <component :is="it.icon" class="sb-ic" />
+                  <span class="sb-label">{{ navLabel(it) }}</span>
+                </RouterLink>
+              </div>
+            </div>
+          </div>
+        </template>
+        <!-- EXPANDED: full labelled list. -->
+        <template v-else>
         <template v-for="g in visibleGroups" :key="g.group || 'root'">
           <div v-if="g.group" class="sb-group">{{ g.group }}</div>
           <template v-for="it in g.items" :key="it.to || it.menu">
@@ -232,6 +281,7 @@ function closeMobile() { mobileOpen.value = false }
             </RouterLink>
           </template>
         </template>
+        </template>
       </nav>
 
       <div class="sb-foot">
@@ -261,7 +311,7 @@ function closeMobile() { mobileOpen.value = false }
     <!-- Main column -->
     <div class="shell-main">
       <header class="topbar">
-        <button class="icon-btn" type="button" :aria-label="collapsed ? 'Show sidebar' : 'Hide sidebar'" @click="toggleSidebar">
+        <button class="icon-btn" type="button" :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar to icons'" @click="toggleSidebar">
           <PanelLeftOpen v-if="collapsed" />
           <PanelLeftClose v-else />
         </button>
@@ -319,7 +369,9 @@ function closeMobile() { mobileOpen.value = false }
   transition: grid-template-columns var(--dur-slow) var(--ease);
   background: var(--bg);
 }
-.app-shell.collapsed { grid-template-columns: 0 1fr; }
+/* Desktop collapse = a slim icon rail (mobile is handled off-canvas
+   in the media query below, where this width is overridden to 1fr). */
+.app-shell.collapsed { grid-template-columns: 64px 1fr; }
 
 /* ── Sidebar ── */
 .sidebar {
@@ -327,7 +379,10 @@ function closeMobile() { mobileOpen.value = false }
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
   min-width: 0; overflow: hidden;
+  position: relative; z-index: 30;   /* keep flyouts above the main column */
 }
+/* In the rail, the sidebar must not clip the flyouts that escape it. */
+.app-shell.collapsed .sidebar { overflow: visible; }
 .sb-brand {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 18px; border-bottom: 1px solid var(--border);
@@ -365,6 +420,50 @@ function closeMobile() { mobileOpen.value = false }
 .sb-parent.open .sb-sub { display: flex; }
 .sb-subitem { font-size: 12.5px; padding: 6px 10px; }
 .sb-subitem .sb-ic { width: 15px; height: 15px; }
+
+/* ── Collapsed icon rail + hover/focus flyouts ── */
+.sb-nav.rail { overflow: visible; padding: 6px 8px; }
+.sb-rail-group { display: flex; justify-content: center; }
+.sb-rail-group + .sb-rail-group { margin-top: 3px; }
+.sb-rail-group-wrap { position: relative; width: 100%; display: flex; justify-content: center; }
+.sb-rail-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: none; background: none; cursor: pointer;
+  border-radius: var(--radius); color: var(--fg-2);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.sb-rail-btn:hover { background: var(--surface-hover); color: var(--fg); }
+.sb-rail-btn.active { background: var(--accent-soft); color: var(--accent); }
+.sb-rail-btn .sb-ic { width: 19px; height: 19px; }
+
+/* The flyout floats to the right of the rail, above the main column.
+   A transparent bridge (::before) spans the gap so the pointer never
+   leaves a hoverable surface on its way across. */
+.sb-flyout {
+  position: absolute; left: 100%; top: -4px; z-index: 60;
+  min-width: 178px; margin-left: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 10px); padding: 6px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.16);
+  opacity: 0; visibility: hidden; transform: translateX(-4px);
+  transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), visibility var(--dur-fast);
+}
+.sb-flyout::before { content: ''; position: absolute; left: -12px; top: 0; bottom: 0; width: 12px; }
+.sb-rail-group-wrap:hover .sb-flyout,
+.sb-rail-group-wrap:focus-within .sb-flyout {
+  opacity: 1; visibility: visible; transform: translateX(0);
+}
+.sb-flyout-head {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--fg-3); padding: 4px 10px 6px;
+}
+.sb-flyout-item { font-size: 13px; }
+/* Rail: logo mark only, avatar only — hide the wide bits. */
+.app-shell.collapsed .sb-brand { justify-content: center; padding: 14px 0; }
+.app-shell.collapsed .sb-brand .wm { display: none; }
+.app-shell.collapsed .sb-user { justify-content: center; padding: 8px 0; }
+.app-shell.collapsed .sb-user-id,
+.app-shell.collapsed .sb-user-caret { display: none; }
 
 .sb-foot { padding: 10px 12px; border-top: 1px solid var(--border); }
 .sb-user-wrap { position: relative; }
