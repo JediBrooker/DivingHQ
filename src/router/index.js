@@ -98,6 +98,14 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['referee', 'org_admin'], appShell: true },
   },
   {
+    // Context-adaptive: club admins manage, coaches see rosters, divers
+    // see their own enrolment. No role restriction — the view decides
+    // what to show for the signed-in user.
+    path: '/classes',
+    component: () => import('@/views/ClassesView.vue'),
+    meta: { requiresAuth: true, appShell: true },
+  },
+  {
     path: '/donate',
     component: () => import('@/views/DonateView.vue'),
     meta: { requiresAuth: true, appShell: true },

@@ -132,6 +132,18 @@ after(async () => {
   }
 });
 
+// ---- context discovery ------------------------------------------
+test("GET /api/me/club-admin-clubs returns only the caller's own club-admin rows", async (t) => {
+  if (!ready) return t.skip();
+  const mine = await api("GET", "/api/me/club-admin-clubs", null, tokenFor(U.clubAdmin));
+  assert.equal(mine.status, 200);
+  assert.ok(mine.body.some((c) => c.id === clubId));
+  assert.ok(!mine.body.some((c) => c.id === otherClubId), "doesn't see a club they don't admin");
+  const notAdmin = await api("GET", "/api/me/club-admin-clubs", null, tokenFor(U.diver1));
+  assert.equal(notAdmin.status, 200);
+  assert.equal(notAdmin.body.length, 0);
+});
+
 // ---- club-private access control (the crux) --------------------
 test("federation org_admin is BLOCKED from a club's classes (club-private)", async (t) => {
   if (!ready) return t.skip();
@@ -155,6 +167,15 @@ test("unauthenticated requests are rejected", async (t) => {
   if (!ready) return t.skip();
   const s = (await api("GET", `/api/clubs/${clubId}/classes`, null, null)).status;
   assert.ok(s === 401 || s === 403, `expected 401/403, got ${s}`);
+});
+
+test("GET /api/clubs/:id/members lists the club's own divers (club-private)", async (t) => {
+  if (!ready) return t.skip();
+  const res = await api("GET", `/api/clubs/${clubId}/members`, null, tokenFor(U.clubAdmin));
+  assert.equal(res.status, 200);
+  assert.ok(res.body.some((m) => m.id === U.diver1.id));
+  assert.ok(!res.body.some((m) => m.id === U.foreignDiver.id));
+  assert.equal((await api("GET", `/api/clubs/${clubId}/members`, null, tokenFor(U.fedAdmin))).status, 403);
 });
 
 // ---- club admin manages classes --------------------------------

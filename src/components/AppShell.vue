@@ -19,7 +19,7 @@ import {
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award, Gavel,
-  Wallet, History, Receipt, Heart,
+  Wallet, History, Receipt, Heart, Layers,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -41,6 +41,7 @@ const NAV = [
     { to: '/control',        label: 'Control Room',   labelKey: 'control.page_label',     icon: MonitorPlay,   roles: ['org_admin', 'meet_manager', 'referee'] },
     { to: '/competitor',     label: 'Dive Sheets',    icon: Waves,         roles: ['diver'] },
     { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
+    { to: '/classes',        label: 'Classes',        labelKey: 'classes.menu', icon: Layers },
     { menu: 'user-payments', label: 'User Payments', labelKey: 'payments.menu', icon: Wallet, children: [
       { to: '/membership',      label: 'Membership',      labelKey: 'payments.membership',    icon: CreditCard, roles: ['diver'] },
       { to: '/accreditation',   label: 'Accreditation',   labelKey: 'payments.accreditation', icon: Award,      roles: ['judge', 'referee', 'coach', 'meet_manager'] },
