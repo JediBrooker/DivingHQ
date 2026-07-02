@@ -1507,6 +1507,36 @@
     "no_available_classes": "目前没有可报名的课程。",
     "already_enrolled": "您已经报名。",
     "enrol": "报名",
-    "enrol_pending": "已提交报名申请 — 支付功能尚未上线，因此您的状态为待处理。"
+    "enrol_pending": "已提交报名申请 — 支付功能尚未上线，因此您的状态为待处理。",
+    "payouts": {
+      "account_details": "提现银行信息",
+      "account_details_hint": "DivingHQ 会将贵俱乐部应得的课程报名付款份额发送到此账户。无需 Stripe 账户。",
+      "details_on_file": "✓ 已登记 — {name}",
+      "details_missing": "请添加您的提现银行信息，以便我们向您付款。",
+      "field_account_name": "账户名称",
+      "field_account_details": "银行信息（IBAN，或联行号 + 账号）",
+      "saved": "已保存",
+      "error_load": "无法加载提现状态。",
+      "error_save": "保存失败。",
+      "balance": "余额",
+      "balance_owed": "应付贵俱乐部的余额",
+      "withdraw_now": "立即提现",
+      "withdrawal_requested": "已申请提现",
+      "error_withdraw": "无法申请提现。",
+      "auto_withdraw": "自动提现",
+      "auto_withdraw_hint": "余额超过设定阈值后自动为您付款。",
+      "auto_withdraw_enable": "自动提现",
+      "field_threshold": "余额达到以下金额时提现",
+      "threshold_invalid": "请输入至少为 1.00 的阈值。",
+      "history": "提现记录",
+      "history_empty": "暂无提现记录。",
+      "dormant_note": "支付功能即将上线。请先添加您的提现信息和自动提现偏好设置——功能开通后我们将立即为您付款。"
+    },
+    "col_date": "日期",
+    "col_amount": "金额",
+    "pay_now": "立即支付",
+    "error_checkout": "无法开始结账。",
+    "subtab_classes": "课程",
+    "subtab_payouts": "提现"
   }
 }

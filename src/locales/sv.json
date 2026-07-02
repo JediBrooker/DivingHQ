@@ -1507,6 +1507,36 @@
     "no_available_classes": "Inga klasser är tillgängliga att gå med i just nu.",
     "already_enrolled": "Du är redan anmäld.",
     "enrol": "Anmäl",
-    "enrol_pending": "Anmälan begärd – betalning är inte aktiverad än, så du står på listan som väntande."
+    "enrol_pending": "Anmälan begärd – betalning är inte aktiverad än, så du står på listan som väntande.",
+    "payouts": {
+      "account_details": "Bankuppgifter för utbetalning",
+      "account_details_hint": "Hit skickar DivingHQ klubbens andel av betalningar för kursanmälningar. Inget Stripe-konto behövs.",
+      "details_on_file": "✓ Registrerade — {name}",
+      "details_missing": "Lägg till klubbens bankuppgifter för utbetalning så att vi kan betala er.",
+      "field_account_name": "Kontonamn",
+      "field_account_details": "Bankuppgifter (IBAN eller clearingnummer + kontonummer)",
+      "saved": "Sparat",
+      "error_load": "Det gick inte att hämta utbetalningsstatus.",
+      "error_save": "Det gick inte att spara.",
+      "balance": "Saldo",
+      "balance_owed": "Saldo att betala ut till klubben",
+      "withdraw_now": "Ta ut nu",
+      "withdrawal_requested": "Uttag begärt",
+      "error_withdraw": "Det gick inte att begära uttag.",
+      "auto_withdraw": "Automatiska uttag",
+      "auto_withdraw_hint": "Få automatisk utbetalning så snart saldot överstiger en viss gräns.",
+      "auto_withdraw_enable": "Ta ut automatiskt",
+      "field_threshold": "Ta ut när saldot når",
+      "threshold_invalid": "Ange en gräns på minst 1,00.",
+      "history": "Uttagshistorik",
+      "history_empty": "Inga uttag ännu.",
+      "dormant_note": "Betalningar kommer snart. Lägg till era utbetalningsuppgifter och inställningar för automatiskt uttag redan nu — vi betalar ut så snart funktionen är aktiverad."
+    },
+    "col_date": "Datum",
+    "col_amount": "Belopp",
+    "pay_now": "Betala nu",
+    "error_checkout": "Det gick inte att starta betalningen.",
+    "subtab_classes": "Kurser",
+    "subtab_payouts": "Utbetalningar"
   }
 }

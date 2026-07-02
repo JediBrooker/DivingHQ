@@ -1507,6 +1507,36 @@
     "no_available_classes": "Jelenleg nincs elérhető óra, amelyre jelentkezhetnél.",
     "already_enrolled": "Már jelentkeztél.",
     "enrol": "Jelentkezés",
-    "enrol_pending": "Jelentkezés elküldve — a fizetés még nem működik élesben, ezért függőben lévő státusszal kerültél a listára."
+    "enrol_pending": "Jelentkezés elküldve — a fizetés még nem működik élesben, ezért függőben lévő státusszal kerültél a listára.",
+    "payouts": {
+      "account_details": "Kifizetési bankadatok",
+      "account_details_hint": "Ide küldi a DivingHQ a klub részesedését a foglalkozásokra való jelentkezési befizetésekből. Stripe-fiók nem szükséges.",
+      "details_on_file": "✓ Rögzítve — {name}",
+      "details_missing": "Add meg a kifizetési bankadataidat, hogy tudjunk fizetni a klubnak.",
+      "field_account_name": "Számlatulajdonos neve",
+      "field_account_details": "Bankadatok (IBAN, vagy bankszámlaszám)",
+      "saved": "Mentve",
+      "error_load": "Nem sikerült betölteni a kifizetési állapotot.",
+      "error_save": "Nem sikerült menteni.",
+      "balance": "Egyenleg",
+      "balance_owed": "A klubnak járó egyenleg",
+      "withdraw_now": "Kifizetés most",
+      "withdrawal_requested": "Kifizetés kérelmezve",
+      "error_withdraw": "Nem sikerült kérelmezni a kifizetést.",
+      "auto_withdraw": "Automatikus kifizetések",
+      "auto_withdraw_hint": "Automatikusan megkapod a kifizetést, amint az egyenleg elér egy küszöbértéket.",
+      "auto_withdraw_enable": "Automatikus kifizetés bekapcsolása",
+      "field_threshold": "Kifizetés, ha az egyenleg eléri",
+      "threshold_invalid": "Adj meg legalább 1,00 összegű küszöbértéket.",
+      "history": "Kifizetési előzmények",
+      "history_empty": "Még nincs kifizetés.",
+      "dormant_note": "A fizetési funkció hamarosan elérhető. Add meg most a kifizetési adataidat és az automatikus kifizetési beállításaidat — amint a funkció aktiválódik, azonnal utaljuk a kifizetést."
+    },
+    "col_date": "Dátum",
+    "col_amount": "Összeg",
+    "pay_now": "Fizetés most",
+    "error_checkout": "Nem sikerült elindítani a fizetést.",
+    "subtab_classes": "Foglalkozások",
+    "subtab_payouts": "Kifizetések"
   }
 }

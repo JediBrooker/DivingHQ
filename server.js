@@ -711,6 +711,7 @@ app.use(require("./routes/classes")({
   verifyToken,
   requireClubAdminOnly,
   logger,
+  payments,
 }));
 
 // =============================================================

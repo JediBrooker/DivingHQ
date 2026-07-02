@@ -1507,6 +1507,36 @@
     "no_available_classes": "Ingen klasser er tilgjengelige for påmelding akkurat nå.",
     "already_enrolled": "Du er allerede påmeldt.",
     "enrol": "Meld på",
-    "enrol_pending": "Påmelding forespurt – betaling er ikke aktivert ennå, så du står på listen som ventende."
+    "enrol_pending": "Påmelding forespurt – betaling er ikke aktivert ennå, så du står på listen som ventende.",
+    "payouts": {
+      "account_details": "Bankopplysninger for utbetaling",
+      "account_details_hint": "Dit DivingHQ sender klubbens andel av betalinger fra kurspåmeldinger. Ingen Stripe-konto nødvendig.",
+      "details_on_file": "✓ Registrert — {name}",
+      "details_missing": "Legg til klubbens bankopplysninger for utbetaling slik at vi kan betale dere.",
+      "field_account_name": "Kontonavn",
+      "field_account_details": "Bankopplysninger (IBAN, eller kontonummer)",
+      "saved": "Lagret",
+      "error_load": "Kunne ikke laste utbetalingsstatus.",
+      "error_save": "Kunne ikke lagre.",
+      "balance": "Saldo",
+      "balance_owed": "Saldo som skyldes klubben",
+      "withdraw_now": "Ta ut nå",
+      "withdrawal_requested": "Uttak forespurt",
+      "error_withdraw": "Kunne ikke be om uttak.",
+      "auto_withdraw": "Automatiske uttak",
+      "auto_withdraw_hint": "Få utbetalt automatisk når saldoen passerer en grenseverdi.",
+      "auto_withdraw_enable": "Ta ut automatisk",
+      "field_threshold": "Ta ut når saldoen når",
+      "threshold_invalid": "Angi en grenseverdi på minst 1,00.",
+      "history": "Uttakshistorikk",
+      "history_empty": "Ingen uttak ennå.",
+      "dormant_note": "Betalinger kommer snart. Legg til klubbens utbetalingsopplysninger og preferanse for automatisk uttak nå — vi betaler ut i det øyeblikket det slås på."
+    },
+    "col_date": "Dato",
+    "col_amount": "Beløp",
+    "pay_now": "Betal nå",
+    "error_checkout": "Kunne ikke starte betaling.",
+    "subtab_classes": "Klasser",
+    "subtab_payouts": "Utbetalinger"
   }
 }

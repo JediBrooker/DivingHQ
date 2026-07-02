@@ -1077,6 +1077,31 @@ test("empty payout details are rejected", async (t) => {
   assert.equal(res.status, 400);
 });
 
+test("a class_enrolment (club-recipient) payment never counts toward the federation's balance", async (t) => {
+  if (!ready) return t.skip();
+  const before = (await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json()).balance_cents;
+  // A class + enrolment row to satisfy the payments_chk_class_enrolment
+  // constraint (class_enrolment_id + club_id NOT NULL).
+  const cls = (await pool.query(
+    "INSERT INTO classes (club_id, org_id, name) VALUES ($1, $2, 'Balance Test Class') RETURNING id",
+    [clubId, orgId],
+  )).rows[0].id;
+  const enr = (await pool.query(
+    `INSERT INTO class_enrolments (class_id, diver_user_id, club_id, org_id, status)
+     VALUES ($1, $2, $3, $4, 'active') RETURNING id`,
+    [cls, userId, clubId, orgId],
+  )).rows[0].id;
+  await pool.query(
+    `INSERT INTO payments
+        (org_id, payer_user_id, payer_type, subject_type, club_id, recipient_type,
+         class_enrolment_id, amount_cents, platform_fee_cents, currency, status)
+     VALUES ($1, $2, 'user', 'class_enrolment', $3, 'club', $4, 9000, 1350, 'GBP', 'paid')`,
+    [orgId, userId, clubId, enr],
+  );
+  const after = (await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json()).balance_cents;
+  assert.equal(after, before, "the federation's balance is unchanged by a club-recipient payment");
+});
+
 test("auto-withdraw settings save and reflect in status", async (t) => {
   if (!ready) return t.skip();
   let res = await api("PUT", `/api/orgs/${orgId}/withdrawal-settings`, { auto_withdraw_enabled: true, auto_withdraw_min_cents: 5000 });

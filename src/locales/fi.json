@@ -1507,6 +1507,36 @@
     "no_available_classes": "Yhtään ryhmää ei ole tällä hetkellä avoinna liittymistä varten.",
     "already_enrolled": "Olet jo ilmoittautunut.",
     "enrol": "Ilmoittaudu",
-    "enrol_pending": "Ilmoittautuminen vastaanotettu — maksu ei ole vielä käytössä, joten olet listalla odottamassa vahvistusta."
+    "enrol_pending": "Ilmoittautuminen vastaanotettu — maksu ei ole vielä käytössä, joten olet listalla odottamassa vahvistusta.",
+    "payouts": {
+      "account_details": "Tilityksen pankkitiedot",
+      "account_details_hint": "Tänne DivingHQ lähettää seuranne osuuden ryhmäilmoittautumisten maksuista. Stripe-tiliä ei tarvita.",
+      "details_on_file": "✓ Tallennettu — {name}",
+      "details_missing": "Lisää tilityksen pankkitiedot, jotta voimme maksaa teille.",
+      "field_account_name": "Tilin nimi",
+      "field_account_details": "Pankkitiedot (IBAN tai pankkikoodi ja tilinumero)",
+      "saved": "Tallennettu",
+      "error_load": "Tilitystilan lataaminen epäonnistui.",
+      "error_save": "Tallennus epäonnistui.",
+      "balance": "Saldo",
+      "balance_owed": "Seuralle maksettava saldo",
+      "withdraw_now": "Nosta nyt",
+      "withdrawal_requested": "Nosto pyydetty",
+      "error_withdraw": "Noston pyytäminen epäonnistui.",
+      "auto_withdraw": "Automaattiset nostot",
+      "auto_withdraw_hint": "Saat maksun automaattisesti, kun saldo ylittää asetetun rajan.",
+      "auto_withdraw_enable": "Nosta automaattisesti",
+      "field_threshold": "Nosta, kun saldo saavuttaa",
+      "threshold_invalid": "Anna vähintään 1,00 suuruinen raja.",
+      "history": "Nostohistoria",
+      "history_empty": "Ei vielä nostoja.",
+      "dormant_note": "Maksut ovat tulossa pian. Lisää tilityksen tiedot ja automaattisen noston asetukset jo nyt — maksamme heti, kun ominaisuus otetaan käyttöön."
+    },
+    "col_date": "Päivämäärä",
+    "col_amount": "Summa",
+    "pay_now": "Maksa nyt",
+    "error_checkout": "Maksun aloittaminen epäonnistui.",
+    "subtab_classes": "Ryhmät",
+    "subtab_payouts": "Tilitykset"
   }
 }

@@ -1449,7 +1449,7 @@
     "type_scratch": "Scratch penalty",
     "type_no_show": "No-show penalty"
   },
-  "classes": {
+  "classes":   {
     "menu": "Classes",
     "title": "Classes",
     "subtitle": "Club training classes — manage, coach, or your own enrolment, depending on your role.",
@@ -1507,6 +1507,36 @@
     "no_available_classes": "No classes are available to join right now.",
     "already_enrolled": "You're already enrolled.",
     "enrol": "Enrol",
-    "enrol_pending": "Enrolment requested — payment isn't live yet, so you're on the list as pending."
+    "enrol_pending": "Enrolment requested — payment isn't live yet, so you're on the list as pending.",
+    "col_date": "Date",
+    "col_amount": "Amount",
+    "pay_now": "Pay now",
+    "error_checkout": "Could not start checkout.",
+    "subtab_classes": "Classes",
+    "subtab_payouts": "Payouts",
+    "payouts": {
+      "account_details": "Payout bank details",
+      "account_details_hint": "Where DivingHQ sends your club's share of class-enrolment payments. No Stripe account needed.",
+      "details_on_file": "✓ On file — {name}",
+      "details_missing": "Add your payout bank details so we can pay you.",
+      "field_account_name": "Account name",
+      "field_account_details": "Bank details (IBAN, or sort code + account number)",
+      "saved": "Saved",
+      "error_load": "Could not load payout status.",
+      "error_save": "Could not save.",
+      "balance": "Balance",
+      "balance_owed": "Balance owed to your club",
+      "withdraw_now": "Withdraw now",
+      "withdrawal_requested": "Withdrawal requested",
+      "error_withdraw": "Could not request withdrawal.",
+      "auto_withdraw": "Automatic withdrawals",
+      "auto_withdraw_hint": "Get paid automatically once your balance passes a threshold.",
+      "auto_withdraw_enable": "Withdraw automatically",
+      "field_threshold": "Withdraw when the balance reaches",
+      "threshold_invalid": "Enter a threshold of at least 1.00.",
+      "history": "Withdrawal history",
+      "history_empty": "No withdrawals yet.",
+      "dormant_note": "Payments are coming soon. Add your payout details and automatic-withdrawal preference now — we'll pay out the moment it's switched on."
+    }
   }
 }

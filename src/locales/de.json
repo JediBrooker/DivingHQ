@@ -1507,6 +1507,36 @@
     "no_available_classes": "Derzeit sind keine Kurse zum Beitreten verfügbar.",
     "already_enrolled": "Du bist bereits angemeldet.",
     "enrol": "Anmelden",
-    "enrol_pending": "Anmeldung angefragt — die Bezahlung ist noch nicht aktiv, daher stehst du als ausstehend auf der Liste."
+    "enrol_pending": "Anmeldung angefragt — die Bezahlung ist noch nicht aktiv, daher stehst du als ausstehend auf der Liste.",
+    "payouts": {
+      "account_details": "Bankverbindung für Auszahlungen",
+      "account_details_hint": "Hierhin sendet DivingHQ den Anteil eures Vereins an den Zahlungen für Kursanmeldungen. Kein Stripe-Konto erforderlich.",
+      "details_on_file": "✓ Hinterlegt — {name}",
+      "details_missing": "Hinterlegt eure Bankverbindung für Auszahlungen, damit wir euch bezahlen können.",
+      "field_account_name": "Kontoinhaber",
+      "field_account_details": "Bankverbindung (IBAN oder Bankleitzahl + Kontonummer)",
+      "saved": "Gespeichert",
+      "error_load": "Auszahlungsstatus konnte nicht geladen werden.",
+      "error_save": "Speichern fehlgeschlagen.",
+      "balance": "Kontostand",
+      "balance_owed": "Guthaben eures Vereins",
+      "withdraw_now": "Jetzt auszahlen",
+      "withdrawal_requested": "Auszahlung angefordert",
+      "error_withdraw": "Auszahlung konnte nicht angefordert werden.",
+      "auto_withdraw": "Automatische Auszahlungen",
+      "auto_withdraw_hint": "Werdet automatisch ausgezahlt, sobald euer Guthaben einen Schwellenwert überschreitet.",
+      "auto_withdraw_enable": "Automatisch auszahlen",
+      "field_threshold": "Auszahlen, sobald das Guthaben erreicht",
+      "threshold_invalid": "Gebt einen Schwellenwert von mindestens 1,00 ein.",
+      "history": "Auszahlungsverlauf",
+      "history_empty": "Noch keine Auszahlungen.",
+      "dormant_note": "Zahlungen sind bald verfügbar. Hinterlegt schon jetzt eure Auszahlungsdaten und eure Einstellung für automatische Auszahlungen — wir zahlen aus, sobald die Funktion aktiviert ist."
+    },
+    "col_date": "Datum",
+    "col_amount": "Betrag",
+    "pay_now": "Jetzt bezahlen",
+    "error_checkout": "Bezahlvorgang konnte nicht gestartet werden.",
+    "subtab_classes": "Kurse",
+    "subtab_payouts": "Auszahlungen"
   }
 }

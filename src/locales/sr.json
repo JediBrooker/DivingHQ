@@ -1507,6 +1507,36 @@
     "no_available_classes": "Trenutno nema dostupnih klasa za prijavu.",
     "already_enrolled": "Već ste prijavljeni.",
     "enrol": "Prijavi se",
-    "enrol_pending": "Prijava je zatražena — plaćanje još nije aktivno, pa ste na listi kao na čekanju."
+    "enrol_pending": "Prijava je zatražena — plaćanje još nije aktivno, pa ste na listi kao na čekanju.",
+    "payouts": {
+      "account_details": "Podaci o bankovnom računu za isplatu",
+      "account_details_hint": "Ovde DivingHQ šalje udeo vašeg kluba od uplata za upis na treninge. Nije potreban Stripe nalog.",
+      "details_on_file": "✓ Evidentirano — {name}",
+      "details_missing": "Dodajte podatke o bankovnom računu za isplatu kako bismo vam mogli isplatiti sredstva.",
+      "field_account_name": "Naziv računa",
+      "field_account_details": "Podaci o računu (IBAN ili broj banke i broj računa)",
+      "saved": "Sačuvano",
+      "error_load": "Nije moguće učitati status isplata.",
+      "error_save": "Nije moguće sačuvati.",
+      "balance": "Stanje",
+      "balance_owed": "Iznos koji se duguje vašem klubu",
+      "withdraw_now": "Isplati odmah",
+      "withdrawal_requested": "Isplata zatražena",
+      "error_withdraw": "Nije moguće zatražiti isplatu.",
+      "auto_withdraw": "Automatske isplate",
+      "auto_withdraw_hint": "Sredstva se automatski isplaćuju kada stanje pređe zadati prag.",
+      "auto_withdraw_enable": "Isplaćuj automatski",
+      "field_threshold": "Isplati kada stanje dostigne",
+      "threshold_invalid": "Unesite prag od najmanje 1,00.",
+      "history": "Istorija isplata",
+      "history_empty": "Još uvek nema isplata.",
+      "dormant_note": "Plaćanja uskoro stižu. Dodajte podatke za isplatu i podesite automatsku isplatu odmah — isplatićemo sredstva čim ova funkcija bude uključena."
+    },
+    "col_date": "Datum",
+    "col_amount": "Iznos",
+    "pay_now": "Plati odmah",
+    "error_checkout": "Nije moguće pokrenuti plaćanje.",
+    "subtab_classes": "Treninzi",
+    "subtab_payouts": "Isplate"
   }
 }

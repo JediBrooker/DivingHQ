@@ -1507,6 +1507,36 @@
     "no_available_classes": "Obecnie brak zajęć dostępnych do zapisu.",
     "already_enrolled": "Jesteś już zapisany.",
     "enrol": "Zapisz się",
-    "enrol_pending": "Zgłoszono zapis — płatności nie są jeszcze aktywne, więc znajdujesz się na liście jako oczekujący."
+    "enrol_pending": "Zgłoszono zapis — płatności nie są jeszcze aktywne, więc znajdujesz się na liście jako oczekujący.",
+    "payouts": {
+      "account_details": "Dane bankowe do wypłat",
+      "account_details_hint": "Tutaj DivingHQ przesyła udział Twojego klubu z opłat za zapisy na zajęcia. Konto Stripe nie jest potrzebne.",
+      "details_on_file": "✓ Zapisane — {name}",
+      "details_missing": "Dodaj dane bankowe do wypłat, abyśmy mogli przekazać Ci środki.",
+      "field_account_name": "Nazwa konta",
+      "field_account_details": "Dane bankowe (IBAN lub numer rozliczeniowy i numer konta)",
+      "saved": "Zapisano",
+      "error_load": "Nie udało się wczytać statusu wypłat.",
+      "error_save": "Nie udało się zapisać.",
+      "balance": "Saldo",
+      "balance_owed": "Saldo należne Twojemu klubowi",
+      "withdraw_now": "Wypłać teraz",
+      "withdrawal_requested": "Zażądano wypłaty",
+      "error_withdraw": "Nie udało się zlecić wypłaty.",
+      "auto_withdraw": "Automatyczne wypłaty",
+      "auto_withdraw_hint": "Otrzymuj wypłaty automatycznie, gdy saldo przekroczy określony próg.",
+      "auto_withdraw_enable": "Wypłacaj automatycznie",
+      "field_threshold": "Wypłacaj, gdy saldo osiągnie",
+      "threshold_invalid": "Podaj próg wynoszący co najmniej 1,00.",
+      "history": "Historia wypłat",
+      "history_empty": "Brak wypłat.",
+      "dormant_note": "Płatności będą dostępne wkrótce. Dodaj teraz dane do wypłat oraz preferencje automatycznej wypłaty — wypłacimy środki natychmiast po uruchomieniu tej funkcji."
+    },
+    "col_date": "Data",
+    "col_amount": "Kwota",
+    "pay_now": "Zapłać teraz",
+    "error_checkout": "Nie udało się rozpocząć płatności.",
+    "subtab_classes": "Zajęcia",
+    "subtab_payouts": "Wypłaty"
   }
 }

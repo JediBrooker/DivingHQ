@@ -82,6 +82,13 @@ async function onCheckoutCompleted(pool, logger, session) {
         "UPDATE fines SET status = 'paid' WHERE id = $1 AND status IN ('owed', 'appealed')",
         [payment.fine_id],
       );
+    } else if (payment.subject_type === "class_enrolment") {
+      // The club (not the federation) is this payment's recipient — see
+      // migration 078. Activates the roster row the diver was pending on.
+      await client.query(
+        "UPDATE class_enrolments SET status = 'active', payment_id = $1, updated_at = now() WHERE id = $2 AND status = 'pending'",
+        [payment.id, payment.class_enrolment_id],
+      );
     }
     // For 'event_entry' the payment is now recorded as paid. Actually
     // building/confirming the diver's dive list stays in the entry flow
@@ -229,6 +236,16 @@ async function onChargeRefunded(pool, charge) {
         AND payment_id IN (
           SELECT id FROM payments WHERE stripe_payment_intent = $1 AND status = 'refunded'
         )`,
+    [pi],
+  );
+  // A fully-refunded class enrolment goes back to 'pending' (and frees its
+  // payment link so the diver can retry) — same "reopen, don't cancel"
+  // treatment as fines/penalties above.
+  await pool.query(
+    `UPDATE class_enrolments SET status = 'pending', payment_id = NULL, updated_at = now()
+      WHERE status = 'active' AND payment_id IN (
+        SELECT id FROM payments WHERE stripe_payment_intent = $1 AND subject_type = 'class_enrolment' AND status = 'refunded'
+      )`,
     [pi],
   );
 }

@@ -17,6 +17,7 @@ const mine = ref([])
 const available = ref([])
 const enrolling = ref(null)
 const chosenPrice = ref({})
+const payingId = ref(null)
 
 function money(cents, currency) {
   if (cents == null) return ''
@@ -40,6 +41,24 @@ async function load() {
     showError(e.message || t('classes.error_load'))
   } finally {
     loading.value = false
+  }
+}
+
+async function payNow(e) {
+  payingId.value = e.id
+  try {
+    const res = await auth.apiFetch(`/api/me/class-enrolments/${e.id}/checkout`, { method: 'POST' })
+    if (res.url) {
+      window.location.href = res.url
+      return
+    }
+    // Fully covered by a discount — activated directly, no Stripe redirect.
+    showSuccess(t('classes.enrolled'))
+    await load()
+  } catch (err) {
+    showError(err.message || t('classes.error_checkout'))
+  } finally {
+    payingId.value = null
   }
 }
 
@@ -85,6 +104,9 @@ onMounted(load)
             <div class="class-foot">
               <span class="pill" :class="e.status">{{ t(`classes.status_${e.status}`) }}</span>
               <span v-if="e.price_label" class="muted small">{{ e.price_label }}: {{ money(e.amount_cents, e.currency) }}</span>
+              <button v-if="e.status === 'pending'" class="btn pay-btn" type="button" :disabled="payingId === e.id" @click="payNow(e)">
+                {{ payingId === e.id ? t('common.loading') : t('classes.pay_now') }}
+              </button>
             </div>
           </div>
         </div>
@@ -141,4 +163,5 @@ onMounted(load)
 .price-pick .in { padding: .35rem .5rem; border: 1px solid var(--border, #ddd); border-radius: var(--radius, .5rem); background: transparent; color: var(--fg, #222); font: inherit; }
 .btn { align-self: flex-start; padding: .45rem .9rem; border: 0; border-radius: var(--radius, .5rem); background: var(--accent, #3b6); color: #fff; cursor: pointer; font: inherit; }
 .btn:disabled { opacity: .55; cursor: default; }
+.pay-btn { padding: .2rem .6rem; font-size: .78rem; margin-left: auto; }
 </style>

@@ -1507,6 +1507,36 @@
     "no_available_classes": "Aucun cours n'est disponible pour le moment.",
     "already_enrolled": "Vous êtes déjà inscrit.",
     "enrol": "S'inscrire",
-    "enrol_pending": "Inscription demandée — le paiement n'est pas encore actif, vous figurez donc sur la liste en attente."
+    "enrol_pending": "Inscription demandée — le paiement n'est pas encore actif, vous figurez donc sur la liste en attente.",
+    "payouts": {
+      "account_details": "Coordonnées bancaires de versement",
+      "account_details_hint": "L'adresse à laquelle DivingHQ envoie la part de votre club sur les paiements d'inscription aux cours. Aucun compte Stripe requis.",
+      "details_on_file": "✓ Enregistrées — {name}",
+      "details_missing": "Ajoutez vos coordonnées bancaires de versement afin que nous puissions vous payer.",
+      "field_account_name": "Nom du titulaire du compte",
+      "field_account_details": "Coordonnées bancaires (IBAN, ou code guichet + numéro de compte)",
+      "saved": "Enregistré",
+      "error_load": "Impossible de charger l'état des versements.",
+      "error_save": "Impossible d'enregistrer.",
+      "balance": "Solde",
+      "balance_owed": "Solde dû à votre club",
+      "withdraw_now": "Retirer maintenant",
+      "withdrawal_requested": "Retrait demandé",
+      "error_withdraw": "Impossible de demander le retrait.",
+      "auto_withdraw": "Retraits automatiques",
+      "auto_withdraw_hint": "Soyez payé automatiquement dès que votre solde dépasse un seuil.",
+      "auto_withdraw_enable": "Retirer automatiquement",
+      "field_threshold": "Retirer lorsque le solde atteint",
+      "threshold_invalid": "Saisissez un seuil d'au moins 1,00.",
+      "history": "Historique des retraits",
+      "history_empty": "Aucun retrait pour le moment.",
+      "dormant_note": "Les paiements arrivent bientôt. Ajoutez dès maintenant vos coordonnées de versement et vos préférences de retrait automatique — nous vous paierons dès l'activation."
+    },
+    "col_date": "Date",
+    "col_amount": "Montant",
+    "pay_now": "Payer maintenant",
+    "error_checkout": "Impossible de démarrer le paiement.",
+    "subtab_classes": "Cours",
+    "subtab_payouts": "Versements"
   }
 }

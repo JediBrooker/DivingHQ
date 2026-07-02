@@ -1507,6 +1507,36 @@
     "no_available_classes": "Ahora mismo no hay clases disponibles para inscribirte.",
     "already_enrolled": "Ya estás inscrito.",
     "enrol": "Inscribirse",
-    "enrol_pending": "Inscripción solicitada: los pagos aún no están activos, así que quedas en la lista como pendiente."
+    "enrol_pending": "Inscripción solicitada: los pagos aún no están activos, así que quedas en la lista como pendiente.",
+    "payouts": {
+      "account_details": "Datos bancarios de pago",
+      "account_details_hint": "Adónde envía DivingHQ la parte correspondiente a tu club de los pagos de inscripción a clases. No se necesita cuenta de Stripe.",
+      "details_on_file": "✓ Registrados — {name}",
+      "details_missing": "Añade los datos bancarios de pago de tu club para que podamos pagarte.",
+      "field_account_name": "Nombre de la cuenta",
+      "field_account_details": "Datos bancarios (IBAN, o código bancario y número de cuenta)",
+      "saved": "Guardado",
+      "error_load": "No se pudo cargar el estado de los pagos.",
+      "error_save": "No se pudo guardar.",
+      "balance": "Saldo",
+      "balance_owed": "Saldo adeudado a tu club",
+      "withdraw_now": "Retirar ahora",
+      "withdrawal_requested": "Retiro solicitado",
+      "error_withdraw": "No se pudo solicitar el retiro.",
+      "auto_withdraw": "Retiros automáticos",
+      "auto_withdraw_hint": "Recibe el pago automáticamente cuando tu saldo supere un umbral.",
+      "auto_withdraw_enable": "Retirar automáticamente",
+      "field_threshold": "Retirar cuando el saldo alcance",
+      "threshold_invalid": "Introduce un umbral de al menos 1,00.",
+      "history": "Historial de retiros",
+      "history_empty": "Aún no hay retiros.",
+      "dormant_note": "Los pagos estarán disponibles próximamente. Añade ya tus datos de pago y tu preferencia de retiro automático; te pagaremos en cuanto se active."
+    },
+    "col_date": "Fecha",
+    "col_amount": "Importe",
+    "pay_now": "Pagar ahora",
+    "error_checkout": "No se pudo iniciar el pago.",
+    "subtab_classes": "Clases",
+    "subtab_payouts": "Pagos"
   }
 }
