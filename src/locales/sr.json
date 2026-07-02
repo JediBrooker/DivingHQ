@@ -1427,7 +1427,7 @@
     "col_date": "Datum",
     "col_description": "Opis",
     "col_amount": "Iznos",
-    "col_status": "Status",
+    "col_status": "Статус",
     "download_csv": "Preuzmi CSV",
     "download_pdf": "Preuzmi PDF",
     "generated_on": "Generisano {date}",
