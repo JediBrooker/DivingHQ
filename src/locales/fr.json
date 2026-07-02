@@ -1538,7 +1538,17 @@
       "history_empty": "Aucun retrait pour le moment.",
       "dormant_note": "Les paiements arrivent bientôt. Ajoutez dès maintenant vos coordonnées de versement et vos préférences de retrait automatique — nous vous paierons dès l'activation.",
       "federation_fees": "Frais de fédération",
-      "federation_fees_hint": "Frais annuels d'affiliation et d'accréditation que votre club verse à la fédération."
+      "federation_fees_hint": "Frais annuels d'affiliation et d'accréditation que votre club verse à la fédération.",
+      "onboard_hint": "DivingHQ vous paie via Stripe. Inscrivez-vous une fois — ajoutez votre compte bancaire et vérifiez votre identité sur la page sécurisée de Stripe. Vos coordonnées bancaires restent chez Stripe, jamais chez nous.",
+      "payouts_ready": "Les paiements sont configurés — vous pouvez retirer.",
+      "onboard_incomplete": "Inscription commencée mais non terminée — quelques informations sont encore nécessaires.",
+      "onboard_needed": "Pas encore configuré — connectez votre banque pour que nous puissions vous payer.",
+      "onboard_needed_short": "Configurez les paiements pour retirer.",
+      "onboard_start": "Configurer les paiements",
+      "onboard_resume": "Terminer la configuration des paiements",
+      "error_onboard": "Impossible de démarrer l'inscription aux paiements",
+      "withdrawal_sent": "En route — votre paiement a été envoyé à votre banque.",
+      "withdrawal_failed": "Un virement a échoué — votre solde a été restauré. Vérifiez votre configuration de paiement et réessayez."
     },
     "col_date": "Date",
     "col_amount": "Montant",

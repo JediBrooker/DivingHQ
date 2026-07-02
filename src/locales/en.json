@@ -1544,7 +1544,17 @@
       "history_empty": "No withdrawals yet.",
       "dormant_note": "Payments are coming soon. Add your payout details and automatic-withdrawal preference now — we'll pay out the moment it's switched on.",
       "federation_fees": "Federation fees",
-      "federation_fees_hint": "Annual affiliation and accreditation fees your club pays the federation."
+      "federation_fees_hint": "Annual affiliation and accreditation fees your club pays the federation.",
+      "onboard_hint": "DivingHQ pays you through Stripe. Onboard once — add your bank account and verify your identity on Stripe's secure page. Your bank details stay with Stripe, never with us.",
+      "payouts_ready": "Payouts are set up — you're ready to withdraw.",
+      "onboard_incomplete": "Onboarding started but not finished — a few details are still needed.",
+      "onboard_needed": "Not set up yet — connect your bank so we can pay you.",
+      "onboard_needed_short": "Set up payouts to withdraw.",
+      "onboard_start": "Set up payouts",
+      "onboard_resume": "Finish payout setup",
+      "error_onboard": "Could not start payout onboarding",
+      "withdrawal_sent": "On its way — your payout has been sent to your bank.",
+      "withdrawal_failed": "A transfer failed — your balance was restored. Check your payout setup and try again."
     },
     "confirm_refund": "Refund {amount} to {name}? The enrolment will go back to unpaid.",
     "refunded": "Refund issued",

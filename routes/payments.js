@@ -25,7 +25,7 @@ const express = require("express");
 const { resolvePrice, priceCharge } = require("../lib/fee-pricing");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const ledger = require("../lib/payout-ledger");
-const { fromStripeAmount } = require("../lib/stripe");
+const { fromStripeAmount, toAlpha2 } = require("../lib/stripe");
 const { retirePendingPayment, resumeOrRetireCheckout, applyFullRefundSideEffects } = require("../lib/payment-lifecycle");
 
 const APP_BASE_URL =
@@ -799,36 +799,46 @@ module.exports = function createPaymentsRouter({
   // balance owed = net (amount - our 15%) of their paid payments, minus what
   // we've already paid out.
 
-  // Payout status + balance owed for a federation.
+  // Payout status + balance owed for a federation. Refreshes the cached
+  // Connect readiness flag from Stripe so the UI reflects onboarding
+  // completion without waiting on a webhook.
   router.get("/api/orgs/:id/payments/status", requireOrgRole(["org_admin"]), async (req, res) => {
     const orgId = req.params.id;
     if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
     try {
       const org = (await pool.query(
-        `SELECT payout_account_name, payout_account_details, default_currency,
+        `SELECT stripe_account_id, stripe_payouts_enabled, default_currency,
                 auto_withdraw_enabled, auto_withdraw_min_cents
            FROM organisations WHERE id = $1`,
         [orgId],
       )).rows[0];
       if (!org) return res.status(404).json({ error: "Organisation not found" });
+      let payoutsReady = !!org.stripe_payouts_enabled;
+      if (payments.enabled && org.stripe_account_id) {
+        try {
+          const st = await payments.retrieveAccountStatus({ accountId: org.stripe_account_id });
+          payoutsReady = st.payoutsEnabled;
+          if (st.payoutsEnabled !== org.stripe_payouts_enabled) {
+            await pool.query("UPDATE organisations SET stripe_payouts_enabled = $2 WHERE id = $1", [orgId, st.payoutsEnabled]);
+          }
+        } catch (e) {
+          logger.warn({ err: e.message, org: orgId }, "[payments] account status refresh failed");
+        }
+      }
       const base = {
-        payout_details_set: !!(org.payout_account_name && org.payout_account_details),
-        account_name: org.payout_account_name || null,
+        connected: !!org.stripe_account_id,
+        payouts_ready: payoutsReady,
         currency: org.default_currency || null,
         auto_withdraw_enabled: !!org.auto_withdraw_enabled,
         auto_withdraw_min_cents: org.auto_withdraw_min_cents ?? null,
       };
-      // Coming-soon: report payout + auto-withdraw settings (they don't need
-      // Stripe) but no balance until payments are switched on.
       if (!payments.enabled) return res.json({ enabled: false, ...base, balances: [], balance_cents: 0 });
       const balances = await orgBalancesByCurrency(orgId);
       const primary = balances[0] || null;
       return res.json({
         enabled: true,
         ...base,
-        // Per-currency amounts owed; the UI renders each in its own currency.
         balances,
-        // Convenience for the common single-currency case: the largest bucket.
         balance_cents: primary ? primary.cents : 0,
         currency: primary ? primary.currency : base.currency,
       });
@@ -838,29 +848,49 @@ module.exports = function createPaymentsRouter({
     }
   });
 
-  // Federation saves its payout bank details.
-  router.put("/api/orgs/:id/payout-details", requireOrgRole(["org_admin"]), async (req, res) => {
+  // Federation starts (or resumes) Stripe-hosted payout onboarding. Creates
+  // a recipient connected account on first call, then returns a fresh
+  // onboarding link. Bank details live at Stripe — never in our DB.
+  router.post("/api/orgs/:id/connect/onboard", requireOrgRole(["org_admin"]), async (req, res) => {
+    if (!ensurePayments(res)) return;
     const orgId = req.params.id;
     if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
-    const name = ((req.body || {}).account_name || "").toString().trim();
-    const details = ((req.body || {}).account_details || "").toString().trim();
-    if (!name || !details) return res.status(400).json({ error: "Account name and details are required." });
     try {
-      await pool.query(
-        "UPDATE organisations SET payout_account_name = $1, payout_account_details = $2 WHERE id = $3",
-        [name.slice(0, 200), details.slice(0, 500), orgId],
-      );
-      // Audit the change but never the details themselves — a silent bank-
-      // detail swap is how a compromised admin account redirects payouts.
-      recordAudit(pool, {
-        ...auditFromReq(req), org_id: orgId,
-        entity_type: "org", entity_id: orgId,
-        action: "payout_details.updated", metadata: { account_name: name.slice(0, 200) },
-      }).catch(() => {});
-      return res.json({ ok: true });
+      const org = (await pool.query(
+        "SELECT id, name, stripe_account_id, default_currency, country_code FROM organisations WHERE id = $1",
+        [orgId],
+      )).rows[0];
+      if (!org) return res.status(404).json({ error: "Organisation not found" });
+      let accountId = org.stripe_account_id;
+      if (!accountId) {
+        const country = toAlpha2(org.country_code);
+        // Stripe requires a contact email on the recipient account. The JWT
+        // doesn't carry email, so fetch the acting admin's; the recipient
+        // can change it during onboarding anyway.
+        const contactEmail = (await pool.query("SELECT email FROM users WHERE id = $1", [req.user.id])).rows[0]?.email
+          || process.env.PLATFORM_OPS_EMAIL || process.env.EMAIL_FROM;
+        const acct = await payments.createRecipientAccount({
+          country, email: contactEmail, name: org.name, currency: org.default_currency,
+        });
+        accountId = acct.id;
+        await pool.query(
+          "UPDATE organisations SET stripe_account_id = $2, stripe_account_country = $3 WHERE id = $1",
+          [orgId, accountId, country],
+        );
+        recordAudit(pool, {
+          ...auditFromReq(req), org_id: orgId, entity_type: "org", entity_id: orgId,
+          action: "connect.account_created", metadata: { account_id: accountId, country },
+        }).catch(() => {});
+      }
+      const url = await payments.createOnboardingLink({
+        accountId,
+        returnUrl: `${APP_BASE_URL}/payments?onboarding=complete`,
+        refreshUrl: `${APP_BASE_URL}/payments?onboarding=refresh`,
+      });
+      return res.json({ url });
     } catch (err) {
-      logger.error({ err: err.message }, "[payments] save payout details failed");
-      return res.status(500).json({ error: "Failed to save payout details." });
+      logger.error({ err: err.message }, "[payments] org onboarding failed");
+      return res.status(err.status || 500).json({ error: err.message || "Could not start payout onboarding." });
     }
   });
 
@@ -918,56 +948,52 @@ module.exports = function createPaymentsRouter({
     }
   });
 
-  // Federation requests a withdrawal of its owed balance. Only meaningful once
-  // payments are live (nothing to withdraw while dormant, so ensurePayments
-  // 503s). lib/payout-ledger locks the org row FOR UPDATE so two concurrent
-  // requests can't both read the same balance and over-withdraw, and records
-  // one pending payout PER CURRENCY. The actual bank transfer is settled by
-  // the platform operator (notified by email; back-office endpoints below).
+  // Federation withdraws its owed balance. lib/payout-ledger locks the org
+  // row so two concurrent requests can't over-withdraw, books one pending
+  // payout PER CURRENCY, then fires the real Stripe transfer to the org's
+  // recipient account — success settles to 'paid', any Stripe error to
+  // 'failed' (balance auto-restores). No operator step, no bank details.
   router.post("/api/orgs/:id/withdrawals", requireOrgRole(["org_admin"]), async (req, res) => {
     if (!ensurePayments(res)) return;
     const orgId = req.params.id;
     if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
     try {
       const note = ((req.body || {}).note || "").toString().trim().slice(0, 200) || null;
-      const payouts = await ledger.createWithdrawal(pool, { orgId, note });
+      const { payouts, accountId } = await ledger.createWithdrawal(pool, { orgId, note });
+      const settled = await ledger.executePayouts(pool, payments, payouts, accountId, { logger });
       recordAudit(pool, {
         ...auditFromReq(req), org_id: orgId,
-        entity_type: "payout", entity_id: payouts[0]?.id || null,
-        action: "payout.requested",
-        metadata: { payouts: payouts.map((p) => ({ id: p.id, amount_cents: p.amount_cents, currency: p.currency })) },
+        entity_type: "payout", entity_id: settled[0]?.id || null,
+        action: "payout.executed",
+        metadata: { payouts: settled.map((p) => ({ id: p.id, amount_cents: p.amount_cents, currency: p.currency, status: p.status })) },
       }).catch(() => {});
-      email?.sendPayoutRequestedEmail({ orgId, payouts });
-      return res.status(201).json(payouts);
+      email?.sendPayoutFailedEmail({ orgId, payouts: settled });
+      return res.status(201).json(settled);
     } catch (err) {
       logger.error({ err: err.message }, "[payments] withdrawal request failed");
       return res.status(err.status || 500).json({ error: err.message || "Withdrawal failed." });
     }
   });
 
-  // ---- Payout back-office (platform operator only) -----------------
-  // The platform is the merchant of record: withdrawals are fulfilled by a
-  // real-world bank transfer the OPERATOR makes, then records here. Without
-  // these endpoints a payout row could never leave 'pending' and nobody
-  // could see the bank details a transfer should go to.
-
-  // Every payout across all federations + clubs (default: the pending queue),
-  // joined with the recipient's name and bank details for fulfilment.
+  // ---- Payout monitoring (platform operator only) -----------------
+  // Payouts are now fulfilled automatically by Stripe Connect transfers, so
+  // there's no manual bank-transfer or mark-paid step. This read-only queue
+  // lets the operator watch the flow across every federation + club and spot
+  // any 'failed' payouts (which restore the recipient's balance for retry).
   router.get("/api/admin/payouts", requireSystemAdmin, async (req, res) => {
-    const status = ["pending", "paid", "failed"].includes(req.query.status) ? req.query.status : "pending";
+    const status = ["pending", "paid", "failed"].includes(req.query.status) ? req.query.status : "paid";
     try {
       const rows = (await pool.query(
         `SELECT p.id, p.amount_cents, p.currency, p.status, p.note, p.created_at, p.paid_at,
-                p.org_id, p.club_id,
+                p.org_id, p.club_id, p.stripe_transfer_id,
                 COALESCE(o.name, c.name) AS recipient_name,
                 CASE WHEN p.org_id IS NOT NULL THEN 'org' ELSE 'club' END AS recipient_type,
-                COALESCE(o.payout_account_name, c.payout_account_name) AS payout_account_name,
-                COALESCE(o.payout_account_details, c.payout_account_details) AS payout_account_details
+                COALESCE(o.stripe_account_id, c.stripe_account_id) AS stripe_account_id
            FROM payouts p
            LEFT JOIN organisations o ON o.id = p.org_id
            LEFT JOIN clubs c ON c.id = p.club_id
           WHERE p.status = $1
-          ORDER BY p.created_at ASC
+          ORDER BY p.created_at DESC
           LIMIT 200`,
         [status],
       )).rows;
@@ -975,42 +1001,6 @@ module.exports = function createPaymentsRouter({
     } catch (err) {
       logger.error({ err: err.message }, "[payments] admin list payouts failed");
       return res.status(500).json({ error: "Failed to list payouts." });
-    }
-  });
-
-  // Operator records the outcome of a pending payout: 'paid' once the bank
-  // transfer is made, or 'failed' to cancel it — a failed payout stops
-  // counting against the recipient's balance, so the money becomes
-  // withdrawable again (e.g. after fixing bad bank details).
-  router.post("/api/admin/payouts/:id/settle", requireSystemAdmin, async (req, res) => {
-    const outcome = (req.body || {}).status;
-    if (!["paid", "failed"].includes(outcome)) {
-      return res.status(400).json({ error: "status must be 'paid' or 'failed'." });
-    }
-    try {
-      const r = await pool.query(
-        `UPDATE payouts
-            SET status = $2::varchar, paid_at = CASE WHEN $2::varchar = 'paid' THEN now() ELSE NULL END
-          WHERE id = $1 AND status = 'pending'
-          RETURNING id, org_id, club_id, amount_cents, currency, status, paid_at`,
-        [req.params.id, outcome],
-      );
-      if (!r.rows.length) {
-        const cur = (await pool.query("SELECT status FROM payouts WHERE id = $1", [req.params.id])).rows[0];
-        if (!cur) return res.status(404).json({ error: "Payout not found" });
-        return res.status(409).json({ error: `This payout is already ${cur.status}.` });
-      }
-      const p = r.rows[0];
-      recordAudit(pool, {
-        ...auditFromReq(req), org_id: p.org_id,
-        entity_type: "payout", entity_id: p.id,
-        action: outcome === "paid" ? "payout.marked_paid" : "payout.marked_failed",
-        metadata: { amount_cents: p.amount_cents, currency: p.currency, club_id: p.club_id },
-      }).catch(() => {});
-      return res.json(p);
-    } catch (err) {
-      logger.error({ err: err.message }, "[payments] settle payout failed");
-      return res.status(500).json({ error: "Failed to settle the payout." });
     }
   });
 

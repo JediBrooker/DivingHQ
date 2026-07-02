@@ -1,11 +1,11 @@
 <script setup>
 // Dedicated Payments section for a federation (org_admin). Tabs:
 //   Overview        — at-a-glance balance / payout / auto-withdraw + how it works
-//   Account details — payout bank details (where we send your money)
+//   Account details — Stripe payout onboarding (where we send your money)
 //   Withdrawals     — balance, withdraw now, automatic withdrawals, history
 //   Fees & pricing  — membership / club / accreditation / donation editors
 // DivingHQ is the merchant of record: it collects, keeps 15%, and pays out
-// the rest. Recipients never onboard with Stripe — they just add bank details.
+// the rest, transferring to each recipient's Stripe-connected bank account.
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showError, showSuccess } from '@/composables/useNotify'
@@ -30,10 +30,9 @@ const tab = ref('overview')
 
 const status = ref(null)
 const loading = ref(true)
-const savingPayout = ref(false)
+const onboarding = ref(false)
 const savingAuto = ref(false)
 const withdrawing = ref(false)
-const payoutForm = ref({ account_name: '', account_details: '' })
 const autoForm = ref({ enabled: false, threshold: '' })
 const withdrawals = ref([])
 
@@ -44,7 +43,8 @@ const hasBalance = computed(() => balances.value.length > 0)
 const balanceLabel = computed(() =>
   balances.value.length ? balances.value.map((b) => money(b.cents, b.currency)).join('  +  ') : money(0),
 )
-const payoutSet = computed(() => !!(status.value && status.value.payout_details_set))
+const connected = computed(() => !!(status.value && status.value.connected))
+const payoutsReady = computed(() => !!(status.value && status.value.payouts_ready))
 const autoThresholdOk = computed(() => Number(autoForm.value.threshold) >= 1)
 
 function money(cents, cur) {
@@ -70,7 +70,6 @@ async function loadStatus() {
   loading.value = true
   try {
     status.value = await auth.apiFetch(`/api/orgs/${orgId.value}/payments/status`)
-    payoutForm.value.account_name = status.value.account_name || ''
     autoForm.value.enabled = !!status.value.auto_withdraw_enabled
     autoForm.value.threshold = status.value.auto_withdraw_min_cents != null
       ? (status.value.auto_withdraw_min_cents / 100).toString()
@@ -91,20 +90,14 @@ async function loadWithdrawals() {
   }
 }
 
-async function savePayout() {
-  savingPayout.value = true
+async function startOnboarding() {
+  onboarding.value = true
   try {
-    await auth.apiFetch(`/api/orgs/${orgId.value}/payout-details`, {
-      method: 'PUT',
-      body: JSON.stringify(payoutForm.value),
-    })
-    showSuccess('Payout details saved')
-    payoutForm.value.account_details = ''
-    await loadStatus()
+    const { url } = await auth.apiFetch(`/api/orgs/${orgId.value}/connect/onboard`, { method: 'POST', body: JSON.stringify({}) })
+    window.location.href = url // hand off to Stripe-hosted onboarding
   } catch (e) {
-    showError(e.message || 'Could not save payout details')
-  } finally {
-    savingPayout.value = false
+    showError(e.message || 'Could not start payout onboarding')
+    onboarding.value = false
   }
 }
 
@@ -129,11 +122,13 @@ async function saveAuto() {
 async function requestWithdrawal() {
   withdrawing.value = true
   try {
-    await auth.apiFetch(`/api/orgs/${orgId.value}/withdrawals`, {
+    const settled = await auth.apiFetch(`/api/orgs/${orgId.value}/withdrawals`, {
       method: 'POST',
       body: JSON.stringify({}),
     })
-    showSuccess('Withdrawal requested')
+    const anyFailed = Array.isArray(settled) && settled.some((p) => p.status === 'failed')
+    if (anyFailed) showError('A transfer failed — your balance was restored. Check your Stripe onboarding and try again.')
+    else showSuccess('On its way — your payout has been sent to your bank via Stripe.')
     await Promise.all([loadStatus(), loadWithdrawals()])
   } catch (e) {
     showError(e.message || 'Could not request withdrawal')
@@ -142,38 +137,23 @@ async function requestWithdrawal() {
   }
 }
 
-// ---- payout back-office (platform operator / sysadmin) -------------
+// ---- payout monitoring (platform operator / sysadmin) -------------
+// Read-only: transfers auto-settle, so there's no manual action here —
+// this is the operator's window onto the flow (paid / failed).
 const queue = ref([])
 const queueLoading = ref(false)
-const settlingId = ref(null)
+const queueStatus = ref('paid')
 
 async function loadQueue() {
   if (!isSysAdmin.value) return
   queueLoading.value = true
   try {
-    const r = await auth.apiFetch('/api/admin/payouts')
+    const r = await auth.apiFetch(`/api/admin/payouts?status=${queueStatus.value}`)
     queue.value = r.payouts || []
   } catch (e) {
     showError(e.message || 'Could not load the payout queue')
   } finally {
     queueLoading.value = false
-  }
-}
-
-async function settle(p, outcome) {
-  const verb = outcome === 'paid' ? 'Mark this payout as PAID (bank transfer made)?' : 'Mark this payout as FAILED (returns the money to their balance)?'
-  if (!confirm(`${verb}
-
-${p.recipient_name} — ${money(p.amount_cents, p.currency)}`)) return
-  settlingId.value = p.id
-  try {
-    await auth.apiFetch(`/api/admin/payouts/${p.id}/settle`, { method: 'POST', body: JSON.stringify({ status: outcome }) })
-    showSuccess(outcome === 'paid' ? 'Payout marked paid' : 'Payout marked failed')
-    await loadQueue()
-  } catch (e) {
-    showError(e.message || 'Could not settle the payout')
-  } finally {
-    settlingId.value = null
   }
 }
 
@@ -188,10 +168,10 @@ onMounted(async () => {
   <section class="payments-admin">
     <header class="ph-head">
       <h1>Payments</h1>
-      <p class="muted">Collect entry fees, memberships, donations and more. DivingHQ keeps 15% and pays the rest to you — no Stripe account needed.</p>
+      <p class="muted">Collect entry fees, memberships, donations and more. DivingHQ keeps 15% and pays the rest straight to your bank via Stripe.</p>
     </header>
 
-    <p v-if="comingSoon" class="coming-soon">🚧 Payments are coming soon. Set everything up now — your payout details and automatic withdrawals — and we'll start paying out the moment it's switched on.</p>
+    <p v-if="comingSoon" class="coming-soon">🚧 Payments are coming soon. Set up your automatic withdrawals now and connect payouts the moment it's switched on.</p>
 
     <nav class="tabs">
       <button v-for="tt in TABS" :key="tt.key" type="button" :class="['tab', { active: tab === tt.key }]" @click="tab = tt.key">{{ tt.label }}</button>
@@ -208,8 +188,8 @@ onMounted(async () => {
             <span class="stat-value">{{ comingSoon ? '—' : balanceLabel }}</span>
           </div>
           <div class="stat">
-            <span class="stat-label">Payout details</span>
-            <span class="stat-value" :class="payoutSet ? 'ok' : 'warn'">{{ payoutSet ? 'On file' : 'Not set' }}</span>
+            <span class="stat-label">Payouts</span>
+            <span class="stat-value" :class="payoutsReady ? 'ok' : 'warn'">{{ payoutsReady ? 'Ready' : 'Not set up' }}</span>
           </div>
           <div class="stat">
             <span class="stat-label">Automatic withdrawals</span>
@@ -219,10 +199,10 @@ onMounted(async () => {
         <div class="card">
           <h2>How it works</h2>
           <ol class="how-list">
-            <li>Add your <button type="button" class="link" @click="tab = 'account'">payout bank details</button> — where we send your money.</li>
+            <li>Set up payouts in the <button type="button" class="link" @click="tab = 'account'">Account details</button> tab — a quick one-time Stripe onboarding where you add your bank account.</li>
             <li>Set your fees &amp; pricing (memberships, entries, donations and more) in the <button type="button" class="link" @click="tab = 'fees'">Fees &amp; pricing</button> tab.</li>
             <li>We collect payments, keep a 15% platform fee, and pay you the rest.</li>
-            <li>Withdraw your balance any time — or turn on automatic withdrawals to get paid the moment your balance passes a threshold.</li>
+            <li>Withdraw your balance any time — the money transfers to your bank automatically. Or turn on automatic withdrawals to get paid the moment your balance passes a threshold.</li>
           </ol>
         </div>
       </div>
@@ -230,21 +210,15 @@ onMounted(async () => {
       <!-- ACCOUNT DETAILS -->
       <div v-show="tab === 'account'" class="panel">
         <div class="card">
-          <h2>Payout bank details</h2>
-          <p class="muted">Where DivingHQ sends your share. No Stripe account needed.</p>
-          <p v-if="payoutSet" class="ok">✓ On file{{ status.account_name ? ` — ${status.account_name}` : '' }}.</p>
-          <p v-else class="warn">Not set yet — add your details so we can pay you.</p>
-          <div class="field">
-            <label>Account name</label>
-            <input class="in" v-model="payoutForm.account_name" placeholder="e.g. Sydney Diving Club" />
-          </div>
-          <div class="field">
-            <label>Bank details (IBAN, or sort code + account number)</label>
-            <input class="in" v-model="payoutForm.account_details" placeholder="GB00 XXXX 0000 0000 0000 00" />
-          </div>
-          <button class="btn" :disabled="savingPayout || !payoutForm.account_name || !payoutForm.account_details" @click="savePayout">
-            {{ savingPayout ? 'Saving…' : 'Save payout details' }}
+          <h2>Payout setup</h2>
+          <p class="muted">DivingHQ pays you through Stripe. You onboard once — adding your bank account and verifying your identity on Stripe's secure page. Your bank details are held by Stripe, never stored by us.</p>
+          <p v-if="payoutsReady" class="ok">✓ Payouts are set up — you're ready to withdraw.</p>
+          <p v-else-if="connected" class="warn">Onboarding started but not finished — a few details are still needed.</p>
+          <p v-else class="warn">Not set up yet — connect your bank so we can pay you.</p>
+          <button v-if="!comingSoon && !payoutsReady" class="btn" :disabled="onboarding" @click="startOnboarding">
+            {{ onboarding ? 'Opening Stripe…' : (connected ? 'Finish payout setup' : 'Set up payouts') }}
           </button>
+          <p v-if="comingSoon" class="muted small">Payout setup opens when payments go live.</p>
         </div>
       </div>
 
@@ -255,11 +229,11 @@ onMounted(async () => {
           <p class="balance-line">Balance owed to you: <strong>{{ comingSoon ? '—' : balanceLabel }}</strong></p>
           <p v-if="comingSoon" class="muted">Withdrawals open when payments go live. You can set up automatic withdrawals below now.</p>
           <template v-else>
-            <p class="muted">Withdraw your full available balance to the bank details on file. We settle the transfer out-of-band.</p>
-            <button class="btn" :disabled="withdrawing || !hasBalance || !payoutSet" @click="requestWithdrawal">
-              {{ withdrawing ? 'Requesting…' : 'Withdraw now' }}
+            <p class="muted">Withdraw your full available balance — it transfers to your bank automatically via Stripe.</p>
+            <button class="btn" :disabled="withdrawing || !hasBalance || !payoutsReady" @click="requestWithdrawal">
+              {{ withdrawing ? 'Sending…' : 'Withdraw now' }}
             </button>
-            <p v-if="!payoutSet" class="warn small">Add your payout details first (Account details tab).</p>
+            <p v-if="!payoutsReady" class="warn small">Set up your payouts first (Account details tab).</p>
           </template>
         </div>
 
@@ -297,27 +271,31 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- PAYOUT QUEUE (sysadmin) -->
+      <!-- PAYOUT MONITORING (sysadmin) -->
       <div v-if="isSysAdmin" v-show="tab === 'queue'" class="panel">
         <div class="card">
-          <h2>Pending payouts — all federations &amp; clubs</h2>
-          <p class="muted">Make the bank transfer, then mark it paid. Marking it failed returns the money to the recipient's withdrawable balance.</p>
+          <div class="queue-head">
+            <h2>Payouts — all federations &amp; clubs</h2>
+            <select class="in queue-filter" v-model="queueStatus" @change="loadQueue">
+              <option value="paid">Paid</option>
+              <option value="failed">Failed</option>
+              <option value="pending">In progress</option>
+            </select>
+          </div>
+          <p class="muted">Transfers settle automatically via Stripe Connect — this is a read-only view of the flow. A <strong>failed</strong> transfer restores the recipient's balance so they can retry once onboarding is complete.</p>
           <p v-if="queueLoading" class="muted">Loading…</p>
-          <p v-else-if="!queue.length" class="muted">Nothing pending. 🎉</p>
+          <p v-else-if="!queue.length" class="muted">No {{ queueStatus }} payouts.</p>
           <div v-else class="queue-scroll">
             <table class="wtable">
-              <thead><tr><th>Requested</th><th>Recipient</th><th>Amount</th><th>Bank details</th><th>Note</th><th></th></tr></thead>
+              <thead><tr><th>Date</th><th>Recipient</th><th>Amount</th><th>Status</th><th>Stripe transfer</th><th>Note</th></tr></thead>
               <tbody>
                 <tr v-for="p in queue" :key="p.id">
                   <td>{{ fmtDate(p.created_at) }}</td>
                   <td>{{ p.recipient_name }} <span class="pill">{{ p.recipient_type }}</span></td>
                   <td><strong>{{ money(p.amount_cents, p.currency) }}</strong></td>
-                  <td class="bank"><div>{{ p.payout_account_name }}</div><div class="muted small">{{ p.payout_account_details }}</div></td>
+                  <td><span :class="['pill', p.status]">{{ p.status }}</span></td>
+                  <td class="muted small mono">{{ p.stripe_transfer_id || '—' }}</td>
                   <td>{{ p.note || '' }}</td>
-                  <td class="q-actions">
-                    <button class="btn sm" :disabled="settlingId === p.id" @click="settle(p, 'paid')">Mark paid</button>
-                    <button class="btn sm ghost-danger" :disabled="settlingId === p.id" @click="settle(p, 'failed')">Failed</button>
-                  </td>
                 </tr>
               </tbody>
             </table>
@@ -391,7 +369,9 @@ onMounted(async () => {
 .pill.failed { background: var(--amber-dim, #fee); color: var(--danger, #c33); }
 .queue-scroll { overflow-x: auto; }
 .bank .small { font-size: .78rem; }
-.q-actions { display: flex; gap: .35rem; }
+.queue-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.queue-filter { width: auto; padding: .3rem .5rem; }
+.mono { font-family: var(--font-mono, ui-monospace, monospace); font-size: .78rem; }
 .btn.sm { padding: .3rem .7rem; font-size: .8rem; }
 .btn.ghost-danger { background: transparent; border: 1px solid var(--danger, #c33); color: var(--danger, #c33); }
 </style>

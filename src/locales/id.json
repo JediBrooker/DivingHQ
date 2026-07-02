@@ -1538,7 +1538,17 @@
       "history_empty": "Belum ada pencairan dana.",
       "dormant_note": "Pembayaran akan segera hadir. Tambahkan detail pencairan dana dan preferensi pencairan otomatis Anda sekarang — kami akan mencairkan dana segera setelah fitur ini diaktifkan.",
       "federation_fees": "Biaya federasi",
-      "federation_fees_hint": "Biaya afiliasi dan akreditasi tahunan yang dibayar klub Anda kepada federasi."
+      "federation_fees_hint": "Biaya afiliasi dan akreditasi tahunan yang dibayar klub Anda kepada federasi.",
+      "onboard_hint": "DivingHQ membayar Anda melalui Stripe. Daftar sekali — tambahkan rekening bank dan verifikasi identitas Anda di halaman aman Stripe. Detail bank Anda tetap di Stripe, bukan di kami.",
+      "payouts_ready": "Pembayaran sudah disiapkan — Anda siap menarik dana.",
+      "onboard_incomplete": "Pendaftaran dimulai tetapi belum selesai — masih diperlukan beberapa detail.",
+      "onboard_needed": "Belum disiapkan — hubungkan bank Anda agar kami bisa membayar Anda.",
+      "onboard_needed_short": "Siapkan pembayaran untuk menarik dana.",
+      "onboard_start": "Siapkan pembayaran",
+      "onboard_resume": "Selesaikan penyiapan pembayaran",
+      "error_onboard": "Tidak dapat memulai pendaftaran pembayaran",
+      "withdrawal_sent": "Dalam perjalanan — pembayaran Anda telah dikirim ke bank Anda.",
+      "withdrawal_failed": "Transfer gagal — saldo Anda dipulihkan. Periksa penyiapan pembayaran dan coba lagi."
     },
     "col_date": "Tanggal",
     "col_amount": "Jumlah",

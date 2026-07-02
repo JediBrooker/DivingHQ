@@ -1538,7 +1538,17 @@
       "history_empty": "Nessun prelievo effettuato finora.",
       "dormant_note": "I pagamenti saranno presto disponibili. Aggiungi ora le tue coordinate bancarie e le preferenze di prelievo automatico: ti pagheremo non appena la funzione sarà attivata.",
       "federation_fees": "Quote federali",
-      "federation_fees_hint": "Quote annuali di affiliazione e accreditamento che il tuo club versa alla federazione."
+      "federation_fees_hint": "Quote annuali di affiliazione e accreditamento che il tuo club versa alla federazione.",
+      "onboard_hint": "DivingHQ ti paga tramite Stripe. Registrati una volta — aggiungi il tuo conto bancario e verifica la tua identità sulla pagina sicura di Stripe. I tuoi dati bancari restano su Stripe, mai da noi.",
+      "payouts_ready": "I pagamenti sono configurati — puoi prelevare.",
+      "onboard_incomplete": "Registrazione avviata ma non completata — servono ancora alcuni dati.",
+      "onboard_needed": "Non ancora configurato — collega la tua banca così possiamo pagarti.",
+      "onboard_needed_short": "Configura i pagamenti per prelevare.",
+      "onboard_start": "Configura i pagamenti",
+      "onboard_resume": "Completa la configurazione dei pagamenti",
+      "error_onboard": "Impossibile avviare la registrazione dei pagamenti",
+      "withdrawal_sent": "In arrivo — il tuo pagamento è stato inviato alla tua banca.",
+      "withdrawal_failed": "Un bonifico non è riuscito — il tuo saldo è stato ripristinato. Controlla la configurazione dei pagamenti e riprova."
     },
     "col_date": "Data",
     "col_amount": "Importo",

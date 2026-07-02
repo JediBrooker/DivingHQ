@@ -64,14 +64,22 @@ const fakePayments = {
   // order-dependent suite's payment rows stable across tests.
   retrieveCheckoutSession: async (args) => retrieveCheckoutSessionImpl(args),
   createRefund: async (args) => { lastRefundArgs = args; return { amount: args.amountCents }; },
+  // --- Connect payouts (recipient accounts + transfers) ---
+  createRecipientAccount: async () => ({ id: "acct_test_" + crypto.randomUUID().slice(0, 8) }),
+  createOnboardingLink: async () => "https://connect.stripe.test/setup/xyz",
+  retrieveAccountStatus: async () => ({ payoutsEnabled: true, capabilityStatus: "active", requirementsCollected: true }),
+  // Transfer succeeds by default; a test can swap createTransferImpl to
+  // simulate a Stripe rejection (the guard path).
+  createTransfer: (...a) => createTransferImpl(...a),
   // Tests POST a JSON body; treat it as the already-verified event.
   constructWebhookEvent: (raw) => JSON.parse(Buffer.isBuffer(raw) ? raw.toString() : raw),
 };
+let createTransferImpl = async (args) => { lastTransferArgs = args; return { id: "tr_" + crypto.randomUUID().slice(0, 8) }; };
+let lastTransferArgs = null;
 
-// Fake operator-notification mailer — captures the last payout email so the
-// withdrawal tests can assert the platform operator is actually told.
-let lastPayoutEmail = null;
-const fakeEmail = { sendPayoutRequestedEmail: (args) => { lastPayoutEmail = args; } };
+// Fake operator-notification mailer — captures the last failed-payout email.
+let lastPayoutFailedEmail = null;
+const fakeEmail = { sendPayoutFailedEmail: (args) => { lastPayoutFailedEmail = args; } };
 
 // Stub auth: every request acts as our seeded user, who holds the roles
 // the routes require. requireEventManager loads req.event like the real
@@ -1079,19 +1087,27 @@ test("appealing a fine with a checkout in flight kills the session; a late webho
 
 // ---- Payouts (platform is merchant of record) -----------------------
 
-test("saving payout details and reading status + balance", async (t) => {
+test("Connect onboarding creates a recipient account and status reflects readiness", async (t) => {
   if (!ready) return t.skip();
-  let res = await api("PUT", `/api/orgs/${orgId}/payout-details`, { account_name: "Test Fed", account_details: "GB00 TEST 0000" });
+  // First onboard call creates the recipient account (fake acct_test_…).
+  let res = await api("POST", `/api/orgs/${orgId}/connect/onboard`, {});
   assert.equal(res.status, 200);
+  assert.match((await res.json()).url, /connect\.stripe/);
+  // Status refresh (fake retrieveAccountStatus → payoutsEnabled true) flips
+  // the cached flag, so the org reads as connected + payouts-ready.
   res = await api("GET", `/api/orgs/${orgId}/payments/status`);
   const s = await res.json();
   assert.equal(s.enabled, true);
-  assert.equal(s.payout_details_set, true);
-  assert.equal(s.account_name, "Test Fed");
-  // Balance = net (amount - our 15%) of paid payments minus payouts; the suite
-  // has several paid payments, so it's a non-negative number.
+  assert.equal(s.connected, true);
+  assert.equal(s.payouts_ready, true);
   assert.equal(typeof s.balance_cents, "number");
   assert.ok(s.balance_cents >= 0);
+  // A second onboard reuses the SAME account (doesn't create a new one).
+  const acctBefore = (await pool.query("SELECT stripe_account_id FROM organisations WHERE id = $1", [orgId])).rows[0].stripe_account_id;
+  res = await api("POST", `/api/orgs/${orgId}/connect/onboard`, {});
+  assert.equal(res.status, 200);
+  const acctAfter = (await pool.query("SELECT stripe_account_id FROM organisations WHERE id = $1", [orgId])).rows[0].stripe_account_id;
+  assert.equal(acctAfter, acctBefore, "onboarding again reuses the existing recipient account");
 });
 
 test("partial refund prorates the platform fee in the payout balance", async (t) => {
@@ -1107,12 +1123,6 @@ test("partial refund prorates the platform fee in the payout balance", async (t)
   );
   const after = (await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json()).balance_cents;
   assert.equal(after - before, 5100);
-});
-
-test("empty payout details are rejected", async (t) => {
-  if (!ready) return t.skip();
-  const res = await api("PUT", `/api/orgs/${orgId}/payout-details`, { account_name: "", account_details: "" });
-  assert.equal(res.status, 400);
 });
 
 test("a class_enrolment (club-recipient) payment never counts toward the federation's balance", async (t) => {
@@ -1158,8 +1168,9 @@ test("auto-withdraw settings save and reflect in status", async (t) => {
   assert.equal(s.auto_withdraw_min_cents, null);
 });
 
-test("withdrawing the balance records a pending payout and zeroes the balance", async (t) => {
+test("withdrawing executes a Stripe transfer, settles 'paid', and zeroes the balance", async (t) => {
   if (!ready) return t.skip();
+  lastTransferArgs = null;
   const before = await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json();
   assert.ok(before.balance_cents > 0, "expected a positive balance from earlier paid payments");
   const res = await api("POST", `/api/orgs/${orgId}/withdrawals`, {});
@@ -1167,12 +1178,15 @@ test("withdrawing the balance records a pending payout and zeroes the balance", 
   const payouts = await res.json();
   assert.equal(payouts.length, 1, "single-currency org yields one payout");
   assert.equal(payouts[0].amount_cents, before.balance_cents);
-  assert.equal(payouts[0].status, "pending");
+  assert.equal(payouts[0].status, "paid", "the transfer succeeded → settled paid");
+  assert.ok(payouts[0].stripe_transfer_id, "the Stripe transfer id is recorded");
+  assert.equal(lastTransferArgs.amountCents, before.balance_cents, "the transfer was for the balance");
+  assert.equal(lastTransferArgs.idempotencyKey, payouts[0].id, "payout id used as the idempotency key");
   const after = await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json();
   assert.equal(after.balance_cents, 0);
   assert.equal(after.balances.length, 0);
   const list = await (await api("GET", `/api/orgs/${orgId}/withdrawals`)).json();
-  assert.ok(list.some((w) => w.id === payouts[0].id && w.status === "pending"), "new payout shows in history");
+  assert.ok(list.some((w) => w.id === payouts[0].id && w.status === "paid"), "new payout shows in history as paid");
 });
 
 test("withdrawing with no balance is rejected", async (t) => {
@@ -1182,7 +1196,7 @@ test("withdrawing with no balance is rejected", async (t) => {
   assert.equal(res.status, 409);
 });
 
-test("withdrawal creates one payout per currency (no cross-currency mixing)", async (t) => {
+test("withdrawal creates + transfers one payout per currency (no cross-currency mixing)", async (t) => {
   if (!ready) return t.skip();
   // Two paid payments in different currencies for the same org.
   await pool.query(
@@ -1199,6 +1213,7 @@ test("withdrawal creates one payout per currency (no cross-currency mixing)", as
   assert.equal(res.status, 201);
   const payouts = await res.json();
   assert.equal(payouts.length, 2, "one payout per currency");
+  assert.ok(payouts.every((p) => p.status === "paid"), "each currency transferred + settled paid");
   const pByCur = Object.fromEntries(payouts.map((p) => [p.currency.trim(), p.amount_cents]));
   assert.equal(pByCur.GBP, 8500);
   assert.equal(pByCur.USD, 17000);
@@ -1237,41 +1252,27 @@ test("GET /api/me/payments returns the caller's payments (incl. accreditation) a
   assert.ok(!list.some((p) => p.amount_cents === 1234), "excludes other users' payments");
 });
 
-// ---- Payout back-office (platform operator) --------------------------
-// Withdrawals are fulfilled by a real-world bank transfer the operator
-// makes, then records via /api/admin/payouts. Before these endpoints
-// existed a payout could never leave 'pending' and nobody could read the
-// bank details a transfer should go to.
+// ---- Payout monitoring + transfer failure ----------------------------
+// Withdrawals now fire automatic Stripe Connect transfers; the admin queue
+// is read-only monitoring, and a failed transfer restores the balance.
 
 const orgStatus = async () => await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json();
 
-test("payout back-office: pending queue exposes fulfilment details; settle transitions exactly once", async (t) => {
+test("admin payout monitoring queue lists paid payouts with their transfer ids (read-only)", async (t) => {
   if (!ready) return t.skip();
-  // Earlier withdrawal tests left pending payouts in the queue.
-  const balBefore = (await orgStatus()).balance_cents;
-  let res = await api("GET", "/api/admin/payouts");
+  // Earlier withdrawals settled 'paid' with transfer ids.
+  const res = await api("GET", "/api/admin/payouts?status=paid");
   assert.equal(res.status, 200);
   const { payouts } = await res.json();
   const mine = payouts.filter((p) => p.org_id === orgId);
-  assert.ok(mine.length >= 1, "this org's pending payouts are visible");
+  assert.ok(mine.length >= 1, "this org's paid payouts are visible");
   assert.equal(mine[0].recipient_type, "org");
-  assert.equal(mine[0].payout_account_name, "Test Fed");
-  assert.ok(mine[0].payout_account_details, "bank details available for fulfilment");
-  // Record the bank transfer as made.
-  res = await api("POST", `/api/admin/payouts/${mine[0].id}/settle`, { status: "paid" });
-  assert.equal(res.status, 200);
-  const settled = await res.json();
-  assert.equal(settled.status, "paid");
-  assert.ok(settled.paid_at, "paid_at stamped");
-  // A settled payout can't be settled again.
-  res = await api("POST", `/api/admin/payouts/${mine[0].id}/settle`, { status: "failed" });
-  assert.equal(res.status, 409);
-  // Paid still counts against the balance exactly as pending did — settling
-  // must not change what's withdrawable (no double-withdraw window).
-  assert.equal((await orgStatus()).balance_cents, balBefore);
+  assert.ok(mine[0].stripe_transfer_id, "the Stripe transfer id is exposed for reconciliation");
+  // No bank details are ever exposed (they live at Stripe now).
+  assert.ok(!("payout_account_name" in mine[0]) && !("payout_account_details" in mine[0]));
 });
 
-test("a failed payout returns the money to the withdrawable balance (and the operator is emailed)", async (t) => {
+test("a failed transfer marks the payout 'failed', restores the balance, and alerts the operator", async (t) => {
   if (!ready) return t.skip();
   await pool.query(
     `INSERT INTO payments (org_id, payer_user_id, subject_type, amount_cents, platform_fee_cents, currency, status)
@@ -1280,19 +1281,23 @@ test("a failed payout returns the money to the withdrawable balance (and the ope
   );
   const before = (await orgStatus()).balance_cents;
   assert.ok(before >= 8500);
-  lastPayoutEmail = null;
-  const res = await api("POST", `/api/orgs/${orgId}/withdrawals`, {});
-  assert.equal(res.status, 201);
-  const [payout] = await res.json();
-  assert.equal(lastPayoutEmail?.orgId, orgId, "operator notified of the withdrawal request");
-  assert.equal((await orgStatus()).balance_cents, 0);
-  // Bank transfer bounced (e.g. bad details) → failed → withdrawable again.
-  const settle = await api("POST", `/api/admin/payouts/${payout.id}/settle`, { status: "failed" });
-  assert.equal(settle.status, 200);
-  assert.equal((await orgStatus()).balance_cents, before, "failed payout restores the balance");
+  // Simulate Stripe rejecting the transfer (e.g. onboarding lapsed).
+  const prev = createTransferImpl;
+  createTransferImpl = async () => { const e = new Error("insufficient_capabilities_for_transfer"); e.code = "insufficient_capabilities_for_transfer"; throw e; };
+  lastPayoutFailedEmail = null;
+  try {
+    const res = await api("POST", `/api/orgs/${orgId}/withdrawals`, {});
+    assert.equal(res.status, 201);
+    const [payout] = await res.json();
+    assert.equal(payout.status, "failed", "the payout is marked failed");
+  } finally {
+    createTransferImpl = prev;
+  }
+  assert.equal((await orgStatus()).balance_cents, before, "a failed transfer restores the balance");
+  assert.equal(lastPayoutFailedEmail?.orgId, orgId, "the operator is alerted about the failed transfer");
 });
 
-test("auto-withdraw sweeper books a payout only once the threshold is met", async (t) => {
+test("auto-withdraw sweeper transfers only once the threshold is met", async (t) => {
   if (!ready) return t.skip();
   const { sweepOnce } = require("../lib/auto-withdraw");
   const bal = (await orgStatus()).balance_cents; // restored by the failed payout above
@@ -1302,16 +1307,14 @@ test("auto-withdraw sweeper books a payout only once the threshold is met", asyn
     "UPDATE organisations SET auto_withdraw_enabled = true, auto_withdraw_min_cents = $2 WHERE id = $1",
     [orgId, bal + 1],
   );
-  await sweepOnce({ pool, logger: silentLogger, email: fakeEmail });
+  await sweepOnce({ pool, payments: fakePayments, logger: silentLogger, email: fakeEmail });
   assert.equal((await orgStatus()).balance_cents, bal, "below-threshold balance is untouched");
-  // Threshold met → the sweep books the withdrawal and notifies the operator.
+  // Threshold met → the sweep transfers and zeroes the balance.
   await pool.query("UPDATE organisations SET auto_withdraw_min_cents = $2 WHERE id = $1", [orgId, bal]);
-  lastPayoutEmail = null;
-  await sweepOnce({ pool, logger: silentLogger, email: fakeEmail });
-  assert.equal((await orgStatus()).balance_cents, 0, "balance auto-withdrawn");
-  assert.equal(lastPayoutEmail?.orgId, orgId, "operator notified of the auto-withdrawal");
+  await sweepOnce({ pool, payments: fakePayments, logger: silentLogger, email: fakeEmail });
+  assert.equal((await orgStatus()).balance_cents, 0, "balance auto-withdrawn via transfer");
   const list = await (await api("GET", `/api/orgs/${orgId}/withdrawals`)).json();
-  assert.ok(list.some((w) => w.note === "auto-withdrawal" && w.amount_cents === bal), "auto payout recorded");
+  assert.ok(list.some((w) => w.note === "auto-withdrawal" && w.amount_cents === bal && w.status === "paid"), "auto payout recorded + paid");
   // Leave the flag off so this suite stays re-runnable.
   await pool.query("UPDATE organisations SET auto_withdraw_enabled = false, auto_withdraw_min_cents = NULL WHERE id = $1", [orgId]);
 });

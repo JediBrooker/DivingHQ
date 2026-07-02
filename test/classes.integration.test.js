@@ -48,8 +48,15 @@ const fakePayments = {
   expireCheckoutSession: (...args) => expireCheckoutSessionImpl(...args),
   retrieveCheckoutSession: (...args) => retrieveCheckoutSessionImpl(...args),
   createRefund: async (args) => ({ amount: args.amountCents }),
+  // Connect payouts.
+  createRecipientAccount: async () => ({ id: "acct_test_" + crypto.randomUUID().slice(0, 8) }),
+  createOnboardingLink: async () => "https://connect.stripe.test/setup/club",
+  retrieveAccountStatus: async () => ({ payoutsEnabled: true, capabilityStatus: "active", requirementsCollected: true }),
+  createTransfer: (...a) => clubTransferImpl(...a),
   constructWebhookEvent: (raw) => JSON.parse(Buffer.isBuffer(raw) ? raw.toString() : raw),
 };
+let clubTransferImpl = async (args) => { lastClubTransfer = args; return { id: "tr_" + crypto.randomUUID().slice(0, 8) }; };
+let lastClubTransfer = null;
 
 let pool;
 let ready = false;
@@ -490,11 +497,11 @@ test("webhook full refund reverts an active enrolment to pending and clears paym
 });
 
 // ---- club payouts (club-private) ---------------------------------
-test("club payout status/details/withdrawals are club-private (federation blocked)", async (t) => {
+test("club payout status/onboard/withdrawals are club-private (federation blocked)", async (t) => {
   if (!ready) return t.skip();
   for (const [method, path, body] of [
     ["GET", `/api/clubs/${clubId}/payments/status`, null],
-    ["PUT", `/api/clubs/${clubId}/payout-details`, { account_name: "x", account_details: "y" }],
+    ["POST", `/api/clubs/${clubId}/connect/onboard`, {}],
     ["GET", `/api/clubs/${clubId}/withdrawals`, null],
     ["POST", `/api/clubs/${clubId}/withdrawals`, {}],
   ]) {
@@ -503,12 +510,13 @@ test("club payout status/details/withdrawals are club-private (federation blocke
   }
 });
 
-test("club admin saves payout details, sees balance, and withdraws (one payout, club_id set)", async (t) => {
+test("club onboards with Stripe, sees balance, and withdraws via a transfer (club_id set, org_id null)", async (t) => {
   if (!ready) return t.skip();
   const tok = tokenFor(U.clubAdmin);
-  const save = await api("PUT", `/api/clubs/${clubId}/payout-details`,
-    { account_name: "Club Account", account_details: "GB00 CLUB 0000" }, tok);
-  assert.equal(save.status, 200);
+  // Onboard the club (fake account) then refresh status (fake → payouts ready).
+  const onb = await api("POST", `/api/clubs/${clubId}/connect/onboard`, {}, tok);
+  assert.equal(onb.status, 200);
+  assert.match(onb.body.url, /connect\.stripe/);
 
   const cls = (await api("POST", `/api/clubs/${clubId}/classes`, {
     name: "Payout Class", price_options: [{ label: "Fee", amount_cents: 8000, currency: "GBP" }],
@@ -522,15 +530,20 @@ test("club admin saves payout details, sees balance, and withdraws (one payout, 
 
   const status = await api("GET", `/api/clubs/${clubId}/payments/status`, null, tok);
   assert.equal(status.status, 200);
-  assert.equal(status.body.payout_details_set, true);
+  assert.equal(status.body.connected, true);
+  assert.equal(status.body.payouts_ready, true);
   assert.ok(status.body.balance_cents >= 6800, JSON.stringify(status.body)); // 8000 - 15% = 6800
 
+  lastClubTransfer = null;
   const wd = await api("POST", `/api/clubs/${clubId}/withdrawals`, {}, tok);
   assert.equal(wd.status, 201, JSON.stringify(wd.body));
-  assert.equal(wd.body[0].status, "pending");
-  const row = (await pool.query("SELECT club_id, org_id FROM payouts WHERE id = $1", [wd.body[0].id])).rows[0];
+  assert.equal(wd.body[0].status, "paid", "the transfer succeeded → settled paid");
+  assert.ok(wd.body[0].stripe_transfer_id, "transfer id recorded");
+  assert.ok(lastClubTransfer, "a Stripe transfer was actually fired");
+  const row = (await pool.query("SELECT club_id, org_id, stripe_transfer_id FROM payouts WHERE id = $1", [wd.body[0].id])).rows[0];
   assert.equal(row.org_id, null);
   assert.equal(row.club_id, clubId);
+  assert.ok(row.stripe_transfer_id);
 });
 
 test("cancelling an enrolment with an in-flight checkout retires the payment; a late webhook can't reactivate it", async (t) => {

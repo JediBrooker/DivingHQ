@@ -1,10 +1,10 @@
 <script setup>
-// Club admin: payout bank details, balance, automatic-withdrawal settings,
-// and withdrawal history for THIS club's class-enrolment revenue. Talks to
-// /api/clubs/:clubId/payments/status|payout-details|withdrawal-settings|
-// withdrawals — all club-private (requireClubAdminOnly on the server).
-// DivingHQ keeps its 15% platform fee; the rest is owed to the club, not
-// the federation.
+// Club admin: Stripe payout onboarding, balance, automatic-withdrawal
+// settings, and withdrawal history for THIS club's class-enrolment revenue.
+// Talks to /api/clubs/:clubId/payments/status|connect/onboard|
+// withdrawal-settings|withdrawals — all club-private (requireClubAdminOnly).
+// The club onboards once with Stripe (bank details live at Stripe, never
+// here); withdrawing then fires a real transfer. DivingHQ keeps its 15%.
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -17,17 +17,17 @@ const { t, locale } = useI18n()
 
 const loading = ref(true)
 const status = ref(null)
-const savingPayout = ref(false)
+const onboarding = ref(false)
 const savingAuto = ref(false)
 const withdrawing = ref(false)
-const payoutForm = ref({ account_name: '', account_details: '' })
 const autoForm = ref({ enabled: false, threshold: '' })
 const withdrawals = ref([])
 
 const comingSoon = computed(() => status.value && status.value.enabled === false)
 const balances = computed(() => (status.value && status.value.balances) || [])
 const hasBalance = computed(() => balances.value.length > 0)
-const payoutSet = computed(() => !!(status.value && status.value.payout_details_set))
+const connected = computed(() => !!(status.value && status.value.connected))
+const payoutsReady = computed(() => !!(status.value && status.value.payouts_ready))
 const autoThresholdOk = computed(() => Number(autoForm.value.threshold) >= 1)
 
 function money(cents, currency) {
@@ -55,7 +55,6 @@ async function loadStatus() {
   loading.value = true
   try {
     status.value = await auth.apiFetch(`/api/clubs/${props.clubId}/payments/status`)
-    payoutForm.value.account_name = status.value.account_name || ''
     autoForm.value.enabled = !!status.value.auto_withdraw_enabled
     autoForm.value.threshold = status.value.auto_withdraw_min_cents != null
       ? (status.value.auto_withdraw_min_cents / 100).toString() : ''
@@ -74,17 +73,14 @@ async function loadWithdrawals() {
   }
 }
 
-async function savePayout() {
-  savingPayout.value = true
+async function startOnboarding() {
+  onboarding.value = true
   try {
-    await auth.apiFetch(`/api/clubs/${props.clubId}/payout-details`, { method: 'PUT', body: JSON.stringify(payoutForm.value) })
-    showSuccess(t('classes.payouts.saved'))
-    payoutForm.value.account_details = ''
-    await loadStatus()
+    const { url } = await auth.apiFetch(`/api/clubs/${props.clubId}/connect/onboard`, { method: 'POST', body: JSON.stringify({}) })
+    window.location.href = url // hand off to Stripe-hosted onboarding
   } catch (e) {
-    showError(e.message || t('classes.payouts.error_save'))
-  } finally {
-    savingPayout.value = false
+    showError(e.message || t('classes.payouts.error_onboard'))
+    onboarding.value = false
   }
 }
 
@@ -106,8 +102,10 @@ async function saveAuto() {
 async function requestWithdrawal() {
   withdrawing.value = true
   try {
-    await auth.apiFetch(`/api/clubs/${props.clubId}/withdrawals`, { method: 'POST', body: JSON.stringify({}) })
-    showSuccess(t('classes.payouts.withdrawal_requested'))
+    const settled = await auth.apiFetch(`/api/clubs/${props.clubId}/withdrawals`, { method: 'POST', body: JSON.stringify({}) })
+    const anyFailed = Array.isArray(settled) && settled.some((p) => p.status === 'failed')
+    if (anyFailed) showError(t('classes.payouts.withdrawal_failed'))
+    else showSuccess(t('classes.payouts.withdrawal_sent'))
     await Promise.all([loadStatus(), loadWithdrawals()])
   } catch (e) {
     showError(e.message || t('classes.payouts.error_withdraw'))
@@ -130,29 +128,22 @@ onMounted(async () => {
 
       <div class="card">
         <h2>{{ t('classes.payouts.account_details') }}</h2>
-        <p class="muted">{{ t('classes.payouts.account_details_hint') }}</p>
-        <p v-if="payoutSet" class="ok">{{ t('classes.payouts.details_on_file', { name: status.account_name || '' }) }}</p>
-        <p v-else class="warn">{{ t('classes.payouts.details_missing') }}</p>
-        <div class="field">
-          <label>{{ t('classes.payouts.field_account_name') }}</label>
-          <input class="in" v-model="payoutForm.account_name" />
-        </div>
-        <div class="field">
-          <label>{{ t('classes.payouts.field_account_details') }}</label>
-          <input class="in" v-model="payoutForm.account_details" placeholder="GB00 XXXX 0000 0000 0000 00" />
-        </div>
-        <button class="btn" :disabled="savingPayout || !payoutForm.account_name || !payoutForm.account_details" @click="savePayout">
-          {{ savingPayout ? t('common.saving') : t('common.save') }}
+        <p class="muted">{{ t('classes.payouts.onboard_hint') }}</p>
+        <p v-if="payoutsReady" class="ok">✓ {{ t('classes.payouts.payouts_ready') }}</p>
+        <p v-else-if="connected" class="warn">{{ t('classes.payouts.onboard_incomplete') }}</p>
+        <p v-else class="warn">{{ t('classes.payouts.onboard_needed') }}</p>
+        <button v-if="!comingSoon && !payoutsReady" class="btn" :disabled="onboarding" @click="startOnboarding">
+          {{ onboarding ? t('common.loading') : (connected ? t('classes.payouts.onboard_resume') : t('classes.payouts.onboard_start')) }}
         </button>
       </div>
 
       <div class="card">
         <h2>{{ t('classes.payouts.balance') }}</h2>
         <p class="balance-line">{{ t('classes.payouts.balance_owed') }}: <strong>{{ comingSoon ? '—' : balanceLabel }}</strong></p>
-        <button v-if="!comingSoon" class="btn" :disabled="withdrawing || !hasBalance || !payoutSet" @click="requestWithdrawal">
+        <button v-if="!comingSoon" class="btn" :disabled="withdrawing || !hasBalance || !payoutsReady" @click="requestWithdrawal">
           {{ withdrawing ? t('common.saving') : t('classes.payouts.withdraw_now') }}
         </button>
-        <p v-if="!comingSoon && !payoutSet" class="warn small">{{ t('classes.payouts.details_missing') }}</p>
+        <p v-if="!comingSoon && !payoutsReady" class="warn small">{{ t('classes.payouts.onboard_needed_short') }}</p>
       </div>
 
       <div class="card">

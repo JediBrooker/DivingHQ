@@ -1538,7 +1538,17 @@
       "history_empty": "暂无提现记录。",
       "dormant_note": "支付功能即将上线。请先添加您的提现信息和自动提现偏好设置——功能开通后我们将立即为您付款。",
       "federation_fees": "联合会费用",
-      "federation_fees_hint": "贵俱乐部每年向联合会支付的加盟费和认证费。"
+      "federation_fees_hint": "贵俱乐部每年向联合会支付的加盟费和认证费。",
+      "onboard_hint": "DivingHQ 通过 Stripe 向您付款。只需入驻一次——在 Stripe 的安全页面添加您的银行账户并验证身份。您的银行信息由 Stripe 保管，绝不会留在我们这里。",
+      "payouts_ready": "付款已设置——您可以提现了。",
+      "onboard_incomplete": "入驻已开始但尚未完成——还需要一些信息。",
+      "onboard_needed": "尚未设置——请连接您的银行，以便我们向您付款。",
+      "onboard_needed_short": "设置付款后即可提现。",
+      "onboard_start": "设置付款",
+      "onboard_resume": "完成付款设置",
+      "error_onboard": "无法开始付款入驻",
+      "withdrawal_sent": "已在途中——您的付款已发送至您的银行。",
+      "withdrawal_failed": "转账失败——您的余额已恢复。请检查付款设置后重试。"
     },
     "col_date": "日期",
     "col_amount": "金额",

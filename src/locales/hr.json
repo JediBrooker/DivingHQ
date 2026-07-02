@@ -1538,7 +1538,17 @@
       "history_empty": "Još nema isplata.",
       "dormant_note": "Plaćanja uskoro stižu. Unesite podatke za isplatu i postavke automatske isplate već sada — isplatit ćemo vam sredstva čim značajka bude uključena.",
       "federation_fees": "Naknade savezu",
-      "federation_fees_hint": "Godišnje naknade za pridruživanje i akreditaciju koje vaš klub plaća savezu."
+      "federation_fees_hint": "Godišnje naknade za pridruživanje i akreditaciju koje vaš klub plaća savezu.",
+      "onboard_hint": "DivingHQ vam plaća putem Stripea. Registrirajte se jednom — dodajte bankovni račun i potvrdite identitet na sigurnoj Stripe stranici. Vaši bankovni podaci ostaju kod Stripea, nikada kod nas.",
+      "payouts_ready": "Isplate su postavljene — možete podići.",
+      "onboard_incomplete": "Registracija je započeta ali nije dovršena — potrebno je još nekoliko podataka.",
+      "onboard_needed": "Još nije postavljeno — povežite banku kako bismo vam mogli platiti.",
+      "onboard_needed_short": "Postavite isplate za podizanje.",
+      "onboard_start": "Postavi isplate",
+      "onboard_resume": "Dovrši postavljanje isplata",
+      "error_onboard": "Nije moguće pokrenuti registraciju isplata",
+      "withdrawal_sent": "Na putu — vaša isplata poslana je u banku.",
+      "withdrawal_failed": "Prijenos nije uspio — vaše stanje je vraćeno. Provjerite postavke isplata i pokušajte ponovno."
     },
     "col_date": "Datum",
     "col_amount": "Iznos",
