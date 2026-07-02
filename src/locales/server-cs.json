@@ -28,6 +28,31 @@
       "body": "Požádali jste o změnu e-mailu pro {app_name} na tuto adresu. Kliknutím na odkaz níže ji potvrďte. Odkaz je platný 30 minut a lze jej použít pouze jednou.",
       "cta": "Potvrdit nový e-mail",
       "footer": "Pokud jste tuto změnu neprovedli, můžete tento e-mail bez obav ignorovat — váš účet zůstává beze změny."
+    },
+    "common": {
+      "greeting": "Dobrý den, {name},"
+    },
+    "payment_receipt": {
+      "subject": "Platba přijata — {app_name}",
+      "body": "Přijali jsme vaši platbu {amount} za: {description}.",
+      "footer": "Historii plateb si můžete kdykoli zobrazit: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Platba vrácena — {app_name}",
+      "body": "{amount} z vaší platby za: {description} bylo vráceno. Vrácené částky se na výpisu obvykle objeví do 5–10 pracovních dnů."
+    },
+    "fine_issued": {
+      "subject": "Byla vám udělena pokuta — {app_name}",
+      "body": "Byla vám udělena pokuta {amount}. Důvod: {reason}",
+      "footer": "Zaplatit ji nebo podat odvolání můžete zde: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Vašemu odvolání bylo vyhověno — {app_name}",
+      "body": "Vašemu odvolání proti pokutě {amount} bylo vyhověno. Pokuta byla prominuta — nic nedlužíte."
+    },
+    "appeal_dismissed": {
+      "subject": "Vaše odvolání bylo zamítnuto — {app_name}",
+      "body": "Vaše odvolání proti pokutě {amount} bylo zamítnuto a pokuta je znovu splatná. Zaplatit ji můžete zde: {link}"
     }
   },
   "pdf": {

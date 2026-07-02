@@ -28,6 +28,31 @@
       "body": "Has solicitado cambiar tu correo de {app_name} a esta dirección. Haz clic en el enlace de abajo para confirmarlo. El enlace caduca en 30 minutos y solo puede usarse una vez.",
       "cta": "Confirmar nuevo correo",
       "footer": "Si no realizaste este cambio, puedes ignorar este correo — tu cuenta queda como estaba."
+    },
+    "common": {
+      "greeting": "Hola {name}:"
+    },
+    "payment_receipt": {
+      "subject": "Pago recibido — {app_name}",
+      "body": "Hemos recibido tu pago de {amount} por: {description}.",
+      "footer": "Consulta tu historial de pagos en cualquier momento: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Pago reembolsado — {app_name}",
+      "body": "Se ha reembolsado {amount} de tu pago por: {description}. Los reembolsos suelen aparecer en tu extracto en un plazo de 5 a 10 días hábiles."
+    },
+    "fine_issued": {
+      "subject": "Se te ha impuesto una multa — {app_name}",
+      "body": "Se te ha impuesto una multa de {amount}. Motivo: {reason}",
+      "footer": "Págala o presenta una apelación aquí: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Tu apelación ha sido aceptada — {app_name}",
+      "body": "Tu apelación contra la multa de {amount} ha sido aceptada. La multa se ha anulado: no debes nada."
+    },
+    "appeal_dismissed": {
+      "subject": "Tu apelación ha sido desestimada — {app_name}",
+      "body": "Tu apelación contra la multa de {amount} ha sido desestimada y la multa vuelve a estar pendiente. Puedes pagarla aquí: {link}"
     }
   },
   "pdf": {

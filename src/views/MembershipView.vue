@@ -1,12 +1,11 @@
 <script setup>
-// Diver-facing membership page (/membership). Shows what membership will
-// cost (per tier) with a contextual "coming soon" preview until online
-// payments are switched on. Each card reads the resolved price from the
-// diver-facing GET /api/orgs/:orgId/membership endpoint (no admin gate).
+// Diver-facing membership page (/membership). Shows what membership costs
+// (per tier) with a real Pay action once payments are live (the card shows
+// its own coming-soon note while dormant). Each card reads the resolved
+// price from the diver-facing GET /api/orgs/:orgId/membership endpoint.
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import FeePreviewCard from '@/components/payments/FeePreviewCard.vue'
-import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
 
 const auth = useAuthStore()
 const orgId = computed(() => auth.user?.org_id)
@@ -28,15 +27,14 @@ const TIERS = [
       Membership unlocks members-only entry prices. It isn't required to enter
       competitions.
     </p>
-    <ComingSoonBanner
-      message="Online membership payments are coming soon — here's what membership will cost."
-    />
     <div class="tiers" v-if="orgId">
       <div v-for="tr in TIERS" :key="tr.key" class="tier-card">
         <h3>{{ tr.label }}</h3>
         <FeePreviewCard
           :title="`${tr.label} membership`"
           :load-url="`/api/orgs/${orgId}/membership?tier=${tr.key}`"
+          :checkout-url="`/api/orgs/${orgId}/membership/checkout`"
+          :checkout-body="tr.key ? { tier: tr.key } : {}"
           coming-soon-message="Membership payments are coming soon."
         />
       </div>

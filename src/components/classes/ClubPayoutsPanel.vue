@@ -9,6 +9,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { showError, showSuccess } from '@/composables/useNotify'
+import FeePreviewCard from '@/components/payments/FeePreviewCard.vue'
 
 const props = defineProps({ clubId: { type: String, required: true } })
 const auth = useAuthStore()
@@ -166,6 +167,25 @@ onMounted(async () => {
         <button class="btn" :disabled="savingAuto || (autoForm.enabled && !autoThresholdOk)" @click="saveAuto">
           {{ savingAuto ? t('common.saving') : t('common.save') }}
         </button>
+      </div>
+
+      <div class="card">
+        <h2>{{ t('classes.payouts.federation_fees') }}</h2>
+        <p class="muted">{{ t('classes.payouts.federation_fees_hint') }}</p>
+        <FeePreviewCard
+          hide-when-unset
+          title="Affiliation"
+          :load-url="`/api/clubs/${clubId}/affiliation?kind=affiliation`"
+          :checkout-url="`/api/clubs/${clubId}/affiliation/checkout`"
+          :checkout-body="{ kind: 'affiliation' }"
+        />
+        <FeePreviewCard
+          hide-when-unset
+          title="Accreditation"
+          :load-url="`/api/clubs/${clubId}/affiliation?kind=accreditation`"
+          :checkout-url="`/api/clubs/${clubId}/affiliation/checkout`"
+          :checkout-body="{ kind: 'accreditation' }"
+        />
       </div>
 
       <div class="card">

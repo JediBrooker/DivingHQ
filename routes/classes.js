@@ -18,11 +18,13 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { priceCharge } = require("../lib/fee-pricing");
+const ledger = require("../lib/payout-ledger");
+const { retirePendingPayment, resumeOrRetireCheckout } = require("../lib/payment-lifecycle");
 
 const APP_BASE_URL =
   process.env.APP_BASE_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
 
-module.exports = function createClassesRouter({ pool, verifyToken, requireClubAdminOnly, logger, payments }) {
+module.exports = function createClassesRouter({ pool, verifyToken, requireClubAdminOnly, logger, payments, email = null }) {
   if (!pool) throw new Error("createClassesRouter requires { pool, … }");
   const router = express.Router();
 
@@ -36,44 +38,32 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     return true;
   }
 
-  // Don't let a class-enrolment status change (cancel, or a future admin
-  // action) race an in-flight Stripe checkout — expire the session and mark
-  // the payment failed so a stale session can't complete after the fact and
-  // strand a paid-but-orphaned payment (mirrors retireInFlightFinePayment in
-  // routes/payments.js). Returns "paid" if the payment had already settled
-  // before we could retire it, so the caller can refuse the status change
-  // instead of silently cancelling underneath a successful payment.
+  // Don't let a class-enrolment status change (cancel, edit, class delete)
+  // race an in-flight Stripe checkout. The race-safe logic — the #101
+  // RETURNING re-check AND the retrieve-after-failed-expire fallback for a
+  // session that completed moments earlier — lives in lib/payment-lifecycle,
+  // shared with fines and entry charges. Returns 'retired' | 'paid' |
+  // 'gone' | 'unavailable' (see the helper for caller obligations).
   async function retireInFlightClassEnrolmentPayment(enrolmentId) {
     const p = (await pool.query(
       "SELECT id, status, stripe_checkout_session FROM payments WHERE class_enrolment_id = $1 AND status IN ('pending', 'paid') ORDER BY created_at DESC LIMIT 1",
       [enrolmentId],
     )).rows[0];
-    if (!p) return null;
-    if (p.status === "paid") return "paid";
-    // p.status === "pending" — expire the Stripe session. This is a network
-    // round-trip: a webhook can land and settle the payment to 'paid' WHILE
-    // we're waiting on it, so we can't assume it's still pending afterward.
-    if (payments && payments.enabled && p.stripe_checkout_session) {
-      try {
-        await payments.expireCheckoutSession({ sessionId: p.stripe_checkout_session });
-      } catch (e) {
-        log.warn({ err: e.message }, "[classes] could not expire in-flight enrolment session");
-      }
+    return retirePendingPayment({ pool, payments, logger: log }, p);
+  }
+
+  // Map a retire outcome onto the HTTP response for state-change endpoints.
+  // Returns true when the caller must stop (response already sent).
+  function retireBlocked(res, outcome, paidMessage) {
+    if (outcome === "paid") {
+      res.status(409).json({ error: paidMessage });
+      return true;
     }
-    // RETURNING proves whether our write actually landed. If a webhook won
-    // the race and flipped the payment to 'paid' during the expire call
-    // above, this matches zero rows — re-check and report "paid" so the
-    // caller refuses the status change instead of reading null as "safely
-    // retired" and clobbering the roster row the webhook just activated.
-    const upd = await pool.query(
-      "UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending' RETURNING id",
-      [p.id],
-    );
-    if (upd.rows.length === 0) {
-      const recheck = (await pool.query("SELECT status FROM payments WHERE id = $1", [p.id])).rows[0];
-      if (recheck && recheck.status === "paid") return "paid";
+    if (outcome === "unavailable") {
+      res.status(503).json({ error: "Couldn't verify the in-flight payment with Stripe — please try again." });
+      return true;
     }
-    return null;
+    return false;
   }
 
   // ---- validation helpers ----------------------------------------
@@ -223,7 +213,12 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       }
       await client.query("COMMIT");
       await recordAudit(pool, {
-        ...auditFromReq(req), org_id: req.club.org_id,
+        ...auditFromReq(req),
+        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // federation's org_id surface in the org-admin audit log, leaking
+        // club-private class/payout activity (#98's boundary). Sysadmin
+        // tooling finds these via metadata.club_id.
+        org_id: null,
         entity_type: "class", entity_id: cls.id, entity_name: cls.name,
         action: "class.created", metadata: { club_id: req.club.id },
       }).catch(() => {});
@@ -279,9 +274,42 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
+      // Money guard: a class with LIVE paid enrolments can't be hard-deleted
+      // out from under the divers who paid — cancel (and refund) those
+      // enrolments first, or deactivate the class instead. Historical
+      // refunded/failed payments don't block (migration 080 lets their
+      // class_enrolment_id null out on delete).
+      const paidLive = (await pool.query(
+        `SELECT COUNT(*)::int AS n
+           FROM payments p
+           JOIN class_enrolments e ON e.id = p.class_enrolment_id
+          WHERE e.class_id = $1 AND e.status IN ('active', 'pending') AND p.status = 'paid'`,
+        [cls.id],
+      )).rows[0].n;
+      if (paidLive > 0) {
+        return res.status(409).json({
+          error: "This class has paid enrolments — cancel or refund them before deleting the class, or deactivate it instead.",
+        });
+      }
+      // Retire any in-flight checkouts on pending enrolments FIRST: the
+      // cascade delete would otherwise leave open Stripe sessions that could
+      // still complete, paying the club for a class that no longer exists.
+      const pendingEnrols = (await pool.query(
+        "SELECT id FROM class_enrolments WHERE class_id = $1 AND status = 'pending'",
+        [cls.id],
+      )).rows;
+      for (const e of pendingEnrols) {
+        const outcome = await retireInFlightClassEnrolmentPayment(e.id);
+        if (retireBlocked(res, outcome, "An enrolment in this class was just paid for — refresh and handle it before deleting.")) return;
+      }
       await pool.query("DELETE FROM classes WHERE id = $1 AND club_id = $2", [req.params.classId, req.club.id]);
       await recordAudit(pool, {
-        ...auditFromReq(req), org_id: req.club.org_id,
+        ...auditFromReq(req),
+        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // federation's org_id surface in the org-admin audit log, leaking
+        // club-private class/payout activity (#98's boundary). Sysadmin
+        // tooling finds these via metadata.club_id.
+        org_id: null,
         entity_type: "class", entity_id: cls.id, entity_name: cls.name,
         action: "class.deleted", metadata: { club_id: req.club.id },
       }).catch(() => {});
@@ -361,10 +389,13 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       const r = await pool.query(
         `SELECT e.id, e.status, e.amount_cents, e.discount_cents, e.currency, e.note, e.enrolled_at,
                 u.id AS diver_id, u.full_name AS diver_name,
-                po.label AS price_label
+                po.label AS price_label,
+                p.id AS payment_id, p.status AS payment_status,
+                p.amount_cents AS paid_cents
            FROM class_enrolments e
            JOIN users u ON u.id = e.diver_user_id
            LEFT JOIN class_price_options po ON po.id = e.price_option_id
+           LEFT JOIN payments p ON p.id = e.payment_id
           WHERE e.class_id = $1 AND e.status <> 'cancelled'
           ORDER BY (e.status = 'active') DESC, lower(u.full_name)`,
         [cls.id],
@@ -396,21 +427,40 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       if (chosen && discount > chosen.amount_cents) {
         return res.status(400).json({ error: "Discount can't exceed the price." });
       }
+      // Default 'active' (the historical comped/offline behaviour). Passing
+      // status 'pending' REQUESTS PAYMENT: the diver sees the enrolment with
+      // a Pay button and it activates on payment. Requires a price, or
+      // there'd be nothing to pay and checkout would refuse the row.
+      let status = "active";
+      if (body.status !== undefined) {
+        if (!["active", "pending"].includes(body.status)) {
+          return res.status(400).json({ error: "status must be 'active' or 'pending'." });
+        }
+        if (body.status === "pending" && !chosen) {
+          return res.status(400).json({ error: "Choose a price option to request payment." });
+        }
+        status = body.status;
+      }
       const r = await pool.query(
         `INSERT INTO class_enrolments
             (class_id, diver_user_id, club_id, org_id, status, price_option_id, amount_cents, discount_cents, currency, note, enrolled_by)
-         VALUES ($1, $2, $3, $4, 'active', $5, $6, $7, $8, $9, $10)
-         RETURNING id`,
-        [cls.id, diverId, req.club.id, req.club.org_id,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING id, status`,
+        [cls.id, diverId, req.club.id, req.club.org_id, status,
          chosen ? chosen.id : null, chosen ? chosen.amount_cents : null,
          discount, chosen ? chosen.currency : null, cleanName(body.note, 500), req.user.id],
       );
       await recordAudit(pool, {
-        ...auditFromReq(req), org_id: req.club.org_id,
+        ...auditFromReq(req),
+        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // federation's org_id surface in the org-admin audit log, leaking
+        // club-private class/payout activity (#98's boundary). Sysadmin
+        // tooling finds these via metadata.club_id.
+        org_id: null,
         entity_type: "class_enrolment", entity_id: r.rows[0].id, entity_name: cls.name,
-        action: "class.enrolment_added", metadata: { class_id: cls.id, diver_id: diverId },
+        action: "class.enrolment_added", metadata: { club_id: req.club.id, class_id: cls.id, diver_id: diverId },
       }).catch(() => {});
-      return res.status(201).json({ id: r.rows[0].id });
+      return res.status(201).json({ id: r.rows[0].id, status: r.rows[0].status });
     } catch (err) {
       if (err.code === "23505") return res.status(409).json({ error: "That diver is already enrolled in this class." });
       log.error({ err: err.message }, "[classes] enrol failed");
@@ -483,9 +533,8 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         const priceChanging = body.price_option_id !== undefined && priceOptionId !== enr.price_option_id;
         const discountChanging = body.discount_cents !== undefined && discount !== enr.discount_cents;
         if (status !== "pending" || priceChanging || discountChanging) {
-          if ((await retireInFlightClassEnrolmentPayment(enr.id)) === "paid") {
-            return res.status(409).json({ error: "This enrolment was just paid for — refresh before making changes." });
-          }
+          const outcome = await retireInFlightClassEnrolmentPayment(enr.id);
+          if (retireBlocked(res, outcome, "This enrolment was just paid for — refresh before making changes.")) return;
         }
       }
       // Defence in depth: guard on the status we read at the top of this
@@ -526,9 +575,8 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       // Retire any in-flight checkout FIRST — otherwise a diver could complete
       // a stale Stripe session after this cancels, settling a payment for an
       // enrolment nothing on the roster reflects anymore.
-      if ((await retireInFlightClassEnrolmentPayment(req.params.enrolId)) === "paid") {
-        return res.status(409).json({ error: "This enrolment was just paid for — refresh the roster instead of removing it." });
-      }
+      const outcome = await retireInFlightClassEnrolmentPayment(req.params.enrolId);
+      if (retireBlocked(res, outcome, "This enrolment was just paid for — refresh the roster instead of removing it.")) return;
       // Defence in depth: guard on the status we just read. If a webhook (or
       // a concurrent request) changed it in between, this becomes a no-op
       // instead of silently cancelling a row that moved on without us.
@@ -540,9 +588,14 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         return res.status(409).json({ error: "This enrolment changed — refresh and try again." });
       }
       await recordAudit(pool, {
-        ...auditFromReq(req), org_id: req.club.org_id,
+        ...auditFromReq(req),
+        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // federation's org_id surface in the org-admin audit log, leaking
+        // club-private class/payout activity (#98's boundary). Sysadmin
+        // tooling finds these via metadata.club_id.
+        org_id: null,
         entity_type: "class_enrolment", entity_id: req.params.enrolId, entity_name: cls.name,
-        action: "class.enrolment_removed", metadata: { class_id: cls.id },
+        action: "class.enrolment_removed", metadata: { club_id: req.club.id, class_id: cls.id },
       }).catch(() => {});
       return res.json({ message: "Enrolment removed" });
     } catch (err) {
@@ -553,35 +606,12 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
 
   // ---- payouts (club-private — the federation never sees this) ----
   //
-  // Net owed to the CLUB per currency: class-enrolment payments collected
-  // (fee prorated on partial refunds, clamped >= 0) minus what's already
-  // withdrawn. Scoped by recipient_type = 'club' so club_affiliation/
-  // accreditation payments (which also carry this club's id, but as the
-  // SUBJECT being charged, not the recipient) are never counted here —
-  // those pay the federation and are covered by orgBalancesByCurrency.
-  async function clubBalancesByCurrency(clubId, db = pool) {
-    const collected = (await db.query(
-      `SELECT currency, COALESCE(SUM(GREATEST(0,
-          CASE status
-            WHEN 'paid' THEN amount_cents - platform_fee_cents
-            WHEN 'partially_refunded' THEN ROUND(
-              (amount_cents - platform_fee_cents)::numeric
-                * (amount_cents - COALESCE(refunded_amount_cents, 0)) / NULLIF(amount_cents, 0))
-            ELSE 0 END)), 0)::bigint AS net
-         FROM payments WHERE club_id = $1 AND recipient_type = 'club' GROUP BY currency`,
-      [clubId],
-    )).rows;
-    const paid = (await db.query(
-      `SELECT currency, COALESCE(SUM(amount_cents), 0)::bigint AS n
-         FROM payouts WHERE club_id = $1 AND status IN ('pending', 'paid') GROUP BY currency`,
-      [clubId],
-    )).rows;
-    const paidByCur = new Map(paid.map((r) => [r.currency, Number(r.n)]));
-    return collected
-      .map((r) => ({ currency: r.currency, cents: Number(r.net) - (paidByCur.get(r.currency) || 0) }))
-      .filter((b) => b.cents > 0)
-      .sort((a, b) => b.cents - a.cents);
-  }
+  // Net owed to the CLUB per currency. The math (fee prorated on partial
+  // refunds, recipient_type = 'club' so affiliation/accreditation payments —
+  // where this club is the SUBJECT being charged, not the recipient — never
+  // count here) lives in lib/payout-ledger.js, shared with the federation
+  // ledger and the auto-withdraw sweeper.
+  const clubBalancesByCurrency = (clubId, db = pool) => ledger.clubBalancesByCurrency(clubId, db);
 
   router.get("/api/clubs/:id/payments/status", requireClubAdminOnly(), async (req, res) => {
     try {
@@ -619,6 +649,18 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         "UPDATE clubs SET payout_account_name = $1, payout_account_details = $2 WHERE id = $3",
         [name.slice(0, 200), details.slice(0, 500), req.club.id],
       );
+      // Audit the change but never the details themselves (matches the org
+      // endpoint) — a silent bank-detail swap redirects payouts.
+      recordAudit(pool, {
+        ...auditFromReq(req),
+        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // federation's org_id surface in the org-admin audit log, leaking
+        // club-private class/payout activity (#98's boundary). Sysadmin
+        // tooling finds these via metadata.club_id.
+        org_id: null,
+        entity_type: "club", entity_id: req.club.id,
+        action: "payout_details.updated", metadata: { club_id: req.club.id, account_name: name.slice(0, 200) },
+      }).catch(() => {});
       return res.json({ ok: true });
     } catch (err) {
       log.error({ err: err.message }, "[classes] save club payout details failed");
@@ -642,6 +684,17 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         "UPDATE clubs SET auto_withdraw_enabled = $1, auto_withdraw_min_cents = $2 WHERE id = $3",
         [enabled, minCents, req.club.id],
       );
+      recordAudit(pool, {
+        ...auditFromReq(req),
+        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // federation's org_id surface in the org-admin audit log, leaking
+        // club-private class/payout activity (#98's boundary). Sysadmin
+        // tooling finds these via metadata.club_id.
+        org_id: null,
+        entity_type: "club", entity_id: req.club.id,
+        action: "withdrawal_settings.updated",
+        metadata: { club_id: req.club.id, auto_withdraw_enabled: enabled, auto_withdraw_min_cents: minCents },
+      }).catch(() => {});
       return res.json({ ok: true, auto_withdraw_enabled: enabled, auto_withdraw_min_cents: minCents });
     } catch (err) {
       log.error({ err: err.message }, "[classes] save club withdrawal settings failed");
@@ -665,41 +718,27 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
 
   router.post("/api/clubs/:id/withdrawals", requireClubAdminOnly(), async (req, res) => {
     if (!ensurePayments(res)) return;
-    const client = await pool.connect();
     try {
-      await client.query("BEGIN");
-      const club = (await client.query(
-        "SELECT payout_account_name, payout_account_details FROM clubs WHERE id = $1 FOR UPDATE",
-        [req.club.id],
-      )).rows[0];
-      if (!club.payout_account_name || !club.payout_account_details) {
-        await client.query("ROLLBACK");
-        return res.status(409).json({ error: "Add your payout bank details before withdrawing." });
-      }
       const note = ((req.body || {}).note || "").toString().trim().slice(0, 200) || null;
-      const balances = await clubBalancesByCurrency(req.club.id, client);
-      if (!balances.length) {
-        await client.query("ROLLBACK");
-        return res.status(409).json({ error: "You have no balance to withdraw." });
-      }
-      const payouts = [];
-      for (const b of balances) {
-        const row = (await client.query(
-          `INSERT INTO payouts (club_id, amount_cents, currency, status, note)
-           VALUES ($1, $2, $3, 'pending', $4)
-           RETURNING id, amount_cents, currency, status, note, created_at, paid_at`,
-          [req.club.id, b.cents, b.currency, note],
-        )).rows[0];
-        payouts.push(row);
-      }
-      await client.query("COMMIT");
+      // lib/payout-ledger locks the club row FOR UPDATE and books one pending
+      // payout per currency; the platform operator is notified to fulfil it.
+      const payouts = await ledger.createWithdrawal(pool, { clubId: req.club.id, note });
+      recordAudit(pool, {
+        ...auditFromReq(req),
+        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // federation's org_id surface in the org-admin audit log, leaking
+        // club-private class/payout activity (#98's boundary). Sysadmin
+        // tooling finds these via metadata.club_id.
+        org_id: null,
+        entity_type: "payout", entity_id: payouts[0]?.id || null,
+        action: "payout.requested",
+        metadata: { club_id: req.club.id, payouts: payouts.map((p) => ({ id: p.id, amount_cents: p.amount_cents, currency: p.currency })) },
+      }).catch(() => {});
+      email?.sendPayoutRequestedEmail({ clubId: req.club.id, payouts });
       return res.status(201).json(payouts);
     } catch (err) {
-      await client.query("ROLLBACK").catch(() => {});
       log.error({ err: err.message }, "[classes] club withdrawal request failed");
       return res.status(err.status || 500).json({ error: err.message || "Withdrawal failed." });
-    } finally {
-      client.release();
     }
   });
 
@@ -790,23 +829,52 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // Diver self-enrols into a class in their own club. Priced classes start
-  // 'pending' (payment is coming soon); free classes go straight to 'active'.
+  // 'pending' (the diver then pays via checkout); free classes go straight
+  // to 'active'. The capacity check and the insert run in ONE transaction
+  // under a class row lock, so two divers can't race into the last spot.
   router.post("/api/me/classes/:classId/enrol", verifyToken, async (req, res) => {
+    const client = await pool.connect();
     try {
       const me = (await pool.query("SELECT club_id, org_id FROM users WHERE id = $1", [req.user.id])).rows[0];
       if (!me || !me.club_id) return res.status(400).json({ error: "Join a club before enrolling in a class." });
-      const cls = (await pool.query(
-        "SELECT * FROM classes WHERE id = $1 AND club_id = $2 AND active",
+      await client.query("BEGIN");
+      const cls = (await client.query(
+        "SELECT * FROM classes WHERE id = $1 AND club_id = $2 AND active FOR UPDATE",
         [req.params.classId, me.club_id],
       )).rows[0];
-      if (!cls) return res.status(404).json({ error: "Class not found" });
+      if (!cls) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Class not found" });
+      }
+      // Capacity is enforced on SELF-enrolment only (club admins may
+      // deliberately overfill their own roster).
+      if (cls.capacity != null && cls.capacity > 0) {
+        const n = (await client.query(
+          "SELECT COUNT(*)::int AS n FROM class_enrolments WHERE class_id = $1 AND status IN ('active','pending')",
+          [cls.id],
+        )).rows[0].n;
+        if (n >= cls.capacity) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ error: "This class is full." });
+        }
+      }
       const chosen = await resolvePriceOption(cls.id, (req.body || {}).price_option_id);
-      if (chosen && chosen.error) return res.status(400).json({ error: chosen.error });
-      const anyPrices = (await pool.query(
+      if (chosen && chosen.error) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: chosen.error });
+      }
+      const anyPrices = (await client.query(
         "SELECT 1 FROM class_price_options WHERE class_id = $1 AND active LIMIT 1", [cls.id],
       )).rows.length > 0;
+      // A priced class REQUIRES a price option on self-enrol. Without this,
+      // the row would land 'pending' with amount_cents NULL and the checkout
+      // endpoint's "nothing left to charge" path would activate it for free.
+      if (anyPrices && !chosen) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "Choose a price option for this class." });
+      }
       const status = anyPrices ? "pending" : "active";
-      const r = await pool.query(
+      const r = await client.query(
         `INSERT INTO class_enrolments
             (class_id, diver_user_id, club_id, org_id, status, price_option_id, amount_cents, currency, enrolled_by)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $2)
@@ -814,11 +882,15 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         [cls.id, req.user.id, me.club_id, me.org_id, status,
          chosen ? chosen.id : null, chosen ? chosen.amount_cents : null, chosen ? chosen.currency : null],
       );
+      await client.query("COMMIT");
       return res.status(201).json(r.rows[0]);
     } catch (err) {
+      await client.query("ROLLBACK").catch(() => {});
       if (err.code === "23505") return res.status(409).json({ error: "You're already enrolled in this class." });
       log.error({ err: err.message }, "[classes] self-enrol failed");
       return res.status(500).json({ error: "Failed to enrol." });
+    } finally {
+      client.release();
     }
   });
 
@@ -841,7 +913,14 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       if (!enr) return res.status(404).json({ error: "Enrolment not found" });
       if (enr.diver_user_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
       if (enr.status !== "pending") return res.status(409).json({ error: `This enrolment is ${enr.status}.` });
-      const baseAmountCents = (enr.amount_cents || 0) - (enr.discount_cents || 0);
+      // A pending enrolment with NO price (amount_cents NULL) is un-priced,
+      // not free: activating it here would hand out priced classes for
+      // nothing whenever a row was created without a price option. Only a
+      // real price fully covered by a discount may activate without charge.
+      if (enr.amount_cents == null) {
+        return res.status(409).json({ error: "This enrolment has no price set — ask your club to set one before paying." });
+      }
+      const baseAmountCents = enr.amount_cents - (enr.discount_cents || 0);
       if (baseAmountCents <= 0) {
         await pool.query("UPDATE class_enrolments SET status = 'active', updated_at = now() WHERE id = $1", [enr.id]);
         return res.json({ status: "active" });
@@ -851,37 +930,64 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       const { chargeAmountCents, applicationFeeCents } = priceCharge({
         baseAmountCents, feeBps: enr.platform_fee_bps, feePayer: "absorb",
       });
+      // One live payment per enrolment (078). A blocked insert means a
+      // previous attempt is still live: resume its open Stripe session, or
+      // retire a dead one and retry — an abandoned checkout must never
+      // dead-end the diver behind a 409 until the session expires.
       let paymentId;
-      try {
-        const ins = await pool.query(
-          `INSERT INTO payments
-              (org_id, payer_user_id, payer_type, subject_type, club_id, recipient_type,
-               class_enrolment_id, amount_cents, platform_fee_cents, currency, fee_payer, status)
-           VALUES ($1, $2, 'user', 'class_enrolment', $3, 'club', $4, $5, $6, $7, 'absorb', 'pending')
-           RETURNING id`,
-          [enr.org_id, req.user.id, enr.club_id, enr.id, chargeAmountCents, applicationFeeCents, currency],
-        );
-        paymentId = ins.rows[0].id;
-      } catch (e) {
-        if (e.code === "23505") return res.status(409).json({ error: "You already have a payment in progress for this class." });
-        throw e;
+      for (let attemptNo = 0; ; attemptNo++) {
+        try {
+          paymentId = (await pool.query(
+            `INSERT INTO payments
+                (org_id, payer_user_id, payer_type, subject_type, club_id, recipient_type,
+                 class_enrolment_id, amount_cents, platform_fee_cents, currency, fee_payer, status)
+             VALUES ($1, $2, 'user', 'class_enrolment', $3, 'club', $4, $5, $6, $7, 'absorb', 'pending')
+             RETURNING id`,
+            [enr.org_id, req.user.id, enr.club_id, enr.id, chargeAmountCents, applicationFeeCents, currency],
+          )).rows[0].id;
+          break;
+        } catch (e) {
+          if (e.code !== "23505" || attemptNo >= 1) {
+            if (e.code === "23505") return res.status(409).json({ error: "You already have a payment in progress for this class." });
+            throw e;
+          }
+          const blocking = (await pool.query(
+            `SELECT id, status, stripe_checkout_session FROM payments
+              WHERE class_enrolment_id = $1 AND status IN ('pending', 'paid')
+              ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
+            [enr.id],
+          )).rows[0];
+          const outcome = await resumeOrRetireCheckout({ pool, payments, logger: log }, blocking);
+          if (outcome.url) return res.json({ url: outcome.url, payment_id: outcome.paymentId, resumed: true });
+          if (outcome.paid) return res.status(409).json({ error: "This enrolment has already been paid for." });
+          if (outcome.unavailable) return res.status(503).json({ error: "Couldn't check your previous payment attempt with Stripe — please try again." });
+          // retired -> loop retries the insert once.
+        }
       }
-      const session = await payments.createCheckoutSession({
-        currency,
-        chargeAmountCents,
-        applicationFeeCents,
-        productName: `Class: ${enr.class_name}`,
-        customerEmail: req.user.email,
-        clientReferenceId: paymentId,
-        metadata: { payment_id: paymentId, class_enrolment_id: enr.id },
-        successUrl: `${APP_BASE_URL}/classes?paid=1`,
-        cancelUrl: `${APP_BASE_URL}/classes?canceled=1`,
-      });
-      await pool.query(
-        "UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2",
-        [session.id, paymentId],
-      );
-      return res.json({ url: session.url, payment_id: paymentId });
+      try {
+        const session = await payments.createCheckoutSession({
+          currency,
+          chargeAmountCents,
+          applicationFeeCents,
+          productName: `Class: ${enr.class_name}`,
+          customerEmail: req.user.email,
+          clientReferenceId: paymentId,
+          metadata: { payment_id: paymentId, class_enrolment_id: enr.id },
+          successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=class`,
+          cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=class`,
+        });
+        await pool.query(
+          "UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2",
+          [session.id, paymentId],
+        );
+        return res.json({ url: session.url, payment_id: paymentId });
+      } catch (err) {
+        // Stripe failed after the row was inserted — release the one-live
+        // slot, or the diver is 409-blocked from ever paying (mirrors every
+        // checkout in routes/payments.js).
+        await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [paymentId]).catch(() => {});
+        throw err;
+      }
     } catch (err) {
       log.error({ err: err.message }, "[classes] enrolment checkout failed");
       return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });

@@ -1447,7 +1447,13 @@
     "type_donation": "Donazione",
     "type_fine": "Multa",
     "type_scratch": "Penale per ritiro",
-    "type_no_show": "Penale per mancata presentazione"
+    "type_no_show": "Penale per mancata presentazione",
+    "return_paid_title": "Pagamento ricevuto",
+    "return_paid_body": "Grazie — il pagamento è andato a buon fine. La conferma sul tuo account può richiedere qualche istante; aggiorna la pagina a breve se qualcosa risulta ancora non pagato.",
+    "return_canceled_title": "Pagamento annullato",
+    "return_canceled_body": "Non ti è stato addebitato nulla. Puoi riprovare quando vuoi.",
+    "return_continue": "Continua",
+    "return_history": "Vedi cronologia pagamenti"
   },
   "classes": {
     "menu": "Lezioni",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Inserisci una soglia di almeno 1,00.",
       "history": "Cronologia prelievi",
       "history_empty": "Nessun prelievo effettuato finora.",
-      "dormant_note": "I pagamenti saranno presto disponibili. Aggiungi ora le tue coordinate bancarie e le preferenze di prelievo automatico: ti pagheremo non appena la funzione sarà attivata."
+      "dormant_note": "I pagamenti saranno presto disponibili. Aggiungi ora le tue coordinate bancarie e le preferenze di prelievo automatico: ti pagheremo non appena la funzione sarà attivata.",
+      "federation_fees": "Quote federali",
+      "federation_fees_hint": "Quote annuali di affiliazione e accreditamento che il tuo club versa alla federazione."
     },
     "col_date": "Data",
     "col_amount": "Importo",
     "pay_now": "Paga ora",
     "error_checkout": "Impossibile avviare il pagamento.",
     "subtab_classes": "Corsi",
-    "subtab_payouts": "Pagamenti"
+    "subtab_payouts": "Pagamenti",
+    "confirm_refund": "Rimborsare {amount} a {name}? L'iscrizione tornerà non pagata.",
+    "refunded": "Rimborso emesso",
+    "error_refund": "Impossibile rimborsare il pagamento",
+    "refund": "Rimborsa",
+    "paid_online": "Pagato online",
+    "paid_online_tip": "Questa iscrizione è stata pagata online",
+    "request_payment": "Richiedi il pagamento online al tuffatore"
   }
 }

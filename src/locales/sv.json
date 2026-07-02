@@ -1447,7 +1447,13 @@
     "type_donation": "Donation",
     "type_fine": "Böter",
     "type_scratch": "Avgift för avanmälan",
-    "type_no_show": "Avgift för utebliven start"
+    "type_no_show": "Avgift för utebliven start",
+    "return_paid_title": "Betalning mottagen",
+    "return_paid_body": "Tack — din betalning gick igenom. Det kan ta en stund innan den bekräftas på ditt konto, så uppdatera sidan om en stund om något fortfarande visas som obetalt.",
+    "return_canceled_title": "Betalning avbruten",
+    "return_canceled_body": "Du har inte debiterats. Du kan försöka igen när du vill.",
+    "return_continue": "Fortsätt",
+    "return_history": "Visa betalningshistorik"
   },
   "classes": {
     "menu": "Klasser",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Ange en gräns på minst 1,00.",
       "history": "Uttagshistorik",
       "history_empty": "Inga uttag ännu.",
-      "dormant_note": "Betalningar kommer snart. Lägg till era utbetalningsuppgifter och inställningar för automatiskt uttag redan nu — vi betalar ut så snart funktionen är aktiverad."
+      "dormant_note": "Betalningar kommer snart. Lägg till era utbetalningsuppgifter och inställningar för automatiskt uttag redan nu — vi betalar ut så snart funktionen är aktiverad.",
+      "federation_fees": "Förbundsavgifter",
+      "federation_fees_hint": "Årliga anslutnings- och ackrediteringsavgifter som din klubb betalar till förbundet."
     },
     "col_date": "Datum",
     "col_amount": "Belopp",
     "pay_now": "Betala nu",
     "error_checkout": "Det gick inte att starta betalningen.",
     "subtab_classes": "Kurser",
-    "subtab_payouts": "Utbetalningar"
+    "subtab_payouts": "Utbetalningar",
+    "confirm_refund": "Återbetala {amount} till {name}? Anmälan blir obetald igen.",
+    "refunded": "Återbetalning genomförd",
+    "error_refund": "Det gick inte att återbetala betalningen",
+    "refund": "Återbetala",
+    "paid_online": "Betald online",
+    "paid_online_tip": "Den här anmälan betalades med onlinebetalning",
+    "request_payment": "Begär onlinebetalning från simhopparen"
   }
 }

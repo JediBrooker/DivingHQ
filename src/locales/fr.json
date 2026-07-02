@@ -1447,7 +1447,13 @@
     "type_donation": "Don",
     "type_fine": "Amende",
     "type_scratch": "Pénalité de retrait",
-    "type_no_show": "Pénalité d'absence"
+    "type_no_show": "Pénalité d'absence",
+    "return_paid_title": "Paiement reçu",
+    "return_paid_body": "Merci — votre paiement a bien été effectué. La confirmation sur votre compte peut prendre quelques instants ; actualisez la page sous peu si quelque chose apparaît encore comme impayé.",
+    "return_canceled_title": "Paiement annulé",
+    "return_canceled_body": "Vous n'avez pas été débité. Vous pouvez réessayer quand vous voulez.",
+    "return_continue": "Continuer",
+    "return_history": "Voir l'historique des paiements"
   },
   "classes": {
     "menu": "Cours",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Saisissez un seuil d'au moins 1,00.",
       "history": "Historique des retraits",
       "history_empty": "Aucun retrait pour le moment.",
-      "dormant_note": "Les paiements arrivent bientôt. Ajoutez dès maintenant vos coordonnées de versement et vos préférences de retrait automatique — nous vous paierons dès l'activation."
+      "dormant_note": "Les paiements arrivent bientôt. Ajoutez dès maintenant vos coordonnées de versement et vos préférences de retrait automatique — nous vous paierons dès l'activation.",
+      "federation_fees": "Frais de fédération",
+      "federation_fees_hint": "Frais annuels d'affiliation et d'accréditation que votre club verse à la fédération."
     },
     "col_date": "Date",
     "col_amount": "Montant",
     "pay_now": "Payer maintenant",
     "error_checkout": "Impossible de démarrer le paiement.",
     "subtab_classes": "Cours",
-    "subtab_payouts": "Versements"
+    "subtab_payouts": "Versements",
+    "confirm_refund": "Rembourser {amount} à {name} ? L'inscription redeviendra impayée.",
+    "refunded": "Remboursement effectué",
+    "error_refund": "Impossible de rembourser le paiement",
+    "refund": "Rembourser",
+    "paid_online": "Payé en ligne",
+    "paid_online_tip": "Cette inscription a été payée en ligne",
+    "request_payment": "Demander un paiement en ligne au plongeur"
   }
 }

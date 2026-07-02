@@ -28,6 +28,31 @@
       "body": "Du har begärt att ändra din e-postadress på {app_name} till denna adress. Klicka på länken nedan för att bekräfta. Länken är giltig i 30 minuter och kan bara användas en gång.",
       "cta": "Bekräfta ny e-post",
       "footer": "Om du inte har gjort den här ändringen kan du bortse från det här meddelandet — ditt konto är oförändrat."
+    },
+    "common": {
+      "greeting": "Hej {name},"
+    },
+    "payment_receipt": {
+      "subject": "Betalning mottagen — {app_name}",
+      "body": "Vi har tagit emot din betalning på {amount} för: {description}.",
+      "footer": "Se din betalningshistorik när som helst: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Betalning återbetalad — {app_name}",
+      "body": "{amount} av din betalning för: {description} har återbetalats. Återbetalningar syns vanligtvis på ditt kontoutdrag inom 5–10 arbetsdagar."
+    },
+    "fine_issued": {
+      "subject": "Du har fått böter — {app_name}",
+      "body": "Du har fått böter på {amount}. Orsak: {reason}",
+      "footer": "Betala dem eller överklaga här: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Ditt överklagande godkändes — {app_name}",
+      "body": "Ditt överklagande av böterna på {amount} godkändes. Böterna har avskrivits — du är inte skyldig något."
+    },
+    "appeal_dismissed": {
+      "subject": "Ditt överklagande avslogs — {app_name}",
+      "body": "Ditt överklagande av böterna på {amount} avslogs och böterna ska betalas igen. Du kan betala dem här: {link}"
     }
   },
   "pdf": {

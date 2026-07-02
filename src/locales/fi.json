@@ -1447,7 +1447,13 @@
     "type_donation": "Lahjoitus",
     "type_fine": "Sakko",
     "type_scratch": "Peruutusmaksu",
-    "type_no_show": "Poissaolomaksu"
+    "type_no_show": "Poissaolomaksu",
+    "return_paid_title": "Maksu vastaanotettu",
+    "return_paid_body": "Kiitos — maksusi onnistui. Vahvistus tilillesi voi kestää hetken; päivitä sivu pian, jos jokin näkyy yhä maksamattomana.",
+    "return_canceled_title": "Maksu peruutettu",
+    "return_canceled_body": "Sinulta ei veloitettu mitään. Voit yrittää uudelleen milloin tahansa.",
+    "return_continue": "Jatka",
+    "return_history": "Näytä maksuhistoria"
   },
   "classes": {
     "menu": "Kurssit",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Anna vähintään 1,00 suuruinen raja.",
       "history": "Nostohistoria",
       "history_empty": "Ei vielä nostoja.",
-      "dormant_note": "Maksut ovat tulossa pian. Lisää tilityksen tiedot ja automaattisen noston asetukset jo nyt — maksamme heti, kun ominaisuus otetaan käyttöön."
+      "dormant_note": "Maksut ovat tulossa pian. Lisää tilityksen tiedot ja automaattisen noston asetukset jo nyt — maksamme heti, kun ominaisuus otetaan käyttöön.",
+      "federation_fees": "Liiton maksut",
+      "federation_fees_hint": "Vuosittaiset jäsenyys- ja akkreditointimaksut, jotka seurasi maksaa liitolle."
     },
     "col_date": "Päivämäärä",
     "col_amount": "Summa",
     "pay_now": "Maksa nyt",
     "error_checkout": "Maksun aloittaminen epäonnistui.",
     "subtab_classes": "Ryhmät",
-    "subtab_payouts": "Tilitykset"
+    "subtab_payouts": "Tilitykset",
+    "confirm_refund": "Palautetaanko {amount} henkilölle {name}? Ilmoittautuminen palaa maksamattomaksi.",
+    "refunded": "Palautus tehty",
+    "error_refund": "Maksun palautus epäonnistui",
+    "refund": "Palauta",
+    "paid_online": "Maksettu verkossa",
+    "paid_online_tip": "Tämä ilmoittautuminen maksettiin verkkomaksuna",
+    "request_payment": "Pyydä verkkomaksua sukeltajalta"
   }
 }

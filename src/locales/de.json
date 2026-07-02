@@ -1447,7 +1447,13 @@
     "type_donation": "Spende",
     "type_fine": "Strafgebühr",
     "type_scratch": "Rückzugsgebühr",
-    "type_no_show": "Nichtantrittsgebühr"
+    "type_no_show": "Nichtantrittsgebühr",
+    "return_paid_title": "Zahlung eingegangen",
+    "return_paid_body": "Vielen Dank — Ihre Zahlung war erfolgreich. Die Bestätigung auf Ihrem Konto kann einen Moment dauern; laden Sie die Seite gleich neu, falls etwas noch als unbezahlt angezeigt wird.",
+    "return_canceled_title": "Zahlung abgebrochen",
+    "return_canceled_body": "Ihnen wurde nichts berechnet. Sie können es jederzeit erneut versuchen.",
+    "return_continue": "Weiter",
+    "return_history": "Zahlungsverlauf ansehen"
   },
   "classes": {
     "menu": "Kurse",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Gebt einen Schwellenwert von mindestens 1,00 ein.",
       "history": "Auszahlungsverlauf",
       "history_empty": "Noch keine Auszahlungen.",
-      "dormant_note": "Zahlungen sind bald verfügbar. Hinterlegt schon jetzt eure Auszahlungsdaten und eure Einstellung für automatische Auszahlungen — wir zahlen aus, sobald die Funktion aktiviert ist."
+      "dormant_note": "Zahlungen sind bald verfügbar. Hinterlegt schon jetzt eure Auszahlungsdaten und eure Einstellung für automatische Auszahlungen — wir zahlen aus, sobald die Funktion aktiviert ist.",
+      "federation_fees": "Verbandsgebühren",
+      "federation_fees_hint": "Jährliche Mitglieds- und Akkreditierungsgebühren, die Ihr Verein an den Verband zahlt."
     },
     "col_date": "Datum",
     "col_amount": "Betrag",
     "pay_now": "Jetzt bezahlen",
     "error_checkout": "Bezahlvorgang konnte nicht gestartet werden.",
     "subtab_classes": "Kurse",
-    "subtab_payouts": "Auszahlungen"
+    "subtab_payouts": "Auszahlungen",
+    "confirm_refund": "{amount} an {name} erstatten? Die Anmeldung gilt danach wieder als unbezahlt.",
+    "refunded": "Erstattung veranlasst",
+    "error_refund": "Zahlung konnte nicht erstattet werden",
+    "refund": "Erstatten",
+    "paid_online": "Online bezahlt",
+    "paid_online_tip": "Diese Anmeldung wurde online bezahlt",
+    "request_payment": "Online-Zahlung vom Springer anfordern"
   }
 }

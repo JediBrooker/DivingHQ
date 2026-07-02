@@ -28,6 +28,31 @@
       "body": "Du har bedt om at ændre din e-mail på {app_name} til denne adresse. Klik på linket nedenfor for at bekræfte. Linket er gyldigt i 30 minutter og kan kun bruges én gang.",
       "cta": "Bekræft ny e-mail",
       "footer": "Hvis du ikke har foretaget denne ændring, kan du roligt ignorere denne e-mail — din konto er uændret."
+    },
+    "common": {
+      "greeting": "Hej {name},"
+    },
+    "payment_receipt": {
+      "subject": "Betaling modtaget — {app_name}",
+      "body": "Vi har modtaget din betaling på {amount} for: {description}.",
+      "footer": "Se din betalingshistorik når som helst: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Betaling refunderet — {app_name}",
+      "body": "{amount} af din betaling for: {description} er blevet refunderet. Refusioner vises normalt på dit kontoudtog inden for 5–10 hverdage."
+    },
+    "fine_issued": {
+      "subject": "Du har fået en bøde — {app_name}",
+      "body": "Du har fået en bøde på {amount}. Årsag: {reason}",
+      "footer": "Betal den eller anke her: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Din anke blev taget til følge — {app_name}",
+      "body": "Din anke over bøden på {amount} blev taget til følge. Bøden er eftergivet — du skylder intet."
+    },
+    "appeal_dismissed": {
+      "subject": "Din anke blev afvist — {app_name}",
+      "body": "Din anke over bøden på {amount} blev afvist, og bøden skal betales igen. Du kan betale den her: {link}"
     }
   },
   "pdf": {

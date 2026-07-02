@@ -28,6 +28,31 @@
       "body": "Kérted, hogy a(z) {app_name} e-mail címét erre módosítsuk. Kattints az alábbi linkre a megerősítéshez. A link 30 percig érvényes, és csak egyszer használható fel.",
       "cta": "Új e-mail megerősítése",
       "footer": "Ha nem te kezdeményezted a változtatást, nyugodtan figyelmen kívül hagyhatod ezt az e-mailt — a fiókod változatlan."
+    },
+    "common": {
+      "greeting": "Kedves {name}!"
+    },
+    "payment_receipt": {
+      "subject": "Fizetés beérkezett — {app_name}",
+      "body": "Megkaptuk {amount} összegű befizetését a következőért: {description}.",
+      "footer": "Fizetési előzményeit bármikor megtekintheti: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Fizetés visszatérítve — {app_name}",
+      "body": "Befizetéséből {amount} visszatérítésre került ({description}). A visszatérítések általában 5–10 munkanapon belül jelennek meg a kivonaton."
+    },
+    "fine_issued": {
+      "subject": "Bírságot szabtak ki Önre — {app_name}",
+      "body": "{amount} összegű bírságot szabtak ki Önre. Indok: {reason}",
+      "footer": "Itt fizetheti be vagy fellebbezhet: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Fellebbezésének helyt adtak — {app_name}",
+      "body": "A(z) {amount} összegű bírság elleni fellebbezésének helyt adtak. A bírságot elengedték — nincs tartozása."
+    },
+    "appeal_dismissed": {
+      "subject": "Fellebbezését elutasították — {app_name}",
+      "body": "A(z) {amount} összegű bírság elleni fellebbezését elutasították, a bírság újra esedékes. Itt fizetheti be: {link}"
     }
   },
   "pdf": {

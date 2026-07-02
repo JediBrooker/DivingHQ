@@ -406,6 +406,7 @@ const requireOrgAdmin = [
 // Email helpers — moved into lib/email.js. Factory takes the pool
 // so the test runner can swap it. Every helper is best-effort and
 // silently no-ops when SMTP_HOST isn't set (dev-mode default).
+const email = require("./lib/email")({ pool });
 const {
   hashFingerprint,
   sendRoleDecisionEmail,
@@ -418,7 +419,7 @@ const {
   sendNewRoleRequestEmail,
   sendEventStartedEmails,
   sendEventResultsEmails,
-} = require("./lib/email")({ pool });
+} = email;
 
 // Scoreboard cache — short-TTL bucket per eventId. The HTTP
 // scoreboard route reads/writes via .get/.set; the socket
@@ -631,14 +632,16 @@ app.use(require("./routes/orgs")({
 }));
 
 // =============================================================
-// PAYMENTS ROUTES (Stripe Connect — Migration 066)
+// PAYMENTS ROUTES (platform is merchant of record — Migration 075)
 // [SECTION: ROUTES — PAYMENTS]
-// Federation onboarding, fee config, diver/member checkout, and
-// refunds. Direct charges: the federation is the merchant of record
-// and DivingHQ skims an application fee. `payments` (lib/stripe) is
+// Fee config, diver/member/club checkout, refunds, and the payout
+// ledger + back-office. Every charge lands on the PLATFORM's own
+// Stripe account; who is owed what is tracked in lib/payout-ledger
+// and paid out by the operator. `payments` (lib/stripe) is
 // constructed once and shared with the webhook handler. When
 // STRIPE_SECRET_KEY is unset, payments.enabled is false and every
-// payment route 503s rather than half-working.
+// payment route 503s rather than half-working; setting it WITHOUT
+// STRIPE_WEBHOOK_SECRET refuses to boot (lib/stripe).
 //
 // The webhook is mounted with express.raw (the global JSON parser
 // skips /webhooks/stripe above) so Stripe's signature can be verified
@@ -658,13 +661,15 @@ app.use(require("./routes/payments")({
   requireEventManager,
   requireMeetEditor,
   requireClubAdmin,
+  requireSystemAdmin,
   logger,
   payments,
+  email,
 }));
 app.post(
   "/webhooks/stripe",
   express.raw({ type: "application/json" }),
-  require("./routes/stripe-webhook")({ pool, logger, payments }),
+  require("./routes/stripe-webhook")({ pool, logger, payments, email }),
 );
 
 // =============================================================
@@ -712,6 +717,7 @@ app.use(require("./routes/classes")({
   requireClubAdminOnly,
   logger,
   payments,
+  email,
 }));
 
 // =============================================================
@@ -1268,6 +1274,18 @@ async function bootChecks() {
     require("./lib/idempotency-sweeper").start({ pool });
   } catch (err) {
     logger.warn({ err: err.message }, "idempotency-sweeper start failed");
+  }
+
+  // Start the auto-withdraw sweeper (migrations 076/078): hourly, books a
+  // withdrawal for every org/club that enabled it once their balance
+  // clears the threshold. Only meaningful with payments live — while
+  // dormant the settings endpoints just save the preference for later.
+  if (payments.enabled) {
+    try {
+      require("./lib/auto-withdraw").start({ pool, logger, email });
+    } catch (err) {
+      logger.warn({ err: err.message }, "auto-withdraw sweeper start failed");
+    }
   }
   try {
     const v = await pool.query("SELECT version, applied_at FROM schema_meta WHERE id = 1");

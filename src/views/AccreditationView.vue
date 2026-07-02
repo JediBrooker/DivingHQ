@@ -7,7 +7,6 @@
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import FeePreviewCard from '@/components/payments/FeePreviewCard.vue'
-import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
 
 const auth = useAuthStore()
 const orgId = computed(() => auth.user?.org_id)
@@ -20,9 +19,6 @@ const myRoles = computed(() => (auth.user?.org_roles || []).filter(r => Object.p
   <section class="accreditation-view">
     <h1>Accreditation</h1>
     <p class="lede">Annual accreditation for the official and coaching roles you hold.</p>
-    <ComingSoonBanner
-      message="Online accreditation payments are coming soon — here's what accreditation will cost."
-    />
     <div v-if="orgId && myRoles.length" class="roles">
       <div v-for="role in myRoles" :key="role" class="role-card">
         <h3>{{ ROLE_LABELS[role] }}</h3>

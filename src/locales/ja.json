@@ -1447,7 +1447,13 @@
     "type_donation": "寄付",
     "type_fine": "罰金",
     "type_scratch": "棄権ペナルティ",
-    "type_no_show": "欠場ペナルティ"
+    "type_no_show": "欠場ペナルティ",
+    "return_paid_title": "お支払いを受け付けました",
+    "return_paid_body": "ありがとうございます。お支払いは完了しました。アカウントへの反映には少し時間がかかる場合があります。未払いのままの表示がある場合は、しばらくしてからページを更新してください。",
+    "return_canceled_title": "お支払いはキャンセルされました",
+    "return_canceled_body": "請求は発生していません。いつでも再度お試しいただけます。",
+    "return_continue": "続ける",
+    "return_history": "支払い履歴を見る"
   },
   "classes": {
     "menu": "クラス",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "1.00以上のしきい値を入力してください。",
       "history": "引き出し履歴",
       "history_empty": "引き出し履歴はまだありません。",
-      "dormant_note": "お支払い機能は近日公開予定です。今のうちに振込先情報と自動引き出しの設定を登録しておくと、機能が有効になり次第すぐにお支払いします。"
+      "dormant_note": "お支払い機能は近日公開予定です。今のうちに振込先情報と自動引き出しの設定を登録しておくと、機能が有効になり次第すぐにお支払いします。",
+      "federation_fees": "連盟への費用",
+      "federation_fees_hint": "クラブが連盟に支払う年間の加盟料・認定料です。"
     },
     "col_date": "日付",
     "col_amount": "金額",
     "pay_now": "今すぐ支払う",
     "error_checkout": "決済を開始できませんでした。",
     "subtab_classes": "クラス",
-    "subtab_payouts": "振込"
+    "subtab_payouts": "振込",
+    "confirm_refund": "{name} さんに {amount} を返金しますか？ 登録は未払いに戻ります。",
+    "refunded": "返金を実行しました",
+    "error_refund": "返金できませんでした",
+    "refund": "返金",
+    "paid_online": "オンライン決済済み",
+    "paid_online_tip": "この登録はオンライン決済で支払われました",
+    "request_payment": "選手にオンライン支払いをリクエストする"
   }
 }

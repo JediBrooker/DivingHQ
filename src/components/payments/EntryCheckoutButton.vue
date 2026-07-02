@@ -65,12 +65,22 @@ onMounted(load)
   <div class="entry-checkout">
     <p v-if="loading" class="muted">Loading…</p>
     <p v-else-if="comingSoon" class="coming-soon">💳 Online entry-fee payments are coming soon.</p>
-    <p v-else-if="!fee || !fee.price" class="muted">No entry fee is required for this event.</p>
+    <!-- fee === null: no fee configured (genuinely free). fee set but no
+         resolved price: every price window has closed — different message,
+         or divers think a paid event is free. -->
+    <p v-else-if="!fee" class="muted">No entry fee is required for this event.</p>
+    <p v-else-if="!fee.price" class="muted">Entry purchase isn't open right now — contact the organisers.</p>
     <p v-else-if="fee.already_paid" class="paid">✓ Entry fee paid</p>
     <template v-else>
       <p class="price">
         Entry fee: <strong>{{ money(fee.price.amount_cents, fee.currency) }}</strong>
         <span v-if="fee.is_member" class="badge">member price</span>
+      </p>
+      <!-- Server-computed figure the card is actually charged (includes the
+           platform fee when the federation passes it on) — the quote must
+           always match Stripe's total. -->
+      <p v-if="fee.payer_total_cents != null && fee.payer_total_cents !== fee.total_cents" class="uplift">
+        You pay {{ money(fee.payer_total_cents, fee.currency) }} (incl. platform fee)
       </p>
       <template v-if="fee.late_fee && fee.late_fee.applies">
         <p class="late">
@@ -95,6 +105,7 @@ onMounted(load)
 .late { margin: 0; color: var(--amber, #b70); }
 .total { margin: 0; }
 .late-warn { margin: 0; font-size: .85rem; color: var(--amber, #b70); }
+.uplift { margin: 0; font-size: .85rem; color: var(--fg-2, #555); }
 .badge { margin-left: .5rem; font-size: .75rem; padding: .1rem .4rem; border-radius: .4rem; background: var(--accent-soft, #eef); }
 .late-badge { background: var(--amber-dim, #fdf0d5); color: var(--amber, #b70); }
 .muted { color: var(--muted, #777); }

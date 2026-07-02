@@ -1447,7 +1447,13 @@
     "type_donation": "Donacija",
     "type_fine": "Kazna",
     "type_scratch": "Kazna za odustajanje",
-    "type_no_show": "Kazna za nedolazak"
+    "type_no_show": "Kazna za nedolazak",
+    "return_paid_title": "Uplata primljena",
+    "return_paid_body": "Hvala — vaša je uplata uspjela. Potvrda na vašem računu može potrajati nekoliko trenutaka; osvježite stranicu uskoro ako se nešto i dalje prikazuje kao neplaćeno.",
+    "return_canceled_title": "Plaćanje otkazano",
+    "return_canceled_body": "Ništa vam nije naplaćeno. Možete pokušati ponovno kad god želite.",
+    "return_continue": "Nastavi",
+    "return_history": "Prikaži povijest plaćanja"
   },
   "classes": {
     "menu": "Ronilačke skupine",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Unesite prag od najmanje 1,00.",
       "history": "Povijest isplata",
       "history_empty": "Još nema isplata.",
-      "dormant_note": "Plaćanja uskoro stižu. Unesite podatke za isplatu i postavke automatske isplate već sada — isplatit ćemo vam sredstva čim značajka bude uključena."
+      "dormant_note": "Plaćanja uskoro stižu. Unesite podatke za isplatu i postavke automatske isplate već sada — isplatit ćemo vam sredstva čim značajka bude uključena.",
+      "federation_fees": "Naknade savezu",
+      "federation_fees_hint": "Godišnje naknade za pridruživanje i akreditaciju koje vaš klub plaća savezu."
     },
     "col_date": "Datum",
     "col_amount": "Iznos",
     "pay_now": "Plati sada",
     "error_checkout": "Naplatu nije bilo moguće pokrenuti.",
     "subtab_classes": "Treninzi",
-    "subtab_payouts": "Isplate"
+    "subtab_payouts": "Isplate",
+    "confirm_refund": "Vratiti {amount} osobi {name}? Upis će se vratiti u neplaćeno.",
+    "refunded": "Povrat izvršen",
+    "error_refund": "Uplatu nije bilo moguće vratiti",
+    "refund": "Povrat",
+    "paid_online": "Plaćeno online",
+    "paid_online_tip": "Ovaj upis plaćen je online plaćanjem",
+    "request_payment": "Zatraži online plaćanje od skakača"
   }
 }

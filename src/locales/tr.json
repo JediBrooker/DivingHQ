@@ -1447,7 +1447,13 @@
     "type_donation": "Bağış",
     "type_fine": "Ceza",
     "type_scratch": "Çekilme cezası",
-    "type_no_show": "Katılmama cezası"
+    "type_no_show": "Katılmama cezası",
+    "return_paid_title": "Ödeme alındı",
+    "return_paid_body": "Teşekkürler — ödemeniz başarıyla gerçekleşti. Hesabınıza yansıması birkaç dakika sürebilir; bir şey hâlâ ödenmemiş görünüyorsa sayfayı birazdan yenileyin.",
+    "return_canceled_title": "Ödeme iptal edildi",
+    "return_canceled_body": "Sizden ücret alınmadı. İstediğiniz zaman yeniden deneyebilirsiniz.",
+    "return_continue": "Devam et",
+    "return_history": "Ödeme geçmişini görüntüle"
   },
   "classes": {
     "menu": "Sınıflar",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "En az 1,00 tutarında bir eşik girin.",
       "history": "Para çekme geçmişi",
       "history_empty": "Henüz para çekme işlemi yok.",
-      "dormant_note": "Ödemeler yakında etkinleştirilecek. Ödeme bilgilerinizi ve otomatik para çekme tercihinizi şimdiden ekleyin — özellik açılır açılmaz ödemenizi yapacağız."
+      "dormant_note": "Ödemeler yakında etkinleştirilecek. Ödeme bilgilerinizi ve otomatik para çekme tercihinizi şimdiden ekleyin — özellik açılır açılmaz ödemenizi yapacağız.",
+      "federation_fees": "Federasyon ücretleri",
+      "federation_fees_hint": "Kulübünüzün federasyona ödediği yıllık üyelik ve akreditasyon ücretleri."
     },
     "col_date": "Tarih",
     "col_amount": "Tutar",
     "pay_now": "Şimdi öde",
     "error_checkout": "Ödeme işlemi başlatılamadı.",
     "subtab_classes": "Kurslar",
-    "subtab_payouts": "Ödemeler"
+    "subtab_payouts": "Ödemeler",
+    "confirm_refund": "{name} adlı kişiye {amount} iade edilsin mi? Kayıt yeniden ödenmemiş duruma döner.",
+    "refunded": "İade yapıldı",
+    "error_refund": "Ödeme iade edilemedi",
+    "refund": "İade et",
+    "paid_online": "Çevrimiçi ödendi",
+    "paid_online_tip": "Bu kayıt çevrimiçi ödemeyle yapıldı",
+    "request_payment": "Dalgıçtan çevrimiçi ödeme iste"
   }
 }

@@ -17,12 +17,15 @@ import DonationEditor from '@/components/payments/DonationEditor.vue'
 const auth = useAuthStore()
 const orgId = computed(() => auth.user?.org_id)
 
-const TABS = [
+const isSysAdmin = computed(() => !!auth.user?.is_system_admin)
+const TABS = computed(() => [
   { key: 'overview', label: 'Overview' },
   { key: 'account', label: 'Account details' },
   { key: 'withdrawals', label: 'Withdrawals' },
   { key: 'fees', label: 'Fees & pricing' },
-]
+  // Platform operator only: the fulfilment queue for EVERY org/club payout.
+  ...(isSysAdmin.value ? [{ key: 'queue', label: 'Payout queue' }] : []),
+])
 const tab = ref('overview')
 
 const status = ref(null)
@@ -139,9 +142,45 @@ async function requestWithdrawal() {
   }
 }
 
+// ---- payout back-office (platform operator / sysadmin) -------------
+const queue = ref([])
+const queueLoading = ref(false)
+const settlingId = ref(null)
+
+async function loadQueue() {
+  if (!isSysAdmin.value) return
+  queueLoading.value = true
+  try {
+    const r = await auth.apiFetch('/api/admin/payouts')
+    queue.value = r.payouts || []
+  } catch (e) {
+    showError(e.message || 'Could not load the payout queue')
+  } finally {
+    queueLoading.value = false
+  }
+}
+
+async function settle(p, outcome) {
+  const verb = outcome === 'paid' ? 'Mark this payout as PAID (bank transfer made)?' : 'Mark this payout as FAILED (returns the money to their balance)?'
+  if (!confirm(`${verb}
+
+${p.recipient_name} — ${money(p.amount_cents, p.currency)}`)) return
+  settlingId.value = p.id
+  try {
+    await auth.apiFetch(`/api/admin/payouts/${p.id}/settle`, { method: 'POST', body: JSON.stringify({ status: outcome }) })
+    showSuccess(outcome === 'paid' ? 'Payout marked paid' : 'Payout marked failed')
+    await loadQueue()
+  } catch (e) {
+    showError(e.message || 'Could not settle the payout')
+  } finally {
+    settlingId.value = null
+  }
+}
+
 onMounted(async () => {
   await loadStatus()
   await loadWithdrawals()
+  await loadQueue()
 })
 </script>
 
@@ -258,6 +297,34 @@ onMounted(async () => {
         </div>
       </div>
 
+      <!-- PAYOUT QUEUE (sysadmin) -->
+      <div v-if="isSysAdmin" v-show="tab === 'queue'" class="panel">
+        <div class="card">
+          <h2>Pending payouts — all federations &amp; clubs</h2>
+          <p class="muted">Make the bank transfer, then mark it paid. Marking it failed returns the money to the recipient's withdrawable balance.</p>
+          <p v-if="queueLoading" class="muted">Loading…</p>
+          <p v-else-if="!queue.length" class="muted">Nothing pending. 🎉</p>
+          <div v-else class="queue-scroll">
+            <table class="wtable">
+              <thead><tr><th>Requested</th><th>Recipient</th><th>Amount</th><th>Bank details</th><th>Note</th><th></th></tr></thead>
+              <tbody>
+                <tr v-for="p in queue" :key="p.id">
+                  <td>{{ fmtDate(p.created_at) }}</td>
+                  <td>{{ p.recipient_name }} <span class="pill">{{ p.recipient_type }}</span></td>
+                  <td><strong>{{ money(p.amount_cents, p.currency) }}</strong></td>
+                  <td class="bank"><div>{{ p.payout_account_name }}</div><div class="muted small">{{ p.payout_account_details }}</div></td>
+                  <td>{{ p.note || '' }}</td>
+                  <td class="q-actions">
+                    <button class="btn sm" :disabled="settlingId === p.id" @click="settle(p, 'paid')">Mark paid</button>
+                    <button class="btn sm ghost-danger" :disabled="settlingId === p.id" @click="settle(p, 'failed')">Failed</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- FEES & PRICING -->
       <div v-show="tab === 'fees'" class="panel">
         <div class="card">
@@ -322,4 +389,9 @@ onMounted(async () => {
 .pill { padding: .1rem .5rem; border-radius: 999px; font-size: .75rem; text-transform: capitalize; background: var(--bg-2, #eee); color: var(--fg-2, #555); }
 .pill.paid { background: var(--accent-soft, #dfe); color: var(--green, #2a7); }
 .pill.failed { background: var(--amber-dim, #fee); color: var(--danger, #c33); }
+.queue-scroll { overflow-x: auto; }
+.bank .small { font-size: .78rem; }
+.q-actions { display: flex; gap: .35rem; }
+.btn.sm { padding: .3rem .7rem; font-size: .8rem; }
+.btn.ghost-danger { background: transparent; border: 1px solid var(--danger, #c33); color: var(--danger, #c33); }
 </style>

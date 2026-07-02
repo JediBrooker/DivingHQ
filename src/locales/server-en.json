@@ -28,6 +28,31 @@
       "body": "You asked to change your {app_name} email to this address. Click the link below to confirm. The link is valid for 30 minutes and can only be used once.",
       "cta": "Confirm new email",
       "footer": "If you didn't make this change, you can safely ignore this email — your account is unchanged."
+    },
+    "common": {
+      "greeting": "Hi {name},"
+    },
+    "payment_receipt": {
+      "subject": "Payment received — {app_name}",
+      "body": "We received your payment of {amount} for: {description}.",
+      "footer": "View your payment history any time: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Payment refunded — {app_name}",
+      "body": "{amount} of your payment for: {description} has been refunded. Refunds usually appear on your statement within 5–10 business days."
+    },
+    "fine_issued": {
+      "subject": "A fine has been issued to you — {app_name}",
+      "body": "A fine of {amount} has been issued to you. Reason: {reason}",
+      "footer": "Pay it or file an appeal here: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Your appeal was upheld — {app_name}",
+      "body": "Your appeal against the fine of {amount} was upheld. The fine has been waived — nothing is owed."
+    },
+    "appeal_dismissed": {
+      "subject": "Your appeal was dismissed — {app_name}",
+      "body": "Your appeal against the fine of {amount} was dismissed and the fine is owed again. You can pay it here: {link}"
     }
   },
   "pdf": {

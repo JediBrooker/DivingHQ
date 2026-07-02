@@ -37,6 +37,14 @@ async function load() {
     ])
     mine.value = m
     available.value = a
+    // Pre-select each class's first price option so the dropdown always
+    // SHOWS the price that enrolling will use (it used to render blank and
+    // silently enrol at the first option).
+    for (const cls of a) {
+      if (cls.price_options && cls.price_options.length && !chosenPrice.value[cls.id]) {
+        chosenPrice.value[cls.id] = cls.price_options[0].id
+      }
+    }
   } catch (e) {
     showError(e.message || t('classes.error_load'))
   } finally {
@@ -49,15 +57,18 @@ async function payNow(e) {
   try {
     const res = await auth.apiFetch(`/api/me/class-enrolments/${e.id}/checkout`, { method: 'POST' })
     if (res.url) {
+      // Keep the button disabled while the browser navigates to Stripe —
+      // a finally-reset here re-enabled it mid-redirect, inviting a second
+      // click and a confusing second request.
       window.location.href = res.url
       return
     }
     // Fully covered by a discount — activated directly, no Stripe redirect.
     showSuccess(t('classes.enrolled'))
     await load()
+    payingId.value = null
   } catch (err) {
     showError(err.message || t('classes.error_checkout'))
-  } finally {
     payingId.value = null
   }
 }

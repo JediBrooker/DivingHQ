@@ -1447,7 +1447,13 @@
     "type_donation": "Doação",
     "type_fine": "Multa",
     "type_scratch": "Penalização por desistência",
-    "type_no_show": "Penalização por ausência"
+    "type_no_show": "Penalização por ausência",
+    "return_paid_title": "Pagamento recebido",
+    "return_paid_body": "Obrigado — o seu pagamento foi concluído. A confirmação na sua conta pode demorar alguns instantes; atualize a página em breve se algo ainda aparecer como não pago.",
+    "return_canceled_title": "Pagamento cancelado",
+    "return_canceled_body": "Não foi cobrado nada. Pode tentar novamente quando quiser.",
+    "return_continue": "Continuar",
+    "return_history": "Ver histórico de pagamentos"
   },
   "classes": {
     "menu": "Aulas",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Introduza um limite de, pelo menos, 1,00.",
       "history": "Histórico de levantamentos",
       "history_empty": "Ainda não há levantamentos.",
-      "dormant_note": "Os pagamentos estarão brevemente disponíveis. Adicione já os seus dados de recebimento e a preferência de levantamento automático — pagaremos ao clube assim que a funcionalidade for ativada."
+      "dormant_note": "Os pagamentos estarão brevemente disponíveis. Adicione já os seus dados de recebimento e a preferência de levantamento automático — pagaremos ao clube assim que a funcionalidade for ativada.",
+      "federation_fees": "Taxas da federação",
+      "federation_fees_hint": "Taxas anuais de filiação e acreditação que o seu clube paga à federação."
     },
     "col_date": "Data",
     "col_amount": "Montante",
     "pay_now": "Pagar agora",
     "error_checkout": "Não foi possível iniciar o pagamento.",
     "subtab_classes": "Aulas",
-    "subtab_payouts": "Pagamentos"
+    "subtab_payouts": "Pagamentos",
+    "confirm_refund": "Reembolsar {amount} a {name}? A inscrição volta a ficar por pagar.",
+    "refunded": "Reembolso emitido",
+    "error_refund": "Não foi possível reembolsar o pagamento",
+    "refund": "Reembolsar",
+    "paid_online": "Pago online",
+    "paid_online_tip": "Esta inscrição foi paga através de pagamento online",
+    "request_payment": "Pedir pagamento online ao saltador"
   }
 }

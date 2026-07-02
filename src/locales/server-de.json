@@ -28,6 +28,31 @@
       "body": "Du hast angefordert, deine {app_name}-E-Mail-Adresse auf diese hier zu ändern. Klicke auf den Link unten, um sie zu bestätigen. Der Link ist 30 Minuten lang gültig und kann nur einmal verwendet werden.",
       "cta": "Neue E-Mail bestätigen",
       "footer": "Wenn du diese Änderung nicht vorgenommen hast, kannst du diese E-Mail bedenkenlos ignorieren — dein Konto bleibt unverändert."
+    },
+    "common": {
+      "greeting": "Hallo {name},"
+    },
+    "payment_receipt": {
+      "subject": "Zahlung eingegangen — {app_name}",
+      "body": "Wir haben Ihre Zahlung über {amount} erhalten für: {description}.",
+      "footer": "Ihren Zahlungsverlauf können Sie jederzeit einsehen: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Zahlung erstattet — {app_name}",
+      "body": "{amount} Ihrer Zahlung für: {description} wurde erstattet. Erstattungen erscheinen üblicherweise innerhalb von 5–10 Werktagen auf Ihrem Kontoauszug."
+    },
+    "fine_issued": {
+      "subject": "Gegen Sie wurde eine Geldstrafe verhängt — {app_name}",
+      "body": "Gegen Sie wurde eine Geldstrafe von {amount} verhängt. Grund: {reason}",
+      "footer": "Hier bezahlen oder Einspruch einlegen: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Ihrem Einspruch wurde stattgegeben — {app_name}",
+      "body": "Ihrem Einspruch gegen die Geldstrafe von {amount} wurde stattgegeben. Die Strafe wurde erlassen — es ist nichts mehr offen."
+    },
+    "appeal_dismissed": {
+      "subject": "Ihr Einspruch wurde abgelehnt — {app_name}",
+      "body": "Ihr Einspruch gegen die Geldstrafe von {amount} wurde abgelehnt; die Strafe ist wieder fällig. Sie können sie hier bezahlen: {link}"
     }
   },
   "pdf": {

@@ -28,6 +28,31 @@
       "body": "Затражили сте промену адресе е-поште на {app_name} на ову адресу. Кликните на везу испод за потврду. Веза важи 30 минута и може се искористити само једном.",
       "cta": "Потврди нову адресу",
       "footer": "Ако нисте направили ову промену, можете слободно занемарити ову поруку — ваш налог остаје непромењен."
+    },
+    "common": {
+      "greeting": "Zdravo {name},"
+    },
+    "payment_receipt": {
+      "subject": "Uplata primljena — {app_name}",
+      "body": "Primili smo vašu uplatu od {amount} za: {description}.",
+      "footer": "Istoriju plaćanja možete pogledati u bilo kom trenutku: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Uplata vraćena — {app_name}",
+      "body": "{amount} vaše uplate za: {description} je vraćeno. Povraćaji se na izvodu obično pojavljuju u roku od 5–10 radnih dana."
+    },
+    "fine_issued": {
+      "subject": "Izrečena vam je novčana kazna — {app_name}",
+      "body": "Izrečena vam je novčana kazna od {amount}. Razlog: {reason}",
+      "footer": "Platite je ili uložite žalbu ovde: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Vaša žalba je usvojena — {app_name}",
+      "body": "Vaša žalba na kaznu od {amount} je usvojena. Kazna je otpisana — ništa ne dugujete."
+    },
+    "appeal_dismissed": {
+      "subject": "Vaša žalba je odbijena — {app_name}",
+      "body": "Vaša žalba na kaznu od {amount} je odbijena i kazna se ponovo duguje. Možete je platiti ovde: {link}"
     }
   },
   "pdf": {

@@ -28,6 +28,31 @@
       "body": "Poprosiłeś o zmianę adresu e-mail w {app_name} na ten adres. Kliknij poniższy link, aby potwierdzić. Link jest ważny przez 30 minut i można go użyć tylko raz.",
       "cta": "Potwierdź nowy e-mail",
       "footer": "Jeśli nie dokonałeś tej zmiany, możesz zignorować tę wiadomość — Twoje konto pozostaje bez zmian."
+    },
+    "common": {
+      "greeting": "Dzień dobry, {name}!"
+    },
+    "payment_receipt": {
+      "subject": "Płatność otrzymana — {app_name}",
+      "body": "Otrzymaliśmy Twoją płatność {amount} za: {description}.",
+      "footer": "Historię płatności możesz sprawdzić w dowolnym momencie: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Płatność zwrócona — {app_name}",
+      "body": "{amount} z Twojej płatności za: {description} zostało zwrócone. Zwroty zwykle pojawiają się na wyciągu w ciągu 5–10 dni roboczych."
+    },
+    "fine_issued": {
+      "subject": "Nałożono na Ciebie grzywnę — {app_name}",
+      "body": "Nałożono na Ciebie grzywnę w wysokości {amount}. Powód: {reason}",
+      "footer": "Zapłać ją lub złóż odwołanie tutaj: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Twoje odwołanie zostało uwzględnione — {app_name}",
+      "body": "Twoje odwołanie od grzywny {amount} zostało uwzględnione. Grzywna została umorzona — nic nie jesteś winien."
+    },
+    "appeal_dismissed": {
+      "subject": "Twoje odwołanie zostało oddalone — {app_name}",
+      "body": "Twoje odwołanie od grzywny {amount} zostało oddalone i grzywna jest ponownie wymagalna. Możesz ją opłacić tutaj: {link}"
     }
   },
   "pdf": {

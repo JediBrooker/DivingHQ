@@ -28,6 +28,31 @@
       "body": "Anda meminta untuk menukar e-mel {app_name} anda kepada alamat ini. Klik pautan di bawah untuk mengesahkan. Pautan ini sah selama 30 minit dan hanya boleh digunakan sekali sahaja.",
       "cta": "Sahkan e-mel baharu",
       "footer": "Jika anda tidak membuat perubahan ini, anda boleh mengabaikan e-mel ini — akaun anda tidak berubah."
+    },
+    "common": {
+      "greeting": "Hai {name},"
+    },
+    "payment_receipt": {
+      "subject": "Pembayaran diterima — {app_name}",
+      "body": "Kami telah menerima pembayaran anda sebanyak {amount} untuk: {description}.",
+      "footer": "Lihat sejarah pembayaran anda pada bila-bila masa: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Pembayaran dikembalikan — {app_name}",
+      "body": "{amount} daripada pembayaran anda untuk: {description} telah dikembalikan. Bayaran balik biasanya muncul dalam penyata anda dalam masa 5–10 hari bekerja."
+    },
+    "fine_issued": {
+      "subject": "Anda dikenakan denda — {app_name}",
+      "body": "Anda dikenakan denda sebanyak {amount}. Sebab: {reason}",
+      "footer": "Bayar atau buat rayuan di sini: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Rayuan anda diterima — {app_name}",
+      "body": "Rayuan anda terhadap denda {amount} diterima. Denda dibatalkan — tiada tunggakan."
+    },
+    "appeal_dismissed": {
+      "subject": "Rayuan anda ditolak — {app_name}",
+      "body": "Rayuan anda terhadap denda {amount} ditolak dan denda perlu dibayar semula. Anda boleh membayarnya di sini: {link}"
     }
   },
   "pdf": {

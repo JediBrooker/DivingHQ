@@ -1447,9 +1447,15 @@
     "type_donation": "Donation",
     "type_fine": "Fine",
     "type_scratch": "Scratch penalty",
-    "type_no_show": "No-show penalty"
+    "type_no_show": "No-show penalty",
+    "return_paid_title": "Payment received",
+    "return_paid_body": "Thank you — your payment went through. It can take a few moments to be confirmed on your account, so refresh shortly if something still shows as unpaid.",
+    "return_canceled_title": "Payment cancelled",
+    "return_canceled_body": "You weren't charged. You can try again whenever you're ready.",
+    "return_continue": "Continue",
+    "return_history": "View payment history"
   },
-  "classes":   {
+  "classes": {
     "menu": "Classes",
     "title": "Classes",
     "subtitle": "Club training classes — manage, coach, or your own enrolment, depending on your role.",
@@ -1536,7 +1542,16 @@
       "threshold_invalid": "Enter a threshold of at least 1.00.",
       "history": "Withdrawal history",
       "history_empty": "No withdrawals yet.",
-      "dormant_note": "Payments are coming soon. Add your payout details and automatic-withdrawal preference now — we'll pay out the moment it's switched on."
-    }
+      "dormant_note": "Payments are coming soon. Add your payout details and automatic-withdrawal preference now — we'll pay out the moment it's switched on.",
+      "federation_fees": "Federation fees",
+      "federation_fees_hint": "Annual affiliation and accreditation fees your club pays the federation."
+    },
+    "confirm_refund": "Refund {amount} to {name}? The enrolment will go back to unpaid.",
+    "refunded": "Refund issued",
+    "error_refund": "Could not refund the payment",
+    "refund": "Refund",
+    "paid_online": "Paid online",
+    "paid_online_tip": "This enrolment was paid through online checkout",
+    "request_payment": "Request online payment from the diver"
   }
 }

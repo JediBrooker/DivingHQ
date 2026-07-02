@@ -1,10 +1,12 @@
-// routes/payments.js — Stripe Connect payment endpoints.
+// routes/payments.js — payment endpoints (platform is merchant of record).
 //
-// Federation onboarding, fee configuration, diver/member checkout, and
-// refunds. DivingHQ is the Connect platform; federations are connected
-// accounts; charges are DIRECT (federation = merchant of record) with a
-// platform application fee. See Migration 066 and lib/stripe.js for the
-// fund-flow model and lib/fee-pricing.js for the price + fee math.
+// Fee configuration, diver/member/club checkout, refunds, and the payout
+// ledger. Every charge lands on the PLATFORM's own Stripe account (PR #94
+// retired the earlier Connect direct-charge model); who is owed what is
+// tracked in our own ledger (lib/payout-ledger.js) and paid out by the
+// platform operator via the /api/admin/payouts back-office below. See
+// migration 075 and lib/stripe.js for the fund-flow model and
+// lib/fee-pricing.js for the price + fee math.
 //
 // Factory pattern (matches the other route modules). The Stripe webhook
 // lives in routes/stripe-webhook.js — it needs the raw body, so it
@@ -21,23 +23,13 @@
 
 const express = require("express");
 const { resolvePrice, priceCharge } = require("../lib/fee-pricing");
+const { recordAudit, auditFromReq } = require("../lib/audit");
+const ledger = require("../lib/payout-ledger");
+const { fromStripeAmount } = require("../lib/stripe");
+const { retirePendingPayment, resumeOrRetireCheckout, applyFullRefundSideEffects } = require("../lib/payment-lifecycle");
 
 const APP_BASE_URL =
   process.env.APP_BASE_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
-
-// Country codes in the DB are ISO 3166-1 alpha-3 (e.g. 'GBR'); Stripe's
-// v2 accounts want alpha-2 (e.g. 'gb'). Map the common federation
-// nations; the onboarding endpoint also accepts an explicit alpha-2
-// `country` in the body to cover anything not listed here.
-const ALPHA3_TO_ALPHA2 = {
-  GBR: "gb", USA: "us", AUS: "au", CAN: "ca", NZL: "nz", IRL: "ie",
-  FRA: "fr", DEU: "de", ESP: "es", ITA: "it", NLD: "nl", SWE: "se",
-  NOR: "no", DNK: "dk", CHE: "ch", AUT: "at", BEL: "be", PRT: "pt",
-  ZAF: "za", JPN: "jp", SGP: "sg",
-};
-function alpha3ToAlpha2(code) {
-  return code ? ALPHA3_TO_ALPHA2[String(code).toUpperCase()] || null : null;
-}
 
 // Validate + normalise an incoming price-variant array. Returns
 // { prices } or { error }.
@@ -46,8 +38,12 @@ function validatePrices(prices) {
   const out = [];
   for (const p of prices) {
     const amount = Number(p.amount_cents);
-    if (!Number.isInteger(amount) || amount < 0) {
-      return { error: "Each price needs an integer amount_cents >= 0." };
+    // Minimum 1.00: a 0 (or sub-minimum) variant is never chargeable —
+    // Stripe refuses tiny charges, and a blank editor row silently parsed
+    // to 0 would win "cheapest applicable price" for EVERYONE. Free things
+    // are modelled by not configuring a fee at all, not by a 0 price.
+    if (!Number.isInteger(amount) || amount < 100) {
+      return { error: "Each price needs an integer amount_cents of at least 100 (1.00). For something free, remove the fee instead." };
     }
     const label = String(p.label || "standard").slice(0, 40);
     const audience = AUDIENCES.includes(p.audience) ? p.audience : "all";
@@ -92,8 +88,10 @@ module.exports = function createPaymentsRouter({
   requireEventManager,
   requireMeetEditor,
   requireClubAdmin,
+  requireSystemAdmin = (req, res) => res.status(403).json({ error: "Forbidden" }),
   logger,
   payments,
+  email = null,
 }) {
   const router = express.Router();
 
@@ -102,6 +100,30 @@ module.exports = function createPaymentsRouter({
   // keeps the URL `kind` param and the DB scope in lockstep.
   function clubScope(kind) {
     return kind === "accreditation" ? "club_accreditation" : "club_affiliation";
+  }
+
+  // Renewable purchases (membership, club affiliation/accreditation,
+  // official accreditation): migration 080 narrowed their one-live indexes
+  // to pending-only so year-2 renewals aren't blocked forever by year-1's
+  // paid row. "Don't accidentally buy twice" therefore lives here: buying
+  // is refused while an active grant is more than this many days from
+  // expiry; inside the window a purchase is a RENEWAL and the webhook
+  // extends the grant from the current period_end (no paid-for days lost).
+  const RENEWAL_WINDOW_DAYS = 30;
+
+  // 409 when an active grant makes this purchase premature. `sql` must
+  // select MAX(period_end) AS until for grants still active beyond the
+  // renewal window.
+  async function refuseOutsideRenewalWindow({ sql, params, what }) {
+    const row = (await pool.query(sql, params)).rows[0];
+    if (row && row.until) {
+      const until = new Date(row.until).toISOString().slice(0, 10);
+      const err = new Error(
+        `${what} is active until ${until} — renewals open ${RENEWAL_WINDOW_DAYS} days before it ends.`,
+      );
+      err.status = 409;
+      throw err;
+    }
   }
 
   // Roles an official can be accredited for. Matches fee_definitions.role_type
@@ -138,40 +160,23 @@ module.exports = function createPaymentsRouter({
     return req.user.is_system_admin || req.user.org_id === orgId;
   }
 
-  // Balance (minor units) the platform still owes a federation: net of all
-  // collected payments (fee prorated on partial refunds, clamped >= 0) minus
-  // everything already withdrawn (pending + paid payouts). Runs on `db` so it
-  // can share a transaction / row-lock with a withdrawal insert.
-  async function orgBalancesByCurrency(orgId, db = pool) {
-    // Net owed PER CURRENCY: collected (fee prorated on partial refunds,
-    // clamped >= 0) minus what's already withdrawn, grouped by currency so a
-    // federation that took payments in more than one currency is never summed
-    // into one meaningless number or paid out in the wrong currency.
-    // recipient_type = 'org' excludes class_enrolment payments — those carry
-    // this same org_id (the diver's federation) for reporting, but the MONEY
-    // is owed to the class's club, not the federation. Without this filter a
-    // class enrolment payment would double-count into both balances.
-    const collected = (await db.query(
-      `SELECT currency, COALESCE(SUM(GREATEST(0,
-          CASE status
-            WHEN 'paid' THEN amount_cents - platform_fee_cents
-            WHEN 'partially_refunded' THEN ROUND(
-              (amount_cents - platform_fee_cents)::numeric
-                * (amount_cents - COALESCE(refunded_amount_cents, 0)) / NULLIF(amount_cents, 0))
-            ELSE 0 END)), 0)::bigint AS net
-         FROM payments WHERE org_id = $1 AND recipient_type = 'org' GROUP BY currency`,
-      [orgId],
-    )).rows;
-    const paid = (await db.query(
-      `SELECT currency, COALESCE(SUM(amount_cents), 0)::bigint AS n
-         FROM payouts WHERE org_id = $1 AND status IN ('pending', 'paid') GROUP BY currency`,
-      [orgId],
-    )).rows;
-    const paidByCur = new Map(paid.map((r) => [r.currency, Number(r.n)]));
-    return collected
-      .map((r) => ({ currency: r.currency, cents: Number(r.net) - (paidByCur.get(r.currency) || 0) }))
-      .filter((b) => b.cents > 0)
-      .sort((a, b) => b.cents - a.cents);
+  // Balance (minor units) the platform still owes a federation. The math
+  // (fee prorated on partial refunds, per-currency buckets, recipient_type
+  // 'org' so class-enrolment money never double-counts into the federation)
+  // lives in lib/payout-ledger.js, shared with the club ledger and the
+  // auto-withdraw sweeper.
+  const orgBalancesByCurrency = (orgId, db = pool) => ledger.orgBalancesByCurrency(orgId, db);
+
+  // What the payer is actually CHARGED for a resolved price: the platform
+  // fee is added on top under 'pass_to_payer'. Buyer-facing reads expose
+  // this as payer_total_cents so the quoted figure always matches the
+  // Stripe Checkout total (quoting the base while charging base+fee was a
+  // trust-destroying surprise at pay time).
+  function payerTotalCents(def, org, baseAmountCents) {
+    if (baseAmountCents == null) return null;
+    const feeBps = def.platform_fee_bps != null ? def.platform_fee_bps : org?.platform_fee_bps;
+    if (feeBps == null) return baseAmountCents;
+    return priceCharge({ baseAmountCents, feeBps, feePayer: def.fee_payer }).chargeAmountCents;
   }
 
   // Is this user an active member of the org right now?
@@ -317,6 +322,16 @@ module.exports = function createPaymentsRouter({
       err.status = 409;
       throw err;
     }
+    if (subjectType === "membership") {
+      await refuseOutsideRenewalWindow({
+        sql: `SELECT MAX(period_end) AS until FROM memberships
+               WHERE org_id = $1 AND user_id = $2 AND tier IS NOT DISTINCT FROM $3
+                 AND status = 'active'
+                 AND period_end > CURRENT_DATE + make_interval(days => $4)`,
+        params: [org.id, userId, fee.tier ?? null, RENEWAL_WINDOW_DAYS],
+        what: "Your membership",
+      });
+    }
     const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
     const { chargeAmountCents, applicationFeeCents } = priceCharge({
       baseAmountCents: chosen.amount_cents + (surchargeCents || 0),
@@ -352,27 +367,37 @@ module.exports = function createPaymentsRouter({
       }
     }
 
-    // Record the pending payment first. The unique partial index blocks
-    // a second live entry payment for the same diver+event.
-    let paymentId;
-    try {
-      const ins = await pool.query(
+    // Record the pending payment first. The unique partial index blocks a
+    // second live payment for the same slot; a blocked insert resumes the
+    // earlier attempt's still-open session or retires a dead one and
+    // retries (see insertPaymentOrResume).
+    const feeScoped = subjectType === "event_entry" || subjectType === "membership";
+    const attempt = await insertPaymentOrResume({
+      insert: async () => (await pool.query(
         `INSERT INTO payments
             (org_id, fee_definition_id, payer_user_id, subject_type, event_id, meet_id,
              amount_cents, platform_fee_cents, currency, fee_payer, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
          RETURNING id`,
         [org.id, fee.id, userId, subjectType, eventId || null, meetId || null, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
-      );
-      paymentId = ins.rows[0].id;
-    } catch (e) {
-      if (e.code === "23505") {
-        const err = new Error("You already have a payment in progress or completed for this.");
-        err.status = 409;
-        throw err;
-      }
-      throw e;
-    }
+      )).rows[0].id,
+      // Mirror the partial unique index guarding this subject: event entries
+      // and memberships are unique per fee definition (per-discipline fees
+      // are separate purchases); meet access and bundles are unique per
+      // meet+payer regardless of fee definition (migrations 072/073).
+      findBlocking: async () => (await pool.query(
+        `SELECT id, status, stripe_checkout_session FROM payments
+          WHERE subject_type = $1 AND payer_user_id = $2
+            AND event_id IS NOT DISTINCT FROM $3 AND meet_id IS NOT DISTINCT FROM $4
+            AND ($5::boolean = false OR fee_definition_id = $6)
+            AND status IN ('pending', 'paid')
+          ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
+        [subjectType, userId, eventId || null, meetId || null, feeScoped, fee.id],
+      )).rows[0],
+      alreadyDoneMessage: "You already have a payment in progress or completed for this.",
+    });
+    if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
+    const paymentId = attempt.paymentId;
 
     try {
       const session = await payments.createCheckoutSession({
@@ -421,6 +446,14 @@ module.exports = function createPaymentsRouter({
       throw err;
     }
     const subjectType = clubScope(kind);
+    await refuseOutsideRenewalWindow({
+      sql: `SELECT MAX(period_end) AS until FROM club_affiliations
+             WHERE org_id = $1 AND club_id = $2 AND kind = $3
+               AND status = 'active'
+               AND period_end > CURRENT_DATE + make_interval(days => $4)`,
+      params: [org.id, club.id, kind, RENEWAL_WINDOW_DAYS],
+      what: `This club's ${kind}`,
+    });
     const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
     const { chargeAmountCents, applicationFeeCents } = priceCharge({
       baseAmountCents: chosen.amount_cents,
@@ -431,25 +464,27 @@ module.exports = function createPaymentsRouter({
     // payer_club_id = the paying club; club_id = the subject club (same
     // here). The one-live-club partial index blocks a second live payment
     // for the same club+fee.
-    let paymentId;
-    try {
-      const ins = await pool.query(
+    const attempt = await insertPaymentOrResume({
+      insert: async () => (await pool.query(
         `INSERT INTO payments
             (org_id, fee_definition_id, payer_type, payer_club_id, club_id, subject_type,
              amount_cents, platform_fee_cents, currency, fee_payer, status)
          VALUES ($1, $2, 'club', $3, $3, $4, $5, $6, $7, $8, 'pending')
          RETURNING id`,
         [org.id, fee.id, club.id, subjectType, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
-      );
-      paymentId = ins.rows[0].id;
-    } catch (e) {
-      if (e.code === "23505") {
-        const err = new Error("This club already has a payment in progress or completed for this.");
-        err.status = 409;
-        throw err;
-      }
-      throw e;
-    }
+      )).rows[0].id,
+      findBlocking: async () => (await pool.query(
+        `SELECT id, status, stripe_checkout_session FROM payments
+          WHERE subject_type IN ('club_affiliation', 'club_accreditation')
+            AND payer_club_id = $1 AND fee_definition_id = $2
+            AND status IN ('pending', 'paid')
+          ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
+        [club.id, fee.id],
+      )).rows[0],
+      alreadyDoneMessage: "This club already has a payment in progress or completed for this.",
+    });
+    if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
+    const paymentId = attempt.paymentId;
 
     try {
       const session = await payments.createCheckoutSession({
@@ -466,8 +501,8 @@ module.exports = function createPaymentsRouter({
           club_id: club.id,
           initiated_by: req.user.id,
         },
-        successUrl: `${APP_BASE_URL}/clubs/${club.id}?paid=1`,
-        cancelUrl: `${APP_BASE_URL}/clubs/${club.id}?canceled=1`,
+        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=club`,
+        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=club`,
       });
       await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
       return { url: session.url, paymentId };
@@ -523,6 +558,14 @@ module.exports = function createPaymentsRouter({
       err.status = 409;
       throw err;
     }
+    await refuseOutsideRenewalWindow({
+      sql: `SELECT MAX(period_end) AS until FROM official_accreditations
+             WHERE org_id = $1 AND user_id = $2 AND role_type = $3 AND meet_id IS NULL
+               AND status = 'active'
+               AND period_end > CURRENT_DATE + make_interval(days => $4)`,
+      params: [org.id, userId, roleType, RENEWAL_WINDOW_DAYS],
+      what: `Your ${roleType} accreditation`,
+    });
     const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
     const { chargeAmountCents, applicationFeeCents } = priceCharge({
       baseAmountCents: chosen.amount_cents,
@@ -530,25 +573,27 @@ module.exports = function createPaymentsRouter({
       feePayer: fee.fee_payer,
     });
 
-    let paymentId;
-    try {
-      const ins = await pool.query(
+    const attempt = await insertPaymentOrResume({
+      insert: async () => (await pool.query(
         `INSERT INTO payments
             (org_id, fee_definition_id, payer_type, payer_user_id, payer_role_type, subject_type,
              amount_cents, platform_fee_cents, currency, fee_payer, status)
          VALUES ($1, $2, 'official_role', $3, $4, 'official_accreditation', $5, $6, $7, $8, 'pending')
          RETURNING id`,
         [org.id, fee.id, userId, roleType, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
-      );
-      paymentId = ins.rows[0].id;
-    } catch (e) {
-      if (e.code === "23505") {
-        const err = new Error("You already have a payment in progress or completed for this accreditation.");
-        err.status = 409;
-        throw err;
-      }
-      throw e;
-    }
+      )).rows[0].id,
+      findBlocking: async () => (await pool.query(
+        `SELECT id, status, stripe_checkout_session FROM payments
+          WHERE subject_type = 'official_accreditation'
+            AND payer_user_id = $1 AND payer_role_type = $2 AND fee_definition_id = $3
+            AND status IN ('pending', 'paid')
+          ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
+        [userId, roleType, fee.id],
+      )).rows[0],
+      alreadyDoneMessage: "You already have a payment in progress or completed for this accreditation.",
+    });
+    if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
+    const paymentId = attempt.paymentId;
 
     try {
       const session = await payments.createCheckoutSession({
@@ -565,8 +610,8 @@ module.exports = function createPaymentsRouter({
           user_id: userId,
           role_type: roleType,
         },
-        successUrl: `${APP_BASE_URL}/accreditation?paid=1`,
-        cancelUrl: `${APP_BASE_URL}/accreditation?canceled=1`,
+        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=accreditation`,
+        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=accreditation`,
       });
       await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
       return { url: session.url, paymentId };
@@ -595,25 +640,25 @@ module.exports = function createPaymentsRouter({
       feePayer: fee.fee_payer,
     });
 
-    let paymentId;
-    try {
-      const ins = await pool.query(
+    const attempt = await insertPaymentOrResume({
+      insert: async () => (await pool.query(
         `INSERT INTO payments
             (org_id, fee_definition_id, payer_user_id, subject_type, event_id,
              amount_cents, platform_fee_cents, currency, fee_payer, entry_charge_id, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
          RETURNING id`,
         [org.id, fee.id, userId, charge.kind, charge.event_id, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer, charge.id],
-      );
-      paymentId = ins.rows[0].id;
-    } catch (e) {
-      if (e.code === "23505") {
-        const err = new Error("You already have a payment in progress or completed for this charge.");
-        err.status = 409;
-        throw err;
-      }
-      throw e;
-    }
+      )).rows[0].id,
+      findBlocking: async () => (await pool.query(
+        `SELECT id, status, stripe_checkout_session FROM payments
+          WHERE entry_charge_id = $1 AND status IN ('pending', 'paid')
+          ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
+        [charge.id],
+      )).rows[0],
+      alreadyDoneMessage: "You already have a payment in progress or completed for this charge.",
+    });
+    if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
+    const paymentId = attempt.paymentId;
 
     try {
       const session = await payments.createCheckoutSession({
@@ -631,8 +676,8 @@ module.exports = function createPaymentsRouter({
           event_id: charge.event_id,
           entry_charge_id: charge.id,
         },
-        successUrl: `${APP_BASE_URL}/charges?paid=1`,
-        cancelUrl: `${APP_BASE_URL}/charges?canceled=1`,
+        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=charges`,
+        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=charges`,
       });
       await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
       // Link the payment onto the charge so the webhook can settle it.
@@ -680,8 +725,8 @@ module.exports = function createPaymentsRouter({
         customerEmail: req.user.email,
         clientReferenceId: paymentId,
         metadata: { payment_id: paymentId, scope: "donation", org_id: org.id, user_id: userId },
-        successUrl: `${APP_BASE_URL}/donate?paid=1`,
-        cancelUrl: `${APP_BASE_URL}/donate?canceled=1`,
+        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=donation`,
+        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=donation`,
       });
       await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
       return { url: session.url, paymentId };
@@ -708,25 +753,25 @@ module.exports = function createPaymentsRouter({
       feeBps,
       feePayer: "absorb",
     });
-    let paymentId;
-    try {
-      const ins = await pool.query(
+    const attempt = await insertPaymentOrResume({
+      insert: async () => (await pool.query(
         `INSERT INTO payments
             (org_id, payer_user_id, liable_user_id, subject_type,
              amount_cents, platform_fee_cents, currency, fee_payer, fine_id, status)
          VALUES ($1, $2, $2, 'fine', $3, $4, $5, 'absorb', $6, 'pending')
          RETURNING id`,
         [org.id, userId, chargeAmountCents, applicationFeeCents, currency, fine.id],
-      );
-      paymentId = ins.rows[0].id;
-    } catch (e) {
-      if (e.code === "23505") {
-        const err = new Error("You already have a payment in progress or completed for this fine.");
-        err.status = 409;
-        throw err;
-      }
-      throw e;
-    }
+      )).rows[0].id,
+      findBlocking: async () => (await pool.query(
+        `SELECT id, status, stripe_checkout_session FROM payments
+          WHERE fine_id = $1 AND status IN ('pending', 'paid')
+          ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
+        [fine.id],
+      )).rows[0],
+      alreadyDoneMessage: "You already have a payment in progress or completed for this fine.",
+    });
+    if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
+    const paymentId = attempt.paymentId;
     try {
       const session = await payments.createCheckoutSession({
         currency,
@@ -736,8 +781,8 @@ module.exports = function createPaymentsRouter({
         customerEmail: req.user.email,
         clientReferenceId: paymentId,
         metadata: { payment_id: paymentId, scope: "fine", org_id: org.id, user_id: userId, fine_id: fine.id },
-        successUrl: `${APP_BASE_URL}/charges?paid=1`,
-        cancelUrl: `${APP_BASE_URL}/charges?canceled=1`,
+        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=charges`,
+        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=charges`,
       });
       await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
       await pool.query("UPDATE fines SET payment_id = $1 WHERE id = $2", [paymentId, fine.id]);
@@ -805,6 +850,13 @@ module.exports = function createPaymentsRouter({
         "UPDATE organisations SET payout_account_name = $1, payout_account_details = $2 WHERE id = $3",
         [name.slice(0, 200), details.slice(0, 500), orgId],
       );
+      // Audit the change but never the details themselves — a silent bank-
+      // detail swap is how a compromised admin account redirects payouts.
+      recordAudit(pool, {
+        ...auditFromReq(req), org_id: orgId,
+        entity_type: "org", entity_id: orgId,
+        action: "payout_details.updated", metadata: { account_name: name.slice(0, 200) },
+      }).catch(() => {});
       return res.json({ ok: true });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] save payout details failed");
@@ -836,6 +888,12 @@ module.exports = function createPaymentsRouter({
         "UPDATE organisations SET auto_withdraw_enabled = $1, auto_withdraw_min_cents = $2 WHERE id = $3",
         [enabled, minCents, orgId],
       );
+      recordAudit(pool, {
+        ...auditFromReq(req), org_id: orgId,
+        entity_type: "org", entity_id: orgId,
+        action: "withdrawal_settings.updated",
+        metadata: { auto_withdraw_enabled: enabled, auto_withdraw_min_cents: minCents },
+      }).catch(() => {});
       return res.json({ ok: true, auto_withdraw_enabled: enabled, auto_withdraw_min_cents: minCents });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] save withdrawal settings failed");
@@ -862,54 +920,97 @@ module.exports = function createPaymentsRouter({
 
   // Federation requests a withdrawal of its owed balance. Only meaningful once
   // payments are live (nothing to withdraw while dormant, so ensurePayments
-  // 503s). The org row is locked FOR UPDATE so two concurrent requests can't
-  // both read the same balance and over-withdraw. Records one pending
-  // payout PER CURRENCY; the actual bank transfer is settled out-of-band.
+  // 503s). lib/payout-ledger locks the org row FOR UPDATE so two concurrent
+  // requests can't both read the same balance and over-withdraw, and records
+  // one pending payout PER CURRENCY. The actual bank transfer is settled by
+  // the platform operator (notified by email; back-office endpoints below).
   router.post("/api/orgs/:id/withdrawals", requireOrgRole(["org_admin"]), async (req, res) => {
     if (!ensurePayments(res)) return;
     const orgId = req.params.id;
     if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
-    const client = await pool.connect();
     try {
-      await client.query("BEGIN");
-      const org = (await client.query(
-        "SELECT payout_account_name, payout_account_details FROM organisations WHERE id = $1 FOR UPDATE",
-        [orgId],
-      )).rows[0];
-      if (!org) {
-        await client.query("ROLLBACK");
-        return res.status(404).json({ error: "Organisation not found" });
-      }
-      if (!org.payout_account_name || !org.payout_account_details) {
-        await client.query("ROLLBACK");
-        return res.status(409).json({ error: "Add your payout bank details before withdrawing." });
-      }
       const note = ((req.body || {}).note || "").toString().trim().slice(0, 200) || null;
-      const balances = await orgBalancesByCurrency(orgId, client);
-      if (!balances.length) {
-        await client.query("ROLLBACK");
-        return res.status(409).json({ error: "You have no balance to withdraw." });
-      }
-      // One pending payout per currency, each stamped with ITS own currency
-      // and amount — never a cross-currency sum booked in the wrong currency.
-      const payouts = [];
-      for (const b of balances) {
-        const row = (await client.query(
-          `INSERT INTO payouts (org_id, amount_cents, currency, status, note)
-           VALUES ($1, $2, $3, 'pending', $4)
-           RETURNING id, amount_cents, currency, status, note, created_at, paid_at`,
-          [orgId, b.cents, b.currency, note],
-        )).rows[0];
-        payouts.push(row);
-      }
-      await client.query("COMMIT");
+      const payouts = await ledger.createWithdrawal(pool, { orgId, note });
+      recordAudit(pool, {
+        ...auditFromReq(req), org_id: orgId,
+        entity_type: "payout", entity_id: payouts[0]?.id || null,
+        action: "payout.requested",
+        metadata: { payouts: payouts.map((p) => ({ id: p.id, amount_cents: p.amount_cents, currency: p.currency })) },
+      }).catch(() => {});
+      email?.sendPayoutRequestedEmail({ orgId, payouts });
       return res.status(201).json(payouts);
     } catch (err) {
-      await client.query("ROLLBACK").catch(() => {});
       logger.error({ err: err.message }, "[payments] withdrawal request failed");
       return res.status(err.status || 500).json({ error: err.message || "Withdrawal failed." });
-    } finally {
-      client.release();
+    }
+  });
+
+  // ---- Payout back-office (platform operator only) -----------------
+  // The platform is the merchant of record: withdrawals are fulfilled by a
+  // real-world bank transfer the OPERATOR makes, then records here. Without
+  // these endpoints a payout row could never leave 'pending' and nobody
+  // could see the bank details a transfer should go to.
+
+  // Every payout across all federations + clubs (default: the pending queue),
+  // joined with the recipient's name and bank details for fulfilment.
+  router.get("/api/admin/payouts", requireSystemAdmin, async (req, res) => {
+    const status = ["pending", "paid", "failed"].includes(req.query.status) ? req.query.status : "pending";
+    try {
+      const rows = (await pool.query(
+        `SELECT p.id, p.amount_cents, p.currency, p.status, p.note, p.created_at, p.paid_at,
+                p.org_id, p.club_id,
+                COALESCE(o.name, c.name) AS recipient_name,
+                CASE WHEN p.org_id IS NOT NULL THEN 'org' ELSE 'club' END AS recipient_type,
+                COALESCE(o.payout_account_name, c.payout_account_name) AS payout_account_name,
+                COALESCE(o.payout_account_details, c.payout_account_details) AS payout_account_details
+           FROM payouts p
+           LEFT JOIN organisations o ON o.id = p.org_id
+           LEFT JOIN clubs c ON c.id = p.club_id
+          WHERE p.status = $1
+          ORDER BY p.created_at ASC
+          LIMIT 200`,
+        [status],
+      )).rows;
+      return res.json({ payouts: rows });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] admin list payouts failed");
+      return res.status(500).json({ error: "Failed to list payouts." });
+    }
+  });
+
+  // Operator records the outcome of a pending payout: 'paid' once the bank
+  // transfer is made, or 'failed' to cancel it — a failed payout stops
+  // counting against the recipient's balance, so the money becomes
+  // withdrawable again (e.g. after fixing bad bank details).
+  router.post("/api/admin/payouts/:id/settle", requireSystemAdmin, async (req, res) => {
+    const outcome = (req.body || {}).status;
+    if (!["paid", "failed"].includes(outcome)) {
+      return res.status(400).json({ error: "status must be 'paid' or 'failed'." });
+    }
+    try {
+      const r = await pool.query(
+        `UPDATE payouts
+            SET status = $2::varchar, paid_at = CASE WHEN $2::varchar = 'paid' THEN now() ELSE NULL END
+          WHERE id = $1 AND status = 'pending'
+          RETURNING id, org_id, club_id, amount_cents, currency, status, paid_at`,
+        [req.params.id, outcome],
+      );
+      if (!r.rows.length) {
+        const cur = (await pool.query("SELECT status FROM payouts WHERE id = $1", [req.params.id])).rows[0];
+        if (!cur) return res.status(404).json({ error: "Payout not found" });
+        return res.status(409).json({ error: `This payout is already ${cur.status}.` });
+      }
+      const p = r.rows[0];
+      recordAudit(pool, {
+        ...auditFromReq(req), org_id: p.org_id,
+        entity_type: "payout", entity_id: p.id,
+        action: outcome === "paid" ? "payout.marked_paid" : "payout.marked_failed",
+        metadata: { amount_cents: p.amount_cents, currency: p.currency, club_id: p.club_id },
+      }).catch(() => {});
+      return res.json(p);
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] settle payout failed");
+      return res.status(500).json({ error: "Failed to settle the payout." });
     }
   });
 
@@ -991,7 +1092,7 @@ module.exports = function createPaymentsRouter({
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
       const chosen = resolvePrice(prices, { isMember: member });
-      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
       // "Submit, then pay": the dive-list entry exists independently; an
       // entry is confirmed once a paid payment exists for this diver.
       const alreadyPaid = req.user
@@ -1018,6 +1119,9 @@ module.exports = function createPaymentsRouter({
             ? { surcharge_cents: late.surchargeCents, applies: late.applies, trigger: late.trigger }
             : null,
           total_cents: baseCents + (late && late.applies ? late.surchargeCents : 0),
+          payer_total_cents: chosen
+            ? payerTotalCents(def, org, baseCents + (late && late.applies ? late.surchargeCents : 0))
+            : null,
         },
         payments_enabled: payments.enabled,
       });
@@ -1235,7 +1339,7 @@ module.exports = function createPaymentsRouter({
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
       const chosen = resolvePrice(prices, { isMember: member });
-      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
       const alreadyPaid = req.user
         ? (await pool.query(
             `SELECT 1 FROM payments
@@ -1251,12 +1355,62 @@ module.exports = function createPaymentsRouter({
           is_member: member,
           already_paid: alreadyPaid,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+          payer_total_cents: chosen ? payerTotalCents(def, org, chosen.amount_cents) : null,
         },
         payments_enabled: payments.enabled,
       });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] read meet fee failed");
       return res.status(500).json({ error: "Failed to read the meet fee." });
+    }
+  });
+
+  // A diver pays the meet-level registration fee (optionally per-discipline).
+  // Mirrors POST /api/events/:id/checkout; the payment carries meet_id (no
+  // event_id) and idx_payments_one_live_meet_entry guards the slot. The
+  // control-room roster counts a paid meet registration as covering every
+  // event of the meet. The fee could be CONFIGURED and DISPLAYED since PR
+  // #83, but no endpoint existed to actually pay it — the UI showed a
+  // permanently disabled Pay button.
+  router.post("/api/meets/:id/checkout", verifyToken, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const meetId = req.params.id;
+    try {
+      const m = await pool.query("SELECT id, name, org_id FROM meets WHERE id = $1", [meetId]);
+      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
+      const orgId = m.rows[0].org_id;
+      const org = (
+        await pool.query(
+          `SELECT id, name, default_currency, platform_fee_bps FROM organisations WHERE id = $1`,
+          [orgId],
+        )
+      ).rows[0];
+      const discipline = (req.body && req.body.discipline) ? String(req.body.discipline).slice(0, 40) : null;
+      const feeRes = await pool.query(
+        `SELECT * FROM fee_definitions
+          WHERE meet_id = $1 AND scope = 'event_entry' AND active
+            AND discipline IS NOT DISTINCT FROM $2 LIMIT 1`,
+        [meetId, discipline],
+      );
+      if (!feeRes.rows.length) return res.status(409).json({ error: "No registration fee is set for this meet." });
+      const fee = feeRes.rows[0];
+      const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
+
+      const { url, paymentId } = await startCheckout({
+        req, org, fee, prices,
+        subjectType: "event_entry",
+        eventId: null,
+        meetId,
+        productName: discipline
+          ? `Meet registration (${discipline}) — ${m.rows[0].name}`
+          : `Meet registration — ${m.rows[0].name}`,
+        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=meet`,
+        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=meet`,
+      });
+      return res.json({ url, payment_id: paymentId });
+    } catch (err) {
+      logger.error({ err: err.message }, "[payments] meet registration checkout failed");
+      return res.status(err.status || 500).json({ error: err.message || "Checkout failed" });
     }
   });
 
@@ -1338,7 +1492,7 @@ module.exports = function createPaymentsRouter({
       const def = feeRes.rows[0];
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
-      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
       const alreadyPaid = req.user
         ? (await pool.query(
             `SELECT 1 FROM payments
@@ -1352,6 +1506,7 @@ module.exports = function createPaymentsRouter({
           currency: def.currency || org?.default_currency || null,
           already_paid: alreadyPaid,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+          payer_total_cents: chosen ? payerTotalCents(def, org, chosen.amount_cents) : null,
         },
         payments_enabled: payments.enabled,
       });
@@ -1396,8 +1551,8 @@ module.exports = function createPaymentsRouter({
         subjectType: kind,
         meetId,
         productName: `${ACCESS_LABELS[kind]} — ${m.rows[0].name}`,
-        successUrl: `${APP_BASE_URL}/meets/${meetId}?paid=1`,
-        cancelUrl: `${APP_BASE_URL}/meets/${meetId}?canceled=1`,
+        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=meet`,
+        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=meet`,
       });
       return res.json({ url, payment_id: paymentId });
     } catch (err) {
@@ -1517,7 +1672,7 @@ module.exports = function createPaymentsRouter({
       // A bundle with no events (half-configured) reads as no bundle, so the
       // public card hides itself rather than offering an empty purchase.
       if (!events.length) return res.json({ fee: null, payments_enabled: payments.enabled });
-      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
       const alreadyPaid = req.user
         ? (await pool.query(
             `SELECT 1 FROM payments
@@ -1531,6 +1686,7 @@ module.exports = function createPaymentsRouter({
           already_paid: alreadyPaid,
           events,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+          payer_total_cents: chosen ? payerTotalCents(def, org, chosen.amount_cents) : null,
         },
         payments_enabled: payments.enabled,
       });
@@ -1575,8 +1731,8 @@ module.exports = function createPaymentsRouter({
         subjectType: "meet_bundle",
         meetId,
         productName: `Meet bundle — ${m.rows[0].name}`,
-        successUrl: `${APP_BASE_URL}/meets/${meetId}?paid=1`,
-        cancelUrl: `${APP_BASE_URL}/meets/${meetId}?canceled=1`,
+        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=meet`,
+        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=meet`,
       });
       return res.json({ url, payment_id: paymentId });
     } catch (err) {
@@ -1620,7 +1776,7 @@ module.exports = function createPaymentsRouter({
       const def = feeRes.rows[0];
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
-      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
       const alreadyMember = req.user
         ? (await pool.query(
             `SELECT 1 FROM memberships
@@ -1635,6 +1791,7 @@ module.exports = function createPaymentsRouter({
           tier: def.tier,
           already_member: alreadyMember,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+          payer_total_cents: chosen ? payerTotalCents(def, org, chosen.amount_cents) : null,
         },
         payments_enabled: payments.enabled,
       });
@@ -1693,7 +1850,7 @@ module.exports = function createPaymentsRouter({
       );
       if (!feeRes.rows.length) return res.json({ donation: null, payments_enabled: payments.enabled });
       const def = feeRes.rows[0];
-      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
       return res.json({
         donation: {
           currency: def.currency || org?.default_currency || null,
@@ -1758,28 +1915,73 @@ module.exports = function createPaymentsRouter({
     };
   }
 
-  // Retire any in-flight checkout for a fine before appealing/waiving it, so a
-  // still-open Stripe session can't settle a fine that's no longer owed.
-  // Returns "paid" if the linked payment already completed (caller should 409).
-  // Requires fine.{payment_id, org_id}.
+  // Retire any in-flight checkout for a fine before appealing/waiving it, so
+  // a still-open Stripe session can't settle a fine that's no longer owed.
+  // Race-safe via lib/payment-lifecycle: 'paid' means the payment settled
+  // (caller 409s), 'unavailable' means Stripe couldn't be consulted (caller
+  // 503s and the action can be retried). Requires fine.payment_id.
   async function retireInFlightFinePayment(fine) {
-    if (!fine.payment_id) return null;
-    const p = (await pool.query("SELECT id, status, stripe_checkout_session FROM payments WHERE id = $1", [fine.payment_id])).rows[0];
-    if (!p) return null;
-    if (p.status === "paid") return "paid";
-    if (p.status === "pending") {
-      // Expire on the PLATFORM account (we're the merchant of record) so the
-      // payer can't complete a session for a fine that's no longer owed.
-      if (payments.enabled && p.stripe_checkout_session) {
-        try {
-          await payments.expireCheckoutSession({ sessionId: p.stripe_checkout_session });
-        } catch (e) {
-          logger.warn({ err: e.message }, "[payments] could not expire in-flight fine session");
-        }
-      }
-      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [p.id]);
+    if (!fine.payment_id) return "retired";
+    const p = (await pool.query(
+      "SELECT id, status, stripe_checkout_session FROM payments WHERE id = $1",
+      [fine.payment_id],
+    )).rows[0];
+    return retirePendingPayment({ pool, payments, logger }, p);
+  }
+
+  // Map a retire outcome onto the HTTP response for state-change endpoints.
+  // Returns true when the caller must stop (response already sent).
+  function retireBlocked(res, outcome, paidMessage) {
+    if (outcome === "paid") {
+      res.status(409).json({ error: paidMessage });
+      return true;
     }
-    return null;
+    if (outcome === "unavailable") {
+      res.status(503).json({ error: "Couldn't verify the in-flight payment with Stripe — please try again." });
+      return true;
+    }
+    return false;
+  }
+
+  // Insert a pending payment into a one-live slot; when an earlier attempt
+  // blocks it (23505 on the partial unique index), RESUME that attempt's
+  // still-open Stripe session — same URL, same price — or retire a dead one
+  // and retry the insert once. Only a genuinely PAID blocker keeps the 409.
+  // Before this, an abandoned checkout dead-ended the payer behind a 409
+  // for up to 24 hours (Checkout's default session lifetime) with no
+  // self-service recovery on ANY payment type.
+  //
+  //   insert()       -> resolves to the new payment id (may throw pg errors)
+  //   findBlocking() -> resolves to the blocking payment row
+  //                     {id, status, stripe_checkout_session} or undefined
+  //
+  // Returns { paymentId } for a fresh insert or { resumedUrl, paymentId }
+  // when the payer should be sent back into their existing session.
+  async function insertPaymentOrResume({ insert, findBlocking, alreadyDoneMessage }) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return { paymentId: await insert() };
+      } catch (e) {
+        if (e.code !== "23505") throw e;
+        const blocking = await findBlocking();
+        const outcome = await resumeOrRetireCheckout({ pool, payments, logger }, blocking);
+        if (outcome.url) return { resumedUrl: outcome.url, paymentId: outcome.paymentId };
+        if (outcome.paid) {
+          const err = new Error(alreadyDoneMessage);
+          err.status = 409;
+          throw err;
+        }
+        if (outcome.unavailable) {
+          const err = new Error("Couldn't check your previous payment attempt with Stripe — please try again.");
+          err.status = 503;
+          throw err;
+        }
+        // retired -> the slot is free; loop to retry the insert once.
+      }
+    }
+    const err = new Error(alreadyDoneMessage);
+    err.status = 409;
+    throw err;
   }
 
   // Referee / org_admin issues a fine against a person in their org.
@@ -1798,7 +2000,7 @@ module.exports = function createPaymentsRouter({
       if (!liable) return res.status(404).json({ error: "Person not found." });
       const orgId = liable.org_id;
       if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "You can only fine people in your own federation." });
-      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
       const currency = org?.default_currency;
       if (!currency) return res.status(409).json({ error: "The federation's currency is not configured." });
       let eventId = null;
@@ -1812,6 +2014,14 @@ module.exports = function createPaymentsRouter({
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'owed') RETURNING id`,
         [orgId, body.liable_user_id, req.user.id, eventId, amountCents, currency, reason],
       );
+      recordAudit(pool, {
+        ...auditFromReq(req), org_id: orgId,
+        entity_type: "fine", entity_id: ins.rows[0].id,
+        action: "fine.issued",
+        metadata: { liable_user_id: body.liable_user_id, amount_cents: amountCents, currency, reason },
+      }).catch(() => {});
+      // The fined person hears about the debt the moment it exists.
+      email?.sendFineIssuedEmail?.(ins.rows[0].id);
       return res.json({ id: ins.rows[0].id, amount_cents: amountCents });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] issue fine failed");
@@ -1839,7 +2049,9 @@ module.exports = function createPaymentsRouter({
     }
   });
 
-  // The person's own fines (to pay or appeal).
+  // The person's own fines — ALL of them, not just the payable ones, so
+  // appeal outcomes are visible (a dismissed appeal used to silently revert
+  // to 'owed' and an upheld one silently vanished from this list).
   router.get("/api/me/fines", verifyToken, async (req, res) => {
     try {
       const rows = (await pool.query(
@@ -1847,8 +2059,9 @@ module.exports = function createPaymentsRouter({
            FROM fines f
            JOIN users lu ON lu.id = f.liable_user_id
            LEFT JOIN users iu ON iu.id = f.issued_by
-          WHERE f.liable_user_id = $1 AND f.status IN ('owed', 'appealed')
-          ORDER BY f.issued_at DESC`,
+          WHERE f.liable_user_id = $1
+          ORDER BY f.issued_at DESC
+          LIMIT 100`,
         [req.user.id],
       )).rows;
       return res.json({ fines: rows.map(fineOut), payments_enabled: payments.enabled });
@@ -1868,14 +2081,19 @@ module.exports = function createPaymentsRouter({
       if (f.liable_user_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
       if (f.status !== "owed") return res.status(409).json({ error: `Cannot appeal a fine that is ${f.status}.` });
       // Don't let an appeal race an in-flight checkout — retire it, or block
-      // the appeal if the payment already settled.
-      if ((await retireInFlightFinePayment(f)) === "paid") {
-        return res.status(409).json({ error: "This fine has already been paid." });
-      }
-      await pool.query(
-        "UPDATE fines SET status = 'appealed', appeal_status = 'pending', appeal_reason = $2 WHERE id = $1 AND status = 'owed'",
+      // the appeal if the payment already settled (or Stripe is unreachable).
+      const outcome = await retireInFlightFinePayment(f);
+      if (retireBlocked(res, outcome, "This fine has already been paid.")) return;
+      const upd = await pool.query(
+        "UPDATE fines SET status = 'appealed', appeal_status = 'pending', appeal_reason = $2 WHERE id = $1 AND status = 'owed' RETURNING id",
         [req.params.id, reason],
       );
+      if (!upd.rowCount) {
+        // The fine left 'owed' between our read and this write (e.g. the
+        // webhook just settled it) — report reality, not a phantom appeal.
+        const fresh = (await pool.query("SELECT status FROM fines WHERE id = $1", [req.params.id])).rows[0];
+        return res.status(409).json({ error: `Cannot appeal a fine that is ${fresh?.status || "gone"}.` });
+      }
       return res.json({ status: "appealed" });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] appeal fine failed");
@@ -1901,10 +2119,22 @@ module.exports = function createPaymentsRouter({
       // Upheld = the appeal succeeds => the fine is waived. Dismissed = it
       // stands => back to owed.
       const newStatus = decision === "upheld" ? "waived" : "owed";
-      await pool.query(
-        "UPDATE fines SET status = $2, appeal_status = $3, appeal_reviewed_by = $4 WHERE id = $1 AND status = 'appealed'",
+      const upd = await pool.query(
+        "UPDATE fines SET status = $2, appeal_status = $3, appeal_reviewed_by = $4 WHERE id = $1 AND status = 'appealed' RETURNING id",
         [req.params.id, newStatus, decision, req.user.id],
       );
+      if (!upd.rowCount) {
+        const fresh = (await pool.query("SELECT status FROM fines WHERE id = $1", [req.params.id])).rows[0];
+        return res.status(409).json({ error: `No pending appeal on a fine that is ${fresh?.status || "gone"}.` });
+      }
+      recordAudit(pool, {
+        ...auditFromReq(req), org_id: f.org_id,
+        entity_type: "fine", entity_id: f.id,
+        action: "fine.appeal_decided", metadata: { decision, new_status: newStatus },
+      }).catch(() => {});
+      // The fined person learns the outcome — dismissed silently reverting
+      // to 'owed' (or upheld silently vanishing) was invisible before.
+      email?.sendAppealDecisionEmail?.(req.params.id, decision);
       return res.json({ status: newStatus, appeal_status: decision });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] review appeal failed");
@@ -1922,10 +2152,20 @@ module.exports = function createPaymentsRouter({
         return res.status(409).json({ error: `Cannot waive a fine that is ${f.status}.` });
       }
       // Kill any in-flight checkout so the person can't pay a waived fine.
-      if ((await retireInFlightFinePayment(f)) === "paid") {
-        return res.status(409).json({ error: "This fine has already been paid — refund it instead of waiving." });
+      const outcome = await retireInFlightFinePayment(f);
+      if (retireBlocked(res, outcome, "This fine has already been paid — refund it instead of waiving.")) return;
+      const upd = await pool.query(
+        "UPDATE fines SET status = 'waived' WHERE id = $1 AND status IN ('owed', 'appealed') RETURNING id",
+        [req.params.id],
+      );
+      if (!upd.rowCount) {
+        const fresh = (await pool.query("SELECT status FROM fines WHERE id = $1", [req.params.id])).rows[0];
+        return res.status(409).json({ error: `Cannot waive a fine that is ${fresh?.status || "gone"}.` });
       }
-      await pool.query("UPDATE fines SET status = 'waived' WHERE id = $1 AND status IN ('owed', 'appealed')", [req.params.id]);
+      recordAudit(pool, {
+        ...auditFromReq(req), org_id: f.org_id,
+        entity_type: "fine", entity_id: f.id, action: "fine.waived",
+      }).catch(() => {});
       return res.json({ status: "waived" });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] waive fine failed");
@@ -2040,12 +2280,13 @@ module.exports = function createPaymentsRouter({
       }
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
-      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
       return res.json({
         fee: {
           kind,
           club_name: club?.name || null,
           currency: def.currency || org?.default_currency || null,
+          payer_total_cents: chosen ? payerTotalCents(def, org, chosen.amount_cents) : null,
           active: !!current,
           period_end: current?.period_end || null,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
@@ -2140,7 +2381,7 @@ module.exports = function createPaymentsRouter({
       }
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
-      const org = (await pool.query("SELECT default_currency FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
       return res.json({
         fee: {
           role_type: roleType,
@@ -2148,6 +2389,7 @@ module.exports = function createPaymentsRouter({
           active: !!current,
           period_end: current?.period_end || null,
           price: chosen ? { amount_cents: chosen.amount_cents, label: chosen.label } : null,
+          payer_total_cents: chosen ? payerTotalCents(def, org, chosen.amount_cents) : null,
         },
         payments_enabled: payments.enabled,
       });
@@ -2197,8 +2439,8 @@ module.exports = function createPaymentsRouter({
         productName: surchargeCents
           ? `Entry (incl. late fee) — ${ev.rows[0].name}`
           : `Entry — ${ev.rows[0].name}`,
-        successUrl: `${APP_BASE_URL}/events/${eventId}?paid=1`,
-        cancelUrl: `${APP_BASE_URL}/events/${eventId}?canceled=1`,
+        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=entry`,
+        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=entry`,
       });
       return res.json({ url, payment_id: paymentId });
     } catch (err) {
@@ -2220,9 +2462,13 @@ module.exports = function createPaymentsRouter({
         )
       ).rows[0];
       if (!org) return res.status(404).json({ error: "Organisation not found" });
+      // Tier-aware: each tier is its own fee definition; NULL = standard.
+      const tier = (req.body && req.body.tier) ? String(req.body.tier).slice(0, 40) : null;
       const feeRes = await pool.query(
-        "SELECT * FROM fee_definitions WHERE org_id = $1 AND scope = 'membership' AND active LIMIT 1",
-        [orgId],
+        `SELECT * FROM fee_definitions
+          WHERE org_id = $1 AND scope = 'membership' AND active
+            AND tier IS NOT DISTINCT FROM $2 LIMIT 1`,
+        [orgId, tier],
       );
       if (!feeRes.rows.length) return res.status(409).json({ error: "No membership fee is set for this federation." });
       const fee = feeRes.rows[0];
@@ -2236,8 +2482,8 @@ module.exports = function createPaymentsRouter({
         subjectType: "membership",
         eventId: null,
         productName: `${org.name} membership`,
-        successUrl: `${APP_BASE_URL}/membership?paid=1`,
-        cancelUrl: `${APP_BASE_URL}/membership?canceled=1`,
+        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=membership`,
+        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=membership`,
       });
       return res.json({ url, payment_id: paymentId });
     } catch (err) {
@@ -2398,38 +2644,25 @@ module.exports = function createPaymentsRouter({
       // Kill any in-flight checkout for this charge BEFORE waiving — otherwise
       // the entrant could complete a still-valid Stripe session and pay a
       // debit that's been waived (money captured, charge says 'waived', no
-      // refund). Expire the session + fail the pending payment. A payment
-      // that's already 'paid' means the charge would be 'paid' (settled by
-      // the webhook), so the status guard above already blocked it.
+      // refund). lib/payment-lifecycle closes both races: the webhook
+      // settling during the round-trip AND a session that completed at
+      // Stripe moments before we tried to expire it.
       if (charge.payment_id) {
         const p = (await pool.query(
           "SELECT id, status, stripe_checkout_session FROM payments WHERE id = $1",
           [charge.payment_id],
         )).rows[0];
-        if (p && p.status === "paid") {
-          return res.status(409).json({ error: "This charge has already been paid — refund it instead of waiving." });
-        }
-        if (p && p.status === "pending") {
-          // Expire on the PLATFORM account (merchant of record).
-          if (payments.enabled && p.stripe_checkout_session) {
-            try {
-              await payments.expireCheckoutSession({ sessionId: p.stripe_checkout_session });
-            } catch (e) {
-              logger.warn({ err: e.message }, "[payments] could not expire session on waive");
-            }
-          }
-          const upd = await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [p.id]);
-          if (upd.rowCount === 0) {
-            // The payment left 'pending' between our read and the update — if
-            // the webhook just settled it, don't waive a now-paid charge.
-            const fresh = (await pool.query("SELECT status FROM payments WHERE id = $1", [p.id])).rows[0];
-            if (fresh && fresh.status === "paid") {
-              return res.status(409).json({ error: "A payment just completed for this charge — refund it instead of waiving." });
-            }
-          }
-        }
+        const outcome = await retirePendingPayment({ pool, payments, logger }, p);
+        if (retireBlocked(res, outcome, "This charge has already been paid — refund it instead of waiving.")) return;
       }
-      await pool.query("UPDATE entry_charges SET status = 'waived' WHERE id = $1 AND status = 'owed'", [req.params.id]);
+      const upd = await pool.query(
+        "UPDATE entry_charges SET status = 'waived' WHERE id = $1 AND status = 'owed' RETURNING id",
+        [req.params.id],
+      );
+      if (!upd.rowCount) {
+        const fresh = (await pool.query("SELECT status FROM entry_charges WHERE id = $1", [req.params.id])).rows[0];
+        return res.status(409).json({ error: `Cannot waive a charge that is ${fresh?.status || "gone"}.` });
+      }
       return res.json({ status: "waived" });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] waive charge failed");
@@ -2523,64 +2756,112 @@ module.exports = function createPaymentsRouter({
   // payout ledger, so a refund just reduces what the federation/club is owed
   // (the balance query prorates the retained fee on partial refunds). Omit
   // amount_cents for a full refund.
-  router.post(
-    "/api/payments/:id/refund",
-    requireOrgRole(["org_admin", "meet_manager"]),
-    async (req, res) => {
-      if (!ensurePayments(res)) return;
-      const paymentId = req.params.id;
-      try {
-        const r = await pool.query("SELECT * FROM payments WHERE id = $1", [paymentId]);
-        if (!r.rows.length) return res.status(404).json({ error: "Payment not found" });
-        const p = r.rows[0];
-        if (!ownsOrg(req, p.org_id)) return res.status(403).json({ error: "Forbidden" });
-        if (!["paid", "partially_refunded"].includes(p.status)) {
-          return res.status(409).json({ error: `Cannot refund a payment that is ${p.status}.` });
-        }
-        if (!p.stripe_payment_intent) {
-          return res.status(409).json({ error: "This payment has no charge to refund yet." });
-        }
-        const requested = req.body && Number(req.body.amount_cents) > 0 ? Math.floor(Number(req.body.amount_cents)) : undefined;
-
-        const refund = await payments.createRefund({
-          paymentIntentId: p.stripe_payment_intent,
-          amountCents: requested,
-        });
-
-        const refunded = Math.min(
-          (p.refunded_amount_cents || 0) + (refund.amount || requested || p.amount_cents),
-          p.amount_cents,
-        );
-        const status = refunded >= p.amount_cents ? "refunded" : "partially_refunded";
-        await pool.query(
-          "UPDATE payments SET status = $1, refunded_amount_cents = $2, refunded_at = now() WHERE id = $3",
-          [status, refunded, paymentId],
-        );
-        // A fully-refunded meet_bundle must un-grant the per-event entries it
-        // expanded into (the amount-0 event_entry rows carrying the bundle's
-        // fee_definition_id), so the diver stops counting as entered.
-        if (status === "refunded" && p.subject_type === "meet_bundle") {
-          await pool.query(
-            `UPDATE payments SET status = 'refunded', refunded_at = now()
-              WHERE payer_user_id = $1 AND fee_definition_id = $2
-                AND subject_type = 'event_entry' AND amount_cents = 0 AND status = 'paid'`,
-            [p.payer_user_id, p.fee_definition_id],
-          );
-        }
-        // A fully-refunded fine goes back to 'owed' so it's still trackable.
-        if (status === "refunded" && p.subject_type === "fine" && p.fine_id) {
-          await pool.query(
-            "UPDATE fines SET status = 'owed', payment_id = NULL WHERE id = $1 AND status = 'paid'",
-            [p.fine_id],
-          );
-        }
-        return res.json({ status, refunded_amount_cents: refunded });
-      } catch (err) {
-        logger.error({ err: err.message }, "[payments] refund failed");
-        return res.status(err.status || 500).json({ error: err.message || "Refund failed" });
+  //
+  // Authorisation is per-RECIPIENT, not a blanket org gate: class-enrolment
+  // money belongs to the CLUB (club-private model, PR #98/#100), so only that
+  // club's admins — not the federation — may refund it; every org-recipient
+  // payment needs org_admin/meet_manager in the payment's org. Sysadmin
+  // passes both.
+  //
+  // The payment row is locked FOR UPDATE for the whole operation (including
+  // the Stripe call) so two concurrent refund requests can't both read the
+  // same refunded_amount and pay the money out twice — the second waits,
+  // re-reads, and is capped/refused against the updated row.
+  router.post("/api/payments/:id/refund", verifyToken, async (req, res) => {
+    if (!ensurePayments(res)) return;
+    const paymentId = req.params.id;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const r = await client.query("SELECT * FROM payments WHERE id = $1 FOR UPDATE", [paymentId]);
+      if (!r.rows.length) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Payment not found" });
       }
-    },
-  );
+      const p = r.rows[0];
+
+      if (!req.user.is_system_admin) {
+        if (p.recipient_type === "club") {
+          const isClubAdmin = (await client.query(
+            "SELECT 1 FROM club_admins WHERE club_id = $1 AND user_id = $2",
+            [p.club_id, req.user.id],
+          )).rows.length > 0;
+          if (!isClubAdmin) {
+            await client.query("ROLLBACK");
+            return res.status(403).json({ error: "Only this club's admins can refund its class payments." });
+          }
+        } else {
+          const roles = req.user.org_roles || [];
+          const hasRole = roles.includes("org_admin") || roles.includes("meet_manager");
+          if (!hasRole || req.user.org_id !== p.org_id) {
+            await client.query("ROLLBACK");
+            return res.status(403).json({ error: "Forbidden" });
+          }
+        }
+      }
+
+      if (!["paid", "partially_refunded"].includes(p.status)) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ error: `Cannot refund a payment that is ${p.status}.` });
+      }
+      if (!p.stripe_payment_intent) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ error: "This payment has no charge to refund yet." });
+      }
+      const remaining = p.amount_cents - (p.refunded_amount_cents || 0);
+      const requested = req.body && Number(req.body.amount_cents) > 0 ? Math.floor(Number(req.body.amount_cents)) : undefined;
+      if (requested !== undefined && requested > remaining) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          error: `Only ${(remaining / 100).toFixed(2)} ${p.currency} of this payment is still refundable.`,
+        });
+      }
+
+      const refund = await payments.createRefund({
+        paymentIntentId: p.stripe_payment_intent,
+        amountCents: requested,
+        currency: p.currency,
+      });
+
+      // refund.amount is in STRIPE minor units — convert back to the
+      // app's uniform hundredths before it touches the ledger.
+      const refundAmountCents = refund.amount != null
+        ? fromStripeAmount(p.currency, refund.amount)
+        : null;
+      const refunded = Math.min(
+        (p.refunded_amount_cents || 0) + (refundAmountCents || requested || p.amount_cents),
+        p.amount_cents,
+      );
+      const status = refunded >= p.amount_cents ? "refunded" : "partially_refunded";
+      await client.query(
+        "UPDATE payments SET status = $1, refunded_amount_cents = $2, refunded_at = now() WHERE id = $3",
+        [status, refunded, paymentId],
+      );
+      // Full refunds roll back what the payment granted (reopen debts,
+      // revoke entitlements) — one shared implementation with the webhook.
+      if (status === "refunded") {
+        await applyFullRefundSideEffects(client, p.stripe_payment_intent);
+      }
+      await client.query("COMMIT");
+      recordAudit(pool, {
+        ...auditFromReq(req), org_id: p.org_id,
+        entity_type: "payment", entity_id: p.id,
+        action: "payment.refunded",
+        metadata: {
+          subject_type: p.subject_type, status, recipient_type: p.recipient_type,
+          refunded_amount_cents: refunded, amount_cents: p.amount_cents, currency: p.currency,
+        },
+      }).catch(() => {});
+      email?.sendPaymentRefundedEmail?.(p.id);
+      return res.json({ status, refunded_amount_cents: refunded });
+    } catch (err) {
+      await client.query("ROLLBACK").catch(() => {});
+      logger.error({ err: err.message }, "[payments] refund failed");
+      return res.status(err.status || 500).json({ error: err.message || "Refund failed" });
+    } finally {
+      client.release();
+    }
+  });
 
   return router;
 };

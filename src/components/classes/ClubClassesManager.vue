@@ -236,11 +236,11 @@ async function toggleRoster(cls) {
 
 const showAdd = ref(false)
 const clubDivers = ref([])
-const addForm = ref({ diver_user_id: '', price_option_id: '', discount: '', note: '' })
+const addForm = ref({ diver_user_id: '', price_option_id: '', discount: '', note: '', request_payment: false })
 
 async function openAdd(cls) {
   showAdd.value = true
-  addForm.value = { diver_user_id: '', price_option_id: (cls.price_options && cls.price_options[0]?.id) || '', discount: '', note: '' }
+  addForm.value = { diver_user_id: '', price_option_id: (cls.price_options && cls.price_options[0]?.id) || '', discount: '', note: '', request_payment: false }
   try {
     clubDivers.value = await auth.apiFetch(`/api/clubs/${props.clubId}/members`)
   } catch {
@@ -257,6 +257,9 @@ async function submitAdd(cls) {
         price_option_id: addForm.value.price_option_id || null,
         discount_cents: addForm.value.discount ? Math.round(Number(addForm.value.discount) * 100) : 0,
         note: addForm.value.note.trim() || null,
+        // 'pending' asks the diver to pay online (they get a Pay button);
+        // default 'active' = comped / collected offline.
+        status: addForm.value.request_payment && addForm.value.price_option_id ? 'pending' : 'active',
       }),
     })
     showAdd.value = false
@@ -265,6 +268,23 @@ async function submitAdd(cls) {
     await load()
   } catch (e) {
     showError(e.message || t('classes.error_enrol'))
+  }
+}
+
+const refundingId = ref(null)
+async function refundEnrolment(cls, enr) {
+  if (!enr.payment_id) return
+  if (!confirm(t('classes.confirm_refund', { name: enr.diver_name, amount: money(enr.paid_cents, enr.currency) }))) return
+  refundingId.value = enr.id
+  try {
+    await auth.apiFetch(`/api/payments/${enr.payment_id}/refund`, { method: 'POST', body: JSON.stringify({}) })
+    showSuccess(t('classes.refunded'))
+    roster.value = await auth.apiFetch(`/api/clubs/${props.clubId}/classes/${cls.id}/roster`)
+    await load()
+  } catch (e) {
+    showError(e.message || t('classes.error_refund'))
+  } finally {
+    refundingId.value = null
   }
 }
 
@@ -336,8 +356,17 @@ onMounted(load)
                     <span v-if="enr.price_label">{{ enr.price_label }}: {{ money(enr.amount_cents, enr.currency) }}</span>
                     <span v-if="enr.discount_cents">&minus;{{ money(enr.discount_cents, enr.currency) }}</span>
                   </td>
-                  <td><span class="pill" :class="enr.status">{{ t(`classes.status_${enr.status}`) }}</span></td>
-                  <td><button class="btn ghost sm danger" type="button" :aria-label="t('actions.remove')" v-tip="t('actions.remove')" @click="removeEnrolment(cls, enr)"><X class="ic" /></button></td>
+                  <td>
+                    <span class="pill" :class="enr.status">{{ t(`classes.status_${enr.status}`) }}</span>
+                    <span v-if="enr.payment_status === 'paid'" class="pill paid-online" v-tip="t('classes.paid_online_tip')">{{ t('classes.paid_online') }}</span>
+                  </td>
+                  <td class="row-actions">
+                    <button v-if="enr.payment_status === 'paid'" class="btn ghost sm" type="button"
+                            :disabled="refundingId === enr.id" @click="refundEnrolment(cls, enr)">
+                      {{ refundingId === enr.id ? t('common.saving') : t('classes.refund') }}
+                    </button>
+                    <button class="btn ghost sm danger" type="button" :aria-label="t('actions.remove')" v-tip="t('actions.remove')" @click="removeEnrolment(cls, enr)"><X class="ic" /></button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -352,6 +381,10 @@ onMounted(load)
                 <option v-for="p in cls.price_options" :key="p.id" :value="p.id">{{ p.label }} ({{ money(p.amount_cents, p.currency) }})</option>
               </select>
               <input class="in" type="number" min="0" step="0.01" v-model="addForm.discount" :placeholder="t('classes.discount_optional')" />
+              <label v-if="addForm.price_option_id" class="check-inline">
+                <input type="checkbox" v-model="addForm.request_payment" />
+                <span>{{ t('classes.request_payment') }}</span>
+              </label>
               <div class="add-form-actions">
                 <button class="btn sm" type="button" :disabled="!addForm.diver_user_id" @click="submitAdd(cls)">{{ t('actions.confirm') }}</button>
                 <button class="btn ghost sm" type="button" @click="showAdd = false">{{ t('common.cancel') }}</button>
@@ -439,6 +472,9 @@ onMounted(load)
 .pill.pending { color: var(--amber, #b70); }
 .pill.muted-pill { background: var(--bg-2, #eee); color: var(--muted, #777); font-weight: 600; text-transform: uppercase; font-size: .68rem; }
 .roster-panel { margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--border, #eee); display: flex; flex-direction: column; gap: .5rem; }
+.pill.paid-online { margin-left: .3rem; background: var(--accent-soft, #dfe); color: var(--green, #2a7); }
+.row-actions { display: flex; gap: .3rem; align-items: center; }
+.check-inline { display: inline-flex; align-items: center; gap: .4rem; font-size: .85rem; color: var(--fg-2, #555); cursor: pointer; }
 .roster-head { display: flex; align-items: center; justify-content: space-between; }
 .rtable { width: 100%; border-collapse: collapse; font-size: .85rem; }
 .rtable th, .rtable td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid var(--border, #eee); }

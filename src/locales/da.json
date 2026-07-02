@@ -1447,7 +1447,13 @@
     "type_donation": "Donation",
     "type_fine": "Bøde",
     "type_scratch": "Gebyr for afmelding",
-    "type_no_show": "Gebyr for udeblivelse"
+    "type_no_show": "Gebyr for udeblivelse",
+    "return_paid_title": "Betaling modtaget",
+    "return_paid_body": "Tak — din betaling gik igennem. Det kan tage et øjeblik, før den bekræftes på din konto, så genindlæs siden om lidt, hvis noget stadig vises som ubetalt.",
+    "return_canceled_title": "Betaling annulleret",
+    "return_canceled_body": "Du er ikke blevet opkrævet. Du kan prøve igen, når du er klar.",
+    "return_continue": "Fortsæt",
+    "return_history": "Se betalingshistorik"
   },
   "classes": {
     "menu": "Klasser",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Angiv en tærskel på mindst 1,00.",
       "history": "Udbetalingshistorik",
       "history_empty": "Ingen udbetalinger endnu.",
-      "dormant_note": "Betalinger lanceres snart. Tilføj jeres oplysninger til udbetaling og indstilling for automatisk udbetaling nu — vi udbetaler, så snart det bliver aktiveret."
+      "dormant_note": "Betalinger lanceres snart. Tilføj jeres oplysninger til udbetaling og indstilling for automatisk udbetaling nu — vi udbetaler, så snart det bliver aktiveret.",
+      "federation_fees": "Forbundsgebyrer",
+      "federation_fees_hint": "Årlige tilslutnings- og akkrediteringsgebyrer, som din klub betaler til forbundet."
     },
     "col_date": "Dato",
     "col_amount": "Beløb",
     "pay_now": "Betal nu",
     "error_checkout": "Kunne ikke starte betaling.",
     "subtab_classes": "Hold",
-    "subtab_payouts": "Udbetalinger"
+    "subtab_payouts": "Udbetalinger",
+    "confirm_refund": "Refunder {amount} til {name}? Tilmeldingen går tilbage til ubetalt.",
+    "refunded": "Refusion gennemført",
+    "error_refund": "Kunne ikke refundere betalingen",
+    "refund": "Refunder",
+    "paid_online": "Betalt online",
+    "paid_online_tip": "Denne tilmelding blev betalt via online betaling",
+    "request_payment": "Anmod om onlinebetaling fra udspringeren"
   }
 }

@@ -1447,7 +1447,13 @@
     "type_donation": "Darowizna",
     "type_fine": "Kara pieniężna",
     "type_scratch": "Kara za wycofanie",
-    "type_no_show": "Kara za niestawienie się"
+    "type_no_show": "Kara za niestawienie się",
+    "return_paid_title": "Płatność otrzymana",
+    "return_paid_body": "Dziękujemy — płatność się powiodła. Potwierdzenie na Twoim koncie może potrwać chwilę; odśwież stronę za moment, jeśli coś nadal wyświetla się jako nieopłacone.",
+    "return_canceled_title": "Płatność anulowana",
+    "return_canceled_body": "Nie pobrano żadnej opłaty. Możesz spróbować ponownie w dowolnym momencie.",
+    "return_continue": "Kontynuuj",
+    "return_history": "Zobacz historię płatności"
   },
   "classes": {
     "menu": "Zajęcia",
@@ -1530,13 +1536,22 @@
       "threshold_invalid": "Podaj próg wynoszący co najmniej 1,00.",
       "history": "Historia wypłat",
       "history_empty": "Brak wypłat.",
-      "dormant_note": "Płatności będą dostępne wkrótce. Dodaj teraz dane do wypłat oraz preferencje automatycznej wypłaty — wypłacimy środki natychmiast po uruchomieniu tej funkcji."
+      "dormant_note": "Płatności będą dostępne wkrótce. Dodaj teraz dane do wypłat oraz preferencje automatycznej wypłaty — wypłacimy środki natychmiast po uruchomieniu tej funkcji.",
+      "federation_fees": "Opłaty na rzecz federacji",
+      "federation_fees_hint": "Roczne opłaty afiliacyjne i akredytacyjne, które Twój klub płaci federacji."
     },
     "col_date": "Data",
     "col_amount": "Kwota",
     "pay_now": "Zapłać teraz",
     "error_checkout": "Nie udało się rozpocząć płatności.",
     "subtab_classes": "Zajęcia",
-    "subtab_payouts": "Wypłaty"
+    "subtab_payouts": "Wypłaty",
+    "confirm_refund": "Zwrócić {amount} osobie {name}? Zapis wróci do stanu nieopłaconego.",
+    "refunded": "Zwrot zrealizowany",
+    "error_refund": "Nie udało się zwrócić płatności",
+    "refund": "Zwrot",
+    "paid_online": "Opłacono online",
+    "paid_online_tip": "Ten zapis został opłacony online",
+    "request_payment": "Poproś zawodnika o płatność online"
   }
 }

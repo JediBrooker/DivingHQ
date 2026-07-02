@@ -28,6 +28,31 @@
       "body": "Humiling kang baguhin ang iyong {app_name} email sa address na ito. I-click ang link sa ibaba para kumpirmahin. Valid ang link sa loob ng 30 minuto at magagamit lang nang isang beses.",
       "cta": "Kumpirmahin ang bagong email",
       "footer": "Kung hindi ikaw ang gumawa ng pagbabagong ito, pwede mong i-ignore ang email na ito — hindi nagbago ang iyong account."
+    },
+    "common": {
+      "greeting": "Kumusta {name},"
+    },
+    "payment_receipt": {
+      "subject": "Natanggap ang bayad — {app_name}",
+      "body": "Natanggap namin ang iyong bayad na {amount} para sa: {description}.",
+      "footer": "Tingnan ang kasaysayan ng iyong pagbabayad anumang oras: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Naibalik ang bayad — {app_name}",
+      "body": "{amount} ng iyong bayad para sa: {description} ay naibalik. Karaniwang lumalabas ang refund sa iyong statement sa loob ng 5–10 araw ng trabaho."
+    },
+    "fine_issued": {
+      "subject": "May ipinataw na multa sa iyo — {app_name}",
+      "body": "May ipinataw na multa sa iyo na {amount}. Dahilan: {reason}",
+      "footer": "Bayaran ito o maghain ng apela dito: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Pinagbigyan ang iyong apela — {app_name}",
+      "body": "Pinagbigyan ang iyong apela laban sa multang {amount}. Pinawalang-bisa ang multa — wala kang utang."
+    },
+    "appeal_dismissed": {
+      "subject": "Ibinasura ang iyong apela — {app_name}",
+      "body": "Ibinasura ang iyong apela laban sa multang {amount} at muling dapat bayaran ang multa. Maaari mo itong bayaran dito: {link}"
     }
   },
   "pdf": {

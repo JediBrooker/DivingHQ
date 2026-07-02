@@ -28,6 +28,31 @@
       "body": "Zatražili ste promjenu adrese e-pošte na {app_name} na ovu adresu. Kliknite na poveznicu ispod za potvrdu. Poveznica vrijedi 30 minuta i može se upotrijebiti samo jednom.",
       "cta": "Potvrdi novu adresu",
       "footer": "Ako niste napravili ovu promjenu, slobodno zanemarite ovu poruku — vaš račun ostaje nepromijenjen."
+    },
+    "common": {
+      "greeting": "Pozdrav {name},"
+    },
+    "payment_receipt": {
+      "subject": "Uplata primljena — {app_name}",
+      "body": "Primili smo vašu uplatu od {amount} za: {description}.",
+      "footer": "Povijest plaćanja možete pogledati u bilo kojem trenutku: {link}"
+    },
+    "payment_refunded": {
+      "subject": "Uplata vraćena — {app_name}",
+      "body": "{amount} vaše uplate za: {description} je vraćeno. Povrati se na izvodu obično pojavljuju unutar 5–10 radnih dana."
+    },
+    "fine_issued": {
+      "subject": "Izrečena vam je novčana kazna — {app_name}",
+      "body": "Izrečena vam je novčana kazna od {amount}. Razlog: {reason}",
+      "footer": "Platite je ili podnesite žalbu ovdje: {link}"
+    },
+    "appeal_upheld": {
+      "subject": "Vaša žalba je prihvaćena — {app_name}",
+      "body": "Vaša žalba na kaznu od {amount} je prihvaćena. Kazna je otpisana — ništa ne dugujete."
+    },
+    "appeal_dismissed": {
+      "subject": "Vaša žalba je odbijena — {app_name}",
+      "body": "Vaša žalba na kaznu od {amount} je odbijena i kazna se ponovno duguje. Možete je platiti ovdje: {link}"
     }
   },
   "pdf": {

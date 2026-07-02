@@ -61,6 +61,13 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['org_admin'], appShell: true },
   },
   {
+    // Stripe Checkout sends every payer back here (?status=paid|canceled,
+    // ?flow=<subject>) — the one place that always confirms what happened.
+    path: '/payments/return',
+    component: () => import('@/views/PaymentReturnView.vue'),
+    meta: { requiresAuth: true, appShell: true },
+  },
+  {
     // First-run setup wizard — guides a brand-new org admin
     // through creating a club, sharing the invite link, and
     // opening Meet Manager. DashboardView auto-redirects here

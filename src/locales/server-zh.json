@@ -28,6 +28,31 @@
       "body": "您请求将 {app_name} 的邮箱更改为此地址。请点击下方链接确认。该链接有效期为 30 分钟，且只能使用一次。",
       "cta": "确认新邮箱",
       "footer": "如果此更改不是您本人的操作，可以忽略此邮件 — 您的账户未做任何更改。"
+    },
+    "common": {
+      "greeting": "{name}，您好："
+    },
+    "payment_receipt": {
+      "subject": "已收到付款 — {app_name}",
+      "body": "我们已收到您为 {description} 支付的 {amount}。",
+      "footer": "您可以随时查看付款记录：{link}"
+    },
+    "payment_refunded": {
+      "subject": "付款已退款 — {app_name}",
+      "body": "您为 {description} 支付的款项中已退还 {amount}。退款通常会在 5–10 个工作日内显示在您的账单上。"
+    },
+    "fine_issued": {
+      "subject": "您被处以罚款 — {app_name}",
+      "body": "您被处以 {amount} 的罚款。原因：{reason}",
+      "footer": "您可以在此支付或提出申诉：{link}"
+    },
+    "appeal_upheld": {
+      "subject": "您的申诉已获支持 — {app_name}",
+      "body": "您对 {amount} 罚款的申诉已获支持。罚款已免除，无需支付。"
+    },
+    "appeal_dismissed": {
+      "subject": "您的申诉已被驳回 — {app_name}",
+      "body": "您对 {amount} 罚款的申诉已被驳回，罚款需重新支付。您可以在此支付：{link}"
     }
   },
   "pdf": {
