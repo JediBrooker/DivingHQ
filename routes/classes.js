@@ -953,7 +953,21 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         [req.params.enrolId],
       )).rows[0];
       if (!enr) return res.status(404).json({ error: "Enrolment not found" });
-      if (enr.diver_user_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+      const isDiver = enr.diver_user_id === req.user.id;
+      let isGuardian = false;
+      if (!isDiver) {
+        try {
+          isGuardian = (await pool.query(
+            `SELECT 1 FROM guardians
+              WHERE guardian_user_id = $1 AND dependent_user_id = $2
+                AND org_id = $3 AND status = 'approved' LIMIT 1`,
+            [req.user.id, enr.diver_user_id, enr.org_id],
+          )).rows.length > 0;
+        } catch (e) {
+          if (!/relation "guardians" does not exist/.test(e.message)) throw e;
+        }
+      }
+      if (!isDiver && !isGuardian) return res.status(403).json({ error: "Forbidden" });
       if (enr.status !== "pending") return res.status(409).json({ error: `This enrolment is ${enr.status}.` });
       // A pending enrolment with NO price (amount_cents NULL) is un-priced,
       // not free: activating it here would hand out priced classes for
@@ -979,13 +993,18 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       let paymentId;
       for (let attemptNo = 0; ; attemptNo++) {
         try {
+          const classSubjectId = isGuardian ? enr.diver_user_id : null;
+          const cols = "org_id, payer_user_id, payer_type, subject_type, club_id, recipient_type, class_enrolment_id, amount_cents, platform_fee_cents, currency, fee_payer, status";
+          const vals = "$1, $2, 'user', 'class_enrolment', $3, 'club', $4, $5, $6, $7, 'absorb', 'pending'";
+          const params = [enr.org_id, req.user.id, enr.club_id, enr.id, chargeAmountCents, applicationFeeCents, currency];
+          if (classSubjectId) {
+            params.push(classSubjectId);
+          }
           paymentId = (await pool.query(
-            `INSERT INTO payments
-                (org_id, payer_user_id, payer_type, subject_type, club_id, recipient_type,
-                 class_enrolment_id, amount_cents, platform_fee_cents, currency, fee_payer, status)
-             VALUES ($1, $2, 'user', 'class_enrolment', $3, 'club', $4, $5, $6, $7, 'absorb', 'pending')
+            `INSERT INTO payments (${cols}${classSubjectId ? ", subject_user_id" : ""})
+             VALUES (${vals}${classSubjectId ? `, $${params.length}` : ""})
              RETURNING id`,
-            [enr.org_id, req.user.id, enr.club_id, enr.id, chargeAmountCents, applicationFeeCents, currency],
+            params,
           )).rows[0].id;
           break;
         } catch (e) {

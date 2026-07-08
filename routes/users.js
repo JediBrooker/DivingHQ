@@ -1072,5 +1072,135 @@ module.exports = function createUsersRouter({
     }
   });
 
+  // ===============================================================
+  // GUARDIAN / DEPENDENT RELATIONSHIPS (Migration 083)
+  //
+  // A parent or guardian can link to a minor's account so they can
+  // pay entry fees, memberships, etc. on the minor's behalf. Links
+  // are org-scoped and require org_admin approval.
+  // ===============================================================
+
+  router.get("/api/guardians/my-dependents", verifyToken, async (req, res) => {
+    try {
+      const rows = (await pool.query(
+        `SELECT g.id AS guardian_link_id, g.status,
+                u.id, u.username, u.full_name, u.date_of_birth
+           FROM guardians g
+           JOIN users u ON u.id = g.dependent_user_id
+          WHERE g.guardian_user_id = $1 AND g.status = 'approved'
+          ORDER BY u.full_name`,
+        [req.user.id],
+      )).rows;
+      res.json(rows);
+    } catch (err) {
+      console.error("[Guardians]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  router.post("/api/guardians/request", verifyToken, async (req, res) => {
+    const { dependent_user_id } = req.body || {};
+    if (!dependent_user_id) return res.status(400).json({ error: "dependent_user_id is required" });
+    if (dependent_user_id === req.user.id) return res.status(400).json({ error: "Cannot link to yourself" });
+    try {
+      const dep = (await pool.query(
+        "SELECT id, org_id, date_of_birth, full_name FROM users WHERE id = $1",
+        [dependent_user_id],
+      )).rows[0];
+      if (!dep) return res.status(404).json({ error: "User not found" });
+      if (dep.org_id !== req.user.org_id) {
+        return res.status(400).json({ error: "Guardian and dependent must be in the same organisation" });
+      }
+      if (!dep.date_of_birth) {
+        return res.status(400).json({ error: "Dependent's date of birth must be set before linking" });
+      }
+      const age = Math.floor((Date.now() - new Date(dep.date_of_birth).getTime()) / (365.25 * 86400000));
+      if (age >= 18) {
+        return res.status(400).json({ error: "Dependent must be under 18" });
+      }
+      await pool.query(
+        `INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id)
+         VALUES ($1, $2, $3)`,
+        [req.user.org_id, req.user.id, dependent_user_id],
+      );
+      res.status(201).json({ message: "Request submitted for admin approval" });
+    } catch (err) {
+      if (err.code === "23505") return res.status(409).json({ error: "A pending or approved link already exists" });
+      console.error("[Guardians]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  router.get("/api/guardian-requests", requireOrgAdmin, async (req, res) => {
+    try {
+      const isSysAdmin = !!req.user.is_system_admin;
+      const rows = (await pool.query(
+        `SELECT g.id, g.status, g.requested_at, g.org_id,
+                gu.id AS guardian_id, gu.full_name AS guardian_name, gu.username AS guardian_username,
+                du.id AS dependent_id, du.full_name AS dependent_name, du.username AS dependent_username,
+                du.date_of_birth AS dependent_dob
+           FROM guardians g
+           JOIN users gu ON gu.id = g.guardian_user_id
+           JOIN users du ON du.id = g.dependent_user_id
+          WHERE g.status = 'pending' AND ($2::boolean OR g.org_id = $1)
+          ORDER BY g.requested_at ASC`,
+        [req.user.org_id, isSysAdmin],
+      )).rows;
+      res.json(rows);
+    } catch (err) {
+      console.error("[Guardians]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  router.post("/api/guardian-requests/:id/review", requireOrgAdmin, async (req, res) => {
+    const { decision } = req.body || {};
+    if (!["approved", "rejected"].includes(decision)) {
+      return res.status(400).json({ error: "decision must be 'approved' or 'rejected'" });
+    }
+    try {
+      const g = (await pool.query(
+        "SELECT * FROM guardians WHERE id = $1 AND status = 'pending'",
+        [req.params.id],
+      )).rows[0];
+      if (!g) return res.status(404).json({ error: "Request not found" });
+      if (!req.user.is_system_admin && g.org_id !== req.user.org_id) {
+        return res.status(403).json({ error: "Cannot review requests in other organisations" });
+      }
+      await pool.query(
+        "UPDATE guardians SET status = $1, reviewed_by = $2, reviewed_at = now() WHERE id = $3",
+        [decision, req.user.id, req.params.id],
+      );
+      res.json({ message: `Guardian request ${decision}` });
+    } catch (err) {
+      console.error("[Guardians]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  router.post("/api/guardians/:id/revoke", verifyToken, async (req, res) => {
+    try {
+      const g = (await pool.query(
+        "SELECT * FROM guardians WHERE id = $1 AND status = 'approved'",
+        [req.params.id],
+      )).rows[0];
+      if (!g) return res.status(404).json({ error: "Guardian link not found" });
+      const isGuardian = g.guardian_user_id === req.user.id;
+      const isAdmin = req.user.is_system_admin || (
+        req.user.org_id === g.org_id &&
+        (req.user.org_roles || []).includes("org_admin")
+      );
+      if (!isGuardian && !isAdmin) return res.status(403).json({ error: "Forbidden" });
+      await pool.query(
+        "UPDATE guardians SET status = 'revoked', reviewed_by = $1, reviewed_at = now() WHERE id = $2",
+        [req.user.id, req.params.id],
+      );
+      res.json({ message: "Guardian link revoked" });
+    } catch (err) {
+      console.error("[Guardians]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   return router;
 };

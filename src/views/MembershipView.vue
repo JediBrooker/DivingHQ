@@ -3,15 +3,15 @@
 // (per tier) with a real Pay action once payments are live (the card shows
 // its own coming-soon note while dormant). Each card reads the resolved
 // price from the diver-facing GET /api/orgs/:orgId/membership endpoint.
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import FeePreviewCard from '@/components/payments/FeePreviewCard.vue'
+import SubjectSelector from '@/components/payments/SubjectSelector.vue'
 
 const auth = useAuthStore()
 const orgId = computed(() => auth.user?.org_id)
+const payingFor = ref('')
 
-// '' = the Standard (ageless) membership; the others are age tiers. Cards
-// for tiers a federation hasn't set will simply show "not set yet".
 const TIERS = [
   { key: '', label: 'Standard' },
   { key: 'junior', label: 'Junior' },
@@ -27,6 +27,7 @@ const TIERS = [
       Membership unlocks members-only entry prices. It isn't required to enter
       competitions.
     </p>
+    <SubjectSelector v-model="payingFor" />
     <div class="tiers" v-if="orgId">
       <div v-for="tr in TIERS" :key="tr.key" class="tier-card">
         <h3>{{ tr.label }}</h3>
@@ -35,6 +36,7 @@ const TIERS = [
           :load-url="`/api/orgs/${orgId}/membership?tier=${tr.key}`"
           :checkout-url="`/api/orgs/${orgId}/membership/checkout`"
           :checkout-body="tr.key ? { tier: tr.key } : {}"
+          :subject-user-id="payingFor"
           coming-soon-message="Membership payments are coming soon."
         />
       </div>

@@ -1830,5 +1830,21 @@
     "paid_online": "مدفوع عبر الإنترنت",
     "paid_online_tip": "تم دفع هذا التسجيل عبر الدفع الإلكتروني",
     "request_payment": "طلب الدفع الإلكتروني من الغطاس"
+  },
+  "guardians": {
+    "nav": "Dependents",
+    "title": "My Dependents",
+    "subtitle": "Link to a minor's account to pay on their behalf.",
+    "empty": "You have no linked dependents.",
+    "add": "Link a dependent",
+    "revoke": "Revoke",
+    "revoke_confirm": "Remove this guardian link?",
+    "request_sent": "Request sent — an administrator will review it.",
+    "search_placeholder": "Search by name...",
+    "age_years": "{age} years old",
+    "paying_for": "Paying for",
+    "paying_for_self": "Yourself",
+    "admin_title": "Guardian Requests",
+    "admin_empty": "No pending guardian requests."
   }
 }

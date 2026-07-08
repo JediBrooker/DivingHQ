@@ -160,6 +160,28 @@ module.exports = function createPaymentsRouter({
     return req.user.is_system_admin || req.user.org_id === orgId;
   }
 
+  async function validateGuardian(req, subjectUserId) {
+    if (!subjectUserId || subjectUserId === req.user.id) return null;
+    let found = false;
+    try {
+      found = (await pool.query(
+        `SELECT 1 FROM guardians
+          WHERE guardian_user_id = $1 AND dependent_user_id = $2
+            AND org_id = $3 AND status = 'approved'
+          LIMIT 1`,
+        [req.user.id, subjectUserId, req.user.org_id],
+      )).rows.length > 0;
+    } catch (e) {
+      if (!/relation "guardians" does not exist/.test(e.message)) throw e;
+    }
+    if (!found) {
+      const err = new Error("You are not an approved guardian of this user.");
+      err.status = 403;
+      throw err;
+    }
+    return subjectUserId;
+  }
+
   // Balance (minor units) the platform still owes a federation. The math
   // (fee prorated on partial refunds, per-currency buckets, recipient_type
   // 'org' so class-enrolment money never double-counts into the federation)
@@ -305,9 +327,10 @@ module.exports = function createPaymentsRouter({
   // is added to the resolved base price before the platform-fee math, so
   // the whole charge — base + surcharge — flows through one payment and
   // DivingHQ's cut applies to the total. Returns { url, paymentId } or throws.
-  async function startCheckout({ req, org, fee, prices, subjectType, eventId, meetId = null, productName, successUrl, cancelUrl, surchargeCents = 0 }) {
+  async function startCheckout({ req, org, fee, prices, subjectType, eventId, meetId = null, productName, successUrl, cancelUrl, surchargeCents = 0, subjectUserId = null }) {
     const userId = req.user.id;
-    const member = await isActiveMember(pool, org.id, userId);
+    const beneficiaryId = subjectUserId || userId;
+    const member = await isActiveMember(pool, org.id, beneficiaryId);
     // A payer buying membership isn't a member yet — resolve at the
     // 'all' tier; entry checkout is member-aware.
     const chosen = resolvePrice(prices, { isMember: subjectType === "membership" ? false : member });
@@ -328,8 +351,8 @@ module.exports = function createPaymentsRouter({
                WHERE org_id = $1 AND user_id = $2 AND tier IS NOT DISTINCT FROM $3
                  AND status = 'active'
                  AND period_end > CURRENT_DATE + make_interval(days => $4)`,
-        params: [org.id, userId, fee.tier ?? null, RENEWAL_WINDOW_DAYS],
-        what: "Your membership",
+        params: [org.id, beneficiaryId, fee.tier ?? null, RENEWAL_WINDOW_DAYS],
+        what: subjectUserId ? "This membership" : "Your membership",
       });
     }
     const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
@@ -372,19 +395,20 @@ module.exports = function createPaymentsRouter({
     // earlier attempt's still-open session or retires a dead one and
     // retries (see insertPaymentOrResume).
     const feeScoped = subjectType === "event_entry" || subjectType === "membership";
+    const insertCols = subjectUserId
+      ? "org_id, fee_definition_id, payer_user_id, subject_user_id, subject_type, event_id, meet_id, amount_cents, platform_fee_cents, currency, fee_payer, status"
+      : "org_id, fee_definition_id, payer_user_id, subject_type, event_id, meet_id, amount_cents, platform_fee_cents, currency, fee_payer, status";
+    const insertVals = subjectUserId
+      ? "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending'"
+      : "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending'";
+    const insertParams = subjectUserId
+      ? [org.id, fee.id, userId, subjectUserId, subjectType, eventId || null, meetId || null, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer]
+      : [org.id, fee.id, userId, subjectType, eventId || null, meetId || null, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer];
     const attempt = await insertPaymentOrResume({
       insert: async () => (await pool.query(
-        `INSERT INTO payments
-            (org_id, fee_definition_id, payer_user_id, subject_type, event_id, meet_id,
-             amount_cents, platform_fee_cents, currency, fee_payer, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
-         RETURNING id`,
-        [org.id, fee.id, userId, subjectType, eventId || null, meetId || null, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
+        `INSERT INTO payments (${insertCols}) VALUES (${insertVals}) RETURNING id`,
+        insertParams,
       )).rows[0].id,
-      // Mirror the partial unique index guarding this subject: event entries
-      // and memberships are unique per fee definition (per-discipline fees
-      // are separate purchases); meet access and bundles are unique per
-      // meet+payer regardless of fee definition (migrations 072/073).
       findBlocking: async () => (await pool.query(
         `SELECT id, status, stripe_checkout_session FROM payments
           WHERE subject_type = $1 AND payer_user_id = $2
@@ -392,9 +416,11 @@ module.exports = function createPaymentsRouter({
             AND ($5::boolean = false OR fee_definition_id = $6)
             AND status IN ('pending', 'paid')
           ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
-        [subjectType, userId, eventId || null, meetId || null, feeScoped, fee.id],
+        [subjectType, beneficiaryId, eventId || null, meetId || null, feeScoped, fee.id],
       )).rows[0],
-      alreadyDoneMessage: "You already have a payment in progress or completed for this.",
+      alreadyDoneMessage: subjectUserId
+        ? "A payment is already in progress or completed for this dependent."
+        : "You already have a payment in progress or completed for this.",
     });
     if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
     const paymentId = attempt.paymentId;
@@ -1085,16 +1111,15 @@ module.exports = function createPaymentsRouter({
       const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
       // "Submit, then pay": the dive-list entry exists independently; an
       // entry is confirmed once a paid payment exists for this diver.
-      const alreadyPaid = req.user
+      const checkUserId = req.query.subject_user_id || (req.user && req.user.id);
+      const alreadyPaid = checkUserId
         ? (await pool.query(
             `SELECT 1 FROM payments
               WHERE event_id = $1 AND payer_user_id = $2
                 AND subject_type = 'event_entry' AND status = 'paid' LIMIT 1`,
-            [eventId, req.user.id],
+            [eventId, checkUserId],
           )).rows.length > 0
         : false;
-      // Late-entry surcharge: surfaced even before it bites so divers can
-      // pay early to avoid it; folded into total_cents once it applies.
       const late = await resolveLateFee(pool, eventId);
       const baseCents = chosen ? chosen.amount_cents : 0;
       return res.json({
@@ -1330,12 +1355,13 @@ module.exports = function createPaymentsRouter({
       const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
       const chosen = resolvePrice(prices, { isMember: member });
       const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
-      const alreadyPaid = req.user
+      const meetCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
+      const alreadyPaid = meetCheckUserId
         ? (await pool.query(
             `SELECT 1 FROM payments
               WHERE meet_id = $1 AND payer_user_id = $2
                 AND subject_type = 'event_entry' AND status = 'paid' LIMIT 1`,
-            [meetId, req.user.id],
+            [meetId, meetCheckUserId],
           )).rows.length > 0
         : false;
       return res.json({
@@ -1366,6 +1392,7 @@ module.exports = function createPaymentsRouter({
     if (!ensurePayments(res)) return;
     const meetId = req.params.id;
     try {
+      const subjectUserId = await validateGuardian(req, req.body?.subject_user_id);
       const m = await pool.query("SELECT id, name, org_id FROM meets WHERE id = $1", [meetId]);
       if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
       const orgId = m.rows[0].org_id;
@@ -1391,6 +1418,7 @@ module.exports = function createPaymentsRouter({
         subjectType: "event_entry",
         eventId: null,
         meetId,
+        subjectUserId,
         productName: discipline
           ? `Meet registration (${discipline}) — ${m.rows[0].name}`
           : `Meet registration — ${m.rows[0].name}`,
@@ -1483,11 +1511,13 @@ module.exports = function createPaymentsRouter({
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
       const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
-      const alreadyPaid = req.user
+      const accessCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
+      const alreadyPaid = accessCheckUserId
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE meet_id = $1 AND payer_user_id = $2 AND subject_type = $3 AND status = 'paid' LIMIT 1`,
-            [meetId, req.user.id, req.query.kind],
+              WHERE meet_id = $1 AND payer_user_id = $2
+                AND subject_type = $3 AND status = 'paid' LIMIT 1`,
+            [meetId, accessCheckUserId, req.query.kind],
           )).rows.length > 0
         : false;
       return res.json({
@@ -1515,6 +1545,7 @@ module.exports = function createPaymentsRouter({
       return res.status(400).json({ error: "A valid access kind is required." });
     }
     try {
+      const subjectUserId = await validateGuardian(req, req.body?.subject_user_id);
       const m = await pool.query("SELECT id, name, org_id FROM meets WHERE id = $1", [meetId]);
       if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
       const orgId = m.rows[0].org_id;
@@ -1540,6 +1571,7 @@ module.exports = function createPaymentsRouter({
         prices,
         subjectType: kind,
         meetId,
+        subjectUserId,
         productName: `${ACCESS_LABELS[kind]} — ${m.rows[0].name}`,
         successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=meet`,
         cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=meet`,
@@ -1663,11 +1695,13 @@ module.exports = function createPaymentsRouter({
       // public card hides itself rather than offering an empty purchase.
       if (!events.length) return res.json({ fee: null, payments_enabled: payments.enabled });
       const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
-      const alreadyPaid = req.user
+      const bundleCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
+      const alreadyPaid = bundleCheckUserId
         ? (await pool.query(
             `SELECT 1 FROM payments
-              WHERE meet_id = $1 AND payer_user_id = $2 AND subject_type = 'meet_bundle' AND status = 'paid' LIMIT 1`,
-            [meetId, req.user.id],
+              WHERE meet_id = $1 AND payer_user_id = $2
+                AND subject_type = 'meet_bundle' AND status = 'paid' LIMIT 1`,
+            [meetId, bundleCheckUserId],
           )).rows.length > 0
         : false;
       return res.json({
@@ -1691,6 +1725,7 @@ module.exports = function createPaymentsRouter({
     if (!ensurePayments(res)) return;
     const meetId = req.params.id;
     try {
+      const subjectUserId = await validateGuardian(req, req.body?.subject_user_id);
       const m = await pool.query("SELECT id, name, org_id FROM meets WHERE id = $1", [meetId]);
       if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
       const orgId = m.rows[0].org_id;
@@ -1707,9 +1742,6 @@ module.exports = function createPaymentsRouter({
       );
       if (!feeRes.rows.length) return res.status(409).json({ error: "No bundle is on sale for this meet." });
       const fee = feeRes.rows[0];
-      // Guard against a half-configured bundle (fee saved but no event set,
-      // e.g. a crash between the fee upsert and the items write) — an item-less
-      // bundle would take money and grant nothing.
       const itemCount = (await pool.query(
         "SELECT COUNT(*)::int AS n FROM meet_bundle_items WHERE fee_definition_id = $1", [fee.id],
       )).rows[0].n;
@@ -1720,6 +1752,7 @@ module.exports = function createPaymentsRouter({
         req, org, fee, prices,
         subjectType: "meet_bundle",
         meetId,
+        subjectUserId,
         productName: `Meet bundle — ${m.rows[0].name}`,
         successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=meet`,
         cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=meet`,
@@ -2396,6 +2429,7 @@ module.exports = function createPaymentsRouter({
     if (!ensurePayments(res)) return;
     const eventId = req.params.id;
     try {
+      const subjectUserId = await validateGuardian(req, req.body?.subject_user_id);
       const ev = await pool.query("SELECT id, name, org_id FROM events WHERE id = $1", [eventId]);
       if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
       const orgId = ev.rows[0].org_id;
@@ -2414,7 +2448,6 @@ module.exports = function createPaymentsRouter({
       const fee = feeRes.rows[0];
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [fee.id])).rows;
 
-      // Fold in the late-entry surcharge when the event's deadline has passed.
       const late = await resolveLateFee(pool, eventId);
       const surchargeCents = late && late.applies ? late.surchargeCents : 0;
 
@@ -2426,6 +2459,7 @@ module.exports = function createPaymentsRouter({
         subjectType: "event_entry",
         eventId,
         surchargeCents,
+        subjectUserId,
         productName: surchargeCents
           ? `Entry (incl. late fee) — ${ev.rows[0].name}`
           : `Entry — ${ev.rows[0].name}`,
@@ -2444,6 +2478,7 @@ module.exports = function createPaymentsRouter({
     if (!ensurePayments(res)) return;
     const orgId = req.params.id;
     try {
+      const subjectUserId = await validateGuardian(req, req.body?.subject_user_id);
       const org = (
         await pool.query(
           `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
@@ -2452,7 +2487,6 @@ module.exports = function createPaymentsRouter({
         )
       ).rows[0];
       if (!org) return res.status(404).json({ error: "Organisation not found" });
-      // Tier-aware: each tier is its own fee definition; NULL = standard.
       const tier = (req.body && req.body.tier) ? String(req.body.tier).slice(0, 40) : null;
       const feeRes = await pool.query(
         `SELECT * FROM fee_definitions
@@ -2471,6 +2505,7 @@ module.exports = function createPaymentsRouter({
         prices,
         subjectType: "membership",
         eventId: null,
+        subjectUserId,
         productName: `${org.name} membership`,
         successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=membership`,
         cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=membership`,
@@ -2686,25 +2721,54 @@ module.exports = function createPaymentsRouter({
   // localises the description/status client-side (fully i18n).
   router.get("/api/me/payments", verifyToken, async (req, res) => {
     try {
-      const rows = (await pool.query(
-        `SELECT p.id, p.created_at, p.paid_at, p.subject_type, p.status,
-                p.amount_cents, p.currency, p.payer_role_type,
-                e.name  AS event_name,
-                m.name  AS meet_name,
-                f.reason AS fine_reason,
-                fd.tier AS membership_tier,
-                fd.name AS fee_name
-           FROM payments p
-           LEFT JOIN events e           ON e.id  = p.event_id
-           LEFT JOIN meets  m           ON m.id  = p.meet_id
-           LEFT JOIN fines  f           ON f.id  = p.fine_id
-           LEFT JOIN fee_definitions fd ON fd.id = p.fee_definition_id
-          WHERE p.payer_user_id = $1
-            AND COALESCE(p.payer_type, 'user') <> 'club'
-          ORDER BY p.created_at DESC
-          LIMIT 500`,
-        [req.user.id],
-      )).rows;
+      let rows;
+      try {
+        rows = (await pool.query(
+          `SELECT p.id, p.created_at, p.paid_at, p.subject_type, p.status,
+                  p.amount_cents, p.currency, p.payer_role_type, p.subject_user_id,
+                  su.full_name AS subject_name,
+                  e.name  AS event_name,
+                  m.name  AS meet_name,
+                  f.reason AS fine_reason,
+                  fd.tier AS membership_tier,
+                  fd.name AS fee_name
+             FROM payments p
+             LEFT JOIN users su           ON su.id = p.subject_user_id
+             LEFT JOIN events e           ON e.id  = p.event_id
+             LEFT JOIN meets  m           ON m.id  = p.meet_id
+             LEFT JOIN fines  f           ON f.id  = p.fine_id
+             LEFT JOIN fee_definitions fd ON fd.id = p.fee_definition_id
+            WHERE p.payer_user_id = $1
+              AND COALESCE(p.payer_type, 'user') <> 'club'
+            ORDER BY p.created_at DESC
+            LIMIT 500`,
+          [req.user.id],
+        )).rows;
+      } catch (e) {
+        if (/column .* does not exist/.test(e.message)) {
+          rows = (await pool.query(
+            `SELECT p.id, p.created_at, p.paid_at, p.subject_type, p.status,
+                    p.amount_cents, p.currency, p.payer_role_type,
+                    e.name  AS event_name,
+                    m.name  AS meet_name,
+                    f.reason AS fine_reason,
+                    fd.tier AS membership_tier,
+                    fd.name AS fee_name
+               FROM payments p
+               LEFT JOIN events e           ON e.id  = p.event_id
+               LEFT JOIN meets  m           ON m.id  = p.meet_id
+               LEFT JOIN fines  f           ON f.id  = p.fine_id
+               LEFT JOIN fee_definitions fd ON fd.id = p.fee_definition_id
+              WHERE p.payer_user_id = $1
+                AND COALESCE(p.payer_type, 'user') <> 'club'
+              ORDER BY p.created_at DESC
+              LIMIT 500`,
+            [req.user.id],
+          )).rows;
+        } else {
+          throw e;
+        }
+      }
       return res.json({ payments: rows, payments_enabled: payments.enabled });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] read my payments failed");

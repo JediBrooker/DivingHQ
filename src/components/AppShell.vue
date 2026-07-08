@@ -19,7 +19,7 @@ import {
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award, Gavel,
-  History, Receipt, Heart, Layers, Wallet,
+  History, Receipt, Heart, Layers, Wallet, UserCheck,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -67,6 +67,7 @@ const NAV = [
     { to: '/charges',         label: 'Charges',         labelKey: 'payments.charges',       icon: Receipt },
     { to: '/membership',      label: 'Membership',      labelKey: 'payments.membership',    icon: CreditCard, roles: ['diver'] },
     { to: '/accreditation',   label: 'Accreditation',   labelKey: 'payments.accreditation', icon: Award,      roles: ['judge', 'referee', 'coach', 'meet_manager'] },
+    { to: '/guardians',       label: 'Dependents',      labelKey: 'guardians.nav',          icon: UserCheck },
     { to: '/payment-history', label: 'Payment History', labelKey: 'payments.history',       icon: History },
     { to: '/donate',          label: 'Donate',          labelKey: 'payments.donate',        icon: Heart },
   ] },
