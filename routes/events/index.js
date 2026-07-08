@@ -34,6 +34,7 @@ const {
   buildReflowProposal,
   stampActualStart,
 } = require("../../lib/schedule-reflow");
+const { retirePendingPayment } = require("../../lib/payment-lifecycle");
 
 // Migration 039: shape-check operator-prescribed round_dives. We
 // only validate structure here (round numbering 1..N contiguous,
@@ -123,6 +124,9 @@ module.exports = function createEventsRouter({
   // suspended_at revocation checks) and treats anything else as
   // anonymous.
   optionalAuth,
+  // Stripe module — needed by the deletion guard to retire
+  // in-flight checkouts before cascade-deleting fee definitions.
+  payments,
 }) {
   if (!pool || !JWT_SECRET || !optionalAuth) {
     throw new Error("createEventsRouter requires { pool, JWT_SECRET, optionalAuth, … }");
@@ -869,6 +873,40 @@ module.exports = function createEventsRouter({
           error: `Refusing to delete: event has ${scoreCount.rows[0].n} recorded scores. Cancel or finalise the event instead.`,
           score_count: scoreCount.rows[0].n,
         });
+      }
+      // Money guard: refuse deletion when paid payments reference
+      // this event — refund or cancel them first. Mirrors the class
+      // deletion pattern (routes/classes.js).
+      const paidCount = (await pool.query(
+        `SELECT COUNT(*)::int AS n FROM payments
+          WHERE event_id = $1 AND status IN ('paid', 'partially_refunded')`,
+        [ev.id],
+      )).rows[0].n;
+      if (paidCount > 0) {
+        return res.status(409).json({
+          error: `This event has ${paidCount} paid payment(s) — refund or cancel them before deleting.`,
+          paid_count: paidCount,
+        });
+      }
+      // Retire any in-flight checkouts so a payer can't complete
+      // payment for an event that's about to be deleted.
+      const pendingPayments = (await pool.query(
+        `SELECT id, status, stripe_checkout_session FROM payments
+          WHERE event_id = $1 AND status = 'pending'`,
+        [ev.id],
+      )).rows;
+      for (const p of pendingPayments) {
+        const outcome = await retirePendingPayment({ pool, payments, logger: console }, p);
+        if (outcome === "paid") {
+          return res.status(409).json({
+            error: "A payment for this event was just completed — refresh and handle it before deleting.",
+          });
+        }
+        if (outcome === "unavailable") {
+          return res.status(503).json({
+            error: "Couldn't verify an in-flight payment with Stripe — please try again.",
+          });
+        }
       }
       await pool.query("DELETE FROM events WHERE id = $1", [ev.id]);
       // A Live/Completed event may sit in the cached public

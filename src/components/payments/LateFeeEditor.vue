@@ -6,15 +6,17 @@
 // PUT lands on the late_entry fee_definition. Backed by
 // /api/events/:id/late-fee(/config).
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import FeeEditor from '@/components/payments/FeeEditor.vue'
 
+const { t } = useI18n()
 const props = defineProps({ eventId: { type: String, required: true } })
 const auth = useAuthStore()
 
 const TRIGGERS = [
-  { key: 'entries_close_at', label: 'Once entries close' },
-  { key: 'dive_list_locks_at', label: 'Once the dive list locks' },
+  { key: 'entries_close_at', labelKey: 'payments.late_editor.trigger_entries_close' },
+  { key: 'dive_list_locks_at', labelKey: 'payments.late_editor.trigger_dive_list_locks' },
 ]
 const trigger = ref('entries_close_at')
 const ready = ref(false)
@@ -32,19 +34,19 @@ onMounted(async () => {
 
 <template>
   <section class="late-fee">
-    <h3>Late entry fee</h3>
-    <p class="hint">A surcharge added to the entry fee once the deadline below has passed. Divers are shown it up front so they can pay early to avoid it.</p>
+    <h3>{{ t('payments.late_editor.title') }}</h3>
+    <p class="hint">{{ t('payments.late_editor.hint') }}</p>
     <div class="trigger-row">
-      <label class="trigger-label" for="late-trigger">Charge it:</label>
+      <label class="trigger-label" for="late-trigger">{{ t('payments.late_editor.label_charge_it') }}</label>
       <select id="late-trigger" class="trigger-select" v-model="trigger">
-        <option v-for="t in TRIGGERS" :key="t.key" :value="t.key">{{ t.label }}</option>
+        <option v-for="trig in TRIGGERS" :key="trig.key" :value="trig.key">{{ t(trig.labelKey) }}</option>
       </select>
-      <span class="trigger-note">— applied when you press Save below.</span>
+      <span class="trigger-note">{{ t('payments.late_editor.trigger_note') }}</span>
     </div>
     <FeeEditor
       v-if="ready"
       flat
-      title="Late entry fee"
+      :title="t('payments.late_editor.title')"
       :load-url="`/api/events/${eventId}/late-fee/config`"
       :save-url="`/api/events/${eventId}/late-fee`"
       :extra-payload="{ late_fee_trigger: trigger }"

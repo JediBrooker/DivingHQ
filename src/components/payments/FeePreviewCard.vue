@@ -7,6 +7,7 @@
 // "Pay" that hands off to Stripe. One card reused across membership,
 // club affiliation, fines, spectator access, owed entry charges, etc.
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
@@ -23,6 +24,7 @@ const props = defineProps({
 })
 
 const auth = useAuthStore()
+const { t } = useI18n()
 const fee = ref(null)
 const enabled = ref(true)
 const loading = ref(true)
@@ -33,10 +35,10 @@ const busy = ref(false)
 // varies by endpoint, so accept any of them.
 const owned = computed(() => !!(fee.value && (fee.value.already_paid || fee.value.already_member || fee.value.active)))
 const ownedLabel = computed(() => {
-  const until = fee.value?.period_end ? ` until ${String(fee.value.period_end).slice(0, 10)}` : ''
-  if (fee.value?.already_member) return `✓ Member${until}`
-  if (fee.value?.active) return `✓ Active${until}`
-  return '✓ Purchased'
+  const date = fee.value?.period_end ? String(fee.value.period_end).slice(0, 10) : ''
+  if (fee.value?.already_member) return date ? t('payments.fee_card.owned_member_until', { date }) : t('payments.fee_card.owned_member')
+  if (fee.value?.active) return date ? t('payments.fee_card.owned_active_until', { date }) : t('payments.fee_card.owned_active')
+  return t('payments.fee_card.owned_purchased')
 })
 
 // The figure the payer is actually charged (server-computed; includes the
@@ -48,9 +50,9 @@ const totalDiffers = computed(() =>
 
 const refundNote = computed(() => {
   const rp = fee.value?.refund_policy
-  if (rp === 'none') return 'No refunds.'
-  if (rp === 'deadline' && fee.value?.refund_deadline) return `Refundable until ${String(fee.value.refund_deadline).slice(0, 10)}.`
-  if (rp === 'full') return 'Refundable.'
+  if (rp === 'none') return t('payments.fee_card.refund_none')
+  if (rp === 'deadline' && fee.value?.refund_deadline) return t('payments.fee_card.refund_deadline', { date: String(fee.value.refund_deadline).slice(0, 10) })
+  if (rp === 'full') return t('payments.fee_card.refund_full')
   return ''
 })
 
@@ -70,7 +72,7 @@ async function load() {
     fee.value = r.fee
     enabled.value = r.payments_enabled !== false
   } catch (e) {
-    showError(e.message || 'Could not load the fee')
+    showError(e.message || t('payments.fee_card.error_load'))
   } finally {
     loading.value = false
   }
@@ -83,7 +85,7 @@ async function pay() {
     const { url } = await auth.apiFetch(props.checkoutUrl, { method: 'POST', body: JSON.stringify(props.checkoutBody) })
     window.location.href = url
   } catch (e) {
-    showError(e.message || 'Could not start checkout')
+    showError(e.message || t('payments.fee_card.error_checkout'))
     busy.value = false
   }
 }
@@ -93,25 +95,25 @@ onMounted(load)
 
 <template>
   <div class="fee-preview">
-    <p v-if="loading" class="muted">Loading…</p>
+    <p v-if="loading" class="muted">{{ t('payments.fee_card.loading') }}</p>
     <template v-else-if="fee && fee.price">
       <p class="fp-price">
         <span class="fp-title">{{ title }}:</span>
         <strong>{{ money(fee.price.amount_cents, fee.currency) }}</strong>
-        <span v-if="fee.is_member" class="fp-badge">member</span>
+        <span v-if="fee.is_member" class="fp-badge">{{ t('payments.fee_card.badge_member') }}</span>
         <span v-else-if="fee.tier" class="fp-badge">{{ fee.tier }}</span>
       </p>
-      <p v-if="totalDiffers" class="fp-total">You pay {{ money(payerTotal, fee.currency) }} (incl. platform fee)</p>
+      <p v-if="totalDiffers" class="fp-total">{{ t('payments.fee_card.total_with_fee', { amount: money(payerTotal, fee.currency) }) }}</p>
       <p v-if="refundNote" class="fp-refund muted">{{ refundNote }}</p>
       <p v-if="owned" class="fp-owned">{{ ownedLabel }}</p>
       <template v-else>
         <button class="fp-pay" :disabled="!enabled || busy || !checkoutUrl" @click="pay">
-          {{ !enabled ? 'Coming soon' : (busy ? 'Redirecting…' : 'Pay') }}
+          {{ !enabled ? t('payments.fee_card.btn_coming_soon') : (busy ? t('payments.fee_card.btn_redirecting') : t('payments.fee_card.btn_pay')) }}
         </button>
         <ComingSoonBanner v-if="!enabled" :message="comingSoonMessage" />
       </template>
     </template>
-    <p v-else-if="!hideWhenUnset" class="muted">No {{ title.toLowerCase() }} is set for this yet.</p>
+    <p v-else-if="!hideWhenUnset" class="muted">{{ t('payments.fee_card.no_fee_set', { title: title.toLowerCase() }) }}</p>
   </div>
 </template>
 

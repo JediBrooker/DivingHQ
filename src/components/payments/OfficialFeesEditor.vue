@@ -5,28 +5,30 @@
 // official_accreditation fee_definition. Accreditation is a flat per-role
 // price (not member-tiered), so FeeEditor runs in flat mode.
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import FeeEditor from '@/components/payments/FeeEditor.vue'
 
+const { t } = useI18n()
 const props = defineProps({ orgId: { type: String, required: true } })
 
 const ROLES = [
-  { key: 'judge', label: 'Judge' },
-  { key: 'referee', label: 'Referee' },
-  { key: 'coach', label: 'Coach' },
-  { key: 'meet_manager', label: 'Meet manager' },
+  { key: 'judge', labelKey: 'payments.official_editor.role_judge' },
+  { key: 'referee', labelKey: 'payments.official_editor.role_referee' },
+  { key: 'coach', labelKey: 'payments.official_editor.role_coach' },
+  { key: 'meet_manager', labelKey: 'payments.official_editor.role_meet_manager' },
 ]
 const active = ref('judge')
-const activeLabel = computed(() => ROLES.find(r => r.key === active.value)?.label || '')
+const activeLabel = computed(() => {
+  const role = ROLES.find(r => r.key === active.value)
+  return role ? t(role.labelKey) : ''
+})
 const loadUrl = computed(() => `/api/orgs/${props.orgId}/official-fee?role_type=${active.value}`)
 const saveUrl = computed(() => `/api/orgs/${props.orgId}/official-fee`)
 </script>
 
 <template>
   <div class="official-fees">
-    <p class="hint">
-      Charge officials and coaches an annual accreditation fee per role. Each
-      person pays from their Accreditation page; set one flat price per role.
-    </p>
+    <p class="hint">{{ t('payments.official_editor.hint') }}</p>
     <div class="role-tabs" role="tablist">
       <button
         v-for="r in ROLES"
@@ -36,12 +38,12 @@ const saveUrl = computed(() => `/api/orgs/${props.orgId}/official-fee`)
         :aria-selected="active === r.key"
         :class="['role-tab', { active: active === r.key }]"
         @click="active = r.key"
-      >{{ r.label }}</button>
+      >{{ t(r.labelKey) }}</button>
     </div>
     <FeeEditor
       :key="active"
       flat
-      :title="`${activeLabel} accreditation`"
+      :title="t('payments.official_editor.title', { label: activeLabel })"
       :load-url="loadUrl"
       :save-url="saveUrl"
       :extra-payload="{ role_type: active }"

@@ -8,6 +8,7 @@
 // the rest, transferring to each recipient's Stripe-connected bank account.
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useI18n } from 'vue-i18n'
 import { showError, showSuccess } from '@/composables/useNotify'
 import MembershipFeeEditor from '@/components/payments/MembershipFeeEditor.vue'
 import ClubFeesEditor from '@/components/payments/ClubFeesEditor.vue'
@@ -15,16 +16,17 @@ import OfficialFeesEditor from '@/components/payments/OfficialFeesEditor.vue'
 import DonationEditor from '@/components/payments/DonationEditor.vue'
 
 const auth = useAuthStore()
+const { t } = useI18n()
 const orgId = computed(() => auth.user?.org_id)
 
 const isSysAdmin = computed(() => !!auth.user?.is_system_admin)
 const TABS = computed(() => [
-  { key: 'overview', label: 'Overview' },
-  { key: 'account', label: 'Account details' },
-  { key: 'withdrawals', label: 'Withdrawals' },
-  { key: 'fees', label: 'Fees & pricing' },
+  { key: 'overview', label: t('payments.admin.tab_overview') },
+  { key: 'account', label: t('payments.admin.tab_account') },
+  { key: 'withdrawals', label: t('payments.admin.tab_withdrawals') },
+  { key: 'fees', label: t('payments.admin.tab_fees') },
   // Platform operator only: the fulfilment queue for EVERY org/club payout.
-  ...(isSysAdmin.value ? [{ key: 'queue', label: 'Payout queue' }] : []),
+  ...(isSysAdmin.value ? [{ key: 'queue', label: t('payments.admin.tab_queue') }] : []),
 ])
 const tab = ref('overview')
 
@@ -75,7 +77,7 @@ async function loadStatus() {
       ? (status.value.auto_withdraw_min_cents / 100).toString()
       : ''
   } catch (e) {
-    showError(e.message || 'Could not load payment status')
+    showError(e.message || t('payments.admin.error_load_status'))
   } finally {
     loading.value = false
   }
@@ -96,7 +98,7 @@ async function startOnboarding() {
     const { url } = await auth.apiFetch(`/api/orgs/${orgId.value}/connect/onboard`, { method: 'POST', body: JSON.stringify({}) })
     window.location.href = url // hand off to Stripe-hosted onboarding
   } catch (e) {
-    showError(e.message || 'Could not start payout onboarding')
+    showError(e.message || t('payments.admin.error_start_onboarding'))
     onboarding.value = false
   }
 }
@@ -110,10 +112,10 @@ async function saveAuto() {
       method: 'PUT',
       body: JSON.stringify(body),
     })
-    showSuccess('Automatic withdrawals updated')
+    showSuccess(t('payments.admin.success_auto_saved'))
     await loadStatus()
   } catch (e) {
-    showError(e.message || 'Could not save withdrawal settings')
+    showError(e.message || t('payments.admin.error_save_auto'))
   } finally {
     savingAuto.value = false
   }
@@ -127,11 +129,11 @@ async function requestWithdrawal() {
       body: JSON.stringify({}),
     })
     const anyFailed = Array.isArray(settled) && settled.some((p) => p.status === 'failed')
-    if (anyFailed) showError('A transfer failed — your balance was restored. Check your Stripe onboarding and try again.')
-    else showSuccess('On its way — your payout has been sent to your bank via Stripe.')
+    if (anyFailed) showError(t('payments.admin.error_transfer_failed'))
+    else showSuccess(t('payments.admin.success_withdrawal_sent'))
     await Promise.all([loadStatus(), loadWithdrawals()])
   } catch (e) {
-    showError(e.message || 'Could not request withdrawal')
+    showError(e.message || t('payments.admin.error_request_withdrawal'))
   } finally {
     withdrawing.value = false
   }
@@ -151,7 +153,7 @@ async function loadQueue() {
     const r = await auth.apiFetch(`/api/admin/payouts?status=${queueStatus.value}`)
     queue.value = r.payouts || []
   } catch (e) {
-    showError(e.message || 'Could not load the payout queue')
+    showError(e.message || t('payments.admin.error_load_queue'))
   } finally {
     queueLoading.value = false
   }
@@ -167,42 +169,42 @@ onMounted(async () => {
 <template>
   <section class="payments-admin">
     <header class="ph-head">
-      <h1>Payments</h1>
-      <p class="muted">Collect entry fees, memberships, donations and more. DivingHQ keeps 15% and pays the rest straight to your bank via Stripe.</p>
+      <h1>{{ t('payments.admin.title') }}</h1>
+      <p class="muted">{{ t('payments.admin.subtitle') }}</p>
     </header>
 
-    <p v-if="comingSoon" class="coming-soon">🚧 Payments are coming soon. Set up your automatic withdrawals now and connect payouts the moment it's switched on.</p>
+    <p v-if="comingSoon" class="coming-soon">{{ t('payments.admin.coming_soon') }}</p>
 
     <nav class="tabs">
       <button v-for="tt in TABS" :key="tt.key" type="button" :class="['tab', { active: tab === tt.key }]" @click="tab = tt.key">{{ tt.label }}</button>
     </nav>
 
-    <p v-if="loading" class="muted">Loading…</p>
+    <p v-if="loading" class="muted">{{ t('payments.admin.loading') }}</p>
 
     <template v-else>
       <!-- OVERVIEW -->
       <div v-show="tab === 'overview'" class="panel">
         <div class="grid">
           <div class="stat">
-            <span class="stat-label">Balance owed to you</span>
+            <span class="stat-label">{{ t('payments.admin.stat_balance_owed') }}</span>
             <span class="stat-value">{{ comingSoon ? '—' : balanceLabel }}</span>
           </div>
           <div class="stat">
-            <span class="stat-label">Payouts</span>
-            <span class="stat-value" :class="payoutsReady ? 'ok' : 'warn'">{{ payoutsReady ? 'Ready' : 'Not set up' }}</span>
+            <span class="stat-label">{{ t('payments.admin.stat_payouts') }}</span>
+            <span class="stat-value" :class="payoutsReady ? 'ok' : 'warn'">{{ payoutsReady ? t('payments.admin.stat_payouts_ready') : t('payments.admin.stat_payouts_not_set_up') }}</span>
           </div>
           <div class="stat">
-            <span class="stat-label">Automatic withdrawals</span>
-            <span class="stat-value">{{ status && status.auto_withdraw_enabled ? `On · over ${money(status.auto_withdraw_min_cents)}` : 'Off' }}</span>
+            <span class="stat-label">{{ t('payments.admin.stat_auto_withdrawals') }}</span>
+            <span class="stat-value">{{ status && status.auto_withdraw_enabled ? t('payments.admin.stat_auto_on', { amount: money(status.auto_withdraw_min_cents) }) : t('payments.admin.stat_auto_off') }}</span>
           </div>
         </div>
         <div class="card">
-          <h2>How it works</h2>
+          <h2>{{ t('payments.admin.section_how_it_works') }}</h2>
           <ol class="how-list">
-            <li>Set up payouts in the <button type="button" class="link" @click="tab = 'account'">Account details</button> tab — a quick one-time Stripe onboarding where you add your bank account.</li>
-            <li>Set your fees &amp; pricing (memberships, entries, donations and more) in the <button type="button" class="link" @click="tab = 'fees'">Fees &amp; pricing</button> tab.</li>
-            <li>We collect payments, keep a 15% platform fee, and pay you the rest.</li>
-            <li>Withdraw your balance any time — the money transfers to your bank automatically. Or turn on automatic withdrawals to get paid the moment your balance passes a threshold.</li>
+            <li>{{ t('payments.admin.how_step_1_pre') }} <button type="button" class="link" @click="tab = 'account'">{{ t('payments.admin.tab_account') }}</button> {{ t('payments.admin.how_step_1_post') }}</li>
+            <li>{{ t('payments.admin.how_step_2_pre') }} <button type="button" class="link" @click="tab = 'fees'">{{ t('payments.admin.tab_fees') }}</button> {{ t('payments.admin.how_step_2_post') }}</li>
+            <li>{{ t('payments.admin.how_step_3') }}</li>
+            <li>{{ t('payments.admin.how_step_4') }}</li>
           </ol>
         </div>
       </div>
@@ -210,55 +212,55 @@ onMounted(async () => {
       <!-- ACCOUNT DETAILS -->
       <div v-show="tab === 'account'" class="panel">
         <div class="card">
-          <h2>Payout setup</h2>
-          <p class="muted">DivingHQ pays you through Stripe. You onboard once — adding your bank account and verifying your identity on Stripe's secure page. Your bank details are held by Stripe, never stored by us.</p>
-          <p v-if="payoutsReady" class="ok">✓ Payouts are set up — you're ready to withdraw.</p>
-          <p v-else-if="connected" class="warn">Onboarding started but not finished — a few details are still needed.</p>
-          <p v-else class="warn">Not set up yet — connect your bank so we can pay you.</p>
+          <h2>{{ t('payments.admin.section_payout_setup') }}</h2>
+          <p class="muted">{{ t('payments.admin.payout_setup_desc') }}</p>
+          <p v-if="payoutsReady" class="ok">{{ t('payments.admin.payout_ready') }}</p>
+          <p v-else-if="connected" class="warn">{{ t('payments.admin.payout_incomplete') }}</p>
+          <p v-else class="warn">{{ t('payments.admin.payout_not_connected') }}</p>
           <button v-if="!comingSoon && !payoutsReady" class="btn" :disabled="onboarding" @click="startOnboarding">
-            {{ onboarding ? 'Opening Stripe…' : (connected ? 'Finish payout setup' : 'Set up payouts') }}
+            {{ onboarding ? t('payments.admin.btn_opening_stripe') : (connected ? t('payments.admin.btn_finish_payout_setup') : t('payments.admin.btn_set_up_payouts')) }}
           </button>
-          <p v-if="comingSoon" class="muted small">Payout setup opens when payments go live.</p>
+          <p v-if="comingSoon" class="muted small">{{ t('payments.admin.payout_setup_coming_soon') }}</p>
         </div>
       </div>
 
       <!-- WITHDRAWALS -->
       <div v-show="tab === 'withdrawals'" class="panel">
         <div class="card">
-          <h2>Balance &amp; withdrawals</h2>
-          <p class="balance-line">Balance owed to you: <strong>{{ comingSoon ? '—' : balanceLabel }}</strong></p>
-          <p v-if="comingSoon" class="muted">Withdrawals open when payments go live. You can set up automatic withdrawals below now.</p>
+          <h2>{{ t('payments.admin.section_balance_withdrawals') }}</h2>
+          <p class="balance-line">{{ t('payments.admin.balance_owed_label') }} <strong>{{ comingSoon ? '—' : balanceLabel }}</strong></p>
+          <p v-if="comingSoon" class="muted">{{ t('payments.admin.withdrawals_coming_soon') }}</p>
           <template v-else>
-            <p class="muted">Withdraw your full available balance — it transfers to your bank automatically via Stripe.</p>
+            <p class="muted">{{ t('payments.admin.withdraw_desc') }}</p>
             <button class="btn" :disabled="withdrawing || !hasBalance || !payoutsReady" @click="requestWithdrawal">
-              {{ withdrawing ? 'Sending…' : 'Withdraw now' }}
+              {{ withdrawing ? t('payments.admin.btn_sending') : t('payments.admin.btn_withdraw_now') }}
             </button>
-            <p v-if="!payoutsReady" class="warn small">Set up your payouts first (Account details tab).</p>
+            <p v-if="!payoutsReady" class="warn small">{{ t('payments.admin.warn_setup_payouts_first') }}</p>
           </template>
         </div>
 
         <div class="card">
-          <h2>Automatic withdrawals</h2>
-          <p class="muted">Get paid automatically when your balance passes a threshold — no need to click Withdraw.</p>
+          <h2>{{ t('payments.admin.section_auto_withdrawals') }}</h2>
+          <p class="muted">{{ t('payments.admin.auto_desc') }}</p>
           <label class="check">
             <input type="checkbox" v-model="autoForm.enabled" />
-            <span>Withdraw automatically</span>
+            <span>{{ t('payments.admin.auto_checkbox_label') }}</span>
           </label>
           <div class="field" v-if="autoForm.enabled">
-            <label>Withdraw when my balance reaches ({{ currency }})</label>
-            <input class="in" type="number" min="1" step="0.01" v-model="autoForm.threshold" placeholder="e.g. 100.00" />
-            <p v-if="!autoThresholdOk" class="warn small">Enter a threshold of at least 1.00.</p>
+            <label>{{ t('payments.admin.auto_threshold_label', { currency }) }}</label>
+            <input class="in" type="number" min="1" step="0.01" v-model="autoForm.threshold" :placeholder="t('payments.admin.auto_threshold_placeholder')" />
+            <p v-if="!autoThresholdOk" class="warn small">{{ t('payments.admin.auto_threshold_warn') }}</p>
           </div>
           <button class="btn" :disabled="savingAuto || (autoForm.enabled && !autoThresholdOk)" @click="saveAuto">
-            {{ savingAuto ? 'Saving…' : 'Save automatic withdrawals' }}
+            {{ savingAuto ? t('payments.admin.btn_saving') : t('payments.admin.btn_save_auto') }}
           </button>
         </div>
 
         <div class="card">
-          <h2>Withdrawal history</h2>
-          <p v-if="!withdrawals.length" class="muted">No withdrawals yet.</p>
+          <h2>{{ t('payments.admin.section_withdrawal_history') }}</h2>
+          <p v-if="!withdrawals.length" class="muted">{{ t('payments.admin.no_withdrawals') }}</p>
           <table v-else class="wtable">
-            <thead><tr><th>Date</th><th>Amount</th><th>Status</th><th>Note</th></tr></thead>
+            <thead><tr><th>{{ t('payments.admin.th_date') }}</th><th>{{ t('payments.admin.th_amount') }}</th><th>{{ t('payments.admin.th_status') }}</th><th>{{ t('payments.admin.th_note') }}</th></tr></thead>
             <tbody>
               <tr v-for="w in withdrawals" :key="w.id">
                 <td>{{ fmtDate(w.created_at) }}</td>
@@ -275,19 +277,19 @@ onMounted(async () => {
       <div v-if="isSysAdmin" v-show="tab === 'queue'" class="panel">
         <div class="card">
           <div class="queue-head">
-            <h2>Payouts — all federations &amp; clubs</h2>
+            <h2>{{ t('payments.admin.section_payout_queue') }}</h2>
             <select class="in queue-filter" v-model="queueStatus" @change="loadQueue">
-              <option value="paid">Paid</option>
-              <option value="failed">Failed</option>
-              <option value="pending">In progress</option>
+              <option value="paid">{{ t('payments.admin.filter_paid') }}</option>
+              <option value="failed">{{ t('payments.admin.filter_failed') }}</option>
+              <option value="pending">{{ t('payments.admin.filter_pending') }}</option>
             </select>
           </div>
-          <p class="muted">Transfers settle automatically via Stripe Connect — this is a read-only view of the flow. A <strong>failed</strong> transfer restores the recipient's balance so they can retry once onboarding is complete.</p>
-          <p v-if="queueLoading" class="muted">Loading…</p>
-          <p v-else-if="!queue.length" class="muted">No {{ queueStatus }} payouts.</p>
+          <p class="muted">{{ t('payments.admin.queue_desc_pre') }} <strong>{{ t('payments.admin.queue_desc_failed') }}</strong> {{ t('payments.admin.queue_desc_post') }}</p>
+          <p v-if="queueLoading" class="muted">{{ t('payments.admin.loading') }}</p>
+          <p v-else-if="!queue.length" class="muted">{{ t('payments.admin.no_payouts', { status: queueStatus }) }}</p>
           <div v-else class="queue-scroll">
             <table class="wtable">
-              <thead><tr><th>Date</th><th>Recipient</th><th>Amount</th><th>Status</th><th>Stripe transfer</th><th>Note</th></tr></thead>
+              <thead><tr><th>{{ t('payments.admin.th_date') }}</th><th>{{ t('payments.admin.th_recipient') }}</th><th>{{ t('payments.admin.th_amount') }}</th><th>{{ t('payments.admin.th_status') }}</th><th>{{ t('payments.admin.th_stripe_transfer') }}</th><th>{{ t('payments.admin.th_note') }}</th></tr></thead>
               <tbody>
                 <tr v-for="p in queue" :key="p.id">
                   <td>{{ fmtDate(p.created_at) }}</td>
@@ -306,23 +308,23 @@ onMounted(async () => {
       <!-- FEES & PRICING -->
       <div v-show="tab === 'fees'" class="panel">
         <div class="card">
-          <h2>Membership fee</h2>
-          <p class="muted">Members get any “Members only” entry prices. Membership isn't required to enter competitions.</p>
+          <h2>{{ t('payments.admin.section_membership_fee') }}</h2>
+          <p class="muted">{{ t('payments.admin.membership_fee_desc') }}</p>
           <MembershipFeeEditor v-if="orgId" :org-id="orgId" />
         </div>
         <div class="card">
-          <h2>Club fees</h2>
-          <p class="muted">Affiliation and accreditation fees your clubs pay you each year. Track who's paid in the Clubs list.</p>
+          <h2>{{ t('payments.admin.section_club_fees') }}</h2>
+          <p class="muted">{{ t('payments.admin.club_fees_desc') }}</p>
           <ClubFeesEditor v-if="orgId" :org-id="orgId" />
         </div>
         <div class="card">
-          <h2>Accreditation fees</h2>
-          <p class="muted">Annual accreditation fees for officials and coaches, per role. They pay from their own Accreditation page.</p>
+          <h2>{{ t('payments.admin.section_accreditation_fees') }}</h2>
+          <p class="muted">{{ t('payments.admin.accreditation_fees_desc') }}</p>
           <OfficialFeesEditor v-if="orgId" :org-id="orgId" />
         </div>
         <div class="card">
-          <h2>Donations</h2>
-          <p class="muted">Accept fundraising donations from supporters, with suggested amounts.</p>
+          <h2>{{ t('payments.admin.section_donations') }}</h2>
+          <p class="muted">{{ t('payments.admin.donations_desc') }}</p>
           <DonationEditor v-if="orgId" :org-id="orgId" />
         </div>
       </div>

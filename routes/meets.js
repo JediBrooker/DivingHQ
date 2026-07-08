@@ -15,6 +15,7 @@
 const express = require("express");
 const { buildReadinessFromRow } = require("../lib/workflow");
 const { detectConflicts } = require("../lib/schedule-conflicts");
+const { retirePendingPayment } = require("../lib/payment-lifecycle");
 
 // Render one CSV cell. Two concerns layered here:
 //   1. RFC-4180 quoting — wrap in double-quotes (and double any
@@ -44,6 +45,7 @@ module.exports = function createMeetsRouter({
   optionalAuth,
   requireMeetEditor,
   requireEventManager,
+  payments,
 }) {
   if (!pool) throw new Error("createMeetsRouter requires { pool, … }");
   const router = express.Router();
@@ -615,14 +617,50 @@ module.exports = function createMeetsRouter({
   router.delete("/api/meets/:id", requireMeetEditor, async (req, res) => {
     try {
       if (!(await requireEditableMeet(pool, req, res))) return;
+      const meetId = req.params.id;
+      // Money guard: refuse deletion when paid payments reference
+      // this meet OR any of its child events. fee_definitions and
+      // entry_charges CASCADE-delete with the meet/events, so we
+      // must ensure nothing financial is still live.
+      const paidCount = (await pool.query(
+        `SELECT COUNT(*)::int AS n FROM payments
+          WHERE status IN ('paid', 'partially_refunded')
+            AND (meet_id = $1 OR event_id IN (
+              SELECT id FROM events WHERE meet_id = $1))`,
+        [meetId],
+      )).rows[0].n;
+      if (paidCount > 0) {
+        return res.status(409).json({
+          error: `This meet has ${paidCount} paid payment(s) — refund or cancel them before deleting.`,
+          paid_count: paidCount,
+        });
+      }
+      // Retire any in-flight checkouts on the meet or its events.
+      const pendingPayments = (await pool.query(
+        `SELECT id, status, stripe_checkout_session FROM payments
+          WHERE status = 'pending'
+            AND (meet_id = $1 OR event_id IN (
+              SELECT id FROM events WHERE meet_id = $1))`,
+        [meetId],
+      )).rows;
+      for (const p of pendingPayments) {
+        const outcome = await retirePendingPayment({ pool, payments, logger: console }, p);
+        if (outcome === "paid") {
+          return res.status(409).json({
+            error: "A payment for this meet was just completed — refresh and handle it before deleting.",
+          });
+        }
+        if (outcome === "unavailable") {
+          return res.status(503).json({
+            error: "Couldn't verify an in-flight payment with Stripe — please try again.",
+          });
+        }
+      }
       const r = await pool.query(
         "DELETE FROM meets WHERE id = $1 RETURNING id",
-        [req.params.id],
+        [meetId],
       );
       if (!r.rows.length) return res.status(404).json({ error: "Meet not found" });
-      // ON DELETE SET NULL on events.meet_id means the events
-      // survive and become standalone — no separate cleanup
-      // needed.
       res.json({ ok: true });
     } catch (err) {
       console.error("[Delete Meet Error]", err.message);

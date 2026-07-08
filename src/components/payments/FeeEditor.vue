@@ -4,7 +4,8 @@
 // save URL (PUT). Amounts are entered in major units and sent as
 // tax-inclusive minor units. The backend stores variants; the cheapest
 // one a buyer is eligible for at checkout time wins.
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess, showError } from '@/composables/useNotify'
 import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
@@ -24,6 +25,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['saved'])
 const auth = useAuthStore()
+const { t } = useI18n()
 
 const loading = ref(true)
 const busy = ref(false)
@@ -34,11 +36,11 @@ const refundPolicy = ref('full')
 const membershipPeriod = ref('annual')
 const prices = ref([])
 
-const AUDIENCES = [
-  { value: 'all', label: 'Everyone' },
-  { value: 'member', label: 'Members only' },
-  { value: 'non_member', label: 'Non-members only' },
-]
+const AUDIENCES = computed(() => [
+  { value: 'all', label: t('payments.fee_editor.opt_everyone') },
+  { value: 'member', label: t('payments.fee_editor.opt_members_only') },
+  { value: 'non_member', label: t('payments.fee_editor.opt_non_members_only') },
+])
 
 function blankPrice() {
   return { label: 'standard', amount: '', audience: 'all', starts_at: '', ends_at: '' }
@@ -68,7 +70,7 @@ async function load() {
     if (!prices.value.length) prices.value = [blankPrice()]
     if (props.flat) prices.value = prices.value.slice(0, 1)
   } catch (e) {
-    showError(e.message || 'Could not load the fee')
+    showError(e.message || t('payments.fee_editor.error_load'))
   } finally {
     loading.value = false
   }
@@ -82,11 +84,11 @@ async function save() {
   const usable = (props.flat ? prices.value.slice(0, 1) : prices.value)
     .filter(p => String(p.amount ?? '').trim() !== '')
   if (!usable.length) {
-    showError('Enter at least one price (or leave the fee unset for free).')
+    showError(t('payments.fee_editor.error_min_price'))
     return
   }
   if (usable.some(p => !(parseFloat(p.amount) >= 1))) {
-    showError('Each price must be at least 1.00.')
+    showError(t('payments.fee_editor.error_min_amount'))
     return
   }
   busy.value = true
@@ -106,10 +108,10 @@ async function save() {
       })),
     }
     await auth.apiFetch(props.saveUrl, { method: 'PUT', body: JSON.stringify(payload) })
-    showSuccess(`${props.title} saved`)
+    showSuccess(t('payments.fee_editor.success_saved', { title: props.title }))
     emit('saved')
   } catch (e) {
-    showError(e.message || 'Could not save the fee')
+    showError(e.message || t('payments.fee_editor.error_save'))
   } finally {
     busy.value = false
   }
@@ -120,30 +122,30 @@ onMounted(load)
 
 <template>
   <form class="fee-editor" @submit.prevent="save">
-    <p v-if="loading" class="muted">Loading…</p>
+    <p v-if="loading" class="muted">{{ t('payments.fee_editor.loading') }}</p>
     <template v-else>
-      <ComingSoonBanner v-if="comingSoon" message="Preview the setup here; it goes live once online payments are switched on." />
+      <ComingSoonBanner v-if="comingSoon" :message="t('payments.fee_editor.coming_soon_preview')" />
       <div class="row">
-        <label>Currency
+        <label>{{ t('payments.fee_editor.label_currency') }}
           <input v-model="currency" maxlength="3" class="cur" />
         </label>
-        <label>Who pays the fees
+        <label>{{ t('payments.fee_editor.label_fee_payer') }}
           <select v-model="feePayer">
-            <option value="absorb">Federation absorbs (one price)</option>
-            <option value="pass_to_payer">Add DivingHQ's fee on top</option>
+            <option value="absorb">{{ t('payments.fee_editor.opt_absorb') }}</option>
+            <option value="pass_to_payer">{{ t('payments.fee_editor.opt_pass_to_payer') }}</option>
           </select>
         </label>
-        <label>Refunds
+        <label>{{ t('payments.fee_editor.label_refunds') }}
           <select v-model="refundPolicy">
-            <option value="full">Refundable</option>
-            <option value="none">Non-refundable</option>
-            <option value="deadline">Refundable until a deadline</option>
+            <option value="full">{{ t('payments.fee_editor.opt_refundable') }}</option>
+            <option value="none">{{ t('payments.fee_editor.opt_non_refundable') }}</option>
+            <option value="deadline">{{ t('payments.fee_editor.opt_refundable_deadline') }}</option>
           </select>
         </label>
-        <label v-if="showMembershipPeriod">Period
+        <label v-if="showMembershipPeriod">{{ t('payments.fee_editor.label_period') }}
           <select v-model="membershipPeriod">
-            <option value="annual">Annual</option>
-            <option value="seasonal">Seasonal</option>
+            <option value="annual">{{ t('payments.fee_editor.opt_annual') }}</option>
+            <option value="seasonal">{{ t('payments.fee_editor.opt_seasonal') }}</option>
           </select>
         </label>
       </div>
@@ -151,13 +153,13 @@ onMounted(load)
       <table class="prices">
         <thead>
           <tr>
-            <th>Label</th><th>Amount</th>
-            <th v-if="!flat">Who</th><th v-if="!flat">From</th><th v-if="!flat">Until</th><th v-if="!flat"></th>
+            <th>{{ t('payments.fee_editor.th_label') }}</th><th>{{ t('payments.fee_editor.th_amount') }}</th>
+            <th v-if="!flat">{{ t('payments.fee_editor.th_who') }}</th><th v-if="!flat">{{ t('payments.fee_editor.th_from') }}</th><th v-if="!flat">{{ t('payments.fee_editor.th_until') }}</th><th v-if="!flat"></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(p, i) in prices" :key="i">
-            <td><input v-model="p.label" placeholder="standard" /></td>
+            <td><input v-model="p.label" :placeholder="t('payments.fee_editor.placeholder_label')" /></td>
             <td><input v-model="p.amount" type="number" min="1" step="0.01" placeholder="10.00" /></td>
             <td v-if="!flat">
               <select v-model="p.audience">
@@ -167,20 +169,19 @@ onMounted(load)
             <td v-if="!flat"><input v-model="p.starts_at" type="date" /></td>
             <td v-if="!flat"><input v-model="p.ends_at" type="date" /></td>
             <td v-if="!flat">
-              <button type="button" class="link" :disabled="prices.length === 1" @click="removePrice(i)">Remove</button>
+              <button type="button" class="link" :disabled="prices.length === 1" @click="removePrice(i)">{{ t('payments.fee_editor.btn_remove') }}</button>
             </td>
           </tr>
         </tbody>
       </table>
-      <button v-if="!flat" type="button" class="link" @click="addPrice">+ Add a price variant</button>
+      <button v-if="!flat" type="button" class="link" @click="addPrice">{{ t('payments.fee_editor.btn_add_variant') }}</button>
 
       <div class="actions">
-        <button type="submit" class="btn" :disabled="busy || comingSoon">{{ busy ? 'Saving…' : (comingSoon ? 'Coming soon' : 'Save') }}</button>
+        <button type="submit" class="btn" :disabled="busy || comingSoon">{{ busy ? t('payments.fee_editor.btn_saving') : (comingSoon ? t('payments.fee_editor.btn_coming_soon') : t('payments.fee_editor.btn_save')) }}</button>
       </div>
       <p class="hint">
-        <template v-if="flat">A single flat surcharge, tax-inclusive, charged in the entry fee's currency once the trigger above is reached.</template>
-        <template v-else>Amounts are tax-inclusive. At checkout the cheapest variant the buyer is
-        eligible for applies; a “Members only” variant needs an active membership.</template>
+        <template v-if="flat">{{ t('payments.fee_editor.hint_flat') }}</template>
+        <template v-else>{{ t('payments.fee_editor.hint_variants') }}</template>
       </p>
     </template>
   </form>

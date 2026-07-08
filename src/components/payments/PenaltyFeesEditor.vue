@@ -5,27 +5,29 @@
 // fee_definition. Admins issue these against entrants in the Penalties
 // panel; this just sets the price.
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import FeeEditor from '@/components/payments/FeeEditor.vue'
 
+const { t } = useI18n()
 const props = defineProps({ eventId: { type: String, required: true } })
 
 const KINDS = [
-  { key: 'scratch', label: 'Scratch (withdrawal)' },
-  { key: 'no_show', label: 'No-show (DNS)' },
+  { key: 'scratch', labelKey: 'payments.penalty_editor.kind_scratch' },
+  { key: 'no_show', labelKey: 'payments.penalty_editor.kind_no_show' },
 ]
 const active = ref('scratch')
-const activeLabel = computed(() => KINDS.find(k => k.key === active.value)?.label || '')
+const activeLabel = computed(() => {
+  const kind = KINDS.find(k => k.key === active.value)
+  return kind ? t(kind.labelKey) : ''
+})
 const loadUrl = computed(() => `/api/events/${props.eventId}/penalty-fee?kind=${active.value}`)
 const saveUrl = computed(() => `/api/events/${props.eventId}/penalty-fee`)
 </script>
 
 <template>
   <section class="penalty-fees">
-    <h3>Scratch / no-show penalties</h3>
-    <p class="hint">
-      A flat penalty you can issue against an entrant who withdraws (scratch) or
-      doesn't show (no-show). Set the price here; issue charges below.
-    </p>
+    <h3>{{ t('payments.penalty_editor.title') }}</h3>
+    <p class="hint">{{ t('payments.penalty_editor.hint') }}</p>
     <div class="kind-tabs" role="tablist">
       <button
         v-for="k in KINDS"
@@ -35,12 +37,12 @@ const saveUrl = computed(() => `/api/events/${props.eventId}/penalty-fee`)
         :aria-selected="active === k.key"
         :class="['kind-tab', { active: active === k.key }]"
         @click="active = k.key"
-      >{{ k.label }}</button>
+      >{{ t(k.labelKey) }}</button>
     </div>
     <FeeEditor
       :key="active"
       flat
-      :title="`${activeLabel} penalty`"
+      :title="t('payments.penalty_editor.fee_title', { label: activeLabel })"
       :load-url="loadUrl"
       :save-url="saveUrl"
       :extra-payload="{ kind: active }"
