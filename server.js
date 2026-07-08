@@ -779,6 +779,7 @@ app.use(require("./routes/meets")({
   optionalAuth,
   requireMeetEditor,
   requireEventManager,
+  payments,
 }));
 
 // =============================================================
@@ -830,6 +831,7 @@ app.use(require("./routes/events")({
   // an invited federation's admins. Optional — if push isn't
   // wired the events router falls back to a silent insert.
   push,
+  payments,
 }));
 
 // =============================================================

@@ -3,10 +3,12 @@
 // amounts (or a custom amount) with a contextual "coming soon" preview until
 // online payments are switched on. Reads GET /api/orgs/:orgId/donation.
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const orgId = computed(() => auth.user?.org_id)
 
@@ -32,7 +34,7 @@ async function load() {
     donation.value = r.donation
     enabled.value = r.payments_enabled !== false
   } catch (e) {
-    showError(e.message || 'Could not load donations')
+    showError(e.message || t('payments.donate_view.error_load'))
   } finally {
     loading.value = false
   }
@@ -45,7 +47,7 @@ async function donate() {
   const cents = Math.round(parseFloat(amount.value || '0') * 100)
   const min = (donation.value && donation.value.min_amount_cents) || 100
   if (!Number.isInteger(cents) || cents < min) {
-    showError('Please enter a valid amount')
+    showError(t('payments.donate_view.error_invalid_amount'))
     return
   }
   busy.value = true
@@ -55,7 +57,7 @@ async function donate() {
     })
     window.location.href = url
   } catch (e) {
-    showError(e.message || 'Could not start checkout')
+    showError(e.message || t('payments.donate_view.error_checkout'))
     busy.value = false
   }
 }
@@ -65,27 +67,27 @@ onMounted(load)
 
 <template>
   <section class="donate-view">
-    <h1>Donate</h1>
-    <p class="lede">Support your federation with a one-off donation.</p>
-    <p v-if="loading" class="muted">Loading…</p>
+    <h1>{{ t('payments.donate_view.title') }}</h1>
+    <p class="lede">{{ t('payments.donate_view.subtitle') }}</p>
+    <p v-if="loading" class="muted">{{ t('payments.donate_view.loading') }}</p>
     <template v-else-if="donation">
-      <ComingSoonBanner v-if="!enabled" message="Online donations are coming soon — here's what you'll be able to give." />
+      <ComingSoonBanner v-if="!enabled" :message="t('payments.donate_view.coming_soon_banner')" />
       <div v-if="donation.suggested_amounts && donation.suggested_amounts.length" class="presets">
         <button v-for="c in donation.suggested_amounts" :key="c" type="button" class="preset" @click="pick(c)">
           {{ money(c, donation.currency) }}
         </button>
       </div>
-      <label class="custom">Amount
+      <label class="custom">{{ t('payments.donate_view.label_amount') }}
         <span class="amt">
           <span class="cur">{{ donation.currency }}</span>
           <input v-model="amount" type="number" min="1" step="0.01" placeholder="0.00" />
         </span>
       </label>
       <button class="btn-donate" :disabled="!enabled || busy" @click="donate">
-        {{ !enabled ? 'Coming soon' : (busy ? 'Redirecting…' : 'Donate') }}
+        {{ !enabled ? t('payments.donate_view.btn_coming_soon') : (busy ? t('payments.donate_view.btn_redirecting') : t('payments.donate_view.btn_donate')) }}
       </button>
     </template>
-    <p v-else class="muted">This federation isn't accepting donations right now.</p>
+    <p v-else class="muted">{{ t('payments.donate_view.no_donations') }}</p>
   </section>
 </template>
 

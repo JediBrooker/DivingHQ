@@ -173,6 +173,24 @@ async function onCheckoutCompleted(pool, logger, payments, email, session) {
     // confirms — payment and dive content are deliberately decoupled.
 
     await client.query("COMMIT");
+
+    // Best-effort: populate the charge ID from the PaymentIntent so
+    // the payments table has the full Stripe chain (session → PI →
+    // charge). Non-critical — if it fails the payment is still paid.
+    if (session.payment_intent && payments.enabled) {
+      try {
+        const pi = await payments.retrievePaymentIntent({ paymentIntentId: session.payment_intent });
+        if (pi.latest_charge) {
+          await pool.query(
+            "UPDATE payments SET stripe_charge_id = $2 WHERE id = $1 AND stripe_charge_id IS NULL",
+            [paymentId, typeof pi.latest_charge === "object" ? pi.latest_charge.id : pi.latest_charge],
+          );
+        }
+      } catch (e) {
+        logger.warn({ err: e.message, paymentId }, "[stripe-webhook] failed to backfill stripe_charge_id");
+      }
+    }
+
     return payment.id;
   } catch (err) {
     await client.query("ROLLBACK");
@@ -317,6 +335,13 @@ async function onChargeRefunded(pool, email, charge) {
       [charge.metadata.payment_id, refundedCents, pi],
     );
     refundedIds = fallback.rows.map((r) => r.id);
+  }
+  // Backfill stripe_charge_id if the refund handler got here first.
+  if (charge.id && refundedIds.length) {
+    await pool.query(
+      "UPDATE payments SET stripe_charge_id = COALESCE(stripe_charge_id, $2) WHERE stripe_payment_intent = $1",
+      [pi, charge.id],
+    ).catch(() => {});
   }
   await applyFullRefundSideEffects(pool, pi);
   for (const id of refundedIds) email?.sendPaymentRefundedEmail?.(id);

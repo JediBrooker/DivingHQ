@@ -7,27 +7,28 @@
 // admin; until payments go live the editor shows the coming-soon notice
 // FeeEditor already renders.
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import FeeEditor from '@/components/payments/FeeEditor.vue'
 
+const { t } = useI18n()
 const props = defineProps({ orgId: { type: String, required: true } })
 
 const KINDS = [
-  { key: 'affiliation', label: 'Annual affiliation' },
-  { key: 'accreditation', label: 'Accreditation' },
+  { key: 'affiliation', labelKey: 'payments.club_editor.kind_affiliation' },
+  { key: 'accreditation', labelKey: 'payments.club_editor.kind_accreditation' },
 ]
 const active = ref('affiliation')
-const activeLabel = computed(() => KINDS.find(k => k.key === active.value)?.label || '')
+const activeLabel = computed(() => {
+  const kind = KINDS.find(k => k.key === active.value)
+  return kind ? t(kind.labelKey) : ''
+})
 const loadUrl = computed(() => `/api/orgs/${props.orgId}/club-fee?kind=${active.value}`)
 const saveUrl = computed(() => `/api/orgs/${props.orgId}/club-fee`)
 </script>
 
 <template>
   <div class="club-fees">
-    <p class="hint">
-      Charge your clubs an annual affiliation fee and/or an accreditation fee.
-      Each club's admin pays from the club's page; you can see who's paid in the
-      Clubs list.
-    </p>
+    <p class="hint">{{ t('payments.club_editor.hint') }}</p>
     <div class="kind-tabs" role="tablist">
       <button
         v-for="k in KINDS"
@@ -37,12 +38,12 @@ const saveUrl = computed(() => `/api/orgs/${props.orgId}/club-fee`)
         :aria-selected="active === k.key"
         :class="['kind-tab', { active: active === k.key }]"
         @click="active = k.key"
-      >{{ k.label }}</button>
+      >{{ t(k.labelKey) }}</button>
     </div>
     <FeeEditor
       :key="active"
       flat
-      :title="`Club ${activeLabel}`"
+      :title="t('payments.club_editor.fee_title', { label: activeLabel })"
       :load-url="loadUrl"
       :save-url="saveUrl"
       :extra-payload="{ kind: active }"

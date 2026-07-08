@@ -5,9 +5,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess, showError } from '@/composables/useNotify'
+import { useI18n } from 'vue-i18n'
 import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
 
 const auth = useAuthStore()
+const { t } = useI18n()
 const orgId = computed(() => auth.user?.org_id)
 const isAdmin = computed(() => (auth.user?.org_roles || []).includes('org_admin'))
 
@@ -18,7 +20,15 @@ const loading = ref(true)
 const busy = ref(false)
 const form = ref({ liable_user_id: '', amount: '', reason: '' })
 
-const STATUS_LABELS = { owed: 'Owed', appealed: 'Under appeal', paid: 'Paid', waived: 'Waived' }
+function statusLabel(status) {
+  const labels = {
+    owed: t('payments.fines_view.status_owed'),
+    appealed: t('payments.fines_view.status_appealed'),
+    paid: t('payments.fines_view.status_paid'),
+    waived: t('payments.fines_view.status_waived'),
+  }
+  return labels[status] || status
+}
 
 function money(cents, currency) {
   if (cents == null) return ''
@@ -38,7 +48,7 @@ async function loadFines() {
     fines.value = r.fines || []
     enabled.value = r.payments_enabled !== false
   } catch (e) {
-    showError(e.message || 'Could not load fines')
+    showError(e.message || t('payments.fines_view.error_load'))
   }
 }
 async function loadPeople() {
@@ -61,11 +71,11 @@ async function issue() {
         reason: form.value.reason.trim(),
       }),
     })
-    showSuccess('Fine issued')
+    showSuccess(t('payments.fines_view.success_issued'))
     form.value = { liable_user_id: '', amount: '', reason: '' }
     await loadFines()
   } catch (e) {
-    showError(e.message || 'Could not issue the fine')
+    showError(e.message || t('payments.fines_view.error_issue'))
   } finally {
     busy.value = false
   }
@@ -75,10 +85,10 @@ async function waive(f) {
   busy.value = true
   try {
     await auth.apiFetch(`/api/fines/${f.id}/waive`, { method: 'POST', body: JSON.stringify({}) })
-    showSuccess('Fine waived')
+    showSuccess(t('payments.fines_view.success_waived'))
     await loadFines()
   } catch (e) {
-    showError(e.message || 'Could not waive the fine')
+    showError(e.message || t('payments.fines_view.error_waive'))
   } finally {
     busy.value = false
   }
@@ -88,10 +98,10 @@ async function review(f, decision) {
   busy.value = true
   try {
     await auth.apiFetch(`/api/fines/${f.id}/appeal/review`, { method: 'POST', body: JSON.stringify({ decision }) })
-    showSuccess(decision === 'upheld' ? 'Appeal upheld — fine waived' : 'Appeal dismissed')
+    showSuccess(decision === 'upheld' ? t('payments.fines_view.success_appeal_upheld') : t('payments.fines_view.success_appeal_dismissed'))
     await loadFines()
   } catch (e) {
-    showError(e.message || 'Could not review the appeal')
+    showError(e.message || t('payments.fines_view.error_review'))
   } finally {
     busy.value = false
   }
@@ -106,48 +116,48 @@ onMounted(async () => {
 
 <template>
   <section class="fines-view">
-    <h1>Fines</h1>
-    <p class="lede">Issue disciplinary fines. The person pays or appeals from their Charges page; appeals come here for an org admin to decide.</p>
-    <ComingSoonBanner v-if="!enabled" message="Fines are coming soon. You can set them up here; they go live once online payments are switched on." />
-    <p v-if="loading" class="muted">Loading…</p>
+    <h1>{{ t('payments.fines_view.title') }}</h1>
+    <p class="lede">{{ t('payments.fines_view.subtitle') }}</p>
+    <ComingSoonBanner v-if="!enabled" :message="t('payments.fines_view.coming_soon_banner')" />
+    <p v-if="loading" class="muted">{{ t('payments.fines_view.loading') }}</p>
     <template v-else>
       <div class="issue">
-        <select v-model="form.liable_user_id" class="ctl" :disabled="!enabled" aria-label="Who is being fined">
-          <option value="">Who is being fined…</option>
+        <select v-model="form.liable_user_id" class="ctl" :disabled="!enabled" :aria-label="t('payments.fines_view.label_who')">
+          <option value="">{{ t('payments.fines_view.placeholder_who') }}</option>
           <option v-for="p in people" :key="p.id" :value="p.id">{{ p.full_name }}</option>
         </select>
-        <label class="ctl-label">Amount
+        <label class="ctl-label">{{ t('payments.fines_view.label_amount') }}
           <input v-model="form.amount" type="number" min="1" step="0.01" placeholder="50.00" class="ctl amt" :disabled="!enabled" />
         </label>
-        <label class="ctl-label reason-label">Reason
-          <input v-model="form.reason" type="text" placeholder="e.g. unsportsmanlike conduct" class="ctl reason" :disabled="!enabled" />
+        <label class="ctl-label reason-label">{{ t('payments.fines_view.label_reason') }}
+          <input v-model="form.reason" type="text" :placeholder="t('payments.fines_view.placeholder_reason')" class="ctl reason" :disabled="!enabled" />
         </label>
-        <button type="button" class="btn" :disabled="!canIssue" @click="issue">Issue fine</button>
+        <button type="button" class="btn" :disabled="!canIssue" @click="issue">{{ t('payments.fines_view.btn_issue') }}</button>
       </div>
 
       <div class="table-scroll">
       <table v-if="fines.length" class="fines">
         <thead>
-          <tr><th>Person</th><th>Amount</th><th>Reason</th><th>Status</th><th class="act"></th></tr>
+          <tr><th>{{ t('payments.fines_view.th_person') }}</th><th>{{ t('payments.fines_view.th_amount') }}</th><th>{{ t('payments.fines_view.th_reason') }}</th><th>{{ t('payments.fines_view.th_status') }}</th><th class="act"></th></tr>
         </thead>
         <tbody>
           <tr v-for="f in fines" :key="f.id">
             <td>{{ f.liable_name }}</td>
             <td>{{ money(f.amount_cents, f.currency) }}</td>
-            <td class="reason-cell">{{ f.reason }}<span v-if="f.appeal_reason" class="appeal-note"> — appeal: “{{ f.appeal_reason }}”</span></td>
-            <td><span :class="['status', f.status]">{{ STATUS_LABELS[f.status] || f.status }}</span></td>
+            <td class="reason-cell">{{ f.reason }}<span v-if="f.appeal_reason" class="appeal-note">{{ t('payments.fines_view.appeal_note', { reason: f.appeal_reason }) }}</span></td>
+            <td><span :class="['status', f.status]">{{ statusLabel(f.status) }}</span></td>
             <td class="act">
               <template v-if="isAdmin && f.status === 'appealed'">
-                <button type="button" class="link" :disabled="busy" @click="review(f, 'upheld')">Uphold</button>
-                <button type="button" class="link" :disabled="busy" @click="review(f, 'dismissed')">Dismiss</button>
+                <button type="button" class="link" :disabled="busy" @click="review(f, 'upheld')">{{ t('payments.fines_view.btn_uphold') }}</button>
+                <button type="button" class="link" :disabled="busy" @click="review(f, 'dismissed')">{{ t('payments.fines_view.btn_dismiss') }}</button>
               </template>
-              <button v-if="['owed', 'appealed'].includes(f.status)" type="button" class="link danger" :disabled="busy" @click="waive(f)">Waive</button>
+              <button v-if="['owed', 'appealed'].includes(f.status)" type="button" class="link danger" :disabled="busy" @click="waive(f)">{{ t('payments.fines_view.btn_waive') }}</button>
             </td>
           </tr>
         </tbody>
       </table>
       </div>
-      <p v-if="!fines.length" class="muted">No fines issued yet.</p>
+      <p v-if="!fines.length" class="muted">{{ t('payments.fines_view.empty') }}</p>
     </template>
   </section>
 </template>

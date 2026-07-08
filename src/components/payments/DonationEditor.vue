@@ -4,10 +4,12 @@
 // amount). Backed by /api/orgs/:orgId/donation. Amounts are entered in major
 // units and stored as minor units.
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess, showError } from '@/composables/useNotify'
 import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
 
+const { t } = useI18n()
 const props = defineProps({ orgId: { type: String, required: true } })
 const auth = useAuthStore()
 
@@ -31,7 +33,7 @@ async function load() {
     }
     if (!presets.value.length) presets.value = ['']
   } catch (e) {
-    showError(e.message || 'Could not load donation settings')
+    showError(e.message || t('payments.donation_editor.error_load'))
   } finally {
     loading.value = false
   }
@@ -48,9 +50,9 @@ async function save() {
       method: 'PUT',
       body: JSON.stringify({ currency: currency.value.toUpperCase(), suggested_amounts: suggested }),
     })
-    showSuccess('Donation settings saved')
+    showSuccess(t('payments.donation_editor.success_save'))
   } catch (e) {
-    showError(e.message || 'Could not save donation settings')
+    showError(e.message || t('payments.donation_editor.error_save'))
   } finally {
     busy.value = false
   }
@@ -61,25 +63,25 @@ onMounted(load)
 
 <template>
   <div class="donation-editor">
-    <p class="hint">Accept fundraising donations. Set suggested amounts supporters can pick from — they can also enter their own.</p>
-    <ComingSoonBanner v-if="!enabled" message="Preview the setup here; donations go live once online payments are switched on." />
-    <p v-if="loading" class="muted">Loading…</p>
+    <p class="hint">{{ t('payments.donation_editor.hint') }}</p>
+    <ComingSoonBanner v-if="!enabled" :message="t('payments.donation_editor.coming_soon_banner')" />
+    <p v-if="loading" class="muted">{{ t('payments.donation_editor.loading') }}</p>
     <template v-else>
       <div class="row">
-        <label>Currency
+        <label>{{ t('payments.donation_editor.label_currency') }}
           <input v-model="currency" maxlength="3" class="cur" :disabled="!enabled" />
         </label>
       </div>
       <div class="presets">
-        <span class="presets-label">Suggested amounts</span>
+        <span class="presets-label">{{ t('payments.donation_editor.label_suggested_amounts') }}</span>
         <div v-for="(p, i) in presets" :key="i" class="preset">
           <span class="cur-sym">{{ currency }}</span>
           <input v-model="presets[i]" type="number" min="1" step="0.01" placeholder="0.00" :disabled="!enabled" />
-          <button type="button" class="link" :disabled="presets.length === 1" @click="removePreset(i)">Remove</button>
+          <button type="button" class="link" :disabled="presets.length === 1" @click="removePreset(i)">{{ t('payments.donation_editor.btn_remove') }}</button>
         </div>
-        <button type="button" class="link" :disabled="!enabled" @click="addPreset">+ Add an amount</button>
+        <button type="button" class="link" :disabled="!enabled" @click="addPreset">{{ t('payments.donation_editor.btn_add_amount') }}</button>
       </div>
-      <button type="button" class="btn" :disabled="busy || !enabled" @click="save">{{ busy ? 'Saving…' : 'Save donation settings' }}</button>
+      <button type="button" class="btn" :disabled="busy || !enabled" @click="save">{{ busy ? t('payments.donation_editor.btn_saving') : t('payments.donation_editor.btn_save') }}</button>
     </template>
   </div>
 </template>

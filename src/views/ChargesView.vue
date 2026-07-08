@@ -6,9 +6,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showError, showSuccess } from '@/composables/useNotify'
+import { useI18n } from 'vue-i18n'
 import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
 
 const auth = useAuthStore()
+const { t } = useI18n()
 
 const charges = ref([])
 const fines = ref([])
@@ -19,20 +21,23 @@ const payingFineId = ref('')
 const appealingId = ref('')
 const appealReason = ref('')
 
-const KIND_LABELS = { scratch: 'Scratch (withdrawal)', no_show: 'No-show (DNS)' }
+function kindLabel(kind) {
+  const labels = { scratch: t('payments.charges_view.kind_scratch'), no_show: t('payments.charges_view.kind_no_show') }
+  return labels[kind] || kind
+}
 
 // /api/me/fines now returns EVERY fine (so appeal outcomes are visible) —
 // split live debts from resolved history.
 const openFines = computed(() => fines.value.filter((f) => ['owed', 'appealed'].includes(f.status)))
 const resolvedFines = computed(() => fines.value.filter((f) => !['owed', 'appealed'].includes(f.status)))
 function fineOutcome(f) {
-  if (f.status === 'waived' && f.appeal_status === 'upheld') return 'Waived — your appeal was upheld'
-  if (f.status === 'waived') return 'Waived'
-  if (f.status === 'paid') return 'Paid'
+  if (f.status === 'waived' && f.appeal_status === 'upheld') return t('payments.charges_view.outcome_waived_upheld')
+  if (f.status === 'waived') return t('payments.charges_view.outcome_waived')
+  if (f.status === 'paid') return t('payments.charges_view.outcome_paid')
   return f.status
 }
 function fineNote(f) {
-  if (f.status === 'owed' && f.appeal_status === 'dismissed') return 'Your appeal was dismissed — the fine is owed again.'
+  if (f.status === 'owed' && f.appeal_status === 'dismissed') return t('payments.charges_view.note_appeal_dismissed')
   return ''
 }
 
@@ -56,7 +61,7 @@ async function load() {
     fines.value = fr.fines || []
     enabled.value = c.payments_enabled !== false
   } catch (e) {
-    showError(e.message || 'Could not load your charges')
+    showError(e.message || t('payments.charges_view.error_load'))
   } finally {
     loading.value = false
   }
@@ -71,7 +76,7 @@ async function pay(charge) {
     })
     window.location.href = url
   } catch (e) {
-    showError(e.message || 'Could not start checkout')
+    showError(e.message || t('payments.charges_view.error_checkout'))
     payingId.value = ''
   }
 }
@@ -83,7 +88,7 @@ async function payFine(f) {
     const { url } = await auth.apiFetch(`/api/fines/${f.id}/checkout`, { method: 'POST', body: JSON.stringify({}) })
     window.location.href = url
   } catch (e) {
-    showError(e.message || 'Could not start checkout')
+    showError(e.message || t('payments.charges_view.error_checkout'))
     payingFineId.value = ''
   }
 }
@@ -91,14 +96,14 @@ async function payFine(f) {
 function startAppeal(f) { appealingId.value = f.id; appealReason.value = '' }
 
 async function submitAppeal(f) {
-  if (!appealReason.value.trim()) { showError('Please enter a reason for your appeal'); return }
+  if (!appealReason.value.trim()) { showError(t('payments.charges_view.error_appeal_reason')); return }
   try {
     await auth.apiFetch(`/api/fines/${f.id}/appeal`, { method: 'POST', body: JSON.stringify({ reason: appealReason.value.trim() }) })
-    showSuccess('Appeal submitted')
+    showSuccess(t('payments.charges_view.success_appeal'))
     appealingId.value = ''
     await load()
   } catch (e) {
-    showError(e.message || 'Could not submit the appeal')
+    showError(e.message || t('payments.charges_view.error_appeal'))
   }
 }
 
@@ -107,66 +112,66 @@ onMounted(load)
 
 <template>
   <section class="charges-view">
-    <h1>Charges</h1>
-    <p class="lede">Outstanding penalties and fines from your federation.</p>
+    <h1>{{ t('payments.charges_view.title') }}</h1>
+    <p class="lede">{{ t('payments.charges_view.subtitle') }}</p>
     <ComingSoonBanner
       v-if="!enabled"
-      message="Online payment of penalties is coming soon — here's what you currently owe."
+      :message="t('payments.charges_view.coming_soon_banner')"
     />
-    <p v-if="loading" class="muted">Loading…</p>
+    <p v-if="loading" class="muted">{{ t('payments.charges_view.loading') }}</p>
     <template v-else>
       <!-- Penalty charges (scratch / no-show) -->
       <div v-if="charges.length" class="charge-list">
-        <h2 class="section-h">Penalties</h2>
+        <h2 class="section-h">{{ t('payments.charges_view.section_penalties') }}</h2>
         <div v-for="c in charges" :key="c.id" class="charge-card">
           <div class="charge-main">
-            <div class="charge-title">{{ KIND_LABELS[c.kind] || c.kind }}</div>
+            <div class="charge-title">{{ kindLabel(c.kind) }}</div>
             <div class="charge-event">{{ c.event_name }}</div>
           </div>
           <div class="charge-amount">{{ money(c.amount_cents, c.currency) }}</div>
           <button class="btn-pay" :disabled="!enabled || payingId === c.id" @click="pay(c)">
-            {{ !enabled ? 'Coming soon' : (payingId === c.id ? 'Redirecting…' : 'Pay') }}
+            {{ !enabled ? t('payments.charges_view.btn_coming_soon') : (payingId === c.id ? t('payments.charges_view.btn_redirecting') : t('payments.charges_view.btn_pay')) }}
           </button>
         </div>
       </div>
 
       <!-- Disciplinary fines -->
       <div v-if="openFines.length" class="charge-list">
-        <h2 class="section-h">Fines</h2>
+        <h2 class="section-h">{{ t('payments.charges_view.section_fines') }}</h2>
         <div v-for="f in openFines" :key="f.id" class="fine-wrap">
           <div class="charge-card">
             <div class="charge-main">
-              <div class="charge-title">Fine</div>
+              <div class="charge-title">{{ t('payments.charges_view.label_fine') }}</div>
               <div class="charge-event">{{ f.reason }}</div>
-              <div v-if="f.status === 'appealed'" class="appeal-tag">Under appeal — awaiting a decision</div>
+              <div v-if="f.status === 'appealed'" class="appeal-tag">{{ t('payments.charges_view.status_under_appeal') }}</div>
               <div v-if="fineNote(f)" class="appeal-tag dismissed">{{ fineNote(f) }}</div>
             </div>
             <div class="charge-amount">{{ money(f.amount_cents, f.currency) }}</div>
             <div v-if="f.status === 'owed'" class="fine-actions">
               <button class="btn-pay" :disabled="!enabled || payingFineId === f.id" @click="payFine(f)">
-                {{ !enabled ? 'Coming soon' : (payingFineId === f.id ? 'Redirecting…' : 'Pay') }}
+                {{ !enabled ? t('payments.charges_view.btn_coming_soon') : (payingFineId === f.id ? t('payments.charges_view.btn_redirecting') : t('payments.charges_view.btn_pay')) }}
               </button>
-              <button class="btn-appeal" :disabled="appealingId === f.id" @click="startAppeal(f)">Appeal</button>
+              <button class="btn-appeal" :disabled="appealingId === f.id" @click="startAppeal(f)">{{ t('payments.charges_view.btn_appeal') }}</button>
             </div>
           </div>
           <div v-if="appealingId === f.id" class="appeal-form">
-            <textarea v-model="appealReason" rows="2" placeholder="Why are you appealing this fine?"></textarea>
+            <textarea v-model="appealReason" rows="2" :placeholder="t('payments.charges_view.appeal_placeholder')"></textarea>
             <div class="appeal-btns">
-              <button class="btn-appeal" @click="appealingId = ''">Cancel</button>
-              <button class="btn-pay" @click="submitAppeal(f)">Submit appeal</button>
+              <button class="btn-appeal" @click="appealingId = ''">{{ t('payments.charges_view.btn_cancel') }}</button>
+              <button class="btn-pay" @click="submitAppeal(f)">{{ t('payments.charges_view.btn_submit_appeal') }}</button>
             </div>
           </div>
         </div>
       </div>
 
-      <p v-if="!charges.length && !openFines.length" class="muted">You're all clear — no outstanding charges. 🎉</p>
+      <p v-if="!charges.length && !openFines.length" class="muted">{{ t('payments.charges_view.empty') }}</p>
 
       <!-- Resolved fines — the outcome of every appeal/payment stays visible -->
       <div v-if="resolvedFines.length" class="charge-list">
-        <h2 class="section-h">Resolved</h2>
+        <h2 class="section-h">{{ t('payments.charges_view.section_resolved') }}</h2>
         <div v-for="f in resolvedFines" :key="f.id" class="charge-card resolved">
           <div class="charge-main">
-            <div class="charge-title">Fine</div>
+            <div class="charge-title">{{ t('payments.charges_view.label_fine') }}</div>
             <div class="charge-event">{{ f.reason }}</div>
           </div>
           <div class="charge-amount muted">{{ money(f.amount_cents, f.currency) }}</div>
