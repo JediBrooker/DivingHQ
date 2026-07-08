@@ -82,31 +82,32 @@ onMounted(loadDependents)
 </script>
 
 <template>
-  <div class="guardians-view">
-    <h2>{{ t('guardians.title') }}</h2>
+  <section class="guardians-view">
+    <h1>{{ t('guardians.title') }}</h1>
     <p class="muted">{{ t('guardians.subtitle') }}</p>
 
-    <div v-if="loading" class="muted">...</div>
+    <p v-if="loading" class="muted">...</p>
 
     <template v-else>
       <p v-if="!dependents.length" class="muted">{{ t('guardians.empty') }}</p>
 
       <div v-for="dep in dependents" :key="dep.guardian_link_id" class="dep-card">
-        <div class="dep-info">
-          <span class="dep-name">{{ dep.full_name }}</span>
-          <span v-if="dep.date_of_birth" class="dep-age">
+        <div class="dep-main">
+          <div class="dep-name">{{ dep.full_name }}</div>
+          <div v-if="dep.date_of_birth" class="dep-age">
             {{ t('guardians.age_years', { age: ageFromDob(dep.date_of_birth) }) }}
-          </span>
+          </div>
         </div>
-        <button class="btn" @click="revoke(dep)">{{ t('guardians.revoke') }}</button>
+        <button class="btn-revoke" @click="revoke(dep)">{{ t('guardians.revoke') }}</button>
       </div>
     </template>
 
     <div class="link-section">
-      <h3>{{ t('guardians.add') }}</h3>
+      <h2 class="section-h">{{ t('guardians.add') }}</h2>
       <input
         v-model="searchQuery"
         type="text"
+        class="search-input"
         :placeholder="t('guardians.search_placeholder')"
         @input="onSearchInput"
       />
@@ -121,51 +122,37 @@ onMounted(loadDependents)
         </div>
       </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <style scoped>
-.guardians-view {
-  max-width: 600px;
-}
+.guardians-view { display: flex; flex-direction: column; gap: 1rem; max-width: 50rem; margin: 0 auto; padding: 1rem; }
+.guardians-view h1 { margin: 0 0 .25rem; }
+.muted { color: var(--muted, #777); margin: 0; }
 .dep-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem;
-  border: 1px solid var(--border, #ddd);
-  border-radius: 0.5rem;
-  margin-bottom: 0.5rem;
+  display: flex; align-items: center; gap: 1rem;
+  border: 1px solid var(--border, #ddd); border-radius: .75rem; padding: .85rem 1rem;
 }
-.dep-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+.dep-main { flex: 1; min-width: 0; }
+.dep-name { font-weight: 600; }
+.dep-age { font-size: .85rem; color: var(--muted, #777); }
+.btn-revoke {
+  padding: .45rem .8rem; border: 1px solid var(--border, #ddd); border-radius: var(--radius, .5rem);
+  background: transparent; color: var(--fg-2, #555); cursor: pointer; font: inherit; font-size: .88rem;
 }
-.dep-name {
-  font-weight: 600;
+.btn-revoke:hover { background: var(--surface-hover, #f5f5f5); }
+.link-section { margin-top: .5rem; }
+.section-h { font-size: 1rem; margin: .5rem 0 .5rem; }
+.search-input {
+  width: 100%; padding: .55rem .75rem;
+  border: 1px solid var(--border, #ddd); border-radius: var(--radius, .5rem);
+  background: var(--surface, #fff); color: var(--fg, #111); font: inherit; font-size: .9rem;
 }
-.dep-age {
-  font-size: 0.85rem;
-  color: var(--muted, #777);
-}
+.search-input::placeholder { color: var(--muted, #999); }
 .search-results {
-  border: 1px solid var(--border, #ddd);
-  border-radius: 0.5rem;
-  max-height: 200px;
-  overflow-y: auto;
+  border: 1px solid var(--border, #ddd); border-radius: var(--radius, .5rem);
+  max-height: 200px; overflow-y: auto; margin-top: .35rem;
 }
-.search-item {
-  padding: 0.5rem 0.75rem;
-  cursor: pointer;
-}
-.search-item:hover {
-  background: var(--bg-2, #f5f5f5);
-}
-.link-section {
-  margin-top: 1.5rem;
-}
-.muted {
-  color: var(--muted, #777);
-}
+.search-item { padding: .55rem .75rem; cursor: pointer; font-size: .9rem; }
+.search-item:hover { background: var(--bg-2, #f5f5f5); }
 </style>
