@@ -82,77 +82,100 @@ onMounted(loadDependents)
 </script>
 
 <template>
-  <section class="guardians-view">
-    <h1>{{ t('guardians.title') }}</h1>
-    <p class="muted">{{ t('guardians.subtitle') }}</p>
-
-    <p v-if="loading" class="muted">...</p>
-
-    <template v-else>
-      <p v-if="!dependents.length" class="muted">{{ t('guardians.empty') }}</p>
-
-      <div v-for="dep in dependents" :key="dep.guardian_link_id" class="dep-card">
-        <div class="dep-main">
-          <div class="dep-name">{{ dep.full_name }}</div>
-          <div v-if="dep.date_of_birth" class="dep-age">
-            {{ t('guardians.age_years', { age: ageFromDob(dep.date_of_birth) }) }}
-          </div>
-        </div>
-        <button class="btn-revoke" @click="revoke(dep)">{{ t('guardians.revoke') }}</button>
+  <div class="gv-page">
+    <div class="gv-wrap">
+      <div class="gv-head">
+        <h1 class="gv-title">{{ t('guardians.title') }}</h1>
+        <p class="gv-sub">{{ t('guardians.subtitle') }}</p>
       </div>
-    </template>
 
-    <div class="link-section">
-      <h2 class="section-h">{{ t('guardians.add') }}</h2>
-      <input
-        v-model="searchQuery"
-        type="text"
-        class="search-input"
-        :placeholder="t('guardians.search_placeholder')"
-        @input="onSearchInput"
-      />
-      <div v-if="searchResults.length" class="search-results">
-        <div
-          v-for="u in searchResults"
-          :key="u.id"
-          class="search-item"
-          @click="requestLink(u)"
-        >
-          {{ u.full_name }}
+      <p v-if="loading" class="gv-empty">...</p>
+
+      <template v-else>
+        <div v-if="!dependents.length" class="gv-empty">
+          {{ t('guardians.empty') }}
+        </div>
+
+        <div v-for="dep in dependents" :key="dep.guardian_link_id" class="gv-dep">
+          <div class="gv-dep-info">
+            <span class="gv-dep-name">{{ dep.full_name }}</span>
+            <span v-if="dep.date_of_birth" class="gv-dep-age">
+              {{ t('guardians.age_years', { age: ageFromDob(dep.date_of_birth) }) }}
+            </span>
+          </div>
+          <button class="btn btn-ghost btn-sm" @click="revoke(dep)">{{ t('guardians.revoke') }}</button>
+        </div>
+      </template>
+
+      <div class="gv-link-section">
+        <label class="field">
+          <span class="label">{{ t('guardians.add') }}</span>
+          <input
+            v-model="searchQuery"
+            type="text"
+            class="input"
+            :placeholder="t('guardians.search_placeholder')"
+            @input="onSearchInput"
+          />
+        </label>
+        <div v-if="searchResults.length" class="gv-results">
+          <div
+            v-for="u in searchResults"
+            :key="u.id"
+            class="gv-result-item"
+            @click="requestLink(u)"
+          >
+            {{ u.full_name }}
+          </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 </template>
 
 <style scoped>
-.guardians-view { display: flex; flex-direction: column; gap: 1rem; max-width: 50rem; margin: 0 auto; padding: 1rem; }
-.guardians-view h1 { margin: 0 0 .25rem; }
-.muted { color: var(--muted, #777); margin: 0; }
-.dep-card {
+.gv-page { min-height: 100%; background: var(--bg); }
+.gv-wrap { max-width: 600px; margin: 0 auto; padding: 1.75rem 1.5rem 2.5rem; }
+
+.gv-head { margin-bottom: 1.25rem; }
+.gv-title {
+  font-size: var(--text-h1); font-weight: 700; color: var(--text);
+  letter-spacing: var(--ls-h1); line-height: var(--lh-h1);
+}
+.gv-sub {
+  margin-top: 0.4rem; font-size: var(--text-sm); color: var(--text-3);
+  line-height: var(--lh-sm);
+}
+
+.gv-empty {
+  color: var(--text-3); font-size: var(--text-sm); line-height: var(--lh-sm);
+  padding: 2.25rem 1rem; text-align: center;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.gv-dep {
   display: flex; align-items: center; gap: 1rem;
-  border: 1px solid var(--border, #ddd); border-radius: .75rem; padding: .85rem 1rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
 }
-.dep-main { flex: 1; min-width: 0; }
-.dep-name { font-weight: 600; }
-.dep-age { font-size: .85rem; color: var(--muted, #777); }
-.btn-revoke {
-  padding: .45rem .8rem; border: 1px solid var(--border, #ddd); border-radius: var(--radius, .5rem);
-  background: transparent; color: var(--fg-2, #555); cursor: pointer; font: inherit; font-size: .88rem;
+.gv-dep-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+.gv-dep-name { font-weight: 600; color: var(--text); }
+.gv-dep-age { font-size: var(--text-sm); color: var(--text-3); }
+
+.gv-link-section { margin-top: 1.25rem; }
+
+.gv-results {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  max-height: 220px; overflow-y: auto; margin-top: 0.35rem;
+  background: var(--surface);
 }
-.btn-revoke:hover { background: var(--surface-hover, #f5f5f5); }
-.link-section { margin-top: .5rem; }
-.section-h { font-size: 1rem; margin: .5rem 0 .5rem; }
-.search-input {
-  width: 100%; padding: .55rem .75rem;
-  border: 1px solid var(--border, #ddd); border-radius: var(--radius, .5rem);
-  background: var(--surface, #fff); color: var(--fg, #111); font: inherit; font-size: .9rem;
+.gv-result-item {
+  padding: 0.6rem 0.85rem; cursor: pointer;
+  font-size: var(--text-body); color: var(--text-2);
+  transition: background var(--dur) var(--ease);
 }
-.search-input::placeholder { color: var(--muted, #999); }
-.search-results {
-  border: 1px solid var(--border, #ddd); border-radius: var(--radius, .5rem);
-  max-height: 200px; overflow-y: auto; margin-top: .35rem;
-}
-.search-item { padding: .55rem .75rem; cursor: pointer; font-size: .9rem; }
-.search-item:hover { background: var(--bg-2, #f5f5f5); }
+.gv-result-item:hover { background: var(--surface-hover); }
+.gv-result-item:not(:last-child) { border-bottom: 1px solid var(--border); }
 </style>
