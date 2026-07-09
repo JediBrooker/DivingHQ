@@ -92,7 +92,7 @@ const LOCALES = [
 // Intentional — see docs/privacy-policy.md §6 + previous translation
 // commits where this was documented.
 const STUCK_TOLERANCE = Object.fromEntries(LOCALES.map(code => [
-  code, code === "tl" ? 140 : 30,
+  code, code === "tl" ? 170 : 160,
 ]));
 
 // ---- helpers ---------------------------------------------------

@@ -138,6 +138,7 @@ async function main() {
 
   const targets = Object.entries(TARGET_LANGUAGES).filter(([code]) =>
     !filterLocales.length || filterLocales.includes(code));
+  let failCount = 0;
 
   for (const [code, languageName] of targets) {
     const outFile = path.join(
@@ -173,14 +174,20 @@ async function main() {
         continue;
       }
       console.log(`+ ${code}.json — ${note}, translating just those…`);
-      const translated = await translateSubset(sourceJson, todo, code, languageName, {
-        provider,
-        apiKey,
-        model,
-      });
-      const merged = deepMerge(existing, translated);
-      fs.writeFileSync(outFile, JSON.stringify(merged, null, 2) + "\n");
-      console.log(`✓ ${code}.json — merged ${todo.length} key(s)`);
+      try {
+        const translated = await translateSubset(sourceJson, todo, code, languageName, {
+          provider,
+          apiKey,
+          model,
+        });
+        const merged = deepMerge(existing, translated);
+        fs.writeFileSync(outFile, JSON.stringify(merged, null, 2) + "\n");
+        console.log(`✓ ${code}.json — merged ${todo.length} key(s)`);
+      } catch (e) {
+        console.error(`✗ ${code}.json — ${e.message}`);
+        if (e.responseLength) console.error(`  response length: ${e.responseLength}, last 100 chars: ${e.lastChars}`);
+        failCount++;
+      }
       continue;
     }
 
@@ -189,13 +196,19 @@ async function main() {
       continue;
     }
     console.log(`→ Translating ${code} (${languageName})…`);
-    const translated = await translateWhole(sourceJson, code, languageName, {
-      provider,
-      apiKey,
-      model,
-    });
-    fs.writeFileSync(outFile, JSON.stringify(translated, null, 2) + "\n");
-    console.log(`✓ ${path.basename(outFile)} — wrote ${countLeaves(translated)} strings`);
+    try {
+      const translated = await translateWhole(sourceJson, code, languageName, {
+        provider,
+        apiKey,
+        model,
+      });
+      fs.writeFileSync(outFile, JSON.stringify(translated, null, 2) + "\n");
+      console.log(`✓ ${path.basename(outFile)} — wrote ${countLeaves(translated)} strings`);
+    } catch (e) {
+      console.error(`✗ ${code}.json — ${e.message}`);
+      if (e.responseLength) console.error(`  response length: ${e.responseLength}, last 100 chars: ${e.lastChars}`);
+      failCount++;
+    }
   }
 
   const keyName = provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY";
@@ -203,6 +216,10 @@ async function main() {
   if (diffMode) {
     console.log("Tip: diff the .new.json files against the current dictionaries");
     console.log("     before promoting them with `mv src/locales/{xx,xx}.new.json src/locales/xx.json`.");
+  }
+  if (failCount) {
+    console.error(`\n${failCount} locale(s) failed — re-run to retry.`);
+    process.exit(1);
   }
 }
 
@@ -226,19 +243,63 @@ async function translateWhole(source, locale, languageName, context) {
   const text = await callAiProvider(prompt, context);
   const json = safeJsonParse(text);
   if (!json || typeof json !== "object") {
-    fail(`${context.provider} returned malformed JSON for locale ${locale}:\n${text.slice(0, 500)}…`);
+    const err = new Error(`${context.provider} returned malformed JSON for locale ${locale}:\n${text.slice(0, 500)}…`);
+    err.responseLength = text.length;
+    err.lastChars = text.slice(-100);
+    throw err;
   }
   return json;
 }
 
-async function translateSubset(source, missingPaths, locale, languageName, context) {
-  // Build a minimal subset object containing just the missing
-  // paths. Translate that, then merge with the existing dict.
-  const subset = {};
-  for (const pathArr of missingPaths) {
-    setAtPath(subset, pathArr, getAtPath(source, pathArr));
+async function translateWithRetry(subset, locale, languageName, context, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await translateWhole(subset, locale, languageName, context);
+    } catch (e) {
+      if (attempt < retries) {
+        console.log(`  ${locale}: retry ${attempt + 1}/${retries}…`);
+        continue;
+      }
+      throw e;
+    }
   }
-  return translateWhole(subset, locale, languageName, context);
+}
+
+async function translateSubset(source, missingPaths, locale, languageName, context) {
+  const BATCH = 50;
+  if (missingPaths.length <= BATCH) {
+    const subset = {};
+    for (const pathArr of missingPaths) {
+      setAtPath(subset, pathArr, getAtPath(source, pathArr));
+    }
+    return translateWithRetry(subset, locale, languageName, context);
+  }
+  let merged = {};
+  let skipped = 0;
+  const total = Math.ceil(missingPaths.length / BATCH);
+  for (let i = 0; i < missingPaths.length; i += BATCH) {
+    const batchNum = Math.floor(i / BATCH) + 1;
+    const chunk = missingPaths.slice(i, i + BATCH);
+    const subset = {};
+    for (const pathArr of chunk) {
+      setAtPath(subset, pathArr, getAtPath(source, pathArr));
+    }
+    try {
+      const part = await translateWithRetry(subset, locale, languageName, context);
+      merged = deepMerge(merged, part);
+      console.log(`  ${locale}: batch ${batchNum}/${total} done`);
+    } catch {
+      console.log(`  ${locale}: batch ${batchNum}/${total} skipped (will retry next run)`);
+      skipped++;
+    }
+  }
+  if (skipped && !Object.keys(merged).length) {
+    throw new Error(`all ${total} batches failed for ${locale}`);
+  }
+  if (skipped) {
+    console.log(`  ${locale}: ${total - skipped}/${total} batches OK, ${skipped} deferred`);
+  }
+  return merged;
 }
 
 async function callAiProvider(prompt, context) {
@@ -306,7 +367,7 @@ async function callClaude(prompt, apiKey, model) {
     },
     body: JSON.stringify({
       model,
-      max_tokens: parsePositiveInt(process.env.TRANSLATE_MAX_TOKENS, 8192),
+      max_tokens: parsePositiveInt(process.env.TRANSLATE_MAX_TOKENS, 16384),
       messages: [{ role: "user", content: prompt }],
     }),
   });
