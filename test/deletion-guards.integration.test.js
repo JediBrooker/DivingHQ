@@ -18,7 +18,11 @@ const createMeetsRouter = require("../routes/meets");
 const createEventsRouter = require("../routes/events");
 const createStripeWebhook = require("../routes/stripe-webhook");
 
-const silentLogger = { warn() {}, error() {}, info() {} };
+const silentLogger = {
+  warn: (...a) => console.warn("[DIAG-warn]", ...a),
+  error: (...a) => console.error("[DIAG-error]", ...a),
+  info() {},
+};
 const suffix = crypto.randomUUID().slice(0, 8);
 
 let pool;
@@ -310,10 +314,11 @@ test("checkout.session.completed backfills stripe_charge_id from the PaymentInte
   const prevRetrievePI = retrievePaymentIntentImpl;
   retrievePaymentIntentImpl = async () => ({ id: "pi_test", latest_charge: chargeId });
   try {
-    await api("POST", "/webhooks/stripe", {
+    const diagRes = await api("POST", "/webhooks/stripe", {
       type: "checkout.session.completed",
       data: { object: { id: "cs_charge_test", client_reference_id: paymentId, payment_intent: "pi_test", payment_status: "paid" } },
     });
+    console.log("[DIAG-response]", diagRes.status, await diagRes.clone().text());
   } finally {
     retrievePaymentIntentImpl = prevRetrievePI;
   }
