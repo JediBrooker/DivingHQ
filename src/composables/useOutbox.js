@@ -12,19 +12,11 @@
 // 'change' event triggers one refresh, every consumer sees the
 // same value.
 //
-// Feature flag posture: when VITE_OFFLINE_OUTBOX_ENABLED is off,
-// the composable still returns refs (so the calling code doesn't
-// need a separate "is the feature on" check at every use site)
-// but all values stay at zero / null / online. Components show
-// nothing because there's nothing to show.
-
 import { ref, computed, watch, effectScope } from 'vue'
 import { createOutbox, createIdbBackend, STATUSES } from '@/lib/outbox'
 import { fingerprintFromUser } from '@/lib/userFingerprint'
 import { useSocket } from './useSocket'
 import { useAuthStore } from '@/stores/auth'
-
-const OUTBOX_ENABLED = import.meta.env.VITE_OFFLINE_OUTBOX_ENABLED === '1'
 
 // ---- Singleton state ------------------------------------------
 // Created on the first getOutbox() call. Module-scope so multiple
@@ -54,14 +46,7 @@ async function refresh() {
   lastSyncedAt.value = latest ? new Date(latest) : null
 }
 
-// THE outbox instance — shared by useOutbox (reactive counts) and
-// useHttpOutbox (HTTP write queueing). Both composables sit over
-// the same IndexedDB store; two createOutbox() instances would
-// split the 'change' event stream, so a write queued through one
-// wouldn't update counts watched on the other until the 30s poll.
-// Returns null when the feature flag is off.
 export function getOutbox() {
-  if (!OUTBOX_ENABLED) return null
   if (!instance) {
     const auth = useAuthStore()
     instance = createOutbox({
@@ -89,23 +74,6 @@ export function getOutbox() {
 // ---- Public composable ----------------------------------------
 
 export function useOutbox() {
-  if (!OUTBOX_ENABLED) {
-    // Flag off — return inert refs. No outbox, no IDB, no listeners.
-    return {
-      enabled: false,
-      outbox: null,
-      counts,
-      offlineSince,
-      lastSyncedAt,
-      isOffline: computed(() => false),
-      pendingCount: computed(() => 0),
-      failedCount: computed(() => 0),
-      conflictCount: computed(() => 0),
-      hasActivity: computed(() => false),
-      refresh: async () => {},
-    }
-  }
-
   const outbox = getOutbox()
 
   if (!offlineScope) {
@@ -131,7 +99,6 @@ export function useOutbox() {
   }
 
   return {
-    enabled: true,
     outbox,
     counts,
     offlineSince,

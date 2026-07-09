@@ -10,8 +10,8 @@
 //   node scripts/check-bundle-size.js            -> check (needs dist/)
 //   node scripts/check-bundle-size.js --update   -> rewrite baseline from dist/
 //
-// Generate the baseline from a flag-on build so it matches CI:
-//   VITE_OFFLINE_OUTBOX_ENABLED=1 npm run build && node scripts/check-bundle-size.js --update
+// Generate the baseline:
+//   npm run build && node scripts/check-bundle-size.js --update
 const fs = require("node:fs");
 const path = require("node:path");
 
