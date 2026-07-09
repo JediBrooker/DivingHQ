@@ -1693,7 +1693,7 @@
       "hint": "Singilin ang mga opisyal at coaches ng taunang bayad sa akreditasyon bawat tungkulin. Magbabayad ang bawat tao mula sa kanilang pahina ng Akreditasyon; magtakda ng isang fixed na presyo bawat tungkulin.",
       "title": "Akreditasyon sa {label}",
       "role_judge": "Hukom",
-      "role_referee": "Referee",
+      "role_referee": "Hukom",
       "role_coach": "Kotsador",
       "role_meet_manager": "Tagapamahala ng kompetisyon"
     },
