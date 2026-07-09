@@ -585,7 +585,13 @@
       "bookmark_shortcuts": "키보드 단축키",
       "bookmark_shortcuts_desc": "컨트롤 룸용 ← / → / Space / T / F / R / H / L",
       "cta_register": "계정 만들기",
-      "cta_scoreboard": "스코어보드 보기 →"
+      "cta_scoreboard": "스코어보드 보기 →",
+      "bookmark_payments": "Payments",
+      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
+      "bookmark_classes": "Classes",
+      "bookmark_classes_desc": "set up and manage training classes for your club",
+      "bookmark_offline": "Offline competitions",
+      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
     },
     "section_quick_actions": "빠른 작업",
     "section_shortcuts": "키보드 단축키",

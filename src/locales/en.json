@@ -584,6 +584,12 @@
       "bookmark_faq_desc": "answers to \"why is this greyed out / not showing\"",
       "bookmark_shortcuts": "Keyboard shortcuts",
       "bookmark_shortcuts_desc": "1–9 / Space / H / L / F / R / C for the Control Room",
+      "bookmark_payments": "Payments",
+      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
+      "bookmark_classes": "Classes",
+      "bookmark_classes_desc": "set up and manage training classes for your club",
+      "bookmark_offline": "Offline competitions",
+      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops",
       "cta_register": "Create an account",
       "cta_scoreboard": "Browse scoreboard →"
     },

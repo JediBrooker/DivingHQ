@@ -596,7 +596,13 @@
       "bookmark_shortcuts": "Billentyűparancsok",
       "bookmark_shortcuts_desc": "← / → / Space / T / F / R / H / L a Vezérlőteremhez",
       "cta_register": "Fiók létrehozása",
-      "cta_scoreboard": "Eredménytábla böngészése →"
+      "cta_scoreboard": "Eredménytábla böngészése →",
+      "bookmark_payments": "Payments",
+      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
+      "bookmark_classes": "Classes",
+      "bookmark_classes_desc": "set up and manage training classes for your club",
+      "bookmark_offline": "Offline competitions",
+      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
     },
     "section_quick_actions": "Gyors műveletek",
     "section_shortcuts": "Billentyűparancsok",

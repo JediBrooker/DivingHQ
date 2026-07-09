@@ -596,7 +596,13 @@
       "bookmark_shortcuts": "Pikanäppäimet",
       "bookmark_shortcuts_desc": "← / → / Välilyönti / T / F / R / H / L Ohjaushuoneessa",
       "cta_register": "Luo tili",
-      "cta_scoreboard": "Selaa tulostaulua →"
+      "cta_scoreboard": "Selaa tulostaulua →",
+      "bookmark_payments": "Payments",
+      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
+      "bookmark_classes": "Classes",
+      "bookmark_classes_desc": "set up and manage training classes for your club",
+      "bookmark_offline": "Offline competitions",
+      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
     },
     "section_quick_actions": "Pikatoiminnot",
     "section_shortcuts": "Pikanäppäimet",

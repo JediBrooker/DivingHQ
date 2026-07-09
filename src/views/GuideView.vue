@@ -424,6 +424,18 @@ onBeforeUnmount(() => observer?.disconnect())
               <a :href="`${WIKI}/Keyboard-Shortcuts`" target="_blank" rel="noopener">{{ $t('guide.next.bookmark_shortcuts') }}</a>
               — {{ $t('guide.next.bookmark_shortcuts_desc') }}
             </li>
+            <li>
+              <a :href="`${WIKI}/Payments`" target="_blank" rel="noopener">{{ $t('guide.next.bookmark_payments') }}</a>
+              — {{ $t('guide.next.bookmark_payments_desc') }}
+            </li>
+            <li>
+              <a :href="`${WIKI}/Classes`" target="_blank" rel="noopener">{{ $t('guide.next.bookmark_classes') }}</a>
+              — {{ $t('guide.next.bookmark_classes_desc') }}
+            </li>
+            <li>
+              <a :href="`${WIKI}/Offline-Competitions`" target="_blank" rel="noopener">{{ $t('guide.next.bookmark_offline') }}</a>
+              — {{ $t('guide.next.bookmark_offline_desc') }}
+            </li>
           </ul>
 
           <div class="guide-cta-row">

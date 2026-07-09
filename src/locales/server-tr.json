@@ -74,5 +74,15 @@
       "header_event_schedule": "Etkinlik takvimi",
       "header_reserves": "Yedekler"
     }
+  },
+  "guide": {
+    "next": {
+      "bookmark_payments": "Payments",
+      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
+      "bookmark_classes": "Classes",
+      "bookmark_classes_desc": "set up and manage training classes for your club",
+      "bookmark_offline": "Offline competitions",
+      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+    }
   }
 }

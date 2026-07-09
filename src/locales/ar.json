@@ -585,7 +585,13 @@
       "bookmark_shortcuts": "اختصارات لوحة المفاتيح",
       "bookmark_shortcuts_desc": "← / → / Space / T / F / R / H / L لغرفة التحكّم",
       "cta_register": "إنشاء حساب",
-      "cta_scoreboard": "تصفّح لوحة النتائج ←"
+      "cta_scoreboard": "تصفّح لوحة النتائج ←",
+      "bookmark_payments": "Payments",
+      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
+      "bookmark_classes": "Classes",
+      "bookmark_classes_desc": "set up and manage training classes for your club",
+      "bookmark_offline": "Offline competitions",
+      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
     },
     "section_quick_actions": "إجراءات سريعة",
     "section_shortcuts": "اختصارات لوحة المفاتيح",
