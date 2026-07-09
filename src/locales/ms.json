@@ -586,12 +586,12 @@
       "bookmark_shortcuts_desc": "← / → / Space / T / F / R / H / L untuk Bilik Kawalan",
       "cta_register": "Cipta akaun",
       "cta_scoreboard": "Layari papan markah →",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "Pembayaran",
+      "bookmark_payments_desc": "yuran, keahlian, pembayaran keluar, denda, dan pembayaran penjaga",
+      "bookmark_classes": "Kelas",
+      "bookmark_classes_desc": "sediakan dan uruskan kelas latihan untuk kelab anda",
+      "bookmark_offline": "Pertandingan luar talian",
+      "bookmark_offline_desc": "bagaimana DivingHQ terus berfungsi apabila Wi-Fi tempat terputus"
     },
     "section_quick_actions": "Tindakan pantas",
     "section_shortcuts": "Pintasan papan kekunci",

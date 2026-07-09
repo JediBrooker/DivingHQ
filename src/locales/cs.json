@@ -586,12 +586,12 @@
       "bookmark_shortcuts_desc": "← / → / Mezerník / T / F / R / H / L pro Řídicí místnost",
       "cta_register": "Vytvořit účet",
       "cta_scoreboard": "Procházet výsledkovou tabuli →",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "Platby",
+      "bookmark_payments_desc": "poplatky, členství, výplaty, pokuty a platby zákonných zástupců",
+      "bookmark_classes": "Tréninky",
+      "bookmark_classes_desc": "nastavte a spravujte tréninkové skupiny pro váš klub",
+      "bookmark_offline": "Offline soutěže",
+      "bookmark_offline_desc": "jak DivingHQ funguje, když vypadne Wi-Fi v hale"
     },
     "section_quick_actions": "Rychlé akce",
     "section_shortcuts": "Klávesové zkratky",
@@ -752,7 +752,7 @@
     "filter_search": "Hledat kód nebo popis…",
     "no_dives_match": "Žádné skoky neodpovídají filtru.",
     "col_code": "Kód",
-    "col_dd": "DD",
+    "col_dd": "KO",
     "col_position": "Poloha",
     "col_description": "Popis"
   },

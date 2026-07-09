@@ -586,12 +586,12 @@
       "bookmark_shortcuts_desc": "← / → / Space / T / F / R / H / L za Kontrolnu sobu",
       "cta_register": "Otvorite račun",
       "cta_scoreboard": "Pregledajte semafor →",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "Plaćanja",
+      "bookmark_payments_desc": "naknade, članarine, isplate, kazne i plaćanja skrbnika",
+      "bookmark_classes": "Razredi",
+      "bookmark_classes_desc": "postavite i upravljajte trenažnim razredima za vaš klub",
+      "bookmark_offline": "Natjecanja bez mreže",
+      "bookmark_offline_desc": "kako DivingHQ nastavlja raditi kada Wi-Fi veza u dvorani prestane"
     },
     "section_quick_actions": "Brze radnje",
     "section_shortcuts": "Tipkovnički prečaci",

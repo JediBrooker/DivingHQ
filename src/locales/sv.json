@@ -597,12 +597,12 @@
       "bookmark_shortcuts_desc": "← / → / Mellanslag / T / F / R / H / L för Kontrollrummet",
       "cta_register": "Skapa ett konto",
       "cta_scoreboard": "Bläddra i poängtavlan →",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "Betalningar",
+      "bookmark_payments_desc": "avgifter, medlemskap, utbetalningar, böter och målsmansbetalningar",
+      "bookmark_classes": "Klasser",
+      "bookmark_classes_desc": "skapa och hantera träningsklasser för din klubb",
+      "bookmark_offline": "Offlinetävlingar",
+      "bookmark_offline_desc": "hur DivingHQ fortsätter fungera när arenans Wi-Fi försvinner"
     },
     "section_quick_actions": "Snabba åtgärder",
     "section_shortcuts": "Kortkommandon",

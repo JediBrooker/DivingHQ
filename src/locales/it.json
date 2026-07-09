@@ -597,12 +597,12 @@
       "bookmark_shortcuts_desc": "← / → / Spazio / T / F / R / H / L per la Sala Controllo",
       "cta_register": "Crea un account",
       "cta_scoreboard": "Vedi il tabellone →",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "Pagamenti",
+      "bookmark_payments_desc": "quote, iscrizioni, pagamenti, sanzioni e pagamenti del tutore",
+      "bookmark_classes": "Corsi",
+      "bookmark_classes_desc": "configura e gestisci i corsi di allenamento per il tuo club",
+      "bookmark_offline": "Competizioni offline",
+      "bookmark_offline_desc": "come DivingHQ continua a funzionare quando il Wi-Fi della sede non è disponibile"
     },
     "section_quick_actions": "Azioni rapide",
     "section_shortcuts": "Scorciatoie da tastiera",

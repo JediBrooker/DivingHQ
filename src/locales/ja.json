@@ -586,12 +586,12 @@
       "bookmark_shortcuts_desc": "コントロールルーム用の ← / → / Space / T / F / R / H / L",
       "cta_register": "アカウントを作成",
       "cta_scoreboard": "得点掲示板を閲覧 →",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "支払い",
+      "bookmark_payments_desc": "料金、会費、支払い、罰金、保護者による支払い",
+      "bookmark_classes": "クラス",
+      "bookmark_classes_desc": "クラブのトレーニングクラスを設定および管理します",
+      "bookmark_offline": "オフライン競技会",
+      "bookmark_offline_desc": "会場のWi-Fiが途切れた際にDivingHQが動作し続ける方法"
     },
     "section_quick_actions": "クイック操作",
     "section_shortcuts": "キーボードショートカット",

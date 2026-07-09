@@ -597,12 +597,12 @@
       "bookmark_shortcuts_desc": "← / → / Пробел / T / F / R / H / L для Центра управления",
       "cta_register": "Создать аккаунт",
       "cta_scoreboard": "Перейти к табло →",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "Платежи",
+      "bookmark_payments_desc": "взносы, членские взносы, выплаты, штрафы и платежи опекунов",
+      "bookmark_classes": "Группы",
+      "bookmark_classes_desc": "создание и управление тренировочными группами для вашего клуба",
+      "bookmark_offline": "Офлайн-соревнования",
+      "bookmark_offline_desc": "как DivingHQ продолжает работать при отключении Wi-Fi на площадке"
     },
     "section_quick_actions": "Быстрые действия",
     "section_shortcuts": "Сочетания клавиш",

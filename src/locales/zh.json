@@ -586,12 +586,12 @@
       "bookmark_shortcuts_desc": "控制室的 ← / → / Space / T / F / R / H / L",
       "cta_register": "创建账户",
       "cta_scoreboard": "浏览记分牌 →",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "付款",
+      "bookmark_payments_desc": "费用、会员费、支出、罚款和监护人付款",
+      "bookmark_classes": "课程",
+      "bookmark_classes_desc": "为您的俱乐部设置和管理训练课程",
+      "bookmark_offline": "离线比赛",
+      "bookmark_offline_desc": "场馆Wi-Fi中断时DivingHQ如何继续运行"
     },
     "section_quick_actions": "快速操作",
     "section_shortcuts": "键盘快捷键",

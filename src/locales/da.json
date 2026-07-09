@@ -597,12 +597,12 @@
       "bookmark_shortcuts_desc": "← / → / Mellemrum / T / F / R / H / L til Kontrolrummet",
       "cta_register": "Opret en konto",
       "cta_scoreboard": "Gennemse scoringstavle →",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "Betalinger",
+      "bookmark_payments_desc": "gebyrer, medlemskaber, udbetalinger, bøder og værgebetalinger",
+      "bookmark_classes": "Hold",
+      "bookmark_classes_desc": "opret og administrer træningshold for din klub",
+      "bookmark_offline": "Offline konkurrencer",
+      "bookmark_offline_desc": "hvordan DivingHQ fortsætter med at køre, når venue Wi-Fi forsvinder"
     },
     "section_quick_actions": "Hurtige handlinger",
     "section_shortcuts": "Tastaturgenveje",

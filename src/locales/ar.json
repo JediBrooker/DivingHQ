@@ -586,12 +586,12 @@
       "bookmark_shortcuts_desc": "← / → / Space / T / F / R / H / L لغرفة التحكّم",
       "cta_register": "إنشاء حساب",
       "cta_scoreboard": "تصفّح لوحة النتائج ←",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "المدفوعات",
+      "bookmark_payments_desc": "الرسوم والاشتراكات والمدفوعات والغرامات ومدفوعات أولياء الأمور",
+      "bookmark_classes": "الفصول",
+      "bookmark_classes_desc": "إعداد وإدارة فصول التدريب لناديك",
+      "bookmark_offline": "المسابقات دون اتصال",
+      "bookmark_offline_desc": "كيف يستمر DivingHQ في العمل عندما ينقطع اتصال الواي فاي في المكان"
     },
     "section_quick_actions": "إجراءات سريعة",
     "section_shortcuts": "اختصارات لوحة المفاتيح",

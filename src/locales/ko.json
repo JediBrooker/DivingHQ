@@ -586,12 +586,12 @@
       "bookmark_shortcuts_desc": "컨트롤 룸용 ← / → / Space / T / F / R / H / L",
       "cta_register": "계정 만들기",
       "cta_scoreboard": "스코어보드 보기 →",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "결제",
+      "bookmark_payments_desc": "수수료, 회원권, 지급금, 벌금 및 보호자 결제",
+      "bookmark_classes": "클래스",
+      "bookmark_classes_desc": "클럽의 훈련 클래스를 설정하고 관리합니다",
+      "bookmark_offline": "오프라인 대회",
+      "bookmark_offline_desc": "경기장 Wi-Fi가 끊어졌을 때 DivingHQ가 계속 작동하는 방법"
     },
     "section_quick_actions": "빠른 작업",
     "section_shortcuts": "키보드 단축키",

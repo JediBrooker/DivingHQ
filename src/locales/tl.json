@@ -586,12 +586,12 @@
       "bookmark_shortcuts_desc": "← / → / Space / T / F / R / H / L para sa Control Room",
       "cta_register": "Gumawa ng account",
       "cta_scoreboard": "Mag-browse ng scoreboard →",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "Mga Pagbabayad",
+      "bookmark_payments_desc": "mga bayad, membership, payout, multa, at mga pagbabayad ng tagapag-alaga",
+      "bookmark_classes": "Mga Klase",
+      "bookmark_classes_desc": "mag-set up at pamahalaan ang mga klase ng pagsasanay para sa inyong club",
+      "bookmark_offline": "Offline na mga kompetisyon",
+      "bookmark_offline_desc": "kung paano patuloy na gumagana ang DivingHQ kahit mawala ang Wi-Fi sa venue"
     },
     "section_quick_actions": "Mga Mabilis na Aksyon",
     "section_shortcuts": "Mga Shortcut sa Keyboard",

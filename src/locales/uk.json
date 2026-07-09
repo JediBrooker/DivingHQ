@@ -597,12 +597,12 @@
       "bookmark_shortcuts_desc": "← / → / Пробіл / T / F / R / H / L для Центру керування",
       "cta_register": "Створити обліковий запис",
       "cta_scoreboard": "Перейти до табло →",
-      "bookmark_payments": "Payments",
-      "bookmark_payments_desc": "fees, memberships, payouts, fines, and guardian payments",
-      "bookmark_classes": "Classes",
-      "bookmark_classes_desc": "set up and manage training classes for your club",
-      "bookmark_offline": "Offline competitions",
-      "bookmark_offline_desc": "how DivingHQ keeps running when venue Wi-Fi drops"
+      "bookmark_payments": "Платежі",
+      "bookmark_payments_desc": "збори, членські внески, виплати, штрафи та платежі опікунів",
+      "bookmark_classes": "Класи",
+      "bookmark_classes_desc": "налаштування та керування тренувальними класами для вашого клубу",
+      "bookmark_offline": "Офлайн-змагання",
+      "bookmark_offline_desc": "як DivingHQ продовжує працювати, коли зв'язок Wi-Fi у місці проведення переривається"
     },
     "section_quick_actions": "Швидкі дії",
     "section_shortcuts": "Клавіатурні скорочення",
