@@ -1,4 +1,4 @@
-// Late-arrival review queue for meet managers + referees.
+// Late-arrival review queue for meet managers and referees.
 //
 // Companion to lib/deadline-gate.js (DEC-04). When a competitor
 // or coach submits a dive list AFTER the entry deadline but
@@ -11,8 +11,8 @@
 //   GET  /api/late-arrivals?event_id=…   list flagged rows
 //   POST /api/late-arrivals/:id/decide   approve or deny
 //
-// Auth: org_admin, meet_manager, or referee. Sysadmin via
-// requireOrgRole.
+// Auth: org_admin, meet_manager, or referee. Sysadmin gets in
+// via requireOrgRole.
 //
 // Mounted in server.js between templates and competitor (same
 // region as routes/conflicts.js).
@@ -31,16 +31,16 @@ module.exports = function createLateArrivalsRouter({ pool, requireOrgRole }) {
   // GET /api/late-arrivals
   //
   // Optional event_id query param scopes the list to one event.
-  // Without it, every pending late-arrival row in the caller's
-  // org is returned. Sysadmin sees across orgs.
+  // Leave it off and you get every pending late-arrival row in
+  // the caller's org. Sysadmin sees across orgs.
   router.get("/api/late-arrivals", requireReviewer, async (req, res) => {
     try {
       const eventId = req.query.event_id || null;
       const isSysAdmin = !!req.user.is_system_admin;
       const orgId = isSysAdmin ? null : req.user.org_id;
 
-      // Joins competitor + event for the tray to render names +
-      // deadline context without a second round-trip.
+      // Joins competitor + event so the tray can render names and
+      // deadline context without a second round trip.
       const r = await pool.query(
         `SELECT cdl.id,
                 cdl.event_id,
@@ -79,10 +79,10 @@ module.exports = function createLateArrivalsRouter({ pool, requireOrgRole }) {
   // body: { decision: 'allowed' | 'denied', note?: string }
   //
   // 'allowed' keeps the row; the diver competes as if the
-  // submission landed on time. 'denied' rolls the row back —
-  // i.e. soft-withdraws by stamping withdrawn_at = NOW(). The
-  // row remains for forensic visibility (the audit log captures
-  // who decided what + when).
+  // submission landed on time. 'denied' rolls the row back,
+  // basically a soft-withdraw via withdrawn_at = NOW(). The row
+  // stays put for forensic visibility (audit log captures who
+  // decided what and when).
   router.post(
     "/api/late-arrivals/:id/decide",
     requireReviewer,
@@ -106,7 +106,7 @@ module.exports = function createLateArrivalsRouter({ pool, requireOrgRole }) {
       try {
         await client.query("BEGIN");
 
-        // Look up the row + scope-check it belongs to the caller's org.
+        // Look up the row and scope-check it belongs to the caller's org.
         const r = await client.query(
           `SELECT cdl.id, cdl.event_id, cdl.competitor_id, cdl.round_number,
                   cdl.late_arrival_flag, cdl.late_arrival_decision,
@@ -141,7 +141,7 @@ module.exports = function createLateArrivalsRouter({ pool, requireOrgRole }) {
         }
 
         // Stamp the decision. For 'denied' we also soft-withdraw
-        // so the diver doesn't compete on that round — the row
+        // so the diver doesn't compete on that round, the row
         // stays for audit but withdrawn_at carries the operational
         // truth.
         await client.query(

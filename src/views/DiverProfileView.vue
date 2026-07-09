@@ -8,15 +8,15 @@ import { isValidPassword } from '@/lib/passwordPolicy'
 import { showSuccess } from '@/composables/useNotify'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
-// Migration 053 surfaces — self-delete + reunite-on-return.
+// Migration 053 surfaces: self-delete + reunite-on-return.
 import DeleteAccountDialog   from '@/components/DeleteAccountDialog.vue'
 import ClaimCandidatesModal  from '@/components/ClaimCandidatesModal.vue'
-// Preferences (own profile) — appearance + language, per the redesign.
+// Preferences (own profile): appearance + language, per the redesign.
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import { Palette, Languages } from '@lucide/vue'
 
-// Per-widget components — see src/components/profile-widgets/.
+// Per-widget components, see src/components/profile-widgets/.
 // Each takes a `data` prop (the relevant analytics / profile
 // slice) and renders its own .card block. Two of them also need
 // auxiliary props: RecentFormWidget wants targetId for the
@@ -48,8 +48,8 @@ const error = ref('')
 // on the page so the diver knows the data is being verified.
 const fromCache = ref(false)
 
-// Analytics payload — populated alongside the profile via a
-// separate /analytics call so the heavy aggregations don't block
+// Analytics payload, populated alongside the profile via a
+// seperate /analytics call so the heavy aggregations don't block
 // the main profile render.
 const analytics = ref(null)
 const analyticsLoading = ref(false)
@@ -183,7 +183,7 @@ function onDragEnd() {
   dragOverIndex.value = null
 }
 
-// Apply the date-range filter — re-fetches profile + analytics with
+// Apply the date-range filter: re-fetches profile + analytics with
 // the new query params. Triggered by the Apply button so a half-typed
 // date doesn't fire a request mid-keystroke.
 async function applyDateFilter() {
@@ -204,7 +204,7 @@ function dateQS() {
   return parts.length ? `?${parts.join('&')}` : ''
 }
 
-// Print / "save as PDF" — relies on the browser's print dialog and
+// Print / "save as PDF": relies on the browser's print dialog and
 // our @media print stylesheet, which hides headers, buttons, and
 // modals so the dashboard cards print cleanly across pages.
 function exportPDF() {
@@ -220,7 +220,7 @@ function exportPDF() {
   requestAnimationFrame(() => window.print())
 }
 
-// :id route param is optional — fall back to the logged-in user.
+// :id route param is optional, falls back to the logged-in user.
 const targetId = computed(() => route.params.id || auth.user?.id)
 const isSelf = computed(() => targetId.value && targetId.value === auth.user?.id)
 
@@ -250,7 +250,7 @@ function openPasswordEditor() {
 }
 
 // =============================================================
-// Email change — Migration 044.
+// Email change: Migration 044.
 //
 // Two-step flow: user confirms password + types a new email, we
 // POST to /api/users/me/email/change-request, server mails a
@@ -310,7 +310,7 @@ async function saveEmail() {
 }
 
 // =============================================================
-// 2FA — Two-Factor Auth setup / disable. Backed by:
+// 2FA: Two-Factor Auth setup / disable. Backed by:
 //   GET  /api/auth/2fa/status   { enabled, recovery_codes_remaining }
 //   POST /api/auth/2fa/setup    → { base32, otpauth_url, qr_data_url, recovery_codes[] }
 //   POST /api/auth/2fa/confirm  { code } → enables
@@ -324,7 +324,7 @@ async function saveEmail() {
 const tfaOpen   = ref(false)
 // Lock background scroll for every modal on this profile screen.
 // DeleteAccountDialog + ClaimCandidatesModal lock themselves via
-// their own useBodyScrollLock calls — the composable's reference
+// their own useBodyScrollLock calls, the composable's reference
 // counter means double-locking is safe.
 useBodyScrollLock().lockWhile(computed(() =>
   customizing.value || editing.value ||
@@ -353,8 +353,8 @@ function closeTfa() {
   tfaOpen.value = false
   tfaStage.value = 'idle'
   tfaError.value = ''
-  // Drop the secret if the user closed mid-setup — they'll get a
-  // fresh one on the next attempt.
+  // Drop the secret if the user closed mid-setup, no big deal,
+  // they'll get a fresh one on the next attempt.
   tfaSetup.value = null
 }
 async function refreshTfaStatus() {
@@ -509,7 +509,7 @@ async function load() {
   } finally {
     loading.value = false
   }
-  // Analytics in parallel — separate endpoint so it doesn't
+  // Analytics in parallel, separate endpoint so it doesn't
   // block the headline-stats / personal-bests / score-trend
   // render. Cached too, so a return visit feels instant.
   loadAnalytics()
@@ -584,7 +584,7 @@ async function saveClub() {
 }
 
 // =========================================================
-// Widget registry — maps each dashboard widget id to its Vue
+// Widget registry: maps each dashboard widget id to its Vue
 // component, plus how to look up the data slice + extra props
 // each component needs. The v-for in the template renders one
 // `<component :is>` per enabled id; this object is the routing
@@ -630,7 +630,7 @@ watch(targetId, load)
 // Account deletion + claim-past-results (Migration 053)
 //
 // Both flows live behind buttons in the danger zone at the
-// bottom of the page. Self-only — public visitors and other
+// bottom of the page. Self-only: public visitors and other
 // org members never see them.
 // --------------------------------------------------------------
 const router = useRouter()
@@ -655,10 +655,10 @@ async function onAccountDeleted() {
 }
 
 // Manual "Find past competition entries" entry point. Kicks
-// off a claim-candidates fetch — if the server returns >0
-// candidates, surface the modal; if zero, show a fleeting
-// "nothing found" notice instead so the user knows the button
-// did something.
+// off a claim-candidates fetch, and if the server returns >0
+// candidates we surface the modal; if zero, show a fleeting
+// "nothing found" notice instead so the user at least knows
+// the button did something.
 async function openClaimDialog() {
   if (!isSelf.value) return
   claimChecking.value = true
@@ -762,7 +762,7 @@ function onClaimed() {
     </div>
     <div v-else-if="error" class="msg msg-error">{{ error }}</div>
     <div v-else-if="profile" class="content">
-      <!-- Headline stats — always pinned to the top via order: -1 -->
+      <!-- Headline stats: always pinned to the top via order: -1 -->
       <div class="stats-row" :style="{ order: -1 }">
         <div class="stat">
           <div class="stat-num">{{ profile.stats.total_meets || 0 }}</div>
@@ -786,7 +786,7 @@ function onClaimed() {
         </div>
       </div>
 
-      <!-- Dashboard widgets — one component per id, in saved
+      <!-- Dashboard widgets: one component per id, in saved
            order. The wrapper carries the CSS `order` so drag-
            reorder still works without forcing every widget root
            to re-declare `:style`. Empty wrappers (e.g. StreakWidget
@@ -805,12 +805,12 @@ function onClaimed() {
       </div>
     </div>
 
-    <!-- Danger zone — self-delete + claim-past-results entry
+    <!-- Danger zone: self-delete + claim-past-results entry
          points. Self-only; never rendered for visitors viewing
          someone else's profile. Pinned to the bottom via a high
          CSS order so account-management actions stay below the
          analytics widgets even when widgets get reordered. -->
-    <!-- Preferences (own profile only) — appearance + language.
+    <!-- Preferences (own profile only): appearance + language.
          Surfaced here per the redesign; both controls persist
          globally (theme via the ui store, locale via vue-i18n). -->
     <section v-if="isSelf" class="pref-section" :style="{ order: 9000 }">
@@ -892,7 +892,7 @@ function onClaimed() {
     @claimed="onClaimed"
   />
 
-  <!-- Customize Dashboard modal — toggle on/off + drag-to-reorder.
+  <!-- Customize Dashboard modal: toggle on/off + drag-to-reorder.
        Order is taken from `customizeList`: enabled widgets first
        (in saved order), then disabled widgets. Dragging a row
        commits a new order through PUT /api/users/me/dashboard. -->
@@ -1004,7 +1004,7 @@ function onClaimed() {
     </div>
   </div>
 
-  <!-- Email change modal — Migration 044. -->
+  <!-- Email change modal: Migration 044. -->
   <div v-if="emEditing" class="modal-backdrop" @click.self="closeEmailEditor">
     <div class="modal">
       <div class="modal-head">
@@ -1051,7 +1051,7 @@ function onClaimed() {
     </div>
   </div>
 
-  <!-- Two-Factor Auth modal — three-stage state machine. -->
+  <!-- Two-Factor Auth modal: three-stage state machine. -->
   <div v-if="tfaOpen" class="modal-backdrop" @click.self="closeTfa">
     <div class="modal tfa-modal">
       <div class="modal-head">

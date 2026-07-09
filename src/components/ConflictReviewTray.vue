@@ -1,17 +1,17 @@
 <script setup>
 /* Client-side conflict review tray.
  *
- * Surfaces outbox entries that landed in the 'conflict' state —
- * the server's idempotency layer or domain logic returned 409
- * because a parallel write already changed the target. The
+ * Surfaces outbox entries that landed in the 'conflict' state,
+ * meaning the server's idempotency layer or domain logic returned
+ * 409 because a parallel write already changed the target. The
  * operator picks 'discard' (drop the local entry) or 'retry'
  * (flip back to pending, hoping the conflict was transient).
  *
  * In P4 this is the local-side counterpart to the late-arrival
- * tray. Conflicts here aren't deadline-driven — they're
+ * tray. Conflicts here aren't deadline-driven, they're
  * concurrency races (two operators editing the same dive list,
  * etc.). The accept_proposed / keep_existing path through
- * POST /api/conflicts/:id/resolve stays as a stub for now;
+ * POST /api/conflicts/:id/resolve stays as a stub for now,
  * P5 builds the server side that knows how to apply a winner.
  *
  * Renders nothing when there are no conflict-state entries.
@@ -52,8 +52,8 @@ async function decide(entry, choice) {
 
 function summariseEntry(entry) {
   const { action_type, payload } = entry
-  // submit_score has structured payload; HTTP entries have
-  // { method, url, body }. We try to render whichever shape the
+  // submit_score has a structured payload; HTTP entries have
+  // { method, url, body }. We just render whichever shape the
   // caller pushed.
   if (action_type === 'submit_score') {
     return `Score ${payload?.score} — round ${payload?.round_number}`

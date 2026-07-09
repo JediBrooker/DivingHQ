@@ -1,19 +1,18 @@
 -- =============================================================
--- MIGRATION 033 — score_audit_log actor index
+-- MIGRATION 033: score_audit_log actor index
 --
 -- The federation-wide /api/audit/scores endpoint (added with
--- the audit log view in 43128b5) supports filtering by actor —
--- "show me every score amendment user X has made". The
--- existing score_audit_log indexes cover (event_id, …),
+-- the audit log view in 43128b5) supports filtering by actor,
+-- basically "show me every score amendment user X has made".
+-- The existing score_audit_log indexes cover (event_id, …),
 -- competitor_id, judge_id, and created_at, but not actor.
 --
 -- Without this index, an actor-filtered query falls back to a
--- sequential scan + the existing event-id index, which is fine
--- for a few thousand rows but slows once a federation
--- accumulates a year of audit history. The role_audit_log and
--- audit_log tables already have analogous (actor_id,
--- created_at DESC) indexes; this brings score_audit_log into
--- line.
+-- sequential scan plus the existing event-id index. Fine for a
+-- few thousand rows but it slows down once a federation racks up
+-- a year of audit history. The role_audit_log and audit_log
+-- tables already have analogous (actor_id, created_at DESC)
+-- indexes, so this just brings score_audit_log into line.
 -- =============================================================
 
 BEGIN;

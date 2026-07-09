@@ -1,19 +1,19 @@
-// Group a meet's events into progression ROWS for the aligned grid.
+// Groups a meet's events into progression ROWS for the aligned grid.
 //
 // A row is one discipline (e.g. "Men's 3m Springboard"); its
-// progression stages — preliminary → semifinal → final, in
-// progression order — become the ordinal columns. A straight final
+// progression stages (preliminary → semifinal → final, in
+// progression order) become the ordinal columns. A straight final
 // is a single-stage row occupying the first column.
 //
 // Two source shapes feed this:
-//   * scoreboard — live `events` rows. Stages are linked
+//   * scoreboard: live `events` rows. Stages are linked
 //     STRUCTURALLY via parent_event_id and labelled by
 //     event_format, so grouping is reliable.
-//   * archive — DiveRecorder `dr_events` rows. There's no
+//   * archive: DiveRecorder `dr_events` rows. There's no
 //     structural link, only a `phase` string best-effort parsed
 //     from the event name, so we group by the discipline name
 //     (with the phase suffix stripped) and order by phase. Fuzzier
-//     by nature — a stray un-grouped stage is possible.
+//     by nature, so a stray un-grouped stage is possible.
 //
 // Both return { rows, maxCols } where each row is:
 //   { key, discipline, tags:[{text,cyan?}],
@@ -21,7 +21,7 @@
 // ordered first→last column, and maxCols is the widest row's stage
 // count (so the grid lines up across rows).
 
-// Progression order — lower rank = earlier stage = leftmost column.
+// Progression order: lower rank means earlier stage, leftmost column.
 const FORMAT_RANK = {
   preliminary: 0, super_final_h2h: 0,
   semifinal: 1,   super_final_semi: 1,
@@ -56,7 +56,7 @@ function phaseLabel(phase) {
   return p
 }
 
-// "Men's 3m Springboard — Final" → "Men's 3m Springboard". Straight
+// "Men's 3m Springboard - Final" → "Men's 3m Springboard". Straight
 // finals carry no suffix and pass through unchanged.
 function baseScoreboardName(name) {
   if (!name) return ''
@@ -173,7 +173,7 @@ export function groupArchiveEvents(events) {
       stages: g.evs.map(e => ({
         id: e.id,
         label: phaseLabel(e.phase),
-        status: null,                 // historical — no live/final badge
+        status: null,                 // historical, no live/final badge
         count: e.result_count || 0,
       })),
     })

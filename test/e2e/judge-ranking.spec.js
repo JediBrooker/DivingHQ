@@ -1,10 +1,10 @@
-// Judge Ranking Analysis — endpoint coverage.
+// Judge Ranking Analysis: endpoint coverage.
 //
 // What this test seeds
 // --------------------
 //   * 5 divers (D1..D5), 1 club apiece
 //   * 5 judges
-//   * 1 round, dive 101B @ 3m (DD 1.5 — that's what the seeded
+//   * 1 round, dive 101B @ 3m (DD 1.5, that's what the seeded
 //     dive_directory carries; verify with
 //     `SELECT dd FROM dive_directory WHERE dive_code='101' AND
 //      position='B' AND height=3.0`)
@@ -44,7 +44,7 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
 
   const { orgId, adminToken } = await setup.createOrgAndAdmin(request);
 
-  // 5-judge, 1-round individual event.
+  // 5-judge, 1-round individual event
   const event = await setup.createEvent(request, {
     adminToken,
     name: "E2E Judge Ranking",
@@ -54,8 +54,8 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
   });
 
   // 5 divers, each in their own club so the club_name column on the
-  // CSV / PDF has varied input. Country codes come off the org —
-  // every diver shares it here; the test asserts on rank not
+  // CSV / PDF has varied input. Country codes come off the org, so
+  // every diver shares it here, the test asserts on rank, not
   // country.
   const { clubId } = await setup.insertClub({
     orgId, name: "Ranking Club", shortCode: "RNK",
@@ -69,7 +69,7 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
     );
   }
 
-  // 5 judges.
+  // 5 judges
   const judges = [];
   for (let i = 1; i <= 5; i++) {
     judges.push(
@@ -98,7 +98,7 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
     });
   }
 
-  // Score matrix — rows are divers (D1..D5), columns are judges
+  // Score matrix: rows are divers (D1..D5), columns are judges
   // (J1..J5). See the table at the top of the file.
   const matrix = [
     [9.0, 8.0, 7.5, 9.0, 9.0],   // D1
@@ -127,14 +127,14 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
   expect(body.divers.length).toBe(5);
   for (const d of body.divers) expect(d.per_judge.length).toBe(5);
 
-  // Quick diver lookup by name (the seeded full_names are unique).
+  // quick diver lookup by name (the seeded full_names are unique)
   const byName = new Map(body.divers.map((d) => [d.full_name, d]));
   const d1 = byName.get("Ranking Diver 1");
   const d2 = byName.get("Ranking Diver 2");
   const d3 = byName.get("Ranking Diver 3");
   const d5 = byName.get("Ranking Diver 5");
 
-  // Actual standings: D1=1, D2=2, D3=3, D4=4, D5=5.
+  // actual standings: D1=1, D2=2, D3=3, D4=4, D5=5
   expect(d1.actual_rank).toBe(1);
   expect(d2.actual_rank).toBe(2);
   expect(d3.actual_rank).toBe(3);
@@ -143,33 +143,33 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
   expect(Number(d2.actual_total)).toBeCloseTo(36.0, 2);
   expect(Number(d5.actual_total)).toBeCloseTo(22.5, 2);
 
-  // Helper — pull diver D's row under judge J's hypothetical panel.
+  // helper: pull diver D's row under judge J's hypothetical panel
   const cell = (diver, jn) => diver.per_judge.find((p) => p.judge_number === jn);
 
   // J1 ranks D1 first. judge_total is the "if every kept judge
-  // scored like J1" total: J1 gave D1 a 9.0, so the kept 3-judge
-  // panel is [9,9,9] = 27 × DD 1.5 = 40.5.
+  // scored like J1" total, J1 gave D1 a 9.0, so the kept 3-judge
+  // panel is [9,9,9] = 27 x DD 1.5 = 40.5.
   expect(cell(d1, 1).rank).toBe(1);
   expect(Number(cell(d1, 1).judge_total)).toBeCloseTo(40.5, 2);
 
-  // J2 swaps D1 and D2 (J2 gave D2 a 9.0, D1 only 8.0).
+  // J2 swaps D1 and D2 (gave D2 a 9.0, D1 only 8.0)
   expect(cell(d1, 2).rank).toBe(2);
   expect(cell(d2, 2).rank).toBe(1);
 
-  // J3 swaps in D3 as the top diver (J3 gave D3 the 9.0).
+  // J3 swaps in D3 as the top diver (gave D3 the 9.0)
   expect(cell(d3, 3).rank).toBe(1);
   expect(cell(d1, 3).rank).toBe(2);
   expect(cell(d2, 3).rank).toBe(3);
 
-  // J4 + J5 agree with J1 — D1 first under both.
+  // J4 + J5 agree with J1, D1 first under both
   expect(cell(d1, 4).rank).toBe(1);
   expect(cell(d1, 5).rank).toBe(1);
 
-  // ---- per_dive_ranks: 5 judges × 5 divers × 1 round = 25 entries.
+  // ---- per_dive_ranks: 5 judges x 5 divers x 1 round = 25 entries
   expect(Object.keys(body.per_dive_ranks).length).toBe(25);
 
-  // J3:D3:1 — rank 1 of 5 in round 1 (J3 gave D3 a 9.0, the
-  // highest single-judge dive points in that round).
+  // J3:D3:1, rank 1 of 5 in round 1 (J3 gave D3 a 9.0, the
+  // highest single-judge dive points in that round)
   const j3Row = body.judges.find((j) => j.judge_number === 3);
   const probeKey = `${j3Row.judge_id}:${d3.competitor_id}:1`;
   expect(body.per_dive_ranks[probeKey]).toBeDefined();
@@ -177,21 +177,21 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
   expect(body.per_dive_ranks[probeKey].total_in_round).toBe(5);
   expect(Number(body.per_dive_ranks[probeKey].judge_dive_points)).toBeCloseTo(13.5, 2);
 
-  // ---- CSV ----
+  // ---- CSV export ----
   const csv = await request.get(`/api/events/${event.id}/judge-ranking-analysis.csv`);
   expect(csv.status()).toBe(200);
   expect(csv.headers()["content-type"]).toMatch(/text\/csv/);
   const csvText = await csv.text();
   const lines = csvText.trim().split(/\r?\n/);
-  // 1 header + 5 diver rows
+  // 1 header row + 5 diver rows
   expect(lines.length).toBe(6);
-  // Header carries Actual rank/total + J1..J5 rank/total columns.
+  // header carries Actual rank/total + J1..J5 rank/total columns
   expect(lines[0]).toContain("diver");
   expect(lines[0]).toContain("actual_rank");
   expect(lines[0]).toContain("J1_rank");
   expect(lines[0]).toContain("J5_total");
 
-  // ---- PDF ----
+  // ---- PDF export ----
   const pdf = await request.get(`/api/events/${event.id}/judge-ranking-analysis.pdf`);
   expect(pdf.status()).toBe(200);
   expect(pdf.headers()["content-type"]).toMatch(/application\/pdf/);
@@ -199,13 +199,14 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
   expect(pdfBuf.length).toBeGreaterThan(1024);
 
   // ---- Synchro pair-shape ----
-  // The v1-limit "synchro returns 400" was removed — synchro pairs
-  // are now first-class. We don't seed scores here (creating a
-  // realistic synchro panel is heavy and covered by the existing
-  // scoring/synchro specs); we just verify the endpoint accepts
-  // the event and returns the expected event_type + (possibly
-  // empty) divers array. A fully-scored synchro fixture would be
-  // ideal but isn't necessary to lock the contract change.
+  // The old v1 limit ("synchro returns 400") was removed, synchro
+  // pairs are now first-class. We don't seed scores here since
+  // building a realistic synchro panel is heavy and already covered
+  // by the existing scoring/synchro specs. Just verifying the
+  // endpoint accepts the event and returns the expected event_type
+  // plus a (possibly empty) divers array is enough. A fully-scored
+  // synchro fixture would be nice to have but isn't necessary to
+  // lock down the contract change.
   const synchroEvent = await setup.createEvent(request, {
     adminToken,
     name: "E2E Synchro Shape",
@@ -223,7 +224,7 @@ test("judge-ranking-analysis: math + CSV + PDF + synchro pair-shape", async ({ r
   expect(Array.isArray(synchroBody.divers)).toBe(true);
   expect(Array.isArray(synchroBody.judges)).toBe(true);
 
-  // Cleanup so re-runs are idempotent.
+  // cleanup so re-runs stay idempotent
   await setup.deleteOrg(orgId);
 });
 
@@ -295,11 +296,11 @@ test("Scoreboard recap renders the Judge Ranking Analysis section", async ({
   });
 
   await page.goto(`${baseURL}/scoreboard/${event.id}`);
-  // The recap card's header (toggle) is visible immediately;
-  // the matrix itself is mounted lazily so opening the section
-  // is a zero-network-call expansion (the parent has already
-  // eager-fetched the payload to feed chip tooltips). Click to
-  // expand, assert the matrix renders.
+  // The recap card's header (toggle) is visible immediately.
+  // The matrix itself is mounted lazily, so opening the section
+  // is a zero-network-call expansion (the parent already
+  // eager-fetched the payload to feed the chip tooltips). Click to
+  // expand and assert the matrix renders.
   const toggle = page.locator("button.jra-toggle", {
     hasText: "Judge Ranking Analysis",
   });

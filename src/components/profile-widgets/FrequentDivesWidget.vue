@@ -1,7 +1,7 @@
 <script setup>
 defineProps({
   // Array of { dive_code, position, height, attempts, avg_score,
-  // best_score }. From analytics.frequent_dives.
+  // best_score }, from analytics.frequent_dives.
   data: { type: Array, default: () => [] },
 })
 </script>
@@ -39,9 +39,9 @@ defineProps({
 
 <style src="./widget-shared.css"></style>
 <style scoped>
-/* Same scroll wrap as PersonalBests — 6 columns fit at 360px
-   only because every cell except the code is short, but the
-   "Attempts" header still overflows on narrowest phones. */
+/* Same scroll wrap as PersonalBests, 6 columns fit at 360px
+   only because every cell except the code is short. Heads up,
+   the "Attempts" header still overflows on the narrowest phones. */
 .pb-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 @media (max-width: 600px) {
   .pb-scroll .pb-table { min-width: 400px; }

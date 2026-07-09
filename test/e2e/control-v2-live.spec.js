@@ -110,8 +110,8 @@ test("auto-advance: set Auto-next to 5s; a full panel arms a countdown that adva
   });
   await expect(page.locator(".cv2-autopill")).toBeVisible({ timeout: 6_000 });
 
-  // The countdown fires on its own and advances the focused pool's cursor
-  // -- no operator click.
+  // The countdown fires on its own and advances the focused pool's cursor,
+  // no operator click needed.
   await expect(page.locator(".cv2-live-diver")).toContainText("ZZZ Diver", { timeout: 12_000 });
 });
 

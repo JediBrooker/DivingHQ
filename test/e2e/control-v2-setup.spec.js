@@ -1,6 +1,6 @@
-// P7.1: ControlViewV2 Setup mode. Flag-on only. An Upcoming event shows
+// P7.1: ControlViewV2 Setup mode, flag-on only. An Upcoming event shows
 // the pre-meet readiness checklist (what's blocking go-live) from the
-// server's canonical readiness -- the four-question BLOCKERS made
+// server's canonical readiness, so the four-question BLOCKERS are made
 // visible up front instead of buried in a stepper.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
@@ -29,11 +29,11 @@ test("an Upcoming event shows the pre-meet readiness checklist", async ({ reques
   await page.waitForLoadState("networkidle");
   await setup.selectControlEvent(page, "Setup Event");
 
-  // Upcoming -> Setup mode.
+  // Upcoming -> Setup mode
   await expect(page.locator('.cv2-mode[aria-label="Setup"]')).toBeVisible();
-  // The 6-core readiness checklist renders.
+  // all 6 readiness steps should render
   await expect(page.locator(".setup-step")).toHaveCount(6);
   await expect(page.locator(".setup-checklist")).toContainText("Roster has competitors");
-  // A fresh event (no roster) is blocked.
+  // a fresh event with no roster yet should be blocked
   await expect(page.locator(".setup-status.is-blocked")).toBeVisible();
 });

@@ -31,21 +31,22 @@ const events = ref([])
 const meets = ref([])
 const formErr = ref('')
 const editErr = ref('')
-// Single composable instance, used to lock the body whenever
-// any of this view's many modals is open. iOS Safari otherwise
-// lets the user drag the page underneath. lockWhile is called
-// next to each modal ref's declaration so the locking stays
-// colocated with the modal logic; the composable's reference
-// counter handles the nested-lock case (e.g. editing an event
-// while a confirm dialog is also open).
+// One composable instance locks the body whenever any of this
+// view's modals is open. iOS Safari otherwise lets you drag the
+// page around underneath. lockWhile gets called right next to
+// each modal ref's declaration so the locking logic stays
+// colocated; the composable's ref counter handles the nested-lock
+// case fine (e.g. editing an event while a confirm dialog is also
+// open).
 const scrollLock = useBodyScrollLock()
 
 const showCreateModal = ref(false)     // New Event form lives in a modal
-// P10 Cluster 1: the create-event form is an in-panel StageStep wizard
+// P10 Cluster 1: create-event form is an in-panel StageStep wizard
 // (Details -> Rounds -> Structure -> Schedule & rules -> Review). Steps
-// are v-show panels so every field stays mounted (createEvent reads them
-// all on submit); navigation is free (Next/Back never gated) and the
-// only required-field check is a JS guard that jumps back to the step.
+// are v-show panels so every field stays mounted (createEvent reads
+// them all on submit). Navigation is free, Next/Back never gated, and
+// the only required-field check is a JS guard that jumps back to the
+// right step.
 const CREATE_STEPS = ['Details', 'Rounds', 'Structure', 'Schedule & rules', 'Review']
 const createStep = ref(0)
 const lastCreateStep = CREATE_STEPS.length - 1
@@ -67,23 +68,23 @@ const createGender = ref('Female')
 const createHeight = ref('')
 const createJudges = ref(5)
 const createType = ref('individual')
-const createMeetId = ref('')           // optional — bundle this event into a meet
+const createMeetId = ref('')           // optional, bundle this event into a meet
 
-// Migration 039: operator-prescribed round dives. The "Number of
-// Rounds" dropdown is gone; total rounds is derived from this
-// array's length. Each entry: { dive_id|null, height|null }.
-// The full editor (add/remove rows, dive-picker autocomplete,
-// per-slot height override) lives in <RoundDivesEditor>; the
-// array itself stays here so submit-time code paths and template
-// hydration keep working untouched.
+// Migration 039: operator-prescribed round dives. The old "Number
+// of Rounds" dropdown is gone, total rounds is derived from this
+// array's length now. Each entry: { dive_id|null, height|null }.
+// Full editor (add/remove rows, dive-picker autocomplete, per-slot
+// height override) lives in <RoundDivesEditor>; the array itself
+// stays here so submit-time code paths and template hydration
+// keep working untouched.
 const createRoundDives = ref([])
 // Derived total rounds. Existing template/code referencing
 // `createRounds` keeps working without churn.
 const createRounds = computed(() => createRoundDives.value.length)
 
-// Dive directory — loaded once on mount and passed into BOTH
+// Dive directory: loaded once on mount and passed into BOTH
 // <RoundDivesEditor> instances (Create + Edit modals) as a prop.
-// The editor owns the per-row autocomplete UI; this view just
+// The editor owns the per-row autocomplete UI, this view just
 // hands it the data and forwards "new dive" requests to the
 // sub-modal below.
 const diveDirectory = ref([])
@@ -110,15 +111,14 @@ async function loadDiveDirectory() {
 const createRoundDivesEditor = ref(null)
 const editRoundDivesEditor   = ref(null)
 
-// "Add new dive" sub-modal — POSTs to /api/dive-directory and,
-// on success, drops the new dive into the row that opened the
-// picker. The editor emits `request-new-dive` ({ rowIdx }); we
-// stash which editor asked + which row, open the modal, and on
-// submit replay back into the editor via its exposed
-// `applyDiveAtRow`.
+// "Add new dive" sub-modal: POSTs to /api/dive-directory and, on
+// success, drops the new dive into the row that opened the picker.
+// The editor emits `request-new-dive` ({ rowIdx }), we stash which
+// editor asked and which row, open the modal, and on submit replay
+// back into the editor via its exposed `applyDiveAtRow`.
 const showCreateDiveModal = ref(false)
 scrollLock.lockWhile(showCreateDiveModal)
-const newDiveCtx          = ref(null)   // 'create' | 'edit' — which editor asked
+const newDiveCtx          = ref(null)   // 'create' | 'edit', which editor asked
 const newDiveRowIdx       = ref(-1)
 const newDiveCode = ref('')
 const newDiveHeight = ref('1m')
@@ -186,7 +186,7 @@ async function submitCreateDive() {
 }
 
 // Migration 031: sign-off policy + multi-board flag.
-const createEnforceSignoff = ref(false) // hard gate — push or credential only
+const createEnforceSignoff = ref(false) // hard gate, push or credential only
 const createMixedHeight    = ref(false) // event spans multiple boards
 const createIsRehearsal    = ref(false) // dry-run: no public archive / records / emails
 // Help-popover toggles
@@ -197,15 +197,15 @@ const showMixedHeightHelp = ref(false)
 // format (final / preliminary), prelim/final link, advance count,
 // per-round DD limits.
 //
-// Age group / division is a single dropdown using <optgroup>
-// for visual grouping — every option is reachable in a single
-// click. The composite value space:
+// Age group / division is a single dropdown using <optgroup> for
+// visual grouping, every option is reachable in a single click. The
+// composite value space:
 //
 //   ''             → un-bracketed (historical default)
 //   'junior:A'     → "Junior Group A"  (16-18, WA Article 13.2.2)
 //   'junior:B'     → "Junior Group B"  (14-15, WA Article 13.2.1)
 //   'junior:C'     → "Junior Group C"  (12-13, WA Article 13.3.1)
-//   'junior:D'     → "Junior Group D"  (11 and under — extends WA
+//   'junior:D'     → "Junior Group D"  (11 and under, extends the WA
 //                                       scheme down per common
 //                                       national-federation usage)
 //   'age:masters'  → "Masters" (+ free-text suffix)
@@ -213,20 +213,20 @@ const showMixedHeightHelp = ref(false)
 //   'other'        → free text
 //
 // The dropdown shows the age range alongside the WA group letter
-// ("Group D — 11 and under") so the operator picks once and the
+// ("Group D, 11 and under") so the operator picks once and the
 // mapping is visible. Stored format stays "Junior Group X" for
 // backward compatibility with existing events.
 //
-// composeAgeGroup retains support for the legacy 'age:11_under',
+// composeAgeGroup still supports the legacy 'age:11_under',
 // 'age:12_13', 'age:14_15', 'age:16_18' choice values so any
-// programmatic caller that hasn't migrated keeps working;
+// programmatic caller that hasn't migrated keeps working.
 // decomposeAgeGroup auto-maps the same legacy stored strings
 // ("11 and under" etc.) into the new junior:* selections so the
 // Edit modal shows the right WA Group when an old event is opened.
 //
-// The sub-inputs (Masters range, Other custom) only render
-// when the matching option is picked. Composed into the
-// existing events.age_group VARCHAR(40) on submit.
+// Sub-inputs (Masters range, Other custom) only render when the
+// matching option is picked. Gets composed into the existing
+// events.age_group VARCHAR(40) on submit.
 const createAgeChoice  = ref('')
 const createAgeMasters = ref('')
 const createAgeOther   = ref('')
@@ -251,19 +251,18 @@ function composeAgeGroup({ choice, masters, other }) {
   if (junior) return `Junior Group ${junior[1]}`
   return ''
 }
-// Reverse-decompose a stored age_group string back into the
-// dropdown selection so the Edit modal can hydrate. Best-effort
-// — anything unrecognised falls into 'other' with the original
-// text preserved.
+// Reverse-decompose a stored age_group string back into the dropdown
+// selection so the Edit modal can hydrate. Best-effort, anything
+// unrecognised falls into 'other' with the original text preserved.
 function decomposeAgeGroup(value) {
   const v = (value || '').trim()
   if (!v)                   return { choice: '',             masters: '', other: '' }
   // Legacy numeric-range stored values map onto their WA Junior
   // Group equivalents so the Edit modal lights up the right
-  // dropdown row when an old event is opened. Article 13 anchors
+  // dropdown row when an old event gets opened. Article 13 anchors
   // A=16-18, B=14-15, C=12-13; D=11-and-under is a national-
   // federation extension that mirrors the WA naming convention
-  // (see Diving Australia / USA Diving etc.).
+  // (see Diving Australia / USA Diving etc).
   if (v === '11 and under') return { choice: 'junior:D',     masters: '', other: '' }
   if (v === '12/13')        return { choice: 'junior:C',     masters: '', other: '' }
   if (v === '14/15')        return { choice: 'junior:B',     masters: '', other: '' }
@@ -283,17 +282,17 @@ const createAdvanceCount = ref(12)      // World Aquatics standard
 const createDdLimitRounds = ref(0)      // 0 = no limit
 const createDdLimitValue  = ref('')     // '' = no limit; numeric otherwise
 
-// Round structure (migration 038). Empty array = legacy
-// behaviour (use the dd_limit_* pair above). Populated = a list
-// of sections, each with its own DD cap + min-distinct-groups
-// rule. Mirrors real-world World Aquatics / Diving Australia bulletins —
-// e.g. "4 dives @ 7.6 from 4 different groups + 4 dives unlimited
-// from 4 different groups" → two sections with rounds=4 each,
-// dd_limit=7.6 and null, min_distinct_groups=4 on both.
+// Round structure (migration 038). Empty array = legacy behaviour
+// (use the dd_limit_* pair above). Populated = a list of sections,
+// each with its own DD cap plus a min-distinct-groups rule. Mirrors
+// real-world World Aquatics / Diving Australia bulletins, e.g. "4
+// dives @ 7.6 from 4 different groups + 4 dives unlimited from 4
+// different groups" → two sections with rounds=4 each, dd_limit=7.6
+// and null, min_distinct_groups=4 on both.
 //
-// min_distinct_groups is independent of rounds, so an operator
-// can also express "5 dives drawn from 4 different groups" (one
-// group is allowed to repeat) or "1 dive from any group" (leave
+// min_distinct_groups is independent of rounds, so an operator can
+// also express "5 dives drawn from 4 different groups" (one group
+// is allowed to repeat) or "1 dive from any group" (leave
 // min_distinct_groups blank).
 const createRoundSections = ref([])
 function addRoundSection(preset) {
@@ -329,8 +328,8 @@ function buildRoundRulesPayload() {
   }
 }
 
-// Event templates — saved form configurations the manager can
-// apply to a fresh event with one click.
+// Event templates: saved form configurations the manager can apply
+// to a fresh event with one click.
 const eventTemplates = ref([])
 const saveTemplateOpen = ref(false)
 const saveTemplateName = ref('')
@@ -347,9 +346,9 @@ async function loadEventTemplates() {
 
 function applyEventTemplate(t) {
   const c = t.config || {}
-  // Name is intentionally NOT pulled in — the saved name is
-  // usually a season-specific label that the manager wants to
-  // re-write for the new event. Everything else fills.
+  // Name is intentionally NOT pulled in, the saved name is usually a
+  // season-specific label the manager wants to rewrite for the new
+  // event. Everything else fills in though.
   if (c.gender)            createGender.value = c.gender
   if (c.height !== undefined) createHeight.value = c.height || ''
   if (c.number_of_judges)  createJudges.value = c.number_of_judges
@@ -389,7 +388,7 @@ function applyEventTemplate(t) {
     createRoundSections.value = []
   }
   // Hydrate prescribed round dives if the template specifies any.
-  // Most standard templates leave them blank — operator pins per
+  // Most standard templates leave them blank, operator pins per
   // event. Length seeds free slots if total_rounds is set so the
   // editor reflects the round count.
   if (Array.isArray(c.round_dives) && c.round_dives.length) {
@@ -408,7 +407,7 @@ function applyEventTemplate(t) {
 
 // Standard / "WA-aligned" templates surfaced in the modal. Filtered
 // live by the operator's current Gender + Age Group so the strip
-// only shows applicable rule shapes. Collapsed by default — the
+// only shows applicable rule shapes. Collapsed by default, the
 // summary line shows the match count and expands on click so the
 // strip doesn't dominate the top of the modal.
 const suggestedStandardTemplates = computed(() =>
@@ -436,10 +435,10 @@ async function saveAsEventTemplate() {
   }
   saveTemplateBusy.value = true
   try {
-    // Build the config snapshot from the current form state.
-    // event-specific fields like meet_id and parent_event_id are
-    // intentionally excluded — a template should be re-usable
-    // across meets.
+    // Build the config snapshot from the current form state. Event-
+    // specific fields like meet_id and parent_event_id are
+    // intentionally excluded, a template should be reusable across
+    // meets.
     const config = {
       gender: createGender.value,
       height: createHeight.value || null,
@@ -489,18 +488,18 @@ async function deleteEventTemplate(t) {
   }
 }
 
-// Stage-progression modal — opens when the operator clicks
-// "Advance to next stage →" on a Completed prelim/semifinal row.
-// Preview/topN/reserves/dive-order state and the confirm handler
-// live in <AdvanceStageModal>; v-if mount re-fetches the preview
-// per open. Non-null = open. The scroll lock stays here so it
-// sits beside the other modal locks.
+// Stage-progression modal, opens when the operator clicks "Advance
+// to next stage →" on a Completed prelim/semifinal row. Preview/
+// topN/reserves/dive-order state and the confirm handler live in
+// <AdvanceStageModal>; v-if mount re-fetches the preview per open.
+// Non-null = open. The scroll lock stays here so it sits beside the
+// other modal locks.
 const advanceModalEvent = ref(null)
 scrollLock.lockWhile(computed(() => !!advanceModalEvent.value))
 
-// True if some other event in the visible list points at `ev` as
-// its parent_event_id. Gates the row button — the modal itself
-// re-checks via the server preview.
+// True if some other event in the visible list points at `ev` as its
+// parent_event_id. Gates the row button, the modal itself re-checks
+// via the server preview.
 function eventHasNextStage(ev) {
   return events.value.some(other => other.parent_event_id === ev.id)
 }
@@ -509,21 +508,20 @@ function openAdvanceModal(ev) {
   advanceModalEvent.value = ev
 }
 
-// Super Final modals (DWC 2026 Appendix 3) — five dialogs that
-// drive the H2H → Semi → Final → Rankings flow. All state and
-// handlers live in src/components/manager/SuperFinalModals.vue;
-// the template ref below lets the event-row buttons reach into
-// the component's exposed openers. The component emits
-// `refresh-events` after a successful seed so we reload the
-// event list.
+// Super Final modals (DWC 2026 Appendix 3): five dialogs that drive
+// the H2H → Semi → Final → Rankings flow. All state and handlers
+// live in src/components/manager/SuperFinalModals.vue; the template
+// ref below lets the event-row buttons reach into the component's
+// exposed openers. Component emits `refresh-events` after a
+// successful seed so we reload the event list.
 //
 // Source of truth for the format: docs/2026.03.05-…-Super-
 // Final…pdf Appendix 3 (committed alongside this view).
 const superFinalModals = ref(null)
 
-// Meet management — separate from event create/edit. A meet is
-// a bundle of events; org admins create them here so events
-// can be filed under e.g. "2026 National Open".
+// Meet management: separate from event create/edit. A meet is a
+// bundle of events, org admins create them here so events can be
+// filed under e.g. "2026 National Open".
 const meetForm = ref({
   name: '', venue: '', start_date: '', end_date: '',
 })
@@ -535,16 +533,16 @@ const meetFormErr = ref('')
 // without re-fetching.
 const orgFilter = ref('')
 
-// Free-text search over the events list — matches event name,
-// venue name (when present), age group, and the linked meet
-// name. Pure client-side; the events array is already in
-// memory after the initial /api/events fetch.
+// Free-text search over the events list, matches event name, venue
+// name (when present), age group, and the linked meet name. Pure
+// client-side since the events array is already in memory after the
+// initial /api/events fetch.
 const eventSearch = ref('')
 
-// Status filter chips — null = "show all", or one of the event
-// status values. Lets an operator focus on whatever lifecycle
-// stage they're currently working on (live runs first, post-
-// meet recap browsing second, etc.).
+// Status filter chips: null = "show all", or one of the event
+// status values. Lets an operator focus on whatever lifecycle stage
+// they're currently working on (live runs first, post-meet recap
+// browsing second, etc).
 const eventStatusFilter = ref(null)
 const STATUS_CHIPS = [
   { value: null,        label: 'All' },
@@ -618,7 +616,7 @@ const filteredManagerEvents = computed(() => {
 // =============================================================
 const selectedMeetId = ref('')
 
-// Events with no meet attribution — drives the rail's "Ungrouped
+// Events with no meet attribution, drives the rail's "Ungrouped
 // events" count badge.
 const ungroupedCount = computed(() =>
   events.value.filter(e => !e.meet_id).length,
@@ -660,11 +658,11 @@ const allEventsCount = computed(() =>
 
 // =============================================================
 // Accordion layout. The page is a vertical list of collapsible
-// sections — "All events", one per meet, then "Ungrouped". Only
-// one expands at a time; expanding it reveals that selection's
-// event list inline. `expandedMeetId` drives open/closed (null =
+// sections: "All events", one per meet, then "Ungrouped". Only one
+// expands at a time; expanding it reveals that selection's event
+// list inline. `expandedMeetId` drives open/closed (null =
 // everything collapsed, the default so the page opens as a clean
-// meet list); toggleSection also mirrors the key into
+// meet list). toggleSection also mirrors the key into
 // `selectedMeetId` so the existing selectedMeet / displayedEvents
 // computeds resolve to the open section.
 // =============================================================
@@ -726,12 +724,12 @@ function formatMeetDates(meet) {
   const fmt = (d) => {
     if (!d) return ''
     const str = String(d)
-    // A bare YYYY-MM-DD is pinned to local noon so it doesn't roll
-    // back a day in negative-offset zones. A full timestamp (what
-    // the API returns) is parsed as-is and converted to the local
-    // date by toLocaleDateString — slicing its date portion would
-    // show the UTC day, off by one from the local date the user
-    // entered.
+    // Watch out: a bare YYYY-MM-DD is pinned to local noon so it
+    // doesn't roll back a day in negative-offset zones. A full
+    // timestamp (what the API returns) is parsed as-is and converted
+    // to the local date by toLocaleDateString, slicing its date
+    // portion would show the UTC day, off by one from the local date
+    // the user entered.
     const parsed = /^\d{4}-\d{2}-\d{2}$/.test(str)
       ? new Date(`${str}T12:00:00`)
       : new Date(str)
@@ -786,7 +784,7 @@ const editEntriesCloseAt = ref('')   // datetime-local string, '' = no deadline
 const editEnforceSignoff = ref(false)
 const editMixedHeight    = ref(false)
 const editIsRehearsal    = ref(false)
-// Structured age group — same shape as the Create form.
+// Structured age group, same shape as the Create form.
 const editAgeChoice  = ref('')
 const editAgeMasters = ref('')
 const editAgeOther   = ref('')
@@ -800,12 +798,12 @@ const editAgeGroup   = computed(() => composeAgeGroup({
 // / "14/15" / "16-18" into their WA Junior Group equivalents
 // (junior:D / junior:C / junior:B / junior:A). When the operator
 // opens such an event in the Edit modal and saves, composeAgeGroup
-// would silently rewrite the column to "Junior Group D" — a quiet
+// would silently rewrite the column to "Junior Group D", a quiet
 // data migration that could break any downstream report filtering
-// on the legacy text. Capture the original column value when the
-// modal opens; show a warning if the composed value differs so
-// the operator knows the format is about to change AND can opt
-// to keep the legacy string instead.
+// on the legacy text. So we capture the original column value when
+// the modal opens, and show a warning if the composed value differs
+// so the operator knows the format's about to change and can opt to
+// keep the legacy string instead.
 const editAgeOriginal = ref('')   // the events.age_group as stored on open
 const editAgeKeepLegacy = ref(false)  // operator opts to preserve legacy string
 const editAgeWasLegacy = computed(() =>
@@ -817,12 +815,12 @@ const editAgeWouldRewrite = computed(() =>
   && editAgeGroup.value !== editAgeOriginal.value,
 )
 // Migration 039: prescribed round dives mirrored into the Edit
-// modal. Same shape as createRoundDives — each entry is
+// modal. Same shape as createRoundDives, each entry is
 // { dive_id|null, height|null, _label, _meta }.
 const editRoundDives    = ref([])
 const editRounds        = computed(() => editRoundDives.value.length)
 // Migration 038: round structure (sections). Edit modal previously
-// couldn't touch round_rules at all — fixed here.
+// couldn't touch round_rules at all, fixed that here.
 const editRoundSections = ref([])
 function addEditRoundSection() {
   editRoundSections.value.push({
@@ -853,23 +851,23 @@ function buildEditRoundRulesPayload() {
     })),
   }
 }
-// Team enrolment modal — open when "Teams" clicked on a team-event
-// row. Lists + busy state live in <TeamsEnrolmentModal>; v-if
-// mount re-fetches per open. Non-null = open.
+// Team enrolment modal, opens when "Teams" is clicked on a
+// team-event row. Lists + busy state live in <TeamsEnrolmentModal>;
+// v-if mount re-fetches per open. Non-null = open.
 const teamsModalEvent = ref(null)
 
-// Participating-orgs modal — open when "Federations" clicked on
+// Participating-orgs modal: opens when "Federations" is clicked on
 // any event row by an org admin. Lists OTHER federations whose
 // divers can self-enter the event. All list/invite state lives in
-// <ParticipatingOrgsModal>; v-if mount re-fetches per open.
-// Non-null = open. The component emits `count-changed` so the
-// row's 🌐 chip stays in sync (see bumpParticipatingCount).
+// <ParticipatingOrgsModal>; v-if mount re-fetches per open. Non-null
+// = open. Component emits `count-changed` so the row's International
+// chip stays in sync (see bumpParticipatingCount).
 const partOrgsModalEvent = ref(null)
 
-// Roster import modal — opened from the per-event "Import
-// Roster" button. All CSV / preview / import state and handlers
-// live in <RosterImportModal>; v-if mount means every open
-// starts from a blank CSV. Non-null = open.
+// Roster import modal, opened from the per-event "Import Roster"
+// button. All CSV / preview / import state and handlers live in
+// <RosterImportModal>; v-if mount means every open starts from a
+// blank CSV. Non-null = open.
 const rosterModalEvent = ref(null)
 
 function openRosterImport(ev) {
@@ -877,7 +875,7 @@ function openRosterImport(ev) {
 }
 
 const HEIGHT_LABELS = {
-  // 0m is the poolside / pool-deck progression — sit-dives, kneel-
+  // 0m is the poolside / pool-deck progression: sit-dives, kneel-
   // dives, standing falls. Surfaces in the same height select the
   // 1m..10m boards use so a coach can run a beginner session in
   // DivingHQ without faking a 1m event.
@@ -951,20 +949,20 @@ async function createMeet() {
 }
 
 // =============================================================
-// Edit Meet — sponsor branding + the meet's core fields. The
+// Edit Meet: sponsor branding plus the meet's core fields. The
 // editable form copy / save handler / sponsor-logos manager all
 // live in <EditMeetModal>; this view fetches the full meet row
-// first (the org meets list lacks description + sponsor fields)
-// and only opens the dialog once that succeeds. Non-null = open:
+// first (the org meets list lacks description + sponsor fields) and
+// only opens the dialog once that succeeds. Non-null = open:
 // { id, form }.
 // =============================================================
 const editingMeet = ref(null)
 scrollLock.lockWhile(computed(() => !!editingMeet.value))
 
-// Meet readiness report — fetch/CSV-export state and handlers
-// live in <MeetReadinessModal>; v-if mount re-fetches per open.
-// Non-null = open. The scroll lock stays here so it sits beside
-// the other modal locks.
+// Meet readiness report: fetch/CSV-export state and handlers live
+// in <MeetReadinessModal>; v-if mount re-fetches per open. Non-null
+// = open. The scroll lock stays here so it sits beside the other
+// modal locks.
 const readinessMeet = ref(null)
 scrollLock.lockWhile(computed(() => !!readinessMeet.value))
 
@@ -1032,9 +1030,10 @@ async function assignEventToMeet(event, meetId) {
 
 async function createEvent() {
   formErr.value = ''
-  // Name is required — validated here (not via the native attribute) so a
-  // field hidden in another wizard step can't trap submit focus. Jump the
-  // wizard to the step holding each invalid field so the operator sees it.
+  // Name is required, validated here (not via the native attribute)
+  // so a field hidden in another wizard step can't trap submit
+  // focus. We jump the wizard to the step holding each invalid field
+  // so the operator actually sees it.
   if (!createName.value.trim()) {
     formErr.value = 'Give the event a name'
     createStep.value = 0
@@ -1057,17 +1056,17 @@ async function createEvent() {
       body: JSON.stringify({
         name: createName.value,
         gender: createGender.value,
-        // Mixed-board events leave the height column NULL — the
-        // server does the same coercion server-side, but pre-
-        // emptively clearing it here means the dive picker that
+        // Mixed-board events leave the height column NULL. Server
+        // does the same coercion server-side, but clearing it here
+        // too (kinda belt-and-braces) means the dive picker that
         // reads form state during validation doesn't see a stale
         // height pinned in.
         height: createMixedHeight.value ? null : (createHeight.value || null),
         number_of_judges: parseInt(createJudges.value),
         // total_rounds is now derived server-side from round_dives
-        // length. Send it anyway so legacy code paths (no slots)
-        // still work — the server prefers round_dives when both
-        // are present.
+        // length. We send it anyway so legacy code paths (no slots)
+        // still work, the server prefers round_dives when both are
+        // present.
         total_rounds: createRoundDives.value.length,
         round_dives: createRoundDives.value.map((slot, i) => ({
           round_number: i + 1,
@@ -1082,9 +1081,9 @@ async function createEvent() {
         scheduled_at: createScheduledAt.value || null,
         entries_close_at: createEntriesCloseAt.value || null,
         event_format: createFormat.value,
-        // Parent link is meaningful for downstream stages —
-        // semifinals always feed from a preliminary; finals may
-        // feed from either (or none, when standalone).
+        // Parent link matters for downstream stages: semifinals
+        // always feed from a preliminary, finals may feed from
+        // either (or none, when standalone).
         parent_event_id: createFormat.value !== 'preliminary' && createParentEventId.value
           ? createParentEventId.value
           : null,
@@ -1149,7 +1148,7 @@ async function openEdit(ev) {
   editAgeOther.value   = ageParts.other
   // entries_close_at comes back as an ISO string from the server.
   // <input type="datetime-local"> wants 'YYYY-MM-DDTHH:mm' in local
-  // time, no zone, no seconds — so format it for display.
+  // time, no zone, no seconds, so format it for display.
   if (ev.entries_close_at) {
     const d = new Date(ev.entries_close_at)
     const pad = (n) => String(n).padStart(2, '0')
@@ -1194,8 +1193,9 @@ async function openEdit(ev) {
         } : null,
       }))
     } else {
-      // No prescribed rows yet — synthesise free slots matching
-      // the event's stored total_rounds so the editor isn't empty.
+      // No prescribed rows yet, so synthesise free slots matching
+      // the event's stored total_rounds, otherwise the editor's
+      // empty.
       const n = ev.total_rounds || 0
       editRoundDives.value = Array.from({ length: n }, () => ({
         dive_id: null, height: null, _label: '', _meta: null,
@@ -1233,10 +1233,10 @@ async function saveEdit() {
           editAgeKeepLegacy.value && editAgeWasLegacy.value
             ? editAgeOriginal.value
             : (editAgeGroup.value || null),
-        // Send '' as null so the server clears the deadline; an
-        // ISO string sets it. Server treats undefined (absent key)
-        // as "leave untouched" — but we always send the field
-        // because the user may have just blanked it.
+        // Send '' as null so the server clears the deadline, an ISO
+        // string sets it. Server treats undefined (absent key) as
+        // "leave untouched", but we always send the field because
+        // the user might have just blanked it.
         entries_close_at: editEntriesCloseAt.value || null,
         enforce_referee_signoff: editEnforceSignoff.value,
         is_mixed_height:         editMixedHeight.value,
@@ -1295,18 +1295,17 @@ function openPartOrgsModal(ev) {
 }
 
 // Patch the participating_orgs_count on a single event row in
-// `events.value` so the 🌐 International (N) chip stays in sync
-// after add/remove without a full loadEvents() refetch.
+// `events.value` so the International (N) chip stays in sync after
+// add/remove without a full loadEvents() refetch.
 function bumpParticipatingCount(eventId, newCount) {
   const row = events.value.find(e => e.id === eventId)
   if (row) row.participating_orgs_count = newCount
 }
 
-// Visiting org self-withdraws from a foreign-hosted event. Used
-// in the per-event overflow menu when the event's host org is
-// not the caller's own. Different from removePartOrg above
-// (which the HOST uses to evict a federation) — this is the
-// guest's exit door.
+// Visiting org self-withdraws from a foreign-hosted event. Used in
+// the per-event overflow menu when the event's host org isn't the
+// caller's own. Different from removePartOrg above (which the HOST
+// uses to evict a federation), this is the guest's exit door.
 async function selfWithdrawFromEvent(ev) {
   if (!await confirmAction({
     title: `Withdraw your federation from "${ev.name}"?`,
@@ -1332,12 +1331,11 @@ async function selfWithdrawFromEvent(ev) {
   }
 }
 
-// Per-event ⋯ overflow menu — Edit / Audit Log / Import
-// Roster / Delete moved here so the row's primary affordance
-// (status-aware: Open Control Room / View Results) is the
-// dominant button rather than fighting four equal-weight
-// siblings. Only one menu is open at a time, identified by
-// the event id; null means closed.
+// Per-event ⋯ overflow menu: Edit / Audit Log / Import Roster /
+// Delete all moved here so the row's primary affordance (status-
+// aware: Open Control Room / View Results) is the dominant button
+// rather than fighting four equal-weight siblings. Only one menu is
+// open at a time, identified by the event id; null means closed.
 const overflowOpenEventId = ref(null)
 function toggleOverflow(id) {
   overflowOpenEventId.value = overflowOpenEventId.value === id ? null : id
@@ -1348,10 +1346,10 @@ function onOutsideClick(e) {
 
 onMounted(async () => {
   await Promise.all([loadEvents(), loadMeets(), loadEventTemplates(), loadDiveDirectory()])
-  // Capture-phase mousedown closes the overflow menu when the
-  // user clicks anywhere outside its wrapper. Capture phase
-  // matters so the row's own ⋯ trigger still fires its toggle
-  // before this listener runs.
+  // Capture-phase mousedown closes the overflow menu when the user
+  // clicks anywhere outside its wrapper. Capture phase matters here
+  // so the row's own ⋯ trigger still fires its toggle before this
+  // listener runs.
   window.addEventListener('mousedown', onOutsideClick, true)
 })
 onUnmounted(() => {
@@ -1378,8 +1376,8 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Template strip — apply a saved configuration with one
-           click. Templates are per-org; saving upserts by name. -->
+      <!-- Template strip: apply a saved configuration with one click.
+           Templates are per-org; saving upserts by name. -->
       <div v-if="eventTemplates.length || saveTemplateOpen" class="event-templates">
         <div v-if="eventTemplates.length" class="event-templates-list">
           <div v-for="t in eventTemplates" :key="t.id" class="event-template-row">
@@ -1409,10 +1407,10 @@ onUnmounted(() => {
         <div v-if="templateErr" class="msg msg-error" style="margin-top:0.5rem">{{ templateErr }}</div>
       </div>
 
-      <!-- World Aquatics / federation-standard templates. Filtered
-           live by the operator's current Gender + Age Group, and
-           collapsed by default so the strip doesn't dominate the
-           top of the modal — click to expand. -->
+      <!-- World Aquatics / federation-standard templates. Filtered live
+           by the operator's current Gender + Age Group, and collapsed
+           by default so the strip doesn't dominate the top of the
+           modal. Click to expand. -->
       <div v-if="suggestedStandardTemplates.length"
            :class="['std-templates', suggestedTemplatesOpen ? 'open' : 'closed']">
         <button type="button" class="std-templates-toggle"
@@ -1439,8 +1437,8 @@ onUnmounted(() => {
       </div>
 
       <form @submit.prevent="createEvent" class="form-stack">
-        <!-- Wizard progress — click a pip to jump; steps are v-show so
-             every field stays mounted for the single createEvent submit. -->
+        <!-- Wizard progress: click a pip to jump; steps are v-show so every
+             field stays mounted for the single createEvent submit. -->
         <ol class="wizard-steps" aria-label="Create event progress">
           <li v-for="(label, i) in CREATE_STEPS" :key="label"
               :class="['wizard-pip', { 'is-current': createStep === i, 'is-done': createStep > i }]">
@@ -1453,12 +1451,12 @@ onUnmounted(() => {
           </li>
         </ol>
 
-        <!-- Step 1 — Details -->
+        <!-- Step 1: Details -->
         <div v-show="createStep === 0" class="wizard-step">
-        <!-- Add to meet — surfaced at the very top so the operator
-             decides bundling before filling out the detailed
-             fields. Preset by the "+ Add event" button when the
-             form is opened from a selected meet. -->
+        <!-- Add to meet: surfaced at the very top so the operator decides
+             bundling before filling out the detailed fields. Preset by
+             the "+ Add event" button when the form is opened from a
+             selected meet. -->
         <div class="field">
           <label class="label">Add to meet</label>
           <select class="select" v-model="createMeetId">
@@ -1493,13 +1491,13 @@ onUnmounted(() => {
           </select>
         </div>
 
-        <!-- Age Group / Division. Structured dropdown — option
-             labels show the WA Group letter alongside its age
-             range so the operator picks once and the mapping is
-             visible (per Article 13.2 / 13.3 / national-federation
-             convention for Group D). Plus Masters / Open / Other
-             for non-junior events. The composed string lands in
-             events.age_group on submit. -->
+        <!-- Age Group / Division. Structured dropdown, option labels
+             show the WA Group letter alongside its age range so the
+             operator picks once and the mapping is visible (per
+             Article 13.2 / 13.3 / national-federation convention for
+             Group D). Plus Masters / Open / Other for non-junior
+             events. Composed string lands in events.age_group on
+             submit. -->
         <div class="field age-group-field">
           <label class="label">Age Group / Division</label>
           <select class="select age-category" v-model="createAgeChoice">
@@ -1568,16 +1566,16 @@ onUnmounted(() => {
         </div>
         </div>
 
-        <!-- Step 2 — Rounds -->
+        <!-- Step 2: Rounds -->
         <div v-show="createStep === 1" class="wizard-step">
-        <!-- Round dives (migration 039). Each row is one round in
-             the event. Pinning a dive to a row makes it a
-             "prescribed" dive — the diver must submit exactly that
-             dive in that round. Leaving the dive blank lets the
-             diver pick freely. The count of rows == total_rounds.
-             The editor (rows, dive-picker, per-slot height) lives
-             in <RoundDivesEditor>; new-dive requests bubble back
-             up so the shared Create-Dive sub-modal stays here. -->
+        <!-- Round dives (migration 039). Each row is one round in the
+             event. Pinning a dive to a row makes it a "prescribed"
+             dive, the diver must submit exactly that dive in that
+             round. Leaving the dive blank lets the diver pick freely.
+             Count of rows == total_rounds. The editor (rows, dive-
+             picker, per-slot height) lives in <RoundDivesEditor>;
+             new-dive requests bubble back up so the shared Create-Dive
+             sub-modal stays here. -->
         <RoundDivesEditor
           ref="createRoundDivesEditor"
           v-model="createRoundDives"
@@ -1589,7 +1587,7 @@ onUnmounted(() => {
 
         </div>
 
-        <!-- Step 3 — Structure -->
+        <!-- Step 3: Structure -->
         <div v-show="createStep === 2" class="wizard-step">
         <!-- Round structure (migration 038). Sections of rounds
              with their own DD-sum cap and min-distinct-groups
@@ -1660,7 +1658,7 @@ onUnmounted(() => {
 
         </div>
 
-        <!-- Step 4 — Schedule & rules -->
+        <!-- Step 4: Schedule & rules -->
         <div v-show="createStep === 3" class="wizard-step">
         <!-- Scheduled start. Powers the meet schedule view,
              notifications, and (later) calendar export. -->
@@ -1687,11 +1685,11 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <!-- Event format — three stages, in order:
-             preliminary → semifinal → final. World Aquatics
-             individual events use all three; synchro and team
-             events typically skip the semi (or are standalone).
-             The chain is operator-defined per event. -->
+        <!-- Event format: three stages, in order: preliminary →
+             semifinal → final. World Aquatics individual events use
+             all three; synchro and team events typically skip the
+             semi (or are standalone). Chain is operator-defined per
+             event. -->
         <div class="field">
           <label class="label">Event Format</label>
           <select class="select" v-model="createFormat" @change="createParentEventId = ''">
@@ -1726,9 +1724,9 @@ onUnmounted(() => {
           </select>
         </div>
 
-        <!-- Advance count — only relevant on a feeder stage
-             (preliminary or semifinal). World Aquatics defaults:
-             prelim → semi = 18, semi → final or prelim → final = 12. -->
+        <!-- Advance count: only relevant on a feeder stage (preliminary
+             or semifinal). World Aquatics defaults: prelim → semi = 18,
+             semi → final or prelim → final = 12. -->
         <div class="field" v-if="createFormat !== 'final'">
           <label class="label">Advance Top N to Next Stage</label>
           <input class="input" type="number" min="1" max="50" v-model="createAdvanceCount">
@@ -1738,12 +1736,12 @@ onUnmounted(() => {
           </p>
         </div>
 
-        <!-- Per-round DD limit. Common in junior events: rounds
-             1–N capped to a max DD; later rounds open. Both
-             columns nullable; UI clears them in tandem.
-             Hidden once the operator switches to the structured
-             "Round structure" editor below — that supersedes
-             this flat constraint. -->
+        <!-- Per-round DD limit. Common in junior events: rounds 1–N
+             capped to a max DD; later rounds open. Both columns
+             nullable; UI clears them in tandem. Hidden once the
+             operator switches to the structured "Round structure"
+             editor below, since that supersedes this flat
+             constraint. -->
         <div class="field" v-if="!createRoundSections.length">
           <label class="label">DD Limit (optional)</label>
           <div style="display:flex;gap:0.5rem">
@@ -1805,7 +1803,7 @@ onUnmounted(() => {
 
         </div>
 
-        <!-- Step 5 — Review & create -->
+        <!-- Step 5: Review & create -->
         <div v-show="createStep === 4" class="wizard-step">
           <div class="wizard-review">
             <h3 class="wizard-review-title">Review</h3>
@@ -1826,7 +1824,7 @@ onUnmounted(() => {
 
         <div v-if="formErr" class="msg msg-error">{{ formErr }}</div>
 
-        <!-- Wizard footer — Back / Next, Create on the final step. -->
+        <!-- Wizard footer: Back / Next, Create on the final step. -->
         <div class="wizard-footer">
           <button type="button" class="btn btn-ghost" v-show="createStep > 0"
                   @click="createStep = createStep - 1">← Back</button>
@@ -1848,17 +1846,16 @@ onUnmounted(() => {
       <p class="mgr-page-sub">{{ $t('manager.subtitle') }}</p>
     </header>
 
-    <!-- Accordion — a vertical list of collapsible sections (All
-         events, one per meet, Ungrouped). Expanding one reveals that
+    <!-- Accordion: a vertical list of collapsible sections (All events,
+         one per meet, Ungrouped). Expanding one reveals that
          selection's event list inline. Hidden while a create/edit
          form page is open. -->
     <div class="mgr-accordion" v-show="!formPageOpen">
-      <!-- Top toolbar — page-level create actions, left-aligned and
-           standard button size, matching Clubs / Teams / Dive
-           Directory (btn btn-primary btn-sm). Both stay visible
-           regardless of which section is expanded, so creating a meet
-           or a standalone event never requires opening a section
-           first. -->
+      <!-- Top toolbar: page-level create actions, left-aligned and
+           standard button size, matching Clubs / Teams / Dive Directory
+           (btn btn-primary btn-sm). Both stay visible regardless of
+           which section is expanded, so creating a meet or a
+           standalone event never requires opening a section first. -->
       <div class="mgr-acc-toolbar">
         <button type="button" class="btn btn-primary btn-sm"
                 v-tip:bottom.fixed="'Create a meet — a banner that bundles several events together'"
@@ -1901,7 +1898,7 @@ onUnmounted(() => {
               <div v-else-if="sec.kind === 'ungrouped'" class="mgr-detail-sub">
                 <span>Standalone events not bundled into a meet.</span>
               </div>
-              <!-- All events — sysadmin cross-org subcount + filter -->
+              <!-- All events: sysadmin cross-org subcount + filter -->
               <template v-else>
                 <div v-if="auth.user?.is_system_admin && events.length" class="mgr-detail-sub">
                   <span>{{ events.length }} across {{ uniqueOrgCount }} org{{ uniqueOrgCount === 1 ? '' : 's' }}</span>
@@ -1935,8 +1932,8 @@ onUnmounted(() => {
             </div>
           </header>
 
-        <!-- Search + status chips — filter within the current
-             selection. Always visible so any view is searchable. -->
+        <!-- Search + status chips: filter within the current selection.
+             Always visible so any view is searchable. -->
         <div class="events-toolbar">
           <input
             class="input events-search"
@@ -1997,8 +1994,8 @@ onUnmounted(() => {
               <span>{{ ev.name }}</span>
             </div>
             <div class="event-meta">
-              <!-- Org badge — visible to sysadmin so they know
-                   which federation each event belongs to. -->
+              <!-- Org badge: visible to sysadmin so they know which
+                   federation each event belongs to. -->
               <span v-if="auth.user?.is_system_admin && ev.org_name" class="org-badge">
                 {{ ev.org_name }}<span v-if="ev.country_code" class="org-badge-ctry">{{ ev.country_code }}</span>
               </span>
@@ -2009,9 +2006,9 @@ onUnmounted(() => {
                     v-tip="'Dry-run event: no public archive, analytics, emails, or records'">
                 Rehearsal
               </span>
-              <!-- 🌐 International chip: visible when one or more
-                   other federations are on the participating list.
-                   Click jumps straight into the Federations modal. -->
+              <!-- International chip: visible when one or more other
+                   federations are on the participating list. Click
+                   jumps straight into the Federations modal. -->
               <button
                 v-if="ev.participating_orgs_count > 0"
                 type="button"
@@ -2019,9 +2016,9 @@ onUnmounted(() => {
                 @click.stop="openPartOrgsModal(ev)"
                 v-tip="`${ev.participating_orgs_count} federation${ev.participating_orgs_count === 1 ? '' : 's'} invited — click to manage`"
               >🌐 International ({{ ev.participating_orgs_count }})</button>
-              <!-- Format badges — distinguish prelim/semi/final
-                   at a glance so an operator linking events can
-                   find the right pair. -->
+              <!-- Format badges: distinguish prelim/semi/final at a
+                   glance so an operator linking events can find the
+                   right pair. -->
               <span v-if="ev.event_format === 'preliminary'" class="event-type-pill prelim">Prelim</span>
               <span v-else-if="ev.event_format === 'semifinal'" class="event-type-pill semi-pill">Semi-Final</span>
               <span v-else-if="ev.parent_event_id" class="event-type-pill final-pill">Final</span>
@@ -2044,16 +2041,16 @@ onUnmounted(() => {
               </template>
             </div>
           </div>
-          <!-- Actions — restructured into:
+          <!-- Actions: restructured into:
                  [optional secondaries] [primary action] [⋯]
-               so the operator sees ONE dominant call-to-action
-               per event. Primary is status-aware:
+               so the operator sees ONE dominant call-to-action per
+               event. Primary is status-aware:
                  Upcoming  → "Open Control Room →"  (drive pre-meet workflow)
-                 Live      → "🔴 LIVE — Open"        (jump back into the meet)
-                 Completed → "View Results"          (ghost; recap is the action)
-               Edit / Audit Log / Import Roster / Delete demote
-               into the ⋯ overflow menu so they don't compete
-               with the primary affordance. -->
+                 Live      → "LIVE, Open"            (jump back into the meet)
+                 Completed → "View Results"          (ghost, recap is the action)
+               Edit / Audit Log / Import Roster / Delete demote into
+               the ⋯ overflow menu so they don't compete with the
+               primary affordance. -->
           <div class="actions">
             <!-- Status-aware primary action. Each path deep-
                  links into the screen the operator's most
@@ -2076,11 +2073,10 @@ onUnmounted(() => {
                         v-tip="'View the recap — podium, full standings, dive-by-dive'">
               View Results
             </RouterLink>
-            <!-- ⋯ overflow — secondary maintenance actions the
-                 operator only touches occasionally. Edit /
-                 Audit Log / Import Roster / Delete all live
-                 here so the row reads as a single primary
-                 action at rest. -->
+            <!-- ⋯ overflow: secondary maintenance actions the operator
+                 only touches occasionally. Edit / Audit Log / Import
+                 Roster / Delete all live here so the row reads as a
+                 single primary action at rest. -->
             <div class="dropdown-host">
               <button class="btn btn-ghost btn-sm btn-icon"
                       :aria-expanded="overflowOpenEventId === ev.id"
@@ -2090,7 +2086,8 @@ onUnmounted(() => {
                 <!-- State-relevant actions for this event (seed / advance /
                      teams / view results), moved off the row so the
                      status-aware primary stands alone. Same conditions +
-                     handlers as before — one click away in the menu. -->
+                     handlers as before, just one click away in the menu
+                     now. -->
                 <button v-if="ev.event_type === 'team'"
                         class="dropdown-item"
                         @click="openTeamsModal(ev); overflowOpenEventId = null">Teams…</button>
@@ -2161,11 +2158,10 @@ onUnmounted(() => {
                   </button>
                 </template>
                 <template v-else>
-                  <!-- Visiting federation overflow — single
-                       destructive action: withdraw our
-                       participation. The event belongs to a
-                       different host so we can't edit or delete
-                       it. -->
+                  <!-- Visiting federation overflow: single destructive
+                       action, withdraw our participation. Event
+                       belongs to a different host so we can't edit or
+                       delete it. -->
                   <div class="dropdown-item-static">
                     Hosted by {{ ev.org_name || 'another federation' }}
                   </div>
@@ -2219,8 +2215,8 @@ onUnmounted(() => {
           </select>
         </div>
 
-        <!-- Structured Age Group / Division — mirrors the Create
-             modal so an operator can change it post-event. -->
+        <!-- Structured Age Group / Division, mirrors the Create modal
+             so an operator can change it post-event. -->
         <div class="field">
           <label class="label">Age Group / Division</label>
           <select class="select" v-model="editAgeChoice">
@@ -2248,14 +2244,14 @@ onUnmounted(() => {
           <p class="hint" v-if="editAgeGroup && !editAgeWouldRewrite" style="margin-top:0.4rem">
             Stored as <strong>{{ editAgeGroup }}</strong>.
           </p>
-          <!-- Legacy-format warning. Surfaces when the event was
-               saved with a pre-rework string ("11 and under" etc.)
-               and saving now would silently rewrite the column to
-               the new canonical "Junior Group X" form. Operator
-               can either accept the migration or tick Keep legacy
-               text to send the original string back verbatim.
-               Hidden once the operator decides — `editAgeWouldRewrite`
-               flips false when Keep legacy is checked. -->
+          <!-- Legacy-format warning. Surfaces when the event was saved
+               with a pre-rework string ("11 and under" etc.) and saving
+               now would silently rewrite the column to the new
+               canonical "Junior Group X" form. Operator can either
+               accept the migration or tick Keep legacy text to send the
+               original string back verbatim. Hidden once the operator
+               decides, `editAgeWouldRewrite` flips false when Keep
+               legacy is checked. -->
           <div v-if="editAgeWouldRewrite" class="msg msg-warning age-legacy-warning"
                style="margin-top:0.5rem">
             <strong>Heads up — this event's age group is stored as
@@ -2322,10 +2318,10 @@ onUnmounted(() => {
             Rehearsal scores do not publish to archive, analytics, emails, or records.
           </p>
         </div>
-        <!-- Round dives — same editor as the New Event modal,
-             pre-populated from /api/events/:id/round-dives so the
-             operator can re-pin or unpin dives, add/remove rounds,
-             or override per-slot board heights for mixed events. -->
+        <!-- Round dives: same editor as the New Event modal, pre-populated
+             from /api/events/:id/round-dives so the operator can re-pin
+             or unpin dives, add/remove rounds, or override per-slot
+             board heights for mixed events. -->
         <RoundDivesEditor
           ref="editRoundDivesEditor"
           v-model="editRoundDives"
@@ -2335,10 +2331,10 @@ onUnmounted(() => {
           @request-new-dive="onRequestNewDive('edit', $event)"
         />
 
-        <!-- Round structure (sections) — was missing from the
-             Edit modal entirely; added in migration 039 alongside
-             the prescribed-dives editor so an operator can change
-             DD limits / min-distinct-groups after the fact. -->
+        <!-- Round structure (sections): was missing from the Edit modal
+             entirely, added in migration 039 alongside the prescribed-
+             dives editor so an operator can change DD limits /
+             min-distinct-groups after the fact. -->
         <div class="field rr-editor">
           <label class="label" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
             <span>Round structure (optional)</span>
@@ -2408,11 +2404,10 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <!-- Create Dive sub-modal — opened from a round-dive picker
-       when the operator types a search that doesn't match any
-       existing directory entry. Mirrors the create form on
-       /dive-directory but inline so the operator never leaves
-       event creation. -->
+  <!-- Create Dive sub-modal: opened from a round-dive picker when the
+       operator types a search that doesn't match any existing
+       directory entry. Mirrors the create form on /dive-directory but
+       inline so the operator never leaves event creation. -->
   <div v-if="showCreateDiveModal" class="modal-backdrop"
        @click.self="closeCreateDiveModal" style="z-index:1100">
     <div class="modal modal-create-dive" @click.stop style="max-width:480px">
@@ -2472,9 +2467,9 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <!-- New Meet modal — moved out of the inline page so the
-       Meet Manager toolbar can offer "+ New Meet" alongside
-       "+ New Event" without crowding the main column. -->
+  <!-- New Meet modal: moved out of the inline page so the Meet
+       Manager toolbar can offer "+ New Meet" alongside "+ New Event"
+       without crowding the main column. -->
   <div v-if="showCreateMeetModal" class="mgr-form-page">
     <div class="mgr-form-card modal-create-meet" style="max-width:560px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
@@ -2511,11 +2506,11 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <!-- Edit Meet modal — name / dates / venue / description /
-       sponsor branding incl. the multi-logo manager (migration
-       045). Opened from the per-meet Edit button; openEditMeet
-       fetches the full row first, then mounts the component with
-       the hydrated form. `saved` triggers a meets reload. -->
+  <!-- Edit Meet modal: name / dates / venue / description / sponsor
+       branding incl. the multi-logo manager (migration 045). Opened
+       from the per-meet Edit button; openEditMeet fetches the full row
+       first, then mounts the component with the hydrated form. `saved`
+       triggers a meets reload. -->
   <EditMeetModal
     v-if="editingMeet"
     :meet-id="editingMeet.id"
@@ -2524,11 +2519,11 @@ onUnmounted(() => {
     @saved="loadMeets"
   />
 
-  <!-- Advance to next stage modal — opens from the prelim/semi
-       row's Completed-state action. Preview + confirm state live
-       in the component; v-if mount re-fetches per open. A
-       successful advance changes statuses/rosters server-side, so
-       `advanced` triggers a full event reload. -->
+  <!-- Advance to next stage modal: opens from the prelim/semi row's
+       Completed-state action. Preview + confirm state live in the
+       component; v-if mount re-fetches per open. A successful advance
+       changes statuses/rosters server-side, so `advanced` triggers a
+       full event reload. -->
   <AdvanceStageModal
     v-if="advanceModalEvent"
     :event="advanceModalEvent"
@@ -2541,7 +2536,7 @@ onUnmounted(() => {
        template ref so the event-row buttons can call into them. -->
   <SuperFinalModals ref="superFinalModals" @refresh-events="loadEvents" />
 
-  <!-- Meet readiness report — state + fetch live in the component;
+  <!-- Meet readiness report: state + fetch live in the component;
        v-if mount re-fetches per open. -->
   <MeetReadinessModal
     v-if="readinessMeet"
@@ -2549,18 +2544,18 @@ onUnmounted(() => {
     @close="readinessMeet = null"
   />
 
-  <!-- Team enrolment modal — lists + busy state live in the
-       component; v-if mount re-fetches per open. -->
+  <!-- Team enrolment modal: lists + busy state live in the component;
+       v-if mount re-fetches per open. -->
   <TeamsEnrolmentModal
     v-if="teamsModalEvent"
     :event="teamsModalEvent"
     @close="teamsModalEvent = null"
   />
 
-  <!-- Participating-orgs modal — invite OTHER federations' divers
-       to enter this event. List/invite state lives in the
-       component; v-if mount re-fetches per open. `count-changed`
-       keeps the row's 🌐 chip in sync without a full refetch. -->
+  <!-- Participating-orgs modal: invite OTHER federations' divers to
+       enter this event. List/invite state lives in the component; v-if
+       mount re-fetches per open. `count-changed` keeps the row's
+       International chip in sync without a full refetch. -->
   <ParticipatingOrgsModal
     v-if="partOrgsModalEvent"
     :event="partOrgsModalEvent"
@@ -2568,8 +2563,8 @@ onUnmounted(() => {
     @count-changed="bumpParticipatingCount(partOrgsModalEvent.id, $event)"
   />
 
-  <!-- Roster CSV import modal — state + handlers live in the
-       component; v-if mount resets it per open. -->
+  <!-- Roster CSV import modal: state + handlers live in the component;
+       v-if mount resets it per open. -->
   <RosterImportModal
     v-if="rosterModalEvent"
     :event="rosterModalEvent"

@@ -1,22 +1,22 @@
 // Shared SQL CTE templates for diver analytics.
 //
-// The analytics endpoint runs ~10 small rollups, several of which
+// The analytics endpoint runs ~10 small rollups, and several of them
 // share the same "compute per-dive points" or "rank against the
 // full field" shape. Keeping the CTEs in one place means a fix to
 // the calculation logic (e.g. a synchro edge case) lands in every
 // query at once instead of needing four parallel edits.
 //
 // IMPORTANT: each helper documents which $N parameters it expects
-// from the caller. The caller is responsible for binding those
+// from the caller. The caller's responsible for binding those
 // params in the right order. The helpers don't choose param
-// numbers themselves because pg-style positional parameters mean
+// numbers themselves since pg-style positional parameters mean
 // outer queries that compose multiple CTEs need to control the
 // numbering. See server.js' /api/divers/:id/analytics for usage.
 
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 
 // =====================================================================
-// PER_DIVE — one row per dive the diver performed.
+// PER_DIVE: one row per dive the diver performed.
 //
 // Filters to a single competitor and (optionally) a date range.
 // Columns:
@@ -50,7 +50,7 @@ const PER_DIVE = perDiveSelect({
 });
 
 // =====================================================================
-// FULL_FIELD_RANKING — for queries that need the diver's RANK against
+// FULL_FIELD_RANKING: for queries that need the diver's RANK against
 // every competitor in their events (recent_form, placings, streak,
 // year_over_year). Returns a chain of CTEs you splice into a parent
 // WITH clause:
@@ -59,26 +59,26 @@ const PER_DIVE = perDiveSelect({
 //   SELECT … FROM my_events WHERE …
 //
 // CTE chain:
-//   diver_events  — { event_id }   the events the diver competed in
-//   all_per_dive  — every dive in those events, by every competitor
-//   event_totals  — per-(event, competitor) sum of dive points + a
+//   diver_events  : { event_id }   the events the diver competed in
+//   all_per_dive  : every dive in those events, by every competitor
+//   event_totals  : per-(event, competitor) sum of dive points + a
 //                   `dives_desc` array of the diver's dive points
 //                   sorted descending (used as the tie-break key)
-//   ranked        — event_totals + RANK over the World Aquatics ordering:
+//   ranked        : event_totals + RANK over the World Aquatics ordering:
 //                     ORDER BY total DESC, dives_desc DESC
 //                   plus an `is_tied_on_total` flag for UI hints
 //                   when two divers share a raw total but the
 //                   secondary criterion separates them.
 //
 // Required params:
-//   $1 = competitor_id (uuid) — the diver of interest
+//   $1 = competitor_id (uuid), the diver of interest
 //   $2 = from_date (date or null)
 //   $3 = to_date   (date or null)
 //
 // World Aquatics tie-break: when two divers have the same total, the higher
 // finish goes to whoever has the highest single dive; if those tie,
-// the second-highest; and so on. Postgres element-wise array
-// comparison on `dives_desc DESC` implements that exactly —
+// the second-highest, and so on. Postgres' element-wise array
+// comparison on `dives_desc DESC` implements that exactly:
 // [9,8,7] > [9,8,6] > [9,8,5]. RANK() with that ordering gives the
 // correct World Aquatics placement for free.
 // =====================================================================
@@ -110,8 +110,8 @@ const FULL_FIELD_RANKING = `
              PARTITION BY et.event_id
              ORDER BY et.total DESC, et.dives_desc DESC
            ) AS rank,
-           /* True when 2+ rows in this event share the SAME total
-              — UI shows an "=" marker so spectators understand why
+           /* True when 2+ rows in this event share the SAME total,
+              shows an "=" marker in the UI so spectators understand why
               two divers with identical totals were separated. */
            COUNT(*) OVER (
              PARTITION BY et.event_id, et.total
@@ -128,37 +128,37 @@ const FULL_FIELD_RANKING = `
 `;
 
 // =====================================================================
-// JUDGE_PER_DIVE — one row per (judge, dive) the judge scored.
+// JUDGE_PER_DIVE: one row per (judge, dive) the judge scored.
 //
 // Filters to a single judge_id and (optionally) a date range. Each row
 // includes:
 //
 //   * The judge's own score for that dive (`my_score`).
-//   * The panel-kept mean (`panel_kept_mean`) — the arithmetic mean
+//   * The panel-kept mean (`panel_kept_mean`), the arithmetic mean
 //     of the post World Aquatics-trim scores for that dive. This is
 //     the reference point judge analytics measures against, not the
 //     raw panel mean: the trim is what the dive-points formula
 //     itself uses (Article 13 / dispatch via calc_event_dive_points)
 //     and it's what spectators / referees compare a judge against
-//     when assessing whether the judge's call lined up with the
+//     when checking whether the judge's call lined up with the
 //     panel's consensus.
-//   * `is_dropped` — TRUE when this judge's score was on the trimmed
+//   * `is_dropped`: TRUE when this judge's score was on the trimmed
 //     ends (one of the highest k or lowest k for the panel size).
 //     For a 7-judge panel this is the high-2 / low-2 the trim
 //     drops. Drives the "drop rate" + hi/lo asymmetry metrics
-//     (see WA Article 8.4.9 — Referee may remove a judge whose
+//     (see WA Article 8.4.9, referee may remove a judge whose
 //     judgement is unsatisfactory; a persistent hi-bias dropping
-//     pattern is the kind of pattern the WA judges programme
+//     pattern is the kind of thing the WA judges programme
 //     surfaces).
-//   * `is_dropped_high` / `is_dropped_low` — disambiguate the two
+//   * `is_dropped_high` / `is_dropped_low`: disambiguate the two
 //     ends of the trim. NULL when not dropped.
-//   * `dive_group` — the first digit of dive_code (1=forward,
+//   * `dive_group`: the first digit of dive_code (1=forward,
 //     2=back, 3=reverse, 4=inward, 5=twisting, 6=armstand). Powers
 //     the per-group breakdown widget.
-//   * Diver demographics — diver_org_id, diver_country_code,
+//   * Diver demographics: diver_org_id, diver_country_code,
 //     diver_club_id (for per-country / per-club bias breakdowns).
 //
-// The kept-mean is computed inline rather than via a SQL function
+// The kept-mean is computed inline rather than via a SQL function,
 // so we don't need a separate immutable function for trimmed-mean
 // (calc_dive_points returns sum × DD × scaling, not the unweighted
 // kept mean we want here). The CTE filters to the panel size n + 2
@@ -168,7 +168,7 @@ const FULL_FIELD_RANKING = `
 // IMPORTANT: synchro events have role-grouped trim (sub-panels for
 // exec A / exec B / synchronisation) that don't fit a single kept-
 // mean. JUDGE_PER_DIVE excludes synchro_pair dives from the
-// `panel_kept_mean` to avoid a misleading number; the analytics
+// `panel_kept_mean` to avoid a misleading number, the analytics
 // endpoint surfaces synchro dive counts separately.
 //
 // Required params:
@@ -196,22 +196,22 @@ const JUDGE_PER_DIVE = `
     LEFT(d.dive_code, 1)                   AS dive_group,
     /* Diver context for per-country / per-club / per-diver
        breakdowns. LEFT JOIN so a diver whose user row was
-       deleted (rare — soft delete) still leaves the dive in
+       deleted (rare, soft delete) still leaves the dive in
        the analysis. */
     cu.org_id                              AS diver_org_id,
     co.country_code                        AS diver_country_code,
     cu.club_id                             AS diver_club_id,
     cl.short_code                          AS diver_club_code,
     cu.full_name                           AS diver_name,
-    /* Panel context — the full panel's scores for THIS dive,
+    /* Panel context: the full panel's scores for THIS dive,
        used downstream by analytics rollups that need to know
        e.g. how the rest of the panel behaved on the same call. */
     panel.panel_scores                     AS panel_scores,
-    /* Kept arithmetic mean — the AVG over the post World Aquatics-trim
+    /* Kept arithmetic mean: the AVG over the post World Aquatics-trim
        slice of the sorted panel. Synchro panels excluded (the
        trim is role-grouped, not a single mid-panel slice). For
        small panels where COUNT(*) <= drop_count*2 we fall back
-       to the raw mean — same behaviour as calc_dive_points'
+       to the raw mean, same behaviour as calc_dive_points'
        "no trim if not enough scores" branch. */
     CASE
       WHEN e.event_type::text = 'synchro_pair' THEN NULL
@@ -235,7 +235,7 @@ const JUDGE_PER_DIVE = `
        For 7-judge: drop_count = 2 → 2 highest + 2 lowest dropped.
        For 5-judge: drop_count = 1 → 1 highest + 1 lowest dropped.
        For 3-judge: drop_count = 0 → no scores dropped.
-       Synchro panels (9, 11) are excluded from this signal —
+       Synchro panels (9, 11) are excluded from this signal,
        see the file header. */
     CASE
       WHEN e.event_type::text = 'synchro_pair' THEN NULL
@@ -272,11 +272,11 @@ const JUDGE_PER_DIVE = `
      high_threshold = the (drop_count)th highest score
      A judge whose score is <= low_threshold sits on the dropped
      low end; >= high_threshold on the dropped high end. Ties
-     break against the judge — same behaviour as the live trim,
+     break against the judge, same behaviour as the live trim,
      which drops "the lowest k by sorted order regardless of
      duplicates". This means a 3-way tie at the bottom drops all
-     three, which over-reports drops on rare tie cases — fine for
-     analytics; the trim function in init.sql does the same. */
+     three, which over-reports drops on rare tie cases (fine for
+     analytics); the trim function in init.sql does the same. */
   LEFT JOIN LATERAL (
     SELECT
       array_agg(s2.score ORDER BY s2.score)::numeric[] AS panel_scores,

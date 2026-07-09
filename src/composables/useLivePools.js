@@ -1,12 +1,12 @@
-// Per-event live-state map (P5 of the redesign) -- the concurrent-pool
+// Per-event live-state map (P5 of the redesign), the concurrent-pool
 // engine for ControlViewV2.
 //
-// V1's ControlView keeps a SINGLE currentActive / scoresThisRound /
+// Heads up: V1's ControlView keeps a SINGLE currentActive / scoresThisRound /
 // judgeTiles for the focused event and DROPS any socket result whose
-// event_id != currentActive.event_id (ControlView.vue:2094-2095). That
-// is correct for one pool, but the V2 rail can show two simultaneously-
+// event_id != currentActive.event_id (ControlView.vue:2094-2095). That's
+// correct for one pool, but the V2 rail can show two simultaneously-
 // Live pools, so a score for a NON-focused pool must still update THAT
-// pool's tiles and arm its advance -- without touching the focused
+// pool's tiles and arm its advance, without touching the focused
 // pool or stealing the operator's center.
 //
 // This composable keys live state by event_id and routes each
@@ -22,7 +22,7 @@ export function makePoolState() {
   return {
     roster: [], // the live QUEUE for this event (server-ordered: round, order)
     currentIndex: -1, // cursor into roster[]; -1 = nothing active
-    currentActive: null, // roster[currentIndex] -- the live row
+    currentActive: null, // roster[currentIndex], the live row
     activeInfo: null, // flat display object for the stage header
     scoresThisRound: {}, // judge_id -> numeric score
     judgeTiles: [], // [{ judgeIndex, judgeId, score, scored, signaled }]
@@ -63,8 +63,8 @@ export function deriveStatus({ hasActive, scoresInCount, clockExpired }) {
 }
 
 // Move a pool's cursor to roster[idx]: the pure part of V1's setActive
-// funnel (ControlView.vue:2246-2309) -- set the cursor, resolve the
-// active row, clear scores, re-init tiles, build the header info. The
+// funnel (ControlView.vue:2246-2309). Sets the cursor, resolves the
+// active row, clears scores, re-inits tiles, builds the header info. The
 // SIDE-EFFECTS (set_active_diver emit, shot clock) stay in the caller.
 export function selectDiver(pool, idx, numberOfJudges, diveDescription) {
   if (!pool || !Array.isArray(pool.roster)) return false
@@ -89,7 +89,7 @@ export function initJudgeTiles(n) {
 // Find the roster row that matches the server's AUTHORITATIVE active-diver
 // payload (the set_active_diver shape persisted in event_live_state and
 // replayed via state_update / get_active_diver). Match by competitor +
-// round -- unique within an event (one dive per competitor per round).
+// round, unique within an event (one dive per competitor per round).
 // Returns the roster index, or -1 when there is no payload or it can't be
 // mapped (roster/payload drift). Pure -> lets ControlViewV2 restore a
 // reopened mid-meet pool to the diver who is actually live instead of
@@ -148,7 +148,7 @@ export function applyJudgeSignal(pool, data) {
 }
 
 // The composable: a reactive event_id -> pool-state map plus a single
-// router that applies a socket result to the RIGHT pool by event_id --
+// router that applies a socket result to the RIGHT pool by event_id,
 // never short-circuiting on the focused pool.
 export function useLivePools() {
   const pools = reactive({})

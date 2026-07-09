@@ -1,7 +1,7 @@
 <script setup>
 // Coach: read-only view of who's enrolled in their club's classes.
 // Backed by /api/coach/classes (scoped server-side to the coach's own
-// users.club_id — a coach can never see another club's roster).
+// users.club_id, so a coach can never see another club's roster).
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'

@@ -8,7 +8,7 @@
 // scoreboard. These tests lock the behaviour so that
 // regression doesn't sneak back in.
 //
-// We dynamically import() the ESM source — same pattern as the
+// We dynamically import() the ESM source, same pattern as the
 // score-trim tests.
 
 const { test } = require("node:test");
@@ -57,7 +57,7 @@ test("trailing-position-word check is case-insensitive", () => {
 test("position word in the middle of the description still appends a trailing one", () => {
   // "Inward Pike Tuck" ends with Tuck (matches position C) so no
   // append. But the same description with position B (Pike) means
-  // the LAST word is still Tuck, not Pike — append fires.
+  // the LAST word is still Tuck, not Pike, so append fires.
   assert.equal(
     diveDescription({ description: "Inward Pike Tuck", position: "C" }),
     "Inward Pike Tuck",

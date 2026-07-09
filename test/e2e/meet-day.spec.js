@@ -1,4 +1,4 @@
-// Diver meet-day view — round-by-round walkthrough.
+// Diver meet-day view, round-by-round walkthrough.
 //
 // What this test exercises end-to-end:
 //   1. Org + admin set up via /api/auth/register-org
@@ -10,18 +10,18 @@
 //   6. The walkthrough loops three times. Each iteration:
 //        a. The five judges submit scores for all three divers
 //           via socket. Score schedule engineered so:
-//             after R1 — Subject is 2nd (Alpha leads)
-//             after R2 — Subject takes 1st
-//             after R3 — Subject keeps 1st (gold)
+//             after R1: Subject is 2nd (Alpha leads)
+//             after R2: Subject takes 1st
+//             after R3: Subject keeps 1st (gold)
 //        b. The page reloads to pick up the new bundle.
 //        c. Assertions verify what changed:
 //             - Round pip + next-dive code advance R1 → R2 → R3 → done
 //             - Standing rank shifts 2 → 1 → 1
-//             - "in the lead" + 🥇 appears once Subject is 1st
+//             - "in the lead" + gold medal icon appears once Subject is 1st
 //             - Gold target flips from "needs avg X" to "achieved"
 //        d. In headed + slow-mo mode the test pauses ~1.5s so a
 //           human watching can register each transition.
-//      The fourth-state ("event complete") is asserted at the end
+//      The fourth state ("event complete") is asserted at the end
 //      of the loop: next_dive null + the all-clear copy renders.
 //   7. AuthZ probe: a diver NOT entered in the event hitting
 //      /api/events/:id/me-meet-day → 403.
@@ -44,16 +44,16 @@ const setup = require("./_setup");
 test.describe.configure({ mode: "serial" });
 
 // Pause briefly between observable transitions in headed-with-
-// slow-mo mode so a human watching can register the change.
-// Headless / fast runs don't pay the cost.
+// slow-mo mode so a human watching can actually register the change.
+// FYI headless and fast runs skip this entirely.
 async function pauseForViewer(page, ms = 1500) {
   if (process.env.PW_SLOWMO) await page.waitForTimeout(ms);
 }
 
 // Submit one judge's full set of per-diver scores for a single
-// round. Exercise socket.emit('submit_score') for each (diver,
-// score) pair, awaiting the score_received broadcast so the
-// returning iteration sees the standings already updated.
+// round. Fires socket.emit('submit_score') for each (diver,
+// score) pair, waiting on the score_received broadcast so the
+// next iteration sees the standings already updated.
 async function emitRoundScores({ baseURL, eventId, judges, roundNumber, diveId, scores }) {
   for (let i = 0; i < judges.length; i++) {
     const j = judges[i];
@@ -131,7 +131,7 @@ test("diver meet-day view: 3-round walkthrough end-to-end", async ({
     judgeIds: judges.map(j => j.userId),
   });
 
-  // Three rounds — different dive each round so the directory
+  // Three rounds, each with a different dive, so directory
   // join carries different DDs and the page's "your next dive"
   // panel observably changes round-to-round.
   const diveR1 = await setup.pickDiveId({ height: 3.0, dive_code: "101", position: "B" });
@@ -203,9 +203,9 @@ test("diver meet-day view: 3-round walkthrough end-to-end", async ({
     ],
   });
 
-  // Reload to pick up the new bundle (in production the socket
-  // refetch would do this automatically with a 250 ms debounce;
-  // reloading is more deterministic for the test).
+  // Reload to pick up the new bundle. In production the socket
+  // refetch would do this automatically with a 250 ms debounce,
+  // but reloading here is more deterministic for the test, hacky but it works.
   await page.reload();
   await expect(page.getByRole("heading", { name: "E2E Meet Day Walkthrough" }))
     .toBeVisible({ timeout: 10_000 });
@@ -256,7 +256,7 @@ test("diver meet-day view: 3-round walkthrough end-to-end", async ({
   // Page state after R2:
   //   - Next dive advances to R3 (301B).
   //   - Subject is 1st.
-  //   - Leader block flips to 🥇 + "in the lead".
+  //   - Leader block flips to the gold medal icon + "in the lead".
   //   - Gold target: achieved.
   await expect(page.getByText("301B")).toBeVisible();
   await expect(page.getByText("R3/3")).toBeVisible();
@@ -271,10 +271,10 @@ test("diver meet-day view: 3-round walkthrough end-to-end", async ({
   await pauseForViewer(page);
 
   // ===========================================================
-  // ROUND 3 — final dive
+  // ROUND 3: final dive
   // ===========================================================
   // Subject keeps 1st with a strong 8. Alpha 7 closes a bit but
-  // can't catch. Bravo 8 — irrelevant since they were 3rd.
+  // can't catch. Bravo 8, but irrelevant since they were 3rd.
   //   Subject 8s on 301B (DD ≈ 1.8) → +43.2 → running ~117.6
   //   Alpha   7s                    → +37.8 → running ~106.8
   //   Bravo   8s                    → +43.2 → running ~107.7
@@ -304,7 +304,7 @@ test("diver meet-day view: 3-round walkthrough end-to-end", async ({
   await expect(page.locator('.md-target-row.tone-achieved')).toHaveCount(3);
   await pauseForViewer(page);
 
-  // Sanity-check the API one last time — completed_dives = 3,
+  // Sanity-check the API one last time: completed_dives = 3,
   // remaining = 0.
   const subjectLogin = await setup.loginAs(request, subject.username);
   const finalApi = await request.get(`/api/events/${eventId}/me-meet-day`, {
@@ -322,7 +322,7 @@ test("diver meet-day view: 3-round walkthrough end-to-end", async ({
   await setup.deleteOrg(stranger.orgId);
 });
 
-// Smoke: pre-event state — diver entered in an Upcoming event
+// Smoke: pre-event state, diver entered in an Upcoming event
 // gets a meaningful page (no dives complete yet, no standing
 // yet). Cheaper than the full walkthrough above.
 test("diver meet-day view: pre-event renders without scores", async ({
@@ -354,7 +354,7 @@ test("diver meet-day view: pre-event renders without scores", async ({
     ],
   });
 
-  // Event still Upcoming — don't flip to Live.
+  // Event still Upcoming, don't flip to Live.
   const apiRes = await request.get(`/api/events/${event.id}/me-meet-day`, {
     headers: { Authorization: `Bearer ${login.token}` },
   });

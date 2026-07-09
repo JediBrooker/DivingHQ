@@ -1,6 +1,6 @@
-// Coach routes — a coach picks up divers via coach_diver_links
+// Coach routes: a coach picks up divers via coach_diver_links
 // (created by an org admin in the User Manager). These endpoints
-// power the coach's dashboard + on-behalf-of dive-list submission.
+// power the coach's dashboard plus on-behalf-of dive-list submission.
 //
 //   GET    /api/coach/dashboard                       per-diver next-dive + rank + last-dive
 //   GET    /api/coach/up-next                         squad members in Live events,
@@ -37,26 +37,27 @@ module.exports = function createCoachRouter({
   if (!pool) throw new Error("createCoachRouter requires { pool, … }");
   const router = express.Router();
 
-  // Helper: assert that the logged-in coach has a coach_diver_links
-  // row for the target diver within the event's host org, or within
-  // the diver's home federation when that federation is explicitly
-  // participating in this event. Returns the diver row (with org_id)
-  // on success; throws an http-shaped error otherwise.
+  // Helper: checks that the logged-in coach actually has a
+  // coach_diver_links row for the target diver, either within the
+  // event's host org or within the diver's home federation when that
+  // federation is explicitly participating in this event. Returns the
+  // diver row (with org_id) on success, throws an http-shaped error
+  // otherwise.
   //
-  // Tenant-boundary note: `coach_diver_links` is scoped per-org —
+  // Tenant-boundary gotcha: `coach_diver_links` is scoped per-org, so
   // the same coach/diver pair can have separate link rows in
   // different federations. Asking only "is there ANY link?" let a
-  // coach with one legitimate link in Org A act on that diver in
-  // Org B's events, where the coach has no granted authority.
-  // The third arg (the event's org_id) is required and parameterised
-  // into the SELECT so the existing host-org branch still requires
-  // the link to be in the same org as the event being acted on.
+  // coach with one legitimate link in Org A act on that diver in Org
+  // B's events, where the coach has no granted authority. The third
+  // arg (the event's org_id) is required and parameterised into the
+  // SELECT so the existing host-org branch still requires the link to
+  // be in the same org as the event being acted on.
   //
-  // Cross-federation exception: if the diver's home federation is
-  // on event_participating_orgs, a coach link in that same home
+  // Cross-federation exception: if the diver's home federation is on
+  // event_participating_orgs, a coach link in that same home
   // federation can act too. The participating org, diver's home org,
-  // and coach link org must all be the same value; do not collapse
-  // this into "any link to this diver".
+  // and coach link org must all be the same value, don't collapse
+  // this down to "any link to this diver".
   async function requireCoachLink(coachId, diverId, eventOrgId, eventId) {
     if (!eventOrgId) {
       const err = new Error("requireCoachLink: eventOrgId is required");
@@ -118,15 +119,15 @@ module.exports = function createCoachRouter({
   }
 
   // -------------------------------------------------------------
-  // GET /api/coach/dashboard — for every linked diver, return the
-  // next dive they have in any Live event (round, dive code, DD)
-  // plus their current rank in that event's standings, plus a
-  // summary of their last dive's total. Powers the dedicated
-  // /coach view; reuses coach_diver_links + per_dive aggregates.
+  // GET /api/coach/dashboard: for every linked diver, return the
+  // next dive they have in any Live event (round, dive code, DD),
+  // their current rank in that event's standings, and a summary of
+  // their last dive's total. Powers the dedicated /coach view;
+  // reuses coach_diver_links + per_dive aggregates.
   //
-  // Schema-wise nothing new — this is just a join across the
-  // existing pieces. Heavy enough that we don't want it in the
-  // page-load critical path of the regular dashboard.
+  // Nothing new schema-wise, just a join across existing pieces.
+  // Heavy enough that we don't want it in the page-load critical
+  // path of the regular dashboard.
   // -------------------------------------------------------------
   router.get("/api/coach/dashboard", verifyToken, async (req, res) => {
     try {
@@ -149,10 +150,10 @@ module.exports = function createCoachRouter({
             weekend gets one section per meet rather than one big
             mixed grid). */
          upcoming_raw AS (
-           /* LEFT JOIN dive_directory — a dive_list row with a
-              NULL or stale dive_id (diver hasn't filed their full
-              list yet) shouldn't drop the diver entirely from the
-              coach's dashboard. */
+           /* LEFT JOIN dive_directory: a dive_list row with a NULL
+              or stale dive_id (diver hasn't filed their full list
+              yet) shouldn't drop the diver entirely from the coach's
+              dashboard. */
            SELECT cdl.competitor_id, cdl.event_id, cdl.round_number,
                   cdl.display_order,
                   e.name AS event_name, e.status, e.event_type,
@@ -168,7 +169,7 @@ module.exports = function createCoachRouter({
              AND cdl.withdrawn_at IS NULL
              AND e.status IN ('Live', 'Upcoming')
          ),
-         /* Pick the diver's next round in each event — the lowest
+         /* Pick the diver's next round in each event: the lowest
             round_number that doesn't yet have all judges' scores. */
          scored_rounds AS (
            SELECT s.event_id, s.competitor_id, s.round_number,
@@ -198,16 +199,15 @@ module.exports = function createCoachRouter({
            WHERE judges_pending > 0
            ORDER BY competitor_id, event_id, round_number ASC
          ),
-         /* Last completed dive — the most recent round where
-            every judge has scored. We want this on the card so
-            the coach can see "Tom just landed 78.40 on his 109C
-            in round 3" without clicking through. Computed as
-            the highest round_number for which judges_in equals
-            number_of_judges, then joined back to the upcoming_raw
-            row for that same competitor/event/round (carrying
-            the dive_code + dd + description) plus the actual
-            dive total from per_dive (computed below in the main
-            chain). */
+         /* Last completed dive: the most recent round where every
+            judge has scored. We want this on the card so the coach
+            can see "Tom just landed 78.40 on his 109C in round 3"
+            without clicking through. Computed as the highest
+            round_number for which judges_in equals number_of_judges,
+            then joined back to the upcoming_raw row for that same
+            competitor/event/round (carrying the dive_code + dd +
+            description) plus the actual dive total from per_dive
+            (computed below in the main chain). */
          last_completed_round AS (
            SELECT DISTINCT ON (competitor_id, event_id)
                   competitor_id, event_id, round_number,
@@ -245,7 +245,7 @@ module.exports = function createCoachRouter({
                 r.total::numeric(8,2)   AS current_total,
                 r.rnk::int              AS current_rank,
                 r.field_size,
-                /* Most-recent completed dive — surfaced as
+                /* Most-recent completed dive, surfaced as
                    "Last: R3 109C → 78.40" on the card so the coach
                    sees what just landed without clicking through.
                    NULL when the diver hasn't competed yet. */
@@ -282,18 +282,17 @@ module.exports = function createCoachRouter({
   });
 
   // -------------------------------------------------------------
-  // GET /api/coach/up-next — the killer "your divers in the next
+  // GET /api/coach/up-next: the killer "your divers in the next
   // ~5 minutes" strip on the coach console. For every Live event
-  // that has a current active diver (from event_live_state), find
-  // every squad member whose display_order is AHEAD of the active
-  // diver in the same round (or in a later round); compute "dives
-  // until they're up" by walking through the dive_order; multiply
-  // by the configurable seconds-per-dive to get an ETA. Results
-  // sorted ETA ascending so the coach's eye lands on whoever's up
-  // soonest first.
+  // with a current active diver (from event_live_state), find every
+  // squad member whose display_order is AHEAD of the active diver in
+  // the same round (or in a later round), compute "dives until
+  // they're up" by walking through the dive_order, then multiply by
+  // the configurable seconds-per-dive to get an ETA. Results sorted
+  // ETA ascending so the coach's eye lands on whoever's up soonest.
   //
-  // Synchro-aware: in a synchro event each "dive slot" is one
-  // pair, not two divers, so we DISTINCT-count pairs not bodies.
+  // Synchro-aware: in a synchro event each "dive slot" is one pair,
+  // not two divers, so we DISTINCT-count pairs, not bodies.
   //
   // Query string:
   //   seconds_per_dive  (optional, default 45, clamp 15..120)
@@ -430,10 +429,10 @@ module.exports = function createCoachRouter({
   });
 
   // -------------------------------------------------------------
-  // GET /api/coach/events — every event where the coach has at
-  // least one linked diver entered, OR which is currently open
-  // for entry within the coach's org (so the coach can pre-emptively
-  // file lists before their divers are formally in the roster).
+  // GET /api/coach/events: every event where the coach has at least
+  // one linked diver entered, OR which is currently open for entry
+  // within the coach's org (so the coach can pre-emptively file
+  // lists before their divers are formally in the roster).
   //
   // Returns one row per event with:
   //   { event_id, event_name, height, event_type, status, meet_id,
@@ -485,9 +484,9 @@ module.exports = function createCoachRouter({
          -- invited and the coach's link lives in that same home org.
          -- This CTE only computes the eligibility BADGES the SPA shows;
          -- the actual write is still gated by requireCoachLink on every
-         -- submit/withdraw. Keep the two in lock-step — if they drift,
-         -- a badge will promise a write the gate then rejects (or hide
-         -- one it would allow). It is advisory, never authoritative.
+         -- submit/withdraw. Keep the two in lock-step, if they drift a
+         -- badge will promise a write the gate then rejects (or hide
+         -- one it would allow). It's advisory, never authoritative.
          write_scope AS (
            SELECT e.id AS event_id,
                   -- Coach's link is in the event's HOST org → host-fed coach.
@@ -496,8 +495,8 @@ module.exports = function createCoachRouter({
                   -- on the participating list (epo.org_id IS NOT NULL), the
                   -- coach's link lives in that SAME home org (link = diver
                   -- org), and that org is NOT the host (else it's just the
-                  -- host-fed case above). All three must hold together — do
-                  -- not collapse to "any link to this diver".
+                  -- host-fed case above). All three must hold together, don't
+                  -- collapse it down to "any link to this diver".
                   BOOL_OR(
                     epo.org_id IS NOT NULL
                     AND ml.link_org_id = ml.diver_org_id
@@ -572,7 +571,7 @@ module.exports = function createCoachRouter({
   });
 
   // -------------------------------------------------------------
-  // GET /api/coach/dive-lists/:event_id — for one event, return
+  // GET /api/coach/dive-lists/:event_id: for one event, return
   // every linked diver who's entered (or eligible to enter) plus
   // their current dive list. Powers the bulk dive-list editor:
   //
@@ -593,8 +592,8 @@ module.exports = function createCoachRouter({
   //   }
   //
   // We pull EVERY linked diver, not just the ones with a dive_list
-  // row, so the coach can see "Emma has nothing entered yet —
-  // build her a list" alongside divers who are already in.
+  // row, so the coach can see "Emma has nothing entered yet, build
+  // her a list" alongside divers who are already in.
   // -------------------------------------------------------------
   router.get("/api/coach/dive-lists/:event_id", verifyToken, async (req, res) => {
     try {
@@ -724,14 +723,14 @@ module.exports = function createCoachRouter({
       ]);
 
       // Cross-federation body-field leak guard. Even though the
-      // eligibility check above lets a coach see the diver-list
-      // shape for any event their linked divers COULD enter, we
-      // don't want to surface the event's `round_rules`,
-      // `prescribed_rounds`, or per-diver `partner_name` to a coach
-      // in another federation UNTIL one of their divers has actually
-      // been entered (a competitor_dive_lists row exists). Otherwise
-      // any coach with a single multi-fed link could fingerprint
-      // every event in every other org's calendar.
+      // eligibility check above lets a coach see the diver-list shape
+      // for any event their linked divers COULD enter, we don't want
+      // to surface the event's `round_rules`, `prescribed_rounds`, or
+      // per-diver `partner_name` to a coach in another federation
+      // until one of their divers has actually been entered (a
+      // competitor_dive_lists row exists). Otherwise any coach with a
+      // single multi-fed link could fingerprint every event on every
+      // other org's calendar.
       const sameOrg = event.org_id === req.user.org_id;
       const anyEntered = diverRes.rows.some(
         (row) => Array.isArray(row.dives) && row.dives.length > 0,
@@ -769,10 +768,10 @@ module.exports = function createCoachRouter({
         ? decoratedDivers
         : decoratedDivers.map((row) => ({
             ...row,
-            // No linked divers entered AND we're cross-fed —
-            // strip partner_name (it can identify another federation's
-            // pairings) but keep the basic id+name so the picker still
-            // works.
+            // No linked divers entered AND we're cross-fed, so strip
+            // partner_name (it can identify another federation's
+            // pairings) but keep the basic id+name so the picker
+            // still works.
             partner_id: null,
             partner_name: null,
           }));
@@ -802,15 +801,15 @@ module.exports = function createCoachRouter({
   });
 
   // -------------------------------------------------------------
-  // POST /api/coach/dive-lists/:event_id/:diver_id — submit /
-  // edit one of the coach's linked divers' dive list for a given
-  // event. Reuses the same validation + UPSERT as the diver-self
-  // path (POST /api/competitor/submit-list) via the shared
+  // POST /api/coach/dive-lists/:event_id/:diver_id: submit or edit
+  // one of the coach's linked divers' dive list for a given event.
+  // Reuses the same validation + UPSERT as the diver-self path
+  // (POST /api/competitor/submit-list) via the shared
   // lib/dive-list-submit helper, so prescribed-dive enforcement,
   // round-rules, and synchro partner checks are identical.
   //
-  // Audit-logged with the coach + diver ids so the operator can
-  // see "this list was submitted by their coach, not the diver".
+  // Audit-logged with the coach + diver ids so the operator can see
+  // "this list was submitted by their coach, not the diver".
   // -------------------------------------------------------------
   router.post(
     "/api/coach/dive-lists/:event_id/:diver_id",
@@ -823,14 +822,14 @@ module.exports = function createCoachRouter({
       try {
         await client.query("BEGIN");
 
-        // Load the event first — we need its org_id so the coach
-        // link gate can be scoped to the right federation. Otherwise
-        // a coach with a link in Org A could act on the diver in Org
+        // Load the event first, we need it's org_id so the coach link
+        // gate can be scoped to the right federation. Otherwise a
+        // coach with a link in Org A could act on the diver in Org
         // B's events (cross-tenant leak).
         // actor_local_time enables the late-arrival gate (DEC-04):
-        // when the coach taps submit before the entry deadline but
-        // the request only arrives after, the gate flags the rows
-        // for referee review instead of returning 409.
+        // when the coach taps submit before the entry deadline but the
+        // request only arrives after, the gate flags the rows for
+        // referee review instead of returning 409.
         const gate = await loadEventForEntries(client, event_id, {
           actorLocalTime: actor_local_time,
         });
@@ -866,9 +865,9 @@ module.exports = function createCoachRouter({
         });
 
         // Audit: a coach acted on a diver's list. Operator visibility.
-        // lib/audit.js reads `actor_id` + `metadata` — not `actor_user_id`
-        // + `context` (caught by the new authz test pack, which discovered
-        // the audit row had been writing NULLs for both fields silently).
+        // lib/audit.js reads `actor_id` + `metadata`, not `actor_user_id`
+        // + `context` (caught by the new authz test pack, which found the
+        // audit row had been silently writing NULLs for both fields).
         await recordAudit(client, {
           org_id: gate.event.org_id,
           actor_id: req.user.id,
@@ -932,21 +931,21 @@ module.exports = function createCoachRouter({
   // -------------------------------------------------------------
   // POST /api/coach/dive-lists/:event_id/:diver_id/withdraw
   //
-  // Phase 4 — coach scratches one of their linked divers from an
-  // event. Sets withdrawn_at, withdrawn_by_user_id (the coach),
-  // and withdrawn_reason on every competitor_dive_lists row this
-  // diver has in the event. Gated by:
+  // Phase 4: coach scratches one of their linked divers from an
+  // event. Sets withdrawn_at, withdrawn_by_user_id (the coach), and
+  // withdrawn_reason on every competitor_dive_lists row this diver
+  // has in the event. Gated by:
   //
-  //   1. coach_diver_links — coach must own the diver.
+  //   1. coach_diver_links: coach must own the diver.
   //   2. Event must not be Completed (we don't rewrite history).
-  //      Live events ARE permitted — sometimes a diver gets
-  //      injured mid-event and pulls.
+  //      Live events ARE permitted, sometimes a diver gets injured
+  //      mid-event and pulls.
   //
-  // Audit-logged as `coach.withdraw_dive_list` so the operator
-  // can see at a glance "Tom was withdrawn by his coach @ 14:32,
-  // reason: shoulder injury". On the live Control Room the
-  // operator gets a meet_held-style banner so they're not blind-
-  // sided when the diver disappears from the queue.
+  // Audit-logged as `coach.withdraw_dive_list` so the operator can
+  // see at a glance "Tom was withdrawn by his coach @ 14:32, reason:
+  // shoulder injury". On the live Control Room the operator gets a
+  // meet_held-style banner so they're not blindsided when the diver
+  // disappears from the queue.
   // -------------------------------------------------------------
   router.post(
     "/api/coach/dive-lists/:event_id/:diver_id/withdraw",
@@ -955,10 +954,10 @@ module.exports = function createCoachRouter({
     async (req, res) => {
       const { event_id, diver_id } = req.params;
       const reason = (req.body?.reason || "").trim().slice(0, 500);
-      // Offline-resilience clock (P4-1 / DEC-04). Captures when
-      // the coach actually tapped Withdraw — useful for forensics
-      // when an outbox-queued withdraw lands minutes after the
-      // diver's first dive of the round.
+      // Offline-resilience clock (P4-1 / DEC-04). Captures when the
+      // coach actually tapped Withdraw, useful for forensics when an
+      // outbox-queued withdraw lands minutes after the diver's first
+      // dive of the round.
       const actorLocalTime = req.body?.actor_local_time || null;
       const client = await pool.connect();
       try {
@@ -993,10 +992,10 @@ module.exports = function createCoachRouter({
           return res.status(err.status || 500).json({ error: err.message });
         }
 
-        // Mark every (un-withdrawn) row for this diver in this
-        // event as withdrawn. If the diver has no rows at all,
-        // 404. If every row is already withdrawn, 409 — nothing
-        // to do, surface that to the coach.
+        // Mark every (un-withdrawn) row for this diver in this event
+        // as withdrawn. If the diver has no rows at all, 404. If
+        // every row is already withdrawn, 409, nothing to do, just
+        // surface that to the coach.
         const upd = await client.query(
           `UPDATE competitor_dive_lists
               SET withdrawn_at         = NOW(),
@@ -1088,11 +1087,11 @@ module.exports = function createCoachRouter({
   );
 
   // -------------------------------------------------------------
-  // GET /api/coach/alert-preferences — coach's "your diver is up
+  // GET /api/coach/alert-preferences: coach's "your diver is up
   // next" push settings. Auto-creates a default row on first read
   // so the coach doesn't have to manually opt in.
   //
-  // POST /api/coach/alert-preferences — update { enabled, dives_ahead }
+  // POST /api/coach/alert-preferences: update { enabled, dives_ahead }
   // -------------------------------------------------------------
   router.get("/api/coach/alert-preferences", verifyToken, async (req, res) => {
     try {
@@ -1139,8 +1138,8 @@ module.exports = function createCoachRouter({
   });
 
   // -------------------------------------------------------------
-  // GET /api/coach/divers — coaches see their own linked divers,
-  // minimal fields, enough to build a dashboard tile + click
+  // GET /api/coach/divers: coaches see their own linked divers,
+  // minimal fields, enough to build a dashboard tile and click
   // through to each diver's profile (which already exists at
   // /profile/:id).
   // -------------------------------------------------------------

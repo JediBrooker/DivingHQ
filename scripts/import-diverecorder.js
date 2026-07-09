@@ -2,23 +2,24 @@
 //
 // DiveRecorder Meet Explorer archive importer (CLI wrapper).
 //
-// The pipeline lives in lib/diverecorder-import.js so the same code
-// powers the sysadmin "import now" button and the scheduled sync.
-// This script is the operator-facing front end for backfills.
+// The actual pipeline lives in lib/diverecorder-import.js so the same
+// code powers both the sysadmin "import now" button and the scheduled
+// sync. This script is just the operator-facing front end for backfills.
 //
 //   npm run import:diverecorder -- --limit 5 --dry    parse first 5 meets, write nothing
 //   npm run import:diverecorder -- --limit 5           import first 5 meets
 //   npm run import:diverecorder -- --meet 1000         import a single meet (by mref)
 //   npm run import:diverecorder -- --new               only import meets not yet stored
 //   npm run import:diverecorder -- --nat GBR,AUS       restrict to these countries
-//   npm run import:diverecorder                        full backfill (hours; polite)
+//   npm run import:diverecorder                        full backfill (hours; be polite)
 //
 // Politeness (robots.txt for /meetexplorer/ allows User-agent: *):
 // single-threaded with a configurable delay (--delay ms, default
-// 800), identifying UA, backoff on 429/5xx, and an on-disk HTML cache
-// under scripts/.dr-cache so re-runs/resumes don't re-hit the server.
+// 800), an identifying UA, backoff on 429/5xx, and an on-disk HTML
+// cache under scripts/.dr-cache so re-runs/resumes don't hammer the
+// server again.
 //
-// Connection: same env as scripts/migrate.js — DATABASE_URL or the
+// Connection: same env as scripts/migrate.js, DATABASE_URL or the
 // standard libpq vars.
 
 require("dotenv").config();

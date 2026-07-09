@@ -1,21 +1,21 @@
 <script setup>
-/* BroadcastModal — the Control Room broadcast chooser, extracted
- * from ControlView.vue. Covers the five operator scenarios:
+/* BroadcastModal: the Control Room broadcast chooser, extracted
+ * from ControlView.vue. Covers the five operator scenarios,
  * operator broadcast (this screen), single-event audience window,
- * multi-event picker, OBS / streaming overlay instructions, and
+ * multi-event picker, OBS/streaming overlay instructions, and
  * the Daktronics venue-bridge command panel.
  *
  * State boundary: chooser/picker state comes from
  * @/composables/useBroadcastChooser (called HERE now, not in the
- * view); the OBS overlay-URL + venue-bridge command state is
+ * view). The OBS overlay-URL + venue-bridge command state is
  * owned here. The parent opens the modal imperatively via the
- * exposed open() — it has no other coupling besides the `event`
+ * exposed open(), it has no other coupling besides the `event`
  * prop and the close-header-menu emit (legacy ⋯-menu cleanup the
  * chooser fires when the operator commits to a broadcast window).
  *
  * Body-scroll lock: registered here for the chooser + venue
- * panel; the composable refcounts, so the lock composes with the
- * parent's lockWhile exactly as before the extraction.
+ * panel. The composable refcounts, so the lock composes with the
+ * parent's lockWhile just like it did before the extraction.
  */
 import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -48,18 +48,18 @@ const {
   closeHeaderMenu: () => emit('close-header-menu'),
 })
 
-// OBS / streaming-app instructions panel — option 4 in the
+// OBS/streaming-app instructions panel, option 4 in the
 // broadcast chooser. The chroma-key overlay URL is the existing
-// `/scoreboard/<id>?overlay=1` endpoint; we surface it here as
-// an absolute URL the operator can paste straight into OBS
+// `/scoreboard/<id>?overlay=1` endpoint, we just surface it here
+// as an absolute URL the operator can paste straight into OBS
 // Studio's Browser Source dialog. `obsCopyState` drives the
 // transient "Copied!" feedback on the copy button.
 const obsCopyState = ref('idle') // 'idle' | 'copied' | 'failed'
 const obsOverlayUrl = computed(() => {
   const id = props.event?.id
   if (!id) return ''
-  // Absolute URL — when pasted into OBS it has to resolve from
-  // outside this app context, so build from window.location.
+  // Needs to be an absolute URL since OBS resolves it from
+  // outside this app's context, so build it off window.location.
   const origin = typeof window !== 'undefined' && window.location
     ? window.location.origin
     : ''
@@ -77,10 +77,10 @@ async function copyObsUrl() {
   setTimeout(() => { obsCopyState.value = 'idle' }, 1800)
 }
 
-// Venue hardware bridge instructions — option 5 in the
-// Broadcast chooser. The browser cannot start a process on the
-// venue laptop, so this panel turns the selected event into
-// copyable bridge commands and a direct diagnostic URL.
+// Venue hardware bridge instructions, option 5 in the
+// broadcast chooser. The browser can't start a process on the
+// venue laptop, so this panel just turns the selected event into
+// copyable bridge commands plus a direct diagnostic URL.
 const daktronicsInstructionsOpen = ref(false)
 const daktronicsCopyState = ref('') // '' | 'dry' | 'udp' | 'json' | 'snapshot' | 'failed'
 const bridgeAppUrl = computed(() => (
@@ -122,14 +122,14 @@ async function copyDaktronicsText(kind, text) {
   setTimeout(() => { daktronicsCopyState.value = '' }, 1800)
 }
 
-// Same lock terms the parent's composed computed used to carry
-// for this modal.
+// Same lock condition the parent's composed computed used to
+// carry for this modal.
 useBodyScrollLock().lockWhile(computed(() =>
   broadcastChoiceOpen.value ||
   daktronicsInstructionsOpen.value
 ))
 
-// Imperative opener — the header Broadcast button calls this via
+// Imperative opener, the header Broadcast button calls this via
 // a template ref.
 function open() {
   broadcastChoiceOpen.value = true
@@ -159,7 +159,7 @@ defineExpose({ open })
            instructions) is open so the operator sees one panel
            at a time. -->
       <div v-if="!broadcastPickerOpen && !obsInstructionsOpen && !daktronicsInstructionsOpen" class="lb-body broadcast-chooser-body">
-        <!-- 1. Operator broadcast — inline on this screen. -->
+        <!-- 1. Operator broadcast, inline on this screen. -->
         <RouterLink
           to="/control?broadcast=1"
           class="broadcast-option"
@@ -214,7 +214,7 @@ defineExpose({ open })
         </button>
 
         <!-- 4. OBS / live-streaming setup instructions. Doesn't
-             open a new window — expands an inline sub-panel
+             open a new window, it expands an inline sub-panel
              with the chroma-key overlay URL and a Browser
              Source how-to. Disabled when no event is selected
              (the overlay URL needs an event id to compose). -->
@@ -528,12 +528,12 @@ defineExpose({ open })
 <style scoped>
 /* Broadcast / OBS / venue-bridge styles MOVED from
    ControlView.css (exclusive to this modal). The .lb-* modal
-   frame at the bottom is COPIED — the pattern is shared by the
-   modals that remain in ControlView. */
+   frame at the bottom is COPIED, since the pattern is shared by
+   the modals that remain in ControlView. */
 
-/* Broadcast chooser modal — big tappable rows so the
-   operator picks the right destination at a glance. The modal
-   width (min(96vw, 760px)) now rides BaseModal's max-width prop. */
+/* Broadcast chooser modal: big tappable rows so the operator
+   picks the right destination at a glance. The modal width
+   (min(96vw, 760px)) now rides BaseModal's max-width prop. */
 .broadcast-chooser-body {
   display: flex;
   flex-direction: column;
@@ -591,7 +591,7 @@ defineExpose({ open })
   color: var(--red, #ef4444);
 }
 
-/* Sub-picker inside the broadcast modal — list of Live events
+/* Sub-picker inside the broadcast modal, list of Live events
    with per-row checkboxes. Same modal width as the chooser so
    the visual frame doesn't jump when the panel swaps. */
 .broadcast-picker {
@@ -624,8 +624,8 @@ defineExpose({ open })
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  /* dvh: stable height on iOS Safari (see notes on .lb-modal).
-     vh fallback for browsers older than ~Q4-2022. */
+  /* dvh keeps this stable on iOS Safari (see .lb-modal notes),
+     vh is the fallback for older browsers. */
   max-height: 50vh;
   max-height: 50dvh;
   overflow-y: auto;
@@ -671,7 +671,7 @@ defineExpose({ open })
   border-top: 1px solid var(--border-2);
 }
 
-/* OBS / streaming-app instructions panel — same modal frame as
+/* OBS / streaming-app instructions panel, same modal frame as
    the multi-event picker so the visual shell doesn't jump when
    the sub-panel swaps. URL row + numbered Browser Source steps. */
 .obs-instructions {
@@ -812,8 +812,8 @@ defineExpose({ open })
 }
 
 .venue-bridge-instructions {
-  /* dvh: stable height on iOS Safari (see notes on .lb-modal).
-     vh fallback for browsers older than ~Q4-2022. */
+  /* dvh keeps this a stable height on iOS Safari (see the notes
+     on .lb-modal); vh is just the fallback for older browsers. */
   max-height: min(72vh, 760px);
   max-height: min(72dvh, 760px);
   overflow-y: auto;

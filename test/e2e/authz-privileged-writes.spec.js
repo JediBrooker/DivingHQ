@@ -1,15 +1,15 @@
 // Authorization boundary tests for privileged writes.
 //
 // These endpoints all carry HIGH blast-radius (rewriting a score,
-// scratching a diver, submitting a dive list on someone's behalf)
-// and the audit notes mark them out as the surfaces an attacker
-// would aim at first. Before this spec landed there was zero
+// scratching a diver, submitting a dive list on someone's behalf),
+// and the audit notes call them out as the surfaces an attacker
+// would go for first. Before this spec landed there was zero
 // e2e coverage of the role + tenant gates, so a regression in
 // requireOrgRole / requireCoachLink could ship undetected.
 //
 // Each describe block exercises:
 //   * happy path with a side-effect assertion (audit row,
-//     socket event, row-count change, etc.) — proves the gate
+//     socket event, row-count change, etc.), proving the gate
 //     isn't accidentally over-permissive
 //   * wrong-role: a user with no relevant role gets 403
 //   * cross-tenant: a same-role caller in another org gets 403
@@ -17,8 +17,8 @@
 //     write only when the diver's home org is on the event's
 //     participating list; wrong-org links still fail closed
 //
-// Serial because the helpers create org + users via the public
-// API which is rate-limited per-IP; running these in parallel
+// Serial, because the helpers create org + users via the public
+// API which is rate-limited per-IP. Running these in parallel
 // would race the auth limiter even with RATE_LIMIT_DISABLED=true.
 
 const { test, expect } = require("@playwright/test");
@@ -32,7 +32,7 @@ function auth(token) { return { Authorization: `Bearer ${token}` }; }
 // referee, a diver-role user, and a foreign-org referee.
 //
 // Returned bundle is everything a describe block needs to compose
-// its specific assertions. Test teardown deletes both orgs.
+// its own assertions. Test teardown deletes both orgs when it's done.
 async function buildTwoOrgFixture(request) {
   const orgA = await setup.createOrgAndAdmin(request, { orgName: "Authz E2E A", countryCode: "AUS" });
   const orgB = await setup.createOrgAndAdmin(request, { orgName: "Authz E2E B", countryCode: "NZL" });
@@ -41,7 +41,7 @@ async function buildTwoOrgFixture(request) {
 
 test.describe.serial("Privileged writes — authz boundary", () => {
   // -------------------------------------------------------------
-  // 1. PUT /api/scores/:id — referee/meet-manager can amend a
+  // 1. PUT /api/scores/:id: referee/meet-manager can amend a
   //    finalized score within their org + event. Diver hitting it
   //    gets 403; referee from another org gets 403.
   // -------------------------------------------------------------
@@ -76,8 +76,8 @@ test.describe.serial("Privileged writes — authz boundary", () => {
         judgeId: judge.userId, diveId, roundNumber: 1, score: 7.0,
       });
 
-      // Org A's referee is added to the event manager list — the
-      // per-event check beyond requireOrgRole gates this.
+      // Org A's referee is added to the event manager list, since the
+      // per-event check beyond requireOrgRole is what gates this.
       const referee = await setup.insertUser({ orgId: orgA.orgId, role: "referee", fullName: "Authz Referee" });
       await setup.addEventManager({ eventId: event.id, userId: referee.userId });
       ({ token: refereeToken } = await setup.loginAs(request, referee.username));
@@ -96,8 +96,8 @@ test.describe.serial("Privileged writes — authz boundary", () => {
 
     test("happy: referee on the event amends the score, audit row + socket broadcast", async ({ request, baseURL }) => {
       // Subscribe BEFORE the PUT so we don't miss the broadcast.
-      // Socket timing is non-deterministic — we use expect.poll on a
-      // received-flag set in the callback.
+      // Socket timing is non-deterministic, so we lean on expect.poll
+      // against a received-flag set in the callback.
       const sock = await setup.openSocket(baseURL, refereeToken);
       const received = [];
       sock.emit("subscribe_event", { event_id: event.id });
@@ -170,7 +170,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
   });
 
   // -------------------------------------------------------------
-  // 2. POST /api/coach/dive-lists/:event_id/:diver_id — coach
+  // 2. POST /api/coach/dive-lists/:event_id/:diver_id: coach
   //    submits on behalf of a linked diver. Multi-tenant gate at
   //    requireCoachLink (link.org_id must match event.org_id).
   // -------------------------------------------------------------
@@ -241,7 +241,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       );
       expect(rows.rows.map((x) => x.round_number)).toEqual([1]);
 
-      // Audit row landed with the full payload — actor_id, org_id,
+      // Audit row landed with the full payload: actor_id, org_id,
       // and metadata are the fields that silently NULLed before
       // commit 96caa22 fixed the recordAudit field-name mismatch.
       const audit = await setup.pool.query(
@@ -277,8 +277,8 @@ test.describe.serial("Privileged writes — authz boundary", () => {
     });
 
     test("wrong-org link: coach with link in Org B can't touch Org A event — regression gate", async ({ request }) => {
-      // The coach DOES have a coach_diver_links row for this diver
-      // — just in the wrong org. The widened cross-fed branch must
+      // The coach DOES have a coach_diver_links row for this diver,
+      // just in the wrong org. The widened cross-fed branch must
       // still fail closed unless link.org_id matches the diver's
       // participating home org.
       const r = await request.post(`/api/coach/dive-lists/${event.id}/${diver.userId}`, {
@@ -296,13 +296,13 @@ test.describe.serial("Privileged writes — authz boundary", () => {
         data: { dives: [{ round_number: 1, dive_id: diveId }] },
       });
       // The endpoint uses verifyToken (not requireOrgRole), so the
-      // gate that catches a diver is requireCoachLink — same 403.
+      // gate that catches a diver is requireCoachLink, same 403 either way.
       expect(r.status()).toBe(403);
     });
   });
 
   // -------------------------------------------------------------
-  // 3. POST /api/coach/dive-lists/:event_id/:diver_id/withdraw —
+  // 3. POST /api/coach/dive-lists/:event_id/:diver_id/withdraw:
   //    irreversible, audit-logged scratch. Event must not be
   //    Completed.
   // -------------------------------------------------------------
@@ -352,7 +352,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       });
       expect(r.status()).toBe(403);
 
-      // Sanity: nothing got marked.
+      // sanity check: nothing got marked.
       const check = await setup.pool.query(
         `SELECT COUNT(*)::int AS n FROM competitor_dive_lists
           WHERE event_id = $1 AND competitor_id = $2 AND withdrawn_at IS NOT NULL`,
@@ -394,7 +394,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       // writing actor_user_id / context, but lib/audit.js reads
       // actor_id / metadata, so both fields were silently NULL on
       // every coach action since the feature shipped). This block
-      // tightens the assertion to ensure that fix doesn't regress —
+      // tightens the assertion so that fix can't regress quietly:
       // actor_id, org_id, metadata, entity_name, and note all
       // need to land.
       const audit = await setup.pool.query(
@@ -413,12 +413,12 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       expect(row?.org_id).toBe(orgA.orgId);
       expect(row?.entity_type).toBe("dive_list");
       expect(row?.entity_id).toBe(diver.userId);
-      // entity_name is the diver's display name — keep this lenient
+      // entity_name is the diver's display name, keep this lenient
       // (the route resolves it from a join, so don't pin the exact
       // shape if the helper changes).
       expect(typeof row?.entity_name).toBe("string");
       expect(row?.note).toBe("shoulder injury");
-      // metadata is a jsonb column — pg returns it as a parsed object
+      // metadata is a jsonb column, pg returns it as a parsed object
       expect(row?.metadata).toMatchObject({
         event_id: event.id,
         coach_id: coachUserId,
@@ -429,7 +429,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
     });
 
     test("already-withdrawn returns 409", async ({ request }) => {
-      // Run AFTER the happy path — every row is already marked.
+      // Run AFTER the happy path, every row is already marked.
       const r = await request.post(`/api/coach/dive-lists/${event.id}/${diver.userId}/withdraw`, {
         headers: auth(coachToken), data: { reason: "double tap" },
       });
@@ -438,7 +438,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
   });
 
   // -------------------------------------------------------------
-  // 4. POST /api/coach/dive-lists/... — cross-federation coach
+  // 4. POST /api/coach/dive-lists/...: cross-federation coach
   //    writes. A coach linked in the diver's home org can submit
   //    and withdraw when that org is on event_participating_orgs;
   //    a link in any other org still fails closed.
@@ -542,10 +542,10 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       });
       expect(submit.status()).toBe(200);
 
-      // competitor_dive_lists has no org column: the entry is
-      // bound by competitor_id. The persisted competitor remains
-      // the home-org diver while the event remains hosted elsewhere,
-      // matching the diver-self cross-federation entry model.
+      // competitor_dive_lists has no org column, the entry is
+      // bound by competitor_id instead. The persisted competitor
+      // remains the home-org diver while the event stays hosted
+      // elsewhere, matching the diver-self cross-federation entry model.
       const entry = await setup.pool.query(
         `SELECT cdl.round_number,
                 cdl.withdrawn_at,
@@ -610,7 +610,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
   });
 
   // -------------------------------------------------------------
-  // 5. GET /api/coach/dive-lists/:event_id — cross-fed body-field
+  // 5. GET /api/coach/dive-lists/:event_id: cross-fed body-field
   //    redaction. A coach with no diver actually entered AND in
   //    another federation must NOT see round_rules /
   //    prescribed_rounds / partner_name.
@@ -623,8 +623,8 @@ test.describe.serial("Privileged writes — authz boundary", () => {
     test.beforeAll(async ({ request }) => {
       ({ orgA, orgB } = await buildTwoOrgFixture(request));
 
-      // Wire Org B onto the event's participating list — without
-      // that, the cross-fed coach's eligible check 403s before we
+      // Wire Org B onto the event's participating list, without
+      // that the cross-fed coach's eligible check 403s before we
       // ever get to the redaction logic.
       event = await setup.createEvent(request, {
         adminToken: orgA.adminToken,
@@ -706,7 +706,7 @@ test.describe.serial("Privileged writes — authz boundary", () => {
   });
 
   // -------------------------------------------------------------
-  // 6. GET /api/coach/up-next — only returns rows for coach's
+  // 6. GET /api/coach/up-next: only returns rows for coach's
   //    linked divers. A coach with NO links gets an empty rows
   //    array even when another coach's divers are live.
   // -------------------------------------------------------------
@@ -748,12 +748,12 @@ test.describe.serial("Privileged writes — authz boundary", () => {
         [event.id, nextUp.userId],
       );
 
-      // Coach with a link to "nextUp" — should see one row.
+      // Coach with a link to "nextUp": should see one row.
       const coachLinked = await setup.insertUser({ orgId: orgA.orgId, role: "coach", fullName: "Linked Coach" });
       await setup.linkCoach({ coachId: coachLinked.userId, diverId: nextUp.userId, orgId: orgA.orgId });
       ({ token: coachWithLinksToken } = await setup.loginAs(request, coachLinked.username));
 
-      // Coach with NO links — should see zero rows even though
+      // Coach with NO links: should see zero rows even though
       // there's a live event with squad members in flight.
       const lonelyCoach = await setup.insertUser({ orgId: orgA.orgId, role: "coach", fullName: "Lonely Coach" });
       ({ token: unlinkedCoachToken } = await setup.loginAs(request, lonelyCoach.username));
@@ -783,9 +783,9 @@ test.describe.serial("Privileged writes — authz boundary", () => {
       expect(body.rows).toHaveLength(1);
       expect(body.rows[0].full_name).toBe("Next Up Diver");
       // dives_until: same round, display_order 2 vs active 1 → 1 dive.
-      // SQL returns numeric/integer as strings via pg; Number() the
-      // values rather than tightening the route to cast its CASE
-      // arithmetic back to int (which would change the response shape
+      // SQL returns numeric/integer as strings via pg, so we Number()
+      // the values here rather than tightening the route to cast its
+      // CASE arithmetic back to int (that'd change the response shape
       // for other consumers).
       expect(Number(body.rows[0].dives_until)).toBe(1);
       // Default seconds_per_dive=45 → eta_seconds = 45.

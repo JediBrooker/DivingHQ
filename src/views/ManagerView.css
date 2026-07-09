@@ -1,5 +1,5 @@
 .page-header { display:flex;align-items:center;justify-content:space-between;padding:1.5rem 2rem;border-bottom:1px solid var(--border);max-width:1400px;margin:0 auto; }
-/* Single-column layout — the New Event form lives in a modal
+/* Single-column layout: the New Event form lives in a modal
    now (migration 039). Inline page hosts the events list + meets
    list stacked vertically. */
 .main { max-width:1100px;margin:0 auto;padding:2rem;display:grid;grid-template-columns:1fr;gap:2rem;align-items:start; }
@@ -12,11 +12,11 @@
   flex-wrap:wrap;
 }
 
-/* dvh, not vh: iOS Safari's collapsing URL bar makes 100vh =
-   the *large* viewport (bar collapsed). With the bar expanded
-   a 100vh modal extends below the visible area and the
+/* dvh, not vh: heads up, iOS Safari's collapsing URL bar makes
+   100vh = the *large* viewport (bar collapsed). With the bar
+   expanded a 100vh modal extends below the visible area and the
    Save/Cancel buttons fall into the overflow-y:auto scroll
-   trap — toolbar can't collapse while a modal is open.
+   trap, since the toolbar can't collapse while a modal is open.
    Paired declarations: vh first for browsers older than
    ~Q4-2022, dvh second for modern. */
 .modal-create-event {
@@ -27,20 +27,20 @@
 }
 .modal-create-dive  { max-width:480px; }
 
-/* Round-dives editor — the .rd-* styles moved into
+/* Round-dives editor: the .rd-* styles moved into
    src/components/manager/RoundDivesEditor.vue (scoped) when the
    editor was extracted from this view. */
 
-/* Advance-stage modal styles — the .modal-advance / .advance-field*
+/* Advance-stage modal styles: the .modal-advance / .advance-field*
    / .advance-radio / .advance-preview* rules moved into
    src/components/manager/AdvanceStageModal.vue (scoped) when the
    modal was extracted from this view. The .advance-btn event-row
-   button (below) stays. */
+   button (below) stays put. */
 .form-stack{display:flex;flex-direction:column;gap:1rem;}
 .event-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-xs);transition:border-color 0.2s;animation:fadeUp 0.25s ease;}
 
-/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
-   reinforces the global guard in app.css). */
+/* P1: reduced-motion guard, just a sanity check tracked per-file
+   by the P0 scanner; reinforces the global guard in app.css. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -72,7 +72,7 @@
 .org-filter .label { margin: 0; flex-shrink: 0; }
 .org-filter .select { max-width: 320px; }
 
-/* Event template strip — saved form configurations the manager
+/* Event template strip: saved form configurations the manager
    re-applies with one click. Sits above the form fields. */
 .event-templates {
   background: var(--bg-2); border: 1px solid var(--border);
@@ -110,7 +110,7 @@
   .event-template-save .input { font-size: 16px; }
 }
 
-/* Suggested templates — collapsible. Closed = a single compact
+/* Suggested templates, collapsible. Closed = a single compact
    line so the strip doesn't dominate the top of the modal.
    Open = expands the list of clickable templates inline. */
 .std-templates {
@@ -156,8 +156,8 @@
 .std-template:hover { border-color: var(--cyan); background: rgba(0, 224, 255, 0.06); }
 .std-template:hover .event-template-name { color: var(--cyan); }
 
-/* Advance-to-final action — green to suggest "promote".
-   Visible only on preliminary rows whose final exists. */
+/* Advance-to-final action, green to suggest "promote".
+   Only shows up on preliminary rows whose final exists. */
 .advance-btn {
   color: var(--green) !important;
   border-color: rgba(16,185,129,0.4) !important;
@@ -169,10 +169,10 @@
 }
 .actions{display:flex;gap:0.5rem;flex-shrink:0;align-items:center;}
 
-/* "🔴 LIVE — Open" — Live primary action. Same dimensions as
+/* The "LIVE - Open" pill, live primary action. Same dimensions as
    the other btn-sm pills, but red-tinted so the operator can
    spot a running event at a glance from the Meet Manager
-   list. The pulse is subtle (opacity only — no movement) so
+   list. The pulse is subtle (opacity only, no movement) so
    it doesn't compete with the audience-facing scoreboard's
    own LIVE badge. */
 .btn-live {
@@ -196,7 +196,7 @@
 
 /* ⋯ overflow menu on the event row. Same visual language as
    the dropdown menus in the Control Room (header overflow,
-   Adjust ▾, Auto-next ▾) — small popover anchored under the
+   Adjust ▾, Auto-next ▾): small popover anchored under the
    trigger, items as full-width buttons with hover tint. The
    "delete" item gets the red:hover treatment so a destructive
    action is colour-coded but doesn't dominate the list. */
@@ -230,7 +230,7 @@
 .event-overflow-menu .dropdown-item-danger:hover {
   background: rgba(239, 68, 68, 0.12); color: var(--red);
 }
-/* Static label inside the overflow menu — used for the "Hosted by
+/* Static label inside the overflow menu, used for the "Hosted by
    X" hint a visiting federation sees. Not interactive. */
 .event-overflow-menu .dropdown-item-static {
   padding: 0.55rem 0.7rem;
@@ -273,7 +273,7 @@
 }
 /* =====================================================================
    Page heading + one-line summary. Mirrors the Judge Analysis header:
-   a 22px/700 title with a plain muted sub-paragraph beneath — no box,
+   a 22px/700 title with a plain muted sub-paragraph beneath, no box,
    icon, or tint. */
 .mgr-page-title {
   margin: 0;
@@ -287,10 +287,10 @@
   line-height: 1.5; max-width: 68ch;
 }
 /* =====================================================================
-   Accordion layout. A single vertical column of collapsible sections —
+   Accordion layout. A single vertical column of collapsible sections:
    "All events", one per meet, then "Ungrouped". The header toggles the
    section; the open one reveals its event list inline. Replaces the old
-   master–detail rail + pane: one layout for every width, so nothing can
+   master–detail rail + pane, one layout for every width, so nothing can
    shear off sideways the way the old fixed grid + horizontal rail strip
    did on phones. Mirrors the CRM card language used elsewhere here.
    ===================================================================== */
@@ -335,7 +335,7 @@
   flex: 1; min-width: 0;
   font-family: var(--font-display); font-size: 14px; font-weight: 700;
   letter-spacing: 0.01em; line-height: 1.3;
-  /* Full meet name — wrap rather than truncate. */
+  /* Full meet name, wrap rather than truncate. */
   white-space: normal; overflow-wrap: break-word;
 }
 .mgr-acc-section.open .mgr-acc-label { color: var(--accent); }
@@ -363,7 +363,7 @@
   color: var(--red);
 }
 
-/* Expanded body — sits on the page background so the inner toolbar +
+/* Expanded body, sits on the page background so the inner toolbar +
    event cards read as raised surfaces against it. */
 .mgr-acc-body {
   padding: 1rem;
@@ -374,11 +374,11 @@
   gap: 1rem; flex-wrap: wrap;
   margin-bottom: 1rem;
 }
-/* Top toolbar — left-aligned page actions above the section list.
+/* Top toolbar: left-aligned page actions above the section list.
    The button keeps its natural (standard) width; no full-bleed. */
 .mgr-acc-toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
-/* RIGHT PANE — contextual header + the existing toolbar/list. */
+/* RIGHT PANE: contextual header + the existing toolbar/list. */
 .mgr-detail { min-width: 0; display: flex; flex-direction: column; }
 .mgr-detail-head {
   display: flex; align-items: flex-start; justify-content: space-between;
@@ -510,7 +510,7 @@
 .rr-section-row .input {
   font-size: 12px; padding: 0.45rem 0.6rem;
   /* `min-width: 0` lets the flex parent shrink the input below
-     its UA-stylesheet intrinsic width — without it, <input
+     its UA-stylesheet intrinsic width. Without it, <input
      type="number"> in particular has an implicit ~150px min
      that pushes the 3-cell row wider than a phone viewport. */
   min-width: 0;
@@ -564,7 +564,7 @@
    - .readiness-*             → src/components/manager/MeetReadinessModal.vue
    - .teams-modal / .enrolled-* / .add-team-row /
      .teams-section-label     → TeamsEnrolmentModal.vue +
-                                ParticipatingOrgsModal.vue (copies — keep in sync)
+                                ParticipatingOrgsModal.vue (copies, keep in sync)
    - .invite-* / .pending-invite-row → ParticipatingOrgsModal.vue */
 
 /* Field-bottom checkbox row + a small help pill that toggles a
@@ -595,25 +595,25 @@
 .help-popover strong:first-child { margin-top: 0; }
 .help-popover p { margin: 0.2rem 0 0.5rem; }
 
-/* Mobile layout — collapse fixed multi-column grids to a single
+/* Mobile layout: collapse fixed multi-column grids to a single
    column, let modals use the full viewport, and tighten internal
    padding so the small-screen org admin can still drive a meet
    from a phone. Outer wrap padding is handled globally by
    src/styles/app.css. */
 /* The accordion is single-column at every width, so it needs no
-   stacking breakpoint — only the phone-specific tightening below. */
+   stacking breakpoint, just the phone-specific tightening below. */
 @media (max-width: 600px) {
-  /* Header — shrink the desktop padding so the title + button row
+  /* Header: shrink the desktop padding so the title + button row
      doesn't dominate above-the-fold on a phone. */
   .page-header { padding: 1rem; }
 
-  /* Accordion body head — stack the meet sub-line above its action
+  /* Accordion body head: stack the meet sub-line above its action
      buttons so the dates/venue get the full row instead of being
      squeezed into a narrow column beside the buttons. */
   .mgr-acc-bodyhead { flex-direction: column; gap: 0.7rem; }
   .mgr-acc-body { padding: 0.8rem; }
 
-  /* Event row — drop the side-by-side layout so the action cluster
+  /* Event row: drop the side-by-side layout so the action cluster
      can wrap below the event meta instead of squeezing it. */
   .event-item {
     flex-direction: column;
@@ -623,7 +623,7 @@
   }
   .actions { flex-wrap: wrap; }
 
-  /* Modals — full-bleed so the inner grids and forms have the
+  /* Modals: full-bleed so the inner grids and forms have the
      entire viewport to play with. Keep a tiny inset. */
   .modal,
   .modal-create-event,
@@ -632,7 +632,7 @@
     width: 100%;
   }
 
-  /* Meet row — name + meta stack above the action chips. */
+  /* Meet row: name + meta stack above the action chips. */
   .meet-row {
     flex-direction: column;
     align-items: stretch;
@@ -640,11 +640,11 @@
     padding: 0.55rem 0.7rem;
   }
 
-  /* Templates strip — collapse the apply / delete row when the
+  /* Templates strip: collapse the apply / delete row when the
      name + config can't fit alongside the chip. */
   .event-template-row { flex-wrap: wrap; }
 
-  /* Org filter — let the select use the row instead of capping at
+  /* Org filter: let the select use the row instead of capping at
      320px on a 360px viewport. */
   .org-filter .select { max-width: none; }
 
@@ -652,7 +652,7 @@
   .empty { padding: 1.25rem; }
 }
 
-/* P10 Cluster 1 — create-event wizard (in-panel StageStep sequence). */
+/* P10 Cluster 1: create-event wizard (in-panel StageStep sequence). */
 .wizard-steps {
   display: flex; flex-wrap: wrap; gap: 0.4rem;
   list-style: none; margin: 0 0 0.5rem; padding: 0;

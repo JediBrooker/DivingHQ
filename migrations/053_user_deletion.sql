@@ -1,12 +1,12 @@
 -- =============================================================
--- MIGRATION 053 — USER SELF-DELETION + CLAIM-PAST-RESULTS
+-- MIGRATION 053 - USER SELF-DELETION + CLAIM-PAST-RESULTS
 --
 -- Privacy-policy §7 deliverable. Two coupled features:
 --
 --   1. Account self-deletion. The user POSTs to
 --      /api/users/me/delete with their password; we strip every
 --      PII column (login, contact, settings) and stamp
---      deleted_at = now(). Crucially the row stays: full_name,
+--      deleted_at = now(). The row stays though: full_name,
 --      org_id, club_id are retained so the user's name remains
 --      on the dives they competed in (sporting record).
 --
@@ -21,7 +21,7 @@
 -- Why we don't just hard-delete the row:
 --   * Hard delete cascades through scores / competitor_dive_lists
 --     and wipes the user's name from every event they ever dived
---     in — that's the wrong outcome for a public sporting record.
+--     in, which is the wrong outcome for a public sporting record.
 --   * Setting an FK to NULL (ON DELETE SET NULL) would leave
 --     ranking tables with anonymous rows whose name nobody can
 --     ever resurrect. The claim flow needs the original users.id
@@ -32,10 +32,10 @@
 --     "deleted-<id_short>" so the existing UNIQUE(username)
 --     constraint doesn't block a new sign-up choosing the same
 --     handle. password / email are NULLed so duplicate-email
---     checks on registration aren't blocked either.
+--     checks on registration arent blocked either.
 --   * No partial unique index on email is needed: existing email
 --     uniqueness in init.sql is enforced on lower(email) WHERE
---     email IS NOT NULL — a deleted row has email = NULL and
+--     email IS NOT NULL, since a deleted row has email = NULL and
 --     doesn't participate.
 -- =============================================================
 

@@ -1,17 +1,17 @@
 -- =============================================================
--- MIGRATION 077 — CLUB TRAINING CLASSES (club-private)
+-- MIGRATION 077: CLUB TRAINING CLASSES (club-private)
 --
--- A "class" is a recurring club-run training group a diver enrols in. It is
--- CLUB-PRIVATE: managed by the club's own admins (club_admins rows) — NOT by
--- the federation org_admin — visible to the club's coaches (roster) and to the
--- enrolled diver (their own enrolment only). Distinct from `teams` (which are
--- org-scoped competition rosters).
+-- A "class" is a recurring club-run training group a diver enrols in. It's
+-- CLUB-PRIVATE: managed by the club's own admins (club_admins rows), NOT by
+-- the federation org_admin, and visible to the club's coaches (roster) and to
+-- the enrolled diver (their own enrolment only). Distinct from `teams` (which
+-- are org-scoped competition rosters).
 --
 -- Pricing is flexible: each class has zero or more price OPTIONS (e.g.
--- "Monthly £40", "Per term £120"); a diver picks one at enrolment. The club
--- may apply a manual per-enrolment discount. Actual enrolment PAYMENT +
--- club payouts land in a later migration; this one is the roster + pricing
--- model and works while payments are dormant.
+-- "Monthly £40", "Per term £120") and a diver picks one at enrolment. The
+-- club may apply a manual per-enrolment discount. Actual enrolment PAYMENT
+-- and club payouts land in a later migration; this one is just the roster +
+-- pricing model, and it works fine while payments are dormant.
 -- =============================================================
 
 BEGIN;

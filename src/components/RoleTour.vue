@@ -1,8 +1,8 @@
 <script setup>
 /* First-login role tour. Mounts globally; activates on the
  * first dashboard load that follows a fresh sign-in (per role).
- * The setup wizard already covers fresh-org-admin onboarding;
- * this fills the gap for the more common first experience —
+ * The setup wizard already covers fresh-org-admin onboarding,
+ * this just fills the gap for the more common first experience:
  * a coach, judge, or diver getting handed a username + invite.
  *
  * Each role has a small ordered list of slides, each with:
@@ -27,8 +27,8 @@ const router = useRouter()
 
 const open    = ref(false)
 
-// Lock background scroll while the tour overlay is up so iOS
-// Safari can't drift the dashboard underneath.
+// Lock background scroll while the tour overlay is up, otherwise iOS
+// Safari lets the dashboard drift underneath it.
 useBodyScrollLock().lockWhile(open)
 const role    = ref(null)        // 'coach' | 'judge' | 'diver'
 const cursor  = ref(0)
@@ -93,9 +93,9 @@ const isLast = computed(() => cursor.value === slides.value.length - 1)
 function stampKey(r) { return `dr_tour_seen_${r}` }
 
 function pickRoleForUser() {
-  // Prefer the most onboarding-needed role the user has, in
-  // priority order. Power roles (org_admin / meet_manager) get
-  // the existing setup wizard, not this tour.
+  // Prefer the most onboarding-needed role the user has, in priority
+  // order. Power roles (org_admin / meet_manager) get the existing
+  // setup wizard, not this tour, they're already covered elsewhere.
   if (!auth.user) return null
   if (auth.hasRole('org_admin') || auth.hasRole('meet_manager')) return null
   for (const r of ['coach', 'judge', 'diver']) {
@@ -107,8 +107,8 @@ function pickRoleForUser() {
 function startIfFresh() {
   const r = pickRoleForUser()
   if (!r) return
-  // Already seen → no replay (manual replay is via the helper
-  // exported on window).
+  // Already seen, heads up, no replay here (manual replay is via
+  // the helper exported on window).
   if (localStorage.getItem(stampKey(r))) return
   role.value   = r
   cursor.value = 0
@@ -132,8 +132,8 @@ function finish() {
   if (cta?.to) router.push(cta.to)
 }
 
-// Replay-from-anywhere — used by the Cmd-K "Help" entry and the
-// /setup link. Caller can pass a role to force; otherwise the
+// Replay-from-anywhere: used by the Cmd-K "Help" entry and the
+// /setup link. Caller can pass a role to force it, otherwise the
 // most-needed-role heuristic kicks in.
 function replayTour(forceRole = null) {
   const r = forceRole || pickRoleForUser()
@@ -144,11 +144,11 @@ function replayTour(forceRole = null) {
 }
 
 let offReplayChannel = null
-// Auto-start on first dashboard mount post-login. We listen to
-// route changes via the router instance because the SPA mounts
-// this component once at the app root.
+// Auto-start on first dashboard mount post-login. We listen to route
+// changes via the router instance since the SPA only mounts this
+// component once, at the app root.
 onMounted(() => {
-  // Start one tick after mount so auth is hydrated.
+  // Start one tick after mount so auth has time to hydrate.
   setTimeout(() => {
     if (router.currentRoute.value.path === '/dashboard') startIfFresh()
   }, 0)
@@ -162,15 +162,15 @@ onBeforeUnmount(() => {
   if (offReplayChannel) offReplayChannel()
 })
 
-// Watch for sign-out → bail.
+// Watch for sign-out and bail if it happens.
 watch(() => auth.isLoggedIn, (now) => { if (!now) open.value = false })
 
-// Keyboard handling — Esc dismisses (treated as "skip"), the
-// Next button auto-focuses on open so a keyboard-only user can
-// hit Enter/Space immediately. Both gated on `open` so the
-// listener doesn't fire while the tour is dormant. Without this,
-// the previously-shipped role="dialog" + aria-modal="true" was
-// only theatrical — no actual keyboard escape route.
+// Keyboard handling: Esc dismisses (treated as "skip"), and the
+// Next button auto-focuses on open so a keyboard-only user can hit
+// Enter/Space right away. Both gated on `open` so the listener
+// doesn't fire while the tour is dormant. Without this, the
+// previously-shipped role="dialog" + aria-modal="true" was only
+// theatrical, there was no actual keyboard escape route.
 const cardEl = ref(null)
 const nextBtn = ref(null)
 function onTourKey(e) {
@@ -181,8 +181,8 @@ watch(open, async (now) => {
   if (now) {
     document.addEventListener('keydown', onTourKey)
     await nextTick()
-    // Focus the primary action so screen readers announce the
-    // dialog title and Tab cycles within the card.
+    // Focus the primary action so screen readers announce the dialog
+    // title, and Tab cycles within the card from there.
     nextBtn.value?.focus?.()
   } else {
     document.removeEventListener('keydown', onTourKey)
@@ -192,7 +192,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onTourKey))
 </script>
 
 <template>
-  <!-- Teleport defensively (see notes in ConfirmModal). -->
+  <!-- Teleport defensively, see notes in ConfirmModal for why. -->
   <Teleport to="body">
   <div v-if="open && slide" class="role-tour-backdrop" role="dialog" aria-modal="true" aria-labelledby="role-tour-title" @click.self="skip">
     <div ref="cardEl" class="role-tour-card" tabindex="-1">

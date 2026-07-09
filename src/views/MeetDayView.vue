@@ -1,24 +1,24 @@
 <script setup>
-/* Diver meet-day view — phone-deck experience for athletes
+/* Diver meet-day view: phone-deck experience for athletes
  * mid-competition. Three blocks composed from data the rest of
  * the system already has:
  *
- *   1. Your next dive — code, position, DD, height. Pulled from
+ *   1. Your next dive: code, position, DD, height. Pulled from
  *      competitor_dive_lists with directory join, the first
  *      round whose judges aren't all in yet.
  *
- *   2. Current standing — rank, total, gap to leader, with
+ *   2. Current standing: rank, total, gap to leader, with
  *      movement vs the previous render.
  *
- *   3. What you need — average judge score required from each
+ *   3. What you need: average judge score required from each
  *      remaining dive to reach gold / silver / bronze. Same
  *      math as the Control Room's catch-up indicator and the
- *      audience scoreboard's projection panel; ceiling-rounded
- *      to the next 0.5 because judges score in halves.
+ *      audience scoreboard's projection panel, ceiling-rounded
+ *      to the next 0.5 since judges only score in halves.
  *
  * Real-time: subscribe to the event-room socket. score_received
- * and state_update both trigger a bundle refetch (cheap; the
- * server endpoint composes from cached pieces).
+ * and state_update both trigger a bundle refetch (cheap, the
+ * server endpoint just composes from cached pieces).
  */
 
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
@@ -62,7 +62,7 @@ async function load() {
   }
 }
 
-// Debounced refetch — multiple socket events in quick succession
+// Debounced refetch: multiple socket events in quick succession
 // (5 judge submissions in 200ms) collapse to one round-trip.
 let refetchTimer = null
 function scheduleRefetch() {
@@ -485,7 +485,7 @@ const eventNotLive = computed(() => {
 }
 
 /* Phone-deck ergonomics. The 56px+ score-card font and
-   2x stacking padding are deliberate — divers glance at this
+   2x stacking padding are deliberate, since divers glance at this
    between drying off and walking up to the platform. */
 @media (max-width: 480px) {
   .meet-day { padding: 0.85rem 0.65rem 4rem; gap: 0.85rem; }

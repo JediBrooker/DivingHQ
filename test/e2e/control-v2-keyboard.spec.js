@@ -1,5 +1,5 @@
-// Per-pool keyboard control: hotkeys act on the FOCUSED pool only, and
-// number keys switch the focused pool. Flag-on only (V2 surface).
+// Per-pool keyboard control. hotkeys act on the FOCUSED pool only, and
+// number keys switch which pool is focused. Flag-on only (V2 surface).
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -55,14 +55,14 @@ test("Space advances only the focused pool; number keys switch focus", async ({ 
   // Arm A's primary, move focus off the chip button, then press Space.
   await setup.submitPanelScores({ baseURL, judges: A.judges, eventId: A.event.id, competitorId: A.divers[0].userId, roundNumber: 1, diveId: A.diveId });
   await expect(cardA.locator(".cv2-primary")).toBeEnabled({ timeout: 6_000 });
-  await cardA.locator(".cv2-live-diver").click(); // blur the chip; non-button target
+  await cardA.locator(".cv2-live-diver").click(); // blur the chip, need a non-button target
   await page.keyboard.press("Space");
 
-  // Focused pool A advanced; background pool B is untouched.
+  // Focused pool A advances, background pool B stays put.
   await expect(cardA.locator(".cv2-live-diver")).toContainText("ZZZ A");
   await expect(cardB.locator(".cv2-live-diver")).toContainText("AAA B");
 
-  // Number keys switch the focused pool.
+  // number keys switch the focused pool
   await page.keyboard.press("2");
   await expect(page.locator(".cv2-chip.is-focused")).toContainText("Pool B");
   await page.keyboard.press("1");
@@ -83,10 +83,10 @@ test("hotkeys do not fire while typing in a field", async ({ request, page, base
   await setup.submitPanelScores({ baseURL, judges: A.judges, eventId: A.event.id, competitorId: A.divers[0].userId, roundNumber: 1, diveId: A.diveId });
   await expect(cardA.locator(".cv2-primary")).toBeEnabled({ timeout: 6_000 });
 
-  // Open the top-bar search (command palette) and type a Space — the
-  // guard must keep it in the input, not advance the pool.
+  // Open the top-bar search (command palette) and type a space, the
+  // guard needs to keep it in the input instead of advancing the pool.
   await page.locator(".topbar-search").click({ force: true });
   await expect(page.locator(".cmdk-input")).toBeVisible({ timeout: 5_000 });
   await page.locator(".cmdk-input").type("a b");
-  await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA A"); // never advanced
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA A"); // still hasn't moved
 });

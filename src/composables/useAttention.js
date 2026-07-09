@@ -1,18 +1,18 @@
 // The single frontend attention selector (P3 of the meet-day redesign).
 //
 // ONE client-side derivation of "what needs attention" for an event, so
-// the three surfaces that used to compute it independently -- the
-// Dashboard attention chip/card/badge (P3), and the ControlViewV2 rail
-// marker + Setup blockers strip (P5/P6) -- can never disagree.
+// the three surfaces that used to compute it independently, the
+// Dashboard attention chip/card/badge (P3) and the ControlViewV2 rail
+// marker plus Setup blockers strip (P5/P6), can never disagree.
 //
 // Module boundary (deliberate): lib/workflow.js is the CommonJS
 // SERVER-side authority for the dashboard bundle's `workflow_actions`
-// payload; it cannot be imported by this ESM client and cannot carry
+// payload; it can't be imported by this ESM client and can't carry
 // the client-only blocker extras (offline / conflict / late-arrival).
 // So this selector reads INPUTS, not lib/: each caller normalises its
-// own source -- the server-derived 6-core readiness (workflow_actions /
-// /api/events/:id/readiness) plus client-only extras -- into the shape
-// below, and the selector layers them. It owns NO scoring rule.
+// own source, the server-derived 6-core readiness (workflow_actions /
+// /api/events/:id/readiness) plus client-only extras, into the shape
+// below, and the selector layers them on top. It owns NO scoring rule.
 //
 // Pure + DB-less by design (unit-tested in test/use-attention.test.js).
 //
@@ -23,12 +23,12 @@
 //     go-live. This is the count the Dashboard / strip / rail agree on.
 //   clientExtras: [{ key, label, blocking?, hint?, onFix?, severity? }]
 //     client-only rows (offline / conflict / late-arrival / schedule /
-//     synchro / federation). ADDITIVE + non-blocking by default: they
+//     synchro / federation). ADDITIVE and non-blocking by default: they
 //     surface in blockerRows but never change the 6-core `count`, so a
-//     caller's go-live (startBlocked) truth table is invariant to them.
+//     caller's go-live (startBlocked) truth table stays invariant to them.
 
 function blocks(row) {
-  // A row blocks when it isn't done and isn't explicitly non-blocking.
+  // A row blocks when it isn't done yet and isn't explicitly non-blocking.
   return !!row && !row.done && row.blocking !== false
 }
 
@@ -38,7 +38,7 @@ export function attentionForEvent(coreReadiness = [], clientExtras = []) {
   const extraBlockers = (clientExtras || []).filter(blocks)
   const blockerRows = [...coreBlockers, ...extraBlockers]
 
-  // `count` is the 6-CORE blocker count only -- the go-live-relevant
+  // `count` is the 6-CORE blocker count only, the go-live-relevant
   // number the chip/card/badge/strip all show. Extras are surfaced via
   // blockerRows/totalCount but never move this number.
   const count = coreBlockers.length
@@ -74,15 +74,15 @@ export function attentionMarker(coreReadiness = [], clientExtras = [], opts = {}
 
 // Caller helper: the server's workflow_actions rows already match the
 // coreReadiness shape (buildReadinessFromRow -> {key,label,done,hint,...}).
-// Pass them straight through; this just guards null/non-arrays so a
+// Pass them straight through, this just guards null/non-arrays so a
 // bundle-in-flight (workflowActions === []/undefined) yields an empty,
-// zero-count attention rather than NaN.
+// zero-count attention instead of a NaN somewhere downstream.
 export function coreFromWorkflowActions(workflowActions) {
   return Array.isArray(workflowActions) ? workflowActions : []
 }
 
 // Caller helper for the Dashboard diver chip: an event only contributes
-// if the diver is actually entered in it. diverEventIds === null means
+// if the diver's actually entered in it. diverEventIds === null means
 // the bundle is still in flight -> treat as "entered" (no blink), matching
 // the existing diverIsEntered(null) => true fallback.
 export function contributesToDiverChip(eventId, diverEventIds) {
@@ -93,7 +93,7 @@ export function contributesToDiverChip(eventId, diverEventIds) {
 // P4 (2/2): rank the Dashboard pulse chips into a needs-attention lane so
 // the MOST urgent category floats to the top instead of a fixed role
 // order. Pure + DB-less (pinned by test/dashboard-attention.test.js).
-// Reuses the SAME P3 item urgency markers -- no new semantics:
+// Reuses the SAME P3 item urgency markers, no new semantics here:
 //   live (0)  > urgent / closing <24h (1) > overdue >7d (2) > rest (3)
 export const ATTENTION_RANK = { live: 0, urgent: 1, overdue: 2, none: 3 }
 
@@ -109,8 +109,8 @@ export function chipUrgencyRank(chip) {
   return ATTENTION_RANK.none
 }
 
-// Stable sort by urgency rank; ties keep the source (role) order so the
-// lane is deterministic and the count is preserved exactly.
+// Stable sort by urgency rank, ties keep the source (role) order so the
+// lane stays deterministic and the count is preserved exactly.
 export function rankAttentionChips(chips) {
   return (chips || [])
     .map((chip, i) => ({ chip, i, rank: chipUrgencyRank(chip) }))

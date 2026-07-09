@@ -1,9 +1,9 @@
 <script setup>
-/* Event status pill — a single source of truth for the
+/* Event status pill: a single source of truth for the
  * Setup / Upcoming / Live / Completed visual vocabulary used by
  * the dashboard pulse strip, attention cards, control room,
  * scoreboard, and event manager. Keeps colours + dot semantics
- * consistent so users don't have to relearn them per surface.
+ * consistent so users dont have to relearn them per surface.
  *
  * Sizes: 'sm' (header chip) | 'md' (default) | 'lg' (hero header).
  * The 'live' variant breathes gently, matching the pulse strip.

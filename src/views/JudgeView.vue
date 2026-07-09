@@ -14,8 +14,8 @@ import { useOutbox } from '@/composables/useOutbox'
 
 const { t } = useI18n()
 
-// Pool deck ergonomics — judging often happens on a phone left
-// face-up on a table for an entire round. Two helpers:
+// Pool deck ergonomics: judging usually happens on a phone left
+// face-up on a table for an entire round. Two helpers here:
 //
 //   1. Screen wake lock so the OS doesn't dim the display
 //      mid-dive. Falls back silently on browsers that don't
@@ -23,11 +23,11 @@ const { t } = useI18n()
 //   2. Haptic feedback on score submit + signal so the judge
 //      gets a confirmation pulse without having to glance back
 //      at the screen. `navigator.vibrate` is a no-op on
-//      desktop / iOS Safari.
+//      desktop / iOS Safari anyway.
 //
-// Wake lock is released on unmount + reacquired on visibility
-// change (the OS drops it when the tab backgrounds; reacquiring
-// on focus avoids the re-tap dance).
+// Wake lock releases on unmount and reacquires on visibility
+// change (the OS drops it when the tab backgrounds, so we
+// reacquire on focus to avoid the re-tap dance).
 const wakeLock = ref(null)
 async function acquireWakeLock() {
   if (!('wakeLock' in navigator)) return
@@ -40,8 +40,8 @@ function onVisibilityChange() {
   if (document.visibilityState === 'visible' && !wakeLock.value) acquireWakeLock()
 }
 function buzz(pattern) {
-  // Pattern can be a single number (ms) or an array of on/off
-  // timings. We default to a short single pulse.
+  // pattern can be a single number (ms) or an array of on/off
+  // timings, defaults to a short single pulse
   if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
     try { navigator.vibrate(pattern || 30) } catch { /* ignore */ }
   }
@@ -52,7 +52,7 @@ const auth = useAuthStore()
 const socket = useSocket()
 
 // Event id from /judge?event=<id>. Required so the socket can
-// subscribe to the right room — without it, state_update +
+// subscribe to the right room. Without it, state_update and
 // meet_held broadcasts (which the server emits to
 // io.to('event:<id>')) never reach this client.
 const eventIdFromUrl = computed(() => route.query.event || null)
@@ -65,17 +65,17 @@ const activeDiver = ref(null)
 const judgeLabel = ref(user?.full_name || 'Judge')
 // Connection state lives on the singleton socket itself
 // (`socket.isConnected`, a ref), so a parallel `connStatus` ref
-// would just duplicate that state — and since useSocket is now
+// would just duplicate that state. Also, since useSocket is now
 // a real singleton, two listeners on `connect`/`disconnect` (the
-// composable's + this view's) would race.
+// composable's + this view's) would race each other.
 const submitted = ref(false)
 const judgeNumber = ref(null)
 // Manual-fallback "big number" mode (P5). When the operator is in
 // fallback mode (typing scores from across the room), the judge
 // taps "Show big" to fill the screen with their submitted score.
 // Tapping anywhere on the big-mode panel returns to normal view.
-// Stays hidden until at least one score has been submitted; before
-// that there's nothing to show.
+// Stays hidden until at least one score's been submitted since
+// theres nothing to show before that.
 const bigDisplayOpen = ref(false)
 const lastSubmittedScore = ref(null)
 function showBigScore() {
@@ -87,7 +87,7 @@ function closeBigScore() {
 }
 
 // Outbox singleton lives in src/composables/useOutbox.js. The
-// composable returns reactive counts + the underlying outbox
+// composable returns reactive counts plus the underlying outbox
 // instance, so push()/drain() callers go through getOutbox() and
 // UI components (OfflineBanner, SyncStatusBadge) stay declarative.
 const outboxState = useOutbox()
@@ -98,11 +98,11 @@ const refreshPendingCount = outboxState.refresh
 function getOutbox() { return outboxInstance }
 
 // Per-entry view of the outbox queue. Drives the sync-chip strip
-// in the template so a judge sees each individual queued score
-// rather than just a count. Refreshed on every outbox 'change'
-// emission (same trigger as pendingCount) so the list stays in
-// step. Filters to non-terminal states so a long-finished synced
-// entry doesn't clutter the strip.
+// in the template so a judge sees each individual queued score,
+// not just a count. Refreshed on every outbox 'change' emission
+// (same trigger as pendingCount) so the list stays in step.
+// Filters to non-terminal states so a long-finished synced entry
+// doesn't clutter the strip.
 const queuedEntries = ref([])
 async function refreshQueuedEntries() {
   if (!outboxInstance) {
@@ -123,11 +123,11 @@ if (outboxInstance) {
 }
 
 // Per-entry send function for outbox.drain. Uses socket.io's
-// ack callback (3rd argument to socket.emit) so the drain protocol
-// has reliable per-submit correlation instead of tuple-matching
-// the room broadcast (which is racy when multiple judges submit
-// for the same diver). Server support: routes/socket.js's
-// submit_score handler calls ack() on success/failure paths.
+// ack callback (3rd arg to socket.emit) so the drain protocol
+// gets reliable per-submit correlation instead of tuple-matching
+// the room broadcast, which is racy when multiple judges submit
+// for the same diver. Server side, routes/socket.js's
+// submit_score handler calls ack() on both success and failure.
 function sendViaSocket(entry) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('timeout')), 10000)
@@ -140,8 +140,8 @@ function sendViaSocket(entry) {
       if (response?.ok) {
         resolve({ ok: true, response: response.response })
       } else if (response?.conflict) {
-        // Server flagged a conflict (P4 territory — won't fire in
-        // P1 because OFFLINE_CONFLICT_RESOLUTION defaults to auto).
+        // Server flagged a conflict (P4 territory, won't fire in
+        // P1 since OFFLINE_CONFLICT_RESOLUTION defaults to auto).
         // The outbox marks the entry as 'conflict' and the
         // operator's review tray resolves it.
         const err = new Error(response.error || 'conflict')
@@ -149,8 +149,8 @@ function sendViaSocket(entry) {
         err.conflict = response.conflict
         reject(err)
       } else {
-        // Transient / validation failure. Outbox retries with
-        // exponential backoff up to 5 attempts then marks failed.
+        // Transient or validation failure. Outbox retries with
+        // exponential backoff, up to 5 attempts, then marks failed.
         reject(new Error(response?.error || 'rejected'))
       }
     })
@@ -163,19 +163,19 @@ async function drainOutbox() {
   await ob.drain({ send: sendViaSocket })
   refreshPendingCount()
 }
-// Panel of every judge's score for the current dive — keyed by
-// judge_number, populated as score_received broadcasts arrive.
+// Panel of every judge's score for the current dive, keyed by
+// judge_number and populated as score_received broadcasts arrive.
 // Lets THIS judge see the full panel (e.g. their own 8.5 next
-// to J1's 8.0, J3's 7.5 …) once everyone has submitted.
+// to J1's 8.0, J3's 7.5, and so on) once everyone has submitted.
 const panelScores = ref({})
-// Referee-signal flag — true when this judge has flagged the
-// referee on the current dive (e.g. didn't see, wants a
-// review). Toggleable; resets on every state_update.
+// Referee-signal flag, true when this judge has flagged the
+// referee on the current dive (e.g. didn't see it, wants a
+// review). Toggleable, and resets on every state_update.
 const signaled = ref(false)
-// Per-judge signal state from the rest of the panel — populated
+// Per-judge signal state from the rest of the panel, populated
 // off the judge_signal broadcasts. Lets THIS judge see when
 // another panel member has flagged the referee, so they can
-// pause / coordinate before locking their own score in.
+// pause or coordinate before locking their own score in.
 const panelSignals = ref({})
 
 const displayValue = computed(() => {
@@ -185,13 +185,13 @@ const displayValue = computed(() => {
 
 const scoreIsZero = computed(() => (currentScore.value + (isHalf.value ? 0.5 : 0)) === 0)
 
-// Total judges on the panel for the current event. Drives the
+// Total judges on the panel for the current event, drives the
 // number of slots the panel display renders.
 const panelSize = computed(() =>
   parseInt(activeDiver.value?.number_of_judges) || 0,
 )
-// keypad / submit are inert once a score is in unless the
-// judge has flagged the referee — the flag re-opens the
+// keypad / submit go inert once a score is in, unless the
+// judge has flagged the referee. The flag re-opens the
 // keypad so the judge can correct the score, and submitting
 // the new score auto-clears the signal.
 const keypadLocked = computed(() => submitted.value && !signaled.value)
@@ -207,7 +207,7 @@ const signalingOthers = computed(() => {
 })
 const panelInCount = computed(() => Object.keys(panelScores.value).length)
 
-// Synchro role — derived from this judge's position in the panel.
+// Synchro role, derived from this judge's position in the panel.
 // Lets the judge see whether they should be scoring Diver A's
 // execution, Diver B's execution, or the synchronisation.
 const synchroRole = computed(() => {
@@ -242,8 +242,8 @@ function joinEventRoom() {
   socket.emit('get_meet_hold',    { event_id: evId })
 }
 
-// All socket listeners go through useSocketEvent — the pooled
-// socket outlives this view, so bare socket.on registrations
+// Heads up: all socket listeners go through useSocketEvent. The
+// pooled socket outlives this view, so bare socket.on registrations
 // would stack a duplicate panel/keypad handler every time the
 // judge navigates back here.
 useSocketEvent(socket, 'connect', () => {
@@ -280,8 +280,8 @@ onBeforeUnmount(() => {
   try { wakeLock.value?.release?.() } catch { /* ignore */ }
   wakeLock.value = null
 })
-// Hold-state propagation. A held meet should disable scoring —
-// judges shouldn't accidentally submit during a video review.
+// Hold-state propagation. A held meet should disable scoring,
+// since judges shouldn't accidentally submit during a video review.
 const isHeld = ref(false)
 const holdReason = ref('')
 useSocketEvent(socket, 'meet_held', (data) => {
@@ -298,16 +298,16 @@ useSocketEvent(socket, 'meet_resumed', (data) => {
 useSocketEvent(socket, 'state_update', async (data) => {
   activeDiver.value = data
   resetScore()
-  // New diver / round → previous panel + referee signal are
-  // both irrelevant. The signal would otherwise carry over to
-  // the next diver and confuse the referee.
+  // New diver / round: previous panel + referee signal are both
+  // irrelevant now. The signal would otherwise carry over to the
+  // next diver and confuse the referee.
   panelScores.value = {}
   panelSignals.value = {}
   signaled.value = false
 
   if (data.event_id) {
     try {
-      // auth.apiFetch rather than a raw fetch — same headers, plus
+      // auth.apiFetch rather than a raw fetch: same headers, plus
       // the store's expired-session (401 → /login) handling.
       const { judge_number } = await auth.apiFetch(`/api/events/${data.event_id}/my-judge-number`)
       judgeNumber.value = judge_number
@@ -335,7 +335,7 @@ useSocketEvent(socket, 'judge_signal', (data) => {
 })
 
 // Every judge tile fills as score_received broadcasts arrive.
-// The judge sees the panel build up in real time — their own
+// The judge sees the panel build up in real time: their own
 // score lights up first when they hit Submit, then the rest
 // trickle in as the other panel members lock theirs in.
 useSocketEvent(socket, 'score_received', (data) => {
@@ -395,12 +395,12 @@ async function submitScore() {
   // the operator is in manual-entry mode.
   lastSubmittedScore.value = finalScore
 
-  // If the judge had flagged the referee before submitting,
-  // the submission IS the rectification — auto-clear the
-  // signal so the Control Room's auto-advance can resume.
-  // Signal-clear is transient + idempotent; we still send it
-  // direct (not via outbox) since an offline signal-clear has
-  // no meaning to a server that never saw the signal.
+  // If the judge had flagged the referee before submitting, the
+  // submission IS the rectification, so auto-clear the signal
+  // and let the Control Room's auto-advance resume.
+  // Signal-clear is transient and idempotent; we still send it
+  // direct (not via outbox) since an offline signal-clear means
+  // nothing to a server that never saw the signal.
   const clearSignal = signaled.value
   if (clearSignal) signaled.value = false
 
@@ -468,10 +468,10 @@ const submitLabel = computed(() => {
   <div class="judge-layout">
     <OfflineBanner />
     <!-- Per-entry sync-status strip. Each queued submit gets a
-         chip showing its score + current sync state (pending,
-         inflight, failed, conflict). Synced entries drop off
-         the strip automatically because refreshQueuedEntries
-         filters them out. Empty list → renders nothing. -->
+         chip showing its score plus current sync state (pending,
+         inflight, failed, conflict). Synced entries drop off the
+         strip automatically since refreshQueuedEntries filters
+         them out. Empty list → renders nothing. -->
     <div v-if="queuedEntries.length > 0" class="queued-strip">
       <span class="queued-strip-label">{{ $t('judge.queued_label') }}</span>
       <span v-for="entry in queuedEntries"
@@ -483,7 +483,7 @@ const submitLabel = computed(() => {
         </span>
       </span>
     </div>
-    <!-- Meet-hold banner — Control Room paused the meet. Score
+    <!-- Meet-hold banner: Control Room paused the meet. Score
          input is disabled below until the hold lifts. -->
     <div v-if="isHeld" class="hold-banner">
       <span class="hold-pulse">⏸ MEET ON HOLD</span>
@@ -527,14 +527,14 @@ const submitLabel = computed(() => {
       </div>
       <div class="dive-desc">{{ activeDiver ? (diveDescription(activeDiver) || '—') : '—' }}</div>
 
-      <!-- Live panel — every judge's tile fills as their
+      <!-- Live panel: every judge's tile fills as their
            score_received broadcast lands. Highlights this
-           judge's own tile so they read the spread including
+           judge's own tile so they can read the spread including
            their own contribution at a glance. -->
       <div v-if="activeDiver && panelSize" class="judge-panel">
         <!-- Other-judge signal alert. Surfaces the moment another
-             panel member taps "Signal Referee" — this judge
-             knows to pause / coordinate before locking their
+             panel member taps "Signal Referee", so this judge
+             knows to pause or coordinate before locking their
              score in. Hidden when no other judge has flagged. -->
         <div v-if="signalingOthers.length" class="judge-panel-alert">
           🚩
@@ -571,16 +571,16 @@ const submitLabel = computed(() => {
       <div class="score-hint">Current Score Entry</div>
     </div>
 
-    <!-- Keypad — number buttons overwrite the current entry, so
+    <!-- Keypad: number buttons overwrite the current entry, so
          a judge who fat-fingers a 7 instead of 8 just taps 8 to
-         correct it. The Clear button used to live in this grid
-         but it was redundant given that behaviour and easy to
+         fix it. The Clear button used to live in this grid but
+         it was redundant given that behaviour, and too easy to
          hit by accident.
 
          keypadLocked = submitted AND not signaled. Once the
          judge has tapped Signal Referee the keypad re-opens
-         even after submission — the signal is the operator's
-         way of saying "I need to fix this", and a fresh score
+         even after submission, since the signal is the operator's
+         way of saying "I need to fix this," and a fresh score
          submission rectifies it. -->
     <div class="keypad">
       <!-- 1-9 -->
@@ -593,11 +593,11 @@ const submitLabel = computed(() => {
       <button class="key key-ten" :disabled="keypadLocked" @click="pressNumber(10)">10</button>
     </div>
 
-    <!-- Signal referee — judges tap this to flag the referee
+    <!-- Signal referee: judges tap this to flag the referee
          (e.g. they didn't see the dive, want a re-dive review,
          scoreboard mismatch). Toggles a bright-red highlight on
          this judge's tile in the Control Room judge grid until
-         the next diver lands or the judge taps again to clear. -->
+         the next diver lands, or the judge taps again to clear. -->
     <div class="signal-footer">
       <button
         :class="['signal-btn', signaled ? 'signal-btn-on' : '']"
@@ -623,7 +623,7 @@ const submitLabel = computed(() => {
     </div>
     <!-- Manual-fallback "Show big" button (P5). Only renders after
          at least one score has been submitted, and only when the
-         outbox shows pending work OR the socket is offline — i.e.
+         outbox shows pending work OR the socket is offline, i.e.
          the scenario where the operator might need to read it off
          the screen. Tap fills the viewport with the score as a
          giant number; tap again to return. -->
@@ -638,7 +638,7 @@ const submitLabel = computed(() => {
     </div>
   </div>
 
-  <!-- Big-mode overlay — full-screen, z-index 1000, fixed. -->
+  <!-- Big-mode overlay: full-screen, z-index 1000, fixed. -->
   <BigScoreDisplay
     v-if="bigDisplayOpen && lastSubmittedScore != null"
     :score="lastSubmittedScore"
@@ -657,7 +657,7 @@ const submitLabel = computed(() => {
     animation-iteration-count: 1 !important;
   }
 }
-/* Meet-hold banner — surfaced when the Control Room pauses
+/* Meet-hold banner, surfaced when the Control Room pauses
    the meet. Same shape on Scoreboard + Control. */
 .hold-banner {
   display: flex; align-items: center; gap: 0.75rem;
@@ -676,8 +676,9 @@ const submitLabel = computed(() => {
 
 /* Queued-entries strip. Sits below the OfflineBanner; shows each
    queued submit_score with a SyncStatusBadge + the score value.
-   Visually quieter than the banner — informational, not alerting.
-   Hides itself when there's nothing in non-terminal states. */
+   Visually quieter than the banner, informational rather than
+   alerting. Hides itself when there's nothing in non-terminal
+   states. */
 .queued-strip {
   display: flex; flex-wrap: wrap; align-items: center;
   gap: 0.4rem;
@@ -710,12 +711,12 @@ const submitLabel = computed(() => {
 
 
 .judge-layout {
-  /* Natural document flow — page scrolls if content exceeds
+  /* Natural document flow, page scrolls if content exceeds
      the viewport. No 100dvh / overflow:hidden lock; resizing
      the window resizes the page like any other. The keypad +
      submit footer flow naturally below the diver header.
      vh fallback first for browsers older than ~Q4-2022. */
-  /* Fill the viewport exactly and never scroll — the whole pad
+  /* Fill the viewport exactly and never scroll, the whole pad
      (header, diver, keypad, submit/clear, signal) fits one screen.
      position:fixed escapes any global body styling the public auth
      views inject. The keypad flexes to absorb leftover space. */
@@ -839,7 +840,7 @@ const submitLabel = computed(() => {
 .dive-pill.dd { color: var(--cyan); border-color: rgba(6,182,212,0.3); background: var(--cyan-dim); }
 .dive-desc { font-size: 11px; color: var(--text-3); margin-top: 0.35rem; font-family: var(--font-mono); }
 
-/* Live panel display — every judge's tile fills as their score
+/* Live panel display: every judge's tile fills as their score
    lands. The current judge's own tile gets a cyan ring so they
    can see their contribution at a glance amongst the panel. */
 .judge-panel {
@@ -861,9 +862,9 @@ const submitLabel = computed(() => {
 .judge-panel-tile {
   /* Fixed width so the panel's overall footprint stays the
      same whether the tile reads "—" (empty) or "10.0" (max).
-     Without this the cells dynamically resized between dives,
+     Without this the cells resize dynamically between dives,
      shifting the surrounding layout left and right as scores
-     came in. 52px fits "10.0" at the chosen mono font with
+     come in. 52px fits "10.0" at the chosen mono font with
      room for padding; flex-shrink: 0 stops grid/flex parents
      from squeezing them. */
   width: 52px;
@@ -897,7 +898,7 @@ const submitLabel = computed(() => {
   color: var(--text-3); margin-top: 0.1rem;
 }
 .judge-panel-tile.in .judge-panel-tile-score { color: var(--text); }
-/* Another panel member tapped Signal Referee — bright-red ring
+/* Another panel member tapped Signal Referee: bright-red ring
    draws this judge's eye so they pause before locking in
    their own score. Wins over .scored / .mine when both apply
    so a signaling judge stands out regardless of state. */
@@ -959,7 +960,7 @@ const submitLabel = computed(() => {
 }
 
 .keypad {
-  /* Compact keypad — buttons are still tap-friendly on touch
+  /* Compact keypad, buttons are still tap-friendly on touch
      screens but no longer dominate the page on a desktop. Caps
      at a sensible width and height so the layout stays balanced
      against the dive header above. */
@@ -998,8 +999,8 @@ const submitLabel = computed(() => {
 .key:active { background: var(--accent); color: var(--fg-on-accent); border-color: var(--accent); transform: scale(0.94); }
 .key-half { font-size: 14px; color: var(--accent); border-color: var(--accent-soft-2); }
 .key-half.active { background: var(--accent); color: var(--fg-on-accent); border-color: var(--accent); }
-/* Disabled key state — engaged once the judge has submitted.
-   Greyed-out + non-interactive so an accidental tap doesn't
+/* Disabled key state, engaged once the judge has submitted.
+   Greyed-out and non-interactive so an accidental tap doesn't
    look like it landed but actually no-ops. */
 .key:disabled {
   opacity: 0.4;
@@ -1007,7 +1008,7 @@ const submitLabel = computed(() => {
 }
 .key:disabled:active { transform: none; background: var(--surface); color: var(--text); border-color: var(--border); }
 
-/* Signal Referee — sits between the keypad and the submit
+/* Signal Referee button sits between the keypad and the submit
    footer. Outline style so it doesn't compete with the cyan
    submit button visually; goes solid red once tapped so the
    judge sees "I sent the flag" at a glance. */
@@ -1020,11 +1021,11 @@ const submitLabel = computed(() => {
   box-sizing: border-box;
 }
 /* The signal-flag and submit-score buttons live in the bottom
-   bar — on notch iPhones the home-indicator overlays the bottom
-   ~20 px. Without an env(safe-area-inset-bottom) gutter the
+   bar. On notch iPhones the home-indicator overlays the bottom
+   ~20px, so without an env(safe-area-inset-bottom) gutter the
    button edges land inside the system swipe-gesture zone and
    mis-register as "swipe up" instead of a tap. Tested with a
-   wet thumb at the deck because that's the real condition. */
+   wet thumb at the deck, since that's the real condition poolside, tbh. */
 @supports (padding: env(safe-area-inset-bottom)) {
   .signal-footer { padding-bottom: env(safe-area-inset-bottom); }
 }
@@ -1181,7 +1182,7 @@ const submitLabel = computed(() => {
   .submit-footer { padding: 0.5rem 0.6rem; }
   .submit-btn { padding: 1rem; font-size: 17px; }
   /* Touch-target lift for the small ghost links at the top
-     right — at WCAG 2.5.5's 44 px floor a wet thumb still
+     right. At WCAG 2.5.5's 44px floor a wet thumb still
      lands them reliably. */
   .btn-back-judge {
     min-height: 32px;
@@ -1191,7 +1192,7 @@ const submitLabel = computed(() => {
   }
 }
 
-/* Small-phone safety net — even the 320px-wide screens that
+/* Small-phone safety net, covers the 320px-wide screens that
    still show up on field tablets and old iPhones. */
 @media (max-width: 360px) {
   .keypad { grid-template-rows: repeat(4, minmax(0, 60px)); gap: 0.4rem; }

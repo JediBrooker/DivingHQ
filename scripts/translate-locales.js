@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 //
-// translate-locales.js — AI-assisted i18n translation pipeline.
+// translate-locales.js: AI-assisted i18n translation pipeline.
 //
-// Reads src/locales/en.json (the source of truth) and emits
+// Reads src/locales/en.json (the source of truth) and spits out
 // translated dictionaries for every other supported locale by
-// asking an AI provider to translate the leaf strings, preserving
-// JSON structure + ICU MessageFormat placeholders verbatim.
+// asking an AI provider to translate the leaf strings. Keeps the
+// JSON structure and ICU MessageFormat placeholders untouched.
 //
 // Usage:
 //   # OpenAI Responses API (default when OPENAI_API_KEY is set)
@@ -20,7 +20,7 @@
 //   # Limit to specific locales
 //   OPENAI_API_KEY=sk-… node scripts/translate-locales.js --provider openai --locales es,fr
 //
-//   # Don't overwrite — write to .new.json side-files for diff/proofread
+//   # Don't overwrite, write to .new.json side-files instead so you can diff/proofread
 //   OPENAI_API_KEY=sk-… node scripts/translate-locales.js --provider openai --diff
 //
 //   # Dry-run: report what WOULD be translated without making API
@@ -28,56 +28,57 @@
 //   node scripts/translate-locales.js --dry-run --locales fr,de,it
 //
 // What counts as "needs translation":
-//   1. Keys that are entirely absent from a locale file (rare — the
+//   1. Keys that are entirely absent from a locale file (rare, the
 //      seed script copies the en.json structure into every locale).
-//   2. Keys whose value EQUALS the English source — i.e. an
-//      English placeholder waiting to be translated. The detector
-//      treats these as untranslated and re-fills them in the next
+//   2. Keys whose value EQUALS the English source, i.e. an English
+//      placeholder still waiting to be translated. The detector
+//      treats these as untranslated and re-fills them on the next
 //      run.
 //
 // Anything else (a hand-translated value that happens not to match
-// the English) is left alone unless --force is passed.
+// the English) gets left alone unless --force is passed.
 //
 // Design notes:
 //
 // • We send the WHOLE flattened dictionary in ONE prompt per locale.
 //   At <2000 keys this fits comfortably in a single model call,
 //   keeps surrounding-key context (so e.g. "Submit" near "Save"
-//   gets the right verb tense), and costs ~$0.02 per locale.
+//   gets the right verb tense), and costs about $0.02 per locale.
 //
-// • Placeholders ({minutes}, {n}, etc.) are preserved verbatim —
-//   we explicitly tell the model not to translate or reorder them.
+// • Placeholders ({minutes}, {n}, etc.) get preserved verbatim, we
+//   explicitly tell the model not to translate or reorder them.
 //
 // • The model's JSON output is parsed strictly; any malformed
 //   response aborts that locale so a half-translated file never
 //   lands in src/locales/.
 //
-// • Federations who'd rather hand-translate can skip this script
-//   and edit the per-locale JSON directly. The script never blows
-//   away their work without --force.
+// • Federations who'd rather hand-translate can just skip this
+//   script and edit the per-locale JSON directly. It never nukes
+//   their work without --force.
 
 const fs = require("fs");
 const path = require("path");
 
 // Load .env from the project root so OPENAI_API_KEY / ANTHROPIC_API_KEY
-// (and TRANSLATE_PROVIDER, OPENAI_MODEL, etc.) reach process.env when
-// this script runs from any directory. Soft-required: if dotenv isn't
-// installed the script keeps working — env vars set directly in the
-// shell still resolve. dotenv is already a runtime dep of the server
-// so the require should always succeed in a working tree.
+// (plus TRANSLATE_PROVIDER, OPENAI_MODEL, etc.) reach process.env no
+// matter what directory this script gets run from. Soft-required: if
+// dotenv isn't installed the script still works fine, env vars set
+// directly in the shell still resolve. dotenv's already a runtime dep
+// of the server anyway, so the require should always succeed here.
 try {
   const result = require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
-  // dotenv won't overwrite a var already present in process.env — correct for
-  // a deliberately-exported value, but an EMPTY pre-existing var (e.g. a shell
-  // profile or sandbox that exports `ANTHROPIC_API_KEY=`) would then shadow a
-  // real key in .env and the script would wrongly report the key as missing.
-  // Treat blank existing vars as unset and backfill them from the parsed .env;
-  // a non-empty exported value still takes precedence.
+  // Gotcha: dotenv won't overwrite a var already present in process.env,
+  // which is correct for a deliberately-exported value. But an EMPTY
+  // pre-existing var (e.g. a shell profile or sandbox that exports
+  // `ANTHROPIC_API_KEY=`) would then shadow a real key in .env and
+  // script would wrongly report the key as missing.
+  // Treat blank existing vars as unset and backfill them from the
+  // parsed .env; a non-empty exported value still wins.
   const parsed = (result && result.parsed) || {};
   for (const [k, v] of Object.entries(parsed)) {
     if (v && !String(process.env[k] || "").trim()) process.env[k] = v;
   }
-} catch { /* dotenv not installed — fall through, shell env still works */ }
+} catch { /* dotenv not installed, fall through, shell env still works fine */ }
 
 const LOCALES_DIR = path.join(__dirname, "..", "src", "locales");
 const SOURCE_LOCALE = "en";
@@ -147,15 +148,15 @@ async function main() {
     );
 
     if (!diffMode && !force && fs.existsSync(outFile)) {
-      // Detect work to do. Two categories:
+      // Figure out what actually needs work here. Two categories:
       //   - missing: key entirely absent from the locale file
       //   - english_stuck: value equals the English source (i.e. a
       //     placeholder waiting to be translated). The seed script
       //     fills every untranslated key with its English value so
-      //     the JSON structure stays in sync; this detector picks
-      //     those up so re-running the translator on a partly-
+      //     the JSON structure stays in sync, and this detector picks
+      //     those up so re-running the translator on a partly
       //     hand-translated file finishes the job without nuking
-      //     the hand work.
+      //     the hand-done work.
       const existing = safeParse(outFile);
       const missing = findMissingKeys(sourceJson, existing);
       const englishStuck = findEnglishStuckKeys(sourceJson, existing);
@@ -311,15 +312,15 @@ async function callAiProvider(prompt, context) {
 }
 
 async function callOpenAI(prompt, apiKey, model) {
-  // Uses the OpenAI Responses API through native fetch so the repo
-  // doesn't need an SDK dependency just for translation maintenance.
+  // Uses the OpenAI Responses API via native fetch so we don't need
+  // to pull in an SDK dependency just for translation maintenance.
   const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
   // Validate the base URL against an allowlist so a poisoned .env
-  // (or stale shell rc) can't redirect the OPENAI_API_KEY at an
-  // attacker-controlled host. https: + openai.com (or localhost
-  // for tests / proxies) only. Override the allowlist if you have
-  // a legitimate enterprise endpoint via OPENAI_BASE_URL_ALLOW
-  // (comma-separated host suffixes).
+  // (or stale shell rc) can't redirect the OPENAI_API_KEY off to an
+  // attacker-controlled host. Only https: + openai.com (or localhost
+  // for tests/proxies) is allowed by default. Got a legit enterprise
+  // endpoint? Override via OPENAI_BASE_URL_ALLOW (comma-separated
+  // host suffixes).
   validateOpenAIBaseUrl(baseUrl);
   const maxOutputTokens = parsePositiveInt(process.env.TRANSLATE_MAX_TOKENS, 12000);
   const res = await fetch(`${baseUrl}/responses`, {
@@ -356,11 +357,11 @@ async function callOpenAI(prompt, apiKey, model) {
 }
 
 async function callClaude(prompt, apiKey, model) {
-  // Use the public Anthropic messages API. Model picked for cost +
-  // quality on short translation tasks.
+  // Hits the public Anthropic messages API. Model's picked for a
+  // balance of cost and quality on short translation tasks.
   //
-  // Assistant prefill forces the model to begin with "{" so it
-  // stays in JSON mode and doesn't stop mid-object with end_turn.
+  // Assistant prefill forces the model to start with "{" so it
+  // stays in JSON mode and doesn't bail mid-object with end_turn.
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -392,7 +393,7 @@ async function callClaude(prompt, apiKey, model) {
 // ---------- Helpers ----------
 
 function resolveProvider(arg) {
-  // Explicit --provider flag (or TRANSLATE_PROVIDER env) wins.
+  // Explicit --provider flag (or TRANSLATE_PROVIDER env) always wins.
   const requested = (arg || process.env.TRANSLATE_PROVIDER || "").trim().toLowerCase();
   if (requested) {
     if (requested === "openai" || requested === "anthropic") return requested;
@@ -400,10 +401,10 @@ function resolveProvider(arg) {
   }
   // Auto-detect: per the wiki Languages.md "Choosing a provider"
   // table, Anthropic is the default WHEN BOTH KEYS ARE PRESENT
-  // (it was the original provider). OpenAI is picked only when
-  // Anthropic is absent. This contract is intentional — set
-  // `TRANSLATE_PROVIDER=openai` to override on a box that has
-  // both keys but prefers OpenAI.
+  // (it was the original provider). OpenAI only gets picked when
+  // Anthropic's key is absent. This is intentional, so if a box has
+  // both keys but you want OpenAI anyway, set
+  // `TRANSLATE_PROVIDER=openai` to override.
   if (process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY) return "openai";
   return "anthropic";
 }
@@ -440,10 +441,10 @@ function resolveModel(provider, arg) {
   if (provider === "openai") {
     return process.env.OPENAI_MODEL || process.env.OPENAI_TRANSLATE_MODEL || "gpt-5-mini";
   }
-  // Default to the latest Sonnet — was claude-3-5-sonnet-latest
-  // until the 4.x line was promoted. Override with ANTHROPIC_MODEL
-  // env if a specific snapshot is needed (e.g. for reproducible
-  // re-runs across the same locale set).
+  // Defaults to the latest Sonnet (this was claude-3-5-sonnet-latest
+  // until the 4.x line got promoted). Override with the ANTHROPIC_MODEL
+  // env var if you need a specific snapshot, e.g. for reproducible
+  // re-runs across the same locale set.
   return process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5";
 }
 
@@ -554,9 +555,9 @@ function findMissingKeys(source, target) {
 }
 
 // Detect keys whose value in the target matches the English
-// source — i.e. an English placeholder waiting to be translated.
-// Skips keys that don't exist in the target at all (those are
-// already caught by findMissingKeys, so don't double-report).
+// source, i.e. an English placeholder still waiting to be translated.
+// Skips keys that don't exist in the target at all since those are
+// already caught by findMissingKeys, so don't double-report.
 function findEnglishStuckKeys(source, target) {
   const stuck = [];
   walk(source, (pathArr, sourceVal) => {

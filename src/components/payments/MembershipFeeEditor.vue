@@ -1,9 +1,9 @@
 <script setup>
 // Admin editor for tiered athlete-membership fees. Renders one FeeEditor
-// at a time for the selected tier — Standard (no tier) plus junior/senior/
-// masters — each backed by /api/orgs/:orgId/membership-fee?tier=… . The
+// at a time for the selected tier (Standard with no tier, plus junior,
+// senior, masters), each backed by /api/orgs/:orgId/membership-fee?tier=… .
 // FeeEditor's extraPayload carries the tier so the PUT lands on the right
-// per-tier fee_definition (Migration 067 keys uniqueness on tier).
+// per-tier fee_definition (FYI, Migration 067 keys uniqueness on tier).
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FeeEditor from '@/components/payments/FeeEditor.vue'
@@ -22,7 +22,7 @@ const activeLabel = computed(() => {
   const tier = TIERS.find(tr => tr.key === active.value)
   return tier ? t(tier.labelKey) : ''
 })
-// 'standard' = the single, ageless membership (tier NULL on the server).
+// 'standard' is the single, ageless membership (tier is NULL on the server).
 function param(key) { return key === 'standard' ? '' : key }
 function tierValue(key) { return key === 'standard' ? null : key }
 const baseUrl = computed(() => `/api/orgs/${props.orgId}/membership-fee?tier=${param(active.value)}`)

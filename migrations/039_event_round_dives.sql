@@ -8,7 +8,7 @@
 -- round-N pick doesn't match the prescription.
 --
 -- Real-world driver: skills trials, certification fixtures, and
--- novice-level meets where the operator wants the whole field
+-- novice-level meets where the operator want the whole field
 -- to dive the same things in the same order so judges can
 -- compare like-for-like.
 --
@@ -23,7 +23,7 @@
 --                   free, restrict the diver's pick to this board
 --
 -- The total number of rows for an event becomes the source of
--- truth for `total_rounds` once any round_dives exist —
+-- truth for `total_rounds` once any round_dives exist:
 -- POST /api/events sets total_rounds from the array length, and
 -- PUT keeps them in sync. Events without round_dives keep the
 -- legacy total_rounds-only behaviour.
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS public.event_round_dives (
   round_number  integer NOT NULL CHECK (round_number >= 1),
   dive_id       uuid REFERENCES public.dive_directory(id) ON DELETE SET NULL,
   -- Optional board height for the slot. Only meaningful when the
-  -- event is_mixed_height AND dive_id IS NULL — it constrains the
+  -- event is_mixed_height AND dive_id IS NULL, since it constrains the
   -- diver's free pick to this board. When dive_id is set the
   -- canonical height is on the dive_directory row.
   height        numeric(3,1),

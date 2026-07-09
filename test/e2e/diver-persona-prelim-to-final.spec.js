@@ -1,4 +1,4 @@
-// Diver-persona walkthrough — prelim → semi (rank 13 = reserve)
+// Diver-persona walkthrough: prelim → semi (rank 13 = reserve)
 // → primary withdraws → reserve promoted to final → reserve edits
 // dive sheet (swap 107B for 109C, harder DD) → submits.
 //
@@ -14,7 +14,7 @@
 //     applying WA Article 4.1.8 / 4.1.10 reverse-rank shift
 //     (reserve takes display_order=1, others below shift +1).
 //   * The post-advance dive-list lock + Confirm/edit banner
-//     (WA Article 6.7.3 — 30 min after end of previous stage).
+//     (WA Article 6.7.3, 30 min after end of previous stage).
 //   * The diver upserting a different dive_id via submit-list
 //     (107B → 109C, both real entries in dive_directory at 3m).
 //   * confirmed_at stamped server-side on re-submit.
@@ -41,7 +41,7 @@ test("persona: prelim → semi (13th, reserve) → promoted into final → edits
   const { orgId, adminToken } = await setup.createOrgAndAdmin(request);
 
   // ---------------------------------------------------------
-  // 13 divers — index 12 is "our" persona diver (rank #13 in
+  // 13 divers, index 12 is "our" persona diver (rank #13 in
   // both stages so they end up as the lone reserve into the
   // final). 5 judges, all reused across the chain.
   // ---------------------------------------------------------
@@ -62,7 +62,7 @@ test("persona: prelim → semi (13th, reserve) → promoted into final → edits
   );
 
   // ---------------------------------------------------------
-  // Dive ids — both exist on 3m springboard per the catalog.
+  // Dive ids, both exist on 3m springboard per the catalog.
   // 107B = forward 3.5 som pike, DD 3.1
   // 109C = forward 4.5 som tuck, DD 3.8
   // ---------------------------------------------------------
@@ -106,7 +106,7 @@ test("persona: prelim → semi (13th, reserve) → promoted into final → edits
   // ---------------------------------------------------------
   // Helper: wire up an event with judges, dive lists for all
   // 13 divers (every diver attempts 107B), and judge scores
-  // arranged so divers[i] ranks (i+1)th — i.e. divers[0]
+  // arranged so divers[i] ranks (i+1)th, i.e. divers[0]
   // wins, divers[12] (our persona) finishes 13th.
   // ---------------------------------------------------------
   async function wireUpStage(eventId, { skipDiveLists } = {}) {
@@ -211,7 +211,7 @@ test("persona: prelim → semi (13th, reserve) → promoted into final → edits
   expect(reserveNotif.rows[0]?.title).toMatch(/reserve/i);
 
   // =========================================================
-  // DIVER UI — log in, see the reserve banner.
+  // DIVER UI: log in, see the reserve banner.
   // =========================================================
   await setup.installClickHighlight(page);
   await page.goto("/login");
@@ -227,7 +227,7 @@ test("persona: prelim → semi (13th, reserve) → promoted into final → edits
   // Pick the FINAL from the dropdown (Step 1).
   await page.locator("select").first().selectOption(final.id);
 
-  // Reserve banner visible — amber, "You're Reserve 1".
+  // Reserve banner visible, amber, "You're Reserve 1".
   await expect(page.locator(".reserve-banner")).toBeVisible({ timeout: 5_000 });
   await expect(page.locator(".reserve-banner-title"))
     .toContainText(/You're Reserve 1/i);
@@ -239,10 +239,10 @@ test("persona: prelim → semi (13th, reserve) → promoted into final → edits
   await expect(page.locator(".dive-row").first()).toContainText("107");
 
   // =========================================================
-  // PROMOTE — simulate diver12 (the 12th-place finisher) being
-  // unable to compete; meet manager promotes our reserve into
-  // their slot. Per WA Article 4.1.8 / 4.1.10 reverse-rank,
-  // the reserve doesn't inherit diver12's display_order — they
+  // PROMOTE: simulate diver12 (the 12th-place finisher) being
+  // unable to compete, so the meet manager promotes our reserve
+  // into their slot. Per WA Article 4.1.8 / 4.1.10 reverse-rank,
+  // the reserve doesn't inherit diver12's display_order, they
   // get DO=1 and divers below diver12 in qualifying rank shift
   // up.
   // =========================================================
@@ -267,7 +267,7 @@ test("persona: prelim → semi (13th, reserve) → promoted into final → edits
   expect(promoteNotif.rows[0]?.title).toMatch(/promoted/i);
 
   // =========================================================
-  // DIVER UI — refresh, reserve banner gone, lock banner now.
+  // DIVER UI: refresh, reserve banner gone, lock banner now.
   // =========================================================
   await page.reload();
   await page.locator("select").first().selectOption(final.id);
@@ -278,7 +278,7 @@ test("persona: prelim → semi (13th, reserve) → promoted into final → edits
     .toContainText(/You've advanced|Confirm or edit/i);
 
   // =========================================================
-  // DIVER UI — edit round 1 from 107B to 109C.
+  // DIVER UI: edit round 1 from 107B to 109C.
   // =========================================================
   // Click the dive row (opens the picker modal).
   await page.locator(".dive-row").first().click();
@@ -298,7 +298,7 @@ test("persona: prelim → semi (13th, reserve) → promoted into final → edits
   await expect(page.locator(".dive-row").first()).toContainText("C");
 
   // =========================================================
-  // DIVER UI — submit, verify success + DB.
+  // DIVER UI: submit, verify success + DB.
   // =========================================================
   await page.getByRole("button", { name: /Finalise & Submit List/i }).click();
   // submitList() redirects to /dashboard on success.
@@ -319,7 +319,7 @@ test("persona: prelim → semi (13th, reserve) → promoted into final → edits
   expect(row.position).toBe("C");
   expect(row.dive_id).toBe(dive109C);
   // Diver is now an active competitor at start position 1
-  // (per WA reverse-rank shift — worst qualifier dives first).
+  // (per WA reverse-rank shift, worst qualifier dives first).
   expect(row.is_reserve).toBe(false);
   expect(Number(row.display_order)).toBe(1);
   // confirmed_at is stamped on the upsert.

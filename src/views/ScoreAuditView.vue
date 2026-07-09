@@ -28,7 +28,7 @@ const filtered = computed(() => {
   })
 })
 
-// Distinct competitors / judges so the filters can populate dropdowns
+// Distinct competitors / judges so the filters can populate their dropdowns
 const competitors = computed(() => {
   const seen = new Map()
   for (const e of entries.value) {
@@ -226,7 +226,7 @@ onMounted(load)
 .field-inline { display: flex; align-items: center; gap: 0.5rem; }
 .filter-label { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-3); }
 .select-sm { padding: 0.3rem 0.5rem; font-size: 12px; min-width: 120px; }
-/* Avoid iOS Safari's focus-zoom on <select> with font-size < 16px. */
+/* iOS Safari zooms in on focus for any <select> under 16px font-size, avoid that here */
 @media (max-width: 720px) {
   .select-sm { font-size: 16px; }
 }

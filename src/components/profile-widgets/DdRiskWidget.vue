@@ -1,7 +1,7 @@
 <script setup>
 defineProps({
-  // { avg_dd, max_dd, avg_score_at_highest_dd, attempts_at_highest_dd }.
-  // From analytics.dd_risk.
+  // { avg_dd, max_dd, avg_score_at_highest_dd, attempts_at_highest_dd }
+  // from analytics.dd_risk.
   data: { type: Object, default: null },
 })
 </script>
@@ -60,8 +60,8 @@ defineProps({
   margin-top: 0.3rem;
 }
 /* Phone (≤600px): 3 cells at 140px each = 420px before gaps,
-   so the grid wraps to 2-1 on most phones. Drop the minimum
-   so all three cells fit side-by-side on 360px, and trim the
+   so the grid wraps to 2-1 on most phones. Dropping the minimum
+   lets all three cells sit side-by-side at 360px, and we trim the
    big 32px numerals so the label doesn't clip. */
 @media (max-width: 600px) {
   .dd-risk-row {

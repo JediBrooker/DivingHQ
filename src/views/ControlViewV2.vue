@@ -1,11 +1,11 @@
 <script setup>
-// ControlViewV2 — the Stage-Rail Control Room (the only Control Room; the
-// legacy all-in-one ControlView was removed at cutover).
+// ControlViewV2, the Stage-Rail Control Room (and the only Control Room now;
+// the legacy all-in-one ControlView got removed at cutover).
 //
-// A top event bar (switch + actions) + a CENTER mode-switch (Setup / Live
+// Top event bar (switch + actions) plus a CENTER mode-switch (Setup / Live
 // / Review, plus a Recovery cross-cut). Live mode is the three-column
-// board (History · concurrent pool cards · Standings) with per-pool
-// controllers + meet-day tools; the mode is chosen by the shared
+// board (History, concurrent pool cards, Standings) with per-pool
+// controllers + meet-day tools; the mode gets chosen by the shared
 // useControlStage derivation. Same /control URL, ?event= deep-link, role
 // gate + AppShell as before.
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
@@ -39,49 +39,49 @@ const auth = useAuthStore()
 const { queueAction, queueSocketAction } = useHttpOutbox()
 
 // Socket + the concurrent-pool live-state engine are hoisted ABOVE the
-// mode switch: ONE subscription for the shell's lifetime routes every
+// mode switch: one subscription for the shell's whole lifetime routes every
 // score_received / judge_signal to the matching pool by event_id, so a
 // non-focused Live pool still updates its own tiles (useLivePools). The
-// frozen trim/sync math is untouched -- only WHERE the result lands is
-// per-pool. The shot clock + auto-advance now live PER-POOL inside each
-// LivePoolCard (driven off its pool state), so the shell just routes
-// scores and refreshes side-panel data on completion.
+// frozen trim/sync math itself is untouched, only where the result lands
+// is per-pool now. Shot clock + auto-advance live PER-POOL inside each
+// LivePoolCard (driven off its own pool state), so the shell just routes
+// scores and refreshes side-panel data when a dive completes.
 const socket = useSocket()
 const { pools, poolFor, routeScore, routeSignal } = useLivePools()
 
 useSocketEvent(socket, 'score_received', (data) => {
   if (data?.event_id) idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
   const res = routeScore(data, numberOfJudgesFor)
-  // A completed dive changes that pool's history + standings -> refresh
-  // its side-panel data (for whichever pool, focused or not). Each card
-  // watches its own pool to stop its clock + arm its own auto-advance.
+  // A completed dive changes that pool's history + standings, so refresh
+  // its side-panel data (whichever pool, focused or not). Each card
+  // watches its own pool to stop its clock and arm its own auto-advance.
   if (res.allScoresIn) loadPoolPanels(data.event_id)
 })
 useSocketEvent(socket, 'judge_signal', (data) => {
   routeSignal(data)
 })
 
-// AUTHORITATIVE active-diver restore. The server replays state_update on
+// Authoritative active-diver restore. The server replays state_update on
 // (re)connect and in reply to get_active_diver, carrying the diver it
 // currently has live per event. We record it and snap the matching pool
-// to that diver -- WITHOUT emitting -- so reopening the Control Room
+// to that diver, without emitting, so reopening the Control Room
 // mid-meet never yanks the judges' panel back to roster[0]. Only a
-// genuinely fresh event (no server diver) announces, in setupLivePool.
+// genuinely fresh event (no server diver) announces, over in setupLivePool.
 const pendingActive = {} // event_id -> latest server state_update payload
 const pendingSeed = new Set() // events optimistically seeded, awaiting the server's verdict
 const seedTimers = new Set() // fallback timers, cleared on unmount
 const SEED_GRACE_MS = 1500
 
 // Drop-detection: the server echoes set_active_diver back as state_update.
-// If the echo doesn't arrive within CONFIRM_TIMEOUT_MS, the pool card
-// shows an "unconfirmed" warning. The outbox handles retries; this is
-// purely UI feedback.
+// If the echo doesn't show up within CONFIRM_TIMEOUT_MS, the pool card
+// shows an "unconfirmed" warning. The outbox handles retries, this bit
+// is just UI feedback.
 const pendingConfirm = {}
 const unconfirmed = reactive({})
 const confirmTimers = new Set()
 const CONFIRM_TIMEOUT_MS = 4000
 
-// LEASE conflict state: event_id -> true when another socket (operator or
+// Lease conflict state: event_id -> true when another socket (operator or
 // window) is also controlling this event (server claim_event_control).
 const conflicts = reactive({})
 
@@ -109,10 +109,10 @@ useSocketEvent(socket, 'event_control_granted', (d) => {
   if (d?.event_id) delete conflicts[d.event_id]
 })
 
-// Queue set_active_diver through the outbox. The outbox persists it
-// to IDB and drains via socket ack when online; offline entries
-// replay on reconnect. Replaces the old token-bucket + drop-detection
-// flow — the outbox's own pending/synced/failed states cover both.
+// Queue set_active_diver through the outbox. It persists to IDB and
+// drains via socket ack when online; offline entries replay on
+// reconnect. Replaces the old token-bucket + drop-detection flow, since
+// the outbox's own pending/synced/failed states cover both now.
 function emitActiveDiver(ev) {
   const p = pools[ev.id]
   const a = p && p.currentActive
@@ -124,13 +124,13 @@ function emitActiveDiver(ev) {
 }
 
 // Snap an optimistically-seeded pool to the server's authoritative active
-// diver (no emit), but ONLY while it is still awaiting the server's
-// verdict (pendingSeed) -- so a routine state echo during live operation
-// can never wipe the operator's in-progress pool. Clearing pendingSeed
-// marks the event server-resolved, so the roster[0] announce fallback
-// won't fire for it. A payload we can't map to a roster row (-1) still
-// resolves: we leave the optimistic roster[0] in place but never announce
-// over the server's diver.
+// diver (no emit), but only while it's still awaiting the server's
+// verdict (pendingSeed), so a routine state echo during live operation
+// can never wipe out the operator's in-progress pool. Clearing pendingSeed
+// marks the event as server-resolved, so the roster[0] announce fallback
+// won't fire for it anymore. A payload we can't map to a roster row (-1)
+// still resolves: we leave the optimistic roster[0] in place but never
+// announce over the server's diver.
 function seedPoolFromServer(eventId) {
   if (!pendingSeed.has(eventId)) return
   const pool = pools[eventId]
@@ -155,16 +155,16 @@ const currentEvent = computed(
 )
 const { workflowMode } = useControlStage(currentEvent)
 
-// SAFE RECOVERY: meet hold/resume on the FOCUSED event, driving the
+// Safe recovery: meet hold/resume on the FOCUSED event, driving the
 // recovery center mode + the focused hold banner. Per-pool hold (from any
-// card) lives inside LivePoolCard; this focused instance mirrors the same
-// server meet_held/meet_resumed broadcasts so the two stay in sync. The
-// focused pool's clock is paused by its own card's hold instance, so
-// onHold here is a no-op.
+// card) lives inside LivePoolCard; this focused instance just mirrors the
+// same server meet_held/meet_resumed broadcasts so the two stay in sync.
+// The focused pool's clock gets paused by its own card's hold instance,
+// so onHold here is a no-op.
 const { isHeld, holdReason, holdPromptOpen, holdReasonInput, openHoldPrompt, confirmHold, resumeMeet } =
   useMeetHold({ socket, event: () => currentEvent.value, onHold: () => {}, queueSocketAction })
 
-// Recovery is the one explicit cross-cutting mode (offer-not-seize).
+// Recovery is the one explicit cross-cutting mode (offer, not seize).
 // Off by default so the center always shows the stage mode.
 const recoveryOpen = ref(false)
 const drawerOpen = ref(false)
@@ -172,17 +172,17 @@ const centerMode = computed(() => (recoveryOpen.value ? 'recovery' : workflowMod
 
 // Every currently-Live event, paired with its pool -> the multi-pool grid
 // in the center renders one LivePoolCard per entry. With one Live event
-// it's the classic single 3-column board; with two or three the cards sit
-// side by side so the operator sees every pool at a glance.
-// Canonical order (oldest-Live first) so grid card N, top-bar chip N and
-// the "N" focus hotkey all address the same pool. See useControlStage.
+// it's the classic single 3-column board; with two or three, the cards sit
+// side by side so the operator can see every pool at a glance.
+// Canonical order (oldest Live first) so grid card N, top-bar chip N, and
+// the "N" focus hotkey all point at the same pool. See useControlStage.
 const livePools = computed(() =>
   liveEventsInOrder(events.value).map((e) => ({ event: e, pool: poolFor(e.id) })),
 )
 
 // History + standings for the FOCUSED pool feed the side columns. Kept in
-// the view (not the pure useLivePools engine): fetched per pool on setup
-// and refreshed when that pool completes a dive.
+// the view (not the pure useLivePools engine) since they're fetched per
+// pool on setup and refreshed when that pool completes a dive.
 const histories = reactive({}) // event_id -> completed-dive cards, newest first
 const standingsByEvent = reactive({}) // event_id -> standings rows, total desc
 const focusedHistory = computed(() => histories[selectedEventId.value] || [])
@@ -190,9 +190,9 @@ const focusedStandings = computed(() => standingsByEvent[selectedEventId.value] 
 
 // Collapsible side columns. One Live event -> both open (the full
 // 3-column board). Two or more -> auto-collapse to edge drawers so the
-// pool cards get the width; the operator can still peek either panel for
-// the focused pool. Manual toggles hold until the Live-event count
-// changes.
+// pool cards get the width, though the operator can still peek either
+// panel for the focused pool. Manual toggles hold until the Live-event
+// count changes.
 const historyOpen = ref(true)
 const standingsOpen = ref(true)
 watch(
@@ -208,7 +208,7 @@ async function loadPoolPanels(eventId) {
   if (!eventId) return
   try {
     const h = await auth.apiFetch(`/api/events/${eventId}/history`)
-    // /history is round ASC, name ASC; reverse so the latest dive is on top.
+    // /history comes back round ASC, name ASC; reverse so the latest dive is on top.
     histories[eventId] = Array.isArray(h) ? h.slice().reverse() : []
   } catch { /* leave prior history in place */ }
   try {
@@ -223,9 +223,9 @@ function fmtTotal(v) {
 }
 
 // Per-judge score chips for a History row. /history carries judge_scores +
-// judge_numbers as parallel arrays (ordered by judge_number); zip them into
-// the {judge_number, score} shape annotateJudgeRows wants, and let it apply
-// the WA trim (kept/dropped) using the focused event's panel size + type.
+// judge_numbers as parallel arrays (ordered by judge_number), so zip them
+// into the {judge_number, score} shape annotateJudgeRows wants and let it
+// apply the WA trim (kept/dropped) using the focused event's panel size + type.
 // Returns [{ judge_number, score, dropped, category }] in judge order.
 function historyJudgeRows(row) {
   const scores = row?.judge_scores || []
@@ -253,9 +253,9 @@ function historySynchroGroups(row) {
   }))
 }
 
-// SCORE CORRECTION (#9): clicking a completed dive in the focused pool's
+// Score correction (#9): clicking a completed dive in the focused pool's
 // History column opens the manager-amend modal. /history rows carry
-// judge_scores + score_ids; the modal wants `scores`, so map across.
+// judge_scores + score_ids, but the modal wants `scores`, so map across.
 const correctOpen = ref(false)
 const correctTarget = ref(null)
 function openCorrection(row) {
@@ -278,8 +278,8 @@ function closeCorrection() {
   correctTarget.value = null
 }
 
-// ANNOUNCE (#9): push the focused pool's standings to the spectator
-// scoreboard ("say it on screen"), reproducing the V1 announce_score emit.
+// Announce (#9): push the focused pool's standings to the spectator
+// scoreboard ("say it on screen"). Reproduces the V1 announce_score emit.
 function announceFocused() {
   const ev = currentEvent.value
   if (!ev || !focusedStandings.value.length) return
@@ -288,8 +288,8 @@ function announceFocused() {
 }
 
 // The nextDiver funnel (ControlView.vue:2347-2378), generalized to ANY
-// pool so each card's primary advances its OWN event: partial-scores
-// confirm, then advance that pool's cursor OR finalise. The per-pool shot
+// pool so each card's primary button advances its OWN event: partial-score
+// confirm, then advance that pool's cursor or finalise. Per-pool shot
 // clock + auto-advance live in each card, which re-arms its clock when its
 // active diver changes here.
 async function advancePool(ev) {
@@ -332,8 +332,8 @@ function retryActiveDiver(ev) {
   if (ev) emitActiveDiver(ev)
 }
 
-// Referee call for the FOCUSED pool's active diver — the keyboard path
-// (the per-card buttons emit the same events from LivePoolCard). Acts only
+// Referee call for the FOCUSED pool's active diver, the keyboard path
+// (per-card buttons emit the same events from LivePoolCard). Acts only
 // on currentEvent so a hotkey never touches a background pool.
 function refActionFocused(type) {
   const ev = currentEvent.value
@@ -345,7 +345,7 @@ function refActionFocused(type) {
   else if (type === 'redive') queueSocketAction('referee_redive', payload)
 }
 
-// Per-pool keyboard control. A single window listener; controlKeyIntent
+// Per-pool keyboard control. One window listener: controlKeyIntent
 // maps the key, isTypingTarget keeps it out of inputs/modals, and every
 // action resolves through the FOCUSED pool (number keys only switch focus).
 function onKeydown(e) {
@@ -367,8 +367,8 @@ function onKeydown(e) {
 
 // finaliseEvent (ControlView.vue:2470-2545), per pool: same
 // consequences/confirm/PUT/undo. (The reflow modal is drawer plumbing,
-// deferred to P8; an event with no long-run candidates -- the common
-// case -- never opens it.)
+// deferred to P8, since an event with no long-run candidates, which is the
+// common case, never opens it.)
 async function finalisePool(ev) {
   if (!ev) return
   const p = pools[ev.id]
@@ -435,19 +435,19 @@ function numberOfJudgesFor(eventId) {
 // an active diver on the stage. Per-pool, so two Live pools stay
 // independent.
 //
-// Active-diver seeding restores the meet's REAL state rather than resetting
+// Active-diver seeding restores the meet's REAL state instead of resetting
 // it. The old version blindly emitted set_active_diver for roster[0] on
-// mount for EVERY Live event -- so merely opening the Control Room yanked
+// mount for EVERY Live event, so merely opening the Control Room yanked
 // every judge's panel (even another operator's) back to diver 1, round 1.
 // Now we:
 //   1. optimistically select roster[0] LOCALLY (no emit) so the stage
 //      isn't blank and a non-focused pool's scores route the instant they
 //      arrive (applyScore matches on the client's currentActive);
 //   2. ask the server who is actually live (get_active_diver). If it has a
-//      diver, the state_update echo snaps us to it via seedPoolFromServer
-//      -- still no emit, so the judges are never reset;
+//      diver, the state_update echo snaps us to it via seedPoolFromServer,
+//      still no emit, so the judges are never reset;
 //   3. only when the server has NO diver (a freshly-Live event nobody has
-//      started) announce roster[0] -- the lone load path that emits.
+//      started yet) do we announce roster[0], the one load path that emits.
 async function setupLivePool(ev) {
   socket.emit('subscribe_event', { event_id: ev.id })
   // Claim the control lease so a second operator/window driving this same
@@ -469,9 +469,9 @@ async function setupLivePool(ev) {
     seedPoolFromServer(ev.id)
     // Fallback: the server never answered within the grace window -> this
     // event is freshly Live with nobody up, so announce roster[0]. Guarded
-    // on pendingSeed (cleared once the server resolves it) + a live socket
-    // so we never clobber an existing diver or announce blind while
-    // disconnected.
+    // on pendingSeed (cleared once the server resolves it) plus a live
+    // socket check, so we never clobber an existing diver or announce
+    // blind while disconnected.
     const tid = setTimeout(() => {
       seedTimers.delete(tid)
       if (pendingSeed.has(ev.id) && socket.isConnected.value && pool.currentActive) {
@@ -515,9 +515,9 @@ onMounted(async () => {
   window.addEventListener('keydown', onKeydown)
 })
 
-// Clear any in-flight seed-fallback timers so a pool can't be announced
-// after the view is gone. (useSocketEvent already auto-cleans the socket
-// listeners on unmount.)
+// Clear any in-flight seed-fallback timers so a pool can't get announced
+// after the view is gone. Heads up: useSocketEvent already auto-cleans the
+// socket listeners on unmount, this is just for our own timers.
 onUnmounted(() => {
   seedTimers.forEach(clearTimeout)
   seedTimers.clear()
@@ -582,18 +582,18 @@ onMounted(() => {
 
       <div v-else class="cv2-stage" :data-mode="centerMode">
         <!-- The focused event's NAME now lives only in the top bar. This
-             visually-hidden heading is the roving-focus target on switch
-             and gives screen readers the stage context. -->
+             visually-hidden heading is the roving-focus target on switch,
+             and it gives screen readers the stage context. -->
         <h1 ref="stageTitleEl" tabindex="-1" class="cv2-sr-title">{{ currentEvent.name }} — {{ currentEvent.status }}</h1>
 
-        <!-- Center mode-switch: EXACTLY ONE mode per stage. The bodies
-             are placeholders; P6-P8 rebuild the real panels here. -->
+        <!-- Center mode-switch: exactly one mode per stage. The bodies
+             here are placeholders, P6-P8 rebuild the real panels. -->
         <section v-if="centerMode === 'setup'" class="cv2-mode" aria-label="Setup">
           <SetupStage :event="currentEvent" />
         </section>
         <section v-else-if="centerMode === 'meet'" class="cv2-live-layout" aria-label="Live">
           <!-- HISTORY (left). One Live event -> a full column; two or more
-               -> a collapsed edge drawer the operator peeks per focused pool. -->
+               -> a collapsed edge drawer the operator can peek per focused pool. -->
           <aside v-if="historyOpen" class="cv2-side cv2-side-history" aria-label="History">
             <div class="cv2-side-head">
               <span class="cv2-side-title">History</span>
@@ -618,7 +618,7 @@ onMounted(() => {
                 </div>
                 <span class="cv2-hcard-total">{{ fmtTotal(h.total_points) }}</span>
                 <!-- Per-judge scores. Synchro events group into Exec A /
-                     Exec B / Sync; everything else shows a flat strip.
+                     Exec B / Sync, everything else just shows a flat strip.
                      Kept/dropped trim + categories reuse the global j-* CSS. -->
                 <div
                   v-if="currentEvent.event_type === 'synchro_pair' && historySynchroGroups(h)"
@@ -736,7 +736,7 @@ onMounted(() => {
 
     <!-- Secondary surfaces (broadcast / reserves / audit / sponsor) live
          in a closed-by-default drawer. v-if-gated so a resting Live canvas
-         never mounts this markup (the #9 subtraction). -->
+         never mounts this markup, the #9 subtraction. -->
     <DrawerPanel v-if="drawerOpen" :event="currentEvent" @close="drawerOpen = false" />
 
     <!-- Score correction (#9): amend a judge score on a completed dive in

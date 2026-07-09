@@ -1,8 +1,9 @@
 <script setup>
-// A member's own payment history. Read-only list of every payment they've
-// made, with CSV + PDF download. All strings are i18n ($t); the description
-// and status are composed client-side from the raw fields returned by
-// GET /api/me/payments so they localise (and stay reactive to locale switch).
+// A member's own payment history. Read-only list of every payment
+// they've made, with CSV + PDF download. All strings are i18n ($t);
+// the description and status get composed client-side from the raw
+// fields returned by GET /api/me/payments so they localise (and stay
+// reactive to a locale switch).
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -17,8 +18,9 @@ const loadError = ref(false)
 const paymentsEnabled = ref(true)
 const raw = ref([])
 
-// Types we give a first-class translated label; anything else (rare/edge,
-// e.g. club_affiliation, levy) degrades to a humanised subject_type.
+// Types we give a first-class translated label to; anything else
+// (rare/edge, e.g. club_affiliation, levy) degrades to a humanised
+// subject_type instead.
 const KNOWN_TYPES = new Set([
   'event_entry', 'late_entry', 'membership', 'meet_bundle', 'official_accreditation',
   'spectator_ticket', 'livestream', 'programme', 'donation', 'fine', 'scratch', 'no_show',
@@ -39,9 +41,10 @@ function statusLabel(status) {
   return val === key ? humanize(status) : val
 }
 
-// Human detail per row. Free-text/user data (event, meet, fine reason) is
-// shown as-is; enum fields (membership tier, official role) are humanised
-// so 'meet_manager' -> 'Meet manager' rather than a raw slug.
+// Human-readable detail per row. Free-text/user data (event, meet,
+// fine reason) is shown as-is; enum fields (membership tier,
+// official role) get humanised so 'meet_manager' -> 'Meet manager'
+// instead of a raw slug.
 function detailFor(p) {
   switch (p.subject_type) {
     case 'event_entry':
@@ -116,8 +119,8 @@ async function load() {
 }
 
 // ---- Exports ----------------------------------------------------
-// Spreadsheet-formula-injection guard + RFC 4180 quoting (mirrors the
-// server-side csvCell in routes/pdf.js).
+// Spreadsheet-formula-injection guard plus RFC 4180 quoting (mirrors
+// the server-side csvCell in routes/pdf.js).
 function csvCell(v) {
   let s = v == null ? '' : String(v)
   if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
@@ -147,9 +150,10 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
 }
 
-// PDF via the browser's print pipeline: open a self-contained, already-
-// translated document and trigger print (the user saves it as PDF). No extra
-// dependency, and it inherits whatever language the page is in.
+// PDF via the browser's print pipeline: open a self-contained,
+// already-translated document and trigger print (the user saves it
+// as PDF themselves). No extra dependency needed, and it inherits
+// whatever language the page happens to be in.
 function downloadPdf() {
   const w = window.open('', '_blank')
   if (!w) {

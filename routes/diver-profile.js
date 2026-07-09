@@ -8,7 +8,7 @@
 //   PUT /api/users/me/dashboard     persist the diver's widget
 //                                   layout (validated whitelist)
 //
-// Profile + analytics are visible to any authenticated user — the
+// Profile + analytics are visible to any authenticated user. The
 // data they expose is already public via the meet scoreboards and
 // the archive (and cross-org comparison was the explicit feature
 // request that drove that). dashboard_widgets is private though;
@@ -28,8 +28,9 @@ const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 
 // Catalog of widget IDs the diver can enable on their dashboard.
 // Validated against the inbound array so a typo can't poison the
-// store. Mirrors the frontend's WIDGET_CATALOG; if you add to the
-// frontend, add here too (flagged in AGENTS.md).
+// store. Mirrors the frontend's WIDGET_CATALOG, so if you add one
+// there, add it here too (flagged in AGENTS.md, worth
+// double-checking).
 const KNOWN_WIDGETS = new Set([
   "score_trend", "personal_bests", "recent_form", "placings",
   "height_breakdown", "round_stamina", "quality_mix", "dd_risk",
@@ -38,13 +39,13 @@ const KNOWN_WIDGETS = new Set([
   "compare_peers", "event_type_splits", "year_over_year",
 ]);
 
-// Diver competitive profiles are now publicly readable — same
+// Diver competitive profiles are now publicly readable: same
 // data the meet scoreboards and event archives already expose to
 // the open web. The handler still gates owner-private fields
 // (dashboard_widgets) via canViewDiverPrivate. Anonymous spectators
 // landing on /profile/<id> from a scoreboard link see the
 // competitive history without being bounced to /login. (Originally
-// gated to authenticated viewers; relaxed when the scoreboard's
+// gated to authenticated viewers, relaxed when the scoreboard's
 // diver-name links became expected to work for unauth visitors.)
 function canViewDiverProfile(/* viewer, diverRow */) {
   return true;
@@ -74,21 +75,21 @@ module.exports = function createDiverProfileRouter({
   // Public-read endpoints (profile + analytics) decode the token if
   // one is sent so we still see req.user for owner-only branches
   // (e.g. dashboard_widgets), but anonymous requests are accepted.
-  // Falls back to verifyToken if the host hasn't been updated yet —
+  // Falls back to verifyToken if the host hasn't been updated yet,
   // belt-and-braces during the rollout.
   const maybeAuth = optionalAuth || verifyToken;
-  // Profile + analytics are heavy historical reads — per_dive
+  // Profile + analytics are heavy historical reads: per_dive
   // CTEs across the whole scores table, FULL_FIELD_RANKING
   // window functions. Route through the optional read replica
   // so analytics dashboards don't compete with live-scoring
   // writes for primary connections. Slight replication lag is
-  // fine here: nobody clicks "show me my stats" in the same
+  // fine here, nobody clicks "show me my stats" in the same
   // second they submit a dive list.
   const reads = readPool || pool;
   const router = express.Router();
 
   // -------------------------------------------------------------
-  // GET /api/divers/:id/profile — stats, PBs, per-meet trend
+  // GET /api/divers/:id/profile: stats, PBs, per-meet trend
   // -------------------------------------------------------------
   router.get("/api/divers/:id/profile", maybeAuth, async (req, res) => {
     try {
@@ -144,7 +145,7 @@ module.exports = function createDiverProfileRouter({
 
       // Personal best per (dive code + position + height), under
       // World Aquatics trim + DD rules. The canonical chain LEFT
-      // JOINs cdl + dive_directory — a withdrawn-then-deleted
+      // JOINs cdl + dive_directory. A withdrawn-then-deleted
       // competitor_dive_lists row would otherwise drop the diver's
       // historical scores from PB calculations. Dive-by-dive scope:
       // d.dd is a grouping column, so it feeds the UDF directly
@@ -263,7 +264,7 @@ module.exports = function createDiverProfileRouter({
         score_trend: trend.rows,
         // Only return the diver's saved dashboard layout to viewers
         // who own it (or sit above them in the same org). To outside
-        // viewers it's irrelevant noise that also leaks a UI
+        // viewers its irrelevant noise that also leaks a UI
         // preference, so we omit the key entirely.
         ...(canViewDiverPrivate(req.user, diver)
           ? {
@@ -279,7 +280,7 @@ module.exports = function createDiverProfileRouter({
   });
 
   // -------------------------------------------------------------
-  // GET /api/divers/:id/analytics — 11 widget rollups in parallel
+  // GET /api/divers/:id/analytics: 11 widget rollups in parallel
   // -------------------------------------------------------------
   router.get("/api/divers/:id/analytics", maybeAuth, async (req, res) => {
     try {
@@ -304,14 +305,15 @@ module.exports = function createDiverProfileRouter({
       // PER_DIVE shared CTE; FULL_FIELD_RANKING (recent_form,
       // placings, streak, year_over_year) ranks against every
       // competitor in the diver's events, then filters to the
-      // diver — otherwise rank always = 1 because the CTE was
+      // diver. Otherwise rank always = 1 because the CTE was
       // pre-filtered to one diver.
       const PER_DIVE = SHARED_PER_DIVE;
 
       // Wrap each rollup so one bad query doesn't take down the
-      // whole payload. Anything that throws is logged with its
-      // label and returns []; the response then renders empty for
-      // that widget and the rest of the dashboard still works.
+      // whole payload, kinda defensive but worth it. Anything that
+      // throws is logged with its label and returns []; the
+      // response then renders empty for that widget and the rest
+      // of the dashboard still works.
       const runQuery = async (label, sql, params) => {
         try {
           const r = await reads.query(sql, params);
@@ -521,7 +523,7 @@ module.exports = function createDiverProfileRouter({
       const [recent, placings, heights, rounds, quality, ddRisk, frequent, streak,
              comparePeers, eventTypeSplits, yearOverYear] = queries;
 
-      // Recent Form expansion — for each meet returned, fetch
+      // Recent Form expansion: for each meet returned, fetch
       // every dive the diver did with the per-judge raw scores so
       // the click-to-expand panel can render the trim algorithm
       // (dropped scores rendered with strike-through).
@@ -565,7 +567,7 @@ module.exports = function createDiverProfileRouter({
         }
       }
 
-      // Streak post-processing — count consecutive top-3 from the
+      // Streak post-processing: count consecutive top-3 from the
       // most recent meet backwards.
       let streakLen = 0;
       let streakKind = null;
@@ -623,7 +625,7 @@ module.exports = function createDiverProfileRouter({
   });
 
   // -------------------------------------------------------------
-  // PUT /api/users/me/dashboard — persist widget layout. Validated
+  // PUT /api/users/me/dashboard: persist widget layout. Validated
   // against the known catalog so a typo can't poison the store.
   // -------------------------------------------------------------
   router.put("/api/users/me/dashboard", verifyToken, async (req, res) => {

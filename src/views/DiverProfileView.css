@@ -19,7 +19,7 @@
 .content { display: flex; flex-direction: column; gap: 1.5rem; }
 .empty { color: var(--text-3); padding: 3rem 0; text-align: center; font-family: var(--font-mono); font-size: 13px; }
 
-/* "Showing cached" banner — small, unobtrusive, sits above the
+/* "Showing cached" banner, small and unobtrusive, sits above the
    profile content while a network refresh is in flight. */
 .cache-banner {
   display: flex; align-items: center; gap: 0.5rem;
@@ -54,7 +54,7 @@
    active streak) collapse so the flex gap doesn't leave a hole. */
 .widget-slot:empty { display: none; }
 
-/* Preferences card (own profile) — SettingRow pattern from the redesign. */
+/* Preferences card (own profile): SettingRow pattern from the redesign. */
 .pref-section { display: flex; flex-direction: column; gap: 0.85rem; }
 .pref-title { font-family: var(--font-sans); font-size: var(--text-h2); font-weight: 600; letter-spacing: -0.01em; color: var(--fg); }
 .pref-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
@@ -68,12 +68,12 @@
 .pref-card .set-control { flex-shrink: 0; }
 
 /* =========================================================
-   Modals — Club edit, password, email, 2FA, customize.
+   Modals: Club edit, password, email, 2FA, customize.
    Pattern: backdrop is the scrollable container (NOT the
    modal). A modal taller than the viewport scrolls the
    backdrop instead of being clipped to a vh-bound box that
    the user can't reach the edges of. Especially important on
-   iOS Safari where the URL/toolbar overlays the bottom of
+   iOS Safari, where the URL/toolbar overlays the bottom of
    `100vh`, hiding the bottom of any vh-constrained modal
    until the toolbar collapses (which it won't, since the
    modal traps scroll inside itself). DOM is parent-child:
@@ -99,8 +99,8 @@
   border: 1px solid var(--border); border-radius: var(--radius-lg);
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
   display: flex; flex-direction: column;
-  /* `overflow: hidden` (formerly) clipped horizontally already
-     — but it also blocks box-shadow nicety on nested elements.
+  /* `overflow: hidden` (formerly) clipped horizontally already,
+     but it also blocks box-shadow nicety on nested elements.
      `overflow-x: clip` clips horizontal without creating a
      scroll context; vertical handled by the backdrop. */
   overflow-x: clip;
@@ -122,7 +122,7 @@
 .modal-hint a { color: var(--cyan); }
 
 /* =========================================================
-   2FA modal — three-stage state machine (idle / setup / disable)
+   2FA modal: three-stage state machine (idle / setup / disable)
    ========================================================= */
 .tfa-modal { max-width: 520px; }
 .tfa-status {
@@ -196,7 +196,7 @@
 }
 
 /* =========================================================
-   Customize-dashboard modal — list of toggleable widgets
+   Customize-dashboard modal: list of toggleable widgets
    ========================================================= */
 .customize-modal { max-width: 560px; }
 .widget-toggles {
@@ -275,11 +275,11 @@
 
 /* =========================================================
    Phone layout (≤600px). Outer `.profile-wrap` padding is
-   already handled by the global app.css wrap rules; this block
-   tightens the page-internal chrome — header type, stat cards,
-   filter strip, modal action lists, 2FA recovery grid, and the
-   drag handle in the customize modal — so the dashboard reads
-   cleanly at 360px without horizontal overflow.
+   already handled by the global app.css wrap rules, so this
+   block just tightens the page-internal chrome: header type,
+   stat cards, filter strip, modal action lists, 2FA recovery
+   grid, and the drag handle in the customize modal, so the
+   dashboard reads cleanly at 360px without horizontal overflow.
    ========================================================= */
 @media (max-width: 600px) {
   .page-header {
@@ -314,9 +314,9 @@
   .tfa-qr { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
   .tfa-secret-value { font-size: 11px; }
 
-  /* Modal backdrop — extra-generous bottom padding so the
+  /* Modal backdrop: extra-generous bottom padding so the
      modal's Save/Cancel buttons clear iOS Safari's URL/toolbar
-     (~50–90px) + the home indicator. Without this, the bottom
+     (~50-90px) + the home indicator. Without this, the bottom
      of a long form is physically hidden behind the toolbar. */
   .modal-backdrop {
     padding-inline-start: 0.5rem;
@@ -325,7 +325,7 @@
     padding-bottom: max(5rem, env(safe-area-inset-bottom, 1rem) + 4rem);
   }
 
-  /* Customize-dashboard modal — bigger tap targets, more
+  /* Customize-dashboard modal: bigger tap targets, more
      comfortable drag handle. Keeps the list scrollable but
      uses the available height when nothing else is on screen. */
   .customize-modal { max-width: none; }
@@ -369,8 +369,8 @@
 
 /* =========================================================
    Danger zone (Migration 053). Self-delete + claim-past-results
-   entry points. Visual treatment leans red but doesn't shout —
-   it's a permanent fixture, not an emergency.
+   entry points. Visual treatment leans red but doesn't shout,
+   its a permanent fixture, not an emergency.
    ========================================================= */
 .danger-zone {
   margin-top: 2.5rem;

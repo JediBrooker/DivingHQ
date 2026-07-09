@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# reset-db-keep-archive.sh — DESTRUCTIVE reset to a CLEAN-SLATE database.
+# reset-db-keep-archive.sh, DESTRUCTIVE reset to a CLEAN-SLATE database.
 #
 # Like scripts/reset-db.sh, but built for a real production "start from
 # scratch" rather than a test-seeded reset. Two differences:
 #
 #   1. PRESERVES the DiveRecorder archive (the dr_* tables that
 #      lib/diverecorder-import.js fills from diverecorder.co.uk). These
-#      are dumped before the wipe and restored after the schema is
+#      get dumped before the wipe and restored after the schema is
 #      rebuilt. The archive is the expensive-to-refetch part, so the
 #      script ABORTS before touching anything if it can't capture it.
 #
@@ -21,8 +21,8 @@
 # Preserves the '$KEEP_USER' account as a SYSTEM SUPERUSER
 # (is_system_admin = true; existing password hash + email kept; attached
 # to the bootstrap 'Administration' org so the NOT NULL users.org_id FK is
-# satisfied). is_system_admin = true alone grants full access — every
-# org-role gate in lib/middleware.js short-circuits on it — so no
+# satisfied). is_system_admin = true alone grants full access, since every
+# org-role gate in lib/middleware.js short-circuits on it, so no
 # user_org_roles row is needed. Deletes the default 'admin'/'admin'
 # account that init.sql creates.
 #
@@ -41,8 +41,8 @@ KEEP_USER="${KEEP_USER:-christianbrooker}"
 ADMIN_USER="admin"
 BOOTSTRAP_ORG="00000000-0000-0000-0000-000000000001"   # init.sql 'Administration' org
 # DiveRecorder archive tables, parent-first. lib/diverecorder-import.js
-# is the only writer; migrations 059/060 are the only schema. The FK
-# graph is self-contained (no references out to operational tables).
+# is the only writer, migrations 059/060 are the only schema for it.
+# FK graph is self-contained (no references out to operational tables).
 DR_TABLES=(dr_meets dr_events dr_divers dr_results dr_dives)
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -148,10 +148,10 @@ SQL
 grep -q "INSERT INTO users" "$KEEP_SQL" || { echo "ABORT: failed to capture '${KEEP_USER}'."; exit 1; }
 
 echo "==> [3/8] Dumping DiveRecorder archive (data-only) -> ${ARCHIVE_SQL}"
-# --data-only: the schema is recreated by migrations 059/060 at step 6.
+# --data-only: the schema gets recreated by migrations 059/060 at step 6.
 # pg_dump topologically sorts the -t tables so parents (dr_meets,
-# dr_divers) load before children (dr_results, dr_dives) — FK-safe.
-# Schema-qualified COPYs, so the restore is search_path-independent.
+# dr_divers) load before children (dr_results, dr_dives), keeps it FK-safe.
+# Schema-qualified COPYs too, so the restore is search_path-independent.
 pg_dump ${CONN[@]+"${CONN[@]}"} --data-only --no-owner --no-privileges \
   -t dr_meets -t dr_events -t dr_divers -t dr_results -t dr_dives \
   > "$ARCHIVE_SQL"

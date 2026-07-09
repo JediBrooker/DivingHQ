@@ -1,6 +1,6 @@
 // Meet-day tools (#9) on the V2 board: per-card referee actions, score
 // correction from the focused History column, and announce from the
-// Standings column. Flag-on only (V2 surface).
+// Standings column. Flag-on only (V2 surface)
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -48,9 +48,9 @@ test("per-card referee actions render and fire without error", async ({ request,
   await page.waitForLoadState("networkidle");
   await setup.selectControlEvent(page, "Ref Event");
 
-  // The three referee calls render on the live card.
+  // The three referee calls render on the live card
   await expect(page.locator(".cv2-ref-btn")).toHaveCount(3);
-  // Firing one emits to the server without throwing on the client.
+  // Firing one emits to the server without throwing on the client
   await page.locator(".cv2-ref-failed").click();
   await page.waitForTimeout(500);
   await expect(page.locator(".cv2-ref-btn")).toHaveCount(3);
@@ -68,14 +68,14 @@ test("score correction opens from a completed History dive and saves", async ({ 
   await page.waitForLoadState("networkidle");
   await setup.selectControlEvent(page, "Correct Event");
 
-  // Complete AAA's dive -> it lands in the History column as a clickable card.
+  // Complete AAA's dive, it lands in the History column as a clickable card
   await setup.submitPanelScores({
     baseURL, judges, eventId: event.id, competitorId: divers[0].userId, roundNumber: 1, diveId,
   });
   const histCard = page.locator(".cv2-hcard.is-clickable", { hasText: "AAA Diver" });
   await expect(histCard).toBeVisible({ timeout: 8_000 });
 
-  // Open the amend modal, change J1's score, save -> modal closes.
+  // Open the amend modal, change J1's score, save, modal should close
   await histCard.click();
   await expect(page.getByText("Amend Score")).toBeVisible();
   await page.locator(".lb-body .input[type=number]").fill("6.0");
@@ -94,7 +94,7 @@ test("announce pushes the focused pool's standings and toasts", async ({ request
   await page.waitForLoadState("networkidle");
   await setup.selectControlEvent(page, "Announce Event");
 
-  // A scored dive populates standings -> Announce enables.
+  // A scored dive populates standings, so Announce enables
   await setup.submitPanelScores({
     baseURL, judges, eventId: event.id, competitorId: divers[0].userId, roundNumber: 1, diveId,
   });

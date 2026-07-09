@@ -1,4 +1,4 @@
-// Self-tests for the P0 reduced-motion gate. DB-less; runs in test:safe.
+// Self-tests for the P0 reduced-motion gate, DB-less so it runs in test:safe.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");

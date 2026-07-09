@@ -1,24 +1,24 @@
 // Guide / README screenshot harness.
 //
 // Captures the PNGs referenced by the in-app guide and README.
-// Manual-run-only — `npm run test:e2e` excludes this spec;
+// Manual-run-only: `npm run test:e2e` excludes this spec, so
 // run it explicitly when the UI rebrands or a guide page needs
 // fresh art:
 //
 //   npx playwright test test/e2e/wiki-screenshots.spec.js --workers=1
 //
 // Outputs land in public/guide-screenshots/<name>.png. Filenames
-// are load-bearing — the guide markdown and README reference them
-// exactly. Anything new added here must also be wired into the
+// are load-bearing (the guide markdown and README reference them
+// exactly), so anything new added here must also be wired into the
 // guide content or README to be useful.
 //
 // Design choice: one big spec, serial mode, shared beforeAll
 // fixture. The 27 screenshots all need the same "live federation
 // with 3 events at different statuses, real divers, real judges,
-// scored dives" world; spinning that up once and screenshotting
-// it 27 times is ~10x cheaper than 27 isolated tests. The trade-
-// off is that a fixture bug breaks every screenshot — acceptable
-// because the spec is meant to be run interactively and looked
+// scored dives" world, and spinning that up once and screenshotting
+// it 27 times is about 10x cheaper than 27 isolated tests. The
+// trade-off is a fixture bug breaks every screenshot, which is fine
+// since the spec is meant to be run interactively and looked
 // at by a human anyway.
 
 const { test, expect } = require("@playwright/test");
@@ -37,16 +37,16 @@ const VIEWPORT = { width: 1440, height: 900 };
 const SCREENSHOT_DIR = "public/guide-screenshots";
 // Defeat scoreboard.js's 60s in-memory cache on Completed events
 // (set in routes/scoreboard.js). Real spectators don't notice
-// because the cache TTL is short — but a screenshot run that
+// because the cache TTL is short, but a screenshot run that
 // flips status Live→Completed and immediately reloads pulls the
 // stale Live response. `?cache=skip` forces a fresh query.
 const CACHE_SKIP = "?cache=skip";
 
 const world = {};
 
-// 5-judge profile, dead simple — every judge gives 7.0 / 7.5 / 8.0
+// 5-judge profile, dead simple: every judge gives 7.0 / 7.5 / 8.0
 // / 7.5 / 7.0 for every dive. Variance doesn't matter for the
-// screenshots; what matters is that scores LAND so the score
+// screenshots, what matters is that scores LAND so the score
 // pills + dive totals render.
 const SCORE_PROFILE = [7.0, 7.5, 8.0, 7.5, 7.0];
 
@@ -86,7 +86,7 @@ async function signIn(page, username, password = setup.TEST_PASSWORD) {
   await page.waitForURL(/\/dashboard$/, { timeout: 10_000 });
 }
 
-// Wipe localStorage + cookies + reload — gets us back to a clean
+// Wipe localStorage + cookies + reload, gets us back to a clean
 // "signed out" state for the public screenshots.
 async function signOut(page) {
   await page.context().clearCookies();
@@ -104,8 +104,8 @@ async function settle(page, extraMs = 600) {
   try {
     await page.waitForLoadState("networkidle", { timeout: 10_000 });
   } catch {
-    // networkidle can hang if a socket stays open. Best-effort —
-    // we still fall through to the timeout below.
+    // heads up, networkidle can hang if a socket stays open.
+    // Best effort, we still fall through to the timeout below.
   }
   await page.waitForTimeout(extraMs);
 }
@@ -118,7 +118,7 @@ async function snap(page, name) {
 }
 
 // =============================================================
-// PHASE 1 — Build the fixture world via API + direct SQL.
+// PHASE 1: build the fixture world via API + direct SQL.
 // =============================================================
 test("setup: build host federation, 3 events, divers + judges + coach", async ({
   request,
@@ -146,7 +146,7 @@ test("setup: build host federation, 3 events, divers + judges + coach", async ({
        AND created_at < now() - interval '15 minutes'
   `);
 
-  // Federation that maps to a recognisable flag — DEU matches the
+  // Federation that maps to a recognisable flag: DEU matches the
   // existing meet-manager spec and gives us a country chip on
   // history cards / live scoreboard.
   const { orgId, adminId, adminToken, username: adminUsername } =
@@ -217,7 +217,7 @@ test("setup: build host federation, 3 events, divers + judges + coach", async ({
     );
   }
 
-  // One referee — gates the sign-off-codes view + lets us prove
+  // One referee: gates the sign-off-codes view and lets us prove
   // the referee role exists in the org.
   const referee = await setup.insertUser({
     orgId, role: "referee", fullName: "Referee Petra Wagner",
@@ -295,7 +295,7 @@ test("setup: build host federation, 3 events, divers + judges + coach", async ({
     });
     expect(assignRes.status(), `assign event ${event.id} to meet`).toBe(200);
 
-    // Roster — 5 divers per event so the live scoreboard /
+    // Roster: 5 divers per event so the live scoreboard /
     // recap have enough density to look like a real meet.
     const eventDivers = world.divers.slice(0, 5);
     for (const diver of eventDivers) {
@@ -358,10 +358,10 @@ test("setup: build host federation, 3 events, divers + judges + coach", async ({
   }
 
   // -------------------------------------------------------------
-  // Build the 3 events. baseURL hack — we need a websocket URL
-  // for openSocket(). The test doesn't get a Playwright `page`
-  // yet (we're in the setup test), so we hard-code 127.0.0.1
-  // matching the Playwright config's baseURL.
+  // Build the 3 events. baseURL hack, kinda gross but it works: we
+  // need a websocket URL for openSocket(). The test doesn't get a
+  // Playwright `page` yet (we're in the setup test), so we
+  // hard-code 127.0.0.1 matching the Playwright config's baseURL.
   // -------------------------------------------------------------
   world.baseURL = process.env.E2E_BASE_URL || "http://127.0.0.1:3097";
 
@@ -424,7 +424,7 @@ test("setup: build host federation, 3 events, divers + judges + coach", async ({
 });
 
 // =============================================================
-// PHASE 2 — Public screenshots (signed out).
+// PHASE 2: public screenshots (signed out).
 // =============================================================
 test("public: home / login / register / register-org", async ({ page }) => {
   test.setTimeout(60_000);
@@ -449,7 +449,7 @@ test("public: home / login / register / register-org", async ({ page }) => {
 });
 
 // =============================================================
-// PHASE 3 — Spectator views (signed out): scoreboard list mode,
+// PHASE 3: spectator views (signed out). scoreboard list mode,
 // live broadcast mode, results-archive (filters set), public
 // meet landing page.
 // =============================================================
@@ -458,15 +458,15 @@ test("spectator: scoreboard list + live + archive + meet", async ({ page, reques
   await page.setViewportSize(VIEWPORT);
   await signOut(page);
 
-  // 1. scoreboard.png — list mode (no event selected). The
+  // 1. scoreboard.png: list mode (no event selected). The
   //    /scoreboard route renders MeetsBrowser when no eventId
   //    is in the URL. The test DB has accumulated meets from
-  //    other specs' bulk seed data; capture viewport-only so
+  //    other spec's bulk seed data, so capture viewport-only so
   //    the result is a usable 1440×900 snap rather than a tall
   //    stretched scroll of every meet ever created.
   await page.goto("/scoreboard");
   // The MeetsBrowser sorts to bring our 3-event meet to the
-  // top — wait for at least one meet card before snapping.
+  // top, so wait for at least one meet card before snapping.
   await expect(page.locator(".meet-card, .live-chip").first()).toBeVisible({
     timeout: 10_000,
   });
@@ -476,12 +476,12 @@ test("spectator: scoreboard list + live + archive + meet", async ({ page, reques
     fullPage: false,
   });
 
-  // 2. scoreboard-live.png — live broadcast mode. Push the
+  // 2. scoreboard-live.png: live broadcast mode. Push the
   //    active diver to the 3rd diver of the live event so the
   //    centre column shows a real performer + the Up Next
   //    panel + standings all populated.
-  //    Need an admin socket to emit set_active_diver — open one
-  //    here just for that, close it once the snap is taken.
+  //    Need an admin socket to emit set_active_diver, so open one
+  //    here just for that and close it once the snap is taken.
   const adminSocket = await openSocket(
     baseURL || world.baseURL,
     world.adminToken,
@@ -511,7 +511,7 @@ test("spectator: scoreboard list + live + archive + meet", async ({ page, reques
   await snap(page, "scoreboard-live");
   adminSocket.disconnect();
 
-  // 3. results-archive.png — same list mode but with the
+  // 3. results-archive.png: same list mode but with the
   //    statusFilter expanded so a casual reader can see the
   //    filter UI in action. Pick "Completed" to mirror what a
   //    user looking for past results would do.
@@ -519,7 +519,7 @@ test("spectator: scoreboard list + live + archive + meet", async ({ page, reques
   await expect(page.locator(".sb-filter-row").first()).toBeVisible({
     timeout: 10_000,
   });
-  // First select in the filter row is statusFilter — set it to
+  // First select in the filter row is statusFilter, set it to
   // Completed so the screenshot demonstrates the filter cluster
   // in a non-default state.
   const statusSel = page.locator(".sb-filter-row .sb-filter-select").first();
@@ -530,14 +530,14 @@ test("spectator: scoreboard list + live + archive + meet", async ({ page, reques
     fullPage: false,
   });
 
-  // 4. meet.png — public meet landing page.
+  // 4. meet.png: public meet landing page.
   await page.goto(`/meet/${world.meetId}`);
   await settle(page);
   await snap(page, "meet");
 });
 
 // =============================================================
-// PHASE 4 — Operator views: dashboard / control room / meet
+// PHASE 4: operator views. dashboard / control room / meet
 // manager (signed in as admin).
 // =============================================================
 test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL, request }) => {
@@ -545,16 +545,16 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
   await page.setViewportSize(VIEWPORT);
   await signIn(page, world.adminUsername);
 
-  // 1. dashboard.png — admin's own dashboard. Has the role
+  // 1. dashboard.png: admin's own dashboard. Has the role
   //    quick-pick panel by default.
   await page.goto("/dashboard");
   await settle(page);
   await snap(page, "dashboard");
 
-  // 2. control-room.png — /control with the Live event picked
+  // 2. control-room.png: /control with the Live event picked
   //    and an active diver shown.
-  //    Push the active diver again (the previous test's
-  //    adminSocket is disconnected by now).
+  //    Push the active diver again since the previous test's
+  //    adminSocket is disconnected by now.
   const adminSocket = await openSocket(
     baseURL || world.baseURL,
     world.adminToken,
@@ -582,12 +582,12 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
   await snap(page, "control-room");
   adminSocket.disconnect();
 
-  // 3. meet-manager.png — /manager.
+  // 3. meet-manager.png: /manager.
   await page.goto("/manager");
   await settle(page);
   await snap(page, "meet-manager");
 
-  // 4. new-event-modal.png — the create-event modal opened over
+  // 4. new-event-modal.png: the create-event modal opened over
   //    /manager. Mirrors the selector the visual-regression spec
   //    uses (the "+ New Event" button → .modal-create-event).
   await page.getByRole("button", { name: /\+ New Event/i }).click();
@@ -600,10 +600,10 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
     fullPage: false,
   });
 
-  // 5. control-room-simultaneous.png — TWO Live events running at once.
+  // 5. control-room-simultaneous.png: TWO Live events running at once.
   //    Spin up a second Live event (created last so the single-event
   //    control-room.png + meet-manager.png above stay one-Live), then
-  //    open the Control Room: the side columns auto-collapse to drawers
+  //    open the Control Room. the side columns auto-collapse to drawers
   //    and each Live event renders as its own pool card.
   const diveId = await setup.pickDiveId({ height: 3.0, dive_code: "101", position: "B" });
   const liveB = await setup.createEvent(request, {
@@ -662,7 +662,7 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
 });
 
 // =============================================================
-// PHASE 5 — Judge view (signed in as a judge with active diver).
+// PHASE 5: judge view (signed in as a judge with active diver).
 // =============================================================
 test("judge: judge.png", async ({ page, baseURL }) => {
   test.setTimeout(60_000);
@@ -670,7 +670,7 @@ test("judge: judge.png", async ({ page, baseURL }) => {
   const judge = world.judges[0];
   await signIn(page, judge.username);
 
-  // Set active diver before navigating — JudgeView listens on
+  // Set active diver before navigating, since JudgeView listens on
   // socket join.
   const adminSocket = await openSocket(
     baseURL || world.baseURL,
@@ -692,7 +692,7 @@ test("judge: judge.png", async ({ page, baseURL }) => {
 
   await page.goto("/judge");
   // The active-diver banner shows up once the judge socket
-  // subscribes and replays the current state — give it room.
+  // subscribes and replays the current state, so give it room.
   await page.waitForTimeout(2000);
   await settle(page);
   // Park the cursor in the top-left corner so the v-tip tooltip
@@ -707,22 +707,22 @@ test("judge: judge.png", async ({ page, baseURL }) => {
 });
 
 // =============================================================
-// PHASE 6 — Diver / Coach views.
+// PHASE 6: diver / coach views.
 // =============================================================
 test("diver+coach: profile / competitor / compare / coach", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize(VIEWPORT);
 
-  // 1. diver-profile.png — public profile, signed OUT so the
+  // 1. diver-profile.png: public profile, signed OUT so the
   //    page renders in its public-spectator mode.
   await signOut(page);
   await page.goto(`/profile/${world.subjectDiverId}`);
   await settle(page);
   await snap(page, "diver-profile");
 
-  // 2. competitor.png — signed in as a diver entered in the
+  // 2. competitor.png: signed in as a diver entered in the
   //    Upcoming event. CompetitorView starts on the event picker
-  //    ("Choose Active Event"); manually pick the Upcoming event
+  //    ("Choose Active Event"), so manually pick the Upcoming event
   //    so the screenshot captures the per-round dive picker UI
   //    rather than the empty placeholder.
   await signIn(page, world.divers[0].username);
@@ -737,7 +737,7 @@ test("diver+coach: profile / competitor / compare / coach", async ({ page }) => 
   await settle(page, 1200);
   await snap(page, "competitor");
 
-  // 2b. meet-day.png — the focused phone-style meet-day view for
+  // 2b. meet-day.png: the focused phone-style meet-day view for
   //     an entrant diver. diver[0] is rostered into the Live
   //     event, so MeetDayView renders the "your next dive" card +
   //     current rank rather than the not-entered placeholder.
@@ -745,29 +745,29 @@ test("diver+coach: profile / competitor / compare / coach", async ({ page }) => 
   await settle(page, 1200);
   await snap(page, "meet-day");
 
-  // 2c. inbox.png — the notifications inbox. Available to any
-  //     authenticated user; capture it while still signed in as
+  // 2c. inbox.png: the notifications inbox. Available to any
+  //     authenticated user, capture it while still signed in as
   //     the diver. May render the empty-state if no notifications
-  //     have fanned out yet — still a useful reference frame.
+  //     have fanned out yet, still a useful reference frame.
   await page.goto("/inbox");
   await settle(page);
   await snap(page, "inbox");
 
-  // 3. compare.png — signed in, comparing 2 divers.
+  // 3. compare.png: signed in, comparing 2 divers.
   await page.goto(
     `/compare?a=${world.subjectDiverId}&b=${world.compareDiverId}`,
   );
   await settle(page);
   await snap(page, "compare");
 
-  // 4. coach.png — signed in as the coach with linked divers.
+  // 4. coach.png: signed in as the coach with linked divers.
   await signOut(page);
   await signIn(page, world.coach.username);
   await page.goto("/coach");
   await settle(page);
   await snap(page, "coach");
 
-  // 5. coach-dive-lists.png — the on-behalf-of squad dive-list
+  // 5. coach-dive-lists.png: the on-behalf-of squad dive-list
   //    editor. The coach is linked to divers[1] + divers[2], both
   //    rostered into the Live event, so this event's editor lists
   //    real squad rows rather than an empty state.
@@ -777,7 +777,7 @@ test("diver+coach: profile / competitor / compare / coach", async ({ page }) => 
 });
 
 // =============================================================
-// PHASE 7 — Admin views (all 7).
+// PHASE 7: admin views (all 7).
 // =============================================================
 test("admin: user-manager / clubs / teams / assign-judges / audit / dive-directory / sign-off-codes", async ({
   page,
@@ -801,7 +801,7 @@ test("admin: user-manager / clubs / teams / assign-judges / audit / dive-directo
   await settle(page);
   await snap(page, "teams");
 
-  // /assign-judges — auto-select an event so the screenshot
+  // /assign-judges: auto-select an event so the screenshot
   //                  shows the assignable judges + currently
   //                  assigned panel, not just an empty picker.
   await page.goto("/assign-judges");
@@ -816,7 +816,7 @@ test("admin: user-manager / clubs / teams / assign-judges / audit / dive-directo
   await settle(page, 1200);
   await snap(page, "assign-judges");
 
-  // /events/:id/audit — Completed event's audit page. Like
+  // /events/:id/audit: Completed event's audit page. Like
   //                     dive-directory, the score-audit log
   //                     can grow to tens of thousands of pixels
   //                     tall (75 rows for our 5×3×5 fixture is
@@ -829,7 +829,7 @@ test("admin: user-manager / clubs / teams / assign-judges / audit / dive-directo
     fullPage: false,
   });
 
-  // /dive-directory — the directory renders all ~830 World
+  // /dive-directory: the directory renders all ~830 World
   //                   Aquatics dives in a single un-paginated
   //                   list, so fullPage:true generates a 60_000px
   //                   tall image that's unusable. Take a
@@ -849,7 +849,7 @@ test("admin: user-manager / clubs / teams / assign-judges / audit / dive-directo
 });
 
 // =============================================================
-// PHASE 8 — Teardown. Drains the federation we spun up so two
+// PHASE 8: teardown. Drains the federation we spun up so two
 // reruns don't pile up orgs in the test DB.
 // =============================================================
 test("teardown", async () => {

@@ -1,9 +1,9 @@
-# Observability stack — Loki (logs), Promtail (log shipper),
+# Observability stack: Loki (logs), Promtail (log shipper),
 # Prometheus (metrics), Grafana (UI for both).
 #
 # Runs alongside the dive-recorder app on the same VPS. Each
-# service is bound to 127.0.0.1 so they're only reachable from
-# the host — pair with Cloudflare Tunnel or SSH-forward when
+# service is bound to 127.0.0.1 so they're reachable from
+# the host, so pair with Cloudflare Tunnel or SSH-forward when
 # you want to reach Grafana from your laptop.
 #
 # Bring it up:
@@ -20,22 +20,22 @@
 # (4 AM daily) and pulls newer images automatically, restarting
 # only the containers it manages. Watchtower is SCOPED via the
 # `com.centurylinklabs.watchtower.enable=true` label, so it only
-# touches the four services here — nothing else on the box.
+# touches the four services here, nothing else on the box.
 #
-#   ⚠ Trade-off: `latest` + unattended updates means a MAJOR
+#   Trade-off: `latest` + unattended updates means a MAJOR
 #     version bump can land without you watching. Grafana, Loki and
 #     Prometheus all migrate their on-disk state on a major upgrade,
 #     and some migrations are one-way. Watchtower does NOT back up
 #     first. Mitigations:
 #       * Keep a periodic backup of the named volumes (esp.
-#         grafana-data) — see ops/observability/README.md.
+#         grafana-data), see ops/observability/README.md.
 #       * To freeze any single service, pin it back to an explicit
 #         tag (e.g. grafana/grafana:13.1.0) OR drop its
 #         watchtower.enable label so Watchtower skips it.
 
 services:
   # -----------------------------------------------------------
-  # Loki — log store. Single-binary mode, BoltDB index +
+  # Loki: log store. Single-binary mode, BoltDB index +
   # filesystem chunks. Plenty for one VPS; if you ever scale to
   # multiple instances, swap in S3 + memberlist.
   # -----------------------------------------------------------
@@ -52,12 +52,12 @@ services:
     restart: unless-stopped
 
   # -----------------------------------------------------------
-  # Promtail — tails the PM2 log files on the host, parses each
+  # Promtail: tails the PM2 log files on the host, parses each
   # line as JSON (Pino output), pushes to Loki. Runs in network
   # 'host' mode so it can read the host's filesystem AND reach
   # loki:3100 via the docker network at the same time.
   #
-  # NOTE: Promtail is in maintenance mode upstream — Grafana
+  # NOTE: Promtail is in maintenance mode upstream, Grafana
   # Alloy is its successor. `latest` still resolves to the final
   # 3.x line; if a future `latest` ever stops shipping Promtail,
   # migrate to grafana/alloy.
@@ -81,7 +81,7 @@ services:
     restart: unless-stopped
 
   # -----------------------------------------------------------
-  # Prometheus — pulls /metrics off the dive-recorder app
+  # Prometheus: pulls /metrics off the dive-recorder app
   # every 30s. 30-day retention is plenty for capacity planning;
   # extend with --storage.tsdb.retention.time if you want more.
   # -----------------------------------------------------------
@@ -98,7 +98,7 @@ services:
       - --web.enable-lifecycle
     extra_hosts:
       # Lets the in-container target `host.docker.internal:3000`
-      # resolve to the host's IP — that's where the dive-recorder
+      # resolve to the host's IP, that's where the dive-recorder
       # /metrics endpoint lives. On Docker Desktop (Mac/Win) this
       # is automatic; on Linux Docker engine we map it explicitly.
       - "host.docker.internal:host-gateway"
@@ -107,16 +107,16 @@ services:
     restart: unless-stopped
 
   # -----------------------------------------------------------
-  # Grafana — single UI for both datasources. Datasources +
+  # Grafana: single UI for both datasources. Datasources +
   # the starter dashboard are provisioned from files (no
   # click-ops needed on first boot). Default admin password is
   # overridable via GRAFANA_ADMIN_PASSWORD in .env beside this
-  # compose file; change it on first login.
+  # compose file, change it on first login.
   # -----------------------------------------------------------
   grafana:
     image: grafana/grafana:latest
     container_name: dive-recorder-grafana
-    # Grafana is the only UI surface in the stack — the others
+    # Grafana is the only UI surface in the stack, the others
     # (loki, prometheus, promtail) stay 127.0.0.1-bound; Grafana
     # proxies their queries internally via the docker network.
     #
@@ -125,7 +125,7 @@ services:
     # via SSH tunnel). Override in .env to make it LAN-reachable
     # (0.0.0.0 = any interface, or set the LAN IP explicitly).
     # Don't set 0.0.0.0 if your VPS is internet-exposed at port
-    # 3030 — Grafana with default creds is a bad day.
+    # 3030, Grafana with default creds is a bad day.
     ports: ["${GRAFANA_BIND_ADDR:-127.0.0.1}:3030:3000"]
     volumes:
       - grafana-data:/var/lib/grafana
@@ -133,11 +133,11 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me-on-first-login}
-      # Dial back the noise — we don't need anonymous access
+      # Dial back the noise, we don't need anonymous access
       # or signups on a private observability stack.
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_USERS_ALLOW_SIGN_UP: "false"
-      # Friendlier on a fresh boot — skip the "explore plugin
+      # Friendlier on a fresh boot, skip the "explore plugin
       # catalog" home page we'd never use.
       GF_AUTH_DISABLE_LOGIN_FORM: "false"
     depends_on: [loki, prometheus]
@@ -146,27 +146,28 @@ services:
     restart: unless-stopped
 
   # -----------------------------------------------------------
-  # Watchtower — watches the four services above (label-scoped)
+  # Watchtower: watches the four services above (label-scoped)
   # and pulls newer `latest` images automatically.
   #
-  #   * WATCHTOWER_LABEL_ENABLE — only act on containers carrying
+  #   * WATCHTOWER_LABEL_ENABLE: only act on containers carrying
   #     com.centurylinklabs.watchtower.enable=true. Watchtower
   #     itself is unlabelled, so it won't update itself, and it
   #     ignores every other container on the host.
-  #   * WATCHTOWER_SCHEDULE — 6-field cron. "0 0 4 * * *" = 04:00
+  #   * WATCHTOWER_SCHEDULE: 6-field cron. "0 0 4 * * *" = 04:00
   #     daily, in the container's timezone (UTC unless you set TZ
   #     below). Off-hours so an update never bounces Grafana mid-
   #     meet. Swap for WATCHTOWER_POLL_INTERVAL=86400 if you'd
   #     rather poll every 24h from container start instead.
-  #   * WATCHTOWER_CLEANUP — delete the old image after a
+  #   * WATCHTOWER_CLEANUP: delete the old image after a
   #     successful pull so /var/lib/docker doesn't grow unbounded.
-  #   * WATCHTOWER_ROLLING_RESTART — update one container at a
+  #   * WATCHTOWER_ROLLING_RESTART: update one container at a
   #     time rather than stopping the whole set at once.
   #
-  # SECURITY: mounting the docker socket gives this container
-  # root-equivalent control of the host. That's inherent to how
-  # Watchtower works; it's acceptable on a single-tenant VPS you
-  # own, but don't expose it and don't run untrusted images.
+  # SECURITY: heads up, mounting the docker socket gives this
+  # container root-equivalent control of the host. That's
+  # inherent to how Watchtower works; it's acceptable on a
+  # single-tenant VPS you own, but don't expose it and don't run
+  # untrusted images.
   # -----------------------------------------------------------
   watchtower:
     image: containrrr/watchtower:latest

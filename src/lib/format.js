@@ -1,13 +1,13 @@
 // Shared date/time formatters.
 //
-// Before this file existed, `fmtDate` / `fmtTime` / `fmtRelative`
-// were copy-pasted into 11 views with subtle drift ("1m ago" vs
-// "1 min ago", inconsistent default options). One source of truth
-// keeps the SPA's date strings consistent across surfaces and
-// makes future i18n a single-file change.
+// Before this file existed, `fmtDate` / `fmtTime` / `fmtRelative` were
+// copy-pasted into 11 views with subtle drift ("1m ago" vs "1 min ago",
+// inconsistent default options). One source of truth keeps the SPAs
+// date strings consistent across surfaces and makes future i18n a
+// single-file change instead of an 11-file hunt.
 //
-// All helpers tolerate null / undefined / invalid input and
-// return '' rather than throwing or rendering "Invalid Date".
+// All helpers tolerate null / undefined / invalid input and return ''
+// rather than throwing or rendering "Invalid Date".
 
 function asDate(input) {
   if (input == null || input === '') return null

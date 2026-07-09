@@ -1,11 +1,11 @@
 <script setup>
-// One "workflow card" row — the title/meta/count action row shared
+// One "workflow card" row, the title/meta/count action row shared
 // by the Meet Manager, Org Admin, Coach and Referee panels. Global
-// styling: .workflow-card (+ -ready / -live state modifiers) and
-// .workflow-mini-pill in src/styles/app.css.
+// styling lives in .workflow-card (+ -ready / -live state modifiers)
+// and .workflow-mini-pill, both in src/styles/app.css.
 //
 // `pill` is the optional inline badge after the title (e.g.
-// "Rehearsal"); omit for the common case. `meta` callers compose
+// "Rehearsal"), skip it for the common case. `meta` callers build
 // any "label · hint" string themselves so this stays a dumb row.
 import { RouterLink } from 'vue-router'
 

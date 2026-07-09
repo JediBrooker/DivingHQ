@@ -1,4 +1,4 @@
-// Event-staff routes — managers (people who can drive an event)
+// Event-staff routes: managers (people who can drive an event)
 // and judges (panel members) for a specific event, plus the
 // per-judge "what events am I on?" lookup.
 //
@@ -45,9 +45,9 @@ module.exports = function createEventStaffRouter({
   router.post("/api/events/:id/managers", requireEventManager(), async (req, res) => {
     const { user_id } = req.body || {};
     try {
-      // The user being added must be in the same org as the event.
-      // Prevents a meet manager from elevating a foreign-org user
-      // into a managerial role on this event.
+      // The user being added has to be in the same org as the event.
+      // Stops a meet manager from elevating a foreign-org user into
+      // a managerial role on this event.
       if (!(await isInSameOrg(pool, req.event.org_id, user_id, "users"))) {
         return res.status(400).json({ error: "User is not in this event's organisation" });
       }
@@ -74,17 +74,17 @@ module.exports = function createEventStaffRouter({
   });
 
   // -------- Judge panel --------
-  // Tuple repeated 1× here, but stays explicit since we don't use
-  // it elsewhere in this file.
+  // Tuple repeated once here, but kept explicit since we don't
+  // reuse it elsewhere in this file.
   const requireMeetController = requireOrgRole(["org_admin", "meet_manager", "referee"]);
 
   router.get("/api/events/:eventId/judges", requireMeetController, async (req, res) => {
     try {
       if (!(await ensureEventOrgGate(req, res, "eventId"))) return;
       // Joined to users so the Control Room can label each judge
-      // tile with the actual person's name (helps the meet
-      // referee chase a slow submitter without checking the
-      // org panel separately).
+      // tile with the actual person's name (helps the meet referee
+      // chase down a slow submitter without checking the org panel
+      // separately).
       const r = await pool.query(
         `SELECT ej.judge_id, ej.judge_number, u.full_name
          FROM event_judges ej
@@ -101,8 +101,8 @@ module.exports = function createEventStaffRouter({
 
   // Replace the entire panel for an event. Body: { judgeIds: [<uuid>, …] }
   // The position of each judge in the array becomes their 1-based
-  // judge_number. Atomic — partial replacements would leave the
-  // panel in an unknown shape.
+  // judge_number. This is atomic, partial replacements would leave
+  // the panel in an unknown shape.
   router.post("/api/events/:id/judges", requireEventManager(), async (req, res) => {
     const { judgeIds } = req.body || {};
     if (!Array.isArray(judgeIds)) {
@@ -111,8 +111,8 @@ module.exports = function createEventStaffRouter({
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      // Cache the participating-orgs list once so we don't fan
-      // out one query per judge. Empty result = domestic event.
+      // Cache the participating-orgs list once so we're not firing
+      // a query per judge. Empty result means a domestic event.
       const partOrgs = await client.query(
         "SELECT org_id FROM event_participating_orgs WHERE event_id = $1",
         [req.params.id],
@@ -121,16 +121,16 @@ module.exports = function createEventStaffRouter({
         req.event.org_id,
         ...partOrgs.rows.map(r => r.org_id),
       ]);
-      // Each judge must (1) hold the `judge` role in their home
+      // Each judge has to (1) hold the `judge` role in their home
       // org and (2) belong to the host org or a participating
-      // federation. The role-row check was previously missing —
-      // the meet manager could shove any user_id from an
-      // allowed org into event_judges (org_admin, diver,
-      // spectator, …). The socket-layer score-submit handler
-      // re-checks, so this never enabled scoring fraud, but it
-      // breaks panel-completeness checks and audit clarity.
+      // federation. The role-row check was previously missing, so
+      // a meet manager could shove any user_id from an allowed org
+      // into event_judges (org_admin, diver, spectator, you name
+      // it). The socket-layer score-submit handler re-checks
+      // anyway, so this gap never enabled scoring fraud, but it did
+      // break panel-completeness checks and audit clarity.
       //
-      // Single batched query (vs the previous N round-trips)
+      // Single batched query (instead of the previous N round-trips)
       // returns the org_id only for users who actually hold the
       // judge role.
       const judgeRows = await client.query(
@@ -193,12 +193,12 @@ module.exports = function createEventStaffRouter({
     }
   });
 
-  // Event-scoped judge picker — host org's judges plus every
+  // Event-scoped judge picker: host org's judges plus every
   // participating federation's judges. The standard /api/judges
-  // endpoint stays org-scoped (used by the legacy AssignJudgesView
-  // before international meets existed); this one is the
-  // event-aware replacement that the assignment UI consults when
-  // an international meet is being staffed.
+  // endpoint stays org-scoped (it's used by the legacy
+  // AssignJudgesView from before international meets existed);
+  // this one is the event-aware replacement that the assignment UI
+  // consults when an international meet is being staffed.
   router.get("/api/events/:id/eligible-judges", requireEventManager(), async (req, res) => {
     try {
       const r = await pool.query(

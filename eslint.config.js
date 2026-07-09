@@ -1,8 +1,8 @@
 /* ESLint flat config (ESLint 9). Faithful port of the previous minimal
  * .eslintrc.cjs gate:
  *   - only parse-correctness + `no-undef` are errors;
- *   - `no-unused-vars` is a warning (warnings don't fail the gate — no
- *     --max-warnings is passed);
+ *   - `no-unused-vars` is a warning (warnings don't fail the gate, FYI
+ *     no --max-warnings is passed);
  *   - everything parsed as an ES module, which also accepts CommonJS
  *     require/module.exports;
  *   - browser + node globals everywhere; <script setup> compiler macros
@@ -43,7 +43,7 @@ module.exports = [
   },
   {
     // <script setup> compiler macros (defineProps/defineEmits/…) must be
-    // known globals or no-undef would fire on valid SFCs. This replaces
+    // known globals or no-undef fires on valid SFCs. This replaces
     // the old `env: { "vue/setup-compiler-macros": true }`.
     files: ["**/*.vue"],
     languageOptions: {

@@ -1,8 +1,8 @@
-// Unit tests for lib/stripe.js — the platform fund-flow helpers.
+// Unit tests for lib/stripe.js, the platform fund-flow helpers.
 //
 // We inject a fake Stripe client (the `clientFactory` hook) and assert the
 // helpers charge/refund on the PLATFORM's own account (DivingHQ is the
-// merchant of record) — no connected account, no application_fee; the 15%
+// merchant of record). No connected account, no application_fee; the 15%
 // cut is stamped on the PaymentIntent for reconciliation only. No network.
 
 const { test } = require("node:test");
@@ -68,7 +68,7 @@ test("createCheckoutSession charges on the platform account (no connected accoun
 
 test("secret key without webhook secret refuses to construct (boot guard)", () => {
   // A half-configured deployment would CHARGE payers while every completion
-  // webhook 400s — money taken, nothing fulfilled. Fail at boot instead.
+  // webhook 400s, money taken, nothing fulfilled. Fail at boot instead.
   assert.throws(
     () => createStripe({ secretKey: "sk_test_x", webhookSecret: "", clientFactory: () => fakeClient() }),
     /STRIPE_WEBHOOK_SECRET/,
@@ -76,9 +76,9 @@ test("secret key without webhook secret refuses to construct (boot guard)", () =
 });
 
 // ---- currency-unit conversion at the Stripe boundary ----------------
-// The app stores hundredths uniformly; Stripe wants each currency's own
-// minor unit. Without conversion a ¥5,000 fee (stored 500000) charges
-// ¥500,000.
+// The app stores hundredths uniformly, but Stripe wants each currency's own
+// minor unit. Without conversion a ¥5,000 fee (stored 500000) would charge
+// ¥500,000, yikes.
 
 test("zero-decimal currencies convert hundredths → whole units on checkout", async () => {
   const { s, calls } = withFake();

@@ -1,12 +1,12 @@
 <script setup>
-// P4 (2/2): the Dashboard needs-attention lane. Presentational only --
-// the chip + popover markup lifted out of DashboardView verbatim so the
-// ranked lane is a reusable surface. No fetch, no business logic: the
-// parent passes the ALREADY-RANKED chips (most urgent first), the open
-// popover id, and the flashing set, and gets a chip-click back. The
-// count -> named-items -> deep-link popover drill is unchanged; only the
-// host moved. Motion stays one-shot/static (the P1 reduced-motion guard
-// lives in app.css + the parent's per-file guard).
+// P4 (2/2): the Dashboard needs-attention lane, presentational only.
+// The chip + popover markup got lifted out of DashboardView verbatim
+// so the ranked lane is a reusable surface. No fetch, no business
+// logic here: the parent passes the already-ranked chips (most urgent
+// first), the open popover id, and the flashing set, and gets a
+// chip-click back. The count -> named-items -> deep-link popover drill
+// is unchanged, only the host moved. Motion stays one-shot/static (the
+// P1 reduced-motion guard lives in app.css + the parents per-file guard).
 defineProps({
   chips: { type: Array, default: () => [] },
   openId: { type: [String, null], default: null },
@@ -19,14 +19,14 @@ const emit = defineEmits(['chip-click'])
 <template>
   <div class="pulse-strip">
     <!-- Skeleton placeholder while the initial pulse fetches. Three ghost
-         chips so the strip has visual mass before the real data lands. -->
+         chips so the strip doesn't look empty before the real data lands. -->
     <template v-if="loading">
       <span v-for="n in 3" :key="`sk-${n}`" class="pulse-skeleton" aria-hidden="true"></span>
     </template>
     <template v-else>
-      <!-- Chip is a role=button div (NOT a <button>) because it nests
-           <RouterLink> popover items; an anchor inside a button is invalid
-           HTML. Keyboard handlers preserve button-like Enter/Space. -->
+      <!-- Chip is a role=button div (NOT a <button>) since it nests
+           <RouterLink> popover items and an anchor inside a button is
+           invalid HTML. Keyboard handlers preserve button-like Enter/Space. -->
       <div
         v-for="chip in chips"
         :key="chip.id"
@@ -52,7 +52,7 @@ const emit = defineEmits(['chip-click'])
           <span class="pulse-num">{{ chip.number }}</span>
           <span class="pulse-text">{{ chip.label }}</span>
         </template>
-        <!-- Hover/focus popover. items.length === 0 hides it entirely. -->
+        <!-- Hover/focus popover, hides entirely when items.length === 0. -->
         <div v-if="chip.items.length" class="pulse-popover" role="menu">
           <div class="pulse-popover-head">{{ chip.popoverTitle }}</div>
           <RouterLink
@@ -78,7 +78,7 @@ const emit = defineEmits(['chip-click'])
 </template>
 
 <style scoped>
-/* P1: reduced-motion guard (tracked per-file by the P0 scanner). */
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner) */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -139,8 +139,8 @@ const emit = defineEmits(['chip-click'])
 .pulse-judge    .pulse-num { color: var(--amber); border-color: rgba(245,158,11,0.4);  background: rgba(245,158,11,0.08); }
 .pulse-coach    .pulse-num { color: #f472b6;      border-color: rgba(244,114,182,0.4); background: rgba(244,114,182,0.08); }
 
-/* Flash — one-shot ~1.4s when a count changes (the parent adds the class
-   on a real numeric delta only; never at rest). */
+/* Flash effect, one-shot ~1.4s when a count changes (the parent only adds
+   the class on a real numeric delta, never at rest). */
 @keyframes pulseFlash {
   0%   { transform: scale(1);    box-shadow: 0 0 0 0 currentColor; }
   20%  { transform: scale(1.18); box-shadow: 0 0 0 6px rgba(6, 182, 212, 0.15); }
@@ -255,7 +255,7 @@ const emit = defineEmits(['chip-click'])
 .pulse-skeleton:nth-child(2) { width: 140px; }
 .pulse-skeleton:nth-child(3) { width: 90px; }
 
-/* Tablet — tighter strip. */
+/* Tablet: tighter strip. */
 @media (max-width: 900px) {
   .pulse-strip {
     width: calc(100% - 2.5rem);
@@ -266,7 +266,7 @@ const emit = defineEmits(['chip-click'])
   }
 }
 
-/* Phone — chips scroll horizontally; popover floats up as a bottom sheet. */
+/* Phone: chips scroll horizontally, popover floats up as a bottom sheet. */
 @media (max-width: 600px) {
   .pulse-strip {
     margin: 0.85rem auto 0;

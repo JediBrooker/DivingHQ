@@ -1,10 +1,10 @@
 -- =============================================================
--- DivingHQ — INITIAL LOAD
+-- DivingHQ: INITIAL LOAD
 --
 -- One-shot bootstrap for a fresh, empty database. Folds in the
--- old schema_v2.sql + every migration (001 .. 007), the full
+-- old schema_v2.sql plus every migration (001..007), the full
 -- World Aquatics dive directory, and a single super-admin
--- account so you can sign in immediately.
+-- account so you can sign in right away.
 --
 -- Usage:
 --     createdb divinghq
@@ -14,7 +14,7 @@
 --     username: admin
 --     password: admin
 --
--- (Change the password from the User Manager as soon as you do.)
+-- (Change the password from the User Manager as soon as you can, don't leave it on admin/admin.)
 -- =============================================================
 
 BEGIN;
@@ -104,11 +104,11 @@ CREATE TYPE attendance_status AS ENUM (
     'absent'
 );
 
--- The record_scope enum was retired in migration 019 when records
+-- The record_scope enum got retired in migration 019 when records
 -- were split into per-scope tables (records_personal /
 -- records_club / records_federation) with proper foreign keys.
--- Any consumer that previously read records.scope::text now
--- discriminates by which table the row came from.
+-- Any consumer that used to read records.scope::text now just
+-- looks at wich table the row came from.
 
 
 -- =============================================================
@@ -120,9 +120,9 @@ CREATE TABLE public.organisations (
     id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     name         varchar(255) NOT NULL,
     country_code char(3),                        -- ISO 3166-1 alpha-3 e.g. 'AUS'
-    -- IOC continent code. Set by sysadmin per federation; NULL =
-    -- not yet classified, in which case continental records skip
-    -- this org's divers. See migration 037.
+    -- IOC continent code. Set by sysadmin per federation. NULL
+    -- means not yet classified, so continental records just skip
+    -- this org's divers for now. See migration 037.
     continent    varchar(20)
         CHECK (continent IS NULL OR continent IN
           ('africa','americas','asia','europe','oceania')),
@@ -135,8 +135,8 @@ CREATE TABLE public.organisations (
 -- =============================================================
 -- CLUBS
 -- A smaller organisational unit nested under organisations
--- (country federations). Optional — independent divers can have
--- NULL club_id.
+-- (country federations). Optional: independent divers can have
+-- a NULL club_id.
 -- =============================================================
 
 CREATE TABLE public.clubs (
@@ -172,17 +172,17 @@ CREATE TABLE public.users (
     -- sign-up. init.sql backfills existing rows below so a fresh
     -- bootstrap doesn't lock anyone out.
     email_verified_at timestamptz,
-    -- 2FA (TOTP) — Migration 022. NULL totp_secret = 2FA off.
-    -- totp_enabled_at flips set when the user completes the setup
+    -- 2FA (TOTP), added in Migration 022. NULL totp_secret = 2FA off.
+    -- totp_enabled_at gets set once the user finishes the setup
     -- flow (verifies a code from their authenticator). The login
     -- gate checks enabled_at, not the secret, so a half-finished
     -- setup doesn't lock the user out.
     totp_secret         varchar(64),
     totp_enabled_at     timestamptz,
-    -- Replay guard (Migration 063) — absolute 30s time-step of the
+    -- Replay guard (Migration 063): absolute 30s time-step of the
     -- most recently accepted TOTP code. Login/step-up flows only
     -- accept codes whose step is strictly greater, so a code can't
-    -- be presented twice inside the validity window. NULL = no
+    -- be presented twice inside the validity window. NULL means no
     -- code consumed yet; reset alongside totp_secret on disable.
     totp_last_used_step bigint,
     -- Array of bcrypt hashes of one-time recovery codes. Plaintext
@@ -223,10 +223,10 @@ CREATE TABLE public.users (
     -- Self-service account deletion (Migration 053). NULL = active
     -- user; non-NULL = the user has deleted their account. The
     -- row is intentionally retained (not hard-deleted) so the
-    -- user's name stays on the dives they actually competed in —
-    -- diving meets are public sporting records. Login + every
-    -- PII column is wiped at delete time; what remains is the
-    -- minimum needed to anchor historical FK references and to
+    -- user's name stays on the dives they actually competed in,
+    -- since diving meets are public sporting records. Login and
+    -- every PII column get wiped at delete time; what remains is
+    -- the minimum needed to anchor historical FK references and to
     -- support reunite-on-return (claim-past-results flow). See
     -- routes/users.js for the delete + claim endpoints and
     -- docs/privacy-policy.md §7 for the user-facing contract.
@@ -283,7 +283,7 @@ CREATE TABLE public.role_requests (
 
 -- =============================================================
 -- DIVE DIRECTORY
--- Global reference table — not org-scoped.
+-- Global reference table, not org-scoped.
 -- =============================================================
 
 CREATE TABLE public.dive_directory (
@@ -310,7 +310,7 @@ CREATE TABLE public.dive_directory (
 
 
 -- =============================================================
--- MEETS — bundles of events.
+-- MEETS: bundles of events.
 -- A real diving competition is multiple events ("2026 National
 -- Open" with 1m / 3m / 10m / synchro …). The meet record holds
 -- the venue, dates, sponsor info; events.meet_id is a nullable
@@ -334,7 +334,7 @@ CREATE TABLE public.meets (
     sponsor_link_url  text,
     -- Multi-logo rotation cadence on broadcast / scoreboard. 0
     -- disables rotation (all logos rendered statically). Default
-    -- 8 — long enough to read a brand, short enough for several
+    -- is 8, long enough to read a brand but short enough for several
     -- logos to cycle within one dive. See migration 045.
     sponsor_rotation_seconds integer NOT NULL DEFAULT 8
         CHECK (sponsor_rotation_seconds >= 0 AND sponsor_rotation_seconds <= 60),
@@ -346,10 +346,10 @@ CREATE TABLE public.meets (
 
 -- Multi-sponsor logo storage (migration 045). One row per
 -- (meet, slot). Image payload stored inline as BYTEA so backups
--- stay simple and LAN-deploys don't need a separate uploads
+-- stay simple and LAN-deploys don't need a seperate uploads
 -- mount. The legacy meets.sponsor_logo_url field falls through
 -- as a single virtual slot when this table has no rows for the
--- meet — see lib/sponsor-logos.js for the read path.
+-- meet. See lib/sponsor-logos.js for the read path.
 CREATE TABLE public.meet_sponsor_logos (
     id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     meet_id      uuid NOT NULL REFERENCES public.meets(id) ON DELETE CASCADE,
@@ -368,14 +368,14 @@ CREATE INDEX idx_meet_sponsor_logos_meet
 
 
 -- =============================================================
--- BOARDS (Migration 049 — Session Scheduler phase 1)
+-- BOARDS (Migration 049, Session Scheduler phase 1)
 -- First-class resource so a championship venue can model multiple
 -- physical boards at the same height (warmup vs competition,
 -- pool A vs pool B). The board_height enum stays as the source
--- of truth for events.height and the dive picker — this table is
--- additive. Boards are seeded lazily on first GET to the
--- scheduler endpoint (one per board_height in "Main pool"); the
--- migration does not backfill every org.
+-- of truth for events.height and the dive picker, this table is
+-- additive on top of it. Boards get seeded lazily on first GET to
+-- the scheduler endpoint (one per board_height in "Main pool");
+-- the migration does not backfill every org.
 -- =============================================================
 CREATE TABLE public.boards (
     id            uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -419,18 +419,18 @@ CREATE TABLE public.events (
     event_type       event_type DEFAULT 'individual' NOT NULL,
     -- World Aquatics three-stage chain:
     --   'preliminary' (all entrants) →
-    --   'semifinal'   (top 18 — optional intermediate) →
-    --   'final'       (top 12 — the default, also covers
+    --   'semifinal'   (top 18, optional intermediate) →
+    --   'final'       (top 12, the default, also covers
     --                  standalone events with no feeder)
     --
-    -- Diving World Cup Super Final stages (Migration 043 —
+    -- Diving World Cup Super Final stages (Migration 043,
     -- see docs/2026.03.05-…-Super-Final…pdf Appendix 3):
-    --   'super_final_h2h'    — Head-to-Head, 6 seeded pairs
-    --   'super_final_semi'   — 6 H2H winners, two SF groups
-    --   'super_final_final'  — 4 finalists, scores reset
+    --   'super_final_h2h'    : Head-to-Head, 6 seeded pairs
+    --   'super_final_semi'   : 6 H2H winners, two SF groups
+    --   'super_final_final'  : 4 finalists, scores reset
     --
-    -- Synchro and team events typically skip the semi; the
-    -- chain length is operator-defined per event.
+    -- Synchro and team events typically skip the semi, chain
+    -- length is operator-defined per event.
     event_format     varchar(20) NOT NULL DEFAULT 'final'
                        CHECK (event_format IN (
                          'preliminary','semifinal','final',
@@ -466,8 +466,8 @@ CREATE TABLE public.events (
     dive_order_signed_off_at  timestamptz,
     dive_order_signed_off_by  uuid REFERENCES public.users(id) ON DELETE SET NULL,
     -- Sign-off policy. When TRUE the simple manager-attests path
-    -- is forbidden — only push approval by the named referee or
-    -- credential entry by the same person count. Default FALSE
+    -- is forbidden, only push approval by the named referee or
+    -- credential entry by the same person counts. Default FALSE
     -- so light-touch club meets keep working.
     enforce_referee_signoff   boolean NOT NULL DEFAULT FALSE,
     -- Multi-board flag. When TRUE the height column above is
@@ -482,11 +482,11 @@ CREATE TABLE public.events (
     is_rehearsal              boolean NOT NULL DEFAULT FALSE,
     -- Migration 041: post-advance dive-list lock. Stamped by
     -- the advance endpoint (NOW() + lock_minutes, default 30
-    -- per WA Article 6.7.3 — change-of-dives must be submitted
+    -- per WA Article 6.7.3, change-of-dives must be submitted
     -- "no later than 30 min after the end of the previous
-    -- stage"). Past this moment the dive-list editor closes;
-    -- divers can't change their list, the inherited one rides.
-    -- Meet manager bypass via /roster late-entry.
+    -- stage"). Past this moment the dive-list editor closes,
+    -- divers can't change their list and the inherited one rides.
+    -- Meet manager can bypass via /roster late-entry.
     dive_list_locks_at        timestamptz,
     -- Migration 049: optional pin to a specific physical board.
     -- NULL = the scheduler matches by `height` against the
@@ -531,8 +531,8 @@ CREATE TABLE public.event_round_dives (
     round_number integer NOT NULL CHECK (round_number >= 1),
     dive_id      uuid    REFERENCES public.dive_directory(id) ON DELETE SET NULL,
     -- Optional board-height override for the slot. Only meaningful
-    -- when the event is_mixed_height AND dive_id IS NULL — it
-    -- constrains the diver's free pick to this board.
+    -- when the event is_mixed_height AND dive_id IS NULL, in which
+    -- case it constrains the diver's free pick to this board.
     height       numeric(3,1),
     PRIMARY KEY (event_id, round_number)
 );
@@ -542,11 +542,11 @@ CREATE INDEX IF NOT EXISTS idx_event_round_dives_event
 
 
 -- =============================================================
--- TEAMS — for event_type = 'team' events.
+-- TEAMS: for event_type = 'team' events.
 -- Defined BEFORE competitor_dive_lists so the team_id FK on that
 -- table resolves cleanly. (The old schema_v2.sql had teams below
 -- competitor_dive_lists which made the FK forward-ref explode on
--- a fresh install — fixed here.)
+-- a fresh install, a gotcha we hit once, fixed here.)
 -- =============================================================
 
 CREATE TABLE public.teams (
@@ -714,9 +714,9 @@ CREATE TABLE public.tiebreak_dive_offs (
 
 -- Saved event configurations. A meet manager builds an event
 -- once ("World Aquatics U16 Women's 3m") then re-applies the template
--- for future seasons. config jsonb holds the form state — name
+-- for future seasons. config jsonb holds the form state (name
 -- pattern, gender, height, judges, rounds, format, dd_limit_*,
--- age_group, etc. — so adding new event columns later doesn't
+-- age_group, etc.) so adding new event columns later doesn't
 -- require a template-table migration.
 CREATE TABLE public.event_templates (
     id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -731,7 +731,7 @@ CREATE TABLE public.event_templates (
 
 
 -- Saved dive lists per diver. Lets a diver carry common 5- or
--- 6-dive combinations between meets without retyping — pick a
+-- 6-dive combinations between meets without retyping, just pick a
 -- template, load it, tweak, submit.
 CREATE TABLE public.dive_list_templates (
     id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -745,7 +745,7 @@ CREATE TABLE public.dive_list_templates (
 );
 
 
--- Coach ↔ Diver links — many-to-many. A coach can mentor
+-- Coach ↔ Diver links, many-to-many. A coach can mentor
 -- multiple divers; a diver may have multiple coaches over time.
 -- Cascade on either side's deletion; UNIQUE keeps duplicate
 -- assignments out and implicitly indexes "is X my coach".
@@ -783,7 +783,7 @@ CREATE TABLE public.role_audit_log (
 
 -- audit_log: generic entity-lifecycle audit. The two domain
 -- logs above (score_audit_log / role_audit_log) cover their
--- own use cases tightly; this table catches everything else —
+-- own use cases tightly, this table catches everything else:
 -- event create / delete / status flip, org status changes,
 -- club + team deletes, late-entry adds, withdraw / reinstate,
 -- pre-meet workflow resets, manager-attest sign-offs.
@@ -793,13 +793,13 @@ CREATE TABLE public.role_audit_log (
 -- code-only change. metadata jsonb carries action-specific
 -- shape: { from, to } for status flips, { round_count } for
 -- late entries, etc. entity_id is nullable post-delete;
--- entity_name is denormalised so the row reads correctly even
+-- entity_name is denormalised so the row still reads right even
 -- after the source row is gone.
 --
 -- Also created via migration 032 for existing deployments.
--- event_live_state: the "currently on the board" diver + the
+-- event_live_state: the "currently on the board" diver plus the
 -- meet hold reason (if any), per event. Persisted so a server
--- restart doesn't leak the live meet's state — the in-memory
+-- restart doesn't lose the live meet's state, the in-memory
 -- maps in lib/live-state.js are a write-through cache rebuilt
 -- from this table on boot. See migration 034.
 CREATE TABLE public.event_live_state (
@@ -812,7 +812,7 @@ CREATE TABLE public.event_live_state (
 
 -- event_participating_orgs: join table that opts other federations
 -- into this event's roster. A populated row makes it an
--- "international event" — divers from the listed org can
+-- "international event", divers from the listed org can
 -- self-enter, and their results count toward THEIR home
 -- federation's records rather than the host's. The host org is
 -- NOT listed here (events.org_id is the source of truth for the
@@ -844,7 +844,7 @@ CREATE TABLE public.audit_log (
 );
 
 -- =============================================================
--- EVENT ATTENDANCE — pre-meet door check-in (migration 016).
+-- EVENT ATTENDANCE: pre-meet door check-in (migration 016).
 -- One row per (event, competitor); no row = "not yet checked in".
 -- =============================================================
 
@@ -858,15 +858,15 @@ CREATE TABLE public.event_attendance (
 );
 
 -- =============================================================
--- RECORDS — split per scope so we can attach proper FKs
+-- RECORDS: split per scope so we can attach proper FKs
 -- (migration 017 introduced a polymorphic scope_id table; 019
 -- split it into the three relations below).
 --
 -- Each scope has a current-best table + a *_history table for
 -- previous holders. History tables don't carry FKs because the
--- subjects (users / clubs / orgs / events) might be deleted
--- between when a record was set and when it was superseded —
--- the historical row needs to survive.
+-- subjects (users / clubs / orgs / events) might get deleted
+-- between when a record was set and when it was superseded, and
+-- the historical row still needs to survive.
 -- =============================================================
 
 CREATE TABLE public.records_personal (
@@ -947,7 +947,7 @@ CREATE TABLE public.records_federation_history (
     superseded_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Continental records — best per (continent, height, dive_code,
+-- Continental records: best per (continent, height, dive_code,
 -- position). Mirrors records_federation's shape with `continent`
 -- replacing org_id. Only divers whose home federation has a
 -- non-null `continent` set ever land here. See migration 037.
@@ -979,7 +979,7 @@ CREATE TABLE public.records_continental_history (
 
 
 -- =============================================================
--- WORLD AQUATICS DIVE POINTS — INDIVIDUAL
+-- WORLD AQUATICS DIVE POINTS: INDIVIDUAL
 -- Trim rules:
 --   3j keep all, 5j drop high+low, 7j drop 2+2,
 --   9j drop 2+2 × 0.6,  11j drop 3+3 × 0.6
@@ -1023,11 +1023,11 @@ $$;
 
 
 -- =============================================================
--- WORLD AQUATICS DIVE POINTS — SYNCHRO
+-- WORLD AQUATICS DIVE POINTS: SYNCHRO
 -- 7-judge:  four execution judges (j1+j2 exec A, j3+j4 exec B)
 --           plus three synchronisation judges (j5..j7); all count.
 -- 9-judge:  j1+j2 exec A, j3+j4 exec B, j5..j9 sync (drop hi+lo,
---           keep middle 3) — both exec scores keep, no drops.
+--           keep middle 3), both exec scores keep, no drops.
 -- 11-judge: j1..j3 exec A (keep middle 1), j4..j6 exec B (keep
 --           middle 1), j7..j11 sync (drop hi+lo, keep middle 3).
 -- award = (counted exec A + counted exec B + counted sync) × DD × 0.6
@@ -1106,7 +1106,7 @@ $$;
 
 
 -- =============================================================
--- DISPATCH WRAPPER — used by every standings / leaderboard /
+-- DISPATCH WRAPPER: used by every standings / leaderboard /
 -- archive / PDF query so they don't have to CASE on event_type
 -- inline.
 --   synchro_pair             → role-grouped synchro
@@ -1180,7 +1180,7 @@ CREATE INDEX idx_score_audit_event_created ON public.score_audit_log (event_id, 
 CREATE INDEX idx_score_audit_competitor    ON public.score_audit_log (competitor_id);
 CREATE INDEX idx_score_audit_judge         ON public.score_audit_log (judge_id);
 CREATE INDEX idx_score_audit_actor         ON public.score_audit_log (actor_user_id, created_at DESC);
--- Migration 043: dive-off + group_number indexes.
+-- Migration 043: dive-off + group_number indexes
 CREATE INDEX idx_tiebreak_event             ON public.tiebreak_dive_offs (event_id);
 CREATE INDEX idx_cdl_event_group            ON public.competitor_dive_lists (event_id, group_number)
   WHERE group_number IS NOT NULL;
@@ -1271,7 +1271,7 @@ CREATE INDEX idx_notifications_pending_expiry
 
 
 -- =============================================================
--- REFEREE SIGN-OFF REQUESTS (Migration 030 — Cut 2)
+-- REFEREE SIGN-OFF REQUESTS (Migration 030, Cut 2)
 -- Round-trip log for the meet manager → referee push request.
 -- Lets the SPA show "Waiting for Sarah Chen…", lets a refresh
 -- resume the right state, and gives the credential-fallback path
@@ -1302,7 +1302,7 @@ CREATE INDEX idx_signoff_requests_event_pending
     ON public.referee_signoff_requests (event_id) WHERE status = 'pending';
 CREATE INDEX idx_signoff_requests_referee_pending
     ON public.referee_signoff_requests (target_referee_id) WHERE status = 'pending';
--- Only one PENDING code at a time per referee — stops two
+-- Only one PENDING code at a time per referee, stops two
 -- parallel "generate code" clicks from racing each other.
 CREATE UNIQUE INDEX idx_signoff_pending_code
     ON public.referee_signoff_requests (target_referee_id, handoff_code)
@@ -1310,20 +1310,20 @@ CREATE UNIQUE INDEX idx_signoff_pending_code
 
 
 -- =============================================================
--- SESSION SCHEDULER (Migration 049 — Phase 1)
+-- SESSION SCHEDULER (Migration 049, Phase 1)
 --
 -- A session is one day-on-one-pool timeline owned by a meet; a
 -- session is composed of schedule_blocks (warmups, event starts,
--- breaks, ceremonies, customs). Phase 1 is read-only — blocks
+-- breaks, ceremonies, customs). Phase 1 is read-only, blocks
 -- are auto-seeded server-side from events.scheduled_at on first
 -- GET (45-min warmup window before each event, event_duration
 -- estimated from total_rounds × competitors × 90s, fallback
 -- 90 min). See routes/sessions.js and docs/session-scheduler.md.
 --
 -- The schedule_block_shifts and dismissed_conflicts ledgers
--- below land now even though no Phase-1 code writes to them —
--- they avoid a second schema bump for phase 2 (conflicts) and
--- phase 4 (live re-flow).
+-- below land now even though no Phase-1 code writes to them yet,
+-- they just avoid a second schema bump for phase 2 (conflicts)
+-- and phase 4 (live re-flow).
 -- =============================================================
 
 CREATE TABLE public.sessions (
@@ -1331,7 +1331,7 @@ CREATE TABLE public.sessions (
     meet_id         uuid NOT NULL REFERENCES public.meets(id) ON DELETE CASCADE,
     name            varchar(120) NOT NULL,         -- "Saturday morning, 3m"
     session_date    date NOT NULL,                 -- the day this session covers
-    pool            varchar(80),                   -- "Main pool" — free text for v1
+    pool            varchar(80),                   -- "Main pool", free text for v1
     -- Optional referee for the whole session. Per-block
     -- assignments can override but most sessions inherit one.
     referee_user_id uuid REFERENCES public.users(id) ON DELETE SET NULL,
@@ -1353,13 +1353,14 @@ CREATE TABLE public.schedule_blocks (
     id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     session_id      uuid NOT NULL REFERENCES public.sessions(id) ON DELETE CASCADE,
     block_type      schedule_block_type NOT NULL,
-    label           varchar(160),                  -- "Warmup — Men's 3m"
+    label           varchar(160),                  -- "Warmup: Men's 3m"
     starts_at       timestamptz NOT NULL,
     ends_at         timestamptz NOT NULL,
     CONSTRAINT block_window_valid CHECK (ends_at > starts_at),
     -- Array because a warmup can claim multiple boards at once.
     -- Empty = doesn't claim a board (ceremony, announcements).
-    -- Postgres can't FK an array; the API validates membership.
+    -- Postgres can't FK an array, heads up: the API is what
+    -- actually validates membership here, not the schema.
     board_ids       uuid[] NOT NULL DEFAULT '{}',
     -- For event_start blocks: the event running in the slot.
     -- NULL for non-event blocks. SET NULL on delete so removing
@@ -1381,7 +1382,7 @@ CREATE INDEX idx_schedule_blocks_event
 CREATE INDEX idx_events_board
     ON public.events (board_id) WHERE board_id IS NOT NULL;
 
--- Audit-only — never read by the running app. Lets us debrief
+-- Audit-only, never read by the running app. Lets us debrief
 -- "why did Sunday afternoon collapse" after a meet.
 CREATE TABLE public.schedule_block_shifts (
     id            uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -1414,11 +1415,11 @@ CREATE TABLE public.dismissed_conflicts (
 
 
 -- =============================================================
--- PENDING PARTNER PAIRINGS (migration 051) — synchro consent.
+-- PENDING PARTNER PAIRINGS (migration 051), synchro consent.
 -- A synchro submit creates a pending row when no reciprocal
--- invite exists; the partner can accept (auto-finalises both
--- competitor_dive_lists rows) or decline. See migration file
--- for the full flow.
+-- invite exists. The partner can then accept (auto-finalises
+-- both competitor_dive_lists rows) or decline. See the
+-- migration file for the full flow.
 -- =============================================================
 
 CREATE TABLE public.pending_partner_pairings (
@@ -1443,12 +1444,12 @@ CREATE INDEX idx_pending_pairings_partner
 
 -- =============================================================
 -- SCHEMA VERSION STAMP
--- Single-row table the server reads on boot to log which
--- schema version is deployed. init.sql is pinned to bootstrap
--- baseline version 53; after loading it into a fresh database,
--- run migrations/054* through the latest numbered migration in
--- order to reach HEAD. Do not bump this stamp unless the later
--- migrations have also been ported into this file.
+-- Single-row table the server reads on boot to log which schema
+-- version is deployed. init.sql is pinned to bootstrap baseline
+-- version 53, so after loading it into a fresh database, run
+-- migrations/054* through the latest numbered migration in order
+-- to reach HEAD. Don't bump this stamp unless the later migrations
+-- have also been ported into this file.
 -- =============================================================
 
 CREATE TABLE public.schema_meta (
@@ -1463,10 +1464,10 @@ INSERT INTO public.schema_meta (id, version) VALUES (1, 53);
 
 -- =============================================================
 -- AUDIT-LOG RETENTION
--- Audit tables are append-only and grow forever otherwise.
--- The function deletes entries older than the given window
+-- Audit tables are append-only, so they'll grow forever otherwise.
+-- This function deletes entries older than the given window
 -- (default 30 days). Wire it into a cron, rely on the server's
--- boot-time cleanup, or run it ad-hoc from psql.
+-- boot-time cleanup, or just run it ad-hoc from psql.
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION public.purge_audit_logs(
@@ -1501,11 +1502,11 @@ $$;
 
 -- =============================================================
 -- DIVE DIRECTORY DATA
--- World Aquatics / World Aquatics DD tables (valid from 2017, confirmed
--- against the 2024 publication).
+-- World Aquatics / World Aquatics DD tables (valid from 2017,
+-- double-checked against the 2024 publication).
 -- Heights:    1m, 3m (springboard) | 5m, 7.5m, 10m (platform)
 -- Positions:  A = Straight, B = Pike, C = Tuck, D = Free
--- Only rows with a valid DD are inserted (dashes = impossible).
+-- Only rows with a valid DD get inserted here (dashes mean impossible).
 -- =============================================================
 
 
@@ -2482,7 +2483,7 @@ INSERT INTO dive_directory (dive_code, height, position, dd, description) VALUES
 ('5436', 10.0, 'D', 3.4, 'Inward 1½ Somersaults 3 Twists');
 
 -- -----------------------------------------------------------------------------
--- ARMSTAND GROUP (6xx / 6xxx) — Platform only
+-- ARMSTAND GROUP (6xx / 6xxx), platform only
 -- -----------------------------------------------------------------------------
 
 -- 5m platform
@@ -2639,20 +2640,20 @@ INSERT INTO dive_directory (dive_code, height, position, dd, description) VALUES
 -- =============================================================
 -- SUPER ADMIN ACCOUNT
 --
--- Creates a single platform organisation and the 'admin' user
--- so the freshly built database is immediately usable.
+-- Creates a single platform organisation and the 'admin' user so
+-- the freshly built database is immediately usable.
 --
 --   username: admin
 --   password: admin
 --
--- ⚠ DEV / BOOTSTRAP ONLY. These are well-known credentials —
+-- Heads up: DEV / BOOTSTRAP ONLY. These are well-known credentials,
 -- anyone who can reach the login page owns the platform until
--- they're rotated. Replace the password from the User Manager
--- as the FIRST thing you do after signing in.
+-- they're rotated. Replace the password from the User Manager as
+-- the FIRST thing you do after signing in.
 --
 -- PRODUCTION BEHAVIOUR: server.js refuses to serve when
 -- NODE_ENV=production and this account still answers to the
--- default password — the boot check bcrypt.compares 'admin'
+-- default password. The boot check bcrypt.compares 'admin'
 -- against the stored hash and exits with a fatal log if it
 -- matches. Dev / test installs (NODE_ENV unset) are unaffected,
 -- as are the intentional dev fixtures in seed_test_data.sql and
@@ -2685,18 +2686,18 @@ VALUES (
     '00000000-0000-0000-0000-000000000001',
     NULL,
     true,
-    -- email_verified_at non-null so the bootstrap admin can log in
+    -- email_verified_at is non-null so the bootstrap admin can log in
     -- straight away on a fresh install. Without this, /api/auth/login
-    -- refuses with "please verify your email" and there's no inbox
-    -- to receive the link from on a brand-new system.
+    -- refuses with "please verify your email", and there's no inbox
+    -- to receive that link from on a brand-new system anyway.
     now(),
     now()
 );
 
--- is_system_admin gives this user cross-org access regardless of
--- explicit role rows, but we add org_admin + spectator within the
--- platform org too so any code path that does a strict role check
--- still resolves cleanly.
+-- is_system_admin already gives this user cross-org access regardless
+-- of explicit role rows, but we add org_admin + spectator within the
+-- platform org too, just in case some code path does a strict role
+-- check and needs it to resolve cleanly.
 INSERT INTO public.user_org_roles (user_id, org_id, role, granted_at) VALUES
     ('00000000-0000-0000-0000-000000000002',
      '00000000-0000-0000-0000-000000000001',
@@ -2724,7 +2725,7 @@ COMMIT;
 -- =============================================================
 -- DONE
 --
--- Sign in at /login with admin / admin. You'll have full system
+-- Sign in at /login with admin / admin, you'll have full system
 -- admin access (cross-org User Manager, Clubs, Teams, Archive,
 -- and the ability to register additional organisations).
 --

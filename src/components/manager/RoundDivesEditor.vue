@@ -1,29 +1,29 @@
 <script setup>
-/* RoundDivesEditor — one row per round of an event, with an inline
+/* RoundDivesEditor: one row per round of an event, with an inline
  * dive-picker autocomplete. Extracted from ManagerView.vue, where
- * the same editor lived twice (Create Event modal + Edit Event
- * modal) with parallel state.
+ * the same editor used to live twice (Create Event modal + Edit
+ * Event modal) with parallel state, gross.
  *
  * State boundary:
- *   * `modelValue` (v-model) is the round-dives array — each slot
+ *   * `modelValue` (v-model) is the round-dives array, each slot
  *     is { dive_id|null, height|null, _label, _meta }. The parent
  *     owns this ref; we mutate slot fields in place (height select,
- *     dive_id flip) and emit `update:modelValue` only for add/remove
+ *     dive_id flip) and only emit `update:modelValue` for add/remove
  *     so the parent's reference identity stays stable across edits.
- *   * `height` / `mixedHeight` come in as props — they shape the
+ *   * `height` / `mixedHeight` come in as props, they shape the
  *     picker filter (mixed-board events let any height through;
  *     single-board events only surface dives at that height).
- *   * `diveDirectory` comes in as a prop — the parent already
- *     loads it once on mount and reuses across modals.
+ *   * `diveDirectory` comes in as a prop, the parent already loads
+ *     it once on mount and reuses it across modals.
  *   * Dive-picker dropdown state (open idx, query, results computed)
- *     is OWNED here. Nothing outside needs it.
+ *     is owned here. Nothing outside needs it.
  *
- * The "Add a new dive" sub-modal stays in ManagerView (it's
- * shared with the dive-directory page). We surface the request
- * via `request-new-dive` ({ rowIdx }); the parent opens the
- * sub-modal and, on success, calls `applyDiveAtRow(rowIdx, dive)`
- * — `dive` is the freshly-created dive-directory row, so the
- * caller doesn't need to know our internal label format.
+ * The "Add a new dive" sub-modal stays in ManagerView (it's shared
+ * with the dive-directory page). We surface the request via
+ * `request-new-dive` ({ rowIdx }); the parent opens the sub-modal
+ * and, on success, calls `applyDiveAtRow(rowIdx, dive)` where `dive`
+ * is the freshly-created dive-directory row, so the caller doesn't
+ * need to know our internal label format.
  */
 import { ref, computed } from 'vue'
 
@@ -37,8 +37,8 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'request-new-dive'])
 
 // Dive-picker dropdown state. `pickerOpenIdx` is the row whose
-// search popover is visible (-1 = none). We deliberately keep
-// just one index — only one popover can be open at a time.
+// search popover is visible (-1 = none). We deliberately keep just
+// one index since only one popover can be open at a time anyway.
 const pickerOpenIdx = ref(-1)
 const pickerQuery   = ref('')
 
@@ -50,19 +50,20 @@ function closeDivePicker() {
   pickerOpenIdx.value = -1
 }
 
-// Delayed close for @blur on the search input — gives a click on
-// a result row time to fire its @mousedown.prevent first.
+// Delayed close for @blur on the search input, gives a click on a
+// result row time to fire its @mousedown.prevent first (just in
+// case the blur wins the race).
 function onPickerBlur(idx) {
   setTimeout(() => {
     if (pickerOpenIdx.value === idx) closeDivePicker()
   }, 150)
 }
 
-// Filter the dive directory to rows matching the picker's query
-// AND, when the event has a fixed height, that height. For
+// Filter the dive directory to rows matching the picker's query,
+// and, when the event has a fixed height, that height too. For
 // mixed-board events with a per-slot height override, only dives
-// at that height appear. Cap at 25 rows so the dropdown stays
-// usable.
+// at that height appear. Cap results at 25, a sanity limit so the
+// dropdown stays usable.
 const divePickerResults = computed(() => {
   const q = pickerQuery.value.toLowerCase().trim()
   const slot = props.modelValue[pickerOpenIdx.value]
@@ -103,8 +104,8 @@ function clearDiveForRow(idx) {
 }
 
 function addRoundDive() {
-  // Emit a new array reference for v-model so the parent's ref
-  // updates even when the binding is shallow-watched.
+  // Emit a new array reference for v-model so the parent's ref updates
+  // even when the binding is shallow-watched.
   emit('update:modelValue', [
     ...props.modelValue,
     { dive_id: null, height: null, _label: '', _meta: null },
@@ -120,10 +121,10 @@ function requestNewDive(rowIdx) {
   emit('request-new-dive', { rowIdx })
 }
 
-// Caller invokes after the Create-Dive sub-modal returns the
-// newly-created dive-directory row. We flip the row's dive_id +
-// metadata to the new dive, and close the picker so the operator
-// sees the success state.
+// Caller invokes this after the Create-Dive sub-modal returns the
+// newly-created dive-directory row. We flip the row's dive_id and
+// metadata over to the new dive, then close the picker so the
+// operator sees the success state.
 function applyDiveAtRow(rowIdx, dive) {
   const slot = props.modelValue[rowIdx]
   if (!slot || !dive) return
@@ -194,7 +195,7 @@ defineExpose({ applyDiveAtRow })
         </div>
       </div>
 
-      <!-- Mixed-board events expose a per-slot height selector: an
+      <!-- Mixed-board events expose a per-slot height selector so an
            operator can leave the dive free but pin the round to a
            particular board. Hidden when the event uses a single
            fixed height. -->
@@ -225,10 +226,10 @@ defineExpose({ applyDiveAtRow })
 </template>
 
 <style scoped>
-/* Round-dives editor (migration 039) — one row per round, with a
+/* Round-dives editor (migration 039): one row per round, with a
    click-to-search dive picker, optional per-slot height for
    mixed-board events, and quick-clear / remove buttons. Lifted
-   verbatim from ManagerView.css when the editor was extracted
+   verbatim from ManagerView.css when the editor got extracted
    into this component. */
 .rd-editor { display:flex; flex-direction:column; gap:0.5rem; }
 .rd-header { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; }
@@ -286,13 +287,13 @@ defineExpose({ applyDiveAtRow })
   display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; margin-top:0.4rem;
 }
 
-/* Mobile — the 5-column row pinches at 360–414px because the
-   picker input + dropdown can't shrink past their content.
-   Re-flow with grid-template-areas: round number pins to the
-   left, the picker spans the full width, and the height select
-   + action buttons sit on a second line beside it. The popover
-   stays position:absolute + inset-inline-start:0/right:0 — its own internal
-   3-col grid (code · meta · desc) is what needs to wrap. */
+/* Mobile: the 5-column row pinches at 360-414px because the picker
+   input + dropdown can't shrink past their content. Re-flow with
+   grid-template-areas: round number pins to the left, the picker
+   spans the full width, and the height select + action buttons sit
+   on a second line beside it. The popover stays
+   position:absolute + inset-inline-start:0/right:0, it's its own
+   internal 3-col grid (code, meta, desc) that needs to wrap. */
 @media (max-width: 600px) {
   .rd-row {
     grid-template-columns: 38px 1fr auto auto;
@@ -311,7 +312,7 @@ defineExpose({ applyDiveAtRow })
   .rd-row-clear  { grid-area: clear;  justify-self: end; }
   .rd-row-remove { grid-area: remove; justify-self: end; }
 
-  /* Picker result row — code + meta on one line, desc wraps under. */
+  /* Picker result row: code + meta on one line, desc wraps under. */
   .rd-pick-result {
     grid-template-columns: auto 1fr;
     row-gap: 0.1rem;
@@ -323,8 +324,8 @@ defineExpose({ applyDiveAtRow })
 
   /* iOS Safari auto-zooms whenever an <input> with font-size <
      16px receives focus. The dive-code picker and height input
-     are the coach's primary editing surface — getting zoomed
-     every time they tap is unworkable. */
+     are the coachs primary editing surface, so getting zoomed
+     every time they tap would be unworkable. */
   .rd-pick-input,
   .rd-row-height { font-size: 16px; }
 }

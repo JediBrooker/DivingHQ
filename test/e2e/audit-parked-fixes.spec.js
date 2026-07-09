@@ -1,6 +1,6 @@
-// Audit parked-fixes spec — locks in the seven items the
+// Audit parked-fixes spec. Locks in the seven items the
 // security + code-review audit flagged after the initial
-// Super Final rollout but were deferred to a follow-up
+// Super Final rollout but that got deferred to a follow-up
 // commit. Each test exercises ONE fix in isolation so a
 // regression points at one defect.
 //
@@ -33,7 +33,7 @@ test("PUT /api/events/:id rejects parent_event_id in another org", async ({ requ
     height: "3m", number_of_judges: 5, total_rounds: 3,
     event_format: "super_final_h2h",
   });
-  // Org B creates an event Org A doesn't own.
+  // Org B creates an event that Org A doesn't own.
   const parentB = await setup.createEvent(request, {
     adminToken: orgB.adminToken,
     name: "B's stop-1",
@@ -41,7 +41,7 @@ test("PUT /api/events/:id rejects parent_event_id in another org", async ({ requ
     event_format: "final",
   });
 
-  // Org A tries to PUT the parent_event_id to Org B's event.
+  // Org A tries to PUT the parent_event_id over to Org B's event.
   const cross = await request.put(`/api/events/${childA.id}`, {
     headers: { Authorization: `Bearer ${orgA.adminToken}` },
     data: { parent_event_id: parentB.id },
@@ -57,11 +57,11 @@ test("PUT /api/events/:id rejects parent_event_id in another org", async ({ requ
 // ---------------- Fix #2 ----------------
 // The judge-analytics router is now mounted behind searchLimiter
 // (60 req/min/IP). In the e2e env RATE_LIMIT_DISABLED=true skips
-// the limiter so the suite doesn't trip its own 429s — meaning we
-// can't directly observe the limit firing. The next-best check:
+// the limiter so the suite doesn't trip its own 429s, meaning we
+// can't directly observe the limit firing here. Next-best check:
 // the endpoints behind the limiter still respond 200 (the mount
-// didn't break the router), AND a separate unit assertion on the
-// limiter's `skip` behavior is in test/syntax/integration.
+// didn't break the router), and a separate unit assertion on the
+// limiter's `skip` behavior lives in test/syntax/integration.
 // Smoke-grade: hit each public judge endpoint and assert 200.
 test("/api/judges/* endpoints still respond 200 after limiter mount", async ({ request }) => {
   test.setTimeout(15_000);
@@ -76,8 +76,8 @@ test("/super-final/rankings 400s when an H2H pair is dead-tied", async ({ reques
   test.setTimeout(60_000);
   const { orgId, adminToken } = await setup.createOrgAndAdmin(request);
 
-  // Minimal Stop-1 + H2H + SF + F chain just to satisfy the
-  // endpoint's parent_event_id checks. We'll plant a tied H2H
+  // Minimal Stop-1 + H2H + SF + F chain, just enough to satisfy
+  // the endpoint's parent_event_id checks. We'll plant a tied H2H
   // pair manually before calling rankings.
   const parent = await setup.createEvent(request, {
     adminToken, name: "Stop-1", height: "3m",
@@ -98,7 +98,7 @@ test("/super-final/rankings 400s when an H2H pair is dead-tied", async ({ reques
       eventId: parent.id, competitorId: d.userId,
       dives: [{ round_number: 1, dive_id: diveId }],
     });
-    // Score everyone the same → ties everywhere → tied pairs in H2H.
+    // score everyone the same → ties everywhere → tied pairs in H2H
     await setup.pool.query(
       `INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score)
        VALUES ($1, $2, $3, $4, 1, 7.0)`,
@@ -108,7 +108,7 @@ test("/super-final/rankings 400s when an H2H pair is dead-tied", async ({ reques
   await setup.setEventStatus(request, { adminToken, eventId: parent.id, status: "Live" });
   await setup.setEventStatus(request, { adminToken, eventId: parent.id, status: "Completed" });
 
-  // Build the rest of the chain.
+  // build the rest of the chain
   const h2h = await setup.createEvent(request, {
     adminToken, name: "H2H", height: "3m",
     number_of_judges: 5, total_rounds: 3,
@@ -120,7 +120,7 @@ test("/super-final/rankings 400s when an H2H pair is dead-tied", async ({ reques
   });
   expect(seedH.status()).toBe(200);
 
-  // Score H2H so every pair ties (uniform scores).
+  // score H2H so every pair ties (uniform scores)
   await setup.pool.query(
     `INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, 1)`,
     [h2h.id, judge.userId],
@@ -138,9 +138,9 @@ test("/super-final/rankings 400s when an H2H pair is dead-tied", async ({ reques
   await setup.setEventStatus(request, { adminToken, eventId: h2h.id, status: "Completed" });
 
   // The merged rankings endpoint sits on the F event. We won't
-  // actually seed SF/F (no need — the endpoint should 400 on
-  // tied H2H without needing them to exist). Skip by minting a
-  // bare F to satisfy the URL.
+  // actually seed SF/F, no need since the endpoint should 400 on
+  // tied H2H without needing them to exist. Skip that by minting
+  // a bare F just to satisfy the URL.
   const sf = await setup.createEvent(request, {
     adminToken, name: "SF", height: "3m",
     number_of_judges: 5, total_rounds: 3,
@@ -157,7 +157,7 @@ test("/super-final/rankings 400s when an H2H pair is dead-tied", async ({ reques
   const body = await rankings.json();
   expect(body.error).toMatch(/tied|dive-off/i);
   expect(Array.isArray(body.tied_pair_ids)).toBe(true);
-  expect(body.tied_pair_ids.length).toBe(6); // all 6 pairs are tied
+  expect(body.tied_pair_ids.length).toBe(6); // all 6 pairs come back tied
 
   await setup.deleteOrg(orgId);
 });
@@ -167,8 +167,8 @@ test("/replace-from-synchro 404s when the withdraw target is already withdrawn",
   test.setTimeout(60_000);
   const { orgId, adminToken } = await setup.createOrgAndAdmin(request);
 
-  // The simplest path: set up the same Stop-1 → H2H chain as fix #3
-  // and pre-stamp withdrawn_at on a roster row, then call replace.
+  // simplest path here: set up the same Stop-1 → H2H chain as fix #3,
+  // pre-stamp withdrawn_at on a roster row, then call replace
   const parent = await setup.createEvent(request, {
     adminToken, name: "Stop-1", height: "3m",
     number_of_judges: 5, total_rounds: 1, event_format: "final",
@@ -190,7 +190,7 @@ test("/replace-from-synchro 404s when the withdraw target is already withdrawn",
     await setup.pool.query(
       `INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score)
        VALUES ($1, $2, $3, $4, 1, $5)`,
-      // 8.0 down by 0.5 — valid half-points
+      // 8.0 down by 0.5 each time, still valid half-points
       [parent.id, d.userId, judge.userId, diveId, 8.0 - i * 0.5],
     );
   }
@@ -207,7 +207,7 @@ test("/replace-from-synchro 404s when the withdraw target is already withdrawn",
     data: { max_per_org: 12 },
   });
 
-  // Stamp withdrawn_at on the first roster row.
+  // stamp withdrawn_at on the first roster row
   const pickRoster = await setup.pool.query(
     `SELECT competitor_id FROM competitor_dive_lists
       WHERE event_id = $1 AND withdrawn_at IS NULL LIMIT 1`,
@@ -220,9 +220,9 @@ test("/replace-from-synchro 404s when the withdraw target is already withdrawn",
     [h2h.id, withdrawnId],
   );
 
-  // Now POST replace-from-synchro pointing at the already-
-  // withdrawn diver. The endpoint should 404, not silently
-  // re-stamp + insert a second slot.
+  // Now POST replace-from-synchro pointing at the already
+  // withdrawn diver. Should 404, not silently re-stamp and
+  // insert a second slot.
   const someOther = divers.find((d) => d.userId !== withdrawnId);
   const replace = await request.post(`/api/events/${h2h.id}/replace-from-synchro`, {
     headers: { Authorization: `Bearer ${adminToken}` },
@@ -246,8 +246,8 @@ test("/synchro-reserve-pool only returns same-gender synchro events", async ({ r
   // Create a meet to hang both H2H + synchro events on.
   // The endpoint contract is fixed: POST /api/meets returns 201
   // with `{ id, ... }`. If that shape ever changes we want this
-  // test to fail loudly, not silently skip — fail-loud was the
-  // entire point of the audit-parked-fixes suite.
+  // test to fail loudly instead of silently skipping, that's kind
+  // of the whole point of the audit-parked-fixes suite.
   const meetRes = await request.post("/api/meets", {
     headers: { Authorization: `Bearer ${adminToken}` },
     data: { name: "Mixed Gender Meet", venue: "Pool" },
@@ -255,7 +255,7 @@ test("/synchro-reserve-pool only returns same-gender synchro events", async ({ r
   expect(meetRes.status()).toBe(201);
   const meet = await meetRes.json();
 
-  // Create both Male and Female synchro events at the meet.
+  // create both Male and Female synchro events at the meet
   await setup.createEvent(request, {
     adminToken, name: "Men's Synchro", height: "3m",
     number_of_judges: 9, total_rounds: 1,
@@ -269,7 +269,7 @@ test("/synchro-reserve-pool only returns same-gender synchro events", async ({ r
     meet_id: meet.id,
   });
 
-  // Female H2H — synchro pool should NOT contain men's synchro.
+  // Female H2H, so the synchro pool should NOT contain men's synchro.
   const h2h = await setup.createEvent(request, {
     adminToken, name: "F H2H", height: "3m",
     number_of_judges: 5, total_rounds: 3,
@@ -284,11 +284,11 @@ test("/synchro-reserve-pool only returns same-gender synchro events", async ({ r
   // Pool may be empty (no synchro scores yet), but it must not
   // reference the men's synchro event. If the response includes
   // synchro_events / referenced event ids, assert they're all
-  // Female. If empty, the gender filter is at least not blowing
-  // up — passes vacuously.
+  // Female. If empty, well, the gender filter is at least not
+  // blowing up, so it passes vacuously.
   const seen = JSON.stringify(body);
-  // Quick smoke: the response shouldn't accidentally surface
-  // a row labelled "Men's Synchro".
+  // quick smoke check: response shouldn't accidentally surface
+  // a row labelled "Men's Synchro"
   expect(seen).not.toMatch(/Men's Synchro/);
 
   await setup.deleteOrg(orgId);
@@ -299,7 +299,7 @@ test("dive-off POST rejects a dive_id the diver hasn't performed", async ({ requ
   test.setTimeout(60_000);
   const { orgId, adminToken } = await setup.createOrgAndAdmin(request);
 
-  // Stop-1 + H2H. Seed + score so 1 pair ends up genuinely tied
+  // Stop-1 + H2H, seed + score so 1 pair ends up genuinely tied
   // (both same score) so we can attempt a dive-off.
   const parent = await setup.createEvent(request, {
     adminToken, name: "S1", height: "3m",
@@ -343,15 +343,15 @@ test("dive-off POST rejects a dive_id the diver hasn't performed", async ({ requ
     data: { max_per_org: 12 },
   });
 
-  // Score the H2H so the first pair ties (uniform 7.0).
+  // score the H2H so the first pair ties (uniform 7.0)
   await setup.pool.query(
     `INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, 1)`,
     [h2h.id, judge.userId],
   );
-  // Pick a real PAIR (display_order 1 + 2 in Group 1 — same pair
+  // Pick a real PAIR (display_order 1 + 2 in Group 1, same pair
   // per the H2H seeding scheme: pairs interleave in display_order
   // 1,2 / 3,4 / 5,6 within each group). Selecting by competitor_id
-  // ascending was wrong — it'd cross pair boundaries.
+  // ascending was wrong, it'd cross pair boundaries.
   const pair = await setup.pool.query(
     `SELECT DISTINCT competitor_id, display_order
        FROM competitor_dive_lists
@@ -371,8 +371,8 @@ test("dive-off POST rejects a dive_id the diver hasn't performed", async ({ requ
     }
   }
 
-  // Attempt to create a dive-off with a dive_a_id the competitor
-  // never actually performed. Should 400 per Appendix 3 §6.
+  // attempt to create a dive-off with a dive_a_id the competitor
+  // never actually performed, should 400 per Appendix 3 §6
   const bad = await request.post(`/api/events/${h2h.id}/dive-offs`, {
     headers: { Authorization: `Bearer ${adminToken}` },
     data: {
@@ -384,7 +384,7 @@ test("dive-off POST rejects a dive_id the diver hasn't performed", async ({ requ
   const body = await bad.json();
   expect(body.error).toMatch(/previously performed|§6/i);
 
-  // And the same dive_id that WAS performed succeeds.
+  // and the same dive_id that WAS performed succeeds
   const ok = await request.post(`/api/events/${h2h.id}/dive-offs`, {
     headers: { Authorization: `Bearer ${adminToken}` },
     data: {
@@ -400,25 +400,25 @@ test("dive-off POST rejects a dive_id the diver hasn't performed", async ({ requ
 
 // ---------------- Fix #7 ----------------
 // The Edit modal's warning UI is best verified via a Playwright
-// page test, but the round-trip — opening a legacy event in
-// the Edit modal AND saving without ticking "Keep legacy" rewrites
-// the column to the canonical form, while ticking it preserves
-// the legacy string — is what really matters here. We assert
-// the API behaviour: PUT with the canonical form succeeds AND
-// the column reads back as canonical; PUT with the legacy string
-// preserves the legacy text.
+// page test, but here's the part that really matters: opening a
+// legacy event in the Edit modal and saving without ticking "Keep
+// legacy" rewrites the column to the canonical form, while ticking
+// it preserves the legacy string. So we assert the API behaviour
+// instead: PUT with the canonical form succeeds and the column
+// reads back as canonical; PUT with the legacy string preserves
+// the legacy text.
 test("Edit modal age-group: caller-supplied string round-trips verbatim", async ({ request }) => {
   test.setTimeout(30_000);
   const { orgId, adminToken } = await setup.createOrgAndAdmin(request);
 
-  // Create an event with the LEGACY format.
+  // create an event with the LEGACY format
   const ev = await setup.createEvent(request, {
     adminToken, name: "Legacy Age Event", height: "3m",
     number_of_judges: 5, total_rounds: 1,
     age_group: "11 and under",
   });
 
-  // PUT with the legacy string verbatim — the column should stay legacy.
+  // PUT with the legacy string verbatim, column should stay legacy
   const keepLegacy = await request.put(`/api/events/${ev.id}`, {
     headers: { Authorization: `Bearer ${adminToken}` },
     data: { age_group: "11 and under" },
@@ -428,7 +428,7 @@ test("Edit modal age-group: caller-supplied string round-trips verbatim", async 
     "SELECT age_group FROM events WHERE id = $1", [ev.id]);
   expect(after1.rows[0].age_group).toBe("11 and under");
 
-  // PUT with the canonical string — column updates to canonical.
+  // PUT with the canonical string, column updates to canonical
   const canon = await request.put(`/api/events/${ev.id}`, {
     headers: { Authorization: `Bearer ${adminToken}` },
     data: { age_group: "Junior Group D" },

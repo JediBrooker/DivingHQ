@@ -5,9 +5,10 @@
 //     ones you switch between mid-meet),
 //   * an "All events" dropdown for the rest (upcoming / completed),
 //   * the action set: History + Standings drawer toggles, Recovery, Tools.
-// The focused event's NAME lives here and nowhere else (the old center
-// heading is gone). Awareness markers reuse the shared useAttention
-// selector so a chip flags 'live' or 'needs action' like the old rail row.
+// The focused event's NAME lives here and nowhere else now (the old
+// center heading is gone). Awareness markers reuse the shared
+// useAttention selector so a chip flags 'live' or 'needs action' the
+// same way the old rail row did.
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { attentionMarker } from '@/composables/useAttention'
 import { orderWorkflowStateFor, liveEventsInOrder } from '@/composables/useControlStage'
@@ -44,10 +45,10 @@ const focusedEvent = computed(
 )
 
 // Chips = every Live event in canonical order (oldest first), so chip N
-// lines up with grid card N and the "N" focus hotkey. The focused chip is
-// highlighted in place -- never reordered to the front. A focused event
-// that ISN'T Live (Upcoming/Completed) isn't in that list, so we surface
-// it first purely so its name stays visible.
+// lines up with grid card N and the "N" focus hotkey. The focused chip
+// gets highlighted in place, it's never reordered to the front. A
+// focused event that ISN'T Live (Upcoming/Completed) isn't in that
+// list, so we surface it first just so its name stays visible.
 const chips = computed(() => {
   const live = liveEventsInOrder(props.events)
   const f = focusedEvent.value

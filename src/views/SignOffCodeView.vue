@@ -1,18 +1,18 @@
 <script setup>
-// Cut 3 of the referee sign-off plan — the page where a referee
+// Cut 3 of the referee sign-off plan: the page where a referee
 // types the 6-digit handoff code the meet manager generated on
-// their screen, or lands on after scanning the QR rendered next
-// to the same code.
+// their screen, or lands here after scanning the QR code rendered
+// next to it.
 //
-// The route is referee-only (router meta gate) but the credential
-// is on the user's existing JWT — no separate auth dance. Server
-// matches (target_referee_id = req.user.id, code) so a code
-// generated for one referee can't be used by another.
+// The route is referee-only (router meta gate), but the credential
+// rides on the user's existing JWT, so there's no separate auth
+// dance. Server matches (target_referee_id = req.user.id, code) so
+// a code generated for one referee can't be used by another.
 //
 // On success we patch the local notification banner (server fires
 // the same referee_signoff_response broadcast as the push respond
-// path, so any open Control Room tab updates too) and surface a
-// "Signed off ✓" confirmation.
+// path, so any open Control Room tab updates too) and show a
+// "Signed off" confirmation.
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -27,10 +27,10 @@ const code = ref('')
 const busy = ref(false)
 const errorMsg = ref('')
 const successMsg = ref('')
-// Auto-mode flag — true when we landed via QR scan (?code=…)
-// rather than manual typing. Drives a slightly different
-// progress / success copy ("Auto-submitted from QR scan…")
-// without changing any of the underlying logic.
+// Auto-mode flag: true when we landed via QR scan (?code=…)
+// rather than manual typing. Drives slightly different progress /
+// success copy ("Auto-submitted from QR scan…") without touching
+// any of the underlying logic.
 const fromQr = ref(false)
 
 const digits = computed(() => code.value.replace(/\D/g, '').slice(0, 6))
@@ -60,28 +60,27 @@ async function submit() {
 }
 
 function paste(text) {
-  // Convenience for the pasted-from-meet-controller-screen case.
-  // Strips anything non-digit and caps at 6 so a stray space or
-  // dash doesn't confuse the input.
+  // Handles the pasted-from-meet-controller-screen case. Strips
+  // anything non-digit and caps at 6, just in case its pasted
+  // with a stray space or dash mixed in.
   code.value = String(text || '').replace(/\D/g, '').slice(0, 6)
 }
 
-// Auto-redeem on ?code=… — set when the referee lands here via
-// a QR scan from the manager's modal. We wait one tick so the
-// reactive state has settled, then submit. Falls through to the
-// manual input cleanly if the code is malformed (the submit
-// guard rejects anything that isn't 6 digits).
+// Auto-redeem on ?code=…, set when the referee lands here via a
+// QR scan from the manager's modal. We wait one tick so the
+// reactive state settles, then submit. Falls through to manual
+// input cleanly if the code is malformed (the submit guard
+// rejects anything that isn't 6 digits).
 onMounted(() => {
   const queryCode = String(route.query.code || '').replace(/\D/g, '').slice(0, 6)
   if (!queryCode) return
   fromQr.value = true
   code.value = queryCode
   if (queryCode.length === 6) {
-    // Microtask delay keeps the input visually populated for a
-    // beat before busy:true greys it out — gives the referee
-    // visual confirmation that the right code came through the
-    // QR rather than the form going straight from blank to
-    // "Verifying…".
+    // Microtask delay keeps the input visually populated for a beat
+    // before busy:true greys it out, so the referee gets visual
+    // confirmation the right code came through via QR instead of
+    // the form jumping straight from blank to "Verifying…".
     setTimeout(submit, 80)
   }
 })
@@ -173,8 +172,8 @@ onMounted(() => {
 }
 
 /* =========================================================
-   Phone — under 600 px. The 6-digit code is the headline of
-   this page — it has to be huge AND fit comfortably on a
+   Phone, under 600 px. The 6-digit code is the headline of
+   this page, since it has to be huge AND fit comfortably on a
    320 px phone (older iPhone SE). The desktop 48px + 0.25em
    spacing overflows at that width, so we trade a bit of
    spacing for fit and bump the submit button to a 44 px

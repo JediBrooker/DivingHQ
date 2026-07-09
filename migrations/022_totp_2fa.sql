@@ -1,5 +1,5 @@
 -- =============================================================
--- MIGRATION 022 — TOTP 2-FACTOR AUTH
+-- MIGRATION 022: TOTP 2-FACTOR AUTH
 --
 -- Adds three columns to users:
 --   * totp_secret              base32 secret for the TOTP authenticator
@@ -7,15 +7,15 @@
 --                              NULL until the user opts in.
 --   * totp_enabled_at          timestamp the user completed the
 --                              setup flow (verified a code from
---                              their authenticator). NULL = setup
---                              started but not confirmed; login is
---                              still single-factor until this is set.
+--                              their authenticator). NULL means setup
+--                              was started but not confirmed; login is
+--                              still single-factor until this gets set.
 --   * totp_recovery_codes      jsonb array of bcrypt hashes of
 --                              one-time recovery codes. The user
 --                              gets the plaintext at setup time
 --                              (and again from a "regenerate" UI).
---                              We store the HASH only — losing the
---                              DB shouldn't compromise the codes.
+--                              We store the HASH only, so losing the
+--                              DB shouldnt compromise the codes.
 --
 -- Login flow becomes two-step when totp_enabled_at IS NOT NULL:
 --   1. POST /api/auth/login with username+password. If 2FA is
@@ -26,8 +26,8 @@
 --      where code is either a 6-digit TOTP or a recovery code.
 --      Server validates and returns the real session JWT.
 --
--- Idempotent: ADD COLUMN IF NOT EXISTS, no backfill needed
--- (every existing row gets NULLs which means "2FA off").
+-- Idempotent: ADD COLUMN IF NOT EXISTS, no backfill needed since
+-- every existing row just gets NULLs, which means "2FA off".
 -- =============================================================
 
 BEGIN;

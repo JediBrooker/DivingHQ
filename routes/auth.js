@@ -1,4 +1,4 @@
-// Auth routes — extracted from the single-file server.js as the
+// Auth routes, pulled out of the single-file server.js as the
 // first slice of an incremental modularisation. This module
 // exports a factory that takes the wiring it needs (pool,
 // mailer-backed email helpers, jwt config, middleware) and
@@ -7,7 +7,7 @@
 // Mounted at the app root in server.js as:
 //     app.use(require('./routes/auth')({ ... }))
 //
-// Every route here was moved verbatim — no behaviour changes.
+// Every route here was moved verbatim, no behaviour changes.
 
 const express = require("express");
 const bcrypt  = require("bcrypt");
@@ -17,14 +17,14 @@ const totp    = require("../lib/totp");
 const { SESSION_COOKIE, cookieOptions } = require("../lib/session-cookie");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
-// session of record — browser JS can neither read nor exfiltrate it.
+// session of record, browser JS can neither read nor exfiltrate it.
 function setSessionCookie(res, token) {
   res.cookie(SESSION_COOKIE, token, cookieOptions());
 }
 
 // Decide whether to include the bearer token in a JSON auth response.
 // The SPA authenticates via the httpOnly session cookie and ignores any
-// body token, so we omit it from BROWSER requests — that way XSS active
+// body token, so we omit it from BROWSER requests: that way XSS active
 // during login / token refresh can't read the token from the response
 // body and replay it off-origin (defeating one goal of the cookie
 // migration). Non-browser API clients (the e2e harness, integration
@@ -41,7 +41,7 @@ function includeBodyToken(req) {
 // the timing constant when the username doesn't exist. Without
 // this, an attacker can enumerate usernames by measuring the
 // response delay (no-user ≈ 5ms, bad-password ≈ 150ms). Computed
-// once at module load — same cost factor (12) bcrypt.hash() uses
+// once at module load, same cost factor (12) bcrypt.hash() uses
 // for real passwords.
 //
 // The plaintext "*" is never a valid password; bcrypt.compare
@@ -54,7 +54,7 @@ const DUMMY_BCRYPT_HASH = bcrypt.hashSync(
   12,
 );
 
-// Centralised password policy — applied to every set-password
+// Centralised password policy, applied to every set-password
 // path (register, register-org, password change, password reset).
 // Returns null on success, or a user-facing error string.
 //
@@ -67,8 +67,8 @@ const DUMMY_BCRYPT_HASH = bcrypt.hashSync(
 //     dictionary words).
 //
 // Deliberately NOT enforced here: symbol classes, max length,
-// breached-password lookups. Those are the next two upgrades —
-// zxcvbn or HIBP k-anonymity — and can layer on top without
+// breached-password lookups. Those are the next two upgrades
+// (zxcvbn or HIBP k-anonymity) and can layer on top without
 // changing this signature.
 function validatePassword(pw) {
   if (typeof pw !== "string" || pw.length < 12) {
@@ -102,11 +102,11 @@ module.exports = function createAuthRouter({
   const router = express.Router();
 
   // -------------------------------------------------------------
-  // GET /api/auth/me — rehydrate the signed-in identity from the
+  // GET /api/auth/me: rehydrate the signed-in identity from the
   // httpOnly session cookie. The SPA calls this on boot because the
   // JWT now lives in a cookie its JS can't read/decode. Returns the
   // same user payload shape the login response carries. 401 when
-  // anonymous (no / expired / revoked cookie) — a normal first-visit
+  // anonymous (no / expired / revoked cookie), a normal first-visit
   // state, not an error.
   // -------------------------------------------------------------
   router.get("/api/auth/me", optionalAuth, async (req, res) => {
@@ -123,11 +123,11 @@ module.exports = function createAuthRouter({
   });
 
   // -------------------------------------------------------------
-  // POST /api/auth/logout — clear the session cookie. JS can't delete
+  // POST /api/auth/logout: clear the session cookie. JS can't delete
   // an httpOnly cookie, so sign-out has to round-trip the server. We
   // deliberately don't bump token_version (that would sign the user
   // out on every device); clearing the cookie + the JWT's own exp
-  // bound this session. No auth gate — clearing a cookie is harmless.
+  // bound this session. No auth gate, clearing a cookie is harmless.
   // -------------------------------------------------------------
   router.post("/api/auth/logout", (req, res) => {
     res.clearCookie(SESSION_COOKIE, cookieOptions());
@@ -137,7 +137,7 @@ module.exports = function createAuthRouter({
   router.post("/api/auth/login", authLimiter, async (req, res) => {
     const { username, password } = req.body || {};
     // Reject malformed bodies up front so bcrypt.compare never sees
-    // a non-string and throws — that was leaking 500 vs 401, which
+    // a non-string and throws. That was leaking 500 vs 401, which
     // a probing attacker could use to distinguish "user exists".
     if (typeof username !== "string" || typeof password !== "string") {
       return res.status(401).json({ error: "Invalid username or password" });
@@ -151,8 +151,8 @@ module.exports = function createAuthRouter({
         [username],
       );
       const user = result.rows[0];
-      // Always run bcrypt.compare — against the user's hash if we
-      // found them, against a dummy hash otherwise — so the
+      // Always run bcrypt.compare, against the user's hash if we
+      // found them, against a dummy hash otherwise, so the
       // response time is the same in both branches. Stops timing-
       // based username enumeration.
       //
@@ -190,7 +190,7 @@ module.exports = function createAuthRouter({
 
       // Migration 022: if 2FA is enabled, the password check is
       // only the first factor. Mint a short-lived "step-up" token
-      // scoped to the second-factor exchange and hand it back —
+      // scoped to the second-factor exchange and hand it back;
       // the client posts it with a TOTP / recovery code to
       // /api/auth/login/totp to get a real session JWT.
       if (user.totp_enabled_at != null) {
@@ -215,7 +215,7 @@ module.exports = function createAuthRouter({
   });
 
   // -------------------------------------------------------------
-  // POST /api/auth/login/totp — second-factor exchange.
+  // POST /api/auth/login/totp: second-factor exchange.
   //
   // Body: { totp_token, code }
   //   totp_token: the 5-min JWT minted by /api/auth/login above.
@@ -223,7 +223,7 @@ module.exports = function createAuthRouter({
   //               10-char recovery code (with or without dash).
   //
   // Returns the same shape as /api/auth/login on success: { token,
-  // ...payload }. Recovery codes are one-time — on success the
+  // ...payload }. Recovery codes are one-time, on success the
   // matched hash is removed from the user's stored array.
   // -------------------------------------------------------------
   router.post("/api/auth/login/totp", authLimiter, async (req, res) => {
@@ -262,8 +262,8 @@ module.exports = function createAuthRouter({
         // could otherwise mint a second session. verifyTokenDelta
         // returns the absolute time-step the code matched; the
         // conditional UPDATE below persists it and only succeeds
-        // when it's strictly newer than the stored last-used step
-        // — a replay (or a concurrent presentation of the same
+        // when it's strictly newer than the stored last-used step,
+        // so a replay (or a concurrent presentation of the same
         // code) loses the race and is rejected like any bad code.
         const matchedStep = totp.verifyTokenDelta(user.totp_secret, code);
         if (matchedStep != null) {
@@ -319,7 +319,7 @@ module.exports = function createAuthRouter({
   //
   // Three endpoints, all behind verifyToken:
   //
-  //   POST /api/auth/2fa/setup   — mints a fresh secret, returns
+  //   POST /api/auth/2fa/setup   : mints a fresh secret, returns
   //                                 the QR + base32 + provisional
   //                                 recovery codes. Saves the secret
   //                                 to users.totp_secret but DOES
@@ -328,7 +328,7 @@ module.exports = function createAuthRouter({
   //                                 code via /confirm before login is
   //                                 gated.
   //
-  //   POST /api/auth/2fa/confirm — { code }. Verifies a TOTP code
+  //   POST /api/auth/2fa/confirm : { code }. Verifies a TOTP code
   //                                 against the pending secret and
   //                                 stamps totp_enabled_at + saves
   //                                 the recovery code hashes from
@@ -337,12 +337,12 @@ module.exports = function createAuthRouter({
   //                                 every existing session for this
   //                                 user (Migration 021 plumbing).
   //
-  //   POST /api/auth/2fa/disable — { password, code? }. Requires
+  //   POST /api/auth/2fa/disable : { password, code? }. Requires
   //                                 the password (proof of access)
   //                                 + a current TOTP / recovery code.
   //                                 Clears every totp_* column.
   //
-  //   GET  /api/auth/2fa/status  — { enabled: bool, recovery_codes_remaining: int|null }.
+  //   GET  /api/auth/2fa/status  : { enabled: bool, recovery_codes_remaining: int|null }.
   //                                 Lets the SPA's Profile page show
   //                                 the right Enable/Disable affordance
   //                                 without trying setup first.
@@ -381,15 +381,15 @@ module.exports = function createAuthRouter({
       }
       const { base32, otpauth_url, qr_data_url } = await totp.generateSecret(user.username);
       // generateRecoveryCodes is async (10 bcrypt hashes ≈ 1s of
-      // CPU — hashing off the event loop keeps concurrent
-      // requests, including live scoring, unaffected).
+      // CPU), hashing off the event loop keeps concurrent
+      // requests, including live scoring, unaffected.
       const { plain, hashes } = await totp.generateRecoveryCodes(10);
       // Save the secret + provisional recovery hashes. We DON'T
-      // set totp_enabled_at — until the user verifies a code via
+      // set totp_enabled_at: until the user verifies a code via
       // /confirm, login still bypasses 2FA. This means a half-
       // finished setup (browser tab closed at the QR screen)
       // doesn't lock the user out. totp_last_used_step resets
-      // with the secret — the replay guard's bookkeeping belongs
+      // with the secret, since the replay guard's bookkeeping belongs
       // to the old secret (migration 063).
       await pool.query(
         `UPDATE users
@@ -439,8 +439,8 @@ module.exports = function createAuthRouter({
         // Record the consumed step alongside the enable stamp so
         // the very first login can't replay the confirm code
         // within its ~90s verify window (migration 063). GREATEST
-        // guards the (unlikely) case of an older value surviving
-        // — the step only ever moves forward.
+        // guards the (unlikely) case of an older value surviving;
+        // the step only ever moves forward.
         await client.query(
           `UPDATE users
            SET totp_enabled_at = now(),
@@ -571,8 +571,8 @@ module.exports = function createAuthRouter({
   // Public account creation (self-register + found-an-org) is OFF by default
   // so the live site is "coming soon" until we're ready to open it; set
   // SIGNUPS_ENABLED=true to turn it on (the test env does). Login and every
-  // existing-account flow (password reset, email change, 2FA) are NEVER gated
-  // — the super admin must always be able to sign in.
+  // existing-account flow (password reset, email change, 2FA) are NEVER gated,
+  // since the super admin must always be able to sign in.
   router.get("/api/auth/signups-status", (req, res) => {
     res.json({ enabled: process.env.SIGNUPS_ENABLED === "true" });
   });
@@ -589,7 +589,7 @@ module.exports = function createAuthRouter({
     const fullName = safeText(req.body?.full_name, 100);
     const cleanClubName = safeText(new_club_name, 80);
     // Username cap mirrors users.username = varchar(50) in init.sql.
-    // Charset is intentionally narrow — username surfaces in audit
+    // Charset is intentionally narrow: username surfaces in audit
     // logs, exports, and push notifications, and an unconstrained
     // string would let a registrant smuggle CR/LF or HTML through
     // those secondary channels.
@@ -672,7 +672,7 @@ module.exports = function createAuthRouter({
           [newUserId, org_id, requested_role, safeText(note, 500)],
         );
         requestedRoleSaved = requested_role;
-        // Real-time push for the dashboard pulse strip — let any
+        // Real-time push for the dashboard pulse strip, lets any
         // connected org admin's dashboard tab refetch its pending
         // count immediately. Best-effort.
         if (io && typeof io.emit === "function") {
@@ -690,7 +690,7 @@ module.exports = function createAuthRouter({
       // Email verification is the gate; welcome message goes out
       // alongside it. Both are best-effort.
       //
-      // 24h TTL (was 7d): defensive — limits the blast radius of
+      // 24h TTL (was 7d): defensive, limits the blast radius of
       // a leaked verification link via email archives / Sentry
       // breadcrumbs / mail forwards. A genuine user who misses
       // the window can request a fresh link via re-registration
@@ -728,8 +728,8 @@ module.exports = function createAuthRouter({
     }
   });
 
-  // Verify email — clicked from the link sent at registration.
-  // Single-use via the email_verified_at column: once stamped,
+  // Verify email: clicked from the link sent at registration.
+  // Single-use via the email_verified_at column, once stamped,
   // re-presenting the same token has no effect.
   router.post("/api/auth/verify-email", authLimiter, async (req, res) => {
     const { token } = req.body || {};
@@ -769,7 +769,7 @@ module.exports = function createAuthRouter({
 
     // Apply the same input validation we run on /api/auth/register.
     // Without these checks the org-founding flow accepted blank
-    // passwords, missing emails, and CR/LF-laced names — every
+    // passwords, missing emails, and CR/LF-laced names, and every
     // pending org seeded a row that a sysadmin clicking Approve
     // turned into a 0-character-password active account.
     const cleanOrgName  = safeText(org_name, 100);
@@ -838,11 +838,11 @@ module.exports = function createAuthRouter({
       // unable to log in (the login gate at line 82-87 refuses
       // bcrypt-correct credentials when email_verified_at IS
       // NULL). The operational workaround was for a sysadmin to
-      // UPDATE-stamp email_verified_at directly — bypassing
+      // UPDATE-stamp email_verified_at directly, bypassing
       // proof-of-inbox-control on the highest-privilege account
       // in a fresh tenant.
       // 24h TTL (was 7d): see /api/auth/register for the
-      // rationale — leaked verification links shouldn't be
+      // rationale, leaked verification links shouldn't be
       // replayable for a week.
       const verifyToken = jwt.sign(
         { sub: userId, type: "email_verify" },
@@ -950,7 +950,7 @@ module.exports = function createAuthRouter({
     const { SUPPORTED } = require("../lib/server-i18n");
     const raw = req.body?.locale;
     // Accept null/empty as "clear preference, fall back to
-    // Accept-Language" — symmetric with the column being NULLable.
+    // Accept-Language", symmetric with the column being NULLable.
     const cleared = raw === null || raw === "";
     if (!cleared && (typeof raw !== "string" || !SUPPORTED.includes(raw))) {
       return res.status(400).json({
@@ -995,7 +995,7 @@ module.exports = function createAuthRouter({
   //
   //   2. POST /api/auth/confirm-email-change
   //        Body: { token }
-  //        Auth: none — the token IS the credential
+  //        Auth: none, the token IS the credential
   //        Effect: swaps users.email = pending_email, clears the
   //                pending_* columns, bumps token_version (forces
   //                re-login on every other session), sends a
@@ -1005,9 +1005,9 @@ module.exports = function createAuthRouter({
   // /forgot-password uses): we need to carry the new address
   // between request and confirm without baking it into a JWT
   // payload that would land in mailer transcripts. The DB
-  // overwrite also gives us "re-issuing supersedes" for free —
-  // the new row write invalidates any earlier in-flight token
-  // without a separate revocation column.
+  // overwrite also gives us "re-issuing supersedes" for free,
+  // since the new row write invalidates any earlier in-flight token
+  // without a seperate revocation column.
   //
   // Tokens are random 32-byte hex (256 bits of entropy). Only
   // sha256(token) is persisted, so a DB dump doesn't hand an
@@ -1045,11 +1045,11 @@ module.exports = function createAuthRouter({
         return res.status(400).json({ error: "That's already your current email address" });
       }
 
-      // Uniqueness check — soft, racy by design. The DB constraint
+      // Uniqueness check: soft, racy by design. The DB constraint
       // (if any) would catch a true race at confirm time, but a
       // pre-check here gives a clean 409 instead of a 500. Compare
       // case-insensitively because email addresses are case-folded
-      // in practice and we don't want two accounts to differ only
+      // in practice, and we don't want two accounts to differ only
       // by capitalisation.
       const dup = await pool.query(
         "SELECT 1 FROM users WHERE lower(email) = $1 AND id <> $2",
@@ -1077,7 +1077,7 @@ module.exports = function createAuthRouter({
       // the request open. The user sees an immediate "check your
       // inbox" response either way.
       if (typeof sendEmailChangeVerify === "function") {
-        // Capture req at schedule time — setImmediate runs after
+        // Capture req at schedule time: setImmediate runs after
         // the request lifecycle but our translator only reads
         // req.user.locale + headers['accept-language'], both of
         // which are plain strings, so it's safe to hold a reference.
@@ -1172,7 +1172,7 @@ module.exports = function createAuthRouter({
         [newEmail, user.id],
       );
       // Force re-login on every device. Same posture as password
-      // change / 2FA toggle — a session that's been resting on the
+      // change / 2FA toggle: a session that's been resting on the
       // old email shouldn't keep going on the new one without an
       // explicit sign-in.
       if (typeof bumpTokenVersion === "function") {
@@ -1180,7 +1180,7 @@ module.exports = function createAuthRouter({
       }
       await client.query("COMMIT");
 
-      // Hygiene notice goes to the OLD address — if someone hijacked
+      // Hygiene notice goes to the OLD address; if someone hijacked
       // the session and rotated the email, this is the original
       // owner's signal to lock down their account.
       if (typeof sendEmailChangedNotice === "function" && oldEmail) {
@@ -1222,7 +1222,7 @@ module.exports = function createAuthRouter({
       let user = null;
       if (typeof email === "string" && email.length <= 320) {
         // Migration 053: deleted users have email = NULL, so they
-        // won't match here anyway — but we add an explicit
+        // won't match here anyway, but we add an explicit
         // deleted_at filter so the constant-time response shape
         // doesn't depend on whether a tombstoned row exists.
         const u = await pool.query(
@@ -1239,10 +1239,10 @@ module.exports = function createAuthRouter({
         );
         // Defer the SMTP round-trip so the response time doesn't
         // depend on whether we found a user. The catch is swallowed
-        // intentionally — we never tell the caller about delivery.
+        // intentionally, we never tell the caller about delivery.
         // Pass `req` so the email lands in the locale the user's
         // current browser is configured for (forgot-password is
-        // unauthenticated so we can't use req.user.locale here —
+        // unauthenticated so we can't use req.user.locale here;
         // Accept-Language is the only signal we have until the
         // user signs back in and POST /api/users/me/locale runs).
         setImmediate(() => {

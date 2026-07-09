@@ -1,9 +1,9 @@
 <script setup>
-// ClaimCandidatesModal — reunite-on-return UI (Migration 053).
+// ClaimCandidatesModal, the reunite-on-return UI (Migration 053).
 //
 // Used in two places:
 //   1. Post-registration in RegisterView, after the welcome
-//      email is sent and the user lands signed in — we look up
+//      email goes out and the user lands signed in, we look up
 //      any deleted-account candidates with the same name in
 //      the same org and offer to re-link them.
 //   2. Manual entry point in DiverProfileView's danger zone,
@@ -13,8 +13,9 @@
 // to get the list, then POST /api/users/me/claim with the
 // selected old_user_ids and a re-auth password.
 //
-// We deliberately don't auto-claim: two athletes can genuinely
-// share a name, so the user picks which entries are theirs.
+// We deliberately don't auto-claim, two athletes can genuinely
+// share a name so the user's the one who picks which entries
+// are actually theirs.
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -22,20 +23,20 @@ import { useAuthStore } from '@/stores/auth'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 const props = defineProps({
-  // Pre-fetched candidates (when the caller already has them).
-  // If omitted, we fetch them ourselves on mount.
+  // Pre-fetched candidates, for when the caller already has them.
+  // If omitted, we go fetch them ourselves on mount.
   candidates: { type: Array, default: null },
-  // Display variant — 'signup' shows the welcome-back banner,
-  // 'manual' uses the generic copy.
+  // Display variant, 'signup' shows the welcome-back banner,
+  // 'manual' just uses the generic copy.
   variant: { type: String, default: 'manual' },
 })
 
 const emit = defineEmits(['close', 'claimed', 'skipped'])
 
-// Lock background scroll for the lifetime of this modal — the
-// component is mounted only while open, so a single lock at
-// setup is sufficient. The composable's own onUnmounted releases
-// the lock when this component is torn down.
+// Lock background scroll for the lifetime of this modal. The
+// component is only mounted while open, so a single lock at
+// setup is enough, the composable's own onUnmounted releases
+// the lock when this component gets torn down.
 useBodyScrollLock().lock()
 
 const { t, locale } = useI18n()
@@ -45,8 +46,8 @@ const loading = ref(false)
 const submitting = ref(false)
 const error = ref('')
 const fetched = ref(props.candidates)
-// Track which candidate ids the user has ticked. Default to
-// none — explicit confirmation is the whole point.
+// Track which candidate ids the user has ticked. Defaults to
+// none, explicit confirmation is the whole point here.
 const selected = ref(new Set())
 const password = ref('')
 
@@ -75,8 +76,8 @@ async function refetch() {
 }
 
 function toggle(id) {
-  // Set re-assignment so Vue picks up the change — mutating in
-  // place would not re-trigger reactivity on a Set ref.
+  // Re-assign the Set so Vue picks up the change, mutating in
+  // place won't re-trigger reactivity on a Set ref (classic Vue gotcha).
   const next = new Set(selected.value)
   if (next.has(id)) next.delete(id); else next.add(id)
   selected.value = next
@@ -125,9 +126,9 @@ async function confirm() {
     emit('claimed', data)
   } catch (err) {
     const msg = err?.message || ''
-    // Server-side 409 → schema-conflict message. We render the
-    // localised string rather than the raw server text so
-    // re-translators control the wording.
+    // Server-side 409 means a schema-conflict message. We render
+    // our own localised string instead of the raw server text so
+    // re-translators stay in control of the wording.
     if (/Cannot merge/i.test(msg)) {
       error.value = t('profile.claim.conflict')
     } else {

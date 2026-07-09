@@ -10,15 +10,15 @@
  * Visual posture: very high contrast, very large digit, minimal
  * chrome. Designed to be readable from 5–10 metres away under
  * mixed venue lighting. The judge's name + judge number stay
- * visible so the operator knows whose value they're typing.
+ * visible so the operator knows whose value theyre typing.
  *
  * Props:
- *   score        — the value to display (number, e.g. 8.5)
- *   judgeNumber  — slot index on the panel (1, 2, …, N)
- *   judgeName    — full name of the judge
+ *   score:       the value to display (number, e.g. 8.5)
+ *   judgeNumber: slot index on the panel (1, 2, …, N)
+ *   judgeName:   full name of the judge
  *
  * Emits:
- *   close        — user tapped to exit big mode
+ *   close:       user tapped to exit big mode
  */
 import { onMounted, onBeforeUnmount } from 'vue'
 
@@ -33,10 +33,10 @@ function fmt(value) {
   return value % 1 === 0 ? value.toString() : value.toFixed(1)
 }
 
-// Keep the screen awake while big mode is open — the judge's
+// Keep the screen awake while big mode is open, the judge's
 // phone shouldn't auto-dim mid-display. We don't re-acquire on
 // visibility change here because BigScoreDisplay is short-lived
-// (a few seconds while the operator reads); the parent JudgeView
+// (just a few seconds while the operator reads); the parent JudgeView
 // owns the long-lived wake lock.
 let bigWakeLock = null
 async function acquireBigWakeLock() {
@@ -47,8 +47,8 @@ async function acquireBigWakeLock() {
 }
 
 function onKeydown(e) {
-  // Escape exits big mode. Operator reads the value, hits escape
-  // on the judge's keyboard (if connected), back to normal view.
+  // Escape exits big mode: operator reads the value, hits escape
+  // on the judge's keyboard (if connected), and we're back to normal view.
   if (e.key === 'Escape') emit('close')
 }
 
@@ -89,7 +89,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
   font-family: var(--font-display);
   z-index: 1000;
-  /* Take full advantage of the viewport — no scrolling. */
+  /* Take full advantage of the viewport, no scrolling. */
   overscroll-behavior: contain;
   /* Reset default button styles so the click target acts like
      a regular div but still gets keyboard focus + screen
@@ -120,16 +120,16 @@ onBeforeUnmount(() => {
 }
 
 .big-score-digit {
-  /* Fill ~70% of the viewport's smaller axis. clamp() prevents
+  /* Fill ~70% of the viewport's smaller axis. clamp() stops
      a tiny phone screen from getting an absurdly small digit
-     while still capping the max for a desktop tester. */
+     while still capping the max for anyone testing on desktop. */
   font-size: clamp(160px, 60vmin, 360px);
   font-weight: 900; font-style: italic;
   line-height: 1;
   color: var(--text);
   /* Subtle glow so the digit stays legible against the dark
-     panel. The shadow is purely decorative — readability is
-     driven by the raw white-on-black contrast. */
+     panel. The shadow is purely decorative, readability comes
+     from the raw white-on-black contrast. */
   text-shadow: 0 0 24px rgba(6, 182, 212, 0.18);
 }
 

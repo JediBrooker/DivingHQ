@@ -1,22 +1,22 @@
 <script setup>
-/* SignoffModal — referee dive-order sign-off, extracted from
+/* SignoffModal, referee dive-order sign-off, extracted from
  * ControlView.vue (Cut 2 + Cut 3). Four paths: push to the
  * referee's device, 6-digit handoff code (+ QR), referee
  * credentials at this device, and the manager-attests fallback
- * (hidden + refused server-side when enforce_referee_signoff).
+ * (hidden and refused server-side when enforce_referee_signoff).
  *
  * Lifecycle contract: the parent mounts this with v-if, so a
  * fresh mount = a fresh modal session (mode reset to 'push',
  * no pending request). The referee_signoff_response socket
- * listener is registered synchronously here via useSocketEvent —
- * it only needs to live while a request can be pending, and a
+ * listener is registered synchronously here via useSocketEvent.
+ * It only needs to live while a request can be pending, and a
  * pending request can only exist while this modal is mounted
  * (closing clears it), so scoping the listener to this component
  * preserves the pre-extraction behaviour.
  *
  * State boundary: everything about the in-flight sign-off is
  * OWNED here. A successful sign-off emits `signed-off` with the
- * event-row patch; the parent applies it via patchCurrentEvent.
+ * event-row patch, the parent applies it via patchCurrentEvent.
  */
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -47,8 +47,8 @@ const credNeedsTotp      = ref(false)
 const busy               = ref(false)
 
 // Whether the simple manager-attests path is allowed for the
-// current event. Server enforces too; this just hides the tab
-// when the event was created with enforce_referee_signoff = TRUE.
+// current event. Server enforces this too, we're just hiding the
+// tab when the event was created with enforce_referee_signoff = TRUE.
 const enforceSignoff = computed(() =>
   !!props.event?.enforce_referee_signoff
 )
@@ -61,7 +61,7 @@ function close() {
 }
 
 // Pull the referee list once when the modal opens (= mounts).
-// Best-effort — if it fails the modal still works via the
+// Best-effort, if it fails the modal still works via the
 // credential tab.
 ;(async () => {
   try {
@@ -112,8 +112,9 @@ async function submitCredentialSignoff() {
       `/api/events/${props.event.id}/dive-order/sign-off/credential`,
       { method: 'POST', body: JSON.stringify(body) },
     )
-    // Server stamped the sign-off in the same transaction. Mirror
-    // locally so the workflow button flips green immediately.
+    // Server already stamped the sign-off in the same transaction,
+    // we just mirror it locally so the workflow button flips green
+    // right away.
     emit('signed-off', {
       dive_order_signed_off_at: new Date().toISOString(),
     })
@@ -140,7 +141,7 @@ async function submitCredentialSignoff() {
 // /sign-off-codes page (server fires the same broadcast).
 function onRefereeSignoffResponse(data) {
   // Match against either the push-waiting request OR the code-
-  // waiting request — both store request_id and only one is
+  // waiting request. Both store request_id and only one is
   // active at a time per modal session.
   const waitingId = signoffWaiting.value?.request_id || signoffCode.value?.request_id
   if (!waitingId || data?.request_id !== waitingId) return
@@ -193,8 +194,8 @@ async function generateSignoffCode() {
 
 // Manager-attests path. Fires the simple endpoint (which the
 // server refuses if the event has enforce_referee_signoff = TRUE).
-// Hidden in the UI under the same condition; this is the
-// belt-and-braces server-trip.
+// Hidden in the UI under the same condition. This is just the
+// belt-and-braces server check, just in case.
 async function managerAttestSignoff() {
   if (!props.event) return
   if (!await confirmAction({
@@ -239,7 +240,7 @@ async function managerAttestSignoff() {
         referee's own approval — push, code, or credential — counts.
       </div>
 
-      <!-- Tab strip — push (primary), Cut 3 code, credential
+      <!-- Tab strip: push (primary), Cut 3 code, credential
            (fallback at this device), and the manager-attests
            shortcut (hidden when sign-off is enforced). -->
       <div class="signoff-tabs">
@@ -341,10 +342,10 @@ async function managerAttestSignoff() {
           <div class="signoff-code-label">Show this to {{ signoffCode.referee_name }}</div>
           <!-- Two-column hand-off: QR on the left, typeable code
                on the right. Whichever the referee can use first
-               wins — both feed the same /sign-off/code/verify
+               wins, both feed the same /sign-off/code/verify
                endpoint, so this panel updates the moment either
                path completes. The QR encodes the same code as a
-               deep link into /sign-off-codes; scan-then-tap is
+               deep link into /sign-off-codes, scan-then-tap is
                faster than dictating six digits across a venue. -->
           <div class="signoff-code-grid">
             <div v-if="signoffCode.qr_data_url" class="signoff-code-qr-block">
@@ -477,9 +478,9 @@ async function managerAttestSignoff() {
   margin-top: 0.7rem; font-size: 11.5px; color: var(--text-3);
   font-style: normal;
 }
-/* Cut 3 code display — QR on the left, big monospace digits on
+/* Cut 3 code display: QR on the left, big monospace digits on
    the right. Two-column flex with a vertical "or" divider in
-   between; collapses to a vertical stack on narrow modals. */
+   between, collapses to a vertical stack on narrow modals. */
 .signoff-code-display {
   text-align: center; padding: 1.2rem 0.5rem;
 }

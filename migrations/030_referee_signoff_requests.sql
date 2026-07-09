@@ -1,5 +1,5 @@
 -- =============================================================
--- MIGRATION 030 — REFEREE SIGN-OFF REQUEST TABLE (Cut 2)
+-- MIGRATION 030: REFEREE SIGN-OFF REQUEST TABLE (Cut 2)
 --
 -- Tracks each "meet manager asked referee X to sign off the dive
 -- order" round-trip so:
@@ -11,17 +11,17 @@
 --     while leaving the original push request as 'expired'.
 --
 -- Status enum:
---   'pending'    — request created, push fired, waiting on referee
---   'approved'   — referee tapped Approve (or credential path
+--   'pending'    - request created, push fired, waiting on referee
+--   'approved'   - referee tapped Approve (or credential path
 --                  succeeded). events.dive_order_signed_off_at
 --                  + signed_off_by are set in the same txn.
---   'declined'   — referee tapped Deny — meet manager picks again
+--   'declined'   - referee tapped Deny, meet manager picks again
 --                  or uses the credential path
---   'expired'    — past expires_at without a response
+--   'expired'    - past expires_at, no response came in
 --
--- The notification_id FK ties the row to the push notification
--- the manager fired so a future "resend" can find the original.
--- ON DELETE SET NULL because notifications churns periodically.
+-- notification_id ties the row back to the push notification the
+-- manager fired, so a future "resend" can find the original one.
+-- ON DELETE SET NULL because notifications churn pretty often.
 -- =============================================================
 
 BEGIN;

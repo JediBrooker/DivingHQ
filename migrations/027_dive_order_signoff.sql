@@ -1,23 +1,23 @@
 -- =============================================================
--- MIGRATION 027 — PRE-MEET DIVE-ORDER WORKFLOW
+-- MIGRATION 027: PRE-MEET DIVE-ORDER WORKFLOW
 --
 -- A diving competition's start order has to be referee-approved
 -- before the event goes live. The Control Room now walks the
 -- operator through three sequential states via a single 3-state
 -- button (red → yellow → green):
 --
---   1. Randomise dive order  (red, "🎲 Randomise Dive Order")
---   2. Referee sign off      (yellow, "📋 Referee Sign Off")
---   3. Start event           (green, "▶ Start Event")
+--   1. Randomise dive order  (red, "Randomise Dive Order")
+--   2. Referee sign off      (yellow, "Referee Sign Off")
+--   3. Start event           (green, "Start Event")
 --
--- Two timestamps + a user FK on events drive the state machine
--- so the workflow survives a page reload / operator handoff.
--- Re-randomising clears the sign-off because the order has
--- changed and the referee must re-approve.
+-- Two timestamps plus a user FK on events drive the state machine
+-- so the workflow survives a page reload or an operator handoff.
+-- Re-randomising clears the sign-off, since the order changed and
+-- the referee has to re-approve it.
 --
--- Idempotent: every ADD COLUMN guards on IF NOT EXISTS, the FK
--- is added inside a pg_constraint lookup block. Re-run on v27 is
--- a no-op.
+-- Idempotent: every ADD COLUMN guards on IF NOT EXISTS, and the FK
+-- is added inside a pg_constraint lookup block. Re-running this on
+-- v27 is a no-op.
 -- =============================================================
 
 BEGIN;

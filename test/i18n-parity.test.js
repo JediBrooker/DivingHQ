@@ -3,7 +3,7 @@
 // This test fails the build when any commit adds new keys to
 // src/locales/en.json without also adding translations for them
 // to every other supported locale. It exists because adding new
-// UI strings during feature work is so frequent that "I'll
+// UI strings during feature work happens so often that "I'll
 // translate them later" has, historically, meant "they ship in
 // English in 24 languages forever."
 //
@@ -14,8 +14,8 @@
 //   * The locale's value SHOULD differ from en.json's value
 //     (otherwise it's still English). A tolerance budget is
 //     allowed because some strings are universal cognates
-//     ("OK", "DD", "Status", proper nouns) or — in the case of
-//     tl (Filipino) — intentional English code-mix for technical
+//     ("OK", "DD", "Status", proper nouns) or, in the case of
+//     tl (Filipino), intentional English code-mix for technical
 //     UI labels. The tolerance limits below match the documented
 //     intent.
 //   * Every {placeholder} in a translation MUST match en.json's
@@ -26,29 +26,29 @@
 // When the english-stuck subtest fails because you added new keys:
 //
 //   1. DO the translations. Don't bump the tolerance.
-//   2. Three valid paths — pick whichever fits the moment:
+//   2. Three valid paths, pick whichever fits the moment:
 //      (a) Claude in chat translates the new keys inline. Works
-//          without any API key; produces the same diving-domain
-//          vocabulary established in each locale; lands in the
+//          without any API key, produces the same diving-domain
+//          vocabulary established in each locale, and lands in the
 //          same commit as the keys. Best for "I just added 5 new
 //          strings while building feature X."
-//      (b) `npm run translate -- --locales <list>` — batch tool,
-//          supports both Anthropic (`ANTHROPIC_API_KEY=sk-…`) and
+//      (b) `npm run translate -- --locales <list>`, the batch tool.
+//          Supports both Anthropic (`ANTHROPIC_API_KEY=sk-…`) and
 //          OpenAI (`OPENAI_API_KEY=sk-…`) providers, auto-detected
 //          from env. Best for refreshing many locales after
 //          several commits have accumulated stuck keys, or for
-//          federations self-hosting who want to manage their own
+//          federations self-hosting who'd rather manage their own
 //          translations without a Claude session in the loop.
 //      (c) Let the deploy-time background translator handle it.
 //          deploy.sh runs the translator AFTER the health check
-//          (fire-and-forget) and auto-commits the result; English
+//          (fire-and-forget) and auto-commits the result. English
 //          placeholders are tolerated for the brief window between
 //          push and translator completion. To allow a deploy to
 //          proceed with stuck keys, set SKIP_I18N_STUCK_CHECK=1
 //          when invoking npm run test:safe (deploy.sh does this).
 //          The other three subtests in this file (structural
-//          parity, no-extras, placeholder integrity) still run,
-//          since those would render brokenly at runtime.
+//          parity, no-extras, placeholder integrity) still run
+//          though, since those would render brokenly at runtime.
 //
 // The tolerance budget is intentionally tight so it can't drift
 // upward silently. Bump it in this file only with a comment
@@ -64,9 +64,9 @@ const SOURCE = "en";
 
 // 25 supported locales (en is the source). Must match the
 // SUPPORTED_LOCALES list in src/i18n/index.js. Updating that list
-// requires updating this one too — there is no reflective import
-// because src/i18n/index.js pulls in Vue-side modules a Node test
-// can't load without a bundler.
+// means updating this one too, since there's no reflective import.
+// src/i18n/index.js pulls in Vue-side modules a Node test can't
+// load without a bundler.
 const LOCALES = [
   "es", "fr", "de", "it", "pt", "pl", "cs",
   "ru", "uk",
@@ -77,11 +77,11 @@ const LOCALES = [
   "ar", "tr", "el",
 ];
 
-// Tolerance budget per locale: maximum number of keys whose
-// value is allowed to equal the English source. Anything beyond
-// this means new English strings were added without translation.
+// Tolerance budget per locale: max number of keys whose value is
+// allowed to equal the English source. Anything beyond this means
+// new English strings got added without translation.
 //
-// Most locales: 30. Covers the long-tail of true cognates ("OK",
+// Most locales: 30. Covers the long tail of true cognates ("OK",
 // "DD", "Status", "Admin", "Branding", proper nouns like
 // "Daktronics" / "OBS Studio", placeholder-only strings like
 // "—" / "↔" / "{start} – {end}").
@@ -89,8 +89,8 @@ const LOCALES = [
 // tl (Tagalog): 40. Filipino sport coverage uses natural English
 // code-mix for technical UI labels (Round, Meet, Event, DD,
 // Code, Dashboard, Inbox, Coach, Diver, Judge, Manager, etc.).
-// Intentional — see docs/privacy-policy.md §6 + previous translation
-// commits where this was documented.
+// This is intentional, see docs/privacy-policy.md §6 and previous
+// translation commits where it was documented.
 const STUCK_TOLERANCE = Object.fromEntries(LOCALES.map(code => [
   code, code === "tl" ? 40 : 30,
 ]));
@@ -120,8 +120,8 @@ function placeholders(s) {
     .join(",");
 }
 
-// Load source dictionary once, share across the per-locale tests
-// below so we're not re-parsing en.json N times.
+// Load the source dictionary once and share it across the per-locale
+// tests below, no point re-parsing en.json N times.
 const enLeaves = leaves(loadJson(path.join(LOCALES_DIR, `${SOURCE}.json`)));
 const enKeys = Object.keys(enLeaves);
 
@@ -182,10 +182,10 @@ test("placeholders in every translation match en.json verbatim", () => {
 // ---- english-stuck guard --------------------------------------
 //
 // Skipped when SKIP_I18N_STUCK_CHECK=1. deploy.sh sets this env
-// var when running npm run test:safe, because the deploy-time
+// var when running npm run test:safe, since the deploy-time
 // background translator fills in stuck keys post-deploy (see
 // section 8 of deploy.sh). The other three parity subtests still
-// run — those guard runtime correctness, not UX quality.
+// run, since those guard runtime correctness, not UX quality.
 
 test("english-stuck key count is within tolerance for every locale", {
   skip: process.env.SKIP_I18N_STUCK_CHECK === '1'

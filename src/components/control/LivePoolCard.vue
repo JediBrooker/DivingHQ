@@ -1,10 +1,10 @@
 <script setup>
 // One Live pool's control card. Rendered once per Live event in the
-// multi-pool grid, so each card is fully self-contained: it OWNS its own
+// multi-pool grid, so each card is fully self-contained: it owns its own
 // shot clock, auto-advance countdown, and meet-hold (all keyed to this
 // card's :event), driven reactively off its :pool. Two pools never share
-// a timer or a hold — a background pool runs its own 60s clock and
-// auto-advances itself without the operator focusing it.
+// a timer or a hold, a background pool runs its own 60s clock and
+// auto-advances itself without the operator ever focusing it.
 //
 // Side-effecting MEET actions (advance the cursor, finalise) stay in the
 // parent via the `advance` emit: the parent owns the confirm + socket
@@ -26,22 +26,22 @@ const props = defineProps({
   totalJudges: { type: Number, default: 0 },
   socket: { type: Object, required: true },
   // #7: the last set_active_diver for this pool wasn't confirmed by the
-  // server (likely rate-limited) -> judges may be on a stale diver.
+  // server (likely rate-limited), so judges may be sitting on a stale diver.
   unconfirmed: { type: Boolean, default: false },
-  // Lease: another operator/window is also driving this event (or null).
+  // Lease: another operator/window is also driving this event (or null)
   conflict: { type: String, default: null },
 })
 const emit = defineEmits(['focus', 'advance', 'retry-active'])
 const { t } = useI18n()
 
-// ---- Per-pool controllers (own lifecycle; auto-clean on card unmount) --
+// ---- Per-pool controllers (own lifecycle, auto-clean on card unmount) --
 const {
   shotClock, shotClockExpired, shotClockClass, startShotClock, stopShotClock, resetShotClock,
 } = useShotClock()
 const signaling = computed(() => (props.pool?.judgeTiles || []).some((t) => t.signaled))
 const { autoAdvanceSeconds, autoAdvanceCountdown, startAutoAdvance, cancelAutoAdvance } = useAutoAdvance({
   isSignaling: () => signaling.value,
-  // Per-event key so each pool keeps its OWN cadence (no cross-clobber).
+  // Per-event key so each pool keeps its own cadence, no cross-clobber.
   storageKey: `${AUTO_ADVANCE_KEY}:${props.event.id}`,
 })
 const { queueSocketAction: qsa } = useHttpOutbox()

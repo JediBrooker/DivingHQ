@@ -1,13 +1,13 @@
 /* Shared modal frame + leaderboard-row rules (the "lb-*" family).
  *
- * These were authored inside ControlView.css (scoped to ControlView.vue)
- * but are consumed app-wide by every BaseModal-based dialog (the control
- * modals, and — from P10 — the Manager dialogs) via ModalHeader's
- * .lb-header/.lb-title/.lb-event and the .lb-body padding wrapper.
- * Re-homed here as a GLOBAL stylesheet (imported in main.js) so those
- * dialogs stay correctly styled independently of ControlView.css — which
- * lets the legacy ControlView.vue/.css be deleted at cutover without
- * unstyling any surviving modal. `fadeUp` is a global keyframe (app.css).
+ * These were originally written inside ControlView.css (scoped to
+ * ControlView.vue), but they're consumed app-wide by every BaseModal-based
+ * dialog (the control modals, and since P10 the Manager dialogs too) via
+ * ModalHeader's .lb-header/.lb-title/.lb-event and the .lb-body padding
+ * wrapper. Re-homed here as a GLOBAL stylesheet (imported in main.js), so
+ * those dialogs stay styled correctly independent of ControlView.css. That's
+ * what lets the legacy ControlView.vue/.css get deleted at cutover without
+ * unstyling any surviving modal. `fadeUp` is a global keyframe (see app.css).
  */
 .lb-backdrop { position: fixed; inset: 0; background: rgba(3,7,18,0.95); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); z-index: 300; }
 .lb-modal {

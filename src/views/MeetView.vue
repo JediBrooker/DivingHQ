@@ -34,22 +34,22 @@ const loading = ref(false)
 const error = ref('')
 
 // =============================================================
-// Program export chooser — controls which optional sections the
+// Program export chooser: controls which optional sections the
 // PDF / CSV pulls in.
 //
 // Schedule basics (event name + tags + scheduled_at + competitor
-// count + status) is always included — that's what makes the
+// count + status) is always included, that's what makes the
 // document a "program". The three optional sections are:
 //
-//   diveLists — per-event roster + each diver's dive list
-//               (code · position · DD · description, with the
-//               height shown on mixed-board events).
-//   judges    — panel for each event (number, name, country).
-//   timing    — estimated event duration. When ticked the
-//               operator also picks 30 / 45 / 60 seconds per
-//               dive — the cadence varies by federation,
-//               warm-up regime, and whether the meet runs a
-//               shot clock.
+//   diveLists: per-event roster + each diver's dive list
+//              (code · position · DD · description, with the
+//              height shown on mixed-board events).
+//   judges:    panel for each event (number, name, country).
+//   timing:    estimated event duration. When ticked the
+//              operator also picks 30 / 45 / 60 seconds per
+//              dive, the cadence varies by federation,
+//              warm-up regime, and whether the meet runs a
+//              shot clock.
 // =============================================================
 const exportChooserOpen = ref(false)
 // Lock background scroll while the export-chooser modal is open.
@@ -143,12 +143,12 @@ const liveEvents = computed(() => events.value.filter(e => e.status === 'Live'))
 const upcomingEvents = computed(() => events.value.filter(e => e.status === 'Upcoming'))
 const completedEvents = computed(() => events.value.filter(e => e.status === 'Completed'))
 
-// Progression grid — one row per discipline, prelim → semi → final
+// Progression grid: one row per discipline, prelim → semi → final
 // as aligned columns (same layout as the Scoreboard's meet browser).
 const progression = computed(() => groupScoreboardEvents(events.value))
 function openEvent(id) { router.push(`/scoreboard/${id}`) }
 
-// fmtDate imported from @/lib/format — single source of truth.
+// fmtDate imported from @/lib/format, single source of truth.
 
 const dateRange = computed(() => {
   if (!meet.value) return ''
@@ -244,8 +244,8 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
                 </div>
               </div>
             </label>
-            <!-- Cadence picker — only relevant when timing is ticked.
-                 Three federation-typical defaults; tighter cadences
+            <!-- Cadence picker, only relevant when timing is ticked.
+                 Three federation-typical defaults: tighter cadences
                  fit a meet with a shot clock and snappy operator,
                  60 s suits a junior meet with deliberate warm-ups. -->
             <div v-if="exportOpts.timing" class="export-timing">
@@ -310,10 +310,10 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
           </div>
         </div>
 
-        <!-- 🌐 International strip — surfaces every other federation
+        <!-- International strip: surfaces every other federation
              that has divers competing in any event of this meet.
              Only renders when there's at least one. The host's own
-             country is shown elsewhere (.hero-ctry); this is the
+             country is shown elsewhere (.hero-ctry), this is the
              VISITING countries. -->
         <div v-if="participatingOrgs.length" class="participating-strip">
           <span class="participating-pulse">🌐 International</span>
@@ -330,28 +330,28 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
           </span>
         </div>
 
-        <!-- Sponsor strip — multi-logo when uploads exist
+        <!-- Sponsor strip: multi-logo when uploads exist
              (migration 045), legacy single-URL fallback when
              not. SponsorRotation handles both in one
              render path. The "Powered by" preface stays so
              the strip reads consistently with the prior
              layout. The strip is hidden entirely when the
-             meet has no sponsor name AND no logos. -->
+             meet has no sponsor name and no logos. -->
         <div v-if="meet.sponsor_name || meet.sponsor_logo_url"
              class="sponsor-strip sponsor-strip-inline">
           <span class="sponsor-prefix">Powered by</span>
           <SponsorRotation :meet-id="meet.id" placement="inline" />
           <!-- Fallback: when the rotation has no images (the
                legacy fallback only carries a name, no URL), the
-               component renders nothing — show the plain name
+               component renders nothing, so show the plain name
                as a final fallback. -->
           <span v-if="meet.sponsor_name && !meet.sponsor_logo_url"
                 class="sponsor-name">{{ meet.sponsor_name }}</span>
         </div>
       </div>
 
-      <!-- Meet registration fee — diver-facing preview. Stays hidden
-           (hide-when-unset) until a federation sets a registration fee;
+      <!-- Meet registration fee: diver-facing preview. Stays hidden
+           (hide-when-unset) until a federation sets a registration fee,
            then shows the price with a coming-soon pay action. -->
       <section v-if="meet" class="meet-reg-section">
         <FeePreviewCard
@@ -361,7 +361,7 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
           :checkout-url="`/api/meets/${meet.id}/checkout`"
           coming-soon-message="Online meet registration is coming soon."
         />
-        <!-- Public access purchases — each hidden until the federation puts
+        <!-- Public access purchases: each hidden until the federation puts
              it on sale, then shown with a coming-soon pay action. -->
         <FeePreviewCard
           v-for="a in accessKinds"
@@ -376,7 +376,7 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
         <MeetBundleCard :meet-id="meet.id" />
       </section>
 
-      <!-- Events — one row per discipline, prelim → semi → final
+      <!-- Events: one row per discipline, prelim → semi → final
            grouped into aligned columns (same layout as the
            Scoreboard's meet browser). Clicking a stage opens its
            live broadcast or completed recap. -->
@@ -403,7 +403,7 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
 .meet-wrap { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
 .meet-nav  { margin-bottom: 1rem; display: flex; gap: 0.6rem 1rem; flex-wrap: wrap; align-items: center; justify-content: space-between; }
 
-/* Breadcrumbs — matches the Scoreboard surfaces (All Meets ›
+/* Breadcrumbs: matches the Scoreboard surfaces (All Meets ›
    <Meet>) so navigation reads consistently across pages. */
 .sb-crumbs {
   display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
@@ -476,7 +476,7 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
   letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-3);
 }
 
-/* International strip — visiting countries badge above the
+/* International strip: visiting countries badge above the
    sponsor block on the public meet page. Only renders when at
    least one foreign federation is participating. */
 .participating-strip {
@@ -560,7 +560,7 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
 /* =============================================================
    Program export chooser modal
    ============================================================= */
-/* Backdrop is the scrollable container — not the modal — so
+/* Backdrop is the scrollable container, not the modal, so
    the modal can scroll past iOS Safari's URL/toolbar instead
    of being clipped behind it. */
 .export-backdrop {
@@ -576,7 +576,7 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
 .export-modal {
   width: 100%; max-width: 580px;
   margin: auto;
-  /* Clip horizontal overflow — CSS promotes a `visible` axis
+  /* Clip horizontal overflow, since CSS promotes a `visible` axis
      to `auto` whenever the other is non-visible. */
   overflow-x: clip;
   background: var(--surface);

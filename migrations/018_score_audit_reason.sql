@@ -1,13 +1,13 @@
 -- =============================================================
--- MIGRATION 018 — SCORE-CORRECTION REASON IN AUDIT LOG
+-- MIGRATION 018: SCORE-CORRECTION REASON IN AUDIT LOG
 --
 -- The score-correction endpoint (PUT /api/scores/:id) accepts a
 -- free-text `reason` from the referee and broadcasts it over the
--- score_corrected socket event — but the audit log never stored
+-- score_corrected socket event, but the audit log never stored
 -- it. Post-meet dispute investigations would see the score change
--- without knowing WHY it was made. Adding a nullable reason
+-- without knowing why it was made. Adding a nullable reason
 -- column keeps the data forever and is backward compatible (old
--- rows = NULL reason; old INSERT statements still work).
+-- rows get a NULL reason, old INSERT statements still work).
 --
 -- Idempotent.
 -- =============================================================
@@ -17,7 +17,7 @@ BEGIN;
 ALTER TABLE public.score_audit_log
     ADD COLUMN IF NOT EXISTS reason text;
 
--- Bump schema version. Defensive create so this still works
+-- Bump schema version. Defensive create, just in case this runs
 -- against a DB without 008 applied.
 CREATE TABLE IF NOT EXISTS public.schema_meta (
     id           integer PRIMARY KEY DEFAULT 1,

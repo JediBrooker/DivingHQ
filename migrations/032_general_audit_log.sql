@@ -1,5 +1,5 @@
 -- =============================================================
--- MIGRATION 032 — GENERAL AUDIT LOG
+-- MIGRATION 032 - GENERAL AUDIT LOG
 --
 -- Adds a new `audit_log` table for entity-lifecycle events that
 -- the existing per-domain logs (`score_audit_log`,
@@ -8,10 +8,10 @@
 -- entry adds, withdraw + reinstate, pre-meet workflow resets,
 -- manager-attest sign-offs.
 --
--- The two existing logs stay where they are — they're optimised
+-- The two existing logs stay where they are since they're optimised
 -- for their respective query patterns (per-event score audit,
 -- per-user role history). This new table sits alongside them
--- as a generic catch-all for everything else, with a `metadata`
+-- as generic catch-all for everything else, with a `metadata`
 -- jsonb so action-specific details (old / new status, withdrawn
 -- diver name, …) ride along without schema bloat.
 --
@@ -22,17 +22,17 @@
 --   org).
 -- * `actor_id` is ON DELETE SET NULL so user purge doesn't
 --   destroy the historical actor link.
--- * `entity_id` is nullable because an entity can be deleted
+-- * heads up: `entity_id` is nullable because an entity can be deleted
 --   AFTER the audit row is written; the row preserves
 --   `entity_name` denormalised so the audit view reads
 --   correctly even after the source row is gone.
 -- * `entity_type` + `action` are short varchars (rather than
 --   enums) so adding new audited surfaces in future commits is
---   a code-only change — no migration churn.
+--   a code-only change, no migration churn.
 -- * `metadata` is jsonb. Common shapes:
---     { from: 'Live', to: 'Completed' }     — status changes
---     { competitor_id, round_count }        — late entries
---     { round_count, withdrawn_at }         — withdraw/reinstate
+--     { from: 'Live', to: 'Completed' }     (status changes)
+--     { competitor_id, round_count }        (late entries)
+--     { round_count, withdrawn_at }         (withdraw/reinstate)
 -- * Three indexes cover the read patterns the new
 --   /api/audit/activity endpoint hits:
 --     - per-org chronological feed
@@ -41,7 +41,7 @@
 --
 -- Audit retention: the existing `purge_audit_logs(retention_days)`
 -- function (migration 008) is extended to truncate this table
--- on the same 30-day window — see the function update below.
+-- on the same 30-day window, see the function update below.
 -- =============================================================
 
 BEGIN;
@@ -72,7 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_actor
 -- created `purge_audit_logs(retention_days)`) to also truncate
 -- the new table. The signature stays
 -- `RETURNS TABLE (table_name text, deleted_rows bigint)` so
--- existing call sites keep working — we just gain a third
+-- existing call sites keep working, we just gain a third
 -- output row for `audit_log`. CREATE OR REPLACE works because
 -- the column types are unchanged.
 CREATE OR REPLACE FUNCTION public.purge_audit_logs(

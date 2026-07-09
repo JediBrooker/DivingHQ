@@ -1,15 +1,16 @@
 -- =============================================================
--- MIGRATION 074 — DISCIPLINARY FINES (+ appeals)
+-- MIGRATION 074: DISCIPLINARY FINES (+ appeals)
 --
--- Migration 067 reserved the 'fine' scope/subject_type + payments
--- .liable_user_id, but a fine needs a stable, trackable record independent
--- of any Stripe checkout (it can be appealed, waived, or paid later). This
--- adds the fines table + the payment link/guard.
+-- Migration 067 reserved the 'fine' scope/subject_type and payments
+-- .liable_user_id, but a fine needs a stable, trackable record that's
+-- independent of any Stripe checkout (it can be appealed, waived, or
+-- paid later). This adds the fines table plus the payment link/guard.
 --
 -- Lifecycle: a referee (or org_admin) issues a fine against a person
--- (liable_user_id) with an amount + reason. The person PAYS it or APPEALS
--- it; an org_admin adjudicates the appeal (upheld => waived, dismissed =>
--- back to owed). Paying is blocked while an appeal is pending.
+-- (liable_user_id) with an amount and reason. The person pays it or
+-- appeals it; an org_admin adjudicates the appeal (upheld => waived,
+-- dismissed => back to owed). Paying is blocked while an appeal's
+-- pending.
 -- =============================================================
 
 BEGIN;
@@ -36,7 +37,7 @@ CREATE TABLE IF NOT EXISTS public.fines (
 CREATE INDEX IF NOT EXISTS idx_fines_liable ON public.fines (liable_user_id) WHERE status IN ('owed', 'appealed');
 CREATE INDEX IF NOT EXISTS idx_fines_org ON public.fines (org_id);
 
--- Payment link + one-live-payment guard (charge-scoped, like entry_charges).
+-- Payment link plus the one-live-payment guard (charge-scoped, like entry_charges).
 ALTER TABLE public.payments
   ADD COLUMN IF NOT EXISTS fine_id uuid REFERENCES public.fines(id) ON DELETE SET NULL;
 

@@ -1,10 +1,10 @@
 // Tiny IndexedDB wrapper for offline API caching.
 //
 // Why not the Cache API (used in the service worker)?
-//   - SW Cache API is keyed by Request, awkward for headers/auth.
-//   - We want to expose entries from the page side too (so the
-//     UI can show "stale data — refreshing" while the network
-//     call is in flight). IndexedDB works in both contexts.
+//   - SW Cache API is keyed by Request, kind of awkward for headers/auth.
+//   - We want to expose entries from the page side too, so the UI can
+//     show "stale data, refreshing" while the network call is in
+//     flight. IndexedDB works in both contexts.
 //
 // Schema:
 //   db    : 'dive-recorder-cache'
@@ -16,29 +16,28 @@
 // key was just the URL, which meant after user A logged out, user B
 // logging in on the same browser would see A's cached responses
 // flash up before the network call landed (real PII leak on shared
-// poolside devices). Each user now has their own keyspace; logout
+// poolside devices). Each user now has their own keyspace, and logout
 // also wipes the store via clearSessionCache().
 //
 // Phase 3 of the offline-resilience work (docs/offline-p1-design.md
-// references P3) adds TTL + invalidate + prefetch helpers on top
+// references P3) adds TTL, invalidate, and prefetch helpers on top
 // of the SWR base:
 //
-//   * cachedFetch(…, { maxAgeMs }) — hard age boundary. If the
-//     cached entry is older than maxAgeMs we DON'T serve it; we
-//     await the network instead. Use for time-sensitive reads
-//     (active scoreboard) where stale data would mislead.
-//   * idbInvalidate(predicate)     — cursor-walk + delete every
-//     key whose URL matches the predicate. Wired to socket
-//     events (score_received → invalidate /api/scoreboard/:id;
-//     state_update → invalidate event metadata).
-//   * prefetch(urls, fetchOpts)    — fan-out cachedFetch over a
-//     list of URLs. Used at meet-load time to warm caches for
-//     dive directory + roster + panel + schedule before the
-//     user lands on any view that consumes them.
+//   * cachedFetch(…, { maxAgeMs }): hard age boundary. If the cached
+//     entry is older than maxAgeMs we DON'T serve it, we await the
+//     network instead. Use for time-sensitive reads (active
+//     scoreboard) where stale data would mislead.
+//   * idbInvalidate(predicate): cursor-walk + delete every key whose
+//     URL matches the predicate. Wired to socket events
+//     (score_received → invalidate /api/scoreboard/:id; state_update
+//     → invalidate event metadata).
+//   * prefetch(urls, fetchOpts): fan-out cachedFetch over a list of
+//     URLs. Used at meet-load time to warm caches for dive directory,
+//     roster, panel, and schedule before the user lands on any view
+//     that consumes them.
 
-// Explicit .js extension — this module is also loaded by the
-// node:test suite, where extensionless ESM specifiers don't
-// resolve.
+// Explicit .js extension: this module is also loaded by the node:test
+// suite, where extensionless ESM specifiers don't resolve.
 import { fingerprintFromToken } from './userFingerprint.js'
 
 const DB_NAME = 'dive-recorder-cache'
@@ -61,7 +60,7 @@ function openDb() {
       }
     }
     req.onsuccess = () => resolve(req.result)
-    req.onerror   = () => resolve(null)   // never reject — caller falls back
+    req.onerror   = () => resolve(null)   // never reject, caller falls back
   })
   return dbPromise
 }
@@ -128,14 +127,14 @@ export function isCacheExpired(cached, maxAgeMs, now = Date.now()) {
 //
 // onUpdate is called when the background revalidation lands, so
 // the caller can swap the displayed data once the network catches
-// up. Failures are swallowed — if both cache and network are
-// unavailable, returns { data: null }.
+// up. Failures are swallowed, if both cache and network are
+// unavailable it just returns { data: null }.
 //
-// maxAgeMs is the hard TTL. When unset (the original behaviour),
-// any cached entry is served while network revalidates. When set,
-// entries older than maxAgeMs are NOT served — we await the
-// network instead. Use for reads where serving very stale data
-// would mislead (active scoreboard, judge panel state).
+// maxAgeMs is the hard TTL. When unset (the original behaviour), any
+// cached entry is served while network revalidates. When set, entries
+// older than maxAgeMs are NOT served, we await the network instead.
+// Use for reads where serving very stale data would mislead (active
+// scoreboard, judge panel state).
 export async function cachedFetch(url, fetchOptions = {}, { onUpdate, maxAgeMs, fingerprint } = {}) {
   // Per-user cache key so user A's cached responses are invisible to
   // user B. Since the cookie migration the auth store passes the
@@ -162,7 +161,7 @@ export async function cachedFetch(url, fetchOptions = {}, { onUpdate, maxAgeMs, 
   const network = (async () => {
     try {
       const r = await fetch(url, fetchOptions)
-      // Auth failures invalidate the cache — never serve a stale
+      // Auth failures invalidate the cache: never serve a stale
       // response after the user has lost access.
       if (r.status === 401 || r.status === 403) {
         idbDelete(key)
@@ -193,9 +192,10 @@ export async function cachedFetch(url, fetchOptions = {}, { onUpdate, maxAgeMs, 
     if (fresh) returnValue = { data: fresh, fromCache: false, age: 0 }
     else if (cached && !expired) {
       // Network failed but we have a non-expired cached entry.
-      // Should be rare since the SWR path above caught the
-      // happy case; safety net for the race where the cache
-      // shape changed between the initial read and now.
+      // Should be rare since the SWR path above already caught
+      // the happy case, this is just a safety net for the race
+      // where the cache shape changed between the initial read
+      // and now.
       returnValue = { data: cached.data, fromCache: true, age: Date.now() - cached.ts }
     } else {
       returnValue = { data: null, fromCache: false, age: 0 }
@@ -238,7 +238,7 @@ export async function idbInvalidate(predicate) {
       if (!cur) return  // tx.oncomplete fires next
       const key = String(cur.key)
       // key shape: '<fingerprint>:<url>'. Split on first ':' to
-      // separate — fingerprints are URL-safe so they don't
+      // seperate them, fingerprints are URL-safe so they don't
       // contain colons.
       const colonIdx = key.indexOf(':')
       const url = colonIdx >= 0 ? key.slice(colonIdx + 1) : key

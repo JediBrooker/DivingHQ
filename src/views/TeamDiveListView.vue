@@ -37,7 +37,7 @@ const eventHeight = computed(() => {
   return parseFloat(event.value.height)
 })
 
-// Mirrors the server-side rule in loadEventForEntries() — the
+// Mirrors the server-side rule in loadEventForEntries(): the
 // team's dive list is editable only while the event is still
 // 'Upcoming' AND the manager-set entries deadline (if any) is
 // still in the future. Late roster changes after that point go
@@ -380,7 +380,7 @@ onMounted(load)
 .dive-dd { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--cyan); margin-top: 0.3rem; }
 .dive-placeholder { font-size: 12px; color: var(--text-3); font-style: italic; }
 
-/* Dive picker modal — backdrop is the scrollable container
+/* Dive picker modal: backdrop is the scrollable container
    (not the modal) so the modal can scroll past iOS Safari's
    URL/toolbar instead of being clipped behind it. Parent-
    child DOM: <.modal-backdrop> <.dive-modal>…</.dive-modal> </.modal-backdrop> */

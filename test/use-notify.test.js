@@ -1,6 +1,6 @@
-// Contract for the notify STACK. DB-less; runs in test:safe. Proves a
-// second toast no longer drops the first's action handle, the stack caps
-// without silently evicting an Undo, and dismiss/fire target by id.
+// Contract for the notify stack. DB-less, runs in test:safe. Proves a
+// second toast doesn't drop the first toast's action handle, the stack
+// caps without silently evicting an Undo, and dismiss/fire target by id.
 const { test, before, beforeEach } = require('node:test')
 const assert = require('node:assert/strict')
 
@@ -17,7 +17,7 @@ test('two toasts coexist; the first keeps its action handle', () => {
   showNotify({ message: 'finalised A', actionLabel: 'Undo', onAction: () => {}, timeoutMs: 0 })
   showNotify({ message: 'finalised B', timeoutMs: 0 })
   assert.equal(toasts.value.length, 2)
-  // The first toast (with the Undo) is still present and actionable.
+  // first toast (the one with Undo) should still be there and clickable
   const first = toasts.value.find((t) => t.message === 'finalised A')
   assert.ok(first && typeof first.onAction === 'function')
 })
@@ -40,7 +40,7 @@ test('cap evicts the oldest NO-action toast first, sparing an Undo', () => {
   showSuccess('plain 2', { timeoutMs: 0 })
   showSuccess('plain 3', { timeoutMs: 0 }) // 4th -> over cap of 3
   assert.equal(toasts.value.length, 3)
-  // The Undo toast must survive; the oldest plain one was evicted.
+  // the Undo toast has to survive, the oldest plain one gets evicted
   assert.ok(toasts.value.some((t) => t.actionLabel === 'Undo'))
   assert.equal(toasts.value.some((t) => t.message === 'plain 1'), false)
 })

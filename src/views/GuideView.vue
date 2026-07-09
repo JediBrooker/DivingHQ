@@ -1,5 +1,5 @@
 <script setup>
-/* GuideView — `/guide`. The hub page for the in-app user guide.
+/* GuideView, lives at `/guide`. The hub page for the in-app user guide.
  * Orientation for new users; topic pages live at `/guide/:topic`.
  *
  * Linked from:
@@ -8,18 +8,18 @@
  *   • Sign-in page footer
  *
  * Structure (matches the journey of a first-time user):
- *   1. Overview — what is DivingHQ
- *   2. "I'm a …" — role-by-role cards
- *   3. Quick actions — tile grid linking to common destinations,
+ *   1. Overview: what is DivingHQ
+ *   2. "I'm a …": role-by-role cards
+ *   3. Quick actions: tile grid linking to common destinations,
  *      each with a thumbnail screenshot served from
  *      /public/guide-screenshots/. Lazy-loaded so the page above
  *      the fold stays cheap.
- *   4. Glossary — diving-specific vocabulary (DD, trim, synchro,
+ *   4. Glossary: diving-specific vocabulary (DD, trim, synchro,
  *      redive, board heights) that newcomers will hit on day one.
- *   5. FAQ — common first questions, now a <details>/<summary>
+ *   5. FAQ: common first questions, now a <details>/<summary>
  *      accordion so users can scan questions without scrolling
  *      past every answer.
- *   6. Wiki — links to the deep-dive material.
+ *   6. Wiki: links to the deep-dive material.
  *
  * Navigation:
  *   • A sticky table-of-contents sits on the left on desktop;
@@ -32,10 +32,10 @@
  *     not animating the highlight transition.
  *
  * i18n: all prose is `$t('guide.*')`. Strings containing
- * <strong> use v-html (translation source is trusted — only
+ * <strong> use v-html (translation source is trusted, it's only
  * our own locale files); strings containing in-app links use
- * <i18n-t> with named slots so the RouterLink is preserved
- * but the wording stays translatable.
+ * <i18n-t> with named slots so the RouterLink is preserved but
+ * the wording stays translatable.
  */
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -43,7 +43,7 @@ import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe } from '@lucide/vue'
 
-// TOC entries match the in-template section ids. Order matters —
+// TOC entries match the in-template section ids. Order matters,
 // it's the visual reading order. Keep the keys aligned with the
 // `guide.toc.*` strings in en.json.
 const SECTIONS = [
@@ -56,12 +56,12 @@ const SECTIONS = [
   { id: 'next',          key: 'next' },
 ]
 
-// Quick-action tiles. Each links to a live in-app destination
-// (RouterLink), pairs a screenshot served from /public, and
-// renders an emoji glyph as a low-cost fallback if the image
-// fails to load (offline, blocked, asset missing during dev).
-// Subtitles live in i18n; titles reuse the role-card names where
-// possible to keep the new key count tight.
+// Quick-action tiles. Each one links to a live in-app destination
+// (RouterLink), pairs it with a screenshot served from /public, and
+// falls back to a cheap emoji glyph if the image fails to load
+// (offline, blocked, asset missing during dev). Subtitles live in
+// i18n; titles reuse the role-card names where possible to keep the
+// new key count tight.
 const TILES = [
   { id: 'scoreboard',     to: '/scoreboard',      img: '/guide-screenshots/scoreboard.png',     glyph: '🌐' },
   { id: 'control_room',   to: '/control',         img: '/guide-screenshots/control-room.png',   glyph: '🎮' },
@@ -72,8 +72,8 @@ const TILES = [
 ]
 
 // Control Room hotkeys (the multi-event console). Keys mirror
-// src/composables/useControlKeymap.js — if the key map changes
-// there, mirror it here. Every action runs on the FOCUSED pool;
+// src/composables/useControlKeymap.js, so if the key map changes
+// there, mirror it here too. Every action runs on the FOCUSED pool;
 // the number keys are the only ones that switch which pool that
 // is. Keys are universal glyphs; only the descriptions are i18n'd.
 const SHORTCUTS = [
@@ -86,10 +86,10 @@ const SHORTCUTS = [
   { keys: ['C'],           descKey: 'cap' },
 ]
 
-// Glossary of diving-specific terms. Term labels are universal
-// (DD, FINA codes, etc.) so they're hardcoded in the template;
-// only definitions are i18n'd. Ordered roughly by how often a
-// newcomer will run into them.
+// Glossary of diving-specific terms. Term labels are universal (DD,
+// FINA codes, etc.) so they're hardcoded in the template, only
+// definitions are i18n'd. Roughly ordered by how often a newcomer
+// will actually run into them.
 const GLOSSARY = [
   { term: 'DD',          defKey: 'dd' },
   { term: 'Trim',        defKey: 'trim' },
@@ -104,11 +104,11 @@ const GLOSSARY = [
 ]
 
 // Sticky-TOC active-section tracker. IntersectionObserver fires
-// when a section's top edge crosses the upper-third viewport
-// line; we record that section as "active" so the TOC entry can
-// take its own highlight style. Falls back gracefully on
-// browsers without IntersectionObserver (the TOC just stays
-// unhighlighted, every link still works).
+// when a section's top edge crosses the upper-third viewport line;
+// we record that section as "active" so the TOC entry gets its own
+// highlight style. Falls back fine on browsers without
+// IntersectionObserver, the TOC just stays unhighlighted and every
+// link still works.
 const activeSection = ref(SECTIONS[0].id)
 let observer = null
 onMounted(() => {
@@ -167,7 +167,7 @@ onBeforeUnmount(() => observer?.disconnect())
       </nav>
 
       <div class="guide-content">
-        <!-- "I'm a …" — role cards -->
+        <!-- "I'm a …": role cards -->
         <section id="roles" class="guide-section">
           <h2 class="guide-h2">{{ $t('guide.section_roles') }}</h2>
 
@@ -262,7 +262,7 @@ onBeforeUnmount(() => observer?.disconnect())
           </div>
         </section>
 
-        <!-- Quick actions — clickable thumbnails into the most
+        <!-- Quick actions: clickable thumbnails into the most
              commonly-asked-for screens. Cheaper than scrolling
              back up to the dashboard for users who just want to
              jump straight into a view. -->
@@ -285,7 +285,7 @@ onBeforeUnmount(() => observer?.disconnect())
           </div>
         </section>
 
-        <!-- Keyboard shortcuts — the multi-event Control Room
+        <!-- Keyboard shortcuts: the multi-event Control Room
              hotkeys. The key glyphs are universal so they stay
              hardcoded; only the per-row descriptions are i18n'd.
              Mirrors src/composables/useControlKeymap.js. -->
@@ -303,7 +303,7 @@ onBeforeUnmount(() => observer?.disconnect())
           </dl>
         </section>
 
-        <!-- Glossary — diving-specific vocabulary. Terms are
+        <!-- Glossary: diving-specific vocabulary. Terms are
              universal (DD, synchro, redive, board heights) so
              they stay hardcoded; only the definitions go through
              i18n. -->
@@ -319,10 +319,10 @@ onBeforeUnmount(() => observer?.disconnect())
           </dl>
         </section>
 
-        <!-- FAQ-lite — now a <details>/<summary> accordion so
+        <!-- FAQ-lite, now a <details>/<summary> accordion so
              users can scan questions and only expand the ones
              they care about. Native semantics mean keyboard +
-             screen-reader access for free; no JS required. -->
+             screen-reader access for free, no JS required. -->
         <section id="faq" class="guide-section">
           <h2 class="guide-h2">{{ $t('guide.section_first_time') }}</h2>
 
@@ -468,7 +468,7 @@ onBeforeUnmount(() => observer?.disconnect())
   color: var(--fg); line-height: 1.15;
   margin: 0 0 1rem;
 }
-/* "Welcome to DivingHQ" — the brand mark sits inside the
+/* "Welcome to DivingHQ": the brand mark sits inside the
    sentence. Outer span is the bold-italic brand wrap; inner
    span splits HQ into cyan so the colour rhythm matches the
    home-page hero (DIVING white, HQ cyan). */
@@ -730,7 +730,7 @@ onBeforeUnmount(() => observer?.disconnect())
   color: var(--fg-2);
 }
 
-/* FAQ — <details>/<summary> accordion */
+/* FAQ, <details>/<summary> accordion */
 .guide-faq {
   display: flex; flex-direction: column;
   border: 1px solid var(--border);

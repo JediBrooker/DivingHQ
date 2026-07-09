@@ -1,11 +1,11 @@
 <script setup>
-// Persistent CRM app shell — 244px collapsible left sidebar +
-// 56px top bar — introduced by the "Marine CRM" redesign. Wraps
+// Persistent CRM app shell: 244px collapsible left sidebar plus a
+// 56px top bar, introduced by the "Marine CRM" redesign. Wraps
 // authenticated routes that opt in via `meta.appShell` (see
 // App.vue). The routed screen renders in the default slot.
 //
 // Nav is role-gated against the auth store (system admins see
-// everything). Collapse state + theme live in the Pinia ui store.
+// everything). Collapse state and theme live in the Pinia ui store.
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -28,17 +28,17 @@ const auth = useAuthStore()
 const ui = useUiStore()
 const { t } = useI18n()
 
-// Nav model. `roles` gates visibility; omit it for items every
+// Nav model. `roles` gates visibility, omit it for items every
 // signed-in user can reach.
 // Labels reuse existing (already-translated) i18n keys where one
-// cleanly exists — keeps the strict i18n-parity gate happy without
+// cleanly exists, wich keeps the strict i18n-parity gate happy without
 // adding new keys. The few role-specific items without a clean key
 // fall back to English via `label`.
-// Each group carries a `key` (stable v-for key) and an `icon` — the icon
+// Each group carries a `key` (stable v-for key) and an `icon`; the icon
 // is the group's face in the collapsed icon rail, where the whole group
 // condenses to one button whose hover/focus flyout lists its items.
 const NAV = [
-  // Header-less lead item — Dashboard is the universal home, not a
+  // Header-less lead item: Dashboard is the universal home, not a
   // "Competition" tool, so it sits above the first section header.
   { key: 'home', group: '', icon: LayoutDashboard, items: [
     { to: '/dashboard',      label: 'Dashboard',      icon: LayoutDashboard },
@@ -54,13 +54,13 @@ const NAV = [
     { to: '/judge-analysis', label: 'Judge Analysis', icon: ChartColumn },
     { to: '/dive-directory', label: 'Dive directory', labelKey: 'dive_directory.title',   icon: BookOpen },
   ] },
-  // Club training — distinct from competition; context-adaptive per role.
+  // Club training: distinct from competition, context-adaptive per role.
   { key: 'training', group: 'Training', icon: GraduationCap, items: [
     { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
     { to: '/classes',        label: 'Classes',        labelKey: 'classes.menu', icon: Layers },
   ] },
-  // Personal money — everything the signed-in user pays or is owed.
-  // Flattened out of the old nested "User Payments" menu: money screens
+  // Personal money: everything the signed-in user pays or is owed.
+  // Flattened out of the old nested "User Payments" menu, money screens
   // are important enough to be one click, not two, and this removes the
   // name clash with the Federation admin payments hub below.
   { key: 'payments', group: 'Payments', icon: Wallet, items: [
@@ -72,7 +72,7 @@ const NAV = [
     { to: '/donate',          label: 'Donate',          labelKey: 'payments.donate',        icon: Heart },
   ] },
   // Federation governance + the org money hub (fees config, withdrawals,
-  // payout queue) — renamed "Payments & payouts" to disambiguate from the
+  // payout queue), renamed "Payments & payouts" to disambiguate from the
   // personal section above.
   { key: 'federation', group: 'Federation', icon: Building2, items: [
     { to: '/users',    label: 'User Manager',       labelKey: 'user_manager.title', icon: Users,      roles: ['org_admin'] },
@@ -340,7 +340,7 @@ function closeMobile() { mobileOpen.value = false }
 </template>
 
 <style scoped>
-/* P1: skip-to-content link — off-screen until focused, then pinned
+/* P1: skip-to-content link, off-screen until focused, then pinned
    top-left. The first focusable element on every shelled page. */
 .skip-link {
   position: absolute;
@@ -408,7 +408,7 @@ function closeMobile() { mobileOpen.value = false }
 .sb-item:hover { background: var(--surface-hover); color: var(--fg); }
 .sb-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
-/* Nested 'User Payments' menu — inline accordion, opens on hover or tap. */
+/* Nested 'User Payments' menu: inline accordion, opens on hover or tap. */
 .sb-parent { display: flex; flex-direction: column; }
 .sb-parent-btn { border: none; background: none; cursor: pointer; font: inherit; text-align: left; }
 .sb-caret { width: 15px; height: 15px; margin-left: auto; flex-shrink: 0; stroke-width: 2;
@@ -459,7 +459,7 @@ function closeMobile() { mobileOpen.value = false }
   color: var(--fg-3); padding: 4px 10px 6px;
 }
 .sb-flyout-item { font-size: 13px; }
-/* Rail: logo mark only, avatar only — hide the wide bits. */
+/* Rail: logo mark only, avatar only, hide the wide bits. */
 .app-shell.collapsed .sb-brand { justify-content: center; padding: 14px 0; }
 .app-shell.collapsed .sb-brand .wm { display: none; }
 .app-shell.collapsed .sb-user { justify-content: center; padding: 8px 0; }

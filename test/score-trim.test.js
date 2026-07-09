@@ -1,12 +1,12 @@
 // Pure unit tests for the World Aquatics trim algorithm. Doesn't need a DB
-// or a running server — just the algorithm in
+// or a running server, just the algorithm in
 // src/composables/useScoreTrim.js. Catches drift in:
 //   * which scores get marked as dropped under each panel size
 //   * synchro sub-panel boundaries (7/9/11 judges)
 //   * tie-break stability (lowest judge_number wins on ties)
 //
-// We dynamically import() the ESM source from this CommonJS test
-// file. Node resolves the file as ESM thanks to src/package.json's
+// We dynamically import() the ESM source from this CommonJS test file.
+// Node resolves it as ESM thanks to src/package.json's
 // "type": "module".
 
 const { test } = require("node:test");
@@ -20,16 +20,16 @@ test.before(async () => {
   scoreCategory     = mod.scoreCategory;
 });
 
-// Helper: build a judges array of {judge_number, score} from a
+// Helper that builds a judges array of {judge_number, score} from a
 // shorthand list of scores. Judge numbers are 1-based and dense.
 function panel(scores) {
   return scores.map((s, i) => ({ judge_number: i + 1, score: s }));
 }
 
 // =====================================================================
-// scoreCategory boundaries — duplicated in test/syntax.test.js to
-// catch drift in the source. This file pulls the live function so
-// any drift in the algorithm is caught here too.
+// scoreCategory boundaries. Duplicated in test/syntax.test.js to catch
+// drift in the source; this file pulls the live function so any drift
+// in the algorithm gets caught here too.
 // =====================================================================
 
 test("scoreCategory returns the expected World Aquatics bucket", () => {
@@ -49,7 +49,7 @@ test("scoreCategory returns the expected World Aquatics bucket", () => {
 });
 
 // =====================================================================
-// Individual panel trims — drop k highest + k lowest.
+// Individual panel trims: drop k highest + k lowest.
 // =====================================================================
 
 test("3-judge panel — no drops", () => {
@@ -88,8 +88,8 @@ test("11-judge panel — drop 3 high + 3 low", () => {
 });
 
 // =====================================================================
-// Tie-break stability — when two judges score the same number,
-// the LOWER judge_number stays in (matches SQL ORDER BY).
+// Tie-break stability: when two judges score the same number, the
+// lower judge_number stays in (matches SQL ORDER BY).
 // =====================================================================
 
 test("tie at the cut: lowest judge_number wins on the kept side", () => {
@@ -104,14 +104,14 @@ test("tie at the cut: lowest judge_number wins on the kept side", () => {
 });
 
 // =====================================================================
-// Synchro sub-panel boundaries — 7-judge: 4 execution judges
+// Synchro sub-panel boundaries. 7-judge: 4 execution judges
 // (1+2 exec A, 3+4 exec B) and 3 sync judges (5..7). Like the 9-judge
-// panel, execution drops 1 high + 1 low ACROSS both Athletes' four
-// marks (keep 2); the 3 sync marks are all kept (a 3-judge group has
-// nothing to drop). 9-judge: same execution rule, plus the 5-judge
+// panel, execution drops 1 high + 1 low across both athletes' four
+// marks (keep 2); the 3 sync marks are all kept since a 3-judge group
+// has nothing to drop. 9-judge: same execution rule, plus the 5-judge
 // sync group drops 1 high + 1 low (keep 3). Per WA Art 9.1.5.4.
-// 11-judge: 1..3 exec A, 4..6 exec B, 7..11 sync — drops computed
-// WITHIN each sub-panel.
+// 11-judge: 1..3 exec A, 4..6 exec B, 7..11 sync, with drops computed
+// within each sub-panel.
 // =====================================================================
 
 test("synchro 7-judge — exec drops 1+1 across both divers, all 3 sync kept", () => {
@@ -169,7 +169,8 @@ test("synchro 11-judge — exec sub-panels drop 1+1, sync drops 1+1", () => {
 });
 
 // =====================================================================
-// Defensive cases the algorithm must handle without throwing.
+// Defensive cases the algorithm has to handle without throwing, just
+// in case something upstream hands it garbage.
 // =====================================================================
 
 test("empty judges → empty result", () => {
@@ -182,8 +183,8 @@ test("non-array input → empty result", () => {
 });
 
 test("unknown panel size → no drops (matches calc_event_dive_points)", () => {
-  // 4-judge panel doesn't exist in World Aquatics's table; algorithm
-  // should leave everything in rather than guess.
+  // 4-judge panel doesn't exist in World Aquatics's table, so the
+  // algorithm should leave everything in rather than guess.
   const out = annotateJudgeRows(panel([5, 6, 7, 8]), 4, "individual");
   assert.deepEqual(out.map(o => o.dropped), [false, false, false, false]);
 });

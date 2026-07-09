@@ -4,8 +4,8 @@
 // any view's call to showNotify / showSuccess / showError /
 // showWarning / showUndo lands here without prop-drilling.
 //
-// File name kept as UndoBar.vue for back-compat — the first
-// shipped form was an Undo-only snackbar; the component now
+// File name kept as UndoBar.vue for back-compat, the first
+// shipped version was an Undo-only snackbar. The component now
 // renders the full notify family.
 import {
   useNotifyState,
@@ -15,8 +15,8 @@ import {
 
 const state = useNotifyState()
 
-// Per-kind leading icon. Empty for plain info so the toast
-// stays visually quiet for incidental notifications.
+// Per-kind leading icon, empty for plain info so the toast
+// stays quiet for incidental notifications.
 const ICONS = {
   success: '✓',
   info:    '',
@@ -54,15 +54,15 @@ function iconFor(kind) { return ICONS[kind] ?? '' }
 </template>
 
 <style scoped>
-/* Bottom-centre snackbar STACK — high z-index so it floats above
+/* Bottom-centre snackbar STACK, high z-index so it floats above
    modals and dropdowns, fixed to the viewport so it survives route
    changes inside the app shell. column-reverse keeps the newest toast
-   lowest (where a single toast used to sit) and stacks older ones above. */
+   lowest (where a single toast used to sit) and stacks the older ones on top. */
 .notify-stack {
   position: fixed;
   inset-inline-start: 50%;
   /* Sit above the iOS home-indicator gesture zone on notch
-     iPhones; design's 1.5rem on devices without insets. */
+     iPhones, falls back to design's 1.5rem on devices without insets. */
   bottom: max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem));
   transform: translateX(-50%);
   z-index: 1000;
@@ -86,8 +86,8 @@ function iconFor(kind) { return ICONS[kind] ?? '' }
   max-width: calc(100vw - 2rem);
 }
 
-/* Per-kind accent — left border + icon colour. Background
-   stays consistent so the snackbar reads as one family of
+/* Per-kind accent: left border + icon colour. Background
+   stays consistent so the snackbar still reads as one family of
    chrome. */
 .notify-bar-success { border-inline-start-color: var(--green); }
 .notify-bar-success .notify-bar-icon { color: var(--green); }
@@ -114,7 +114,7 @@ function iconFor(kind) { return ICONS[kind] ?? '' }
   color: var(--cyan);
   font-family: inherit; font-size: 11px; font-weight: 700;
   letter-spacing: 0.16em; text-transform: uppercase;
-  /* WCAG 2.5.5 minimum 44×44 — this button is the user's last
+  /* WCAG 2.5.5 minimum 44×44, this button is the user's last
      line of defence after an accidental destructive action. */
   min-height: 44px;
   padding: 0 1rem;

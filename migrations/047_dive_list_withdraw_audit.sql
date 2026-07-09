@@ -1,22 +1,22 @@
 -- =============================================================
--- MIGRATION 047 — DIVE LIST WITHDRAW AUDIT FIELDS
+-- MIGRATION 047: DIVE LIST WITHDRAW AUDIT FIELDS
 --
--- Phase 4 of the coach feature bundle. competitor_dive_lists
--- already carries withdrawn_at (migration 012) — when set, the
--- diver was scratched from the event. This migration adds two
--- audit fields so we know:
+-- Phase 4 of the coach feature bundle. competitor_dive_lists already
+-- carries withdrawn_at (migration 012); when that's set, the diver
+-- was scratched from the event. This migration adds two audit
+-- fields so we actually know:
 --
---   withdrawn_by_user_id  — who triggered the withdrawal (the
---                           operator, the diver themselves, or
---                           now the coach via the new endpoint).
---   withdrawn_reason      — free-text reason logged at withdraw
---                           time. Surfaces in the audit log + on
---                           the operator's Control Room.
+--   withdrawn_by_user_id: who triggered the withdrawal (the
+--                         operator, the diver themselves, or now
+--                         the coach via the new endpoint).
+--   withdrawn_reason:     free-text reason logged at withdraw time,
+--                         shows up in the audit log and on the
+--                         operator's Control Room.
 --
--- Both fields are nullable to avoid breaking the existing
--- withdraw paths in routes/control-room.js + routes/events/*.js;
--- old NULL rows mean "withdrawn before this audit was added".
--- New writes from the coach endpoint always set both.
+-- Both fields are nullable so we don't break the existing withdraw
+-- paths in routes/control-room.js + routes/events/*.js; old NULL
+-- rows just mean "withdrawn before this audit was added". New
+-- writes from the coach endpoint always set both.
 --
 -- Idempotent. Run:
 --   psql -d <db> -f migrations/047_dive_list_withdraw_audit.sql

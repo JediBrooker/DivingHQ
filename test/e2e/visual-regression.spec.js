@@ -1,7 +1,7 @@
 // Focused visual regression snapshots for high-risk UI surfaces.
 //
-// This complements wiki-screenshots.spec.js. The wiki harness writes
-// documentation PNGs; this file uses Playwright snapshot assertions.
+// This complements wiki-screenshots.spec.js: the wiki harness writes
+// documentation PNGs, this file uses Playwright snapshot assertions.
 
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
@@ -55,7 +55,7 @@ test("core operator surfaces match visual snapshots", async ({ request, page, ba
 
     // Seeded so the dashboard renders the same event set the baselines
     // were captured with (the Control Room itself is no longer snapshotted
-    // here — see the control-v2-*.spec.js suite).
+    // here, see the control-v2-*.spec.js suite).
     await setup.createEvent(request, {
       adminToken,
       name: "Visual Control Event",
@@ -134,7 +134,7 @@ test("core operator surfaces match visual snapshots", async ({ request, page, ba
     });
 
     // (The Control Room is covered by the control-v2-*.spec.js suite now,
-    // not a visual snapshot — its DOM is intentionally fluid.)
+    // not a visual snapshot, since its DOM is intentionally fluid.)
 
     await page.goto(`/scoreboard/${scoreboardEvent.id}?cache=skip`);
     await expect(page.getByRole("link", { name: "Visual Diver" })).toBeVisible();

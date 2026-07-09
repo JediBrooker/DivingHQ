@@ -1,7 +1,8 @@
 // Per-event control LEASE (#lease) + drop-detection (#7). When two
 // operators drive the SAME event, both get an advisory conflict warning
-// (the lease never blocks). And in normal operation a confirmed
-// set_active_diver never raises the "not confirmed" warning. Flag-on only.
+// (the lease never actually blocks anything, just warns). And in normal
+// operation a confirmed set_active_diver should never raise the "not
+// confirmed" warning. Flag-on only for now.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -44,16 +45,16 @@ test("two operators on the same event both see a conflict warning", async ({ req
   await liveEvent(request, { orgId, adminToken, name: "Shared Pool", diverNames: ["AAA Diver"] });
   const opB = await setup.insertUser({ orgId, role: "meet_manager", fullName: "Operator B" });
 
-  // Operator A claims control of the event first.
+  // Operator A grabs control of the event first.
   const ctxA = await browser.newContext();
   const pageA = await ctxA.newPage();
   await signIn(pageA, adminUser);
   await pageA.goto("/control");
   await pageA.waitForLoadState("networkidle");
   await setup.selectControlEvent(pageA, "Shared Pool");
-  await pageA.waitForTimeout(600); // let A's claim land
+  await pageA.waitForTimeout(600); // give A's claim a moment to land
 
-  // Operator B opens the same event -> both operators are warned.
+  // Operator B opens the same event, so both operators should be warned.
   const ctxB = await browser.newContext();
   const pageB = await ctxB.newPage();
   await signIn(pageB, opB.username);
@@ -62,7 +63,7 @@ test("two operators on the same event both see a conflict warning", async ({ req
   await setup.selectControlEvent(pageB, "Shared Pool");
 
   await expect(pageB.locator(".cv2-pool-conflict")).toContainText(/another operator/i, { timeout: 6_000 });
-  // A (the lease holder) is contested -> also warned.
+  // A (the lease holder) is contested too, so also warned.
   await expect(pageA.locator(".cv2-pool-conflict")).toContainText(/another operator/i, { timeout: 6_000 });
 
   await ctxA.close();
@@ -80,7 +81,7 @@ test("a confirmed set_active_diver raises no 'not confirmed' warning", async ({ 
   await page.waitForLoadState("networkidle");
   await setup.selectControlEvent(page, "Confirm Pool");
 
-  // Advance to the next diver -> set_active_diver is echoed back, so the
+  // Advance to the next diver, set_active_diver gets echoed back so the
   // pool never shows the unconfirmed warning.
   await setup.submitPanelScores({ baseURL, judges, eventId: event.id, competitorId: divers[0].userId, roundNumber: 1, diveId });
   await expect(page.locator(".cv2-primary")).toBeEnabled({ timeout: 6_000 });

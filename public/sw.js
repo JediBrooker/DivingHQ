@@ -2,7 +2,7 @@
  *
  * Goal: a minimal offline shell so a judge's phone keeps the app
  * UI rendering when poolside wifi drops mid-meet. The actual
- * /api/* and /socket.io/* paths are NEVER served from cache —
+ * /api/* and /socket.io/* paths are NEVER served from cache:
  * those need to round-trip to the server, and a cached score
  * submission is worse than no submission.
  *
@@ -32,7 +32,7 @@
  * reaching browsers that had cached the previous app.css).
  */
 
-// v5 → v6: new logo (Option C — arc + dot) replaced the old
+// v5 → v6: new logo (Option C, arc + dot) replaced the old
 // tucked-diver mark in /icon.svg + the 192/512 PNGs. The PNG
 // filenames are unchanged, so without a cache-version bump
 // returning PWA users would keep seeing the old icon from
@@ -73,14 +73,14 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
-  // Same-origin only — don't intercept third-party fonts, etc.
+  // Same-origin only, don't intercept third-party fonts, etc.
   if (url.origin !== self.location.origin) return;
 
   // Skip API + sockets entirely. These must never be cached.
   if (url.pathname.startsWith("/api/")) return;
   if (url.pathname.startsWith("/socket.io/")) return;
 
-  // SPA navigation — NETWORK-FIRST. Critical for deploy hygiene:
+  // SPA navigation: NETWORK-FIRST. Critical for deploy hygiene,
   // a freshly-deployed index.html reaches users immediately
   // rather than being shadowed by a stale cache entry pointing
   // at vanished asset hashes. We update the cache copy in the
@@ -101,7 +101,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Vite-bundled hashed assets at /assets/* — content-hashed
+  // Vite-bundled hashed assets at /assets/*, content-hashed
   // URLs, so cache-first is safe and fastest.
   if (url.pathname.startsWith("/assets/")) {
     event.respondWith(
@@ -145,7 +145,7 @@ self.addEventListener("fetch", (event) => {
  * via the user's subscribed push service; this is where it lands.
  * Schema (kept in sync with sendNotification's wpPayload):
  *   {
- *     id,                  // notifications.id — for ack on click
+ *     id,                  // notifications.id, used to ack on click
  *     category,            // 'referee_signoff', 'judge_call', ...
  *     title, body,
  *     data: {              // category-specific
@@ -156,7 +156,7 @@ self.addEventListener("fetch", (event) => {
  *   }
  *
  * On notificationclick we focus an existing SPA tab if one's
- * open (the in-app banner has likely already handled it) — only
+ * open (the in-app banner has likely already handled it), only
  * spinning up a new tab when no SPA window is around. Either
  * way we POST /api/notifications/:id/acknowledge so the inbox
  * row clears.
@@ -231,7 +231,7 @@ self.addEventListener("notificationclick", (event) => {
         return client.focus();
       }
     }
-    // No SPA tab open — fall back to opening the action URL.
+    // No SPA tab open, fall back to opening the action URL.
     return self.clients.openWindow(target);
   })());
 });

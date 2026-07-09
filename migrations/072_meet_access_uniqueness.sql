@@ -1,10 +1,11 @@
 -- =============================================================
--- MIGRATION 072 — MEET-ACCESS LIVE-PAYMENT GUARD
+-- MIGRATION 072 - MEET-ACCESS LIVE-PAYMENT GUARD
 --
--- Spectator ticket / livestream / programme are meet-level access purchases
--- (one per buyer per meet per kind for this cut — quantity/multi-ticket is a
--- later feature). Mirror the other one-live-payment guards so a buyer can't
--- stack duplicate live payments for the same access on the same meet.
+-- FYI: spectator ticket / livestream / programme are meet-level access
+-- purchases (one per buyer per meet per kind for this cut, quantity/
+-- multi-ticket is a later feature). Mirror the other one-live-payment
+-- guards so a buyer can't stack duplicate live payments for the same
+-- access on the same meet.
 -- =============================================================
 
 BEGIN;

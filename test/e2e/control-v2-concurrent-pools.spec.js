@@ -1,9 +1,9 @@
 // P5: concurrent multi-pool Live. Flag-on only (V2). Two events in one
 // org both Live render as side-by-side pool cards. A full panel of scores
 // for the NON-focused pool fills THAT card's tiles while it stays on
-// screen -- the property V1 cannot give (it drops non-focused scores at
+// screen, the property V1 cannot give (it drops non-focused scores at
 // ControlView.vue:2094-2095). Each card is scoped by [data-event-id], so
-// a score lands only in its own pool and never bleeds into the other.
+// a score lands only in it's own pool and never bleeds into the other.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -18,7 +18,7 @@ async function signIn(page, username) {
 }
 
 // A Live event with one rostered diver (round-1 dive list) + a full
-// 5-judge panel assigned, flipped Live.
+// 5-judge panel assigned, then flipped Live
 async function liveEvent(request, { orgId, adminToken, name }) {
   const event = await setup.createEvent(request, {
     adminToken, name, total_rounds: 2, number_of_judges: 5, height: "3m",
@@ -71,7 +71,7 @@ test("a non-focused Live pool's scores route to it without thrashing the focused
     competitorId: B.diver.userId, roundNumber: 1, diveId: B.diveId,
   });
 
-  // Pool B's card fills IN PLACE -- no focus thrash, no bleed into A.
+  // Pool B's card fills IN PLACE, no focus thrash, no bleed into A
   await expect(cardB.locator(".cv2-tile.scored")).toHaveCount(5, { timeout: 6_000 });
   await expect(page.locator(".cv2-chip.is-focused")).toContainText("Pool A");
   await expect(cardA.locator(".cv2-tile.scored")).toHaveCount(0);

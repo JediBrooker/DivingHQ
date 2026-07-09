@@ -1,5 +1,5 @@
 // =============================================================
-// DIVING APP — SERVER v2
+// DIVING APP: SERVER v2
 // Express + Socket.IO + PostgreSQL
 // Multi-tenant RBAC with org-scoped roles
 //
@@ -18,28 +18,28 @@
 //                                     ensureEventOrgGate, isInSameOrg,
 //                                     parseDateRange, isValidScore
 //   [SECTION: TOKEN PAYLOAD]          buildTokenPayload (JWT shape)
-//   [SECTION: ROUTES — ORGANISATIONS] /api/orgs/*, /api/clubs/*
-//   [SECTION: ROUTES — TEAMS]         /api/teams/*, /api/events/:id/teams
-//   [SECTION: ROUTES — COACH]         /api/coach/*
-//   [SECTION: ROUTES — USERS]         /api/users/*, /api/role-requests/*
-//   [SECTION: ROUTES — MEETS]         /api/meets/*
-//   [SECTION: ROUTES — SESSIONS]      /api/meets/:id/sessions, schedule.ics
-//   [SECTION: ROUTES — EVENTS]        /api/events (CRUD + status)
-//   [SECTION: ROUTES — STAGE ADVANCE] /api/events/:id/advance (top-N)
-//   [SECTION: ROUTES — TEMPLATES]     /api/orgs/:id/event-templates
-//   [SECTION: ROUTES — JUDGES]        /api/events/:id/judges
-//   [SECTION: ROUTES — CONTROL ROOM]  /api/events/:id/roster + reorder + DNS
-//   [SECTION: ROUTES — SCOREBOARD]    public scoreboard, score corrections
+//   [SECTION: ROUTES: ORGANISATIONS]  /api/orgs/*, /api/clubs/*
+//   [SECTION: ROUTES: TEAMS]          /api/teams/*, /api/events/:id/teams
+//   [SECTION: ROUTES: COACH]          /api/coach/*
+//   [SECTION: ROUTES: USERS]          /api/users/*, /api/role-requests/*
+//   [SECTION: ROUTES: MEETS]          /api/meets/*
+//   [SECTION: ROUTES: SESSIONS]       /api/meets/:id/sessions, schedule.ics
+//   [SECTION: ROUTES: EVENTS]         /api/events (CRUD + status)
+//   [SECTION: ROUTES: STAGE ADVANCE]  /api/events/:id/advance (top-N)
+//   [SECTION: ROUTES: TEMPLATES]      /api/orgs/:id/event-templates
+//   [SECTION: ROUTES: JUDGES]         /api/events/:id/judges
+//   [SECTION: ROUTES: CONTROL ROOM]   /api/events/:id/roster + reorder + DNS
+//   [SECTION: ROUTES: SCOREBOARD]     public scoreboard, score corrections
 //   [SECTION: MEET HOLD STATE]        in-memory hold map
-//   [SECTION: ROUTES — DIVE TEMPLATES] /api/dive-list-templates/*
-//   [SECTION: ROUTES — COMPETITOR]    /api/competitor/submit-list
-//   [SECTION: ROUTES — DIVE DIRECTORY] /api/dive-directory
-//   [SECTION: ROUTES — DIVER PROFILE] /api/divers/:id/profile, /analytics
-//   [SECTION: ROUTES — AUDIT LOG]     /api/events/:id/score-audit
+//   [SECTION: ROUTES: DIVE TEMPLATES]  /api/dive-list-templates/*
+//   [SECTION: ROUTES: COMPETITOR]     /api/competitor/submit-list
+//   [SECTION: ROUTES: DIVE DIRECTORY]  /api/dive-directory
+//   [SECTION: ROUTES: DIVER PROFILE]  /api/divers/:id/profile, /analytics
+//   [SECTION: ROUTES: AUDIT LOG]      /api/events/:id/score-audit
 //   [SECTION: SOCKET ENGINE]          io.use, submit_score, referee_*,
 //                                     meet_hold/resume, set_active_diver
-//   [SECTION: ROUTES — ARCHIVE]       /api/archive
-//   [SECTION: ROUTES — PDF EXPORT]    /api/events/:id/results.pdf, /program.pdf
+//   [SECTION: ROUTES: ARCHIVE]        /api/archive
+//   [SECTION: ROUTES: PDF EXPORT]     /api/events/:id/results.pdf, /program.pdf
 //   [SECTION: SPA FALLBACK]           static + history-API rewrite
 //   [SECTION: START]                  server.listen (skipped under require())
 // =============================================================
@@ -62,12 +62,12 @@ const metrics = require("./lib/metrics");
 
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
 
-// Refuse to boot a production deployment with a wildcard CORS
-// origin — '*' is passed straight to both the Express cors
-// middleware and the Socket.IO server below, which would let any
-// website script the API/socket with a victim's credentials.
-// Same fail-closed posture as the JWT_SECRET check further down;
-// dev keeps working (NODE_ENV unset) for local wildcard setups.
+// Refuse to boot a production deployment with a wildcard CORS origin.
+// '*' gets passed straight to both the Express cors middleware and
+// the Socket.IO server below, which would let any website script the
+// API/socket using a victim's credentials.
+// Same fail-closed posture as the JWT_SECRET check further down, dev
+// still works fine (NODE_ENV unset) for local wildcard setups.
 if (process.env.NODE_ENV === "production" && CORS_ORIGIN === "*") {
   console.error(
     "FATAL: CORS_ORIGIN must not be '*' in production — set it to the app's public origin. Refusing to start.",
@@ -88,9 +88,9 @@ app.use(metrics.httpMetricsMiddleware);
 //     proxy is false" on every request and rate-limits all users
 //     by the proxy IP (= one shared bucket).
 //   * req.ip is the proxy address, not the real client.
-// `1` trusts ONE hop — exactly what's wanted behind a single
-// edge proxy. Override via TRUST_PROXY env if you need more
-// hops (or set to 'false' for a no-proxy setup).
+// `1` trusts ONE hop, which is exactly what we want behind a single
+// edge proxy. Override via TRUST_PROXY env if you need more hops
+// (or set to 'false' for a no-proxy setup).
 const TRUST_PROXY = process.env.TRUST_PROXY ?? "1";
 app.set("trust proxy", TRUST_PROXY === "false" ? false
   : /^\d+$/.test(TRUST_PROXY) ? Number(TRUST_PROXY)
@@ -99,8 +99,8 @@ app.set("trust proxy", TRUST_PROXY === "false" ? false
 const server = http.createServer(app);
 // credentials: true so the browser sends the httpOnly session cookie
 // on the WebSocket handshake (and on cross-origin XHR if CORS_ORIGIN is
-// a real origin). With credentials on, the origin can never be "*" —
-// the production guard above already enforces that.
+// a real origin). With credentials on, the origin can never be "*",
+// since the production guard above already enforces that.
 const io = new Server(server, { cors: { origin: CORS_ORIGIN, credentials: true } });
 
 // Standard HTTP-security headers. The SPA is served via the same
@@ -111,26 +111,26 @@ const io = new Server(server, { cors: { origin: CORS_ORIGIN, credentials: true }
 // frame-ancestors 'self', etc.) and override the few directives the
 // app actually needs:
 //
-//   * connect-src — adds ws:/wss: so Socket.IO upgrades aren't
+//   * connect-src: adds ws:/wss: so Socket.IO upgrades aren't
 //     blocked (helmet's default-src 'self' only covers HTTP fetches).
-//   * img-src     — adds blob: alongside data: + 'self' for the
+//   * img-src: adds blob: alongside data: + 'self' for the
 //     sharp-rendered OG cards and QR data URIs.
 //
-// The Vite build emits no inline <script> tags — the only inline
-// element in dist/index.html is a <link rel="stylesheet"> — so
-// strict script-src 'self' works without a nonce or hash list.
+// The Vite build emits no inline <script> tags. The only inline
+// element in dist/index.html is a <link rel="stylesheet">, so
+// strict script-src 'self' works fine without a nonce or hash list.
 // In test mode (RATE_LIMIT_DISABLED=true), drop the
-// upgrade-insecure-requests CSP directive. Production unaffected.
+// upgrade-insecure-requests CSP directive. Production is unaffected.
 //
 // Why: the local Playwright webServer only listens on HTTP, but
-// WebKit obeys upgrade-insecure-requests by silently rewriting
-// every asset URL from http://127.0.0.1:3097 to https://...
-// which then fails with a TLS error and the SPA never mounts.
-// Chromium has a localhost exemption so the existing chromium
-// tests aren't affected; WebKit doesn't. Keeping the directive
-// disabled in production-style runs (where HTTPS is real and
-// the upgrade is a no-op) avoids the routing complexity that
-// would otherwise be needed in test/e2e/mobile-safari.spec.js.
+// WebKit obeys upgrade-insecure-requests and silently rewrites
+// every asset URL from http://127.0.0.1:3097 to https://..., which
+// then fails with a TLS error and the SPA never mounts. Chromium has
+// a localhost exemption so the existing chromium tests aren't
+// affected, kinda annoying but WebKit doesn't play along. Keeping
+// the directive disabled in production-style runs (where HTTPS is
+// real and the upgrade is a no-op) avoids the routing complexity
+// that would otherwise be needed in test/e2e/mobile-safari.spec.js.
 const cspDirectives = {
   "connect-src": ["'self'", "ws:", "wss:"],
   "img-src": ["'self'", "data:", "blob:"],
@@ -143,7 +143,7 @@ app.use(helmet({
     useDefaults: true,
     directives: cspDirectives,
   },
-  // Skip HSTS in test mode for the same reason — HSTS would
+  // Heads up: skip HSTS in test mode too, same reason. HSTS would
   // make WebKit upgrade on subsequent visits even with CSP
   // disabled.
   strictTransportSecurity: process.env.RATE_LIMIT_DISABLED !== "true",
@@ -157,12 +157,12 @@ app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
 // httpOnly session cookie (the JWT no longer rides the Authorization
 // header for the SPA). Mounted before any route that authenticates.
 app.use(cookieParser());
-// Bound the JSON body size — the largest legitimate payload is the
-// CSV roster import, which never approaches 256kb. Anything bigger
-// is either a bug or an abuse attempt.
+// Bound the JSON body size. The largest legitimate payload is the
+// CSV roster import, which never gets close to 256kb, so anything
+// bigger is either a bug or someone poking at the API.
 //
 // Stripe webhooks are the one exception: signature verification needs
-// the untouched raw bytes, so /webhooks/stripe SKIPS the JSON parser
+// the untouched raw bytes, so /webhooks/stripe skips the JSON parser
 // here and uses express.raw on its own route (see the mount below).
 const jsonBodyParser = express.json({ limit: "256kb" });
 app.use((req, res, next) =>
@@ -183,8 +183,8 @@ app.use(require("./lib/server-i18n").middleware());
 // settings (20 auth requests / 15 min / IP) trips the limiter
 // after a handful of register/login calls and leaves the rest of
 // the suite seeing 429s. Setting RATE_LIMIT_DISABLED=true in the
-// test webServer env disables the limiters at module load — no
-// effect on the deployed app where the env var is unset.
+// test webServer env disables the limiters at module load, no
+// effect on the deployed app since the env var stays unset there.
 const RATE_LIMIT_DISABLED = process.env.RATE_LIMIT_DISABLED === "true";
 const skipWhenDisabled = () => RATE_LIMIT_DISABLED;
 
@@ -263,23 +263,23 @@ app.use(express.static(path.join(__dirname, 'dist')))
 //
 // node-postgres falls back to libpq env vars when a config field is
 // undefined, so the explicit DB_*-then-PG* coalesce below is mostly
-// belt-and-braces — but it makes the precedence visible to anyone
+// belt-and-braces, but it makes the precedence visible to anyone
 // debugging a connection error.
 // `application_name` is propagated to pg_stat_activity. Setting
 // distinct values on the writer + reader pools lets an operator
 // tell from a `SELECT application_name FROM pg_stat_activity`
-// query which side of the wiring served any given connection —
-// invaluable when verifying read-replica routing.
+// query which side of the wiring served any given connection.
+// Handy when you're trying to verify read-replica routing.
 const POOL_APP_NAME_WRITER = "dive-recorder-writer";
 const POOL_APP_NAME_READER = "dive-recorder-reader";
 
-// Explicit pool cap — node-postgres defaults to max 10, which the
-// socket scoring path (routes/socket.js submit_score) SHARES with
-// every HTTP route on this writer pool; a single heavy fan-out
+// Explicit pool cap. node-postgres defaults to max 10, which the
+// socket scoring path (routes/socket.js submit_score) shares with
+// every HTTP route on this writer pool, so a single heavy fan-out
 // (analytics, archive) could otherwise starve live scoring of
-// connections. 20 is comfortable for a meet-day node; override
-// via PG_POOL_MAX for constrained Postgres plans (mind the
-// server-side max_connections when raising it).
+// connections. 20 is comfortable for a meet-day node, override via
+// PG_POOL_MAX for constrained Postgres plans, worth double-checking
+// the server-side max_connections when you raise it.
 const PG_POOL_MAX = Number(process.env.PG_POOL_MAX) || 20;
 
 const pool = process.env.DATABASE_URL
@@ -305,16 +305,16 @@ const pool = process.env.DATABASE_URL
 // archive listing, per-event recap) route to a Postgres streaming
 // replica so they don't contend with live writes on the primary.
 // Live-scoring reads (scoreboard, attendance, queue) intentionally
-// stay on the primary — replication lag (typically <1s but
-// variable) is acceptable for "what was the diver's PB last year"
-// but not for "did my score just land?"
+// stay on the primary. Replication lag (typically under 1s but
+// variable) is fine for "what was the diver's PB last year" but
+// not for "did my score just land?"
 //
 // Falls back to the primary when DATABASE_READ_URL isn't set, so
 // single-node deployments keep working with no config change. The
 // factory pattern means a route's code is identical regardless of
 // whether the dep is the writer or a replica.
-// Same explicit cap as the writer (PG_READ_POOL_MAX to size the
-// replica side independently; falls back to PG_POOL_MAX's value).
+// Same explicit cap as the writer (PG_READ_POOL_MAX sizes the
+// replica side independently, falls back to PG_POOL_MAX's value).
 const readPool = process.env.DATABASE_READ_URL
   ? new Pool({
       connectionString: process.env.DATABASE_READ_URL,
@@ -327,8 +327,8 @@ if (readPool !== pool) {
     "read replica configured");
 }
 
-// Refuse to boot with no JWT secret or the well-known placeholder —
-// either case means tokens are trivially forgeable. Short secrets
+// Refuse to boot with no JWT secret or the well-known placeholder,
+// either way tokens are trivially forgeable. Short secrets
 // (< 32 chars) are a hard fail in production too: a brute-forceable
 // secret means forgeable sessions, and that's not a "fix on your
 // next pass" problem on a deployment serving real traffic. Dev
@@ -360,8 +360,8 @@ const JWT_EXPIRY = process.env.JWT_EXPIRY || "8h";
 //
 // All middleware + security helpers live in lib/middleware.js so
 // the auth/RBAC perimeter can be reviewed as a single unit. See
-// AGENTS.md for the invariants. Don't add new gates inline here —
-// add them to lib/middleware.js and re-export.
+// AGENTS.md for the invariants. Don't add new gates inline here,
+// add them to lib/middleware.js and re-export instead.
 // =============================================================
 const {
   verifyToken,
@@ -385,15 +385,14 @@ const {
   requireTotpForPrivilegedRoles,
 } = require("./lib/middleware")({ pool, JWT_SECRET });
 
-// Convenience aliases — defined once so a typo can't drift the
+// Convenience aliases, defined once so a typo can't drift the
 // role tuple across 20+ route mountings. Used throughout.
 //
 // Each is an array of middleware (Express accepts arrays anywhere
 // a single function is accepted, so the call sites that take
 // these as factory deps don't need to know). The TOTP gate is
 // pre-wired but no-ops unless TOTP_REQUIRED_FOR_ADMINS=true is
-// set in the env — see lib/middleware.js for the rollout
-// rationale.
+// set in the env, see lib/middleware.js for the rollout rationale.
 const requireMeetEditor = [
   requireOrgRole(["org_admin", "meet_manager"]),
   requireTotpForPrivilegedRoles,
@@ -403,9 +402,9 @@ const requireOrgAdmin = [
   requireTotpForPrivilegedRoles,
 ];
 
-// Email helpers — moved into lib/email.js. Factory takes the pool
+// Email helpers, moved into lib/email.js. Factory takes the pool
 // so the test runner can swap it. Every helper is best-effort and
-// silently no-ops when SMTP_HOST isn't set (dev-mode default).
+// silently no-ops when SMTP_HOST isnt set (dev-mode default).
 const email = require("./lib/email")({ pool });
 const {
   hashFingerprint,
@@ -421,26 +420,26 @@ const {
   sendEventResultsEmails,
 } = email;
 
-// Scoreboard cache — short-TTL bucket per eventId. The HTTP
+// Scoreboard cache, a short-TTL bucket per eventId. The HTTP
 // scoreboard route reads/writes via .get/.set; the socket
 // submit_score handler and the HTTP score-correction handler
-// both invalidate the bucket on commit so the next reader
-// rebuilds. Without this, every connected scoreboard re-runs
-// the same 7-table standings query after every score event.
+// both invalidate the bucket on commit so the next reader rebuilds.
+// Without this, every connected scoreboard re-runs the same
+// 7-table standings query after every single score event.
 // Defined here (before any route mount) so both consumers can
 // take it via dependency injection.
 const scoreboardCache = require("./lib/scoreboard-cache")();
 
-// Live state — activeDivers (current performer per event) +
+// Live state: activeDivers (current performer per event) plus
 // meetHolds (per-event hold reason). Shared by
 // routes/events.js (PUT /:id/status clears them on Completed),
 // routes/socket.js (set/get from set_active_diver, meet_hold),
 // and any future handler that needs to read live state.
 //
-// Backed by the `event_live_state` table (migration 034) — the
-// in-memory maps are a write-through cache rebuilt from the
-// DB on boot via init(pool), so a server restart mid-meet
-// doesn't wipe the live state.
+// Backed by the `event_live_state` table (migration 034). The
+// in-memory maps are a write-through cache rebuilt from the DB
+// on boot via init(pool), so a server restart mid-meet doesn't
+// wipe the live state.
 const liveState = require("./lib/live-state");
 const {
   activeDivers,
@@ -454,7 +453,7 @@ const {
   persistClearAll,
 } = liveState;
 
-// Reusable push engine — wires Web Push (when VAPID is set) plus
+// Reusable push engine, wires up Web Push (when VAPID is set) plus
 // in-app socket banners. Created here so route modules mounted
 // further down can inject it as a dependency. The socket attach
 // further down picks up the same instance to handle per-user
@@ -462,7 +461,7 @@ const {
 const push = require("./lib/push")({ pool, io });
 
 // =============================================================
-// HELPER — Build JWT payload
+// HELPER: build JWT payload
 // [SECTION: TOKEN PAYLOAD]
 // =============================================================
 async function buildTokenPayload(userId) {
@@ -487,13 +486,13 @@ async function buildTokenPayload(userId) {
     // Stamped on every issued JWT. verifyToken (lib/middleware.js)
     // rejects any token whose `tv` is older than the current row.
     // Bumping users.token_version invalidates every outstanding
-    // session for that user — used by role grant/revoke and the
+    // session for that user, used by role grant/revoke and the
     // password change flow (Migration 021).
     tv: user.token_version,
-    // Migration 052: per-user locale. Null when the user has never
-    // set one — the server falls back to Accept-Language; the SPA
-    // falls back to whatever localStorage has remembered. Stamped
-    // on the JWT (not just the response body) so resolveLocale in
+    // Migration 052: per-user locale. Null when the user's never set
+    // one, so the server falls back to Accept-Language, and the SPA
+    // falls back to whatever localStorage remembers. Stamped on the
+    // JWT (not just the response body) so resolveLocale in
     // lib/server-i18n.js can find it on every subsequent authed
     // request without a DB round-trip.
     locale: user.locale || null,
@@ -503,19 +502,19 @@ async function buildTokenPayload(userId) {
 // =============================================================
 // =============================================================
 // HEALTH CHECK
-// [SECTION: ROUTES — HEALTH]
+// [SECTION: ROUTES: HEALTH]
 // =============================================================
 // Cheap public-readable health probe used by deploy.sh and any
 // external uptime monitor. Confirms two things:
 //   * the process is up and serving HTTP
-//   * the DB pool can issue a trivial query (catches the case
-//     where the process bound a port but Postgres is wedged or
-//     unreachable, which a port-only liveness check would miss).
+//   * the DB pool can run a trivial query as a sanity check, catches
+//     the case where the process bound a port but Postgres is
+//     wedged or unreachable, which a port-only liveness check would miss.
 //
 // 200 + { ok: true, schema_version } when both pass. 503 + { ok:
-// false } if the DB query throws — the deploy script can refuse
-// to advance past restart on that signal. No auth: monitors and
-// load balancers shouldn't need a credential.
+// false } if the DB query throws, so the deploy script can refuse
+// to advance past restart on that signal. No auth needed here,
+// monitors and load balancers shouldn't need a credential.
 app.get("/api/health", async (_req, res) => {
   try {
     const r = await pool.query(
@@ -531,7 +530,7 @@ app.get("/api/health", async (_req, res) => {
 });
 
 // =============================================================
-// METRICS — Prometheus scrape target
+// METRICS: Prometheus scrape target
 // =============================================================
 // `text/plain; version=0.0.4` (the prom-client default) is the
 // content-type Prometheus expects. The payload contains operational
@@ -619,7 +618,7 @@ app.use(
 
 // =============================================================
 // ORGANISATION + CLUBS ROUTES
-// [SECTION: ROUTES — ORGANISATIONS]
+// [SECTION: ROUTES: ORGANISATIONS]
 // /api/orgs/* and /api/clubs/* extracted into routes/orgs.js.
 // /api/orgs/:id/divers (used by the synchro-partner picker)
 // also lives there since it's a per-org listing.
@@ -632,8 +631,8 @@ app.use(require("./routes/orgs")({
 }));
 
 // =============================================================
-// PAYMENTS ROUTES (platform is merchant of record — Migration 075)
-// [SECTION: ROUTES — PAYMENTS]
+// PAYMENTS ROUTES (platform is merchant of record, per Migration 075)
+// [SECTION: ROUTES: PAYMENTS]
 // Fee config, diver/member/club checkout, refunds, and the payout
 // ledger + back-office. Every charge lands on the PLATFORM's own
 // Stripe account; who is owed what is tracked in lib/payout-ledger
@@ -674,7 +673,7 @@ app.post(
 
 // =============================================================
 // TEAM ROUTES
-// [SECTION: ROUTES — TEAMS]
+// [SECTION: ROUTES: TEAMS]
 // /api/orgs/:id/teams, /api/teams/*, team_members,
 // /api/teams/:id/dive-lists, and the event_teams routes
 // (/api/events/:id/teams[/...]) extracted into routes/teams.js.
@@ -691,7 +690,7 @@ app.use(require("./routes/teams")({
 
 // =============================================================
 // COACH ROUTES
-// [SECTION: ROUTES — COACH]
+// [SECTION: ROUTES: COACH]
 // /api/coach/dashboard, /api/coach/divers, /api/orgs/:id/coach-links,
 // /api/coach-links/:id extracted into routes/coach.js.
 // =============================================================
@@ -706,9 +705,9 @@ app.use(require("./routes/coach")({
 
 // =============================================================
 // CLASS ROUTES (club-private training classes)
-// [SECTION: ROUTES — CLASSES]
+// [SECTION: ROUTES: CLASSES]
 // /api/clubs/:id/classes[/...], /api/coach/classes, /api/me/classes,
-// /api/me/available-classes — see routes/classes.js. Club-private:
+// /api/me/available-classes, see routes/classes.js. Club-private:
 // requireClubAdminOnly keeps the federation org_admin out.
 // =============================================================
 app.use(require("./routes/classes")({
@@ -722,8 +721,8 @@ app.use(require("./routes/classes")({
 
 // =============================================================
 // VENUE INTEGRATION ROUTES
-// [SECTION: ROUTES — VENUE]
-// /api/venue/scoreboard-state/:event_id — one-shot snapshot
+// [SECTION: ROUTES: VENUE]
+// /api/venue/scoreboard-state/:event_id: one-shot snapshot
 // for hardware bridges (Daktronics, Colorado Time Systems, etc).
 // Companion to the `venue.scoreboard_state` socket event
 // emitted from routes/socket.js. See lib/venue-state.js for
@@ -738,13 +737,13 @@ app.use(require("./routes/classes")({
 app.use(createSearchLimiter(), require("./routes/venue")({ pool }));
 
 // Cross-org diver search + browse + orgs/all live in routes/
-// diver-search.js — extracted to keep server.js manageable. See
+// diver-search.js, extracted to keep server.js manageable. See
 // AGENTS.md for the modularisation plan.
 app.use(createSearchLimiter(), require("./routes/diver-search")({ pool, verifyToken }));
 
 // =============================================================
 // USER & ROLE MANAGEMENT ROUTES
-// [SECTION: ROUTES — USERS]
+// [SECTION: ROUTES: USERS]
 // All seven endpoints + the role-mutation/token-bump plumbing
 // extracted into routes/users.js.
 // =============================================================
@@ -755,7 +754,7 @@ app.use(require("./routes/users")({
   requireMeetEditor,
   bumpTokenVersion,
   sendRoleDecisionEmail,
-  // Self-delete + claim endpoints (Migration 053) — rate-limited
+  // Self-delete + claim endpoints (Migration 053), rate-limited
   // so a hijacked session can't brute-force the password gate.
   bulkWriteLimiter,
   // Org-admin profile edit + account lifecycle (Migration 058).
@@ -770,7 +769,7 @@ app.use(require("./routes/club-changes")({ pool, verifyToken }));
 
 // =============================================================
 // MEET ROUTES
-// [SECTION: ROUTES — MEETS]
+// [SECTION: ROUTES: MEETS]
 // /api/orgs/:id/meets, /api/meets/*, /api/events/:id/meet
 // extracted into routes/meets.js.
 // =============================================================
@@ -784,9 +783,9 @@ app.use(require("./routes/meets")({
 
 // =============================================================
 // SESSION SCHEDULER ROUTES
-// [SECTION: ROUTES — SESSIONS]
-// /api/meets/:meetId/sessions       — sessions + inlined blocks
-// /api/meets/:meetId/schedule.ics   — public iCal feed
+// [SECTION: ROUTES: SESSIONS]
+// /api/meets/:meetId/sessions:       sessions + inlined blocks
+// /api/meets/:meetId/schedule.ics:   public iCal feed
 // Phase 1 is read-only; phase 2-4 (conflicts, manual edit, live
 // re-flow) extend this same file. See docs/session-scheduler.md.
 // =============================================================
@@ -803,7 +802,7 @@ app.use(require("./routes/sessions")({
 
 // =============================================================
 // EVENT ROUTES
-// [SECTION: ROUTES — EVENTS]
+// [SECTION: ROUTES: EVENTS]
 // CRUD + status transitions extracted into routes/events.js.
 // loadEventForEntries (used here AND by the team dive-list +
 // diver-portal submit handlers) lives in lib/middleware.js so a
@@ -828,15 +827,15 @@ app.use(require("./routes/events")({
   meetHolds,
   persistClearAll,
   // Push helper used by the international-invite flow to notify
-  // an invited federation's admins. Optional — if push isn't
-  // wired the events router falls back to a silent insert.
+  // an invited federation's admins. Optional: if push isn't
+  // wired, the events router just falls back to a silent insert.
   push,
   payments,
 }));
 
 // =============================================================
-// EVENT STAFF — managers + judges + per-judge views
-// [SECTION: ROUTES — EVENT STAFF]
+// EVENT STAFF (managers + judges + per-judge views)
+// [SECTION: ROUTES: EVENT STAFF]
 // /api/events/:id/managers (CRUD), /api/events/:id/judges (panel
 // CRUD), /api/events/:eventId/my-judge-number, /api/judge/my-events
 // extracted into routes/event-staff.js.
@@ -852,9 +851,9 @@ app.use(require("./routes/event-staff")({
 
 // =============================================================
 // CONTROL ROOM ROUTES
-// [SECTION: ROUTES — CONTROL ROOM]
-// 10 endpoints — roster + reorder + randomise + check-in +
-// late-entry + CSV import + public history — extracted into
+// [SECTION: ROUTES: CONTROL ROOM]
+// 10 endpoints (roster + reorder + randomise + check-in +
+// late-entry + CSV import + public history) extracted into
 // routes/control-room.js along with the local parseCsv helper.
 // =============================================================
 app.use(require("./routes/control-room")({
@@ -870,18 +869,18 @@ app.use(require("./routes/control-room")({
   bcrypt,
   totp: require("./lib/totp"),
   // Shared pre-meet gate (stashes req.event, same 409 contract
-  // everywhere) — keeps the dive-order routes on the exact same
+  // everywhere), keeps the dive-order routes on the exact same
   // message/shape as the rest of the app.
   ensureEventPreMeet,
 }));
 
 // =============================================================
-// SCOREBOARD — public
-// [SECTION: ROUTES — SCOREBOARD]
+// SCOREBOARD (public)
+// [SECTION: ROUTES: SCOREBOARD]
 // Endpoints (/api/scoreboard/:eventId and /leaderboard) moved
 // to routes/scoreboard.js. The dive-list-templates section
 // below sits between the two original mounts and is kept here
-// since it's per-diver state, not scoreboard-related.
+// since its per-diver state, not scoreboard-related.
 // =============================================================
 
 app.use(require("./routes/scoreboard")({
@@ -893,12 +892,12 @@ app.use(require("./routes/scoreboard")({
 
 // =============================================================
 // SCORE CORRECTION + AUDIT LOG
-// [SECTION: ROUTES — SCORE CORRECTION]
+// [SECTION: ROUTES: SCORE CORRECTION]
 // PUT /api/scores/:id (manager / referee amends a score) and
 // GET /api/events/:id/score-audit (audit trail) extracted into
 // routes/score-correction.js. The HTTP correction handler also
 // invalidates scoreboardCache and broadcasts a `score_corrected`
-// socket event to the event's room — needs both io and the
+// socket event to the event's room, which needs both io and the
 // cache as factory deps.
 // =============================================================
 app.use(require("./routes/score-correction")({
@@ -911,9 +910,9 @@ app.use(require("./routes/score-correction")({
 
 // =============================================================
 // DASHBOARD BUNDLE
-// [SECTION: ROUTES — DASHBOARD]
+// [SECTION: ROUTES: DASHBOARD]
 // /api/dashboard returns every role-scoped slice the dashboard
-// view needs in one round trip — events, role requests,
+// view needs in one round trip: events, role requests,
 // pending orgs, recent activity, judge events, coach divers.
 // Replaces the previous fan-out of 5–6 separate API calls on
 // dashboard mount.
@@ -925,8 +924,8 @@ app.use(require("./routes/dashboard")({
 
 // =============================================================
 // FEDERATION-WIDE AUDIT
-// [SECTION: ROUTES — AUDIT]
-// /api/audit/scores + /api/audit/roles + /api/audit/recent —
+// [SECTION: ROUTES: AUDIT]
+// /api/audit/scores + /api/audit/roles + /api/audit/recent:
 // cross-event / cross-user audit views for org admins doing
 // dispute investigations and compliance review. The per-event
 // /api/events/:id/score-audit (inside score-correction.js) and
@@ -939,7 +938,7 @@ app.use(require("./routes/audit")({
 }));
 
 // =============================================================
-// LIVE STATE — activeDivers + meetHolds
+// LIVE STATE (activeDivers + meetHolds)
 // [SECTION: LIVE STATE]
 // activeDivers + meetHolds are imported earlier in the file (just
 // after the email helpers) because the events router mounts before
@@ -950,7 +949,7 @@ app.use(require("./routes/audit")({
 
 // =============================================================
 // DIVE LIST TEMPLATES
-// [SECTION: ROUTES — DIVE TEMPLATES]
+// [SECTION: ROUTES: DIVE TEMPLATES]
 // Per-diver saved combinations (CompetitorView load/save)
 // extracted into routes/templates.js.
 // =============================================================
@@ -980,7 +979,7 @@ app.use(require("./routes/late-arrivals")({ pool, requireOrgRole }));
 // =============================================================
 // MANUAL SCORE ENTRY (P5)
 // =============================================================
-// POST /api/scores/manual-entry — operator types each judge's
+// POST /api/scores/manual-entry: operator types each judge's
 // score during a fallback episode (extended outage; judges
 // showing values on phone screens). See docs/offline-p1-design.md
 // §Phase 5.
@@ -991,7 +990,7 @@ app.use(require("./routes/manual-scores")({
 
 // =============================================================
 // COMPETITOR ROUTES
-// [SECTION: ROUTES — COMPETITOR]
+// [SECTION: ROUTES: COMPETITOR]
 // /api/competitor/submit-list extracted into routes/competitor.js.
 // =============================================================
 app.use(require("./routes/competitor")({
@@ -1005,14 +1004,14 @@ app.use(require("./routes/competitor")({
 
 // =============================================================
 // DIVE DIRECTORY
-// [SECTION: ROUTES — DIVE DIRECTORY]
+// [SECTION: ROUTES: DIVE DIRECTORY]
 // /api/dive-directory extracted into routes/dive-directory.js.
 // =============================================================
 app.use(require("./routes/dive-directory")({ pool, verifyToken, requireOrgRole }));
 
 // =============================================================
 // DIVER PROFILE & HISTORY
-// [SECTION: ROUTES — DIVER PROFILE]
+// [SECTION: ROUTES: DIVER PROFILE]
 // /api/divers/:id/profile, /analytics, and /api/users/me/dashboard
 // extracted into routes/diver-profile.js along with the local
 // canViewDiverProfile / canViewDiverPrivate helpers and the
@@ -1033,11 +1032,11 @@ app.use(createSearchLimiter(), require("./routes/diver-profile")({
 
 // =============================================================
 // JUDGE ANALYSIS
-// [SECTION: ROUTES — JUDGE ANALYTICS]
+// [SECTION: ROUTES: JUDGE ANALYTICS]
 // /api/judges/:id/profile, /api/judges/:id/analytics, and
 // /api/users/me/judge-dashboard. The analytics endpoint computes
 // per-judge metrics referenced against the World Aquatics-trim
-// kept mean for each dive (PART FOUR Article 13 trim rules) — the
+// kept mean for each dive (PART FOUR Article 13 trim rules), the
 // same "kept set" the dive-points formula uses, so a judge's
 // deviation from it is the same signal an WA judges' assessor
 // would compute by hand. See routes/judge-analytics.js for the
@@ -1077,7 +1076,7 @@ app.use(recordsRouter);
 // SOCKET ENGINE
 // [SECTION: SOCKET ENGINE]
 // Every io.use / socket.on handler lives in routes/socket.js.
-// We hand it the dependencies it needs — pool, JWT_SECRET, the
+// We hand it the dependencies it needs: pool, JWT_SECRET, the
 // auth helpers, isValidScore, the records helper, the shared
 // activeDivers / meetHolds maps from lib/live-state, and the push
 // engine (the connection handler joins per-user rooms + accepts
@@ -1107,7 +1106,7 @@ require("./routes/socket")({
 
 // =============================================================
 // WEB PUSH ROUTES
-// [SECTION: ROUTES — WEB PUSH]
+// [SECTION: ROUTES: WEB PUSH]
 // /api/push/* + /api/notifications/* live in routes/push.js. The
 // engine itself (lib/push.js) is shared with the socket layer +
 // any feature that wants to fire a notification (referee sign-off,
@@ -1115,7 +1114,7 @@ require("./routes/socket")({
 // =============================================================
 app.use(require("./routes/push")({ verifyToken, push }));
 
-// Periodic expirer — cheap thanks to the partial index on
+// Periodic expirer, cheap thanks to the partial index on
 // (status, expires_at). Five-minute cadence is plenty: a
 // stale-by-30-seconds row in the inbox isn't worth a tighter
 // loop, and the engine refuses to re-dispatch expired rows
@@ -1128,13 +1127,13 @@ setInterval(() => {
 
 // =============================================================
 // RESULTS ARCHIVE
-// [SECTION: ROUTES — ARCHIVE]
+// [SECTION: ROUTES: ARCHIVE]
 // /api/archive, /api/archive/clubs, /api/archive/:eventId/results
 // extracted into routes/archive.js.
 // =============================================================
 app.use(exportLimiter, require("./routes/archive")({ pool, readPool }));
 
-// DiveRecorder mined archive (dr_* tables) — public, read-only
+// DiveRecorder mined archive (dr_* tables): public, read-only
 // browse of historical results imported from diverecorder.co.uk.
 // Anonymous-readable like the live archive; throttled with the same
 // public-read limiter.
@@ -1158,7 +1157,7 @@ app.use(createSearchLimiter(), require("./routes/dr-archive")({ pool, readPool, 
 
 // =============================================================
 // PDF + CSV EXPORT
-// [SECTION: ROUTES — PDF EXPORT]
+// [SECTION: ROUTES: PDF EXPORT]
 // 4 PDFs (program, start-list, score-sheet, results) + 1 CSV
 // (per-dive results) extracted into routes/pdf.js along with
 // the local csvCell / csvRow helpers and the World Aquatics trim
@@ -1168,7 +1167,7 @@ app.use(exportLimiter, require("./routes/pdf")({ pool }));
 
 // =============================================================
 // JUDGE RANKING ANALYSIS
-// [SECTION: ROUTES — JUDGE RANKING]
+// [SECTION: ROUTES: JUDGE RANKING]
 // "What would the standings have been if every judge had scored
 // unanimously like one specific judge?" Powers the in-page table
 // + score-chip tooltip enhancement on Completed events, plus CSV
@@ -1179,7 +1178,7 @@ app.use(exportLimiter, require("./routes/judge-ranking")({ pool }));
 
 // =============================================================
 // PUBLIC DIVER PROFILE
-// [SECTION: ROUTES — PUBLIC PROFILE]
+// [SECTION: ROUTES: PUBLIC PROFILE]
 // /api/public/divers/:public_slug (JSON) and /diver/:public_slug
 // (server-rendered OG-tagged HTML for social-network crawlers,
 // SPA fall-through for browsers). Mounted BEFORE the SPA static
@@ -1188,7 +1187,7 @@ app.use(exportLimiter, require("./routes/judge-ranking")({ pool }));
 app.use(exportLimiter, require("./routes/public-profile")({ pool, readPool }));
 
 // =============================================================
-// SPA FALLBACK — must come after all API routes
+// SPA FALLBACK (must come after all API routes)
 // [SECTION: SPA FALLBACK]
 //
 // Hard-refreshing /dashboard (or any client-side route) hits
@@ -1225,17 +1224,17 @@ app.use((req, res) => {
 
 // Log schema version + run audit-log retention sweep at boot.
 // Both queries are best-effort: a failure (e.g. running against
-// an old DB that pre-dates migration 008) just logs a warning.
+// an old DB that pre-dates migration 008) just logs warning.
 async function bootChecks() {
-  // Refuse to serve a production deployment whose bootstrap
-  // system_admin still answers to the well-known init.sql
-  // credentials (admin / admin) — anyone who can reach the login
+  // Heads up: refuse to serve a production deployment whose
+  // bootstrap system_admin still answers to the well-known init.sql
+  // credentials (admin / admin). Anyone who can reach the login
   // page owns the platform until that password is rotated. One
   // bcrypt.compare against the stored hash at boot; NOT best-
   // effort: a match is a fatal log + exit. Dev / test installs
   // (NODE_ENV unset) and the intentional fixtures in
   // seed_test_data.sql are unaffected. A query error (e.g. half-
-  // migrated DB) only warns — the other boot checks below stay
+  // migrated DB) only warns, the other boot checks below stay
   // best-effort and fail-open on infrastructure trouble.
   if (process.env.NODE_ENV === "production") {
     try {
@@ -1255,7 +1254,7 @@ async function bootChecks() {
   }
 
   // Rehydrate live-state cache from event_live_state. Best-
-  // effort — if the table doesn't exist yet (DB pre-dates
+  // effort: if the table doesn't exist yet (DB pre-dates
   // migration 034) the helper logs and returns. After
   // rehydrate the in-memory maps reflect any meet that was
   // running when the previous server instance shut down.
@@ -1268,10 +1267,10 @@ async function bootChecks() {
   // Start the idempotency-keys TTL sweeper (migration 054).
   // Background interval inside this Node process; deletes rows
   // older than 72 hours every hour. Safe to call before any
-  // route uses idempotency — if the table doesn't exist yet
+  // route uses idempotency: if the table doesn't exist yet
   // the first sweep logs an error and the next deploy applies
-  // the migration. See docs/offline-p1-design.md §2 for the
-  // retention rationale.
+  // the migration. FYI, see docs/offline-p1-design.md §2 for
+  // the retention rationale.
   try {
     require("./lib/idempotency-sweeper").start({ pool });
   } catch (err) {
@@ -1280,7 +1279,7 @@ async function bootChecks() {
 
   // Start the auto-withdraw sweeper (migrations 076/078): hourly, books a
   // withdrawal for every org/club that enabled it once their balance
-  // clears the threshold. Only meaningful with payments live — while
+  // clears the threshold. Only meaningful with payments live, while
   // dormant the settings endpoints just save the preference for later.
   if (payments.enabled) {
     try {
@@ -1325,12 +1324,12 @@ async function bootChecks() {
   }
 }
 
-// Daily snapshot — writes the past 24 h of audit rows to JSONL
+// Daily snapshot: writes the past 24 h of audit rows to JSONL
 // files in AUDIT_SNAPSHOT_DIR (one file per table per day).
 // Called from bootChecks before the purge so the rows about to
 // roll off the 30-day window survive externally. The operator
 // is expected to push the dir to S3 / off-site backup via a
-// separate cron / systemd job.
+// seperate cron / systemd job.
 async function snapshotAuditTables() {
   const fs = require("node:fs");
   const path = require("node:path");
@@ -1352,7 +1351,7 @@ async function snapshotAuditTables() {
       );
       const out = path.join(dir, file);
       // Append mode so multiple snapshots in the same day
-      // accumulate rather than overwrite — dedupe is the
+      // accumulate rather than overwrite, dedupe is the
       // operator's problem if they run this manually.
       const stream = fs.createWriteStream(out, { flags: "a" });
       for (const row of r.rows) {
@@ -1403,9 +1402,9 @@ if (require.main === module) {
   //      flight).
   //   4. Exit 0.
   //
-  // 25-second deadline forces an exit if any of the above
-  // hangs — better to bounce loudly than to leave a half-dead
-  // process holding a port. The deploy environment's grace
+  // Worth flagging: the 25-second deadline forces an exit if any
+  // of the above hangs, better to bounce loudly than to leave a
+  // half-dead process holding a port. The deploy environment's grace
   // period (pm2 default 30s, Kubernetes default 30s) matches.
   let shuttingDown = false;
   async function gracefulShutdown(signal) {
@@ -1420,7 +1419,7 @@ if (require.main === module) {
     deadline.unref();
 
     try {
-      // Stop accepting new HTTP — promisified so we await the close.
+      // Stop accepting new HTTP, promisified so we await the close.
       await new Promise((resolve, reject) =>
         server.close((err) => (err ? reject(err) : resolve())),
       );

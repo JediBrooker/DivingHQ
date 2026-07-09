@@ -1,5 +1,5 @@
 <script setup>
-// DeleteAccountDialog — self-service account deletion modal
+// DeleteAccountDialog: self-service account deletion modal
 // (Migration 053). Mounted by DiverProfileView's danger zone.
 //
 // Flow:
@@ -10,8 +10,8 @@
 //      and the parent clears the auth store + redirects.
 //
 // The password gate is the same defence as the email / password
-// change flows — a hijacked session can't silently destroy the
-// account without proving the password.
+// change flows, since a hijacked session can't silently destroy
+// the account without proving the password.
 
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -21,7 +21,7 @@ import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 const { t } = useI18n()
 const auth = useAuthStore()
 
-// Component is mounted only while open — lock for its lifetime
+// Component is mounted only while open, so lock for its lifetime
 // and rely on the composable's onUnmounted to release.
 useBodyScrollLock().lock()
 
@@ -45,10 +45,10 @@ async function submit() {
     })
     emit('deleted')
   } catch (err) {
-    // Server returns a generic "Password incorrect" for wrong-
-    // password (401). Anything else is a server-side wobble or
-    // a rate-limit trip — surface the message verbatim so the
-    // user knows what happened.
+    // Heads up: server returns a generic "Password incorrect" for
+    // wrong-password (401). Anything else is a server-side wobble or
+    // a rate-limit trip, so just surface the message verbatim,
+    // that way the user knows what happened.
     error.value = err?.message || t('profile.delete.password_wrong')
     submitting.value = false
   }

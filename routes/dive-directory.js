@@ -1,4 +1,4 @@
-// Dive directory — the World Aquatics dive catalog (~830 rows)
+// Dive directory: the World Aquatics dive catalog (~830 rows)
 // loaded by init.sql, plus org-specific custom rows added through
 // the SPA's Dive Directory page.
 //
@@ -17,12 +17,13 @@
 
 const express = require("express");
 
-// Whitelist of dive_position enum values — has to match the
-// dive_position enum in init.sql. A typo here would silently let
-// the DB reject the insert with a less helpful error message.
+// Whitelist of dive_position enum values. Watch out, this has to
+// match the dive_position enum in init.sql. A typo here would
+// silently let the DB reject the insert with a less helpful error
+// message.
 const DIVE_POSITIONS = new Set(["A", "B", "C", "D"]);
 // board_height enum (matches init.sql's board_height ENUM). Used
-// to validate the height string before the cast — the height
+// to validate the height string before the cast. The height
 // column on dive_directory itself is numeric(3,1), but events use
 // the enum, so we keep the strings aligned.
 const HEIGHT_LABELS = new Set(["0m", "1m", "3m", "5m", "7.5m", "10m"]);
@@ -43,7 +44,7 @@ function isValidDD(dd) {
   return Number.isFinite(n) && n >= 0.1 && n <= 9.9;
 }
 
-// dive_code is "<group><somersaults><twists?><flying?>" — 2–6
+// dive_code is "<group><somersaults><twists?><flying?>", 2–6
 // alphanumeric chars. Strict regex so a "FORWARD" or empty string
 // can't bypass and end up as a label that the autocomplete won't
 // match.
@@ -63,8 +64,8 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
   //   - judge
   //   - coach
   // System admins bypass via requireOrgRole's built-in
-  // is_system_admin shortcut. Divers, spectators, etc. can read
-  // the catalog but not modify it.
+  // is_system_admin shortcut. FYI divers, spectators, etc. can
+  // read the catalog but not modify it.
   //
   // requireOrgRole is optional in the factory signature so the
   // existing test setups that mount this router with the smaller
@@ -77,7 +78,7 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
     : verifyToken;
 
   // -----------------------------------------------------------
-  // GET /api/dive-directory — full catalog. is_custom + created_by
+  // GET /api/dive-directory: full catalog. is_custom + created_by
   // + created_org_id surface so the SPA can show edit/delete
   // controls for the rows the current org owns.
   // -----------------------------------------------------------
@@ -137,7 +138,7 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
   }
 
   // -----------------------------------------------------------
-  // POST /api/dive-directory — add a custom row. Body:
+  // POST /api/dive-directory: add a custom row. Body:
   //   { dive_code, height, position, dd, description? }
   // height accepts the enum string ("3m") and converts to numeric
   // for the dive_directory.height column.
@@ -165,7 +166,7 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
     try {
       // Pre-flight dedup check on the full 4-key (dive_code,
       // position, height, dd). Catches the case the user explicitly
-      // asked us to refuse — "this exact dive already exists" — and
+      // asked us to refuse ("this exact dive already exists") and
       // produces a more readable 409 than the generic
       // unique_violation that would otherwise trip from the
       // (dive_code, height, position) index. We also flag whether
@@ -231,10 +232,10 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
   });
 
   // -----------------------------------------------------------
-  // PUT /api/dive-directory/:id — update an existing custom row.
-  // Core rows (is_custom = false) refuse — they're the protected
-  // World Aquatics catalog. Cross-org edits also refuse so an org
-  // can't tamper with another's drill list.
+  // PUT /api/dive-directory/:id: update an existing custom row.
+  // Core rows (is_custom = false) refuse since they're the
+  // protected World Aquatics catalog. Cross-org edits also refuse
+  // so an org can't tamper with another's drill list.
   // -----------------------------------------------------------
   router.put("/api/dive-directory/:id", requireStaff, async (req, res) => {
     const id = req.params.id;
@@ -256,7 +257,7 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
       // both the row exists and the gate passes. NULL row → 404
       // path; gate fail → 403 path. Pull current field values too
       // so the dedup pre-flight below knows the post-update key
-      // (the patch is partial — unchanged fields keep their old
+      // (the patch is partial, so unchanged fields keep their old
       // value via COALESCE in the UPDATE).
       const owner = await pool.query(
         `SELECT is_custom, created_org_id, dive_code, height, position, dd
@@ -336,7 +337,7 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
       );
       res.json(r.rows[0]);
     } catch (err) {
-      // Same race fall-through as the POST handler — only fires
+      // Same race fall-through as the POST handler, only fires
       // when an exact 4-key duplicate slips past the pre-flight.
       if (err.code === "23505") {
         return res.status(409).json({
@@ -349,10 +350,10 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
   });
 
   // -----------------------------------------------------------
-  // DELETE /api/dive-directory/:id — remove a custom row. Core
+  // DELETE /api/dive-directory/:id: remove a custom row. Core
   // rows refuse. Cross-org refuses. Rows that have ever been
   // filed on a roster or scored in a meet refuse via the
-  // rejectIfInUse pre-flight so the scoreboard archive can't be
+  // rejectIfInUse pre-flight so the scoreboard archive cant be
   // retroactively orphaned.
   // -----------------------------------------------------------
   router.delete("/api/dive-directory/:id", requireStaff, async (req, res) => {
@@ -373,10 +374,11 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
         return res.status(403).json({ error: "Custom dive belongs to another org" });
       }
 
-      // Lock-on-use. Same gate as PUT — a dive referenced by
+      // Lock-on-use. Same gate as PUT: a dive referenced by
       // competitor_dive_lists or scores is part of a meet record
       // and can't be quietly deleted. The 23503 fallback in the
-      // catch block stays as a belt-and-braces against a race.
+      // catch block stays as a belt-and-braces against a race,
+      // just in case.
       const lockResult = await rejectIfInUse(id);
       if (lockResult) return res.status(lockResult.status).json(lockResult.body);
 

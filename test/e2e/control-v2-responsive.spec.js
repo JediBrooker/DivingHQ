@@ -1,13 +1,13 @@
 // P9: ControlViewV2 responsive collapse. Flag-on only, narrow viewport.
-// Proves the single-column layout (the top control bar wraps, full-width
-// center, bottom-sheet drawer), no PAGE horizontal scrollbar, and the
-// Unknown/no-event state rendering exactly ONE coherent surface instead
-// of a blank panel.
+// Proves the single-column layout (top control bar wraps, full-width
+// center, bottom-sheet drawer), no PAGE horizontal scrollbar, and that
+// the Unknown/no-event state renders exactly ONE coherent surface
+// instead of a blank panel.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
-test.use({ viewport: { width: 390, height: 844 } }); // iPhone-ish width
+test.use({ viewport: { width: 390, height: 844 } }); // roughly iPhone width
 
 async function signIn(page, username) {
   await page.goto("/login");
@@ -33,18 +33,18 @@ test("narrow viewport: Unknown state shows one surface; top bar wraps; drawer is
   await page.goto("/control");
   await page.waitForLoadState("networkidle");
 
-  // Unknown state (no stage selected yet): exactly ONE coherent surface,
+  // Unknown state (no stage picked yet): exactly ONE coherent surface,
   // never blank.
   await expect(page.locator(".cv2-empty .empty-state")).toBeVisible();
   expect(await noPageHScroll(page)).toBe(true);
 
-  // Pick the stage -> Setup mode under the collapsed layout.
+  // pick the stage -> Setup mode under the collapsed layout
   await setup.selectControlEvent(page, "Responsive Event");
   await expect(page.locator('.cv2-mode[aria-label="Setup"]')).toBeVisible();
   expect(await noPageHScroll(page)).toBe(true);
 
   // The top control bar replaces the rail and wraps within the viewport
-  // (no sideways page scroll) rather than stripping off-screen.
+  // (no sideways page scroll) instead of stripping off-screen.
   await expect(page.locator(".cv2-topbar")).toBeVisible();
   expect(await noPageHScroll(page)).toBe(true);
 
@@ -53,6 +53,6 @@ test("narrow viewport: Unknown state shows one surface; top bar wraps; drawer is
   await expect(page.locator(".cv2-drawer")).toBeVisible();
   const box = await page.locator(".cv2-drawer").boundingBox();
   const vh = page.viewportSize().height;
-  expect(box.y + box.height).toBeGreaterThanOrEqual(vh - 2); // flush to the bottom
+  expect(box.y + box.height).toBeGreaterThanOrEqual(vh - 2); // should sit flush to the bottom
   expect(await noPageHScroll(page)).toBe(true);
 });

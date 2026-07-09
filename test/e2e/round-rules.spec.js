@@ -12,14 +12,14 @@
 //   2. POST /api/events with a `round_rules` body builds the
 //      8-round event with two sections.
 //   3. GET /api/events round-trips the rules.
-//   4. A diver self-submits — three times:
+//   4. A diver self-submits, three times:
 //        a) too much DD in section 1 → 400 + violations[]
 //        b) only 3 distinct groups in section 1 (cap is 4) → 400
 //        c) a clean list → 200.
 //   5. Validation is mirrored client-side: the SPA's submit
 //      button stays disabled while violations show on the page.
 //      We don't drive the full SPA dive-picker (that's a
-//      modal-heavy UI well-covered elsewhere) — the API +
+//      modal-heavy UI well-covered elsewhere), the API +
 //      validator coverage proves the contract.
 //   6. Headed-mode walk: the spec opens the Manager event form
 //      via the SPA and asserts the Round-structure editor's
@@ -79,7 +79,7 @@ test("round-rules: 4 @ 7.6 + 4 unlimited blocks bad lists, accepts good ones", a
   const i = await pickDive(1.0, "401", "B");      // inward
   const t = await pickDive(1.0, "5132", "D");     // twist
   // High-DD optional-section picks:
-  const f2 = await pickDive(1.0, "103", "B");     // forward 1.5som — different code, same group
+  const f2 = await pickDive(1.0, "103", "B");     // forward 1.5som, different code, same group
   const b2 = await pickDive(1.0, "203", "B");
   const r2 = await pickDive(1.0, "303", "B");
   const i2 = await pickDive(1.0, "403", "B");
@@ -92,7 +92,7 @@ test("round-rules: 4 @ 7.6 + 4 unlimited blocks bad lists, accepts good ones", a
 
   // ---- Case A: violates DD-sum cap in voluntary section --------
   // Voluntary section: pick 4 dives whose sum DD definitely
-  // exceeds 7.6 — using 103B / 203B / 303B / 403B (each ~1.7-2.3
+  // exceeds 7.6, since 103B / 203B / 303B / 403B (each ~1.7-2.3
   // DD on 1m board) overshoots easily.
   const badDdRes = await request.post("/api/competitor/submit-list", {
     headers: { Authorization: `Bearer ${diverLogin.token}` },
@@ -117,9 +117,9 @@ test("round-rules: 4 @ 7.6 + 4 unlimited blocks bad lists, accepts good ones", a
   expect(badDdBody.violations.join(" ")).toMatch(/Voluntary.*DD/);
 
   // ---- Case B: not enough distinct groups in voluntary -----
-  // Voluntary picks: 101B + 103B (both forward — group 1) +
+  // Voluntary picks: 101B + 103B (both forward, group 1) +
   // 201B + 301B. Total DD stays under 7.6, but only 3 distinct
-  // groups (forward / back / reverse) appear — section
+  // groups (forward / back / reverse) appear when the section
   // requires 4. Server rejects with the
   // "needs 4 different groups, 3 used so far" violation.
   const badGroupRes = await request.post("/api/competitor/submit-list", {
@@ -128,7 +128,7 @@ test("round-rules: 4 @ 7.6 + 4 unlimited blocks bad lists, accepts good ones", a
       event_id: event.id,
       dives: [
         { round_number: 1, dive_id: f },
-        { round_number: 2, dive_id: f2 },     // 2nd forward — only 3 distinct groups
+        { round_number: 2, dive_id: f2 },     // 2nd forward, only 3 distinct groups
         { round_number: 3, dive_id: b },
         { round_number: 4, dive_id: r },
         { round_number: 5, dive_id: i },
@@ -237,7 +237,7 @@ test("round-rules: section editor exposes the min-distinct-groups field", async 
   test.setTimeout(45_000);
 
   const { orgId, adminToken, username } = await setup.createOrgAndAdmin(request);
-  // adminToken is unused below — we drive the SPA directly via login.
+  // heads up: adminToken is unused below, we just drive the SPA directly via login.
   void adminToken;
 
   await setup.installClickHighlight(page);
@@ -258,10 +258,10 @@ test("round-rules: section editor exposes the min-distinct-groups field", async 
   await page.getByRole("button", { name: /\+ New Event/i }).click();
   await expect(page.locator(".modal-create-event")).toBeVisible();
 
-  // The Quick preset is gone — make sure it doesn't sneak back in.
+  // The Quick preset is gone, make sure it doesn't sneak back in.
   await expect(page.getByRole("button", { name: /Quick: 4 @ 7\.6/ })).toHaveCount(0);
 
-  // The create form is a wizard now — step Details -> Rounds -> Structure.
+  // The create form is a wizard now: step Details -> Rounds -> Structure.
   await page.getByRole("button", { name: /Next/ }).click();
   await page.getByRole("button", { name: /Next/ }).click();
 

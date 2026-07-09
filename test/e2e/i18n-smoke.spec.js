@@ -1,6 +1,6 @@
 // Locale smoke coverage.
 //
-// The goal is not translation quality; it is to catch broken
+// The goal isn't translation quality, it's to catch broken
 // dictionaries, raw key leakage, blank pages, and RTL boot issues
 // across representative public + authenticated routes.
 
@@ -63,9 +63,9 @@ for (const locale of ["es", "de", "ar"]) {
 
       await page.goto("/manager");
       await assertHealthyPage(page, `${locale} manager`);
-      // Master–detail Meet Manager: the "+ New event" action in the
-      // detail header proves the page mounted in this locale (the
-      // button text is not translated, so it's locale-stable).
+      // Master-detail Meet Manager: the "+ New event" action in the
+      // detail header proves the page mounted in this locale, the
+      // button text isn't translated so it's locale-stable.
       await expect(page.getByRole("button", { name: /\+ New event/i })).toBeVisible();
 
       const dir = await page.evaluate(() => document.documentElement.getAttribute("dir"));

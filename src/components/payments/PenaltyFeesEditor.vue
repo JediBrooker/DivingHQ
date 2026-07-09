@@ -1,9 +1,9 @@
 <script setup>
 // Manager editor for an event's scratch / no-show penalty fees. One flat
 // FeeEditor per kind, backed by /api/events/:id/penalty-fee?kind=… . The
-// kind rides extraPayload so the PUT lands on the right penalty
+// kind rides along in extraPayload so the PUT lands on the right penalty
 // fee_definition. Admins issue these against entrants in the Penalties
-// panel; this just sets the price.
+// panel, this component just sets the price.
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FeeEditor from '@/components/payments/FeeEditor.vue'

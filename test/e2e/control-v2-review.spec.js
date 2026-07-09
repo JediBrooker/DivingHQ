@@ -1,6 +1,6 @@
 // P8.1: ControlViewV2 Review mode. Flag-on only. A Completed event shows
-// its final standings (read from /api/scoreboard/:id) + a link to the
-// public scoreboard.
+// its final standings (read from /api/scoreboard/:id) plus a link to
+// the public scoreboard.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 

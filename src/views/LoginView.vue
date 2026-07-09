@@ -9,8 +9,8 @@ import ThemeToggle from '@/components/ThemeToggle.vue'
 import { CircleHelp } from '@lucide/vue'
 // Migration 053: reunite-on-return prompt fires on every login
 // when there are deleted-account candidates in the user's org
-// with the same name. The modal is dismissable; checking is a
-// single tiny POST so it doesn't slow the landing.
+// with the same name. The modal is dismissable, and checking is
+// just a single tiny POST so it doesn't slow the landing.
 import ClaimCandidatesModal from '@/components/ClaimCandidatesModal.vue'
 
 const router = useRouter()
@@ -26,7 +26,7 @@ const errorMsg = ref('')
 const noticeMsg = ref('')
 const loading = ref(false)
 
-// Post-login destination — defaults to the dashboard, but if
+// Post-login destination, defaults to the dashboard, but if
 // the router guard bounced the user here from a protected
 // route we honour the `next` query param so they land where
 // they were aiming. Validated as same-origin (must start with
@@ -39,7 +39,7 @@ function safeNextPath() {
   if (typeof raw !== 'string' || !raw) return '/dashboard'
   // Reject anything that isn't a clean local path. Same-origin
   // check covers absolute URLs (http://…), protocol-relative
-  // URLs (//evil.example), and javascript: schemes — every
+  // URLs (//evil.example), and javascript: schemes, since every
   // attacker-controllable target starts with a non-"/" or with
   // "//".
   if (!raw.startsWith('/') || raw.startsWith('//')) return '/dashboard'
@@ -61,11 +61,11 @@ onMounted(async () => {
   }
 })
 
-// Claim-candidates state (Migration 053). When non-empty the
+// Claim-candidates state (Migration 053). When non-empty, the
 // post-login redirect is held until the user dismisses or
 // confirms the modal. The session-storage flag suppresses
-// re-prompting on subsequent logins from the same browser tab
-// — anyone who explicitly Skip'd doesn't want to be asked again
+// re-prompting on subsequent logins from the same browser tab,
+// since anyone who explicitly Skip'd doesn't want to be asked again
 // every time they sign in.
 const claimCandidates = ref(null)
 const CLAIM_SEEN_KEY = 'profile.claim.seen'
@@ -96,9 +96,9 @@ async function finishLogin(data) {
     showWarning(data.warning)
   }
   // Before routing to the dashboard, probe for claim
-  // candidates. Hits one tiny endpoint; if there are no
-  // matches we route immediately. The modal handles its own
-  // close + claim transitions back to safeNextPath().
+  // candidates as a quick sanity check. Hits one tiny endpoint;
+  // if there are no matches we route immediately. The modal
+  // handles its own close + claim transitions back to safeNextPath().
   const held = await checkClaimCandidates()
   if (!held) {
     router.push(safeNextPath())
@@ -192,7 +192,7 @@ async function handleTotpSubmit() {
         <label class="label">{{ $t('auth.login.username_label') }}</label>
         <!-- iOS Safari capitalises the first letter of any text
              input by default and red-underlines it as a typo.
-             Usernames in this app are not sentences — disable the
+             Usernames in this app aren't sentences, so disable the
              keyboard helpers so iOS doesn't fight the user. -->
         <input class="input" type="text" v-model="username"
                autocomplete="username"
@@ -261,12 +261,12 @@ async function handleTotpSubmit() {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* dvh, not vh — iOS Safari's collapsing URL bar makes 100vh
+  /* dvh, not vh: iOS Safari's collapsing URL bar makes 100vh
      equal the large viewport, so on iPhone SE-class screens
-     with the bar expanded the Sign In button sits below the
-     visible area. dvh tracks the live viewport. vh fallback
-     first so browsers older than ~Q4-2022 still get a sane
-     min-height; modern browsers ignore it and use dvh. */
+     with the bar expanded the Sign In button ends up below the
+     visible area. dvh tracks the live viewport instead. vh fallback
+     goes first so browsers older than ~Q4-2022 still get a sane
+     min-height; modern browsers just ignore it and use dvh. */
   min-height: 100vh;
   min-height: 100dvh;
   padding: 1.5rem;
@@ -300,7 +300,7 @@ async function handleTotpSubmit() {
   font-weight: 700;
   letter-spacing: -0.01em;
   text-transform: none;
-  /* DIVING white, HQ cyan — match the public home page hero
+  /* DIVING white, HQ cyan: matches the public home page hero
      mark's colour rhythm. The cyan accent on HQ keeps the
      brand recognisable at a glance while the white DIVING
      reads cleanly against the dark page. */
@@ -308,7 +308,7 @@ async function handleTotpSubmit() {
   /* margin-bottom moved to .login-top, which now wraps the mark + locale switcher */
   display: flex;
   align-items: center;
-  /* No `gap` here — flex would treat the text "DIVING" and
+  /* No `gap` here, since flex would treat the text "DIVING" and
      the <span>HQ</span> as two flex items and put the gap
      between them, producing a visible "DIVING HQ" rather
      than "DIVINGHQ". Spacing between the dash (::before) and

@@ -1,9 +1,9 @@
-// Integration tests for the payment-aware deletion guards added to
-// meet and event routes, and for stripe_charge_id backfill in the
-// webhook handler.
+// Integration tests for the payment-aware deletion guards on the meet
+// and event routes, plus stripe_charge_id backfill in the webhook
+// handler.
 //
-// Self-skips when Postgres is unreachable or the payments table
-// hasn't been created (same pattern as payments.integration.test.js).
+// Heads up: self-skips if Postgres isn't reachable or the payments
+// table hasn't been created yet (same pattern as payments.integration.test.js).
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
@@ -164,7 +164,7 @@ test("event deletion is blocked when a paid payment references it", async (t) =>
   assert.equal(res.status, 409, "should refuse deletion with paid payments");
   const body = await res.json();
   assert.ok(body.paid_count >= 1);
-  // Event must still exist.
+  // sanity check: event must still exist
   const exists = (await pool.query("SELECT id FROM events WHERE id = $1", [eventId])).rowCount;
   assert.equal(exists, 1, "event was not deleted");
 });

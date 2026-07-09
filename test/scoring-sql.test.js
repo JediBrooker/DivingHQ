@@ -1,12 +1,12 @@
-// Unit coverage for lib/scoring-sql.js — the canonical per-dive
+// Unit coverage for lib/scoring-sql.js, the canonical per-dive
 // scoring SQL builders.
 //
-// Two layers of protection, no DB needed (pure string assembly):
+// Two layers of protection here, no DB needed since it's pure string assembly:
 //
 //   1. Exact snapshots of the high-traffic fragments (default
 //      CTE, the seeding/leaderboard variant, the single-dive
-//      SELECT). These are the queries that decide who advances —
-//      an accidental builder change must show up as a loud,
+//      SELECT). These are the queries that decide who advances,
+//      so an accidental builder change must show up as a loud,
 //      reviewable snapshot diff, not a silent SQL drift.
 //   2. A table of every option combination the real call sites
 //      use, each checked for the load-bearing pieces: the
@@ -109,7 +109,7 @@ test("snapshot: perDiveJoins with extraJoins appended after the chain", () => {
 // ---------------------------------------------------------------
 // 2. Real call-site option combinations.
 //
-// One entry per converged call site (sites sharing a combo are
+// One entry per converged call site (sites sharing a combo get
 // listed together). `expect` adds per-site assertions on top of
 // the shared load-bearing checks below.
 // ---------------------------------------------------------------
@@ -406,7 +406,7 @@ const CALL_SITES = [
     pointsAlias: "dive_total",
     where: "s.competitor_id = $1",
     expect: (sql) => {
-      // No projected columns — the UDF is the whole select list.
+      // No projected columns, the UDF is the whole select list.
       assert.ok(sql.includes("SELECT calc_event_dive_points("));
       assert.ok(sql.includes("GROUP BY s.event_id, s.round_number,"));
     },
@@ -710,7 +710,7 @@ for (const cs of CALL_SITES) {
     assert.ok(sql.includes(cs.where));
     assert.ok(sql.includes(`AS ${cs.pointsAlias}`));
 
-    // Mandatory grouping tail — both columns feed the UDF
+    // Mandatory grouping tail, both columns feed the UDF
     // un-aggregated.
     assert.ok(/GROUP BY .*e\.number_of_judges, e\.event_type/.test(sql));
 

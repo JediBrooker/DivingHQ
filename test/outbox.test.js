@@ -172,9 +172,9 @@ test("drain() retries transient failures up to maxAttempts", async () => {
   const o = newOutbox({ maxAttempts: 3 });
   await o.push('submit_score', { score: 8.5 });
 
-  // Send fails twice then succeeds. We need to drain 3 times because
-  // each drain() processes pending once and a failure flips status
-  // back to pending without re-trying in the same call.
+  // Send fails twice then succeeds. Gotcha: we need to drain 3 times
+  // because each drain() only processes pending once, and a failure
+  // flips status back to pending without retrying in the same call.
   const send = flakySend(2);
   const r1 = await o.drain({ send });
   assert.deepEqual(r1, { drained: 0, conflicts: 0, failed: 0 });

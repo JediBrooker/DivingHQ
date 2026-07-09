@@ -7,7 +7,7 @@
 // `violations[]` array of human-readable strings.
 //
 // Cases:
-//   1. POST /api/events with `round_dives` — server returns the
+//   1. POST /api/events with `round_dives`, server returns the
 //      event row and the dedicated GET endpoint returns the
 //      enriched array (joined with dive_directory).
 //   2. Diver submits a list:
@@ -37,7 +37,7 @@ test("round-dives: operator pins dives, server enforces on diver submit", async 
   const fwd = await setup.pickDiveId({ height: 1.0, dive_code: "101", position: "B" });
   const back = await setup.pickDiveId({ height: 1.0, dive_code: "201", position: "B" });
   const rev = await setup.pickDiveId({ height: 1.0, dive_code: "301", position: "B" });
-  // A wrong dive — same height, different code/group.
+  // A wrong dive: same height, different code/group.
   const wrong = await setup.pickDiveId({ height: 1.0, dive_code: "401", position: "B" });
 
   // ---- Create event with round_dives ------------------------
@@ -85,7 +85,7 @@ test("round-dives: operator pins dives, server enforces on diver submit", async 
       dives: [
         { round_number: 1, dive_id: fwd },     // OK
         { round_number: 2, dive_id: wrong },   // operator pinned 'back', not 401
-        { round_number: 3, dive_id: rev },     // free slot — OK
+        { round_number: 3, dive_id: rev },     // free slot, all good
       ],
     },
   });
@@ -154,7 +154,7 @@ test("round-dives: New Event modal has + Add Dive flow (no rounds dropdown)", as
   await expect(page.getByRole("button", { name: /\+ New Event/i }))
     .toBeVisible({ timeout: 10_000 });
 
-  // The "Number of Rounds" dropdown should be gone — the new
+  // The "Number of Rounds" dropdown should be gone, the new
   // flow uses the round-dives editor inside the New Event modal.
   await expect(page.getByLabel(/Number of Rounds/i)).toHaveCount(0);
 
@@ -162,7 +162,7 @@ test("round-dives: New Event modal has + Add Dive flow (no rounds dropdown)", as
   await page.getByRole("button", { name: /\+ New Event/i }).click();
   await expect(page.locator(".modal-create-event")).toBeVisible();
 
-  // The create form is a wizard now — step to "Rounds" for the dives editor.
+  // The create form is a wizard now, step to "Rounds" for the dives editor.
   await page.getByRole("button", { name: /Next/ }).click();
 
   // Add 3 round-dive rows via the "+ Add Dive" button.
@@ -174,7 +174,7 @@ test("round-dives: New Event modal has + Add Dive flow (no rounds dropdown)", as
   // Round-count badge updates live.
   await expect(page.locator(".rd-total")).toContainText("3 rounds");
 
-  // Quick-add buttons are gone — operator goes one row at a time.
+  // Quick-add buttons are gone, operator goes one row at a time.
   await expect(page.getByRole("button", { name: /\+ 5 rounds/i })).toHaveCount(0);
 
   await setup.deleteOrg(orgId);
@@ -210,7 +210,7 @@ test("round-dives: suggested templates filter by gender + age group and apply on
   // operator picks an age group.
   const strip = page.locator(".std-templates");
 
-  // Pick "Open" — single-select dropdown, optgroups for visual
+  // Pick "Open", a single-select dropdown, optgroups for visual
   // grouping but every option is reachable in one click.
   const ageDropdown = page.locator(".modal-create-event select.age-category");
   await ageDropdown.selectOption("open");

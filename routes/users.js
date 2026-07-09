@@ -11,10 +11,10 @@
 //   GET  /api/judges                 list judges in caller's org
 //
 // Both writes that change a user's privilege set call
-// bumpTokenVersion inside the same transaction so a rollback
-// rolls back the bump too — the freshly-revoked role takes effect
-// on the user's next request without waiting for their JWT to
-// expire (Migration 021).
+// bumpTokenVersion inside the same transaction, so a rollback rolls
+// back the bump too: the freshly-revoked role takes effect on the
+// user's next request without waiting for their JWT to expire
+// (Migration 021).
 //
 // Mounted via:
 //   app.use(require('./routes/users')({ … }))
@@ -24,18 +24,18 @@ const bcrypt  = require("bcrypt");
 const jwt     = require("jsonwebtoken");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 
-// Enum values from init.sql's CREATE TYPE org_role. system_admin
-// is intentionally NOT in this set — it's a column on users, not
-// a role assignable here. Keeping this in sync with init.sql is
-// flagged in AGENTS.md.
+// Enum values from init.sql's CREATE TYPE org_role. system_admin is
+// intentionally NOT in this set, it's a column on users, not a role
+// assignable here. Keeping this in sync with init.sql is flagged in
+// AGENTS.md.
 const VALID_ORG_ROLES = new Set([
   "org_admin", "meet_manager", "referee",
   "judge", "diver", "coach", "spectator",
 ]);
 
-// Pass-through middleware used when the caller doesn't wire a
-// bulkWriteLimiter (e.g. test harnesses). Keeps the per-route
-// chain syntax identical in both branches.
+// Pass-through middleware for when the caller doesn't wire a
+// bulkWriteLimiter (test harnesses, mostly). Keeps the per-route
+// chain syntax identical either way.
 const NOOP = (_req, _res, next) => next();
 
 module.exports = function createUsersRouter({
@@ -46,7 +46,7 @@ module.exports = function createUsersRouter({
   bumpTokenVersion,
   sendRoleDecisionEmail,
   bulkWriteLimiter,
-  // Migration 058 — org-admin profile edit + account lifecycle.
+  // Migration 058: org-admin profile edit + account lifecycle.
   sendVerifyEmailEmail,
   sendPasswordResetEmail,
   hashFingerprint,
@@ -58,9 +58,9 @@ module.exports = function createUsersRouter({
 
   router.get("/api/users", requireOrgAdmin, async (req, res) => {
     try {
-      // System admins see every user across every org; org_admins
-      // see only their own org. Org name + country code are
-      // returned so the system-admin UI can group/filter by org.
+      // System admins see every user across every org, org_admins
+      // only see their own. Org name + country code come back too
+      // so the system-admin UI can group/filter by org.
       //
       // r.role is the org_role enum. node-postgres only auto-parses
       // arrays of built-in types, so we cast each role to text to
@@ -98,11 +98,11 @@ module.exports = function createUsersRouter({
 
   router.put("/api/users/:id/roles", requireOrgAdmin, async (req, res) => {
     const { roles } = req.body || {};
-    // Validate up front: roles must be an array of strings, every
-    // element must be a known org_role. Without this, a malformed
-    // body (string, object, role typo) cascades to a 500 from the
-    // INSERT enum cast, which is bad UX and gives an attacker a
-    // clean signal that they hit a real endpoint.
+    // Validate up front: roles has to be an array of strings, and
+    // every element a known org_role. Skip this and a malformed body
+    // (string, object, role typo) cascades into a 500 from the
+    // INSERT enum cast, which is bad UX and hands an attacker a
+    // clean signal they hit a real endpoint.
     if (!Array.isArray(roles)) {
       return res.status(400).json({ error: "roles must be an array of role strings" });
     }
@@ -115,10 +115,10 @@ module.exports = function createUsersRouter({
     }
     const client = await pool.connect();
     try {
-      // Apply roles in the target user's own org — not the
-      // caller's. For org_admins these match by definition (with
-      // a check below); for system_admins editing users across
-      // orgs, this is what makes the cross-org case work.
+      // Apply roles in the target user's own org, not the caller's.
+      // For org_admins these match by definition (there's a check
+      // below); for system_admins editing users across orgs, this
+      // is what makes the cross-org case work.
       const target = await client.query(
         "SELECT org_id FROM users WHERE id = $1",
         [req.params.id],
@@ -135,8 +135,9 @@ module.exports = function createUsersRouter({
 
       await client.query("BEGIN");
 
-      // Diff against existing so the audit log records only the
-      // actual grant / revoke events (not the full delete + insert).
+      // Diff against what's already there so the audit log only
+      // records the actual grant / revoke events, not the full
+      // delete + insert.
       const existing = await client.query(
         "SELECT role::text FROM user_org_roles WHERE user_id = $1 AND org_id = $2",
         [req.params.id, targetOrgId],
@@ -157,9 +158,9 @@ module.exports = function createUsersRouter({
         );
       }
 
-      // Best-effort audit writes — same pattern as the score
-      // audit log: don't let an audit failure roll back the
-      // legitimate role change (e.g. before the migration ran).
+      // Best-effort audit writes, same pattern as the score audit
+      // log: don't let an audit failure roll back the legitimate
+      // role change (e.g. before the migration ran).
       try {
         for (const role of granted) {
           await client.query(
@@ -180,11 +181,11 @@ module.exports = function createUsersRouter({
       }
 
       // Invalidate the target user's existing JWTs (Migration 021).
-      // Granting OR revoking changes the privilege set, so the
-      // currently-circulating token is no longer accurate. The
-      // helper bumps users.token_version + clears the in-memory
-      // cache; the next request from any of their devices forces
-      // a fresh login.
+      // Granting or revoking either one changes the privilege set,
+      // so whatever token is currently circulating is no longer
+      // accurate. The helper bumps users.token_version and clears
+      // the in-memory cache; the next request from any of their
+      // devices forces a fresh login.
       if (granted.length > 0 || revoked.length > 0) {
         await bumpTokenVersion(client, req.params.id);
       }
@@ -229,10 +230,10 @@ module.exports = function createUsersRouter({
     try {
       await client.query("BEGIN");
 
-      // Match by id only; verify the caller can act on this
-      // request after we know which org it belongs to. Granting
-      // the role uses rq.org_id, not the caller's org_id, so
-      // system admins approving cross-org requests work too.
+      // Match by id only, then verify the caller can act on this
+      // request once we know which org it belongs to. Granting the
+      // role uses rq.org_id, not the caller's org_id, so system
+      // admins approving cross-org requests work too.
       const rqRes = await client.query(
         "SELECT * FROM role_requests WHERE id = $1 AND status = 'pending'",
         [req.params.id],
@@ -293,8 +294,8 @@ module.exports = function createUsersRouter({
     }
   });
 
-  // Update a user's club. Two flows allowed:
-  //   * Self-edit can ONLY clear the club. A club is meaningful for
+  // Update a user's club. Two flows are allowed:
+  //   * Self-edit can ONLY clear the club. A club matters for
   //     visibility scoping (rosters, coach links), so a malicious
   //     diver self-assigning into a rival club would be a tenancy
   //     gap. Switching club is org_admin-only.
@@ -324,9 +325,9 @@ module.exports = function createUsersRouter({
           .json({ error: "Cannot change another user's club" });
       }
       // Migration 021: tighten self-edit. Diver can drop their club
-      // (e.g. they left it) but can't move into a different one
-      // without an admin signing off — otherwise a roster of "Club
-      // Foo divers" can be polluted by anyone in the org.
+      // (say they left it) but can't move into a different one
+      // without an admin signing off, otherwise a roster of "Club
+      // Foo divers" could get polluted by anyone in the org.
       if (isSelf && !isAdmin && club_id) {
         return res.status(403).json({
           error: "Switching clubs requires an org admin. You can clear your club yourself.",
@@ -334,7 +335,7 @@ module.exports = function createUsersRouter({
       }
 
       // Only allow assigning a club that belongs to the target's
-      // org. Empty/null clears the club.
+      // org; empty/null just clears it.
       if (club_id) {
         const club = await pool.query(
           "SELECT id FROM clubs WHERE id = $1 AND org_id = $2",
@@ -346,7 +347,7 @@ module.exports = function createUsersRouter({
             .json({ error: "Club not in your organisation" });
       }
 
-      // Capture the previous club for the audit trail.
+      // Grab the previous club for the audit trail.
       const prev = await pool.query(
         "SELECT u.full_name, u.club_id, c.name AS club_name FROM users u LEFT JOIN clubs c ON c.id = u.club_id WHERE u.id = $1",
         [targetId],
@@ -355,8 +356,8 @@ module.exports = function createUsersRouter({
         club_id || null,
         targetId,
       ]);
-      // Audit only when an admin moves someone (not a self-clear) so
-      // the org Audit Log shows who reassigned which diver's club.
+      // Only audit when an admin moves someone (not a self-clear),
+      // so the org Audit Log shows who reassigned which diver's club.
       if (!isSelf || isAdmin) {
         await recordAudit(pool, {
           ...auditFromReq(req),
@@ -376,7 +377,7 @@ module.exports = function createUsersRouter({
   });
 
   // Per-user role audit history. Visible to org_admin within the
-  // user's own org, or to system_admin across all orgs.
+  // user's own org, or system_admin across all orgs.
   router.get("/api/users/:id/role-audit", requireOrgAdmin, async (req, res) => {
     try {
       const target = await pool.query(
@@ -420,22 +421,22 @@ module.exports = function createUsersRouter({
   // -------------------------------------------------------------
   // POST /api/users/me/delete  (Migration 053)
   //
-  // Self-service account deletion. Strips every PII column from
-  // the user row, wipes settings + push subscriptions + role
-  // grants, and stamps deleted_at = now(). What stays: full_name,
-  // org_id, club_id — so the user's name remains on the dives
-  // they actually competed in (sporting record). See
-  // docs/privacy-policy.md §7 for the user-facing contract.
+  // Self-service account deletion. Strips every PII column from the
+  // user row, wipes settings, push subscriptions, and role grants,
+  // then stamps deleted_at = now(). What stays: full_name, org_id,
+  // club_id, so the user's name remains on the dives they actually
+  // competed in (sporting record). See docs/privacy-policy.md §7
+  // for the user-facing contract.
   //
   // Body: { password }. We re-verify the current password so a
-  // hijacked session can't silently destroy the account; same
+  // hijacked session can't silently destroy the account, same
   // pattern as the self-service password / email change paths.
-  // Rate-limited via bulkWriteLimiter to slow brute-forcing the
-  // password gate.
+  // Rate-limited via bulkWriteLimiter to slow down brute-forcing
+  // the password gate.
   //
   // The transaction also bumps token_version, so every
-  // currently-issued JWT for this user is invalidated within the
-  // 30s cache TTL even before deleted_at gates fire in
+  // currently-issued JWT for this user gets invalidated within the
+  // 30s cache TTL, even before the deleted_at gates fire in
   // verifyToken.
   // -------------------------------------------------------------
   router.post("/api/users/me/delete", writeLimiter, verifyToken, async (req, res) => {
@@ -445,11 +446,11 @@ module.exports = function createUsersRouter({
     }
     const client = await pool.connect();
     try {
-      // Pull the user row first — we need org_id (for the audit
-      // row) and password (for the re-auth gate). Read happens
+      // Pull the user row first, we need org_id (for the audit row)
+      // and password (for the re-auth gate). This read happens
       // OUTSIDE the BEGIN block so a wrong-password early return
-      // doesn't open and immediately roll back an empty
-      // transaction on every brute-force probe.
+      // doesn't open and immediately roll back an empty transaction
+      // on every brute-force probe.
       const u = await client.query(
         `SELECT id, password, org_id, deleted_at, full_name
          FROM users WHERE id = $1`,
@@ -460,10 +461,10 @@ module.exports = function createUsersRouter({
         return res.status(404).json({ error: "User not found" });
       }
       if (!user.password) {
-        // No password hash on the row — that user signed up
-        // pre-bcrypt or had their password column wiped already.
-        // Treat as auth failure rather than letting them delete
-        // without proving identity.
+        // No password hash on the row: that user signed up
+        // pre-bcrypt, or had their password column wiped already.
+        // Treat it as an auth failure rather than letting them
+        // delete without proving identity.
         return res.status(401).json({ error: "Password incorrect" });
       }
       const ok = await bcrypt.compare(password, user.password);
@@ -474,8 +475,8 @@ module.exports = function createUsersRouter({
       await client.query("BEGIN");
 
       // Count the side-effect deletes BEFORE we run them so the
-      // audit-log metadata has accurate numbers. Cheap — these
-      // are tiny per-user tables.
+      // audit-log metadata has accurate numbers. Cheap enough,
+      // these are tiny per-user tables.
       const subCount = await client.query(
         "SELECT COUNT(*)::int AS n FROM push_subscriptions WHERE user_id = $1",
         [req.user.id],
@@ -495,19 +496,19 @@ module.exports = function createUsersRouter({
       );
 
       // The big-redact UPDATE. Keep full_name, org_id, club_id
-      // intact — they anchor the historical sporting record and
-      // the claim-on-return flow. Rewrite username so a future
-      // sign-up choosing the same handle isn't blocked by the
-      // UNIQUE constraint; password / email / public_slug go to
-      // NULL so duplicate-email checks and the public profile
-      // route lose their hooks. token_version bump invalidates
-      // every outstanding JWT immediately.
+      // intact, they anchor the historical sporting record and the
+      // claim-on-return flow. Rewrite username so a future sign-up
+      // choosing the same handle isn't blocked by the UNIQUE
+      // constraint; password / email / public_slug go to NULL so
+      // duplicate-email checks and the public profile route lose
+      // their hooks. The token_version bump invalidates every
+      // outstanding JWT immediately.
       // public_slug is NOT NULL in the schema (init.sql line ~191),
-      // so we can't NULL it. To make /diver/<old_slug> 404 cleanly
-      // we replace it with a deterministic placeholder that is
-      // NOT a 32-hex string — the public-profile regex check
+      // so we can't just NULL it. To make /diver/<old_slug> 404
+      // cleanly we swap in a deterministic placeholder that is NOT
+      // a 32-hex string: the public-profile regex check
       // (`/^[0-9a-f]{32}$/i`) rejects it before the DB round-trip,
-      // so the slug is effectively unreachable.
+      // so the slug ends up effectively unreachable.
       await client.query(
         `UPDATE users SET
             password                 = NULL,
@@ -530,9 +531,9 @@ module.exports = function createUsersRouter({
       );
 
       // Cut every link to other people. push_subscriptions also
-      // FK-cascades on user delete but we DON'T hard-delete the
-      // user row — so wipe these manually. Same for coach links,
-      // role requests, and held grants.
+      // FK-cascades on user delete, but we don't hard-delete the
+      // user row here, so wipe these manually. Same story for
+      // coach links, role requests, and held grants.
       await client.query(
         "DELETE FROM push_subscriptions WHERE user_id = $1",
         [req.user.id],
@@ -551,9 +552,9 @@ module.exports = function createUsersRouter({
         [req.user.id],
       );
 
-      // Audit. Best-effort — recordAudit swallows its own errors.
-      // metadata carries summary counts but never any PII; the
-      // user's full_name is intentionally NOT included.
+      // Audit. Best-effort, recordAudit swallows its own errors.
+      // metadata carries summary counts but never any PII, the
+      // user's full_name is intentionally left out.
       await recordAudit(client, {
         ...auditFromReq(req),
         org_id: user.org_id,
@@ -571,13 +572,13 @@ module.exports = function createUsersRouter({
 
       // Drop the token-version cache entry so the 30s in-process
       // cache can't admit a request from a stale JWT after the
-      // commit. Composes inside the open transaction so a
+      // commit. This runs inside the still-open transaction so a
       // rollback here also rolls back the version bump above.
       if (typeof bumpTokenVersion === "function") {
-        // bumpTokenVersion increments AGAIN — that's intentional:
-        // the UPDATE above already bumped, and this second bump
-        // ensures the in-process cache.delete() runs. The total
-        // increment of 2 is harmless: nothing depends on the
+        // bumpTokenVersion increments AGAIN, that's intentional:
+        // the UPDATE above already bumped it, and this second bump
+        // makes sure the in-process cache.delete() actually runs.
+        // Total increment of 2 is harmless, nothing depends on the
         // version being monotonic by exactly 1.
         await bumpTokenVersion(client, req.user.id);
       }
@@ -601,22 +602,21 @@ module.exports = function createUsersRouter({
   // The caller picks which (if any) are theirs and POSTs to
   // /api/users/me/claim to re-link them.
   //
-  // Cross-org candidates are NOT returned. A diver who has moved
+  // Cross-org candidates are NOT returned. A diver who's moved
   // federations between accounts gets the manual-admin escalation
   // route described in the privacy policy; auto-suggesting a
   // candidate from another org would surface a name + event
   // history pair to anyone who could guess the org boundary.
   //
-  // GET would be acceptable here too — we treat it as POST so a
-  // future variant that takes a body (e.g. an explicit name
-  // override for a married-name change) doesn't have to break
-  // the URL shape.
+  // GET would be acceptable here too, we treat it as POST so a
+  // future variant that takes a body (say an explicit name override
+  // for a married-name change) doesn't have to break the URL shape.
   // -------------------------------------------------------------
   router.post("/api/users/me/claim-candidates", verifyToken, async (req, res) => {
     try {
-      // Fetch the current user's identity. We can't trust the
-      // JWT alone — it doesn't carry full_name — and we need
-      // org_id from the row anyway for the scoping clause.
+      // Fetch the current user's identity. We can't trust the JWT
+      // alone (it doesn't carry full_name), and we need org_id from
+      // the row anyway for the scoping clause.
       const meRes = await pool.query(
         `SELECT id, full_name, org_id, deleted_at
          FROM users WHERE id = $1`,
@@ -675,19 +675,19 @@ module.exports = function createUsersRouter({
   //
   // Body: { old_user_ids: [uuid, …], password }
   //
-  // Re-link every users.id FK reference from each old_user_id
-  // over to the caller. Same-org, deleted-only — verified per
-  // candidate inside the transaction so a half-valid request
-  // doesn't claim some-but-not-others.
+  // Re-link every users.id FK reference from each old_user_id over
+  // to the caller. Same-org, deleted-only, verified per candidate
+  // inside the transaction so a half-valid request can't claim
+  // some-but-not-others.
   //
   // The competitor_dive_lists UNIQUE (event_id, competitor_id,
-  // round_number) constraint creates a merge conflict surface:
-  // if the new account has an entry for (event, round) that the
-  // old account also entered, we can't silently merge — they're
-  // distinct entries by design. We abort the entire transaction
-  // with 409 in that case; the caller decides whether to
-  // un-tick the colliding candidate or contact admin to merge
-  // manually.
+  // round_number) constraint creates a merge conflict surface: if
+  // the new account already has an entry for (event, round) that
+  // the old account also entered, we can't silently merge them,
+  // they're distinct entries by design. We abort the whole
+  // transaction with 409 in that case; the caller decides whether
+  // to un-tick the colliding candidate or contact an admin to
+  // merge manually.
   //
   // Password re-auth: claim irreversibly attaches PII to an
   // account, so the same hijacked-session defence we use on
@@ -701,7 +701,7 @@ module.exports = function createUsersRouter({
     if (typeof password !== "string" || !password) {
       return res.status(400).json({ error: "Password is required" });
     }
-    // Cap the batch — a runaway client (or a malicious one) can't
+    // Cap the batch so a runaway client (or a malicious one) cant
     // ask us to merge thousands of rows in one transaction.
     if (old_user_ids.length > 50) {
       return res.status(400).json({ error: "Too many candidates in one request (max 50)" });
@@ -728,9 +728,9 @@ module.exports = function createUsersRouter({
       const counts = { dives: 0, scores: 0, panels: 0, audits: 0 };
 
       for (const oldId of old_user_ids) {
-        // Validate same-org, deleted-only. Anything else is a
-        // 404 (not a 403) so we don't leak whether the id
-        // exists in a different org.
+        // Validate same-org, deleted-only. Anything else is a 404
+        // (not a 403) so we don't leak whether the id exists in a
+        // different org.
         const oldRes = await client.query(
           `SELECT id, org_id, full_name, deleted_at
            FROM users WHERE id = $1`,
@@ -738,16 +738,16 @@ module.exports = function createUsersRouter({
         );
         const old = oldRes.rows[0];
         if (!old || old.deleted_at == null || old.org_id !== me.org_id) {
-          // Idempotent: an already-claimed (i.e. hard-deleted)
-          // row returns 404 rather than 500. We continue past it
+          // Idempotent: an already-claimed (hard-deleted) row
+          // returns 404 instead of 500. We just continue past it
           // so a partial batch can still succeed for the others.
           continue;
         }
 
-        // Conflict detection: if the new account has a dive
-        // list for the same (event, round) as the old account,
-        // we can't merge them. Abort early — the caller can
-        // un-tick the colliding candidate and retry.
+        // Conflict detection: if the new account already has a
+        // dive list for the same (event, round) as the old account,
+        // we can't merge them. Abort early, the caller can un-tick
+        // the colliding candidate and retry.
         const conflict = await client.query(
           `SELECT 1
            FROM competitor_dive_lists a
@@ -769,12 +769,11 @@ module.exports = function createUsersRouter({
 
         // FK references to users.id that carry sporting-record
         // value. Grep `REFERENCES public.users` over init.sql +
-        // migrations/* to maintain this list when new FKs land.
-        // Tables NOT touched here either ON DELETE CASCADE (so
-        // the row goes away when we hard-delete below) or ON
-        // DELETE SET NULL (so they survive with a null
-        // pointer, which is the right call for "who set this"
-        // metadata).
+        // migrations/* to keep this list current when new FKs land.
+        // Tables NOT touched here are either ON DELETE CASCADE (row
+        // goes away when we hard-delete below) or ON DELETE SET
+        // NULL (they survive with a null pointer, which is the
+        // right call for "who set this" metadata).
         //
         // Tables we explicitly migrate so the historical entry
         // reads under the new account:
@@ -811,8 +810,8 @@ module.exports = function createUsersRouter({
         counts.panels += movePanels.rowCount || 0;
 
         // score_audit_log carries competitor_id + judge_id +
-        // actor_user_id, all ON DELETE SET NULL. Move them to
-        // the new owner so the audit trail shows the same name.
+        // actor_user_id, all ON DELETE SET NULL. Move them to the
+        // new owner so the audit trail keeps showing the same name.
         await client.query(
           `UPDATE score_audit_log SET competitor_id = $2 WHERE competitor_id = $1`,
           [oldId, me.id],
@@ -827,22 +826,22 @@ module.exports = function createUsersRouter({
         );
         counts.audits += 1;
 
-        // Event attendance — ON DELETE CASCADE on the user FK, so
-        // move it to preserve the history rather than losing it when
-        // we delete the shell row below.
+        // Event attendance is ON DELETE CASCADE on the user FK, so
+        // move it to preserve the history rather than losing it
+        // when we delete the shell row below.
         await client.query(
           `UPDATE event_attendance SET competitor_id = $2 WHERE competitor_id = $1`,
           [oldId, me.id],
         );
 
-        // Tie-break dive-offs — competitor_a_id / competitor_b_id are
+        // Tie-break dive-offs: competitor_a_id / competitor_b_id are
         // NOT NULL ON DELETE CASCADE, so the shell-row delete below
-        // would otherwise destroy the dive-off record (which this
+        // would otherwise wipe out the dive-off record (which this
         // block's comment always claimed to preserve). Re-point both
         // sides AND winner_id in ONE UPDATE: the
-        // tiebreak_winner_is_competitor CHECK (winner_id must equal a
-        // or b) is evaluated per-statement, so migrating winner_id in
-        // a separate query would transiently violate it.
+        // tiebreak_winner_is_competitor CHECK (winner_id has to
+        // equal a or b) is evaluated per-statement, so migrating
+        // winner_id in a separate query would transiently violate it.
         await client.query(
           `UPDATE tiebreak_dive_offs
               SET competitor_a_id = CASE WHEN competitor_a_id = $1 THEN $2 ELSE competitor_a_id END,
@@ -853,20 +852,20 @@ module.exports = function createUsersRouter({
         );
 
         // The shell row is now disconnected from every
-        // sporting-record FK we care about; safe to hard-delete.
+        // sporting-record FK we care about, safe to hard-delete.
         // Everything that ON DELETE CASCADEs from here (e.g.
-        // user_org_roles — already wiped at self-delete time)
-        // is intentional. Anything left referencing oldId via
-        // ON DELETE SET NULL (audit_log.actor_id etc.) becomes
-        // NULL, which matches the privacy policy: "Audit log
-        // entries are kept for dispute and integrity reasons,
-        // then purged on the normal 30-day rotation".
+        // user_org_roles, already wiped at self-delete time) is
+        // intentional. Anything left referencing oldId via ON
+        // DELETE SET NULL (audit_log.actor_id etc.) becomes NULL,
+        // which matches the privacy policy: "Audit log entries are
+        // kept for dispute and integrity reasons, then purged on
+        // the normal 30-day rotation".
         await client.query("DELETE FROM users WHERE id = $1 AND deleted_at IS NOT NULL", [oldId]);
 
         claimed.push(oldId);
 
-        // Per-claim audit row so an admin can trace exactly
-        // which historical id got re-linked to whom.
+        // Per-claim audit row so an admin can trace exactly which
+        // historical id got re-linked to whom.
         await recordAudit(client, {
           ...auditFromReq(req),
           org_id: me.org_id,
@@ -895,10 +894,10 @@ module.exports = function createUsersRouter({
     }
   });
 
-  // Judges within the current user's org. Drop username — the
-  // judge picker uses id + full_name; username is the credential
-  // identifier and the meet_manager-gate isn't a high enough bar
-  // to justify spraying it across every responder.
+  // Judges within the current user's org. Drop username, the judge
+  // picker only needs id + full_name; username is the credential
+  // identifier and the meet_manager gate isn't a high enough bar to
+  // justify spraying it across every response.
   router.get("/api/judges", requireMeetEditor, async (req, res) => {
     try {
       const r = await pool.query(
@@ -920,9 +919,9 @@ module.exports = function createUsersRouter({
   // ORG-ADMIN PROFILE EDIT + ACCOUNT LIFECYCLE  (migration 058)
   // =============================================================
 
-  // Guard: caller must be sysadmin or an org_admin of the target's
-  // own org. Returns the target row (org_id + a few fields) or null
-  // after sending the appropriate error response.
+  // Guard: caller has to be sysadmin or an org_admin of the target's
+  // own org. Returns the target row (org_id + a few fields), or
+  // null after sending the right error response.
   async function loadEditableTarget(req, res, cols = "org_id, full_name") {
     const t = await pool.query(
       `SELECT ${cols} FROM users WHERE id = $1`, [req.params.id]);
@@ -979,7 +978,7 @@ module.exports = function createUsersRouter({
     }
   });
 
-  // Suspend an account — blocks login (auth.js gate) until reactivated.
+  // Suspend an account, blocks login (auth.js gate) until reactivated.
   router.post("/api/users/:id/suspend", requireOrgAdmin, async (req, res) => {
     try {
       const target = await loadEditableTarget(req, res, "org_id, full_name, is_system_admin");
@@ -989,11 +988,12 @@ module.exports = function createUsersRouter({
       if (req.params.id === req.user.id)
         return res.status(400).json({ error: "You can't suspend your own account" });
       await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [req.params.id]);
-      // bumpTokenVersion(db, userId) — pass the pool as the first arg.
-      // A single-arg call lands the id in `db`, leaves userId undefined,
-      // and the helper's `if (!userId) return;` guard makes it a silent
-      // no-op — which previously left the suspended user's existing JWT
-      // valid for up to JWT_EXPIRY. Bumping here revokes every session.
+      // bumpTokenVersion(db, userId): pass the pool as the first arg.
+      // Heads up, a single-arg call lands the id in `db`, leaves
+      // userId undefined, and the helper's `if (!userId) return;`
+      // guard turns it into a silent no-op, which previously left
+      // the suspended user's existing JWT valid for up to
+      // JWT_EXPIRY. Bumping here revokes every session properly.
       if (typeof bumpTokenVersion === "function") await bumpTokenVersion(pool, req.params.id);
       await recordAudit(pool, {
         ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
@@ -1077,7 +1077,7 @@ module.exports = function createUsersRouter({
   //
   // A parent or guardian can link to a minor's account so they can
   // pay entry fees, memberships, etc. on the minor's behalf. Links
-  // are org-scoped and require org_admin approval.
+  // are org-scoped and need org_admin approval.
   // ===============================================================
 
   router.get("/api/guardians/my-dependents", verifyToken, async (req, res) => {

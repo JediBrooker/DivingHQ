@@ -1,7 +1,7 @@
 // P10 Cluster 3: the bespoke Manager dialogs migrated onto BaseModal.
 // Proves the migrated dialog renders as a proper a11y dialog
 // (.lb-modal[role=dialog][aria-modal]) with a wired aria-labelledby, and
-// that BaseModal's Escape-to-close + focus management work — none of
+// that BaseModal's Escape-to-close + focus management work, none of
 // which the old .modal-backdrop shell provided. Uses the Federations
 // (ParticipatingOrgs) + Import-roster dialogs, reachable from any
 // host-org event row's overflow menu.

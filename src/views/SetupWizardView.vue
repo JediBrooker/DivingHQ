@@ -2,14 +2,14 @@
 // First-run org setup wizard. Walks a brand-new org admin
 // through the minimum config needed to make their dashboard
 // productive: create a club, invite users, create their first
-// event. Each step is skip-able — for an admin who knows what
-// they're doing, the whole thing collapses to "click Skip
-// three times" and they land on the Meet Manager.
+// event. Each step is skippable, so an admin who already knows
+// what they're doing can just click Skip three times and land
+// on the Meet Manager.
 //
 // Triggered from DashboardView.onMounted() when the org has
 // zero events AND zero clubs AND the local "wizard dismissed"
-// flag isn't set. The user can also reach it from the User
-// Menu directly: route /setup.
+// flag isn't set. User can also get here directly from the
+// User Menu: route /setup.
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -20,8 +20,8 @@ const auth = useAuthStore()
 const router = useRouter()
 const { t } = useI18n()
 
-// Wizard step index — 0..3. Each step renders independently; a
-// progress strip at the top reflects the current position.
+// Wizard step index, 0..3. Each step renders independently, and
+// the progress strip up top reflects wherever we currently are.
 const STEPS = computed(() => [
   { key: 'welcome',    label: t('setup.step_intro') },
   { key: 'club',       label: t('setup.step_clubs') },
@@ -35,9 +35,9 @@ function next()    { if (stepIdx.value < STEPS.value.length - 1) stepIdx.value++
 function back()    { if (stepIdx.value > 0) stepIdx.value-- }
 function dismiss() {
   // Persist so the next dashboard visit doesn't redirect here
-  // again. Two keys: a global "skip this for now" + a permanent
-  // "completed" stamp (the latter set when the user clicks
-  // Done at the end).
+  // again. Two keys: a global "skip this for now" flag, plus a
+  // permanent "completed" stamp (set when the user clicks Done
+  // at the end).
   try { localStorage.setItem('setup.wizardDismissed.v1', '1') } catch {}
   router.push('/dashboard')
 }
@@ -84,8 +84,8 @@ async function createClub() {
 
 // ---- Step 3: Invite people ---------------------------------
 // Public registration URL the admin can share with their
-// members. /register lets users sign up under an existing org;
-// the admin then approves their role from User Manager.
+// members. /register lets users sign up under an existing org,
+// then the admin approves their role from User Manager.
 const registerUrl = computed(() => {
   if (typeof window === 'undefined') return ''
   return `${window.location.origin}/register`
@@ -102,9 +102,10 @@ async function copyRegisterUrl() {
   }
 }
 
-// On mount: if the wizard was already completed, bounce to the
-// Meet Manager. The Dashboard auto-redirect won't send us here
-// when completed flag is set, but a direct visit still might.
+// On mount: if the wizard's already been completed, bounce to
+// the Meet Manager. Dashboard's auto-redirect won't send us
+// here once the completed flag is set, but a direct visit still
+// could.
 onMounted(() => {
   try {
     if (localStorage.getItem('setup.wizardCompleted.v1') === '1') {
@@ -124,7 +125,7 @@ onMounted(() => {
     </header>
 
     <div class="wizard-frame">
-      <!-- Progress strip — pip + label per step, current pip
+      <!-- Progress strip: pip + label per step, current pip
            glows cyan. Click a pip to jump (lets a returning
            admin skip back without using Back/Next). -->
       <div class="wizard-stepper" role="tablist" :aria-label="$t('setup.wizard.aria_step_progress', { current: stepIdx + 1, total: STEPS.length })">
@@ -148,7 +149,7 @@ onMounted(() => {
         </template>
       </div>
 
-      <!-- Step 1 — Welcome -->
+      <!-- Step 1: Welcome -->
       <div v-if="currentStep.key === 'welcome'" class="wizard-card">
         <div class="wizard-eyebrow">{{ $t('setup.wizard.step_eyebrow', { current: 1, total: 4 }) }}</div>
         <h1 class="wizard-title">{{ $t('setup.title') }}</h1>
@@ -184,7 +185,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Step 2 — Create a club -->
+      <!-- Step 2: Create a club -->
       <div v-else-if="currentStep.key === 'club'" class="wizard-card">
         <div class="wizard-eyebrow">{{ $t('setup.wizard.step_eyebrow', { current: 2, total: 4 }) }}</div>
         <h1 class="wizard-title">{{ $t('setup.wizard.club_title') }}</h1>
@@ -214,7 +215,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Step 3 — Invite users -->
+      <!-- Step 3: Invite users -->
       <div v-else-if="currentStep.key === 'invite'" class="wizard-card">
         <div class="wizard-eyebrow">{{ $t('setup.wizard.step_eyebrow', { current: 3, total: 4 }) }}</div>
         <h1 class="wizard-title">{{ $t('setup.wizard.invite_title') }}</h1>
@@ -249,7 +250,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Step 4 — Create first event -->
+      <!-- Step 4: Create first event -->
       <div v-else-if="currentStep.key === 'event'" class="wizard-card">
         <div class="wizard-eyebrow">{{ $t('setup.wizard.step_eyebrow', { current: 4, total: 4 }) }}</div>
         <h1 class="wizard-title">{{ $t('setup.wizard.event_title') }}</h1>
@@ -311,7 +312,7 @@ onMounted(() => {
   font-family: var(--font-display);
   font-size: 16px; font-weight: 800; font-style: italic;
   letter-spacing: 0.04em;
-  /* DIVING white, HQ cyan — match the home-page hero. */
+  /* DIVING white, HQ cyan, matches the home-page hero. */
   color: var(--text);
   text-decoration: none;
 }
@@ -334,7 +335,7 @@ onMounted(() => {
   padding: 2.5rem 2rem 4rem;
 }
 
-/* Stepper — same idea as the Pre-Meet stepper in ControlView,
+/* Stepper, same idea as the Pre-Meet stepper in ControlView:
    labels under pips, with a click-to-jump affordance. */
 .wizard-stepper {
   display: flex; align-items: flex-start;

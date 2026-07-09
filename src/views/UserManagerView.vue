@@ -33,8 +33,8 @@ const bulkRole = ref('judge')
 const bulkBusy = ref(false)
 const bulkSummary = ref('')            // last operation result, shown briefly
 
-// Group by org (system admin only — collapsible org sections in
-// place of the flat paged list)
+// Group by org (system admin only), collapsible org sections in
+// place of the flat paged list
 const groupByOrg = ref(false)
 const collapsedOrgs = ref(new Set())
 
@@ -45,7 +45,7 @@ const PRIMARY_ROLES = ['org_admin', 'meet_manager', 'referee', 'judge', 'coach',
 // rendered as a pill in the table summary.
 const ALL_ROLES = [...PRIMARY_ROLES, 'spectator']
 
-// Visual ordering — primary roles by responsibility, spectator last
+// Visual ordering: primary roles by responsibility, spectator last
 const ROLE_ORDER = { org_admin: 0, meet_manager: 1, referee: 2, judge: 3, coach: 4, diver: 5, spectator: 6 }
 
 // Per-user edit drawer
@@ -75,9 +75,9 @@ const orgs = computed(() => {
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
 })
 
-// Top-of-page stats — instant sense of scale and where to look.
-// We deliberately don't count spectator: every user has it, so a
-// "1,012 spectators" pill is just total membership restated.
+// Top-of-page stats, meant to give an instant sense of scale and
+// where to look. We deliberately don't count spectator: everyone
+// has it, so a "1,012 spectators" pill is just total membership restated.
 // Pending club-change / org-transfer requests, used by both the
 // Requests tab list and folded into the pending badge count.
 const pendingClubRequests = computed(() =>
@@ -138,7 +138,7 @@ const drawerNewClubCode = ref('')
 const drawerCoachLinks = ref([])        // links in this user's org
 const drawerOrgUsers = ref([])          // candidates for the "other side" picker
 const drawerLinkOtherId = ref('')       // selected partner user
-const drawerLinkRole = ref('coach')     // 'coach' | 'diver' — which side this user plays
+const drawerLinkRole = ref('coach')     // 'coach' | 'diver', which side this user plays
 const drawerLinkNote  = ref('')
 const drawerLinkSaving = ref(false)
 const drawerLinkError  = ref('')
@@ -194,7 +194,7 @@ async function loadClubs(orgId, currentClubId) {
 
 // Pull every coach link in the user's org. The candidate picker
 // for "the other user in the link" comes from allUsers, already
-// loaded by the User Manager — saves a second round trip and
+// loaded by the User Manager. Saves a second round trip and
 // guarantees the picker only contains org-mates the admin has
 // permission to manage.
 async function loadCoachLinks(orgId, currentUserId) {
@@ -278,7 +278,7 @@ async function removeCoachLink(id) {
 }
 
 // Seed the editable personal-details form from the open user.
-// Mirrors how loadClubs seeds drawerClubChoice — pulled straight
+// Mirrors how loadClubs seeds drawerClubChoice: pulled straight
 // from the cached row so the inputs are populated on open.
 function seedDrawerProfile(u) {
   drawerFullName.value = u?.full_name || ''
@@ -310,8 +310,8 @@ function closeDrawer() {
   drawerAccountBusy.value = false
 }
 
-// Save the personal & competition details. Empty strings are sent
-// as null — the backend treats '' / null as clearing the field.
+// Save the personal & competition details. Empty strings get sent
+// as null since the backend treats '' / null as clearing the field.
 async function saveDrawerProfile() {
   if (!drawerUserId.value) return
   drawerProfileSaving.value = true
@@ -343,7 +343,7 @@ async function saveDrawerProfile() {
   }
 }
 
-// --- Account lifecycle actions. Each hits its endpoint then
+// --- Account lifecycle actions. Each hits it's endpoint then
 // refreshes the user list so suspended_at / email_verified_at
 // flags update in place. ---
 async function runAccountAction(path, successMsg, opts = {}) {
@@ -525,7 +525,7 @@ async function reviewClubRequest(id, decision) {
       method: 'POST',
       body: JSON.stringify({ decision }),
     })
-    // A club move can change the affected user's row — refresh both.
+    // A club move can change the affected user's row, so refresh both.
     await Promise.all([loadClubRequests(), loadUsers()])
   } catch (err) {
     showError(err.message)
@@ -574,7 +574,7 @@ function toggleRole(userId, role) {
   if (set.has(role)) set.delete(role)
   else set.add(role)
   // Force reactivity (Set mutation is reactive, but the wrapping
-  // ref won't re-emit unless the assignment is replaced)
+  // ref won't re-emit unless the assignment gets replaced). Hacky but it works.
   userRoles.value[userId] = new Set(set)
   rowState.value[userId] = 'dirty'
   clearTimeout(saveTimers[userId])
@@ -619,7 +619,7 @@ function retrySave(userId) {
 }
 
 // Group filteredUsers by org for the system-admin grouped view.
-// Sorted by org name; users inside each group preserve the
+// Sorted by org name; users inside each group preserve the the
 // alphabetical order from the API.
 const groupedUsers = computed(() => {
   if (!groupByOrg.value) return []
@@ -639,7 +639,7 @@ const groupedUsers = computed(() => {
   return [...map.values()].sort((a, b) => a.org_name.localeCompare(b.org_name))
 })
 
-// IDs visible right now — depends on whether we're paged or grouped.
+// IDs visible right now: depends on whether we're paged or grouped.
 const visibleIds = computed(() => {
   if (groupByOrg.value) {
     return groupedUsers.value.flatMap(g =>
@@ -684,8 +684,8 @@ function collapseAllOrgs() {
 }
 
 // Run an async function over a list with a concurrency cap so we
-// don't fire 1000 simultaneous PUTs at the server during a bulk
-// operation.
+// don't fire off 1000 simultaneous PUTs at the server during a bulk
+// operation, yeah that would be bad.
 async function runWithConcurrency(items, fn, concurrency = 8) {
   const queue = [...items]
   const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
@@ -751,8 +751,8 @@ async function applyBulkRole(action) {
   setTimeout(() => { bulkSummary.value = '' }, 4000)
 }
 
-// CSV export of the *currently filtered* users — respects search,
-// role chips and org filter. Useful for offline triage and for
+// CSV export of the *currently filtered* users, respects search,
+// role chips and org filter. Handy for offline triage and for
 // onboarding emails.
 function exportCsv() {
   const rows = filteredUsers.value
@@ -883,7 +883,7 @@ onUnmounted(() => {
                 <span class="badge">{{ rq.kind === 'org_transfer' ? 'transfer' : 'club change' }}</span>
                 {{ clubRequestSummary(rq) }}
               </div>
-              <!-- Org transfers need three approvals — show which are in. -->
+              <!-- Org transfers need three approvals, this shows which are in. -->
               <div v-if="rq.kind === 'org_transfer'" class="club-approvals">
                 <span :class="['approval-chip', rq.source_approved_at ? 'approval-on' : 'approval-off']">
                   Source {{ rq.source_approved_at ? '✓' : '–' }}
@@ -926,7 +926,7 @@ onUnmounted(() => {
         <span class="result-count">{{ $t('user_manager.result_count', { shown: filteredUsers.length.toLocaleString(), total: allUsers.length.toLocaleString() }) }}</span>
       </div>
 
-      <!-- Role chip filter — primary roles only; filtering by
+      <!-- Role chip filter, primary roles only. Filtering by
            spectator would just show every member -->
       <div class="chip-row">
         <span class="chip-label">{{ $t('user_manager.role_label_short') }}</span>
@@ -938,7 +938,7 @@ onUnmounted(() => {
         <button v-if="roleFilters.size" class="chip chip-clear" @click="clearRoleFilters">{{ $t('user_manager.clear_filter') }}</button>
       </div>
 
-      <!-- Bulk action bar — only visible while at least one row is selected -->
+      <!-- Bulk action bar, only visible while at least one row is selected -->
       <div v-if="selectedIds.size" class="bulk-bar">
         <div class="bulk-count">{{ $t('user_manager.selected_count', { n: selectedIds.size }) }}</div>
         <select class="select bulk-select" v-model="bulkRole">
@@ -1082,7 +1082,7 @@ onUnmounted(() => {
         </table></div>
       </div>
 
-      <!-- Pagination — only meaningful in flat (non-grouped) mode -->
+      <!-- Pagination, only meaningful in flat (non-grouped) mode -->
       <div v-if="!groupByOrg && totalPages > 1" class="pagination">
         <button class="page-btn" :disabled="currentPage === 1" @click="currentPage--">{{ $t('user_manager.page_prev') }}</button>
         <button v-for="(n, i) in pageNums()" :key="i"
@@ -1133,9 +1133,9 @@ onUnmounted(() => {
       </div>
 
       <div class="drawer-body">
-        <!-- Club editor — assign or create a club within the
+        <!-- Club editor: assign or create a club within the
              target user's org. Only orgs they belong to are
-             selectable; cross-org assignment isn't a real flow. -->
+             selectable, cross-org assignment isn't a real flow. -->
         <div class="drawer-section-label">{{ $t('user_manager.drawer_section_club') }}</div>
         <div class="club-editor">
           <select v-if="!drawerCreatingClub"
@@ -1313,7 +1313,7 @@ onUnmounted(() => {
           </button>
         </div>
 
-        <!-- Audit history — every grant / revoke event for this user
+        <!-- Audit history: every grant / revoke event for this user
              across the lifetime of their account. Updates after each
              role toggle saves successfully. -->
         <div class="drawer-section-label" style="margin-top:1.5rem">{{ $t('user_manager.drawer_section_audit') }}</div>
@@ -1345,7 +1345,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* Title is redundant with the shell breadcrumb — hidden. */
+/* Title is redundant with the shell breadcrumb, so it's hidden. */
 .page-header { display: none; }
 /* Back-to-dashboard is redundant inside the app shell sidebar. */
 .page-header .btn { display: none; }
@@ -1419,7 +1419,7 @@ onUnmounted(() => {
 .request-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
 .btn-approve { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
 
-/* Club-change request list — sits below role requests in the
+/* Club-change request list, sits below role requests in the
    Requests tab, separated by a faint rule + section heading. */
 .club-requests-block { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
 .club-requests-block:first-child { margin-top: 0; padding-top: 0; border-top: none; }
@@ -1495,7 +1495,7 @@ onUnmounted(() => {
 .toggle input { accent-color: var(--cyan); width: 14px; height: 14px; }
 .toggle:has(input:checked) { color: var(--cyan); border-color: var(--cyan); background: var(--cyan-dim); }
 
-/* Bulk action bar — sticky-feeling band that appears above the
+/* Bulk action bar: sticky-feeling band that appears above the
    table whenever a row is selected */
 .bulk-bar {
   display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
@@ -1554,7 +1554,7 @@ onUnmounted(() => {
 .user-row.selected.saving { background: rgba(6,182,212,0.10); }
 .user-row.selected.saved  { background: rgba(16,185,129,0.10); }
 
-/* Role pills — read-only summary in the table.
+/* Role pills, read-only summary in the table.
    Click anywhere on the row to open the drawer for editing. */
 .role-pills {
   display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center;
@@ -1617,7 +1617,7 @@ onUnmounted(() => {
 /* `overflow-x: clip` prevents CSS's promote-to-auto from
    making the body silently horizontally scrollable whenever
    a wide descendant exceeds the drawer's width. Bottom padding
-   keeps drawer content above iOS Safari's URL/toolbar — the
+   keeps drawer content above iOS Safari's URL/toolbar, since the
    drawer itself extends to `bottom: 0` but the toolbar overlays
    the bottom of the viewport. */
 .drawer-body {

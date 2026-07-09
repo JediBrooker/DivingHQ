@@ -1,6 +1,6 @@
-// Integration tests for guardian/dependent relationships (Migration 083)
-// and guardian-aware payment checkout. Self-skips when Postgres is
-// unreachable or migration 083 hasn't been applied.
+// Integration tests for guardian/dependent relationships (migration 083)
+// and guardian-aware payment checkout. Self-skips when Postgres isn't
+// reachable, or when migration 083 hasn't been applied yet.
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
@@ -54,7 +54,7 @@ const fakePayments = {
 };
 const fakeEmail = { sendPayoutFailedEmail() {} };
 
-// Current acting user — tests swap this to simulate different callers.
+// heads up: tests swap this out to simulate different callers
 let actingUser;
 
 function buildApp() {
@@ -128,7 +128,7 @@ before(async () => {
     [`Guardian Fed ${suffix}`, `guardian-fed-${suffix}`, `acct_guardian_${suffix}`],
   )).rows[0].id;
 
-  // Minor — born 10 years ago
+  // minor, born 10 years ago
   const minorDob = new Date();
   minorDob.setFullYear(minorDob.getFullYear() - 10);
   minorUserId = (await pool.query(
@@ -281,7 +281,7 @@ test("event checkout with subject_user_id for approved dependent succeeds", asyn
   const body = await r.json();
   assert.ok(body.url, "should return Stripe checkout URL");
 
-  // Verify the payment row has subject_user_id set
+  // sanity check that the payment row has subject_user_id set
   if (body.payment_id) {
     const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [body.payment_id])).rows[0];
     assert.equal(row.payer_user_id, guardianUserId, "payer should be guardian");

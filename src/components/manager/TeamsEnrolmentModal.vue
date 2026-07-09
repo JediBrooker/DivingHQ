@@ -1,14 +1,14 @@
 <script setup>
-/* TeamsEnrolmentModal — enrol/remove org teams on a team-type
- * event, extracted from ManagerView.vue. Opened from the
- * event-row "Teams" button (event_type === 'team' only).
+/* TeamsEnrolmentModal handles enrolling/removing org teams on a
+ * team-type event. Extracted from ManagerView.vue, opened from
+ * the event-row "Teams" button (event_type === 'team' only).
  *
  * Mount contract: the parent mounts this with v-if keyed on the
  * target event, so every open re-fetches both the enrolled and
  * available team lists (same as the old openTeamsModal()).
  *
  * State boundary: enrolled / available / busy are OWNED here.
- * Enrolment doesn't surface anywhere on the parent's event rows,
+ * Enrolment doesnt surface anywhere on the parent's event rows,
  * so the only emit is `close`.
  */
 import { ref, computed } from 'vue'
@@ -46,7 +46,7 @@ async function loadTeams() {
     teamsBusy.value = false
   }
 }
-// Initial load on mount — same cadence as the old open handler.
+// Initial load on mount, same as the old open handler.
 loadTeams()
 
 const addableTeams = computed(() => {
@@ -136,7 +136,7 @@ async function removeTeamFromEvent(team) {
 </template>
 
 <style scoped>
-/* Enrolment-list styles COPIED from ManagerView.css — shared with
+/* Enrolment-list styles COPIED from ManagerView.css, shared with
    ParticipatingOrgsModal.vue (keep the two in sync). The modal
    frame (pin/centre/size) now lives in BaseModal.vue. */
 .teams-section-label {

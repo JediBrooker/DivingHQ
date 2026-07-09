@@ -2,8 +2,8 @@
 import { barWidth } from '@/lib/profile-helpers'
 
 defineProps({
-  // Array of { height, avg_score, best_score, dive_count }.
-  // From analytics.height_breakdown. Null while loading.
+  // Array of { height, avg_score, best_score, dive_count },
+  // comes from analytics.height_breakdown. Null while it's loading.
   data: { type: Array, default: null },
 })
 </script>
@@ -52,10 +52,10 @@ defineProps({
 .bar-value { color: var(--text); font-weight: 700; }
 .bar-meta  { color: var(--text-3); font-size: 11px; }
 
-/* Phone (≤600px): 250px of fixed columns squeezes the bar to
-   ~80px at 360 viewport. Two-row layout — label + bar on top,
-   value + meta on a second mono line — keeps the bar long
-   enough to read while preserving all the data. */
+/* Phone (≤600px): 250px of fixed columns squeezes the bar down
+   to ~80px at a 360 viewport. Two-row layout (label + bar on
+   top, value + meta on a second mono line) keeps the bar long
+   enough to read without losing any of the data. */
 @media (max-width: 600px) {
   .bar-row {
     grid-template-columns: auto 1fr;

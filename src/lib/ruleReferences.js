@@ -1,5 +1,5 @@
 // Verified labels for UI copy that cites World Aquatics diving
-// rules. Keep this small and only add entries after checking the
+// rules. Keep this small, only add entries after checking the
 // committed regulations PDF called out in AGENTS.md.
 
 export const RULE_REFERENCES = Object.freeze({

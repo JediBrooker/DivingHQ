@@ -2,17 +2,17 @@
 //
 // Three features that landed without dedicated e2e specs:
 //
-//   1. /api/dashboard bundle endpoint — replaces 5–6 fan-out
+//   1. /api/dashboard bundle endpoint, replaces 5–6 fan-out
 //      API calls with a single round trip.
 //   2. /api/audit/* federation-wide audit endpoints + the
 //      streaming CSV export.
 //   3. The first-run setup wizard at /setup.
 //
-// Each is a quick API/UI test, not a full lifecycle drive.
-// The meet-manager spec already covers the score-correction
-// path that produces audit rows; this file just verifies the
-// new endpoints can read them back and the wizard's redirect
-// logic fires for fresh org admins.
+// Each is a quick API/UI test, not a full lifecycle drive. The
+// meet-manager spec already covers the score-correction path that
+// produces audit rows, so this file just verifies the new endpoints
+// can read them back and the wizard's redirect logic fires for fresh
+// org admins.
 
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
@@ -34,26 +34,27 @@ test("dashboard bundle endpoint returns role-scoped slices", async ({ request })
   const body = await res.json();
 
   // Org admin should see events + role_requests + recent_activity
-  // (sysadmin-only slices like pending_orgs aren't in this
-  // user's scope).
+  // (sysadmin-only slices like pending_orgs aren't in this user's
+  // scope).
   expect(Array.isArray(body.events)).toBe(true);
   expect(Array.isArray(body.role_requests)).toBe(true);
   expect(Array.isArray(body.recent_activity)).toBe(true);
-  // Fresh org has nothing yet — but the keys must be present.
+  // sanity check: fresh org has nothing yet, but the keys still need
+  // to be present
 });
 
 // =============================================================
-// 1b. Judge-role dashboard surface — `judge_events` slice
+// 1b. Judge-role dashboard surface: `judge_events` slice
 // =============================================================
 //
 // The dashboard returns a `judge_events` array for users with the
-// judge role: every Upcoming/Live event the user is on the panel
-// of, with the panel position (`judge_number`) the operator
-// assigned them. This is what the in-app "Your Assigned Events"
-// card renders. Used to be covered only by the headed demo spec
-// in judge.spec.js (which clicked through the card to confirm it
-// surfaced the right event); now covered headlessly at the API
-// layer so the same regression is caught without running Chrome.
+// judge role: every Upcoming/Live event the user is on the panel of,
+// with the panel position (`judge_number`) the operator assigned
+// them. This is what the in-app "Your Assigned Events" card renders.
+// Used to be covered only by the headed demo spec in judge.spec.js
+// (which clicked through the card to confirm it surfaced the right
+// event). Now it's covered headlessly at the API layer so the same
+// regression gets caught without spinning up Chrome.
 test("dashboard judge_events surfaces assigned panel events for judge role", async ({ request }) => {
   test.setTimeout(30_000);
 
@@ -70,8 +71,8 @@ test("dashboard judge_events surfaces assigned panel events for judge role", asy
     height: "3m",
   });
 
-  // Judge with no panel assignment — `judge_events` should exist
-  // but be empty.
+  // Judge with no panel assignment, `judge_events` should exist but
+  // be empty.
   const unassigned = await setup.insertUser({
     orgId, role: "judge", fullName: "Unassigned Judge",
   });
@@ -84,8 +85,8 @@ test("dashboard judge_events surfaces assigned panel events for judge role", asy
   expect(Array.isArray(body1.judge_events)).toBe(true);
   expect(body1.judge_events).toHaveLength(0);
 
-  // Judge assigned to the event panel — the card SHOULD show the
-  // event with the panel position the operator gave them.
+  // Judge assigned to event panel, the card SHOULD show the event
+  // with the panel position the operator gave them.
   const assigned = await setup.insertUser({
     orgId, role: "judge", fullName: "Assigned Judge",
   });
@@ -105,7 +106,7 @@ test("dashboard judge_events surfaces assigned panel events for judge role", asy
   const judgeEvent = body2.judge_events[0];
   expect(judgeEvent.id).toBe(event.id);
   expect(judgeEvent.name).toBe("Judge Dashboard Event");
-  // `Upcoming` is the default status for a freshly-created event —
+  // `Upcoming` is the default status for a freshly-created event, and
   // the dashboard query filters out anything outside Upcoming/Live
   // so a Completed event drops off this card automatically.
   expect(judgeEvent.status).toBe("Upcoming");
@@ -115,7 +116,7 @@ test("dashboard judge_events surfaces assigned panel events for judge role", asy
 });
 
 // =============================================================
-// 2. /api/audit/* — federation-wide audit endpoints
+// 2. /api/audit/*: federation-wide audit endpoints
 // =============================================================
 test("audit endpoints expose role + event lifecycle activity", async ({ request }) => {
   test.setTimeout(30_000);
@@ -188,25 +189,25 @@ test("fresh org admin is redirected to /setup wizard", async ({
   // Login redirects to /dashboard, dashboard's onMounted then
   // bounces to /setup. Wait for the wizard URL.
   await page.waitForURL(/\/setup$/, { timeout: 10_000 });
-  // Confirm the wizard rendered — step 1's heading.
+  // Confirm the wizard actually rendered, check step 1's heading.
   await expect(page.getByRole("heading", {
     name: /Welcome — let's get you set up/i,
   })).toBeVisible({ timeout: 5_000 });
 
-  // Click the "Skip setup" link in the header — should land
-  // back on /dashboard and the localStorage stamp should
-  // prevent another redirect.
+  // Click the "Skip setup" link in the header, should land back on
+  // /dashboard and the localStorage stamp should prevent another
+  // redirect.
   await page.getByRole("button", { name: /Skip setup/i }).click();
   await page.waitForURL(/\/dashboard$/, { timeout: 5_000 });
 });
 
 // =============================================================
-// 4. /api/dashboard — diver_event_ids slice gates the diver-tab
+// 4. /api/dashboard: diver_event_ids slice gates the diver-tab
 //    "Meet day · Live now" card so it never surfaces an event the
-//    diver isn't actually entered in. Regression: pre-fix, the
-//    Live event in the diver's federation surfaced on the diver
-//    tab and clicking it dead-ended at /me/meet/:id with a 403
-//    "You're not entered in this event".
+//    diver isn't actually entered in. Regression: pre-fix, the Live
+//    event in the diver's federation surfaced on the diver tab and
+//    clicking it dead-ended at /me/meet/:id with a 403 "You're not
+//    entered in this event".
 // =============================================================
 test("dashboard bundle: diver_event_ids gates the diver-tab live-meet card", async ({
   request,
@@ -246,8 +247,8 @@ test("dashboard bundle: diver_event_ids gates the diver-tab live-meet card", asy
   // so the SPA's diverLiveMeet computed filters it out.
   expect(body.diver_event_ids).not.toContain(event.id);
 
-  // Now enter the diver via insertDiveList — slice should pick
-  // it up on the next bundle fetch.
+  // Now enter the diver via insertDiveList, the slice should pick it
+  // up on the next bundle fetch.
   const f = await setup.pickDiveId({ height: 3.0, dive_code: "101", position: "B" });
   const b = await setup.pickDiveId({ height: 3.0, dive_code: "201", position: "B" });
   const r = await setup.pickDiveId({ height: 3.0, dive_code: "301", position: "B" });

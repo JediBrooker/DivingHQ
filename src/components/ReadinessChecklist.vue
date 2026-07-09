@@ -1,21 +1,21 @@
 <script setup>
-/* Pre-meet readiness checklist — a compact "are we ready?" panel
- * for an event in Setup status. Each row is one prerequisite for
- * Start Event; clicking a not-done row scrolls/jumps to the
- * surface that fixes it.
+/* Pre-meet readiness checklist, a compact "are we ready?" panel
+ * for an event sitting in Setup status. Each row is one
+ * prerequisite for Start Event. Clicking a not-done row jumps
+ * you over to whatever surface fixes it.
  *
- * Items are derived from props rather than computed inline so
- * the parent (typically ControlView or ManagerView) can
- * translate its existing event/dive-list state into the small
- * subset this component needs. Keeps this component dumb and
- * easily reusable.
+ * Items come in via props rather than being computed inline, so
+ * the parent (usually ControlView or ManagerView) can translate
+ * its own event/dive-list state into the small subset this
+ * component actually needs. Keeps this component dumb and easy
+ * to reuse elsewhere.
  *
  * Each item:
  *   { key, label, done, hint?, onFix?, severity?, blocking? }
  *
  * - key:   stable id (also used for storage)
  * - label: short imperative ("Roster locked")
- * - done:  boolean — checks the box, dims the row
+ * - done:  boolean, checks the box and dims the row
  * - hint:  optional text shown when not done
  * - onFix: optional click handler to jump into the fix surface
  * - severity: optional 'critical' | 'warning' | 'info'
@@ -25,9 +25,9 @@ import { computed } from 'vue'
 
 const props = defineProps({
   items:    { type: Array, required: true },
-  /* When all items are done the checklist collapses into a
+  /* Once everything's done, the checklist collapses into a
      single "Ready to start" line. Set to false to keep all rows
-     visible regardless. */
+     visible anyway. */
   collapseWhenDone: { type: Boolean, default: true },
 })
 

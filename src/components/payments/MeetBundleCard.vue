@@ -1,7 +1,7 @@
 <script setup>
 // Buyer-facing meet-bundle card on the public meet page. Shows the discounted
-// price + which events it covers, with a coming-soon Buy action until online
-// payments are switched on. Hidden entirely until a federation sets a bundle.
+// price plus which events it covers, with a coming-soon Buy action until
+// online payments are switched on. Stays hidden until a federation sets a bundle.
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'

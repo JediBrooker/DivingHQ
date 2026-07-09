@@ -2,10 +2,10 @@
 //
 // The login / 2FA / password-change / locale responses omit the bearer
 // token from the JSON body for BROWSER requests (so XSS during login
-// can't read it), while non-browser API clients still receive it. The
+// can't read it), while non-browser API clients still get it. The
 // signal is the presence of a Sec-Fetch-* header, which browsers always
-// attach to fetch/XHR and JS cannot forge or strip. This pins that
-// decision function.
+// attach to fetch/XHR and JS can't forge or strip. This test just pins
+// down that decision function.
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");

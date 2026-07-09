@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// DivingHQ — seed generator.
+// DivingHQ seed generator.
 //
 //   node scripts/generate-seed.js
 //
@@ -15,11 +15,11 @@
 // Why a generator instead of hand-written SQL? Realistic profiles, three event
 // types (incl. 11-judge synchro role bands), the controlled "out of whack"
 // judge outliers, the cross-federation meet and the prelim→final progression
-// are far easier to keep correct as code than as 800 lines of INSERTs.
+// are just way easier to keep correct as code than as 800 lines of INSERTs.
 //
-// Things that matter:
+// Heads up, a few things that matter:
 //   * dive_directory ids are random (gen_random_uuid in init.sql), so the seed
-//     NEVER hardcodes a dive_id — it resolves them at load time by the natural
+//     never hardcodes a dive_id, it resolves them at load time by the natural
 //     key (dive_code, height, position) via INSERT … SELECT … JOIN dive_directory.
 //   * Dates are emitted as now()-relative SQL so "3 years ago" and "live right
 //     now" stay correct whenever the file is loaded.
@@ -58,7 +58,7 @@ function shuffled(arr) {
   }
   return a;
 }
-// Stable per-string hash → latent skill independent of PRNG draw order.
+// Stable per-string hash so each user gets a latent skill that doesn't depend on PRNG draw order.
 function hash01(str) {
   let h = 2166136261 >>> 0;
   for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
@@ -100,9 +100,9 @@ function b64bytes(n) {
   return buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-// minimal solid-colour PNG encoder (real, valid PNG via zlib) — for made-up
-// sponsor logos. A two-band design (brand colour over a darker footer) so the
-// thumbnails don't look like flat blocks.
+// minimal solid-colour PNG encoder (real, valid PNG via zlib), hacky but it
+// works, for made-up sponsor logos. Two-band design (brand colour over a
+// darker footer) so the thumbnails don't look like flat blocks.
 const CRC_TABLE = (() => {
   const t = new Array(256);
   for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
@@ -146,7 +146,7 @@ const SURNAMES = ["Smith","Jones","Williams","Taylor","Brown","Wilson","Nguyen",
 const FOREIGN_NAT = ["USA","CAN","NZL","IRL","RSA","SGP","JPN","FRA"];
 const LOCALES = ["en","en","en","en","en","fr","es","de"];
 
-// Dive lists per board height — each (code, height, position) verified present
+// Dive lists per board height, each (code, height, position) verifed present
 // in init.sql's dive_directory. dd is for the latent-score model only.
 const DIVE_LISTS = {
   "1m":  [["103","B",1.7],["203","B",2.3],["303","C",2.1],["403","B",2.4],["105","B",2.6],["301","B",1.7]],
@@ -302,7 +302,7 @@ const MEETS = [
 ];
 
 // ---------------------------------------------------------------------------
-// Build model — PASS 1: events, panels, entities, dive lists (no scores yet)
+// Build model, PASS 1: events, panels, entities, dive lists (no scores yet)
 // ---------------------------------------------------------------------------
 const M = {
   events: [], teams: [], teamMembers: [], eventJudges: [], eventManagers: [],
@@ -357,9 +357,9 @@ for (const meet of MEETS) {
     M.eventManagers.push({ eventId: eid, userId: hostOrg.manager.id, addedBy: hostOrg.admin.id, at: createdAt });
     if (meet.crossFed) for (const k of orgKeys) M.participatingOrgs.push({ eventId: eid, orgId: orgByKey[k].id, addedBy: hostOrg.admin.id, at: createdAt });
 
-    // judges — random panel of N (synchro uses all 11). For completed
+    // judges: random panel of N (synchro uses all 11). For completed
     // individual events we make sure the recurring outlier judge (judge.03)
-    // is on the panel so its erratic pattern accumulates somewhere visible.
+    // is on the panel, so its erratic pattern actually shows up somewhere.
     const panel = shuffled(eventType === "synchro_pair" ? judges.slice() : shuffled(judges).slice(0, ev.judges));
     if (eventType === "individual" && ev.status === "Completed" && (ev.judges === 5 || ev.judges === 7)) {
       const ol = judges.find((j) => j.isOutlier);
@@ -414,7 +414,7 @@ for (const meet of MEETS) {
       });
     }
 
-    // CDLs + attendance + live state. (Scores deferred to pass 2.)
+    // CDLs + attendance + live state (scores are deferred to pass 2).
     const scoredRounds = completed ? ev.rounds : live ? Math.ceil(ev.rounds / 2) : 0;
     ev.scoredRounds = scoredRounds;
     let withdrawIdx = -1, lateIdx = -1;
@@ -453,9 +453,9 @@ for (const meet of MEETS) {
 }
 
 // ---------------------------------------------------------------------------
-// Decide outlier cells — per completed meet, judge.03 + one other judge each
-// throw 2-3 way-off scores on 5/7-judge INDIVIDUAL events (the only panels the
-// deviation/drop-rate analytics actually compute on).
+// Decide outlier cells: per completed meet, judge.03 plus one other judge
+// each throw 2-3 way-off scores on 5/7-judge INDIVIDUAL events (the only
+// panels the deviation/drop-rate analytics actually compute on).
 // ---------------------------------------------------------------------------
 const outlierCells = new Map(); // key -> signed delta
 for (const meet of MEETS) {
@@ -473,14 +473,15 @@ for (const meet of MEETS) {
       for (const ent of e.entities) for (let r = 1; r <= e.rounds; r++) cells.push(`${e.id}|${ent.competitorId}|${r}|${judgeId}`);
     }
     const j = judges.find((x) => x.id === judgeId);
-    // judge.03 (recurring, harsh low-baller) throws ~3 per meet; the secondary
-    // judge ~2. A handful across ~150 dives = clearly elevated, still realistic.
+    // judge.03 (recurring, harsh low-baller) throws ~3 per meet, the secondary
+    // judge throws ~2. a handful across ~150 dives reads as clearly elevated
+    // but still realistic.
     shuffled(cells).slice(0, j && j.isOutlier ? 3 : 2).forEach((c) => outlierCells.set(c, j && j.isOutlier ? -1 : 1));
   }
 }
 
 // ---------------------------------------------------------------------------
-// Build model — PASS 2: scores
+// Build model, PASS 2: scores
 // ---------------------------------------------------------------------------
 function judgeScore(comp, dd, round, judge, isOut) {
   const base = 7.0 + comp.skill - (dd - 2.5) * 0.25 - round * 0.03;
@@ -525,7 +526,7 @@ for (const org of ORGS) {
   for (const c of org.people.coaches) { grant(c.id, org.id, "coach", ts); grant(c.id, org.id, "spectator", ts); }
   for (const s of org.people.spectators) grant(s.id, org.id, "spectator", ts);
 }
-// judges: judge role in BOTH orgs + spectator in home
+// judges get the judge role in BOTH orgs, plus spectator in their home org
 for (const j of judges) {
   const ts = agoTs(1180);
   for (const org of ORGS) grant(j.id, org.id, "judge", ts);
@@ -569,7 +570,7 @@ const aus = orgByKey.aus, gbr = orgByKey.gbr;
   M.roleReq.push({ id: uid(NS.rolereq), userId: u.id, orgId: aus.id, role: "judge", status: "pending", note: "Qualified FINA judge — requesting judge access", at: agoTs(6) });
 }
 
-// audit log — a spread of recent admin/officiating actions
+// audit log: a spread of recent admin/officiating actions
 const auditSeed = [];
 allEvents.filter((e) => e.completed).slice(0, 4).forEach((e) =>
   auditSeed.push({ org: e.orgId, actor: orgByKey[e.meet.orgKey].manager.id, etype: "event", action: "finalised",
@@ -582,7 +583,7 @@ auditSeed.push({ org: aus.id, actor: ADMIN_USER_ID, etype: "organisation", actio
   eid: aus.id, ename: aus.name, at: agoTs(1190), meta: JSON.stringify({}) });
 for (const a of auditSeed) M.audit.push({ id: uid(NS.audit), ...a });
 
-// score audit — a couple of referee corrections on a completed event
+// score audit: a couple of referee corrections on a completed event
 {
   const e = allEvents.find((x) => x.completed && x.eventType === "individual");
   if (e) {
@@ -596,7 +597,7 @@ for (const a of auditSeed) M.audit.push({ id: uid(NS.audit), ...a });
   }
 }
 
-// notifications — varied, recent
+// notifications, varied and recent
 const notifSeed = [
   { user: aus.people.coaches[0].id, cat: "coach_alert", title: "Your diver is up next", body: "is on deck in the Men's 3m Springboard.", status: "acknowledged", at: agoTs(1) },
   { user: gbr.people.divers[4].id, cat: "club_change", title: "Club change submitted", body: "Your club-change request is awaiting approval.", status: "sent", at: agoTs(9) },
@@ -618,8 +619,8 @@ for (const meet of MEETS.filter((m) => m.daysAgo <= 1)) {
   });
 }
 
-// sponsor logos — two made-up sponsors per meet (real PNGs), so the public
-// meet page / scoreboard logo rotation has something to rotate.
+// sponsor logos: two made-up sponsors per meet (real PNGs), so the public
+// meet page / scoreboard logo rotation actually has something to show.
 const SPONSOR_BRANDS = {
   aus: [
     { name: "Speedo", top: [0, 79, 159], bottom: [0, 40, 90], url: "https://www.speedo.com" },
@@ -641,9 +642,9 @@ for (const meet of MEETS) {
   });
 }
 
-// web-push subscriptions — made-up endpoints/keys for a spread of users so the
+// web-push subscriptions: made-up endpoints/keys for a spread of users so the
 // push/notification features (and the coach "your diver is up next" alert) have
-// real subscriber rows. Endpoints are unique (table enforces it).
+// real subscriber rows to work with. endpoints are unique, table enforces it anyway.
 const UA = [
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
@@ -785,8 +786,8 @@ out.push(insert("meets",
     agoDate(m.daysAgo), agoDate(m.daysAgo - m.durDays), q(m.desc), q(o.sponsor),
     q(`https://logos.divinghq.local/${o.key}-${o.sponsor.toLowerCase()}.png`), q(o.sponsorUrl), "8", agoTs(m.daysAgo + 30)]; })));
 
-// events  (parents first via array order; parent_event_id set inline since
-// the prelim is emitted before the final in MEETS order)
+// events (parents first via array order, parent_event_id gets set inline
+// since the prelim is emitted before the final in MEETS order)
 out.push("-- ---- events ----");
 out.push(insert("events",
   ["id", "org_id", "meet_id", "name", "gender", "age_group", "height", "number_of_judges", "total_rounds",
@@ -807,7 +808,7 @@ out.push(insert("event_participating_orgs", ["event_id", "org_id", "added_by", "
 out.push(insert("event_teams", ["event_id", "team_id", "added_at"],
   M.eventTeams.map((x) => [q(x.eventId), q(x.teamId), x.at])));
 
-// competitor_dive_lists — dive_id resolved by natural key via JOIN
+// competitor_dive_lists: dive_id resolved by natural key via JOIN
 out.push("-- ---- competitor_dive_lists (dive_id resolved from dive_directory by natural key) ----");
 {
   const byEvent = new Map();
@@ -830,7 +831,7 @@ JOIN dive_directory d ON d.dive_code = v.code AND d.height = v.height AND d.posi
   }
 }
 
-// scores — dive_id resolved by natural key via JOIN
+// scores: dive_id resolved by natural key via JOIN
 out.push("-- ---- scores (dive_id resolved from dive_directory by natural key) ----");
 {
   const byEvent = new Map();
@@ -890,7 +891,7 @@ out.push(insert("push_subscriptions",
   ["user_id", "endpoint", "p256dh_key", "auth_key", "user_agent", "created_at", "last_used_at", "revoked_at"],
   M.pushSubs.map((p) => [q(p.userId), q(p.endpoint), q(p.p256dh), q(p.auth), q(p.ua), p.createdAt, p.lastUsedAt, p.revokedAt || "NULL"])));
 
-// records — derived from completed individual events using the app's own
+// records: derived from completed individual events using the app's own
 // World-Aquatics-correct calc_dive_points(), so the values are realistic.
 out.push(`-- ---- records (derived from completed individual scores via calc_dive_points) ----
 CREATE TEMP TABLE seed_record_candidates ON COMMIT DROP AS

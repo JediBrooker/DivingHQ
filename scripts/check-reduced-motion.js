@@ -1,20 +1,20 @@
 #!/usr/bin/env node
-// Reduced-motion gate (P0). Fails when NEW recurring (infinite)
-// animation is added without a `prefers-reduced-motion` escape hatch in
-// its owning file. Burn-down model: the current known-unguarded set is
-// frozen in scripts/reduced-motion-baseline.json, so the gate is green
-// today and only fails on sites not already baselined. Fixing a
-// baselined site and re-running with --update shrinks the list; in
-// review the list may only shrink.
+// Reduced-motion gate (P0). Fails when a NEW recurring (infinite)
+// animation gets added without a `prefers-reduced-motion` escape hatch
+// in its owning file. Burn-down model: the current known-unguarded set
+// is frozen in scripts/reduced-motion-baseline.json, so the gate stays
+// green today and only fails on sites that aren't already baselined.
+// Fix a baselined site and re-run with --update to shrink the list;
+// in review, the list should only ever shrink.
 //
 //   node scripts/check-reduced-motion.js            -> check (CI gate)
 //   node scripts/check-reduced-motion.js --update   -> rewrite baseline
 //
-// Scope: src/**/*.{css,vue}. "Recurring" = an `animation` shorthand that
-// runs `infinite`, or `animation-iteration-count: infinite`. A file is
-// considered guarded if it contains an
-// `@media (prefers-reduced-motion: reduce)` block. This is the
-// enforcement primitive P1 burns down against.
+// Scope: src/**/*.{css,vue}. "Recurring" means an `animation` shorthand
+// that runs `infinite`, or an explicit `animation-iteration-count:
+// infinite`. A file counts as guarded if it contains an
+// `@media (prefers-reduced-motion: reduce)` block somewhere. This is
+// the enforcement primitive P1 burns down against.
 const fs = require("node:fs");
 const path = require("node:path");
 

@@ -1,4 +1,4 @@
-// Unit coverage for assignSharedTierRanks — the within-tier shared-
+// Unit coverage for assignSharedTierRanks, the within-tier shared-
 // place ranking used to assemble the Super-Final 1-12 standings.
 // World Aquatics Art 4.1.5 (equal totals share a place) + Diving World
 // Cup §3.1.2 (tied prize positions split equally). DB-less.

@@ -5,14 +5,14 @@
 // buildReflowProposal() reads three things from Postgres (the
 // matching schedule_block, the noise-floor side-effect stamp, and
 // the downstream candidate set) and computes the delta + per-block
-// shift in pure JS. We fake the pool — script-driven — so each test
-// hands back exactly the row shape the code expects for each of
-// its three queries, in order.
+// shift in pure JS. The pool here is faked (script-driven), so each
+// test hands back exactly the row shape the code expects for each
+// of its three queries, in order.
 //
 // We pin:
 //   * delta math: actualEnd - plannedEnd, in ms, rounded to s for
 //     the wire payload
-//   * noise threshold guard (REFLOW_NOISE_THRESHOLD_MS = 5 min) —
+//   * noise threshold guard (REFLOW_NOISE_THRESHOLD_MS = 5 min):
 //     the design doc explicitly forbids interrupting the operator
 //     for sub-5-min drift, and the security audit flagged the
 //     short-event no-op path as load-bearing
@@ -46,7 +46,7 @@ const {
 //   2) UPDATE schedule_blocks SET actual_end_at = …          (stamp side-effect)
 //   3) SELECT … FROM schedule_blocks b LEFT JOIN events e … (downstream candidates)
 //
-// We dispatch off the SQL text rather than call order so a test
+// We dispatch off the SQL text rather than call order, so a test
 // that triggers an early return (no block found, no candidates)
 // still passes through the right matcher.
 // ---------------------------------------------------------------
@@ -82,10 +82,10 @@ function makeFakeClient({ blockRow, candidateRows = [], existingActualEndAt = nu
       // Candidates: filtered by session_id with ORDER BY starts_at.
       if (/WHERE b\.session_id\s*=\s*\$1/i.test(sql)) {
         // Production code filters in SQL by session_id + starts_at >= ends_at
-        // + actual_start_at IS NULL. Our fake honours session_id so the
-        // session-scoping test produces the right answer; downstream
-        // filters are the caller's responsibility (we only stage rows
-        // the SQL would actually return).
+        // + actual_start_at IS NULL. Our fake only honours session_id so
+        // the session-scoping test gets the right answer; the other
+        // filters are the caller's problem, we just stage rows the SQL
+        // would actually return.
         const [sessionId, excludeId, fromTs] = params;
         const filtered = candidateRows.filter(
           (r) => r.session_id === sessionId && r.id !== excludeId,
@@ -110,13 +110,13 @@ function tPlus(minutes) {
 
 test("REFLOW_NOISE_THRESHOLD_MS is the documented 5-minute floor", () => {
   // The design doc and the route logic both rely on this exact
-  // value. A silent change should fail loudly so we don't start
-  // bothering operators with 30-second drifts.
+  // value, so a silent change should fail loudly. Don't want to
+  // start bothering operators over 30-second drifts.
   assert.equal(REFLOW_NOISE_THRESHOLD_MS, 5 * 60 * 1000);
 });
 
 // ---------------------------------------------------------------
-// stampActualStart — small but real side-effect
+// stampActualStart: small but real side-effect
 // ---------------------------------------------------------------
 
 test("stampActualStart: returns null when eventId is falsy and does not query", async () => {
@@ -138,7 +138,7 @@ test("stampActualStart: passes eventId + at to the idempotent UPDATE", async () 
 });
 
 // ---------------------------------------------------------------
-// buildReflowProposal — no-ops
+// buildReflowProposal: no-ops
 // ---------------------------------------------------------------
 
 test("buildReflowProposal: no eventId → null", async () => {
@@ -152,7 +152,7 @@ test("buildReflowProposal: no matching schedule_block → null (older pre-schedu
   const client = makeFakeClient({ blockRow: null });
   const out = await buildReflowProposal(client, "event-orphan", new Date());
   assert.equal(out, null);
-  // Just the block-lookup query — no stamp, no candidates.
+  // Just the block-lookup query, no stamp, no candidates.
   assert.equal(client.calls.length, 1);
 });
 
@@ -209,7 +209,7 @@ test("buildReflowProposal: event ran SHORT (negative delta) → null (never pull
 
 test("buildReflowProposal: no downstream candidates → null (short event with nothing after it)", async () => {
   // A 10-min event runs 7 min late (over noise floor) but there's
-  // nothing scheduled after it in the same session — empty
+  // nothing scheduled after it in the same session. Empty
   // candidate list means there's nothing to propose shifting.
   const client = makeFakeClient({
     blockRow: {
@@ -227,7 +227,7 @@ test("buildReflowProposal: no downstream candidates → null (short event with n
 });
 
 // ---------------------------------------------------------------
-// buildReflowProposal — cascade math
+// buildReflowProposal: cascade math
 // ---------------------------------------------------------------
 
 test("buildReflowProposal: 5+ min overrun → cascades the same delta to every downstream block", async () => {
@@ -294,7 +294,7 @@ test("buildReflowProposal: candidates are session-scoped — a block in session 
     },
     candidateRows: [
       { id: "down-A", session_id: "sess-A", label: "A-Warmup", block_type: "warmup", starts_at: tPlus(30), ends_at: tPlus(45), event_name: null },
-      // Same pool, parallel session — must NOT appear in the proposal.
+      // Same pool, parallel session, must NOT appear in the proposal.
       { id: "down-B", session_id: "sess-B", label: "B-Event",  block_type: "event_start", starts_at: tPlus(30), ends_at: tPlus(60), event_name: null },
     ],
   });
@@ -305,9 +305,9 @@ test("buildReflowProposal: candidates are session-scoped — a block in session 
   assert.equal(out.candidates.length, 1, "must NOT include the parallel session's block");
   assert.equal(out.candidates[0].block_id, "down-A");
 
-  // Belt-and-braces: confirm the SQL was parameterised with the
+  // Belt and braces: confirm the SQL was parameterised with the
   // completing block's session_id, so the prod query (which uses
-  // a real WHERE clause) would have done the same filtering.
+  // a real WHERE clause) would've done the same filtering.
   const candidatesCall = client.calls.find(
     (c) => /WHERE b\.session_id\s*=\s*\$1/i.test(c.sql),
   );
@@ -319,7 +319,7 @@ test("buildReflowProposal: pre-existing actual_end_at is NOT overwritten (operat
   // Re-flip Completed → Live → Completed: actual_end_at should be
   // the FIRST observed end-time (audit truth), not the latest.
   // The mapper only issues the stamp UPDATE when actual_end_at IS
-  // NULL — we confirm by counting queries.
+  // NULL, confirmed here by counting queries.
   const at = new Date(BASE + 38 * 60_000);
   const client = makeFakeClient({
     blockRow: {

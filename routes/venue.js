@@ -9,9 +9,9 @@
 //         next state-changing event
 //       - Diagnostics / debugging from the operator's laptop
 //
-// Public: no auth gate. The same data is on /scoreboard/:id
-// already; venue bridges typically run inside the venue's own
-// LAN where exposing the payload is intentional.
+// Public: no auth gate. The same data already lives on /scoreboard/:id;
+// venue bridges typically run inside the venue's own LAN, so exposing
+// the payload here is intentional.
 //
 // Mount via:
 //   app.use(require('./routes/venue')({ pool }))
@@ -24,8 +24,8 @@ module.exports = function createVenueRouter({ pool }) {
   const router = express.Router();
 
   // Load the in-memory live state at request time so the snapshot
-  // reflects current active diver + hold reason. lib/live-state
-  // owns the cache; we read from it without a DB hit.
+  // reflects the current active diver + hold reason. lib/live-state
+  // owns the cache, we just read from it without a DB hit.
   const liveState = require("../lib/live-state");
 
   router.get("/api/venue/scoreboard-state/:event_id", async (req, res) => {
@@ -33,12 +33,13 @@ module.exports = function createVenueRouter({ pool }) {
     try {
       const activePayload = liveState.activeDivers[event_id] || null;
       const onHoldReason  = liveState.meetHolds[event_id]?.reason || null;
-      // HTTP snapshot is read-only — DO NOT advance the per-event
-      // sequence counter. The bridge boots with this HTTP fetch
+      // HTTP snapshot is read-only, DO NOT advance the per-event
+      // sequence counter here. The bridge boots off this HTTP fetch
       // then subscribes to socket emits; if this read bumped the
-      // counter, the very next socket emit would be at sequence+2
-      // rather than sequence+1, tripping the bridge's regression
-      // guard into a phantom re-sync on every reconnect.
+      // counter, the very next socket emit would land at sequence+2
+      // instead of sequence+1, tripping the bridge's regression guard
+      // into a phantom re-sync on every reconnect. Worth remembering
+      // if you're ever tempted to unify the read paths.
       const state = await buildScoreboardState({
         pool, eventId: event_id, activePayload, onHoldReason,
         stamp: false,

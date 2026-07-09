@@ -1,8 +1,8 @@
 <script setup>
 // Club admin: full CRUD on the club's training classes, price options, and
 // roster (enrol/edit/remove a diver). Talks to /api/clubs/:clubId/classes*
-// which is club-private (requireClubAdminOnly on the server — never reaches
-// a federation org_admin).
+// which is club-private (requireClubAdminOnly on the server, so it never
+// reaches a federation org_admin).
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -57,9 +57,9 @@ function removePriceRow(i) {
 }
 
 // Price options for an EXISTING class (edit mode) are managed live against
-// the price-option endpoints — not batched with the class save — since a
-// club may want to fix/add a tier without touching the class itself, and
-// deleting+recreating a class would cascade-wipe its whole roster.
+// the price-option endpoints, not batched with the class save, since a
+// club may want to fix/add a tier without touching the class itself. And
+// deleting+recreating a class would cascade-wipe its whole roster anyway.
 const editPrices = ref([])
 const newEditPrice = ref({ label: '', amount: '', currency: 'GBP' })
 const savingPriceId = ref(null)
@@ -213,10 +213,11 @@ async function deleteClass(cls) {
 
 // ---- roster (expanded class) ------------------------------------
 async function toggleRoster(cls) {
-  // Always close any open add-diver form when the expanded class changes —
-  // it's keyed off expandedId in the template, so leaving it open would
+  // Always close any open add-diver form when the expanded class changes,
+  // since it's keyed off expandedId in the template. Leaving it open would
   // otherwise resurface under whichever class is expanded next, still
-  // holding the previous class's price-option selection.
+  // holding the previous class's price-option selection (gotcha we hit
+  // early on).
   showAdd.value = false
   if (expandedId.value === cls.id) {
     expandedId.value = null

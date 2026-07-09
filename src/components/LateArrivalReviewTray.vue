@@ -1,16 +1,16 @@
 <script setup>
-/* Late-arrival review tray for meet managers + referees.
+/* Late-arrival review tray for meet managers and referees.
  *
  * Surfaces rows that lib/deadline-gate.js accepted "with review"
  * (DEC-04): the competitor or coach claims they submitted before
  * the entry deadline, but the server only saw the request after.
- * The operator decides whether to keep or roll back each entry.
+ * Operator decides whether to keep or roll back each entry.
  *
- * Polls /api/late-arrivals on mount + every 30s. Refreshes after
+ * Polls /api/late-arrivals on mount and every 30s, refreshes after
  * a decision so the row drops out of the queue.
  *
- * Visibility: renders nothing when there are no pending rows, so
- * a quiet meet shows no chrome.
+ * Visibility: renders nothing when there are no pending rows, so a
+ * quiet meet shows no chrome at all.
  */
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -53,8 +53,8 @@ async function decide(row, decision) {
       method: 'POST',
       body: JSON.stringify({ decision }),
     })
-    // Drop the row locally so the UI feels responsive; then
-    // reload to catch anything that landed concurrently.
+    // Drop the row locally so the UI feels responsive, then reload
+    // to catch anything that landed concurrently in the meantime.
     rows.value = rows.value.filter((r) => r.id !== row.id)
     loadRows()
   } catch (err) {

@@ -1,4 +1,4 @@
-// Server-side i18n unit tests. Pure module — no DB, no HTTP.
+// Server-side i18n unit tests. Pure module, no DB, no HTTP.
 //
 // Covers:
 //   * resolveLocale precedence (req.user.locale > Accept-Language > 'en')
@@ -59,8 +59,8 @@ test("resolveLocale falls back to 'en' with no headers at all", () => {
 
 test("resolveLocale rejects a stored locale that's not in the supported list", () => {
   // Defence in depth: even if a future migration somehow lands a
-  // bogus value in users.locale, the resolver should not blow up —
-  // it should fall through to Accept-Language.
+  // bogus value in users.locale, the resolver shouldn't blow up,
+  // it should just fall through to Accept-Language.
   const req = {
     user: { locale: "klingon" },
     headers: { "accept-language": "fr" },
@@ -71,7 +71,7 @@ test("resolveLocale rejects a stored locale that's not in the supported list", (
 test("t() walks dot paths", () => {
   // Three-segment path that we know exists in server-en.json.
   const out = t({}, "emails.password_reset.subject");
-  // No params supplied — the {app_name} placeholder should stay literal.
+  // No params supplied, so the {app_name} placeholder should stay literal.
   assert.match(out, /password reset/i);
   assert.match(out, /\{app_name\}/);
 });
@@ -94,8 +94,8 @@ test("t() falls back to English when the resolved locale is missing a key", () =
   // The 6 well-known error keys exist in every server-*.json (we
   // copied en wholesale into the stubs). Construct a synthetic
   // miss by asking for a key that exists in en but won't exist in
-  // a separate path. We don't have a key that's missing in es —
-  // so prove the codepath by mocking: pretend Spanish is missing
+  // a seperate path. We don't have a key that's missing in es, so
+  // we prove the codepath by mocking it: pretend Spanish is missing
   // 'errors.unauthorized' by asking for a key that no locale has
   // and confirming we fall through to the literal-key floor.
   const out = t({ user: { locale: "es" } }, "errors.does_not_exist_anywhere");
@@ -133,7 +133,7 @@ test("serverT.list returns the supported locale codes", () => {
   for (const code of ["en", "es", "fr", "de", "it", "pt"]) {
     assert.ok(list.includes(code), `expected ${code} in supported list`);
   }
-  // Returned copy — caller can't mutate the source.
+  // Returned copy, caller can't mutate the source.
   list.pop();
   assert.equal(serverT.list().length, 26);
 });
@@ -147,8 +147,8 @@ test("SUPPORTED + DEFAULT_LOCALE exports are sane", () => {
 test("hand-translated locales all expose the same error keys as English", () => {
   // Sanity check that the hand-translations didn't typo a key
   // path. If es is missing 'errors.unauthorized', a Spanish
-  // speaker would silently see the English string in production
-  // — annoying but not broken. Better to catch it here.
+  // speaker would silently see the English string in production,
+  // annoying but not broken. Better to catch it here.
   const ERROR_KEYS = [
     "errors.unauthorized",
     "errors.forbidden",

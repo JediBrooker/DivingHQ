@@ -1,10 +1,10 @@
 -- =============================================================
--- MIGRATION 051 — PENDING PARTNER PAIRINGS
+-- MIGRATION 051: pending partner pairings
 --
 -- Synchro events need both divers to consent to the pairing.
--- Today the submit-list endpoint accepts a partner_id without
--- asking the partner — they show up on the start list with
--- someone they may not have agreed to dive with.
+-- Right now the submit-list endpoint just accepts a partner_id
+-- with no ask, so a diver can end up on the start list paired
+-- with someone who never agreed to it.
 --
 -- This migration adds a pending_partner_pairings table. The
 -- submit flow becomes:
@@ -18,8 +18,8 @@
 --      sides) or decline (which clears the pending row).
 --
 -- Rows are scoped to (event_id, requester_id, partner_id). The
--- UNIQUE constraint prevents duplicate pending invites; the
--- check constraint prevents self-pairing.
+-- UNIQUE constraint stops duplicate pending invites; the check
+-- constraint stops self-pairing.
 -- =============================================================
 
 BEGIN;
@@ -32,11 +32,11 @@ CREATE TABLE IF NOT EXISTS public.pending_partner_pairings (
     status        text NOT NULL DEFAULT 'pending'
                   CHECK (status IN ('pending', 'accepted', 'declined', 'expired')),
     -- The requester's chosen dive list as submitted. Stored on the
-    -- pending row (rather than competitor_dive_lists) so the
-    -- partner sees the proposal but the public start list is not
-    -- polluted with an entry the partner never agreed to. On
-    -- accept we use this payload to populate competitor_dive_lists
-    -- for BOTH divers in one transaction.
+    -- pending row (not competitor_dive_lists) so the partner sees
+    -- the proposal but the public start list isn't polluted with
+    -- an entry the partner never agreed to. On accept we use this
+    -- payload to populate competitor_dive_lists for BOTH divers in
+    -- one transaction.
     -- Shape: [{ dive_id: uuid, round_number: int }, ...]
     dives         jsonb NOT NULL DEFAULT '[]'::jsonb,
     note          text,

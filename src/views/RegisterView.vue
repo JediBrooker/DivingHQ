@@ -9,15 +9,15 @@ const username = ref('')
 const email = ref('')
 const password = ref('')
 const orgId = ref('')
-// Default to "diver" — the most common public-registration use
-// case. Spectator-only sign-ups will pick "Spectator" explicitly.
+// Default to "diver", the most common public-registration use case.
+// Spectator-only sign-ups will pick "Spectator" explicitly.
 const requestedRole = ref('diver')
 const note = ref('')
 const orgs = ref([])
 
-// Club state — populated whenever an org is picked. The club
-// dropdown has three modes: pick existing, "I want to create a
-// new club", or leave empty (independent diver).
+// Club state, populated whenever an org is picked. The club
+// dropdown has three modes: pick an existing one, "I want to create
+// a new club", or leave it empty (independent diver).
 const clubs = ref([])
 const clubChoice = ref('')           // '' | 'new' | <club_id>
 const newClubName = ref('')
@@ -27,8 +27,8 @@ const msg = ref('')
 const msgType = ref('')
 const loading = ref(false)
 
-// Public signups are gated OFF by default (coming-soon launch). null = still
-// checking, true = open (show the form), false = closed (show the notice).
+// Public signups are gated off by default (coming-soon launch). null means
+// still checking, true is open (show the form), false is closed (show the notice).
 const signupsEnabled = ref(null)
 
 onMounted(async () => {
@@ -159,7 +159,7 @@ async function handleSubmit() {
         </select>
       </div>
 
-      <!-- Club — only meaningful once an org is picked. Lets you
+      <!-- Club, only meaningful once an org is picked. Lets you
            pick an existing club, create a new one inline, or skip. -->
       <div class="field" v-if="orgId">
         <label class="label">{{ $t('auth.register.club') }}</label>
@@ -175,7 +175,7 @@ async function handleSubmit() {
         </p>
       </div>
 
-      <!-- Inline new-club form — only when "Create a new club" is picked -->
+      <!-- Inline new-club form, only shows when "Create a new club" is picked -->
       <div v-if="orgId && clubChoice === 'new'" class="field new-club-block">
         <div class="field">
           <label class="label">{{ $t('auth.register.new_club_name') }}</label>
@@ -213,12 +213,12 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-/* dvh, not vh — iOS Safari's collapsing URL bar makes 100vh =
-   the *large* viewport (bar collapsed). With the bar expanded
-   the Submit button on iPhone SE-class screens sits below the
-   visible area. dvh tracks the live viewport. vh fallback
-   first so browsers older than ~Q4-2022 still get a sane
-   min-height; modern browsers ignore it and use dvh. */
+/* dvh, not vh: iOS Safari's collapsing URL bar makes 100vh equal
+   the *large* viewport (bar collapsed). With the bar expanded, the
+   Submit button on iPhone SE-class screens ends up below the visible
+   area. dvh tracks the live viewport instead. vh fallback goes first
+   so browsers older than ~Q4-2022 still get a sane min-height; modern
+   browsers just ignore it and use dvh. */
 :global(body) {
   display: flex; align-items: center; justify-content: center;
   min-height: 100vh;
@@ -230,7 +230,7 @@ async function handleSubmit() {
   font-family: var(--font-display); font-size: 13px; font-weight: 700;
   letter-spacing: 0.3em; text-transform: uppercase; color: var(--text);
   margin-bottom: 2.5rem; display: flex; align-items: center;
-  /* No `gap` — see LoginView for the rationale. */
+  /* No `gap` here, see LoginView for the rationale. */
 }
 .login-mark span { color: var(--cyan); }
 .login-mark::before { content: ''; display: block; width: 24px; height: 2px; margin-inline-end: 0.75rem; background: var(--cyan); }

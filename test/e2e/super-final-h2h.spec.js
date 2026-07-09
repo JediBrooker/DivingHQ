@@ -1,12 +1,12 @@
-// Super Final — Head-to-Head seeding + results
-// (Diving World Cup 2026, Appendix 3 §1-2 + §6 — see
+// Super Final: Head-to-Head seeding + results
+// (Diving World Cup 2026, Appendix 3 §1-2 + §6, see
 // docs/2026.03.05-…-Super-Final…pdf).
 //
 // Covers the Phase-2 endpoints:
 //
-//   POST /api/events/:id/seed-h2h         — commit pairs
-//   GET  /api/events/:id/seed-h2h/preview — read-only preview
-//   GET  /api/events/:id/super-final/h2h-results — pair winners
+//   POST /api/events/:id/seed-h2h           commit pairs
+//   GET  /api/events/:id/seed-h2h/preview   read-only preview
+//   GET  /api/events/:id/super-final/h2h-results  pair winners
 //
 // Setup: 6 federations × 4 divers (24 divers total) entered in
 // a parent-stage "final" event, each with a 3-round dive list.
@@ -18,22 +18,22 @@
 //     B/C/D/E/F so the top-12 ends up with at most 2 per
 //     federation.
 //
-// 6 feds × max-2 = 12 max — we need at least that many feds for
+// 6 feds × max-2 = 12 max, so we need at least that many feds for
 // the cap to leave 12 qualifiers. With 6 feds and 4 divers each,
-// every fed contributes exactly 2, so the bracket fills.
+// every fed contributes exactly 2 and the bracket fills.
 //
 // We then verify pair structure (12v1, 11v2, …, 7v6 by rank
 // within the cap-applied top 12), group assignment per
 // Appendix 3 §2.1.1, and that h2h-results returns 6 winners
-// with totals when the H2H stage is scored.
+// with totals once the H2H stage is scored.
 
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
 
-// Helper: register a fresh org via the public API + return
-// adminToken/orgId. Mirrors createOrgAndAdmin but returns enough
+// Helper: registers a fresh org via the public API and returns
+// adminToken/orgId. Mirrors createOrgAndAdmin, just returns enough
 // detail to spawn N divers under that org.
 async function makeFederation(request, label) {
   return await setup.createOrgAndAdmin(request, {
@@ -54,9 +54,9 @@ async function makeFederation(request, label) {
 //   round 3 → all five judges score `roundC`
 //
 // where roundA/B/C are 0.5 increments derived from rank so the
-// 3-round sum (with calc_event_dive_points trim — every judge
-// agreed, so kept sum = 3 × score) is monotonic across ranks.
-// Avoids the "more divers than 0.5 increments" problem.
+// 3-round sum (with calc_event_dive_points trim, since every judge
+// agreed, kept sum = 3 × score) is monotonic across ranks. Avoids
+// the "more divers than 0.5 increments" problem.
 async function scoreParentEvent({ eventId, divers, dive_id, judgeUserIds }) {
   for (let i = 0; i < judgeUserIds.length; i++) {
     await setup.pool.query(
@@ -73,9 +73,9 @@ async function scoreParentEvent({ eventId, divers, dive_id, judgeUserIds }) {
     //
     // Score per round in 0.5 increments. We want rank N to score
     // strictly more than rank N+1 across the round triple.
-    // Encode rank in base 17 across 3 rounds — each digit is in
+    // Encode rank in base 17 across 3 rounds, each digit is in
     // [0..16] which maps to a 0.5-increment score in [2.0..10.0].
-    // 17^3 = 4913 distinct codes (more than enough for 24).
+    // 17^3 = 4913 distinct codes, way more than enough for 24.
     //
     // For deterministic ordering, higher rank = higher score, so:
     //   code = (24 - rank)  → larger for better divers
@@ -92,7 +92,7 @@ async function scoreParentEvent({ eventId, divers, dive_id, judgeUserIds }) {
     const roundScores = [scoreOf(r1), scoreOf(r2), scoreOf(r3)];
     for (let round = 1; round <= 3; round++) {
       const s = roundScores[round - 1];
-      // All 5 judges score the same value — trim drops one high
+      // All 5 judges score the same value, so trim drops one high
       // + one low, keeps three identical → kept sum = 3 × s.
       for (const judgeUserId of judgeUserIds) {
         await setup.pool.query(
@@ -112,7 +112,7 @@ test("super-final H2H: per-fed cap, pair structure, group assignment", async ({ 
 
   // ---- 6 federations with 4 divers each (24 total) ----------
   // Federation A's divers all rank in the global top 8 before
-  // the cap; B/C/D/E/F each have 1-2 strong divers.
+  // the cap kicks in; B/C/D/E/F each have 1-2 strong divers.
   const fedA = await makeFederation(request, "AAA");
   const fedB = await makeFederation(request, "BBB");
   const fedC = await makeFederation(request, "CCC");
@@ -144,7 +144,7 @@ test("super-final H2H: per-fed cap, pair structure, group assignment", async ({ 
   }
 
   // ---- Parent stage: create as a "final" in fedA's org ------
-  // (the H2H later will be in fedA's org too — single host)
+  // (the H2H later will be in fedA's org too, single host)
   const parent = await setup.createEvent(request, {
     adminToken: fedA.adminToken,
     name: "E2E Parent Stop1 Final",
@@ -161,11 +161,11 @@ test("super-final H2H: per-fed cap, pair structure, group assignment", async ({ 
     judgeUserIds.push(ju.userId);
   }
 
-  // Pick a 3m forward 1.5 (101B) — present in the seed.
+  // Pick a 3m forward 1.5 (101B), just needs to exist in the seed.
   const dive_id = await setup.pickDiveId({ height: 3.0, dive_code: "101", position: "B" });
 
   // Insert dive-list rows for every diver (3 rounds of the same
-  // dive — the H2H seed copies these forward).
+  // dive, since the H2H seed copies these forward).
   for (const d of divers) {
     await setup.insertDiveList({
       eventId:      parent.id,
@@ -180,11 +180,11 @@ test("super-final H2H: per-fed cap, pair structure, group assignment", async ({ 
 
   // ---- Score assignment so the cap actually bites ----------
   // Strategy: assign scoreFloor by global rank (lower = better).
-  // Order by hand:
+  // Worked out by hand:
   //   Rank  1: FedA Diver 1
   //   Rank  2: FedA Diver 2
-  //   Rank  3: FedA Diver 3   (3rd A — DROPPED by cap)
-  //   Rank  4: FedA Diver 4   (4th A — DROPPED by cap)
+  //   Rank  3: FedA Diver 3   (3rd A, DROPPED by cap)
+  //   Rank  4: FedA Diver 4   (4th A, DROPPED by cap)
   //   Rank  5: FedB Diver 1
   //   Rank  6: FedB Diver 2
   //   Rank  7: FedC Diver 1
@@ -333,9 +333,9 @@ test("super-final H2H: per-fed cap, pair structure, group assignment", async ({ 
     const ju = await setup.insertUser({ orgId: fedA.orgId, role: "judge", fullName: `H2H Judge ${j+1}` });
     h2hJudges.push(ju.userId);
   }
-  // For each pair: competitor_b (the higher-seeded / better
-  // diver) gets 8.0s, competitor_a gets 5.0s. Both finish all
-  // 3 rounds.
+  // For each pair: competitor_b (the higher-seeded, presumably
+  // better diver) gets 8.0s, competitor_a gets 5.0s. Both finish
+  // all 3 rounds.
   for (const p of seed.pairs) {
     for (let round = 1; round <= 3; round++) {
       for (let j = 0; j < h2hJudges.length; j++) {

@@ -1,9 +1,9 @@
-// Shared helpers used by the diver-profile dashboard widgets.
+// Shared helpers for the diver-profile dashboard widgets.
 //
 // Each widget under src/components/profile-widgets/ imports
-// whichever of these it needs. Widget-private helpers (e.g. the
-// year-over-year delta calc) live next to their widget instead
-// of here.
+// whichever of these it needs. Widget-private helpers (the
+// year-over-year delta calc, for instance) live next to their
+// widget instead of here.
 
 /**
  * "1st", "2nd", "3rd", "11th", "21st", … for a place number.
@@ -17,7 +17,7 @@ export function placeOrdinal(n) {
 }
 
 /**
- * CSS class for a place 1/2/3 chip — used by score-trend and
+ * CSS class for a place 1/2/3 chip, used by score-trend and
  * recent-form. Returns '' for anything outside the podium.
  */
 export function placeColor(n) {

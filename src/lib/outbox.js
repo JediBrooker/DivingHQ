@@ -1,7 +1,7 @@
 // Client-side outbox for offline-resilient writes.
 //
 // Every meet-time action a client wants to send goes through this
-// outbox. push() persists the action to IndexedDB; drain() walks
+// outbox. push() persists the action to IndexedDB, drain() walks
 // the queue and invokes a caller-supplied send() function (which
 // knows how to talk to the socket or HTTP layer). Entries survive
 // page reloads, navigation between views, and offline gaps up to
@@ -13,29 +13,30 @@
 //
 //   * The outbox is BACKEND-INJECTED. Production code passes the
 //     IDB-backed backend; tests pass an in-memory Map-backed one.
-//     Keeps unit tests dependency-free and the production hot path
-//     unchanged.
+//     Keeps unit tests dependency-free and leaves the production
+//     hot path untouched.
 //
-//   * push() is synchronous from the caller's perspective in the
-//     sense that it returns the idempotency_key immediately. The
-//     IDB write completes in the background. Optimistic UI updates
-//     can fire on the returned key without waiting for IDB.
+//   * push() is synchronous from the caller's perspective, in that
+//     it returns the idempotency_key right away. The IDB write
+//     itself completes in the background, so optimistic UI updates
+//     can fire on the returned key without waiting on IDB.
 //
-//   * drain() acquires an in-memory lock; concurrent callers no-op.
-//     The lock is in-process only — two tabs of the same SPA can
-//     each drain independently, but the server-side idempotency
-//     layer dedupes them.
+//   * drain() grabs an in-memory lock; concurrent callers just
+//     no-op. The lock is in-process only, so two tabs of the same
+//     SPA can each drain independently. That's fine, the
+//     server-side idempotency layer dedupes them anyway.
 //
 //   * FIFO by created_at. The server idempotency_keys table makes
-//     re-sends safe, but operator intent is preserved by sending
-//     in tap order.
+//     re-sends safe, but we still send in tap order to preserve
+//     operator intent.
 //
 //   * 5 attempts with exponential backoff (1s, 2s, 4s, 8s, 16s),
 //     then status='failed'. Manual retry surfaces in the UI.
 //
-//   * No Vue coupling. Components subscribe via outbox.on('change')
-//     and re-read counts as needed. A thin composable wrapper
-//     (P2 work) translates events to reactive refs.
+//   * No Vue coupling here. Components subscribe via
+//     outbox.on('change') and re-read counts as needed. A thin
+//     composable wrapper (P2 work) translates events to reactive
+//     refs.
 
 // ---- Constants ------------------------------------------------
 
@@ -44,7 +45,7 @@ const STORE = 'outbox'
 const VERSION = 1
 
 // 72h matches the server-side idempotency retention. Entries in
-// terminal states older than this get GC'd on startup.
+// terminal states older then this get GC'd on startup.
 const RETENTION_MS = 72 * 60 * 60 * 1000
 
 // Max 5 attempts then mark failed. UI surfaces failed entries for
@@ -111,8 +112,9 @@ function createEmitter() {
     emit(event, ...args) {
       for (const fn of listeners.get(event) || []) {
         try { fn(...args) } catch (err) {
-          // Listeners shouldn't throw; log and keep going so one
-          // bad listener doesn't break the chain.
+          // Listeners shouldn't throw, but if one does, log it
+          // and keep going so one bad listener doesn't take down
+          // the rest of the chain.
           // eslint-disable-next-line no-console
           console.error('[outbox] listener error:', err)
         }
@@ -191,10 +193,10 @@ export function createIdbBackend() {
         const store = tx.objectStore(STORE)
         const out = []
         // We walk via the by_created_at index so the result is
-        // FIFO. Filtering happens in-memory because compound
-        // index queries on (status, created_at) would need a
-        // second index definition; the queue is small enough
-        // that the JS-side filter is cheaper than the schema
+        // FIFO. Filtering happens in-memory because a compound
+        // index on (status, created_at) would need its own
+        // index definition, and the queue is small enough that
+        // the JS-side filter is cheaper than the extra schema
         // complexity.
         const cursorReq = store.index('by_created_at').openCursor()
         cursorReq.onsuccess = () => {
@@ -269,9 +271,9 @@ export function createOutbox({
 
   /**
    * Queue an action. Returns the idempotency_key the caller
-   * should reference for optimistic UI updates + conflict
-   * resolution. The IDB write completes in the background; the
-   * key is generated synchronously.
+   * should reference for optimistic UI updates and conflict
+   * resolution. The IDB write completes in the background, but
+   * the key itself is generated synchronously.
    *
    * @param {string} actionType  Stable identifier for the action
    *                             (e.g., 'submit_score'). Used for
@@ -378,16 +380,17 @@ export function createOutbox({
             await backend.put(entry)
             failed += 1
           } else {
-            // Schedule a retry with exponential backoff. We just
-            // flip the status back to pending; the next drain()
+            // Schedule a retry with exponential backoff, we just
+            // flip the status back to pending. The next drain()
             // (on socket reconnect, online event, or the periodic
             // heartbeat in the calling composable) picks it up.
             entry.status = STATUSES.PENDING
             entry.last_error = String(err?.message || err)
             await backend.put(entry)
-            // Note: we don't sleep here. The retry is scheduled
-            // by whatever triggered this drain; the backoff is
-            // implicit in the wait until the next drain trigger.
+            // Heads up: we don't sleep here. The retry is
+            // scheduled by whatever triggered this drain, the
+            // backoff is just implicit in the wait until the
+            // next drain trigger.
           }
           emitChange()
         }
@@ -422,8 +425,8 @@ export function createOutbox({
    * decisions are 'discard' (mark cancelled) or 'retry' (flip
    * back to pending). The 'accept_proposed' / 'keep_existing'
    * flow that the Control Room conflict tray will use happens
-   * server-side via POST /api/conflicts/:id/resolve in P4; the
-   * client outbox only needs to dispose of its local entry.
+   * server-side via POST /api/conflicts/:id/resolve in P4, so
+   * the client outbox only needs to dispose of its local entry.
    */
   async function resolveConflict(key, decision) {
     const entry = await getEntry(key)

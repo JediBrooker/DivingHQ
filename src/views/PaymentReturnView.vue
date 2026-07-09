@@ -3,7 +3,7 @@
 // All checkout success/cancel URLs point here with ?status=paid|canceled
 // and ?flow=<what was being paid> so the payer always gets an explicit
 // confirmation (previously the return URLs pointed at pages that ignored
-// the query — or didn't exist at all — so paying ended on a blank page).
+// the query, or didn't even exist, so paying ended on a blank page).
 //
 // "Paid" is Stripe's redirect, not our webhook: the payment can still be
 // settling for a few moments, so the copy says so instead of promising a

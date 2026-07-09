@@ -1,16 +1,16 @@
 -- =============================================================
--- MIGRATION 023 — STABLE OPAQUE public_slug FOR DIVERS
+-- MIGRATION 023, stable opaque public_slug for divers
 --
--- The existing publicId() helper produces per-event hashes — fine
--- for spectator-facing scoreboard chips, useless as a stable
--- "share my profile" URL because it changes per event. Username
--- is stable but it's a credential identifier we deliberately
--- redacted from cross-org payloads (Migration 021's audit).
+-- The existing publicId() helper produces per-event hashes, which is
+-- fine for spectator-facing scoreboard chips but useless as a stable
+-- "share my profile" URL since it changes per event. Username is
+-- stable, but it's a credential identifier we deliberately redacted
+-- from cross-org payloads (Migration 021's audit).
 --
 -- This migration adds a third, purpose-built identifier:
 -- users.public_slug. 16 random hex chars (~64 bits of entropy),
 -- URL-safe, opaque (doesn't leak username or user_id), generated
--- at user creation. Existing rows are backfilled with one slug
+-- at user creation. Existing rows get backfilled with one slug
 -- each.
 --
 -- Idempotent: ADD COLUMN IF NOT EXISTS, backfill UPDATE only
@@ -25,14 +25,14 @@ ALTER TABLE public.users
 
 -- Default for NEW inserts. Without this, a future
 -- "INSERT INTO users (...) VALUES (...)" that doesn't list
--- public_slug would crash on the NOT NULL we set below.
+-- public_slug would blow up on the NOT NULL we set below.
 ALTER TABLE public.users
     ALTER COLUMN public_slug SET DEFAULT REPLACE(gen_random_uuid()::text, '-', '');
 
--- Backfill EXISTING rows. Uses gen_random_uuid() (already
+-- Backfill EXISTING rows, using gen_random_uuid() (already
 -- enabled by init.sql via pgcrypto) truncated to 32 hex chars
--- (no dashes). WHERE public_slug IS NULL gates so a re-run
--- after a partial backfill picks up where it left off.
+-- (no dashes). WHERE public_slug IS NULL gates it so a re-run
+-- after a partial backfill just picks up where it left off.
 UPDATE public.users
    SET public_slug = REPLACE(gen_random_uuid()::text, '-', '')
  WHERE public_slug IS NULL;

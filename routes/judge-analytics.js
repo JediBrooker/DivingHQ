@@ -1,4 +1,4 @@
-// Judge Analysis — analytics endpoint for the JudgeProfileView.
+// Judge Analysis, the analytics endpoint for the JudgeProfileView.
 //
 //   GET /api/judges/:id/profile     header stats + recent meets
 //   GET /api/judges/:id/analytics   the customisable widget rollups
@@ -6,11 +6,11 @@
 //   GET /api/judges/search          public typeahead (≥2 chars)
 //   PUT /api/users/me/judge-dashboard
 //                                   persist the judge's widget layout
-//                                   (owner-only — the only mutating
+//                                   (owner-only, the only mutating
 //                                   endpoint here)
 //
 // The numeric reference for every "how is this judge tracking?"
-// metric is the **panel-kept mean** — the arithmetic mean of the
+// metric is the **panel-kept mean**, the arithmetic mean of the
 // scores that survived the World Aquatics trim for that dive
 // (PART FOUR, Article 13 trim rules). That's the same kept set the
 // dive-points formula uses, so a judge's deviation from it is the
@@ -18,21 +18,21 @@
 //
 // References (PART FOUR of the World Aquatics Competition Regulations,
 // in force as of February 2026):
-//   * 7.9    — Awards and scoring of dives by Judges (judges
+//   * 7.9    : Awards and scoring of dives by Judges (judges
 //              award between 0 and 10 in 0.5 increments, simultaneously,
 //              without communicating).
-//   * 8.4.9  — Referee may remove a Judge whose judgement is
+//   * 8.4.9  : Referee may remove a Judge whose judgement is
 //              regarded as unsatisfactory; the Referee writes a
 //              report to the Jury of Appeal explaining the basis.
 //              Self-service deviation analytics give a judge their
 //              own evidence trail before that point.
-//   * 10     — General criteria for judging dives (technique,
+//   * 10     : General criteria for judging dives (technique,
 //              grace, execution, completion of starting position,
 //              approach, take-off, flight, entry).
 //
 // Permissions
 // -----------
-// Judge profiles + analytics are PUBLIC by design — the same
+// Judge profiles + analytics are PUBLIC by design, the same
 // transparency stance the existing diver profile takes (every
 // score this analytics rollup aggregates is already visible on
 // the public scoreboard, archived meet pages, and PDF score
@@ -43,23 +43,23 @@
 // judge's calls trend with their country / club / etc.
 //
 // What stays private
-//   * `judge_dashboard_widgets` — UI preference. Returned only to
+//   * `judge_dashboard_widgets`: UI preference. Returned only to
 //     the owner and to same-org admins/managers/referees who can
 //     plausibly customise on the judge's behalf. Outside viewers
 //     don't see the field at all (it's redacted, not zero'd).
-//   * The PUT endpoint — owner only.
+//   * The PUT endpoint: owner only.
 //
 // The endpoints accept a `?from_date=&to_date=` filter so a
-// viewer can scope a window (e.g. the last competition season)
-// — same parsing helper the diver-profile router uses.
+// viewer can scope a window (e.g. the last competition season),
+// same parsing helper the diver-profile router uses.
 
 const express = require("express");
 const { JUDGE_PER_DIVE } = require("../db/queries");
 
 // Catalog of widget IDs the judge can enable on their dashboard.
 // Mirrors the frontend JUDGE_WIDGET_CATALOG. Validated against
-// inbound arrays so a typo can't poison the store. If you add to
-// the frontend, add here too.
+// inbound arrays so a typo can't poison the store. If you add one
+// on the frontend, add it here too.
 const KNOWN_WIDGETS = new Set([
   "bias_summary",
   "deviation_distribution",
@@ -95,27 +95,27 @@ function canViewJudgePrivate(viewer, judgeRow) {
 }
 
 // -------------------------------------------------------------
-// JUDGE_ANALYTICS_BUNDLE — the 13 date-free analytics widgets in a
+// JUDGE_ANALYTICS_BUNDLE: the 13 date-free analytics widgets in a
 // single statement that materialises JUDGE_PER_DIVE exactly once
 // and fans every widget out of it as a jsonb column.
 //
 // Why one query: the per-widget version re-materialised the
 // JUDGE_PER_DIVE CTE (scores ⨝ events ⟕ dive_directory + the panel
-// LATERAL) once PER widget — 16 evaluations of the same expensive
+// LATERAL) once PER widget, 16 evaluations of the same expensive
 // per-dive panel math per request. `per_dive AS MATERIALIZED`
 // computes it once; the 13 sub-selects then scan that in-memory
-// result. (The 3 date-bearing widgets — recent_meets, score_trend,
-// panel_deviation_per_event — stay native; their timestamp/date
+// result. (The 3 date-bearing widgets, recent_meets, score_trend,
+// panel_deviation_per_event, stay native since their timestamp/date
 // columns serialise differently through jsonb, so folding them in
 // would change the wire shape. Net: 16 → 4 materialisations.)
 //
 // Byte-identical output: node-postgres returns `numeric` as a
 // STRING ("0.500", scale preserved). Raw jsonb would coerce it to a
 // JS number and drop trailing zeros, so every numeric is cast
-// ::text — the value the client receives is unchanged. Integer
-// columns (::int) and uuid/text columns stay as-is (jsonb and the
-// native driver agree on those). The equivalence is regression-
-// guarded by test/judge-analytics.integration.test.js.
+// ::text, meaning the value the client receives is unchanged.
+// Integer columns (::int) and uuid/text columns stay as-is (jsonb
+// and the native driver agree on those). The equivalence is
+// regression-guarded by test/judge-analytics.integration.test.js.
 //
 // Each sub-select below is its pre-consolidation widget query
 // verbatim, reading FROM the shared per_dive instead of a private
@@ -426,7 +426,7 @@ module.exports = function createJudgeAnalyticsRouter({
   // the token if one is sent so we still see req.user for owner-
   // only branches (e.g. dashboard_widgets), but anonymous requests
   // are accepted. Falls back to verifyToken if the host hasn't
-  // been updated yet — belt-and-braces during the rollout.
+  // been updated yet, belt-and-braces during the rollout.
   const maybeAuth = optionalAuth || verifyToken;
   // Profile + analytics are heavy historical reads; route through
   // the optional read replica when available.
@@ -434,8 +434,8 @@ module.exports = function createJudgeAnalyticsRouter({
   const router = express.Router();
 
   // -------------------------------------------------------------
-  // GET /api/judges/:id/profile — header stats + dashboard prefs
-  // Public — anyone can read the analytics; owner / same-org
+  // GET /api/judges/:id/profile: header stats + dashboard prefs
+  // Public, anyone can read the analytics; owner / same-org
   // admins also get `dashboard_widgets` for the customise modal.
   // -------------------------------------------------------------
   router.get("/api/judges/:id/profile", maybeAuth, async (req, res) => {
@@ -460,10 +460,10 @@ module.exports = function createJudgeAnalyticsRouter({
         return res.status(404).json({ error: "Judge not found" });
       }
       const judge = judgeRes.rows[0];
-      // Profiles are public — no permission gate here. Owner-only
+      // Profiles are public, no permission gate here. Owner-only
       // fields are redacted further down.
 
-      // Header stats — total events officiated, total dives scored,
+      // Header stats: total events officiated, total dives scored,
       // overall mean signed deviation, mean absolute deviation, drop
       // rate (and high/low split).
       const stats = await reads.query(
@@ -521,7 +521,7 @@ module.exports = function createJudgeAnalyticsRouter({
           drop_high_rate: null,
           drop_low_rate: null,
         },
-        // Only owner / same-org admins see the dashboard layout —
+        // Only owner / same-org admins see the dashboard layout;
         // everyone else gets the public analytics without the UI
         // preference. Outside viewers don't see the field at all
         // (redacted, not zero'd) so there's nothing to leak.
@@ -540,8 +540,8 @@ module.exports = function createJudgeAnalyticsRouter({
   });
 
   // -------------------------------------------------------------
-  // GET /api/judges/:id/analytics — widget rollups in parallel
-  // Public — same transparency stance as the diver profile.
+  // GET /api/judges/:id/analytics: widget rollups in parallel
+  // Public, same transparency stance as the diver profile.
   // -------------------------------------------------------------
   router.get("/api/judges/:id/analytics", maybeAuth, async (req, res) => {
     try {
@@ -557,14 +557,14 @@ module.exports = function createJudgeAnalyticsRouter({
       if (!judgeRes.rows.length) {
         return res.status(404).json({ error: "Judge not found" });
       }
-      // Public endpoint — no permission gate.
+      // Public endpoint, no permission gate.
 
       const id = req.params.id;
 
       // Wrap each rollup so one bad query doesn't take down the
-      // whole payload. Anything that throws is logged and returns
-      // []; the response then renders empty for that widget and
-      // the rest of the dashboard still works.
+      // whole payload, just in case. Anything that throws gets logged
+      // and returns []; the response then renders empty for that
+      // widget, and the rest of the dashboard still works.
       const runQuery = async (label, sql, params) => {
         try {
           const r = await reads.query(sql, params);
@@ -579,8 +579,8 @@ module.exports = function createJudgeAnalyticsRouter({
 
       // The non-date widgets used to run as 16 separate queries in
       // bounded batches; they now share ONE per_dive materialisation
-      // (JUDGE_ANALYTICS_BUNDLE, above). runBatched survives to run
-      // the 3 remaining native (date-bearing) widgets without holding
+      // (JUDGE_ANALYTICS_BUNDLE, above). runBatched still runs the
+      // 3 remaining native (date-bearing) widgets, without holding
       // more than a batch's worth of pool slots at once.
       const runBatched = async (tasks, batchSize = 4) => {
         const results = [];
@@ -592,8 +592,8 @@ module.exports = function createJudgeAnalyticsRouter({
       };
 
       // The 13 date-free widgets share one per_dive materialisation.
-      // On error the bundle degrades to empty widgets — mirroring the
-      // old per-widget try/catch — so a bundle failure still serves
+      // On error the bundle degrades to empty widgets (mirroring the
+      // old per-widget try/catch) so a bundle failure still serves
       // the 3 native widgets below instead of 500-ing the whole page.
       const EMPTY_BUNDLE = {
         bias_summary: null, deviation_distribution: [], agreement_rate: null,
@@ -610,7 +610,7 @@ module.exports = function createJudgeAnalyticsRouter({
         console.error("[Judge Analytics bundle]", err.message);
       }
 
-      // The 3 date-bearing widgets stay native (unchanged SQL): their
+      // The 3 date-bearing widgets stay native (unchanged SQL), their
       // timestamp/date columns serialise differently through jsonb, so
       // folding them into the bundle would change the wire shape.
       const [recent_meets, score_trend, panel_deviation_per_event] =
@@ -709,7 +709,7 @@ module.exports = function createJudgeAnalyticsRouter({
   });
 
   // -------------------------------------------------------------
-  // GET /api/judges/search — public typeahead (≥2 chars, ≤20 rows)
+  // GET /api/judges/search: public typeahead (≥2 chars, ≤20 rows)
   // Same shape as /api/divers/search; powers the public Judges
   // directory search box. Username is deliberately omitted (it's
   // a credential identifier; the UI label is full_name + club).
@@ -742,10 +742,10 @@ module.exports = function createJudgeAnalyticsRouter({
   });
 
   // -------------------------------------------------------------
-  // GET /api/judges/directory — public paginated browse + filters.
+  // GET /api/judges/directory: public paginated browse + filters.
   // Each row carries a `total_scores` count so the directory can
   // sort/filter on "judges with at least N dives officiated"
-  // (the deviation rollups are noisy under N≈10 — surfacing the
+  // (the deviation rollups are noisy under N≈10, so surfacing the
   // count up-front lets the UI tell viewers when to trust the
   // summary numbers).
   //
@@ -753,8 +753,8 @@ module.exports = function createJudgeAnalyticsRouter({
   // routes/users.js judge-picker endpoint already owns
   // `/api/judges` for the meet-manager assign UI; that one is
   // org-scoped and returns a tiny shape, this one is public and
-  // paginated. Different consumers, different shapes — keep them
-  // on distinct paths.
+  // paginated. Different consumers, different shapes, so we keep
+  // them on distinct paths.
   // -------------------------------------------------------------
   router.get("/api/judges/directory", maybeAuth, async (req, res) => {
     const q           = (req.query.q || "").trim();
@@ -814,7 +814,7 @@ module.exports = function createJudgeAnalyticsRouter({
   });
 
   // -------------------------------------------------------------
-  // PUT /api/users/me/judge-dashboard — persist widget layout
+  // PUT /api/users/me/judge-dashboard: persist widget layout
   // -------------------------------------------------------------
   router.put("/api/users/me/judge-dashboard", verifyToken, async (req, res) => {
     try {
@@ -822,7 +822,7 @@ module.exports = function createJudgeAnalyticsRouter({
       if (!Array.isArray(widgets)) {
         return res.status(400).json({ error: "widgets must be an array" });
       }
-      // Filter to known IDs and de-dupe — silently drop unknowns
+      // Filter to known IDs and de-dupe, silently drop unknowns
       // rather than 400ing, so a future widget removal doesn't
       // brick old clients sending stale lists.
       const seen = new Set();

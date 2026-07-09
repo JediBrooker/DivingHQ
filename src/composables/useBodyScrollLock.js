@@ -2,12 +2,12 @@
 //
 // Why this exists:
 //
-//   iOS Safari does not respect `document.body.style.overflow =
+//   iOS Safari doesn't respect `document.body.style.overflow =
 //   'hidden'` reliably. With a fixed-position modal open, the
 //   user can still drag on the backdrop area (or on the safe-
 //   area gutter above a small modal) and the underlying page
 //   will scroll behind it. When they close the modal, they're
-//   left in a different scroll position than they started —
+//   left in a different scroll position than they started,
 //   disorienting on a Dashboard that drifted ten event-rows
 //   during a confirm dialog.
 //
@@ -26,18 +26,18 @@
 //       2. Clear all the body styles we set.
 //       3. window.scrollTo(0, scrollY) to restore the position.
 //
-//   This is iOS Safari's only reliable scroll-lock approach.
-//   It works on every other browser too (Chrome / Firefox /
-//   desktop Safari are all fine with the same pattern), so a
-//   single code path covers all platforms.
+//   This is iOS Safari's only reliable scroll-lock approach, but
+//   it works on every other browser too (Chrome / Firefox /
+//   desktop Safari are all fine with the same pattern), so one
+//   code path covers all platforms.
 //
 // Reference counting:
 //
 //   Multiple modals can be open at once (e.g. a Confirm dialog
-//   on top of an open Drawer). A naive boolean lock would
-//   unlock the body when the *inner* modal closes even if the
-//   outer is still open. The shared counter in
-//   body-scroll-lock-core.js handles that.
+//   on top of an open Drawer). A naive boolean lock would unlock
+//   the body when the *inner* modal closes even if the outer is
+//   still open. The shared counter in body-scroll-lock-core.js
+//   handles that.
 //
 // Usage:
 //
@@ -48,16 +48,16 @@
 //   const { lockWhile } = useBodyScrollLock()
 //   lockWhile(isOpen)
 //
-// The pure mechanics live in body-scroll-lock-core.js — this
-// file is just the Vue lifecycle / watch wiring. Tests target
-// the core directly so they don't have to stub out Vue.
+// The pure mechanics live in body-scroll-lock-core.js, this file
+// is just the Vue lifecycle / watch wiring. Tests target the core
+// directly so they don't have to stub out Vue.
 
 import { onUnmounted, watch } from 'vue'
 import { createBodyScrollLock } from './body-scroll-lock-core'
 
-// Resolve the env once, lazily, so module import itself is
-// safe under SSR (Vite's SSR pre-render builds run this file
-// at build time with no globals).
+// Resolve the env once, lazily, so the module import itself is
+// safe under SSR (Vite's SSR pre-render builds run this file at
+// build time with no globals available).
 function resolveEnv() {
   if (typeof document === 'undefined' || typeof window === 'undefined') {
     return [null, null]
@@ -66,7 +66,7 @@ function resolveEnv() {
 }
 
 /**
- * useBodyScrollLock — returns helpers + auto-cleans up on
+ * useBodyScrollLock: returns helpers and auto-cleans up on
  * component unmount.
  *
  * @returns {{
@@ -86,9 +86,9 @@ export function useBodyScrollLock() {
     }, { immediate: true })
   }
 
-  // Belt-and-braces: if the component unmounts while it still
-  // holds locks (e.g. router-pushed away with a modal open),
-  // release them so the next page isn't frozen.
+  // Belt-and-braces: if the component unmounts while it's still
+  // holding locks (e.g. router-pushed away with a modal open),
+  // release them so the next page doesn't come up frozen.
   onUnmounted(() => inst.releaseAll())
 
   return {

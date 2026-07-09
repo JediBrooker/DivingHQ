@@ -6,7 +6,7 @@
 --
 --   * how many top divers progress as PRIMARIES (compete);
 --   * how many trailing divers carry forward as RESERVES
---     (don't compete unless promoted — operator can swap one
+--     (don't compete unless promoted, the operator can swap one
 --     in if a primary withdraws between stages).
 --
 -- Both kinds get rows in the child event's competitor_dive_lists,
@@ -25,9 +25,9 @@ ALTER TABLE public.competitor_dive_lists
 ALTER TABLE public.competitor_dive_lists
   ADD COLUMN IF NOT EXISTS reserve_position integer;
 
--- Reserve_position is only meaningful when is_reserve=true. Don't
--- bother with a CHECK constraint — the advance endpoint enforces
--- the invariant on insert.
+-- Reserve_position is only meaningful when is_reserve=true. Didn't
+-- bother with a CHECK constraint here, the advance endpoint already
+-- enforces the invariant on insert.
 
 CREATE INDEX IF NOT EXISTS idx_competitor_dive_lists_event_reserve
   ON public.competitor_dive_lists(event_id, is_reserve);

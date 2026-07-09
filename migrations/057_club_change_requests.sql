@@ -1,5 +1,5 @@
 -- =============================================================
--- MIGRATION 057 — CLUB CHANGE REQUESTS + CROSS-ORG TRANSFERS
+-- MIGRATION 057: CLUB CHANGE REQUESTS + CROSS-ORG TRANSFERS
 --
 -- Two flows, one table:
 --

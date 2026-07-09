@@ -1,14 +1,14 @@
 // Unit coverage for the meet-readiness CSV cell renderer.
 //
 // Two behaviours under test:
-//   1. CSV formula-injection neutralisation (OWASP) — cells that
-//      start with = + - @ \t \r must be prefixed with a literal
-//      apostrophe so a spreadsheet treats them as text, not a
-//      formula. Org / federation / diver / event names are
-//      user-controlled and flow into this export.
-//   2. RFC-4180 quoting — embedded quote / comma / newline still
+//   1. CSV formula-injection neutralisation (OWASP): cells that
+//      start with = + - @ \t \r need a literal apostrophe prefix
+//      so a spreadsheet treats them as text, not a formula. Org,
+//      federation, diver, and event names are all user-controlled
+//      and flow straight into this export.
+//   2. RFC-4180 quoting: embedded quote / comma / newline still
 //      forces double-quote wrapping with quote-doubling, and that
-//      must compose correctly with the apostrophe prefix.
+//      has to compose correctly with the apostrophe prefix.
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
@@ -20,7 +20,7 @@ test("csvCell exists as a pure exported helper", () => {
 });
 
 test("neutralises a value that begins with = (the documented attack)", () => {
-  // Without the guard this opens as a live formula in Excel.
+  // heads up: without this guard it opens as a live formula in Excel
   assert.equal(
     csvCell('=HYPERLINK("http://evil","click")'),
     `"'=HYPERLINK(""http://evil"",""click"")"`,
@@ -48,14 +48,14 @@ test("prefixes control-character triggers (tab, carriage return)", () => {
 test("leaves an ordinary value untouched", () => {
   assert.equal(csvCell("Aquatics AUS"), "Aquatics AUS");
   assert.equal(csvCell("Round 3"), "Round 3");
-  // A minus sign mid-string is fine — only the FIRST char triggers.
+  // A minus sign mid-string is fine, only the FIRST char triggers.
   assert.equal(csvCell("Best-of-3"), "Best-of-3");
 });
 
 test("a negative number rendered as a string is neutralised", () => {
   // Counts/IDs are numbers, but a name or note could legitimately
-  // start with '-'. The guard keys off the first char regardless
-  // of type after stringification.
+  // start with '-' too. The guard just looks at the first char,
+  // regardless of type, after stringification.
   assert.equal(csvCell(String(-5)), "'-5");
   assert.equal(csvCell(5), "5");
 });

@@ -1,10 +1,10 @@
-// Promise-based confirm dialog composable. Replaces native
+// Promise-based confirm dialog composable, replaces the native
 // window.confirm() with a styled modal that can:
 //
-//   - Show a richer body (consequences, side effects)
-//   - Render a list of "what will happen" bullet points
-//   - Configure the confirm button label + variant
-//   - Be dismissed via Esc or outside-click
+//   - show a richer body (consequences, side effects)
+//   - render a list of "what will happen" bullet points
+//   - configure the confirm button label + variant
+//   - be dismissed via Esc or outside-click
 //
 // Usage:
 //
@@ -26,11 +26,11 @@
 // Confirms are QUEUED, not preempted: opening a second dialog while
 // the first is still open lines it up behind the first instead of
 // silently resolving the first to false. This matters once two Live
-// pools can each raise a confirm (a partial-scores skip, a finalise) --
-// the old preempt behaviour made pool A's finalise quietly resolve to
-// `false` (= "operator declined") the moment pool B raised its own
-// dialog. One dialog renders at a time (the queue head); answering it
-// pops the next.
+// pools can each raise a confirm (a partial-scores skip, a finalise),
+// since the old preempt behaviour made pool A's finalise quietly
+// resolve to `false` (= "operator declined") the moment pool B raised
+// its own dialog. One dialog renders at a time (the queue head);
+// answering it pops the next.
 
 import { ref } from 'vue'
 
@@ -43,12 +43,12 @@ let seq = 0                     // monotonic id source (Date.now collides on rap
  * false if they cancel / press Esc / click outside.
  *
  * @param {object}   opts
- * @param {string}   opts.title           — modal heading
- * @param {string}   [opts.body]          — descriptive paragraph
- * @param {string[]} [opts.consequences]  — bullet list of what'll happen
- * @param {string}   [opts.confirmLabel]  — primary button text
- * @param {string}   [opts.cancelLabel]   — cancel button text
- * @param {string}   [opts.confirmKind]   — 'primary' | 'danger' | 'warn'
+ * @param {string}   opts.title           - modal heading
+ * @param {string}   [opts.body]          - descriptive paragraph
+ * @param {string[]} [opts.consequences]  - bullet list of what'll happen
+ * @param {string}   [opts.confirmLabel]  - primary button text
+ * @param {string}   [opts.cancelLabel]   - cancel button text
+ * @param {string}   [opts.confirmKind]   - 'primary' | 'danger' | 'warn'
  * @returns {Promise<boolean>}
  */
 export function confirmAction(opts = {}) {
@@ -66,7 +66,7 @@ export function confirmAction(opts = {}) {
       },
     }
     queue.push(entry)
-    // If this is the only entry, it's the head -> show it now.
+    // if this is the only entry, it's the head -> show it now
     if (queue.length === 1) confirmState.value = entry.state
   })
 }
@@ -75,8 +75,8 @@ export function useConfirmState() { return confirmState }
 
 export function resolveConfirm(value) {
   const entry = queue.shift()
-  // Surface the next queued dialog (or clear) BEFORE resolving, so a
-  // handler that chains another confirm enqueues behind a clean head.
+  // Surface the next queued dialog (or clear it) BEFORE resolving, so
+  // a handler that chains another confirm enqueues behind a clean head.
   confirmState.value = queue.length ? queue[0].state : null
   if (entry) entry.resolve(!!value)
 }

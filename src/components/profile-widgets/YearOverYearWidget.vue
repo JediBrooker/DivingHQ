@@ -2,11 +2,11 @@
 const props = defineProps({
   // Array of { year, meets, avg_meet_total, best_meet_total,
   // wins, podiums }. Sorted newest first.
-  // From analytics.year_over_year.
+  // Comes from analytics.year_over_year.
   data: { type: Array, default: () => [] },
 })
 
-// Year-over-year delta — compares row[i] to row[i+1] (the list is
+// Year-over-year delta, compares row[i] to row[i+1] (list is
 // sorted newest first). Returns "+12.3%" / "-4.5%" / "—".
 function yoyDelta(list, i) {
   const cur  = Number(list[i]?.avg_meet_total)
@@ -71,9 +71,9 @@ function yoyDeltaClass(i) {
 .yoy-up   { color: #10b981; font-weight: 700; }
 .yoy-down { color: #ef4444; font-weight: 700; }
 
-/* Phone (≤600px): 7 columns can't fit at 360px even after the
-   shared cell-padding shrink, so allow horizontal scroll
-   inside the card rather than truncating the year list. */
+/* Phone (≤600px): 7 columns won't fit at 360px even after the
+   shared cell-padding shrink, so we allow horizontal scroll
+   inside the card instead of truncating the year list. */
 .pb-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 @media (max-width: 600px) {
   .pb-scroll .pb-table { min-width: 480px; }

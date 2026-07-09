@@ -1,18 +1,18 @@
 // Manual-entry score path (P5 manual fallback mode).
 //
-// During an extended outage the operator can type each judge's
-// score directly from the Control Room, reading the value off the
-// judge's phone (which displays it as a giant number — see
-// BigScoreDisplay in JudgeView). When the judge's device later
-// reconnects and syncs its queued submit_score, routes/socket.js
-// reconciles the two — same value silently confirms; mismatch
-// fires conflict_pending for the operator's review tray.
+// During an extended outage the operator can type each judge's score
+// directly from the Control Room, reading the value off the judge's
+// phone (it shows it as a giant number, see BigScoreDisplay in
+// JudgeView). When the judge's device later reconnects and syncs its
+// queued submit_score, routes/socket.js reconciles the two: same
+// value silently confirms, a mismatch fires conflict_pending for the
+// operator's review tray.
 //
 // See docs/offline-p1-design.md §Phase 5 + MANUAL-VS-SYNC-001 in
-// docs/offline-inventory.md for the policy. The decision rule
-// resolved during the design review: operator's manual entry WINS
-// on mismatch. The judge's later digital sync is audit-logged as
-// a discarded duplicate (the operator overrode the row).
+// docs/offline-inventory.md for the policy. The decision rule that
+// came out of the design review: operator's manual entry WINS on
+// mismatch. The judge's later digital sync gets audit-logged as a
+// discarded duplicate (the operator overrode the row).
 //
 //   POST /api/scores/manual-entry
 //   body: {
@@ -21,7 +21,7 @@
 //   }
 //
 // Auth: org_admin, meet_manager, referee (same posture as score
-// correction). The operator is acting on the judge's behalf — the
+// correction). The operator is acting on the judge's behalf, so the
 // scores row records judge_id from the body so analytics + audit
 // trails still attribute the value to the right panel member.
 //
@@ -49,7 +49,7 @@ module.exports = function createManualScoresRouter({
       } = req.body || {};
       const actorLocalTime = req.body?.actor_local_time || null;
 
-      // Inputs. The score is checked against the same 0.0-10.0 /
+      // Basic input checks. Score has to fit the same 0.0-10.0 /
       // 0.5-step constraint the scores table enforces.
       if (!event_id || !competitor_id || !judge_id) {
         return res.status(400).json({ error: "event_id, competitor_id, judge_id all required" });
@@ -71,7 +71,7 @@ module.exports = function createManualScoresRouter({
         await client.query("BEGIN");
 
         // Event must belong to the caller's org. Sysadmin can act
-        // anywhere — same posture as routes/score-correction.js.
+        // anywhere, same posture as routes/score-correction.js.
         const ev = await client.query(
           "SELECT id, org_id, name FROM events WHERE id = $1",
           [event_id],
@@ -85,9 +85,9 @@ module.exports = function createManualScoresRouter({
           return res.status(403).json({ error: "Cannot enter scores for other organisations" });
         }
 
-        // Judge must be on the panel. Without this gate a typo in
-        // the body could attribute a score to a user who never
-        // sat the event.
+        // Judge has to be on the panel. Without this gate a typo in
+        // the body could attribute a score to a user who never sat
+        // the event.
         const panel = await client.query(
           "SELECT 1 FROM event_judges WHERE event_id = $1 AND judge_id = $2",
           [event_id, judge_id],
@@ -99,8 +99,8 @@ module.exports = function createManualScoresRouter({
           });
         }
 
-        // dive_id resolved server-side from the dive list so an
-        // out-of-date Control Room can't smuggle the wrong dive's
+        // dive_id is resolved server-side from the dive list so an
+        // out-of-date Control Room can't smuggle in the wrong dive's
         // DD. Same posture as routes/socket.js submit_score.
         const dv = await client.query(
           `SELECT dive_id FROM competitor_dive_lists
@@ -109,7 +109,7 @@ module.exports = function createManualScoresRouter({
         );
         const resolvedDiveId = dv.rows[0]?.dive_id ?? null;
 
-        // Look up an existing row. Three cases govern what happens:
+        // Look up an existing row first. Three cases govern what happens:
         //   * no row              → INSERT with score_source='manual_entry'
         //   * source='manual_entry' → UPDATE (operator typo fix)
         //   * source='judge_direct' → 409 (judge got there first;
@@ -150,9 +150,9 @@ module.exports = function createManualScoresRouter({
             });
           }
           // Operator is fixing their own typo on a manual_entry row.
-          // Reset score_source to 'manual_entry' even if it had been
-          // reconciled — a fresh manual entry on a reconciled row is
-          // effectively a re-override.
+          // Heads up: reset score_source back to 'manual_entry' even
+          // if it had already been reconciled, since a fresh manual
+          // entry on a reconciled row is effectively a re-override.
           await client.query(
             `UPDATE scores
                 SET score = $2,
@@ -165,9 +165,9 @@ module.exports = function createManualScoresRouter({
           scoreId = existing.id;
         }
 
-        // Audit row mirrors the live submit_score audit shape. The
+        // Audit row mirrors the live submit_score audit shape.
         // actor_user_id is the OPERATOR (not the judge whose row this
-        // is) so the audit log clearly says "operator X typed this
+        // is) so the audit log clearly reads "operator X typed this
         // score on judge Y's behalf at 14:32".
         if (isInsert || oldScore !== scoreVal) {
           const trimmedReason = typeof reason === "string"
@@ -193,9 +193,9 @@ module.exports = function createManualScoresRouter({
 
         await client.query("COMMIT");
 
-        // Invalidate the scoreboard cache + broadcast like
+        // Invalidate the scoreboard cache and broadcast like
         // submit_score does, so spectators see the new score
-        // appear immediately.
+        // appear right away.
         if (scoreboardCache) scoreboardCache.invalidate(event_id);
         io.to(`event:${event_id}`).emit("score_received", {
           event_id,

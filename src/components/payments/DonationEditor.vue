@@ -1,8 +1,8 @@
 <script setup>
-// Federation editor for fundraising donations: a currency + a set of suggested
-// preset amounts supporters can pick from (they can also enter a custom
-// amount). Backed by /api/orgs/:orgId/donation. Amounts are entered in major
-// units and stored as minor units.
+// Federation editor for fundraising donations: a currency plus a set of
+// suggested preset amounts supporters can pick from (they can also type in
+// a custom amount). Backed by /api/orgs/:orgId/donation. Amounts go in as
+// major units and get stored as minor units.
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'

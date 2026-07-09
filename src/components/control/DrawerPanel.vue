@@ -1,11 +1,12 @@
 <script setup>
 // P8 secondary-surfaces drawer. Closed by default in ControlViewV2 (the
-// whole panel is v-if-gated there), so a resting Live canvas carries NONE
-// of this markup -- the #9 subtraction. Within the drawer ONE section is
-// open at a time and each section's heavy child / fetch is deferred until
-// its first open. Reserves/audit reuse the SAME endpoints ControlView.vue
-// hits (loadReserves 1737, audit-recent 272); broadcast reuses the intact
-// BroadcastModal; sponsor reuses SponsorLogosManager. No new business rule.
+// whole panel is v-if-gated there), so a resting Live canvas carries none
+// of this markup, that's the #9 subtraction. Within the drawer only one
+// section is open at a time, and each section's heavy child/fetch is
+// deferred until its first open. Reserves/audit reuse the same endpoints
+// ControlView.vue hits (loadReserves 1737, audit-recent 272); broadcast
+// reuses the intact BroadcastModal; sponsor reuses SponsorLogosManager.
+// No new business rule here, just moving where the markup lives.
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import BroadcastModal from '@/components/control/BroadcastModal.vue'
@@ -19,7 +20,7 @@ const auth = useAuthStore()
 const panelEl = ref(null)
 const broadcastModal = ref(null)
 
-// One section open at a time; the heavy child mounts only on first open.
+// One section open at a time, the heavy child mounts only on first open.
 const openSection = ref('')
 const broadcastMounted = ref(false)
 function toggle(section) {
@@ -28,7 +29,7 @@ function toggle(section) {
   if (openSection.value === 'audit' && !auditLoaded.value) loadAudit()
 }
 
-// --- Broadcast: lazy-mount the intact chooser, then open it imperatively.
+// --- Broadcast: lazy-mount the intact chooser, then open it imperatively
 async function launchBroadcast() {
   broadcastMounted.value = true
   await nextTick()
@@ -92,7 +93,7 @@ async function loadAudit() {
   }
 }
 
-// --- a11y: Escape closes; focus moves in on open, restores on unmount. ---
+// --- a11y: Escape closes, focus moves in on open, restores on unmount ---
 let prevFocus = null
 function onKeydown(e) {
   if (e.key === 'Escape') {
@@ -259,8 +260,8 @@ onBeforeUnmount(() => {
   padding: 0.3rem 0.25rem; border-bottom: 1px solid var(--border-2);
 }
 
-/* Phone: the drawer becomes a bottom sheet (dvh-bound, safe-area padded)
-   so it's thumb-reachable and never forces a horizontal scrollbar. */
+/* Phone: drawer turns into a bottom sheet (dvh-bound, safe-area padded)
+   so it stays thumb-reachable and never forces a horizontal scrollbar. */
 @media (max-width: 600px) {
   .cv2-drawer-overlay { align-items: flex-end; }
   .cv2-drawer {

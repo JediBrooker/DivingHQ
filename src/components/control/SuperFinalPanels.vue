@@ -1,19 +1,18 @@
 <script setup>
-/* SuperFinalPanels — Super Final operator surfaces extracted from
- * ControlView.vue: the synchro reserve-pool panel + modal
+/* SuperFinalPanels: Super Final operator surfaces extracted from
+ * ControlView.vue, the synchro reserve-pool panel + modal
  * (Appendix 3 §5.1), the dive-offs panel + modal (Appendix 3 §6),
- * and the tied-pairs quick-pick. Self-gating: renders nothing
+ * and the tied-pairs quick-pick. Self-gating, it renders nothing
  * unless the current event is a super_final_h2h / super_final_semi
  * format, so ControlView mounts it unconditionally in the right
  * column.
  *
  * State boundary: dive-off rows, the reserve pool, and both modal
- * forms are OWNED here. ControlView calls reload() from
- * onEventChange so the load cadence is identical to the
- * pre-extraction code (loaders are no-ops on other formats).
- * Mutations that change the roster/bracket emit `refresh` so the
- * parent re-runs its event load; nothing here writes parent state
- * directly.
+ * forms are owned here. ControlView calls reload() from
+ * onEventChange so the load cadence matches the pre-extraction
+ * code (loaders are no-ops on other formats). Mutations that
+ * change the roster/bracket emit `refresh` so the parent re-runs
+ * its event load, nothing here writes parent state directly.
  */
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -31,7 +30,7 @@ const auth = useAuthStore()
 // Super Final dive-offs (Appendix 3 §6). Visible on
 // super_final_h2h or super_final_semi events. The operator
 // creates a tie-break record when two divers are tied at the
-// end of the stage; once both pick a previously-performed dive
+// end of the stage. Once both pick a previously-performed dive
 // and re-do it, the operator records the scores + winner.
 const diveOffs           = ref([])
 const diveOffModalOpen   = ref(false)
@@ -114,8 +113,8 @@ async function saveDiveOff() {
   diveOffErr.value = ''
   try {
     const f = diveOffForm.value
-    // Auto-fill winner_id from scores if both are present and
-    // operator hasn't picked one explicitly.
+    // Auto-fill winner_id from scores if both are present and the
+    // operator hasn't picked one explicitly
     let winnerId = f.winner_id
     if (!winnerId && f.score_a !== '' && f.score_b !== '') {
       const sa = Number(f.score_a), sb = Number(f.score_b)
@@ -134,7 +133,7 @@ async function saveDiveOff() {
       confirm_tied:    !!f.confirm_tied,
     }
     if (diveOffEditing.value) {
-      // PATCH — drop competitors from body (they're immutable).
+      // PATCH: drop competitors from body, they're immutable
       delete body.competitor_a_id
       delete body.competitor_b_id
       delete body.confirm_tied
@@ -163,7 +162,7 @@ async function saveDiveOff() {
 // Upcoming super_final_h2h events. Loads /synchro-reserve-pool
 // and lets the operator swap a Top-12 diver for a synchro
 // reserve, keeping the same display_order slot so the bracket
-// stays intact.
+// stays intact
 const synchroPoolModalOpen = ref(false)
 const synchroPool          = ref(null)
 const synchroPoolErr       = ref('')
@@ -216,7 +215,7 @@ async function confirmSynchroReplacement() {
 }
 
 // Suggest tied pairs for a quick-pick dropdown. For H2H, the
-// h2h-results endpoint already flags tied=true; for SF we surface
+// h2h-results endpoint already flags tied=true. For SF we surface
 // the within-group standings so the operator can pick.
 const tiedPairsSuggestion = ref([])
 async function loadTiedSuggestion() {
@@ -231,11 +230,11 @@ async function loadTiedSuggestion() {
         full_name_a:     p.full_name_a,
         full_name_b:     p.full_name_b,
       }))
-    } catch { /* swallow — best-effort */ }
+    } catch { /* swallow, best-effort anyway */ }
   }
 }
 
-// Called by ControlView's onEventChange — same call sites the
+// Called by ControlView's onEventChange, same call sites the
 // pre-extraction loadDiveOffs() / loadTiedSuggestion() had, so
 // the reload cadence (including after a reserve promote or
 // dive edit) is unchanged.
@@ -247,10 +246,10 @@ defineExpose({ reload })
 </script>
 
 <template>
-  <!-- Super Final — Synchro reserve replacement (Appendix 3
-       §5.1). Visible only on Upcoming H2H events — once
-       the event goes Live, the bracket is locked and
-       withdrawals route through the standard reserve flow. -->
+  <!-- Super Final: Synchro reserve replacement (Appendix 3
+       §5.1). Visible only on Upcoming H2H events, once the
+       event goes Live the bracket is locked and withdrawals
+       route through the standard reserve flow. -->
   <div v-if="isH2hUpcoming" class="reserves-panel">
     <div class="reserves-head" style="cursor:default">
       <span class="reserves-head-label">🔄 Synchro reserve pool</span>
@@ -263,7 +262,7 @@ defineExpose({ reload })
     </div>
   </div>
 
-  <!-- Super Final — Dive-offs panel (Appendix 3 §6).
+  <!-- Super Final: Dive-offs panel (Appendix 3 §6).
        Visible on H2H + SF stages. Lists existing dive-offs
        with status (pending / resolved) and a "Create
        dive-off" button that opens the modal. -->
@@ -309,9 +308,9 @@ defineExpose({ reload })
     </div>
   </div>
 
-  <!-- Super Final — Synchro reserve replacement modal
+  <!-- Super Final: Synchro reserve replacement modal
        (Appendix 3 §5.1). Lists eligible federations + their
-       synchro divers; the operator picks one to swap into a
+       synchro divers, operator picks one to swap into a
        Top-12 slot. -->
   <BaseModal :open="synchroPoolModalOpen" max-width="680px" @close="closeSynchroPoolModal">
     <template #default="{ titleId }">
@@ -369,7 +368,7 @@ defineExpose({ reload })
     </template>
   </BaseModal>
 
-  <!-- Super Final — Dive-off modal (Appendix 3 §6).
+  <!-- Super Final: Dive-off modal (Appendix 3 §6).
        Operator records a tie-break dive-off after two divers
        picked their previously-performed dives + re-dove them. -->
   <BaseModal :open="diveOffModalOpen" max-width="560px" @close="closeDiveOffModal">
@@ -471,10 +470,10 @@ defineExpose({ reload })
 </template>
 
 <style scoped>
-/* Panel chrome — copied from ControlView.css (the .reserves-*
+/* Panel chrome, copied from ControlView.css (the .reserves-*
    family is shared with the Reserves panel that stays in the
-   view, so the source rules remain there; scoped styles don't
-   cross the component boundary). */
+   view, so the source rules remain there since scoped styles
+   don't cross the component boundary). */
 .reserves-panel {
   display: flex; flex-direction: column;
   border-bottom: 1px solid var(--border);
@@ -524,9 +523,9 @@ defineExpose({ reload })
   display: flex; gap: 0.4rem; align-items: center;
 }
 
-/* Modal frame — copied from ControlView.css. The .lb-* pattern
+/* Modal frame, copied from ControlView.css. The .lb-* pattern
    (fixed backdrop + sibling fixed modal, see AGENTS.md "Modal CSS
-   pattern") is shared by every Control Room modal; the source
+   pattern") is shared by every Control Room modal, so the source
    rules stay in ControlView.css for the modals that remain there. */
 .lb-backdrop { position: fixed; inset: 0; background: rgba(3,7,18,0.95); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); z-index: 300; }
 .lb-modal {

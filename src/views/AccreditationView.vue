@@ -1,8 +1,8 @@
 <script setup>
 // Official/coach-facing accreditation page (/accreditation). Shows what
-// accreditation costs for each official role the signed-in user holds, with
-// a contextual "coming soon" preview until online payments are switched on.
-// Each card reads the resolved price + status from the official-facing
+// accreditation costs for each official role the signed-in user holds,
+// with a contextual "coming soon" preview until online payments go live.
+// Each card just reads the resolved price + status from the official-facing
 // GET /api/orgs/:orgId/official-accreditation endpoint.
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'

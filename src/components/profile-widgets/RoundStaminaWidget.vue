@@ -4,11 +4,11 @@ import { barWidth } from '@/lib/profile-helpers'
 
 const props = defineProps({
   // Array of { round_number, avg_score, dive_count }.
-  // From analytics.round_stamina. Null while loading.
+  // Comes from analytics.round_stamina, null while it's loading.
   data: { type: Array, default: null },
 })
 
-// One-line insight — flag if scores drop in later rounds.
+// one-line insight, flags it if scores drop off in later rounds
 const staminaInsight = computed(() => {
   const r = props.data || []
   if (r.length < 2) return ''
@@ -69,8 +69,8 @@ const staminaInsight = computed(() => {
 .bar-value { color: var(--text); font-weight: 700; }
 .bar-meta  { color: var(--text-3); font-size: 11px; }
 
-/* Phone (≤600px): same two-row layout as HeightBreakdown so
-   the bar keeps a usable width at 360px. */
+/* Phone (≤600px): same two-row layout as HeightBreakdown, so
+   the bar still has a usable width at 360px. */
 @media (max-width: 600px) {
   .bar-row {
     grid-template-columns: auto 1fr;

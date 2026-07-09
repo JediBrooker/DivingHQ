@@ -1,5 +1,5 @@
 // PM2 ecosystem file. Committed so the deploy box doesn't have to
-// remember the right `pm2 start` incantation — anyone with the
+// remember the right `pm2 start` incantation, anyone with the
 // repo can `pm2 start ecosystem.config.js` and get the canonical
 // setup. deploy.sh restarts the process by name, so the value of
 // `name` here MUST match deploy.sh's PM2_PROCESS_NAME.
@@ -13,7 +13,7 @@
 //
 //     # One-time log rotation. PM2 keeps appending to the log
 //     # file forever by default; this keeps the last 7 rotations
-//     # of 10MB each (~70MB max) so the disk doesn't slowly fill.
+//     # of 10MB each (~70MB max) so the disk doesnt slowly fill.
 //     pm2 install pm2-logrotate
 //     pm2 set pm2-logrotate:max_size 10M
 //     pm2 set pm2-logrotate:retain 7
@@ -21,7 +21,7 @@
 // Subsequent deploys go through deploy.sh, which calls
 // `pm2 restart dive-recorder`.
 //
-// IMPORTANT — no clustering.
+// IMPORTANT: no clustering.
 //
 // PM2 supports `instances: max` to fork one process per CPU. We
 // run a single instance for two reasons that BOTH need fixing
@@ -31,25 +31,26 @@
 //      the same node process. Clustering would scatter judges,
 //      controllers and spectators across workers and the
 //      scoreboard would silently desync. The fix is the Redis
-//      or `@socket.io/cluster-adapter` adapter — neither is
+//      or `@socket.io/cluster-adapter` adapter, and neither is
 //      currently wired up.
 //
 //   2. In-memory state. `activeDivers` and `meetHolds` in
 //      server.js are plain Maps. Clustering would split-brain
-//      these — half the judges seeing one active diver, the
+//      these, half the judges seeing one active diver, the
 //      other half seeing the previous one. Either move them to
 //      Redis or accept that this app is a single-instance
 //      design.
 //
 // 95% of meets fit comfortably on one Node process anyway, so
-// "fix this when you actually need to" is the right answer.
+// "fix this when you actually need to" is the right answer
+// (note to self: revisit if we ever run multi-venue on one box).
 module.exports = {
   apps: [
     {
       name: "dive-recorder",
       script: "server.js",
 
-      // Single fork process — see top-of-file comment for why.
+      // Single fork process, see top-of-file comment for why.
       exec_mode: "fork",
       instances: 1,
 
@@ -93,7 +94,7 @@ module.exports = {
       // Do NOT use PM2's --watch. We deploy via deploy.sh, which
       // does an explicit restart after the build/migrate steps.
       // PM2 watching would race against deploys and (worse)
-      // restart on every disk write, including log writes —
+      // restart on every disk write, including log writes,
       // which is a feedback loop.
       watch: false,
     },

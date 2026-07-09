@@ -1,4 +1,4 @@
-// Stage progression — prelim → semi → final advance flow
+// Stage progression: prelim → semi → final advance flow
 // (migration 040 + the matching POST /api/events/:id/advance
 // + GET /api/events/:id/advance/preview endpoints).
 //
@@ -6,15 +6,15 @@
 //
 //   1. Create a prelim + final event (final.parent_event_id =
 //      prelim.id).
-//   2. Hit the preview endpoint — returns the child event's
+//   2. Hit the preview endpoint, returns the child event's
 //      handle and an empty `ranked` array (no scores yet).
-//   3. Hit advance on a non-Completed parent — rejected with
+//   3. Hit advance on a non-Completed parent, rejected with
 //      `400 Parent event must be Completed`.
 //   4. Flip the prelim to Completed without scoring → advance
 //      now passes the status gate but rejects with
 //      `400 Parent event has no scored divers`.
 //   5. Insert a synthetic reserve row + hit the promote
-//      endpoint — flag flips, display_order is assigned at the
+//      endpoint, flag flips, display_order is assigned at the
 //      back of the queue.
 //
 // Note: a "real" advance (top divers actually picked from a
@@ -106,7 +106,7 @@ test("advance: preview + status gates + promote", async ({ request }) => {
   const fwd = await setup.pickDiveId({
     height: 3.0, dive_code: "101", position: "B",
   });
-  // Manual reserve row — bypass the public API since
+  // Manual reserve row, bypass the public API since
   // submit-list won't write is_reserve.
   await setup.pool.query(
     `INSERT INTO competitor_dive_lists
@@ -146,8 +146,8 @@ test("advance: preview + status gates + promote", async ({ request }) => {
   await setup.deleteOrg(orgId);
 });
 
-// Migration 041: post-advance dive-list lock (WA Article 6.7.3
-// — change-of-dives submission window) + confirm-list endpoint.
+// Migration 041: post-advance dive-list lock (WA Article 6.7.3,
+// change-of-dives submission window) + confirm-list endpoint.
 // Verifies:
 //   * the advance endpoint stamps dive_list_locks_at on the
 //     child event (and respects lock_minutes from the body)
@@ -222,7 +222,7 @@ test("advance: dive-list lock + confirm-list endpoint", async ({ request }) => {
     adminToken, eventId: prelim.id, status: "Completed",
   });
 
-  // Advance with lock_minutes: 30 (default) — verify the lock
+  // Advance with lock_minutes: 30 (default), verify the lock
   // timestamp is stamped on the final.
   const advanceRes = await request.post(`/api/events/${prelim.id}/advance`, {
     headers: { Authorization: `Bearer ${adminToken}` },
@@ -287,13 +287,13 @@ test("advance: dive-list lock + confirm-list endpoint", async ({ request }) => {
   await setup.deleteOrg(orgId);
 });
 
-// Reserve replacement in a final — World Aquatics Article 4.1.8
+// Reserve replacement in a final: World Aquatics Article 4.1.8
 // (reverse-rank start order) + Article 4.1.12 (advancement). The
 // reserve has the worst qualifying rank in the new field, so
 // they always dive FIRST (display_order=1). Every primary
-// qualified worse than the replaced diver — i.e., currently
-// has a smaller display_order than the replaced diver —
-// shifts +1 to make room. Highest qualifier still dives last.
+// qualified worse than the replaced diver (i.e. currently has a
+// smaller display_order than the replaced diver) shifts +1 to
+// make room. Highest qualifier still dives last.
 //
 // Test setup: 3 primaries at DO 1, 2, 3 + 1 reserve (no DO).
 // Under reverse-rank that means semi rank #3 → DO=1,
@@ -400,10 +400,10 @@ test("advance: reserve replacing a final primary takes DO=1 + shifts others up (
   await setup.deleteOrg(orgId);
 });
 
-// Reserve replacement in a SEMI-FINAL — per WA Article 4.1.8
+// Reserve replacement in a SEMI-FINAL: per WA Article 4.1.8
 // the semi uses reverse-rank start order based on the
 // preliminary ranking, so the SAME algorithm as a final
-// applies: reserve gets DO=1, divers below the replaced
+// applies. Reserve gets DO=1, divers below the replaced
 // primary shift +1.
 test("advance: reserve replacing a semi-final primary applies the same reverse-rank shift as a final", async ({
   request,

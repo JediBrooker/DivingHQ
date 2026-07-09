@@ -1,5 +1,5 @@
 // Global toast / notify composable. A small STACK of snackbars at the
-// bottom of the viewport (newest lowest) — any view can fire one without
+// bottom of the viewport (newest lowest); any view can fire one without
 // prop-drilling. A stack (not a single slot) is what lets two Live pools
 // each surface a toast without the second silently dropping the first's
 // action: e.g. pool A's 12s "undo finalise" survives when pool B toasts
@@ -9,9 +9,9 @@
 //
 //   1. Convenience wrappers for the common cases:
 //
-//        showSuccess('Roster imported — 12 divers added')
+//        showSuccess('Roster imported: 12 divers added')
 //        showError('Failed to save: network unreachable')
-//        showInfo('Late entry added — Avery Ueno scheduled in Round 1')
+//        showInfo('Late entry added: Avery Ueno scheduled in Round 1')
 //        showWarning('Entries close in 1 hour')
 //
 //   2. Action-bearing toast (e.g. an Undo / Retry / View button):
@@ -34,8 +34,9 @@
 
 import { ref } from 'vue'
 
-// Shared reactive stack — newest LAST. Each toast owns its own
-// auto-dismiss timer (keyed by id) so they expire independently.
+// Shared reactive stack, newest LAST. Each toast owns its own
+// auto-dismiss timer (keyed by id) so they expire independently,
+// no shared-timer gotchas to worry about.
 const toasts = ref([])
 const timers = new Map() // id -> setTimeout handle
 const MAX_TOASTS = 3
@@ -56,11 +57,11 @@ const DEFAULT_TIMEOUTS = {
  * Fire a toast.
  *
  * @param {object}   opts
- * @param {string}   opts.message     — human-facing text
- * @param {string}   [opts.kind]      — 'success' | 'info' | 'warn' | 'error'
- * @param {string}   [opts.actionLabel] — e.g. 'Undo', 'Retry', 'View'
- * @param {Function} [opts.onAction]  — handler for the action button
- * @param {number}   [opts.timeoutMs] — ms before auto-dismiss; 0 = sticky
+ * @param {string}   opts.message     - human-facing text
+ * @param {string}   [opts.kind]      - 'success' | 'info' | 'warn' | 'error'
+ * @param {string}   [opts.actionLabel] - e.g. 'Undo', 'Retry', 'View'
+ * @param {Function} [opts.onAction]  - handler for the action button
+ * @param {number}   [opts.timeoutMs] - ms before auto-dismiss; 0 = sticky
  */
 export function showNotify(opts = {}) {
   const message = opts.message

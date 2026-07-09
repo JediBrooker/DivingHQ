@@ -8,38 +8,38 @@
 -- operator could paste a CDN URL and the public meet landing page
 -- would render a "Powered by" strip with a logo. Two limitations:
 --
---   1. Single sponsor — real meets often carry 2-5 sponsors
+--   1. Single sponsor, real meets often carry 2-5 sponsors
 --      (title sponsor + presenting sponsors + venue partner +
 --      apparel partner). The streaming production team wants
 --      to cycle through them during a broadcast.
---   2. External URLs only — LAN deployments (a federation
+--   2. External URLs only, LAN deployments (a federation
 --      running the app on a single laptop without internet)
 --      can't reach an external CDN, so the logos don't load.
 --
 -- This migration adds:
 --
---   • meet_sponsor_logos table — one row per (meet, slot). Image
+--   • meet_sponsor_logos table, one row per (meet, slot). Image
 --     bytes stored inline as BYTEA so backups stay simple (one
 --     pg_dump captures everything) and the LAN-deploy story
 --     doesn't need a separate `uploads/` mount. Soft cap of
 --     ~1MB per logo enforced at the application layer.
---   • meets.sponsor_rotation_seconds — how often the broadcast
+--   • meets.sponsor_rotation_seconds, how often the broadcast
 --     view should rotate to the next logo. 0 = no rotation
---     (show all in a strip). Default 8 — long enough that a
+--     (show all in a strip). Default 8, long enough that a
 --     spectator can clock the brand, short enough that 4 logos
 --     all show within a single dive.
 --
 -- The legacy `meets.sponsor_logo_url` / `sponsor_link_url` /
 -- `sponsor_name` columns are KEPT. When the new table has no
 -- rows for a meet, the existing fields fall back to render as a
--- single virtual logo — pre-migration meets keep working
+-- single virtual logo, pre-migration meets keep working
 -- without backfill. When the new table has rows, the new ones
 -- win (the legacy fields stay as a defensive fallback only).
 --
 -- Permissions: backend writes are gated on the org_admin /
--- meet_manager role (same as the rest of /api/meets). Reads
--- are public — the logos are meant to be seen on the public
--- scoreboard and broadcast surfaces.
+-- meet_manager role (same as the rest of /api/meets). Heads up,
+-- reads are public since the logos are meant to be seen on the
+-- public scoreboard and broadcast surfaces.
 
 CREATE TABLE IF NOT EXISTS meet_sponsor_logos (
   id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,

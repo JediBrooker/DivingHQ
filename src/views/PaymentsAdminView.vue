@@ -1,10 +1,10 @@
 <script setup>
 // Dedicated Payments section for a federation (org_admin). Tabs:
-//   Overview        — at-a-glance balance / payout / auto-withdraw + how it works
-//   Account details — Stripe payout onboarding (where we send your money)
-//   Withdrawals     — balance, withdraw now, automatic withdrawals, history
-//   Fees & pricing  — membership / club / accreditation / donation editors
-// DivingHQ is the merchant of record: it collects, keeps 15%, and pays out
+//   Overview        : at-a-glance balance / payout / auto-withdraw + how it works
+//   Account details : Stripe payout onboarding (where we send your money)
+//   Withdrawals     : balance, withdraw now, automatic withdrawals, history
+//   Fees & pricing  : membership / club / accreditation / donation editors
+// DivingHQ is the merchant of record, it collects, keeps 15%, and pays out
 // the rest, transferring to each recipient's Stripe-connected bank account.
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -25,7 +25,7 @@ const TABS = computed(() => [
   { key: 'account', label: t('payments.admin.tab_account') },
   { key: 'withdrawals', label: t('payments.admin.tab_withdrawals') },
   { key: 'fees', label: t('payments.admin.tab_fees') },
-  // Platform operator only: the fulfilment queue for EVERY org/club payout.
+  // Platform operator only, the fulfilment queue for EVERY org/club payout.
   ...(isSysAdmin.value ? [{ key: 'queue', label: t('payments.admin.tab_queue') }] : []),
 ])
 const tab = ref('overview')
@@ -140,8 +140,8 @@ async function requestWithdrawal() {
 }
 
 // ---- payout monitoring (platform operator / sysadmin) -------------
-// Read-only: transfers auto-settle, so there's no manual action here —
-// this is the operator's window onto the flow (paid / failed).
+// Read-only: transfers auto-settle, so there's no manual action here,
+// this is just the operator's window onto the flow (paid / failed).
 const queue = ref([])
 const queueLoading = ref(false)
 const queueStatus = ref('paid')

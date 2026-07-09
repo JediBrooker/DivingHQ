@@ -2,7 +2,7 @@
 /* Global Cmd-K command palette. Single instance mounted at the
  * app root. Opens on:
  *   - ⌘K / Ctrl-K (anywhere except inside text inputs that haven't
- *     stolen focus — we deliberately fire even from inside inputs
+ *     stolen focus, we deliberately fire even from inside inputs
  *     because returning users use Cmd-K mid-typing all the time)
  *   - Manual openPalette() from any view
  *
@@ -14,7 +14,7 @@
  *
  * Static + events + clubs come from a single /api/dashboard call
  * that the dashboard already loads on mount; we cache the slice
- * client-side so opening the palette is instant. Diver search
+ * client-side so opening the palette feels instant. Diver search
  * fans out per-keystroke once the query is 2+ chars.
  *
  * Keyboard: ↑/↓ to move, Enter to jump, Esc to close.
@@ -78,7 +78,7 @@ async function openPalette() {
   cursor.value = 0
   await nextTick()
   inputEl.value?.focus()
-  // Prime cache (events + clubs) once per 60s — Cmd-K should
+  // Prime cache (events + clubs) once per 60s. Cmd-K should
   // feel instant, so we accept slightly-stale data over a
   // round-trip on every open.
   if (Date.now() - cachedAt.value > 60_000) primeCache()
@@ -98,16 +98,16 @@ async function primeCache() {
     events.value = Array.isArray(data.events) ? data.events : []
     clubs.value  = Array.isArray(data.clubs)  ? data.clubs  : []
     cachedAt.value = Date.now()
-  } catch { /* silent — palette still works with static entries */ }
+  } catch { /* silent, palette still works fine with static entries */ }
 }
 
 // ----- Keyboard glue -------------------------------------------
 function onGlobalKey(e) {
-  // Held-key debounce — without this, holding ⌘K or / opens the
+  // Held-key debounce: without this, holding ⌘K or / opens the
   // palette repeatedly until the user lets go.
   if (e.repeat) return
 
-  // Toggle on Cmd/Ctrl-K. Always — even inside inputs (returning
+  // Toggle on Cmd/Ctrl-K. Always, even inside inputs (returning
   // users use Cmd-K mid-typing; stealing focus is the point).
   const isMod = e.metaKey || e.ctrlKey
   if (isMod && e.key.toLowerCase() === 'k') {
@@ -148,7 +148,7 @@ function score(haystack, needle) {
   const wordBoundary = h.split(/[\s/_-]+/).some(w => w.startsWith(n))
   if (wordBoundary) return 60
   if (h.includes(n)) return 40
-  // Subsequence match — every char of needle in order
+  // Subsequence match: every char of needle in order
   let i = 0
   for (const ch of h) {
     if (ch === n[i]) i++
@@ -193,7 +193,7 @@ const results = computed(() => {
       _score: s - 5,    // Slightly de-prioritised vs events
     })
   }
-  // 4. Divers (only when q is non-empty — typeahead populates
+  // 4. Divers (only when q is non-empty, typeahead populates
   //    `divers.value`)
   for (const d of divers.value) {
     out.push({
@@ -210,7 +210,7 @@ const results = computed(() => {
   return out.slice(0, 20)
 })
 
-// Diver typeahead — debounced fetch as the user types.
+// Diver typeahead: debounced fetch as the user types.
 let diverDebounce = null
 watch(query, (q) => {
   cursor.value = 0
@@ -233,7 +233,7 @@ watch(query, (q) => {
         `/api/divers/search?q=${encodeURIComponent(q)}`,
         { signal: ctrl.signal },
       )
-    } catch { /* aborted, 401, or network — ignore */ }
+    } catch { /* aborted, 401, or network, just ignore it */ }
     diverLoading.value = false
   }, 180)
 })
@@ -253,7 +253,7 @@ let offOpenChannel = null
 onMounted(() => {
   window.addEventListener('keydown', onGlobalKey)
   // Other surfaces (e.g. the topbar Search button) open the palette via
-  // the app channel — no window global, no mount-order coupling.
+  // the app channel, no window global, no mount-order coupling.
   offOpenChannel = onOpenCommandPalette(openPalette)
 })
 onBeforeUnmount(() => {

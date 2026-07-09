@@ -11,7 +11,7 @@
 //     (Playwright stores them next to the test results directory;
 //     the file path is logged so reviewers can find them)
 //
-// We don't snapshot the screenshots — the goal is a visual sanity
+// We don't snapshot the screenshots, the goal is just a visual sanity
 // check, and pixel-snapshotting Arabic glyphs is fragile across
 // font-rendering versions. Use:
 //   npx playwright test rtl-smoke --headed
@@ -52,7 +52,7 @@ test("RTL: locale switch flips <html dir> and routes render", async ({ request, 
       localStorage.setItem("setup.wizardDismissed.v1", "1");
     });
 
-    // 1) Home in English — flip to Arabic via the actual <select>.
+    // 1) Home in English, flip to Arabic via the actual <select>.
     await page.goto("/");
     await expect(page.locator("body")).toBeVisible();
 
@@ -67,7 +67,7 @@ test("RTL: locale switch flips <html dir> and routes render", async ({ request, 
 
     await page.screenshot({ path: path.join(OUT_DIR, "home-rtl.png"), fullPage: true });
 
-    // 2) Login — public route, Arabic locale should persist via
+    // 2) Login: public route, Arabic locale should persist via
     //    localStorage. Dir attribute must stay rtl.
     await page.goto("/login");
     await expect(page.locator('input[autocomplete="username"]')).toBeVisible();
@@ -75,7 +75,7 @@ test("RTL: locale switch flips <html dir> and routes render", async ({ request, 
     expect(dirLogin).toBe("rtl");
     await page.screenshot({ path: path.join(OUT_DIR, "login-rtl.png"), fullPage: true });
 
-    // 3) Authenticated route — log in then hit /dashboard.
+    // 3) Authenticated route: log in then hit /dashboard.
     await page.locator('input[autocomplete="username"]').fill(username);
     await page.locator('input[autocomplete="current-password"]').fill(setup.TEST_PASSWORD);
     await page.locator('button[type="submit"]').click();
@@ -86,13 +86,14 @@ test("RTL: locale switch flips <html dir> and routes render", async ({ request, 
     await page.screenshot({ path: path.join(OUT_DIR, "dashboard-rtl.png"), fullPage: true });
 
     // 4) Console + API errors. We tolerate the occasional 404 on
-    //    optional resources (favicon, etc.) — those don't go
-    //    through collectApiErrors (>=500-only) and console
-    //    `error` is rarely emitted for them either.
+    //    optional resources (favicon, etc.); those don't go through
+    //    collectApiErrors (>=500-only) and console `error` is rarely
+    //    emitted for them either.
     expect(apiErrors).toEqual([]);
-    // Filter out a known benign source: network warnings logged
-    // when the dev server hasn't seeded sponsor logos / inbox
-    // attachments. Adjust if a real RTL regression starts firing.
+    // Heads up: filtering out a known benign source here, network
+    // warnings logged when the dev server hasn't seeded sponsor logos
+    // or inbox attachments. Adjust if a real RTL regression starts
+    // firing.
     const realConsoleErrors = consoleErrors.filter((line) =>
       !/Failed to load resource/.test(line),
     );

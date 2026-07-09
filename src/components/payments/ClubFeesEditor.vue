@@ -1,11 +1,11 @@
 <script setup>
-// Federation editor for the fees it charges its CLUBS — annual
+// Federation editor for the fees it charges its CLUBS: annual
 // affiliation and accreditation. One FeeEditor at a time per kind, backed
-// by /api/orgs/:orgId/club-fee?kind=… . The FeeEditor's extraPayload
-// carries the kind so the PUT lands on the right fee_definition scope
+// by /api/orgs/:orgId/club-fee?kind=… . FeeEditor's extraPayload carries
+// the kind so the PUT lands on the right fee_definition scope
 // (club_affiliation / club_accreditation). Clubs pay these via the club
-// admin; until payments go live the editor shows the coming-soon notice
-// FeeEditor already renders.
+// admin, but until payments go live the editor just shows the coming-soon
+// notice FeeEditor already renders.
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FeeEditor from '@/components/payments/FeeEditor.vue'

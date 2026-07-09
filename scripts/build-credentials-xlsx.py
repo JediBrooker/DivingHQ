@@ -2,8 +2,8 @@
 """Render docs/seed-credentials.csv into a formatted docs/seed-credentials.xlsx.
 
 The CSV is the canonical artifact (emitted by scripts/generate-seed.js, zero deps).
-This optional helper upgrades it to a presentation spreadsheet. It needs openpyxl,
-which is NOT a project dependency — install into a throwaway venv:
+This is just an optional helper that dresses it up into a presentation spreadsheet.
+It needs openpyxl, which is NOT a project dependency, so install into a throwaway venv:
 
     python3 -m venv /tmp/xlsxenv && /tmp/xlsxenv/bin/pip install openpyxl
     /tmp/xlsxenv/bin/python scripts/build-credentials-xlsx.py
@@ -24,7 +24,7 @@ WIDTHS = [22, 18, 14, 24, 18, 22, 34, 52]
 
 NAVY = "1F3A5F"
 HEADER_FILL = PatternFill("solid", fgColor=NAVY)
-NOTE_FILL = PatternFill("solid", fgColor="FFF3CD")   # pale amber: rows that need attention
+NOTE_FILL = PatternFill("solid", fgColor="FFF3CD")   # pale amber, flags rows that need a look
 ZEBRA_FILL = PatternFill("solid", fgColor="F2F6FA")
 thin = Side(style="thin", color="D7DEE6")
 BORDER = Border(left=thin, right=thin, top=thin, bottom=thin)

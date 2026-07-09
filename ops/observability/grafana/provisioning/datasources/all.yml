@@ -2,7 +2,7 @@
 # startup. This file declares both datasources so an operator
 # never has to click through the UI.
 #
-# Reachable via the docker network DNS — the service name from
+# Reachable via the docker network DNS, the service name from
 # docker-compose.yml is the hostname.
 
 apiVersion: 1

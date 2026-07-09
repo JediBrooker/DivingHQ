@@ -2,11 +2,11 @@
 //
 // The per-event score audit (/api/events/:id/score-audit) and the
 // per-user role audit (/api/users/:id/role-audit) already exist in
-// routes/score-correction.js + routes/users.js, but both are
-// scoped to a single subject. Org admins / sysadmins running
-// dispute investigations or doing periodic compliance review want
-// a federation-wide cross-cutting view: "every score correction
-// in the last week", "who's been granted org_admin recently".
+// routes/score-correction.js + routes/users.js, but both are scoped
+// to a single subject. Org admins / sysadmins running dispute
+// investigations or doing periodic compliance review want a
+// federation-wide, cross-cutting view: "every score correction in
+// the last week", "who's been granted org_admin recently".
 //
 // Endpoints (org-admin gated; sysadmin passes the same gate):
 //
@@ -14,7 +14,7 @@
 //     Filters: event_id, competitor_id, judge_id, actor_id,
 //              action (insert | update | delete), from, to,
 //              q (substring search of reason), org_id (sysadmin
-//              only — narrows across orgs), limit, offset
+//              only, narrows across orgs), limit, offset
 //
 //   GET /api/audit/roles
 //     Filters: user_id, actor_id, role, action (granted |
@@ -23,11 +23,11 @@
 //
 //   GET /api/audit/recent
 //     Returns the most recent score + role rows interleaved so
-//     the dashboard "Recent activity" tab can show a feed
-//     without coordinating two separate fetches.
+//     the dashboard "Recent activity" tab can show a feed without
+//     coordinating two separate fetches.
 //
-// All three return JSON arrays of rows enriched with the
-// joined user / event / org names so the SPA doesn't need to
+// All three return JSON arrays of rows enriched with the joined
+// user / event / org names so the SPA doesn't need to
 // secondary-fetch those.
 //
 // Mounted via:
@@ -45,9 +45,9 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
   const router = express.Router();
 
   // Guard ?from / ?to so a non-timestamp value returns a clean 400
-  // instead of bubbling a Postgres "invalid input syntax" 500. The
-  // values feed `created_at >= $N` / `<= $N` as bound params, so this
-  // is robustness, not an injection fix.
+  // instead of bubbling up a Postgres "invalid input syntax" 500.
+  // These values feed `created_at >= $N` / `<= $N` as bound params,
+  // so this is about robustness, not an injection fix.
   function validAuditDates(req, res) {
     for (const k of ["from", "to"]) {
       const v = req.query[k];
@@ -60,7 +60,7 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
   }
 
   // ---------------------------------------------------------------
-  // GET /api/audit/scores — federation-wide score audit
+  // GET /api/audit/scores: federation-wide score audit
   // ---------------------------------------------------------------
   router.get("/api/audit/scores", requireOrgAdmin, async (req, res) => {
     if (!validAuditDates(req, res)) return;
@@ -95,8 +95,8 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
     if (req.query.from) add("a.created_at >= $$", req.query.from);
     if (req.query.to)   add("a.created_at <= $$", req.query.to);
     if (req.query.q && req.query.q.trim()) {
-      // ILIKE substring match on reason — most common operator
-      // workflow is "find every correction that mentioned 'video'".
+      // ILIKE substring match on reason, the most common operator
+      // workflow here is "find every correction that mentioned 'video'".
       add("a.reason ILIKE $$", `%${req.query.q.trim()}%`);
     }
 
@@ -143,7 +143,7 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
   });
 
   // ---------------------------------------------------------------
-  // GET /api/audit/roles — federation-wide role audit
+  // GET /api/audit/roles: federation-wide role audit
   // ---------------------------------------------------------------
   router.get("/api/audit/roles", requireOrgAdmin, async (req, res) => {
     if (!validAuditDates(req, res)) return;
@@ -206,7 +206,7 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
   });
 
   // ---------------------------------------------------------------
-  // GET /api/audit/activity — generic audit_log feed (event
+  // GET /api/audit/activity: generic audit_log feed (event
   // create/delete/status, org status, club/team delete,
   // late-entry, withdraw/reinstate, workflow reset).
   // ---------------------------------------------------------------
@@ -229,12 +229,12 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
     if (req.query.entity_id)   add("a.entity_id = $$",   req.query.entity_id);
     if (req.query.actor_id)    add("a.actor_id = $$",    req.query.actor_id);
     if (req.query.action) {
-      // action is freeform; allow exact match only (ILIKE'd
+      // action is freeform, so allow exact match only (an ILIKE
       // wildcard search invites accidental scans).
       add("a.action = $$", req.query.action);
     }
     if (req.query.action_prefix) {
-      // 'event.' / 'roster.' / 'org.' / 'club.' — lets the SPA
+      // 'event.' / 'roster.' / 'org.' / 'club.', lets the SPA
       // filter by domain in one tab.
       add("a.action LIKE $$ || '%'", req.query.action_prefix);
     }
@@ -270,10 +270,10 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
   // ---------------------------------------------------------------
   // GET /api/audit/export.csv?kind=scores|roles|activity
   // Streaming full-history export. Bypasses the 1000-row cap on
-  // the regular endpoints — useful for legal disputes /
-  // compliance reviews that need every audit row in a date
-  // window. Rows stream as CSV directly to the response so we
-  // don't have to load thousands into memory at once.
+  // the regular endpoints, useful for legal disputes / compliance
+  // reviews that need every audit row in a date window. Rows stream
+  // as CSV straight to the response so we don't have to load
+  // thousands of rows into memory at once.
   // ---------------------------------------------------------------
   router.get("/api/audit/export.csv", requireOrgAdmin, async (req, res) => {
     const kind = ["scores", "roles", "activity"].includes(req.query.kind)
@@ -294,9 +294,9 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
       if (v == null) return "";
       let s = String(v);
       // Spreadsheet formula-injection guard. Cells starting with
-      // = + - @ \t \r are evaluated as formulas by Excel /
-      // Google Sheets. Prepend a single quote to force literal
-      // text. See routes/pdf.js for the matching helper.
+      // = + - @ \t \r get evaluated as formulas by Excel / Google
+      // Sheets, so prepend a single quote to force literal text.
+      // See routes/pdf.js for the matching helper.
       if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
       s = s.replace(/"/g, '""');
       return `"${s}"`;
@@ -388,15 +388,15 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
       res.end();
     } catch (err) {
       console.error("[Audit Export Error]", err.message);
-      // If we've already started writing, just end the stream.
-      // Otherwise return JSON.
+      // If we've already started writing, just end the stream,
+      // otherwise return JSON.
       if (res.headersSent) res.end();
       else res.status(500).json({ error: "Failed to export audit log" });
     }
   });
 
   // ---------------------------------------------------------------
-  // GET /api/audit/recent — interleaved feed for the dashboard tab
+  // GET /api/audit/recent: interleaved feed for the dashboard tab
   // ---------------------------------------------------------------
   router.get("/api/audit/recent", requireOrgAdmin, async (req, res) => {
     const isSysAdmin = !!req.user.is_system_admin;
@@ -405,7 +405,7 @@ module.exports = function createAuditRouter({ pool, requireOrgAdmin }) {
     const limit = clampInt(req.query.limit, DEFAULT_LIMIT, 1, MAX_LIMIT);
 
     try {
-      // Two queries → merge in JS rather than a SQL UNION because
+      // Two queries, merged in JS rather than a SQL UNION, because
       // the row shapes are different and the SPA wants discriminated
       // entries (`kind: 'score' | 'role'`) for tab-filter rendering.
       const since = new Date(Date.now() - days * 86_400_000).toISOString();

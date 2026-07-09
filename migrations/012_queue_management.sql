@@ -1,20 +1,18 @@
 -- =============================================================
--- MIGRATION 012 — QUEUE MANAGEMENT
+-- MIGRATION 012: QUEUE MANAGEMENT
 --
--- Two columns on competitor_dive_lists for Control Room
--- workflow:
+-- Two columns on competitor_dive_lists for Control Room workflow:
 --
---   display_order — nullable int. When set, overrides the
+--   display_order: nullable int. When set, it overrides the
 --     default queue order (round_number, full_name) so the
 --     operator can re-sort divers within a round on the fly.
 --     Roster query falls back to NULL ORDER BY full_name when
---     not set, so older events keep working unchanged.
+--     it's not set, so older events keep working unchanged.
 --
---   withdrawn_at — nullable timestamptz. When set, the diver
---     has scratched / DNS / DNF for that specific dive list
---     row. The roster endpoint excludes withdrawn rows from
---     the active queue but standings can still attribute prior
---     dives to them.
+--   withdrawn_at: nullable timestamptz. When set, the diver has
+--     scratched / DNS / DNF for that specific dive list row. The
+--     roster endpoint excludes withdrawn rows from the active
+--     queue, but standings can still attribute prior dives to them.
 --
 -- Idempotent.
 -- =============================================================
@@ -31,8 +29,8 @@ CREATE INDEX IF NOT EXISTS idx_dive_lists_event_round_order
     ON public.competitor_dive_lists (event_id, round_number, display_order)
     WHERE withdrawn_at IS NULL;
 
--- Bump schema version. Defensive create so this still works
--- against a DB without 008 applied.
+-- Bump schema version. Defensive create here so this still works
+-- against a DB that doesn't have 008 applied yet.
 CREATE TABLE IF NOT EXISTS public.schema_meta (
     id           integer PRIMARY KEY DEFAULT 1,
     version      integer NOT NULL,

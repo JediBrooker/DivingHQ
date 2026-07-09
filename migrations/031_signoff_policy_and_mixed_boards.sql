@@ -1,17 +1,17 @@
 -- =============================================================
--- MIGRATION 031 — REFEREE SIGN-OFF POLICY + MIXED-BOARD EVENTS +
+-- MIGRATION 031: REFEREE SIGN-OFF POLICY + MIXED-BOARD EVENTS +
 --                 CUT 3 CODE-HANDOFF
 --
--- Three orthogonal bits land together because they all only
--- touch column-additions and a covering index — keeps the
+-- Three orthogonal bits land together because they all just touch
+-- column-additions and a covering index, so it keeps the
 -- migration count bounded.
 --
 -- 1. events.enforce_referee_signoff
---    When TRUE, the meet manager cannot soft-attest the dive
---    order — only push approval or credential entry by the
---    actual referee count. The simple /sign-off endpoint
---    (manager-attests path) refuses 403 in this mode. Default
---    FALSE so existing meets keep their lighter-touch flow.
+--    When TRUE, the meet manager can't soft-attest the dive order,
+--    only push approval or credential entry by the actual referee
+--    count. The simple /sign-off endpoint (manager-attests path)
+--    refuses with 403 in this mode. Default FALSE so existing
+--    meets keep their lighter-touch flow.
 --
 -- 2. events.is_mixed_height
 --    Lets a single event span multiple boards (e.g. an "Open
@@ -24,8 +24,8 @@
 --    Cut 3 of the sign-off plan: a 6-digit code the manager
 --    generates on their screen and the referee types into a
 --    "/sign-off-codes" page on their own device. Doesn't need
---    push permission, doesn't need the referee on the manager's
---    laptop, doesn't need email setup.
+--    push permission, doesn't need the referee on the managers
+--    laptop, doesn't need email setup either.
 --
 -- Idempotent: every ADD COLUMN guards on IF NOT EXISTS, the
 -- partial index check is gated on pg_class. Re-run on v31 is a
@@ -46,11 +46,12 @@ ALTER TABLE public.events
 ALTER TABLE public.referee_signoff_requests
     ADD COLUMN IF NOT EXISTS handoff_code varchar(8);
 
--- Partial unique index — only at most one PENDING code at a time
+-- Partial unique index: only one PENDING code allowed at a time
 -- per referee. Stops two parallel "generate code" clicks for the
--- same referee from racing each other; the first wins, the
--- second 409s. Stale codes (expired / consumed) drop out of the
--- index because handoff_code stays on the row but status flips.
+-- same referee from racing each other, first one wins, the
+-- second 409s. Worth noting, stale codes (expired / consumed)
+-- drop out of the index since handoff_code stays on the row but
+-- status flips.
 DO $$
 BEGIN
   IF NOT EXISTS (

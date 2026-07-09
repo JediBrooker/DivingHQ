@@ -3,29 +3,29 @@
 // linked to via coach_diver_links. For divers with a Live or
 // Upcoming event, the card shows their NEXT dive (round + code +
 // DD), current rank, and LAST completed dive (round + code +
-// total) — so a coach with 8 divers across 3 events can see at a
-// glance who's where AND what just happened.
+// total), so a coach with 8 divers across 3 events can see at a
+// glance who's where and what just happened.
 //
 // Three surfaces:
 //
-//   1. UP-NEXT STRIP (top) — squad members in the next ~20 min
+//   1. UP-NEXT STRIP (top): squad members in the next ~20 min
 //      across every Live event with a current active diver,
 //      sorted by ETA ascending. The killer "look once, know what
 //      to watch" panel. Powered by /api/coach/up-next.
 //
-//   2. PER-MEET SECTIONS — when the coach has divers across more
+//   2. PER-MEET SECTIONS: when the coach has divers across more
 //      than one meet (state regionals + local invitational on the
 //      same weekend), each meet gets its own LIVE/UPCOMING/IDLE
 //      sub-grouping so the eye doesn't have to disambiguate.
 //
-//   3. LIVE / UPCOMING / IDLE GROUPING — within each meet, cards
+//   3. LIVE / UPCOMING / IDLE GROUPING: within each meet, cards
 //      group by event status (LIVE > UPCOMING > IDLE).
 //
 // Live refresh: the view subscribes to socket rooms for every
 // event in the response and reloads (debounced) on state_update +
-// final_score_announced. Coach doesn't have to ↻ Refresh.
+// final_score_announced. Coach shouldn't ever need to hit refresh.
 //
-// Data comes from /api/coach/dashboard + /api/coach/up-next; see
+// Data comes from /api/coach/dashboard + /api/coach/up-next, see
 // routes/coach.js.
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
@@ -47,11 +47,11 @@ const auth = useAuthStore()
 const socket = useSocket()
 const push = usePush({ socket })
 
-// Coach alert preferences — Phase 3 of the coach bundle. The
+// Coach alert preferences (Phase 3 of the coach bundle). The
 // server fans out "your diver is up next" pushes when one of
 // the coach's linked divers lands within `dives_ahead` of the
-// active diver. Defaults: enabled=true, dives_ahead=2 (about
-// 60s of warning at a 30s shot clock).
+// active diver. Defaults: enabled=true, dives_ahead=2, about
+// 60s of warning at a 30s shot clock.
 const alertPrefs = ref({ enabled: true, dives_ahead: 2 })
 const alertSettingsOpen = ref(false)
 const savingPrefs = ref(false)
@@ -63,12 +63,12 @@ const error = ref('')
 
 // Event ids the view is currently subscribed to. We track this
 // so a reload can diff against the new set and join/leave rooms
-// idempotently — re-subscribing every reload would be noisy.
+// idempotently, since re-subscribing every reload would be noisy.
 const subscribedEvents = ref(new Set())
 
 // Debounced reload. A burst of score_received + final_score_
 // announced + state_update events lands inside ~500ms of each
-// other when a dive finalizes; one reload covers the lot.
+// other when a dive finalizes, so one reload covers lot.
 let reloadTimer = null
 function scheduleReload() {
   clearTimeout(reloadTimer)
@@ -97,10 +97,10 @@ async function load() {
         subscribedEvents.value.add(id)
       }
     }
-    // Skipping `leave` — Socket.IO has no graceful per-room leave
-    // for an event we still hold the connection to; the rooms will
-    // be discarded on disconnect. Stale memberships are harmless,
-    // just slightly chatty.
+    // Skipping `leave` since Socket.IO has no graceful per-room leave
+    // for an event we still hold the connection to. The rooms get
+    // discarded on disconnect anyway. Stale memberships are harmless,
+    // just a bit chatty.
   } catch (err) {
     error.value = err.message
     rows.value = []
@@ -110,7 +110,7 @@ async function load() {
   }
 }
 
-// Socket listeners — registered once on mount, torn down on
+// Socket listeners, registered once on mount, torn down on
 // unmount. Every listener delegates to scheduleReload() so the
 // view stays simple and the server is the single source of truth.
 function onStateUpdate()         { scheduleReload() }
@@ -123,7 +123,7 @@ async function loadAlertPrefs() {
     const prefs = await auth.apiFetch('/api/coach/alert-preferences')
     alertPrefs.value = prefs
   } catch {
-    // Silent fallback — the strip still works without prefs.
+    // Silent fallback, the strip still works fine without prefs.
   }
 }
 
@@ -175,7 +175,7 @@ onUnmounted(() => {
 
 // ---------- Display helpers ----------
 
-// ordinal + placeColor imported from the shared libs — same
+// ordinal + placeColor imported from the shared libs, same
 // implementations the scoreboard + profile widgets use.
 
 function fmtEta(seconds) {
@@ -237,8 +237,8 @@ const groupedByMeet = computed(() => {
 })
 
 // Do we have multiple meets? Only render the per-meet heading
-// when there's more than one — a coach with all their divers in
-// one meet shouldn't see a redundant "Acme Regional →" label
+// when there's more than one, since a coach with all their divers
+// in one meet shouldn't see a redundant "Acme Regional →" label
 // above every section.
 const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
 </script>
@@ -246,7 +246,7 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
 <template>
   <div class="coach-wrap">
     <!-- Offline / sync banner. Coaches submitting dive lists on
-         behalf of divers (offline-tolerant per the inventory)
+         behalf of divers (offline-tolerant, per the inventory)
          benefit from a visible queue state. -->
     <OfflineBanner />
     <div class="page-header">
@@ -265,7 +265,7 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
       </div>
     </div>
 
-    <!-- Alert preferences panel — collapsible. Lets the coach
+    <!-- Alert preferences panel, collapsible. Lets the coach
          opt out of "your diver is up next" pushes or change how
          far ahead the alert fires. When push permission hasn't
          been granted yet, surface a one-tap "Enable on this
@@ -325,10 +325,10 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
     />
 
     <template v-else>
-      <!-- UP NEXT STRIP — squad members in the next ~20 min,
+      <!-- UP NEXT STRIP: squad members in the next ~20 min,
            sorted by ETA. The "look once, know what to watch"
            panel. Only renders when at least one squad member is
-           in flight; otherwise the coach is between meets and
+           in flight, otherwise the coach is between meets and
            this strip is just noise. -->
       <section v-if="upNext.rows.length" class="up-next-section">
         <div class="up-next-head">
@@ -374,7 +374,7 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
           </RouterLink>
         </div>
 
-        <!-- LIVE — biggest cards, brightest accent -->
+        <!-- LIVE: biggest cards, brightest accent -->
         <section v-if="bucket.live.length" class="diver-section">
           <div class="section-head">
             <span class="section-label">{{ $t('coach.dashboard.section_live') }}</span>
@@ -407,7 +407,7 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
                 <span v-if="r.dd" class="next-dd">DD {{ Number(r.dd).toFixed(1) }}</span>
               </div>
               <div v-if="r.description" class="diver-card-desc">{{ diveDescription(r) }}</div>
-              <!-- Last completed dive (only when there IS one) —
+              <!-- Last completed dive (only when there IS one):
                    round, code, and dive total. Surfaces what
                    just landed without forcing the coach to click
                    into the diver's profile. -->
@@ -427,9 +427,9 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
           </div>
         </section>
 
-        <!-- UPCOMING — same shape, dimmer accent. Each card carries
-             a small "✎ Dive lists" action that deep-links to the
-             coach-on-behalf-of editor for that event. -->
+        <!-- UPCOMING: same shape, dimmer accent. Each card carries
+             a small "Dive lists" action (pencil icon) that deep-links
+             to the coach-on-behalf-of editor for that event. -->
         <section v-if="bucket.upcoming.length" class="diver-section">
           <div class="section-head">
             <span class="section-label">{{ $t('coach.dashboard.section_upcoming') }}</span>
@@ -468,9 +468,9 @@ const hasMultipleMeets = computed(() => groupedByMeet.value.length > 1)
           </div>
         </section>
 
-        <!-- IDLE — divers with no active event for this meet
-             bucket. Rendered only inside the standalone bucket
-             because divers with no event don't belong to a meet. -->
+        <!-- IDLE: divers with no active event for this meet
+             bucket. Rendered only inside the standalone bucket,
+             since divers with no event don't belong to a meet. -->
         <section v-if="bucket.idle.length && !bucket.meet_id" class="diver-section">
           <div class="section-head">
             <span class="section-label">{{ $t('coach.dashboard.section_idle') }}</span>

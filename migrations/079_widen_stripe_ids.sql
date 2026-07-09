@@ -1,16 +1,16 @@
 -- =============================================================
--- MIGRATION 079 — WIDEN STRIPE ID COLUMNS
+-- MIGRATION 079: WIDEN STRIPE ID COLUMNS
 --
 -- payments.stripe_checkout_session was varchar(64), but real Stripe
 -- Checkout Session IDs ("cs_live_…"/"cs_test_…") are ~66 characters,
 -- so the post-create UPDATE that stores the session id would fail on
--- EVERY real checkout ("value too long for type character varying(64)")
--- — the payer got a 500 and the row was marked failed while the Stripe
--- session stayed open. The test suite never caught it because the fake
--- Stripe returns short ids. Stripe documents no maximum id length and
--- advises against assuming one, so all three linkage columns become
--- text (a metadata-only change in Postgres — no table rewrite, safe on
--- the live database).
+-- EVERY real checkout ("value too long for type character varying(64)").
+-- The payer got a 500 and the row was marked failed while the Stripe
+-- session stayed open, gross. The test suite never caught it because
+-- the fake Stripe returns short ids. Stripe documents no maximum id
+-- length and advises against assuming one, so all three linkage
+-- columns become text (a metadata-only change in Postgres, no table
+-- rewrite, safe on the live database).
 -- =============================================================
 
 BEGIN;

@@ -1,4 +1,4 @@
-// Event routes — CRUD + status transitions.
+// Event routes: CRUD + status transitions.
 //
 //   GET    /api/events            list (anon → Live/Completed only)
 //   POST   /api/events            create (org_admin only)
@@ -6,11 +6,11 @@
 //   DELETE /api/events/:id        remove (org_admin only)
 //   PUT    /api/events/:id/status flip Upcoming/Live/Completed
 //
-// Adjacent concerns — judges, managers, roster, advance, dive
-// templates, event-judges plumbing — live in their own routes
+// Adjacent concerns (judges, managers, roster, advance, dive
+// templates, event-judges plumbing) live in their own routes
 // modules (extraction in progress; many still in server.js as of
-// the Phase-4 split). loadEventForEntries — used by the
-// diver-portal and team dive-list submit handlers — moved into
+// the Phase-4 split). loadEventForEntries, used by the
+// diver-portal and team dive-list submit handlers, moved into
 // lib/middleware.js so it can be imported once and reused by
 // both consumers.
 //
@@ -110,7 +110,7 @@ module.exports = function createEventsRouter({
   sendEventResultsEmails,
   activeDivers,
   meetHolds,
-  // Optional — when supplied, the Completed-status cleanup
+  // Optional: when supplied, the Completed-status cleanup
   // also drops the matching event_live_state row so the
   // table doesn't accumulate dead state.
   persistClearAll,
@@ -119,12 +119,12 @@ module.exports = function createEventsRouter({
   // to a silent skip if the push engine isn't wired (the
   // notification row will simply not be created).
   push,
-  // lib/middleware.js optionalAuth — decodes a valid JWT into
+  // lib/middleware.js optionalAuth: decodes a valid JWT into
   // req.user (running the token-version / deleted_at /
   // suspended_at revocation checks) and treats anything else as
   // anonymous.
   optionalAuth,
-  // Stripe module — needed by the deletion guard to retire
+  // Stripe module, needed by the deletion guard to retire
   // in-flight checkouts before cascade-deleting fee definitions.
   payments,
 }) {
@@ -137,7 +137,7 @@ module.exports = function createEventsRouter({
   // status-flip route below since that's a meet-time write the
   // outbox covers. Other writes in this router are pre-meet
   // setup (event create / edit / delete / advance / seed) and
-  // stay on the legacy direct path — see DEC-01 and the
+  // stay on the legacy direct path. See DEC-01 and the
   // "online-only" classification in docs/offline-inventory.md.
   const { httpMiddleware: idem } = createIdempotency({ pool });
 
@@ -226,7 +226,7 @@ module.exports = function createEventsRouter({
   // Aquatics Article 6.7.3: a change-of-dives form must be
   // submitted "no later than thirty (30) minutes after the end of
   // the previous stage", so the advance/seed endpoints call this
-  // right after reseeding — NOW() approximates when the previous
+  // right after reseeding. NOW() approximates when the previous
   // stage ended. lockMin = 0 means "no auto-lock" and clears any
   // stale value left by a prior advance/seed. Runs on the caller's
   // open transaction client. Returns the new lock as an ISO
@@ -250,20 +250,20 @@ module.exports = function createEventsRouter({
   }
 
   // -------------------------------------------------------------
-  // GET /api/events — list events visible to the caller.
+  // GET /api/events: list events visible to the caller.
   //
   //   * anonymous   → Live/Completed only
   //   * sysadmin    → every event in every org
   //   * regular user → events in caller's org
   //
   // Optional query params:
-  //   * status — comma-separated event_status values; narrows
+  //   * status: comma-separated event_status values; narrows
   //     WITHIN the caller's visibility, never widens it (an
   //     anonymous caller asking for Upcoming gets [], not a leak).
-  //   * limit  — positive integer, capped at 500.
+  //   * limit: positive integer, capped at 500.
   //
   // 401-on-bad-JWT (rather than silent downgrade to public)
-  // landed in Migration 021 — if the caller sent a bad token they
+  // landed in Migration 021, if the caller sent a bad token they
   // meant to be authed, so the SPA needs the signal to prompt
   // re-login. optionalAuth leaves req.user unset for a bad token,
   // so the presence of an Authorization header is the signal; a
@@ -303,9 +303,9 @@ module.exports = function createEventsRouter({
       }
 
       // participating_orgs_count > 0 → international event (the
-      // SPA renders a 🌐 chip and the federations modal pre-loads
-      // the invited list). Subselect rather than LEFT JOIN +
-      // GROUP BY so the rest of the query stays readable.
+      // SPA renders a globe chip and the federations modal
+      // pre-loads the invited list). Subselect rather than LEFT
+      // JOIN + GROUP BY so the rest of the query stays readable.
       const SELECT = `
         SELECT e.*, o.name AS org_name, o.country_code, o.slug AS org_slug,
                m.name AS meet_name, m.start_date AS meet_start_date,
@@ -321,12 +321,12 @@ module.exports = function createEventsRouter({
       const where = [];
       const params = [];
       if (req.user?.is_system_admin) {
-        // Sysadmin sees every event in every org — no scope clause.
+        // Sysadmin sees every event in every org, no scope clause needed.
       } else if (req.user) {
         // Show events the caller's org hosts OR events that
         // explicitly invited the caller's org via
         // event_participating_orgs. The EXISTS subquery is
-        // short-circuited by the OR — domestic-only orgs pay
+        // short-circuited by the OR, so domestic-only orgs pay
         // no extra cost. Sysadmin already bypassed above.
         params.push(req.user.org_id);
         const p = `$${params.length}`;
@@ -374,10 +374,10 @@ module.exports = function createEventsRouter({
   });
 
   // -------------------------------------------------------------
-  // POST /api/events — create an event in caller's org.
+  // POST /api/events: create an event in caller's org.
   //
-  // org_admin only (no event_managers fallback because the event
-  // doesn't exist yet — there's no row to be a manager of).
+  // org_admin only (no event_managers fallback becuase the event
+  // doesn't exist yet, there's no row to be a manager of).
   // -------------------------------------------------------------
   router.post("/api/events", requireOrgAdmin, async (req, res) => {
     const {
@@ -387,11 +387,11 @@ module.exports = function createEventsRouter({
       // Migration 020: optional registration deadline.
       entries_close_at,
       // Migration 031:
-      //   enforce_referee_signoff — gate the simple manager-attests
+      //   enforce_referee_signoff: gate the simple manager-attests
       //                             sign-off path; force push or
       //                             credential entry by the named
       //                             referee.
-      //   is_mixed_height         — multi-board event; the picker
+      //   is_mixed_height:          multi-board event; the picker
       //                             widens to the full directory.
       enforce_referee_signoff, is_mixed_height,
       // Workflow: rehearsal events let meet staff dry-run the
@@ -399,7 +399,7 @@ module.exports = function createEventsRouter({
       // record side effects.
       is_rehearsal,
       // Migration 038: structured round-by-round dive-list rules.
-      // Optional — when null the legacy (dd_limit_rounds,
+      // Optional, when null the legacy (dd_limit_rounds,
       // dd_limit_value) flat constraint applies. See
       // lib/round-rules.js for the shape + validator.
       round_rules,
@@ -420,7 +420,7 @@ module.exports = function createEventsRouter({
         ? round_dives.length
         : (total_rounds || 6);
 
-    // Validate round_rules shape if supplied — use the EFFECTIVE
+    // Validate round_rules shape if supplied, use the EFFECTIVE
     // total so the section-sum check sees the actual round count
     // when round_dives drove it.
     if (round_rules != null) {
@@ -439,7 +439,7 @@ module.exports = function createEventsRouter({
         error: "Synchronised pair events require 7, 9 or 11 judges",
       });
     }
-    // Validate event_format — see ALLOWED_FORMATS at module scope.
+    // Validate event_format, see ALLOWED_FORMATS at module scope.
     const fmt = event_format || "final";
     if (!ALLOWED_FORMATS.includes(fmt)) {
       return res
@@ -449,7 +449,7 @@ module.exports = function createEventsRouter({
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      // Validate meet_id if provided — must belong to the same org.
+      // Validate meet_id if provided, must belong to the same org.
       if (meet_id) {
         const m = await client.query(
           "SELECT id FROM meets WHERE id = $1 AND org_id = $2",
@@ -472,7 +472,7 @@ module.exports = function createEventsRouter({
       //                        super_final_h2h branch below).
       //   preliminary       → must NOT have a parent (it's the source)
       //   super_final_h2h   → parent is the Stop-1 final (event_format
-      //                        'final' or 'preliminary' — the operator
+      //                        'final' or 'preliminary', the operator
       //                        picks whichever stage produced the
       //                        12-diver ranking).
       //   super_final_semi  → parent must be a 'super_final_h2h'
@@ -524,7 +524,7 @@ module.exports = function createEventsRouter({
           number_of_judges || 5,
           effectiveTotalRounds,
           // For mixed-board events the column is informational
-          // only — store NULL so any "filter dives by height"
+          // only, store NULL so any "filter dives by height"
           // logic that didn't get the is_mixed_height memo just
           // returns nothing rather than the wrong subset.
           is_mixed_height ? null : (height || null),
@@ -568,7 +568,7 @@ module.exports = function createEventsRouter({
         [event.id, req.user.id],
       );
       // Audit the create. metadata captures the headline config
-      // an admin would want to see when reviewing later — full
+      // an admin would want to see when reviewing later. The full
       // event row is available via /events/:id if more detail
       // is needed.
       await recordAudit(client, {
@@ -601,7 +601,7 @@ module.exports = function createEventsRouter({
   });
 
   // -------------------------------------------------------------
-  // PUT /api/events/:id — partial update. Every COALESCE-able
+  // PUT /api/events/:id: partial update. Every COALESCE-able
   // field is treated as "leave alone if not sent". The
   // entries_close_at column uses tri-state semantics (undefined =
   // untouched, null/'' = clear, string = set) since "no value
@@ -615,14 +615,14 @@ module.exports = function createEventsRouter({
       age_group, scheduled_at, event_format, parent_event_id, advance_count,
       dd_limit_rounds, dd_limit_value,
       entries_close_at,
-      // Migration 031 — see POST handler for the rationale.
+      // Migration 031, see POST handler for the rationale.
       enforce_referee_signoff, is_mixed_height, is_rehearsal,
-      // Migration 038 — structured round rules. Tri-state:
+      // Migration 038: structured round rules. Tri-state:
       //   undefined → leave untouched
       //   null      → clear, fall back to legacy dd_limit_*
       //   {sections}→ set
       round_rules,
-      // Migration 039 — operator-prescribed round dives. Tri-state:
+      // Migration 039: operator-prescribed round dives. Tri-state:
       //   undefined → leave untouched
       //   []        → clear all prescribed dives for this event
       //   [...slots]→ replace the existing rows
@@ -681,7 +681,7 @@ module.exports = function createEventsRouter({
       // /api/events already does this (~line 281-288); the PUT
       // handler had dropped the check. Without it, an org_admin in
       // Org A could PUT a child event with parent_event_id pointing
-      // at any Org B event whose UUID they know — chaining through
+      // at any Org B event whose UUID they know, chaining through
       // the Super Final seed endpoints would then pull Org B's
       // ranked divers into Org A's H2H roster and fire push
       // notifications at Org B divers. Sysadmin bypass intact via
@@ -701,7 +701,7 @@ module.exports = function createEventsRouter({
             .json({ error: "Parent event not found in this org" });
         }
       }
-      // ---- SET clause assembly (field-descriptor style — same
+      // ---- SET clause assembly (field-descriptor style, same
       // idiom as PUT /api/blocks/:id in routes/sessions.js). Each
       // field keeps the exact update semantics of the old
       // 31-positional-param statement:
@@ -733,13 +733,13 @@ module.exports = function createEventsRouter({
           ? round_dives.length
           : (hasOwn(body, "total_rounds") ? (total_rounds || null) : null);
       if (totalRoundsForUpdate != null) addSet("total_rounds", totalRoundsForUpdate);
-      // dd_limit_rounds sets on any non-nullish value — 0 is a
+      // dd_limit_rounds sets on any non-nullish value, 0 is a
       // meaningful "no limit-rounds" value here, unlike the truthy
       // fields above.
       if (dd_limit_rounds != null) addSet("dd_limit_rounds", dd_limit_rounds);
 
       // height: flipping is_mixed_height on force-clears the column
-      // (informational-only for mixed-board events — see the POST
+      // (informational-only for mixed-board events, see the POST
       // handler); otherwise key-presence tri-state with "" → NULL.
       const heightClearedByMixed = hasOwn(body, "is_mixed_height") && !!is_mixed_height;
       if (heightClearedByMixed) {
@@ -754,7 +754,7 @@ module.exports = function createEventsRouter({
       if (hasOwn(body, "parent_event_id")) addSet("parent_event_id", parent_event_id ?? null, "::uuid");
       if (hasOwn(body, "dd_limit_value")) addSet("dd_limit_value", dd_limit_value ?? null, "::numeric");
       if (hasOwn(body, "scheduled_at")) addSet("scheduled_at", scheduled_at ?? null, "::timestamptz");
-      // entries_close_at additionally treats "" as clear — "no
+      // entries_close_at additionally treats "" as clear, "no
       // value sent" and "explicitly cleared" mean different things
       // on a nullable timestamp.
       if (entries_close_at !== undefined) {
@@ -762,8 +762,8 @@ module.exports = function createEventsRouter({
       }
 
       // Boolean flags: undefined = leave untouched, anything else =
-      // set to its truthiness — a partial PUT body must not flip a
-      // flag back to its default.
+      // set to its truthiness, since a partial PUT body must not
+      // flip a flag back to its default.
       if (enforce_referee_signoff !== undefined) {
         addSet("enforce_referee_signoff", !!enforce_referee_signoff);
       }
@@ -793,7 +793,7 @@ module.exports = function createEventsRouter({
         );
       } else {
         // Nothing to update (the old statement still ran with every
-        // field on its "leave alone" branch) — preserve the
+        // field on its "leave alone" branch), preserve the
         // row-returning response and the 404 on a cross-org id.
         r = await client.query(
           "SELECT * FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)",
@@ -841,7 +841,7 @@ module.exports = function createEventsRouter({
   });
 
   // -------------------------------------------------------------
-  // DELETE /api/events/:id — org_admin only. CASCADE down to
+  // DELETE /api/events/:id: org_admin only. CASCADE down to
   // dive lists, judges, scores etc. via FKs in init.sql.
   // -------------------------------------------------------------
   router.delete("/api/events/:id", requireOrgAdmin, async (req, res) => {
@@ -875,7 +875,7 @@ module.exports = function createEventsRouter({
         });
       }
       // Money guard: refuse deletion when paid payments reference
-      // this event — refund or cancel them first. Mirrors the class
+      // this event, refund or cancel them first. Mirrors the class
       // deletion pattern (routes/classes.js).
       const paidCount = (await pool.query(
         `SELECT COUNT(*)::int AS n FROM payments
@@ -910,7 +910,7 @@ module.exports = function createEventsRouter({
       }
       await pool.query("DELETE FROM events WHERE id = $1", [ev.id]);
       // A Live/Completed event may sit in the cached public
-      // archive listing for up to 60s — bust it so the deleted
+      // archive listing for up to 60s, bust it so the deleted
       // event drops out immediately.
       archiveCache.invalidate();
       // Audit. status preserved in metadata so a sysadmin
@@ -933,7 +933,7 @@ module.exports = function createEventsRouter({
   });
 
   // -------------------------------------------------------------
-  // PUT /api/events/:id/status — Upcoming → Live → Completed.
+  // PUT /api/events/:id/status: Upcoming → Live → Completed.
   // Fires notifications on the meaningful transitions and frees
   // the in-memory state when an event finalises.
   // -------------------------------------------------------------
@@ -968,7 +968,7 @@ module.exports = function createEventsRouter({
       } else {
         // Zero rows = the event isn't visible to the caller (404)
         // OR it's already at the target status. The no-op case
-        // preserves the old response shape — return the row and
+        // preserves the old response shape, return the row and
         // skip the transition side effects below (previousStatus
         // === status keeps every guard false).
         const cur = await pool.query(
@@ -986,7 +986,7 @@ module.exports = function createEventsRouter({
       if (previousStatus !== status) {
         // The public archive listing caches event statuses for
         // 60s, and the SPA picks the live-vs-recap scoreboard
-        // layout from that field — bust it so a spectator
+        // layout from that field, so we bust it so a spectator
         // deep-linking right after this flip can't get the wrong
         // page mode.
         archiveCache.invalidate();
@@ -997,7 +997,7 @@ module.exports = function createEventsRouter({
           if (status === "Live")      notifyEventLive(event).catch(() => {});
         }
 
-        // Real-time push for the dashboard pulse strip — emit
+        // Real-time push for the dashboard pulse strip. Emit
         // globally so any connected dashboard tab can refetch
         // its pulse data and update the LIVE / UPCOMING /
         // COMPLETED counts immediately. Cheap broadcast (no
@@ -1011,13 +1011,13 @@ module.exports = function createEventsRouter({
               from:     previousStatus,
               to:       status,
             });
-          } catch (_e) { /* ignore — best-effort */ }
+          } catch (_e) { /* ignore, best-effort */ }
         }
 
         // Audit the status flip. Specific actions for the
         // meaningful transitions ('event.started',
         // 'event.finalised', 'event.unfinalised') so the audit
-        // view can colour-code or filter on them — falls back
+        // view can colour-code or filter on them. Falls back
         // to a generic 'event.status_changed' for the unusual
         // hops (e.g. Live → Upcoming for a workflow re-do).
         let action = "event.status_changed";
@@ -1040,7 +1040,7 @@ module.exports = function createEventsRouter({
       // would otherwise accumulate as meets pile up. Also
       // clear the persisted row in event_live_state so a
       // restart doesn't rehydrate dead state. Drop the venue
-      // bridge sequence counter for the same reason — otherwise
+      // bridge sequence counter for the same reason, otherwise
       // the per-event Map grows unbounded over a meet-week.
       if (status === "Completed") {
         delete activeDivers[event.id];
@@ -1051,7 +1051,7 @@ module.exports = function createEventsRouter({
         try {
           require("../../lib/venue-state").pruneSequenceForEvent(event.id);
         } catch (_e) { /* best-effort cleanup */ }
-        // Drop the coach-alerts dedupe entry too — otherwise the
+        // Drop the coach-alerts dedupe entry too, otherwise the
         // per-process Map would accumulate stale (event_id → key)
         // entries across a meet-week. Best-effort, never throws.
         try {
@@ -1060,7 +1060,7 @@ module.exports = function createEventsRouter({
       }
 
       // ---------------------------------------------------------
-      // Phase 4 — session-scheduler bookkeeping + live re-flow.
+      // Phase 4: session-scheduler bookkeeping + live re-flow.
       //
       // On Upcoming → Live: stamp actual_start_at on the matching
       //   schedule_block row (if any) so the post-meet debrief can
@@ -1076,7 +1076,7 @@ module.exports = function createEventsRouter({
       //   the modal.
       //
       // Wrapped in try/catch so a scheduler issue NEVER blocks the
-      // status flip from succeeding — the operator's finalise
+      // status flip from succeeding, the operator's finalise
       // action is the load-bearing thing here. A failed reflow
       // just means we ship `event` without `reflow` and the
       // operator can use the manual editor in the scheduler view.
@@ -1092,7 +1092,7 @@ module.exports = function createEventsRouter({
         } catch (reflowErr) {
           // Don't let a scheduler-side failure (missing tables on
           // pre-049 deploys, transient pool issue) bubble up as a
-          // 500 — the status flip already committed.
+          // 500, the status flip already committed.
           console.error("[Reflow Bookkeeping Error]", reflowErr.message);
         }
       }
@@ -1105,7 +1105,7 @@ module.exports = function createEventsRouter({
   });
 
   // -------------------------------------------------------------
-  // PARTICIPATING ORGS — opt-in list of OTHER federations whose
+  // PARTICIPATING ORGS: opt-in list of OTHER federations whose
   // divers can self-enter this event. Host-org_admin manages.
   //
   //   GET    /api/events/:id/participating-orgs
@@ -1114,25 +1114,25 @@ module.exports = function createEventsRouter({
   //
   // Empty list = domestic-only event (host-org divers only). Any
   // populated row makes this an international event in practice.
-  // The host org is NEVER inserted here — events.org_id is the
+  // The host org is NEVER inserted here, events.org_id is the
   // source of truth for the host. See migration 036.
   // -------------------------------------------------------------
 
   // -------------------------------------------------------------
-  // GET /api/events/:id/round-dives — operator-prescribed round
+  // GET /api/events/:id/round-dives: operator-prescribed round
   // dives for a single event (migration 039). Returned as an
   // ordered array enriched with the dive's directory fields so
   // the diver portal can render the locked rows without a second
   // round-trip. Empty array when no rows exist.
   //
   // Public for Live/Completed events; authed scope for Upcoming
-  // (mirrors the GET /api/events visibility contract — operators
+  // (mirrors the GET /api/events visibility contract, operators
   // shouldn't have their pre-meet bulletin leaked).
   // -------------------------------------------------------------
   router.get("/api/events/:id/round-dives", optionalAuth, async (req, res) => {
     try {
       // optionalAuth: a bad/revoked/suspended token reads as
-      // anonymous — same floor as the old inline peek, but the
+      // anonymous, same floor as the old inline peek, but the
       // token-version / deleted_at / suspended_at checks now apply.
       const callerOrgId = req.user?.org_id || null;
       const callerIsSys = !!req.user?.is_system_admin;
@@ -1166,7 +1166,7 @@ module.exports = function createEventsRouter({
     }
   });
 
-  // Public read — the meet's public landing page wants to render
+  // Public read: the meet's public landing page wants to render
   // "participating: AUS / NZL / FIJ" badges, so this endpoint is
   // open to anonymous spectators. Mirrors the privacy contract
   // of /api/events itself: anonymous callers only see Live or
@@ -1179,7 +1179,7 @@ module.exports = function createEventsRouter({
   router.get("/api/events/:id/participating-orgs", optionalAuth, async (req, res) => {
     try {
       // optionalAuth: a bad/revoked/suspended token reads as
-      // anonymous — same floor as the old inline peek, but the
+      // anonymous, same floor as the old inline peek, but the
       // token-version / deleted_at / suspended_at checks now apply.
       const callerOrgId = req.user?.org_id || null;
       const callerIsSys = !!req.user?.is_system_admin;
@@ -1435,7 +1435,7 @@ module.exports = function createEventsRouter({
     }
   });
 
-  // Add — host org_admin only (or sysadmin). Same gate as POST
+  // Add: host org_admin only (or sysadmin). Same gate as POST
   // /api/events. The event is loaded first so the response can
   // confirm host-org match.
   router.post("/api/events/:id/participating-orgs", requireOrgAdmin, async (req, res) => {
@@ -1454,7 +1454,7 @@ module.exports = function createEventsRouter({
       if (!req.user.is_system_admin && ev.rows[0].org_id !== req.user.org_id) {
         return res.status(403).json({ error: "You don't host this event" });
       }
-      // Refuse on already-finalised events — inviting a federation
+      // Refuse on already-finalised events, inviting a federation
       // post-Completed sends a stale "your divers can now self-
       // enter" notification (the entry-gate middleware would
       // reject every actual submit) AND opens a way to spam
@@ -1464,14 +1464,14 @@ module.exports = function createEventsRouter({
           error: "Event is already Completed — re-open it before inviting more federations",
         });
       }
-      // Disallow listing the host's own org — that's the implicit
+      // Disallow listing the host's own org, that's the implicit
       // entry path, not a participating-org row.
       if (org_id === ev.rows[0].org_id) {
         return res.status(400).json({
           error: "Host org is implicit — don't list it as a participating org",
         });
       }
-      // Active orgs only — pending/rejected/suspended can't
+      // Active orgs only: pending/rejected/suspended can't
       // participate.
       const target = await pool.query(
         "SELECT id, name, status FROM organisations WHERE id = $1",
@@ -1513,8 +1513,8 @@ module.exports = function createEventsRouter({
       // already-invited org); skip the notification spam.
       if (inserted.rows.length && push && typeof push.sendNotification === "function") {
         try {
-          // Find every user with org_admin in the invited org —
-          // gate on user_org_roles.role alone, NOT on
+          // Find every user with org_admin in the invited org.
+          // Gate on user_org_roles.role alone, NOT on
           // users.org_id matching. A user can hold org_admin in
           // an org that isn't their primary; the previous
           // r.org_id = u.org_id predicate silently dropped those
@@ -1551,11 +1551,11 @@ module.exports = function createEventsRouter({
     }
   });
 
-  // Remove — host org_admin removes ANY federation, OR a visiting
+  // Remove: host org_admin removes ANY federation, OR a visiting
   // federation's own org_admin self-withdraws their participation.
   // The visiting-side path lets a country pull out without
   // pinging the host (e.g. funding cut, travel ban, schedule
-  // clash) — existing roster entries stay intact (the diver
+  // clash), existing roster entries stay intact (the diver
   // gates only block NEW entries) so no in-flight competition
   // is destabilised.
   router.delete("/api/events/:id/participating-orgs/:org_id", requireOrgAdmin, async (req, res) => {
@@ -1593,7 +1593,7 @@ module.exports = function createEventsRouter({
       try {
         await recordAudit(pool, {
           ...auditFromReq(req),
-          // Audit row lands on the host org's books — that's where
+          // Audit row lands on the host org's books, that's where
           // the event lives and where compliance reads for it.
           // The metadata captures whether this was host-removal
           // or self-withdrawal so the trail reads correctly.
@@ -1611,8 +1611,8 @@ module.exports = function createEventsRouter({
         console.error("[Participating Org Audit Skipped]", auditErr.message);
       }
       // Notify the host's org admins when a federation
-      // self-withdraws — they need to know their roster expectation
-      // changed. (Host-driven removal doesn't need this — the host
+      // self-withdraws, they need to know their roster expectation
+      // changed. (Host-driven removal doesn't need this, the host
       // initiated it.)
       if (isSelfWithdraw && !isHostAdmin && push && typeof push.sendNotification === "function") {
         try {
@@ -1650,13 +1650,13 @@ module.exports = function createEventsRouter({
     }
   });
 
-  // Eligible divers for an event — host org's divers + every
+  // Eligible divers for an event: host org's divers + every
   // participating org's divers. Used by the synchro-partner
   // picker and the late-entry roster lookup so a meet manager
   // can find foreign divers without hitting the org-scoped
   // /api/orgs/:id/divers endpoint.
   //
-  // The previous gate was `verifyToken` only — any signed-in
+  // The previous gate was `verifyToken` only, any signed-in
   // user (including a freshly-registered spectator in any
   // federation) could enumerate full diver rosters of every
   // event in the system. Tightened to require either:
@@ -1715,7 +1715,7 @@ module.exports = function createEventsRouter({
   });
 
   // -------------------------------------------------------------
-  // Stage progression — prelim → semi → final.
+  // Stage progression: prelim → semi → final.
   //
   //   GET  /api/events/:id/advance/preview
   //   POST /api/events/:id/advance
@@ -1732,10 +1732,10 @@ module.exports = function createEventsRouter({
   // on the trailing N reserves, and assigns display_order per the
   // chosen mode:
   //
-  //   'inherit' — copy the parent's display_order, drop non-
+  //   'inherit': copy the parent's display_order, drop non-
   //               progressors, re-number 1..N (default for semi).
-  //   'reverse' — top diver dives LAST (default for finals).
-  //   'random'  — randomise the primaries.
+  //   'reverse': top diver dives LAST (default for finals).
+  //   'random':  randomise the primaries.
   //
   // Reserves get is_reserve=true + reserve_position 1..M and no
   // display_order. The Control Room can later promote a reserve
@@ -1786,7 +1786,7 @@ module.exports = function createEventsRouter({
     return r.rows;
   }
 
-  // Look up the child event of :id — the next stage that points
+  // Look up the child event of :id, the next stage that points
   // back at us via parent_event_id. Returns null if none exists.
   async function childEvent(client, parentEventId) {
     const r = await client.query(
@@ -1804,7 +1804,7 @@ module.exports = function createEventsRouter({
   // when the target event already has scored dives. The seed path
   // does `DELETE FROM competitor_dive_lists WHERE event_id = $1`
   // and `scores` cascades on competitor_dive_lists' (event_id,
-  // competitor_id, round_number) FK — so a re-seed without this
+  // competitor_id, round_number) FK, so a re-seed without this
   // guard SILENTLY destroys every recorded score. The route's
   // status === 'Upcoming' gate isn't sufficient because PUT
   // /api/events/:id/status lets a manager flip a Live event back
@@ -1936,7 +1936,7 @@ module.exports = function createEventsRouter({
           });
         }
         // Diving World Cup §1.5.1 (and WA Art 4.1.9.3): when a tie
-        // straddles the advance cut-off, ALL tied divers advance — so
+        // straddles the advance cut-off, ALL tied divers advance, so
         // the primary count can exceed top_n. `ranked` is RANK()-ordered
         // on total (equal totals share a rank), so we keep every diver
         // whose rank is at or better than the diver on the boundary.
@@ -1952,18 +1952,18 @@ module.exports = function createEventsRouter({
           .slice(0, resN);
 
         // Compute display_order for primaries per the chosen mode.
-        // 'inherit' — copy parent_display_order, then re-number 1..N
+        // 'inherit': copy parent_display_order, then re-number 1..N
         //              so gaps from non-progressors close up.
-        // 'reverse' — top diver dives last → rank 1 gets order topN,
+        // 'reverse': top diver dives last → rank 1 gets order topN,
         //              rank topN gets order 1.
-        // 'random'  — Fisher-Yates a copy of [1..topN] and assign.
+        // 'random':   Fisher-Yates a copy of [1..topN] and assign.
         const primaryOrder = primaries.map((r, i) => ({ idx: i, sort: r.parent_display_order ?? r.rnk }));
         if (orderMode === 'inherit') {
           primaryOrder.sort((a, b) =>
             (a.sort == null ? Infinity : a.sort) - (b.sort == null ? Infinity : b.sort),
           );
         } else if (orderMode === 'reverse') {
-          // Already in rank order ascending — reverse so worst dives first, top last.
+          // Already in rank order ascending, so reverse it: worst dives first, top last.
           primaryOrder.reverse();
         } else if (orderMode === 'random') {
           for (let i = primaryOrder.length - 1; i > 0; i--) {
@@ -1988,7 +1988,7 @@ module.exports = function createEventsRouter({
           prescribedRes.rows.map((r) => [r.round_number, r.dive_id]),
         );
 
-        // Refuse if scores already exist on the child — a re-run
+        // Refuse if scores already exist on the child, a re-run
         // advance would CASCADE-delete them via the scores FK.
         // The status gate above isn't sufficient because PUT
         // /api/events/:id/status can flip a Live event back to
@@ -1999,7 +1999,7 @@ module.exports = function createEventsRouter({
           return res.status(409).json({ error: scoresErr });
         }
 
-        // Wipe any existing roster on the child — re-running advance
+        // Wipe any existing roster on the child, re-running advance
         // is a "redo" not an append. The guard above prevents the
         // CASCADE-destroys-scores foot-gun.
         await client.query(
@@ -2065,7 +2065,7 @@ module.exports = function createEventsRouter({
         // Stamp the dive-list lock on the child event. The advance
         // endpoint runs after the parent is Completed (we already
         // gate on this above), so NOW() is approximately when the
-        // previous stage ended — see stampDiveListLock for the WA
+        // previous stage ended. See stampDiveListLock for the WA
         // Article 6.7.3 window.
         const lockAtIso = await stampDiveListLock(client, child.id, lockMin);
 
@@ -2089,7 +2089,7 @@ module.exports = function createEventsRouter({
         await client.query("COMMIT");
 
         // Push notifications to advanced primaries + reserves so
-        // they see "you've advanced — confirm or edit by [time]"
+        // they see "you've advanced, confirm or edit by [time]"
         // in the inbox. Best-effort; if the push engine isn't
         // wired the rows just skip notification.
         if (push && typeof push.sendNotification === "function") {
@@ -2121,7 +2121,7 @@ module.exports = function createEventsRouter({
               });
             }
             // Reserves: explicit "you're a reserve" framing per
-            // WA Article 4.1.12. Same lock window applies — they
+            // WA Article 4.1.12. Same lock window applies, they
             // should keep the list current in case they're
             // promoted before the deadline.
             if (reserveRows.length) {
@@ -2162,7 +2162,7 @@ module.exports = function createEventsRouter({
   );
 
   // -------------------------------------------------------------
-  // SUPER FINAL — Diving World Cup 2026, Appendix 3.
+  // SUPER FINAL: Diving World Cup 2026, Appendix 3.
   //
   // Three endpoint families implement the format:
   //   POST /seed-h2h               seed the 6 H2H pairs from the
@@ -2333,7 +2333,7 @@ module.exports = function createEventsRouter({
     return { pairs, top12, capped, shortfall, allRanked };
   }
 
-  // GET /api/events/:id/seed-h2h/preview — read-only.
+  // GET /api/events/:id/seed-h2h/preview: read-only.
   // :id is the H2H event itself (event_format=super_final_h2h).
   // Returns the proposed pairing without writing anything.
   router.get(
@@ -2390,16 +2390,16 @@ module.exports = function createEventsRouter({
     },
   );
 
-  // POST /api/events/:id/seed-h2h — commits the H2H bracket.
+  // POST /api/events/:id/seed-h2h: commits the H2H bracket.
   //
   // Body (all optional):
-  //   max_per_org   default 2  (Appendix 3 §1.1 — World Cup cap)
-  //   lock_minutes  default 30 (WA Article 6.7.3 — change-of-dives)
+  //   max_per_org   default 2  (Appendix 3 §1.1, World Cup cap)
+  //   lock_minutes  default 30 (WA Article 6.7.3, change-of-dives)
   //
   // Writes 36 competitor_dive_lists rows (12 divers × 3 rounds),
   // sets group_number 1 or 2, sets display_order so the dive
   // sequence within a group is "Dive 1: divers 12,1; 9,4; 8,5"
-  // (Appendix 3 §2.1.2 — lower-seeded diver of each pair goes
+  // (Appendix 3 §2.1.2, lower-seeded diver of each pair goes
   // first within the pair, pairs in seed order). Stamps the
   // dive_list_locks_at on the H2H event.
   router.post(
@@ -2473,7 +2473,7 @@ module.exports = function createEventsRouter({
           return res.status(400).json({ error: plan.shortfall });
         }
 
-        // Refuse if scores already exist — a re-seed would
+        // Refuse if scores already exist, a re-seed would
         // CASCADE-delete them. See refuseIfScoresExist comment.
         const scoresErrH2h = await refuseIfScoresExist(client, ev.id);
         if (scoresErrH2h) {
@@ -2481,7 +2481,7 @@ module.exports = function createEventsRouter({
           return res.status(409).json({ error: scoresErrH2h });
         }
 
-        // Wipe any existing roster on the H2H event — re-seeding
+        // Wipe any existing roster on the H2H event, re-seeding
         // (still Upcoming, with no scores) is "redo not append".
         await client.query(
           "DELETE FROM competitor_dive_lists WHERE event_id = $1",
@@ -2490,10 +2490,10 @@ module.exports = function createEventsRouter({
 
         // Build the dive order. Appendix 3 §2.1.2 reads as:
         //
-        //   Group 1 — Dive 1: Divers 12,1; 9,4; 8,5
-        //   Group 1 — Dive 2: Same divers
-        //   Group 1 — Dive 3: Same divers
-        //   Group 2 — Dive 1: Divers 11,2; 10,3; 7,6
+        //   Group 1, Dive 1: Divers 12,1; 9,4; 8,5
+        //   Group 1, Dive 2: Same divers
+        //   Group 1, Dive 3: Same divers
+        //   Group 2, Dive 1: Divers 11,2; 10,3; 7,6
         //   …etc.
         //
         // In a single competitor_dive_lists.display_order field
@@ -2573,7 +2573,7 @@ module.exports = function createEventsRouter({
           );
         }
 
-        // Lock the dive list — see stampDiveListLock for the WA
+        // Lock the dive list, see stampDiveListLock for the WA
         // Article 6.7.3 window.
         const lockAtIso = await stampDiveListLock(client, ev.id, lockMin);
 
@@ -2603,7 +2603,7 @@ module.exports = function createEventsRouter({
 
         await client.query("COMMIT");
 
-        // Push notifications to the 12 advanced divers — same
+        // Push notifications to the 12 advanced divers, same
         // best-effort pattern as /advance.
         if (push && typeof push.sendNotification === "function") {
           try {
@@ -2654,7 +2654,7 @@ module.exports = function createEventsRouter({
     },
   );
 
-  // GET /api/events/:id/super-final/h2h-results — public read.
+  // GET /api/events/:id/super-final/h2h-results: public read.
   //
   // Sums each diver's 3 H2H dives and declares the winner of each
   // pair. tied=true means the meet manager needs to resolve via
@@ -2679,7 +2679,7 @@ module.exports = function createEventsRouter({
 
         // Same pair reconstruction (group bucketing, display_order
         // sort, G1/G2 pair indexes, tie detection) as the seed-semi
-        // flow — one algorithm in lib/super-final-helpers.js. Only
+        // flow, one algorithm in lib/super-final-helpers.js. Only
         // the wire shape lives here: the public contract is flat
         // *_a/*_b keys plus seeds derived from pair_index per
         // Appendix 3 §2.1.1, and the SPA + external consumers
@@ -2769,7 +2769,7 @@ module.exports = function createEventsRouter({
           });
         }
         // Total rounds for SF: 2 dives for women, 3 for men
-        // (Appendix 3 §2.2 — "Men: 3 additional dives, Women: 2
+        // (Appendix 3 §2.2, "Men: 3 additional dives, Women: 2
         // additional dives"). The event row holds the SF count
         // (2 or 3); we validate it matches the gender.
         const expectedSfRounds = ev.gender === "Male" ? 3 : 2;
@@ -2821,7 +2821,7 @@ module.exports = function createEventsRouter({
         }
 
         // Reverse-rank within group: the LOWEST scorer in each
-        // group dives first (Appendix 3 §2.2 — "starting order
+        // group dives first (Appendix 3 §2.2, "starting order
         // is reversed from H2H results within the same group").
         // Group 1 winners get display_order 1..3; Group 2 get
         // 4..6. Lowest H2H score within group → 1 / 4
@@ -2837,7 +2837,7 @@ module.exports = function createEventsRouter({
 
         // Pull each winner's parent (Stop-1) submission so we
         // can copy dives 4..5 (W) or 4..6 (M). The "parent" of
-        // the SF in the dive-list sense is the H2H's parent —
+        // the SF in the dive-list sense is the H2H's parent,
         // the actual Stop-1 final/qualifier where the divers
         // submitted their full lists. h2h.parent_event_id is
         // that event.
@@ -2867,7 +2867,7 @@ module.exports = function createEventsRouter({
           stop1ByCompetitor.get(r.competitor_id).set(Number(r.round_number), r.dive_id);
         }
 
-        // Refuse if scores already exist — see refuseIfScoresExist.
+        // Refuse if scores already exist, see refuseIfScoresExist.
         const scoresErrSemi = await refuseIfScoresExist(client, ev.id);
         if (scoresErrSemi) {
           await client.query("ROLLBACK");
@@ -2882,7 +2882,7 @@ module.exports = function createEventsRouter({
 
         // Seed SF rows. Each diver gets total_rounds rows;
         // round_number r in the SF event uses the Stop-1
-        // submission's round (3 + r) — i.e. SF round 1 → Stop-1
+        // submission's round (3 + r), i.e. SF round 1 → Stop-1
         // round 4, SF round 2 → Stop-1 round 5, SF round 3
         // (men only) → Stop-1 round 6. One multi-row INSERT; the
         // UNNEST arrays stay aligned by index.
@@ -2918,13 +2918,13 @@ module.exports = function createEventsRouter({
         );
 
         // Set score_carry_from so standings include H2H
-        // (Appendix 3 §3.1 — "H2H scores carry forward to SF").
+        // (Appendix 3 §3.1, "H2H scores carry forward to SF").
         await client.query(
           "UPDATE events SET score_carry_from = $2 WHERE id = $1",
           [ev.id, h2h.id],
         );
 
-        // Lock window — same WA Article 6.7.3 default as
+        // Lock window: same WA Article 6.7.3 default as
         // /advance, but this stage runs immediately after H2H so
         // the operator may want a tighter window. Default 30.
         const lockAtIso = await stampDiveListLock(client, ev.id, lockMin);
@@ -3005,11 +3005,11 @@ module.exports = function createEventsRouter({
   // POST /api/events/:id/seed-final
   // :id is the F event (event_format=super_final_final). Top-2
   // per SF group on cumulative score (H2H+SF) → 4 finalists.
-  // F resets scores (Appendix 3 §3.2 — score_carry_from=NULL).
+  // F resets scores (Appendix 3 §3.2, score_carry_from=NULL).
   // F.total_rounds = 5 (W) / 6 (M); roster seeds full Stop-1
   // submission rounds 1..5/6.
   //
-  // Body: { lock_minutes: 15 } (Appendix 3 §4.1 — 15-min break
+  // Body: { lock_minutes: 15 } (Appendix 3 §4.1, 15-min break
   // between SF and F, change-of-dives must be made AFTER SF and
   // at LATEST 5 minutes before F → effective lock at NOW() +
   // (lock_minutes - 5)).
@@ -3096,7 +3096,7 @@ module.exports = function createEventsRouter({
         // Top 2 per group on cumulative_total. A within-group tie on
         // the qualifying cut-off is broken by the recorded SF dive-off
         // (Appendix 3 §6); if two divers are tied across the 2nd/3rd
-        // boundary with no dive-off, refuse — the same gate seed-semi
+        // boundary with no dive-off, refuse, the same gate seed-semi
         // applies to H2H pairs.
         const sfDiveOffs = await loadResolvedDiveOffs(client, sf.id);
         const finalists = [];
@@ -3152,7 +3152,7 @@ module.exports = function createEventsRouter({
         const orderByCompetitor = new Map();
         ordered.forEach((f, i) => orderByCompetitor.set(f.competitor_id, i + 1));
 
-        // Refuse if scores already exist — see refuseIfScoresExist.
+        // Refuse if scores already exist, see refuseIfScoresExist.
         const scoresErrFinal = await refuseIfScoresExist(client, ev.id);
         if (scoresErrFinal) {
           await client.query("ROLLBACK");
@@ -3165,7 +3165,7 @@ module.exports = function createEventsRouter({
         );
 
         // One multi-row INSERT; the UNNEST arrays stay aligned by
-        // index. group_number is NULL in the F event — groups only
+        // index. group_number is NULL in the F event, groups only
         // exist in the H2H / SF stages.
         const seedRows = {
           competitor_ids: [], dive_ids: [], round_numbers: [], display_orders: [],
@@ -3201,7 +3201,7 @@ module.exports = function createEventsRouter({
           [ev.id],
         );
 
-        // Lock window — Appendix 3 §4.1: 15-min break between
+        // Lock window: Appendix 3 §4.1, 15-min break between
         // SF and F, change-of-dives must be made up to "5
         // minutes before the Final" → effective lock = NOW() +
         // (lock_minutes - 5), already folded into lockMin above.

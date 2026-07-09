@@ -3,14 +3,14 @@
  *
  * Empty state is the highest-leverage place to teach a new user
  * what to do next. This component standardises the look and
- * forces every empty state in the app to specify a concrete
+ * forces every empty state in app to specify a concrete
  * "do this next" link or button rather than just saying "no
  * results".
  *
  * Usage:
  *
  *   <EmptyState
- *     icon="🏆"
+ *     icon="trophy"
  *     v-tip="'No events yet'"
  *     body="Create your first competition to start collecting
  *           dives and scores."
@@ -24,9 +24,9 @@
  *
  *   or, no action (truly informational):
  *
- *   <EmptyState icon="📭" v-tip="'Inbox zero'" body="…" />
+ *   <EmptyState icon="mailbox" v-tip="'Inbox zero'" body="…" />
  *
- * The component is intentionally generic — pages with bespoke
+ * The component is intentionally generic, pages with bespoke
  * needs (the Org Admin "All quiet" panel) keep their own markup.
  */
 import { computed } from 'vue'
@@ -36,7 +36,7 @@ const props = defineProps({
   icon:        { type: String, default: '✦' },
   title:       { type: String, required: true },
   body:        { type: String, default: '' },
-  /* Action — pass exactly one of these:
+  /* Action: pass exactly one of these:
      - actionTo:    router-link target (string or RouteLocation)
      - actionHref:  external link (anchor)
      - onAction:    callback fired on click
@@ -45,7 +45,7 @@ const props = defineProps({
   actionHref:  { type: String, default: null },
   onAction:    { type: Function, default: null },
   actionLabel: { type: String, default: null },
-  /* Visual variant — 'card' (default, bordered) or 'inline'
+  /* Visual variant: 'card' (default, bordered) or 'inline'
      (no border, used inside an existing panel). */
   variant:     { type: String, default: 'card' },
 })

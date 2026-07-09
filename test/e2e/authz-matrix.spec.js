@@ -2,8 +2,8 @@
 //
 // The older privileged-write pack asserts detailed side effects for
 // individual endpoints. This file complements it by making the
-// role/org/event relationship matrix explicit, so tenant-boundary
-// regressions show up as one failed row rather than a bespoke test
+// role/org/event relationship matrix explicit, so a tenant-boundary
+// regression shows up as one failed row instead of a bespoke test
 // buried in endpoint setup.
 
 const { test, expect } = require("@playwright/test");

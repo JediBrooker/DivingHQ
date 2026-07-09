@@ -2,30 +2,30 @@
 //
 // SCOPE
 // -----
-// The detector itself is a single (large) SQL query — the actual
+// The detector itself is a single (large) SQL query, the actual
 // "two blocks overlap on a shared resource" logic lives in Postgres
 // CTEs. What we can pin without a real DB is the JS surface:
-//   * fingerprint(ids) — pure, sha256-of-sorted-csv. Drives the
+//   * fingerprint(ids): pure, sha256-of-sorted-csv. Drives the
 //     dismissal-resurfacing scheme: same membership → same hash,
 //     ANY membership change → fresh hash and the dismissal stops
 //     hiding the conflict.
-//   * detectConflicts(meetId, client) — input guards, the SQL
+//   * detectConflicts(meetId, client): input guards, the SQL
 //     parameters (meet_id + soft-window minutes), and the row-shape
 //     mapping that the /api/meets/:meetId/conflicts route hands to
 //     the timeline drawer. We fake the pool to return canned rows
 //     in the same shape the detector SQL emits and assert the
 //     mapped Conflict objects.
-//   * computeResourceFingerprint(client, …) — the server-side
+//   * computeResourceFingerprint(client, …): the server-side
 //     fingerprint the dismissal route uses so the client can't
 //     spoof a stale fingerprint. Dispatches per resource_kind to
 //     resourceIdsForPair() and hashes the result.
 //
 // What we CAN'T pin from JS-only:
 //   * the detector SQL's own overlap math, the four UNION ALL arms,
-//     the soft-vs-hard severity CASE — those are exercised by the
-//     integration suite (which needs Postgres) and by the SQL
+//     the soft-vs-hard severity CASE, since those get exercised by the
+//     integration suite (which needs Postgres) and by the the SQL
 //     itself. The tests below assert that GIVEN the documented row
-//     shape, the JS half does the right thing — which is the
+//     shape, the JS half does the right thing, which is the
 //     contract the route code in routes/sessions.js depends on.
 //
 // Production paths exercised:
@@ -106,7 +106,7 @@ function makeFakePool(rows = []) {
 }
 
 // ---------------------------------------------------------------
-// fingerprint() — pure function
+// fingerprint(): pure function
 // ---------------------------------------------------------------
 
 test("fingerprint: same membership → identical hash (dismissal sticks)", () => {
@@ -139,7 +139,7 @@ test("fingerprint: matches independent sha256-of-sorted-csv reference", () => {
 });
 
 test("SOFT_JUDGE_GAP_MINUTES is the documented 15-minute soft window", () => {
-  // The constant is part of the public API — the detector SQL is
+  // The constant is part of the public API, the detector SQL is
   // parameterised with it, the docs reference it, and the soft-
   // warning UI label hard-codes "15 minutes". A silent change to
   // this should fail loudly.
@@ -147,7 +147,7 @@ test("SOFT_JUDGE_GAP_MINUTES is the documented 15-minute soft window", () => {
 });
 
 // ---------------------------------------------------------------
-// detectConflicts() — input guards
+// detectConflicts(): input guards
 // ---------------------------------------------------------------
 
 test("detectConflicts: empty meetId → [] without touching the pool", async () => {
@@ -176,7 +176,7 @@ test("detectConflicts: passes meetId + soft-window minutes to the SQL", async ()
 });
 
 // ---------------------------------------------------------------
-// detectConflicts() — row mapping
+// detectConflicts(): row mapping
 // ---------------------------------------------------------------
 
 test("detectConflicts: no conflicts → empty array", async () => {
@@ -192,7 +192,7 @@ test("detectConflicts: board conflict on overlapping blocks → hard severity, b
       resource_ids: ["board-1m"],
       resource_labels: ["1m Springboard"],
       severity: "hard",
-      // overlapping windows — a 9:30-10:30 block crosses a 9:00-10:00 block
+      // overlapping windows: a 9:30-10:30 block crosses a 9:00-10:00 block
       a_starts_at: "2026-05-18T09:00:00Z",
       a_ends_at: "2026-05-18T10:00:00Z",
       b_starts_at: "2026-05-18T09:30:00Z",
@@ -388,7 +388,7 @@ test("detectConflicts: null resource_ids / labels collapse to []", async () => {
 });
 
 // ---------------------------------------------------------------
-// computeResourceFingerprint() — the dismissal-route helper
+// computeResourceFingerprint(): the dismissal-route helper
 // ---------------------------------------------------------------
 
 test("computeResourceFingerprint: judge lookup returns sha256 of the discovered ids", async () => {
@@ -408,8 +408,9 @@ test("computeResourceFingerprint: judge lookup returns sha256 of the discovered 
   assert.equal(fp, refFingerprint(["judge-a", "judge-b"]));
   assert.equal(calls.length, 1);
   // The helper must pass both block ids through so the query can
-  // intersect the two event panels — a typo here would silently
-  // hash a one-sided membership set and break resurfacing.
+  // intersect the two event panels, a typo here would silently
+  // hash a one-sided membership set and break resurfacing, so worth
+  // double-checking if you touch this code.
   assert.deepEqual(calls[0].params, ["block-1", "block-2"]);
 });
 
@@ -424,7 +425,7 @@ test("computeResourceFingerprint: missing client throws", async () => {
 
 test("computeResourceFingerprint: unknown resource_kind hashes the empty set", async () => {
   // The route validates resource_kind before reaching here, but
-  // belt-and-braces: an unknown kind shouldn't throw — it should
+  // belt-and-braces: an unknown kind shouldn't throw, it should
   // produce a deterministic empty-set fingerprint that obviously
   // won't match any real conflict.
   const fakeClient = { async query() { return { rows: [] }; } };

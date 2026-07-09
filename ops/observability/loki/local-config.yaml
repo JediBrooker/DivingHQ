@@ -1,4 +1,4 @@
-# Loki — single-binary mode for a single VPS. Reasonable defaults
+# Loki: single-binary mode for a single VPS. Reasonable defaults
 # pulled from the upstream "single-binary" example, plus a 30-day
 # retention window so logs don't grow forever.
 
@@ -6,7 +6,7 @@ auth_enabled: false
 
 server:
   http_listen_port: 3100
-  log_level: warn   # Loki itself is chatty at info; quiet it down
+  log_level: warn   # yeah, loki's chatty at info by default, quiet it down
 
 common:
   instance_addr: 127.0.0.1
@@ -30,8 +30,8 @@ schema_config:
         prefix: index_
         period: 24h
 
-# Retention: keep 30 days of logs. The compactor sweeps older
-# chunks on a 10-minute interval. Tune retention_period up if
+# Retention: keep 30 days of logs. The compactor sweeps up older
+# chunks on a 10-minute interval. Bump retention_period up if
 # you ever want longer history (and have the disk for it).
 limits_config:
   retention_period: 720h    # 30 days

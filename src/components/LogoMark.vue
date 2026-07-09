@@ -1,5 +1,5 @@
 <script setup>
-// DivingHQ brand mark — dive-trajectory arc with the diver at
+// DivingHQ brand mark: dive-trajectory arc with the diver at
 // apex and an entry ripple at the water line. Inlined as an SVG
 // component (rather than an <img>) so it needs no asset-import
 // plumbing and can be reused across the shell, nav, and footer.

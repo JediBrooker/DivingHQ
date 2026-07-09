@@ -1,9 +1,9 @@
 <script setup>
-/* MeetReadinessModal — per-meet readiness report (blockers, hard
- * conflicts, late-arrival / synchro pendings, per-federation
- * splits), extracted from ManagerView.vue. Opened from a meet
- * section's "Readiness" button; read-only apart from the CSV
- * export.
+/* MeetReadinessModal shows the per-meet readiness report
+ * (blockers, hard conflicts, late-arrival / synchro pendings,
+ * per-federation splits). Extracted from ManagerView.vue, opened
+ * from a meet section's "Readiness" button. Read-only apart from
+ * the CSV export.
  *
  * Mount contract: the parent mounts this with v-if keyed on the
  * target meet, so every open re-fetches the report (same as the
@@ -42,7 +42,7 @@ async function loadReadinessReport() {
     readinessLoading.value = false
   }
 }
-// Initial load on mount — same cadence as the old open handler.
+// Initial load on mount; same cadence as the old open handler.
 loadReadinessReport()
 
 async function downloadMeetReadinessCsv() {
@@ -168,7 +168,7 @@ async function downloadMeetReadinessCsv() {
 
 <style scoped>
 /* Readiness styles MOVED from ManagerView.css (exclusive to this
-   modal — .readiness-* and the .modal.readiness-modal viewport
+   modal: .readiness-* and the .modal.readiness-modal viewport
    pin). .teams-section-label, .enrolled-empty, and .hint are
    COPIED from ManagerView.css (shared with the teams /
    federations modals and the rest of the manager page). */
@@ -254,7 +254,7 @@ async function downloadMeetReadinessCsv() {
   font-style: normal; color: var(--amber);
 }
 
-/* COPIED — section label / hint / empty-line styles shared with
+/* COPIED: section label / hint / empty-line styles shared with
    the other manager modals (see ManagerView.css). */
 .teams-section-label {
   font-family: var(--font-display); font-size: 10px; font-weight: 700;
@@ -268,7 +268,7 @@ async function downloadMeetReadinessCsv() {
 }
 .enrolled-empty { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); padding: 0.4rem 0; font-style: italic; }
 
-/* Phone — copied from ManagerView.css's 600px block. */
+/* Phone, copied from ManagerView.css's 600px block. */
 @media (max-width: 600px) {
   .readiness-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -8,10 +8,10 @@
 //   POST /api/club-change-requests/:id/cancel  withdraw a pending request
 //
 // Flows (see migration 057):
-//   club_change (within-org) — diver asks, one org_admin approves.
-//   org_transfer (cross-org) — three-way handshake: source admin +
-//     target admin + diver, in any order; finalises when all three
-//     are in. Updates users.org_id/club_id atomically and audits.
+//   club_change (within-org): diver asks, one org_admin approves.
+//   org_transfer (cross-org): three-way handshake, source admin +
+//     target admin + diver, in any order, finalises once all three
+//     are in. Updates users.org_id/club_id atomically and audits it.
 // =============================================================
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
@@ -25,7 +25,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
     ((req.user.org_roles || []).includes("org_admin") &&
       req.user.org_id === orgId);
 
-  // Best-effort inbox notification — never aborts the parent tx.
+  // Best-effort inbox notification, never aborts the parent tx.
   async function notify(db, userId, { title, body, action_url, data }) {
     try {
       await db.query(
@@ -53,7 +53,8 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
         [r.to_org_id, r.to_club_id || null, r.user_id],
       );
       // Carry the diver role into the receiving org so they show up
-      // on its roster; leave any historical roles in the old org.
+      // on its roster; leave any historical roles behind in the old
+      // org.
       await client.query(
         `INSERT INTO user_org_roles (user_id, org_id, role, granted_by)
          VALUES ($1, $2, 'diver', $3) ON CONFLICT DO NOTHING`,
@@ -182,7 +183,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
       // Notify the relevant approvers if still pending.
       if (!finalised) {
         if (kind === "club_change") {
-          // diver asked — ping the org admins of their org via audit
+          // diver asked, ping the org admins of their org via audit.
           // inbox is the admin's GET; no direct per-admin row here.
         }
       }
@@ -201,7 +202,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
   router.get("/api/club-change-requests", verifyToken, async (req, res) => {
     try {
       // Diver sees their own; an org admin also sees requests that
-      // touch their org (releases OR intakes). Sysadmin sees all.
+      // touch their org (releases OR intakes). Sysadmin sees everything.
       const isAdmin = (req.user.org_roles || []).includes("org_admin") || req.user.is_system_admin;
       const r = await pool.query(
         `SELECT cr.*,

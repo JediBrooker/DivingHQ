@@ -1,4 +1,4 @@
-// Judge Ranking Analysis — "what would the standings have been if
+// Judge Ranking Analysis: "what would the standings have been if
 // every judge had scored unanimously like one specific judge?"
 //
 //   GET /api/events/:id/judge-ranking-analysis        JSON payload
@@ -14,20 +14,20 @@
 // alongside the diver's ACTUAL (panel-trimmed, World Aquatics tie-
 // break aware) total + rank. The frontend renders the result as a
 // "diver × judge" matrix so a viewer can see at a glance which
-// judge's scoring pattern would have re-shuffled the podium.
+// judge's scoring pattern would've reshuffled the podium.
 //
 // Per-dive judge rank is also computed (rank within a single round,
 // for each judge) so the score-chip tooltip on the scoreboard can
 // say "J3 ranked this diver 2nd of 12 in round 1".
 //
 // Permission: PUBLIC read. Every input (per-judge per-dive score)
-// is already visible on the existing scoreboard / archive / judge
+// is already visible on the existing scoreboard, archive, and judge
 // profile pages. Re-aggregating into a hypothetical ranking surfaces
-// no new private data — it just visualises a pattern that was
+// no new private data, it just visualises a pattern that was
 // already in plain sight.
 //
 // Event-type handling: all three types (individual / synchro_pair
-// / team) are supported. The math is identical at heart — for
+// / team) are supported. The math is identical at heart: for
 // each judge J and each "competing entity" E (a diver, a pair, or
 // a team), compute SUM over rounds of J's contribution × DD ×
 // scaling, then rank entities by that total per judge. The
@@ -40,7 +40,7 @@
 //                          for synchro dives within team events)
 //
 // Synchro pairs are stored as one cdl row per (event, lead diver,
-// round) with partner_id set — all 9/11 judges score under the
+// round) with partner_id set, all 9/11 judges score under the
 // lead's competitor_id, role-tagged by judge_number. So the
 // aggregation key for synchro is still competitor_id (the lead);
 // we expose partner_id + partner_name on the row for display.
@@ -56,15 +56,15 @@
 //     dedicated CTE before any join onto cdl / dive_directory, so
 //     a missing-dd row never explodes into a Cartesian fan-out.
 //   * COALESCE(dd, 1.0) treats a missing DD as a neutral multiplier
-//     rather than zeroing the whole dive — same approach as the
-//     existing CSV export.
+//     rather than zeroing the whole dive, same trick the existing
+//     CSV export uses.
 
 const express = require("express");
 const PDFDocument = require("pdfkit");
 const { perDivePointsCte } = require("../lib/scoring-sql");
 
 // CSV escaping + spreadsheet-formula-injection guard. Identical to
-// the helpers in routes/pdf.js — kept inline rather than extracted
+// the helpers in routes/pdf.js, kept inline rather than extracted
 // into a shared module so this file stays self-contained until the
 // pattern crops up a third time.
 function csvCell(s) {
@@ -79,7 +79,7 @@ function csvCell(s) {
 }
 function csvRow(cells) { return cells.map(csvCell).join(",") + "\n"; }
 
-// Filename slug — matches the existing PDF/CSV exports.
+// Filename slug, matches the existing PDF/CSV exports.
 function slugify(s) {
   return String(s || "event")
     .toLowerCase()
@@ -88,7 +88,7 @@ function slugify(s) {
 }
 
 // Build the analysis payload. Extracted so the JSON, CSV, and PDF
-// endpoints can share a single source of truth — adding a column
+// endpoints can share a single source of truth, adding a column
 // in one place ripples through all three exports automatically.
 async function buildAnalysis(pool, eventId) {
   const evRes = await pool.query(
@@ -112,7 +112,7 @@ async function buildAnalysis(pool, eventId) {
   const synchroScale = event.event_type === "synchro_pair" ? 0.6 : 1.0;
   const isTeam = event.event_type === "team";
 
-  // Panel for this event — judge_number + identity. Used both as
+  // Panel for this event: judge_number + identity. Used both as
   // the column headers in the rendered table and to join back onto
   // the per-judge totals below.
   const panelRes = await pool.query(
@@ -138,7 +138,7 @@ async function buildAnalysis(pool, eventId) {
   // judge_total[J][rankee] is ONE judge's contribution: SUM over
   // rounds of (J's score × DD × synchroScale). The hypothetical the
   // matrix wants to show is the FULL event total *if every kept
-  // judge had scored exactly like J* — i.e. judge_total × (number of
+  // judge had scored exactly like J*, i.e. judge_total × (number of
   // judges the World-Aquatics trim keeps). calc_event_dive_points
   // applies that trim (a 5- or 7-judge individual panel keeps the
   // middle 3; synchro keeps its own subset × 0.6), so we probe it
@@ -156,9 +156,9 @@ async function buildAnalysis(pool, eventId) {
   try {
     const jnums = judges.map((j) => j.judge_number);
     const unanimousOnes = jnums.map(() => 1.0);
-    // Direct scalar UDF probe with synthetic arrays — NOT the
-    // per-dive scores-join shape, so lib/scoring-sql's builders
-    // deliberately don't apply here.
+    // Heads up: this is a direct scalar UDF probe with synthetic
+    // arrays, NOT the per-dive scores-join shape, so lib/scoring-sql's
+    // builders deliberately don't apply here.
     const probeRes = await pool.query(
       `SELECT calc_event_dive_points($1::int[], $2::numeric[], $3::int, 1.0::numeric, $4, false) AS m`,
       [jnums, unanimousOnes, event.number_of_judges, event.event_type],
@@ -369,9 +369,9 @@ async function buildAnalysis(pool, eventId) {
           judge_number: j.judge_number,
           // Scale the single judge's contribution up to the full
           // "if every kept judge scored like J" event total. rank is
-          // left untouched — a positive monotonic scale can't reorder
-          // the per-judge ranking. This single source feeds JSON, CSV
-          // and PDF exports alike.
+          // left untouched since a positive monotonic scale can't
+          // reorder the per-judge ranking. This single source feeds
+          // JSON, CSV and PDF exports alike.
           judge_total: hit ? hit.judge_total * unanimousMultiplier : 0,
           rank: hit ? hit.rank : null,
         };
@@ -404,7 +404,7 @@ module.exports = function createJudgeRankingRouter({ pool }) {
   const router = express.Router();
 
   // -------------------------------------------------------------
-  // JSON payload — drives the in-page JudgeRankingTable + the
+  // JSON payload, drives the in-page JudgeRankingTable + the
   // scoreboard's chip-tooltip enhancement (per_dive_ranks).
   // -------------------------------------------------------------
   router.get("/api/events/:id/judge-ranking-analysis", async (req, res) => {
@@ -420,9 +420,9 @@ module.exports = function createJudgeRankingRouter({ pool }) {
   });
 
   // -------------------------------------------------------------
-  // CSV export — one row per diver, with the Actual column +
+  // CSV export, one row per diver, with the Actual column +
   // per-judge (rank, total) columns. Federation operators paste
-  // this into central record-keeping systems; the formula-injection
+  // this into central record-keeping systems, so the formula-injection
   // guard (csvCell) is essential.
   // -------------------------------------------------------------
   router.get("/api/events/:id/judge-ranking-analysis.csv", async (req, res) => {
@@ -468,7 +468,7 @@ module.exports = function createJudgeRankingRouter({ pool }) {
   });
 
   // -------------------------------------------------------------
-  // PDF export — landscape A4 table, mirrors the on-screen layout.
+  // PDF export, landscape A4 table, mirrors the on-screen layout.
   // -------------------------------------------------------------
   router.get("/api/events/:id/judge-ranking-analysis.pdf", async (req, res) => {
     try {
@@ -568,7 +568,7 @@ module.exports = function createJudgeRankingRouter({ pool }) {
             x, rowY, { width: actualCol, align: "center" });
         x += actualCol;
         for (const pj of d.per_judge) {
-          // Highlight outliers — judges whose rank differs from
+          // Highlight outliers: judges whose rank differs from
           // actual by 2+ positions. Same threshold the frontend
           // applies for the cyan accent.
           const isOutlier = pj.rank != null

@@ -1,14 +1,14 @@
 -- =============================================================
--- MIGRATION 015 — DIVER DASHBOARD WIDGETS
+-- MIGRATION 015: DIVER DASHBOARD WIDGETS
 --
--- Stores each diver's chosen analytics widgets as a jsonb array
--- of widget IDs. Defaults to the two widgets that already
--- existed on the profile (score_trend, personal_bests) so
--- existing accounts don't see an empty dashboard after upgrade.
+-- Stores each diver's chosen analytics widgets as a jsonb array of
+-- widget IDs. Defaults to the two widgets that were already on the
+-- profile (score_trend, personal_bests) so existing accounts don't
+-- see an empty dashboard after the upgrade.
 --
--- jsonb (rather than a child table) because the list is small,
--- atomic, never queried by individual element, and adding new
--- widget IDs later doesn't require a migration.
+-- Went with jsonb (rather than a child table) since the list is
+-- small, atomic, never queried by individual element, and adding
+-- new widget IDs later doesn't require a migration.
 --
 -- Idempotent.
 -- =============================================================
@@ -19,8 +19,8 @@ ALTER TABLE public.users
     ADD COLUMN IF NOT EXISTS dashboard_widgets jsonb
     DEFAULT '["score_trend","personal_bests","recent_form","placings"]'::jsonb;
 
--- Bump schema version. Defensive create so this still works
--- against a DB without 008 applied.
+-- Bump schema version here too, same defensive create so it
+-- still works against a DB without 008 applied.
 CREATE TABLE IF NOT EXISTS public.schema_meta (
     id           integer PRIMARY KEY DEFAULT 1,
     version      integer NOT NULL,

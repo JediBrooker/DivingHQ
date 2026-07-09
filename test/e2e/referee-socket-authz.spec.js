@@ -1,44 +1,45 @@
 // Authorization boundary tests for the four privileged referee
-// socket events. These are socket-ONLY writes (no HTTP equivalent)
-// and a regression silently corrupts scores during a Live meet:
+// socket events. These are socket-only writes (no HTTP equivalent),
+// and a regression here would silently corrupt scores during a
+// live meet:
 //
-//   * referee_failed_dive — flips every judge's score for that
+//   * referee_failed_dive: flips every judge's score for that
 //     dive to 0 (UPDATE scores SET score = 0 …)
-//   * referee_cap_scores  — caps every judge's score at cap_value
+//   * referee_cap_scores: caps every judge's score at cap_value
 //     (UPDATE scores SET score = LEAST(score, cap) …)
-//   * referee_redive      — orders a redive; doesn't mutate
-//     scores rows directly (the diver re-performs and submit_score
-//     overwrites on the same UNIQUE key), but DOES insert a
-//     score_audit_log snapshot capturing the action.
-//   * meet_hold           — pauses the event; writes
+//   * referee_redive: orders a redive, doesn't mutate scores rows
+//     directly (the diver re-performs and submit_score overwrites
+//     on the same UNIQUE key), but does insert a score_audit_log
+//     snapshot capturing the action.
+//   * meet_hold: pauses the event, writes
 //     event_live_state.on_hold_reason. No score_audit_log row.
 //
 // Auth gate (all four): socketCanManageEvent(socket, event_id,
-// ["referee", "meet_manager", "org_admin"]) — must hold one of
-// those org roles AND the event must live in the socket's org.
+// ["referee", "meet_manager", "org_admin"]). Caller must hold one
+// of those org roles, and the event has to live in the socket's org.
 //
-// Socket handlers DO NOT return errors to bad callers — they just
-// silently `return`. The "wrong role" and "cross-tenant" tests
-// therefore assert the ABSENCE of side effects (DB unchanged + no
-// broadcast received by a second socket subscribed to the event
-// room) rather than a 403-style response.
+// Socket handlers don't return errors to bad callers, they just
+// silently `return`. So the "wrong role" and "cross-tenant" tests
+// assert the absence of side effects (DB unchanged, no broadcast
+// received by a second socket subscribed to the event room) rather
+// than checking for a 403-style response.
 //
-// Each event covered with 4 scenarios = 16 tests total:
-//   1. happy path  — referee fires, asserts DB mutation +
-//                    broadcast + (where applicable) audit row.
-//   2. wrong role  — diver fires, asserts nothing changes and
-//                    no broadcast lands on the recipient socket.
-//   3. cross-tenant— referee in Org A targets event in Org B;
+// Each event covered with 4 scenarios, 16 tests total:
+//   1. happy path: referee fires, asserts DB mutation, broadcast,
+//                  and (where applicable) an audit row.
+//   2. wrong role: diver fires, asserts nothing changes and no
+//                  broadcast lands on the recipient socket.
+//   3. cross-tenant: referee in Org A targets event in Org B,
 //                    socketCanManageEvent rejects on wrong_org.
-//   4. rate limit  — fire N+1 times rapidly; the (N+1)th must be
-//                    silently dropped (no further mutation).
+//   4. rate limit: fire N+1 times rapidly, the (N+1)th must be
+//                  silently dropped (no further mutation).
 //
-// Serial because the helpers create org + users via the public
-// API which is rate-limited per-IP; running these in parallel
+// Serial, because the helpers create org + users via the public
+// API, which is rate-limited per-IP, so running these in parallel
 // would race the auth limiter even with RATE_LIMIT_DISABLED=true.
 // Each describe block uses fresh users so the in-process socket
-// action rate-limiter (keyed by `${action}:${userId}`) can't bleed
-// between tests.
+// action rate-limiter (keyed by `${action}:${userId}`) doesn't
+// bleed between tests.
 
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
@@ -50,13 +51,13 @@ const setup = require("./_setup");
 // Build a single-org world with one event, one diver, one judge,
 // one referee (on a referee socket), and one "spectator" socket
 // connected as the admin so we can assert that broadcasts to
-// `event:${event_id}` land. Score row exists so cap / failed have
-// something to mutate (and so the INSERT..SELECT into
+// `event:${event_id}` land. A score row already exists so cap and
+// failed have something to mutate (and so the INSERT..SELECT into
 // score_audit_log writes at least one row).
 //
 // The returned bundle also includes a freshly-built "wrong role"
 // diver token so the wrong-role test in each block doesn't have to
-// re-do this setup.
+// redo this setup.
 async function buildRefereeWorld(request, { eventName, capValue } = {}) {
   const orgA = await setup.createOrgAndAdmin(request, {
     orgName: `RefAuthz ${setup.rand()}`,
@@ -88,8 +89,8 @@ async function buildRefereeWorld(request, { eventName, capValue } = {}) {
 
   // One judge + one seed score so failed/cap have something to
   // touch. score = 8.0 is comfortably above cap candidates (e.g.
-  // 6.0) so LEAST(...) is observable; comfortably above 0 so the
-  // failed-dive zero is observable.
+  // 6.0) so LEAST(...) is observable, and comfortably above 0 so
+  // the failed-dive zero is observable too.
   const judge = await setup.insertUser({
     orgId: orgA.orgId, role: "judge", fullName: "RefAuthz Judge",
   });
@@ -107,9 +108,9 @@ async function buildRefereeWorld(request, { eventName, capValue } = {}) {
     score: 8.0,
   });
 
-  // Referee with the role — socketCanManageEvent passes on the
-  // role alone (event_managers fallback only kicks in for users
-  // WITHOUT the role).
+  // Referee with the role: socketCanManageEvent passes on the role
+  // alone (the event_managers fallback only kicks in for users who
+  // don't have the role).
   const referee = await setup.insertUser({
     orgId: orgA.orgId, role: "referee", fullName: "RefAuthz Referee",
   });
@@ -137,16 +138,16 @@ async function buildRefereeWorld(request, { eventName, capValue } = {}) {
 }
 
 // Connect a socket subscribed to event:${event_id}; returns the
-// socket plus a `received` map of event-name → array of payloads.
+// socket plus a `received` map of event-name -> array of payloads.
 // Caller must `.disconnect()` it.
 //
-// We start listeners for the canonical broadcast names BEFORE
+// We start listeners for the canonical broadcast names before
 // subscribing so any in-flight emit lands in `received`. The
-// 250ms settle delay after subscribe is the smallest cushion
-// that reliably lets the join-room round-trip finish on the
-// loopback socket; without it, a fast happy-path test can fire
-// the privileged event before the recipient has actually joined
-// the room and miss the broadcast.
+// 250ms settle delay after subscribe is the smallest cushion that
+// reliably lets the join-room round-trip finish on the loopback
+// socket. Without it, a fast happy-path test can fire the
+// privileged event before the recipient has actually joined the
+// room and miss the broadcast.
 async function connectAndSubscribe(baseURL, token, eventId, eventNames) {
   const sock = await setup.openSocket(baseURL, token);
   const received = Object.fromEntries(eventNames.map((n) => [n, []]));
@@ -160,9 +161,9 @@ async function connectAndSubscribe(baseURL, token, eventId, eventNames) {
 
 // Tiny helper: wait `ms` for any in-flight broadcast to land on
 // the recipient socket. Used by the negative-case tests where we
-// need to assert ABSENCE of a broadcast — Playwright's expect.poll
-// is the right tool for "wait until X is truthy" but for "X must
-// stay falsy for the next 600ms" a plain sleep is simpler.
+// need to assert the absence of a broadcast. Playwright's
+// expect.poll is the right tool for "wait until X is truthy", but
+// for "X must stay falsy for the next 600ms" a plain sleep is simpler.
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -170,7 +171,7 @@ function sleep(ms) {
 test.describe.serial("Privileged referee socket events — authz boundary", () => {
 
   // -------------------------------------------------------------
-  // 1. referee_failed_dive — fail a dive (scores → 0)
+  // 1. referee_failed_dive: fail a dive (scores -> 0)
   // -------------------------------------------------------------
   test.describe("referee_failed_dive", () => {
     let world;
@@ -196,7 +197,7 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
           round_number: 1,
         });
 
-        // (a) DB mutation — score row flipped to 0.
+        // (a) DB mutation: score row flipped to 0.
         await expect.poll(async () => {
           const r = await setup.pool.query(
             `SELECT score FROM scores
@@ -206,7 +207,7 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
           return Number(r.rows[0]?.score);
         }, { timeout: 5000, intervals: [100, 250, 500] }).toBe(0);
 
-        // (b) Broadcast — recipient socket got both events.
+        // (b) Broadcast: recipient socket got both events.
         await expect.poll(
           () => recipient.received["referee_action_failed"].length,
           { timeout: 3000, intervals: [100, 250] },
@@ -217,9 +218,9 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
         ).toBeGreaterThan(0);
         expect(recipient.received["score_corrected"][0].reason).toBe("referee:failed");
 
-        // (c) Audit row — applyRefereeAction writes one
+        // (c) Audit row: applyRefereeAction writes one
         // score_audit_log row per existing scores row. We seeded
-        // one judge → one audit row.
+        // one judge -> one audit row.
         const audit = await setup.pool.query(
           `SELECT action, old_score, new_score, reason, actor_user_id
              FROM score_audit_log
@@ -354,20 +355,20 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
     test("rate limit: 30 fires pass, the 31st is silently dropped", async ({ baseURL, request }) => {
       // Use a fresh referee so the in-process limiter (keyed by
       // `referee_action:${userId}`) starts at zero. The happy-path
-      // + cross-tenant tests above used world.refereeToken, which
-      // already consumed slots — a new user is the cleanest reset.
+      // and cross-tenant tests above used world.refereeToken, which
+      // already consumed slots, so a new user is the cleanest reset.
       const burstReferee = await setup.insertUser({
         orgId: world.orgA.orgId, role: "referee", fullName: "Burst Referee F",
       });
       const { token: burstToken } = await setup.loginAs(request, burstReferee.username);
 
-      // Count ACCEPTED actions via the room broadcast rather than the
+      // Count accepted actions via the room broadcast rather than the
       // score value. The server emits exactly one `referee_action_failed`
       // per fire that clears the limiter, and stays silent on the
-      // dropped one. The score saturates — the first fire flips it to 0
-      // and the other 29 are no-ops — so polling the score can't tell
-      // "1 processed" from "30 processed", which is what made the old
-      // reset-and-recheck version flaky under CI load. Waiting for all
+      // dropped one. The score saturates (the first fire flips it to 0
+      // and the other 29 are no-ops), so polling the score can't tell
+      // "1 processed" from "30 processed" - which is what made the old
+      // reset-and-recheck version flakey under CI load. Waiting for all
       // 30 broadcasts before firing #31 removes the race entirely.
       const recipient = await connectAndSubscribe(
         baseURL, world.refereeToken, world.event.id, ["referee_action_failed"],
@@ -404,7 +405,7 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
   });
 
   // -------------------------------------------------------------
-  // 2. referee_cap_scores — cap scores at cap_value
+  // 2. referee_cap_scores: cap scores at cap_value
   // -------------------------------------------------------------
   test.describe("referee_cap_scores", () => {
     let world;
@@ -453,7 +454,7 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
         ).toBeGreaterThan(0);
         expect(recipient.received["score_corrected"][0].reason).toMatch(/^referee:cap/);
 
-        // (c) Audit row — reason captures the cap value.
+        // (c) Audit row: reason captures the cap value.
         const audit = await setup.pool.query(
           `SELECT action, old_score, new_score, reason, actor_user_id
              FROM score_audit_log
@@ -577,13 +578,13 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
       });
       const { token: burstToken } = await setup.loginAs(request, burstReferee.username);
 
-      // Count ACCEPTED caps via the room broadcast rather than the
+      // Count accepted caps via the room broadcast rather than the
       // score value. The server emits one `referee_action_cap` per fire
       // that clears the limiter, and nothing on the dropped one. The
-      // score saturates (first cap drops 8.0 → 6.0, the rest are
-      // no-ops), so a score poll can't distinguish 1 from 30 processed
-      // — the cause of the old flakiness. Waiting for all 30 broadcasts
-      // before firing #31 removes the race.
+      // score saturates (first cap drops 8.0 -> 6.0, the rest are
+      // no-ops), so a score poll can't distinguish 1 from 30 processed.
+      // That's the cause of the old flakiness. Waiting for all 30
+      // broadcasts before firing #31 removes the race.
       const recipient = await connectAndSubscribe(
         baseURL, world.refereeToken, world.event.id, ["referee_action_cap"],
       );
@@ -621,12 +622,12 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
   });
 
   // -------------------------------------------------------------
-  // 3. referee_redive — order a redive
+  // 3. referee_redive: order a redive
   //
-  // The route does NOT mutate scores rows (the diver re-performs
-  // and submit_score overwrites on the UNIQUE key). It DOES write
-  // a score_audit_log row per existing scores row, and broadcasts
-  // `referee_action_redive` to the event room.
+  // The route does not mutate scores rows directly (the diver
+  // re-performs and submit_score overwrites on the UNIQUE key). It
+  // does write a score_audit_log row per existing scores row, and
+  // broadcasts `referee_action_redive` to the event room.
   //
   // So our DB-side assertion is "score_audit_log gained a row
   // with reason='referee:redive'", not "scores row deleted".
@@ -795,7 +796,7 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
           return r.rows[0].n;
         }, { timeout: 5000, intervals: [100, 250, 500] }).toBe(before.rows[0].n + 30);
 
-        // Fire #31 — should be silently dropped.
+        // Fire #31, should be silently dropped.
         burstSock.emit("referee_redive", {
           event_id: world.event.id,
           competitor_id: world.competitor.userId,
@@ -818,11 +819,11 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
   });
 
   // -------------------------------------------------------------
-  // 4. meet_hold — pause the meet (e.g. equipment fault, weather)
+  // 4. meet_hold: pause the meet (e.g. equipment fault, weather)
   //
   // Writes event_live_state.on_hold_reason via persistMeetHold.
   // Broadcasts `meet_held` to the event room. No score_audit_log
-  // row (this isn't a score mutation — it's a meet-state change).
+  // row, since this isn't a score mutation, it's a meet-state change.
   // Rate-limit key: `meet_hold:${userId}`, limit 10/min.
   // -------------------------------------------------------------
   test.describe("meet_hold", () => {
@@ -846,7 +847,7 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
           reason: "Lightning in area",
         });
 
-        // (a) DB state — on_hold_reason persisted.
+        // (a) DB state: on_hold_reason persisted.
         await expect.poll(async () => {
           const r = await setup.pool.query(
             `SELECT on_hold_reason FROM event_live_state WHERE event_id = $1`,
@@ -865,9 +866,9 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
         refSock.disconnect();
         recipient.sock.disconnect();
         // Clean up the hold so it doesn't leak into other tests
-        // here (no cross-suite leak — each describe builds its
-        // own event — but the meet_resume coverage path lives in
-        // a separate spec file).
+        // here, just in case (no cross-suite leak since each
+        // describe builds its own event, but the meet_resume
+        // coverage path lives in a separate spec file).
         await setup.pool.query(
           `UPDATE event_live_state SET on_hold_reason = NULL, hold_since = NULL
             WHERE event_id = $1`,
@@ -900,8 +901,8 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
           `SELECT on_hold_reason FROM event_live_state WHERE event_id = $1`,
           [world.event.id],
         );
-        // Row may not exist yet, OR may exist with on_hold_reason
-        // = null. Both are "no hold" — the bug we'd catch is a
+        // Row may not exist yet, or it may exist with on_hold_reason
+        // = null. Both count as "no hold", the bug we'd catch is a
         // non-null reason.
         expect(r.rows[0]?.on_hold_reason ?? null).toBeNull();
         expect(recipient.received["meet_held"]).toHaveLength(0);
@@ -963,16 +964,16 @@ test.describe.serial("Privileged referee socket events — authz boundary", () =
       });
       const { token: burstToken } = await setup.loginAs(request, burstReferee.username);
 
-      // Count ACCEPTED holds via the `meet_held` room broadcast, not
+      // Count accepted holds via the `meet_held` room broadcast, not
       // the persisted on_hold_reason. persistMeetHold is fire-and-forget
       // (lib/live-state.js doesn't await the pool.query), so the DB
-      // row's reason can't be pinned and racing those async writes is
+      // row's reason can't be pinned, and racing those async writes is
       // exactly what made the old poll-the-reason version fragile. The
       // server emits one `meet_held` synchronously per hold that clears
       // the limiter and nothing on the dropped one, so the broadcast
       // count is the exact "how many passed the limiter" signal.
       // (subscribe_event only joins the room; the meet_held replay lives
-      // in the separate get_meet_hold handler — so the recipient sees
+      // in the separate get_meet_hold handler, so the recipient sees
       // only this burst's broadcasts.)
       const recipient = await connectAndSubscribe(
         baseURL, world.refereeToken, world.event.id, ["meet_held"],

@@ -1,5 +1,5 @@
 <script setup>
-// Shared identity block — renders a diver / synchro pair / team
+// Shared identity block: renders a diver, synchro pair, or team
 // entrant the same way wherever it shows up in the SPA. Both
 // the Control Room and the Scoreboard mount this on their
 // history cards, Up Next tiles, standings rows, and active-
@@ -16,13 +16,13 @@
 //   └────────────────────────────────────────────┘
 //
 // The affiliation chip pins to the top-right of the names
-// column; the lead + partner stack equal-weight (synchro is
-// two equal performers, not a hero with a sidekick); the
+// column. The lead + partner stack equal-weight (synchro is
+// two equal performers, not a hero with a sidekick), and the
 // secondary line dims a level (club / team affiliation, not a
 // co-performer).
 //
 // Slots:
-//   trailing — anything that should sit alongside the badge on
+//   trailing:  anything that should sit alongside the badge on
 //              the right edge (a score total, a dive total
 //              chip, etc.). Renders inside .di-trailing.
 //
@@ -35,8 +35,8 @@ import { RouterLink } from 'vue-router'
 import { diverIdentity } from '@/composables/useDiverIdentity'
 
 const props = defineProps({
-  // Any "row" shape — roster row, history row, standings row,
-  // active-diver socket payload — the composable handles the
+  // Any "row" shape: roster row, history row, standings row,
+  // active-diver socket payload. The composable handles the
   // field-name variance.
   row: { type: Object, default: () => ({}) },
   // Optional 1-based rank prefix shown in front of the lead
@@ -48,15 +48,15 @@ const props = defineProps({
   partnerId:    { type: String, default: null },
   linkProfiles: { type: Boolean, default: false },
   // Affiliation rendering style:
-  //   "compact" — single muted secondary line (team_name OR
+  //   "compact":  single muted secondary line (team_name OR
   //               club_name). Right for roster rows + Up Next
   //               tiles where there isn't room for two lines.
-  //   "split"   — team_name as a purple chip line AND
+  //   "split":    team_name as a purple chip line AND
   //               club_name + club_code as a separate muted
   //               line. Used by history cards so the operator
   //               sees both the team identity (for team events)
   //               and the diver's home club at a glance.
-  // Synchro pairs ignore both — partner_name takes the second
+  // FYI, synchro pairs ignore both, partner_name takes the second
   // line regardless of variant.
   variant: {
     type: String,
@@ -77,7 +77,7 @@ const id = computed(() => diverIdentity(props.row))
            Partner Name"); when they don't (long names, narrow
            column) flex-wrap drops the partner onto its own
            row. Each .di-name is white-space:nowrap so a name
-           never breaks mid-word — only the partner-as-a-whole
+           never breaks mid-word, only the partner-as-a-whole
            wraps. -->
       <div class="di-names-row">
         <span class="di-name di-name-lead">
@@ -109,8 +109,8 @@ const id = computed(() => diverIdentity(props.row))
              individual diver with no team shows just the club
              line; a team-event entrant shows both. Synchro
              pairs render the partner row first (above) and
-             then drop into these lines too — the audience and
-             operator still need to see which club a pair
+             then drop into these lines too, since the audience
+             and operator still need to see which club a pair
              represents. -->
         <div v-if="id.teamName" class="di-team">{{ id.teamName }}</div>
         <div v-if="id.clubName" class="di-club">
@@ -128,7 +128,7 @@ const id = computed(() => diverIdentity(props.row))
     <!-- Right-side grouping. The badge column stacks chips
          vertically so an international synchro pair (lead + a
          partner from a different country / club) shows BOTH
-         flags top-right — the lead's chip lines up next to the
+         flags top-right: the lead's chip lines up next to the
          lead name, the partner's chip drops to the partner's
          line. align-self: start anchors the column to the top
          of the names; per-row alignment via the inner stack
@@ -156,7 +156,7 @@ const id = computed(() => diverIdentity(props.row))
   display: flex; flex-direction: column; gap: 0.05rem;
   line-height: 1.25;
 }
-/* Names row — flex-wrap so the lead + partner sit on the same
+/* Names row: flex-wrap so the lead + partner sit on the same
    line when there's room, and drop the partner onto its own
    line only when the available width forces it. The row's
    horizontal gap doubles as the spacing between names; the
@@ -167,12 +167,12 @@ const id = computed(() => diverIdentity(props.row))
   align-items: baseline;
   column-gap: 0.4em; row-gap: 0;
 }
-/* Lead + partner share the same colour, weight, size — synchro
-   pairs are two equal performers. The cyan ampersand still
-   reads as a connector so the eye groups them as one entry.
-   white-space:nowrap keeps a single name from breaking mid-
-   word; only the partner-as-a-whole wraps when the row can't
-   fit it. */
+/* Lead + partner share the same colour, weight, size, since
+   synchro pairs are two equal performers. The cyan ampersand
+   still reads as a connector so the eye groups them as one
+   entry. white-space:nowrap keeps a single name from breaking
+   mid-word; only the partner-as-a-whole wraps when the row
+   can't fit it. */
 .di-name {
   font-family: var(--font-display); font-weight: 700;
   font-size: inherit; color: var(--text);
@@ -191,9 +191,9 @@ const id = computed(() => diverIdentity(props.row))
 /* Match the SPA-wide .diver-link treatment: default colour at
    rest, on hover the text turns cyan AND gets a cyan dashed
    underline. Uses text-decoration (rather than border-bottom)
-   so the underline survives parent overflow:hidden — the
-   border-bottom approach was clipped inside the Up Next list
-   on the scoreboard. */
+   so the underline survives parent overflow:hidden. The
+   border-bottom approach used to get clipped inside the Up
+   Next list on the scoreboard. */
 .di-link {
   color: inherit;
   text-decoration: underline dashed transparent;
@@ -201,8 +201,8 @@ const id = computed(() => diverIdentity(props.row))
   /* 1px offset keeps the underline inside the line-box even
      in tight clipping contexts (parent overflow:hidden +
      line-height:normal). A larger offset would land below
-     the parent's content-box and get clipped — same root
-     cause as the .diver-link version. */
+     the parent's content-box and get clipped, heads up: same
+     root cause as the .diver-link version. */
   text-underline-offset: 1px;
   transition: color 0.12s, text-decoration-color 0.12s;
 }
@@ -210,7 +210,7 @@ const id = computed(() => diverIdentity(props.row))
   color: var(--cyan);
   text-decoration-color: var(--cyan);
 }
-/* Team / club secondary line — only shown for non-synchro rows
+/* Team / club secondary line, only shown for non-synchro rows
    (synchro uses partner-name for the second line instead). One
    step down in weight + colour because affiliation is metadata,
    not a co-performer. */
@@ -219,7 +219,7 @@ const id = computed(() => diverIdentity(props.row))
   color: var(--text-3); font-weight: 400;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* Split-variant team chip — same purple system the centre
+/* Split-variant team chip: same purple system the centre
    column's .active-team uses, scaled down to fit the smaller
    history-card surface. Caps + letter-spacing keep it
    feeling chip-like even when the team name is long. */
@@ -247,7 +247,7 @@ const id = computed(() => diverIdentity(props.row))
   display: flex; align-items: flex-start; gap: 0.4rem;
   flex-shrink: 0; align-self: flex-start;
 }
-/* Vertical stack — lead's chip on top, partner's chip
+/* Vertical stack: lead's chip on top, partner's chip
    underneath. Gap matches the names column's row gap (0.05rem)
    plus the chip's vertical padding so the second chip lines up
    visually next to the partner's name. */
@@ -262,7 +262,7 @@ const id = computed(() => diverIdentity(props.row))
   border-radius: 3px; padding: 0.1rem 0.4rem;
   white-space: nowrap;
 }
-/* Partner chip — uses a slightly muted background so the lead's
+/* Partner chip: uses a slightly muted background so the leads
    chip stays the visual anchor, but the partner chip is still
    the same size + colour so the pair reads as two equal entries
    in keeping with the lead/partner-equal-weight name treatment. */

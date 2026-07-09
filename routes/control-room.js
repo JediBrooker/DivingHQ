@@ -1,4 +1,4 @@
-// Control-Room routes — everything the operator hits from the
+// Control-Room routes: everything the operator hits from the
 // pre-meet roster screen and during-meet queue management.
 //
 //   GET    /api/events/:id/roster                roster + dive lists
@@ -16,7 +16,7 @@
 // Reorder + randomize are locked once an event flips out of
 // 'Upcoming'; operators withdraw scratchers instead. Late-entry
 // is the manager-only override that intentionally works after
-// entries close (the diver showed up; we can't say "you're too
+// entries close (the diver showed up, we can't say "you're too
 // late" once the meet is running).
 //
 // Mounted via:
@@ -30,17 +30,17 @@ const createIdempotency = require("../lib/idempotency");
 const { t } = require("../lib/server-i18n");
 const { perDiveSelect } = require("../lib/scoring-sql");
 
-// Mirrors init.sql's dive_position enum. Pre-validating each CSV
-// cell keeps a bad value from ever reaching the ::dive_position
-// cast — in commit mode that cast error would abort the whole
-// import transaction (see the SAVEPOINT fence in
+// Mirrors init.sql's dive_position enum. Heads up: pre-validating
+// each CSV cell keeps a bad value from ever reaching the
+// ::dive_position cast, since in commit mode that cast error would
+// abort the whole import transaction (see the SAVEPOINT fence in
 // buildRosterImportPlan).
 const DIVE_POSITIONS = new Set(["A", "B", "C", "D"]);
 
 // Light CSV parser. Handles "quoted, fields", "doubled""quotes"
-// inside quoted fields, and trailing/leading whitespace. Doesn't
-// pull a dependency for what's a 30-line job; the input is
-// always small (a meet roster, not a database export).
+// inside quoted fields, plus trailing/leading whitespace. Not
+// worth pulling in a dependency for what's a 30-line job, the
+// input is always small (a meet roster, not a database export).
 function parseCsv(text) {
   const rows = [];
   let row = [];
@@ -161,7 +161,7 @@ module.exports = function createControlRoomRouter({
       };
 
       // Row-level fence (commit mode only). An unexpected DB error
-      // below — bad cast, FK violation — would otherwise abort the
+      // below (bad cast, FK violation) would otherwise abort the
       // surrounding transaction: every later row then fails with
       // "current transaction is aborted", COMMIT quietly becomes a
       // rollback, and the route still returns 200 with bogus counts.
@@ -203,7 +203,7 @@ module.exports = function createControlRoomRouter({
           const code = (row[codeIdx] || "").trim();
           const pos = (row[posIdx] || "").trim().toUpperCase();
           if (!code || !pos) continue;
-          // Whitelist before the ::dive_position cast below — see
+          // Whitelist before the ::dive_position cast below, see
           // the DIVE_POSITIONS note at the top of the file.
           if (!DIVE_POSITIONS.has(pos)) {
             stats.errors.push({
@@ -276,14 +276,14 @@ module.exports = function createControlRoomRouter({
   }
 
   // -------------------------------------------------------------
-  // GET /api/events/:id/roster — full dive list + diver metadata
+  // GET /api/events/:id/roster: full dive list + diver metadata
   // for the Control Room queue. Withdrawn rows are returned but
   // flagged so the UI can render scratched divers separately.
   // -------------------------------------------------------------
   router.get("/api/events/:id/roster", requireMeetController, async (req, res) => {
     try {
       // Cross-org gate. requireOrgRole only checks the caller HAS
-      // a role; it doesn't check the event in :id is in their org.
+      // a role; it doesn't check the event in :id is in thier org.
       // Without this any meet_manager could enumerate roster +
       // dive lists for any other org's events by guessing UUIDs.
       if (!(await ensureEventOrgGate(req, res, "id"))) return;
@@ -291,7 +291,7 @@ module.exports = function createControlRoomRouter({
       // round_order is the canonical 1-based diving position
        // within a round, computed via ROW_NUMBER over the same
        // sort key the ORDER BY uses. Mirrors the spectator
-       // scoreboard's upcoming query — see routes/scoreboard.js.
+       // scoreboard's upcoming query, see routes/scoreboard.js.
        // Two reasons to compute it server-side rather than have
        // the SPA render display_order verbatim:
        //   1. Self-healing against historic data corrupted by the
@@ -401,11 +401,11 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // GET /api/events/:id/audit-recent — event-scoped audit rows
+  // GET /api/events/:id/audit-recent: event-scoped audit rows
   // for Control Room risky workflows. The org-wide audit feed is
-  // org-admin only; Control Room operators also include meet
+  // org-admin only, but Control Room operators also include meet
   // managers/referees, so this route keeps the same event-org
-  // gate as roster mutations and exposes only rows tied to the
+  // gate as roster mutations and only exposes rows tied to the
   // selected event.
   // -------------------------------------------------------------
   router.get("/api/events/:id/audit-recent", requireMeetController, async (req, res) => {
@@ -497,7 +497,7 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // PUT /api/dive-lists/:id/order — single-row reorder. Body:
+  // PUT /api/dive-lists/:id/order: single-row reorder. Body:
   // { display_order: int | null }. Locked once status != Upcoming.
   // -------------------------------------------------------------
   router.put("/api/dive-lists/:id/order", requireMeetController, idem("dive_list_reorder_one"), async (req, res) => {
@@ -537,7 +537,7 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // PUT /api/events/:id/dive-lists/reorder — bulk drag-and-drop.
+  // PUT /api/events/:id/dive-lists/reorder: bulk drag-and-drop.
   // Atomic against partial failures. Cap of 500 rows / request.
   // -------------------------------------------------------------
   router.put("/api/events/:id/dive-lists/reorder", requireMeetController, idem("dive_list_reorder_bulk"), async (req, res) => {
@@ -592,14 +592,14 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // POST /api/events/:id/dive-lists/randomize — pre-meet shuffle.
+  // POST /api/events/:id/dive-lists/randomize: pre-meet shuffle.
   // Each unique competitor gets one random position applied to
   // every round they're in, so "Diver Z dives 1st" stays
   // consistent across rounds.
   // -------------------------------------------------------------
   router.post("/api/events/:id/dive-lists/randomize", requireMeetController, idem("dive_list_randomize"), async (req, res) => {
     const eventId = req.params.id;
-    // One transaction for the shuffle + the workflow stamp below —
+    // One transaction for the shuffle + the workflow stamp below,
     // a crash between the two must not leave a re-shuffled order
     // still carrying the previous shuffle's referee sign-off.
     const client = await pool.connect();
@@ -621,10 +621,10 @@ module.exports = function createControlRoomRouter({
       // Pick a random ordering of the unique competitors, then
       // apply that ordering across every round in one UPDATE.
       // Withdrawn rows are excluded from the shuffle pool but
-      // still get a display_order assigned via the JOIN — they
+      // still get a display_order assigned via the JOIN, they
       // just sort to the end of their slot when reinstated.
       // SELECT DISTINCT col, ROW_NUMBER() OVER (...) is a known
-      // SQL footgun — the window function evaluates BEFORE the
+      // SQL gotcha: the window function evaluates BEFORE the
       // DISTINCT, so a 3-pair × 3-round synchro event got
       // positions 1..9 assigned to its 9 cdl rows and the
       // subsequent JOIN matched arbitrarily, leaving display_order
@@ -655,7 +655,7 @@ module.exports = function createControlRoomRouter({
       );
 
       // Pre-meet workflow: the order has changed, so stamp
-      // randomised_at and clear any prior sign-off — the referee
+      // randomised_at and clear any prior sign-off. The referee
       // signs off on the FINAL order, not a previous shuffle.
       await client.query(
         `UPDATE events
@@ -678,14 +678,14 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // POST /api/events/:id/dive-order/sign-off — referee approves
+  // POST /api/events/:id/dive-order/sign-off: referee approves
   // the published order. Records who signed off + when. The
   // Control Room's 3-state button reads this back via the events
   // payload and turns green ("Start Event") once the timestamp
   // is set.
   //
   // Role gate is the same requireMeetController used by the
-  // reorder endpoints — meet_managers, referees and org_admins
+  // reorder endpoints, meet_managers, referees and org_admins
   // can sign off. The recorded signed_off_by user_id is whoever
   // was logged in at that moment, so the audit trail still names
   // the actual person regardless of which staff role they hold.
@@ -706,7 +706,7 @@ module.exports = function createControlRoomRouter({
         });
       }
       // Enforcement gate. When the event has enforce_referee_signoff = TRUE
-      // the manager-attests path is forbidden — the actual referee must
+      // the manager-attests path is forbidden, the actual referee must
       // approve via push, credential entry, or the Cut 3 code handoff.
       // Defence in depth: the SPA hides the manager-attests tab when
       // enforced, but a hand-crafted curl shouldn't smuggle past it.
@@ -732,11 +732,11 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // POST /api/events/:id/check-in/confirm — operator confirms
+  // POST /api/events/:id/check-in/confirm: operator confirms
   // pre-meet check-in is complete and the workflow can advance
   // to the randomise step. Stamps check_in_done_at on the event.
   // The actual per-diver attendance rows live in event_attendance
-  // and are unaffected; this is just the gate signal.
+  // and are unaffected, this is just the gate signal.
   // -------------------------------------------------------------
   router.post("/api/events/:id/check-in/confirm", requireMeetController, idem("check_in_confirm"), async (req, res) => {
     const eventId = req.params.id;
@@ -766,7 +766,7 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // POST /api/events/:id/dive-order/reset — clears every pre-meet
+  // POST /api/events/:id/dive-order/reset: clears every pre-meet
   // workflow stamp (check-in confirmation, randomise, sign-off)
   // so the operator can walk the four states again from the top.
   // Used by the "↺ Reset" affordance next to the workflow button.
@@ -809,7 +809,7 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // POST /api/events/:id/dive-order/confirm — operator chose to
+  // POST /api/events/:id/dive-order/confirm: operator chose to
   // skip the randomise step (e.g. the order was already arranged
   // manually) and wants to advance to sign-off. Just stamps
   // randomised_at without touching display_order.
@@ -841,16 +841,16 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // CUT 2 — REFEREE SIGN-OFF VIA PUSH + CREDENTIAL FALLBACK
+  // CUT 2: REFEREE SIGN-OFF VIA PUSH + CREDENTIAL FALLBACK
   //
   // Three endpoints replace the simple POST /dive-order/sign-off:
   //
-  //   GET  /events/:id/referees        — picker dropdown source
-  //   POST /events/:id/sign-off/request    — manager picks ref;
+  //   GET  /events/:id/referees        : picker dropdown source
+  //   POST /events/:id/sign-off/request    : manager picks ref;
   //          creates a request row + fires the push notification
-  //   POST /events/:id/sign-off/respond    — referee taps Approve/Deny
+  //   POST /events/:id/sign-off/respond    : referee taps Approve/Deny
   //          via the in-app banner; closes the loop
-  //   POST /events/:id/sign-off/credential — fallback when the
+  //   POST /events/:id/sign-off/credential : fallback for when the
   //          referee can't get the push (no device registered,
   //          permissions denied). Referee enters their username +
   //          password (+ TOTP if enabled) on the manager's laptop;
@@ -862,9 +862,9 @@ module.exports = function createControlRoomRouter({
   // the meet calls for it.
   // -------------------------------------------------------------
 
-  // GET /api/events/:id/referees — list referees in the event's
+  // GET /api/events/:id/referees: list referees in the event's
   // org so the manager modal has something to populate. Names +
-  // ids only; no contact info, no role tuples.
+  // ids only, no contact info, no role tuples.
   router.get("/api/events/:id/referees", requireMeetController, async (req, res) => {
     try {
       if (!(await ensureEventOrgGate(req, res, "id"))) return;
@@ -933,7 +933,7 @@ module.exports = function createControlRoomRouter({
         [eventId],
       );
 
-      // Fetch the manager's name now so we can put it in the
+      // Fetch the managers name now so we can put it in the
       // notification body without another join later.
       const managerQ = await pool.query(
         "SELECT full_name FROM users WHERE id = $1",
@@ -953,7 +953,7 @@ module.exports = function createControlRoomRouter({
       );
       const requestId = reqIns.rows[0].id;
 
-      // Fire the notification — push (where subscribed) plus
+      // Fire the notification: push (where subscribed) plus
       // socket emit (always). 5-min TTL matches the request row's
       // expires_at default.
       const result = await push.sendNotification([referee_id], {
@@ -1000,7 +1000,7 @@ module.exports = function createControlRoomRouter({
   //   Body: { request_id, decision: 'approve' | 'deny' }
   // Referee's SPA hits this from the in-app banner Approve/Deny
   // buttons (or from a deep-linked /control?signoff_request=...).
-  // Auth attributes the action to whoever's signed in — must
+  // Auth attributes the action to whoever's signed in, must
   // match referee_signoff_requests.target_referee_id.
   router.post("/api/events/:id/dive-order/sign-off/respond",
               requireMeetController, async (req, res) => {
@@ -1066,8 +1066,8 @@ module.exports = function createControlRoomRouter({
 
       // Notify the manager + anyone else watching the event so
       // their modal flips out of "waiting for referee" state.
-      // Doesn't go through the push engine (no need to OS-notify
-      // the manager — they're staring at the screen).
+      // Doesn't go through the push engine, no need to OS-notify
+      // the manager since they're staring at the screen.
       const io = push?.io || null;
       if (push) {
         // Best-effort emit. We don't have a direct handle to the
@@ -1098,7 +1098,7 @@ module.exports = function createControlRoomRouter({
   // Referee enters their own credentials (+ TOTP code if 2FA is
   // on). Server verifies, ensures they hold the referee role for
   // this event's org, and stamps signed_off_by = their user id.
-  // The manager's session is untouched — no JWT swap.
+  // The manager's session is untouched, no JWT swap.
   router.post("/api/events/:id/dive-order/sign-off/credential",
               requireMeetController, async (req, res) => {
     if (!bcrypt) {
@@ -1131,9 +1131,9 @@ module.exports = function createControlRoomRouter({
       );
       const user = u.rows[0];
       // Constant-time compare against a dummy when the user
-      // doesn't exist — same hardening as the main login flow,
-      // copy-pasted shape rather than imported to keep this
-      // module standalone.
+      // doesn't exist, same hardening as the main login flow.
+      // Copy-pasted shape rather than imported, a little hacky
+      // but keeps this module standalone.
       const fakeHash = "$2b$12$00000000000000000000000000000000000000000000000000000";
       const passwordOk = await bcrypt.compare(password, user?.password || fakeHash);
       if (!user || !passwordOk) {
@@ -1144,14 +1144,14 @@ module.exports = function createControlRoomRouter({
       }
       // Org match: the referee must be in the same org as the
       // event (or sysadmin). Stops a referee from another org
-      // accidentally signing off the wrong meet.
+      // accidently signing off the wrong meet.
       if (user.org_id !== ev.rows[0].org_id) {
         return res.status(403).json({ error: "Referee is not in this event's org" });
       }
-      // Referee role check — BEFORE the TOTP block so a one-time
+      // Referee role check, done BEFORE the TOTP block so a one-time
       // recovery code is never consumed for a user who turns out not
-      // to be a referee (a 403 they'd get regardless). Also tightens
-      // the password oracle: a non-referee learns nothing new.
+      // to be a referee (a 403 they'd get regardless anyway). Also
+      // tightens the password oracle: a non-referee learns nothing new.
       const roleQ = await pool.query(
         `SELECT 1 FROM user_org_roles
          WHERE user_id = $1 AND org_id = $2 AND role = 'referee' LIMIT 1`,
@@ -1208,7 +1208,7 @@ module.exports = function createControlRoomRouter({
       // connection. Using `pool.query` here checks out a fresh
       // connection per call, so the BEGIN ran on a connection
       // that was returned to the pool before the UPDATEs ran on
-      // (potentially different) ones — i.e. no transaction at
+      // (potentially different) ones, i.e. no transaction at
       // all. A failure between the two UPDATEs would leave the
       // event signed off but the referee_signoff_requests row
       // stuck "pending" forever.
@@ -1249,10 +1249,10 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // CUT 3 — CODE HANDOFF
+  // CUT 3: CODE HANDOFF
   //
   // The push and credential paths cover most setups, but they
-  // both require something — push permission OR the referee
+  // both require something: push permission OR the referee
   // physically at the manager's laptop. Cut 3 plugs the gap: the
   // manager generates a 6-digit code on their screen; the
   // referee opens DivingHQ on their own already-signed-in
@@ -1319,7 +1319,7 @@ module.exports = function createControlRoomRouter({
       );
 
       // Retry on the unique-pending-code-per-referee index race.
-      // Three tries is plenty — the cardinality is 1e6 and the
+      // Three tries is plenty, the cardinality is 1e6 and the
       // partial index narrows to <1 active code per referee on
       // average.
       let attempts = 0;
@@ -1337,7 +1337,7 @@ module.exports = function createControlRoomRouter({
         } catch (err) {
           if (err.code !== "23505") throw err;
           // Collision on (target_referee_id, handoff_code) WHERE
-          // pending — try again with a fresh code. Won't happen
+          // pending, just try again with a fresh code. Won't happen
           // in practice but the retry guards against the rare
           // case where two managers are both generating codes
           // for the same referee at the exact same instant.
@@ -1355,12 +1355,12 @@ module.exports = function createControlRoomRouter({
       // the referee scans, lands on /sign-off-codes?code=…, the
       // SPA auto-submits if they're already signed in OR bounces
       // through /login?next=… and back. The QR carries no secret
-      // beyond what the typeable code already has — the verifier
+      // beyond what the typeable code already has, the verifier
       // still requires the referee's own JWT (target_referee_id =
       // req.user.id) so a leaked QR is useless to anyone but the
       // specific referee the manager picked.
       // APP_BASE_URL must be configured. Without it the previous
-      // fallback used `req.get('host')` — a client-supplied header
+      // fallback used `req.get('host')`, a client-supplied header
       // that an attacker can spoof to point the QR at their own
       // domain (the referee would then type the code into the
       // attacker's site, which replays it to the real server).
@@ -1387,9 +1387,9 @@ module.exports = function createControlRoomRouter({
           errorCorrectionLevel: "M",
         });
       } catch (err) {
-        // QR is a UX nicety — falling back to the typeable code
-        // alone keeps the modal functional if the generator hits
-        // an edge case.
+        // FYI, QR is just a UX nicety, falling back to the
+        // typeable code alone keeps the modal functional if the
+        // generator hits an edge case.
         console.error("[Sign-Off QR Generate Error]", err.message);
       }
 
@@ -1463,7 +1463,7 @@ module.exports = function createControlRoomRouter({
       await client.query("COMMIT");
 
       // Broadcast so the manager's open Control Room flips out
-      // of "waiting" state — same channel the push respond path
+      // of "waiting" state, same channel the push respond path
       // uses.
       try {
         push?.emitEvent?.(reqRow.event_id, "referee_signoff_response", {
@@ -1482,7 +1482,7 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // PUT /api/dive-lists/:id/withdraw — scratch / reinstate. Body:
+  // PUT /api/dive-lists/:id/withdraw: scratch / reinstate. Body:
   // { withdrawn: bool }. Standings still attribute prior dives;
   // the active queue excludes them from upcoming rounds.
   // -------------------------------------------------------------
@@ -1503,7 +1503,7 @@ module.exports = function createControlRoomRouter({
       const row = r.rows[0];
       // Audit. Record the diver's name in entity_name so the
       // audit feed reads "Withdrew Avery Ueno from 2024 FRA
-      // Grand Prix 10m" — both halves of the link are useful.
+      // Grand Prix 10m", both halves of the link are useful.
       await recordAudit(pool, {
         ...auditFromReq(req),
         org_id:      row.org_id,
@@ -1595,7 +1595,7 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // POST /api/events/:id/roster — late-entry add. Used when a
+  // POST /api/events/:id/roster: late-entry add. Used when a
   // diver shows up but didn't pre-submit a list. Single-row
   // version of the CSV import.
   // -------------------------------------------------------------
@@ -1615,8 +1615,8 @@ module.exports = function createControlRoomRouter({
       const eventOrgId = ev.rows[0].org_id;
 
       // Bounds-check against the event's round count BEFORE the
-      // INSERT — a non-integer would otherwise surface as a
-      // Postgres cast error (500) instead of a validation 400.
+      // INSERT, otherwise a non-integer surfaces as a Postgres
+      // cast error (500) instead of a validation 400.
       const totalRounds = ev.rows[0].total_rounds;
       if (!Number.isInteger(round_number) || round_number < 1 || round_number > totalRounds) {
         return res.status(400).json({
@@ -1634,9 +1634,9 @@ module.exports = function createControlRoomRouter({
 
       // An attached partner / team must belong to the same org as the
       // event (AGENTS.md isInSameOrg invariant). Without this a meet
-      // manager could splice a cross-org user/team into the roster —
-      // the public GET /api/events/:id/history joins on partner_id and
-      // would leak that foreign user's name + country.
+      // manager could splice a cross-org user/team into the roster,
+      // and the public GET /api/events/:id/history joins on partner_id
+      // and would leak that foreign user's name + country.
       if (partner_id) {
         const p = await pool.query(
           "SELECT 1 FROM users WHERE id = $1 AND org_id = $2",
@@ -1657,8 +1657,8 @@ module.exports = function createControlRoomRouter({
       }
 
       // xmax=0 on the returning row distinguishes a fresh
-      // INSERT from an ON-CONFLICT UPDATE — the audit row's
-      // action differs (late_entry_added vs dive_edited) so
+      // INSERT from an ON-CONFLICT UPDATE, so the audit row's
+      // action differs (late_entry_added vs dive_edited) and
       // a referee scrolling the audit log can tell whether
       // a roster row was added (e.g. walk-up entry) or an
       // existing diver's dive was changed mid-event.
@@ -1704,11 +1704,11 @@ module.exports = function createControlRoomRouter({
   });
 
   // -------------------------------------------------------------
-  // POST /api/events/:id/roster/import — CSV bulk import.
+  // POST /api/events/:id/roster/import: CSV bulk import.
   // Header: username,partner_username,round_1_code,round_1_pos,…
   // Per-row errors are returned without failing the whole import.
-  // bulkWriteLimiter caps abuse — the parser itself caps input at
-  // 200KB.
+  // bulkWriteLimiter caps abuse, and the parser itself caps input
+  // at 200KB.
   // -------------------------------------------------------------
   router.post("/api/events/:id/roster/import",
     bulkWriteLimiter,
@@ -1757,9 +1757,9 @@ module.exports = function createControlRoomRouter({
   );
 
   // -------------------------------------------------------------
-  // GET /api/events/:id/history — public dive-by-dive recap. Used
-  // by the live scoreboard and the post-meet recap. No auth: the
-  // data is already public via the scoreboard endpoint.
+  // GET /api/events/:id/history: public dive-by-dive recap. Used
+  // by the live scoreboard and the post-meet recap. No auth needed,
+  // the data is already public via the scoreboard endpoint.
   // -------------------------------------------------------------
   router.get("/api/events/:id/history", async (req, res) => {
     try {

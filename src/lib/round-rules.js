@@ -1,13 +1,14 @@
 // Round-rules validator + helpers (SPA-side ESM mirror).
 //
-// Functionally identical to /lib/round-rules.js (CommonJS, used
-// by the server). Two files instead of one because Vite's @
+// Functionally identical to /lib/round-rules.js (CommonJS, used by
+// the server). We keep two files instead of one because Vite's @
 // alias resolves to /src/ and cross-tree CommonJS imports are
-// fragile through Vite's interop. Behaviour MUST stay in sync;
-// any change here needs the same edit in /lib/round-rules.js.
+// fragile through Vite's interop. Behaviour MUST stay in sync,
+// so any change here needs the same edit in /lib/round-rules.js
+// (easy to forget, heads up).
 //
-// See the server module for the full prose docs on the data
-// shape and design rationale.
+// See the server module for the full prose docs on the data shape
+// and design rationale.
 
 const GROUPS = {
   '1': 'forward',

@@ -1,6 +1,6 @@
-// Parser tests for the DiveRecorder archive importer. These run
-// against saved HTML fixtures captured from the live Meet Explorer
-// (test/fixtures/diverecorder/*.html) so parsing stays locked even
+// Parser tests for the DiveRecorder archive importer. These run against
+// saved HTML fixtures captured from the live Meet Explorer
+// (test/fixtures/diverecorder/*.html), so parsing stays locked down even
 // though the importer itself hits the network.
 
 const test = require("node:test");

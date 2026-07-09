@@ -3,7 +3,7 @@
 // Same data model and endpoints as AssignJudgesView, just framed as
 // a modal so the operator can seat the panel without leaving Control.
 //
-// Opens when the parent flips `open` to true; emits `saved` after a
+// Opens when the parent flips `open` to true, emits `saved` after a
 // successful POST so the parent can refresh its judgePanel ref and
 // the readiness check ticks green.
 
@@ -18,7 +18,7 @@ const props = defineProps({
   eventId:   { type: [Number, String], default: null },
   panelSize: { type: Number, default: 5 },
   eventName: { type: String, default: '' },
-  // Phase 2 — when provided, the modal queries the meet's
+  // Phase 2: when provided, the modal queries the meet's
   // conflict report after save and shows a non-blocking warning
   // for any conflict involving this event's panel. Optional so
   // callers in older surfaces (legacy AssignJudgesView) keep
@@ -32,14 +32,14 @@ const auth = useAuthStore()
 const router = useRouter()
 const { t } = useI18n()
 
-// Lock background scroll while open — iOS Safari otherwise lets
+// Lock background scroll while open. iOS Safari otherwise lets
 // the operator drag the page underneath this modal mid-roster-
 // build and lose their place in the control surface.
 useBodyScrollLock().lockWhile(toRef(props, 'open'))
 
-// Phase 2 — post-save conflict warnings. Populated by the
+// Phase 2: post-save conflict warnings. Populated by the
 // optional check after a successful POST /api/events/:id/judges.
-// Always non-blocking: the save has already gone through by the
+// Always non-blocking, the save has already gone through by the
 // time the operator sees these; they're informational.
 const conflictWarnings = ref([])  // Conflict[] involving this event
 
@@ -50,7 +50,7 @@ const loading   = ref(false)
 const saving    = ref(false)
 const errorMsg  = ref('')
 
-// Phase 3 — schedule-aware availability hints. Map of judge_id →
+// Phase 3: schedule-aware availability hints. Map of judge_id →
 // { status: 'available' | 'busy', busy_until?: iso,
 //   conflicting_event_label?: string }. Populated by an opt-in
 // call to /api/meets/:meetId/judges/availability when both
@@ -60,7 +60,7 @@ const availability = ref(new Map())
 const availabilityLoading = ref(false)
 // Reactive timestamp this panel is being assigned for. Resolved
 // off the event's schedule block (or events.scheduled_at as a
-// fallback) — declared as a ref so loadAvailability can re-run
+// fallback), declared as a ref so loadAvailability can re-run
 // without a closure refactor.
 const eventScheduledAt = ref(null)
 
@@ -102,19 +102,19 @@ async function loadData() {
       })
     }
 
-    // Phase 3 — schedule-aware availability. Two preconditions:
+    // Phase 3: schedule-aware availability. Two preconditions:
     // a meetId on the modal (passed by Phase 2 callers) and a
-    // scheduled_at on the event. Without either we silently skip
-    // the call; the picker still works, judges just don't show
-    // a badge. Reading scheduled_at via the existing event
-    // endpoint avoids adding a second round-trip to /sessions.
+    // scheduled_at on the event. Heads up: without either we
+    // silently skip the call, the picker still works, judges just
+    // don't show a badge. Reading scheduled_at via the existing
+    // event endpoint avoids adding a second round-trip to /sessions.
     if (props.meetId) {
       try {
         const ev = await auth.apiFetch(`/api/events/${props.eventId}`)
         const at = ev?.scheduled_at || null
         eventScheduledAt.value = at
         if (at) await loadAvailability(at)
-      } catch { /* availability is informational — never fail load */ }
+      } catch { /* availability's informational, don't fail the load over it */ }
     }
   } catch (err) {
     errorMsg.value = err.message || 'Failed to load judges.'
@@ -197,17 +197,17 @@ async function save() {
     })
     emit('saved')
 
-    // Phase 2 — non-blocking conflict surfacing. We refetch the
+    // Phase 2: non-blocking conflict surfacing. We refetch the
     // meet's conflict report after the save, filter to entries
     // involving this event's panel, and if any are active
     // (non-dismissed) keep the modal open with a warning banner.
-    // The user can dismiss the warning or jump to the scheduler;
+    // The user can dismiss the warning or jump to the scheduler,
     // the panel save itself has already succeeded.
     if (props.meetId) {
       try {
         const body = await auth.apiFetch(`/api/meets/${props.meetId}/conflicts`)
         const list = Array.isArray(body?.conflicts) ? body.conflicts : []
-        // Match by event_id — for judge conflicts, both blocks
+        // Match by event_id: for judge conflicts, both blocks
         // are event_start blocks and at least one points to the
         // event we just saved.
         const eventId = String(props.eventId)
@@ -219,7 +219,7 @@ async function save() {
             String(c.block_b.event_id || '') === eventId
           )
         })
-      } catch { /* informational only — never fail the save */ }
+      } catch { /* informational only, never fail the save */ }
     }
 
     if (!conflictWarnings.value.length) {
@@ -281,8 +281,8 @@ function warningNames(c) {
 
       <div v-if="errorMsg" class="msg msg-error jpm-error">{{ errorMsg }}</div>
 
-      <!-- Phase 2 — post-save conflict warning. The panel save
-           has already succeeded by the time this shows; we keep
+      <!-- Phase 2: post-save conflict warning. The panel save
+           has already succeeded by the time this shows, we keep
            the modal open just long enough for the operator to
            jump to the scheduler or dismiss. -->
       <div v-if="conflictWarnings.length" class="msg msg-warn jpm-conflict-warn">
@@ -342,7 +342,7 @@ function warningNames(c) {
                 <div class="jpm-judge-name">
                   {{ j.full_name }}
                   <span v-if="j.country_code" class="jpm-judge-country">{{ j.country_code }}</span>
-                  <!-- Phase 3 availability badge — only rendered
+                  <!-- Phase 3 availability badge, only rendered
                        when the parent passed a meetId and the event
                        has a scheduled_at. The picker treats it as a
                        non-blocking hint; busy judges remain pickable
@@ -596,10 +596,9 @@ function warningNames(c) {
   color: var(--text-3);
   cursor: pointer;
   font-size: 14px;
-  /* WCAG 2.5.5: 44×44 minimum. This button unseats a judge —
-     misregistering on it during roster build is a destructive
-     mis-tap. The ✕ glyph still sits centred inside the larger
-     hit area. */
+  /* WCAG 2.5.5: 44×44 minimum. This button unseats a judge, so
+     mis-tapping it during roster build is a destructive gotcha.
+     The ✕ glyph still sits centred inside the larger hit area. */
   min-width: 44px; min-height: 44px;
   display: inline-flex; align-items: center; justify-content: center;
   padding: 0;

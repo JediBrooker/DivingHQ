@@ -5,16 +5,15 @@ import { useAuthStore } from '@/stores/auth'
 
 // Step 2 of the email-change flow (Migration 044). The link in
 // the verification email is /confirm-email-change?token=<64-hex>.
-// We POST that token to /api/auth/confirm-email-change; the
+// We POST that token to /api/auth/confirm-email-change, the
 // server hashes it, looks up the pending row, swaps users.email,
 // clears the pending columns, and bumps token_version so every
-// session (including this one, if the user is signed in on the
+// session (including this one, if the user's signed in on the
 // new device) re-authenticates.
 //
-// We deliberately fire the POST automatically on mount so the
-// user lands on a finished page. No password re-entry is needed
-// here — proof-of-inbox-control IS the second factor, mirroring
-// the registration-verification flow.
+// Fires the POST automatically on mount so the user just lands on a
+// finished page. No password re-entry needed here, proof-of-inbox-control
+// IS the second factor, mirroring the registration-verification flow.
 
 const route  = useRoute()
 const router = useRouter()
@@ -43,7 +42,7 @@ async function confirm() {
     const body = await r.json().catch(() => ({}))
     if (!r.ok) throw new Error(body.error || t('auth.confirm_email.failed'))
     done.value = true
-    // Sign out locally — the server bumped token_version so the
+    // Sign out locally, the server already bumped token_version so the
     // current JWT is dead anyway. Best to drop it now so the next
     // navigation isn't a forced /login redirect from a 401.
     auth.clearSession()
@@ -88,7 +87,7 @@ onMounted(confirm)
   display: flex; align-items: center; justify-content: center;
   /* dvh: see LoginView for the iOS Safari rationale.
      vh first for pre-2022 browsers, dvh second so modern
-     browsers prefer it. */
+     browsers prefer it */
   min-height: 100vh;
   min-height: 100dvh;
   padding: 1.5rem;
@@ -98,7 +97,7 @@ onMounted(confirm)
   font-family: var(--font-display); font-size: 13px; font-weight: 700;
   letter-spacing: 0.3em; text-transform: uppercase; color: var(--text);
   margin-bottom: 2.5rem; display: flex; align-items: center;
-  /* No `gap` — see LoginView for the rationale. */
+  /* No `gap`, see LoginView for the rationale */
 }
 .confirm-mark span { color: var(--cyan); }
 .confirm-mark::before {

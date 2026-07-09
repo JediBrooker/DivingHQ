@@ -1,5 +1,5 @@
 <script setup>
-/* ScoreCorrectionModal — manager-amend on a finalised dive,
+/* ScoreCorrectionModal, manager-amend on a finalised dive,
  * extracted from ControlView.vue. Judge picker + new-score input
  * with a live trim-sum / dive-points preview; the PUT routes
  * through the HTTP outbox so a network blip can't lose the edit.
@@ -10,8 +10,8 @@
  * prefilled).
  *
  * State boundary: draft fields + preview are OWNED here. On save
- * the clicked history card (the `card` prop) is mutated in place
- * — same object the parent's history list renders — and `saved`
+ * the clicked history card (the `card` prop) is mutated in place,
+ * same object the parent's history list renders, and `saved`
  * tells the parent to refresh its audit strip.
  */
 import { ref, computed } from 'vue'
@@ -34,14 +34,14 @@ const correctReason = ref('')
 const correctBusy = ref(false)
 const correctErr = ref('')
 
-// Live preview for the correction modal — recomputes the trim
+// Live preview for the correction modal. Recomputes the trim
 // sum + dive points the moment the operator types a new score
 // so they see the impact before clicking Save.
 //
 // The trim follows the same rule the live scoring uses
 // (trimCount(numJudges)), and synchro pairs multiply by the WA
 // 0.6 factor. Returns null when the input is invalid so the
-// preview block hides cleanly until a usable score is in.
+// preview block hides cleanly until there's a usable score.
 const correctPreview = computed(() => {
   const card = props.card
   if (!card || !Array.isArray(card.scores) || !card.scores.length) return null
@@ -75,10 +75,10 @@ const correctPreview = computed(() => {
   const newPoints = newTrim * dd * factor
   const delta     = newPoints - oldPoints
 
-  // Flag when the edit changes which judge gets dropped — e.g.,
+  // Flag when the edit changes which judge gets dropped, e.g.
   // pulling a 9.0 down to 5.0 means a different score is now
-  // trimmed at the top end. Useful so the operator understands
-  // why the trim sum moved more than they'd expect.
+  // trimmed at the top end. Helps the operator understand why
+  // the trim sum moved more than they'd expect.
   const dropChanged = (() => {
     if (k <= 0) return false
     const oldSorted = [...oldScores].map((s, i) => ({ s, i }))
@@ -126,16 +126,17 @@ async function submitCorrection() {
   try {
     // Route through the outbox so a network blip during the
     // correction doesn't lose the operator's edit. Server-side
-    // idempotency (P4-2) makes a retry safe; the new schema
-    // columns (P4-1 + migration 054) record both clocks.
+    // idempotency (P4-2) makes a retry safe, and the new schema
+    // columns (P4-1 + migration 054) record both clocks. Worth
+    // double-checking these two line up if you touch either one.
     await queueAction({
       method: 'PUT',
       url: `/api/scores/${props.card.score_ids[correctJudgeIdx.value]}`,
       body: { score: newVal, reason: correctReason.value || null },
       actionType: 'score_correction',
     })
-    // Optimistic local update — the audit row + broadcast will
-    // catch up when drain() succeeds.
+    // Optimistic local update, the audit row + broadcast will
+    // catch up once drain() succeeds.
     props.card.scores[correctJudgeIdx.value] = newVal
     props.card.total = props.card.scores
       .reduce((a, b) => a + b, 0).toFixed(1)
@@ -230,7 +231,7 @@ async function submitCorrection() {
    this modal). The modal's 520px max-width now rides the
    BaseModal max-width prop (was .correct-modal). */
 
-/* Score-correction live preview — refreshes on every keystroke
+/* Score-correction live preview, refreshes on every keystroke
    so the operator can see the impact of the edit (trim-sum
    shift, dive-points delta) before clicking Save. */
 .correct-preview {

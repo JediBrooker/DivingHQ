@@ -1,38 +1,38 @@
 <script setup>
-/* SponsorLogosManager — multi-sponsor logo upload + reorder
+/* SponsorLogosManager: multi-sponsor logo upload + reorder
  * for a single meet.
  *
  * Backend: routes/events/sponsor-logos (added in migration 045
- * + commit dfd9c0b). The component is self-fetching — pass it
+ * plus commit dfd9c0b). The component is self-fetching, pass it
  * a `meetId` and it loads `/api/meets/:id/sponsor-logos`,
  * lets the user upload / reorder / edit / delete via the same
  * REST API, and re-fetches on every successful mutation.
  *
  * Used in two places:
- *   1. ManagerView Edit Meet modal (Phase 2 — this commit)
- *   2. Control Room ⋯ menu → "🎨 Sponsor branding…" (Phase 4)
+ *   1. ManagerView Edit Meet modal (Phase 2, this commit)
+ *   2. Control Room ⋯ menu → "Sponsor branding…" (Phase 4)
  *
  * Behaviour:
  *   • Drag-to-reorder via HTML5 drag-and-drop. Drop fires the
- *     /reorder endpoint which atomically renumbers slots.
+ *     /reorder endpoint wich atomically renumbers slots.
  *   • Inline edit of alt_text + link_url; saves on blur.
  *   • Click-the-trash button to delete; confirms inline.
  *   • Upload via a hidden <input type=file> triggered by the
  *     "+ Upload logo" button. Sends the raw binary as the
  *     POST body with the matching Content-Type and alt/link
- *     as query params. 1MB client-side cap as a guard rail —
+ *     as query params. 1MB client-side cap as a guard rail,
  *     the server enforces the real limit.
- *   • Rotation cadence slider (0-60s) writes to a separate
+ *   • Rotation cadence slider (0-60s) writes to a seperate
  *     /sponsor-rotation endpoint.
- *   • Optimistic UI on reorder + delete — the visible list
- *     updates instantly; an error rolls it back and shows
+ *   • Optimistic UI on reorder + delete: the visible list
+ *     updates instantly, an error rolls it back and shows
  *     a toast.
  *
  * Legacy fallback: if the API returns a single { legacy: true }
- * row, we render an explanatory banner explaining that the
- * sponsor was set via the old single-URL field on the meet,
- * with a button to "Replace with uploads" that drops the
- * legacy field on first successful upload.
+ * row, we render a banner explaining that the sponsor was set
+ * via the old single-URL field on the meet, with a button to
+ * "Replace with uploads" that drops the legacy field on first
+ * successful upload.
  */
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -131,7 +131,7 @@ async function onFilePicked(e) {
 }
 
 // =============================================================
-// Inline metadata edit — alt_text + link_url, save on blur.
+// Inline metadata edit: alt_text + link_url, save on blur.
 // =============================================================
 async function saveMeta(logo, patch) {
   if (!logo.id || logo.legacy) return
@@ -187,13 +187,13 @@ async function remove(logo) {
 }
 
 // =============================================================
-// Drag-to-reorder — HTML5 drag events, same pattern as the
+// Drag-to-reorder: HTML5 drag events, same pattern as the
 // diver-profile widget customize modal.
 // =============================================================
 function onDragStart(idx, e) {
   dragIndex.value = idx
   e.dataTransfer.effectAllowed = 'move'
-  // Required for Firefox — empty payload triggers the drag.
+  // Required for Firefox, empty payload triggers the drag.
   try { e.dataTransfer.setData('text/plain', String(idx)) } catch {}
 }
 function onDragOver(idx, e) {
@@ -234,7 +234,7 @@ async function onDrop(idx, e) {
 }
 
 // =============================================================
-// Rotation cadence — saves on the slider's `change` (mouse-up),
+// Rotation cadence: saves on the slider's `change` (mouse-up),
 // not `input` (every drag tick), so we don't hammer the server.
 // =============================================================
 async function saveRotation(e) {
@@ -279,9 +279,9 @@ async function saveRotation(e) {
       </button>
     </div>
 
-    <!-- Legacy fallback banner. When the meet has only the old
-         single-URL sponsor field (no uploads yet), explain it
-         and offer the upload affordance. -->
+    <!-- Legacy fallback banner: heads up, when the meet only has
+         the old single-URL sponsor field (no uploads yet), explain
+         that and offer the upload affordance. -->
     <div v-if="hasLegacy" class="sl-legacy">
       <div class="sl-legacy-row">
         <img v-if="logos[0].image_url"
@@ -467,7 +467,7 @@ async function saveRotation(e) {
   font-size: 14px;
   text-align: center;
   user-select: none;
-  /* Touch-friendly target — the drag handle is the only column
+  /* Touch-friendly target: the drag handle is the only column
      that initiates the drag, so keep it tappable on phones too. */
   min-width: 32px; min-height: 32px;
   display: flex; align-items: center; justify-content: center;
@@ -535,7 +535,7 @@ async function saveRotation(e) {
 }
 
 @media (max-width: 600px) {
-  /* Stack the row contents vertically on phones — the inline
+  /* Stack the row contents vertically on phones: the inline
      three-column "fields" grid can't fit a 360px viewport. */
   .sl-row {
     grid-template-columns: 24px 56px 1fr;

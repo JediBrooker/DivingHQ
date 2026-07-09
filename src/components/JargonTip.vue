@@ -3,7 +3,7 @@
  *
  * Wraps any short term in a dotted-underline span; hovering /
  * focusing it shows a definition tooltip. The glossary lives in
- * @/lib/glossary.js — a known-term miss is fine (component falls
+ * @/lib/glossary.js, so a known-term miss is fine (component falls
  * back to whatever was passed via the `define` prop, or just
  * shows the term verbatim with no tooltip if neither is given).
  *
@@ -14,7 +14,7 @@
  *   <JargonTip term="balk" define="A diver starts the takeoff but stops…" />
  *
  * The slot, if any, becomes the visible label; otherwise the
- * term itself is rendered. Tooltip text comes from `define` or
+ * term itself gets rendered. Tooltip text comes from `define` or
  * the glossary lookup.
  */
 import { computed, ref } from 'vue'

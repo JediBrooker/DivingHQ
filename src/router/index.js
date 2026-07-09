@@ -39,7 +39,7 @@ const routes = [
   },
   {
     // Step 2 of the self-service email change (Migration 044).
-    // Public route — the token in the query string is the
+    // Public route, the token in the query string is the
     // credential. The view auto-posts on mount, swaps the user's
     // email server-side, and bounces them to /login since the
     // confirm bumps token_version (kills every active session).
@@ -63,17 +63,18 @@ const routes = [
   },
   {
     // Stripe Checkout sends every payer back here (?status=paid|canceled,
-    // ?flow=<subject>) — the one place that always confirms what happened.
+    // ?flow=<subject>). FYI this is the one place that always confirms
+    // what happened.
     path: '/payments/return',
     component: () => import('@/views/PaymentReturnView.vue'),
     meta: { requiresAuth: true, appShell: true },
   },
   {
-    // First-run setup wizard — guides a brand-new org admin
-    // through creating a club, sharing the invite link, and
-    // opening Meet Manager. DashboardView auto-redirects here
-    // for fresh accounts; the wizard itself bounces back if
-    // already completed (localStorage stamp).
+    // First-run setup wizard: guides a brand-new org admin through
+    // creating a club, sharing the invite link, and opening Meet
+    // Manager. DashboardView auto-redirects here for fresh accounts;
+    // the wizard itself bounces back if already completed (localStorage
+    // stamp).
     path: '/setup',
     component: () => import('@/views/SetupWizardView.vue'),
     meta: { requiresAuth: true, requiresRole: ['org_admin'] },
@@ -112,8 +113,8 @@ const routes = [
   },
   {
     // Context-adaptive: club admins manage, coaches see rosters, divers
-    // see their own enrolment. No role restriction — the view decides
-    // what to show for the signed-in user.
+    // see their own enrolment. No role restriction here, the view
+    // decides what to show for the signed-in user.
     path: '/classes',
     component: () => import('@/views/ClassesView.vue'),
     meta: { requiresAuth: true, appShell: true },
@@ -135,7 +136,7 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['coach'], appShell: true },
   },
   {
-    // Coach-on-behalf-of dive list editor — Phase 2 of the coach
+    // Coach-on-behalf-of dive list editor, Phase 2 of the coach
     // feature bundle. Lets a coach submit / edit dive lists for
     // any of their linked divers for a given event.
     path: '/coach/dive-lists/:event_id',
@@ -144,11 +145,12 @@ const routes = [
   },
   {
     path: '/control',
-    // Control Room — the Stage-Rail multi-event ControlViewV2 is now the
-    // only Control Room (the legacy all-in-one ControlView was removed at
-    // cutover). It runs the meet-day board: a top event bar, the three
-    // columns (History · pools · Standings), concurrent live pools with
-    // per-pool controllers + meet-day tools, and an advisory operator lease.
+    // Control Room: the Stage-Rail multi-event ControlViewV2 is now the
+    // only Control Room (the legacy all-in-one ControlView was removed
+    // at cutover). It runs the meet-day board: a top event bar, the
+    // three columns (History · pools · Standings), concurrent live
+    // pools with per-pool controllers + meet-day tools, and an advisory
+    // operator lease.
     component: () => import('@/views/ControlViewV2.vue'),
     meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager', 'referee'], appShell: true },
   },
@@ -158,11 +160,11 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['judge'] },
   },
   {
-    // Judge Analysis — public transparency dashboard for any
-    // judge in the system. Anonymous spectators can land here
-    // from a scoreboard / meet page and verify whether a panel
-    // member's calls trend with a country / club / etc — same
-    // public-by-default stance as /profile/:id for divers.
+    // Judge Analysis: public transparency dashboard for any judge in
+    // the system. Anonymous spectators can land here from a scoreboard
+    // / meet page and verify whether a panel member's calls trend with
+    // a country / club / etc, same public-by-default stance as
+    // /profile/:id for divers.
     //
     // /judge-profile        → owner's own analysis (auth required)
     // /judge-profile/:id    → public profile for that judge
@@ -171,16 +173,16 @@ const routes = [
     meta: { requiresAuthIfNoId: true },
   },
   {
-    // Public judge directory — paginated browse + search across
-    // every active org's judges. Open to anonymous viewers as a
-    // discovery surface for the public Judge Analysis pages.
+    // Public judge directory: paginated browse + search across every
+    // active org's judges. Open to anonymous viewers as a discovery
+    // surface for the public Judge Analysis pages.
     path: '/judges',
     component: () => import('@/views/JudgeDirectoryView.vue'),
   },
   {
-    // Unified live + archive surface — the old /archive route
-    // was retired once this view absorbed both browse-completed-
-    // meets and live-broadcast modes.
+    // Unified live + archive surface. The old /archive route was
+    // retired once this view absorbed both browse-completed-meets
+    // and live-broadcast modes.
     //
     // /scoreboard            → list mode (browse meets)
     // /scoreboard/:eventId   → detail mode (deep-link to one meet)
@@ -190,35 +192,35 @@ const routes = [
     meta: { appShell: true },
   },
   {
-    // Judge Analysis — public-accessible landing surface that
-    // composes the per-event ranking matrix (By Event) and the
-    // public judge directory (By Judge). Shell for signed-in
-    // users, standalone for the public — same stance as
-    // /scoreboard (no requiresAuth; appShell flips the CRM shell).
+    // Judge Analysis: public-accessible landing surface that composes
+    // the per-event ranking matrix (By Event) and the public judge
+    // directory (By Judge). Shell for signed-in users, standalone for
+    // the public, same stance as /scoreboard (no requiresAuth; appShell
+    // flips the CRM shell).
     path: '/judge-analysis',
     component: () => import('@/views/JudgeAnalysisView.vue'),
     meta: { appShell: true },
   },
   {
-    // Results Archive — public, read-only browse of historical
-    // results mined from DiveRecorder Meet Explorer into the dr_*
-    // tables. Same public/appShell stance as /scoreboard.
+    // Results Archive: public, read-only browse of historical results
+    // mined from DiveRecorder Meet Explorer into the dr_* tables. Same
+    // public/appShell stance as /scoreboard.
     path: '/results-archive',
     component: () => import('@/views/DrArchiveExplorer.vue'),
     meta: { appShell: true },
   },
   {
-    // Multi-event broadcast — one display, every currently-Live
-    // event side by side. Auto-grids by event count (1 fills the
-    // screen, 2 splits horizontally, 3-4 form a 2×2 …). Refreshes
-    // its event list every 30s so newly-Live events join the
-    // grid without an operator action.
+    // Multi-event broadcast: one display, every currently-Live event
+    // side by side. Auto-grids by event count (1 fills the screen, 2
+    // splits horizontally, 3-4 form a 2×2 …). Refreshes its event list
+    // every 30s so newly-Live events join the grid without an operator
+    // action.
     path: '/broadcast/all',
     component: () => import('@/views/MultiBroadcastView.vue'),
   },
   {
-    // Public meet landing page — meet metadata + every event
-    // grouped by status. Each event card jumps into /scoreboard.
+    // Public meet landing page: meet metadata + every event grouped
+    // by status. Each event card jumps into /scoreboard.
     path: '/meet/:id',
     component: () => import('@/views/MeetView.vue'),
   },
@@ -255,7 +257,7 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'] },
   },
   {
-    // /profile/:id is a PUBLIC profile page — anonymous spectators
+    // /profile/:id is a PUBLIC profile page, anonymous spectators
     // landing here from a scoreboard diver-link should see the
     // diver's competitive history without being bounced to /login.
     // /profile (no id) means "my profile" and still needs a session;
@@ -277,29 +279,29 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'] },
   },
   {
-    // Federation-wide audit log — three tabs: recent activity,
-    // score corrections, role changes. Org-admin gated; sysadmin
-    // passes the same gate (the API enforces org scope) and gets
-    // an extra "all orgs" filter inside the view.
+    // Federation-wide audit log, three tabs: recent activity, score
+    // corrections, role changes. Org-admin gated; sysadmin passes the
+    // same gate (the API enforces org scope) and gets an extra "all
+    // orgs" filter inside the view.
     path: '/audit',
     component: () => import('@/views/AuditLogView.vue'),
     meta: { requiresAuth: true, requiresRole: ['org_admin'], appShell: true },
   },
   {
-    // Notifications inbox — every push notification + in-app
-    // banner sent to the signed-in user. Available to any
-    // authenticated user (each row is scoped server-side).
+    // Notifications inbox: every push notification + in-app banner
+    // sent to the signed-in user. Available to any authenticated user
+    // (each row is scoped server-side).
     path: '/inbox',
     component: () => import('@/views/InboxView.vue'),
     meta: { requiresAuth: true, appShell: true },
   },
   {
-    // Diver meet-day view — focused phone-deck experience for
-    // an athlete mid-competition. Shows their next dive, queue
-    // position, current rank, and what they need to score for
-    // gold/silver/bronze. Powered by /api/events/:id/me-meet-day,
-    // which gates on competitor_dive_lists membership so any
-    // diver entered in the event reaches it.
+    // Diver meet-day view: focused phone-deck experience for an
+    // athlete mid-competition. Shows their next dive, queue position,
+    // current rank, and what they need to score for gold/silver/bronze.
+    // Powered by /api/events/:id/me-meet-day, which gates on
+    // competitor_dive_lists membership so any diver entered in the
+    // event reaches it.
     path: '/me/meet/:eventId',
     component: () => import('@/views/MeetDayView.vue'),
     meta: { requiresAuth: true },
@@ -314,9 +316,8 @@ const routes = [
     meta: { requiresAuth: true, appShell: true },
   },
   {
-    // Cut 3 referee sign-off — the page where a referee types
-    // the 6-digit handoff code the meet manager generated on
-    // their device.
+    // Cut 3 referee sign-off, the page where a referee types the
+    // 6-digit handoff code the meet manager generated on thier device.
     path: '/sign-off-codes',
     component: () => import('@/views/SignOffCodeView.vue'),
     meta: { requiresAuth: true, requiresRole: ['referee', 'org_admin'] },
@@ -340,7 +341,7 @@ const router = createRouter({
 // origin path before honouring it (open-redirect guard).
 function bounceToLogin(to) {
   // Don't pass next when the user was already heading to /login
-  // (avoid loops) or to a guest-only entry point.
+  // (watch out for loops there) or to a guest-only entry point.
   if (to.path === '/login') return '/login'
   return {
     path: '/login',

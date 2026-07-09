@@ -1,8 +1,8 @@
 // API response contract tests for SPA-critical payloads.
 //
-// These are not business-flow tests. They pin the JSON shapes that
+// These aren't business-flow tests, they pin the JSON shapes that
 // frontend views assume exist, so route refactors fail before they
-// become undefined-property bugs in Vue components.
+// turn into undefined-property bugs in Vue components.
 
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");

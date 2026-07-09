@@ -1,9 +1,9 @@
 <script setup>
-// Org Admin tab panel. Lifted out of DashboardView so the
-// chunk loads only when the user activates this tab. Shared
-// CSS lives in src/styles/app.css (panel/, action-card/,
-// activity-/ etc.). Attention-card copy is composed (and
-// translated) by the parent and arrives ready to render.
+// Org Admin tab panel, lifted out of DashboardView so the chunk
+// only loads once the user actually activates this tab. Shared CSS
+// lives in src/styles/app.css (panel/, action-card/, activity- etc).
+// Attention-card copy is composed (and translated) by the parent
+// and arrives ready to render, we don't do any string-building here.
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { Calendar, MonitorPlay, UserCog, ScrollText, Building2, Users, Gavel } from '@lucide/vue'

@@ -1,4 +1,4 @@
-// routes/payments.js — payment endpoints (platform is merchant of record).
+// routes/payments.js: payment endpoints (platform is merchant of record).
 //
 // Fee configuration, diver/member/club checkout, refunds, and the payout
 // ledger. Every charge lands on the PLATFORM's own Stripe account (PR #94
@@ -9,8 +9,8 @@
 // lib/fee-pricing.js for the price + fee math.
 //
 // Factory pattern (matches the other route modules). The Stripe webhook
-// lives in routes/stripe-webhook.js — it needs the raw body, so it
-// can't share this JSON-parsed router.
+// lives in routes/stripe-webhook.js, it needs the raw body, so it can't
+// share this JSON-parsed router.
 //
 // Auth model:
 //   * Onboarding + membership-fee config → org_admin of that org.
@@ -38,7 +38,7 @@ function validatePrices(prices) {
   const out = [];
   for (const p of prices) {
     const amount = Number(p.amount_cents);
-    // Minimum 1.00: a 0 (or sub-minimum) variant is never chargeable —
+    // Minimum 1.00: a 0 (or sub-minimum) variant is never chargeable.
     // Stripe refuses tiny charges, and a blank editor row silently parsed
     // to 0 would win "cheapest applicable price" for EVERYONE. Free things
     // are modelled by not configuring a fee at all, not by a 0 price.
@@ -105,10 +105,10 @@ module.exports = function createPaymentsRouter({
   // Renewable purchases (membership, club affiliation/accreditation,
   // official accreditation): migration 080 narrowed their one-live indexes
   // to pending-only so year-2 renewals aren't blocked forever by year-1's
-  // paid row. "Don't accidentally buy twice" therefore lives here: buying
-  // is refused while an active grant is more than this many days from
-  // expiry; inside the window a purchase is a RENEWAL and the webhook
-  // extends the grant from the current period_end (no paid-for days lost).
+  // paid row. "Don't accidentally buy twice" lives here, then: buying is
+  // refused while an active grant is more than this many days from expiry;
+  // inside the window a purchase is a RENEWAL and the webhook extends the
+  // grant from the current period_end (no paid-for days lost).
   const RENEWAL_WINDOW_DAYS = 30;
 
   // 409 when an active grant makes this purchase premature. `sql` must
@@ -127,8 +127,8 @@ module.exports = function createPaymentsRouter({
   }
 
   // Roles an official can be accredited for. Matches fee_definitions.role_type
-  // (migration 067) and the org_roles the app issues. Allowlisted so a fee or
-  // checkout can't be created for an arbitrary role string.
+  // (migration 067) and the org_roles the app issues. Allowlisted, so a fee
+  // or checkout can't be created for an arbitrary role string.
   const OFFICIAL_ROLES = ["judge", "referee", "coach", "meet_manager"];
 
   // Entry-penalty kinds. The scope/subject_type IS the kind. Admin-issued
@@ -215,9 +215,9 @@ module.exports = function createPaymentsRouter({
 
   // Upsert a single active fee_definition (+ replace its price variants)
   // for an (org, scope, + entity/qualifier tuple). The identity tuple is
-  // (org, scope, event_id, meet_id, club_id, role_type, discipline, tier)
-  // — matching Migration 067's unique index — so e.g. one event can carry
-  // a separate entry fee per discipline, and one org a separate membership
+  // (org, scope, event_id, meet_id, club_id, role_type, discipline, tier),
+  // matching Migration 067's unique index, so e.g. one event can carry a
+  // separate entry fee per discipline, and one org a separate membership
   // fee per tier. Runs in one transaction. Returns feeId.
   async function upsertFee({
     orgId, scope, name, body, cleanPrices,
@@ -298,7 +298,7 @@ module.exports = function createPaymentsRouter({
   // event deadline (entries close / dive list locks) is reached. Returns
   // { feeId, surchargeCents, applies, trigger, triggerAt } or null when no
   // late fee exists. `applies` requires the event to actually carry the
-  // trigger timestamp and now to be at/after it — mirroring the deadline
+  // trigger timestamp and now to be at/after it, mirroring the deadline
   // check in routes/coach.js.
   async function resolveLateFee(db, eventId) {
     const r = await db.query(
@@ -325,13 +325,13 @@ module.exports = function createPaymentsRouter({
   // pending payment, and opens a Checkout Session on the federation's
   // connected account. An optional `surchargeCents` (the late-entry fee)
   // is added to the resolved base price before the platform-fee math, so
-  // the whole charge — base + surcharge — flows through one payment and
+  // the whole charge (base + surcharge) flows through one payment and
   // DivingHQ's cut applies to the total. Returns { url, paymentId } or throws.
   async function startCheckout({ req, org, fee, prices, subjectType, eventId, meetId = null, productName, successUrl, cancelUrl, surchargeCents = 0, subjectUserId = null }) {
     const userId = req.user.id;
     const beneficiaryId = subjectUserId || userId;
     const member = await isActiveMember(pool, org.id, beneficiaryId);
-    // A payer buying membership isn't a member yet — resolve at the
+    // A payer buying membership isn't a member yet, so resolve at the
     // 'all' tier; entry checkout is member-aware.
     const chosen = resolvePrice(prices, { isMember: subjectType === "membership" ? false : member });
     if (!chosen) {
@@ -363,7 +363,7 @@ module.exports = function createPaymentsRouter({
     });
 
     // If a late surcharge now applies, retire any stale pending payment that
-    // was opened (and priced) BEFORE the deadline — otherwise the diver could
+    // was opened (and priced) BEFORE the deadline. Otherwise the diver could
     // return to that cheaper, still-valid Checkout session and dodge the
     // surcharge. Expire its Stripe session and free the one-live-payment slot
     // so the fresh, correctly-priced row can be inserted. Same-priced pending
@@ -447,7 +447,7 @@ module.exports = function createPaymentsRouter({
       await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
       return { url: session.url, paymentId };
     } catch (err) {
-      // Stripe failed after we inserted the row — release the slot.
+      // Stripe failed after we inserted the row, so release the slot.
       await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
       throw err;
     }
@@ -457,7 +457,7 @@ module.exports = function createPaymentsRouter({
   // federation an affiliation/accreditation fee. payer_type='club' with
   // no payer_user_id, so this can't reuse startCheckout (which is the
   // member-aware individual path). The connected account is still the
-  // federation's — the club pays the federation, DivingHQ skims its cut.
+  // federation's, the club pays the federation and DivingHQ skims its cut.
   async function startClubCheckout({ req, org, club, fee, prices, kind }) {
     const chosen = resolvePrice(prices, { isMember: false });
     if (!chosen) {
@@ -649,7 +649,7 @@ module.exports = function createPaymentsRouter({
 
   // The entrant pays an owed scratch/no-show charge. Unlike the other
   // checkouts the amount is the SNAPSHOT taken at issuance (entry_charges
-  // .amount_cents), not a re-resolved price — the debit is fixed when issued.
+  // .amount_cents), not a re-resolved price: the debit is fixed when issued.
   // Links the new payment back onto the charge; the webhook marks it paid.
   async function startChargeCheckout({ req, org, charge, fee }) {
     const userId = req.user.id;
@@ -717,8 +717,8 @@ module.exports = function createPaymentsRouter({
 
   // A signed-in supporter donates a chosen amount to the federation. The
   // amount is buyer-picked (a preset or custom), not a fixed fee_price, so
-  // this doesn't resolve a price. No one-live guard — repeat donations are
-  // fine.
+  // this doesn't resolve a price. No one-live guard here, repeat donations
+  // are fine.
   async function startDonationCheckout({ req, org, fee, amountCents }) {
     const userId = req.user.id;
     const currency = fee.currency || org.default_currency;
@@ -876,7 +876,7 @@ module.exports = function createPaymentsRouter({
 
   // Federation starts (or resumes) Stripe-hosted payout onboarding. Creates
   // a recipient connected account on first call, then returns a fresh
-  // onboarding link. Bank details live at Stripe — never in our DB.
+  // onboarding link. Bank details live at Stripe, never in our DB.
   router.post("/api/orgs/:id/connect/onboard", requireOrgRole(["org_admin"]), async (req, res) => {
     if (!ensurePayments(res)) return;
     const orgId = req.params.id;
@@ -921,9 +921,9 @@ module.exports = function createPaymentsRouter({
   });
 
   // Federation saves its automatic-withdrawal preference. Savable any time
-  // (even in coming-soon mode) so it's ready when payments go live — the
-  // auto-payout job reads these columns then. A threshold (minor units) is
-  // required when enabled.
+  // (even in coming-soon mode) so it's ready when payments go live, since
+  // the auto-payout job reads these columns then. A threshold (minor units)
+  // is required when enabled.
   router.put("/api/orgs/:id/withdrawal-settings", requireOrgRole(["org_admin"]), async (req, res) => {
     const orgId = req.params.id;
     if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
@@ -957,7 +957,7 @@ module.exports = function createPaymentsRouter({
     }
   });
 
-  // Federation's withdrawal (payout) history — most recent first.
+  // Federation's withdrawal (payout) history, most recent first.
   router.get("/api/orgs/:id/withdrawals", requireOrgRole(["org_admin"]), async (req, res) => {
     const orgId = req.params.id;
     if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
@@ -977,7 +977,7 @@ module.exports = function createPaymentsRouter({
   // Federation withdraws its owed balance. lib/payout-ledger locks the org
   // row so two concurrent requests can't over-withdraw, books one pending
   // payout PER CURRENCY, then fires the real Stripe transfer to the org's
-  // recipient account — success settles to 'paid', any Stripe error to
+  // recipient account: success settles to 'paid', any Stripe error to
   // 'failed' (balance auto-restores). No operator step, no bank details.
   router.post("/api/orgs/:id/withdrawals", requireOrgRole(["org_admin"]), async (req, res) => {
     if (!ensurePayments(res)) return;
@@ -1186,11 +1186,11 @@ module.exports = function createPaymentsRouter({
       // the trigger, NOT by audience tiers or price windows. Force the
       // stored variant to audience 'all' with no window so it can never be
       // silently suppressed at resolve time (resolveLateFee resolves with
-      // isMember:false at now — a 'member'/windowed variant would vanish and
-      // the diver would dodge the surcharge).
+      // isMember:false at now, so a 'member'/windowed variant would vanish
+      // and the diver would dodge the surcharge).
       const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
-      // Keep the surcharge in the SAME currency as the base entry fee — they
-      // are summed into one charge at checkout. Inherit it when a base fee
+      // Keep the surcharge in the SAME currency as the base entry fee, they
+      // get summed into one charge at checkout. Inherit it when a base fee
       // exists so the two can never diverge.
       const baseCurrency = (await pool.query(
         "SELECT currency FROM fee_definitions WHERE event_id = $1 AND scope = 'event_entry' AND active LIMIT 1",
@@ -1246,7 +1246,7 @@ module.exports = function createPaymentsRouter({
     const v = validatePrices(body.prices);
     if (v.error) return res.status(400).json({ error: v.error });
     try {
-      // Flat penalty (audience 'all', no window) — like late fees, a
+      // Flat penalty (audience 'all', no window). Like late fees, a
       // member/windowed variant would silently vanish at resolve time.
       const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
       const feeId = await upsertFee({
@@ -1386,8 +1386,8 @@ module.exports = function createPaymentsRouter({
   // event_id) and idx_payments_one_live_meet_entry guards the slot. The
   // control-room roster counts a paid meet registration as covering every
   // event of the meet. The fee could be CONFIGURED and DISPLAYED since PR
-  // #83, but no endpoint existed to actually pay it — the UI showed a
-  // permanently disabled Pay button.
+  // #83, but no endpoint existed to actually pay it, so the UI just showed
+  // a permanently disabled Pay button.
   router.post("/api/meets/:id/checkout", verifyToken, async (req, res) => {
     if (!ensurePayments(res)) return;
     const meetId = req.params.id;
@@ -1436,7 +1436,7 @@ module.exports = function createPaymentsRouter({
   // Meet-level purchases a signed-in buyer makes. Federation sets a flat
   // price per kind; the buyer pays the federation. One purchase per buyer
   // per meet per kind (multi-quantity is a later feature). NOTE: requires a
-  // signed-in buyer — anonymous/guest checkout would need a new payer type.
+  // signed-in buyer, anonymous/guest checkout would need a new payer type.
 
   // Federation sets/updates a meet access fee for one kind.
   router.put("/api/meets/:id/access-fee", requireMeetEditor, async (req, res) => {
@@ -1456,7 +1456,7 @@ module.exports = function createPaymentsRouter({
       }
       const v = validatePrices(body.prices);
       if (v.error) return res.status(400).json({ error: v.error });
-      // Flat price (audience 'all', no window) — access isn't member-tiered.
+      // Flat price (audience 'all', no window): access isn't member-tiered.
       const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
       const feeId = await upsertFee({
         orgId, scope: body.kind, meetId,
@@ -1784,7 +1784,7 @@ module.exports = function createPaymentsRouter({
   });
 
   // Diver-facing: what would membership (optionally a given tier) cost me?
-  // Mirrors GET /api/events/:id/fee — resolved price, no admin gate.
+  // Mirrors GET /api/events/:id/fee: resolved price, no admin gate.
   router.get("/api/orgs/:id/membership", optionalAuth, async (req, res) => {
     const orgId = req.params.id;
     try {
@@ -1968,7 +1968,7 @@ module.exports = function createPaymentsRouter({
 
   // Insert a pending payment into a one-live slot; when an earlier attempt
   // blocks it (23505 on the partial unique index), RESUME that attempt's
-  // still-open Stripe session — same URL, same price — or retire a dead one
+  // still-open Stripe session (same URL, same price) or retire a dead one
   // and retry the insert once. Only a genuinely PAID blocker keeps the 409.
   // Before this, an abandoned checkout dead-ended the payer behind a 409
   // for up to 24 hours (Checkout's default session lifetime) with no
@@ -2072,7 +2072,7 @@ module.exports = function createPaymentsRouter({
     }
   });
 
-  // The person's own fines — ALL of them, not just the payable ones, so
+  // The person's own fines, ALL of them, not just the payable ones, so
   // appeal outcomes are visible (a dismissed appeal used to silently revert
   // to 'owed' and an upheld one silently vanished from this list).
   router.get("/api/me/fines", verifyToken, async (req, res) => {
@@ -2103,7 +2103,7 @@ module.exports = function createPaymentsRouter({
       if (!f) return res.status(404).json({ error: "Fine not found" });
       if (f.liable_user_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
       if (f.status !== "owed") return res.status(409).json({ error: `Cannot appeal a fine that is ${f.status}.` });
-      // Don't let an appeal race an in-flight checkout — retire it, or block
+      // Don't let an appeal race an in-flight checkout, retire it, or block
       // the appeal if the payment already settled (or Stripe is unreachable).
       const outcome = await retireInFlightFinePayment(f);
       if (retireBlocked(res, outcome, "This fine has already been paid.")) return;
@@ -2113,7 +2113,7 @@ module.exports = function createPaymentsRouter({
       );
       if (!upd.rowCount) {
         // The fine left 'owed' between our read and this write (e.g. the
-        // webhook just settled it) — report reality, not a phantom appeal.
+        // webhook just settled it), so report reality, not a phantom appeal.
         const fresh = (await pool.query("SELECT status FROM fines WHERE id = $1", [req.params.id])).rows[0];
         return res.status(409).json({ error: `Cannot appeal a fine that is ${fresh?.status || "gone"}.` });
       }
@@ -2155,7 +2155,7 @@ module.exports = function createPaymentsRouter({
         entity_type: "fine", entity_id: f.id,
         action: "fine.appeal_decided", metadata: { decision, new_status: newStatus },
       }).catch(() => {});
-      // The fined person learns the outcome — dismissed silently reverting
+      // The fined person learns the outcome. Dismissed silently reverting
       // to 'owed' (or upheld silently vanishing) was invisible before.
       email?.sendAppealDecisionEmail?.(req.params.id, decision);
       return res.json({ status: newStatus, appeal_status: decision });
@@ -2221,7 +2221,7 @@ module.exports = function createPaymentsRouter({
 
   // ---- Club affiliation / accreditation fees ----------------------
   // The FEDERATION (org_admin) sets the price its clubs pay; the CLUB
-  // (requireClubAdmin — org_admin of the club's org OR a club_admins row)
+  // (requireClubAdmin: org_admin of the club's org OR a club_admins row)
   // pays it. One org-wide fee per kind (club_id NULL) for this first cut;
   // the schema also allows per-club overrides.
 
@@ -2238,7 +2238,7 @@ module.exports = function createPaymentsRouter({
     if (v.error) return res.status(400).json({ error: v.error });
     try {
       const scope = clubScope(body.kind);
-      // A club fee is a single FLAT price — the payer is a CLUB, never a
+      // A club fee is a single FLAT price, the payer is a CLUB, never a
       // "member", so audience tiers / time windows are meaningless and would
       // only let the fee silently vanish at resolve time (resolveClubFee
       // resolves isMember:false at now). Force audience 'all', no window.
@@ -2342,7 +2342,7 @@ module.exports = function createPaymentsRouter({
     const v = validatePrices(body.prices);
     if (v.error) return res.status(400).json({ error: v.error });
     try {
-      // A flat per-role price (audience 'all', no window) — accreditation
+      // A flat per-role price (audience 'all', no window). Accreditation
       // isn't member-tiered, and a member/windowed variant would silently
       // vanish at resolve time (resolveOfficialFee resolves isMember:false).
       const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
@@ -2666,7 +2666,7 @@ module.exports = function createPaymentsRouter({
       if (charge.status !== "owed") {
         return res.status(409).json({ error: `Cannot waive a charge that is ${charge.status}.` });
       }
-      // Kill any in-flight checkout for this charge BEFORE waiving — otherwise
+      // Kill any in-flight checkout for this charge BEFORE waiving, otherwise
       // the entrant could complete a still-valid Stripe session and pay a
       // debit that's been waived (money captured, charge says 'waived', no
       // refund). lib/payment-lifecycle closes both races: the webhook
@@ -2715,7 +2715,7 @@ module.exports = function createPaymentsRouter({
     }
   });
 
-  // A member's own payment history — every payment they made (club-paid
+  // A member's own payment history: every payment they made (club-paid
   // rows are excluded; those belong to club billing). Read-only; drives the
   // Payment History page + its CSV/PDF export. Returns raw fields so the SPA
   // localises the description/status client-side (fully i18n).
@@ -2806,20 +2806,20 @@ module.exports = function createPaymentsRouter({
   // ---- Refunds -----------------------------------------------------
 
   // Refund a payment on the platform account (DivingHQ is the merchant of
-  // record). There's no Stripe fee reversal — the platform's cut lives in our
+  // record). There's no Stripe fee reversal, the platform's cut lives in our
   // payout ledger, so a refund just reduces what the federation/club is owed
   // (the balance query prorates the retained fee on partial refunds). Omit
   // amount_cents for a full refund.
   //
   // Authorisation is per-RECIPIENT, not a blanket org gate: class-enrolment
-  // money belongs to the CLUB (club-private model, PR #98/#100), so only that
-  // club's admins — not the federation — may refund it; every org-recipient
-  // payment needs org_admin/meet_manager in the payment's org. Sysadmin
-  // passes both.
+  // money belongs to the CLUB (club-private model, PR #98/#100), so only
+  // that club's admins (not the federation) may refund it; every org-
+  // recipient payment needs org_admin/meet_manager in the payment's org.
+  // Sysadmin passes both.
   //
   // The payment row is locked FOR UPDATE for the whole operation (including
   // the Stripe call) so two concurrent refund requests can't both read the
-  // same refunded_amount and pay the money out twice — the second waits,
+  // same refunded_amount and pay the money out twice: the second waits,
   // re-reads, and is capped/refused against the updated row.
   router.post("/api/payments/:id/refund", verifyToken, async (req, res) => {
     if (!ensurePayments(res)) return;
@@ -2877,7 +2877,7 @@ module.exports = function createPaymentsRouter({
         currency: p.currency,
       });
 
-      // refund.amount is in STRIPE minor units — convert back to the
+      // refund.amount is in STRIPE minor units, convert back to the
       // app's uniform hundredths before it touches the ledger.
       const refundAmountCents = refund.amount != null
         ? fromStripeAmount(p.currency, refund.amount)
@@ -2892,7 +2892,7 @@ module.exports = function createPaymentsRouter({
         [status, refunded, paymentId],
       );
       // Full refunds roll back what the payment granted (reopen debts,
-      // revoke entitlements) — one shared implementation with the webhook.
+      // revoke entitlements), one shared implementation with the webhook.
       if (status === "refunded") {
         await applyFullRefundSideEffects(client, p.stripe_payment_intent);
       }

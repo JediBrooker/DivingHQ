@@ -1,9 +1,9 @@
-// Super Final — synchro reserve replacement (Appendix 3 §5.1).
+// Super Final, synchro reserve replacement (Appendix 3 §5.1).
 //
 // Phase 3d e2e: build a 12-diver Super Final + a synchro_pair
 // event at the SAME meet, withdraw a Top-12 individual, replace
-// from synchro pool, verify the replacement is now in the H2H
-// roster occupying the withdrawn diver's slot.
+// from the synchro pool, and verify the replacement ends up in
+// the H2H roster occupying the withdrawn diver's slot.
 
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
@@ -14,7 +14,7 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
   test.setTimeout(120_000);
 
   // ---- 6 federations × 2 individuals + 2 synchro pair divers
-  // each (24 individuals + 12 synchro divers across the 6 feds).
+  // each (24 individuals + 12 synchro divers across the 6 feds)
   const feds = [];
   for (let i = 0; i < 6; i++) {
     feds.push(await setup.createOrgAndAdmin(request, {
@@ -24,7 +24,7 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
   }
   const fedHost = feds[0];
 
-  // 2 individuals per fed = 12.
+  // 2 individuals per fed = 12
   const individuals = [];
   for (let f = 0; f < feds.length; f++) {
     for (let i = 0; i < 2; i++) {
@@ -35,7 +35,7 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
       individuals.push({ ...u, fedIdx: f });
     }
   }
-  // 2 synchro divers per fed = 12.
+  // 2 synchro divers per fed = 12
   const synchroDivers = [];
   for (let f = 0; f < feds.length; f++) {
     for (let i = 0; i < 2; i++) {
@@ -47,16 +47,16 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
     }
   }
 
-  // ---- Create a meet via SQL (simpler than the API for a
-  // fixture; the API requires meet_manager role + we just need
-  // an id). meets table has org_id NOT NULL, name NOT NULL.
+  // ---- Create a meet via SQL, simpler than the API for a
+  // fixture since it requires the meet_manager role and we just
+  // need an id. meets table has org_id NOT NULL, name NOT NULL.
   const meetRes = await setup.pool.query(
     `INSERT INTO meets (org_id, name) VALUES ($1, $2) RETURNING id`,
     [fedHost.orgId, `E2E SR Meet ${setup.rand()}`],
   );
   const meetId = meetRes.rows[0].id;
 
-  // ---- Stop-1 final (parent of the Super Final H2H) at this meet.
+  // ---- Stop-1 final (parent of the Super Final H2H) at this meet ----
   const parent = await setup.createEvent(request, {
     adminToken: fedHost.adminToken,
     name: "E2E SR Parent",
@@ -67,7 +67,7 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
     meet_id: meetId,
   });
 
-  // 5-judge panel.
+  // 5-judge panel
   const judgeUserIds = [];
   for (let j = 0; j < 5; j++) {
     const ju = await setup.insertUser({ orgId: fedHost.orgId, role: "judge", fullName: `Parent Judge ${j+1}` });
@@ -81,8 +81,8 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
   }
   const dive_id = await setup.pickDiveId({ height: 3.0, dive_code: "101", position: "B" });
 
-  // Score every individual + insert a 3-round dive list. Floor
-  // by global rank: rank 1 → 8.0, decreasing by 0.5.
+  // score every individual + insert a 3-round dive list, floor
+  // by global rank: rank 1 → 8.0, decreasing by 0.5 each step
   for (let rank = 1; rank <= individuals.length; rank++) {
     const d = individuals[rank - 1];
     await setup.insertDiveList({
@@ -108,18 +108,18 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
   await setup.setEventStatus(request, { adminToken: fedHost.adminToken, eventId: parent.id, status: "Live" });
   await setup.setEventStatus(request, { adminToken: fedHost.adminToken, eventId: parent.id, status: "Completed" });
 
-  // ---- Synchro_pair event at the same meet. ----
+  // ---- Synchro_pair event at the same meet ----
   const synchroEvent = await setup.createEvent(request, {
     adminToken: fedHost.adminToken,
     name: "E2E SR Synchro 3m",
     height: "3m",
-    number_of_judges: 9,           // synchro supports 7, 9 or 11
+    number_of_judges: 9,           // synchro allows 7, 9 or 11 judges
     total_rounds: 3,
     event_format: "final",
     event_type: "synchro_pair",
     meet_id: meetId,
   });
-  // Add a 9-judge panel.
+  // add a 9-judge panel
   const synchroJudges = [];
   for (let j = 0; j < 9; j++) {
     const ju = await setup.insertUser({ orgId: fedHost.orgId, role: "judge", fullName: `Synchro Judge ${j+1}` });
@@ -131,16 +131,17 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
       [synchroEvent.id, synchroJudges[j], j + 1],
     );
   }
-  // Insert synchro pair entries — partner_id pairs the two
+  // Insert synchro pair entries, partner_id links the two
   // divers. 6 pairs (one per fed). Score them so fed 0 ranks
-  // best (we'll withdraw a fed-1 diver, expect fed-0 synchro
-  // to be the top of the reserve pool — but fed-0 already has
-  // 2 individuals and is INELIGIBLE; fed-1's synchro is next).
+  // best. We'll withdraw a fed-1 diver, expect fed-0 synchro
+  // to be the top of the reserve pool, but fed-0 already has
+  // 2 individuals so it's INELIGIBLE, meaning fed-1's synchro
+  // is next.
   for (let f = 0; f < feds.length; f++) {
     const lead = synchroDivers[f * 2];
     const partner = synchroDivers[f * 2 + 1];
-    // Two roster rows per round (one for each diver) with
-    // partner_id linking them.
+    // two roster rows per round (one for each diver), with
+    // partner_id linking them
     for (let round = 1; round <= 3; round++) {
       await setup.pool.query(
         `INSERT INTO competitor_dive_lists
@@ -155,8 +156,8 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
         [synchroEvent.id, partner.userId, lead.userId, dive_id, round],
       );
     }
-    // Score: fed 0 → 8s, fed 1 → 7.5s, ..., fed 5 → 5.5s. Both
-    // pair members get the same scores.
+    // score: fed 0 → 8s, fed 1 → 7.5s, ..., fed 5 → 5.5s, both
+    // pair members get the same scores
     const score = Math.max(0.5, 8.0 - 0.5 * f);
     for (const cid of [lead.userId, partner.userId]) {
       for (let round = 1; round <= 3; round++) {
@@ -173,7 +174,7 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
   await setup.setEventStatus(request, { adminToken: fedHost.adminToken, eventId: synchroEvent.id, status: "Live" });
   await setup.setEventStatus(request, { adminToken: fedHost.adminToken, eventId: synchroEvent.id, status: "Completed" });
 
-  // ---- H2H event at the same meet. ----
+  // ---- H2H event at the same meet ----
   const h2h = await setup.createEvent(request, {
     adminToken: fedHost.adminToken,
     name: "E2E SR H2H",
@@ -192,21 +193,21 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
   const seed = await seedRes.json();
   expect(seed.seeded).toBe(12);
 
-  // ---- Pool listing ----
+  // ---- pool listing ----
   const poolRes = await request.get(
     `/api/events/${h2h.id}/synchro-reserve-pool`,
     { headers: { Authorization: `Bearer ${fedHost.adminToken}` } },
   );
   expect(poolRes.status()).toBe(200);
   const pool = await poolRes.json();
-  // Every fed has 2 individuals → all are at the cap → reserve
-  // pool should be empty.
+  // every fed has 2 individuals → all are at the cap → reserve
+  // pool should be empty
   expect(pool.reserve_pool).toEqual([]);
 
-  // Withdraw a fed-3 individual to free up the slot. Pick the
+  // Withdraw a fed-3 individual to free up the slot, picking the
   // first individual from fed 3 in the H2H bracket.
   const fed3IndIds = individuals.filter(d => d.fedIdx === 3).map(d => d.userId);
-  // Find the one currently in the H2H roster.
+  // find the one currently in the H2H roster
   const rosterRes = await setup.pool.query(
     `SELECT competitor_id FROM competitor_dive_lists
       WHERE event_id = $1 AND competitor_id = ANY($2::uuid[])
@@ -215,38 +216,38 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
   );
   expect(rosterRes.rows.length).toBe(1);
   const withdrawId = rosterRes.rows[0].competitor_id;
-  // Pre-mark withdrawn so the reserve pool sees fed 3 with only
-  // 1 individual remaining.
+  // pre-mark withdrawn so the reserve pool sees fed 3 with only
+  // 1 individual remaining
   await setup.pool.query(
     `UPDATE competitor_dive_lists SET withdrawn_at = NOW()
       WHERE event_id = $1 AND competitor_id = $2`,
     [h2h.id, withdrawId],
   );
 
-  // ---- Pool re-listing — fed 3 should now appear ----
+  // ---- pool re-listing, fed 3 should now appear ----
   const poolRes2 = await request.get(
     `/api/events/${h2h.id}/synchro-reserve-pool`,
     { headers: { Authorization: `Bearer ${fedHost.adminToken}` } },
   );
   const pool2 = await poolRes2.json();
   // fed 3 has 1 individual + 2 synchro divers → eligible.
-  // Synchro rank 4 (since fed 0 is best, fed 1 second, etc.).
-  // (More precisely: fed 0 = rank 1, fed 1 = rank 2, fed 2 = rank 3,
-  //  fed 3 = rank 4, fed 4 = rank 5, fed 5 = rank 6.)
+  // Synchro rank 4 here (fed 0 is best, fed 1 second, etc).
+  // (more precisely: fed 0 = rank 1, fed 1 = rank 2, fed 2 = rank 3,
+  //  fed 3 = rank 4, fed 4 = rank 5, fed 5 = rank 6)
   const fed3Entry = pool2.reserve_pool.find(p => p.org_id === feds[3].orgId);
   expect(fed3Entry).toBeTruthy();
   expect(fed3Entry.eligible_divers.length).toBeGreaterThanOrEqual(1);
 
-  // ---- Pre-restore the withdrawn flag (the actual replace
-  //      endpoint will re-stamp it). Easier than rebuilding the
-  //      bracket. ----
+  // ---- pre-restore the withdrawn flag (the actual replace
+  //      endpoint will re-stamp it anyway). Easier than rebuilding
+  //      the whole bracket. ----
   await setup.pool.query(
     `UPDATE competitor_dive_lists SET withdrawn_at = NULL
       WHERE event_id = $1 AND competitor_id = $2`,
     [h2h.id, withdrawId],
   );
 
-  // ---- Replace from synchro pool ----
+  // ---- replace from synchro pool ----
   const replacementId = fed3Entry.eligible_divers[0].competitor_id;
   const replaceRes = await request.post(
     `/api/events/${h2h.id}/replace-from-synchro`,
@@ -262,8 +263,8 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
   const replaceBody = await replaceRes.json();
   expect(replaceBody.replaced).toBe(true);
 
-  // ---- Verify roster: replacement has 3 rows in same slot,
-  //      withdrawn diver has withdrawn_at stamped on all 3. ----
+  // ---- verify roster: replacement has 3 rows in same slot,
+  //      withdrawn diver has withdrawn_at stamped on all 3 ----
   const verifyReplRes = await setup.pool.query(
     `SELECT COUNT(*) AS c, MIN(group_number) AS gn, MIN(display_order) AS d_order
        FROM competitor_dive_lists
@@ -284,6 +285,6 @@ test("super-final synchro reserve replacement: pool listing + swap", async ({ re
     expect(r.withdrawn_at).not.toBeNull();
   }
 
-  // ---- Cleanup ----
+  // ---- cleanup ----
   for (const fed of feds) await setup.deleteOrg(fed.orgId);
 });

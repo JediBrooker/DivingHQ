@@ -1,10 +1,10 @@
 -- =============================================================
--- MIGRATION 071 — CHARGE-SCOPED PENALTY PAYMENT UNIQUENESS
+-- MIGRATION 071, charge-scoped penalty payment uniqueness
 --
 -- Migration 070's idx_payments_one_live_entry_penalty was keyed on
 -- (event_id, payer_user_id, fee_definition_id). But a 'paid' payment is
 -- never freed, and upsertFee keeps ONE active scratch/no_show
--- fee_definition per event — so once an entrant paid one penalty, a
+-- fee_definition per event, so once an entrant paid one penalty, a
 -- re-issued penalty of the same kind (which idx_entry_charges_one_owed
 -- explicitly allows, since paid rows don't count) could never be paid: the
 -- INSERT collided with the old, still-'paid' payment.

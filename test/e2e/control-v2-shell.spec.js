@@ -1,6 +1,6 @@
-// ControlViewV2 shell — the top event bar lists every event and selecting
+// ControlViewV2 shell: the top event bar lists every event, and selecting
 // one focuses exactly one stage mode. ControlViewV2 is the only Control
-// Room now (the legacy ControlView was removed at cutover).
+// Room now (the legacy ControlView got removed at cutover).
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 

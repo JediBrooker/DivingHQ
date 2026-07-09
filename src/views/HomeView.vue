@@ -234,8 +234,8 @@ onMounted(() => {
 .nav-help:hover { background: var(--surface-hover); color: var(--fg); }
 .nav-help :deep(svg) { width: 18px; height: 18px; }
 @media (max-width: 640px) {
-  /* Nav CTAs are redundant with the hero CTAs on small screens —
-     drop them so the brand + theme + locale never overflow. */
+  /* Nav CTAs are redundant with the hero CTAs on small screens, so
+     drop them here so the brand + theme + locale never overflow. */
   .nav-right .btn { display: none; }
 }
 

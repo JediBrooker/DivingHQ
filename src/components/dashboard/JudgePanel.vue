@@ -25,8 +25,8 @@ const roundsJudges = (ev) => t('dashboard.judge_panel.rounds_judges', {
       :body="$t('dashboard.empty.judge_body')"
     />
 
-    <!-- Self-service Judge Analysis link — surfaces independently of
-         live assignments so a judge can review their tracking
+    <!-- Self-service Judge Analysis link, shows up independently of
+         live assignments so a judge can check their own tracking
          between meets. The metrics on /judge-profile compare each
          award against the panel-kept mean (post World Aquatics trim,
          PART FOUR Article 13). -->

@@ -14,7 +14,7 @@
 #     working against the new schema during the brief window
 #     between migrate and restart. If you ever ship a destructive
 #     migration (DROP COLUMN, RENAME), use a two-deploy dance
-#     instead — don't change this script.
+#     instead, don't change this script.
 #   * Health check at the end fails the deploy script (non-zero
 #     exit) if the service didn't actually come back up. CI / cron
 #     wrappers will see the failure.
@@ -24,17 +24,17 @@
 #   build / migrate / test steps are SKIPPED (nothing changed on
 #   the code side; running them would just be heat) but the pm2
 #   restart + health check STILL RUN. This lets `./deploy.sh`
-#   double as a "reload the running process" command — useful
+#   double as a "reload the running process" command, useful
 #   after editing .env files, rotating log directories, or
 #   bouncing the process for any reason. If you don't want the
 #   restart in this case, pass `--no-restart-if-noop`.
 #
 # Usage:
-#     ./deploy.sh                       — full deploy, fail closed on any error
-#     ./deploy.sh --skip-tests          — emergency hotfix path; tests skipped
-#     ./deploy.sh --no-restart-if-noop  — exit early if there are no new commits
+#     ./deploy.sh                       : full deploy, fail closed on any error
+#     ./deploy.sh --skip-tests          : emergency hotfix path; tests skipped
+#     ./deploy.sh --no-restart-if-noop  : exit early if there are no new commits
 #                                         (legacy behaviour from before May 2026)
-#     ./deploy.sh --dry                 — print every step, change nothing
+#     ./deploy.sh --dry                 : print every step, change nothing
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -60,9 +60,9 @@ done
 
 # ---- Helpers --------------------------------------------------
 step() { echo "[deploy] $(date -u +%FT%TZ) — $*"; }
-# run is called as `run cmd arg1 arg2 …` — each argument is a
+# run is called as `run cmd arg1 arg2 …`, each argument is a
 # separate token, no shell-string parsing. Previously this used
-# `eval "$@"` which worked because every call site passed a single
+# `eval "$@"` which worked becuase every call site passed a single
 # pre-split string, but eval-on-arguments is the kind of pattern
 # that quietly turns into a code-injection sink the day someone
 # adds an interpolated variable. Pass tokens, not strings.
@@ -84,13 +84,13 @@ step "starting deploy from ${PREV_SHA}"
 # --ff-only refuses non-fast-forward merges so a manually-edited
 # file on the box can't silently produce a merge commit.
 #
-# Auto-reset package-lock.json if it's the only dirty file. npm
-# install (sometimes run accidentally on the server, sometimes by
-# tools like pm2-logrotate) mutates the lockfile, which then
-# blocks `git pull --ff-only` even though no real edit was made.
-# We're strict about everything ELSE: any other dirty file means
-# someone made a real change on the box, and we refuse to pull
-# rather than silently lose it.
+# Auto-reset package-lock.json if it's the only dirty file (a bit
+# hacky, but it works). npm install (sometimes run accidentally on
+# the server, sometimes by tools like pm2-logrotate) mutates the
+# lockfile, which then blocks `git pull --ff-only` even though no
+# real edit was made. We're strict about everything ELSE: any
+# other dirty file means someone made a real change on the box,
+# and we refuse to pull rather than silently lose it.
 DIRTY="$(git status --porcelain | awk '{print $2}')"
 if [[ -n "$DIRTY" ]]; then
   if [[ "$DIRTY" == "package-lock.json" ]]; then
@@ -110,7 +110,7 @@ run git pull --ff-only
 
 NEW_SHA="$(git rev-parse --short HEAD)"
 # Detect the no-op case (pull was a fast-forward to the same SHA).
-# Dry-run never pulls, so HEAD won't have moved — we still want
+# Dry-run never pulls, so HEAD won't have moved, but we still want
 # to show every downstream step that WOULD have run, so don't
 # treat dry-run as a no-op.
 NOOP=0
@@ -127,7 +127,7 @@ fi
 
 # Steps 2-5 only run when there are NEW commits. With no new
 # commits the on-disk bundle, dependency tree, schema, and tests
-# are already what's running — re-running them would just be
+# are already what's running, so re-running them would just be
 # heat. We still fall through to the pm2 restart + health check
 # below so `./deploy.sh` can double as a "reload the running
 # process" command after .env / log-rotation / runtime tweaks.
@@ -143,14 +143,15 @@ if [[ $NOOP -eq 0 ]]; then
   # Build BEFORE migrate so a broken build doesn't leave the DB
   # advanced past code we can't ship.
   #
-  # Heap bump: the precompiled vue-i18n dictionaries (25 locales ×
-  # ~988 keys = 24,700 AST nodes baked into the bundle) push Vite's
-  # memory ceiling on small VPSes. The default Node heap (~512 MB
-  # on a 1 GB box) ran out partway through transforming
-  # socket.io-client during a 2026-05-18 deploy. 4 GB is generous
-  # headroom and only allocates lazily — the build process won't
-  # actually use it all unless the bundle keeps growing. Override
-  # via NODE_OPTIONS in the shell env if you want a different cap.
+  # Heap bump (gotcha we hit for real): the precompiled vue-i18n
+  # dictionaries (25 locales × ~988 keys = 24,700 AST nodes baked
+  # into the bundle) push Vite's memory ceiling on small VPSes. The
+  # default Node heap (~512 MB on a 1 GB box) ran out partway
+  # through transforming socket.io-client during a 2026-05-18
+  # deploy. 4 GB is generous headroom and only allocates lazily,
+  # the build process won't actually use it all unless the bundle
+  # keeps growing. Override via NODE_OPTIONS in the shell env if
+  # you want a different cap.
   step "npm run build"
   run env NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}" npm run build
 
@@ -179,18 +180,18 @@ if [[ $NOOP -eq 0 ]]; then
   #   * syntax.test.js       boot test + parse + schema_version pin
   #   * calc.test.js         World Aquatics scoring vs Postgres UDF
   #   * score-trim.test.js   trim-rule parity
-  # All three are valuable smoke tests — they catch the kind of
+  # All three are valuable smoke tests, they catch the kind of
   # regression a deploy would otherwise ship blind.
   #
   # For full integration coverage, run `npm test` against a
   # DEDICATED test database (createdb divinghq_test, point
-  # DB_DATABASE at it) — never against the production DB.
+  # DB_DATABASE at it), never against the production DB.
   if [[ $SKIP_TESTS -eq 0 ]]; then
-    # SKIP_I18N_STUCK_CHECK=1 — the deploy-time background
+    # SKIP_I18N_STUCK_CHECK=1: the deploy-time background
     # translator (section 8 below) fills in any keys that landed
     # as English placeholders. The OTHER three i18n-parity
     # subtests (structural, no-extras, placeholder integrity)
-    # still run; only the UX-quality stuck-count subtest is
+    # still run, only the UX-quality stuck-count subtest is
     # deferred. See test/i18n-parity.test.js for the full
     # explanation.
     step "npm run test:safe"
@@ -211,7 +212,7 @@ fi
 # OPENAI_API_KEY for the translator, etc.) silently fail to
 # take effect after a deploy until someone notices the process
 # is still using the old values. Pay the re-read on every
-# deploy — it's free when nothing changed, and removes a class
+# deploy, it's free when nothing changed, and it removes a class
 # of "why isn't the new env var live?" debugging session.
 step "pm2 restart ${PM2_PROCESS_NAME} --update-env"
 run pm2 restart "${PM2_PROCESS_NAME}" --update-env
@@ -220,7 +221,7 @@ run pm2 restart "${PM2_PROCESS_NAME}" --update-env
 # Poll /api/health until it returns 200 or HEALTH_TIMEOUT_S
 # passes. The endpoint also issues a trivial DB query, so a 503
 # means the process bound the port but the pool can't talk to
-# Postgres — equally unsafe to declare "deployed".
+# Postgres, which is equally unsafe to declare "deployed".
 step "health check (timeout ${HEALTH_TIMEOUT_S}s)"
 if [[ $DRY_RUN -eq 1 ]]; then
   echo "          DRY: would curl ${HEALTH_URL}"
@@ -266,7 +267,7 @@ done
 #     this script exiting.
 #   * Output goes to /tmp/divinghq-translate-<sha>-<ts>.log so you
 #     can `tail -f` it from another shell. Each deploy gets its own
-#     file — old logs accumulate, prune them with logrotate or
+#     file, old logs accumulate, prune them with logrotate or
 #     cron if that becomes an issue.
 #   * Skipped entirely on no-op deploys (no code change → no new
 #     keys could have been added) and on dry-run. The box never ends
@@ -276,7 +277,7 @@ done
 #     commit we just built. Stuck keys are simply re-derived on a
 #     later deploy, so nothing is permanently lost.
 #   * Skipped silently if neither OPENAI_API_KEY nor
-#     ANTHROPIC_API_KEY is set in .env — same gate as the inline
+#     ANTHROPIC_API_KEY is set in .env, same gate as the inline
 #     version had.
 #
 # The deploy-side test gate (section 5) defers the english-stuck
@@ -322,9 +323,9 @@ if [[ $HEALTHY -eq 1 && $NOOP -eq 0 && $DRY_RUN -eq 0 ]]; then
       exit 0
     fi
 
-    # Only commit if there's something to commit (the translator
-    # may have decided every stuck value was a legitimate cognate
-    # or proper noun and chosen to leave it stuck).
+    # Sanity check: only commit if there's something to commit (the
+    # translator may have decided every stuck value was a
+    # legitimate cognate or proper noun and chosen to leave it stuck).
     if git diff --quiet src/locales/; then
       log "stuck keys were legitimate cognates (no diff to commit)"
       exit 0
@@ -336,7 +337,7 @@ if [[ $HEALTHY -eq 1 && $NOOP -eq 0 && $DRY_RUN -eq 0 ]]; then
     # that diverges from origin (breaks the next `git pull --ff-only`)
     # or runs ahead of what we built (makes the next deploy a no-op
     # that silently skips build + migrate). Both states wedge future
-    # deploys — which is precisely how this box wedged before.
+    # deploys, which is precisely how this box wedged before.
     BUILT_SHA="$(git rev-parse HEAD)"
     git add src/locales/
     # Don't sign the commit (no GPG on the deploy box); use a clear
@@ -365,10 +366,10 @@ if [[ $HEALTHY -eq 1 && $NOOP -eq 0 && $DRY_RUN -eq 0 ]]; then
       fi
     else
       # origin/main advanced while we were translating (a PR merged
-      # mid-run). Don't try to absorb those commits here — rebasing
+      # mid-run). Don't try to absorb those commits here, rebasing
       # them in would leave the running build behind its own working
       # tree, and the no-op next deploy would skip building/migrating
-      # them. Defer: drop our commit and snap back to what we built;
+      # them. Defer: drop our commit and snap back to what we built,
       # the next deploy pulls + rebuilds the new code, and the
       # translator re-fills these keys on top of it.
       log "origin/main moved during translate — deferring to next deploy; resetting to ${BUILT_SHA}"

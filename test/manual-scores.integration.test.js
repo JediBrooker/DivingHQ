@@ -1,7 +1,7 @@
-// Integration tests for the P5 manual-fallback flow against a
-// live Postgres.
+// Integration tests for the P5 manual-fallback flow against a live
+// Postgres.
 //
-// Exercises the parts the mock-pool unit tests can't:
+// Covers the parts the mock-pool unit tests can't reach:
 //
 //   * Migration 055 actually applied (score_source column + enum
 //     extension + partial index).
@@ -21,11 +21,11 @@
 //   * Migrations 054 + 055 haven't been applied to divinghq_test.
 //
 // The socket-side reconciliation (submit_score against a prior
-// manual entry) isn't exercised here — it requires spinning up
-// Socket.IO + a JWT-authenticated client, which doubles the
-// fixture cost for marginal extra coverage. The HTTP-side guards
-// + audit-log shape verified here are enough to demonstrate the
-// schema + endpoints work end-to-end.
+// manual entry) isn't covered here, it would mean spinning up
+// Socket.IO plus a JWT-authenticated client, which doubles the
+// fixture cost for not much extra coverage. The HTTP-side guards
+// and audit-log shape checked here are enough to show the schema
+// and endpoints works end-to-end.
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
@@ -43,7 +43,7 @@ let app;
 let httpServer;
 let harnessPort;
 
-// Test-fixture row ids — cleaned up in after().
+// Test-fixture row ids, cleaned up in after().
 let testOrgId, testEventId, testOperatorId, testJudgeId, testCompetitorId;
 let testDiveId;
 
@@ -66,7 +66,7 @@ before(async () => {
     return;
   }
 
-  // Migration 055 check.
+  // quick sanity check for migration 055
   try {
     const r = await pool.query(
       `SELECT column_name FROM information_schema.columns
@@ -95,8 +95,8 @@ before(async () => {
   );
   testOrgId = org.rows[0].id;
 
-  // Roles live in the user_org_roles join table (not a users column),
-  // so each user is two inserts: the row, then its org role. Mirrors
+  // Roles live in the user_org_roles join table, not a users column,
+  // so each user needs two inserts: the row, then its org role. Mirrors
   // the pattern in test/e2e/_setup.js insertUser().
   const mkUser = async (uname, fullName, role) => {
     const u = await pool.query(
@@ -117,8 +117,8 @@ before(async () => {
 
   // Reuse a seeded 1m dive from the World Aquatics catalog (init.sql
   // seeds dive_directory). competitor_dive_lists.dive_id just needs a
-  // valid directory row — no need to author a custom one (and the
-  // catalog is shared, so nothing to clean up).
+  // valid directory row, no need to author a custom one (and the
+  // catalog is shared, so there's nothing to clean up).
   const dive = await pool.query(
     `SELECT id FROM dive_directory WHERE height = 1.0 ORDER BY dive_code LIMIT 1`,
   );
@@ -148,10 +148,10 @@ before(async () => {
     [testEventId, testCompetitorId, testDiveId],
   );
 
-  // HTTP harness. Mount the actual production routes against the
+  // HTTP harness. Mounts the actual production routes against the
   // pool so we exercise the real code paths. Auth is short-
-  // circuited via a header that fills in req.user — the actual
-  // JWT layer is verified separately in routes/auth tests.
+  // circuited via a header that fills in req.user. The actual
+  // JWT layer gets verified separately in routes/auth tests.
   app = express();
   app.use(express.json());
 
@@ -172,8 +172,8 @@ before(async () => {
     next();
   });
 
-  // Minimal requireOrgRole shim — the real middleware checks JWT
-  // + DB; we trust the X-Test-Roles header here since the
+  // Minimal requireOrgRole shim. The real middleware checks JWT
+  // + DB, but we trust the X-Test-Roles header here since the
   // X-Test-User indirection is the same pattern other integration
   // tests use.
   const requireOrgRole = (allowed) => (req, res, next) => {
@@ -296,7 +296,7 @@ test("POST /api/scores/manual-entry inserts with score_source='manual_entry'", a
 
 test("POST /api/scores/manual-entry updates on re-post (operator typo fix)", async (t) => {
   if (!dbReachable || !migrationsApplied) { t.skip(); return; }
-  // First entry — initial value.
+  // first entry, initial value
   const r1 = await httpPost(
     "/api/scores/manual-entry",
     {
@@ -310,7 +310,7 @@ test("POST /api/scores/manual-entry updates on re-post (operator typo fix)", asy
   );
   assert.equal(r1.status, 200);
 
-  // Second entry — operator corrects to 7.5.
+  // second entry, operator corrects it to 7.5
   const r2 = await httpPost(
     "/api/scores/manual-entry",
     {
@@ -363,7 +363,7 @@ test("POST /api/scores/manual-entry rejects non-0.5 increments", async (t) => {
 
 test("POST /api/scores/manual-entry rejects when judge is not on panel", async (t) => {
   if (!dbReachable || !migrationsApplied) { t.skip(); return; }
-  // Use the operator's id as a fake judge id — they're not in event_judges.
+  // Use the operator's id as a fake judge id since they're not in event_judges.
   const r = await httpPost(
     "/api/scores/manual-entry",
     {

@@ -1,16 +1,16 @@
 -- =============================================================
--- MIGRATION 058 — DIVER PROFILE DETAILS + ACCOUNT SUSPEND
+-- MIGRATION 058: DIVER PROFILE DETAILS + ACCOUNT SUSPEND
 --
 -- Lets an org admin maintain a diver's competition details and
 -- run basic account lifecycle from the User Manager:
---   * date_of_birth — drives age-group eligibility / display.
---   * gender        — free-ish (UI offers Male/Female/Other/…).
---   * nationality   — 3-letter country code (independent of the
+--   * date_of_birth : drives age-group eligibility / display.
+--   * gender        : free-ish (UI offers Male/Female/Other/…).
+--   * nationality   : 3-letter country code (independent of the
 --                     federation/org the diver competes for).
---   * suspended_at  — NULL = active. A non-null value blocks login
+--   * suspended_at  : NULL = active. A non-null value blocks login
 --                     (checked in /api/auth/login) without deleting
---                     the account; reversible via reactivate.
--- All edits are written to audit_log by the API.
+--                     the account, reversible via reactivate.
+-- All edits get written to audit_log by the API.
 -- =============================================================
 
 BEGIN;

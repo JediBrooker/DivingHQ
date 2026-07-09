@@ -1,4 +1,4 @@
-// PDF + CSV exports — printable artefacts for officials and
+// PDF + CSV exports: printable artefacts for officials and
 // federations. Six public endpoints (data is already exposed via
 // the live scoreboard / archive, no auth gate):
 //
@@ -32,7 +32,7 @@ const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 // RFC 4180 quoting handles commas, quotes, newlines. The
 // leading-character guard handles the Excel/Google Sheets
 // "if the cell starts with =, +, -, @, tab, or CR, evaluate
-// it as a formula" foot-gun — a diver registering with
+// it as a formula" foot-gun. A diver registering with
 // full_name = "=cmd|'/c calc'!A0" would otherwise execute on
 // every operator's machine when they open the exported CSV.
 // Prepending a single quote forces Excel to treat the cell as
@@ -55,24 +55,24 @@ module.exports = function createPdfRouter({ pool }) {
   const router = express.Router();
 
   // ===============================================================
-  // Meet program export options — parse the ?include= + ?seconds_per_dive
-  // query params and pre-fetch the enrichment payloads each event needs.
+  // Meet program export options: parses the ?include= + ?seconds_per_dive
+  // query params and pre-fetches the enrichment payloads each event needs.
   // Shared by program.pdf and program.csv so the two surfaces are
   // guaranteed to render the same data.
   //
   // Recognised include tokens:
-  //   • dive_lists   — per-event roster + every diver's per-round
+  //   • dive_lists   : per-event roster + every diver's per-round
   //                    dive list (code, position, dd, height for
   //                    mixed-board events).
-  //   • judges       — panel for each event (number, name, country,
+  //   • judges       : panel for each event (number, name, country,
   //                    role-tag for synchro panels).
-  //   • timing       — estimated event duration. Pairs with
+  //   • timing       : estimated event duration. Pairs with
   //                    seconds_per_dive (30 / 45 / 60 default 45).
   //                    Computed as competitor_count * total_rounds *
   //                    seconds_per_dive (synchro doubles the per-row
   //                    pair into a single dive).
   //
-  // Unknown tokens are silently dropped — same posture as the rest
+  // Unknown tokens are silently dropped, same posture as the rest
   // of the public read endpoints. The default (no include= param)
   // is the legacy schedule-only program.
   // ===============================================================
@@ -153,7 +153,7 @@ module.exports = function createPdfRouter({ pool }) {
 
     // Group dive-list rows into { competitor_id → { meta, divesByRound } }
     // per event. The grouped shape is what both PDF + CSV renderers
-    // consume — flatten happens at render time.
+    // consume; flattening happens at render time.
     const byEvent = new Map();
     for (const id of eventIds) byEvent.set(id, { diveLists: null, judges: null });
 
@@ -183,7 +183,7 @@ module.exports = function createPdfRouter({ pool }) {
           position:     row.position,
           dd:           row.dd,
           description:  row.description,
-          // dive_height comes from dive_directory — useful when the
+          // dive_height comes from dive_directory, useful when the
           // event spans multiple boards (e.g. 1m + 3m), null for
           // single-board events where height is implied by the event.
           height:       row.dive_height
@@ -225,7 +225,7 @@ module.exports = function createPdfRouter({ pool }) {
   }
 
   // Compute the timing estimate for a single event. The unit cost
-  // covers one "dive event" — for individuals that's one diver
+  // covers one "dive event": for individuals that's one diver
   // performing one dive; for synchro a pair performs one combined
   // dive; for team events each team-member's per-round dive is
   // counted (their roster shape is one row per member per round).
@@ -259,14 +259,14 @@ module.exports = function createPdfRouter({ pool }) {
   }
 
   // -------------------------------------------------------------
-  // Public meet program PDF — full schedule, every event in the
+  // Public meet program PDF: full schedule, every event in the
   // bundle, competitor count per event, sponsor strip on the
   // cover. No auth required (public meet pages already expose
   // this data via /meet/:id).
   //
   // Optional query params:
-  //   ?include=dive_lists,judges,timing   — extra per-event sections
-  //   ?seconds_per_dive=30|45|60          — paired with timing
+  //   ?include=dive_lists,judges,timing   : extra per-event sections
+  //   ?seconds_per_dive=30|45|60          : paired with timing
   // -------------------------------------------------------------
   router.get("/api/meets/:id/program.pdf", async (req, res) => {
     try {
@@ -417,7 +417,7 @@ module.exports = function createPdfRouter({ pool }) {
         }
         meta.push(ev.status);
         // Timing estimate sits in the meta line so it reads next to
-        // the diver count — the natural place for "X divers · ~Y min".
+        // the diver count, the natural place for "X divers · ~Y min".
         if (include.has("timing")) {
           const est = estimateEventDuration(ev, secondsPerDive);
           meetTotalSeconds += est.totalSeconds;
@@ -429,7 +429,7 @@ module.exports = function createPdfRouter({ pool }) {
 
         const ext = enrichments.get(ev.id) || { diveLists: null, judges: null };
 
-        // Judge panel block — public-facing, so we omit clubs (only
+        // Judge panel block: public-facing, so we omit clubs (only
         // the chip-tap on the live scoreboard surfaces them). Name +
         // country code per row is enough for a printed program.
         if (include.has("judges") && ext.judges && ext.judges.length) {
@@ -445,7 +445,7 @@ module.exports = function createPdfRouter({ pool }) {
           }
         }
 
-        // Dive lists — every diver in start-order, their dives by
+        // Dive lists: every diver in start-order, their dives by
         // round. Withdrawn divers are marked but still listed so a
         // printed program matches the live scoreboard's start list.
         // Reserves print last under a "RESERVES" sub-header.
@@ -495,7 +495,7 @@ module.exports = function createPdfRouter({ pool }) {
           .moveTo(50, doc.y - 4).lineTo(545, doc.y - 4).stroke();
       }
 
-      // Total meet-duration summary — only when timing was requested
+      // Total meet-duration summary, only when timing was requested
       // and the meet has at least one event with divers loaded.
       if (include.has("timing") && meetTotalSeconds > 0) {
         if (doc.y > 720) doc.addPage();
@@ -529,7 +529,7 @@ module.exports = function createPdfRouter({ pool }) {
   });
 
   // -------------------------------------------------------------
-  // Meet program CSV — same data as the PDF, in a flat shape
+  // Meet program CSV: same data as the PDF, in a flat shape
   // friendly to spreadsheets. One row per event when no extras
   // are requested; one row per event-judge / per-diver-dive when
   // the corresponding include token is set. The `section` column
@@ -587,7 +587,7 @@ module.exports = function createPdfRouter({ pool }) {
         `attachment; filename="${slug}_program.csv"`,
       );
 
-      // Column header — superset across all section types so a
+      // Column header: a superset across all section types so a
       // spreadsheet user can sort/filter by `section` and see the
       // rows that matter to them. Empty cells are left blank.
       const header = [
@@ -613,7 +613,7 @@ module.exports = function createPdfRouter({ pool }) {
         const est = include.has("timing")
           ? estimateEventDuration(ev, secondsPerDive)
           : null;
-        // Event-summary row — always written so a consumer can
+        // Event-summary row: always written so a consumer can
         // pivot on (section='event'). Repeats event metadata so
         // the dive-list / judge rows below don't have to.
         res.write(csvRow([
@@ -689,7 +689,7 @@ module.exports = function createPdfRouter({ pool }) {
   });
 
   // -------------------------------------------------------------
-  // START LIST PDF — pinned-to-wall pre-meet sheet showing every
+  // START LIST PDF: pinned-to-wall pre-meet sheet showing every
   // diver in start-order with their per-round dives. Operators
   // print this and pin it to the deck so divers know when they're
   // up. Reuses the program PDF's PDFKit setup but the body is a
@@ -882,7 +882,7 @@ module.exports = function createPdfRouter({ pool }) {
   });
 
   // -------------------------------------------------------------
-  // PER-DIVER SCORE SHEET PDF — every diver wants their own
+  // PER-DIVER SCORE SHEET PDF: every diver wants their own
   // report after a meet. Reuses the dive-with-judges shape we
   // already build for Recent Form: per-round dive metadata + each
   // judge's raw score (with the dropped scores marked under World Aquatics
@@ -936,8 +936,8 @@ module.exports = function createPdfRouter({ pool }) {
            ORDER BY s.round_number ASC`,
           [eventId, diverId],
         ),
-        // Final placing — full-field rank query identical to the
-        // analytics rollup, kept inline since it's a one-off here.
+        // Final placing: full-field rank query identical to the
+        // analytics rollup, kept inline since its a one-off here.
         pool.query(
           `WITH ${perDivePointsCte({
              select:      ["s.competitor_id"],
@@ -964,7 +964,7 @@ module.exports = function createPdfRouter({ pool }) {
       const dives = divesRes.rows;
       const totals = totalRes.rows[0] || {};
 
-      // World Aquatics trim — apply the same algorithm the frontend uses
+      // World Aquatics trim: apply the same algorithm the frontend uses
       // (lib/score-trim semantics) so the dropped marks line up.
       function trimCount(n) {
         if (!n || n <= 3) return 0;
@@ -976,11 +976,11 @@ module.exports = function createPdfRouter({ pool }) {
       }
       function annotateDrops(judges, n /*, eventType */) {
         // For synchro 9/11 we'd need the sub-panel logic. For the
-        // score sheet we keep things simple — the canonical
+        // score sheet we keep things simple: the canonical
         // dive_total comes from the SQL function, and we just need
-        // the visual "what was dropped" markup. Fall back to
+        // the visual "what was dropped" markup. Falls back to
         // individual trim for synchro panels we don't fully model
-        // here.
+        // here, hacky but it works.
         const flagged = judges.map((j) => ({ ...j, dropped: false }));
         const k = trimCount(n);
         if (!k || flagged.length <= k * 2) return flagged;
@@ -1094,7 +1094,7 @@ module.exports = function createPdfRouter({ pool }) {
   });
 
   // -------------------------------------------------------------
-  // CSV EXPORT — federation operators copy results into the
+  // CSV EXPORT: federation operators copy results into the
   // federation's central record-keeping system. Same data as the
   // results PDF, formatted as a single CSV with one row per dive
   // so downstream pivot tables work cleanly.
@@ -1199,7 +1199,7 @@ module.exports = function createPdfRouter({ pool }) {
   });
 
   // -------------------------------------------------------------
-  // RESULTS PDF — final standings + dive-by-dive grouped by
+  // RESULTS PDF: final standings + dive-by-dive grouped by
   // diver. Synchro events regroup the judge chips into A / B /
   // Sync sub-panels so the printed page matches the on-screen
   // layout the audience saw.
@@ -1241,7 +1241,7 @@ module.exports = function createPdfRouter({ pool }) {
         ),
         pool.query(
           /* Group by u.id (not u.full_name). The PDF renders "Dive
-             Results" grouped by diver — without the id, two divers
+             Results" grouped by diver, without the id, two divers
              with the same name merged into a single section with
              inflated dive totals. STRING_AGG also now orders by
              judge_number, not judge_id (UUID), so the chip order on

@@ -1,14 +1,14 @@
 -- =============================================================
--- MIGRATION 069 — WIDEN scope / subject_type COLUMNS
+-- MIGRATION 069: widen scope / subject_type columns
 --
--- Migration 067 widened the fee taxonomy and added per-scope CHECKs that
--- list 'official_accreditation' (22 chars) as a valid value — but left
--- fee_definitions.scope and payments.subject_type at varchar(20). So the
--- one scope longer than 20 chars (official_accreditation) is permitted by
--- the CHECK yet rejected at write time with 22001 "value too long".
--- Every other scope (≤ 18 chars) fits, which is why only official
--- accreditation broke. Widen both columns to varchar(40) (matches
--- role_type/discipline/tier). Safe widening; no data change.
+-- Migration 067 widened the fee taxonomy and added per-scope CHECKs
+-- that list 'official_accreditation' (22 chars) as a valid value, but
+-- left fee_definitions.scope and payments.subject_type at varchar(20).
+-- So the one scope longer than 20 chars (official_accreditation) is
+-- permitted by the CHECK yet rejected at write time with 22001 "value
+-- too long". Every other scope (≤ 18 chars) fits, which is why only
+-- official accreditation broke. Widen both columns to varchar(40)
+-- (matches role_type/discipline/tier). Safe widening, no data change.
 -- =============================================================
 
 BEGIN;

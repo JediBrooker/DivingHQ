@@ -38,7 +38,7 @@ module.exports = function createOrgsRouter({
     }
   });
 
-  // List active orgs — used by register form to populate the org picker.
+  // List active orgs, used by register form to populate the org picker.
   router.get("/api/orgs/active", async (req, res) => {
     try {
       const r = await pool.query(
@@ -55,7 +55,7 @@ module.exports = function createOrgsRouter({
     const { status } = req.body || {};
     try {
       // Read the previous status so the audit row has a
-      // before/after pair — sysadmins reviewing the audit later
+      // before/after pair. Sysadmins reviewing the audit later
       // want "approved a pending org" / "suspended a live org"
       // distinguishable at a glance.
       const prior = await pool.query(
@@ -73,8 +73,9 @@ module.exports = function createOrgsRouter({
       if (previousStatus !== status) {
         await recordAudit(pool, {
           ...auditFromReq(req),
-          // org_id is the org being modified — the actor is a
-          // sysadmin who has no own org binding for this action.
+          // org_id is the org being modified, since the actor is
+          // a sysadmin with no org binding of their own for this
+          // action.
           org_id:      r.rows[0].id,
           entity_type: "org",
           entity_id:   r.rows[0].id,
@@ -101,9 +102,10 @@ module.exports = function createOrgsRouter({
         .json({ error: "Cannot list divers in other organisations" });
     }
     try {
-      // Drop u.username from the projection — the synchro-partner
-      // picker (the sole legitimate consumer) uses id + full_name.
-      // Username is the credential identifier, so leaking it via a
+      // Drop u.username from the projection. The synchro-partner
+      // picker (the sole legitimate consumer) only needs id +
+      // full_name. Gotcha: username is the credential identifier,
+      // so leaking it via a
       // verifyToken-only endpoint would let any signed-in user
       // (including a freshly-registered spectator) enumerate the
       // org's username space and feed a credential-stuffing run
@@ -126,7 +128,7 @@ module.exports = function createOrgsRouter({
   });
 
   // All members of the org (id + name only), for pickers that aren't
-  // diver-specific — e.g. the fines desk, which can fine any member. Same
+  // diver-specific, e.g. the fines desk, which can fine any member. Same
   // credential-safe projection as /divers (no username).
   router.get("/api/orgs/:id/members", verifyToken, async (req, res) => {
     if (!req.user.is_system_admin && req.params.id !== req.user.org_id) {
@@ -148,7 +150,7 @@ module.exports = function createOrgsRouter({
   });
 
   // -------- Clubs --------
-  // Clubs in an organisation. Public — used by the registration
+  // Clubs in an organisation. Public, used by the registration
   // form's club picker before the user has an account.
   router.get("/api/orgs/:id/clubs", async (req, res) => {
     try {
@@ -167,7 +169,7 @@ module.exports = function createOrgsRouter({
 
   // Listing for the dedicated Clubs management screen. System
   // admins see every club across all orgs; org_admin / meet_manager
-  // see only their own org's. Each row carries a live member count
+  // see only thier own org's. Each row carries a live member count
   // so admins can spot empty clubs.
   router.get("/api/clubs", requireMeetEditor, async (req, res) => {
     try {
@@ -287,7 +289,7 @@ module.exports = function createOrgsRouter({
   });
 
   // Create a club in an organisation. Authenticated org_admin or
-  // meet_manager (or system_admin) only — keeps spam off the table.
+  // meet_manager (or system_admin) only, keeps spam off the table.
   // During registration, /api/auth/register has its own path that
   // can create a club for the new user without prior auth.
   router.post("/api/orgs/:id/clubs", requireMeetEditor, async (req, res) => {

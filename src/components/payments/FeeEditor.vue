@@ -1,9 +1,9 @@
 <script setup>
 // Reusable fee-config editor. Drives both event entry fees and the
-// federation membership fee — pass a load URL (full-config GET) and a
-// save URL (PUT). Amounts are entered in major units and sent as
-// tax-inclusive minor units. The backend stores variants; the cheapest
-// one a buyer is eligible for at checkout time wins.
+// federation membership fee, just pass a load URL (full-config GET) and
+// a save URL (PUT). Amounts are entered in major units and sent as
+// tax-inclusive minor units. The backend stores variants, and the
+// cheapest one a buyer's eligible for at checkout time wins.
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -15,12 +15,12 @@ const props = defineProps({
   saveUrl: { type: String, required: true },
   title: { type: String, default: 'Fee' },
   showMembershipPeriod: { type: Boolean, default: false },
-  // Extra fields merged into the PUT body — lets wrappers send the fee's
+  // Extra fields merged into the PUT body, so wrappers can send the fee's
   // identity qualifiers, e.g. { tier: 'junior' } or { discipline: '3m' }.
   extraPayload: { type: Object, default: () => ({}) },
-  // Flat mode: a single amount, audience 'all', no time windows. Used for
-  // late-entry surcharges whose timing is governed by a trigger, not by
-  // audience tiers / price windows (which would silently suppress them).
+  // Flat mode: one amount, audience 'all', no time windows. Used for
+  // late-entry surcharges where timing comes from a trigger, not from
+  // audience tiers / price windows (those would silently suppress them).
   flat: { type: Boolean, default: false },
 })
 const emit = defineEmits(['saved'])
@@ -78,9 +78,9 @@ async function load() {
 
 async function save() {
   if (comingSoon.value) return
-  // Blank rows are dropped, not saved as 0.00 — a silently-parsed £0 variant
-  // would win "cheapest applicable price" for every buyer. The server also
-  // refuses amounts under 1.00 (free = no fee configured at all).
+  // Blank rows are dropped, not saved as 0.00. A silently-parsed £0 variant
+  // would win "cheapest applicable price" for every buyer, so watch out.
+  // Server also refuses amounts under 1.00 (free = no fee configured at all).
   const usable = (props.flat ? prices.value.slice(0, 1) : prices.value)
     .filter(p => String(p.amount ?? '').trim() !== '')
   if (!usable.length) {

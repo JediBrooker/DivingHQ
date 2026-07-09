@@ -1,7 +1,7 @@
 // Integration tests for the Stripe Connect payment flow (routes +
 // webhook) against a real Postgres (Migration 066). A FAKE Stripe is
-// injected so no network/keys are needed — we're testing OUR money
-// logic + DB transitions, not Stripe's API.
+// injected so no network/keys are needed, since we're testing OUR
+// money logic and DB transitions here, not Stripe's API.
 //
 // Self-skips when Postgres is unreachable or Migration 066 hasn't been
 // applied, mirroring the other *.integration.test.js files. Seeds its
@@ -38,7 +38,7 @@ let lastCheckoutArgs = null;
 let retrieveCheckoutSessionImpl = async (args) => ({ id: args.sessionId, status: "open", url: "https://stripe.test/resume" });
 let expireCheckoutSessionImpl = async (args) => { lastExpireArgs = args; return { status: "expired" }; };
 
-// Fake Stripe — captures args, returns canned objects.
+// Fake Stripe: captures args, returns canned objects.
 const fakePayments = {
   enabled: true,
   createConnectedAccount: async () => ({ id: "acct_test" }),
@@ -48,8 +48,8 @@ const fakePayments = {
   }),
   // REAL Checkout Session ids are ~66 chars ("cs_live_" + 58); the fake
   // matches that length so the schema can never regress to a column too
-  // narrow for production ids (the varchar(64) bug migration 079 fixed —
-  // short fake ids were exactly why the suite missed it).
+  // narrow for production ids. That's the varchar(64) bug migration 079
+  // fixed, and short fake ids were exactly why this suite missed it.
   createCheckoutSession: async (args) => {
     lastCheckoutArgs = args;
     return {
@@ -60,7 +60,7 @@ const fakePayments = {
   expireCheckoutSession: (...a) => expireCheckoutSessionImpl(...a),
   // Blocking-checkout lookups: default to a still-OPEN session so a second
   // checkout attempt RESUMES the first (returns its url) rather than
-  // retiring it — mirrors the common real-world case and keeps this
+  // retiring it. Mirrors the common real-world case and keeps this
   // order-dependent suite's payment rows stable across tests.
   retrieveCheckoutSession: async (args) => retrieveCheckoutSessionImpl(args),
   createRefund: async (args) => { lastRefundArgs = args; return { amount: args.amountCents }; },
@@ -68,22 +68,22 @@ const fakePayments = {
   createRecipientAccount: async () => ({ id: "acct_test_" + crypto.randomUUID().slice(0, 8) }),
   createOnboardingLink: async () => "https://connect.stripe.test/setup/xyz",
   retrieveAccountStatus: async () => ({ payoutsEnabled: true, capabilityStatus: "active", requirementsCollected: true }),
-  // Transfer succeeds by default; a test can swap createTransferImpl to
-  // simulate a Stripe rejection (the guard path).
+  // Transfer succeeds by default, but a test can swap createTransferImpl
+  // to simulate a Stripe rejection (the guard path).
   createTransfer: (...a) => createTransferImpl(...a),
-  // Tests POST a JSON body; treat it as the already-verified event.
+  // Tests POST a JSON body, treat it as the already-verified event.
   constructWebhookEvent: (raw) => JSON.parse(Buffer.isBuffer(raw) ? raw.toString() : raw),
 };
 let createTransferImpl = async (args) => { lastTransferArgs = args; return { id: "tr_" + crypto.randomUUID().slice(0, 8) }; };
 let lastTransferArgs = null;
 
-// Fake operator-notification mailer — captures the last failed-payout email.
+// Fake operator-notification mailer, captures the last failed-payout email.
 let lastPayoutFailedEmail = null;
 const fakeEmail = { sendPayoutFailedEmail: (args) => { lastPayoutFailedEmail = args; } };
 
-// Stub auth: every request acts as our seeded user, who holds the roles
-// the routes require. requireEventManager loads req.event like the real
-// gate does.
+// Stub auth: every request acts as our seeded user, who holds whatever
+// roles the routes require. requireEventManager loads req.event like the
+// real gate does.
 function buildApp() {
   const TEST_USER = () => ({
     id: userId, org_id: orgId,
@@ -100,14 +100,15 @@ function buildApp() {
     req.event = r.rows[0];
     next();
   };
-  // Meet-fee endpoints (Phase 1b) gate on requireMeetEditor — in prod an
-  // array guard, here a passthrough that sets req.user. Must be a real
-  // function or Express throws "argument handler must be a function" when
-  // the router registers the route (the bug that broke CI on PR #83).
+  // Meet-fee endpoints (Phase 1b) gate on requireMeetEditor, which is an
+  // array guard in prod, here just a passthrough that sets req.user. Has
+  // to be a real function or Express throws "argument handler must be a
+  // function" when the router registers the route (the bug that broke CI
+  // on PR #83, heads up if this ever regresses).
   const requireMeetEditor = setUser;
   // Club-payer endpoints (affiliation/accreditation) gate on
-  // requireClubAdmin — stash req.club like the real guard so handlers can
-  // read req.club.org_id.
+  // requireClubAdmin, so stash req.club like the real guard does, so
+  // handlers can read req.club.org_id.
   const requireClubAdmin = () => async (req, res, next) => {
     req.user = TEST_USER();
     const r = await pool.query("SELECT id, org_id FROM clubs WHERE id = $1", [req.params.id || req.body.clubId]);
@@ -115,8 +116,8 @@ function buildApp() {
     next();
   };
 
-  // The payout back-office is platform-operator-only in prod; the stub
-  // grants is_system_admin so those routes are testable here.
+  // The payout back-office is platform-operator-only in prod, so the stub
+  // grants is_system_admin here so those routes are testable.
   const requireSystemAdmin = (req, _res, next) => {
     req.user = { ...TEST_USER(), is_system_admin: true };
     next();
@@ -181,8 +182,8 @@ before(async () => {
     "INSERT INTO meets (org_id, name) VALUES ($1, $2) RETURNING id",
     [orgId, `Test Meet ${suffix}`],
   )).rows[0].id;
-  // Separate event for late-fee tests; deadline starts in the future so the
-  // surcharge is dormant, then a test moves it into the past.
+  // Separate event for late-fee tests. Deadline starts in the future so
+  // the surcharge is dormant, then a test moves it into the past.
   lateEventId = (await pool.query(
     `INSERT INTO events (org_id, name, gender, number_of_judges, entries_close_at)
      VALUES ($1, '3m Springboard (late-test)', 'Female', 5, now() + interval '1 day') RETURNING id`,
@@ -275,7 +276,7 @@ test("webhook marks the payment paid, and is idempotent on re-delivery", async (
   assert.equal(row.stripe_payment_intent, "pi_done");
   assert.ok(row.paid_at);
 
-  // Re-deliver — must stay paid, no error, no duplicate side effects.
+  // Re-deliver: must stay paid, no error, no duplicate side effects.
   const second = await api("POST", "/webhooks/stripe", event);
   assert.equal(second.status, 200);
   row = (await pool.query("SELECT * FROM payments WHERE id = $1", [paymentId])).rows[0];
@@ -304,7 +305,7 @@ test("refund reverses the charge", async (t) => {
 
 test("membership purchase grants membership and unlocks member pricing", async (t) => {
   if (!ready) return t.skip();
-  // Federation sets a membership fee.
+  // Federation sets a membership fee first.
   let res = await api("PUT", `/api/orgs/${orgId}/membership-fee`, {
     currency: "GBP", membership_period: "annual",
     prices: [{ label: "standard", amount_cents: 2000, audience: "all" }],
@@ -337,7 +338,7 @@ test("membership purchase grants membership and unlocks member pricing", async (
 
 // Regression: meet-level event_entry (event_id NULL, meet_id set) was
 // rejected by the stale fee_definitions_scope_event_check until migration
-// 068 dropped it. This path had no test, which is how the bug shipped.
+// 068 dropped it. This path had no test before, which is how the bug shipped.
 test("federation sets a meet registration fee", async (t) => {
   if (!ready) return t.skip();
   const res = await api("PUT", `/api/meets/${meetId}/fees`, {
@@ -397,7 +398,7 @@ test("a diver who checks out before the deadline pays the base price only", asyn
   assert.equal(res.status, 200);
   earlyPaymentId = (await res.json()).payment_id;
   const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [earlyPaymentId])).rows[0];
-  assert.equal(row.amount_cents, 6000); // base only — deadline not reached
+  assert.equal(row.amount_cents, 6000); // base only, deadline not reached yet
   assert.equal(row.status, "pending");
 });
 
@@ -429,8 +430,8 @@ test("once entries close, a re-checkout retires the stale base session and charg
 
 test("a member-only / windowed late price is coerced to a flat 'all' surcharge", async (t) => {
   if (!ready) return t.skip();
-  // A manager mis-configures the late fee with an audience + a closed window;
-  // the server must flatten it so the surcharge can't silently vanish.
+  // A manager mis-configures the late fee with an audience + a closed window.
+  // The server must flatten it so the surcharge can't silently vanish.
   const res = await api("PUT", `/api/events/${lateEventId}/late-fee`, {
     currency: "GBP", late_fee_trigger: "entries_close_at",
     prices: [{ label: "late", amount_cents: 2000, audience: "member", starts_at: "2020-01-01", ends_at: "2020-02-01" }],
@@ -520,8 +521,8 @@ test("webhook activates the club affiliation period and the read flips to active
 test("a member-only / windowed club fee is coerced to a flat 'all' price", async (t) => {
   if (!ready) return t.skip();
   // A federation mis-configures the (accreditation) club fee with an audience
-  // + a closed window; clubs are never "members", so the server must flatten
-  // it or the fee would silently vanish at resolve time.
+  // + a closed window. Clubs are never "members" though, so the server must
+  // flatten it, otherwise the fee would silently vanish at resolve time.
   const res = await api("PUT", `/api/orgs/${orgId}/club-fee`, {
     kind: "accreditation", currency: "GBP",
     prices: [{ label: "annual", amount_cents: 9000, audience: "member", starts_at: "2020-01-01", ends_at: "2020-02-01" }],
@@ -650,12 +651,12 @@ test("waiving a charge with a checkout in flight kills the session and can't be 
   });
   const chargeId = (await issued.json()).id;
 
-  // Entrant opens checkout — a pending payment is linked to the charge.
+  // Entrant opens checkout: a pending payment gets linked to the charge.
   const co = await api("POST", `/api/entry-charges/${chargeId}/checkout`, {});
   assert.equal(co.status, 200);
   const payId = (await co.json()).payment_id;
 
-  // Admin waives — the in-flight session must be expired + the payment failed.
+  // Admin waives: the in-flight session must be expired and the payment failed.
   lastExpireArgs = null;
   const res = await api("POST", `/api/entry-charges/${chargeId}/waive`, {});
   assert.equal(res.status, 200);
@@ -666,8 +667,9 @@ test("waiving a charge with a checkout in flight kills the session and can't be 
   let ec = (await pool.query("SELECT status FROM entry_charges WHERE id = $1", [chargeId])).rows[0];
   assert.equal(ec.status, "waived");
 
-  // A late webhook completion for the killed session is a no-op (payment is
-  // failed, not pending), so the charge stays waived and money is never taken.
+  // A late webhook completion for the killed session is a no-op since the
+  // payment is failed, not pending, so the charge stays waived and no
+  // money changes hands.
   await api("POST", "/webhooks/stripe", {
     type: "checkout.session.completed",
     data: { object: { id: "cs_waived", client_reference_id: payId, payment_intent: "pi_waived" } },
@@ -1094,7 +1096,7 @@ test("Connect onboarding creates a recipient account and status reflects readine
   assert.equal(res.status, 200);
   assert.match((await res.json()).url, /connect\.stripe/);
   // Status refresh (fake retrieveAccountStatus → payoutsEnabled true) flips
-  // the cached flag, so the org reads as connected + payouts-ready.
+  // the cached flag, so the org now reads as connected and payouts-ready.
   res = await api("GET", `/api/orgs/${orgId}/payments/status`);
   const s = await res.json();
   assert.equal(s.enabled, true);
@@ -1102,7 +1104,7 @@ test("Connect onboarding creates a recipient account and status reflects readine
   assert.equal(s.payouts_ready, true);
   assert.equal(typeof s.balance_cents, "number");
   assert.ok(s.balance_cents >= 0);
-  // A second onboard reuses the SAME account (doesn't create a new one).
+  // A second onboard reuses the SAME account, doesn't create a new one.
   const acctBefore = (await pool.query("SELECT stripe_account_id FROM organisations WHERE id = $1", [orgId])).rows[0].stripe_account_id;
   res = await api("POST", `/api/orgs/${orgId}/connect/onboard`, {});
   assert.equal(res.status, 200);
@@ -1113,9 +1115,10 @@ test("Connect onboarding creates a recipient account and status reflects readine
 test("partial refund prorates the platform fee in the payout balance", async (t) => {
   if (!ready) return t.skip();
   const before = (await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json()).balance_cents;
-  // A £100 payment, 15% (£15) fee, £40 refunded → £60 retained. The federation is
-  // owed £60 minus the fee PRORATED to the retained portion (£15 × 60% = £9) =
-  // £51 — NOT £60 − the full £15 = £45 (the over-deduction this guards against).
+  // A £100 payment, 15% (£15) fee, £40 refunded → £60 retained. The federation
+  // is owed £60 minus the fee PRORATED to the retained portion (£15 × 60% = £9),
+  // so £51. NOT £60 minus the full £15 = £45, which is the over-deduction bug
+  // this test guards against.
   await pool.query(
     `INSERT INTO payments (org_id, payer_user_id, subject_type, amount_cents, platform_fee_cents, currency, status, refunded_amount_cents)
      VALUES ($1, $2, 'donation', 10000, 1500, 'GBP', 'partially_refunded', 4000)`,
@@ -1128,7 +1131,7 @@ test("partial refund prorates the platform fee in the payout balance", async (t)
 test("a class_enrolment (club-recipient) payment never counts toward the federation's balance", async (t) => {
   if (!ready) return t.skip();
   const before = (await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json()).balance_cents;
-  // A class + enrolment row to satisfy the payments_chk_class_enrolment
+  // Need a class + enrolment row to satisfy the payments_chk_class_enrolment
   // constraint (class_enrolment_id + club_id NOT NULL).
   const cls = (await pool.query(
     "INSERT INTO classes (club_id, org_id, name) VALUES ($1, $2, 'Balance Test Class') RETURNING id",
@@ -1223,14 +1226,14 @@ test("withdrawal creates + transfers one payout per currency (no cross-currency 
 
 test("GET /api/me/payments returns the caller's payments (incl. accreditation) and excludes others", async (t) => {
   if (!ready) return t.skip();
-  // An official_accreditation the caller paid — payer_user_id is set, so it
+  // An official_accreditation the caller paid: payer_user_id is set, so it
   // must appear in their history.
   await pool.query(
     `INSERT INTO payments (org_id, payer_user_id, payer_type, payer_role_type, subject_type, amount_cents, platform_fee_cents, currency, status)
      VALUES ($1, $2, 'official_role', 'judge', 'official_accreditation', 3000, 450, 'GBP', 'paid')`,
     [orgId, userId],
   );
-  // Another user's donation — must NOT appear in the caller's history.
+  // Another user's donation, must NOT appear in the caller's history.
   const other = (await pool.query(
     "INSERT INTO users (username, full_name, org_id) VALUES ($1, $2, $3) RETURNING id",
     [`ph-other-${suffix}`, "PH Other", orgId],
@@ -1253,7 +1256,7 @@ test("GET /api/me/payments returns the caller's payments (incl. accreditation) a
 });
 
 // ---- Payout monitoring + transfer failure ----------------------------
-// Withdrawals now fire automatic Stripe Connect transfers; the admin queue
+// Withdrawals now fire automatic Stripe Connect transfers. The admin queue
 // is read-only monitoring, and a failed transfer restores the balance.
 
 const orgStatus = async () => await (await api("GET", `/api/orgs/${orgId}/payments/status`)).json();
@@ -1268,7 +1271,8 @@ test("admin payout monitoring queue lists paid payouts with their transfer ids (
   assert.ok(mine.length >= 1, "this org's paid payouts are visible");
   assert.equal(mine[0].recipient_type, "org");
   assert.ok(mine[0].stripe_transfer_id, "the Stripe transfer id is exposed for reconciliation");
-  // No bank details are ever exposed (they live at Stripe now).
+  // No bank details are ever exposed, they live at Stripe now, worth
+  // double-checking this stays true if the payout shape ever changes.
   assert.ok(!("payout_account_name" in mine[0]) && !("payout_account_details" in mine[0]));
 });
 
@@ -1456,7 +1460,7 @@ test("charge.refunded landing before checkout.session.completed still applies (m
      VALUES ($1, $2, 'donation', 4200, 630, 'GBP', 'pending') RETURNING id`,
     [orgId, userId],
   )).rows[0].id;
-  // Refund webhook first — the PI was never stored on the row.
+  // Refund webhook lands first, so the PI was never stored on the row.
   await api("POST", "/webhooks/stripe", {
     type: "charge.refunded",
     data: { object: { payment_intent: "pi_early_refund", currency: "gbp", amount_refunded: 4200, metadata: { payment_id: id } } },
@@ -1482,7 +1486,7 @@ test("a LOST chargeback debits the ledger once (redelivery-safe) and reopens the
     [orgId, userId],
   )).rows[0].id;
   assert.equal((await orgStatus()).balance_cents, before + 8500);
-  // Dispute opened: informational only — the ledger must NOT move yet.
+  // Dispute opened: informational only, the ledger must NOT move yet.
   await api("POST", "/webhooks/stripe", {
     type: "charge.dispute.created",
     data: { object: { id: "dp_1", payment_intent: "pi_dispute", reason: "fraudulent", amount: 10000, currency: "gbp" } },
@@ -1498,15 +1502,15 @@ test("a LOST chargeback debits the ledger once (redelivery-safe) and reopens the
   assert.equal(row.status, "refunded");
   assert.equal(row.refunded_amount_cents, 10000);
   assert.equal((await orgStatus()).balance_cents, before, "the recipient's credit is clawed back");
-  // Stripe redelivers — the additive update must NOT double-debit.
+  // Stripe redelivers, the additive update must NOT double-debit.
   await api("POST", "/webhooks/stripe", lost);
   assert.equal((await orgStatus()).balance_cents, before, "redelivery is a no-op");
 });
 
 test("membership renewal: blocked while active (outside the window), allowed near expiry, and the grant EXTENDS", async (t) => {
   if (!ready) return t.skip();
-  // Earlier in the suite the webhook granted a 12-month membership — a fresh
-  // purchase must be refused as premature.
+  // Earlier in the suite the webhook granted a 12-month membership, so a
+  // fresh purchase must be refused as premature.
   let res = await api("POST", `/api/orgs/${orgId}/membership/checkout`, {});
   assert.equal(res.status, 409);
   assert.match((await res.json()).error, /renewals open/i);
@@ -1555,7 +1559,7 @@ test("partial refunds are capped at the remaining refundable amount", async (t) 
   let res = await api("POST", `/api/payments/${payId}/refund`, { amount_cents: 4000 });
   assert.equal(res.status, 200);
   assert.equal((await res.json()).status, "partially_refunded");
-  // Only 2000 remains — asking for 3000 must be a clean 400, not a Stripe error.
+  // Only 2000 remains, so asking for 3000 must be a clean 400, not a Stripe error.
   res = await api("POST", `/api/payments/${payId}/refund`, { amount_cents: 3000 });
   assert.equal(res.status, 400);
   res = await api("POST", `/api/payments/${payId}/refund`, { amount_cents: 2000 });
@@ -1583,7 +1587,7 @@ test("club-recipient payments cannot be refunded by the federation — only the 
     [orgId, userId, clubId, enr],
   )).rows[0].id;
   // The stubbed caller is an org_admin/meet_manager in this org but NOT a
-  // club admin — the club-private boundary must hold.
+  // club admin, so the club-private boundary must hold.
   let res = await api("POST", `/api/payments/${payId}/refund`, {});
   assert.equal(res.status, 403, "federation admins cannot touch a club's class revenue");
   // Grant the caller club-admin status → the club CAN refund its own revenue.
@@ -1616,8 +1620,8 @@ test("retire when the session already COMPLETED at Stripe (expire fails): the ac
   )).rows[0].id;
   const co = await api("POST", `/api/fines/${fineId}/checkout`, {});
   const payId = (await co.json()).payment_id;
-  // Stripe refuses to expire a completed session; retrieve reveals it is
-  // 'complete' — the money is captured, the webhook just hasn't landed yet.
+  // Stripe refuses to expire a completed session, retrieve reveals it's
+  // 'complete': the money is captured, the webhook just hasn't landed yet.
   const prevExpire = expireCheckoutSessionImpl;
   const prevRetrieve = retrieveCheckoutSessionImpl;
   expireCheckoutSessionImpl = async () => { const e = new Error("Session is already complete"); throw e; };
@@ -1629,7 +1633,7 @@ test("retire when the session already COMPLETED at Stripe (expire fails): the ac
     expireCheckoutSessionImpl = prevExpire;
     retrieveCheckoutSessionImpl = prevRetrieve;
   }
-  // The payment row was left PENDING for the webhook to settle — never
+  // The payment row was left PENDING for the webhook to settle, never
   // force-failed, which used to drop the fulfilment and strand the money.
   assert.equal((await pool.query("SELECT status FROM payments WHERE id = $1", [payId])).rows[0].status, "pending");
   await api("POST", "/webhooks/stripe", {

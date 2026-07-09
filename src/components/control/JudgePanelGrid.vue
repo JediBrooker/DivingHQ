@@ -1,7 +1,7 @@
 <script setup>
-/* JudgePanelGrid — the live judge-tile grid extracted from the
+/* JudgePanelGrid: the live judge-tile grid extracted from the
  * Control Room's active-diver panel (ControlView.vue). Pure
- * presentation: one tile per panel judge showing their submitted
+ * presentation, one tile per panel judge showing their submitted
  * score, with a green "scored" state and a pulsing red "signaled"
  * state when a judge has tapped Signal Referee on their keypad.
  *
@@ -14,7 +14,7 @@
  * State boundary: ControlView OWNS the tiles. It builds them in
  * initJudgeTiles(), mutates `.scored` / `.score` on score_received
  * and `.signaled` on judge_signal, and clears them between dives.
- * This component only renders what it's handed — no socket
+ * This component just renders what it's handed, no socket
  * listeners, no emits. v-tip is a globally-registered directive
  * (src/main.js), so it works here with no import.
  */
@@ -98,7 +98,7 @@ defineProps({
 }
 .judge-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
 
-/* Synchro variant of the judge grid — three labelled columns
+/* Synchro variant of the judge grid: three labelled columns
    (Exec A / Exec B / Sync) so the operator sees who's scoring
    what role at a glance. Border colour echoes the per-group
    accents the Scoreboard view uses for its score chips, so the
@@ -152,10 +152,10 @@ defineProps({
   100% { transform: scale(1); box-shadow: 0 0 12px rgba(16,185,129,0.2); }
 }
 /* Judge has tapped Signal Referee on their keypad. Bright red
-   ring around the tile + pulsing glow draws the operator's eye
-   regardless of what's currently scored / unscored on the
+   ring around the tile plus a pulsing glow draws the operator's
+   eye regardless of what's currently scored / unscored on the
    panel. Wins over .scored when both are set (a judge can
-   submit AND signal — e.g. they want a video review of the
+   submit AND signal, e.g. they want a video review of the
    dive they just judged). */
 .judge-tile.signaled {
   border-color: var(--red);
@@ -185,8 +185,9 @@ defineProps({
 
 /* Shrink tiles a touch on narrow decks so a 7- or 11-judge panel
    still lands on one row. Mirrors the ControlView @720px breakpoint.
-   The .ctrl-broadcast projection-mode override (110px tiles) lives in
-   ControlView.css via :deep(), next to its sibling broadcast rules. */
+   Heads up: the .ctrl-broadcast projection-mode override (110px tiles)
+   lives in ControlView.css via :deep(), next to its sibling broadcast
+   rules. */
 @media (max-width: 720px) {
   .judge-tile { width: 52px; height: 52px; }
 }

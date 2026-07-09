@@ -1,27 +1,28 @@
 -- =============================================================
--- MIGRATION 016 — EVENT ATTENDANCE / CHECK-IN
+-- MIGRATION 016: EVENT ATTENDANCE / CHECK-IN
 --
 -- Pre-meet door check-in. Operators tap each diver as they
 -- arrive to mark them Present, Late, or DNS (did not start).
--- One row per (event, competitor); no row = "not yet checked in".
+-- One row per (event, competitor); no row means "not yet checked in".
 --
--- Why a new table rather than a column on competitor_dive_lists:
+-- Why a new table rather than a column on competitor_dive_lists,
+-- worth spelling out since it's a fair question:
 --   * Status is per-diver-per-event, not per-dive-row. We don't
 --     want to duplicate it across the diver's N round entries.
 --   * Keeps competitor_dive_lists narrowly about the dive list,
 --     not about person-arrival state. withdrawn_at handles
---     during-meet scratches; attendance.status handles pre-meet
---     check-in. A diver can be Present in attendance and have
---     a withdrawn_at on round 5 because they hurt themselves
---     mid-event — these are different concerns.
+--     during-meet scratches, attendance.status handles pre-meet
+--     check-in. A diver can be Present in attendance and still
+--     have a withdrawn_at on round 5 because they hurt themselves
+--     mid-event, these are genuinely different concerns.
 --
 -- Idempotent.
 -- =============================================================
 
 BEGIN;
 
--- Enum for attendance status. The frontend renders these as
--- Present / Late / Absent chips, but the wire value is the enum.
+-- Enum for attendance status. Frontend renders these as
+-- Present / Late / Absent chips, but the wire value stays the enum.
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attendance_status') THEN
@@ -42,7 +43,7 @@ CREATE INDEX IF NOT EXISTS idx_event_attendance_event
   ON public.event_attendance (event_id);
 
 -- Bump schema version. Defensive create so this still works
--- against a DB without 008 applied.
+-- against a DB that doesn't have 008 applied yet.
 CREATE TABLE IF NOT EXISTS public.schema_meta (
     id           integer PRIMARY KEY DEFAULT 1,
     version      integer NOT NULL,

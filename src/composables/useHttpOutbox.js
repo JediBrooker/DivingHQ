@@ -2,8 +2,8 @@
 //
 // Unified bridge between src/lib/outbox.js (protocol-agnostic) and
 // both HTTP write endpoints and socket-based Control Room operations.
-// Every meet-time write — HTTP or socket — goes through the same
-// IDB-backed outbox so actions survive offline gaps.
+// Every meet-time write, whether HTTP or socket, goes through the
+// same IDB-backed outbox so actions survive offline gaps.
 //
 // Two transport modes, dispatched by action_type prefix:
 //   • 'socket:<event>'  → socket.emit with ack callback

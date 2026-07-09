@@ -1,11 +1,11 @@
 <script setup>
-// Judge Analysis — a single landing surface that composes the two
+// Judge Analysis: a single landing surface that composes the two
 // existing judge-transparency tools:
 //
-//   • By Event — pick a Completed event and render the per-event
+//   • By Event: pick a Completed event and render the per-event
 //     "what would the standings be if every judge scored like J"
 //     matrix (the JudgeRankingTable component, reused verbatim).
-//   • By Judge — search the public judge directory and link each
+//   • By Judge: search the public judge directory and link each
 //     result through to its /judge-profile/:id analytics page
 //     (reuses the /api/judges/directory search+list pattern from
 //     JudgeDirectoryView).
@@ -22,7 +22,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-// 'event' | 'judge' — default to the per-event matrix.
+// 'event' | 'judge': default to the per-event matrix.
 const tab = ref('event')
 
 // ── By Event ──────────────────────────────────────────────────
@@ -40,8 +40,8 @@ async function loadEvents() {
   try {
     // Signed-in users get their org's events (every status) from the
     // authed list. The public can't see that endpoint, so they fall
-    // back to the open archive — every federation's Live + Completed
-    // events — which is exactly the public transparency surface this
+    // back to the open archive, every federation's Live + Completed
+    // events, which is exactly the public transparency surface this
     // page is meant to be. Both shapes carry id / name / status /
     // created_at, so completedEvents filters to Completed either way.
     const list = auth.isLoggedIn
@@ -165,7 +165,7 @@ onMounted(() => {
 
 <template>
   <div class="ja-page">
-    <!-- Public top chrome — only the logged-out spectator sees a
+    <!-- Public top chrome: only the logged-out spectator sees a
          page title + Home link; signed-in users get this inside the
          CRM shell (sidebar + breadcrumb already provide context). -->
     <div v-if="!auth.isLoggedIn" class="ja-public-bar">
@@ -303,7 +303,7 @@ onMounted(() => {
 <style scoped>
 .ja-page { min-height: 100%; background: var(--bg); }
 
-/* Public top chrome — mirrors ScoreboardView's logged-out header. */
+/* Public top chrome, mirrors ScoreboardView's logged-out header. */
 .ja-public-bar {
   display: flex; align-items: center; justify-content: space-between;
   gap: 1rem; padding: 0.9rem 1.5rem;
@@ -325,7 +325,7 @@ onMounted(() => {
   line-height: 1.5; max-width: 68ch;
 }
 
-/* Segmented tab control — token-based, reads in both themes. */
+/* Segmented tab control, token-based, reads in both themes. */
 .ja-tabs {
   display: inline-flex; gap: 0.25rem; padding: 0.25rem;
   background: var(--surface-2); border: 1px solid var(--border);
@@ -365,7 +365,7 @@ onMounted(() => {
   border-radius: var(--radius); max-width: 70ch;
 }
 
-/* Judges list — mirrors JudgeDirectoryView's table, token-based. */
+/* Judges list, mirrors JudgeDirectoryView's table, token-based. */
 .ja-judges-table {
   width: 100%; border-collapse: collapse;
   font-size: 13px; background: var(--bg-2);

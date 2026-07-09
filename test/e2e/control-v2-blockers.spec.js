@@ -1,6 +1,6 @@
 // P6.3: ControlViewV2 Live BLOCKERS strip. Flag-on only. A partial panel
 // surfaces "Waiting for N more judge scores" ON-CANVAS (not hidden in a
-// tooltip) -- the four-question layout's BLOCKERS, answering "what's
+// tooltip), the four-question layout's BLOCKERS, answering "what's
 // stopping me".
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");

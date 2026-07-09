@@ -1,6 +1,6 @@
 -- 041_dive_list_lock.sql
 --
--- Post-advance dive-list lock — World Aquatics Article 6.7.3
+-- Post-advance dive-list lock, per World Aquatics Article 6.7.3
 -- (change-of-dives submission window): a change-of-dives form
 -- must be submitted "no later than thirty (30) minutes after
 -- the end of the previous stage of the event". Past that
@@ -11,7 +11,7 @@
 --
 -- New columns:
 --
---   events.dive_list_locks_at  — when the dive-list editor
+--   events.dive_list_locks_at  - when the dive-list editor
 --     closes for THIS event. Set automatically by
 --     POST /api/events/:id/advance to NOW() + lock_minutes
 --     (default 30, configurable per advance, 0 = no auto-lock).
@@ -19,12 +19,12 @@
 --     is Completed, NOW() ≈ "end of the previous stage" per
 --     Article 6.7.3.
 --
---   competitor_dive_lists.confirmed_at — when the diver
+--   competitor_dive_lists.confirmed_at - when the diver
 --     explicitly confirmed (or re-submitted) their list for
---     this event. NULL = inherited from the parent stage and
---     untouched. Distinguishes "diver actively confirmed"
+--     this event. NULL means inherited from the parent stage
+--     and untouched. Distinguishes "diver actively confirmed"
 --     from "diver took the default" so the operator can audit
---     who responded vs. who let the default ride.
+--     who responded vs. who just let the default ride.
 
 BEGIN;
 

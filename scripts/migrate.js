@@ -2,19 +2,19 @@
 //
 // Migration runner.
 //
-//   npm run migrate            — apply every pending migration
-//   npm run migrate -- --dry   — print what would run, change nothing
-//   npm run migrate -- --to 12 — stop after 0NN_*.sql where NN <= 12
+//   npm run migrate            : apply every pending migration
+//   npm run migrate -- --dry   : print what would run, don't change anything
+//   npm run migrate -- --to 12 : stop after 0NN_*.sql where NN <= 12
 //
 // Reads schema_meta.version from the target database, then applies
 // every migrations/0NN_<name>.sql file with NN > current_version, in
-// numeric order, inside its own transaction. Each migration is
-// idempotent already (we use IF NOT EXISTS / ON CONFLICT), so a
-// re-run that the operator triggers by accident is a no-op.
+// numeric order, inside its own transaction. Each migration is already
+// idempotent (we use IF NOT EXISTS / ON CONFLICT), so if operator
+// accidentally triggers a re-run it's just a no-op.
 //
-// Connection: same env as server.js — DATABASE_URL takes precedence,
+// Connection: same env as server.js, DATABASE_URL takes precedence,
 // otherwise the standard libpq vars (DB_HOST/DB_USER/DB_PASSWORD/
-// DB_NAME/DB_PORT). dotenv loaded so a developer can `npm run
+// DB_NAME/DB_PORT). dotenv is loaded so a dev can `npm run
 // migrate` against a .env without exporting anything by hand.
 
 require("dotenv").config();
@@ -45,9 +45,9 @@ function listMigrations() {
 }
 
 async function getCurrentVersion(client) {
-  // schema_meta is created by migration 008; on a totally fresh DB
-  // (no init.sql, no 008 applied) the table doesn't exist yet, so
-  // we treat that as version 0 and run everything from the start.
+  // schema_meta gets created by migration 008. On a totally fresh DB
+  // (no init.sql, no 008 applied yet) the table just doesn't exist,
+  // so we treat that as version 0 and run everything from scratch.
   try {
     const r = await client.query(
       "SELECT version FROM public.schema_meta WHERE id = 1",
@@ -99,7 +99,7 @@ function makeClient() {
       console.log(`[migrate] ${m.file} (→ v${m.version})`);
       if (DRY_RUN) continue;
       // Each migration file already wraps itself in BEGIN/COMMIT, so
-      // running it as a single multi-statement query gives us per-file
+      // running it as one multi-statement query gets us per-file
       // atomicity: if anything fails partway through, the whole file
       // rolls back and we exit non-zero.
       try {

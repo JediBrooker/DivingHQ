@@ -1,30 +1,30 @@
 -- =============================================================
--- MIGRATION 066 — PAYMENTS CORE (Stripe Connect, direct charges)
+-- MIGRATION 066, payments core (Stripe Connect, direct charges)
 --
 -- Adds the marketplace payment layer. Federations (organisations)
 -- become Stripe *connected accounts*; DivingHQ is the Connect
 -- *platform*. We use DIRECT charges: the federation is the merchant
 -- of record and bears refund/dispute liability + Stripe processing
 -- fees; DivingHQ collects an *application fee* (default 15%) on every
--- charge. Money is never custodied by DivingHQ — Stripe pays each
+-- charge. Money is never custodied by DivingHQ, Stripe pays each
 -- federation directly. See routes/payments.js for the fund flow.
 --
 -- Scope (agreed first cut):
---   • Membership / registration fees  — recurring. NOT a prerequisite
+--   • Membership / registration fees: recurring. NOT a prerequisite
 --     for entry; a membership record only unlocks member pricing.
---   • Competition entry fees          — per event.
+--   • Competition entry fees: per event.
 -- Both support member-vs-non-member pricing and early-bird / standard
 -- / late time windows via fee_prices variants.
 --
 -- Three non-negotiable knobs are modelled now:
---   • who pays the fees   — fee_definitions.fee_payer
---   • refund policy       — fee_definitions.refund_policy
---   • currency            — organisations.default_currency, set per
---                           the federation's country at onboarding.
+--   • who pays the fees:  fee_definitions.fee_payer
+--   • refund policy:      fee_definitions.refund_policy
+--   • currency:           organisations.default_currency, set per
+--                         the federation's country at onboarding.
 --
 -- Money is stored in MINOR UNITS (integer pence/cents) and is
--- TAX-INCLUSIVE — the federation is the taxable supplier, so VAT is
--- baked into the sticker price. organisations.tax_rate_bps is kept
+-- TAX-INCLUSIVE, since the federation is the taxable supplier, so VAT
+-- is baked into the sticker price. organisations.tax_rate_bps is kept
 -- only to itemise tax on receipts.
 --
 -- All steps are guarded/idempotent and forward-safe on a live DB.
@@ -38,12 +38,12 @@ ALTER TABLE public.organisations
   ADD COLUMN IF NOT EXISTS stripe_charges_enabled boolean NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS stripe_payouts_enabled boolean NOT NULL DEFAULT false,
   -- ISO 4217 settlement currency, set per federation country at
-  -- onboarding (NULL until then). Fees inherit it unless overridden.
+  -- onboarding (NULL until then). Fees inherit it unless overriden.
   ADD COLUMN IF NOT EXISTS default_currency       char(3),
   -- DivingHQ's cut, in basis points (1500 = 15%). Per-federation so a
   -- larger body can negotiate a lower rate without a code change.
   ADD COLUMN IF NOT EXISTS platform_fee_bps       integer NOT NULL DEFAULT 1500,
-  -- Federation VAT/GST rate in bps, for receipt itemisation only
+  -- Federation VAT/GST rate in bps, just for receipt itemisation
   -- (amounts are already tax-inclusive). NULL = not configured.
   ADD COLUMN IF NOT EXISTS tax_rate_bps           integer;
 
@@ -72,8 +72,8 @@ CREATE TABLE IF NOT EXISTS public.fee_definitions (
     -- ISO 4217. NULL = inherit organisations.default_currency.
     currency          char(3),
     -- Who absorbs Stripe + platform fees:
-    --   'absorb'        — baked into the price (payer sees one number)
-    --   'pass_to_payer' — added on top at checkout
+    --   'absorb':        baked into the price (payer sees one number)
+    --   'pass_to_payer': added on top at checkout
     fee_payer         varchar(20) NOT NULL DEFAULT 'absorb'
         CHECK (fee_payer IN ('absorb','pass_to_payer')),
     -- Diver-initiated refund policy. Competition CANCELLATION always

@@ -10,15 +10,15 @@
 //   VAPID_PRIVATE_KEY=...
 //   VAPID_SUBJECT=mailto:ops@example.com
 //
-// Run once per deployment environment and paste the output into the
-// host's .env. The same keys must persist for the lifetime of the
-// deployment — rotating them invalidates every existing browser
-// subscription, which means every user has to grant push permission
-// again.
+// Run this once per deployment environment and paste the output into
+// the host's .env. The same keys need to persist for the lifetime of
+// the deployment: rotating them invalidates every existing browser
+// subscription, so every user would have to grant push permission
+// again. Worth double-checking you're not overwriting a live key pair.
 //
-// VAPID_SUBJECT is the contact the push service uses to reach you
-// if your sender misbehaves. mailto: or https: scheme; the email
-// address doesn't have to be valid for delivery.
+// VAPID_SUBJECT is just the contact the push service uses to reach you
+// if your sender misbehaves. mailto: or https: scheme works; the email
+// address doesn't actually have to be valid for delivery.
 
 const webpush = require("web-push");
 

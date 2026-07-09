@@ -1,18 +1,18 @@
 -- =============================================================
--- MIGRATION 070 — ENTRY-CHARGE UNIQUENESS GUARDS
+-- MIGRATION 070: ENTRY-CHARGE UNIQUENESS GUARDS
 --
 -- Scratch / no-show penalties (entry_charges, migration 067) ship with the
 -- routes in this change. Two partial unique indexes enforce the invariants
 -- the code relies on:
 --
---   1. At most one OWED charge per (event, entrant, kind) — so re-issuing a
+--   1. At most one OWED charge per (event, entrant, kind), so re-issuing a
 --      scratch/no-show penalty is idempotent instead of stacking debits.
 --      Waived/paid rows don't count, so a waived charge can be re-issued.
 --
 --   2. At most one LIVE (pending|paid) penalty PAYMENT per (event, entrant,
---      fee_definition) — the scratch/no_show analogue of the event_entry /
---      membership / club / official live-payment guards (067 added those but
---      not one for the entry-penalty subject types, so duplicate live
+--      fee_definition): the scratch/no_show analogue of the event_entry /
+--      membership / club / official live-payment guards (067 added those
+--      but not one for the entry-penalty subject types, so duplicate live
 --      penalty payments were possible).
 -- =============================================================
 

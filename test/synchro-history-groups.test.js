@@ -1,5 +1,5 @@
-// Contract for the synchro Exec/Sync grouping the Control Room History
-// uses (synchroJudgeGroups + groupedSynchroScoresForDisplay). DB-less.
+// Contract for the synchro Exec/Sync grouping that Control Room History
+// uses (synchroJudgeGroups + groupedSynchroScoresForDisplay). DB-less
 const { test, before } = require('node:test')
 const assert = require('node:assert/strict')
 
@@ -23,8 +23,8 @@ test('grouped display returns 3 labelled clusters with the right judge counts (7
   assert.deepEqual(groups.map((g) => g.role), ['a', 'b', 'sync'])
   assert.deepEqual(groups.map((g) => g.scores.length), [2, 2, 3])
   // 7-judge synchro now mirrors the 9-judge execution rule: the single
-  // lowest + highest execution marks are cancelled ACROSS both divers'
-  // four marks (2 dropped), while all 3 sync marks are kept.
+  // lowest + highest execution marks get cancelled across both divers'
+  // four marks (2 dropped), while all 3 sync marks are kept
   const byRole = Object.fromEntries(groups.map((g) => [g.role, g]))
   assert.equal(byRole.sync.scores.filter((s) => s.dropped).length, 0, 'all 3 sync kept')
   assert.equal(

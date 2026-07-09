@@ -5,19 +5,19 @@ import { useAuthStore } from '@/stores/auth'
 // Singleton socket pool keyed by `(spectator, userId)` so every
 // view + global component sharing the same auth share one
 // transport. Without this, every `useSocket()` call creates a
-// fresh `io(...)` connection — a tab on /dashboard with the
+// fresh `io(...)` connection: a tab on /dashboard with the
 // global NotificationCenter mounted ends up with two-or-three
 // concurrent sockets joining the same event rooms, doubling
-// server connections and forcing every broadcast to be sent
+// server connections and forcing every broadcast to get sent
 // twice to the same client. Refcounted so the last consumer
 // disconnecting actually closes the transport.
 //
-// Auth rides the httpOnly session cookie on the handshake — the
+// Auth rides the httpOnly session cookie on the handshake, since
 // browser JS can't read the JWT to pass it via `auth.token` any
 // more, so authenticated sockets send no token and the server
-// reads the cookie. The pool keys on the user id (not the token)
-// so a mid-session identity change still swaps the socket. An
-// explicit `spectator` lease sends `auth.token: 'spectator'` to
+// reads the cookie instead. The pool keys on the user id (not the
+// token) so a mid-session identity change still swaps the socket.
+// An explicit `spectator` lease sends `auth.token: 'spectator'` to
 // opt OUT of cookie auth (a signed-in user viewing a public board).
 //
 // Public surface stays exactly the same: returns a socket-like
@@ -34,7 +34,7 @@ function acquire({ spectator, userId }) {
   let entry = pool.get(key)
   if (!entry) {
     const socket = io({ auth: spectator ? { token: 'spectator' } : {} })
-    // Initialise from the socket's real state — io() connects
+    // Initialise from the socket's real state, since io() connects
     // asynchronously, so a hardcoded `true` would report
     // "connected" before the first connect event ever fires.
     const isConnected = ref(socket.connected)
@@ -60,7 +60,7 @@ function release(key) {
 }
 
 // Manual lease on a pooled socket, for consumers whose socket
-// lifetime is tied to something other than a component unmount —
+// lifetime is tied to something other than a component unmount:
 // NotificationCenter swaps sockets whenever the auth identity
 // changes mid-session (login/logout navigate without a reload).
 // Returns the pooled socket plus an idempotent release().

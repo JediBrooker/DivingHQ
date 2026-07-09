@@ -2,12 +2,12 @@
 // One-shot transformer: physical-direction CSS -> logical-property
 // equivalents so the app mirrors correctly under <html dir="rtl">.
 //
-// Scope of changes (all string substitutions; we keep the diff
-// reviewable). For each Vue file we split out three contexts:
+// Scope of changes (all string substitutions, we keep the diff
+// reviewable that way). For each Vue file we split out three contexts:
 //
-//   1. <style ...> ... </style>          -- CSS, full sweep
-//   2. style="..."                       -- inline CSS attribute
-//   3. <script ...> ... </script> + JS   -- skipped; logical-property
+//   1. <style ...> ... </style>          CSS, full sweep
+//   2. style="..."                       inline CSS attribute
+//   3. <script ...> ... </script> + JS   skipped; logical-property
 //      keys in Vue :style object syntax need camelCase keys, which
 //      isn't a safe automated swap (they may appear in larger
 //      expressions). We handle the remaining .vue script blocks
@@ -24,7 +24,7 @@
 //   absolute left:/right:            -> inset-inline-start / -end
 //
 // We deliberately do NOT rewrite shorthand `margin: a b c d`,
-// `padding: ...`, or `inset: ...` — those need human review.
+// `padding: ...`, or `inset: ...`, those still need a human look.
 
 "use strict";
 
@@ -74,7 +74,7 @@ function transformFile(file, src) {
     return transformCss(src);
   }
 
-  // Vue file: only transform inside <style ...> blocks and
+  // Vue file, so only transform inside <style ...> blocks and
   // style="..." attribute values.
   let totalCount = 0;
   let out = src;
@@ -133,9 +133,9 @@ function transformCss(src) {
   // Absolute positioning: bare `left:` / `right:` properties.
   // Must follow start-of-line, whitespace, `;`, `{`, or `(` so we
   // don't touch `padding-left:` (the `-` blocks the boundary) or
-  // anything mid-identifier. We already swapped padding/margin/etc.
-  // above, so by the time we get here the remaining `left:` /
-  // `right:` matches are positioning declarations.
+  // anything mid-identifier. We already swapped padding/margin/etc
+  // above, so by the time we get here whatever `left:` / `right:`
+  // is left over is a positioning declaration.
   src = src.replace(/(^|[\s;{(])left:/g, (m, pre) => {
     count += 1;
     return `${pre}inset-inline-start:`;
@@ -150,6 +150,6 @@ function transformCss(src) {
 
 function transformInlineStyle(src) {
   // Inline style attribute is CSS but with `;`-separated
-  // declarations. We can reuse transformCss.
+  // declarations, so we can just reuse transformCss.
   return transformCss(src);
 }

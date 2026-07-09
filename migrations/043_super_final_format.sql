@@ -1,6 +1,6 @@
 -- 043_super_final_format.sql
 --
--- World Aquatics Diving World Cup "Super Final" format —
+-- World Aquatics Diving World Cup "Super Final" format:
 -- foundation schema only. Subsequent commits wire the
 -- seeding endpoints, ranking endpoint, dive-offs UI, and
 -- synchro-reserve replacement on top of these columns.
@@ -13,18 +13,18 @@
 --
 -- Appendix 3 spells out the three-stage Individual format:
 --
---   Stage 1 — Head-to-Head: 12 divers in 6 seeded pairs
+--   Stage 1 - Head-to-Head: 12 divers in 6 seeded pairs
 --             (12v1, 11v2, 10v3, 9v4, 8v5, 7v6) split into
 --             two physical groups (G1 = 12v1, 9v4, 8v5;
 --             G2 = 11v2, 10v3, 7v6). Each diver dives 3
 --             dives. Higher pair total advances → 6 winners.
 --
---   Stage 2 — Semi Final: the 6 H2H winners regrouped by
+--   Stage 2 - Semi Final: the 6 H2H winners regrouped by
 --             which H2H group they came from. SCORES CARRY
 --             FORWARD from H2H. Women add 2 dives, Men add
 --             3. Top 2 per SF group advance → 4 finalists.
 --
---   Stage 3 — Final: 4 divers, full submitted dive list
+--   Stage 3 - Final: 4 divers, full submitted dive list
 --             (5 W / 6 M). Scores RESET to zero. Reverse-
 --             rank start order from SF.
 --
@@ -36,12 +36,12 @@
 -- ----------------------------------------------------------
 -- New columns + table this migration adds:
 --
---   competitor_dive_lists.group_number int —
+--   competitor_dive_lists.group_number int -
 --     1 or 2 for Super Final stages (H2H sub-groups, SF
 --     groups). NULL for non-super-final events. Used by
 --     the standings query to rank within a sub-group only.
 --
---   events.score_carry_from uuid —
+--   events.score_carry_from uuid -
 --     When set, the standings/calc layers SUM scores from
 --     this stage AND the parent stage referenced here.
 --     Default NULL = points reset per Article 4.1.13 (the
@@ -50,11 +50,11 @@
 --     the Super Final F leaves it NULL (reset).
 --
 --   New event_format values:
---     'super_final_h2h'   — Head-to-Head stage
---     'super_final_semi'  — Semi Final stage
---     'super_final_final' — Final stage
+--     'super_final_h2h'   - Head-to-Head stage
+--     'super_final_semi'  - Semi Final stage
+--     'super_final_final' - Final stage
 --
---   tiebreak_dive_offs table — single-dive tie-breakers
+--   tiebreak_dive_offs table - single-dive tie-breakers
 --     held at end of H2H or SF (Appendix 3 §6). Doesn't
 --     affect official scores; just records who advanced.
 
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS public.tiebreak_dive_offs (
     score_a         numeric(6,2),
     score_b         numeric(6,2),
     winner_id       uuid REFERENCES public.users(id) ON DELETE SET NULL,
-    -- Free-text "why" — usually empty, but the referee can
+    -- Free-text "why", usually empty, but the referee can
     -- annotate (e.g. "Diver B refused dive-off; Diver A
     -- advanced by default").
     notes           text,
@@ -147,12 +147,13 @@ CREATE INDEX IF NOT EXISTS idx_tiebreak_event
   ON public.tiebreak_dive_offs(event_id);
 
 -- Bump schema_meta.version. Migrations 035-042 silently stopped
--- bumping the singleton — the audit caught that init.sql now
+-- bumping the singleton, the audit caught that init.sql now
 -- declares 43 while a migrated DB still reads 34. The runner
--- relies on this column to compute "what's pending" so a stale
+-- relies on this column to compute "what's pending", so a stale
 -- value re-applies idempotent migrations on every run (harmless
--- but wasteful + observability gap). 043 picks the responsibility
--- back up; backfilling 035-042's bumps is a separate cleanup.
+-- but wasteful, plus an observability gap). 043 picks the
+-- responsibility back up; backfilling 035-042's bumps is a
+-- separate cleanup, tbh not the fun kind.
 INSERT INTO public.schema_meta (id, version)
 VALUES (1, 43)
 ON CONFLICT (id) DO UPDATE SET version = EXCLUDED.version

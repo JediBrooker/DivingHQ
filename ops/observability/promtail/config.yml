@@ -1,4 +1,4 @@
-# Promtail — tails the PM2 log files in /var/log/dive-recorder
+# Promtail: tails the PM2 log files in /var/log/dive-recorder
 # (mounted from the host's project /logs directory) and pushes
 # every line to Loki.
 #
@@ -32,8 +32,8 @@ scrape_configs:
           # so we get logfile = "pm2-out.log" / "pm2-err.log".
           __path__: /var/log/dive-recorder/*.log
     pipeline_stages:
-      # Parse Pino's JSON shape. Anything that doesn't parse
-      # (e.g. a bare console.log() that slipped through the
+      # Parse Pino's JSON shape. Heads up: anything that doesn't
+      # parse (e.g. a bare console.log() that slipped through the
       # net) lands as a string entry under msg.
       - json:
           expressions:
@@ -42,7 +42,7 @@ scrape_configs:
             msg:   msg
             module: module      # set when a child logger is used
       # Promote level + module to indexed labels so Grafana's
-      # query bar can filter on them. Cardinality stays low —
+      # query bar can filter on them. Cardinality stays low,
       # level is one of trace/debug/info/warn/error/fatal,
       # module is whatever a child logger sets.
       - labels:

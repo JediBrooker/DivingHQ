@@ -1,7 +1,7 @@
-// Per-pool controllers (#1, #2, #4): each LivePoolCard owns its OWN shot
-// clock, auto-advance, and meet-hold. Proves a NON-focused pool runs its
-// own clock + auto-advances itself, and that holding one pool leaves the
-// other untouched. Flag-on only (V2 surface).
+// Per-pool controllers (#1, #2, #4): each LivePoolCard owns its own shot
+// clock, auto-advance, and meet-hold. Proves a non-focused pool still runs
+// its own clock and auto-advances itself, and that holding one pool leaves
+// the other untouched. Flag-on only (V2 surface).
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -52,25 +52,25 @@ test("a NON-focused pool runs its own clock and auto-advances itself", async ({ 
   const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
   const cardB = page.locator(`.cv2-pool[data-event-id="${B.event.id}"]`);
 
-  // #1: BOTH pools show their own shot clock (not just the focused one).
+  // #1: both pools show their own shot clock, not just the focused one.
   await expect(cardA.locator(".cv2-shotclock")).toBeVisible();
   await expect(cardB.locator(".cv2-shotclock")).toBeVisible();
   await expect(cardB.locator(".cv2-live-diver")).toContainText("AAA B");
 
-  // Set Pool B's OWN auto-next to 5s via B's card, while A stays focused.
+  // Set Pool B's own auto-next to 5s via B's card while A stays focused.
   await cardB.locator(".cv2-split-aside").click();
   await cardB.getByRole("menuitemradio", { name: "5 seconds", exact: true }).click();
   await expect(cardB.locator(".cv2-autonext-menu")).toHaveCount(0);
 
-  // A full panel for B's active diver arms B's countdown -> B advances to
-  // its second diver UNAIDED, without ever focusing B (focus stays on A).
+  // A full panel for B's active diver arms B's countdown, so B advances to
+  // its second diver unaided, without ever focusing B (focus stays on A).
   await setup.submitPanelScores({
     baseURL, judges: B.judges, eventId: B.event.id,
     competitorId: B.divers[0].userId, roundNumber: 1, diveId: B.diveId,
   });
   await expect(cardB.locator(".cv2-autopill")).toBeVisible({ timeout: 6_000 });
   await expect(cardB.locator(".cv2-live-diver")).toContainText("ZZZ B", { timeout: 12_000 });
-  // Focus never left Pool A.
+  // Focus never left Pool A
   await expect(page.locator(".cv2-chip.is-focused")).toContainText("Pool A");
 });
 
@@ -89,14 +89,14 @@ test("holding one pool leaves the other pool running", async ({ request, page })
   const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
   const cardB = page.locator(`.cv2-pool[data-event-id="${B.event.id}"]`);
 
-  // Hold Pool B from its own card.
+  // Hold Pool B from its own card
   await cardB.locator(".cv2-pool-hold").click();
   await expect(cardB.locator(".cv2-pool-heldbar")).toBeVisible();
   await expect(cardB).toHaveClass(/is-held/);
-  // Pool A is untouched (no held bar).
+  // Pool A is untouched, no held bar
   await expect(cardA.locator(".cv2-pool-heldbar")).toHaveCount(0);
 
-  // Resume B -> its held state clears.
+  // Resume B, its held state should clear
   await cardB.locator(".cv2-pool-hold").click();
   await expect(cardB.locator(".cv2-pool-heldbar")).toHaveCount(0);
 });
