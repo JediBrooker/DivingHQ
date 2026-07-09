@@ -412,7 +412,7 @@ test("diver checks out a priced pending enrolment; webhook activates it", async 
 
   const wh = await api("POST", "/webhooks/stripe", {
     type: "checkout.session.completed",
-    data: { object: { id: "cs_test", client_reference_id: paymentId, payment_intent: "pi_test" } },
+    data: { object: { id: "cs_test", client_reference_id: paymentId, payment_intent: "pi_test_" + suffix } },
   }, null);
   assert.equal(wh.status, 200);
 
