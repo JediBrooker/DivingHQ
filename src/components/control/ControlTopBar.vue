@@ -229,6 +229,9 @@ onUnmounted(() => {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.7; }
 }
+@media (prefers-reduced-motion: reduce) {
+  .cv2-conn-off { animation: none; }
+}
 .cv2-conn-dot {
   width: 7px; height: 7px; border-radius: 50%; flex: none;
 }
