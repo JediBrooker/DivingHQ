@@ -1,8 +1,8 @@
 <script setup>
-/* AdvanceStageModal — stage-progression dialog (prelim/semi →
- * next stage), extracted from ManagerView.vue. Opened from a
+/* AdvanceStageModal is the stage-progression dialog (prelim/semi
+ * to next stage), extracted from ManagerView.vue. Opened from a
  * Completed prelim/semifinal row's "Advance to next stage →"
- * button; the operator picks top N + reserves + dive-order mode
+ * button. The operator picks top N, reserves, and dive-order mode,
  * with a live preview of the World Aquatics tie-break ranking
  * before seeding.
  *
@@ -12,9 +12,9 @@
  * stays in the parent, keyed off the same open condition.
  *
  * State boundary: child/ranked/topN/reserves/diveOrder/loading/
- * error are OWNED here. A successful advance emits `advanced` —
+ * error are OWNED here. A successful advance emits `advanced`,
  * the parent reloads its event list (statuses + rosters changed
- * server-side) — then `close`.
+ * server-side), then `close`.
  */
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -34,14 +34,14 @@ const auth = useAuthStore()
 const advanceChild     = ref(null)
 const advanceRanked    = ref([])
 const advanceTopN      = ref(props.event.advance_count || 12)
-// Default 4 reserves — typical at WA-sanctioned events so the
+// Default 4 reserves, typical at WA-sanctioned events so the
 // referee has a buffer if multiple primaries withdraw before
 // the next stage begins. Operator can override per advance.
 const advanceReserves  = ref(4)
 // World Aquatics Article 4.1.8 (semi) + 4.1.10 (subsequent
 // stages): both semi-final and final use REVERSE-RANK start
 // order based on the previous stage's results. Default the
-// dive_order picker to 'reverse' regardless of stage; the
+// dive_order picker to 'reverse' regardless of stage, but the
 // operator can still override to 'inherit' or 'random' for
 // non-WA-sanctioned events.
 const advanceDiveOrder = ref('reverse')   // 'inherit' | 'reverse' | 'random'
@@ -63,7 +63,7 @@ async function loadAdvancePreview() {
     advanceLoading.value = false
   }
 }
-// Initial load on mount — same cadence as the old open handler.
+// Initial load on mount, same cadence as the old open handler.
 loadAdvancePreview()
 
 async function confirmAdvance() {
@@ -191,13 +191,13 @@ async function confirmAdvance() {
 
 <style scoped>
 /* Advance styles MOVED from ManagerView.css (exclusive to this
-   modal — .modal-advance / .advance-field* / .advance-radio /
+   modal, .modal-advance / .advance-field* / .advance-radio /
    .advance-preview*; NOT .advance-btn, which is the green
    event-row button and stays with the view). The .hint block is
    COPIED from ManagerView.css (shared with the rest of the
    manager page); .modal/.modal-backdrop are global (app.css). */
 
-/* Advance to next stage — modal layout. The right side surfaces
+/* Advance to next stage modal layout. The right side surfaces
    a live preview of the ranked divers split into Primaries /
    Reserves / Cut so the operator can see exactly who'll
    progress before clicking the button. */
@@ -252,7 +252,7 @@ async function confirmAdvance() {
 }
 .advance-preview-row.cut .advance-tag { color:var(--text-3); }
 
-/* COPIED — hint block shared with the rest of the manager page
+/* COPIED: hint block shared with the rest of the manager page
    (see ManagerView.css). */
 .hint {
   font-size: 11px; color: var(--text-3); line-height: 1.5;
@@ -260,11 +260,11 @@ async function confirmAdvance() {
   background: var(--bg-3); border-inline-start: 3px solid var(--cyan); border-radius: 3px;
 }
 
-/* Phone — copied from ManagerView.css's 600px block. */
+/* Phone, copied from ManagerView.css's 600px block. */
 @media (max-width: 600px) {
-  /* Advance preview rows — 38+60+80 = 178px of fixed cols is too
-     greedy on 360px; let the name eat the row, rank pins to the
-     left and tag/total wrap underneath. */
+  /* Advance preview rows: 38+60+80 = 178px of fixed cols is too
+     greedy on 360px, so let the name eat the row. Rank pins to
+     the left and tag/total wrap underneath. */
   .advance-preview-row {
     grid-template-columns: 32px 1fr auto;
     row-gap: 0.15rem;

@@ -1,5 +1,5 @@
 -- =============================================================
--- MIGRATION 046 — COACH ALERT PREFERENCES
+-- MIGRATION 046 - COACH ALERT PREFERENCES
 --
 -- Phase 3 of the coach feature bundle: real-time "your diver
 -- is up next" push notifications. When the active diver flips,
@@ -8,8 +8,8 @@
 -- their coach(es) via lib/push.js (sockets + Web Push).
 --
 -- This table stores per-coach preferences:
---   enabled       — coach can opt out entirely
---   dives_ahead   — how many slots out from the active diver
+--   enabled       - coach can opt out entirely
+--   dives_ahead   - how many slots out from the active diver
 --                   should trigger the alert (default 2 ≈ 60s of
 --                   warning at a 30s shot-clock)
 --

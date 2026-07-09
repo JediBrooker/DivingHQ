@@ -1,14 +1,14 @@
 <script setup>
-// Session Scheduler — Phases 1, 2 & 3.
+// Session Scheduler: Phases 1, 2 & 3.
 //
 // Phase 1 (already shipped): vertical timeline (30-min gridlines)
 // with one column per board, blocks anchored to their windows by
-// absolute positioning. Read-only — no drag, no resize, no insert.
+// absolute positioning. Read-only, no drag, no resize, no insert.
 //
 // Phase 2 (already shipped): conflict overlay + drawer.
 //   * Blocks participating in an active (non-dismissed) conflict
 //     pick up a coloured outline (red for hard, amber for soft)
-//     and a ⚠ marker, matching docs/session-scheduler.md §4.1.
+//     and a warning-triangle marker, matching docs/session-scheduler.md §4.1.
 //   * Collapsible drawer on the right lists conflicts grouped
 //     by severity. Each entry has Jump-to-block, Dismiss
 //     (with optional reason), and (when "show dismissed" is on)
@@ -19,7 +19,7 @@
 //     dismissals propagate live.
 //
 // Phase 3 (this revision): manual edit + duplicate-session.
-//   * "Edit mode" toggle in the header. Default OFF — the read-
+//   * "Edit mode" toggle in the header. Default OFF, the read-
 //     only Phase 2 surface stays the entry experience. With edit
 //     mode ON, blocks become draggable (vertical = shift in time,
 //     horizontal = re-column to a different board) and resizable
@@ -45,9 +45,9 @@
 //
 // Phase 4 (this revision): subscribes to `schedule:shifted` and
 // refetches /sessions on receipt. The live re-flow UI itself
-// (the "Reschedule downstream" modal) lives in the Control Room
-// — the operator who marked the event Complete shouldn't have to
-// leave that view to confirm shifts. See
+// (the "Reschedule downstream" modal) lives in the Control Room,
+// since the operator who marked the event Complete shouldn't have
+// to leave that view to confirm shifts. See
 // src/components/ReflowModal.vue + the finaliseEvent flow in
 // ControlView.vue.
 
@@ -58,8 +58,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { useBlockDrag } from '@/composables/useBlockDrag'
 // NB: SchedulerView's drawer is a docked side panel, not an
-// overlay — drag-and-drop in the underlying calendar is
-// intentional while it's open. No body-scroll-lock here.
+// overlay, so drag-and-drop in the underlying calendar still
+// works while it's open. No body-scroll-lock here.
 
 const route = useRoute()
 const { t } = useI18n()
@@ -81,7 +81,7 @@ const canEditSchedule = computed(() => {
   return roles.includes('org_admin') || roles.includes('meet_manager')
 })
 
-// Phase 2 — conflict state.
+// Phase 2: conflict state.
 const conflicts = ref([])           // raw response from /conflicts
 const conflictsLoading = ref(false)
 const conflictsError = ref('')
@@ -93,18 +93,18 @@ const dismissReason = ref('')
 const dismissPending = ref(false)
 const dismissError = ref('')
 const highlightBlockId = ref(null)  // block to flash when "Jump to block"
-                                    // is clicked — cleared after the
+                                    // is clicked, cleared after the
                                     // animation lands.
 
 // Visual constants. Pixels per minute defines how tall each block
 // renders; the 30-minute gridline cadence and column widths come
-// off of it. Tweak these together — the gridline drawer assumes
+// off of it. Tweak these together: the gridline drawer assumes
 // MINUTES_PER_GRIDLINE × PIXELS_PER_MINUTE = the row height.
 const PIXELS_PER_MINUTE = 1.6
 const MINUTES_PER_GRIDLINE = 30
 const GRIDLINE_HEIGHT = PIXELS_PER_MINUTE * MINUTES_PER_GRIDLINE
 
-// Phase 3 — edit-mode state.
+// Phase 3: edit-mode state.
 const editMode = ref(false)
 const LS_EDIT_MODE = 'scheduler.editMode'
 watch(editMode, (v) => writePref(LS_EDIT_MODE, v))
@@ -130,7 +130,7 @@ const insertSaving = ref(false)
 const insertError = ref('')
 
 // Hover-confirm delete state. Mirrors the per-conflict dismiss
-// inline form pattern — the small × button on each block flips
+// inline form pattern: the small × button on each block flips
 // pendingDeleteId to that block, the operator confirms inline.
 const pendingDeleteId = ref(null)
 const deleteSaving = ref(false)
@@ -142,7 +142,7 @@ const duplicateSaving = ref(false)
 const duplicateError = ref('')
 
 // LocalStorage keys for the QoL prefs. Mirrors the locale-switcher
-// pattern in src/i18n/index.js — a single namespace, one key per
+// pattern in src/i18n/index.js: a single namespace, one key per
 // preference, JSON-encoded so we can extend later without a
 // migration. Read once at mount, written on toggle.
 const LS_DRAWER_OPEN = 'scheduler.drawerOpen'
@@ -180,7 +180,7 @@ async function load() {
     loading.value = false
   }
   // Conflicts are independent of /sessions but always paired with
-  // it in the UI — fire them after we have block ids to map
+  // it in the UI, so fire them after we have block ids to map
   // against.
   await loadConflicts()
 }
@@ -219,7 +219,7 @@ onMounted(() => {
   editMode.value = canEditSchedule.value && readPref(LS_EDIT_MODE, false)
 })
 
-// Socket subscription — refetch on schedule:conflict_dismissed for
+// Socket subscription: refetch on schedule:conflict_dismissed for
 // any meet we care about. Filtered to our meet to avoid
 // gratuitous refetches when a different meet's dismissal
 // broadcasts through the shared socket pool.
@@ -228,9 +228,9 @@ function onConflictDismissed(payload) {
   if (payload.meet_id && payload.meet_id !== meetId.value) return
   loadConflicts()
 }
-// Phase 3 — broadcast events from manual edits in other tabs.
+// Phase 3: broadcast events from manual edits in other tabs.
 // We refetch the whole /sessions payload rather than splicing
-// in deltas because the absolute-positioning math depends on
+// in deltas becuase the absolute-positioning math depends on
 // the session window (earliest → latest) and a single moved
 // block can shift it.
 function onScheduleChanged(payload) {
@@ -242,7 +242,7 @@ socket.on('schedule:conflict_dismissed', onConflictDismissed)
 socket.on('schedule:block_updated', onScheduleChanged)
 socket.on('schedule:block_deleted', onScheduleChanged)
 socket.on('schedule:session_duplicated', onScheduleChanged)
-// Phase 4 — live re-flow. The Control Room's reflow modal POSTs
+// Phase 4: live re-flow. The Control Room's reflow modal POSTs
 // to /api/blocks/reflow which emits this event; every connected
 // timeline (including public-schedule viewers) refetches so the
 // new windows appear within a socket round-trip.
@@ -264,8 +264,8 @@ const webcalUrl = computed(() => {
   if (!meetId.value) return '#'
   // Strip the scheme so the OS calendar treats the link as a
   // subscription rather than a one-shot download. window may be
-  // undefined during SSR — the SchedulerView isn't SSR'd today,
-  // but the guard costs nothing.
+  // undefined during SSR (the SchedulerView isn't SSR'd today,
+  // but the guard costs nothing).
   if (typeof window === 'undefined') return '#'
   const { host } = window.location
   return `webcal://${host}/api/meets/${meetId.value}/schedule.ics`
@@ -318,8 +318,8 @@ function timelineHeight(session) {
 // Per-block geometry. board_ids is a uuid[]; we resolve each id
 // to a column index and render the block spanning that column.
 // Blocks with no board (ceremonies, breaks) get a 'no-column'
-// pseudo-column that spans the full width — visually distinct
-// so the operator can see they're meet-wide.
+// pseudo-column that spans the full width, visually distinct so
+// the operator can see they're meet-wide.
 function blockStyle(block, session) {
   const win = sessionWindow(session)
   if (!win) return {}
@@ -422,7 +422,7 @@ function blockToneClass(block) {
 // Conflict derivations
 // -----------------------------------------------------------------
 
-// Active conflicts (not dismissed) — what the marker / outline /
+// Active conflicts (not dismissed): what the marker / outline /
 // counter use. Dismissed ones land in the drawer's "Dismissed"
 // section only when the toggle is on.
 const activeConflicts = computed(() =>
@@ -545,11 +545,11 @@ async function undismiss(c) {
 }
 
 // -----------------------------------------------------------------
-// Phase 3 — manual edit
+// Phase 3: manual edit
 // -----------------------------------------------------------------
 
 // Flash the just-edited block red/amber for ~1.4s. Severity comes
-// off the conflicts the API returned — hard wins over soft. We
+// off the conflicts the API returned, hard wins over soft. We
 // pick the severity off the inline `conflicts` subset rather than
 // re-reading the global map because the global map only updates
 // after the next /conflicts poll.
@@ -598,7 +598,7 @@ function resolveColumnAtX(clientX, _dxPx, block) {
   if (!boards.value.length) return null
   // The drag may have started on a block in one session timeline
   // and the operator may have dragged horizontally across another.
-  // We constrain re-column to the session that owns the block —
+  // We constrain re-column to the session that owns the block:
   // dragging across sessions isn't supported in Phase 3 (see the
   // design doc §2 "NOT in Phase 3" note in the brief).
   const session = sessions.value.find((s) => s.blocks?.some((b) => b.id === block.id))
@@ -635,7 +635,7 @@ async function commitBlockEdit({ block, patch }) {
   }
 }
 
-// One drag composable per timeline session — but a single
+// One drag composable per timeline session, but a single
 // composable works for the entire page because the resolver and
 // commit callbacks both look up the relevant session via the
 // block's id. The factory is invoked once at script init so the
@@ -684,7 +684,7 @@ function onGridClick(e, session) {
   const body = e.currentTarget
   const rect = body.getBoundingClientRect()
   const offsetMin = Math.max(0, (e.clientY - rect.top) / PIXELS_PER_MINUTE)
-  // Round DOWN to the start of the clicked half-hour — feels more
+  // Round DOWN to the start of the clicked half-hour, feels more
   // natural ("click 10:42 → 10:30 block") than round-to-nearest.
   const snappedMin = Math.floor(offsetMin / MINUTES_PER_GRIDLINE) * MINUTES_PER_GRIDLINE
   const win = sessionWindow(session)
@@ -955,7 +955,7 @@ async function confirmDuplicate() {
               :style="{ top: `${idx * GRIDLINE_HEIGHT}px` }"
             ></div>
 
-            <!-- Column dividers — one per board boundary. -->
+            <!-- Column dividers: one per board boundary. -->
             <div
               v-for="(b, i) in boards"
               :key="`colsep-${b.id}`"
@@ -1134,7 +1134,7 @@ async function confirmDuplicate() {
     </div>
 
     <!-- =========================================================
-         Conflicts drawer — Phase 2.
+         Conflicts drawer: Phase 2.
          Mounted at the page level (not inside .scheduler-session)
          so it stays visible while the operator scrolls between
          sessions on a multi-day meet.
@@ -1698,7 +1698,7 @@ async function confirmDuplicate() {
   }
 }
 
-/* ----- Phase 3 — edit mode ----- */
+/* ----- Phase 3: edit mode ----- */
 .scheduler-edit-toggle {
   display: inline-flex;
   align-items: center;
@@ -1759,7 +1759,7 @@ async function confirmDuplicate() {
   background: rgba(76, 187, 204, 0.5);
 }
 
-/* Brief flash after a successful save — distinct from the persistent
+/* Brief flash after a successful save, distinct from the persistent
    outline applied by .has-conflict-* so the operator can see "I just
    touched this and it landed in a conflict" even when the block was
    already outlined for a different reason. */
@@ -1779,7 +1779,7 @@ async function confirmDuplicate() {
 .scheduler-block.is-flash-soft { animation: scheduler-flash-soft 1.4s ease-out; }
 .scheduler-block.is-flash-ok   { animation: scheduler-flash-ok 1.4s ease-out; }
 
-/* Delete affordance — only visible on hover so the read-only view
+/* Delete affordance, only visible on hover so the read-only view
    in edit-off mode is byte-identical to Phase 2. */
 .scheduler-block-delete {
   position: absolute;

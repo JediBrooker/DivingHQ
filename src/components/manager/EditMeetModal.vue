@@ -1,20 +1,20 @@
 <script setup>
-/* EditMeetModal — meet core fields (name / dates / venue /
- * description) + sponsor branding incl. the multi-logo manager
- * (migration 045), extracted from ManagerView.vue. Opened from
- * the per-meet Edit button.
+/* EditMeetModal handles the meet's core fields (name, dates,
+ * venue, description) plus sponsor branding, including the
+ * multi-logo manager (migration 045). Extracted from
+ * ManagerView.vue, opened from the per-meet Edit button.
  *
  * Mount contract: the parent fetches the FULL meet row first
  * (the org meets list lacks description + sponsor fields) and
- * only mounts this with v-if once that succeeds — so the form
- * never renders half-hydrated, exactly like the old
- * openEditMeet(). The body scroll lock stays in the parent,
- * keyed off the same open condition.
+ * only mounts this with v-if once that succeeds, so the form
+ * never renders half-hydrated. Same as the old openEditMeet().
+ * The body scroll lock stays in the parent, keyed off the same
+ * open condition.
  *
- * State boundary: the editable form copy / saving / error are
+ * State boundary: the editable form copy, saving, and error are
  * OWNED here (initialForm prop is cloned, never mutated). A
- * successful PUT emits `saved` — the parent reloads its meets
- * list — then `close`.
+ * successful PUT emits `saved`, the parent reloads its meets
+ * list, then `close`.
  */
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -56,8 +56,8 @@ async function saveMeet() {
         end_date:         editMeetForm.value.end_date   || null,
         description:      editMeetForm.value.description.trim() || null,
         sponsor_name:     editMeetForm.value.sponsor_name.trim() || null,
-        // The legacy `sponsor_logo_url` field is left untouched —
-        // the new sponsor-logos table is the source of truth.
+        // The legacy `sponsor_logo_url` field is left untouched since
+        // the new sponsor-logos table is the source of truth now.
         // We keep `sponsor_link_url` on the meet row for the
         // pre-045 fallback path.
         sponsor_link_url: editMeetForm.value.sponsor_link_url.trim() || null,
@@ -155,7 +155,7 @@ async function saveMeet() {
 </template>
 
 <style scoped>
-/* Form-page frame + hint styles COPIED from ManagerView.css —
+/* Form-page frame + hint styles COPIED from ManagerView.css,
    shared with the create-event / edit-event / create-meet form
    pages that stay in the view (keep in sync). Create/edit forms
    render as full-page panels in the content area rather than

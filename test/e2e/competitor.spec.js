@@ -1,14 +1,14 @@
 // Competitor self-service flow.
 //
 // What this exercises end-to-end:
-//   1. Diver self-registers via POST /api/auth/register — note
-//      this leaves email_verified_at = NULL on purpose.
-//   2. Login is REFUSED with code: "email_not_verified" — this is
+//   1. Diver self-registers via POST /api/auth/register, note this
+//      leaves email_verified_at = NULL on purpose.
+//   2. Login is REFUSED with code: "email_not_verified", this is
 //      the gate Migration 021 added.
 //   3. We "click the link" by stamping email_verified_at directly
 //      (the real link is signed with the same JWT_SECRET, but we
 //      don't ship that to the test process and don't want to peek
-//      at it via the mailer transport — easier to bypass).
+//      at it via the mailer transport, easier to just bypass).
 //   4. Login now succeeds and returns a token.
 //   5. Diver approves themselves into a 'diver' role (real flow:
 //      role_request → admin reviews → role granted; bypass via
@@ -18,10 +18,10 @@
 //   7. Diver POSTs /api/competitor/submit-list with two rounds.
 //   8. Roster GET (as admin) shows the diver's two dives.
 //
-// Why API-driven: the registration form is a normal HTML form
-// in the SPA; testing it through Playwright would only exercise
-// vue-router + the form bindings, not the gate logic that's
-// the regression risk here.
+// Why API-driven: the registration form is just a normal HTML form
+// in the SPA, so testing it through Playwright would only exercise
+// vue-router and the form bindings, not the gate logic that's
+// actually the regression risk here.
 
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
@@ -59,10 +59,10 @@ test("diver registers, gates on email verification, then submits a dive list", a
   const blockedBody = await blocked.json();
   expect(blockedBody.code).toBe("email_not_verified");
 
-  // ---- 3. "Click the link" — stamp email_verified_at directly.
+  // ---- 3. "Click the link" by stamping email_verified_at directly.
   //         The real flow POSTs the JWT from the email back to
   //         /api/auth/verify-email; we don't have access to the
-  //         mailer queue from the test, so we bypass.
+  //         mailer queue from the test, so we just bypass it.
   const userIdRow = await setup.pool.query(
     "SELECT id FROM users WHERE org_id = $1 AND username = $2",
     [orgId, username],
@@ -74,8 +74,8 @@ test("diver registers, gates on email verification, then submits a dive list", a
   );
 
   // Self-register only grants the 'spectator' role and files a
-  // role_request. Bypass the admin review by inserting the diver
-  // role directly (same trade-off _setup.insertUser makes).
+  // role_request, so bypass the admin review here by inserting the
+  // diver role directly (same trade-off _setup.insertUser makes).
   await setup.pool.query(
     `INSERT INTO user_org_roles (user_id, org_id, role)
      VALUES ($1, $2, 'diver')
@@ -88,7 +88,7 @@ test("diver registers, gates on email verification, then submits a dive list", a
   expect(diverLogin.token).toBeTruthy();
 
   // ---- 5. Admin creates an event the diver can submit into. ----
-  // entries_close_at must be in the future or
+  // entries_close_at must be in the future, otherwise
   // loadEventForEntries refuses the submission.
   const future = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
   const event = await setup.createEvent(request, {
@@ -143,5 +143,5 @@ test("diver registers, gates on email verification, then submits a dive list", a
 
 // pool teardown left to process exit (Playwright tears down the
 // worker process anyway). Calling pool.end() here was a foot-gun
-// when two specs landed in the same worker — the second hit a
-// closed pool. node-postgres handles process exit gracefully.
+// when two specs landed in the same worker, the second one hit a
+// closed pool. node-postgres handles process exit fine on its own.

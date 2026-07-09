@@ -6,11 +6,11 @@ import DashboardEmptyState from './DashboardEmptyState.vue'
 
 defineProps({
   diverNextMeet: { type: Object, default: null },
-  /* The Live event (if any) — when present we render the
+  /* The Live event, if there is one. When it's set we render the
      meet-day CTA card at the top of the panel, deep-linking to
      /me/meet/:eventId. The endpoint 403s for divers who aren't
-     entered, so this card hiding itself for non-entrants
-     happens server-side rather than via a client predicate. */
+     entered, so hiding this card for non-entrants happens
+     server-side instead of some client-side predicate. */
   diverLiveMeet: { type: Object, default: null },
   fmtCloses:     { type: Function, required: true },
 })
@@ -18,10 +18,10 @@ defineProps({
 
 <template>
   <section class="panel">
-    <!-- Meet day card — visible whenever a Live event is on.
-         The diver opens this from the warm-up area or the deck
-         and gets a focused "next dive / rank / what to score"
-         view that beats refreshing the public scoreboard. -->
+    <!-- Meet day card, shows up whenever a Live event is on. Diver
+         opens this from the warm-up area or the deck and gets a
+         focused "next dive / rank / what to score" view, way
+         better than refreshing the public scoreboard. -->
     <div v-if="diverLiveMeet" class="panel-section">
       <div class="panel-section-label">{{ $t('dashboard.sections.meet_day_live') }}</div>
       <RouterLink :to="`/me/meet/${diverLiveMeet.id}`" class="diver-next-card md-cta">

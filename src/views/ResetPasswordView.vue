@@ -4,10 +4,10 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { isValidPassword } from '@/lib/passwordPolicy'
 
 // Step 2 of the password-reset flow. The link in the email is
-// /reset-password?token=<jwt>. We POST that token + the new
+// /reset-password?token=<jwt>. We POST that token plus the new
 // password to /api/auth/reset-password; the server verifies the
-// JWT, checks the password fingerprint hasn't changed (single-
-// use guard), and updates the password.
+// JWT, checks the password fingerprint hasn't changed (this is
+// the single-use guard), and updates the password.
 
 const route  = useRoute()
 const router = useRouter()
@@ -100,7 +100,7 @@ async function submit() {
 <style scoped>
 :global(body) {
   display: flex; align-items: center; justify-content: center;
-  /* dvh, not vh — iOS Safari toolbar collapse. See RegisterView.
+  /* dvh, not vh: iOS Safari toolbar collapse. See RegisterView.
      vh fallback for browsers older than ~Q4-2022. */
   min-height: 100vh;
   min-height: 100dvh;
@@ -117,7 +117,7 @@ async function submit() {
   font-family: var(--font-display); font-size: 13px; font-weight: 700;
   letter-spacing: 0.3em; text-transform: uppercase; color: var(--text);
   margin-bottom: 2.5rem; display: flex; align-items: center;
-  /* No `gap` — see LoginView for the rationale. */
+  /* No `gap` here, see LoginView for the rationale. */
 }
 .reset-mark span { color: var(--cyan); }
 .reset-mark::before {

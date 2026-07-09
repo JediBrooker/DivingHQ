@@ -1,9 +1,9 @@
 <script setup>
 // Tiny header-friendly language picker. Renders as a flag-prefixed
-// dropdown; defaults to compact mode (just the flag) on narrow
-// screens via a CSS media query, full mode (flag + label) on wider.
+// dropdown, defaults to compact mode (just the flag) on narrow
+// screens via a CSS media query, full mode (flag + label) on wider ones.
 //
-// Slot the component into any header. Persists the choice via
+// Drop the component into any header. Persists the choice via
 // setLocale() in src/i18n/index.js (localStorage + <html lang>).
 
 import { computed } from 'vue'
@@ -22,8 +22,8 @@ async function onChange(e) {
 
 <template>
   <label class="locale-switcher" v-tip:bottom="$t('locale.switcher_label')">
-    <!-- Standalone flag shows the CURRENT selection. The native
-         <select>'s rendered text is just the language name — if
+    <!-- Standalone flag shows the CURRENT selection. Heads up: the native
+         <select>'s rendered text is just the language name, so if
          we also embed the flag inside <option>, the selected
          option's text would render the flag a second time next
          to the standalone span (the "two flags" bug). -->

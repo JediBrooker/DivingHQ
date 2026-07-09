@@ -1,5 +1,5 @@
 // Helpers for rendering per-judge scores as colour-coded chips.
-// Used by the Scoreboard and Archive views — keep them in sync so
+// Used by the Scoreboard and Archive views, keep them in sync so
 // dive breakdowns look identical wherever they appear.
 
 // World Aquatics award descriptions (WA Art 10.1.1). Each slug maps to
@@ -37,7 +37,7 @@ export function trimCount(numJudges) {
   return 0
 }
 
-// World Aquatics synchronised panel layout — which judges score
+// World Aquatics synchronised panel layout, which judges score
 // what role, by position. A 7-judge synchro panel is 4 execution
 // judges split 2+2 across the divers, plus 3 synchronisation
 // judges. Returns null for non-synchro panels.
@@ -72,8 +72,8 @@ export function synchroRoleForJudge(judgeNumber, numJudges) {
 // chip rendering stays uniform.
 // Mark the lowest `dropCount` and highest `dropCount` values among the
 // given 1-based judge numbers as dropped, keyed by 0-based index into
-// `values`. Stable on ties — the lowest judge number stays on the
-// "kept" side. No-op when the group is too small to trim.
+// `values`. Stable on ties, the lowest judge number stays on the
+// "kept" side. No-op when the group's too small to trim.
 function markDroppedEnds(judgeNumbers, values, dropCount, dropped) {
   if (dropCount <= 0 || judgeNumbers.length <= dropCount * 2) return
   const indexed = judgeNumbers
@@ -90,7 +90,7 @@ export function annotatedSynchroScores(scoresStr, numJudges) {
     .filter(n => !Number.isNaN(n))
   const groups = synchroJudgeGroups(numJudges)
   if (!groups || values.length !== numJudges) {
-    // Unknown / partial panel — fall back to flat individual rules
+    // Unknown / partial panel, fall back to flat individual rules
     return annotatedScores(scoresStr, numJudges)
   }
   const dropped = new Set()
@@ -118,7 +118,7 @@ export function annotatedSynchroScores(scoresStr, numJudges) {
 
 // View-friendly grouping. Returns:
 //   [{ role, label, scores: [{value, dropped, category}, …] }, …]
-// or null for non-synchro panels — caller falls back to flat
+// or null for non-synchro panels, caller falls back to flat
 // rendering in that case.
 export function groupedSynchroScoresForDisplay(scoresStr, numJudges) {
   const groups = synchroJudgeGroups(numJudges)

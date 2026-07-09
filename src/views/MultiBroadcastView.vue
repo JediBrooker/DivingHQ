@@ -1,18 +1,19 @@
 <script setup>
-/* Multi-event broadcast — one display, every Live event side by side.
+/* Multi-event broadcast: one display, every Live event side by side.
  *
  * The Control Room "Broadcast" launcher offers this as an alternative
- * to the single-event /scoreboard/:id/broadcast view: when a meet
+ * to the single-event /scoreboard/:id/broadcast view. When a meet
  * runs two pools concurrently (3 m + 10 m simultaneously, two
- * stages of a Super Final, etc.) and the venue has ONE projector,
- * the operator points the projector at /broadcast/all and gets an
- * auto-sized grid of every Live event.
+ * stages of a Super Final, etc.) and the venue only has ONE projector,
+ * the operator points it at /broadcast/all and gets an auto-sized
+ * grid of every Live event.
  *
  * Implementation: each pane is an <iframe> of the existing per-event
  * /scoreboard/:id/broadcast view. Reuses the full scoreboard render
- * + socket plumbing for free, at the cost of N SPA instances on the
- * page. In practice the venue use case is 2-4 events; even Chromium
- * handles 4 iframes of this app comfortably (~120 MB total).
+ * plus socket plumbing for free, at the cost of N SPA instances on
+ * the page. In practice the venue use case is 2-4 events, and even
+ * Chromium handles 4 iframes of this app comfortably (~120 MB total,
+ * not exactly svelte but it works).
  *
  * The live-events list refreshes every 30s so events that flip
  * Live → Completed drop out and freshly-flipped events drop in
@@ -29,23 +30,23 @@ const route = useRoute()
 const router = useRouter()
 
 // All Live events as returned by the most recent /api/events
-// poll. The displayed grid is a `computed` derived from this plus
-// the operator's subset filter so that clearing the filter (via
+// poll. The displayed grid is a `computed` derived from this, plus
+// the operator's subset filter, so that clearing the filter (via
 // the "Show all Live events" rescue) re-renders instantly without
 // waiting for the next 30s poll.
 const liveEvents = ref([])
 const loading = ref(true)
 const error = ref('')
 
-// Optional ?ids=<id1>,<id2>,…  — when present the operator picked
+// Optional ?ids=<id1>,<id2>,…, present when the operator picked
 // a subset from the Control Room's broadcast chooser. We intersect
 // this list with the polled Live events so:
 //   • events outside the picked set never show (even if Live)
 //   • selected events that finish drop out naturally on the next poll
 //   • newly-Live events do NOT auto-join the grid (the operator
-//     made an explicit choice; respect it)
+//     made an explicit choice, respect it)
 //
-// A null `selectedIds` means "no subset chosen — show every Live event"
+// A null `selectedIds` means "no subset chosen, show every Live event"
 // (the legacy /broadcast/all behaviour).
 const selectedIds = computed(() => {
   const raw = route.query.ids
@@ -64,7 +65,7 @@ function showAllLive() {
   router.replace({ path: '/broadcast/all' })
 }
 
-// 30 second refresh — slow enough that we're not hammering the API,
+// 30 second refresh, slow enough that we're not hammering the API,
 // fast enough that a venue projector picks up newly-Live events
 // within half a minute of the operator flipping the status.
 const REFRESH_MS = 30_000
@@ -73,10 +74,10 @@ let refreshTimer = null
 async function loadEvents() {
   try {
     // ?status=Live so the server only sends what this grid can
-    // show — the full /api/events payload grows with every
+    // show, the full /api/events payload grows with every
     // archived season. The client-side filter stays as a belt-
-    // and-braces guard (and covers servers predating the filter,
-    // which ignore the query param).
+    // and-braces guard (also covers servers predating the filter,
+    // which just ignore the query param).
     const res = await fetch('/api/events?status=Live', { credentials: 'same-origin' })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()
@@ -91,8 +92,8 @@ async function loadEvents() {
 
 // The displayed events: every Live event when no ?ids= filter is
 // set, else the intersection of (polled Live events) ∩ (picked ids).
-// Computed so the rescue button can strip the filter and have the
-// grid re-render against the most recent poll instantly.
+// Computed this way so the rescue button can strip the filter and
+// have the grid re-render against the most recent poll instantly.
 const events = computed(() => {
   const subset = selectedIds.value
   if (!subset) return liveEvents.value
@@ -114,11 +115,11 @@ onUnmounted(() => {
   if (refreshTimer) clearInterval(refreshTimer)
 })
 
-// Grid template — auto-fit so the layout responds to event count
+// Grid template, auto-fit so the layout responds to event count
 // without a manual breakpoint table.
 //   1 event  → 1×1 (full screen)
 //   2 events → 2×1
-//   3 events → 2×2 (3rd spans bottom or one row left blank — CSS
+//   3 events → 2×2 (3rd spans bottom or one row left blank, CSS
 //                   auto-fit handles it naturally)
 //   4 events → 2×2
 //   5-6      → 3×2
@@ -135,7 +136,7 @@ const gridStyle = computed(() => {
 
 <template>
   <div class="mbcast-root">
-    <!-- Floating chrome: event count + exit. Hidden until the
+    <!-- floating chrome: event count + exit. Hidden until the
          operator moves the pointer near the top of the screen,
          so the projector image stays clean during the meet. -->
     <div class="mbcast-chrome">
@@ -174,11 +175,12 @@ const gridStyle = computed(() => {
           <span v-if="ev.gender" class="mbcast-label-meta">{{ ev.gender }}</span>
         </div>
         <!-- The single-event broadcast view we already ship. Each
-             iframe is its own SPA instance with its own socket;
-             they don't interfere. sandbox without allow-same-origin
-             would break the JWT session — we deliberately keep
-             same-origin so the iframe inherits the spectator's
-             (anonymous or authed) context naturally. -->
+             iframe is its own SPA instance with its own socket,
+             they don't interfere with each other. Heads up:
+             sandboxing without allow-same-origin would break the
+             JWT session, so we deliberately keep it same-origin
+             so the iframe inherits the spectator's (anonymous or
+             authed) context naturally. -->
         <iframe
           :src="`/scoreboard/${ev.id}/broadcast`"
           class="mbcast-frame"
@@ -194,15 +196,15 @@ const gridStyle = computed(() => {
 .mbcast-root {
   position: fixed;
   /* inset:0 alone doesn't account for the iOS Safari dynamic
-     toolbar. Anchor explicitly using safe-area insets so an
-     accidental iPhone preview doesn't render the bottom 50-90px
-     of the multi-stream behind Safari's UI. height:100dvh +
-     inset 0 0 auto 0 + bottom safe-area gives a stream area
-     that's actually visible on a phone. On laptops/projectors
-     env() values are 0 so this still behaves like inset:0. */
+     toolbar, so anchor explicitly using safe-area insets. That
+     way an accidental iPhone preview doesn't render the bottom
+     50-90px of the multi-stream behind Safari's UI. height:100dvh
+     plus inset 0 0 auto 0 plus bottom safe-area gives a stream
+     area that's actually visible on a phone. On laptops/projectors
+     env() values are 0, so this still behaves like inset:0. */
   top: 0; inset-inline-start: 0; inset-inline-end: 0;
   bottom: env(safe-area-inset-bottom, 0px);
-  /* vh fallback for browsers older than ~Q4-2022. */
+  /* vh fallback for browsers older than ~Q4-2022 */
   height: 100vh;
   height: 100dvh;
   background: var(--bg, #0f172a);
@@ -211,7 +213,7 @@ const gridStyle = computed(() => {
   color: var(--text-1, #f1f5f9);
 }
 
-/* Chrome — visible faintly at rest, fades in on hover near the
+/* Chrome, visible faintly at rest, fades in on hover near the
    top of the screen so the projector doesn't show operator UI. */
 .mbcast-chrome {
   position: absolute;

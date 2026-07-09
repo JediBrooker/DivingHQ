@@ -1,28 +1,27 @@
 <script setup>
-// Judge Analysis dashboard — self-service "how am I tracking"
-// for the judge persona. Mirrors the DiverProfileView widget
-// pattern (catalog + drag-to-reorder + per-user persistence) but
-// the metrics are WA-judging-programme analytics: deviation from
-// the panel-kept mean, drop rate, per-(country/club/height/group/
-// DD) breakdowns. The numeric reference for every metric is the
-// post-trim panel kept-mean — the same kept set the dive-points
-// formula uses, so deviation from it is the same signal a WA
-// assessor would compute by hand.
+// Judge Analysis dashboard, a self-service "how am I tracking" view
+// for the judge persona. Mirrors the DiverProfileView widget pattern
+// (catalog + drag-to-reorder + per-user persistence), but the metrics
+// here are WA-judging-programme analytics: deviation from the
+// panel-kept mean, drop rate, per-(country/club/height/group/DD)
+// breakdowns. The numeric reference for every metric is the post-trim
+// panel kept-mean, the same kept set the dive-points formula uses, so
+// deviation from it is the same signal a WA assessor would compute by
+// hand.
 //
-// Permission model lives server-side: judges see their own;
-// org admins, meet managers and referees in the same org see
-// any judge in their org; sysadmins see all. The view drops
-// owner-only affordances (Customise, Save layout) for non-owner
-// viewers.
+// Permission model lives server-side: judges see their own; org
+// admins, meet managers and referees in the same org see any judge in
+// their org; sysadmins see all. The view drops owner-only affordances
+// (Customise, Save layout) for non-owner viewers.
 //
 // References (PART FOUR of the World Aquatics Competition Regulations):
-//   * 7.9   — Awards and scoring of dives by Judges
-//   * 8.4.9 — Referee may remove a Judge whose judgement is
+//   * 7.9   - Awards and scoring of dives by Judges
+//   * 8.4.9 - Referee may remove a Judge whose judgement is
 //             unsatisfactory; report to Jury of Appeal. Self-
 //             service deviation analytics give a judge their
 //             own evidence trail before that point.
-//   * 10    — General criteria for judging dives.
-//   * 13    — Trim rules + dive-points formula (drop high+low,
+//   * 10    - General criteria for judging dives.
+//   * 13    - Trim rules + dive-points formula (drop high+low,
 //             multiply kept sum × DD × scaling).
 
 import { ref, computed, onMounted, watch } from 'vue'
@@ -42,10 +41,10 @@ const analyticsLoading = ref(false)
 const error = ref('')
 
 // =============================================================
-// Widget catalog — each widget is { id, label, desc }. Adding
-// here also requires adding to KNOWN_WIDGETS in
-// routes/judge-analytics.js (see AGENTS.md "When you change X
-// also check Y" table).
+// Widget catalog: each widget is { id, label, desc }. Adding one
+// here also means adding it to KNOWN_WIDGETS in
+// routes/judge-analytics.js (see AGENTS.md "When you change X also
+// check Y" table). Heads up, it's easy to forget the other side.
 // =============================================================
 const JUDGE_WIDGET_CATALOG = [
   { id: 'bias_summary',           label: 'Bias Summary',
@@ -91,7 +90,7 @@ const customizeErr = ref('')
 const dragIndex = ref(null)
 const dragOverIndex = ref(null)
 
-// Date range filter — empty strings = no filter on that side
+// Date range filter. Empty strings mean no filter on that side.
 const fromDate = ref('')
 const toDate = ref('')
 
@@ -203,7 +202,7 @@ async function load() {
   } finally {
     loading.value = false
   }
-  // Analytics fires in parallel — heavy aggregations don't block the
+  // Analytics fires in parallel, heavy aggregations don't block the
   // header render.
   analyticsLoading.value = true
   try {
@@ -211,7 +210,7 @@ async function load() {
       `/api/judges/${targetId.value}/analytics${dateQS()}`,
     )
   } catch (err) {
-    // Analytics failure is non-fatal — the header still renders.
+    // Analytics failure isn't fatal, the header still renders.
     console.error('[JudgeProfile] analytics failed', err)
     analytics.value = null
   } finally {
@@ -259,7 +258,7 @@ function biasClass(n) {
   return v > 0 ? 'bias-high' : 'bias-low'
 }
 
-// Bar width helper — normalises a value against the maximum |signed|
+// Bar width helper: normalises a value against the the maximum |signed|
 // in the same array so a horizontal bar visualises bias intensity.
 function deviationBarWidth(value, rows, key = 'signed_deviation') {
   if (value == null || !rows?.length) return 0
@@ -286,7 +285,7 @@ function groupLabel(digit) {
   }
 }
 
-// Insight text for the bias_summary widget — short plain-English
+// Insight text for the bias_summary widget: a short plain-English
 // summary so a judge new to the page understands the headline.
 const biasInsight = computed(() => {
   const s = analytics.value?.bias_summary
@@ -302,8 +301,8 @@ const biasInsight = computed(() => {
   return `Across ${s.sample_size} comparable dives you score on average ${mag.toFixed(2)} ${dir} than the panel-kept mean.`
 })
 
-// Print / "save as PDF" — relies on the browser's print dialog and
-// our @media print stylesheet.
+// Print / "save as PDF" button. Relies on the browser's print dialog
+// and our @media print stylesheet.
 function exportPDF() {
   document.body.classList.add('printing-dashboard')
   const cleanup = () => {
@@ -399,7 +398,7 @@ watch(() => route.params.id, () => { load() })
     <div v-if="!profile && !loading" class="empty">No judge data yet.</div>
 
     <!-- =============================================================
-         Widgets — each card is conditionally rendered based on the
+         Widgets: each card is conditionally rendered based on the
          judge's enabled list, ordered via :style="{ order: … }".
          ============================================================= -->
     <div v-if="profile" class="content widget-grid">
@@ -769,13 +768,12 @@ watch(() => route.params.id, () => { load() })
         </p>
       </div>
 
-      <!-- Panel Deviation — how often this judge differs from
-           the rest of the panel. Headline shows two rates
-           (substantive disagreement ≥1.0 from kept-mean, and
-           dropped-outlier — score sat outside the kept-trim
-           slice on that dive). Per-event table beneath lets
-           the judge see whether one specific meet drove the
-           headline. -->
+      <!-- Panel Deviation: how often this judge differs from the
+           rest of the panel. Headline shows two rates (substantive
+           disagreement ≥1.0 from kept-mean, and dropped-outlier:
+           score sat outside the kept-trim slice on that dive).
+           Per-event table beneath lets the judge see whether one
+           specific meet drove the headline. -->
       <div v-if="isEnabled('panel_deviation')" class="card"
            :style="{ order: widgetOrder('panel_deviation') }">
         <div class="card-head">Panel Deviation</div>
@@ -1059,7 +1057,7 @@ watch(() => route.params.id, () => { load() })
 }
 
 /* =========================================================
-   Modal — copied / adapted from DiverProfileView.
+   Modal, copied / adapted from DiverProfileView.
    Pattern: backdrop is the scrollable container (NOT the
    modal) so a tall modal scrolls the backdrop instead of
    being clipped behind iOS Safari's URL/toolbar. DOM is
@@ -1084,7 +1082,7 @@ watch(() => route.params.id, () => { load() })
   margin: auto;
   display: flex; flex-direction: column;
   box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-  /* Clip horizontal overflow — CSS promotes the `visible`
+  /* Clip horizontal overflow. CSS promotes the `visible`
      axis to `auto` whenever the other is non-visible, so
      without this a wide descendant would let the user drag
      the modal left/right. */
@@ -1099,7 +1097,7 @@ watch(() => route.params.id, () => { load() })
   font-family: var(--font-display); font-size: 14px; font-weight: 900;
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--text);
 }
-/* Body no longer needs its own scroll — backdrop handles it. */
+/* Body no longer needs its own scroll, backdrop handles it. */
 .modal-body { padding: 1.1rem 1.25rem; }
 .modal-hint {
   font-family: var(--font-mono); font-size: 12px; color: var(--text-3);
@@ -1152,12 +1150,12 @@ watch(() => route.params.id, () => { load() })
   .card { break-inside: avoid; page-break-inside: avoid; }
 }
 
-/* Phone layout — public spectators tap a score chip on the live
+/* Phone layout: public spectators tap a score chip on the live
    scoreboard and land here on a 360–414px screen. The 80/1fr/80/80
    and 100/1fr/220 grids defined above overflow at that width, so
    collapse them to a two-line layout. */
 @media (max-width: 600px) {
-  /* Modal backdrop — generous top/bottom padding so a tall
+  /* Modal backdrop: generous top/bottom padding so a tall
      form can scroll past iOS Safari's URL/toolbar (~50-90px)
      and the home indicator. Without this the bottom of a
      long form is physically unreachable. */
@@ -1191,11 +1189,11 @@ watch(() => route.params.id, () => { load() })
 
   .card { padding: 1rem; }
 
-  /* Bar rows — collapse the fixed 80/1fr/80/80 grid. Label and
+  /* Bar rows: collapse the fixed 80/1fr/80/80 grid. Label and
      numeric value share the top row; the bar gets the full width
      beneath; the per-row "N dives" meta sits beside the value.
      Stacked over wrap because the bar needs a full-width track to
-     read at a glance — a wrapped half-width bar is hard to compare
+     read at a glance, a wrapped half-width bar is hard to compare
      across rows. */
   .bar-row {
     grid-template-columns: 1fr auto;
@@ -1210,8 +1208,8 @@ watch(() => route.params.id, () => { load() })
   .bar-row .bar-track { grid-area: track; }
   .bar-row .bar-meta  { grid-area: meta; }
 
-  /* Compare row — stack label, bars, and values vertically.
-     220px right column was the chief overflow culprit; on phones
+  /* Compare row: stack label, bars, and values vertically.
+     220px right column was the chief overflow culprit, on phones
      the You/Panel numbers wrap cleanly below the bars. */
   .compare-row {
     grid-template-columns: 1fr;
@@ -1222,14 +1220,14 @@ watch(() => route.params.id, () => { load() })
     flex-wrap: wrap;
   }
 
-  /* Stat strip — 140px min was already auto-fit but cap to 2 cols
+  /* Stat strip: 140px min was already auto-fit, but cap to 2 cols
      on phones so numbers stay readable. */
   .stat-strip {
     grid-template-columns: repeat(2, 1fr);
     padding: 0.75rem;
   }
 
-  /* Tables — let the wide diver/recent-meets/per-event tables
+  /* Tables: let the wide diver/recent-meets/per-event tables
      scroll horizontally rather than crush columns to unreadable
      widths. */
   .pb-table {
@@ -1241,7 +1239,7 @@ watch(() => route.params.id, () => { load() })
 }
 
 /* Make sure the bar fills always have a visible height even if a
-   container collapses the track. Belt-and-braces — the track is
+   container collapses the track. Belt and braces, the track is
    10px tall so absolute-positioned fills already show, but if a
    future change makes the track flex, fills won't vanish. */
 .signed-fill, .hist-fill, .bar-fill { min-height: 4px; }

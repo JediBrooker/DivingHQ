@@ -1,8 +1,8 @@
 <script setup>
 defineProps({
   // Array of { event_type, meets, dives, avg_dive_score,
-  // best_single_dive, avg_meet_total, best_meet_total }.
-  // From analytics.event_type_splits.
+  // best_single_dive, avg_meet_total, best_meet_total }
+  // pulled from analytics.event_type_splits.
   data: { type: Array, default: () => [] },
 })
 </script>

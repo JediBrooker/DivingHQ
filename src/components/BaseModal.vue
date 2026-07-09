@@ -11,14 +11,14 @@
 //   :open  -> always-mounted; parent toggles `open` (LateEntry's
 //             cache-survival contract).
 //
-// Scroll-lock is intentionally NOT owned here -- ControlView's 14-flag
-// useBodyScrollLock OR reference-counts it across every surface.
+// Scroll-lock is intentionally not owned here, since ControlView's
+// 14-flag useBodyScrollLock already reference-counts it across every surface.
 import { ref, computed, watch, nextTick, onBeforeUnmount, useId } from 'vue'
 
 const props = defineProps({
   open: { type: Boolean, default: true },
-  // id of the element that labels the dialog; ModalHeader wires this
-  // to its title via the slot-scoped `titleId`.
+  // id of the element that labels this dialog. ModalHeader wires it
+  // to the title via the slot-scoped `titleId`.
   labelledby: { type: String, default: '' },
   maxWidth: { type: String, default: '' },
   closeOnBackdrop: { type: Boolean, default: true },
@@ -104,7 +104,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
-  // Covers v-if consumers that unmount instead of toggling `open`.
+  // covers v-if consumers that unmount instead of toggling `open`
   document.removeEventListener('keydown', onKeydown, true)
   if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus()
 })
@@ -130,12 +130,12 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* lb-* frame lifted verbatim from the control modals (P2). Self-
+/* lb-* frame lifted verbatim from the control modals (P2), self-
    contained so BaseModal works outside the Control Room too (V2 /
    Manager). The header/title/event/body INSIDE the dialog stay styled
    by the consumer (ModalHeader + the global lb-* in ControlView.css)
-   until those rules are pulled out in a later phase. fadeUp is a global
-   keyframe and is one-shot, so the P1 reduced-motion guard handles it. */
+   until those rules get pulled out in a later phase. fadeUp is a global
+   keyframe and only runs once, so the P1 reduced-motion guard handles it fine. */
 .lb-backdrop {
   position: fixed; inset: 0;
   background: rgba(3, 7, 18, 0.95);

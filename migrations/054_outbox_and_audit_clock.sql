@@ -1,5 +1,5 @@
 -- =============================================================
--- MIGRATION 054 — OFFLINE-RESILIENCE FOUNDATIONS
+-- MIGRATION 054, offline-resilience foundations
 --
 -- Server-side support for P1 of the offline-resilience work
 -- (see docs/offline-p1-design.md and docs/offline-inventory.md).
@@ -9,22 +9,22 @@
 --   1. idempotency_keys table. Every meet-time write endpoint
 --      starts accepting an X-Idempotency-Key header or body
 --      field; this table caches the response for 72 hours so a
---      retried request from the client outbox returns the same
+--      retried request from the client outbox gets back the same
 --      result instead of double-applying.
 --
 --   2. score_audit_log gains actor_local_time +
---      server_committed_at. Today the audit row's created_at
+--      server_committed_at. Right now the audit row's created_at
 --      conflates "when the operator clicked" and "when Postgres
---      committed" — fine when those are <100ms apart, broken when
---      an outbox replays a 30-minute-old action. The two columns
---      keep both clocks. Backfill: server_committed_at = created_at
---      for existing rows (they're equivalent under the old
---      online-only flow).
+--      committed", which is fine when those are <100ms apart but
+--      breaks once an outbox replays a 30-minute-old action. The
+--      two columns keep both clocks. Backfill: server_committed_at
+--      = created_at for existing rows since they're equivalent
+--      under the old online-only flow.
 --
---   3. audit_log gains the same two columns for the same reason.
+--   3. audit_log gets the same two columns, same reason.
 --
---   4. scores.actor_local_time. So a per-row replay clock
---      survives even if the audit row is purged. ~16 bytes per
+--   4. scores.actor_local_time, so a per-row replay clock
+--      survives even if the audit row gets purged. ~16 bytes per
 --      row; the table is bounded by event size, not append rate.
 --
 --   5. event_status gains 'pending_signoff' between 'Live' and
@@ -32,8 +32,8 @@
 --      event ready to sign off; the cryptographic sign-off path
 --      (routes/control-room.js sign-off code endpoints, all
 --      server-canonical) completes the transition to 'Completed'
---      when network returns and the referee enters the code.
---      Postgres ENUM ADD VALUE is irreversible — see migration
+--      once network returns and the referee enters the code.
+--      Postgres ENUM ADD VALUE is irreversible, see the migration
 --      header comment in 053 for the philosophy on irreversible
 --      ENUM changes.
 --
@@ -42,7 +42,7 @@
 --      inventory.md) accepts a sync from a coach or diver whose
 --      actor_local_time is BEFORE the entry deadline even if the
 --      server only saw the request AFTER the deadline; the row
---      is then flagged for referee review. Schema captures the
+--      then gets flagged for referee review. Schema captures the
 --      claim, the flag, and the eventual decision.
 --
 -- All changes guarded with IF NOT EXISTS / ADD VALUE IF NOT
@@ -68,8 +68,9 @@ CREATE TABLE IF NOT EXISTS public.idempotency_keys (
 );
 
 -- Sweeper queries `WHERE created_at < now() - interval '72 hours'`.
--- BRIN would be tighter for an append-only insert pattern but B-tree
--- is unambiguously correct + matches the rest of the schema's idiom.
+-- BRIN would be tighter for an append-only insert pattern but, tbh,
+-- B-tree is unambiguously correct and matches the rest of the
+-- schema's idiom.
 CREATE INDEX IF NOT EXISTS idempotency_keys_created_idx
     ON public.idempotency_keys (created_at);
 CREATE INDEX IF NOT EXISTS idempotency_keys_user_idx
@@ -78,7 +79,7 @@ CREATE INDEX IF NOT EXISTS idempotency_keys_user_idx
 -- ---- 2 + 3. Audit clock columns -------------------------------
 -- Existing rows get server_committed_at backfilled from created_at
 -- (they're equivalent under the old online-only flow). NULL on
--- actor_local_time is acceptable for legacy rows — it means
+-- actor_local_time is fine for legacy rows, it just means
 -- "unknown, predates the outbox."
 ALTER TABLE public.score_audit_log
     ADD COLUMN IF NOT EXISTS actor_local_time     timestamptz,

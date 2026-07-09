@@ -1,6 +1,6 @@
 <script setup>
 // Drop-in entry-fee editor for an event's manager page. Mount it on the
-// event-management view, e.g.:
+// event-management view like so:
 //   <EntryFeeEditor :event-id="event.id" />
 import { useI18n } from 'vue-i18n'
 import FeeEditor from '@/components/payments/FeeEditor.vue'

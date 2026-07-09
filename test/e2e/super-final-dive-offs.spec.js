@@ -1,4 +1,4 @@
-// Super Final — dive-off API surface (Phase 3c).
+// Super Final: dive-off API surface (Phase 3c).
 //
 // Covers POST + PATCH /api/events/:id/dive-offs and GET listing.
 // Builds a small H2H fixture with 12 divers and forces a tie in
@@ -53,7 +53,7 @@ async function scoreH2hBracket({ eventId, pairs, dive_id, judges }) {
 // Build an H2H bracket end-to-end. Returns
 // { adminToken, parentEventId, h2hEvent, pairs, dive_id, judgeUserIds }.
 async function buildH2hWithTie(request) {
-  // Six "federations" — easiest with one orgAdmin per fed. Reuse
+  // Six "federations", easiest with one orgAdmin per fed. Reuses
   // the same approach the H2H spec uses.
   const feds = [];
   for (let i = 0; i < 6; i++) {
@@ -116,7 +116,7 @@ async function buildH2hWithTie(request) {
         { round_number: 3, dive_id },
       ],
     });
-    // Score floor in 0.5 increments — quantize.
+    // Score floor in 0.5 increments, quantize.
     const raw = 5.0 + 0.25 * (11 - i);
     const floor = Math.round(raw * 2) / 2;
     for (let round = 1; round <= 3; round++) {
@@ -153,7 +153,7 @@ async function buildH2hWithTie(request) {
   expect(seedRes.status()).toBe(200);
   const seed = await seedRes.json();
 
-  // Score the H2H — pair 5 (last) is tied.
+  // Score the H2H: pair 5 (last) is tied.
   const h2hJudges = [];
   for (let j = 0; j < 5; j++) {
     const ju = await setup.insertUser({ orgId: fedHost.orgId, role: "judge", fullName: `H2H Judge ${j+1}` });
@@ -189,19 +189,19 @@ test("super-final dive-offs: create / validate / resolve", async ({ request }) =
   const cleanPair = results.pairs.find(p => !p.tied && p.winner_id);
   expect(cleanPair).toBeTruthy();
 
-  // ---- POST dive-off — cross-pair rejected ----
+  // ---- POST dive-off: cross-pair rejected ----
   const crossRes = await request.post(`/api/events/${h2hEvent.id}/dive-offs`, {
     headers: { Authorization: `Bearer ${adminToken}` },
     data:    {
       competitor_a_id: tiedPair.competitor_a_id,
-      // Pair 5 is in G2; pair 0 is in G1 — cross-group.
+      // Pair 5 is in G2; pair 0 is in G1, cross-group.
       competitor_b_id: cleanPair.competitor_a_id,
       confirm_tied:    true,
     },
   });
   expect(crossRes.status()).toBe(400);
 
-  // ---- POST dive-off — non-tied without confirm rejected ----
+  // ---- POST dive-off: non-tied without confirm rejected ----
   const noConfirmRes = await request.post(`/api/events/${h2hEvent.id}/dive-offs`, {
     headers: { Authorization: `Bearer ${adminToken}` },
     data:    {
@@ -213,7 +213,7 @@ test("super-final dive-offs: create / validate / resolve", async ({ request }) =
   });
   expect(noConfirmRes.status()).toBe(400);
 
-  // ---- POST dive-off — tied pair (clean path) ----
+  // ---- POST dive-off: tied pair (clean path) ----
   const createRes = await request.post(`/api/events/${h2hEvent.id}/dive-offs`, {
     headers: { Authorization: `Bearer ${adminToken}` },
     data:    {
@@ -266,7 +266,7 @@ test("super-final dive-offs: create / validate / resolve", async ({ request }) =
   expect(Number(resolved.score_b)).toBe(8.0);
 
   // ---- Integration: the resolved dive-off now drives h2h-results ----
-  // Previously the winner was recorded but never consumed — the pair
+  // Previously the winner was recorded but never consumed, so the pair
   // stayed tied=true with winner_id null. Now the formerly-tied pair
   // reports the dive-off winner and is no longer flagged unresolved.
   const afterRes = await request.get(`/api/events/${h2hEvent.id}/super-final/h2h-results`);

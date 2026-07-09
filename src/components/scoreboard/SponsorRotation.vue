@@ -1,19 +1,19 @@
 <script setup>
-/* SponsorRotation — display-side companion to the
+/* SponsorRotation: display-side companion to the
  * SponsorLogosManager in Phase 2. Self-fetches the meet's
  * sponsor logos and cycles through them on the rotation
  * cadence the operator set.
  *
  * Used in three placements (set via the `placement` prop):
  *
- *   'corner' — fixed-position bottom-right tile during live
+ *   'corner': fixed-position bottom-right tile during live
  *              broadcast mode. ~80px tall, semi-translucent
  *              background. Doesn't compete with the active
  *              diver block.
- *   'overlay' — same vibe as 'corner' but transparent so it
+ *   'overlay': same vibe as 'corner' but transparent so it
  *              chroma-keys cleanly when fed into OBS via the
  *              ?overlay=1 stream view.
- *   'inline' — non-rotating row of all logos for the public
+ *   'inline': non-rotating row of all logos for the public
  *              meet landing page hero strip. Rendered as a
  *              static "Powered by" panel.
  *
@@ -24,11 +24,11 @@
  *   • Single-logo meets never rotate regardless of cadence.
  *   • Pauses when document.visibilityState is 'hidden' so
  *     the cycle doesn't drift while the operator is on a
- *     different tab — picks back up on next visible event.
+ *     different tab, picks back up on the next visible event.
  *
  * Legacy fallback: API returns a single `legacy: true` row
  * when the meet has only the pre-045 single-URL sponsor field.
- * That renders identically to a slot-1 logo — no separate code
+ * That renders identically to a slot-1 logo, no separate code
  * path needed.
  */
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
@@ -38,7 +38,7 @@ const props = defineProps({
   // ID of the meet whose logos to fetch. null/undefined = no
   // render (e.g. an event that isn't part of a meet bundle).
   meetId: { type: [String, null], default: null },
-  // Layout flavour — see file header.
+  // Layout flavour, see file header.
   placement: {
     type: String,
     default: 'corner',
@@ -196,7 +196,7 @@ watch(() => props.meetId, load)
   display: block;
 }
 
-/* Corner placement — live broadcast / kiosk view. Anchored
+/* Corner placement: live broadcast / kiosk view. Anchored
    bottom-right of the viewport so it doesn't compete with the
    active-diver block at the centre. Translucent dark backplate
    so the logo reads against any pool-deck colour. */
@@ -219,7 +219,7 @@ watch(() => props.meetId, load)
   height: 100%;
 }
 
-/* Overlay placement — composite-friendly for OBS chroma key.
+/* Overlay placement: composite-friendly for OBS chroma key.
    No backplate, no shadow. The host page (`?overlay=1`) sets
    the chroma colour as its background; the logo composites
    cleanly. */
@@ -235,13 +235,13 @@ watch(() => props.meetId, load)
   width: 100%;
   height: 100%;
   /* Subtle text-shadow-style backplate via a drop-shadow
-     filter — keeps the logo readable on any chroma colour
+     filter, keeps the logo readable on any chroma colour
      without adding a visible solid background that would
      have to be keyed out separately. */
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
 
-/* Inline placement — public meet landing page "Powered by"
+/* Inline placement: public meet landing page "Powered by"
    strip. Row of static logos with a small gap. */
 .sponsor-rot-inline {
   display: flex;

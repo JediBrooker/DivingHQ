@@ -1,10 +1,10 @@
 // Super-Final dive-off routes (Appendix 3 §6).
 //
 // A dive-off is a single-dive tie-breaker held at the end of H2H
-// or SF when two divers are tied. Both divers pick a previously-
-// performed dive; higher score advances. Doesn't affect official
-// scores. Stored in tiebreak_dive_offs (Phase 1 schema, init.sql
-// ~line 572).
+// or SF when two divers are tied. Both divers pick a previously
+// performed dive, and the higher score advances. Doesn't affect
+// official scores. Stored in tiebreak_dive_offs (Phase 1 schema,
+// init.sql ~line 572).
 //
 // Routes (all under /api/events/:id):
 //   GET    /api/events/:id/dive-offs
@@ -14,14 +14,14 @@
 // Mounted from routes/events/index.js via:
 //   router.use(require('./dive-offs')({ pool, requireEventManager }))
 //
-// Extracted out of the 4,320-line routes/events.js when the file
+// Extracted out of the 4,320-line routes/events.js once the file
 // crossed the "agent-grep cost real tokens" line. The block is
-// self-contained — the only outside-world dependencies are
-// `pool` (Postgres pool) and `requireEventManager` (auth gate).
-// `validateDiveOffChoice` (Appendix 3 §6 — chosen dive must be
-// one the diver already performed in this stage) lives inline
-// in both handlers because each closes over its own
-// `client` / `eventId`.
+// self-contained, the only outside-world dependencies are `pool`
+// (Postgres pool) and `requireEventManager` (auth gate).
+// `validateDiveOffChoice` (Appendix 3 §6, the chosen dive must be
+// one the diver already performed in this stage) lives inline in
+// both handlers because each closes over its own `client` /
+// `eventId`.
 
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../../lib/audit");
@@ -33,8 +33,8 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
   }
   const router = express.Router();
 
-  // GET /api/events/:id/dive-offs — list. Public-readable: the
-  // official record needs to be transparent.
+  // GET /api/events/:id/dive-offs: the list. Public readable,
+  // since the official record needs to be transparent.
   router.get(
     "/api/events/:id/dive-offs",
     async (req, res) => {
@@ -73,13 +73,13 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
     },
   );
 
-  // POST /api/events/:id/dive-offs — referee creates a tie-break
+  // POST /api/events/:id/dive-offs: referee creates a tie-break
   // record. Both divers must be on the event roster and (per
-  // spec) tied at the end of the parent stage's standings — but
+  // spec) tied at the end of the parent stage's standings. But
   // since the standings query is fluid (a corrective re-score
-  // could break the tie after the dive-off was set up), we
-  // accept a `confirm_tied:true` flag in the body to say "I,
-  // the operator, attest these two are tied / need a dive-off".
+  // could break the tie after the dive-off was set up), we accept
+  // a `confirm_tied:true` flag in the body to say "I, the
+  // operator, attest these two are tied / need a dive-off".
   //
   // Body:
   //   competitor_a_id, competitor_b_id  (required)
@@ -174,11 +174,11 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
 
         // Tied check unless confirm_tied=true.
         if (!confirm_tied) {
-          // Compute current totals.
+          // Sanity check: compute current totals.
           const tot = await client.query(
             `WITH ${perDivePointsCte({
-               // Grouping stays per-(competitor, round) — one UDF
-               // call per dive — though only competitor_id is
+               // Grouping stays per-(competitor, round), one UDF
+               // call per dive, though only competitor_id gets
                // projected.
                select:  ["s.competitor_id"],
                groupBy: ["s.competitor_id", "s.round_number"],
@@ -211,11 +211,11 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
         // AUDIT FIX (Strong-6): Appendix 3 §6 specifies the
         // dive-off must use a previously performed dive ("Each
         // diver picks one of their previously performed dives").
-        // The schema only FKs to dive_directory globally — no
-        // scoping to the event or the diver. Validate at the
-        // route level: each chosen dive_id must appear as that
-        // diver's dive in one of their already-scored rounds on
-        // this event.
+        // The schema only FKs to dive_directory globally, there's
+        // no scoping to the event or the diver. So we validate at
+        // the route level: each chosen dive_id must appear as
+        // that divers dive in one of their already-scored rounds
+        // on this event.
         async function validateDiveOffChoice(competitorId, diveId, side) {
           if (diveId == null) return null; // optional at create
           const prior = await client.query(
@@ -300,9 +300,9 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
     },
   );
 
-  // PATCH /api/events/:id/dive-offs/:diveOffId — update / resolve.
-  // Setting winner_id (non-null) auto-stamps resolved_at if not
-  // already provided. Audits 'event.dive_off_resolved'.
+  // PATCH /api/events/:id/dive-offs/:diveOffId: update or resolve.
+  // Setting winner_id (non-null) auto-stamps resolved_at if it's
+  // not already provided. Audits 'event.dive_off_resolved'.
   router.patch(
     "/api/events/:id/dive-offs/:diveOffId",
     requireEventManager(),

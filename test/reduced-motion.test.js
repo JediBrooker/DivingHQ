@@ -1,11 +1,11 @@
-// Unit coverage for the P1 app-channel pub/sub (useAppChannel) -- the
+// Unit coverage for the P1 app-channel pub/sub (useAppChannel), the
 // module-singleton replacement for the window.__openCommandPalette /
 // window.__replayRoleTour globals. DB-less; runs in test:safe.
 //
-// useReducedMotion is intentionally NOT unit-tested here: it is a
+// useReducedMotion is intentionally NOT unit-tested here: it's a
 // browser matchMedia singleton, and the repo avoids loading Vue
-// composables into node tests (see test/body-scroll-lock.test.js). It
-// is covered by test/e2e/reduced-motion.spec.js via emulateMedia.
+// composables into node tests (see test/body-scroll-lock.test.js). It's
+// covered by test/e2e/reduced-motion.spec.js via emulateMedia.
 const { test, before } = require("node:test");
 const assert = require("node:assert/strict");
 

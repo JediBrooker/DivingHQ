@@ -3,13 +3,13 @@ import { computed } from 'vue'
 
 const props = defineProps({
   // { total, failed, very_deficient, deficient, satisfactory,
-  // good, very_good, excellent }. From analytics.quality_mix.
-  // Null while loading.
+  // good, very_good, excellent }, from analytics.quality_mix.
+  // Null while it's loading.
   data: { type: Object, default: null },
 })
 
-// World Aquatics category buckets in display order. Mirrors the
-// colour classes used by the live scoreboard chips.
+// World Aquatics category buckets, kept in display order. Mirrors the
+// colour classes the live scoreboard chips already use.
 const qualityBuckets = computed(() => {
   const q = props.data || {}
   return [
@@ -81,9 +81,9 @@ const qualityBuckets = computed(() => {
 .quality-pct   { color: var(--text-3); width: 48px; text-align: end; }
 
 /* Phone (≤600px): legend rows are already auto-sized after
-   the dot column, but the labels ("Unsat. (≤4.5)") get tight.
-   Shrink the percent column and font so all four cells fit
-   in a single row at 360px. */
+   the dot column, but the labels ("Unsat. (≤4.5)") get tight here.
+   Shrinking the percent column and font keeps all four cells
+   fitting in a single row at 360px. */
 @media (max-width: 600px) {
   .quality-bar { height: 22px; }
   .quality-legend-row {

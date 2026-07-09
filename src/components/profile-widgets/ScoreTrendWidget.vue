@@ -5,8 +5,8 @@ import { placeOrdinal, placeColor } from '@/lib/profile-helpers'
 
 const props = defineProps({
   // Array of { event_id, event_name, event_type, total_score,
-  // final_rank, created_at, partner_name?, team_name? }. Comes
-  // from /profile (profile.score_trend), not /analytics.
+  // final_rank, created_at, partner_name?, team_name? }. FYI this
+  // comes from /profile (profile.score_trend), not /analytics.
   data: { type: Array, default: () => [] },
 })
 
@@ -100,7 +100,7 @@ const trendChart = computed(() => {
 .trend-place.place-bronze { color: #92400e; border-color: rgba(180,83,9,0.4); background: rgba(180,83,9,0.06); }
 .trend-total { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--cyan); }
 
-/* Phone (≤600px): the four fixed-ish columns can't fit at
+/* Phone (≤600px): the four fixed-ish columns cant fit at
    360px (date + name + place + total + gaps ≈ 320px before
    ellipsis). Collapse to a two-row layout: date+place+total
    on top, full-width name underneath so synchro/team badges

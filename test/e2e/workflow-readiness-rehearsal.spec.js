@@ -1,6 +1,6 @@
 // Focused workflow/readiness + rehearsal-mode contracts.
 //
-// These tests cover the newer operator dashboard surfaces directly:
+// These tests hit the newer operator dashboard surfaces directly:
 // /api/events/:id/readiness, dashboard.workflow_actions,
 // dashboard.referee_desk, dashboard.coach_workbench, and the
 // "rehearsal events are private/no-side-effects" guarantee.

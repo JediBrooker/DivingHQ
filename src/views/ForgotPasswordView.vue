@@ -5,7 +5,7 @@ import { RouterLink } from 'vue-router'
 // Step 1 of the password-reset flow. The server always responds
 // 200 OK regardless of whether the email matches a real user
 // (prevents account enumeration), so the success message here
-// is intentionally vague: "if an account exists, we sent a link".
+// stays intentionally vague: "if an account exists, we sent a link".
 
 const email = ref('')
 const sending = ref(false)
@@ -89,7 +89,7 @@ async function submit() {
   font-family: var(--font-display); font-size: 13px; font-weight: 700;
   letter-spacing: 0.3em; text-transform: uppercase; color: var(--text);
   margin-bottom: 2.5rem; display: flex; align-items: center;
-  /* No `gap` — see LoginView for the rationale. */
+  /* No `gap` here, see LoginView for the rationale. */
 }
 .reset-mark span { color: var(--cyan); }
 .reset-mark::before {

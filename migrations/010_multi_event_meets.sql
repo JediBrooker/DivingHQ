@@ -1,5 +1,5 @@
 -- =============================================================
--- MIGRATION 010 — MULTI-EVENT MEETS
+-- MIGRATION 010 - MULTI-EVENT MEETS
 --
 -- Real diving competitions are bundles of events. "2026
 -- Australian Open" might run 8 events over 2 days (1m M/F,
@@ -10,7 +10,7 @@
 -- continues to work unchanged. Existing events stay with
 -- meet_id = NULL; managers can group them retroactively.
 --
--- Idempotent — uses IF NOT EXISTS / DO blocks throughout.
+-- Idempotent, uses IF NOT EXISTS / DO blocks throughout.
 -- =============================================================
 
 BEGIN;
@@ -37,14 +37,14 @@ CREATE INDEX IF NOT EXISTS idx_meets_dates ON public.meets (start_date DESC NULL
 
 -- Add the nullable backref on events. ON DELETE SET NULL so a
 -- meet deletion preserves the underlying events (and their
--- standings, audit log, etc.) — they just become standalone
+-- standings, audit log, etc.), they just become standalone
 -- again. Mirrors the team_id pattern from migration 007.
 ALTER TABLE public.events
     ADD COLUMN IF NOT EXISTS meet_id uuid REFERENCES public.meets(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_events_meet ON public.events (meet_id);
 
--- Bump schema version. Defensive create so this still works
+-- Bump schema version. Defensive create, just in case this runs
 -- against a DB without 008 applied (same pattern as 009).
 CREATE TABLE IF NOT EXISTS public.schema_meta (
     id           integer PRIMARY KEY DEFAULT 1,

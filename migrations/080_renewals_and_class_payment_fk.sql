@@ -1,31 +1,33 @@
 -- =============================================================
--- MIGRATION 080 — RENEWABLE PURCHASES + CLASS-PAYMENT DELETE FIX
+-- MIGRATION 080: renewable purchases + class-payment delete fix
 --
 -- 1. The one-live-payment unique indexes for membership, club
 --    affiliation/accreditation, and official accreditation (migration 067)
 --    included status='paid' with no time bound, so the SECOND year's
---    purchase of the same fee hit the index forever — annual renewals were
---    structurally impossible. Paid rows never expire from an index, so
---    "don't buy twice" for renewable purchases moves to the APP, which
---    knows the granted period: checkout now refuses while an active grant
---    is more than 30 days from expiry, and a renewal extends from the
---    current period_end (routes/payments.js + routes/stripe-webhook.js).
---    The indexes keep blocking concurrent DOUBLE-PENDING checkouts, which
---    is the part the app can't do race-free.
+--    purchase of the same fee hit the index forever, which made annual
+--    renewals structurally impossible. Paid rows never expire from an
+--    index, so "don't buy twice" for renewable purchases moves to the
+--    APP instead, which actually knows the granted period: checkout now
+--    refuses while an active grant is more than 30 days from expiry, and
+--    a renewal extends from the current period_end (routes/payments.js +
+--    routes/stripe-webhook.js). The indexes still block concurrent
+--    DOUBLE-PENDING checkouts, which is the part the app genuinely can't
+--    do race-free.
 --
 --    Event entries, meet access, bundles, penalties, fines, and class
---    enrolments are NOT renewable — one settled purchase per subject is
---    correct — so their indexes keep including 'paid'.
+--    enrolments are NOT renewable, one settled purchase per subject is
+--    correct, so their indexes keep including 'paid'.
 --
 -- 2. payments_chk_class_enrolment (migration 078) required
---    class_enrolment_id NOT NULL, but the FK is ON DELETE SET NULL —
---    deleting a class (cascading its enrolments) tried to null the column
---    and violated the CHECK, so class deletion 500'd forever once any
---    enrolment payment existed. The linkage is lifecycle plumbing; the
---    club's MONEY integrity rests on recipient_type + club_id, which stay
---    required. Settled payments may now outlive their enrolment row.
---    (routes/classes.js additionally refuses to delete a class with live
---    paid enrolments, and retires in-flight checkouts first.)
+--    class_enrolment_id NOT NULL, but the FK is ON DELETE SET NULL, so
+--    deleting a class (cascading its enrolments) tried to null the
+--    column and violated the CHECK. Class deletion 500'd forever once
+--    any enrolment payment existed. The linkage here is just lifecycle
+--    plumbing though; the club's MONEY integrity rests on
+--    recipient_type + club_id, which stay required. Settled payments
+--    may now outlive their enrolment row. (routes/classes.js
+--    additionally refuses to delete a class with live paid enrolments,
+--    and retires in-flight checkouts first.)
 -- =============================================================
 
 BEGIN;

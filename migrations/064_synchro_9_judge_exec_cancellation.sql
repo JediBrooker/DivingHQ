@@ -1,20 +1,21 @@
 -- =============================================================
--- MIGRATION 064 — 9-JUDGE SYNCHRO EXECUTION CANCELLATION
+-- MIGRATION 064: 9-JUDGE SYNCHRO EXECUTION CANCELLATION
 --
 -- World Aquatics Competition Regulations (Feb 2026), Part Four,
 -- Article 9.1.5.4: in a 9-judge synchronised panel the Secretaries
 -- cancel "the highest and the lowest Judges' awards given for
 -- execution BETWEEN BOTH Athletes" (i.e. one high + one low across
--- the combined pool of four execution marks → keep the middle two),
+-- the combined pool of four execution marks, keep the middle two),
 -- and cancel the highest + lowest of the five synchronisation marks
 -- (keep three). The award is then (sum of the five counted marks)
--- × (3/5) × DD — matching the 11-judge panel's five-mark scale.
+-- × (3/5) × DD, matching the 11-judge panel's five-mark scale.
 --
--- The previous definition (migrations 050 / init.sql) summed ALL
--- FOUR execution marks for the 9-judge panel, counting seven marks
--- instead of five and over-scoring every 9-judge synchro dive by a
--- factor of 7/5. This redefinition fixes the 9-judge branch; the
--- 7-judge and 11-judge branches are unchanged.
+-- Heads up: the previous definition (migrations 050 / init.sql)
+-- summed ALL FOUR execution marks for the 9-judge panel, counting
+-- seven marks instead of five and over-scoring every 9-judge
+-- synchro dive by a factor of 7/5. This redefinition fixes the
+-- 9-judge branch only; the 7-judge and 11-judge branches are
+-- unchanged.
 -- =============================================================
 
 BEGIN;
@@ -72,8 +73,8 @@ BEGIN
         IF array_length(sorted, 1) = 4 THEN
             counted_sum := counted_sum + sorted[2] + sorted[3];
         ELSE
-            -- Defensive: an unexpected execution count (partial panel) —
-            -- sum whatever execution marks are present rather than drop.
+            -- Defensive: an unexpected execution count (partial panel),
+            -- just sum whatever execution marks are present rather than drop.
             SELECT COALESCE(SUM(s), 0) INTO group_sum FROM unnest(exec_all) AS s;
             counted_sum := counted_sum + group_sum;
         END IF;

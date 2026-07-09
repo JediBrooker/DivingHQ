@@ -4,52 +4,52 @@ import { idbClear, cachedFetch } from '@/lib/idbCache'
 import { fingerprintFromUser } from '@/lib/userFingerprint'
 
 export const useAuthStore = defineStore('auth', () => {
-  // The session credential (the JWT) now lives in an httpOnly cookie
-  // the browser sends automatically and JS cannot read — closing the
-  // XSS token-theft vector the old sessionStorage token left open.
+  // The session credential (the JWT) lives in an httpOnly cookie now,
+  // the browser sends it automatically and JS can't read it, which
+  // closes the XSS token-theft vector the old sessionStorage token left open.
   //
   // What we keep here is only the decoded IDENTITY (id, org_roles,
-  // locale…), delivered in the login/refresh response bodies and
+  // locale...), delivered in the login/refresh response bodies and
   // rehydrated from /api/auth/me on boot. The server re-verifies the
   // cookie on every request, so `user` is display/routing state, never
-  // a credential — tampering with it changes UI hints, never access.
+  // a credential. Tampering with it changes UI hints only, never access.
   const user = ref(null)
 
   const isLoggedIn = computed(() => !!user.value)
 
   // Stable per-identity key for scoping client-side caches (idbCache,
   // outbox) so a shared device never serves one user's data to the
-  // next. Derived from the user id now that the token is unreadable.
+  // next person. Derived from the user id now that the token itself is unreadable.
   const fingerprint = computed(() => fingerprintFromUser(user.value))
 
   // Accept either { user } (the new explicit shape) or a flat payload
-  // carrying a top-level id (the login/refresh responses still spread
-  // the payload for API clients). Any `token` field is ignored — the
-  // cookie is the session.
+  // carrying a top-level id (login/refresh responses still spread the
+  // payload for API clients). Any `token` field is ignored, the cookie
+  // is the session now.
   function saveSession(data) {
     const next = data?.user || (data && data.id ? data : null)
     if (!next) {
       throw new Error('Cannot save a session without a user identity')
     }
     // Wipe any cached responses owned by the previous identity before
-    // swapping. Keeps disk usage bounded across sign-in/out cycles on
-    // a shared device even though cache keys are per-fingerprint.
+    // swapping in the new one. Keeps disk usage bounded across sign-in/out
+    // cycles on a shared device, even though cache keys are per-fingerprint.
     idbClear().catch(() => {})
     user.value = next
   }
 
   function clearSession() {
     user.value = null
-    // Clear the httpOnly cookie server-side — JS can't delete it. Fire-
-    // and-forget with keepalive so it still completes if the caller
-    // navigates away (hard redirect to /login) in the same tick.
+    // Clear the httpOnly cookie server-side since JS can't delete it.
+    // Fire-and-forget with keepalive so it still completes even if the
+    // caller navigates away (hard redirect to /login) in the same tick.
     try {
       fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'same-origin',
         keepalive: true,
       }).catch(() => {})
-    } catch { /* navigation already tore down fetch — cookie still clears server-side */ }
+    } catch { /* navigation already tore down fetch, cookie still clears server-side */ }
     try { sessionStorage.clear() } catch { /* private mode */ }
     // Belt-and-braces: drop every cached API payload so the next user
     // on a shared device can't be served the previous user's data.
@@ -57,8 +57,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Rehydrate identity from the httpOnly session cookie on app boot.
-  // 401 = anonymous (no / expired / revoked cookie) — a normal first-
-  // visit state, not an error. Never throws so boot can't be blocked.
+  // 401 = anonymous (no cookie, expired, or revoked), that's a normal
+  // first-visit state, not an error. Never throws so boot can't be blocked.
   async function fetchMe() {
     try {
       const res = await fetch('/api/auth/me', { credentials: 'same-origin' })
@@ -84,9 +84,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function getHeaders() {
-    // No Authorization header any more — the httpOnly session cookie
-    // carries the credential and rides every same-origin request. We
-    // still set Content-Type for JSON bodies.
+    // No Authorization header any more, the httpOnly session cookie
+    // carries the credential and rides along on every same-origin
+    // request. Still need Content-Type set for JSON bodies though.
     return { 'Content-Type': 'application/json' }
   }
 
@@ -98,10 +98,10 @@ export const useAuthStore = defineStore('auth', () => {
       headers: { ...getHeaders(), ...(options.headers ?? {}) },
     })
     // 401 = cookie expired or revoked. Clear the session so the router
-    // guard sends the user back to /login instead of every page
-    // throwing red errors. Skip the redirect for viewers who weren't
-    // signed in to begin with — a 401 there is a public endpoint
-    // genuinely refusing them, not a session-expiry signal.
+    // guard sends the user back to /login instead of every page throwing
+    // red errors. Skip the redirect for viewers who weren't signed in to
+    // begin with, a 401 there just means a public endpoint is genuinely
+    // refusing them, not a session-expiry signal.
     if (res.status === 401 && isLoggedIn.value) {
       clearSession()
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
@@ -116,10 +116,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Stale-while-revalidate variant of apiFetch. Wraps idbCache's
-  // cachedFetch so authenticated reads can serve a cached copy
-  // instantly + refresh on the side. Returns { data, fromCache, age }.
-  // The per-user cache fingerprint is passed in explicitly now that
-  // the token isn't readable from the Authorization header.
+  // cachedFetch so authenticated reads can serve a cached copy instantly
+  // and refresh on the side. Returns { data, fromCache, age }.
+  // Per-user cache fingerprint gets passed in explicitly now that the
+  // token isn't readable from the Authorization header.
   async function cachedApiFetch(url, opts = {}) {
     const { cache = {}, ...fetchInit } = opts
     const result = await cachedFetch(url, {

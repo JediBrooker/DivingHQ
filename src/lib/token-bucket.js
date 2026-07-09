@@ -1,8 +1,8 @@
 // Client-side token-bucket rate limiter. The server caps set_active_diver
-// at 60/min/user and SILENTLY drops anything over (no ack) -- which, with
-// one operator driving N pools, can mean a diver change never reaches the
-// judges. This bucket staggers bursts of emits under the server budget so
-// they queue-and-drain instead of getting dropped.
+// at 60/min/user and SILENTLY drops anything over (no ack), which is a bit
+// of a gotcha: with one operator driving N pools, that can mean a diver
+// change never reaches the judges. This bucket staggers bursts of emits
+// under the server budget so they queue-and-drain instead of getting dropped.
 //
 // When tokens are available the callback runs SYNCHRONOUSLY (no delay in
 // the common case). Over budget, callbacks queue and drain as the bucket
@@ -36,14 +36,14 @@ export function makeTokenBucket({
     }
     if (queue.length && !pending) {
       pending = true
-      // Time until the next whole token is available.
+      // time until the next whole token is available
       const waitMs = Math.max(50, ((1 - tokens) / refillPerMin) * 60000)
       schedule(pump, waitMs)
     }
   }
 
-  // Enqueue a function to run within budget. Returns nothing; the fn runs
-  // now if a token is free, else when one refills.
+  // Enqueue a function to run within budget. Returns nothing, the fn runs
+  // now if a token's free, else when one refills.
   return function run(fn) {
     queue.push(fn)
     pump()

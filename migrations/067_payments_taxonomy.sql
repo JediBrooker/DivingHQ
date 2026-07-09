@@ -1,5 +1,5 @@
 -- =============================================================
--- MIGRATION 067 — PAYMENTS TAXONOMY
+-- MIGRATION 067: PAYMENTS TAXONOMY
 --
 -- Widens the fee system (Migration 066) from {membership, event_entry}
 -- to the full fee taxonomy and wires fees to the right entities:
@@ -13,7 +13,8 @@
 --     entry_charges, meet_bundle_items.
 --
 -- Backward compatible: existing membership/event_entry rows satisfy the
--- new per-scope CHECKs; payer_type defaults to 'user'. Additive + guarded.
+-- new per-scope CHECKs, and payer_type defaults to 'user'. Additive and guarded,
+-- nothing here should break existing rows.
 -- =============================================================
 
 BEGIN;
@@ -137,9 +138,10 @@ CREATE INDEX IF NOT EXISTS idx_fee_definitions_meet ON public.fee_definitions (m
 CREATE INDEX IF NOT EXISTS idx_fee_definitions_club ON public.fee_definitions (club_id) WHERE club_id IS NOT NULL;
 
 -- ============================================================
--- 1B. fee_prices: reused as-is for windows/audience (no schema change).
---   resolvePrice() gains tier/discipline awareness via the fee_definition
---   row, NOT new audience values. Early-bird/standard/late = starts_at/ends_at.
+-- 1B. fee_prices: reused as-is for windows/audience (no schema change here).
+--   resolvePrice() picks up tier/discipline awareness via the
+--   fee_definition row, not new audience values. Early-bird/standard/late
+--   still just map to starts_at/ends_at.
 -- ============================================================
 
 -- ============================================================
@@ -214,8 +216,9 @@ ALTER TABLE public.memberships
 
 -- ============================================================
 -- 1E. club_admins: club-scoped authorization
---   No club-role mechanism existed. Grants named users admin over a club,
---   independent of org_role. requireClubAdmin authorizes club-payer routes.
+--   There was no club-role mechanism before this. Grants named users admin
+--   over a club, seperate from org_role. requireClubAdmin is what authorizes
+--   the club-payer routes.
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.club_admins (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -270,9 +273,10 @@ CREATE INDEX IF NOT EXISTS idx_official_accred_active
 
 -- ============================================================
 -- 1H. entry_charges: scratch / no-show as entry-state debits
---   Not checkouts — admin/system-initiated debits against an existing entry.
---   Records the triggering transition, who/when, and links to the payment
---   created to collect the penalty (settled out-of-band).
+--   Heads up, these aren't checkouts: they're admin/system-initiated debits
+--   against an existing entry. Records the triggering transition, who and
+--   when, and links to the payment created to collect the penalty
+--   (settled out-of-band).
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.entry_charges (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -295,8 +299,9 @@ CREATE INDEX IF NOT EXISTS idx_entry_charges_event ON public.entry_charges (even
 
 -- ============================================================
 -- 1I. meet_bundle_items: what a bundle grants
---   A meet_bundle is a discounted package over a defined set of the meet's
---   events. The webhook expands a paid bundle into per-event entries.
+--   A meet_bundle is basically a discounted package over a defined set of
+--   the meet's events. The webhook expands a paid bundle into per-event
+--   entries.
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.meet_bundle_items (
   id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),

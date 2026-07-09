@@ -6,7 +6,7 @@ defineProps({
   //   my_max_dd, peer_max_dd, my_dives, peer_dives }.
   // From analytics.compare_peers.
   data: { type: Object, default: null },
-  // Organisation name for the card header.
+  // Org name for the card header
   orgName: { type: String, default: '' },
 })
 </script>
@@ -110,8 +110,8 @@ defineProps({
 .compare-peer-text { color: var(--text-3); }
 
 /* Phone (≤600px): 140px label + 200px values eats 340px of
-   the 360px viewport before bars. Stack to single column
-   with bars full-width and the values inline beneath. */
+   the 360px viewport before we even get to the bars. Stack to
+   a single column, bars full-width, values inline beneath. */
 @media (max-width: 600px) {
   .compare-row {
     grid-template-columns: 1fr;

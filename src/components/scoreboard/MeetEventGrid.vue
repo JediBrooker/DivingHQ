@@ -1,19 +1,21 @@
 <script setup>
-/* MeetEventGrid — one row per discipline, progression stages as
- * aligned ordinal columns.
+/* MeetEventGrid: one row per discipline, progression stages laid
+ * out as aligned ordinal columns.
  *
- * Presentational only: it takes already-grouped `rows` (see
- * src/composables/useProgressionGroups.js) + the group's `maxCols`
- * and renders an aligned grid. The first column is the discipline
- * (name + tags); the remaining columns are the stages in
- * progression order — a straight final fills column 1 and leaves
- * the rest as faint placeholders so every row's columns line up.
+ * Presentational only, it takes already-grouped `rows` (see
+ * src/composables/useProgressionGroups.js) plus the group's
+ * `maxCols` and renders an aligned grid. First column is the
+ * discipline (name + tags), the rest are the stages in
+ * progression order. A straight final just fills column 1 and
+ * leaves the rest as faint placeholders so every row's columns
+ * still line up.
  *
- * Each stage cell is a button; clicking emits `select(eventId)`.
- * The same component drives the live Scoreboard (cells carry a
- * LIVE/FINAL badge + Watch/Recap affordance) and the DiveRecorder
- * archive (no badge, "Results" affordance) — the affordance is
- * derived per cell from its status, so no mode flag is needed.
+ * Each stage cell is a button, click emits `select(eventId)`.
+ * Same component drives the live Scoreboard (cells carry a
+ * LIVE/FINAL badge plus Watch/Recap affordance) and the
+ * DiveRecorder archive (no badge, just a "Results" affordance).
+ * The affordance's derived per cell from its status, so we don't
+ * need a mode flag for it.
  */
 const props = defineProps({
   rows:    { type: Array,  required: true },
@@ -21,8 +23,8 @@ const props = defineProps({
 })
 const emit = defineEmits(['select'])
 
-// Pad a row's stages out to maxCols with nulls so empty trailing
-// columns render as alignment placeholders.
+// Pad a row's stages out to maxCols with nulls, so the trailing
+// empty columns still render as alignment placeholders.
 function cells(row) {
   const out = row.stages.slice()
   while (out.length < props.maxCols) out.push(null)
@@ -75,8 +77,8 @@ function cellClass(cell) {
 </template>
 
 <style scoped>
-/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
-   reinforces the global guard in app.css). */
+/* P1: reduced-motion guard, tracked per-file by the P0 scanner.
+   Just reinforces the global guard in app.css. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -86,8 +88,8 @@ function cellClass(cell) {
 .ev-grid { display: flex; flex-direction: column; gap: 0.45rem; }
 
 /* Each row is its own grid sharing an identical column template
-   (label + N equal stage columns), so the columns line up across
-   every row without needing a single shared grid container. */
+   (label + N equal stage columns) so columns line up across
+   every row, no need for one shared grid container. */
 .ev-row {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) repeat(var(--cols), minmax(0, 1fr));
@@ -161,14 +163,14 @@ function cellClass(cell) {
 .ev-cell-live .ev-cell-cta { color: var(--red); }
 .ev-cell-upcoming .ev-cell-cta { color: var(--amber); }
 
-/* Local keyframe (scoped) so the component is self-contained in
-   both host views regardless of which global stylesheet loaded. */
+/* Local keyframe (scoped) so this component stays self-contained
+   in both host views, doesn't matter which global stylesheet loaded. */
 @keyframes ev-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.65; } }
 
 @media (max-width: 720px) {
-  /* Phones: collapse the bracket — discipline on its own line, the
-     stage cells stack full-width beneath it. Placeholders are
-     dropped so empty stages don't waste vertical space. */
+  /* Phones: collapse the bracket, discipline gets its own line,
+     stage cells stack full-width beneath it. Placeholders get
+     dropped here so empty stages don't waste vertical space. */
   .ev-row { grid-template-columns: 1fr; gap: 0.35rem; }
   .ev-disc { padding: 0.15rem 0.25rem 0; }
   .ev-cell-empty { display: none; }

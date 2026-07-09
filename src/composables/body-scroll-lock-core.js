@@ -1,25 +1,25 @@
 // Pure-JS body-scroll-lock implementation. No Vue, no DOM
-// globals at the module scope — every API takes the
-// `window` / `document` it operates on explicitly. This makes
-// the module trivially testable (the unit suite passes in
-// fake objects) AND keeps the production composable a thin
-// Vue wrapper around this.
+// globals at the module scope, every API takes the `window` /
+// `document` it operates on explicitly. That's what makes the
+// module trivially testable (the unit suite just passes in fake
+// objects) and keeps the production composable a thin Vue
+// wrapper around this.
 //
-// See useBodyScrollLock.js for the why-this-exists narrative;
+// See useBodyScrollLock.js for the why-this-exists narrative,
 // this file is just the mechanics.
 
-// Module-level state. One lock counter for the whole app — the
-// same body element is locked or it isn't.
+// Module-level state. One lock counter for the whole app, since
+// the same body element is either locked or it isn't.
 let lockCount = 0
 let savedScrollY = 0
-// We stash the styles we OVERWRITE so the unlock can restore
-// the original values (the body has its own design styles that
-// must not be nuked). Only populated when going 0 -> 1.
+// Stash the styles we're about to OVERWRITE so unlock can restore
+// the original values later (body has its own design styles that
+// must not get nuked). Only populated on the 0 -> 1 transition.
 let savedBodyStyles = null
 
 function applyLock(win, doc) {
   // Only act on the 0 -> 1 transition. Nested locks are no-ops
-  // at the DOM level; just bump the counter.
+  // at the DOM level, just bump the counter.
   if (lockCount > 0) {
     lockCount++
     return
@@ -34,9 +34,9 @@ function applyLock(win, doc) {
     left:     body.style.left,
     right:    body.style.right,
     width:    body.style.width,
-    // Belt-and-braces: also pin overflow on the html element,
-    // which catches the small number of layouts where body's
-    // overflow isn't the scroll container.
+    // Belt and braces: also pin overflow on the html element,
+    // catches the small number of layouts where body's overflow
+    // isn't actually the scroll container.
     htmlOverflow: doc.documentElement.style.overflow,
   }
   body.style.position = 'fixed'
@@ -49,16 +49,16 @@ function applyLock(win, doc) {
 
 function applyUnlock(win, doc) {
   if (lockCount <= 0) {
-    // Already unlocked. Don't underflow.
+    // Already unlocked, don't underflow.
     return
   }
   lockCount--
   if (lockCount > 0) {
-    // Outer modal still open. Leave the lock in place.
+    // Outer modal is still open, leave the lock in place.
     return
   }
 
-  // 1 -> 0 transition. Restore body + scroll.
+  // 1 -> 0 transition, restore body + scroll.
   const body = doc.body
   if (savedBodyStyles) {
     body.style.position = savedBodyStyles.position
@@ -71,7 +71,7 @@ function applyUnlock(win, doc) {
   }
   // Use scrollTo with the saved offset. window.scroll() would
   // animate on some browsers if scroll-behavior: smooth is set
-  // globally — restore is supposed to be instant.
+  // globally, and restore is supposed to be instant.
   win.scrollTo(0, savedScrollY)
 }
 
@@ -80,7 +80,7 @@ function applyUnlock(win, doc) {
  * lockup on component unmount can release exactly what that
  * instance locked, without underflowing global state.
  *
- * Pass `null` (or omit the args) for SSR safety — every
+ * Pass `null` (or just omit the args) for SSR safety, every
  * method becomes a silent no-op when there's no environment
  * to act on.
  *
@@ -111,8 +111,8 @@ export function createBodyScrollLock(win, doc) {
   return { lock, unlock, releaseAll }
 }
 
-// Test-only exports — read/reset module-level state. Not part
-// of the public API; production code should not import these.
+// Test-only exports, read/reset module-level state. Not part
+// of the public API, production code shouldn't import these.
 export function __getLockCount() { return lockCount }
 export function __reset() {
   lockCount = 0

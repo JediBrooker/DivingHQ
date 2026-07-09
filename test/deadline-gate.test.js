@@ -1,4 +1,4 @@
-// Unit tests for lib/deadline-gate.js — pure verdict function.
+// Unit tests for lib/deadline-gate.js, a pure verdict function.
 //
 // Covers the four-corner cases of (actor before/after deadline) ×
 // (server before/after deadline), plus the legacy-no-actor-clock,
@@ -8,7 +8,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { evaluateDeadline } = require("../lib/deadline-gate");
 
-// Reference times — all aligned so the math is obvious in failures.
+// Reference times, lined up so the math is easy to follow when something fails.
 const DEADLINE = new Date("2026-05-22T14:00:00Z");
 const BEFORE   = new Date("2026-05-22T13:50:00Z");  // 10 min before
 const AFTER    = new Date("2026-05-22T14:10:00Z");  // 10 min after
@@ -115,8 +115,8 @@ test("missing deadline → ok regardless of times", () => {
 
 test("malformed deadline string → ok (fail open)", () => {
   // The strict gate above the deadline check (loadEventForEntries)
-  // would have rejected if the event was malformed; here we just
-  // don't add a second rejection path.
+  // would already have rejected a malformed event, this test just
+  // makes sure we don't add a second rejection path on top of it.
   const r = evaluateDeadline({
     deadline: "not-a-date",
     actorLocalTime: BEFORE,
@@ -129,15 +129,15 @@ test("accepts ISO string timestamps for both clocks", () => {
   const r = evaluateDeadline({
     deadline: DEADLINE.toISOString(),
     actorLocalTime: BEFORE.toISOString(),
-    serverNow: AFTER,  // Date — caller controls
+    serverNow: AFTER,  // Date, caller controls it
   });
   assert.equal(r.verdict, "late_review");
 });
 
 test("rejected: on-time actor claim but server is past the late-review window", () => {
   // Client claims it submitted 10 min before the deadline, but the
-  // request only lands 2 days later — beyond the default 24h window,
-  // so the "I was on time" claim is no longer credible.
+  // request only lands 2 days later, well beyond the default 24h
+  // window, so the "I was on time" claim isn't credible anymore.
   const r = evaluateDeadline({
     deadline: DEADLINE,
     actorLocalTime: BEFORE,

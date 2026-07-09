@@ -1,9 +1,9 @@
 <script setup>
 // Promise-based confirm modal. Single instance mounted at the
-// top of App.vue. Reads from useConfirm's shared state; any
+// top of App.vue. Reads from useConfirm's shared state, any
 // view's confirmAction() call lands here.
 //
-// Replaces native window.confirm() — which can't render a
+// Replaces native window.confirm(), which can't render a
 // rich consequences list, can't be styled, and trains
 // operators to dismiss-by-instinct.
 import { onBeforeUnmount, watch, nextTick, ref, computed } from 'vue'
@@ -15,16 +15,16 @@ const confirmBtnRef = ref(null)
 
 // Lock background scroll while open. iOS Safari otherwise lets
 // the user drag the page underneath the dialog and end up at a
-// different scroll position when it closes — disorienting on a
-// confirm that's supposed to be a yes/no moment.
+// different scroll position when it closes, which is disorienting on a
+// confirm that's supposed to be a quick yes/no moment.
 useBodyScrollLock().lockWhile(computed(() => !!state.value))
 
 function onConfirm() { resolveConfirm(true) }
 function onCancel()  { resolveConfirm(false) }
 
-// Esc closes the modal as a cancel. Listener mounted only when
-// a confirm is active so it doesn't fight other Esc handlers
-// when dormant.
+// Esc closes the modal as a cancel. Listener's only mounted when
+// a confirm is active, so it doesn't fight other Esc handlers
+// while dormant.
 function onKey(e) {
   if (!state.value) return
   if (e.key === 'Escape') {
@@ -37,7 +37,7 @@ function onKey(e) {
 }
 
 // Track when the modal opens so we can move keyboard focus to
-// the primary button — Enter key then commits, matching native
+// the primary button. Enter then commits, matching native
 // confirm() behaviour.
 watch(state, async (next) => {
   if (next) {
@@ -55,7 +55,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
   <!-- Teleport to body so an ancestor with transform/filter/
        contain:paint/perspective can't break position:fixed.
        This component is mounted in App.vue today (no such
-       ancestor), but the teleport is defensive — if anyone
+       ancestor), but the teleport is defensive: if anyone
        wraps App in a transformed shell, fixed-positioned
        modals would silently stop covering the viewport. Vue's
        scoped-CSS attribute selectors follow teleported nodes
@@ -109,13 +109,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
     max(1.5rem, env(safe-area-inset-top))
     1.5rem
     max(1.5rem, env(safe-area-inset-bottom));
-  /* Let the backdrop scroll if the modal taller than the
+  /* Let the backdrop scroll if the modal is taller than the
      viewport (long consequences list on a short iPhone). The
      original `align-items: center` produced a centred-but-
-     unscrollable layout — buttons disappeared off the bottom on
-     iPhone SE. `align-items: safe center` keeps centering but
+     unscrollable layout, so buttons disappeared off the bottom on
+     iPhone SE. `align-items: safe center` keeps the centering but
      falls back to top-anchoring when content overflows so the
-     scroll affordance is reachable. */
+     scroll affordance stays reachable. */
   display: flex; align-items: safe center; justify-content: center;
   overflow-y: auto;
 }

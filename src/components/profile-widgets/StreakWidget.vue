@@ -1,8 +1,8 @@
 <script setup>
 defineProps({
   // { length, kind: 'win' | 'podium' }. From analytics.streak.
-  // The widget renders nothing when there's no active streak so
-  // the dashboard doesn't show a "no streak" pity card.
+  // Renders nothing when there's no active streak, don't want
+  // the dashboard showing off a "no streak" pity card.
   data: { type: Object, default: null },
 })
 </script>
@@ -39,8 +39,8 @@ defineProps({
   font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
 }
 /* Phone (≤600px): the 56px streak number eats too much
-   vertical real-estate on a small card. Trim it and bump the
-   text down a touch. */
+   vertical space on a small card, so trim it and knock the
+   text sizes down a touch. */
 @media (max-width: 600px) {
   .streak-body { gap: 0.75rem; }
   .streak-num  { font-size: 42px; }

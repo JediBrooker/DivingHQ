@@ -1,5 +1,5 @@
 <script setup>
-/* JudgeRankingTable — "what would the standings have been if every
+/* JudgeRankingTable: "what would the standings have been if every
  * judge had scored unanimously like one specific judge?"
  *
  * For a Completed event, renders a matrix:
@@ -13,23 +13,22 @@
  *             magnitude is visible without hovering
  *
  * Outliers (any judge whose hypothetical rank differs from the
- * actual rank) are highlighted in cyan so a viewer can scan the
+ * actual rank) get highlighted in cyan so a viewer can scan the
  * matrix and spot every disagreement at a glance. The v-tip
- * tooltip carries the same information plus context (delta from
- * actual + judge identity).
+ * tooltip carries the same info plus context (delta from actual,
+ * judge identity).
  *
- * The payload is fetched eagerly on mount. The parent
- * (ScoreboardView) consumes the same payload via the `loaded`
- * event to feed the chip-tooltip enhancement, so the endpoint
- * isn't hit twice.
+ * Payload is fetched eagerly on mount. The parent (ScoreboardView)
+ * consumes the same payload via the `loaded` event to feed the
+ * chip-tooltip enhancement, so we don't hit the endpoint twice.
  */
 import { ref, onMounted, computed, watch } from 'vue'
 import { ordinal } from '@/lib/format'
 
-// Two ways the component can get its data:
+// Two ways this component can get its data:
 //
-//   1. Parent passes `payload` as a prop (preferred — parent has
-//      already fetched eagerly so the chip-tooltip data is
+//   1. Parent passes `payload` as a prop (preferred, since the parent
+//      has already fetched eagerly so the chip-tooltip data is
 //      available on first paint of the page, regardless of
 //      whether this section is expanded).
 //   2. Parent omits the prop → fall back to fetching internally
@@ -47,7 +46,7 @@ const localPayload = ref(null)
 const payloadView = computed(() => props.payload || localPayload.value)
 
 async function load() {
-  // Skip the fetch entirely when the parent already supplied data.
+  // Skip the fetch when the parent already handed us the data.
   if (props.payload) {
     emit('loaded', props.payload)
     return
@@ -130,9 +129,9 @@ function divePointsOf(judgeId, competitorId, round) {
   return e && e.judge_dive_points != null ? Number(e.judge_dive_points) : null
 }
 // WA per-role cancellation: drop one highest + one lowest, sum the
-// rest. (≤2 values → nothing to cancel.) Trimming the dive-points
-// is equivalent to trimming the raw awards since DD is constant
-// within a (pair, round).
+// rest (heads up: ≤2 values means there's nothing to cancel).
+// Trimming the dive-points is equivalent to trimming the raw awards
+// since DD is constant within a (pair, round).
 function trimmedSum(vals) {
   if (vals.length <= 2) return vals.reduce((a, b) => a + b, 0)
   const sorted = [...vals].sort((a, b) => a - b)
@@ -143,8 +142,8 @@ function trimmedSum(vals) {
 function roleKeptCount(role) {
   return role === 'sync' ? 3 : 1
 }
-// RANK() semantics with ties — sort rows by val() DESC (official
-// order as the tie-break) and write the rank back via set().
+// RANK() semantics with ties: sort rows by val() DESC (official
+// order as the tie-break), then write the rank back via set().
 function rankInto(rows, val, set) {
   const sorted = [...rows].sort((a, b) =>
     val(b) - val(a) || (a.diver.actual_rank - b.diver.actual_rank))
@@ -208,11 +207,11 @@ function segCellTip(diver, judge, cell, segment) {
 }
 
 // Outlier = any judge whose hypothetical rank disagrees with the
-// actual rank. A 1-rank swap is a real signal in this format —
-// every disagreement gets flagged so the viewer can scan the
-// matrix and see exactly where judges disagreed. Use the cell's
-// background tone (light cyan for ±1, deep cyan for ≥2) so the
-// strength of the disagreement is visible at a glance.
+// actual rank. A 1-rank swap is a real signal in this format, so
+// every disagreement gets flagged and the viewer can scan the
+// matrix to see exactly where judges disagreed. Cell background
+// tone (light cyan for ±1, deep cyan for ≥2) shows the strength of
+// the disagreement at a glance.
 function isOutlier(pj, actualRank) {
   if (pj?.rank == null) return false
   return pj.rank !== actualRank
@@ -224,8 +223,8 @@ function outlierStrength(pj, actualRank) {
   return delta >= 2 ? 'jra-outlier-strong' : 'jra-outlier-mild'
 }
 
-// Composite label for a row's competing entity — handles all
-// three event types so the table doesn't need branches in the
+// Composite label for a row's competing entity, handles all
+// three event types so the table doesnt need branches in the
 // template. Individual → diver name. Synchro pair → "Lead &
 // Partner". Team → team name (already in full_name from the
 // server side).
@@ -258,15 +257,15 @@ function cellTip(diver, judge, pj) {
   return parts.join('\n')
 }
 
-// Tooltip for the Actual column — explains it's the official total.
+// Tooltip for the Actual column, just explains it's the official total.
 function actualTip(diver) {
   return `Official rank: ${ordinal(diver.actual_rank)}\n`
     + `Panel-trimmed total: ${Number(diver.actual_total).toFixed(2)}`
 }
 
-// URLs for the export buttons. The CSV / PDF endpoints share the
-// same path prefix with .csv / .pdf suffixes — same convention as
-// the existing /api/events/:id/results.csv / .pdf.
+// URLs for the export buttons. CSV / PDF endpoints share the same
+// path prefix with .csv / .pdf suffixes, same convention as the
+// existing /api/events/:id/results.csv / .pdf.
 const csvHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analysis.csv`)
 const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analysis.pdf`)
 </script>
@@ -370,7 +369,7 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
       </div>
     </template>
 
-    <!-- Individual / team / synchro-without-recognised-panel —
+    <!-- Individual / team / synchro-without-recognised-panel:
          single matrix. -->
     <div v-else class="jra-scroll">
       <table class="jra-table">
@@ -582,12 +581,12 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   font-weight: 600;
   color: var(--text-1, #f1f5f9);
 }
-/* Score chip — same visual vocabulary as the Control Room / Scoreboard
-   .j-score / .hist-score chips: prominent dark text on a subtle filled
-   surface, bordered, tabular figures. Lives on an INNER span so the
-   <td> stays display: table-cell and the judge columns keep their
-   grid alignment. The flex `gap` provides the rank↔total spacing
-   (replacing the old per-element margin-inline-end hack). */
+/* Score chip, same visual vocabulary as the Control Room / Scoreboard
+   .j-score / .hist-score chips: prominent dark text on a subtle
+   filled surface, bordered, tabular figures. Lives on an INNER span
+   so the <td> stays display: table-cell and the judge columns keep
+   their grid alignment. The flex `gap` gives us the rank↔total
+   spacing (replacing the old per-element margin-inline-end hack). */
 .jra-chip {
   display: inline-flex;
   align-items: baseline;
@@ -626,12 +625,12 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   font-weight: 400;
   color: var(--text-3, #94a3b8);
 }
-/* Outliers: the <td> carries the outlier class; we tint the inner
+/* Outliers: the <td> carries the outlier class, we tint the inner
    .jra-chip so the disagreement reads as a coloured score chip.
-   Theme-aware via the accent family (marine blue — dark-on-light,
-   light-on-dark) instead of a hardcoded cyan: a soft fill for ±1
-   (routine disagreement), a stronger fill + heavier weight for ≥2
-   (the kind that re-shuffles the podium). */
+   Theme-aware via the accent family (marine blue, dark-on-light,
+   light-on-dark) instead of a hardcoded cyan: soft fill for ±1
+   (routine disagreement), stronger fill + heavier weight for ≥2
+   (the kind that reshuffles the podium). */
 .jra-outlier-mild .jra-chip {
   background: var(--accent-soft);
   border-color: var(--accent);
@@ -689,12 +688,12 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
 }
 
 /* =========================================================
-   Mobile — sticky pair column + tighter cells.
+   Mobile: sticky pair column + tighter cells.
 
    The matrix has one column per judge (typically 5, 7, 9, or
    11), which can't all fit on a phone. With overflow-x: auto
-   already in place, the table is horizontally scrollable —
-   but if the user can't see the row label (pair / diver) while
+   already in place, the table is horizontally scrollable, but
+   if the user can't see the row label (pair / diver) while
    they scroll judges, the data is meaningless.
 
    Stick the first two columns (PAIR + ACTUAL) to the left
@@ -737,7 +736,7 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
     /* border-collapse: collapse breaks `position: sticky` on
        table cells in Chrome and Safari (the sticky cells lose
        their borders and sometimes don't repaint on scroll).
-       Switch to separate + zero spacing on mobile — visually
+       Switch to separate + zero spacing on mobile: visually
        identical, but sticky behaves. */
     border-collapse: separate;
     border-spacing: 0;
@@ -749,7 +748,7 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
     border-bottom: 1px solid rgba(148, 163, 184, 0.12);
   }
 
-  /* Pair / diver column — pinned to the left edge so the row
+  /* Pair / diver column, pinned to the left edge so the row
      label is always visible during horizontal scroll. */
   .jra-th-diver,
   .jra-td-diver {
@@ -765,7 +764,7 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
      sticky positions on the corner cell. */
   thead .jra-th-diver { z-index: 3; }
 
-  /* ACTUAL column — pinned right after PAIR so the user sees
+  /* ACTUAL column, pinned right after PAIR so the user sees
      both "who" and "official rank" before the per-judge cells.
      left value matches PAIR's min-width above. */
   .jra-th-actual,
@@ -779,7 +778,7 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   }
   thead .jra-th-actual { z-index: 3; }
 
-  /* Judge columns — give back some space taken by the wider
+  /* Judge columns, give back some space taken by the wider
      pair column. */
   .jra-th-judge { min-width: 48px; }
   .jra-judge-name { font-size: 8px; max-width: 8ch; }
@@ -790,7 +789,7 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   .jra-cell-total { font-size: 9px; }
 
   /* Tighten the pair name so it stays inside the 140px column.
-     Names wrap rather than truncate — the user needs the full
+     Names wrap rather than truncate, the user needs the full
      name visible to read the row. */
   .jra-diver-name {
     flex-wrap: wrap;
@@ -802,7 +801,7 @@ const pdfHref = computed(() => `/api/events/${props.eventId}/judge-ranking-analy
   .jra-diver-cc   { font-size: 9px; }
 }
 
-/* Even tighter on iPhone-SE class viewports — drop the pair
+/* Even tighter on iPhone-SE class viewports, drop the pair
    column to 110px and pull ACTUAL in alongside. */
 @media (max-width: 400px) {
   .jra-th-diver,

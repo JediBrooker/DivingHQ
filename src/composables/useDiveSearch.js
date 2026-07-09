@@ -1,22 +1,22 @@
 // Shared dive-directory search/filter.
 //
 // CompetitorView, TeamDiveListView and CoachDiveListsView each
-// offer a "pick a dive from the directory" UI; each used to carry
-// its own copy of the same filter (code+position text match,
-// height restriction, result cap). One implementation, per-view
-// differences expressed as options:
+// offer a "pick a dive from the directory" UI, and each used to
+// carry its own copy of the same filter (code+position text match,
+// height restriction, result cap). Now there's one implementation,
+// with per-view differences expressed as options:
 //
-//   term   — Ref<string> bound to a search input. Matches the
+//   term   - Ref<string> bound to a search input. Matches the
 //            concatenated code+position ("101C") and the
 //            description, case-insensitively. Omit for views
 //            with no text search (CoachDiveListsView's flat
 //            dropdown).
-//   height — Ref<number|null>. When non-null, only dives at
+//   height - Ref<number|null>. When non-null, only dives at
 //            exactly that height pass.
-//   limit  — cap on result count (search pickers keep their
+//   limit  - caps result count (search pickers keep their
 //            dropdowns short). Omit for no cap.
-//   sort   — order results by dive_code then position (the flat
-//            dropdown wants alphabetical; the search pickers
+//   sort   - orders results by dive_code then position (the flat
+//            dropdown wants alphabetical, the search pickers just
 //            keep directory order).
 //
 // Returns a computed array of matching directory rows.

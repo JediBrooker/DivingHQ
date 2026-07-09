@@ -1,20 +1,20 @@
 <script setup>
-/* RandomiseDrawModal — the WA Article 4.1.6 random dive-order
+/* RandomiseDrawModal: the WA Article 4.1.6 random dive-order
  * draw ceremony, extracted from ControlView.vue. Three phases:
  * 'preview' (current order + "Start the draw"), 'shuffling'
- * (5-second animated reel; the server-side randomise runs in
- * parallel but the result is held until the floor elapses), and
- * 'done' (confirm or re-shuffle).
+ * (5-second animated reel, the server-side randomise runs in
+ * parallel but the result is held back until the floor elapses),
+ * and 'done' (confirm or re-shuffle).
  *
  * Mount contract: the parent mounts this with v-if when the
  * operator opens the draw, so every open starts at 'preview'
- * with a clean reel — same reset the old openRandomiseDraw()
+ * with a clean reel, same reset the old openRandomiseDraw()
  * performed. The open guard (queue lock check + toast) stays in
  * ControlView because it owns canReorderQueue.
  *
- * State boundary: stage + reel are OWNED here; the roster comes
+ * State boundary: stage + reel are owned here, the roster comes
  * in as a prop and is never mutated. A successful draw emits
- * `randomised` with the fresh roster — the parent assigns it,
+ * `randomised` with the fresh roster, the parent assigns it,
  * resets the active-diver pointer, and stamps the workflow.
  */
 import { ref, computed, onUnmounted } from 'vue'
@@ -39,16 +39,16 @@ let randomiseShuffleTimer  = null
 const ANIM_MS = 5000   // user spec: 5 seconds
 const TICK_MS = 140    // 140ms per permutation → ~36 ticks across the run
 
-// Rows the modal should render — preview reads from roster,
+// Rows the modal should render: preview reads from roster,
 // shuffling reads from the cycling overlay, done reads from
 // roster again (now the post-randomise one).
 //
-// Start order is per-diver, not per-(diver, round) — every
-// round dives in the SAME order. So we dedupe props.roster
-// by competitor_id (the roster endpoint returns one row per
+// Start order is per-diver, not per-(diver, round), every round
+// dives in the same order. So we dedupe props.roster by
+// competitor_id (the roster endpoint returns one row per
 // diver-round combination, and display_order is identical
 // across rounds for the same diver). Reserves are also
-// excluded — they're not in the start order until promoted.
+// excluded, they're not in the start order until promoted.
 const randomiseDisplayRows = computed(() => {
   if (randomiseStage.value === 'shuffling') {
     return randomiseShufflePreview.value
@@ -61,7 +61,7 @@ const randomiseDisplayRows = computed(() => {
     seen.add(r.competitor_id)
     unique.push({ ...r })
   }
-  // Sort by display_order so the rendered list reads 1..N.
+  // Sort by display_order so the rendered list reads 1..N
   unique.sort((a, b) =>
     (a.display_order ?? Infinity) - (b.display_order ?? Infinity),
   )
@@ -75,8 +75,8 @@ function close() {
   }
   emit('close')
 }
-// Mount-scope safety net — the parent unmounts this component via
-// close(), which already cleared the timer; this guards any
+// Mount-scope safety net. The parent unmounts this component via
+// close(), which already cleared the timer, but this guards any
 // future unmount path so the shuffle interval can never leak.
 onUnmounted(() => {
   if (randomiseShuffleTimer) clearInterval(randomiseShuffleTimer)
@@ -84,18 +84,18 @@ onUnmounted(() => {
 
 // Called from the modal's "Start the draw" button (and from
 // "Re-shuffle"). Runs the 5-sec animation + parallel server
-// randomise, then settles the final order.
+// randomise, then settles on the final order.
 async function runRandomiseDraw() {
   const ev = props.event
   if (!ev) return
 
   // Start order is per-diver, applied identically across every
-  // round (Article 4.1.6). Snapshot ONE row per unique diver
-  // (excluding reserves + withdrawn) — that's the list the
+  // round (Article 4.1.6). Snapshot one row per unique diver
+  // (excluding reserves + withdrawn), that's the list the
   // animation cycles. Server-side, the randomize endpoint
   // assigns the same display_order to every round-row of a
-  // given diver, so there's no need for the animation to think
-  // in (diver, round) tuples.
+  // given diver, so the animation doesn't need to think in
+  // (diver, round) tuples.
   const seen = new Set()
   const baseRoster = []
   for (const r of props.roster) {
@@ -106,8 +106,8 @@ async function runRandomiseDraw() {
   }
 
   function shuffleTick() {
-    // Fisher-Yates the diver list, then re-stamp display_order
-    // so the rendered position pills also cycle (1, 2, 3…).
+    // Fisher-Yates the diver list, then re-stamp display_order so
+    // the rendered position pills also cycle along (1, 2, 3…)
     const arr = baseRoster.map(r => ({ ...r }))
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
@@ -132,7 +132,7 @@ async function runRandomiseDraw() {
         actionType: 'dive_list_randomize',
       }),
       // Hold the ceremony for the full ANIM_MS even if the
-      // server returns faster — the audience needs the full
+      // server comes back faster, the audience needs the full
       // animation to read the moment as a "draw".
       new Promise((resolve) => setTimeout(resolve, ANIM_MS)).then(() =>
         auth.apiFetch(`/api/events/${ev.id}/roster`),
@@ -140,7 +140,7 @@ async function runRandomiseDraw() {
     ])
     // Parent applies the fresh roster + workflow stamps (listener
     // runs synchronously on emit, so ordering matches the old
-    // inline code: roster first, then stage flips to 'done').
+    // inline code, roster first, then stage flips to 'done').
     emit('randomised', fresh)
     randomiseStage.value = 'done'
   } catch (err) {
@@ -199,7 +199,7 @@ async function runRandomiseDraw() {
       </template>
     </p>
 
-    <!-- Single list of divers — start order is per-diver, the
+    <!-- Single list of divers: start order is per-diver, the
          same across every round (Article 4.1.6). -->
     <div class="randomise-list">
       <div v-for="item in randomiseDisplayRows"
@@ -240,9 +240,9 @@ async function runRandomiseDraw() {
 </template>
 
 <style scoped>
-/* P1: reduced-motion guard (tracked per-file by the P0 scanner;
+/* P1: reduced-motion guard (tracked per-file by the P0 scanner,
    reinforces the global guard in app.css). Reduced -> the reel resolves
-   to its final order without the shuffle; the draw logic is untouched. */
+   to its final order without the shuffle, draw logic is untouched. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -250,19 +250,19 @@ async function runRandomiseDraw() {
   }
 }
 /* Randomise-draw styles MOVED from ControlView.css (exclusive to
-   this modal). The .lb-* modal frame at the bottom is COPIED —
+   this modal). The .lb-* modal frame at the bottom is COPIED,
    the pattern is shared by the modals that remain in
    ControlView. */
 /* =========================================================
    Random dive-order draw modal (WA Article 4.1.6 ceremony).
-   Wide + projector-friendly so divers / referees / spectators
-   in the meeting room can read it from the back.
+   Wide and projector-friendly so divers, referees, and
+   spectators in the room can read it from the back.
    ========================================================= */
 .randomise-modal {
   max-width: 760px;
   /* `dvh` so the modal shrinks with the iOS Safari toolbar
-     rather than being clipped behind it. vh fallback for
-     browsers older than ~Q4-2022. */
+     instead of getting clipped behind it. vh is just the
+     fallback for older browsers. */
   max-height: 92vh;
   max-height: 92dvh;
   display: flex; flex-direction: column;
@@ -307,7 +307,7 @@ async function runRandomiseDraw() {
   font-size: 14px; line-height: 1.55; color: var(--text-2);
 }
 
-/* List of divers — large, readable from across the room.
+/* List of divers, large and readable from across the room.
    While shuffling, the .is-shuffling rows pulse subtly. */
 .randomise-list {
   flex: 1; min-height: 0;
@@ -382,5 +382,5 @@ async function runRandomiseDraw() {
 }
 
 /* Modal frame (.lb-backdrop / .lb-modal + the 720px frame media query)
-   now lives in BaseModal.vue; the global lb-* in ControlView.css. */
+   now lives in BaseModal.vue, the global lb-* is in ControlView.css. */
 </style>

@@ -12,22 +12,22 @@
 // Public API:
 //   const { ready, notifications, subscribe, unsubscribe,
 //           ack, recent } = usePush()
-//   ready          — true once SW is registered + push status
+//   ready          - true once SW is registered + push status
 //                    settled (or push isn't available)
-//   notifications  — reactive array, newest-first, capped at 50.
+//   notifications  - reactive array, newest-first, capped at 50.
 //                    Pushed to by the socket listener AND the
 //                    SW postMessage on notification-click.
-//   subscribe()    — request permission + register with the
+//   subscribe()    - request permission + register with the
 //                    server. Idempotent.
-//   unsubscribe()  — revoke browser sub + tell the server.
-//   ack(id)        — mark notification 'acknowledged' on the
+//   unsubscribe()  - revoke browser sub + tell the server.
+//   ack(id)        - mark notification 'acknowledged' on the
 //                    server + remove from the local list.
-//   recent()       — pull /api/notifications/me, merge into list.
+//   recent()       - pull /api/notifications/me, merge into list.
 
 import { ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
-// Module-level shared state — survives across component mounts.
+// Module-level shared state, survives across component mounts
 const notifications = ref([])
 const ready = ref(false)
 let initialised = false
@@ -87,7 +87,7 @@ export function usePush({ socket: sock } = {}) {
   const auth = useAuthStore()
   if (sock) bindPushSocket(sock)
 
-  // Service worker postMessage — fired when the user taps a
+  // Service worker postMessage, fired when the user taps a
   // system notification while the SPA tab is open.
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && !initialised) {
     initialised = true
@@ -100,8 +100,8 @@ export function usePush({ socket: sock } = {}) {
     })
   }
 
-  // Subscribe to push. Safe to call multiple times — duplicates
-  // collapse on the endpoint UNIQUE.
+  // Subscribe to push. Safe to call multiple times, duplicates
+  // just collapse on the endpoint UNIQUE.
   async function subscribe() {
     if (!pushApiAvailable() || !auth.isLoggedIn) {
       ready.value = true
@@ -123,7 +123,7 @@ export function usePush({ socket: sock } = {}) {
         return { ok: false, reason: 'permission-denied' }
       }
       // PushManager.subscribe is idempotent against the same
-      // applicationServerKey — returns the existing sub if any.
+      // applicationServerKey, returns the existing sub if there is one.
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(key),
@@ -162,8 +162,8 @@ export function usePush({ socket: sock } = {}) {
     if (!id) return
     notifications.value = notifications.value.filter(n => n.id !== id)
     if (socket) socket.emit('notification:ack', { id })
-    // Belt+braces — also fire the HTTP ack in case the socket is
-    // disconnected. Idempotent server-side.
+    // belt and braces, also fire the HTTP ack in case the socket is
+    // disconnected (idempotent server-side anyway)
     try {
       await auth.apiFetch(`/api/notifications/${id}/acknowledge`, { method: 'POST' })
     } catch { /* silent */ }
@@ -173,15 +173,15 @@ export function usePush({ socket: sock } = {}) {
     if (!auth.isLoggedIn) return
     try {
       const rows = await auth.apiFetch('/api/notifications/me?limit=20')
-      // Filter out anything already acknowledged — those don't
-      // belong in the live banner.
+      // filter out anything already acknowledged, those don't
+      // belong in the live banner
       const fresh = (rows || []).filter(r => r.status !== 'acknowledged')
       // Merge into notifications, preserving order.
       for (const r of [...fresh].reverse()) pushIntoList(r)
     } catch { /* silent */ }
   }
 
-  // Auto-subscribe on login — once. The watcher fires when the user
+  // Auto-subscribe on login, once. The watcher fires when the user
   // identity appears (after a fresh login or the boot-time /me probe)
   // and is wrapped to avoid a duplicate subscribe on hot module reload.
   watch(() => auth.user?.id, (id, prev) => {

@@ -4,7 +4,7 @@
 // mount: /api/events, /api/role-requests, /api/orgs (sysadmin),
 // /api/audit/recent, /api/judge/my-events, /api/coach/dashboard.
 // Each is its own auth check + route handler + Postgres query.
-// Single user that's fine; 50 operators all hitting Refresh
+// Fine for a single user, but 50 operators all hitting Refresh
 // during a meet day = 50 × 6 = 300 round trips, plus the
 // upstream connection pool churn.
 //
@@ -20,8 +20,8 @@
 //       pending_orgs:     [...],   // sysadmin only
 //       recent_activity:  [...],   // org_admin only
 //       judge_events:     [...],   // judge role only
-//       coach:            { ... }, // coach role only — minimal slice
-//       diver_event_ids:  [...],   // diver role only — event_ids the
+//       coach:            { ... }, // coach role only, minimal slice
+//       diver_event_ids:  [...],   // diver role only, event_ids the
 //                                  // caller has an active (is_reserve=
 //                                  // FALSE) competitor_dive_lists entry
 //                                  // for. Lets the diver-tab "Meet day
@@ -31,7 +31,7 @@
 //                                  // /api/events/:id/me-meet-day so a
 //                                  // surfaced card never dead-ends in
 //                                  // a 403).
-//       diver_reserve_event_ids:    // diver role only — events where
+//       diver_reserve_event_ids:    // diver role only, events where
 //         [{event_id, reserve_position}, …]   // the caller is a reserve.
 //                                  // Surfaced as a separate card so the
 //                                  // diver can confirm their list before
@@ -67,10 +67,10 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
       // Mirrors what /api/events returns. Org admin / meet
       // manager / diver see their org's events PLUS any event
       // their org has been invited to via event_participating_orgs
-      // (commit 48fa8d5). Without the EXISTS clause, the
-      // dashboard pulse strip's 🌐 INVITED chip silently never
-      // fires for visiting federations because their bundle
-      // ships zero foreign events.
+      // (commit 48fa8d5). Heads up: without the EXISTS clause, the
+      // dashboard pulse strip's INVITED chip silently never fires
+      // for visiting federations because their bundle ships zero
+      // foreign events.
       tasks.events = pool.query(
         `SELECT e.id, e.name, e.status, e.event_type::text AS event_type,
                 e.gender, e.height, e.age_group,
@@ -347,9 +347,9 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
     // ---- Diver entered-event ids (diver role only) ----
     // Mirrors the gate on /api/events/:id/me-meet-day exactly:
     // an entry in competitor_dive_lists whose withdrawn_at is
-    // null counts as "this diver is in this event". We only
-    // need the ids — the SPA already has the full event row
-    // from `events` and intersects.
+    // null counts as "this diver is in this event". We only need
+    // the ids, the SPA already has the full event row from
+    // `events` and intersects.
     if (has("diver")) {
       tasks.diver_event_ids = pool.query(
         `SELECT DISTINCT event_id
@@ -359,10 +359,10 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
             AND is_reserve = FALSE`,
         [user.id],
       ).then((r) => r.rows.map((row) => row.event_id)).catch(() => []);
-      // Migration 040: separate slice for events where the
+      // Migration 040: seperate slice for events where the
       // diver is a reserve. Surfaced as a "You're a reserve in
-      // [event]" card on the diver tab — the Meet Day card
-      // doesn't make sense (reserves don't compete) but the
+      // [event]" card on the diver tab. The Meet Day card
+      // doesn't make sense here (reserves don't compete) but the
       // diver should still see the event so they can confirm
       // their list before the lock.
       tasks.diver_reserve_event_ids = pool.query(
@@ -380,9 +380,9 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
     }
 
     // ---- Coach slice (coach role only) ----
-    // Minimal — divers list with names + clubs. Full coach
+    // Minimal, just divers list with names + clubs. Full coach
     // dashboard data still goes via /api/coach/dashboard
-    // when the user actually opens the Coach tab; this is
+    // when the user actually opens the Coach tab, this is
     // just enough for the pulse chip + tab badge.
     if (has("coach")) {
       tasks.coach = pool.query(

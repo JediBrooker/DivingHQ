@@ -1,13 +1,13 @@
 -- =============================================================
--- MIGRATION 083 — GUARDIAN / DEPENDENT RELATIONSHIPS
+-- MIGRATION 083: GUARDIAN / DEPENDENT RELATIONSHIPS
 --
 -- Lets a parent or guardian link to a minor's account so they can
 -- pay entry fees, memberships, etc. on the minor's behalf.
 --
 -- 1. guardians table (many-to-many, org-scoped, admin-approved)
--- 2. payments.subject_user_id — the beneficiary when payer ≠ subject
+-- 2. payments.subject_user_id, the beneficiary when payer ≠ subject
 -- 3. Rebuild user-keyed one-live dedup indexes with
---    COALESCE(subject_user_id, payer_user_id) so two parents cannot
+--    COALESCE(subject_user_id, payer_user_id) so two parents can't
 --    double-pay for the same child's entry.
 -- =============================================================
 
@@ -51,8 +51,8 @@ CREATE INDEX IF NOT EXISTS idx_payments_subject_user
 
 -- ---- 3. rebuild user-keyed dedup indexes -----------------------
 -- COALESCE(subject_user_id, payer_user_id) = the beneficiary.
--- For legacy rows subject_user_id IS NULL so COALESCE falls back to
--- payer_user_id — identical behaviour to the old index.
+-- For legacy rows subject_user_id IS NULL, so COALESCE falls back
+-- to payer_user_id, same behaviour as the old index.
 
 DROP INDEX IF EXISTS idx_payments_one_live_event_entry;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_one_live_event_entry

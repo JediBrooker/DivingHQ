@@ -1,7 +1,8 @@
 <script setup>
-// Referee / org_admin fines desk (/fines). Issue a disciplinary fine against
-// a person, see the org's fines, waive them, and (org_admin) adjudicate
-// appeals. The fined person pays or appeals from their own Charges page.
+// Referee / org_admin fines desk (/fines). Lets you issue a disciplinary
+// fine against a person, view the org's fines, waive them, and (as
+// org_admin) adjudicate appeals. The fined person pays or appeals from
+// their own Charges page.
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess, showError } from '@/composables/useNotify'

@@ -1,7 +1,7 @@
 <script setup>
 // Diver: their OWN enrolments (never anyone else's), plus browsing +
 // self-enrolling into their own club's active classes. Backed by
-// /api/me/classes and /api/me/available-classes — both scoped
+// /api/me/classes and /api/me/available-classes, both scoped
 // server-side to the caller.
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -38,8 +38,8 @@ async function load() {
     mine.value = m
     available.value = a
     // Pre-select each class's first price option so the dropdown always
-    // SHOWS the price that enrolling will use (it used to render blank and
-    // silently enrol at the first option).
+    // shows the price that enrolling will use. Gotcha we fixed: it used
+    // to render blank and silently enrol at the first option anyway.
     for (const cls of a) {
       if (cls.price_options && cls.price_options.length && !chosenPrice.value[cls.id]) {
         chosenPrice.value[cls.id] = cls.price_options[0].id
@@ -57,13 +57,13 @@ async function payNow(e) {
   try {
     const res = await auth.apiFetch(`/api/me/class-enrolments/${e.id}/checkout`, { method: 'POST' })
     if (res.url) {
-      // Keep the button disabled while the browser navigates to Stripe —
-      // a finally-reset here re-enabled it mid-redirect, inviting a second
-      // click and a confusing second request.
+      // Keep the button disabled while the browser navigates to Stripe.
+      // A finally-reset here re-enabled it mid-redirect, which invited a
+      // second click and a confusing second request.
       window.location.href = res.url
       return
     }
-    // Fully covered by a discount — activated directly, no Stripe redirect.
+    // Fully covered by a discount, so it's activated directly, no Stripe redirect.
     showSuccess(t('classes.enrolled'))
     await load()
     payingId.value = null

@@ -1,9 +1,9 @@
 <script setup>
-// DiveRecorder Archive Explorer — public, read-only browse of the
+// DiveRecorder Archive Explorer, a public, read-only browse of the
 // historical results mined from diverecorder.co.uk into the dr_*
 // tables (migrations 059/060, /api/dr-archive/*). Mirrors the
 // Scoreboard browse stance: signed-in users get the CRM shell (route
-// has meta.appShell), the public get minimal chrome.
+// has meta.appShell), the public just get minimal chrome.
 //
 // Browse views (switched client-side): meets → meet events → event
 // results → divesheet, plus a diver search that lists a person's
@@ -21,7 +21,7 @@ const auth = useAuthStore()
 
 // Group a loaded meet's events into progression rows (base
 // discipline name + parsed phase → aligned prelim/semi/final
-// columns). Best-effort, since DiveRecorder only carries a
+// columns). Best-effort, heads up: DiveRecorder only carries a
 // name-parsed phase, not a structural stage link.
 function archiveGroup(meetId) {
   return groupArchiveEvents(meetEvents.value[meetId] || [])
@@ -36,7 +36,7 @@ const meets = ref([])
 const countries = ref([])
 const filters = ref({ q: '', nat: '', from: '', to: '' })
 
-// Pagination — the API caps each page; we page through with
+// Pagination: the API caps each page, so we page through with
 // offset and expose Prev/Next. hasMore is true when the last page
 // came back full (so there's likely another page to fetch).
 const PAGE_SIZE = 50
@@ -48,7 +48,7 @@ const rangeStart = computed(() => (meets.value.length ? page.value * PAGE_SIZE +
 const rangeEnd = computed(() => page.value * PAGE_SIZE + meets.value.length)
 
 // Windowed page tokens: first + last + a few around the current page,
-// with '…' gaps — e.g. [1, '…', 5, 6, 7, '…', 28]. Keeps the control
+// with '…' gaps, e.g. [1, '…', 5, 6, 7, '…', 28]. Keeps the control
 // compact even with hundreds of pages.
 const pageItems = computed(() => {
   const tp = totalPages.value
@@ -65,11 +65,11 @@ const pageItems = computed(() => {
   }
   return items
 })
-const event = ref(null)      // { event, results }  — event detail view
-const diver = ref(null)      // { diver, history }   — diver history view
+const event = ref(null)      // { event, results }, event detail view
+const diver = ref(null)      // { diver, history }, diver history view
 
-// Meet accordion — first click expands a meet to reveal its events
-// inline (lazy-loaded), mirroring the Scoreboard's meets browser.
+// Meet accordion: first click expands a meet to reveal its events
+// inline (lazy-loaded), mirroring the Scoreboards meets browser.
 const expandedMeets = ref({})  // meetId -> true
 const meetEvents = ref({})     // meetId -> events[] (cached after first open)
 
@@ -96,7 +96,7 @@ const toPct = computed(() => (toIdx.value / lastIdx.value) * 100)
 
 // Date-only formatter that does NOT round-trip through a UTC Date
 // (the API returns plain 'YYYY-MM-DD', and `new Date('2021-10-23')`
-// would shift a day in negative-offset zones).
+// would shift a day in negative-offset zones, classic gotcha).
 function fmtDay(s) {
   if (!s) return ''
   const [y, m, d] = String(s).split('-').map(Number)
@@ -144,7 +144,7 @@ async function loadMeets() {
 }
 
 // Total count for the current filters (drives the numbered page
-// links). Plain fetch — kept off the shared loading spinner so it
+// links). Plain fetch, kept off the shared loading spinner so it
 // doesn't race the meets fetch. Non-fatal if it fails.
 async function loadCount() {
   try {
@@ -276,8 +276,8 @@ function pickMeet(id) {
   meetHits.value = []
 }
 
-// Second click — on an event — opens the event detail (ranked
-// results), the same "open the event" step the Scoreboard uses.
+// Second click, on an event, opens the event detail (ranked
+// results). Same "open the event" step the Scoreboard uses.
 async function openEvent(id) {
   const data = await api(`/events/${id}`)
   if (data) { event.value = data; expandedResults.value = {}; view.value = 'event' }
@@ -492,7 +492,7 @@ onMounted(() => {
       <p v-if="loading && !meets.length" class="dr-empty">Loading…</p>
       <p v-else-if="!meets.length" class="dr-empty">No meets found.</p>
 
-      <!-- Meets accordion — first click expands a meet to reveal its
+      <!-- Meets accordion: first click expands a meet to reveal its
            events inline; clicking an event opens it. Same shape and
            process as the Scoreboard's meets browser. -->
       <div v-else class="meets-acc">
@@ -529,7 +529,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Pagination — server-paged. Prev/Next plus numbered links
+      <!-- Pagination: server-paged. Prev/Next plus numbered links
            (windowed with … gaps) so the user sees how many pages
            there are and can jump straight to one. -->
       <div v-if="meets.length && (totalPages > 1 || page > 0 || hasMore)" class="dr-pager">
@@ -825,7 +825,7 @@ onMounted(() => {
 .dr-score { font-family: var(--font-mono); font-weight: 700; color: var(--fg); }
 .dr-empty { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--fg-3); text-align: center; padding: var(--space-12) var(--space-4); background: var(--surface-2); border: 1px dashed var(--border); border-radius: var(--radius-lg); }
 
-/* Expandable diver rows — click to reveal the divesheet inline. */
+/* Expandable diver rows: click to reveal the divesheet inline. */
 .dr-trow { cursor: pointer; transition: background var(--dur) var(--ease); }
 .dr-trow:hover { background: var(--surface-2); }
 .dr-trow.is-open { background: var(--accent-soft); }

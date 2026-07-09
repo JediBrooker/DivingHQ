@@ -1,4 +1,4 @@
-// Public diver profile — share-friendly read-only page.
+// Public diver profile: share-friendly, read-only page.
 //
 //   GET /api/public/divers/:public_slug
 //       JSON payload (the SPA route /diver/:slug consumes this)
@@ -10,10 +10,10 @@
 //       to the SPA's index.html.
 //
 //   GET /api/public/divers/:public_slug/og-card.png
-//       (left as a TODO — static fallback used for now)
+//       (left as a TODO, static fallback used for now)
 //
 // Permission model: completely public. The profile shows only
-// data already visible on the live scoreboard / archive — name,
+// data already visible on the live scoreboard / archive: name,
 // org, country, club, headline meet stats, recent placings.
 // Internal fields (email, dashboard_widgets, judge assignments)
 // are never included.
@@ -29,8 +29,8 @@ const { perDivePointsCte } = require("../lib/scoring-sql");
 // og:image once per share-to-cache (Twitter / FB / LinkedIn all
 // behave this way), so a small LRU is plenty.
 //
-// Bounded two ways — each PNG is ~100-300KB, so an unbounded Map
-// pins real memory:
+// Bounded two ways, since each PNG is ~100-300KB and an unbounded
+// Map would pin real memory:
 //   * a periodic sweep deletes expired entries (the read path
 //     only BYPASSED them before, so a crawler sweep over many
 //     profiles left every stale buffer resident forever);
@@ -43,7 +43,7 @@ const OG_CARD_CACHE_MAX = 200;
 
 // Sweep cadence mirrors lib/scoreboard-cache.js (a fraction of
 // the TTL is plenty of resolution); unref()'d so the timer never
-// holds the process open — same posture as the idempotency
+// holds the process open, same posture as the idempotency
 // sweeper's interval.
 setInterval(() => {
   const now = Date.now();
@@ -52,22 +52,22 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref?.();
 
-// Crawler UA detection. Matched anywhere in the User-Agent
-// string. Conservative — we'd rather mis-serve OG-tagged HTML
-// to a curl probe than fail to unfurl on a real Twitter card.
+// Crawler UA detection, matched anywhere in the User-Agent
+// string. Conservative on purpose: we'd rather mis-serve OG-tagged
+// HTML to a curl probe than fail to unfurl on a real Twitter card.
 const CRAWLER_UA_RE = /(twitterbot|facebookexternalhit|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|googlebot|bingbot|duckduckbot|pinterestbot|redditbot)/i;
 
 // Strict hostname[:port] shape. Used as a fallback validator for
-// the Host: header when APP_BASE_URL is unset — a malicious
-// crawler hit with a wild Host header would otherwise let an
-// attacker steer the meta-refresh redirect at an arbitrary host.
+// the Host: header when APP_BASE_URL is unset. Without it,
+// malicious crawler hit with a wild Host header could steer the
+// meta-refresh redirect at an arbitrary host.
 const HOST_RE = /^[a-z0-9](?:[a-z0-9.-]{0,253}[a-z0-9])?(?::\d{1,5})?$/i;
 
 // HTML-escape a free-text field before splicing it into a meta
 // tag. The values come from the DB (full_name, org_name, club
 // name) which we sanitised on the way in (Migration 021), but
-// defence in depth — a missed code path that lets a bad string
-// land would otherwise pop a meta tag attribute.
+// this is defence in depth, just in case a missed code path lets
+// a bad string land and pops a meta tag attribute.
 function htmlEscape(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
@@ -83,7 +83,7 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
   const router = express.Router();
 
   // -------------------------------------------------------------
-  // GET /api/public/divers/:public_slug — JSON payload.
+  // GET /api/public/divers/:public_slug: JSON payload.
   //
   // Returns:
   //   diver:           id (opaque slug, NOT user_id), full_name,
@@ -100,9 +100,10 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
   router.get("/api/public/divers/:public_slug", async (req, res) => {
     try {
       const slug = req.params.public_slug;
-      // Cheap shape check — public_slug is 32 hex chars (16 bytes
-      // of randomness, base16-encoded). Reject anything else with
-      // a 404 to avoid filling the logs with junk.
+      // Cheap shape check: public_slug is 32 hex chars (16 bytes
+      // of randomness, base16-encoded). Just a sanity check, reject
+      // anything else with a 404 so we're not filling the logs with
+      // junk.
       if (!/^[0-9a-f]{32}$/i.test(slug)) {
         return res.status(404).json({ error: "Diver not found" });
       }
@@ -122,7 +123,7 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
       }
       const diver = diverRes.rows[0];
 
-      // Stats query — same shape as /api/divers/:id/profile but
+      // Stats query, same shape as /api/divers/:id/profile but
       // without the date filter (public profile is "all time").
       const stats = await reads.query(
         `WITH ${perDivePointsCte({
@@ -211,14 +212,14 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
   // memory for an hour to keep the response fast on warm
   // crawlers.
   //
-  // No PII — same data the public profile endpoint already
-  // exposes, just rendered as pixels instead of JSON.
+  // No PII here either, same data the public profile endpoint
+  // already exposes, just rendered as pixels instead of JSON.
   // -------------------------------------------------------------
   router.get("/api/public/divers/:public_slug/og-card.png", async (req, res) => {
     const slug = req.params.public_slug;
     if (!/^[0-9a-f]{32}$/i.test(slug)) return res.status(404).end();
 
-    // Cache hit — serve straight from memory. An expired entry is
+    // Cache hit: serve straight from memory. An expired entry gets
     // deleted on sight (not just bypassed) so the ~quarter-MB
     // buffer is reclaimable before the next sweep.
     const cached = ogCardCache.get(slug);
@@ -233,9 +234,9 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
 
     try {
       // Diver row + their best single dive total. One round trip.
-      // The best-dive scalar is fine to send to the replica — the
-      // OG card is intentionally allowed to be a few seconds
-      // stale (hit ratio matters more than freshness here).
+      // The best-dive scalar is fine to send to the replica since
+      // the OG card is allowed to be a few seconds stale on
+      // purpose (hit ratio matters more than freshness here).
       const r = await reads.query(
         `SELECT u.id, u.full_name, o.name AS org_name, o.country_code,
                 cl.name AS club_name
@@ -265,7 +266,7 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
         ? Number(stat.rows[0].best).toFixed(2)
         : "—";
 
-      // Defence-in-depth HTML escape — the source rows come from
+      // Defence-in-depth HTML escape: the source rows come from
       // the DB (sanitised at registration) but a missed code
       // path that lets a bad string land would otherwise pop
       // an SVG attribute and either break the render or leak.
@@ -319,13 +320,13 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
       res.end(png);
     } catch (err) {
       console.error("[OG Card Error]", err.message);
-      // Fall back to the static icon — never a broken og:image.
+      // Fall back to the static icon, never a broken og:image.
       res.redirect(302, "/icon-512.png");
     }
   });
 
   // -------------------------------------------------------------
-  // GET /diver/:public_slug — server-rendered HTML for crawlers,
+  // GET /diver/:public_slug: server-rendered HTML for crawlers,
   // SPA fallthrough for browsers.
   //
   // Detection: User-Agent is checked against CRAWLER_UA_RE. If
@@ -359,7 +360,7 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
       const d = r.rows[0];
 
       // APP_BASE_URL is preferred; when unset we fall back to the
-      // request's protocol + Host header — but only if Host passes
+      // request's protocol + Host header, but only if Host passes
       // a strict shape check. An attacker-supplied Host like
       // `evil.com" content="0;url=javascript:…` is HTML-escaped at
       // the splice site, but a bare attacker-controlled hostname
@@ -380,10 +381,10 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
         : "View competitive history, personal bests, and recent meet placings.";
       const ogImage = `${base}/api/public/divers/${slug}/og-card.png`;
 
-      // Inline HTML — no template engine. Just Open Graph +
+      // Inline HTML, no template engine. Just Open Graph +
       // Twitter card meta. The body is intentionally near-empty:
       // crawlers only read the head, and a human who somehow
-      // lands here without JS gets a graceful redirect.
+      // lands here without JS still gets a graceful redirect.
       res
         .status(200)
         .set("Content-Type", "text/html; charset=utf-8")

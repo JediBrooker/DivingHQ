@@ -1,8 +1,8 @@
 <script setup>
 // "What I owe" page (/charges) for any signed-in user. Lists outstanding
-// scratch / no-show penalty charges (divers) AND disciplinary fines, each
-// with a Pay action and the contextual "coming soon" preview. Fines can also
-// be appealed here. Reads GET /api/me/charges + GET /api/me/fines.
+// scratch / no-show penalty charges (divers) and disciplinary fines, each
+// with a Pay action and the contextual "coming soon" preview. Fines can
+// also be appealed here. Reads GET /api/me/charges + GET /api/me/fines.
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showError, showSuccess } from '@/composables/useNotify'
@@ -26,8 +26,8 @@ function kindLabel(kind) {
   return labels[kind] || kind
 }
 
-// /api/me/fines now returns EVERY fine (so appeal outcomes are visible) —
-// split live debts from resolved history.
+// /api/me/fines now returns EVERY fine (so appeal outcomes are visible),
+// so we split live debts from resolved history here.
 const openFines = computed(() => fines.value.filter((f) => ['owed', 'appealed'].includes(f.status)))
 const resolvedFines = computed(() => fines.value.filter((f) => !['owed', 'appealed'].includes(f.status)))
 function fineOutcome(f) {
@@ -166,7 +166,7 @@ onMounted(load)
 
       <p v-if="!charges.length && !openFines.length" class="muted">{{ t('payments.charges_view.empty') }}</p>
 
-      <!-- Resolved fines — the outcome of every appeal/payment stays visible -->
+      <!-- Resolved fines: the outcome of every appeal/payment stays visible -->
       <div v-if="resolvedFines.length" class="charge-list">
         <h2 class="section-h">{{ t('payments.charges_view.section_resolved') }}</h2>
         <div v-for="f in resolvedFines" :key="f.id" class="charge-card resolved">

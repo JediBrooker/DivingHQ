@@ -1,16 +1,15 @@
 <script setup>
 // Notifications inbox.
 //
-// Until now, push notifications were transient — once a user
-// dismissed the system toast (or had their phone off when one
-// fired), it was gone. This view is the persistent record:
-// every notification the push engine wrote to the
-// `notifications` table for this user, sorted newest-first,
-// with a "mark read" button.
+// Until now, push notifications were transient: once a user dismissed
+// the system toast (or had their phone off when one fired), it was
+// gone. This view is the persistent record, every notification the
+// push engine wrote to the `notifications` table for this user,
+// sorted newest-first, with a "mark read" button.
 //
 // Backed by the existing endpoints:
-//   GET  /api/notifications/me                  — list
-//   POST /api/notifications/:id/acknowledge     — mark read
+//   GET  /api/notifications/me                  (list)
+//   POST /api/notifications/:id/acknowledge     (mark read)
 //
 // Categories so far: signoff_request, role_decision,
 // event_started, event_results_posted, generic. Each row
@@ -38,8 +37,8 @@ const showRead     = ref(false)
 const categoryFilter = ref('all')
 const laneFilter = ref('all')
 
-// Lane labels resolve through i18n in laneCounts (below) so a
-// locale switch re-renders them; keep only the stable id + key here.
+// Lane labels resolve through i18n in laneCounts (below) so a locale
+// switch re-renders them, just keep the stable id + key here.
 const LANE_DEFS = [
   { id: 'all', labelKey: 'inbox.lane_all' },
   { id: 'action', labelKey: 'inbox.lane_action' },
@@ -121,7 +120,7 @@ const unreadCount = computed(() =>
 
 async function markRead(row) {
   if (row.status === 'acknowledged') return
-  // Optimistic.
+  // optimistic update, revert below if the request fails
   row.status = 'acknowledged'
   row.acknowledged_at = new Date().toISOString()
   try {
@@ -155,8 +154,7 @@ async function markAllRead() {
 function clickRow(row) {
   markRead(row)
   if (!row.action_url) return
-  // Internal links use the router; external URLs open in a
-  // new tab.
+  // internal links use the router, external URLs open in a new tab
   if (row.action_url.startsWith('/')) {
     router.push(row.action_url)
   } else {
@@ -164,14 +162,14 @@ function clickRow(row) {
   }
 }
 
-// fmtTime was a local copy of the same fmtRelative the dashboard
-// uses. Reuse the shared helper from @/lib/format.
+// fmtTime used to be a local copy of the same fmtRelative the
+// dashboard uses; just reuse the shared helper from @/lib/format now.
 const fmtTime = fmtRelative
 
-// Category → i18n leaf under inbox.cat.*. The keys are sanitised
-// (dots → underscores) because the raw category ids contain dots
-// (e.g. "coach.diver_up_next") which vue-i18n would read as a
-// nested path. Unknown categories fall back to the raw id.
+// Category -> i18n leaf under inbox.cat.*. Keys are sanitised (dots
+// become underscores) because the raw category ids contain dots
+// (e.g. "coach.diver_up_next") which vue-i18n would otherwise read
+// as a nested path. Unknown categories fall back to the raw id.
 const CATEGORY_LABEL_KEYS = {
   signoff_request:             'signoff_request',
   role_decision:               'role_decision',

@@ -1,9 +1,9 @@
 <script setup>
-/* CheckInModal — pre-meet door-pass list, extracted from
+/* CheckInModal: pre-meet door-pass list, extracted from
  * ControlView.vue (#2 from the feature roadmap). Each unique
- * diver gets a Present / Late / DNS chip; when the pre-meet
+ * diver gets a Present / Late / DNS chip. When the pre-meet
  * workflow is still on state 1 the footer carries the
- * "Check-in Complete — Continue" confirm that stamps
+ * "Check-in Complete / Continue" confirm that stamps
  * check_in_done_at and advances the workflow.
  *
  * Mount contract: the parent mounts this with v-if, so every
@@ -11,8 +11,8 @@
  *
  * State boundary: rows / loading / error are OWNED here. The
  * confirm step emits `confirmed` with the optimistic
- * check_in_done_at patch — the parent applies it via
- * patchCurrentEvent, exactly like the inline version did.
+ * check_in_done_at patch, the parent applies it via
+ * patchCurrentEvent, same as the inline version did.
  */
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -24,7 +24,7 @@ import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
   event:         { type: Object, required: true },
-  // orderWorkflowState from the parent — gates the confirm footer
+  // orderWorkflowState from the parent, gates the confirm footer
   // to pre-meet state 1 only.
   workflowState: { type: String, default: '' },
 })
@@ -53,11 +53,11 @@ async function refreshCheckIn() {
     checkInLoading.value = false
   }
 }
-// Initial load on mount — same cadence as the old openCheckIn().
+// Initial load on mount, same cadence as the old openCheckIn().
 refreshCheckIn()
 
-// Set a diver's status. Optimistic — we update the local row
-// then fire the PUT; on failure we revert and surface the error.
+// Set a diver's status. Optimistic: update the local row then
+// fire the PUT, and revert + surface the error if it fails.
 async function setAttendance(row, status) {
   const prev = row.status
   // Toggle: clicking the same chip twice clears the status.
@@ -68,7 +68,7 @@ async function setAttendance(row, status) {
       `/api/events/${props.event.id}/attendance/${row.competitor_id}`,
       { method: 'PUT', body: JSON.stringify({ status: next }) },
     )
-    row.status = r.status   // server is source of truth
+    row.status = r.status   // server wins, it's the source of truth
     row.set_at = r.set_at
   } catch (err) {
     row.status = prev
@@ -89,9 +89,9 @@ const checkInCounts = computed(() => {
 
 async function confirmCheckInComplete() {
   if (!props.event) return
-  // Friendly nudge if no diver has been ticked off yet — the
-  // operator can still proceed, but they're advancing on an
-  // empty list which is usually a mistake.
+  // Friendly nudge if no diver has been ticked off yet. The
+  // operator can still proceed, but advancing on a completely
+  // empty list is usually a mistake, so double-check first.
   const anyMarked = (checkInRows.value || []).some(r => r.status)
   if (!anyMarked && !await confirmAction({
     title: 'Confirm check-in complete?',
@@ -109,9 +109,9 @@ async function confirmCheckInComplete() {
       url: `/api/events/${props.event.id}/check-in/confirm`,
       actionType: 'check_in_confirm',
     })
-    // Optimistic check_in_done_at — the canonical value lands
-    // via the next event refresh; the parent sets it client-side
-    // now so the UI advances out of the check-in step immediately.
+    // Optimistic check_in_done_at, the canonical value lands via
+    // the next event refresh. Parent sets it client-side now so
+    // the UI advances out of the check-in step right away.
     emit('confirmed', { check_in_done_at: new Date().toISOString() })
     emit('close')
   } catch (err) {
@@ -190,14 +190,14 @@ async function confirmCheckInComplete() {
 
 <style scoped>
 /* Check-in styles MOVED from ControlView.css (exclusive to this
-   modal — .lb-footer included; this was its only user). The
+   modal, .lb-footer included, this was its only user). The
    .wf-btn rules and the .lb-* modal frame are COPIED from
    ControlView.css (shared with the pre-meet workflow buttons /
    remaining modals there). */
 /* =========================================================
-   Check-in modal — pre-meet door pass list. Each row has the
-   diver's name + chip group. The chip colour leans on the
-   status semantics (cyan = present, amber = late, red = DNS).
+   Check-in modal, pre-meet door pass list. Each row has the
+   diver's name + chip group. Chip colour leans on the status
+   semantics (cyan = present, amber = late, red = DNS).
    ========================================================= */
 .lb-footer {
   display: flex; align-items: center; justify-content: space-between;
@@ -273,7 +273,7 @@ async function confirmCheckInComplete() {
   .checkin-chips { justify-content: space-between; }
 }
 
-/* COPIED — footer confirm button reuses the workflow-button
+/* COPIED, footer confirm button reuses the workflow-button
    look (see ControlView.css .wf-btn). */
 .wf-btn {
   font-family: var(--font-sans); font-weight: 600; font-style: normal;

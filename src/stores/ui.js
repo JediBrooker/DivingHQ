@@ -2,13 +2,13 @@ import { defineStore } from 'pinia'
 
 // Client-only presentation state introduced by the "Marine CRM"
 // redesign: the colour theme (light / dark) and whether the app
-// shell's left sidebar is collapsed. Both persist to localStorage
+// shell's left sidebar is collapsed. Both persist localStorage
 // and apply to <html> so they survive reloads.
 //
-// The theme is ALSO applied by a tiny inline script in index.html
+// The theme is also applied by a tiny inline script in index.html
 // before first paint (avoids a flash of the wrong theme). This
 // store reads the same localStorage key, so the two never
-// disagree; the store owns runtime changes after mount.
+// disagree, the store just owns runtime changes after mount.
 const THEME_KEY = 'dhq-theme'
 const SIDEBAR_KEY = 'dhq-sidebar'
 
@@ -40,7 +40,7 @@ export const useUiStore = defineStore('ui', {
       try {
         document.documentElement.dataset.theme = this.theme
       } catch {
-        /* SSR / no-DOM guard — never throws in the browser. */
+        /* SSR / no-DOM guard, never throws in the browser. */
       }
     },
     setTheme(theme) {
@@ -48,7 +48,7 @@ export const useUiStore = defineStore('ui', {
       try {
         localStorage.setItem(THEME_KEY, this.theme)
       } catch {
-        /* private-mode / quota — non-fatal, theme still applies this session. */
+        /* private-mode / quota, non-fatal, theme still applies this session. */
       }
       this.applyTheme()
     },

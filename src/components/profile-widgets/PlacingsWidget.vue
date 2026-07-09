@@ -1,7 +1,7 @@
 <script setup>
 defineProps({
-  // { gold, silver, bronze, finalist, further }. From
-  // analytics.placings. May be null while analytics is loading.
+  // { gold, silver, bronze, finalist, further }, from
+  // analytics.placings. May be null while analytics still loading.
   data: { type: Object, default: null },
 })
 </script>
@@ -62,9 +62,9 @@ defineProps({
   margin-top: 0.4rem;
 }
 /* Phone (≤600px): with 5 cells at minmax(120px,1fr) the grid
-   wraps to 3-2 or 2-2-1 at typical phone widths. Drop the
-   minimum so we get a clean 3-col or 2-col layout, and shrink
-   the giant placing numbers. */
+   wraps to 3-2 or 2-2-1 at typical phone widths. Dropping the
+   minimum gets us a clean 3-col or 2-col layout, and we shrink
+   the giant placing numbers to match. */
 @media (max-width: 600px) {
   .placings-row {
     grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));

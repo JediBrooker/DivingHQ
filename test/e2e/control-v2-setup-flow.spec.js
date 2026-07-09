@@ -1,7 +1,7 @@
-// P7.2: ControlViewV2 Setup workflow ACTIONS. Flag-on only. The workflow
+// P7.2: ControlViewV2 Setup workflow actions, flag-on only. The workflow
 // primary opens the migrated check-in modal; confirming advances the
 // stage in place (orderWorkflowState check-in -> random), so the primary
-// morphs to Randomise -- proving the migrated modals drive V2's stage.
+// morphs to Randomise, proving the migrated modals drive V2's stage.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -33,7 +33,7 @@ test("check-in: the workflow primary opens the modal; confirm advances to Random
   await page.waitForLoadState("networkidle");
   await setup.selectControlEvent(page, "Flow Event");
 
-  // Stage = check-in -> primary opens the check-in modal.
+  // Stage is check-in, so the primary opens the check-in modal.
   const primary = page.locator(".setup-primary");
   await expect(primary).toContainText(/Check In Divers/i);
   await primary.click();
@@ -44,7 +44,7 @@ test("check-in: the workflow primary opens the modal; confirm advances to Random
   await dialog.locator(".chip-present").first().click();
   await dialog.locator(".wf-btn-red").click();
 
-  // Stage advanced check-in -> random; the primary morphs to Randomise.
+  // Stage advanced check-in -> random, so the primary morphs to Randomise.
   await expect(primary).toContainText(/Randomise/i, { timeout: 6_000 });
   await expect(dialog).toBeHidden();
 });

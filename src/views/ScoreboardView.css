@@ -1,4 +1,4 @@
-/* Default: natural document flow — page scrolls if content
+/* Default: natural document flow, page scrolls if content
    exceeds the viewport. Broadcast + overlay modes (kiosk /
    projector / OBS) opt back into the locked-to-viewport
    layout below. */
@@ -21,7 +21,7 @@
   min-height: 100dvh;
 }
 
-/* Broadcast / kiosk mode — header is hidden via v-if, but we
+/* Broadcast / kiosk mode: header is hidden via v-if, but we
    also nudge font sizes up so the venue projector reads
    cleanly from the back of a pool deck. */
 .sb-layout.broadcast-mode .sb-name      { font-size: clamp(48px, 9vw, 110px); }
@@ -47,7 +47,7 @@
 }
 .broadcast-exit:hover { opacity: 1; color: var(--cyan); border-color: var(--cyan); }
 
-/* Meet-hold banner — solid amber across the top whenever the
+/* Meet-hold banner, solid amber across the top whenever the
    Control Room has paused the meet. Same shape on every
    surface (Scoreboard, Control, Judge). */
 .hold-banner {
@@ -67,7 +67,7 @@
   opacity: 0.8;
 }
 
-/* Connection-lost banner — same look as the judge view. */
+/* Connection-lost banner, same look as the judge view. */
 .conn-banner {
   background: var(--amber); color: var(--bg);
   font-family: var(--font-display); font-size: 12px; font-weight: 700;
@@ -135,7 +135,7 @@
   min-width: 0;
 }
 
-/* Breadcrumbs — consistent nav across the scoreboard surfaces:
+/* Breadcrumbs, consistent nav across the scoreboard surfaces:
    All Meets › <Meet> › <Event>. Wraps on narrow screens so the
    event title is never clipped. */
 .sb-crumbs {
@@ -192,9 +192,9 @@
   justify-content: flex-start; padding: 2rem; text-align: center;
   background: var(--bg-2); overflow-y: auto;
 }
-/* Centre column — condensed pass. Each block's vertical
+/* Centre column, condensed pass. Each block's vertical
    spend got tightened so the whole "Current Performer" block
-   reads ~20% shorter. The big diver name is still the visual
+   reads about 20% shorter. The big diver name is still the visual
    anchor, just with less white space above and below it; the
    judges row, dive-total slot, rank line, and catch-up block
    all sit closer together. Up Next slides up correspondingly,
@@ -214,7 +214,7 @@
 }
 .sb-label { font-family: var(--font-sans); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.6rem; }
 .sb-name { font-family: var(--font-sans); font-size: clamp(30px,5vw,54px); font-weight: 600; font-style: normal; letter-spacing: -0.02em; color: var(--fg); line-height: 1.05; margin-bottom: 0.7rem; }
-/* Mid-meet "On Deck — Up Next" placeholder. Slightly desaturated
+/* Mid-meet "On Deck, Up Next" placeholder. Slightly desaturated
    so the audience reads it as queued-not-diving without losing
    the visual prominence of the centre block. */
 .sb-name.sb-name-next { color: var(--text-2); }
@@ -251,7 +251,7 @@
   border-radius: var(--radius);
   min-width: 3ch;
 }
-/* Empty placeholder tile — same dimensions as a populated
+/* Empty placeholder tile, same dimensions as a populated
    .j-score so the row's height stays constant from the
    moment the diver becomes active. Dim border + dash glyph
    tells the audience "judge slot, no score yet" without
@@ -263,7 +263,7 @@
   opacity: 0.55;
 }
 
-/* .j-link — a score chip rendered as a RouterLink to the
+/* .j-link, a score chip rendered as a RouterLink to the
    judge's analysis page. Looks identical to a .j-score chip at
    rest (so the colour-by-category visual vocabulary is
    preserved), but cursor + subtle outline on hover signal that
@@ -289,7 +289,7 @@
 .j-link:active { transform: scale(0.97); }
 
 /* Tooltip rendering for .j-link chips lives in the global
-   `[data-tip]::after` rule in src/styles/app.css — the chip
+   `[data-tip]::after` rule in src/styles/app.css, the chip
    migrates to v-tip with the rest of the codebase. */
 /* Reserved-height wrapper for the dive-total. Without this
    the catch-up + Up Next blocks below would shift down by
@@ -339,15 +339,15 @@
   font-weight: 700;
 }
 
-/* Catch-up projection — sits between the current performer
+/* Catch-up projection, sits between the current performer
    block and Up Next. Cyan-tinted block (gold when leading) with
    a confident font size + chunky border so it reads clearly
    from across a pool deck, not just the front row. */
 /* Reserved min-height absorbs the projection's natural variance
    between kinds (pre / chase / lead / unopposed each have a
    different number of rows) so the Up Next list below doesn't
-   shift when the projection updates. The chunkiest case — chase
-   with three podium rows + the head line — is ~6 lines × 1.45
+   shift when the projection updates. The chunkiest case, chase
+   with three podium rows + the head line, is about 6 lines × 1.45
    line-height + 0.7rem×2 padding ≈ 11rem at the desktop end of
    the clamp. We reserve a slightly smaller floor (8rem) since
    most actual states are smaller; the chase-with-3-targets case
@@ -359,7 +359,7 @@
      head           → 14px font × 1.4 line + 8px margin = 28px
      3 catchup rows → 16px font × 1.4 line + 4px×2 pad = 30px × 3 = 90px
      padding inside → 8px × 2                          = 16px
-     —————————————————————————————————————————————————————
+     -----------------------------------------------------
      ~134px ≈ 8.5rem
    Set min-height to 8.5rem so the most expensive state fits
    without growing past the reservation. Smaller variants
@@ -406,7 +406,7 @@
   margin-top: 0.25rem;
 }
 .sb-projection-detail strong { color: var(--text-2); }
-/* Catch-up table — one row per podium target showing the
+/* Catch-up table, one row per podium target showing the
    average judge score the active diver needs over the remaining
    dives. Layout matches the Control Room (rank | name | target)
    so the audience and the operator read the same shape. */
@@ -442,7 +442,7 @@
   color: var(--red); font-weight: 700; font-style: normal;
 }
 
-/* Up Next panel — sits below the active diver block. Contains
+/* Up Next panel, sits below the active diver block. Contains
    every remaining dive in the meet, scrollable when the list
    exceeds ~10 rows. Each row is laid out as a horizontal flex
    strip: round / order / name / dive code / DD / description so
@@ -473,9 +473,9 @@
   overflow-y: auto;
 }
 
-/* Show-more toggle — sits below the Up Next list (and below the
+/* Show-more toggle, sits below the Up Next list (and below the
    Completed Dives column). Same compact display-font styling
-   the other "Show all" toggles in the SPA use, so the eye
+   the other "Show all" toggles in the SPA use, so eye
    recognises it as a list-expansion control. Full-width inside
    its container; clicks expand the preview to the full set. */
 .up-next-toggle,
@@ -546,7 +546,7 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   min-width: 0;
   /* Description gets pushed onto its own row when the panel is
-     narrow — see media query below. */
+     narrow, see the media query below. */
   grid-column: 3 / -1;
 }
 @media (max-width: 720px) {
@@ -570,11 +570,11 @@
 
 .hist-card { padding: 0.875rem 1rem; border-inline-start: 2px solid var(--cyan); background: var(--bg-3); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-bottom: 0.5rem; }
 .hist-round { font-size: 10px; color: var(--text-3); margin-bottom: 0.3rem; font-family: var(--font-mono); }
-/* Identity block font-size base — DiverIdentity inherits this
+/* Identity block font-size base, DiverIdentity inherits this
    and resolves badge / secondary-line sizes off it. */
 .hist-identity { font-size: 13px; margin-bottom: 0.3rem; }
 
-/* Diver-name links — clickable diver names everywhere they
+/* Diver-name links, clickable diver names everywhere they
    appear, jumping to /profile/<id>. Inherits the surrounding
    font / size / colour so the underline-on-hover is the only
    visual cue at rest.
@@ -582,13 +582,13 @@
    transparent -color at rest, cyan on hover) instead of
    border-bottom. The Up Next list's row uses overflow:hidden
    for ellipsis, which clipped the inline element's border-
-   bottom but leaves text-decoration intact — same visual cue
+   bottom but leaves text-decoration intact, same visual cue
    on every surface this class appears. */
 .diver-link {
   color: inherit;
   text-decoration: underline dashed transparent;
   text-decoration-thickness: 1px;
-  /* text-underline-offset stays small (1px) — the Up Next list
+  /* text-underline-offset stays small (1px). The Up Next list
      in particular wraps the link in a span with overflow:hidden
      and a tight line-height, which clips a wider offset. 1px
      keeps the underline cleanly under the text without
@@ -630,7 +630,7 @@
 
 .event-sel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.4rem 0.75rem; font-family: var(--font-mono); font-size: 13px; color: var(--text); outline: none; cursor: pointer; }
 
-/* Standings panel head — title plus Final/By Round tabs */
+/* Standings panel head: title plus Final/By Round tabs */
 .col-head { display: flex; align-items: center; justify-content: space-between; }
 .tabs { display: flex; gap: 0.25rem; }
 .tab {
@@ -689,7 +689,7 @@
    Completed-event layout
    ========================================================= */
 /* End-of-event branch. Scrolls vertically when the recap
-   overflows the viewport — moved up from .completed-recap so the
+   overflows the viewport. Moved up from .completed-recap so the
    whole recap content (podium, leaderboard, stats) participates
    in one scroll context rather than being clipped inside a
    nested scroller. */
@@ -705,8 +705,8 @@
      pushing wider than the viewport gets clipped to the parent
      rather than forcing the page itself to scroll horizontally.
      The JRA's own `.jra-scroll` wrapper still handles its own
-     internal scroll. clip > hidden — see DashboardView for the
-     reasoning. */
+     internal scroll. clip beats hidden here, see DashboardView
+     for the reasoning. */
   overflow-x: clip;
   max-width: 100%;
   min-width: 0;
@@ -735,7 +735,7 @@
 .meta-tag.meta-org { color: var(--cyan); border-color: rgba(6,182,212,0.3); background: var(--cyan-dim); }
 .meta-tag.meta-date { color: var(--text-2); }
 
-/* Result export buttons (PDF / CSV / start list) — sit in the
+/* Result export buttons (PDF / CSV / start list), sit in the
    recap header next to the event title. Wrap on narrow screens. */
 .export-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 
@@ -749,7 +749,7 @@
 }
 
 /* =========================================================
-   Live-stream overlay (?overlay=1) — chroma-key-friendly view
+   Live-stream overlay (?overlay=1), chroma-key-friendly view
    for OBS. Strips every background colour and panel chrome so
    the streaming software can key out the bg colour cleanly.
    Activated by adding `?overlay=1` to the scoreboard URL; the
@@ -817,7 +817,7 @@
   display: flex; flex-direction: column;
 }
 .recap-card .col-body {
-  /* Don't lock height — let the recap-card grow with content
+  /* Don't lock height, let the recap-card grow with content
      since the parent .completed-recap already scrolls. The
      .col-body default of overflow:auto + flex:1 would otherwise
      clip the diver-blocks list to one screen-height. */
@@ -825,12 +825,12 @@
   flex: 0 0 auto;
 }
 
-/* Country medal table — Olympic-style ranking by golds/silvers/
+/* Country medal table, Olympic-style ranking by golds/silvers/
    bronzes. Only shown for international events; collapses to a
    tight grid that scans top-to-bottom like a leaderboard. */
 .recap-card.medal-card { margin-bottom: 1rem; }
 
-/* Judge Ranking Analysis section — collapsed by default, expands
+/* Judge Ranking Analysis section, collapsed by default, expands
    to host the JudgeRankingTable component. The toggle uses
    .col-head styling so it visually matches the other recap card
    headers (medals, standings); when expanded the caret flips. */
@@ -1010,14 +1010,14 @@
 }
 .dr-judges { display: flex; gap: 0.25rem; flex-wrap: wrap; min-width: 0; }
 /* .j-score (World Aquatics category chips) styles are global in
-   public/css/app.css — shared with the Archive view. */
+   public/css/app.css, shared with the Archive view. */
 .dr-total {
   font-family: var(--font-mono); font-size: 13px; font-weight: 700;
   color: var(--text); text-align: end;
 }
 
-/* Condensed final standings — the default Final-tab view (toggle
-   ON). One row per diver / pair / team: rank · identity · total.
+/* Condensed final standings, the default Final-tab view (toggle
+   ON). One row per diver / pair / team: rank, identity, total.
    Switching the toggle off swaps this for the per-diver
    dive-by-dive scoresheet (.diver-block) below. */
 .final-standings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
@@ -1050,7 +1050,7 @@
   color: var(--cyan); text-align: end; white-space: nowrap;
 }
 
-/* Score-density toggle bar — the "Final scores only" switch above
+/* Score-density toggle bar, the "Final scores only" switch above
    the recap standings / scoresheet. */
 .breakdown-toggle-bar {
   display: flex; align-items: center; justify-content: space-between;
@@ -1093,7 +1093,7 @@
   .dive-row { grid-template-columns: 32px 1fr 44px 1fr 52px; }
 }
 
-/* Phone — collapse the live 3-column layout (history / centre /
+/* Phone: collapse the live 3-column layout (history / centre /
    standings) into a single scrolling stack so the active diver
    stays the hero, with history above and standings below. */
 @media (max-width: 720px) {
@@ -1183,11 +1183,11 @@
   .standing-score { font-size: 14px; }
 
   /* =========================================================
-     Completed-event recap — phone-specific fixes
+     Completed-event recap: phone-specific fixes
      ========================================================= */
 
   /* The header is a single-row flex on desktop. On a phone the
-     event-sel dropdown gets pushed off-screen — let it wrap onto
+     event-sel dropdown gets pushed off-screen, so let it wrap onto
      its own full-width row, tighten everything else. */
   .sb-header {
     flex-wrap: wrap;
@@ -1230,7 +1230,7 @@
      "Standings" col-head label without bleeding. */
   .col-head { padding: 0.65rem 0.875rem; gap: 0.5rem; flex-wrap: wrap; }
 
-  /* Stats panel — keep but compact. It's "nice to have" data
+  /* Stats panel, keep but compact. It's "nice to have" data
      that historically pushed the dive breakdown below the fold. */
   .stats-panel { margin-top: 0.6rem; padding: 0.6rem 0.7rem; }
   .stats-head  { font-size: 9px; letter-spacing: 0.2em; margin-bottom: 0.35rem; }
@@ -1242,7 +1242,7 @@
   .diver-total { font-size: 12px; }
   .diver-rank-badge { width: 24px; height: 24px; font-size: 11px; }
 
-  /* Recap dive table — same root cause as the Archive view's
+  /* Recap dive table, same root cause as the Archive view's
      vertical-stacking: the desktop 5-column grid (round / code /
      DD / judges / total) gives judges only ~75px on a phone, so
      synchro groups (and even flat j-score chips) fall into a
@@ -1270,7 +1270,7 @@
     padding-inline-start: 32px;
     gap: 0.3rem;
   }
-  /* Hide the column-header row entirely — its labels (especially
+  /* Hide the column-header row entirely, its labels (especially
      "Judge Scores") don't map onto a 2-row layout, and the
      colour-coded chips below speak for themselves. */
   .dive-head-row { display: none; }

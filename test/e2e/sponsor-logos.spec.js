@@ -1,4 +1,4 @@
-// Multi-sponsor logo upload + rotation — backend smoke.
+// Multi-sponsor logo upload + rotation, backend smoke.
 //
 // Covers the migration-045 endpoints end-to-end via the public
 // API. The frontend manage / rotation UI lives in subsequent
@@ -43,7 +43,7 @@ const makeTestImages = async () => {
 
 test.describe("sponsor logos", () => {
   // Tests share state (ctx.brandA / ctx.brandB) and operate on
-  // the SAME meet — parallel execution would race for slot 1
+  // the SAME meet, so parallel execution would race for slot 1
   // and leave half the suite reading from an undefined ctx.
   // Serial mode keeps the flow upload-A → upload-B → reorder →
   // update → delete in a deterministic order.
@@ -141,7 +141,7 @@ test.describe("sponsor logos", () => {
     expect(r.headers()["content-type"]).toBe("image/png");
     expect(r.headers()["cache-control"]).toContain("max-age=");
     const bytes = await r.body();
-    // sharp roundtrip — still a PNG, non-trivial size.
+    // sharp roundtrip, still a PNG, non-trivial size.
     expect(bytes.slice(0, 8).toString("hex")).toBe("89504e470d0a1a0a"); // PNG magic
   });
 
@@ -157,8 +157,8 @@ test.describe("sponsor logos", () => {
       },
     );
     // express.raw with a type filter passes through unknown
-    // types as an EMPTY body — the route then 400s on "Empty
-    // body" rather than on MIME. Either signal is acceptable;
+    // types as an EMPTY body, so the route then 400s on "Empty
+    // body" rather than on MIME. Either signal is fine here,
     // we just want a 4xx (not a 5xx + crash).
     expect(r.status()).toBeGreaterThanOrEqual(400);
     expect(r.status()).toBeLessThan(500);

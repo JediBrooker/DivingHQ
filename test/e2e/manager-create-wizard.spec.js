@@ -1,8 +1,9 @@
 // P10 Cluster 1: the create-event form is an in-panel StageStep wizard
 // (Details -> Rounds -> Structure -> Schedule & rules -> Review). Proves
-// the wizard steps through, the review summary reflects the inputs, the
-// final Create actually creates the event, and the name guard jumps back
-// to the Details step instead of silently failing on a hidden required.
+// the wizard actually steps through, the review summary reflects the
+// inputs, the final Create actually creates the event, and the name
+// guard jumps back to the Details step instead of silently failing on
+// a hidden required.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -50,7 +51,7 @@ test("the create wizard steps through and creates an event", async ({ request, p
   await expect(page.locator(".wizard-review-grid")).toContainText("Wizard Made Event");
   await expect(page.locator(".wizard-review-grid")).toContainText("1"); // rounds = 1
 
-  // Create — the modal closes and the event lands in the list.
+  // Create: the modal closes and the event lands in the list.
   await page.getByRole("button", { name: /Create|New Event/i }).last().click();
   await expect(page.locator(".modal-create-event")).toHaveCount(0, { timeout: 10_000 });
   await page.getByRole("button", { name: /Your events|All events/i }).first().click();

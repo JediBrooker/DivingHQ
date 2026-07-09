@@ -4,8 +4,8 @@
 // module bundle (which is deferred). Served same-origin from /, so
 // the strict script-src 'self' CSP allows it without a hash or
 // nonce. The Pinia UI store (src/stores/ui.js) reads the same
-// localStorage key and keeps this in sync at runtime; this file
-// only handles the very first paint.
+// localStorage key and keeps this in sync at runtime, this file
+// just handles the very first paint.
 (function () {
   try {
     var t = localStorage.getItem('dhq-theme');

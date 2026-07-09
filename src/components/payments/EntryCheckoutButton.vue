@@ -2,8 +2,8 @@
 // Diver-facing "Pay & enter" control for an event. Mount it on the
 // competitor view, e.g.:
 //   <EntryCheckoutButton :event-id="event.id" />
-// It shows the price the signed-in diver would pay (member-aware) and
-// hands off to Stripe Checkout. The webhook records payment server-side.
+// Shows the price the signed-in diver would pay (member-aware) then
+// hands off to Stripe Checkout. The webhook records the payment server-side.
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
@@ -66,8 +66,8 @@ onMounted(load)
     <p v-if="loading" class="muted">Loading…</p>
     <p v-else-if="comingSoon" class="coming-soon">💳 Online entry-fee payments are coming soon.</p>
     <!-- fee === null: no fee configured (genuinely free). fee set but no
-         resolved price: every price window has closed — different message,
-         or divers think a paid event is free. -->
+         resolved price means every price window has closed, so we show a
+         different message instead of letting divers think a paid event is free. -->
     <p v-else-if="!fee" class="muted">No entry fee is required for this event.</p>
     <p v-else-if="!fee.price" class="muted">Entry purchase isn't open right now — contact the organisers.</p>
     <p v-else-if="fee.already_paid" class="paid">✓ Entry fee paid</p>
@@ -76,8 +76,8 @@ onMounted(load)
         Entry fee: <strong>{{ money(fee.price.amount_cents, fee.currency) }}</strong>
         <span v-if="fee.is_member" class="badge">member price</span>
       </p>
-      <!-- Server-computed figure the card is actually charged (includes the
-           platform fee when the federation passes it on) — the quote must
+      <!-- Server-computed figure the card actually gets charged (includes the
+           platform fee when the federation passes it on), since the quote must
            always match Stripe's total. -->
       <p v-if="fee.payer_total_cents != null && fee.payer_total_cents !== fee.total_cents" class="uplift">
         You pay {{ money(fee.payer_total_cents, fee.currency) }} (incl. platform fee)

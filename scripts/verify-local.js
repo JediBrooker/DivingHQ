@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Local verification runner.
 //
-// Encodes the repo's required pre-push checks in one command:
+// Bundles the repo's required pre-push checks into one command:
 //   npm run verify:local
 //
-// Pass `--e2e` followed by Playwright args to append a focused
-// browser run after the non-browser checks, for example:
+// Pass `--e2e` followed by Playwright args to run a focused browser
+// pass after the non-browser checks, e.g:
 //   npm run verify:local -- --e2e test/e2e/authz-privileged-writes.spec.js --project=chromium
 
 const { spawnSync } = require("node:child_process");
@@ -54,8 +54,8 @@ function run(label, command, commandArgs) {
 run("lint", "npm", ["run", "lint"]);
 run("build", "npm", ["run", "build"]);
 run("test:safe", "npm", ["run", "test:safe"]);
-// Gates added in P0 of the meet-day redesign. check:size reads the
-// dist/ that the build step above just produced.
+// Gates added in P0 of the meet-day redesign, check:size just reads
+// whatever dist/ the build step above produced.
 run("check:motion", "npm", ["run", "check:motion"]);
 run("check:size", "npm", ["run", "check:size"]);
 

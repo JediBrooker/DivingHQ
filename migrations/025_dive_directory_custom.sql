@@ -1,28 +1,29 @@
 -- =============================================================
--- MIGRATION 025 — CUSTOM ENTRIES IN dive_directory
+-- MIGRATION 025: CUSTOM ENTRIES IN dive_directory
 --
 -- The dive_directory table shipped with init.sql is a catalog of
 -- the ~830 World Aquatics-recognised dives. Coaches need to record
--- progression / teaching dives that aren't in that catalog —
--- poolside sit-dives, kneel-dives, novice forwards on a 0m board,
--- club-specific drills with their own DDs.
+-- progression/teaching dives that aren't in that catalog, things
+-- like poolside sit-dives, kneel-dives, novice forwards on a 0m
+-- board, club-specific drills with their own DDs.
 --
 -- This migration widens dive_directory with three columns so the
--- new "Dive Directory" page in the SPA can let users add their
--- own rows without leaking authority over the core catalog:
+-- new "Dive Directory" page in the SPA lets users add their own
+-- rows without leaking authority over the core catalog:
 --
---   is_custom       — false for catalog rows, true for org-created
---   created_by      — user who added the custom row (nullable so
+--   is_custom       - false for catalog rows, true for org-created
+--   created_by      - user who added the custom row (nullable so
 --                     a user delete doesn't cascade)
---   created_org_id  — org that owns the custom row; only members
+--   created_org_id  - org that owns the custom row, only members
 --                     of that org can edit/delete it
 --
--- Existing rows are backfilled is_custom = false (handled by the
--- column default + the existing rows) so any code that assumes
--- "all dive_directory rows are core" still reads the same data.
+-- Existing rows get backfilled with is_custom = false (handled by
+-- the column default plus the existing data), so any code that
+-- assumes "all dive_directory rows are core" still reads the same
+-- data.
 --
--- Idempotent: ADD COLUMN IF NOT EXISTS guards every change so a
--- re-run on a v25 DB is a no-op.
+-- Idempotent: ADD COLUMN IF NOT EXISTS guards every change so
+-- re-running this on a v25 DB is a no-op.
 -- =============================================================
 
 BEGIN;
@@ -40,7 +41,7 @@ ALTER TABLE public.dive_directory
     ADD COLUMN IF NOT EXISTS created_at     timestamptz NOT NULL DEFAULT now();
 
 -- FKs added separately so a re-run that finds the column already
--- present doesn't fail trying to re-create the constraint.
+-- there doesn't blow up trying to recreate the constraint.
 DO $$
 BEGIN
   IF NOT EXISTS (

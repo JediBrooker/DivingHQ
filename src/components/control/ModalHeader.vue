@@ -1,7 +1,7 @@
 <script setup>
 // Standardised modal header (P2). One eyebrow `.lb-title` + `.lb-event`
-// subtitle + ONE ghost close button -- replaces the drifting
-// 'Close' / 'Close ✕' / 'Cancel' variants across the control modals.
+// subtitle + ONE ghost close button, replacing the drifting
+// 'Close' / 'Close (X icon)' / 'Cancel' variants across the control modals.
 // Wires `titleId` (from BaseModal's slot scope) onto the title element
 // so the dialog's aria-labelledby resolves.
 defineProps({

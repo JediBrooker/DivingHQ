@@ -1,21 +1,21 @@
 <script setup>
-// ReflowModal — Phase 4 of the session scheduler.
+// ReflowModal, Phase 4 of the session scheduler.
 //
 // docs/session-scheduler.md §6: when the operator marks an event
 // Complete, the event-status endpoint returns a `reflow` proposal
-// listing every downstream block in the same session plus the
-// proposed new start time (old + delta). The Control Room mounts
-// this modal so the operator can pick which blocks actually shift
-// — defaulting all checked, defaulting nothing on Skip.
+// listing every downstream block in that session plus the
+// proposed new start time (old + delta). Control Room mounts
+// this modal so the operator can pick which blocks actually shift,
+// defaulting all checked, nothing checked if they hit Skip.
 //
-// Live re-flow never shifts earlier (§6 closing): the parent only
-// ever opens the modal with delta_seconds > 0, so we don't have a
-// "negative delta" UI branch here.
+// Live re-flow never shifts earlier (see §6 closing): the parent
+// only ever opens this with delta_seconds > 0, so there's no
+// "negative delta" UI branch to worry about here.
 //
 // On Confirm we POST /api/blocks/reflow and emit `saved` with the
-// payload so the Control Room can pop a success toast. On Skip we
-// emit `close` and the proposal is discarded — the operator can
-// always edit blocks manually in the scheduler view later.
+// payload so Control Room can pop a success toast. On Skip we just
+// emit `close` and the proposal gets discarded, the operator can
+// always edit blocks manually in the scheduler view later anyway.
 
 import { ref, computed, watch, toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -24,16 +24,16 @@ import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 const props = defineProps({
   open: { type: Boolean, required: true },
-  // The reflow proposal returned by PUT /api/events/:id/status.
+  // The reflow proposal that PUT /api/events/:id/status returns.
   // Shape (see lib/schedule-reflow.js):
   //   { completed_block_id, meet_id, session_id, delta_seconds,
   //     candidates: [{ block_id, label, block_type,
   //       old_starts_at, new_starts_at,
   //       old_ends_at, new_ends_at }] }
   proposal: { type: Object, default: null },
-  // The event the operator just finalised — used for the heading.
-  // Optional; the modal falls back to a generic phrasing when no
-  // event name is available.
+  // The event the operator just finalised, used for the heading.
+  // Optional, falls back to a generic phrasing when there's no
+  // event name to show.
   eventName: { type: String, default: '' },
 })
 
@@ -42,15 +42,15 @@ const emit = defineEmits(['close', 'saved'])
 const auth = useAuthStore()
 const { t } = useI18n()
 
-// Lock background scroll while open — iOS Safari otherwise lets
-// the operator drag the underlying Control surface while they're
-// reviewing the candidate list.
+// Lock background scroll while open. Otherwise iOS Safari lets
+// the operator drag the underlying Control surface around while
+// they're reviewing the candidate list.
 useBodyScrollLock().lockWhile(toRef(props, 'open'))
 
-// Per-block selection. Reset to all-checked every time the modal
-// re-opens with a new proposal — the design doc explicitly defaults
-// every candidate checked, and a stale ref from a prior open would
-// override that.
+// Per-block selection. Resets to all-checked every time the
+// modal re-opens with a new proposal, the design doc explicitly
+// wants every candidate checked by default, and a stale ref from
+// a prior open would stomp on that.
 const selected = ref(new Set())
 const reason = ref('')
 const saving = ref(false)
@@ -118,9 +118,9 @@ function formatTime(d) {
 async function onConfirm() {
   if (!props.proposal) return
   const blockIds = Array.from(selected.value)
-  // The skip path lives behind a separate button — but if the
-  // operator unchecks every row and hits Confirm, treat it as a
-  // skip too. Saves a confused round-trip.
+  // Skip has its own button, but if the operator unchecks every
+  // row and hits Confirm anyway, just treat it as a skip. Saves a
+  // confused round-trip.
   if (!blockIds.length) {
     emit('close')
     return
@@ -139,10 +139,10 @@ async function onConfirm() {
     })
     emit('saved', { ...result, count: blockIds.length })
   } catch (err) {
-    // The endpoint returns a 409 with conflicting_block_id when a
-    // candidate already started while the modal was open. We map
-    // that to a distinct message so the operator knows a refresh
-    // is required rather than a generic "try again."
+    // Endpoint returns a 409 with conflicting_block_id when a
+    // candidate already started while the modal was sitting open.
+    // We map that to its own message so the operator knows to
+    // refresh instead of just getting a generic "try again."
     if (err && /already started/i.test(err.message || '')) {
       errorMsg.value = t('scheduler.reflow.conflict_refresh')
     } else {
@@ -160,8 +160,8 @@ function onSkip() {
 </script>
 
 <template>
-  <!-- Teleport defensively: this modal mounts inside ControlView
-       whose layout has many nested wrappers; any future
+  <!-- Teleport defensively, this modal mounts inside ControlView
+       whose layout has a lot of nested wrappers. Any future
        transform on one of them would break our position:fixed. -->
   <Teleport to="body">
     <Transition name="reflow-modal">
@@ -288,17 +288,17 @@ function onSkip() {
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
   width: 100%; max-width: 560px;
   padding: 1.4rem 1.6rem 1.15rem;
-  /* Long-session days can produce a dozen+ candidates — let the
-     modal scroll its body rather than spilling off-screen on a
-     phone in the Control Room.
+  /* Long-session days can produce a dozen-plus candidates, so
+     let the modal scroll its own body instead of spilling off
+     screen on a phone in the Control Room.
 
-     dvh, not vh: iOS Safari's collapsing URL bar makes 100vh
-     equal the *large* viewport (bar collapsed). With the bar
-     expanded, a 100vh-sized modal extends below the visible
+     dvh, not vh: heads up, iOS Safari's collapsing URL bar makes
+     100vh equal the *large* viewport (bar collapsed). With the
+     bar expanded, a 100vh-sized modal extends below the visible
      area and the Apply/Cancel buttons end up trapped in the
      modal's overflow-y:auto scroll with no way to reach them
      (the toolbar can't collapse while a modal is open).
-     vh fallback for browsers older than ~Q4-2022. */
+     vh fallback stays here for browsers older than ~Q4-2022. */
   max-height: calc(100vh - 3rem);
   max-height: calc(100dvh - 3rem);
   overflow-y: auto;

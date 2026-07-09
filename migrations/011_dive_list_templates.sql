@@ -1,5 +1,5 @@
 -- =============================================================
--- MIGRATION 011 — DIVE LIST TEMPLATES
+-- MIGRATION 011: DIVE LIST TEMPLATES
 --
 -- Save / load reusable dive lists. A diver builds a 6-dive list
 -- for a 3m event, saves it as "3m optionals 2026". Next meet at
@@ -9,10 +9,10 @@
 -- Templates are per-user (each diver owns their own); name is
 -- unique per (user, height) so a diver can have one template
 -- per event height. The actual dive picks live in the dives
--- jsonb column — { round_number: int, dive_code: string,
+-- jsonb column, shaped like { round_number: int, dive_code: string,
 -- position: 'A'|'B'|'C'|'D' }[]. We keep them as jsonb rather
--- than a child table because the list is small, atomic, and
--- never queried by individual dive.
+-- than a child table since the list is small, atomic, and never
+-- queried by individual dive.
 --
 -- Idempotent.
 -- =============================================================
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS public.dive_list_templates (
 CREATE INDEX IF NOT EXISTS idx_dive_list_templates_user ON public.dive_list_templates (user_id);
 
 -- Bump schema version. Defensive create so this still works
--- against a DB without 008 applied.
+-- against a DB that hasn't had 008 applied yet.
 CREATE TABLE IF NOT EXISTS public.schema_meta (
     id           integer PRIMARY KEY DEFAULT 1,
     version      integer NOT NULL,

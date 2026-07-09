@@ -1,4 +1,4 @@
-// Event reserves routes — list + promote.
+// Event reserves routes: list + promote.
 //
 //   GET  /api/events/:id/reserves            list reserves + sidebars
 //                                            (withdrawn primaries +
@@ -19,9 +19,9 @@
 //   router.use(require('./reserves')({ pool, requireEventManager, push }))
 //
 // Outside-world deps:
-//   • pool                — Postgres pool
-//   • requireEventManager — auth gate (event_managers OR org_admin)
-//   • push                — optional. When supplied, the just-promoted
+//   • pool                : Postgres pool
+//   • requireEventManager : auth gate (event_managers OR org_admin)
+//   • push                : optional. When supplied, the just-promoted
 //                           diver gets a "you've been promoted" push.
 //                           Falls back to a silent skip otherwise.
 
@@ -35,7 +35,7 @@ module.exports = function createReservesRoutes({ pool, requireEventManager, push
   const router = express.Router();
 
   // -------------------------------------------------------------
-  // GET /api/events/:id/reserves — list reserves on an event with
+  // GET /api/events/:id/reserves: list reserves on an event with
   // their dive-list preview (round + dive_code/dd) so the Control
   // Room reserves panel can render rich rows + "promote" buttons.
   // Visible to event managers.
@@ -71,8 +71,8 @@ module.exports = function createReservesRoutes({ pool, requireEventManager, push
 
         // Also surface withdrawn primaries so the Control Room
         // can offer a "Replace [withdrawn diver] →" picker on
-        // each reserve. Per WA Article 4.1.8 the reserve inherits the
-        // withdrawn diver's start order.
+        // each reserve. Per WA Article 4.1.8 the reserve inherits
+        // withdrawn divers start order.
         const w = await pool.query(
           `SELECT DISTINCT ON (cdl.competitor_id)
                   cdl.competitor_id,
@@ -90,7 +90,7 @@ module.exports = function createReservesRoutes({ pool, requireEventManager, push
           [req.params.id],
         );
 
-        // Active primaries — used by the Control Room to offer
+        // Active primaries: used by the Control Room to offer
         // "Replace …" against any active diver too (e.g. the
         // operator pre-emptively swaps before official Live
         // start, when the diver gives advance notice).
@@ -129,7 +129,7 @@ module.exports = function createReservesRoutes({ pool, requireEventManager, push
   // semi-final / final).
   //
   // Body (optional):
-  //   replaces_competitor_id — when set, the operator is using
+  //   replaces_competitor_id: when set, the operator is using
   //                            this reserve to replace a primary
   //                            who has withdrawn or is unable to
   //                            compete. Per WA Diving Articles
@@ -169,7 +169,7 @@ module.exports = function createReservesRoutes({ pool, requireEventManager, push
           await client.query("ROLLBACK");
           return res.status(404).json({ error: "Reserve not found" });
         }
-        // Replacement path — see block header comment for the
+        // Replacement path, see block header comment for the
         // WA Article 4.1.8 / 4.1.10 / 4.1.12 derivation.
         let targetOrder = null;
         let replacedName = null;
@@ -218,8 +218,8 @@ module.exports = function createReservesRoutes({ pool, requireEventManager, push
           );
           targetOrder = 1;
         } else {
-          // No-replace path — slot at the back of the active
-          // queue (e.g. filling an empty slot pre-Live).
+          // No-replace path: slot at the back of the active
+          // queue (kinda the fallback for filling an empty slot pre-Live).
           targetOrder = (await client.query(
             `SELECT COALESCE(MAX(display_order), 0) + 1 AS next
                FROM competitor_dive_lists
@@ -237,7 +237,7 @@ module.exports = function createReservesRoutes({ pool, requireEventManager, push
           [eventId, competitorId, targetOrder],
         );
 
-        // Audit trail — replacements are evidentiary; the
+        // Audit trail: replacements are evidentiary, the
         // operator may need to defend why a reserve dived
         // ahead of someone else later.
         await recordAudit(client, {
@@ -257,10 +257,10 @@ module.exports = function createReservesRoutes({ pool, requireEventManager, push
 
         await client.query("COMMIT");
 
-        // Notify the just-promoted diver — they were a reserve a
-        // moment ago and now need to know they're competing.
-        // Best-effort; if push isn't wired the row just doesn't
-        // get sent.
+        // Notify the just-promoted diver, heads up they were a
+        // reserve a moment ago and now need to know they're
+        // competing. Best-effort; if push isn't wired the row
+        // just doesn't get sent.
         if (push && typeof push.sendNotification === "function") {
           try {
             const evRow = await pool.query(

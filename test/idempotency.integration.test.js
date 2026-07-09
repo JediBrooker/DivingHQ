@@ -13,14 +13,14 @@
 //
 // Skips (doesn't fail) when:
 //   * Postgres isn't reachable (mirrors test/integration.test.js).
-//   * Migration 054 hasn't been applied to divinghq_test — the
+//   * Migration 054 hasn't been applied to divinghq_test. The
 //     CREATE TABLE check at boot time catches this with a clear
 //     console warning. CI applies all migrations via init.sql +
 //     scripts/migrate.js before running tests, so this should
 //     only skip on stale dev databases.
 //
 // CI sets PG* env vars in .github/workflows/ci.yml. Local devs
-// either set them or accept that this test skips.
+// either set them or just accept that this test skips.
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
@@ -131,7 +131,7 @@ after(async () => {
   if (pool && dbReachable && migrationApplied) {
     // Clean up our test rows. The user row goes last because the
     // idempotency_keys rows reference it via FK ON DELETE SET NULL,
-    // so order doesn't strictly matter — but explicit is cheap.
+    // so order doesn't strictly matter, but explicit is cheap.
     try {
       await pool.query(`DELETE FROM idempotency_keys WHERE user_id = $1`, [testUserId]);
       await pool.query(`DELETE FROM users WHERE id = $1`, [testUserId]);

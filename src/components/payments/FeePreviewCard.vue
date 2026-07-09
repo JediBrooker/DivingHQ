@@ -1,10 +1,10 @@
 <script setup>
-// End-user functional preview of an upcoming fee. Fetches the resolved
-// fee from `loadUrl` (the server makes it member/tier/discipline-aware)
-// and renders the price with a DISABLED pay action + a ComingSoonBanner
-// while payments are dormant (payments_enabled === false). When payments
-// go live and a `checkoutUrl` is supplied, the button becomes a real
-// "Pay" that hands off to Stripe. One card reused across membership,
+// End-user preview of an upcoming fee. Fetches the resolved fee from
+// `loadUrl` (server makes it member/tier/discipline-aware) and renders
+// the price with a DISABLED pay action plus a ComingSoonBanner while
+// payments are dormant (payments_enabled === false). Once payments go
+// live and a `checkoutUrl` is supplied, the button becomes a real "Pay"
+// that hands off to Stripe. Same card gets reused across membership,
 // club affiliation, fines, spectator access, owed entry charges, etc.
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -19,8 +19,8 @@ const props = defineProps({
   subjectUserId: { type: String, default: '' },  // guardian paying for a dependent
   title: { type: String, default: 'Fee' },
   comingSoonMessage: { type: String, default: 'Online payments are coming soon.' },
-  // When true, render nothing if no fee is configured (keeps public pages
-  // clean until a federation sets one). Default shows a "not set" note.
+  // When true, renders nothing if no fee's configured (keeps public pages
+  // clean until a federation sets one). Default just shows a "not set" note.
   hideWhenUnset: { type: Boolean, default: false },
 })
 
@@ -31,9 +31,9 @@ const enabled = ref(true)
 const loading = ref(true)
 const busy = ref(false)
 
-// The buyer already holds this (paid / member / active accreditation) — show
-// a confirmed state instead of an actionable Pay button. The flag name
-// varies by endpoint, so accept any of them.
+// The buyer already holds this (paid / member / active accreditation), so
+// show a confirmed state instead of an actionable Pay button. The flag
+// name varies by endpoint, so we just accept any of them.
 const owned = computed(() => !!(fee.value && (fee.value.already_paid || fee.value.already_member || fee.value.active)))
 const ownedLabel = computed(() => {
   const date = fee.value?.period_end ? String(fee.value.period_end).slice(0, 10) : ''
@@ -42,9 +42,9 @@ const ownedLabel = computed(() => {
   return t('payments.fee_card.owned_purchased')
 })
 
-// The figure the payer is actually charged (server-computed; includes the
-// platform fee when the org passes it to the payer). Shown whenever it
-// differs from the base price so the quote always matches Stripe's total.
+// The figure the payer actually gets charged (server-computed, includes the
+// platform fee when the org passes it on to the payer). Shown whenever it
+// differs from the base price so the quote matches Stripe's total exactly.
 const payerTotal = computed(() => fee.value?.payer_total_cents ?? null)
 const totalDiffers = computed(() =>
   payerTotal.value != null && fee.value?.price && payerTotal.value !== fee.value.price.amount_cents)

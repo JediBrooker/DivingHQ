@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 #
-# Verification script — exercises a few routes that should
+# Verification script: exercises a few routes that should
 # route to the replica + a few that should stay on the writer,
 # then reports which DB each connection went through.
 #
 # How it works: pg's connection string accepts an
 # `application_name` parameter. Set distinct names on the two
 # pools (writer = "dive-recorder-writer", reader =
-# "dive-recorder-reader") and we can tell from pg_stat_activity
+# "dive-recorder-reader") and we can can tell from pg_stat_activity
 # which side of the wiring the connection landed on.
 #
 # Run from the ops/postgres-replica directory:
 #     cd ops/postgres-replica && ./verify.sh
 #
-# Defaults to http://127.0.0.1:3000 — override with HOST.
-# Defaults to the local divinghq DB — override with DB_*.
+# Defaults to http://127.0.0.1:3000, override with HOST.
+# Defaults to the local divinghq DB (override with DB_*).
 
 set -euo pipefail
 
@@ -41,7 +41,7 @@ echo
 #
 # We look for distinct application_name values that the app
 # sets on its two pools. If the writer-only deployment is in
-# effect, there'll be one application_name; with a replica
+# effect, there'll be one application_name, with a replica
 # wired up, there'll be two (writer + reader).
 echo "--- pg_stat_activity application_name groupings ---"
 psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_DATABASE" -tA -c "

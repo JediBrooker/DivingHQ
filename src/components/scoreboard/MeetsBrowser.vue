@@ -1,8 +1,8 @@
 <script setup>
-/* MeetsBrowser — meets-first browse surface for /scoreboard.
+/* MeetsBrowser: meets-first browse surface for /scoreboard.
  *
  * Renders the cache banner, the LIVE-now strip (grouped by meet),
- * the two-row filter cluster, and the meets list itself — an
+ * the two-row filter cluster, and the meets list itself. It's an
  * accordion where each row is a MEET and expanding it reveals the
  * events inside (styled like the public meet page). Selection of
  * an individual event is emitted as `select(eventId)`; the parent
@@ -12,13 +12,13 @@
  * Meets-first rationale: the page used to list events flat with a
  * small "part of <meet>" badge. Spectators think in meets ("the
  * Grand Prix"), then drill into a discipline, so the hierarchy is
- * inverted here — meets are the primary unit, events nest under
+ * inverted here: meets are the primary unit, events nest under
  * them.
  *
  * State boundary:
  *   * Master event list, derived live-events list, cache flag, and
  *     the filter source data (countries / years / heights / clubs)
- *     all come in as props — the parent loads them once and reuses
+ *     all come in as props, the parent loads them once and reuses
  *     them across the list + detail surfaces.
  *   * Filter state (search, country, year, height, club, status,
  *     sort) plus the per-meet expand/collapse state is OWNED here.
@@ -57,7 +57,7 @@ const statusFilter  = ref('')      // '' | 'Live' | 'Completed'
 
 // Sort preference persists in localStorage so a returning user
 // lands on the order they last picked. (The old cards/list view
-// toggle is gone — the meets accordion is now the single
+// toggle is gone, the meets accordion is now the single
 // presentation.) `sortBy` controls the meet order applied AFTER
 // filtering.
 const sortBy = ref(localStorage.getItem('sb_sort_by') || 'recent') // 'recent' | 'oldest' | 'name'
@@ -108,7 +108,7 @@ function meetKeyOf(e) { return e.meet_id ? `meet:${e.meet_id}` : `solo:${e.id}` 
 
 // Group the filtered events into their parent meets. A meet
 // surfaces whenever ≥1 of its events survives the active filters,
-// and only the surviving events render inside it — so the filter
+// and only the surviving events render inside it, so the filter
 // cluster stays meaningful in the meets-first layout. Meet-level
 // metadata (org, country, dates) is lifted off the first event;
 // every event in a meet shares the same host org.
@@ -166,7 +166,7 @@ const meetGroups = computed(() => {
   return list
 })
 
-// Year a meet belongs to — its scheduled start, falling back to
+// Year a meet belongs to: its scheduled start, falling back to
 // the most recent event's timestamp for meets with no dates set.
 function meetYear(g) {
   const src = g.startDate || g.latestCreatedAt
@@ -210,7 +210,7 @@ const groupedMeets = computed(() => {
 })
 
 // Flat render list: interleaves year-header rows with meet rows
-// when grouped, or just meet rows when not — so the template can
+// when grouped, or just meet rows when not, so the template can
 // render the accordion in a single loop without duplicating the
 // (non-trivial) per-meet row markup across the grouped/flat
 // branches.
@@ -226,9 +226,9 @@ const displayRows = computed(() => {
   return meetGroups.value.map(g => ({ type: 'meet', key: g.key, meet: g }))
 })
 
-// Group an event list by meet for the LIVE / UPCOMING strips —
+// Group an event list by meet for the LIVE / UPCOMING strips:
 // each meet heads a row of chips so every chip shows the meet it
-// belongs to. Reads the server-provided lists (unfiltered): the
+// belongs to. Reads the server-provided lists (unfiltered), the
 // strips are persistent "what's on / what's next" affordances,
 // independent of the archive filters below them.
 function chipsByMeet(list) {
@@ -252,7 +252,7 @@ const liveExpanded     = ref(true)
 const upcomingExpanded = ref(true)
 
 // --- Per-meet expand / collapse ---
-// Meets start collapsed — the page is a tidy list of meets that
+// Meets start collapsed, the page is a tidy list of meets that
 // the user opens on demand (live action is already one tap away in
 // the LIVE strip above, and live meets are pinned to the top). The
 // only exception is when a filter/search is active: every matching
@@ -277,7 +277,7 @@ function clearFilters() {
 }
 
 // CSV export of the currently-filtered meets list. Useful for
-// federations doing year-end reporting — pick a year + status
+// federations doing year-end reporting: pick a year + status
 // in the filter, click Export.
 function exportMeetsCsv() {
   const headers = [
@@ -326,7 +326,7 @@ watch(countryFilter, (val) => {
 
 <template>
   <div class="meets-mode">
-    <!-- Cache banner — visible while the meets list was served
+    <!-- Cache banner: visible while the meets list was served
          from IndexedDB and the network refresh is in flight.
          Disappears the moment fresh data arrives. -->
     <div v-if="meetsFromCache" class="cache-banner">
@@ -334,7 +334,7 @@ watch(countryFilter, (val) => {
       Showing your last cached meets list — refreshing in the background
     </div>
 
-    <!-- LIVE strip — collapsible (open by default). Clickable chips
+    <!-- LIVE strip: collapsible (open by default). Clickable chips
          grouped under their parent meet, so each live event makes
          clear which meet it belongs to. Each chip jumps straight
          into that event's broadcast; the ↗ opens the full meet page. -->
@@ -378,7 +378,7 @@ watch(countryFilter, (val) => {
       </div>
     </div>
 
-    <!-- UPCOMING strip — collapsible (open by default). Events that
+    <!-- UPCOMING strip: collapsible (open by default). Events that
          are scheduled but not yet live, grouped by meet. A chip
          opens that event's board (it'll read "waiting" until it
          starts). -->
@@ -494,7 +494,7 @@ watch(countryFilter, (val) => {
     </div>
 
     <!-- =========================================================
-         MEETS ACCORDION — the primary browse surface. One row per
+         MEETS ACCORDION: the primary browse surface. One row per
          meet; the year-section headers (when the archive is large)
          and the meet rows are interleaved into `displayRows` so
          this renders in a single loop. Expanding a meet reveals
@@ -589,7 +589,7 @@ watch(countryFilter, (val) => {
     animation-iteration-count: 1 !important;
   }
 }
-/* List mode (browsable meets) — no special handling needed
+/* List mode (browsable meets), no special handling needed
    anymore; .sb-layout defaults to natural document flow. The
    :has(.meets-mode) override is gone with the height:100vh lock
    that required it. */
@@ -602,7 +602,7 @@ watch(countryFilter, (val) => {
   display: flex; flex-direction: column; gap: 1.25rem;
 }
 
-/* LIVE strip — clickable chips grouped under their parent meet.
+/* LIVE strip: clickable chips grouped under their parent meet.
    Each meet gets a small label heading so every live event makes
    clear which meet it belongs to; the chips beneath jump straight
    into a broadcast. Recovers vertical space vs. the old card grid
@@ -639,7 +639,7 @@ watch(countryFilter, (val) => {
   display: flex; flex-direction: column; gap: 0.7rem;
 }
 
-/* UPCOMING strip — amber sibling of the live strip. */
+/* UPCOMING strip: amber sibling of the live strip. */
 .upcoming-strip {
   background: linear-gradient(135deg, rgba(245,158,11,0.10), rgba(245,158,11,0.02));
   border: 1px solid rgba(245,158,11,0.35);
@@ -780,7 +780,7 @@ watch(countryFilter, (val) => {
   font-size: 12px; padding: 0.45rem 0.6rem;
 }
 
-/* Year-section headers — interleaved into the accordion flow
+/* Year-section headers: interleaved into the accordion flow
    (only shown when ≥12 meets across ≥2 years; small lists stay
    flat). The accordion's own row gap handles spacing; a little
    extra top margin separates a year section from the meets above
@@ -802,7 +802,7 @@ watch(countryFilter, (val) => {
 }
 
 /* =============================================================
-   Meets accordion — one row per meet, expanding to its events.
+   Meets accordion: one row per meet, expanding to its events.
    ============================================================= */
 .meets-acc { display: flex; flex-direction: column; gap: 0.6rem; }
 
@@ -890,7 +890,7 @@ watch(countryFilter, (val) => {
 .meet-acc-count { white-space: nowrap; }
 .meet-acc-date  { white-space: nowrap; }
 
-/* Expanded body — the meet's events as a progression grid
+/* Expanded body: the meet's events as a progression grid
    (see MeetEventGrid.vue). */
 .meet-acc-body {
   padding: 0 1.05rem 1rem;
@@ -908,7 +908,7 @@ watch(countryFilter, (val) => {
 
 @media (max-width: 720px) {
   /* Two-row header: caret + title get the full width on top, the
-     meta (LIVE badge + event count) drops to its own row beneath —
+     meta (LIVE badge + event count) drops to its own row beneath,
      so a long meet title is no longer squeezed into an ellipsis by
      the badge. The title wraps instead of truncating. */
   .meet-acc-head,
@@ -928,8 +928,8 @@ watch(countryFilter, (val) => {
   .meet-acc-date { display: none; }       /* keep the live badge + count; date is the least useful here */
   .meet-acc-body { padding-inline: 0.85rem; }
 
-  /* iOS Safari auto-zooms whenever an <input>/<select> with
-     font-size < 16px receives focus. Bump the meets-browser
+  /* iOS Safari gotcha: it auto-zooms whenever an <input>/<select>
+     with font-size < 16px receives focus. Bump the meets-browser
      search + tool + filter controls so tapping them on a phone
      doesn't jolt the viewport. */
   .sb-search-input,

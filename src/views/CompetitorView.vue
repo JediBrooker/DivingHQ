@@ -24,8 +24,8 @@ const currentEvent = ref(null)
 const selectedDives = ref([]) // array of null | dive object
 // Migration 039: operator-prescribed round dives. Array indexed
 // by round_number-1. Each entry is either:
-//   null               — diver picks freely for this round
-//   { dive_id, height, slot_height } — slot is constrained.
+//   null               : diver picks freely for this round
+//   { dive_id, height, slot_height } - slot is constrained.
 //                                      slot_height pins the
 //                                      diver's free pick to a
 //                                      specific board (mixed-
@@ -44,7 +44,7 @@ const eventLoadError = ref('')
 // dive-list submissions when its lifecycle is still 'Upcoming' AND
 // either there's no entries_close_at deadline, or the deadline is
 // still in the future. Mirrors the server-side rule in
-// loadEventForEntries() — keep them in sync.
+// loadEventForEntries(), keep these two in sync.
 function isAcceptingEntries(ev) {
   if (!ev) return false
   if (ev.status && ev.status !== 'Upcoming') return false
@@ -65,8 +65,8 @@ function notAcceptingReason(ev) {
 
 // Show open events first, then closed ones (greyed out and
 // labelled). Hiding closed events outright would leave divers
-// confused about why their event "disappeared", so we keep them
-// visible but un-selectable.
+// confused about why their event "disappeared", so we just keep
+// them visible but un-selectable.
 const eventOptions = computed(() => {
   const open = events.value.filter(isAcceptingEntries)
   const closed = events.value.filter((e) => !isAcceptingEntries(e))
@@ -75,7 +75,7 @@ const eventOptions = computed(() => {
 
 const isCurrentEventOpen = computed(() => isAcceptingEntries(currentEvent.value))
 
-// Migration 041 — post-advance dive-list lock state. The banner
+// Migration 041: post-advance dive-list lock state. The banner
 // shown above the dive picker reads `dive_list_locks_at` off the
 // event row; `diveListLockExpired` flips the banner from "edit
 // or confirm by [time]" to "locked at [time]".
@@ -88,18 +88,18 @@ const diveListLockExpired = computed(() => {
 })
 
 // Super Final F has a stricter lock window than the standard
-// 30-min WA Article 6.7.3 default — Appendix 3 §4.1 specifies a
-// 15-min break between SF and F with the change-of-dives request
+// 30-min WA Article 6.7.3 default. Appendix 3 section 4.1 specifies
+// a 15-min break between SF and F with the change-of-dives request
 // "made after the SF and at LATEST 5 minutes before the Final".
 // On super_final_final events we surface a louder countdown
 // banner so the diver knows the deadline is sooner than the
-// standard prelim → final flow.
+// standard prelim -> final flow.
 const isSuperFinalFinal = computed(() =>
   currentEvent.value?.event_format === 'super_final_final'
 )
-// Live countdown to the lock — re-computed once per second so
-// the banner ticks down in real time. Returns a friendly string
-// like "4 min 12 sec" or null when no lock is set / past.
+// Live countdown to the lock, re-computed once per second so the
+// banner ticks down in real time. Returns a friendly string like
+// "4 min 12 sec" or null when no lock is set / past.
 const liveTickRef = ref(0)
 let liveTickHandle = null
 function startLiveTick() {
@@ -126,7 +126,7 @@ onUnmounted(() => stopLiveTick())
 
 // Migration 040 reserves: the diver's status in the currently-
 // selected event (loaded from /api/competitor/list-status when
-// the event changes). Drives the "You're Reserve N" banner —
+// the event changes). Drives the "You're Reserve N" banner, and
 // reserves stay editable while the lock is open so they're
 // ready to compete if the meet manager promotes them.
 const myListStatus = ref({
@@ -169,11 +169,11 @@ async function confirmInheritedList() {
 }
 
 // Synchro support
-const orgDivers = ref([])      // potential partners — fellow divers in your org
+const orgDivers = ref([])      // potential partners, fellow divers in your org
 const partnerId = ref('')       // selected partner's user id, '' = none
 const isSynchro = computed(() => currentEvent.value?.event_type === 'synchro_pair')
 
-// Partner autocomplete state. Keeps the rendering simple — no
+// Partner autocomplete state. Keeps the rendering simple, no
 // dependency, no popper. The dropdown overlays absolutely
 // beneath the input and re-uses the same option labels the old
 // <select> used.
@@ -181,9 +181,9 @@ const partnerSearch = ref('')      // what's currently in the input
 const partnerOpen   = ref(false)   // dropdown visible?
 const partnerActive = ref(0)       // keyboard-highlighted index in matches
 
-// Filter the org's divers by the search term — case-insensitive
+// Filter the org's divers by the search term, case-insensitive
 // against the full name + club_code. Empty term returns the
-// whole list (capped at 30 to avoid drawing 1000 rows).
+// whole list (capped at 30 so we're not drawing 1000 rows).
 const partnerMatches = computed(() => {
   const term = partnerSearch.value.trim().toLowerCase()
   const list = orgDivers.value.filter((d) => {
@@ -195,7 +195,7 @@ const partnerMatches = computed(() => {
   return list.slice(0, 30)
 })
 
-// Selected partner's display name — shown in the input when
+// Selected partner's display name, shown in the input when
 // closed. Looks up by id so re-selecting from the list shows
 // the canonical name even if the user typed only a fragment.
 const selectedPartnerLabel = computed(() => {
@@ -225,7 +225,7 @@ function blurPartner() {
   setTimeout(() => {
     partnerOpen.value = false
     if (!partnerId.value) {
-      // No selection made — reset typed text
+      // no selection made, reset the typed text
       partnerSearch.value = ''
     } else if (!partnerSearch.value.trim()) {
       // Restore the canonical label if the user blanked it
@@ -411,7 +411,7 @@ const roundRulesValidation = computed(() => {
   return validateDiveList(rules, dives)
 })
 
-// Per-section running totals — used by the section header row
+// Per-section running totals, used by the section header row
 // in the dive-list builder so the diver sees "3.4 / 7.6 used"
 // in the section as they pick dives.
 const roundRulesSections = computed(() => {
@@ -461,11 +461,11 @@ async function onEventChange() {
     return
   }
   // Refresh the events list before computing currentEvent. The
-  // events.value array was loaded once on mount; if the operator
+  // events.value array was loaded once on mount, so if the operator
   // edits the event's round_rules / total_rounds while this page
-  // is open, the cached row is stale. One extra GET per event
-  // pick guarantees the diver sees the operator's latest
-  // conditions without forcing a page reload.
+  // is open, the cached row goes stale. One extra GET per event pick
+  // guarantees the diver sees the operator's latest conditions
+  // without forcing a page reload.
   try {
     events.value = await auth.apiFetch('/api/events')
   } catch { /* fall back to the cached list */ }
@@ -481,7 +481,7 @@ async function onEventChange() {
     if (Array.isArray(rows) && rows.length) {
       // Resize selectedDives to match the prescribed-row count
       // (the operator may have added/removed slots since last
-      // load — server enforces total_rounds = rows.length so we
+      // load, server enforces total_rounds = rows.length so we
       // align here too).
       selectedDives.value = Array(rows.length).fill(null)
       const slots = Array(rows.length).fill(null)
@@ -507,12 +507,12 @@ async function onEventChange() {
       prescribedDives.value = slots
     }
   } catch {
-    // Silent — fall back to the flat selectedDives. Worst case:
+    // silent, fall back to the flat selectedDives. worst case
     // the diver picks a dive that the server's submit-list gate
     // rejects, with the same prescribed-violation message they'd
-    // see anyway.
+    // see anyway
   }
-  // Reserves status (migration 040) — drives the "You're Reserve
+  // Reserves status (migration 040), drives the "You're Reserve
   // N" banner if the diver carried over as a reserve rather than
   // a primary in this stage. Also returns the diver's own
   // existing dive list so we can pre-fill the form (e.g. when
@@ -520,7 +520,7 @@ async function onEventChange() {
   // should show in the picker rows).
   await loadMyListStatus()
   if (Array.isArray(myListStatus.value.dives) && myListStatus.value.dives.length) {
-    // Resize selectedDives if needed — the diver-list endpoint
+    // Resize selectedDives if needed, the diver-list endpoint
     // is the authoritative source when the operator hasn't
     // prescribed a different round count.
     const maxRound = Math.max(...myListStatus.value.dives.map(d => d.round_number))
@@ -531,7 +531,7 @@ async function onEventChange() {
     }
     // Pre-fill any round that doesn't already have a dive
     // (operator-prescribed slots from the round-dives endpoint
-    // win — we only fill the gaps).
+    // win, we only fill the gaps here).
     for (const d of myListStatus.value.dives) {
       const idx = d.round_number - 1
       if (!selectedDives.value[idx] && d.dive_id) {
@@ -548,7 +548,7 @@ async function onEventChange() {
   }
 }
 
-// True when round (1-indexed) has an operator-pinned dive_id —
+// True when round (1-indexed) has an operator-pinned dive_id, so
 // the slot is locked, the picker can't open, and the row paints
 // with a lock indicator.
 function isPrescribedRound(roundIdx0) {
@@ -557,7 +557,7 @@ function isPrescribedRound(roundIdx0) {
 }
 
 function openModal(idx) {
-  // Locked rows refuse to open the picker — the dive is operator-
+  // Locked rows refuse to open the picker, the dive is operator-
   // prescribed and the diver isn't allowed to swap it.
   if (isPrescribedRound(idx)) return
   activeSlot.value = idx
@@ -675,11 +675,11 @@ async function declinePairing(p) {
 }
 
 // =========================================================
-// My club — current club + request-a-change flow.
+// My club: current club + request-a-change flow.
 // The diver can request to move clubs within their org (or, if
 // the backend resolves a different to_org_id, an org transfer).
 // Current club is sourced pragmatically: if the diver already
-// has a pending request its `from_club_name` is the live truth;
+// has a pending request its `from_club_name` is the live truth,
 // otherwise we show the picker without a "current" label since
 // the JWT carries no club info and the clubs list alone can't
 // tell us which one is theirs.
@@ -706,7 +706,7 @@ const needsMyConfirm = computed(() => {
   return !!(r && r.kind === 'org_transfer' && !r.diver_confirmed_at)
 })
 
-// Current club name — from the pending request's source, else the
+// Current club name, from the pending request's source, else the
 // most recent finalised request's source. Null when unknown.
 const currentClubName = computed(() => {
   if (myPendingClubRequest.value) return myPendingClubRequest.value.from_club_name || null
@@ -820,7 +820,7 @@ async function loadEntryData() {
 onMounted(loadEntryData)
 
 // When the event changes and it's synchro, fetch potential
-// partners — other divers in the user's org.
+// partners, other divers in the user's org.
 watch(currentEvent, async (ev) => {
   if (!ev || ev.event_type !== 'synchro_pair') {
     orgDivers.value = []
@@ -886,7 +886,7 @@ watch(currentEvent, async (ev) => {
       </ul>
     </div>
 
-    <!-- My club — current club + request-a-change flow. Divers
+    <!-- My club: current club + request-a-change flow. Divers
          can move clubs within their org; the org admin reviews
          the request. Shown only to users holding the diver role. -->
     <div v-if="isDiver" class="card my-club-card">
@@ -905,7 +905,7 @@ watch(currentEvent, async (ev) => {
         </button>
       </div>
 
-      <!-- Pending request status — replaces the form while a
+      <!-- Pending request status, replaces the form while a
            request is open. -->
       <div v-if="myPendingClubRequest" class="my-club-pending">
         <div class="my-club-pending-head">
@@ -953,7 +953,7 @@ watch(currentEvent, async (ev) => {
       </div>
     </div>
 
-    <!-- Empty state — diver landed here but their federation
+    <!-- Empty state: diver landed here but their federation
          doesn't have any events open for entries (or any events
          at all). The form is useless without a pickable event,
          so explain what's missing rather than show an empty
@@ -1028,7 +1028,7 @@ watch(currentEvent, async (ev) => {
 
       <!-- Post-advance lock banner (migration 041, WA
            Article 6.7.3). Shown when the meet manager has
-           stamped a dive_list_locks_at on this event —
+           stamped a dive_list_locks_at on this event,
            typically a final or semi-final right after the
            prior stage was advanced. Diver carries forward the
            inherited list by default; clicking Confirm
@@ -1093,7 +1093,7 @@ watch(currentEvent, async (ev) => {
       </div>
     </div>
 
-    <!-- Synchro partner picker — autocomplete typeahead. Replaces
+    <!-- Synchro partner picker: autocomplete typeahead. Replaces
          a flat <select> that became unwieldy in orgs with 100+
          divers. Filters as the user types; arrow keys + enter
          navigate the dropdown. -->
@@ -1141,7 +1141,7 @@ watch(currentEvent, async (ev) => {
     </div>
 
     <div v-if="currentEvent">
-      <!-- Templates strip — shows only when at least one saved
+      <!-- Templates strip, shows only when at least one saved
            template matches the active event's height. Tapping
            a template fills the dive slots; the diver can then
            tweak before submitting. -->
@@ -1198,7 +1198,7 @@ watch(currentEvent, async (ev) => {
           </div>
         </div>
         <EntryCheckoutButton v-if="currentEvent" :event-id="currentEvent.id" />
-        <!-- Round-rules summary strip — only when the event
+        <!-- Round-rules summary strip, only shown when the event
              carries a structured round_rules object (migration
              038). Shows each section's running totals so the
              diver knows where they stand against the per-section
@@ -1256,7 +1256,7 @@ watch(currentEvent, async (ev) => {
         <!-- Round-rules violation panel. The same validator the
              server runs is mirrored client-side, so the diver
              sees per-section DD-sum + group-repeat violations
-             the moment they pick the offending dive — the
+             the moment they pick the offending dive, and the
              submit button locks until cleared. -->
         <div v-if="roundRulesValidation && !roundRulesValidation.valid && selectedDives.some(d => d)"
              class="rr-violations">
@@ -1340,7 +1340,7 @@ watch(currentEvent, async (ev) => {
 .page-header .btn{display:none;}
 .main{max-width:900px;margin:0 auto;padding:2rem;display:flex;flex-direction:column;gap:1.5rem;}
 
-/* Post-advance lock banner — surfaces when the meet manager
+/* Post-advance lock banner, surfaces when the meet manager
    has stamped a dive_list_locks_at on this event (migration 041).
    Cyan accent while the window is open; muted when expired. */
 .advance-banner {
@@ -1371,8 +1371,8 @@ watch(currentEvent, async (ev) => {
   margin: 0.4rem 0 0; font-size: 12px; color: #34d399;
   font-family: var(--font-mono);
 }
-/* Super Final F — louder banner because the change window is
-   shorter than the standard prelim → final. Amber pulse and
+/* Super Final F: louder banner because the change window is
+   shorter than the standard prelim -> final. Amber pulse and
    bold MM:SS countdown so the diver doesn't miss the deadline. */
 .advance-banner.super-final-f {
   border-color: #f59e0b;
@@ -1387,14 +1387,14 @@ watch(currentEvent, async (ev) => {
   50%      { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18); }
 }
 .advance-banner.super-final-f.locked {
-  /* Once the deadline passes the urgency is moot — drop the
-     pulse, keep the amber border so the audit trail looks
+  /* Once the deadline passes the urgency is moot, so drop the
+     pulse but keep the amber border so the audit trail looks
      consistent with the alert state. */
   animation: none;
   border-color: var(--border);
 }
 
-/* Pending synchro pairing invitations (migration 051) — sits at
+/* Pending synchro pairing invitations (migration 051), sits at
    the top of the dive-list page so the invitee sees their pending
    pairing requests before they hunt for their event. Violet accent
    so it reads distinct from the cyan (post-advance) and amber
@@ -1433,7 +1433,7 @@ watch(currentEvent, async (ev) => {
   display: flex; gap: 0.5rem; flex: 0 0 auto;
 }
 
-/* Reserve banner — amber accent so it reads as a holding
+/* Reserve banner, amber accent so it reads as a holding
    state distinct from the cyan post-advance lock banner. */
 .reserve-banner {
   margin-top: 1rem;
@@ -1454,7 +1454,7 @@ watch(currentEvent, async (ev) => {
   line-height: 1.5;
 }
 
-/* Round-rules summary strip — one row per section, showing
+/* Round-rules summary strip: one row per section, showing
    running DD totals + group-pick progress against the cap. */
 .rr-summary { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.5rem; }
 .rr-summary-row {
@@ -1491,7 +1491,7 @@ watch(currentEvent, async (ev) => {
 }
 .rr-summary-meta { font-size: 11px; }
 
-/* Round-rules violations panel below the dive list — same red
+/* Round-rules violations panel below the dive list, same red
    palette as msg-error so it reads as a hard-block. */
 .rr-violations {
   margin-top: 1rem;
@@ -1578,7 +1578,7 @@ watch(currentEvent, async (ev) => {
 
 .hint-line { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
 
-/* My club card — current club + request-a-change flow. */
+/* My club card: current club + request-a-change flow. */
 .my-club-card { padding: 1rem 1.25rem; }
 .my-club-head {
   display: flex; align-items: flex-start; justify-content: space-between;
@@ -1734,7 +1734,7 @@ watch(currentEvent, async (ev) => {
   .advance-banner-body,
   .reserve-banner-body { font-size: 12px; }
 
-  /* Round-rules summary — tighter row padding */
+  /* Round-rules summary: tighter row padding */
   .rr-summary-row { padding: 0.45rem 0.6rem; }
 
   /* Template save form: name input + save button stack

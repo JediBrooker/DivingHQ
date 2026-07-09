@@ -1,13 +1,13 @@
 -- =============================================================
--- MIGRATION 024 — ADD '0m' (POOLSIDE) TO board_height ENUM
+-- MIGRATION 024: ADD '0m' (POOLSIDE) TO board_height ENUM
 --
 -- Coaches use poolside / pool-deck entries (sit-dives, kneel-dives,
 -- standing falls) as a teaching progression before introducing the
 -- 1m board. Until now there was no way to record those sessions in
--- DivingHQ because the events.height column is a board_height
--- enum that only knows 1m / 3m / 5m / 7.5m / 10m.
+-- DivingHQ since the events.height column is a board_height enum
+-- that only knows 1m / 3m / 5m / 7.5m / 10m.
 --
--- Adding '0m' BEFORE '1m' so the spectator UI's natural sort order
+-- Adding '0m' before '1m' so the spectator UI's natural sort order
 -- still reads low-to-high.
 --
 -- ALTER TYPE ... ADD VALUE is supported inside a transaction from
@@ -15,7 +15,7 @@
 -- gen_random_uuid()::text without pgcrypto). IF NOT EXISTS makes a
 -- re-run a no-op.
 --
--- No backfill needed — this only widens the legal set; existing
+-- No backfill needed, this only widens the legal set. Existing
 -- rows on 1m..10m stay valid.
 -- =============================================================
 

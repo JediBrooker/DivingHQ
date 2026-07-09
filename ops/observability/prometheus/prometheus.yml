@@ -1,8 +1,8 @@
-# Prometheus — scrapes /metrics off the dive-recorder app every
+# Prometheus: scrapes /metrics off the dive-recorder app every
 # 30s. Single target; if you ever add a staging box or a worker
 # process, append to `targets`. Each scrape request shows up in
 # the app's own dive_recorder_http_requests_total{route="/metrics"}
-# counter — that's expected.
+# counter, that's expected.
 
 global:
   scrape_interval: 30s

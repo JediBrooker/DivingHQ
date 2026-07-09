@@ -3,7 +3,7 @@
 // The Control Room's "Audience broadcast — pick events…" chooser
 // builds a /broadcast/all?ids=<csv> URL when the operator picks a
 // strict subset of currently-Live events. This test mocks the
-// /api/events response so we can verify the view honours that
+// /api/events response so we can check the view honours that
 // filter without spinning up real meets:
 //
 //   1. With ?ids=evt-2,evt-4  → only those two iframes render
@@ -11,8 +11,8 @@
 //   3. With ?ids=<dead-id>   → "all selected events have finished"
 //                              rescue UI appears
 //
-// The iframe src is asserted but the iframes are not waited on
-// to load — the /scoreboard/<id>/broadcast view they would render
+// The iframe src is asserted but we don't wait for the iframes
+// to load, since the /scoreboard/<id>/broadcast view they'd render
 // is exercised separately.
 
 const { test, expect } = require('@playwright/test')
@@ -22,7 +22,7 @@ const fakeEvents = [
   { id: 'evt-2', name: 'Mens 3m Springboard', height: '3m',  gender: 'M', status: 'Live' },
   { id: 'evt-3', name: 'Womens 3m Synchro',  height: '3m',  gender: 'F', status: 'Live' },
   { id: 'evt-4', name: 'Mens 10m Synchro',   height: '10m', gender: 'M', status: 'Live' },
-  // Completed event — should never appear in the grid regardless
+  // Completed event, should never show up in the grid regardless
   // of whether it's in ?ids=.
   { id: 'evt-5', name: 'Mixed Team Final',   height: 'team', gender: 'X', status: 'Completed' },
 ]
@@ -72,13 +72,13 @@ test('/broadcast/all with no ids shows every Live event', async ({ page }) => {
 
   // 4 Live events in the fake list (the Completed one is filtered).
   await expect(page.locator('.mbcast-frame')).toHaveCount(4)
-  // No subset badge when there is no ?ids= filter.
+  // No subset badge when there's no ?ids= filter.
   await expect(page.locator('.mbcast-stat-sub')).toHaveCount(0)
 })
 
 test('/broadcast/all?ids=<dead-id> shows the rescue UI', async ({ page }) => {
   await installMocks(page)
-  // evt-5 is Completed, evt-9 doesn't exist — both get filtered
+  // evt-5 is Completed, evt-9 doesn't exist, so both get filtered
   // out, leaving zero events in the picked subset.
   await page.goto('/broadcast/all?ids=evt-9,evt-5')
 

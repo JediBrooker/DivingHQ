@@ -4,14 +4,14 @@
 // Layout:
 //   1. Header (welcome + sign-out)
 //   2. Find Diver typeahead
-//   3. Pulse strip — always-visible cross-role digest
+//   3. Pulse strip, always-visible cross-role digest
 //      ("3 LIVE · 2 UPCOMING · 5 PENDING · entries close 14d")
-//   4. Tab strip — one tab per role the user holds + an Other
+//   4. Tab strip, one tab per role the user holds plus an Other
 //      tab for utility surfaces (Dive Directory, Scoreboard,
 //      Compare). Each tab carries an optional badge count.
-//   5. Active panel — content scoped to the active tab.
+//   5. Active panel, content scoped to the active tab.
 //
-// Smart-pick picks the initial tab on first mount:
+// Smart-pick chooses the initial tab on first mount:
 //   1. If any LIVE event AND user has org_admin/meet_manager →
 //      that operator tab.
 //   2. Else if user is a diver with entries close < 7 days →
@@ -20,14 +20,13 @@
 //      still a valid tab for this user → that tab.
 //   4. Else fallback to most-privileged role.
 //
-// Each tab loads its own data lazily on first activation; once
-// loaded, switches are instant. Pulse data loads up front
-// because it's needed for the strip and for the smart-pick
-// computation.
+// Each tab loads its own data lazily on first activation, once
+// loaded, switches are instant. Pulse data loads up front since
+// it's needed for the strip and for the smart-pick computation.
 //
-// Brand-new org admins (zero clubs + zero events + no
+// Brand-new org admins (zero clubs, zero events, no
 // dismiss/complete stamp) still get the auto-redirect to
-// /setup — happens before the tab logic runs.
+// /setup, which happens before the tab logic runs.
 import { ref, onMounted, onUnmounted, computed, watch, defineAsyncComponent } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -39,7 +38,7 @@ import { fmtCloses, fmtRelative } from '@/lib/format'
 import { Building2, Calendar, MonitorPlay, UserCog } from '@lucide/vue'
 
 
-// Per-role panels — async-imported so each tab's chunk only
+// Per-role panels, async-imported so each tab's chunk only
 // loads when the user activates it. A diver-only account
 // never downloads the OrgAdmin / Audit-related markup.
 const OrgAdminPanel    = defineAsyncComponent(() => import('@/components/dashboard/OrgAdminPanel.vue'))
@@ -97,7 +96,7 @@ function setTab(id) {
 // ---- Pulse + per-tab data refs -----------------------------
 // Loaded lazily; first hit triggers fetch, then cached. The
 // `loaded` map prevents double-fetch on re-tab visits.
-const events             = ref([])     // /api/events — used by org_admin + meet_manager + diver
+const events             = ref([])     // /api/events, used by org_admin + meet_manager + diver
 const roleRequests       = ref([])     // /api/role-requests
 const pendingOrgs        = ref([])     // /api/orgs filtered to pending (sysadmin)
 const recentActivity     = ref([])     // /api/audit/recent
@@ -133,8 +132,8 @@ const pendingCount = computed(() => {
 const diverEntryCloseDays = computed(() => {
   // Heuristic v1: closest entries_close_at across upcoming events.
   // Refinement: filter to events the diver is entered in once
-  // we have that data — but this is good enough for the smart-
-  // pick + pulse signal.
+  // we have that data, but this is good enough for the smart-
+  // pick + pulse signal for now.
   const now = Date.now()
   let nearest = Infinity
   for (const ev of events.value) {
@@ -158,9 +157,9 @@ const diverEntryCloseDays = computed(() => {
 //   - layout          'count-first' for "5 LIVE" or 'count-after'
 //                     for "entries close in 14 days"
 //   - targetTab       which tab to switch to when the chip is
-//                     clicked (#1 — clickable chips)
+//                     clicked (#1, clickable chips)
 //   - popoverTitle    heading at the top of the hover popover
-//   - items           [{ id, title, meta, to }] — the actual
+//   - items           [{ id, title, meta, to }], the actual
 //                     things behind the count, rendered as
 //                     RouterLink rows in the popover (#2)
 //
@@ -169,7 +168,7 @@ const diverEntryCloseDays = computed(() => {
 const pulseChips = computed(() => {
   const chips = []
 
-  // Live events — operator chip
+  // Live events, operator chip
   if (liveCount.value && auth.hasAnyRole(['org_admin', 'meet_manager'])) {
     const liveEvents = events.value.filter((e) => e.status === 'Live')
     chips.push({
@@ -186,13 +185,13 @@ const pulseChips = computed(() => {
         title: e.name,
         meta:  'Open Control Room',
         to:    `/control?event=${e.id}`,
-        urgency: null,                // live events themselves aren't "urgent" — they're already happening
+        urgency: null,                // live events themselves aren't "urgent", they're already happening
       })),
     })
   }
 
-  // Upcoming events — operator chip. Items get an `urgency`
-  // marker if the entries-close window is < 24h.
+  // Upcoming events, operator chip. Items get an `urgency`
+  // marker if the entries-close window is under 24h.
   if (upcomingCount.value && auth.hasAnyRole(['org_admin', 'meet_manager'])) {
     const now = Date.now()
     const upcomingEvents = events.value
@@ -224,10 +223,10 @@ const pulseChips = computed(() => {
     })
   }
 
-  // 🌐 International invitations — visible only when the user's
-  // own org is a guest on someone else's event (i.e. the event's
+  // International invitations, visible only when the user's own
+  // org is a guest on someone else's event (i.e. the event's
   // host org is different from the caller's own org). Powered by
-  // the relaxed /api/events query — events where the caller's
+  // the relaxed /api/events query: events where the caller's
   // org is on event_participating_orgs come through with
   // e.org_id != auth.user.org_id. Coverage: org_admin (so they
   // can prep their roster) + diver (so they can self-enter).
@@ -243,7 +242,7 @@ const pulseChips = computed(() => {
         number:       guestEvents.length,
         label:        'INVITED',
         layout:       'count-first',
-        // Match the fallback chain used by the other chips —
+        // Match the fallback chain used by the other chips:
         // a user holding only meet_manager (no org_admin, no
         // diver) would otherwise land on a 'diver' tab they
         // don't have.
@@ -266,7 +265,7 @@ const pulseChips = computed(() => {
     }
   }
 
-  // Pending governance work — org admin chip. Items older than
+  // Pending governance work, org admin chip. Items older than
   // 7 days get an `overdue` marker.
   if (pendingCount.value && auth.hasRole('org_admin')) {
     const now = Date.now()
@@ -306,7 +305,7 @@ const pulseChips = computed(() => {
     })
   }
 
-  // Diver — entries close countdown
+  // Diver, entries close countdown
   if (diverEntryCloseDays.value != null && auth.hasRole('diver')) {
     const now = Date.now()
     const upcoming = events.value
@@ -335,7 +334,7 @@ const pulseChips = computed(() => {
     })
   }
 
-  // Judge — assignments
+  // Judge, assignments
   if (judgeEvents.value.length && auth.hasRole('judge')) {
     chips.push({
       id:           'judge',
@@ -358,7 +357,7 @@ const pulseChips = computed(() => {
     })
   }
 
-  // Coach — divers under the user's wing
+  // Coach, divers under the user's wing
   if (coachData.value?.divers?.length && auth.hasRole('coach')) {
     chips.push({
       id:           'coach',
@@ -382,13 +381,13 @@ const pulseChips = computed(() => {
   return chips
 })
 
-// P4 (2/2): the ranked needs-attention lane -- the same chips, but the
-// most urgent category first (live > closing<24h > overdue>7d) instead of
-// a fixed role order. The popover drill + deep links are unchanged.
+// P4 (2/2): the ranked needs-attention lane, same chips as above, just
+// sorted by most urgent category first (live > closing<24h > overdue>7d)
+// instead of a fixed role order. The popover drill + deep links are unchanged.
 const attentionLane = computed(() => rankAttentionChips(pulseChips.value))
 
 // Which chip's popover is currently open via tap. Mobile-only
-// affordance — desktop uses :hover to reveal the popover so
+// affordance, desktop uses :hover to reveal the popover so
 // `openChipId` stays null there. Tracked as a single id (only
 // one chip's popover at a time) so opening a second chip
 // implicitly closes the first.
@@ -404,13 +403,13 @@ const hasHoverCapability = () => {
   return window.matchMedia('(hover: hover)').matches
 }
 
-// Click handler — branches by device:
+// Click handler, branches by device:
 //   • Hover-capable (desktop/laptop): tap navigates immediately.
 //     The popover was already visible via :hover.
 //   • Touch-only (phone/tablet): tap opens the popover first
 //     (closing any other open one). A second tap on the same
 //     chip then navigates. A chip with no items (popover empty)
-//     navigates immediately on first tap — no point opening an
+//     navigates immediately on first tap, no point opening an
 //     empty dropdown.
 function onPulseChipClick(chip) {
   if (!chip || !chip.targetTab) return
@@ -425,7 +424,7 @@ function onPulseChipClick(chip) {
   setTab(chip.targetTab)
 }
 
-// Tap-outside handler — closes the open popover when the user
+// Tap-outside handler, closes the open popover when the user
 // taps anywhere outside any pulse chip. Attached at document
 // level (and only while a popover is open) so the chip strip's
 // horizontal scroll isn't affected. The .closest() check covers
@@ -462,9 +461,9 @@ function flashChip(id) {
     flashingChips.value = next
   }, 1400)
 }
-// Watchers — fire flashChip when the underlying count changes.
+// Watchers, fire flashChip when the underlying count changes.
 // Initial mount also triggers (oldVal undefined → newVal
-// number); a small guard prevents flashing on first paint.
+// number), so a small guard prevents flashing on first paint.
 let pulseInitialised = false
 watch(
   [liveCount, upcomingCount, pendingCount, diverEntryCloseDays,
@@ -516,9 +515,9 @@ function pickInitialTab() {
 }
 
 // ---- Loaders -----------------------------------------------
-// Each loader is idempotent — `tabsLoaded` set prevents
-// re-fetch on re-tab visits. Errors swallowed; the panel
-// renders an empty state if its data is missing.
+// Each loader is idempotent, the `tabsLoaded` set prevents
+// re-fetch on re-tab visits. Errors just get swallowed, just in
+// case, and the panel renders an empty state if its data is missing.
 async function loadOperatorEvents() {
   if (events.value.length || tabsLoaded.value.has('events')) return
   try {
@@ -600,7 +599,7 @@ async function loadDashboardBundle() {
   if (Array.isArray(bundle.diver_event_ids)) {
     diverEventIds.value = bundle.diver_event_ids
   }
-  // Mark tabsLoaded so per-tab loaders don't refetch what we
+  // mark tabsLoaded so per-tab loaders don't refetch what we
   // already have. Recent-activity is the only org-admin slice
   // that has a separate tabsLoaded key.
   tabsLoaded.value.add('events')
@@ -630,7 +629,7 @@ async function ensureTabDataLoaded(tab) {
   } else if (tab === 'coach') {
     await loadCoachData()
   } else if (tab === 'diver') {
-    await loadOperatorEvents()  // for "your next meet" — heuristic
+    await loadOperatorEvents()  // for "your next meet", heuristic
   }
   // 'referee' and 'other' need no extra data right now.
 }
@@ -669,16 +668,16 @@ function onDiverSearchBlur() {
   setTimeout(() => { diverDropdown.value = false }, 150)
 }
 
-// fmtCloses + fmtRelative are imported from @/lib/format —
-// they used to live inline in 11+ views with subtle drift.
+// fmtCloses + fmtRelative are imported from @/lib/format, they
+// use to live inline in 11+ views with subtle drift between them.
 
 // ---- Tile catalog (now role-scoped per panel) --------------
-// The flat allTiles config of the previous layout is gone; each
+// The flat allTiles config of the previous layout is gone, each
 // panel renders its own role-scoped "GO TO" group via the shared
 // GotoTile component, importing its own Lucide icons. The Other
 // tab carries the utility surfaces that don't belong to any
 // single role. (The old hand-rolled SVG ICONS map + v-html
-// threading lived here — replaced by @lucide/vue components.)
+// threading lived here, replaced by @lucide/vue components.)
 
 // ---- Static data ------------------------------------------
 const welcomeName = computed(() => auth.user?.full_name?.toUpperCase() || '—')
@@ -689,7 +688,7 @@ function logout() {
   router.push('/login')
 }
 
-// Org-admin's "what needs your attention" cards — preserved
+// Org-admin's "what needs your attention" cards, preserved
 // from the old action-strip but now scoped inside the org_admin
 // panel. Each card is one row.
 const attentionCards = computed(() => {
@@ -746,10 +745,10 @@ const attentionCards = computed(() => {
   return cards
 })
 
-// Meet Manager events — same /api/events fetch but presented
+// Meet Manager events, same /api/events fetch but presented
 // as compact rows instead of attention cards.
 const operatorEvents = computed(() => {
-  // Sorted: live first, then upcoming by entries_close_at, then completed by date desc.
+  // sorted: live first, then upcoming by entries_close_at, then completed by date desc
   const live = events.value.filter((e) => e.status === 'Live')
   const upcoming = events.value
     .filter((e) => e.status === 'Upcoming')
@@ -765,7 +764,7 @@ const operatorEvents = computed(() => {
   return [...live, ...upcoming, ...completed]
 })
 
-// Diver next-meet heuristic — closest upcoming event by entries
+// Diver next-meet heuristic, closest upcoming event by entries.
 // Filtered to events the diver actually has a competitor_dive_lists
 // row for, sourced from the dashboard bundle's `diver_event_ids`
 // slice. Same gate as /api/events/:id/me-meet-day, so a card
@@ -779,7 +778,7 @@ const diverEnteredSet = computed(() => {
 })
 function diverIsEntered(eventId) {
   const set = diverEnteredSet.value
-  if (set === null) return true   // bundle not back yet — don't hide
+  if (set === null) return true   // bundle not back yet, don't hide
   return set.has(eventId)
 }
 
@@ -862,9 +861,9 @@ onMounted(async () => {
 
   // One-shot bundle endpoint that returns every role-scoped
   // slice in a single round trip. Replaces the previous
-  // 5-6 parallel API calls. If the bundle endpoint isn't
-  // available (older server, network glitch), fall back to
-  // the per-source loaders.
+  // 5-6 parallel API calls, much nicer on the network tab. If
+  // the bundle endpoint isn't available (older server, network
+  // glitch), fall back to the per-source loaders.
   const bundled = await loadDashboardBundle()
   if (!bundled) {
     await Promise.all([
@@ -877,7 +876,7 @@ onMounted(async () => {
       auth.hasRole('diver')       ? loadOperatorEvents()  : Promise.resolve(),
     ])
   }
-  // Initial fetch settled — flip the skeleton off so the real
+  // Initial fetch settled, flip the skeleton off so the real
   // chips render.
   pulseInitiallyLoaded.value = true
 
@@ -887,7 +886,7 @@ onMounted(async () => {
   // fetches the pulse step skipped, e.g. recent activity).
   await ensureTabDataLoaded(activeTab.value)
 
-  // Live polling — refetch the pulse-driving sources every
+  // Live polling, refetch the pulse-driving sources every
   // POLL_MS so the strip stays current without a full page
   // refresh. The watchers on each count then flash the
   // corresponding chip when something changes. Coach data is
@@ -898,7 +897,7 @@ onMounted(async () => {
   // emits so the strip updates the moment something happens.
   // Polling continues as a fallback.
   attachSocketHandlers()
-  // (P4) the activity ticker was removed; nothing to start here.
+  // (P4) the activity ticker was removed, nothing to start here.
 })
 onUnmounted(() => {
   stopPulsePolling()
@@ -947,7 +946,7 @@ const pulseInitiallyLoaded = ref(false)
 // net for socket-disconnected edge cases.
 const dashboardSocket = useSocket()
 
-// Named handlers + explicit off — the pooled socket outlives this
+// Named handlers + explicit off, the pooled socket outlives this
 // view, so anonymous listeners would stack one copy per dashboard
 // visit. (useSocketEvent isn't usable here: attachSocketHandlers
 // runs after an await in onMounted, outside the setup scope.)
@@ -994,7 +993,7 @@ function detachSocketHandlers() {
       </div>
       <!-- Top-right account area: diver search + My Profile +
            Sign Out. Search lives here because users hunt for
-           people the same way they hunt for their own profile —
+           people the same way they hunt for their own profile,
            top-right "account / find someone" pattern. The
            dropdown is anchored to the input wrapper, so it
            drops below the input regardless of how the header
@@ -1036,12 +1035,12 @@ function detachSocketHandlers() {
       </div>
     </div>
 
-    <!-- Pulse strip — always-visible cross-role digest. Each
+    <!-- Pulse strip, always-visible cross-role digest. Each
          chip is a button (clickable to switch to the chip's
          target tab) AND a popover trigger (hover / focus shows
          a list of the actual items behind the count, each
          clickable to navigate directly to that thing). Polled
-         every 30s; counts that change flash briefly. -->
+         every 30s, counts that change flash briefly. -->
     <AttentionLane
       :chips="attentionLane"
       :open-id="openChipId"
@@ -1050,7 +1049,7 @@ function detachSocketHandlers() {
       @chip-click="onPulseChipClick"
     />
 
-    <!-- Tab strip — one tab per visible role + Other. -->
+    <!-- Tab strip, one tab per visible role + Other. -->
     <div class="tab-strip" role="tablist">
       <button
         v-for="t in visibleTabs"
@@ -1066,7 +1065,7 @@ function detachSocketHandlers() {
     </div>
 
     <!-- ===========================================
-         Active panels — one v-if per tab. Each panel is an
+         Active panels, one v-if per tab. Each panel is an
          async-imported component so its chunk only loads
          when the user activates that tab. Shared CSS lives
          in public/css/app.css; the template + minimal logic
@@ -1101,7 +1100,7 @@ function detachSocketHandlers() {
     <OtherPanel
       v-else-if="activeTab === 'other'"    />
 
-    <!-- Dashboard footer — single muted strip below the active
+    <!-- Dashboard footer, single muted strip below the active
          role panel. Two affordances: the plain-English user
          guide for orientation, and a GitHub issue link for bug
          reports (pre-filled with title + bug label so reports
@@ -1131,20 +1130,20 @@ function detachSocketHandlers() {
     animation-iteration-count: 1 !important;
   }
 }
-/* Dashboard wrapper — clamps horizontal overflow at the page
+/* Dashboard wrapper, clamps horizontal overflow at the page
    level. */
 .dashboard {
   overflow-x: clip;
-  /* clip > hidden — hidden creates a new scrolling context
-     and lets descendants with sticky-positioning leak in iOS
-     Safari; clip is the modern recommendation that just stops
-     overflow without creating a scroll container. Universally
-     supported since Safari 16. */
+  /* clip > hidden: hidden creates a new scrolling context and
+     lets descendants with sticky-positioning leak in iOS Safari.
+     clip is the modern recommendation that just stops overflow
+     without creating a scroll container. Universally supported
+     since Safari 16. */
   width: 100%;
-  /* 100% (not 100vw) — 100vw includes the scrollbar gutter on
+  /* 100% (not 100vw): 100vw includes the scrollbar gutter on
      some browsers, overshoots the parent on iOS, and can force
      a horizontal scrollbar from rounding. The parent already
-     caps the width at the viewport; 100% inherits that cleanly. */
+     caps the width at the viewport, so 100% inherits that cleanly. */
   max-width: 100%;
   padding-bottom: 4rem;
 }
@@ -1164,8 +1163,8 @@ function detachSocketHandlers() {
   min-width: 0;
   flex: 1 1 auto;
 }
-/* Brand lockup is provided by the app shell now — hide the
-   duplicate in the dashboard's own header. */
+/* Brand lockup is provided by the app shell now, so hide the
+   duplicate in the dashboards own header. */
 .welcome-label { display: none; }
 .welcome-name  {
   font-family: var(--font-sans); font-weight: 600; font-style: normal;
@@ -1181,11 +1180,11 @@ function detachSocketHandlers() {
   white-space: normal; word-break: break-word;
 }
 
-/* Secondary nav row — sits inside .header-inner as a third flex
+/* Secondary nav row, sits inside .header-inner as a third flex
    item that consumes full width, so it stacks below the
    welcome/account row even though they're in the same flex
    container. Right-aligned per the spec; reads as a quiet
-   strip of "always-on" destinations. Currently just Scoreboard;
+   strip of "always-on" destinations. Currently just Scoreboard,
    easy to grow as more cross-role surfaces land. */
 .header-secondary-nav {
   flex: 1 0 100%;
@@ -1224,7 +1223,7 @@ function detachSocketHandlers() {
 }
 .header-secondary-link-icon {
   font-size: 14px; line-height: 1;
-  /* Emojis carry their own colour — neutralise the cyan tint
+  /* Emojis carry their own colour, so neutralise the cyan tint
      that bleeds in from the parent. */
   filter: none;
 }
@@ -1241,12 +1240,12 @@ function detachSocketHandlers() {
   flex-shrink: 0;
 }
 .header-account .btn {
-  /* Redundant inside the app shell — Inbox, My Profile, User Guide
+  /* Redundant inside the app shell, Inbox, My Profile, User Guide
      and Sign Out are provided by the sidebar + topbar user menu. */
   display: none;
 }
 
-/* Find Diver — typeahead lives in the top-right account row.
+/* Find Diver, typeahead lives in the top-right account row.
    Wrapper provides the relative-positioning anchor for the
    absolutely-positioned dropdown so the suggestion list drops
    immediately below the input regardless of where the header
@@ -1268,7 +1267,7 @@ function detachSocketHandlers() {
 .find-diver-dropdown {
   position: absolute;
   top: calc(100% + 0.25rem);
-  /* Anchor to the input's right edge and grow leftward — keeps
+  /* Anchor to the input's right edge and grow leftward, keeps
      the dropdown on-screen even though the input is squeezed
      into the right side of the header. The dropdown is wider
      than the input so club/country chips fit comfortably. */
@@ -1311,12 +1310,12 @@ function detachSocketHandlers() {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .find-diver-club-code { font-weight: 700; color: var(--cyan); margin-inline-start: 0.4rem; }
 
-/* Tab strip — primary navigation, so styled with the same
+/* Tab strip, primary navigation, so styled with the same
    display-italic typography the rest of the dashboard uses
    for "important things". Active tab gets a subtle cyan tint
-   + thicker bottom border to read as the current section,
-   not a button. Hover paints a hint so the strip feels
-   interactive even before any click. */
+   + thicker bottom border to read as the current section, not
+   a button. Hover paints a hint so the strip feels interactive
+   even before any click. */
 .tab-strip {
   display: flex; align-items: stretch; gap: 0.5rem;
   flex-wrap: wrap;
@@ -1351,7 +1350,7 @@ function detachSocketHandlers() {
   font-weight: 600;
 }
 .tab-active:hover {
-  /* Don't darken the active tab on hover — it should read as
+  /* Dont darken the active tab on hover, it should read as
      "you are here", not "you can click this". */
   background: transparent;
 }
@@ -1380,7 +1379,7 @@ function detachSocketHandlers() {
    Mobile / narrow-viewport adaptations.
    ========================================================= */
 
-/* Tablet & smaller — under 900 px viewport. The header's
+/* Tablet & smaller, under 900 px viewport. The header's
    account row drops onto its own line below the welcome
    block (already handled by .header-inner's flex-wrap), the
    pulse strip wraps more aggressively, and the tab strip
@@ -1401,7 +1400,7 @@ function detachSocketHandlers() {
     min-width: 0;
   }
   .find-diver-wrapper {
-    /* Take a full row when wrapped — the buttons sit below. */
+    /* Take a full row when wrapped, the buttons sit below. */
     flex: 1 1 100%;
     min-width: 0;
   }
@@ -1413,7 +1412,7 @@ function detachSocketHandlers() {
     gap: 0.5rem;
   }
   .header-secondary-link {
-    /* Shrink the chunky letter-spacing on phones — the desktop
+    /* Shrink the chunky letter-spacing on phones, the desktop
        0.18em + 12px makes "SCOREBOARD & RESULTS" ~210px wide on
        its own. 0.08em + 11px keeps the affordance readable but
        fits comfortably alongside its sibling at 360px+. */
@@ -1427,7 +1426,7 @@ function detachSocketHandlers() {
   }
   .tab-strip {
     padding: 0 1.25rem;
-    /* Horizontal scroll instead of wrap — keeps the strip a
+    /* Horizontal scroll instead of wrap, keeps the strip a
        single visual line on phones, swipeable. min-width:0
        prevents the strip's intrinsic content size from
        expanding .dashboard wider than the viewport (Safari
@@ -1456,7 +1455,7 @@ function detachSocketHandlers() {
   }
 }
 
-/* Phone — under 600 px viewport. Welcome name shrinks, pulse
+/* Phone, under 600 px viewport. Welcome name shrinks, pulse
    chips become tappable instead of hover-only (popovers
    collapse to a tap toggle), and the account row stacks
    each button on its own line. */
@@ -1488,7 +1487,7 @@ function detachSocketHandlers() {
 }
 
 /* =============================================================
-   Footer — single muted "Spot a bug? Report it on GitHub" strip
+   Footer, single muted "Spot a bug? Report it on GitHub" strip
    at the bottom of the page, beneath whichever role panel is
    active. Intentionally quiet so it doesn't compete with the
    panel content above; centred so it reads as page-chrome

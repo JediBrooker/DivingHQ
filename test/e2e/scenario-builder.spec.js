@@ -1,7 +1,7 @@
 // Smoke tests for the composed e2e scenario builder.
 //
-// The builder is intentionally small infrastructure: it wraps the
-// raw _setup.js primitives so authz and workflow specs can request
+// The builder is intentionally small infra: it just wraps the
+// raw _setup.js primitives so authz and workflow specs can spin up
 // a realistic host/guest event world without repeating the same
 // org/user/event/dive-list setup every time.
 

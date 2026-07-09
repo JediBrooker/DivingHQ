@@ -1,17 +1,17 @@
 -- =============================================================
--- MIGRATION 059 — DiveRecorder archive tables (dr_*)
+-- MIGRATION 059: DiveRecorder archive tables (dr_*)
 --
 -- DivingHQ only knows about meets run on its own platform. The
 -- DiveRecorder Meet Explorer (diverecorder.co.uk/meetexplorer)
 -- publishes a large public archive of historical UK/AUS diving
--- results — ~1,386 meets, each with dozens of events, each with a
--- ranked diver list and a full per-dive breakdown (dive code,
--- position, DD, individual judge marks, running total).
+-- results, something like 1,386 meets, each with dozens of events,
+-- each with a ranked diver list and a full per-dive breakdown (dive
+-- code, position, DD, individual judge marks, running total).
 --
 -- We mine that archive (scripts/import-diverecorder.js) and surface
 -- it as a read-only "Archive Explorer" inside DivingHQ so divers,
--- coaches and clubs get a richer historical record without
--- re-entering anything by hand.
+-- coaches and clubs get a richer historical record without having
+-- to re-enter anything by hand.
 --
 -- This data is deliberately kept in its OWN namespace (dr_*). It
 -- must never touch the live operational tables (meets / events /
@@ -20,8 +20,8 @@
 -- org behind these rows, and they must not count toward records.
 -- Hence: no foreign keys into operational tables, no org_id, no RLS
 -- coupling. The source's own numeric ids (mref / eref / dref) are
--- carried as natural keys so re-running the importer is idempotent
--- (ON CONFLICT ... DO UPDATE) and resumable.
+-- carried as natural keys so re-running the importer stays
+-- idempotent (ON CONFLICT ... DO UPDATE) and resumable.
 -- =============================================================
 
 BEGIN;
@@ -52,8 +52,9 @@ CREATE TABLE IF NOT EXISTS public.dr_events (
 
 -- One row per distinct diver across the archive. Collapsed on
 -- (name, club_name, birth_year) so the same person appearing in
--- many meets is a single row, enabling a cross-meet history view.
--- No link to real DivingHQ users (out of scope this round).
+-- many meets ends up as a single row, which is what enables the
+-- cross-meet history view. No link to real DivingHQ users, thats
+-- out of scope this round.
 CREATE TABLE IF NOT EXISTS public.dr_divers (
     id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name       text NOT NULL,

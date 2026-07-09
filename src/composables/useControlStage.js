@@ -1,11 +1,11 @@
 // Shared meet-day stage derivation (P5 of the redesign).
 //
 // The SAME workflowMode / orderWorkflowState ControlView.vue derives
-// inline (ControlView.vue:835-850) -- COPIED here, not extracted: the
-// original SFC stays byte-identical as the V2 rollback. This copy is
-// pinned by test/use-control-stage.test.js against the exact same
+// inline (ControlView.vue:835-850), copied here rather than extracted:
+// the original SFC stays byte-identical as the V2 rollback. This copy
+// is pinned by test/use-control-stage.test.js against the exact same
 // transitions the ControlView e2e specs lock, so V1 and V2 cannot
-// drift. Pure functions of an event object; no scoring/business rule.
+// drift. Pure functions of an event object, no scoring or business rules.
 import { computed, unref } from 'vue'
 
 // Pre-meet stepper order (ControlView.vue:857).
@@ -23,7 +23,7 @@ export function orderWorkflowStateFor(ev) {
 }
 
 // Canonical pool order: oldest-created first, so the first event to go
-// Live is "Pool 1", the next "Pool 2", and so on -- stable as events
+// Live is "Pool 1", the next "Pool 2", and so on, stable as events
 // come and go. The SAME order drives the center pool grid, the top-bar
 // switch chips, AND the number-key focus map, so chip position N, grid
 // card N and the "N" hotkey always point at the same pool.
@@ -34,7 +34,7 @@ export function compareByCreation(a, b) {
   return Number(a?.id) - Number(b?.id)
 }
 
-// Every Live event in canonical order (a fresh array; never mutates input).
+// every Live event in canonical order (a fresh array, never mutates input)
 export function liveEventsInOrder(events) {
   return (Array.isArray(events) ? events : [])
     .filter((e) => e.status === 'Live')

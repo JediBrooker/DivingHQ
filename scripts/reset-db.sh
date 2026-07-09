@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# reset-db.sh — DESTRUCTIVE full reset of the configured database.
+# reset-db.sh, DESTRUCTIVE full reset of the configured database.
 #
 # Wipes the ENTIRE `public` schema and rebuilds it from:
 #     init.sql  ->  npm run migrate  ->  seed_test_data.sql
@@ -9,7 +9,7 @@
 # SUPERUSER (is_system_admin = true; existing password hash + email
 # kept; attached to the bootstrap 'Administration' org so the NOT NULL
 # users.org_id FK is satisfied). Deletes the default 'admin'/'admin'
-# account that init.sql creates.
+# account that init.sql creates too.
 #
 # Connection is resolved exactly like server.js / scripts/migrate.js:
 #   DATABASE_URL  (preferred)  else  DB_HOST/DB_USER/DB_PASSWORD/DB_DATABASE/DB_PORT

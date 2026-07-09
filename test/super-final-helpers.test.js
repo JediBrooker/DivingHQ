@@ -1,7 +1,7 @@
 // Unit coverage for the dive-off tie-break helpers used to wire a
 // recorded dive-off (tiebreak_dive_offs, Appendix 3 §6) into the
 // Super-Final H2H pair results and SF-group finalist selection.
-// Pure functions — DB-less.
+// Pure functions, no DB involved.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const {

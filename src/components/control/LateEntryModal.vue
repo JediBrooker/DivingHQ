@@ -1,18 +1,18 @@
 <script setup>
-/* LateEntryModal — "Add Late Diver" form, extracted from
+/* LateEntryModal, the "Add Late Diver" form, extracted from
  * ControlView.vue. One autocomplete input per round (the diver
  * competes every round), validated against the dive directory at
- * the event's height; synchro events add a partner picker, team
+ * the event's height. Synchro events add a partner picker, team
  * events a team picker.
  *
  * Mount contract: the parent keeps this ALWAYS mounted and drives
  * visibility via the `open` prop. That preserves the
- * pre-extraction once-per-session caches — org divers, the dive
+ * pre-extraction once-per-session caches: org divers, the dive
  * directory, and the event's teams are lazy-loaded on first open
- * and reused on every later open (a v-if mount would refetch).
+ * and reused on every later open (a v-if mount would refetch them).
  *
  * State boundary: the whole form is OWNED here. A successful
- * submit emits `added` with the freshly fetched roster — the
+ * submit emits `added` with the freshly fetched roster, and the
  * parent assigns it and runs its audit/conflict refreshes.
  */
 import { ref, computed, watch } from 'vue'
@@ -47,14 +47,14 @@ const lateRounds = ref([])
 const lateActiveSlot = ref(-1)        // which slot's autocomplete dropdown is open
 
 // The diver shown in the picker. Stored at the form level rather
-// than per-round because all rounds belong to the same diver.
-// Deliberately NOT reset on reopen — same stickiness the inline
+// than per-round since all rounds belong to the same diver.
+// Deliberately NOT reset on reopen, same stickiness the inline
 // version had.
 const lateCompetitorId = ref('')
 
-// Per-open initialisation — the body of the old openLateEntry()
+// Per-open init, basically the body of the old openLateEntry()
 // minus the open flag (the parent owns that now). Pre-flush
-// watch, so the reset lands before the modal paints.
+// watch so the reset lands before the modal paints.
 watch(() => props.open, async (isOpen) => {
   if (!isOpen) return
   lateErr.value = ''
@@ -63,7 +63,7 @@ watch(() => props.open, async (isOpen) => {
   lateTeamId.value = ''
   lateActiveSlot.value = -1
   // Build N empty slots based on the event's total_rounds. Default
-  // to 6 if the event metadata hasn't loaded yet (rare).
+  // to 6 if the event metadata hasnt loaded yet (rare).
   const totalRounds = Number(props.event?.total_rounds) || 6
   lateRounds.value = Array.from({ length: totalRounds }, () => ({ text: '', dive: null, competitorId: '' }))
   // Lazy-load org divers + dive directory once per session
@@ -74,8 +74,8 @@ watch(() => props.open, async (isOpen) => {
   }
   if (!lateDiveDir.value.length) {
     try {
-      // Cached read — first open of the late-add modal in a session
-      // hits the network; subsequent opens (same or different meets)
+      // Cached read: first open of the late-add modal in a session
+      // hits the network, subsequent opens (same or different meets)
       // serve from IDB instantly.
       const result = await auth.cachedApiFetch('/api/dive-directory', {
         cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS },
@@ -83,7 +83,7 @@ watch(() => props.open, async (isOpen) => {
       lateDiveDir.value = Array.isArray(result.data) ? result.data : []
     } catch { lateDiveDir.value = [] }
   }
-  // Teams enrolled in this event — only used when event_type === 'team'
+  // Teams enrolled in this event, only used when event_type === 'team'
   if (props.event?.event_type === 'team' && !lateTeams.value.length) {
     try {
       lateTeams.value = await auth.apiFetch(`/api/events/${props.event.id}/teams`)
@@ -114,7 +114,7 @@ function lateMatchesFor(idx) {
 }
 
 // Try to resolve the typed text directly against the directory
-// (no dropdown needed). Used when the user tabs out — if they
+// (no dropdown needed). Used when the user tabs out, if they
 // typed exactly "5132D" we silently lock it in. Returns the dive
 // or null.
 function resolveTypedDive(text) {
@@ -141,8 +141,8 @@ function latePickDive(idx, dive) {
   lateRounds.value[idx].dive = dive
   lateRounds.value[idx].text = `${dive.dive_code}${dive.position}`
   lateActiveSlot.value = -1
-  // Move focus to the next empty round if there is one — fast
-  // entry workflow for the operator typing through a list.
+  // Move focus to the next empty round if there is one, keeps the
+  // entry workflow fast for an operator typing through a list.
   const nextIdx = lateRounds.value.findIndex((s, i) => i > idx && !s.dive)
   if (nextIdx >= 0) {
     requestAnimationFrame(() => {
@@ -172,7 +172,7 @@ async function submitLateEntry() {
   if (!lateCompetitorId.value) { lateErr.value = 'Pick a diver'; return }
 
   // Re-resolve any rows where the operator typed but didn't click
-  // a result — gives them one last chance before we error.
+  // a result, gives them one last chance before we error out.
   for (const slot of lateRounds.value) {
     if (!slot.dive && slot.text) slot.dive = resolveTypedDive(slot.text)
   }
@@ -198,8 +198,8 @@ async function submitLateEntry() {
   try {
     // POST one row per round. The endpoint upserts on
     // (event_id, competitor_id, round_number) so a re-run after
-    // a partial failure is safe — the operator just clicks Add
-    // again and we backfill the missing rows.
+    // a partial failure is safe, the operator just clicks Add
+    // again and we backfill whatever's missing.
     for (let i = 0; i < lateRounds.value.length; i++) {
       const slot = lateRounds.value[i]
       await queueAction({
@@ -242,7 +242,7 @@ async function submitLateEntry() {
         </select>
       </div>
 
-      <!-- Synchro pair partner picker — only shown for synchro_pair events. -->
+      <!-- Synchro pair partner picker, only shown for synchro_pair events. -->
       <div v-if="event?.event_type === 'synchro_pair'" class="field">
         <label class="label">Partner</label>
         <select class="select" v-model="latePartnerId">
@@ -256,7 +256,7 @@ async function submitLateEntry() {
         </select>
       </div>
 
-      <!-- Team picker — only shown for team events. -->
+      <!-- Team picker, only shown for team events. -->
       <div v-if="event?.event_type === 'team'" class="field">
         <label class="label">Team</label>
         <select class="select" v-model="lateTeamId">

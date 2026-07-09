@@ -7,27 +7,27 @@ import { placeOrdinal, placeColor } from '@/lib/profile-helpers'
 const props = defineProps({
   // Array of { event_id, event_name, created_at, rank, field_size,
   // total, dives: [...] }. From analytics.recent_form. Pass `null`
-  // (not []) while analytics is still loading so the loading state
-  // can be distinguished from "empty".
+  // (not []) while analytics is still loading, that's the gotcha
+  // that lets us tell "still loading" apart from "actually empty".
   data: { type: Array, default: null },
-  // The diver whose profile is being viewed — used in the
+  // The diver whose profile is being viewed, used for the
   // score-sheet download link.
   targetId: { type: [String, Number], default: null },
   // When true, the parent's /analytics request is still in flight
-  // and `data` may still be null. Renders the "Loading…" line.
+  // and `data` may still be null, renders the "Loading…" line.
   loading: { type: Boolean, default: false },
 })
 
-// Recent-Form-only state: click a meet row to expand a per-dive
-// breakdown showing the judges' raw scores.
+// State that's local to Recent Form: click a meet row to expand
+// the per-dive breakdown with each judge's raw score.
 const expandedMeet = ref(null)
 function toggleMeet(eventId) {
   expandedMeet.value = expandedMeet.value === eventId ? null : eventId
 }
 
 // Trim algorithm + score-category lookup live in
-// src/composables/useScoreTrim.js — single source so the live
-// scoreboard, archive, and this widget all agree on dropped/kept.
+// src/composables/useScoreTrim.js, kept in one place so the live
+// scoreboard, archive, and this widget all agree on what's dropped/kept.
 function annotateJudges(judges, numJudges, eventType) {
   return annotateJudgeRows(judges, numJudges, eventType)
 }
@@ -129,7 +129,7 @@ function scoreClass(s) {
 .trend-place.place-bronze { color: #92400e; border-color: rgba(180,83,9,0.4); background: rgba(180,83,9,0.06); }
 .trend-total { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--cyan); }
 
-/* Clickable variant — chevron + hover state. */
+/* Clickable variant, adds the chevron + hover state. */
 .trend-row-clickable {
   grid-template-columns: 16px 110px 1fr auto auto;
   cursor: pointer;
@@ -176,7 +176,7 @@ function scoreClass(s) {
   min-width: 30px; text-align: center;
 }
 .j-chip.j-dropped { text-decoration: line-through; opacity: 0.55; }
-/* Per-category chip backgrounds — match the live scoreboard. */
+/* Per-category chip backgrounds, match the live scoreboard. */
 .j-chip.qs-failed         { background: rgba(239,68,68,0.18);   border-color: rgba(239,68,68,0.45);   color: #fecaca; }
 .j-chip.qs-very-deficient { background: rgba(251,146,60,0.18);  border-color: rgba(251,146,60,0.45);  color: #fed7aa; }
 .j-chip.qs-deficient      { background: rgba(251,191,36,0.18);  border-color: rgba(251,191,36,0.45);  color: #fde68a; }
@@ -185,10 +185,10 @@ function scoreClass(s) {
 .j-chip.qs-very-good      { background: rgba(16,185,129,0.18);  border-color: rgba(16,185,129,0.45);  color: #a7f3d0; }
 .j-chip.qs-excellent      { background: rgba(236,72,153,0.18);  border-color: rgba(236,72,153,0.45);  color: #fbcfe8; }
 
-/* Phone (≤600px): collapse the trend row (chevron + date +
+/* phone (≤600px): collapse the trend row (chevron + date +
    name + place + total) onto two rows so the meet name has
-   width to breathe. The expanded dive table gets a horizontal
-   scroll wrap so 7 cols don't overflow the card. */
+   room to breathe. Expanded dive table gets a horizontal
+   scroll wrap so the 7 cols don't overflow the card. */
 @media (max-width: 600px) {
   .trend-row {
     grid-template-columns: auto 1fr auto;
@@ -211,9 +211,9 @@ function scoreClass(s) {
   .trend-place   { grid-area: place; justify-self: end; }
   .trend-total   { grid-area: total; font-size: 13px; }
 
-  /* Expanded breakdown — the inner dive table has 7 columns;
-     allow horizontal scroll instead of squeezing everything
-     into the card width. */
+  /* Expanded breakdown: the inner dive table has 7 columns, so
+     just let it scroll horizontally instead of squeezing
+     everything into the card width. */
   .dive-breakdown {
     padding: 0.5rem 0.4rem 0.6rem;
     overflow-x: auto;

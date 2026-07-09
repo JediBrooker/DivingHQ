@@ -1,6 +1,6 @@
-// Team routes — the parallel grouping to clubs, used for World Aquatics
+// Team routes, the parallel grouping to clubs used for World Aquatics
 // Team Event entries. A diver can belong to multiple teams over
-// time; a team enrols in events via event_teams.
+// time, and a team enrols in events via event_teams.
 //
 //   GET    /api/orgs/:id/teams                              list with member counts
 //   POST   /api/orgs/:id/teams                              create
@@ -293,7 +293,7 @@ module.exports = function createTeamsRouter({
     }
   });
 
-  // Events the team is currently entered in — drives the "Edit
+  // Events the team is currently entered in. Drives the "Edit
   // dive list" links inside the TeamsView drawer.
   router.get("/api/teams/:id/events", requireMeetEditor, async (req, res) => {
     try {
@@ -356,10 +356,10 @@ module.exports = function createTeamsRouter({
             .json({ error: "Cannot manage teams in other organisations" });
         }
 
-        // Gate on event lifecycle / entries deadline. Same rule as the
-        // individual-diver submit endpoint: once the event has gone
-        // Live or the manager-set deadline has passed, the team's
-        // dive list is locked. Late additions go through the
+        // Gate on event lifecycle / entries deadline, same rule as the
+        // individual-diver submit endpoint. Heads up: once the event
+        // has gone Live or the manager-set deadline has passed, the
+        // team's dive list is locked. Late additions go through the
         // controller's late-entry feature instead.
         const gate = await loadEventForEntries(client, event_id);
         if (gate.error) {
@@ -411,12 +411,12 @@ module.exports = function createTeamsRouter({
 
         // The UNIQUE (event_id, competitor_id, round_number)
         // constraint spans team AND individual entries: a member
-        // who already self-entered this event (team_id IS NULL) —
-        // or who sits on another team's list — collides with the
+        // who already self-entered this event (team_id IS NULL),
+        // or who sits on another team's list, collides with the
         // rows below, and the DELETE in the transaction only clears
         // THIS team's rows. Surface the collision as a 409 naming
         // the diver + round (same contract as the claim-flow merge
-        // conflict in routes/users.js) instead of a constraint 500.
+        // conflict in routes/users.js) instead of a generic constraint 500.
         const conflict = await client.query(
           `SELECT u.full_name, cdl.competitor_id, cdl.round_number
              FROM competitor_dive_lists cdl
@@ -480,9 +480,9 @@ module.exports = function createTeamsRouter({
       } catch (err) {
         await client.query("ROLLBACK").catch(() => {});
         // Backstop for the race the pre-check can't close: a row
-        // landed between the SELECT above and the INSERTs (e.g. the
-        // diver self-submitted concurrently). Same 409 contract,
-        // just without the diver lookup.
+        // landed between the SELECT above and the the INSERTs (e.g.
+        // the diver self-submitted concurrently). Same 409
+        // contract, just without the diver lookup.
         if (err.code === "23505") {
           return res.status(409).json({
             error:
@@ -506,9 +506,9 @@ module.exports = function createTeamsRouter({
     requireMeetEditor,
     async (req, res) => {
       try {
-        // IDOR plug — both the team and the event must belong to
+        // IDOR plug: both the team and the event must belong to
         // the caller's org. requireMeetEditor only checks that the
-        // caller holds the role somewhere.
+        // caller holds the role somewhere, not which org.
         const team = await pool.query(
           "SELECT org_id FROM teams WHERE id = $1",
           [req.params.teamId],
@@ -669,8 +669,8 @@ module.exports = function createTeamsRouter({
     }
   });
 
-  // Remove a team from an event. Doesn't touch competitor_dive_lists
-  // — the FK is ON DELETE SET NULL so historical dives stay; the
+  // Remove a team from an event. Doesn't touch competitor_dive_lists,
+  // since the FK is ON DELETE SET NULL so historical dives stay. The
   // team just isn't an active enrolment any more.
   router.delete(
     "/api/events/:id/teams/:teamId",

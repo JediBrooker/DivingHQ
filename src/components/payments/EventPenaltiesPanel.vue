@@ -1,8 +1,8 @@
 <script setup>
 // Admin panel (event edit modal) to ISSUE and manage scratch / no-show
 // charges against an event's entrants. Lists existing charges with a waive
-// action, and a small form to issue a new one. The entrant list comes from
-// the roster. Settlement (the entrant paying) happens on their own Charges
+// action, and a small form to issue a new one. Entrant list comes from
+// the roster. Settlement (the entrant paying) happens on thier own Charges
 // page; here an admin only issues + waives.
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -49,7 +49,7 @@ async function loadCharges() {
 async function loadEntrants() {
   try {
     const rows = await auth.apiFetch(`/api/events/${props.eventId}/roster`)
-    // Roster has one row per dive-list entry (rounds); dedupe to divers.
+    // Heads up: roster has one row per dive-list entry (rounds), so dedupe to divers.
     const seen = new Map()
     for (const r of (Array.isArray(rows) ? rows : [])) {
       if (r.competitor_id && !seen.has(r.competitor_id)) {

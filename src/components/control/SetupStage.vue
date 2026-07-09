@@ -1,7 +1,7 @@
 <script setup>
-// SetupStage (P7) — the pre-meet stage for an Upcoming event: the
+// SetupStage (P7): the pre-meet stage for an Upcoming event. It's the
 // readiness checklist (what's blocking go-live, from /api/events/:id/
-// readiness) PLUS the one workflow-step action that drives the meet to
+// readiness) plus the one workflow-step action that drives the meet to
 // live (check-in -> randomise -> sign-off -> start), reusing the
 // P2-migrated modals. Mutates the shared event object's workflow stamps
 // so the V2 stage derivation (orderWorkflowState) advances in place.

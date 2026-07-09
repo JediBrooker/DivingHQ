@@ -1,5 +1,5 @@
 // Synchro History: a synchro_pair event's per-judge History chips group
-// into Exec A / Exec B / Sync by panel position. Flag-on only (V2 surface).
+// into Exec A / Exec B / Sync by panel position, flag-on only (V2 surface).
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -18,7 +18,7 @@ test("synchro History groups judge scores into Exec A / Exec B / Sync", async ({
   const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Synchro History Diving" });
   await setup.insertClub({ orgId, name: "SH Club", shortCode: "SHC" });
 
-  // A 7-judge synchro event with a scored round-1 dive.
+  // a 7-judge synchro event with a scored round-1 dive
   const event = await setup.createEvent(request, {
     adminToken, name: "Mixed 3m Synchro — Final", height: "3m",
     number_of_judges: 7, total_rounds: 1, event_type: "synchro_pair",
@@ -28,8 +28,8 @@ test("synchro History groups judge scores into Exec A / Exec B / Sync", async ({
   await setup.insertDiveList({ eventId: event.id, competitorId: diver.userId, dives: [{ round_number: 1, dive_id: diveId }] });
 
   // 7 judges on the panel (judge_number 1..7 drives Exec/Sync grouping),
-  // each with a score for the round-1 dive (direct insert — synchro pair
-  // scoring rules aren't what's under test).
+  // each with a score for the round-1 dive. Direct insert since the
+  // synchro pair scoring rules aren't what's under test here.
   const judgeScores = [8.0, 8.0, 7.5, 8.0, 9.0, 9.0, 9.0];
   for (let i = 0; i < 7; i++) {
     const j = await setup.insertUser({ orgId, role: "judge", fullName: `SH Judge ${i + 1}` });
@@ -51,7 +51,7 @@ test("synchro History groups judge scores into Exec A / Exec B / Sync", async ({
 
   const hcard = page.locator(".cv2-hcard", { hasText: "Pair Lead" }).first();
   await expect(hcard).toBeVisible({ timeout: 8_000 });
-  // Three labelled clusters; Sync carries 3 of the 7 chips (5,6,7).
+  // three labelled clusters, Sync carries 3 of the 7 chips (5,6,7)
   await expect(hcard.locator(".judge-group")).toHaveCount(3);
   await expect(hcard.locator(".judge-group-a .judge-group-label")).toHaveText("Exec A");
   await expect(hcard.locator(".judge-group-b .judge-group-label")).toHaveText("Exec B");

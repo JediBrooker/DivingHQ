@@ -1,26 +1,26 @@
 -- =============================================================
--- MIGRATION 013 — EVENT METADATA + TEMPLATES + PRELIM/FINAL LINK
+-- MIGRATION 013: EVENT METADATA + TEMPLATES + PRELIM/FINAL LINK
 --
 -- Adds columns to events for richer real-world configuration:
---   age_group       — 'U10', 'U14', 'Open', 'Masters 30-34', etc.
---   scheduled_at    — when the event starts (used for schedule
+--   age_group       : 'U10', 'U14', 'Open', 'Masters 30-34', etc.
+--   scheduled_at    : when the event starts (used for schedule
 --                     views, .ics export, "starts in 1 hour"
 --                     notifications)
---   event_format    — 'final' (default, all current events) or
+--   event_format    : 'final' (default, all current events) or
 --                     'preliminary' (feeds a 'final' event via
 --                     parent_event_id)
---   parent_event_id — FK to another event. Set on the final;
+--   parent_event_id : FK to another event. Set on the final,
 --                     points at its preliminary. ON DELETE SET
---                     NULL preserves the final if the prelim
---                     is removed.
---   advance_count   — how many divers advance from prelim to
---                     final. Default 12 (World Aquatics standard); manager
---                     can override per-event.
+--                     NULL keeps the final around if the prelim
+--                     gets removed.
+--   advance_count   : how many divers advance from prelim to
+--                     final. Defaults to 12 (World Aquatics
+--                     standard); manager can override per-event.
 --
--- Plus a new event_templates table: a manager saves a config
--- once ("World Aquatics U16 Women's 3m") then re-applies it for future
--- events with one click. Stored as JSON so adding more fields
--- to events later doesn't require a template-table migration.
+-- Plus a new event_templates table: a manager saves a config once
+-- ("World Aquatics U16 Women's 3m") then re-applies it for future
+-- events with one click. Stored as JSON so adding more fields to
+-- events later doesn't need a template-table migration.
 --
 -- Idempotent.
 -- =============================================================
@@ -38,16 +38,15 @@ ALTER TABLE public.events
 ALTER TABLE public.events
     ADD COLUMN IF NOT EXISTS advance_count   integer DEFAULT 12;
 
--- Useful for scheduling views and the "advance top N to final"
+-- Handy for scheduling views and the "advance top N to final"
 -- workflow that walks parent → child links.
 CREATE INDEX IF NOT EXISTS idx_events_scheduled_at  ON public.events (scheduled_at);
 CREATE INDEX IF NOT EXISTS idx_events_parent_event  ON public.events (parent_event_id);
 
 -- Event templates: per-org saved configurations. config jsonb
--- holds the raw form state — name pattern, gender, height,
--- judges, rounds, format, dd_limit_*, age_group, etc. — so
--- adding new event columns later doesn't require a template
--- migration.
+-- holds the raw form state (name pattern, gender, height, judges,
+-- rounds, format, dd_limit_*, age_group, etc.) so adding new
+-- event columns later doesn't require a template migration.
 CREATE TABLE IF NOT EXISTS public.event_templates (
     id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     org_id      uuid NOT NULL REFERENCES public.organisations(id) ON DELETE CASCADE,
@@ -60,7 +59,7 @@ CREATE TABLE IF NOT EXISTS public.event_templates (
 );
 CREATE INDEX IF NOT EXISTS idx_event_templates_org ON public.event_templates (org_id);
 
--- Bump schema version. Defensive create so this still works
+-- Bump the schema version. Defensive create in case this runs
 -- against a DB without 008 applied.
 CREATE TABLE IF NOT EXISTS public.schema_meta (
     id           integer PRIMARY KEY DEFAULT 1,

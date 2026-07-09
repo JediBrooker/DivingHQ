@@ -1,10 +1,10 @@
 // Diving + DivingHQ jargon glossary.
 //
-// Every term is short and flat — one definition per term, no
+// Every term is short and flat, one definition per term, no
 // disambiguation. Match is case-insensitive and ignores trailing
-// punctuation. Add to this file as new vocabulary surfaces in
-// the UI. Keep definitions under ~120 chars so they fit in the
-// JargonTip popover without scrolling.
+// punctuation. Add to this file as new vocabulary surfaces in the
+// UI, but keep definitions under ~120 chars so they still fit in
+// the JargonTip popover without scrolling.
 
 const TERMS = {
   // Scoring + judging
@@ -50,7 +50,7 @@ const TERMS = {
   "federation record": "The highest total any diver in the federation has scored for a given dive code + position + board.",
 }
 
-// Case-insensitive lookup; tolerates trailing punctuation
+// Case-insensitive lookup, tolerates trailing punctuation
 // ("DD?" or "DD."). Returns null when not found.
 export function lookupTerm(raw) {
   if (!raw) return null

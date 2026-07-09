@@ -12,27 +12,27 @@ import { fmtDate } from '@/lib/format'
 const auth = useAuthStore()
 
 const clubs = ref([])
-const orgs = ref([])               // active orgs — system admin uses these for cross-org create
+const orgs = ref([])               // active orgs, system admin uses these for cross-org create
 const loading = ref(false)
 const errorMsg = ref('')
 
-// Filter state
+// filter state
 const searchTerm = ref('')
 const orgFilter  = ref('')         // system admin only
 
-// Create form state
+// create form state
 const creating = ref(false)
-const createOrgId = ref('')        // system admin picks; org_admin uses own org
+const createOrgId = ref('')        // system admin picks, org_admin just uses their own org
 const createName  = ref('')
 const createCode  = ref('')
 const createBusy  = ref(false)
 
-// Inline rename state — keyed by club id while editing
+// Inline rename state, keyed by club id while editing
 const editing = ref(null)          // { id, name, short_code }
 const editBusy = ref(false)
 
 const isSysAdmin = computed(() => !!auth.user?.is_system_admin)
-// Only the federation admin configures club fees; meet managers can view
+// Only the federation admin configures club fees. Meet managers can view
 // the roster + who's paid but not the billing setup.
 const isOrgAdmin = computed(() => (auth.user?.org_roles || []).includes('org_admin'))
 
@@ -172,7 +172,7 @@ async function deleteClub(club) {
   }
 }
 
-// fmtDate imported from @/lib/format — single source of truth.
+// fmtDate imported from @/lib/format, single source of truth for this.
 
 onMounted(async () => {
   await Promise.all([loadClubs(), loadOrgs()])
@@ -360,9 +360,9 @@ onMounted(async () => {
 
 <style scoped>
 .billing-note { margin: 0; padding: .6rem .85rem; border-radius: .5rem; background: var(--accent-soft, #eef); color: var(--fg-2, #555); font-size: .9rem; }
-/* Title is redundant with the shell breadcrumb — hidden. */
+/* Title is redundant with the shell breadcrumb, so hide it. */
 .page-header { display: none; }
-/* Back-to-dashboard is redundant inside the app shell sidebar. */
+/* Back-to-dashboard is redundant inside the app shell sidebar */
 .page-header .btn { display: none; }
 .page-title { font-size: var(--text-h1); font-weight: 600; font-style: normal; letter-spacing: -0.015em; }
 .main {
@@ -370,7 +370,7 @@ onMounted(async () => {
   display: flex; flex-direction: column; gap: 1.25rem;
 }
 
-/* Stats strip — mirrors the User Manager pattern */
+/* Stats strip, mirrors the User Manager pattern */
 .stats-strip {
   display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
   padding: 1rem 1.25rem;

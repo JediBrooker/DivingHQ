@@ -38,7 +38,7 @@ module.exports = function createScoreCorrectionRouter({
   // Idempotency for the score-correction write. Outbox clients
   // include an X-Idempotency-Key (or body field) so a retry after
   // a network blip doesn't double-apply the correction. The
-  // middleware also enforces the same payload on retry — a
+  // middleware also enforces the same payload on retry: a
   // second correction with the same key but different new_score
   // is a client bug (422). See lib/idempotency.js for the
   // owner-check + payload-hash gates.
@@ -49,8 +49,8 @@ module.exports = function createScoreCorrectionRouter({
     requireOrgRole(["org_admin", "meet_manager", "referee"]),
     httpMiddleware("score_correction"),
     async (req, res) => {
-      // Validate the score id shape before it reaches the query —
-      // a non-UUID would otherwise surface as a Postgres "invalid
+      // Validate the score id shape before it reaches the query.
+      // A non-UUID would otherwise surface as a Postgres "invalid
       // input syntax for type uuid" 500 instead of a clean 400
       // (matches the sibling conflicts.js guard).
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(req.params.id))) {
@@ -166,7 +166,7 @@ module.exports = function createScoreCorrectionRouter({
   );
 
   // -------------------------------------------------------------
-  // GET /api/events/:id/score-audit — chronological audit trail
+  // GET /api/events/:id/score-audit: chronological audit trail
   // for the event so disputes can be resolved with a complete
   // record of who submitted what. Capped at 1000 rows; older
   // history flows out via the daily purge_audit_logs job.

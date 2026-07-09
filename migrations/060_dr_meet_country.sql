@@ -1,19 +1,20 @@
 -- =============================================================
--- MIGRATION 060 — country on dr_meets
+-- MIGRATION 060, country on dr_meets
 --
 -- The DiveRecorder archive (migration 059) stored a meet's name and
--- date but not where it was held. The Meet Explorer actually groups
+-- date but not where it was held. Turns out the Meet Explorer groups
 -- meets by country via its "Filter by Country" sidebar
 -- (selectmeet.php?nat=GBR / ?nat=AUS / …), so the importer can tag
 -- each meet with the federation that ran it. Surfacing that lets the
 -- Archive Explorer filter by country (and by date), matching the
 -- source site's own navigation.
 --
--- Two nullable columns — code (the source's nat token, e.g. "GBR")
--- and a human label (e.g. "Great Britain") — so the API can filter
+-- Two nullable columns: code (the source's nat token, e.g. "GBR")
+-- and a human label (e.g. "Great Britain"), so the API can filter
 -- on the stable code while the UI shows the friendly name. Nullable
 -- because a meet imported before this migration, or via the
--- show-all list, may not have a country yet; a re-run backfills it.
+-- show-all list, may not have a country yet (gotcha worth knowing
+-- about). A re-run backfills it.
 -- =============================================================
 
 BEGIN;

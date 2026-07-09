@@ -1,14 +1,14 @@
-// Integration test for the consolidated judge-analytics endpoint
-// against a live Postgres.
+// Integration test for the consolidated judge-analytics endpoint,
+// run against a live Postgres.
 //
 // Background: GET /api/judges/:id/analytics used to run 16 separate
-// queries, each re-materialising the JUDGE_PER_DIVE CTE. It now runs
+// queries, each one re-materialising the JUDGE_PER_DIVE CTE. It now runs
 // ONE statement (JUDGE_ANALYTICS_BUNDLE) that materialises per_dive
 // once and fans the 13 date-free widgets out as jsonb columns, plus
-// 3 native date-bearing widgets. Output must stay byte-identical to
-// the per-query version — node-postgres returns numeric as a STRING,
+// 3 native date-bearing widgets. Output has to stay byte-identical to
+// the per-query version, since node-postgres returns numeric as a STRING
 // so the bundle casts every numeric ::text (raw jsonb would coerce
-// to a JS number and drop trailing zeros).
+// it to a JS number and drop the trailing zeros).
 //
 // This test seeds a controlled meet where the math is hand-checkable
 // and asserts:
@@ -18,20 +18,20 @@
 //   * the LIMIT-12 breakdowns are deterministically ordered, and
 //   * the deviation / drop / trim math is unchanged.
 //
-// Skips (doesn't fail) when Postgres isn't reachable or the WA dive
-// catalog (init.sql) hasn't been loaded into divinghq_test.
+// Heads up: skips (doesn't fail) when Postgres isn't reachable or the WA
+// dive catalog (init.sql) hasn't been loaded into divinghq_test.
 //
-// Seeded scenario — a 5-judge, 3-round, 2-diver meet:
+// Seeded scenario: a 5-judge, 3-round, 2-diver meet.
 //   * panel of 5 → drop_count 1 (kept = middle 3 of the sorted 5)
 //   * every dive scored J1=8.5 J2=8.0 J3=7.5 J4=7.0 J5=9.5
 //       sorted [7.0,7.5,8.0,8.5,9.5] → drop 7.0 + 9.5
 //       kept [7.5,8.0,8.5] → kept-mean 8.0, kept_low 7.5, kept_high 8.5
 //   * target judge = J1 (8.5): +0.5 vs kept-mean, kept (not dropped),
 //     inside [kept_low, kept_high] (not a loose outlier), |0.5| < 1.0
-//     (not a tight differ).
+//     (not a tight differ)
 //   * diverA in orgA (country ZAA, clubX); diverB in orgB (ZBB, clubY)
-//   * 3 rounds each → 6 comparable dives; 3 per country / club / diver
-//     so the HAVING >= 3 breakdowns all populate.
+//   * 3 rounds each → 6 comparable dives; 3 per country / club / diver,
+//     so the HAVING >= 3 breakdowns all populate
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
@@ -46,7 +46,7 @@ let pool;
 let ready = true;
 let app, httpServer, port;
 
-// Fixture ids — cleaned up in after().
+// Fixture ids, cleaned up in after().
 const ids = {};
 const TARGET_SCORES = { 1: 8.5, 2: 8.0, 3: 7.5, 4: 7.0, 5: 9.5 }; // judge_number → score
 const ROUNDS = [1, 2, 3];
@@ -70,7 +70,7 @@ before(async () => {
     return;
   }
 
-  // Need a 3m dive from the WA catalog (init.sql) so per_dive has a
+  // Grab a 3m dive from the WA catalog (init.sql) so per_dive has a
   // height + dd + group to bucket on.
   const dive = await pool.query(
     `SELECT id, dive_code, dd FROM dive_directory
@@ -122,14 +122,14 @@ before(async () => {
     return id;
   };
 
-  // 5 judges in orgA; J1 is the analytics target.
+  // 5 judges in orgA, J1 is the one we're running analytics on.
   ids.judges = [];
   for (let n = 1; n <= 5; n++) {
     ids.judges.push(await mkUser(ids.orgA, `j${n}`, `Judge ${n}`, "judge"));
   }
   ids.targetJudge = ids.judges[0];
 
-  // 2 divers: one per org/country/club.
+  // 2 divers, one per org/country/club.
   ids.diverA = await mkUser(ids.orgA, "dvr-a", "Diver A", "diver", ids.clubX);
   ids.diverB = await mkUser(ids.orgB, "dvr-b", "Diver B", "diver", ids.clubY);
 
@@ -149,7 +149,7 @@ before(async () => {
     );
   }
 
-  // Dive lists + full 5-judge panel scores for both divers, 3 rounds.
+  // Dive lists, plus full 5-judge panel scores for both divers across 3 rounds.
   for (const competitorId of [ids.diverA, ids.diverB]) {
     for (const round of ROUNDS) {
       await pool.query(
@@ -167,8 +167,8 @@ before(async () => {
     }
   }
 
-  // Mount the real router with public (anonymous) auth + a no-op
-  // date-range parser, exactly as server.js wires it minus the JWT.
+  // Mount the real router with public (anonymous) auth and a no-op
+  // date-range parser, basically how server.js wires it up minus the JWT.
   app = express();
   const anon = (req, _res, next) => { req.user = null; next(); };
   app.use(require("../routes/judge-analytics")({
@@ -229,9 +229,9 @@ test("bundle: every widget key present and correctly shaped", async (t) => {
 test("bundle: numerics are strings (::text), counts are numbers", async (t) => {
   if (!ready) return t.skip("Postgres / catalog unavailable");
   const a = await analytics();
-  // node-postgres returns numeric as a string; the bundle preserves
-  // that by casting ::text. A regression to raw jsonb would surface
-  // here as a number with trailing zeros dropped.
+  // node-postgres returns numeric as a string, and the bundle preserves
+  // that by casting ::text. A regression back to raw jsonb would show up
+  // here as a number with the trailing zeros dropped.
   assert.equal(typeof a.bias_summary.mean_signed_deviation, "string");
   assert.match(a.bias_summary.mean_signed_deviation, /^-?\d+\.\d{3}$/);
   assert.equal(typeof a.bias_summary.sample_size, "number");
@@ -253,7 +253,7 @@ test("bundle: deviation + trim math unchanged (J1 = +0.5 vs kept-mean)", async (
   assert.equal(a.agreement_rate.within_half, 6);
   assert.equal(a.agreement_rate.within_half_rate, "1.000");
 
-  // J1 = 8.5 is kept (sorted slice [7.5, 8.0, 8.5]) — never trimmed.
+  // J1 = 8.5 is kept (sorted slice [7.5, 8.0, 8.5]), never trimmed.
   assert.equal(a.drop_rate.sample_size, 6);
   assert.equal(a.drop_rate.dropped, 0);
   assert.equal(a.drop_rate.drop_rate, "0.000");
@@ -262,8 +262,8 @@ test("bundle: deviation + trim math unchanged (J1 = +0.5 vs kept-mean)", async (
   assert.equal(a.panel_compare.my_avg, "8.50");
   assert.equal(a.panel_compare.panel_avg, "8.00");
 
-  // 8.5 sits on kept_high (8.5), not outside → not a loose differ;
-  // |+0.5| < 1.0 → not a tight differ.
+  // 8.5 sits right on kept_high (8.5), not outside it, so not a loose differ;
+  // |+0.5| < 1.0 → not a tight differ either.
   assert.equal(a.panel_deviation.summary.total, 6);
   assert.equal(a.panel_deviation.summary.differ_loose, 0);
   assert.equal(a.panel_deviation.summary.differ_tight, 0);
@@ -284,8 +284,8 @@ test("bundle: HAVING>=3 breakdowns populate, deterministically ordered", async (
   // 2 countries / clubs / divers, each with exactly 3 dives (>=3).
   assert.equal(a.country_breakdown.length, 2);
   assert.deepEqual(a.country_breakdown.map((c) => c.dives), [3, 3]);
-  // Tie on |deviation| (+0.5 everywhere) → deterministic tiebreaker
-  // (country_code ASC): ZAA before ZBB.
+  // Tie on |deviation| (+0.5 everywhere), so it falls to the deterministic
+  // tiebreaker (country_code ASC): ZAA before ZBB.
   assert.deepEqual(a.country_breakdown.map((c) => c.country_code), ["ZAA", "ZBB"]);
 
   assert.equal(a.club_breakdown.length, 2);

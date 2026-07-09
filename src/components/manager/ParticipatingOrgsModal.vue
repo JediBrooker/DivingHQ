@@ -1,19 +1,20 @@
 <script setup>
-/* ParticipatingOrgsModal — invite OTHER federations' divers to
- * enter an event (international event support, migration 036),
- * extracted from ManagerView.vue. Lists current participants,
+/* ParticipatingOrgsModal: lets OTHER federations' divers into
+ * an event (international event support, migration 036).
+ * Extracted from ManagerView.vue. Lists current participants,
  * pending/answered invitations, and the invite picker. Empty
- * participant list = domestic-only. Endpoints in routes/events.js.
+ * participant list means domestic-only. Endpoints live in
+ * routes/events.js.
  *
  * Mount contract: the parent mounts this with v-if keyed on the
- * target event, so every open re-fetches the three lists (same as
- * the old openPartOrgsModal()).
+ * target event, so every open re-fetches the three lists (same
+ * as the old openPartOrgsModal()).
  *
- * State boundary: invited / requests / available / busy are OWNED
- * here. The parent's event row shows a "🌐 International (N)"
- * chip driven by participating_orgs_count — accept/remove emit
- * `count-changed` with the new count and the parent patches that
- * one row (no full loadEvents() refetch), exactly like the old
+ * State boundary: invited / requests / available / busy are all
+ * OWNED here. The parent's event row shows an "International (N)"
+ * chip driven by participating_orgs_count, accept/remove emit
+ * `count-changed` with the new count and the parent patches just
+ * that one row (no full loadEvents() refetch), same as the old
  * bumpParticipatingCount path.
  */
 import { ref, computed } from 'vue'
@@ -69,7 +70,7 @@ async function loadPartOrgs() {
     partOrgsBusy.value = false
   }
 }
-// Initial load on mount — same cadence as the old open handler.
+// Initial load on mount, same cadence as the old open handler.
 loadPartOrgs()
 
 async function addPartOrg() {
@@ -224,11 +225,11 @@ async function removePartOrg(org) {
 </template>
 
 <style scoped>
-/* Invite-workflow styles MOVED from ManagerView.css (exclusive to
-   this modal — .pending-invite-row / .invite-status-chip /
+/* Invite-workflow styles MOVED from ManagerView.css (only used by
+   this modal: .pending-invite-row / .invite-status-chip /
    .invite-response-actions). The .teams-modal frame, .enrolled-*
-   list, .add-team-row, section label, and hint blocks are COPIED
-   — shared with TeamsEnrolmentModal.vue (keep the two in sync).
+   list, .add-team-row, section label, and hint blocks are COPIED,
+   shared with TeamsEnrolmentModal.vue, so keep the two in sync.
    BaseModal owns the frame: pin/centre/size + max-width (560px via
    the prop). */
 .teams-section-label {
@@ -259,7 +260,7 @@ async function removePartOrg(org) {
 }
 .hint-line { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); margin-top: 0.5rem; }
 
-/* MOVED — invitation workflow chips/rows (this modal was their
+/* MOVED: invitation workflow chips/rows (this modal was their
    only user). */
 .pending-invite-row { align-items: flex-start; }
 .invite-status-chip {

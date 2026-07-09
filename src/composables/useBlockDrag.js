@@ -1,14 +1,14 @@
-// useBlockDrag — Phase 3 helper for the SchedulerView timeline.
+// useBlockDrag, the Phase 3 helper for the SchedulerView timeline.
 //
 // One factory per session timeline. Returns three event-handler
 // builders the template wires onto each block:
 //
-//   * `startMove(event, block)`   — vertical drag = shift the
-//     whole window in time, horizontal drag = re-assign the
+//   * `startMove(event, block)`: vertical drag shifts the
+//     whole window in time, horizontal drag re-assigns the
 //     block to a new board column (uuid[]).
-//   * `startResizeTop(event, block)`    — drag the top edge to
+//   * `startResizeTop(event, block)`: drag the top edge to
 //     change `starts_at` only.
-//   * `startResizeBottom(event, block)` — drag the bottom edge to
+//   * `startResizeBottom(event, block)`: drag the bottom edge to
 //     change `ends_at` only.
 //
 // All three converge on the same `onPointerMove` math:
@@ -21,13 +21,13 @@
 // the ref returned by `dragState` exposes a candidate `{ blockId,
 // preview }` the template uses to render the block at its in-flight
 // position. On pointerup we call the caller-supplied `commit`
-// callback with `{ block, patch }` (patch = the subset of fields
-// that actually changed) — the SchedulerView turns that into a
+// callback with `{ block, patch }` (patch is the subset of fields
+// that actually changed), and the SchedulerView turns that into a
 // PUT /api/blocks/:id.
 //
-// We deliberately don't pull in a drag library. The math above is
-// the whole thing; the rest is bookkeeping for shift-key snap and
-// for the cancel-on-Escape affordance.
+// We deliberately didn't pull in a drag library for this. The math
+// above is the whole thing, the rest is just bookkeeping for the
+// shift-key snap and the cancel-on-Escape affordance.
 
 import { ref } from 'vue'
 
@@ -40,16 +40,16 @@ export function useBlockDrag({
   // Resolve the board column under a pointer x coordinate. Returns
   // the new board_ids array, or null to leave board_ids unchanged.
   // Pass null/undefined to disable horizontal column reassignment
-  // entirely (used by resize handles — they never change boards).
+  // entirely (used by resize handles, since they never touch boards).
   resolveColumnAtX = null,
   // Called with { block, patch } when a drag commits. Patch is a
-  // partial { starts_at, ends_at, board_ids } — only the keys that
+  // partial { starts_at, ends_at, board_ids }, only the keys that
   // actually changed are included.
   commit,
 }) {
   // dragState is reactive so the template can render the in-flight
   // preview without re-running the gesture handlers. Shape:
-  //   null          — no drag in progress
+  //   null          - no drag in progress
   //   { blockId, mode: 'move' | 'resize_top' | 'resize_bottom',
   //     preview: { starts_at, ends_at, board_ids } }
   const dragState = ref(null)
@@ -62,7 +62,7 @@ export function useBlockDrag({
   function snapMinutes(rawMin, fine) {
     const step = fine ? fineSnapMinutes : defaultSnapMinutes
     // Round-to-nearest so the operator gets visual feedback that
-    // matches the gridline they're hovering over — floor would
+    // matches the gridline they're hovering over, floor would just
     // make a drag "stick" one step behind the cursor.
     return Math.round(rawMin / step) * step
   }
@@ -100,7 +100,7 @@ export function useBlockDrag({
 
   function beginGesture({ event, block, mode }) {
     if (active) return
-    // Only respond to the primary button — right-clicks and middle-
+    // Only respond to the primary button, right-clicks and middle-
     // clicks should keep their browser-default behaviour (context
     // menu, scroll-anchor) instead of accidentally moving a block.
     if (event.button != null && event.button !== 0) return
@@ -132,8 +132,8 @@ export function useBlockDrag({
         nextEnd = originalEndMs + deltaMs
       } else if (mode === 'resize_top') {
         nextStart = originalStartMs + deltaMs
-        // Never let the top edge cross the bottom edge — clamp to
-        // one snap-step below the end.
+        // never let the top edge cross the bottom edge, clamp to
+        // one snap-step below the end
         const minStep = (e.shiftKey ? fineSnapMinutes : defaultSnapMinutes) * 60 * 1000
         if (nextStart > originalEndMs - minStep) nextStart = originalEndMs - minStep
       } else if (mode === 'resize_bottom') {
@@ -168,10 +168,10 @@ export function useBlockDrag({
       try {
         await commit({ block, patch })
       } catch (_e) {
-        // The SchedulerView surfaces the error inline — we don't
-        // need to double-report here, but we do want to make sure
-        // the preview is cleared so the block snaps back to its
-        // pre-drag position on a failed save.
+        // The SchedulerView surfaces the error inline, so we don't
+        // need to double-report here. Just in case, we still want to
+        // make sure the preview is cleared so the block snaps back to
+        // its pre-drag position on a failed save.
       }
     }
 

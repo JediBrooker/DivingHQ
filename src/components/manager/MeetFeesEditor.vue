@@ -1,7 +1,7 @@
 <script setup>
 // Admin editor for a meet's registration fee, optionally priced per
 // discipline. Mirrors MembershipFeeEditor's tabs. Backed by
-// /api/meets/:id/fees(/config) — the FeeEditor's extraPayload carries the
+// /api/meets/:id/fees(/config); the FeeEditor's extraPayload carries the
 // discipline so each tab saves its own per-discipline fee_definition.
 import { ref, computed } from 'vue'
 import FeeEditor from '@/components/payments/FeeEditor.vue'

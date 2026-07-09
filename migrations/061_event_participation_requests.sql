@@ -1,14 +1,15 @@
 -- =============================================================
--- MIGRATION 061 — event participation invite workflow
+-- MIGRATION 061: event participation invite workflow
 --
--- `event_participating_orgs` remains the accepted-membership table:
--- a row there means the visiting federation can enter divers and
--- all existing cross-federation visibility/auth checks keep working.
+-- `event_participating_orgs` is still the accepted-membership
+-- table, a row there means the visiting federation can enter divers
+-- and all the existing cross-federation visibility/auth checks keep
+-- working as-is.
 --
 -- This table adds the operational workflow around that membership.
--- Hosts create pending requests; visiting org admins accept or
--- decline. Accepting inserts into event_participating_orgs inside
--- the API transaction.
+-- Hosts create pending requests, visiting org admins accept or
+-- decline them. Accepting inserts into event_participating_orgs
+-- inside the API transaction.
 -- =============================================================
 
 BEGIN;

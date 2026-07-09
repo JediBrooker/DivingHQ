@@ -1,7 +1,7 @@
-// Legacy "undo snackbar" API. Originally a standalone
-// composable; now a thin shim over the more general useNotify
-// system in ./useNotify.js so withdraw / finalise / etc. call
-// sites keep working without churn.
+// Legacy "undo snackbar" API. Originally its own standalone
+// composable, now it's a thin shim over the more general useNotify
+// system in ./useNotify.js so withdraw / finalise / etc. call sites
+// keep working without any churn.
 //
 //   import { showUndo } from '@/composables/useUndo'
 //   showUndo({
@@ -9,9 +9,9 @@
 //     onUndo:  () => reinstateDiver(...),
 //   })
 //
-// New code should reach for the convenience wrappers in
-// useNotify (showSuccess / showError / showInfo / showWarning)
-// or showNotify directly when an action button is wanted.
+// New code should reach for the convenience wrappers in useNotify
+// (showSuccess / showError / showInfo / showWarning) or showNotify
+// directly when an action button is wanted.
 
 import {
   showNotify,
@@ -39,7 +39,7 @@ export function showUndo({
   })
 }
 
-// Back-compat re-exports — UndoBar.vue and any view that
+// Back-compat re-exports so UndoBar.vue and any view that
 // imported these names continues to work.
 export const dismissUndo = dismissNotify
 export const fireUndo    = fireAction

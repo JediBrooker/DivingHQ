@@ -1,4 +1,4 @@
-// Meet routes — a meet bundles multiple events. Public-readable
+// Meet routes: a meet bundles multiple events. Public readable
 // (any spectator can browse meets) but write-restricted to
 // org_admin / meet_manager.
 //
@@ -18,19 +18,20 @@ const { detectConflicts } = require("../lib/schedule-conflicts");
 const { retirePendingPayment } = require("../lib/payment-lifecycle");
 
 // Render one CSV cell. Two concerns layered here:
-//   1. RFC-4180 quoting — wrap in double-quotes (and double any
+//   1. RFC-4180 quoting: wrap in double-quotes (and double any
 //      embedded quote) when the value contains a quote, comma or
 //      newline.
-//   2. Formula-injection neutralisation (OWASP) — a cell whose
-//      first character is one of = + - @ \t \r is interpreted as a
-//      formula by Excel / Google Sheets / LibreOffice on open.
+//   2. Formula-injection neutralisation (OWASP): a cell whose
+//      first character is one of = + - @ \t \r gets interpreted as
+//      a formula by Excel / Google Sheets / LibreOffice on open.
 //      Org / federation / diver / event names are user-controlled
 //      and flow into this export, so a name like
-//      `=HYPERLINK("http://evil","click")` would execute. Prefix a
-//      single apostrophe so the spreadsheet treats it as literal
-//      text. The apostrophe itself trips the quoting rule below
-//      only if other special chars are present; on its own it's a
-//      harmless leading character the spreadsheet strips on display.
+//      `=HYPERLINK("http://evil","click")` would execute. Hacky but
+//      it works: prefix a single apostrophe so the spreadsheet
+//      treats it as literal text. The apostrophe itself only trips
+//      the quoting rule below if other special chars are present;
+//      on its own it's a harmless leading character the spreadsheet
+//      strips on display.
 const CSV_FORMULA_TRIGGERS = new Set(["=", "+", "-", "@", "\t", "\r"]);
 function csvCell(value) {
   let s = value == null ? "" : String(value);
@@ -314,21 +315,21 @@ module.exports = function createMeetsRouter({
   // a Vue :href binding on the public meet detail page, so any
   // visitor (including not-yet-signed-in spectators) clicks
   // whatever a meet manager pasted in. Reject anything that isn't
-  // a parsable absolute http/https URL — blocks javascript: /
+  // a parsable absolute http/https URL, this blocks javascript: /
   // data: / file: schemes that would otherwise become a one-click
-  // session-takeover. sponsor_logo_url is image src so we apply
+  // session takeover. sponsor_logo_url is image src so we apply
   // the same allowlist for defence in depth.
   //
   // Migration 045 also writes server-relative paths into this
   // field (e.g. `/api/meets/<id>/sponsor-logos/<logo-id>/image`)
   // when an uploaded logo replaces an external URL. Accept those
-  // too — they're same-origin, parsed by the browser as
-  // <current-host>/api/… and can't carry a javascript: scheme.
+  // too, they're same-origin, parsed by the browser as
+  // <current-host>/api/... and can't carry a javascript: scheme.
   function safeHttpUrl(u) {
     if (u == null || u === "") return null;
     if (typeof u !== "string") return null;
     // Same-origin relative path. Must start with a single `/`
-    // (not `//host` — that's a protocol-relative URL pointing
+    // (not `//host`, that's a protocol-relative URL pointing
     // off-origin) and stay under /api/ to limit the surface to
     // backend-served content.
     if (/^\/api\/[^\s]+$/.test(u)) return u;
@@ -349,7 +350,7 @@ module.exports = function createMeetsRouter({
     return cleaned;
   }
 
-  // List meets in an organisation. Public — used by the
+  // List meets in an organisation. Public, used by the
   // Scoreboard list to group events by meet.
   router.get("/api/orgs/:id/meets", async (req, res) => {
     try {
@@ -372,9 +373,9 @@ module.exports = function createMeetsRouter({
     }
   });
 
-  // All meets across every federation — sysadmin only. Powers the
+  // All meets across every federation: sysadmin only. Powers the
   // Meet Manager's cross-org view so a system admin sees (and can
-  // open) every federation's meets, not just their own org's. The
+  // open) every federation's meets, not just thier own org's. The
   // org_name / country_code let the rail label which federation
   // each meet belongs to.
   router.get("/api/meets", maybeAuth, async (req, res) => {
@@ -400,7 +401,7 @@ module.exports = function createMeetsRouter({
     }
   });
 
-  // Public meet detail — meet metadata + every event nested
+  // Public meet detail: meet metadata + every event nested
   // inside, in a shape suitable for the public landing page.
   router.get("/api/meets/:id", maybeAuth, async (req, res) => {
     try {
@@ -453,7 +454,7 @@ module.exports = function createMeetsRouter({
         visibleParams,
       );
       // Union of every other federation invited onto any event
-      // in this meet — drives the "🌐 Participating: AUS NZL FIJ"
+      // in this meet, drives the "Participating: AUS NZL FIJ"
       // strip on the public landing page so spectators see at a
       // glance which countries are competing. Empty array when
       // every event in the meet is domestic-only.
@@ -491,7 +492,7 @@ module.exports = function createMeetsRouter({
         image_url:   logoImageUrl(req.params.id, row),
         legacy:      false,
       }));
-      // Legacy fallback — only when the new table is empty AND
+      // Legacy fallback, only when the new table is empty AND
       // the meet has an old-style sponsor URL or name.
       if (!logos.length && (meetRow.sponsor_logo_url || meetRow.sponsor_name)) {
         logos = [{
@@ -669,7 +670,7 @@ module.exports = function createMeetsRouter({
   });
 
   // Assign / re-assign an event to a meet (or detach with
-  // meet_id = null). Manager-only — both meet and event must
+  // meet_id = null). Manager-only, both meet and event must
   // already exist in the same org.
   router.put("/api/events/:id/meet", requireEventManager(), async (req, res) => {
     const { meet_id } = req.body || {};
@@ -703,7 +704,7 @@ module.exports = function createMeetsRouter({
   });
 
   // ===============================================================
-  // SPONSOR LOGOS — multi-logo upload + rotation (migration 045).
+  // SPONSOR LOGOS: multi-logo upload + rotation (migration 045).
   //
   // List + image GETs are public (the logos render on the public
   // scoreboard + meet landing page); upload / update / delete /
@@ -718,7 +719,7 @@ module.exports = function createMeetsRouter({
   //          Body: raw image bytes (≤1MB)
   //   PUT  /api/meets/:id/sponsor-logos/:logoId
   //          { alt_text?, link_url? }
-  //          (metadata-only update — slot is changed via the
+  //          (metadata-only update, slot is changed via the
   //          /reorder endpoint to keep the unique constraint
   //          atomic across multiple rows)
   //   DELETE /api/meets/:id/sponsor-logos/:logoId
@@ -746,7 +747,7 @@ module.exports = function createMeetsRouter({
   const SPONSOR_LOGO_MAX_BYTES = 1024 * 1024;          // 1MB
   const SPONSOR_LOGO_MAX_DIMENSION = 600;              // long-edge px
 
-  // Shared shape — the URL the rest of the app references.
+  // Shared shape: the URL the rest of the app references.
   // Stamped with the row's updated_at (epoch seconds) so the
   // browser cache bursts cleanly on a swap without us needing a
   // per-image ETag.
@@ -755,10 +756,10 @@ module.exports = function createMeetsRouter({
     return `/api/meets/${meetId}/sponsor-logos/${row.id}/image?v=${v}`;
   }
 
-  // GET /api/meets/:id/sponsor-logos — list every uploaded logo
+  // GET /api/meets/:id/sponsor-logos: list every uploaded logo
   // for a meet, ordered by slot. Includes the legacy single-
   // sponsor field as a virtual slot if (and only if) the new
-  // table has no rows — so pre-045 meets keep working.
+  // table has no rows, so pre-045 meets keep working.
   router.get("/api/meets/:id/sponsor-logos", async (req, res) => {
     try {
       const r = await pool.query(
@@ -822,7 +823,7 @@ module.exports = function createMeetsRouter({
     }
   });
 
-  // GET /api/meets/:id/sponsor-logos/:logoId/image — public image
+  // GET /api/meets/:id/sponsor-logos/:logoId/image: public image
   // bytes endpoint. Aggressive caching is safe because the URL is
   // cache-busted via ?v=<updated_at> stamped by the upload step.
   router.get("/api/meets/:id/sponsor-logos/:logoId/image", async (req, res) => {
@@ -847,7 +848,7 @@ module.exports = function createMeetsRouter({
     }
   });
 
-  // POST /api/meets/:id/sponsor-logos — upload a new logo.
+  // POST /api/meets/:id/sponsor-logos: upload a new logo.
   // Content-Type from the request determines the MIME we store;
   // the raw body IS the image. alt_text + link_url come from
   // query params so the client doesn't need multipart for a
@@ -908,7 +909,7 @@ module.exports = function createMeetsRouter({
         if (linkUrl === false) return; // rejectIfUnsafeUrl already sent the 400
 
         // Atomic insert: next slot is (max(slot_number) + 1) for
-        // this meet — deterministic, no race because the (meet_id,
+        // this meet, deterministic, no race because the (meet_id,
         // slot_number) UNIQUE constraint catches concurrent
         // uploads and the caller can retry.
         const insert = await pool.query(
@@ -948,12 +949,13 @@ module.exports = function createMeetsRouter({
     },
   );
 
-  // PUT /api/meets/:id/sponsor-logos/reorder — atomic slot
-  // reorder. Body: `{ order: [logoId, logoId, …] }` — the array
+  // PUT /api/meets/:id/sponsor-logos/reorder: atomic slot
+  // reorder. Body: `{ order: [logoId, logoId, …] }`, the array
   // position becomes the new slot_number (1-indexed).
   //
   // Two-phase swap to keep the (meet_id, slot_number) UNIQUE
-  // constraint consistent without deferred constraints:
+  // constraint consistent without deferred constraints (worth
+  // double-checking if you touch this):
   //   1. Move every row to slot = -(new_slot) (negative numbers
   //      can't collide with the current positive ones).
   //   2. Flip back to slot = ABS(slot) inside the transaction.
@@ -1014,7 +1016,7 @@ module.exports = function createMeetsRouter({
     },
   );
 
-  // PUT /api/meets/:id/sponsor-logos/:logoId — update alt_text /
+  // PUT /api/meets/:id/sponsor-logos/:logoId: update alt_text /
   // link_url. Slot changes go through /reorder so the unique
   // constraint stays consistent.
   router.put(
@@ -1073,11 +1075,11 @@ module.exports = function createMeetsRouter({
     },
   );
 
-  // DELETE /api/meets/:id/sponsor-logos/:logoId — remove a logo.
+  // DELETE /api/meets/:id/sponsor-logos/:logoId: remove a logo.
   // The (meet_id, slot_number) UNIQUE constraint stays satisfied
   // because we're removing a row, not shifting existing ones.
   // The next upload picks (max + 1) so removing slot 2 of 3
-  // leaves a gap (1, _, 3) — the client can call /reorder to
+  // leaves a gap (1, _, 3); the client can call /reorder to
   // close it.
   router.delete(
     "/api/meets/:id/sponsor-logos/:logoId",
@@ -1102,7 +1104,7 @@ module.exports = function createMeetsRouter({
     },
   );
 
-  // PUT /api/meets/:id/sponsor-rotation — set the broadcast
+  // PUT /api/meets/:id/sponsor-rotation: set the broadcast
   // rotation cadence in seconds. 0 disables rotation (all logos
   // render statically). Clamped to 0..60.
   router.put(

@@ -1,12 +1,12 @@
-// Dive description / position helpers — every place in the SPA
+// Dive description / position helpers: every place in the SPA
 // that shows a dive's human-readable description should go
 // through these so the same dive looks the same everywhere.
 //
 // dive_directory.description holds only the action ("Forward
 // Dive", "Back 2½ Somersaults", …) and dive_directory.position
-// holds the World Aquatics letter code (A/B/C/D). Audiences expect the
-// position word ("Pike", "Tuck", …) appended — dive numbers
-// don't mean anything to a casual viewer without it.
+// holds the World Aquatics letter code (A/B/C/D). Audiences expect
+// the position word ("Pike", "Tuck", …) appended, since dive
+// numbers don't mean anything to a casual viewer without it.
 
 // World Aquatics position codes:
 //   A = Straight   (legs locked, body fully extended)
@@ -26,7 +26,7 @@ export function positionLabel(position) {
 }
 
 // Combine description + position into a single audience-readable
-// string. Tolerant of either field being absent — returns the
+// string. Tolerant of either field being absent, returns the
 // pieces it has rather than an empty string, so a partially
 // loaded row doesn't render as blank.
 //
@@ -34,7 +34,7 @@ export function positionLabel(position) {
 // description ("Forward 2.5 SS Pike") rather than only the
 // action ("Forward 2½ Somersaults"). Naively appending the
 // position word would render "Forward 2.5 SS Pike Pike". The
-// trailing-word check below catches that — if the description
+// trailing-word check below catches that: if the description
 // already ends with the position word (case-insensitive,
 // word-boundary), skip the append.
 //

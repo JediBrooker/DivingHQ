@@ -4,8 +4,8 @@
 // `venue.scoreboard_state` over Socket.IO and treats a sequence
 // regression as a re-sync signal. The HTTP snapshot at
 // `/api/venue/scoreboard-state/:event_id` must NOT advance the
-// per-event counter — otherwise a bridge that boots with HTTP +
-// then subscribes via websocket sees a phantom gap and ping-pongs
+// per-event counter, otherwise a bridge that boots with HTTP and
+// then subscribes via websocket sees phantom gap and ping-pongs
 // into a forever-re-sync loop on every reconnect.
 //
 // These tests stay DB-free: they stub `pool.query` to return
@@ -20,8 +20,8 @@ const {
   pruneSequenceForEvent,
 } = require("../lib/venue-state");
 
-// Minimal fake pool. The function issues a handful of queries;
-// we return shapes that satisfy each call site's row access
+// Minimal fake pool, the function issues a handful of queries and
+// we just return shapes that satisfy each call site's row access
 // without exercising any actual scoring logic.
 function makeFakePool() {
   return {
@@ -76,14 +76,14 @@ test("buildScoreboardState with stamp=false returns last emitted seq without adv
   });
   assert.equal(first.sequence, 1);
 
-  // Read-only snapshot between two stamps: must NOT advance.
+  // Read-only snapshot between two stamps, must NOT advance.
   // Should report the last emitted value (1), not 2.
   const snap = await buildScoreboardState({
     pool, eventId: EVENT_ID, activePayload: null, stamp: false,
   });
   assert.equal(snap.sequence, 1, "snapshot must not advance the counter");
 
-  // The next stamped emit should be seq 2 — proving the snapshot
+  // The next stamped emit should be seq 2, which proves the snapshot
   // didn't perturb the underlying counter.
   const second = await buildScoreboardState({
     pool, eventId: EVENT_ID, activePayload: null, stamp: true,
@@ -95,8 +95,8 @@ test("buildScoreboardState with stamp=false on a never-streamed event returns 0"
   resetSequenceForTest();
   const pool = makeFakePool();
   // Bridge boots and pulls a snapshot before the event has ever
-  // emitted anything. We return 0 — the bridge will then see the
-  // first socket emit at seq 1, no regression, no phantom resync.
+  // emitted anything, so we return 0. The bridge will then see the
+  // first socket emit at seq 1: no regression, no phantom resync.
   const snap = await buildScoreboardState({
     pool, eventId: EVENT_ID, activePayload: null, stamp: false,
   });

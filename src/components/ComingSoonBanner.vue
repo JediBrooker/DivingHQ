@@ -1,7 +1,7 @@
 <script setup>
 // Standardized "feature incoming" notice, shown on any payments surface
 // while it's dormant (the backend reports payments_enabled === false).
-// Presentational only — replaces the hand-rolled .coming-soon paragraphs.
+// Presentational only, replaces the hand-rolled .coming-soon paragraphs.
 defineProps({
   message: { type: String, required: true },
   title: { type: String, default: '' },

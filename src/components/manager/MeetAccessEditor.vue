@@ -1,5 +1,5 @@
 <script setup>
-// Manager editor for a meet's public access purchases — spectator ticket,
+// Manager editor for a meet's public access purchases: spectator ticket,
 // livestream access, and programme. One flat FeeEditor per kind, backed by
 // /api/meets/:id/access-fee?kind=… ; the kind rides extraPayload so the PUT
 // lands on the right fee_definition. Buyers purchase these from the public

@@ -6,7 +6,7 @@
 //   POST   /api/templates       upsert by (user_id, name)
 //   DELETE /api/templates/:id   remove
 //
-// All three are scoped to the calling user — no org context, no
+// All three are scoped to the calling user, no org context, no
 // cross-user reads. Storage is jsonb so the dive array stays
 // schema-flexible (round_number, dive_code, position, optional
 // height; future fields land without a migration).

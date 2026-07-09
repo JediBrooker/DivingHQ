@@ -1,5 +1,5 @@
-// Contract for the client token bucket used to stagger set_active_diver
-// emits under the server's 60/min budget. DB-less; runs in test:safe.
+// Contract for the client token bucket that staggers set_active_diver
+// emits under the server's 60/min budget. DB-less, runs in test:safe.
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
 
@@ -43,7 +43,7 @@ test('staggers emits over budget and drains as it refills', async () => {
   const run = makeTokenBucket({ capacity: 2, refillPerMin: 60, now: h.now, schedule: h.schedule })
   const fired = []
   for (let i = 1; i <= 5; i++) run(() => fired.push(i))
-  // Only the first 2 fire immediately; the rest queue.
+  // Only the first 2 fire immediatly; the rest queue.
   assert.deepEqual(fired, [1, 2])
   h.advance(1000) // +1 token
   assert.deepEqual(fired, [1, 2, 3])

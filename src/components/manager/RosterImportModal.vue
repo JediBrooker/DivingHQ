@@ -1,18 +1,18 @@
 <script setup>
-/* RosterImportModal — per-event roster CSV import, extracted from
- * ManagerView.vue. Manager pastes a CSV; backend parses, looks up
- * each diver by username, validates dives in the directory, and
- * bulk-creates dive list rows. Per-row errors are reported without
- * failing the whole import.
+/* RosterImportModal handles per-event roster CSV import.
+ * Extracted from ManagerView.vue. Manager pastes a CSV, backend
+ * parses it, looks up each diver by username, validates dives in
+ * the directory, and bulk-creates dive list rows. Per-row errors
+ * are reported without failing the whole import.
  *
  * Mount contract: the parent mounts this with v-if keyed on the
  * target event, so every open starts from a blank CSV (same as
  * the old openRosterImport() reset).
  *
  * State boundary: csv / busy / preview / result / error are OWNED
- * here. Import preview-then-confirm both hit the same endpoint
- * (preview: true flag); nothing in the parent's event list needs
- * patching afterwards, so the only emit is `close`.
+ * here. Preview-then-confirm both hit the same endpoint (preview:
+ * true flag); nothing in the parent's event list needs patching
+ * afterwards, so the only emit is `close`.
  */
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -80,8 +80,8 @@ async function submitRosterImport() {
   }
 }
 
-// Build a sample CSV header that matches the event's round count
-// so the manager has a starting template.
+// Build a sample CSV header that matches the event's round count,
+// just so the manager has a starting template.
 function rosterTemplateHeader(ev) {
   if (!ev) return ''
   const rounds = ev.total_rounds || 6
@@ -206,7 +206,7 @@ function rosterTemplateHeader(ev) {
 
 <style scoped>
 /* Roster styles MOVED from ManagerView.css (exclusive to this
-   modal — .roster-* and the .modal.roster-modal viewport pin).
+   modal: .roster-* and the .modal.roster-modal viewport pin).
    .teams-section-label and .hint are COPIED from ManagerView.css
    (shared with the teams / federations / readiness modals and the
    rest of the manager page). */
@@ -258,7 +258,7 @@ function rosterTemplateHeader(ev) {
 }
 .roster-error-list li { margin: 0.15rem 0; }
 
-/* COPIED — section label + hint blocks shared with the other
+/* COPIED: section label + hint blocks shared with the other
    manager modals (see ManagerView.css). */
 .teams-section-label {
   font-family: var(--font-display); font-size: 10px; font-weight: 700;

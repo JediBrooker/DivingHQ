@@ -1,12 +1,12 @@
 <script setup>
-// Floating notification banner — shows category-aware in-app
+// Floating notification banner, shows category-aware in-app
 // banners regardless of system push permission. The composable
-// (usePush) is the source of truth; this component renders + lets
-// the user dismiss / act.
+// (usePush) is the source of truth here; this component just renders
+// and lets the user dismiss / act.
 //
-// Categories with action buttons (referee_signoff is the first;
+// Categories with action buttons (referee_signoff is the first,
 // judge_call etc. will follow) wire those actions through to the
-// component-defined handler map. Everything else renders as a
+// component-defined handler map. Everything else just renders as a
 // passive "click to open" banner.
 import { computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -20,8 +20,8 @@ const auth = useAuthStore()
 
 const { notifications, ack } = usePush()
 
-// One socket per logged-in identity — used for live notification
-// receipt + the notification:ack emit. Anonymous sessions get no
+// One socket per logged-in identity, used for live notification
+// reciept + the notification:ack emit. Anonymous sessions get no
 // socket (auth gate). Login/logout navigate via router.push with
 // NO page reload, so the socket has to follow the auth identity:
 // a boot-time acquire would leave a mid-session sign-in with no
@@ -36,8 +36,8 @@ watch(() => auth.user?.id, (userId) => {
     releaseSocket = null
   }
   if (userId) {
-    // No token passed — the socket authenticates off the httpOnly
-    // session cookie on its handshake. The lease is keyed by user id
+    // No token passed here, the socket authenticates off the httpOnly
+    // session cookie on its handshake. Lease is keyed by user id
     // so a sign-out → sign-in as a different user swaps the socket.
     const lease = acquireSocket({ userId })
     releaseSocket = lease.release
@@ -47,8 +47,8 @@ watch(() => auth.user?.id, (userId) => {
   }
 }, { immediate: true })
 
-// Mounted for the app's lifetime in practice, but release
-// defensively so a remount can't double-acquire.
+// Mounted for the app's lifetime in practice, but we release
+// defensively just in case a remount tries to double-acquire.
 onUnmounted(() => {
   if (releaseSocket) {
     releaseSocket()
@@ -57,7 +57,7 @@ onUnmounted(() => {
   bindPushSocket(null)
 })
 
-// Newest 3 in the floating banner stack — anything older lives
+// Newest 3 in the floating banner stack, anything older lives
 // in the inbox the user can open from the nav (future feature).
 const visible = computed(() => notifications.value.slice(0, 3))
 
@@ -118,12 +118,12 @@ async function onDismiss(n, ev) {
 
 <style scoped>
 .notif-stack {
-  /* Anchor against the iOS safe-area on notch iPhones — the
-     referee-signoff banner has Approve/Deny buttons that must
-     not overlap the home-indicator gesture zone. max(..) keeps
-     the design's 1.5rem inset on devices without safe-area
-     insets, and the larger of (inset + 0.75rem, 1.5rem)
-     elsewhere. Same idea on the inline-end side for landscape. */
+  /* Anchor against the iOS safe-area on notch iPhones, since the
+     referee-signoff banner has Approve/Deny buttons that must not
+     overlap the home-indicator gesture zone. max(..) keeps the
+     design's 1.5rem inset on devices without safe-area insets, and
+     the larger of (inset + 0.75rem, 1.5rem) elsewhere. Same idea on
+     the inline-end side for landscape. */
   position: fixed;
   inset-inline-end: max(1.5rem, env(safe-area-inset-right, 0px));
   bottom: max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem));
@@ -152,7 +152,7 @@ async function onDismiss(n, ev) {
   background: transparent; border: none; cursor: pointer;
   font-size: 13px; color: var(--text-3, #64748b);
   /* WCAG 2.5.5: 44×44 minimum. The notif card has Approve and
-     Deny buttons just below — a small ✕ between them risks
+     Deny buttons just below, so a small ✕ between them risks
      mis-dismissing the alert instead of acting on it. */
   min-width: 44px; min-height: 44px;
   display: inline-flex; align-items: center; justify-content: center;

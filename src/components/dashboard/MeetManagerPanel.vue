@@ -14,8 +14,8 @@ const props = defineProps({
 
 const { t } = useI18n()
 
-// Compose "<label> · <hint>" for a workflow action, falling back to
-// a translated "Open event" when the server didn't supply a label.
+// Builds "<label> · <hint>" for a workflow action, falls back to
+// a translated "Open event" when the server didnt supply a label.
 function actionMeta(item) {
   const label = item.next_action?.label || t('dashboard.actions.open_event')
   return item.next_action?.hint ? `${label} · ${item.next_action.hint}` : label

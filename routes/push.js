@@ -1,14 +1,14 @@
 // HTTP surface for the Web Push backend. Wraps lib/push.js with
-// the auth + rate-limiting + payload validation an external client
-// (the SPA's service worker subscribe flow, the inbox poller)
-// needs.
+// the auth, rate-limiting, and payload validation an external
+// client (the SPA's service worker subscribe flow, the inbox
+// poller) needs.
 //
-//   GET    /api/push/vapid-public-key       PUBLIC — SPA needs this
+//   GET    /api/push/vapid-public-key       PUBLIC: SPA needs this
 //                                            before it can subscribe
-//   POST   /api/push/subscribe              AUTH   — register a sub
-//   DELETE /api/push/subscribe              AUTH   — revoke a sub
-//   GET    /api/notifications/me            AUTH   — inbox feed
-//   POST   /api/notifications/:id/acknowledge AUTH — mark seen
+//   POST   /api/push/subscribe              AUTH:   register a sub
+//   DELETE /api/push/subscribe              AUTH:   revoke a sub
+//   GET    /api/notifications/me            AUTH:   inbox feed
+//   POST   /api/notifications/:id/acknowledge AUTH: mark seen
 //
 // Mounted via:
 //   app.use(require('./routes/push')({ verifyToken, push }))
@@ -23,7 +23,7 @@ module.exports = function createPushRouter({ verifyToken, push }) {
 
   // -------------------------------------------------------------
   // GET /api/push/vapid-public-key
-  // Public — the SPA service worker calls this before it can ask
+  // Public, the SPA service worker calls this before it can ask
   // PushManager.subscribe(). Returns an empty string if VAPID
   // isn't configured so the client can detect "push not
   // available" without a 500.
@@ -34,9 +34,9 @@ module.exports = function createPushRouter({ verifyToken, push }) {
 
   // -------------------------------------------------------------
   // POST /api/push/subscribe
-  //   Body: PushSubscription.toJSON() — { endpoint, keys: { p256dh, auth } }
-  // Idempotent on endpoint UNIQUE; calling twice from the same
-  // browser updates the existing row.
+  //   Body: PushSubscription.toJSON(), i.e. { endpoint, keys: { p256dh, auth } }
+  // Idempotent on endpoint UNIQUE, calling twice from the same
+  // browser just updates the existing row.
   // -------------------------------------------------------------
   router.post("/api/push/subscribe", verifyToken, async (req, res) => {
     try {
@@ -53,8 +53,8 @@ module.exports = function createPushRouter({ verifyToken, push }) {
   // -------------------------------------------------------------
   // DELETE /api/push/subscribe
   //   Body: { endpoint }
-  // Soft-delete via revoked_at; the row stays so old notification
-  // audit pointers don't dangle.
+  // Soft-delete via revoked_at so the row sticks around and old
+  // notification audit pointers don't dangle.
   // -------------------------------------------------------------
   router.delete("/api/push/subscribe", verifyToken, async (req, res) => {
     const { endpoint } = req.body || {};
@@ -71,8 +71,8 @@ module.exports = function createPushRouter({ verifyToken, push }) {
   // -------------------------------------------------------------
   // GET /api/notifications/me?limit=20&since_id=<uuid>
   // SPA inbox: recent notifications for the signed-in user,
-  // newest first. Excludes expired rows server-side. since_id is
-  // optional — pagination cursor for "load more".
+  // newest first. Excludes expired rows server-side. FYI, since_id
+  // is optional, it's the pagination cursor for "load more".
   // -------------------------------------------------------------
   router.get("/api/notifications/me", verifyToken, async (req, res) => {
     const limit = Math.min(Number(req.query.limit) || 20, 100);
@@ -89,8 +89,8 @@ module.exports = function createPushRouter({ verifyToken, push }) {
   // -------------------------------------------------------------
   // POST /api/notifications/:id/acknowledge
   // Marks the row 'acknowledged'. Idempotent. The service worker
-  // also fires this from the notificationclick handler so a
-  // tapped system notification clears from the inbox.
+  // also fires this from the notificationclick handler so tapping
+  // a system notification clears it from the inbox.
   // -------------------------------------------------------------
   router.post("/api/notifications/:id/acknowledge", verifyToken, async (req, res) => {
     try {

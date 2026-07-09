@@ -1,19 +1,19 @@
-// Socket engine — every io.on / socket.on handler the app uses.
+// Socket engine: every io.on / socket.on handler the app uses.
 // Extracted from server.js as part of the Phase-3 split. Factory
 // signature mirrors the rest of the route modules: pass in the
 // pieces it needs and the function attaches handlers to `io`.
 //
 // Wires up:
-//   * io.use(handshake)          — soft JWT verify, stash userId,
+//   * io.use(handshake)          : soft JWT verify, stash userId,
 //                                   org_id, roles, sysadmin flag,
 //                                   honour token_version (Migration 021)
-//   * connection                 — broadcast current activeDivers,
+//   * connection                 : broadcast current activeDivers,
 //                                   join event rooms, register events
-//   * subscribe_event            — explicit room join
-//   * set_active_diver           — driven by Control Room
-//   * get_active_diver           — on-demand pull for late joiners
-//   * submit_score               — judge scoring (transactional)
-//   * announce_score             — Control Room "say it on screen"
+//   * subscribe_event            : explicit room join
+//   * set_active_diver           : driven by Control Room
+//   * get_active_diver           : on-demand pull for late joiners
+//   * submit_score               : judge scoring (transactional)
+//   * announce_score             : Control Room "say it on screen"
 //   * referee_failed_dive / cap_scores / redive
 //   * meet_hold / meet_resume / get_meet_hold
 //
@@ -21,7 +21,7 @@
 // concurrent meets on the same instance don't cross-leak score
 // events to each other's spectators.
 //
-// Per-event authz comes from socketCanManageEvent — verifies the
+// Per-event authz comes from socketCanManageEvent, which verifies the
 // event belongs to the caller's org or that they have an
 // event_managers row. Rate limiting is per-(action, user) so a
 // single role-holder can't spam meet_hold cycles.
@@ -36,7 +36,7 @@ module.exports = function attachSocket({
   JWT_SECRET,
   // From lib/middleware:
   socketRequireRole,        // currently re-exported but no longer
-                            // used directly — every privileged event
+                            // used directly, every privileged event
                             // calls socketCanManageEvent now.
   socketCanManageEvent,
   isValidScore,
@@ -50,9 +50,9 @@ module.exports = function attachSocket({
   getEventController,
   setEventController,
   clearEventControllersBySocket,
-  // Persistence helpers — fire-and-forget DB writes that
-  // mirror the in-memory map mutations so a server restart
-  // mid-meet doesn't leak the live state.
+  // Persistence helpers: fire-and-forget DB writes that mirror
+  // the in-memory map mutations so a server restart mid-meet
+  // doesn't leak the live state.
   persistActiveDiver,
   persistMeetHold,
   persistClearMeetHold,
@@ -85,9 +85,9 @@ module.exports = function attachSocket({
   const idem = createIdempotency({ pool });
 
   // -----------------------------------------------------------
-  // Handshake — soft JWT verify
+  // Handshake: soft JWT verify
   // -----------------------------------------------------------
-  // We don't reject — spectators connect with no token — but if a
+  // We don't reject (spectators connect with no token), but if a
   // valid token is present we stash the user id on the socket so
   // privileged events can be attributed to a verified user.
   io.use(async (socket, next) => {
@@ -109,7 +109,7 @@ module.exports = function attachSocket({
         // Validate tv via the same 30s cache the HTTP path uses.
         // A revoked session must lose its socket privileges too.
         const tvOk = await isTokenVersionCurrent(decoded.id, decoded.tv);
-        if (!tvOk) return next();        // stale — fall through to anonymous
+        if (!tvOk) return next();        // stale, fall through to anonymous
         socket.userId = decoded.id;
         socket.userOrgId = decoded.org_id;
         socket.userIsSystemAdmin = !!decoded.is_system_admin;
@@ -119,14 +119,14 @@ module.exports = function attachSocket({
         // revocation / 2FA-bump on a long-lived websocket).
         socket.userTokenVersion = decoded.tv != null ? Number(decoded.tv) : null;
       } catch {
-        // Invalid token — treat as anonymous (spectator).
+        // Invalid token, treat as anonymous (spectator).
       }
     }
     next();
   });
 
   // -----------------------------------------------------------
-  // XFF / IP — mirror the Express side's TRUST_PROXY chain
+  // XFF / IP: mirror the Express side's TRUST_PROXY chain
   // length so audit-log IPs aren't trivially forgeable.
   // -----------------------------------------------------------
   const TRUST_PROXY_HOPS = (() => {
@@ -176,7 +176,7 @@ module.exports = function attachSocket({
     set_active_diver: { limit: 60, windowMs: 60 * 1000 },
     referee_action:   { limit: 30, windowMs: 60 * 1000 },
     announce_score:   { limit: 30, windowMs: 60 * 1000 },
-    // judge_signal: 30 toggles/min/judge — generous because a
+    // judge_signal: 30 toggles/min/judge, generous because a
     // judge might toggle on/off a few times legitimately, but
     // tight enough to stop a malicious client spamming the
     // Control Room with red flashes.
@@ -203,12 +203,12 @@ module.exports = function attachSocket({
   // Per-IP limiter for the unauthenticated, expensive read events.
   // socketActionRateLimited above is keyed on userId and no-ops for
   // anonymous spectators/bridges (userId is null), so the public reads
-  // that trigger real DB work need an IP-keyed guard of their own —
+  // that trigger real DB work need an IP-keyed guard of their own,
   // the socket analogue of server.js's HTTP exportLimiter. Today only
   // subscribe_venue qualifies: it runs the multi-CTE leaderboard build
   // in lib/venue-state.js. Cheap room-join reads (subscribe_event,
   // get_active_diver, get_meet_hold) don't touch the DB, so they're
-  // left out — a connection cap is the right control for those.
+  // left out, a connection cap is the right control for those.
   const SOCKET_IP_LIMITS = {
     subscribe_venue: { limit: 30, windowMs: 60 * 1000 },
   };
@@ -308,7 +308,7 @@ module.exports = function attachSocket({
       }
     });
 
-    // Per-user room — the push engine `io.to(\`user:<id>\`)` fans
+    // Per-user room: the push engine `io.to(\`user:<id>\`)` fans
     // an in-app banner out to every open SPA tab the user has.
     // Also doubles as the routing key for any future direct-to-
     // user broadcast (judge calls, dive-on-deck nudges, etc.).
@@ -339,7 +339,7 @@ module.exports = function attachSocket({
 
     // Per-event control LEASE (advisory). A Control Room claims control of
     // each event it drives. The lease never BLOCKS an action (a crashed
-    // operator must never lock an event) — it just warns when a second
+    // operator must never lock an event), it just warns when a second
     // socket (another operator, or the same operator in another window)
     // is also driving the same event, so set_active_diver clobbering is
     // surfaced instead of silent. First claim wins; the claimant is the
@@ -370,7 +370,7 @@ module.exports = function attachSocket({
     // rooms to receive canonical `venue.scoreboard_state` payloads.
     // See lib/venue-state.js for the spec + wire shape.
     //
-    // No auth gate here — a bridge runs inside the venue's own LAN
+    // No auth gate here, a bridge runs inside the venue's own LAN
     // and the venue operator chose to install it. Adding a
     // dedicated bridge token would harden against curious public
     // clients but doesn't change the security posture (the same
@@ -382,7 +382,7 @@ module.exports = function attachSocket({
     socket.on("subscribe_venue", async (data) => {
       const eventId = data?.event_id;
       // Validate shape before any work: events.id is a UUID, so a
-      // malformed id is junk — reject it without joining a room or
+      // malformed id is junk, reject it without joining a room or
       // touching the DB. (Also short-circuits a missing id.)
       if (!EVENT_UUID_RE.test(String(eventId ?? ""))) return;
       // Per-IP throttle. subscribe_venue triggers emitVenueState, which
@@ -395,7 +395,7 @@ module.exports = function attachSocket({
       if (socketIpRateLimited("subscribe_venue", clientIp(socket))) return;
       joinVenue(eventId);
       // Immediately emit a fresh snapshot so the bridge has full
-      // state to render — important after a bridge restart.
+      // state to render, important after a bridge restart.
       try {
         const { emitVenueState } = require("../lib/venue-state");
         await emitVenueState({
@@ -443,7 +443,7 @@ module.exports = function attachSocket({
       // pushes "your diver is up next" to coaches whose linked
       // divers land in the window. Per-process in-memory dedupe
       // prevents double-fires when the operator re-emits state.
-      // Errors logged but never propagate — score path stays clean.
+      // Errors logged but never propagate, score path stays clean.
       if (data.event_id && push) {
         try {
           require("../lib/coach-alerts")
@@ -453,7 +453,7 @@ module.exports = function attachSocket({
         }
       }
 
-      // Venue scoreboard state — fan out to any connected
+      // Venue scoreboard state: fan out to any connected
       // hardware bridge in this event's venue room. See
       // lib/venue-state.js for the wire shape.
       if (data.event_id) {
@@ -479,7 +479,7 @@ module.exports = function attachSocket({
     });
 
     // -----------------------------------------------------------
-    // submit_score — fully transactional. Prior-row read with
+    // submit_score: fully transactional. Prior-row read with
     // FOR UPDATE → upsert → audit insert, all in one txn so the
     // audit row is durable iff the score is. Sysadmin policy:
     // even sysadmins must be on the panel; judge_number always
@@ -497,7 +497,7 @@ module.exports = function attachSocket({
     socket.on("submit_score", async (data, ack) => {
       // Socket.IO ack callback (3rd argument). When the client
       // uses the outbox drain protocol, it provides a callback to
-      // correlate "my submit" with "the server confirmed mine" —
+      // correlate "my submit" with "the server confirmed mine",
       // tuple-matching the room broadcast would be racy when
       // multiple devices submit for the same diver. Legacy clients
       // (no outbox) pass no callback; safeAck is a no-op for them.
@@ -581,7 +581,7 @@ module.exports = function attachSocket({
           return;
         }
         if (cached) {
-          // Cache hit — replay the success ack to THIS socket only.
+          // Cache hit, replay the success ack to THIS socket only.
           // The original room broadcast already fired on the first
           // submission; replaying it would double-broadcast.
           socket.emit("score_received", cached.response_body);
@@ -627,7 +627,7 @@ module.exports = function attachSocket({
         );
         // dive_id comes from the server-side dive list ONLY. When
         // the diver has no row for this round, store NULL and let
-        // the operator fix the list — falling back to the wire
+        // the operator fix the list. Falling back to the wire
         // value would let a stale client smuggle in the wrong
         // dive's DD.
         const resolvedDiveId = dvRes.rows[0]?.dive_id ?? null;
@@ -656,7 +656,7 @@ module.exports = function attachSocket({
         let reconciledManual = false;
         if (existing && existing.score_source === "manual_entry") {
           if (oldScore === score) {
-            // Same value — reconcile by flipping the source.
+            // Same value, reconcile by flipping the source.
             await client.query(
               `UPDATE scores SET score_source = 'manual_then_reconciled',
                                  actor_local_time = $2
@@ -666,7 +666,7 @@ module.exports = function attachSocket({
             scoreId = existing.id;
             reconciledManual = true;
           } else {
-            // Different value — operator's manual entry wins. We
+            // Different value, operator's manual entry wins. We
             // DON'T update the score; we audit-log the rejected
             // digital sync and emit conflict_pending for the
             // operator's review tray.
@@ -747,7 +747,7 @@ module.exports = function attachSocket({
         if (isInsert || oldScore !== score || reconciledManual) {
           // Audit row records both clocks (migration 054). For
           // legacy online-only clients actor_local_time is NULL and
-          // server_committed_at is now() — those rows look like the
+          // server_committed_at is now(), those rows look like the
           // pre-outbox world. For outbox clients both are populated.
           // For reconciled manual entries the action is 'reconcile'
           // so audit queries can spot the merge cleanly.
@@ -808,7 +808,7 @@ module.exports = function attachSocket({
 
       // Cache the response for outbox retries. Fire-and-forget;
       // failures log + continue. The judge's UI doesn't wait for
-      // this to complete — the broadcast above is the user-facing
+      // this to complete, the broadcast above is the user-facing
       // ack.
       if (idempotencyKey && payloadHash) {
         idem.socketStore(
@@ -817,7 +817,7 @@ module.exports = function attachSocket({
         );
       }
 
-      // Venue bridge fan-out — refresh the scoreboard_state for
+      // Venue bridge fan-out: refresh the scoreboard_state for
       // hardware boards every time a judge submits.
       if (data.event_id) {
         try {
@@ -872,7 +872,7 @@ module.exports = function attachSocket({
     });
 
     // -----------------------------------------------------------
-    // judge_signal — judge taps "Signal Referee" on the keypad
+    // judge_signal: judge taps "Signal Referee" on the keypad
     // (e.g. didn't see the dive, wants a re-dive review,
     // disagrees with the scoreboard). Server validates the
     // sender is a judge on this event's panel, then rebroadcasts
@@ -881,7 +881,7 @@ module.exports = function attachSocket({
     // toggling it off.
     //
     // judge_id + judge_number come from the server's view of
-    // event_judges, never from the wire — same posture as
+    // event_judges, never from the wire, same posture as
     // submit_score.
     // -----------------------------------------------------------
     socket.on("judge_signal", async (data) => {
@@ -917,7 +917,7 @@ module.exports = function attachSocket({
     });
 
     // -----------------------------------------------------------
-    // Referee actions — UPDATE the actual scores AND persist to
+    // Referee actions: UPDATE the actual scores AND persist to
     // score_audit_log. 'failed' → 0; 'cap' → LEAST(score, cap);
     // 'redive' → no score change (new dive overwrites via
     // submit_score on the same UNIQUE key).
@@ -928,7 +928,7 @@ module.exports = function attachSocket({
       // submit_score / judge_signal paths. Previously only truthiness
       // was checked, so a malformed value reached the parameterized
       // UPDATE and surfaced as a confusing 500 instead of a clean
-      // rejection — an inconsistent input surface across the three
+      // rejection, an inconsistent input surface across the three
       // score-mutation paths.
       const round = Number(data.round_number);
       if (!Number.isInteger(round) || round < 1) {
@@ -1049,7 +1049,7 @@ module.exports = function attachSocket({
       } finally {
         client.release();
       }
-      // Same reasoning as submit_score — fail/cap/redive
+      // Same reasoning as submit_score: fail/cap/redive
       // changed (or could change) the standings; flush so the
       // next /api/scoreboard read rebuilds.
       scoreboardCache?.invalidate(data.event_id);

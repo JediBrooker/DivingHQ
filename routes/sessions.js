@@ -1,4 +1,4 @@
-// Sessions / Schedule routes — Phases 1, 2, 3 & 4.
+// Sessions / Schedule routes: Phases 1, 2, 3 & 4.
 //
 //   GET    /api/meets/:meetId/sessions               sessions + inlined blocks (P1)
 //   GET    /api/meets/:meetId/schedule.ics           iCal feed, public (P1)
@@ -20,7 +20,7 @@
 // "Duplicate to next day" action (§8.4), and a schedule-aware judge
 // availability hint backing the panel picker. The schema for all of
 // this was already created by migration 049, so Phase 3 is API + UI
-// only — no new migration.
+// only, no new migration.
 //
 // EDIT-PATH CONFLICT RETURN
 // -------------------------
@@ -30,11 +30,11 @@
 // back inline so the front-end can flash the block and surface the
 // new entries in the drawer without a separate refetch round-trip.
 // The full /api/meets/:meetId/conflicts list still rebuilds on the
-// next drawer poll — the inline subset is a UX latency win, not a
-// new source of truth.
+// next drawer poll, the inline subset is just a UX latency win, not
+// a new source of truth.
 //
 // Phase 4 (live re-flow, this revision): operator marks an event
-// Complete via PUT /api/events/:id/status — the events router calls
+// Complete via PUT /api/events/:id/status, and the events router calls
 // buildReflowProposal() from lib/schedule-reflow.js and returns the
 // proposal alongside the event row. The Control Room shows the
 // modal, the operator picks which downstream blocks to shift, and
@@ -57,7 +57,7 @@
 // total_rounds × competitor_count × 90 seconds. Falls back to
 // 90 minutes when an event has no competitors yet (the common
 // case before sign-ups close). Crude, but the operator can drag
-// in phase 3 — the seed is a starting point, not a constraint.
+// in phase 3, the seed is a starting point, not a constraint.
 //
 // Mounted via:
 //   app.use(require('./routes/sessions')({ pool, optionalAuth }))
@@ -75,7 +75,7 @@ const {
 const { recordAudit, auditFromReq } = require("../lib/audit");
 
 // Default operator warmup length in front of every competition
-// event. Editable per-block in phase 3 — for now it's the
+// event. Editable per-block in phase 3, for now it's just the
 // auto-seed value.
 const WARMUP_MINUTES = 45;
 
@@ -90,7 +90,7 @@ const FALLBACK_EVENT_MINUTES = 90;
 const SECONDS_PER_DIVE = 90;
 
 // Heights the auto-seed creates boards for in "Main pool".
-// Skips '0m' (poolside / non-board events) — those are the
+// Skips '0m' (poolside / non-board events), those are the
 // outlier and the operator can add a board manually later.
 const SEEDED_BOARD_HEIGHTS = ["1m", "3m", "5m", "7.5m", "10m"];
 
@@ -99,7 +99,7 @@ const SEEDED_BOARD_HEIGHTS = ["1m", "3m", "5m", "7.5m", "10m"];
 // the full conflict list multiple times in quick succession; this
 // absorbs that chatter without hammering the planner. 5 seconds is
 // short enough that a freshly dismissed conflict shows up on the
-// next drawer poll — the explicit `socket emit` after dismissal
+// next drawer poll. The explicit `socket emit` after dismissal
 // also drops the cache so updates feel instant on the original
 // tab.
 const CONFLICT_CACHE_TTL_MS = 5000;
@@ -126,7 +126,7 @@ function invalidateConflictCache(meetId) {
 module.exports = function createSessionsRouter({
   pool,
   optionalAuth,
-  // Phase 2 additions — optional so the Phase 1 callsite (no auth /
+  // Phase 2 additions, optional so the Phase 1 callsite (no auth /
   // no socket) still works if someone keeps the old signature, but
   // server.js wires them all in now so the conflict dismiss + emit
   // surface is live.
@@ -138,7 +138,7 @@ module.exports = function createSessionsRouter({
   const maybeAuth = optionalAuth || ((req, _res, next) => next());
 
   // The dismiss endpoints need an auth gate. requireMeetEditor is
-  // an array of middleware (role check + TOTP gate) — falls back
+  // an array of middleware (role check + TOTP gate); falls back
   // to a 503 if the host wired the router without it, so a
   // partially-configured deploy fails loudly instead of silently
   // accepting unauth'd dismissals.
@@ -240,7 +240,7 @@ module.exports = function createSessionsRouter({
   }
 
   // -------------------------------------------------------------
-  // Seed helpers — both idempotent in the sense that they no-op
+  // Seed helpers, both idempotent in the sense that they no-op
   // when their target rows already exist for the org / meet.
   // -------------------------------------------------------------
 
@@ -301,7 +301,7 @@ module.exports = function createSessionsRouter({
     // Distinct days the meet covers, in UTC. The session-row
     // name uses the event-day in UTC; the front-end re-renders
     // in the viewer's locale. Discrete dates is the right grain
-    // here — a one-day session "Saturday morning, 3m" on top of
+    // here, a one-day session "Saturday morning, 3m" on top of
     // a UTC instant matches how operators talk about the meet.
     const dayBuckets = new Map(); // ISO date -> sessionId (created below)
     for (const ev of eventsRes.rows) {
@@ -321,7 +321,7 @@ module.exports = function createSessionsRouter({
     // by enum height; events.board_id (if the operator already
     // pinned one) wins over the height lookup. Heights with no
     // matching board (e.g. a 0m exhibition event) drop through
-    // with an empty board_ids array — the block still renders,
+    // with an empty board_ids array, the block still renders,
     // just not in a specific column.
     const boardsRes = await client.query(
       `SELECT id, height
@@ -500,7 +500,7 @@ module.exports = function createSessionsRouter({
   // -------------------------------------------------------------
   // GET /api/meets/:meetId/schedule.ics
   //
-  // Public iCal feed — one VEVENT per schedule_block. Coaches
+  // Public iCal feed: one VEVENT per schedule_block. Coaches
   // subscribe in Apple Calendar / Outlook / Google Calendar and
   // re-fetch on their client's cadence; later phases' re-flow
   // shifts propagate automatically without push.
@@ -604,7 +604,7 @@ module.exports = function createSessionsRouter({
   // dismiss from either "side" of the pair without surprises.
   //
   // The resource fingerprint is computed server-side from the
-  // current membership of the resource — we never trust whatever
+  // current membership of the resource, we never trust whatever
   // the client may have posted. The point of the fingerprint
   // (§5) is to resurface the conflict when membership shifts, so
   // it has to be derived from authoritative data, not the
@@ -623,7 +623,7 @@ module.exports = function createSessionsRouter({
     if (!["judge", "board", "diver", "referee"].includes(kind)) {
       return res.status(400).json({ error: "resource_kind must be one of judge|board|diver|referee" });
     }
-    // Normalise pair order — UUID string compare matches Postgres'
+    // Normalise pair order: UUID string compare matches Postgres'
     // uuid < operator (lexicographic on canonical form).
     if (aId > bId) [aId, bId] = [bId, aId];
 
@@ -700,7 +700,7 @@ module.exports = function createSessionsRouter({
 
       // Tell every connected client that the conflict landscape
       // moved. The drawer subscribes and refetches; spectators
-      // just ignore it. Best-effort — a missing io shouldn't
+      // just ignore it. Best-effort, a missing io shouldn't
       // fail the dismissal.
       try {
         if (io && typeof io.emit === "function") {
@@ -755,7 +755,7 @@ module.exports = function createSessionsRouter({
         (c) => c.block_a?.id === blockId || c.block_b?.id === blockId,
       );
     } catch (err) {
-      // Never let a detector failure roll back a successful write —
+      // Never let a detector failure roll back a successful write,
       // the operator can still inspect the drawer to see conflicts.
       console.error("[conflictsTouchingBlock]", err.message);
       return [];
@@ -809,7 +809,7 @@ module.exports = function createSessionsRouter({
   }
 
   // Optional event_id reference: must be in the same meet as the
-  // session, or null (which clears the link — useful when an
+  // session, or null (which clears the link, useful when an
   // event-start block is being re-purposed as a custom block).
   async function validateEventId(client, sessionId, raw) {
     if (raw == null) return { set: true, value: null };
@@ -844,7 +844,7 @@ module.exports = function createSessionsRouter({
   //     event_id }
   //
   // Only the fields present on the request body are mutated. We
-  // intentionally don't accept actual_start_at / actual_end_at —
+  // intentionally don't accept actual_start_at / actual_end_at:
   // those are written by the live re-flow flow in Phase 4 and don't
   // belong on a manual-edit endpoint.
   // -------------------------------------------------------------
@@ -954,7 +954,7 @@ module.exports = function createSessionsRouter({
       }
 
       if (!sets.length) {
-        // No-op write — return the existing row + the touching
+        // No-op write, just return the existing row + the touching
         // conflicts so the caller gets a consistent response shape
         // even when nothing changed.
         const block = await fetchBlockById(client, id);
@@ -1105,7 +1105,7 @@ module.exports = function createSessionsRouter({
   // Soft-impact delete: just drops the row. The schedule_block_shifts
   // FK cascades any audit rows for the block; Phase 3 doesn't read
   // those, so the cascade is fine. dismissed_conflicts is also
-  // cascaded by the FK on (block_a_id, block_b_id) — which means a
+  // cascaded by the FK on (block_a_id, block_b_id), which means a
   // dismissal that referenced this block disappears with it, exactly
   // the behaviour we want (the block is gone, the conflict is gone).
   // -------------------------------------------------------------
@@ -1208,7 +1208,7 @@ module.exports = function createSessionsRouter({
 
     // An attached referee must hold the referee role in this meet's
     // org. Editing the session is already gated above, but the
-    // referee_user_id itself was only format-checked — without this a
+    // referee_user_id itself was only format-checked, so without this a
     // meet editor could bind an arbitrary or cross-org user as session
     // referee, polluting referee-conflict detection. (International
     // meets that need a participating-federation referee would extend
@@ -1228,7 +1228,7 @@ module.exports = function createSessionsRouter({
     }
 
     if (!sets.length) {
-      // No-op — return the current row so the caller gets a
+      // No-op, return the current row so the caller gets a
       // predictable shape even when no fields were sent.
       const r = await pool.query(
         `SELECT id, meet_id, name, session_date, pool,
@@ -1264,7 +1264,7 @@ module.exports = function createSessionsRouter({
         },
       });
       // Editing the session referee or its date can change the
-      // referee-conflict landscape — invalidate the cache so the
+      // referee-conflict landscape, so invalidate the cache so the
       // next conflicts read recomputes.
       invalidateConflictCache(session.meet_id);
       safeEmit("schedule:block_updated", {
@@ -1289,7 +1289,7 @@ module.exports = function createSessionsRouter({
   // session never survives a mid-write error. Preserves board_ids
   // (the new day uses the same physical boards) and the session
   // name + pool + referee_user_id. Resets event_id and
-  // actual_start_at / actual_end_at on every cloned block — the
+  // actual_start_at / actual_end_at on every cloned block, since the
   // new day's events haven't been created yet, and the cloned
   // window is the *planned* time, not an observed one.
   // -------------------------------------------------------------
@@ -1328,9 +1328,9 @@ module.exports = function createSessionsRouter({
       }
 
       // Compute the delta in whole days so the timestamps shift by
-      // exactly that integer day count — using straight ms subtraction
+      // exactly that integer day count. Using straight ms subtraction
       // would inherit any DST offset between the source and target
-      // date if one of them straddled a transition. Reading both as
+      // date if one of them straddled a transition, so reading both as
       // YYYY-MM-DD strings keeps the arithmetic at calendar-day grain.
       const srcDateStr = (src.session_date instanceof Date
         ? src.session_date.toISOString().slice(0, 10)
@@ -1352,7 +1352,7 @@ module.exports = function createSessionsRouter({
       }
 
       // Clone the session row. We append "(copy)" only if the name
-      // doesn't already end with the new date — operators routinely
+      // doesn't already end with the new date, since operators routinely
       // run Day 1 → Day 2 → Day 3 from the same template and don't
       // want a chain of "(copy) (copy)" suffixes.
       const newSess = await client.query(
@@ -1393,8 +1393,8 @@ module.exports = function createSessionsRouter({
       );
 
       // Read the cloned blocks back so the response mirrors the
-      // shape /sessions returns (event_name / event_height joined
-      // — they'll all be null on a fresh clone, but the keys are
+      // shape /sessions returns (event_name / event_height joined,
+      // they'll all be null on a fresh clone, but the keys are
       // present so the client doesn't have to special-case).
       const blocksRes = await client.query(
         `SELECT b.id, b.session_id, b.block_type, b.label,
@@ -1453,7 +1453,7 @@ module.exports = function createSessionsRouter({
   //
   // 5-second in-process cache mirrors the conflict report. The
   // expensive part is the panel-join, and the picker pings this
-  // every time the panel opens — caching by (meetId, at-rounded)
+  // every time the panel opens. Caching by (meetId, at-rounded)
   // means a flurry of opens in a single drawer session resolves
   // off the same plan.
   // -------------------------------------------------------------
@@ -1470,7 +1470,7 @@ module.exports = function createSessionsRouter({
       return res.status(400).json({ error: "`at` is not a valid timestamp" });
     }
     try {
-      // Ownership gate BEFORE the cache lookup — within the 5s TTL
+      // Ownership gate BEFORE the cache lookup: within the 5s TTL
       // a cached entry must not be served to a caller who merely
       // shares the cache key but can't edit the meet (would leak
       // another org's judge availability). Mirrors the ordering in
@@ -1497,7 +1497,7 @@ module.exports = function createSessionsRouter({
       //
       // The query joins event_judges → events → schedule_blocks via
       // the block's event_id, then filters to blocks containing
-      // `at`. A judge can show up on multiple panels — we group by
+      // `at`. A judge can show up on multiple panels, so we group by
       // judge_id and pick the EARLIEST ends_at as the "busy_until"
       // so the picker's tooltip points to the soonest opening.
       const atIso = at.toISOString();
@@ -1537,8 +1537,8 @@ module.exports = function createSessionsRouter({
       availabilityCache.set(cacheKey, { at: Date.now(), value: judges });
       // Bound the cache so a long-lived process doesn't accumulate
       // a per-minute entry indefinitely. 200 entries ≈ 200 minutes
-      // of distinct cache hits, far above the realistic working
-      // set for a single meet day.
+      // of distinct cache hits, way more than a single meet day
+      // would realistically need.
       if (availabilityCache.size > 200) {
         const oldestKey = availabilityCache.keys().next().value;
         availabilityCache.delete(oldestKey);
@@ -1565,7 +1565,7 @@ module.exports = function createSessionsRouter({
   // face value, but we also don't want to reject every replay where
   // a real human took 10 seconds to confirm. The check is that
   // delta_seconds is positive and within a sane envelope (under
-  // 24h — anything beyond is almost certainly bogus). The shift
+  // 24h, anything beyond is almost certainly bogus). The shift
   // candidates were already filtered to "haven't started" when the
   // modal was built; we re-check here with FOR UPDATE so a race
   // with a concurrent set_active_diver doesn't push us past an
@@ -1574,7 +1574,7 @@ module.exports = function createSessionsRouter({
   // 409 on actual_start_at-set: the modal saw the block as
   // not-yet-started, but in the meantime someone (perhaps the same
   // operator from another tab) flipped its event Live. We refuse
-  // the whole batch — partial reflow leaves the timeline in a
+  // the whole batch, since partial reflow leaves the timeline in a
   // worse state than no reflow.
   // -------------------------------------------------------------
   router.post("/api/blocks/reflow", editorGate, async (req, res) => {
@@ -1628,7 +1628,7 @@ module.exports = function createSessionsRouter({
       // Lock the candidate rows + verify ownership via the parent
       // session. SELECT FOR UPDATE serialises against any concurrent
       // PUT /api/blocks/:id (manual edit) and against another tab
-      // running the same reflow confirm — the second writer waits,
+      // running the same reflow confirm. The second writer waits,
       // then sees actual_start_at-set or the new window and bails.
       const lockedRes = await client.query(
         `SELECT b.id, b.session_id, b.starts_at, b.ends_at,
@@ -1652,9 +1652,9 @@ module.exports = function createSessionsRouter({
           .status(400)
           .json({ error: "block_ids must all belong to the meet_id" });
       }
-      // §6 guard — refuse if any candidate is already running. The
+      // §6 guard: refuse if any candidate is already running. The
       // modal pre-filtered on this but the time between modal open
-      // and confirm is operator-paced; a concurrent Live flip can
+      // and confirm is operator-paced, so a concurrent Live flip can
       // land in the gap.
       const startedAlready = lockedRes.rows.find(
         (r) => r.actual_start_at != null,
@@ -1670,7 +1670,7 @@ module.exports = function createSessionsRouter({
 
       // Apply the shift + append the ledger row per block. We do
       // them in the lock order from the SELECT (id ASC isn't
-      // guaranteed but it doesn't matter — every row is locked, no
+      // guaranteed but it doesn't matter, every row is locked, no
       // deadlock window). One ledger row per block per shift event;
       // shifted_at uses the txn clock so all rows share a timestamp.
       const shiftedAt = new Date();
@@ -1831,8 +1831,8 @@ module.exports = function createSessionsRouter({
 // -----------------------------------------------------------------
 // iCal serializer.
 //
-// Hand-written rather than dragging in an npm dep — the format
-// is small enough that the standards work fits in a screen:
+// Hand-written rather than dragging in an npm dep, the format
+// is small enough that the standards work fits on a screen:
 //   * CRLF line endings (RFC 5545 §3.1)
 //   * 75-octet line folding (continuation = CRLF + space)
 //   * Escape: backslash, comma, semicolon, newline
@@ -1891,7 +1891,7 @@ function blockSummary(b) {
   }
 }
 
-// RFC 5545 escape rules — order matters: backslash first so it
+// RFC 5545 escape rules: order matters, backslash first so it
 // doesn't double-escape the others.
 function escapeText(value) {
   if (value == null) return "";
@@ -1902,7 +1902,7 @@ function escapeText(value) {
     .replace(/\r?\n/g, "\\n");
 }
 
-// 20251231T235959Z — basic-format UTC, no separators.
+// 20251231T235959Z: basic-format UTC, no separators.
 function formatIcsUtc(value) {
   const d = value instanceof Date ? value : new Date(value);
   const yyyy = d.getUTCFullYear();
@@ -1914,7 +1914,7 @@ function formatIcsUtc(value) {
   return `${yyyy}${mm}${dd}T${hh}${mi}${ss}Z`;
 }
 
-// RFC 5545 §3.1 — lines must not exceed 75 octets. Continuation
+// RFC 5545 §3.1: lines must not exceed 75 octets. Continuation
 // lines start with a single space (CRLF + space). We chunk on
 // byte length, not character length, since multibyte UTF-8
 // characters count toward the limit. Splitting inside a

@@ -1,8 +1,8 @@
 <script setup>
-// Manager editor for a meet's discounted bundle: pick which of the meet's
-// events the bundle covers + set one flat price. Backed by
-// /api/meets/:id/bundle(/config). On purchase the server expands the bundle
-// into a paid entry for each selected event.
+// Manager editor for a meet's discounted bundle, pick which of the meet's
+// events it covers and set one flat price. Backed by
+// /api/meets/:id/bundle(/config). On purchase, the server expands the
+// bundle into a paid entry for each selected event.
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess, showError } from '@/composables/useNotify'

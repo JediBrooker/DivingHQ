@@ -47,20 +47,20 @@ test("one Live event shows three columns; History and Standings collapse + reope
   await page.waitForLoadState("networkidle");
   await setup.selectControlEvent(page, "Solo Pool");
 
-  // Three columns: History (left), the pool card (center), Standings (right).
+  // Three columns: History (left), pool card (center), Standings (right)
   await expect(page.locator(".cv2-side-history")).toBeVisible();
   await expect(page.locator(".cv2-side-standings")).toBeVisible();
   await expect(page.locator(".cv2-pool")).toHaveCount(1);
   await expect(page.locator(".cv2-side-tab")).toHaveCount(0);
 
-  // Collapse History -> the column is replaced by an edge drawer tab.
+  // Collapse History -> column gets replaced by an edge drawer tab.
   await page.getByRole("button", { name: "Collapse history" }).click();
   await expect(page.locator(".cv2-side-history")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Open history drawer" })).toBeVisible();
-  // Standings is untouched.
+  // Standings should be untouched.
   await expect(page.locator(".cv2-side-standings")).toBeVisible();
 
-  // Reopen History from its tab.
+  // Reopen History from its tab
   await page.getByRole("button", { name: "Open history drawer" }).click();
   await expect(page.locator(".cv2-side-history")).toBeVisible();
 });
@@ -79,13 +79,13 @@ test("two Live events auto-collapse both side columns to drawers; a tab peeks on
   await page.waitForLoadState("networkidle");
   await setup.selectControlEvent(page, "Alpha Pool");
 
-  // Two pool cards, and BOTH side columns auto-collapsed to edge tabs so
-  // the cards get the width.
+  // Two pool cards, and BOTH side columns auto-collapse to edge tabs so
+  // the cards get the width they need.
   await expect(page.locator(".cv2-pool")).toHaveCount(2);
   await expect(page.locator(".cv2-side")).toHaveCount(0);
   await expect(page.locator(".cv2-side-tab")).toHaveCount(2);
 
-  // Peeking Standings opens its drawer (focused pool) without un-collapsing History.
+  // Peeking Standings opens its drawer (focused pool) without un-collapsing History
   await page.getByRole("button", { name: "Open standings drawer" }).click();
   await expect(page.locator(".cv2-side-standings")).toBeVisible();
   await expect(page.locator(".cv2-side-history")).toHaveCount(0);

@@ -3,13 +3,13 @@
 //
 //   /** @type {import('@/types').DiverProfile} */
 //
-// or by writing JSDoc on a variable. There's no runtime export — this
+// or by writing JSDoc on a variable. There's no runtime export, this
 // file exists purely so editors and code-completion can answer
 // "what's on this object?" without grepping through server.js.
 //
 // Keep this in sync with the actual response builders in server.js.
 // AGENTS.md lists this file in the "When you change X, also check Y"
-// table — please honour that.
+// table, please honour that.
 
 // ---- core ---------------------------------------------------------
 
@@ -18,7 +18,7 @@
  * The decoded JWT, attached to req.user by verifyToken on the server,
  * and exposed via auth.user (a computed) on the client.
  *
- * @property {string}   id              UUID — DO NOT call this user_id.
+ * @property {string}   id              UUID, do not call this user_id.
  * @property {string}   username
  * @property {string}   full_name
  * @property {string}   org_id          Primary org of the user.
@@ -243,7 +243,7 @@
  * Row returned by the roster endpoint and used by the Control Room
  * queue. Every row is one (competitor, round, dive) tuple.
  *
- * @property {string}      dive_list_id      cdl.id — target for reorder/withdraw
+ * @property {string}      dive_list_id      cdl.id, target for reorder/withdraw
  * @property {number|null} display_order
  * @property {string|null} withdrawn_at      ISO timestamp or null
  * @property {string}      competitor_id

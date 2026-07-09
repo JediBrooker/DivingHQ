@@ -1,17 +1,17 @@
 -- =============================================================
--- MIGRATION 082 — STRIPE CONNECT RECIPIENT ACCOUNTS (payout automation)
+-- MIGRATION 082 - STRIPE CONNECT RECIPIENT ACCOUNTS (payout automation)
 --
--- Replaces the manual-bank-transfer payout model with automated Stripe
+-- Replaces the manual bank-transfer payout model with automated Stripe
 -- Connect transfers. Clubs and federations onboard once as RECIPIENT-only
 -- connected accounts (Accounts v2, hosted onboarding); "withdraw" then
 -- fires a real transfer instead of the operator making a bank transfer by
 -- hand.
 --
--- Crucially this DELETES the plaintext bank-detail columns: the account
+-- This also DELETES the plaintext bank-detail columns: the account
 -- and its verified bank account now live at Stripe (referenced only by an
--- acct_… id), so the app never stores or handles bank details again — the
--- single biggest data liability the pre-deploy audit flagged simply ceases
--- to exist.
+-- acct_… id), so the app never stores or handles bank details again.
+-- That was the single biggest data liability the pre-deploy audit flagged,
+-- and now it's just gone.
 --
 -- organisations already carry stripe_account_id / stripe_payouts_enabled /
 -- stripe_charges_enabled from the earlier (retired) Connect direct-charge
@@ -24,8 +24,8 @@
 BEGIN;
 
 -- Recipient account + readiness cache on clubs (orgs already have the
--- id/enabled pair). country is stamped at onboarding — recipients may be
--- in a different country than the platform (cross-border corridors are
+-- id/enabled pair). country is stamped at onboarding since recipients may
+-- be in a different country than the platform (cross-border corridors get
 -- enabled deliberately per-country later; same-country is the launch path).
 ALTER TABLE public.clubs
   ADD COLUMN IF NOT EXISTS stripe_account_id        text,
@@ -38,9 +38,9 @@ ALTER TABLE public.organisations
 CREATE UNIQUE INDEX IF NOT EXISTS idx_clubs_stripe_account
   ON public.clubs (stripe_account_id) WHERE stripe_account_id IS NOT NULL;
 
--- Remove the plaintext bank-detail liability. Pre-launch, no real data —
--- a clean cutover. (The routes/UI that read these are removed in the same
--- change; nothing in production depends on them yet.)
+-- Remove the plaintext bank-detail liability. Pre-launch, no real data,
+-- so this is a clean cutover. (The routes/UI that read these are removed
+-- in the same change; nothing in production depends on them yet.)
 ALTER TABLE public.organisations
   DROP COLUMN IF EXISTS payout_account_name,
   DROP COLUMN IF EXISTS payout_account_details;

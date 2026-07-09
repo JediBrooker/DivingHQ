@@ -1,14 +1,14 @@
 -- =============================================================
--- MIGRATION 052 — PER-USER LOCALE
+-- MIGRATION 052: PER-USER LOCALE
 --
 -- The SPA locale lives in localStorage today, so a returning user
 -- gets their language back on the same device. Cross-device
--- persistence requires server-side storage. This migration adds
+-- persistence needs server-side storage, so this migration adds
 -- users.locale (nullable; null means "infer from Accept-Language
 -- on each request").
 --
--- Also serves server-side i18n: error messages, email templates,
--- and PDF column headers select strings based on the requester's
+-- Also feeds server-side i18n: error messages, email templates,
+-- and PDF column headers pick strings based on the requester's
 -- users.locale (when known) or Accept-Language (when not).
 -- =============================================================
 

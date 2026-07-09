@@ -1,15 +1,15 @@
 <script setup>
 // Federation-wide audit log. Three tabs:
 //
-//   1. Recent activity — the last 7 days of score + role events
+//   1. Recent activity: the last 7 days of score + role events
 //      interleaved chronologically. Lets an admin glance at
 //      "what happened recently" without picking a target up
 //      front.
-//   2. Score corrections — every score insert / update / delete
+//   2. Score corrections: every score insert / update / delete
 //      across the federation, filterable by event, action,
 //      reason text, and date range. Click a row to jump to the
 //      per-event audit view (which also surfaces IP / UA).
-//   3. Role changes — every role grant / revoke across the
+//   3. Role changes: every role grant / revoke across the
 //      federation, filterable by role, action, and target user.
 //
 // Sysadmin gets a fourth control: an org filter dropdown that
@@ -215,7 +215,7 @@ watch(() => activeTab.value, (next) => {
   if (next === 'activity' && !activityRows.value.length) loadActivity()
 })
 watch(() => orgFilter.value, () => {
-  // Org filter is global — refetch whichever tab is visible.
+  // Org filter is global, refetch wichever tab is visible.
   if (activeTab.value === 'recent')   loadRecent()
   if (activeTab.value === 'scores')   loadScores()
   if (activeTab.value === 'roles')    loadRoles()
@@ -224,7 +224,7 @@ watch(() => orgFilter.value, () => {
 watch(() => recentDays.value, () => {
   if (activeTab.value === 'recent') loadRecent()
 })
-// Score / role filter changes — debounce-free; if the operator
+// Score / role filter changes, debounce-free. If the operator
 // types fast in the search box they'll hit Enter or blur to fire
 // a refetch via a button. Action / date / role are select boxes
 // so a change-event reload is fine.
@@ -255,7 +255,7 @@ function fmtTime(iso) {
 // Friendlier label for each audit action. Score + role audits
 // store short enums (insert / update / delete / granted /
 // revoked); the activity log uses dotted verbs ('event.created',
-// 'roster.late_entry_added') — both shapes feed in here.
+// 'roster.late_entry_added') and both shapes feed in here.
 const ACTIVITY_LABEL_KEYS = {
   'event.created':           'audit.activity.label_event_created',
   'event.deleted':           'audit.activity.label_event_deleted',
@@ -818,11 +818,11 @@ onMounted(async () => {
 }
 .select-sm { padding: 0.3rem 0.5rem; font-size: 12px; min-width: 110px; }
 .input-sm { padding: 0.3rem 0.5rem; font-size: 12px; min-width: 130px; }
-/* iOS Safari auto-zooms whenever an <input> or <select> with
-   font-size < 16px receives focus. That's especially jarring
-   here because the date-range filters are tapped frequently
-   when investigating an audit trail on a phone. Bump to 16px
-   at phone widths only — desktop keeps the compact 12px. */
+/* Heads up: iOS Safari auto-zooms whenever an <input> or <select>
+   with font-size < 16px receives focus. That's especially annoying
+   here since the date-range filters get tapped a lot when
+   investigating an audit trail on a phone. Bump to 16px at
+   phone widths only, desktop keeps the compact 12px. */
 @media (max-width: 720px) {
   .select-sm, .input-sm { font-size: 16px; }
 }

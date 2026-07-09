@@ -1,4 +1,4 @@
-/* Shared widget chrome — card frame, header, empty state, table,
+/* Shared widget chrome: card frame, header, empty state, table,
    and hint band. Imported (unscoped) by every widget so the visual
    shell stays identical across them without :deep() gymnastics. */
 
@@ -16,7 +16,7 @@
   font-family: var(--font-mono); font-size: 12px;
 }
 
-/* Tabular widget body — used by personal_bests, frequent_dives,
+/* Tabular widget body, used by personal_bests, frequent_dives,
    event_type_splits, year_over_year. */
 .pb-table { width: 100%; border-collapse: collapse; }
 .pb-table th, .pb-table td {
@@ -39,11 +39,12 @@
 }
 
 /* =========================================================
-   Phone layout (≤600px). Tightens the shared chrome — card
-   padding, head spacing, table cell padding — so widgets read
-   on a 360px viewport without forcing per-widget rules. The
-   global app.css `.card` rule at 720px already drops padding
-   to 1.25rem; here we go further inside the profile dashboard.
+   Phone layout (≤600px). Tightens the shared chrome, card
+   padding, head spacing, table cell padding, so widgets still
+   read on a 360px viewport without forcing per-widget rules.
+   The global app.css `.card` rule at 720px already drops padding
+   to 1.25rem, we just go a bit further here inside the profile
+   dashboard.
    ========================================================= */
 @media (max-width: 600px) {
   .card {
@@ -59,8 +60,8 @@
   /* `.pb-table` is the shared tabular layout used by Personal
      Bests, Frequent Dives, Event-Type Splits, Year-over-Year.
      Wrap is added per-widget via `.table-wrap`-style overflow,
-     but tightening cell padding keeps things readable when
-     the table fits as-is. */
+     but tightening cell padding here keeps things readable
+     when the table fits as-is. */
   .pb-table th, .pb-table td {
     padding: 0.45rem 0.35rem; font-size: 12px;
   }
@@ -72,7 +73,7 @@
   }
 }
 
-/* Print rules — keep cards readable on paper. */
+/* Print rules, just keeping cards readable on paper. */
 @media print {
   .card {
     break-inside: avoid; page-break-inside: avoid;

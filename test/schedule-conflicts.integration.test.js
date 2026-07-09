@@ -1,13 +1,13 @@
-// Integration coverage for lib/schedule-conflicts.js — SQL overlap
+// Integration coverage for lib/schedule-conflicts.js: SQL overlap
 // math against a real Postgres test DB. Complements
 // test/schedule-conflicts.test.js, which pins the JS contract with a
 // fake pool stub and a synthetic detector row shape.
 //
 // SCOPE
 // -----
-// The detector itself is one (large) SQL query — four UNION ALL arms
-// (judge / board / diver / referee), a hoisted event_divers CTE, and
-// a soft-vs-hard severity CASE. Unit-stubbing the pool can't prove
+// The detector itself is one (large) SQL query with four UNION ALL
+// arms (judge / board / diver / referee), a hoisted event_divers CTE,
+// and a soft-vs-hard severity CASE. Unit-stubbing the pool can't prove
 // the SQL actually computes overlaps the way the docs say it does;
 // this file inserts real schedule_blocks / events / dive lists and
 // asserts the rows detectConflicts() returns.
@@ -15,13 +15,13 @@
 // What every test does, in shape:
 //   1. Build an org + meet + pool + a couple of events as fixtures
 //      (helpers `makeOrg`, `makeMeet`, `makeEvent`, …) all using
-//      direct pool.query() inserts. The HTTP layer isn't in play —
+//      direct pool.query() inserts. The HTTP layer isnt in play, so
 //      these are SQL-level integration tests.
 //   2. Insert exactly the two schedule_blocks the scenario needs and
 //      whatever resource membership (event_judges row, dive-list row,
 //      team_member row, …) the arm under test reads from.
 //   3. Call detectConflicts(meetId, pool) and assert on the returned
-//      Conflict array — usually count, resource_kind, severity, and
+//      Conflict array, usually count, resource_kind, severity, and
 //      that the right user_ids are referenced.
 //
 // REGRESSION GUARD
@@ -29,7 +29,7 @@
 // One of these scenarios specifically guards the hoisted event_divers
 // CTE from commit 02f52e7. The "diver double-booked across events"
 // test would fail if the JOIN between (pairs) and (event_divers) was
-// dropped or its filters changed — exactly the kind of regression
+// dropped or its filters changed, exactly the kind of regression
 // that could re-introduce the O(pairs × dive_list_rows) hot path.
 //
 // SKIPPING
@@ -45,11 +45,11 @@
 //     read-only and acquires no row locks; the FOR UPDATE block-row
 //     lock the API depends on lives in routes/sessions.js
 //     (POST /api/blocks/reflow). Locking is therefore a route-level
-//     concern, not a detector-level one, and belongs to a separate
+//     concern, not a detector-level one, and belongs to a seperate
 //     route-integration test.
 //   * Dismissed-conflict flag flow. Pinned by the JS-stub tests in
 //     test/schedule-conflicts.test.js; re-asserting against a real
-//     dismissed_conflicts row here would not exercise different SQL.
+//     dismissed_conflicts row here wouldn't exercise different SQL.
 
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
@@ -61,7 +61,7 @@ const { Pool } = require("pg");
 const { detectConflicts } = require("../lib/schedule-conflicts");
 
 // ---------------------------------------------------------------
-// Pool setup — mirrors test/integration.test.js so a single
+// Pool setup: mirrors test/integration.test.js so a single
 // .env / CI config feeds both suites. Skips with a warning when
 // the DB is unreachable instead of failing.
 // ---------------------------------------------------------------
@@ -70,8 +70,8 @@ let pool;
 
 // Track fixtures so the after() cleanup can drop them. Even though
 // each test() builds its own org and the org cascades to most of
-// the world, we still hold the org ids so cleanup can be best-effort
-// even if a test crashes mid-fixture.
+// the world, we still hold onto the org ids so cleanup can be
+// best-effort, just in case a test crashes mid-fixture.
 const createdOrgIds = [];
 
 before(async () => {
@@ -96,9 +96,9 @@ after(async () => {
   if (!pool) return;
   if (dbReachable) {
     // organisations cascades to clubs, meets, events, teams, and
-    // boards — but users.org_id is ON DELETE RESTRICT (so an admin
+    // boards, but users.org_id is ON DELETE RESTRICT (so an admin
     // can't accidentally drop an org and orphan its accounts). So
-    // we delete users first, then the org cascades the rest.
+    // we delete users first, then org cascades the rest.
     // meets → sessions → schedule_blocks all cascade. event_judges
     // and competitor_dive_lists hang off events → cascade.
     for (const orgId of createdOrgIds) {
@@ -114,13 +114,13 @@ after(async () => {
 });
 
 // ---------------------------------------------------------------
-// Fixture helpers — direct SQL. We bypass the HTTP layer because
+// Fixture helpers: direct SQL. We bypass the HTTP layer because
 // this file is about exercising the detector SQL, not the API.
 // Every helper returns the inserted row's id so callers can wire
 // up referential graphs without re-SELECTing.
 // ---------------------------------------------------------------
 
-// Random tag for unique names — slugs and usernames have UNIQUE
+// Random tag for unique names, since slugs and usernames have UNIQUE
 // indexes, and parallel test runs (or a previous failed run that
 // didn't clean up) would otherwise collide.
 function tag() {
@@ -255,7 +255,7 @@ test("overlap by 1 minute → board_conflict on overlapping blocks", async (t) =
   const boardId = boardR.rows[0].id;
   const sessionA = await makeSession(meetId);
   const sessionB = await makeSession(meetId);
-  // Block A ends 10:00; block B starts 09:59 — overlap of one minute.
+  // Block A ends 10:00, block B starts 09:59, an overlap of one minute.
   // Both claim the same board, which is the resource collision.
   const blockA = await makeBlock(sessionA, {
     startsAt: "2026-05-18T09:00:00Z",
@@ -272,8 +272,8 @@ test("overlap by 1 minute → board_conflict on overlapping blocks", async (t) =
   const board = conflicts.filter((c) => c.resource_kind === "board");
   assert.equal(board.length, 1, "exactly one board conflict expected");
   assert.deepEqual(board[0].resource_ids, [boardId]);
-  // Both blocks referenced — order depends on the SQL's b.id > a.id
-  // pair ordering, so check membership rather than position.
+  // both blocks are referenced but order depends on the SQL's b.id >
+  // a.id pair ordering, so check membership rather than position
   const ids = [board[0].block_a.id, board[0].block_b.id].sort();
   assert.deepEqual(ids, [blockA, blockB].sort());
   assert.equal(board[0].severity, "hard");
@@ -292,8 +292,8 @@ test("back-to-back at the same pool → no conflict (exclusive end)", async (t) 
   const sessA = await makeSession(meetId);
   const sessB = await makeSession(meetId);
   // A ends 10:00, B starts 10:00. The overlap predicate is
-  // a.starts < b.ends AND b.starts < a.ends — strict <, so touching
-  // boundaries don't overlap.
+  // a.starts < b.ends AND b.starts < a.ends, strict <, so touching
+  // boundaries don't overlap
   await makeBlock(sessA, {
     startsAt: "2026-05-18T09:00:00Z",
     endsAt:   "2026-05-18T10:00:00Z",
@@ -323,7 +323,7 @@ test("judge double-booked across overlapping events → judge_conflict", async (
 
   const sessA = await makeSession(meetId);
   const sessB = await makeSession(meetId);
-  // Overlap 09:30–10:00 — judge is on both panels.
+  // overlap 09:30-10:00, judge is on both panels
   await makeBlock(sessA, {
     startsAt: "2026-05-18T09:00:00Z",
     endsAt:   "2026-05-18T10:00:00Z",
@@ -357,7 +357,7 @@ test("judge soft-warning when gap < 15 min and no overlap → severity 'soft'", 
 
   const sessA = await makeSession(meetId);
   const sessB = await makeSession(meetId);
-  // A ends 09:30, B starts 09:40 — a 10-minute transit gap, inside
+  // A ends 09:30, B starts 09:40, a 10-minute transit gap, inside
   // the SOFT_JUDGE_GAP_MINUTES window but with no actual overlap.
   await makeBlock(sessA, {
     startsAt: "2026-05-18T09:00:00Z",
@@ -379,11 +379,11 @@ test("judge soft-warning when gap < 15 min and no overlap → severity 'soft'", 
 
 test("diver double-booked across overlapping events → diver_conflict (event_divers CTE)", async (t) => {
   if (!dbReachable) return t.skip("no test DB");
-  // This is the regression guard for commit 02f52e7. The detector
+  // this is the regression guard for commit 02f52e7. The detector
   // SQL hoists an event_divers CTE that's hash-joined against the
-  // overlapping-pair set. If that hoist is broken — wrong filter,
-  // wrong join key, lost UNION arm — this test fails because the
-  // diver_conflicts CTE no longer yields rows.
+  // overlapping-pair set. If that hoist is broken (wrong filter,
+  // wrong join key, lost UNION arm) this test fails because the
+  // diver_conflicts CTE no longer yields rows
 
   const orgId = await makeOrg();
   const meetId = await makeMeet(orgId);
@@ -419,8 +419,8 @@ test("synchro partner double-booked across events → diver_conflict (partner-si
   if (!dbReachable) return t.skip("no test DB");
   // Diver Y is the lead competitor in event B but the partner in
   // event A. The event_divers UNION must pick Y up from BOTH the
-  // competitor_id and partner_id arms — if the partner arm is
-  // dropped this test fails.
+  // competitor_id and partner_id arms. If the partner arm gets
+  // dropped, this test fails.
 
   const orgId = await makeOrg();
   const meetId = await makeMeet(orgId);
@@ -461,8 +461,8 @@ test("team member double-booked across events → diver_conflict", async (t) => 
   if (!dbReachable) return t.skip("no test DB");
   // Y is in a team that's entered in event A, and entered as a solo
   // competitor in event B. The team_members UNION arm in
-  // event_divers is the only path that picks Y up for event A — if
-  // it's dropped this test fails.
+  // event_divers is the only path that picks Y up for event A. If
+  // it's dropped, this test fails.
 
   const orgId = await makeOrg();
   const meetId = await makeMeet(orgId);
@@ -601,13 +601,13 @@ test("fingerprint stability — same fixture, two runs, identical hashes", async
 
 test("fingerprint changes when block time shifts (membership stays the same shape)", async (t) => {
   if (!dbReachable) return t.skip("no test DB");
-  // Shifting a block by 1 minute keeps the same overlapping pair —
+  // Shifting a block by 1 minute keeps the same overlapping pair,
   // and the same resource set, so the *fingerprint of the resource
   // membership* should be identical. But mutating block_a's start
   // makes the pair re-emerge with a different overlap window. We
   // assert the row count stays positive and the fingerprint of the
-  // pair-with-time changes only if membership changes — to do that,
-  // we change the SET of overlapping judges. Specifically: add a
+  // pair-with-time changes only if membership changes. To do that,
+  // we change the SET of overlapping judges: add a
   // second judge to both panels and re-run. The fingerprint then
   // covers two ids and must differ from the one-judge run.
 
@@ -636,8 +636,8 @@ test("fingerprint changes when block time shifts (membership stays the same shap
   const beforeJudge = before.find((c) => c.resource_kind === "judge");
   assert.ok(beforeJudge, "baseline run must yield a judge conflict");
 
-  // Shift blockA's start by one minute — does NOT change membership;
-  // fingerprint must remain stable for the same resource set.
+  // shift blockA's start by one minute. Does NOT change membership;
+  // fingerprint must remain stable for the same resource set
   await pool.query(
     `UPDATE schedule_blocks SET starts_at = $1 WHERE id = $2`,
     ["2026-05-18T09:01:00Z", blockA],
@@ -651,8 +651,8 @@ test("fingerprint changes when block time shifts (membership stays the same shap
     "time shift without membership change must keep fingerprint stable",
   );
 
-  // Now add a second judge to both panels — membership changes,
-  // fingerprint must change.
+  // now add a second judge to both panels: membership changes,
+  // fingerprint must change
   await assignJudge(eventA, j2, 2);
   await assignJudge(eventB, j2, 2);
   const afterAdd = await detectConflicts(meetId, pool);

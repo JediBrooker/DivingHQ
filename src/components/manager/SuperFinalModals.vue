@@ -1,19 +1,19 @@
 <script setup>
-/* SuperFinalModals — the five Super Final dialogs (DWC 2026
+/* SuperFinalModals: the five Super Final dialogs (DWC 2026
  * Appendix 3), extracted from ManagerView.vue.
  *
- * Owns all per-modal state (open flags, payloads, errors,
- * loading flags) and the open/close/confirm handlers. The parent
- * (ManagerView) keeps a template ref so the event-row buttons
- * can call into us via defineExpose. After a successful seed we
- * emit `refresh-events` so the parent can reload its list.
+ * Owns all per-modal state (open flags, payloads, errors, loading
+ * flags) and the open/close/confirm handlers. The parent
+ * (ManagerView) keeps a template ref so the event-row buttons can
+ * call into us via defineExpose. After a successful seed we emit
+ * `refresh-events` so the parent can reload its list.
  *
  * Five modals in order of the SF flow:
- *   1. Seed Head-to-Head — preview + confirm pair seeding (§2.1.1)
- *   2. H2H pair results — read-only display once H2H is Live/Completed
- *   3. Seed Semi Final — single-step seed from H2H winners (§3.1)
- *   4. Seed Final — single-step seed from SF top-2-per-group (§3.2)
- *   5. Super Final rankings — official 1-12 list (§7)
+ *   1. Seed Head-to-Head: preview + confirm pair seeding (§2.1.1)
+ *   2. H2H pair results: read-only display once H2H is Live/Completed
+ *   3. Seed Semi Final: single-step seed from H2H winners (§3.1)
+ *   4. Seed Final: single-step seed from SF top-2-per-group (§3.2)
+ *   5. Super Final rankings: official 1-12 list (§7)
  *
  * Backend routes all live in routes/events/super-final-bridge.js.
  */
@@ -29,8 +29,8 @@ const auth = useAuthStore()
 
 const emit = defineEmits(['refresh-events'])
 
-// 1. Super Final — H2H seeding modal. Mirrors the openAdvanceModal
-// pattern: pull the preview, show the proposed pairs, commit when
+// 1. Super Final: H2H seeding modal. Mirrors the openAdvanceModal
+// pattern, pull the preview, show the proposed pairs, commit when
 // the operator confirms.
 const h2hModalOpen     = ref(false)
 const h2hEvent         = ref(null)
@@ -101,7 +101,7 @@ async function confirmH2hSeed() {
   }
 }
 
-// 2. "View pair results" — read-only modal opened on Live or
+// 2. "View pair results": read-only modal opened on Live or
 // Completed super_final_h2h events.
 const h2hResultsModalOpen = ref(false)
 async function openH2hResultsModal(ev) {
@@ -121,9 +121,9 @@ function closeH2hResultsModal() {
   h2hResults.value = null
 }
 
-// 3. Super Final — Seed Semi Final modal. Simpler than the H2H
-// modal: no per-Federation cap, no preview, just a single
-// "Confirm" action that posts to seed-semi.
+// 3. Super Final: Seed Semi Final modal. Simpler than the H2H modal,
+// no per-Federation cap, no preview, just a single "Confirm" action
+// that posts to seed-semi.
 const sfSeedModalOpen = ref(false)
 const sfSeedEvent     = ref(null)
 const sfSeedLockMin   = ref(30)
@@ -157,10 +157,10 @@ async function confirmSfSeed() {
   }
 }
 
-// 4. Super Final — Seed Final modal.
+// 4. Super Final: Seed Final modal.
 const fSeedModalOpen = ref(false)
 const fSeedEvent     = ref(null)
-const fSeedLockMin   = ref(15)   // Appendix 3 §4.1 — 15-min break
+const fSeedLockMin   = ref(15)   // Appendix 3 §4.1 (15-min break)
 const fSeedLoading   = ref(false)
 const fSeedErr       = ref('')
 
@@ -191,15 +191,15 @@ async function confirmFSeed() {
   }
 }
 
-// 5. Merged Super Final rankings — Appendix 3 §7. Opens from
-// the Final event's "View Super Final rankings" link.
+// 5. Merged Super Final rankings (Appendix 3 §7). Opens from the
+// Final event's "View Super Final rankings" link.
 const superFinalRankingsModalOpen = ref(false)
 const superFinalRankings          = ref(null)
 const superFinalRankingsErr       = ref('')
 
-// Lock background scroll while any of the 5 super-final modals
-// is open — iOS Safari otherwise lets the manager drag the
-// underlying events list mid-bracket-setup.
+// Lock background scroll while any of the 5 super-final modals is
+// open, heads up that iOS Safari otherwise lets the manager drag
+// the underlying events list mid-bracket-setup.
 useBodyScrollLock().lockWhile(computed(() =>
   h2hModalOpen.value || h2hResultsModalOpen.value ||
   sfSeedModalOpen.value || fSeedModalOpen.value ||
@@ -223,8 +223,8 @@ function closeSuperFinalRankingsModal() {
 
 // Surface the openers so ManagerView's event-row buttons can call
 // into us via a template ref. We deliberately do NOT expose the
-// close handlers — those only need to be reachable from within
-// our own template.
+// close handlers, they only need to be reachable from within our
+// own template.
 defineExpose({
   openH2hModal,
   openH2hResultsModal,
@@ -235,8 +235,8 @@ defineExpose({
 </script>
 
 <template>
-  <!-- Super Final — Seed Head-to-Head modal. Mirrors the
-       advance modal: preview + a single confirm action. -->
+  <!-- Super Final: Seed Head-to-Head modal. Mirrors the advance
+       modal, preview + a single confirm action. -->
   <BaseModal v-if="h2hModalOpen" max-width="720px" @close="closeH2hModal">
     <template #default="{ titleId }">
       <ModalHeader :title-id="titleId" @close="closeH2hModal">
@@ -270,7 +270,7 @@ defineExpose({
           </label>
         </div>
 
-        <!-- Capped orgs — surface so the operator sees who got
+        <!-- Capped orgs, heads up for the operator on who got
              dropped because of the per-Federation cap. -->
         <div v-if="h2hPreview.capped_orgs && h2hPreview.capped_orgs.length"
              class="hint" style="margin-top:0.75rem;padding:0.5rem 0.75rem;
@@ -322,8 +322,8 @@ defineExpose({
     </template>
   </BaseModal>
 
-  <!-- Super Final — H2H pair results modal. Read-only,
-       opens on Live/Completed super_final_h2h events. -->
+  <!-- Super Final: H2H pair results modal. Read-only, opens on
+       Live/Completed super_final_h2h events. -->
   <BaseModal v-if="h2hResultsModalOpen" max-width="720px" @close="closeH2hResultsModal">
     <template #default="{ titleId }">
       <ModalHeader :title-id="titleId" @close="closeH2hResultsModal">
@@ -357,7 +357,7 @@ defineExpose({
     </template>
   </BaseModal>
 
-  <!-- Super Final — Seed Semi Final modal. -->
+  <!-- Super Final: Seed Semi Final modal. -->
   <BaseModal v-if="sfSeedModalOpen" max-width="520px" @close="closeSfSeedModal">
     <template #default="{ titleId }">
       <ModalHeader :title-id="titleId" @close="closeSfSeedModal">
@@ -389,7 +389,7 @@ defineExpose({
     </template>
   </BaseModal>
 
-  <!-- Super Final — Seed Final modal. -->
+  <!-- Super Final: Seed Final modal. -->
   <BaseModal v-if="fSeedModalOpen" max-width="520px" @close="closeFSeedModal">
     <template #default="{ titleId }">
       <ModalHeader :title-id="titleId" @close="closeFSeedModal">
@@ -422,7 +422,7 @@ defineExpose({
     </template>
   </BaseModal>
 
-  <!-- Super Final — Official 1-12 rankings (Appendix 3 §7). -->
+  <!-- Super Final: Official 1-12 rankings (Appendix 3 §7). -->
   <BaseModal v-if="superFinalRankingsModalOpen" max-width="680px" @close="closeSuperFinalRankingsModal">
     <template #default="{ titleId }">
       <ModalHeader :title-id="titleId" @close="closeSuperFinalRankingsModal">
@@ -488,9 +488,9 @@ defineExpose({
 .sf-ranking-row     { grid-template-columns: 36px 1fr 90px 80px; }
 
 @media (max-width: 600px) {
-  /* G# pins to the left, names + scores stack underneath. The
-     "vs" label is decorative on a stacked layout — keep it
-     centered across the row. */
+  /* G# pins to the left, names + scores stack underneath. The "vs"
+     label is decorative on a stacked layout anyway, so just keep
+     it centered across the row. */
   .sf-pair-row {
     grid-template-columns: 36px 1fr;
     row-gap: 0.1rem;

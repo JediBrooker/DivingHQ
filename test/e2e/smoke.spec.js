@@ -1,8 +1,8 @@
-// End-to-end smoke test — drives the actual SPA in a real
-// browser. Complements the integration test (which exercises
-// the HTTP API directly) by catching things that only break in
-// the browser: SPA bundle wiring, router guards, the
-// scoreboard's socket reconnect, OG-tag fallback for crawlers.
+// End-to-end smoke test, drives the actual SPA in a real browser.
+// Complements the integration test (which exercises the HTTP API
+// directly) by catching things that only break in the browser: SPA
+// bundle wiring, router guards, the scoreboard's socket reconnect,
+// OG-tag fallback for crawlers.
 //
 // What's covered:
 //   1. /api/health   → server up, schema_meta exposed
@@ -16,10 +16,10 @@
 //                      through to the SPA's index.html
 //
 // We deliberately don't cover the deep flows (login, score
-// submission) yet — those need fixture data that the integration
-// suite already covers. This file is a tripwire that catches
+// submission) yet, those need fixture data the integration suite
+// already handles. Think of this file as a tripwire that catches
 // "the SPA bundle stopped loading" or "the request middleware
-// broke" — the kind of regression that's invisible to API tests.
+// broke", the kind of regression that's invisible to API tests.
 
 const { test, expect, request } = require("@playwright/test");
 
@@ -34,62 +34,62 @@ test("server is healthy and exposes schema_meta", async ({ request: req }) => {
 
 test("SPA index page boots", async ({ page }) => {
   await page.goto("/");
-  // The SPA's index.html sets <title>DivingHQ</title>;
-  // anything else means the static fallback didn't fire.
+  // The SPA's index.html sets <title>DivingHQ</title>; anything
+  // else means the static fallback didn't fire.
   await expect(page).toHaveTitle(/divinghq/i);
-  // The bundle should load and Vue should mount; check the
-  // root #app element is present and the JS chunk fired.
+  // Bundle should load and Vue should mount, so just check the root
+  // #app element is present and the JS chunk actually fired.
   const rootCount = await page.locator("#app").count();
   expect(rootCount).toBe(1);
 });
 
 test("metrics endpoint exposes Prometheus payload", async ({ request: req }) => {
-  // Generate at least one scrape-worthy request first so the
-  // counters aren't empty.
+  // Fire off at least one scrape-worthy request first, just in case
+  // the counters start empty.
   await req.get("/api/health");
   const r = await req.get("/metrics");
   expect(r.status()).toBe(200);
   expect(r.headers()["content-type"]).toMatch(/text\/plain/);
   const body = await r.text();
-  // App-specific metric should appear (proves prom-client
-  // registry got our custom counters, not just the defaults).
+  // App-specific metric should show up too (proves prom-client's
+  // registry picked up our custom counters, not just the defaults).
   expect(body).toContain("dive_recorder_http_requests_total");
-  // Default Node.js metric should appear too.
+  // default Node.js metric should appear too
   expect(body).toContain("dive_recorder_process_resident_memory_bytes");
 });
 
 test("public diver profile: crawler gets OG tags, browser gets SPA", async ({ request: req, page }) => {
   // Look up a real public_slug. The bootstrap admin user always
-  // exists (init.sql) and has a slug post-Migration-023. Hit
-  // the JSON endpoint with any slug to confirm shape, then use
-  // a known one for the OG check.
-  // /api/orgs/active is public — gives us org metadata; we
-  // can't easily extract a user's slug from the public API
-  // (correctly — we don't expose the inverse lookup). For the
-  // smoke test we just hit a known invalid slug and assert 404.
+  // exists (init.sql) and has a slug post-Migration-023. Hit the
+  // JSON endpoint with any slug to confirm the shape, then use a
+  // known one for the OG check.
+  // /api/orgs/active is public, gives us org metadata, but we can't
+  // easily extract a user's slug from the public API (that's on
+  // purpose, we don't expose the inverse lookup). So for the smoke
+  // test we just hit a known invalid slug and assert 404.
   const r = await req.get("/api/public/divers/0123456789abcdef0123456789abcdef");
   expect(r.status()).toBe(404);
 
-  // Crawler path should return HTML even on a 404-ish slug for
-  // any crawler check at all. The handler next()s on bad slug,
-  // which falls through to the SPA fallback. So instead let's
-  // just verify the SPA fallback fires for /diver/whatever.
+  // Crawler path should return HTML even on a 404-ish slug, just to
+  // prove the crawler check works at all. The handler next()s on a
+  // bad slug, which falls through to the SPA fallback, so let's just
+  // verify the SPA fallback fires for /diver/whatever.
   await page.goto("/diver/0123456789abcdef0123456789abcdef");
   await expect(page).toHaveTitle(/divinghq/i);
 });
 
 test("crawler UA on /diver/:slug receives OG-tagged HTML when slug exists",
   async ({ playwright }) => {
-    // We need a real slug; query the DB-backed public endpoint
-    // for the bootstrap admin. The admin's slug is autogenerated
-    // by Migration 023; we can't predict it, so list-by-org and
-    // pick one.
+    // Need a real slug here, so query the DB-backed public endpoint
+    // for the bootstrap admin. The admin's slug is autogenerated by
+    // Migration 023, we can't predict it, hence list-by-org and pick
+    // one.
     //
-    // /api/orgs/active is public. Pick the first org. For a slug
-    // we'd need a DB lookup we don't expose, so this test stays
-    // shape-only: we hit /diver/<32 hex> as a crawler and assert
-    // we get HTML (either the OG page on a hit, or the SPA on a
-    // miss). Either way the SPA fallback must serve text/html.
+    // /api/orgs/active is public, pick the first org. For an actual
+    // slug we'd need a DB lookup we don't expose, so this test stays
+    // shape-only: hit /diver/<32 hex> as a crawler and assert we get
+    // HTML back (either the OG page on a hit, or the SPA on a miss).
+    // Either way the SPA fallback has to serve text/html.
     const ctx = await playwright.request.newContext({
       extraHTTPHeaders: { "User-Agent": "Twitterbot/1.0" },
     });

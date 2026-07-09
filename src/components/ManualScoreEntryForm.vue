@@ -9,15 +9,15 @@
  * digital submission doesn't block the rest of the panel.
  *
  * Props:
- *   eventId         — current event the operator is driving
- *   competitorId    — current diver
- *   roundNumber     — current round (so the operator's typed
+ *   eventId         - current event the operator is driving
+ *   competitorId    - current diver
+ *   roundNumber     - current round (so the operator's typed
  *                     value lands on the right row of the dive list)
- *   panel           — [{ judge_id, judge_number, judge_name }]
+ *   panel           - [{ judge_id, judge_number, judge_name }]
  *
  * Emits:
- *   close           — operator dismissed the form (saved or cancelled)
- *   saved(judgeId)  — single judge's score successfully landed;
+ *   close           - operator dismissed the form (saved or cancelled)
+ *   saved(judgeId)  - single judge's score successfully landed;
  *                     parent can mark the panel tile as scored
  *
  * Per-row state machine: idle → submitting → ok|error. Conflict
@@ -90,8 +90,8 @@ function getState(judgeId) {
 
 // Validate the typed score against the same 0.0-10.0 / 0.5-step
 // constraint the server enforces. Returns the parsed number or
-// null. Empty string is a special-case "skip this judge" — the
-// operator may want to enter only some panel members in one batch.
+// null. Empty string is a special-case "skip this judge", since
+// the operator may want to enter only some panel members in one batch.
 function parseScore(raw) {
   if (raw === '' || raw == null) return null
   const n = Number(raw)
@@ -151,7 +151,7 @@ async function submitOne(judge) {
 
 // Bulk-submit every populated row in panel order. Stops on per-
 // row failures (each row carries its own status) but doesn't
-// short-circuit — the operator sees every result.
+// short-circuit, so the operator sees every result.
 async function submitAll() {
   for (const judge of loadedPanel.value) {
     await submitOne(judge)

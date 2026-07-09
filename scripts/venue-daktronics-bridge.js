@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // DivingHQ to Daktronics venue bridge.
 //
-// Subscribes to the existing `venue.scoreboard_state` stream and
-// writes Daktronics-friendly RTD frames to UDP/TCP/stdout/file/serial.
-// Designed to run on the operator laptop inside the venue LAN.
+// Subscribes to the existing `venue.scoreboard_state` stream and writes
+// Daktronics-friendly RTD frames out to UDP/TCP/stdout/file/serial.
+// Meant to run on the operator's laptop, inside the venue LAN.
 
 const fs = require("node:fs");
 const net = require("node:net");

@@ -1,7 +1,7 @@
 <script setup>
-// One compact event row — name + status badge + meta + arrow,
+// One compact event row: name + status badge + meta + arrow,
 // shared by the Meet Manager and Judge panels (and Referee, which
-// overrides the badge label). Global styling: .event-row,
+// overrides the badge label). Global styling lives in .event-row,
 // .event-row-<status>, .evrs-<status>, .event-row-* in
 // src/styles/app.css.
 //

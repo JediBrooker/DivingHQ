@@ -5,13 +5,13 @@
 // Design choice: setup goes through a mix of the public API
 // (so we exercise real code paths where it's cheap) and direct
 // SQL writes (for the bits that are otherwise gated by
-// out-of-band steps — email verification clicks, sysadmin org
-// approvals — that would make every test 10× slower for no
+// out-of-band steps, email verification clicks, sysadmin org
+// approvals, that would make every test 10× slower for no
 // extra coverage). Same trade-off the integration test makes
 // (see test/integration.test.js).
 //
-// Tests run in parallel — every helper that creates state uses
-// a per-test random slug so two parallel tests never collide.
+// Tests run in parallel, so every helper that creates state uses
+// a per-test random slug: two parallel tests should never collide.
 
 const crypto = require("node:crypto");
 const bcrypt = require("bcrypt");
@@ -33,8 +33,8 @@ const pool = process.env.DATABASE_URL
     });
 
 // Constant password used for every synthetic user. Real e2e tests
-// shouldn't be in the business of testing password strength —
-// that's a unit-test concern. We just need a string ≥8 chars
+// shouldn't be in the business of testing password strength, that's
+// a unit-test concern. We just need a string ≥8 chars
 // that bcrypt-compares cleanly.
 const TEST_PASSWORD = "e2e-test-password-1234";
 
@@ -152,7 +152,7 @@ function rand() {
 async function createOrgAndAdmin(request, opts = {}) {
   const slug = `e2e-${rand()}`;
   const username = `e2e-admin-${slug}`;
-  // Optional country override — defaults to "TST" so existing
+  // Optional country override, defaults to "TST" so existing
   // callers don't change. Specs that drive the watcher mode pass
   // a real ISO-ish code (NZL / DEU / etc.) so the country chip
   // on history cards reads like a live meet.
@@ -210,8 +210,8 @@ async function createOrgAndAdmin(request, opts = {}) {
 }
 
 // Insert a user with a single org_role directly. Bypasses the
-// public registration flow because we don't need to exercise it
-// in every test — just need a user with the role set up.
+// public registration flow becuase we don't need to exercise it
+// in every test, just need a user with the role set up.
 //
 // `clubId` is optional: pass one to wire the user into a club so
 // the history card / Up Next / scoreboard rows show a club_name
@@ -219,8 +219,8 @@ async function createOrgAndAdmin(request, opts = {}) {
 // omit it; the column is nullable.
 async function insertUser({ orgId, role, fullName, clubId = null }) {
   const username = `e2e-${role}-${rand()}`;
-  // bcrypt cost 4 — fine for a fixture user nobody will brute
-  // force; default 12 would add ~150ms per insertion.
+  // bcrypt cost 4, kinda low but fine for a fixture user nobody
+  // will brute force; default 12 would add ~150ms per insertion.
   const hash = await bcrypt.hash(TEST_PASSWORD, 4);
   const r = await pool.query(
     `INSERT INTO users (username, password, full_name, org_id, club_id, email_verified_at)
@@ -251,7 +251,7 @@ async function insertClub({ orgId, name, shortCode = null }) {
 
 // The login endpoints now ALSO set an httpOnly session cookie (for the
 // browser SPA). Playwright's APIRequestContext captures Set-Cookie and
-// re-sends it on every later request — which would ambiently
+// re-sends it on every later request, which would ambiently
 // authenticate a request a test means to be anonymous, breaking
 // "no auth → 401/403" and "anonymous sees public-only" assertions.
 //
@@ -312,7 +312,7 @@ async function addParticipatingOrg({ eventId, orgId, addedBy = null }) {
   );
 }
 
-// Replace the panel for an event. Order matters — judge_number
+// Replace the panel for an event. Order matters: judge_number
 // is assigned by position in the array.
 async function assignJudges(request, { adminToken, eventId, judgeIds }) {
   const r = await request.post(`/api/events/${eventId}/judges`, {
@@ -327,8 +327,8 @@ async function assignJudges(request, { adminToken, eventId, judgeIds }) {
 // Pre-populate a competitor's dive list directly. Bypasses
 // /api/competitor/submit-list because that endpoint requires
 // the competitor to be logged in as themselves AND the event to
-// be Upcoming AND entries_close_at not reached — fine for the
-// competitor-flow test that exercises that path explicitly,
+// be Upcoming AND entries_close_at not reached. Fine for the
+// competitor-flow test that exercises that path explicitly, but
 // overhead for every other test.
 async function insertDiveList({ eventId, competitorId, dives }) {
   for (const { round_number, dive_id } of dives) {
@@ -343,7 +343,7 @@ async function insertDiveList({ eventId, competitorId, dives }) {
 }
 
 // Look up a real dive_id from the directory. The directory is
-// loaded by init.sql with ~830 World Aquatics dives — pick one
+// loaded by init.sql with ~830 World Aquatics dives, pick one
 // matching the height + position so it composes sanely with
 // calc_event_dive_points.
 async function pickDiveId({ height = 3.0, dive_code = "101", position = "B" } = {}) {
@@ -392,7 +392,7 @@ async function linkCoach({ coachId, diverId, orgId, note = null }) {
 
 // Insert one judge's score for a (event, competitor, round, dive).
 // Returns the new scores.id so tests of PUT /api/scores/:id have a
-// stable handle. ON CONFLICT keeps re-runs idempotent — re-submits
+// stable handle. ON CONFLICT keeps re-runs idempotent: re-submits
 // with a different value update in place rather than colliding on
 // the UNIQUE (event, competitor, round, judge).
 async function insertScore({
@@ -410,9 +410,9 @@ async function insertScore({
 }
 
 // Mark a user as a manager of a specific event. Score correction
-// (PUT /api/scores/:id) gates non-org-admin callers on this row —
-// a referee role alone isn't enough; they must also be on the
-// event's manager list.
+// (PUT /api/scores/:id) gates non-org-admin callers on this row:
+// a referee role alone isn't enough, they've gotta be on the
+// event's manager list too.
 async function addEventManager({ eventId, userId }) {
   await pool.query(
     `INSERT INTO event_managers (event_id, user_id)
@@ -598,16 +598,16 @@ async function installDialogDelay(page) {
 // Without this, every fresh-context Playwright run with a
 // tour-eligible role lands on a modal that obscures the
 // dashboard, and any subsequent `.event-row` / nav click times
-// out at 180s. Cheap to call from every test that hits /login
-// — admin / meet_manager flows are unaffected (the tour ignores
-// those roles anyway).
+// out at 180s. Cheap to call from every test that hits /login,
+// and admin / meet_manager flows are unaffected anyway (the tour
+// ignores those roles).
 async function bypassRoleTour(page) {
   await page.addInitScript(() => {
     try {
       localStorage.setItem("dr_tour_seen_coach", "1");
       localStorage.setItem("dr_tour_seen_judge", "1");
       localStorage.setItem("dr_tour_seen_diver", "1");
-    } catch { /* private mode / storage disabled — ignore */ }
+    } catch { /* private mode / storage disabled, ignore */ }
   });
 }
 
@@ -648,7 +648,7 @@ async function installClickHighlight(page) {
     // target's ancestor suppresses pointerdown but not the
     // synthetic mousedown), and (b) a capture-phase listener
     // higher in the chain can stopImmediatePropagation a
-    // single event type — listening on both window AND
+    // single event type, so listening on both window AND
     // document means at least one branch always fires.
     let lastTs = 0;
     const STYLE_ID = "__e2e-click-style";
@@ -675,7 +675,7 @@ async function installClickHighlight(page) {
     // Marker animation tuned to be visible *from the very first
     // frame*. The previous version ramped opacity 0 → 0.95
     // over 15% of the animation (~54ms), which meant a click
-    // that triggered fast navigation flashed away invisibly —
+    // that triggered fast navigation flashed away invisibly,
     // the page swapped before the ring crossed the visibility
     // threshold. Now opacity starts at 1, so even one painted
     // frame is enough to register the click visually.
@@ -701,7 +701,7 @@ async function installClickHighlight(page) {
             inset 0 0 4px rgba(6, 182, 212, 0.45);
           animation: e2eClickRing 450ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
           will-change: transform, opacity;
-          opacity: 1;   /* explicit pre-animation state — paints
+          opacity: 1;   /* explicit pre-animation state, paints
                             on the first frame even before the
                             animation engine kicks in. */
         }
@@ -713,7 +713,7 @@ async function installClickHighlight(page) {
       ensureStyle();
       const target = document.body;
       if (!target) {
-        // Click landed before <body> existed — log only.
+        // Click landed before <body> existed, log only.
         try { console.log(`[e2e-click] ${Math.round(x)},${Math.round(y)} (no body)`); } catch {}
         return;
       }

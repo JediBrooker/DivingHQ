@@ -6,11 +6,11 @@ import { useAuthStore } from '@/stores/auth'
 import { fmtDate } from '@/lib/format'
 
 // Side-by-side comparison of two divers across ANY organisation.
-// Each side uses an autocomplete typeahead OR a "Browse" modal that
+// Each side uses an autocomplete typeahead or a "Browse" modal that
 // lists every diver with org/club/country filters. Reuses the
-// existing /api/divers/:id/profile endpoint, which now allows any
-// authenticated user to view a diver's competitive history (the
-// data was already public via the meet scoreboards).
+// existing /api/divers/:id/profile endpoint, which now lets any
+// authenticated user view a diver's competitive history (this data
+// was already public via the meet scoreboards anyway).
 
 const route  = useRoute()
 const router = useRouter()
@@ -60,9 +60,9 @@ function selectDiver(side, diver) {
   closeBrowse()
 }
 
-// fmtDate imported from @/lib/format — single source of truth.
+// fmtDate imported from @/lib/format, keeping date formatting in one place.
 
-// Diff helpers — colour the higher value cyan, the other dim.
+// Diff helpers: colour the higher value cyan, the other dim.
 // Returns 'a' | 'b' | 'tie'.
 function winner(a, b) {
   if (a == null && b == null) return 'tie'
@@ -158,7 +158,7 @@ async function runSearch(side, q) {
 
 function closeAutocomplete(side) {
   // setTimeout so a click on a result row registers before blur
-  // tears down the dropdown.
+  // tears down the dropdown. Bit hacky but it works.
   setTimeout(() => {
     if (side === 'a') openA.value = false
     else              openB.value = false
@@ -172,7 +172,7 @@ function clearSide(side) {
 }
 
 // =========================================================
-// Browse modal — list every diver with org / country / club
+// Browse modal: list every diver with org / country / club
 // filters and a search box. Selecting a row resolves to that
 // side and closes the modal.
 // =========================================================
@@ -289,7 +289,7 @@ onMounted(async () => {
       <RouterLink to="/dashboard" class="btn btn-ghost btn-sm">{{ $t('compare.back') }}</RouterLink>
     </div>
 
-    <!-- Pickers — autocomplete + browse, one per side -->
+    <!-- Pickers: autocomplete + browse, one per side -->
     <div class="picker-row">
       <div class="picker-side">
         <div class="picker-label-a">{{ $t('compare.pick_diver_a') }}</div>
@@ -448,7 +448,7 @@ onMounted(async () => {
     <div v-if="errorB" class="msg msg-error">Diver B: {{ errorB }}</div>
   </div>
 
-  <!-- Browse modal — full filterable list of divers -->
+  <!-- Browse modal: full filterable list of divers -->
   <div v-if="browseOpen" class="browse-backdrop" @click="closeBrowse"></div>
   <div v-if="browseOpen" class="browse-modal" @click.stop>
     <div class="browse-head">
@@ -671,7 +671,7 @@ onMounted(async () => {
   z-index: 100;
   width: min(900px, calc(100vw - 2rem));
   /* `dvh` not `vh` so the modal shrinks with the iOS Safari
-     URL/toolbar rather than being clipped behind it — otherwise
+     URL/toolbar rather than being clipped behind it. Otherwise
      the bottom rows of the dive-browse table can sit physically
      under the toolbar and be unreachable. vh fallback first
      for browsers older than ~Q4-2022. */

@@ -1,13 +1,14 @@
 -- =============================================================
--- MIGRATION 076 — AUTO-WITHDRAW SETTINGS
+-- MIGRATION 076: auto-withdraw settings
 --
--- The dedicated Payments section lets a federation opt into automatic
--- withdrawals: when its owed balance reaches a threshold, the platform pays
--- that balance out to the stored bank details without the admin having to
--- click "Withdraw". These two columns hold that preference; the withdrawal
--- itself is recorded in the payouts table (migration 075). The auto-execution
--- job is wired when payments go live — dormant until then, but the admin can
--- save the preference now.
+-- The Payments section lets a federation opt into automatic
+-- withdrawals: once its owed balance hits a threshold, the platform
+-- pays that balance out to the stored bank details without the admin
+-- having to click "Withdraw". These two columns just hold that
+-- preference; the actual withdrawal gets recorded in the payouts
+-- table (migration 075). The auto-execution job gets wired up once
+-- payments go live, so it's dormant for now, but the admin can save
+-- the preference today.
 -- =============================================================
 
 BEGIN;

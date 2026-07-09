@@ -78,7 +78,7 @@ async function onEventChange() {
     // Use the event-scoped picker so participating federations'
     // judges show up too. Falls back to the org-scoped /api/judges
     // (which the page initialised from) if the event endpoint
-    // 4xxs — keeps domestic-only flows working unchanged.
+    // 4xxs, keeps domestic-only flows working unchanged.
     const [assigned, eligible] = await Promise.all([
       auth.apiFetch(`/api/events/${selectedEventId.value}/judges`),
       auth.apiFetch(`/api/events/${selectedEventId.value}/eligible-judges`).catch(() => null),

@@ -1,25 +1,25 @@
-// Standard event templates — World Aquatics & common federation
+// Standard event templates: World Aquatics & common federation
 // patterns shipped as static, code-defined defaults so every org
 // gets the same canonical starting points.
 //
 // Each template has:
-//   * name        — surfaces in the modal's template strip.
-//   * description — one-line explanation of the rule shape.
-//   * applies     — { gender, age_group } both optional. Filters
+//   * name:        surfaces in the modal's template strip.
+//   * description: one-line explanation of the rule shape.
+//   * applies:     { gender, age_group } both optional. Filters
 //                    which templates the modal surfaces given the
 //                    operator's current Gender + Age Group choice.
 //                    null/undefined match anything.
-//   * config      — same shape as the saved-template `config`
+//   * config:      same shape as the saved-template `config`
 //                    blob the manager already supports, so
 //                    applyEventTemplate() handles it without
 //                    code changes.
 //
 // Caveats this file is honest about: per-federation Junior
-// conditions (DD caps, "voluntary + optional" splits) change
-// year-to-year and per host federation. The shipped Junior
+// conditions (DD caps, "voluntary + optional" splits) definately
+// change year-to-year and per host federation. The shipped Junior
 // templates reflect the World Aquatics structural rules
 // (round counts + different-groups requirement). DD limits are
-// left blank — operators add them per the bulletin in force.
+// left blank, operators add them per the bulletin in force.
 //
 // World Aquatics Senior conditions used as the source of truth:
 //   * Men individual:   6 dives, 6 different World Aquatics groups (or
@@ -28,7 +28,7 @@
 //   * Synchro:          first 2 voluntary @ DD 2.0, then 3 (W) or
 //                        4 (M) optional.
 
-// Helper — generate the section structure for a "voluntary + optional"
+// Helper: generate the section structure for a "voluntary + optional"
 // synchro event. WA rule: first 2 dives at fixed 2.0 DD, remainder
 // optional.
 function synchroSections(totalRounds) {
@@ -42,7 +42,7 @@ function synchroSections(totalRounds) {
 
 const TEMPLATES = [
   // ─────────────────────────────────────────────────────────
-  // SENIOR / OPEN — INDIVIDUAL EVENTS
+  // SENIOR / OPEN: INDIVIDUAL EVENTS
   // ─────────────────────────────────────────────────────────
   {
     name: "Men's 1m Springboard — Senior Open",
@@ -142,7 +142,7 @@ const TEMPLATES = [
   },
 
   // ─────────────────────────────────────────────────────────
-  // SENIOR / OPEN — SYNCHRO EVENTS
+  // SENIOR / OPEN: SYNCHRO EVENTS
   // First 2 dives @ DD 2.0 each (voluntary), remaining optional.
   // ─────────────────────────────────────────────────────────
   {
@@ -195,10 +195,10 @@ const TEMPLATES = [
   },
 
   // ─────────────────────────────────────────────────────────
-  // JUNIOR — GROUP A (16–18). Per WA Junior Championships,
-  // structurally identical to Senior. DD caps come from the host
-  // federation's bulletin (Diving Australia, USA Diving, etc.) —
-  // adjust per current rules.
+  // JUNIOR: GROUP A (16–18). Per WA Junior Championships,
+  // structurally identical to Senior. Heads up: DD caps come from
+  // the host federation's bulletin (Diving Australia, USA Diving,
+  // etc.), adjust per current rules.
   // ─────────────────────────────────────────────────────────
   {
     name: "Boys 1m Springboard — Junior Group A (16-18)",
@@ -298,10 +298,10 @@ const TEMPLATES = [
   },
 
   // ─────────────────────────────────────────────────────────
-  // JUNIOR — GROUP B (14–15). Same structure as Group A; DD
-  // caps tighter per host federation. Diving Australia 2024
-  // pattern is reflected in the canonical "4 @ 7.6 + 4 unlimited"
-  // youth bulletin — see /events/295029.
+  // JUNIOR: GROUP B (14–15). Same structure as Group A, DD caps
+  // tighter per host federation. Diving Australia 2024 pattern is
+  // reflected in the canonical "4 @ 7.6 + 4 unlimited" youth
+  // bulletin, see /events/295029.
   // ─────────────────────────────────────────────────────────
   {
     name: "Boys 1m Springboard — Junior Group B (14-15)",
@@ -373,7 +373,7 @@ const TEMPLATES = [
   },
 
   // ─────────────────────────────────────────────────────────
-  // JUNIOR — GROUP C (12–13). Reduced rounds, lower DD caps.
+  // JUNIOR: GROUP C (12–13). Reduced rounds, lower DD caps.
   // ─────────────────────────────────────────────────────────
   {
     name: "Boys 1m Springboard — Junior Group C (12-13)",
@@ -409,7 +409,7 @@ const TEMPLATES = [
   },
 
   // ─────────────────────────────────────────────────────────
-  // JUNIOR — GROUP D (11 and under). Smaller still.
+  // JUNIOR: GROUP D (11 and under). Smaller still.
   // ─────────────────────────────────────────────────────────
   {
     name: "Boys 1m Springboard — Junior Group D (11 and under)",

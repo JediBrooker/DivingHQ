@@ -1,4 +1,4 @@
-// DiveRecorder archive — public, read-only browse of the mined
+// DiveRecorder archive: public, read-only browse of the mined
 // historical results in the dr_* tables (migration 059, populated by
 // scripts/import-diverecorder.js). Powers the "Archive Explorer"
 // view.
@@ -12,8 +12,8 @@
 // All endpoints are anonymous-readable: the source data is already
 // public, there are no real accounts behind it, and it carries no
 // org. No auth gate, no org filtering. Reads route through the
-// optional replica like routes/archive.js. Mounted behind a read
-// limiter in server.js.
+// optional replica like routes/archive.js does. Mounted behind a
+// read limiter in server.js.
 //
 // Mounted via:
 //   app.use(limiter, require('./routes/dr-archive')({ pool, readPool }))
@@ -26,10 +26,10 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
   const reads = readPool || pool;
   const router = express.Router();
 
-  // GET /api/dr-archive/stats — headline totals for the archive
-  // (events + meets). Cheap COUNT(*)s; used by the public Scoreboard
-  // header to surface "N archived" alongside the live/completed
-  // operational counts.
+  // GET /api/dr-archive/stats: headline totals for the archive
+  // (events + meets). Cheap COUNT(*)s, used by the public
+  // Scoreboard header to surface "N archived" alongside the
+  // live/completed operational counts.
   router.get("/api/dr-archive/stats", async (_req, res) => {
     try {
       const { rows } = await reads.query(
@@ -94,7 +94,7 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
     }
   });
 
-  // GET /api/dr-archive/meets-count?q=&nat=&from=&to= — total number
+  // GET /api/dr-archive/meets-count?q=&nat=&from=&to=: total number
   // of meets matching the same filters as /meets. Lets the client
   // render numbered page links (total pages = ceil(count / pageSize)).
   // Hyphenated path so it never collides with /meets/:id.
@@ -134,7 +134,7 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
     }
   });
 
-  // GET /api/dr-archive/date-range — earliest + latest meet date in
+  // GET /api/dr-archive/date-range: earliest + latest meet date in
   // the archive, as plain YYYY-MM-DD. Bounds the date range slider.
   router.get("/api/dr-archive/date-range", async (req, res) => {
     try {
@@ -150,7 +150,7 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
     }
   });
 
-  // GET /api/dr-archive/countries — distinct countries present in the
+  // GET /api/dr-archive/countries: distinct countries present in the
   // archive (with a meet count), for the filter dropdown.
   router.get("/api/dr-archive/countries", async (req, res) => {
     try {
@@ -168,7 +168,7 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
     }
   });
 
-  // GET /api/dr-archive/meets/:id — meet header + its events.
+  // GET /api/dr-archive/meets/:id: meet header + its events.
   router.get("/api/dr-archive/meets/:id", async (req, res) => {
     try {
       const meet = await reads.query(
@@ -194,7 +194,7 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
     }
   });
 
-  // GET /api/dr-archive/events/:id — event header + ranked results.
+  // GET /api/dr-archive/events/:id: event header + ranked results.
   router.get("/api/dr-archive/events/:id", async (req, res) => {
     try {
       const ev = await reads.query(
@@ -220,7 +220,7 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
     }
   });
 
-  // GET /api/dr-archive/results/:id — one diver's full divesheet.
+  // GET /api/dr-archive/results/:id: one diver's full divesheet.
   router.get("/api/dr-archive/results/:id", async (req, res) => {
     try {
       const result = await reads.query(
@@ -249,7 +249,7 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
     }
   });
 
-  // GET /api/dr-archive/divers/search?q= — find a diver and list
+  // GET /api/dr-archive/divers/search?q=: find a diver and list
   // every archived result for them, newest first.
   router.get("/api/dr-archive/divers/search", async (req, res) => {
     try {
@@ -274,7 +274,7 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
     }
   });
 
-  // GET /api/dr-archive/divers/:id — a diver's cross-meet history.
+  // GET /api/dr-archive/divers/:id: a diver's cross-meet history.
   router.get("/api/dr-archive/divers/:id", async (req, res) => {
     try {
       const diver = await reads.query(
@@ -301,10 +301,10 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
   });
 
   // ----- Sysadmin-only: trigger / monitor a DiveRecorder import ----
-  // Only wired when the middleware is provided (the server passes it;
-  // tests that mount the router without it simply omit these routes).
+  // Only wired up when the middleware is provided, heads up: tests
+  // that mount the router without it just omit these routes.
   if (requireSystemAdmin) {
-    // POST /api/dr-archive/admin/import — kick off an import in the
+    // POST /api/dr-archive/admin/import: kick off an import in the
     // background and return immediately. Body: { onlyNew?, limit?, nat? }.
     // Defaults to onlyNew=true (fast incremental "pull new meets").
     router.post("/api/dr-archive/admin/import", requireSystemAdmin, (req, res) => {
@@ -319,7 +319,7 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
       res.status(202).json({ ok: true, status: started.status });
     });
 
-    // GET /api/dr-archive/admin/import/status — poll progress.
+    // GET /api/dr-archive/admin/import/status: poll progress.
     router.get("/api/dr-archive/admin/import/status", requireSystemAdmin, (req, res) => {
       res.json(getImportStatus());
     });

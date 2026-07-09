@@ -1,11 +1,11 @@
 // Unit tests for body-scroll-lock-core.
 //
 // We target the pure-JS core (no Vue), passing in fake
-// window/document objects so the suite is hermetic and
-// independent of any DOM environment. The Vue composable
+// window/document objects so the suite stays hermetic and
+// doesn't depend on any real DOM environment. The Vue composable
 // useBodyScrollLock just wires the core to onUnmounted +
-// watch; that wiring is tiny enough not to need its own
-// unit test (the e2e mobile-safari suite exercises the
+// watch, and that wiring is tiny enough it doesn't need its own
+// unit test (the e2e mobile-safari suite already exercises the
 // full path through a real browser).
 //
 // History: an earlier version of this test loaded the Vue
@@ -13,8 +13,8 @@
 // That worked on Node 24 locally but broke on older Node
 // in CI ("paths[0] argument must be of type string. Received
 // undefined") because of fragility in the ESM→CJS interop
-// path. The split into a pure-JS core + Vue wrapper makes
-// the test trivial: require the core directly.
+// path. Splitting into a pure-JS core + Vue wrapper made
+// the test trivial: just require the core directly.
 
 const { test, beforeEach } = require("node:test")
 const assert = require("node:assert/strict")
@@ -23,9 +23,9 @@ const corePath = require("node:path").join(
   __dirname, "..", "src", "composables", "body-scroll-lock-core.js",
 )
 
-// The core is ESM. Convert to a cacheable promise so each
-// test can call await loadCore() and get the same module
-// instance (with mutable module-level state).
+// The core is ESM, so wrap it in a cacheable promise. That way
+// each test can await loadCore() and get back the same module
+// instance, mutable module-level state and all.
 let coreModulePromise = null
 function loadCore() {
   if (!coreModulePromise) {
@@ -75,10 +75,10 @@ test("lock() applies body styles on 0->1 transition", async () => {
 test("nested lock() / unlock() reference-counts (2 locks, 1 unlock keeps body locked)", async () => {
   const { createBodyScrollLock, __getLockCount } = await loadCore()
   const { win, doc } = makeFakeDom({ scrollY: 100 })
-  // Two separate instances sharing the same env — simulates
-  // a Confirm dialog opened on top of an open Drawer. Each
-  // gets its own instance counter, both contribute to the
-  // module-level lockCount.
+  // Two separate instances sharing the same env, simulating
+  // a Confirm dialog opened on top of an open Drawer. Each gets
+  // its own instance counter but both feed the module-level
+  // lockCount.
   const a = createBodyScrollLock(win, doc)
   const b = createBodyScrollLock(win, doc)
 
@@ -111,9 +111,9 @@ test("unlock() without a preceding lock is a no-op (does not underflow)", async 
 })
 
 test("releaseAll() drains an instance's locks even if caller forgot to unlock", async () => {
-  // Simulates Vue's onUnmounted hook firing while a modal
-  // still holds the lock. The lock must be released so the
-  // next page isn't permanently frozen.
+  // Simulates Vue's onUnmounted hook firing while a modal still
+  // holds the lock. Gotta release it here or the next page ends
+  // up permanently frozen.
   const { createBodyScrollLock, __getLockCount } = await loadCore()
   const { win, doc } = makeFakeDom()
   const inst = createBodyScrollLock(win, doc)

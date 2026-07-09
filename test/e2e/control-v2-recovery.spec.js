@@ -1,5 +1,5 @@
-// P7.3 / Recovery mode. Flag-on only. The cross-cutting Recovery center:
-// hold the meet (useMeetHold) -> a hold banner appears; resume clears it.
+// P7.3 / Recovery mode, flag-on only. Covers the cross-cutting Recovery center:
+// hold the meet (useMeetHold) -> a hold banner shows up, resume clears it.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -32,18 +32,18 @@ test("recovery: hold the meet shows a banner; resume clears it", async ({ reques
   await page.waitForLoadState("networkidle");
   await setup.selectControlEvent(page, "Recovery Event");
 
-  // Enter recovery from the top control bar.
+  // Jump into recovery from the top control bar.
   await page.locator(".cv2-act-recovery").click();
   await expect(page.locator('.cv2-mode[aria-label="Recovery"]')).toBeVisible();
 
-  // Hold the meet -> prompt -> confirm -> banner.
+  // hold the meet -> prompt -> confirm -> banner
   await page.locator(".cv2-recovery-btn", { hasText: "Hold meet" }).click();
   await page.locator(".cv2-hold-input").fill("pool maintenance");
   await page.locator(".cv2-hold-confirm").click();
   await expect(page.locator(".cv2-hold-banner")).toContainText(/Meet held/i);
   await expect(page.locator(".cv2-hold-banner")).toContainText(/pool maintenance/i);
 
-  // Resume -> banner gone.
+  // resume -> banner disappears
   await page.locator(".cv2-hold-banner button", { hasText: "Resume" }).click();
   await expect(page.locator(".cv2-hold-banner")).toHaveCount(0);
 });

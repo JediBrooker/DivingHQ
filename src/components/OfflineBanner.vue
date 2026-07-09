@@ -2,10 +2,10 @@
 /* Top-of-view banner showing offline + queue status.
  *
  * Visible when:
- *   * The socket is disconnected, OR
- *   * The outbox has any pending / failed / conflict entries
- *     (even when online, because that means a drain is in flight
- *     or just hit a transient failure).
+ *   * the socket is disconnected, OR
+ *   * the outbox has any pending / failed / conflict entries
+ *     (even when online, since that can mean a drain is in flight
+ *     or it just hit a transient failure)
  *
  * Driven by the useOutbox() composable so multiple views share
  * the same state without re-querying IDB.

@@ -1,8 +1,9 @@
 // Unit coverage for the Daktronics venue bridge formatter.
 //
-// These tests stay hardware-free: the bridge runtime can write to
-// UDP/TCP/serial, but the contract we need to lock is the stable
-// field mapping and frame rendering from venue.scoreboard_state.
+// These tests stay hardware-free. The bridge runtime can write to
+// UDP/TCP/serial, but the contract we actually need to lock down is
+// the stable field mapping and frame rendering from
+// venue.scoreboard_state.
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");

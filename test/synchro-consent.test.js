@@ -6,27 +6,27 @@
 // We exercise the helper in lib/dive-list-submit.js and the
 // writeSynchroBothSides re-export with a hand-rolled fake pg client
 // that returns canned rows for each SQL the helper issues, in order.
-// No real Postgres required — the test pack runs under `test:safe`
+// No real Postgres required, the test pack runs under `test:safe`
 // alongside the other no-DB unit suites.
 //
 // What we pin:
 //   1. Fresh submit (no reciprocal invite) creates a pending row,
 //      writes NO competitor_dive_lists rows, and fires a push.
 //   2. Reciprocal invite: when the OTHER side already invited us,
-//      the helper auto-confirms — pending row flipped to 'accepted'
+//      the helper auto-confirms, pending row flipped to 'accepted'
 //      and competitor_dive_lists rows inserted for both divers.
 //   3. Self-pairing (partner_id === competitor_id) is rejected
 //      before any SQL runs.
-//   4. writeSynchroBothSides — used by the accept endpoint — emits
+//   4. writeSynchroBothSides (used by the accept endpoint) emits
 //      one UPSERT per dive PER diver (i.e. 2N inserts for N dives).
-//   5. Decline path lives in the route — we cover it via direct SQL
-//      assertions on the fake client (the helper itself isn't
+//   5. Decline path lives in the route, we cover it via direct SQL
+//      assertions on the fake client. The helper itself isn't
 //      involved on decline, so this test just pins the SQL we
-//      expect the route to issue).
+//      expect the route to issue.
 //
 // The fake client matches calls by regex against the SQL text. The
-// detail of WHICH validation runs in WHICH order is captured by the
-// `expectations` queue — push() the canned rows you want each
+// detail of which validation runs in which order is captured by the
+// `expectations` queue, push() the canned rows you want each
 // query() call to return, in the order the helper emits them.
 
 const { test } = require("node:test");
@@ -56,7 +56,7 @@ function makeFakeClient(expectations) {
       }
       // Fall-through: anything not explicitly matched returns 0 rows.
       // The validation paths use this to short-circuit (e.g. no
-      // prescribed rows → skip enforcement).
+      // prescribed rows means skip enforcement).
       return { rows: [], rowCount: 0 };
     },
   };
@@ -88,17 +88,17 @@ const TEST_DIVES = [
   { dive_id: "dive-bbb", round_number: 2 },
 ];
 
-// Common expectation builders — keep tests readable by reusing the
+// Common expectation builders, keeps tests readable by reusing the
 // "dive directory + prescribed + partner check" stack and varying the
 // reciprocal-pairing rows per test.
 function baseExpectations({ reciprocalRows = [], partnerRow = { id: "partner-1", full_name: "Tom Daley" } } = {}) {
   return [
-    // Dive directory validation — return each requested dive_id.
+    // Dive directory validation, return each requested dive_id.
     {
       match: /FROM\s+dive_directory/i,
       rows: (params) => params[0].map((id) => ({ id, dive_code: "5132D", dd: 3.2, height: null })),
     },
-    // Prescribed round dives — empty (no operator constraints).
+    // Prescribed round dives, empty since there are no operator constraints.
     { match: /FROM\s+event_round_dives/i, rows: [] },
     // Partner validation lookup.
     { match: /FROM\s+users\s+u[\s\S]*user_org_roles/i, rows: [partnerRow] },
@@ -107,9 +107,9 @@ function baseExpectations({ reciprocalRows = [], partnerRow = { id: "partner-1",
       match: /FROM\s+pending_partner_pairings[\s\S]*FOR UPDATE/i,
       rows: reciprocalRows,
     },
-    // INSERT ... ON CONFLICT pending_partner_pairings → returning id
+    // INSERT ... ON CONFLICT pending_partner_pairings, returns id
     { match: /INSERT INTO pending_partner_pairings/i, rows: [{ id: "pairing-new" }] },
-    // UPDATE pending_partner_pairings (the auto-confirm path).
+    // UPDATE pending_partner_pairings, the auto-confirm path.
     { match: /UPDATE pending_partner_pairings/i, rows: [] },
   ];
 }
@@ -136,7 +136,7 @@ test("fresh synchro submit creates a pending row and skips competitor_dive_lists
   assert.equal(result.pairing.pairing_id, "pairing-new");
   assert.equal(result.pairing.partner_name, "Tom Daley");
 
-  // No competitor_dive_lists touched.
+  // No competitor_dive_lists touched, that's the whole point of the test.
   const cdlWrites = client.calls.filter((c) => /competitor_dive_lists/i.test(c.sql));
   assert.equal(cdlWrites.length, 0, "competitor_dive_lists must not be written before consent");
 
@@ -147,7 +147,7 @@ test("fresh synchro submit creates a pending row and skips competitor_dive_lists
   assert.equal(payload.length, 2);
   assert.deepEqual(payload[0], { dive_id: "dive-aaa", round_number: 1 });
 
-  // Push fired at the partner under the synchro.partner_invite category.
+  // Push fired at the partner, under the synchro.partner_invite category.
   assert.equal(push.calls.length, 1);
   assert.deepEqual(push.calls[0].userIds, ["partner-1"]);
   assert.equal(push.calls[0].payload.category, "synchro.partner_invite");
@@ -185,7 +185,7 @@ test("reciprocal pending row triggers auto-confirm with dive-list writes for bot
   const update = client.calls.find((c) => /UPDATE pending_partner_pairings/i.test(c.sql));
   assert.ok(update, "Expected the pending row to be flipped to accepted");
 
-  // Two rows per dive (one per side) → 4 inserts for 2 dives.
+  // Two rows per dive (one per side), so 4 inserts for 2 dives.
   const cdlInserts = client.calls.filter(
     (c) => /INSERT INTO competitor_dive_lists/i.test(c.sql),
   );
@@ -194,11 +194,11 @@ test("reciprocal pending row triggers auto-confirm with dive-list writes for bot
   // First insert is the requester's row (partner-1 in our shape).
   assert.equal(cdlInserts[0].params[0], "partner-1");
   assert.equal(cdlInserts[0].params[1], "diver-B");
-  // Second insert mirrors for the accepter.
+  // Second insert mirrors it for the accepter.
   assert.equal(cdlInserts[1].params[0], "diver-B");
   assert.equal(cdlInserts[1].params[1], "partner-1");
 
-  // Push fires at the original requester announcing confirmation.
+  // Push fires at the original requester, announcing confirmation.
   assert.equal(push.calls.length, 1);
   assert.deepEqual(push.calls[0].userIds, ["partner-1"]);
   assert.equal(push.calls[0].payload.data.kind, "accepted");
@@ -208,8 +208,8 @@ test("reciprocal pending row triggers auto-confirm with dive-list writes for bot
 // 3. Self-pairing is rejected.
 // --------------------------------------------------------------------
 test("self-pairing is rejected before any SQL fires the partner check", async () => {
-  // No expectations queued for partner / pending lookups — the helper
-  // must throw before reaching them.
+  // No expectations queued for partner / pending lookups, the helper
+  // must throw before it ever reaches them.
   const client = makeFakeClient([
     { match: /FROM\s+dive_directory/i, rows: (params) => params[0].map((id) => ({ id, dive_code: "5132D", dd: 3.2, height: null })) },
     { match: /FROM\s+event_round_dives/i, rows: [] },
@@ -223,7 +223,7 @@ test("self-pairing is rejected before any SQL fires the partner check", async ()
       actor:           { id: "diver-A", org_id: "org-1", is_system_admin: false },
       competitorId:    "diver-A",
       competitorOrgId: "org-1",
-      partnerId:       "diver-A", // same as competitor — must be rejected
+      partnerId:       "diver-A", // same as competitor, must be rejected
       dives:           TEST_DIVES,
       push,
     }),
@@ -239,7 +239,7 @@ test("self-pairing is rejected before any SQL fires the partner check", async ()
 });
 
 // --------------------------------------------------------------------
-// 4. writeSynchroBothSides (re-exported) — driven by the accept route.
+// 4. writeSynchroBothSides (re-exported), driven by the accept route.
 //    For N dives we expect 2N UPSERTs into competitor_dive_lists.
 // --------------------------------------------------------------------
 test("writeSynchroBothSides issues 2 inserts per dive (one per diver)", async () => {
@@ -274,7 +274,7 @@ test("writeSynchroBothSides issues 2 inserts per dive (one per diver)", async ()
 });
 
 // --------------------------------------------------------------------
-// 5. writeSynchroBothSides refuses an empty dives payload — the
+// 5. writeSynchroBothSides refuses an empty dives payload. The
 //    accept endpoint relies on this guard to surface a 400 to the
 //    invitee when the requester's row somehow lost its dives.
 // --------------------------------------------------------------------

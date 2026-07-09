@@ -10,8 +10,8 @@
 //        * existing JWT 401s on the next privileged call
 //
 //   2. Login attempt after deletion returns the same generic
-//      "Invalid username or password" as a wrong password — no
-//      "this account was deleted" leak.
+//      "Invalid username or password" as a wrong password would,
+//      no "this account was deleted" leak.
 //
 //   3. Public profile by old slug 404s.
 //
@@ -19,19 +19,19 @@
 //      same full_name sees the deleted account as a candidate and
 //      can claim its dives.
 //
-//   5. Safety: a user CAN'T see candidates from a different org
+//   5. Safety: a user CAN'T see candidates from a different org,
 //      nor from a same-org user with a different name.
 //
 //   6. Conflict: if the new account already has a dive list for
 //      an event the old account also entered, claim 409s instead
 //      of silently merging or 500ing.
 //
-//   7. Claim without correct password → 401.
+//   7. Claim without correct password gets a 401.
 //
 // All tests run inside their own throwaway orgs and clean up via
-// setup.deleteOrg afterward. Several sub-cases share fixtures —
-// they're grouped serially because of that, not because the
-// endpoints care.
+// setup.deleteOrg afterward. A few sub-cases share fixtures, so
+// they're grouped serially for that, not because the endpoints
+// themselves care.
 
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
@@ -59,8 +59,8 @@ test.describe.serial("Account deletion + claim-past-results", () => {
         orgId: org.orgId, role: "diver", fullName: "Delete Me",
       });
       ({ token: diverToken } = await setup.loginAs(request, diver.username));
-      // Make sure there's something to keep around after deletion
-      // — a dive list row that should still carry the user's name.
+      // Make sure theres something to keep around after deletion,
+      // just in case: a dive list row that should still carry the user's name.
       const event = await setup.createEvent(request, {
         adminToken: org.adminToken,
       });
@@ -78,7 +78,7 @@ test.describe.serial("Account deletion + claim-past-results", () => {
       );
       oldSlug = slugR.rows[0].public_slug;
       // Drop in a couple of side-effect rows so the audit-counts
-      // path is exercised — a push subscription + a role request.
+      // path is exercised too: a push subscription + a role request.
       await setup.pool.query(
         `INSERT INTO push_subscriptions (user_id, endpoint, p256dh_key, auth_key)
          VALUES ($1, $2, $3, $4)`,
@@ -99,7 +99,7 @@ test.describe.serial("Account deletion + claim-past-results", () => {
         data: { password: "wrong-password" },
       });
       expect(r.status()).toBe(401);
-      // The row must still be active — we never write deleted_at
+      // The row must still be active since we never write deleted_at
       // on a failed password attempt.
       const row = await setup.pool.query(
         "SELECT deleted_at FROM users WHERE id = $1",
@@ -160,14 +160,14 @@ test.describe.serial("Account deletion + claim-past-results", () => {
       );
       expect(auditRow.rows.length).toBe(1);
       expect(auditRow.rows[0].entity_id).toBe(diver.userId);
-      // Metadata holds the summary counts; smoke-test one of them.
+      // Metadata holds the summary counts, we just smoke-test one of them here.
       expect(auditRow.rows[0].metadata.push_subscriptions_removed).toBe(1);
     });
 
     test("JWT after delete: privileged endpoint 401s", async ({ request }) => {
-      // The token was minted before token_version bumped, so it
-      // must no longer pass verifyToken. /api/users/me/email/
-      // change-request is a convenient verifyToken-gated endpoint.
+      // Heads up: the token was minted before token_version bumped, so
+      // it must no longer pass verifyToken. /api/users/me/email/
+      // change-request is just a convenient verifyToken-gated endpoint to poke.
       const r = await request.post("/api/users/me/email/change-request", {
         headers: auth(diverToken),
         data: { new_email: "x@y.com", current_password: "doesnt-matter" },
@@ -305,8 +305,8 @@ test.describe.serial("Account deletion + claim-past-results", () => {
       );
       expect(oldRow.rows.length).toBe(0);
 
-      // Idempotency: claiming an already-deleted id returns 200
-      // with empty `claimed` rather than 500.
+      // idempotency check: claiming an already-deleted id returns 200
+      // with an empty `claimed` rather than 500ing.
       const again = await request.post("/api/users/me/claim", {
         headers: auth(userBToken),
         data: {
@@ -345,7 +345,7 @@ test.describe.serial("Account deletion + claim-past-results", () => {
         data: { password: setup.TEST_PASSWORD },
       });
 
-      // User A in orgA with same name — should NOT see User B.
+      // User A in orgA with same name, should NOT see User B.
       const userA = await setup.insertUser({
         orgId: orgA.orgId, role: "diver", fullName: "Cross Org",
       });

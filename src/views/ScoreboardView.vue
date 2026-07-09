@@ -38,8 +38,8 @@ const broadcastMode = computed(() => route.params.mode === 'broadcast')
 
 // Stream-overlay mode: ?overlay=1 puts the page into a minimal,
 // chroma-key-friendly layout for OBS / streaming software. Hides
-// every background colour, header, and panel chrome — just the
-// active diver block + a compact top-3. Chroma-key colour is set
+// every background colour, header, and panel chrome, just the
+// active diver block plus a compact top-3. Chroma-key colour is set
 // by ?bg=<hex>; defaults to a vivid green (#00ff44) which is the
 // standard OBS chroma colour. Operators can pick e.g. ?bg=ff00ff
 // for magenta if their lighting pushes a green spill.
@@ -54,7 +54,7 @@ const overlayBg   = computed(() => {
 // into either the live broadcast layout or the recap layout.
 const events = ref([])
 const clubsList = ref([])
-// Total events sitting in the DiveRecorder results archive — shown
+// Total events sitting in the DiveRecorder results archive, shown
 // in the header next to the live/completed operational counts, and
 // links through to /results-archive. Null until the count lands.
 const archiveTotal = ref(null)
@@ -66,21 +66,20 @@ const currentEvent = computed(() => events.value.find(e => String(e.id) === Stri
 
 // Filter state (search / country / year / height / club / status,
 // plus the sort + view-mode preferences) and the meets-browsing
-// computeds live inside the MeetsBrowser component now — see
-// src/components/scoreboard/MeetsBrowser.vue. The parent still
-// owns the master `events` list (it's also consumed by the detail
-// surfaces) and the derived `liveEvents` array (the header
-// summary line "{n} live now" reads it too).
+// computeds live inside the MeetsBrowser component now, see
+// src/components/scoreboard/MeetsBrowser.vue. The parent still owns
+// the master `events` list (it's also consumed by the detail
+// surfaces) and the derived `liveEvents` array (the header summary
+// line "{n} live now" reads it too).
 
 const liveEvents = computed(() => events.value.filter(e => e.status === 'Live'))
 const upcomingEvents = computed(() => events.value.filter(e => e.status === 'Upcoming'))
 const completedEvents = computed(() => events.value.filter(e => e.status === 'Completed'))
 
 // Up Next: filter the server's queue to skip the current active
-// diver (so they don't appear as both "current performer" and
-// "up next"). Returns the FULL remaining queue — the panel below
-// scrolls when the list overflows ~10 rows. Empty array → panel
-// hides.
+// diver (so they don't appear as both "current performer" and "up
+// next"). Returns the FULL remaining queue, the panel below scrolls
+// when the list overflows ~10 rows. Empty array → panel hides.
 //
 // Also drops the head-of-queue when the centre block is rendering
 // it as the "On Deck" placeholder (no live active diver yet) so
@@ -90,23 +89,23 @@ const upcomingDisplay = computed(() => {
   const active = activeDiver.value?.diverName
   const round  = activeDiver.value?.round_number
   let list = upcoming.value
-  // Active diver currently mid-dive — exclude their queue row.
+  // Active diver currently mid-dive, exclude their queue row.
   if (active) {
     list = list.filter(u => !(u.full_name === active && u.round_number === round))
   } else {
-    // No active diver — the head of the queue is being shown in
-    // the centre as "On Deck", so drop it from this list.
+    // No active diver, so the head of the queue is already being
+    // shown in the centre as "On Deck", drop it from this list.
     list = list.slice(1)
   }
   return list
 })
 
 // Centre-block performer: the live active diver when one is
-// announced, otherwise the head of the upcoming queue rendered
-// as "On Deck". Keeps the spectator scoreboard from sitting on
-// "Waiting..." mid-meet — between rounds, or before the operator
-// has clicked Next Diver, the audience can still see who's about
-// to dive. Normalised to the shape activeDiver carries so the
+// announced, otherwise the head of the upcoming queue rendered as
+// "On Deck". Keeps the spectator scoreboard from sitting on
+// "Waiting..." mid-meet, between rounds, or before the operator has
+// clicked Next Diver, the audience can still see who's about to
+// dive. Normalised to the shape activeDiver carries so the
 // downstream template doesn't branch on data source.
 const centrePerformer = computed(() => {
   if (activeDiver.value) {
@@ -170,16 +169,16 @@ const historyItems = ref([])
 const standings = ref([])
 const upcoming = ref([])         // next ≤5 dives queued, populated for Live events
 
-// Show-more pagination — Completed Dives defaults to 5 cards
-// (most-recent round of a 5-judge meet usually fits a single
-// round of dives in view), Up Next stays at a tighter 3-row
-// preview because the audience really only needs to see "who's
-// next + on deck". Both have a toggle to expand to the full set.
+// Show-more pagination: Completed Dives defaults to 5 cards
+// (most-recent round of a 5-judge meet usually fits a single round
+// of dives in view), Up Next stays at a tighter 3-row preview
+// because the audience really only needs to see "who's next + on
+// deck". Both have a toggle to expand to the full set.
 //
-// preview / rest split: the toggle button is rendered INSIDE
-// the v-for after the last preview entry so it stays at a
-// fixed visual position when the list expands — extra entries
-// drop down below the button instead of pushing it off-screen.
+// preview / rest split: the toggle button is rendered INSIDE the
+// v-for after the last preview entry so it stays at a fixed visual
+// position when the list expands, extra entries drop down below the
+// button instead of pushing it off-screen.
 const HISTORY_PREVIEW_COUNT  = 5
 const UP_NEXT_PREVIEW_COUNT  = 3
 const historyShowAll = ref(false)
@@ -195,10 +194,10 @@ const standingsTab = ref('final')     // 'final' | 'by-round'
 const expandedRound = ref(null)       // currently expanded round in by-round view
 // Recap density toggle. ON by default → the Final tab shows only
 // the final standings (rank · diver · total points), the calm
-// audience-facing summary. Toggling it OFF expands every diver
-// into their full dive-by-dive scoresheet (dive code, DD, each
-// judge's score, dive total). Scoped to the Final tab — the
-// By-Round tab is its own cumulative leaderboard.
+// audience-facing summary. Toggling it OFF expands every diver into
+// their full dive-by-dive scoresheet (dive code, DD, each judge's
+// score, dive total). Scoped to the Final tab, the By-Round tab is
+// its own cumulative leaderboard.
 const finalScoresOnly = ref(true)
 const activeDiver = ref(null)
 // Per-judge scores arriving live for the active diver, in
@@ -207,21 +206,21 @@ const activeDiver = ref(null)
 // the inline pills under the Current Performer block, replacing
 // the older fullscreen score-overlay UX.
 const liveJudgeScores = ref([])
-// Completed-event archive payload — only populated when the
-// selected event has status === 'Completed'. Drives the dive
-// breakdown, podium and event-stats panels.
+// Completed-event archive payload, only populated when the selected
+// event has status === 'Completed'. Drives the dive breakdown,
+// podium and event-stats panels.
 const archiveResults = ref(null)
 
-// Panel for the current event — `[{judge_id, judge_number,
+// Panel for the current event: `[{judge_id, judge_number,
 // full_name, country_code, club_code, org_name, club_name}, …]`
 // ordered by judge_number. Drives:
-//   * tooltips on every score chip ("J3 — Maria Schmidt · GER ·
+//   * tooltips on every score chip ("J3, Maria Schmidt · GER ·
 //     Munich Diving Club. Click to open judge analysis.")
 //   * the RouterLink each chip wraps → /judge-profile/<id>
 // Populated from /api/scoreboard/:id (live) or /api/archive/:id/
-// results (completed). Empty when the panel hasn't been seated
-// yet (rare — pre-meet scoreboard) — chips fall back to a
-// non-clickable rendering with a "panel not assigned" tooltip.
+// results (completed). Empty when the panel hasn't been seated yet
+// (rare, pre-meet scoreboard), chips fall back to a non-clickable
+// rendering with a "panel not assigned" tooltip.
 const eventPanel = ref([])
 
 // O(1) lookup for chip rendering. Built off eventPanel; rebuilt
@@ -236,16 +235,15 @@ const panelByNumber = computed(() => {
 
 // Per-dive judge-rank map keyed by `${judge_id}:${competitor_id}:
 // Per-dive ranks: ${judge_id}:${competitor_id}:${round_number}.
-// Populated eagerly from /api/events/:id/judge-ranking-analysis
-// the moment the page loads on a Completed event — so chip
-// tooltips have rank context on the FIRST hover (waiting for the
-// JRA section to expand would mean the first few hovers fall
-// back to identity-only).
+// Populated eagerly from /api/events/:id/judge-ranking-analysis the
+// moment the page loads on a Completed event, so chip tooltips have
+// rank context on the FIRST hover (waiting for the JRA section to
+// expand would mean the first few hovers fall back to identity-only).
 //
 // The full payload is also passed straight through to the
-// JudgeRankingTable component as a prop, so opening the section
-// is a zero-network-call expansion. Section UI stays v-if'd
-// (mounts only on expand) — the parent owns the data lifecycle.
+// JudgeRankingTable component as a prop, so opening the section is
+// a zero-network-call expansion. Section UI stays v-if'd (mounts
+// only on expand), the parent owns the data lifecycle.
 const judgeRankingPayload = ref(null)
 const judgeRankingExpanded = ref(false)
 const judgeRankingLoadFailed = ref(false)
@@ -270,9 +268,9 @@ async function loadJudgeRankingPayload() {
 //
 // The optional opts.perDiveRank ({ rank, total_in_round }) adds a
 // line like "Ranked this dive 2nd of 12 in round 1" between the
-// identity line and the dropped/click-to-open lines — surfaced
-// only when the event is Completed and the analysis payload is
-// loaded (Live events don't have a stable rank yet).
+// identity line and the dropped/click-to-open lines, surfaced only
+// when the event is Completed and the analysis payload is loaded
+// (Live events don't have a stable rank yet).
 function judgeTooltip(judge, opts = {}) {
   if (!judge) return 'Judge identity not available'
   const parts = []
@@ -317,9 +315,9 @@ function onJudgeRankingLoaded(payload) {
 }
 
 // Map a chip's position in the rendered list back to its
-// judge_number using the parallel `judge_numbers` array supplied
-// by the API. Falls back to (i + 1) when judge_numbers is missing
-// (e.g. cached responses pre-dating the rollout) — works for the
+// judge_number using the parallel `judge_numbers` array supplied by
+// the API. Falls back to (i + 1) when judge_numbers is missing (e.g.
+// cached responses pre-dating the rollout), works fine for the
 // common case of a dense panel.
 function judgeNumberAt(judgeNumbers, i) {
   if (Array.isArray(judgeNumbers) && judgeNumbers[i] != null) {
@@ -378,11 +376,11 @@ const divesByDiver = computed(() => {
   return [...grouped.entries()]
     .sort((a, b) => (order.get(a[0]) ?? 999) - (order.get(b[0]) ?? 999))
     .map(([key, dives]) => {
-      // Pull partner_id off the matching standings row (the
-      // archive standings query exposes it for synchro events).
-      // Falls back to scanning the dive rows if standings doesn't
-      // surface it for some reason — partner_id from competitor
-      // _dive_lists rides on every dive of that diver.
+      // Pull partner_id off the matching standings row (the archive
+      // standings query exposes it for synchro events). Falls back
+      // to scanning the dive rows if standings doesn't surface it
+      // for some reason, partner_id from competitor_dive_lists
+      // rides on every dive of that diver.
       const standRow = archiveResults.value.standings
         .find(s => s.full_name === key)
       return {
@@ -400,25 +398,24 @@ const divesByDiver = computed(() => {
     })
 })
 
-// Country medal table — counts gold/silver/bronze per country
-// from the archive standings. Only renders when at least two
-// distinct countries appear in the result, which is the
-// indicator that this was an international meet (ties the
-// audience-facing surface to the same threshold the host org's
-// event_participating_orgs entry implies). Sort by gold desc,
-// silver desc, bronze desc, then total desc as tiebreaker —
-// matches how WA + Olympics rank countries.
+// Country medal table: counts gold/silver/bronze per country from
+// the archive standings. Only renders when at least two distinct
+// countries appear in the result, which is the indicator that this
+// was an international meet (ties the audience-facing surface to
+// the same threshold the host org's event_participating_orgs entry
+// implies). Sort by gold desc, silver desc, bronze desc, then total
+// desc as tiebreaker, matches how WA + Olympics rank countries.
 const countryMedalTable = computed(() => {
   if (!archiveResults.value) return null
   const standings = archiveResults.value.standings || []
   if (!standings.length) return null
-  // Derive rank from index — the archive endpoint returns
-  // standings already sorted by total descending, but doesn't
-  // include a rank column. Without this the medal table was
-  // rendering 0/0/0 for every country because s.rank was always
-  // undefined. Tied totals share a rank (World Aquatics practice: both
-  // divers on the same total get gold), and subsequent ranks
-  // skip by the size of the tied group (1, 1, 3).
+  // Derive rank from index, the archive endpoint returns standings
+  // already sorted by total descending but doesn't include a rank
+  // column. Without this the medal table was rendering 0/0/0 for
+  // every country because s.rank was always undefined. Tied totals
+  // share a rank (World Aquatics practice: both divers on the same
+  // total get gold), and subsequent ranks skip by the size of the
+  // tied group (1, 1, 3).
   let prevTotal = null
   let prevRank  = 0
   const byCountry = new Map()
@@ -501,9 +498,9 @@ const eventStats = computed(() => {
   }
 })
 
-// Hold state for the active event — set by Control Room via
-// the meet_hold socket event. Surfaces a banner across the top
-// of the page while in effect.
+// Hold state for the active event, set by Control Room via the
+// meet_hold socket event. Surfaces a banner across the top of the
+// page while in effect.
 const isHeld = ref(false)
 const holdReason = ref('')
 
@@ -526,8 +523,8 @@ function selectEvent(id, { pushUrl = true } = {}) {
   // buffers the emit until the connection is up, so this works
   // whether the socket has already connected or not.
   socket.emit('get_active_diver', { event_id: id })
-  // Pull the current hold state too — covers the case where the
-  // page loads after a hold has already been set.
+  // Pull the current hold state too, covers the case where the page
+  // loads after a hold has already been set.
   socket.emit('get_meet_hold', { event_id: id })
   // Reflect the selection in the URL so the meet is shareable
   // and back-button works. pushUrl=false avoids loops when this
@@ -583,12 +580,12 @@ watch(() => currentEvent.value?.status, (status, prev) => {
   if (status && prev && status !== prev) refreshData()
 })
 
-// Stale-response guard for refreshData. Rapid event switching (or
-// a status flip mid-flight) can leave an older request's slower
-// response landing after a newer one — without the guard it would
+// Stale-response guard for refreshData. Rapid event switching (or a
+// status flip mid-flight) can leave an older request's slower
+// response landing after a newer one, without the guard it would
 // overwrite the newer event's standings/history/archive panels.
-// Each call takes a fresh token; writes after an await bail if a
-// newer call has started.
+// Each call takes a fresh token; writes after an await bail out if a
+// newer call has already started.
 let refreshSeq = 0
 
 async function refreshData() {
@@ -620,22 +617,21 @@ async function refreshData() {
       leaderboardRounds.value = leaderboard.rounds || []
       // Panel comes from the archive payload for completed events.
       eventPanel.value = archive.panel || []
-      // Eager-fetch the JRA payload so per-chip tooltips have
-      // rank context on first hover. The section UI itself
-      // stays v-if'd (lazy mount) — the data lifecycle lives
-      // on the parent now so opening the section is a zero-
-      // network-call expansion.
+      // Eager-fetch the JRA payload so per-chip tooltips have rank
+      // context on first hover. The section UI itself stays v-if'd
+      // (lazy mount), the data lifecycle lives on the parent now so
+      // opening the section is a zero-network-call expansion.
       loadJudgeRankingPayload()
     } else {
       archiveResults.value = null
-      // Live events don't have a stable Judge Ranking Analysis —
+      // Live events don't have a stable Judge Ranking Analysis, so
       // clear any payload left over from a flip Completed → Live
-      // (rare, but cheap to guard against).
+      // (rare, but cheap to guard against anyway).
       judgeRankingPayload.value = null
       judgeRankingExpanded.value = false
-      // Live events: 5s hard TTL — matches the server-side cache so
-      // a spectator that just hit reload never sees data older than
-      // the server would have served. Socket-driven invalidation
+      // Live events: 5s hard TTL, matches the server-side cache so a
+      // spectator that just hit reload never sees data older than the
+      // server would have served. Socket-driven invalidation
       // (score_received) busts the entry the moment a new score
       // commits, so real freshness comes from there.
       const [scoreboardRes, leaderboardRes] = await Promise.all([
@@ -668,7 +664,7 @@ async function refreshData() {
   }
 }
 
-// fmtDate imported from @/lib/format — single source of truth.
+// fmtDate imported from @/lib/format, single source of truth.
 
 
 function movementClass(m) {
@@ -685,13 +681,13 @@ function movementSymbol(m) {
   return '–'
 }
 
-// Record-broken toasts (PB / club / federation) used to pop in
-// the top-right of the scoreboard on each new record. Removed —
-// they distracted from the live standings panel they overlapped.
-// The server still fires record_broken; we just don't render it
-// here. If a quieter celebration UX is wanted later, re-listen
-// for record_broken and pick a presentation that doesn't sit on
-// top of the standings.
+// Record-broken toasts (PB / club / federation) used to pop in the
+// top-right of the scoreboard on each new record. Removed, they
+// distracted from the live standings panel they overlapped. The
+// server still fires record_broken, we just don't render it here.
+// If a quieter celebration UX is wanted later, re-listen for
+// record_broken and pick a presentation that doesn't sit on top of
+// the standings.
 
 // All listeners below go through useSocketEvent so they're torn
 // down with the view rather than relying on the spectator pool's
@@ -704,7 +700,7 @@ useSocketEvent(socket, 'state_update', data => {
   if (!currentEventId.value) return
   if (data.event_id !== currentEventId.value) return
   // Clear the per-judge live pills when the active diver/round
-  // changes — the new diver hasn't been scored yet, and the old
+  // changes, the new diver hasn't been scored yet and the old
   // diver's pills would visually carry over otherwise.
   const sameDive = activeDiver.value
     && activeDiver.value.competitor_id === data.competitor_id
@@ -732,7 +728,7 @@ useSocketEvent(socket, 'score_received', data => {
   if (!activeDiver.value) return
   if (data.competitor_id !== activeDiver.value.competitor_id) return
   if (Number(data.round_number) !== Number(activeDiver.value.round_number)) return
-  // Same judge resubmitting (rare — referee correction path)
+  // Same judge resubmitting (rare, referee correction path)
   // overwrites their pill rather than adding a 6th.
   const idx = liveJudgeScores.value.findIndex(s => s.judge_number === data.judge_number)
   const next = { value: Number(data.score), judge_number: data.judge_number }
@@ -767,8 +763,8 @@ useSocketEvent(socket, 'meet_resumed', (data) => {
 })
 
 // Score corrections fired by the Control Room: re-pull the
-// scoreboard so totals reflect the amendment. Cheap full-pull
-// is fine — score corrections are rare events.
+// scoreboard so totals reflect the amendment. Cheap full-pull is
+// fine, score corrections are rare events.
 useSocketEvent(socket, 'score_corrected', (data) => {
   if (data.event_id !== currentEventId.value) return
   refreshData()
@@ -782,8 +778,8 @@ useSocketEvent(socket, 'final_score_announced', () => {
   refreshData()
 })
 
-// rankClass + ordinal imported from @/lib/format — single source
-// of truth for the podium classes and the "Currently Nth" line.
+// rankClass + ordinal imported from @/lib/format, single source of
+// truth for the podium classes and the "Currently Nth" line.
 
 // Per-judge pills for the current active diver, annotated with
 // scoreCategory + dropped-under-trim flag. Reuses the same helper
@@ -794,14 +790,15 @@ const liveAnnotatedScores = computed(() => {
   return annotatedScores(csv, currentEvent.value?.number_of_judges)
 })
 
-// Stable-layout placeholders — generates an array of `number_of_judges`
-// tiles ALWAYS (even when no scores have arrived), so the live-judges
-// row's height stays constant from the moment a diver becomes active.
-// Without this the row started at 0px, then jumped to ~50px the
-// instant the first score landed, shoving the catch-up + Up Next
-// blocks below it down. Each slot either carries a populated score
-// (with World Aquatics category + dropped flag) or renders as a dim "—"
-// placeholder; either way the tile dimensions are identical.
+// Stable-layout placeholders: generates an array of
+// `number_of_judges` tiles ALWAYS (even when no scores have arrived),
+// so the live-judges row's height stays constant from the moment a
+// diver becomes active. Without this the row started at 0px, then
+// jumped to ~50px the instant the first score landed, shoving the
+// catch-up + Up Next blocks below it down. Each slot either carries
+// a populated score (with World Aquatics category + dropped flag) or
+// renders as a dim placeholder dash, either way the tile dimensions
+// are identical.
 const liveJudgeSlots = computed(() => {
   const numJudges = Number(currentEvent.value?.number_of_judges) || 5
   const annotated = liveAnnotatedScores.value
@@ -822,9 +819,9 @@ const liveJudgeSlots = computed(() => {
   return slots
 })
 
-// Dive total for the active diver — only populated once the full
-// panel is in (otherwise we'd be flashing partial sums). Computed
-// as (sum of non-dropped scores) × DD.
+// Dive total for the active diver, only populated once the full
+// panel is in (otherwise we'd be flashing partial sums). Computed as
+// (sum of non-dropped scores) × DD.
 const liveDiveTotal = computed(() => {
   const annotated = liveAnnotatedScores.value
   const need = Number(currentEvent.value?.number_of_judges) || 5
@@ -848,18 +845,17 @@ const activeDiverRank = computed(() => {
   return idx >= 0 ? idx + 1 : null
 })
 
-// Catch-up projection — mirrors the Control Room indicator. For
-// the active diver, computes:
+// Catch-up projection: mirrors the Control Room indicator. For the
+// active diver, computes:
 //   * gap to leader (or to runner-up if leading)
 //   * average dive total they need across remaining dives
 //   * average judge score per kept score those dives need
-// DD proxy is the active diver's current dive (we don't have
-// the full upcoming roster on the audience scoreboard, just the
+// DD proxy is the active diver's current dive (we don't have the
+// full upcoming roster on the audience scoreboard, just the
 // state_update payload that drives the active block). Catch-up
-// table mirrors the Control Room — surfaces the average judge
-// score needed across the remaining dives to reach 1st / 2nd /
-// 3rd, with "not possible" for targets that even straight 10s
-// wouldn't catch.
+// table mirrors the Control Room, surfaces the average judge score
+// needed across the remaining dives to reach 1st / 2nd / 3rd, with
+// "not possible" for targets that even straight 10s wouldn't catch.
 function pairLabel(row) {
   if (!row) return ''
   if (row.partner_name) return `${row.full_name} & ${row.partner_name}`
@@ -885,12 +881,12 @@ function panelMultiplier(numJudges, isSynchro) {
 }
 
 const activeProjection = computed(() => {
-  // Subject — the diver the projection table is computed FOR.
-  // We use the active diver when one is on the board, and fall
-  // back to the on-deck (next-up) performer otherwise so the
-  // catch-up table stays visible BEFORE the diver is officially
-  // on the board too. Same shape covers both: round_number, dd,
-  // full_name / diverName all come through on each.
+  // Subject: the diver the projection table is computed FOR. We use
+  // the active diver when one is on the board, and fall back to the
+  // on-deck (next-up) performer otherwise so the catch-up table
+  // stays visible BEFORE the diver is officially on the board too.
+  // Same shape covers both: round_number, dd, full_name / diverName
+  // all come through on each.
   const subject = activeDiver.value
     || (centrePerformer.value?.kind === 'next' ? centrePerformer.value : null)
   if (!subject || !standings.value.length) return null
@@ -908,18 +904,18 @@ const activeProjection = computed(() => {
     : 0
   const mult = panelMultiplier(numJudges, isSynchro)
 
-  // Per-dive contribution if every judge scores X is X × mult ×
-  // DD. So gap G across R dives at avg DD D solves to
-  // X = G / (mult × D × R). 10 is the ceiling — any X > 10 means
-  // straight 10s wouldn't close the gap.
+  // Per-dive contribution if every judge scores X is X × mult × DD.
+  // So gap G across R dives at avg DD D solves to X = G / (mult × D
+  // × R). 10 is the ceiling, any X > 10 means straight 10s wouldn't
+  // close the gap.
   //
-  // The displayed score rounds UP to the next 0.5 because judges
-  // can only score in half-point increments — 5.2 isn't a
-  // possible judge score, but 5.5 is. Rounded value is what the
-  // diver would need from EVERY judge on every remaining dive to
-  // mathematically guarantee closing the gap. `possible` stays
-  // tied to the raw value so a raw of 9.6 (rounds to 10.0 —
-  // straight 10s, achievable) doesn't flip to "not possible".
+  // The displayed score rounds UP to the next 0.5 because judges can
+  // only score in half-point increments. 5.2 isn't a possible judge
+  // score, but 5.5 is. Rounded value is what the diver would need
+  // from EVERY judge on every remaining dive to mathematically
+  // guarantee closing the gap. `possible` stays tied to the raw
+  // value so a raw of 9.6 (rounds to 10.0, straight 10s, achievable)
+  // doesn't flip to "not possible".
   function avgJudgeForGap(gap) {
     if (gap <= 0)                   return { score: 0,    possible: true  }
     if (remaining <= 0 || !ddProxy) return { score: null, possible: null  }
@@ -990,11 +986,11 @@ onMounted(async () => {
   loadingList.value = true
   meetsFromCache.value = false
   try {
-    // Stale-while-revalidate via IndexedDB. Spectators landing
-    // on /scoreboard get an instant render from cache (if they've
-    // visited before) and the network refresh updates the list
-    // when it lands. Works offline for browsing past meets even
-    // if the network is gone — only live state stays unavailable.
+    // Stale-while-revalidate via IndexedDB. Spectators landing on
+    // /scoreboard get an instant render from cache (if they've
+    // visited before) and the network refresh updates the list when
+    // it lands. Works offline for browsing past meets too, only live
+    // state stays unavailable.
     const [evs, cls] = await Promise.all([
       cachedFetch('/api/archive', { credentials: 'same-origin' }, {
         onUpdate(fresh) {
@@ -1013,8 +1009,8 @@ onMounted(async () => {
       clubsList.value = cls.data
     }
     // Headline count of the DiveRecorder results archive for the
-    // header line. Fire-and-forget — a failure just hides the
-    // "N archived" link, it never blocks the live list.
+    // header line. Fire-and-forget, a failure just hides the "N
+    // archived" link, it never blocks the live list.
     fetch('/api/dr-archive/stats', { credentials: 'same-origin' })
       .then(r => (r.ok ? r.json() : null))
       .then(s => { if (s && Number.isFinite(s.events)) archiveTotal.value = s.events })
@@ -1033,49 +1029,48 @@ onMounted(async () => {
   <div class="sb-layout"
        :class="{ 'broadcast-mode': broadcastMode, 'overlay-mode': overlayMode }"
        :style="overlayMode ? { background: overlayBg } : null">
-    <!-- Floating exit button when in broadcast mode — small,
-         positioned in the corner, nearly invisible until hover.
-         Lets an operator drop back into the normal layout
-         without retyping the URL. -->
+    <!-- Floating exit button when in broadcast mode: small,
+         positioned in the corner, nearly invisible until hover. Lets
+         an operator drop back into the normal layout without
+         retyping the URL. -->
     <RouterLink
       v-if="broadcastMode && currentEventId"
       :to="`/scoreboard/${currentEventId}`"
       class="broadcast-exit"
       v-tip.fixed="'Exit broadcast mode'"
     >✕</RouterLink>
-    <!-- Sponsor rotation tile. Only rendered when the current
-         event is part of a meet (event.meet_id is set) — the
-         component itself no-ops if the meet has no logos.
-         Suppressed on the recap (isCompleted) since sponsor
-         branding on a results page reads as gauche. The
-         'overlay' placement strips the backplate so OBS chroma
-         keying composites cleanly. -->
+    <!-- Sponsor rotation tile. Only rendered when the current event
+         is part of a meet (event.meet_id is set), the component
+         itself no-ops if the meet has no logos. Suppressed on the
+         recap (isCompleted) since sponsor branding on a results page
+         reads as gauche. The 'overlay' placement strips the backplate
+         so OBS chroma keying composites cleanly. -->
     <SponsorRotation
       v-if="currentEvent && currentEvent.meet_id && !isCompleted"
       :meet-id="currentEvent.meet_id"
       :placement="overlayMode ? 'overlay' : 'corner'"
     />
-    <!-- Connection banner — visible whenever the spectator
-         socket has dropped. Live event watchers won't see new
-         dives until reconnect, so it's worth surfacing. -->
+    <!-- Connection banner: visible whenever the spectator socket has
+         dropped. Live event watchers won't see new dives until
+         reconnect, so it's worth surfacing. -->
     <div v-if="!socket.isConnected.value && currentEventId && !isCompleted" class="conn-banner">
       <span class="conn-dot"></span>
       Reconnecting to live feed…
     </div>
 
-    <!-- Meet-hold banner — surfaces when the Control Room has
-         paused the meet (video review, judge consultation,
-         technical issue). Visible across all spectator devices
-         so the audience knows why nothing's happening. -->
+    <!-- Meet-hold banner: surfaces when the Control Room has paused
+         the meet (video review, judge consultation, technical
+         issue). Visible across all spectator devices so the
+         audience knows why nothing's happening. -->
     <div v-if="isHeld && currentEventId" class="hold-banner">
       <span class="hold-pulse">⏸ MEET ON HOLD</span>
       <span v-if="holdReason" class="hold-reason">{{ holdReason }}</span>
     </div>
-    <!-- Header — adapts to list mode (browsing) vs detail mode
-         (a single event selected). The detail header doubles as a
+    <!-- Header: adapts to list mode (browsing) vs detail mode (a
+         single event selected). The detail header doubles as a
          breadcrumb so the user can jump back to the list. Hidden
-         entirely in broadcast mode so a venue projector shows
-         only the live scoring content. -->
+         entirely in broadcast mode so a venue projector shows only
+         the live scoring content. -->
     <div v-if="!broadcastMode" class="sb-header">
       <template v-if="!currentEventId">
         <div class="header-left">
@@ -1105,9 +1100,9 @@ onMounted(async () => {
         </div>
       </template>
       <div style="display:flex;gap:0.4rem;align-items:center">
-        <!-- Results Archive — historical results mined from
-             DiveRecorder. Shown while browsing (list mode) so the
-             archive is reachable from the public Scoreboard. -->
+        <!-- Results Archive: historical results mined from DiveRecorder.
+             Shown while browsing (list mode) so the archive is
+             reachable from the public Scoreboard. -->
         <RouterLink
           v-if="!currentEventId"
           to="/results-archive"
@@ -1135,13 +1130,13 @@ onMounted(async () => {
     </div>
 
     <!-- =========================================================
-         LIST MODE — no event selected. Browses every Live and
+         LIST MODE: no event selected. Browses every Live and
          Completed meet with the same filter controls the old
          ArchiveView used. The whole list-mode surface (cache
-         banner, LIVE strip, filter cluster, results) lives in
-         the MeetsBrowser component; the parent just supplies the
-         master event list + filter source data and listens for
-         a selection.
+         banner, LIVE strip, filter cluster, results) lives in the
+         MeetsBrowser component; the parent just supplies the master
+         event list + filter source data and listens for a
+         selection.
          ========================================================= -->
     <MeetsBrowser
       v-if="!currentEventId"
@@ -1157,29 +1152,27 @@ onMounted(async () => {
       @select="selectEvent"
     />
 
-    <!-- Body — Live broadcast layout (only when an event is selected
-         and it's not completed). The completed branch is handled by
-         the <div class="sb-completed"> below. -->
+    <!-- Body: Live broadcast layout (only when an event is selected and
+         it's not completed). The completed branch is handled by the
+         <div class="sb-completed"> below. -->
     <div class="sb-body" v-else-if="!isCompleted">
       <!-- Left: History -->
       <div class="sb-col">
         <div class="col-head">Completed Dives</div>
         <div class="col-body">
           <p v-if="!historyItems.length" style="color:var(--text-3);font-size:12px;text-align:center;padding:2rem">No scores yet</p>
-          <!-- Preview cards (always visible) + toggle button +
-               rest cards (visible when expanded) — wrapped in a
-               single v-for over either the preview or the full
-               list, with the toggle injected after the
-               (HISTORY_PREVIEW_COUNT)th card. Keeps the toggle
-               anchored at a fixed visual position; clicking
-               drops the rest of the list down BELOW the
-               button. -->
+          <!-- Preview cards (always visible) + toggle button + rest cards
+               (visible when expanded), wrapped in a single v-for over
+               either the preview or the full list, with the toggle
+               injected after the (HISTORY_PREVIEW_COUNT)th card. Keeps
+               the toggle anchored at a fixed visual position; clicking
+               drops the rest of the list down BELOW the button. -->
           <template v-for="(h, idx) in (historyShowAll ? historyItems : historyPreview)"
                     :key="`${h.competitor_id}-${h.round_number}`">
           <div class="hist-card">
             <div class="hist-round">Round {{ h.round_number }}{{ currentEvent?.total_rounds ? ` / ${currentEvent.total_rounds}` : '' }}</div>
-            <!-- Shared identity block — same source of truth as
-                 the Control Room. Lead + synchro partner stack
+            <!-- Shared identity block, same source of truth as the
+                 Control Room. Lead + synchro partner stack
                  equal-weight, team / club secondary line for
                  non-synchro rows, country / team / club chip top-
                  right alongside the dive total. -->
@@ -1270,17 +1263,16 @@ onMounted(async () => {
 
       <!-- Centre: Active diver. The list of meets is now the page's
            landing state, so we no longer render a separate picker
-           here — by the time we render this branch, currentEventId
-           is guaranteed to be set. -->
+           here, by the time we render this branch, currentEventId is
+           guaranteed to be set. -->
       <div class="sb-col active-centre">
         <div style="width:100%;text-align:center">
           <div v-if="centrePerformer?.round_number" class="sb-round-pill">
             Round {{ centrePerformer.round_number }}<span v-if="currentEvent?.total_rounds"> / {{ currentEvent.total_rounds }}</span>
           </div>
-          <!-- Label flips between live ("Current Performer") and
-               on-deck ("On Deck — Up Next") so the audience knows
-               whether the named diver is actively performing or
-               just queued. -->
+          <!-- Label flips between live ("Current Performer") and on-deck
+               ("On Deck / Up Next") so the audience knows whether the
+               named diver is actively performing or just queued. -->
           <div class="sb-label">
             <template v-if="centrePerformer?.kind === 'active'">Current Performer</template>
             <template v-else-if="centrePerformer?.kind === 'next'">On Deck — Up Next</template>
@@ -1317,21 +1309,21 @@ onMounted(async () => {
             <div v-if="centrePerformer?.description" class="sb-desc">{{ diveDescription(centrePerformer) }}</div>
           </div>
 
-          <!-- Live judges' scores for the active diver. Pills are
-               styled with the same .j-score / .j-dropped classes
-               the Completed-Dives panel uses, so the visual
-               vocabulary is consistent. Once the panel is full,
-               the high + low pills shade out via .j-dropped and
-               the Dive Total appears below.
+          <!-- Live judges' scores for the active diver. Pills are styled
+               with the same .j-score / .j-dropped classes the
+               Completed-Dives panel uses, so the visual vocabulary is
+               consistent. Once the panel is full, the high + low pills
+               shade out via .j-dropped and the Dive Total appears
+               below.
                STABLE LAYOUT: every block here renders for ANY
-               centrePerformer (active OR on-deck) so the layout
-               is identical between "On Deck — Diver Alpha" and
-               "Current Performer — Diver Alpha (mid-dive)". The
-               judge tiles are placeholder "—" pills until scores
-               arrive; the dive-total wrapper has a reserved
-               min-height; the rank line wraps in a slot div with
-               a min-height so its eventual appearance doesn't
-               push the catch-up + Up Next blocks below it down. -->
+               centrePerformer (active OR on-deck) so the layout is
+               identical between "On Deck, Diver Alpha" and "Current
+               Performer, Diver Alpha (mid-dive)". The judge tiles are
+               placeholder dash pills until scores arrive; the
+               dive-total wrapper has a reserved min-height; the rank
+               line wraps in a slot div with a min-height so its
+               eventual appearance doesn't push the catch-up + Up Next
+               blocks below it down. -->
           <div v-if="centrePerformer" class="sb-live-judges">
             <template v-for="(slot, i) in liveJudgeSlots" :key="i">
               <!-- Live chips: each slot's judge_number is i+1 (the
@@ -1367,12 +1359,11 @@ onMounted(async () => {
               Currently <strong>{{ activeDiverRank ? ordinal(activeDiverRank) : '' }}</strong>
             </div>
           </div>
-          <!-- Catch-up projection — table per podium target with
-               the average judge score the active diver needs over
-               the remaining dives. Caps at 10 (anything above
-               reads "Not possible"). Mirrors the Control Room
-               panel so the audience and the operator see the
-               same chase math. -->
+          <!-- Catch-up projection: table per podium target with the average
+               judge score the active diver needs over the remaining
+               dives. Caps at 10 (anything above reads "Not possible").
+               Mirrors the Control Room panel so the audience and the
+               operator see the same chase math. -->
           <div v-if="activeProjection" :class="['sb-projection', `sb-projection-${activeProjection.kind}`]">
             <template v-if="activeProjection.kind === 'chase'">
               <div class="sb-projection-head">
@@ -1508,7 +1499,7 @@ onMounted(async () => {
           </div>
         </div>
         <div class="col-body">
-          <!-- Final view (existing) — augmented with movement vs previous round -->
+          <!-- Final view (existing), augmented with movement vs previous round -->
           <template v-if="standingsTab === 'final'">
             <p v-if="!standings.length" style="color:var(--text-3);font-size:12px;text-align:center;padding:2rem">No standings yet</p>
             <div v-for="(s, i) in standings" :key="i" class="standing">
@@ -1576,9 +1567,9 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Body — Completed event recap (only when an event is
-         selected and it has finished). Sits next to the live
-         body branch above; the v-if chain is:
+    <!-- Body: Completed event recap (only when an event is selected
+         and it has finished). Sits next to the live body branch
+         above; the v-if chain is:
            !currentEventId  → list mode
            !isCompleted      → live broadcast
            else              → recap below -->
@@ -1655,8 +1646,8 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Country medal table — only when 2+ distinct countries
-             appeared on the standings (i.e. the meet was actually
+        <!-- Country medal table: only when 2+ distinct countries appeared
+             on the standings (i.e. the meet was actually
              international). Shows gold/silver/bronze count per
              country, sorted Olympic-style. -->
         <div v-if="countryMedalTable" class="recap-card medal-card">
@@ -1763,11 +1754,11 @@ onMounted(async () => {
                   <div class="diver-id">
                     <div class="diver-id-row">
                       <div class="diver-name">
-                        <!-- For team-mode blocks the name is the
-                             team, not a single diver — skip the
-                             link. For individual + synchro the
-                             leader's competitor_id sits on every
-                             one of their dive rows. -->
+                        <!-- For team-mode blocks the name is the team, not a
+                             single diver, so skip the link. For
+                             individual + synchro the leader's
+                             competitor_id sits on every one of their
+                             dive rows. -->
                         <RouterLink v-if="!block.isTeam && block.dives[0]?.competitor_id"
                                     :to="`/profile/${block.dives[0].competitor_id}`"
                                     class="diver-link">{{ block.name }}</RouterLink>
@@ -1851,12 +1842,11 @@ onMounted(async () => {
                           </span>
                         </template>
                       </template>
-                      <!-- Officials-only audit history. Sits at
-                           the trailing edge of the judges' chip
-                           row (.dr-judges already flex-wraps so
-                           the extra pill flows naturally). The
-                           component self-gates on org-admin —
-                           spectators don't see anything. -->
+                      <!-- Officials-only audit history. Sits at the trailing
+                           edge of the judges' chip row (.dr-judges
+                           already flex-wraps so the extra pill flows
+                           naturally). Component self-gates on
+                           org-admin, spectators don't see anything. -->
                       <ScoreHistoryButton
                         v-if="currentEventId && d.competitor_id"
                         :event-id="currentEventId"
@@ -1909,14 +1899,13 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Judge Ranking Analysis. Section is collapsed by
-             default — the data is already in memory (eager-
-             fetched alongside the recap payload so the chip
-             tooltips can use it on first hover), so opening the
-             section is a zero-network-call expansion. The table
-             component takes the payload via prop, no internal
-             fetch. Available on every Completed event type —
-             individual / synchro_pair / team. -->
+        <!-- Judge Ranking Analysis. Section is collapsed by default, the
+             data is already in memory (eager-fetched alongside the
+             recap payload so the chip tooltips can use it on first
+             hover), so opening the section is a zero-network-call
+             expansion. The table component takes the payload via
+             prop, no internal fetch. Available on every Completed
+             event type: individual / synchro_pair / team. -->
         <div v-if="isCompleted" class="recap-card jra-section">
           <button
             class="col-head jra-toggle"
@@ -1933,9 +1922,8 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Meet highlights — sits below the leaderboard so it
-             doesn't compete for attention with the per-diver
-             results. -->
+        <!-- Meet highlights: sits below the leaderboard so it doesn't
+             compete for attention with the per-diver results. -->
         <div v-if="eventStats" class="stats-panel">
           <div class="stats-head">Meet Highlights</div>
           <div v-if="eventStats.margin != null" class="stat-row">
@@ -1972,11 +1960,10 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Score overlay removed — the inline pills + dive total +
+    <!-- Score overlay removed, the inline pills + dive total +
          "currently Nth" line under the active diver carry the
-         spotlight now. The fullscreen flash was disorienting
-         because it hid the rest of the scoreboard for 4s on every
-         dive. -->
+         spotlight now. The fullscreen flash was disorienting because
+         it hid the rest of the scoreboard for 4s on every dive. -->
 
   </div>
 </template>

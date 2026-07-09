@@ -8,7 +8,7 @@
 //   4.  hit /api/divers/search and confirm the admin shows up
 //   5.  hit /api/orgs/all and confirm the new org is listed
 //   6.  fetch the analytics endpoint for the admin (returns shape
-//       even with no scores) — catches the "every meet ranks 1st"
+//       even with no scores), catches the "every meet ranks 1st"
 //       and silent-500 regressions the audit hit
 //   7.  insert 3 diver fixtures + 5 judge fixtures + scored round 1,
 //       then assert /api/divers/<diver>/analytics ranks the diver
@@ -16,17 +16,17 @@
 //       the audit pass found: it would silently report every meet as
 //       a gold for any diver in the database.
 //
-// Skips with a console warning if Postgres is unreachable, the
-// same pattern calc.test.js uses, so a dev with no DB can still
+// Skips with a console warning if Postgres is unreachable, same
+// pattern calc.test.js uses, so a dev with no DB can still
 // run `npm test` without failures. ALSO skips if JWT_SECRET is
-// unset — server.js fail-closes on missing secret and we don't
+// unset, since server.js fail-closes on missing secret and we don't
 // want to mask that with a hardcoded test fallback (an agent
 // debugging a production boot crash should see the same surface).
 //
 // Strict invariant checks (read AGENTS.md before touching):
 //   * `req.user.id` (NOT user_id) is verified by the login flow
 //   * /api/divers/:id/profile returns dashboard_widgets to owners
-//     and omits it for outside viewers — both branches covered
+//     and omits it for outside viewers, both branches covered
 //   * the analytics endpoint never 500s; per-widget errors degrade
 //     to empty arrays via runQuery
 //   * recent_form ranks the diver against the full field; field_size
@@ -35,7 +35,7 @@
 // Test isolation:
 //   Each subtest provisions its OWN org + admin + event fixture via
 //   `beforeEach`, and tears it down in `afterEach`. There is NO
-//   module-scoped mutable state passed between subtests — every
+//   module-scoped mutable state passed between subtests, every
 //   subtest sees a freshly-minted org so reordering / parallelism
 //   can't introduce ghost-state regressions. The first subtest
 //   (`register-org creates an org…`) is the exception: it exercises
@@ -66,7 +66,7 @@ before(async () => {
   // Prefer the app's documented DB_* env vars; fall back to
   // libpq's PG* names so CI's Postgres service container keeps
   // working unchanged. Without this, an empty `new Pool()` would
-  // only see PG* — and a dev with .env using DB_* would get a
+  // only see PG*, and a dev with .env using DB_* would get a
   // confusing "client password must be a string" SASL error
   // instead of the friendly "skip" message.
   pool = process.env.DATABASE_URL
@@ -87,7 +87,7 @@ before(async () => {
   }
 
   // server.js fail-closes when JWT_SECRET is missing or weak. Don't
-  // hardcode a fallback here — that masks production boot failures
+  // hardcode a fallback here, that masks production boot failures
   // and makes the test silently differ from the real surface. CI
   // sets JWT_SECRET in .github/workflows/ci.yml; a local dev must
   // either set it or accept that this test skips.
@@ -123,7 +123,7 @@ after(async () => {
 });
 
 // =====================================================================
-// HTTP helper — small wrapper around node http so we don't pull in a
+// HTTP helper, a small wrapper around node http so we don't pull in a
 // supertest-class dep for one test file.
 // =====================================================================
 function fetchJson(method, path, { body, token } = {}) {
@@ -155,7 +155,7 @@ function fetchJson(method, path, { body, token } = {}) {
 }
 
 // =====================================================================
-// Fixture helpers — direct SQL inserts. We could use the API for
+// Fixture helpers, direct SQL inserts. We could use the API for
 // some of these (POST /api/users etc.) but the surface is simpler if
 // we stick to one path per fixture. The point of these fixtures is
 // to populate the analytics queries; the endpoints under test are
@@ -164,11 +164,11 @@ function fetchJson(method, path, { body, token } = {}) {
 const bcrypt = require("bcrypt");
 
 async function insertUser({ orgId, username, fullName, role }) {
-  const hash = await bcrypt.hash("not-used-here", 4); // cost 4 — fixture only
+  const hash = await bcrypt.hash("not-used-here", 4); // cost 4, fixture only
   // email_verified_at = now() so /api/auth/login doesn't refuse
   // these synthetic fixtures with the email-verification gate
-  // added in Migration 021. Mirrors "user clicked the email link"
-  // — the production gate is unaffected.
+  // added in Migration 021. Mirrors "user clicked the email link",
+  // the production gate itself is unaffected.
   const u = await pool.query(
     `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
      VALUES ($1, $2, $3, $4, now()) RETURNING id`,
@@ -309,7 +309,7 @@ test("end-to-end happy path", async (t) => {
 
   // 1. register-org
   //
-  // Exercises the registration endpoint AS the system under test —
+  // Exercises the registration endpoint AS the system under test,
   // builds its own fixture inline (rather than via setupFixture)
   // because setupFixture's own implementation IS this flow.
   await t.test("register-org creates an org + founding admin", async () => {
@@ -476,7 +476,7 @@ test("end-to-end happy path", async (t) => {
           [state.eventId, judgeIds[i], i + 1],
         );
       }
-      // Pick any 3m dive — the directory is seeded by init.sql.
+      // Pick any 3m dive, the directory is seeded by init.sql.
       const d = await pool.query(
         `SELECT id, dd FROM dive_directory WHERE height = 3 LIMIT 1`,
       );
@@ -484,7 +484,7 @@ test("end-to-end happy path", async (t) => {
       const diveId = d.rows[0].id;
 
       // dive_list rows + scores. Pre-baked totals so the ranking is
-      // deterministic — Diver 2 wins (highest), Diver 1 second,
+      // deterministic, Diver 2 wins (highest), Diver 1 second,
       // Diver 3 third. 5-judge trim drops the high + the low.
       //
       //   Diver 1: [7.0, 7.5, 7.0, 7.5, 7.0] → keep 7.0+7.0+7.5 = 21.5
@@ -530,7 +530,7 @@ test("end-to-end happy path", async (t) => {
       assert.equal(ranks[diverIds[0]], 2, "Diver 1 finished 2nd");
       assert.equal(ranks[diverIds[2]], 3, "Diver 3 finished 3rd (lowest scores)");
 
-      // Placings echoes the same ranking — Diver 2 has 1 gold.
+      // Placings echoes the same ranking, Diver 2 has 1 gold.
       const p = await fetchJson(
         "GET", `/api/divers/${diverIds[1]}/analytics`, { token: state.adminToken },
       );

@@ -1,8 +1,8 @@
 <script setup>
 // Single "Classes" section, context-adaptive: club admins manage their
 // club's classes + roster, coaches see a read-only roster, divers see
-// their own enrolment + can self-enrol. Club-admin-ness isn't in the
-// JWT (it's a club_admins row) so we fetch it once on mount; a user who
+// their own enrolment and can self-enrol. Club-admin-ness isn't in the
+// JWT (it's a club_admins row), so we fetch it once on mount. A user who
 // qualifies for more than one context gets tabs, defaulting to the most
 // privileged (manage > coach > mine).
 import { ref, computed, onMounted } from 'vue'

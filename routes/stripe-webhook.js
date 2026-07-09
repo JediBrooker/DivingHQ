@@ -1,4 +1,4 @@
-// routes/stripe-webhook.js — Stripe platform-account webhook (RAW body).
+// routes/stripe-webhook.js: Stripe platform-account webhook (RAW body).
 //
 // Mounted in server.js with express.raw, and the global JSON parser is
 // skipped for this path (see the express.json wiring), so req.body is
@@ -12,7 +12,7 @@
 // their own redelivery guard (payments.stripe_dispute_id, migration 081).
 //
 // PLATFORM-account webhooks: DivingHQ is the merchant of record, so charges
-// fire on the PLATFORM's own account — these are STANDARD account events (no
+// fire on the PLATFORM's own account, these are STANDARD account events (no
 // event.account), NOT Connect events. In the Stripe dashboard register a
 // standard webhook endpoint for the platform account and put its signing
 // secret in STRIPE_WEBHOOK_SECRET. Subscribe to:
@@ -22,8 +22,8 @@
 //   charge.refunded, charge.dispute.created, charge.dispute.closed
 //
 // (payment_intent.payment_failed is deliberately NOT handled: a card
-// decline inside a still-open Checkout session must not fail our row —
-// the payer can retry within the same session, and failing the row early
+// decline inside a still-open Checkout session must not fail our row, the
+// payer can retry within the same session, and failing the row early
 // would make the eventual completed event find a non-pending payment and
 // drop the fulfilment. Slot release for abandoned checkouts is
 // checkout.session.expired's job.)
@@ -33,7 +33,7 @@ const { applyFullRefundSideEffects } = require("../lib/payment-lifecycle");
 
 // Advance a pending payment to 'paid' exactly once, and fulfil it
 // (grant membership for a membership payment; entry confirmation is
-// gated elsewhere — see the note below). Returns the fulfilled payment id
+// gated elsewhere, see the note below). Returns the fulfilled payment id
 // (for the receipt email) or null when nothing was fulfilled this call.
 async function onCheckoutCompleted(pool, logger, payments, email, session) {
   const paymentId = session.client_reference_id;
@@ -42,9 +42,9 @@ async function onCheckoutCompleted(pool, logger, payments, email, session) {
     return null;
   }
   // Delayed-notification payment methods (bank debits etc.) fire
-  // checkout.session.completed with payment_status 'unpaid' — the money has
-  // NOT arrived. Record the linkage but do not fulfil; fulfilment happens on
-  // checkout.session.async_payment_succeeded (same shape, payment_status
+  // checkout.session.completed with payment_status 'unpaid', the money has
+  // NOT arrived yet. Record the linkage but don't fulfil; fulfilment happens
+  // on checkout.session.async_payment_succeeded (same shape, payment_status
   // 'paid'), and async_payment_failed frees the slot.
   if (session.payment_status && session.payment_status !== "paid") {
     await pool.query(
@@ -74,7 +74,7 @@ async function onCheckoutCompleted(pool, logger, payments, email, session) {
     // The money was CAPTURED for a payment we'd already retired (a waive/
     // cancel/reprice raced the payer's completion and lost). The subject is
     // no longer payable, so keeping the charge would strand the payer's
-    // money invisibly — refund it automatically and record that, loudly.
+    // money invisibly. Refund it automatically and record that, loudly.
     if (payment.status === "failed") {
       const pi = session.payment_intent;
       if (pi) {
@@ -82,12 +82,13 @@ async function onCheckoutCompleted(pool, logger, payments, email, session) {
           await payments.createRefund({ paymentIntentId: pi, currency: payment.currency });
         } catch (e) {
           if (e && e.code === "charge_already_refunded") {
-            // A previous (crashed) attempt already refunded — fall through
+            // A previous (crashed) attempt already refunded, fall through
             // and record it.
           } else {
             // Refund failed (e.g. Stripe hiccup): roll back and 500 so
-            // Stripe redelivers and we try again. Nothing is lost — the
-            // charge sits on the platform account until the retry succeeds.
+            // Stripe redelivers and we try again. Nothing is lost, the
+            // charge just sits on the platform account until the retry
+            // succeeds.
             throw e;
           }
         }
@@ -119,7 +120,7 @@ async function onCheckoutCompleted(pool, logger, payments, email, session) {
     }
 
     if (payment.status !== "pending") {
-      // Already handled (re-delivery) — nothing to do.
+      // Already handled (re-delivery), nothing to do.
       await client.query("ROLLBACK");
       return null;
     }
@@ -160,7 +161,7 @@ async function onCheckoutCompleted(pool, logger, payments, email, session) {
         [payment.fine_id],
       );
     } else if (payment.subject_type === "class_enrolment") {
-      // The club (not the federation) is this payment's recipient — see
+      // The club (not the federation) is this payment's recipient, see
       // migration 078. Activates the roster row the diver was pending on.
       await client.query(
         "UPDATE class_enrolments SET status = 'active', payment_id = $1, updated_at = now() WHERE id = $2 AND status = 'pending'",
@@ -170,13 +171,13 @@ async function onCheckoutCompleted(pool, logger, payments, email, session) {
     // For 'event_entry' the payment is now recorded as paid. Actually
     // building/confirming the diver's dive list stays in the entry flow
     // (routes/competitor.js), which checks for a paid payment before it
-    // confirms — payment and dive content are deliberately decoupled.
+    // confirms. Payment and dive content are deliberately decoupled.
 
     await client.query("COMMIT");
 
     // Best-effort: populate the charge ID from the PaymentIntent so
     // the payments table has the full Stripe chain (session → PI →
-    // charge). Non-critical — if it fails the payment is still paid.
+    // charge). Non-critical, if it fails the payment is still paid.
     if (session.payment_intent && payments.enabled) {
       try {
         const pi = await payments.retrievePaymentIntent({ paymentIntentId: session.payment_intent });
@@ -252,7 +253,7 @@ async function grantOfficialAccreditation(client, payment) {
 // paid via the bundle). meet_id is deliberately LEFT NULL: these are
 // per-event entries keyed on event_id, and stamping the shared meet_id would
 // collide them all on idx_payments_one_live_meet_entry (meet_id,
-// payer_user_id, fee_definition_id) — which ignores event_id — so only one
+// payer_user_id, fee_definition_id), which ignores event_id, so only one
 // event would survive. ON CONFLICT DO NOTHING dedupes only against a
 // re-delivery of THIS bundle (same event_id + bundle fee_definition_id); it
 // does NOT dedupe against a separately-purchased per-event entry, which uses
@@ -333,10 +334,10 @@ async function onChargeRefunded(pool, email, charge) {
   // A refund can land BEFORE checkout.session.completed is processed (the
   // PI isn't stored on the row until completion). The PaymentIntent's
   // metadata carries our payment_id (stamped at session creation), and
-  // charges inherit it — fall back to that so the refund is never silently
-  // dropped. A 'pending' row here means captured-then-refunded before we
-  // fulfilled anything: mark it refunded; the completed event will then
-  // no-op (row no longer pending) and nothing gets granted.
+  // charges inherit it, so fall back to that so the refund is never
+  // silently dropped. A 'pending' row here means captured-then-refunded
+  // before we fulfilled anything: mark it refunded; the completed event
+  // will then no-op (row no longer pending) and nothing gets granted.
   let refundedIds = upd.rows.map((r) => r.id);
   if (!upd.rowCount && charge.metadata && charge.metadata.payment_id) {
     const fallback = await pool.query(
@@ -363,7 +364,7 @@ async function onChargeRefunded(pool, email, charge) {
 }
 
 // A cardholder disputed the charge. Nothing moves in the ledger yet (the
-// funds are merely held by Stripe), but the operator must know NOW — losing
+// funds are merely held by Stripe), but the operator must know NOW, losing
 // by silence is the default outcome of an unanswered dispute.
 async function onDisputeCreated(pool, logger, email, dispute) {
   const pi = dispute.payment_intent;
@@ -463,7 +464,7 @@ module.exports = function createStripeWebhook({ pool, logger, payments, email = 
           await onDisputeClosed(pool, logger, email, event.data.object);
           break;
         default:
-          // Unhandled types are fine — ack so Stripe stops retrying.
+          // Unhandled types are fine, ack so Stripe stops retrying.
           break;
       }
     } catch (err) {

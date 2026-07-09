@@ -4,8 +4,8 @@
 // chunk stay at or under the ceilings frozen in
 // scripts/bundle-size-baseline.json. Ceilings carry ~15% headroom over
 // the size measured when the baseline was written, so ordinary churn
-// passes and only a real weight regression -- e.g. a heavy import
-// landing on the live /control route -- trips the gate.
+// passes and only a real weight regression (say a heavy import landing
+// on the live /control route) trips the gate.
 //
 //   node scripts/check-bundle-size.js            -> check (needs dist/)
 //   node scripts/check-bundle-size.js --update   -> rewrite baseline from dist/
@@ -25,7 +25,7 @@ const CHUNKS = {
   "vendor-vue": /^vendor-vue-.*\.js$/,
   "vendor-i18n": /^vendor-i18n-.*\.js$/,
   "vendor-socket": /^vendor-socket-.*\.js$/,
-  // The per-route Control Room chunk (ControlViewV2; the optional V2
+  // The per-route Control Room chunk (ControlViewV2, the optional V2
   // suffix also tolerates a future rename back to ControlView).
   control: /^ControlView(V2)?-.*\.js$/,
 };

@@ -1,4 +1,4 @@
-// Self-tests for the P0 bundle-size gate. DB-less; runs in test:safe.
+// Self-tests for the P0 bundle-size gate, no DB needed so it runs in test:safe.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { evaluate, ceilingFor } = require("../scripts/check-bundle-size.js");

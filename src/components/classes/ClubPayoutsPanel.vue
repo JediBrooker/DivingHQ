@@ -2,9 +2,9 @@
 // Club admin: Stripe payout onboarding, balance, automatic-withdrawal
 // settings, and withdrawal history for THIS club's class-enrolment revenue.
 // Talks to /api/clubs/:clubId/payments/status|connect/onboard|
-// withdrawal-settings|withdrawals — all club-private (requireClubAdminOnly).
-// The club onboards once with Stripe (bank details live at Stripe, never
-// here); withdrawing then fires a real transfer. DivingHQ keeps its 15%.
+// withdrawal-settings|withdrawals, all club-private (requireClubAdminOnly).
+// FYI, the club onboards once with Stripe (bank details live at Stripe,
+// never here); withdrawing then fires a real transfer. DivingHQ keeps its 15%.
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'

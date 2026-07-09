@@ -1,9 +1,10 @@
 <script setup>
 // Federation editor for per-role official/coach accreditation fees. One
 // FeeEditor (flat mode) per role, backed by /api/orgs/:orgId/official-fee
-// ?role_type=… . The role rides extraPayload so the PUT lands on the right
-// official_accreditation fee_definition. Accreditation is a flat per-role
-// price (not member-tiered), so FeeEditor runs in flat mode.
+// ?role_type=… . The role rides along in extraPayload so the the PUT lands
+// on the right official_accreditation fee_definition. Accreditation is a
+// flat per-role price (not member-tiered), so FeeEditor just runs in flat
+// mode.
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FeeEditor from '@/components/payments/FeeEditor.vue'

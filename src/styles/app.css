@@ -1,12 +1,12 @@
 /* =============================================================
-   DIVING APP — Design System v2
+   DIVING APP: Design System v2
    Place at: public/css/app.css
 
    Fonts: see index.html. The Google Fonts stylesheet used to be
    imported here with @import, which blocks first paint while the
-   CSSOM waits for the network round-trip — bad on slow poolside
-   cell connections (judges' phones on 3G/4G). It's now loaded
-   from index.html as a parallel <link rel="preconnect"> +
+   CSSOM waits for the network round-trip, bad news on slow
+   poolside cell connections (judges' phones on 3G/4G). It's now
+   loaded from index.html as a parallel <link rel="preconnect"> +
    <link rel="stylesheet">, which lets the HTML parser kick off
    the DNS lookup + TLS handshake in parallel with this CSS
    bundle's download. First contentful paint is faster, and
@@ -15,7 +15,7 @@
    ============================================================= */
 
 /* =============================================================
-   DESIGN TOKENS — "Marine CRM" redesign
+   DESIGN TOKENS: "Marine CRM" redesign
    Primitive ramps (slate / blue / status hues) stay fixed; the
    SEMANTIC layer below them is what components reference, and is
    what [data-theme="dark"] remaps. A COMPATIBILITY BRIDGE at the
@@ -51,8 +51,8 @@
   --surface-2:    var(--slate-50);
   --surface-hover:var(--slate-50);
   --fg:           var(--slate-900);
-  --fg-2:         var(--slate-700);   /* secondary text — kept dark for readability */
-  --fg-3:         var(--slate-600);   /* muted text — grey-on-white must stay dark to read */
+  --fg-2:         var(--slate-700);   /* secondary text, kept dark for readability */
+  --fg-3:         var(--slate-600);   /* muted text, grey-on-white must stay dark to read */
   --fg-on-accent: var(--white);
   --border:       var(--slate-200);
   --border-2:     var(--slate-300);
@@ -127,7 +127,7 @@
   --dur-fast:110ms; --dur:160ms; --dur-slow:240ms;
 
   /* ═════════════════════════════════════════════════════════
-     COMPATIBILITY BRIDGE — prior dark-v2 names → new semantic
+     COMPATIBILITY BRIDGE: prior dark-v2 names → new semantic
      tokens. Lets the existing component + per-view CSS reskin
      for free; each alias resolves against the SEMANTIC layer so
      it tracks [data-theme="dark"] automatically.
@@ -164,7 +164,7 @@
 }
 
 /* =============================================================
-   DARK THEME — [data-theme="dark"] on <html> flips every
+   DARK THEME: [data-theme="dark"] on <html> flips every
    SEMANTIC token; primitives stay fixed. A calm nod to the
    original deep-navy + marine identity, kept readable.
    ============================================================= */
@@ -252,13 +252,13 @@ body {
   background: var(--bg);
   color: var(--fg);
   text-rendering: optimizeLegibility;
-  /* dvh, not vh — iOS Safari's collapsing URL bar makes 100vh
+  /* dvh, not vh: iOS Safari's collapsing URL bar makes 100vh
      equal the large viewport (bar collapsed). With the bar
      expanded, a 100vh body is taller than the visible area
      and content at the bottom is hidden under the toolbar.
      The 100vh fallback line is for browsers older than
-     ~Q4-2022 that don't understand dvh — they ignore the
-     second declaration and keep the vh value. */
+     ~Q4-2022 that don't understand dvh, so they just ignore
+     the second declaration and keep the vh value. */
   min-height: 100vh;
   min-height: 100dvh;
   /* Match html's overflow clamp + cap width to the viewport so
@@ -330,7 +330,7 @@ h1, h2, h3, h4 {
   font-size: 20px;
   font-weight: 700;
   font-style: normal;
-  /* DIVING white, HQ cyan — same colour rhythm as the public
+  /* DIVING white, HQ cyan, same colour rhythm as the public
      home page hero so the brand reads identically across the
      surface (the operator just sees a smaller version of the
      mark they saw on the landing page). */
@@ -447,7 +447,7 @@ h1, h2, h3, h4 {
 .input::placeholder { color: var(--fg-3); }
 
 /* Number-input spinner arrows. Browser defaults render almost
-   black-on-black in our dark theme — recolour the chrome so the
+   black-on-black in our dark theme, so recolour the chrome so the
    up/down arrows are actually visible (hover / focus brighten
    them so the affordance is obvious).
 
@@ -628,7 +628,7 @@ h1, h2, h3, h4 {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  /* The backdrop is the scrollable container — not the modal.
+  /* The backdrop is the scrollable container, not the modal.
      A modal taller than the viewport scrolls the backdrop
      instead of being clipped to a 90vh box that the user
      can't reach the edges of. Especially important on iOS
@@ -647,7 +647,7 @@ h1, h2, h3, h4 {
   padding: 2rem;
   width: 100%;
   max-width: 520px;
-  /* No vh cap on the modal itself — its parent .modal-backdrop
+  /* No vh cap on the modal itself, its parent .modal-backdrop
      handles the scroll. The modal flexes to fit its content;
      short modals stay center-aligned via flex on the backdrop,
      tall modals overflow the backdrop and the user scrolls.
@@ -667,7 +667,7 @@ h1, h2, h3, h4 {
 
 /* =========================================================
    Per-judge score chips (FINA categories)
-   Shared by Scoreboard and Archive — keep in sync with the
+   Shared by Scoreboard and Archive, keep in sync with the
    logic in src/composables/useScoreCategories.js
    ========================================================= */
 .j-score {
@@ -678,7 +678,7 @@ h1, h2, h3, h4 {
   white-space: nowrap;
 }
 /* Judge score chips are intentionally NOT colour-coded by award
-   category — they read as plain tabular mono figures (consistent
+   category, they read as plain tabular mono figures (consistent
    with the Control Room). Dropped/trimmed scores are conveyed by
    the strike-through (.j-dropped) below, not by colour. */
 .j-score.j-failed,
@@ -691,14 +691,14 @@ h1, h2, h3, h4 {
   color: var(--fg); background: var(--surface-2); border-color: var(--border); font-weight: 500;
 }
 
-/* Dropped by the panel's trim rule — keeps the category colour
+/* Dropped by the panel's trim rule, keeps the category colour
    but desaturates and dims so live + counted scores still pop. */
 .j-score.j-dropped {
   opacity: 0.8;
   font-weight: 400;
   color: var(--fg-2);
   /* !important so the strike survives anchor `text-decoration:none`
-     resets — dropped/trimmed scores are score-history links. */
+     resets. dropped/trimmed scores are score-history links. */
   text-decoration: line-through !important;
   text-decoration-thickness: 2px !important;
   text-decoration-color: var(--fg-3) !important;
@@ -728,8 +728,8 @@ h1, h2, h3, h4 {
   margin-inline-end: 0.3rem;
   white-space: nowrap;
 }
-/* Exec A / Exec B / Sync keep their WA sub-panel role identity —
-   violet / amber / green — via theme-aware role tokens (a dark hue on
+/* Exec A / Exec B / Sync keep their WA sub-panel role identity
+   (violet / amber / green) via theme-aware role tokens (a dark hue on
    light surfaces, a light hue on dark) so they read clearly in both
    themes instead of the washed-out dark-only hues used before. Each
    role's label and box border share its colour. */
@@ -742,14 +742,14 @@ h1, h2, h3, h4 {
 
 
 /* =========================================================
-   RESPONSIVE — phone & small tablet
+   RESPONSIVE: phone & small tablet
    The desktop styles above assume ≥ 1024px-ish viewports;
    the rules below scale them down so every page stays usable
    on a phone without per-view duplication.
 
    Breakpoints:
-     ≤ 720px — phones in portrait, small tablets
-     ≤ 480px — narrow phones (iPhone SE etc.)
+     ≤ 720px: phones in portrait, small tablets
+     ≤ 480px: narrow phones (iPhone SE etc.)
    ========================================================= */
 
 @media (max-width: 720px) {
@@ -769,7 +769,7 @@ h1, h2, h3, h4 {
   .card-sm  { padding: 1rem; }
   .card-inset { padding: 0.875rem; }
 
-  /* Buttons — tighten the giant primary buttons that look
+  /* Buttons: tighten the giant primary buttons that look
      fine on desktop but eat real estate on a phone. The hit
      area stays well over the 44px tap target. */
   .btn-primary    { padding: 0.7rem 1.1rem; font-size: 12px; }
@@ -777,7 +777,7 @@ h1, h2, h3, h4 {
   .btn-ghost      { padding: 0.55rem 0.9rem; }
   .btn-danger     { padding: 0.55rem 0.9rem; }
 
-  /* Form fields — prevent iOS Safari from auto-zooming when
+  /* Form fields: prevent iOS Safari from auto-zooming when
      a field is focused. Triggered by any font-size < 16px. */
   .input, .select { font-size: 16px; padding: 0.75rem 0.9rem; }
 
@@ -786,7 +786,7 @@ h1, h2, h3, h4 {
      themselves in their own files. */
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
 
-  /* Tables — keep the table semantics but let rows scroll
+  /* Tables: keep the table semantics but let rows scroll
      horizontally inside their containing card if columns
      don't fit. Combined with smaller cell padding this means
      the User Manager / Clubs / Teams tables stay readable. */
@@ -797,7 +797,7 @@ h1, h2, h3, h4 {
   .data-table td       { padding: 0.55rem 0.7rem; }
   .data-table th       { font-size: 9px; letter-spacing: 0.15em; }
 
-  /* Modal — full-bleed-ish on mobile. Backdrop top/bottom
+  /* Modal: full-bleed-ish on mobile. Backdrop top/bottom
      padding gives the modal breathing room above and below
      when the content is taller than the viewport, so the user
      can scroll past the modal's edges to reach the top + bottom
@@ -807,7 +807,7 @@ h1, h2, h3, h4 {
        • a thumb's-width of breathing room
      so the Save / Cancel buttons at the bottom of a long form
      are always swipe-reachable.
-     Modal max-height is dropped — backdrop handles the scroll
+     Modal max-height is dropped, backdrop handles the scroll
      and the modal flexes to fit its content. */
   .modal-backdrop {
     padding-inline-start: 0.5rem;
@@ -826,13 +826,13 @@ h1, h2, h3, h4 {
   .badge { font-size: 9px; padding: 0.2rem 0.5rem; }
 
   /* Headings auto-shrink. Most views use h1 at ~36px italic
-     for the page-header — that's ~80% of a 375px viewport and
+     for the page-header, that's about 80% of a 375px viewport and
      wraps awkwardly. Cap it. */
   h1 { font-size: clamp(22px, 6vw, 30px) !important; }
   h2 { font-size: clamp(18px, 5vw, 24px); }
   h3 { font-size: clamp(15px, 4vw, 18px); }
 
-  /* Per-view wrap classes — most views ship a top-level wrapper
+  /* Per-view wrap classes: most views ship a top-level wrapper
      with `padding: 2rem` and a max-width. That's right for a
      laptop and crowds the content into ~280px usable width on
      a 360px phone. Universal trim brings the available room
@@ -865,16 +865,16 @@ h1, h2, h3, h4 {
     border-radius: var(--radius-sm);
   }
 
-  /* Touch targets — WCAG 2.1 says any interactive element
+  /* Touch targets: WCAG 2.1 says any interactive element
      should be at least 24×24 CSS px; Apple HIG and Google
-     Material both go further (44×44 / 48dp). A handful of
-     buttons in the audit (drag handle, delete chip, partner
-     clear, tab pills) sit below that. Lift them. */
+     Material both go further (44×44 / 48dp). Heads up, a
+     handful of buttons in the audit (drag handle, delete chip,
+     partner clear, tab pills) sit below that, so lift them. */
   .drag-handle,
   .partner-clear,
   .event-template-del { min-width: 32px; min-height: 32px; }
 
-  /* Fixed-column grids inside profile widgets — collapse to
+  /* Fixed-column grids inside profile widgets: collapse to
      a more forgiving layout on narrow viewports. Per-widget
      overrides can still kick in below this with higher
      specificity, but the default goes from "240px+1fr" type
@@ -886,7 +886,7 @@ h1, h2, h3, h4 {
 }
 
 /* =========================================================
-   PRINT — turn the recap into a clean printout
+   PRINT: turn the recap into a clean printout
    The dark broadcast UI doesn't print well (lots of black ink
    and tiny chips). On Cmd-P / Ctrl-P we strip backgrounds,
    force black text on white, hide the page chrome and the
@@ -928,7 +928,7 @@ h1, h2, h3, h4 {
   }
   .completed-grid { display: block !important; }
   .completed-col + .completed-col { page-break-before: avoid; margin-top: 1.5rem; }
-  /* The chip backgrounds end up muddy in print — neutralise them
+  /* The chip backgrounds end up muddy in print, so neutralise them
      and rely on text + struck-through for the trim indication. */
   .j-score, .judge-group {
     background: white !important;
@@ -957,7 +957,7 @@ h1, h2, h3, h4 {
   .card          { padding: 1rem; }
   .card-sm       { padding: 0.75rem; }
 
-  /* Make the data-table cell padding dense — works well as
+  /* Make the data-table cell padding dense, works well as
      a scroll-anyway table. */
   .data-table th,
   .data-table td { padding: 0.45rem 0.55rem; }
@@ -978,7 +978,7 @@ h1, h2, h3, h4 {
 }
 
 /* =========================================================
-   Empty-state cards — surfaces that have nothing to show
+   Empty-state cards: surfaces that have nothing to show
    yet (no events, no clubs, no linked divers, no events open
    for entries) render this block instead of a thin "no rows"
    line. Catches the user at exactly the moment they're
@@ -1016,7 +1016,7 @@ h1, h2, h3, h4 {
 }
 
 /* =========================================================
-   Dashboard panels — shared rules for the per-role panel
+   Dashboard panels: shared rules for the per-role panel
    chunks rendered inside DashboardView. Lifted out of
    DashboardView's scoped <style> so the per-role panel
    components (defineAsyncComponent'd from
@@ -1309,7 +1309,7 @@ h1, h2, h3, h4 {
 .diver-next-card.md-cta:hover { border-color: var(--cyan); }
 .diver-next-card.md-cta:hover .diver-next-arrow { color: var(--cyan); }
 
-/* GO TO tiles — small grid per panel */
+/* GO TO tiles, small grid per panel */
 .goto-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
@@ -1378,7 +1378,7 @@ h1, h2, h3, h4 {
 }
 
 /* =========================================================
-   v-tip — instant tooltip for any element with data-tip.
+   v-tip: instant tooltip for any element with data-tip.
 
    Why: native `title` has a ~500ms+ browser delay. This
    pseudo-element renders the bubble on the very first hover
@@ -1387,11 +1387,11 @@ h1, h2, h3, h4 {
    screen readers announce the same text.
 
    Usage in templates:
-     v-tip="someValue"     (preferred — replaces title=)
+     v-tip="someValue"     (preferred, replaces title=)
      :data-tip="..."       (raw, e.g. for non-Vue partials)
 
    Constraints we accept:
-     * Hosts must be flow-content (block/inline) — pseudos
+     * Hosts must be flow-content (block/inline), pseudos
        don't render on SVG nodes. No SVG title= sites in
        this codebase to migrate.
      * No JS positioning. Tooltip is anchored to the chip
@@ -1410,7 +1410,7 @@ h1, h2, h3, h4 {
 }
 :where([data-tip]) { position: relative; }
 
-/* Fixed-position tooltip (v-tip.fixed) — body-appended so it
+/* Fixed-position tooltip (v-tip.fixed), body-appended so it
    escapes overflow-clipping ancestors (e.g. the judge-ranking
    matrix's horizontal scroll). Mirrors the [data-tip] bubble. */
 .tip-fixed {
@@ -1442,7 +1442,7 @@ h1, h2, h3, h4 {
   inset-inline-start: 50%;
   transform: translateX(-50%);
   /* The directive's value can carry literal "\n" between
-     lines (e.g. "J3 — Maria Schmidt · GER\nClick to open
+     lines (e.g. "J3, Maria Schmidt · GER\nClick to open
      judge analysis"). pre-line preserves them. */
   white-space: pre-line;
   text-align: start;
@@ -1468,14 +1468,14 @@ h1, h2, h3, h4 {
   opacity: 0;
   visibility: hidden;
   /* Strip any decoration (e.g. parent .j-dropped's strike
-     through) — the bubble's own text should always be plain. */
+     through). The bubble's own text should always be plain. */
   text-decoration: none;
 }
 /* Fixed-mode hosts (v-tip.fixed) render their bubble as a
    body-appended .tip-fixed node instead, so suppress the CSS
-   ::after — otherwise a partially-clipped host shows both. */
+   ::after, otherwise a partially-clipped host shows both. */
 [data-tip-fixed]::after { content: none; }
-/* Downward placement — opt in with v-tip:bottom="…" (sets
+/* Downward placement: opt in with v-tip:bottom="…" (sets
    data-tip-pos="bottom"). For hosts near the top of the
    viewport (e.g. a page's top nav) whose default above-the-host
    bubble would be clipped off the top edge. Two attribute
@@ -1486,7 +1486,7 @@ h1, h2, h3, h4 {
 }
 /* Show on hover ONLY where hover is actually a thing. On iOS
    Safari (no real hover), tapping a [data-tip] element fired
-   both the tooltip-reveal AND consumed the tap event — the
+   both the tooltip-reveal AND consumed the tap event, so the
    click handler then needed a SECOND tap to fire. The
    @media (hover: hover) wrapper restricts the hover-reveal to
    devices with a real pointer, so touch users get straight-

@@ -36,7 +36,7 @@ const editBusy = ref(false)
 
 // Member drawer
 const drawerTeam = ref(null)         // team object
-// Lock background scroll while the team drawer is open.
+// Lock background scroll while the team drawer's open.
 useBodyScrollLock().lockWhile(computed(() => drawerTeam.value !== null))
 const drawerMembers = ref([])
 const drawerEvents = ref([])         // events the team is in
@@ -46,8 +46,8 @@ const memberToAdd = ref('')
 const isSysAdmin = computed(() => !!auth.user?.is_system_admin)
 
 const teamOrgs = computed(() => {
-  // For system admin, the orgs derived from the team list. For
-  // regular admin, just the user's own org.
+  // For system admin, derive the orgs from the team list. For
+  // regular admin it's just the user's own org.
   if (!isSysAdmin.value) return []
   const seen = new Map()
   for (const t of teams.value) {
@@ -81,7 +81,7 @@ async function loadTeams() {
   try {
     if (isSysAdmin.value) {
       // Fetch teams across all orgs by hitting each org's endpoint
-      // (no global teams listing yet — wired off of org).
+      // (no global teams listing yet, this is wired off of org).
       const allOrgs = await auth.apiFetch('/api/orgs/active')
       const lists = await Promise.all(
         (Array.isArray(allOrgs) ? allOrgs : []).map(o =>
@@ -255,7 +255,7 @@ async function addMember() {
     })
     const refreshed = await auth.apiFetch(`/api/teams/${drawerTeam.value.id}/members`)
     drawerMembers.value = refreshed
-    // Reflect new count in the table list
+    // reflect the new count in the table list
     const t = teams.value.find(x => x.id === drawerTeam.value.id)
     if (t) t.member_count = refreshed.length
     memberToAdd.value = ''
@@ -289,7 +289,7 @@ async function removeMember(memberId) {
   }
 }
 
-// fmtDate imported from @/lib/format — single source of truth.
+// fmtDate imported from @/lib/format, single source of truth.
 
 function onKeyDown(e) {
   if (e.key === 'Escape' && drawerTeam.value) closeMembers()
@@ -477,7 +477,7 @@ watch(() => drawerTeam.value, (val) => {
       </div>
 
       <div class="drawer-body">
-        <!-- Events the team is in — links to per-event dive list editor -->
+        <!-- Events the team is in, links to per-event dive list editor -->
         <div class="drawer-section-label">Events ({{ drawerEvents.length }})</div>
         <ul v-if="drawerEvents.length" class="event-list">
           <li v-for="e in drawerEvents" :key="e.id" class="event-list-row">
@@ -533,7 +533,7 @@ watch(() => drawerTeam.value, (val) => {
 </template>
 
 <style scoped>
-/* Title is redundant with the shell breadcrumb — hidden. */
+/* Title is redundant with the shell breadcrumb, so hidden. */
 .page-header { display: none; }
 .page-header .btn { display: none; }
 .page-title { font-size: var(--text-h1); font-weight: 600; font-style: normal; letter-spacing: -0.015em; }
@@ -636,9 +636,9 @@ watch(() => drawerTeam.value, (val) => {
 .drawer-id { min-width: 0; }
 .drawer-name { font-family: var(--font-sans); font-size: 22px; font-weight: 600; font-style: normal; letter-spacing: -0.01em; color: var(--fg); line-height: 1.1; }
 .drawer-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); margin-top: 0.4rem; }
-/* `overflow-x: clip` prevents CSS's promote-to-auto from
-   making the body silently horizontally scrollable. Bottom
-   padding keeps content above iOS Safari's URL/toolbar — the
+/* `overflow-x: clip` stops CSS's promote-to-auto from making
+   the body silently horizontally scrollable. Bottom padding
+   keeps content above iOS Safari's URL/toolbar, since the
    drawer extends to `bottom: 0` but the toolbar overlays the
    viewport bottom. */
 .drawer-body {

@@ -1,4 +1,4 @@
-// Super Final — full 12-diver walkthrough (Phases 2 + 3a + 3b
+// Super Final: full 12-diver walkthrough (Phases 2 + 3a + 3b
 // + 3c).
 //
 // Drives all 4 stages end-to-end:
@@ -8,7 +8,7 @@
 //   3. SF            (super_final_semi)        6 winners
 //   4. F             (super_final_final)       4 finalists
 //
-// Then GET /super-final/rankings and verify the 1-4 / 5-6 / 7-12
+// Then hits GET /super-final/rankings and checks the 1-4 / 5-6 / 7-12
 // payout layout per Appendix 3 §7.
 
 const { test, expect } = require("@playwright/test");
@@ -76,7 +76,7 @@ test("super-final full 12-diver walkthrough: H2H + tie + SF + F + rankings", asy
   for (let f = 0; f < 6; f++) rankOrder.push({ fedIdx: f, withinFed: 0 });
   // Second pass: 2nd-best of each fed (rank 7..12)
   for (let f = 0; f < 6; f++) rankOrder.push({ fedIdx: f, withinFed: 1 });
-  // Third pass: 3rd of each fed (rank 13..18 — capped, never qualify)
+  // Third pass: 3rd of each fed (rank 13..18, capped, never qualify)
   for (let f = 0; f < 6; f++) rankOrder.push({ fedIdx: f, withinFed: 2 });
 
   for (let rank = 1; rank <= rankOrder.length; rank++) {
@@ -92,7 +92,7 @@ test("super-final full 12-diver walkthrough: H2H + tie + SF + F + rankings", asy
     // where base is monotonic in rank.
     // base 6.0 → rank 18; base 8.5 → rank 1, by 0.5 increments.
     // 18 ranks need 18 distinct base values. 0.5 steps from 0.5
-    // to 9.0 = 18 values exactly — perfect.
+    // to 9.0 = 18 values exactly, perfect.
     const base = Math.max(0.5, 9.0 - (rank - 1) * 0.5);
     for (let round = 1; round <= 6; round++) {
       const score = base; // identical across rounds → 6× base sum
@@ -187,9 +187,9 @@ test("super-final full 12-diver walkthrough: H2H + tie + SF + F + rankings", asy
   expect(resolveDoRes.status()).toBe(200);
 
   // The resolved dive-off (winner = competitor_b) now breaks the
-  // on-field tie directly — h2h-results consumes tiebreak_dive_offs,
-  // so no manual score adjustment is needed (it used to be required
-  // because the dive-off winner wasn't read).
+  // on-field tie directly, since h2h-results consumes tiebreak_dive_offs.
+  // No manual score adjustment needed (used to be required because the
+  // dive-off winner wasn't read).
 
   // ---- Verify h2h-results: 6 winners, one resolved by the dive-off. ----
   const h2hResultsRes = await request.get(`/api/events/${h2h.id}/super-final/h2h-results`);
@@ -229,7 +229,7 @@ test("super-final full 12-diver walkthrough: H2H + tie + SF + F + rankings", asy
   );
   expect(sfRowAfterSeed.rows[0].score_carry_from).toBe(h2h.id);
 
-  // Score SF — make group winners clean (highest seed advances).
+  // Score SF: make group winners clean (highest seed advances).
   const sfJudges = [];
   for (let j = 0; j < 5; j++) {
     sfJudges.push(await setup.insertUser({ orgId: fedHost.orgId, role: "judge", fullName: `SF J${j+1}` }));
@@ -342,14 +342,14 @@ test("super-final full 12-diver walkthrough: H2H + tie + SF + F + rankings", asy
   }
 
   // MAGNITUDE GUARD: an earlier Cartesian-join bug had the F-tier
-  // SUM inflated by total_rounds (6× for Men, 5× for Women) —
-  // tests passed because the inflation was uniform and ranks
-  // ordered correctly. Pin a sanity range so a future regression
-  // can't slip through. Each F finalist scores `base = 4.0 +
+  // SUM inflated by total_rounds (6× for Men, 5× for Women), and
+  // tests passed anyway because the inflation was uniform and ranks
+  // still ordered correctly. Pin a sanity range so a future regression
+  // can't slip through quietly. Each F finalist scores `base = 4.0 +
   // 0.5 × display_order` (so 4.5 / 5.0 / 5.5 / 6.0) on a 5-judge
   // panel. Trim drops 1 high + 1 low → 3 kept × base × DD ≈
   // 3 × 6.0 × 1.7 ≈ 30.6/dive × 6 rounds ≈ 184 max. The pre-fix
-  // bug returned ~1100. Cap any rank's total below 250 catches
+  // bug returned ~1100, so capping any rank's total below 250 catches
   // it while leaving room for a stricter dive_directory DD.
   for (const r of rankings.rankings) {
     expect(Number(r.total)).toBeLessThan(300);

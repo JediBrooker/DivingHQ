@@ -1,17 +1,16 @@
-// Competitor self-service routes — diver submits their own
-// dive list before a meet. Synchro events also resolve the
-// partner here.
+// Competitor self-service routes: diver submits their own dive
+// list before a meet. Synchro events also resolve the partner here.
 //
 //   POST /api/competitor/submit-list
 //
 // Gated by:
-//   * requireOrgRole(["diver"])     — only divers can self-submit
-//   * loadEventForEntries           — event must still be Upcoming
+//   * requireOrgRole(["diver"])     : only divers can self-submit
+//   * loadEventForEntries           : event must still be Upcoming
 //                                     and entries_close_at not yet
 //                                     reached. Late additions are
 //                                     a manager-only flow via the
 //                                     Control Room late-entry add.
-//   * bulkWriteLimiter              — caps abuse on the bulk write
+//   * bulkWriteLimiter              : caps abuse on the bulk write
 //
 // Mounted via:
 //   app.use(require('./routes/competitor')({ … }))
@@ -25,7 +24,7 @@ module.exports = function createCompetitorRouter({
   requireOrgRole,
   bulkWriteLimiter,
   loadEventForEntries,
-  push, // optional — when present, drives synchro consent notifications
+  push, // optional, drives synchro consent notifications when present
 }) {
   if (!pool) throw new Error("createCompetitorRouter requires { pool, … }");
   const router = express.Router();
@@ -44,7 +43,7 @@ module.exports = function createCompetitorRouter({
 
         // Confirm the event exists and is still accepting entries.
         // Passes actor_local_time so the gate can return a
-        // late_review verdict instead of 409 when the outbox
+        // late_review verdict instead of a 409 when the outbox
         // client claims pre-deadline submission (DEC-04).
         const gate = await loadEventForEntries(client, event_id, {
           actorLocalTime: actor_local_time,
@@ -75,7 +74,7 @@ module.exports = function createCompetitorRouter({
         });
 
         await client.query("COMMIT");
-        // Synchro consent (migration 051) — surface the
+        // Synchro consent (migration 051): surface the
         // pending/auto-confirmed status so the SPA can switch
         // between "Submitted" and "Waiting for partner" toasts.
         if (result?.pairing?.status === "pending") {
@@ -104,7 +103,7 @@ module.exports = function createCompetitorRouter({
       } catch (err) {
         await client.query("ROLLBACK");
         if (err.status) {
-          // Validation error from the shared helper — return its
+          // Validation error from the shared helper, just return its
           // structured shape with optional `violations`.
           const body = { error: err.message };
           if (err.violations) body.violations = err.violations;
@@ -124,8 +123,8 @@ module.exports = function createCompetitorRouter({
   // GET /api/events/:id/me-meet-day
   //
   // The diver's competition-day "now" view. Composes data the
-  // operator surfaces and the spectator scoreboard already have
-  // — dive list + queue + standings + catch-up math — into a
+  // operator surfaces and the spectator scoreboard already have,
+  // dive list + queue + standings + catch-up math, into a
   // single payload for a focused phone-deck experience:
   //
   //   { event, next_dive, queue, standing, targets }
@@ -137,17 +136,17 @@ module.exports = function createCompetitorRouter({
   // -------------------------------------------------------------
   // POST /api/competitor/confirm-list
   //
-  // Migration 041 — when a diver advances to a new stage, their
+  // Migration 041: when a diver advances to a new stage, their
   // dive list inherits from the parent event. The diver portal
   // surfaces a "Confirm or edit" prompt; this endpoint is the
-  // "Confirm" path: the diver explicitly says "ride with the
+  // "Confirm" path, the diver explicitly says "ride with the
   // inherited list, don't change anything".
   //
   // Stamps confirmed_at = NOW() on every row this diver has in
   // the event, so the operator can audit who actively responded
   // before the post-advance lock.
   //
-  // Idempotent — safe to re-run; just re-stamps the timestamp.
+  // Idempotent, safe to re-run; just re-stamps the timestamp.
   // -------------------------------------------------------------
   // -------------------------------------------------------------
   // GET /api/competitor/list-status?event_id=…
@@ -299,7 +298,7 @@ module.exports = function createCompetitorRouter({
       const nextDive = myDives.find(d => !d.completed) || null;
       const remainingDives = myDives.filter(d => !d.completed).length;
 
-      // 3. Standings — same per-dive math as the public scoreboard,
+      // 3. Standings: same per-dive math as the public scoreboard,
       //    rolled up per competitor. Rank ties share (World Aquatics practice).
       const standRes = await pool.query(
         `WITH ${perDivePointsCte()}, totals AS (
@@ -332,7 +331,7 @@ module.exports = function createCompetitorRouter({
       const totalCompetitors = ranked.length;
       const leaderTotal = ranked[0] ? Number(ranked[0].total) : 0;
 
-      // Top three distinct totals — these are the gold/silver/
+      // Top three distinct totals: these are the gold/silver/
       // bronze targets. Tied scores at the cut share the medal so
       // the diver-facing math stays accurate even at podium edges.
       const distinctTotals = [];
@@ -346,10 +345,10 @@ module.exports = function createCompetitorRouter({
       const silverTotal = distinctTotals[1] ?? null;
       const bronzeTotal = distinctTotals[2] ?? null;
 
-      // 4. Catch-up math — mirrors ScoreboardView's
+      // 4. Catch-up math: mirrors ScoreboardView's
       //    activeProjection. The DD proxy is the diver's NEXT
-      //    dive (we know it; the public scoreboard had to use the
-      //    active diver's dive as a proxy).
+      //    dive (we know it, whereas the public scoreboard had to
+      //    use the active diver's dive as a proxy).
       const numJudges = parseInt(event.number_of_judges) || 5;
       const isSynchro = event.event_type === "synchro_pair";
       // Trim count: 5j drop 1+1, 7j drop 2+2, 9j drop 2+2, 11j drop 3+3.
@@ -392,7 +391,7 @@ module.exports = function createCompetitorRouter({
         bronze: targetFor(bronzeTotal),
       };
 
-      // 5. Queue — who's on the board now + how many divers until
+      // 5. Queue: who's on the board now, plus how many divers until
       //    me. Pull the live state row + the dive order around me.
       const liveRes = await pool.query(
         "SELECT active_diver_payload FROM event_live_state WHERE event_id = $1",
@@ -406,8 +405,8 @@ module.exports = function createCompetitorRouter({
         activeRound = active.round_number != null ? parseInt(active.round_number) : null;
       }
       // How many divers in nextDive's round are ahead of me by
-      // display_order. Without an active diver we report null —
-      // the SPA renders "Pre-event" instead of a misleading 0.
+      // display_order. Without an active diver we report null,
+      // so the SPA renders "Pre-event" instead of a misleading 0.
       let diversUntilMe = null;
       let myPositionInRound = null;
       if (nextDive) {
@@ -434,7 +433,7 @@ module.exports = function createCompetitorRouter({
               }
             }
           } else if (activeRound != null && activeRound < nextDive.round_number) {
-            // Active is in a prior round — the count of remaining
+            // Active is in a prior round, so the count of remaining
             // divers in this round is just my position.
             diversUntilMe = myOrder;
           }

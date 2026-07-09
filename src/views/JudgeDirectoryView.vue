@@ -1,5 +1,5 @@
 <script setup>
-// Public Judge Directory — discovery surface for the per-judge
+// Public Judge Directory: discovery surface for the per-judge
 // transparency analytics at /judge-profile/:id. Anonymous
 // spectators land here, type a name (or browse by federation /
 // country / club), and click through to the analytics page.
@@ -7,11 +7,11 @@
 // The transparency stance: every score this rollup aggregates is
 // already public (visible on the live scoreboard, the archived
 // meet page, and the PDF score sheet). Pre-aggregating per-judge
-// just makes patterns visible — bias by country, by club, by
-// dive group — instead of leaving them buried in 300 rows of
-// per-dive HTML. WA Article 8.4.9 is the formal channel
-// (Referee may remove a judge whose judgement is unsatisfactory);
-// this page gives the spectator their own evidence trail.
+// just makes patterns visible (bias by country, by club, by dive
+// group) instead of leaving them buried in 300 rows of per-dive
+// HTML. WA Article 8.4.9 is the formal channel (Referee may
+// remove a judge whose judgement is unsatisfactory); this page
+// gives the spectator their own evidence trail.
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -31,8 +31,8 @@ const error         = ref('')
 
 const orgs          = ref([])
 
-// Build query string for /api/judges. Empty entries are dropped
-// so the URL stays minimal.
+// Builds the query string for /api/judges. Empty entries get
+// dropped so the URL stays minimal.
 function buildQS() {
   const parts = []
   if (q.value.trim())          parts.push(`q=${encodeURIComponent(q.value.trim())}`)
@@ -62,9 +62,9 @@ async function load() {
 }
 
 async function loadOrgs() {
-  // /api/orgs/all is the existing diver-search org list — auth
+  // /api/orgs/all is the existing diver-search org list, auth
   // required by the existing route. Skip for anonymous viewers
-  // (the org dropdown gracefully falls back to "—" + free-text
+  // (the org dropdown gracefully falls back to a dash placeholder plus free-text
   // country code in that case).
   if (!auth.isLoggedIn) return
   try {
@@ -94,10 +94,10 @@ function prevPage() {
   load()
 }
 
-// Client-side trim by minimum-scores threshold — keeps the
-// server query simple but still gives spectators the ability
-// to focus on judges with enough sample for the bias number to
-// be meaningful (the deviation rollup is noisy under ~10 dives).
+// Client-side trim by minimum-scores threshold. Keeps the
+// server query simple but still gives spectators a way to
+// focus on judges with enough sample for the bias number to
+// be meaningful (the deviation rollup gets noisy under ~10 dives).
 const visibleRows = computed(() => {
   if (!minScores.value) return rows.value
   return rows.value.filter(r => Number(r.total_scores) >= Number(minScores.value))
@@ -115,8 +115,8 @@ onMounted(() => {
   load()
 })
 
-// Re-run search when filters settle. q has its own button to
-// avoid firing per-keystroke; org / country apply on change.
+// Re-run the search once filters settle. q gets its own button so
+// it doesn't fire per-keystroke; org / country apply on change.
 watch([orgId, countryCode], () => {
   offset.value = 0
   load()

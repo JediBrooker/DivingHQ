@@ -1,12 +1,12 @@
-// Cross-org diver search + browse routes — extracted from server.js
+// Cross-org diver search + browse routes, pulled out of server.js
 // to keep the monolith from growing further. The Compare page is
 // the primary consumer:
-//   GET /api/divers/search  — typeahead, used by autocomplete inputs
-//   GET /api/divers         — paginated list with filters (browse modal)
-//   GET /api/orgs/all       — lightweight org list for filter dropdowns
+//   GET /api/divers/search  : typeahead, used by autocomplete inputs
+//   GET /api/divers         : paginated list with filters (browse modal)
+//   GET /api/orgs/all       : lightweight org list for filter dropdowns
 //
 // All three require a valid JWT (any role, including spectator) but
-// no org-scope check — the diver's full name, org and club ARE
+// no org-scope check, since the diver's full name, org and club are
 // already public via the meet scoreboards and the archive.
 //
 // SECURITY (Migration 021): we deliberately drop `username` from
@@ -21,7 +21,7 @@ module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
   const router = express.Router();
 
   // Cross-org diver autocomplete. Min 2 chars, ≤20 results, ranks
-  // prefix matches above contains-anywhere. Parameterised — no SQL
+  // prefix matches above contains-anywhere. Parameterised, so no SQL
   // injection surface even though the LIKE pattern is built from
   // user input (it's bound, not interpolated).
   router.get("/api/divers/search", verifyToken, async (req, res) => {
@@ -52,7 +52,7 @@ module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
     }
   });
 
-  // Browse-all paginated diver list. limit clamped to [1, 100].
+  // Browse-all paginated diver list; limit clamped to [1, 100].
   router.get("/api/divers", verifyToken, async (req, res) => {
     const q           = (req.query.q || "").trim();
     const orgId       = req.query.org_id || null;
@@ -99,7 +99,8 @@ module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
     }
   });
 
-  // Lightweight org listing for the browse-all filter dropdowns.
+  // Lightweight org listing for the browse-all filter dropdowns,
+  // nothing fancy.
   router.get("/api/orgs/all", verifyToken, async (_req, res) => {
     try {
       const r = await pool.query(

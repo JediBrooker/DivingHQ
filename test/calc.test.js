@@ -1,12 +1,12 @@
-// World Aquatics scoring tests — exercises the SQL functions
+// World Aquatics scoring tests, exercises the SQL functions
 // calc_dive_points and calc_synchro_dive_points against a live
-// Postgres connection. The functions are pure and deterministic
+// Postgres connection. The functions are pure and deterministic,
 // so we use known World Aquatics-rule examples and assert exact outputs.
 //
 // Connection: prefers the app's own DB_* env vars (the ones
 // .env.example documents) and falls back to libpq's PG* names so
 // CI's Postgres service container keeps working unchanged. Empty
-// new Pool() would only see PG* — that's a subtle trap on a dev
+// new Pool() would only see PG* though, that's a gotcha on a dev
 // box where .env has DB_* and the password looks "set" but the
 // Pool gets undefined and pg throws a confusing SASL error.
 // dotenv loaded so the local .env actually reaches us.
@@ -59,7 +59,7 @@ async function synchroValue(judgeNumbers, scores, numJudges, dd) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// calc_dive_points — individual events
+// calc_dive_points: individual events
 // ─────────────────────────────────────────────────────────────
 
 test("calc_dive_points: 5 judges, drop high+low", async (t) => {
@@ -85,7 +85,7 @@ test("calc_dive_points: 9 judges, drop 2+2, × 0.6 normalisation", async (t) => 
 
 test("calc_dive_points: 11 judges, drop 3+3, × 0.6", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
-  // All 7s — drop 3 highest + 3 lowest (still 7s), keep middle 5 = 35, × DD 2.0 × 0.6 = 42
+  // All 7s, drop 3 highest + 3 lowest (still 7s), keep middle 5 = 35, × DD 2.0 × 0.6 = 42
   const v = await diveValue([7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7], 11, 2.0);
   assert.equal(v, 42);
 });
@@ -104,14 +104,14 @@ test("calc_dive_points: empty scores returns 0", async (t) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// calc_synchro_dive_points — synchronised pairs
+// calc_synchro_dive_points: synchronised pairs
 // ─────────────────────────────────────────────────────────────
 
 test("synchro: 9-judge panel, cancel hi+lo exec across both divers, drop hi+lo sync", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   // WA Article 9.1.5.4: judges 1-2 score Diver A exec, 3-4 Diver B,
-  // 5-9 sync. Execution is cancelled BETWEEN BOTH Athletes — pool the
-  // four exec marks, drop one high + one low, keep the middle two.
+  // 5-9 sync. Execution is cancelled BETWEEN BOTH Athletes, so pool
+  // the four exec marks, drop one high + one low, keep the middle two.
   // Exec pool: [7,8,7,8] → sorted [7,7,8,8] → drop 7 + 8 → keep 7+8 = 15
   // Sync: [5,6,7,8,9] → drop 5+9 → 6+7+8 = 21
   // Sum = 36, × DD 2.0 × 0.6 = 43.2
@@ -166,7 +166,7 @@ test("synchro: empty scores returns 0", async (t) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// schema_meta + purge_audit_logs — operational sanity
+// schema_meta + purge_audit_logs: operational sanity
 // ─────────────────────────────────────────────────────────────
 
 test("schema_meta is populated", async (t) => {
@@ -180,8 +180,8 @@ test("purge_audit_logs returns per-table counts", async (t) => {
   const r = await pool.query("SELECT * FROM purge_audit_logs(99999)");
   // 99999-day window means nothing should be deleted on a typical
   // test database. We just assert the function returns the
-  // documented shape — three rows after migration 032 added
-  // audit_log alongside the existing two.
+  // documented shape (three rows, after migration 032 added
+  // audit_log alongside the existing two).
   const tables = r.rows.map((row) => row.table_name).sort();
   assert.deepEqual(tables, ["audit_log", "role_audit_log", "score_audit_log"]);
   for (const row of r.rows) {

@@ -1,8 +1,8 @@
-/* Broadcast chooser — state for the ⋯ → 📺 Broadcast…
+/* Broadcast chooser: state for the "..." menu's Broadcast
  * modal in Control Room.
  *
  * Five flavours surfaced to the operator:
- *   1. Operator broadcast (this screen, kiosk layout) — handled
+ *   1. Operator broadcast (this screen, kiosk layout), handled
  *      inline in the template via a RouterLink, no composable
  *      state needed beyond `broadcastChoiceOpen`.
  *   2. Audience broadcast for THIS event → new window
@@ -17,12 +17,12 @@
  *      and step-by-step Browser Source setup so the operator can
  *      composite the live scoreboard into their broadcast graphics.
  *   5. Venue hardware bridge → ControlView owns the event-specific
- *      Daktronics command panel locally because it does not need
+ *      Daktronics command panel locally since it doesn't need
  *      event-list picker state.
  *
  * Lifted out of ControlView.vue when that file crossed 7,500
  * lines and reading it through cost real agent tokens. The state
- * is self-contained — only outside coupling is a single
+ * is self-contained, only outside coupling is a single
  * `closeHeaderMenu()` callback the caller passes in so we can
  * collapse the ⋯ overflow when the operator commits to opening
  * a broadcast window.
@@ -41,7 +41,7 @@
  *
  * `closeHeaderMenu` is captured as a closure so it's safe to
  * reference `headerMenuOpen` before that ref is declared further
- * down the script — the callback only fires on user click, well
+ * down the script; the callback only fires on user click, well
  * after the script body has run end-to-end.
  */
 import { ref, computed } from 'vue'
@@ -63,16 +63,16 @@ export function useBroadcastChooser({ closeHeaderMenu = () => {} } = {}) {
   const broadcastLiveError = ref('')
   const broadcastSelection = ref(new Set())
   // Sub-panel state for option 4 (OBS / streaming-app setup
-  // instructions). Static content — just a how-to with the
-  // chroma-key overlay URL — so no fetch / selection state needed.
+  // instructions). Static content, just a how-to with the
+  // chroma-key overlay URL, so no fetch / selection state needed.
   const obsInstructionsOpen = ref(false)
 
   function openBroadcastInNewWindow(path) {
     // Aim for an undecorated popup, with reasonable defaults that
     // still allow the operator to resize / drag onto the projector.
-    // No noopener so the new window can read the auth session from
-    // the same origin (the broadcast page itself is anonymous-
-    // friendly anyway).
+    // No noopener here so the new window can still read the auth
+    // session from the same origin (the broadcast page itself is
+    // anonymous-friendly anyway, so there's no real risk).
     window.open(path, '_blank', NEW_WINDOW_OPTS)
     broadcastChoiceOpen.value = false
     broadcastPickerOpen.value = false
@@ -82,8 +82,8 @@ export function useBroadcastChooser({ closeHeaderMenu = () => {} } = {}) {
 
   // Click handler for the third chooser row. Fetches the current
   // Live events, then either:
-  //   - skips the picker entirely (0 or 1 Live events — there's no
-  //     subset to choose from, so just open the canonical
+  //   - skips the picker entirely (0 or 1 Live events, so there's no
+  //     subset to choose from, just open the canonical
   //     /broadcast/all URL), or
   //   - opens the in-modal picker with every Live event preselected.
   async function pickBroadcastAll() {
@@ -96,11 +96,11 @@ export function useBroadcastChooser({ closeHeaderMenu = () => {} } = {}) {
       const live = (data || []).filter((e) => e.status === 'Live')
       broadcastLiveEvents.value = live
       if (live.length <= 1) {
-        // Nothing to pick — fall through to the canonical URL.
+        // Nothing to pick, fall through to the canonical URL.
         openBroadcastInNewWindow('/broadcast/all')
         return
       }
-      // Default: every Live event selected, matching the prior
+      // Default: every Live event selected, matching the the prior
       // single-click behaviour. The operator unticks what they
       // don't want.
       broadcastSelection.value = new Set(live.map((e) => String(e.id)))
@@ -114,8 +114,8 @@ export function useBroadcastChooser({ closeHeaderMenu = () => {} } = {}) {
 
   function toggleBroadcastSelection(id) {
     const key = String(id)
-    // Re-assign so Vue's reactivity sees the change — mutating a Set
-    // in-place doesn't trigger reactivity on its own.
+    // Re-assign so Vue's reactivity sees the change, since mutating
+    // a Set in-place doesn't trigger reactivity on its own.
     const next = new Set(broadcastSelection.value)
     if (next.has(key)) next.delete(key)
     else next.add(key)

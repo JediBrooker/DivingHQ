@@ -1,8 +1,9 @@
 // Hidden backend error guards.
 //
 // These are intentionally API/socket-first tests. The browser UI can
-// look healthy while a caught backend error logs and returns an empty
-// slice. These assertions pin the side effects that must exist.
+// look perfectly healthy while a caught backend error just logs and
+// returns an empty slice, so these assertions pin the side effects
+// that have to exist.
 
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");

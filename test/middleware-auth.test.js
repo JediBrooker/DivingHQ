@@ -6,9 +6,10 @@
 // middleware instance so the 30s token-version cache can't leak
 // state between cases.
 //
-// Primary regression guard (see the May-2026 audit follow-up):
+// Heads up: this is the primary regression guard (see the May-2026
+// audit follow-up):
 //   * Suspending an account must terminate its LIVE sessions, not
-//     just block the next login. The bug was twofold —
+//     just block the next login. The bug was twofold:
 //       1. POST /api/users/:id/suspend called bumpTokenVersion with
 //          a single arg, so the helper's `if (!userId) return;`
 //          guard made it a silent no-op and token_version never
@@ -100,7 +101,7 @@ test("optionalAuth: suspended account is downgraded to guest, not 401", async ()
   const { optionalAuth } = build({ token_version: 1, suspended_at: "2026-01-01T00:00:00Z" });
   const out = await runVerify(optionalAuth, sign({ id: USER_ID, tv: 1 }));
   assert.equal(out.type, "next");
-  assert.equal(out.req.user, undefined); // guest — no owner-only fields
+  assert.equal(out.req.user, undefined); // guest, no owner-only fields
 });
 
 test("isTokenVersionCurrent: returns false for a suspended user (kicks live sockets)", async () => {

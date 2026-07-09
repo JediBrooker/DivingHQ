@@ -4,35 +4,34 @@
 // reconciliation path emits when a judge's digital sync arrives
 // with a different value than a prior manual entry for the same
 // (event, competitor, round, judge) target. The audit row written
-// at reconciliation time uses action='rejected_duplicate' with
+// at reconciliation time uses action='rejected_duplicate', with
 // the manual value as old_score and the rejected judge value as
-// new_score — that's the operator's conflict context.
+// new_score. That's the operator's conflict context.
 //
 // Decision flow:
 //
-//   keep_existing    — operator confirms the manual entry. No
-//                      score change. Audit-log row notes the
-//                      explicit confirmation.
-//   accept_proposed  — operator overrides with the judge's
-//                      value. body.proposed_score is required.
-//                      scores.score gets updated, source flips
-//                      to 'manual_then_reconciled', audit-log
-//                      records the change, score_corrected
-//                      broadcasts so spectators see the new total.
+//   keep_existing:   operator confirms the manual entry. No
+//                    score change, just an audit-log row noting
+//                    the explicit confirmation.
+//   accept_proposed: operator overrides with the judge's value.
+//                    body.proposed_score is required. scores.score
+//                    gets updated, source flips to
+//                    'manual_then_reconciled', audit-log records
+//                    the change, score_corrected broadcasts so
+//                    spectators see the new total.
 //
-// The `discard_both` path (DELETE the score row) isn't supported
-// — losing a score on a partial-panel breaks downstream trim
-// calculations. If an operator wants to scrub a score they use
-// the withdraw flow on the diver, not a delete.
+// The `discard_both` path (DELETE the score row) isn't supported,
+// since losing a score on a partial-panel breaks downstream trim
+// calculations. If an operator wants to scrub a score they should
+// use the withdraw flow on the diver, not a delete.
 //
 // Auth: referee, meet_manager, or org_admin (per DEC-05 in
 // docs/offline-inventory.md). Sysadmin always passes via
 // requireOrgRole.
 //
-// The :conflict_id path param is the scores.id row (which is
-// what routes/socket.js emits as conflict_id in the
-// conflict_pending event). That row is the canonical pointer
-// to the disputed cell.
+// The :conflict_id path param is the scores.id row (it's what
+// routes/socket.js emits as conflict_id in the conflict_pending
+// event). That row is the canonical pointer to the disputed cell.
 
 const express = require("express");
 const { recordAudit } = require("../lib/audit");
@@ -53,8 +52,8 @@ module.exports = function createConflictsRouter({ pool, io, scoreboardCache, req
         : null;
 
       // UUID validation. The submit_score reconciliation emits the
-      // scores.id as conflict_id, which is a UUID (any version) —
-      // accept the broader pattern, not just v4.
+      // scores.id as conflict_id, which is a UUID (any version), so
+      // we accept the broader pattern here, not just v4.
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(conflict_id)) {
         return res.status(400).json({ error: "conflict_id must be a UUID" });
       }
@@ -96,7 +95,7 @@ module.exports = function createConflictsRouter({ pool, io, scoreboardCache, req
         }
         const row = r.rows[0];
 
-        // Org guard. The operator must own the event's org
+        // Org guard, heads up: the operator must own the event's org
         // (sysadmin always passes).
         if (!req.user.is_system_admin && row.org_id !== req.user.org_id) {
           await client.query("ROLLBACK");
@@ -106,11 +105,11 @@ module.exports = function createConflictsRouter({ pool, io, scoreboardCache, req
         const oldScore = Number(row.score);
 
         if (decision === "keep_existing") {
-          // No score change. Audit a confirm row so future readers
-          // can see the operator explicitly stood by the manual
-          // entry. score_source flips to 'manual_then_reconciled'
-          // if it was still 'manual_entry' — the conflict is
-          // closed and the value has been adjudicated.
+          // No score change here. We audit a confirm row so future
+          // readers can see the operator explicitly stood by the
+          // manual entry. score_source flips to
+          // 'manual_then_reconciled' if it was still 'manual_entry',
+          // since the conflict is closed and the value's been adjudicated.
           await client.query(
             `UPDATE scores SET score_source = 'manual_then_reconciled' WHERE id = $1`,
             [row.id],

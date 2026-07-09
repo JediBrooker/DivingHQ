@@ -1,9 +1,10 @@
 // P10 Cluster 2: event-row action consolidation. Each row reads as ONE
-// dominant primary (the status-aware RouterLink); every secondary
+// dominant primary (the status-aware RouterLink), and every secondary
 // (Teams / Advance / Super-Final seed+view) plus the maintenance actions
-// live behind the single ⋯ menu primitive. Proves a team event has no
-// inline "Teams"/advance button on the row, that "Teams…" is reachable
-// in the menu, and that the menu keeps single-open + close semantics.
+// live behind the single ⋯ menu primitive. Proves a team event doesn't
+// have an inline "Teams"/advance button on the row, that "Teams…" is
+// reachable in the menu, and that the menu keeps single-open + close
+// semantics.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -35,8 +36,8 @@ test("a row shows one primary; the secondaries live in the ⋯ menu", async ({ r
   const row = page.locator(".event-item", { hasText: "Team Row Event" });
   await expect(row).toBeVisible({ timeout: 15_000 });
 
-  // ONE dominant primary on the row: the status-aware RouterLink. No
-  // inline Teams button, no inline advance-btn competing with it.
+  // ONE dominant primary on the row: the status-aware RouterLink, and
+  // no inline Teams button or advance-btn competing with it.
   await expect(row.locator(".actions a.btn")).toHaveCount(1);
   await expect(row.locator(".actions > .advance-btn")).toHaveCount(0);
   await expect(row.locator(".actions > button", { hasText: "Teams" })).toHaveCount(0);

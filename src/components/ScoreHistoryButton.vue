@@ -4,11 +4,11 @@
  * Renders a tiny "history" pill inside a dive row. Clicking it
  * opens a popover with the per-dive audit rows pulled from
  * /api/events/:id/score-audit. Lazy-fetched on first open per
- * event; cached on window so multiple buttons in the same
+ * event, then cached on window so multiple buttons in the same
  * recap share one round trip.
  *
  * Visibility: org_admin, meet_manager, or referee. Spectators
- * never see this — the audit log isn't a public artefact.
+ * never see this, the audit log isn't a public artefact.
  *
  * The popover is inline (not modal) so it doesn't disrupt the
  * recap. Click outside to close; Esc also closes.
@@ -73,8 +73,8 @@ const filtered = computed(() => {
   )
 })
 
-// fmtDateTime imported from @/lib/format — single source of
-// truth across views. Was a local copy.
+// fmtDateTime imported from @/lib/format, single source of
+// truth across views now. Used to be a local copy here.
 
 async function toggle(e) {
   e.stopPropagation()
@@ -88,13 +88,13 @@ function close() {
 }
 
 // Outside-click + Esc handling. Each dive row mounts an instance,
-// and the recap can have 30+ dives — attaching the listeners
+// and the recap can have 30+ dives, so attaching the listeners
 // unconditionally at script-setup top level would mean 30+
 // document mousedown listeners firing on every click. Watch
 // `open` so listeners are attached ONLY while a popover is
 // actually open. The marker attribute carries the instance id
-// so a click inside popover B doesn't close popover A (an issue
-// with the previous shared-marker approach).
+// so a click inside popover B doesn't close popover A, gotcha
+// we ran into with the previous shared-marker approach.
 const popoverId = `sha-${Math.random().toString(36).slice(2, 8)}`
 function onDocClick(e) {
   if (!open.value) return

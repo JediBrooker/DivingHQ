@@ -1,5 +1,5 @@
 -- =============================================================
--- MIGRATION 020 — ADD events.entries_close_at
+-- MIGRATION 020: ADD events.entries_close_at
 --
 -- Lets a meet manager set a deadline after which divers can no
 -- longer submit (or change) their dive list for an event. Distinct
@@ -12,8 +12,8 @@
 --     status = 'Upcoming'
 --   AND (entries_close_at IS NULL OR entries_close_at > now())
 --
--- NULL means "no explicit deadline — entries close when the event
--- goes Live", which preserves the pre-migration behaviour for every
+-- NULL means "no explicit deadline, entries close when the event
+-- goes Live" - keeps the pre-migration behaviour for every
 -- existing row.
 --
 -- Idempotent: ADD COLUMN IF NOT EXISTS, no backfill needed.
@@ -25,9 +25,9 @@ ALTER TABLE public.events
     ADD COLUMN IF NOT EXISTS entries_close_at timestamptz;
 
 -- Index for the diver-portal listing query, which filters on
--- `entries_close_at > now()`. Partial — only the rows where a
--- deadline is actually set are interesting; NULLs short-circuit
--- the predicate before the index is consulted.
+-- `entries_close_at > now()`. Partial index, only the rows where
+-- a deadline is actually set are interesting - NULLs short-circuit
+-- the predicate before the index even gets consulted.
 CREATE INDEX IF NOT EXISTS idx_events_entries_close_at
     ON public.events (entries_close_at)
     WHERE entries_close_at IS NOT NULL;

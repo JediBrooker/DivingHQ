@@ -1,6 +1,6 @@
-// Pins the P4 ranked-lane ordering: the Dashboard needs-attention lane
+// Pins down the P4 ranked-lane ordering: the Dashboard needs-attention lane
 // floats the most urgent category to the top (live > urgent > overdue >
-// rest), preserves the chip count, and is stable for ties. DB-less.
+// everything else), keeps the chip count intact, and stays stable for ties. DB-less.
 const { test, before } = require('node:test')
 const assert = require('node:assert/strict')
 
@@ -26,7 +26,7 @@ test('chipUrgencyRank: live(0) < urgent(1) < overdue(2) < none(3)', () => {
 })
 
 test('rankAttentionChips floats the most urgent category to the top', () => {
-  // Source order is deliberately worst-first.
+  // source order here is deliberately worst-first, on purpose
   const ranked = rankAttentionChips([coachCalm, pendingOverdue, upcomingUrgent, liveChip])
   assert.deepEqual(ranked.map((c) => c.id), ['live', 'up', 'pend', 'coach'])
 })

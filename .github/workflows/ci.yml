@@ -5,8 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  # Manually trigger a snapshot regeneration on CI. Required because
-  # Playwright visual baselines are platform-pinned to chromium-linux
+  # Manually trigger a snapshot regeneration on CI. Needed since
+  # Playwright's visual baselines are platform-pinned to chromium-linux
   # and can't be produced on macOS dev machines. Run the workflow with
   # update_snapshots=true, download the `updated-snapshots` artifact,
   # then commit the PNGs to the repo.
@@ -34,8 +34,8 @@ jobs:
 
       # Cache node_modules (including compiled native deps: bcrypt,
       # sharp, esbuild) keyed on the lockfile. On a hit we skip npm ci
-      # entirely; the runner OS is constant so the cached binaries are
-      # safe to reuse. Shared across the build/test/e2e jobs.
+      # entirely since the runner OS is constant, so the cached binaries
+      # are safe to reuse. Shared across the build/test/e2e jobs.
       - name: Cache node_modules
         id: npm-cache
         uses: actions/cache@v4
@@ -99,13 +99,13 @@ jobs:
       # JWT_SECRET is required for server.js to boot (it fail-closes
       # on missing or placeholder values). The integration test
       # require()s server.js directly, so without this the whole
-      # test run dies at startup. Use a long deterministic dummy —
-      # CI never sees real user data.
+      # test run dies at startup. Heads up: use a long deterministic
+      # dummy, CI never sees real user data.
       JWT_SECRET: ci-test-secret-do-not-use-in-prod-aaaaaaaaaaaaaaaa
       # Defer the english-stuck subtest in test/i18n-parity.test.js
       # to the deploy-time background translator (section 8 of
       # deploy.sh). CI's job is to catch runtime-breaking issues
-      # (missing keys, extra keys, placeholder mismatches — those
+      # (missing keys, extra keys, placeholder mismatches, those
       # three subtests still run); UX-quality "is this string
       # actually translated yet" is the translator's job. Same
       # flag deploy.sh sets when running test:safe.
@@ -139,7 +139,7 @@ jobs:
       # integration specs run against the same schema the server uses
       # (idempotency_keys, actor_local_time, score_source, …) instead of
       # self-skipping. (The manual-scores integration suite is skipped
-      # in-file pending a fixture rewrite — its fixture predates the
+      # in-file pending a fixture rewrite, its fixture predates the
       # user_org_roles migration.)
       - name: Apply tail migrations
         run: npm run migrate
@@ -170,7 +170,7 @@ jobs:
           --health-retries 5
 
     env:
-      # libpq vars — pg's Pool falls back to these when the DB_*
+      # libpq vars: pg's Pool falls back to these when the DB_*
       # alternatives aren't set. Same shape the test job uses.
       PGHOST: localhost
       PGUSER: diver
@@ -179,7 +179,7 @@ jobs:
       # DB_DATABASE explicit so the integration-test fixture
       # (which prefers DB_* over PG*) targets the same database.
       DB_DATABASE: divinghq_test
-      # Required for server.js to boot — see the test job's
+      # Required for server.js to boot, see the test job's
       # comment for why we use a long deterministic dummy.
       JWT_SECRET: ci-test-secret-do-not-use-in-prod-aaaaaaaaaaaaaaaa
       # Bind the test webServer to a non-default port so it can
@@ -231,10 +231,11 @@ jobs:
           DATABASE_URL: postgres://diver:diver@localhost:5432/divinghq_test
 
       # Cache the Playwright browser binaries (chromium + firefox +
-      # webkit) keyed by the lockfile plus a browser-set marker. Bump
-      # the "-cfw" suffix whenever the installed browser set changes,
-      # so a stale cache can't shadow newly-added browsers (the bug
-      # that left firefox/webkit missing when only chromium was cached).
+      # webkit), keyed by the lockfile plus a browser-set marker. FYI,
+      # bump the "-cfw" suffix whenever the installed browser set
+      # changes, so a stale cache can't shadow newly-added browsers
+      # (this is the bug that left firefox/webkit missing when only
+      # chromium was cached).
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         id: playwright-cache
@@ -247,7 +248,7 @@ jobs:
       # matches the projects in playwright.config.js (chromium,
       # mobile-chrome, firefox, mobile-safari/webkit). Cached run: the
       # binaries are restored from ~/.cache; only the apt system deps
-      # (which live outside that path) need reinstalling each time.
+      # (which live outside that path) still need reinstalling each time.
       - name: Install Playwright (browsers + deps, fresh)
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
@@ -256,12 +257,12 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps
 
-      # playwright.config.js boots the app via webServer — no separate
+      # playwright.config.js boots the app via webServer, no separate
       # "start the app" step. With PW_SKIP_BUILD set it runs
       # `node server.js` against the downloaded dist/ instead of
       # rebuilding. process.env.CI flips the config to retries=2 +
       # GitHub reporter + 3 workers.
-      # On pull requests, gate with chromium only — the cross-browser /
+      # On pull requests, gate with chromium only, the cross-browser /
       # mobile projects (firefox, mobile-chrome, mobile-safari) rarely
       # catch PR-specific regressions and roughly quadruple e2e time.
       # Pushes to main and manual dispatches run the full project matrix.
@@ -290,7 +291,7 @@ jobs:
         if: github.event.inputs.update_snapshots == 'true'
         run: npx playwright test --update-snapshots
 
-      # Failure artifacts — when an e2e flakes or breaks, this
+      # Failure artifacts: when an e2e flakes or breaks, this
       # uploads the trace + screenshots + video so we can
       # diagnose without re-running locally.
       - name: Upload Playwright report on failure

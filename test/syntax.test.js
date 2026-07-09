@@ -1,5 +1,5 @@
 // Lightweight tests that don't need a DB. Runs on every npm test
-// invocation so a fresh dev clone catches obvious breakage.
+// invocation so a fresh clone catches obvious breakage early.
 //   - server.js parses cleanly
 //   - SPA built bundle, if present, contains the expected entry
 //   - the World Aquatics category helper is consistent (no DB)
@@ -16,10 +16,10 @@ test("server.js syntax is valid", () => {
 });
 
 test("server.js loads cleanly (catches TDZ / missing-binding bugs)", () => {
-  // node --check above only validates parser-level syntax. It
+  // node --check above only validates parser-level syntax, it
   // does NOT catch a `const x = x` self-reference, a missing
-  // import binding, or any other TDZ-class issue that explodes
-  // at module-evaluation time. We add this so a botched perl
+  // import binding, or any other TDZ-class issue that blows up
+  // at module-evaluation time. Added this so a botched perl
   // sweep across hundreds of call sites can't ship a server
   // that won't boot. We pre-set every env var server.js insists
   // on at boot so the load can complete without a real DB.
@@ -37,7 +37,7 @@ test("server.js loads cleanly (catches TDZ / missing-binding bugs)", () => {
   const cmd = `node -e "process.env.SKIP_LISTEN='1'; require('./server.js')"`;
   // We accept any exit status that proves module evaluation got
   // past every top-level binding. server.js intentionally fails
-  // closed if it can't reach the DB on boot — but that's a
+  // closed if it can't reach the DB on boot, but that's a
   // runtime branch, not a load-time one. The TDZ failure we're
   // guarding against would crash before even the env validation.
   try {
@@ -45,13 +45,13 @@ test("server.js loads cleanly (catches TDZ / missing-binding bugs)", () => {
   } catch (err) {
     const out = String(err.stdout || "") + String(err.stderr || "");
     // If we tripped a ReferenceError or "before initialization"
-    // the load itself was broken — fail the test.
+    // the load itself was broken, so fail the test.
     if (/ReferenceError|before initialization|is not defined/i.test(out)) {
       assert.fail("server.js failed to load:\n" + out);
     }
     // Anything else (DB pool errors, exit codes from the
-    // intentional fail-closed paths) is fine — the load itself
-    // succeeded, which is what we're verifying.
+    // intentional fail-closed paths) is fine, the load itself
+    // succeeded, which is what we're actually verifying here.
   }
 });
 
@@ -103,7 +103,7 @@ test("Vue templates use v-tip instead of native title attributes", () => {
     const re = /<([a-z][a-z0-9-]*)[^>]*\s(?::title|title)\s*=/g;
     let match;
     while ((match = re.exec(stripped))) {
-      // <iframe> is the one allowed exception: it's a replaced element,
+      // <iframe> is the one allowed exception, it's a replaced element
       // so v-tip's ::after tooltip bubble can't render on it, and `title`
       // is the correct accessibility mechanism for an iframe (WCAG H64).
       if (match[1] === "iframe") continue;
@@ -151,9 +151,9 @@ test("CSS custom properties used by Vue/CSS files are defined", () => {
 });
 
 test("scoreCategory boundaries match World Aquatics buckets", () => {
-  // We can't import the .js composable directly under CommonJS, so
+  // Can't import the .js composable directly under CommonJS, so
   // re-implement the same boundaries here. If they ever drift, this
-  // test will catch it. (Mirror of src/composables/useScoreCategories.js.)
+  // test will catch it (mirror of src/composables/useScoreCategories.js).
   const cat = (s) => {
     if (s == null || Number.isNaN(s)) return null;
     if (s === 0) return "failed";

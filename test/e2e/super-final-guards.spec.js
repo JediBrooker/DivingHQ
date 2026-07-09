@@ -1,17 +1,17 @@
-// Super Final guard rails — three reject-paths that the audit
-// flagged as untested. Each one corresponds to a real correctness
-// concern raised by the code review:
+// Super Final guard rails: three reject-paths that the audit flagged
+// as untested. Each one corresponds to a real correctness concern
+// raised in the code review:
 //
-//   1. Re-seed-on-scored-data → must 409 (not silently nuke
-//      scores via FK CASCADE). Code-review Blocking #3.
-//   2. Mixed-gender Super Final SF → must 400 (Appendix 3 §1
-//      splits Super Final by gender; M=6 dives, W=5).
-//   3. score_carry_from must be honoured by /api/scoreboard/:id
-//      so spectators see H2H+SF cumulative on the SF stage's
-//      live scoreboard. Code-review Blocking #2.
+//   1. Re-seed-on-scored-data must 409 (not silently nuke scores
+//      via FK CASCADE). Code-review Blocking #3.
+//   2. Mixed-gender Super Final SF must 400 (Appendix 3 §1 splits
+//      Super Final by gender; M=6 dives, W=5).
+//   3. score_carry_from must be honoured by /api/scoreboard/:id so
+//      spectators see H2H+SF cumulative on the SF stage's live
+//      scoreboard. Code-review Blocking #2.
 //
-// Each test is small + self-contained so a failure points at
-// one concern.
+// Each test is small and self-contained, so a failure points at
+// one concern instead of a tangle of them.
 
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
@@ -22,7 +22,7 @@ test("seed-h2h refuses re-seed when scores already exist on the H2H event", asyn
   test.setTimeout(45_000);
   const { orgId, adminToken } = await setup.createOrgAndAdmin(request);
 
-  // Stop-1 final: 12 divers, scored.
+  // stop-1 final: 12 divers, all scored
   const parent = await setup.createEvent(request, {
     adminToken, name: "S1 final", height: "3m",
     number_of_judges: 5, total_rounds: 1, event_format: "final",
@@ -42,15 +42,15 @@ test("seed-h2h refuses re-seed when scores already exist on the H2H event", asyn
     await setup.pool.query(
       `INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score)
        VALUES ($1, $2, $3, $4, 1, $5)`,
-      // Score validation = 0..10 in 0.5 increments (`isValidScore`).
-      // 8.0 down by 0.5 covers 12 distinct values 8.0 → 2.5.
+      // Score validation is 0..10 in 0.5 increments (`isValidScore`).
+      // 8.0 down by 0.5 covers 12 distinct values, 8.0 to 2.5.
       [parent.id, d.userId, judge.userId, diveId, 8.0 - i * 0.5],
     );
   }
   await setup.setEventStatus(request, { adminToken, eventId: parent.id, status: "Live" });
   await setup.setEventStatus(request, { adminToken, eventId: parent.id, status: "Completed" });
 
-  // H2H stage; seed once cleanly.
+  // H2H stage, seed once cleanly
   const h2h = await setup.createEvent(request, {
     adminToken, name: "H2H", height: "3m",
     number_of_judges: 5, total_rounds: 3,
@@ -63,8 +63,8 @@ test("seed-h2h refuses re-seed when scores already exist on the H2H event", asyn
   expect(seed1.status()).toBe(200);
 
   // Pretend an operator started scoring (insert a single score row),
-  // then re-seeds. The scores-exist guard should fire — silently
-  // nuking scored data via the cdl→scores FK cascade was the bug.
+  // then re-seeds. The scores-exist guard should fire here, silently
+  // nuking scored data via the cdl->scores FK cascade was the actual bug.
   const h2hRoster = await setup.pool.query(
     "SELECT competitor_id FROM competitor_dive_lists WHERE event_id = $1 LIMIT 1",
     [h2h.id],
@@ -88,8 +88,8 @@ test("seed-h2h refuses re-seed when scores already exist on the H2H event", asyn
   const body = await seed2.json();
   expect(body.error).toMatch(/score row/i);
 
-  // Score row must still exist (i.e. the guard prevented the
-  // cascade-delete that the bug used to do).
+  // Score row must still exist, i.e. the guard prevented the
+  // cascade-delete the bug used to let through.
   const scoresAfter = await setup.pool.query(
     "SELECT COUNT(*)::int AS n FROM scores WHERE event_id = $1",
     [h2h.id],
@@ -103,7 +103,7 @@ test("seed-semi rejects Mixed-gender Super Final per Appendix 3 §1", async ({ r
   test.setTimeout(45_000);
   const { orgId, adminToken } = await setup.createOrgAndAdmin(request);
 
-  // Build a minimal H2H Completed → SF Mixed.
+  // build a minimal H2H Completed -> SF Mixed
   const parent = await setup.createEvent(request, {
     adminToken, name: "S1", height: "3m",
     number_of_judges: 5, total_rounds: 1, event_format: "final",
@@ -132,7 +132,7 @@ test("seed-semi rejects Mixed-gender Super Final per Appendix 3 §1", async ({ r
   });
   expect(seedRes.status()).toBe(400);
   const body = await seedRes.json();
-  // Spec is gender-specific (M=6 dives, W=5). Server should
+  // Spec is gender-specific (M=6 dives, W=5), so the server should
   // refuse Mixed cleanly rather than half-supporting it.
   expect(body.error.toLowerCase()).toMatch(/mixed|gender/);
 

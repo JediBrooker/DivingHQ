@@ -1,11 +1,12 @@
 // P0 regression: reopening the Control Room mid-meet must RESTORE the
 // event's live diver, not reset it. ControlViewV2 used to blindly emit
-// set_active_diver for roster[0] on mount for EVERY Live event -- so
+// set_active_diver for roster[0] on mount for EVERY Live event, so
 // merely reloading (or a second operator opening the room) yanked the
 // judges' panel back to diver 1, round 1, corrupting a meet in progress.
-// The fix seeds each pool from the server's AUTHORITATIVE active diver
-// (get_active_diver / state_update) and only announces roster[0] when the
-// server has no diver at all. Flag-on only (V2 surface).
+// That's the gotcha this test guards against. The fix seeds each pool
+// from the server's AUTHORITATIVE active diver (get_active_diver /
+// state_update) and only announces roster[0] when the server has no
+// diver at all. Flag-on only (V2 surface).
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -59,11 +60,11 @@ test("reloading mid-meet restores the live diver instead of resetting to diver 1
   await page.waitForLoadState("networkidle");
   await setup.selectControlEvent(page, "Restore Meet");
 
-  // Fresh event -> the first dive is up.
+  // Fresh event -> the first dive is up
   await expect(page.locator(".cv2-live-diver")).toContainText("AAA Diver");
 
   // Drive the meet forward: full panel for AAA arms the primary, then
-  // advancing makes ZZZ the live diver -- which emits set_active_diver,
+  // advancing makes ZZZ the live diver, which emits set_active_diver,
   // so the server's authoritative active diver is now ZZZ (round 1, #2).
   await setup.submitPanelScores({
     baseURL, judges, eventId: event.id,
@@ -81,8 +82,8 @@ test("reloading mid-meet restores the live diver instead of resetting to diver 1
   await setup.selectControlEvent(page, "Restore Meet");
 
   await expect(page.locator(".cv2-live-diver")).toContainText("ZZZ Diver");
-  // And it must STAY on ZZZ -- prove no late roster[0] announce snaps it
-  // back after the seed grace window elapses.
+  // And it must STAY on ZZZ, worth double-checking that no late
+  // roster[0] announce snaps it back after the seed grace window elapses.
   await page.waitForTimeout(2_500);
   await expect(page.locator(".cv2-live-diver")).toContainText("ZZZ Diver");
 });

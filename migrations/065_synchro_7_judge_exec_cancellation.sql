@@ -1,9 +1,9 @@
 -- =============================================================
--- MIGRATION 065 — 7-JUDGE SYNCHRO: CONSISTENT NORMALISATION
+-- MIGRATION 065 - 7-JUDGE SYNCHRO: CONSISTENT NORMALISATION
 --
 -- The 7-judge synchronised panel (four execution judges split 2+2,
 -- plus three synchronisation judges) is a DivingHQ extension for
--- smaller meets — World Aquatics only sanctions 9- and 11-judge
+-- smaller meets. World Aquatics only sanctions 9- and 11-judge
 -- synchro panels. Migrations 050/064 scored it by summing ALL seven
 -- marks × 0.6, which put it on a different scale from every other
 -- synchro panel: the 0.6 (= 3/5) factor is calibrated for FIVE
@@ -12,13 +12,13 @@
 --
 -- This redefinition makes the 7-judge panel a clean sibling of the
 -- 9-judge panel: both share the 2+2 execution layout, so both apply
--- the WA Art 9.1.5.4 execution rule — cancel the single highest and
+-- the WA Art 9.1.5.4 execution rule, cancelling the single highest and
 -- lowest execution award BETWEEN BOTH Athletes (pool of four → keep
 -- the middle two). The 7-judge panel keeps all three synchronisation
--- marks (a three-judge group has nothing to drop); the 9-judge panel
--- drops the high + low of its five. Both therefore count five marks
--- and land on the same × 0.6 scale as the 11-judge panel and the
--- individual events. Only the 7-judge branch changes here.
+-- marks since a three-judge group has nothing to drop; the 9-judge
+-- panel drops the high + low of its five. Both therefore count five
+-- marks and land on the same × 0.6 scale as the 11-judge panel and
+-- the individual events. Only the 7-judge branch changes here.
 -- =============================================================
 
 BEGIN;
@@ -77,8 +77,8 @@ BEGIN
         IF array_length(sorted, 1) = 4 THEN
             counted_sum := counted_sum + sorted[2] + sorted[3];
         ELSE
-            -- Defensive: an unexpected execution count (partial panel) —
-            -- sum whatever execution marks are present rather than drop.
+            -- Defensive, just in case: an unexpected execution count
+            -- (partial panel), so sum whatever marks are present rather than drop.
             SELECT COALESCE(SUM(s), 0) INTO group_sum FROM unnest(exec_all) AS s;
             counted_sum := counted_sum + group_sum;
         END IF;

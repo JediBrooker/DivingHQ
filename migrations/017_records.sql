@@ -1,25 +1,25 @@
 -- =============================================================
--- MIGRATION 017 — RECORDS TRACKING
+-- MIGRATION 017, records tracking
 --
--- Personal / club / federation records broken at meets — surfaced
--- live on the scoreboard with a 🏆 badge and stored for posterity
--- on each diver's profile.
+-- Personal / club / federation records broken at meets, surfaced
+-- live on the scoreboard with a badge and stored for posterity on
+-- each diver's profile.
 --
 -- Three scopes:
---   personal   — diver's all-time best at a (height, dive_code,
---                position) tuple. Always check on every scored dive.
---   club       — best at the same tuple within a club. Only check
---                when the diver has a club_id.
---   federation — best at the same tuple within an organisation
---                (we use organisation as the "federation" unit).
+--   personal:   diver's all-time best at a (height, dive_code,
+--               position) tuple. Always check on every scored dive.
+--   club:       best at the same tuple within a club. Only check
+--               when the diver actually has a club_id.
+--   federation: best at the same tuple within an organisation
+--               (we use organisation as the "federation" unit).
 --
 -- A "score" here means a single dive's calc_event_dive_points
--- value, NOT a meet total. Meet-total records are a separate kind
+-- value, NOT a meet total. Meet-total records are a seperate kind
 -- and out of scope for this migration.
 --
 -- The records table holds the CURRENT record for each (scope,
 -- scope_id, height, dive_code, position) tuple. When a new dive
--- beats the existing record we UPDATE the row; the old holder is
+-- beats the existing record we UPDATE the row; the old holder gets
 -- archived in records_history so we can show "the previous
 -- record was X by Y on date Z".
 --

@@ -1,7 +1,7 @@
-// Club training-classes routes — CLUB-PRIVATE.
+// Club training-classes routes: CLUB-PRIVATE.
 //
 // A "class" is a recurring club-run training group. Access is context-scoped:
-//   * Club admins (requireClubAdminOnly — NOT the federation org_admin) manage
+//   * Club admins (requireClubAdminOnly, NOT the federation org_admin) manage
 //     their club's classes, prices, and enrolments, and see the full roster.
 //   * Coaches (role 'coach', in the same club) see who is enrolled (read-only).
 //   * Divers see only THEIR OWN enrolments + can browse/self-enrol into their
@@ -40,9 +40,9 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   }
 
   // Don't let a class-enrolment status change (cancel, edit, class delete)
-  // race an in-flight Stripe checkout. The race-safe logic — the #101
+  // race an in-flight Stripe checkout. The race-safe logic (the #101
   // RETURNING re-check AND the retrieve-after-failed-expire fallback for a
-  // session that completed moments earlier — lives in lib/payment-lifecycle,
+  // session that completed moments earlier) lives in lib/payment-lifecycle,
   // shared with fines and entry charges. Returns 'retired' | 'paid' |
   // 'gone' | 'unavailable' (see the helper for caller obligations).
   async function retireInFlightClassEnrolmentPayment(enrolmentId) {
@@ -111,14 +111,14 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       FROM class_price_options po WHERE po.class_id = c.id AND po.active), '[]'::json)`;
 
   // ================================================================
-  // CONTEXT DISCOVERY — lets the SPA pick which panel(s) to show without
+  // CONTEXT DISCOVERY: lets the SPA pick which panel(s) to show without
   // guessing from JWT roles alone (club-admin-ness isn't in the JWT: it's
   // a club_admins row, not an org role).
   // ================================================================
   router.get("/api/me/club-admin-clubs", verifyToken, async (req, res) => {
     try {
       // Sysadmin manages every club (requireClubAdminOnly already lets them
-      // through each club endpoint — without this, the SPA never shows the
+      // through each club endpoint, without this the SPA never shows the
       // Manage tab because they hold no club_admins rows). Labelled with the
       // federation since a platform operator sees clubs across all orgs.
       const r = req.user.is_system_admin
@@ -143,7 +143,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // ================================================================
-  // CLUB ADMIN — manage classes (club-private; excludes federation)
+  // CLUB ADMIN: manage classes (club-private; excludes federation)
   // ================================================================
 
   // List the club's classes, with live enrolment count + active price options.
@@ -168,7 +168,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // Club's own members, for the "add diver to class" picker. Credential-safe
-  // projection (id + name only, no username) — mirrors GET /api/orgs/:id/members.
+  // projection (id + name only, no username), mirrors GET /api/orgs/:id/members.
   router.get("/api/clubs/:id/members", requireClubAdminOnly(), async (req, res) => {
     try {
       const r = await pool.query(
@@ -225,7 +225,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       await client.query("COMMIT");
       await recordAudit(pool, {
         ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // CLUB-PRIVATE: org_id deliberately NULL. Audit rows with the
         // federation's org_id surface in the org-admin audit log, leaking
         // club-private class/payout activity (#98's boundary). Sysadmin
         // tooling finds these via metadata.club_id.
@@ -286,7 +286,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
       // Money guard: a class with LIVE paid enrolments can't be hard-deleted
-      // out from under the divers who paid — cancel (and refund) those
+      // out from under the divers who paid. Cancel (and refund) those
       // enrolments first, or deactivate the class instead. Historical
       // refunded/failed payments don't block (migration 080 lets their
       // class_enrolment_id null out on delete).
@@ -316,7 +316,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       await pool.query("DELETE FROM classes WHERE id = $1 AND club_id = $2", [req.params.classId, req.club.id]);
       await recordAudit(pool, {
         ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // CLUB-PRIVATE: org_id deliberately NULL. Audit rows with the
         // federation's org_id surface in the org-admin audit log, leaking
         // club-private class/payout activity (#98's boundary). Sysadmin
         // tooling finds these via metadata.club_id.
@@ -463,7 +463,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       );
       await recordAudit(pool, {
         ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // CLUB-PRIVATE: org_id deliberately NULL. Audit rows with the
         // federation's org_id surface in the org-admin audit log, leaking
         // club-private class/payout activity (#98's boundary). Sysadmin
         // tooling finds these via metadata.club_id.
@@ -533,13 +533,13 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       // for its CURRENT price. Retire it before committing any edit that
       // would make a stale session's completion wrong: leaving 'pending' for
       // any other status (a stale session could re-activate a row the admin
-      // just cancelled/paused, or — worse — double-charge a diver whose
+      // just cancelled/paused, or worse, double-charge a diver whose
       // payment the admin just resolved manually by setting 'active'
       // directly), or changing price/discount while staying 'pending' (a
       // stale session would settle at the OLD price, leaving the payment
       // that actually funded activation mismatched against the edited
       // snapshot). Not needed once the row is already active/inactive/
-      // cancelled — there's no live checkout left to race by then.
+      // cancelled, there's no live checkout left to race by then.
       if (enr.status === "pending") {
         const priceChanging = body.price_option_id !== undefined && priceOptionId !== enr.price_option_id;
         const discountChanging = body.discount_cents !== undefined && discount !== enr.discount_cents;
@@ -550,7 +550,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       }
       // Defence in depth: guard on the status we read at the top of this
       // handler. If a webhook (or a concurrent request) changed it in
-      // between — e.g. it just activated on payment — this becomes a no-op
+      // between (e.g. it just activated on payment) this becomes a no-op
       // instead of silently overwriting a row that moved on without us.
       const r = await pool.query(
         `UPDATE class_enrolments
@@ -583,7 +583,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         [req.params.enrolId, cls.id],
       )).rows[0];
       if (!before) return res.status(404).json({ error: "Enrolment not found" });
-      // Retire any in-flight checkout FIRST — otherwise a diver could complete
+      // Retire any in-flight checkout FIRST, otherwise a diver could complete
       // a stale Stripe session after this cancels, settling a payment for an
       // enrolment nothing on the roster reflects anymore.
       const outcome = await retireInFlightClassEnrolmentPayment(req.params.enrolId);
@@ -600,7 +600,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       }
       await recordAudit(pool, {
         ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // CLUB-PRIVATE: org_id deliberately NULL. Audit rows with the
         // federation's org_id surface in the org-admin audit log, leaking
         // club-private class/payout activity (#98's boundary). Sysadmin
         // tooling finds these via metadata.club_id.
@@ -615,13 +615,13 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     }
   });
 
-  // ---- payouts (club-private — the federation never sees this) ----
+  // ---- payouts (club-private, the federation never sees this) ----
   //
   // Net owed to the CLUB per currency. The math (fee prorated on partial
-  // refunds, recipient_type = 'club' so affiliation/accreditation payments —
-  // where this club is the SUBJECT being charged, not the recipient — never
-  // count here) lives in lib/payout-ledger.js, shared with the federation
-  // ledger and the auto-withdraw sweeper.
+  // refunds, recipient_type = 'club' so affiliation/accreditation payments,
+  // where this club is the SUBJECT being charged and not the recipient,
+  // never count here) lives in lib/payout-ledger.js, shared with the
+  // federation ledger and the auto-withdraw sweeper.
   const clubBalancesByCurrency = (clubId, db = pool) => ledger.clubBalancesByCurrency(clubId, db);
 
   router.get("/api/clubs/:id/payments/status", requireClubAdminOnly(), async (req, res) => {
@@ -666,7 +666,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   // Club starts (or resumes) Stripe-hosted payout onboarding. Creates a
   // recipient connected account on first call (in the club's own country,
   // inherited from its federation), then returns a fresh onboarding link.
-  // Bank details live at Stripe — never in our DB.
+  // Bank details live at Stripe, never in our DB.
   router.post("/api/clubs/:id/connect/onboard", requireClubAdminOnly(), async (req, res) => {
     if (!ensurePayments(res)) return;
     try {
@@ -726,7 +726,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       );
       recordAudit(pool, {
         ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // CLUB-PRIVATE: org_id deliberately NULL. Audit rows with the
         // federation's org_id surface in the org-admin audit log, leaking
         // club-private class/payout activity (#98's boundary). Sysadmin
         // tooling finds these via metadata.club_id.
@@ -761,13 +761,13 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     try {
       const note = ((req.body || {}).note || "").toString().trim().slice(0, 200) || null;
       // Book the payout under a row lock, then fire the real Stripe transfer
-      // to the club's recipient account — success settles 'paid', any Stripe
+      // to the club's recipient account: success settles 'paid', any Stripe
       // error 'failed' (balance auto-restores). No operator step.
       const { payouts, accountId } = await ledger.createWithdrawal(pool, { clubId: req.club.id, note });
       const settled = await ledger.executePayouts(pool, payments, payouts, accountId, { logger: log });
       recordAudit(pool, {
         ...auditFromReq(req),
-        // CLUB-PRIVATE: org_id deliberately NULL — audit rows with the
+        // CLUB-PRIVATE: org_id deliberately NULL. Audit rows with the
         // federation's org_id surface in the org-admin audit log, leaking
         // club-private class/payout activity (#98's boundary). Sysadmin
         // tooling finds these via metadata.club_id.
@@ -785,7 +785,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // ================================================================
-  // COACH — read-only view of who's in the club's classes
+  // COACH: read-only view of who's in the club's classes
   // ================================================================
   router.get("/api/coach/classes", verifyToken, async (req, res) => {
     try {
@@ -822,7 +822,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // ================================================================
-  // DIVER — own enrolments + browse/self-enrol into own club's classes
+  // DIVER: own enrolments + browse/self-enrol into own club's classes
   // ================================================================
   router.get("/api/me/classes", verifyToken, async (req, res) => {
     try {
@@ -938,7 +938,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
 
   // The diver pays for their OWN pending enrolment. Never reachable for
   // another diver's enrolment (403) or a non-pending one (409). If a manual
-  // discount fully covers the price, there's nothing to charge — activate
+  // discount fully covers the price, there's nothing to charge, so activate
   // directly rather than open a $0 Stripe session. The club (not the
   // federation) is the payment's recipient.
   router.post("/api/me/class-enrolments/:enrolId/checkout", verifyToken, async (req, res) => {
@@ -988,7 +988,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       });
       // One live payment per enrolment (078). A blocked insert means a
       // previous attempt is still live: resume its open Stripe session, or
-      // retire a dead one and retry — an abandoned checkout must never
+      // retire a dead one and retry, an abandoned checkout must never
       // dead-end the diver behind a 409 until the session expires.
       let paymentId;
       for (let attemptNo = 0; ; attemptNo++) {
@@ -1043,7 +1043,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
         );
         return res.json({ url: session.url, payment_id: paymentId });
       } catch (err) {
-        // Stripe failed after the row was inserted — release the one-live
+        // Stripe failed after the row was inserted, release the one-live
         // slot, or the diver is 409-blocked from ever paying (mirrors every
         // checkout in routes/payments.js).
         await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1 AND status = 'pending'", [paymentId]).catch(() => {});

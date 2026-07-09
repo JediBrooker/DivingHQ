@@ -1,4 +1,4 @@
-// Scoreboard routes — public endpoints that drive the live
+// Scoreboard routes: public endpoints that drive the live
 // broadcast layout and the round-by-round leaderboard.
 //
 // /api/scoreboard/:eventId            standings + history + up next
@@ -56,7 +56,7 @@ module.exports = function createScoreboardRouter({
 
   router.get("/api/scoreboard/:eventId", maybeAuth, async (req, res) => {
     const eventId = req.params.eventId;
-    // Cache lookup. ?cache=skip forces a rebuild — useful when a
+    // Cache lookup. ?cache=skip forces a rebuild, handy when a
     // referee has just corrected a score via the HTTP path and
     // wants to see the result reflected immediately (the HTTP
     // correction handler also calls invalidate(), so this is
@@ -78,7 +78,7 @@ module.exports = function createScoreboardRouter({
         //
         // SUPER FINAL CARRY-FORWARD: when this event has a non-NULL
         // events.score_carry_from, the standings include dive points
-        // from BOTH stages — the current event AND the parent stage
+        // from BOTH stages: the current event AND the parent stage
         // referenced in score_carry_from. This implements the
         // Diving World Cup Super Final §3.1 rule ("Head-to-Head
         // scores carry forward to Semi Final"). Filter is scoped
@@ -98,7 +98,7 @@ module.exports = function createScoreboardRouter({
                )`,
            })},
            /* Team-event branch: aggregate by team. public_id is
-              computed in Node from team_id below — we expose team_id
+              computed in Node from team_id below, we expose team_id
               here so the router can hash it. The spectator-facing
               JSON drops team_id and only emits public_id, so internal
               UUIDs still aren't leaked. */
@@ -185,7 +185,7 @@ module.exports = function createScoreboardRouter({
             pointsAlias: "total_dive_score",
             selectExtra: [
               "STRING_AGG(s.score::text, ',' ORDER BY ej.judge_number) AS judge_array",
-              `/* Parallel array — same ordering as judge_array,
+              `/* Parallel array, same ordering as judge_array,
                   so consumers can zip score chip i with
                   judge_numbers[i] then look up identity from
                   the top-level panel array. Robust to panels
@@ -213,7 +213,7 @@ module.exports = function createScoreboardRouter({
         // Up Next: every dive list row that hasn't been scored
         // yet, earliest round first. Returns the FULL queue (no
         // LIMIT) so the scoreboard's centre column can render a
-        // scrollable "what's coming" list — truncating at the
+        // scrollable "what's coming" list, truncating at the
         // server would force an artificial paging UX on the
         // client. A meet's competitor_dive_lists rarely exceeds
         // 600 rows (50 divers × 12 rounds), so the payload size
@@ -269,13 +269,13 @@ module.exports = function createScoreboardRouter({
            ORDER BY ordered.round_number, ordered.round_order`,
           [req.params.eventId],
         ),
-        // Panel — public listing of the judges seated for this
+        // Panel: public listing of the judges seated for this
         // event, with country + club so the scoreboard can show
-        // each chip's tooltip ("J3 — Maria Schmidt · GER · MDC")
+        // each chip's tooltip ("J3: Maria Schmidt · GER · MDC")
         // and link the chip through to /judge-profile/<id>. Same
         // shape as /api/events/:id/judges but public-readable
         // (the scoreboard is anonymous-accessible, so the panel
-        // identities have to be too — and judge profiles are
+        // identities have to be too, and judge profiles are
         // already public, so there's no new disclosure here).
         pool.query(
           `SELECT ej.judge_id, ej.judge_number,
@@ -299,9 +299,9 @@ module.exports = function createScoreboardRouter({
       // a standings row by public_id and the SPA also uses
       // competitor_id to deep-link from a standings row to that
       // diver's profile (/profile/<id>). competitor_id was
-      // previously redacted; it's exposed in the dive history
-      // payload anyway so the redaction was inconsistent —
-      // dropped to allow the diver-name link.
+      // previously redacted, but it's exposed in the dive history
+      // payload anyway, so the redaction was inconsistent. Dropped
+      // it to allow the diver-name link.
       const standings = st.rows.map(({ team_id, ...rest }) => ({
         ...rest,
         public_id:
@@ -331,18 +331,18 @@ module.exports = function createScoreboardRouter({
   // next to the standings.
   //
   // Cached under the same per-event bucket as the main scoreboard
-  // payload (lib/scoreboard-cache.js, derived key "leaderboard") —
-  // the query below re-materialises every dive's trim UDF, so the
+  // payload (lib/scoreboard-cache.js, derived key "leaderboard").
+  // The query below re-materialises every dive's trim UDF, so the
   // post-score viewer stampede the cache header comment describes
   // hits this endpoint just as hard as the sibling. The existing
   // invalidation hooks (socket submit_score, HTTP score
   // correction) call invalidate(eventId), which clears derived
-  // keys too — no new hook needed.
+  // keys too, no new hook needed.
   router.get("/api/scoreboard/:eventId/leaderboard", maybeAuth, async (req, res) => {
     const eventId = req.params.eventId;
     try {
       if (!(await ensureScoreboardVisible(req, res, eventId))) return;
-      // ?cache=skip forces a rebuild — same escape hatch as the
+      // ?cache=skip forces a rebuild, same escape hatch as the
       // main scoreboard endpoint above.
       if (scoreboardCache?.getDerived && req.query.cache !== "skip") {
         const hit = scoreboardCache.getDerived(eventId, "leaderboard");

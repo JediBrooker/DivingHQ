@@ -1,22 +1,22 @@
 -- =============================================================
--- MIGRATION 026 — UNIQUE KEY ON dive_directory NOW INCLUDES DD
+-- MIGRATION 026: unique key on dive_directory now includes DD
 --
 -- The original UNIQUE (dive_code, height, position) blocked any
--- second row sharing those three fields, regardless of DD. That's
--- a sensible invariant for the World Aquatics catalog (each
+-- second row sharing those three fields, regardless of DD. Made
+-- sense as an invariant for the World Aquatics catalog (each
 -- code/height/position has exactly one official tariff), but it
 -- gets in the way of the new custom-dives flow: a poolside drill
 -- can legitimately exist as "0m forward sit-dive at DD 0.4" AND
 -- "0m forward sit-dive at DD 0.6" depending on the level being
 -- coached.
 --
--- We widen the unique key to (dive_code, height, position, dd) so
--- variants are allowed but exact duplicates still aren't.
+-- So we widen the unique key to (dive_code, height, position, dd)
+-- so variants are allowed but exact duplicates still aren't.
 --
 -- Idempotent: drops the old constraint by name (the default
 -- Postgres-generated name from the inline UNIQUE clause in
 -- init.sql), then adds the new one only if it isn't already
--- there. A re-run on a v26 DB is a no-op.
+-- there. Re-running this on a v26 DB is a no-op.
 -- =============================================================
 
 BEGIN;

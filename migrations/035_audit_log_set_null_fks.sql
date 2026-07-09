@@ -9,24 +9,25 @@
 --   role_audit_log.user_id        → users(id)             ON DELETE CASCADE
 --   role_audit_log.org_id         → organisations(id)     ON DELETE CASCADE
 --
--- An org_admin (or sysadmin) deleting an event silently took
--- every audit row for that event with it. Same shape on user
--- delete. For a federation-grade product that's the worst
--- possible audit-integrity hole: a corrupt actor can launder a
--- scoring dispute by removing the evidence in one DELETE.
+-- An org_admin (or sysadmin) deleting an event silently took every
+-- audit row for that event down with it. Same thing happens on a
+-- user delete. For a federation-grade product that's about the
+-- worst audit-integrity hole you can have: a bad actor could
+-- launder a scoring dispute just by deleting the evidence in one
+-- DELETE.
 --
--- After this migration the FKs SET NULL instead, preserving the
--- audit trail past parent-row deletion. The score_audit_log row
--- still carries score_id (already nullable), action, old/new
--- score, actor, IP, user agent, reason, and timestamp, so
--- post-deletion forensics still works.
+-- After this migration the FKs SET NULL instead, so the audit
+-- trail survives parent-row deletion. The score_audit_log row
+-- still keeps score_id (already nullable), action, old/new score,
+-- actor, IP, user agent, reason, and timestamp, so forensics still
+-- work even after the parent's gone.
 --
--- For event delete specifically the right long-term answer is
--- soft-delete (events.deleted_at), but that's a larger schema
--- change — this migration just plugs the FK loophole. The
--- DELETE /api/events/:id handler should also be hardened to
--- refuse delete once any score has been recorded; that's a
--- code-side change in the same commit.
+-- For event delete specifically the real long-term fix is
+-- soft-delete (events.deleted_at), but that's a bigger schema
+-- change, this migration just plugs the FK loophole for now. The
+-- DELETE /api/events/:id handler should also get hardened to
+-- refuse the delete once any score has been recorded, that's a
+-- code-side change that should land in the same commit.
 
 BEGIN;
 
@@ -71,7 +72,7 @@ ALTER TABLE public.role_audit_log
   ALTER COLUMN org_id DROP NOT NULL;
 
 -- audit_log was already SET NULL on org_id and actor_id (per
--- init.sql:570-571), but its existing reference to events(id) is
--- via the metadata jsonb (no FK at all), so nothing to touch.
+-- init.sql:570-571). Its reference to events(id) is only via the
+-- metadata jsonb though, no real FK there, so nothing to touch.
 
 COMMIT;

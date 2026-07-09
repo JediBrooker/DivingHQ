@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Test discovery runner (P0). Replaces the hand-maintained file arrays
 // that package.json's "test"/"test:safe" used to carry, so new
-// test/*.test.js files are picked up automatically and can never be
+// test/*.test.js files get picked up automatically and can never be
 // silently orphaned again (the bug that left test/scoring-sql.test.js
-// running in ZERO scripts despite being on disk for weeks).
+// running in ZERO scripts despite sitting on disk for weeks).
 //
 //   node scripts/run-tests.js full   -> every test/*.test.js (CI, with DB)
 //   node scripts/run-tests.js safe   -> all except *.integration.test.js
@@ -14,7 +14,7 @@
 //
 // "safe" excludes any file whose name carries `integration` as a dotted
 // segment: foo.integration.test.js AND the legacy integration.test.js.
-// Everything else -- including the pure, DB-less scoring-sql.test.js --
+// Everything else, including the pure, DB-less scoring-sql.test.js,
 // runs in both. This reproduces the previous curated split exactly while
 // adding scoring-sql.test.js to both lists.
 const { spawnSync } = require("node:child_process");

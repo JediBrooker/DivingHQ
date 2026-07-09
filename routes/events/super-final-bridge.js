@@ -4,7 +4,7 @@
 // SF + Final hierarchy as a single chain (per Appendix 3):
 //
 //   GET  /api/events/:id/synchro-reserve-pool
-//        (Appendix 3 §5.1) — prioritised list of synchro divers
+//        (Appendix 3 §5.1): prioritised list of synchro divers
 //        eligible to replace a withdrawn Top-12 individual.
 //
 //   POST /api/events/:id/replace-from-synchro
@@ -19,9 +19,9 @@
 // Mounted from routes/events/index.js via:
 //   router.use(require('./super-final-bridge')({ pool, requireEventManager }))
 //
-// Extracted out of routes/events.js as part of the Phase-5 split
-// when the file crossed 4,000 lines. Shares helpers with the
-// seed-semi / seed-final POST handlers that remain in index.js;
+// Extracted out of routes/events.js as part of the Phase-5 split,
+// once the file crossed 4,000 lines. Shares helpers with the
+// seed-semi / seed-final POST handlers that remain in index.js:
 // loadH2hPairResults + loadSfCumulative live in
 // lib/super-final-helpers.js for that reason.
 
@@ -35,12 +35,12 @@ const { perDivePointsCte } = require("../../lib/scoring-sql");
 
 // World Aquatics Art 4.1.5 / Diving World Cup §3.1.2: within a Super-
 // Final tier (finalists at positions 1-4, SF non-finalists 5-6, H2H
-// losers 7-12) competitors on an equal total SHARE a placing — and
+// losers 7-12) competitors on an equal total SHARE a placing, and
 // split any prize for that position. Assign standard competition ranks
 // ("1, 2, 2, 4") offset by the tier's base position; `rows` must be
 // sorted by total descending. Returns { row, rank, is_tied } per entry.
 // Tiers are structural pools, so the caller advances the next tier's
-// base by rows.length — a shared placing still consumes a slot.
+// base by rows.length, a shared placing still consumes a slot.
 function assignSharedTierRanks(rows, base, getTotal) {
   let prevTotal = null;
   let prevRank = base;
@@ -65,7 +65,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
   const router = express.Router();
 
   // -------------------------------------------------------------
-  // SUPER FINAL — Synchro reserve pool (Appendix 3 §5.1).
+  // SUPER FINAL: Synchro reserve pool (Appendix 3 §5.1).
   //
   // If a Top-12 individual diver withdraws after the Team
   // Leaders Meeting (i.e. once the H2H is seeded), they may be
@@ -75,7 +75,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
   // H2H is ineligible.
   // -------------------------------------------------------------
 
-  // GET /api/events/:id/synchro-reserve-pool — read-only.
+  // GET /api/events/:id/synchro-reserve-pool: read-only.
   // :id is the H2H event. Returns the prioritised list of
   // federations + their eligible synchro divers.
   router.get(
@@ -105,19 +105,19 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         }
 
         // 1. Find synchro events at the same meet. The H2H
-        //    event's gender carries through — a Female H2H must
+        //    event's gender carries through: a Female H2H must
         //    not pull a Male synchro diver, per Appendix 3 §1
         //    (Super Final is gender-split; M=6 dives, W=5).
         //
         //    AUDIT FIX (Strong-5): the previous code commented
         //    "Match the H2H event's gender + height/board if
-        //    possible" but didn't actually filter — synchroRes
+        //    possible" but didn't actually filter, so synchroRes
         //    returned every synchro_pair event at the meet,
         //    regardless of gender. A Female H2H could pull a
         //    Male synchro replacement; replace-from-synchro
         //    further down only checked the diver was on a
         //    synchro_pair event, not that the event matched the
-        //    H2H's gender. Mixed-gender Super Final is not
+        //    H2H's gender. Mixed-gender Super Final isn't
         //    supported anyway (seed-semi 400s on Mixed), so we
         //    can require an exact gender match here.
         const synchroRes = await client.query(
@@ -135,7 +135,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         //    For each synchro event, compute the team standings
         //    (per-pair total) and rank within that event. Then
         //    associate each pair with its federation (the org of
-        //    the lead diver — synchro pairs are same-federation).
+        //    the lead diver, since synchro pairs are same-federation).
         // We pick the BEST synchro rank an org has across the
         // synchro events at the meet.
         const orgRanks = new Map(); // org_id → { best_synchro_rank, best_synchro_event_id, pair_competitor_ids }
@@ -250,7 +250,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
   // Body: { withdraw_competitor_id, replacement_competitor_id }
   //
   // Validation:
-  //   * H2H must be Upcoming (Appendix 3 §5.1 — replacement
+  //   * H2H must be Upcoming (Appendix 3 §5.1: replacement
   //     valid pre-H2H only).
   //   * Replacement must be in the synchro reserve pool.
   //   * Replacement's federation must not exceed 2 individuals
@@ -301,12 +301,12 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         // active (withdrawn_at IS NULL).
         //
         // AUDIT FIX (Strong-4): the previous lookup omitted
-        // `AND withdrawn_at IS NULL` — if an operator double-
+        // `AND withdrawn_at IS NULL`. Gotcha: if an operator double
         // clicked the swap button (or replayed the request by
         // mistake), the second call would still find the
         // already-withdrawn rows, re-stamp `withdrawn_at = NOW()`
         // on them, and insert a SECOND replacement into the same
-        // (group_number, display_order) slot — two divers
+        // (group_number, display_order) slot, two divers
         // occupying one H2H slot. Filtering on withdrawn_at IS
         // NULL makes the second call a clean 404.
         const withdrawRowsRes = await client.query(
@@ -332,8 +332,9 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
           display_order: withdrawRowsRes.rows[0].d_order,
         };
 
-        // Verify the replacement org's individual count + that
-        // the replacement isn't already on the roster.
+        // Verify the replacement org's individual count, and a
+        // quick sanity check that the replacement isn't already
+        // on the roster.
         const replOrgRes = await client.query(
           `SELECT id, org_id FROM users WHERE id = $1`,
           [replacement_competitor_id],
@@ -370,7 +371,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         const indCount = Number(indRes.rows[0].ind_count);
         // Withdrawn diver counts ABOVE (we haven't withdrawn
         // yet); but if they're from the same org, the swap-in is
-        // 1-for-1 — net unchanged. If not, we add 1.
+        // 1-for-1, net unchanged. If not, we add 1.
         const withdrawSameOrgRes = await client.query(
           `SELECT u.org_id FROM users u WHERE u.id = $1`,
           [withdraw_competitor_id],
@@ -384,7 +385,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
           });
         }
 
-        // Verify replacement is in the meet's synchro pool — we
+        // Verify replacement is in the meet's synchro pool. We
         // do this by checking they're on a synchro_pair event
         // at the same meet.
         if (!ev.meet_id) {
@@ -420,14 +421,14 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         );
 
         // Pull the replacement's most recent dive list (their
-        // own submitted list — we don't try to copy the
-        // withdrawn diver's because the spec is ambiguous and
-        // the simplest interpretation is "diver brings their
-        // own dives"). We look in any event the replacement has
-        // a dive list for, ordered by event created_at desc;
-        // pick the first non-empty 3-round list. Falls back to
-        // NULL dive_ids if nothing is found — diver will need to
-        // submit before the lock.
+        // own submitted list, we don't try to copy the withdrawn
+        // diver's because the spec is ambiguous and the simplest
+        // interpretation is "diver brings their own dives"). We
+        // look in any event the replacement has a dive list for,
+        // ordered by event created_at desc, and pick the first
+        // non-empty 3-round list. Falls back to NULL dive_ids if
+        // nothing is found, the diver will need to submit before
+        // the lock.
         const replListRes = await client.query(
           `SELECT cdl.round_number, cdl.dive_id
              FROM competitor_dive_lists cdl
@@ -501,7 +502,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
     },
   );
 
-  // GET /api/events/:id/super-final/rankings — public read.
+  // GET /api/events/:id/super-final/rankings: public read.
   //
   // :id is the F event. Returns the merged 1-12 official ranking
   // per Appendix 3 §7:
@@ -513,7 +514,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
   //                   ranked by H2H total only.
   //
   // Cross-tier ties are impossible by construction (a position-1
-  // diver can't tie a position-7 diver — they're in different pools).
+  // diver can't tie a position-7 diver, they're in different pools).
   // Within a tier, equal totals SHARE a placing per World Aquatics
   // Art 4.1.5 (and split any prize for that position, WC §3.1.2):
   // assignSharedTierRanks gives standard "1, 2, 2, 4" competition
@@ -553,11 +554,11 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         // BUG-FIX: pre-aggregate per-competitor totals into a
         // dedicated CTE before joining onto cdl. The previous
         // shape joined an N-rows-per-competitor `per_dive` against
-        // an N-rows-per-competitor cdl on competitor_id only —
+        // an N-rows-per-competitor cdl on competitor_id only, so a
         // Cartesian explosion meant SUM came out N× the real
         // value (where N = total_rounds, so 5× for women / 6×
         // for men). Tests only checked rank ordering (which the
-        // uniform inflation preserved) so the bug shipped green.
+        // uniform inflation preserved), so the bug shipped green.
         const fTier = await client.query(
           `WITH ${perDivePointsCte()},
            per_competitor AS (
@@ -597,7 +598,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         // when we get here (winner_id is null), refuse with 400
         // rather than silently skip the pair. The earlier code
         // dropped tied pairs and returned 11 entries instead of
-        // 12 with no signal — spectators (and the meet manager)
+        // 12 with no signal, so spectators (and the meet manager)
         // had no way to spot that the rankings were incomplete.
         // The dive-off endpoint (Appendix 3 §6) exists precisely
         // to resolve these; the operator must run it before
@@ -643,7 +644,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
 
         // Build merged rankings. Each tier shares placings on equal
         // totals (assignSharedTierRanks) and the next tier's base
-        // advances by the tier's competitor count — a shared placing
+        // advances by the tier's competitor count, a shared placing
         // still consumes a slot, so the tier boundaries stay 1-4 / 5-6
         // / 7-12 in a clean run.
         const rankings = [];

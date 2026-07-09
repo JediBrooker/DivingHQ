@@ -1,5 +1,5 @@
 <script setup>
-// Dive Directory browser + custom-dive editor.
+// Dive Directory browser and custom-dive editor.
 //
 // Reads from GET /api/dive-directory (which returns the World
 // Aquatics catalog plus any custom rows the org has added). Custom
@@ -8,9 +8,9 @@
 // owned by the current org. Core rows render with a lock pill.
 //
 // The auth gate is set on the route (requiresAuth) so anonymous
-// visitors are bounced. Anyone with an org membership can create a
-// custom dive; deletes/edits are gated server-side too so a hand-
-// crafted curl can't tamper with another org's drill list.
+// visitors get bounced. Anyone with an org membership can create a
+// custom dive; deletes/edits are gated server-side too so a
+// hand-crafted curl can't tamper with another org's drill list.
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -41,7 +41,7 @@ const createDesc     = ref('')
 const createBusy     = ref(false)
 const createError    = ref('')
 
-// Inline edit state — keyed by dive id
+// Inline edit state, keyed by dive id
 const editing  = ref(null)
 const editBusy = ref(false)
 const editError = ref('')
@@ -55,9 +55,9 @@ const POSITION_OPTIONS = [
 ]
 
 // Postgres returns dive_directory.height as a numeric, which the
-// JSON serialiser hands back as a string ("3.0"). Re-coerce for
-// comparison + display so a custom row entered as "0m" matches
-// "0.0" from the wire.
+// JSON serialiser hands back as a string ("3.0"). Gotcha: re-coerce
+// for comparison + display so a custom row entered as "0m" matches
+// "0.0" coming off the wire.
 function fmtHeight(h) {
   if (h == null) return ''
   const n = parseFloat(h)
@@ -73,12 +73,12 @@ const filteredDives = computed(() => {
     if (heightFilter.value && fmtHeight(d.height) !== heightFilter.value) return false
     if (posFilter.value && d.position !== posFilter.value) return false
     if (!term) return true
-    // Concatenated forms — "101B", "101 B", "101b 3m" etc all
-    // resolve. The bare dive_code / description / position
-    // checks were missing the natural way a coach types it
-    // (code+position together, no separator) which left a search
-    // for "101B" finding nothing even though dive 101 + position
-    // B is in the catalog.
+    // Concatenated forms like "101B", "101 B", "101b 3m" etc all
+    // resolve. The bare dive_code / description / position checks
+    // were missing the natural way a coach types it in (code and
+    // position together, no separator), which left a search for
+    // "101B" finding nothing even though dive 101 position B is
+    // right there in the catalog.
     const codePos = `${d.dive_code || ''}${d.position || ''}`.toLowerCase()
     const codePosSp = `${d.dive_code || ''} ${d.position || ''}`.toLowerCase()
     const heightStr = fmtHeight(d.height).toLowerCase()
@@ -99,20 +99,20 @@ const stats = computed(() => ({
   custom: dives.value.filter(d => d.is_custom).length,
 }))
 
-// Roles allowed to create / edit / delete custom dives. Mirrors
-// the server-side requireStaff gate in routes/dive-directory.js;
-// kept identical here so the UI doesn't dangle buttons that the
-// API would reject. Divers + spectators see read-only browse.
+// Roles allowed to create / edit / delete custom dives. Mirrors the
+// server-side requireStaff gate in routes/dive-directory.js, kept
+// identical here so the UI doesn't dangle buttons the API would
+// just reject anyway. Divers and spectators get read-only browse.
 const STAFF_ROLES = ['org_admin', 'meet_manager', 'referee', 'judge', 'coach']
 const canWrite = computed(() =>
   !!auth.user?.is_system_admin || auth.hasAnyRole(STAFF_ROLES)
 )
 
 // Can the current user edit/delete this row? Server enforces it
-// too — this just hides the buttons. Four checks: row must be
-// custom (core is read-only), viewer must hold a staff role,
-// the row must belong to the viewer's org (sysadmin bypass), and
-// the row must NOT have been used in a meet yet (lock-on-use
+// too, this just hides the buttons client-side. Four checks: row
+// must be custom (core is read-only), viewer must hold a staff
+// role, the row must belong to the viewer's org (sysadmin bypass),
+// and the row must NOT have been used in a meet yet (lock-on-use
 // preserves the scoreboard archive).
 function canManage(d) {
   if (!d.is_custom) return false
@@ -127,9 +127,9 @@ async function loadDives() {
   errorMsg.value = ''
   try {
     // Cached read: serves the previous fetch instantly while a
-    // background revalidation runs. 24h TTL because the catalog
-    // is essentially static — only changes when an org adds a
-    // custom dive (POST below invalidates manually).
+    // background revalidation runs. 24h TTL because the catalog is
+    // basically static, only changes when an org adds a custom dive
+    // (POST below invalidates manually).
     const result = await auth.cachedApiFetch('/api/dive-directory', {
       cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS, onUpdate: (fresh) => {
         if (Array.isArray(fresh)) dives.value = fresh
@@ -470,7 +470,7 @@ onMounted(loadDives)
 </template>
 
 <style scoped>
-/* Title is redundant with the shell breadcrumb — hidden. */
+/* Title is redundant with the shell breadcrumb, so it's hidden. */
 .page-header { display: none; }
 /* Back-to-dashboard is redundant inside the app shell sidebar. */
 .page-header .btn { display: none; }
@@ -535,10 +535,10 @@ onMounted(loadDives)
   font-size: 12px; padding: 0.5rem 0;
 }
 
-/* Condense the table — the catalog has 460+ rows so the default
+/* Condense the table: the catalog has 460+ rows so the default
    1rem / 1.25rem cell padding made the page scroll forever. Only
-   target rows in this scoped view via :deep so the global
-   data-table styling other pages depend on isn't affected. */
+   target rows in this scoped view via :deep so the global data-table
+   styling other pages depend on isn't affected. */
 :deep(.data-table th) { padding: 0.55rem 0.85rem; font-size: 9.5px; }
 :deep(.data-table td) { padding: 0.4rem 0.85rem; }
 
@@ -566,12 +566,12 @@ onMounted(loadDives)
 .error-row td { background: rgba(220, 38, 38, 0.05); }
 
 /* =========================================================
-   Phone — under 600 px. Toolbar filters cram against each
-   other and the data-table overflows the viewport. Stack
-   filter children full-width so each is comfortably tappable,
-   let the table scroll inside a `.table-wrap` (added on the
-   card wrapper below), and shrink the page-header padding so
-   the title doesn't dominate.
+   Phone, under 600px. Toolbar filters cram against each other
+   and the data-table overflows the viewport. Stack filter
+   children full-width so each is comfortably tappable, let the
+   table scroll inside a `.table-wrap` (added on the card wrapper
+   below), and shrink the page-header padding so the title
+   doesn't dominate.
    ========================================================= */
 @media (max-width: 600px) {
   .page-header { padding: 1rem; }
@@ -608,8 +608,8 @@ onMounted(loadDives)
   .card { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
   :deep(.data-table) { min-width: 640px; }
 
-  /* Create form fields stack — the auto-fit minmax(140px,1fr)
-     already collapses but the gap is too generous on a phone. */
+  /* Create form fields stack: the auto-fit minmax(140px,1fr) already
+     collapses but the gap is too generous on a phone. */
   .create-block { padding: 0.85rem; }
   .create-fields { gap: 0.55rem; }
 }

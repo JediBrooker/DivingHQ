@@ -1,14 +1,15 @@
 -- =============================================================
--- MIGRATION 021 — TOKEN VERSIONING, EMAIL VERIFICATION, INDEXES
+-- MIGRATION 021: TOKEN VERSIONING, EMAIL VERIFICATION, INDEXES
 --
 -- Closes three findings from the May-2026 audit:
 --
--- 1. Stale JWT claims. Demoting a judge or revoking sysadmin
---    didn't actually revoke — old tokens stayed privileged for
---    up to JWT_EXPIRY (8h). Adds users.token_version: every JWT
---    carries the issuing version; the verifier rejects tokens
---    whose tv doesn't match. Bumping the column instantly
---    invalidates every outstanding session for that user.
+-- 1. Stale JWT claims. Demoting a judge or revoking sysadmin didn't
+--    actually revoke anything (classic gotcha with JWTs): old tokens
+--    stayed privileged for up to JWT_EXPIRY (8h). Adds
+--    users.token_version: every JWT carries the issuing version, and
+--    the verifier rejects tokens whose tv doesn't match. Bumping the
+--    column instantly invalidates every outstanding session for that
+--    user.
 --
 -- 2. Self-service registration with no email confirmation.
 --    Adds users.email_verified_at; existing rows are grandfathered

@@ -1,4 +1,4 @@
-// Live scoring pipeline — judges submit scores via the socket
+// Live scoring pipeline: judges submit scores via the socket
 // and the scoreboard reflects them.
 //
 // What this test exercises end-to-end:
@@ -14,10 +14,10 @@
 //   9. /api/scoreboard returns standings showing diver A with
 //      a non-zero total via the calc_event_dive_points UDF
 //
-// We don't drive the JudgeView UI — the score-submission path
-// is socket-only, and we want to test the pipeline (socket →
-// DB → standings query → scoreboard cache → JSON), not the
-// UI for tapping a number.
+// We don't drive the JudgeView UI here, since the score-submission
+// path is socket-only and what we actually care about is the
+// pipeline (socket → DB → standings query → scoreboard cache
+// → JSON), not the UI for tapping a number.
 
 const { test, expect } = require("@playwright/test");
 const { io } = require("socket.io-client");
@@ -73,9 +73,9 @@ test("five judges submit scores → scoreboard shows the diver's total", async (
   });
 
   // Flip event to Live. submit_score on an Upcoming event would
-  // be accepted (the socket path doesn't gate on status — only
-  // the entries-accepting check does, which is for dive list
-  // submission), but it matches the real meet flow.
+  // probably be accepted anyway (the socket path doesn't gate on
+  // status, only the entries-accepting check does, and that's
+  // for dive list submission) but this matches the real meet flow.
   await setup.setEventStatus(request, { adminToken, eventId, status: "Live" });
 
   // ---- Each judge connects + submits ----
@@ -99,10 +99,10 @@ test("five judges submit scores → scoreboard shows the diver's total", async (
       setTimeout(() => reject(new Error(`socket connect timeout (judge ${i})`)), 5000);
     });
     // score_received is broadcast to room `event:<id>`, so we
-    // need to be in that room to see our own ack. score_rejected
+    // need to be in that room to recieve our own ack. score_rejected
     // is emitted directly to the submitting socket and would
-    // arrive without the subscribe — but we attach both
-    // listeners before emitting either way.
+    // arrive fine without the subscribe, but we attach both
+    // listeners before emitting either way just in case.
     sock.emit("subscribe_event", { event_id: eventId });
     // Listen BEFORE emitting the score, otherwise a fast server
     // could emit score_received before we register the handler.
@@ -124,9 +124,9 @@ test("five judges submit scores → scoreboard shows the diver's total", async (
   }
 
   // ---- Verify via the scoreboard API ----
-  // Bypass the cache so we read the freshest standings — the
+  // Bypass the cache so we read the freshest standings. The
   // scoreboard cache invalidates on submit, but a stale read
-  // could race the cache flush.
+  // could still race the cache flush.
   const sb = await request.get(`/api/scoreboard/${eventId}?cache=skip`);
   expect(sb.status()).toBe(200);
   const sbData = await sb.json();
@@ -135,17 +135,17 @@ test("five judges submit scores → scoreboard shows the diver's total", async (
   const row = sbData.standings[0];
   expect(row.full_name).toBe("Diver A");
   // After high/low trim of 7.0 + 9.0, median three sum = 24.0,
-  // multiplied by the 101B dd. Don't pin to an exact value —
-  // dd's precise figure is what the dive_directory says. Just
-  // assert the order of magnitude is right.
+  // multiplied by the 101B dd. Don't pin to an exact value here,
+  // since dd's precise figure is whatever the dive_directory
+  // says. Just assert the order of magnitude is right.
   expect(Number(row.total)).toBeGreaterThan(20);
   expect(Number(row.total)).toBeLessThan(60);
 
-  // ---- Public chip-link payload — every spectator should get
+  // ---- Public chip-link payload: every spectator should get
   //      everything the SPA needs to wire each score chip to
   //      /judge-profile/<id> with a tooltip. The contract is:
-  //        * `panel`        — judge identity per panel position
-  //        * each history row's `judge_numbers` parallel array —
+  //        * `panel`: judge identity per panel position
+  //        * each history row's `judge_numbers` parallel array,
   //          maps chip index → judge_number → panelByNumber lookup
   expect(Array.isArray(sbData.panel)).toBe(true);
   expect(sbData.panel).toHaveLength(5);
@@ -179,5 +179,6 @@ test("five judges submit scores → scoreboard shows the diver's total", async (
 
 // pool teardown left to process exit (Playwright tears down the
 // worker process anyway). Calling pool.end() here was a foot-gun
-// when two specs landed in the same worker — the second hit a
-// closed pool. node-postgres handles process exit gracefully.
+// when two specs landed in the same worker, since the second one
+// hit a closed pool. node-postgres handles process exit fine on
+// its own.

@@ -1,10 +1,10 @@
-// Meet program export — verifies the new ?include= options on
+// Meet program export: verifies the new ?include= options on
 // /api/meets/:id/program.pdf and the matching /api/meets/:id/
 // program.csv endpoint.
 //
 // We don't introspect the PDF body (PDFKit output is binary and
-// not worth pulling a parser in for) — content-type + 200 status
-// + reasonable size is enough to catch the renderer crashing.
+// not worth pulling a parser in for), so content-type + 200 status
+// plus a reasonable size is enough to catch the renderer crashing.
 // The CSV body IS introspected since it's text: header columns,
 // section markers (event / judge / dive), and the timing math.
 
@@ -20,7 +20,7 @@ test.describe("meet program export options", () => {
     context.adminToken = adminToken;
     context.adminId = adminId;
 
-    // Meet — required because the program endpoint is meet-scoped.
+    // Meet, required because the program endpoint is meet-scoped.
     const meetRes = await request.post("/api/meets", {
       headers: { Authorization: `Bearer ${adminToken}` },
       data: { name: "Program Export Smoke Meet", venue: "Test Pool" },
@@ -29,8 +29,8 @@ test.describe("meet program export options", () => {
     const meet = await meetRes.json();
     context.meetId = meet.id;
 
-    // One event with 3 rounds + a 5-judge panel — small enough
-    // for a fast test, big enough to exercise the dive-list +
+    // One event with 3 rounds + a 5-judge panel, small enough
+    // for a fast test but big enough to exercise the dive-list +
     // judge sections.
     const event = await setup.createEvent(request, {
       adminToken,
@@ -42,7 +42,7 @@ test.describe("meet program export options", () => {
     });
     context.eventId = event.id;
 
-    // Judges — exact count to fill the panel. The helper creates
+    // Judges: exact count to fill the panel. The helper creates
     // verified users via direct SQL so we don't pay the signup +
     // email-verify round-trip per judge.
     const judges = [];
@@ -111,8 +111,8 @@ test.describe("meet program export options", () => {
   });
 
   test("PDF rejects garbage seconds_per_dive by falling back to 45s", async ({ request }) => {
-    // The handler treats unrecognised values as 45s — don't 400,
-    // just normalise. Confirm we still get a PDF.
+    // The handler treats unrecognised values as 45s instead of
+    // 400ing, just normalises them. Confirm we still get a PDF.
     const r = await request.get(
       `/api/meets/${context.meetId}/program.pdf` +
         `?include=timing&seconds_per_dive=999`,

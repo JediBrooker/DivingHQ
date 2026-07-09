@@ -1,7 +1,7 @@
-// Contract for the P5 concurrent-pool live-state map. DB-less; runs in
-// test:safe. Proves the property V1 cannot give: a score for a
-// NON-focused Live pool updates THAT pool and leaves the focused pool's
-// currentActive + tiles untouched (no focus thrash, no dropped scores).
+// Contract for the P5 concurrent-pool live-state map. DB-less, runs in
+// test:safe. Proves the one thing V1 couldnt: a score for a
+// NON-focused Live pool updates THAT pool only, leaving the focused
+// pool's currentActive + tiles untouched (no focus thrash, no dropped scores).
 const { test, before } = require('node:test')
 const assert = require('node:assert/strict')
 
@@ -48,12 +48,12 @@ test('a score for the NON-focused pool updates that pool, not the focused one', 
   const res = routeScore(score('B', 1, 7.5), 5)
   assert.equal(res.matched, true)
 
-  // Pool B got the score + a filled tile.
+  // pool B got the score plus a filled tile
   assert.equal(pools.B.scoresThisRound['B-j1'], 7.5)
   assert.equal(pools.B.judgeTiles[0].scored, true)
   assert.equal(pools.B.judgeTiles[0].score, '7.5')
 
-  // Pool A is completely untouched.
+  // and pool A stays completely untouched
   assert.deepEqual(pools.A.scoresThisRound, {})
   assert.equal(pools.A.judgeTiles.every((t) => !t.scored), true)
 })
@@ -136,8 +136,8 @@ test('selectDiver: moves the cursor, clears scores, re-inits tiles, builds info'
 })
 
 test('rosterIndexForActive: a mid-meet pool restores to the live diver, NOT roster[0]', () => {
-  // A roster spanning rounds (server order: round ASC). The match keys on
-  // competitor AND round, so the same diver in different rounds is distinct.
+  // A roster spanning rounds (server order: round ASC). Matching keys on
+  // competitor AND round, so the same diver in different rounds still counts as distinct.
   const roster = [
     { competitor_id: 'd1', round_number: 1 },
     { competitor_id: 'd2', round_number: 1 },
@@ -148,7 +148,7 @@ test('rosterIndexForActive: a mid-meet pool restores to the live diver, NOT rost
   ]
   // The server's authoritative active diver (set_active_diver payload shape).
   const serverActive = { event_id: 'E', competitor_id: 'd2', round_number: 2, status: 'judging' }
-  // Must resolve to index 3 -- the SAME diver/round the server has live --
+  // Must resolve to index 3, the SAME diver/round the server has live,
   // so reopening the Control Room never reseeds the judges to roster[0].
   assert.equal(rosterIndexForActive(roster, serverActive), 3)
   // The same competitor in a different round is NOT a match.

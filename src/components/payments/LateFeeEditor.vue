@@ -1,9 +1,9 @@
 <script setup>
-// Manager editor for an event's LATE-ENTRY surcharge — a flat fee added to
+// Manager editor for an event's LATE-ENTRY surcharge: a flat fee added to
 // the entry fee once a chosen deadline passes. A trigger dropdown picks the
-// moment (entries close / dive list locks); the wrapped FeeEditor handles
-// the amount + windows and carries the trigger through extraPayload so the
-// PUT lands on the late_entry fee_definition. Backed by
+// moment (entries close / dive list locks), and the wrapped FeeEditor
+// handles the amount + windows and carries trigger through extraPayload so
+// the PUT lands on the late_entry fee_definition. Backed by
 // /api/events/:id/late-fee(/config).
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -23,7 +23,7 @@ const ready = ref(false)
 
 onMounted(async () => {
   // Seed the dropdown from any saved late fee so the manager sees the
-  // current trigger; FeeEditor loads the amount/variants itself.
+  // current trigger. FeeEditor loads the amount/variants itself.
   try {
     const r = await auth.apiFetch(`/api/events/${props.eventId}/late-fee/config`)
     if (r.fee?.late_fee_trigger) trigger.value = r.fee.late_fee_trigger

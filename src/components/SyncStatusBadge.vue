@@ -5,13 +5,13 @@
  * row, a coach's pending dive-list edit, a referee-action item in
  * the audit log. Variants map to the outbox state machine:
  *
- *   pending   — ⏳ amber, "queued, waiting for network"
- *   inflight  — 🔄 cyan,  "send in progress"
- *   synced    — ✓ subtle, "server accepted" (only shown for the
- *                first few seconds after success; usually fades
- *                out of the UI)
- *   failed    — ⚠ red,   "max retries exhausted, needs manual help"
- *   conflict  — 🔀 magenta, "server rejected, needs operator review"
+ *   pending:  amber hourglass, "queued, waiting for network"
+ *   inflight: cyan spinner, "send in progress"
+ *   synced:   subtle check, "server accepted" (only shown for the
+ *             first few seconds after success, usually fades
+ *             out of the UI)
+ *   failed:   red warning, "max retries exhausted, needs manual help"
+ *   conflict: magenta shuffle, "server rejected, needs operator review"
  *
  * Density-first: 11px monospace, fits next to a 32px score chip.
  * Visual language matches the rest of the app's chip + tag idiom
@@ -25,9 +25,9 @@ const props = defineProps({
     required: true,
     validator: (v) => ['pending', 'inflight', 'synced', 'failed', 'conflict'].includes(v),
   },
-  /** Optional count; rendered as "⏳ 3" when > 1. */
+  /** Optional count, shown next to the icon when greater than 1. */
   count: { type: Number, default: 0 },
-  /** When true, show the long-form label ("queued, will send"). When false (default), icon only. */
+  /** When true, shows the long-form label ("queued, will send"); false (default) means icon only. */
   showLabel: { type: Boolean, default: false },
 })
 
@@ -78,7 +78,7 @@ const tone = computed(() => props.status)
   letter-spacing: 0.1em; text-transform: uppercase;
 }
 
-/* Tonal variants. We lean on the cyan / amber / red palette
+/* Tonal variants, FYI we lean on the cyan / amber / red palette
    already in use across the app (see ScoreboardView's status
    chips and ControlView's queue indicators). */
 .sync-badge--pending {
@@ -104,12 +104,12 @@ const tone = computed(() => props.status)
   color: #d946ef;
 }
 
-/* Inflight gets a subtle spin on the icon glyph only; we can't
+/* Inflight gets a subtle spin on the icon glyph only, we can't
    rotate the whole badge because that'd rotate the count too. */
 @keyframes sync-spin {
   /* Use a gentle pulse instead of a literal rotate to keep the
      emoji readable. The chip subtly breathes between full
-     opacity and 70% — enough to draw the eye without being
+     opacity and 70%, enough to draw the eye without being
      distracting. */
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.7; }

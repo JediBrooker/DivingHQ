@@ -1,10 +1,10 @@
 <script setup>
-// Light / Dark theme switch, two shapes:
-//   <ThemeToggle />          — segmented Light|Dark control (sidebar footer, profile)
-//   <ThemeToggle compact />  — single icon button (top bar, sign-in screen)
+// Light / Dark theme switch, comes in two shapes:
+//   <ThemeToggle />          - segmented Light|Dark control (sidebar footer, profile)
+//   <ThemeToggle compact />  - single icon button (top bar, sign-in screen)
 // Backed by the Pinia UI store so every instance stays in sync
-// and the choice persists. Icons are inline outline SVGs in the
-// Lucide “sun” / “moon” style (24px, 2px stroke, currentColor).
+// and the choice sticks around. Icons are inline outline SVGs,
+// Lucide's "sun" / "moon" style (24px, 2px stroke, currentColor).
 import { computed } from 'vue'
 import { useUiStore } from '@/stores/ui'
 
@@ -50,7 +50,7 @@ const isDark = computed(() => ui.theme === 'dark')
 </template>
 
 <style scoped>
-/* Segmented control — sidebar footer / profile preferences */
+/* Segmented control, sidebar footer / profile preferences */
 .theme-toggle {
   display: flex;
   gap: 3px;
@@ -84,7 +84,7 @@ const isDark = computed(() => ui.theme === 'dark')
   box-shadow: var(--shadow-xs);
 }
 
-/* Compact single-button — top bar / sign-in */
+/* Compact single-button, top bar / sign-in */
 .tt-compact {
   width: 34px;
   height: 34px;

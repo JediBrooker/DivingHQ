@@ -1,7 +1,7 @@
 <script setup>
-// Standardised modal footer (P2). Right-aligned ghost-cancel + a
-// busy-aware primary -- replaces the inline-styled `.lb-footer` blocks
-// each control modal hand-rolled. Optional `lead` slot for a hint line.
+// Standardised modal footer (P2). Right-aligned ghost-cancel button plus a
+// busy-aware primary, replaces the inline-styled `.lb-footer` blocks each
+// control modal used to hand-roll. Optional `lead` slot for a hint line.
 defineProps({
   primaryLabel: { type: String, default: '' },
   cancelLabel: { type: String, default: 'Cancel' },

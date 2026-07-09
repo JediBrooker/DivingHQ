@@ -2,11 +2,11 @@
 //
 // The historical bug: the dedupe Map keyed off competitor_id only,
 // so when a diver came up again in round 2+ the early-return fired
-// and no coach pushes went out for ANY squad member behind them.
+// and no coach pushes went out for any squad member behind them.
 // These tests pin the new (competitor_id|round_number) dedupe key
 // so the bug can't sneak back in.
 //
-// No DB required — we hand-roll a tiny pool stub that returns the
+// No DB required, we hand-roll a tiny pool stub that returns the
 // rows we want for each SQL call in turn.
 
 const { test } = require("node:test");
@@ -28,13 +28,13 @@ function makeFakePool() {
     queryCalls: 0,
     async query(sql /*, params */) {
       this.queryCalls += 1;
-      // Active diver display_order lookup — short SELECT with
-      // `display_order` in the column list.
+      // active diver display_order lookup, short SELECT with
+      // `display_order` in the column list
       if (/SELECT\s+display_order/i.test(sql)) {
         return { rows: [{ display_order: 1 }] };
       }
-      // Candidate squad rows — the big CTE. Return one match so
-      // exactly one push is expected per non-deduped invocation.
+      // candidate squad rows, the big CTE. Return one match so
+      // exactly one push is expected per non-deduped invocation
       return {
         rows: [
           {
@@ -77,9 +77,9 @@ test("fires for the same competitor in a different round", async () => {
     "event-1",
     { competitor_id: "active-diver", round_number: 1 },
   );
-  // Round 2 — same active competitor, new round. The old
-  // dedupe key would have skipped this; the round-aware key
-  // must NOT skip.
+  // round 2: same active competitor, new round. The old
+  // dedupe key would've skipped this, the round-aware key
+  // must not skip
   await maybeNotifyCoachesOfNextDivers(
     { pool, push },
     "event-1",
@@ -103,7 +103,7 @@ test("dedupes identical (competitor_id, round_number) calls", async () => {
     "event-1",
     { competitor_id: "active-diver", round_number: 3 },
   );
-  // Operator re-emits state for the same diver/round — must be skipped.
+  // operator re-emits state for the same diver/round, must be skipped
   await maybeNotifyCoachesOfNextDivers(
     { pool, push },
     "event-1",

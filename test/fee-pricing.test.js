@@ -1,7 +1,7 @@
-// Unit tests for lib/fee-pricing.js — pure price/fee math.
+// Unit tests for lib/fee-pricing.js. Just pure price/fee math.
 //
 // Covers the 15% split (absorb vs pass_to_payer) and price-variant
-// resolution across the member/non-member × time-window matrix.
+// resolution across the member/non-member x time-window matrix.
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");

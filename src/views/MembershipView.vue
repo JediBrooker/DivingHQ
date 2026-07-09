@@ -1,7 +1,7 @@
 <script setup>
 // Diver-facing membership page (/membership). Shows what membership costs
-// (per tier) with a real Pay action once payments are live (the card shows
-// its own coming-soon note while dormant). Each card reads the resolved
+// per tier, with a real Pay action once payments go live (until then the
+// card just shows its own coming-soon note). Each card reads the resolved
 // price from the diver-facing GET /api/orgs/:orgId/membership endpoint.
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'

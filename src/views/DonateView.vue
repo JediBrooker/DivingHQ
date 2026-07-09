@@ -1,7 +1,7 @@
 <script setup>
 // Supporter-facing donation page (/donate). Shows the federation's suggested
-// amounts (or a custom amount) with a contextual "coming soon" preview until
-// online payments are switched on. Reads GET /api/orgs/:orgId/donation.
+// amounts (or a custom amount), with a contextual "coming soon" preview until
+// online payments get switched on. Reads GET /api/orgs/:orgId/donation.
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'

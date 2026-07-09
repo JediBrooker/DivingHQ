@@ -115,7 +115,7 @@ async function handleSubmit() {
         </div>
         <div class="field">
           <!-- Reuses the auth.register.* email strings (present in every
-               locale) — the org founder's email is required by
+               locale); the org founder's email is required by
                /api/auth/register-org for the verification mail. -->
           <label class="label">{{ $t('auth.register.email') }}</label>
           <input class="input" type="email" v-model="email"
@@ -165,7 +165,7 @@ async function handleSubmit() {
   font-family: var(--font-display); font-size: 13px; font-weight: 700;
   letter-spacing: 0.3em; text-transform: uppercase; color: var(--text);
   margin-bottom: 2.5rem; display: flex; align-items: center;
-  /* No `gap` — see LoginView for the rationale. */
+  /* No `gap`, see LoginView for the rationale. */
 }
 .login-mark span { color: var(--cyan); }
 .login-mark::before { content: ''; display: block; width: 24px; height: 2px; margin-inline-end: 0.75rem; background: var(--cyan); }

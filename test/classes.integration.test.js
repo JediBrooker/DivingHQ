@@ -1,6 +1,6 @@
 // Integration tests for club training-classes (routes/classes.js) against a
 // real Postgres. Uses the REAL middleware (createMiddleware) + real JWTs so
-// the CLUB-PRIVATE access control is genuinely exercised — the crux of the
+// the CLUB-PRIVATE access control is genuinely exercised: the crux of the
 // feature is that a federation org_admin must NOT reach a club's classes.
 //
 // Self-skips when Postgres is unreachable, JWT_SECRET is unset, or migration
@@ -25,7 +25,7 @@ const silent = { warn() {}, error() {}, info() {} };
 const suffix = crypto.randomUUID().slice(0, 8);
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Fake Stripe — captures args, returns canned objects. Mirrors the harness
+// Fake Stripe, captures args and returns canned objects. Mirrors the harness
 // in test/payments.integration.test.js; a real Stripe key is never needed.
 let lastCheckoutArgs = null;
 // Indirection so a single test can swap the expire behaviour (e.g. to
@@ -36,7 +36,7 @@ let expireCheckoutSessionImpl = async (args) => { lastExpireArgs = args; return 
 let retrieveCheckoutSessionImpl = async (args) => ({ id: args.sessionId, status: "open", url: "https://stripe.test/resume" });
 const fakePayments = {
   enabled: true,
-  // Real-length session ids (~66 chars) — see the note in
+  // Real-length session ids (~66 chars), see the note in
   // test/payments.integration.test.js; guards the migration-079 fix.
   createCheckoutSession: async (args) => {
     lastCheckoutArgs = args;
@@ -153,7 +153,7 @@ before(async () => {
   // The refund endpoint lives in the payments router; mount it with the
   // REAL verifyToken so the club-private refund authorisation (club admin
   // yes, federation org_admin no) is genuinely exercised. The role-gated
-  // fee/config routes aren't used by this suite — passthrough stubs.
+  // fee/config routes aren't used by this suite, just passthrough stubs.
   const stubGate = () => (req, res, next) => mw.verifyToken(req, res, next);
   app.use(createPaymentsRouter({
     pool,
@@ -179,7 +179,7 @@ after(async () => {
     for (const id of [orgId, org2Id]) {
       if (!id) continue;
       // payments.org_id is ON DELETE RESTRICT (so a payer never loses their
-      // own receipt just because an org is torn down elsewhere) — without
+      // own receipt just because an org is torn down elsewhere). Heads up: without
       // deleting these first, DELETE FROM organisations below silently fails
       // via the .catch(), orphaning the org AND leaving stripe_payment_intent
       // literals (e.g. "pi_test") permanently squatting on idx_payments_pi
@@ -347,7 +347,7 @@ test("diver browses + self-enrols into their own club's class (pending)", async 
 
 test("a diver in another federation cannot self-enrol here", async (t) => {
   if (!ready) return t.skip();
-  // The class isn't in their club (they have none in this federation) — blocked.
+  // The class isn't in their club (they have none in this federation), so it's blocked.
   const s = (await api("POST", `/api/me/classes/${classId}/enrol`, {}, tokenFor(U.foreignDiver))).status;
   assert.ok(s === 404 || s === 400, `expected blocked (404/400), got ${s}`);
 });
@@ -412,7 +412,7 @@ test("diver checks out a priced pending enrolment; webhook activates it", async 
 
   const wh = await api("POST", "/webhooks/stripe", {
     type: "checkout.session.completed",
-    data: { object: { id: "cs_test", client_reference_id: paymentId, payment_intent: "pi_test" } },
+    data: { object: { id: "cs_test", client_reference_id: paymentId, payment_intent: "pi_test_" + suffix } },
   }, null);
   assert.equal(wh.status, 200);
 
@@ -502,7 +502,7 @@ test("sysadmin sees every club in club-admin-clubs (org-labelled) and passes the
   if (!ready) return t.skip();
   const tok = tokenFor(U.sysAdmin);
   // Discovery: the platform operator gets ALL clubs, labelled with their org
-  // (a real club admin still only gets their own — asserted below).
+  // (a real club admin still only gets their own, asserted below).
   const all = await api("GET", "/api/me/club-admin-clubs", null, tok);
   assert.equal(all.status, 200);
   const names = all.body.map((c) => c.name);
@@ -590,7 +590,7 @@ test("cancelling an enrolment with an in-flight checkout retires the payment; a 
 
   // A late webhook delivery for the now-retired session means the payer's
   // money WAS captured for something that no longer exists. It must never
-  // reactivate the enrolment — and the charge is refunded automatically so
+  // reactivate the enrolment, and the charge gets refunded automatically so
   // the money isn't silently stranded on a 'failed' row.
   const wh = await api("POST", "/webhooks/stripe", {
     type: "checkout.session.completed",
@@ -703,7 +703,7 @@ test("manually activating a pending enrolment retires any in-flight checkout (pr
   assert.equal(lastExpireArgs.sessionId, beforePay.stripe_checkout_session);
 
   // A late webhook for the retired session means the diver's card WAS
-  // charged for an enrolment the admin already resolved offline — the exact
+  // charged for an enrolment the admin already resolved offline, the exact
   // double-charge this guard exists for. The enrolment must be untouched
   // and the captured duplicate charge automatically refunded.
   const wh = await api("POST", "/webhooks/stripe", {
@@ -732,9 +732,9 @@ test("editing an already-active (paid) enrolment's price/discount is a normal, u
   assert.equal((await pool.query("SELECT status FROM class_enrolments WHERE id = $1", [enrol.body.id])).rows[0].status, "active");
 
   // Note: at this point the DB row is 'active', so this PUT wouldn't even
-  // reach the retire guard (enr.status !== 'pending') — this instead proves
+  // reach the retire guard (enr.status !== 'pending'). This instead proves
   // editing an already-settled enrolment is a normal, unguarded update (no
-  // stale in-flight payment exists to protect against), and does not error.
+  // stale in-flight payment exists to protect against), and doesnt error.
   const put = await api("PUT", `/api/clubs/${clubId}/classes/${cls.id}/enrolments/${enrol.body.id}`,
     { discount_cents: 500 }, tok);
   assert.equal(put.status, 200);
@@ -886,7 +886,7 @@ test("club admin can request online payment when adding a diver (status 'pending
     { diver_user_id: d.id, price_option_id: cls.price_options[0].id, status: "pending" }, tok);
   assert.equal(enr.status, 201, JSON.stringify(enr.body));
   assert.equal(enr.body.status, "pending", "the diver is asked to pay, not silently comped");
-  // Requesting payment without a price is meaningless — refused.
+  // Requesting payment without a price is meaningless, so it's refused.
   const d2 = await seedUser("requested2", ["diver"], clubId);
   const bad = await api("POST", `/api/clubs/${clubId}/classes/${cls.id}/enrolments`,
     { diver_user_id: d2.id, status: "pending" }, tok);

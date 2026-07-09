@@ -1,12 +1,12 @@
 <script setup>
-// Coach dive-list editor — Phase 2 of the coach feature bundle.
+// Coach dive-list editor, Phase 2 of the coach feature bundle.
 //
 // One page, one event. Lists every diver in the coach's squad
 // (linked via coach_diver_links) alongside their current dive
 // list for the event; per-diver inline editor lets the coach
 // pick a dive for each round and submit on the diver's behalf.
 //
-// Server validation lives in lib/dive-list-submit.js — same
+// Server validation lives in lib/dive-list-submit.js, same
 // checks as the diver-self POST /api/competitor/submit-list path:
 // dive_id is in the directory at the event's height, no duplicate
 // rounds, prescribed-dive enforcement (migration 039), round-rules
@@ -14,11 +14,11 @@
 // Violations come back as a 400 with `violations: string[]`.
 //
 // We deliberately don't build a fancy "search the directory"
-// picker here — coaches typically know exactly what dives their
+// picker here, coaches typically know exactly what dives their
 // athletes are doing. A flat dropdown of every directory entry
-// at the event's height is enough; the alternative is to lift the
-// big picker out of CompetitorView.vue, which is a separate
-// refactor.
+// at the event's height is enough. The alternative is lifting the
+// big picker out of CompetitorView.vue, which is its own
+// separate refactor.
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
@@ -68,8 +68,8 @@ async function load() {
 }
 
 // Filter the dive directory to entries valid at the event's
-// height. Server enforces this too; the dropdown just stops the
-// coach from picking something that'll fail. No `term` — this is
+// height. Server enforces this too, the dropdown just stops the
+// coach from picking something that'll fail. No `term`, this is
 // the deliberately-flat dropdown, not the search picker.
 const validDives = useDiveSearch(diveDirectory, {
   height: computed(() => event.value?.height ? Number(event.value.height) : null),
@@ -176,7 +176,7 @@ async function submitEdit(diver) {
   state.errors = []
   state.submitting = true
 
-  // Compose body. Skip null rounds — the server requires every
+  // Compose body. Skip null rounds, the server requires every
   // submitted dive to have a dive_id, and the coach should ship
   // every round filled. If any are missing, surface a client-side
   // error.
@@ -227,9 +227,9 @@ function isPrescribedHeight(round_number) {
 }
 
 async function withdrawDiver(diver) {
-  // Two-step confirm — withdrawing is a high-blast-radius action.
-  // Operator AND diver both see the consequence (Control Room
-  // queue + spectator scoreboard), so we want intentional clicks.
+  // Two-step confirm, since withdrawing is a high-blast-radius action.
+  // Operator and diver both see the consequence (Control Room
+  // queue + spectator scoreboard), so we want intentional clicks here.
   const reason = window.prompt(
     `Withdraw ${diver.full_name} from ${event.value?.name || 'this event'}?\n\n` +
     `Optionally enter a reason (visible in the audit log + Control Room):`,
@@ -314,7 +314,7 @@ onMounted(load)
         <span class="deadline-value">{{ new Date(event.entries_close_at).toLocaleString() }}</span>
       </div>
 
-      <!-- Empty state — coach has no linked divers -->
+      <!-- Empty state: coach has no linked divers -->
       <EmptyState
         v-if="!divers.length"
         icon="🤝"
@@ -366,7 +366,7 @@ onMounted(load)
             </div>
           </div>
 
-          <!-- View mode — show their current dive list compactly -->
+          <!-- View mode: show their current dive list compactly -->
           <div v-if="!editing[diver.diver_id] && diver.dives.length" class="diver-dives">
             <div v-for="dv in diver.dives" :key="dv.round_number" class="dive-line">
               <span class="dive-round">R{{ dv.round_number }}</span>
@@ -379,7 +379,7 @@ onMounted(load)
             <em>No dive list submitted yet.</em>
           </div>
 
-          <!-- Edit mode — one dropdown per round -->
+          <!-- Edit mode: one dropdown per round -->
           <div v-if="editing[diver.diver_id]" class="diver-editor">
             <div v-for="(_, idx) in event.total_rounds || 6"
                  :key="idx"
@@ -402,8 +402,8 @@ onMounted(load)
               </span>
             </div>
 
-            <!-- Synchro partner picker — only when event is a pair.
-                 For now we accept a partner_id paste; full picker
+            <!-- Synchro partner picker, only when event is a pair.
+                 For now we accept a partner_id paste, a full picker
                  would need the org_divers fetch from CompetitorView. -->
             <div v-if="event.event_type === 'synchro_pair'" class="edit-row">
               <span class="edit-round">Partner</span>

@@ -1,7 +1,7 @@
 <script setup>
 defineProps({
   // Array of { dive_code, position, height, dd, best_total,
-  // attempts, event_name }. From profile.personal_bests.
+  // attempts, event_name }. Comes from profile.personal_bests.
   data: { type: Array, default: () => [] },
 })
 </script>
@@ -42,7 +42,7 @@ defineProps({
 <style src="./widget-shared.css"></style>
 <style scoped>
 /* Scroll wrap lets the 7-column table overflow horizontally
-   on phones rather than crushing the "At Meet" name column. */
+   on phones instead of crushing the "At Meet" name column. */
 .pb-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 @media (max-width: 600px) {
   .pb-scroll .pb-table { min-width: 540px; }

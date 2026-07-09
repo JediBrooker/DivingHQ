@@ -4,7 +4,7 @@
 //
 // subscribe_venue is unauthenticated (hardware bridges + public clients)
 // and triggers emitVenueState, which runs the multi-CTE leaderboard
-// build — the most expensive query in the app. The per-(action,user)
+// build, the most expensive query in the app. The per-(action,user)
 // limiter no-ops for anonymous clients (userId null), so these tests
 // pin the IP-keyed throttle, the UUID guard, and the per-IP concurrent
 // connection cap that stop a single client from exhausting the server.
@@ -21,9 +21,9 @@ const venueState = require("../lib/venue-state");
 const VALID_ID = "11111111-1111-1111-1111-111111111111";
 let seq = 0;
 
-// Build a minimal io/socket harness, attach the real handlers, and
-// return a driver that can connect fake sockets and fire events.
-// opts.maxPerIp overrides MAX_SOCKETS_PER_IP (read at attach time).
+// Builds a minimal io/socket harness, attaches the real handlers, and
+// returns a driver that can connect fake sockets and fire events.
+// FYI opts.maxPerIp overrides MAX_SOCKETS_PER_IP, read at attach time.
 function makeHarness(opts = {}) {
   let emitCount = 0;
   venueState.emitVenueState = async () => { emitCount += 1; };
@@ -64,9 +64,9 @@ function makeHarness(opts = {}) {
     else process.env.MAX_SOCKETS_PER_IP = prevEnv;
   }
 
-  // Connect an anonymous socket from `ip`, returning a driver.
-  // onHandlers maps event → array of listeners, because the production
-  // connection handler registers two `disconnect` listeners and real
+  // Connects an anonymous socket from `ip` and returns a driver.
+  // onHandlers maps event → array of listeners since the production
+  // connection handler registers two `disconnect` listeners, and real
   // socket.io fires both (a single-slot map would drop the decrement).
   function connect(ip) {
     const onHandlers = new Map();
@@ -111,7 +111,7 @@ test("subscribe_venue rejects non-UUID event ids without a snapshot or budget co
   }
   assert.equal(h.emits(), 0, "malformed ids must not trigger emitVenueState");
 
-  // ...and the rejected calls must not have consumed the rate budget.
+  // ...and the rejected calls must not have consumed teh rate budget.
   await c.fire("subscribe_venue", { event_id: VALID_ID });
   assert.equal(h.emits(), 1, "a valid id after junk should still emit");
 });

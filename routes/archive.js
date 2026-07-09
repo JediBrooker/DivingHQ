@@ -1,4 +1,4 @@
-// Results archive — public listing of every Live or Completed
+// Results archive: public listing of every Live or Completed
 // event across the platform. Powers the unified Scoreboard
 // "browse all meets" page and the per-event recap.
 //
@@ -6,11 +6,11 @@
 //   GET /api/archive/clubs           distinct clubs in the archive
 //   GET /api/archive/:eventId/results  per-event recap payload
 //
-// All three are public — the data is already exposed via the
-// live scoreboards. No auth gate, no org filtering. The list
-// query folds in current_round + last_diver_name for Live
-// events so the "LIVE NOW" banner reads "Round 3 · Phoenix
-// Patel diving" instead of a generic placeholder.
+// All three are public, the data's already exposed via the live
+// scoreboards anyway. No auth gate, no org filtering. The list
+// query folds in current_round + last_diver_name for Live events
+// so the "LIVE NOW" banner reads "Round 3 · Phoenix Patel diving"
+// instead of a generic placeholder.
 //
 // Mounted via:
 //   app.use(require('./routes/archive')({ pool }))
@@ -21,9 +21,9 @@ const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 // Short-TTL cache for the two unbounded all-time aggregations
 // (/api/archive and /api/archive/clubs). Lives in
 // lib/archive-cache.js because the listing's `status` field is
-// load-bearing for the SPA's live-vs-recap layout choice — the
+// load-bearing for the SPA's live-vs-recap layout choice. The
 // event status-flip route invalidates it on every successful
-// transition; the TTL only bounds the harmless fields
+// transition, so the TTL only needs to bound the harmless fields
 // (current_round, last_diver_name, counts).
 const archiveCache = require("../lib/archive-cache");
 const archiveCacheGet = archiveCache.get;
@@ -31,24 +31,24 @@ const archiveCacheSet = archiveCache.set;
 
 module.exports = function createArchiveRouter({ pool, readPool }) {
   if (!pool) throw new Error("createArchiveRouter requires { pool }");
-  // Archive payloads are entirely "what happened" reads. Route
-  // through the optional read replica so a long meet day's
-  // archive browsing doesn't compete with live-scoring writes
-  // for primary connections. Falls back to the writer when no
-  // replica is configured.
+  // Archive payloads are entirely "what happened" reads, so route
+  // them through the optional read replica. Keeps a long meet
+  // day's archive browsing from competing with live-scoring
+  // writes for primary connections. Falls back to the writer
+  // when no replica is configured, just in case.
   const reads = readPool || pool;
   const router = express.Router();
 
   // -------------------------------------------------------------
-  // GET /api/archive — every Live or Completed event with the
+  // GET /api/archive: every Live or Completed event with the
   // facets the unified Scoreboard's filter strip needs:
   // competitor_count, club_count, club_ids[], plus current_round
   // + last_diver_name for Live entries.
   //
-  // Optional pagination (additive — the default request returns
-  // the same full array the SPA consumes today):
+  // Optional pagination (additive, the default request still
+  // returns the same full array the SPA consumes today):
   //   ?limit=N    cap the result count (clamped to 1..500)
-  //   ?before=ISO cursor — only events created strictly before
+  //   ?before=ISO cursor, only events created strictly before
   //               this timestamp. Pass the created_at of the last
   //               row from the previous page to fetch the next
   //               one. (Live/Upcoming rows sort first regardless
@@ -58,9 +58,9 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   router.get("/api/archive", async (req, res) => {
     try {
       // Parse the optional pagination params up front. limit is
-      // clamped (same convention as /api/judges/directory); an
-      // unparseable `before` cursor is a hard 400 — silently
-      // ignoring it would quietly return the full unpaged set.
+      // clamped (same convention as /api/judges/directory). An
+      // unparseable `before` cursor is a hard 400, sanity check so
+      // we don't silently return the full unpaged set instead.
       const limit = req.query.limit != null
         ? Math.min(Math.max(Number(req.query.limit) || 0, 1), 500)
         : null;
@@ -73,31 +73,30 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
         before = new Date(t).toISOString();
       }
 
-      // Cache only the default (un-paginated) request — that's
-      // the one every first-time scoreboard visitor fires, and
-      // skipping arbitrary cursor variants keeps the key space
-      // bounded.
+      // Cache only the default (un-paginated) request, that's the
+      // one every first-time scoreboard visitor fires. Skipping
+      // arbitrary cursor variants keeps the key space bounded.
       const cacheable = limit == null && before == null;
       if (cacheable) {
         const hit = archiveCacheGet("archive");
         if (hit) return res.json(hit);
       }
       // Each event row gains a competitor count, a club count, and
-      // the list of distinct club ids that participated. The list
+      // the list of distinct club ids that participated. That list
       // is what powers the client-side "filter by club" dropdown
       // without an extra round trip per filter change.
       //
       // Returns Live + Completed events so the unified Scoreboard
       // page can show both in the same browsable list. The status
-      // column lets the client render a "LIVE NOW" badge / banner
+      // column lets the client render a "LIVE NOW" badge/banner
       // for in-progress meets.
       //
       // For Live events we additionally fold in the current round
-      // (= max round_number with any score recorded) and the
-      // most-recent diver to score. The "LIVE NOW" banner uses
-      // these to read "Round 3 · Phoenix Patel diving" instead of
-      // a generic placeholder, which is far more compelling for a
-      // spectator deciding whether to tap in.
+      // (max round_number with any score recorded) and the most
+      // recent diver to score. The "LIVE NOW" banner uses these to
+      // read "Round 3 · Phoenix Patel diving" instead of a generic
+      // placeholder, which is way more compelling for a spectator
+      // deciding whether to tap in.
       const events = await reads.query(
         `SELECT e.id, e.name, e.gender, e.height, e.total_rounds, e.number_of_judges,
                 e.event_type, e.status,
@@ -155,12 +154,12 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   });
 
   // -------------------------------------------------------------
-  // GET /api/archive/clubs — distinct clubs that have appeared
+  // GET /api/archive/clubs: distinct clubs that have appeared
   // in any live or completed meet. Drives the club filter
   // dropdown on the unified Scoreboard.
   //
-  // Optional ?limit=N (clamped to 1..500) caps the result count —
-  // additive, same convention as /api/archive above; the default
+  // Optional ?limit=N (clamped to 1..500) caps the result count.
+  // Additive, same convention as /api/archive above, the default
   // request still returns the full set the dropdown consumes.
   // -------------------------------------------------------------
   router.get("/api/archive/clubs", async (req, res) => {
@@ -168,7 +167,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
       const limit = req.query.limit != null
         ? Math.min(Math.max(Number(req.query.limit) || 0, 1), 500)
         : null;
-      // Cache only the default (un-capped) request — same posture
+      // Cache only the default (un-capped) request, same posture
       // as /api/archive: arbitrary limit variants stay out of the
       // key space.
       const cacheable = limit == null;
@@ -199,7 +198,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   });
 
   // -------------------------------------------------------------
-  // GET /api/archive/:eventId/results — per-event recap.
+  // GET /api/archive/:eventId/results: per-event recap.
   //
   // Returns:
   //   event:     event metadata
@@ -242,12 +241,13 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
              GROUP BY t.id, t.name, t.short_code
            ),
            comp_standings AS (
-             /* Group by u.id (not just u.full_name) so two divers
-                sharing a name don't merge into one inflated row.
-                u.id is the competitor_id the SPA uses to deep-
-                link a standings row → /profile/<id>. partner_id is
-                exposed alongside partner_name so the synchro
-                partner gets the same /profile/<id> link. */
+             /* Group by u.id (not just u.full_name): two divers
+                sharing a name would otherwise merge into one
+                inflated row, gotcha we hit early on. u.id is the
+                competitor_id the SPA uses to deep-link a standings
+                row → /profile/<id>. partner_id is exposed alongside
+                partner_name so the synchro partner gets the same
+                /profile/<id> link. */
              SELECT u.id AS competitor_id,
                     u.full_name, o.country_code, cl.name AS club_name,
                     p.partner_id AS partner_id,
@@ -270,7 +270,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
            ),
            team_standings_padded AS (
              /* Pad the team-standings shape so the UNION below
-                aligns: team rows have no individual competitor
+                lines up: team rows have no individual competitor,
                 so competitor_id is NULL. */
              SELECT NULL::uuid AS competitor_id, *
              FROM team_standings
@@ -292,11 +292,11 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
         ),
         reads.query(
           /* Group by u.id (not full_name) so same-named divers stay
-             separate. STRING_AGG ordered by judge_number (panel
+             separate. STRING_AGG is ordered by judge_number (panel
              position), not judge_id (random UUID), so the chip
              order matches the actual panel layout the audience saw. */
           // Dive-by-dive scope: d.dd is a grouping column, so it
-          // feeds the UDF directly (no MAX() wrapper).
+          // feeds straight into the UDF (no MAX() wrapper needed).
           `${perDiveSelect({
             select: [
               "u.id AS competitor_id", "u.full_name", "o.country_code", "cl.name AS club_name",
@@ -309,11 +309,11 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
             pointsAlias: "total_dive_score",
             selectExtra: [
               "STRING_AGG(s.score::text, ',' ORDER BY ej.judge_number) AS judge_scores",
-              `/* Parallel array — same order as judge_scores so
+              `/* Parallel array, same order as judge_scores so
                      the SPA can zip chip i with judge_numbers[i]
-                     and look up identity from the top-level
-                     panel array. Robust to events where the
-                     panel was edited mid-meet (sparse positions). */
+                     and look up identity from the top-level panel
+                     array. Stays robust for events where the panel
+                     got edited mid-meet (sparse positions). */
                   JSON_AGG(ej.judge_number ORDER BY ej.judge_number) AS judge_numbers`,
             ],
             extraJoins: [
@@ -336,11 +336,11 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
            ORDER BY u.full_name ASC, u.id ASC, s.round_number ASC`,
           [req.params.eventId],
         ),
-        // Panel — see /api/scoreboard/:id for the rationale: lets
+        // Panel, see /api/scoreboard/:id for the rationale: lets
         // the scoreboard show a tooltip on each chip and link the
         // chip to /judge-profile/<id>. Same shape across both
-        // endpoints so the SPA's panel-by-number map can be built
-        // identically for live + archived events.
+        // endpoints so the SPAs panel-by-number map can be built
+        // the same way for live + archived events.
         reads.query(
           `SELECT ej.judge_id, ej.judge_number,
                   u.full_name,

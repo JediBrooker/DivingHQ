@@ -1,9 +1,9 @@
-// Meet manager edits a diver's dive mid-event (WA Article 6.7.4
-// — change-of-dives via the official form, signed by the
+// Meet manager edits a diver's dive mid-event (WA Article 6.7.4,
+// change-of-dives via the official form, signed by the
 // athlete's representative under Referee oversight).
 //
 // The flow rides on POST /api/events/:id/roster, an upsert
-// endpoint already used for late-entry adds. This commit split
+// endpoint already used late-entry adds. This commit split
 // the audit action so an INSERT (new roster row) audits as
 // `roster.late_entry_added` while an ON-CONFLICT UPDATE (dive
 // swap on an existing row) audits as `roster.dive_edited`.
@@ -36,9 +36,9 @@ test("edit-dive: existing row updates audit as dive_edited; new row audits as la
     name: "E2E Edit-Dive",
     height: "3m",
     number_of_judges: 5,
-    // 3 rounds so the round-3 add below is a legitimate fresh
-    // INSERT — the roster upsert now bounds-checks round_number
-    // against total_rounds (phantom rounds are rejected with 400).
+    // Heads up: 3 rounds so the round-3 add below is a legitimate
+    // fresh INSERT, since the roster upsert now bounds-checks
+    // round_number against total_rounds (phantom rounds get rejected with 400).
     total_rounds: 3,
   });
 
@@ -90,7 +90,7 @@ test("edit-dive: existing row updates audit as dive_edited; new row audits as la
   expect(after.rows[1].dive_id).toBe(dive101B);
 
   // Audit row action = 'roster.dive_edited' (NOT
-  // late_entry_added — the row already existed).
+  // late_entry_added, since the row already existed).
   const editAudit = await setup.pool.query(
     `SELECT action, metadata FROM audit_log
        WHERE org_id = $1 AND entity_type = 'roster_entry'

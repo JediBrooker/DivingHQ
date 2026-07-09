@@ -1,38 +1,38 @@
 -- =============================================================
--- MIGRATION 029 — REUSABLE WEB PUSH BACKEND
+-- MIGRATION 029: REUSABLE WEB PUSH BACKEND
 --
 -- Two tables wire the push engine for everything the app might
 -- want to push (referee sign-off, judge calls, "you're up next"
 -- nudges, role-request approvals, etc.). Designed to outlive any
--- single feature — categories are a free-form text key so a new
--- caller adds rows without a schema change.
+-- single feature, since categories are just a free-form text key
+-- so a new caller can add rows without needing a schema change.
 --
---   push_subscriptions  — one row per (user, browser/device).
---                         Stores the Web Push endpoint + the
---                         encryption keys the push service hands
---                         the SPA at subscription time.
---   notifications       — server-side record of every dispatch.
---                         Driver for retries, audit, ack tracking,
---                         and the SPA's "what did I miss" inbox.
+--   push_subscriptions: one row per (user, browser/device).
+--                        Stores the Web Push endpoint + the
+--                        encryption keys the push service hands
+--                        the SPA at subscription time.
+--   notifications: server-side record of every dispatch.
+--                   Driver for retries, audit, ack tracking,
+--                        and the SPA's "what did I miss" inbox.
 --
 -- Status enum values:
---   'pending'      — row inserted, not yet sent
---   'sent'         — push delivered to the push service (no
---                    guarantee the user saw it; that's what
---                    'acknowledged' is for)
---   'acknowledged' — user interacted (tapped notification, hit
---                    Approve/Deny, or the SPA inbox marked it
---                    read)
---   'failed'       — push service rejected (invalid endpoint,
---                    quota, etc.). failure_reason carries the
---                    HTTP status / error string.
---   'expired'      — past expires_at without ever sending or
---                    being acknowledged
+--   'pending':      row inserted, not yet sent
+--   'sent':         push delivered to the push service (no
+--                   guarantee the user actually saw it, that's
+--                   what 'acknowledged' is for)
+--   'acknowledged': user interacted (tapped notification, hit
+--                   Approve/Deny, or the SPA inbox marked it
+--                   read)
+--   'failed':       push service rejected (invalid endpoint,
+--                   quota, etc.). failure_reason carries the
+--                   HTTP status / error string.
+--   'expired':      past expires_at without ever sending or
+--                   being acknowledged
 --
 -- Indexes are deliberate: (user_id, status) for the SPA inbox
 -- query, (status, expires_at) for the periodic expirer, and
--- (endpoint) UNIQUE so the same browser doesn't get duplicate
--- subscriptions when re-registering on the same device.
+-- (endpoint) UNIQUE so the same browser doesn't get a duplicate
+-- subscription when re-registering on the same device.
 -- =============================================================
 
 BEGIN;
@@ -41,15 +41,15 @@ CREATE TABLE IF NOT EXISTS public.push_subscriptions (
     id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id     uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     -- Endpoint URL the push service handed the SPA at subscribe.
-    -- Unique so re-subscribing from the same browser updates the
-    -- existing row rather than creating a duplicate.
+    -- Unique so re-subscribing from the same browser just updates
+    -- the existing row instead of creating a duplicate.
     endpoint    text NOT NULL,
     -- ECDH public key + auth secret the push service needs to
     -- encrypt payloads. Both are URL-safe base64 strings.
     p256dh_key  text NOT NULL,
     auth_key    text NOT NULL,
     -- User-agent at subscribe time, for a future "manage your
-    -- devices" UI. Not used by the engine itself.
+    -- devices" UI. Not used by the engine itself yet.
     user_agent  text,
     created_at  timestamptz NOT NULL DEFAULT now(),
     last_used_at timestamptz,

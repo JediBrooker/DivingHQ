@@ -1,24 +1,24 @@
 // Two-factor auth flow.
 //
 // What this exercises end-to-end:
-//   1. Admin user starts /api/auth/2fa/setup → gets a base32
-//      secret + 10 recovery codes.
+//   1. Admin user starts /api/auth/2fa/setup, gets a base32 secret
+//      plus 10 recovery codes.
 //   2. Admin generates a fresh TOTP for that secret (using the
 //      same speakeasy library the server uses) and POSTs it to
-//      /api/auth/2fa/confirm — 2FA is now active.
+//      /api/auth/2fa/confirm, so 2FA is now active.
 //   3. Logging in with username+password no longer returns a
-//      session token; instead it returns
+//      session token, instead it returns
 //      { needs_totp: true, totp_token: "<5-min jwt>" }.
 //   4. POSTing the totp_token + a fresh 6-digit code to
 //      /api/auth/login/totp returns the real session token.
 //   5. POSTing the totp_token + a recovery code (from the setup
-//      response) ALSO returns a session token, AND the recovery
-//      code is consumed (replaying it 401s).
+//      response) also returns a session token, and the recovery
+//      code gets consumed (replaying it 401s).
 //   6. /api/auth/2fa/disable with password + a current TOTP
 //      clears the columns and login goes back to one-step.
 //
-// We use speakeasy directly to compute the TOTP — same library
-// the server uses to verify, so codes match deterministically.
+// We use speakeasy directly to compute the TOTP, same library the
+// server uses to verify, so codes match deterministically.
 
 const { test, expect } = require("@playwright/test");
 const speakeasy = require("speakeasy");
@@ -26,12 +26,13 @@ const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
 
-// The server's verify uses ±1 step (±30s) AND a replay guard
-// (migration 063): each accepted code consumes its time-step,
-// and any code at or below the consumed step is rejected. So
-// back-to-back verifications need codes from ADVANCING steps —
-// pass stepOffset=1 to mint the next window's code (still inside
-// the ±1 verify window, but strictly newer than the last one).
+// The server's verify uses a ±1 step (±30s) window plus a replay
+// guard (migration 063): each accepted code consumes its
+// time-step, and any code at or below the consumed step gets
+// rejected. So back-to-back verifications need codes from
+// advancing steps, pass stepOffset=1 to mint the next window's
+// code (still inside the ±1 verify window, but strictly newer
+// than the last one).
 function totpFor(secret, stepOffset = 0) {
   return speakeasy.totp({
     secret,
@@ -41,9 +42,9 @@ function totpFor(secret, stepOffset = 0) {
 }
 
 // The identity the SPA stores after a successful login. Since the
-// httpOnly-cookie migration the client reads this from the response
-// body's `user` field (it can no longer decode the JWT itself), so the
-// mocked /login/totp response must carry it.
+// httpOnly-cookie migration, the client reads this from the response
+// body's `user` field (it can't decode the JWT itself anymore), so
+// the mocked /login/totp response has to carry it.
 const FAKE_SESSION_USER = {
   id: "00000000-0000-4000-8000-000000000001",
   username: "totp-ui-admin",
@@ -137,8 +138,8 @@ test("admin enables 2FA, logs in via TOTP and via recovery code", async ({
 
   // ---- 3. Plain login is now two-step. ----
   // Note: confirming 2FA bumps token_version, which would
-  // invalidate the OLD admin token if we tried to use it for
-  // anything below. We don't — we go through login again.
+  // invalidate the old admin token if we tried to use it for
+  // anything below. We don't, we go through login again.
   const stepOne = await request.post("/api/auth/login", {
     data: { username, password: setup.TEST_PASSWORD },
   });
@@ -152,7 +153,7 @@ test("admin enables 2FA, logs in via TOTP and via recovery code", async ({
   const stepTwo = await request.post("/api/auth/login/totp", {
     data: {
       totp_token: stepOneBody.totp_token,
-      // One step ahead of the /confirm code — same-step reuse is
+      // One step ahead of the /confirm code, same-step reuse is
       // now a rejected replay.
       code:       totpFor(setupBody.base32, 1),
     },
@@ -180,7 +181,7 @@ test("admin enables 2FA, logs in via TOTP and via recovery code", async ({
   // Server also surfaces a warning when a recovery code is used.
   expect(recoveryBody.warning).toMatch(/recovery code consumed/i);
 
-  // Replaying the same recovery code MUST 401 — they're one-time.
+  // Replaying the same recovery code must 401, they're one-time use.
   const stepOneReplay = await request.post("/api/auth/login", {
     data: { username, password: setup.TEST_PASSWORD },
   });
@@ -199,8 +200,8 @@ test("admin enables 2FA, logs in via TOTP and via recovery code", async ({
       password: setup.TEST_PASSWORD,
       // A fresh recovery code, not a TOTP: /confirm consumed
       // step 0 and the login consumed step +1, which exhausts
-      // the ±1 verify window until the wall clock advances —
-      // exactly what the replay guard is for. Recovery codes
+      // the ±1 verify window until the wall clock advances. This
+      // is exactly what the replay guard is for. Recovery codes
       // are single-use but not time-stepped.
       code:     setupBody.recovery_codes[1],
     },
@@ -230,7 +231,7 @@ test("login UI completes the second factor with a recovery code", async ({ page 
   await expect(page.getByText(/recovery code consumed/i)).toBeVisible();
 });
 
-// pool teardown left to process exit (Playwright tears down the
+// Pool teardown left to process exit (Playwright tears down the
 // worker process anyway). Calling pool.end() here was a foot-gun
-// when two specs landed in the same worker — the second hit a
+// when two specs landed in the same worker, the second one hit a
 // closed pool. node-postgres handles process exit gracefully.

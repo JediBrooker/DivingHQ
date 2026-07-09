@@ -29,7 +29,7 @@ test("the drawer is closed by default, opens from Tools, lazy-mounts sections, c
   await page.waitForLoadState("networkidle");
   await setup.selectControlEvent(page, "Drawer Event");
 
-  // Closed by default: NONE of the drawer markup is in the DOM.
+  // closed by default: none of the drawer markup is in the DOM
   await expect(page.locator(".cv2-drawer")).toHaveCount(0);
 
   // Open from the stage-head Tools control.
@@ -44,7 +44,7 @@ test("the drawer is closed by default, opens from Tools, lazy-mounts sections, c
   await expect(page.locator(".cv2-drawer-audit")).toHaveCount(0);
   await page.getByRole("button", { name: /Recent audit/ }).click();
   await expect(page.locator(".cv2-drawer-audit")).toBeVisible();
-  // One section open at a time: opening audit closed reserves.
+  // one section open at a time, opening audit closed reserves
   await expect(page.locator(".cv2-drawer-reserves")).toHaveCount(0);
 
   // The broadcast chooser is not mounted until its section is opened.

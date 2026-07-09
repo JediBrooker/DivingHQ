@@ -1,9 +1,9 @@
-/* Shot clock — World Aquatics Article 8.5.5: "If the Athlete
+/* Shot clock: World Aquatics Article 8.5.5, "If the Athlete
  * does not dive within ONE (1) MINUTE after the Referee has
  * issued a warning [per 8.5.4], the Referee will declare a
  * failed dive". The diver is given "sufficient time for
- * preparation and execution" before that warning per 8.5.4 —
- * that's a Referee judgment call, not a fixed timer — so this
+ * preparation and execution" before that warning per 8.5.4
+ * (that's a Referee judgment call, not a fixed timer), so this
  * clock represents the post-warning 60-second window.
  *
  * Lifted out of ControlView.vue when that file crossed 7,500
@@ -41,11 +41,11 @@ export function useShotClock({ defaultSeconds = 60 } = {}) {
         shotClock.value = 0
         shotClockExpired.value = true
         stopShotClock()
-        // Audible beep removed — pool decks already have a horn /
+        // Audible beep removed: pool decks already have a horn /
         // referee whistle that the operator listens for, and the
         // visual .shot-clock-expired flash gives the same signal
-        // without competing with the venue audio. The shotClockExpired
-        // flag still drives the colour change in the CSS.
+        // without competing with the venue audio. shotClockExpired
+        // still drives the colour change in the CSS.
       }
     }, 1000)
   }
@@ -84,15 +84,15 @@ export function useShotClock({ defaultSeconds = 60 } = {}) {
 
   const shotClockClass = computed(() => {
     if (shotClockExpired.value) return 'shot-clock-expired'
-    // Thresholds scaled to the 60-sec total — red at 10s, amber at 20s.
+    // Thresholds scaled to the 60-sec total: red at 10s, amber at 20s.
     if (shotClock.value <= 10) return 'shot-clock-warn'
     if (shotClock.value <= 20) return 'shot-clock-amber'
     return ''
   })
 
-  // Belt-and-braces cleanup — Control Room unmount path already
-  // calls stopShotClock() but a future caller might not, and a
-  // dangling setInterval would tick forever.
+  // Belt-and-braces cleanup: the Control Room unmount path already
+  // calls stopShotClock(), but just in case a future caller forgets,
+  // a dangling setInterval would tick forever otherwise.
   onUnmounted(() => stopShotClock())
 
   return {

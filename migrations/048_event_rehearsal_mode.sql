@@ -1,10 +1,10 @@
 -- =============================================================
--- MIGRATION 048 — EVENT REHEARSAL MODE
+-- MIGRATION 048: event rehearsal mode
 --
 -- Adds a first-class dry-run flag to events. Rehearsal events use
 -- the same roster, panel, check-in, sign-off, and scoring surfaces
--- as real meets, but product code excludes them from public archive,
--- analytics, event-start/result emails, and record-setting.
+-- as real meets, but product code excludes them from the public
+-- archive, analytics, event-start/result emails, and record-setting.
 -- =============================================================
 
 BEGIN;

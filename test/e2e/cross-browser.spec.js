@@ -1,25 +1,25 @@
 // Cross-browser smoke spec.
 //
 // Runs against two non-Chromium engine profiles:
-//   * firefox            — desktop Firefox / Gecko
-//   * mobile-chrome      — Pixel 7 / Chromium with mobile UA
+//   * firefox            - desktop Firefox / Gecko
+//   * mobile-chrome      - Pixel 7 / Chromium with mobile UA
 //
 // (Mobile WebKit / iOS Safari is covered in detail by
-// mobile-safari.spec.js; that one tests iOS-specific
+// mobile-safari.spec.js, that one tests iOS-specific
 // attributes the other engines don't surface.)
 //
 // What we're guarding against is silent regression on browsers
-// that DON'T support the newer CSS features we lean on. The iOS
+// that don't support the newer CSS features we lean on. The iOS
 // Safari passes 1-10 added `dvh` viewport units, `-webkit-tap-
 // highlight-color`, and `@media (hover: hover)` rules. Each has
-// a fallback for older engines; this spec asserts those
-// fallbacks fire correctly.
+// a fallback for older engines, and this spec just checks those
+// fallbacks actually fire.
 //
 // Specifically:
 //   * 100dvh body min-height has a 100vh fallback line so
 //     pre-Q4-2022 browsers don't end up with no min-height at
 //     all.
-//   * Login form mounts + Sign-In button is reachable.
+//   * Login form mounts and the Sign-In button is reachable.
 //   * No console errors during render.
 //   * No horizontal overflow.
 //   * Page renders without the Vue mount silently failing on a
@@ -43,7 +43,7 @@ test("login page renders and Sign-In button is reachable", async ({ page }) => {
   await expect(button).toBeVisible();
 
   // Body should have a sane min-height. We don't care whether
-  // it's computed from `vh` or `dvh` — only that the resolved
+  // it's computed from `vh` or `dvh`, just that the resolved
   // value is non-zero and at least the viewport height (i.e.
   // the fallback line didn't get dropped).
   const minHeight = await page.locator("body").evaluate(
@@ -73,9 +73,9 @@ test("page renders without console errors", async ({ page }) => {
   await gotoLogin(page);
   await page.waitForLoadState("networkidle");
 
-  // Same noise filter as mobile-safari.spec — Google Fonts,
+  // Same noise filter as mobile-safari.spec: Google Fonts,
   // service worker, TLS errors from preconnects are all
-  // out-of-our-control for the local test environment.
+  // out of our control in the local test environment.
   const ours = errors.filter((e) =>
     !/fonts\.gstatic\.com|fonts\.googleapis\.com|service.worker|TLS error|Failed to load resource|NS_ERROR|net::ERR/i.test(e)
   );
@@ -84,7 +84,7 @@ test("page renders without console errors", async ({ page }) => {
 
 test("login form inputs accept text (engine doesn't break event handling)", async ({ page }) => {
   await gotoLogin(page);
-  // Type into the username field — if Vue's v-model is broken
+  // Type into the username field - if Vue's v-model is broken
   // under this engine, this fails outright. Catches the kind
   // of "SPA mounts but is dead" regression we'd otherwise miss.
   const username = page.locator('input[autocomplete="username"]');

@@ -1,13 +1,13 @@
 // Pins the P6.4 auto-advance countdown to ControlView.vue's frozen
-// contract: Manual never arms, a referee signal blocks the timer, the
+// contract: Manual never arms, a referee signal blocks the timer, and the
 // countdown decrements once per tick and fires exactly once at zero.
-// DB-less; drives a fake interval scheduler so no real wall-clock.
+// DB-less, drives a fake interval scheduler so there's no real wall-clock.
 const { test, before, beforeEach } = require('node:test')
 const assert = require('node:assert/strict')
 
 let useAutoAdvance, readAutoAdvanceSeconds, AUTO_ADVANCE_KEY
 
-// Minimal localStorage stub so the composable's persistence path runs.
+// Minimal localStorage stub, just enough for the composable's persistence path to run.
 const mem = {}
 globalThis.localStorage = {
   getItem: (k) => (k in mem ? mem[k] : null),
@@ -15,7 +15,7 @@ globalThis.localStorage = {
   removeItem: (k) => { delete mem[k] },
 }
 
-// Fake scheduler: capture the tick callback so the test drives time.
+// Fake scheduler: grabs the tick callback so the test can drive time itself.
 function makeScheduler() {
   let cb = null
   return {
@@ -75,7 +75,7 @@ test('countdown decrements per tick and fires exactly once at zero', () => {
   fireOnce()
   assert.equal(autoAdvanceCountdown.value, 0, 'reset to idle after firing')
   assert.equal(fired, 1, 'callback ran once')
-  fireOnce() // extra ticks after disarm must not re-fire
+  fireOnce() // sanity check: extra ticks after disarm shouldn't re-fire
   assert.equal(fired, 1)
 })
 
