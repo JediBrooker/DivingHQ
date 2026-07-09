@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { useRoute, RouterLink, onBeforeRouteLeave } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
@@ -11,22 +11,6 @@ import OfflineBanner from '@/components/OfflineBanner.vue'
 import SyncStatusBadge from '@/components/SyncStatusBadge.vue'
 import BigScoreDisplay from '@/components/BigScoreDisplay.vue'
 import { useOutbox } from '@/composables/useOutbox'
-
-// Feature flag (P1 of the offline-resilience work; see
-// docs/offline-p1-design.md). Build-time constant via Vite's
-// import.meta.env. Default off in production .env; on for CI in
-// .github/workflows/ci.yml + canary federations until proven.
-//
-// When OFF, this view behaves exactly as it did pre-outbox: one
-// in-memory pendingScore slot, drained on socket reconnect.
-// When ON, every submit routes through src/lib/outbox.js —
-// scores survive a tab close + indefinite outage (up to the 72h
-// idempotency retention) and replay on reconnect.
-const OUTBOX_ENABLED = import.meta.env.VITE_OFFLINE_OUTBOX_ENABLED === '1'
-
-// User fingerprinting lives in src/composables/useOutbox.js; the
-// composable handles outbox creation + identity scoping. Nothing
-// in JudgeView needs to know how the fingerprint is computed.
 
 const { t } = useI18n()
 
@@ -86,10 +70,6 @@ const judgeLabel = ref(user?.full_name || 'Judge')
 // composable's + this view's) would race.
 const submitted = ref(false)
 const judgeNumber = ref(null)
-// Legacy single-slot pending (active when OUTBOX_ENABLED is off).
-// In outbox mode this stays null and `pendingCount` drives the UI.
-const pendingScore = ref(null)
-
 // Manual-fallback "big number" mode (P5). When the operator is in
 // fallback mode (typing scores from across the room), the judge
 // taps "Show big" to fill the screen with their submitted score.
@@ -267,34 +247,36 @@ function joinEventRoom() {
 // would stack a duplicate panel/keypad handler every time the
 // judge navigates back here.
 useSocketEvent(socket, 'connect', () => {
-  if (OUTBOX_ENABLED) {
-    // Drain any entries queued while offline (this session or a
-    // prior session that closed before the drain completed).
-    drainOutbox()
-  } else if (pendingScore.value) {
-    // Legacy single-slot pending.
-    socket.emit('submit_score', pendingScore.value)
-    pendingScore.value = null
-  }
+  drainOutbox()
   joinEventRoom()
 })
 
+const { isOffline } = outboxState
+
+function onJudgeBeforeUnload(e) {
+  if (!isOffline.value && pendingCount.value === 0) return
+  e.preventDefault()
+}
+
+onBeforeRouteLeave(() => {
+  if (!isOffline.value && pendingCount.value === 0) return true
+  const msg = isOffline.value
+    ? 'You are offline — leaving the Judge Terminal will lose queued scores. Stay on this page?'
+    : `${pendingCount.value} score(s) are still syncing. Leave anyway?`
+  return window.confirm(msg) // eslint-disable-line no-alert
+})
+
 onMounted(() => {
-  // The socket may already be connected (composable reuses a
-  // singleton across views). Subscribe on mount as well so the
-  // room join doesn't depend on a reconnect.
   if (socket.connected) joinEventRoom()
   acquireWakeLock()
   document.addEventListener('visibilitychange', onVisibilityChange)
-
-  // Outbox: useOutbox() already wires the 'change' listener +
-  // initial refresh. We just kick a drain in case we connected
-  // before this view mounted.
-  if (OUTBOX_ENABLED && socket.connected) drainOutbox()
+  window.addEventListener('beforeunload', onJudgeBeforeUnload)
+  if (socket.connected) drainOutbox()
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', onVisibilityChange)
+  window.removeEventListener('beforeunload', onJudgeBeforeUnload)
   try { wakeLock.value?.release?.() } catch { /* ignore */ }
   wakeLock.value = null
 })
@@ -422,34 +404,10 @@ async function submitScore() {
   const clearSignal = signaled.value
   if (clearSignal) signaled.value = false
 
-  if (OUTBOX_ENABLED) {
-    // Queue the score for delivery. push() returns immediately
-    // (IDB write happens in the background); drain() fires only
-    // if we're online.
-    try {
-      await getOutbox().push('submit_score', payload, { actorLocalTime: new Date() })
-      refreshPendingCount()
-      if (clearSignal && socket.connected) {
-        socket.emit('judge_signal', {
-          event_id:      activeDiver.value.event_id,
-          competitor_id: activeDiver.value.competitor_id,
-          round_number:  activeDiver.value.round_number,
-          judge_id:      user?.id,
-          judge_number:  activeDiver.value.judge_number || null,
-          signaled:      false,
-        })
-      }
-      if (socket.connected) drainOutbox()
-    } catch (err) {
-      // Push failed (oversized payload, IDB unavailable). Surface
-      // to the user; submitted=false so they can retry.
-      submitted.value = false
-      showInfo(`Could not queue score: ${err.message}`)
-    }
-  } else if (socket.connected) {
-    // Legacy online path.
-    socket.emit('submit_score', payload)
-    if (clearSignal) {
+  try {
+    await getOutbox().push('submit_score', payload, { actorLocalTime: new Date() })
+    refreshPendingCount()
+    if (clearSignal && socket.connected) {
       socket.emit('judge_signal', {
         event_id:      activeDiver.value.event_id,
         competitor_id: activeDiver.value.competitor_id,
@@ -459,9 +417,10 @@ async function submitScore() {
         signaled:      false,
       })
     }
-  } else {
-    // Legacy offline path — single-slot in-memory.
-    pendingScore.value = payload
+    if (socket.connected) drainOutbox()
+  } catch (err) {
+    submitted.value = false
+    showInfo(`Could not queue score: ${err.message}`)
   }
 }
 
@@ -489,15 +448,11 @@ function toggleRefereeSignal() {
 }
 
 const submitLabel = computed(() => {
-  // Outbox mode: surface the queue depth so the judge knows their
-  // taps are landing even when the socket is bouncing.
-  if (OUTBOX_ENABLED && pendingCount.value > 0) {
+  if (pendingCount.value > 0) {
     return pendingCount.value === 1
       ? '⏳ 1 pending — will send when reconnected'
       : `⏳ ${pendingCount.value} pending — will send when reconnected`
   }
-  // Legacy single-slot pending state.
-  if (pendingScore.value) return '⏳ Reconnecting — will send automatically'
   // Signaled trumps submitted: the judge has flagged a need to
   // correct, so prompt them to enter + submit a fresh score.
   if (signaled.value && submitted.value) return 'Submit Corrected Score'
@@ -511,25 +466,13 @@ const submitLabel = computed(() => {
 
 <template>
   <div class="judge-layout">
-    <!-- Offline / pending-sync banner. Replaces the old
-         conn-banner (which only showed when the socket was
-         dropped) with a richer signal: also visible when there
-         are pending / failed / conflict entries in the outbox
-         even while online (drain in flight, etc.). Behind the
-         OUTBOX_ENABLED feature flag — falls back to the
-         legacy connection banner when the flag is off so
-         today's pre-outbox behaviour stays identical. -->
-    <OfflineBanner v-if="OUTBOX_ENABLED" />
-    <div v-else-if="!socket.isConnected.value" class="conn-banner">
-      <span class="conn-dot"></span>
-      {{ $t('judge.panel_offline') }}
-    </div>
+    <OfflineBanner />
     <!-- Per-entry sync-status strip. Each queued submit gets a
          chip showing its score + current sync state (pending,
          inflight, failed, conflict). Synced entries drop off
          the strip automatically because refreshQueuedEntries
          filters them out. Empty list → renders nothing. -->
-    <div v-if="OUTBOX_ENABLED && queuedEntries.length > 0" class="queued-strip">
+    <div v-if="queuedEntries.length > 0" class="queued-strip">
       <span class="queued-strip-label">{{ $t('judge.queued_label') }}</span>
       <span v-for="entry in queuedEntries"
             :key="entry.idempotency_key"
@@ -730,25 +673,6 @@ const submitLabel = computed(() => {
   font-family: var(--font-mono); font-size: 11px; font-weight: 700;
   opacity: 0.85;
 }
-
-/* Connection banner — sticky at top of viewport so a judge
-   can't miss it. Animates in from above on disconnect. */
-.conn-banner {
-  position: sticky; top: 0; z-index: 50;
-  background: var(--amber); color: var(--bg);
-  font-family: var(--font-display); font-size: 12px; font-weight: 700;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  padding: 0.55rem 1rem;
-  display: flex; align-items: center; gap: 0.6rem;
-  border-bottom: 1px solid rgba(0,0,0,0.2);
-  animation: connSlide 0.18s ease;
-}
-.conn-dot {
-  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-  background: var(--bg); animation: connPulse 1s infinite;
-}
-@keyframes connSlide { from { transform: translateY(-100%); } to { transform: translateY(0); } }
-@keyframes connPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
 /* Queued-entries strip. Sits below the OfflineBanner; shows each
    queued submit_score with a SyncStatusBadge + the score value.

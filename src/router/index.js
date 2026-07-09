@@ -88,6 +88,11 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['diver'], appShell: true },
   },
   {
+    path: '/guardians',
+    component: () => import('@/views/GuardiansView.vue'),
+    meta: { requiresAuth: true, appShell: true },
+  },
+  {
     path: '/accreditation',
     component: () => import('@/views/AccreditationView.vue'),
     meta: { requiresAuth: true, requiresRole: ['judge', 'referee', 'coach', 'meet_manager'], appShell: true },

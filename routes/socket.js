@@ -418,10 +418,16 @@ module.exports = function attachSocket({
       });
     }
 
-    socket.on("set_active_diver", async (data) => {
+    socket.on("set_active_diver", async (data, ack) => {
       if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["meet_manager", "referee", "org_admin"]))) return;
-      if (socketActionRateLimited("set_active_diver", socket.userId)) return;
+                                       ["meet_manager", "referee", "org_admin"]))) {
+        if (typeof ack === "function") ack({ ok: false, error: "unauthorized" });
+        return;
+      }
+      if (socketActionRateLimited("set_active_diver", socket.userId)) {
+        if (typeof ack === "function") ack({ ok: false, error: "rate_limited" });
+        return;
+      }
       if (data.event_id) {
         activeDivers[data.event_id] = data;
         // Write-through to event_live_state so a server
@@ -462,6 +468,7 @@ module.exports = function attachSocket({
           console.error("[set_active_diver] venue emit failed", err.message);
         }
       }
+      if (typeof ack === "function") ack({ ok: true });
     });
 
     socket.on("get_active_diver", (data) => {
@@ -836,10 +843,16 @@ module.exports = function attachSocket({
       }).catch((e) => console.error("[Records broadcast]", e.message));
     });
 
-    socket.on("announce_score", async (data) => {
+    socket.on("announce_score", async (data, ack) => {
       if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["meet_manager", "referee", "org_admin"]))) return;
-      if (socketActionRateLimited("announce_score", socket.userId)) return;
+                                       ["meet_manager", "referee", "org_admin"]))) {
+        if (typeof ack === "function") ack({ ok: false, error: "not authorised" });
+        return;
+      }
+      if (socketActionRateLimited("announce_score", socket.userId)) {
+        if (typeof ack === "function") ack({ ok: false, error: "rate limited" });
+        return;
+      }
       io.to(`event:${data.event_id}`).emit("final_score_announced", data);
       // Venue bridges want the post-final state: dive_total is now
       // present, running_total + rank updated, leaderboard reshuffled.
@@ -855,6 +868,7 @@ module.exports = function attachSocket({
           console.error("[announce_score] venue emit failed", err.message);
         }
       }
+      if (typeof ack === "function") ack({ ok: true });
     });
 
     // -----------------------------------------------------------
@@ -1042,11 +1056,20 @@ module.exports = function attachSocket({
       return true;
     }
 
-    socket.on("referee_failed_dive", async (data) => {
+    socket.on("referee_failed_dive", async (data, ack) => {
       if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["referee", "meet_manager", "org_admin"]))) return;
-      if (socketActionRateLimited("referee_action", socket.userId)) return;
-      if (!(await applyRefereeAction("failed", data, socket.userId))) return;
+                                       ["referee", "meet_manager", "org_admin"]))) {
+        if (typeof ack === "function") ack({ ok: false, error: "unauthorized" });
+        return;
+      }
+      if (socketActionRateLimited("referee_action", socket.userId)) {
+        if (typeof ack === "function") ack({ ok: false, error: "rate_limited" });
+        return;
+      }
+      if (!(await applyRefereeAction("failed", data, socket.userId))) {
+        if (typeof ack === "function") ack({ ok: false, error: "action_failed" });
+        return;
+      }
       io.to(`event:${data.event_id}`).emit("referee_action_failed", data);
       io.to(`event:${data.event_id}`).emit("score_corrected", {
         event_id: data.event_id,
@@ -1054,12 +1077,22 @@ module.exports = function attachSocket({
         round_number: data.round_number,
         reason: "referee:failed",
       });
+      if (typeof ack === "function") ack({ ok: true });
     });
-    socket.on("referee_cap_scores", async (data) => {
+    socket.on("referee_cap_scores", async (data, ack) => {
       if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["referee", "meet_manager", "org_admin"]))) return;
-      if (socketActionRateLimited("referee_action", socket.userId)) return;
-      if (!(await applyRefereeAction("cap", data, socket.userId))) return;
+                                       ["referee", "meet_manager", "org_admin"]))) {
+        if (typeof ack === "function") ack({ ok: false, error: "unauthorized" });
+        return;
+      }
+      if (socketActionRateLimited("referee_action", socket.userId)) {
+        if (typeof ack === "function") ack({ ok: false, error: "rate_limited" });
+        return;
+      }
+      if (!(await applyRefereeAction("cap", data, socket.userId))) {
+        if (typeof ack === "function") ack({ ok: false, error: "action_failed" });
+        return;
+      }
       io.to(`event:${data.event_id}`).emit("referee_action_cap", data);
       io.to(`event:${data.event_id}`).emit("score_corrected", {
         event_id: data.event_id,
@@ -1067,22 +1100,39 @@ module.exports = function attachSocket({
         round_number: data.round_number,
         reason: `referee:cap(${data.cap_value || 2.0})`,
       });
+      if (typeof ack === "function") ack({ ok: true });
     });
-    socket.on("referee_redive", async (data) => {
+    socket.on("referee_redive", async (data, ack) => {
       if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["referee", "meet_manager", "org_admin"]))) return;
-      if (socketActionRateLimited("referee_action", socket.userId)) return;
-      if (!(await applyRefereeAction("redive", data, socket.userId))) return;
+                                       ["referee", "meet_manager", "org_admin"]))) {
+        if (typeof ack === "function") ack({ ok: false, error: "unauthorized" });
+        return;
+      }
+      if (socketActionRateLimited("referee_action", socket.userId)) {
+        if (typeof ack === "function") ack({ ok: false, error: "rate_limited" });
+        return;
+      }
+      if (!(await applyRefereeAction("redive", data, socket.userId))) {
+        if (typeof ack === "function") ack({ ok: false, error: "action_failed" });
+        return;
+      }
       io.to(`event:${data.event_id}`).emit("referee_action_redive", data);
+      if (typeof ack === "function") ack({ ok: true });
     });
 
     // -----------------------------------------------------------
     // Hold / resume the meet
     // -----------------------------------------------------------
-    socket.on("meet_hold", async (data) => {
+    socket.on("meet_hold", async (data, ack) => {
       if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["meet_manager", "referee", "org_admin"]))) return;
-      if (socketActionRateLimited("meet_hold", socket.userId)) return;
+                                       ["meet_manager", "referee", "org_admin"]))) {
+        if (typeof ack === "function") ack({ ok: false, error: "unauthorized" });
+        return;
+      }
+      if (socketActionRateLimited("meet_hold", socket.userId)) {
+        if (typeof ack === "function") ack({ ok: false, error: "rate_limited" });
+        return;
+      }
       meetHolds[data.event_id] = {
         reason: data.reason || null,
         since: Date.now(),
@@ -1107,17 +1157,23 @@ module.exports = function attachSocket({
       } catch (err) {
         console.error("[meet_hold] venue emit failed", err.message);
       }
+      if (typeof ack === "function") ack({ ok: true });
     });
-    socket.on("meet_resume", async (data) => {
+    socket.on("meet_resume", async (data, ack) => {
       if (!(await socketCanManageEvent(socket, data?.event_id,
-                                       ["meet_manager", "referee", "org_admin"]))) return;
-      if (socketActionRateLimited("meet_resume", socket.userId)) return;
+                                       ["meet_manager", "referee", "org_admin"]))) {
+        if (typeof ack === "function") ack({ ok: false, error: "unauthorized" });
+        return;
+      }
+      if (socketActionRateLimited("meet_resume", socket.userId)) {
+        if (typeof ack === "function") ack({ ok: false, error: "rate_limited" });
+        return;
+      }
       delete meetHolds[data.event_id];
       if (typeof persistClearMeetHold === "function") {
         persistClearMeetHold(data.event_id);
       }
       io.to(`event:${data.event_id}`).emit("meet_resumed", { event_id: data.event_id });
-      // Venue: clear on_hold so the bridge drops the HOLD banner.
       try {
         require("../lib/venue-state").emitVenueState({
           io, pool,
@@ -1128,6 +1184,7 @@ module.exports = function attachSocket({
       } catch (err) {
         console.error("[meet_resume] venue emit failed", err.message);
       }
+      if (typeof ack === "function") ack({ ok: true });
     });
     socket.on("get_meet_hold", (data) => {
       if (!data?.event_id) return;

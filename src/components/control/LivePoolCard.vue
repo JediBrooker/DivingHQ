@@ -17,6 +17,7 @@ import { deriveStatus } from '@/composables/useLivePools'
 import { useShotClock } from '@/composables/useShotClock'
 import { useAutoAdvance, AUTO_ADVANCE_KEY } from '@/composables/useAutoAdvance'
 import { useMeetHold } from '@/composables/useMeetHold'
+import { useHttpOutbox } from '@/composables/useHttpOutbox'
 
 const props = defineProps({
   event: { type: Object, required: true },
@@ -43,10 +44,12 @@ const { autoAdvanceSeconds, autoAdvanceCountdown, startAutoAdvance, cancelAutoAd
   // Per-event key so each pool keeps its OWN cadence (no cross-clobber).
   storageKey: `${AUTO_ADVANCE_KEY}:${props.event.id}`,
 })
+const { queueSocketAction: qsa } = useHttpOutbox()
 const { isHeld, holdReason, resumeMeet, confirmHold } = useMeetHold({
   socket: props.socket,
   event: () => props.event,
   onHold: () => resetShotClock(),
+  queueSocketAction: qsa,
 })
 
 // ---- Derived display state (per pool) ---------------------------------
@@ -153,9 +156,9 @@ function refAction(type) {
   if (!a) return
   cancelAutoAdvance()
   const payload = { event_id: a.event_id, competitor_id: a.competitor_id, round_number: a.round_number }
-  if (type === 'failed') props.socket.emit('referee_failed_dive', payload)
-  else if (type === 'cap') props.socket.emit('referee_cap_scores', { ...payload, cap_value: 2.0 })
-  else if (type === 'redive') props.socket.emit('referee_redive', payload)
+  if (type === 'failed') qsa('referee_failed_dive', payload)
+  else if (type === 'cap') qsa('referee_cap_scores', { ...payload, cap_value: 2.0 })
+  else if (type === 'redive') qsa('referee_redive', payload)
 }
 function onCardClick() {
   if (!props.focused) emit('focus', props.event.id)

@@ -11,6 +11,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { attentionMarker } from '@/composables/useAttention'
 import { orderWorkflowStateFor, liveEventsInOrder } from '@/composables/useControlStage'
+import { useOutbox } from '@/composables/useOutbox'
+import { useSocket } from '@/composables/useSocket'
 
 const props = defineProps({
   events: { type: Array, default: () => [] },
@@ -20,6 +22,19 @@ const props = defineProps({
   recoveryOpen: { type: Boolean, default: false },
 })
 const emit = defineEmits(['select', 'toggle-history', 'toggle-standings', 'toggle-recovery', 'open-tools'])
+
+const socket = useSocket()
+const { isOffline, offlineSince, pendingCount, failedCount, conflictCount } = useOutbox()
+
+const offlineDuration = ref('')
+let offlineTimer = null
+function tickOffline() {
+  if (!offlineSince.value) { offlineDuration.value = ''; return }
+  const s = Math.floor((Date.now() - offlineSince.value.getTime()) / 1000)
+  if (s < 60) offlineDuration.value = `${s}s`
+  else if (s < 3600) offlineDuration.value = `${Math.floor(s / 60)}m`
+  else offlineDuration.value = `${Math.floor(s / 3600)}h${Math.floor((s % 3600) / 60)}m`
+}
 
 const allMenuOpen = ref(false)
 const rootEl = ref(null)
@@ -76,10 +91,13 @@ function onKey(e) {
 onMounted(() => {
   document.addEventListener('click', onDocClick)
   document.addEventListener('keydown', onKey)
+  offlineTimer = setInterval(tickOffline, 1000)
+  tickOffline()
 })
 onUnmounted(() => {
   document.removeEventListener('click', onDocClick)
   document.removeEventListener('keydown', onKey)
+  clearInterval(offlineTimer)
 })
 </script>
 
@@ -130,6 +148,14 @@ onUnmounted(() => {
     <span class="cv2-topbar-sp"></span>
 
     <div class="cv2-topbar-actions">
+      <div class="cv2-conn" :class="isOffline ? 'cv2-conn-off' : 'cv2-conn-on'" role="status" :aria-label="isOffline ? 'Offline' : 'Connected'">
+        <span class="cv2-conn-dot" aria-hidden="true"></span>
+        <span v-if="isOffline" class="cv2-conn-label">Offline{{ offlineDuration ? ` ${offlineDuration}` : '' }}</span>
+        <span v-else class="cv2-conn-label">Online</span>
+        <span v-if="pendingCount > 0" class="cv2-conn-badge" :title="`${pendingCount} queued`">{{ pendingCount }}</span>
+        <span v-if="failedCount > 0" class="cv2-conn-badge cv2-conn-badge-fail" :title="`${failedCount} failed`">{{ failedCount }}!</span>
+        <span v-if="conflictCount > 0" class="cv2-conn-badge cv2-conn-badge-conflict" :title="`${conflictCount} conflicts`">{{ conflictCount }}⚡</span>
+      </div>
       <button type="button" class="cv2-act" :class="{ 'is-active': historyOpen }" :aria-pressed="historyOpen" @click="emit('toggle-history')">History</button>
       <button type="button" class="cv2-act" :class="{ 'is-active': standingsOpen }" :aria-pressed="standingsOpen" @click="emit('toggle-standings')">Standings</button>
       <button type="button" class="cv2-act cv2-act-recovery" :class="{ 'is-active': recoveryOpen }" :aria-pressed="recoveryOpen" @click="emit('toggle-recovery')">Recovery</button>
@@ -185,6 +211,37 @@ onUnmounted(() => {
 .cv2-allitem-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cv2-allitem-status { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
 .cv2-allempty { padding: 0.6rem; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+
+.cv2-conn {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.35rem 0.65rem; border-radius: var(--radius-sm);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  border: 1px solid var(--border-2);
+}
+.cv2-conn-on { color: var(--green); border-color: rgba(16,185,129,0.25); }
+.cv2-conn-off {
+  color: var(--amber); border-color: rgba(245,158,11,0.4);
+  background: rgba(245,158,11,0.06);
+  animation: cv2ConnPulse 2s ease-in-out infinite;
+}
+@keyframes cv2ConnPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
+.cv2-conn-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex: none;
+}
+.cv2-conn-on .cv2-conn-dot { background: var(--green); box-shadow: 0 0 4px var(--green); }
+.cv2-conn-off .cv2-conn-dot { background: var(--amber); box-shadow: 0 0 4px var(--amber); }
+.cv2-conn-label { white-space: nowrap; }
+.cv2-conn-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 9px; font-size: 10px; font-weight: 700;
+  background: rgba(245,158,11,0.15); color: var(--amber);
+}
+.cv2-conn-badge-fail { background: rgba(239,68,68,0.15); color: var(--red); }
+.cv2-conn-badge-conflict { background: rgba(139,92,246,0.15); color: var(--role-admin-fg); }
 
 .cv2-act {
   padding: 0.45rem 0.75rem; border: 1px solid var(--border-2); border-radius: var(--radius-sm);

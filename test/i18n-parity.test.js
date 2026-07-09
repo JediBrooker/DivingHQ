@@ -86,13 +86,13 @@ const LOCALES = [
 // "Daktronics" / "OBS Studio", placeholder-only strings like
 // "—" / "↔" / "{start} – {end}").
 //
-// tl (Tagalog): 140. Filipino sport coverage uses natural English
+// tl (Tagalog): 40. Filipino sport coverage uses natural English
 // code-mix for technical UI labels (Round, Meet, Event, DD,
 // Code, Dashboard, Inbox, Coach, Diver, Judge, Manager, etc.).
 // Intentional — see docs/privacy-policy.md §6 + previous translation
 // commits where this was documented.
 const STUCK_TOLERANCE = Object.fromEntries(LOCALES.map(code => [
-  code, code === "tl" ? 140 : 30,
+  code, code === "tl" ? 40 : 30,
 ]));
 
 // ---- helpers ---------------------------------------------------

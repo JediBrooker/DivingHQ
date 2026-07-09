@@ -6,7 +6,7 @@
 // go live and a `checkoutUrl` is supplied, the button becomes a real
 // "Pay" that hands off to Stripe. One card reused across membership,
 // club affiliation, fines, spectator access, owed entry charges, etc.
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
@@ -16,6 +16,7 @@ const props = defineProps({
   loadUrl: { type: String, required: true },     // GET -> { fee: {price,currency,is_member,tier}|null, payments_enabled }
   checkoutUrl: { type: String, default: '' },    // POST -> { url }; only used once payments are live
   checkoutBody: { type: Object, default: () => ({}) }, // extra POST body (e.g. {kind}, {tier})
+  subjectUserId: { type: String, default: '' },  // guardian paying for a dependent
   title: { type: String, default: 'Fee' },
   comingSoonMessage: { type: String, default: 'Online payments are coming soon.' },
   // When true, render nothing if no fee is configured (keeps public pages
@@ -68,7 +69,11 @@ function money(cents, currency) {
 async function load() {
   loading.value = true
   try {
-    const r = await auth.apiFetch(props.loadUrl)
+    const sep = props.loadUrl.includes('?') ? '&' : '?'
+    const loadWithSubject = props.subjectUserId
+      ? `${props.loadUrl}${sep}subject_user_id=${props.subjectUserId}`
+      : props.loadUrl
+    const r = await auth.apiFetch(loadWithSubject)
     fee.value = r.fee
     enabled.value = r.payments_enabled !== false
   } catch (e) {
@@ -82,7 +87,9 @@ async function pay() {
   if (!props.checkoutUrl || !enabled.value) return
   busy.value = true
   try {
-    const { url } = await auth.apiFetch(props.checkoutUrl, { method: 'POST', body: JSON.stringify(props.checkoutBody) })
+    const body = { ...props.checkoutBody }
+    if (props.subjectUserId) body.subject_user_id = props.subjectUserId
+    const { url } = await auth.apiFetch(props.checkoutUrl, { method: 'POST', body: JSON.stringify(body) })
     window.location.href = url
   } catch (e) {
     showError(e.message || t('payments.fee_card.error_checkout'))
@@ -91,6 +98,7 @@ async function pay() {
 }
 
 onMounted(load)
+watch(() => props.subjectUserId, load)
 </script>
 
 <template>

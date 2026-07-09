@@ -21,7 +21,7 @@
 import { ref } from 'vue'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 
-export function useMeetHold({ socket, event, onHold = () => {} }) {
+export function useMeetHold({ socket, event, onHold = () => {}, queueSocketAction = null }) {
   const isHeld = ref(false)
   const holdReason = ref('')
   const holdPromptOpen = ref(false)
@@ -35,10 +35,9 @@ export function useMeetHold({ socket, event, onHold = () => {} }) {
     if (!event()) return
     isHeld.value = true
     holdReason.value = holdReasonInput.value.trim()
-    socket.emit('meet_hold', {
-      event_id: event().id,
-      reason: holdReason.value || null,
-    })
+    const holdPayload = { event_id: event().id, reason: holdReason.value || null }
+    if (queueSocketAction) queueSocketAction('meet_hold', holdPayload)
+    else socket.emit('meet_hold', holdPayload)
     holdPromptOpen.value = false
     // Pause the shot clock — diver can't be "on the clock" during a hold
     onHold()
@@ -47,7 +46,9 @@ export function useMeetHold({ socket, event, onHold = () => {} }) {
     if (!event()) return
     isHeld.value = false
     holdReason.value = ''
-    socket.emit('meet_resume', { event_id: event().id })
+    const resumePayload = { event_id: event().id }
+    if (queueSocketAction) queueSocketAction('meet_resume', resumePayload)
+    else socket.emit('meet_resume', resumePayload)
   }
 
   // Hold-state sync — for multi-operator setups + late-joining

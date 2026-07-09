@@ -9,7 +9,7 @@
 // useControlStage derivation. Same /control URL, ?event= deep-link, role
 // gate + AppShell as before.
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useControlStage, liveEventsInOrder } from '@/composables/useControlStage'
 import ControlTopBar from '@/components/control/ControlTopBar.vue'
@@ -27,16 +27,16 @@ import { synchroJudgeGroups } from '@/composables/useScoreCategories'
 import { controlKeyIntent, isTypingTarget } from '@/composables/useControlKeymap'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { idbInvalidate } from '@/lib/idbCache'
-import { makeTokenBucket } from '@/lib/token-bucket'
 import { useMeetHold } from '@/composables/useMeetHold'
 import { useHttpOutbox } from '@/composables/useHttpOutbox'
+import { useOutbox } from '@/composables/useOutbox'
 import { confirmAction } from '@/composables/useConfirm'
 import { showUndo } from '@/composables/useUndo'
 import { showError, showSuccess } from '@/composables/useNotify'
 
 const route = useRoute()
 const auth = useAuthStore()
-const { queueAction } = useHttpOutbox()
+const { queueAction, queueSocketAction } = useHttpOutbox()
 
 // Socket + the concurrent-pool live-state engine are hoisted ABOVE the
 // mode switch: ONE subscription for the shell's lifetime routes every
@@ -72,15 +72,12 @@ const pendingSeed = new Set() // events optimistically seeded, awaiting the serv
 const seedTimers = new Set() // fallback timers, cleared on unmount
 const SEED_GRACE_MS = 1500
 
-// #7 RATE-LIMIT + DROP-DETECTION. set_active_diver is capped server-side
-// at 60/min/user and over-budget emits are dropped SILENTLY -- so a diver
-// change can fail to reach the judges. The token bucket staggers bursts
-// under the budget; drop-detection waits for the server's state_update
-// echo and flags the pool (a Retry on its card) if the change never
-// confirms. unconfirmed is reactive so the card can surface the warning.
-const activeDiverBucket = makeTokenBucket({ capacity: 40, refillPerMin: 40 })
-const pendingConfirm = {} // event_id -> { competitor_id, round_number }
-const unconfirmed = reactive({}) // event_id -> true when a set_active_diver wasn't echoed
+// Drop-detection: the server echoes set_active_diver back as state_update.
+// If the echo doesn't arrive within CONFIRM_TIMEOUT_MS, the pool card
+// shows an "unconfirmed" warning. The outbox handles retries; this is
+// purely UI feedback.
+const pendingConfirm = {}
+const unconfirmed = reactive({})
 const confirmTimers = new Set()
 const CONFIRM_TIMEOUT_MS = 4000
 
@@ -112,28 +109,18 @@ useSocketEvent(socket, 'event_control_granted', (d) => {
   if (d?.event_id) delete conflicts[d.event_id]
 })
 
-// Emit set_active_diver for a pool THROUGH the token bucket, then watch
-// for the server's echo; if it doesn't arrive within the window, flag the
-// pool as unconfirmed so the operator can retry (judges may be on a stale
-// diver). The lone funnel for every set_active_diver the shell sends.
+// Queue set_active_diver through the outbox. The outbox persists it
+// to IDB and drains via socket ack when online; offline entries
+// replay on reconnect. Replaces the old token-bucket + drop-detection
+// flow — the outbox's own pending/synced/failed states cover both.
 function emitActiveDiver(ev) {
   const p = pools[ev.id]
   const a = p && p.currentActive
   if (!a) return
   pendingConfirm[ev.id] = { competitor_id: a.competitor_id, round_number: a.round_number }
-  delete unconfirmed[ev.id] // re-attempt clears any stale warning
+  delete unconfirmed[ev.id]
   const payload = { ...a, status: 'ready' }
-  activeDiverBucket(() => {
-    socket.emit('set_active_diver', payload)
-    const tid = setTimeout(() => {
-      confirmTimers.delete(tid)
-      const pc = pendingConfirm[ev.id]
-      if (pc && String(pc.competitor_id) === String(a.competitor_id) && Number(pc.round_number) === Number(a.round_number)) {
-        unconfirmed[ev.id] = true
-      }
-    }, CONFIRM_TIMEOUT_MS)
-    confirmTimers.add(tid)
-  })
+  queueSocketAction('set_active_diver', payload)
 }
 
 // Snap an optimistically-seeded pool to the server's authoritative active
@@ -175,7 +162,7 @@ const { workflowMode } = useControlStage(currentEvent)
 // focused pool's clock is paused by its own card's hold instance, so
 // onHold here is a no-op.
 const { isHeld, holdReason, holdPromptOpen, holdReasonInput, openHoldPrompt, confirmHold, resumeMeet } =
-  useMeetHold({ socket, event: () => currentEvent.value, onHold: () => {} })
+  useMeetHold({ socket, event: () => currentEvent.value, onHold: () => {}, queueSocketAction })
 
 // Recovery is the one explicit cross-cutting mode (offer-not-seize).
 // Off by default so the center always shows the stage mode.
@@ -296,7 +283,7 @@ function closeCorrection() {
 function announceFocused() {
   const ev = currentEvent.value
   if (!ev || !focusedStandings.value.length) return
-  socket.emit('announce_score', { standings: focusedStandings.value, eventId: ev.id })
+  queueSocketAction('announce_score', { standings: focusedStandings.value, eventId: ev.id })
   showSuccess(`Announced "${ev.name}" standings on the scoreboard.`)
 }
 
@@ -353,9 +340,9 @@ function refActionFocused(type) {
   const a = ev && pools[ev.id]?.currentActive
   if (!a) return
   const payload = { event_id: a.event_id, competitor_id: a.competitor_id, round_number: a.round_number }
-  if (type === 'failed') socket.emit('referee_failed_dive', payload)
-  else if (type === 'cap') socket.emit('referee_cap_scores', { ...payload, cap_value: 2.0 })
-  else if (type === 'redive') socket.emit('referee_redive', payload)
+  if (type === 'failed') queueSocketAction('referee_failed_dive', payload)
+  else if (type === 'cap') queueSocketAction('referee_cap_scores', { ...payload, cap_value: 2.0 })
+  else if (type === 'redive') queueSocketAction('referee_redive', payload)
 }
 
 // Per-pool keyboard control. A single window listener; controlKeyIntent
@@ -537,6 +524,25 @@ onUnmounted(() => {
   confirmTimers.forEach(clearTimeout)
   confirmTimers.clear()
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('beforeunload', onBeforeUnload)
+})
+
+const { isOffline, pendingCount: outboxPending } = useOutbox()
+
+onBeforeRouteLeave(() => {
+  if (!isOffline.value && outboxPending.value === 0) return true
+  const msg = isOffline.value
+    ? 'You are offline — leaving the Control Room will lose the current meet state. Stay on this page?'
+    : `${outboxPending.value} action(s) are still syncing. Leave anyway?`
+  return window.confirm(msg) // eslint-disable-line no-alert
+})
+
+function onBeforeUnload(e) {
+  if (!isOffline.value && outboxPending.value === 0) return
+  e.preventDefault()
+}
+onMounted(() => {
+  window.addEventListener('beforeunload', onBeforeUnload)
 })
 </script>
 

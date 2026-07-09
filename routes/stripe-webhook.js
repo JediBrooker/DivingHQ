@@ -211,7 +211,8 @@ async function grantMembership(client, payment) {
     [payment.fee_definition_id],
   );
   const tier = def.rows[0]?.tier ?? null;
-  const months = 12; // annual + seasonal both ~12mo for this first cut
+  const months = 12;
+  const beneficiary = payment.subject_user_id || payment.payer_user_id;
   await client.query(
     `INSERT INTO memberships
         (org_id, user_id, fee_definition_id, payment_id, tier, period_start, period_end, status)
@@ -222,7 +223,7 @@ async function grantMembership(client, payment) {
                           WHERE org_id = $1 AND user_id = $2
                             AND tier IS NOT DISTINCT FROM $5 AND status = 'active'), CURRENT_DATE)
              ) AS start_date) s`,
-    [payment.org_id, payment.payer_user_id, payment.fee_definition_id, payment.id, tier, String(months)],
+    [payment.org_id, beneficiary, payment.fee_definition_id, payment.id, tier, String(months)],
   );
 }
 
@@ -257,16 +258,30 @@ async function grantOfficialAccreditation(client, payment) {
 // does NOT dedupe against a separately-purchased per-event entry, which uses
 // a different fee_definition_id (see the known double-purchase limitation).
 async function grantMeetBundle(client, payment) {
-  await client.query(
-    `INSERT INTO payments
-        (org_id, fee_definition_id, payer_user_id, subject_type, event_id,
-         amount_cents, platform_fee_cents, currency, fee_payer, status, paid_at)
-     SELECT $1, $2, $3, 'event_entry', mbi.event_id, 0, 0, $4, 'absorb', 'paid', now()
-       FROM meet_bundle_items mbi
-      WHERE mbi.fee_definition_id = $2
-     ON CONFLICT DO NOTHING`,
-    [payment.org_id, payment.fee_definition_id, payment.payer_user_id, payment.currency || "GBP"],
-  );
+  const sub = payment.subject_user_id || null;
+  if (sub) {
+    await client.query(
+      `INSERT INTO payments
+          (org_id, fee_definition_id, payer_user_id, subject_user_id, subject_type, event_id,
+           amount_cents, platform_fee_cents, currency, fee_payer, status, paid_at)
+       SELECT $1, $2, $3, $4, 'event_entry', mbi.event_id, 0, 0, $5, 'absorb', 'paid', now()
+         FROM meet_bundle_items mbi
+        WHERE mbi.fee_definition_id = $2
+       ON CONFLICT DO NOTHING`,
+      [payment.org_id, payment.fee_definition_id, payment.payer_user_id, sub, payment.currency || "GBP"],
+    );
+  } else {
+    await client.query(
+      `INSERT INTO payments
+          (org_id, fee_definition_id, payer_user_id, subject_type, event_id,
+           amount_cents, platform_fee_cents, currency, fee_payer, status, paid_at)
+       SELECT $1, $2, $3, 'event_entry', mbi.event_id, 0, 0, $4, 'absorb', 'paid', now()
+         FROM meet_bundle_items mbi
+        WHERE mbi.fee_definition_id = $2
+       ON CONFLICT DO NOTHING`,
+      [payment.org_id, payment.fee_definition_id, payment.payer_user_id, payment.currency || "GBP"],
+    );
+  }
 }
 
 // Record a paid club affiliation/accreditation period. Renewals extend from
