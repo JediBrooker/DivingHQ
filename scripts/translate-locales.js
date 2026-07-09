@@ -235,6 +235,7 @@ async function translateWhole(source, locale, languageName, context) {
     `5. Preserve inline HTML tags (<strong>…</strong>, <em>…</em>, <a …>…</a>) verbatim — DO translate the text BETWEEN the tags, but never translate the tag names, attributes, or angle-brackets themselves.`,
     `6. Use the formal/respectful register that fits a sports federation context. In Spanish use second-person plural address (tu/tus) as it reads warmer for an athlete community. In German use the formal Sie form.`,
     `7. Output ONLY the translated JSON object. No prose before or after. No markdown fences.`,
+    `8. The output MUST be valid JSON. Never place a literal ASCII double-quote character (") inside a string value — it terminates the JSON string and breaks parsing. For locale-specific quotation marks use ONLY Unicode characters (German „ and \\u201C, French « », etc.). If you absolutely need a double-quote inside a value, escape it as \\".`,
     ``,
     `Source dictionary:`,
     JSON.stringify(source, null, 2),
@@ -243,7 +244,7 @@ async function translateWhole(source, locale, languageName, context) {
   const text = await callAiProvider(prompt, context);
   const json = safeJsonParse(text);
   if (!json || typeof json !== "object") {
-    const err = new Error(`${context.provider} returned malformed JSON for locale ${locale}:\n${text.slice(0, 500)}…`);
+    const err = new Error(`malformed JSON for ${locale} (${text.length} chars, starts: ${JSON.stringify(text.slice(0, 80))}, ends: ${JSON.stringify(text.slice(-80))})`);
     err.responseLength = text.length;
     err.lastChars = text.slice(-100);
     throw err;
@@ -356,8 +357,10 @@ async function callOpenAI(prompt, apiKey, model) {
 
 async function callClaude(prompt, apiKey, model) {
   // Use the public Anthropic messages API. Model picked for cost +
-  // quality on short translation tasks. Increase max_tokens if a
-  // future dictionary outgrows the default.
+  // quality on short translation tasks.
+  //
+  // Assistant prefill forces the model to begin with "{" so it
+  // stays in JSON mode and doesn't stop mid-object with end_turn.
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -368,7 +371,10 @@ async function callClaude(prompt, apiKey, model) {
     body: JSON.stringify({
       model,
       max_tokens: parsePositiveInt(process.env.TRANSLATE_MAX_TOKENS, 16384),
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "user", content: prompt },
+        { role: "assistant", content: "{" },
+      ],
     }),
   });
   if (!res.ok) {
@@ -380,7 +386,7 @@ async function callClaude(prompt, apiKey, model) {
   if (!text) {
     fail(`Anthropic API returned no text:\n${JSON.stringify(body).slice(0, 500)}`);
   }
-  return text;
+  return "{" + text;
 }
 
 // ---------- Helpers ----------
@@ -471,7 +477,6 @@ function isSymbolOnly(value) {
 }
 
 function safeJsonParse(text) {
-  // Strip markdown code fences if the model added them.
   const cleaned = text
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/```\s*$/i, "")
@@ -479,8 +484,47 @@ function safeJsonParse(text) {
   try {
     return JSON.parse(cleaned);
   } catch {
+    const { text: repaired, repairs } = repairJsonQuotes(cleaned);
+    if (repairs) {
+      console.log(`  (repaired ${repairs} unescaped quote(s) in JSON response)`);
+      try { return JSON.parse(repaired); } catch { return null; }
+    }
     return null;
   }
+}
+
+function repairJsonQuotes(text) {
+  let result = "";
+  let inString = false;
+  let repairs = 0;
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i];
+    if (!inString) {
+      result += ch;
+      if (ch === '"') inString = true;
+      i++;
+    } else if (ch === "\\") {
+      result += ch + (text[i + 1] || "");
+      i += 2;
+    } else if (ch === '"') {
+      let j = i + 1;
+      while (j < text.length && /\s/.test(text[j])) j++;
+      const next = text[j];
+      if (next === ":" || next === "," || next === "}" || next === "]" || j >= text.length) {
+        result += ch;
+        inString = false;
+      } else {
+        result += '\\"';
+        repairs++;
+      }
+      i++;
+    } else {
+      result += ch;
+      i++;
+    }
+  }
+  return { text: result, repairs };
 }
 
 function safeParse(file) {
