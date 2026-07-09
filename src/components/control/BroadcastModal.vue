@@ -516,10 +516,9 @@ defineExpose({ open })
         <div class="broadcast-picker-actions">
           <button class="btn btn-ghost" type="button"
                   @click="daktronicsInstructionsOpen = false">{{ $t('control.modals.back') }}</button>
-          <a class="btn btn-primary" target="_blank" rel="noopener"
-             href="https://github.com/JediBrooker/DivingHQ/wiki/Venue-Integration">
+          <router-link class="btn btn-primary" to="/guide/venue-integration">
             {{ $t('control.modals.dak_open_guide') }}
-          </a>
+          </router-link>
         </div>
       </div>
     </template>

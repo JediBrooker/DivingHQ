@@ -499,8 +499,8 @@
     "section_finding": "Dinge finden",
     "section_help": "Hilfe erhalten",
     "back_to_home": "← Zurück zur Startseite",
-    "open_wiki": "Vollständiges Wiki öffnen ↗",
-    "open_wiki_tip": "Ausführliches Benutzerhandbuch auf GitHub",
+    "open_guide": "Vollständiges Wiki öffnen ↗",
+    "open_guide_tip": "Ausführliches Benutzerhandbuch auf GitHub",
     "hero_welcome_prefix": "Willkommen bei",
     "hero_lede": "Eine Plattform zur Durchführung von Sprungwettkämpfen — Springer reichen ihre Sprungkarten ein, Kampfrichter werten am Smartphone, der Operator steuert den Wettkampf aus einem Kontrollraum, und das Publikum verfolgt die Anzeigetafel live. Diese Seite ist die fünfminütige Einführung. Wählen Sie unten Ihre Rolle für den passenden Einstieg.",
     "role": {
@@ -583,8 +583,8 @@
       "account_a": "Alles unter <strong>Mein Profil</strong> → <strong>Kontoeinstellungen</strong>. E-Mail-Änderungen erfordern eine erneute Bestätigung an der neuen Adresse. Das Löschen Ihres Kontos ist endgültig und entfernt Ihren Login; historische Wertungen bleiben unter dem Eintrag des Verbands auf der öffentlichen Anzeigetafel (auf Anfrage anonymisiert — wenden Sie sich an Ihren Verbandsadmin)."
     },
     "next": {
-      "lede": "Brauchen Sie die ausführliche Version? Das {wiki_link} behandelt jeden Bildschirm, jede Rolle und jede World-Aquatics-Regel, die die App umsetzt. Die Seiten, die einen Lesezeichen wert sind:",
-      "wiki_link_label": "vollständige Wiki",
+      "lede": "Brauchen Sie die ausführliche Version? Das {guide_link} behandelt jeden Bildschirm, jede Rolle und jede World-Aquatics-Regel, die die App umsetzt. Die Seiten, die einen Lesezeichen wert sind:",
+      "guide_link_label": "vollständige Wiki",
       "bookmark_features": "Funktionen nach Rolle",
       "bookmark_features_desc": "alle Funktionen der App, geordnet nach Nutzergruppe",
       "bookmark_quickstart": "Schnellstart (10 Min.)",
@@ -615,7 +615,7 @@
       "shortcuts": "Tastenkürzel",
       "glossary": "Glossar",
       "faq": "Häufig gestellte Fragen",
-      "wiki": "Mehr im Wiki"
+      "next": "Mehr im Wiki"
     },
     "quick_actions": {
       "lede": "Überspringen Sie das Menü — springen Sie direkt zu dem Bildschirm, den Sie benötigen. Jede Kachel öffnet die Live-Seite."

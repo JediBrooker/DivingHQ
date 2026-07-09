@@ -499,8 +499,8 @@
     "section_finding": "Znajdowanie informacji",
     "section_help": "Uzyskaj pomoc",
     "back_to_home": "← Powrót do strony głównej",
-    "open_wiki": "Otwórz pełną wiki ↗",
-    "open_wiki_tip": "Szczegółowy przewodnik użytkownika na GitHubie",
+    "open_guide": "Otwórz pełną wiki ↗",
+    "open_guide_tip": "Szczegółowy przewodnik użytkownika na GitHubie",
     "hero_welcome_prefix": "Witaj w",
     "hero_lede": "Platforma do prowadzenia zawodów w skokach do wody — skoczkowie składają karty skoków, sędziowie oceniają na telefonach, operator prowadzi zawody z Pokoju Kontrolnego, a publiczność śledzi tablicę wyników na żywo. Ta strona to pięciominutowe wprowadzenie. Wybierz poniżej swoją rolę, aby zobaczyć właściwą dla Ciebie ścieżkę.",
     "role": {
@@ -583,8 +583,8 @@
       "account_a": "Wszystko w <strong>Mój profil</strong> → <strong>Ustawienia konta</strong>. Zmiana e-maila wymaga ponownej weryfikacji pod nowym adresem. Usunięcie konta jest trwałe i likwiduje Twój login; historyczne wyniki pozostają na publicznej tablicy wyników w rekordzie federacji (anonimizowane na życzenie — skontaktuj się z administratorem swojej federacji)."
     },
     "next": {
-      "lede": "Potrzebujesz pełnej, szczegółowej wersji? {wiki_link} omawia każdy ekran, każdą rolę, każdą regułę World Aquatics, którą wspiera aplikacja. Strony, które warto dodać do zakładek:",
-      "wiki_link_label": "pełna wiki",
+      "lede": "Potrzebujesz pełnej, szczegółowej wersji? {guide_link} omawia każdy ekran, każdą rolę, każdą regułę World Aquatics, którą wspiera aplikacja. Strony, które warto dodać do zakładek:",
+      "guide_link_label": "pełna wiki",
       "bookmark_features": "Funkcje według roli",
       "bookmark_features_desc": "wszystkie funkcje aplikacji, posortowane według tego, kto ich używa",
       "bookmark_quickstart": "Szybki Start (10 min)",
@@ -615,7 +615,7 @@
       "shortcuts": "Skróty",
       "glossary": "Glosariusz",
       "faq": "Najczęściej zadawane pytania",
-      "wiki": "Więcej na wiki"
+      "next": "Więcej na wiki"
     },
     "quick_actions": {
       "lede": "Pomiń menu — przejdź bezpośrednio do potrzebnego ekranu. Każdy kafelek otwiera stronę na żywo."

@@ -1,18 +1,16 @@
-// Wiki / README screenshot harness.
+// Guide / README screenshot harness.
 //
-// Captures the 27 PNGs referenced by docs/ and the GitHub wiki.
-// Manual-run-only — `npm run test:e2e` excludes this spec by
-// virtue of nobody chaining it into CI; run it explicitly when
-// the UI rebrands, the home hero shifts, or a wiki page needs
+// Captures the PNGs referenced by the in-app guide and README.
+// Manual-run-only — `npm run test:e2e` excludes this spec;
+// run it explicitly when the UI rebrands or a guide page needs
 // fresh art:
 //
 //   npx playwright test test/e2e/wiki-screenshots.spec.js --workers=1
 //
-// Outputs land in docs/screenshots/<name>.png. Filenames are
-// load-bearing — README + wiki pages reference them with
-// <img src="docs/screenshots/foo.png"> so we mirror them
+// Outputs land in public/guide-screenshots/<name>.png. Filenames
+// are load-bearing — the guide markdown and README reference them
 // exactly. Anything new added here must also be wired into the
-// wiki / README to be useful.
+// guide content or README to be useful.
 //
 // Design choice: one big spec, serial mode, shared beforeAll
 // fixture. The 27 screenshots all need the same "live federation
@@ -36,7 +34,7 @@ test.describe.configure({ mode: "serial" });
 // setup helpers need.
 // -------------------------------------------------------------
 const VIEWPORT = { width: 1440, height: 900 };
-const SCREENSHOT_DIR = "docs/screenshots";
+const SCREENSHOT_DIR = "public/guide-screenshots";
 // Defeat scoreboard.js's 60s in-memory cache on Completed events
 // (set in routes/scoreboard.js). Real spectators don't notice
 // because the cache TTL is short — but a screenshot run that

@@ -488,8 +488,8 @@
     "section_finding": "Paghahanap ng mga bagay",
     "section_help": "Humingi ng tulong",
     "back_to_home": "← Bumalik sa home",
-    "open_wiki": "Buksan ang buong wiki ↗",
-    "open_wiki_tip": "Detalyadong user guide sa GitHub",
+    "open_guide": "Buksan ang buong wiki ↗",
+    "open_guide_tip": "Detalyadong user guide sa GitHub",
     "hero_welcome_prefix": "Welcome sa",
     "hero_lede": "Isang platform para sa pagpapatakbo ng diving meets — nagsa-submit ang mga diver ng dive sheets, nagsa-score ang mga judge sa phone, pinapatakbo ng operator ang meet mula sa Control Room, at sinusubaybayan ng audience ang scoreboard nang live. Ang page na ito ay limang-minutong primer. Piliin ang iyong role sa baba para sa angkop na daan.",
     "role": {
@@ -572,8 +572,8 @@
       "account_a": "Nasa <strong>My Profile</strong> → <strong>Account settings</strong> lahat. Ang pagpalit ng email ay nangangailangan ng muling pag-verify sa bagong address. Permanente ang pagbura ng iyong account at inaalis nito ang iyong sign-in; mananatili ang mga historical na iskor sa public scoreboard sa ilalim ng rekord ng federation (ina-anonymize kapag hiniling — makipag-ugnayan sa iyong federation admin)."
     },
     "next": {
-      "lede": "Kailangan ng deep-dive version? Sakop ng {wiki_link} ang bawat screen, bawat role, bawat patakaran ng World Aquatics na encoded ng app. Ang mga page na sulit i-bookmark:",
-      "wiki_link_label": "buong wiki",
+      "lede": "Kailangan ng deep-dive version? Sakop ng {guide_link} ang bawat screen, bawat role, bawat patakaran ng World Aquatics na encoded ng app. Ang mga page na sulit i-bookmark:",
+      "guide_link_label": "buong wiki",
       "bookmark_features": "Mga tampok ayon sa tungkulin",
       "bookmark_features_desc": "bawat feature sa app, naka-index ayon sa gumagamit",
       "bookmark_quickstart": "Mabilis na Panimula (10 min)",
@@ -604,7 +604,7 @@
       "shortcuts": "Mga Shortcut",
       "glossary": "Talahulugan",
       "faq": "Mga Madalas Itanong",
-      "wiki": "Higit pa sa wiki"
+      "next": "Higit pa sa wiki"
     },
     "quick_actions": {
       "lede": "Laktawan ang menu — diretso sa pahinang kailangan ninyo. Bawat tile ay nagbubukas ng live na pahina."

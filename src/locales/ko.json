@@ -488,8 +488,8 @@
     "section_finding": "찾아보기",
     "section_help": "도움받기",
     "back_to_home": "← 홈으로 돌아가기",
-    "open_wiki": "전체 위키 열기 ↗",
-    "open_wiki_tip": "GitHub의 상세 사용자 가이드",
+    "open_guide": "전체 위키 열기 ↗",
+    "open_guide_tip": "GitHub의 상세 사용자 가이드",
     "hero_welcome_prefix": "환영합니다",
     "hero_lede": "다이빙 대회를 운영하기 위한 플랫폼입니다 — 다이버는 다이브 시트를 제출하고, 심판은 전화로 채점하며, 운영자는 컨트롤 룸에서 대회를 진행하고, 관중은 실시간 스코어보드를 시청합니다. 이 페이지는 5분 입문서입니다. 아래에서 자신의 역할을 선택하여 적합한 경로를 확인하십시오.",
     "role": {
@@ -572,8 +572,8 @@
       "account_a": "모두 <strong>내 프로필</strong> → <strong>계정 설정</strong>에 있습니다. 이메일 변경에는 새 주소에서의 재인증이 필요합니다. 계정 삭제는 영구적이며 로그인이 제거됩니다. 과거 점수는 연맹 기록으로 공개 스코어보드에 남습니다(요청 시 익명화 — 연맹 관리자에게 문의하십시오)."
     },
     "next": {
-      "lede": "심화 버전이 필요합니까? {wiki_link}는 모든 화면, 모든 역할, 앱이 인코딩하는 모든 World Aquatics 규칙을 다룹니다. 가장 북마크할 만한 페이지:",
-      "wiki_link_label": "전체 wiki",
+      "lede": "심화 버전이 필요합니까? {guide_link}는 모든 화면, 모든 역할, 앱이 인코딩하는 모든 World Aquatics 규칙을 다룹니다. 가장 북마크할 만한 페이지:",
+      "guide_link_label": "전체 wiki",
       "bookmark_features": "역할별 기능",
       "bookmark_features_desc": "앱의 모든 기능을 사용자별로 색인화",
       "bookmark_quickstart": "빠른 시작 (10분)",
@@ -604,7 +604,7 @@
       "shortcuts": "단축키",
       "glossary": "용어집",
       "faq": "자주 묻는 질문",
-      "wiki": "위키에서 자세히 보기"
+      "next": "위키에서 자세히 보기"
     },
     "quick_actions": {
       "lede": "메뉴를 건너뛰고 필요한 화면으로 바로 이동할 수 있습니다. 각 타일은 실시간 페이지를 엽니다."

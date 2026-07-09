@@ -488,8 +488,8 @@
     "section_finding": "Mencari sesuatu",
     "section_help": "Dapatkan bantuan",
     "back_to_home": "← Kembali ke halaman utama",
-    "open_wiki": "Buka wiki penuh ↗",
-    "open_wiki_tip": "Panduan pengguna terperinci di GitHub",
+    "open_guide": "Buka wiki penuh ↗",
+    "open_guide_tip": "Panduan pengguna terperinci di GitHub",
     "hero_welcome_prefix": "Selamat datang ke",
     "hero_lede": "Platform untuk mengendalikan pertandingan terjun — peterjun menghantar senarai terjunan, hakim memberi markah pada telefon, operator menjalankan pertandingan dari Bilik Kawalan, dan penonton menyaksikan papan markah secara langsung. Halaman ini ialah pengenalan lima minit. Pilih peranan anda di bawah untuk laluan yang sesuai.",
     "role": {
@@ -572,8 +572,8 @@
       "account_a": "Kesemuanya dalam <strong>Profil Saya</strong> → <strong>Tetapan akaun</strong>. Perubahan e-mel memerlukan pengesahan semula pada alamat baharu. Memadam akaun anda adalah kekal dan membuang log masuk anda; markah bersejarah kekal pada papan markah awam di bawah rekod persekutuan (dianonimkan atas permintaan — hubungi admin persekutuan anda)."
     },
     "next": {
-      "lede": "Perlukan versi terperinci? {wiki_link} merangkumi setiap skrin, setiap peranan, setiap peraturan World Aquatics yang dikodkan oleh aplikasi. Halaman yang paling berbaloi ditanda buku:",
-      "wiki_link_label": "wiki penuh",
+      "lede": "Perlukan versi terperinci? {guide_link} merangkumi setiap skrin, setiap peranan, setiap peraturan World Aquatics yang dikodkan oleh aplikasi. Halaman yang paling berbaloi ditanda buku:",
+      "guide_link_label": "wiki penuh",
       "bookmark_features": "Ciri-ciri mengikut peranan",
       "bookmark_features_desc": "setiap ciri dalam aplikasi, diindeks mengikut pengguna",
       "bookmark_quickstart": "Permulaan Pantas (10 min)",
@@ -604,7 +604,7 @@
       "shortcuts": "Pintasan",
       "glossary": "Glosari",
       "faq": "Soalan Lazim",
-      "wiki": "Maklumat lanjut di wiki"
+      "next": "Maklumat lanjut di wiki"
     },
     "quick_actions": {
       "lede": "Langkau menu — terus ke skrin yang anda perlukan. Setiap jubin membuka halaman langsung."

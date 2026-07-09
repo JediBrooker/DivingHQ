@@ -488,8 +488,8 @@
     "section_finding": "Mencari sesuatu",
     "section_help": "Dapatkan bantuan",
     "back_to_home": "← Kembali ke beranda",
-    "open_wiki": "Buka wiki lengkap ↗",
-    "open_wiki_tip": "Panduan pengguna lengkap di GitHub",
+    "open_guide": "Buka wiki lengkap ↗",
+    "open_guide_tip": "Panduan pengguna lengkap di GitHub",
     "hero_welcome_prefix": "Selamat datang di",
     "hero_lede": "Platform untuk menjalankan kompetisi loncat indah — peloncat mengirim daftar loncatan, juri menilai dari ponsel, operator menjalankan kompetisi dari Ruang Kontrol, dan penonton menyaksikan papan skor secara langsung. Halaman ini adalah pengenalan lima menit. Pilih peran Anda di bawah untuk jalur yang sesuai.",
     "role": {
@@ -572,8 +572,8 @@
       "account_a": "Semuanya ada di <strong>Profil Saya</strong> → <strong>Pengaturan akun</strong>. Perubahan email memerlukan verifikasi ulang di alamat yang baru. Menghapus akun Anda bersifat permanen dan menghapus akses masuk Anda; skor historis tetap ada di papan skor publik dalam catatan federasi (dianonimkan atas permintaan — hubungi admin federasi Anda)."
     },
     "next": {
-      "lede": "Butuh versi mendalam? {wiki_link} mencakup setiap layar, setiap peran, setiap aturan World Aquatics yang diterapkan aplikasi. Halaman yang paling layak ditandai:",
-      "wiki_link_label": "wiki lengkap",
+      "lede": "Butuh versi mendalam? {guide_link} mencakup setiap layar, setiap peran, setiap aturan World Aquatics yang diterapkan aplikasi. Halaman yang paling layak ditandai:",
+      "guide_link_label": "wiki lengkap",
       "bookmark_features": "Fitur menurut peran",
       "bookmark_features_desc": "setiap fitur dalam aplikasi, terindeks berdasarkan penggunanya",
       "bookmark_quickstart": "Memulai Cepat (10 menit)",
@@ -604,7 +604,7 @@
       "shortcuts": "Pintasan",
       "glossary": "Glosarium",
       "faq": "Pertanyaan yang Sering Diajukan",
-      "wiki": "Lebih lanjut di wiki"
+      "next": "Lebih lanjut di wiki"
     },
     "quick_actions": {
       "lede": "Lewati menu — lompat langsung ke layar yang Anda butuhkan. Setiap ubin membuka halaman langsung."

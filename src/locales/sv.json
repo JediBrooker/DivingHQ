@@ -499,8 +499,8 @@
     "section_finding": "Hitta saker",
     "section_help": "Få hjälp",
     "back_to_home": "← Tillbaka till startsidan",
-    "open_wiki": "Öppna hela wikin ↗",
-    "open_wiki_tip": "Detaljerad användarguide på GitHub",
+    "open_guide": "Öppna hela wikin ↗",
+    "open_guide_tip": "Detaljerad användarguide på GitHub",
     "hero_welcome_prefix": "Välkommen till",
     "hero_lede": "En plattform för att köra simhoppstävlingar — hoppare lämnar in hopplistor, domare bedömer från mobilen, operatören styr tävlingen från ett kontrollrum och publiken följer poängtavlan live. Den här sidan är en fem-minuters genomgång. Välj din roll nedan för den väg som passar dig.",
     "role": {
@@ -583,8 +583,8 @@
       "account_a": "Allt finns under <strong>Min profil</strong> → <strong>Kontoinställningar</strong>. E-postbyten kräver ny verifiering på den nya adressen. Att ta bort kontot är permanent och tar bort din inloggning; historiska poäng finns kvar på den publika resultattavlan under förbundets post (anonymiseras på begäran — kontakta din förbundsadministratör)."
     },
     "next": {
-      "lede": "Vill du ha den fördjupade versionen? {wiki_link} täcker varje skärm, varje roll och varje World Aquatics-regel som appen kodat in. Sidorna värda att bokmärka:",
-      "wiki_link_label": "fullständig wiki",
+      "lede": "Vill du ha den fördjupade versionen? {guide_link} täcker varje skärm, varje roll och varje World Aquatics-regel som appen kodat in. Sidorna värda att bokmärka:",
+      "guide_link_label": "fullständig wiki",
       "bookmark_features": "Funktioner per roll",
       "bookmark_features_desc": "alla funktioner i appen, indexerade efter vem som använder dem",
       "bookmark_quickstart": "Snabbstart (10 min)",
@@ -615,7 +615,7 @@
       "shortcuts": "Kortkommandon",
       "glossary": "Ordlista",
       "faq": "Vanliga frågor",
-      "wiki": "Mer på wikin"
+      "next": "Mer på wikin"
     },
     "quick_actions": {
       "lede": "Hoppa över menyn — gå direkt till den vy ni behöver. Varje ruta öppnar respektive live-sida."

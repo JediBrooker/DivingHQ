@@ -488,8 +488,8 @@
     "section_finding": "Finding things",
     "section_help": "Get help",
     "back_to_home": "← Back to home",
-    "open_wiki": "Open full wiki ↗",
-    "open_wiki_tip": "Detailed user guide on GitHub",
+    "open_guide": "Browse the guide",
+    "open_guide_tip": "In-depth topics, screenshots, and walkthroughs",
     "hero_welcome_prefix": "Welcome to",
     "hero_lede": "A platform for running diving meets — divers submit dive sheets, judges score on phones, the operator drives the meet from a Control Room, and the audience watches the scoreboard live. This page is the five-minute primer. Pick your role below for the path that fits.",
     "role": {
@@ -572,8 +572,8 @@
       "account_a": "All in <strong>My Profile</strong> → <strong>Account settings</strong>. Email changes need re-verification at the new address. Deleting your account is permanent and removes your sign-in; historical scores stay on the public scoreboard under the federation's record (anonymised on request — contact your federation admin)."
     },
     "next": {
-      "lede": "Need the deep-dive version? The {wiki_link} covers every screen, every role, every World Aquatics rule the app encodes. The pages most worth bookmarking:",
-      "wiki_link_label": "full wiki",
+      "lede": "Need the deep-dive version? The {guide_link} covers every screen, every role, every World Aquatics rule the app encodes. The pages most worth bookmarking:",
+      "guide_link_label": "full guide",
       "bookmark_features": "Features by role",
       "bookmark_features_desc": "every feature in the app, indexed by who uses it",
       "bookmark_quickstart": "Quick Start (10 min)",
@@ -604,7 +604,7 @@
       "shortcuts": "Shortcuts",
       "glossary": "Glossary",
       "faq": "FAQ",
-      "wiki": "More on the wiki"
+      "next": "Finding things"
     },
     "quick_actions": {
       "lede": "Skip the menu — jump straight into the screen you need. Each tile opens the live page."

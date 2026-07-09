@@ -488,8 +488,8 @@
     "section_finding": "Hledání",
     "section_help": "Získat pomoc",
     "back_to_home": "← Zpět na úvod",
-    "open_wiki": "Otevřít plnou wiki ↗",
-    "open_wiki_tip": "Podrobná uživatelská příručka na GitHubu",
+    "open_guide": "Otevřít plnou wiki ↗",
+    "open_guide_tip": "Podrobná uživatelská příručka na GitHubu",
     "hero_welcome_prefix": "Vítejte v",
     "hero_lede": "Platforma pro pořádání závodů ve skocích do vody — skokani odevzdávají soupisy skoků, rozhodčí bodují na telefonech, operátor řídí závod z Řídicí místnosti a diváci sledují výsledkovou tabuli živě. Tato stránka je pětiminutový úvod. Vyberte níže svou roli pro postup, který vám sedí.",
     "role": {
@@ -572,8 +572,8 @@
       "account_a": "Vše v <strong>Mém profilu</strong> → <strong>Nastavení účtu</strong>. Změna e-mailu vyžaduje opětovné ověření na nové adrese. Smazání účtu je trvalé a odstraní vaše přihlášení; historické známky zůstávají na veřejné výsledkové tabuli v záznamu federace (na požádání anonymizovány — kontaktujte administrátora své federace)."
     },
     "next": {
-      "lede": "Potřebujete podrobnou verzi? {wiki_link} pokrývá každou obrazovku, každou roli a každé pravidlo World Aquatics, které aplikace zachycuje. Stránky, které stojí za přidání do záložek:",
-      "wiki_link_label": "plná wiki",
+      "lede": "Potřebujete podrobnou verzi? {guide_link} pokrývá každou obrazovku, každou roli a každé pravidlo World Aquatics, které aplikace zachycuje. Stránky, které stojí za přidání do záložek:",
+      "guide_link_label": "plná wiki",
       "bookmark_features": "Funkce podle role",
       "bookmark_features_desc": "každá funkce aplikace, seřazená podle toho, kdo ji používá",
       "bookmark_quickstart": "Rychlý start (10 min)",
@@ -604,7 +604,7 @@
       "shortcuts": "Zkratky",
       "glossary": "Slovníček",
       "faq": "Časté dotazy",
-      "wiki": "Více na wiki"
+      "next": "Více na wiki"
     },
     "quick_actions": {
       "lede": "Vynechte nabídku — skočte rovnou na obrazovku, kterou potřebujete. Každá dlaždice otevře živou stránku."

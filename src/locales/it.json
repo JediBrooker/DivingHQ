@@ -499,8 +499,8 @@
     "section_finding": "Trovare le cose",
     "section_help": "Chiedere aiuto",
     "back_to_home": "← Torna alla home",
-    "open_wiki": "Apri il wiki completo ↗",
-    "open_wiki_tip": "Guida utente dettagliata su GitHub",
+    "open_guide": "Apri il wiki completo ↗",
+    "open_guide_tip": "Guida utente dettagliata su GitHub",
     "hero_welcome_prefix": "Benvenuta/o in",
     "hero_lede": "Una piattaforma per gestire gare di tuffi — i tuffatori inviano le liste tuffi, i giudici valutano dal telefono, l'operatore guida la gara da una Sala Controllo e il pubblico segue il tabellone in diretta. Questa pagina è l'introduzione di cinque minuti. Scelga il suo ruolo qui sotto per il percorso più adatto.",
     "role": {
@@ -583,8 +583,8 @@
       "account_a": "Tutto in <strong>Il mio profilo</strong> → <strong>Impostazioni dell'account</strong>. Il cambio email richiede una nuova verifica al nuovo indirizzo. Eliminare l'account è permanente e rimuove l'accesso; i punteggi storici restano sul tabellone pubblico sotto il registro della federazione (anonimizzati su richiesta — contatti l'admin della sua federazione)."
     },
     "next": {
-      "lede": "Le serve la versione approfondita? Il {wiki_link} copre ogni schermata, ogni ruolo, ogni regola World Aquatics che l'app implementa. Le pagine più utili da salvare nei preferiti:",
-      "wiki_link_label": "wiki completa",
+      "lede": "Le serve la versione approfondita? Il {guide_link} copre ogni schermata, ogni ruolo, ogni regola World Aquatics che l'app implementa. Le pagine più utili da salvare nei preferiti:",
+      "guide_link_label": "wiki completa",
       "bookmark_features": "Funzionalità per ruolo",
       "bookmark_features_desc": "tutte le funzionalità dell'app, indicizzate per utente",
       "bookmark_quickstart": "Avvio Rapido (10 min)",
@@ -615,7 +615,7 @@
       "shortcuts": "Scorciatoie",
       "glossary": "Glossario",
       "faq": "Domande frequenti",
-      "wiki": "Ulteriori informazioni sul wiki"
+      "next": "Ulteriori informazioni sul wiki"
     },
     "quick_actions": {
       "lede": "Tralasciare il menu — accedere direttamente alla schermata necessaria. Ogni riquadro apre la pagina live."

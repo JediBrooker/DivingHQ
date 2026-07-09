@@ -8,12 +8,13 @@ const routes = [
     meta: { guestOnly: true },
   },
   {
-    // Plain-English new-user primer. Public, no auth required —
-    // linked from the home hero / footer and from the dashboard
-    // footer. Deliberately NOT a wiki replacement; the page
-    // points out to the full wiki for depth.
     path: '/guide',
     component: () => import('@/views/GuideView.vue'),
+  },
+  {
+    path: '/guide/:topic',
+    component: () => import('@/guide/GuideTopicView.vue'),
+    props: true,
   },
   {
     path: '/login',

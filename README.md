@@ -3,7 +3,7 @@
 > [!NOTE]
 > **Live.** DivingHQ is now running in production at [https://divinghq.app](https://divinghq.app) — go ahead and use it for real competitions. Your data (meets, events, dive lists, scores, accounts) is persistent and won't be wiped without notice.
 
-📖 **[User Guide → DivingHQ Wiki](https://github.com/JediBrooker/DivingHQ/wiki)** — how to actually use the app: register a federation, run a meet, judge dives, watch the scoreboard, manage admin tasks. This README covers setup, deployment, and architecture.
+📖 **[User Guide](https://divinghq.app/guide/quick-start)** — how to actually use the app: register a federation, run a meet, judge dives, watch the scoreboard, manage admin tasks. This README covers setup, deployment, and architecture.
 
 ---
 
@@ -17,13 +17,13 @@ Built around five audiences:
 - **Judges** — Single-purpose phone-friendly view that submits scores back to the server in real time. Synchro panels see role hints (Exec A / Exec B / Sync) so they know which judging slot they're filling. **Judge Analysis** (`/judge-profile`) gives every judge a self-service dashboard showing how their scoring tracks against the panel-kept mean (post World Aquatics trim, PART FOUR Article 13) — overall bias, drop rate (with high vs low split), and breakdowns per board height, dive group, country, club, individual diver, round, and DD difficulty. Fully customisable widget catalogue, mirroring the diver dashboard pattern. A separate per-event **Judge Analysis** matrix (`/judge-analysis` — a tabbed By-Event / By-Judge page, with the app shell for signed-in users and a standalone view for the public) shows how each judge’s calls would have re-ranked the field, with World-Aquatics-correct synchro role breakdowns (Exec A / Exec B / Sync contributions that sum to the pair total, per Article 9.1.5).
 - **Spectators** — Public scoreboard with current performer, live standings, per-round leaderboard with movement arrows, public meet landing pages, and an archive of completed meets.
 
-**🌍 26 languages, switchable in-app.** The whole UI is internationalized — English source plus 25 translations (Spanish, French, German, Italian, Portuguese, Polish, Czech, Russian, Ukrainian, Finnish, Swedish, Danish, Norwegian, Hungarian, Croatian, Serbian, Mandarin Chinese, Japanese, Korean, Indonesian, Malay, Tagalog, Arabic, Turkish, Greek). A flag-prefixed dropdown in the header lets any user pick their language; the choice persists across sign-in / sign-out and across devices when signed in. Arabic gets full RTL layout flipping. See [Languages & Translation](https://github.com/JediBrooker/DivingHQ/wiki/Languages) for the full list and how the AI-assisted translation pipeline works.
+**🌍 26 languages, switchable in-app.** The whole UI is internationalized — English source plus 25 translations (Spanish, French, German, Italian, Portuguese, Polish, Czech, Russian, Ukrainian, Finnish, Swedish, Danish, Norwegian, Hungarian, Croatian, Serbian, Mandarin Chinese, Japanese, Korean, Indonesian, Malay, Tagalog, Arabic, Turkish, Greek). A flag-prefixed dropdown in the header lets any user pick their language; the choice persists across sign-in / sign-out and across devices when signed in. Arabic gets full RTL layout flipping. See [Languages & Translation](https://divinghq.app/guide/languages) for the full list and how the AI-assisted translation pipeline works.
 
 ---
 
 ## Table of contents
 
-- [User Guide (Wiki) ↗](https://github.com/JediBrooker/DivingHQ/wiki)
+- [User Guide ↗](https://divinghq.app/guide/quick-start)
 - [Screenshots](#screenshots)
 - [Tech stack](#tech-stack)
 - [Features](#features)
@@ -45,7 +45,7 @@ Built around five audiences:
 <details>
 <summary><h2 id="screenshots">Screenshots</h2></summary>
 
-Screenshots are grouped by audience: **Public**, **Spectators**, **Operators**, **Judges**, **Divers + Coaches**, and **Admins**. The full user guide lives in the [DivingHQ Wiki](https://github.com/JediBrooker/DivingHQ/wiki).
+Screenshots are grouped by audience: **Public**, **Spectators**, **Operators**, **Judges**, **Divers + Coaches**, and **Admins**. The full user guide lives in the [in-app guide](https://divinghq.app/guide/quick-start).
 
 ### Public-facing entry points
 
@@ -53,25 +53,25 @@ Screenshots are grouped by audience: **Public**, **Spectators**, **Operators**, 
 
 The public landing page. Anyone can sign in, create an account, watch a live meet, or browse the archive without logging in. Featured tiles surface live + upcoming meets so a spectator who lands here cold can be watching a dive in two clicks.
 
-![Home](./docs/screenshots/home.png)
+![Home](./public/guide-screenshots/home.png)
 
 #### Sign In
 
 Three entry points from one screen: existing users sign in, individuals join an existing federation via "Register here", and a brand-new federation admin clicks "Register your org". Forgot-password sends a single-use 30-min reset link.
 
-![Sign In](./docs/screenshots/login.png)
+![Sign In](./public/guide-screenshots/login.png)
 
 #### Sign Up (individual)
 
 The path for an individual diver, judge, or coach to join an existing federation. Pick the federation from the dropdown, role from the chips, fill in details. New accounts go through email verification and (for non-diver roles) admin approval before they can sign in.
 
-![Sign Up](./docs/screenshots/register.png)
+![Sign Up](./public/guide-screenshots/register.png)
 
 #### Register a Federation
 
 The first-time path for a country federation or club to register an organisation on DivingHQ. Org admin lands here, fills in name + country code + slug + admin credentials, and the request goes to the system administrator's queue for approval before the federation can run meets.
 
-![Register a Federation](./docs/screenshots/register-org.png)
+![Register a Federation](./public/guide-screenshots/register-org.png)
 
 ### Spectators + Public Results
 
@@ -79,25 +79,25 @@ The first-time path for a country federation or club to register an organisation
 
 The public hub for a multi-event meet. Federation hero + dates + venue at the top, status counters (`N Live` / `N Upcoming` / `N Completed`), and an event grid grouped by status. Each card jumps to that event's scoreboard or recap. The **📄 Program export…** button at the top opens a chooser to build a printable program: tick which sections to include (event schedule is always on; **Dive lists**, **Judge panels**, and **Estimated event duration** are optional) and pick the per-dive cadence (30 / 45 / 60 seconds) when timing is on. Download as **PDF** for a printed program or **CSV** for spreadsheet ingestion — the CSV uses a `section` column (`event` / `judge` / `dive`) so a federation can filter rows by what they care about.
 
-![Public Meet Landing Page](./docs/screenshots/meet.png)
+![Public Meet Landing Page](./public/guide-screenshots/meet.png)
 
 #### Live Scoreboard
 
 What the audience sees while a meet is running. Three-column layout: completed dives on the left (each card shows the diver, country chip, club, dive code + DD + description, and per-judge scores with World Aquatics-category colour-coding); current performer (or on-deck preview) in the centre with a **catch-up projection** below the rank line — the average judge score the active diver needs to overtake the leaders, rounded up to the next achievable 0.5; standings on the right with Final / By Round tabs.
 
-![Live Scoreboard](./docs/screenshots/scoreboard-live.png)
+![Live Scoreboard](./public/guide-screenshots/scoreboard-live.png)
 
 #### Completed Meet Recap
 
 When a meet is over, the Scoreboard switches to a recap layout: podium spotlight, full standings with club + team lines, and a per-diver dive-by-dive breakdown. Per-judge scores are colour-coded by World Aquatics category (excellent → failed) with the trim rule visualised by struck-through dimmed scores. A **Judge Ranking Analysis** card sits between the standings and the highlights panel and renders eagerly on every Completed event — individual, synchro pair, AND team. Each row is a competing entity (diver, pair, or team), each cell shows that judge's hypothetical rank with the hypothetical total on a second line, and every disagreement with the official rank is tinted cyan (pale for a single-position swap, brighter for two or more) so the columns that would have re-shuffled the podium jump out. CSV / PDF exports are one click away from the card header. Hovering a score chip elsewhere on the page also now spells out "Ranked this dive Nth of M in round R" alongside the existing judge identity line. **PDF / CSV / Start List** buttons in the header export the recap in print-ready form.
 
-![Completed Meet Recap](./docs/screenshots/scoreboard.png)
+![Completed Meet Recap](./public/guide-screenshots/scoreboard.png)
 
 #### Completed Meets Index
 
 The `/scoreboard` index (no event id) browses every meet **run on DivingHQ itself**. Filter by country, year, height, club, or just search across event / org / country. Each event card shows competitor and club counts so you can see meet size at a glance, and per-event PDFs (program, start list, score sheet, results) plus a CSV export of the filtered list are one click away.
 
-![Completed Meets Index](./docs/screenshots/results-archive.png)
+![Completed Meets Index](./public/guide-screenshots/results-archive.png)
 
 #### Results Archive (DiveRecorder)
 
@@ -109,7 +109,7 @@ A separate surface at `/results-archive` (the **Results Archive** sidebar item) 
 
 A **role-aware home** with a tabbed layout. The header carries the user's name + roles plus a top-right account row (diver search box, My Profile, Sign Out). Below the header sits a **Pulse strip** — always-visible, glyph-prefixed cross-role digest reading `🔴 3 LIVE · 📅 2 UPCOMING · 👥 5 PENDING · 🤿 14 days until entries close · ⚖️ 1 judging assignment · 🎓 8 divers coaching · ⚡ Cameron Costa scored 7.5 in 2024 NZL Cup · 4s ago`. Each chip is **clickable** (jumps to the relevant role's tab) and **hoverable** (drops a popover listing the actual items behind the count, each clickable as a deep-link). The LIVE chip *breathes* gently while there are live events; counts that change between polls **flash cyan** so the operator's eye lands on the change. Items in popovers carry **urgency markers** — upcoming events closing within 24h get an amber border + "closing soon" pill; role requests older than 7 days get a red border + "overdue" pill. A **latest-activity ticker** at the right edge auto-cycles every ~9s through the most recent audit rows (hover pauses, click → /audit). The strip is **socket-driven** in real time: `event_status_changed` and `role_request_created` server emits trigger immediate refetches, so the LIVE / PENDING counts update the moment something happens; a 30-second poll stays as a fallback. **Skeleton ghost chips** render briefly on first mount before the real data arrives. Below the pulse strip, a **Tab strip** has one tab per role the user holds and a permanent Other tab for utility surfaces; each tab carries a badge count for pending work in that role. The active panel renders content scoped to the active role: org admins see "What needs your attention" cards (live events, upcoming events sorted by entries-close, pending role requests / org registrations) plus a recent-activity feed plus a go-to grid. Meet managers see their events list + operational tiles. Divers see "Your next meet" + a personal go-to grid. Coaches / judges / referees see their role-scoped content. **Smart-pick** auto-selects the initial tab on mount based on signals (LIVE event for an operator → operator tab; diver with imminent entries close → diver tab; pending governance work → org admin tab; localStorage stamp from a prior visit; most-privileged role fallback). Brand-new federations (zero events + zero clubs) are auto-redirected to `/setup` (the first-run wizard) until they've created a club or dismissed.
 
-![Dashboard](./docs/screenshots/dashboard.png)
+![Dashboard](./public/guide-screenshots/dashboard.png)
 
 #### Meet Manager
 
@@ -121,11 +121,11 @@ The New Event form itself lives in a **modal** (migration 039) that opens via th
 
 Form layout is ordered so the operator's flow reads top-to-bottom: Event Name → Event Type → Gender → **Age Group / Division** → Board height → Judges → **Round dives** → **Round structure** (sections, sat directly under the dives so the operator pins the dives then groups them) → meet bundle / scheduling / format. The **Age Group / Division** dropdown shows the WA Group letter alongside the actual age band so the mapping is visible in one click — *Group D — 11 and under*, *Group C — 12/13*, *Group B — 14/15*, *Group A — 16-18*, plus Masters / Open / Other. The age ranges anchor to PART FOUR Article 13 (Group A 13.2.2; Group B 13.2.1; Group C 13.3.1; Group D extends the WA scheme down per common national-federation usage). A **Suggested templates** strip surfaces World Aquatics-aligned starting points (`src/lib/standard-templates.js`) filtered live by the chosen Gender + Age Group — pick Female + Open and the modal offers Women's 1m/3m/10m and synchro templates that match WA conditions; pick Junior Group A and the Boys/Girls 1m/3m/10m structures load with the right round count + min-distinct-groups rule. Click a template → the form populates, the operator can still tweak any field before submit.
 
-![Meet Manager](./docs/screenshots/meet-manager.png)
+![Meet Manager](./public/guide-screenshots/meet-manager.png)
 
 The `+ New Event` button opens the create-event modal — suggested templates, meet bundling, event type / gender / age group / board height, judge panel size, and the Round dives + Round structure editors all in one full-width surface. The Edit Event modal mirrors the same UI.
 
-![New Event modal](./docs/screenshots/new-event-modal.png)
+![New Event modal](./public/guide-screenshots/new-event-modal.png)
 
 #### Control Room
 
@@ -133,11 +133,11 @@ The operator's cockpit during a live meet — and it now drives **two or more ev
 
 With **one event live** it's the familiar three-column board: the running **History** of completed dives on the left — each card shows the diver, dive, and the **per-judge score chips** (trimmed marks struck through; for synchro events the chips group into Exec A / Exec B / Sync) — and a click opens the **Score Correction modal**, with a live preview of trim sum + dive points + delta as you type; the active diver in the centre — name, country chip, dive code + DD + description, the live judge tile strip, a READY / DIVING / JUDGING status pill, the 60-second WA post-warning shot clock, a Failed / Cap / Re-dive referee row, and the bottom-pinned **Next Diver / Finalise** primary with an Auto-next picker; and **Standings** on the right with an **Announce** button that pushes the board to the spectator scoreboard.
 
-![Control Room](./docs/screenshots/control-room.png)
+![Control Room](./public/guide-screenshots/control-room.png)
 
 With **multiple events live**, History and Standings collapse into edge drawers (one tap to peek the focused pool) and each Live event becomes its own **pool card** side by side — each with its own shot clock, auto-advance, Hold, judge tiles, and referee actions, so a background pool keeps scoring and can auto-advance itself while you work another. Scores route to the right pool by event id; a `set_active_diver` that the server rate-limits is caught client-side and flagged for retry; and an advisory **operator lease** warns (without blocking) if a second operator or window is driving the same event. Recovery (meet hold/resume) and the secondary-surfaces drawer (Broadcast / Reserves / Audit) round out the toolset.
 
-![Control Room — two events at once](./docs/screenshots/control-room-simultaneous.png)
+![Control Room — two events at once](./public/guide-screenshots/control-room-simultaneous.png)
 
 **Keyboard control.** The whole console is drivable from the keyboard, and every hotkey acts on the **focused pool** — so with several pools live you `1`…`9` to switch focus, then drive that pool: `Space` / `→` advance to the next diver, `H` hold/resume, `L` announce standings, and `F` / `R` / `C` for the referee's failed-dive / re-dive / cap rulings. Hotkeys are suppressed while you're typing in a field or the command palette.
 
@@ -145,13 +145,13 @@ With **multiple events live**, History and Standings collapse into edge drawers 
 
 Build the panel for an event: pick judges from the federation's user list, drag to reorder so judge_number aligns with panel position. For synchro events the position-to-role mapping (Exec A / Exec B / Sync) is shown next to each slot so the operator can verify the panel before sign-off.
 
-![Assign Judges](./docs/screenshots/assign-judges.png)
+![Assign Judges](./public/guide-screenshots/assign-judges.png)
 
 #### Score Audit Log
 
 Per-event timeline of every score insert / update / delete with actor, IP, user agent, old / new value, and reason text. Visible to org admins, referees, and meet managers. 30-day retention by default.
 
-![Score Audit Log](./docs/screenshots/score-audit.png)
+![Score Audit Log](./public/guide-screenshots/score-audit.png)
 
 ### Judges
 
@@ -159,7 +159,7 @@ Per-event timeline of every score insert / update / delete with actor, IP, user 
 
 The single-purpose, phone-friendly screen scoring panel members use during a meet. Top zone shows the current diver, their dive code + DD + description, and the panel's progress (`DIVE PANEL · 0 / 5`). Bottom zone is a numeric keypad accepting half-point increments. **Signal Referee** flags the panel for a meet manager hold; **Lock & Submit** sends the score over the socket. For synchro panels, the header also shows the judge's sub-panel role (Exec A / Exec B / Sync) so they know which slot they're filling.
 
-![Judge View](./docs/screenshots/judge.png)
+![Judge View](./public/guide-screenshots/judge.png)
 
 ### Divers + Coaches
 
@@ -169,7 +169,7 @@ Where divers build their list for an upcoming event. Step 1 picks the event (aut
 
 When the event has **round rules** configured (e.g. Diving NSW–style "4 dives @ 7.6 + 4 unlimited"), the portal shows a per-section strip above the dive picker — running DD total against the section cap and a "n of m groups picked" counter — plus a violations panel beneath the rows that lists which rules are still failing (DD over the limit, repeated group, missing rounds). The **Finalise & Submit** button stays disabled until the list is legal, and the server re-validates on submit so a malformed list can never land in the DB.
 
-![Diver Portal](./docs/screenshots/competitor.png)
+![Diver Portal](./public/guide-screenshots/competitor.png)
 
 #### Diver Meet Day View
 
@@ -181,37 +181,37 @@ Phone-deck experience for athletes mid-competition. Lives at `/me/meet/:eventId`
 
 Real-time: subscribes to the event-room socket; `score_received` / `state_update` / `score_corrected` trigger a 250 ms-debounced bundle refetch. Endpoint: `GET /api/events/:id/me-meet-day`, gated on `competitor_dive_lists` membership (403s for non-entrants).
 
-![Diver Meet Day View](./docs/screenshots/meet-day.png)
+![Diver Meet Day View](./public/guide-screenshots/meet-day.png)
 
 #### Diver Profile
 
 Per-diver stats: meets entered, dives performed, average DD attempted, best single dive, an SVG sparkline of total scores across meets, and a personal-bests table keyed by dive code + position + height. The Customize modal lets each diver pick which of 10+ analytics widgets to show (Recent Form, Medal Counts, Height Breakdown, Round-by-Round Form with stamina insight, DD Risk Profile, Compare-to-Peers, Year-over-Year, etc.) — the choices persist per-user. Cmd-P / Ctrl-P prints the dashboard to PDF; `/compare?a=&b=` puts two divers side-by-side.
 
-![Diver Profile](./docs/screenshots/diver-profile.png)
+![Diver Profile](./public/guide-screenshots/diver-profile.png)
 
 #### Compare Two Divers
 
 Side-by-side at `/compare?a=<id>&b=<id>` — two divers' headline stats in two columns, plus a per-dive PB diff for every dive code + position both have attempted. Useful before national selections or for coaches comparing rivals.
 
-![Compare Two Divers](./docs/screenshots/compare.png)
+![Compare Two Divers](./public/guide-screenshots/compare.png)
 
 #### Coach Dashboard
 
 A coach's hub: their roster of linked divers (subject to org-admin approval) with one-click access to each diver's profile + analytics. Templates the coach saves on a diver's behalf are scoped per board height and per diver.
 
-![Coach Dashboard](./docs/screenshots/coach.png)
+![Coach Dashboard](./public/guide-screenshots/coach.png)
 
 #### Coach Dive Lists (on-behalf-of)
 
 From a linked diver's event, a coach opens the per-event dive-list editor at `/coach/dive-lists/:event_id` to build or edit every squad member's list in one view — each diver's rounds, dive codes + DD, submission status, and withdraw control. Round rules and operator-pinned dives are enforced exactly as they are in the diver's own portal.
 
-![Coach Dive Lists](./docs/screenshots/coach-dive-lists.png)
+![Coach Dive Lists](./public/guide-screenshots/coach-dive-lists.png)
 
 #### Notifications Inbox
 
 Available to every signed-in user at `/inbox` (bell icon in the header). It keeps every push notification + in-app banner the account received, retained past the moment of the live push so a missed phone alert isn't lost. Filter by category (Action required, Coach & team, Results, Operations), toggle unread-only, and one-click **Mark all read**; each row deep-links to the relevant scoreboard, event, or approval queue.
 
-![Notifications Inbox](./docs/screenshots/inbox.png)
+![Notifications Inbox](./public/guide-screenshots/inbox.png)
 
 ### Admins
 
@@ -219,31 +219,31 @@ Available to every signed-in user at `/inbox` (bell icon in the header). It keep
 
 Search across the federation's users; filter by role chips and (system admins only) by org; bulk-apply roles by ticking rows; click any row to open the edit drawer with profile, roles, role-audit history, club assignment, and (for divers) coach links. The token-version bump on every role change forces the affected user to re-login the next request.
 
-![User Manager](./docs/screenshots/user-manager.png)
+![User Manager](./public/guide-screenshots/user-manager.png)
 
 #### Clubs
 
 The federation's club registry. Each club has a name + a 3 – 6 char short code (the cyan pill that surfaces next to the diver's name on the scoreboard). Members count is derived from `users.club_id`; non-empty clubs can't be deleted (prevents orphaning users).
 
-![Clubs](./docs/screenshots/clubs.png)
+![Clubs](./public/guide-screenshots/clubs.png)
 
 #### Teams
 
 Teams sit alongside clubs as a separate grouping for World Aquatics Team Event entries. A diver can belong to multiple teams over time. Soft-delete preserves the team's history (existing dive lists keep referencing the team via `ON DELETE SET NULL`).
 
-![Teams](./docs/screenshots/teams.png)
+![Teams](./public/guide-screenshots/teams.png)
 
 #### Dive Directory
 
 Browse the World Aquatics catalogue (~830 dives shipped in `init.sql`) and add custom rows for poolside / progression / age-group dives. Filter by group, position, height, gender. Custom rows are scoped per-org; standard rows are read-only.
 
-![Dive Directory](./docs/screenshots/dive-directory.png)
+![Dive Directory](./public/guide-screenshots/dive-directory.png)
 
 #### Sign-Off Codes (Referee)
 
 The referee's sign-off page. Pre-meet, the meet manager generates a 6-digit handoff code on their device; the referee opens this page on their phone and types the code to authorise the panel. Both legs write the same audit row regardless of which path the operator picked.
 
-![Sign-Off Codes](./docs/screenshots/sign-off-codes.png)
+![Sign-Off Codes](./public/guide-screenshots/sign-off-codes.png)
 
 ---
 
@@ -267,12 +267,10 @@ The project intentionally avoids a build-time framework like Nuxt or Next — th
 <details>
 <summary><h2 id="features">Features</h2></summary>
 
-The complete feature inventory now lives in the wiki, with two views over the same set of features:
+The complete feature inventory lives in the in-app guide, with two views over the same set of features:
 
-- **[Features → By persona](https://github.com/JediBrooker/DivingHQ/wiki/Features#by-persona)** — pick your role (Spectator / Diver / Judge / Referee / Coach / Meet manager / Org admin / System admin) and see everything you can do, with deep-links to the docs for each one.
-- **[Features → By section](https://github.com/JediBrooker/DivingHQ/wiki/Features#by-section)** — same features inverted, grouped by app surface (Auth, Meet setup, Control Room, Judging, Scoreboard, Diver Portal, Admin Tasks, PDF/CSV exports, Notifications, Keyboard shortcuts, Performance + offline).
-
-The README used to inline this list; the wiki page keeps deep-links to the user guide and is easier to keep in sync as features land.
+- **[Features → By persona](https://divinghq.app/guide/features)** — pick your role (Spectator / Diver / Judge / Referee / Coach / Meet manager / Org admin / System admin) and see everything you can do, with deep-links to the docs for each one.
+- **[Features → By section](https://divinghq.app/guide/features)** — same features inverted, grouped by app surface (Auth, Meet setup, Control Room, Judging, Scoreboard, Diver Portal, Admin Tasks, PDF/CSV exports, Notifications, Keyboard shortcuts, Performance + offline).
 
 The app also ships a venue hardware bridge for Daktronics workflows:
 `npm run venue:daktronics` subscribes to the existing
@@ -331,7 +329,7 @@ ANTHROPIC_API_KEY=sk-… npm run translate -- --provider anthropic
 
 The script is idempotent — already-translated keys are skipped unless `--force` is passed, and the JSON structure / placeholders / `{'@'}` escape sequences are preserved verbatim.
 
-For deeper detail (vue-i18n message format, the unplugin alternative builds, how the locale state hydrates), see the wiki: [Languages & Translation ↗](https://github.com/JediBrooker/DivingHQ/wiki/Languages).
+For deeper detail (vue-i18n message format, the unplugin alternative builds, how the locale state hydrates), see the guide: [Languages & Translation](https://divinghq.app/guide/languages).
 
 ---
 
@@ -775,7 +773,7 @@ If you're a paying customer or running a production federation, urgent issues ca
 | `npm run lint` | Syntax-check `server.js` |
 | `npm test` | Node's built-in test runner against `test/*.test.js` |
 | `npm run test:e2e` | Automatic Playwright suite — see below |
-| `npm run test:e2e:docs` | Regenerate documentation screenshots in `docs/screenshots/` |
+| `npm run test:e2e:docs` | Regenerate documentation screenshots in `public/guide-screenshots/` |
 | `npm run test:e2e:visual` | Run only the Playwright visual regression snapshots |
 | `npm run test:e2e:profile` | Run Playwright with the JSON reporter at `/tmp/divinghq-playwright-profile.json` |
 | `npm run venue:daktronics` | Run the Daktronics RTD/ERTD venue bridge CLI |
@@ -797,7 +795,7 @@ in cleanup so parallel runs don't collide.
 The default `npm run test:e2e` command is the regression gate.
 It excludes only the documentation screenshot generator
 (`wiki-screenshots.spec.js`), which rewrites images in
-`docs/screenshots/` and is opt-in via `npm run test:e2e:docs`.
+`public/guide-screenshots/` and is opt-in via `npm run test:e2e:docs`.
 
 ### The specs
 
@@ -828,7 +826,7 @@ The spec runs use the same Postgres test database as `npm test`
 npm run test:e2e
 
 # Documentation screenshot regeneration. This rewrites
-# docs/screenshots/*.png by design.
+# public/guide-screenshots/*.png by design.
 npm run test:e2e:docs
 
 # Visual regression snapshots only.

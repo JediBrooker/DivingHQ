@@ -488,8 +488,8 @@
     "section_finding": "查找内容",
     "section_help": "获取帮助",
     "back_to_home": "← 返回首页",
-    "open_wiki": "打开完整 Wiki ↗",
-    "open_wiki_tip": "GitHub 上的详细用户指南",
+    "open_guide": "打开完整 Wiki ↗",
+    "open_guide_tip": "GitHub 上的详细用户指南",
     "hero_welcome_prefix": "欢迎来到",
     "hero_lede": "运营跳水比赛的平台 — 跳水运动员提交动作单,裁判员用手机打分,操作员从控制室驱动比赛,观众实时观看记分牌。本页是五分钟入门。在下方选择您的角色,获取对应路径。",
     "role": {
@@ -572,8 +572,8 @@
       "account_a": "全部在 <strong>我的资料</strong> → <strong>账户设置</strong> 中。更改邮箱需要在新地址重新验证。删除账户是永久性的，会移除您的登录方式；历史成绩将以联合会记录的形式保留在公开记分牌上（如需匿名化请提出申请 — 联系您所在联合会的管理员）。"
     },
     "next": {
-      "lede": "需要深入版本?{wiki_link} 涵盖每个屏幕、每个角色、应用编码的每条 World Aquatics 规则。最值得收藏的页面:",
-      "wiki_link_label": "完整 wiki",
+      "lede": "需要深入版本?{guide_link} 涵盖每个屏幕、每个角色、应用编码的每条 World Aquatics 规则。最值得收藏的页面:",
+      "guide_link_label": "完整 wiki",
       "bookmark_features": "按角色分类的功能",
       "bookmark_features_desc": "应用中的每个功能,按使用者索引",
       "bookmark_quickstart": "快速开始(10 分钟)",
@@ -604,7 +604,7 @@
       "shortcuts": "快捷键",
       "glossary": "术语",
       "faq": "常见问题",
-      "wiki": "在维基上了解更多"
+      "next": "在维基上了解更多"
     },
     "quick_actions": {
       "lede": "跳过菜单 — 直接进入所需界面。每个方块将打开实时页面。"

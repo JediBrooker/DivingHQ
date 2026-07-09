@@ -499,8 +499,8 @@
     "section_finding": "Finne ting",
     "section_help": "Få hjelp",
     "back_to_home": "← Tilbake til forsiden",
-    "open_wiki": "Åpne hele wikien ↗",
-    "open_wiki_tip": "Detaljert brukerveiledning på GitHub",
+    "open_guide": "Åpne hele wikien ↗",
+    "open_guide_tip": "Detaljert brukerveiledning på GitHub",
     "hero_welcome_prefix": "Velkommen til",
     "hero_lede": "En plattform for å avvikle stupstevner — stupere sender inn stuplister, dommere bedømmer fra telefonen, operatøren styrer stevnet fra et kontrollrom, og publikum følger scoretavlen live. Denne siden er en fem-minutters innføring. Velg din rolle nedenfor for veien som passer.",
     "role": {
@@ -583,8 +583,8 @@
       "account_a": "Alt sammen under <strong>Min profil</strong> → <strong>Kontoinnstillinger</strong>. Endring av e-post krever ny bekreftelse på den nye adressen. Sletting av kontoen er permanent og fjerner innloggingen din; historiske poengsummer blir stående på den offentlige scoretavlen under forbundets registrering (anonymiseres på forespørsel — kontakt forbundsadministratoren din)."
     },
     "next": {
-      "lede": "Trenger du den dyptgående versjonen? {wiki_link} dekker hver skjerm, hver rolle, hver World Aquatics-regel som appen har kodet inn. Sidene som er verdt å bokmerke:",
-      "wiki_link_label": "fulle wiki",
+      "lede": "Trenger du den dyptgående versjonen? {guide_link} dekker hver skjerm, hver rolle, hver World Aquatics-regel som appen har kodet inn. Sidene som er verdt å bokmerke:",
+      "guide_link_label": "fulle wiki",
       "bookmark_features": "Funksjoner per rolle",
       "bookmark_features_desc": "alle funksjoner i appen, indeksert etter hvem som bruker dem",
       "bookmark_quickstart": "Hurtigstart (10 min)",
@@ -615,7 +615,7 @@
       "shortcuts": "Snarveier",
       "glossary": "Ordliste",
       "faq": "Ofte stilte spørsmål",
-      "wiki": "Mer på wikien"
+      "next": "Mer på wikien"
     },
     "quick_actions": {
       "lede": "Hopp over menyen — gå direkte til skjermen du trenger. Hver rute åpner den direkte siden."

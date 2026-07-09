@@ -499,8 +499,8 @@
     "section_finding": "Tájékozódás",
     "section_help": "Segítség kérése",
     "back_to_home": "← Vissza a kezdőlapra",
-    "open_wiki": "Teljes wiki megnyitása ↗",
-    "open_wiki_tip": "Részletes felhasználói kézikönyv a GitHubon",
+    "open_guide": "Teljes wiki megnyitása ↗",
+    "open_guide_tip": "Részletes felhasználói kézikönyv a GitHubon",
     "hero_welcome_prefix": "Üdvözöljük a",
     "hero_lede": "Platform műugró versenyek lebonyolításához — a műugrók ugrási lapokat adnak le, a pontozóbírók telefonon pontoznak, a kezelő a Vezérlőteremből irányítja a versenyt, a közönség pedig élőben követi az eredménytáblát. Ez az oldal az ötperces bevezető. Válassza ki alább a szerepét a megfelelő útvonalhoz.",
     "role": {
@@ -583,8 +583,8 @@
       "account_a": "Mind a <strong>Saját profil</strong> → <strong>Fiókbeállítások</strong> alatt. Az e-mail-cím módosításához újra meg kell erősíteni az új címet. A fiók törlése végleges, és eltávolítja a bejelentkezését; a korábbi pontszámok a nyilvános eredménytáblán maradnak a szövetség nyilvántartása alatt (kérésre anonimizálva — vegye fel a kapcsolatot a szövetségi adminisztrátorral)."
     },
     "next": {
-      "lede": "Részletes verzióra van szüksége? A {wiki_link} minden képernyőt, minden szerepkört, minden World Aquatics szabályt lefed, amelyet az alkalmazás kódol. A leginkább könyvjelzőzésre érdemes oldalak:",
-      "wiki_link_label": "teljes wiki",
+      "lede": "Részletes verzióra van szüksége? A {guide_link} minden képernyőt, minden szerepkört, minden World Aquatics szabályt lefed, amelyet az alkalmazás kódol. A leginkább könyvjelzőzésre érdemes oldalak:",
+      "guide_link_label": "teljes wiki",
       "bookmark_features": "Funkciók szerepkör szerint",
       "bookmark_features_desc": "minden funkció az alkalmazásban, indexelve aszerint, ki használja",
       "bookmark_quickstart": "Gyors kezdés (10 perc)",
@@ -615,7 +615,7 @@
       "shortcuts": "Billentyűparancsok",
       "glossary": "Fogalomtár",
       "faq": "Gyakran ismételt kérdések",
-      "wiki": "További információk a wikiben"
+      "next": "További információk a wikiben"
     },
     "quick_actions": {
       "lede": "Hagyja ki a menüt — lépjen közvetlenül a kívánt képernyőre. Minden csempe megnyitja az élő oldalt."

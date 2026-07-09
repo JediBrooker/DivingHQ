@@ -1,13 +1,6 @@
 <script setup>
-/* GuideView — `/guide`. A single-page, no-login, plain-English
- * primer for someone who just landed in the app and needs a
- * sketch of "what is this and how do I use it."
- *
- * Deliberately NOT a wiki replacement — the wiki at
- * https://github.com/JediBrooker/DivingHQ/wiki carries the
- * exhaustive material. This page is the 5-minute orientation
- * that gets a new user from "I have no idea where to click" to
- * "OK, I know which screen to open."
+/* GuideView — `/guide`. The hub page for the in-app user guide.
+ * Orientation for new users; topic pages live at `/guide/:topic`.
  *
  * Linked from:
  *   • Home (`/`) hero CTAs + footer
@@ -33,7 +26,7 @@
  *     on mobile it collapses into a horizontal scroll strip
  *     pinned beneath the page header. Each entry is a hash
  *     anchor (#overview, #roles, …) so individual sections are
- *     deep-linkable from the dashboard, wiki, or chat.
+ *     deep-linkable from the dashboard, guide, or chat.
  *   • IntersectionObserver highlights the active section as the
  *     user scrolls; respects the reduced-motion preference by
  *     not animating the highlight transition.
@@ -50,8 +43,6 @@ import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe } from '@lucide/vue'
 
-const WIKI = 'https://github.com/JediBrooker/DivingHQ/wiki'
-
 // TOC entries match the in-template section ids. Order matters —
 // it's the visual reading order. Keep the keys aligned with the
 // `guide.toc.*` strings in en.json.
@@ -62,7 +53,7 @@ const SECTIONS = [
   { id: 'shortcuts',     key: 'shortcuts' },
   { id: 'glossary',      key: 'glossary' },
   { id: 'faq',           key: 'faq' },
-  { id: 'wiki',          key: 'wiki' },
+  { id: 'next',          key: 'next' },
 ]
 
 // Quick-action tiles. Each links to a live in-app destination
@@ -140,11 +131,9 @@ onBeforeUnmount(() => observer?.disconnect())
     <!-- Top nav -->
     <div class="guide-nav">
       <RouterLink to="/" class="btn btn-ghost btn-sm">{{ $t('guide.back_to_home') }}</RouterLink>
-      <a :href="WIKI" target="_blank" rel="noopener"
-         class="btn btn-ghost btn-sm"
-         v-tip:bottom="$t('guide.open_wiki_tip')">
-        {{ $t('guide.open_wiki') }}
-      </a>
+      <RouterLink to="/guide/quick-start" class="btn btn-ghost btn-sm">
+        {{ $t('guide.open_guide') }}
+      </RouterLink>
       <div class="guide-nav-locale guide-nav-actions">
         <ThemeToggle compact />
         <LocaleSwitcher />
@@ -193,8 +182,7 @@ onBeforeUnmount(() => observer?.disconnect())
                 <li v-html="$t('guide.role.diver.step_3')"></li>
                 <li v-html="$t('guide.role.diver.step_4')"></li>
               </ol>
-              <a :href="`${WIKI}/Diver-Portal`" target="_blank" rel="noopener"
-                 class="role-cta">{{ $t('guide.role.diver.cta') }}</a>
+              <RouterLink to="/guide/diver-portal" class="role-cta">{{ $t('guide.role.diver.cta') }}</RouterLink>
             </article>
 
             <article class="role-card">
@@ -207,8 +195,7 @@ onBeforeUnmount(() => observer?.disconnect())
                 <li v-html="$t('guide.role.judge.step_3')"></li>
                 <li v-html="$t('guide.role.judge.step_4')"></li>
               </ol>
-              <a :href="`${WIKI}/Judging`" target="_blank" rel="noopener"
-                 class="role-cta">{{ $t('guide.role.judge.cta') }}</a>
+              <RouterLink to="/guide/judging" class="role-cta">{{ $t('guide.role.judge.cta') }}</RouterLink>
             </article>
 
             <article class="role-card">
@@ -222,8 +209,7 @@ onBeforeUnmount(() => observer?.disconnect())
                 <li v-html="$t('guide.role.coach.step_4')"></li>
                 <li v-html="$t('guide.role.coach.step_5')"></li>
               </ol>
-              <a :href="`${WIKI}/Diver-Portal#coach-access`" target="_blank" rel="noopener"
-                 class="role-cta">{{ $t('guide.role.coach.cta') }}</a>
+              <RouterLink to="/guide/diver-portal#coach-access" class="role-cta">{{ $t('guide.role.coach.cta') }}</RouterLink>
             </article>
 
             <article class="role-card">
@@ -237,8 +223,7 @@ onBeforeUnmount(() => observer?.disconnect())
                 <li v-html="$t('guide.role.meet_manager.step_4')"></li>
                 <li v-html="$t('guide.role.meet_manager.step_5')"></li>
               </ol>
-              <a :href="`${WIKI}/Running-a-Meet`" target="_blank" rel="noopener"
-                 class="role-cta">{{ $t('guide.role.meet_manager.cta') }}</a>
+              <RouterLink to="/guide/running-a-meet" class="role-cta">{{ $t('guide.role.meet_manager.cta') }}</RouterLink>
             </article>
 
             <article class="role-card">
@@ -255,8 +240,7 @@ onBeforeUnmount(() => observer?.disconnect())
                 <li v-html="$t('guide.role.org_admin.step_3')"></li>
                 <li v-html="$t('guide.role.org_admin.step_4')"></li>
               </ol>
-              <a :href="`${WIKI}/Quick-Start`" target="_blank" rel="noopener"
-                 class="role-cta">{{ $t('guide.role.org_admin.cta') }}</a>
+              <RouterLink to="/guide/quick-start" class="role-cta">{{ $t('guide.role.org_admin.cta') }}</RouterLink>
             </article>
 
             <article class="role-card">
@@ -273,8 +257,7 @@ onBeforeUnmount(() => observer?.disconnect())
                 <li v-html="$t('guide.role.spectator.step_3')"></li>
                 <li v-html="$t('guide.role.spectator.step_4')"></li>
               </ol>
-              <a :href="`${WIKI}/Scoreboard`" target="_blank" rel="noopener"
-                 class="role-cta">{{ $t('guide.role.spectator.cta') }}</a>
+              <RouterLink to="/guide/scoreboard" class="role-cta">{{ $t('guide.role.spectator.cta') }}</RouterLink>
             </article>
           </div>
         </section>
@@ -396,44 +379,44 @@ onBeforeUnmount(() => observer?.disconnect())
         </section>
 
         <!-- Where to next -->
-        <section id="wiki" class="guide-section guide-next">
+        <section id="next" class="guide-section guide-next">
           <h2 class="guide-h2">{{ $t('guide.section_finding') }}</h2>
           <i18n-t keypath="guide.next.lede" tag="p" class="guide-next-lede">
-            <template #wiki_link>
-              <a :href="WIKI" target="_blank" rel="noopener">{{ $t('guide.next.wiki_link_label') }}</a>
+            <template #guide_link>
+              <RouterLink to="/guide/quick-start">{{ $t('guide.next.guide_link_label') }}</RouterLink>
             </template>
           </i18n-t>
           <ul class="guide-next-list">
             <li>
-              <a :href="`${WIKI}/Features`" target="_blank" rel="noopener">{{ $t('guide.next.bookmark_features') }}</a>
+              <RouterLink to="/guide/features">{{ $t('guide.next.bookmark_features') }}</RouterLink>
               — {{ $t('guide.next.bookmark_features_desc') }}
             </li>
             <li>
-              <a :href="`${WIKI}/Quick-Start`" target="_blank" rel="noopener">{{ $t('guide.next.bookmark_quickstart') }}</a>
+              <RouterLink to="/guide/quick-start">{{ $t('guide.next.bookmark_quickstart') }}</RouterLink>
               — {{ $t('guide.next.bookmark_quickstart_desc') }}
             </li>
             <li>
-              <a :href="`${WIKI}/Roles-and-Permissions`" target="_blank" rel="noopener">{{ $t('guide.next.bookmark_roles') }}</a>
+              <RouterLink to="/guide/roles-and-permissions">{{ $t('guide.next.bookmark_roles') }}</RouterLink>
               — {{ $t('guide.next.bookmark_roles_desc') }}
             </li>
             <li>
-              <a :href="`${WIKI}/FAQ`" target="_blank" rel="noopener">{{ $t('guide.next.bookmark_faq') }}</a>
+              <RouterLink to="/guide/faq">{{ $t('guide.next.bookmark_faq') }}</RouterLink>
               — {{ $t('guide.next.bookmark_faq_desc') }}
             </li>
             <li>
-              <a :href="`${WIKI}/Keyboard-Shortcuts`" target="_blank" rel="noopener">{{ $t('guide.next.bookmark_shortcuts') }}</a>
+              <RouterLink to="/guide/keyboard-shortcuts">{{ $t('guide.next.bookmark_shortcuts') }}</RouterLink>
               — {{ $t('guide.next.bookmark_shortcuts_desc') }}
             </li>
             <li>
-              <a :href="`${WIKI}/Payments`" target="_blank" rel="noopener">{{ $t('guide.next.bookmark_payments') }}</a>
+              <RouterLink to="/guide/payments">{{ $t('guide.next.bookmark_payments') }}</RouterLink>
               — {{ $t('guide.next.bookmark_payments_desc') }}
             </li>
             <li>
-              <a :href="`${WIKI}/Classes`" target="_blank" rel="noopener">{{ $t('guide.next.bookmark_classes') }}</a>
+              <RouterLink to="/guide/classes">{{ $t('guide.next.bookmark_classes') }}</RouterLink>
               — {{ $t('guide.next.bookmark_classes_desc') }}
             </li>
             <li>
-              <a :href="`${WIKI}/Offline-Competitions`" target="_blank" rel="noopener">{{ $t('guide.next.bookmark_offline') }}</a>
+              <RouterLink to="/guide/offline-competitions">{{ $t('guide.next.bookmark_offline') }}</RouterLink>
               — {{ $t('guide.next.bookmark_offline_desc') }}
             </li>
           </ul>

@@ -499,8 +499,8 @@
     "section_finding": "Find rundt",
     "section_help": "Få hjælp",
     "back_to_home": "← Tilbage til forsiden",
-    "open_wiki": "Åbn hele wikien ↗",
-    "open_wiki_tip": "Detaljeret brugervejledning på GitHub",
+    "open_guide": "Åbn hele wikien ↗",
+    "open_guide_tip": "Detaljeret brugervejledning på GitHub",
     "hero_welcome_prefix": "Velkommen til",
     "hero_lede": "En platform til at afvikle udspringsstævner — udspringere indsender springlister, dommere bedømmer på telefonen, operatøren styrer stævnet fra et kontrolrum, og publikum følger scoringstavlen live. Denne side er en fem-minutters intro. Vælg din rolle nedenfor for den vej, der passer dig.",
     "role": {
@@ -583,8 +583,8 @@
       "account_a": "Alt sammen under <strong>Min profil</strong> → <strong>Kontoindstillinger</strong>. Ændring af e-mail kræver fornyet bekræftelse på den nye adresse. Sletning af din konto er permanent og fjerner dit login; historiske scoringer bliver stående på den offentlige scoringstavle under forbundets registrering (anonymiseres på anmodning — kontakt din forbundsadministrator)."
     },
     "next": {
-      "lede": "Brug for den dybdegående version? {wiki_link} dækker hvert skærmbillede, hver rolle, hver World Aquatics-regel som appen har kodet ind. De sider, der er værd at bogmærke:",
-      "wiki_link_label": "fuldstændige wiki",
+      "lede": "Brug for den dybdegående version? {guide_link} dækker hvert skærmbillede, hver rolle, hver World Aquatics-regel som appen har kodet ind. De sider, der er værd at bogmærke:",
+      "guide_link_label": "fuldstændige wiki",
       "bookmark_features": "Funktioner pr. rolle",
       "bookmark_features_desc": "alle funktioner i appen, indekseret efter hvem der bruger dem",
       "bookmark_quickstart": "Hurtigstart (10 min)",
@@ -615,7 +615,7 @@
       "shortcuts": "Genveje",
       "glossary": "Ordliste",
       "faq": "Ofte stillede spørgsmål",
-      "wiki": "Mere på wikien"
+      "next": "Mere på wikien"
     },
     "quick_actions": {
       "lede": "Spring menuen over — hop direkte til den skærm, du har brug for. Hver flise åbner den live-side."

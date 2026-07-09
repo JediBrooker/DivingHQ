@@ -488,8 +488,8 @@
     "section_finding": "Bir şey bulma",
     "section_help": "Yardım al",
     "back_to_home": "← Ana sayfaya dön",
-    "open_wiki": "Tam wikiyi aç ↗",
-    "open_wiki_tip": "GitHub'da ayrıntılı kullanıcı kılavuzu",
+    "open_guide": "Tam wikiyi aç ↗",
+    "open_guide_tip": "GitHub'da ayrıntılı kullanıcı kılavuzu",
     "hero_welcome_prefix": "Hoş geldiniz",
     "hero_lede": "Atlama yarışlarını yönetmek için bir platform — atlamacılar atlama listelerini gönderir, hakemler telefonlarından puanlar, operatör Kontrol Odası'ndan yarışı yönetir ve seyirciler skor tahtasını canlı izler. Bu sayfa beş dakikalık bir tanıtımdır. Size uygun yol için aşağıdan rolünüzü seçin.",
     "role": {
@@ -572,8 +572,8 @@
       "account_a": "Hepsi <strong>Profilim</strong> → <strong>Hesap ayarları</strong>'nda. E-posta değişiklikleri yeni adreste yeniden doğrulama gerektirir. Hesabınızı silmek kalıcıdır ve girişinizi kaldırır; geçmiş puanlar federasyonun kaydı altında herkese açık skor tablosunda kalır (talep üzerine anonimleştirilir — federasyon yöneticinizle iletişime geçin)."
     },
     "next": {
-      "lede": "Daha kapsamlı sürümü mi gerekiyor? {wiki_link} her ekranı, her rolü ve uygulamanın kodladığı her World Aquatics kuralını kapsar. Yer imine eklemeye değer sayfalar:",
-      "wiki_link_label": "tam wiki",
+      "lede": "Daha kapsamlı sürümü mi gerekiyor? {guide_link} her ekranı, her rolü ve uygulamanın kodladığı her World Aquatics kuralını kapsar. Yer imine eklemeye değer sayfalar:",
+      "guide_link_label": "tam wiki",
       "bookmark_features": "Role göre özellikler",
       "bookmark_features_desc": "uygulamadaki her özellik, kullananına göre dizinlenmiş",
       "bookmark_quickstart": "Hızlı Başlangıç (10 dk)",
@@ -604,7 +604,7 @@
       "shortcuts": "Kısayollar",
       "glossary": "Sözlük",
       "faq": "SSS",
-      "wiki": "Vikide daha fazlası"
+      "next": "Vikide daha fazlası"
     },
     "quick_actions": {
       "lede": "Menüyü atlayın — ihtiyacınız olan ekrana doğrudan gidin. Her kutucuk canlı sayfayı açar."

@@ -499,8 +499,8 @@
     "section_finding": "Asioiden löytäminen",
     "section_help": "Hae apua",
     "back_to_home": "← Takaisin etusivulle",
-    "open_wiki": "Avaa koko wiki ↗",
-    "open_wiki_tip": "Yksityiskohtainen käyttöopas GitHubissa",
+    "open_guide": "Avaa koko wiki ↗",
+    "open_guide_tip": "Yksityiskohtainen käyttöopas GitHubissa",
     "hero_welcome_prefix": "Tervetuloa palveluun",
     "hero_lede": "Alusta uimahypäpykälömpien järjestämiseen — hyppääjät lähettävät hyppylistat, tuomarit pisteyttävät puhelimella, operaattori ohjaa kisaa Ohjaushuoneesta, ja yleisö katsoo tulostaulua suorana. Tämä sivu on viiden minuutin pikaopas. Valitse oma roolisi alta sopivalle polulle.",
     "role": {
@@ -583,8 +583,8 @@
       "account_a": "Kaikki kohdassa <strong>Oma profiili</strong> → <strong>Tilin asetukset</strong>. Sähköpostin vaihto vaatii uuden vahvistuksen uudessa osoitteessa. Tilin poistaminen on pysyvää ja poistaa kirjautumisesi; aiemmat pisteet säilyvät julkisella tulostaululla liiton kirjauksen alla (anonymisoidaan pyynnöstä — ota yhteyttä liittokoordinaattoriisi)."
     },
     "next": {
-      "lede": "Tarvitsetko syväluotaavaa versiota? {wiki_link} kattaa jokaisen näytön, jokaisen roolin ja jokaisen World Aquatics -säännön, jonka sovellus on koodannut. Kirjanmerkkien arvoiset sivut:",
-      "wiki_link_label": "täysi wiki",
+      "lede": "Tarvitsetko syväluotaavaa versiota? {guide_link} kattaa jokaisen näytön, jokaisen roolin ja jokaisen World Aquatics -säännön, jonka sovellus on koodannut. Kirjanmerkkien arvoiset sivut:",
+      "guide_link_label": "täysi wiki",
       "bookmark_features": "Ominaisuudet rooleittain",
       "bookmark_features_desc": "kaikki sovelluksen ominaisuudet käyttäjäryhmittäin",
       "bookmark_quickstart": "Pika-aloitus (10 min)",
@@ -615,7 +615,7 @@
       "shortcuts": "Pikanäppäimet",
       "glossary": "Sanasto",
       "faq": "UKK",
-      "wiki": "Lisätietoja wikistä"
+      "next": "Lisätietoja wikistä"
     },
     "quick_actions": {
       "lede": "Ohita valikko — siirry suoraan tarvitsemaasi näkymään. Jokainen laatta avaa live-sivun."

@@ -488,8 +488,8 @@
     "section_finding": "Encontrar cosas",
     "section_help": "Pedir ayuda",
     "back_to_home": "← Volver al inicio",
-    "open_wiki": "Abrir wiki completa ↗",
-    "open_wiki_tip": "Guía de usuario detallada en GitHub",
+    "open_guide": "Abrir wiki completa ↗",
+    "open_guide_tip": "Guía de usuario detallada en GitHub",
     "hero_welcome_prefix": "Bienvenido a",
     "hero_lede": "Una plataforma para gestionar competiciones de saltos — los saltadores envían sus listas de saltos, los jueces puntúan desde el móvil, el operador dirige la competición desde una Sala de Control y el público sigue el marcador en vivo. Esta página es la introducción de cinco minutos. Elige tu rol abajo para seguir el camino que te corresponde.",
     "role": {
@@ -572,8 +572,8 @@
       "account_a": "Todo en <strong>Mi Perfil</strong> → <strong>Ajustes de la cuenta</strong>. Los cambios de correo requieren volver a verificar la nueva dirección. Eliminar tu cuenta es permanente y elimina tu inicio de sesión; los resultados históricos permanecen en el marcador público bajo el registro de la federación (anonimizados si lo solicitas — contacta con el admin de tu federación)."
     },
     "next": {
-      "lede": "¿Necesitas la versión en profundidad? El {wiki_link} cubre cada pantalla, cada rol y cada norma de World Aquatics que la app implementa. Las páginas más útiles para guardar como favoritos:",
-      "wiki_link_label": "wiki completa",
+      "lede": "¿Necesitas la versión en profundidad? El {guide_link} cubre cada pantalla, cada rol y cada norma de World Aquatics que la app implementa. Las páginas más útiles para guardar como favoritos:",
+      "guide_link_label": "wiki completa",
       "bookmark_features": "Funciones por rol",
       "bookmark_features_desc": "todas las funciones de la app, indexadas por quién las usa",
       "bookmark_quickstart": "Inicio Rápido (10 min)",
@@ -604,7 +604,7 @@
       "shortcuts": "Atajos",
       "glossary": "Glosario",
       "faq": "Preguntas frecuentes",
-      "wiki": "Más en la wiki"
+      "next": "Más en la wiki"
     },
     "quick_actions": {
       "lede": "Sáltate el menú — ve directamente a la pantalla que necesitas. Cada ficha abre la página en directo."

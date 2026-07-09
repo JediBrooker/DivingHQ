@@ -488,8 +488,8 @@
     "section_finding": "Pronalaženje",
     "section_help": "Zatražite pomoć",
     "back_to_home": "← Natrag na početnu",
-    "open_wiki": "Otvori puni wiki ↗",
-    "open_wiki_tip": "Detaljan korisnički vodič na GitHubu",
+    "open_guide": "Otvori puni wiki ↗",
+    "open_guide_tip": "Detaljan korisnički vodič na GitHubu",
     "hero_welcome_prefix": "Dobrodošli u",
     "hero_lede": "Platforma za vođenje skakačkih natjecanja — skakači predaju liste skokova, suci ocjenjuju na telefonima, operater vodi natjecanje iz Kontrolne sobe, a publika prati semafor uživo. Ova stranica je petominutni uvod. Odaberite svoju ulogu ispod za put koji vam odgovara.",
     "role": {
@@ -572,8 +572,8 @@
       "account_a": "Sve u <strong>Moj profil</strong> → <strong>Postavke računa</strong>. Promjena e-maila zahtijeva ponovnu provjeru na novoj adresi. Brisanje računa je trajno i uklanja vašu prijavu; povijesni rezultati ostaju na javnom semaforu pod evidencijom federacije (anonimizirani na zahtjev — obratite se administratoru svoje federacije)."
     },
     "next": {
-      "lede": "Trebate detaljnu verziju? {wiki_link} pokriva svaki zaslon, svaku ulogu, svako World Aquatics pravilo koje aplikacija kodira. Stranice koje najviše vrijedi zabilježiti:",
-      "wiki_link_label": "puni wiki",
+      "lede": "Trebate detaljnu verziju? {guide_link} pokriva svaki zaslon, svaku ulogu, svako World Aquatics pravilo koje aplikacija kodira. Stranice koje najviše vrijedi zabilježiti:",
+      "guide_link_label": "puni wiki",
       "bookmark_features": "Značajke po ulozi",
       "bookmark_features_desc": "svaka značajka u aplikaciji, indeksirana prema tome tko je koristi",
       "bookmark_quickstart": "Brzi početak (10 min)",
@@ -604,7 +604,7 @@
       "shortcuts": "Prečaci",
       "glossary": "Rječnik",
       "faq": "Česta pitanja",
-      "wiki": "Više na wikiju"
+      "next": "Više na wikiju"
     },
     "quick_actions": {
       "lede": "Preskočite izbornik — prijeđite izravno na zaslon koji vam treba. Svaka pločica otvara stranicu uživo."

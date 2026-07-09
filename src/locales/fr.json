@@ -499,8 +499,8 @@
     "section_finding": "Trouver les choses",
     "section_help": "Obtenir de l'aide",
     "back_to_home": "← Retour à l'accueil",
-    "open_wiki": "Ouvrir le wiki complet ↗",
-    "open_wiki_tip": "Guide utilisateur détaillé sur GitHub",
+    "open_guide": "Ouvrir le wiki complet ↗",
+    "open_guide_tip": "Guide utilisateur détaillé sur GitHub",
     "hero_welcome_prefix": "Bienvenue sur",
     "hero_lede": "Une plateforme pour organiser des compétitions de plongeon — les plongeurs soumettent leurs feuilles de plongeons, les juges notent depuis leur téléphone, l'opérateur pilote la compétition depuis une Salle de Contrôle, et le public suit le tableau d'affichage en direct. Cette page est l'introduction express. Choisis ton rôle ci-dessous pour suivre le parcours qui te correspond.",
     "role": {
@@ -583,8 +583,8 @@
       "account_a": "Tout se passe dans <strong>Mon profil</strong> → <strong>Paramètres du compte</strong>. Un changement d'e-mail demande une nouvelle vérification à la nouvelle adresse. Supprimer ton compte est définitif et retire ta connexion ; les scores historiques restent sur le tableau d'affichage public sous le registre de la fédération (anonymisés sur demande — contacte l'admin de ta fédération)."
     },
     "next": {
-      "lede": "Besoin de la version détaillée ? Le {wiki_link} couvre chaque écran, chaque rôle, chaque règle World Aquatics que l'app applique. Les pages à mettre en favoris :",
-      "wiki_link_label": "wiki complet",
+      "lede": "Besoin de la version détaillée ? Le {guide_link} couvre chaque écran, chaque rôle, chaque règle World Aquatics que l'app applique. Les pages à mettre en favoris :",
+      "guide_link_label": "wiki complet",
       "bookmark_features": "Fonctionnalités par rôle",
       "bookmark_features_desc": "toutes les fonctionnalités de l'app, indexées par qui les utilise",
       "bookmark_quickstart": "Démarrage Rapide (10 min)",
@@ -615,7 +615,7 @@
       "shortcuts": "Raccourcis",
       "glossary": "Glossaire",
       "faq": "Foire aux questions",
-      "wiki": "Plus d'informations sur le wiki"
+      "next": "Plus d'informations sur le wiki"
     },
     "quick_actions": {
       "lede": "Passez le menu — accédez directement à l'écran dont vous avez besoin. Chaque tuile ouvre la page en direct."

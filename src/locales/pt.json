@@ -499,8 +499,8 @@
     "section_finding": "Encontrar conteúdos",
     "section_help": "Obter ajuda",
     "back_to_home": "← Voltar à página inicial",
-    "open_wiki": "Abrir wiki completa ↗",
-    "open_wiki_tip": "Guia de utilizador detalhado no GitHub",
+    "open_guide": "Abrir wiki completa ↗",
+    "open_guide_tip": "Guia de utilizador detalhado no GitHub",
     "hero_welcome_prefix": "Bem-vindo ao",
     "hero_lede": "Uma plataforma para gerir provas de saltos para a água — os saltadores submetem listas de saltos, os juízes pontuam pelo telemóvel, o operador conduz a prova a partir de uma Sala de Controlo e o público acompanha o marcador em direto. Esta página é a introdução de cinco minutos. Escolhe o teu papel em baixo para o percurso que te encaixa.",
     "role": {
@@ -583,8 +583,8 @@
       "account_a": "Tudo em <strong>O Meu Perfil</strong> → <strong>Definições da conta</strong>. As alterações de email precisam de nova verificação no novo endereço. Eliminar a conta é permanente e remove o teu acesso; as pontuações históricas mantêm-se no marcador público sob o registo da federação (anonimizadas a pedido — contacta o admin da tua federação)."
     },
     "next": {
-      "lede": "Precisas da versão completa? O {wiki_link} cobre cada ecrã, cada papel, cada regra da World Aquatics que a app implementa. As páginas mais úteis para guardar nos favoritos:",
-      "wiki_link_label": "wiki completa",
+      "lede": "Precisas da versão completa? O {guide_link} cobre cada ecrã, cada papel, cada regra da World Aquatics que a app implementa. As páginas mais úteis para guardar nos favoritos:",
+      "guide_link_label": "wiki completa",
       "bookmark_features": "Funcionalidades por papel",
       "bookmark_features_desc": "todas as funcionalidades da app, indexadas por quem as usa",
       "bookmark_quickstart": "Início Rápido (10 min)",
@@ -615,7 +615,7 @@
       "shortcuts": "Atalhos",
       "glossary": "Glossário",
       "faq": "Perguntas frequentes",
-      "wiki": "Mais na wiki"
+      "next": "Mais na wiki"
     },
     "quick_actions": {
       "lede": "Ignore o menu — aceda directamente ao ecrã de que necessita. Cada bloco abre a página em direto."
