@@ -36,6 +36,11 @@ import RoleTour from '@/components/RoleTour.vue'
 // Keeps the offline outbox draining for the whole session rather than only
 // while the Control Room happens to be rendered. No template of its own.
 import { useOutboxSync } from '@/composables/useOutboxSync'
+// Same function ScoreboardView uses to decide it is an overlay. This file
+// used to keep its own copy of the magic strings, so adding a shape here
+// and forgetting there (or the reverse) painted the CRM sidebar across a
+// live broadcast. One answer, asked twice.
+import { resolveOverlay } from '@/lib/overlayParts'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -48,8 +53,7 @@ const useShell = computed(() =>
   auth.isLoggedIn &&
   route.meta.appShell === true &&
   route.params.mode !== 'broadcast' &&
-  route.query.overlay !== '1' && route.query.overlay !== 'true' &&
-  route.query.overlay !== 'minimal'
+  !resolveOverlay(route.query).active
 )
 </script>
 
