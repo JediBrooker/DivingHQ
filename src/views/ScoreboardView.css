@@ -118,6 +118,18 @@
   font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* "78 live now · 28 upcoming · …". Under <html dir="rtl"> the bidi
+   algorithm runs across the whole line, so each stat's leading digits got
+   flung to the line's start edge: the live count rendered about 440px away
+   from the words "live now". `plaintext` gives every stat its own bidi
+   paragraph whose direction comes from its first strong character, so the
+   number stays glued to its label. Deliberately not `isolate`, which would
+   inherit rtl and render "live now 78", nor a hard `direction: ltr`, which
+   would break these labels once somebody translates them. */
+.sb-page-sub > span,
+.sb-page-sub > .sb-page-sub-archive {
+  unicode-bidi: plaintext;
+}
 .sb-page-sub-live {
   color: var(--red); font-weight: 700;
 }
@@ -750,12 +762,27 @@
 
 /* =========================================================
    Live-stream overlay (?overlay=1), chroma-key-friendly view
-   for OBS. Strips every background colour and panel chrome so
-   the streaming software can key out the bg colour cleanly.
-   Activated by adding `?overlay=1` to the scoreboard URL; the
-   chroma colour is set inline on .sb-layout via ?bg=<hex>.
+   for OBS. Activated by adding `?overlay=1` to the scoreboard
+   URL; the chroma colour is set inline on .sb-layout via
+   ?bg=<hex>.
+
+   What it does: hides the page chrome (header, controls, filter
+   bar, footer, exports, archive) and drops the panel backgrounds
+   so the chroma colour shows through. The three columns stay,
+   because that is what has always shipped. Crop the Browser
+   Source in OBS to whichever column you want on air.
+
+   What it does NOT do, whatever the old comment here claimed:
+   reduce the board to an active-diver tile plus a compact top-3.
+   That was written against `.active-diver-tile`, `.standings-card`
+   and `.standings-row`, three class names that never existed in
+   the markup, in any commit. Their rules were dead, and the one
+   live consequence was ugly: the layout forced `color: #fff` on
+   the strength of dark plates that were never applied, so every
+   judge score chip rendered white-on-white and vanished from the
+   broadcast. The colour is gone now; the cards carry their own.
    ========================================================= */
-.sb-layout.overlay-mode { color: #fff; min-height: 100vh; min-height: 100dvh; padding: 1.5rem; }
+.sb-layout.overlay-mode { min-height: 100vh; min-height: 100dvh; padding: 1.5rem; }
 .sb-layout.overlay-mode .sb-header,
 .sb-layout.overlay-mode .sb-controls,
 .sb-layout.overlay-mode .sb-footer,
@@ -767,9 +794,8 @@
 .sb-layout.overlay-mode .export-actions,
 .sb-layout.overlay-mode .archive-wrap,
 .sb-layout.overlay-mode .archive-controls { display: none !important; }
-/* Keep only the active diver tile and a compact top-3 visible.
-   Style them with text-shadow for readability against any chroma
-   colour the operator picks. */
+
+/* Panel chrome off, so the key colour reaches the edges of each card. */
 .sb-layout.overlay-mode .sb-body,
 .sb-layout.overlay-mode .sb-completed,
 .sb-layout.overlay-mode .sb-col,
@@ -778,22 +804,116 @@
   background: transparent !important; border: none !important;
   box-shadow: none !important;
 }
-.sb-layout.overlay-mode .active-diver-tile,
-.sb-layout.overlay-mode .standings-card,
-.sb-layout.overlay-mode .col-head,
-.sb-layout.overlay-mode .standings-row {
+
+/* Column headings are the only text that ends up sitting straight on the
+   chroma colour, so they get a dark plate and a shadow to survive whatever
+   the operator keys against. Everything else lives on its own card. */
+.sb-layout.overlay-mode .col-head {
   background: rgba(0, 0, 0, 0.55) !important;
   border-radius: 8px;
   color: #fff !important;
   text-shadow: 0 1px 2px rgba(0,0,0,0.6);
   padding: 0.6rem 0.9rem;
+  font-size: 13px;
+  letter-spacing: 0.2em;
 }
-.sb-layout.overlay-mode .standings-row {
-  margin-bottom: 0.25rem; padding: 0.4rem 0.7rem;
+
+/* ---------------------------------------------------------
+   ?overlay=minimal: the cut-down shape, for graphics that sit over live
+   camera footage instead of filling the frame.
+
+   Drop the dive history, the catch-up projection and the Up Next
+   queue, trim the standings to a podium, and put what's left on dark
+   plates so it reads against any chroma colour.
+
+   The plate forces light text on the containers, which means anything
+   inside that carried its own dark colour has to be lifted back out
+   explicitly. That's the trap the old (dead) overlay rules fell into:
+   they set color:#fff on the layout while the plates never applied, so
+   the judge score chips rendered white-on-white and disappeared from
+   the broadcast. Every element listed below is one the automated
+   contrast sweep flagged; if you add a widget to the centre column,
+   run that sweep again.
+   --------------------------------------------------------- */
+.sb-layout.overlay-minimal .sb-col-history,
+.sb-layout.overlay-minimal .sb-projection,
+.sb-layout.overlay-minimal .up-next { display: none !important; }
+
+/* A cut-down board doesn't need the Final / By Round toggle. */
+.sb-layout.overlay-minimal .sb-col-standings .col-head .tabs { display: none !important; }
+
+/* Podium only. The standings rows are siblings inside .col-body. */
+.sb-layout.overlay-minimal .sb-col-standings .standing:nth-of-type(n+4) {
+  display: none;
 }
-.sb-layout.overlay-mode .standings-card { padding: 0.4rem; }
-.sb-layout.overlay-mode .standings-card .standings-row:nth-child(n+5) { display: none; }
-.sb-layout.overlay-mode .col-head { font-size: 13px; letter-spacing: 0.2em; }
+
+/* Opaque, not translucent. A semi-transparent black over the key colour
+   composites to dark green, which then survives the keyer as a green-tinted
+   slab. Solid ink keeps the plate neutral whatever ?bg= the operator picks.
+   Only the area AROUND the plates is meant to key out. */
+/* The !important is load-bearing: the shared overlay-mode rule above blanks
+   the background on every .sb-col, and the standings column is one. Drop it
+   and the podium text renders straight onto the chroma colour, which the
+   keyer then punches a diver-shaped hole through. */
+.sb-layout.overlay-minimal .active-centre > div,
+.sb-layout.overlay-minimal .sb-col-standings {
+  background: #0d1117 !important;
+  border-radius: 14px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+}
+.sb-layout.overlay-minimal .active-centre > div { padding: 1rem 1.25rem; }
+
+/* Heading and rows are one tile, so the keyer sees a single rectangle
+   instead of a caption floating above a card. Undoes the plate + radius
+   the shared overlay-mode rule puts on every col-head. */
+.sb-layout.overlay-minimal .sb-col-standings {
+  overflow: hidden;
+  align-self: flex-start;
+}
+.sb-layout.overlay-minimal .sb-col-standings .col-head {
+  background: transparent !important;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+.sb-layout.overlay-minimal .sb-col-standings .col-body {
+  padding: 0.75rem 1.1rem;
+}
+
+/* Anything sitting on a plate reads light. Blanket rule first, so a widget
+   added to the centre column later can't come out invisible; the accents
+   below then re-tint themselves with a higher specificity. */
+.sb-layout.overlay-minimal .active-centre > div,
+.sb-layout.overlay-minimal .active-centre > div *,
+.sb-layout.overlay-minimal .sb-col-standings,
+.sb-layout.overlay-minimal .sb-col-standings * {
+  color: #fff;
+}
+
+/* Accents stay accents, lifted for a dark ground. */
+.sb-layout.overlay-minimal .active-centre .sb-dd,
+.sb-layout.overlay-minimal .sb-col-standings .standing-score {
+  color: #7dd3fc;
+}
+
+/* Pills and chips carried a light background of their own, which now sits
+   on ink. Give them a translucent white instead. */
+.sb-layout.overlay-minimal .sb-round-pill,
+.sb-layout.overlay-minimal .standing-rank,
+.sb-layout.overlay-minimal .standing-country,
+.sb-layout.overlay-minimal .up-next-ctry {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: transparent !important;
+}
+
+/* Centre what's left rather than leaving a three-column skeleton with two
+   holes in it. */
+.sb-layout.overlay-minimal .sb-body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+.sb-layout.overlay-minimal .sb-col-standings { max-width: 26rem; }
 
 /* End-of-event recap is a single centred column. Was a 2-col
    grid (standings sidebar + dive breakdown); the dive breakdown

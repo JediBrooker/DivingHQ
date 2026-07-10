@@ -48,7 +48,8 @@ const useShell = computed(() =>
   auth.isLoggedIn &&
   route.meta.appShell === true &&
   route.params.mode !== 'broadcast' &&
-  route.query.overlay !== '1' && route.query.overlay !== 'true'
+  route.query.overlay !== '1' && route.query.overlay !== 'true' &&
+  route.query.overlay !== 'minimal'
 )
 </script>
 

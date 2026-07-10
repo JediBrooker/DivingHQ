@@ -36,14 +36,23 @@ const socket = useSocket({ spectator: true })
 // into kiosk mode without leaving the page.
 const broadcastMode = computed(() => route.params.mode === 'broadcast')
 
-// Stream-overlay mode: ?overlay=1 puts the page into a minimal,
-// chroma-key-friendly layout for OBS / streaming software. Hides
-// every background colour, header, and panel chrome, just the
-// active diver block plus a compact top-3. Chroma-key colour is set
-// by ?bg=<hex>; defaults to a vivid green (#00ff44) which is the
-// standard OBS chroma colour. Operators can pick e.g. ?bg=ff00ff
-// for magenta if their lighting pushes a green spill.
-const overlayMode = computed(() => route.query.overlay === '1' || route.query.overlay === 'true')
+// Stream-overlay mode, chroma-key friendly, for OBS and friends. Hides the
+// page chrome and every panel background so the streaming software can key
+// the colour out cleanly. Set the colour with ?bg=<hex>; the default is the
+// vivid green (#00ff44) OBS expects, and an operator whose lighting throws
+// green spill can pass e.g. ?bg=ff00ff.
+//
+// Two shapes, because productions genuinely want different things:
+//   ?overlay=1        the whole board on chroma. Composite it wholesale, or
+//                     crop the Browser Source down to one column.
+//   ?overlay=minimal  a cut-down board: the current diver and a top-3, on
+//                     dark plates. Everything else is gone.
+//
+// The 1/true spelling is what has always shipped, so it keeps its meaning.
+const overlayMinimal = computed(() => route.query.overlay === 'minimal')
+const overlayMode = computed(
+  () => route.query.overlay === '1' || route.query.overlay === 'true' || overlayMinimal.value,
+)
 const overlayBg   = computed(() => {
   const raw = String(route.query.bg || '').replace(/^#/, '').trim()
   return /^[0-9a-fA-F]{6}$/.test(raw) ? `#${raw}` : '#00ff44'
@@ -1027,7 +1036,7 @@ onMounted(async () => {
 
 <template>
   <div class="sb-layout"
-       :class="{ 'broadcast-mode': broadcastMode, 'overlay-mode': overlayMode }"
+       :class="{ 'broadcast-mode': broadcastMode, 'overlay-mode': overlayMode, 'overlay-minimal': overlayMinimal }"
        :style="overlayMode ? { background: overlayBg } : null">
     <!-- Floating exit button when in broadcast mode: small,
          positioned in the corner, nearly invisible until hover. Lets
@@ -1160,7 +1169,8 @@ onMounted(async () => {
          <div class="sb-completed"> below. -->
     <div class="sb-body" v-else-if="!isCompleted">
       <!-- Left: History -->
-      <div class="sb-col">
+      <!-- sb-col-history: named so ?overlay=minimal can drop it -->
+      <div class="sb-col sb-col-history">
         <div class="col-head">Completed Dives</div>
         <div class="col-body">
           <p v-if="!historyItems.length" style="color:var(--text-3);font-size:12px;text-align:center;padding:2rem">No scores yet</p>
@@ -1487,7 +1497,8 @@ onMounted(async () => {
       </div>
 
       <!-- Right: Standings -->
-      <div class="sb-col">
+      <!-- sb-col-standings: kept, and trimmed to a top-3, by ?overlay=minimal -->
+      <div class="sb-col sb-col-standings">
         <div class="col-head">
           <span>{{ $t('scoreboard.standings') }}</span>
           <div class="tabs">
