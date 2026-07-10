@@ -176,6 +176,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
+      // A write refused because the server just went into maintenance mode.
+      // The banner is driven by the features store, which only reloads at
+      // boot, so flip it here: this is usually the first a non-admin hears of
+      // it, and it explains the error they're about to see. Imported lazily to
+      // keep the store graph acyclic.
+      if (res.status === 503 && body.code === 'maintenance') {
+        import('@/stores/features').then(({ useFeaturesStore }) => {
+          useFeaturesStore().apply('maintenance', true)
+        })
+      }
       throw new Error(body.error || res.statusText)
     }
     return res.json()

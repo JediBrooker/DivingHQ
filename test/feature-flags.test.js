@@ -80,7 +80,9 @@ test("features default to off when the table has no rows", async () => {
   await f.load();
   assert.equal(f.enabled("payments"), false);
   assert.equal(f.enabled("classes"), false);
-  assert.deepEqual(f.all(), { payments: false, classes: false });
+  // Every registered key, all off. Asserted against the registry rather than a
+  // hard-coded list so adding a flag doesn't silently skip it here.
+  assert.deepEqual(f.all(), Object.fromEntries(f.KEYS.map((k) => [k, false])));
 });
 
 test("features read as off before load() has ever run", () => {
@@ -107,6 +109,19 @@ test("load() reflects the table, and unknown rows are ignored", async () => {
 test("enabled() throws on a key nobody registered", () => {
   const f = createFeatures({ pool: fakePool() });
   assert.throws(() => f.enabled("nope"), /Unknown feature flag/);
+});
+
+test("the registry carries signups and maintenance", () => {
+  const f = createFeatures({ pool: fakePool() });
+  assert.ok(f.KEYS.includes("signups"));
+  assert.ok(f.KEYS.includes("maintenance"));
+});
+
+test("signups and maintenance also default off with no rows", async () => {
+  const f = createFeatures({ pool: fakePool([]) });
+  await f.load();
+  assert.equal(f.enabled("signups"), false);
+  assert.equal(f.enabled("maintenance"), false);
 });
 
 test("set() writes, updates the cache in the same tick, and audits", async () => {

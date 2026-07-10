@@ -194,15 +194,13 @@ module.exports = defineConfig({
       // poisons the rest with 429s. Heads up: the bypass is opt-in
       // via env var, production .env never sets it.
       RATE_LIMIT_DISABLED: "true",
-      // Public signups are OFF by default (coming-soon launch); the e2e
-      // specs register orgs + divers as fixtures, so we open them here.
-      SIGNUPS_ENABLED: "true",
-      // Payments + classes ship switched OFF (migration 085 seeds both false).
-      // guardian-payments.spec.js and the guide screenshots in
-      // wiki-screenshots.spec.js both drive those screens, so force them on
-      // for the suite. Without this the router bounces every payment/class
-      // route to /dashboard and both specs fail against an empty page.
-      FEATURE_FLAGS_ON: "payments,classes",
+      // Feature flags ship off (migration 085/086 seeds payments/classes/
+      // maintenance off; signups on). The e2e specs register orgs + divers as
+      // fixtures and drive the payment/class screens, so force those three on
+      // for the whole suite. This is the break-glass override in lib/features:
+      // force-on only, so nothing here can flip a flag back off mid-run.
+      // 'maintenance' is intentionally absent, its specs toggle it per-test.
+      FEATURE_FLAGS_ON: "payments,classes,signups",
       // Local .env often points SMTP_HOST at smtp.example.com so
       // registration tests can exercise email-triggering paths.
       // For e2e, force the helper into documented dev no-op mode:
