@@ -493,14 +493,25 @@ async function selectEvent(id) {
   stageTitleEl.value?.focus()
 }
 
-onMounted(async () => {
+async function loadEvents() {
+  loading.value = true
   try {
     events.value = await auth.apiFetch('/api/events')
+    loadError.value = ''
+    return true
   } catch (err) {
     loadError.value = err?.message || 'Failed to load events'
+    return false
   } finally {
     loading.value = false
   }
+}
+
+// Events whose live pool is already wired, so a retry doesn't subscribe
+// or announce twice.
+const wiredPools = new Set()
+
+function bringUpPools() {
   // Honour /control?event=<id> (same deep-link contract as V1).
   const q = route.query.event
   if (q != null && events.value.some((e) => String(e.id) === String(q))) {
@@ -509,8 +520,25 @@ onMounted(async () => {
   // Stand up a live pool for EVERY Live event (not just the focused
   // one) so non-focused pools keep receiving + routing their scores.
   for (const ev of events.value) {
-    if (ev.status === 'Live') setupLivePool(ev)
+    if (ev.status === 'Live' && !wiredPools.has(ev.id)) {
+      wiredPools.add(ev.id)
+      setupLivePool(ev)
+    }
   }
+}
+
+// Venue wifi dies, the operator refreshes, /api/events can't be reached and
+// they are left staring at an error message in the middle of a meet, with
+// no way back other than noticing the wifi came back and hitting reload
+// again. Retry the moment the socket reconnects.
+watch(socket.isConnected, async (connected) => {
+  if (connected && loadError.value) {
+    if (await loadEvents()) bringUpPools()
+  }
+})
+
+onMounted(async () => {
+  if (await loadEvents()) bringUpPools()
   // Per-pool operator hotkeys (focused pool only).
   window.addEventListener('keydown', onKeydown)
 })

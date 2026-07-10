@@ -22,6 +22,7 @@ import { useAuthStore } from '@/stores/auth'
 // multiple component mounts share one instance.
 
 let instance = null
+let instanceFingerprint = null   // whose queue the singleton is scoped to
 let refreshTimer = null
 let offlineScope = null   // detached effectScope owning the socket watch
 
@@ -46,11 +47,29 @@ async function refresh() {
 }
 
 export function getOutbox() {
+  const auth = useAuthStore()
+  const fingerprint = fingerprintFromUser(auth.user)
+
+  // The fingerprint is baked into the instance: push() stamps it onto every
+  // entry and drain() refuses to touch anyone else's. Sign out and back in
+  // as somebody else on the same laptop (which is what a shared meet-desk
+  // machine is) and the singleton would still be scoped to the person who
+  // left, so the new operator's queue would never drain. Rebuild instead.
+  if (instance && instanceFingerprint !== fingerprint) {
+    if (refreshTimer) {
+      clearInterval(refreshTimer)
+      refreshTimer = null
+    }
+    instance = null
+    counts.value = { pending: 0, inflight: 0, synced: 0, conflict: 0, failed: 0 }
+    lastSyncedAt.value = null
+  }
+
   if (!instance) {
-    const auth = useAuthStore()
+    instanceFingerprint = fingerprint
     instance = createOutbox({
       backend: createIdbBackend(),
-      userFingerprint: fingerprintFromUser(auth.user),
+      userFingerprint: fingerprint,
     })
 
     // Refresh counts on every outbox state change. push/drain/
@@ -135,6 +154,7 @@ export function _resetOutboxForTests() {
     offlineScope = null
   }
   instance = null
+  instanceFingerprint = null
   counts.value = { pending: 0, inflight: 0, synced: 0, conflict: 0, failed: 0 }
   offlineSince.value = null
   lastSyncedAt.value = null

@@ -15,6 +15,35 @@ export const useAuthStore = defineStore('auth', () => {
   // a credential. Tampering with it changes UI hints only, never access.
   const user = ref(null)
 
+  // Same identity, mirrored to localStorage so a reload with no network
+  // can still tell who is signed in. It is NOT a credential: the cookie
+  // is, and the server re-checks it on every request. The worst a stale
+  // copy buys you is one screen of chrome before the first API call
+  // 401s, and apiFetch() below turns that into a redirect to /login.
+  //
+  // Without this, refreshing mid-meet on flaky venue wifi bounced the
+  // operator to a login page they couldn't use, because fetchMe() read
+  // "the network is down" as "you are anonymous".
+  const IDENTITY_KEY = 'dhq_identity'
+
+  function cacheIdentity(u) {
+    try {
+      if (u && u.id) localStorage.setItem(IDENTITY_KEY, JSON.stringify(u))
+      else localStorage.removeItem(IDENTITY_KEY)
+    } catch { /* private mode, quota; the app works without it */ }
+  }
+
+  function readCachedIdentity() {
+    try {
+      const raw = localStorage.getItem(IDENTITY_KEY)
+      if (!raw) return null
+      const parsed = JSON.parse(raw)
+      return parsed && parsed.id ? parsed : null
+    } catch {
+      return null
+    }
+  }
+
   const isLoggedIn = computed(() => !!user.value)
 
   // Stable per-identity key for scoping client-side caches (idbCache,
@@ -36,10 +65,12 @@ export const useAuthStore = defineStore('auth', () => {
     // cycles on a shared device, even though cache keys are per-fingerprint.
     idbClear().catch(() => {})
     user.value = next
+    cacheIdentity(next)
   }
 
   function clearSession() {
     user.value = null
+    cacheIdentity(null)
     // Clear the httpOnly cookie server-side since JS can't delete it.
     // Fire-and-forget with keepalive so it still completes even if the
     // caller navigates away (hard redirect to /login) in the same tick.
@@ -57,19 +88,38 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Rehydrate identity from the httpOnly session cookie on app boot.
-  // 401 = anonymous (no cookie, expired, or revoked), that's a normal
-  // first-visit state, not an error. Never throws so boot can't be blocked.
+  // Never throws, so boot can't be blocked.
+  //
+  // Three outcomes, and the third one used to be conflated with the
+  // second:
+  //   * 2xx           -> that's who you are. Refresh the cache.
+  //   * 401 / 403     -> you really are anonymous (no cookie, expired,
+  //                      revoked). Drop the cache.
+  //   * anything else -> we couldn't ask. Offline, or the server is
+  //                      having a moment. Fall back to the last identity
+  //                      we cached, because a mid-meet refresh on dying
+  //                      venue wifi must not evict the operator to a
+  //                      login page they have no way of using. The cookie
+  //                      is still in the jar; the first request that
+  //                      reaches the server settles it either way.
   async function fetchMe() {
     try {
       const res = await fetch('/api/auth/me', { credentials: 'same-origin' })
       if (res.ok) {
         const body = await res.json().catch(() => null)
         user.value = body?.user || null
-      } else {
-        user.value = null
+        cacheIdentity(user.value)
+        return
       }
+      if (res.status === 401 || res.status === 403) {
+        user.value = null
+        cacheIdentity(null)
+        return
+      }
+      user.value = readCachedIdentity()
     } catch {
-      user.value = null
+      // Network unreachable. Same reasoning as a 5xx.
+      user.value = readCachedIdentity()
     }
   }
 
