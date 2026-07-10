@@ -210,15 +210,60 @@ test("signing out clears the cached identity, so an offline reload stays signed 
     "signing out must not leave an identity behind for the next person on this laptop",
   ).toBeNull();
 
-  // And with nothing cached, an offline boot is anonymous again. Wait for
-  // the redirect rather than budgeting for it: an offline boot has to come
-  // out of the service-worker cache, run fetchMe, fail, and let the router
-  // guard fire, and a fixed sleep is only ever as good as the runner is
-  // fast. This flaked in CI at 1200ms.
-  await page.context().setOffline(true);
-  await page.goto("/control").catch(() => {});
+  // And with nothing cached, a boot that can't reach the server is anonymous
+  // again. What matters is fetchMe's unreachable branch, so cut the wire at
+  // /api/auth/me rather than at the whole context. A full setOffline() here
+  // makes the navigation itself depend on the service worker serving
+  // /control from cache, and when it doesn't the document never reaches
+  // 'load', the SPA never boots, and nothing redirects anywhere. That is
+  // what flaked in CI, twice, and it was never the thing under test.
+  await page.route("**/api/auth/me", (route) => route.abort("failed"));
+  await page.goto("/control");
   await page.waitForURL(/\/login/, { timeout: 20_000 });
-  await page.context().setOffline(false);
+  await page.unroute("**/api/auth/me");
+});
+
+test("a closed browser takes the identity with it, so the next person is not the last one", async ({ browser, request }) => {
+  test.setTimeout(90_000);
+  const { orgId, username } = await setup.createOrgAndAdmin(request, {
+    countryCode: "AUS", orgName: "Obx Shared Diving",
+  });
+  await setup.insertClub({ orgId, name: "Obx Shared Club", shortCode: "OSH" });
+
+  // Operator A works a meet, then shuts the laptop lid on the browser
+  // without signing out.
+  const ctxA = await browser.newContext();
+  const pageA = await ctxA.newPage();
+  await signIn(pageA, username);
+  const state = await ctxA.storageState();
+  await ctxA.close();
+
+  // What survives a browser restart is persistent storage, not the session
+  // cookie: dhq_session has no maxAge, so the browser drops it on close.
+  // storageState carries localStorage across; sessionStorage it cannot,
+  // which is precisely why the identity belongs there.
+  const persisted = state.origins.flatMap((o) => o.localStorage ?? []);
+  expect(
+    persisted.map((e) => e.name),
+    "nothing that identifies operator A may outlive their browser",
+  ).not.toContain("dhq_identity");
+
+  // Next morning, user B opens the laptop. The venue wifi is down, so
+  // nothing can reach the server to say who they are (or aren't).
+  const ctxB = await browser.newContext({ storageState: { cookies: [], origins: state.origins } });
+  const pageB = await ctxB.newPage();
+  await pageB.route("**/api/auth/me", (route) => route.abort("failed"));
+  await pageB.goto("/control");
+
+  await pageB.waitForURL(/\/login/, {
+    timeout: 20_000,
+  });
+  expect(
+    await pageB.evaluate(() => sessionStorage.getItem("dhq_identity")),
+    "B must not inherit A's identity, nor the idb cache keyed to its fingerprint",
+  ).toBeNull();
+
+  await ctxB.close();
 });
 
 // The judge path deserves its own case. JudgeView predates the 'socket:'
