@@ -83,6 +83,13 @@ export const useAuthStore = defineStore('auth', () => {
     return roles.some(r => hasRole(r))
   }
 
+  // A parent who signs up purely to pay for their child holds no role
+  // beyond 'spectator' (that's all registration grants), so role checks
+  // on their own would lock them out of the very pages they came for.
+  // The server sets this on the login response and /api/auth/me. It
+  // gates UI only; every payment endpoint re-checks the guardian link.
+  const hasDependents = computed(() => Boolean(user.value?.has_dependents))
+
   function getHeaders() {
     // No Authorization header any more, the httpOnly session cookie
     // carries the credential and rides along on every same-origin
@@ -136,7 +143,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    user, isLoggedIn, fingerprint,
+    user, isLoggedIn, fingerprint, hasDependents,
     saveSession, clearSession, fetchMe,
     hasRole, hasAnyRole, getHeaders,
     apiFetch, cachedApiFetch,

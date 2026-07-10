@@ -85,9 +85,12 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['diver'], appShell: true },
   },
   {
+    // allowGuardian: an approved guardian reaches this page too, even
+    // though registration only ever made them a 'spectator'. Paying a
+    // dependent's membership is the whole reason they have an account.
     path: '/membership',
     component: () => import('@/views/MembershipView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['diver'], appShell: true },
+    meta: { requiresAuth: true, requiresRole: ['diver'], allowGuardian: true, appShell: true },
   },
   {
     path: '/guardians',
@@ -370,9 +373,13 @@ router.beforeEach((to, from, next) => {
     return next(bounceToLogin(to))
   }
 
-  // Require specific roles
+  // Require specific roles. Routes flagged allowGuardian also open up
+  // for anyone with an approved dependent, since a parent paying on a
+  // minor's behalf never gets a role of their own.
   if (to.meta.requiresRole && isLoggedIn) {
-    if (!auth.hasAnyRole(to.meta.requiresRole)) {
+    const allowed = auth.hasAnyRole(to.meta.requiresRole)
+      || (to.meta.allowGuardian && auth.hasDependents)
+    if (!allowed) {
       return next('/dashboard')
     }
   }

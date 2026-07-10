@@ -40,12 +40,36 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
 
   // Apply the change if every required approval is in. Returns true
   // when it finalised. Caller holds the transaction client.
+  // Guardian authority is scoped to one federation: guardians.org_id, and
+  // routes/payments.js validates the link against the caller's org before
+  // it will read or pay anything on a dependent's behalf. So a transfer
+  // has to close the links the mover leaves behind, in either role. A
+  // parent whose child moves federations has no standing in the new one
+  // until they ask for it there and an admin approves; leaving the row
+  // approved-but-pinned-to-the-old-org left the child sitting in the
+  // parent's "Paying for" picker while every action against them failed.
+  //
+  // Returns the ids of whoever lost a link, so they can be told.
+  async function revokeGuardianLinks(client, userId, reviewedBy) {
+    const gone = await client.query(
+      `UPDATE guardians
+          SET status = 'revoked', reviewed_by = $2, reviewed_at = now()
+        WHERE (guardian_user_id = $1 OR dependent_user_id = $1)
+          AND status IN ('pending', 'approved')
+        RETURNING id, guardian_user_id, dependent_user_id`,
+      [userId, reviewedBy],
+    );
+    return gone.rows;
+  }
+
   async function finalizeIfReady(client, r, req) {
     const ready =
       r.kind === "club_change"
         ? !!r.source_approved_at
         : !!r.source_approved_at && !!r.target_approved_at && !!r.diver_confirmed_at;
     if (!ready) return false;
+
+    let revokedLinks = [];
 
     if (r.kind === "org_transfer") {
       await client.query(
@@ -60,6 +84,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
          VALUES ($1, $2, 'diver', $3) ON CONFLICT DO NOTHING`,
         [r.user_id, r.to_org_id, req.user.id],
       );
+      revokedLinks = await revokeGuardianLinks(client, r.user_id, req.user.id);
     } else {
       await client.query("UPDATE users SET club_id = $1 WHERE id = $2", [
         r.to_club_id || null,
@@ -93,6 +118,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
         to_org_id: r.to_org_id,
         from_club_id: r.from_club_id,
         to_club_id: r.to_club_id,
+        revoked_guardian_links: revokedLinks.length,
       },
       note: r.note || null,
     });
@@ -103,6 +129,21 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
       action_url: "/profile",
       data: { request_id: r.id, kind: r.kind },
     });
+
+    // Tell the other half of every link we just closed. The mover already
+    // got their own notification above, so skip them.
+    for (const link of revokedLinks) {
+      const other = link.guardian_user_id === r.user_id
+        ? link.dependent_user_id
+        : link.guardian_user_id;
+      if (other === r.user_id) continue;
+      await notify(client, other, {
+        title: "A guardian link was ended",
+        body: `${fullName || "Someone you were linked to"} transferred to another federation, so the link between you was closed. You can request it again in the new federation.`,
+        action_url: "/guardians",
+        data: { request_id: r.id, kind: r.kind, guardian_link_id: link.id },
+      });
+    }
     return true;
   }
 

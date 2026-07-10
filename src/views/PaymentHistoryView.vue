@@ -71,7 +71,15 @@ function detailFor(p) {
 function describe(p) {
   const label = typeLabel(p.subject_type)
   const detail = detailFor(p)
-  return detail ? `${label} — ${detail}` : label
+  const base = detail ? `${label} — ${detail}` : label
+  // A guardian's ledger already contains the rows they paid on a
+  // dependent's behalf, since payer_user_id is theirs. Without the
+  // subject's name every one of them reads as if the parent bought it
+  // for themselves. The API has been sending subject_name all along,
+  // this view just never looked. Appended with the same middot the
+  // rest of the app uses rather than a new translated string, so it
+  // reads the same in all 26 locales.
+  return p.subject_name ? `${base} · ${p.subject_name}` : base
 }
 
 function money(cents, currency) {
