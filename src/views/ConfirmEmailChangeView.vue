@@ -59,7 +59,7 @@ onMounted(confirm)
 
 <template>
   <div class="confirm-wrap">
-    <div class="confirm-mark">DIVING<span>HQ</span></div>
+    <div class="confirm-mark brand-wordmark">DIVING<span>HQ</span></div>
     <h1>{{ $t('auth.confirm_email.title') }}</h1>
     <p class="subtitle">{{ $t('auth.confirm_email.subtitle') }}</p>
 

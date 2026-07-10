@@ -206,7 +206,7 @@ function closeMobile() { mobileOpen.value = false }
     <aside class="sidebar">
       <RouterLink to="/dashboard" class="sb-brand">
         <LogoMark :size="28" />
-        <span class="wm">DIVING<span>HQ</span></span>
+        <span class="wm brand-wordmark">DIVING<span>HQ</span></span>
       </RouterLink>
 
       <nav class="sb-nav" :class="{ rail: railMode }" aria-label="Primary">

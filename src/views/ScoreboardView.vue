@@ -1080,7 +1080,10 @@ onMounted(async () => {
             <span v-if="liveEvents.length && upcomingEvents.length"> · </span>
             <span v-if="upcomingEvents.length" class="sb-page-sub-upcoming">{{ upcomingEvents.length }} upcoming</span>
             <template v-if="liveEvents.length || upcomingEvents.length"> · </template>
-            {{ completedEvents.length.toLocaleString() }} completed<template v-if="archiveTotal"> · <RouterLink to="/results-archive" class="sb-page-sub-archive">{{ archiveTotal.toLocaleString() }} archived</RouterLink></template>
+            <!-- wrapped in a span so it picks up the same bidi isolation as
+                 its siblings; as a bare text node Arabic rendered it as
+                 "completed 19" -->
+            <span class="sb-page-sub-completed">{{ completedEvents.length.toLocaleString() }} completed</span><template v-if="archiveTotal"> · <RouterLink to="/results-archive" class="sb-page-sub-archive">{{ archiveTotal.toLocaleString() }} archived</RouterLink></template>
           </span>
         </div>
       </template>

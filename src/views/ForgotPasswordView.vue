@@ -43,7 +43,7 @@ async function submit() {
 
 <template>
   <div class="reset-wrap">
-    <div class="reset-mark">DIVING<span>HQ</span></div>
+    <div class="reset-mark brand-wordmark">DIVING<span>HQ</span></div>
     <h1>{{ $t('auth.forgot.title') }}</h1>
     <p class="subtitle">{{ $t('auth.forgot.subtitle') }}</p>
 
