@@ -33,9 +33,14 @@
 // boot and a couple of tests read it. It's a mirror of max(ledger) now,
 // not the source of truth.
 //
-// Re-applying is safe. Every file in migrations/ is written with
-// IF NOT EXISTS / ON CONFLICT / guarded DO blocks, and
-// scripts/check-schema-drift.js proves it in CI by replaying the lot.
+// Re-applying is NOT universally safe, whatever the old comment here
+// claimed. check-schema-drift.js only proves it for 008..053, which are the
+// files it replays over an init.sql that already contains their objects.
+// Everything from 054 up runs exactly once there, and at least two of them
+// would fail a second time: 055 and 067 add CHECK constraints unguarded, and
+// Postgres has no ADD CONSTRAINT IF NOT EXISTS. So --redo on a recent file
+// may well blow up, and anything that makes the runner treat an applied file
+// as pending is a bug, not an inconvenience. See backfillLedger.
 //
 // Connection: same env as server.js, DATABASE_URL takes precedence,
 // otherwise the standard libpq vars (DB_HOST/DB_USER/DB_PASSWORD/
@@ -127,15 +132,31 @@ async function readLedger(client) {
 // everything at or below it and flag the rows as assumed rather than
 // observed. Migration 084 exists precisely because that assumption was
 // wrong for at least one file.
+//
+// All or nothing. The only thing that triggers a backfill is an empty
+// ledger, so a half-written one is worse than none: the next run would see
+// rows, skip the backfill, treat everything above the last row as pending,
+// and re-run forward migrations against a live database. Several of them
+// are not re-runnable (067 adds CHECK constraints unguarded, and Postgres
+// has no ADD CONSTRAINT IF NOT EXISTS), so that run dies partway and leaves
+// the schema half-reapplied. Wrapped in a transaction, a crash rolls back
+// to no ledger at all, which is the state the next run knows how to fix.
 async function backfillLedger(client, migs, legacyVersion) {
   const assumed = migs.filter((m) => m.version <= legacyVersion);
   if (!assumed.length) return 0;
-  for (const m of assumed) {
-    await client.query(
-      `INSERT INTO public.applied_migrations (version, filename, checksum, backfilled)
-       VALUES ($1, $2, $3, true) ON CONFLICT (version) DO NOTHING`,
-      [m.version, m.file, m.checksum],
-    );
+  await client.query("BEGIN");
+  try {
+    for (const m of assumed) {
+      await client.query(
+        `INSERT INTO public.applied_migrations (version, filename, checksum, backfilled)
+         VALUES ($1, $2, $3, true) ON CONFLICT (version) DO NOTHING`,
+        [m.version, m.file, m.checksum],
+      );
+    }
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
   }
   return assumed.length;
 }

@@ -245,7 +245,11 @@ function report(left, right, leftMsg, rightMsg) {
       );
       process.exitCode = 1;
     } else {
-      console.log("[drift] no drift. Both bootstrap paths agree, and every migration re-ran cleanly.");
+      // Careful with the wording. Only 008..053 get re-applied over a schema
+      // that already holds their objects, because init.sql is pinned at 53.
+      // Everything above it ran exactly once just now, so this run says
+      // nothing about whether 054+ are re-runnable. Several are not.
+      console.log("[drift] no drift. Both bootstrap paths agree, and 008..053 re-ran cleanly over init.sql.");
     }
   } finally {
     const cleanup = new Client(baseConn(MAINT_DB));
