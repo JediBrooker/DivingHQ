@@ -2,7 +2,7 @@
 
 The scoreboard is the audience-facing view. It works **anonymously** — no login, no token — so a spectator can open the URL on their phone, drop in halfway through a meet, and immediately see what's happening. It also drives the back-of-house projector via Broadcast mode and overlays an OBS feed via Stream mode.
 
-![Completed meet recap](/guide-screenshots/scoreboard.png)
+![The scoreboard's meet browser, listing meets as cards with live and completed status chips](/guide-screenshots/scoreboard.png)
 
 ## Two URLs
 
@@ -17,7 +17,7 @@ If the meet manager has published a [Session Scheduler](/guide/session-scheduler
 
 ## Live broadcast layout
 
-![Live broadcast layout](/guide-screenshots/scoreboard-live.png)
+![The live broadcast scoreboard: the active diver in the centre, judge scores below, and live standings alongside](/guide-screenshots/scoreboard-live.png)
 
 A three-column layout while the event is `Live`:
 
@@ -51,6 +51,10 @@ Cells where a judge's hypothetical rank disagrees with the official rank are **h
 For synchro events each row is a pair (`Lead & Partner`); for team events each row is a team (named, no individual /profile link). For individual events the row label links straight through to the lead diver's `/profile`.
 
 The card is **collapsed by default**; click the section header to expand it and reveal the full matrix. The same payload that backs the table also feeds the score-chip tooltip enhancement elsewhere on the page (the "Ranked this dive Nth of M in round R" line).
+
+The same matrix is reachable standalone from the Judge Analysis hub, which is easier to link to:
+
+![The Judge Analysis hub showing the per-judge ranking matrix for a completed event](/guide-screenshots/judge-analysis.png)
 
 **CSV / PDF export** buttons at the top of the section produce a federation-reporting-friendly artefact. The CSV carries one row per entity with `actual_rank`, `actual_total`, and `(rank, total)` columns for each judge; the PDF mirrors the on-screen matrix in landscape A4 form. Both endpoints are public — same transparency stance as the rest of the scoreboard.
 
@@ -148,23 +152,41 @@ The scoreboard ships with a built-in **chroma-key overlay** view designed to dro
 
 ### What the overlay looks like
 
-The overlay strips everything except the live scoring graphics:
+There are two shapes, chosen by the query flag. Both strip every piece of page chrome — no header, footer, filter bar, or export controls — and both float on a vivid solid-colour background (default `#00ff44`, OBS standard green) for chroma keying.
+
+**`?overlay=1` — the full board.** Everything the audience scoreboard shows, minus the chrome:
 
 - Active diver block (name · country · dive code · DD) with live judge tiles as scores stream in
-- Compact top-3 leaderboard that auto-updates between dives
-- Vivid solid-colour background (default `#00ff44`, OBS standard green) for chroma keying
-- No header, footer, or page chrome of any kind
+- Standings, completed dives, the catch-up projection, and the Up Next queue
 
-The chroma colour is configurable via `?bg=<6-digit-hex>` — useful when stage lighting throws green spill onto the broadcast. Common alternatives: `?bg=ff00ff` (magenta), `?bg=0000ff` (blue).
+![The full stream overlay: the three-column board with its page chrome stripped, floating on a solid chroma-key green background](/guide-screenshots/stream-overlay-chroma.png)
+
+Crop the Browser Source in your broadcast tool to whichever columns you want on air — most productions key the centre column only.
+
+**`?overlay=minimal` — the cut-down board.** For productions that want the graphics to sit over live camera footage rather than fill the frame:
+
+- Active diver block and the top 3 of the standings, and nothing else
+- Completed dives, the catch-up projection and the Up Next queue are all hidden
+- Each tile gets a dark plate and a text shadow, so the white text stays readable whatever `?bg=` colour you key against
+
+![The minimal stream overlay: just the active diver block and the top three standings, on dark plates against chroma-key green](/guide-screenshots/stream-overlay-minimal.png)
+
+The two tiles sit at the top of the frame with the rest keyed out, so position them in your broadcast tool the same way you would any other Browser Source. Unlike the full board, there is nothing to crop away.
+
+### Chroma colour
+
+The chroma colour is configurable via `?bg=<6-digit-hex>` — useful when stage lighting throws green spill onto the broadcast. Common alternatives: `?bg=ff00ff` (magenta), `?bg=0000ff` (blue). It works with either overlay shape.
 
 ### URL shape
 
 ```
 /scoreboard/<event-id>?overlay=1
 /scoreboard/<event-id>?overlay=1&bg=ff00ff
+/scoreboard/<event-id>?overlay=minimal
+/scoreboard/<event-id>?overlay=minimal&bg=ff00ff
 ```
 
-Same anonymous-friendly endpoint as the public scoreboard, just with the `overlay=1` query flag flipping the page into chroma-key mode.
+Same anonymous-friendly endpoint as the public scoreboard, just with the `overlay` query flag flipping the page into chroma-key mode.
 
 ### Getting the URL from the Control Room
 
@@ -242,7 +264,7 @@ Both endpoints are public — same transparency stance as the rest of the meet p
 
 `/scoreboard` with no event id is the **platform index** — a browseable list of every meet *run on DivingHQ itself*, defaulting to Completed. (Not to be confused with the **Results Archive** sidebar item, which is the separate DiveRecorder historical archive documented below.) Filters at the top:
 
-![Results Archive](/guide-screenshots/results-archive.png)
+![The results archive with its status filter set to Completed, listing past meets](/guide-screenshots/results-archive.png)
 
 - **Search** — across event name, org name, country
 - **Country** — list of every federation that's run a meet

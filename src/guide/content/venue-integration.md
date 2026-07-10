@@ -25,6 +25,8 @@ For meet operators, the bridge setup lives in the same place as the projector an
 5. Copy the **Test output** command first. It prints one RTD frame in Terminal and proves the selected event is publishing venue state.
 6. Copy the **All Sport Pro / ERTD UDP** command when the test works. Give that command to the venue technician running the bridge laptop.
 
+![The Control Room's venue bridge panel, listing the copyable test-output and UDP bridge commands with the event id already filled in](/guide-screenshots/control-room-venue-bridge.png)
+
 The Control Room panel fills in the current event id and app URL for you. The venue technician only needs to adjust:
 
 - `--host` — the Daktronics ingest address or subnet broadcast address.

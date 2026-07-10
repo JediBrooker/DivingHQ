@@ -14,7 +14,7 @@ Before your organisation can collect fees or receive payouts, an org admin needs
 4. Open the **Fees & pricing** tab to configure what you charge (see the next section).
 5. Optionally, enable **automatic withdrawals** with a threshold on the **Withdrawals** tab — for example, "withdraw when balance reaches $100".
 
-![Payments admin overview](/guide-screenshots/payments-admin-overview.png)
+![The Payments dashboard Overview tab, with the tab bar across the top and a step-by-step "how this works" panel](/guide-screenshots/payments-admin-overview.png)
 
 > **Tip:** You can return to the Account details tab at any time to check your onboarding status or update details via Stripe's dashboard link.
 
@@ -29,7 +29,7 @@ Under the **Fees & pricing** tab, admins configure the fees their organisation c
 - **Donations** — suggested donation amounts plus a custom-amount option.
 - **Meet registration / bundles** — a single fee that covers all events in a meet.
 
-![Fee editor](/guide-screenshots/payments-fee-editor.png)
+![The Fees & pricing tab, showing the membership fee editor with its tier tabs, currency, fee-model and refund controls](/guide-screenshots/payments-fee-editor.png)
 
 > **Tip:** When you set the platform fee to be absorbed by the payer, the checkout page shows the total including the fee so there are no surprises at payment time.
 
@@ -45,7 +45,11 @@ The payment flow is the same regardless of fee type. Here is how it works from t
 6. A webhook from Stripe fulfils the purchase on the backend — granting membership, activating accreditation, confirming entry, and so on.
 7. Renewals are allowed within a 30-day window before your current membership or accreditation expires.
 
-![Membership purchase](/guide-screenshots/payments-membership.png)
+![The Membership page, one card per tier, each showing its resolved price and a Pay button](/guide-screenshots/payments-membership.png)
+
+Donations work the same way, except the payer picks the amount. The chips come from the suggested amounts the admin configured; the box beside them takes anything else.
+
+![The Donate page showing suggested donation amount chips alongside a custom-amount field](/guide-screenshots/payments-donate.png)
 
 > **Note:** If you close the browser during Stripe checkout, the payment may still complete. Check your `/payment-history` page or wait for the confirmation email.
 
@@ -67,16 +71,20 @@ Guardians can pay fees on behalf of minors they are linked to.
 1. Visit `/guardians` ("My Dependents").
 2. Search for a minor by name and send a link request.
 3. An administrator approves the request.
-4. Once linked, a **Paying for** dropdown appears on any payment page: *Yourself* or *[Dependent Name (age)]*.
+4. Once linked, a **Paying for** dropdown appears at the top of the Membership page: *Yourself* or *[Dependent Name (age)]*.
 5. Select the dependent — the price resolves for them (for example, junior-tier membership pricing).
 6. At checkout, the session carries a `subject_user_id` so the server validates the guardian relationship before processing.
 7. You can revoke the guardian link at any time from `/guardians`.
 
-![Guardian selector](/guide-screenshots/payments-guardian-selector.png)
+![The Membership page with a "Paying for" dropdown at the top, set to the linked dependent rather than to yourself](/guide-screenshots/payments-guardian-selector.png)
 
 > **Tip:** The dependent's age determines which tier applies. If a dependent turns 18 before the membership period ends, the tier that was active at purchase time stays in effect for the remainder of that period.
 
 ## Charges, fines, and appeals
+
+Penalties, fines, and any appeal you have lodged all land on the same page, `/charges`:
+
+![The Charges page listing an unpaid scratch penalty, an outstanding fine with a Pay button, and a second fine marked as under appeal](/guide-screenshots/payments-charges.png)
 
 ### Penalties
 
@@ -118,6 +126,8 @@ DivingHQ is the merchant of record. All charges land on the platform's Stripe ac
 ## Payment history
 
 Every user has a personal payment ledger at `/payment-history`. It shows all payments you have made: membership fees, event entries, fines, donations, and anything else.
+
+![The personal payment history ledger, one row per payment, with a refunded event entry among the paid rows](/guide-screenshots/payments-history.png)
 
 - Filter by payment type or date range.
 - Export the full ledger or a filtered subset to CSV or PDF.

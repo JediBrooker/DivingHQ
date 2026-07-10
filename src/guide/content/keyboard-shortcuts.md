@@ -4,6 +4,10 @@
 
 The multi-event Control Room is fully keyboard-drivable. The trick to running several pools at once without a keypress landing on the wrong event: **every hotkey acts on the _focused_ pool only**, and the **number keys** are what change which pool is focused. So the operator's rhythm is "pick a pool with a number, then drive it" — and each pool can still be driven by mouse/touch at the same time.
 
+Two pools running side by side. Pressing `1` focuses the left card, `2` the right; everything below acts on whichever one is focused.
+
+![Control Room running two live events at once, each as its own pool card](/guide-screenshots/control-room-simultaneous.png)
+
 | Key | Action |
 |---|---|
 | **1** … **9** | Switch the focused pool. `1` is the first live pool, `2` the second, and so on (oldest-started first — the same order the chips and pool cards appear in). |

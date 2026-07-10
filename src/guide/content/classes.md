@@ -10,7 +10,7 @@ Payments for classes go to the club (not the federation). Clubs onboard with Str
 
 Club admins see two sub-tabs under the **Manage** tab: **Classes** for creating and managing classes, and **Payouts** for Stripe Connect onboarding and withdrawal settings.
 
-![Classes management](/guide-screenshots/classes-manage.png)
+![The Classes page on its Manage tab, listing each club class with its level, schedule, enrolment count and price options](/guide-screenshots/classes-manage.png)
 
 ### Creating a class
 
@@ -56,7 +56,7 @@ The Payouts tab shows your current balance, withdrawal settings, and withdrawal 
 
 Coaches see the **My club's classes** tab — a read-only list of every class the club runs, with the roster for each. You can see each diver's name and their enrolment status (pending or active), but you cannot edit classes, change prices, or manage enrolments. Use this view to check who's enrolled before a session.
 
-![Coach class view](/guide-screenshots/classes-coach.png)
+![The Classes page on the coach's tab, showing a read-only roster for each of the club's classes](/guide-screenshots/classes-coach.png)
 
 ## For divers
 
@@ -65,7 +65,7 @@ Divers see the **My classes** tab, which has two panels:
 - **Your enrolments.** Every class you're currently enrolled in, with the status, schedule, and price you selected.
 - **Browse available classes.** All active classes at your club. Click a class to see its description, schedule, level, and available price options, then click **Enrol** to join.
 
-![My classes](/guide-screenshots/classes-my-classes.png)
+![A diver's My classes tab, showing the classes they are enrolled in and the price option they chose](/guide-screenshots/classes-my-classes.png)
 
 When you enrol in a paid class, you select a price option and complete payment through Stripe Checkout. If a discount fully covers the price, the enrolment activates immediately with no checkout step.
 

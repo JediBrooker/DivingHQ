@@ -34,6 +34,10 @@ From Meet Manager, every meet row has a **Schedule** link in its actions. The sc
 
 The timeline lays out the day vertically with **30-minute gridlines** and **one column per board** (1 m, 3 m, 5 m, 7.5 m, 10 m platform — plus extra columns if your venue has multiple boards of the same height). Each **block** sits on the grid, anchored to its time window and its board column.
 
+![Session scheduler day timeline, with one column per board, half-hour gridlines, and warmup and event blocks placed on the grid](/guide-screenshots/session-scheduler-timeline.png)
+
+Read it like a train timetable that runs downward: time on the left, one lane per board, and a block wherever something is claiming that board.
+
 Five block types:
 
 | Type | What it means | Claims a board? |
@@ -91,6 +95,10 @@ A **conflict** is two blocks that overlap in time AND share a resource. The sche
 - **Soft** (amber outline): same judge in blocks ≤ 15 minutes apart but not overlapping (no time for them to physically switch panels).
 
 Hard conflicts on board, diver, and referee resources only — those are always real. Soft only applies to judges, where "tight switching" is the realistic scenario.
+
+Below, two 3 m events have been scheduled five minutes apart. They share a board, a judging panel, and a roster, so the detector raises a hard conflict on all three resources at once.
+
+![The scheduler's Conflicts drawer open beside the timeline, listing a hard conflict between two overlapping blocks and naming the shared resources](/guide-screenshots/schedule-conflict-drawer.png)
 
 ### Dismissing a conflict
 

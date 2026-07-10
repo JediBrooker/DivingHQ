@@ -36,6 +36,8 @@ Three entry points carry the language switcher:
 
 The switcher is a flag-prefixed dropdown. Tap the flag, pick a language, the entire app re-renders into the new locale immediately — no reload required.
 
+![The language switcher — a small dropdown showing a flag beside the current language name](/guide-screenshots/language-switcher.png)
+
 ## What persists
 
 The chosen language is written to `localStorage('locale')` on every change. That means:
@@ -55,6 +57,10 @@ Arabic is the only RTL language in the supported set. When you switch to it:
 - `<html dir="rtl">` is set at the document root
 - `<html lang="ar">` is set in lockstep
 - The whole page mirrors automatically — buttons flow right-to-left, headings align right, columns swap, etc.
+
+Here is the login page in Arabic. Nothing on it was written twice: the same markup produced both layouts.
+
+![The DivingHQ login page rendered in Arabic, with the entire layout mirrored right-to-left](/guide-screenshots/rtl-arabic-layout.png)
 
 This is achieved with CSS *logical properties* (`padding-inline-end`, `inset-inline-end`, `margin-inline-start`, etc.) throughout the layout, so no per-component RTL stylesheet is needed. Per-page chrome (event-picker chevrons, arrow indicators, menu pop-out direction) all flip correctly.
 

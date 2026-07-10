@@ -50,19 +50,13 @@ SMTP_FROM="DivingHQ <noreply@your-domain>"
 
 ## Running a meet
 
-### "The Start Event button is greyed out"
+### "I can't find the Start Event button"
 
-You're missing one of the four pre-meet steps. The button is gated on:
+There isn't a permanently visible one. The Control Room's pre-meet view shows a **readiness checklist** and a single button that offers only the next action you can take. Until every item on the checklist ticks green, that button says something else — `✓ Check In Divers`, `🎲 Randomise Dive Order`, or `📋 Referee Sign Off`. The status chip at the top tells you how many blockers are left, and the **Next:** hint beside it names the one in the way.
 
-1. Check-in modal completed (red → orange)
-2. Dive order randomised or manually set (orange → yellow)
-3. Referee sign-off (yellow → green)
+Work down the checklist and the button eventually becomes `▶ Start Event`. Clicking it flips the event Live straight away — there's no separate confirmation step, because the checklist has already done that job.
 
-If you've skipped one (e.g. randomise) the workflow button stays the colour of the missing step and the **stepper above it** highlights that step in cyan. Click the button (or address the missing step in the modal it opens) to advance.
-
-### "I clicked Start Event and a modal popped up — what is this?"
-
-The **Pre-Flight Review** modal. It's a last-chance summary of what's about to broadcast: roster size, judge panel composition, referee status, plus warnings for anything that looks misconfigured (invalid synchro panel, divers with incomplete dive lists, partial panel, missing referee). Two buttons: `Not yet` returns to the workflow; `▶ Go Live` actually flips the event to Live. See [Running a Meet → Pre-Flight Review modal](/guide/running-a-meet#pre-flight-review-modal).
+![Control Room before an event starts, with the readiness checklist showing which steps are still outstanding](/guide-screenshots/control-room-premeet-checklist.png)
 
 ### "Where did the Finalise Event button go mid-meet?"
 
@@ -128,6 +122,8 @@ From the Control Room, open the header `⋯` menu → **📺 Broadcast…** and 
 - **By Event** — pick any Completed event to see a per-judge ranking matrix: where each diver/pair/team would have placed if every scoring judge had judged like that judge alone. Synchro events are segmented into Exec A / Exec B / Sync. Results can be exported to CSV or PDF.
 - **By Judge** — search the public judge directory and open any judge's `/judge-profile` analytics page.
 
+![The Judge Analysis page on its By Event tab, showing the per-judge ranking matrix](/guide-screenshots/judge-analysis.png)
+
 Signed-in users see the page inside the full CRM shell (it is also in the left sidebar under **Judge Analysis**). Logged-out users see a minimal top chrome — the event data and judge profiles are the same either way.
 
 ### "Can I link someone directly to a specific event's analysis?"
@@ -155,7 +151,7 @@ Red conflicts mean two things cannot happen at the same time. The most common ca
 - The same referee assigned to overlapping events
 - A synchro event with an invalid panel split
 
-Click the warning, then either move the event, change the board, edit the panel, or add a break between sessions. See [Session Scheduler → Common warnings](/guide/session-scheduler#common-warnings).
+Click the warning, then either move the event, change the board, edit the panel, or add a break between sessions. See [Session Scheduler → Conflict detection](/guide/session-scheduler#conflict-detection).
 
 ### "The public meet page is showing old times"
 

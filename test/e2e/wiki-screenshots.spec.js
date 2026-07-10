@@ -13,19 +13,33 @@
 // guide content or README to be useful.
 //
 // Design choice: one big spec, serial mode, shared beforeAll
-// fixture. The 27 screenshots all need the same "live federation
+// fixture. The screenshots nearly all need the same "live federation
 // with 3 events at different statuses, real divers, real judges,
 // scored dives" world, and spinning that up once and screenshotting
-// it 27 times is about 10x cheaper than 27 isolated tests. The
+// it 40-odd times is about 10x cheaper than 40 isolated tests. The
 // trade-off is a fixture bug breaks every screenshot, which is fine
 // since the spec is meant to be run interactively and looked
 // at by a human anyway.
+//
+// No annotations. An earlier pass drew red callout badges and arrows
+// onto these images; they were positioned against a different build
+// and ended up covering the very fields they pointed at. If a shot
+// needs a callout, the fix is to crop it (see snapEl) or to describe
+// it in the surrounding prose, not to paint on the PNG.
 
 const { test, expect } = require("@playwright/test");
 const { io } = require("socket.io-client");
 const setup = require("./_setup");
 
 test.describe.configure({ mode: "serial" });
+
+// Pin the browser to UTC. Everything the fixture seeds is written as
+// a UTC instant, and without this the images bake in whatever zone the
+// operator's laptop happens to be in. The session scheduler is the
+// obvious casualty: a 09:30 event start renders as "06:45 PM" from
+// Sydney and the day spills over midnight. Doc screenshots should look
+// the same wherever they get regenerated.
+test.use({ timezoneId: "UTC" });
 
 // -------------------------------------------------------------
 // Shared world. Populated by the first test, drained by the last.
@@ -110,10 +124,62 @@ async function settle(page, extraMs = 600) {
   await page.waitForTimeout(extraMs);
 }
 
-async function snap(page, name) {
+// The socket fans out "Your event is live" cards into the top-right
+// .notif-stack whenever a status flips. They stack up three deep on a
+// slow page and land in whatever screenshot happens to fire next, which
+// is how meet-day.png ended up with a column of toasts down its side.
+// They're also non-deterministic (pure socket timing), so the same run
+// twice gives two different images. Hide them for every doc capture.
+// The Inbox screenshot is unaffected, that's a route, not this overlay.
+async function hideTransientChrome(page) {
+  await page.addStyleTag({
+    content: `.notif-stack { display: none !important; }`,
+  }).catch(() => {
+    // addStyleTag throws if we're mid-navigation. Not worth failing a
+    // screenshot over, the stack is usually empty anyway.
+  });
+}
+
+// payments.org_id and payments.payer_user_id are both ON DELETE
+// RESTRICT, since a financial record isn't supposed to evaporate when
+// someone deletes a user. Right call everywhere except here. This spec
+// is the only one that seeds payment rows, so it's also the only one
+// that has to sweep them up: without this, neither the stale-org
+// cleanup below nor setup.deleteOrg() can drop the fixture, and the
+// next run trips over yesterday's org.
+//
+// Everything that points AT payments (fines, entry_charges,
+// class_enrolments, memberships…) is ON DELETE SET NULL, so the
+// order here doesn't matter.
+async function purgePayments(orgIds) {
+  if (!orgIds.length) return;
+  await setup.pool.query("DELETE FROM payments WHERE org_id = ANY($1::uuid[])", [orgIds]);
+}
+
+async function snap(page, name, opts = {}) {
+  await hideTransientChrome(page);
   await page.screenshot({
     path: `${SCREENSHOT_DIR}/${name}.png`,
-    fullPage: true,
+    fullPage: opts.fullPage !== false,
+    ...(opts.clip ? { clip: opts.clip } : {}),
+  });
+}
+
+// Screenshot a single element rather than the page. Used where the
+// documented thing is a small piece of chrome (the connection pill)
+// and a 1440px-wide page shot would render it four pixels tall.
+async function snapEl(page, selector, name, padding = 12) {
+  await hideTransientChrome(page);
+  const box = await page.locator(selector).first().boundingBox();
+  if (!box) throw new Error(`snapEl: ${selector} has no box`);
+  await page.screenshot({
+    path: `${SCREENSHOT_DIR}/${name}.png`,
+    clip: {
+      x:      Math.max(0, box.x - padding),
+      y:      Math.max(0, box.y - padding),
+      width:  box.width  + padding * 2,
+      height: box.height + padding * 2,
+    },
   });
 }
 
@@ -125,26 +191,39 @@ test("setup: build host federation, 3 events, divers + judges + coach", async ({
 }) => {
   test.setTimeout(120_000);
 
-  // Drain stale synthetic orgs from prior e2e runs. Do not delete
-  // fresh e2e orgs here: this spec runs in parallel with other
-  // files, and deleting their users mid-test can deadlock against
-  // status flips / notification fan-out. A short age gate keeps
-  // crashed-run leftovers out of the screenshots without racing the
-  // active suite.
-  await setup.pool.query(`
-    DELETE FROM users
-     WHERE org_id IN (
-       SELECT id
-         FROM organisations
-        WHERE slug LIKE 'e2e-%'
-          AND created_at < now() - interval '15 minutes'
-     )
-  `);
-  await setup.pool.query(`
-    DELETE FROM organisations
-     WHERE slug LIKE 'e2e-%'
-       AND created_at < now() - interval '15 minutes'
-  `);
+  // Drain EVERY synthetic org left behind by other e2e files before
+  // we shoot anything.
+  //
+  // This used to carry a 15-minute age gate, because the spec once ran
+  // alongside the rest of the suite and deleting a live spec's users
+  // mid-test could deadlock against status flips / notification
+  // fan-out. That hasn't been true since playwright.config.js started
+  // testIgnore-ing this file unless E2E_DOCS=1, so it now only ever runs
+  // alone, via `npm run test:e2e:docs`.
+  //
+  // The gate was quietly wrecking two screenshots. /scoreboard and
+  // /results-archive list every meet in the database, so leftovers
+  // from other specs turn up as "Announce Event", "V2 Live", "Pool A"
+  // sitting above the demo federation. The last capture had 32 junk
+  // live events in it.
+  //
+  // Seeded demo data (the Grand Prix meets from seed_test_data.sql)
+  // has a different slug and survives, which is what we want in frame.
+  //
+  // Payments go first: they hold RESTRICT references onto both the org
+  // and its users, so a previous run that died before teardown leaves
+  // rows that make the DELETEs below fail outright.
+  const staleOrgs = (await setup.pool.query(
+    "SELECT id FROM organisations WHERE slug LIKE 'e2e-%'",
+  )).rows.map((r) => r.id);
+  await purgePayments(staleOrgs);
+
+  await setup.pool.query(
+    "DELETE FROM users WHERE org_id = ANY($1::uuid[])", [staleOrgs],
+  );
+  await setup.pool.query(
+    "DELETE FROM organisations WHERE id = ANY($1::uuid[])", [staleOrgs],
+  );
 
   // Federation that maps to a recognisable flag: DEU matches the
   // existing meet-manager spec and gives us a country chip on
@@ -204,8 +283,11 @@ test("setup: build host federation, 3 events, divers + judges + coach", async ({
   }
 
   // One coach with two linked divers (divers[1] + divers[2]).
+  // The club matters: /api/coach/classes resolves the coach's roster
+  // through users.club_id, so a clubless coach sees an empty Classes
+  // tab no matter how many classes exist.
   const coach = await setup.insertUser({
-    orgId, role: "coach", fullName: "Coach Andreas Klein",
+    orgId, role: "coach", fullName: "Coach Andreas Klein", clubId: club1.clubId,
   });
   const coachLogin = await setup.loginAs(request, coach.username);
   world.coach = { ...coach, fullName: "Coach Andreas Klein", token: coachLogin.token };
@@ -421,7 +503,293 @@ test("setup: build host federation, 3 events, divers + judges + coach", async ({
   world.subjectDiverId = world.divers[0].userId;
   world.compareDiverId = world.divers[1].userId;
   world.thirdDiverId   = world.liveDivers[2].userId;
+
+  // -------------------------------------------------------------
+  // Give the three events a start time. Two things need it: the
+  // meet page renders a running order, and the session scheduler
+  // refuses to auto-seed a meet whose events have no scheduled_at
+  // (routes/sessions.js seedSessionsForMeet), so it'd hand us an empty
+  // timeline to photograph.
+  //
+  // Times are anchored to the meet's own start_date, NOT to now(),
+  // so the screenshot doesn't drift with the wall clock.
+  // -------------------------------------------------------------
+  const eventTimes = [
+    [world.completedEvent.id, "2026-05-15T09:30:00Z"],
+    [world.liveEvent.id,      "2026-05-15T13:00:00Z"],
+    [world.upcomingEvent.id,  "2026-05-15T16:00:00Z"],
+  ];
+  for (const [eventId, at] of eventTimes) {
+    await setup.pool.query(
+      "UPDATE events SET scheduled_at = $2 WHERE id = $1",
+      [eventId, at],
+    );
+  }
+
+  await seedClassesWorld(request);
+  await seedPaymentsWorld();
 });
+
+// =============================================================
+// Fixture: club training classes.
+//
+// The Classes page is context-adaptive (ClassesView.vue): the
+// Manage tab needs a club_admins row, the Coach tab needs role
+// 'coach' + a matching users.club_id, and My classes needs an
+// enrolment. So we need three different signed-in users to shoot
+// the three tabs, and all of them have to point at the same club.
+// =============================================================
+async function seedClassesWorld(request) {
+  const orgId = world.orgId;
+  const club  = world.clubs[0];   // Berlin Diving Club, holds divers 0/2/4
+
+  // Club admin. Club-admin-ness is a club_admins row, not an org
+  // role, so the JWT alone can't grant it. Give her the coach role
+  // too, which is what a real club's head coach usually looks like
+  // and is what makes all three tabs render in one screenshot.
+  const clubAdmin = await setup.insertUser({
+    orgId, role: "coach", fullName: "Nina Roth", clubId: club.clubId,
+  });
+  await setup.pool.query(
+    `INSERT INTO club_admins (club_id, user_id, org_id)
+     VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+    [club.clubId, clubAdmin.userId, orgId],
+  );
+  world.clubAdmin = clubAdmin;
+
+  const classSpecs = [
+    {
+      name: "Learn to Dive", level: "Beginner",
+      schedule: "Mondays + Wednesdays, 17:00–18:30", capacity: 16,
+      prices: [
+        { label: "Term (10 weeks)", amount_cents: 12000 },
+        { label: "Pay as you go",   amount_cents: 1500 },
+      ],
+      enrol: [4],
+    },
+    {
+      name: "Development Squad", level: "Intermediate",
+      schedule: "Tue / Thu / Sat, 16:30–19:00", capacity: 12,
+      prices: [
+        { label: "Term (10 weeks)", amount_cents: 24000 },
+        { label: "Monthly",         amount_cents: 9000 },
+      ],
+      enrol: [2, 4],
+    },
+    {
+      name: "Elite Performance", level: "Advanced",
+      schedule: "Daily, 06:00–08:00 + 16:00–19:00", capacity: 8,
+      prices: [
+        { label: "Term (10 weeks)", amount_cents: 42000 },
+      ],
+      enrol: [0, 2],
+    },
+  ];
+
+  world.classes = [];
+  for (const spec of classSpecs) {
+    const cls = (await setup.pool.query(
+      `INSERT INTO classes (club_id, org_id, name, description, level, schedule, capacity, active, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8) RETURNING id`,
+      [
+        club.clubId, orgId, spec.name,
+        `${spec.level} group coached by ${world.coach.fullName}.`,
+        spec.level, spec.schedule, spec.capacity, clubAdmin.userId,
+      ],
+    )).rows[0];
+
+    const priceIds = [];
+    for (const [i, p] of spec.prices.entries()) {
+      const row = (await setup.pool.query(
+        `INSERT INTO class_price_options (class_id, label, amount_cents, currency, active, sort_order)
+         VALUES ($1, $2, $3, 'GBP', true, $4) RETURNING id`,
+        [cls.id, p.label, p.amount_cents, i],
+      )).rows[0];
+      priceIds.push({ ...row, ...p });
+    }
+
+    for (const diverIdx of spec.enrol) {
+      const diver = world.divers[diverIdx];
+      const price = priceIds[0];
+      await setup.pool.query(
+        `INSERT INTO class_enrolments
+           (class_id, diver_user_id, club_id, org_id, status, price_option_id,
+            amount_cents, discount_cents, currency, enrolled_by)
+         VALUES ($1, $2, $3, $4, 'active', $5, $6, 0, 'GBP', $7)`,
+        [cls.id, diver.userId, club.clubId, orgId, price.id, price.amount_cents, clubAdmin.userId],
+      );
+    }
+    world.classes.push({ id: cls.id, ...spec });
+  }
+
+  // Log the club admin in so the classes test can reuse the token.
+  const login = await setup.loginAs(request, clubAdmin.username);
+  world.clubAdmin.token = login.token;
+}
+
+// =============================================================
+// Fixture: payments.
+//
+// Everything here is inserted with SQL rather than driven through
+// the admin API. The API paths run real Stripe calls (Connect
+// onboarding, Checkout session creation) and a screenshot run has
+// no business hitting Stripe. The diver-facing GET endpoints we're
+// photographing are pure reads over these tables, so the pages
+// render exactly as they would in production.
+//
+// The one thing we can't fake is a completed Connect onboarding,
+// so the /payments "Account details" tab stays empty. That's why the
+// admin captures below stick to Overview plus Fees & pricing.
+// =============================================================
+async function seedPaymentsWorld() {
+  const orgId = world.orgId;
+
+  async function addFee(fields, prices = []) {
+    const cols = Object.keys(fields);
+    const feeId = (await setup.pool.query(
+      `INSERT INTO fee_definitions (org_id, ${cols.join(", ")}, active)
+       VALUES ($1, ${cols.map((_, i) => `$${i + 2}`).join(", ")}, true)
+       RETURNING id`,
+      [orgId, ...cols.map((c) => fields[c])],
+    )).rows[0].id;
+    for (const p of prices) {
+      await setup.pool.query(
+        `INSERT INTO fee_prices (fee_definition_id, label, amount_cents, audience)
+         VALUES ($1, $2, $3, $4)`,
+        [feeId, p.label, p.amount_cents, p.audience || "all"],
+      );
+    }
+    return feeId;
+  }
+
+  // Membership, one fee per tier. MembershipView asks for tier=''
+  // (Standard) plus junior/senior/masters, and the endpoint matches
+  // on `tier IS NOT DISTINCT FROM $2`, so Standard is a NULL tier.
+  const membershipFees = {};
+  const tiers = [
+    { tier: null,      name: "Annual membership",         amount: 4500 },
+    { tier: "junior",  name: "Junior annual membership",  amount: 2500 },
+    { tier: "senior",  name: "Senior annual membership",  amount: 4500 },
+    { tier: "masters", name: "Masters annual membership", amount: 3500 },
+  ];
+  for (const t of tiers) {
+    membershipFees[t.tier || "standard"] = await addFee(
+      {
+        scope: "membership", name: t.name, currency: "GBP",
+        fee_payer: "absorb", refund_policy: "deadline",
+        membership_period: "annual", tier: t.tier,
+      },
+      [
+        { label: "Standard",     amount_cents: t.amount },
+        { label: "Members only", amount_cents: Math.round(t.amount * 0.8), audience: "member" },
+      ],
+    );
+  }
+
+  // Donations: buyer picks the amount, so no fee_prices rows. The preset
+  // chips come off suggested_amounts.
+  world.donationFeeId = await addFee({
+    scope: "donation", name: "Support German diving", currency: "GBP",
+    fee_payer: "absorb", refund_policy: "none",
+    suggested_amounts: [1000, 2500, 5000, 10000],
+  });
+
+  // Entry fee for the meet, so the admin Overview has something to
+  // total and payment history has a plausible line item.
+  world.entryFeeId = await addFee(
+    {
+      scope: "event_entry", name: "Event entry", currency: "GBP",
+      fee_payer: "pass_to_payer", refund_policy: "deadline",
+      event_id: world.liveEvent.id,
+    },
+    [{ label: "Standard", amount_cents: 1800 }],
+  );
+
+  // A scratch penalty definition + one charge sitting unpaid against
+  // a diver, which is the whole point of the /charges page.
+  const scratchFeeId = await addFee(
+    {
+      scope: "scratch", name: "Late scratch penalty", currency: "GBP",
+      fee_payer: "absorb", refund_policy: "none",
+      event_id: world.upcomingEvent.id,
+    },
+    [{ label: "Standard", amount_cents: 2500 }],
+  );
+  await setup.pool.query(
+    `INSERT INTO entry_charges
+       (org_id, event_id, entrant_user_id, kind, fee_definition_id, amount_cents, status, triggered_at)
+     VALUES ($1, $2, $3, 'scratch', $4, 2500, 'owed', now() - interval '2 days')`,
+    [orgId, world.upcomingEvent.id, world.divers[0].userId, scratchFeeId],
+  );
+
+  // Two fines: one plain owed, one under appeal, so the page shows
+  // both the Pay and the appeal-pending states side by side.
+  await setup.pool.query(
+    `INSERT INTO fines (org_id, liable_user_id, issued_by, event_id, amount_cents, currency, reason, status, issued_at)
+     VALUES ($1, $2, $3, $4, 5000, 'GBP', 'Late arrival to the judges'' briefing', 'owed', now() - interval '5 days')`,
+    [orgId, world.divers[0].userId, world.adminId, world.liveEvent.id],
+  );
+  await setup.pool.query(
+    `INSERT INTO fines (org_id, liable_user_id, issued_by, event_id, amount_cents, currency, reason,
+                        status, appeal_status, appeal_reason, issued_at)
+     VALUES ($1, $2, $3, $4, 2000, 'GBP', 'Unregistered kit on poolside', 'appealed', 'pending',
+             'The kit was registered on the day — receipt attached.', now() - interval '9 days')`,
+    [orgId, world.divers[0].userId, world.adminId, world.liveEvent.id],
+  );
+
+  // Payment history for the subject diver. Mixed subject types and
+  // one refund, because a ledger with a single row teaches nothing.
+  const history = [
+    { subject: "membership",  fee: membershipFees.standard, amount: 4500, status: "paid",     daysAgo: 96 },
+    { subject: "event_entry", fee: world.entryFeeId,        amount: 1800, status: "paid",     daysAgo: 21, eventId: world.liveEvent.id },
+    { subject: "donation",    fee: world.donationFeeId,     amount: 2500, status: "paid",     daysAgo: 12 },
+    { subject: "event_entry", fee: world.entryFeeId,        amount: 1800, status: "refunded", daysAgo: 4,  eventId: world.upcomingEvent.id },
+  ];
+  for (const h of history) {
+    const refunded = h.status === "refunded";
+    await setup.pool.query(
+      `INSERT INTO payments
+         (org_id, fee_definition_id, payer_user_id, subject_type, event_id, meet_id,
+          amount_cents, platform_fee_cents, currency, fee_payer, status, payer_type,
+          created_at, paid_at, refunded_at, refunded_amount_cents)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'GBP', 'absorb', $9, 'user',
+               now() - ($10::int * interval '1 day'),
+               now() - ($10::int * interval '1 day'),
+               $11, $12)`,
+      [
+        orgId, h.fee, world.divers[0].userId, h.subject,
+        h.eventId || null, h.eventId ? world.meetId : null,
+        h.amount, Math.round(h.amount * 0.15), h.status, h.daysAgo,
+        refunded ? new Date(Date.now() - 24 * 3600 * 1000) : null,
+        refunded ? h.amount : 0,
+      ],
+    );
+  }
+
+  // Guardian → dependent. SubjectSelector.vue only renders its
+  // "Paying for" dropdown when /api/guardians/my-dependents comes
+  // back non-empty, and it prints the dependent's age, so the
+  // dependent needs a date_of_birth or the label reads "(NaN)".
+  await setup.pool.query(
+    "UPDATE users SET date_of_birth = '2012-04-18' WHERE id = $1",
+    [world.divers[0].userId],
+  );
+  // 'spectator' is what registration actually hands a new account
+  // (routes/auth.js), and a parent who signs up purely to pay for their
+  // child never earns anything more, so that's the person the screenshot
+  // should show. /membership carries allowGuardian in the router and the
+  // guard lets anyone holding an approved dependent through, so she
+  // reaches the page and SubjectSelector renders her picker.
+  const guardian = await setup.insertUser({
+    orgId, role: "spectator", fullName: "Marta Bennett",
+  });
+  await setup.pool.query(
+    `INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id, status, reviewed_by, reviewed_at)
+     VALUES ($1, $2, $3, 'approved', $4, now())`,
+    [orgId, guardian.userId, world.divers[0].userId, world.adminId],
+  );
+  world.guardian = guardian;
+}
 
 // =============================================================
 // PHASE 2: public screenshots (signed out).
@@ -524,6 +892,19 @@ test("spectator: scoreboard list + live + archive + meet", async ({ page, reques
   // in a non-default state.
   const statusSel = page.locator(".sb-filter-row .sb-filter-select").first();
   await statusSel.selectOption("Completed");
+
+  // The LIVE NOW and UPCOMING strips sit above the filtered list and
+  // ignore statusFilter entirely (MeetsBrowser.vue renders them off
+  // liveByMeet / upcomingByMeet, not the filtered set). Left expanded
+  // they push the completed meets clean out of a viewport-only shot,
+  // which is how this file ended up byte-for-byte identical to
+  // scoreboard.png. Collapse them so the archive is the subject.
+  for (const head of [".live-strip-head", ".upcoming-strip-head"]) {
+    const btn = page.locator(head);
+    if (await btn.count()) {
+      if (await btn.getAttribute("aria-expanded") === "true") await btn.click();
+    }
+  }
   await settle(page);
   await page.screenshot({
     path: `${SCREENSHOT_DIR}/results-archive.png`,
@@ -849,11 +1230,391 @@ test("admin: user-manager / clubs / teams / assign-judges / audit / dive-directo
 });
 
 // =============================================================
-// PHASE 8: teardown. Drains the federation we spun up so two
+// PHASE 8: payments. Two audiences on the same feature, so two
+// sign-ins: the federation admin who configures fees, and the
+// diver who pays them.
+// =============================================================
+test("payments: admin overview + fee editor / membership / charges / donate / history", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize(VIEWPORT);
+
+  // ---- Federation admin -------------------------------------
+  await signIn(page, world.adminUsername);
+
+  // payments-admin-overview.png: the landing tab. Shows the
+  // money-in totals plus the "how this works" explainer.
+  await page.goto("/payments");
+  await expect(page.locator(".tabs .tab").first()).toBeVisible({ timeout: 10_000 });
+  await settle(page);
+  await snap(page, "payments-admin-overview");
+
+  // payments-fee-editor.png: the Fees & pricing tab, where the
+  // membership fee, club fees, and entry pricing get set. Scope to
+  // the tab bar, because the Overview panel's "how this works" list has
+  // a button with the same label that jumps to the same tab.
+  await page.locator(".tabs .tab", { hasText: /Fees & pricing/i }).click();
+  await settle(page, 800);
+  await snap(page, "payments-fee-editor");
+
+  // ---- Diver ------------------------------------------------
+  await signOut(page);
+  await signIn(page, world.divers[0].username);
+
+  // payments-membership.png: the four tier cards with prices
+  // resolved from fee_prices.
+  await page.goto("/membership");
+  await expect(page.locator(".tier-card").first()).toBeVisible({ timeout: 10_000 });
+  await settle(page);
+  await snap(page, "payments-membership");
+
+  // payments-charges.png: an unpaid scratch penalty, an owed
+  // fine, and a fine already under appeal.
+  await page.goto("/charges");
+  await settle(page, 900);
+  await snap(page, "payments-charges");
+
+  // payments-donate.png: preset amount chips off suggested_amounts.
+  await page.goto("/donate");
+  await settle(page, 900);
+  await snap(page, "payments-donate");
+
+  // payments-history.png: the personal ledger, four rows, one
+  // of them refunded.
+  await page.goto("/payment-history");
+  await settle(page, 900);
+  await snap(page, "payments-history");
+
+  // ---- Guardian ---------------------------------------------
+  // payments-guardian-selector.png: the "Paying for" dropdown that
+  // SubjectSelector.vue renders ONLY for a user with an approved
+  // dependent. The old screenshot under this name was the wrong
+  // page entirely (it showed an empty /guardians list), so this
+  // one actually earns its filename.
+  await signOut(page);
+  await signIn(page, world.guardian.username);
+  await page.goto("/membership");
+  const subject = page.locator(".subject-selector select");
+  await expect(subject).toBeVisible({ timeout: 10_000 });
+  await subject.selectOption({ index: 1 });   // the dependent, not "myself"
+  await settle(page, 700);
+  await snap(page, "payments-guardian-selector");
+});
+
+// =============================================================
+// PHASE 9: classes. One page, three tabs, three different users,
+// because the tab you land on is decided by what you are.
+// =============================================================
+test("classes: manage / coach / my-classes", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize(VIEWPORT);
+
+  // classes-manage.png: club admin lands on Manage.
+  await signIn(page, world.clubAdmin.username);
+  await page.goto("/classes");
+  await expect(page.locator(".panel")).toBeVisible({ timeout: 10_000 });
+  await settle(page, 900);
+  await snap(page, "classes-manage");
+
+  // classes-coach.png: the coach gets the read-only roster view.
+  await signOut(page);
+  await signIn(page, world.coach.username);
+  await page.goto("/classes");
+  await expect(page.locator(".panel")).toBeVisible({ timeout: 10_000 });
+  await settle(page, 900);
+  await snap(page, "classes-coach");
+
+  // classes-my-classes.png: divers[0] is enrolled in Elite
+  // Performance, so this renders an enrolment card rather than
+  // the "browse your club's classes" empty state.
+  await signOut(page);
+  await signIn(page, world.divers[0].username);
+  await page.goto("/classes");
+  await expect(page.locator(".panel")).toBeVisible({ timeout: 10_000 });
+  await settle(page, 900);
+  await snap(page, "classes-my-classes");
+});
+
+// =============================================================
+// PHASE 10: the offline connection indicator.
+//
+// The guide documents an amber "Offline 12s" pill with a pending
+// count badge next to it. Getting there means actually cutting the
+// socket and then queuing a write, because both halves of that pill
+// are derived state: isOffline comes from the socket's connected
+// flag (useOutbox.js), and the badge counts unsynced outbox rows.
+//
+// Captured as a cropped element, not a page. At 1440px wide the
+// pill is a ~90px smudge in the top-right corner and the reader
+// can't see the thing the page is describing.
+// =============================================================
+test("offline: connection indicator", async ({ page, baseURL }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize(VIEWPORT);
+  await signIn(page, world.adminUsername);
+
+  const adminSocket = await openSocket(baseURL || world.baseURL, world.adminToken);
+  adminSocket.emit("subscribe_event", { event_id: world.liveEvent.id });
+  adminSocket.emit("set_active_diver", {
+    event_id:      world.liveEvent.id,
+    competitor_id: world.thirdDiverId,
+    diverName:     world.liveDivers[2].fullName,
+    full_name:     world.liveDivers[2].fullName,
+    round_number:  2,
+    diveCode:      "201B",
+    dd:            1.8,
+    description:   "Back Dive",
+    position:      "B",
+    eventName:     world.liveEvent.name,
+  });
+
+  // By now the operator phase has spun up a second Live event, so
+  // the Control Room renders two pool cards. Everything below wants
+  // the first one.
+  await page.goto(`/control?event=${world.liveEvent.id}`);
+  await expect(page.locator(".cv2-live-diver").first()).toBeVisible({ timeout: 15_000 });
+  await settle(page, 800);
+  adminSocket.disconnect();
+
+  // Cut the network. The socket notices, offlineSince is stamped,
+  // and the pill flips amber.
+  await page.context().setOffline(true);
+  await expect(page.locator(".cv2-conn-off")).toBeVisible({ timeout: 20_000 });
+
+  // Now queue something, so the pill grows the pending-count badge
+  // the guide describes. A referee Re-dive call is the right lever:
+  // LivePoolCard routes it straight through queueSocketAction with
+  // no confirm dialog in the way, and unlike Next Diver it stays
+  // enabled while the active diver's panel is still incomplete.
+  //
+  // Bound the click. Playwright waits for actionability with no
+  // deadline of its own, so a disabled button would silently burn
+  // the whole test timeout rather than fall through to the catch.
+  await page
+    .locator(".cv2-pool").first()
+    .getByRole("button", { name: /Re-dive/i })
+    .click({ timeout: 5_000 })
+    .catch(() => {
+      // No active diver in that pool. The pill is still worth
+      // photographing, just without the badge.
+    });
+  // Give the pill's 1s ticker a beat so it reads "Offline 3s" rather
+  // than an empty duration, and let the outbox write land.
+  await page.waitForTimeout(3000);
+
+  // Crop to the right-hand action cluster. The guide places the
+  // indicator "next to the History and Standings buttons", so those
+  // belong in frame; the event chips on the far left do not.
+  await snapEl(page, ".cv2-topbar-actions", "offline-connection-indicator", 10);
+
+  await page.context().setOffline(false);
+});
+
+// =============================================================
+// PHASE 11: session scheduler.
+//
+// /meet/:id/schedule auto-seeds on first authenticated GET, but
+// only for events that carry a scheduled_at (set in the fixture).
+// Two extra events at other heights give the timeline more than
+// one board column, which is the whole point of the layout. They
+// are created HERE, after meet-manager.png and the dashboard have
+// already been captured, so those images keep their tidy 3-event
+// meet.
+// =============================================================
+test("scheduler: day timeline + edit mode", async ({ page, request }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize(VIEWPORT);
+
+  for (const spec of [
+    { name: "Women 10m Platform — Preliminary", height: "10m", at: "2026-05-15T11:00:00Z", gender: "Female" },
+    { name: "Men 1m Springboard — Final",       height: "1m",  at: "2026-05-15T14:30:00Z", gender: "Male" },
+  ]) {
+    const ev = await setup.createEvent(request, {
+      adminToken: world.adminToken,
+      name: spec.name,
+      gender: spec.gender,
+      number_of_judges: 5,
+      total_rounds: 3,
+      height: spec.height,
+      event_type: "individual",
+    });
+    await request.put(`/api/events/${ev.id}/meet`, {
+      headers: { Authorization: `Bearer ${world.adminToken}` },
+      data: { meet_id: world.meetId },
+    });
+    await setup.pool.query(
+      "UPDATE events SET scheduled_at = $2 WHERE id = $1",
+      [ev.id, spec.at],
+    );
+  }
+
+  await signIn(page, world.adminUsername);
+  await page.goto(`/meet/${world.meetId}/schedule`);
+  // The first authenticated load is the one that seeds boards +
+  // sessions + blocks, so wait for a block to paint rather than
+  // for networkidle.
+  await expect(page.locator(".scheduler-block").first()).toBeVisible({ timeout: 20_000 });
+  await settle(page, 1200);
+  await page.screenshot({
+    path: `${SCREENSHOT_DIR}/session-scheduler-timeline.png`,
+    fullPage: false,
+  });
+
+  // schedule-conflict-drawer.png: the Conflict detection section of
+  // the guide is entirely about hard vs soft and the colours that
+  // carry them, and a clean schedule has neither. Manufacture one:
+  // shove the Semifinal's event block on top of the Final's. Both
+  // are 3m, both hold the same five judges and the same five divers,
+  // so the detector fires on board, judge, AND diver at once.
+  const finalBlock = (await setup.pool.query(
+    `SELECT starts_at, ends_at FROM schedule_blocks
+      WHERE event_id = $1 AND block_type = 'event_start' LIMIT 1`,
+    [world.liveEvent.id],
+  )).rows[0];
+  expect(finalBlock, "the Final's event block should have been seeded").toBeTruthy();
+
+  await setup.pool.query(
+    `UPDATE schedule_blocks
+        SET starts_at = $2, ends_at = $3
+      WHERE event_id = $1 AND block_type = 'event_start'`,
+    [
+      world.upcomingEvent.id,
+      new Date(finalBlock.starts_at.getTime() + 5 * 60_000),
+      new Date(finalBlock.ends_at.getTime()   + 5 * 60_000),
+    ],
+  );
+
+  // GET /api/meets/:id/conflicts memoises for CONFLICT_CACHE_TTL_MS
+  // (5s, routes/sessions.js) and only busts that cache on writes made
+  // through the API. We moved the block underneath it with raw SQL, so
+  // an immediate reload just re-serves the pre-move "no conflicts"
+  // answer. Wait the TTL out rather than reach into the cache.
+  await page.waitForTimeout(5_500);
+
+  await page.reload();
+  await expect(page.locator(".scheduler-block").first()).toBeVisible({ timeout: 20_000 });
+  await page.locator(".scheduler-drawer-toggle").first().click();
+  await expect(page.locator(".scheduler-conflict-card.severity-hard").first())
+    .toBeVisible({ timeout: 15_000 });
+  await settle(page, 900);
+  await page.screenshot({
+    path: `${SCREENSHOT_DIR}/schedule-conflict-drawer.png`,
+    fullPage: false,
+  });
+});
+
+// =============================================================
+// PHASE 12: the odds and ends the guide pages ask for but no
+// earlier phase happens to be standing in front of.
+// =============================================================
+test("extras: pre-meet checklist / judge analysis / user drawer / language switcher / rtl", async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.setViewportSize(VIEWPORT);
+  await signIn(page, world.adminUsername);
+
+  // control-room-premeet-checklist.png: the Control Room in its
+  // pre-meet Setup state. Quick Start, Running a Meet, and the FAQ
+  // all describe this colour-cycling stepper and none of them
+  // could show it. Deep-link the Upcoming event, which is the only
+  // one that hasn't started.
+  await page.goto(`/control?event=${world.upcomingEvent.id}`);
+  await expect(page.locator(".cv2-chip.is-focused")).toBeVisible({ timeout: 15_000 });
+  await settle(page, 1200);
+  await page.screenshot({
+    path: `${SCREENSHOT_DIR}/control-room-premeet-checklist.png`,
+    fullPage: false,
+  });
+
+  // control-room-venue-bridge.png: Venue Integration is otherwise a
+  // wall of CLI flags and payload schemas. This panel is the one
+  // place an operator actually clicks, and it's four levels deep:
+  // Tools → Broadcast → Venue hardware → the copyable commands.
+  await page.getByRole("button", { name: "Tools" }).click();
+  await page.getByRole("button", { name: /Broadcast/ }).click();
+  // The drawer's Broadcast section is a blurb + a button; the option
+  // list only mounts once the chooser itself is opened.
+  await page.getByRole("button", { name: /Open broadcast chooser/i }).click();
+  await page.locator(".broadcast-option", { hasText: /Daktronics bridge/i }).click();
+  await expect(page.locator(".venue-command").first()).toBeVisible({ timeout: 10_000 });
+  await settle(page, 700);
+  await page.screenshot({
+    path: `${SCREENSHOT_DIR}/control-room-venue-bridge.png`,
+    fullPage: false,
+  });
+
+  // judge-analysis.png: the panel-wide bias + deviation dashboard.
+  // Point it at the Completed event, which has a full 3 rounds of
+  // scores from all 5 judges behind it.
+  await page.goto(`/judge-analysis?event=${world.completedEvent.id}`);
+  await settle(page, 1500);
+  await page.screenshot({
+    path: `${SCREENSHOT_DIR}/judge-analysis.png`,
+    fullPage: false,
+  });
+
+  // user-manager-drawer.png: Roles & Permissions describes where
+  // roles are granted and revoked, which is this drawer, not the
+  // table behind it.
+  await page.goto("/users");
+  await settle(page);
+  await page.locator("tbody tr[data-user-id], tbody tr:not(.group-head)").first().click();
+  await expect(page.locator("aside.drawer")).toBeVisible({ timeout: 10_000 });
+  await settle(page, 900);
+  await page.screenshot({
+    path: `${SCREENSHOT_DIR}/user-manager-drawer.png`,
+    fullPage: false,
+  });
+
+  await signOut(page);
+
+  // stream-overlay-chroma.png: what OBS actually receives. Anyone
+  // setting up a broadcast wants to see the green before they trust
+  // the chroma key. Public route, no sign-in needed.
+  await page.goto(`/scoreboard/${world.liveEvent.id}?overlay=1`);
+  await settle(page, 1200);
+  await page.screenshot({
+    path: `${SCREENSHOT_DIR}/stream-overlay-chroma.png`,
+    fullPage: false,
+  });
+
+  // stream-overlay-minimal.png: the cut-down shape. Same event, same route,
+  // only the query flag differs, so the two shots sit next to each other in
+  // the guide and the difference is the only thing that moves.
+  await page.goto(`/scoreboard/${world.liveEvent.id}?overlay=minimal`);
+  await settle(page, 1200);
+  await page.screenshot({
+    path: `${SCREENSHOT_DIR}/stream-overlay-minimal.png`,
+    fullPage: false,
+  });
+
+  // language-switcher.png: a crop of the flag-prefixed control, not
+  // the menu open. It's a native <select>, and the OS draws that popup
+  // outside the page, so a screenshot of it "open" is just the closed
+  // control again. What the reader actually needs is "look for the flag
+  // in the top-right", wich the crop gives them.
+  await page.goto("/login");
+  await settle(page);
+  await snapEl(page, ".locale-switcher", "language-switcher", 40);
+
+  // rtl-arabic-layout.png: the single hardest claim on the
+  // Languages page to make in prose ("the whole page mirrors").
+  // Set the stored locale the way the switcher would, then reload.
+  await page.evaluate(() => localStorage.setItem("locale", "ar"));
+  await page.goto("/login");
+  await settle(page, 1200);
+  await page.screenshot({
+    path: `${SCREENSHOT_DIR}/rtl-arabic-layout.png`,
+    fullPage: false,
+  });
+  await page.evaluate(() => localStorage.removeItem("locale"));
+});
+
+// =============================================================
+// PHASE 13: teardown. Drains the federation we spun up so two
 // reruns don't pile up orgs in the test DB.
 // =============================================================
 test("teardown", async () => {
   if (world.orgId) {
+    await purgePayments([world.orgId]);
     await setup.deleteOrg(world.orgId);
   }
 });
