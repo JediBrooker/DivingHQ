@@ -169,7 +169,7 @@ test("an anonymous tab never opens the outbox and caches no identity", async ({ 
     "an anonymous visitor must not create an outbox; it would be pinned to the 'anon' fingerprint forever",
   ).not.toContain("divinghq-outbox");
 
-  const cached = await page.evaluate(() => localStorage.getItem("dhq_identity"));
+  const cached = await page.evaluate(() => sessionStorage.getItem("dhq_identity"));
   expect(cached, "no identity cached for a visitor who never signed in").toBeNull();
 });
 
@@ -184,9 +184,18 @@ test("signing out clears the cached identity, so an offline reload stays signed 
 
   await signIn(page, username);
   expect(
-    await page.evaluate(() => localStorage.getItem("dhq_identity")),
+    await page.evaluate(() => sessionStorage.getItem("dhq_identity")),
     "a signed-in session is mirrored so an offline boot still knows who you are",
   ).not.toBeNull();
+
+  // dhq_session is a session cookie, so the mirror must not outlive the
+  // browser either. In localStorage it would survive a close, and the next
+  // person to open the laptop offline would boot as the last operator and
+  // read their fingerprint-keyed idb cache.
+  expect(
+    await page.evaluate(() => localStorage.getItem("dhq_identity")),
+    "the identity mirror must never reach persistent storage",
+  ).toBeNull();
 
   // Drive the real control, so clearSession() is what does the clearing.
   await page.locator(".sb-user").click();
@@ -194,7 +203,7 @@ test("signing out clears the cached identity, so an offline reload stays signed 
   await page.waitForURL(/\/login/, { timeout: 10_000 });
 
   expect(
-    await page.evaluate(() => localStorage.getItem("dhq_identity")),
+    await page.evaluate(() => sessionStorage.getItem("dhq_identity")),
     "signing out must not leave an identity behind for the next person on this laptop",
   ).toBeNull();
 

@@ -15,27 +15,36 @@ export const useAuthStore = defineStore('auth', () => {
   // a credential. Tampering with it changes UI hints only, never access.
   const user = ref(null)
 
-  // Same identity, mirrored to localStorage so a reload with no network
-  // can still tell who is signed in. It is NOT a credential: the cookie
-  // is, and the server re-checks it on every request. The worst a stale
-  // copy buys you is one screen of chrome before the first API call
-  // 401s, and apiFetch() below turns that into a redirect to /login.
+  // Same identity, mirrored so a reload with no network can still tell who
+  // is signed in. It is NOT a credential: the cookie is, and the server
+  // re-checks it on every request. The worst a stale copy buys you is one
+  // screen of chrome before the first API call 401s, and apiFetch() below
+  // turns that into a redirect to /login.
   //
   // Without this, refreshing mid-meet on flaky venue wifi bounced the
   // operator to a login page they couldn't use, because fetchMe() read
   // "the network is down" as "you are anonymous".
+  //
+  // sessionStorage, deliberately, NOT localStorage. dhq_session is a session
+  // cookie: it dies when the browser closes. A mirror that outlives it would
+  // resurrect the previous user on the next offline boot, and since the idb
+  // cache is keyed by this identity's fingerprint, the next person at a
+  // shared meet-desk laptop would be shown as them and served their cached
+  // reads. Tying the mirror to the tab keeps its lifetime at or below the
+  // credential's. A tab opened fresh while offline gets no identity, which
+  // is the safe answer.
   const IDENTITY_KEY = 'dhq_identity'
 
   function cacheIdentity(u) {
     try {
-      if (u && u.id) localStorage.setItem(IDENTITY_KEY, JSON.stringify(u))
-      else localStorage.removeItem(IDENTITY_KEY)
+      if (u && u.id) sessionStorage.setItem(IDENTITY_KEY, JSON.stringify(u))
+      else sessionStorage.removeItem(IDENTITY_KEY)
     } catch { /* private mode, quota; the app works without it */ }
   }
 
   function readCachedIdentity() {
     try {
-      const raw = localStorage.getItem(IDENTITY_KEY)
+      const raw = sessionStorage.getItem(IDENTITY_KEY)
       if (!raw) return null
       const parsed = JSON.parse(raw)
       return parsed && parsed.id ? parsed : null
