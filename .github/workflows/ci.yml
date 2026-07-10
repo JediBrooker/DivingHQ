@@ -146,6 +146,16 @@ jobs:
         env:
           DATABASE_URL: postgres://diver:diver@localhost:5432/divinghq_test
 
+      # init.sql is a hand-maintained snapshot, so it can quietly fall out
+      # of step with migrations/. When it does, fresh installs and
+      # long-lived boxes end up with different schemas and nothing says so.
+      # This builds both bootstrap paths into scratch databases and fails
+      # on any difference. See scripts/check-schema-drift.js.
+      - name: Check schema drift (init.sql vs migrations)
+        run: npm run check:schema
+        env:
+          DATABASE_URL: postgres://diver:diver@localhost:5432/divinghq_test
+
       - name: Run tests
         run: npm test
 
