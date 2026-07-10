@@ -115,9 +115,12 @@ test("an offline refresh keeps the operator signed in, and the queued advance la
     "the offline advance must not reach the server before the network returns",
   ).not.toBe("ZZZ Diver");
 
-  // The refresh that used to end the operator's afternoon.
+  // The refresh that used to end the operator's afternoon. Wait for the
+  // signed-in shell to actually paint before judging the URL. Sleeping and
+  // then asserting "not /login" would also pass on a runner so slow the
+  // router hadn't run yet, which is a green test that proves nothing.
   await page.reload().catch(() => {});
-  await page.waitForTimeout(1500);
+  await expect(page.locator(".sb-user")).toBeVisible({ timeout: 20_000 });
   expect(page.url(), "an offline refresh must not evict a signed-in operator to /login")
     .not.toContain("/login");
 
@@ -207,11 +210,14 @@ test("signing out clears the cached identity, so an offline reload stays signed 
     "signing out must not leave an identity behind for the next person on this laptop",
   ).toBeNull();
 
-  // And with nothing cached, an offline boot is anonymous again.
+  // And with nothing cached, an offline boot is anonymous again. Wait for
+  // the redirect rather than budgeting for it: an offline boot has to come
+  // out of the service-worker cache, run fetchMe, fail, and let the router
+  // guard fire, and a fixed sleep is only ever as good as the runner is
+  // fast. This flaked in CI at 1200ms.
   await page.context().setOffline(true);
   await page.goto("/control").catch(() => {});
-  await page.waitForTimeout(1200);
-  expect(page.url()).toContain("/login");
+  await page.waitForURL(/\/login/, { timeout: 20_000 });
   await page.context().setOffline(false);
 });
 
