@@ -13,7 +13,7 @@ import { ref, computed } from 'vue'
 // shows up a beat late is a shrug; one that flashes on screen and then
 // vanishes, or worse leads to a checkout we meant to keep dark, is not.
 export const useFeaturesStore = defineStore('features', () => {
-  const flags = ref({ payments: false, classes: false })
+  const flags = ref({ payments: false, classes: false, signups: false, maintenance: false })
   const loaded = ref(false)
 
   async function load() {
@@ -41,6 +41,8 @@ export const useFeaturesStore = defineStore('features', () => {
 
   const payments = computed(() => enabled('payments'))
   const classes = computed(() => enabled('classes'))
+  const signups = computed(() => enabled('signups'))
+  const maintenance = computed(() => enabled('maintenance'))
 
-  return { flags, loaded, load, enabled, apply, payments, classes }
+  return { flags, loaded, load, enabled, apply, payments, classes, signups, maintenance }
 })

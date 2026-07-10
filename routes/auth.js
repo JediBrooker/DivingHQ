@@ -108,6 +108,7 @@ async function loadHasDependents(pool, userId) {
 module.exports = function createAuthRouter({
   pool,
   io,
+  features,
   authLimiter,
   verifyToken,
   optionalAuth,
@@ -597,17 +598,23 @@ module.exports = function createAuthRouter({
   // verification (Migration 021) is now mandatory: the user is
   // created with email_verified_at = NULL and login is blocked
   // until they click the link in the verification email.
-  // Public account creation (self-register + found-an-org) is OFF by default
-  // so the live site is "coming soon" until we're ready to open it; set
-  // SIGNUPS_ENABLED=true to turn it on (the test env does). Login and every
-  // existing-account flow (password reset, email change, 2FA) are NEVER gated,
-  // since the super admin must always be able to sign in.
+  // Public account creation (self-register + found-an-org) is gated by the
+  // 'signups' feature flag (migration 086), toggled at /admin/features. Login
+  // and every existing-account flow (password reset, email change, 2FA) are
+  // NEVER gated, since the super admin must always be able to sign in.
+  //
+  // The env fallback is only for a router constructed without a features
+  // service (some unit tests do this); the real server always passes one.
+  function signupsOpen() {
+    return features ? features.enabled("signups") : process.env.SIGNUPS_ENABLED === "true";
+  }
+
   router.get("/api/auth/signups-status", (req, res) => {
-    res.json({ enabled: process.env.SIGNUPS_ENABLED === "true" });
+    res.json({ enabled: signupsOpen() });
   });
 
   router.post("/api/auth/register", authLimiter, async (req, res) => {
-    if (process.env.SIGNUPS_ENABLED !== "true") {
+    if (!signupsOpen()) {
       return res.status(403).json({ error: "Account creation is coming soon.", code: "signups_disabled" });
     }
     const {
@@ -790,7 +797,7 @@ module.exports = function createAuthRouter({
 
   // Register a new organisation + its founding org_admin
   router.post("/api/auth/register-org", authLimiter, async (req, res) => {
-    if (process.env.SIGNUPS_ENABLED !== "true") {
+    if (!signupsOpen()) {
       return res.status(403).json({ error: "Account creation is coming soon.", code: "signups_disabled" });
     }
     const { org_name, country_code, slug, username, password, full_name, email } =

@@ -199,8 +199,24 @@ Don't spread the object (`{...payments}`) or you'll freeze it. Same reason
 `lib/auto-withdraw.js` re-checks the flag each sweep instead of at `start()`.
 
 Frontend: a route hides behind `meta.feature`, a nav entry behind `feature:`
-(`src/components/AppShell.vue`). The e2e suite forces both on with
-`FEATURE_FLAGS_ON=payments,classes` in `playwright.config.js`.
+(`src/components/AppShell.vue`). The e2e suite forces flags on with
+`FEATURE_FLAGS_ON=payments,classes,signups` in `playwright.config.js` (that
+env var is a force-ON-only override, read once at construction).
+
+**Registration** (`signups`, migration 086, seeded ON) is a flag too, not the
+old `SIGNUPS_ENABLED` env var. The gate lives in `routes/auth.js`
+(`signupsOpen()`), and `/api/auth/signups-status` reports it. Login and every
+existing-account flow stay open regardless.
+
+**Maintenance mode** (`maintenance`, migration 086, seeded off) is a global
+read-only lockdown. `maintenanceGate` in `server.js` refuses non-sysadmin
+write-method requests (allowlist: login, logout, health, `/webhooks/`); the
+socket side is one check in `socketRequireRole` (`lib/middleware.js`), which is
+why every mutating socket event has to route through that gate and not roll its
+own. `MaintenanceBanner.vue` shows the notice, suppressed in the chromeless
+broadcast/overlay modes. `bootChecks()` loads flags before `listen()`, so a
+test that `require()`s `server.js` (only `integration.test.js` does) must call
+`features.load()` itself, everything reads fail-closed until it does.
 
 ### Schema migrations
 

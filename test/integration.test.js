@@ -48,10 +48,9 @@ const http   = require("node:http");
 const crypto = require("node:crypto");
 
 require("dotenv").config();
-// Public signups are gated OFF by default (coming-soon launch). This suite
-// drives register-org / register as the system under test, so switch them on
-// before server.js is required below.
-process.env.SIGNUPS_ENABLED = "true";
+// Public signups are now a feature flag ('signups', migration 086), not an env
+// var. This suite drives register-org / register as the system under test, so
+// before() loads the flags and pins signups on once the server is up.
 const { Pool } = require("pg");
 
 const TEST_PASSWORD = "integration-test-password-1234";
@@ -106,6 +105,14 @@ before(async () => {
   await new Promise((resolve) => httpServer.listen(0, "127.0.0.1", resolve));
   const port = httpServer.address().port;
   baseUrl = `http://127.0.0.1:${port}`;
+
+  // bootChecks() loads the feature flags, but it's skipped when server.js is
+  // require()d as a module, so do it by hand. Then pin 'signups' on so the
+  // register fixtures below aren't gated off by a shared test DB whose flag a
+  // previous run (or the flip test) left disabled.
+  await mod.features.load();
+  if (!mod.features.enabled("signups")) await mod.features.set("signups", true);
+
   serverReady = true;
 });
 
@@ -285,10 +292,12 @@ async function teardownFixture(state) {
 test("account creation is gated off when signups are disabled", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   if (!serverReady) return t.skip("server didn't boot — see warning above");
-  // The rest of the suite runs with SIGNUPS_ENABLED=true (set at module top);
-  // flip it off just for this test to prove the coming-soon gate, then restore.
-  const prev = process.env.SIGNUPS_ENABLED;
-  process.env.SIGNUPS_ENABLED = "false";
+  // The rest of the suite runs with the 'signups' flag on (pinned in before());
+  // flip it off through the real feature service just for this test to prove
+  // the coming-soon gate, then restore. require() is cached, so this is the
+  // same features instance the running server reads.
+  const { features } = require("../server.js");
+  await features.set("signups", false);
   try {
     const status = await fetchJson("GET", "/api/auth/signups-status");
     assert.equal(status.body.enabled, false);
@@ -299,7 +308,7 @@ test("account creation is gated off when signups are disabled", async (t) => {
     assert.equal(self.status, 403);
     assert.equal(self.body.code, "signups_disabled");
   } finally {
-    process.env.SIGNUPS_ENABLED = prev;
+    await features.set("signups", true);
   }
 });
 

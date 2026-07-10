@@ -7,6 +7,11 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppShell from '@/components/AppShell.vue'
+// Global maintenance-mode notice. Sits above every route so it shows on the
+// dashboard and the standalone screens alike. Deliberately suppressed in the
+// chromeless broadcast/overlay modes below, where any banner would bleed into
+// a live scoreboard or stream.
+import MaintenanceBanner from '@/components/MaintenanceBanner.vue'
 // Global notification stack lives at the app root so it floats
 // over every route. The component itself is auth-aware: anonymous
 // tabs get nothing, signed-in tabs see banners once the push engine
@@ -46,18 +51,23 @@ const route = useRoute()
 const auth = useAuthStore()
 
 useOutboxSync()
-// Shell shows for signed-in users on opted-in routes, but never
-// in the Scoreboard's broadcast/kiosk or stream-overlay modes.
-// Those are deliberately chromeless.
+// The Scoreboard's broadcast/kiosk and stream-overlay modes are deliberately
+// chromeless: no shell, and no maintenance banner either, since either would
+// paint over a live scoreboard or broadcast.
+const isChromeless = computed(() =>
+  route.params.mode === 'broadcast' || resolveOverlay(route.query).active
+)
+// Shell shows for signed-in users on opted-in routes, but never in the
+// chromeless modes above.
 const useShell = computed(() =>
   auth.isLoggedIn &&
   route.meta.appShell === true &&
-  route.params.mode !== 'broadcast' &&
-  !resolveOverlay(route.query).active
+  !isChromeless.value
 )
 </script>
 
 <template>
+  <MaintenanceBanner v-if="!isChromeless" />
   <AppShell v-if="useShell">
     <RouterView />
   </AppShell>

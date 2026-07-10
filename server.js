@@ -363,6 +363,13 @@ const JWT_EXPIRY = process.env.JWT_EXPIRY || "8h";
 // AGENTS.md for the invariants. Don't add new gates inline here,
 // add them to lib/middleware.js and re-export instead.
 // =============================================================
+// Feature flags (migration 085/086). Built here, before the middleware, so
+// the socket auth gate can read the 'maintenance' flag live. Flags are loaded
+// from the table in bootChecks() before we accept traffic; everything reads
+// off (fail-closed) until then. Shared with the auth router, the payments
+// wrapper, and the classes router further down.
+const features = require("./lib/features")({ pool, logger });
+
 const {
   verifyToken,
   optionalAuth,
@@ -383,7 +390,11 @@ const {
   isTokenVersionCurrent,
   loadEventForEntries,
   requireTotpForPrivilegedRoles,
-} = require("./lib/middleware")({ pool, JWT_SECRET });
+} = require("./lib/middleware")({
+  pool,
+  JWT_SECRET,
+  isMaintenance: () => features.enabled("maintenance"),
+});
 
 // Convenience aliases, defined once so a typo can't drift the
 // role tuple across 20+ route mountings. Used throughout.
@@ -401,6 +412,43 @@ const requireOrgAdmin = [
   requireOrgRole(["org_admin"]),
   requireTotpForPrivilegedRoles,
 ];
+
+// =============================================================
+// MAINTENANCE MODE (lib/features 'maintenance')
+// [SECTION: MAINTENANCE GATE]
+// Global read-only lockdown. While the flag is on, any state-changing
+// request from a non-sysadmin is refused, but reads, the scoreboard, admin
+// sign-in, and the Stripe webhook stay live. Mounted here so it fronts every
+// router below; the socket side is gated in socketRequireRole (lib/middleware).
+//
+// Reads are the overwhelming majority of traffic, so the fast path is a
+// method + flag check before we spend anything decoding a token.
+// =============================================================
+const MAINTENANCE_SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+// Writes that must survive a lockdown. Signing in, so an admin can get in and
+// lift it; logout; the health probe; and Stripe's webhook, which is
+// unauthenticated, retried, and about money already in motion, not our users.
+const MAINTENANCE_ALLOW_PREFIXES = [
+  "/api/auth/login",
+  "/api/auth/logout",
+  "/api/health",
+  "/webhooks/",
+];
+function maintenanceGate(req, res, next) {
+  if (!features.enabled("maintenance")) return next();
+  if (MAINTENANCE_SAFE_METHODS.has(req.method)) return next();
+  if (MAINTENANCE_ALLOW_PREFIXES.some((p) => req.path.startsWith(p))) return next();
+  // Decode a token if one's present (optionalAuth never rejects), then let
+  // system admins through so they can actually do the maintenance.
+  return optionalAuth(req, res, () => {
+    if (req.user && req.user.is_system_admin) return next();
+    return res.status(503).json({
+      error: "DivingHQ is in maintenance mode. Changes are paused for a short while — please try again soon.",
+      code: "maintenance",
+    });
+  });
+}
+app.use(maintenanceGate);
 
 // Email helpers, moved into lib/email.js. Factory takes the pool
 // so the test runner can swap it. Every helper is best-effort and
@@ -598,6 +646,7 @@ app.use(
   require("./routes/auth")({
     pool,
     io,
+    features,
     authLimiter,
     verifyToken,
     optionalAuth,
@@ -653,7 +702,6 @@ app.use(require("./routes/orgs")({
 // the untouched body. It stays live whenever Stripe is configured, flag
 // or no flag, so money already in flight can still settle.
 // =============================================================
-const features = require("./lib/features")({ pool, logger });
 app.use(require("./routes/features")({
   features,
   verifyToken,
@@ -1492,4 +1540,4 @@ if (require.main === module) {
   process.on("SIGINT",  () => gracefulShutdown("SIGINT"));
 }
 
-module.exports = { app, server, pool, io };
+module.exports = { app, server, pool, io, features };

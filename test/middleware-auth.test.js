@@ -46,6 +46,51 @@ function build({ token_version = 1, deleted_at = null, suspended_at = null } = {
   return createMiddleware({ pool: fakePool, JWT_SECRET });
 }
 
+// Like build(), but with a controllable maintenance flag for the socket gate.
+function buildWithMaintenance(isMaintenance) {
+  const fakePool = { async query() { return { rows: [] }; } };
+  return createMiddleware({ pool: fakePool, JWT_SECRET, isMaintenance });
+}
+
+// Minimal socket stub: records emits so a test can see the unauthorized reason.
+function fakeSocket({ userId = USER_ID, sysadmin = false } = {}) {
+  const emits = [];
+  return {
+    userId,
+    userIsSystemAdmin: sysadmin,
+    userOrgRoles: ["judge"],
+    emits,
+    emit(event, payload) { this.emits.push({ event, payload }); },
+  };
+}
+
+test("socketRequireRole: maintenance mode blocks a non-admin write", () => {
+  const { socketRequireRole } = buildWithMaintenance(() => true);
+  const socket = fakeSocket({ sysadmin: false });
+  const ok = socketRequireRole(socket, ["judge"]);
+  assert.equal(ok, false);
+  assert.equal(socket.emits.at(-1).payload.reason, "maintenance");
+});
+
+test("socketRequireRole: maintenance mode still lets a sysadmin write", () => {
+  const { socketRequireRole } = buildWithMaintenance(() => true);
+  const socket = fakeSocket({ sysadmin: true });
+  assert.equal(socketRequireRole(socket, ["judge"]), true);
+});
+
+test("socketRequireRole: with maintenance off, the normal role check applies", () => {
+  const { socketRequireRole } = buildWithMaintenance(() => false);
+  assert.equal(socketRequireRole(fakeSocket({ sysadmin: false }), ["judge"]), true);
+  const wrongRole = fakeSocket({ sysadmin: false });
+  assert.equal(socketRequireRole(wrongRole, ["referee"]), false);
+  assert.equal(wrongRole.emits.at(-1).payload.reason, "insufficient_role");
+});
+
+test("socketRequireRole: default construction has maintenance off", () => {
+  const { socketRequireRole } = build();
+  assert.equal(socketRequireRole(fakeSocket({ sysadmin: false }), ["judge"]), true);
+});
+
 // Drive verifyToken to completion. Resolves { type:'next', req } when
 // the request is allowed through, or { type:'res', statusCode, body }
 // when it's rejected.
