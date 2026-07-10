@@ -915,6 +915,127 @@
 }
 .sb-layout.overlay-minimal .sb-col-standings { max-width: 26rem; }
 
+/* ---------------------------------------------------------
+   ?overlay=custom&parts=... and the named presets built on it.
+
+   Deliberately a separate block from .overlay-minimal rather than an
+   extension of it. Those rules are display:none !important, and an
+   !important hide always beats a "no, show this one" from a picker. Two
+   independent shapes are easier to reason about than one shape with an
+   escape hatch.
+
+   The pattern is :not(.has-x) rather than .hide-x, so the class list on the
+   root is exactly the set of parts the operator asked for. Nothing has to
+   compute a complement, and a part nobody picked simply never appears.
+
+   Every hook below is declared in src/lib/overlayParts.js. Add a part there
+   and here, in that order, or the allowlist will silently drop it.
+   --------------------------------------------------------- */
+.sb-layout.overlay-parts:not(.has-history)   .sb-col-history,
+.sb-layout.overlay-parts:not(.has-standings) .sb-col-standings,
+.sb-layout.overlay-parts:not(.has-round)     .sb-round-pill,
+.sb-layout.overlay-parts:not(.has-dive)      .sb-badges,
+.sb-layout.overlay-parts:not(.has-judges)    .sb-live-judges,
+.sb-layout.overlay-parts:not(.has-total)     .sb-live-total-slot,
+.sb-layout.overlay-parts:not(.has-rank)      .sb-live-rank-slot,
+.sb-layout.overlay-parts:not(.has-catchup)   .sb-projection,
+.sb-layout.overlay-parts:not(.has-upnext)    .up-next { display: none; }
+
+/* "Diver" means the whole identity block: the CURRENT PERFORMER caption, the
+   name, and the country/club line under it. Splitting those into three
+   toggles would be a picker nobody wants to use. */
+.sb-layout.overlay-parts:not(.has-diver) .sb-label,
+.sb-layout.overlay-parts:not(.has-diver) .sb-name,
+.sb-layout.overlay-parts:not(.has-diver) .sb-country-line { display: none; }
+
+/* Judges-only, diver-only and friends live inside one card, so the tabs and
+   the standings trim that .overlay-minimal does by hand have to be repeated
+   for the parts shapes that keep the standings. */
+.sb-layout.overlay-parts .sb-col-standings .col-head .tabs { display: none; }
+
+/* Nobody picked anything from the centre column, so don't draw its plate. */
+.sb-layout.overlay-parts.no-centre .active-centre { display: none; }
+
+/* Same visual language as the minimal shape: opaque ink so the plate stays
+   neutral under any ?bg=, never a translucent black (which composites to a
+   dark tint of the key colour and survives the keyer as a coloured slab). */
+.sb-layout.overlay-parts .active-centre > div,
+.sb-layout.overlay-parts .sb-col-standings {
+  background: #0d1117 !important;
+  border-radius: 14px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+}
+.sb-layout.overlay-parts .active-centre > div { padding: 1rem 1.25rem; }
+.sb-layout.overlay-parts .sb-col-standings { overflow: hidden; align-self: flex-start; }
+.sb-layout.overlay-parts .sb-col-standings .col-head {
+  background: transparent !important;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+.sb-layout.overlay-parts .sb-col-standings .col-body { padding: 0.75rem 1.1rem; }
+
+/* Blanket white first so a widget added to the centre later cannot come out
+   invisible, then lift the accents back with higher specificity. This is the
+   bug that ate the judge chips twice; the contrast sweep in
+   test/e2e/overlay-parts.spec.js is what stops it happening a third time. */
+.sb-layout.overlay-parts .active-centre > div,
+.sb-layout.overlay-parts .active-centre > div *,
+.sb-layout.overlay-parts .sb-col-standings,
+.sb-layout.overlay-parts .sb-col-standings * { color: #fff; }
+
+/* Panels inside the centre card that carry their own pale background from the
+   base theme. On the ink plate they have to give it up, or the blanket white
+   above writes white text onto near-white. .overlay-minimal never hit this
+   because it hides both of them outright; the parts shapes can keep them. */
+.sb-layout.overlay-parts .up-next,
+.sb-layout.overlay-parts .sb-projection {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.sb-layout.overlay-parts .active-centre .sb-dd,
+.sb-layout.overlay-parts .sb-col-standings .standing-score { color: #7dd3fc; }
+
+.sb-layout.overlay-parts .sb-round-pill,
+.sb-layout.overlay-parts .standing-rank,
+.sb-layout.overlay-parts .standing-country,
+.sb-layout.overlay-parts .up-next-ctry {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: transparent !important;
+}
+
+/* THE JUDGE CHIPS. Read this before touching the blanket white above.
+
+   A filled chip paints its own background (--surface-2) and its own figures
+   (--fg). The blanket rule repaints the figures white and leaves the chip
+   alone, so the scores go white-on-white and simply are not on the broadcast.
+   This has now happened twice. The first time the blanket sat on .overlay-mode
+   and the plates never applied; the second time it was these very rules, and
+   the contrast sweep walked past it because a judge chip with no score has no
+   text to measure.
+
+   Empty slots are the exception and genuinely do want the light treatment:
+   they are a dashed outline round a dash glyph, with no background of their
+   own, sitting straight on the ink plate.
+
+   Both shapes, one rule, because both carry the same blanket. */
+.sb-layout.overlay-minimal .sb-live-judges .j-score:not(.j-empty),
+.sb-layout.overlay-parts   .sb-live-judges .j-score:not(.j-empty) { color: var(--fg); }
+
+.sb-layout.overlay-minimal .sb-live-judges .j-score.j-dropped,
+.sb-layout.overlay-parts   .sb-live-judges .j-score.j-dropped { color: var(--fg-2); }
+
+/* Centre whatever survived instead of leaving a three-column skeleton with
+   holes in it. A judges-only frame is one small card, not a card floating in
+   column two of an invisible grid. */
+.sb-layout.overlay-parts .sb-body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+.sb-layout.overlay-parts .sb-col-standings { max-width: 26rem; }
+
 /* End-of-event recap is a single centred column. Was a 2-col
    grid (standings sidebar + dive breakdown); the dive breakdown
    absorbed the rank / total info that the standings list was
