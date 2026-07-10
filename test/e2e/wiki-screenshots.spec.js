@@ -503,6 +503,8 @@ test("setup: build host federation, 3 events, divers + judges + coach", async ({
   world.subjectDiverId = world.divers[0].userId;
   world.compareDiverId = world.divers[1].userId;
   world.thirdDiverId   = world.liveDivers[2].userId;
+  // The judges-only overlay shot needs to land scores while the page watches.
+  world.dives3m        = dives3m;
 
   // -------------------------------------------------------------
   // Give the three events a start time. Two things need it: the
@@ -961,6 +963,22 @@ test("operator: dashboard / control-room / meet-manager", async ({ page, baseURL
   await expect(page.locator(".cv2-live-diver")).toBeVisible({ timeout: 15_000 });
   await settle(page, 1200);
   await snap(page, "control-room");
+
+  // 2b. broadcast-overlay-picker.png: the overlay shape picker, mid-compose.
+  //     Shown in Custom with a couple of blocks off, because a screenshot of
+  //     every box ticked teaches the reader nothing about what the boxes do.
+  await page.getByRole("button", { name: "Tools" }).click();
+  await page.locator(".cv2-drawer-row", { hasText: "Broadcast" }).click();
+  await page.locator(".cv2-drawer-action", { hasText: "Open broadcast chooser" }).click();
+  await page.locator(".broadcast-option", { hasText: /Stream to OBS/i }).click();
+  await expect(page.locator(".opp")).toBeVisible({ timeout: 10_000 });
+  await page.locator(".opp-preset", { hasText: /^Custom$/i }).click();
+  for (const block of ["Catch-up projection", "Up Next queue", "Completed dives"]) {
+    await page.locator(".opp-check", { hasText: block }).locator("input").uncheck();
+  }
+  await settle(page, 600);
+  await snapEl(page, ".obs-instructions", "broadcast-overlay-picker", 10);
+  await page.keyboard.press("Escape");
   adminSocket.disconnect();
 
   // 3. meet-manager.png: /manager.
@@ -1583,6 +1601,48 @@ test("extras: pre-meet checklist / judge analysis / user drawer / language switc
   await settle(page, 1200);
   await page.screenshot({
     path: `${SCREENSHOT_DIR}/stream-overlay-minimal.png`,
+    fullPage: false,
+  });
+
+  // stream-overlay-judges.png: the smallest shape there is. Proves the point
+  // of the parts picker better than any prose does, so the guide leans on it.
+  //
+  // A shot of five empty slots is technically the judges-only overlay and
+  // teaches the reader nothing. Catch the panel mid-vote instead.
+  //
+  // Order matters: the live chips are filled by score_received broadcasts, not
+  // by the fetch on load, so the page has to already be watching when the
+  // scores land. Open first, score second.
+  await page.goto(`/scoreboard/${world.liveEvent.id}?overlay=judges`);
+  await settle(page, 900);
+
+  const scoreSockets = [];
+  for (const j of world.judges.slice(0, 3)) {
+    const s = await openSocket(world.baseURL || "http://127.0.0.1:3097", j.token);
+    s.emit("subscribe_event", { event_id: world.liveEvent.id });
+    scoreSockets.push(s);
+  }
+  try {
+    for (let i = 0; i < scoreSockets.length; i++) {
+      const ack = awaitAck(scoreSockets[i]);
+      scoreSockets[i].emit("submit_score", {
+        event_id:      world.liveEvent.id,
+        competitor_id: world.thirdDiverId,
+        round_number:  2,
+        score:         SCORE_PROFILE[i],
+        dive_id:       world.dives3m[1],
+      });
+      await ack;
+    }
+  } finally {
+    for (const s of scoreSockets) s.disconnect();
+  }
+
+  await expect(page.locator(".sb-live-judges .j-score:not(.j-empty)").first())
+    .toBeVisible({ timeout: 10_000 });
+  await settle(page, 800);
+  await page.screenshot({
+    path: `${SCREENSHOT_DIR}/stream-overlay-judges.png`,
     fullPage: false,
   });
 
