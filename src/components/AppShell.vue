@@ -10,6 +10,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
+import { useFeaturesStore } from '@/stores/features'
 import { useI18n } from 'vue-i18n'
 import LogoMark from '@/components/LogoMark.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
@@ -19,13 +20,14 @@ import {
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award, Gavel,
-  History, Receipt, Heart, Layers, Wallet, UserCheck,
+  History, Receipt, Heart, Layers, Wallet, UserCheck, SlidersHorizontal,
 } from '@lucide/vue'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const ui = useUiStore()
+const features = useFeaturesStore()
 const { t } = useI18n()
 
 // Nav model. `roles` gates visibility, omit it for items every
@@ -37,6 +39,13 @@ const { t } = useI18n()
 // Each group carries a `key` (stable v-for key) and an `icon`; the icon
 // is the group's face in the collapsed icon rail, where the whole group
 // condenses to one button whose hover/focus flyout lists its items.
+//
+// Two more gates alongside `roles`:
+//   feature       hide unless that kill switch is on (src/stores/features).
+//                 Works on a whole group or a single item.
+//   sysadminOnly  hide from everyone but a platform operator. Needed because
+//                 auth.hasRole() answers true to every role for a system
+//                 admin, so `roles` can't express "sysadmin and nobody else".
 const NAV = [
   // Header-less lead item: Dashboard is the universal home, not a
   // "Competition" tool, so it sits above the first section header.
@@ -57,13 +66,19 @@ const NAV = [
   // Club training: distinct from competition, context-adaptive per role.
   { key: 'training', group: 'Training', icon: GraduationCap, items: [
     { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
-    { to: '/classes',        label: 'Classes',        labelKey: 'classes.menu', icon: Layers },
+    { to: '/classes',        label: 'Classes',        labelKey: 'classes.menu', icon: Layers, feature: 'classes' },
   ] },
   // Personal money: everything the signed-in user pays or is owed.
   // Flattened out of the old nested "User Payments" menu, money screens
   // are important enough to be one click, not two, and this removes the
   // name clash with the Federation admin payments hub below.
-  { key: 'payments', group: 'Payments', icon: Wallet, items: [
+  //
+  // Dependents rides along on the payments flag. The page itself has no
+  // Stripe in it, but linking a child account exists so a parent can pay the
+  // child's membership, and `hasDependents` is read nowhere except the
+  // allowGuardian gate on /membership. With payments dark it's a form that
+  // leads nowhere, so it goes dark too.
+  { key: 'payments', group: 'Payments', icon: Wallet, feature: 'payments', items: [
     { to: '/charges',         label: 'Charges',         labelKey: 'payments.charges',       icon: Receipt },
     // allowGuardian mirrors the route meta: a parent with an approved
     // dependent needs the link even though they're only a spectator.
@@ -79,9 +94,15 @@ const NAV = [
   { key: 'federation', group: 'Federation', icon: Building2, items: [
     { to: '/users',    label: 'User Manager',       labelKey: 'user_manager.title', icon: Users,      roles: ['org_admin'] },
     { to: '/clubs',    label: 'Clubs & teams',      labelKey: 'clubs.title',        icon: Building2,  roles: ['org_admin', 'meet_manager'] },
-    { to: '/fines',    label: 'Fines',              icon: Gavel,      roles: ['referee', 'org_admin'] },
-    { to: '/payments', label: 'Payments & payouts', icon: CreditCard, roles: ['org_admin'] },
+    { to: '/fines',    label: 'Fines',              icon: Gavel,      roles: ['referee', 'org_admin'], feature: 'payments' },
+    { to: '/payments', label: 'Payments & payouts', icon: CreditCard, roles: ['org_admin'], feature: 'payments' },
     { to: '/audit',    label: 'Audit Log',          labelKey: 'audit.page_label',   icon: ScrollText, roles: ['org_admin'] },
+  ] },
+  // Platform operator only. English labels on purpose: adding en.json keys
+  // means translating them into every locale (test/i18n-parity.test.js), and
+  // nobody is running the box in Filipino.
+  { key: 'admin', group: 'Admin', icon: SlidersHorizontal, sysadminOnly: true, items: [
+    { to: '/admin/features', label: 'Feature Flags', icon: SlidersHorizontal, sysadminOnly: true },
   ] },
 ]
 
@@ -89,27 +110,39 @@ function navLabel(it) {
   return it.labelKey ? t(it.labelKey) : it.label
 }
 
+// Is the product area this entry belongs to switched on? Entries with no
+// `feature` are always on.
+function featureOn(entry) {
+  return !entry.feature || features.enabled(entry.feature)
+}
 function allowedBy(entry) {
+  if (entry.sysadminOnly) return Boolean(auth.user?.is_system_admin)
   if (!entry.roles) return true
   if (entry.roles.some((r) => auth.hasRole(r))) return true
   return Boolean(entry.allowGuardian && auth.hasDependents)
 }
 function childVisible(c) {
-  return allowedBy(c)
+  return featureOn(c) && allowedBy(c)
 }
 function itemVisible(it) {
+  if (!featureOn(it)) return false
   if (it.children) return it.children.some(childVisible)
   return allowedBy(it)
 }
 // A nested item (children) is shown if any child is visible; its child
 // list is filtered to the roles the user actually has.
+// Groups drop out either because their own gate says so (a switched-off
+// feature, a sysadmin-only section) or because every item inside them was
+// filtered away, which is what keeps an empty section header off the rail.
 const visibleGroups = computed(() =>
-  NAV.map((g) => ({
-    ...g,
-    items: g.items
-      .filter(itemVisible)
-      .map((it) => (it.children ? { ...it, children: it.children.filter(childVisible) } : it)),
-  })).filter((g) => g.items.length),
+  NAV.filter((g) => featureOn(g) && allowedBy(g))
+    .map((g) => ({
+      ...g,
+      items: g.items
+        .filter(itemVisible)
+        .map((it) => (it.children ? { ...it, children: it.children.filter(childVisible) } : it)),
+    }))
+    .filter((g) => g.items.length),
 )
 
 // Nested-menu expansion. Hover expands it on desktop (CSS); this click

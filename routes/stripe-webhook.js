@@ -31,6 +31,18 @@
 const { fromStripeAmount } = require("../lib/stripe");
 const { applyFullRefundSideEffects } = require("../lib/payment-lifecycle");
 
+// Can we still talk to Stripe about money that already moved?
+//
+// Note this asks `configured` (is there a client) and NOT `enabled` (is the
+// payments feature flag on). Deliveries for charges taken before someone
+// switched payments off must still be verified and fulfilled, otherwise
+// flipping the flag would strand every in-flight checkout. See lib/stripe.
+// The `?? enabled` fallback is for the fake payments objects in the test
+// suite, which never grew a `configured` property.
+function canReconcile(payments) {
+  return (payments?.configured ?? payments?.enabled) === true;
+}
+
 // Advance a pending payment to 'paid' exactly once, and fulfil it
 // (grant membership for a membership payment; entry confirmation is
 // gated elsewhere, see the note below). Returns the fulfilled payment id
@@ -178,7 +190,7 @@ async function onCheckoutCompleted(pool, logger, payments, email, session) {
     // Best-effort: populate the charge ID from the PaymentIntent so
     // the payments table has the full Stripe chain (session → PI →
     // charge). Non-critical, if it fails the payment is still paid.
-    if (session.payment_intent && payments.enabled) {
+    if (session.payment_intent && canReconcile(payments)) {
       try {
         const pi = await payments.retrievePaymentIntent({ paymentIntentId: session.payment_intent });
         if (pi.latest_charge) {
@@ -430,7 +442,7 @@ async function onDisputeClosed(pool, logger, email, dispute) {
 
 module.exports = function createStripeWebhook({ pool, logger, payments, email = null }) {
   return async function handleStripeWebhook(req, res) {
-    if (!payments.enabled) {
+    if (!canReconcile(payments)) {
       return res.status(503).json({ error: "Payments are not configured." });
     }
     const sig = req.headers["stripe-signature"];

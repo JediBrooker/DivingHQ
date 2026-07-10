@@ -637,21 +637,33 @@ app.use(require("./routes/orgs")({
 // ledger + back-office. Every charge lands on the PLATFORM's own
 // Stripe account; who is owed what is tracked in lib/payout-ledger
 // and paid out by the operator. `payments` (lib/stripe) is
-// constructed once and shared with the webhook handler. When
-// STRIPE_SECRET_KEY is unset, payments.enabled is false and every
-// payment route 503s rather than half-working; setting it WITHOUT
-// STRIPE_WEBHOOK_SECRET refuses to boot (lib/stripe).
+// constructed once and shared with the webhook handler.
 //
-// The webhook is mounted with express.raw (the global JSON parser
-// skips /webhooks/stripe above) so Stripe's signature can be verified
-// against the untouched body.
+// TWO things must be true before a charge can happen: STRIPE_SECRET_KEY
+// is set (payments.configured), and the 'payments' feature flag is on
+// (payments.enabled). Miss either and every checkout route 503s rather
+// than half-working. Setting the secret key WITHOUT STRIPE_WEBHOOK_SECRET
+// still refuses to boot, see lib/stripe.
+//
+// The flag is read fresh on every request, so switching payments on from
+// the admin screen takes effect at once, no restart needed.
+//
+// The webhook is mounted with express.raw (the global JSON parser skips
+// /webhooks/stripe above) so Stripe's signature can be verified against
+// the untouched body. It stays live whenever Stripe is configured, flag
+// or no flag, so money already in flight can still settle.
 // =============================================================
-const payments = require("./lib/stripe")();
-if (!payments.enabled) {
-  logger.warn(
-    "Payments disabled — STRIPE_SECRET_KEY unset. Onboarding + checkout routes will return 503.",
-  );
-}
+const features = require("./lib/features")({ pool, logger });
+app.use(require("./routes/features")({
+  features,
+  verifyToken,
+  requireSystemAdmin,
+  logger,
+}));
+
+const payments = require("./lib/stripe")({
+  featureEnabled: () => features.enabled("payments"),
+});
 app.use(require("./routes/payments")({
   pool,
   verifyToken,
@@ -717,6 +729,7 @@ app.use(require("./routes/classes")({
   logger,
   payments,
   email,
+  features,
 }));
 
 // =============================================================
@@ -1226,6 +1239,28 @@ app.use((req, res) => {
 // Both queries are best-effort: a failure (e.g. running against
 // an old DB that pre-dates migration 008) just logs warning.
 async function bootChecks() {
+  // Pull the feature flags into memory before we take a single request.
+  // This is NOT best-effort. Serving with a guessed flag state is how you
+  // end up charging cards on a launch day you meant to keep quiet, so a
+  // read failure here kills the boot. The table arrives in migration 085;
+  // an old database that predates it is a migration problem, not something
+  // to paper over at runtime.
+  try {
+    await features.load();
+  } catch (err) {
+    logger.fatal(
+      { err: err.message },
+      "could not read feature_flags — run `npm run migrate`. Refusing to serve.",
+    );
+    process.exit(1);
+  }
+  if (payments.configured && !features.enabled("payments")) {
+    logger.warn("Stripe is configured but the 'payments' feature flag is OFF. Checkout routes will 503; the webhook stays live so in-flight payments still settle.");
+  }
+  if (!payments.configured) {
+    logger.warn("Payments dormant: STRIPE_SECRET_KEY unset. Checkout routes will return 503.");
+  }
+
   // Heads up: refuse to serve a production deployment whose
   // bootstrap system_admin still answers to the well-known init.sql
   // credentials (admin / admin). Anyone who can reach the login
@@ -1279,9 +1314,14 @@ async function bootChecks() {
 
   // Start the auto-withdraw sweeper (migrations 076/078): hourly, books a
   // withdrawal for every org/club that enabled it once their balance
-  // clears the threshold. Only meaningful with payments live, while
-  // dormant the settings endpoints just save the preference for later.
-  if (payments.enabled) {
+  // clears the threshold.
+  //
+  // Started on `configured`, not `enabled`. The payments flag can be flipped
+  // on from the admin screen hours after boot, and a sweeper that latched
+  // onto the flag at startup would sit there doing nothing until someone
+  // remembered to restart. Each sweep re-checks the flag instead, so while
+  // payments are off it's an hourly no-op costing one branch.
+  if (payments.configured) {
     try {
       require("./lib/auto-withdraw").start({ pool, payments, logger, email });
     } catch (err) {

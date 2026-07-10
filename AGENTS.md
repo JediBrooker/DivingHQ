@@ -84,6 +84,7 @@ ship code (or docs) that misrepresents the rule.
 | `server.js`           | Express + Socket.IO bootstrap, route mounts, socket handlers. Has a TOC at the top with `[SECTION: NAME]` anchors — Cmd-F for any of them to jump straight there. ~5,000 lines. |
 | `routes/`             | Route modules extracted from `server.js`: `auth.js`, `scoreboard.js`, `diver-search.js`. Pattern: factory function returning an Express router. |
 | `lib/middleware.js`   | The auth + RBAC + payload-validation perimeter. Every gate the API uses to reject a request lives here. **Read this whole file** when reviewing security. |
+| `lib/features.js`     | Runtime kill switches (`payments`, `classes`), backed by the `feature_flags` table. `requireFeature('x')` is the Express gate; sysadmins toggle at `/admin/features`. Both ship OFF. See the invariant below. |
 | `db/queries.js`       | Shared SQL CTE templates (`PER_DIVE`, `FULL_FIELD_RANKING`). Used by the analytics endpoint. |
 | `migrations/`         | Numbered SQL migration files (`0NN_*.sql`). Run via `npm run migrate`. |
 | `init.sql`            | Schema bootstrap baseline from empty, currently pinned at version 53; run migrations above that baseline to reach HEAD. Do not bump `schema_meta.version` unless the later migrations are ported into this file. |
@@ -166,6 +167,40 @@ closed.
 Any code path that accepts a score must validate `0 ≤ n ≤ 10` in 0.5
 increments. Helper is `isValidScore(s)` in `server.js`. The HTTP and
 Socket paths must agree, otherwise one becomes a back-door.
+
+### Feature flags: `configured` is not `enabled`
+
+`payments` and `classes` are switched off at launch and live in the
+`feature_flags` table (migration 085). Two rules keep this honest.
+
+**Flags fail closed.** An unknown key, a missing row, a database that wouldn't
+answer at boot: all of it reads as *off*. `lib/features.js` never defaults a
+flag on, and the server refuses to serve if it can't read the table.
+
+**`lib/stripe.js` exposes two different booleans, and swapping them loses
+money:**
+
+```js
+payments.configured  // STRIPE_SECRET_KEY is set, so a Stripe client exists
+payments.enabled     // configured AND the 'payments' flag is on
+```
+
+Anything that starts a *new* flow of money (checkout, Connect onboarding,
+transfers) asserts `enabled`. Anything that *reconciles money already in
+flight* (webhook signature verification, refunds, expiring or resuming a
+checkout session, the retrieves) asserts `configured`. Gate the webhook on
+`enabled` and switching payments off strands every open checkout: card
+charged, nothing fulfilled. That's the same hole the boot check in
+`lib/stripe.js` refuses to start over.
+
+`payments.enabled` is a **getter**, not a snapshot, so a toggle from
+`/admin/features` lands on the next request rather than the next restart.
+Don't spread the object (`{...payments}`) or you'll freeze it. Same reason
+`lib/auto-withdraw.js` re-checks the flag each sweep instead of at `start()`.
+
+Frontend: a route hides behind `meta.feature`, a nav entry behind `feature:`
+(`src/components/AppShell.vue`). The e2e suite forces both on with
+`FEATURE_FLAGS_ON=payments,classes` in `playwright.config.js`.
 
 ### Schema migrations
 
