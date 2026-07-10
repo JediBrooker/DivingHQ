@@ -7,8 +7,30 @@
 // from the server's AUTHORITATIVE active diver (get_active_diver /
 // state_update) and only announces roster[0] when the server has no
 // diver at all. Flag-on only (V2 surface).
+//
+// Heads up on timing. This test used to click Next Diver and reload in
+// the same breath, because set_active_diver went straight out on the
+// socket. Since the offline work (commit 6d62a94) every Control Room
+// socket write is queued through the IndexedDB outbox first and only
+// then emitted, so the server learns about the advance a few
+// milliseconds later. Reloading inside that window means the server
+// genuinely has no diver, the reopened room correctly announces
+// roster[0], and the failure reads like a restore bug when it is
+// nothing of the sort. Wait for the server to actually hold the new
+// diver before reloading, and assert it, so the two failure modes stay
+// tellable apart.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
+
+// The server's authoritative active diver, as persisted by
+// set_active_diver's write-through (lib/live-state.js).
+async function serverActiveDiver(eventId) {
+  const r = await setup.pool.query(
+    "SELECT active_diver_payload FROM event_live_state WHERE event_id = $1",
+    [eventId],
+  );
+  return r.rows[0]?.active_diver_payload?.full_name ?? null;
+}
 
 test.describe.configure({ mode: "serial" });
 
@@ -64,8 +86,7 @@ test("reloading mid-meet restores the live diver instead of resetting to diver 1
   await expect(page.locator(".cv2-live-diver")).toContainText("AAA Diver");
 
   // Drive the meet forward: full panel for AAA arms the primary, then
-  // advancing makes ZZZ the live diver, which emits set_active_diver,
-  // so the server's authoritative active diver is now ZZZ (round 1, #2).
+  // advancing makes ZZZ the live diver, which queues set_active_diver.
   await setup.submitPanelScores({
     baseURL, judges, eventId: event.id,
     competitorId: divers[0].userId, roundNumber: 1, diveId,
@@ -73,6 +94,18 @@ test("reloading mid-meet restores the live diver instead of resetting to diver 1
   await expect(page.locator(".cv2-primary")).toBeEnabled({ timeout: 6_000 });
   await page.locator(".cv2-primary").click();
   await expect(page.locator(".cv2-live-diver")).toContainText("ZZZ Diver");
+
+  // The click only moved the OPERATOR's screen. Wait until the outbox has
+  // drained and the server has actually recorded ZZZ, because that, not
+  // the local UI, is what a reopened Control Room seeds itself from. If
+  // this poll is what fails, the advance never reached the server and the
+  // restore path is innocent.
+  await expect
+    .poll(() => serverActiveDiver(event.id), {
+      timeout: 10_000,
+      message: "set_active_diver never reached the server, so there is nothing to restore",
+    })
+    .toBe("ZZZ Diver");
 
   // Reopen the Control Room from scratch (simulates reload / a second
   // operator window). Pre-fix this re-announced roster[0] (AAA) and reset

@@ -22,7 +22,7 @@ onMounted(() => {
       <div class="nav-in">
         <RouterLink to="/" class="brand">
           <LogoMark :size="28" />
-          <span class="wm">DIVING<span>HQ</span></span>
+          <span class="wm brand-wordmark">DIVING<span>HQ</span></span>
         </RouterLink>
         <div class="nav-right">
           <ThemeToggle compact />
@@ -37,7 +37,7 @@ onMounted(() => {
     <!-- Hero -->
     <header class="hero">
       <div class="eyebrow">{{ $t('home.hero.mark') }}</div>
-      <h1 class="hero-logo">DIVING<span>HQ</span></h1>
+      <h1 class="hero-logo brand-wordmark">DIVING<span>HQ</span></h1>
       <p class="lede">{{ $t('home.hero.tagline') }}</p>
       <div class="hero-cta">
         <RouterLink to="/login" class="btn btn-primary btn-lg">{{ $t('home.hero.btn_sign_in') }}</RouterLink>
@@ -190,7 +190,7 @@ onMounted(() => {
       <div class="footer-in">
         <RouterLink to="/" class="brand">
           <LogoMark :size="24" />
-          <span class="wm">DIVING<span>HQ</span></span>
+          <span class="wm brand-wordmark">DIVING<span>HQ</span></span>
         </RouterLink>
         <div class="footer-links">
           <RouterLink to="/login">{{ $t('home.footer.sign_in') }}</RouterLink>

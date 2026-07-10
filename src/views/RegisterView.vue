@@ -103,7 +103,7 @@ async function handleSubmit() {
 
 <template>
   <div class="wrap">
-    <div class="login-mark">DIVING<span>HQ</span></div>
+    <div class="login-mark brand-wordmark">DIVING<span>HQ</span></div>
 
     <template v-if="signupsEnabled === false">
       <h1>{{ $t('auth.register.title') }}</h1>

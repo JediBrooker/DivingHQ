@@ -6,7 +6,7 @@ This page covers the full eight-hour day. If you're new, do the [Quick Start](/g
 
 With one event live, the Control Room is the familiar three-column board:
 
-![Control Room](/guide-screenshots/control-room.png)
+![The Control Room running a live event, with the dive history on the left, the active diver in the centre, and live standings on the right](/guide-screenshots/control-room.png)
 
 With several events live, each becomes its own pool card side by side and the side columns fold into drawers — see [Running multiple events at once](#running-multiple-events-at-once):
 
@@ -66,34 +66,33 @@ When more than one event is Live, the Control Room shows them **side by side** r
 
 ## The pre-meet workflow
 
-Before the event flips to Live, the centre shows the **Setup** view — a four-step stepper above a colour-cycling action button so a new operator sees both **where they are** and **what's next** at a glance:
+Before the event flips to Live, the centre shows the **Setup** view — a readiness checklist above a single action button, so a new operator sees both **where they are** and **what's next** at a glance.
 
-```
-(✓ Check-in) ── (✓ Randomise) ── (3) Sign Off ── (4) Start
-```
+![Control Room in its pre-meet Setup view, showing the readiness checklist and the contextual action button beneath it](/guide-screenshots/control-room-premeet-checklist.png)
 
-Done steps tick green; the active step glows cyan; future steps stay muted grey. The connecting dividers light up green as transitions complete. Beneath the stepper, the action button cycles through four colours and matching labels:
+A status chip at the top reads either **Ready to go live** or `N blockers`, and next to it a **Next:** hint names the step in the way. Each readiness item below ticks `✓` green when satisfied and stays `○` grey when it isn't, with a short hint on the right telling you how to satisfy it:
 
-| Step | Colour | What it does |
-|---|---|---|
-| 1. Check-in | **Red** | Opens the check-in modal. Tick everyone present, click Continue. Uncheck anyone who didn't show up — they're hidden from the start list. |
-| 2. Randomise | **Orange** | Writes a random `display_order` per diver. Click opens a confirm modal listing what'll happen ("you can re-run randomise as many times as you like before sign-off"). Skip with the *Use current order →* link if you've already manually arranged the order. |
-| 3. Sign Off | **Yellow** | Opens the sign-off modal. The referee can authorise via push notification, scan a QR code on the manager's screen with their phone (auto-submits when they land), type a 6-digit handoff code into `/sign-off-codes` on their own device, or — fallback — type their credentials directly into the manager's laptop. All paths write the same audit row. |
-| 4. Start | **Green** | Opens the **Pre-Flight Review modal** (see below). The modal's `▶ Go Live` button is what actually flips status Upcoming → Live and broadcasts `state_update` to all judges' phones. |
+| Readiness item | Satisfied when |
+|---|---|
+| Roster has competitors | At least one diver is entered |
+| Dive lists complete | Every entered diver has a full list |
+| Judge panel seated | The panel is assigned and the right size |
+| Check-in confirmed | You've run check-in |
+| Start order locked | The order is randomised, or the current order is kept |
+| Referee sign-off | A referee has authorised the panel |
 
-Each click is **idempotent** — re-clicking just re-runs the step. You can re-check in divers (a late arrival) and re-randomise as many times as you want, until the event goes Live. A small `↺ Reset` link backs out to step 1 if you need to walk the whole flow again.
+The button beneath the checklist always offers the one action that unblocks you next, so its label changes as you work through:
 
-### Pre-Flight Review modal
+| Button | What it does |
+|---|---|
+| **✓ Check In Divers** | Opens the check-in modal. Tick everyone present, click Continue. Uncheck anyone who didn't show up — they're hidden from the start list. |
+| **🎲 Randomise Dive Order** | Writes a random `display_order` per diver. Click opens a confirm modal listing what'll happen ("you can re-run randomise as many times as you like before sign-off"). |
+| **📋 Referee Sign Off** | Opens the sign-off modal. The referee can authorise via push notification, scan a QR code on the manager's screen with their phone (auto-submits when they land), type a 6-digit handoff code into `/sign-off-codes` on their own device, or — fallback — type their credentials directly into the manager's laptop. All paths write the same audit row. |
+| **▶ Start Event** | Flips status Upcoming → Live and broadcasts `state_update` to every judge's phone. The spectator scoreboards start showing the event immediately. |
 
-Before flipping the event Live, the green Start button opens a last-chance summary modal so the operator can verify what's about to broadcast. It pulls live state from the event configuration, the roster, and the judge panel, and lays it out in four sections plus a warnings list:
+Each click is **idempotent** — re-clicking just re-runs the step. You can re-check in divers (a late arrival) and re-randomise as many times as you want, until the event goes Live.
 
-- **Event** — type (Individual / Synchro / Team), board height, age group, total rounds.
-- **Roster** — `N divers checked in`, plus a list of any divers with incomplete dive lists (missing rounds or missing dive codes), capped at 5 with `+ N more` overflow.
-- **Panel** — `N of N judges seated`, with each judge's surname pinned to their slot (`J1 Singh`, `J2 Brooks`, …) so synchro sub-panel positions are obvious.
-- **Referee** — `Signed off ✓` or warning if missing.
-- **⚠ Worth a second look** — a list of warnings: invalid synchro panel, N divers with incomplete dive lists, only X of Y judge slots filled, missing referee.
-
-Two buttons: **Not yet** returns to the workflow (you can fix whatever the warnings flagged); **▶ Go Live** flips the status. A success toast (`"Event Name" is Live — scoreboards broadcasting`) confirms the flip.
+The checklist is the last-chance review. `▶ Start Event` only becomes the button's label once every item has ticked, so by the time you can click it the roster, the dive lists, the panel, and the referee sign-off have all been verified for you.
 
 ## During scoring
 
@@ -338,7 +337,7 @@ Every destructive or consequential action in the Control Room (and across the re
 - *Finalise event?* — "Public scoreboard switches to recap; results emails go out to N competitors; reversible by an org admin."
 - *Skip ahead with partial scores?* — "Only N of M judges have submitted; missing judges can still amend via score correction afterwards."
 
-Confirm buttons are colour-coded by severity: cyan for routine actions (`Use current order`), amber for warnings (`Move on`, `Reset workflow`), red for destructive ones (`Delete event`, `Delete club`).
+Confirm buttons are colour-coded by severity: cyan for routine actions, amber for warnings (`Move on`, `Reset workflow`), red for destructive ones (`Delete event`, `Delete club`).
 
 After every async action lands, a **toast** at the bottom-centre of the screen confirms what just happened — `Roster imported: 12 divers added, 0 errors` / `Score correction saved` / `Late entry added — Avery Ueno scheduled in Round 1`. Failures show as a red error toast with the server message instead of disappearing silently. Success toasts auto-dismiss after a few seconds; you can also close any toast with the ✕ button.
 

@@ -7,7 +7,7 @@ A "meet" in DivingHQ is a bundle of one or more **events**. The terminology mirr
 
 You can run a one-event "meet" by simply not creating a meet record and leaving the event as standalone — the scoreboard and archive both work either way. But for a multi-event championship, bundling them gives you a single landing page and a single printable program.
 
-![Meet Manager](/guide-screenshots/meet-manager.png)
+![Meet Manager, listing the federation's meets and their events with per-event action buttons](/guide-screenshots/meet-manager.png)
 
 ## Setup checklist
 
@@ -70,7 +70,7 @@ Pre-migration meets that carried a single external `sponsor_logo_url` keep rende
 
 In the right pane, click **+ New event** (or **+ Add event** when a specific meet is selected on the rail) to open the New Event modal. The form has the following fields:
 
-![New Event modal](/guide-screenshots/new-event-modal.png)
+![The New Event modal, with fields for name, gender, height, panel size, and round count](/guide-screenshots/new-event-modal.png)
 
 ### Required
 
@@ -294,16 +294,14 @@ The same pattern works for **referees**, but a referee isn't on the panel — th
 
 ## Pre-meet checklist
 
-Before flipping the event to Live, the Control Room enforces a four-step pre-meet workflow surfaced as both a **stepper** (showing all four steps with completed ones ticked green) and a colour-cycling action button beneath it:
+Before flipping the event to Live, the Control Room enforces a four-step pre-meet workflow. It shows up as a **readiness checklist** with a single action button beneath it, and the button always offers the next step you can take:
 
-```
-(1) Check-in ─── (2) Randomise ─── (3) Sign Off ─── (4) Start
-```
+1. **✓ Check In Divers** — opens the check-in modal so the operator can mark who actually showed up.
+2. **🎲 Randomise Dive Order** — writes a random `display_order` per diver. The click opens a confirm modal listing what'll happen ("you can re-run randomise as many times as you like before sign-off").
+3. **📋 Referee Sign Off** — referee scans a QR on the manager's screen, taps a push notification, types a 6-digit handoff code, or enters credentials directly. All four paths confirm the panel is valid and write the same audit row.
+4. **▶ Start Event** — flips status Upcoming → Live and broadcasts to all judges' phones.
 
-1. **Red — Check In Divers** — opens the check-in modal so the operator can mark who actually showed up.
-2. **Orange — Randomise Dive Order** — operator can skip if they manually re-ordered; otherwise this writes a random `display_order` per diver. The click opens a confirm modal listing what'll happen ("you can re-run randomise as many times as you like before sign-off").
-3. **Yellow — Referee Sign Off** — referee scans a QR on the manager's screen, taps a push notification, types a 6-digit handoff code, or enters credentials directly. All four paths confirm the panel is valid and write the same audit row.
-4. **Green — Start Event** — opens the **Pre-Flight Review modal** before actually flipping the event Live. The modal is a last-chance summary of what's about to broadcast: roster size, judge panel composition, referee status, and a warnings list for anything that looks misconfigured (invalid synchro panel, divers with incomplete dive lists, partial panel, missing referee). Two buttons: `Not yet` returns to the workflow; `▶ Go Live` actually flips status Upcoming → Live and broadcasts to all judges' phones.
+The checklist won't let you reach step 4 until the roster, dive lists, panel, and referee sign-off have all ticked green, so there's no separate confirmation screen.
 
 See [Running a Meet](/guide/running-a-meet) for the operator's perspective.
 
@@ -322,8 +320,8 @@ For a multi-event championship day where two or three boards run concurrently, t
 
 ## Common pitfalls
 
-- **Forgetting to set the panel size for synchro.** A 5-judge synchro panel doesn't have an Exec A / Exec B / Sync split. Use 7, 9, or 11 judges so the app can label the sub-panels correctly. The Pre-Flight Review modal flags invalid panels before the event goes Live.
+- **Forgetting to set the panel size for synchro.** A 5-judge synchro panel doesn't have an Exec A / Exec B / Sync split. Use 7, 9, or 11 judges so the app can label the sub-panels correctly. The pre-meet checklist won't tick "Judge panel seated" until the panel is valid.
 - **Skipping the schedule for a multi-event day.** A single event can run without a schedule, but championships need one source of truth for boards, warmups, breaks, and officials. Build and publish the schedule before meet day.
 - **Setting `entries_close_at` in the past.** Divers can't submit. Meet manager has to use the late-entry override for every diver. Just leave it null while testing.
 - **Mixing teams across federations in a Team event.** All teams in a team event must belong to the same org. The UI filters this for you, but a direct API call won't.
-- **Forgetting the referee.** The yellow Sign Off step blocks Start Event until a referee authorises. Set them up before the meet day. The Pre-Flight Review modal also flags this as a warning before the event flips Live, so you get a second chance.
+- **Forgetting the referee.** The Sign Off step blocks Start Event until a referee authorises. Set them up before the meet day — the checklist's "Referee sign-off" row stays grey until one does, so you'll see it coming.

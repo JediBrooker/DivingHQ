@@ -987,7 +987,7 @@ function detachSocketHandlers() {
   <div class="dashboard">
     <div class="header-inner">
       <div class="header-welcome">
-        <div class="welcome-label">DIVING<span>HQ</span></div>
+        <div class="welcome-label brand-wordmark">DIVING<span>HQ</span></div>
         <div class="welcome-name">{{ welcomeName }}</div>
         <div class="role-line">{{ roleLine }}</div>
       </div>

@@ -160,8 +160,21 @@ module.exports = function createPaymentsRouter({
     return req.user.is_system_admin || req.user.org_id === orgId;
   }
 
-  async function validateGuardian(req, subjectUserId) {
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  async function validateGuardian(req, rawSubjectUserId) {
+    // Query strings hand us arrays when a param repeats, and any
+    // non-uuid would make Postgres throw 22P02 and surface as a 500.
+    // Not a guardian of a thing that can't exist, so: 403.
+    const subjectUserId = Array.isArray(rawSubjectUserId)
+      ? rawSubjectUserId[0]
+      : rawSubjectUserId;
     if (!subjectUserId || subjectUserId === req.user.id) return null;
+    if (typeof subjectUserId !== "string" || !UUID_RE.test(subjectUserId)) {
+      const err = new Error("You are not an approved guardian of this user.");
+      err.status = 403;
+      throw err;
+    }
     let found = false;
     try {
       found = (await pool.query(
@@ -180,6 +193,35 @@ module.exports = function createPaymentsRouter({
       throw err;
     }
     return subjectUserId;
+  }
+
+  // "Can the caller act on something that belongs to ownerUserId?"
+  // Yes if it's their own, yes if they're that person's approved
+  // guardian, 403 otherwise. Returns true when the caller is acting on
+  // somebody else's behalf, wich the payment row needs to know so the
+  // ledger records who owes versus who paid.
+  //
+  // Fines and entry charges used to compare owner to req.user.id and
+  // 403 on any mismatch, which meant a parent could buy their child a
+  // membership but not settle the child's late-scratch penalty.
+  //
+  // recordOrgId closes a gap the guardian link opens up. Guardian
+  // authority is scoped to one federation (guardians.org_id), but a
+  // dependent can move federations via the org_transfer flow in
+  // routes/club-changes.js, wich leaves the approved link behind
+  // pointing at the old org. Without this check the parent keeps
+  // reaching into their child's records in a federation they have no
+  // standing in. Acting on your own records is unaffected, so a diver
+  // who transfers can still settle debts their old federation issued.
+  async function assertCanActFor(req, ownerUserId, recordOrgId = null) {
+    if (ownerUserId === req.user.id) return false;
+    await validateGuardian(req, ownerUserId);
+    if (recordOrgId && recordOrgId !== req.user.org_id) {
+      const err = new Error("You are not an approved guardian of this user.");
+      err.status = 403;
+      throw err;
+    }
+    return true;
   }
 
   // Balance (minor units) the platform still owes a federation. The math
@@ -651,7 +693,7 @@ module.exports = function createPaymentsRouter({
   // checkouts the amount is the SNAPSHOT taken at issuance (entry_charges
   // .amount_cents), not a re-resolved price: the debit is fixed when issued.
   // Links the new payment back onto the charge; the webhook marks it paid.
-  async function startChargeCheckout({ req, org, charge, fee }) {
+  async function startChargeCheckout({ req, org, charge, fee, onBehalf = false }) {
     const userId = req.user.id;
     const currency = fee.currency || org.default_currency;
     if (!currency) {
@@ -668,20 +710,31 @@ module.exports = function createPaymentsRouter({
 
     const attempt = await insertPaymentOrResume({
       insert: async () => (await pool.query(
+        // liable_user_id was never set on entry-charge payments, since
+        // the entrant was always the payer. Record it now, and stamp
+        // subject_user_id when a guardian is settling somebody else's
+        // penalty, so the ledger reads "Scratch penalty, Aria Bennett".
         `INSERT INTO payments
-            (org_id, fee_definition_id, payer_user_id, subject_type, event_id,
+            (org_id, fee_definition_id, payer_user_id, liable_user_id, subject_user_id,
+             subject_type, event_id,
              amount_cents, platform_fee_cents, currency, fee_payer, entry_charge_id, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'pending')
          RETURNING id`,
-        [org.id, fee.id, userId, charge.kind, charge.event_id, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer, charge.id],
+        [
+          org.id, fee.id, userId, charge.entrant_user_id,
+          onBehalf ? charge.entrant_user_id : null,
+          charge.kind, charge.event_id,
+          chargeAmountCents, applicationFeeCents, currency, fee.fee_payer, charge.id,
+        ],
       )).rows[0].id,
       findBlocking: async () => (await pool.query(
-        `SELECT id, status, stripe_checkout_session FROM payments
+        `SELECT id, status, stripe_checkout_session, payer_user_id FROM payments
           WHERE entry_charge_id = $1 AND status IN ('pending', 'paid')
           ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
         [charge.id],
       )).rows[0],
-      alreadyDoneMessage: "You already have a payment in progress or completed for this charge.",
+      actingUserId: userId,
+      alreadyDoneMessage: "There is already a payment in progress or completed for this charge.",
     });
     if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
     const paymentId = attempt.paymentId;
@@ -765,7 +818,7 @@ module.exports = function createPaymentsRouter({
   // The fined person pays their own fine (payer_user_id = liable_user_id).
   // The amount is fixed on the fine row (referee-set), not a fee_price, and
   // fines carry no fee_definition. One-live guard is per-fine (fine_id).
-  async function startFineCheckout({ req, org, fine }) {
+  async function startFineCheckout({ req, org, fine, onBehalf = false }) {
     const userId = req.user.id;
     const currency = fine.currency || org.default_currency;
     if (!currency) {
@@ -781,20 +834,28 @@ module.exports = function createPaymentsRouter({
     });
     const attempt = await insertPaymentOrResume({
       insert: async () => (await pool.query(
+        // payer and liable used to be the same person by construction.
+        // A guardian settling a dependent's fine splits them: the money
+        // comes from the guardian, the debt was the dependent's.
         `INSERT INTO payments
-            (org_id, payer_user_id, liable_user_id, subject_type,
+            (org_id, payer_user_id, liable_user_id, subject_user_id, subject_type,
              amount_cents, platform_fee_cents, currency, fee_payer, fine_id, status)
-         VALUES ($1, $2, $2, 'fine', $3, $4, $5, 'absorb', $6, 'pending')
+         VALUES ($1, $2, $3, $4, 'fine', $5, $6, $7, 'absorb', $8, 'pending')
          RETURNING id`,
-        [org.id, userId, chargeAmountCents, applicationFeeCents, currency, fine.id],
+        [
+          org.id, userId, fine.liable_user_id,
+          onBehalf ? fine.liable_user_id : null,
+          chargeAmountCents, applicationFeeCents, currency, fine.id,
+        ],
       )).rows[0].id,
       findBlocking: async () => (await pool.query(
-        `SELECT id, status, stripe_checkout_session FROM payments
+        `SELECT id, status, stripe_checkout_session, payer_user_id FROM payments
           WHERE fine_id = $1 AND status IN ('pending', 'paid')
           ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 1`,
         [fine.id],
       )).rows[0],
-      alreadyDoneMessage: "You already have a payment in progress or completed for this fine.",
+      actingUserId: userId,
+      alreadyDoneMessage: "There is already a payment in progress or completed for this fine.",
     });
     if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
     const paymentId = attempt.paymentId;
@@ -1980,13 +2041,44 @@ module.exports = function createPaymentsRouter({
   //
   // Returns { paymentId } for a fresh insert or { resumedUrl, paymentId }
   // when the payer should be sent back into their existing session.
-  async function insertPaymentOrResume({ insert, findBlocking, alreadyDoneMessage }) {
+  //
+  // actingUserId: whoever is trying to pay right now. The fine and
+  // entry-charge slots are the only ones two different people can
+  // contest, because their unique indexes key on fine_id /
+  // entry_charge_id alone, never on the payer. Once a guardian may pay a
+  // dependent's penalty, both of them can be mid-checkout on the same
+  // row.
+  //
+  // Handing the second caller the first caller's open Stripe session
+  // would take the money off card B while the payment row still names
+  // user A as payer. The federation gets paid either way, but the ledger
+  // lies, the person who actually paid never sees it in their history,
+  // and a later refund emails the wrong human. So when the blocking
+  // attempt belongs to somebody else, retire it and insert a fresh row
+  // rather than resuming into it.
+  async function insertPaymentOrResume({ insert, findBlocking, alreadyDoneMessage, actingUserId = null }) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         return { paymentId: await insert() };
       } catch (e) {
         if (e.code !== "23505") throw e;
         const blocking = await findBlocking();
+
+        if (actingUserId && blocking?.payer_user_id && blocking.payer_user_id !== actingUserId) {
+          const retired = await retirePendingPayment({ pool, payments, logger }, blocking);
+          if (retired === "paid") {
+            const err = new Error(alreadyDoneMessage);
+            err.status = 409;
+            throw err;
+          }
+          if (retired === "unavailable") {
+            const err = new Error("Couldn't check the existing payment attempt with Stripe — please try again.");
+            err.status = 503;
+            throw err;
+          }
+          continue; // retired or gone: the slot is free, retry the insert.
+        }
+
         const outcome = await resumeOrRetireCheckout({ pool, payments, logger }, blocking);
         if (outcome.url) return { resumedUrl: outcome.url, paymentId: outcome.paymentId };
         if (outcome.paid) {
@@ -2075,20 +2167,29 @@ module.exports = function createPaymentsRouter({
   // The person's own fines, ALL of them, not just the payable ones, so
   // appeal outcomes are visible (a dismissed appeal used to silently revert
   // to 'owed' and an upheld one silently vanished from this list).
+  // Same ?subject_user_id= switch as /api/me/charges above.
   router.get("/api/me/fines", verifyToken, async (req, res) => {
     try {
+      // Guardian authority is per-federation, so a dependent's list is
+      // clamped to the guardian's own org. Your OWN list isn't clamped:
+      // transfer federations and you must still be able to see, and pay,
+      // whatever the old one fined you.
+      const onBehalfOf = await validateGuardian(req, req.query.subject_user_id);
+      const subject = onBehalfOf || req.user.id;
       const rows = (await pool.query(
         `SELECT f.*, lu.full_name AS liable_name, iu.full_name AS issued_by_name
            FROM fines f
            JOIN users lu ON lu.id = f.liable_user_id
            LEFT JOIN users iu ON iu.id = f.issued_by
           WHERE f.liable_user_id = $1
+            AND ($2::uuid IS NULL OR f.org_id = $2)
           ORDER BY f.issued_at DESC
           LIMIT 100`,
-        [req.user.id],
+        [subject, onBehalfOf ? req.user.org_id : null],
       )).rows;
       return res.json({ fines: rows.map(fineOut), payments_enabled: payments.enabled });
     } catch (err) {
+      if (err.status === 403) return res.status(403).json({ error: err.message });
       logger.error({ err: err.message }, "[payments] read my fines failed");
       return res.status(500).json({ error: "Failed to read your fines." });
     }
@@ -2202,7 +2303,7 @@ module.exports = function createPaymentsRouter({
     try {
       const fine = (await pool.query("SELECT * FROM fines WHERE id = $1", [req.params.id])).rows[0];
       if (!fine) return res.status(404).json({ error: "Fine not found" });
-      if (fine.liable_user_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+      const onBehalfOfFine = await assertCanActFor(req, fine.liable_user_id, fine.org_id);
       if (fine.status !== "owed") return res.status(409).json({ error: `This fine is ${fine.status}.` });
       const org = (
         await pool.query(
@@ -2211,7 +2312,7 @@ module.exports = function createPaymentsRouter({
           [fine.org_id],
         )
       ).rows[0];
-      const { url, paymentId } = await startFineCheckout({ req, org, fine });
+      const { url, paymentId } = await startFineCheckout({ req, org, fine, onBehalf: onBehalfOfFine });
       return res.json({ url, payment_id: paymentId });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] fine checkout failed");
@@ -2696,8 +2797,15 @@ module.exports = function createPaymentsRouter({
   });
 
   // Diver-facing: the charges I currently owe (across all my events).
+  // ?subject_user_id=<dependent> switches to a dependent's charges,
+  // once validateGuardian has confirmed the caller really is their
+  // guardian. Anything else 403s before it touches a row.
   router.get("/api/me/charges", verifyToken, async (req, res) => {
     try {
+      // Same org clamp as /api/me/fines: a guardian only reaches into
+      // their dependent's records inside their own federation.
+      const onBehalfOf = await validateGuardian(req, req.query.subject_user_id);
+      const subject = onBehalfOf || req.user.id;
       const rows = (await pool.query(
         `SELECT ec.id, ec.kind, ec.amount_cents, ec.status, ec.event_id,
                 e.name AS event_name, fd.currency
@@ -2705,11 +2813,13 @@ module.exports = function createPaymentsRouter({
            JOIN events e ON e.id = ec.event_id
            LEFT JOIN fee_definitions fd ON fd.id = ec.fee_definition_id
           WHERE ec.entrant_user_id = $1 AND ec.status = 'owed'
+            AND ($2::uuid IS NULL OR ec.org_id = $2)
           ORDER BY ec.triggered_at DESC`,
-        [req.user.id],
+        [subject, onBehalfOf ? req.user.org_id : null],
       )).rows;
       return res.json({ charges: rows, payments_enabled: payments.enabled });
     } catch (err) {
+      if (err.status === 403) return res.status(403).json({ error: err.message });
       logger.error({ err: err.message }, "[payments] read my charges failed");
       return res.status(500).json({ error: "Failed to read your charges." });
     }
@@ -2782,7 +2892,7 @@ module.exports = function createPaymentsRouter({
     try {
       const charge = (await pool.query("SELECT * FROM entry_charges WHERE id = $1", [req.params.id])).rows[0];
       if (!charge) return res.status(404).json({ error: "Charge not found" });
-      if (charge.entrant_user_id !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+      const onBehalfOfCharge = await assertCanActFor(req, charge.entrant_user_id, charge.org_id);
       if (charge.status !== "owed") return res.status(409).json({ error: `This charge is ${charge.status}.` });
 
       const org = (
@@ -2795,7 +2905,7 @@ module.exports = function createPaymentsRouter({
       const fee = (await pool.query("SELECT * FROM fee_definitions WHERE id = $1", [charge.fee_definition_id])).rows[0];
       if (!fee) return res.status(409).json({ error: "The penalty fee is no longer configured." });
 
-      const { url, paymentId } = await startChargeCheckout({ req, org, charge, fee });
+      const { url, paymentId } = await startChargeCheckout({ req, org, charge, fee, onBehalf: onBehalfOfCharge });
       return res.json({ url, payment_id: paymentId });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] charge checkout failed");

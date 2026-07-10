@@ -80,6 +80,31 @@ function validatePassword(pw) {
   return null;
 }
 
+// Does this user look after anybody? A guardian with an approved
+// dependent gets to reach the payment surfaces even when they hold no
+// role beyond 'spectator', which is what registration hands out. See
+// the router's allowGuardian meta.
+//
+// Deliberately NOT folded into buildTokenPayload: that shape gets
+// signed into the JWT, and an approval that lands after the cookie was
+// minted would sit stale until the next sign-in. This rides on the
+// response body instead, so /api/auth/me refreshes it on every boot.
+async function loadHasDependents(pool, userId) {
+  try {
+    const r = await pool.query(
+      `SELECT 1 FROM guardians
+        WHERE guardian_user_id = $1 AND status = 'approved' LIMIT 1`,
+      [userId],
+    );
+    return r.rows.length > 0;
+  } catch (err) {
+    // Migration 083 might not have landed on this box yet. A missing
+    // table just means nobody has dependents.
+    if (err.code === "42P01") return false;
+    throw err;
+  }
+}
+
 module.exports = function createAuthRouter({
   pool,
   io,
@@ -113,8 +138,10 @@ module.exports = function createAuthRouter({
     if (!req.user) return res.status(401).json({ error: "Not authenticated" });
     try {
       // Rebuild from the DB so a role/locale change since the cookie
-      // was minted is reflected without forcing a re-login.
+      // was minted is reflected without forcing a re-login. Same goes
+      // for a guardian link an admin approved five minutes ago.
       const payload = await buildTokenPayload(req.user.id);
+      payload.has_dependents = await loadHasDependents(pool, req.user.id);
       res.json({ user: payload });
     } catch (err) {
       console.error("[Auth Me Error]", err.message);
@@ -205,6 +232,8 @@ module.exports = function createAuthRouter({
       const payload = await buildTokenPayload(user.id);
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
       setSessionCookie(res, token);
+      // After signing, so the flag never enters the JWT.
+      payload.has_dependents = await loadHasDependents(pool, user.id);
       const resBody = { user: payload, ...payload };
       if (includeBodyToken(req)) resBody.token = token;
       res.json(resBody);

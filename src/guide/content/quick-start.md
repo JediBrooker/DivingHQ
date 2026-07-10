@@ -8,7 +8,7 @@ You need a running DivingHQ server — see the main README for installation. Fro
 
 ## 1. Sign in or register your federation
 
-![Login](/guide-screenshots/login.png)
+![The DivingHQ login page](/guide-screenshots/login.png)
 
 Go to `/login`. You have three options:
 
@@ -22,7 +22,7 @@ The system administrator (the person who set up the DivingHQ server) needs to **
 
 ## 2. Open the dashboard
 
-![Dashboard](/guide-screenshots/dashboard.png)
+![The dashboard after signing in, showing live and upcoming counts and a list of things needing attention](/guide-screenshots/dashboard.png)
 
 After signing in you land on `/dashboard`. The dashboard changes based on your role.
 
@@ -76,7 +76,7 @@ See [Roles & Permissions](/guide/roles-and-permissions) for what each role can d
 
 ## 5. Build your first event
 
-![Meet Manager](/guide-screenshots/meet-manager.png)
+![Meet Manager, listing the federation's meets and their events with per-event action buttons](/guide-screenshots/meet-manager.png)
 
 Click **Meet Manager** from the dashboard. The layout is master-detail: a **left rail** lists your meets (All events / each meet / Ungrouped events); the **right pane** shows that selection's events with a search box and status filter chips. Use **+ New meet** on the rail to create a meet bundle; use **+ New event** or **+ Add event** in the right-pane header to create an event (optionally pre-bundled into the selected meet).
 
@@ -110,6 +110,8 @@ Divers can also self-submit their lists from `/competitor` while the event is **
 ## 7. Assign the judging panel
 
 From the event row click **Assign Judges**. Pick a panel from your federation's `judge` users — order matters because judge_number is assigned by position (Judge 1 = panel slot 1).
+
+![The Assign Judges page, with the federation's available judges on one side and the ordered panel slots on the other](/guide-screenshots/assign-judges.png)
 
 For synchro events, the panel positions map to roles:
 
@@ -147,26 +149,24 @@ See [Session Scheduler](/guide/session-scheduler) when you're planning multiple 
 
 From the dashboard's "What needs your attention" panel, click your event's `Open Control Room →` card. (Alternatively, open Meet Manager and click the same primary button on the event's row, or navigate directly to `/control` and pick the event from the dropdown.) This is the operator's cockpit during the meet.
 
-Pre-meet, the right column shows a four-step **stepper** above a colour-cycling button so you see the whole flow at a glance:
+Pre-meet, the centre shows a **readiness checklist** and, beneath it, a single button offering the next thing you can do. Work through them in order:
 
-```
-(1) Check-in ─── (2) Randomise ─── (3) Sign Off ─── (4) Start
-```
+1. **✓ Check In Divers.** Opens the check-in modal; tick everyone present, click Continue.
+2. **🎲 Randomise Dive Order.** Click opens a confirm dialog spelling out what'll happen.
+3. **📋 Referee Sign Off.** A referee scans a QR code on the manager's screen with their phone (or taps a push notification, types a 6-digit handoff code, or enters credentials directly) to confirm the panel is valid.
+4. **▶ Start Event.** Flips status Upcoming → Live; the spectator scoreboards start broadcasting immediately.
 
-Each step has a matching coloured action button beneath:
+Items tick green as you satisfy them, and the chip at the top counts what's left, so a new operator never has to remember what comes next.
 
-1. **Red — Check In Divers.** Opens the check-in modal; tick everyone present, click Continue.
-2. **Orange — Randomise Dive Order.** Or skip with the *Use current order →* link if you've already manually arranged the order. Click opens a confirm dialog spelling out what'll happen.
-3. **Yellow — Referee Sign Off.** A referee scans a QR code on the manager's screen with their phone (or taps a push notification, types a 6-digit handoff code, or enters credentials directly) to confirm the panel is valid.
-4. **Green — Start Event.** Opens the **Pre-Flight Review modal** — a last-chance summary of the event you're about to broadcast: roster size, judge panel composition, referee status, and any warnings (invalid synchro panel, divers with incomplete dive lists, partial panel, missing referee). Click `▶ Go Live` to flip status Upcoming → Live; the spectator scoreboards start broadcasting immediately.
-
-Done steps tick green in the stepper as you progress, so a new operator never has to remember "what colour came after orange?".
+![Control Room before an event starts, showing the readiness checklist above its contextual action button](/guide-screenshots/control-room-premeet-checklist.png)
 
 See [Running a Meet](/guide/running-a-meet) for the full operator playbook including hold/resume, score correction with live preview, late entries, the auto-advance timer, the toast feedback strip (success / error notifications for every async action), and the undo snackbar that catches misclicks (withdraw / finalise).
 
 ## 11. Watch the scoreboard
 
 Open `/scoreboard/<event-id>` in another browser window (or another machine on the same network). This is the audience-facing live scoreboard — current performer, live judge scores, standings, catch-up math, Up Next list. Add `?broadcast=1` (or use the **Broadcast** button in the header) for a kiosk-style version that hides the chrome and scales fonts up for a venue projector.
+
+![The live scoreboard: the current performer in the centre column, judge scores beneath, and live standings alongside](/guide-screenshots/scoreboard-live.png)
 
 For a phone-friendly spectator URL, the same `/scoreboard/<event-id>` route is responsive — it collapses to a single column on narrow screens.
 

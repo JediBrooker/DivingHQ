@@ -65,7 +65,9 @@ const NAV = [
   // name clash with the Federation admin payments hub below.
   { key: 'payments', group: 'Payments', icon: Wallet, items: [
     { to: '/charges',         label: 'Charges',         labelKey: 'payments.charges',       icon: Receipt },
-    { to: '/membership',      label: 'Membership',      labelKey: 'payments.membership',    icon: CreditCard, roles: ['diver'] },
+    // allowGuardian mirrors the route meta: a parent with an approved
+    // dependent needs the link even though they're only a spectator.
+    { to: '/membership',      label: 'Membership',      labelKey: 'payments.membership',    icon: CreditCard, roles: ['diver'], allowGuardian: true },
     { to: '/accreditation',   label: 'Accreditation',   labelKey: 'payments.accreditation', icon: Award,      roles: ['judge', 'referee', 'coach', 'meet_manager'] },
     { to: '/guardians',       label: 'Dependents',      labelKey: 'guardians.nav',          icon: UserCheck },
     { to: '/payment-history', label: 'Payment History', labelKey: 'payments.history',       icon: History },
@@ -87,12 +89,17 @@ function navLabel(it) {
   return it.labelKey ? t(it.labelKey) : it.label
 }
 
+function allowedBy(entry) {
+  if (!entry.roles) return true
+  if (entry.roles.some((r) => auth.hasRole(r))) return true
+  return Boolean(entry.allowGuardian && auth.hasDependents)
+}
 function childVisible(c) {
-  return !c.roles || c.roles.some((r) => auth.hasRole(r))
+  return allowedBy(c)
 }
 function itemVisible(it) {
   if (it.children) return it.children.some(childVisible)
-  return !it.roles || it.roles.some((r) => auth.hasRole(r))
+  return allowedBy(it)
 }
 // A nested item (children) is shown if any child is visible; its child
 // list is filtered to the roles the user actually has.
@@ -199,7 +206,7 @@ function closeMobile() { mobileOpen.value = false }
     <aside class="sidebar">
       <RouterLink to="/dashboard" class="sb-brand">
         <LogoMark :size="28" />
-        <span class="wm">DIVING<span>HQ</span></span>
+        <span class="wm brand-wordmark">DIVING<span>HQ</span></span>
       </RouterLink>
 
       <nav class="sb-nav" :class="{ rail: railMode }" aria-label="Primary">

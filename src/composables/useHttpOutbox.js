@@ -67,12 +67,25 @@ async function httpSend(auth, entry) {
 
 let _socket = null
 
+// JudgeView predates the 'socket:' prefix and pushes plain 'submit_score'
+// entries, draining them through its own sender. Now that the drain also
+// runs app-wide, a judge's queued score can be picked up here, and routing
+// it to httpSend would fire fetch(undefined) and burn the entry's retries
+// until it was marked failed. Treat the legacy name as a socket action.
+const LEGACY_SOCKET_ACTIONS = new Set(['submit_score'])
+
+function isSocketAction(actionType) {
+  return actionType.startsWith('socket:') || LEGACY_SOCKET_ACTIONS.has(actionType)
+}
+
 function socketSend(entry) {
   const s = _socket
   if (!s || !s.connected) {
     throw new Error('socket disconnected')
   }
-  const eventName = entry.action_type.slice('socket:'.length)
+  const eventName = entry.action_type.startsWith('socket:')
+    ? entry.action_type.slice('socket:'.length)
+    : entry.action_type
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('timeout')), 10000)
     s.emit(eventName, {
@@ -98,7 +111,7 @@ function socketSend(entry) {
 // --- Unified send ------------------------------------------------
 
 function unifiedSend(auth, entry) {
-  if (entry.action_type.startsWith('socket:')) {
+  if (isSocketAction(entry.action_type)) {
     return socketSend(entry)
   }
   return httpSend(auth, entry)
@@ -121,17 +134,33 @@ function scheduleDrain(auth) {
   })
 }
 
+// Attach the connect -> drain hook to the socket, once, and kick a drain
+// straight away if we're already online.
+//
+// The immediate drain is the important half. The socket connects during
+// app boot, long before any of this runs, so waiting for the *next*
+// 'connect' stranded whatever a previous session left in the queue: the
+// entry sat pending until the operator happened to reconnect or make
+// another write.
+//
+// Exported so App.vue can arm it for the whole session (see
+// useOutboxSync). Until then the hook only existed while the Control
+// Room was on screen, and a judge or operator who refreshed mid-meet
+// could sit reconnected on some other route with unsent scores in IDB.
+export function armOutboxDrain(auth, socket) {
+  _socket = socket
+  if (drainHookSockets.has(socket)) return
+  drainHookSockets.add(socket)
+  socket.on('connect', () => scheduleDrain(auth))
+  if (socket.connected) scheduleDrain(auth)
+}
+
 // --- Public composable -------------------------------------------
 
 export function useHttpOutbox() {
   const auth = useAuthStore()
   const socket = useSocket()
-  _socket = socket
-
-  if (!drainHookSockets.has(socket)) {
-    drainHookSockets.add(socket)
-    socket.on('connect', () => scheduleDrain(auth))
-  }
+  armOutboxDrain(auth, socket)
 
   async function queueAction({ method, url, body, actionType }) {
     const ob = getOutbox()

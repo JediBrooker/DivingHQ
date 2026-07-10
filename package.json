@@ -22,6 +22,7 @@
     "verify:local": "node scripts/verify-local.js",
     "check:motion": "node scripts/check-reduced-motion.js",
     "check:size": "node scripts/check-bundle-size.js",
+    "check:schema": "node scripts/check-schema-drift.js",
     "migrate": "node scripts/migrate.js",
     "translate": "node scripts/translate-locales.js",
     "venue:daktronics": "node scripts/venue-daktronics-bridge.js",

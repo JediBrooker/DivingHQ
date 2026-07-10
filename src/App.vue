@@ -33,9 +33,14 @@ import CommandPalette from '@/components/CommandPalette.vue'
 // path: a coach/judge/diver who just got handed an invite. Auto-starts
 // on the first dashboard mount per role, replay it via Cmd-K.
 import RoleTour from '@/components/RoleTour.vue'
+// Keeps the offline outbox draining for the whole session rather than only
+// while the Control Room happens to be rendered. No template of its own.
+import { useOutboxSync } from '@/composables/useOutboxSync'
 
 const route = useRoute()
 const auth = useAuthStore()
+
+useOutboxSync()
 // Shell shows for signed-in users on opted-in routes, but never
 // in the Scoreboard's broadcast/kiosk or stream-overlay modes.
 // Those are deliberately chromeless.
@@ -43,7 +48,8 @@ const useShell = computed(() =>
   auth.isLoggedIn &&
   route.meta.appShell === true &&
   route.params.mode !== 'broadcast' &&
-  route.query.overlay !== '1' && route.query.overlay !== 'true'
+  route.query.overlay !== '1' && route.query.overlay !== 'true' &&
+  route.query.overlay !== 'minimal'
 )
 </script>
 

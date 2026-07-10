@@ -3,11 +3,17 @@
 // scratch / no-show penalty charges (divers) and disciplinary fines, each
 // with a Pay action and the contextual "coming soon" preview. Fines can
 // also be appealed here. Reads GET /api/me/charges + GET /api/me/fines.
-import { ref, computed, onMounted } from 'vue'
+//
+// A guardian can flip the "Paying for" picker to a dependent and settle
+// their penalties. Appeals stay with the person who was fined, since an
+// appeal is a statement about their own conduct, so the button hides
+// while you're looking at somebody else's debts.
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showError, showSuccess } from '@/composables/useNotify'
 import { useI18n } from 'vue-i18n'
 import ComingSoonBanner from '@/components/ComingSoonBanner.vue'
+import SubjectSelector from '@/components/payments/SubjectSelector.vue'
 
 const auth = useAuthStore()
 const { t } = useI18n()
@@ -20,6 +26,14 @@ const payingId = ref('')
 const payingFineId = ref('')
 const appealingId = ref('')
 const appealReason = ref('')
+
+// '' means "me". Anything else is a dependent's user id; the server
+// re-checks the guardian link on every read and every checkout.
+const payingFor = ref('')
+const viewingDependent = computed(() => Boolean(payingFor.value))
+function subjectQuery() {
+  return payingFor.value ? `?subject_user_id=${encodeURIComponent(payingFor.value)}` : ''
+}
 
 function kindLabel(kind) {
   const labels = { scratch: t('payments.charges_view.kind_scratch'), no_show: t('payments.charges_view.kind_no_show') }
@@ -52,10 +66,12 @@ function money(cents, currency) {
 
 async function load() {
   loading.value = true
+  appealingId.value = ''
   try {
+    const q = subjectQuery()
     const [c, fr] = await Promise.all([
-      auth.apiFetch('/api/me/charges'),
-      auth.apiFetch('/api/me/fines'),
+      auth.apiFetch(`/api/me/charges${q}`),
+      auth.apiFetch(`/api/me/fines${q}`),
     ])
     charges.value = c.charges || []
     fines.value = fr.fines || []
@@ -66,6 +82,8 @@ async function load() {
     loading.value = false
   }
 }
+
+watch(payingFor, load)
 
 async function pay(charge) {
   if (!enabled.value) return
@@ -114,6 +132,7 @@ onMounted(load)
   <section class="charges-view">
     <h1>{{ t('payments.charges_view.title') }}</h1>
     <p class="lede">{{ t('payments.charges_view.subtitle') }}</p>
+    <SubjectSelector v-model="payingFor" />
     <ComingSoonBanner
       v-if="!enabled"
       :message="t('payments.charges_view.coming_soon_banner')"
@@ -151,7 +170,7 @@ onMounted(load)
               <button class="btn-pay" :disabled="!enabled || payingFineId === f.id" @click="payFine(f)">
                 {{ !enabled ? t('payments.charges_view.btn_coming_soon') : (payingFineId === f.id ? t('payments.charges_view.btn_redirecting') : t('payments.charges_view.btn_pay')) }}
               </button>
-              <button class="btn-appeal" :disabled="appealingId === f.id" @click="startAppeal(f)">{{ t('payments.charges_view.btn_appeal') }}</button>
+              <button v-if="!viewingDependent" class="btn-appeal" :disabled="appealingId === f.id" @click="startAppeal(f)">{{ t('payments.charges_view.btn_appeal') }}</button>
             </div>
           </div>
           <div v-if="appealingId === f.id" class="appeal-form">

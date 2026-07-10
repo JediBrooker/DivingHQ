@@ -20,9 +20,25 @@ const ciWorkers = Number.isFinite(requestedCiWorkers) && requestedCiWorkers > 0
   : 3;
 
 // Default suite skips the documentation screenshot generator
-// (it's a one-shot writer that produces wiki PNGs, not a
+// (it's a one-shot writer that produces guide PNGs, not a
 // regression gate). Pass E2E_DOCS=1 to include it.
-const testIgnore = DOCS_E2E ? [] : ["**/wiki-screenshots.spec.js"];
+//
+// Gotcha, and it bit us for months: a project's own `testIgnore`
+// REPLACES the config-level one, it doesn't merge with it. The
+// chromium project below sets its own to keep the mobile/cross-browser
+// specs out, wich quietly re-admitted wiki-screenshots.spec.js to
+// every `npx playwright test` run. That spec rewrites all 48 files in
+// public/guide-screenshots/ and (since it purges leftover e2e orgs)
+// yanks the database out from under whatever else is running in
+// parallel. Both symptoms were blamed on flake for a long time.
+//
+// So: build every project's ignore list from this one base.
+const DOCS_SPEC = "**/wiki-screenshots.spec.js";
+const testIgnore = DOCS_E2E ? [] : [DOCS_SPEC];
+
+// Helper so a project can add its own exclusions without dropping the
+// docs-spec guard on the floor.
+const ignoreWithDocs = (...extra) => [...testIgnore, ...extra];
 
 module.exports = defineConfig({
   testDir: "./test/e2e",
@@ -114,7 +130,7 @@ module.exports = defineConfig({
     },
     {
       name: "chromium",
-      testIgnore: /(mobile-safari|cross-browser)\.spec\.js$/,
+      testIgnore: ignoreWithDocs("**/mobile-safari.spec.js", "**/cross-browser.spec.js"),
       use: {
         // Don't spread devices["Desktop Chrome"], it bakes in
         // a fixed 1280×720 viewport plus a deviceScaleFactor,

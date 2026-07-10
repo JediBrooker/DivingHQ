@@ -40,7 +40,7 @@ When a chip's count is more than a glance can absorb, click the chip itself (rat
 
 `/users` — the central screen for managing your federation's users.
 
-![User Manager](/guide-screenshots/user-manager.png)
+![The User Manager table, listing every member of the federation with their roles and account status](/guide-screenshots/user-manager.png)
 
 ### What you see
 
@@ -96,6 +96,8 @@ The move only finalises once all three are in. Every approval and the final tran
 
 `/clubs` — the federation's club registry.
 
+![Clubs registry listing every club in the federation with its short code and member count](/guide-screenshots/clubs.png)
+
 - **List** — every club in your org, with member counts derived from `users.club_id`
 - **+ New Club** — name + short code (3 – 6 chars; surfaces as the cyan pill in scoreboards)
 - **Edit** — rename, change short code
@@ -106,6 +108,8 @@ The short code matters more than you'd think — it's the cyan pill that shows n
 ## Teams
 
 `/teams` — for World Aquatics Team Event entries.
+
+![Teams page listing each team with its short code, member count, and enrolled events](/guide-screenshots/teams.png)
 
 - **List** — every team in your org, with member counts and a list of events the team is enrolled in
 - **+ New Team** — name + optional short code
@@ -121,6 +125,8 @@ Team names show as a **purple chip** in history cards and the active-diver block
 `/events/<id>/audit` — every score insert, update, and delete for one event.
 
 You can also reach this from the event row in Meet Manager via the **Audit Log** button.
+
+![Score Audit Log listing each score action with its actor, old and new values, and reason](/guide-screenshots/score-audit.png)
 
 ### What it logs
 
@@ -304,7 +310,7 @@ Without `SMTP_HOST` configured, all email helpers silently no-op. Registrations 
 
 Beyond email, every push notification and in-app banner is retained in the user's **Inbox** (`/inbox`, bell icon in the header) so a missed phone alert isn't lost. Users filter by category (Action required, Coach & team, Results, Operations), toggle unread-only, and **Mark all read**; each row deep-links to the relevant scoreboard, event, or approval queue.
 
-![Notifications inbox](/guide-screenshots/inbox.png)
+![The notifications inbox, listing recent notifications with their category and timestamp](/guide-screenshots/inbox.png)
 
 ## Common admin pitfalls
 

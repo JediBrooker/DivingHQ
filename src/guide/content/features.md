@@ -129,12 +129,12 @@ The first section groups features **by persona** — pick your role to see what 
 | Schedule | Duplicate session to next day (preserves shape, clears event references) | [Session Scheduler → Duplicate to next day](/guide/session-scheduler#duplicate-to-next-day) |
 | Schedule | Public iCal feed per meet (`/api/meets/<id>/schedule.ics`) — coaches / federations subscribe | [Session Scheduler → iCal export](/guide/session-scheduler#ical-export) |
 | Control Room | 3-column live operator layout (history · active diver · queue) | [Running a Meet → Layout](/guide/running-a-meet#layout) |
-| Control Room | Pre-Flight Review modal (last-chance roster / panel / referee / warnings summary) | [Running a Meet → Pre-Flight Review modal](/guide/running-a-meet#pre-flight-review-modal) |
+| Control Room | Pre-meet readiness checklist (roster · dive lists · panel · check-in · start order · referee) gating Start Event | [Running a Meet → The pre-meet workflow](/guide/running-a-meet#the-pre-meet-workflow) |
 | Control Room | Set the active diver (any roster row, in any order) | [Running a Meet → Setting the active diver](/guide/running-a-meet#setting-the-active-diver) |
 | Control Room | Shot clock with reset / pause / extend (World Aquatics Article 8.5.5) | [Running a Meet → The shot clock](/guide/running-a-meet#the-shot-clock) |
 | Control Room | Auto-advance toggle (Manual / 5s / 10s / 15s after last judge submits) | [Running a Meet → Auto-advance](/guide/running-a-meet#auto-advance) |
 | Control Room | Hold / Resume meet (amber banner pushed to all clients) | [Running a Meet → Hold / Resume](/guide/running-a-meet#hold--resume) |
-| Control Room | Adjust ▾ — Failed Dive · Cap Score · Re-Dive (referee actions) | [Running a Meet → Referee actions](/guide/running-a-meet#referee-actions-adjust-) |
+| Control Room | Adjust ▾ — Failed Dive · Cap Score · Re-Dive (referee actions) | [Running a Meet → Referee actions](/guide/running-a-meet#referee-actions-failed--cap--re-dive) |
 | Control Room | Score correction modal with live preview of the impact on standings | [Running a Meet → Correcting a score](/guide/running-a-meet#correcting-a-score) |
 | Control Room | Late entries during a Live event | [Running a Meet → Late entries](/guide/running-a-meet#late-entries) |
 | Control Room | Withdraw / scratch a diver mid-meet | [Running a Meet → Withdrawing or scratching a diver](/guide/running-a-meet#withdrawing-or-scratching-a-diver) |

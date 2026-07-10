@@ -12,7 +12,7 @@ All three work on phone (most divers use phones) or desktop. The signed-in app s
 
 When an event you're entered in goes Live, the **Diver tab** of your dashboard surfaces a **Meet day · live now** card at the top. Tapping it lands on `/me/meet/<eventId>` — a focused, phone-first surface designed for the exact two minutes you have between drying off and walking up to the platform. No history, no analytics, no ads — just three things:
 
-![Diver meet day view](/guide-screenshots/meet-day.png)
+![The phone-sized meet day view, showing the diver's next dive, current standing, and what they need for a medal](/guide-screenshots/meet-day.png)
 
 ### 1. Your next dive
 
@@ -46,7 +46,7 @@ The page subscribes to the event-room socket. Every score that lands and every c
 
 ## Submitting a dive list
 
-![Diver Portal — submit dive list](/guide-screenshots/competitor.png)
+![The Diver Portal dive-list editor, with one dive picker per round and a running degree-of-difficulty total](/guide-screenshots/competitor.png)
 
 From the dashboard, tap **Diver Portal**. You'll see a list of every event you're eligible for — events in your federation that are `Upcoming` and haven't passed `entries_close_at`.
 
@@ -110,11 +110,11 @@ A coach role can also save and load templates on behalf of their linked divers.
 
 A coach can also edit a linked diver's whole list from the **Coach Dive Lists** editor at `/coach/dive-lists/<event_id>` — every squad member's rounds, dive codes + DD, submission status, and withdraw control in one per-event view. The same round rules and operator-pinned dives are enforced exactly as in the diver's own portal.
 
-![Coach dive lists editor](/guide-screenshots/coach-dive-lists.png)
+![The coach's squad dive-list editor, showing each linked diver's list side by side for one event](/guide-screenshots/coach-dive-lists.png)
 
 ## Diver Profile
 
-![Diver Profile](/guide-screenshots/diver-profile.png)
+![A public diver profile, with headline stats, a score trend chart, personal bests by dive, and a medal tally](/guide-screenshots/diver-profile.png)
 
 The diver profile (`/profile/<id>`) is **publicly viewable** by default — anyone with the URL can see your career stats. URLs use an opaque slug (not a numeric id), so they're not enumerable from outside.
 
@@ -169,6 +169,8 @@ Cmd-P / Ctrl-P opens a **print-friendly view** of the dashboard with widget tile
 ## Compare two divers
 
 `/compare?a=<diver-id-a>&b=<diver-id-b>` shows two divers side-by-side:
+
+![The Compare view with two divers side by side — headline stats in two columns, per-dive PB differences, and overlaid score trends](/guide-screenshots/compare.png)
 
 - Headline stats per diver, in two columns
 - Per-dive PB diff — for every dive code + position both divers have attempted, who has the better PB and by how much

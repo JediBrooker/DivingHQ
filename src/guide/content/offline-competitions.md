@@ -23,7 +23,7 @@ The Control Room top bar shows a real-time connection indicator on the right sid
 
 When operations are queued, a **badge** appears next to the indicator showing the pending count — e.g., "3" means three operations are waiting to send. If any operations fail after all retries, a red badge appears so you know something needs attention.
 
-![Connection indicator](/guide-screenshots/offline-connection-indicator.png)
+![The Control Room top bar with the connection indicator flipped to an amber Offline pill and a badge showing queued operations](/guide-screenshots/offline-connection-indicator.png)
 
 ### Automatic sync
 

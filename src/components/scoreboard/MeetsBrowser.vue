@@ -634,6 +634,11 @@ watch(countryFilter, (val) => {
 .live-strip-sub {
   font-family: var(--font-mono); font-size: 11px;
   color: var(--text-3); letter-spacing: 0.04em;
+  /* Keeps the leading count next to its words in Arabic. Without this the
+     bidi pass flings the digits to the far side of the line and it reads
+     "broadcasting - click any to watch 78". plaintext, not isolate, so the
+     direction follows whatever language the label ends up in. */
+  unicode-bidi: plaintext;
 }
 .live-strip-groups {
   display: flex; flex-direction: column; gap: 0.7rem;
@@ -655,6 +660,7 @@ watch(countryFilter, (val) => {
 .upcoming-strip-sub {
   font-family: var(--font-mono); font-size: 11px;
   color: var(--text-3); letter-spacing: 0.04em;
+  unicode-bidi: plaintext;
 }
 .upcoming-chip {
   display: inline-flex; align-items: center; gap: 0.5rem;

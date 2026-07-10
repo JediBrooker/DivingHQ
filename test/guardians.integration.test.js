@@ -14,6 +14,7 @@ require("dotenv").config();
 const createUsersRouter = require("../routes/users");
 const createPaymentsRouter = require("../routes/payments");
 const createStripeWebhook = require("../routes/stripe-webhook");
+const createClubChangesRouter = require("../routes/club-changes");
 
 const silentLogger = { warn() {}, error() {}, info() {} };
 const suffix = crypto.randomUUID().slice(0, 8);
@@ -94,6 +95,7 @@ function buildApp() {
     requireMeetEditor, requireClubAdmin, requireSystemAdmin,
     logger: silentLogger, payments: fakePayments, email: fakeEmail,
   }));
+  app.use(createClubChangesRouter({ pool, verifyToken }));
   app.post("/webhooks/stripe", express.raw({ type: "application/json" }),
     createStripeWebhook({ pool, logger: silentLogger, payments: fakePayments }));
   return app;
@@ -172,7 +174,11 @@ before(async () => {
 after(async () => {
   if (server) await new Promise((res) => server.close(res));
   if (orgId) {
+    // payments first: its org_id / payer_user_id FKs are ON DELETE
+    // RESTRICT, so nothing else drops while a payment row points at it.
     await pool.query("DELETE FROM payments WHERE org_id = $1", [orgId]).catch(() => {});
+    await pool.query("DELETE FROM fines WHERE org_id = $1", [orgId]).catch(() => {});
+    await pool.query("DELETE FROM entry_charges WHERE org_id = $1", [orgId]).catch(() => {});
     await pool.query("DELETE FROM guardians WHERE org_id = $1", [orgId]).catch(() => {});
     await pool.query("DELETE FROM memberships WHERE org_id = $1", [orgId]).catch(() => {});
     await pool.query("DELETE FROM fee_prices WHERE fee_definition_id IN (SELECT id FROM fee_definitions WHERE org_id = $1)", [orgId]).catch(() => {});
@@ -295,6 +301,399 @@ test("event checkout with subject_user_id for non-dependent is rejected", async 
   assert.equal(r.status, 403);
   const body = await r.json();
   assert.match(body.error, /not.*guardian|approved/i);
+});
+
+// === Guardian pays a dependent's charges and fines ===
+//
+// A parent who registers only to pay for their child is a 'spectator',
+// because that's the single role routes/auth.js grants on sign-up. None
+// of these endpoints may depend on holding a diver role.
+
+let minorFineId;
+let minorChargeId;
+let guardianFineId;
+let scratchFeeId;
+
+test("seed a fine and an entry charge against the minor", async (t) => {
+  if (!ready) return t.skip();
+
+  minorFineId = (await pool.query(
+    `INSERT INTO fines (org_id, liable_user_id, issued_by, event_id, amount_cents, currency, reason, status)
+     VALUES ($1, $2, $3, $4, 5000, 'GBP', 'Late to the briefing', 'owed') RETURNING id`,
+    [orgId, minorUserId, guardianUserId, eventId],
+  )).rows[0].id;
+
+  // A fine the guardian owes in their own right, so we can prove the
+  // payer/liable split didn't break paying for yourself.
+  guardianFineId = (await pool.query(
+    `INSERT INTO fines (org_id, liable_user_id, issued_by, event_id, amount_cents, currency, reason, status)
+     VALUES ($1, $2, $2, $3, 1500, 'GBP', 'Parked in the officials bay', 'owed') RETURNING id`,
+    [orgId, guardianUserId, eventId],
+  )).rows[0].id;
+
+  scratchFeeId = (await pool.query(
+    `INSERT INTO fee_definitions (org_id, scope, name, currency, fee_payer, refund_policy, active, event_id)
+     VALUES ($1, 'scratch', 'Late scratch', 'GBP', 'absorb', 'none', true, $2) RETURNING id`,
+    [orgId, eventId],
+  )).rows[0].id;
+
+  minorChargeId = (await pool.query(
+    `INSERT INTO entry_charges (org_id, event_id, entrant_user_id, kind, fee_definition_id, amount_cents, status)
+     VALUES ($1, $2, $3, 'scratch', $4, 2500, 'owed') RETURNING id`,
+    [orgId, eventId, minorUserId, scratchFeeId],
+  )).rows[0].id;
+
+  assert.ok(minorFineId && minorChargeId && guardianFineId);
+});
+
+test("GET /api/me/charges?subject_user_id returns the dependent's charges", async (t) => {
+  if (!ready) return t.skip();
+  const r = await api("GET", `/api/me/charges?subject_user_id=${minorUserId}`);
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  assert.equal(body.charges.length, 1);
+  assert.equal(body.charges[0].id, minorChargeId);
+});
+
+test("GET /api/me/charges without a subject still returns only my own", async (t) => {
+  if (!ready) return t.skip();
+  const r = await api("GET", "/api/me/charges");
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  assert.equal(body.charges.filter((c) => c.id === minorChargeId).length, 0);
+});
+
+test("GET /api/me/fines?subject_user_id returns the dependent's fines", async (t) => {
+  if (!ready) return t.skip();
+  const r = await api("GET", `/api/me/fines?subject_user_id=${minorUserId}`);
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  assert.ok(body.fines.some((f) => f.id === minorFineId));
+  assert.ok(!body.fines.some((f) => f.id === guardianFineId), "must not leak my own fines into the dependent view");
+});
+
+test("reading a non-dependent's charges is refused", async (t) => {
+  if (!ready) return t.skip();
+  const r = await api("GET", `/api/me/charges?subject_user_id=${adultUserId}`);
+  assert.equal(r.status, 403);
+  assert.match((await r.json()).error, /guardian/i);
+});
+
+test("a malformed subject_user_id is a 403, not a 500", async (t) => {
+  if (!ready) return t.skip();
+  for (const bad of ["not-a-uuid", "1; DROP TABLE users", ""]) {
+    const r = await api("GET", `/api/me/fines?subject_user_id=${encodeURIComponent(bad)}`);
+    // An empty value means "no subject", so that one falls through to self.
+    assert.equal(r.status, bad === "" ? 200 : 403, `subject_user_id=${bad}`);
+  }
+});
+
+test("guardian pays the dependent's fine; ledger splits payer from liable", async (t) => {
+  if (!ready) return t.skip();
+  const r = await api("POST", `/api/fines/${minorFineId}/checkout`, {});
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  assert.ok(body.url);
+
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [body.payment_id])).rows[0];
+  assert.equal(row.payer_user_id, guardianUserId, "guardian paid");
+  assert.equal(row.liable_user_id, minorUserId, "minor owed it");
+  assert.equal(row.subject_user_id, minorUserId, "paid on the minor's behalf");
+});
+
+test("guardian pays the dependent's entry charge", async (t) => {
+  if (!ready) return t.skip();
+  const r = await api("POST", `/api/entry-charges/${minorChargeId}/checkout`, {});
+  assert.equal(r.status, 200);
+  const body = await r.json();
+
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [body.payment_id])).rows[0];
+  assert.equal(row.payer_user_id, guardianUserId);
+  assert.equal(row.liable_user_id, minorUserId);
+  assert.equal(row.subject_user_id, minorUserId);
+});
+
+test("paying your own fine leaves subject_user_id null", async (t) => {
+  if (!ready) return t.skip();
+  const r = await api("POST", `/api/fines/${guardianFineId}/checkout`, {});
+  assert.equal(r.status, 200);
+  const body = await r.json();
+
+  const row = (await pool.query("SELECT * FROM payments WHERE id = $1", [body.payment_id])).rows[0];
+  assert.equal(row.payer_user_id, guardianUserId);
+  assert.equal(row.liable_user_id, guardianUserId);
+  assert.equal(row.subject_user_id, null, "not acting on anyone's behalf");
+});
+
+test("a stranger cannot pay someone else's fine", async (t) => {
+  if (!ready) return t.skip();
+  const previous = actingUser;
+  actingUser = { ...previous, id: adultUserId, org_roles: ["diver"] };
+  try {
+    const fresh = (await pool.query(
+      `INSERT INTO fines (org_id, liable_user_id, issued_by, event_id, amount_cents, currency, reason, status)
+       VALUES ($1, $2, $3, $4, 900, 'GBP', 'Unrelated', 'owed') RETURNING id`,
+      [orgId, minorUserId, guardianUserId, eventId],
+    )).rows[0].id;
+    const r = await api("POST", `/api/fines/${fresh}/checkout`, {});
+    assert.equal(r.status, 403);
+    assert.match((await r.json()).error, /guardian/i);
+  } finally {
+    actingUser = previous;
+  }
+});
+
+test("a spectator-only guardian can still read and pay for their dependent", async (t) => {
+  if (!ready) return t.skip();
+  // The role registration actually hands out. Nothing in the payment
+  // path may require 'diver'.
+  const previous = actingUser;
+  actingUser = { ...previous, org_roles: ["spectator"] };
+  try {
+    const read = await api("GET", `/api/me/charges?subject_user_id=${minorUserId}`);
+    assert.equal(read.status, 200);
+
+    const fresh = (await pool.query(
+      `INSERT INTO entry_charges (org_id, event_id, entrant_user_id, kind, fee_definition_id, amount_cents, status)
+       VALUES ($1, $2, $3, 'no_show', $4, 800, 'owed') RETURNING id`,
+      [orgId, eventId, minorUserId, scratchFeeId],
+    )).rows[0].id;
+    const pay = await api("POST", `/api/entry-charges/${fresh}/checkout`, {});
+    assert.equal(pay.status, 200, "a spectator guardian must be able to pay");
+  } finally {
+    actingUser = previous;
+  }
+});
+
+// === Two bugs this change introduced, found in review, now closed ===
+
+test("guardian cannot resume a payment the dependent already started", async (t) => {
+  if (!ready) return t.skip();
+
+  const fineId = (await pool.query(
+    `INSERT INTO fines (org_id, liable_user_id, issued_by, event_id, amount_cents, currency, reason, status)
+     VALUES ($1, $2, $3, $4, 4200, 'GBP', 'Contested slot', 'owed') RETURNING id`,
+    [orgId, minorUserId, guardianUserId, eventId],
+  )).rows[0].id;
+
+  // The dependent starts their own checkout, then wanders off.
+  const previous = actingUser;
+  actingUser = { ...previous, id: minorUserId, org_roles: ["diver"] };
+  let minorPaymentId;
+  try {
+    const r = await api("POST", `/api/fines/${fineId}/checkout`, {});
+    assert.equal(r.status, 200);
+    minorPaymentId = (await r.json()).payment_id;
+  } finally {
+    actingUser = previous;
+  }
+  assert.equal(
+    (await pool.query("SELECT payer_user_id FROM payments WHERE id = $1", [minorPaymentId])).rows[0].payer_user_id,
+    minorUserId,
+  );
+
+  // The guardian now pays. They must NOT be handed the dependent's open
+  // Stripe session: the ledger would credit the dependent for money that
+  // came off the guardian's card.
+  const r2 = await api("POST", `/api/fines/${fineId}/checkout`, {});
+  assert.equal(r2.status, 200);
+  const guardianPaymentId = (await r2.json()).payment_id;
+  assert.notEqual(guardianPaymentId, minorPaymentId, "expected a fresh payment row, not a resume");
+
+  const fresh = (await pool.query(
+    "SELECT payer_user_id, liable_user_id, subject_user_id FROM payments WHERE id = $1",
+    [guardianPaymentId],
+  )).rows[0];
+  assert.equal(fresh.payer_user_id, guardianUserId);
+  assert.equal(fresh.liable_user_id, minorUserId);
+  assert.equal(fresh.subject_user_id, minorUserId);
+
+  // And the dependent's abandoned attempt was retired, not left live.
+  assert.equal(
+    (await pool.query("SELECT status FROM payments WHERE id = $1", [minorPaymentId])).rows[0].status,
+    "failed",
+  );
+});
+
+test("guardian authority does not follow a dependent across federations", async (t) => {
+  if (!ready) return t.skip();
+
+  const otherOrgId = (await pool.query(
+    "INSERT INTO organisations (name, slug, default_currency) VALUES ($1, $2, 'GBP') RETURNING id",
+    [`Other Fed ${suffix}`, `other-fed-${suffix}`],
+  )).rows[0].id;
+  const otherEventId = (await pool.query(
+    "INSERT INTO events (org_id, name, gender, number_of_judges) VALUES ($1, '3m', 'Male', 5) RETURNING id",
+    [otherOrgId],
+  )).rows[0].id;
+
+  // The dependent transferred out. routes/club-changes.js moves
+  // users.org_id and never touches the guardians row, so the approved
+  // link stays pinned to the guardian's federation.
+  const foreignFineId = (await pool.query(
+    `INSERT INTO fines (org_id, liable_user_id, issued_by, event_id, amount_cents, currency, reason, status)
+     VALUES ($1, $2, $2, $3, 700, 'GBP', 'Fined by the new federation', 'owed') RETURNING id`,
+    [otherOrgId, minorUserId, otherEventId],
+  )).rows[0].id;
+
+  try {
+    const read = await api("GET", `/api/me/fines?subject_user_id=${minorUserId}`);
+    assert.equal(read.status, 200);
+    const body = await read.json();
+    assert.ok(
+      !body.fines.some((f) => f.id === foreignFineId),
+      "a guardian must not see a dependent's fines from another federation",
+    );
+
+    const pay = await api("POST", `/api/fines/${foreignFineId}/checkout`, {});
+    assert.equal(pay.status, 403, "nor pay them");
+  } finally {
+    await pool.query("DELETE FROM payments WHERE org_id = $1", [otherOrgId]).catch(() => {});
+    await pool.query("DELETE FROM fines WHERE org_id = $1", [otherOrgId]).catch(() => {});
+    await pool.query("DELETE FROM events WHERE org_id = $1", [otherOrgId]).catch(() => {});
+    await pool.query("DELETE FROM organisations WHERE id = $1", [otherOrgId]).catch(() => {});
+  }
+});
+
+test("your own cross-federation fines stay visible after a transfer", async (t) => {
+  if (!ready) return t.skip();
+  // The org clamp applies only to a dependent's list. A diver who moves
+  // federations still owes the old one and must be able to settle up.
+  const oldOrgId = (await pool.query(
+    "INSERT INTO organisations (name, slug, default_currency) VALUES ($1, $2, 'GBP') RETURNING id",
+    [`Old Fed ${suffix}`, `old-fed-${suffix}`],
+  )).rows[0].id;
+  const oldFineId = (await pool.query(
+    `INSERT INTO fines (org_id, liable_user_id, issued_by, amount_cents, currency, reason, status)
+     VALUES ($1, $2, $2, 1100, 'GBP', 'Owed to my former federation', 'owed') RETURNING id`,
+    [oldOrgId, guardianUserId],
+  )).rows[0].id;
+  try {
+    const r = await api("GET", "/api/me/fines");
+    assert.equal(r.status, 200);
+    const body = await r.json();
+    assert.ok(body.fines.some((f) => f.id === oldFineId), "must still see my own old-federation fine");
+  } finally {
+    await pool.query("DELETE FROM fines WHERE org_id = $1", [oldOrgId]).catch(() => {});
+    await pool.query("DELETE FROM organisations WHERE id = $1", [oldOrgId]).catch(() => {});
+  }
+});
+
+// === Guardian links vs federation transfers ===
+
+test("my-dependents lists only dependents inside my own federation", async (t) => {
+  if (!ready) return t.skip();
+
+  const otherOrgId = (await pool.query(
+    "INSERT INTO organisations (name, slug, default_currency) VALUES ($1, $2, 'GBP') RETURNING id",
+    [`Foreign Fed ${suffix}`, `foreign-fed-${suffix}`],
+  )).rows[0].id;
+  const dob = new Date();
+  dob.setFullYear(dob.getFullYear() - 9);
+  const foreignMinor = (await pool.query(
+    "INSERT INTO users (username, full_name, org_id, date_of_birth) VALUES ($1, $2, $3, $4) RETURNING id",
+    [`foreign-minor-${suffix}`, "Foreign Minor", otherOrgId, dob.toISOString().slice(0, 10)],
+  )).rows[0].id;
+  // An approved link, but pinned to a federation the guardian has no
+  // standing in. Exactly the shape an old org transfer used to leave behind.
+  await pool.query(
+    `INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id, status, reviewed_at)
+     VALUES ($1, $2, $3, 'approved', now())`,
+    [otherOrgId, guardianUserId, foreignMinor],
+  );
+
+  try {
+    const r = await api("GET", "/api/guardians/my-dependents");
+    assert.equal(r.status, 200);
+    const rows = await r.json();
+    assert.ok(rows.some((d) => d.id === minorUserId), "my own federation's dependent is still listed");
+    assert.ok(
+      !rows.some((d) => d.id === foreignMinor),
+      "a dependent in another federation must not appear in the Paying for picker",
+    );
+  } finally {
+    await pool.query("DELETE FROM guardians WHERE org_id = $1", [otherOrgId]).catch(() => {});
+    await pool.query("DELETE FROM users WHERE org_id = $1", [otherOrgId]).catch(() => {});
+    await pool.query("DELETE FROM organisations WHERE id = $1", [otherOrgId]).catch(() => {});
+  }
+});
+
+test("an approved org transfer revokes the guardian links the mover leaves behind", async (t) => {
+  if (!ready) return t.skip();
+
+  // A second minor, linked to our guardian, in our own federation.
+  const dob = new Date();
+  dob.setFullYear(dob.getFullYear() - 11);
+  const mover = (await pool.query(
+    "INSERT INTO users (username, full_name, org_id, date_of_birth) VALUES ($1, $2, $3, $4) RETURNING id",
+    [`mover-${suffix}`, "Mover Minor", orgId, dob.toISOString().slice(0, 10)],
+  )).rows[0].id;
+  const linkId = (await pool.query(
+    `INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id, status, reviewed_at)
+     VALUES ($1, $2, $3, 'approved', now()) RETURNING id`,
+    [orgId, guardianUserId, mover],
+  )).rows[0].id;
+
+  const targetOrgId = (await pool.query(
+    "INSERT INTO organisations (name, slug, default_currency) VALUES ($1, $2, 'GBP') RETURNING id",
+    [`Target Fed ${suffix}`, `target-fed-${suffix}`],
+  )).rows[0].id;
+
+  const previous = actingUser;
+  try {
+    // The picker sees them before the move.
+    const before = await (await api("GET", "/api/guardians/my-dependents")).json();
+    assert.ok(before.some((d) => d.id === mover), "linked before the transfer");
+
+    // Diver opens the request themselves; that stamps diver_confirmed_at.
+    actingUser = { ...previous, id: mover, org_id: orgId, org_roles: ["diver"] };
+    const create = await api("POST", "/api/club-change-requests", { to_org_id: targetOrgId });
+    assert.equal(create.status, 201, JSON.stringify(await create.clone().json()));
+    const requestId = (await create.json()).id;
+
+    // Source federation releases them.
+    actingUser = { ...previous, id: guardianUserId, org_id: orgId, org_roles: ["org_admin"] };
+    const src = await api("POST", `/api/club-change-requests/${requestId}/review`, { decision: "approved" });
+    assert.equal(src.status, 200);
+
+    // Receiving federation accepts them; that completes the handshake.
+    actingUser = { ...previous, id: guardianUserId, org_id: targetOrgId, org_roles: ["org_admin"] };
+    const tgt = await api("POST", `/api/club-change-requests/${requestId}/review`, { decision: "approved" });
+    assert.equal(tgt.status, 200);
+    assert.equal((await tgt.json()).finalised, true, "the transfer should have finalised");
+
+    // The user really moved...
+    const moved = (await pool.query("SELECT org_id FROM users WHERE id = $1", [mover])).rows[0];
+    assert.equal(moved.org_id, targetOrgId);
+
+    // ...and the guardian link they left behind is closed, not stranded.
+    const link = (await pool.query("SELECT status FROM guardians WHERE id = $1", [linkId])).rows[0];
+    assert.equal(link.status, "revoked");
+
+    actingUser = previous;
+    const after = await (await api("GET", "/api/guardians/my-dependents")).json();
+    assert.ok(!after.some((d) => d.id === mover), "gone from the picker once the link is revoked");
+    assert.ok(after.some((d) => d.id === minorUserId), "the untouched dependent survives");
+
+    // And the guardian was told, rather than silently losing access.
+    const notes = await pool.query(
+      "SELECT title FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5",
+      [guardianUserId],
+    ).catch(() => ({ rows: [] }));
+    if (notes.rows.length) {
+      assert.ok(
+        notes.rows.some((n) => /guardian link was ended/i.test(n.title)),
+        "the guardian gets a notification",
+      );
+    }
+  } finally {
+    actingUser = previous;
+    await pool.query("DELETE FROM club_change_requests WHERE user_id = $1", [mover]).catch(() => {});
+    await pool.query("DELETE FROM guardians WHERE dependent_user_id = $1", [mover]).catch(() => {});
+    await pool.query("DELETE FROM user_org_roles WHERE user_id = $1", [mover]).catch(() => {});
+    await pool.query("DELETE FROM users WHERE id = $1", [mover]).catch(() => {});
+    await pool.query("DELETE FROM organisations WHERE id = $1", [targetOrgId]).catch(() => {});
+  }
 });
 
 // === Revoke ===

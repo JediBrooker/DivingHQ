@@ -144,7 +144,7 @@ onBeforeUnmount(() => observer?.disconnect())
     <section id="overview" class="guide-hero">
       <div class="guide-eyebrow">{{ $t('guide.title') }}</div>
       <h1 class="guide-title">{{ $t('guide.hero_welcome_prefix') }}
-        <span class="guide-title-brand">Diving<span>HQ</span></span>
+        <span class="guide-title-brand brand-wordmark">Diving<span>HQ</span></span>
       </h1>
       <p class="guide-lede">{{ $t('guide.hero_lede') }}</p>
     </section>

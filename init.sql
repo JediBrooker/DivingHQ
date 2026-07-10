@@ -413,7 +413,11 @@ CREATE TABLE public.events (
     -- constraint. Populated: an array of sections, each with
     -- {label, rounds, dd_limit (SUM), require_different_groups}.
     -- See migration 038 for the full shape.
+    -- Named to match migration 038. An unnamed inline CHECK gets an
+    -- auto-generated name, wich made 038's "add it if missing" guard
+    -- miss it and add a duplicate. See migration 084.
     round_rules      jsonb
+        CONSTRAINT events_round_rules_shape_check
         CHECK (round_rules IS NULL
                OR jsonb_typeof(round_rules->'sections') = 'array'),
     event_type       event_type DEFAULT 'individual' NOT NULL,
@@ -613,7 +617,10 @@ CREATE TABLE public.competitor_dive_lists (
     -- (groups carry forward from H2H). NULL for non-super-
     -- final events. The standings query uses this to compute
     -- intra-group rankings rather than a global field rank.
+    -- Named to match migration 043, same reason as
+    -- events_round_rules_shape_check above.
     group_number     integer
+        CONSTRAINT cdl_group_number_check
         CHECK (group_number IS NULL OR group_number BETWEEN 1 AND 4),
     -- Migration 041: when the diver explicitly confirmed (or
     -- re-submitted) the list. NULL = inherited from a parent

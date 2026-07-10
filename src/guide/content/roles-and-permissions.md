@@ -13,6 +13,10 @@ DivingHQ has eight role personas — seven `org_role` values plus a separate pla
 | Diver | Self | Competitor view | Submit lists, watch own results |
 | Spectator | Public | Scoreboard | Zero-friction live spectating |
 
+Role-awareness in practice: the org admin below gets a Federation section in the sidebar and a row of role filter tabs. A diver signing in to the same federation sees neither — their dashboard opens on their own next dive and results.
+
+![Org admin dashboard with role filter tabs, live and upcoming counts, and a "what needs your attention" list](/guide-screenshots/dashboard.png)
+
 The full breakdown is below — pick the section that matches you.
 
 ## System administrator
@@ -47,6 +51,10 @@ Top of the food chain inside one federation — the person whose name is on the 
 - Manage clubs and teams within the federation
 
 ### User Manager — per-user drawer
+
+Clicking any row in User Manager slides out this drawer. It's where roles are actually granted and revoked, so it's the screen to know if you administer a federation.
+
+![User Manager with a member's drawer open, showing their details, account lifecycle actions, and editable role pills](/guide-screenshots/user-manager-drawer.png)
 
 From **User Manager** (`/users`), an org admin can open any member's drawer and:
 

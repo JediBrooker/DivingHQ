@@ -1082,14 +1082,22 @@ module.exports = function createUsersRouter({
 
   router.get("/api/guardians/my-dependents", verifyToken, async (req, res) => {
     try {
+      // Scoped to the caller's own federation. A guardian link belongs to
+      // one org (guardians.org_id) and routes/payments.js won't act on a
+      // dependent outside it, so listing one the caller can do nothing for
+      // just parks a dead entry in their "Paying for" picker. An org
+      // transfer now revokes the link outright (routes/club-changes.js);
+      // this filter is the belt to that pair of braces.
       const rows = (await pool.query(
         `SELECT g.id AS guardian_link_id, g.status,
                 u.id, u.username, u.full_name, u.date_of_birth
            FROM guardians g
            JOIN users u ON u.id = g.dependent_user_id
-          WHERE g.guardian_user_id = $1 AND g.status = 'approved'
+          WHERE g.guardian_user_id = $1
+            AND g.org_id = $2
+            AND g.status = 'approved'
           ORDER BY u.full_name`,
-        [req.user.id],
+        [req.user.id, req.user.org_id],
       )).rows;
       res.json(rows);
     } catch (err) {

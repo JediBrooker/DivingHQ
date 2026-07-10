@@ -2,7 +2,7 @@
 
 The judge view (`/judge`) is the single-purpose, phone-friendly screen that scoring panel members use during a meet. The whole UI exists to do one thing: get a half-point score from the judge into the server as fast and as reliably as possible.
 
-![Judge view](/guide-screenshots/judge.png)
+![The judge terminal on a phone, showing the active diver and the score entry pad](/guide-screenshots/judge.png)
 
 ## Before the meet
 
@@ -118,6 +118,10 @@ The page is **public on purpose** — every score the rollups aggregate is alrea
   - **By Event** — pick any Completed event and see the per-judge ranking matrix (same as the scoreboard recap card) for that event. Deep-linkable via `?event=<id>`.
   - **By Judge** — browse the full judge directory with name, federation, and country filters; click **Open analysis →** on any row to reach that judge's `/judge-profile` page.
 - **Browse all judges directly**: `/judges` is a dedicated public directory with a search box, federation filter, country code filter, and a *Min scores* filter to hide judges without enough sample for the bias number to be meaningful.
+
+The hub on its By Event tab, showing the ranking matrix for one completed event:
+
+![The Judge Analysis hub, By Event tab, showing the per-judge ranking matrix for a completed event](/guide-screenshots/judge-analysis.png)
 
 ### Default widgets
 

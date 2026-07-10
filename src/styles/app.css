@@ -288,6 +288,21 @@ h1, h2, h3, h4 {
   color: var(--fg-2);
 }
 
+/* A brand name is not prose, so it must never mirror. Put this class on
+   anything rendering DIVING + <span>HQ</span>.
+   Half of those containers are `display: flex` (the little accent dash is
+   a ::before pseudo-item), and under <html dir="rtl"> a flex row lays its
+   items out right-to-left, so "DIVING" and "HQ" swapped and the logo read
+   HQDIVING in Arabic. Pinning the direction makes the flex main axis
+   resolve left-to-right again; unicode-bidi: isolate keeps the Latin run
+   from being reordered against the Arabic text around it. Harmless on the
+   non-flex marks, so it goes on all of them, and a new screen that adds a
+   wordmark gets the fix for free. */
+.brand-wordmark {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
 /* ── Layout ───────────────────────────────────────────────── */
 .container {
   max-width: 1400px;
