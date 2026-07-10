@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useFeaturesStore } from '@/stores/features'
 
 const routes = [
   {
@@ -59,7 +60,7 @@ const routes = [
   {
     path: '/payments',
     component: () => import('@/views/PaymentsAdminView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin'], appShell: true },
+    meta: { requiresAuth: true, requiresRole: ['org_admin'], appShell: true, feature: 'payments' },
   },
   {
     // Stripe Checkout sends every payer back here (?status=paid|canceled,
@@ -67,7 +68,7 @@ const routes = [
     // what happened.
     path: '/payments/return',
     component: () => import('@/views/PaymentReturnView.vue'),
-    meta: { requiresAuth: true, appShell: true },
+    meta: { requiresAuth: true, appShell: true, feature: 'payments' },
   },
   {
     // First-run setup wizard: guides a brand-new org admin through
@@ -90,29 +91,29 @@ const routes = [
     // dependent's membership is the whole reason they have an account.
     path: '/membership',
     component: () => import('@/views/MembershipView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['diver'], allowGuardian: true, appShell: true },
+    meta: { requiresAuth: true, requiresRole: ['diver'], allowGuardian: true, appShell: true, feature: 'payments' },
   },
   {
     path: '/guardians',
     component: () => import('@/views/GuardiansView.vue'),
-    meta: { requiresAuth: true, appShell: true },
+    meta: { requiresAuth: true, appShell: true, feature: 'payments' },
   },
   {
     path: '/accreditation',
     component: () => import('@/views/AccreditationView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['judge', 'referee', 'coach', 'meet_manager'], appShell: true },
+    meta: { requiresAuth: true, requiresRole: ['judge', 'referee', 'coach', 'meet_manager'], appShell: true, feature: 'payments' },
   },
   {
     // Broadened to all signed-in users: penalties are diver-only but
     // disciplinary fines can be issued against anyone.
     path: '/charges',
     component: () => import('@/views/ChargesView.vue'),
-    meta: { requiresAuth: true, appShell: true },
+    meta: { requiresAuth: true, appShell: true, feature: 'payments' },
   },
   {
     path: '/fines',
     component: () => import('@/views/FinesView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['referee', 'org_admin'], appShell: true },
+    meta: { requiresAuth: true, requiresRole: ['referee', 'org_admin'], appShell: true, feature: 'payments' },
   },
   {
     // Context-adaptive: club admins manage, coaches see rosters, divers
@@ -120,18 +121,18 @@ const routes = [
     // decides what to show for the signed-in user.
     path: '/classes',
     component: () => import('@/views/ClassesView.vue'),
-    meta: { requiresAuth: true, appShell: true },
+    meta: { requiresAuth: true, appShell: true, feature: 'classes' },
   },
   {
     path: '/donate',
     component: () => import('@/views/DonateView.vue'),
-    meta: { requiresAuth: true, appShell: true },
+    meta: { requiresAuth: true, appShell: true, feature: 'payments' },
   },
   {
     // Every signed-in user can see their own payment history + export it.
     path: '/payment-history',
     component: () => import('@/views/PaymentHistoryView.vue'),
-    meta: { requiresAuth: true, appShell: true },
+    meta: { requiresAuth: true, appShell: true, feature: 'payments' },
   },
   {
     path: '/coach',
@@ -291,6 +292,15 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['org_admin'], appShell: true },
   },
   {
+    // Platform kill switches. requiresSysadmin, not requiresRole: these
+    // flags are global, and hasRole() waves a system admin through any role
+    // check, so an org_admin-shaped gate would let every federation admin
+    // switch payments on for the whole box.
+    path: '/admin/features',
+    component: () => import('@/views/FeatureFlagsView.vue'),
+    meta: { requiresAuth: true, requiresSysadmin: true, appShell: true },
+  },
+  {
     // Notifications inbox: every push notification + in-app banner
     // sent to the signed-in user. Available to any authenticated user
     // (each row is scoped server-side).
@@ -371,6 +381,29 @@ router.beforeEach((to, from, next) => {
   // profile and so needs a session.
   if (to.meta.requiresAuthIfNoId && !isLoggedIn && !to.params.id) {
     return next(bounceToLogin(to))
+  }
+
+  // Feature kill switches (lib/features.js, migration 085). A route whose
+  // product area is switched off doesn't exist as far as the user is
+  // concerned, so bounce to the dashboard rather than render a screen whose
+  // every API call would 503.
+  //
+  // Checked BEFORE the role gate on purpose: "payments are off" is the true
+  // reason, and telling an org_admin they lack a role for /payments would
+  // send whoever debugs it next down entirely the wrong hole.
+  //
+  // The store is loaded before mount (src/main.js), and it defaults to all
+  // flags off, so the worst a race can do is bounce someone who then finds
+  // the link waiting for them on the next navigation.
+  if (to.meta.feature && !useFeaturesStore().enabled(to.meta.feature)) {
+    return next('/dashboard')
+  }
+
+  // Platform-operator screens. Separate from requiresRole because
+  // auth.hasRole() answers true to everything for a system admin, so there
+  // is no role name that means "system admin and nobody else".
+  if (to.meta.requiresSysadmin && isLoggedIn && !auth.user?.is_system_admin) {
+    return next('/dashboard')
   }
 
   // Require specific roles. Routes flagged allowGuardian also open up

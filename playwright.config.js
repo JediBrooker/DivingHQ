@@ -197,6 +197,12 @@ module.exports = defineConfig({
       // Public signups are OFF by default (coming-soon launch); the e2e
       // specs register orgs + divers as fixtures, so we open them here.
       SIGNUPS_ENABLED: "true",
+      // Payments + classes ship switched OFF (migration 085 seeds both false).
+      // guardian-payments.spec.js and the guide screenshots in
+      // wiki-screenshots.spec.js both drive those screens, so force them on
+      // for the suite. Without this the router bounces every payment/class
+      // route to /dashboard and both specs fail against an empty page.
+      FEATURE_FLAGS_ON: "payments,classes",
       // Local .env often points SMTP_HOST at smtp.example.com so
       // registration tests can exercise email-triggering paths.
       // For e2e, force the helper into documented dev no-op mode:

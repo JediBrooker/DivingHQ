@@ -25,11 +25,25 @@ const { retirePendingPayment, resumeOrRetireCheckout } = require("../lib/payment
 const APP_BASE_URL =
   process.env.APP_BASE_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
 
-module.exports = function createClassesRouter({ pool, verifyToken, requireClubAdminOnly, logger, payments, email = null }) {
+module.exports = function createClassesRouter({ pool, verifyToken, requireClubAdminOnly, logger, payments, email = null, features = null }) {
   if (!pool) throw new Error("createClassesRouter requires { pool, … }");
   const router = express.Router();
 
   const log = logger || { error: () => {}, warn: () => {} };
+
+  // The 'classes' kill switch (lib/features.js, migration 085). It fronts
+  // every class endpoint below, but deliberately NOT the club payout block
+  // near the middle of this file. Those are payments-domain routes that only
+  // live here because the Classes page is where a club admin reaches them.
+  // Gating them on 'classes' would mean a club couldn't collect its money
+  // unless classes happened to be switched on too, and that's a coupling
+  // nobody asked for.
+  //
+  // Falls back to a pass-through when no features service is handed in, which
+  // is how the integration suite builds this router.
+  const classesOn = features
+    ? features.requireFeature("classes")
+    : (req, res, next) => next();
 
   function ensurePayments(res) {
     if (!payments || !payments.enabled) {
@@ -147,7 +161,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   // ================================================================
 
   // List the club's classes, with live enrolment count + active price options.
-  router.get("/api/clubs/:id/classes", requireClubAdminOnly(), async (req, res) => {
+  router.get("/api/clubs/:id/classes", classesOn, requireClubAdminOnly(), async (req, res) => {
     try {
       const r = await pool.query(
         `SELECT c.id, c.name, c.description, c.level, c.schedule, c.capacity,
@@ -169,7 +183,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
 
   // Club's own members, for the "add diver to class" picker. Credential-safe
   // projection (id + name only, no username), mirrors GET /api/orgs/:id/members.
-  router.get("/api/clubs/:id/members", requireClubAdminOnly(), async (req, res) => {
+  router.get("/api/clubs/:id/members", classesOn, requireClubAdminOnly(), async (req, res) => {
     try {
       const r = await pool.query(
         `SELECT id, full_name FROM users
@@ -185,7 +199,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // Create a class (+ optional initial price options).
-  router.post("/api/clubs/:id/classes", requireClubAdminOnly(), async (req, res) => {
+  router.post("/api/clubs/:id/classes", classesOn, requireClubAdminOnly(), async (req, res) => {
     const body = req.body || {};
     const name = cleanName(body.name, 120);
     if (!name) return res.status(400).json({ error: "A class name is required." });
@@ -246,7 +260,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // Update a class's core fields.
-  router.put("/api/clubs/:id/classes/:classId", requireClubAdminOnly(), async (req, res) => {
+  router.put("/api/clubs/:id/classes/:classId", classesOn, requireClubAdminOnly(), async (req, res) => {
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
@@ -281,7 +295,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // Delete a class (cascades price options + enrolments).
-  router.delete("/api/clubs/:id/classes/:classId", requireClubAdminOnly(), async (req, res) => {
+  router.delete("/api/clubs/:id/classes/:classId", classesOn, requireClubAdminOnly(), async (req, res) => {
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
@@ -332,7 +346,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // ---- price options ---------------------------------------------
-  router.post("/api/clubs/:id/classes/:classId/prices", requireClubAdminOnly(), async (req, res) => {
+  router.post("/api/clubs/:id/classes/:classId/prices", classesOn, requireClubAdminOnly(), async (req, res) => {
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
@@ -352,7 +366,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
     }
   });
 
-  router.put("/api/clubs/:id/classes/:classId/prices/:priceId", requireClubAdminOnly(), async (req, res) => {
+  router.put("/api/clubs/:id/classes/:classId/prices/:priceId", classesOn, requireClubAdminOnly(), async (req, res) => {
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
@@ -376,7 +390,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // Deactivate a price option (kept for enrolment history; amount snapshots survive).
-  router.delete("/api/clubs/:id/classes/:classId/prices/:priceId", requireClubAdminOnly(), async (req, res) => {
+  router.delete("/api/clubs/:id/classes/:classId/prices/:priceId", classesOn, requireClubAdminOnly(), async (req, res) => {
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
@@ -393,7 +407,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // ---- roster + enrolment management -----------------------------
-  router.get("/api/clubs/:id/classes/:classId/roster", requireClubAdminOnly(), async (req, res) => {
+  router.get("/api/clubs/:id/classes/:classId/roster", classesOn, requireClubAdminOnly(), async (req, res) => {
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
@@ -419,7 +433,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // Club admin adds a diver to a class.
-  router.post("/api/clubs/:id/classes/:classId/enrolments", requireClubAdminOnly(), async (req, res) => {
+  router.post("/api/clubs/:id/classes/:classId/enrolments", classesOn, requireClubAdminOnly(), async (req, res) => {
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
@@ -491,7 +505,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   }
 
   // Club admin updates an enrolment (status / discount / price option).
-  router.put("/api/clubs/:id/classes/:classId/enrolments/:enrolId", requireClubAdminOnly(), async (req, res) => {
+  router.put("/api/clubs/:id/classes/:classId/enrolments/:enrolId", classesOn, requireClubAdminOnly(), async (req, res) => {
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
@@ -574,7 +588,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // Club admin removes an enrolment (cancels it; frees the slot for re-enrolment).
-  router.delete("/api/clubs/:id/classes/:classId/enrolments/:enrolId", requireClubAdminOnly(), async (req, res) => {
+  router.delete("/api/clubs/:id/classes/:classId/enrolments/:enrolId", classesOn, requireClubAdminOnly(), async (req, res) => {
     try {
       const cls = await loadClass(req.club.id, req.params.classId);
       if (!cls) return res.status(404).json({ error: "Class not found" });
@@ -787,7 +801,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   // ================================================================
   // COACH: read-only view of who's in the club's classes
   // ================================================================
-  router.get("/api/coach/classes", verifyToken, async (req, res) => {
+  router.get("/api/coach/classes", classesOn, verifyToken, async (req, res) => {
     try {
       const roles = req.user.org_roles || [];
       if (!roles.includes("coach") && !req.user.is_system_admin) {
@@ -824,7 +838,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   // ================================================================
   // DIVER: own enrolments + browse/self-enrol into own club's classes
   // ================================================================
-  router.get("/api/me/classes", verifyToken, async (req, res) => {
+  router.get("/api/me/classes", classesOn, verifyToken, async (req, res) => {
     try {
       const r = await pool.query(
         `SELECT e.id, e.status, e.amount_cents, e.discount_cents, e.currency, e.enrolled_at,
@@ -846,7 +860,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   });
 
   // Active classes in the diver's OWN club, for self-enrolment. No roster.
-  router.get("/api/me/available-classes", verifyToken, async (req, res) => {
+  router.get("/api/me/available-classes", classesOn, verifyToken, async (req, res) => {
     try {
       const me = (await pool.query("SELECT club_id FROM users WHERE id = $1", [req.user.id])).rows[0];
       const clubId = me && me.club_id;
@@ -874,7 +888,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   // 'pending' (the diver then pays via checkout); free classes go straight
   // to 'active'. The capacity check and the insert run in ONE transaction
   // under a class row lock, so two divers can't race into the last spot.
-  router.post("/api/me/classes/:classId/enrol", verifyToken, async (req, res) => {
+  router.post("/api/me/classes/:classId/enrol", classesOn, verifyToken, async (req, res) => {
     const client = await pool.connect();
     try {
       const me = (await pool.query("SELECT club_id, org_id FROM users WHERE id = $1", [req.user.id])).rows[0];
@@ -941,7 +955,7 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
   // discount fully covers the price, there's nothing to charge, so activate
   // directly rather than open a $0 Stripe session. The club (not the
   // federation) is the payment's recipient.
-  router.post("/api/me/class-enrolments/:enrolId/checkout", verifyToken, async (req, res) => {
+  router.post("/api/me/class-enrolments/:enrolId/checkout", classesOn, verifyToken, async (req, res) => {
     if (!ensurePayments(res)) return;
     try {
       const enr = (await pool.query(

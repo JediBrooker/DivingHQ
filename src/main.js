@@ -6,6 +6,7 @@ import i18n, { initI18n } from './i18n'
 import { tipDirective } from './directives/tip'
 import { useUiStore } from './stores/ui'
 import { useAuthStore } from './stores/auth'
+import { useFeaturesStore } from './stores/features'
 // Global styles. Imported here (not via <link> in index.html) so Vite
 // content-hashes the output filename. Any edit to app.css produces a
 // new hashed URL, so browser + service-worker caches stay transparent
@@ -38,8 +39,16 @@ app.directive('tip', tipDirective)
 //                storage, so without this probe the router guard would
 //                treat a logged-in user's deep link as anonymous and
 //                bounce them to /login on every reload.
-// Both are best-effort and never reject, so a failure can't block boot.
-Promise.all([initI18n(), useAuthStore().fetchMe()]).finally(() => app.mount('#app'))
+//   * features:  which product areas this deployment has switched on.
+//                Must land BEFORE the first navigation, or the guard on
+//                /payments and /classes would wave through a deep link
+//                to a screen we've turned off.
+// All three are best-effort and never reject, so a failure can't block boot.
+Promise.all([
+  initI18n(),
+  useAuthStore().fetchMe(),
+  useFeaturesStore().load(),
+]).finally(() => app.mount('#app'))
 
 // Register the service worker only in production builds, FYI the Vite
 // dev server's HMR conflicts with cached assets otherwise. Skips
