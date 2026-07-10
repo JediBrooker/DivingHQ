@@ -103,7 +103,17 @@ test("an offline refresh keeps the operator signed in, and the queued advance la
   const { event } = await liveMeetReadyToAdvance(request, page, baseURL, "ObxA");
 
   await advanceOffline(page);
-  expect(await serverActiveDiver(event.id)).toBeNull();
+  // Precondition, not the point of the test: the advance is still sat in IDB.
+  // Don't assert the server has NO live state. The Control Room announces
+  // roster[0] itself if the server hasn't named a diver within 1500ms of
+  // mount, and on a loaded runner that timer fires before we go offline,
+  // leaving "AAA Diver" on the server. That's correct behaviour, and a
+  // toBeNull() here would fail on it for reasons having nothing to do with
+  // the outbox.
+  expect(
+    await serverActiveDiver(event.id),
+    "the offline advance must not reach the server before the network returns",
+  ).not.toBe("ZZZ Diver");
 
   // The refresh that used to end the operator's afternoon.
   await page.reload().catch(() => {});
