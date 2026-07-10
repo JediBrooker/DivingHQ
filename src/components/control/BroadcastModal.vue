@@ -22,6 +22,8 @@ import { RouterLink } from 'vue-router'
 import { useBroadcastChooser } from '@/composables/useBroadcastChooser'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import BaseModal from '@/components/BaseModal.vue'
+import OverlayPartsPicker from '@/components/control/OverlayPartsPicker.vue'
+import { buildOverlayUrl } from '@/lib/overlayParts'
 import ModalHeader from '@/components/control/ModalHeader.vue'
 
 const props = defineProps({
@@ -50,11 +52,20 @@ const {
 
 // OBS/streaming-app instructions panel, option 4 in the
 // broadcast chooser. The chroma-key overlay URL is the existing
-// `/scoreboard/<id>?overlay=1` endpoint, we just surface it here
+// `/scoreboard/<id>?overlay=…` endpoint, we just surface it here
 // as an absolute URL the operator can paste straight into OBS
 // Studio's Browser Source dialog. `obsCopyState` drives the
 // transient "Copied!" feedback on the copy button.
 const obsCopyState = ref('idle') // 'idle' | 'copied' | 'failed'
+
+// The shape the operator is composing. Starts on the full board, which is the
+// URL this panel has always produced, so anyone who ignores the picker gets
+// exactly what they got before. Nothing here is persisted: a Browser Source
+// runs on a different machine with no session, so the URL is the only thing
+// that travels.
+const overlayPreset = ref('1')
+const overlayParts = ref([])
+
 const obsOverlayUrl = computed(() => {
   const id = props.event?.id
   if (!id) return ''
@@ -63,8 +74,20 @@ const obsOverlayUrl = computed(() => {
   const origin = typeof window !== 'undefined' && window.location
     ? window.location.origin
     : ''
-  return `${origin}/scoreboard/${id}?overlay=1`
+  return buildOverlayUrl({
+    origin,
+    eventId: id,
+    preset: overlayPreset.value,
+    parts: overlayParts.value,
+  })
 })
+
+// An empty custom selection would hand OBS a frame with nothing on it. The
+// overlay falls back rather than going black, but an operator should not have
+// to find that out from a Browser Source in the middle of a meet.
+const obsUrlUsable = computed(
+  () => overlayPreset.value !== 'custom' || overlayParts.value.length > 0,
+)
 async function copyObsUrl() {
   const url = obsOverlayUrl.value
   if (!url) return
@@ -305,6 +328,14 @@ defineExpose({ open })
           {{ $t('control.modals.obs_lead_html_suffix') }}
         </p>
 
+        <!-- Pick the shape first, then copy the URL it produced. The picker
+             writes straight into the URL below, so what you see in the
+             wireframe is what the Browser Source renders. -->
+        <OverlayPartsPicker
+          v-model:preset="overlayPreset"
+          v-model:parts="overlayParts"
+        />
+
         <div class="obs-url-block">
           <label class="obs-url-label">{{ $t('control.modals.obs_overlay_url_label_prefix') }}
             <strong>{{ event?.name || $t('control.modals.obs_overlay_event_fallback') }}</strong></label>
@@ -316,6 +347,7 @@ defineExpose({ open })
                    @focus="$event.target.select()">
             <button class="btn btn-primary btn-sm obs-url-copy"
                     type="button"
+                    :disabled="!obsUrlUsable"
                     @click="copyObsUrl">
               <template v-if="obsCopyState === 'copied'">{{ $t('control.modals.obs_copied') }}</template>
               <template v-else-if="obsCopyState === 'failed'">{{ $t('control.modals.obs_copy_failed') }}</template>
@@ -383,9 +415,9 @@ defineExpose({ open })
           <button class="btn btn-ghost" type="button"
                   @click="obsInstructionsOpen = false">{{ $t('control.modals.back') }}</button>
           <a class="btn btn-primary" target="_blank" rel="noopener"
-             :href="obsOverlayUrl || '#'"
-             :class="{ disabled: !obsOverlayUrl }"
-             @click="!obsOverlayUrl && $event.preventDefault()">
+             :href="obsUrlUsable && obsOverlayUrl ? obsOverlayUrl : '#'"
+             :class="{ disabled: !obsUrlUsable || !obsOverlayUrl }"
+             @click="(!obsUrlUsable || !obsOverlayUrl) && $event.preventDefault()">
             {{ $t('control.modals.obs_preview_btn') }}
           </a>
         </div>

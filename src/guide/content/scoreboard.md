@@ -152,41 +152,68 @@ The scoreboard ships with a built-in **chroma-key overlay** view designed to dro
 
 ### What the overlay looks like
 
-There are two shapes, chosen by the query flag. Both strip every piece of page chrome — no header, footer, filter bar, or export controls — and both float on a vivid solid-colour background (default `#00ff44`, OBS standard green) for chroma keying.
+Every shape strips the page chrome — no header, footer, filter bar, or export controls — and floats on a vivid solid-colour background (default `#00ff44`, OBS standard green) for chroma keying. What differs is how much of the board is on screen.
 
-**`?overlay=1` — the full board.** Everything the audience scoreboard shows, minus the chrome:
-
-- Active diver block (name · country · dive code · DD) with live judge tiles as scores stream in
-- Standings, completed dives, the catch-up projection, and the Up Next queue
+**`?overlay=1` — the full board.** Everything the audience scoreboard shows, minus the chrome: the active diver block (name · country · dive code · DD) with live judge tiles as scores stream in, plus standings, completed dives, the catch-up projection and the Up Next queue.
 
 ![The full stream overlay: the three-column board with its page chrome stripped, floating on a solid chroma-key green background](/guide-screenshots/stream-overlay-chroma.png)
 
 Crop the Browser Source in your broadcast tool to whichever columns you want on air — most productions key the centre column only.
 
-**`?overlay=minimal` — the cut-down board.** For productions that want the graphics to sit over live camera footage rather than fill the frame:
-
-- Active diver block and the top 3 of the standings, and nothing else
-- Completed dives, the catch-up projection and the Up Next queue are all hidden
-- Each tile gets a dark plate and a text shadow, so the white text stays readable whatever `?bg=` colour you key against
+**`?overlay=minimal` — the cut-down board.** The active diver and the top 3 of the standings, on dark plates so white text stays readable against any `?bg=` colour. Completed dives, the catch-up projection and the Up Next queue are hidden. Nothing to crop away.
 
 ![The minimal stream overlay: just the active diver block and the top three standings, on dark plates against chroma-key green](/guide-screenshots/stream-overlay-minimal.png)
 
-The two tiles sit at the top of the frame with the rest keyed out, so position them in your broadcast tool the same way you would any other Browser Source. Unlike the full board, there is nothing to crop away.
+**`?overlay=judges` — the judges' scores alone.** One tile, five chips, filling in as the panel votes. Sized to drop under a camera shot of the board.
+
+![The judges-only stream overlay: a single dark tile holding five judge score chips, on chroma-key green](/guide-screenshots/stream-overlay-judges.png)
+
+**`?overlay=diver`** gives the round, the name and the dive, without the scores. **`?overlay=detailed`** is the full board on dark plates, for when the graphics sit over footage rather than fill the frame.
+
+### Building your own shape
+
+If none of the presets fit, `?overlay=custom&parts=…` takes a comma-separated list of blocks. The ten you can pick from:
+
+| Key | Block |
+| --- | --- |
+| `round` | Round pill (Round 2 / 6) |
+| `diver` | Current diver: name, country, club |
+| `dive` | Dive code and DD |
+| `judges` | Judge score chips |
+| `total` | Dive total |
+| `rank` | Current rank |
+| `catchup` | Catch-up projection |
+| `upnext` | Up Next queue |
+| `standings` | Standings column |
+| `history` | Completed dives column |
+
+So `?overlay=custom&parts=diver,judges` is a name and its scores, and nothing else. Unknown keys are ignored; if nothing usable survives, the overlay falls back to the diver and the judges rather than handing your Browser Source an empty frame.
+
+You do not have to remember any of this. The Control Room's Broadcast panel has a picker that draws the board as a wireframe, lets you click blocks on and off, and writes the URL for you.
+
+![The overlay picker in the Broadcast panel: preset buttons, a clickable wireframe of the scoreboard, and a checkbox list, all writing into the overlay URL below](/guide-screenshots/broadcast-overlay-picker.png)
+
+### Running several at once
+
+Overlays are read-only, anonymous pages. Nothing stops you pointing as many Browser Sources at the same meet as you like, each with its own shape and its own chroma colour — the full board on the venue screen, the judges alone as a lower-third on the stream, the current diver on a third display. Scores land in all of them at the same moment, because each one holds its own live connection.
 
 ### Chroma colour
 
-The chroma colour is configurable via `?bg=<6-digit-hex>` — useful when stage lighting throws green spill onto the broadcast. Common alternatives: `?bg=ff00ff` (magenta), `?bg=0000ff` (blue). It works with either overlay shape.
+The chroma colour is configurable via `?bg=<6-digit-hex>` — useful when stage lighting throws green spill onto the broadcast. Common alternatives: `?bg=ff00ff` (magenta), `?bg=0000ff` (blue). It works with every overlay shape.
 
 ### URL shape
 
 ```
 /scoreboard/<event-id>?overlay=1
-/scoreboard/<event-id>?overlay=1&bg=ff00ff
 /scoreboard/<event-id>?overlay=minimal
-/scoreboard/<event-id>?overlay=minimal&bg=ff00ff
+/scoreboard/<event-id>?overlay=detailed
+/scoreboard/<event-id>?overlay=diver
+/scoreboard/<event-id>?overlay=judges
+/scoreboard/<event-id>?overlay=custom&parts=diver,judges
+/scoreboard/<event-id>?overlay=judges&bg=ff00ff
 ```
 
-Same anonymous-friendly endpoint as the public scoreboard, just with the `overlay` query flag flipping the page into chroma-key mode.
+Same anonymous-friendly endpoint as the public scoreboard, just with the `overlay` query flag flipping the page into chroma-key mode. `?overlay=1` and `?overlay=minimal` have not changed and never will, so a URL already saved in an OBS scene keeps doing exactly what it did.
 
 ### Getting the URL from the Control Room
 

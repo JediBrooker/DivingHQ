@@ -15,6 +15,7 @@ import {
 import { diveDescription } from '@/composables/useDiveLabel'
 import { cachedFetch, idbInvalidate } from '@/lib/idbCache'
 import { SCOREBOARD_LIVE_TTL_MS, SCOREBOARD_ARCHIVE_TTL_MS } from '@/lib/cache-policy'
+import { resolveOverlay, overlayClasses } from '@/lib/overlayParts'
 import { fmtDate, ordinal, rankClass } from '@/lib/format'
 import DiverIdentity from '@/components/DiverIdentity.vue'
 import ScoreHistoryButton from '@/components/ScoreHistoryButton.vue'
@@ -42,17 +43,12 @@ const broadcastMode = computed(() => route.params.mode === 'broadcast')
 // vivid green (#00ff44) OBS expects, and an operator whose lighting throws
 // green spill can pass e.g. ?bg=ff00ff.
 //
-// Two shapes, because productions genuinely want different things:
-//   ?overlay=1        the whole board on chroma. Composite it wholesale, or
-//                     crop the Browser Source down to one column.
-//   ?overlay=minimal  a cut-down board: the current diver and a top-3, on
-//                     dark plates. Everything else is gone.
-//
-// The 1/true spelling is what has always shipped, so it keeps its meaning.
-const overlayMinimal = computed(() => route.query.overlay === 'minimal')
-const overlayMode = computed(
-  () => route.query.overlay === '1' || route.query.overlay === 'true' || overlayMinimal.value,
-)
+// Which shape we render is resolveOverlay's call, not ours, and App.vue asks
+// the same function whether to draw the app chrome. When the two of them
+// each kept their own list of magic strings they drifted, and the operator
+// found out live: sidebar over the chroma key, or no chroma key at all.
+const overlay     = computed(() => resolveOverlay(route.query))
+const overlayMode = computed(() => overlay.value.active)
 const overlayBg   = computed(() => {
   const raw = String(route.query.bg || '').replace(/^#/, '').trim()
   return /^[0-9a-fA-F]{6}$/.test(raw) ? `#${raw}` : '#00ff44'
@@ -1036,7 +1032,7 @@ onMounted(async () => {
 
 <template>
   <div class="sb-layout"
-       :class="{ 'broadcast-mode': broadcastMode, 'overlay-mode': overlayMode, 'overlay-minimal': overlayMinimal }"
+       :class="{ 'broadcast-mode': broadcastMode, ...overlayClasses(overlay) }"
        :style="overlayMode ? { background: overlayBg } : null">
     <!-- Floating exit button when in broadcast mode: small,
          positioned in the corner, nearly invisible until hover. Lets
