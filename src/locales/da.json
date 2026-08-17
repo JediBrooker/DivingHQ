@@ -730,6 +730,7 @@
       "role_decision": "Rolle",
       "role_request": "Anmodning om rolle",
       "org_pending": "Forbund",
+      "org_decision": "Forbund",
       "event_started": "Begivenhed",
       "event_live": "Begivenhed i gang",
       "event_results_posted": "Resultater",

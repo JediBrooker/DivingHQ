@@ -730,6 +730,7 @@
       "role_decision": "Rolle",
       "role_request": "Rollenanfrage",
       "org_pending": "Föderation",
+      "org_decision": "Föderation",
       "event_started": "Wettkampf",
       "event_live": "Wettkampf live",
       "event_results_posted": "Ergebnisse",

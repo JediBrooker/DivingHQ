@@ -719,6 +719,7 @@
       "role_decision": "역할",
       "role_request": "역할 요청",
       "org_pending": "연맹",
+      "org_decision": "연맹",
       "event_started": "행사",
       "event_live": "행사 진행 중",
       "event_results_posted": "결과",

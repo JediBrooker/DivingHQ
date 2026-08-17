@@ -176,6 +176,7 @@ const CATEGORY_LABEL_KEYS = {
   role_decision:               'role_decision',
   role_request:                'role_request',
   org_pending:                 'org_pending',
+  org_decision:                'org_decision',
   event_started:               'event_started',
   event_live:                  'event_live',
   event_results_posted:        'event_results_posted',
@@ -427,8 +428,10 @@ onMounted(load)
 .inbox-row-bar[data-cat="signoff_request"]      { background: var(--amber); }
 .inbox-row-bar[data-cat="referee_signoff"]      { background: var(--amber); }
 .inbox-row-bar[data-cat="role_decision"]        { background: var(--green); }
+.inbox-row-bar[data-cat="org_decision"]         { background: var(--green); }
 .inbox-row-bar[data-cat="international_invite"] { background: #67e8f9; }
 .inbox-row-bar[data-cat="role_request"]         { background: #a78bfa; }
+.inbox-row-bar[data-cat="org_pending"]          { background: var(--amber); }
 .inbox-row-bar[data-cat="event_started"]        { background: var(--red); }
 .inbox-row-bar[data-cat="event_live"]           { background: var(--red); }
 .inbox-row-bar[data-cat="event_results_posted"] { background: var(--green); }

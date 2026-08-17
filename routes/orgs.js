@@ -3,6 +3,8 @@
 //   GET    /api/orgs                    every org (sysadmin only)
 //   GET    /api/orgs/active             public list for register-form
 //   PUT    /api/orgs/:id/status         sysadmin approves / suspends
+//                                       (emails + notifies the org's
+//                                       own admin(s) of the decision)
 //   GET    /api/orgs/:id/divers         per-org diver list (in-org auth)
 //   GET    /api/orgs/:id/clubs          public club list for register form
 //   GET    /api/clubs                   admin clubs grid (member counts)
@@ -18,9 +20,11 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 
 module.exports = function createOrgsRouter({
   pool,
+  push,
   verifyToken,
   requireSystemAdmin,
   requireMeetEditor,
+  sendOrgDecisionEmail,
 }) {
   if (!pool) throw new Error("createOrgsRouter requires { pool, … }");
   const router = express.Router();
@@ -83,6 +87,47 @@ module.exports = function createOrgsRouter({
           action:      "org.status_changed",
           metadata: { from: previousStatus, to: status },
         });
+
+        // Tell the org's own admin(s) the outcome — mirrors how
+        // role-request decisions already email the requester.
+        // Only 'active'/'suspended' are decisions a founding admin
+        // is waiting on; a status flip to anything else (there
+        // isn't one today, but the enum could grow) has nothing
+        // sensible to say here.
+        if (status === "active" || status === "suspended") {
+          if (typeof sendOrgDecisionEmail === "function") {
+            sendOrgDecisionEmail(r.rows[0].id, status).catch(() => {});
+          }
+          if (push && typeof push.sendNotification === "function") {
+            (async () => {
+              try {
+                const admins = await pool.query(
+                  `SELECT DISTINCT u.id
+                     FROM user_org_roles ur
+                     JOIN users u ON u.id = ur.user_id
+                    WHERE ur.org_id = $1 AND ur.role = 'org_admin'`,
+                  [r.rows[0].id],
+                );
+                const adminIds = admins.rows.map((row) => row.id);
+                if (adminIds.length) {
+                  await push.sendNotification(adminIds, {
+                    category: "org_decision",
+                    title: status === "active"
+                      ? `${r.rows[0].name} has been approved`
+                      : `${r.rows[0].name} has been suspended`,
+                    body: status === "active"
+                      ? "A system admin approved your federation. You can start setting up meets."
+                      : "A system admin suspended your federation's access.",
+                    data:       { org_id: r.rows[0].id, org_name: r.rows[0].name, status },
+                    action_url: "/dashboard",
+                  });
+                }
+              } catch (notifErr) {
+                console.error("[Org Decision Notification Skipped]", notifErr.message);
+              }
+            })();
+          }
+        }
       }
 
       res.json(r.rows[0]);
