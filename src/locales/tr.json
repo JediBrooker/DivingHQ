@@ -718,6 +718,7 @@
       "signoff_request": "Onay",
       "role_decision": "Rol",
       "role_request": "Rol talebi",
+      "org_pending": "Federasyon",
       "event_started": "Etkinlik",
       "event_live": "Etkinlik canlı",
       "event_results_posted": "Sonuçlar",

@@ -729,6 +729,7 @@
       "signoff_request": "Подтверждение",
       "role_decision": "Роль",
       "role_request": "Запрос роли",
+      "org_pending": "Федерация",
       "event_started": "Событие",
       "event_live": "Событие в прямом эфире",
       "event_results_posted": "Результаты",

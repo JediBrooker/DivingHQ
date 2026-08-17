@@ -729,6 +729,7 @@
       "signoff_request": "Godkjenning",
       "role_decision": "Rolle",
       "role_request": "Rolleforespørsel",
+      "org_pending": "Forbund",
       "event_started": "Arrangement",
       "event_live": "Arrangement direkte",
       "event_results_posted": "Resultater",

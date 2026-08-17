@@ -729,6 +729,7 @@
       "signoff_request": "Confirmação",
       "role_decision": "Função",
       "role_request": "Pedido de função",
+      "org_pending": "Federação",
       "event_started": "Evento",
       "event_live": "Evento ao vivo",
       "event_results_posted": "Resultados",
