@@ -718,6 +718,7 @@
       "signoff_request": "承認",
       "role_decision": "役割",
       "role_request": "役割の依頼",
+      "org_pending": "連盟",
       "event_started": "イベント",
       "event_live": "イベント開催中です",
       "event_results_posted": "結果",

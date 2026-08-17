@@ -464,6 +464,7 @@ const {
   sendEmailChangedNotice,
   sendWelcomeEmail,
   sendNewRoleRequestEmail,
+  sendNewOrgRequestEmail,
   sendEventStartedEmails,
   sendEventResultsEmails,
 } = email;
@@ -646,6 +647,7 @@ app.use(
   require("./routes/auth")({
     pool,
     io,
+    push,
     features,
     authLimiter,
     verifyToken,
@@ -655,6 +657,7 @@ app.use(
     sendWelcomeEmail,
     sendVerifyEmailEmail,
     sendNewRoleRequestEmail,
+    sendNewOrgRequestEmail,
     sendPasswordChangedEmail,
     sendPasswordResetEmail,
     sendEmailChangeVerify,

@@ -729,6 +729,7 @@
       "signoff_request": "Jóváhagyás",
       "role_decision": "Szerep",
       "role_request": "Szerepkérelem",
+      "org_pending": "Szövetség",
       "event_started": "Esemény",
       "event_live": "Esemény élőben",
       "event_results_posted": "Eredmények",

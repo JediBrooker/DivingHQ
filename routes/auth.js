@@ -108,6 +108,7 @@ async function loadHasDependents(pool, userId) {
 module.exports = function createAuthRouter({
   pool,
   io,
+  push,
   features,
   authLimiter,
   verifyToken,
@@ -117,6 +118,7 @@ module.exports = function createAuthRouter({
   sendWelcomeEmail,
   sendVerifyEmailEmail,
   sendNewRoleRequestEmail,
+  sendNewOrgRequestEmail,
   sendPasswordChangedEmail,
   sendPasswordResetEmail,
   sendEmailChangeVerify,
@@ -887,6 +889,34 @@ module.exports = function createAuthRouter({
       );
       if (typeof sendVerifyEmailEmail === "function") {
         sendVerifyEmailEmail(userId, verifyToken, { req }).catch(() => {});
+      }
+      // Sysadmins otherwise have no signal that a new org is
+      // sitting in the pending queue other than polling the
+      // dashboard. Without this, an org can sit unapproved
+      // indefinitely with nobody aware it's waiting.
+      if (typeof sendNewOrgRequestEmail === "function") {
+        sendNewOrgRequestEmail(cleanOrgName).catch(() => {});
+      }
+      if (push && typeof push.sendNotification === "function") {
+        (async () => {
+          try {
+            const admins = await pool.query(
+              "SELECT id FROM users WHERE is_system_admin = true",
+            );
+            const adminIds = admins.rows.map((r) => r.id);
+            if (adminIds.length) {
+              await push.sendNotification(adminIds, {
+                category:   "org_pending",
+                title:      `${cleanOrgName} is awaiting approval`,
+                body:       "A new federation registered and needs a system admin to review it.",
+                data:       { org_id: orgId, org_name: cleanOrgName },
+                action_url: "/users",
+              });
+            }
+          } catch (notifErr) {
+            console.error("[Org Pending Notification Skipped]", notifErr.message);
+          }
+        })();
       }
 
       res
