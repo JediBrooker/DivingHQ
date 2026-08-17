@@ -719,6 +719,7 @@
       "role_decision": "角色",
       "role_request": "角色申请",
       "org_pending": "协会",
+      "org_decision": "协会",
       "event_started": "赛事",
       "event_live": "赛事进行中",
       "event_results_posted": "成绩",

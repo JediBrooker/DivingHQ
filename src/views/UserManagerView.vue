@@ -543,6 +543,14 @@ async function loadPendingOrgs() {
   } catch { pendingOrgs.value = [] }
 }
 
+// /api/orgs doesn't carry a contact — cross-reference allUsers
+// (already loaded, sysadmin sees every org) for the founding
+// org_admin so a sysadmin reviewing the pending card has someone
+// to email without hunting through the Members tab first.
+function orgAdminContact(orgId) {
+  return allUsers.value.find(u => u.org_id === orgId && (u.org_roles || []).includes('org_admin')) || null
+}
+
 // Approve activates the org; deny suspends it (organisations only
 // have pending/active/suspended states, there's no separate
 // "declined" — see PUT /api/orgs/:id/status).
@@ -887,6 +895,9 @@ onUnmounted(() => {
                 <span class="badge">federation</span>
                 {{ org.country_code || '—' }}
               </div>
+              <div v-if="orgAdminContact(org.id)" class="user-email">
+                {{ orgAdminContact(org.id).full_name }} · {{ orgAdminContact(org.id).email }}
+              </div>
             </div>
             <div class="request-actions">
               <button class="btn btn-sm btn-approve" @click="reviewOrg(org.id, 'approved')">{{ $t('user_manager.approve') }}</button>
@@ -1039,7 +1050,10 @@ onUnmounted(() => {
                 <span class="user-name">{{ user.full_name }}</span>
                 <span v-if="user.is_system_admin" class="sys-badge sys-badge-inline">{{ $t('user_manager.sys_badge_short') }}</span>
               </td>
-              <td class="dim">@{{ user.username }}</td>
+              <td class="dim">
+                <div>@{{ user.username }}</div>
+                <div v-if="user.email" class="user-email">{{ user.email }}</div>
+              </td>
               <td v-if="isSysAdmin" class="org-cell">
                 <div class="org-stack">
                   <span class="org-name">
@@ -1100,7 +1114,10 @@ onUnmounted(() => {
                       <span class="user-name">{{ user.full_name }}</span>
                       <span v-if="user.is_system_admin" class="sys-badge sys-badge-inline">{{ $t('user_manager.sys_badge_short') }}</span>
                     </td>
-                    <td class="dim">@{{ user.username }}</td>
+                    <td class="dim">
+                      <div>@{{ user.username }}</div>
+                      <div v-if="user.email" class="user-email">{{ user.email }}</div>
+                    </td>
                     <td>
                       <div class="role-pills">
                         <span v-for="role in userPills(user.id)" :key="role"
@@ -1164,7 +1181,7 @@ onUnmounted(() => {
             <span v-if="drawerUser.is_system_admin" class="sys-badge sys-badge-inline">SYS</span>
           </div>
           <div class="drawer-meta">
-            @{{ drawerUser.username }}
+            @{{ drawerUser.username }}<span v-if="drawerUser.email"> · {{ drawerUser.email }}</span>
           </div>
           <div class="drawer-org">
             <span v-if="drawerUser.org_name" class="drawer-org-name">{{ drawerUser.org_name }}</span>
@@ -1778,6 +1795,10 @@ onUnmounted(() => {
   font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
 }
 .club-line-empty { font-style: italic; opacity: 0.7; }
+.user-email {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
+  margin-top: 0.15rem; word-break: break-all;
+}
 .club-code {
   font-family: var(--font-mono); font-size: 9px; font-weight: 700;
   letter-spacing: 0.05em; color: var(--cyan);

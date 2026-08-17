@@ -730,6 +730,7 @@
       "role_decision": "Rooli",
       "role_request": "Roolipyyntö",
       "org_pending": "Liitto",
+      "org_decision": "Liitto",
       "event_started": "Tapahtuma",
       "event_live": "Tapahtuma käynnissä",
       "event_results_posted": "Tulokset",

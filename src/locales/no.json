@@ -730,6 +730,7 @@
       "role_decision": "Rolle",
       "role_request": "Rolleforespørsel",
       "org_pending": "Forbund",
+      "org_decision": "Forbund",
       "event_started": "Arrangement",
       "event_live": "Arrangement direkte",
       "event_results_posted": "Resultater",

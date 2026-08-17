@@ -465,6 +465,7 @@ const {
   sendWelcomeEmail,
   sendNewRoleRequestEmail,
   sendNewOrgRequestEmail,
+  sendOrgDecisionEmail,
   sendEventStartedEmails,
   sendEventResultsEmails,
 } = email;
@@ -677,9 +678,11 @@ app.use(
 // =============================================================
 app.use(require("./routes/orgs")({
   pool,
+  push,
   verifyToken,
   requireSystemAdmin,
   requireMeetEditor,
+  sendOrgDecisionEmail,
 }));
 
 // =============================================================

@@ -730,6 +730,7 @@
       "role_decision": "Szerep",
       "role_request": "Szerepkérelem",
       "org_pending": "Szövetség",
+      "org_decision": "Szövetség",
       "event_started": "Esemény",
       "event_live": "Esemény élőben",
       "event_results_posted": "Eredmények",
