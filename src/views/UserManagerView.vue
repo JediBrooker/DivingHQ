@@ -12,6 +12,7 @@ const auth = useAuthStore()
 
 const requests = ref([])
 const clubRequests = ref([])     // club-change / org-transfer requests
+const pendingOrgs = ref([])      // federations awaiting approval (system admin only)
 const allUsers = ref([])
 
 // View state
@@ -87,7 +88,7 @@ const pendingClubRequests = computed(() =>
 const stats = computed(() => {
   const counts = {
     total: allUsers.value.length,
-    pending: requests.value.length + pendingClubRequests.value.length,
+    pending: requests.value.length + pendingClubRequests.value.length + pendingOrgs.value.length,
   }
   PRIMARY_ROLES.forEach(r => { counts[r] = 0 })
   for (const u of allUsers.value) {
@@ -532,6 +533,31 @@ async function reviewClubRequest(id, decision) {
   }
 }
 
+// Federations awaiting approval. System admin only — /api/orgs 403s
+// for everyone else, so skip the call rather than eat a console error.
+async function loadPendingOrgs() {
+  if (!isSysAdmin.value) { pendingOrgs.value = []; return }
+  try {
+    const orgs = await auth.apiFetch('/api/orgs')
+    pendingOrgs.value = (orgs || []).filter(o => o.status === 'pending')
+  } catch { pendingOrgs.value = [] }
+}
+
+// Approve activates the org; deny suspends it (organisations only
+// have pending/active/suspended states, there's no separate
+// "declined" — see PUT /api/orgs/:id/status).
+async function reviewOrg(id, decision) {
+  try {
+    await auth.apiFetch(`/api/orgs/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: decision === 'approved' ? 'active' : 'suspended' }),
+    })
+    await loadPendingOrgs()
+  } catch (err) {
+    showError(err.message)
+  }
+}
+
 async function loadUsers() {
   try {
     const users = await auth.apiFetch('/api/users')
@@ -800,7 +826,7 @@ function pageNums() {
 
 onMounted(async () => {
   window.addEventListener('keydown', onKeyDown)
-  await Promise.all([loadRequests(), loadClubRequests(), loadUsers()])
+  await Promise.all([loadRequests(), loadClubRequests(), loadPendingOrgs(), loadUsers()])
 })
 
 onUnmounted(() => {
@@ -848,7 +874,27 @@ onUnmounted(() => {
 
     <!-- Requests tab -->
     <div v-if="activeTab === 'requests'" class="card">
-      <div v-if="!requests.length && !pendingClubRequests.length" class="empty-state">{{ $t('user_manager.no_pending') }}</div>
+      <div v-if="!requests.length && !pendingClubRequests.length && !pendingOrgs.length" class="empty-state">{{ $t('user_manager.no_pending') }}</div>
+
+      <!-- Pending federation registrations (system admin only) -->
+      <div v-if="pendingOrgs.length" class="club-requests-block">
+        <div class="club-requests-head">Federation registrations</div>
+        <div class="requests-grid">
+          <div v-for="org in pendingOrgs" :key="org.id" class="request-card">
+            <div style="flex:1;min-width:0">
+              <div class="request-name">{{ org.name }}</div>
+              <div class="request-meta">
+                <span class="badge">federation</span>
+                {{ org.country_code || '—' }}
+              </div>
+            </div>
+            <div class="request-actions">
+              <button class="btn btn-sm btn-approve" @click="reviewOrg(org.id, 'approved')">{{ $t('user_manager.approve') }}</button>
+              <button class="btn btn-danger btn-sm" @click="reviewOrg(org.id, 'rejected')">{{ $t('user_manager.deny') }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Role requests -->
       <div v-if="requests.length" class="requests-grid">
