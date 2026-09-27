@@ -32,8 +32,13 @@ const APP_BASE_URL =
   process.env.APP_BASE_URL || process.env.CORS_ORIGIN || "http://localhost:5173";
 
 // Validate + normalise an incoming price-variant array. Returns
-// { prices } or { error }.
-function validatePrices(prices) {
+// { prices } or { error }. { flat: true } is for fees that can only ever
+// have one price for everyone (late fees, penalties, access, bundles,
+// club and official fees): every row is still validated, then the first
+// one is kept as audience 'all' with no window. A member-only or windowed
+// variant there would just vanish at resolve time, since those resolve
+// with isMember:false at now.
+function validatePrices(prices, { flat = false } = {}) {
   const AUDIENCES = ["all", "member", "non_member"];
   const out = [];
   for (const p of prices) {
@@ -55,6 +60,7 @@ function validatePrices(prices) {
       ends_at: p.ends_at || null,
     });
   }
+  if (flat) return { prices: [{ ...out[0], audience: "all", starts_at: null, ends_at: null }] };
   return { prices: out };
 }
 
@@ -158,6 +164,42 @@ module.exports = function createPaymentsRouter({
 
   function ownsOrg(req, orgId) {
     return req.user.is_system_admin || req.user.org_id === orgId;
+  }
+
+  // Meet-scoped editor routes: the meet has to exist (404) and belong to
+  // the caller's org (403, sysadmin passes). Returns the meet's org_id, or
+  // null once the error response has gone out.
+  async function loadOwnedMeet(req, res, meetId) {
+    const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
+    if (!m.rows.length) {
+      res.status(404).json({ error: "Meet not found" });
+      return null;
+    }
+    const orgId = m.rows[0].org_id;
+    if (!ownsOrg(req, orgId)) {
+      res.status(403).json({ error: "Forbidden" });
+      return null;
+    }
+    return orgId;
+  }
+
+  // The federation fields pricing and checkout read. undefined when the
+  // org doesn't exist, same as the inline lookups this replaced.
+  async function loadOrg(orgId) {
+    return (await pool.query(
+      "SELECT id, name, default_currency, platform_fee_bps FROM organisations WHERE id = $1",
+      [orgId],
+    )).rows[0];
+  }
+
+  // Every fee editor needs at least one price row. 400s and returns false
+  // when there isn't one. It's deliberately not folded into validatePrices:
+  // some handlers run it before checking other fields, and moving it would
+  // change which 400 a request with several problems gets back.
+  function requirePrices(body, res) {
+    if (Array.isArray(body.prices) && body.prices.length) return true;
+    res.status(400).json({ error: "At least one price variant is required." });
+    return false;
   }
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1050,9 +1092,7 @@ module.exports = function createPaymentsRouter({
     const eventId = req.params.id;
     const orgId = req.event.org_id; // stashed by requireEventManager
     const body = req.body || {};
-    if (!Array.isArray(body.prices) || !body.prices.length) {
-      return res.status(400).json({ error: "At least one price variant is required." });
-    }
+    if (!requirePrices(body, res)) return;
     const v = validatePrices(body.prices);
     if (v.error) return res.status(400).json({ error: v.error });
     try {
@@ -1079,9 +1119,7 @@ module.exports = function createPaymentsRouter({
     const orgId = req.params.id;
     if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
     const body = req.body || {};
-    if (!Array.isArray(body.prices) || !body.prices.length) {
-      return res.status(400).json({ error: "At least one price variant is required." });
-    }
+    if (!requirePrices(body, res)) return;
     const v = validatePrices(body.prices);
     if (v.error) return res.status(400).json({ error: v.error });
     try {
@@ -1120,7 +1158,7 @@ module.exports = function createPaymentsRouter({
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
       const chosen = resolvePrice(prices, { isMember: member });
-      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = await loadOrg(orgId);
       // "Submit, then pay": the dive-list entry exists independently; an
       // entry is confirmed once a paid payment exists for this diver.
       const checkUserId = req.query.subject_user_id || (req.user && req.user.id);
@@ -1188,10 +1226,8 @@ module.exports = function createPaymentsRouter({
     if (!["entries_close_at", "dive_list_locks_at"].includes(body.late_fee_trigger)) {
       return res.status(400).json({ error: "A valid late_fee_trigger is required." });
     }
-    if (!Array.isArray(body.prices) || !body.prices.length) {
-      return res.status(400).json({ error: "At least one price variant is required." });
-    }
-    const v = validatePrices(body.prices);
+    if (!requirePrices(body, res)) return;
+    const v = validatePrices(body.prices, { flat: true });
     if (v.error) return res.status(400).json({ error: v.error });
     try {
       // A late fee is a single FLAT surcharge whose timing is governed by
@@ -1200,7 +1236,6 @@ module.exports = function createPaymentsRouter({
       // silently suppressed at resolve time (resolveLateFee resolves with
       // isMember:false at now, so a 'member'/windowed variant would vanish
       // and the diver would dodge the surcharge).
-      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
       // Keep the surcharge in the SAME currency as the base entry fee, they
       // get summed into one charge at checkout. Inherit it when a base fee
       // exists so the two can never diverge.
@@ -1215,7 +1250,7 @@ module.exports = function createPaymentsRouter({
         eventId,
         name: "Late entry fee",
         body: feeBody,
-        cleanPrices: [flatPrice],
+        cleanPrices: v.prices,
       });
       return res.json({ id: feeId });
     } catch (err) {
@@ -1252,22 +1287,19 @@ module.exports = function createPaymentsRouter({
     if (!PENALTY_KINDS.includes(body.kind)) {
       return res.status(400).json({ error: "A valid penalty kind is required." });
     }
-    if (!Array.isArray(body.prices) || !body.prices.length) {
-      return res.status(400).json({ error: "At least one price variant is required." });
-    }
-    const v = validatePrices(body.prices);
+    if (!requirePrices(body, res)) return;
+    const v = validatePrices(body.prices, { flat: true });
     if (v.error) return res.status(400).json({ error: v.error });
     try {
       // Flat penalty (audience 'all', no window). Like late fees, a
       // member/windowed variant would silently vanish at resolve time.
-      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
       const feeId = await upsertFee({
         orgId,
         scope: body.kind,
         eventId,
         name: penaltyLabel(body.kind),
         body,
-        cleanPrices: [flatPrice],
+        cleanPrices: v.prices,
       });
       return res.json({ id: feeId });
     } catch (err) {
@@ -1303,14 +1335,10 @@ module.exports = function createPaymentsRouter({
     if (!ensurePayments(res)) return;
     const meetId = req.params.id;
     try {
-      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
-      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
-      const orgId = m.rows[0].org_id;
-      if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+      const orgId = await loadOwnedMeet(req, res, meetId);
+      if (!orgId) return;
       const body = req.body || {};
-      if (!Array.isArray(body.prices) || !body.prices.length) {
-        return res.status(400).json({ error: "At least one price variant is required." });
-      }
+      if (!requirePrices(body, res)) return;
       const v = validatePrices(body.prices);
       if (v.error) return res.status(400).json({ error: v.error });
       const discipline = body.discipline ? String(body.discipline).slice(0, 40) : null;
@@ -1330,9 +1358,7 @@ module.exports = function createPaymentsRouter({
   router.get("/api/meets/:id/fees/config", requireMeetEditor, async (req, res) => {
     const meetId = req.params.id;
     try {
-      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
-      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
-      if (!ownsOrg(req, m.rows[0].org_id)) return res.status(403).json({ error: "Forbidden" });
+      if (!(await loadOwnedMeet(req, res, meetId))) return;
       const feeRes = await pool.query(
         `SELECT * FROM fee_definitions
           WHERE meet_id = $1 AND scope = 'event_entry' AND active
@@ -1366,7 +1392,7 @@ module.exports = function createPaymentsRouter({
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const member = req.user ? await isActiveMember(pool, orgId, req.user.id) : false;
       const chosen = resolvePrice(prices, { isMember: member });
-      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = await loadOrg(orgId);
       const meetCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
       const alreadyPaid = meetCheckUserId
         ? (await pool.query(
@@ -1408,12 +1434,7 @@ module.exports = function createPaymentsRouter({
       const m = await pool.query("SELECT id, name, org_id FROM meets WHERE id = $1", [meetId]);
       if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
       const orgId = m.rows[0].org_id;
-      const org = (
-        await pool.query(
-          `SELECT id, name, default_currency, platform_fee_bps FROM organisations WHERE id = $1`,
-          [orgId],
-        )
-      ).rows[0];
+      const org = await loadOrg(orgId);
       const discipline = (req.body && req.body.discipline) ? String(req.body.discipline).slice(0, 40) : null;
       const feeRes = await pool.query(
         `SELECT * FROM fee_definitions
@@ -1459,21 +1480,16 @@ module.exports = function createPaymentsRouter({
       return res.status(400).json({ error: "A valid access kind is required." });
     }
     try {
-      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
-      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
-      const orgId = m.rows[0].org_id;
-      if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
-      if (!Array.isArray(body.prices) || !body.prices.length) {
-        return res.status(400).json({ error: "At least one price variant is required." });
-      }
-      const v = validatePrices(body.prices);
+      const orgId = await loadOwnedMeet(req, res, meetId);
+      if (!orgId) return;
+      if (!requirePrices(body, res)) return;
+      const v = validatePrices(body.prices, { flat: true });
       if (v.error) return res.status(400).json({ error: v.error });
       // Flat price (audience 'all', no window): access isn't member-tiered.
-      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
       const feeId = await upsertFee({
         orgId, scope: body.kind, meetId,
         name: `${ACCESS_LABELS[body.kind]} (meet)`,
-        body, cleanPrices: [flatPrice],
+        body, cleanPrices: v.prices,
       });
       return res.json({ id: feeId });
     } catch (err) {
@@ -1489,9 +1505,7 @@ module.exports = function createPaymentsRouter({
       return res.status(400).json({ error: "A valid access kind is required." });
     }
     try {
-      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
-      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
-      if (!ownsOrg(req, m.rows[0].org_id)) return res.status(403).json({ error: "Forbidden" });
+      if (!(await loadOwnedMeet(req, res, meetId))) return;
       const feeRes = await pool.query(
         "SELECT * FROM fee_definitions WHERE meet_id = $1 AND scope = $2 AND active LIMIT 1",
         [meetId, req.query.kind],
@@ -1522,7 +1536,7 @@ module.exports = function createPaymentsRouter({
       const def = feeRes.rows[0];
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
-      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = await loadOrg(orgId);
       const accessCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
       const alreadyPaid = accessCheckUserId
         ? (await pool.query(
@@ -1561,13 +1575,7 @@ module.exports = function createPaymentsRouter({
       const m = await pool.query("SELECT id, name, org_id FROM meets WHERE id = $1", [meetId]);
       if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
       const orgId = m.rows[0].org_id;
-      const org = (
-        await pool.query(
-          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
-             FROM organisations WHERE id = $1`,
-          [orgId],
-        )
-      ).rows[0];
+      const org = await loadOrg(orgId);
       const feeRes = await pool.query(
         "SELECT * FROM fee_definitions WHERE meet_id = $1 AND scope = $2 AND active LIMIT 1",
         [meetId, kind],
@@ -1608,26 +1616,21 @@ module.exports = function createPaymentsRouter({
     if (!Array.isArray(body.event_ids) || !body.event_ids.length) {
       return res.status(400).json({ error: "Select at least one event for the bundle." });
     }
-    if (!Array.isArray(body.prices) || !body.prices.length) {
-      return res.status(400).json({ error: "At least one price variant is required." });
-    }
+    if (!requirePrices(body, res)) return;
     try {
-      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
-      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
-      const orgId = m.rows[0].org_id;
-      if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
+      const orgId = await loadOwnedMeet(req, res, meetId);
+      if (!orgId) return;
       // Only events that actually belong to this meet can be bundled.
       const validEvents = (await pool.query(
         "SELECT id FROM events WHERE meet_id = $1 AND id = ANY($2::uuid[])",
         [meetId, body.event_ids],
       )).rows.map((r) => r.id);
       if (!validEvents.length) return res.status(400).json({ error: "None of those events belong to this meet." });
-      const v = validatePrices(body.prices);
+      const v = validatePrices(body.prices, { flat: true });
       if (v.error) return res.status(400).json({ error: v.error });
-      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
       const feeId = await upsertFee({
         orgId, scope: "meet_bundle", meetId,
-        name: "Meet bundle", body, cleanPrices: [flatPrice],
+        name: "Meet bundle", body, cleanPrices: v.prices,
       });
       // Replace the bundle's event set atomically.
       const client = await pool.connect();
@@ -1658,9 +1661,7 @@ module.exports = function createPaymentsRouter({
   router.get("/api/meets/:id/bundle/config", requireMeetEditor, async (req, res) => {
     const meetId = req.params.id;
     try {
-      const m = await pool.query("SELECT org_id FROM meets WHERE id = $1", [meetId]);
-      if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
-      if (!ownsOrg(req, m.rows[0].org_id)) return res.status(403).json({ error: "Forbidden" });
+      if (!(await loadOwnedMeet(req, res, meetId))) return;
       const feeRes = await pool.query(
         "SELECT * FROM fee_definitions WHERE meet_id = $1 AND scope = 'meet_bundle' AND active LIMIT 1",
         [meetId],
@@ -1706,7 +1707,7 @@ module.exports = function createPaymentsRouter({
       // A bundle with no events (half-configured) reads as no bundle, so the
       // public card hides itself rather than offering an empty purchase.
       if (!events.length) return res.json({ fee: null, payments_enabled: payments.enabled });
-      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = await loadOrg(orgId);
       const bundleCheckUserId = req.query.subject_user_id || (req.user && req.user.id);
       const alreadyPaid = bundleCheckUserId
         ? (await pool.query(
@@ -1741,13 +1742,7 @@ module.exports = function createPaymentsRouter({
       const m = await pool.query("SELECT id, name, org_id FROM meets WHERE id = $1", [meetId]);
       if (!m.rows.length) return res.status(404).json({ error: "Meet not found" });
       const orgId = m.rows[0].org_id;
-      const org = (
-        await pool.query(
-          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
-             FROM organisations WHERE id = $1`,
-          [orgId],
-        )
-      ).rows[0];
+      const org = await loadOrg(orgId);
       const feeRes = await pool.query(
         "SELECT * FROM fee_definitions WHERE meet_id = $1 AND scope = 'meet_bundle' AND active LIMIT 1",
         [meetId],
@@ -1811,7 +1806,7 @@ module.exports = function createPaymentsRouter({
       const def = feeRes.rows[0];
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
-      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = await loadOrg(orgId);
       const alreadyMember = req.user
         ? (await pool.query(
             `SELECT 1 FROM memberships
@@ -1885,7 +1880,7 @@ module.exports = function createPaymentsRouter({
       );
       if (!feeRes.rows.length) return res.json({ donation: null, payments_enabled: payments.enabled });
       const def = feeRes.rows[0];
-      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = await loadOrg(orgId);
       return res.json({
         donation: {
           currency: def.currency || org?.default_currency || null,
@@ -1909,13 +1904,7 @@ module.exports = function createPaymentsRouter({
       return res.status(400).json({ error: "Please enter a valid donation amount." });
     }
     try {
-      const org = (
-        await pool.query(
-          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
-             FROM organisations WHERE id = $1`,
-          [orgId],
-        )
-      ).rows[0];
+      const org = await loadOrg(orgId);
       if (!org) return res.status(404).json({ error: "Organisation not found" });
       const feeRes = await pool.query(
         "SELECT * FROM fee_definitions WHERE org_id = $1 AND scope = 'donation' AND active LIMIT 1",
@@ -2066,7 +2055,7 @@ module.exports = function createPaymentsRouter({
       if (!liable) return res.status(404).json({ error: "Person not found." });
       const orgId = liable.org_id;
       if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "You can only fine people in your own federation." });
-      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = await loadOrg(orgId);
       const currency = org?.default_currency;
       if (!currency) return res.status(409).json({ error: "The federation's currency is not configured." });
       let eventId = null;
@@ -2256,13 +2245,7 @@ module.exports = function createPaymentsRouter({
       if (!fine) return res.status(404).json({ error: "Fine not found" });
       const onBehalfOfFine = await assertCanActFor(req, fine.liable_user_id, fine.org_id);
       if (fine.status !== "owed") return res.status(409).json({ error: `This fine is ${fine.status}.` });
-      const org = (
-        await pool.query(
-          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
-             FROM organisations WHERE id = $1`,
-          [fine.org_id],
-        )
-      ).rows[0];
+      const org = await loadOrg(fine.org_id);
       const { url, paymentId } = await startFineCheckout({ req, org, fine, onBehalf: onBehalfOfFine });
       return res.json({ url, payment_id: paymentId });
     } catch (err) {
@@ -2283,10 +2266,8 @@ module.exports = function createPaymentsRouter({
     const orgId = req.params.id;
     if (!ownsOrg(req, orgId)) return res.status(403).json({ error: "Forbidden" });
     const body = req.body || {};
-    if (!Array.isArray(body.prices) || !body.prices.length) {
-      return res.status(400).json({ error: "At least one price variant is required." });
-    }
-    const v = validatePrices(body.prices);
+    if (!requirePrices(body, res)) return;
+    const v = validatePrices(body.prices, { flat: true });
     if (v.error) return res.status(400).json({ error: v.error });
     try {
       const scope = clubScope(body.kind);
@@ -2294,13 +2275,12 @@ module.exports = function createPaymentsRouter({
       // "member", so audience tiers / time windows are meaningless and would
       // only let the fee silently vanish at resolve time (resolveClubFee
       // resolves isMember:false at now). Force audience 'all', no window.
-      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
       const feeId = await upsertFee({
         orgId,
         scope,
         name: body.name || (scope === "club_accreditation" ? "Club accreditation" : "Club affiliation"),
         body,
-        cleanPrices: [flatPrice],
+        cleanPrices: v.prices,
       });
       return res.json({ id: feeId });
     } catch (err) {
@@ -2355,7 +2335,7 @@ module.exports = function createPaymentsRouter({
       }
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
-      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = await loadOrg(orgId);
       return res.json({
         fee: {
           kind,
@@ -2388,23 +2368,20 @@ module.exports = function createPaymentsRouter({
     if (!OFFICIAL_ROLES.includes(body.role_type)) {
       return res.status(400).json({ error: "A valid role_type is required." });
     }
-    if (!Array.isArray(body.prices) || !body.prices.length) {
-      return res.status(400).json({ error: "At least one price variant is required." });
-    }
-    const v = validatePrices(body.prices);
+    if (!requirePrices(body, res)) return;
+    const v = validatePrices(body.prices, { flat: true });
     if (v.error) return res.status(400).json({ error: v.error });
     try {
       // A flat per-role price (audience 'all', no window). Accreditation
       // isn't member-tiered, and a member/windowed variant would silently
       // vanish at resolve time (resolveOfficialFee resolves isMember:false).
-      const flatPrice = { ...v.prices[0], audience: "all", starts_at: null, ends_at: null };
       const feeId = await upsertFee({
         orgId,
         scope: "official_accreditation",
         roleType: body.role_type,
         name: `${body.role_type} accreditation`,
         body,
-        cleanPrices: [flatPrice],
+        cleanPrices: v.prices,
       });
       return res.json({ id: feeId });
     } catch (err) {
@@ -2456,7 +2433,7 @@ module.exports = function createPaymentsRouter({
       }
       const prices = (await pool.query("SELECT * FROM fee_prices WHERE fee_definition_id = $1", [def.id])).rows;
       const chosen = resolvePrice(prices, { isMember: false });
-      const org = (await pool.query("SELECT default_currency, platform_fee_bps FROM organisations WHERE id = $1", [orgId])).rows[0];
+      const org = await loadOrg(orgId);
       return res.json({
         fee: {
           role_type: roleType,
@@ -2485,13 +2462,7 @@ module.exports = function createPaymentsRouter({
       const ev = await pool.query("SELECT id, name, org_id FROM events WHERE id = $1", [eventId]);
       if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
       const orgId = ev.rows[0].org_id;
-      const org = (
-        await pool.query(
-          `SELECT id, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
-             FROM organisations WHERE id = $1`,
-          [orgId],
-        )
-      ).rows[0];
+      const org = await loadOrg(orgId);
       const feeRes = await pool.query(
         "SELECT * FROM fee_definitions WHERE event_id = $1 AND scope = 'event_entry' AND active LIMIT 1",
         [eventId],
@@ -2531,13 +2502,7 @@ module.exports = function createPaymentsRouter({
     const orgId = req.params.id;
     try {
       const subjectUserId = await validateGuardian(req, req.body?.subject_user_id);
-      const org = (
-        await pool.query(
-          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
-             FROM organisations WHERE id = $1`,
-          [orgId],
-        )
-      ).rows[0];
+      const org = await loadOrg(orgId);
       if (!org) return res.status(404).json({ error: "Organisation not found" });
       const tier = (req.body && req.body.tier) ? String(req.body.tier).slice(0, 40) : null;
       const feeRes = await pool.query(
@@ -2578,13 +2543,7 @@ module.exports = function createPaymentsRouter({
     const orgId = req.club.org_id; // stashed by requireClubAdmin
     try {
       const kind = (req.body && req.body.kind) === "accreditation" ? "accreditation" : "affiliation";
-      const org = (
-        await pool.query(
-          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
-             FROM organisations WHERE id = $1`,
-          [orgId],
-        )
-      ).rows[0];
+      const org = await loadOrg(orgId);
       if (!org) return res.status(404).json({ error: "Organisation not found" });
       const fee = await resolveClubFee(pool, orgId, clubScope(kind), clubId);
       if (!fee) return res.status(409).json({ error: `No ${kind} fee is set for this federation.` });
@@ -2609,13 +2568,7 @@ module.exports = function createPaymentsRouter({
       return res.status(400).json({ error: "A valid role_type is required." });
     }
     try {
-      const org = (
-        await pool.query(
-          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
-             FROM organisations WHERE id = $1`,
-          [orgId],
-        )
-      ).rows[0];
+      const org = await loadOrg(orgId);
       if (!org) return res.status(404).json({ error: "Organisation not found" });
       const fee = await resolveOfficialFee(pool, orgId, roleType);
       if (!fee) return res.status(409).json({ error: `No ${roleType} accreditation fee is set for this federation.` });
@@ -2846,13 +2799,7 @@ module.exports = function createPaymentsRouter({
       const onBehalfOfCharge = await assertCanActFor(req, charge.entrant_user_id, charge.org_id);
       if (charge.status !== "owed") return res.status(409).json({ error: `This charge is ${charge.status}.` });
 
-      const org = (
-        await pool.query(
-          `SELECT id, name, default_currency, platform_fee_bps, stripe_account_id, stripe_charges_enabled
-             FROM organisations WHERE id = $1`,
-          [charge.org_id],
-        )
-      ).rows[0];
+      const org = await loadOrg(charge.org_id);
       const fee = (await pool.query("SELECT * FROM fee_definitions WHERE id = $1", [charge.fee_definition_id])).rows[0];
       if (!fee) return res.status(409).json({ error: "The penalty fee is no longer configured." });
 
