@@ -1097,7 +1097,18 @@
     "role_coach": "Pelatih",
     "role_diver": "Peloncat",
     "role_spectator": "Penonton",
-    "no_org_label": "Tanpa Organisasi"
+    "no_org_label": "Tanpa Organisasi",
+    "org_country_label": "Negara",
+    "org_country_pick": "— Pilih negara —",
+    "org_country_save": "Tetapkan negara",
+    "org_country_saved": "{org}: negara ditetapkan ke {country}",
+    "org_country_missing": "Belum ada negara. Pendaftar menemukan federasi mereka berdasarkan negara, jadi tidak ada yang bisa bergabung dengan organisasi ini. Tetapkan sebelum menyetujui.",
+    "org_country_unknown": "{code} tidak ada di daftar negara DivingHQ, jadi pendaftar tidak dapat menemukan organisasi ini. Pilih negaranya.",
+    "org_country_clash": "Klub sudah membuat akun {country} di DivingHQ. Menyetujui ini akan memberi {country} dua akun, jadi tolak dan minta federasi mengklaim akun tersebut melalui Daftarkan organisasi.",
+    "orgs_need_country_title": "Organisasi tanpa negara ({n})",
+    "orgs_need_country_hint": "Pendaftar menemukan federasi mereka berdasarkan negara, jadi tidak ada yang bisa bergabung dengan organisasi ini sampai negaranya ditetapkan.",
+    "org_suspended": "Ditangguhkan",
+    "orgs_show_all": "Tampilkan semua {n}"
   },
   "audit_log": {
     "title": "Log audit",

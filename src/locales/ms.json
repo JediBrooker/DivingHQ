@@ -1097,7 +1097,18 @@
     "role_coach": "Jurulatih",
     "role_diver": "Peterjun",
     "role_spectator": "Penonton",
-    "no_org_label": "Tiada Organisasi"
+    "no_org_label": "Tiada Organisasi",
+    "org_country_label": "Negara",
+    "org_country_pick": "— Pilih negara —",
+    "org_country_save": "Tetapkan negara",
+    "org_country_saved": "{org}: negara ditetapkan kepada {country}",
+    "org_country_missing": "Tiada negara ditetapkan. Pendaftar mencari persekutuan mereka mengikut negara, jadi tiada sesiapa boleh menyertai organisasi ini. Tetapkan sebelum meluluskan.",
+    "org_country_unknown": "{code} tiada dalam senarai negara DivingHQ, jadi pendaftar tidak dapat menemui organisasi ini. Pilih negaranya.",
+    "org_country_clash": "Kelab sudah membuka akaun {country} di DivingHQ. Meluluskan ini akan memberi {country} dua akaun, jadi tolaknya dan minta persekutuan menuntut akaun itu melalui Daftarkan organisasi.",
+    "orgs_need_country_title": "Organisasi tanpa negara ({n})",
+    "orgs_need_country_hint": "Pendaftar mencari persekutuan mereka mengikut negara, jadi tiada sesiapa boleh menyertai organisasi ini sehingga negaranya ditetapkan.",
+    "org_suspended": "Digantung",
+    "orgs_show_all": "Tunjuk semua {n}"
   },
   "audit_log": {
     "title": "Log audit",

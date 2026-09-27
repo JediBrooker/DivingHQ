@@ -1108,7 +1108,18 @@
     "role_coach": "Trainer",
     "role_diver": "Springer",
     "role_spectator": "Zuschauer",
-    "no_org_label": "Keine Organisation"
+    "no_org_label": "Keine Organisation",
+    "org_country_label": "Land",
+    "org_country_pick": "— Land auswählen —",
+    "org_country_save": "Land festlegen",
+    "org_country_saved": "{org}: Land auf {country} gesetzt",
+    "org_country_missing": "Kein Land festgelegt. Bei der Registrierung wird der Verband über das Land gefunden, daher könnte niemand dieser Organisation beitreten. Legen Sie es vor der Genehmigung fest.",
+    "org_country_unknown": "{code} steht nicht in der Länderliste von DivingHQ, daher kann diese Organisation bei der Registrierung nicht gefunden werden. Wählen Sie ihr Land aus.",
+    "org_country_clash": "Vereine haben auf DivingHQ bereits ein Konto für {country} angelegt. Eine Genehmigung würde {country} ein zweites verschaffen. Lehnen Sie daher ab und lassen Sie den Verband dieses Konto stattdessen über „Organisation registrieren“ beanspruchen.",
+    "orgs_need_country_title": "Organisationen ohne Land ({n})",
+    "orgs_need_country_hint": "Bei der Registrierung wird der Verband über das Land gefunden, daher kann niemand diesen Organisationen beitreten, bevor ein Land festgelegt ist.",
+    "org_suspended": "Gesperrt",
+    "orgs_show_all": "Alle {n} anzeigen"
   },
   "audit_log": {
     "title": "Audit-Log",

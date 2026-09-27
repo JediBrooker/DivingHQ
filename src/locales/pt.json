@@ -1108,7 +1108,18 @@
     "role_coach": "Treinador",
     "role_diver": "Saltador",
     "role_spectator": "Espectador",
-    "no_org_label": "Sem Organização"
+    "no_org_label": "Sem Organização",
+    "org_country_label": "País",
+    "org_country_pick": "— Escolha um país —",
+    "org_country_save": "Definir país",
+    "org_country_saved": "{org}: país definido como {country}",
+    "org_country_missing": "Sem país definido. Os registos encontram a sua federação pelo país, por isso ninguém se conseguiria juntar a esta. Defina-o antes de aprovar.",
+    "org_country_unknown": "{code} não consta da lista de países do DivingHQ, por isso os registos não conseguem encontrar esta organização. Escolha o seu país.",
+    "org_country_clash": "Os clubes já criaram a conta de {country} no DivingHQ. Aprovar isto daria a {country} duas contas, por isso recuse e peça à federação que reivindique essa conta em Registar Organização.",
+    "orgs_need_country_title": "Organizações sem país ({n})",
+    "orgs_need_country_hint": "Os registos encontram a sua federação pelo país, por isso ninguém se pode juntar a estas enquanto não tiverem um.",
+    "org_suspended": "Suspensa",
+    "orgs_show_all": "Mostrar todas ({n})"
   },
   "audit_log": {
     "title": "Registo de Auditoria",

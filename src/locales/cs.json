@@ -1097,7 +1097,18 @@
     "role_coach": "Trenér",
     "role_diver": "Skokan",
     "role_spectator": "Divák",
-    "no_org_label": "Bez organizace"
+    "no_org_label": "Bez organizace",
+    "org_country_label": "Země",
+    "org_country_pick": "— Vyberte zemi —",
+    "org_country_save": "Nastavit zemi",
+    "org_country_saved": "{org}: země nastavena na {country}",
+    "org_country_missing": "Není nastavena žádná země. Registrace hledají svou federaci podle země, takže by se k této nikdo nemohl připojit. Nastavte ji před schválením.",
+    "org_country_unknown": "Kód {code} není v seznamu zemí DivingHQ, takže registrace tuto organizaci nenajdou. Vyberte její zemi.",
+    "org_country_clash": "Kluby už na DivingHQ založily účet pro {country}. Schválením by {country} měla dva účty, proto žádost zamítněte a nechte federaci o tento účet požádat přes Registrace organizace.",
+    "orgs_need_country_title": "Organizace bez země ({n})",
+    "orgs_need_country_hint": "Registrace hledají svou federaci podle země, takže se k těmto organizacím nikdo nepřipojí, dokud ji nebudou mít.",
+    "org_suspended": "Pozastaveno",
+    "orgs_show_all": "Zobrazit všech {n}"
   },
   "audit_log": {
     "title": "Protokol auditu",

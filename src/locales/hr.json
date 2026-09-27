@@ -1097,7 +1097,18 @@
     "role_coach": "Trener",
     "role_diver": "Skakač",
     "role_spectator": "Gledatelj",
-    "no_org_label": "Bez organizacije"
+    "no_org_label": "Bez organizacije",
+    "org_country_label": "Država",
+    "org_country_pick": "— Odaberite državu —",
+    "org_country_save": "Postavi državu",
+    "org_country_saved": "{org}: država postavljena na {country}",
+    "org_country_missing": "Država nije postavljena. Prijave pronalaze svoj savez prema državi, pa se ovoj organizaciji nitko ne bi mogao pridružiti. Postavite je prije odobrenja.",
+    "org_country_unknown": "{code} nije na DivingHQ-ovu popisu država, pa prijave ne mogu pronaći ovu organizaciju. Odaberite njezinu državu.",
+    "org_country_clash": "Klubovi su već otvorili račun za {country} na DivingHQ-u. Odobrenjem bi {country} imala dva, pa zahtjev odbijte i neka savez preuzme taj račun putem stranice Registracija organizacije.",
+    "orgs_need_country_title": "Organizacije bez države ({n})",
+    "orgs_need_country_hint": "Prijave pronalaze svoj savez prema državi, pa im se nitko ne može pridružiti dok je nemaju.",
+    "org_suspended": "Suspendirano",
+    "orgs_show_all": "Prikaži svih {n}"
   },
   "audit_log": {
     "title": "Dnevnik revizije",

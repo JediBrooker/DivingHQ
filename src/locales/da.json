@@ -1108,7 +1108,18 @@
     "role_coach": "Træner",
     "role_diver": "Udspringer",
     "role_spectator": "Tilskuer",
-    "no_org_label": "Ingen organisation"
+    "no_org_label": "Ingen organisation",
+    "org_country_label": "Land",
+    "org_country_pick": "— Vælg et land —",
+    "org_country_save": "Angiv land",
+    "org_country_saved": "{org}: land sat til {country}",
+    "org_country_missing": "Intet land angivet. Tilmeldinger finder deres forbund efter land, så ingen ville kunne blive medlem af denne. Angiv det, før du godkender.",
+    "org_country_unknown": "{code} er ikke på DivingHQ's landeliste, så tilmeldinger kan ikke finde denne organisation. Vælg dens land.",
+    "org_country_clash": "Klubber har allerede oprettet en konto for {country} på DivingHQ. Godkendes dette, får {country} to, så afvis det, og lad forbundet gøre krav på den konto via Registrér organisation i stedet.",
+    "orgs_need_country_title": "Organisationer uden land ({n})",
+    "orgs_need_country_hint": "Tilmeldinger finder deres forbund efter land, så ingen kan blive medlem af disse, før de har et.",
+    "org_suspended": "Suspenderet",
+    "orgs_show_all": "Vis alle {n}"
   },
   "audit_log": {
     "title": "Revisionslog",

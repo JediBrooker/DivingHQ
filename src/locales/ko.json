@@ -1097,7 +1097,18 @@
     "role_coach": "코치",
     "role_diver": "다이버",
     "role_spectator": "관중",
-    "no_org_label": "조직 없음"
+    "no_org_label": "조직 없음",
+    "org_country_label": "국가",
+    "org_country_pick": "— 국가 선택 —",
+    "org_country_save": "국가 설정",
+    "org_country_saved": "{org}: 국가가 {country}(으)로 설정되었습니다",
+    "org_country_missing": "국가가 설정되지 않았습니다. 가입자는 국가로 연맹을 찾기 때문에 아무도 이 조직에 가입할 수 없습니다. 승인 전에 설정하세요.",
+    "org_country_unknown": "{code}은(는) DivingHQ 국가 목록에 없어 가입자가 이 조직을 찾을 수 없습니다. 국가를 선택하세요.",
+    "org_country_clash": "클럽들이 이미 DivingHQ에 {country} 계정을 만들었습니다. 승인하면 {country}에 계정이 두 개가 되므로 거절하고, 연맹이 조직 등록에서 그 계정을 청구하도록 안내하세요.",
+    "orgs_need_country_title": "국가가 없는 조직 ({n})",
+    "orgs_need_country_hint": "가입자는 국가로 연맹을 찾기 때문에 국가가 설정될 때까지 아무도 이 조직들에 가입할 수 없습니다.",
+    "org_suspended": "정지됨",
+    "orgs_show_all": "모두 보기 ({n})"
   },
   "audit_log": {
     "title": "감사 로그",

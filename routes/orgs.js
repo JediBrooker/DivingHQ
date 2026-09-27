@@ -3,6 +3,8 @@
 //   GET    /api/orgs                    every org (sysadmin only)
 //   GET    /api/orgs/active             public list for register-form
 //   GET    /api/orgs/by-country/:code   public, the org(s) a signup in that country joins
+//   GET    /api/orgs/needs-country      sysadmin, live orgs signups can't find by country
+//   PUT    /api/orgs/:id/country        sysadmin sets an org's country
 //   PUT    /api/orgs/:id/status         sysadmin approves / suspends
 //                                       (emails + notifies the org's
 //                                       own admin(s) of the decision)
@@ -35,6 +37,7 @@ module.exports = function createOrgsRouter({
 }) {
   if (!pool) throw new Error("createOrgsRouter requires { pool, … }");
   const router = express.Router();
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   // -------- Orgs --------
   router.get("/api/orgs", requireSystemAdmin, async (req, res) => {
@@ -91,18 +94,127 @@ module.exports = function createOrgsRouter({
     }
   });
 
+  // Live orgs a signup can't reach by country: no country_code at all, or
+  // one that isn't in lib/countries.json (a leftover 2-letter code, an IOC
+  // code like GER, a typo). The sysadmin's User Manager lists them so they
+  // can be given a real one. Pending orgs aren't here, their approval card
+  // asks for the country itself.
+  router.get("/api/orgs/needs-country", requireSystemAdmin, async (req, res) => {
+    try {
+      const r = await pool.query(
+        `SELECT id, name, country_code, status, claim_state, created_at
+           FROM organisations
+          WHERE id <> $1 AND status <> 'pending'
+          ORDER BY lower(name)`,
+        [ADMIN_ORG_ID],
+      );
+      // country_code is char(3), so a 2-letter code comes back padded.
+      const rows = r.rows
+        .map((o) => ({ ...o, country_code: o.country_code ? o.country_code.trim() : null }))
+        .filter((o) => !countryByCode(o.country_code));
+      res.json(rows);
+    } catch (err) {
+      console.error("[Orgs Needs Country Error]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Give an org its country. Catalogue codes only: the point is that
+  // /api/orgs/by-country can find it afterwards.
+  router.put("/api/orgs/:id/country", requireSystemAdmin, async (req, res) => {
+    if (!UUID_RE.test(req.params.id)) return res.status(404).json({ error: "Org not found" });
+    if (req.params.id === ADMIN_ORG_ID) {
+      return res.status(400).json({ error: "The Administration org doesn't belong to a country" });
+    }
+    const raw = req.body?.country_code;
+    const country = countryByCode(typeof raw === "string" ? raw.trim() : "");
+    if (!country) {
+      return res.status(400).json({ error: "Pick a country from the list", code: "country_unknown" });
+    }
+    try {
+      const prior = await pool.query(
+        "SELECT name, country_code, claim_state FROM organisations WHERE id = $1",
+        [req.params.id],
+      );
+      if (!prior.rows.length) return res.status(404).json({ error: "Org not found" });
+      // An unclaimed org IS its country's account (named after it, regions
+      // copied from its catalogue), so moving it would just corrupt it.
+      if (prior.rows[0].claim_state === "unclaimed") {
+        return res.status(409).json({
+          error: "This account was started by a country's clubs, so its country can't change",
+          code: "unclaimed_country_fixed",
+        });
+      }
+      const r = await pool.query(
+        "UPDATE organisations SET country_code = $2 WHERE id = $1 RETURNING *",
+        [req.params.id, country.a3],
+      );
+      const from = prior.rows[0].country_code ? prior.rows[0].country_code.trim() : null;
+      if (from !== country.a3) {
+        await recordAudit(pool, {
+          ...auditFromReq(req),
+          org_id:      r.rows[0].id,
+          entity_type: "org",
+          entity_id:   r.rows[0].id,
+          entity_name: r.rows[0].name,
+          action:      "org.country_changed",
+          metadata:    { from, to: country.a3 },
+        });
+      }
+      res.json(r.rows[0]);
+    } catch (err) {
+      console.error("[Org Country Error]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   router.put("/api/orgs/:id/status", requireSystemAdmin, async (req, res) => {
     const { status } = req.body || {};
+    // Anything else would reach postgres as a bad enum value and come
+    // back as a 500.
+    if (!["pending", "active", "suspended"].includes(status)) {
+      return res.status(400).json({ error: "status must be pending, active or suspended" });
+    }
+    if (!UUID_RE.test(req.params.id)) return res.status(404).json({ error: "Org not found" });
     try {
       // Read the previous status so the audit row has a
       // before/after pair. Sysadmins reviewing the audit later
       // want "approved a pending org" / "suspended a live org"
       // distinguishable at a glance.
       const prior = await pool.query(
-        "SELECT status FROM organisations WHERE id = $1",
+        "SELECT status, country_code FROM organisations WHERE id = $1",
         [req.params.id],
       );
-      const previousStatus = prior.rows[0]?.status;
+      if (!prior.rows.length) return res.status(404).json({ error: "Org not found" });
+      const previousStatus = prior.rows[0].status;
+
+      // Approving a federation that registered the old way. Two things
+      // would leave the country split or unreachable, so both stop here.
+      if (status === "active" && previousStatus === "pending") {
+        const code = prior.rows[0].country_code ? prior.rows[0].country_code.trim() : "";
+        if (!code) {
+          return res.status(400).json({
+            error: "Set this organisation's country before approving it. Signups find their federation by country, so nobody could join it.",
+            code: "country_required",
+          });
+        }
+        const country = countryByCode(code);
+        const clubsAccount = await pool.query(
+          `SELECT name FROM organisations
+            WHERE country_code IN ($1, $2) AND claim_state = 'unclaimed'
+              AND status = 'active' AND id <> $3
+            LIMIT 1`,
+          [country ? country.a3 : code, country ? country.a2 : null, req.params.id],
+        );
+        if (clubsAccount.rows.length) {
+          const where = clubsAccount.rows[0].name;
+          return res.status(409).json({
+            error: `Clubs have already started ${where}'s account on DivingHQ. Approving this would give ${where} two, `
+              + "so deny it and have the federation claim that account from Register organisation instead.",
+            code: "country_has_unclaimed_org",
+          });
+        }
+      }
 
       const r = await pool.query(
         "UPDATE organisations SET status = $1 WHERE id = $2 RETURNING *",
@@ -410,7 +522,6 @@ module.exports = function createOrgsRouter({
   // manage who admins the club.
   // They can't remove the last one, a club with no admin has nobody to
   // run it but the sysadmin.
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   async function loadClubForAdminGrant(req, res) {
     // A malformed id would reach postgres as a uuid cast error and come

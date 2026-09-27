@@ -1108,7 +1108,18 @@
     "role_coach": "Entraîneur",
     "role_diver": "Plongeur",
     "role_spectator": "Spectateur",
-    "no_org_label": "Sans Organisation"
+    "no_org_label": "Sans Organisation",
+    "org_country_label": "Pays",
+    "org_country_pick": "— Choisissez un pays —",
+    "org_country_save": "Définir le pays",
+    "org_country_saved": "{org} : pays défini sur {country}",
+    "org_country_missing": "Aucun pays défini. Les inscriptions trouvent leur fédération par pays, donc personne ne pourrait rejoindre celle-ci. Définissez-le avant d'approuver.",
+    "org_country_unknown": "{code} ne figure pas dans la liste des pays de DivingHQ, les inscriptions ne peuvent donc pas trouver cette organisation. Choisissez son pays.",
+    "org_country_clash": "Des clubs ont déjà ouvert le compte de {country} sur DivingHQ. Approuver ceci donnerait deux comptes à {country} : refusez-le et demandez à la fédération de revendiquer ce compte depuis Inscrire une organisation.",
+    "orgs_need_country_title": "Organisations sans pays ({n})",
+    "orgs_need_country_hint": "Les inscriptions trouvent leur fédération par pays, donc personne ne peut rejoindre celles-ci tant qu'elles n'en ont pas.",
+    "org_suspended": "Suspendue",
+    "orgs_show_all": "Tout afficher ({n})"
   },
   "audit_log": {
     "title": "Journal d'audit",

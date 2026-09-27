@@ -1097,7 +1097,18 @@
     "role_coach": "Tagasanay",
     "role_diver": "Manlulusong",
     "role_spectator": "Manonood",
-    "no_org_label": "Walang Organisation"
+    "no_org_label": "Walang Organisation",
+    "org_country_label": "Bansa",
+    "org_country_pick": "— Pumili ng bansa —",
+    "org_country_save": "Itakda ang bansa",
+    "org_country_saved": "{org}: itinakda ang bansa sa {country}",
+    "org_country_missing": "Walang nakatakdang bansa. Hinahanap ng mga nagsa-sign up ang kanilang federation ayon sa bansa, kaya walang makakasali rito. Itakda ito bago aprubahan.",
+    "org_country_unknown": "Wala ang {code} sa listahan ng mga bansa ng DivingHQ, kaya hindi mahanap ng mga nagsa-sign up ang organisasyong ito. Piliin ang bansa nito.",
+    "org_country_clash": "May account na para sa {country} sa DivingHQ na sinimulan ng mga club. Kapag inaprubahan ito, magkakaroon ng dalawa ang {country}, kaya tanggihan ito at ipa-claim sa federation ang account na iyon mula sa Irehistro ang organisasyon.",
+    "orgs_need_country_title": "Mga organisasyong walang bansa ({n})",
+    "orgs_need_country_hint": "Hinahanap ng mga nagsa-sign up ang kanilang federation ayon sa bansa, kaya walang makakasali sa mga ito hangga't wala silang bansa.",
+    "org_suspended": "Suspendido",
+    "orgs_show_all": "Ipakita lahat ({n})"
   },
   "audit_log": {
     "title": "Talaan ng audit",

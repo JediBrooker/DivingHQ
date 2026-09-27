@@ -1097,7 +1097,18 @@
     "role_coach": "Coach",
     "role_diver": "Diver",
     "role_spectator": "Spectator",
-    "no_org_label": "No Organisation"
+    "no_org_label": "No Organisation",
+    "org_country_label": "Country",
+    "org_country_pick": "— Pick a country —",
+    "org_country_save": "Set country",
+    "org_country_saved": "{org}: country set to {country}",
+    "org_country_missing": "No country set. Signups find their federation by country, so nobody could join this one. Set it before approving.",
+    "org_country_unknown": "{code} isn't on DivingHQ's country list, so signups can't find this organisation. Pick its country.",
+    "org_country_clash": "Clubs have already started {country}'s account on DivingHQ. Approving this would give {country} two, so deny it and have the federation claim that account from Register Organisation instead.",
+    "orgs_need_country_title": "Organisations without a country ({n})",
+    "orgs_need_country_hint": "Signups find their federation by country, so nobody can join these until they have one.",
+    "org_suspended": "Suspended",
+    "orgs_show_all": "Show all {n}"
   },
   "audit_log": {
     "title": "Audit Log",

@@ -6,13 +6,20 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
+import { useCountryOptions, isKnownCountry } from '@/composables/useCountryOptions'
 
 const { t } = useI18n()
 const auth = useAuthStore()
+const { countryOptions, countryName } = useCountryOptions()
 
 const requests = ref([])
 const clubRequests = ref([])     // club-change / org-transfer requests
 const pendingOrgs = ref([])      // federations awaiting approval (system admin only)
+const allOrgList = ref([])       // every org, for the pending cards' country checks (system admin only)
+const orgsNeedingCountry = ref([])  // live orgs signups can't find by country (system admin only)
+const showAllNeedCountry = ref(false)
+const orgCountryChoice = ref({})    // org id -> picked alpha-3 code
+const savingCountryFor = ref(null)
 const allUsers = ref([])
 
 // View state
@@ -536,11 +543,56 @@ async function reviewClubRequest(id, decision) {
 // Federations awaiting approval. System admin only — /api/orgs 403s
 // for everyone else, so skip the call rather than eat a console error.
 async function loadPendingOrgs() {
-  if (!isSysAdmin.value) { pendingOrgs.value = []; return }
+  if (!isSysAdmin.value) { pendingOrgs.value = []; orgsNeedingCountry.value = []; return }
   try {
     const orgs = await auth.apiFetch('/api/orgs')
-    pendingOrgs.value = (orgs || []).filter(o => o.status === 'pending')
+    allOrgList.value = orgs || []
+    pendingOrgs.value = allOrgList.value.filter(o => o.status === 'pending')
   } catch { pendingOrgs.value = [] }
+  try {
+    orgsNeedingCountry.value = (await auth.apiFetch('/api/orgs/needs-country')) || []
+  } catch { orgsNeedingCountry.value = [] }
+}
+
+// Signups find their federation by country (club-first signup), so an
+// org without a real country code is one nobody can join. The pending
+// cards won't approve one until it has a country, and live ones that
+// slipped through before register-org required it are listed below them.
+const visibleNeedCountry = computed(() =>
+  showAllNeedCountry.value ? orgsNeedingCountry.value : orgsNeedingCountry.value.slice(0, 10))
+
+// The account a country's clubs started, if approving this pending
+// federation would sit a second org next to it. The server refuses that
+// approval too (409 country_has_unclaimed_org); this just says why up front.
+function clubsAccountFor(org) {
+  if (!isKnownCountry(org.country_code)) return null
+  const code = org.country_code.trim()
+  return allOrgList.value.find(o =>
+    o.id !== org.id && o.status === 'active' && o.claim_state === 'unclaimed'
+    && (o.country_code || '').trim() === code) || null
+}
+
+function canApproveOrg(org) {
+  return !!(org.country_code || '').trim() && !clubsAccountFor(org)
+}
+
+async function saveOrgCountry(org) {
+  const code = orgCountryChoice.value[org.id]
+  if (!code) return
+  savingCountryFor.value = org.id
+  try {
+    await auth.apiFetch(`/api/orgs/${org.id}/country`, {
+      method: 'PUT',
+      body: JSON.stringify({ country_code: code }),
+    })
+    showSuccess(t('user_manager.org_country_saved', { org: org.name, country: countryName(code) }))
+    delete orgCountryChoice.value[org.id]
+    await loadPendingOrgs()
+  } catch (err) {
+    showError(err.message)
+  } finally {
+    savingCountryFor.value = null
+  }
 }
 
 // /api/orgs doesn't carry a contact — cross-reference allUsers
@@ -888,23 +940,73 @@ onUnmounted(() => {
       <div v-if="pendingOrgs.length" class="club-requests-block">
         <div class="club-requests-head">Federation registrations</div>
         <div class="requests-grid">
-          <div v-for="org in pendingOrgs" :key="org.id" class="request-card">
+          <div v-for="org in pendingOrgs" :key="org.id" class="request-card request-card-wrap" data-testid="pending-org">
             <div style="flex:1;min-width:0">
               <div class="request-name">{{ org.name }}</div>
               <div class="request-meta">
                 <span class="badge">federation</span>
-                {{ org.country_code || '—' }}
+                <template v-if="isKnownCountry(org.country_code)">{{ countryName(org.country_code) }} · {{ org.country_code.trim() }}</template>
+                <template v-else>{{ (org.country_code || '').trim() || '—' }}</template>
               </div>
               <div v-if="orgAdminContact(org.id)" class="user-email">
                 {{ orgAdminContact(org.id).full_name }} · {{ orgAdminContact(org.id).email }}
               </div>
+              <!-- No country (or one signups can't match): offer the fix
+                   right here, approval waits for it when there's none. -->
+              <template v-if="!isKnownCountry(org.country_code)">
+                <p class="org-country-warn">
+                  {{ (org.country_code || '').trim()
+                    ? $t('user_manager.org_country_unknown', { code: org.country_code.trim() })
+                    : $t('user_manager.org_country_missing') }}
+                </p>
+                <div class="org-country-row">
+                  <select class="select" v-model="orgCountryChoice[org.id]" :aria-label="$t('user_manager.org_country_label')">
+                    <option :value="undefined">{{ $t('user_manager.org_country_pick') }}</option>
+                    <option v-for="c in countryOptions" :key="c.code" :value="c.code">{{ c.name }}</option>
+                  </select>
+                  <button class="btn btn-sm" :disabled="!orgCountryChoice[org.id] || savingCountryFor === org.id"
+                          @click="saveOrgCountry(org)">{{ $t('user_manager.org_country_save') }}</button>
+                </div>
+              </template>
+              <p v-else-if="clubsAccountFor(org)" class="org-country-warn">
+                {{ $t('user_manager.org_country_clash', { country: countryName(org.country_code) }) }}
+              </p>
             </div>
             <div class="request-actions">
-              <button class="btn btn-sm btn-approve" @click="reviewOrg(org.id, 'approved')">{{ $t('user_manager.approve') }}</button>
+              <button class="btn btn-sm btn-approve" :disabled="!canApproveOrg(org)" @click="reviewOrg(org.id, 'approved')">{{ $t('user_manager.approve') }}</button>
               <button class="btn btn-danger btn-sm" @click="reviewOrg(org.id, 'rejected')">{{ $t('user_manager.deny') }}</button>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Live orgs signups can't find by country (system admin only) -->
+      <div v-if="orgsNeedingCountry.length" class="club-requests-block" data-testid="orgs-need-country">
+        <div class="club-requests-head">{{ $t('user_manager.orgs_need_country_title', { n: orgsNeedingCountry.length }) }}</div>
+        <p class="org-country-hint">{{ $t('user_manager.orgs_need_country_hint') }}</p>
+        <div class="requests-grid">
+          <div v-for="org in visibleNeedCountry" :key="org.id" class="request-card request-card-wrap">
+            <div style="flex:1;min-width:0">
+              <div class="request-name">{{ org.name }}</div>
+              <div class="request-meta">
+                <span v-if="org.status === 'suspended'" class="badge">{{ $t('user_manager.org_suspended') }}</span>
+                {{ org.country_code || '—' }}
+              </div>
+            </div>
+            <div class="org-country-row">
+              <select class="select" v-model="orgCountryChoice[org.id]" :aria-label="$t('user_manager.org_country_label')">
+                <option :value="undefined">{{ $t('user_manager.org_country_pick') }}</option>
+                <option v-for="c in countryOptions" :key="c.code" :value="c.code">{{ c.name }}</option>
+              </select>
+              <button class="btn btn-sm" :disabled="!orgCountryChoice[org.id] || savingCountryFor === org.id"
+                      @click="saveOrgCountry(org)">{{ $t('user_manager.org_country_save') }}</button>
+            </div>
+          </div>
+        </div>
+        <button v-if="!showAllNeedCountry && orgsNeedingCountry.length > visibleNeedCountry.length"
+                class="btn btn-ghost btn-sm org-country-more" @click="showAllNeedCountry = true">
+          {{ $t('user_manager.orgs_show_all', { n: orgsNeedingCountry.length }) }}
+        </button>
       </div>
 
       <!-- Role requests -->
@@ -1480,7 +1582,18 @@ onUnmounted(() => {
 .request-meta  { font-size: 11px; color: var(--text-3); margin-top: 0.2rem; }
 .request-note  { font-size: 11px; color: var(--text-2); margin-top: 0.35rem; font-style: italic; }
 .request-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+/* Org cards that carry a country picker wrap on narrow screens rather
+   than squeezing the select down to nothing. */
+.request-card-wrap { flex-wrap: wrap; }
+.org-country-warn {
+  margin: 0.45rem 0 0; font-size: 12px; line-height: 1.5; color: var(--warn-fg);
+}
+.org-country-hint { margin: 0 0.5rem 0.25rem; font-size: 12px; color: var(--text-3); }
+.org-country-row { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; flex-wrap: wrap; }
+.org-country-row .select { width: auto; min-width: 12rem; max-width: 100%; padding-block: 0.4rem; font-size: 13px; }
+.org-country-more { margin: 0.25rem 0.5rem 0; }
 .btn-approve { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+.btn-approve:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* Club-change request list, sits below role requests in the
    Requests tab, separated by a faint rule + section heading. */

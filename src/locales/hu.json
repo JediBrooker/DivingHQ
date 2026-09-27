@@ -1108,7 +1108,18 @@
     "role_coach": "Edző",
     "role_diver": "Műugró",
     "role_spectator": "Néző",
-    "no_org_label": "Nincs szervezet"
+    "no_org_label": "Nincs szervezet",
+    "org_country_label": "Ország",
+    "org_country_pick": "— Válasszon országot —",
+    "org_country_save": "Ország beállítása",
+    "org_country_saved": "{org}: az ország beállítva: {country}",
+    "org_country_missing": "Nincs ország megadva. A regisztrálók ország alapján találják meg a szövetségüket, így ehhez senki sem tudna csatlakozni. Jóváhagyás előtt állítsa be.",
+    "org_country_unknown": "A(z) {code} nem szerepel a DivingHQ országlistáján, így a regisztrálók nem találják meg ezt a szervezetet. Válassza ki az országát.",
+    "org_country_clash": "A klubok már létrehoztak egy fiókot {country} számára a DivingHQ-n. A jóváhagyással {country} két fiókot kapna, ezért utasítsa el, és kérje meg a szövetséget, hogy a Szervezet regisztrációja oldalon igényelje azt a fiókot.",
+    "orgs_need_country_title": "Ország nélküli szervezetek ({n})",
+    "orgs_need_country_hint": "A regisztrálók ország alapján találják meg a szövetségüket, így ezekhez senki sem tud csatlakozni, amíg nincs országuk.",
+    "org_suspended": "Felfüggesztve",
+    "orgs_show_all": "Mind a(z) {n} megjelenítése"
   },
   "audit_log": {
     "title": "Auditnapló",

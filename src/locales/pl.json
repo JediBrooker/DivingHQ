@@ -1108,7 +1108,18 @@
     "role_coach": "Trener",
     "role_diver": "Skoczek",
     "role_spectator": "Widz",
-    "no_org_label": "Brak Organizacji"
+    "no_org_label": "Brak Organizacji",
+    "org_country_label": "Kraj",
+    "org_country_pick": "— Wybierz kraj —",
+    "org_country_save": "Ustaw kraj",
+    "org_country_saved": "{org}: ustawiono kraj {country}",
+    "org_country_missing": "Nie ustawiono kraju. Rejestrujący znajdują swoją federację po kraju, więc nikt nie mógłby dołączyć do tej organizacji. Ustaw go przed zatwierdzeniem.",
+    "org_country_unknown": "{code} nie ma na liście krajów DivingHQ, więc rejestrujący nie znajdą tej organizacji. Wybierz jej kraj.",
+    "org_country_clash": "Kluby założyły już konto dla kraju {country} w DivingHQ. Zatwierdzenie dałoby krajowi {country} dwa konta, więc odrzuć zgłoszenie i poproś federację o przejęcie tamtego konta przez Rejestrację organizacji.",
+    "orgs_need_country_title": "Organizacje bez kraju ({n})",
+    "orgs_need_country_hint": "Rejestrujący znajdują swoją federację po kraju, więc nikt nie może dołączyć do tych organizacji, dopóki nie mają kraju.",
+    "org_suspended": "Zawieszona",
+    "orgs_show_all": "Pokaż wszystkie ({n})"
   },
   "audit_log": {
     "title": "Dziennik audytu",

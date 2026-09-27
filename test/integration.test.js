@@ -1787,3 +1787,78 @@ test("a federation stored with an alpha-2 code is still found by country", async
     await claimKit.wipe("MS");
   }
 });
+
+// The sysadmin side of #6 / #26: approving needs a country and won't split
+// one, and live orgs with no usable country can be given one.
+test("sysadmin: org countries, and approvals that would split a country", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const sys = await claimKit.login("admin", "admin");
+  if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+  const CODE = "FRO";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  const made = [];
+  const mkOrg = async (country, status) => {
+    const id = (await pool.query(
+      `INSERT INTO organisations (name, country_code, slug, status) VALUES ($1, $2, $3, $4) RETURNING id`,
+      [`Int Country ${crypto.randomBytes(3).toString("hex")}`, country, `int-cc-${crypto.randomBytes(4).toString("hex")}`, status],
+    )).rows[0].id;
+    made.push(id);
+    return id;
+  };
+  try {
+    // No country, no approval.
+    const noCountry = await mkOrg(null, "pending");
+    const st = await fetchJson("PUT", `/api/orgs/${noCountry}/status`, { token: sys.token, body: { status: "active" } });
+    assert.equal(st.status, 400, JSON.stringify(st.body));
+    assert.equal(st.body.code, "country_required");
+    assert.equal((await fetchJson("PUT", `/api/orgs/${noCountry}/status`, { token: sys.token, body: { status: "bogus" } })).status, 400);
+
+    // Live orgs signups can't find by country are listed for fixing.
+    const lost = await mkOrg(null, "active");
+    const ioc = await mkOrg("GER", "active");
+    const fine = await mkOrg("GRL", "active");
+    const list = (await fetchJson("GET", "/api/orgs/needs-country", { token: sys.token })).body;
+    const ids = list.map((o) => o.id);
+    assert.ok(ids.includes(lost) && ids.includes(ioc), "NULL and non-ISO codes are listed");
+    assert.ok(!ids.includes(fine) && !ids.includes(noCountry), "real codes and pending orgs aren't");
+    assert.equal((await fetchJson("GET", "/api/orgs/needs-country", { token: state.adminToken })).status, 403);
+
+    // Give one its country.
+    assert.equal((await fetchJson("PUT", `/api/orgs/${lost}/country`, { token: sys.token, body: { country_code: "XX" } })).body.code, "country_unknown");
+    assert.equal((await fetchJson("PUT", `/api/orgs/${lost}/country`, { token: state.adminToken, body: { country_code: "GRL" } })).status, 403);
+    const set = await fetchJson("PUT", `/api/orgs/${lost}/country`, { token: sys.token, body: { country_code: "grl" } });
+    assert.equal(set.status, 200, JSON.stringify(set.body));
+    assert.equal(set.body.country_code, "GRL");
+    const audit = await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'org.country_changed'", [lost],
+    );
+    assert.deepEqual(audit.rows[0]?.metadata, { from: null, to: "GRL" });
+    assert.ok(!(await fetchJson("GET", "/api/orgs/needs-country", { token: sys.token })).body.some((o) => o.id === lost));
+    await pool.query("DELETE FROM audit_log WHERE entity_id = $1", [lost]);
+
+    // Clubs started the Faroes; approving a pending Faroese federation now
+    // would give the country two accounts.
+    await claimKit.founder(CODE, "Tórshavn Divers");
+    const clubsOrg = (await pool.query(
+      "SELECT id FROM organisations WHERE country_code = $1 AND claim_state = 'unclaimed'", [CODE],
+    )).rows[0].id;
+    const fed = await mkOrg(CODE, "pending");
+    const clash = await fetchJson("PUT", `/api/orgs/${fed}/status`, { token: sys.token, body: { status: "active" } });
+    assert.equal(clash.status, 409, JSON.stringify(clash.body));
+    assert.equal(clash.body.code, "country_has_unclaimed_org");
+    assert.equal((await pool.query("SELECT status FROM organisations WHERE id = $1", [fed])).rows[0].status, "pending");
+    // Denying it is still fine.
+    assert.equal((await fetchJson("PUT", `/api/orgs/${fed}/status`, { token: sys.token, body: { status: "suspended" } })).status, 200);
+    // And the clubs' own account keeps its country.
+    const fixed = await fetchJson("PUT", `/api/orgs/${clubsOrg}/country`, { token: sys.token, body: { country_code: "GRL" } });
+    assert.equal(fixed.status, 409);
+    assert.equal(fixed.body.code, "unclaimed_country_fixed");
+  } finally {
+    await pool.query("DELETE FROM audit_log WHERE entity_id = ANY($1::uuid[])", [made]).catch(() => {});
+    for (const orgId of made) await teardownFixture({ orgId });
+    await teardownFixture(state);
+    await claimKit.wipe(CODE);
+  }
+});

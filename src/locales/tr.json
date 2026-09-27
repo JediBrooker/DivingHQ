@@ -1097,7 +1097,18 @@
     "role_coach": "Antrenör",
     "role_diver": "Atlamacı",
     "role_spectator": "Seyirci",
-    "no_org_label": "Kuruluş yok"
+    "no_org_label": "Kuruluş yok",
+    "org_country_label": "Ülke",
+    "org_country_pick": "— Bir ülke seçin —",
+    "org_country_save": "Ülkeyi ayarla",
+    "org_country_saved": "{org}: ülke {country} olarak ayarlandı",
+    "org_country_missing": "Ülke ayarlanmamış. Kayıt olanlar federasyonlarını ülkeye göre bulur, bu yüzden kimse bu kuruluşa katılamaz. Onaylamadan önce ayarlayın.",
+    "org_country_unknown": "{code}, DivingHQ ülke listesinde yok, bu yüzden kayıt olanlar bu kuruluşu bulamaz. Ülkesini seçin.",
+    "org_country_clash": "Kulüpler DivingHQ'da {country} için zaten bir hesap açtı. Bunu onaylamak {country} için ikinci bir hesap oluşturur; bu yüzden reddedin ve federasyondan o hesabı Kuruluş Kaydı sayfasından talep etmesini isteyin.",
+    "orgs_need_country_title": "Ülkesi olmayan kuruluşlar ({n})",
+    "orgs_need_country_hint": "Kayıt olanlar federasyonlarını ülkeye göre bulur, bu yüzden bir ülke atanana kadar kimse bunlara katılamaz.",
+    "org_suspended": "Askıya alındı",
+    "orgs_show_all": "Tümünü göster ({n})"
   },
   "audit_log": {
     "title": "Denetim Günlüğü",
