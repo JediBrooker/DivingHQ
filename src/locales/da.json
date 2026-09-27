@@ -1937,7 +1937,7 @@
     "intro": "Når et forbund eller et regionalt organ vil overtage en konto, klubberne startede, afgøres det her.",
     "empty_title": "Ingen krav",
     "empty_body": "Når et forbund gør krav på dit land eller din region, stemmer du her.",
-    "kind_org": "National",
+    "kind_org": "Nationalt",
     "kind_region": "Region",
     "by": "krævet af {name}",
     "awaiting_email": "Venter på e-mailbekræftelse",
