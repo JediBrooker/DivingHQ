@@ -22,6 +22,26 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 
+// Every route on an existing team checks it exists and belongs to the
+// caller's org (sysadmins anywhere) first. requireMeetEditor only
+// proves the caller holds the role somewhere, so without this any
+// team UUID would do. Sends the 404/403 itself and returns null,
+// otherwise the team row with `cols`. `db` is the pool or, inside a
+// transaction, the caller's client.
+async function loadOwnTeam(db, req, res, teamId, verb, cols = "org_id") {
+  const r = await db.query(`SELECT ${cols} FROM teams WHERE id = $1`, [teamId]);
+  const team = r.rows[0];
+  if (!team) {
+    res.status(404).json({ error: "Team not found" });
+    return null;
+  }
+  if (!req.user.is_system_admin && team.org_id !== req.user.org_id) {
+    res.status(403).json({ error: `Cannot ${verb} teams in other organisations` });
+    return null;
+  }
+  return team;
+}
+
 module.exports = function createTeamsRouter({
   pool,
   requireMeetEditor,
@@ -218,20 +238,7 @@ module.exports = function createTeamsRouter({
     if (!name || !name.trim())
       return res.status(400).json({ error: "Team name is required" });
     try {
-      const target = await pool.query(
-        "SELECT org_id FROM teams WHERE id = $1",
-        [req.params.id],
-      );
-      if (!target.rows.length)
-        return res.status(404).json({ error: "Team not found" });
-      if (
-        !req.user.is_system_admin &&
-        target.rows[0].org_id !== req.user.org_id
-      ) {
-        return res
-          .status(403)
-          .json({ error: "Cannot edit teams in other organisations" });
-      }
+      if (!(await loadOwnTeam(pool, req, res, req.params.id, "edit"))) return;
       const r = await pool.query(
         `UPDATE teams SET name = $1, short_code = $2 WHERE id = $3
          RETURNING id, name, short_code`,
@@ -246,21 +253,9 @@ module.exports = function createTeamsRouter({
 
   router.delete("/api/teams/:id", requireMeetEditor, async (req, res) => {
     try {
-      const target = await pool.query(
-        "SELECT id, org_id, name, short_code FROM teams WHERE id = $1",
-        [req.params.id],
-      );
-      if (!target.rows.length)
-        return res.status(404).json({ error: "Team not found" });
-      const team = target.rows[0];
-      if (
-        !req.user.is_system_admin &&
-        team.org_id !== req.user.org_id
-      ) {
-        return res
-          .status(403)
-          .json({ error: "Cannot delete teams in other organisations" });
-      }
+      const team = await loadOwnTeam(pool, req, res, req.params.id, "delete",
+        "id, org_id, name, short_code");
+      if (!team) return;
       // Impact summary before deletion so the client can show
       // what it just severed.
       const impact = await pool.query(
@@ -302,15 +297,8 @@ module.exports = function createTeamsRouter({
       // Cross-org IDOR plug. requireMeetEditor only confirms the
       // caller has org_admin / meet_manager somewhere; the team
       // UUID came from the URL with no guarantee it belongs to
-      // their org. Mirror the rename / delete check above.
-      const team = await pool.query(
-        "SELECT org_id FROM teams WHERE id = $1",
-        [req.params.id],
-      );
-      if (!team.rows.length) return res.status(404).json({ error: "Team not found" });
-      if (!req.user.is_system_admin && team.rows[0].org_id !== req.user.org_id) {
-        return res.status(403).json({ error: "Cannot read teams in other organisations" });
-      }
+      // their org. Same check as the rename / delete above.
+      if (!(await loadOwnTeam(pool, req, res, req.params.id, "read"))) return;
       const r = await pool.query(
         `SELECT e.id, e.name, e.gender, e.height, e.event_type::text AS event_type,
                 e.total_rounds, e.number_of_judges, e.status,
@@ -342,21 +330,9 @@ module.exports = function createTeamsRouter({
       }
       const client = await pool.connect();
       try {
-        const target = await client.query(
-          "SELECT org_id FROM teams WHERE id = $1",
-          [req.params.teamId],
-        );
-        if (!target.rows.length)
-          return res.status(404).json({ error: "Team not found" });
-        const teamOrgId = target.rows[0].org_id;
-        if (
-          !req.user.is_system_admin &&
-          teamOrgId !== req.user.org_id
-        ) {
-          return res
-            .status(403)
-            .json({ error: "Cannot manage teams in other organisations" });
-        }
+        const target = await loadOwnTeam(client, req, res, req.params.teamId, "manage");
+        if (!target) return;
+        const teamOrgId = target.org_id;
 
         // Gate on event lifecycle / entries deadline, same rule as the
         // individual-diver submit endpoint. Heads up: once the event
@@ -511,14 +487,7 @@ module.exports = function createTeamsRouter({
         // IDOR plug: both the team and the event must belong to
         // the caller's org. requireMeetEditor only checks that the
         // caller holds the role somewhere, not which org.
-        const team = await pool.query(
-          "SELECT org_id FROM teams WHERE id = $1",
-          [req.params.teamId],
-        );
-        if (!team.rows.length) return res.status(404).json({ error: "Team not found" });
-        if (!req.user.is_system_admin && team.rows[0].org_id !== req.user.org_id) {
-          return res.status(403).json({ error: "Cannot read teams in other organisations" });
-        }
+        if (!(await loadOwnTeam(pool, req, res, req.params.teamId, "read"))) return;
         const r = await pool.query(
           `SELECT cdl.round_number, cdl.competitor_id, cdl.partner_id, cdl.dive_id,
                   u.full_name AS competitor_name,
@@ -541,20 +510,7 @@ module.exports = function createTeamsRouter({
 
   router.get("/api/teams/:id/members", requireMeetEditor, async (req, res) => {
     try {
-      const target = await pool.query(
-        "SELECT org_id FROM teams WHERE id = $1",
-        [req.params.id],
-      );
-      if (!target.rows.length)
-        return res.status(404).json({ error: "Team not found" });
-      if (
-        !req.user.is_system_admin &&
-        target.rows[0].org_id !== req.user.org_id
-      ) {
-        return res
-          .status(403)
-          .json({ error: "Cannot view teams in other organisations" });
-      }
+      if (!(await loadOwnTeam(pool, req, res, req.params.id, "view"))) return;
       const r = await pool.query(
         `SELECT u.id, u.username, u.full_name, tm.added_at
          FROM team_members tm
@@ -572,24 +528,12 @@ module.exports = function createTeamsRouter({
   router.post("/api/teams/:id/members", requireMeetEditor, async (req, res) => {
     const { user_id } = req.body || {};
     try {
-      const target = await pool.query(
-        "SELECT org_id FROM teams WHERE id = $1",
-        [req.params.id],
-      );
-      if (!target.rows.length)
-        return res.status(404).json({ error: "Team not found" });
-      if (
-        !req.user.is_system_admin &&
-        target.rows[0].org_id !== req.user.org_id
-      ) {
-        return res
-          .status(403)
-          .json({ error: "Cannot modify teams in other organisations" });
-      }
+      const team = await loadOwnTeam(pool, req, res, req.params.id, "modify");
+      if (!team) return;
       // Member must be a user in the same org as the team
       const u = await pool.query(
         "SELECT 1 FROM users WHERE id = $1 AND org_id = $2",
-        [user_id, target.rows[0].org_id],
+        [user_id, team.org_id],
       );
       if (!u.rows.length)
         return res
@@ -611,20 +555,7 @@ module.exports = function createTeamsRouter({
     requireMeetEditor,
     async (req, res) => {
       try {
-        const target = await pool.query(
-          "SELECT org_id FROM teams WHERE id = $1",
-          [req.params.id],
-        );
-        if (!target.rows.length)
-          return res.status(404).json({ error: "Team not found" });
-        if (
-          !req.user.is_system_admin &&
-          target.rows[0].org_id !== req.user.org_id
-        ) {
-          return res
-            .status(403)
-            .json({ error: "Cannot modify teams in other organisations" });
-        }
+        if (!(await loadOwnTeam(pool, req, res, req.params.id, "modify"))) return;
         await pool.query(
           "DELETE FROM team_members WHERE team_id = $1 AND user_id = $2",
           [req.params.id, req.params.userId],
