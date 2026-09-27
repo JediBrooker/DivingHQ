@@ -6833,3 +6833,26 @@ test("signup into a claimed region asks it, once the founder has verified", asyn
     await claimKit.wipe(CODE);
   }
 });
+
+// A claimed federation whose only admin has gone (deleted, or suspended)
+// stays claimed. New role requests there emailed nobody; the sysadmin
+// hears instead, the way club approvals already fall back.
+test("role requests: a federation with no live admin sends new ones to DivingHQ", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { reviewersFor } = require("../lib/role-requests");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const member = await insertUser({ orgId: st.orgId, role: "spectator", username: `int-rr-${st.slug}`, fullName: "Asking Member" });
+    assert.equal((await reviewersFor(pool, member, st.orgId, "judge")).via, "org");
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [st.adminId]);
+    const suspended = await reviewersFor(pool, member, st.orgId, "judge");
+    assert.equal(suspended.via, "sysadmin", "not a suspended admin who can't act on it");
+    await pool.query("UPDATE users SET suspended_at = NULL, deleted_at = now() WHERE id = $1", [st.adminId]);
+    const gone = await reviewersFor(pool, member, st.orgId, "judge");
+    assert.equal(gone.via, "sysadmin");
+    assert.ok(!gone.recipients.some((r) => r.email === `${st.username}@example.test`));
+  } finally {
+    await teardownFixture(st);
+  }
+});
