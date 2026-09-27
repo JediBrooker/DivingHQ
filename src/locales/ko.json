@@ -1948,7 +1948,9 @@
     "no_clubs_body": "클럽이 가입 시 또는 클럽 페이지에서 지역을 선택하면 여기에 표시됩니다.",
     "members": "회원 {n}명",
     "no_admin": "관리자 없음",
-    "region_admins": "지역 관리자"
+    "region_admins": "지역 관리자",
+    "pick_member": "— 지역 내 클럽 회원 선택 —",
+    "no_candidates": "아직 추가할 사람이 없습니다. 지역 내 클럽 회원이 여기에 표시됩니다."
   },
   "claims": {
     "title": "인수 신청",

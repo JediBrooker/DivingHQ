@@ -1948,7 +1948,9 @@
     "no_clubs_body": "Klubovi se ovdje pojavljuju kad odaberu vašu regiju, pri registraciji ili na stranici kluba.",
     "members": "{n} članova",
     "no_admin": "Još nema administratora",
-    "region_admins": "Administratori regije"
+    "region_admins": "Administratori regije",
+    "pick_member": "— Odaberite člana nekog kluba iz vaše regije —",
+    "no_candidates": "Još nema koga dodati. Ovdje se prikazuju članovi klubova iz vaše regije."
   },
   "claims": {
     "title": "Zahtjevi",

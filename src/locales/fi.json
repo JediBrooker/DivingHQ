@@ -1948,7 +1948,9 @@
     "no_clubs_body": "Seurat näkyvät tässä, kun ne ovat valinneet alueesi rekisteröityessä tai seurasivullaan.",
     "members": "{n} jäsentä",
     "no_admin": "Ei vielä ylläpitäjää",
-    "region_admins": "Alueen ylläpitäjät"
+    "region_admins": "Alueen ylläpitäjät",
+    "pick_member": "— Valitse alueesi seuran jäsen —",
+    "no_candidates": "Lisättäviä ei vielä ole. Alueesi seurojen jäsenet näkyvät tässä."
   },
   "claims": {
     "title": "Vaatimukset",

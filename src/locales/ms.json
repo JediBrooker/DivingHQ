@@ -1948,7 +1948,9 @@
     "no_clubs_body": "Kelab dipaparkan di sini selepas memilih rantau anda semasa pendaftaran atau di halaman kelab.",
     "members": "{n} ahli",
     "no_admin": "Belum ada pentadbir",
-    "region_admins": "Pentadbir rantau"
+    "region_admins": "Pentadbir rantau",
+    "pick_member": "— Pilih ahli kelab dalam rantau anda —",
+    "no_candidates": "Belum ada sesiapa untuk ditambah. Ahli kelab dalam rantau anda dipaparkan di sini."
   },
   "claims": {
     "title": "Tuntutan",

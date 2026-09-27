@@ -10,17 +10,22 @@
 //   GET    /api/regions/:id/overview        region admins + org admins: its
 //                                           clubs and who admins them
 //   GET    /api/regions/:id/admins          admins + candidates
-//   POST   /api/regions/:id/admins          appoint (org_admin / sysadmin)
-//   DELETE /api/regions/:id/admins/:userId  remove  (org_admin / sysadmin)
+//   POST   /api/regions/:id/admins          appoint
+//   DELETE /api/regions/:id/admins/:userId  remove
 //
 // Who appoints region admins: the federation's org admin, or the
-// sysadmin. In a country the clubs started there's no org admin, and a
-// state body claiming its region is phase 3, so until then that's the
-// sysadmin's call.
+// sysadmin. In a country the clubs started there's no org admin, so a
+// region's own admins (usually the state body whose claim passed) add
+// and remove their co-admins there, the same way club admins do for a
+// club: people from the region's clubs only, and never down to no live
+// admin. If a region does end up with nobody (the sysadmin removed them,
+// or every admin deleted their account) it can be claimed again, see
+// register-org in routes/auth.js.
 
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { catalogFor, materializeRegions } = require("../lib/regions");
+const { removeAdmin } = require("../lib/admin-rows");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -31,6 +36,11 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
   const isOrgAdminOf = (user, orgId) =>
     !!user.is_system_admin
     || ((user.org_roles || []).includes("org_admin") && user.org_id === orgId);
+
+  // A region admin looking after their own co-admins, which only happens
+  // where there's no federation to do it.
+  const viaRegionAdmin = (region) =>
+    region.org_claim_state === "unclaimed" && region.caller_is_admin;
 
   // Region row + its org's claim state, or null after writing a 404.
   async function loadRegion(req, res) {
@@ -156,7 +166,7 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
                 (SELECT count(*)::int FROM users u WHERE u.club_id = c.id AND u.deleted_at IS NULL) AS member_count,
                 COALESCE((SELECT json_agg(json_build_object('id', u.id, 'full_name', u.full_name) ORDER BY u.full_name)
                             FROM club_admins ca JOIN users u ON u.id = ca.user_id
-                           WHERE ca.club_id = c.id), '[]'::json) AS admins
+                           WHERE ca.club_id = c.id AND u.deleted_at IS NULL), '[]'::json) AS admins
            FROM clubs c WHERE c.region_id = $1
           ORDER BY lower(c.name)`,
         [region.id],
@@ -179,7 +189,7 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
     try {
       const region = await loadRegion(req, res);
       if (!region) return;
-      const canManage = isOrgAdminOf(req.user, region.org_id);
+      const canManage = isOrgAdminOf(req.user, region.org_id) || viaRegionAdmin(region);
       if (!canManage && !region.caller_is_admin) return res.status(403).json({ error: "Forbidden" });
       const admins = await pool.query(
         `SELECT u.id, u.full_name, u.username, ra.created_at
@@ -193,7 +203,7 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
         ? (await pool.query(
             `SELECT u.id, u.full_name, u.username, c.name AS club_name
                FROM users u JOIN clubs c ON c.id = u.club_id
-              WHERE c.region_id = $1 AND u.deleted_at IS NULL
+              WHERE c.region_id = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL
               ORDER BY lower(u.full_name)`,
             [region.id],
           )).rows
@@ -213,9 +223,23 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
     try {
       const region = await loadRegion(req, res);
       if (!region) return;
-      if (!isOrgAdminOf(req.user, region.org_id)) return res.status(403).json({ error: "Forbidden" });
+      const asOrgAdmin = isOrgAdminOf(req.user, region.org_id);
+      if (!asOrgAdmin && !viaRegionAdmin(region)) return res.status(403).json({ error: "Forbidden" });
       if (!(await isInSameOrg(pool, region.org_id, userId, "users"))) {
         return res.status(400).json({ error: "That user isn't in this region's organisation" });
+      }
+      // Same limit a club admin has: their own people, here meaning a
+      // live member of one of the region's clubs, not anyone in the country.
+      if (!asOrgAdmin) {
+        const m = await pool.query(
+          `SELECT 1 FROM users u JOIN clubs c ON c.id = u.club_id
+            WHERE u.id = $1 AND c.region_id = $2
+              AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
+          [userId, region.id],
+        );
+        if (!m.rows.length) {
+          return res.status(400).json({ error: "Only members of this region's clubs can be its admins" });
+        }
       }
       const ins = await pool.query(
         `INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)
@@ -240,13 +264,19 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
     try {
       const region = await loadRegion(req, res);
       if (!region) return;
-      if (!isOrgAdminOf(req.user, region.org_id)) return res.status(403).json({ error: "Forbidden" });
+      const asOrgAdmin = isOrgAdminOf(req.user, region.org_id);
+      if (!asOrgAdmin && !viaRegionAdmin(region)) return res.status(403).json({ error: "Forbidden" });
       if (!UUID_RE.test(String(req.params.userId))) return res.status(404).json({ error: "Not a region admin" });
-      const del = await pool.query(
-        "DELETE FROM region_admins WHERE region_id = $1 AND user_id = $2 RETURNING id",
-        [region.id, req.params.userId],
-      );
-      if (!del.rows.length) return res.status(404).json({ error: "Not a region admin" });
+      const out = await removeAdmin(pool, {
+        scope: "region",
+        scopeId: region.id,
+        userId: req.params.userId,
+        keepOneLive: !asOrgAdmin,
+      });
+      if (out.status === 404) return res.status(404).json({ error: "Not a region admin" });
+      if (out.status === 409) {
+        return res.status(409).json({ error: "A region needs at least one admin. Add someone else first." });
+      }
       await recordAudit(pool, {
         ...auditFromReq(req),
         org_id: region.org_id, entity_type: "region", entity_id: region.id,

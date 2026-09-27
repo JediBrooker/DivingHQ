@@ -1948,7 +1948,9 @@
     "no_clubs_body": "俱乐部在注册时或在俱乐部页面选择您的地区后会显示在这里。",
     "members": "{n} 名会员",
     "no_admin": "尚无管理员",
-    "region_admins": "地区管理员"
+    "region_admins": "地区管理员",
+    "pick_member": "— 选择您所在地区俱乐部的会员 —",
+    "no_candidates": "暂时没有可添加的人。您所在地区各俱乐部的会员会显示在这里。"
   },
   "claims": {
     "title": "接管申请",

@@ -1948,7 +1948,9 @@
     "no_clubs_body": "Klubbar visas här när de har valt din region vid registrering eller på sin klubbsida.",
     "members": "{n} medlemmar",
     "no_admin": "Ingen administratör ännu",
-    "region_admins": "Regionadministratörer"
+    "region_admins": "Regionadministratörer",
+    "pick_member": "— Välj en medlem i en klubb i din region —",
+    "no_candidates": "Ingen att lägga till än. Medlemmar i klubbarna i din region visas här."
   },
   "claims": {
     "title": "Anspråk",

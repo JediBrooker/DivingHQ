@@ -523,7 +523,11 @@ club's own admin picks, on My club (`PUT /api/clubs/:id/region`).
 
 **Region admins** are appointed by the federation's org admin or the
 sysadmin (a region chip on the Clubs screen opens `RegionAdminsModal`).
-State bodies appointing themselves via claims is phase 3. A region admin:
+State bodies appointing themselves via claims is phase 3. Where there's
+no federation, a region's own admins add and remove co-admins on
+`/region` (members of the region's clubs only, never down to no live
+admin, via `lib/admin-rows.js`). A claimed region whose admins have all
+gone can be claimed again through `/register-org`. A region admin:
 - runs meets hosted by their region or by any club in it: the
   `isEventDelegate` / `isMeetHostAdmin` checks now include the host region
   and the host club's region, so every phase-1 gate follows;

@@ -1948,7 +1948,9 @@
     "no_clubs_body": "Kluby se tu objeví, jakmile si váš region vyberou při registraci nebo na stránce klubu.",
     "members": "{n} členů",
     "no_admin": "Zatím bez správce",
-    "region_admins": "Správci regionu"
+    "region_admins": "Správci regionu",
+    "pick_member": "— Vyberte člena některého klubu ve vašem regionu —",
+    "no_candidates": "Zatím není koho přidat. Zobrazí se tu členové klubů ve vašem regionu."
   },
   "claims": {
     "title": "Nároky",

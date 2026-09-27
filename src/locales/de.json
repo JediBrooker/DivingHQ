@@ -1948,7 +1948,9 @@
     "no_clubs_body": "Vereine erscheinen hier, sobald sie Ihre Region bei der Registrierung oder auf ihrer Vereinsseite gewählt haben.",
     "members": "{n} Mitglieder",
     "no_admin": "Noch kein Admin",
-    "region_admins": "Regionsadmins"
+    "region_admins": "Regionsadmins",
+    "pick_member": "— Mitglied eines Vereins Ihrer Region auswählen —",
+    "no_candidates": "Noch niemand zum Hinzufügen. Mitglieder der Vereine Ihrer Region erscheinen hier."
   },
   "claims": {
     "title": "Ansprüche",

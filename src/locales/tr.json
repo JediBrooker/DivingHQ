@@ -1948,7 +1948,9 @@
     "no_clubs_body": "Kulüpler, kayıt sırasında veya kulüp sayfasında bölgenizi seçtiklerinde burada görünür.",
     "members": "{n} üye",
     "no_admin": "Henüz yönetici yok",
-    "region_admins": "Bölge yöneticileri"
+    "region_admins": "Bölge yöneticileri",
+    "pick_member": "— Bölgenizdeki kulüplerden bir üye seçin —",
+    "no_candidates": "Henüz eklenecek kimse yok. Bölgenizdeki kulüplerin üyeleri burada görünür."
   },
   "claims": {
     "title": "Devralma talepleri",

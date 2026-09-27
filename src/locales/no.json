@@ -1948,7 +1948,9 @@
     "no_clubs_body": "Klubber vises her når de har valgt regionen din ved registrering eller på klubbsiden.",
     "members": "{n} medlemmer",
     "no_admin": "Ingen administrator ennå",
-    "region_admins": "Regionsadministratorer"
+    "region_admins": "Regionsadministratorer",
+    "pick_member": "— Velg et medlem av en klubb i regionen din —",
+    "no_candidates": "Ingen å legge til ennå. Medlemmer av klubbene i regionen din vises her."
   },
   "claims": {
     "title": "Krav",

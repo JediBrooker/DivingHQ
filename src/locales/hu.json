@@ -1948,7 +1948,9 @@
     "no_clubs_body": "A klubok akkor jelennek meg itt, ha regisztrációkor vagy a klub oldalán az Ön régióját választják.",
     "members": "{n} tag",
     "no_admin": "Még nincs adminisztrátor",
-    "region_admins": "Régió-adminisztrátorok"
+    "region_admins": "Régió-adminisztrátorok",
+    "pick_member": "— Válasszon tagot a régiója klubjaiból —",
+    "no_candidates": "Még nincs kit hozzáadni. Itt jelennek meg a régiója klubjainak tagjai."
   },
   "claims": {
     "title": "Igények",

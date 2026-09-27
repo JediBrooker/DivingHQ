@@ -1892,3 +1892,56 @@ test("last club admin: only live admins count, and co-admins can't remove each o
     await claimKit.wipe(CODE);
   }
 });
+
+test("region co-admins: a region's own admins manage them, and an orphaned region can be claimed again", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CAN";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Kingston Tritons", region_code: "ON" });
+    const M = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
+    const Q = await delegateSignUp({ country_code: CODE, new_club_name: "Quebec Tritons", region_code: "QC" });
+    const on = (await pool.query("SELECT id FROM regions WHERE org_id = $1 AND short_code = 'ON'", [A.orgId])).rows[0].id;
+    // Ontario's body won its claim: claimed, with one admin.
+    const R = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
+    await pool.query("UPDATE regions SET claim_state = 'claimed', claimed_name = 'Diving Ontario' WHERE id = $1", [on]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [on, R.id, A.orgId]);
+    const url = `/api/regions/${on}/admins`;
+
+    const list = await fetchJson("GET", url, { token: R.token });
+    assert.equal(list.status, 200);
+    assert.equal(list.body.can_manage, true);
+    assert.ok(list.body.candidates.some((c) => c.id === M.id));
+
+    // Their own clubs' members only; a club admin can't appoint here.
+    assert.equal((await fetchJson("POST", url, { token: R.token, body: { user_id: Q.id } })).status, 400);
+    assert.equal((await fetchJson("POST", url, { token: A.token, body: { user_id: M.id } })).status, 403);
+    assert.equal((await fetchJson("POST", url, { token: R.token, body: { user_id: M.id } })).status, 201);
+    assert.equal((await fetchJson("DELETE", `${url}/${M.id}`, { token: A.token })).status, 403);
+    assert.equal((await fetchJson("DELETE", `${url}/${M.id}`, { token: R.token })).status, 200);
+    // Never down to nobody, and a dead co-admin doesn't count.
+    assert.equal((await fetchJson("DELETE", `${url}/${R.id}`, { token: R.token })).status, 409);
+    assert.equal((await fetchJson("POST", url, { token: R.token, body: { user_id: M.id } })).status, 201);
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [M.id]);
+    assert.equal((await fetchJson("DELETE", `${url}/${R.id}`, { token: R.token })).status, 409);
+
+    // Under a federation it's the org admin's call, as before.
+    await pool.query("UPDATE organisations SET claim_state = 'claimed' WHERE id = $1", [A.orgId]);
+    assert.equal((await fetchJson("POST", url, { token: R.token, body: { user_id: A.id } })).status, 403);
+    assert.equal((await fetchJson("GET", url, { token: R.token })).body.can_manage, false);
+    await pool.query("UPDATE organisations SET claim_state = 'unclaimed' WHERE id = $1", [A.orgId]);
+
+    // While Ontario has a live admin a second body can't claim it...
+    const early = await claimKit.claim({ org_name: "Ontario Diving Two", country_code: CODE, region_code: "ON" });
+    assert.equal(early.res.status, 409);
+    assert.equal(early.res.body.code, "already_claimed");
+    // ...but once its last admin has gone, the region is open again.
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [R.id]);
+    const again = await claimKit.claim({ org_name: "Ontario Diving Two", country_code: CODE, region_code: "ON" });
+    assert.equal(again.res.status, 201, JSON.stringify(again.res.body));
+    assert.equal(again.res.body.target_kind, "region");
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

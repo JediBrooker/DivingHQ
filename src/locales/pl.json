@@ -1948,7 +1948,9 @@
     "no_clubs_body": "Kluby pojawią się tutaj, gdy wybiorą twój region przy rejestracji lub na stronie klubu.",
     "members": "{n} członków",
     "no_admin": "Brak administratora",
-    "region_admins": "Administratorzy regionu"
+    "region_admins": "Administratorzy regionu",
+    "pick_member": "— Wybierz członka klubu z twojego regionu —",
+    "no_candidates": "Na razie nie ma kogo dodać. Tutaj pojawiają się członkowie klubów z twojego regionu."
   },
   "claims": {
     "title": "Roszczenia",

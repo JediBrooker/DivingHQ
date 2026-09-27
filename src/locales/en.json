@@ -1948,7 +1948,9 @@
     "no_clubs_body": "Clubs show up here once they've picked your region, at sign-up or on their club page.",
     "members": "{n} members",
     "no_admin": "No admin yet",
-    "region_admins": "Region admins"
+    "region_admins": "Region admins",
+    "pick_member": "— Pick a member of your region's clubs —",
+    "no_candidates": "Nobody to add yet. Members of your region's clubs show up here."
   },
   "claims": {
     "title": "Claims",

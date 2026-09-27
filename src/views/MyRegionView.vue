@@ -3,6 +3,8 @@
 // runs each one, and the pending role requests from those clubs'
 // members. Region admins sit one level above club admins, so they can
 // act on any of these requests, not just ones whose club has no admin.
+// Where there's no federation they also add and remove their own
+// co-admins here (the server says so with can_manage).
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
@@ -15,8 +17,9 @@ const { t } = useI18n()
 const auth = useAuthStore()
 
 const regions = computed(() => auth.regionAdminOf)
-// Per region id: { region, clubs, admins }
+// Per region id: { region, clubs, admins, candidates, canManage, toAdd }
 const detail = ref({})
+const busyId = ref(null)
 
 function labelFor(key) {
   return key ? t(`regions.label.${key}`) : ''
@@ -28,9 +31,53 @@ async function load(region) {
       auth.apiFetch(`/api/regions/${region.id}/overview`),
       auth.apiFetch(`/api/regions/${region.id}/admins`),
     ])
-    detail.value[region.id] = { ...overview, admins: admins.admins || [] }
+    detail.value[region.id] = {
+      ...overview,
+      admins: admins.admins || [],
+      candidates: admins.candidates || [],
+      canManage: !!admins.can_manage,
+      toAdd: '',
+    }
   } catch (err) {
     showError(err.message)
+  }
+}
+
+function addable(regionId) {
+  const d = detail.value[regionId]
+  if (!d) return []
+  const taken = new Set(d.admins.map(a => a.id))
+  return d.candidates.filter(c => !taken.has(c.id))
+}
+
+async function addAdmin(region) {
+  const d = detail.value[region.id]
+  if (!d?.toAdd) return
+  busyId.value = region.id
+  try {
+    await auth.apiFetch(`/api/regions/${region.id}/admins`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: d.toAdd }),
+    })
+    await load(region)
+  } catch (err) {
+    showError(err.message)
+  } finally {
+    busyId.value = null
+  }
+}
+
+async function removeAdmin(region, admin) {
+  busyId.value = region.id
+  try {
+    await auth.apiFetch(`/api/regions/${region.id}/admins/${admin.id}`, { method: 'DELETE' })
+    // Taking yourself off loses you the page, so re-read who you are.
+    if (admin.id === auth.user?.id) await auth.fetchMe()
+    else await load(region)
+  } catch (err) {
+    showError(err.message)
+  } finally {
+    busyId.value = null
   }
 }
 
@@ -81,7 +128,31 @@ onMounted(() => {
         </ul>
 
         <h3 class="sub-title">{{ $t('my_region.region_admins') }}</h3>
-        <p class="meta">{{ detail[r.id].admins.map(a => a.full_name).join(', ') }}</p>
+        <template v-if="detail[r.id].canManage">
+          <ul class="rows" data-test-id="region-admins">
+            <li v-for="a in detail[r.id].admins" :key="a.id" class="row card-sm">
+              <div class="who">
+                <span class="name">{{ a.full_name }}</span>
+                <span class="meta">@{{ a.username }}</span>
+              </div>
+              <button class="btn btn-ghost btn-sm" :disabled="busyId === r.id"
+                      @click="removeAdmin(r, a)">{{ $t('my_club.remove') }}</button>
+            </li>
+          </ul>
+          <div class="add-row">
+            <select class="select" v-model="detail[r.id].toAdd" :disabled="!addable(r.id).length"
+                    :aria-label="$t('my_club.add_admin')">
+              <option value="">{{ $t('my_region.pick_member') }}</option>
+              <option v-for="m in addable(r.id)" :key="m.id" :value="m.id">
+                {{ m.full_name }} (@{{ m.username }}) · {{ m.club_name }}
+              </option>
+            </select>
+            <button class="btn btn-primary btn-sm" :disabled="!detail[r.id].toAdd || busyId === r.id"
+                    @click="addAdmin(r)">{{ $t('my_club.add') }}</button>
+          </div>
+          <p v-if="!addable(r.id).length" class="meta">{{ $t('my_region.no_candidates') }}</p>
+        </template>
+        <p v-else class="meta">{{ detail[r.id].admins.map(a => a.full_name).join(', ') }}</p>
       </template>
     </section>
   </div>
@@ -105,6 +176,8 @@ onMounted(() => {
 .name { font-weight: 600; color: var(--fg); }
 .meta { font-size: var(--text-xs); color: var(--fg-3); margin: 0; }
 .admins { text-align: end; }
+.add-row { display: flex; gap: var(--space-2); align-items: center; }
+.add-row .select { flex: 1; min-width: 0; }
 @media (max-width: 720px) {
   .main { padding: var(--space-4); }
   .row { flex-direction: column; align-items: flex-start; }

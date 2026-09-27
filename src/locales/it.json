@@ -1948,7 +1948,9 @@
     "no_clubs_body": "I club compaiono qui quando scelgono la tua regione, all'iscrizione o nella pagina del club.",
     "members": "{n} membri",
     "no_admin": "Ancora nessun amministratore",
-    "region_admins": "Amministratori della regione"
+    "region_admins": "Amministratori della regione",
+    "pick_member": "— Scegli un membro dei club della tua regione —",
+    "no_candidates": "Ancora nessuno da aggiungere. Qui compaiono i membri dei club della tua regione."
   },
   "claims": {
     "title": "Rivendicazioni",

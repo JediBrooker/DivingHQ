@@ -1948,7 +1948,9 @@
     "no_clubs_body": "Lalabas dito ang mga club kapag napili na nila ang iyong rehiyon, sa pag-sign up o sa kanilang club page.",
     "members": "{n} miyembro",
     "no_admin": "Wala pang admin",
-    "region_admins": "Mga admin ng rehiyon"
+    "region_admins": "Mga admin ng rehiyon",
+    "pick_member": "— Pumili ng miyembro ng mga club sa iyong rehiyon —",
+    "no_candidates": "Wala pang maidadagdag. Lalabas dito ang mga miyembro ng mga club sa iyong rehiyon."
   },
   "claims": {
     "title": "Mga claim",
