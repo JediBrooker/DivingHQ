@@ -119,7 +119,7 @@ A claim is how a federation or state body takes over a country or region that it
 3. **Vote.** The club admins affected are notified by email and in the app, with the body's name, its website, and whether the applicant's email is on that website's domain. They vote on **Claims**. For a national claim, the regions whose state bodies are already on DivingHQ vote instead, if there are enough of them.
    - Enough approvals passes it straight away: by default, more than half the eligible voters and at least two.
    - Any objection sends it to DivingHQ, with the reason given.
-   - When the voting window closes (two weeks by default), at least one approval and no objections passes it. Anything else goes to DivingHQ.
+   - When the voting window closes (two weeks by default) without reaching that bar, it goes to DivingHQ. A claim never passes on the clock alone.
    - If there aren't enough eligible voters to begin with, DivingHQ decides. By default a club gets a vote once it has an admin, has been on DivingHQ for a month, and has hosted a meet or has at least five members with confirmed emails.
    - A state body's claim in a country whose federation already runs DivingHQ is the federation's call.
 4. **Approved.** The applicant becomes the federation admin (or region admin), and the clubs are told who now runs it. From then on role requests go to them, and they appoint club and region admins. Club admins keep running their own club's meets.

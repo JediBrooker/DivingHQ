@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Panahon ng botohan (araw)",
-      "description": "Pagkatapos nito: kahit isang pag-apruba at walang tutol ay pumapasa sa claim, kung hindi ay mapupunta ito sa sysadmin."
+      "description": "Kapag natapos ito nang kulang ang pag-apruba para pumasa (ang dalawang tuntunin sa itaas), mapupunta ang claim sa sysadmin. Hindi ito kailanman pumapasa dahil lang natapos ang oras."
     }
   },
   "nav": {

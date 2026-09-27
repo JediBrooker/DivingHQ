@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Afstemningsperiode (dage)",
-      "description": "Når den udløber: mindst én godkendelse og ingen indsigelser vedtager kravet, ellers går det til systemadministratoren."
+      "description": "Når den udløber uden nok godkendelser til at vedtage kravet (de to regler ovenfor), går kravet til systemadministratoren. Det vedtages aldrig alene fordi tiden løber ud."
     }
   },
   "nav": {

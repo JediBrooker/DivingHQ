@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Durata del voto (giorni)",
-      "description": "Alla scadenza: almeno un'approvazione e nessuna obiezione fanno passare la rivendicazione, altrimenti va all'amministratore di sistema."
+      "description": "Se scade senza abbastanza approvazioni per passare (le due regole sopra), la rivendicazione va all'amministratore di sistema. Non passa mai solo per lo scadere del tempo."
     }
   },
   "nav": {

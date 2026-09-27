@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Doba hlasování (dny)",
-      "description": "Po jejím uplynutí nárok projde s alespoň jedním schválením a bez námitek, jinak jde systémovému správci."
+      "description": "Když uplyne a nárok nemá dost schválení (podle dvou pravidel výše), jde systémovému správci. Samotným uplynutím času nárok nikdy neprojde."
     }
   },
   "nav": {

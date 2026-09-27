@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Trajanje glasanja (dani)",
-      "description": "Kad istekne: barem jedno odobrenje i nijedan prigovor znače da zahtjev prolazi, inače ide administratoru sustava."
+      "description": "Ako istekne bez dovoljno odobrenja za prolaz (dva pravila iznad), zahtjev ide administratoru sustava. Nikada ne prolazi samo zato što je vrijeme isteklo."
     }
   },
   "nav": {

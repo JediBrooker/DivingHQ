@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Masa pemungutan suara (hari)",
-      "description": "Saat berakhir: minimal satu persetujuan tanpa keberatan meloloskan klaim, jika tidak diteruskan ke admin sistem."
+      "description": "Jika berakhir tanpa cukup persetujuan untuk lolos (dua aturan di atas), klaim diteruskan ke admin sistem. Klaim tidak pernah lolos hanya karena waktunya habis."
     }
   },
   "nav": {

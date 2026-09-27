@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Szavazási idő (nap)",
-      "description": "Lejártakor: legalább egy jóváhagyás és egyetlen kifogás sem esetén az igény elfogadott, különben a rendszergazdához kerül."
+      "description": "Ha úgy jár le, hogy nincs elég jóváhagyás az elfogadáshoz (a fenti két szabály), az igény a rendszergazdához kerül. Pusztán az idő lejártával soha nem fogadják el."
     }
   },
   "nav": {

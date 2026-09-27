@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Stemmeperiode (dager)",
-      "description": "Når den er ute: minst én godkjenning og ingen innsigelser vedtar kravet, ellers går det til systemadministratoren."
+      "description": "Går den ut uten nok godkjenninger til å vedta kravet (de to reglene over), går kravet til systemadministratoren. Det vedtas aldri bare fordi tiden er ute."
     }
   },
   "nav": {

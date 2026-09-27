@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Oylama süresi (gün)",
-      "description": "Süre dolduğunda: en az bir onay ve hiç itiraz yoksa talep kabul edilir, aksi halde sistem yöneticisine gider."
+      "description": "Geçmesi için yeterli onay toplanmadan süre dolarsa (yukarıdaki iki kural), talep sistem yöneticisine gider. Yalnızca süre dolduğu için asla kabul edilmez."
     }
   },
   "nav": {

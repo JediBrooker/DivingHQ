@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Durée du vote (jours)",
-      "description": "À son terme : au moins une approbation et aucune objection valident la revendication, sinon elle part à l'administrateur système."
+      "description": "Si elle se termine sans assez d'approbations pour la valider (les deux règles ci-dessus), la revendication part à l'administrateur système. Elle n'est jamais validée du seul fait du délai."
     }
   },
   "nav": {

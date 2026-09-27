@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Prazo de votação (dias)",
-      "description": "Quando termina: pelo menos uma aprovação e nenhuma objeção aprovam a reivindicação; caso contrário, passa para o administrador do sistema."
+      "description": "Se terminar sem aprovações suficientes para passar (as duas regras acima), a reivindicação passa para o administrador do sistema. Nunca é aprovada apenas por o prazo terminar."
     }
   },
   "nav": {

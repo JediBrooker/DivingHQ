@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Plazo de votación (días)",
-      "description": "Al terminar: al menos una aprobación y ninguna objeción aprueban la reclamación; si no, pasa al administrador del sistema."
+      "description": "Si termina sin aprobaciones suficientes para aprobarla (las dos reglas de arriba), la reclamación pasa al administrador del sistema. Nunca se aprueba solo porque se acabe el plazo."
     }
   },
   "nav": {

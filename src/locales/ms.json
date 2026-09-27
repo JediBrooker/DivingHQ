@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Tempoh mengundi (hari)",
-      "description": "Apabila tamat: sekurang-kurangnya satu kelulusan tanpa bantahan meluluskan tuntutan, jika tidak ia dihantar kepada pentadbir sistem."
+      "description": "Jika tamat tanpa kelulusan yang cukup untuk lulus (dua peraturan di atas), tuntutan dihantar kepada pentadbir sistem. Ia tidak pernah lulus hanya kerana masa tamat."
     }
   },
   "nav": {

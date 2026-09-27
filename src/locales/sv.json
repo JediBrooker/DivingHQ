@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Röstningsperiod (dagar)",
-      "description": "När den löper ut: minst ett godkännande och inga invändningar antar anspråket, annars går det till systemadministratören."
+      "description": "Om den löper ut utan tillräckligt många godkännanden (de två reglerna ovan) går anspråket till systemadministratören. Det antas aldrig bara för att tiden gått ut."
     }
   },
   "nav": {

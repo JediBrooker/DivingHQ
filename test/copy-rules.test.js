@@ -27,3 +27,13 @@ test("nothing tells a club admin they approve referees", () => {
   }
   assert.doesNotMatch(read("README.md"), /Sign off federation records/);
 });
+
+// lib/claims.js sweepOnce: a claim whose window closes without passing()
+// goes to the sysadmin. The guide and the settings screen said one
+// approval and no objections would pass it.
+test("the claim timeout never passes a claim, wherever it's described", () => {
+  assert.match(read("lib/platform-settings.js"), /never passes on the clock alone/);
+  assert.match(en.admin_settings.claim_timeout_days.description, /never passes on the clock alone/);
+  assert.doesNotMatch(en.admin_settings.claim_timeout_days.description, /at least one approval and no objections passes/);
+  assert.doesNotMatch(read("src/guide/content/roles-and-permissions.md"), /at least one approval and no objections passes/);
+});

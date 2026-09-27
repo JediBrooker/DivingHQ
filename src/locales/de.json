@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Abstimmungszeitraum (Tage)",
-      "description": "Nach Ablauf: mindestens eine Zustimmung und keine Einwände lassen den Anspruch durchgehen, sonst geht er an den Systemadmin."
+      "description": "Läuft sie ab, ohne dass genügend Zustimmungen vorliegen (die beiden Regeln oben), geht der Anspruch an den Systemadmin. Allein durch Zeitablauf geht er nie durch."
     }
   },
   "nav": {

@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Czas głosowania (dni)",
-      "description": "Po jego upływie: co najmniej jedna zgoda i brak sprzeciwów oznaczają przyjęcie, w przeciwnym razie roszczenie trafia do administratora systemu."
+      "description": "Jeśli upłynie bez wystarczającej liczby zgód (dwie reguły powyżej), roszczenie trafia do administratora systemu. Samo upłynięcie czasu nigdy go nie przyjmuje."
     }
   },
   "nav": {

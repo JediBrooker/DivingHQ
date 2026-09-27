@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Äänestysaika (päivää)",
-      "description": "Kun se päättyy: vähintään yksi hyväksyntä ilman vastalauseita hyväksyy vaatimuksen, muuten se siirtyy järjestelmänvalvojalle."
+      "description": "Jos se päättyy ilman riittäviä hyväksyntöjä (kaksi yllä olevaa sääntöä), vaatimus siirtyy järjestelmänvalvojalle. Pelkkä ajan kuluminen ei koskaan hyväksy sitä."
     }
   },
   "nav": {

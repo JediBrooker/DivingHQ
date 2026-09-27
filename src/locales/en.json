@@ -2308,7 +2308,7 @@
     },
     "claim_timeout_days": {
       "label": "Voting window (days)",
-      "description": "When it runs out: at least one approval and no objections passes the claim, otherwise it goes to the sysadmin."
+      "description": "When it runs out without enough approvals to pass (the two rules above), the claim goes to the sysadmin. It never passes on the clock alone."
     }
   },
   "nav": {
