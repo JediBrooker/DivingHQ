@@ -548,3 +548,91 @@ test("manual entry that completes a dive sets records and announces them", async
   const firstRecord = emitted.findIndex((e) => e.name === "record_broken" && e.payload.event_id === recordEventId);
   assert.deepEqual(emitted[firstRecord - 1], { name: "cache_invalidate", payload: { event_id: recordEventId } });
 });
+
+test("manual entry gives its connection back before the records check takes one", async (t) => {
+  if (!dbReachable || !migrationsApplied) { t.skip(); return; }
+  // One connection, the whole pool. The handler used to hold its own
+  // client while checkAndApplyRecords waited on pool.connect() for a
+  // second, so with nothing spare the request hung for good (the app's
+  // pool has no connect timeout). Enough concurrent manual entries do
+  // the same to a 20-connection pool.
+  // The connect timeout is only here so a regression fails the
+  // assertion below instead of hanging the whole file.
+  const tight = new Pool({ ...pool.options, max: 1, connectionTimeoutMillis: 2000 });
+  const suffix = crypto.randomBytes(4).toString("hex");
+  const made = { event: null, users: [] };
+  let server;
+  try {
+    const ev = await pool.query(
+      `INSERT INTO events (org_id, name, gender, status, height, event_type, total_rounds, number_of_judges)
+       VALUES ($1, $2, 'Female', 'Live', '1m', 'individual', 5, 3) RETURNING id`,
+      [testOrgId, `One connection ${suffix}`],
+    );
+    made.event = ev.rows[0].id;
+    const judges = [];
+    for (let i = 1; i <= 3; i++) {
+      const u = await pool.query(
+        `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+         VALUES ($1, 'x', $2, $3, now()) RETURNING id`,
+        [`oc${i}-${suffix}`, `Tight Judge ${i}`, testOrgId],
+      );
+      judges.push(u.rows[0].id);
+      made.users.push(u.rows[0].id);
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)",
+        [made.event, u.rows[0].id, i]);
+    }
+    const diver = (await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+       VALUES ($1, 'x', 'Tight Pool Diver', $2, now()) RETURNING id`,
+      [`ocd-${suffix}`, testOrgId],
+    )).rows[0].id;
+    made.users.push(diver);
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+      [made.event, diver, testDiveId],
+    );
+    for (const j of judges.slice(0, 2)) {
+      await pool.query(
+        "INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, 1, 7)",
+        [made.event, diver, j, testDiveId],
+      );
+    }
+
+    const tightApp = express();
+    tightApp.use(express.json());
+    tightApp.use((req, _res, next) => {
+      req.user = { id: testOperatorId, org_id: testOrgId, is_system_admin: false, org_roles: ["org_admin"] };
+      next();
+    });
+    const { checkAndApplyRecords } = require("../lib/records")({ pool: tight });
+    tightApp.use(require("../routes/manual-scores")({
+      pool: tight,
+      io: { to: () => ({ emit: () => {} }) },
+      scoreboardCache: { invalidate: () => {} },
+      requireOrgRole: () => (_req, _res, next) => next(),
+      checkAndApplyRecords,
+    }));
+    server = http.createServer(tightApp);
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+
+    // The third score completes the dive, so the records check runs.
+    const res = await fetch(`http://127.0.0.1:${server.address().port}/api/scores/manual-entry`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: made.event, competitor_id: diver, round_number: 1, judge_id: judges[2], score: 7 }),
+      signal: AbortSignal.timeout(10000),
+    });
+    assert.equal(res.status, 200);
+    // The diver's own personal best is a first mark, so it's always set
+    // (the federation book may already hold this score from the test
+    // above).
+    const set = await pool.query(
+      "SELECT count(*)::int AS n FROM records_personal WHERE user_id = $1 AND event_id = $2", [diver, made.event]);
+    assert.equal(set.rows[0].n, 1, "and the record still got written");
+  } finally {
+    if (server) await new Promise((resolve) => server.close(resolve));
+    await tight.end();
+    if (made.event) await pool.query("DELETE FROM events WHERE id = $1", [made.event]);
+    if (made.users.length) await pool.query("DELETE FROM users WHERE id = ANY($1::uuid[])", [made.users]);
+  }
+});

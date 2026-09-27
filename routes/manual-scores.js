@@ -72,6 +72,14 @@ module.exports = function createManualScoresRouter({
       }
 
       const client = await pool.connect();
+      // Released early once the score commits (see the records check
+      // below), so the finally block has to know not to do it twice.
+      let released = false;
+      const release = () => {
+        if (released) return;
+        released = true;
+        client.release();
+      };
       try {
         await client.query("BEGIN");
 
@@ -197,6 +205,11 @@ module.exports = function createManualScoresRouter({
         }
 
         await client.query("COMMIT");
+        // Hand the connection back now. The records check below takes
+        // its own from the same pool, and holding this one while it
+        // waits is how a burst of manual entries could end up with
+        // every connection held by a request waiting for another.
+        release();
 
         // Invalidate the scoreboard cache and broadcast like
         // submit_score does, so spectators see the new score
@@ -230,11 +243,11 @@ module.exports = function createManualScoresRouter({
           source: "manual_entry",
         });
       } catch (err) {
-        await client.query("ROLLBACK").catch(() => {});
+        if (!released) await client.query("ROLLBACK").catch(() => {});
         console.error("[Manual Score Entry]", err.message);
         res.status(500).json({ error: "Internal server error" });
       } finally {
-        client.release();
+        release();
       }
     },
   );
