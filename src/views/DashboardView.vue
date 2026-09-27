@@ -295,7 +295,8 @@ const pulseChips = computed(() => {
   // straight to /claims rather than switching tabs.
   if (claimsToAct.value) {
     const n = claimsToAct.value
-    const title = t(n === 1 ? 'dashboard.attention.claims_one' : 'dashboard.attention.claims_many', { count: n })
+    // Through tn, not a one/many pair: "2 заявки" and "5 заявок" differ.
+    const title = tn('counts.claims_waiting', n)
     chips.push({
       id:           'claims',
       kind:         'pending',
@@ -822,7 +823,7 @@ const attentionCards = computed(() => {
       id:    'claims',
       kind:  'pending',
       icon:  Scale,
-      title: t(n === 1 ? 'dashboard.attention.claims_one' : 'dashboard.attention.claims_many', { count: n }),
+      title: tn('counts.claims_waiting', n),
       meta:  t('dashboard.attention.claims_meta'),
       to:    '/claims',
     })

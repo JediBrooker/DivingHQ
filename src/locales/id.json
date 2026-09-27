@@ -410,8 +410,6 @@
       "orgs_one": "{count} federasi menunggu persetujuan",
       "orgs_many": "{count} federasi menunggu persetujuan",
       "orgs_meta": "Tinjau di Pengelola Pengguna → filter organisasi",
-      "claims_one": "1 klaim menunggu Anda",
-      "claims_many": "{count} klaim menunggu Anda",
       "claims_meta": "Sebuah federasi ingin mengambil alih akun",
       "chip_pending": "Tertunda",
       "chip_claims": "Klaim",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "{n} wilayah ditambahkan",
     "regions_added_few": "{n} wilayah ditambahkan",
     "regions_added_many": "{n} wilayah ditambahkan",
-    "regions_added_other": "{n} wilayah ditambahkan"
+    "regions_added_other": "{n} wilayah ditambahkan",
+    "claims_waiting_zero": "{n} klaim menunggu Anda",
+    "claims_waiting_one": "{n} klaim menunggu Anda",
+    "claims_waiting_two": "{n} klaim menunggu Anda",
+    "claims_waiting_few": "{n} klaim menunggu Anda",
+    "claims_waiting_many": "{n} klaim menunggu Anda",
+    "claims_waiting_other": "{n} klaim menunggu Anda"
   },
   "admin_settings": {
     "title": "Aturan pemungutan suara klaim",

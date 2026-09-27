@@ -410,8 +410,6 @@
       "orgs_one": "{count} Föderation wartet auf Genehmigung",
       "orgs_many": "{count} Föderationen warten auf Genehmigung",
       "orgs_meta": "Prüfen Sie in der Benutzerverwaltung → Organisationsfilter",
-      "claims_one": "1 Anspruch wartet auf Sie",
-      "claims_many": "{count} Ansprüche warten auf Sie",
       "claims_meta": "Ein Verband möchte ein Konto übernehmen",
       "chip_pending": "Offen",
       "chip_claims": "Ansprüche",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "{n} Regionen hinzugefügt",
     "regions_added_few": "{n} Regionen hinzugefügt",
     "regions_added_many": "{n} Regionen hinzugefügt",
-    "regions_added_other": "{n} Regionen hinzugefügt"
+    "regions_added_other": "{n} Regionen hinzugefügt",
+    "claims_waiting_zero": "{n} Ansprüche warten auf Sie",
+    "claims_waiting_one": "{n} Anspruch wartet auf Sie",
+    "claims_waiting_two": "{n} Ansprüche warten auf Sie",
+    "claims_waiting_few": "{n} Ansprüche warten auf Sie",
+    "claims_waiting_many": "{n} Ansprüche warten auf Sie",
+    "claims_waiting_other": "{n} Ansprüche warten auf Sie"
   },
   "admin_settings": {
     "title": "Abstimmungsregeln für Ansprüche",

@@ -410,8 +410,6 @@
       "orgs_one": "{count} федерација чека одобрење",
       "orgs_many": "{count} федерација чекају одобрење",
       "orgs_meta": "Прегледајте у Управљању корисницима → филтер организације",
-      "claims_one": "1 захтев чека на вас",
-      "claims_many": "Захтева који чекају на вас: {count}",
       "claims_meta": "Савез жели да преузме налог",
       "chip_pending": "На чекању",
       "chip_claims": "Захтеви",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "Додато {n} региона",
     "regions_added_few": "Додата {n} региона",
     "regions_added_many": "Додато {n} региона",
-    "regions_added_other": "Додато {n} региона"
+    "regions_added_other": "Додато {n} региона",
+    "claims_waiting_zero": "{n} захтева чека на вас",
+    "claims_waiting_one": "{n} захтев чека на вас",
+    "claims_waiting_two": "{n} захтева чека на вас",
+    "claims_waiting_few": "{n} захтева чекају на вас",
+    "claims_waiting_many": "{n} захтева чека на вас",
+    "claims_waiting_other": "{n} захтева чека на вас"
   },
   "admin_settings": {
     "title": "Правила гласања о захтевима",

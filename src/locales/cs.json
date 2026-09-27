@@ -410,8 +410,6 @@
       "orgs_one": "{count} federace čeká na schválení",
       "orgs_many": "{count} federací čeká na schválení",
       "orgs_meta": "Zkontrolujte ve Správci uživatelů → filtr organizací",
-      "claims_one": "Čeká na vás 1 nárok",
-      "claims_many": "Čeká na vás nároků: {count}",
       "claims_meta": "Federace chce převzít účet",
       "chip_pending": "Čeká",
       "chip_claims": "Nároky",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "Přidáno {n} krajů",
     "regions_added_few": "Přidány {n} kraje",
     "regions_added_many": "Přidáno {n} kraje",
-    "regions_added_other": "Přidáno {n} krajů"
+    "regions_added_other": "Přidáno {n} krajů",
+    "claims_waiting_zero": "Čeká na vás {n} nároků",
+    "claims_waiting_one": "Čeká na vás {n} nárok",
+    "claims_waiting_two": "Čeká na vás {n} nároků",
+    "claims_waiting_few": "Čekají na vás {n} nároky",
+    "claims_waiting_many": "Čeká na vás {n} nároku",
+    "claims_waiting_other": "Čeká na vás {n} nároků"
   },
   "admin_settings": {
     "title": "Pravidla hlasování o nárocích",

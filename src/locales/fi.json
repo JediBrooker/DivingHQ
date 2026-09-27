@@ -410,8 +410,6 @@
       "orgs_one": "{count} liitto odottaa hyväksyntää",
       "orgs_many": "{count} liittoa odottaa hyväksyntää",
       "orgs_meta": "Tarkastele Käyttäjien hallinnassa → organisaatiosuodatin",
-      "claims_one": "1 vaatimus odottaa sinua",
-      "claims_many": "{count} vaatimusta odottaa sinua",
       "claims_meta": "Liitto haluaa ottaa tilin haltuunsa",
       "chip_pending": "Odottaa",
       "chip_claims": "Vaatimukset",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "Lisättiin {n} aluetta",
     "regions_added_few": "Lisättiin {n} aluetta",
     "regions_added_many": "Lisättiin {n} aluetta",
-    "regions_added_other": "Lisättiin {n} aluetta"
+    "regions_added_other": "Lisättiin {n} aluetta",
+    "claims_waiting_zero": "{n} vaatimusta odottaa sinua",
+    "claims_waiting_one": "{n} vaatimus odottaa sinua",
+    "claims_waiting_two": "{n} vaatimusta odottaa sinua",
+    "claims_waiting_few": "{n} vaatimusta odottaa sinua",
+    "claims_waiting_many": "{n} vaatimusta odottaa sinua",
+    "claims_waiting_other": "{n} vaatimusta odottaa sinua"
   },
   "admin_settings": {
     "title": "Vaatimusten äänestyssäännöt",

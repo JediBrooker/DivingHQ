@@ -410,8 +410,6 @@
       "orgs_one": "{count} federação à espera de aprovação",
       "orgs_many": "{count} federações à espera de aprovação",
       "orgs_meta": "Revise no Gestor de Utilizadores → filtro de organização",
-      "claims_one": "1 reivindicação à sua espera",
-      "claims_many": "{count} reivindicações à sua espera",
       "claims_meta": "Uma federação quer assumir uma conta",
       "chip_pending": "Pendentes",
       "chip_claims": "Reivindicações",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "{n} regiões adicionadas",
     "regions_added_few": "{n} regiões adicionadas",
     "regions_added_many": "{n} de regiões adicionadas",
-    "regions_added_other": "{n} regiões adicionadas"
+    "regions_added_other": "{n} regiões adicionadas",
+    "claims_waiting_zero": "{n} reivindicações à sua espera",
+    "claims_waiting_one": "{n} reivindicação à sua espera",
+    "claims_waiting_two": "{n} reivindicações à sua espera",
+    "claims_waiting_few": "{n} reivindicações à sua espera",
+    "claims_waiting_many": "{n} de reivindicações à sua espera",
+    "claims_waiting_other": "{n} reivindicações à sua espera"
   },
   "admin_settings": {
     "title": "Regras de votação das reivindicações",

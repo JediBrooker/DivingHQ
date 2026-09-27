@@ -410,8 +410,6 @@
       "orgs_one": "{count} اتحاد بانتظار الموافقة",
       "orgs_many": "{count} اتحادات بانتظار الموافقة",
       "orgs_meta": "راجع في إدارة المستخدمين → مرشح الاتحاد",
-      "claims_one": "طلب واحد بانتظارك",
-      "claims_many": "{count} طلبات بانتظارك",
       "claims_meta": "اتحاد يريد تولّي حساب",
       "chip_pending": "معلّقة",
       "chip_claims": "طلبات التولّي",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "تمت إضافة منطقتين ({n})",
     "regions_added_few": "تمت إضافة {n} مناطق",
     "regions_added_many": "تمت إضافة {n} منطقة",
-    "regions_added_other": "تمت إضافة {n} منطقة"
+    "regions_added_other": "تمت إضافة {n} منطقة",
+    "claims_waiting_zero": "لا توجد طلبات بانتظارك ({n})",
+    "claims_waiting_one": "{n} طلب بانتظارك",
+    "claims_waiting_two": "{n} طلبان بانتظارك",
+    "claims_waiting_few": "{n} طلبات بانتظارك",
+    "claims_waiting_many": "{n} طلبًا بانتظارك",
+    "claims_waiting_other": "{n} طلب بانتظارك"
   },
   "admin_settings": {
     "title": "قواعد التصويت على طلبات التولّي",

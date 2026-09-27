@@ -410,8 +410,6 @@
       "orgs_one": "{count} federación pendiente de aprobación",
       "orgs_many": "{count} federaciones pendientes de aprobación",
       "orgs_meta": "Revisad en Gestor de usuarios → filtro de organización",
-      "claims_one": "1 reclamación te espera",
-      "claims_many": "{count} reclamaciones te esperan",
       "claims_meta": "Una federación quiere hacerse cargo",
       "chip_pending": "Pendiente",
       "chip_claims": "Reclamaciones",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "{n} regiones añadidas",
     "regions_added_few": "{n} regiones añadidas",
     "regions_added_many": "{n} de regiones añadidas",
-    "regions_added_other": "{n} regiones añadidas"
+    "regions_added_other": "{n} regiones añadidas",
+    "claims_waiting_zero": "{n} reclamaciones te esperan",
+    "claims_waiting_one": "{n} reclamación te espera",
+    "claims_waiting_two": "{n} reclamaciones te esperan",
+    "claims_waiting_few": "{n} reclamaciones te esperan",
+    "claims_waiting_many": "{n} de reclamaciones te esperan",
+    "claims_waiting_other": "{n} reclamaciones te esperan"
   },
   "admin_settings": {
     "title": "Reglas de votación de reclamaciones",

@@ -410,8 +410,6 @@
       "orgs_one": "{count} pederasyon ang naghihintay ng pag-apruba",
       "orgs_many": "{count} mga pederasyon ang naghihintay ng pag-apruba",
       "orgs_meta": "Suriin sa User Manager → org filter",
-      "claims_one": "May 1 claim na naghihintay sa iyo",
-      "claims_many": "May {count} claim na naghihintay sa iyo",
       "claims_meta": "Gustong pamahalaan ng isang pederasyon ang account",
       "chip_pending": "Nakabinbin",
       "chip_claims": "Mga claim",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "Nagdagdag ng {n} rehiyon",
     "regions_added_few": "Nagdagdag ng {n} rehiyon",
     "regions_added_many": "Nagdagdag ng {n} rehiyon",
-    "regions_added_other": "Nagdagdag ng {n} rehiyon"
+    "regions_added_other": "Nagdagdag ng {n} rehiyon",
+    "claims_waiting_zero": "May {n} claim na naghihintay sa iyo",
+    "claims_waiting_one": "May {n} claim na naghihintay sa iyo",
+    "claims_waiting_two": "May {n} claim na naghihintay sa iyo",
+    "claims_waiting_few": "May {n} claim na naghihintay sa iyo",
+    "claims_waiting_many": "May {n} claim na naghihintay sa iyo",
+    "claims_waiting_other": "May {n} claim na naghihintay sa iyo"
   },
   "admin_settings": {
     "title": "Mga patakaran sa botohan ng claim",

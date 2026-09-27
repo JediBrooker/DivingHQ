@@ -410,8 +410,6 @@
       "orgs_one": "{count} federazione in attesa di approvazione",
       "orgs_many": "{count} federazioni in attesa di approvazione",
       "orgs_meta": "Verifichi in Gestione utenti → filtro organizzazioni",
-      "claims_one": "1 rivendicazione ti aspetta",
-      "claims_many": "{count} rivendicazioni ti aspettano",
       "claims_meta": "Una federazione vuole subentrare",
       "chip_pending": "In attesa",
       "chip_claims": "Rivendicazioni",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "{n} regioni aggiunte",
     "regions_added_few": "{n} regioni aggiunte",
     "regions_added_many": "{n} di regioni aggiunte",
-    "regions_added_other": "{n} regioni aggiunte"
+    "regions_added_other": "{n} regioni aggiunte",
+    "claims_waiting_zero": "{n} rivendicazioni ti aspettano",
+    "claims_waiting_one": "{n} rivendicazione ti aspetta",
+    "claims_waiting_two": "{n} rivendicazioni ti aspettano",
+    "claims_waiting_few": "{n} rivendicazioni ti aspettano",
+    "claims_waiting_many": "{n} di rivendicazioni ti aspettano",
+    "claims_waiting_other": "{n} rivendicazioni ti aspettano"
   },
   "admin_settings": {
     "title": "Regole di voto sulle rivendicazioni",

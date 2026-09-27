@@ -410,8 +410,6 @@
       "orgs_one": "{count} федерация ожидает подтверждения",
       "orgs_many": "{count} федераций ожидают подтверждения",
       "orgs_meta": "Просмотреть в Управлении пользователями → фильтр организаций",
-      "claims_one": "Вас ждёт 1 заявка",
-      "claims_many": "Вас ждут заявки: {count}",
       "claims_meta": "Федерация хочет взять на себя учётную запись",
       "chip_pending": "Ожидают",
       "chip_claims": "Заявки",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "Добавлено {n} регионов",
     "regions_added_few": "Добавлено {n} региона",
     "regions_added_many": "Добавлено {n} регионов",
-    "regions_added_other": "Добавлено {n} региона"
+    "regions_added_other": "Добавлено {n} региона",
+    "claims_waiting_zero": "Вас ждут {n} заявок",
+    "claims_waiting_one": "Вас ждёт {n} заявка",
+    "claims_waiting_two": "Вас ждут {n} заявок",
+    "claims_waiting_few": "Вас ждут {n} заявки",
+    "claims_waiting_many": "Вас ждут {n} заявок",
+    "claims_waiting_other": "Вас ждут {n} заявки"
   },
   "admin_settings": {
     "title": "Правила голосования по заявкам",

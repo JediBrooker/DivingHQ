@@ -410,8 +410,6 @@
       "orgs_one": "{count} persekutuan menunggu kelulusan",
       "orgs_many": "{count} persekutuan menunggu kelulusan",
       "orgs_meta": "Semak dalam Pengurus Pengguna → penapis organisasi",
-      "claims_one": "1 tuntutan menunggu anda",
-      "claims_many": "{count} tuntutan menunggu anda",
       "claims_meta": "Persekutuan mahu mengambil alih akaun",
       "chip_pending": "Belum selesai",
       "chip_claims": "Tuntutan",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "{n} wilayah ditambah",
     "regions_added_few": "{n} wilayah ditambah",
     "regions_added_many": "{n} wilayah ditambah",
-    "regions_added_other": "{n} wilayah ditambah"
+    "regions_added_other": "{n} wilayah ditambah",
+    "claims_waiting_zero": "{n} tuntutan menunggu anda",
+    "claims_waiting_one": "{n} tuntutan menunggu anda",
+    "claims_waiting_two": "{n} tuntutan menunggu anda",
+    "claims_waiting_few": "{n} tuntutan menunggu anda",
+    "claims_waiting_many": "{n} tuntutan menunggu anda",
+    "claims_waiting_other": "{n} tuntutan menunggu anda"
   },
   "admin_settings": {
     "title": "Peraturan undian tuntutan",

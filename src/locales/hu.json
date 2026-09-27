@@ -410,8 +410,6 @@
       "orgs_one": "{count} szövetség vár jóváhagyásra",
       "orgs_many": "{count} szövetség vár jóváhagyásra",
       "orgs_meta": "Tekintse át a Felhasználókezelőben → szervezet-szűrő",
-      "claims_one": "1 igény vár Önre",
-      "claims_many": "{count} igény vár Önre",
       "claims_meta": "Egy szövetség át szeretne venni egy fiókot",
       "chip_pending": "Függőben",
       "chip_claims": "Igények",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "{n} régió hozzáadva",
     "regions_added_few": "{n} régió hozzáadva",
     "regions_added_many": "{n} régió hozzáadva",
-    "regions_added_other": "{n} régió hozzáadva"
+    "regions_added_other": "{n} régió hozzáadva",
+    "claims_waiting_zero": "{n} igény vár Önre",
+    "claims_waiting_one": "{n} igény vár Önre",
+    "claims_waiting_two": "{n} igény vár Önre",
+    "claims_waiting_few": "{n} igény vár Önre",
+    "claims_waiting_many": "{n} igény vár Önre",
+    "claims_waiting_other": "{n} igény vár Önre"
   },
   "admin_settings": {
     "title": "Az igényekről szóló szavazás szabályai",

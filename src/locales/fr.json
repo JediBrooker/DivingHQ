@@ -410,8 +410,6 @@
       "orgs_one": "{count} fédération en attente d'approbation",
       "orgs_many": "{count} fédérations en attente d'approbation",
       "orgs_meta": "Examinez dans le Gestionnaire d'utilisateurs → filtre d'organisation",
-      "claims_one": "1 revendication vous attend",
-      "claims_many": "{count} revendications vous attendent",
       "claims_meta": "Une fédération souhaite reprendre un compte",
       "chip_pending": "En attente",
       "chip_claims": "Revendications",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "{n} régions ajoutées",
     "regions_added_few": "{n} régions ajoutées",
     "regions_added_many": "{n} de régions ajoutées",
-    "regions_added_other": "{n} régions ajoutées"
+    "regions_added_other": "{n} régions ajoutées",
+    "claims_waiting_zero": "{n} revendications vous attendent",
+    "claims_waiting_one": "{n} revendication vous attend",
+    "claims_waiting_two": "{n} revendications vous attendent",
+    "claims_waiting_few": "{n} revendications vous attendent",
+    "claims_waiting_many": "{n} de revendications vous attendent",
+    "claims_waiting_other": "{n} revendications vous attendent"
   },
   "admin_settings": {
     "title": "Règles de vote des revendications",

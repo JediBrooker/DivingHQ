@@ -410,8 +410,6 @@
       "orgs_one": "{count} federasyon onay bekliyor",
       "orgs_many": "{count} federasyon onay bekliyor",
       "orgs_meta": "Kullanıcı Yönetimi'nde inceleyin → org filtresi",
-      "claims_one": "Sizi bekleyen 1 talep var",
-      "claims_many": "Sizi bekleyen {count} talep var",
       "claims_meta": "Bir federasyon bir hesabı devralmak istiyor",
       "chip_pending": "Bekleyen",
       "chip_claims": "Devralma talepleri",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "{n} bölge eklendi",
     "regions_added_few": "{n} bölge eklendi",
     "regions_added_many": "{n} bölge eklendi",
-    "regions_added_other": "{n} bölge eklendi"
+    "regions_added_other": "{n} bölge eklendi",
+    "claims_waiting_zero": "Sizi bekleyen {n} talep var",
+    "claims_waiting_one": "Sizi bekleyen {n} talep var",
+    "claims_waiting_two": "Sizi bekleyen {n} talep var",
+    "claims_waiting_few": "Sizi bekleyen {n} talep var",
+    "claims_waiting_many": "Sizi bekleyen {n} talep var",
+    "claims_waiting_other": "Sizi bekleyen {n} talep var"
   },
   "admin_settings": {
     "title": "Devralma talebi oylama kuralları",

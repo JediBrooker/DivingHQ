@@ -410,8 +410,6 @@
       "orgs_one": "{count} federacja oczekuje na zatwierdzenie",
       "orgs_many": "{count} federacje oczekują na zatwierdzenie",
       "orgs_meta": "Przejrzyj w Menedżerze użytkowników → filtr organizacji",
-      "claims_one": "Czeka na ciebie 1 roszczenie",
-      "claims_many": "Czeka na ciebie roszczeń: {count}",
       "claims_meta": "Federacja chce przejąć konto",
       "chip_pending": "Oczekujące",
       "chip_claims": "Roszczenia",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "Dodano {n} regionów",
     "regions_added_few": "Dodano {n} regiony",
     "regions_added_many": "Dodano {n} regionów",
-    "regions_added_other": "Dodano {n} regionu"
+    "regions_added_other": "Dodano {n} regionu",
+    "claims_waiting_zero": "Czeka na ciebie {n} roszczeń",
+    "claims_waiting_one": "Czeka na ciebie {n} roszczenie",
+    "claims_waiting_two": "Czeka na ciebie {n} roszczeń",
+    "claims_waiting_few": "Czekają na ciebie {n} roszczenia",
+    "claims_waiting_many": "Czeka na ciebie {n} roszczeń",
+    "claims_waiting_other": "Czeka na ciebie {n} roszczenia"
   },
   "admin_settings": {
     "title": "Zasady głosowania nad roszczeniami",

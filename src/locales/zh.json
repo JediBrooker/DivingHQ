@@ -410,8 +410,6 @@
       "orgs_one": "有 {count} 个协会等待批准",
       "orgs_many": "有 {count} 个协会等待批准",
       "orgs_meta": "在用户管理中审核 → 组织筛选",
-      "claims_one": "有 1 个申请等待您处理",
-      "claims_many": "有 {count} 个申请等待您处理",
       "claims_meta": "有联合会申请接管账户",
       "chip_pending": "待处理",
       "chip_claims": "接管申请",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "已添加 {n} 个地区",
     "regions_added_few": "已添加 {n} 个地区",
     "regions_added_many": "已添加 {n} 个地区",
-    "regions_added_other": "已添加 {n} 个地区"
+    "regions_added_other": "已添加 {n} 个地区",
+    "claims_waiting_zero": "有 {n} 个申请等待您处理",
+    "claims_waiting_one": "有 {n} 个申请等待您处理",
+    "claims_waiting_two": "有 {n} 个申请等待您处理",
+    "claims_waiting_few": "有 {n} 个申请等待您处理",
+    "claims_waiting_many": "有 {n} 个申请等待您处理",
+    "claims_waiting_other": "有 {n} 个申请等待您处理"
   },
   "admin_settings": {
     "title": "接管申请投票规则",

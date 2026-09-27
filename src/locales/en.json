@@ -410,8 +410,6 @@
       "orgs_one": "{count} federation awaiting approval",
       "orgs_many": "{count} federations awaiting approval",
       "orgs_meta": "Review in User Manager → org filter",
-      "claims_one": "1 claim waiting on you",
-      "claims_many": "{count} claims waiting on you",
       "claims_meta": "A federation or state body wants to take over",
       "chip_pending": "Pending",
       "chip_claims": "Claims",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "Added {n} regions",
     "regions_added_few": "Added {n} regions",
     "regions_added_many": "Added {n} regions",
-    "regions_added_other": "Added {n} regions"
+    "regions_added_other": "Added {n} regions",
+    "claims_waiting_zero": "{n} claims waiting on you",
+    "claims_waiting_one": "{n} claim waiting on you",
+    "claims_waiting_two": "{n} claims waiting on you",
+    "claims_waiting_few": "{n} claims waiting on you",
+    "claims_waiting_many": "{n} claims waiting on you",
+    "claims_waiting_other": "{n} claims waiting on you"
   },
   "admin_settings": {
     "title": "Claim voting rules",

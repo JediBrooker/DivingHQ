@@ -410,8 +410,6 @@
       "orgs_one": "{count} 件の連盟が承認待ちです",
       "orgs_many": "{count} 件の連盟が承認待ちです",
       "orgs_meta": "ユーザー管理で確認してください → 組織フィルター",
-      "claims_one": "1 件の申請があなたを待っています",
-      "claims_many": "{count} 件の申請があなたを待っています",
       "claims_meta": "連盟がアカウントの引き継ぎを求めています",
       "chip_pending": "保留中",
       "chip_claims": "引き継ぎ申請",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "{n} 件の地域を追加しました",
     "regions_added_few": "{n} 件の地域を追加しました",
     "regions_added_many": "{n} 件の地域を追加しました",
-    "regions_added_other": "{n} 件の地域を追加しました"
+    "regions_added_other": "{n} 件の地域を追加しました",
+    "claims_waiting_zero": "{n} 件の申請があなたを待っています",
+    "claims_waiting_one": "{n} 件の申請があなたを待っています",
+    "claims_waiting_two": "{n} 件の申請があなたを待っています",
+    "claims_waiting_few": "{n} 件の申請があなたを待っています",
+    "claims_waiting_many": "{n} 件の申請があなたを待っています",
+    "claims_waiting_other": "{n} 件の申請があなたを待っています"
   },
   "admin_settings": {
     "title": "引き継ぎ申請の投票ルール",

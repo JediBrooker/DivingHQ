@@ -410,8 +410,6 @@
       "orgs_one": "{count} forbund venter på godkjenning",
       "orgs_many": "{count} forbund venter på godkjenning",
       "orgs_meta": "Gå gjennom i Brukeradministrasjon → org-filter",
-      "claims_one": "1 krav venter på deg",
-      "claims_many": "{count} krav venter på deg",
       "claims_meta": "Et forbund vil overta en konto",
       "chip_pending": "Venter",
       "chip_claims": "Krav",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "La til {n} regioner",
     "regions_added_few": "La til {n} regioner",
     "regions_added_many": "La til {n} regioner",
-    "regions_added_other": "La til {n} regioner"
+    "regions_added_other": "La til {n} regioner",
+    "claims_waiting_zero": "{n} krav venter på deg",
+    "claims_waiting_one": "{n} krav venter på deg",
+    "claims_waiting_two": "{n} krav venter på deg",
+    "claims_waiting_few": "{n} krav venter på deg",
+    "claims_waiting_many": "{n} krav venter på deg",
+    "claims_waiting_other": "{n} krav venter på deg"
   },
   "admin_settings": {
     "title": "Stemmeregler for krav",

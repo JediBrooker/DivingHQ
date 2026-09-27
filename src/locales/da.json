@@ -410,8 +410,6 @@
       "orgs_one": "{count} forbund afventer godkendelse",
       "orgs_many": "{count} forbund afventer godkendelse",
       "orgs_meta": "Gennemse i Brugeradministration → org-filter",
-      "claims_one": "1 krav venter på dig",
-      "claims_many": "{count} krav venter på dig",
       "claims_meta": "Et forbund vil overtage en konto",
       "chip_pending": "Afventer",
       "chip_claims": "Krav",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "Tilføjede {n} regioner",
     "regions_added_few": "Tilføjede {n} regioner",
     "regions_added_many": "Tilføjede {n} regioner",
-    "regions_added_other": "Tilføjede {n} regioner"
+    "regions_added_other": "Tilføjede {n} regioner",
+    "claims_waiting_zero": "{n} krav venter på dig",
+    "claims_waiting_one": "{n} krav venter på dig",
+    "claims_waiting_two": "{n} krav venter på dig",
+    "claims_waiting_few": "{n} krav venter på dig",
+    "claims_waiting_many": "{n} krav venter på dig",
+    "claims_waiting_other": "{n} krav venter på dig"
   },
   "admin_settings": {
     "title": "Afstemningsregler for krav",

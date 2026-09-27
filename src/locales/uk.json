@@ -410,8 +410,6 @@
       "orgs_one": "{count} федерація очікує на затвердження",
       "orgs_many": "{count} федерацій очікують на затвердження",
       "orgs_meta": "Перегляньте в Менеджері користувачів → фільтр організацій",
-      "claims_one": "На вас чекає 1 заявка",
-      "claims_many": "На вас чекають заявки: {count}",
       "claims_meta": "Федерація хоче взяти на себе обліковий запис",
       "chip_pending": "Очікують",
       "chip_claims": "Заявки",
@@ -2049,7 +2047,13 @@
     "regions_added_two": "Додано {n} регіонів",
     "regions_added_few": "Додано {n} регіони",
     "regions_added_many": "Додано {n} регіонів",
-    "regions_added_other": "Додано {n} регіону"
+    "regions_added_other": "Додано {n} регіону",
+    "claims_waiting_zero": "На вас чекають {n} заявок",
+    "claims_waiting_one": "На вас чекає {n} заявка",
+    "claims_waiting_two": "На вас чекають {n} заявок",
+    "claims_waiting_few": "На вас чекають {n} заявки",
+    "claims_waiting_many": "На вас чекають {n} заявок",
+    "claims_waiting_other": "На вас чекають {n} заявки"
   },
   "admin_settings": {
     "title": "Правила голосування за заявками",
