@@ -230,6 +230,11 @@ the host club should pass, and use the shared helpers rather than a fresh
 `org_roles.includes` check. `club_admin_of` rides on the login and
 `/api/auth/me` bodies for the SPA; the server never trusts it.
 
+Regions (migration 088) sit one level above clubs: a `region_admins` row
+reaches meets hosted by the region or by any club in it, never another
+region's. Same helpers, same rule. `region_admin_of` rides alongside
+`club_admin_of`.
+
 ### Schema migrations
 
 Every change goes in **two** places:
@@ -275,12 +280,14 @@ above it.
 | Judge analytics — one row per (judge, dive) with kept-mean + drop flags | `JUDGE_PER_DIVE` CTE | `db/queries.js` |
 | Instant tooltip (no native `title` lag) | `v-tip="…"` directive | `src/directives/tip.js` + `src/styles/app.css` |
 | Shared frontend tokens and primitives | Design-system guide | `docs/design-system.md` + `src/styles/app.css` |
-| "Does this person run this event?" (event_managers row, or admin of the club hosting its meet) | `isEventDelegate(eventId, userId)` | `lib/middleware.js` |
+| "Does this person run this event?" (event_managers row, or admin of the club / region hosting its meet, or of the host club's region) | `isEventDelegate(eventId, userId)` | `lib/middleware.js` |
 | Role gate that also lets the event's delegates in | `requireRoleOrEventDelegate(roles, eventIdOf)` | `lib/middleware.js` |
 | Meet routes open to club admins (then pin with `isMeetHostAdmin`) | `requireMeetEditorOrClubAdmin` / server.js `requireMeetOrClubEditor` | `lib/middleware.js` |
 | Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForClubAdmin` / `clubAdminCanReview` / `reviewersFor` | `lib/role-requests.js` |
 | Narrow a meet screen to a club admin's own meets | `useClubScope()` | `src/composables/useClubScope.js` |
 | ISO country list (server validation + signup picker) | `countryByCode(a3)` / `countries.json` | `lib/countries.js` |
+| Built-in regions per country, copy them into an org | `catalogFor(a3)` / `materializeRegions(db, orgId, a3)` / `regions.json` | `lib/regions.js` |
+| Approve/reject list for club and region admin pages | `<RoleRequestQueue>` | `src/components/RoleRequestQueue.vue` |
 
 If you write the third copy of any of these, **stop and consolidate** into
 a helper. The repo has bled time on duplicated patterns.

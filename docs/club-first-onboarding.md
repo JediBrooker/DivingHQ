@@ -1,6 +1,6 @@
 # Club-first onboarding — design
 
-> **Status:** Phase 1 built (see §14). Phases 2 to 4 are still design.
+> **Status:** Phases 1 and 2 built (see §14, §15). Phases 3 and 4 are still design.
 > Author: Christian Brooker (with Claude). Last updated: 2026-09-27.
 
 ## 1. Problem
@@ -490,4 +490,53 @@ takes `can_edit` from the server. `/guide` has a Club Admin card.
 **Tests.** Integration: signup and the country race, two clubs' admins
 against each other, role-request routing and co-admins.
 e2e: `test/e2e/club-first-signup.spec.js`.
+
+## 15. Phase 2 as built
+
+Migration 088: `regions`, `region_admins`, `clubs.region_id`,
+`meets.host_region_id` (with a one-host check) and
+`organisations.region_label`. The `represent_as` column from §5 waits for
+phase 4.
+
+**Where regions come from.** There's a built-in catalogue,
+`lib/regions.json`, instead of a sysadmin script. It currently holds
+Australia (states and territories), Canada (provinces and territories) and
+the UK (home nations); adding a country is a JSON edit.
+`materializeRegions` copies a country's list into its org:
+- **automatically** for an unclaimed country account, the first time
+  anyone founds a club there (this also backfills phase-1 accounts);
+- **on request** for a claimed federation, via "Set up regions" on the
+  Clubs screen (`POST /api/orgs/:id/regions/seed`). A federation may not
+  want them.
+
+**Signup.** Once a country has regions, founding a club needs one
+(`region_code`, `400 region_required` otherwise). For joining, the
+region just narrows the club list. The form reads the org's regions, and
+falls back to the catalogue for a country nobody has started yet.
+
+**Putting clubs in regions.** Under a federation, the federation decides
+(Region column on the Clubs screen). Where there's no federation, the
+club's own admin picks, on My club (`PUT /api/clubs/:id/region`).
+
+**Region admins** are appointed by the federation's org admin or the
+sysadmin (a region chip on the Clubs screen opens `RegionAdminsModal`).
+State bodies appointing themselves via claims is phase 3. A region admin:
+- runs meets hosted by their region or by any club in it: the
+  `isEventDelegate` / `isMeetHostAdmin` checks now include the host region
+  and the host club's region, so every phase-1 gate follows;
+- hosts meets as their region or one of its clubs (`host_region_id`);
+- reviews role requests from their clubs' members, next in line after
+  the club's own admins (`lib/role-requests.js`);
+- manages club admins for their region's clubs where there's no
+  federation;
+- sees it all on `/region` (My region).
+
+The SPA gets `region_admin_of` next to `club_admin_of`; `useClubScope`,
+the router (`allowDelegateAdmin`, `requiresRegionAdmin`) and the nav
+treat club and region admins alike.
+
+**Tests.** Integration: catalogue, signup with and without a region, club
+moves, federation seeding and appointment, and Ontario's admin against
+Ottawa (reachable) and Montreal (not). e2e: a Canadian founder picks a
+province at signup.
 
