@@ -24,6 +24,12 @@ const { liveAdminCount } = require("../lib/admin-rows");
 const roleRequests = require("../lib/role-requests");
 const clubApprovals = require("../lib/club-approvals");
 const { recordAudit } = require("../lib/audit");
+const createAuthLinks = require("../lib/auth-links");
+
+// Loose on purpose, something@something.tld: the verification link is what
+// actually proves the address. Register, register-org and the email change
+// all check against this.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -283,6 +289,7 @@ module.exports = function createAuthRouter({
   sendNoticeEmail,     // optional, club approval notices by email (lib/club-approvals.js)
 }) {
   const router = express.Router();
+  const { mintVerifyToken, mintResetToken } = createAuthLinks(JWT_SECRET);
 
   // -------------------------------------------------------------
   // GET /api/auth/me: rehydrate the signed-in identity from the
@@ -424,6 +431,28 @@ module.exports = function createAuthRouter({
     }
   });
 
+  // Replay guard (migration 063): the ±1-step verify window keeps a
+  // code valid for ~90s, so a just-consumed code could otherwise mint a
+  // second session, or be replayed to tear the second factor down.
+  // verifyTokenDelta returns the absolute time-step the code matched; the
+  // conditional UPDATE persists it and only succeeds when it's strictly
+  // newer than the stored last-used step, so a replay (or a concurrent
+  // presentation of the same code) loses the race and is rejected like
+  // any bad code. Login and 2FA disable both spend codes through this.
+  async function consumeTotpStep(userId, secret, code) {
+    const matchedStep = totp.verifyTokenDelta(secret, code);
+    if (matchedStep == null) return false;
+    const consumed = await pool.query(
+      `UPDATE users
+       SET totp_last_used_step = $1
+       WHERE id = $2
+         AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)
+       RETURNING id`,
+      [matchedStep, userId],
+    );
+    return consumed.rowCount > 0;
+  }
+
   // -------------------------------------------------------------
   // POST /api/auth/login/totp: second-factor exchange.
   //
@@ -466,28 +495,7 @@ module.exports = function createAuthRouter({
       const looksLikeTotp = typeof code === "string" && /^\d{6}$/.test(code);
       let accepted = false;
       let consumedRecovery = false;
-      if (looksLikeTotp) {
-        // Replay guard (migration 063): the ±1-step verify window
-        // keeps a code valid for ~90s, so a just-consumed code
-        // could otherwise mint a second session. verifyTokenDelta
-        // returns the absolute time-step the code matched; the
-        // conditional UPDATE below persists it and only succeeds
-        // when it's strictly newer than the stored last-used step,
-        // so a replay (or a concurrent presentation of the same
-        // code) loses the race and is rejected like any bad code.
-        const matchedStep = totp.verifyTokenDelta(user.totp_secret, code);
-        if (matchedStep != null) {
-          const consumed = await pool.query(
-            `UPDATE users
-             SET totp_last_used_step = $1
-             WHERE id = $2
-               AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)
-             RETURNING id`,
-            [matchedStep, user.id],
-          );
-          accepted = consumed.rowCount > 0;
-        }
-      }
+      if (looksLikeTotp) accepted = await consumeTotpStep(user.id, user.totp_secret, code);
       if (!accepted) {
         const { matched, remainingHashes } = await totp.consumeRecoveryCode(
           user.totp_recovery_codes || [],
@@ -662,9 +670,7 @@ module.exports = function createAuthRouter({
         );
         // Bump token_version so every device this user is signed
         // in on is forced through the new 2FA flow on next request.
-        if (typeof bumpTokenVersion === "function") {
-          await bumpTokenVersion(client, req.user.id);
-        }
+        await bumpTokenVersion(client, req.user.id);
         await client.query("COMMIT");
       } catch (txErr) {
         await client.query("ROLLBACK").catch(() => {});
@@ -705,21 +711,9 @@ module.exports = function createAuthRouter({
       const looksLikeTotp = typeof code === "string" && /^\d{6}$/.test(code);
       let codeOk = false;
       if (looksLikeTotp) {
-        // Same single-use guard as the login exchange (migration
-        // 063): a code that already minted a session can't be
-        // replayed to tear the second factor down.
-        const matchedStep = totp.verifyTokenDelta(user.totp_secret, code);
-        if (matchedStep != null) {
-          const consumed = await pool.query(
-            `UPDATE users
-             SET totp_last_used_step = $1
-             WHERE id = $2
-               AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)
-             RETURNING id`,
-            [matchedStep, req.user.id],
-          );
-          codeOk = consumed.rowCount > 0;
-        }
+        // Single-use, same as the login exchange: a code that already
+        // minted a session can't be replayed to tear 2FA down.
+        codeOk = await consumeTotpStep(req.user.id, user.totp_secret, code);
       } else {
         const { matched } = await totp.consumeRecoveryCode(
           user.totp_recovery_codes || [],
@@ -747,9 +741,7 @@ module.exports = function createAuthRouter({
         // Bump token_version: a session with the disabled 2FA flag
         // baked in is no different from one without, but bumping
         // is the consistent posture after every privilege change.
-        if (typeof bumpTokenVersion === "function") {
-          await bumpTokenVersion(client, req.user.id);
-        }
+        await bumpTokenVersion(client, req.user.id);
         await client.query("COMMIT");
       } catch (txErr) {
         await client.query("ROLLBACK").catch(() => {});
@@ -853,7 +845,7 @@ module.exports = function createAuthRouter({
     }
     const pwErr = validatePassword(password);
     if (pwErr) return res.status(400).json({ error: pwErr });
-    if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (typeof email !== "string" || !EMAIL_RE.test(email)) {
       return res.status(400).json({ error: "A valid email address is required for verification" });
     }
 
@@ -1072,28 +1064,13 @@ module.exports = function createAuthRouter({
 
       await client.query("COMMIT");
 
-      // Email verification is the gate; welcome message goes out
-      // alongside it. Both are best-effort.
-      //
-      // 24h TTL (was 7d): defensive, limits the blast radius of
-      // a leaked verification link via email archives / Sentry
-      // breadcrumbs / mail forwards. A genuine user who misses
-      // the window can request a fresh link via re-registration
-      // or password reset; the cost of a slightly tighter expiry
-      // is far smaller than the cost of a week-long replay
-      // window for a leaked URL.
-      const verifyToken = jwt.sign(
-        { sub: newUserId, type: "email_verify" },
-        JWT_SECRET,
-        { expiresIn: "24h" },
-      );
-      if (typeof sendVerifyEmailEmail === "function") {
-        // Pass `req` so the verify-email subject/body are rendered
-        // in the locale the registrant was using when they submitted
-        // the form (Accept-Language at register-time, since the user
-        // row doesn't have a locale yet).
-        sendVerifyEmailEmail(newUserId, verifyToken, { req }).catch(() => {});
-      }
+      // Email verification is the gate, best effort like every mail here
+      // (lib/auth-links.js has why the link only lasts a day). Pass `req`
+      // so the verify-email subject/body are rendered in the locale the
+      // registrant was using when they submitted the form
+      // (Accept-Language at register-time, since the user row doesn't
+      // have a locale yet).
+      sendVerifyEmailEmail(newUserId, mintVerifyToken(newUserId), { req }).catch(() => {});
       // The welcome mail waits for the verify click (see verify-email),
       // it says "you can sign in now" and that isn't true yet.
       if (requestedRoleSaved) {
@@ -1226,11 +1203,9 @@ module.exports = function createAuthRouter({
       if (id && !(last && Date.now() - last < RESEND_COOLDOWN_MS)) {
         resendCooldown.set(id, Date.now());
         if (resendCooldown.size > 5000) resendCooldown.clear();
-        const link = jwt.sign({ sub: id, type: "email_verify" }, JWT_SECRET, { expiresIn: "24h" });
+        const link = mintVerifyToken(id);
         setImmediate(() => {
-          if (typeof sendVerifyEmailEmail === "function") {
-            sendVerifyEmailEmail(id, link, { req }).catch(() => {});
-          }
+          sendVerifyEmailEmail(id, link, { req }).catch(() => {});
         });
       }
       res.json({ ok: true });
@@ -1282,7 +1257,7 @@ module.exports = function createAuthRouter({
     // is returned with a clear error instead.
     if (typeof email !== "string"
         || email.length > 254
-        || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        || !EMAIL_RE.test(email)) {
       return res.status(400).json({ error: "A valid email address is required" });
     }
     // Country is required, alpha-3 only. Signups find their federation by
@@ -1399,10 +1374,7 @@ module.exports = function createAuthRouter({
 
         // The claim goes live (and voters hear about it) when this link
         // is clicked, see the verify-email handler.
-        const verifyLink = jwt.sign({ sub: claimant, type: "email_verify" }, JWT_SECRET, { expiresIn: "24h" });
-        if (typeof sendVerifyEmailEmail === "function") {
-          sendVerifyEmailEmail(claimant, verifyLink, { req }).catch(() => {});
-        }
+        sendVerifyEmailEmail(claimant, mintVerifyToken(claimant), { req }).catch(() => {});
         const who = {
           clubs:    "the clubs already on DivingHQ there vote on it",
           regions:  "the states and provinces already on DivingHQ vote on it",
@@ -1459,24 +1431,12 @@ module.exports = function createAuthRouter({
       // UPDATE-stamp email_verified_at directly, bypassing
       // proof-of-inbox-control on the highest-privilege account
       // in a fresh tenant.
-      // 24h TTL (was 7d): see /api/auth/register for the
-      // rationale, leaked verification links shouldn't be
-      // replayable for a week.
-      const verifyToken = jwt.sign(
-        { sub: userId, type: "email_verify" },
-        JWT_SECRET,
-        { expiresIn: "24h" },
-      );
-      if (typeof sendVerifyEmailEmail === "function") {
-        sendVerifyEmailEmail(userId, verifyToken, { req }).catch(() => {});
-      }
+      sendVerifyEmailEmail(userId, mintVerifyToken(userId), { req }).catch(() => {});
       // Sysadmins otherwise have no signal that a new org is
       // sitting in the pending queue other than polling the
       // dashboard. Without this, an org can sit unapproved
       // indefinitely with nobody aware it's waiting.
-      if (typeof sendNewOrgRequestEmail === "function") {
-        sendNewOrgRequestEmail(cleanOrgName).catch(() => {});
-      }
+      sendNewOrgRequestEmail(cleanOrgName).catch(() => {});
       if (push && typeof push.sendNotification === "function") {
         (async () => {
           try {
@@ -1559,9 +1519,7 @@ module.exports = function createAuthRouter({
       // has open on other devices. Then issue a replacement JWT
       // carrying the new token_version so this request doesn't
       // strand its own tab on a stale token.
-      if (typeof bumpTokenVersion === "function") {
-        await bumpTokenVersion(client, user.id);
-      }
+      await bumpTokenVersion(client, user.id);
       await client.query("COMMIT");
       sendPasswordChangedEmail(user.id).catch(() => {});
       const payload = await buildTokenPayload(user.id);
@@ -1668,7 +1626,7 @@ module.exports = function createAuthRouter({
     // passes here is the same shape registrations enforce.
     if (typeof new_email !== "string"
         || new_email.length > 254
-        || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(new_email)) {
+        || !EMAIL_RE.test(new_email)) {
       return res.status(400).json({ error: "A valid new email address is required" });
     }
     if (typeof current_password !== "string" || !current_password) {
@@ -1725,15 +1683,14 @@ module.exports = function createAuthRouter({
       // Fire-and-forget the send so a stuck mail API can't hold
       // the request open. The user sees an immediate "check your
       // inbox" response either way.
-      if (typeof sendEmailChangeVerify === "function") {
-        // Capture req at schedule time: setImmediate runs after
-        // the request lifecycle but our translator only reads
-        // req.user.locale + headers['accept-language'], both of
-        // which are plain strings, so it's safe to hold a reference.
-        setImmediate(() => {
-          sendEmailChangeVerify(req.user.id, normalisedNew, token, { req }).catch(() => {});
-        });
-      }
+      //
+      // Capture req at schedule time: setImmediate runs after the
+      // request lifecycle but our translator only reads
+      // req.user.locale + headers['accept-language'], both of which
+      // are plain strings, so it's safe to hold a reference.
+      setImmediate(() => {
+        sendEmailChangeVerify(req.user.id, normalisedNew, token, { req }).catch(() => {});
+      });
 
       res.json({
         ok: true,
@@ -1824,15 +1781,13 @@ module.exports = function createAuthRouter({
       // change / 2FA toggle: a session that's been resting on the
       // old email shouldn't keep going on the new one without an
       // explicit sign-in.
-      if (typeof bumpTokenVersion === "function") {
-        await bumpTokenVersion(client, user.id);
-      }
+      await bumpTokenVersion(client, user.id);
       await client.query("COMMIT");
 
       // Hygiene notice goes to the OLD address; if someone hijacked
       // the session and rotated the email, this is the original
       // owner's signal to lock down their account.
-      if (typeof sendEmailChangedNotice === "function" && oldEmail) {
+      if (oldEmail) {
         sendEmailChangedNotice(user.id, oldEmail, newEmail).catch(() => {});
       }
 
@@ -1881,11 +1836,7 @@ module.exports = function createAuthRouter({
         user = u.rows[0] || null;
       }
       if (user && user.email) {
-        const fingerprint = jwt.sign(
-          { sub: user.id, type: "password_reset", fp: hashFingerprint(user.password) },
-          JWT_SECRET,
-          { expiresIn: "30m" },
-        );
+        const fingerprint = mintResetToken(user.id, hashFingerprint(user.password));
         // Defer the mail API round-trip so the response time doesn't
         // depend on whether we found a user. The catch is swallowed
         // intentionally, we never tell the caller about delivery.
@@ -1949,9 +1900,7 @@ module.exports = function createAuthRouter({
           "UPDATE users SET password = $1, email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $2",
           [hash, user.id],
         );
-        if (typeof bumpTokenVersion === "function") {
-          await bumpTokenVersion(client2, user.id);
-        }
+        await bumpTokenVersion(client2, user.id);
         await client2.query("COMMIT");
       } catch (txErr) {
         await client2.query("ROLLBACK").catch(() => {});

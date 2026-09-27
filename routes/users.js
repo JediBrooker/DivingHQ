@@ -25,7 +25,7 @@ const express = require("express");
 const roleRequests = require("../lib/role-requests");
 const claimsLib = require("../lib/claims");
 const bcrypt  = require("bcrypt");
-const jwt     = require("jsonwebtoken");
+const createAuthLinks = require("../lib/auth-links");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { supportContact } = require("../lib/support");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
@@ -65,6 +65,9 @@ module.exports = function createUsersRouter({
 }) {
   if (!pool) throw new Error("createUsersRouter requires { pool, … }");
   const router = express.Router();
+  // Same links the self-service flows in routes/auth.js send. The routes
+  // below 503 before minting when JWT_SECRET isn't wired in.
+  const { mintVerifyToken, mintResetToken } = createAuthLinks(JWT_SECRET);
   const writeLimiter = bulkWriteLimiter || NOOP;
 
   router.get("/api/users", requireOrgAdmin, async (req, res) => {
@@ -1269,8 +1272,7 @@ module.exports = function createUsersRouter({
       if (target.email_verified_at) return res.status(400).json({ error: "This email is already verified" });
       if (!JWT_SECRET || typeof sendVerifyEmailEmail !== "function")
         return res.status(503).json({ error: "Email is not configured on this server" });
-      const token = jwt.sign({ sub: req.params.id, type: "email_verify" }, JWT_SECRET, { expiresIn: "24h" });
-      sendVerifyEmailEmail(req.params.id, token, { req }).catch(() => {});
+      sendVerifyEmailEmail(req.params.id, mintVerifyToken(req.params.id), { req }).catch(() => {});
       await recordAudit(pool, {
         ...auditFromReq(req), org_id: target.org_id, entity_type: "user",
         entity_id: req.params.id, entity_name: target.full_name, action: "user.verification_resent",
@@ -1291,9 +1293,7 @@ module.exports = function createUsersRouter({
       if (!target.email) return res.status(400).json({ error: "This user has no email on file" });
       if (!JWT_SECRET || typeof sendPasswordResetEmail !== "function" || typeof hashFingerprint !== "function")
         return res.status(503).json({ error: "Email is not configured on this server" });
-      const token = jwt.sign(
-        { sub: req.params.id, type: "password_reset", fp: hashFingerprint(target.password) },
-        JWT_SECRET, { expiresIn: "30m" });
+      const token = mintResetToken(req.params.id, hashFingerprint(target.password));
       sendPasswordResetEmail(
         { id: req.params.id, full_name: target.full_name, email: target.email },
         token, { req }).catch(() => {});
