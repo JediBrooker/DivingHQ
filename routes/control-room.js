@@ -1161,6 +1161,12 @@ module.exports = function createControlRoomRouter({
     // back on for itself without restarting the server.
     skip: credentialLimitSkip,
   });
+  // Keyed on the caller's org as well as the username. The lookup below
+  // only ever matches a referee in the event's org, and outside the
+  // sysadmin that's the caller's own org, so guesses from anywhere else
+  // can't be right. Keyed on the username alone, a club founder on the
+  // other side of the world could burn a federation referee's five tries
+  // with junk against their own event and lock them out mid-meet.
   const credentialTargetLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 5,
@@ -1168,7 +1174,8 @@ module.exports = function createControlRoomRouter({
     requestWasSuccessful: credentialAttemptOk,
     standardHeaders: "draft-7",
     legacyHeaders: false,
-    keyGenerator: (req) => `signoff-target:${String(req.body?.username || "").trim().toLowerCase()}`,
+    keyGenerator: (req) =>
+      `signoff-target:${req.user?.org_id || ""}:${String(req.body?.username || "").trim().toLowerCase()}`,
     message: { error: "Too many sign-off attempts for that referee, please try again in 15 minutes." },
     skip: credentialLimitSkip,
   });

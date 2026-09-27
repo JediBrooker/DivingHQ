@@ -2336,3 +2336,77 @@ test("unclaimed country: a region admin can't approve their own request to join 
     await claimKit.wipe(CODE);
   }
 });
+
+test("referee credential sign-off: guesses from another org can't lock a federation's referee out", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CUW";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: true });
+  try {
+    const pw = "federation-referee-pw-42";
+    const username = `int-xo-${crypto.randomBytes(4).toString("hex")}`;
+    const refId = (await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+       VALUES ($1, $2, $1, $3, now()) RETURNING id`,
+      [username, await bcrypt.hash(pw, 4), state.orgId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'referee')", [refId, state.orgId]);
+
+    // Anyone can found a club in a country with no federation and run
+    // an event, which is all this route asks of the caller.
+    const X = await delegateSignUp({ country_code: CODE, new_club_name: "Willemstad Divers" });
+    const meet = (await fetchJson("POST", "/api/meets", { token: X.token, body: { name: "Willemstad Open" } })).body.id;
+    const ev = (await fetchJson("POST", "/api/events", {
+      token: X.token,
+      body: { name: "1m", gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 5, event_type: "individual", meet_id: meet },
+    })).body.id;
+
+    // Each side from its own address, so the per-IP limiter (which other
+    // tests in this process have been feeding) stays out of it and only
+    // the per-referee one is under test. server.js trusts one proxy hop.
+    const from = (ip, path, token, body) => new Promise((resolve, reject) => {
+      const url = new URL(baseUrl + path);
+      const data = JSON.stringify(body);
+      const req = http.request({
+        method: "POST", host: url.hostname, port: url.port, path: url.pathname,
+        headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data),
+                   Authorization: `Bearer ${token}`, "X-Forwarded-For": ip },
+      }, (res) => {
+        const chunks = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(Buffer.concat(chunks).toString() || "null") }));
+      });
+      req.on("error", reject);
+      req.end(data);
+    });
+    const attackerIp = `10.97.${crypto.randomInt(256)}.${crypto.randomInt(256)}`;
+    const venueIp = `10.98.${crypto.randomInt(256)}.${crypto.randomInt(256)}`;
+
+    process.env.RATE_LIMIT_DISABLED = "false";
+    try {
+      // Five tries of junk at the federation referee's username, from the
+      // attacker's own event: exactly what used to use up that referee's
+      // budget. None of it can ever match (the lookup is pinned to the
+      // event's org).
+      for (let i = 0; i < 5; i++) {
+        const r = await from(attackerIp, `/api/events/${ev}/dive-order/sign-off/credential`, X.token,
+          { username, password: `junk-${i}` });
+        assert.equal(r.status, 401, JSON.stringify(r.body));
+      }
+      // The federation's own sign-off still goes through...
+      const legit = await from(venueIp, `/api/events/${state.eventId}/dive-order/sign-off/credential`,
+        state.adminToken, { username, password: pw });
+      assert.equal(legit.status, 200, JSON.stringify(legit.body));
+      // ...while the attacker has used up their own tries at that name.
+      const sixth = await from(attackerIp, `/api/events/${ev}/dive-order/sign-off/credential`, X.token,
+        { username, password: "junk-6" });
+      assert.equal(sixth.status, 429, JSON.stringify(sixth.body));
+    } finally {
+      process.env.RATE_LIMIT_DISABLED = "true";
+    }
+  } finally {
+    await teardownFixture(state);
+    await claimKit.wipe(CODE);
+  }
+});
