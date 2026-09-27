@@ -81,7 +81,8 @@
       "short_code_placeholder": "p. ej. SYD",
       "club_needs_approval": "{org} aprueba los clubes nuevos antes de que se publiquen. Se lo pediremos en cuanto confirmes tu correo y, mientras tanto, puedes iniciar sesión y competir.",
       "club_joins_now": "Los clubes nuevos se unen a {org} al instante. {org} nombra a los administradores de cada club.",
-      "success_club_pending": "{club} está esperando la aprobación de {org}. Lo verán en cuanto confirmes tu correo, y te escribiremos cuando decidan."
+      "success_club_pending": "{club} está esperando la aprobación de {org}. Lo verán en cuanto confirmes tu correo, y te escribiremos cuando decidan.",
+      "region_will_ask": "{region} decide qué clubes acepta, así que se le pedirá que acepte el tuyo en cuanto verifiques tu correo. Hasta que lo acepte, tu club no está en la región."
     },
     "register_org": {
       "title": "Registrar Organización",

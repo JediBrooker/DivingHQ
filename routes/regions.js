@@ -384,6 +384,9 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
                 (SELECT count(*)::int FROM users u WHERE u.club_id = c.id AND u.deleted_at IS NULL) AS member_count
            FROM clubs c LEFT JOIN regions cur ON cur.id = c.region_id
           WHERE c.requested_region_id = $1 AND c.status = 'active'
+            -- An ask made at signup waits for its founder to verify, like
+            -- a club waiting on its federation does.
+            AND NOT EXISTS (SELECT 1 FROM users f WHERE f.id = c.created_by AND f.email_verified_at IS NULL)
           ORDER BY c.region_requested_at`,
         [region.id],
       );

@@ -81,7 +81,8 @@
       "short_code_placeholder": "p. ex. SYD",
       "club_needs_approval": "{org} aprova os novos clubes antes de ficarem ativos. Enviamos o pedido assim que confirmar o seu e-mail; entretanto, pode iniciar sessão e competir.",
       "club_joins_now": "Os novos clubes entram em {org} de imediato. {org} nomeia os administradores de cada clube.",
-      "success_club_pending": "{club} aguarda a aprovação de {org}. O pedido chega-lhes assim que confirmar o seu e-mail, e enviamos-lhe um e-mail quando decidirem."
+      "success_club_pending": "{club} aguarda a aprovação de {org}. O pedido chega-lhes assim que confirmar o seu e-mail, e enviamos-lhe um e-mail quando decidirem.",
+      "region_will_ask": "{region} decide que clubes aceita, por isso receberá um pedido assim que verificar o seu e-mail. Até aceitar, o seu clube não pertence à região."
     },
     "register_org": {
       "title": "Registar Organização",

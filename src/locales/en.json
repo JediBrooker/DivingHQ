@@ -81,7 +81,8 @@
       "short_code_placeholder": "e.g. SYD",
       "club_needs_approval": "{org} approves new clubs before they go live. We'll ask them once you've confirmed your email, and you can sign in and dive meanwhile.",
       "club_joins_now": "New clubs join {org} straight away. {org} appoints each club's admins.",
-      "success_club_pending": "{club} is waiting for {org} to approve it. They'll see it once you've confirmed your email, and we'll email you when they decide."
+      "success_club_pending": "{club} is waiting for {org} to approve it. They'll see it once you've confirmed your email, and we'll email you when they decide.",
+      "region_will_ask": "{region} decides which clubs it takes, so it will be asked to take yours once you've verified your email. Until it accepts, your club isn't in the region."
     },
     "register_org": {
       "title": "Register Organisation",

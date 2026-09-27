@@ -81,7 +81,8 @@
       "short_code_placeholder": "np. SYD",
       "club_needs_approval": "{org} zatwierdza nowe kluby, zanim staną się widoczne. Poprosimy o zatwierdzenie, gdy tylko potwierdzisz e-mail, a w międzyczasie możesz się zalogować i startować w zawodach.",
       "club_joins_now": "Nowe kluby od razu dołączają do {org}. {org} wyznacza administratorów każdego klubu.",
-      "success_club_pending": "Klub {club} czeka na zatwierdzenie przez {org}. Zobaczą go, gdy tylko potwierdzisz e-mail, a o decyzji poinformujemy cię e-mailem."
+      "success_club_pending": "Klub {club} czeka na zatwierdzenie przez {org}. Zobaczą go, gdy tylko potwierdzisz e-mail, a o decyzji poinformujemy cię e-mailem.",
+      "region_will_ask": "Region {region} sam decyduje, które kluby przyjmuje, więc po potwierdzeniu adresu e-mail dostanie prośbę o przyjęcie twojego klubu. Dopóki jej nie przyjmie, twój klub nie należy do regionu."
     },
     "register_org": {
       "title": "Rejestracja organizacji",

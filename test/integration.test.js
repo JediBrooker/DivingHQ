@@ -6754,3 +6754,65 @@ test("claiming a past account carries its records over", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// Where there's no federation, joining a claimed region takes both sides
+// (PUT /api/clubs/:id/region answers 202). Signup used to set the region
+// straight away, so a founder could put a club in a state body's region,
+// and into its official records, without it ever being asked.
+test("signup into a claimed region asks it, once the founder has verified", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "AGO";
+  await claimKit.wipe(CODE);
+  try {
+    const R = await claimKit.founder(CODE, "Benguela Divers");
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [R.id])).rows[0].org_id;
+    const region = async (name, code, claimed) => (await pool.query(
+      `INSERT INTO regions (org_id, name, short_code, claim_state, claimed_name)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [orgId, name, code, claimed ? "claimed" : "unclaimed", claimed ? `${name} Diving` : null],
+    )).rows[0].id;
+    const lu = await region("Luanda", "LU", true);
+    const hu = await region("Huambo", "HU", false);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [lu, R.id, orgId]);
+
+    const signUp = async (clubName, regionCode) => {
+      const username = `int-ra-${crypto.randomBytes(4).toString("hex")}`;
+      const r = await fetchJson("POST", "/api/auth/register", {
+        body: { username, full_name: `${clubName} Admin`, password: TEST_PASSWORD, email: `${username}@example.test`,
+                country_code: CODE, new_club_name: clubName, region_code: regionCode },
+      });
+      assert.equal(r.status, 201, JSON.stringify(r.body));
+      const u = (await pool.query("SELECT id, club_id FROM users WHERE username = $1", [username])).rows[0];
+      return { id: u.id, clubId: u.club_id };
+    };
+    const clubRow = async (id) => (await pool.query(
+      "SELECT region_id, requested_region_id FROM clubs WHERE id = $1", [id],
+    )).rows[0];
+    const asksFor = async () => (await pool.query(
+      "SELECT count(*)::int AS n FROM notifications WHERE user_id = $1 AND category = 'region_request'", [R.id],
+    )).rows[0].n;
+    const overview = async () => (await fetchJson("GET", `/api/regions/${lu}/overview`, { token: R.token })).body;
+
+    const B = await signUp("Cacuaco Divers", "LU");
+    assert.deepEqual(await clubRow(B.clubId), { region_id: null, requested_region_id: lu });
+    // Not yet verified: nobody's pinged and the ask isn't listed.
+    assert.equal(await asksFor(), 0);
+    assert.deepEqual((await overview()).join_requests, []);
+    await claimKit.verify(B.id);
+    assert.equal(await asksFor(), 1);
+    assert.deepEqual((await overview()).join_requests.map((c) => c.id), [B.clubId]);
+    await claimKit.verify(B.id);
+    assert.equal(await asksFor(), 1, "a second click doesn't ask again");
+    // The region accepts the usual way.
+    const ok = await fetchJson("PUT", `/api/clubs/${B.clubId}/region`, { token: R.token, body: { region_id: lu } });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.deepEqual(await clubRow(B.clubId), { region_id: lu, requested_region_id: null });
+
+    // An unclaimed region is still the founder's pick.
+    const C = await signUp("Huambo Divers", "HU");
+    assert.deepEqual(await clubRow(C.clubId), { region_id: hu, requested_region_id: null });
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

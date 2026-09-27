@@ -81,7 +81,8 @@
       "short_code_placeholder": "例如 SYD",
       "club_needs_approval": "{org} 会在新俱乐部公开前进行审批。您确认邮箱后，我们会立即向其提交申请；在此期间，您可以登录并参赛。",
       "club_joins_now": "新俱乐部会立即加入 {org}。各俱乐部的管理员由 {org} 任命。",
-      "success_club_pending": "{club} 正在等待 {org} 审批。您确认邮箱后对方即可看到，审批结果出来后我们会通过邮件通知您。"
+      "success_club_pending": "{club} 正在等待 {org} 审批。您确认邮箱后对方即可看到，审批结果出来后我们会通过邮件通知您。",
+      "region_will_ask": "{region}自行决定接收哪些俱乐部，因此在您验证邮箱后会向其发送申请。在其接受之前，您的俱乐部不属于该地区。"
     },
     "register_org": {
       "title": "注册机构",

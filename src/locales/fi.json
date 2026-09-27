@@ -81,7 +81,8 @@
       "short_code_placeholder": "esim. SYD",
       "club_needs_approval": "{org} hyväksyy uudet seurat ennen kuin ne tulevat näkyviin. Kysymme sitä heti, kun olet vahvistanut sähköpostiosoitteesi, ja sillä välin voit kirjautua sisään ja kilpailla.",
       "club_joins_now": "Uudet seurat liittyvät organisaatioon {org} heti. {org} nimeää kunkin seuran ylläpitäjät.",
-      "success_club_pending": "{club} odottaa organisaation {org} hyväksyntää. He näkevät sen, kun olet vahvistanut sähköpostiosoitteesi, ja lähetämme sinulle sähköpostia, kun päätös on tehty."
+      "success_club_pending": "{club} odottaa organisaation {org} hyväksyntää. He näkevät sen, kun olet vahvistanut sähköpostiosoitteesi, ja lähetämme sinulle sähköpostia, kun päätös on tehty.",
+      "region_will_ask": "Alue {region} päättää itse, mitkä seurat se ottaa, joten siltä kysytään, kun olet vahvistanut sähköpostisi. Ennen hyväksyntää seurasi ei kuulu alueeseen."
     },
     "register_org": {
       "title": "Rekisteröi organisaatio",

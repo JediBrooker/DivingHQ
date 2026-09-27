@@ -81,7 +81,8 @@
       "short_code_placeholder": "ör. SYD",
       "club_needs_approval": "{org} yeni kulüpleri görünür olmadan önce onaylar. E-postanızı doğruladığınız anda onlara sorarız; bu arada giriş yapıp yarışabilirsiniz.",
       "club_joins_now": "Yeni kulüpler {org} kuruluşuna hemen katılır. Her kulübün yöneticilerini {org} atar.",
-      "success_club_pending": "{club}, {org} onayını bekliyor. E-postanızı doğruladığınız anda görecekler; karar verildiğinde size e-posta göndereceğiz."
+      "success_club_pending": "{club}, {org} onayını bekliyor. E-postanızı doğruladığınız anda görecekler; karar verildiğinde size e-posta göndereceğiz.",
+      "region_will_ask": "{region} hangi kulüpleri alacağına kendisi karar verir; e-postanızı doğruladığınızda ona bir talep gönderilir. Kabul edene kadar kulübünüz bölgede değildir."
     },
     "register_org": {
       "title": "Kuruluş Kaydı",

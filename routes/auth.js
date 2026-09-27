@@ -23,6 +23,7 @@ const { supportContact, suspendedAccountMessage } = require("../lib/support");
 const { liveAdminCount } = require("../lib/admin-rows");
 const roleRequests = require("../lib/role-requests");
 const clubApprovals = require("../lib/club-approvals");
+const { recordAudit } = require("../lib/audit");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -967,15 +968,32 @@ module.exports = function createAuthRouter({
         // org has regions, a new club has to say which one it's in.
         if (unclaimed) await materializeRegions(client, orgId, orgCountry);
         let regionId = null;
+        let askRegionId = null;
         const regions = await client.query(
-          "SELECT id, short_code FROM regions WHERE org_id = $1", [orgId],
+          `SELECT rg.id, rg.short_code, rg.claim_state,
+                  EXISTS (SELECT 1 FROM region_admins ra JOIN users u ON u.id = ra.user_id
+                           WHERE ra.region_id = rg.id
+                             AND u.deleted_at IS NULL AND u.suspended_at IS NULL) AS has_live_admin
+             FROM regions rg WHERE rg.org_id = $1`,
+          [orgId],
         );
         if (regions.rows.length) {
           const code = typeof region_code === "string" ? region_code.toUpperCase() : "";
-          regionId = regions.rows.find((r) => r.short_code === code)?.id || null;
+          const pick = regions.rows.find((r) => r.short_code === code) || null;
+          regionId = pick?.id || null;
           if (!regionId) {
             await client.query("ROLLBACK");
             return res.status(400).json({ error: "Pick which state or region your club is in", code: "region_required" });
+          }
+          // Where there's no federation, a region its state body has
+          // claimed decides which clubs it takes (PUT /api/clubs/:id/region
+          // answers 202 and waits for the region). Signup is no back door:
+          // the club asks, and sits outside the region until it's accepted.
+          // Under a federation where to put a club is the federation's
+          // call, same as that route.
+          if (unclaimed && pick.claim_state === "claimed" && pick.has_live_admin) {
+            askRegionId = regionId;
+            regionId = null;
           }
         }
         // Under a federation a new club waits for its org admin, unless
@@ -996,10 +1014,10 @@ module.exports = function createAuthRouter({
           return res.status(err.status).json({ error: err.message, code: err.code });
         }
         const cnew = await client.query(
-          `INSERT INTO clubs (org_id, name, short_code, region_id, status)
-           VALUES ($1, $2, $3, $4, $5)
+          `INSERT INTO clubs (org_id, name, short_code, region_id, status, requested_region_id, region_requested_at)
+           VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $6::uuid IS NULL THEN NULL ELSE now() END)
            RETURNING id`,
-          [orgId, cleanClubName, newClubCode, regionId, clubStatus],
+          [orgId, cleanClubName, newClubCode, regionId, clubStatus, askRegionId],
         );
         resolvedClubId = cnew.rows[0].id;
         createdClubId = resolvedClubId;
@@ -1016,6 +1034,19 @@ module.exports = function createAuthRouter({
 
       if (createdClubId) {
         await client.query("UPDATE clubs SET created_by = $1 WHERE id = $2", [newUserId, createdClubId]);
+        const ask = (await client.query(
+          "SELECT name, requested_region_id FROM clubs WHERE id = $1 AND requested_region_id IS NOT NULL", [createdClubId],
+        )).rows[0];
+        if (ask) {
+          // Same audit row as asking from My club. The region hears about
+          // it once the founder has verified their email (askRegions), so
+          // a signup nobody finishes doesn't ping its admins.
+          await recordAudit(client, {
+            org_id: orgId, actor_id: newUserId, entity_type: "club", entity_id: createdClubId,
+            entity_name: ask.name, action: "club.region_requested",
+            metadata: { from: null, to: ask.requested_region_id, at_signup: true },
+          });
+        }
         // In an unclaimed country the founder runs their club, there's
         // nobody above them to appoint anyone. Under a real federation
         // it stays the federation's call: approving the club can make
@@ -1154,6 +1185,9 @@ module.exports = function createAuthRouter({
       // Same rule for a club waiting on its federation: now it asks.
       await clubApprovals.submitForUser(pool, decoded.sub, { push, email: { sendNoticeEmail } })
         .catch((err) => console.error("[Club Submit Error]", err.message));
+      // And for a new club that picked a claimed region at signup.
+      await clubApprovals.askRegionsForUser(pool, decoded.sub)
+        .catch((err) => console.error("[Club Region Ask Error]", err.message));
       // Welcome mail only once, and only when they can actually sign in.
       // A pending federation hears from us when it's approved instead.
       if (fresh && orgStatus === "active") sendWelcomeEmail(decoded.sub).catch(() => {});
@@ -1935,6 +1969,8 @@ module.exports = function createAuthRouter({
         console.error("[Claim Activate Error]", err.message));
       await clubApprovals.submitForUser(pool, user.id, { push, email: { sendNoticeEmail } }).catch((err) =>
         console.error("[Club Submit Error]", err.message));
+      await clubApprovals.askRegionsForUser(pool, user.id).catch((err) =>
+        console.error("[Club Region Ask Error]", err.message));
       res.json({ ok: true });
     } catch (err) {
       console.error("[Reset Password Error]", err.message);

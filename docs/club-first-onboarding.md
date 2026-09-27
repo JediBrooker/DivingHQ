@@ -544,7 +544,11 @@ side moves a club alone:
   records the ask (`202`, `clubs.requested_region_id`, migration 097) and
   tells the region's admins; they accept on My region with the same PUT
   (`403 club_request_required` if the club never asked). Either side can
-  drop the ask with `DELETE /api/clubs/:id/region-request`.
+  drop the ask with `DELETE /api/clubs/:id/region-request`. Founding a
+  club at signup into such a region works the same way: the club is
+  created outside it with the ask recorded, and the region's admins are
+  told once the founder verifies their email (`askRegionsForUser`); until
+  then the ask isn't on My region either.
 - **Leaving** is the region's call: its admin takes the club out (to no
   region) on My region. The club's admin gets `403 region_admin_required`.
   The region can let a club go but not pick where it lands.

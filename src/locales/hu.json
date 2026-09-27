@@ -81,7 +81,8 @@
       "short_code_placeholder": "pl. SYD",
       "club_needs_approval": "Az új klubokat a szövetség ({org}) hagyja jóvá, mielőtt megjelennek. Amint megerősítette e-mail-címét, továbbítjuk nekik a kérést; addig is bejelentkezhet és versenyezhet.",
       "club_joins_now": "Az új klubok azonnal csatlakoznak ehhez: {org}. Az egyes klubok adminisztrátorait a szövetség ({org}) nevezi ki.",
-      "success_club_pending": "A klub ({club}) a szövetség ({org}) jóváhagyására vár. Amint megerősítette e-mail-címét, látni fogják, és e-mailben értesítjük a döntésről."
+      "success_club_pending": "A klub ({club}) a szövetség ({org}) jóváhagyására vár. Amint megerősítette e-mail-címét, látni fogják, és e-mailben értesítjük a döntésről.",
+      "region_will_ask": "A(z) {region} régió maga dönti el, mely klubokat fogadja be, ezért az e-mail-címe megerősítése után kérelmet kap. Amíg nem fogadja el, a klubja nem tartozik a régióhoz."
     },
     "register_org": {
       "title": "Szervezet regisztrációja",

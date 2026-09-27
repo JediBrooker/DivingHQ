@@ -62,6 +62,16 @@ const regionCode = ref('')
 const regionLabel = computed(() => regionList.value.label ? t(`regions.label.${regionList.value.label}`) : '')
 const selectedRegionId = computed(() =>
   regionList.value.regions.find(r => r.short_code === regionCode.value)?.id || null)
+// A new club picking a region its state body has claimed (with someone
+// still running it) asks to join rather than joining, same as on My club.
+// Only the org's own list carries claim_state; the built-in catalogue is
+// only used before anyone's there to claim anything.
+
+const regionAsks = computed(() => {
+  if (clubChoice.value !== 'new' || !noFederation.value) return null
+  const r = regionList.value.regions.find(x => x.short_code === regionCode.value)
+  return r?.claim_state === 'claimed' && r.has_live_admin !== false ? (r.claimed_name || r.name) : null
+})
 
 // Bumped on every loadRegions call. A slow answer for a country or org
 // the registrant has since moved off must not land on top of the current
@@ -373,6 +383,9 @@ async function handleSubmit() {
           <option value="">{{ $t('regions.pick') }}</option>
           <option v-for="r in regionList.regions" :key="r.short_code" :value="r.short_code">{{ r.name }}</option>
         </select>
+        <p v-if="regionAsks" class="hint-line" data-testid="region-will-ask">
+          {{ $t('auth.register.region_will_ask', { region: regionAsks }) }}
+        </p>
       </div>
 
       <!-- Club: pick an existing one, create a new one inline, or skip. -->

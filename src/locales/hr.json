@@ -81,7 +81,8 @@
       "short_code_placeholder": "npr. SYD",
       "club_needs_approval": "{org} odobrava nove klubove prije nego što postanu vidljivi. Zatražit ćemo odobrenje čim potvrdite svoju e-poštu, a u međuvremenu se možete prijaviti i natjecati.",
       "club_joins_now": "Novi klubovi odmah se pridružuju organizaciji {org}. {org} imenuje administratore svakog kluba.",
-      "success_club_pending": "Klub {club} čeka odobrenje organizacije {org}. Vidjet će ga čim potvrdite svoju e-poštu, a javit ćemo vam e-poštom kad odluče."
+      "success_club_pending": "Klub {club} čeka odobrenje organizacije {org}. Vidjet će ga čim potvrdite svoju e-poštu, a javit ćemo vam e-poštom kad odluče.",
+      "region_will_ask": "Regija {region} sama odlučuje koje klubove prima, pa će joj zahtjev stići čim potvrdite e-poštu. Dok ga ne prihvati, vaš klub nije u regiji."
     },
     "register_org": {
       "title": "Registracija organizacije",

@@ -81,7 +81,8 @@
       "short_code_placeholder": "f.eks. SYD",
       "club_needs_approval": "{org} godkjenner nye klubber før de blir synlige. Vi spør dem så snart du har bekreftet e-posten din, og i mellomtiden kan du logge inn og stupe.",
       "club_joins_now": "Nye klubber blir med i {org} med en gang. {org} utnevner administratorene for hver klubb.",
-      "success_club_pending": "{club} venter på godkjenning fra {org}. De ser den så snart du har bekreftet e-posten din, og vi sender deg en e-post når de har bestemt seg."
+      "success_club_pending": "{club} venter på godkjenning fra {org}. De ser den så snart du har bekreftet e-posten din, og vi sender deg en e-post når de har bestemt seg.",
+      "region_will_ask": "{region} bestemmer selv hvilke klubber den tar inn, så den blir spurt når du har bekreftet e-posten din. Før den sier ja, er ikke klubben din i regionen."
     },
     "register_org": {
       "title": "Registrer organisasjon",
