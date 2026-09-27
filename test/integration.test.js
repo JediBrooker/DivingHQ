@@ -6008,3 +6008,39 @@ test("club approval: whoever loses a race to decide is told it's decided, whiche
     await claimKit.wipe(CODE);
   }
 });
+
+test("club approval: a revoke activates waiting clubs but doesn't make a suspended founder admin", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "BDI";
+  await claimKit.wipe(CODE);
+  try {
+    const fx = await approvalKit.federation(CODE);
+    const P = await approvalKit.signUp(CODE, "Bujumbura Divers", {}, { verify: true });
+    const Q = await approvalKit.signUp(CODE, "Gitega Divers", {}, { verify: true });
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [P.id]);
+
+    const client = await pool.connect();
+    let out;
+    try {
+      await client.query("BEGIN");
+      out = await clubApprovals.activateAllPending(client, fx.orgId, { actorId: fx.adminId });
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+    assert.deepEqual(out.clubs.map((c) => c.id).sort(), [P.clubId, Q.clubId].sort());
+    assert.equal((await approvalKit.club(P.clubId)).status, "active");
+    assert.equal(await approvalKit.isAdmin(P.clubId, P.id), false, "suspended, so no admin seat");
+    assert.equal(await approvalKit.isAdmin(Q.clubId, Q.id), true);
+    const audit = (await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'club.approved'", [P.clubId],
+    )).rows[0].metadata;
+    assert.equal(audit.founder_admin, false);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
