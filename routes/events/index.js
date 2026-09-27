@@ -6,13 +6,13 @@
 //   DELETE /api/events/:id        remove (org_admin only)
 //   PUT    /api/events/:id/status flip Upcoming/Live/Completed
 //
-// Adjacent concerns (judges, managers, roster, advance, dive
-// templates, event-judges plumbing) live in their own routes
-// modules (extraction in progress; many still in server.js as of
-// the Phase-4 split). loadEventForEntries, used by the
-// diver-portal and team dive-list submit handlers, moved into
-// lib/middleware.js so it can be imported once and reused by
-// both consumers.
+// This file also carries the stage chain (advance, Super Final
+// seeding), the international participation flow and the round-dive
+// templates. Judges, managers and the Control Room roster have their
+// own route modules (event-staff.js, control-room.js), and the Super
+// Final bridge, dive-offs and reserves sit next to this file.
+// loadEventForEntries, used by the diver-portal and team dive-list
+// submit handlers, lives in lib/middleware.js so both share it.
 //
 // Mounted via:
 //   app.use(require('./routes/events')({ … }))
@@ -721,7 +721,8 @@ module.exports = function createEventsRouter({
 
       // AUDIT FIX (Medium-1): when parent_event_id is being set or
       // changed, confirm the parent is in the caller's org. POST
-      // /api/events already does this (~line 281-288); the PUT
+      // /api/events already does this (the parent_event_id block in
+      // its stage-chain validation); the PUT
       // handler had dropped the check. Without it, an org_admin in
       // Org A could PUT a child event with parent_event_id pointing
       // at any Org B event whose UUID they know, chaining through
@@ -1938,10 +1939,10 @@ module.exports = function createEventsRouter({
         top_n,
         reserves = 0,
         dive_order, // 'inherit' | 'reverse' | 'random'
-        // World Aquatics Article 4.1.8 (start order / dive-list submission window): divers must submit the
-        // next stage's list within 30 min of the prior stage's
-        // results being announced. Configurable per-advance,
-        // 0 = no auto-lock (operator wants no time pressure).
+        // WA Article 6.7.3 (change of dives): a changed list has to be
+        // in no later than 30 min after the end of the previous stage.
+        // Configurable per-advance, 0 = no auto-lock (operator wants
+        // no time pressure).
         lock_minutes = 30,
       } = req.body || {};
       const topN = parseInt(top_n);

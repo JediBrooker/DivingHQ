@@ -60,7 +60,8 @@
 // in phase 3, the seed is a starting point, not a constraint.
 //
 // Mounted via:
-//   app.use(require('./routes/sessions')({ pool, optionalAuth }))
+//   app.use(require('./routes/sessions')({ pool, optionalAuth,
+//     requireMeetEditor, requireMeetOrClubEditor, isMeetHostAdmin, io }))
 
 const express = require("express");
 const {

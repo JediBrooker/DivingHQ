@@ -81,10 +81,9 @@ module.exports = function createControlRoomRouter({
   requireMeetEditor,
   bulkWriteLimiter,
   ensureEventOrgGate,
-  // lib/middleware.js exports the canonical pre-meet ("Upcoming")
-  // gate; the server.js mount doesn't pass it yet, so the factory
-  // falls back to a behaviour-identical local twin below when
-  // absent. Optional so existing mounts keep working unchanged.
+  // lib/middleware.js's canonical pre-meet ("Upcoming") gate. Required,
+  // the factory throws without it, so the reorder/randomise routes can't
+  // quietly lose their lock.
   ensureEventPreMeet,
   // Cut 2 deps: push for the request → notify hop, bcrypt + totp
   // for the credential-fallback verification path. All three are

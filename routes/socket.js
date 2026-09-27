@@ -35,10 +35,12 @@ module.exports = function attachSocket({
   io,
   pool,
   JWT_SECRET,
-  // From lib/middleware:
-  socketRequireRole,        // currently re-exported but no longer
-                            // used directly, every privileged event
-                            // calls socketCanManageEvent now.
+  // From lib/middleware. socketRequireRole is passed in but nothing
+  // here calls it: submit_score does its own role check and the
+  // Control Room events go through socketCanManageEvent. Heads up,
+  // that means the maintenance-mode check that lives in
+  // socketRequireRole doesn't run for any socket write today.
+  socketRequireRole,
   socketCanManageEvent,
   isValidScore,
   isTokenVersionCurrent,
@@ -76,8 +78,8 @@ module.exports = function attachSocket({
   if (!io || !pool || !JWT_SECRET) {
     throw new Error("attachSocket requires { io, pool, JWT_SECRET, … }");
   }
-  // Avoid an unused-var lint warning while still naming the
-  // dependency at the call site for clarity.
+  // Not called yet (see the note on the parameter), void keeps lint
+  // quiet without dropping it from the mount.
   void socketRequireRole;
 
   // Idempotency layer (migration 054 + lib/idempotency.js).
