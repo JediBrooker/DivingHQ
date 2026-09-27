@@ -511,7 +511,15 @@
     "view_recap": "Lihat rekap →",
     "stream_overlay": "Overlay siaran",
     "broadcast": "Siaran",
-    "pdf_recap": "📄 Rekap PDF"
+    "pdf_recap": "📄 Rekap PDF",
+    "medal_title_country": "Klasemen medali per negara",
+    "medal_title_club": "Klasemen medali per klub",
+    "medal_title_state": "Klasemen medali per negara bagian",
+    "medal_title_province": "Klasemen medali per provinsi",
+    "medal_title_home_nation": "Klasemen medali per bangsa",
+    "medal_title_region": "Klasemen medali per wilayah",
+    "medal_col_country": "Negara",
+    "medal_col_club": "Klub"
   },
   "guide": {
     "title": "Panduan pengguna",

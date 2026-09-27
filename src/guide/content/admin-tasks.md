@@ -262,6 +262,8 @@ When you click **Invite** in the Federations modal, every org_admin in the invit
 
 Once any event in the meet has finalised with ≥2 distinct countries on the standings, the public recap automatically grows an Olympic-style country medal table card alongside the per-diver leaderboard — sorted by gold count, then silver, then bronze. Spectators see who topped the federation count without you doing anything extra.
 
+The table groups by whatever the chips next to each diver show, so it follows the meet's **Divers represent** setting. A national championship set to states gets a state medal table (called a province or home-nation table where that's what the country uses), a club meet gets a club medal table, and the heading says which. Team events count too: each team sits under the state, club or country its divers share.
+
 ### Continental records
 
 Migration 037 added a fourth records scope alongside personal / club / federation. Each federation now has a **continent** field (`africa`, `americas`, `asia`, `europe`, `oceania`) — sysadmin sets this once per federation. When a diver whose home federation is classified sets a personal best, the dive is also compared against the continental record book. A junior setting an Oceania record at a Pacific Junior Champs now has a real place to land it; the records page (`/records/:slug`) gains a Continental tab.

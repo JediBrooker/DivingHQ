@@ -511,7 +511,15 @@
     "view_recap": "View recap →",
     "stream_overlay": "Stream Overlay",
     "broadcast": "Broadcast",
-    "pdf_recap": "📄 PDF recap"
+    "pdf_recap": "📄 PDF recap",
+    "medal_title_country": "Country Medal Table",
+    "medal_title_club": "Club Medal Table",
+    "medal_title_state": "State Medal Table",
+    "medal_title_province": "Province Medal Table",
+    "medal_title_home_nation": "Home Nation Medal Table",
+    "medal_title_region": "Region Medal Table",
+    "medal_col_country": "Country",
+    "medal_col_club": "Club"
   },
   "guide": {
     "title": "User Guide",

@@ -511,7 +511,15 @@
     "view_recap": "Ver resumen →",
     "stream_overlay": "Superposición para streaming",
     "broadcast": "Retransmisión",
-    "pdf_recap": "📄 Resumen PDF"
+    "pdf_recap": "📄 Resumen PDF",
+    "medal_title_country": "Medallero por países",
+    "medal_title_club": "Medallero por clubes",
+    "medal_title_state": "Medallero por estados",
+    "medal_title_province": "Medallero por provincias",
+    "medal_title_home_nation": "Medallero por naciones",
+    "medal_title_region": "Medallero por regiones",
+    "medal_col_country": "País",
+    "medal_col_club": "Club deportivo"
   },
   "guide": {
     "title": "Guía de uso",

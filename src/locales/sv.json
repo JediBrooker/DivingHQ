@@ -522,7 +522,15 @@
     "view_recap": "Visa sammanfattning →",
     "stream_overlay": "Sändningsoverlay",
     "broadcast": "Sändning",
-    "pdf_recap": "📄 PDF-sammanfattning"
+    "pdf_recap": "📄 PDF-sammanfattning",
+    "medal_title_country": "Medaljtabell per land",
+    "medal_title_club": "Medaljtabell per klubb",
+    "medal_title_state": "Medaljtabell per delstat",
+    "medal_title_province": "Medaljtabell per provins",
+    "medal_title_home_nation": "Medaljtabell per nation",
+    "medal_title_region": "Medaljtabell per region",
+    "medal_col_country": "Land",
+    "medal_col_club": "Klubb"
   },
   "guide": {
     "title": "Användarguide",

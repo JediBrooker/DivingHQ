@@ -511,7 +511,15 @@
     "view_recap": "Özeti görüntüle →",
     "stream_overlay": "Yayın Katmanı",
     "broadcast": "Yayın",
-    "pdf_recap": "📄 PDF özet"
+    "pdf_recap": "📄 PDF özet",
+    "medal_title_country": "Ülkelere göre madalya tablosu",
+    "medal_title_club": "Kulüplere göre madalya tablosu",
+    "medal_title_state": "Eyaletlere göre madalya tablosu",
+    "medal_title_province": "Eyaletlere göre madalya tablosu",
+    "medal_title_home_nation": "Ülkelere göre madalya tablosu (BK)",
+    "medal_title_region": "Bölgelere göre madalya tablosu",
+    "medal_col_country": "Ülke",
+    "medal_col_club": "Kulüp"
   },
   "guide": {
     "title": "Kullanıcı Kılavuzu",

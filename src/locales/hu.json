@@ -522,7 +522,15 @@
     "view_recap": "Összefoglaló megtekintése →",
     "stream_overlay": "Közvetítési átfedés",
     "broadcast": "Közvetítés",
-    "pdf_recap": "📄 PDF összefoglaló"
+    "pdf_recap": "📄 PDF összefoglaló",
+    "medal_title_country": "Éremtáblázat országonként",
+    "medal_title_club": "Éremtáblázat klubonként",
+    "medal_title_state": "Éremtáblázat államonként",
+    "medal_title_province": "Éremtáblázat tartományonként",
+    "medal_title_home_nation": "Éremtáblázat országonként (UK)",
+    "medal_title_region": "Éremtáblázat régiónként",
+    "medal_col_country": "Ország",
+    "medal_col_club": "Klub"
   },
   "guide": {
     "title": "Felhasználói útmutató",

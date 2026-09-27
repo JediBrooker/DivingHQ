@@ -511,7 +511,15 @@
     "view_recap": "ハイライトを見る →",
     "stream_overlay": "ストリームオーバーレイ",
     "broadcast": "放送",
-    "pdf_recap": "📄 PDF ハイライト"
+    "pdf_recap": "📄 PDF ハイライト",
+    "medal_title_country": "国別メダル表",
+    "medal_title_club": "クラブ別メダル表",
+    "medal_title_state": "州別メダル表",
+    "medal_title_province": "州別メダル表",
+    "medal_title_home_nation": "構成国別メダル表",
+    "medal_title_region": "地域別メダル表",
+    "medal_col_country": "国",
+    "medal_col_club": "クラブ"
   },
   "guide": {
     "title": "ユーザーガイド",

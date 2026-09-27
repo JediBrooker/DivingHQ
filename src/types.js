@@ -481,6 +481,31 @@
  */
 
 /**
+ * @typedef {Object} ArchiveEventMeta
+ * The `event` block of GET /api/archive/:eventId/results.
+ *
+ * @property {string}      name
+ * @property {string}      [gender]
+ * @property {string}      [height]
+ * @property {number}      total_rounds
+ * @property {number}      number_of_judges
+ * @property {'individual'|'synchro_pair'|'team'} event_type
+ * @property {string}      org_name
+ * @property {'country'|'region'|'club'} represent_as  The meet's setting; 'country' outside a meet.
+ * @property {?('state'|'province'|'home_nation'|'region')} region_label  What the org calls its regions, null = none.
+ */
+
+/**
+ * @typedef {Object} ArchiveResultsPayload
+ * GET /api/archive/:eventId/results, the completed-event recap.
+ *
+ * @property {ArchiveEventMeta} event
+ * @property {StandingsRow[]}   standings  With rank; no public_id / is_tied_on_total here.
+ * @property {Object[]}         dives
+ * @property {ScoreboardPanelRow[]} panel
+ */
+
+/**
  * @typedef {Object} ScoreboardPayload
  * @property {StandingsRow[]}      standings
  * @property {Object[]}            history

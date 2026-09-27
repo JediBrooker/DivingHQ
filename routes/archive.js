@@ -201,7 +201,8 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   // GET /api/archive/:eventId/results: per-event recap.
   //
   // Returns:
-  //   event:     event metadata
+  //   event:     event metadata, plus the meet's represent_as and the
+  //              org's region_label for the medal table heading
   //   standings: total per competitor (or per team, for team
   //              events), World Aquatics tie-break by descending dive
   //              points
@@ -212,10 +213,17 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
     try {
       const [ev, standings, history, panel] = await Promise.all([
         reads.query(
+          /* represent_as (and what the host country calls its regions)
+             let the recap title its medal table State / Club / Country
+             to match the codes it groups by. An event outside any meet
+             labels as country, same as event_rep_code(). */
           `SELECT e.name, e.gender, e.height, e.total_rounds,
-                  e.number_of_judges, e.event_type, o.name AS org_name
+                  e.number_of_judges, e.event_type, o.name AS org_name,
+                  COALESCE(m.represent_as, 'country') AS represent_as,
+                  o.region_label
            FROM events e
            JOIN organisations o ON e.org_id = o.id
+           LEFT JOIN meets m ON m.id = e.meet_id
            WHERE e.id = $1
              AND e.status IN ('Live', 'Completed')
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,

@@ -511,7 +511,15 @@
     "view_recap": "عرض الملخّص →",
     "stream_overlay": "تراكب البث",
     "broadcast": "بث",
-    "pdf_recap": "📄 ملخّص PDF"
+    "pdf_recap": "📄 ملخّص PDF",
+    "medal_title_country": "جدول الميداليات حسب الدولة",
+    "medal_title_club": "جدول الميداليات حسب النادي",
+    "medal_title_state": "جدول الميداليات حسب الولاية",
+    "medal_title_province": "جدول الميداليات حسب المقاطعة",
+    "medal_title_home_nation": "جدول الميداليات حسب الأمة",
+    "medal_title_region": "جدول الميداليات حسب المنطقة",
+    "medal_col_country": "الدولة",
+    "medal_col_club": "النادي"
   },
   "guide": {
     "title": "دليل المستخدم",

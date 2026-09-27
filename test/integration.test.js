@@ -1923,3 +1923,43 @@ test("an event's team list opens to its delegates, and only them", async (t) => 
     await claimKit.wipe("AIA");
   }
 });
+
+// The recap titles its medal table by what the codes are, so the archive
+// event block says how the meet represents divers and what the host
+// country calls its regions.
+test("recap event block carries represent_as and the region label", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "FLK";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Stanley Divers");
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    await pool.query("UPDATE organisations SET region_label = 'province' WHERE id = $1", [orgId]);
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Falklands Champs", represent_as: "region" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "1m", gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 1, event_type: "individual", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const loose = (await pool.query(
+      `INSERT INTO events (org_id, name, gender, height, number_of_judges, total_rounds, status)
+       VALUES ($1, 'Friendly', 'Mixed', '1m', 5, 1, 'Completed') RETURNING id`, [orgId],
+    )).rows[0].id;
+    await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [ev.body.id]);
+
+    const meta = async (id) => {
+      const r = await fetchJson("GET", `/api/archive/${id}/results`);
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      return { represent_as: r.body.event.represent_as, region_label: r.body.event.region_label };
+    };
+    assert.deepEqual(await meta(ev.body.id), { represent_as: "region", region_label: "province" });
+    assert.equal((await fetchJson("PUT", `/api/meets/${meet.body.id}`, { token: A.token, body: { represent_as: "club" } })).status, 200);
+    assert.equal((await meta(ev.body.id)).represent_as, "club");
+    // No meet, no setting: the chips are countries, so is the heading.
+    assert.equal((await meta(loose)).represent_as, "country");
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

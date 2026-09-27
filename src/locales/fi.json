@@ -522,7 +522,15 @@
     "view_recap": "Näytä yhteenveto →",
     "stream_overlay": "Lähetyspäällys",
     "broadcast": "Lähetys",
-    "pdf_recap": "📄 PDF-yhteenveto"
+    "pdf_recap": "📄 PDF-yhteenveto",
+    "medal_title_country": "Mitalitaulukko maittain",
+    "medal_title_club": "Mitalitaulukko seuroittain",
+    "medal_title_state": "Mitalitaulukko osavaltioittain",
+    "medal_title_province": "Mitalitaulukko provinsseittain",
+    "medal_title_home_nation": "Mitalitaulukko kansakunnittain",
+    "medal_title_region": "Mitalitaulukko alueittain",
+    "medal_col_country": "Maa",
+    "medal_col_club": "Seura"
   },
   "guide": {
     "title": "Käyttöopas",
