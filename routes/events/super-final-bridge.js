@@ -309,16 +309,16 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         // (group_number, display_order) slot, two divers
         // occupying one H2H slot. Filtering on withdrawn_at IS
         // NULL makes the second call a clean 404.
+        // The slot is read off their earliest round; one row per round.
         const withdrawRowsRes = await client.query(
-          `SELECT round_number, dive_id, group_number, MIN(display_order) OVER () AS first_order,
-                  MIN(display_order) AS d_order
+          `SELECT group_number, display_order
              FROM competitor_dive_lists
             WHERE event_id = $1
               AND competitor_id = $2
               AND is_reserve = FALSE
               AND withdrawn_at IS NULL
-            GROUP BY round_number, dive_id, group_number, display_order
-            ORDER BY round_number`,
+            ORDER BY round_number
+            LIMIT 1`,
           [eventId, withdraw_competitor_id],
         );
         if (!withdrawRowsRes.rows.length) {
@@ -329,7 +329,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         }
         const withdrawSlot = {
           group_number:  withdrawRowsRes.rows[0].group_number,
-          display_order: withdrawRowsRes.rows[0].d_order,
+          display_order: withdrawRowsRes.rows[0].display_order,
         };
 
         // Verify the replacement org's individual count, and a

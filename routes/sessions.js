@@ -68,11 +68,6 @@ const {
   detectConflicts,
   computeResourceFingerprint,
 } = require("../lib/schedule-conflicts");
-const {
-  buildReflowProposal,
-  stampActualStart,
-  REFLOW_NOISE_THRESHOLD_MS,
-} = require("../lib/schedule-reflow");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 
 // Default operator warmup length in front of every competition
@@ -127,30 +122,27 @@ function invalidateConflictCache(meetId) {
 module.exports = function createSessionsRouter({
   pool,
   optionalAuth,
-  // Phase 2 additions, optional so the Phase 1 callsite (no auth /
-  // no socket) still works if someone keeps the old signature, but
-  // server.js wires them all in now so the conflict dismiss + emit
-  // surface is live.
+  // The conflict/dismiss/block-edit gate. requireMeetEditor is an
+  // array of middleware (role check + TOTP gate).
   requireMeetEditor,
+  // Optional: without it the schedule:* socket emits are skipped.
   io,
-  // Club-hosted meets (migration 087), optional. With them a club admin
-  // can edit the schedule of a meet their club hosts.
+  // Club-hosted meets (migration 087). With them a club admin can edit
+  // the schedule of a meet their club hosts, and requireMeetOrClubEditor
+  // takes over from requireMeetEditor as the editor gate.
   requireMeetOrClubEditor,
   isMeetHostAdmin,
 } = {}) {
-  if (!pool) throw new Error("createSessionsRouter requires { pool, … }");
+  // A mount missing its auth pieces used to limp along (anonymous
+  // reads, 503 on every edit). Throwing at boot is louder and there's
+  // exactly one mount, in server.js, which passes all of them.
+  if (!pool || !optionalAuth || !(requireMeetOrClubEditor || requireMeetEditor)) {
+    throw new Error(
+      "createSessionsRouter requires { pool, optionalAuth, requireMeetOrClubEditor or requireMeetEditor, … }",
+    );
+  }
   const router = express.Router();
-  const maybeAuth = optionalAuth || ((req, _res, next) => next());
-
-  // The dismiss endpoints need an auth gate. requireMeetEditor is
-  // an array of middleware (role check + TOTP gate); falls back
-  // to a 503 if the host wired the router without it, so a
-  // partially-configured deploy fails loudly instead of silently
-  // accepting unauth'd dismissals.
-  const editorGate = requireMeetOrClubEditor || requireMeetEditor || ((_req, res) =>
-    res.status(503).json({
-      error: "Conflict dismissal requires an authenticated configuration",
-    }));
+  const editorGate = requireMeetOrClubEditor || requireMeetEditor;
 
   async function userCanEditMeet(req, meet) {
     if (!req.user || !meet) return false;
@@ -391,7 +383,7 @@ module.exports = function createSessionsRouter({
   // has events with scheduled_at but no sessions, the boards
   // and sessions are seeded inside a transaction.
   // -------------------------------------------------------------
-  router.get("/api/meets/:meetId/sessions", maybeAuth, async (req, res) => {
+  router.get("/api/meets/:meetId/sessions", optionalAuth, async (req, res) => {
     const { meetId } = req.params;
     let client;
     try {
@@ -1954,9 +1946,3 @@ function foldLine(line) {
   if (chunk) out.push(chunk);
   return out.map((p, i) => (i === 0 ? p : " " + p)).join("\r\n");
 }
-
-module.exports.__test__ = { renderIcs, escapeText, formatIcsUtc, foldLine };
-module.exports.__internals__ = {
-  invalidateConflictCache,
-  CONFLICT_CACHE_TTL_MS,
-};

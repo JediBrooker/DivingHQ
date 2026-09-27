@@ -136,7 +136,7 @@ module.exports = function createDiveOffsRoutes({ pool, requireEventManager }) {
         // a tie-break within the same pool that's competing for
         // a single advancement slot.
         const rosterRes = await client.query(
-          `SELECT DISTINCT competitor_id, group_number, MIN(display_order) AS display_order
+          `SELECT competitor_id, group_number, MIN(display_order) AS display_order
              FROM competitor_dive_lists
             WHERE event_id = $1
               AND competitor_id = ANY($2::uuid[])

@@ -34,7 +34,6 @@
 // event). That row is the canonical pointer to the disputed cell.
 
 const express = require("express");
-const { recordAudit } = require("../lib/audit");
 const { announceRecords } = require("../lib/records");
 
 module.exports = function createConflictsRouter({

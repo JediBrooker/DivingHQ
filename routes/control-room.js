@@ -28,7 +28,6 @@ const QRCode  = require("qrcode");
 const { publicId } = require("../lib/public-id");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const createIdempotency = require("../lib/idempotency");
-const { t } = require("../lib/server-i18n");
 const { perDiveSelect } = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
@@ -1098,7 +1097,6 @@ module.exports = function createControlRoomRouter({
       // their modal flips out of "waiting for referee" state.
       // Doesn't go through the push engine, no need to OS-notify
       // the manager since they're staring at the screen.
-      const io = push?.io || null;
       if (push) {
         // Best-effort emit. We don't have a direct handle to the
         // manager's user_id here, but the SPA listens for any

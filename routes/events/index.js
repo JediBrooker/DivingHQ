@@ -100,11 +100,9 @@ const ALLOWED_FORMATS = ["preliminary", "semifinal", "final", ...SUPER_FINAL_FOR
 
 module.exports = function createEventsRouter({
   pool,
-  JWT_SECRET,
   io,
   verifyToken,
   requireOrgAdmin,
-  requireOrgRole,
   requireEventManager,
   sendEventStartedEmails,
   sendEventResultsEmails,
@@ -133,8 +131,8 @@ module.exports = function createEventsRouter({
   isEventDelegate,
   requireTotpForPrivilegedRoles,
 }) {
-  if (!pool || !JWT_SECRET || !optionalAuth) {
-    throw new Error("createEventsRouter requires { pool, JWT_SECRET, optionalAuth, … }");
+  if (!pool || !optionalAuth) {
+    throw new Error("createEventsRouter requires { pool, optionalAuth, … }");
   }
   const router = express.Router();
 
