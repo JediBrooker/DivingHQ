@@ -48,3 +48,28 @@ test("delete, deletePrefix and clear", () => {
 test("a TTL is required", () => {
   assert.throws(() => createTtlCache({}), /positive ttlMs/);
 });
+
+test("getOrBuild: one build per key and tag, keep() decides what's cached", async () => {
+  const c = createTtlCache({ ttlMs: 1000 });
+  let builds = 0;
+  const build = async () => { builds += 1; return { n: builds }; };
+  const [a, b] = await Promise.all([c.getOrBuild("k", build), c.getOrBuild("k", build)]);
+  assert.equal(builds, 1);
+  assert.equal(a, b);
+
+  // Different tag, different flight. keep() says no, so nothing's cached.
+  c.clear();
+  const [x, y] = await Promise.all([
+    c.getOrBuild("k", build, { tag: 1, keep: () => false }),
+    c.getOrBuild("k", build, { tag: 2, keep: () => false }),
+  ]);
+  assert.equal(builds, 3);
+  assert.notEqual(x, y);
+  assert.equal(c.get("k"), null);
+});
+
+test("getOrBuild: a synchronous throw in build is a rejection, not a crash", async () => {
+  const c = createTtlCache({ ttlMs: 1000 });
+  await assert.rejects(c.getOrBuild("k", () => { throw new Error("nope"); }), /nope/);
+  assert.equal(await c.getOrBuild("k", async () => "fine"), "fine");
+});
