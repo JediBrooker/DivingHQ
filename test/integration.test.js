@@ -1388,3 +1388,53 @@ test("representation: meet setting drives the label, entries keep their snapshot
     await claimKit.wipe(CODE);
   }
 });
+
+// Phase 4: state records, and records from unclaimed accounts reading
+// as unofficial.
+test("records: a dive sets a state record, unofficial until the state is claimed", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CAN";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Kingston Divers", { region_code: "ON" });
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const on = (await pool.query("SELECT id FROM regions WHERE org_id = $1 AND short_code = 'ON'", [orgId])).rows[0].id;
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Ontario Open", represent_as: "region" } });
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "3m", gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 1, event_type: "individual", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const dive = (await pool.query("SELECT id FROM dive_directory WHERE height = 3 LIMIT 1")).rows[0].id;
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+      [ev.body.id, A.id, dive],
+    );
+    for (let i = 1; i <= 5; i++) {
+      const j = await insertUser({ orgId, role: "judge", username: `int-rj${i}-${crypto.randomBytes(3).toString("hex")}`, fullName: `Judge ${i}` });
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)", [ev.body.id, j, i]);
+      await pool.query(
+        "INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, 1, 7.5)",
+        [ev.body.id, A.id, j, dive],
+      );
+    }
+    const records = require("../lib/records")({ pool, verifyToken: (_req, _res, next) => next() });
+    const broken = await records.checkAndApplyRecords({ eventId: ev.body.id, competitorId: A.id, roundNumber: 1 });
+    const region = broken.find((b) => b.scope === "region");
+    assert.ok(region, `a state record was set: ${JSON.stringify(broken.map((b) => b.scope))}`);
+    assert.equal(region.scope_name, "Ontario");
+
+    const list = async (scope, id) =>
+      (await fetchJson("GET", `/api/records?scope=${scope}&scope_id=${id}`, { token: A.token })).body;
+    let reg = await list("region", on);
+    assert.equal(reg.length, 1);
+    assert.equal(reg[0].official, false, "Ontario has no state body yet");
+    assert.equal((await list("federation", orgId))[0].official, false, "nor Canada a federation");
+    await pool.query("UPDATE regions SET claim_state = 'claimed' WHERE id = $1", [on]);
+    reg = await list("region", on);
+    assert.equal(reg[0].official, true);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
