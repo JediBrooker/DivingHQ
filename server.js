@@ -1183,8 +1183,13 @@ app.use(limitRoutes(createSearchLimiter(), require("./routes/judge-analytics")({
 // socket submit_score handler and from manual entry) and a tiny
 // Express router with the public GET /api/records endpoint (the
 // /records page), mounted here.
+//
+// It used to sit behind verifyToken. Now that anyone can read it,
+// it gets the same 60/min/IP throttle as the other public reads
+// (profiles, judge analytics, the archives); a person paging
+// through books makes a request per book, nowhere near that.
 // =============================================================
-app.use(recordsRouter);
+app.use(limitRoutes(createSearchLimiter(), recordsRouter));
 
 // =============================================================
 // SOCKET ENGINE

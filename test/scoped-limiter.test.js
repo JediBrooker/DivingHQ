@@ -79,3 +79,12 @@ test("server.js mounts no limiter bare in front of a router", () => {
   const bare = src.match(/app\.use\(\s*(createSearchLimiter\(\)|exportLimiter|bulkWriteLimiter|authLimiter)\s*,/g);
   assert.equal(bare, null, `use limitRoutes() instead: ${bare}`);
 });
+
+test("the public records read is throttled like the other public reads", () => {
+  // GET /api/records dropped verifyToken for the /records page. Anything
+  // anonymous that hits the database gets a limiter in this app, so
+  // don't let a refactor quietly mount it bare again.
+  const src = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
+  assert.match(src, /app\.use\(limitRoutes\(createSearchLimiter\(\),\s*recordsRouter\)\)/);
+  assert.doesNotMatch(src, /app\.use\(recordsRouter\)/);
+});
