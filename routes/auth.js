@@ -23,6 +23,7 @@ const { supportContact, suspendedAccountMessage } = require("../lib/support");
 const { liveAdminCount, sysadminIds } = require("../lib/admin-rows");
 const roleRequests = require("../lib/role-requests");
 const clubApprovals = require("../lib/club-approvals");
+const notices = require("../lib/notices");
 const { recordAudit } = require("../lib/audit");
 const createAuthLinks = require("../lib/auth-links");
 
@@ -784,27 +785,24 @@ module.exports = function createAuthRouter({
     res.json({ enabled: signupsOpen() });
   });
 
-  // Best-effort in-app heads-up to every sysadmin. Fire and forget.
+  // Best-effort in-app heads-up to every sysadmin. Fire and forget: the
+  // lookup runs here, and lib/notices does the push without throwing.
   function notifySysadminsOfClub({ clubName, orgId, countryName, startedCountry }) {
-    if (!push || typeof push.sendNotification !== "function") return;
-    (async () => {
-      try {
-        const adminIds = await sysadminIds(pool);
-        if (!adminIds.length) return;
-        const where = countryName || "an unclaimed country";
-        await push.sendNotification(adminIds, {
-          category:   "club_created",
-          title:      `New club: ${clubName}`,
-          body:       startedCountry
-            ? `First club on DivingHQ from ${where}. The country account was created unclaimed.`
-            : `A new club joined ${where}, which has no federation on DivingHQ yet.`,
-          data:       { org_id: orgId, club_name: clubName },
-          action_url: "/clubs",
-        });
-      } catch (err) {
-        console.error("[Club Created Notification Skipped]", err.message);
-      }
-    })();
+    const where = countryName || "an unclaimed country";
+    const tag = "Club Created Notification Skipped";
+    sysadminIds(pool)
+      .then((userIds) => notices.deliver({ push }, [{
+        userIds,
+        category:   "club_created",
+        title:      `New club: ${clubName}`,
+        body:       startedCountry
+          ? `First club on DivingHQ from ${where}. The country account was created unclaimed.`
+          : `A new club joined ${where}, which has no federation on DivingHQ yet.`,
+        data:       { org_id: orgId, club_name: clubName },
+        action_url: "/clubs",
+        email:      false,
+      }], { tag }))
+      .catch((err) => console.error(`[${tag}]`, err.message));
   }
 
   router.post("/api/auth/register", authLimiter, async (req, res) => {
@@ -1436,24 +1434,18 @@ module.exports = function createAuthRouter({
       // dashboard. Without this, an org can sit unapproved
       // indefinitely with nobody aware it's waiting.
       sendNewOrgRequestEmail(cleanOrgName).catch(() => {});
-      if (push && typeof push.sendNotification === "function") {
-        (async () => {
-          try {
-            const adminIds = await sysadminIds(pool);
-            if (adminIds.length) {
-              await push.sendNotification(adminIds, {
-                category:   "org_pending",
-                title:      `${cleanOrgName} is awaiting approval`,
-                body:       "A new federation registered and needs a system admin to review it.",
-                data:       { org_id: orgId, org_name: cleanOrgName },
-                action_url: "/users",
-              });
-            }
-          } catch (notifErr) {
-            console.error("[Org Pending Notification Skipped]", notifErr.message);
-          }
-        })();
-      }
+      // And the same heads-up in-app, fire and forget.
+      sysadminIds(pool)
+        .then((userIds) => notices.deliver({ push }, [{
+          userIds,
+          category:   "org_pending",
+          title:      `${cleanOrgName} is awaiting approval`,
+          body:       "A new federation registered and needs a system admin to review it.",
+          data:       { org_id: orgId, org_name: cleanOrgName },
+          action_url: "/users",
+          email:      false,
+        }], { tag: "Org Pending Notification Skipped" }))
+        .catch((err) => console.error("[Org Pending Notification Skipped]", err.message));
 
       res
         .status(201)

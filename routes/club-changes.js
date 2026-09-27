@@ -22,7 +22,7 @@
 // =============================================================
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
-const { NOTICE_TITLE_MAX } = require("../lib/notices");
+const notices = require("../lib/notices");
 const { isOrgAdminOf, liveAdminIds, liveOrgAdminIds } = require("../lib/admin-rows");
 
 module.exports = function createClubChangesRouter({ pool, verifyToken, bumpTokenVersion }) {
@@ -70,17 +70,14 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
   // try/catch alone isn't enough: one failed INSERT aborts the whole
   // transaction, and the COMMIT after it quietly rolls back instead. A
   // transfer used to report "approved" while nothing had moved. Hence the
-  // savepoint. The title is cut to fit notifications.title as well, since
-  // a club's name on its own can be longer than that.
-  async function notify(db, userId, { title, body, action_url, data, category = "club_change" }) {
+  // savepoint. insertInApp cuts the title to fit notifications.title as
+  // well, since a club's name on its own can be longer than that.
+  async function notify(db, userIds, { category = "club_change", ...note }) {
+    if (!userIds.length) return;
     const inTx = db !== pool;
     try {
       if (inTx) await db.query("SAVEPOINT club_change_notify");
-      await db.query(
-        `INSERT INTO notifications (user_id, category, title, body, data, action_url, status)
-         VALUES ($1, $6, $2, $3, $4::jsonb, $5, 'sent')`,
-        [userId, String(title).slice(0, NOTICE_TITLE_MAX), body || null, data ? JSON.stringify(data) : "{}", action_url || null, category],
-      );
+      await notices.insertInApp(db, userIds, { category, ...note });
       if (inTx) await db.query("RELEASE SAVEPOINT club_change_notify");
     } catch (err) {
       if (inTx) await db.query("ROLLBACK TO SAVEPOINT club_change_notify");
@@ -233,7 +230,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
       note: r.note || null,
     });
 
-    await notify(client, r.user_id, {
+    await notify(client, [r.user_id], {
       title: r.kind === "org_transfer" ? "Your transfer was approved" : "Your club change was approved",
       body: "The change has been applied to your profile.",
       action_url: "/profile",
@@ -243,16 +240,14 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
     for (const [scope, list] of [["club", seats.clubs], ["region", seats.regions]]) {
       for (const row of list) {
         const { ids, orphaned } = await whoIsLeft(client, scope, row);
-        for (const id of ids) {
-          if (id === r.user_id) continue;
-          await notify(client, id, {
-            title: orphaned ? `${row.name} has no admin now` : `${row.name} has one admin fewer`,
-            body: `${fullName || "One of its admins"} transferred to another federation, so they no longer run ${row.name}.`
-              + (orphaned ? " Appoint a new admin so someone can run its meets." : ""),
-            action_url: orphaned ? "/clubs" : (scope === "club" ? "/club" : "/region"),
-            data: { request_id: r.id, kind: r.kind, [`${scope}_id`]: row.id },
-          });
-        }
+        // The mover can still hold org_admin in the org they left.
+        await notify(client, ids.filter((id) => id !== r.user_id), {
+          title: orphaned ? `${row.name} has no admin now` : `${row.name} has one admin fewer`,
+          body: `${fullName || "One of its admins"} transferred to another federation, so they no longer run ${row.name}.`
+            + (orphaned ? " Appoint a new admin so someone can run its meets." : ""),
+          action_url: orphaned ? "/clubs" : (scope === "club" ? "/club" : "/region"),
+          data: { request_id: r.id, kind: r.kind, [`${scope}_id`]: row.id },
+        });
       }
     }
 
@@ -263,7 +258,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
         ? link.dependent_user_id
         : link.guardian_user_id;
       if (other === r.user_id) continue;
-      await notify(client, other, {
+      await notify(client, [other], {
         title: "A guardian link was ended",
         body: `${fullName || "Someone you were linked to"} transferred to another federation, so the link between you was closed. You can request it again in the new federation.`,
         action_url: "/guardians",
@@ -363,15 +358,13 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
         }
       }
       await client.query("COMMIT");
-      for (const id of tellIds) {
-        await notify(pool, id, {
-          category: "club_join_request",
-          title: `${u.full_name} wants to join your club`,
-          body: "Approve or decline it on your club page.",
-          action_url: "/club",
-          data: { request_id: r.id, kind: r.kind },
-        });
-      }
+      await notify(pool, tellIds, {
+        category: "club_join_request",
+        title: `${u.full_name} wants to join your club`,
+        body: "Approve or decline it on your club page.",
+        action_url: "/club",
+        data: { request_id: r.id, kind: r.kind },
+      });
       res.status(201).json({ ...r, finalised });
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
@@ -458,7 +451,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
           "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now() WHERE id=$2",
           [req.user.id, r.id],
         );
-        await notify(client, r.user_id, {
+        await notify(client, [r.user_id], {
           title: "Your club change was declined",
           body: "An administrator declined the request.",
           action_url: "/profile",

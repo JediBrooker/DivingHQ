@@ -30,6 +30,7 @@ const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { catalogFor, materializeRegions } = require("../lib/regions");
 const { removeAdmin, isOrgAdminOf, liveAdminIds } = require("../lib/admin-rows");
+const notices = require("../lib/notices");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -132,18 +133,9 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
   // 'region_request' is a club asking, for the region to act on;
   // 'region_decision' tells the club how it went. Same split as
   // role_request / role_decision, so only the asks sit under Action.
-  async function notifyUsers(userIds, { title, body, action_url, data, category }) {
-    for (const id of userIds) {
-      try {
-        await pool.query(
-          `INSERT INTO notifications (user_id, category, title, body, data, action_url, status)
-           VALUES ($1, $6, $2, $3, $4::jsonb, $5, 'sent')`,
-          [id, String(title).slice(0, 160), body || null, JSON.stringify(data || {}), action_url || null, category],
-        );
-      } catch (err) {
-        console.error("[region-request] notify failed:", err.message);
-      }
-    }
+  async function notifyUsers(userIds, note) {
+    await notices.insertInApp(pool, userIds, note)
+      .catch((err) => console.error("[region-request] notify failed:", err.message));
   }
 
   const regionName = (rg) => rg?.claimed_name || rg?.name || "no region";

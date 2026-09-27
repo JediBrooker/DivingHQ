@@ -6567,6 +6567,60 @@ test("admin-rows: live admin lookups skip deleted and suspended accounts", async
   }
 });
 
+// The fire-and-forget in-app heads-ups: a new federation (org_pending) and
+// a new club where there's no federation (club_created) go to every
+// sysadmin, and a decision on a federation (org_decision) to its admins.
+test("heads-ups: new federations and clubs reach the sysadmins, decisions reach the federation", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const sysIds = (await pool.query("SELECT id FROM users WHERE is_system_admin = true")).rows.map((r) => r.id).sort();
+  if (!sysIds.length) return t.skip("no sysadmin in this DB");
+  // Nothing awaits these, so give them a moment to land.
+  const waitFor = async (sql, params) => {
+    for (let i = 0; i < 60; i++) {
+      const rows = (await pool.query(sql, params)).rows;
+      if (rows.length) return rows;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return [];
+  };
+  const CODE = "NCL";
+  await claimKit.wipe(CODE);
+  const X = await setupFixture({ withEvent: false });
+  try {
+    const pending = await waitFor(
+      "SELECT user_id, title, action_url FROM notifications WHERE category = 'org_pending' AND data->>'org_id' = $1", [X.orgId],
+    );
+    assert.deepEqual(pending.map((n) => n.user_id).sort(), sysIds);
+    assert.equal(pending[0].title, `Integration Test ${X.slug} is awaiting approval`);
+    assert.equal(pending[0].action_url, "/users");
+
+    const founder = await claimKit.founder(CODE, "Noumea Divers");
+    const created = await waitFor(
+      "SELECT user_id, title, body FROM notifications WHERE category = 'club_created' AND data->>'club_name' = 'Noumea Divers'", [],
+    );
+    assert.deepEqual(created.map((n) => n.user_id).sort(), sysIds);
+    assert.equal(created[0].title, "New club: Noumea Divers");
+    assert.match(created[0].body, /^First club on DivingHQ from New Caledonia\./);
+    assert.ok(founder.clubId);
+
+    const sys = await claimKit.login("admin", "admin");
+    if (!sys?.token) return;
+    const put = await fetchJson("PUT", `/api/orgs/${X.orgId}/status`, { token: sys.token, body: { status: "suspended" } });
+    assert.equal(put.status, 200, JSON.stringify(put.body));
+    const decided = await waitFor(
+      "SELECT user_id, title FROM notifications WHERE category = 'org_decision' AND data->>'org_id' = $1", [X.orgId],
+    );
+    assert.deepEqual(decided.map((n) => n.user_id), [X.adminId]);
+    assert.equal(decided[0].title, `Integration Test ${X.slug} has been suspended`);
+  } finally {
+    await pool.query("DELETE FROM notifications WHERE data->>'org_id' = $1", [X.orgId]).catch(() => {});
+    await pool.query("DELETE FROM notifications WHERE data->>'club_name' = 'Noumea Divers'").catch(() => {});
+    await teardownFixture(X);
+    await claimKit.wipe(CODE);
+  }
+});
+
 // Signup used to store a new club's code as typed, cut to 8: no upper
 // case, no format check, no clash check, and a club that goes live at once
 // (no federation) never met the rule club setup and approval apply. The

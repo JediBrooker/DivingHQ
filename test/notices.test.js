@@ -61,3 +61,45 @@ test("an empty audience sends nothing and long titles still fit", async () => {
   assert.ok(Array.from(r.pushed[0].title).length <= notices.NOTICE_TITLE_MAX);
   assert.equal(r.pushed[0].body, `${long}. tail`);
 });
+
+// insertInApp: the inbox-only row the region, club-change and club
+// approval notices write. A stub db records the one statement it runs.
+function stubDb(rowCount = 0) {
+  const calls = [];
+  return { calls, query: async (sql, params) => { calls.push({ sql, params }); return { rowCount }; } };
+}
+
+test("insertInApp writes one row per distinct recipient in one statement", async () => {
+  const db = stubDb(2);
+  const n = await notices.insertInApp(db, ["a", "a", null, "b"], {
+    category: "region_request", title: "Club wants in", body: "Decide on your region page.",
+    data: { club_id: "c1" }, action_url: "/region",
+  });
+  assert.equal(n, 2);
+  assert.equal(db.calls.length, 1);
+  const [ids, category, title, body, data, url] = db.calls[0].params;
+  assert.deepEqual(ids, ["a", "b"]);
+  assert.equal(category, "region_request");
+  assert.equal(title, "Club wants in");
+  assert.equal(body, "Decide on your region page.");
+  assert.equal(data, JSON.stringify({ club_id: "c1" }));
+  assert.equal(url, "/region");
+  assert.match(db.calls[0].sql, /unnest\(\$1::uuid\[\]\)/);
+});
+
+test("insertInApp cuts a long title to the column and leaves the body alone", async () => {
+  const db = stubDb(1);
+  await notices.insertInApp(db, ["a"], { category: "club_change", title: "Y".repeat(300) });
+  const [, , title, body, data, url] = db.calls[0].params;
+  assert.equal(title, "Y".repeat(notices.NOTICE_TITLE_MAX));
+  assert.equal(body, null, "no fitNotice-style move into the body");
+  assert.equal(data, "{}");
+  assert.equal(url, null);
+});
+
+test("insertInApp with nobody to tell runs no query", async () => {
+  const db = stubDb();
+  assert.equal(await notices.insertInApp(db, [], { category: "club_change", title: "T" }), 0);
+  assert.equal(await notices.insertInApp(db, undefined, { category: "club_change", title: "T" }), 0);
+  assert.equal(db.calls.length, 0);
+});
