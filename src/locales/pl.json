@@ -278,7 +278,8 @@
       "step3_title": "Poprowadź pierwsze zawody",
       "step3_desc": "Przygotuj konkurencje, prowadź zawody z pokoju kontroli, gdy sędziowie oceniają na telefonach, a wyniki publikują się po każdym ocenionym skoku.",
       "note": "Do startu nie potrzebujesz federacji. Jeśli twoja federacja lub związek regionalny dołączy później do DivingHQ, przejmie prowadzenie kraju lub regionu, a twój klub zachowa swoje zawody, wyniki i rekordy."
-    }
+    },
+    "meta_title": "Oprogramowanie do zawodów w skokach do wody dla klubów i federacji"
   },
   "dashboard": {
     "search_divers": "Szukaj skoczków…",

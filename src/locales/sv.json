@@ -278,7 +278,8 @@
       "step3_title": "Arrangera din första tävling",
       "step3_desc": "Lägg upp grenar, styr tävlingen från kontrollrummet medan domarna ger poäng i mobilen, och resultaten publiceras allt eftersom varje hopp bedöms.",
       "note": "Du behöver inget förbund för att komma igång. Om ditt förbund eller distriktsförbund ansluter till DivingHQ senare tar det över driften av landet eller regionen, och din klubb behåller sina tävlingar, resultat och rekord."
-    }
+    },
+    "meta_title": "Tävlingsprogram för simhopp, för klubbar och förbund"
   },
   "dashboard": {
     "search_divers": "Sök hoppare…",

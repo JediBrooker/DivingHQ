@@ -108,3 +108,54 @@ test.describe("home page", () => {
     expect(await pulse(page)).toMatch(/^pulse-red/);
   });
 });
+
+test.describe("titles and link previews", () => {
+  test("each public page names itself in the tab", async ({ page }) => {
+    for (const [path, title] of [
+      ["/", "DivingHQ · Diving competition software for clubs and federations"],
+      ["/login", "Sign In · DivingHQ"],
+      ["/privacy", "Privacy Policy · DivingHQ"],
+      ["/terms", "Terms of Service · DivingHQ"],
+      ["/guide", "User Guide · DivingHQ"],
+      ["/guide/faq", "FAQ & Troubleshooting · DivingHQ"],
+    ]) {
+      await page.goto(path);
+      await expect(page, path).toHaveTitle(title);
+    }
+    // A client-side hop between topics retitles too.
+    await page.locator(".gt-sidebar").getByRole("link", { name: "Quick Start" }).click();
+    await expect(page).toHaveTitle("Quick Start · DivingHQ");
+  });
+
+  test("titles follow the language", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("locale", "de"));
+    await page.goto("/login");
+    await expect(page).toHaveTitle("Anmelden · DivingHQ");
+  });
+
+  test("the served shell carries preview tags and a canonical URL for the page asked for", async ({ request }) => {
+    const res = await request.get("/guide/faq");
+    expect(res.status()).toBe(200);
+    const html = await res.text();
+    expect(html).toMatch(/<link rel="canonical" href="https?:\/\/[^"]+\/guide\/faq">/);
+    expect(html).toMatch(/<meta property="og:url" content="https?:\/\/[^"]+\/guide\/faq">/);
+    expect(html).toMatch(/<meta property="og:image" content="https?:\/\/[^"]+\/og-image\.png">/);
+    expect(html).toContain('<meta name="twitter:card" content="summary_large_image">');
+
+    const home = await (await request.get("/")).text();
+    expect(home).toMatch(/<link rel="canonical" href="https?:\/\/[^"/]+\/">/);
+
+    const img = await request.get("/og-image.png");
+    expect(img.status()).toBe(200);
+    expect(img.headers()["content-type"]).toBe("image/png");
+  });
+
+  test("robots.txt and sitemap.xml aren't the SPA shell", async ({ request }) => {
+    const robots = await request.get("/robots.txt");
+    expect(robots.headers()["content-type"]).toMatch(/^text\/plain/);
+    expect(await robots.text()).toContain("Sitemap: https://divinghq.app/sitemap.xml");
+    const sitemap = await request.get("/sitemap.xml");
+    expect(sitemap.headers()["content-type"]).toMatch(/xml/);
+    expect(await sitemap.text()).toContain("<loc>https://divinghq.app/privacy</loc>");
+  });
+});

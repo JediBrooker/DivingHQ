@@ -278,7 +278,8 @@
       "step3_title": "İlk yarışmanızı düzenleyin",
       "step3_desc": "Branşları oluşturun, hakemler telefonlarından puan verirken yarışmayı Kontrol Odası'ndan yönetin; sonuçlar her atlayış puanlandıkça yayımlanır.",
       "note": "Başlamak için federasyona gerek yok. Federasyonunuz ya da bölge kuruluşunuz daha sonra DivingHQ'ya katılırsa ülkenin veya bölgenin yönetimini devralır; kulübünüz yarışmalarını, sonuçlarını ve rekorlarını korur."
-    }
+    },
+    "meta_title": "Kulüpler ve federasyonlar için atlama yarışması yazılımı"
   },
   "dashboard": {
     "search_divers": "Atlamacı ara…",

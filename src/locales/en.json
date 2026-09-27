@@ -278,7 +278,8 @@
       "step3_title": "Run your first meet",
       "step3_desc": "Set up events, run the meet from the Control Room while judges score on their phones, and results publish as each dive is scored.",
       "note": "No federation needed to start. If your federation or state body joins DivingHQ later, it takes over running the country or region, and your club keeps its meets, results and records."
-    }
+    },
+    "meta_title": "Diving competition software for clubs and federations"
   },
   "dashboard": {
     "search_divers": "Search divers…",

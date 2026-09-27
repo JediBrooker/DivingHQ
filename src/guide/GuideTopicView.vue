@@ -1,6 +1,8 @@
 <script setup>
 import { computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { setPageTitle } from '@/lib/pageTitle'
 import { GUIDE_SECTIONS, getTopicBySlug, getAdjacentTopics } from './topics.js'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
@@ -13,6 +15,14 @@ const topic = computed(() => getTopicBySlug(slug.value))
 const adjacent = computed(() => getAdjacentTopics(slug.value))
 
 watch(slug, () => nextTick(() => window.scrollTo(0, 0)))
+
+// The route only knows it's "User Guide"; the tab should say which topic.
+// flush 'post' so this lands after the router's own title hook, which also
+// re-runs on a language switch.
+const { locale } = useI18n()
+watch([topic, locale], ([t]) => {
+  if (t) setPageTitle(t.title)
+}, { immediate: true, flush: 'post' })
 </script>
 
 <template>

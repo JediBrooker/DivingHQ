@@ -278,7 +278,8 @@
       "step3_title": "Järjestä ensimmäiset kilpailusi",
       "step3_desc": "Luo lajit, vedä kilpailua ohjaamosta tuomareiden pisteyttäessä puhelimillaan, ja tulokset julkaistaan sitä mukaa kuin hypyt pisteytetään.",
       "note": "Aloittamiseen ei tarvita liittoa. Jos liittosi tai alueliittosi liittyy DivingHQ:hun myöhemmin, se ottaa maan tai alueen hallintaansa, ja seurasi säilyttää kilpailunsa, tuloksensa ja ennätyksensä."
-    }
+    },
+    "meta_title": "Hyppykilpailujen ohjelmisto seuroille ja liitoille"
   },
   "dashboard": {
     "search_divers": "Etsi hyppääjiä…",

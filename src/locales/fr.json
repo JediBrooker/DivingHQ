@@ -278,7 +278,8 @@
       "step3_title": "Organisez votre première compétition",
       "step3_desc": "Créez les épreuves, pilotez la compétition depuis la salle de contrôle pendant que les juges notent sur leur téléphone, et les résultats sont publiés au fil des plongeons notés.",
       "note": "Pas besoin de fédération pour commencer. Si votre fédération ou votre ligue régionale rejoint DivingHQ plus tard, elle prend en charge le pays ou la région, et votre club conserve ses compétitions, résultats et records."
-    }
+    },
+    "meta_title": "Logiciel de compétitions de plongeon pour clubs et fédérations"
   },
   "dashboard": {
     "search_divers": "Rechercher des plongeurs…",

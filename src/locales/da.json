@@ -278,7 +278,8 @@
       "step3_title": "Afvikl dit første stævne",
       "step3_desc": "Opret konkurrencer, styr stævnet fra kontrolrummet, mens dommerne giver point på deres telefoner, og resultaterne offentliggøres, efterhånden som hvert spring er bedømt.",
       "note": "Du behøver ikke et forbund for at komme i gang. Hvis dit forbund eller regionale forbund senere kommer på DivingHQ, overtager det driften af landet eller regionen, og din klub beholder sine stævner, resultater og rekorder."
-    }
+    },
+    "meta_title": "Stævnesoftware til udspring for klubber og forbund"
   },
   "dashboard": {
     "search_divers": "Søg udspringere…",

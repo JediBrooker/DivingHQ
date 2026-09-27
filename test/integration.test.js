@@ -1719,3 +1719,33 @@ test("account deletion clears personal details and admin seats", async (t) => {
     await claimKit.wipe(CODE);
   }
 });
+
+// Crawler files. Before public/robots.txt and sitemap.xml existed, both paths
+// fell through to the SPA fallback and answered 200 with the app's HTML. The
+// integration server runs without a build, so this also proves the explicit
+// routes in server.js, not just a dist/ copy, serve them.
+test("robots.txt and sitemap.xml are real files, not the SPA shell", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const get = (p) => new Promise((resolve, reject) => {
+    http.get(baseUrl + p, (res) => {
+      const chunks = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("end", () => resolve({ status: res.statusCode, type: res.headers["content-type"] || "", body: Buffer.concat(chunks).toString("utf8") }));
+    }).on("error", reject);
+  });
+
+  const robots = await get("/robots.txt");
+  assert.equal(robots.status, 200);
+  assert.match(robots.type, /^text\/plain/);
+  assert.match(robots.body, /^Disallow: \/api\/$/m);
+  assert.match(robots.body, /^Sitemap: https:\/\/divinghq\.app\/sitemap\.xml$/m);
+  assert.doesNotMatch(robots.body, /<html/i);
+
+  const sitemap = await get("/sitemap.xml");
+  assert.equal(sitemap.status, 200);
+  assert.match(sitemap.type, /^application\/xml/);
+  assert.match(sitemap.body, /<urlset /);
+  assert.match(sitemap.body, /<loc>https:\/\/divinghq\.app\/guide\/quick-start<\/loc>/);
+  assert.doesNotMatch(sitemap.body, /<div id="app">/);
+});

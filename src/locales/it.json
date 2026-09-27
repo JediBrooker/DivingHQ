@@ -278,7 +278,8 @@
       "step3_title": "Organizza la tua prima gara",
       "step3_desc": "Crea le prove, gestisci la gara dalla sala di controllo mentre i giudici votano dal telefono, e i risultati vengono pubblicati man mano che ogni tuffo viene giudicato.",
       "note": "Non serve una federazione per iniziare. Se la tua federazione o il tuo comitato regionale entra in DivingHQ più avanti, assume la gestione del paese o della regione, e il tuo club conserva gare, risultati e record."
-    }
+    },
+    "meta_title": "Software per gare di tuffi per club e federazioni"
   },
   "dashboard": {
     "search_divers": "Cerca tuffatori…",

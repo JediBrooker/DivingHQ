@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The public pages of divinghq.app. Guide topics must match
+     src/guide/topics.js; test/spa-shell.test.js checks that they do. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://divinghq.app/</loc></url>
+  <url><loc>https://divinghq.app/guide</loc></url>
+  <url><loc>https://divinghq.app/guide/quick-start</loc></url>
+  <url><loc>https://divinghq.app/guide/features</loc></url>
+  <url><loc>https://divinghq.app/guide/setting-up-a-meet</loc></url>
+  <url><loc>https://divinghq.app/guide/session-scheduler</loc></url>
+  <url><loc>https://divinghq.app/guide/running-a-meet</loc></url>
+  <url><loc>https://divinghq.app/guide/keyboard-shortcuts</loc></url>
+  <url><loc>https://divinghq.app/guide/offline-competitions</loc></url>
+  <url><loc>https://divinghq.app/guide/judging</loc></url>
+  <url><loc>https://divinghq.app/guide/diver-portal</loc></url>
+  <url><loc>https://divinghq.app/guide/scoreboard</loc></url>
+  <url><loc>https://divinghq.app/guide/payments</loc></url>
+  <url><loc>https://divinghq.app/guide/classes</loc></url>
+  <url><loc>https://divinghq.app/guide/roles-and-permissions</loc></url>
+  <url><loc>https://divinghq.app/guide/admin-tasks</loc></url>
+  <url><loc>https://divinghq.app/guide/languages</loc></url>
+  <url><loc>https://divinghq.app/guide/venue-integration</loc></url>
+  <url><loc>https://divinghq.app/guide/faq</loc></url>
+  <url><loc>https://divinghq.app/scoreboard</loc></url>
+  <url><loc>https://divinghq.app/judges</loc></url>
+  <url><loc>https://divinghq.app/records</loc></url>
+  <url><loc>https://divinghq.app/login</loc></url>
+  <url><loc>https://divinghq.app/register</loc></url>
+  <url><loc>https://divinghq.app/register-org</loc></url>
+  <url><loc>https://divinghq.app/privacy</loc></url>
+  <url><loc>https://divinghq.app/terms</loc></url>
+</urlset>

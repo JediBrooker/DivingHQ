@@ -278,7 +278,8 @@
       "step3_title": "Organiza tu primera competición",
       "step3_desc": "Prepara las pruebas, dirige la competición desde la sala de control mientras los jueces puntúan en sus móviles, y los resultados se publican a medida que se puntúa cada salto.",
       "note": "No necesitas una federación para empezar. Si tu federación o tu organismo regional se une a DivingHQ más adelante, pasa a gestionar el país o la región, y tu club conserva sus competiciones, resultados y récords."
-    }
+    },
+    "meta_title": "Software de competiciones de saltos para clubes y federaciones"
   },
   "dashboard": {
     "search_divers": "Buscar saltadores…",

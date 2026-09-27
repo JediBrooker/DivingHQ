@@ -278,7 +278,8 @@
       "step3_title": "Rendezze meg az első versenyét",
       "step3_desc": "Hozza létre a versenyszámokat, irányítsa a versenyt a vezérlőszobából, miközben a pontozóbírók a telefonjukon pontoznak, és az eredmények minden pontozott ugrás után megjelennek.",
       "note": "Az induláshoz nincs szükség szövetségre. Ha a szövetsége vagy regionális szövetsége később csatlakozik a DivingHQ-hoz, átveszi az ország vagy a régió irányítását, a klubja pedig megtartja versenyeit, eredményeit és rekordjait."
-    }
+    },
+    "meta_title": "Műugróverseny-szoftver kluboknak és szövetségeknek"
   },
   "dashboard": {
     "search_divers": "Műugrók keresése…",

@@ -251,8 +251,37 @@ function createSearchLimiter() {
 // Every send-* helper lives in lib/email.js. Built lazily after
 // the pool is ready (see below) so the factory has its dependency.
 
+// The SPA shell, for "/" here and for every client-side route in the
+// fallback at the bottom of this file. It goes through renderShell so the
+// canonical link and og:url name the page actually requested, not the home
+// page (see lib/spa-shell.js). "/" is answered before express.static, which
+// would otherwise hand out dist/index.html untouched.
+const { publicOrigin, renderShell } = require("./lib/spa-shell");
+const SPA_SHELL = path.join(__dirname, "dist", "index.html");
+async function sendSpaShell(req, res, next) {
+  try {
+    const html = await require("node:fs").promises.readFile(SPA_SHELL, "utf8");
+    res.set("Cache-Control", "no-cache");
+    res.type("html").send(renderShell(html, { origin: publicOrigin(), path: req.path }));
+  } catch (err) {
+    next(err);
+  }
+}
+app.get("/", sendSpaShell);
+
 // Serve the built Vue app (run `npm run build` before starting the server)
 app.use(express.static(path.join(__dirname, 'dist')))
+
+// Crawler files. Vite copies public/ into dist/, so after a build the static
+// mount above answers these. The explicit routes cover a server running
+// without a fresh build (the test suite, a dev box): /robots.txt must never
+// fall through to the SPA fallback, which answered crawlers with a 200 of
+// HTML and told them nothing.
+for (const [file, type] of [["robots.txt", "text/plain"], ["sitemap.xml", "application/xml"]]) {
+  app.get(`/${file}`, (req, res, next) => {
+    res.type(type).sendFile(path.join(__dirname, "public", file), (err) => { if (err) next(err); });
+  });
+}
 
 // [SECTION: DB POOL & JWT_SECRET]
 //
@@ -1310,9 +1339,7 @@ app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
   if (req.path.startsWith('/api/')) return next();
   if (req.path.startsWith('/socket.io/')) return next();
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'), (err) => {
-    if (err) next(err);
-  });
+  sendSpaShell(req, res, next);
 });
 
 // Final 404 for unmatched /api/* and non-GET requests, so they

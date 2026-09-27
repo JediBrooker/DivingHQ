@@ -278,7 +278,8 @@
       "step3_title": "Uspořádejte první závody",
       "step3_desc": "Připravte disciplíny, řiďte závody z řídicí místnosti, zatímco rozhodčí hodnotí na telefonech, a výsledky se zveřejňují po každém skoku.",
       "note": "K začátku nepotřebujete federaci. Pokud se vaše federace nebo krajský svaz později připojí k DivingHQ, převezme správu země nebo regionu a váš klub si ponechá své závody, výsledky i rekordy."
-    }
+    },
+    "meta_title": "Software pro skokanské závody pro kluby a federace"
   },
   "dashboard": {
     "search_divers": "Hledat skokany…",

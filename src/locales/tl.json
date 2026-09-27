@@ -278,7 +278,8 @@
       "step3_title": "Patakbuhin ang iyong unang meet",
       "step3_desc": "Ihanda ang mga event, patakbuhin ang meet mula sa Control Room habang nagbibigay ng iskor ang mga hukom sa kanilang telepono, at lumalabas ang mga resulta habang naiiskor ang bawat dive.",
       "note": "Hindi kailangan ng pederasyon para magsimula. Kapag sumali sa DivingHQ ang iyong pederasyon o panrehiyong samahan, sila na ang mamamahala sa bansa o rehiyon, at mananatili sa iyong club ang mga meet, resulta at rekord nito."
-    }
+    },
+    "meta_title": "Software para sa diving competition ng mga club at pederasyon"
   },
   "dashboard": {
     "search_divers": "Maghanap ng diver…",
