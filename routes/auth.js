@@ -141,26 +141,36 @@ async function resolveCountryOrg(client, country) {
   if (existing.rows.length > 1) return { choose: true };
   if (existing.rows.length === 1) return { ...existing.rows[0], created: false };
 
-  let slug = `country-${country.a3.toLowerCase()}`;
-  const taken = await client.query("SELECT 1 FROM organisations WHERE slug = $1", [slug]);
-  if (taken.rows.length) slug += `-${crypto.randomBytes(2).toString("hex")}`;
-  const ins = await client.query(
+  // Bare ON CONFLICT DO NOTHING on purpose. Two racing signups collide
+  // on the slug as readily as on the one-per-country index, and naming
+  // just the index let the slug clash through as a 500.
+  const tryInsert = (slug) => client.query(
     `INSERT INTO organisations (name, country_code, slug, status, claim_state)
      VALUES ($1, $2, $3, 'active', 'unclaimed')
-     ON CONFLICT (country_code) WHERE claim_state = 'unclaimed' DO NOTHING
+     ON CONFLICT DO NOTHING
      RETURNING id, claim_state`,
     [country.name, country.a3, slug],
   );
+  const base = `country-${country.a3.toLowerCase()}`;
+  let ins = await tryInsert(base);
   if (ins.rows.length) return { ...ins.rows[0], created: true };
 
-  // Lost the race, or a sysadmin suspended this country's account. The
-  // second case has to stop here, joining it would just lock them out.
-  const again = await client.query(
+  // Nothing inserted: either someone else just started this country
+  // (read their row back), or 'country-xyz' was already some other
+  // org's slug (try once more with a suffix).
+  const findUnclaimed = () => client.query(
     `SELECT id, claim_state, status FROM organisations
       WHERE country_code = $1 AND claim_state = 'unclaimed'`,
     [country.a3],
   );
-  const row = again.rows[0];
+  let row = (await findUnclaimed()).rows[0];
+  if (!row) {
+    ins = await tryInsert(`${base}-${crypto.randomBytes(2).toString("hex")}`);
+    if (ins.rows.length) return { ...ins.rows[0], created: true };
+    row = (await findUnclaimed()).rows[0];
+  }
+  // Still nothing, or a sysadmin suspended this country's account.
+  // Joining a suspended one would just lock them out.
   if (!row || row.status !== "active") return { closed: true };
   return { id: row.id, claim_state: row.claim_state, created: false };
 }
