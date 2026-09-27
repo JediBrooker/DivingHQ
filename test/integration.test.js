@@ -2310,3 +2310,32 @@ test("claims: a region revoke takes back the event seats its admins handed out",
     await claimKit.wipe(CODE);
   }
 });
+
+test("claims: a state body made org_admin still can't approve its own claim", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "JEY";
+  await claimKit.wipe(CODE);
+  const fedFx = await setupFixture({ withEvent: false });
+  try {
+    await pool.query("UPDATE organisations SET country_code = $2 WHERE id = $1", [fedFx.orgId, CODE]);
+    await pool.query("INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'St Helier', 'SH')", [fedFx.orgId]);
+    const body = await claimKit.claim({ org_name: "St Helier Diving", country_code: CODE, region_code: "SH" });
+    assert.equal(body.res.body.approver, "parent");
+    await claimKit.verify(body.id);
+    // The federation promotes the claimant's account inside its own org.
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'org_admin')", [body.id, fedFx.orgId]);
+    const token = (await claimKit.login(body.username)).token;
+    const mine = (await fetchJson("GET", "/api/claims", { token })).body.find((c) => c.id === body.res.body.claim_id);
+    assert.equal(mine.can_decide, false);
+    const d = await fetchJson("POST", `/api/claims/${body.res.body.claim_id}/decide`, { token, body: { decision: "approve" } });
+    assert.equal(d.status, 403, JSON.stringify(d.body));
+    assert.equal((await claimStatus(body.res.body.claim_id)).status, "open");
+    // The federation's own admin still can.
+    assert.equal((await fetchJson("POST", `/api/claims/${body.res.body.claim_id}/decide`, { token: fedFx.adminToken, body: { decision: "approve" } })).status, 200);
+  } finally {
+    await pool.query("DELETE FROM claims WHERE org_id = $1", [fedFx.orgId]).catch(() => {});
+    await teardownFixture(fedFx);
+    await claimKit.wipe(CODE);
+  }
+});
