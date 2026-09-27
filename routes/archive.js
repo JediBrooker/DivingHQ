@@ -27,6 +27,7 @@ const { eventRecordMarks } = require("../lib/records");
 // transition, so the TTL only needs to bound the harmless fields
 // (current_round, last_diver_name, counts).
 const archiveCache = require("../lib/archive-cache");
+const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 const archiveCacheGet = archiveCache.get;
 const archiveCacheSet = archiveCache.set;
 
@@ -264,7 +265,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
              FROM per_dive pd
              JOIN users u ON u.id = pd.competitor_id
              JOIN organisations o ON o.id = u.org_id
-             LEFT JOIN clubs cl ON cl.id = u.club_id
+             ${PUBLIC_CLUB_JOIN}
              LEFT JOIN LATERAL (
                SELECT DISTINCT cdl.partner_id FROM competitor_dive_lists cdl
                WHERE cdl.event_id = $1 AND cdl.competitor_id = pd.competitor_id
@@ -331,7 +332,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
             extraJoins: [
               "JOIN users u ON s.competitor_id = u.id",
               "JOIN organisations o ON u.org_id = o.id",
-              "LEFT JOIN clubs cl ON cl.id = u.club_id",
+              PUBLIC_CLUB_JOIN,
               "LEFT JOIN users pu ON pu.id = cdl.partner_id",
               "LEFT JOIN organisations pl ON pl.id = pu.org_id",
               "LEFT JOIN teams t ON t.id = cdl.team_id",
@@ -363,7 +364,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
            FROM event_judges ej
            JOIN users u         ON u.id = ej.judge_id
            JOIN organisations o ON o.id = u.org_id
-           LEFT JOIN clubs cl   ON cl.id = u.club_id
+           ${PUBLIC_CLUB_JOIN}
            WHERE ej.event_id = $1
            ORDER BY ej.judge_number ASC`,
           [req.params.eventId],

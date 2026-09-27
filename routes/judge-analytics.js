@@ -55,6 +55,7 @@
 
 const express = require("express");
 const { JUDGE_PER_DIVE } = require("../db/queries");
+const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // Catalog of widget IDs the judge can enable on their dashboard.
 // Mirrors the frontend JUDGE_WIDGET_CATALOG. Validated against
@@ -451,7 +452,7 @@ module.exports = function createJudgeAnalyticsRouter({
                 u.club_id, cl.name AS club_name, cl.short_code AS club_code
          FROM users u
          JOIN organisations o ON u.org_id = o.id
-         LEFT JOIN clubs cl ON cl.id = u.club_id
+         ${PUBLIC_CLUB_JOIN}
          WHERE u.id = $1
            AND u.deleted_at IS NULL`,
         [req.params.id],
@@ -725,7 +726,7 @@ module.exports = function createJudgeAnalyticsRouter({
          FROM users u
          JOIN user_org_roles r ON r.user_id = u.id AND r.org_id = u.org_id AND r.role = 'judge'
          JOIN organisations o  ON o.id = u.org_id
-         LEFT JOIN clubs cl    ON cl.id = u.club_id
+         ${PUBLIC_CLUB_JOIN}
          WHERE u.full_name ILIKE $1
            AND u.deleted_at IS NULL
          ORDER BY
@@ -779,7 +780,7 @@ module.exports = function createJudgeAnalyticsRouter({
          FROM users u
          JOIN user_org_roles r ON r.user_id = u.id AND r.org_id = u.org_id AND r.role = 'judge'
          JOIN organisations o  ON o.id = u.org_id
-         LEFT JOIN clubs cl    ON cl.id = u.club_id
+         ${PUBLIC_CLUB_JOIN}
          LEFT JOIN LATERAL (
            SELECT COUNT(*) AS total_scores
            FROM scores s WHERE s.judge_id = u.id

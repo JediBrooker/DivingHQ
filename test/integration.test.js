@@ -5575,6 +5575,22 @@ test("club approval: a waiting club can't host, be joined, be managed or be paid
     assert.equal((await pool.query("SELECT count(*)::int AS n FROM records_club WHERE club_id = $1", [P])).rows[0].n, 0);
     const archive = (await fetchJson("GET", "/api/archive/clubs?limit=500")).body;
     assert.ok(!archive.some((c) => c.id === P), "not in the public archive's club list");
+    // Nor its founder-typed name and code, on anything the public reads.
+    const clubName = (await approvalKit.club(P)).name;
+    const standing = async () => (await fetchJson("GET", `/api/scoreboard/${ev.body.id}?cache=skip`)).body
+      .standings.find((r) => r.competitor_id === A.id);
+    assert.equal((await standing()).club_name, null, "scoreboard standings");
+    const profile = (await fetchJson("GET", `/api/divers/${A.id}/profile`)).body;
+    assert.equal(profile.club_name ?? null, null, "public diver profile");
+    assert.equal(profile.club_code ?? null, null);
+    const csv = await new Promise((resolve, reject) => {
+      http.get(`${baseUrl}/api/events/${ev.body.id}/results.csv`, (r) => {
+        const chunks = []; r.on("data", (c) => chunks.push(c)); r.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+      }).on("error", reject);
+    });
+    // As a field of its own: the founder's name has the club's in it.
+    const esc = clubName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.ok(!new RegExp(`(^|,)"?${esc}"?(,|$)`, "m").test(csv), "results.csv");
 
     // Payments RESTRICT a club's deletion. Shouldn't happen to a waiting
     // club, but if it does, reject says so instead of a 500.
@@ -5593,6 +5609,7 @@ test("club approval: a waiting club can't host, be joined, be managed or be paid
     // Once approved, all of that opens up.
     assert.equal((await fetchJson("POST", `/api/clubs/${P}/approve`, { token: fx.adminToken, body: {} })).status, 200);
     assert.equal(await rep(), "TAD", "the entry snapshot picks the code up by itself");
+    assert.equal((await standing()).club_name, (await approvalKit.club(P)).name, "and the name shows once it's approved");
     const hosted = await fetchJson("POST", "/api/meets", { token: fx.adminToken, body: { name: "Gulf Open", host_club_id: P } });
     assert.equal(hosted.status, 201, JSON.stringify(hosted.body));
     assert.equal((await fetchJson("POST", "/api/club-change-requests", { token: diver.token, body: { to_club_id: P } })).status, 201);

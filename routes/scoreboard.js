@@ -21,6 +21,7 @@ const express = require("express");
 const { publicId } = require("../lib/public-id");
 const { perDiveSelect, perDivePointsCte, teamStandingsCte } = require("../lib/scoring-sql");
 const { eventRecordMarks } = require("../lib/records");
+const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 module.exports = function createScoreboardRouter({
   pool,
@@ -129,7 +130,7 @@ module.exports = function createScoreboardRouter({
              FROM per_dive pd
              JOIN users u ON u.id = pd.competitor_id
              JOIN organisations o ON o.id = u.org_id
-             LEFT JOIN clubs cl ON cl.id = u.club_id
+             ${PUBLIC_CLUB_JOIN}
              LEFT JOIN LATERAL (
                SELECT DISTINCT cdl.partner_id
                FROM competitor_dive_lists cdl
@@ -199,7 +200,7 @@ module.exports = function createScoreboardRouter({
             extraJoins: [
               "JOIN users u ON s.competitor_id = u.id",
               "JOIN organisations o ON u.org_id = o.id",
-              "LEFT JOIN clubs cl ON cl.id = u.club_id",
+              PUBLIC_CLUB_JOIN,
               "LEFT JOIN users pu ON pu.id = cdl.partner_id",
               "LEFT JOIN organisations pl ON pl.id = pu.org_id",
               "LEFT JOIN teams t ON t.id = cdl.team_id",
@@ -261,7 +262,7 @@ module.exports = function createScoreboardRouter({
            FROM ordered
            JOIN users u ON u.id = ordered.competitor_id
            JOIN organisations o ON o.id = u.org_id
-           LEFT JOIN clubs cl ON cl.id = u.club_id
+           ${PUBLIC_CLUB_JOIN}
            LEFT JOIN users pu ON pu.id = ordered.partner_id
            LEFT JOIN organisations pl ON pl.id = pu.org_id
            LEFT JOIN teams t ON t.id = ordered.team_id
@@ -293,7 +294,7 @@ module.exports = function createScoreboardRouter({
            FROM event_judges ej
            JOIN users u         ON u.id = ej.judge_id
            JOIN organisations o ON o.id = u.org_id
-           LEFT JOIN clubs cl   ON cl.id = u.club_id
+           ${PUBLIC_CLUB_JOIN}
            WHERE ej.event_id = $1
            ORDER BY ej.judge_number ASC`,
           [req.params.eventId],
@@ -450,7 +451,7 @@ module.exports = function createScoreboardRouter({
          FROM with_prev wp
          JOIN users u ON u.id = wp.competitor_id
          JOIN organisations o ON o.id = u.org_id
-         LEFT JOIN clubs cl ON cl.id = u.club_id
+         ${PUBLIC_CLUB_JOIN}
          /* Filter the synthetic carry-row (round_number=0) out of
             the rendered leaderboard. Its contribution survives in
             cumulative_total via the SUM OVER above. */
