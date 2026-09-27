@@ -225,12 +225,11 @@ const showMixedHeightHelp = ref(false)
 // mapping is visible. Stored format stays "Junior Group X" for
 // backward compatibility with existing events.
 //
-// composeAgeGroup still supports the legacy 'age:11_under',
-// 'age:12_13', 'age:14_15', 'age:16_18' choice values so any
-// programmatic caller that hasn't migrated keeps working.
-// decomposeAgeGroup auto-maps the same legacy stored strings
-// ("11 and under" etc.) into the new junior:* selections so the
-// Edit modal shows the right WA Group when an old event is opened.
+// Older events stored numeric-range strings ("11 and under", "12/13"
+// etc.). decomposeAgeGroup maps those onto the matching junior:*
+// selection so the Edit modal shows the right WA Group when an old
+// event is opened; composeAgeGroup only ever sees the choices the two
+// dropdowns offer.
 //
 // Sub-inputs (Masters range, Other custom) only render when the
 // matching option is picked. Gets composed into the existing
@@ -247,10 +246,6 @@ function composeAgeGroup({ choice, masters, other }) {
   if (!choice) return ''
   if (choice === 'open')         return 'Open'
   if (choice === 'other')        return (other || '').trim()
-  if (choice === 'age:11_under') return '11 and under'
-  if (choice === 'age:12_13')    return '12/13'
-  if (choice === 'age:14_15')    return '14/15'
-  if (choice === 'age:16_18')    return '16-18'
   if (choice === 'age:masters') {
     const m = (masters || '').trim()
     return m ? `Masters ${m}` : 'Masters'
@@ -795,17 +790,6 @@ const parentCandidates = computed(() => {
     .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 })
 
-// Default advance counts mirroring World Aquatics individual rules.
-// Operators can override per event.
-const defaultAdvanceCount = computed(() => {
-  // prelim → semi (default 18); prelim → final or semi → final (default 12)
-  if (createFormat.value !== 'final' && createFormat.value !== 'semifinal') return 18
-  // For a final, look at what the parent is to suggest a default.
-  const parent = parentCandidates.value.find(p => p.id === createParentEventId.value)
-  if (parent?.event_format === 'preliminary' && createFormat.value === 'semifinal') return 18
-  return 12
-})
-
 // Edit form
 const editId = ref('')
 const editName = ref('')
@@ -851,7 +835,6 @@ const editAgeWouldRewrite = computed(() =>
 // modal. Same shape as createRoundDives, each entry is
 // { dive_id|null, height|null, _label, _meta }.
 const editRoundDives    = ref([])
-const editRounds        = computed(() => editRoundDives.value.length)
 // Migration 038: round structure (sections). Edit modal previously
 // couldn't touch round_rules at all, fixed that here.
 const editRoundSections = ref([])
@@ -918,18 +901,6 @@ const HEIGHT_LABELS = {
   '5m': '5m Platform',
   '7.5m': '7.5m Platform',
   '10m': '10m Platform',
-}
-
-const TYPE_LABELS = {
-  individual:   'Individual',
-  synchro_pair: 'Synchronised Pair',
-  team:         'Team (coming soon)',
-}
-
-function statusColor(status) {
-  if (status === 'Live') return 'var(--green)'
-  if (status === 'Completed') return 'var(--text-3)'
-  return 'var(--amber)'
 }
 
 async function loadEvents() {
@@ -1054,20 +1025,6 @@ async function deleteMeet(meet) {
 
 function openMeetReadinessReport(meet) {
   readinessMeet.value = meet
-}
-
-async function assignEventToMeet(event, meetId) {
-  try {
-    await auth.apiFetch(`/api/events/${event.id}/meet`, {
-      method: 'PUT',
-      body: JSON.stringify({ meet_id: meetId || null }),
-    })
-    event.meet_id = meetId || null
-    // Refresh meet event-counts
-    await loadMeets()
-  } catch (err) {
-    showError('Failed: ' + err.message)
-  }
 }
 
 async function createEvent() {

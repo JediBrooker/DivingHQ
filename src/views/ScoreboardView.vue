@@ -162,16 +162,6 @@ const heights = computed(() => {
   return [...set]
 })
 
-async function fetchJsonArray(url) {
-  try {
-    const r = await fetch(url)
-    if (!r.ok) return []
-    const body = await r.json()
-    return Array.isArray(body) ? body : []
-  } catch {
-    return []
-  }
-}
 const historyItems = ref([])
 const standings = ref([])
 const upcoming = ref([])         // next ≤5 dives queued, populated for Live events
@@ -356,11 +346,6 @@ function judgeForSynchro(historyRow, role, i) {
 }
 
 const isCompleted = computed(() => currentEvent.value?.status === 'Completed')
-
-const latestRound = computed(() => {
-  if (!leaderboardRounds.value.length) return null
-  return leaderboardRounds.value[leaderboardRounds.value.length - 1]
-})
 
 const isTeamEvent = computed(() => archiveResults.value?.event?.event_type === 'team')
 
