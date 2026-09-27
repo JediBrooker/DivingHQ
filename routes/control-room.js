@@ -84,6 +84,65 @@ function parseCsv(text) {
 // function gave NULL for that as well). LEFT JOINs because the partner
 // side of the old calls was LEFT JOINed; `competitorsFrom` is the
 // table whose competitor_id column says who's in.
+// The pre-meet gate the workflow and sign-off routes share: event :id
+// has to be in the caller's org (sysadmins anywhere) and still
+// Upcoming. On a miss it sends the 404/409 itself and returns null,
+// otherwise the row (id, name, status, org_id plus `columns`). `verb`
+// finishes the 409 ("Cannot <verb> — event ..."); the credential path
+// has never had one and says "Event ... is Live." instead.
+async function loadUpcomingEvent(pool, req, res, { verb = null, columns = [] } = {}) {
+  const r = await pool.query(
+    `SELECT ${["id", "name", "status", "org_id", ...columns].join(", ")}
+       FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)`,
+    [req.params.id, !!req.user.is_system_admin, req.user.org_id],
+  );
+  const ev = r.rows[0];
+  if (!ev) {
+    res.status(404).json({ error: "Event not found" });
+    return null;
+  }
+  if (ev.status !== "Upcoming") {
+    res.status(409).json({
+      error: verb
+        ? `Cannot ${verb} — event "${ev.name}" is ${ev.status}.`
+        : `Event "${ev.name}" is ${ev.status}.`,
+    });
+    return null;
+  }
+  return ev;
+}
+
+// The referee a sign-off request or handoff code is aimed at has to
+// exist, be in the event's org and actually hold the referee role, a
+// meet manager shouldn't be able to "ask the diver" to sign off. Sends
+// the 400 itself on a miss.
+async function requireReferee(pool, res, refereeId, orgId) {
+  const r = await pool.query(
+    `SELECT u.id, u.full_name
+       FROM users u
+       JOIN user_org_roles r ON r.user_id = u.id
+      WHERE u.id = $1 AND u.org_id = $2 AND r.role = 'referee'
+      LIMIT 1`,
+    [refereeId, orgId],
+  );
+  if (!r.rows.length) {
+    res.status(400).json({ error: "Selected user is not a referee in this org" });
+    return null;
+  }
+  return r.rows[0];
+}
+
+// A new request or code supersedes whatever was still pending for the
+// event, so the manager's modal only ever tracks the latest one.
+function expirePendingSignoffs(pool, eventId) {
+  return pool.query(
+    `UPDATE referee_signoff_requests
+     SET status = 'expired', responded_at = now()
+     WHERE event_id = $1 AND status = 'pending'`,
+    [eventId],
+  );
+}
+
 function repCodesCte(competitorsFrom) {
   return `reps AS MATERIALIZED (
            SELECT x.id, event_rep_code($1, x.id, ro.country_code) AS code
@@ -746,24 +805,16 @@ module.exports = function createControlRoomRouter({
   router.post("/api/events/:id/dive-order/sign-off", requireMeetController, async (req, res) => {
     const eventId = req.params.id;
     try {
-      const ev = await pool.query(
-        `SELECT id, status, name, dive_order_randomised_at,
-                enforce_referee_signoff
-         FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)`,
-        [eventId, !!req.user.is_system_admin, req.user.org_id],
-      );
-      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
-      if (ev.rows[0].status !== "Upcoming") {
-        return res.status(409).json({
-          error: `Cannot sign off — event "${ev.rows[0].name}" is ${ev.rows[0].status}.`,
-        });
-      }
+      const ev = await loadUpcomingEvent(pool, req, res, {
+        verb: "sign off", columns: ["enforce_referee_signoff"],
+      });
+      if (!ev) return;
       // Enforcement gate. When the event has enforce_referee_signoff = TRUE
       // the manager-attests path is forbidden, the actual referee must
       // approve via push, credential entry, or the Cut 3 code handoff.
       // Defence in depth: the SPA hides the manager-attests tab when
       // enforced, but a hand-crafted curl shouldn't smuggle past it.
-      if (ev.rows[0].enforce_referee_signoff) {
+      if (ev.enforce_referee_signoff) {
         return res.status(403).json({
           error: "This event requires referee sign-off. Use the push, code, or credential path.",
           enforced: true,
@@ -794,16 +845,7 @@ module.exports = function createControlRoomRouter({
   router.post("/api/events/:id/check-in/confirm", requireMeetController, idem("check_in_confirm"), async (req, res) => {
     const eventId = req.params.id;
     try {
-      const ev = await pool.query(
-        `SELECT id, status, name FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)`,
-        [eventId, !!req.user.is_system_admin, req.user.org_id],
-      );
-      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
-      if (ev.rows[0].status !== "Upcoming") {
-        return res.status(409).json({
-          error: `Cannot confirm check-in — event "${ev.rows[0].name}" is ${ev.rows[0].status}.`,
-        });
-      }
+      if (!(await loadUpcomingEvent(pool, req, res, { verb: "confirm check-in" }))) return;
       const r = await pool.query(
         `UPDATE events
          SET check_in_done_at = COALESCE(check_in_done_at, now())
@@ -827,16 +869,8 @@ module.exports = function createControlRoomRouter({
   router.post("/api/events/:id/dive-order/reset", requireMeetController, idem("dive_order_reset"), async (req, res) => {
     const eventId = req.params.id;
     try {
-      const ev = await pool.query(
-        `SELECT id, status, name, org_id FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)`,
-        [eventId, !!req.user.is_system_admin, req.user.org_id],
-      );
-      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
-      if (ev.rows[0].status !== "Upcoming") {
-        return res.status(409).json({
-          error: `Cannot reset workflow — event "${ev.rows[0].name}" is ${ev.rows[0].status}.`,
-        });
-      }
+      const ev = await loadUpcomingEvent(pool, req, res, { verb: "reset workflow" });
+      if (!ev) return;
       await pool.query(
         `UPDATE events
          SET check_in_done_at         = NULL,
@@ -848,10 +882,10 @@ module.exports = function createControlRoomRouter({
       );
       await recordAudit(pool, {
         ...auditFromReq(req),
-        org_id:      ev.rows[0].org_id,
+        org_id:      ev.org_id,
         entity_type: "event",
-        entity_id:   ev.rows[0].id,
-        entity_name: ev.rows[0].name,
+        entity_id:   ev.id,
+        entity_name: ev.name,
         action:      "event.workflow_reset",
       });
       res.json({ ok: true });
@@ -870,16 +904,7 @@ module.exports = function createControlRoomRouter({
   router.post("/api/events/:id/dive-order/confirm", requireMeetController, idem("dive_order_confirm"), async (req, res) => {
     const eventId = req.params.id;
     try {
-      const ev = await pool.query(
-        `SELECT id, status, name FROM events WHERE id = $1 AND ($2::boolean OR org_id = $3)`,
-        [eventId, !!req.user.is_system_admin, req.user.org_id],
-      );
-      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
-      if (ev.rows[0].status !== "Upcoming") {
-        return res.status(409).json({
-          error: `Cannot advance workflow — event "${ev.rows[0].name}" is ${ev.rows[0].status}.`,
-        });
-      }
+      if (!(await loadUpcomingEvent(pool, req, res, { verb: "advance workflow" }))) return;
       await pool.query(
         `UPDATE events
          SET dive_order_randomised_at = COALESCE(dive_order_randomised_at, now())
@@ -951,40 +976,10 @@ module.exports = function createControlRoomRouter({
     const { referee_id } = req.body || {};
     if (!referee_id) return res.status(400).json({ error: "referee_id required" });
     try {
-      const ev = await pool.query(
-        `SELECT id, name, status, org_id FROM events
-         WHERE id = $1 AND ($2::boolean OR org_id = $3)`,
-        [eventId, !!req.user.is_system_admin, req.user.org_id],
-      );
-      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
-      if (ev.rows[0].status !== "Upcoming") {
-        return res.status(409).json({
-          error: `Cannot request sign-off — event "${ev.rows[0].name}" is ${ev.rows[0].status}.`,
-        });
-      }
-      // Verify the referee exists, belongs to the event's org,
-      // and actually holds the referee role. A meet manager
-      // shouldn't be able to "ask the diver" to sign off.
-      const refQ = await pool.query(
-        `SELECT u.id, u.full_name
-         FROM users u
-         JOIN user_org_roles r ON r.user_id = u.id
-         WHERE u.id = $1 AND u.org_id = $2 AND r.role = 'referee'
-         LIMIT 1`,
-        [referee_id, ev.rows[0].org_id],
-      );
-      if (!refQ.rows.length) {
-        return res.status(400).json({ error: "Selected user is not a referee in this org" });
-      }
-
-      // Expire any prior pending request for the same event so
-      // the modal only ever sees the latest one.
-      await pool.query(
-        `UPDATE referee_signoff_requests
-         SET status = 'expired', responded_at = now()
-         WHERE event_id = $1 AND status = 'pending'`,
-        [eventId],
-      );
+      const ev = await loadUpcomingEvent(pool, req, res, { verb: "request sign-off" });
+      if (!ev) return;
+      if (!(await requireReferee(pool, res, referee_id, ev.org_id))) return;
+      await expirePendingSignoffs(pool, eventId);
 
       // Fetch the managers name now so we can put it in the
       // notification body without another join later.
@@ -1012,10 +1007,10 @@ module.exports = function createControlRoomRouter({
       const result = await push.sendNotification([referee_id], {
         category: "referee_signoff",
         title: "Referee sign-off requested",
-        body: `${managerName} asked you to approve the dive order for ${ev.rows[0].name}.`,
+        body: `${managerName} asked you to approve the dive order for ${ev.name}.`,
         data: {
           event_id: eventId,
-          event_name: ev.rows[0].name,
+          event_name: ev.name,
           request_id: requestId,
           requested_by_name: managerName,
         },
@@ -1216,17 +1211,8 @@ module.exports = function createControlRoomRouter({
       return res.status(400).json({ error: "username + password required" });
     }
     try {
-      const ev = await pool.query(
-        `SELECT id, name, status, org_id FROM events
-         WHERE id = $1 AND ($2::boolean OR org_id = $3)`,
-        [req.params.id, !!req.user.is_system_admin, req.user.org_id],
-      );
-      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
-      if (ev.rows[0].status !== "Upcoming") {
-        return res.status(409).json({
-          error: `Event "${ev.rows[0].name}" is ${ev.rows[0].status}.`,
-        });
-      }
+      const ev = await loadUpcomingEvent(pool, req, res);
+      if (!ev) return;
 
       // Only a live, verified referee of this event's org can be the
       // answer. Anything else (no such user, another org, not a
@@ -1240,7 +1226,7 @@ module.exports = function createControlRoomRouter({
             AND u.email_verified_at IS NOT NULL AND u.password IS NOT NULL
             AND EXISTS (SELECT 1 FROM user_org_roles r
                          WHERE r.user_id = u.id AND r.org_id = $2 AND r.role = 'referee')`,
-        [username, ev.rows[0].org_id],
+        [username, ev.org_id],
       );
       const user = u.rows[0] || null;
       const passwordOk = await bcrypt.compare(password, user ? user.password : FAKE_BCRYPT_HASH);
@@ -1377,36 +1363,10 @@ module.exports = function createControlRoomRouter({
     const { referee_id } = req.body || {};
     if (!referee_id) return res.status(400).json({ error: "referee_id required" });
     try {
-      const ev = await pool.query(
-        `SELECT id, name, status, org_id FROM events
-         WHERE id = $1 AND ($2::boolean OR org_id = $3)`,
-        [eventId, !!req.user.is_system_admin, req.user.org_id],
-      );
-      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
-      if (ev.rows[0].status !== "Upcoming") {
-        return res.status(409).json({
-          error: `Cannot generate code — event "${ev.rows[0].name}" is ${ev.rows[0].status}.`,
-        });
-      }
-      // Same referee-validation as the push request path.
-      const refQ = await pool.query(
-        `SELECT u.id FROM users u
-         JOIN user_org_roles r ON r.user_id = u.id
-         WHERE u.id = $1 AND u.org_id = $2 AND r.role = 'referee' LIMIT 1`,
-        [referee_id, ev.rows[0].org_id],
-      );
-      if (!refQ.rows.length) {
-        return res.status(400).json({ error: "Selected user is not a referee in this org" });
-      }
-
-      // Expire any prior pending request for the same event so
-      // the modal only ever sees the latest one.
-      await pool.query(
-        `UPDATE referee_signoff_requests
-         SET status = 'expired', responded_at = now()
-         WHERE event_id = $1 AND status = 'pending'`,
-        [eventId],
-      );
+      const ev = await loadUpcomingEvent(pool, req, res, { verb: "generate code" });
+      if (!ev) return;
+      if (!(await requireReferee(pool, res, referee_id, ev.org_id))) return;
+      await expirePendingSignoffs(pool, eventId);
 
       // Retry on the unique-pending-code-per-referee index race.
       // Three tries is plenty, the cardinality is 1e6 and the
