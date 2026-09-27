@@ -21,12 +21,15 @@ import ParticipatingOrgsModal from '@/components/manager/ParticipatingOrgsModal.
 import AdvanceStageModal from '@/components/manager/AdvanceStageModal.vue'
 import RoundDivesEditor from '@/components/manager/RoundDivesEditor.vue'
 import EditMeetModal from '@/components/manager/EditMeetModal.vue'
+import { useCanEditFees } from '@/composables/useCanEditFees'
 import { filterStandardTemplates } from '@/lib/standard-templates'
 import { RULE_REFERENCES } from '@/lib/ruleReferences'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 const { t } = useI18n()
 const auth = useAuthStore()
+// Event fee panels: payments on, and an org role the fee routes accept.
+const canEditFees = useCanEditFees()
 
 const events = ref([])
 const meets = ref([])
@@ -528,7 +531,7 @@ const superFinalModals = ref(null)
 // bundle of events, org admins create them here so events can be
 // filed under e.g. "2026 National Open".
 const meetForm = ref({
-  name: '', venue: '', start_date: '', end_date: '', host: '',
+  name: '', venue: '', start_date: '', end_date: '', host: '', represent_as: '',
 })
 // Who a club or region admin can host a meet as, 'club:<id>' or
 // 'region:<id>'. The picker only shows when there's more than one; with
@@ -538,6 +541,20 @@ const hostOptions = computed(() => [
   ...auth.regionAdminOf.map(r => ({ value: `region:${r.id}`, label: `${r.name} (${r.short_code})` })),
 ])
 const meetFormErr = ref('')
+// "Divers represent" follows the host until someone picks for themselves,
+// the same default the server applies (routes/meets.js). A club admin
+// with one club hosts as it even though no picker shows.
+const defaultRepresent = computed(() => {
+  const host = meetForm.value.host
+    || (clubMode.value && hostOptions.value.length === 1 ? hostOptions.value[0].value : '')
+  if (host.startsWith('club:')) return 'club'
+  if (host.startsWith('region:')) return 'region'
+  return 'country'
+})
+const meetRepresent = computed({
+  get: () => meetForm.value.represent_as || defaultRepresent.value,
+  set: (v) => { meetForm.value.represent_as = v },
+})
 
 // Sysadmin-only org filter for the events list. The /api/events
 // endpoint returns every org's events when called with a
@@ -961,9 +978,10 @@ async function createMeet() {
         // the only one when there's just the one.
         host_club_id: meetForm.value.host.startsWith('club:') ? meetForm.value.host.slice(5) : undefined,
         host_region_id: meetForm.value.host.startsWith('region:') ? meetForm.value.host.slice(7) : undefined,
+        represent_as: meetRepresent.value,
       }),
     })
-    meetForm.value = { name: '', venue: '', start_date: '', end_date: '', host: '' }
+    meetForm.value = { name: '', venue: '', start_date: '', end_date: '', host: '', represent_as: '' }
     showCreateMeetModal.value = false
     await loadMeets()
   } catch (err) {
@@ -2429,10 +2447,12 @@ onUnmounted(() => {
             No deadline set — entries close when the event goes Live.
           </p>
         </div>
-        <EntryFeeEditor v-if="editId" :event-id="editId" />
-        <LateFeeEditor v-if="editId" :event-id="editId" />
-        <PenaltyFeesEditor v-if="editId" :event-id="editId" />
-        <EventPenaltiesPanel v-if="editId" :event-id="editId" />
+        <template v-if="editId && canEditFees">
+          <EntryFeeEditor :event-id="editId" />
+          <LateFeeEditor :event-id="editId" />
+          <PenaltyFeesEditor :event-id="editId" />
+          <EventPenaltiesPanel :event-id="editId" />
+        </template>
         <div v-if="editErr" class="msg msg-error">{{ editErr }}</div>
         <button type="submit" class="btn btn-primary-lg">{{ $t('manager.modals.edit_event_submit') }}</button>
       </form>
@@ -2541,6 +2561,15 @@ onUnmounted(() => {
             <option value="">{{ $t('manager.club_mode.pick_host') }}</option>
             <option v-for="h in hostOptions" :key="h.value" :value="h.value">{{ h.label }}</option>
           </select>
+        </div>
+        <div class="field">
+          <label class="label" for="new-meet-represent">{{ $t('manager.represent.label') }}</label>
+          <select id="new-meet-represent" class="select" v-model="meetRepresent">
+            <option value="country">{{ $t('manager.represent.country') }}</option>
+            <option value="region">{{ $t('manager.represent.region') }}</option>
+            <option value="club">{{ $t('manager.represent.club') }}</option>
+          </select>
+          <p class="hint">{{ $t('manager.represent.hint') }}</p>
         </div>
         <div v-if="meetFormErr" class="msg msg-error">{{ meetFormErr }}</div>
         <button type="submit" class="btn btn-primary">{{ $t('manager.modals.new_meet_submit') }}</button>

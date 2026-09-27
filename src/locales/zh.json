@@ -162,6 +162,19 @@
       "resend_label": "用户名或邮箱",
       "resend_button": "发送新链接",
       "resend_sent": "如果该账户正在等待验证，新链接已发出。请查看收件箱。"
+    },
+    "check_inbox": {
+      "title": "请查看收件箱",
+      "body": "我们已向 {email} 发送验证链接。点击该链接即可完成账户设置。",
+      "no_mail": "几分钟后仍未收到？请查看垃圾邮件文件夹，或发送新链接。",
+      "resend_wait": "发送新链接（{seconds} 秒）",
+      "resent": "新链接正在发往 {email}。",
+      "already": "已经点击过链接了？",
+      "next_org_pending": "验证后，DivingHQ 会审核你的协会。获批后我们会发邮件通知你，此后即可登录。",
+      "next_claim_clubs": "验证后，你的认领申请即开启，由当地已在 DivingHQ 上的俱乐部投票。决定期间你也可以登录。",
+      "next_claim_regions": "验证后，你的认领申请即开启，由已在 DivingHQ 上的州和省投票。决定期间你也可以登录。",
+      "next_claim_parent": "验证后，你的认领申请即开启，由你的协会决定。决定期间你也可以登录。",
+      "next_claim_sysadmin": "验证后，你的认领申请即开启，由 DivingHQ 团队审核。决定期间你也可以登录。"
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "即将截止",
       "pill_overdue": "已逾期",
       "chip_aria_tab": "{title}。打开此控制台上的对应标签页。"
+    },
+    "getting_started": {
+      "title": "开始运营 {club}",
+      "intro": "有几件事需要先设置好。每一项完成后都会自动打勾。",
+      "all_done": "全部完成。你的俱乐部已准备就绪，可以隐藏此清单了。",
+      "progress": "已完成 {done}/{total}",
+      "dismiss": "隐藏",
+      "dismiss_tip": "隐藏此清单。在此设备上不会再显示。",
+      "done": "已完成",
+      "step_meet": "创建你的第一场比赛",
+      "step_meet_desc": "设置一场由你的俱乐部主办的比赛，然后添加项目。",
+      "step_invite": "邀请你的会员",
+      "step_invite_desc": "在“我的俱乐部”中分享俱乐部注册链接。",
+      "step_code": "设置俱乐部简码",
+      "step_code_desc": "在俱乐部比赛中显示在你的运动员旁边。",
+      "step_guide": "阅读俱乐部管理员指南",
+      "step_guide_desc": "从第一场比赛到比赛当天，你能做的一切。"
     }
   },
   "profile": {
@@ -617,7 +647,8 @@
         "step_3": "在<strong>我的俱乐部</strong>中审批申请入会的人，以及希望成为运动员、裁判或教练的会员",
         "step_4": "比赛当天，在<strong>控制室</strong>中主持评分",
         "step_5": "当您的联合会或地区机构加入时，请在<strong>接管申请</strong>中对其申请投票",
-        "cta": "组织比赛 ↗"
+        "cta": "组织比赛 ↗",
+        "step_invite": "在<strong>我的俱乐部</strong>中分享俱乐部的邀请链接，并设置俱乐部代码"
       },
       "region_admin": {
         "name": "地区管理员",
@@ -1056,7 +1087,7 @@
       "country": "所属国家（国际比赛）",
       "region": "所属州 / 省（全国锦标赛）",
       "club": "所属俱乐部（俱乐部及俱乐部间比赛）",
-      "hint": "显示在记分牌、成绩和 PDF 中每位运动员旁边，奖牌榜也按此分组。没有州或俱乐部代码的运动员显示其国家。团体显示其所有运动员共同所属的州或俱乐部，否则显示其国家。"
+      "hint": "显示在记分牌、成绩和 PDF 中每位运动员旁边，奖牌榜也按此分组。没有州或俱乐部代码的运动员显示其国家。"
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "俱乐部管理员负责组织本俱乐部的比赛，并管理其课程、收款和会籍费用。他们没有联合会范围的权限。",
     "current_admins": "当前管理员（{n}）",
     "nobody_admins": "该俱乐部还没有管理员。",
-    "no_other_members": "该俱乐部没有其他成员。请先在用户管理中将成员调入该俱乐部。"
+    "no_other_members": "该俱乐部没有其他成员。请先在用户管理中将成员调入该俱乐部。",
+    "setup": {
+      "invite_title": "邀请你的会员",
+      "invite_body": "通过此链接注册的人会自动选好 {club}。可通过邮件、聊天或俱乐部通讯分享。",
+      "code_title": "俱乐部代码",
+      "code_hint": "在俱乐部比赛的记分牌、成绩和 PDF 中显示在你的运动员旁边的简短代码。最多 8 个字母、数字或连字符。",
+      "code_placeholder": "例如 SYD",
+      "code_saved": "俱乐部代码已保存",
+      "code_none": "尚未设置代码。",
+      "code_federation": "俱乐部代码由你的协会设置。"
+    },
+    "admins_intro_meets": "俱乐部管理员负责运营本俱乐部主办的比赛，没有全联合会范围的权限。",
+    "admins_intro_classes": "俱乐部管理员负责运营本俱乐部主办的比赛并管理其课程，没有全联合会范围的权限。",
+    "admins_intro_payments": "俱乐部管理员负责运营本俱乐部主办的比赛并管理其付款和会费，没有全联合会范围的权限。"
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "投票期限（天）",
       "description": "期满时：至少一票批准且无人反对即通过，否则交由系统管理员处理。"
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "比赛",
+      "training": "训练",
+      "payments": "付款",
+      "organisation": "机构"
     }
   }
 }

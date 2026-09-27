@@ -1,7 +1,7 @@
 <script setup>
-// Who admins a club. Club admins run their club's meets (club-first
-// countries), its classes, its Stripe payouts and its affiliation
-// payments, and before this dialog there was no way to appoint one
+// Who admins a club. Club admins run the meets their club hosts, and
+// its classes, Stripe payouts and affiliation payments where those are
+// switched on. Before this dialog there was no way to appoint one
 // outside the database.
 // Opened from the Clubs screen by the federation's org_admin (or a
 // sysadmin); the server enforces the same rule.
@@ -9,6 +9,7 @@ import { ref, computed, onMounted } from 'vue'
 import BaseModal from '@/components/BaseModal.vue'
 import ModalHeader from '@/components/control/ModalHeader.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useFeaturesStore } from '@/stores/features'
 import { showError } from '@/composables/useNotify'
 
 const props = defineProps({
@@ -17,6 +18,17 @@ const props = defineProps({
 defineEmits(['close'])
 
 const auth = useAuthStore()
+
+// What the job involves. Hosting the club's own meets always is; classes
+// and the money side only while those areas are switched on, otherwise
+// we'd be describing screens the new admin can't find.
+const features = useFeaturesStore()
+const introKey = computed(() => {
+  if (features.classes && features.payments) return 'my_club.admins_intro'
+  if (features.classes) return 'my_club.admins_intro_classes'
+  if (features.payments) return 'my_club.admins_intro_payments'
+  return 'my_club.admins_intro_meets'
+})
 const admins = ref([])
 const members = ref([])
 const loading = ref(true)
@@ -79,7 +91,7 @@ onMounted(load)
     <template #default="{ titleId }">
       <ModalHeader :title-id="titleId" :title="$t('my_club.admins')" :subtitle="club.name" @close="$emit('close')" />
       <div class="lb-body">
-        <p class="hint-line intro">{{ $t('my_club.admins_intro') }}</p>
+        <p class="hint-line intro">{{ $t(introKey) }}</p>
 
         <div class="section-label">{{ $t('my_club.current_admins', { n: admins.length }) }}</div>
         <div v-if="loading" class="empty">{{ $t('common.loading') }}</div>

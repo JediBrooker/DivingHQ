@@ -162,6 +162,19 @@
       "resend_label": "Korisničko ime ili e-pošta",
       "resend_button": "Pošalji novu poveznicu",
       "resend_sent": "Ako taj račun čeka potvrdu, nova poveznica je na putu. Provjerite svoj sandučić."
+    },
+    "check_inbox": {
+      "title": "Provjerite svoj sandučić",
+      "body": "Poslali smo poveznicu za potvrdu na {email}. Kliknite je kako biste dovršili postavljanje računa.",
+      "no_mail": "Ništa ni nakon nekoliko minuta? Provjerite mapu neželjene pošte ili zatražite novu poveznicu.",
+      "resend_wait": "Pošalji novu poveznicu ({seconds} s)",
+      "resent": "Nova poveznica je na putu na {email}.",
+      "already": "Već ste kliknuli poveznicu?",
+      "next_org_pending": "Nakon potvrde DivingHQ pregledava vaš savez. Javit ćemo vam e-poštom kad bude odobren, a od tada se možete prijaviti.",
+      "next_claim_clubs": "Nakon potvrde vaš se zahtjev otvara, a klubovi koji su tamo već na DivingHQ-u glasaju o njemu. Možete se prijaviti dok se odlučuje.",
+      "next_claim_regions": "Nakon potvrde vaš se zahtjev otvara, a savezne države i pokrajine koje su već na DivingHQ-u glasaju o njemu. Možete se prijaviti dok se odlučuje.",
+      "next_claim_parent": "Nakon potvrde vaš se zahtjev otvara, a o njemu odlučuje vaš savez. Možete se prijaviti dok se odlučuje.",
+      "next_claim_sysadmin": "Nakon potvrde vaš se zahtjev otvara, a pregledava ga tim DivingHQ-a. Možete se prijaviti dok se odlučuje."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "uskoro se zatvara",
       "pill_overdue": "kasni",
       "chip_aria_tab": "{title}. Otvara pripadajuću karticu na ovoj nadzornoj ploči."
+    },
+    "getting_started": {
+      "title": "Pokrenite {club}",
+      "intro": "Nekoliko stvari za prvo postavljanje. Svaka se sama označi kad je gotova.",
+      "all_done": "Sve je gotovo. Vaš je klub spreman, pa ovo možete sakriti.",
+      "progress": "Gotovo {done} od {total}",
+      "dismiss": "Sakrij",
+      "dismiss_tip": "Sakrij ovaj popis. Na ovom se uređaju više neće pojaviti.",
+      "done": "Gotovo",
+      "step_meet": "Izradite svoje prvo natjecanje",
+      "step_meet_desc": "Postavite natjecanje koje organizira vaš klub, zatim dodajte discipline.",
+      "step_invite": "Pozovite svoje članove",
+      "step_invite_desc": "Podijelite poveznicu za registraciju kluba sa stranice Moj klub.",
+      "step_code": "Postavite kratku oznaku kluba",
+      "step_code_desc": "Prikazuje se uz vaše skakače na klupskim natjecanjima.",
+      "step_guide": "Pročitajte vodič za administratore kluba",
+      "step_guide_desc": "Što sve možete, od prvog natjecanja do dana natjecanja."
     }
   },
   "profile": {
@@ -617,7 +647,8 @@
         "step_3": "Na stranici <strong>Moj klub</strong> odobrite one koji traže učlanjenje i članove koji žele skakati, suditi ili trenirati druge",
         "step_4": "Na dan natjecanja vodite bodovanje iz <strong>Kontrolne sobe</strong>",
         "step_5": "Kad stigne vaš savez ili regionalno tijelo, glasajte o njegovu zahtjevu u <strong>Zahtjevima</strong>",
-        "cta": "Organizacija natjecanja ↗"
+        "cta": "Organizacija natjecanja ↗",
+        "step_invite": "Na stranici <strong>Moj klub</strong> podijelite poveznicu za pozivnicu svojeg kluba i postavite oznaku kluba"
       },
       "region_admin": {
         "name": "Administrator regije",
@@ -1054,9 +1085,9 @@
     "represent": {
       "label": "Skakači predstavljaju",
       "country": "Svoju zemlju (međunarodna natjecanja)",
-      "region": "Svoju državu / pokrajinu (nacionalna prvenstva)",
+      "region": "Svoju saveznu državu / pokrajinu (državna prvenstva)",
       "club": "Svoj klub (klupska i međuklupska natjecanja)",
-      "hint": "Prikazuje se uz svakog skakača na semaforu, u rezultatima i PDF-ovima te određuje grupiranje tablice medalja. Skakač bez oznake države ili kluba prikazuje se sa svojom zemljom. Ekipa prikazuje državu ili klub koji dijele svi njezini skakači, inače svoju zemlju."
+      "hint": "Prikazuje se uz svakog skakača na semaforu, u rezultatima i PDF-ovima, a prema tome se grupira i tablica medalja. Skakač bez oznake savezne države ili kluba prikazuje se sa svojom zemljom."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Administratori kluba organiziraju natjecanja svog kluba i brinu o njegovim tečajevima, isplatama i članarinama. Nemaju pristup na razini cijelog saveza.",
     "current_admins": "Trenutačni administratori ({n})",
     "nobody_admins": "Ovaj klub još nema administratora.",
-    "no_other_members": "U ovom klubu nema drugih članova. Najprije nekoga premjestite u klub putem Upravitelja korisnika."
+    "no_other_members": "U ovom klubu nema drugih članova. Najprije nekoga premjestite u klub putem Upravitelja korisnika.",
+    "setup": {
+      "invite_title": "Pozovite svoje članove",
+      "invite_body": "Tko se registrira putem ove poveznice, ima {club} već odabran. Podijelite je e-poštom, u chatu ili u klupskom biltenu.",
+      "code_title": "Oznaka kluba",
+      "code_hint": "Kratka oznaka koja se na klupskim natjecanjima prikazuje uz vaše skakače na semaforu, u rezultatima i PDF-ovima. Do 8 slova, brojki ili crtica.",
+      "code_placeholder": "npr. SYD",
+      "code_saved": "Oznaka kluba spremljena",
+      "code_none": "Još nema oznake.",
+      "code_federation": "Oznaku vašeg kluba određuje vaš savez."
+    },
+    "admins_intro_meets": "Administratori kluba vode natjecanja koja njihov klub organizira. Nemaju pristup na razini saveza.",
+    "admins_intro_classes": "Administratori kluba vode natjecanja koja njihov klub organizira i brinu o njegovim tečajevima. Nemaju pristup na razini saveza.",
+    "admins_intro_payments": "Administratori kluba vode natjecanja koja njihov klub organizira i brinu o njegovim isplatama i članarinama. Nemaju pristup na razini saveza."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Trajanje glasanja (dani)",
       "description": "Kad istekne: barem jedno odobrenje i nijedan prigovor znače da zahtjev prolazi, inače ide administratoru sustava."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Natjecanje",
+      "training": "Trening",
+      "payments": "Plaćanja",
+      "organisation": "Organizacija"
     }
   }
 }

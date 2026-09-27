@@ -34,6 +34,7 @@ Required:
 Optional:
 
 - **Venue / location** — free text
+- **Divers represent** — the code shown next to each diver on the scoreboard, results and PDFs (and what the medal table groups by): their country, their state / province, or their club. It starts at the host's own level, so a meet your club hosts shows club codes, a state's meet shows state codes and a federation's meet shows countries. Change it here or later under **Edit meet**.
 - **Description** — public meet blurb shown on the landing page
 - **Sponsor branding** — see below
 

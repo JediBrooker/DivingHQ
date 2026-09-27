@@ -16,9 +16,14 @@ import MeetEventGrid from '@/components/scoreboard/MeetEventGrid.vue'
 import SponsorRotation from '@/components/scoreboard/SponsorRotation.vue'
 import FeePreviewCard from '@/components/payments/FeePreviewCard.vue'
 import MeetBundleCard from '@/components/payments/MeetBundleCard.vue'
+import { useFeaturesStore } from '@/stores/features'
 
 const route = useRoute()
 const router = useRouter()
+// Registration, ticket and bundle prices are for sale only with payments
+// on. With them off a price and a "coming soon" button is just noise on
+// the public page.
+const features = useFeaturesStore()
 
 // Public access purchases shown on the meet page (each hidden until on sale).
 const accessKinds = [
@@ -353,7 +358,7 @@ onMounted(() => { if (route.params.id) load(route.params.id) })
       <!-- Meet registration fee: diver-facing preview. Stays hidden
            (hide-when-unset) until a federation sets a registration fee,
            then shows the price with a coming-soon pay action. -->
-      <section v-if="meet" class="meet-reg-section">
+      <section v-if="meet && features.payments" class="meet-reg-section">
         <FeePreviewCard
           hide-when-unset
           title="Meet registration"

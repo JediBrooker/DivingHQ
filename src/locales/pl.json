@@ -162,6 +162,19 @@
       "resend_label": "Nazwa użytkownika lub e-mail",
       "resend_button": "Wyślij nowy link",
       "resend_sent": "Jeśli to konto czeka na weryfikację, nowy link jest w drodze. Sprawdź skrzynkę odbiorczą."
+    },
+    "check_inbox": {
+      "title": "Sprawdź skrzynkę odbiorczą",
+      "body": "Wysłaliśmy link weryfikacyjny na adres {email}. Kliknij go, aby dokończyć zakładanie konta.",
+      "no_mail": "Nic po kilku minutach? Sprawdź folder spamu albo wyślij nowy link.",
+      "resend_wait": "Wyślij nowy link ({seconds} s)",
+      "resent": "Nowy link jest w drodze na adres {email}.",
+      "already": "Link już kliknięty?",
+      "next_org_pending": "Po weryfikacji DivingHQ rozpatrzy Twoją federację. Napiszemy, gdy zostanie zatwierdzona, i od tego momentu będzie można się logować.",
+      "next_claim_clubs": "Po weryfikacji Twoje zgłoszenie zostanie otwarte, a kluby, które już są tam na DivingHQ, zagłosują nad nim. W trakcie decyzji możesz się logować.",
+      "next_claim_regions": "Po weryfikacji Twoje zgłoszenie zostanie otwarte, a stany i prowincje, które już są na DivingHQ, zagłosują nad nim. W trakcie decyzji możesz się logować.",
+      "next_claim_parent": "Po weryfikacji Twoje zgłoszenie zostanie otwarte, a decyzję podejmie Twoja federacja. W trakcie decyzji możesz się logować.",
+      "next_claim_sysadmin": "Po weryfikacji Twoje zgłoszenie zostanie otwarte, a rozpatrzy je zespół DivingHQ. W trakcie decyzji możesz się logować."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "wkrótce koniec",
       "pill_overdue": "zaległe",
       "chip_aria_tab": "{title}. Otwiera odpowiednią kartę na tym panelu."
+    },
+    "getting_started": {
+      "title": "Rozkręć {club}",
+      "intro": "Kilka rzeczy do ustawienia na start. Każda odhaczy się sama, gdy będzie gotowa.",
+      "all_done": "Wszystko gotowe. Klub może działać, więc możesz to ukryć.",
+      "progress": "Gotowe: {done} z {total}",
+      "dismiss": "Ukryj",
+      "dismiss_tip": "Ukryj tę listę. Na tym urządzeniu już się nie pojawi.",
+      "done": "Gotowe",
+      "step_meet": "Utwórz pierwsze zawody",
+      "step_meet_desc": "Załóż zawody organizowane przez Twój klub, a potem dodaj konkurencje.",
+      "step_invite": "Zaproś członków klubu",
+      "step_invite_desc": "Udostępnij link rejestracyjny klubu ze strony Mój klub.",
+      "step_code": "Ustaw krótki kod klubu",
+      "step_code_desc": "Wyświetlany obok Twoich skoczków na zawodach klubowych.",
+      "step_guide": "Przeczytaj przewodnik administratora klubu",
+      "step_guide_desc": "Co możesz zrobić, od pierwszych zawodów po dzień startów."
     }
   },
   "role": {
@@ -628,7 +658,8 @@
         "step_3": "Na stronie <strong>Mój klub</strong> zatwierdzaj chętnych do dołączenia i członków, którzy chcą skakać, sędziować lub trenować",
         "step_4": "W dniu zawodów prowadź punktację z <strong>Pokoju kontroli</strong>",
         "step_5": "Gdy dołączy twoja federacja lub organ regionalny, zagłosuj nad jej roszczeniem w <strong>Roszczeniach</strong>",
-        "cta": "Organizacja zawodów ↗"
+        "cta": "Organizacja zawodów ↗",
+        "step_invite": "Na stronie <strong>Mój klub</strong> udostępnij link z zaproszeniem do klubu i ustaw kod klubu"
       },
       "region_admin": {
         "name": "Administrator regionu",
@@ -1067,7 +1098,7 @@
       "country": "Swój kraj (zawody międzynarodowe)",
       "region": "Swój stan / prowincję (mistrzostwa krajowe)",
       "club": "Swój klub (zawody klubowe i międzyklubowe)",
-      "hint": "Wyświetlane przy każdym skoczku na tablicy wyników, w wynikach i PDF-ach; według tego grupowana jest klasyfikacja medalowa. Skoczek bez kodu stanu lub klubu jest pokazywany ze swoim krajem. Drużyna pokazuje stan lub klub wspólny dla wszystkich jej skoczków, w przeciwnym razie swój kraj."
+      "hint": "Wyświetlane obok każdego skoczka na tablicy wyników, w wynikach i plikach PDF; według tego grupuje się też klasyfikacja medalowa. Skoczek bez kodu stanu lub klubu pojawia się ze swoim krajem."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Administratorzy klubu organizują jego zawody i zajmują się jego zajęciami, wypłatami i składkami członkowskimi. Nie mają dostępu na poziomie całej federacji.",
     "current_admins": "Obecni administratorzy ({n})",
     "nobody_admins": "Ten klub nie ma jeszcze administratora.",
-    "no_other_members": "W tym klubie nie ma innych członków. Najpierw przenieś kogoś do klubu w Menedżerze użytkowników."
+    "no_other_members": "W tym klubie nie ma innych członków. Najpierw przenieś kogoś do klubu w Menedżerze użytkowników.",
+    "setup": {
+      "invite_title": "Zaproś członków klubu",
+      "invite_body": "Każdy, kto zarejestruje się przez ten link, będzie miał już wybrany {club}. Udostępnij go e-mailem, na czacie lub w klubowym biuletynie.",
+      "code_title": "Kod klubu",
+      "code_hint": "Krótki kod wyświetlany obok Twoich skoczków na tablicy wyników, w wynikach i plikach PDF podczas zawodów klubowych. Do 8 liter, cyfr lub myślników.",
+      "code_placeholder": "np. SYD",
+      "code_saved": "Zapisano kod klubu",
+      "code_none": "Brak kodu.",
+      "code_federation": "Kod klubu ustala Twoja federacja."
+    },
+    "admins_intro_meets": "Administratorzy klubu prowadzą zawody organizowane przez swój klub. Nie mają dostępu na poziomie całego związku.",
+    "admins_intro_classes": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego zajęciami. Nie mają dostępu na poziomie całego związku.",
+    "admins_intro_payments": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego wypłatami oraz składkami członkowskimi. Nie mają dostępu na poziomie całego związku."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Czas głosowania (dni)",
       "description": "Po jego upływie: co najmniej jedna zgoda i brak sprzeciwów oznaczają przyjęcie, w przeciwnym razie roszczenie trafia do administratora systemu."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Zawody",
+      "training": "Trening",
+      "payments": "Płatności",
+      "organisation": "Organizacja"
     }
   }
 }

@@ -740,6 +740,9 @@ app.use(require("./routes/orgs")({
 // Regions (states / provinces / home nations), migration 088.
 app.use(require("./routes/regions")({ pool, verifyToken, isInSameOrg }));
 
+// A club admin's setup: invite link parts, short code, get-started counts.
+app.use(require("./routes/club-setup")({ pool, verifyToken }));
+
 // Claims: a federation or state body taking over an account the clubs
 // started (migration 089, lib/claims.js).
 app.use(require("./routes/claims")({ pool, push, email, verifyToken, requireSystemAdmin, bumpTokenVersion }));

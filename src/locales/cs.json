@@ -162,6 +162,19 @@
       "resend_label": "Uživatelské jméno nebo e-mail",
       "resend_button": "Poslat nový odkaz",
       "resend_sent": "Pokud tento účet čeká na ověření, nový odkaz je na cestě. Zkontrolujte svou schránku."
+    },
+    "check_inbox": {
+      "title": "Zkontrolujte svou schránku",
+      "body": "Na adresu {email} jsme poslali ověřovací odkaz. Klikněte na něj a dokončete nastavení účtu.",
+      "no_mail": "Po několika minutách nic? Podívejte se do složky se spamem, nebo si pošlete nový odkaz.",
+      "resend_wait": "Poslat nový odkaz ({seconds} s)",
+      "resent": "Nový odkaz je na cestě na {email}.",
+      "already": "Už jste na odkaz klikli?",
+      "next_org_pending": "Po ověření DivingHQ posoudí vaši federaci. Jakmile bude schválena, pošleme vám e-mail a od té chvíle se můžete přihlásit.",
+      "next_claim_clubs": "Po ověření se vaše žádost otevře a hlasují o ní kluby, které tam už na DivingHQ jsou. Během rozhodování se můžete přihlásit.",
+      "next_claim_regions": "Po ověření se vaše žádost otevře a hlasují o ní státy a provincie, které už na DivingHQ jsou. Během rozhodování se můžete přihlásit.",
+      "next_claim_parent": "Po ověření se vaše žádost otevře a rozhodne o ní vaše federace. Během rozhodování se můžete přihlásit.",
+      "next_claim_sysadmin": "Po ověření se vaše žádost otevře a posoudí ji tým DivingHQ. Během rozhodování se můžete přihlásit."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "brzy končí",
       "pill_overdue": "po termínu",
       "chip_aria_tab": "{title}. Otevře příslušnou kartu na této nástěnce."
+    },
+    "getting_started": {
+      "title": "Rozjeďte {club}",
+      "intro": "Pár věcí, které je dobré nastavit hned. Každá se sama odškrtne, jakmile je hotová.",
+      "all_done": "Hotovo. Váš klub je připravený, tento přehled můžete skrýt.",
+      "progress": "Hotovo {done} z {total}",
+      "dismiss": "Skrýt",
+      "dismiss_tip": "Skrýt tento přehled. Na tomto zařízení se už neobjeví.",
+      "done": "Hotovo",
+      "step_meet": "Vytvořte první závody",
+      "step_meet_desc": "Založte závody, které váš klub pořádá, a přidejte do nich disciplíny.",
+      "step_invite": "Pozvěte své členy",
+      "step_invite_desc": "Sdílejte registrační odkaz klubu ze stránky Můj klub.",
+      "step_code": "Nastavte kód klubu",
+      "step_code_desc": "Zobrazuje se u vašich skokanů na klubových závodech.",
+      "step_guide": "Přečtěte si průvodce pro správce klubu",
+      "step_guide_desc": "Co všechno můžete dělat, od prvních závodů po den závodu."
     }
   },
   "profile": {
@@ -617,7 +647,8 @@
         "step_3": "Na stránce <strong>Můj klub</strong> schvalujte zájemce o vstup a členy, kteří chtějí skákat, soudit nebo trénovat",
         "step_4": "V den závodu řiďte bodování z <strong>Řídicí místnosti</strong>",
         "step_5": "Až dorazí vaše federace nebo krajský svaz, hlasujte o jejím nároku na stránce <strong>Nároky</strong>",
-        "cta": "Pořádání závodu ↗"
+        "cta": "Pořádání závodu ↗",
+        "step_invite": "Na stránce <strong>Můj klub</strong> sdílejte pozvánkový odkaz klubu a nastavte kód klubu"
       },
       "region_admin": {
         "name": "Správce regionu",
@@ -1056,7 +1087,7 @@
       "country": "Svou zemi (mezinárodní závody)",
       "region": "Svůj stát / provincii (národní mistrovství)",
       "club": "Svůj klub (klubové a meziklubové závody)",
-      "hint": "Zobrazuje se u každého skokana na výsledkové tabuli, ve výsledcích a v PDF a podle toho se sestavuje medailová tabulka. Skokan bez kódu státu nebo klubu se zobrazí se svou zemí. Družstvo se zobrazí se státem nebo klubem, který sdílejí všichni jeho skokani, jinak se svou zemí."
+      "hint": "Zobrazuje se u každého skokana na výsledkové tabuli, ve výsledcích a v PDF a podle toho se seskupuje tabulka medailí. Skokan bez kódu státu nebo klubu se zobrazí se svou zemí."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Správci klubu pořádají jeho závody a starají se o jeho kurzy, výplaty a členské poplatky. Nezískávají žádný přístup v rámci celé federace.",
     "current_admins": "Současní správci ({n})",
     "nobody_admins": "Tento klub zatím nemá žádného správce.",
-    "no_other_members": "V tomto klubu nejsou žádní další členové. Nejdřív někoho přesuňte do klubu ve Správě uživatelů."
+    "no_other_members": "V tomto klubu nejsou žádní další členové. Nejdřív někoho přesuňte do klubu ve Správě uživatelů.",
+    "setup": {
+      "invite_title": "Pozvěte své členy",
+      "invite_body": "Kdo se zaregistruje přes tento odkaz, bude mít {club} rovnou vybraný. Pošlete ho e-mailem, v chatu nebo v klubovém zpravodaji.",
+      "code_title": "Kód klubu",
+      "code_hint": "Krátký kód, který se na klubových závodech zobrazuje u vašich skokanů na výsledkové tabuli, ve výsledcích a v PDF. Nejvýše 8 písmen, číslic nebo pomlček.",
+      "code_placeholder": "např. SYD",
+      "code_saved": "Kód klubu uložen",
+      "code_none": "Zatím bez kódu.",
+      "code_federation": "Kód vašeho klubu určuje vaše federace."
+    },
+    "admins_intro_meets": "Správci klubu řídí závody, které jejich klub pořádá. Přístup v rámci celého svazu nemají.",
+    "admins_intro_classes": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho kurzy. Přístup v rámci celého svazu nemají.",
+    "admins_intro_payments": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho výplaty a členské příspěvky. Přístup v rámci celého svazu nemají."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Doba hlasování (dny)",
       "description": "Po jejím uplynutí nárok projde s alespoň jedním schválením a bez námitek, jinak jde systémovému správci."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Soutěž",
+      "training": "Trénink",
+      "payments": "Platby",
+      "organisation": "Organizace"
     }
   }
 }

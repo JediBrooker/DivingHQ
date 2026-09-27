@@ -162,6 +162,19 @@
       "resend_label": "Benutzername oder E-Mail",
       "resend_button": "Neuen Link senden",
       "resend_sent": "Falls dieses Konto auf Bestätigung wartet, ist ein neuer Link unterwegs. Sehen Sie in Ihrem Posteingang nach."
+    },
+    "check_inbox": {
+      "title": "Sehen Sie in Ihrem Posteingang nach",
+      "body": "Wir haben einen Bestätigungslink an {email} gesendet. Klicken Sie darauf, um die Einrichtung Ihres Kontos abzuschließen.",
+      "no_mail": "Nach ein paar Minuten noch nichts da? Sehen Sie im Spam-Ordner nach oder fordern Sie einen neuen Link an.",
+      "resend_wait": "Neuen Link senden ({seconds} s)",
+      "resent": "Ein neuer Link ist unterwegs an {email}.",
+      "already": "Haben Sie den Link schon angeklickt?",
+      "next_org_pending": "Nach der Bestätigung prüft DivingHQ Ihren Verband. Wir schreiben Ihnen, sobald er freigegeben ist, und ab dann können Sie sich anmelden.",
+      "next_claim_clubs": "Nach der Bestätigung wird Ihr Anspruch eröffnet und die Vereine, die dort bereits auf DivingHQ sind, stimmen darüber ab. Sie können sich anmelden, während entschieden wird.",
+      "next_claim_regions": "Nach der Bestätigung wird Ihr Anspruch eröffnet und die Bundesstaaten und Provinzen, die bereits auf DivingHQ sind, stimmen darüber ab. Sie können sich anmelden, während entschieden wird.",
+      "next_claim_parent": "Nach der Bestätigung wird Ihr Anspruch eröffnet und Ihr Verband entscheidet darüber. Sie können sich anmelden, während entschieden wird.",
+      "next_claim_sysadmin": "Nach der Bestätigung wird Ihr Anspruch eröffnet und das DivingHQ-Team prüft ihn. Sie können sich anmelden, während entschieden wird."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "schließt bald",
       "pill_overdue": "überfällig",
       "chip_aria_tab": "{title}. Öffnet die zugehörige Registerkarte in dieser Übersicht."
+    },
+    "getting_started": {
+      "title": "Legen Sie mit {club} los",
+      "intro": "Ein paar Dinge, die Sie zuerst einrichten sollten. Jeder Punkt hakt sich selbst ab, sobald er erledigt ist.",
+      "all_done": "Alles erledigt. Ihr Verein ist startklar, Sie können diese Liste ausblenden.",
+      "progress": "{done} von {total} erledigt",
+      "dismiss": "Ausblenden",
+      "dismiss_tip": "Diese Checkliste ausblenden. Auf diesem Gerät erscheint sie nicht wieder.",
+      "done": "Erledigt",
+      "step_meet": "Ersten Wettkampf anlegen",
+      "step_meet_desc": "Legen Sie einen Wettkampf an, den Ihr Verein ausrichtet, und fügen Sie dann die Disziplinen hinzu.",
+      "step_invite": "Mitglieder einladen",
+      "step_invite_desc": "Teilen Sie den Registrierungslink Ihres Vereins unter Mein Verein.",
+      "step_code": "Vereinskürzel festlegen",
+      "step_code_desc": "Erscheint bei Vereinswettkämpfen neben Ihren Springern.",
+      "step_guide": "Leitfaden für Vereinsadmins lesen",
+      "step_guide_desc": "Was Sie tun können, vom ersten Wettkampf bis zum Wettkampftag."
     }
   },
   "role": {
@@ -628,7 +658,8 @@
         "step_3": "Genehmigen Sie auf <strong>Mein Verein</strong> Beitrittsanfragen und Mitglieder, die springen, werten oder trainieren möchten",
         "step_4": "Am Wettkampftag steuern Sie die Wertung aus dem <strong>Kontrollraum</strong>",
         "step_5": "Kommt Ihr Verband oder Landesverband dazu, stimmen Sie unter <strong>Ansprüche</strong> über seinen Anspruch ab",
-        "cta": "Einen Wettkampf ausrichten ↗"
+        "cta": "Einen Wettkampf ausrichten ↗",
+        "step_invite": "Teilen Sie unter <strong>Mein Verein</strong> den Einladungslink Ihres Vereins und legen Sie das Vereinskürzel fest"
       },
       "region_admin": {
         "name": "Regionsadmin",
@@ -1065,9 +1096,9 @@
     "represent": {
       "label": "Springer vertreten",
       "country": "Ihr Land (internationale Wettkämpfe)",
-      "region": "Ihr Bundesland / ihre Provinz (nationale Meisterschaften)",
+      "region": "Ihren Bundesstaat / ihre Provinz (nationale Meisterschaften)",
       "club": "Ihren Verein (Vereins- und Vergleichswettkämpfe)",
-      "hint": "Wird neben jedem Springer auf der Anzeigetafel, in den Ergebnissen und PDFs angezeigt und bestimmt die Gruppierung im Medaillenspiegel. Springer ohne Landes- oder Vereinskürzel erscheinen mit ihrem Land. Ein Team erscheint mit dem Bundesland oder Verein, den alle seine Springer gemeinsam haben, sonst mit seinem Land."
+      "hint": "Wird neben jedem Springer auf der Anzeigetafel, in den Ergebnissen und PDFs angezeigt und bestimmt die Gruppierung des Medaillenspiegels. Springer ohne Bundesstaats- oder Vereinskürzel werden mit ihrem Land angezeigt."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Vereinsadmins richten die Wettkämpfe ihres Vereins aus und kümmern sich um Kurse, Auszahlungen und Mitgliedsbeiträge. Verbandsweite Rechte bekommen sie nicht.",
     "current_admins": "Aktuelle Admins ({n})",
     "nobody_admins": "Dieser Verein hat noch keinen Admin.",
-    "no_other_members": "Keine weiteren Mitglieder in diesem Verein. Verschieben Sie zuerst jemanden über die Benutzerverwaltung hierher."
+    "no_other_members": "Keine weiteren Mitglieder in diesem Verein. Verschieben Sie zuerst jemanden über die Benutzerverwaltung hierher.",
+    "setup": {
+      "invite_title": "Mitglieder einladen",
+      "invite_body": "Wer sich über diesen Link registriert, hat {club} bereits ausgewählt. Teilen Sie ihn per E-Mail, Chat oder im Vereinsnewsletter.",
+      "code_title": "Vereinskürzel",
+      "code_hint": "Ein kurzes Kürzel, das bei Vereinswettkämpfen neben Ihren Springern auf der Anzeigetafel, in den Ergebnissen und PDFs erscheint. Bis zu 8 Buchstaben, Ziffern oder Bindestriche.",
+      "code_placeholder": "z. B. SYD",
+      "code_saved": "Vereinskürzel gespeichert",
+      "code_none": "Noch kein Kürzel.",
+      "code_federation": "Das Kürzel Ihres Vereins legt Ihr Verband fest."
+    },
+    "admins_intro_meets": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet. Verbandsweite Rechte bekommen sie nicht.",
+    "admins_intro_classes": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet, und kümmern sich um seine Kurse. Verbandsweite Rechte bekommen sie nicht.",
+    "admins_intro_payments": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet, und kümmern sich um Auszahlungen und Mitgliedsbeiträge. Verbandsweite Rechte bekommen sie nicht."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Abstimmungszeitraum (Tage)",
       "description": "Nach Ablauf: mindestens eine Zustimmung und keine Einwände lassen den Anspruch durchgehen, sonst geht er an den Systemadmin."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Wettkampf",
+      "training": "Training",
+      "payments": "Zahlungen",
+      "organisation": "Organisation"
     }
   }
 }

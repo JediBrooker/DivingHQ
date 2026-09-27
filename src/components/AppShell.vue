@@ -54,7 +54,7 @@ const NAV = [
   ] },
   // Live-competition workflow, roughly in the order it's used:
   // set up → run → participate → judge → results → analysis → reference.
-  { key: 'competition', group: 'Competition', icon: Trophy, items: [
+  { key: 'competition', group: 'Competition', labelKey: 'nav.group.competition', icon: Trophy, items: [
     { to: '/manager',        label: 'Meets & events', labelKey: 'manager.title',         icon: Trophy,        roles: ['org_admin', 'meet_manager'], allowDelegateAdmin: true },
     { to: '/control',        label: 'Control Room',   labelKey: 'control.page_label',     icon: MonitorPlay,   roles: ['org_admin', 'meet_manager', 'referee'], allowDelegateAdmin: true },
     { to: '/competitor',     label: 'Dive Sheets',    icon: Waves,         roles: ['diver'] },
@@ -65,7 +65,7 @@ const NAV = [
     { to: '/dive-directory', label: 'Dive directory', labelKey: 'dive_directory.title',   icon: BookOpen },
   ] },
   // Club training: distinct from competition, context-adaptive per role.
-  { key: 'training', group: 'Training', icon: GraduationCap, items: [
+  { key: 'training', group: 'Training', labelKey: 'nav.group.training', icon: GraduationCap, items: [
     { to: '/coach',          label: 'Coaching',       icon: GraduationCap, roles: ['coach'] },
     { to: '/classes',        label: 'Classes',        labelKey: 'classes.menu', icon: Layers, feature: 'classes' },
   ] },
@@ -79,7 +79,7 @@ const NAV = [
   // child's membership, and `hasDependents` is read nowhere except the
   // allowGuardian gate on /membership. With payments dark it's a form that
   // leads nowhere, so it goes dark too.
-  { key: 'payments', group: 'Payments', icon: Wallet, feature: 'payments', items: [
+  { key: 'payments', group: 'Payments', labelKey: 'nav.group.payments', icon: Wallet, feature: 'payments', items: [
     { to: '/charges',         label: 'Charges',         labelKey: 'payments.charges',       icon: Receipt },
     // allowGuardian mirrors the route meta: a parent with an approved
     // dependent needs the link even though they're only a spectator.
@@ -91,8 +91,10 @@ const NAV = [
   ] },
   // Federation governance + the org money hub (fees config, withdrawals,
   // payout queue), renamed "Payments & payouts" to disambiguate from the
-  // personal section above.
-  { key: 'federation', group: 'Federation', icon: Building2, items: [
+  // personal section above. Headed "Organisation" rather than "Federation"
+  // because club and region admins find My club / My region here too, and
+  // in a country the clubs started there's no federation at all.
+  { key: 'federation', group: 'Organisation', labelKey: 'nav.group.organisation', icon: Building2, items: [
     { to: '/club',     label: 'My club',            labelKey: 'my_club.title',      icon: Building2,  clubAdminOnly: true },
     { to: '/region',   label: 'My region',          labelKey: 'my_region.title',    icon: Building2,  regionAdminOnly: true },
     { to: '/claims',   label: 'Claims',             labelKey: 'claims.title',       icon: Scale,      roles: ['org_admin'], allowDelegateAdmin: true, allowClaimant: true },
@@ -112,6 +114,10 @@ const NAV = [
 
 function navLabel(it) {
   return it.labelKey ? t(it.labelKey) : it.label
+}
+// Section headings. Admin keeps its English `group` on purpose (see above).
+function groupLabel(g) {
+  return g.labelKey ? t(g.labelKey) : g.group
 }
 
 // Is the product area this entry belongs to switched on? Entries with no
@@ -268,11 +274,11 @@ function closeMobile() { mobileOpen.value = false }
               <component :is="g.items[0].icon" class="sb-ic" />
             </RouterLink>
             <div v-else class="sb-rail-group-wrap">
-              <button type="button" class="sb-rail-btn" :class="{ active: groupActive(g) }" :aria-label="g.group">
+              <button type="button" class="sb-rail-btn" :class="{ active: groupActive(g) }" :aria-label="groupLabel(g)">
                 <component :is="g.icon" class="sb-ic" />
               </button>
-              <div class="sb-flyout" role="menu" :aria-label="g.group">
-                <div class="sb-flyout-head">{{ g.group }}</div>
+              <div class="sb-flyout" role="menu" :aria-label="groupLabel(g)">
+                <div class="sb-flyout-head">{{ groupLabel(g) }}</div>
                 <RouterLink
                   v-for="it in g.items"
                   :key="it.to"
@@ -291,7 +297,7 @@ function closeMobile() { mobileOpen.value = false }
         <!-- EXPANDED: full labelled list. -->
         <template v-else>
         <template v-for="g in visibleGroups" :key="g.group || 'root'">
-          <div v-if="g.group" class="sb-group">{{ g.group }}</div>
+          <div v-if="g.group" class="sb-group">{{ groupLabel(g) }}</div>
           <template v-for="it in g.items" :key="it.to || it.menu">
             <!-- Nested menu: hover (desktop) or tap expands the sub-items -->
             <div v-if="it.children" class="sb-parent" :class="{ open: openMenu === it.menu }">

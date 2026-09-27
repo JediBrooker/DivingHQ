@@ -162,6 +162,19 @@
       "resend_label": "Användarnamn eller e-post",
       "resend_button": "Skicka en ny länk",
       "resend_sent": "Om kontot väntar på verifiering är en ny länk på väg. Kolla din inkorg."
+    },
+    "check_inbox": {
+      "title": "Kolla din inkorg",
+      "body": "Vi har skickat en verifieringslänk till {email}. Klicka på den för att slutföra ditt konto.",
+      "no_mail": "Inget efter några minuter? Kolla skräppostmappen, eller skicka en ny länk.",
+      "resend_wait": "Skicka en ny länk ({seconds} s)",
+      "resent": "En ny länk är på väg till {email}.",
+      "already": "Har du redan klickat på länken?",
+      "next_org_pending": "När du har verifierat granskar DivingHQ ditt förbund. Vi mejlar dig när det är godkänt, och från och med då kan du logga in.",
+      "next_claim_clubs": "När du har verifierat öppnas ditt anspråk och klubbarna som redan finns på DivingHQ där röstar om det. Du kan logga in medan det avgörs.",
+      "next_claim_regions": "När du har verifierat öppnas ditt anspråk och delstaterna och provinserna som redan finns på DivingHQ röstar om det. Du kan logga in medan det avgörs.",
+      "next_claim_parent": "När du har verifierat öppnas ditt anspråk och ditt förbund avgör det. Du kan logga in medan det avgörs.",
+      "next_claim_sysadmin": "När du har verifierat öppnas ditt anspråk och DivingHQ-teamet granskar det. Du kan logga in medan det avgörs."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "stänger snart",
       "pill_overdue": "försenad",
       "chip_aria_tab": "{title}. Öppnar tillhörande flik i den här översikten."
+    },
+    "getting_started": {
+      "title": "Kom igång med {club}",
+      "intro": "Några saker att ställa in först. Varje punkt bockas av av sig själv när den är klar.",
+      "all_done": "Allt är klart. Din klubb är redo, så du kan dölja det här.",
+      "progress": "{done} av {total} klara",
+      "dismiss": "Dölj",
+      "dismiss_tip": "Dölj den här checklistan. Den kommer inte tillbaka på den här enheten.",
+      "done": "Klar",
+      "step_meet": "Skapa din första tävling",
+      "step_meet_desc": "Lägg upp en tävling som din klubb arrangerar och lägg sedan till grenarna.",
+      "step_invite": "Bjud in dina medlemmar",
+      "step_invite_desc": "Dela klubbens registreringslänk från Min klubb.",
+      "step_code": "Ange klubbens kortkod",
+      "step_code_desc": "Visas bredvid dina hoppare vid klubbtävlingar.",
+      "step_guide": "Läs guiden för klubbadministratörer",
+      "step_guide_desc": "Vad du kan göra, från första tävlingen till tävlingsdagen."
     }
   },
   "role": {
@@ -628,7 +658,8 @@
         "step_3": "Godkänn på <strong>Min klubb</strong> dem som ber om att gå med och medlemmar som vill hoppa, döma eller vara tränare",
         "step_4": "På tävlingsdagen styr du poängsättningen från <strong>Kontrollrummet</strong>",
         "step_5": "När ditt förbund eller regionala organ ansluter röstar du om dess anspråk under <strong>Anspråk</strong>",
-        "cta": "Arrangera en tävling ↗"
+        "cta": "Arrangera en tävling ↗",
+        "step_invite": "Dela klubbens inbjudningslänk och ange klubbkoden under <strong>Min klubb</strong>"
       },
       "region_admin": {
         "name": "Regionadministratör",
@@ -1066,8 +1097,8 @@
       "label": "Hopparna representerar",
       "country": "Sitt land (internationella tävlingar)",
       "region": "Sin delstat / provins (nationella mästerskap)",
-      "club": "Sin klubb (klubb- och klubbmötestävlingar)",
-      "hint": "Visas bredvid varje hoppare på resultattavlan, i resultat och PDF:er och styr hur medaljtabellen grupperas. En hoppare utan delstats- eller klubbkod visas med sitt land. Ett lag visas med den delstat eller klubb som alla dess hoppare delar, annars med sitt land."
+      "club": "Sin klubb (klubb- och mellanklubbstävlingar)",
+      "hint": "Visas bredvid varje hoppare på resultattavlan, i resultat och PDF:er, och är det som medaljtabellen grupperas efter. En hoppare utan delstats- eller klubbkod visas med sitt land."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Klubbadministratörer arrangerar klubbens tävlingar och sköter dess grupper, utbetalningar och anslutningsavgifter. De får ingen åtkomst till hela förbundet.",
     "current_admins": "Nuvarande administratörer ({n})",
     "nobody_admins": "Klubben har ingen administratör än.",
-    "no_other_members": "Det finns inga andra medlemmar i klubben. Flytta först in någon i den från Användarhanteringen."
+    "no_other_members": "Det finns inga andra medlemmar i klubben. Flytta först in någon i den från Användarhanteringen.",
+    "setup": {
+      "invite_title": "Bjud in dina medlemmar",
+      "invite_body": "Alla som registrerar sig via den här länken har {club} förvalt. Dela den via e-post, chatt eller klubbens nyhetsbrev.",
+      "code_title": "Klubbkod",
+      "code_hint": "En kort kod som visas bredvid dina hoppare på resultattavlan, i resultat och PDF:er vid klubbtävlingar. Upp till 8 bokstäver, siffror eller bindestreck.",
+      "code_placeholder": "t.ex. SYD",
+      "code_saved": "Klubbkoden har sparats",
+      "code_none": "Ingen kod än.",
+      "code_federation": "Ditt förbund bestämmer klubbens kod."
+    },
+    "admins_intro_meets": "Klubbadministratörer sköter tävlingarna som klubben arrangerar. De får ingen åtkomst på förbundsnivå.",
+    "admins_intro_classes": "Klubbadministratörer sköter tävlingarna som klubben arrangerar och tar hand om klubbens kurser. De får ingen åtkomst på förbundsnivå.",
+    "admins_intro_payments": "Klubbadministratörer sköter tävlingarna som klubben arrangerar och tar hand om utbetalningar och medlemsavgifter. De får ingen åtkomst på förbundsnivå."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Röstningsperiod (dagar)",
       "description": "När den löper ut: minst ett godkännande och inga invändningar antar anspråket, annars går det till systemadministratören."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Tävling",
+      "training": "Träning",
+      "payments": "Betalningar",
+      "organisation": "Organisation"
     }
   }
 }

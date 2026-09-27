@@ -162,6 +162,19 @@
       "resend_label": "Brugernavn eller e-mail",
       "resend_button": "Send et nyt link",
       "resend_sent": "Hvis kontoen venter på bekræftelse, er et nyt link på vej. Tjek din indbakke."
+    },
+    "check_inbox": {
+      "title": "Tjek din indbakke",
+      "body": "Vi har sendt et bekræftelseslink til {email}. Klik på det for at gøre din konto færdig.",
+      "no_mail": "Intet efter et par minutter? Tjek din spam-mappe, eller send et nyt link.",
+      "resend_wait": "Send et nyt link ({seconds} s)",
+      "resent": "Et nyt link er på vej til {email}.",
+      "already": "Har du allerede klikket på linket?",
+      "next_org_pending": "Når du er bekræftet, gennemgår DivingHQ dit forbund. Vi sender dig en e-mail, når det er godkendt, og derefter kan du logge ind.",
+      "next_claim_clubs": "Når du er bekræftet, åbnes dit krav, og de klubber, der allerede er på DivingHQ der, stemmer om det. Du kan logge ind, mens det afgøres.",
+      "next_claim_regions": "Når du er bekræftet, åbnes dit krav, og de stater og provinser, der allerede er på DivingHQ, stemmer om det. Du kan logge ind, mens det afgøres.",
+      "next_claim_parent": "Når du er bekræftet, åbnes dit krav, og dit forbund afgør det. Du kan logge ind, mens det afgøres.",
+      "next_claim_sysadmin": "Når du er bekræftet, åbnes dit krav, og DivingHQ-teamet gennemgår det. Du kan logge ind, mens det afgøres."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "lukker snart",
       "pill_overdue": "forsinket",
       "chip_aria_tab": "{title}. Åbner den tilhørende fane i denne oversigt."
+    },
+    "getting_started": {
+      "title": "Kom godt i gang med {club}",
+      "intro": "Et par ting, der skal sættes op først. Hver af dem krydses af af sig selv, når de er klaret.",
+      "all_done": "Alt er klaret. Din klub er klar, så du kan skjule dette.",
+      "progress": "{done} af {total} klaret",
+      "dismiss": "Skjul",
+      "dismiss_tip": "Skjul denne tjekliste. Den kommer ikke igen på denne enhed.",
+      "done": "Klaret",
+      "step_meet": "Opret dit første stævne",
+      "step_meet_desc": "Opret et stævne, som din klub afholder, og tilføj derefter dets øvelser.",
+      "step_invite": "Inviter dine medlemmer",
+      "step_invite_desc": "Del klubbens tilmeldingslink fra Min klub.",
+      "step_code": "Angiv din klubs kortkode",
+      "step_code_desc": "Vises ved dine udspringere til klubstævner.",
+      "step_guide": "Læs vejledningen for klubadministratorer",
+      "step_guide_desc": "Hvad du kan, fra det første stævne til stævnedagen."
     }
   },
   "role": {
@@ -628,7 +658,8 @@
         "step_3": "Godkend på <strong>Min klub</strong> dem, der beder om at blive medlem, og medlemmer, der vil springe, dømme eller være træner",
         "step_4": "På dagen styrer du pointgivningen fra <strong>Kontrolrummet</strong>",
         "step_5": "Når dit forbund eller regionale organ kommer til, stemmer du om dets krav under <strong>Krav</strong>",
-        "cta": "Afvikling af et stævne ↗"
+        "cta": "Afvikling af et stævne ↗",
+        "step_invite": "Del klubbens invitationslink og angiv klubkoden under <strong>Min klub</strong>"
       },
       "region_admin": {
         "name": "Regionsadministrator",
@@ -1067,7 +1098,7 @@
       "country": "Deres land (internationale stævner)",
       "region": "Deres stat / provins (nationale mesterskaber)",
       "club": "Deres klub (klub- og mellemklubstævner)",
-      "hint": "Vises ved hver udspringer på resultattavlen, i resultater og PDF’er og bestemmer, hvordan medaljetabellen grupperes. En udspringer uden stats- eller klubkode vises med sit land. Et hold vises med den stat eller klub, alle dets udspringere har til fælles, ellers med sit land."
+      "hint": "Vises ved hver udspringer på resultattavlen, i resultater og PDF'er, og det er det, medaljeoversigten grupperer efter. En udspringer uden stats- eller klubkode vises med sit land."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Klubadministratorer afvikler klubbens stævner og tager sig af dens hold, udbetalinger og tilknytningsbetalinger. De får ingen adgang til hele forbundet.",
     "current_admins": "Nuværende administratorer ({n})",
     "nobody_admins": "Klubben har ingen administrator endnu.",
-    "no_other_members": "Der er ingen andre medlemmer i klubben. Flyt først nogen ind i den fra Brugerstyring."
+    "no_other_members": "Der er ingen andre medlemmer i klubben. Flyt først nogen ind i den fra Brugerstyring.",
+    "setup": {
+      "invite_title": "Inviter dine medlemmer",
+      "invite_body": "Alle, der tilmelder sig via dette link, har {club} valgt på forhånd. Del det på e-mail, i chat eller i klubbens nyhedsbrev.",
+      "code_title": "Klubkode",
+      "code_hint": "En kort kode, der vises ved dine udspringere på resultattavlen, i resultater og PDF'er til klubstævner. Højst 8 bogstaver, tal eller bindestreger.",
+      "code_placeholder": "f.eks. SYD",
+      "code_saved": "Klubkoden er gemt",
+      "code_none": "Ingen kode endnu.",
+      "code_federation": "Dit forbund fastsætter din klubs kode."
+    },
+    "admins_intro_meets": "Klubadministratorer står for de stævner, klubben arrangerer. De får ingen adgang på forbundsniveau.",
+    "admins_intro_classes": "Klubadministratorer står for de stævner, klubben arrangerer, og tager sig af dens hold. De får ingen adgang på forbundsniveau.",
+    "admins_intro_payments": "Klubadministratorer står for de stævner, klubben arrangerer, og tager sig af dens udbetalinger og medlemskontingenter. De får ingen adgang på forbundsniveau."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Afstemningsperiode (dage)",
       "description": "Når den udløber: mindst én godkendelse og ingen indsigelser vedtager kravet, ellers går det til systemadministratoren."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Konkurrence",
+      "training": "Træning",
+      "payments": "Betalinger",
+      "organisation": "Organisation"
     }
   }
 }

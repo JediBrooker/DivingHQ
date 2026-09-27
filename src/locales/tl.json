@@ -162,6 +162,19 @@
       "resend_label": "Username o email",
       "resend_button": "Magpadala ng bagong link",
       "resend_sent": "Kung naghihintay ng verification ang account na iyon, papunta na ang bagong link. Tingnan ang iyong inbox."
+    },
+    "check_inbox": {
+      "title": "Tingnan ang iyong inbox",
+      "body": "Nagpadala kami ng verification link sa {email}. I-click ito para matapos ang pag-set up ng iyong account.",
+      "no_mail": "Wala pa rin pagkalipas ng ilang minuto? Tingnan ang spam folder, o magpadala ng bagong link.",
+      "resend_wait": "Magpadala ng bagong link ({seconds}s)",
+      "resent": "Papunta na ang bagong link sa {email}.",
+      "already": "Na-click mo na ba ang link?",
+      "next_org_pending": "Kapag na-verify ka na, susuriin ng DivingHQ ang iyong federation. Mag-e-email kami kapag naaprubahan ito, at mula noon ay makakapag-sign in ka na.",
+      "next_claim_clubs": "Kapag na-verify ka na, bubuksan ang iyong claim at boboto rito ang mga club na nasa DivingHQ na roon. Maaari kang mag-sign in habang pinagpapasyahan ito.",
+      "next_claim_regions": "Kapag na-verify ka na, bubuksan ang iyong claim at boboto rito ang mga estado at lalawigan na nasa DivingHQ na. Maaari kang mag-sign in habang pinagpapasyahan ito.",
+      "next_claim_parent": "Kapag na-verify ka na, bubuksan ang iyong claim at ang iyong federation ang magpapasya. Maaari kang mag-sign in habang pinagpapasyahan ito.",
+      "next_claim_sysadmin": "Kapag na-verify ka na, bubuksan ang iyong claim at susuriin ito ng DivingHQ team. Maaari kang mag-sign in habang pinagpapasyahan ito."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "malapit nang magsara",
       "pill_overdue": "lampas na",
       "chip_aria_tab": "{title}. Binubuksan ang tab nito sa dashboard na ito."
+    },
+    "getting_started": {
+      "title": "Simulan ang {club}",
+      "intro": "Ilang bagay na dapat munang i-set up. Kusang malalagyan ng tsek ang bawat isa kapag tapos na.",
+      "all_done": "Tapos na lahat. Handa na ang iyong club, kaya maaari mo na itong itago.",
+      "progress": "{done} sa {total} ang tapos",
+      "dismiss": "Itago",
+      "dismiss_tip": "Itago ang checklist na ito. Hindi na ito babalik sa device na ito.",
+      "done": "Tapos na",
+      "step_meet": "Gawin ang iyong unang meet",
+      "step_meet_desc": "Mag-set up ng meet na iho-host ng iyong club, saka idagdag ang mga event nito.",
+      "step_invite": "Imbitahan ang iyong mga miyembro",
+      "step_invite_desc": "Ibahagi ang signup link ng club mula sa Aking club.",
+      "step_code": "Itakda ang maikling code ng club",
+      "step_code_desc": "Ipinapakita sa tabi ng iyong mga diver sa mga club meet.",
+      "step_guide": "Basahin ang gabay para sa club admin",
+      "step_guide_desc": "Ang mga magagawa mo, mula sa unang meet hanggang sa araw ng meet."
     }
   },
   "profile": {
@@ -617,7 +647,8 @@
         "step_3": "Sa <strong>Aking club</strong>, aprubahan ang mga humihiling na sumali at ang mga miyembrong gustong mag-dive, humusga o maging tagasanay",
         "step_4": "Sa araw ng kompetisyon, patakbuhin ang pagmamarka mula sa <strong>Control Room</strong>",
         "step_5": "Kapag dumating ang iyong pederasyon o panrehiyong lupon, bumoto sa claim nito sa <strong>Mga claim</strong>",
-        "cta": "Pagpapatakbo ng kompetisyon ↗"
+        "cta": "Pagpapatakbo ng kompetisyon ↗",
+        "step_invite": "Sa <strong>Aking club</strong>, ibahagi ang invite link ng iyong club at itakda ang code ng club"
       },
       "region_admin": {
         "name": "Admin ng rehiyon",
@@ -1052,11 +1083,11 @@
       "pick_host": "— Piliin ang iyong club o rehiyon —"
     },
     "represent": {
-      "label": "Kinakatawan ng mga diver ang",
-      "country": "Kanilang bansa (mga internasyonal na kompetisyon)",
-      "region": "Kanilang estado / lalawigan (mga pambansang kampeonato)",
-      "club": "Kanilang club (mga kompetisyon ng club at inter-club)",
-      "hint": "Ipinapakita sa tabi ng bawat diver sa scoreboard, mga resulta at PDF, at ito ang batayan ng pagpapangkat sa medal table. Ang diver na walang code ng estado o club ay ipinapakita sa kanyang bansa. Ipinapakita ng isang koponan ang estado o club na pareho sa lahat ng diver nito, kung hindi ay ang bansa nito."
+      "label": "Kinakatawan ng mga diver",
+      "country": "Ang kanilang bansa (mga pandaigdigang paligsahan)",
+      "region": "Ang kanilang estado / lalawigan (mga pambansang kampeonato)",
+      "club": "Ang kanilang club (mga paligsahan ng club at inter-club)",
+      "hint": "Ipinapakita sa tabi ng bawat diver sa scoreboard, mga resulta at PDF, at ito ang batayan ng pagpapangkat sa medal table. Ang diver na walang code ng estado o club ay ipapakita kasama ang kanyang bansa."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Pinapatakbo ng mga admin ng club ang mga kompetisyon ng kanilang club at inaasikaso ang mga klase, bayad, at bayarin sa pagkakaanib nito. Wala silang access sa buong pederasyon.",
     "current_admins": "Kasalukuyang mga admin ({n})",
     "nobody_admins": "Wala pang admin ang club na ito.",
-    "no_other_members": "Walang ibang miyembro sa club na ito. Ilipat muna ang isang tao rito mula sa User Manager."
+    "no_other_members": "Walang ibang miyembro sa club na ito. Ilipat muna ang isang tao rito mula sa User Manager.",
+    "setup": {
+      "invite_title": "Imbitahan ang iyong mga miyembro",
+      "invite_body": "Ang sinumang mag-sign up gamit ang link na ito ay may nakapiling {club} na. Ibahagi ito sa email, chat o newsletter ng iyong club.",
+      "code_title": "Code ng club",
+      "code_hint": "Maikling code na ipinapakita sa tabi ng iyong mga diver sa scoreboard, mga resulta at PDF sa mga club meet. Hanggang 8 titik, numero o gitling.",
+      "code_placeholder": "hal. SYD",
+      "code_saved": "Nai-save ang code ng club",
+      "code_none": "Wala pang code.",
+      "code_federation": "Ang iyong federation ang nagtatakda ng code ng iyong club."
+    },
+    "admins_intro_meets": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club. Wala silang access sa buong pederasyon.",
+    "admins_intro_classes": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club at inaasikaso ang mga klase nito. Wala silang access sa buong pederasyon.",
+    "admins_intro_payments": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club at inaasikaso ang mga payout at bayad sa pagsapi nito. Wala silang access sa buong pederasyon."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Panahon ng botohan (araw)",
       "description": "Pagkatapos nito: kahit isang pag-apruba at walang tutol ay pumapasa sa claim, kung hindi ay mapupunta ito sa sysadmin."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Kompetisyon",
+      "training": "Pagsasanay",
+      "payments": "Mga Bayarin",
+      "organisation": "Organisasyon"
     }
   }
 }

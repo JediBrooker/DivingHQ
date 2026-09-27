@@ -57,7 +57,15 @@ test("a founder signs up by country and runs their club's first meet", async ({ 
   await expect(page.locator('option[value="meet_manager"]')).toHaveCount(0);
 
   await page.getByRole("button", { name: /Create Account/i }).click();
-  await expect(page.locator(".msg-success")).toBeVisible();
+  // The form gives way to a panel that stays: where the link went, a
+  // resend that's cooling down (a mail just went out), and no bounce.
+  const inbox = page.getByTestId("check-inbox");
+  await expect(inbox).toContainText(`${world.username}@example.test`);
+  await expect(page.getByTestId("check-inbox-resend")).toBeDisabled();
+  await expect(page.getByTestId("check-inbox-resend")).toContainText(/\(\d+s\)/);
+  await page.waitForTimeout(3000);
+  await expect(page).toHaveURL(/\/register$/);
+  await expect(inbox).toBeVisible();
 
   // The country account exists, unclaimed, with the founder as club admin.
   const org = await setup.pool.query(
@@ -142,7 +150,7 @@ test("a founder in a country with provinces picks one", async ({ page }) => {
     await page.getByPlaceholder("e.g. Sydney Springboard").fill("Halifax Divers");
     await province.selectOption("NS");
     await page.getByRole("button", { name: /Create Account/i }).click();
-    await expect(page.locator(".msg-success")).toBeVisible();
+    await expect(page.getByTestId("check-inbox")).toBeVisible();
 
     const club = await setup.pool.query(
       `SELECT rg.short_code FROM clubs c JOIN regions rg ON rg.id = c.region_id
@@ -207,7 +215,8 @@ test("a federation claims a country and the clubs vote it in", async ({ page, re
     await page.locator('input[autocomplete="username"]').fill(fedUser);
     await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
     await page.getByRole("button", { name: /Submit Registration/i }).click();
-    await expect(page.locator(".msg-success")).toContainText("Verify your email");
+    await expect(page.getByTestId("check-inbox")).toContainText(`${fedUser}@example.test`);
+    await expect(page.getByTestId("register-org-next")).toContainText("clubs already on DivingHQ there vote");
 
     // Stand in for the emailed link: what the verify-email route does, done
     // directly, so the test doesn't need the server's JWT secret.

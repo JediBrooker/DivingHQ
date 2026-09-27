@@ -162,6 +162,19 @@
       "resend_label": "Felhasználónév vagy e-mail",
       "resend_button": "Új hivatkozás küldése",
       "resend_sent": "Ha a fiók megerősítésre vár, az új hivatkozás úton van. Nézd meg a beérkezett üzeneteidet."
+    },
+    "check_inbox": {
+      "title": "Nézd meg a beérkező leveleidet",
+      "body": "Megerősítő hivatkozást küldtünk ide: {email}. Kattints rá a fiókod beállításának befejezéséhez.",
+      "no_mail": "Pár perc után sincs semmi? Nézd meg a levélszemét mappát, vagy kérj új hivatkozást.",
+      "resend_wait": "Új hivatkozás küldése ({seconds} mp)",
+      "resent": "Az új hivatkozás úton van ide: {email}.",
+      "already": "Már rákattintottál a hivatkozásra?",
+      "next_org_pending": "A megerősítés után a DivingHQ elbírálja a szövetségedet. E-mailt küldünk, amikor jóváhagyták, és onnantól bejelentkezhetsz.",
+      "next_claim_clubs": "A megerősítés után megnyílik az igénylésed, és az ottani, már DivingHQ-n lévő klubok szavaznak róla. Amíg döntenek, bejelentkezhetsz.",
+      "next_claim_regions": "A megerősítés után megnyílik az igénylésed, és a már DivingHQ-n lévő államok és tartományok szavaznak róla. Amíg döntenek, bejelentkezhetsz.",
+      "next_claim_parent": "A megerősítés után megnyílik az igénylésed, és a szövetséged dönt róla. Amíg döntenek, bejelentkezhetsz.",
+      "next_claim_sysadmin": "A megerősítés után megnyílik az igénylésed, és a DivingHQ csapata elbírálja. Amíg döntenek, bejelentkezhetsz."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "hamarosan zárul",
       "pill_overdue": "lejárt",
       "chip_aria_tab": "{title}. Megnyitja a hozzá tartozó lapot ezen a vezérlőpulton."
+    },
+    "getting_started": {
+      "title": "Indítsd el: {club}",
+      "intro": "Néhány dolog, amit érdemes először beállítani. Mindegyik magától kipipálódik, ha kész.",
+      "all_done": "Minden kész. A klubod indulhat, ezt elrejtheted.",
+      "progress": "{done}/{total} kész",
+      "dismiss": "Elrejtés",
+      "dismiss_tip": "A lista elrejtése. Ezen az eszközön nem jelenik meg újra.",
+      "done": "Kész",
+      "step_meet": "Hozd létre az első versenyed",
+      "step_meet_desc": "Állíts be egy versenyt, amelyet a klubod rendez, majd add hozzá a versenyszámokat.",
+      "step_invite": "Hívd meg a tagjaidat",
+      "step_invite_desc": "Oszd meg a klub regisztrációs hivatkozását a Saját klubom oldalról.",
+      "step_code": "Állítsd be a klub rövid kódját",
+      "step_code_desc": "Klubversenyeken a műugróid mellett jelenik meg.",
+      "step_guide": "Olvasd el a klubadminisztrátori útmutatót",
+      "step_guide_desc": "Mit tehetsz az első versenytől a verseny napjáig."
     }
   },
   "role": {
@@ -628,7 +658,8 @@
         "step_3": "A <strong>Saját klubom</strong> oldalon hagyja jóvá a csatlakozni kívánókat és a műugrani, bíráskodni vagy edzősködni kívánó tagokat",
         "step_4": "A versenynapon a <strong>Vezérlőszobából</strong> irányítja a pontozást",
         "step_5": "Amikor szövetsége vagy regionális testülete csatlakozik, szavazzon az igényéről az <strong>Igények</strong> oldalon",
-        "cta": "Verseny rendezése ↗"
+        "cta": "Verseny rendezése ↗",
+        "step_invite": "A <strong>Saját klubom</strong> oldalon ossza meg klubja meghívó linkjét, és állítsa be a klubkódot"
       },
       "region_admin": {
         "name": "Régió-adminisztrátor",
@@ -1067,7 +1098,7 @@
       "country": "Az országukat (nemzetközi versenyek)",
       "region": "Az államukat / tartományukat (országos bajnokságok)",
       "club": "A klubjukat (klub- és klubközi versenyek)",
-      "hint": "Minden műugró mellett megjelenik az eredményjelzőn, az eredményekben és a PDF-ekben, és ez alapján csoportosul az éremtáblázat. Akinek nincs állam- vagy klubkódja, az országával jelenik meg. A csapat annál az államnál vagy klubnál jelenik meg, amely minden műugrójában közös, különben az országánál."
+      "hint": "Minden műugró mellett megjelenik az eredményjelzőn, az eredményekben és a PDF-ekben, és ez alapján csoportosul az éremtáblázat. Akinek nincs állam- vagy klubkódja, az országával jelenik meg."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "A klubadminisztrátorok rendezik a klubjuk versenyeit, és intézik az edzéseit, kifizetéseit és tagdíjait. Szövetségi szintű hozzáférést nem kapnak.",
     "current_admins": "Jelenlegi adminisztrátorok ({n})",
     "nobody_admins": "Ennek a klubnak még nincs adminisztrátora.",
-    "no_other_members": "Nincs más tag ebben a klubban. Előbb helyezzen át valakit a klubba a Felhasználókezelőben."
+    "no_other_members": "Nincs más tag ebben a klubban. Előbb helyezzen át valakit a klubba a Felhasználókezelőben.",
+    "setup": {
+      "invite_title": "Hívd meg a tagjaidat",
+      "invite_body": "Aki ezzel a hivatkozással regisztrál, annál a(z) {club} már ki van választva. Oszd meg e-mailben, csevegésben vagy a klub hírlevelében.",
+      "code_title": "Klubkód",
+      "code_hint": "Rövid kód, amely klubversenyeken a műugróid mellett jelenik meg az eredményjelzőn, az eredményekben és a PDF-ekben. Legfeljebb 8 betű, szám vagy kötőjel.",
+      "code_placeholder": "pl. SYD",
+      "code_saved": "Klubkód mentve",
+      "code_none": "Még nincs kód.",
+      "code_federation": "A klubod kódját a szövetséged állítja be."
+    },
+    "admins_intro_meets": "A klubadminok a klubjuk által rendezett versenyeket vezetik. Szövetségi szintű hozzáférést nem kapnak.",
+    "admins_intro_classes": "A klubadminok a klubjuk által rendezett versenyeket vezetik, és gondoskodnak a klub foglalkozásairól. Szövetségi szintű hozzáférést nem kapnak.",
+    "admins_intro_payments": "A klubadminok a klubjuk által rendezett versenyeket vezetik, és gondoskodnak a klub kifizetéseiről és tagdíjairól. Szövetségi szintű hozzáférést nem kapnak."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Szavazási idő (nap)",
       "description": "Lejártakor: legalább egy jóváhagyás és egyetlen kifogás sem esetén az igény elfogadott, különben a rendszergazdához kerül."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Verseny",
+      "training": "Edzés",
+      "payments": "Fizetések",
+      "organisation": "Szervezet"
     }
   }
 }

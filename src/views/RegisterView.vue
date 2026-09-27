@@ -1,15 +1,34 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCountryOptions } from '@/composables/useCountryOptions'
+import CheckInboxPanel from '@/components/CheckInboxPanel.vue'
 // Same file the server validates against (lib/countries.js). The picker
-// comes from useCountryOptions; this is just for the locale guess below.
+// comes from useCountryOptions; this is for the locale guess and the
+// invite links below.
 import COUNTRIES from '../../lib/countries.json'
 
-const router = useRouter()
 const { t } = useI18n()
+const route = useRoute()
 const { countryOptions, countryName: nameOfCountry } = useCountryOptions()
+
+// Invite links from a club admin's My club page look like
+// /register?country=AUS&club=<club id>. Only a real country code is taken,
+// and the club only once it turns up in that country's club list, so a
+// mangled or doctored link just leaves the form as it would be anyway.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const invite = (() => {
+  const q = route.query
+  const country = typeof q.country === 'string' ? q.country.trim().toUpperCase() : ''
+  const club = typeof q.club === 'string' ? q.club.trim().toLowerCase() : ''
+  const known = COUNTRIES.some(c => c.a3 === country)
+  return {
+    country: known ? country : '',
+    club: known && UUID_RE.test(club) ? club : '',
+    regionId: null,
+  }
+})()
 
 const fullName = ref('')
 const username = ref('')
@@ -85,6 +104,9 @@ const newClubCode = ref('')
 const msg = ref('')
 const msgType = ref('')
 const loading = ref(false)
+// Set once the account exists: the form gives way to the check-your-inbox
+// panel, which stays until they leave (no timed bounce to /login).
+const registered = ref(null)   // { email, username }
 
 // Public signups are gated off by default (coming-soon launch). null means
 // still checking, true is open (show the form), false is closed (show the notice).
@@ -105,7 +127,7 @@ onMounted(async () => {
     signupsEnabled.value = false
   }
   if (!signupsEnabled.value) return
-  countryCode.value = guessCountry()
+  countryCode.value = invite.country || guessCountry()
 })
 
 watch(countryCode, async (code) => {
@@ -180,6 +202,25 @@ watch(regionCode, () => {
   const c = clubChoice.value
   if (c && c !== 'new' && !visibleClubs.value.some(v => v.id === c)) clubChoice.value = ''
 })
+// Pick the invited club as soon as it's in the list, once; after that the
+// picker is theirs. Its region too, where the country has them, so the
+// region filter above agrees with the club. Clubs and regions load in
+// either order, hence the two triggers.
+watch(clubs, (list) => {
+  const c = invite.club && list.find(x => x.id === invite.club)
+  if (!c) return
+  invite.club = ''
+  clubChoice.value = c.id
+  invite.regionId = c.region_id || null
+  applyInviteRegion()
+})
+watch(() => regionList.value.regions, applyInviteRegion)
+function applyInviteRegion() {
+  const r = invite.regionId && regionList.value.regions.find(x => x.id === invite.regionId)
+  if (!r) return
+  invite.regionId = null
+  regionCode.value = r.short_code
+}
 
 async function handleSubmit() {
   msg.value = ''
@@ -214,11 +255,7 @@ async function handleSubmit() {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || t('auth.register.failed'))
-    // The server's message is English and always the same one, so say it
-    // in the reader's language instead.
-    msg.value = t('auth.register.success')
-    msgType.value = 'success'
-    setTimeout(() => router.push('/login'), 2500)
+    registered.value = { email: email.value.trim(), username: username.value.trim() }
   } catch (err) {
     msg.value = err.message
     msgType.value = 'error'
@@ -243,7 +280,8 @@ async function handleSubmit() {
     <h1>{{ $t('auth.register.title') }}</h1>
     <p class="subtitle">{{ $t('auth.register.subtitle') }}</p>
 
-    <form @submit.prevent="handleSubmit" class="form-stack">
+    <CheckInboxPanel v-if="registered" :email="registered.email" :username="registered.username" />
+    <form v-else @submit.prevent="handleSubmit" class="form-stack">
       <div class="field">
         <label class="label">{{ $t('auth.register.full_name') }}</label>
         <!-- autocomplete="name" lets iOS surface the contact-card
@@ -370,7 +408,7 @@ async function handleSubmit() {
       </button>
       <LegalConsent />
     </form>
-    <p class="footer-link">{{ $t('auth.register.already_have_account') }} <RouterLink to="/login">{{ $t('auth.register.sign_in_link') }}</RouterLink></p>
+    <p v-if="!registered" class="footer-link">{{ $t('auth.register.already_have_account') }} <RouterLink to="/login">{{ $t('auth.register.sign_in_link') }}</RouterLink></p>
     </template>
   </div>
 </template>

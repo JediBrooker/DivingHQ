@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useCountryOptions } from '@/composables/useCountryOptions'
+import CheckInboxPanel from '@/components/CheckInboxPanel.vue'
 
 const { t } = useI18n()
 const { countryOptions, countryName: nameOfCountry } = useCountryOptions()
@@ -29,6 +30,24 @@ const msg = ref('')
 const msgType = ref('')
 const loading = ref(false)
 const website = ref('')
+// After a successful submit: who to tell to check their inbox, and what
+// happens once they have. `approver` comes back on a claim (clubs,
+// regions, parent or sysadmin); a brand-new federation has none and waits
+// for a sysadmin instead.
+const registered = ref(null)   // { email, username, approver }
+const NEXT_STEP = {
+  clubs:    'auth.check_inbox.next_claim_clubs',
+  regions:  'auth.check_inbox.next_claim_regions',
+  parent:   'auth.check_inbox.next_claim_parent',
+  sysadmin: 'auth.check_inbox.next_claim_sysadmin',
+}
+const nextStep = computed(() => {
+  if (!registered.value) return ''
+  const a = registered.value.approver
+  // Any claim we don't have words for still gets a sensible line.
+  if (a) return t(NEXT_STEP[a] || NEXT_STEP.sysadmin)
+  return t('auth.check_inbox.next_org_pending')
+})
 
 // Every registration here is a claim (phase 3): on the account clubs
 // already started for the country, on one of its regions, or on a
@@ -135,8 +154,11 @@ async function handleSubmit() {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || t('auth.register.failed'))
-    msg.value = data.message
-    msgType.value = 'success'
+    registered.value = {
+      email: email.value.trim(),
+      username: username.value.trim(),
+      approver: data.approver || null,
+    }
   } catch (err) {
     msg.value = err.message
     msgType.value = 'error'
@@ -163,12 +185,15 @@ async function handleSubmit() {
 
     <!-- Clubs kept landing here from "Register your org" and either claimed
          their whole country or registered a federation named after the club. -->
-    <div class="club-callout" data-testid="club-callout">
+    <div v-if="!registered" class="club-callout" data-testid="club-callout">
       <strong>{{ $t('auth.register_org.club_callout') }}</strong>
       <RouterLink to="/register">{{ $t('auth.register_org.club_callout_action') }}</RouterLink>
     </div>
 
-    <form @submit.prevent="handleSubmit" class="form-stack">
+    <CheckInboxPanel v-if="registered" :email="registered.email" :username="registered.username">
+      <p class="next-note" data-testid="register-org-next">{{ nextStep }}</p>
+    </CheckInboxPanel>
+    <form v-else @submit.prevent="handleSubmit" class="form-stack">
       <div class="section">
         <div class="section-label">{{ $t('auth.register_org.section_org') }}</div>
         <div class="field">
@@ -255,7 +280,7 @@ async function handleSubmit() {
       </button>
       <LegalConsent />
     </form>
-    <p class="footer-link">{{ $t('auth.register_org.already_registered') }} <RouterLink to="/login">{{ $t('auth.register_org.sign_in_link') }}</RouterLink></p>
+    <p v-if="!registered" class="footer-link">{{ $t('auth.register_org.already_registered') }} <RouterLink to="/login">{{ $t('auth.register_org.sign_in_link') }}</RouterLink></p>
     </template>
   </div>
 </template>
@@ -300,6 +325,11 @@ h1 { font-size: 44px; font-style: italic; margin-bottom: 0.25rem; }
 .club-callout a { color: var(--cyan); font-weight: 600; }
 .hint-line { margin-top: 0.4rem; font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
 .hint-error { color: var(--danger-fg); }
+.next-note {
+  margin: 0; font-size: 13px; line-height: 1.55; color: var(--fg-2);
+  padding: 0.75rem; border-radius: var(--radius-sm);
+  background: var(--accent-soft); border: 1px solid var(--accent-soft-2);
+}
 .claim-note {
   margin: 0; font-size: 12px; line-height: 1.55; color: var(--fg-2);
   padding: 0.75rem; border-radius: var(--radius-sm);

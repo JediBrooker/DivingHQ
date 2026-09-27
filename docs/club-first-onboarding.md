@@ -709,6 +709,8 @@ Migration 090 adds `meets.represent_as`, `competitor_dive_lists.rep_club_id` / `
 
 **Default is `country`, not `club`** (deviation from §5). Every existing screen already showed the diver's country chip, so defaulting to club would have silently changed every meet. Organisers opt in per meet: "Divers represent" in the meet's Edit dialog.
 
+**New meets follow their host.** The column default stays `country` so existing rows never change, but `POST /api/meets` without a `represent_as` now picks the host's level: `club` when `host_club_id` is set (named or defaulted to a club admin's only club), `region` for `host_region_id`, `country` otherwise. A club's first meet shows club codes rather than the same country code next to every diver. The New meet form has the same "Divers represent" select, pre-set to that default.
+
 **Snapshot by trigger.** Rather than touching the eleven code paths that insert entries, a `BEFORE INSERT` trigger copies the diver's club, region and country onto the row. `event_rep_code(event, user, home_country)` reads the snapshot, falls back to the diver's current club and region for pre-090 rows, and falls back to the country when there's nothing better.
 
 Migration 095 tightened this. When a snapshot exists it is the whole answer: an entry made from a club with no region used to borrow the region of whatever club the diver joined later, and an entry whose club was deleted borrowed their new club. Now a snapshot club with no snapshot region resolves through that same club's region (it may have been placed after the entry), and a deleted club reads as the country. The same trigger snapshots synchro partners into `partner_rep_club_id` / `partner_rep_region_id` / `partner_rep_country`, on insert and whenever a row's partner is swapped, because roster late-add and CSV import give the partner no row of their own. An account merge sets `divinghq.keep_rep_snapshot` for its transaction so moving `partner_id` to the same diver's other account doesn't re-snapshot. `event_rep_ids(event, user)` holds the resolution; `event_rep_code()` and the region-record lookup in `lib/records.js` both use it.
@@ -738,3 +740,12 @@ Three holes let a country end up with two accounts, and there's no merge, so the
 **`/register-org` copy.** A callout sends clubs to `/register`; the name field reads "Organisation name"; the note under the country says which of the above is about to happen, and warns a state body when the country has no regions to pick from.
 
 **Not done:** a claimed federation that's suspended still doesn't hold its country, so a club signing up meanwhile starts an unclaimed account and reactivating the federation leaves two. Blocking it would also block every country whose junk registration was once denied (also `suspended`), so it needs a proper "denied" state first.
+
+## 19. First-week onboarding for club founders
+
+A founder used to land on a dashboard built for federations: the setup wizard is org-admin only and their one tab was "Other". Now:
+
+- **Get started panel** (`src/components/dashboard/ClubGettingStarted.vue`), above the dashboard tabs for anyone in `club_admin_of`: create a meet, invite members, set the short code, read the guide. The first three tick themselves off from `GET /api/clubs/:id/setup` (meet count, member count, `short_code`); the guide step ticks when opened from the panel. The code step is hidden when the federation owns the code and hasn't set one. Hiding the panel is per user in localStorage.
+- **Invite link** on My club (`src/components/ClubSetupCard.vue`): `/register?country=<alpha-3>&club=<club id>`. RegisterView takes the country only if it's in `lib/countries.json` and the club only once it appears in that country's club list, selecting its region too. Junk parameters leave the form as it would be anyway.
+- **Short code** on the same card, `PUT /api/clubs/:id/short-code` (`routes/club-setup.js`): trimmed, upper-cased, up to 8 letters / digits / dashes, unique within the org, audit-logged as `club.code_changed`. Same rule as the region picker: the club's admins set it where the country is unclaimed, the federation's org admin (or the sysadmin) otherwise.
+- The sidebar section holding My club / My region is headed **Organisation**, not "Federation".

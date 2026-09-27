@@ -162,6 +162,19 @@
       "resend_label": "Usuario o correo electrónico",
       "resend_button": "Enviar un enlace nuevo",
       "resend_sent": "Si esa cuenta está pendiente de verificación, hay un enlace nuevo en camino. Revisa tu bandeja de entrada."
+    },
+    "check_inbox": {
+      "title": "Revisa tu bandeja de entrada",
+      "body": "Hemos enviado un enlace de verificación a {email}. Haz clic en él para terminar de configurar tu cuenta.",
+      "no_mail": "¿Nada después de unos minutos? Revisa la carpeta de spam o envía un enlace nuevo.",
+      "resend_wait": "Enviar un enlace nuevo ({seconds} s)",
+      "resent": "Hay un enlace nuevo en camino a {email}.",
+      "already": "¿Ya has hecho clic en el enlace?",
+      "next_org_pending": "Cuando lo verifiques, DivingHQ revisará tu federación. Te escribiremos cuando esté aprobada y desde entonces podrás iniciar sesión.",
+      "next_claim_clubs": "Cuando lo verifiques, tu solicitud se abrirá y los clubes que ya están allí en DivingHQ votarán. Puedes iniciar sesión mientras se decide.",
+      "next_claim_regions": "Cuando lo verifiques, tu solicitud se abrirá y los estados y provincias que ya están en DivingHQ votarán. Puedes iniciar sesión mientras se decide.",
+      "next_claim_parent": "Cuando lo verifiques, tu solicitud se abrirá y tu federación decidirá. Puedes iniciar sesión mientras se decide.",
+      "next_claim_sysadmin": "Cuando lo verifiques, tu solicitud se abrirá y el equipo de DivingHQ la revisará. Puedes iniciar sesión mientras se decide."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "cierra pronto",
       "pill_overdue": "atrasado",
       "chip_aria_tab": "{title}. Abre su pestaña en este panel."
+    },
+    "getting_started": {
+      "title": "Pon en marcha {club}",
+      "intro": "Algunas cosas que configurar primero. Cada una se marca sola cuando está hecha.",
+      "all_done": "Todo listo. Tu club ya puede empezar, así que puedes ocultar esto.",
+      "progress": "{done} de {total} hechas",
+      "dismiss": "Ocultar",
+      "dismiss_tip": "Oculta esta lista. No volverá a aparecer en este dispositivo.",
+      "done": "Hecho",
+      "step_meet": "Crea tu primera competición",
+      "step_meet_desc": "Configura una competición que organice tu club y añade sus pruebas.",
+      "step_invite": "Invita a tus miembros",
+      "step_invite_desc": "Comparte el enlace de registro del club desde Mi club.",
+      "step_code": "Define el código corto de tu club",
+      "step_code_desc": "Aparece junto a tus saltadores en las competiciones de club.",
+      "step_guide": "Lee la guía para administradores de club",
+      "step_guide_desc": "Lo que puedes hacer, desde la primera competición hasta el día de la prueba."
     }
   },
   "profile": {
@@ -617,7 +647,8 @@
         "step_3": "Aprueba en <strong>Mi club</strong> a quienes piden unirse y a los miembros que quieren saltar, juzgar o entrenar",
         "step_4": "El día de la competición, dirige la puntuación desde la <strong>Sala de control</strong>",
         "step_5": "Cuando llegue tu federación u organismo regional, vota su reclamación en <strong>Reclamaciones</strong>",
-        "cta": "Organizar una competición ↗"
+        "cta": "Organizar una competición ↗",
+        "step_invite": "En <strong>Mi club</strong>, comparte el enlace de invitación de tu club y define el código del club"
       },
       "region_admin": {
         "name": "Administrador regional",
@@ -1056,7 +1087,7 @@
       "country": "Su país (competiciones internacionales)",
       "region": "Su estado / provincia (campeonatos nacionales)",
       "club": "Su club (competiciones de club e interclubes)",
-      "hint": "Se muestra junto a cada saltador en el marcador, los resultados y los PDF, y es lo que agrupa el medallero. Un saltador sin código de estado o club aparece con su país. Un equipo muestra el estado o club que comparten todos sus saltadores; si no, su país."
+      "hint": "Se muestra junto a cada saltador en el marcador, los resultados y los PDF, y es lo que agrupa el medallero. Un saltador sin código de estado o de club aparece con su país."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Los administradores del club organizan sus competiciones y se ocupan de sus clases, cobros y cuotas de afiliación. No tienen acceso a toda la federación.",
     "current_admins": "Administradores actuales ({n})",
     "nobody_admins": "Este club aún no tiene administrador.",
-    "no_other_members": "No hay más miembros en este club. Primero mueve a alguien a él desde el Gestor de usuarios."
+    "no_other_members": "No hay más miembros en este club. Primero mueve a alguien a él desde el Gestor de usuarios.",
+    "setup": {
+      "invite_title": "Invita a tus miembros",
+      "invite_body": "Quien se registre con este enlace empieza con {club} ya elegido. Compártelo por correo, chat o en el boletín del club.",
+      "code_title": "Código del club",
+      "code_hint": "Un código corto que aparece junto a tus saltadores en el marcador, los resultados y los PDF de las competiciones de club. Hasta 8 letras, números o guiones.",
+      "code_placeholder": "p. ej. SYD",
+      "code_saved": "Código del club guardado",
+      "code_none": "Todavía sin código.",
+      "code_federation": "El código de tu club lo fija tu federación."
+    },
+    "admins_intro_meets": "Los administradores del club dirigen las competiciones que organiza su club. No tienen acceso a nivel de federación.",
+    "admins_intro_classes": "Los administradores del club dirigen las competiciones que organiza su club y se ocupan de sus clases. No tienen acceso a nivel de federación.",
+    "admins_intro_payments": "Los administradores del club dirigen las competiciones que organiza su club y se ocupan de sus pagos y cuotas de afiliación. No tienen acceso a nivel de federación."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Plazo de votación (días)",
       "description": "Al terminar: al menos una aprobación y ninguna objeción aprueban la reclamación; si no, pasa al administrador del sistema."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Competición",
+      "training": "Entrenamiento",
+      "payments": "Pagos",
+      "organisation": "Organización"
     }
   }
 }

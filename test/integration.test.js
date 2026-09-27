@@ -5132,3 +5132,153 @@ test("regions: an unknown org's region list is empty with no catalogue", async (
   assert.equal(r.status, 200);
   assert.deepEqual(r.body, { label: null, regions: [], catalogue: false });
 });
+
+// A new meet labels divers at the host's own level unless the creator
+// picks: club for a club's meet, region for a region's, country for the
+// federation's. Before this every club night came out as 'country'.
+test("new meets default 'divers represent' to the host's level", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "BLM";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  try {
+    const A = await claimKit.founder(CODE, "Gustavia Divers");
+    const clubNight = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Gustavia Club Night" } });
+    assert.equal(clubNight.status, 201, JSON.stringify(clubNight.body));
+    assert.equal(clubNight.body.host_club_id, A.clubId);
+    assert.equal(clubNight.body.represent_as, "club");
+    // An explicit choice still wins, and junk is still refused.
+    const open = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Island Open", represent_as: "country" } });
+    assert.equal(open.status, 201, JSON.stringify(open.body));
+    assert.equal(open.body.represent_as, "country");
+    assert.equal((await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "x", represent_as: "" } })).status, 400);
+
+    // A region admin's meet (defaulted to their only region) goes by region.
+    const orgId = (await pool.query("SELECT org_id FROM clubs WHERE id = $1", [A.clubId])).rows[0].org_id;
+    const regionId = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Saint-Barthélemy', 'SBH') RETURNING id", [orgId],
+    )).rows[0].id;
+    const rUser = `int-ra-${crypto.randomBytes(4).toString("hex")}`;
+    const reg = await fetchJson("POST", "/api/auth/register", {
+      body: { username: rUser, full_name: "Region Admin", password: TEST_PASSWORD,
+              email: `${rUser}@example.test`, country_code: CODE, club_id: A.clubId },
+    });
+    assert.equal(reg.status, 201, JSON.stringify(reg.body));
+    const rId = (await pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1 RETURNING id", [rUser])).rows[0].id;
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [regionId, rId, orgId]);
+    const R = await claimKit.login(rUser);
+    const champs = await fetchJson("POST", "/api/meets", { token: R.token, body: { name: "Island Championships" } });
+    assert.equal(champs.status, 201, JSON.stringify(champs.body));
+    assert.equal(champs.body.host_region_id, regionId);
+    assert.equal(champs.body.represent_as, "region");
+
+    // The federation's own meets keep 'country'; one it sets up on a
+    // club's behalf follows the club.
+    const fedMeet = await fetchJson("POST", "/api/meets", { token: state.adminToken, body: { name: "Nationals" } });
+    assert.equal(fedMeet.status, 201, JSON.stringify(fedMeet.body));
+    assert.equal(fedMeet.body.represent_as, "country");
+    const fedClub = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, 'Fed Club', 'FC') RETURNING id", [state.orgId],
+    )).rows[0].id;
+    const onBehalf = await fetchJson("POST", "/api/meets", { token: state.adminToken, body: { name: "Fed Club Night", host_club_id: fedClub } });
+    assert.equal(onBehalf.status, 201, JSON.stringify(onBehalf.body));
+    assert.equal(onBehalf.body.represent_as, "club");
+  } finally {
+    await claimKit.wipe(CODE);
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [state.orgId]).catch(() => {});
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [state.orgId]).catch(() => {});
+    await teardownFixture(state);
+  }
+});
+
+// Club setup (routes/club-setup.js): the dashboard's Get started panel
+// and My club's invite link / short code card read and write this.
+test("club setup: a founder's progress, invite parts and short code", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "SXM";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  try {
+    const A = await claimKit.founder(CODE, "Philipsburg Divers");
+    const B = await claimKit.founder(CODE, "Simpson Bay Divers", { new_club_short_code: "SBY" });
+
+    const fresh = await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token });
+    assert.equal(fresh.status, 200, JSON.stringify(fresh.body));
+    assert.equal(fresh.body.name, "Philipsburg Divers");
+    assert.equal(fresh.body.country_code, CODE, "invite link needs the country");
+    assert.equal(fresh.body.short_code, null);
+    assert.equal(fresh.body.claim_state, "unclaimed");
+    assert.equal(fresh.body.can_edit_code, true, "no federation, so the club sets its own code");
+    assert.equal(fresh.body.meet_count, 0);
+    assert.equal(fresh.body.member_count, 1);
+    assert.equal(fresh.body.you_are_member, true);
+
+    // Someone follows the invite link (country + club), and a meet lands.
+    const member = `int-inv-${crypto.randomBytes(4).toString("hex")}`;
+    const joined = await fetchJson("POST", "/api/auth/register", {
+      body: { username: member, full_name: "Invited Diver", password: TEST_PASSWORD,
+              email: `${member}@example.test`, country_code: CODE, club_id: A.clubId },
+    });
+    assert.equal(joined.status, 201, JSON.stringify(joined.body));
+    assert.equal((await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Philipsburg Club Night" } })).status, 201);
+    const later = (await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body;
+    assert.equal(later.member_count, 2);
+    assert.equal(later.meet_count, 1);
+
+    // The code: trimmed, upper-cased, validated, unique within the country.
+    const set = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: " phi " } });
+    assert.equal(set.status, 200, JSON.stringify(set.body));
+    assert.equal(set.body.short_code, "PHI");
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body.short_code, "PHI");
+    for (const bad of ["WAY-TOO-LONG", "P L Y", "<b>", 42]) {
+      const r = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: bad } });
+      assert.equal(r.status, 400, `${JSON.stringify(bad)} should be refused`);
+    }
+    // A body without the field doesn't quietly clear the code.
+    assert.equal((await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: {} })).status, 400);
+    const taken = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: "sby" } });
+    assert.equal(taken.status, 409);
+    assert.equal(taken.body.code, "short_code_taken");
+    const audit = await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'club.code_changed'", [A.clubId],
+    );
+    assert.deepEqual(audit.rows.map((r) => r.metadata), [{ from: null, to: "PHI" }]);
+    // Clearing it is allowed too.
+    const cleared = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: "" } });
+    assert.equal(cleared.status, 200);
+    assert.equal(cleared.body.short_code, null);
+
+    // Nobody else's club: another club's admin, a plain member, another org.
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: B.token })).status, 403);
+    assert.equal((await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: B.token, body: { short_code: "HAX" } })).status, 403);
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1", [member]);
+    const M = await claimKit.login(member);
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: M.token })).status, 403);
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: state.adminToken })).status, 404);
+    assert.equal((await fetchJson("GET", "/api/clubs/not-a-uuid/setup", { token: A.token })).status, 404);
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`)).status, 403, "anonymous gets nothing");
+
+    // Under a federation the club admin can read their progress, but the
+    // federation owns the code.
+    const fedClub = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, 'Federation Club') RETURNING id", [state.orgId],
+    )).rows[0].id;
+    const adminUser = await insertUser({ orgId: state.orgId, username: `int-fca-${state.slug}`, fullName: "Fed Club Admin", role: "spectator" });
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [fedClub, adminUser, state.orgId]);
+    await pool.query("UPDATE users SET password = $1 WHERE id = $2", [await require("bcrypt").hash(TEST_PASSWORD, 4), adminUser]);
+    const FCA = await claimKit.login(`int-fca-${state.slug}`);
+    const fedView = await fetchJson("GET", `/api/clubs/${fedClub}/setup`, { token: FCA.token });
+    assert.equal(fedView.status, 200, JSON.stringify(fedView.body));
+    assert.equal(fedView.body.can_edit_code, false);
+    assert.equal((await fetchJson("PUT", `/api/clubs/${fedClub}/short-code`, { token: FCA.token, body: { short_code: "FED" } })).status, 403);
+    // ...and the federation's admin can set it from here as well.
+    const orgSet = await fetchJson("PUT", `/api/clubs/${fedClub}/short-code`, { token: state.adminToken, body: { short_code: "FED" } });
+    assert.equal(orgSet.status, 200, JSON.stringify(orgSet.body));
+  } finally {
+    await claimKit.wipe(CODE);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [state.orgId]).catch(() => {});
+    await teardownFixture(state);
+  }
+});

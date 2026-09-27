@@ -162,6 +162,19 @@
       "resend_label": "Username or email",
       "resend_button": "Send a new link",
       "resend_sent": "If that account is waiting for verification, a new link is on its way. Check your inbox."
+    },
+    "check_inbox": {
+      "title": "Check your inbox",
+      "body": "We've sent a verification link to {email}. Click it to finish setting up your account.",
+      "no_mail": "Nothing after a few minutes? Check your spam folder, or send a new link.",
+      "resend_wait": "Send a new link ({seconds}s)",
+      "resent": "A new link is on its way to {email}.",
+      "already": "Clicked the link already?",
+      "next_org_pending": "Once you've verified, DivingHQ reviews your federation. We'll email you when it's approved, and you can sign in from then on.",
+      "next_claim_clubs": "Once you've verified, your claim opens and the clubs already on DivingHQ there vote on it. You can sign in while it's decided.",
+      "next_claim_regions": "Once you've verified, your claim opens and the states and provinces already on DivingHQ vote on it. You can sign in while it's decided.",
+      "next_claim_parent": "Once you've verified, your claim opens and your federation decides on it. You can sign in while it's decided.",
+      "next_claim_sysadmin": "Once you've verified, your claim opens and the DivingHQ team reviews it. You can sign in while it's decided."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "closing soon",
       "pill_overdue": "overdue",
       "chip_aria_tab": "{title}. Opens its tab on this dashboard."
+    },
+    "getting_started": {
+      "title": "Get {club} started",
+      "intro": "A few things to set up first. Each one ticks itself off once it's done.",
+      "all_done": "All done. Your club is ready to go, so you can hide this.",
+      "progress": "{done} of {total} done",
+      "dismiss": "Hide",
+      "dismiss_tip": "Hide this checklist. It won't come back on this device.",
+      "done": "Done",
+      "step_meet": "Create your first meet",
+      "step_meet_desc": "Set up a meet your club hosts, then add its events.",
+      "step_invite": "Invite your members",
+      "step_invite_desc": "Share your club's signup link from My club.",
+      "step_code": "Set your club's short code",
+      "step_code_desc": "Shown next to your divers at club meets.",
+      "step_guide": "Read the club admin guide",
+      "step_guide_desc": "What you can do, from the first meet to meet day."
     }
   },
   "profile": {
@@ -617,7 +647,8 @@
         "step_3": "On <strong>My club</strong>, approve people asking to join and members who want to dive, judge or coach",
         "step_4": "On the day, drive scoring from <strong>Control Room</strong>",
         "step_5": "When your federation or state body arrives, vote on its claim on <strong>Claims</strong>",
-        "cta": "Running a meet ↗"
+        "cta": "Running a meet ↗",
+        "step_invite": "On <strong>My club</strong>, share your club's invite link and set its club code"
       },
       "region_admin": {
         "name": "Region Admin",
@@ -1056,7 +1087,7 @@
       "country": "Their country (international meets)",
       "region": "Their state / province (national championships)",
       "club": "Their club (club and inter-club meets)",
-      "hint": "Shown next to each diver on the scoreboard, results and PDFs, and what the medal table groups by. A diver with no state or club code falls back to their country. A team shows the state or club all its divers share, otherwise its country."
+      "hint": "Shown next to each diver on the scoreboard, results and PDFs, and what the medal table groups by. A diver with no state or club code falls back to their country."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Club admins run their club's meets and look after its classes, payouts and affiliation payments. They get no federation-wide access.",
     "current_admins": "Current admins ({n})",
     "nobody_admins": "Nobody admins this club yet.",
-    "no_other_members": "No other members in this club. Move someone into it from the User Manager first."
+    "no_other_members": "No other members in this club. Move someone into it from the User Manager first.",
+    "setup": {
+      "invite_title": "Invite your members",
+      "invite_body": "Anyone who signs up with this link starts with {club} already picked. Share it by email, chat or your club newsletter.",
+      "code_title": "Club code",
+      "code_hint": "A short code shown next to your divers on the scoreboard, results and PDFs at club meets. Up to 8 letters, numbers or dashes.",
+      "code_placeholder": "e.g. SYD",
+      "code_saved": "Club code saved",
+      "code_none": "No code yet.",
+      "code_federation": "Your federation sets your club's code."
+    },
+    "admins_intro_meets": "Club admins run the meets their club hosts. They get no federation-wide access.",
+    "admins_intro_classes": "Club admins run the meets their club hosts and look after its classes. They get no federation-wide access.",
+    "admins_intro_payments": "Club admins run the meets their club hosts and look after its payouts and affiliation payments. They get no federation-wide access."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Voting window (days)",
       "description": "When it runs out: at least one approval and no objections passes the claim, otherwise it goes to the sysadmin."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Competition",
+      "training": "Training",
+      "payments": "Payments",
+      "organisation": "Organisation"
     }
   }
 }

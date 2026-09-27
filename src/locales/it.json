@@ -162,6 +162,19 @@
       "resend_label": "Nome utente o email",
       "resend_button": "Invia un nuovo link",
       "resend_sent": "Se quell'account è in attesa di verifica, un nuovo link è in arrivo. Controlla la tua casella di posta."
+    },
+    "check_inbox": {
+      "title": "Controlla la tua casella di posta",
+      "body": "Abbiamo inviato un link di verifica a {email}. Cliccalo per completare la configurazione del tuo account.",
+      "no_mail": "Niente dopo qualche minuto? Controlla la cartella spam, oppure invia un nuovo link.",
+      "resend_wait": "Invia un nuovo link ({seconds} s)",
+      "resent": "Un nuovo link è in arrivo a {email}.",
+      "already": "Hai già cliccato il link?",
+      "next_org_pending": "Dopo la verifica, DivingHQ esamina la tua federazione. Ti scriveremo quando sarà approvata e da quel momento potrai accedere.",
+      "next_claim_clubs": "Dopo la verifica, la tua richiesta si apre e i club già presenti lì su DivingHQ la votano. Puoi accedere mentre si decide.",
+      "next_claim_regions": "Dopo la verifica, la tua richiesta si apre e gli stati e le province già presenti su DivingHQ la votano. Puoi accedere mentre si decide.",
+      "next_claim_parent": "Dopo la verifica, la tua richiesta si apre e decide la tua federazione. Puoi accedere mentre si decide.",
+      "next_claim_sysadmin": "Dopo la verifica, la tua richiesta si apre e il team di DivingHQ la esamina. Puoi accedere mentre si decide."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "chiude a breve",
       "pill_overdue": "in ritardo",
       "chip_aria_tab": "{title}. Apre la scheda corrispondente in questo pannello."
+    },
+    "getting_started": {
+      "title": "Avvia {club}",
+      "intro": "Alcune cose da configurare subito. Ognuna si spunta da sola quando è fatta.",
+      "all_done": "Tutto fatto. Il tuo club è pronto, puoi nascondere questo riquadro.",
+      "progress": "{done} di {total} fatti",
+      "dismiss": "Nascondi",
+      "dismiss_tip": "Nascondi questa lista. Non ricomparirà su questo dispositivo.",
+      "done": "Fatto",
+      "step_meet": "Crea la tua prima gara",
+      "step_meet_desc": "Imposta una gara organizzata dal tuo club, poi aggiungi le sue specialità.",
+      "step_invite": "Invita i tuoi membri",
+      "step_invite_desc": "Condividi il link di registrazione del club da Il mio club.",
+      "step_code": "Imposta il codice breve del club",
+      "step_code_desc": "Mostrato accanto ai tuoi tuffatori nelle gare di club.",
+      "step_guide": "Leggi la guida per gli amministratori di club",
+      "step_guide_desc": "Cosa puoi fare, dalla prima gara al giorno della competizione."
     }
   },
   "role": {
@@ -628,7 +658,8 @@
         "step_3": "In <strong>Il mio club</strong> approva chi chiede di entrare e i membri che vogliono tuffarsi, giudicare o allenare",
         "step_4": "Il giorno della gara, dirigi i punteggi dalla <strong>Sala Controllo</strong>",
         "step_5": "Quando arriva la tua federazione o l'ente regionale, vota la sua rivendicazione in <strong>Rivendicazioni</strong>",
-        "cta": "Organizzare una gara ↗"
+        "cta": "Organizzare una gara ↗",
+        "step_invite": "In <strong>Il mio club</strong>, condividi il link di invito del tuo club e imposta il codice del club"
       },
       "region_admin": {
         "name": "Amministratore regionale",
@@ -1067,7 +1098,7 @@
       "country": "Il loro paese (gare internazionali)",
       "region": "Il loro stato / provincia (campionati nazionali)",
       "club": "Il loro club (gare di club e interclub)",
-      "hint": "Compare accanto a ogni tuffatore sul tabellone, nei risultati e nei PDF, ed è il criterio con cui si raggruppa il medagliere. Un tuffatore senza codice di stato o club compare con il suo paese. Una squadra mostra lo stato o il club comune a tutti i suoi tuffatori, altrimenti il suo paese."
+      "hint": "Mostrato accanto a ogni tuffatore sul tabellone, nei risultati e nei PDF, ed è ciò per cui si raggruppa il medagliere. Un tuffatore senza codice di stato o di club compare con il suo paese."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Gli amministratori del club organizzano le gare del proprio club e ne gestiscono corsi, pagamenti e quote di affiliazione. Non hanno accesso a livello di federazione.",
     "current_admins": "Amministratori attuali ({n})",
     "nobody_admins": "Questo club non ha ancora un amministratore.",
-    "no_other_members": "Nessun altro membro in questo club. Sposta prima qualcuno nel club dalla Gestione utenti."
+    "no_other_members": "Nessun altro membro in questo club. Sposta prima qualcuno nel club dalla Gestione utenti.",
+    "setup": {
+      "invite_title": "Invita i tuoi membri",
+      "invite_body": "Chi si registra con questo link trova {club} già selezionato. Condividilo via email, chat o nella newsletter del club.",
+      "code_title": "Codice del club",
+      "code_hint": "Un codice breve mostrato accanto ai tuoi tuffatori sul tabellone, nei risultati e nei PDF delle gare di club. Fino a 8 lettere, numeri o trattini.",
+      "code_placeholder": "es. SYD",
+      "code_saved": "Codice del club salvato",
+      "code_none": "Ancora nessun codice.",
+      "code_federation": "Il codice del tuo club lo stabilisce la tua federazione."
+    },
+    "admins_intro_meets": "Gli amministratori del club gestiscono le gare organizzate dal loro club. Non hanno accesso a livello di federazione.",
+    "admins_intro_classes": "Gli amministratori del club gestiscono le gare organizzate dal loro club e si occupano dei suoi corsi. Non hanno accesso a livello di federazione.",
+    "admins_intro_payments": "Gli amministratori del club gestiscono le gare organizzate dal loro club e si occupano dei suoi pagamenti e delle quote di affiliazione. Non hanno accesso a livello di federazione."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Durata del voto (giorni)",
       "description": "Alla scadenza: almeno un'approvazione e nessuna obiezione fanno passare la rivendicazione, altrimenti va all'amministratore di sistema."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Gare",
+      "training": "Allenamento",
+      "payments": "Pagamenti",
+      "organisation": "Organizzazione"
     }
   }
 }

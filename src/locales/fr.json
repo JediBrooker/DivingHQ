@@ -162,6 +162,19 @@
       "resend_label": "Nom d'utilisateur ou e-mail",
       "resend_button": "Envoyer un nouveau lien",
       "resend_sent": "Si ce compte attend une vérification, un nouveau lien est en route. Consultez votre boîte de réception."
+    },
+    "check_inbox": {
+      "title": "Consultez votre boîte de réception",
+      "body": "Nous avons envoyé un lien de vérification à {email}. Cliquez dessus pour terminer la création de votre compte.",
+      "no_mail": "Rien au bout de quelques minutes ? Vérifiez vos courriers indésirables, ou demandez un nouveau lien.",
+      "resend_wait": "Envoyer un nouveau lien ({seconds} s)",
+      "resent": "Un nouveau lien est en route vers {email}.",
+      "already": "Vous avez déjà cliqué sur le lien ?",
+      "next_org_pending": "Une fois la vérification faite, DivingHQ examine votre fédération. Nous vous écrirons dès qu'elle sera approuvée, et vous pourrez alors vous connecter.",
+      "next_claim_clubs": "Une fois la vérification faite, votre revendication s'ouvre et les clubs déjà présents sur DivingHQ dans ce pays votent. Vous pouvez vous connecter pendant la décision.",
+      "next_claim_regions": "Une fois la vérification faite, votre revendication s'ouvre et les États et provinces déjà présents sur DivingHQ votent. Vous pouvez vous connecter pendant la décision.",
+      "next_claim_parent": "Une fois la vérification faite, votre revendication s'ouvre et votre fédération la tranche. Vous pouvez vous connecter pendant la décision.",
+      "next_claim_sysadmin": "Une fois la vérification faite, votre revendication s'ouvre et l'équipe DivingHQ l'examine. Vous pouvez vous connecter pendant la décision."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "clôture proche",
       "pill_overdue": "en retard",
       "chip_aria_tab": "{title}. Ouvre l'onglet correspondant de ce tableau de bord."
+    },
+    "getting_started": {
+      "title": "Lancez {club}",
+      "intro": "Quelques éléments à configurer d'abord. Chacun se coche tout seul une fois fait.",
+      "all_done": "Tout est prêt. Votre club peut démarrer, vous pouvez masquer ceci.",
+      "progress": "{done} sur {total} faits",
+      "dismiss": "Masquer",
+      "dismiss_tip": "Masquer cette liste. Elle ne reviendra pas sur cet appareil.",
+      "done": "Fait",
+      "step_meet": "Créez votre première compétition",
+      "step_meet_desc": "Créez une compétition organisée par votre club, puis ajoutez ses épreuves.",
+      "step_invite": "Invitez vos membres",
+      "step_invite_desc": "Partagez le lien d'inscription du club depuis Mon club.",
+      "step_code": "Définissez le code court du club",
+      "step_code_desc": "Affiché à côté de vos plongeurs lors des compétitions de club.",
+      "step_guide": "Lisez le guide de l'administrateur de club",
+      "step_guide_desc": "Ce que vous pouvez faire, de la première compétition au jour J."
     }
   },
   "role": {
@@ -628,7 +658,8 @@
         "step_3": "Dans <strong>Mon club</strong>, approuvez les personnes qui demandent à rejoindre le club et les membres qui veulent plonger, juger ou entraîner",
         "step_4": "Le jour J, pilotez la notation depuis la <strong>Salle de contrôle</strong>",
         "step_5": "Quand votre fédération ou votre organe régional arrive, votez sur sa revendication dans <strong>Revendications</strong>",
-        "cta": "Organiser une compétition ↗"
+        "cta": "Organiser une compétition ↗",
+        "step_invite": "Dans <strong>Mon club</strong>, partagez le lien d'invitation de votre club et définissez son code"
       },
       "region_admin": {
         "name": "Administrateur régional",
@@ -1067,7 +1098,7 @@
       "country": "Leur pays (compétitions internationales)",
       "region": "Leur État / province (championnats nationaux)",
       "club": "Leur club (compétitions de club et interclubs)",
-      "hint": "Affiché à côté de chaque plongeur sur le tableau d'affichage, dans les résultats et les PDF, et sert à regrouper le tableau des médailles. Un plongeur sans code d'État ou de club apparaît avec son pays. Une équipe affiche l'État ou le club commun à tous ses plongeurs, sinon son pays."
+      "hint": "Affiché à côté de chaque plongeur sur le tableau, dans les résultats et les PDF, et c'est ce qui regroupe le tableau des médailles. Un plongeur sans code d'État ou de club apparaît avec son pays."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Les administrateurs du club organisent ses compétitions et gèrent ses cours, ses versements et ses cotisations d'affiliation. Ils n'ont aucun accès à l'échelle de la fédération.",
     "current_admins": "Administrateurs actuels ({n})",
     "nobody_admins": "Ce club n'a pas encore d'administrateur.",
-    "no_other_members": "Aucun autre membre dans ce club. Déplacez d'abord quelqu'un vers ce club depuis le Gestionnaire d'utilisateurs."
+    "no_other_members": "Aucun autre membre dans ce club. Déplacez d'abord quelqu'un vers ce club depuis le Gestionnaire d'utilisateurs.",
+    "setup": {
+      "invite_title": "Invitez vos membres",
+      "invite_body": "Toute personne qui s'inscrit avec ce lien a déjà {club} sélectionné. Partagez-le par e-mail, messagerie ou dans la lettre d'information du club.",
+      "code_title": "Code du club",
+      "code_hint": "Un code court affiché à côté de vos plongeurs sur le tableau, dans les résultats et les PDF des compétitions de club. Jusqu'à 8 lettres, chiffres ou tirets.",
+      "code_placeholder": "ex. SYD",
+      "code_saved": "Code du club enregistré",
+      "code_none": "Pas encore de code.",
+      "code_federation": "C'est votre fédération qui fixe le code de votre club."
+    },
+    "admins_intro_meets": "Les administrateurs du club organisent les compétitions que leur club accueille. Ils n'ont aucun accès à l'échelle de la fédération.",
+    "admins_intro_classes": "Les administrateurs du club organisent les compétitions que leur club accueille et gèrent ses cours. Ils n'ont aucun accès à l'échelle de la fédération.",
+    "admins_intro_payments": "Les administrateurs du club organisent les compétitions que leur club accueille et gèrent ses versements et ses cotisations d'affiliation. Ils n'ont aucun accès à l'échelle de la fédération."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Durée du vote (jours)",
       "description": "À son terme : au moins une approbation et aucune objection valident la revendication, sinon elle part à l'administrateur système."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Compétition",
+      "training": "Entraînement",
+      "payments": "Paiements",
+      "organisation": "Organisation"
     }
   }
 }

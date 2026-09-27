@@ -41,6 +41,7 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import { useFeaturesStore } from '@/stores/features'
 import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe, Users, Map } from '@lucide/vue'
 import { useSupportEmail, DEFAULT_SUPPORT_EMAIL } from '@/composables/useSupportEmail'
 
@@ -48,6 +49,11 @@ const supportEmail = useSupportEmail()
 // The FAQ answers print the address inline. Until /api/public-config has
 // answered, show the hosted one rather than a hole in the sentence.
 const contactEmail = computed(() => supportEmail.value || DEFAULT_SUPPORT_EMAIL)
+
+// Payments and classes are switched off at launch (migration 085). Their
+// guide pages stay out of the bookmarks until the flags come on, rather
+// than advertising screens nobody can open.
+const features = useFeaturesStore()
 
 // TOC entries match the in-template section ids. Order matters,
 // it's the visual reading order. Keep the keys aligned with the
@@ -118,7 +124,15 @@ const GLOSSARY = [
 const activeSection = ref(SECTIONS[0].id)
 let observer = null
 onMounted(() => {
-  if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return
+  if (typeof window === 'undefined') return
+  // The router has no scrollBehavior, so an in-app link like
+  // /guide#club-admin would otherwise land at the top of the page.
+  if (window.location.hash.length > 1) {
+    try {
+      document.getElementById(decodeURIComponent(window.location.hash.slice(1)))?.scrollIntoView()
+    } catch { /* a malformed hash just leaves us at the top */ }
+  }
+  if (!('IntersectionObserver' in window)) return
   observer = new IntersectionObserver((entries) => {
     for (const e of entries) {
       if (e.isIntersecting) activeSection.value = e.target.id
@@ -233,14 +247,16 @@ onBeforeUnmount(() => observer?.disconnect())
             </article>
 
             <!-- Club admin: runs their own club's meets where there's no
-                 federation on DivingHQ yet (club-first signup). -->
-            <article class="role-card">
+                 federation on DivingHQ yet (club-first signup). The id is
+                 what the dashboard's Get started panel links to. -->
+            <article id="club-admin" class="role-card">
               <div class="role-icon" aria-hidden="true"><Users /></div>
               <h3 class="role-name">{{ $t('guide.role.club_admin.name') }}</h3>
               <p class="role-desc" v-html="$t('guide.role.club_admin.desc')"></p>
               <ol class="role-steps">
                 <li v-html="$t('guide.role.club_admin.step_1')"></li>
                 <li v-html="$t('guide.role.club_admin.step_2')"></li>
+                <li v-html="$t('guide.role.club_admin.step_invite')"></li>
                 <li v-html="$t('guide.role.club_admin.step_3')"></li>
                 <li v-html="$t('guide.role.club_admin.step_4')"></li>
                 <li v-html="$t('guide.role.club_admin.step_5')"></li>
@@ -451,11 +467,11 @@ onBeforeUnmount(() => observer?.disconnect())
               <RouterLink to="/guide/keyboard-shortcuts">{{ $t('guide.next.bookmark_shortcuts') }}</RouterLink>
               — {{ $t('guide.next.bookmark_shortcuts_desc') }}
             </li>
-            <li>
+            <li v-if="features.payments">
               <RouterLink to="/guide/payments">{{ $t('guide.next.bookmark_payments') }}</RouterLink>
               — {{ $t('guide.next.bookmark_payments_desc') }}
             </li>
-            <li>
+            <li v-if="features.classes">
               <RouterLink to="/guide/classes">{{ $t('guide.next.bookmark_classes') }}</RouterLink>
               — {{ $t('guide.next.bookmark_classes_desc') }}
             </li>

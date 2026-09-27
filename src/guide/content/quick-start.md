@@ -37,6 +37,8 @@ For a first scored meet you need at least:
 
 While your country has no federation on DivingHQ, My club is also where you add **co-admins**: other members who can help you run the club. Two admins is a good idea, so the club isn't stuck if one of you is away.
 
+Club admins also get a **Get started** checklist at the top of the dashboard: create your first meet, invite your members, set your club's short code (on **My club**, up to 8 letters, numbers or dashes, e.g. `SYD`), and read the club admin guide. Each step links to where it's done and ticks itself off; **Hide** puts the checklist away on that device. Under a federation, the federation sets club codes from its Clubs screen instead.
+
 See [Roles & Permissions](/guide/roles-and-permissions) for what each role can do.
 
 ## 4. Create your meet and its events

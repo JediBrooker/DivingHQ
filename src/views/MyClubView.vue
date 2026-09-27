@@ -14,6 +14,7 @@ import { usePlural } from '@/composables/usePlural'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
 import JoinRequestQueue from '@/components/JoinRequestQueue.vue'
 import LoadError from '@/components/LoadError.vue'
+import ClubSetupCard from '@/components/ClubSetupCard.vue'
 
 const { t } = useI18n()
 const { tn } = usePlural()
@@ -210,6 +211,9 @@ onMounted(() => {
       </div>
       <RouterLink to="/manager" class="btn btn-primary btn-sm">{{ $t('my_club.run_meets') }}</RouterLink>
     </header>
+
+    <!-- Invite link + club code, one card per club (dashboard "Get started" links here). -->
+    <ClubSetupCard v-for="club in clubs" :key="`setup-${club.id}`" :club="club" />
 
     <section class="block">
       <h2 class="block-title">{{ $t('my_club.requests') }}</h2>

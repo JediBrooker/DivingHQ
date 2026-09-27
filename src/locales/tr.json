@@ -162,6 +162,19 @@
       "resend_label": "Kullanıcı adı veya e-posta",
       "resend_button": "Yeni bağlantı gönder",
       "resend_sent": "Bu hesap doğrulama bekliyorsa yeni bir bağlantı yolda. Gelen kutunuzu kontrol edin."
+    },
+    "check_inbox": {
+      "title": "Gelen kutunuzu kontrol edin",
+      "body": "{email} adresine bir doğrulama bağlantısı gönderdik. Hesabınızın kurulumunu tamamlamak için bağlantıya tıklayın.",
+      "no_mail": "Birkaç dakika sonra hâlâ bir şey yok mu? İstenmeyen posta klasörünü kontrol edin veya yeni bir bağlantı gönderin.",
+      "resend_wait": "Yeni bağlantı gönder ({seconds} sn)",
+      "resent": "{email} adresine yeni bir bağlantı yolda.",
+      "already": "Bağlantıya zaten tıkladınız mı?",
+      "next_org_pending": "Doğrulamadan sonra DivingHQ federasyonunuzu inceler. Onaylandığında size e-posta göndeririz ve o andan itibaren giriş yapabilirsiniz.",
+      "next_claim_clubs": "Doğrulamadan sonra talebiniz açılır ve oradaki, zaten DivingHQ'da olan kulüpler oy verir. Karar verilirken giriş yapabilirsiniz.",
+      "next_claim_regions": "Doğrulamadan sonra talebiniz açılır ve zaten DivingHQ'da olan eyaletler ve iller oy verir. Karar verilirken giriş yapabilirsiniz.",
+      "next_claim_parent": "Doğrulamadan sonra talebiniz açılır ve kararı federasyonunuz verir. Karar verilirken giriş yapabilirsiniz.",
+      "next_claim_sysadmin": "Doğrulamadan sonra talebiniz açılır ve DivingHQ ekibi inceler. Karar verilirken giriş yapabilirsiniz."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "yakında kapanıyor",
       "pill_overdue": "gecikmiş",
       "chip_aria_tab": "{title}. Bu paneldeki ilgili sekmeyi açar."
+    },
+    "getting_started": {
+      "title": "{club} ile başlayın",
+      "intro": "Önce ayarlanması gereken birkaç şey var. Her biri tamamlandığında kendiliğinden işaretlenir.",
+      "all_done": "Hepsi tamam. Kulübünüz hazır, bunu gizleyebilirsiniz.",
+      "progress": "{total} adımdan {done} tanesi tamam",
+      "dismiss": "Gizle",
+      "dismiss_tip": "Bu kontrol listesini gizleyin. Bu cihazda bir daha görünmez.",
+      "done": "Tamam",
+      "step_meet": "İlk yarışmanızı oluşturun",
+      "step_meet_desc": "Kulübünüzün düzenlediği bir yarışma oluşturun, ardından branşlarını ekleyin.",
+      "step_invite": "Üyelerinizi davet edin",
+      "step_invite_desc": "Kulübün kayıt bağlantısını Kulübüm sayfasından paylaşın.",
+      "step_code": "Kulübün kısa kodunu belirleyin",
+      "step_code_desc": "Kulüp yarışmalarında atlayıcılarınızın yanında görünür.",
+      "step_guide": "Kulüp yöneticisi rehberini okuyun",
+      "step_guide_desc": "İlk yarışmadan yarışma gününe kadar yapabilecekleriniz."
     }
   },
   "profile": {
@@ -617,7 +647,8 @@
         "step_3": "<strong>Kulübüm</strong> sayfasında katılmak isteyenleri ve atlamak, hakemlik yapmak veya antrenörlük yapmak isteyen üyeleri onaylayın",
         "step_4": "Yarışma günü puanlamayı <strong>Kontrol Odası</strong>'ndan yönetin",
         "step_5": "Federasyonunuz veya bölgesel kurumunuz geldiğinde, talebini <strong>Devralma talepleri</strong> sayfasında oylayın",
-        "cta": "Yarışma düzenlemek ↗"
+        "cta": "Yarışma düzenlemek ↗",
+        "step_invite": "<strong>Kulübüm</strong> sayfasında kulübünüzün davet bağlantısını paylaşın ve kulüp kodunu belirleyin"
       },
       "region_admin": {
         "name": "Bölge yöneticisi",
@@ -1052,11 +1083,11 @@
       "pick_host": "— Kulübünüzü veya bölgenizi seçin —"
     },
     "represent": {
-      "label": "Atlayıcılar şunu temsil eder",
+      "label": "Atlayıcılar neyi temsil ediyor",
       "country": "Ülkelerini (uluslararası yarışmalar)",
       "region": "Eyaletlerini / illerini (ulusal şampiyonalar)",
-      "club": "Kulüplerini (kulüp ve kulüpler arası yarışmalar)",
-      "hint": "Skor tablosunda, sonuçlarda ve PDF’lerde her atlayıcının yanında gösterilir ve madalya tablosu buna göre gruplanır. Eyalet veya kulüp kodu olmayan atlayıcı ülkesiyle gösterilir. Takım, tüm atlayıcılarının ortak olduğu eyalet veya kulüple gösterilir, aksi halde ülkesiyle."
+      "club": "Kulüplerini (kulüp ve kulüplerarası yarışmalar)",
+      "hint": "Skor tablosunda, sonuçlarda ve PDF'lerde her atlayıcının yanında gösterilir ve madalya tablosu buna göre gruplanır. Eyalet veya kulüp kodu olmayan atlayıcı ülkesiyle gösterilir."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Kulüp yöneticileri kulüplerinin yarışmalarını düzenler; derslerini, ödemelerini ve üyelik aidatlarını yönetir. Federasyon genelinde erişimleri yoktur.",
     "current_admins": "Mevcut yöneticiler ({n})",
     "nobody_admins": "Bu kulübün henüz yöneticisi yok.",
-    "no_other_members": "Bu kulüpte başka üye yok. Önce Kullanıcı Yöneticisi’nden birini bu kulübe taşıyın."
+    "no_other_members": "Bu kulüpte başka üye yok. Önce Kullanıcı Yöneticisi’nden birini bu kulübe taşıyın.",
+    "setup": {
+      "invite_title": "Üyelerinizi davet edin",
+      "invite_body": "Bu bağlantıyla kaydolan herkes için {club} önceden seçili olur. E-posta, sohbet veya kulüp bülteniyle paylaşın.",
+      "code_title": "Kulüp kodu",
+      "code_hint": "Kulüp yarışmalarında skor tablosunda, sonuçlarda ve PDF'lerde atlayıcılarınızın yanında görünen kısa kod. En fazla 8 harf, rakam veya tire.",
+      "code_placeholder": "örn. SYD",
+      "code_saved": "Kulüp kodu kaydedildi",
+      "code_none": "Henüz kod yok.",
+      "code_federation": "Kulübünüzün kodunu federasyonunuz belirler."
+    },
+    "admins_intro_meets": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür. Federasyon genelinde erişimleri yoktur.",
+    "admins_intro_classes": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür ve kulübün kurslarıyla ilgilenir. Federasyon genelinde erişimleri yoktur.",
+    "admins_intro_payments": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür ve kulübün ödemeleriyle üyelik aidatlarıyla ilgilenir. Federasyon genelinde erişimleri yoktur."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Oylama süresi (gün)",
       "description": "Süre dolduğunda: en az bir onay ve hiç itiraz yoksa talep kabul edilir, aksi halde sistem yöneticisine gider."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Yarışma",
+      "training": "Antrenman",
+      "payments": "Ödemeler",
+      "organisation": "Kuruluş"
     }
   }
 }

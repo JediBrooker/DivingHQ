@@ -162,6 +162,19 @@
       "resend_label": "Käyttäjätunnus tai sähköposti",
       "resend_button": "Lähetä uusi linkki",
       "resend_sent": "Jos tili odottaa vahvistusta, uusi linkki on matkalla. Tarkista saapuneet viestisi."
+    },
+    "check_inbox": {
+      "title": "Tarkista saapuneet viestisi",
+      "body": "Lähetimme vahvistuslinkin osoitteeseen {email}. Viimeistele tilisi napsauttamalla sitä.",
+      "no_mail": "Eikö mitään muutaman minuutin jälkeen? Katso roskapostikansio tai lähetä uusi linkki.",
+      "resend_wait": "Lähetä uusi linkki ({seconds} s)",
+      "resent": "Uusi linkki on matkalla osoitteeseen {email}.",
+      "already": "Napsautitko jo linkkiä?",
+      "next_org_pending": "Vahvistuksen jälkeen DivingHQ käsittelee liittosi. Lähetämme sähköpostia, kun se on hyväksytty, ja siitä lähtien voit kirjautua sisään.",
+      "next_claim_clubs": "Vahvistuksen jälkeen vaateesi avataan ja siellä jo DivingHQ:ssa olevat seurat äänestävät siitä. Voit kirjautua sisään päätöksen aikana.",
+      "next_claim_regions": "Vahvistuksen jälkeen vaateesi avataan ja jo DivingHQ:ssa olevat osavaltiot ja provinssit äänestävät siitä. Voit kirjautua sisään päätöksen aikana.",
+      "next_claim_parent": "Vahvistuksen jälkeen vaateesi avataan ja liittosi päättää siitä. Voit kirjautua sisään päätöksen aikana.",
+      "next_claim_sysadmin": "Vahvistuksen jälkeen vaateesi avataan ja DivingHQ-tiimi käsittelee sen. Voit kirjautua sisään päätöksen aikana."
     }
   },
   "coach": {
@@ -438,6 +451,23 @@
       "pill_urgent": "sulkeutuu pian",
       "pill_overdue": "myöhässä",
       "chip_aria_tab": "{title}. Avaa sen välilehden tässä hallintapaneelissa."
+    },
+    "getting_started": {
+      "title": "Pane {club} alulle",
+      "intro": "Muutama asia, jotka kannattaa laittaa kuntoon ensin. Kukin kuittaantuu itsestään, kun se on tehty.",
+      "all_done": "Kaikki valmista. Seurasi on valmis, joten voit piilottaa tämän.",
+      "progress": "{done}/{total} tehty",
+      "dismiss": "Piilota",
+      "dismiss_tip": "Piilota tämä tarkistuslista. Se ei palaa tälle laitteelle.",
+      "done": "Tehty",
+      "step_meet": "Luo ensimmäinen kilpailusi",
+      "step_meet_desc": "Perusta kilpailu, jonka seurasi järjestää, ja lisää sitten sen lajit.",
+      "step_invite": "Kutsu jäsenesi",
+      "step_invite_desc": "Jaa seuran rekisteröitymislinkki Oma seura -sivulta.",
+      "step_code": "Aseta seurasi lyhenne",
+      "step_code_desc": "Näkyy hyppääjiesi vieressä seurakilpailuissa.",
+      "step_guide": "Lue seuran ylläpitäjän opas",
+      "step_guide_desc": "Mitä voit tehdä ensimmäisestä kilpailusta kilpailupäivään."
     }
   },
   "role": {
@@ -628,7 +658,8 @@
         "step_3": "Hyväksy <strong>Oma seura</strong> -sivulla liittymistä pyytävät sekä jäsenet, jotka haluavat hypätä, tuomita tai valmentaa",
         "step_4": "Kilpailupäivänä ohjaat pisteytystä <strong>Ohjaamosta</strong>",
         "step_5": "Kun liittosi tai alueellinen elin liittyy, äänestä sen vaatimuksesta sivulla <strong>Vaatimukset</strong>",
-        "cta": "Kilpailun järjestäminen ↗"
+        "cta": "Kilpailun järjestäminen ↗",
+        "step_invite": "Jaa seurasi kutsulinkki ja aseta seuran lyhenne sivulla <strong>Oma seura</strong>"
       },
       "region_admin": {
         "name": "Alueen ylläpitäjä",
@@ -1065,9 +1096,9 @@
     "represent": {
       "label": "Hyppääjät edustavat",
       "country": "Maataan (kansainväliset kilpailut)",
-      "region": "Osavaltiotaan / provinssiaan (kansalliset mestaruudet)",
+      "region": "Osavaltiotaan / provinssiaan (kansalliset mestaruuskilpailut)",
       "club": "Seuraansa (seura- ja seurojen väliset kilpailut)",
-      "hint": "Näytetään jokaisen hyppääjän vieressä tulostaululla, tuloksissa ja PDF-tiedostoissa, ja sen mukaan mitalitaulukko ryhmitellään. Hyppääjä ilman osavaltio- tai seuratunnusta näytetään maansa mukaan. Joukkue näytetään osavaltiolla tai seuralla, joka on kaikille sen hyppääjille yhteinen, muuten maallaan."
+      "hint": "Näkyy jokaisen hyppääjän vieressä tulostaululla, tuloksissa ja PDF-tiedostoissa, ja mitalitaulukko ryhmitellään sen mukaan. Jos hyppääjällä ei ole osavaltio- tai seuralyhennettä, näytetään hänen maansa."
     }
   },
   "user_manager": {
@@ -2021,7 +2052,20 @@
     "admins_intro": "Seuran ylläpitäjät järjestävät seuransa kilpailut ja hoitavat sen ryhmät, tilitykset ja jäsenmaksut. He eivät saa liittotason oikeuksia.",
     "current_admins": "Nykyiset ylläpitäjät ({n})",
     "nobody_admins": "Tällä seuralla ei ole vielä ylläpitäjää.",
-    "no_other_members": "Seurassa ei ole muita jäseniä. Siirrä ensin joku seuraan käyttäjähallinnasta."
+    "no_other_members": "Seurassa ei ole muita jäseniä. Siirrä ensin joku seuraan käyttäjähallinnasta.",
+    "setup": {
+      "invite_title": "Kutsu jäsenesi",
+      "invite_body": "Kaikilla, jotka rekisteröityvät tällä linkillä, on {club} valmiiksi valittuna. Jaa se sähköpostilla, chatissa tai seuran uutiskirjeessä.",
+      "code_title": "Seuran lyhenne",
+      "code_hint": "Lyhyt tunnus, joka näkyy hyppääjiesi vieressä tulostaululla, tuloksissa ja PDF-tiedostoissa seurakilpailuissa. Enintään 8 kirjainta, numeroa tai viivaa.",
+      "code_placeholder": "esim. SYD",
+      "code_saved": "Seuran lyhenne tallennettu",
+      "code_none": "Ei vielä lyhennettä.",
+      "code_federation": "Liittosi määrittää seurasi lyhenteen."
+    },
+    "admins_intro_meets": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut. Heillä ei ole liittotason oikeuksia.",
+    "admins_intro_classes": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen ryhmistä. Heillä ei ole liittotason oikeuksia.",
+    "admins_intro_payments": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen tilityksistä ja jäsenmaksuista. Heillä ei ole liittotason oikeuksia."
   },
   "regions": {
     "label": {
@@ -2204,6 +2248,14 @@
     "claim_timeout_days": {
       "label": "Äänestysaika (päivää)",
       "description": "Kun se päättyy: vähintään yksi hyväksyntä ilman vastalauseita hyväksyy vaatimuksen, muuten se siirtyy järjestelmänvalvojalle."
+    }
+  },
+  "nav": {
+    "group": {
+      "competition": "Kilpailu",
+      "training": "Harjoittelu",
+      "payments": "Maksut",
+      "organisation": "Organisaatio"
     }
   }
 }
