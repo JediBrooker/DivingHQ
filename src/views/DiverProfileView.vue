@@ -565,14 +565,17 @@ function closeClubEditor() {
 // Leaving a club is yours to do. Joining or switching one needs whoever
 // runs it to say yes (the federation, or where there's none yet the
 // club's own admins), so that files a club change request instead of
-// trying the direct PUT, which would only answer 403.
+// trying the direct PUT, which would only answer 403. An org admin (or
+// the sysadmin) is the one who'd approve it anyway, so they still set
+// their own club in one go.
 async function saveClub() {
   savingClub.value = true
   saveError.value = ''
   clubRequestSent.value = false
   const current = profile.value?.diver?.club_id || ''
+  const setsDirectly = auth.hasRole('org_admin')
   try {
-    if (clubChoice.value && clubChoice.value !== current) {
+    if (clubChoice.value && clubChoice.value !== current && !setsDirectly) {
       await auth.apiFetch('/api/club-change-requests', {
         method: 'POST',
         body: JSON.stringify({ to_club_id: clubChoice.value }),
