@@ -75,6 +75,8 @@
  * @property {?('state'|'province'|'home_nation'|'region')} label  null = no regions
  * @property {{id?: string, name: string, short_code: string, club_count?: number}[]} regions
  *   id and club_count only on the per-org list (the country list is the built-in catalogue).
+ * @property {boolean} [catalogue]  per-org list only: DivingHQ has a built-in list
+ *   for the org's country, so POST /api/orgs/:id/regions/seed can work.
  */
 
 /**

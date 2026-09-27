@@ -3,7 +3,9 @@
 //
 //   GET    /api/countries/:code/regions     public, the built-in list for a
 //                                           country nobody's started yet
-//   GET    /api/orgs/:id/regions            public, an org's regions (signup)
+//   GET    /api/orgs/:id/regions            public, an org's regions (signup),
+//                                           and whether its country has a
+//                                           built-in list to seed from
 //   POST   /api/orgs/:id/regions/seed       org_admin / sysadmin: set up the
 //                                           built-in regions for a federation
 //   PUT    /api/clubs/:id/region            which region a club is in
@@ -64,9 +66,9 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
   });
 
   router.get("/api/orgs/:id/regions", async (req, res) => {
-    if (!UUID_RE.test(String(req.params.id))) return res.json({ label: null, regions: [] });
+    if (!UUID_RE.test(String(req.params.id))) return res.json({ label: null, regions: [], catalogue: false });
     try {
-      const org = await pool.query("SELECT region_label FROM organisations WHERE id = $1", [req.params.id]);
+      const org = await pool.query("SELECT region_label, country_code FROM organisations WHERE id = $1", [req.params.id]);
       const r = await pool.query(
         `SELECT rg.id, rg.name, rg.short_code, rg.claim_state, rg.claimed_name,
                 (SELECT count(*)::int FROM clubs c WHERE c.region_id = rg.id) AS club_count
@@ -74,7 +76,14 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
           ORDER BY rg.name`,
         [req.params.id],
       );
-      res.json({ label: org.rows[0]?.region_label || null, regions: r.rows });
+      res.json({
+        label: org.rows[0]?.region_label || null,
+        regions: r.rows,
+        // Whether "set up regions" can work: the seed route 400s for any
+        // country lib/regions.json has no list for, so the Clubs screen
+        // only offers it when this is true.
+        catalogue: !!catalogFor(org.rows[0]?.country_code),
+      });
     } catch (err) {
       console.error("[Org Regions Error]", err.message);
       res.status(500).json({ error: "Internal server error" });

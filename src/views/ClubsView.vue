@@ -186,15 +186,33 @@ async function deleteClub(club) {
 // a time: your own, or, for a sysadmin, the org picked in the filter.
 const regionOrgId = computed(() =>
   isSysAdmin.value ? (orgFilter.value || null) : (auth.user?.org_id || null))
-const regions = ref({ label: null, regions: [] })
+const regions = ref({ label: null, regions: [], catalogue: false })
 const regionsBusy = ref(false)
 const canManageRegions = computed(() => isSysAdmin.value || isOrgAdmin.value)
+// Only offer "Set up regions" where it can work: the seed route refuses
+// any country lib/regions.json has no list for (most of them, today).
+const showRegionsPanel = computed(() =>
+  canManageRegions.value && !!regionOrgId.value && (regions.value.regions.length > 0 || regions.value.catalogue))
+
+// Everyone who sees the Region column gets the club's region in it, not
+// just the admins who get a picker.
+const regionById = computed(() => new Map(regions.value.regions.map(r => [r.id, r])))
+
+// A sysadmin flicking through the org filter fires one load per org; only
+// the latest may land, or the per-club selects end up offering another
+// org's regions (and saving one 400s).
+let regionsReq = 0
 
 async function loadRegions() {
-  regions.value = { label: null, regions: [] }
-  if (!regionOrgId.value) return
+  const req = ++regionsReq
+  const orgId = regionOrgId.value
+  // Only blank the list when the org changes. A refresh for new club
+  // counts keeps showing the column instead of blinking it away.
+  if (regions.value.orgId !== orgId) regions.value = { label: null, regions: [], catalogue: false }
+  if (!orgId) return
   try {
-    regions.value = await auth.apiFetch(`/api/orgs/${regionOrgId.value}/regions`)
+    const body = await auth.apiFetch(`/api/orgs/${orgId}/regions`)
+    if (req === regionsReq) regions.value = { ...body, orgId }
   } catch { /* none */ }
 }
 
@@ -265,7 +283,7 @@ onMounted(async () => {
     </p>
 
     <!-- Regions: states / provinces / home nations for one org. -->
-    <div v-if="canManageRegions && regionOrgId" class="regions-panel">
+    <div v-if="showRegionsPanel" class="regions-panel">
       <template v-if="regions.regions.length">
         <span class="regions-head">Regions</span>
         <button v-for="r in regions.regions" :key="r.id" class="region-chip" type="button"
@@ -389,6 +407,8 @@ onMounted(async () => {
                   <option value="">—</option>
                   <option v-for="r in regions.regions" :key="r.id" :value="r.id">{{ r.short_code }}</option>
                 </select>
+                <span v-else-if="regionById.get(c.region_id)" class="club-code"
+                      v-tip="regionById.get(c.region_id).name">{{ regionById.get(c.region_id).short_code }}</span>
                 <span v-else class="dim">—</span>
               </td>
               <td class="num-col">

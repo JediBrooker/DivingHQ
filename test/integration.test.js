@@ -1679,3 +1679,30 @@ test("club admins: club_admin_of says who runs the org, and self-removal drops t
     await claimKit.wipe(CODE);
   }
 });
+
+// The Clubs screen only offers "Set up regions" where the seed route can
+// work, which is decided by lib/regions.json having a list for the org's
+// country. Pending orgs so nobody's by-country lookup trips over them.
+test("regions: an org's region list says whether its country has a built-in catalogue", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const ids = [];
+  try {
+    for (const code of ["GBR", "MHL"]) {
+      const slug = `int-cat-${code.toLowerCase()}-${crypto.randomBytes(3).toString("hex")}`;
+      ids.push((await pool.query(
+        "INSERT INTO organisations (name, slug, country_code, status) VALUES ($1, $2, $3, 'pending') RETURNING id",
+        [`Catalogue ${code}`, slug, code],
+      )).rows[0].id);
+    }
+    const gbr = await fetchJson("GET", `/api/orgs/${ids[0]}/regions`);
+    assert.equal(gbr.status, 200);
+    assert.equal(gbr.body.catalogue, true, "Britain's home nations ship in regions.json");
+    assert.deepEqual(gbr.body.regions, [], "nothing seeded until someone asks");
+    const mhl = await fetchJson("GET", `/api/orgs/${ids[1]}/regions`);
+    assert.equal(mhl.body.catalogue, false, "no list for the Marshall Islands");
+    assert.equal((await fetchJson("GET", "/api/orgs/not-a-uuid/regions")).body.catalogue, false);
+  } finally {
+    for (const id of ids) await pool.query("DELETE FROM organisations WHERE id = $1", [id]).catch(() => {});
+  }
+});
