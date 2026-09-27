@@ -20,7 +20,7 @@
    SEMANTIC layer below them is what components reference, and is
    what [data-theme="dark"] remaps. A COMPATIBILITY BRIDGE at the
    end aliases the prior dark-v2 token names (--cyan, --text,
-   --bg-2/3, --font-display, status/role singles) onto the new
+   --bg-2/3, --font-display, status singles) onto the new
    semantic tokens so the existing component + per-view CSS
    re-skins without a rewrite. Every bridge alias points at a
    SEMANTIC token, so it follows the dark theme for free.
@@ -81,17 +81,6 @@
   --role-diver-fg:var(--green-700);    --role-diver-bg:var(--green-50);
   --role-spectator-fg:var(--slate-500);--role-spectator-bg:var(--slate-100);
 
-  /* ── SEMANTIC · World Aquatics judge-score award categories ── */
-  --cat-failed:#dc2626; --cat-deficient:#ea580c; --cat-unsatisfactory:#d97706;
-  --cat-satisfactory:#475569; --cat-good:var(--blue-600); --cat-very-good:#059669; --cat-excellent:#a21caf;
-  --cat-failed-bg:#fee2e2; --cat-failed-bd:#fecaca;
-  --cat-deficient-bg:#ffedd5; --cat-deficient-bd:#fed7aa;
-  --cat-unsatisfactory-bg:#fef3c7; --cat-unsatisfactory-bd:#fde68a;
-  --cat-satisfactory-bg:#f1f5f9; --cat-satisfactory-bd:#e2e8f0;
-  --cat-good-bg:#d2e9f5; --cat-good-bd:#a6d3eb;
-  --cat-very-good-bg:#d1fae5; --cat-very-good-bd:#a7f3d0;
-  --cat-excellent-bg:#fae8ff; --cat-excellent-bd:#f5d0fe;
-
   /* ── TYPOGRAPHY · Families ──────────────────────────────── */
   --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -140,7 +129,6 @@
   --border-subtle: var(--border);
   --cyan:      var(--accent);
   --cyan-dim:  var(--accent-soft);
-  --cyan-glow: none;
   --text:   var(--fg);
   --text-1: var(--fg);
   --text-2: var(--fg-2);
@@ -152,13 +140,6 @@
   --red:       var(--danger-solid); --red-dim: var(--danger-bg);
   --danger:   var(--danger-solid);
   --violet:   var(--role-admin-fg);
-  --role-admin:     var(--role-admin-fg);
-  --role-manager:   var(--role-manager-fg);
-  --role-referee:   var(--role-referee-fg);
-  --role-judge:     var(--role-judge-fg);
-  --role-coach:     var(--role-coach-fg);
-  --role-diver:     var(--role-diver-fg);
-  --role-spectator: var(--role-spectator-fg);
   --radius-md: var(--radius);
   --font-display: var(--font-sans);
 }
@@ -189,16 +170,6 @@
   --role-diver-fg:#4ade80;  --role-diver-bg:rgba(16,185,129,0.15);
   --role-spectator-fg:#94a3b8; --role-spectator-bg:rgba(148,163,184,0.14);
 
-  --cat-failed:#f87171; --cat-deficient:#fb923c; --cat-unsatisfactory:#fbbf24;
-  --cat-satisfactory:#94a3b8; --cat-good:#6fb6dc; --cat-very-good:#34d399; --cat-excellent:#e879f9;
-  --cat-failed-bg:rgba(248,113,113,0.16); --cat-failed-bd:rgba(248,113,113,0.40);
-  --cat-deficient-bg:rgba(251,146,60,0.16); --cat-deficient-bd:rgba(251,146,60,0.40);
-  --cat-unsatisfactory-bg:rgba(251,191,36,0.16); --cat-unsatisfactory-bd:rgba(251,191,36,0.40);
-  --cat-satisfactory-bg:rgba(148,163,184,0.16); --cat-satisfactory-bd:rgba(148,163,184,0.35);
-  --cat-good-bg:rgba(111,182,220,0.18); --cat-good-bd:rgba(111,182,220,0.42);
-  --cat-very-good-bg:rgba(52,211,153,0.16); --cat-very-good-bd:rgba(52,211,153,0.42);
-  --cat-excellent-bg:rgba(232,121,249,0.16); --cat-excellent-bd:rgba(232,121,249,0.42);
-
   --shadow-xs:0 1px 2px rgba(0,0,0,0.30);
   --shadow-sm:0 1px 3px rgba(0,0,0,0.40), 0 1px 2px rgba(0,0,0,0.30);
   --shadow:0 2px 6px rgba(0,0,0,0.40), 0 1px 2px rgba(0,0,0,0.30);
@@ -207,18 +178,6 @@
 
   color-scheme: dark;
 }
-
-/* ── Semantic type helper classes (for new shell + screens) ── */
-.ds-display { font-family:var(--font-sans); font-size:var(--text-display); line-height:var(--lh-display); letter-spacing:var(--ls-display); font-weight:600; color:var(--fg); }
-.ds-h1 { font-family:var(--font-sans); font-size:var(--text-h1); line-height:var(--lh-h1); letter-spacing:var(--ls-h1); font-weight:600; color:var(--fg); }
-.ds-h2 { font-family:var(--font-sans); font-size:var(--text-h2); line-height:var(--lh-h2); letter-spacing:var(--ls-h2); font-weight:600; color:var(--fg); }
-.ds-h3 { font-family:var(--font-sans); font-size:var(--text-h3); line-height:var(--lh-h3); letter-spacing:var(--ls-h3); font-weight:600; color:var(--fg); }
-.ds-body { font-family:var(--font-sans); font-size:var(--text-body); line-height:var(--lh-body); font-weight:400; color:var(--fg); }
-.ds-sm { font-family:var(--font-sans); font-size:var(--text-sm); line-height:var(--lh-sm); color:var(--fg-2); }
-.ds-xs { font-family:var(--font-sans); font-size:var(--text-xs); line-height:var(--lh-xs); color:var(--fg-2); }
-.ds-label { font-family:var(--font-sans); font-size:var(--text-label); line-height:var(--lh-label); letter-spacing:var(--ls-label); text-transform:uppercase; font-weight:600; color:var(--fg-3); }
-.ds-mono { font-family:var(--font-mono); font-variant-numeric:tabular-nums; letter-spacing:-0.01em; }
-.ds-score { font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-weight:500; color:var(--fg); }
 
 /* ── Reset ────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -268,9 +227,6 @@ body {
 }
 
 /* ── Typography ───────────────────────────────────────────── */
-.font-display { font-family: var(--font-display); }
-.font-mono    { font-family: var(--font-mono); }
-
 h1, h2, h3, h4 {
   font-family: var(--font-sans);
   font-weight: 600;
@@ -309,54 +265,6 @@ h1, h2, h3, h4 {
   margin: 0 auto;
   padding: 0 2rem;
 }
-
-.container-sm {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-.container-md {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 2rem;
-}
-
-/* ── App Shell ────────────────────────────────────────────── */
-.app-header {
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-2);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.app-header-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.app-logo {
-  font-family: var(--font-sans);
-  font-size: 20px;
-  font-weight: 700;
-  font-style: normal;
-  /* DIVING white, HQ cyan, same colour rhythm as the public
-     home page hero so the brand reads identically across the
-     surface (the operator just sees a smaller version of the
-     mark they saw on the landing page). */
-  color: var(--fg);
-  letter-spacing: -0.01em;
-  text-decoration: none;
-}
-
-.app-logo span { color: var(--accent); }
-
-.app-main { padding: 2.5rem 2rem; }
 
 /* ── Cards ────────────────────────────────────────────────── */
 .card {
@@ -520,15 +428,6 @@ h1, h2, h3, h4 {
 .badge-red     { background: var(--danger-bg); color: var(--danger-fg); }
 .badge-muted   { background: var(--bg-sunken); color: var(--fg-2); }
 
-/* Role badges */
-.badge-org_admin    { background: var(--role-admin-bg);     color: var(--role-admin-fg); }
-.badge-meet_manager { background: var(--role-manager-bg);   color: var(--role-manager-fg); }
-.badge-referee      { background: var(--role-referee-bg);   color: var(--role-referee-fg); }
-.badge-judge        { background: var(--role-judge-bg);     color: var(--role-judge-fg); }
-.badge-coach        { background: var(--role-coach-bg);     color: var(--role-coach-fg); }
-.badge-diver        { background: var(--role-diver-bg);     color: var(--role-diver-fg); }
-.badge-spectator    { background: var(--role-spectator-bg); color: var(--role-spectator-fg); }
-
 /* ── Tables ───────────────────────────────────────────────── */
 .data-table {
   width: 100%;
@@ -558,13 +457,6 @@ h1, h2, h3, h4 {
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tr:hover td { background: var(--surface-hover); }
 
-/* ── Dividers ─────────────────────────────────────────────── */
-.divider {
-  height: 1px;
-  background: var(--border);
-  margin: 1.5rem 0;
-}
-
 /* ── Connection dot ───────────────────────────────────────── */
 .status-dot {
   display: inline-block;
@@ -585,34 +477,14 @@ h1, h2, h3, h4 {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes pulse-cyan {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(6,182,212,0.4); }
-  50%       { box-shadow: 0 0 0 8px rgba(6,182,212,0); }
-}
-
-.animate-in { animation: fadeUp 0.3s ease forwards; }
 
 /* ── Utility ──────────────────────────────────────────────── */
 .hidden { display: none !important; }
-.text-cyan   { color: var(--cyan); }
-.text-muted  { color: var(--text-2); }
-.text-dimmed { color: var(--text-3); }
-.text-green  { color: var(--green); }
-.text-amber  { color: var(--amber); }
-.text-red    { color: var(--red); }
 .mono        { font-family: var(--font-mono); }
 
 .flex        { display: flex; }
-.flex-col    { display: flex; flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.gap-1       { gap: 0.5rem; }
-.gap-2       { gap: 1rem; }
-.gap-3       { gap: 1.5rem; }
-.gap-4       { gap: 2rem; }
 
 .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
 
 /* ── Error / success messages ─────────────────────────────── */
 .msg {
@@ -770,14 +642,7 @@ h1, h2, h3, h4 {
 @media (max-width: 720px) {
   /* Universally tighten body padding so 320–414px viewports
      stop bleeding off the right edge. */
-  .container,
-  .container-md,
-  .container-sm   { padding-inline-start: 1rem; padding-inline-end: 1rem; }
-
-  /* App shell */
-  .app-header-inner { padding: 0.75rem 1rem; gap: 0.75rem; flex-wrap: wrap; }
-  .app-logo         { font-size: 18px; }
-  .app-main         { padding: 1.25rem 1rem; }
+  .container { padding-inline-start: 1rem; padding-inline-end: 1rem; }
 
   /* Cards lose half their padding so their inner content has room */
   .card     { padding: 1.25rem; border-radius: var(--radius); }
@@ -799,7 +664,7 @@ h1, h2, h3, h4 {
   /* Grid utilities collapse to single column.
      Per-view custom grids (sb-body, ctrl-main, etc.) handle
      themselves in their own files. */
-  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
 
   /* Tables: keep the table semantics but let rows scroll
      horizontally inside their containing card if columns
@@ -857,14 +722,9 @@ h1, h2, h3, h4 {
 
      `Coach`, `Inbox`, `Audit`, `Compare`, `Profile` etc. all
      map to a "page padding" idiom; pulling them in here means
-     one rule covers ten files. */
+     one rule covers all of them. */
   .profile-wrap, .audit-wrap, .compare-wrap, .coach-wrap,
-  .inbox-wrap,   .meet-wrap,  .dashboard-wrap,
-  .judge-wrap,   .archive-wrap,
-  .clubs-wrap,   .teams-wrap, .users-wrap,
-  .competitor-wrap, .dive-directory-wrap,
-  .assign-wrap, .setup-wrap, .sign-off-wrap,
-  .meets-mode,
+  .inbox-wrap,   .meet-wrap,  .meets-mode,
   .main { padding: 1rem !important; }
 
   /* Generic wrapper for any wide table that would overflow on
@@ -888,16 +748,6 @@ h1, h2, h3, h4 {
   .drag-handle,
   .partner-clear,
   .event-template-del { min-width: 32px; min-height: 32px; }
-
-  /* Fixed-column grids inside profile widgets: collapse to
-     a more forgiving layout on narrow viewports. Per-widget
-     overrides can still kick in below this with higher
-     specificity, but the default goes from "240px+1fr" type
-     grids to "auto + 1fr" so the labels keep their column
-     and the values can flex. */
-  .widget-card .pb-table,
-  .widget-card .bar-row,
-  .widget-card .compare-row { font-size: 11.5px; }
 }
 
 /* =========================================================
@@ -930,19 +780,16 @@ h1, h2, h3, h4 {
     color: black !important;
   }
   /* Hide page chrome that doesn't belong on paper. */
-  .app-header, .conn-banner, .filter-bar,
+  .conn-banner, .filter-bar,
   .btn, .btn-ghost, .btn-primary, .btn-primary-lg,
   .sb-header, .modal-backdrop, .modal,
-  .meta-strip a, .broadcast-exit, .kbd-hints,
+  .meta-strip a, .broadcast-exit,
   .no-print { display: none !important; }
   /* Restore page-flow so a tall recap pages naturally. */
-  .sb-layout, .sb-completed, .completed-grid, .completed-col,
-  .col-body, .archive-wrap {
+  .sb-layout, .sb-completed, .col-body {
     height: auto !important;
     overflow: visible !important;
   }
-  .completed-grid { display: block !important; }
-  .completed-col + .completed-col { page-break-before: avoid; margin-top: 1.5rem; }
   /* The chip backgrounds end up muddy in print, so neutralise them
      and rely on text + struck-through for the trim indication. */
   .j-score, .judge-group {
@@ -958,17 +805,14 @@ h1, h2, h3, h4 {
   /* Page break before each diver block keeps long recaps tidy. */
   .diver-block { page-break-inside: avoid; }
   /* Avoid invisible cyan dividers on white. */
-  .divider, .border, .standing { border-color: #cbd5e1 !important; }
+  .border, .standing { border-color: #cbd5e1 !important; }
 }
 
 @media (max-width: 480px) {
   /* Even tighter for compact phones. Keep cards readable but
      drop the big radius and outer padding further. */
-  .container,
-  .container-md,
-  .container-sm  { padding-inline-start: 0.75rem; padding-inline-end: 0.75rem; }
+  .container     { padding-inline-start: 0.75rem; padding-inline-end: 0.75rem; }
 
-  .app-main      { padding: 0.875rem 0.75rem; }
   .card          { padding: 1rem; }
   .card-sm       { padding: 0.75rem; }
 
@@ -983,12 +827,7 @@ h1, h2, h3, h4 {
   /* Per-view wrap classes go a notch tighter on iPhone SE
      class viewports. */
   .profile-wrap, .audit-wrap, .compare-wrap, .coach-wrap,
-  .inbox-wrap,   .meet-wrap,  .dashboard-wrap,
-  .judge-wrap,   .archive-wrap,
-  .clubs-wrap,   .teams-wrap, .users-wrap,
-  .competitor-wrap, .dive-directory-wrap,
-  .assign-wrap, .setup-wrap, .sign-off-wrap,
-  .meets-mode,
+  .inbox-wrap,   .meet-wrap,  .meets-mode,
   .main { padding: 0.75rem !important; }
 }
 
@@ -1417,12 +1256,9 @@ h1, h2, h3, h4 {
      * pointer-events: none on the bubble so it can never
        intercept a click meant for the host below.
    ========================================================= */
-[data-tip] {
-  /* Anchor point for the absolutely-positioned ::after.
-     :where() lowers specificity to (0,0,1) so any explicit
-     position: absolute / fixed / sticky / static a host
-     declares still wins. */
-}
+/* Anchor point for the absolutely-positioned ::after. :where()
+   drops the specificity to zero, so any explicit position:
+   absolute / fixed / sticky / static a host declares still wins. */
 :where([data-tip]) { position: relative; }
 
 /* Fixed-position tooltip (v-tip.fixed), body-appended so it
