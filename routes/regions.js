@@ -225,6 +225,11 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
         if (toClaimed) {
           if (!to.caller_is_admin) {
             if (!club.caller_is_admin) return res.status(403).json({ error: "Forbidden" });
+            // Asking again for the same region changes nothing, and
+            // shouldn't ping its admins (or the audit log) a second time.
+            if (club.requested_region_id === to.id) {
+              return res.status(202).json({ ok: true, requested: true });
+            }
             // The club asks. A new ask replaces an older one.
             await pool.query(
               "UPDATE clubs SET requested_region_id = $1, region_requested_at = now() WHERE id = $2",

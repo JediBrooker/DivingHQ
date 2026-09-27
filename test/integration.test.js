@@ -2480,6 +2480,8 @@ test("club region moves: a claimed region with nobody left running it doesn't ho
     const ask = await move(A.token, A.clubId, south);
     assert.equal(ask.status, 202, JSON.stringify(ask.body));
     assert.equal(await regionOf(A.clubId), north);
+    // Picking it again is the same ask, not a second ping.
+    assert.equal((await move(A.token, A.clubId, south)).status, 202);
     const told = await pool.query(
       "SELECT category FROM notifications WHERE user_id = $1", [Rs.id]);
     assert.deepEqual(told.rows.map((r) => r.category), ["region_request"]);
