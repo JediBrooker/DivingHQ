@@ -32,6 +32,7 @@ const {
   loadSfCumulative,
 } = require("../../lib/super-final-helpers");
 const { perDivePointsCte } = require("../../lib/scoring-sql");
+const { insertDiveListRows } = require("./stage-helpers");
 
 // World Aquatics Art 4.1.5 / Diving World Cup §3.1.2: within a Super-
 // Final tier (finalists at positions 1-4, SF non-finalists 5-6, H2H
@@ -452,22 +453,13 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
 
         // Insert the replacement's 3 H2H rows in the same slot
         // (group_number + display_order) as the withdrawn diver.
-        for (let r = 1; r <= 3; r++) {
-          await client.query(
-            `INSERT INTO competitor_dive_lists
-                (event_id, competitor_id, dive_id, round_number,
-                 display_order, group_number, is_reserve)
-              VALUES ($1, $2, $3, $4, $5, $6, FALSE)`,
-            [
-              eventId,
-              replacement_competitor_id,
-              replByRound.get(r) || null,
-              r,
-              withdrawSlot.display_order,
-              withdrawSlot.group_number,
-            ],
-          );
-        }
+        await insertDiveListRows(client, eventId, [1, 2, 3].map((r) => ({
+          competitor_id: replacement_competitor_id,
+          dive_id: replByRound.get(r) || null,
+          round_number: r,
+          display_order: withdrawSlot.display_order,
+          group_number: withdrawSlot.group_number,
+        })));
 
         await recordAudit(client, {
           ...auditFromReq(req),

@@ -35,6 +35,12 @@ const {
   stampActualStart,
 } = require("../../lib/schedule-reflow");
 const { retirePendingPayment } = require("../../lib/payment-lifecycle");
+const {
+  parseLockMinutes,
+  insertDiveListRows,
+  loadStop1Lists,
+  insertRoundDives,
+} = require("./stage-helpers");
 
 // Migration 039: shape-check operator-prescribed round_dives. We
 // only validate structure here (round numbering 1..N contiguous,
@@ -656,22 +662,7 @@ module.exports = function createEventsRouter({
       );
       const event = evRes.rows[0];
       // Persist any operator-prescribed round dives (migration 039).
-      if (Array.isArray(round_dives) && round_dives.length) {
-        for (const slot of round_dives) {
-          await client.query(
-            `INSERT INTO event_round_dives (event_id, round_number, dive_id, height)
-             VALUES ($1, $2, $3, $4)`,
-            [
-              event.id,
-              slot.round_number,
-              slot.dive_id || null,
-              slot.height == null || slot.height === ""
-                ? null
-                : Number(slot.height),
-            ],
-          );
-        }
-      }
+      if (Array.isArray(round_dives)) await insertRoundDives(client, event.id, round_dives);
       // Creator becomes the first event manager automatically.
       await client.query(
         "INSERT INTO event_managers (event_id, user_id, added_by) VALUES ($1,$2,$2)",
@@ -946,22 +937,7 @@ module.exports = function createEventsRouter({
           "DELETE FROM event_round_dives WHERE event_id = $1",
           [req.params.id],
         );
-        if (Array.isArray(round_dives) && round_dives.length) {
-          for (const slot of round_dives) {
-            await client.query(
-              `INSERT INTO event_round_dives (event_id, round_number, dive_id, height)
-               VALUES ($1, $2, $3, $4)`,
-              [
-                req.params.id,
-                slot.round_number,
-                slot.dive_id || null,
-                slot.height == null || slot.height === ""
-                  ? null
-                  : Number(slot.height),
-              ],
-            );
-          }
-        }
+        if (Array.isArray(round_dives)) await insertRoundDives(client, req.params.id, round_dives);
       }
       await client.query("COMMIT");
       res.json(r.rows[0]);
@@ -1911,9 +1887,7 @@ module.exports = function createEventsRouter({
       } = req.body || {};
       const topN = parseInt(top_n);
       const resN = parseInt(reserves) || 0;
-      const lockMin = Number.isFinite(parseInt(lock_minutes))
-        ? Math.max(0, Math.min(parseInt(lock_minutes), 24 * 60))
-        : 30;
+      const lockMin = parseLockMinutes(lock_minutes);
       if (!Number.isInteger(topN) || topN < 1) {
         return res.status(400).json({ error: "top_n must be a positive integer" });
       }
@@ -2039,26 +2013,23 @@ module.exports = function createEventsRouter({
         );
 
         const childRounds = child.total_rounds;
-        // One multi-row INSERT for the whole reseed (primaries then
-        // reserves, same row order the per-row loop produced). The
-        // UNNEST arrays stay aligned by index.
-        const seedRows = {
-          competitor_ids: [], dive_ids: [], round_numbers: [],
-          display_orders: [], is_reserves: [], reserve_positions: [],
-        };
+        // One multi-row INSERT for the whole reseed, primaries then
+        // reserves.
+        const seedRows = [];
         function pushDiverRows(diver, { isReserve, reservePos, displayOrder }) {
           const dives = Array.isArray(diver.dives) ? diver.dives : [];
           const byRound = new Map(dives.map((d) => [d.round_number, d.dive_id]));
           for (let r = 1; r <= childRounds; r++) {
-            const diveId = prescribedByRound.has(r)
-              ? prescribedByRound.get(r)
-              : (byRound.get(r) || null);
-            seedRows.competitor_ids.push(diver.competitor_id);
-            seedRows.dive_ids.push(diveId);
-            seedRows.round_numbers.push(r);
-            seedRows.display_orders.push(isReserve ? null : displayOrder);
-            seedRows.is_reserves.push(isReserve);
-            seedRows.reserve_positions.push(isReserve ? reservePos : null);
+            seedRows.push({
+              competitor_id: diver.competitor_id,
+              dive_id: prescribedByRound.has(r)
+                ? prescribedByRound.get(r)
+                : (byRound.get(r) || null),
+              round_number: r,
+              display_order: isReserve ? null : displayOrder,
+              is_reserve: isReserve,
+              reserve_position: isReserve ? reservePos : null,
+            });
           }
         }
 
@@ -2076,22 +2047,7 @@ module.exports = function createEventsRouter({
             displayOrder: null,
           });
         }
-        await client.query(
-          `INSERT INTO competitor_dive_lists
-            (event_id, competitor_id, dive_id, round_number,
-             display_order, is_reserve, reserve_position)
-           SELECT $1::uuid, t.competitor_id, t.dive_id, t.round_number,
-                  t.display_order, t.is_reserve, t.reserve_position
-           FROM UNNEST($2::uuid[], $3::uuid[], $4::int[], $5::int[],
-                       $6::boolean[], $7::int[])
-             AS t(competitor_id, dive_id, round_number, display_order,
-                  is_reserve, reserve_position)`,
-          [
-            child.id,
-            seedRows.competitor_ids, seedRows.dive_ids, seedRows.round_numbers,
-            seedRows.display_orders, seedRows.is_reserves, seedRows.reserve_positions,
-          ],
-        );
+        await insertDiveListRows(client, child.id, seedRows);
 
         // Stamp the dive-list lock on the child event. The advance
         // endpoint runs after the parent is Completed (we already
@@ -2440,9 +2396,7 @@ module.exports = function createEventsRouter({
       const maxPerOrg = Number.isFinite(parseInt(req.body?.max_per_org))
         ? Math.max(1, Math.min(parseInt(req.body.max_per_org), 12))
         : 2;
-      const lockMin = Number.isFinite(parseInt(req.body?.lock_minutes))
-        ? Math.max(0, Math.min(parseInt(req.body.lock_minutes), 24 * 60))
-        : 30;
+      const lockMin = parseLockMinutes(req.body?.lock_minutes);
 
       const client = await pool.connect();
       try {
@@ -2566,43 +2520,27 @@ module.exports = function createEventsRouter({
         // stage's submission. If a diver didn't have a row for a
         // given round in the parent (incomplete list), the dive_id
         // will be NULL and the diver will need to submit before
-        // dive_list_locks_at.
-        async function insertDiverRows(competitorId, dives, groupNumber, displayOrder) {
+        // dive_list_locks_at. Pair by pair, A before B, in one INSERT.
+        const seedRows = [];
+        function pushDiverRows(competitorId, dives, groupNumber) {
           const byRound = new Map(
             (dives || []).map((d) => [Number(d.round_number), d.dive_id]),
           );
           for (let r = 1; r <= 3; r++) {
-            await client.query(
-              `INSERT INTO competitor_dive_lists
-                (event_id, competitor_id, dive_id, round_number,
-                 display_order, group_number, is_reserve)
-               VALUES ($1, $2, $3, $4, $5, $6, FALSE)`,
-              [
-                ev.id,
-                competitorId,
-                byRound.get(r) || null,
-                r,
-                displayOrder,
-                groupNumber,
-              ],
-            );
+            seedRows.push({
+              competitor_id: competitorId,
+              dive_id: byRound.get(r) || null,
+              round_number: r,
+              display_order: orderByCompetitor.get(competitorId),
+              group_number: groupNumber,
+            });
           }
         }
-
         for (const pair of plan.pairs) {
-          await insertDiverRows(
-            pair.competitor_a_id,
-            pair.dives_a,
-            pair.group_number,
-            orderByCompetitor.get(pair.competitor_a_id),
-          );
-          await insertDiverRows(
-            pair.competitor_b_id,
-            pair.dives_b,
-            pair.group_number,
-            orderByCompetitor.get(pair.competitor_b_id),
-          );
+          pushDiverRows(pair.competitor_a_id, pair.dives_a, pair.group_number);
+          pushDiverRows(pair.competitor_b_id, pair.dives_b, pair.group_number);
         }
+        await insertDiveListRows(client, ev.id, seedRows);
 
         // Lock the dive list, see stampDiveListLock for the WA
         // Article 6.7.3 window.
@@ -2759,9 +2697,7 @@ module.exports = function createEventsRouter({
     "/api/events/:id/seed-semi",
     requireEventManager(),
     async (req, res) => {
-      const lockMin = Number.isFinite(parseInt(req.body?.lock_minutes))
-        ? Math.max(0, Math.min(parseInt(req.body.lock_minutes), 24 * 60))
-        : 30;
+      const lockMin = parseLockMinutes(req.body?.lock_minutes);
 
       const client = await pool.connect();
       try {
@@ -2881,22 +2817,8 @@ module.exports = function createEventsRouter({
         // Map: competitor_id → { round_number → dive_id } from
         // the original Stop-1 submission. Rounds 4..5/6 are the
         // SF's dives.
-        const stop1ListsRes = await client.query(
-          `SELECT competitor_id, round_number, dive_id
-             FROM competitor_dive_lists
-            WHERE event_id = $1
-              AND withdrawn_at IS NULL
-              AND is_reserve = FALSE
-              AND competitor_id = ANY($2::uuid[])`,
-          [h2h.parent_event_id, winners.map((w) => w.competitor_id)],
-        );
-        const stop1ByCompetitor = new Map();
-        for (const r of stop1ListsRes.rows) {
-          if (!stop1ByCompetitor.has(r.competitor_id)) {
-            stop1ByCompetitor.set(r.competitor_id, new Map());
-          }
-          stop1ByCompetitor.get(r.competitor_id).set(Number(r.round_number), r.dive_id);
-        }
+        const stop1ByCompetitor = await loadStop1Lists(
+          client, h2h.parent_event_id, winners.map((w) => w.competitor_id));
 
         // Refuse if scores already exist, see refuseIfScoresExist.
         const scoresErrSemi = await refuseIfScoresExist(client, ev.id);
@@ -2915,38 +2837,22 @@ module.exports = function createEventsRouter({
         // round_number r in the SF event uses the Stop-1
         // submission's round (3 + r), i.e. SF round 1 → Stop-1
         // round 4, SF round 2 → Stop-1 round 5, SF round 3
-        // (men only) → Stop-1 round 6. One multi-row INSERT; the
-        // UNNEST arrays stay aligned by index.
-        const seedRows = {
-          competitor_ids: [], dive_ids: [], round_numbers: [],
-          display_orders: [], group_numbers: [],
-        };
+        // (men only) → Stop-1 round 6. One multi-row INSERT.
+        const seedRows = [];
         for (const w of winners) {
           const stop1Map = stop1ByCompetitor.get(w.competitor_id) || new Map();
           for (let r = 1; r <= expectedSfRounds; r++) {
             const stop1Round = 3 + r; // SF r=1 → parent r=4, etc.
-            seedRows.competitor_ids.push(w.competitor_id);
-            seedRows.dive_ids.push(stop1Map.get(stop1Round) || null);
-            seedRows.round_numbers.push(r);
-            seedRows.display_orders.push(orderByCompetitor.get(w.competitor_id));
-            seedRows.group_numbers.push(w.group_number);
+            seedRows.push({
+              competitor_id: w.competitor_id,
+              dive_id: stop1Map.get(stop1Round) || null,
+              round_number: r,
+              display_order: orderByCompetitor.get(w.competitor_id),
+              group_number: w.group_number,
+            });
           }
         }
-        await client.query(
-          `INSERT INTO competitor_dive_lists
-            (event_id, competitor_id, dive_id, round_number,
-             display_order, group_number, is_reserve)
-           SELECT $1::uuid, t.competitor_id, t.dive_id, t.round_number,
-                  t.display_order, t.group_number, FALSE
-           FROM UNNEST($2::uuid[], $3::uuid[], $4::int[], $5::int[], $6::int[])
-             AS t(competitor_id, dive_id, round_number, display_order,
-                  group_number)`,
-          [
-            ev.id,
-            seedRows.competitor_ids, seedRows.dive_ids, seedRows.round_numbers,
-            seedRows.display_orders, seedRows.group_numbers,
-          ],
-        );
+        await insertDiveListRows(client, ev.id, seedRows);
 
         // Set score_carry_from so standings include H2H
         // (Appendix 3 §3.1, "H2H scores carry forward to SF").
@@ -3048,9 +2954,7 @@ module.exports = function createEventsRouter({
     "/api/events/:id/seed-final",
     requireEventManager(),
     async (req, res) => {
-      const rawLockMin = Number.isFinite(parseInt(req.body?.lock_minutes))
-        ? Math.max(5, Math.min(parseInt(req.body.lock_minutes), 24 * 60))
-        : 15;
+      const rawLockMin = parseLockMinutes(req.body?.lock_minutes, { def: 15, min: 5 });
       // Effective lock: 5-min buffer before F starts (Appendix 3 §4.1).
       const lockMin = Math.max(0, rawLockMin - 5);
 
@@ -3160,22 +3064,8 @@ module.exports = function createEventsRouter({
 
         // Pull each finalist's full Stop-1 dive list (rounds
         // 1..5/6) so we can seed it verbatim into the F event.
-        const stop1ListsRes = await client.query(
-          `SELECT competitor_id, round_number, dive_id
-             FROM competitor_dive_lists
-            WHERE event_id = $1
-              AND withdrawn_at IS NULL
-              AND is_reserve = FALSE
-              AND competitor_id = ANY($2::uuid[])`,
-          [stop1EventId, finalists.map((f) => f.competitor_id)],
-        );
-        const stop1ByCompetitor = new Map();
-        for (const r of stop1ListsRes.rows) {
-          if (!stop1ByCompetitor.has(r.competitor_id)) {
-            stop1ByCompetitor.set(r.competitor_id, new Map());
-          }
-          stop1ByCompetitor.get(r.competitor_id).set(Number(r.round_number), r.dive_id);
-        }
+        const stop1ByCompetitor = await loadStop1Lists(
+          client, stop1EventId, finalists.map((f) => f.competitor_id));
 
         // Reverse rank: highest cumulative dives last (display_order=4).
         // Order finalists by cumulative_total ascending and assign 1..4.
@@ -3195,35 +3085,21 @@ module.exports = function createEventsRouter({
           [ev.id],
         );
 
-        // One multi-row INSERT; the UNNEST arrays stay aligned by
-        // index. group_number is NULL in the F event, groups only
-        // exist in the H2H / SF stages.
-        const seedRows = {
-          competitor_ids: [], dive_ids: [], round_numbers: [], display_orders: [],
-        };
+        // One multi-row INSERT. group_number stays NULL in the F
+        // event, groups only exist in the H2H / SF stages.
+        const seedRows = [];
         for (const f of finalists) {
           const stop1Map = stop1ByCompetitor.get(f.competitor_id) || new Map();
           for (let r = 1; r <= expectedFRounds; r++) {
-            seedRows.competitor_ids.push(f.competitor_id);
-            seedRows.dive_ids.push(stop1Map.get(r) || null);
-            seedRows.round_numbers.push(r);
-            seedRows.display_orders.push(orderByCompetitor.get(f.competitor_id));
+            seedRows.push({
+              competitor_id: f.competitor_id,
+              dive_id: stop1Map.get(r) || null,
+              round_number: r,
+              display_order: orderByCompetitor.get(f.competitor_id),
+            });
           }
         }
-        await client.query(
-          `INSERT INTO competitor_dive_lists
-            (event_id, competitor_id, dive_id, round_number,
-             display_order, group_number, is_reserve)
-           SELECT $1::uuid, t.competitor_id, t.dive_id, t.round_number,
-                  t.display_order, NULL::int, FALSE
-           FROM UNNEST($2::uuid[], $3::uuid[], $4::int[], $5::int[])
-             AS t(competitor_id, dive_id, round_number, display_order)`,
-          [
-            ev.id,
-            seedRows.competitor_ids, seedRows.dive_ids,
-            seedRows.round_numbers, seedRows.display_orders,
-          ],
-        );
+        await insertDiveListRows(client, ev.id, seedRows);
 
         // F resets scores (Appendix 3 §3.2). Make sure
         // score_carry_from is NULL.
