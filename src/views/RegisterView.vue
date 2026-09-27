@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CheckInboxPanel from '@/components/CheckInboxPanel.vue'
 // Same file the server validates against (lib/countries.js), so the
@@ -8,6 +8,24 @@ import CheckInboxPanel from '@/components/CheckInboxPanel.vue'
 import COUNTRIES from '../../lib/countries.json'
 
 const { locale, t } = useI18n()
+const route = useRoute()
+
+// Invite links from a club admin's My club page look like
+// /register?country=AUS&club=<club id>. Only a real country code is taken,
+// and the club only once it turns up in that country's club list, so a
+// mangled or doctored link just leaves the form as it would be anyway.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const invite = (() => {
+  const q = route.query
+  const country = typeof q.country === 'string' ? q.country.trim().toUpperCase() : ''
+  const club = typeof q.club === 'string' ? q.club.trim().toLowerCase() : ''
+  const known = COUNTRIES.some(c => c.a3 === country)
+  return {
+    country: known ? country : '',
+    club: known && UUID_RE.test(club) ? club : '',
+    regionId: null,
+  }
+})()
 
 const fullName = ref('')
 const username = ref('')
@@ -105,7 +123,7 @@ onMounted(async () => {
     signupsEnabled.value = false
   }
   if (!signupsEnabled.value) return
-  countryCode.value = guessCountry()
+  countryCode.value = invite.country || guessCountry()
 })
 
 watch(countryCode, async (code) => {
@@ -157,6 +175,26 @@ const visibleClubs = computed(() => {
 })
 
 watch([countryLoaded, orgId], () => { loadRegions() })
+
+// Pick the invited club as soon as it's in the list, once; after that the
+// picker is theirs. Its region too, where the country has them, so the
+// region filter above agrees with the club. Clubs and regions load in
+// either order, hence the two triggers.
+watch(clubs, (list) => {
+  const c = invite.club && list.find(x => x.id === invite.club)
+  if (!c) return
+  invite.club = ''
+  clubChoice.value = c.id
+  invite.regionId = c.region_id || null
+  applyInviteRegion()
+})
+watch(() => regionList.value.regions, applyInviteRegion)
+function applyInviteRegion() {
+  const r = invite.regionId && regionList.value.regions.find(x => x.id === invite.regionId)
+  if (!r) return
+  invite.regionId = null
+  regionCode.value = r.short_code
+}
 
 async function handleSubmit() {
   msg.value = ''

@@ -53,6 +53,19 @@ The very first time an org admin lands on the dashboard with zero events and zer
 
 Each step is skip-able. A `Skip setup →` link at the top bails out entirely. The wizard persists a localStorage stamp so it doesn't redirect you again on the next visit, even if you skipped without completing.
 
+### 2b. Starting a club (no federation needed)
+
+If your country's federation isn't on DivingHQ yet, a club can start on its own: on `/register`, pick your country, choose **+ Create a new club**, and you become that club's admin once you've verified your email. (Right after signing up, the page tells you which address the link went to and lets you send a new one if it doesn't arrive.)
+
+Club admins get a **Get started** checklist at the top of the dashboard. Each step links to where it's done and ticks itself off:
+
+1. **Create your first meet** — in Meet Manager. Meets your club hosts show each diver's club code by default (the meet's **Divers represent** setting).
+2. **Invite your members** — **My club** has a signup link for your club. Anyone who follows it starts with your country and club already picked, so they land in the right place. Their role requests come back to you on the same page.
+3. **Set your club's short code** — also on **My club**: up to 8 letters, numbers or dashes (`SYD`, `NZL-WLG`). It's what appears next to your divers on the scoreboard, results and PDFs at club meets. Under a federation, the federation sets it from its Clubs screen instead.
+4. **Read the club admin guide** — the Club Admin card on the [guide's home page](/guide).
+
+**Hide** puts the checklist away on that device.
+
 ## 3. Add a few clubs (optional but realistic)
 
 From the dashboard click **Clubs**. Create one or two clubs (e.g. "Capital Diving Club", "Coastal Aquatics"). Each gets a short code (3–6 chars, e.g. `NZL-1`) that surfaces as a cyan pill next to the club name on the scoreboard.

@@ -416,6 +416,23 @@
       "claims_one": "1 reclamación te espera",
       "claims_many": "{count} reclamaciones te esperan",
       "claims_meta": "Una federación quiere hacerse cargo"
+    },
+    "getting_started": {
+      "title": "Pon en marcha {club}",
+      "intro": "Algunas cosas que configurar primero. Cada una se marca sola cuando está hecha.",
+      "all_done": "Todo listo. Tu club ya puede empezar, así que puedes ocultar esto.",
+      "progress": "{done} de {total} hechas",
+      "dismiss": "Ocultar",
+      "dismiss_tip": "Oculta esta lista. No volverá a aparecer en este dispositivo.",
+      "done": "Hecho",
+      "step_meet": "Crea tu primera competición",
+      "step_meet_desc": "Configura una competición que organice tu club y añade sus pruebas.",
+      "step_invite": "Invita a tus miembros",
+      "step_invite_desc": "Comparte el enlace de registro del club desde Mi club.",
+      "step_code": "Define el código corto de tu club",
+      "step_code_desc": "Aparece junto a tus saltadores en las competiciones de club.",
+      "step_guide": "Lee la guía para administradores de club",
+      "step_guide_desc": "Lo que puedes hacer, desde la primera competición hasta el día de la prueba."
     }
   },
   "profile": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Elige un miembro del club —",
     "add": "Añadir",
     "remove": "Quitar",
-    "federation_appoints": "Tu federación nombra a los administradores de este club."
+    "federation_appoints": "Tu federación nombra a los administradores de este club.",
+    "setup": {
+      "invite_title": "Invita a tus miembros",
+      "invite_body": "Quien se registre con este enlace empieza con {club} ya elegido. Compártelo por correo, chat o en el boletín del club.",
+      "code_title": "Código del club",
+      "code_hint": "Un código corto que aparece junto a tus saltadores en el marcador, los resultados y los PDF de las competiciones de club. Hasta 8 letras, números o guiones.",
+      "code_placeholder": "p. ej. SYD",
+      "code_saved": "Código del club guardado",
+      "code_none": "Todavía sin código.",
+      "code_federation": "El código de tu club lo fija tu federación."
+    }
   },
   "regions": {
     "label": {

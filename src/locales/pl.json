@@ -416,6 +416,23 @@
       "claims_one": "Czeka na ciebie 1 roszczenie",
       "claims_many": "Czeka na ciebie roszczeń: {count}",
       "claims_meta": "Federacja chce przejąć konto"
+    },
+    "getting_started": {
+      "title": "Rozkręć {club}",
+      "intro": "Kilka rzeczy do ustawienia na start. Każda odhaczy się sama, gdy będzie gotowa.",
+      "all_done": "Wszystko gotowe. Klub może działać, więc możesz to ukryć.",
+      "progress": "Gotowe: {done} z {total}",
+      "dismiss": "Ukryj",
+      "dismiss_tip": "Ukryj tę listę. Na tym urządzeniu już się nie pojawi.",
+      "done": "Gotowe",
+      "step_meet": "Utwórz pierwsze zawody",
+      "step_meet_desc": "Załóż zawody organizowane przez Twój klub, a potem dodaj konkurencje.",
+      "step_invite": "Zaproś członków klubu",
+      "step_invite_desc": "Udostępnij link rejestracyjny klubu ze strony Mój klub.",
+      "step_code": "Ustaw krótki kod klubu",
+      "step_code_desc": "Wyświetlany obok Twoich skoczków na zawodach klubowych.",
+      "step_guide": "Przeczytaj przewodnik administratora klubu",
+      "step_guide_desc": "Co możesz zrobić, od pierwszych zawodów po dzień startów."
     }
   },
   "role": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Wybierz członka klubu —",
     "add": "Dodaj",
     "remove": "Usuń",
-    "federation_appoints": "Administratorów tego klubu wyznacza twoja federacja."
+    "federation_appoints": "Administratorów tego klubu wyznacza twoja federacja.",
+    "setup": {
+      "invite_title": "Zaproś członków klubu",
+      "invite_body": "Każdy, kto zarejestruje się przez ten link, będzie miał już wybrany {club}. Udostępnij go e-mailem, na czacie lub w klubowym biuletynie.",
+      "code_title": "Kod klubu",
+      "code_hint": "Krótki kod wyświetlany obok Twoich skoczków na tablicy wyników, w wynikach i plikach PDF podczas zawodów klubowych. Do 8 liter, cyfr lub myślników.",
+      "code_placeholder": "np. SYD",
+      "code_saved": "Zapisano kod klubu",
+      "code_none": "Brak kodu.",
+      "code_federation": "Kod klubu ustala Twoja federacja."
+    }
   },
   "regions": {
     "label": {

@@ -416,6 +416,23 @@
       "claims_one": "1 Anspruch wartet auf Sie",
       "claims_many": "{count} Ansprüche warten auf Sie",
       "claims_meta": "Ein Verband möchte ein Konto übernehmen"
+    },
+    "getting_started": {
+      "title": "Legen Sie mit {club} los",
+      "intro": "Ein paar Dinge, die Sie zuerst einrichten sollten. Jeder Punkt hakt sich selbst ab, sobald er erledigt ist.",
+      "all_done": "Alles erledigt. Ihr Verein ist startklar, Sie können diese Liste ausblenden.",
+      "progress": "{done} von {total} erledigt",
+      "dismiss": "Ausblenden",
+      "dismiss_tip": "Diese Checkliste ausblenden. Auf diesem Gerät erscheint sie nicht wieder.",
+      "done": "Erledigt",
+      "step_meet": "Ersten Wettkampf anlegen",
+      "step_meet_desc": "Legen Sie einen Wettkampf an, den Ihr Verein ausrichtet, und fügen Sie dann die Disziplinen hinzu.",
+      "step_invite": "Mitglieder einladen",
+      "step_invite_desc": "Teilen Sie den Registrierungslink Ihres Vereins unter Mein Verein.",
+      "step_code": "Vereinskürzel festlegen",
+      "step_code_desc": "Erscheint bei Vereinswettkämpfen neben Ihren Springern.",
+      "step_guide": "Leitfaden für Vereinsadmins lesen",
+      "step_guide_desc": "Was Sie tun können, vom ersten Wettkampf bis zum Wettkampftag."
     }
   },
   "role": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Vereinsmitglied auswählen —",
     "add": "Hinzufügen",
     "remove": "Entfernen",
-    "federation_appoints": "Ihr Verband ernennt die Admins dieses Vereins."
+    "federation_appoints": "Ihr Verband ernennt die Admins dieses Vereins.",
+    "setup": {
+      "invite_title": "Mitglieder einladen",
+      "invite_body": "Wer sich über diesen Link registriert, hat {club} bereits ausgewählt. Teilen Sie ihn per E-Mail, Chat oder im Vereinsnewsletter.",
+      "code_title": "Vereinskürzel",
+      "code_hint": "Ein kurzes Kürzel, das bei Vereinswettkämpfen neben Ihren Springern auf der Anzeigetafel, in den Ergebnissen und PDFs erscheint. Bis zu 8 Buchstaben, Ziffern oder Bindestriche.",
+      "code_placeholder": "z. B. SYD",
+      "code_saved": "Vereinskürzel gespeichert",
+      "code_none": "Noch kein Kürzel.",
+      "code_federation": "Das Kürzel Ihres Vereins legt Ihr Verband fest."
+    }
   },
   "regions": {
     "label": {

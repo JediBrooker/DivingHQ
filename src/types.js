@@ -60,6 +60,23 @@
  */
 
 /**
+ * @typedef {Object} ClubSetup
+ * GET /api/clubs/:id/setup (routes/club-setup.js). For the club's admins,
+ * the org's admins and the sysadmin; drives the dashboard's "Get started"
+ * panel and the invite link / short code card on My club.
+ *
+ * @property {string}  id
+ * @property {string}  name
+ * @property {?string} short_code
+ * @property {?string} country_code   ISO alpha-3 for the invite link, null when the org has none
+ * @property {'claimed'|'unclaimed'} claim_state
+ * @property {boolean} can_edit_code  PUT /api/clubs/:id/short-code would be allowed
+ * @property {number}  member_count   everyone in the club, the caller included if they're a member
+ * @property {boolean} you_are_member
+ * @property {number}  meet_count     meets this club hosts
+ */
+
+/**
  * @typedef {Object} DiverSummary
  * The lightweight diver row returned from the cross-org search and
  * browse endpoints. Used for autocomplete + filterable lists.

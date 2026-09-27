@@ -118,7 +118,13 @@ const GLOSSARY = [
 const activeSection = ref(SECTIONS[0].id)
 let observer = null
 onMounted(() => {
-  if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return
+  if (typeof window === 'undefined') return
+  // The router has no scrollBehavior, so an in-app link like
+  // /guide#club-admin would otherwise land at the top of the page.
+  if (window.location.hash.length > 1) {
+    document.getElementById(decodeURIComponent(window.location.hash.slice(1)))?.scrollIntoView()
+  }
+  if (!('IntersectionObserver' in window)) return
   observer = new IntersectionObserver((entries) => {
     for (const e of entries) {
       if (e.isIntersecting) activeSection.value = e.target.id
@@ -233,8 +239,9 @@ onBeforeUnmount(() => observer?.disconnect())
             </article>
 
             <!-- Club admin: runs their own club's meets where there's no
-                 federation on DivingHQ yet (club-first signup). -->
-            <article class="role-card">
+                 federation on DivingHQ yet (club-first signup). The id is
+                 what the dashboard's Get started panel links to. -->
+            <article id="club-admin" class="role-card">
               <div class="role-icon" aria-hidden="true"><Users /></div>
               <h3 class="role-name">{{ $t('guide.role.club_admin.name') }}</h3>
               <p class="role-desc" v-html="$t('guide.role.club_admin.desc')"></p>

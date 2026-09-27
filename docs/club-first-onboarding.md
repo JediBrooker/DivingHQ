@@ -632,3 +632,12 @@ Migration 090 adds `meets.represent_as`, `competitor_dive_lists.rep_club_id` / `
 
 **Tests.** Integration covers labels switching across region / club / country, a diver who changes club after entering keeping their entry-time state, the Control Room roster agreeing, and a state record reading unofficial until the region is claimed.
 
+
+## 18. First-week onboarding for club founders
+
+A founder used to land on a dashboard built for federations: the setup wizard is org-admin only and their one tab was "Other". Now:
+
+- **Get started panel** (`src/components/dashboard/ClubGettingStarted.vue`), above the dashboard tabs for anyone in `club_admin_of`: create a meet, invite members, set the short code, read the guide. The first three tick themselves off from `GET /api/clubs/:id/setup` (meet count, member count, `short_code`); the guide step ticks when opened from the panel. The code step is hidden when the federation owns the code and hasn't set one. Hiding the panel is per user in localStorage.
+- **Invite link** on My club (`src/components/ClubSetupCard.vue`): `/register?country=<alpha-3>&club=<club id>`. RegisterView takes the country only if it's in `lib/countries.json` and the club only once it appears in that country's club list, selecting its region too. Junk parameters leave the form as it would be anyway.
+- **Short code** on the same card, `PUT /api/clubs/:id/short-code` (`routes/club-setup.js`): trimmed, upper-cased, up to 8 letters / digits / dashes, unique within the org, audit-logged as `club.code_changed`. Same rule as the region picker: the club's admins set it where the country is unclaimed, the federation's org admin (or the sysadmin) otherwise.
+- The sidebar section holding My club / My region is headed **Organisation**, not "Federation".

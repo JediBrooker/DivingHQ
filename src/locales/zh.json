@@ -416,6 +416,23 @@
       "claims_one": "有 1 个申请等待您处理",
       "claims_many": "有 {count} 个申请等待您处理",
       "claims_meta": "有联合会申请接管账户"
+    },
+    "getting_started": {
+      "title": "开始运营 {club}",
+      "intro": "有几件事需要先设置好。每一项完成后都会自动打勾。",
+      "all_done": "全部完成。你的俱乐部已准备就绪，可以隐藏此清单了。",
+      "progress": "已完成 {done}/{total}",
+      "dismiss": "隐藏",
+      "dismiss_tip": "隐藏此清单。在此设备上不会再显示。",
+      "done": "已完成",
+      "step_meet": "创建你的第一场比赛",
+      "step_meet_desc": "设置一场由你的俱乐部主办的比赛，然后添加项目。",
+      "step_invite": "邀请你的会员",
+      "step_invite_desc": "在“我的俱乐部”中分享俱乐部注册链接。",
+      "step_code": "设置俱乐部简码",
+      "step_code_desc": "在俱乐部比赛中显示在你的运动员旁边。",
+      "step_guide": "阅读俱乐部管理员指南",
+      "step_guide_desc": "从第一场比赛到比赛当天，你能做的一切。"
     }
   },
   "profile": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— 选择俱乐部会员 —",
     "add": "添加",
     "remove": "移除",
-    "federation_appoints": "本俱乐部的管理员由您的联合会任命。"
+    "federation_appoints": "本俱乐部的管理员由您的联合会任命。",
+    "setup": {
+      "invite_title": "邀请你的会员",
+      "invite_body": "通过此链接注册的人会自动选好 {club}。可通过邮件、聊天或俱乐部通讯分享。",
+      "code_title": "俱乐部代码",
+      "code_hint": "在俱乐部比赛的记分牌、成绩和 PDF 中显示在你的运动员旁边的简短代码。最多 8 个字母、数字或连字符。",
+      "code_placeholder": "例如 SYD",
+      "code_saved": "俱乐部代码已保存",
+      "code_none": "尚未设置代码。",
+      "code_federation": "俱乐部代码由你的协会设置。"
+    }
   },
   "regions": {
     "label": {

@@ -416,6 +416,23 @@
       "claims_one": "1 anspråk väntar på dig",
       "claims_many": "{count} anspråk väntar på dig",
       "claims_meta": "Ett förbund vill ta över ett konto"
+    },
+    "getting_started": {
+      "title": "Kom igång med {club}",
+      "intro": "Några saker att ställa in först. Varje punkt bockas av av sig själv när den är klar.",
+      "all_done": "Allt är klart. Din klubb är redo, så du kan dölja det här.",
+      "progress": "{done} av {total} klara",
+      "dismiss": "Dölj",
+      "dismiss_tip": "Dölj den här checklistan. Den kommer inte tillbaka på den här enheten.",
+      "done": "Klar",
+      "step_meet": "Skapa din första tävling",
+      "step_meet_desc": "Lägg upp en tävling som din klubb arrangerar och lägg sedan till grenarna.",
+      "step_invite": "Bjud in dina medlemmar",
+      "step_invite_desc": "Dela klubbens registreringslänk från Min klubb.",
+      "step_code": "Ange klubbens kortkod",
+      "step_code_desc": "Visas bredvid dina hoppare vid klubbtävlingar.",
+      "step_guide": "Läs guiden för klubbadministratörer",
+      "step_guide_desc": "Vad du kan göra, från första tävlingen till tävlingsdagen."
     }
   },
   "role": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Välj en klubbmedlem —",
     "add": "Lägg till",
     "remove": "Ta bort",
-    "federation_appoints": "Ditt förbund utser klubbens administratörer."
+    "federation_appoints": "Ditt förbund utser klubbens administratörer.",
+    "setup": {
+      "invite_title": "Bjud in dina medlemmar",
+      "invite_body": "Alla som registrerar sig via den här länken har {club} förvalt. Dela den via e-post, chatt eller klubbens nyhetsbrev.",
+      "code_title": "Klubbkod",
+      "code_hint": "En kort kod som visas bredvid dina hoppare på resultattavlan, i resultat och PDF:er vid klubbtävlingar. Upp till 8 bokstäver, siffror eller bindestreck.",
+      "code_placeholder": "t.ex. SYD",
+      "code_saved": "Klubbkoden har sparats",
+      "code_none": "Ingen kod än.",
+      "code_federation": "Ditt förbund bestämmer klubbens kod."
+    }
   },
   "regions": {
     "label": {

@@ -416,6 +416,23 @@
       "claims_one": "1 krav venter på dig",
       "claims_many": "{count} krav venter på dig",
       "claims_meta": "Et forbund vil overtage en konto"
+    },
+    "getting_started": {
+      "title": "Kom godt i gang med {club}",
+      "intro": "Et par ting, der skal sættes op først. Hver af dem krydses af af sig selv, når de er klaret.",
+      "all_done": "Alt er klaret. Din klub er klar, så du kan skjule dette.",
+      "progress": "{done} af {total} klaret",
+      "dismiss": "Skjul",
+      "dismiss_tip": "Skjul denne tjekliste. Den kommer ikke igen på denne enhed.",
+      "done": "Klaret",
+      "step_meet": "Opret dit første stævne",
+      "step_meet_desc": "Opret et stævne, som din klub afholder, og tilføj derefter dets øvelser.",
+      "step_invite": "Inviter dine medlemmer",
+      "step_invite_desc": "Del klubbens tilmeldingslink fra Min klub.",
+      "step_code": "Angiv din klubs kortkode",
+      "step_code_desc": "Vises ved dine udspringere til klubstævner.",
+      "step_guide": "Læs vejledningen for klubadministratorer",
+      "step_guide_desc": "Hvad du kan, fra det første stævne til stævnedagen."
     }
   },
   "role": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Vælg et klubmedlem —",
     "add": "Tilføj",
     "remove": "Fjern",
-    "federation_appoints": "Dit forbund udpeger klubbens administratorer."
+    "federation_appoints": "Dit forbund udpeger klubbens administratorer.",
+    "setup": {
+      "invite_title": "Inviter dine medlemmer",
+      "invite_body": "Alle, der tilmelder sig via dette link, har {club} valgt på forhånd. Del det på e-mail, i chat eller i klubbens nyhedsbrev.",
+      "code_title": "Klubkode",
+      "code_hint": "En kort kode, der vises ved dine udspringere på resultattavlen, i resultater og PDF'er til klubstævner. Højst 8 bogstaver, tal eller bindestreger.",
+      "code_placeholder": "f.eks. SYD",
+      "code_saved": "Klubkoden er gemt",
+      "code_none": "Ingen kode endnu.",
+      "code_federation": "Dit forbund fastsætter din klubs kode."
+    }
   },
   "regions": {
     "label": {

@@ -416,6 +416,23 @@
       "claims_one": "1 rivendicazione ti aspetta",
       "claims_many": "{count} rivendicazioni ti aspettano",
       "claims_meta": "Una federazione vuole subentrare"
+    },
+    "getting_started": {
+      "title": "Avvia {club}",
+      "intro": "Alcune cose da configurare subito. Ognuna si spunta da sola quando è fatta.",
+      "all_done": "Tutto fatto. Il tuo club è pronto, puoi nascondere questo riquadro.",
+      "progress": "{done} di {total} fatti",
+      "dismiss": "Nascondi",
+      "dismiss_tip": "Nascondi questa lista. Non ricomparirà su questo dispositivo.",
+      "done": "Fatto",
+      "step_meet": "Crea la tua prima gara",
+      "step_meet_desc": "Imposta una gara organizzata dal tuo club, poi aggiungi le sue specialità.",
+      "step_invite": "Invita i tuoi membri",
+      "step_invite_desc": "Condividi il link di registrazione del club da Il mio club.",
+      "step_code": "Imposta il codice breve del club",
+      "step_code_desc": "Mostrato accanto ai tuoi tuffatori nelle gare di club.",
+      "step_guide": "Leggi la guida per gli amministratori di club",
+      "step_guide_desc": "Cosa puoi fare, dalla prima gara al giorno della competizione."
     }
   },
   "role": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Scegli un membro del club —",
     "add": "Aggiungi",
     "remove": "Rimuovi",
-    "federation_appoints": "Gli amministratori di questo club sono nominati dalla tua federazione."
+    "federation_appoints": "Gli amministratori di questo club sono nominati dalla tua federazione.",
+    "setup": {
+      "invite_title": "Invita i tuoi membri",
+      "invite_body": "Chi si registra con questo link trova {club} già selezionato. Condividilo via email, chat o nella newsletter del club.",
+      "code_title": "Codice del club",
+      "code_hint": "Un codice breve mostrato accanto ai tuoi tuffatori sul tabellone, nei risultati e nei PDF delle gare di club. Fino a 8 lettere, numeri o trattini.",
+      "code_placeholder": "es. SYD",
+      "code_saved": "Codice del club salvato",
+      "code_none": "Ancora nessun codice.",
+      "code_federation": "Il codice del tuo club lo stabilisce la tua federazione."
+    }
   },
   "regions": {
     "label": {

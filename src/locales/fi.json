@@ -416,6 +416,23 @@
       "claims_one": "1 vaatimus odottaa sinua",
       "claims_many": "{count} vaatimusta odottaa sinua",
       "claims_meta": "Liitto haluaa ottaa tilin haltuunsa"
+    },
+    "getting_started": {
+      "title": "Pane {club} alulle",
+      "intro": "Muutama asia, jotka kannattaa laittaa kuntoon ensin. Kukin kuittaantuu itsestään, kun se on tehty.",
+      "all_done": "Kaikki valmista. Seurasi on valmis, joten voit piilottaa tämän.",
+      "progress": "{done}/{total} tehty",
+      "dismiss": "Piilota",
+      "dismiss_tip": "Piilota tämä tarkistuslista. Se ei palaa tälle laitteelle.",
+      "done": "Tehty",
+      "step_meet": "Luo ensimmäinen kilpailusi",
+      "step_meet_desc": "Perusta kilpailu, jonka seurasi järjestää, ja lisää sitten sen lajit.",
+      "step_invite": "Kutsu jäsenesi",
+      "step_invite_desc": "Jaa seuran rekisteröitymislinkki Oma seura -sivulta.",
+      "step_code": "Aseta seurasi lyhenne",
+      "step_code_desc": "Näkyy hyppääjiesi vieressä seurakilpailuissa.",
+      "step_guide": "Lue seuran ylläpitäjän opas",
+      "step_guide_desc": "Mitä voit tehdä ensimmäisestä kilpailusta kilpailupäivään."
     }
   },
   "role": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Valitse seuran jäsen —",
     "add": "Lisää",
     "remove": "Poista",
-    "federation_appoints": "Liittosi nimeää tämän seuran ylläpitäjät."
+    "federation_appoints": "Liittosi nimeää tämän seuran ylläpitäjät.",
+    "setup": {
+      "invite_title": "Kutsu jäsenesi",
+      "invite_body": "Kaikilla, jotka rekisteröityvät tällä linkillä, on {club} valmiiksi valittuna. Jaa se sähköpostilla, chatissa tai seuran uutiskirjeessä.",
+      "code_title": "Seuran lyhenne",
+      "code_hint": "Lyhyt tunnus, joka näkyy hyppääjiesi vieressä tulostaululla, tuloksissa ja PDF-tiedostoissa seurakilpailuissa. Enintään 8 kirjainta, numeroa tai viivaa.",
+      "code_placeholder": "esim. SYD",
+      "code_saved": "Seuran lyhenne tallennettu",
+      "code_none": "Ei vielä lyhennettä.",
+      "code_federation": "Liittosi määrittää seurasi lyhenteen."
+    }
   },
   "regions": {
     "label": {

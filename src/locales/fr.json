@@ -416,6 +416,23 @@
       "claims_one": "1 revendication vous attend",
       "claims_many": "{count} revendications vous attendent",
       "claims_meta": "Une fédération souhaite reprendre un compte"
+    },
+    "getting_started": {
+      "title": "Lancez {club}",
+      "intro": "Quelques éléments à configurer d'abord. Chacun se coche tout seul une fois fait.",
+      "all_done": "Tout est prêt. Votre club peut démarrer, vous pouvez masquer ceci.",
+      "progress": "{done} sur {total} faits",
+      "dismiss": "Masquer",
+      "dismiss_tip": "Masquer cette liste. Elle ne reviendra pas sur cet appareil.",
+      "done": "Fait",
+      "step_meet": "Créez votre première compétition",
+      "step_meet_desc": "Créez une compétition organisée par votre club, puis ajoutez ses épreuves.",
+      "step_invite": "Invitez vos membres",
+      "step_invite_desc": "Partagez le lien d'inscription du club depuis Mon club.",
+      "step_code": "Définissez le code court du club",
+      "step_code_desc": "Affiché à côté de vos plongeurs lors des compétitions de club.",
+      "step_guide": "Lisez le guide de l'administrateur de club",
+      "step_guide_desc": "Ce que vous pouvez faire, de la première compétition au jour J."
     }
   },
   "role": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Choisissez un membre du club —",
     "add": "Ajouter",
     "remove": "Retirer",
-    "federation_appoints": "Votre fédération nomme les administrateurs de ce club."
+    "federation_appoints": "Votre fédération nomme les administrateurs de ce club.",
+    "setup": {
+      "invite_title": "Invitez vos membres",
+      "invite_body": "Toute personne qui s'inscrit avec ce lien a déjà {club} sélectionné. Partagez-le par e-mail, messagerie ou dans la lettre d'information du club.",
+      "code_title": "Code du club",
+      "code_hint": "Un code court affiché à côté de vos plongeurs sur le tableau, dans les résultats et les PDF des compétitions de club. Jusqu'à 8 lettres, chiffres ou tirets.",
+      "code_placeholder": "ex. SYD",
+      "code_saved": "Code du club enregistré",
+      "code_none": "Pas encore de code.",
+      "code_federation": "C'est votre fédération qui fixe le code de votre club."
+    }
   },
   "regions": {
     "label": {

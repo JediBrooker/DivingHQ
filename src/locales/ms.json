@@ -416,6 +416,23 @@
       "claims_one": "1 tuntutan menunggu anda",
       "claims_many": "{count} tuntutan menunggu anda",
       "claims_meta": "Persekutuan mahu mengambil alih akaun"
+    },
+    "getting_started": {
+      "title": "Mulakan {club}",
+      "intro": "Beberapa perkara untuk disediakan dahulu. Setiap satu akan ditanda sendiri apabila selesai.",
+      "all_done": "Semua selesai. Kelab anda sudah sedia, jadi anda boleh menyembunyikan ini.",
+      "progress": "{done} daripada {total} selesai",
+      "dismiss": "Sembunyi",
+      "dismiss_tip": "Sembunyikan senarai semak ini. Ia tidak akan muncul semula pada peranti ini.",
+      "done": "Selesai",
+      "step_meet": "Cipta kejohanan pertama anda",
+      "step_meet_desc": "Sediakan kejohanan yang dianjurkan kelab anda, kemudian tambah acaranya.",
+      "step_invite": "Jemput ahli anda",
+      "step_invite_desc": "Kongsi pautan pendaftaran kelab dari halaman Kelab saya.",
+      "step_code": "Tetapkan kod ringkas kelab anda",
+      "step_code_desc": "Dipaparkan di sebelah penerjun anda dalam kejohanan kelab.",
+      "step_guide": "Baca panduan pentadbir kelab",
+      "step_guide_desc": "Apa yang boleh anda lakukan, dari kejohanan pertama hingga hari pertandingan."
     }
   },
   "profile": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Pilih ahli kelab —",
     "add": "Tambah",
     "remove": "Alih keluar",
-    "federation_appoints": "Persekutuan anda melantik pentadbir kelab ini."
+    "federation_appoints": "Persekutuan anda melantik pentadbir kelab ini.",
+    "setup": {
+      "invite_title": "Jemput ahli anda",
+      "invite_body": "Sesiapa yang mendaftar melalui pautan ini akan mendapati {club} sudah dipilih. Kongsikannya melalui e-mel, sembang atau buletin kelab anda.",
+      "code_title": "Kod kelab",
+      "code_hint": "Kod ringkas yang dipaparkan di sebelah penerjun anda pada papan skor, keputusan dan PDF dalam kejohanan kelab. Sehingga 8 huruf, nombor atau sengkang.",
+      "code_placeholder": "cth. SYD",
+      "code_saved": "Kod kelab disimpan",
+      "code_none": "Belum ada kod.",
+      "code_federation": "Kod kelab anda ditetapkan oleh persekutuan anda."
+    }
   },
   "regions": {
     "label": {

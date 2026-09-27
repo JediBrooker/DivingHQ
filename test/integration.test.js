@@ -1634,3 +1634,92 @@ test("new meets default 'divers represent' to the host's level", async (t) => {
     await teardownFixture(state);
   }
 });
+
+// Club setup (routes/club-setup.js): the dashboard's Get started panel
+// and My club's invite link / short code card read and write this.
+test("club setup: a founder's progress, invite parts and short code", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MSR";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  try {
+    const A = await claimKit.founder(CODE, "Plymouth Divers");
+    const B = await claimKit.founder(CODE, "Brades Divers", { new_club_short_code: "BRD" });
+
+    const fresh = await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token });
+    assert.equal(fresh.status, 200, JSON.stringify(fresh.body));
+    assert.equal(fresh.body.name, "Plymouth Divers");
+    assert.equal(fresh.body.country_code, CODE, "invite link needs the country");
+    assert.equal(fresh.body.short_code, null);
+    assert.equal(fresh.body.claim_state, "unclaimed");
+    assert.equal(fresh.body.can_edit_code, true, "no federation, so the club sets its own code");
+    assert.equal(fresh.body.meet_count, 0);
+    assert.equal(fresh.body.member_count, 1);
+    assert.equal(fresh.body.you_are_member, true);
+
+    // Someone follows the invite link (country + club), and a meet lands.
+    const member = `int-inv-${crypto.randomBytes(4).toString("hex")}`;
+    const joined = await fetchJson("POST", "/api/auth/register", {
+      body: { username: member, full_name: "Invited Diver", password: TEST_PASSWORD,
+              email: `${member}@example.test`, country_code: CODE, club_id: A.clubId },
+    });
+    assert.equal(joined.status, 201, JSON.stringify(joined.body));
+    assert.equal((await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Plymouth Club Night" } })).status, 201);
+    const later = (await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body;
+    assert.equal(later.member_count, 2);
+    assert.equal(later.meet_count, 1);
+
+    // The code: trimmed, upper-cased, validated, unique within the country.
+    const set = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: " ply " } });
+    assert.equal(set.status, 200, JSON.stringify(set.body));
+    assert.equal(set.body.short_code, "PLY");
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body.short_code, "PLY");
+    for (const bad of ["WAY-TOO-LONG", "P L Y", "<b>", 42]) {
+      const r = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: bad } });
+      assert.equal(r.status, 400, `${JSON.stringify(bad)} should be refused`);
+    }
+    const taken = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: "brd" } });
+    assert.equal(taken.status, 409);
+    assert.equal(taken.body.code, "short_code_taken");
+    const audit = await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'club.code_changed'", [A.clubId],
+    );
+    assert.deepEqual(audit.rows.map((r) => r.metadata), [{ from: null, to: "PLY" }]);
+    // Clearing it is allowed too.
+    const cleared = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: "" } });
+    assert.equal(cleared.status, 200);
+    assert.equal(cleared.body.short_code, null);
+
+    // Nobody else's club: another club's admin, a plain member, another org.
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: B.token })).status, 403);
+    assert.equal((await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: B.token, body: { short_code: "HAX" } })).status, 403);
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1", [member]);
+    const M = await claimKit.login(member);
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: M.token })).status, 403);
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: state.adminToken })).status, 404);
+    assert.equal((await fetchJson("GET", "/api/clubs/not-a-uuid/setup", { token: A.token })).status, 404);
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`)).status, 403, "anonymous gets nothing");
+
+    // Under a federation the club admin can read their progress, but the
+    // federation owns the code.
+    const fedClub = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, 'Federation Club') RETURNING id", [state.orgId],
+    )).rows[0].id;
+    const adminUser = await insertUser({ orgId: state.orgId, username: `int-fca-${state.slug}`, fullName: "Fed Club Admin", role: "spectator" });
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [fedClub, adminUser, state.orgId]);
+    await pool.query("UPDATE users SET password = $1 WHERE id = $2", [await require("bcrypt").hash(TEST_PASSWORD, 4), adminUser]);
+    const FCA = await claimKit.login(`int-fca-${state.slug}`);
+    const fedView = await fetchJson("GET", `/api/clubs/${fedClub}/setup`, { token: FCA.token });
+    assert.equal(fedView.status, 200, JSON.stringify(fedView.body));
+    assert.equal(fedView.body.can_edit_code, false);
+    assert.equal((await fetchJson("PUT", `/api/clubs/${fedClub}/short-code`, { token: FCA.token, body: { short_code: "FED" } })).status, 403);
+    // ...and the federation's admin can set it from here as well.
+    const orgSet = await fetchJson("PUT", `/api/clubs/${fedClub}/short-code`, { token: state.adminToken, body: { short_code: "FED" } });
+    assert.equal(orgSet.status, 200, JSON.stringify(orgSet.body));
+  } finally {
+    await claimKit.wipe(CODE);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [state.orgId]).catch(() => {});
+    await teardownFixture(state);
+  }
+});

@@ -416,6 +416,23 @@
       "claims_one": "신청 1건이 기다리고 있습니다",
       "claims_many": "신청 {count}건이 기다리고 있습니다",
       "claims_meta": "연맹이 계정 인수를 요청했습니다"
+    },
+    "getting_started": {
+      "title": "{club} 시작하기",
+      "intro": "먼저 설정해 둘 몇 가지입니다. 완료되면 각 항목이 자동으로 체크됩니다.",
+      "all_done": "모두 완료했습니다. 클럽 준비가 끝났으니 이 안내를 숨겨도 됩니다.",
+      "progress": "{total}개 중 {done}개 완료",
+      "dismiss": "숨기기",
+      "dismiss_tip": "이 체크리스트를 숨깁니다. 이 기기에서는 다시 나타나지 않습니다.",
+      "done": "완료",
+      "step_meet": "첫 대회 만들기",
+      "step_meet_desc": "클럽이 주최하는 대회를 만들고 종목을 추가하세요.",
+      "step_invite": "회원 초대하기",
+      "step_invite_desc": "내 클럽에서 클럽 가입 링크를 공유하세요.",
+      "step_code": "클럽 약칭 코드 설정하기",
+      "step_code_desc": "클럽 대회에서 선수 이름 옆에 표시됩니다.",
+      "step_guide": "클럽 관리자 가이드 읽기",
+      "step_guide_desc": "첫 대회부터 대회 당일까지 할 수 있는 일을 알려 드립니다."
     }
   },
   "profile": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— 클럽 회원 선택 —",
     "add": "추가",
     "remove": "제거",
-    "federation_appoints": "이 클럽의 관리자는 연맹이 임명합니다."
+    "federation_appoints": "이 클럽의 관리자는 연맹이 임명합니다.",
+    "setup": {
+      "invite_title": "회원 초대하기",
+      "invite_body": "이 링크로 가입하면 {club}이(가) 미리 선택되어 있습니다. 이메일, 채팅, 클럽 소식지로 공유하세요.",
+      "code_title": "클럽 코드",
+      "code_hint": "클럽 대회에서 스코어보드, 결과, PDF의 선수 이름 옆에 표시되는 짧은 코드입니다. 문자, 숫자, 하이픈으로 최대 8자.",
+      "code_placeholder": "예: SYD",
+      "code_saved": "클럽 코드를 저장했습니다",
+      "code_none": "아직 코드가 없습니다.",
+      "code_federation": "클럽 코드는 소속 연맹이 정합니다."
+    }
   },
   "regions": {
     "label": {

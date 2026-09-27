@@ -416,6 +416,23 @@
       "claims_one": "Sizi bekleyen 1 talep var",
       "claims_many": "Sizi bekleyen {count} talep var",
       "claims_meta": "Bir federasyon bir hesabı devralmak istiyor"
+    },
+    "getting_started": {
+      "title": "{club} ile başlayın",
+      "intro": "Önce ayarlanması gereken birkaç şey var. Her biri tamamlandığında kendiliğinden işaretlenir.",
+      "all_done": "Hepsi tamam. Kulübünüz hazır, bunu gizleyebilirsiniz.",
+      "progress": "{total} adımdan {done} tanesi tamam",
+      "dismiss": "Gizle",
+      "dismiss_tip": "Bu kontrol listesini gizleyin. Bu cihazda bir daha görünmez.",
+      "done": "Tamam",
+      "step_meet": "İlk yarışmanızı oluşturun",
+      "step_meet_desc": "Kulübünüzün düzenlediği bir yarışma oluşturun, ardından branşlarını ekleyin.",
+      "step_invite": "Üyelerinizi davet edin",
+      "step_invite_desc": "Kulübün kayıt bağlantısını Kulübüm sayfasından paylaşın.",
+      "step_code": "Kulübün kısa kodunu belirleyin",
+      "step_code_desc": "Kulüp yarışmalarında atlayıcılarınızın yanında görünür.",
+      "step_guide": "Kulüp yöneticisi rehberini okuyun",
+      "step_guide_desc": "İlk yarışmadan yarışma gününe kadar yapabilecekleriniz."
     }
   },
   "profile": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Bir kulüp üyesi seçin —",
     "add": "Ekle",
     "remove": "Kaldır",
-    "federation_appoints": "Bu kulübün yöneticilerini federasyonunuz atar."
+    "federation_appoints": "Bu kulübün yöneticilerini federasyonunuz atar.",
+    "setup": {
+      "invite_title": "Üyelerinizi davet edin",
+      "invite_body": "Bu bağlantıyla kaydolan herkes için {club} önceden seçili olur. E-posta, sohbet veya kulüp bülteniyle paylaşın.",
+      "code_title": "Kulüp kodu",
+      "code_hint": "Kulüp yarışmalarında skor tablosunda, sonuçlarda ve PDF'lerde atlayıcılarınızın yanında görünen kısa kod. En fazla 8 harf, rakam veya tire.",
+      "code_placeholder": "örn. SYD",
+      "code_saved": "Kulüp kodu kaydedildi",
+      "code_none": "Henüz kod yok.",
+      "code_federation": "Kulübünüzün kodunu federasyonunuz belirler."
+    }
   },
   "regions": {
     "label": {

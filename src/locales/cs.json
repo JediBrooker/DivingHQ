@@ -416,6 +416,23 @@
       "claims_one": "Čeká na vás 1 nárok",
       "claims_many": "Čeká na vás nároků: {count}",
       "claims_meta": "Federace chce převzít účet"
+    },
+    "getting_started": {
+      "title": "Rozjeďte {club}",
+      "intro": "Pár věcí, které je dobré nastavit hned. Každá se sama odškrtne, jakmile je hotová.",
+      "all_done": "Hotovo. Váš klub je připravený, tento přehled můžete skrýt.",
+      "progress": "Hotovo {done} z {total}",
+      "dismiss": "Skrýt",
+      "dismiss_tip": "Skrýt tento přehled. Na tomto zařízení se už neobjeví.",
+      "done": "Hotovo",
+      "step_meet": "Vytvořte první závody",
+      "step_meet_desc": "Založte závody, které váš klub pořádá, a přidejte do nich disciplíny.",
+      "step_invite": "Pozvěte své členy",
+      "step_invite_desc": "Sdílejte registrační odkaz klubu ze stránky Můj klub.",
+      "step_code": "Nastavte kód klubu",
+      "step_code_desc": "Zobrazuje se u vašich skokanů na klubových závodech.",
+      "step_guide": "Přečtěte si průvodce pro správce klubu",
+      "step_guide_desc": "Co všechno můžete dělat, od prvních závodů po den závodu."
     }
   },
   "profile": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Vyberte člena klubu —",
     "add": "Přidat",
     "remove": "Odebrat",
-    "federation_appoints": "Správce tohoto klubu jmenuje vaše federace."
+    "federation_appoints": "Správce tohoto klubu jmenuje vaše federace.",
+    "setup": {
+      "invite_title": "Pozvěte své členy",
+      "invite_body": "Kdo se zaregistruje přes tento odkaz, bude mít {club} rovnou vybraný. Pošlete ho e-mailem, v chatu nebo v klubovém zpravodaji.",
+      "code_title": "Kód klubu",
+      "code_hint": "Krátký kód, který se na klubových závodech zobrazuje u vašich skokanů na výsledkové tabuli, ve výsledcích a v PDF. Nejvýše 8 písmen, číslic nebo pomlček.",
+      "code_placeholder": "např. SYD",
+      "code_saved": "Kód klubu uložen",
+      "code_none": "Zatím bez kódu.",
+      "code_federation": "Kód vašeho klubu určuje vaše federace."
+    }
   },
   "regions": {
     "label": {

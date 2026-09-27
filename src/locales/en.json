@@ -416,6 +416,23 @@
       "claims_one": "1 claim waiting on you",
       "claims_many": "{count} claims waiting on you",
       "claims_meta": "A federation or state body wants to take over"
+    },
+    "getting_started": {
+      "title": "Get {club} started",
+      "intro": "A few things to set up first. Each one ticks itself off once it's done.",
+      "all_done": "All done. Your club is ready to go, so you can hide this.",
+      "progress": "{done} of {total} done",
+      "dismiss": "Hide",
+      "dismiss_tip": "Hide this checklist. It won't come back on this device.",
+      "done": "Done",
+      "step_meet": "Create your first meet",
+      "step_meet_desc": "Set up a meet your club hosts, then add its events.",
+      "step_invite": "Invite your members",
+      "step_invite_desc": "Share your club's signup link from My club.",
+      "step_code": "Set your club's short code",
+      "step_code_desc": "Shown next to your divers at club meets.",
+      "step_guide": "Read the club admin guide",
+      "step_guide_desc": "What you can do, from the first meet to meet day."
     }
   },
   "profile": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Pick a club member —",
     "add": "Add",
     "remove": "Remove",
-    "federation_appoints": "Your federation appoints this club's admins."
+    "federation_appoints": "Your federation appoints this club's admins.",
+    "setup": {
+      "invite_title": "Invite your members",
+      "invite_body": "Anyone who signs up with this link starts with {club} already picked. Share it by email, chat or your club newsletter.",
+      "code_title": "Club code",
+      "code_hint": "A short code shown next to your divers on the scoreboard, results and PDFs at club meets. Up to 8 letters, numbers or dashes.",
+      "code_placeholder": "e.g. SYD",
+      "code_saved": "Club code saved",
+      "code_none": "No code yet.",
+      "code_federation": "Your federation sets your club's code."
+    }
   },
   "regions": {
     "label": {

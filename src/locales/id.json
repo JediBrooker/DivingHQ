@@ -416,6 +416,23 @@
       "claims_one": "1 klaim menunggu Anda",
       "claims_many": "{count} klaim menunggu Anda",
       "claims_meta": "Sebuah federasi ingin mengambil alih akun"
+    },
+    "getting_started": {
+      "title": "Mulai jalankan {club}",
+      "intro": "Beberapa hal yang perlu disiapkan dulu. Masing-masing akan tercentang sendiri setelah selesai.",
+      "all_done": "Semua selesai. Klub Anda siap berjalan, jadi Anda bisa menyembunyikan ini.",
+      "progress": "{done} dari {total} selesai",
+      "dismiss": "Sembunyikan",
+      "dismiss_tip": "Sembunyikan daftar ini. Tidak akan muncul lagi di perangkat ini.",
+      "done": "Selesai",
+      "step_meet": "Buat kompetisi pertama Anda",
+      "step_meet_desc": "Siapkan kompetisi yang diselenggarakan klub Anda, lalu tambahkan nomor-nomornya.",
+      "step_invite": "Undang anggota Anda",
+      "step_invite_desc": "Bagikan tautan pendaftaran klub dari halaman Klub saya.",
+      "step_code": "Tetapkan kode singkat klub",
+      "step_code_desc": "Tampil di samping atlet Anda di kompetisi klub.",
+      "step_guide": "Baca panduan admin klub",
+      "step_guide_desc": "Apa saja yang bisa Anda lakukan, dari kompetisi pertama hingga hari pertandingan."
     }
   },
   "profile": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Pilih anggota klub —",
     "add": "Tambah",
     "remove": "Hapus",
-    "federation_appoints": "Federasi Anda menunjuk admin klub ini."
+    "federation_appoints": "Federasi Anda menunjuk admin klub ini.",
+    "setup": {
+      "invite_title": "Undang anggota Anda",
+      "invite_body": "Siapa pun yang mendaftar lewat tautan ini langsung memilih {club}. Bagikan lewat email, obrolan, atau buletin klub Anda.",
+      "code_title": "Kode klub",
+      "code_hint": "Kode singkat yang tampil di samping atlet Anda pada papan skor, hasil, dan PDF di kompetisi klub. Maksimal 8 huruf, angka, atau tanda hubung.",
+      "code_placeholder": "mis. SYD",
+      "code_saved": "Kode klub disimpan",
+      "code_none": "Belum ada kode.",
+      "code_federation": "Kode klub Anda ditetapkan oleh federasi Anda."
+    }
   },
   "regions": {
     "label": {

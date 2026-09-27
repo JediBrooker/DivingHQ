@@ -48,6 +48,8 @@ const JudgePanel       = defineAsyncComponent(() => import('@/components/dashboa
 const CoachPanel       = defineAsyncComponent(() => import('@/components/dashboard/CoachPanel.vue'))
 const DiverPanel       = defineAsyncComponent(() => import('@/components/dashboard/DiverPanel.vue'))
 const OtherPanel       = defineAsyncComponent(() => import('@/components/dashboard/OtherPanel.vue'))
+// Club admins' first-week checklist, above the tabs (whatever tab is open).
+const ClubGettingStarted = defineAsyncComponent(() => import('@/components/dashboard/ClubGettingStarted.vue'))
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -1086,6 +1088,8 @@ function detachSocketHandlers() {
       :loading="!pulseInitiallyLoaded"
       @chip-click="onPulseChipClick"
     />
+
+    <ClubGettingStarted v-if="auth.isClubAdmin" />
 
     <!-- Tab strip, one tab per visible role + Other. -->
     <div class="tab-strip" role="tablist">

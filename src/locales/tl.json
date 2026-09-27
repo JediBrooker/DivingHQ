@@ -416,6 +416,23 @@
       "claims_one": "May 1 claim na naghihintay sa iyo",
       "claims_many": "May {count} claim na naghihintay sa iyo",
       "claims_meta": "Gustong pamahalaan ng isang pederasyon ang account"
+    },
+    "getting_started": {
+      "title": "Simulan ang {club}",
+      "intro": "Ilang bagay na dapat munang i-set up. Kusang malalagyan ng tsek ang bawat isa kapag tapos na.",
+      "all_done": "Tapos na lahat. Handa na ang iyong club, kaya maaari mo na itong itago.",
+      "progress": "{done} sa {total} ang tapos",
+      "dismiss": "Itago",
+      "dismiss_tip": "Itago ang checklist na ito. Hindi na ito babalik sa device na ito.",
+      "done": "Tapos na",
+      "step_meet": "Gawin ang iyong unang meet",
+      "step_meet_desc": "Mag-set up ng meet na iho-host ng iyong club, saka idagdag ang mga event nito.",
+      "step_invite": "Imbitahan ang iyong mga miyembro",
+      "step_invite_desc": "Ibahagi ang signup link ng club mula sa Aking club.",
+      "step_code": "Itakda ang maikling code ng club",
+      "step_code_desc": "Ipinapakita sa tabi ng iyong mga diver sa mga club meet.",
+      "step_guide": "Basahin ang gabay para sa club admin",
+      "step_guide_desc": "Ang mga magagawa mo, mula sa unang meet hanggang sa araw ng meet."
     }
   },
   "profile": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Pumili ng miyembro ng club —",
     "add": "Idagdag",
     "remove": "Alisin",
-    "federation_appoints": "Ang iyong pederasyon ang nagtatalaga ng mga admin ng club na ito."
+    "federation_appoints": "Ang iyong pederasyon ang nagtatalaga ng mga admin ng club na ito.",
+    "setup": {
+      "invite_title": "Imbitahan ang iyong mga miyembro",
+      "invite_body": "Ang sinumang mag-sign up gamit ang link na ito ay may nakapiling {club} na. Ibahagi ito sa email, chat o newsletter ng iyong club.",
+      "code_title": "Code ng club",
+      "code_hint": "Maikling code na ipinapakita sa tabi ng iyong mga diver sa scoreboard, mga resulta at PDF sa mga club meet. Hanggang 8 titik, numero o gitling.",
+      "code_placeholder": "hal. SYD",
+      "code_saved": "Nai-save ang code ng club",
+      "code_none": "Wala pang code.",
+      "code_federation": "Ang iyong federation ang nagtatakda ng code ng iyong club."
+    }
   },
   "regions": {
     "label": {

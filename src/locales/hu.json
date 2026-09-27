@@ -416,6 +416,23 @@
       "claims_one": "1 igény vár Önre",
       "claims_many": "{count} igény vár Önre",
       "claims_meta": "Egy szövetség át szeretne venni egy fiókot"
+    },
+    "getting_started": {
+      "title": "Indítsd el: {club}",
+      "intro": "Néhány dolog, amit érdemes először beállítani. Mindegyik magától kipipálódik, ha kész.",
+      "all_done": "Minden kész. A klubod indulhat, ezt elrejtheted.",
+      "progress": "{done}/{total} kész",
+      "dismiss": "Elrejtés",
+      "dismiss_tip": "A lista elrejtése. Ezen az eszközön nem jelenik meg újra.",
+      "done": "Kész",
+      "step_meet": "Hozd létre az első versenyed",
+      "step_meet_desc": "Állíts be egy versenyt, amelyet a klubod rendez, majd add hozzá a versenyszámokat.",
+      "step_invite": "Hívd meg a tagjaidat",
+      "step_invite_desc": "Oszd meg a klub regisztrációs hivatkozását a Saját klubom oldalról.",
+      "step_code": "Állítsd be a klub rövid kódját",
+      "step_code_desc": "Klubversenyeken a műugróid mellett jelenik meg.",
+      "step_guide": "Olvasd el a klubadminisztrátori útmutatót",
+      "step_guide_desc": "Mit tehetsz az első versenytől a verseny napjáig."
     }
   },
   "role": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Válasszon klubtagot —",
     "add": "Hozzáadás",
     "remove": "Eltávolítás",
-    "federation_appoints": "A klub adminisztrátorait a szövetsége nevezi ki."
+    "federation_appoints": "A klub adminisztrátorait a szövetsége nevezi ki.",
+    "setup": {
+      "invite_title": "Hívd meg a tagjaidat",
+      "invite_body": "Aki ezzel a hivatkozással regisztrál, annál a(z) {club} már ki van választva. Oszd meg e-mailben, csevegésben vagy a klub hírlevelében.",
+      "code_title": "Klubkód",
+      "code_hint": "Rövid kód, amely klubversenyeken a műugróid mellett jelenik meg az eredményjelzőn, az eredményekben és a PDF-ekben. Legfeljebb 8 betű, szám vagy kötőjel.",
+      "code_placeholder": "pl. SYD",
+      "code_saved": "Klubkód mentve",
+      "code_none": "Még nincs kód.",
+      "code_federation": "A klubod kódját a szövetséged állítja be."
+    }
   },
   "regions": {
     "label": {

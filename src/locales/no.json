@@ -416,6 +416,23 @@
       "claims_one": "1 krav venter på deg",
       "claims_many": "{count} krav venter på deg",
       "claims_meta": "Et forbund vil overta en konto"
+    },
+    "getting_started": {
+      "title": "Kom i gang med {club}",
+      "intro": "Noen ting som bør settes opp først. Hver av dem hukes av av seg selv når de er gjort.",
+      "all_done": "Alt er gjort. Klubben din er klar, så du kan skjule dette.",
+      "progress": "{done} av {total} gjort",
+      "dismiss": "Skjul",
+      "dismiss_tip": "Skjul denne sjekklisten. Den kommer ikke tilbake på denne enheten.",
+      "done": "Gjort",
+      "step_meet": "Opprett ditt første stevne",
+      "step_meet_desc": "Sett opp et stevne klubben din arrangerer, og legg deretter til øvelsene.",
+      "step_invite": "Inviter medlemmene dine",
+      "step_invite_desc": "Del klubbens registreringslenke fra Min klubb.",
+      "step_code": "Angi klubbens kortkode",
+      "step_code_desc": "Vises ved stuperne dine på klubbstevner.",
+      "step_guide": "Les veiledningen for klubbadministratorer",
+      "step_guide_desc": "Hva du kan gjøre, fra første stevne til stevnedagen."
     }
   },
   "role": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Velg et klubbmedlem —",
     "add": "Legg til",
     "remove": "Fjern",
-    "federation_appoints": "Forbundet ditt utnevner klubbens administratorer."
+    "federation_appoints": "Forbundet ditt utnevner klubbens administratorer.",
+    "setup": {
+      "invite_title": "Inviter medlemmene dine",
+      "invite_body": "Alle som registrerer seg med denne lenken, har {club} valgt fra start. Del den på e-post, i chat eller i klubbens nyhetsbrev.",
+      "code_title": "Klubbkode",
+      "code_hint": "En kort kode som vises ved stuperne dine på resultattavlen, i resultater og PDF-er på klubbstevner. Opptil 8 bokstaver, tall eller bindestreker.",
+      "code_placeholder": "f.eks. SYD",
+      "code_saved": "Klubbkoden er lagret",
+      "code_none": "Ingen kode ennå.",
+      "code_federation": "Forbundet ditt bestemmer klubbens kode."
+    }
   },
   "regions": {
     "label": {

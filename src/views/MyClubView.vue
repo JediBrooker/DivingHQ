@@ -10,6 +10,7 @@ import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
+import ClubSetupCard from '@/components/ClubSetupCard.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -111,6 +112,9 @@ onMounted(() => {
       </div>
       <RouterLink to="/manager" class="btn btn-primary btn-sm">{{ $t('my_club.run_meets') }}</RouterLink>
     </header>
+
+    <!-- Invite link + club code, one card per club (dashboard "Get started" links here). -->
+    <ClubSetupCard v-for="club in clubs" :key="`setup-${club.id}`" :club="club" />
 
     <section class="block">
       <h2 class="block-title">{{ $t('my_club.requests') }}</h2>

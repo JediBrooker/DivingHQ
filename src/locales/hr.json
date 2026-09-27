@@ -416,6 +416,23 @@
       "claims_one": "1 zahtjev čeka na vas",
       "claims_many": "Zahtjeva koji čekaju na vas: {count}",
       "claims_meta": "Savez želi preuzeti račun"
+    },
+    "getting_started": {
+      "title": "Pokrenite {club}",
+      "intro": "Nekoliko stvari za prvo postavljanje. Svaka se sama označi kad je gotova.",
+      "all_done": "Sve je gotovo. Vaš je klub spreman, pa ovo možete sakriti.",
+      "progress": "Gotovo {done} od {total}",
+      "dismiss": "Sakrij",
+      "dismiss_tip": "Sakrij ovaj popis. Na ovom se uređaju više neće pojaviti.",
+      "done": "Gotovo",
+      "step_meet": "Izradite svoje prvo natjecanje",
+      "step_meet_desc": "Postavite natjecanje koje organizira vaš klub, zatim dodajte discipline.",
+      "step_invite": "Pozovite svoje članove",
+      "step_invite_desc": "Podijelite poveznicu za registraciju kluba sa stranice Moj klub.",
+      "step_code": "Postavite kratku oznaku kluba",
+      "step_code_desc": "Prikazuje se uz vaše skakače na klupskim natjecanjima.",
+      "step_guide": "Pročitajte vodič za administratore kluba",
+      "step_guide_desc": "Što sve možete, od prvog natjecanja do dana natjecanja."
     }
   },
   "profile": {
@@ -1947,7 +1964,17 @@
     "pick_member": "— Odaberite člana kluba —",
     "add": "Dodaj",
     "remove": "Ukloni",
-    "federation_appoints": "Administratore ovog kluba imenuje vaš savez."
+    "federation_appoints": "Administratore ovog kluba imenuje vaš savez.",
+    "setup": {
+      "invite_title": "Pozovite svoje članove",
+      "invite_body": "Tko se registrira putem ove poveznice, ima {club} već odabran. Podijelite je e-poštom, u chatu ili u klupskom biltenu.",
+      "code_title": "Oznaka kluba",
+      "code_hint": "Kratka oznaka koja se na klupskim natjecanjima prikazuje uz vaše skakače na semaforu, u rezultatima i PDF-ovima. Do 8 slova, brojki ili crtica.",
+      "code_placeholder": "npr. SYD",
+      "code_saved": "Oznaka kluba spremljena",
+      "code_none": "Još nema oznake.",
+      "code_federation": "Oznaku vašeg kluba određuje vaš savez."
+    }
   },
   "regions": {
     "label": {
