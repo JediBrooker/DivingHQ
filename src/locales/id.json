@@ -1174,7 +1174,11 @@
     "col_name": "Nama",
     "col_code": "Kode",
     "col_members": "Anggota",
-    "col_created": "Dibuat"
+    "col_created": "Dibuat",
+    "col_billing": "Tagihan",
+    "col_actions": "Tindakan",
+    "admins_button": "Admin",
+    "rename": "Ganti nama"
   },
   "teams": {
     "title": "Tim",
@@ -1940,7 +1944,11 @@
     "left_notice": "Anda bukan lagi admin {club}.",
     "leave_title": "Hapus diri Anda sebagai admin {club}?",
     "leave_body": "Anda tidak akan bisa lagi mengelola kompetisi klub atau menyetujui permintaan anggotanya. Hanya admin lain yang bisa menambahkan Anda kembali.",
-    "leave_confirm": "Hapus saya"
+    "leave_confirm": "Hapus saya",
+    "admins_intro": "Admin klub menjalankan kompetisi klubnya dan mengurus kelas, pembayaran, serta iuran afiliasinya. Mereka tidak mendapat akses di tingkat federasi.",
+    "current_admins": "Admin saat ini ({n})",
+    "nobody_admins": "Klub ini belum punya admin.",
+    "no_other_members": "Tidak ada anggota lain di klub ini. Pindahkan seseorang ke klub ini dari Pengelola Pengguna terlebih dahulu."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Wilayah"
     },
     "pick": "— Pilih salah satu —",
-    "required": "{label}: pilih satu untuk klub baru Anda."
+    "required": "{label}: pilih satu untuk klub baru Anda.",
+    "admins_intro": "Admin wilayah menjalankan kompetisi yang diselenggarakan wilayahnya atau klub-klubnya, dan meninjau permintaan peran dari klub di wilayah itu.",
+    "nobody_admins": "Wilayah ini belum punya admin.",
+    "pick_member": "— Pilih anggota klub di wilayah ini —",
+    "no_candidates": "Belum ada yang bisa ditambahkan. Masukkan klub ke wilayah ini dulu, anggotanya akan muncul di sini.",
+    "strip_title": "Wilayah",
+    "manage_admins": "Kelola admin {name}",
+    "none_set_up": "Belum ada wilayah (negara bagian, provinsi…) yang disiapkan untuk organisasi ini.",
+    "set_up": "Siapkan wilayah",
+    "region_for": "Wilayah untuk {club}"
   },
   "my_region": {
     "title": "Wilayah saya",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "klaim terbuka",
     "open_claims_few": "klaim terbuka",
     "open_claims_many": "klaim terbuka",
-    "open_claims_other": "klaim terbuka"
+    "open_claims_other": "klaim terbuka",
+    "regions_added_zero": "{n} wilayah ditambahkan",
+    "regions_added_one": "{n} wilayah ditambahkan",
+    "regions_added_two": "{n} wilayah ditambahkan",
+    "regions_added_few": "{n} wilayah ditambahkan",
+    "regions_added_many": "{n} wilayah ditambahkan",
+    "regions_added_other": "{n} wilayah ditambahkan"
   },
   "admin_settings": {
     "title": "Aturan pemungutan suara klaim",

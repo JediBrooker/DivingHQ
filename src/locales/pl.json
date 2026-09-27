@@ -1185,7 +1185,11 @@
     "col_name": "Nazwa",
     "col_code": "Kod",
     "col_members": "Członkowie",
-    "col_created": "Utworzono"
+    "col_created": "Utworzono",
+    "col_billing": "Rozliczenia",
+    "col_actions": "Akcje",
+    "admins_button": "Administratorzy",
+    "rename": "Zmień nazwę"
   },
   "teams": {
     "title": "Drużyny",
@@ -1940,7 +1944,11 @@
     "left_notice": "Nie jesteś już administratorem klubu {club}.",
     "leave_title": "Usunąć się z administratorów klubu {club}?",
     "leave_body": "Nie będziesz już mógł organizować zawodów klubu ani zatwierdzać próśb jego członków. Z powrotem może cię dodać tylko inny administrator.",
-    "leave_confirm": "Usuń mnie"
+    "leave_confirm": "Usuń mnie",
+    "admins_intro": "Administratorzy klubu organizują jego zawody i zajmują się jego zajęciami, wypłatami i składkami członkowskimi. Nie mają dostępu na poziomie całej federacji.",
+    "current_admins": "Obecni administratorzy ({n})",
+    "nobody_admins": "Ten klub nie ma jeszcze administratora.",
+    "no_other_members": "W tym klubie nie ma innych członków. Najpierw przenieś kogoś do klubu w Menedżerze użytkowników."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Region"
     },
     "pick": "— Wybierz —",
-    "required": "{label}: wybierz dla nowego klubu."
+    "required": "{label}: wybierz dla nowego klubu.",
+    "admins_intro": "Administratorzy regionu organizują zawody, których gospodarzem jest ich region lub jego kluby, i rozpatrują prośby o role od klubów regionu.",
+    "nobody_admins": "Ten region nie ma jeszcze administratora.",
+    "pick_member": "— Wybierz członka klubu z tego regionu —",
+    "no_candidates": "Na razie nie ma kogo dodać. Najpierw przypisz kluby do tego regionu, a ich członkowie pojawią się tutaj.",
+    "strip_title": "Regiony",
+    "manage_admins": "Zarządzaj administratorami: {name}",
+    "none_set_up": "Dla tej organizacji nie skonfigurowano jeszcze regionów (stanów, prowincji…).",
+    "set_up": "Skonfiguruj regiony",
+    "region_for": "Region klubu {club}"
   },
   "my_region": {
     "title": "Mój region",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "otwartych roszczeń",
     "open_claims_few": "otwarte roszczenia",
     "open_claims_many": "otwartych roszczeń",
-    "open_claims_other": "otwartego roszczenia"
+    "open_claims_other": "otwartego roszczenia",
+    "regions_added_zero": "Dodano {n} regionów",
+    "regions_added_one": "Dodano {n} region",
+    "regions_added_two": "Dodano {n} regionów",
+    "regions_added_few": "Dodano {n} regiony",
+    "regions_added_many": "Dodano {n} regionów",
+    "regions_added_other": "Dodano {n} regionu"
   },
   "admin_settings": {
     "title": "Zasady głosowania nad roszczeniami",

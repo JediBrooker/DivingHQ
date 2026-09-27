@@ -1185,7 +1185,11 @@
     "col_name": "Namn",
     "col_code": "Kod",
     "col_members": "Medlemmar",
-    "col_created": "Skapad"
+    "col_created": "Skapad",
+    "col_billing": "Fakturering",
+    "col_actions": "Åtgärder",
+    "admins_button": "Administratörer",
+    "rename": "Byt namn"
   },
   "teams": {
     "title": "Lag",
@@ -1940,7 +1944,11 @@
     "left_notice": "Du är inte längre administratör för {club}.",
     "leave_title": "Ta bort dig själv som administratör för {club}?",
     "leave_body": "Du kommer inte längre att kunna arrangera klubbens tävlingar eller godkänna medlemmarnas förfrågningar. Bara en annan administratör kan lägga till dig igen.",
-    "leave_confirm": "Ta bort mig"
+    "leave_confirm": "Ta bort mig",
+    "admins_intro": "Klubbadministratörer arrangerar klubbens tävlingar och sköter dess grupper, utbetalningar och anslutningsavgifter. De får ingen åtkomst till hela förbundet.",
+    "current_admins": "Nuvarande administratörer ({n})",
+    "nobody_admins": "Klubben har ingen administratör än.",
+    "no_other_members": "Det finns inga andra medlemmar i klubben. Flytta först in någon i den från Användarhanteringen."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Region"
     },
     "pick": "— Välj en —",
-    "required": "{label}: välj en för din nya klubb."
+    "required": "{label}: välj en för din nya klubb.",
+    "admins_intro": "Regionsadministratörer arrangerar tävlingar som regionen eller dess klubbar står värd för och granskar rollförfrågningar från regionens klubbar.",
+    "nobody_admins": "Regionen har ingen administratör än.",
+    "pick_member": "— Välj en medlem i regionens klubbar —",
+    "no_candidates": "Ingen att lägga till än. Placera först klubbar i regionen, så visas deras medlemmar här.",
+    "strip_title": "Regioner",
+    "manage_admins": "Hantera vem som administrerar {name}",
+    "none_set_up": "Inga regioner (delstater, provinser…) har ställts in för den här organisationen än.",
+    "set_up": "Ställ in regioner",
+    "region_for": "Region för {club}"
   },
   "my_region": {
     "title": "Min region",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "öppna anspråk",
     "open_claims_few": "öppna anspråk",
     "open_claims_many": "öppna anspråk",
-    "open_claims_other": "öppna anspråk"
+    "open_claims_other": "öppna anspråk",
+    "regions_added_zero": "Lade till {n} regioner",
+    "regions_added_one": "Lade till {n} region",
+    "regions_added_two": "Lade till {n} regioner",
+    "regions_added_few": "Lade till {n} regioner",
+    "regions_added_many": "Lade till {n} regioner",
+    "regions_added_other": "Lade till {n} regioner"
   },
   "admin_settings": {
     "title": "Omröstningsregler för anspråk",

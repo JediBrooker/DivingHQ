@@ -1185,7 +1185,11 @@
     "col_name": "Nimi",
     "col_code": "Lyhenne",
     "col_members": "Jäseniä",
-    "col_created": "Luotu"
+    "col_created": "Luotu",
+    "col_billing": "Laskutus",
+    "col_actions": "Toiminnot",
+    "admins_button": "Ylläpitäjät",
+    "rename": "Nimeä uudelleen"
   },
   "teams": {
     "title": "Joukkueet",
@@ -1940,7 +1944,11 @@
     "left_notice": "Et ole enää seuran {club} ylläpitäjä.",
     "leave_title": "Poistetaanko sinut seuran {club} ylläpitäjistä?",
     "leave_body": "Et voi enää järjestää seuran kilpailuja etkä hyväksyä sen jäsenten pyyntöjä. Vain toinen ylläpitäjä voi lisätä sinut takaisin.",
-    "leave_confirm": "Poista minut"
+    "leave_confirm": "Poista minut",
+    "admins_intro": "Seuran ylläpitäjät järjestävät seuransa kilpailut ja hoitavat sen ryhmät, tilitykset ja jäsenmaksut. He eivät saa liittotason oikeuksia.",
+    "current_admins": "Nykyiset ylläpitäjät ({n})",
+    "nobody_admins": "Tällä seuralla ei ole vielä ylläpitäjää.",
+    "no_other_members": "Seurassa ei ole muita jäseniä. Siirrä ensin joku seuraan käyttäjähallinnasta."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Alue"
     },
     "pick": "— Valitse —",
-    "required": "{label}: valitse uudelle seuralle."
+    "required": "{label}: valitse uudelle seuralle.",
+    "admins_intro": "Alueen ylläpitäjät järjestävät kilpailut, joita alue tai sen seurat isännöivät, ja käsittelevät alueen seurojen roolipyynnöt.",
+    "nobody_admins": "Tällä alueella ei ole vielä ylläpitäjää.",
+    "pick_member": "— Valitse alueen seuran jäsen —",
+    "no_candidates": "Lisättäviä ei ole vielä. Liitä ensin seuroja alueeseen, niin niiden jäsenet näkyvät täällä.",
+    "strip_title": "Alueet",
+    "manage_admins": "Hallitse alueen {name} ylläpitäjiä",
+    "none_set_up": "Tälle organisaatiolle ei ole vielä määritetty alueita (osavaltioita, provinsseja…).",
+    "set_up": "Määritä alueet",
+    "region_for": "Seuran {club} alue"
   },
   "my_region": {
     "title": "Oma alue",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "avointa vaatimusta",
     "open_claims_few": "avointa vaatimusta",
     "open_claims_many": "avointa vaatimusta",
-    "open_claims_other": "avointa vaatimusta"
+    "open_claims_other": "avointa vaatimusta",
+    "regions_added_zero": "Lisättiin {n} aluetta",
+    "regions_added_one": "Lisättiin {n} alue",
+    "regions_added_two": "Lisättiin {n} aluetta",
+    "regions_added_few": "Lisättiin {n} aluetta",
+    "regions_added_many": "Lisättiin {n} aluetta",
+    "regions_added_other": "Lisättiin {n} aluetta"
   },
   "admin_settings": {
     "title": "Vaatimusten äänestyssäännöt",

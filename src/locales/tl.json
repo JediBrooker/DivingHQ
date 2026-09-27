@@ -1174,7 +1174,11 @@
     "col_name": "Pangalan",
     "col_code": "Kodigo",
     "col_members": "Mga miyembro",
-    "col_created": "Ginawa"
+    "col_created": "Ginawa",
+    "col_billing": "Pagsingil",
+    "col_actions": "Mga aksyon",
+    "admins_button": "Mga admin",
+    "rename": "Palitan ang pangalan"
   },
   "teams": {
     "title": "Mga Team",
@@ -1940,7 +1944,11 @@
     "left_notice": "Hindi ka na admin ng {club}.",
     "leave_title": "Alisin ang sarili bilang admin ng {club}?",
     "leave_body": "Hindi mo na mapapatakbo ang mga kompetisyon ng club o maaaprubahan ang mga kahilingan ng mga miyembro nito. Ibang admin lang ang makapagbabalik sa iyo.",
-    "leave_confirm": "Alisin ako"
+    "leave_confirm": "Alisin ako",
+    "admins_intro": "Pinapatakbo ng mga admin ng club ang mga kompetisyon ng kanilang club at inaasikaso ang mga klase, bayad, at bayarin sa pagkakaanib nito. Wala silang access sa buong pederasyon.",
+    "current_admins": "Kasalukuyang mga admin ({n})",
+    "nobody_admins": "Wala pang admin ang club na ito.",
+    "no_other_members": "Walang ibang miyembro sa club na ito. Ilipat muna ang isang tao rito mula sa User Manager."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Rehiyon"
     },
     "pick": "— Pumili ng isa —",
-    "required": "{label}: pumili ng isa para sa iyong bagong club."
+    "required": "{label}: pumili ng isa para sa iyong bagong club.",
+    "admins_intro": "Pinapatakbo ng mga admin ng rehiyon ang mga kompetisyong hino-host ng kanilang rehiyon o mga club nito, at sinusuri ang mga kahilingan sa role mula sa mga club ng rehiyon.",
+    "nobody_admins": "Wala pang admin ang rehiyong ito.",
+    "pick_member": "— Pumili ng miyembro ng mga club sa rehiyong ito —",
+    "no_candidates": "Wala pang maidadagdag. Ilagay muna ang mga club sa rehiyong ito, lalabas dito ang kanilang mga miyembro.",
+    "strip_title": "Mga rehiyon",
+    "manage_admins": "Pamahalaan ang mga admin ng {name}",
+    "none_set_up": "Wala pang naka-set up na rehiyon (estado, lalawigan…) para sa organisasyong ito.",
+    "set_up": "I-set up ang mga rehiyon",
+    "region_for": "Rehiyon ng {club}"
   },
   "my_region": {
     "title": "Aking rehiyon",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "bukas na claim",
     "open_claims_few": "bukas na claim",
     "open_claims_many": "bukas na claim",
-    "open_claims_other": "bukas na claim"
+    "open_claims_other": "bukas na claim",
+    "regions_added_zero": "Nagdagdag ng {n} rehiyon",
+    "regions_added_one": "Nagdagdag ng {n} rehiyon",
+    "regions_added_two": "Nagdagdag ng {n} rehiyon",
+    "regions_added_few": "Nagdagdag ng {n} rehiyon",
+    "regions_added_many": "Nagdagdag ng {n} rehiyon",
+    "regions_added_other": "Nagdagdag ng {n} rehiyon"
   },
   "admin_settings": {
     "title": "Mga patakaran sa botohan ng claim",

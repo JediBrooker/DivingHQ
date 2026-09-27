@@ -1185,7 +1185,11 @@
     "col_name": "Vereinsname",
     "col_code": "Vereinskürzel",
     "col_members": "Mitglieder",
-    "col_created": "Erstellt am"
+    "col_created": "Erstellt am",
+    "col_billing": "Abrechnung",
+    "col_actions": "Aktionen",
+    "admins_button": "Vereinsadmins",
+    "rename": "Umbenennen"
   },
   "teams": {
     "title": "Mannschaften",
@@ -1940,7 +1944,11 @@
     "left_notice": "Sie sind kein Admin von {club} mehr.",
     "leave_title": "Sich selbst als Admin von {club} entfernen?",
     "leave_body": "Sie können dann keine Wettkämpfe des Vereins mehr ausrichten und keine Anfragen seiner Mitglieder mehr genehmigen. Nur ein anderer Admin kann Sie wieder hinzufügen.",
-    "leave_confirm": "Mich entfernen"
+    "leave_confirm": "Mich entfernen",
+    "admins_intro": "Vereinsadmins richten die Wettkämpfe ihres Vereins aus und kümmern sich um Kurse, Auszahlungen und Mitgliedsbeiträge. Verbandsweite Rechte bekommen sie nicht.",
+    "current_admins": "Aktuelle Admins ({n})",
+    "nobody_admins": "Dieser Verein hat noch keinen Admin.",
+    "no_other_members": "Keine weiteren Mitglieder in diesem Verein. Verschieben Sie zuerst jemanden über die Benutzerverwaltung hierher."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Region"
     },
     "pick": "— Bitte wählen —",
-    "required": "{label}: bitte für Ihren neuen Verein wählen."
+    "required": "{label}: bitte für Ihren neuen Verein wählen.",
+    "admins_intro": "Regionsadmins richten Wettkämpfe aus, die ihre Region oder deren Vereine veranstalten, und prüfen Rollenanfragen aus den Vereinen der Region.",
+    "nobody_admins": "Diese Region hat noch keinen Admin.",
+    "pick_member": "— Mitglied eines Vereins dieser Region wählen —",
+    "no_candidates": "Noch niemand zum Hinzufügen. Ordnen Sie zuerst Vereine dieser Region zu, dann erscheinen deren Mitglieder hier.",
+    "strip_title": "Regionen",
+    "manage_admins": "Admins von {name} verwalten",
+    "none_set_up": "Für diese Organisation sind noch keine Regionen (Bundesländer, Provinzen…) eingerichtet.",
+    "set_up": "Regionen einrichten",
+    "region_for": "Region von {club}"
   },
   "my_region": {
     "title": "Meine Region",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "offene Ansprüche",
     "open_claims_few": "offene Ansprüche",
     "open_claims_many": "offene Ansprüche",
-    "open_claims_other": "offene Ansprüche"
+    "open_claims_other": "offene Ansprüche",
+    "regions_added_zero": "{n} Regionen hinzugefügt",
+    "regions_added_one": "{n} Region hinzugefügt",
+    "regions_added_two": "{n} Regionen hinzugefügt",
+    "regions_added_few": "{n} Regionen hinzugefügt",
+    "regions_added_many": "{n} Regionen hinzugefügt",
+    "regions_added_other": "{n} Regionen hinzugefügt"
   },
   "admin_settings": {
     "title": "Abstimmungsregeln für Ansprüche",

@@ -1174,7 +1174,11 @@
     "col_name": "Naziv",
     "col_code": "Kod",
     "col_members": "Članovi",
-    "col_created": "Stvoreno"
+    "col_created": "Stvoreno",
+    "col_billing": "Naplata",
+    "col_actions": "Radnje",
+    "admins_button": "Administratori",
+    "rename": "Preimenuj"
   },
   "teams": {
     "title": "Timovi",
@@ -1940,7 +1944,11 @@
     "left_notice": "Više niste administrator kluba {club}.",
     "leave_title": "Ukloniti se iz administratora kluba {club}?",
     "leave_body": "Više nećete moći organizirati natjecanja kluba ni odobravati zahtjeve njegovih članova. Natrag vas može dodati samo drugi administrator.",
-    "leave_confirm": "Ukloni me"
+    "leave_confirm": "Ukloni me",
+    "admins_intro": "Administratori kluba organiziraju natjecanja svog kluba i brinu o njegovim tečajevima, isplatama i članarinama. Nemaju pristup na razini cijelog saveza.",
+    "current_admins": "Trenutačni administratori ({n})",
+    "nobody_admins": "Ovaj klub još nema administratora.",
+    "no_other_members": "U ovom klubu nema drugih članova. Najprije nekoga premjestite u klub putem Upravitelja korisnika."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Regija"
     },
     "pick": "— Odaberite —",
-    "required": "{label}: odaberite za svoj novi klub."
+    "required": "{label}: odaberite za svoj novi klub.",
+    "admins_intro": "Administratori regije organiziraju natjecanja kojima su domaćini njihova regija ili njezini klubovi te pregledavaju zahtjeve za uloge iz klubova regije.",
+    "nobody_admins": "Ova regija još nema administratora.",
+    "pick_member": "— Odaberite člana kluba iz ove regije —",
+    "no_candidates": "Još nema koga dodati. Najprije smjestite klubove u ovu regiju, njihovi će se članovi pojaviti ovdje.",
+    "strip_title": "Regije",
+    "manage_admins": "Upravljaj administratorima za {name}",
+    "none_set_up": "Za ovu organizaciju još nisu postavljene regije (države, pokrajine…).",
+    "set_up": "Postavi regije",
+    "region_for": "Regija kluba {club}"
   },
   "my_region": {
     "title": "Moja regija",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "otvorenih zahtjeva",
     "open_claims_few": "otvorena zahtjeva",
     "open_claims_many": "otvorenih zahtjeva",
-    "open_claims_other": "otvorenih zahtjeva"
+    "open_claims_other": "otvorenih zahtjeva",
+    "regions_added_zero": "Dodano {n} regija",
+    "regions_added_one": "Dodana {n} regija",
+    "regions_added_two": "Dodano {n} regija",
+    "regions_added_few": "Dodane {n} regije",
+    "regions_added_many": "Dodano {n} regija",
+    "regions_added_other": "Dodano {n} regija"
   },
   "admin_settings": {
     "title": "Pravila glasanja o zahtjevima",

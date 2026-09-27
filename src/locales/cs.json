@@ -1272,7 +1272,11 @@
     "col_name": "Název",
     "col_code": "Kód",
     "col_members": "Členové",
-    "col_created": "Vytvořeno"
+    "col_created": "Vytvořeno",
+    "col_billing": "Platby",
+    "col_actions": "Akce",
+    "admins_button": "Správci",
+    "rename": "Přejmenovat"
   },
   "teams": {
     "title": "Týmy",
@@ -1940,7 +1944,11 @@
     "left_notice": "Už nejste správcem klubu {club}.",
     "leave_title": "Odebrat se ze správců klubu {club}?",
     "leave_body": "Už nebudete moci pořádat závody klubu ani schvalovat žádosti jeho členů. Zpět vás může přidat jen jiný správce.",
-    "leave_confirm": "Odebrat mě"
+    "leave_confirm": "Odebrat mě",
+    "admins_intro": "Správci klubu pořádají jeho závody a starají se o jeho kurzy, výplaty a členské poplatky. Nezískávají žádný přístup v rámci celé federace.",
+    "current_admins": "Současní správci ({n})",
+    "nobody_admins": "Tento klub zatím nemá žádného správce.",
+    "no_other_members": "V tomto klubu nejsou žádní další členové. Nejdřív někoho přesuňte do klubu ve Správě uživatelů."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Region"
     },
     "pick": "— Vyberte —",
-    "required": "{label}: vyberte pro svůj nový klub."
+    "required": "{label}: vyberte pro svůj nový klub.",
+    "admins_intro": "Správci kraje pořádají závody, které hostí jejich kraj nebo jeho kluby, a posuzují žádosti o role od členů krajských klubů.",
+    "nobody_admins": "Tento kraj zatím nemá žádného správce.",
+    "pick_member": "— Vyberte člena klubu z tohoto kraje —",
+    "no_candidates": "Zatím není koho přidat. Nejdřív zařaďte do kraje kluby, jejich členové se objeví tady.",
+    "strip_title": "Kraje",
+    "manage_admins": "Spravovat správce: {name}",
+    "none_set_up": "Pro tuto organizaci zatím nejsou nastavené žádné kraje (státy, provincie…).",
+    "set_up": "Nastavit kraje",
+    "region_for": "Kraj klubu {club}"
   },
   "my_region": {
     "title": "Můj region",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "otevřených nároků",
     "open_claims_few": "otevřené nároky",
     "open_claims_many": "otevřeného nároku",
-    "open_claims_other": "otevřených nároků"
+    "open_claims_other": "otevřených nároků",
+    "regions_added_zero": "Přidáno {n} krajů",
+    "regions_added_one": "Přidán {n} kraj",
+    "regions_added_two": "Přidáno {n} krajů",
+    "regions_added_few": "Přidány {n} kraje",
+    "regions_added_many": "Přidáno {n} kraje",
+    "regions_added_other": "Přidáno {n} krajů"
   },
   "admin_settings": {
     "title": "Pravidla hlasování o nárocích",

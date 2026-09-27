@@ -1185,7 +1185,11 @@
     "col_name": "Navn",
     "col_code": "Kode",
     "col_members": "Medlemmer",
-    "col_created": "Opprettet"
+    "col_created": "Opprettet",
+    "col_billing": "Fakturering",
+    "col_actions": "Handlinger",
+    "admins_button": "Administratorer",
+    "rename": "Gi nytt navn"
   },
   "teams": {
     "title": "Lag",
@@ -1940,7 +1944,11 @@
     "left_notice": "Du er ikke lenger administrator for {club}.",
     "leave_title": "Vil du fjerne deg selv som administrator for {club}?",
     "leave_body": "Du kan ikke lenger arrangere klubbens stevner eller godkjenne medlemmenes forespørsler. Bare en annen administrator kan legge deg til igjen.",
-    "leave_confirm": "Fjern meg"
+    "leave_confirm": "Fjern meg",
+    "admins_intro": "Klubbadministratorer arrangerer klubbens stevner og tar seg av dens partier, utbetalinger og tilknytningsavgifter. De får ingen tilgang til hele forbundet.",
+    "current_admins": "Nåværende administratorer ({n})",
+    "nobody_admins": "Klubben har ingen administrator ennå.",
+    "no_other_members": "Det er ingen andre medlemmer i klubben. Flytt først noen inn i den fra Brukerbehandling."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Region"
     },
     "pick": "— Velg én —",
-    "required": "{label}: velg én for den nye klubben din."
+    "required": "{label}: velg én for den nye klubben din.",
+    "admins_intro": "Regionsadministratorer arrangerer stevner som regionen eller klubbene i den er vert for, og behandler rolleforespørsler fra regionens klubber.",
+    "nobody_admins": "Regionen har ingen administrator ennå.",
+    "pick_member": "— Velg et medlem fra regionens klubber —",
+    "no_candidates": "Ingen å legge til ennå. Plasser først klubber i regionen, så dukker medlemmene deres opp her.",
+    "strip_title": "Regioner",
+    "manage_admins": "Administrer hvem som styrer {name}",
+    "none_set_up": "Det er ennå ikke satt opp regioner (delstater, provinser…) for denne organisasjonen.",
+    "set_up": "Sett opp regioner",
+    "region_for": "Velg region for {club}"
   },
   "my_region": {
     "title": "Min region",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "åpne krav",
     "open_claims_few": "åpne krav",
     "open_claims_many": "åpne krav",
-    "open_claims_other": "åpne krav"
+    "open_claims_other": "åpne krav",
+    "regions_added_zero": "La til {n} regioner",
+    "regions_added_one": "La til {n} region",
+    "regions_added_two": "La til {n} regioner",
+    "regions_added_few": "La til {n} regioner",
+    "regions_added_many": "La til {n} regioner",
+    "regions_added_other": "La til {n} regioner"
   },
   "admin_settings": {
     "title": "Stemmeregler for krav",

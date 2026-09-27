@@ -1174,7 +1174,11 @@
     "col_name": "Nama",
     "col_code": "Kod",
     "col_members": "Ahli",
-    "col_created": "Dicipta"
+    "col_created": "Dicipta",
+    "col_billing": "Bil",
+    "col_actions": "Tindakan",
+    "admins_button": "Pentadbir",
+    "rename": "Namakan semula"
   },
   "teams": {
     "title": "Pasukan",
@@ -1940,7 +1944,11 @@
     "left_notice": "Anda bukan lagi pentadbir {club}.",
     "leave_title": "Alih keluar diri anda sebagai pentadbir {club}?",
     "leave_body": "Anda tidak lagi boleh menganjurkan pertandingan kelab atau meluluskan permintaan ahlinya. Hanya pentadbir lain boleh menambah anda semula.",
-    "leave_confirm": "Alih keluar saya"
+    "leave_confirm": "Alih keluar saya",
+    "admins_intro": "Pentadbir kelab menganjurkan pertandingan kelab mereka dan menguruskan kelas, pembayaran serta yuran gabungannya. Mereka tidak mendapat akses di peringkat persekutuan.",
+    "current_admins": "Pentadbir semasa ({n})",
+    "nobody_admins": "Kelab ini belum mempunyai pentadbir.",
+    "no_other_members": "Tiada ahli lain dalam kelab ini. Pindahkan seseorang ke kelab ini dari Pengurus Pengguna dahulu."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Rantau"
     },
     "pick": "— Pilih satu —",
-    "required": "{label}: pilih satu untuk kelab baharu anda."
+    "required": "{label}: pilih satu untuk kelab baharu anda.",
+    "admins_intro": "Pentadbir wilayah menganjurkan pertandingan yang dihoskan oleh wilayah atau kelab-kelabnya, dan menyemak permintaan peranan daripada kelab di wilayah itu.",
+    "nobody_admins": "Wilayah ini belum mempunyai pentadbir.",
+    "pick_member": "— Pilih ahli kelab dalam wilayah ini —",
+    "no_candidates": "Belum ada sesiapa untuk ditambah. Letakkan kelab dalam wilayah ini dahulu, ahli mereka akan muncul di sini.",
+    "strip_title": "Wilayah",
+    "manage_admins": "Urus pentadbir {name}",
+    "none_set_up": "Belum ada wilayah (negeri, wilayah…) yang disediakan untuk organisasi ini.",
+    "set_up": "Sediakan wilayah",
+    "region_for": "Wilayah untuk {club}"
   },
   "my_region": {
     "title": "Rantau saya",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "tuntutan terbuka",
     "open_claims_few": "tuntutan terbuka",
     "open_claims_many": "tuntutan terbuka",
-    "open_claims_other": "tuntutan terbuka"
+    "open_claims_other": "tuntutan terbuka",
+    "regions_added_zero": "{n} wilayah ditambah",
+    "regions_added_one": "{n} wilayah ditambah",
+    "regions_added_two": "{n} wilayah ditambah",
+    "regions_added_few": "{n} wilayah ditambah",
+    "regions_added_many": "{n} wilayah ditambah",
+    "regions_added_other": "{n} wilayah ditambah"
   },
   "admin_settings": {
     "title": "Peraturan undian tuntutan",

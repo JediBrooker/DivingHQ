@@ -1185,7 +1185,11 @@
     "col_name": "Név",
     "col_code": "Kód",
     "col_members": "Tagok",
-    "col_created": "Létrehozva"
+    "col_created": "Létrehozva",
+    "col_billing": "Számlázás",
+    "col_actions": "Műveletek",
+    "admins_button": "Adminisztrátorok",
+    "rename": "Átnevezés"
   },
   "teams": {
     "title": "Csapatok",
@@ -1940,7 +1944,11 @@
     "left_notice": "Már nem adminisztrátora ennek a klubnak: {club}.",
     "leave_title": "Eltávolítja magát a(z) {club} adminisztrátorai közül?",
     "leave_body": "Ezután nem rendezhet versenyeket a klub nevében, és nem hagyhatja jóvá a tagok kérelmeit. Csak egy másik adminisztrátor veheti vissza.",
-    "leave_confirm": "Eltávolítás"
+    "leave_confirm": "Eltávolítás",
+    "admins_intro": "A klubadminisztrátorok rendezik a klubjuk versenyeit, és intézik az edzéseit, kifizetéseit és tagdíjait. Szövetségi szintű hozzáférést nem kapnak.",
+    "current_admins": "Jelenlegi adminisztrátorok ({n})",
+    "nobody_admins": "Ennek a klubnak még nincs adminisztrátora.",
+    "no_other_members": "Nincs más tag ebben a klubban. Előbb helyezzen át valakit a klubba a Felhasználókezelőben."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Régió"
     },
     "pick": "— Válasszon —",
-    "required": "{label}: válasszon az új klubjához."
+    "required": "{label}: válasszon az új klubjához.",
+    "admins_intro": "A régióadminisztrátorok rendezik a régiójuk vagy annak klubjai által szervezett versenyeket, és elbírálják a régió klubjaiból érkező szerepkérelmeket.",
+    "nobody_admins": "Ennek a régiónak még nincs adminisztrátora.",
+    "pick_member": "— Válasszon tagot a régió klubjaiból —",
+    "no_candidates": "Még nincs kit hozzáadni. Előbb soroljon klubokat ebbe a régióba, tagjaik itt jelennek meg.",
+    "strip_title": "Régiók",
+    "manage_admins": "{name} adminisztrátorainak kezelése",
+    "none_set_up": "Ehhez a szervezethez még nincsenek régiók (államok, tartományok…) beállítva.",
+    "set_up": "Régiók beállítása",
+    "region_for": "{club} régiója"
   },
   "my_region": {
     "title": "Saját régióm",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "nyitott igény",
     "open_claims_few": "nyitott igény",
     "open_claims_many": "nyitott igény",
-    "open_claims_other": "nyitott igény"
+    "open_claims_other": "nyitott igény",
+    "regions_added_zero": "{n} régió hozzáadva",
+    "regions_added_one": "{n} régió hozzáadva",
+    "regions_added_two": "{n} régió hozzáadva",
+    "regions_added_few": "{n} régió hozzáadva",
+    "regions_added_many": "{n} régió hozzáadva",
+    "regions_added_other": "{n} régió hozzáadva"
   },
   "admin_settings": {
     "title": "Az igényekről szóló szavazás szabályai",

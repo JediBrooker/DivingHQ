@@ -1174,7 +1174,11 @@
     "col_name": "名称",
     "col_code": "代码",
     "col_members": "成员",
-    "col_created": "创建时间"
+    "col_created": "创建时间",
+    "col_billing": "账单",
+    "col_actions": "操作",
+    "admins_button": "管理员",
+    "rename": "重命名"
   },
   "teams": {
     "title": "队伍",
@@ -1940,7 +1944,11 @@
     "left_notice": "您已不再是 {club} 的管理员。",
     "leave_title": "要将自己从 {club} 的管理员中移除吗？",
     "leave_body": "您将无法再组织俱乐部的比赛或批准其成员的申请。只有其他管理员才能将您重新添加。",
-    "leave_confirm": "移除我"
+    "leave_confirm": "移除我",
+    "admins_intro": "俱乐部管理员负责组织本俱乐部的比赛，并管理其课程、收款和会籍费用。他们没有联合会范围的权限。",
+    "current_admins": "当前管理员（{n}）",
+    "nobody_admins": "该俱乐部还没有管理员。",
+    "no_other_members": "该俱乐部没有其他成员。请先在用户管理中将成员调入该俱乐部。"
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "地区"
     },
     "pick": "— 请选择 —",
-    "required": "{label}：请为新俱乐部选择一个。"
+    "required": "{label}：请为新俱乐部选择一个。",
+    "admins_intro": "地区管理员负责组织本地区或其俱乐部主办的比赛，并审核本地区俱乐部的角色申请。",
+    "nobody_admins": "该地区还没有管理员。",
+    "pick_member": "— 选择本地区俱乐部的成员 —",
+    "no_candidates": "暂时没有可添加的人。请先把俱乐部划入该地区，其成员会显示在这里。",
+    "strip_title": "地区",
+    "manage_admins": "管理 {name} 的管理员",
+    "none_set_up": "该机构尚未设置地区（州、省等）。",
+    "set_up": "设置地区",
+    "region_for": "{club} 所在地区"
   },
   "my_region": {
     "title": "我的地区",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "个进行中的申请",
     "open_claims_few": "个进行中的申请",
     "open_claims_many": "个进行中的申请",
-    "open_claims_other": "个进行中的申请"
+    "open_claims_other": "个进行中的申请",
+    "regions_added_zero": "已添加 {n} 个地区",
+    "regions_added_one": "已添加 {n} 个地区",
+    "regions_added_two": "已添加 {n} 个地区",
+    "regions_added_few": "已添加 {n} 个地区",
+    "regions_added_many": "已添加 {n} 个地区",
+    "regions_added_other": "已添加 {n} 个地区"
   },
   "admin_settings": {
     "title": "接管申请投票规则",

@@ -1174,7 +1174,11 @@
     "col_name": "Ad",
     "col_code": "Kod",
     "col_members": "Üyeler",
-    "col_created": "Oluşturuldu"
+    "col_created": "Oluşturuldu",
+    "col_billing": "Faturalama",
+    "col_actions": "İşlemler",
+    "admins_button": "Yöneticiler",
+    "rename": "Yeniden adlandır"
   },
   "teams": {
     "title": "Takımlar",
@@ -1940,7 +1944,11 @@
     "left_notice": "Artık {club} yöneticisi değilsiniz.",
     "leave_title": "Kendinizi {club} yöneticilerinden çıkarmak istiyor musunuz?",
     "leave_body": "Artık kulübün yarışmalarını düzenleyemez ve üyelerinin isteklerini onaylayamazsınız. Sizi yalnızca başka bir yönetici geri ekleyebilir.",
-    "leave_confirm": "Beni çıkar"
+    "leave_confirm": "Beni çıkar",
+    "admins_intro": "Kulüp yöneticileri kulüplerinin yarışmalarını düzenler; derslerini, ödemelerini ve üyelik aidatlarını yönetir. Federasyon genelinde erişimleri yoktur.",
+    "current_admins": "Mevcut yöneticiler ({n})",
+    "nobody_admins": "Bu kulübün henüz yöneticisi yok.",
+    "no_other_members": "Bu kulüpte başka üye yok. Önce Kullanıcı Yöneticisi’nden birini bu kulübe taşıyın."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Bölge"
     },
     "pick": "— Birini seçin —",
-    "required": "{label}: yeni kulübünüz için birini seçin."
+    "required": "{label}: yeni kulübünüz için birini seçin.",
+    "admins_intro": "Bölge yöneticileri, bölgelerinin veya kulüplerinin ev sahipliği yaptığı yarışmaları düzenler ve bölge kulüplerinden gelen rol isteklerini inceler.",
+    "nobody_admins": "Bu bölgenin henüz yöneticisi yok.",
+    "pick_member": "— Bu bölgenin kulüplerinden bir üye seçin —",
+    "no_candidates": "Henüz eklenecek kimse yok. Önce bu bölgeye kulüp ekleyin, üyeleri burada görünür.",
+    "strip_title": "Bölgeler",
+    "manage_admins": "{name} yöneticilerini yönet",
+    "none_set_up": "Bu kuruluş için henüz bölge (eyalet, il…) ayarlanmadı.",
+    "set_up": "Bölgeleri ayarla",
+    "region_for": "{club} bölgesi"
   },
   "my_region": {
     "title": "Bölgem",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "açık talep",
     "open_claims_few": "açık talep",
     "open_claims_many": "açık talep",
-    "open_claims_other": "açık talep"
+    "open_claims_other": "açık talep",
+    "regions_added_zero": "{n} bölge eklendi",
+    "regions_added_one": "{n} bölge eklendi",
+    "regions_added_two": "{n} bölge eklendi",
+    "regions_added_few": "{n} bölge eklendi",
+    "regions_added_many": "{n} bölge eklendi",
+    "regions_added_other": "{n} bölge eklendi"
   },
   "admin_settings": {
     "title": "Devralma talebi oylama kuralları",

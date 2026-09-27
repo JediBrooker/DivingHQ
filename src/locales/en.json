@@ -1272,7 +1272,11 @@
     "col_name": "Name",
     "col_code": "Code",
     "col_members": "Members",
-    "col_created": "Created"
+    "col_created": "Created",
+    "col_billing": "Billing",
+    "col_actions": "Actions",
+    "admins_button": "Admins",
+    "rename": "Rename"
   },
   "teams": {
     "title": "Teams",
@@ -1940,7 +1944,11 @@
     "left_notice": "You're no longer an admin of {club}.",
     "leave_title": "Remove yourself as an admin of {club}?",
     "leave_body": "You won't be able to run the club's meets or approve its members' requests any more. Only another admin can add you back.",
-    "leave_confirm": "Remove me"
+    "leave_confirm": "Remove me",
+    "admins_intro": "Club admins run their club's meets and look after its classes, payouts and affiliation payments. They get no federation-wide access.",
+    "current_admins": "Current admins ({n})",
+    "nobody_admins": "Nobody admins this club yet.",
+    "no_other_members": "No other members in this club. Move someone into it from the User Manager first."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Region"
     },
     "pick": "— Pick one —",
-    "required": "{label}: pick one for your new club."
+    "required": "{label}: pick one for your new club.",
+    "admins_intro": "Region admins run meets their region or its clubs host, and review role requests from the region's clubs.",
+    "nobody_admins": "Nobody admins this region yet.",
+    "pick_member": "— Pick a member of this region's clubs —",
+    "no_candidates": "No one to add yet. Put clubs in this region first, their members show up here.",
+    "strip_title": "Regions",
+    "manage_admins": "Manage who admins {name}",
+    "none_set_up": "No regions (states, provinces…) set up for this organisation yet.",
+    "set_up": "Set up regions",
+    "region_for": "Region for {club}"
   },
   "my_region": {
     "title": "My region",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "open claims",
     "open_claims_few": "open claims",
     "open_claims_many": "open claims",
-    "open_claims_other": "open claims"
+    "open_claims_other": "open claims",
+    "regions_added_zero": "Added {n} regions",
+    "regions_added_one": "Added {n} region",
+    "regions_added_two": "Added {n} regions",
+    "regions_added_few": "Added {n} regions",
+    "regions_added_many": "Added {n} regions",
+    "regions_added_other": "Added {n} regions"
   },
   "admin_settings": {
     "title": "Claim voting rules",

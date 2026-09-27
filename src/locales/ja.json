@@ -1174,7 +1174,11 @@
     "col_name": "名称",
     "col_code": "コード",
     "col_members": "メンバー",
-    "col_created": "作成日"
+    "col_created": "作成日",
+    "col_billing": "請求",
+    "col_actions": "操作",
+    "admins_button": "管理者",
+    "rename": "名前を変更"
   },
   "teams": {
     "title": "チーム",
@@ -1940,7 +1944,11 @@
     "left_notice": "{club} の管理者ではなくなりました。",
     "leave_title": "{club} の管理者から自分を外しますか？",
     "leave_body": "クラブの大会運営やメンバーの申請承認ができなくなります。元に戻せるのは他の管理者だけです。",
-    "leave_confirm": "自分を外す"
+    "leave_confirm": "自分を外す",
+    "admins_intro": "クラブ管理者は自クラブの大会を運営し、クラスや支払い、加盟費を管理します。連盟全体へのアクセス権はありません。",
+    "current_admins": "現在の管理者（{n}）",
+    "nobody_admins": "このクラブにはまだ管理者がいません。",
+    "no_other_members": "このクラブには他のメンバーがいません。まずユーザー管理から誰かをこのクラブに移してください。"
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "地域"
     },
     "pick": "— 選択してください —",
-    "required": "{label}: 新しいクラブの所属を選んでください。"
+    "required": "{label}: 新しいクラブの所属を選んでください。",
+    "admins_intro": "地域管理者は、地域またはその所属クラブが主催する大会を運営し、地域のクラブからの役割申請を審査します。",
+    "nobody_admins": "この地域にはまだ管理者がいません。",
+    "pick_member": "— この地域のクラブのメンバーを選択 —",
+    "no_candidates": "追加できる人がまだいません。まずクラブをこの地域に登録すると、そのメンバーがここに表示されます。",
+    "strip_title": "地域",
+    "manage_admins": "{name} の管理者を管理",
+    "none_set_up": "この組織にはまだ地域（州・県など）が設定されていません。",
+    "set_up": "地域を設定",
+    "region_for": "{club} の地域"
   },
   "my_region": {
     "title": "マイ地域",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "件の進行中の申請",
     "open_claims_few": "件の進行中の申請",
     "open_claims_many": "件の進行中の申請",
-    "open_claims_other": "件の進行中の申請"
+    "open_claims_other": "件の進行中の申請",
+    "regions_added_zero": "{n} 件の地域を追加しました",
+    "regions_added_one": "{n} 件の地域を追加しました",
+    "regions_added_two": "{n} 件の地域を追加しました",
+    "regions_added_few": "{n} 件の地域を追加しました",
+    "regions_added_many": "{n} 件の地域を追加しました",
+    "regions_added_other": "{n} 件の地域を追加しました"
   },
   "admin_settings": {
     "title": "引き継ぎ申請の投票ルール",

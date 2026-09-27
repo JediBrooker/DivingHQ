@@ -1185,7 +1185,11 @@
     "col_name": "Nome",
     "col_code": "Código",
     "col_members": "Membros",
-    "col_created": "Criado em"
+    "col_created": "Criado em",
+    "col_billing": "Faturação",
+    "col_actions": "Ações",
+    "admins_button": "Administradores",
+    "rename": "Mudar o nome"
   },
   "teams": {
     "title": "Equipas",
@@ -1940,7 +1944,11 @@
     "left_notice": "Já não é administrador de {club}.",
     "leave_title": "Remover-se dos administradores de {club}?",
     "leave_body": "Deixará de poder organizar as provas do clube ou aprovar os pedidos dos seus membros. Só outro administrador o pode voltar a adicionar.",
-    "leave_confirm": "Remover-me"
+    "leave_confirm": "Remover-me",
+    "admins_intro": "Os administradores do clube organizam as provas do seu clube e tratam das aulas, pagamentos e quotas de filiação. Não têm acesso a toda a federação.",
+    "current_admins": "Administradores atuais ({n})",
+    "nobody_admins": "Este clube ainda não tem administrador.",
+    "no_other_members": "Não há outros membros neste clube. Mova primeiro alguém para este clube a partir do Gestor de utilizadores."
   },
   "regions": {
     "label": {
@@ -1950,7 +1958,16 @@
       "region": "Região"
     },
     "pick": "— Escolha uma —",
-    "required": "{label}: escolha uma para o seu novo clube."
+    "required": "{label}: escolha uma para o seu novo clube.",
+    "admins_intro": "Os administradores regionais organizam as provas acolhidas pela sua região ou pelos clubes dela e analisam os pedidos de função dos clubes da região.",
+    "nobody_admins": "Esta região ainda não tem administrador.",
+    "pick_member": "— Escolha um membro dos clubes desta região —",
+    "no_candidates": "Ainda não há ninguém para adicionar. Coloque primeiro clubes nesta região e os membros deles aparecem aqui.",
+    "strip_title": "Regiões",
+    "manage_admins": "Gerir quem administra {name}",
+    "none_set_up": "Ainda não há regiões (estados, províncias…) configuradas para esta organização.",
+    "set_up": "Configurar regiões",
+    "region_for": "Região de {club}"
   },
   "my_region": {
     "title": "A minha região",
@@ -2006,7 +2023,13 @@
     "open_claims_two": "reivindicações abertas",
     "open_claims_few": "reivindicações abertas",
     "open_claims_many": "de reivindicações abertas",
-    "open_claims_other": "reivindicações abertas"
+    "open_claims_other": "reivindicações abertas",
+    "regions_added_zero": "{n} regiões adicionadas",
+    "regions_added_one": "{n} região adicionada",
+    "regions_added_two": "{n} regiões adicionadas",
+    "regions_added_few": "{n} regiões adicionadas",
+    "regions_added_many": "{n} de regiões adicionadas",
+    "regions_added_other": "{n} regiões adicionadas"
   },
   "admin_settings": {
     "title": "Regras de votação das reivindicações",
