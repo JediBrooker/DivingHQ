@@ -652,7 +652,29 @@ function pickInitialTab() {
 // Used on initial mount and on every poll/socket-driven refresh.
 // Returns false when the call failed, so the mount can tell "no
 // events" apart from "couldn't ask".
-async function loadDashboardBundle() {
+//
+// Only one request is ever out at a time. A poll tick or socket signal
+// that lands while one is in flight queues a single follow-up rather
+// than a parallel call, so two responses can't land out of order and
+// the follow-up still sees whatever the signal was about.
+let bundleInFlight = null
+let bundleQueued = false
+let unmounted = false
+function loadDashboardBundle() {
+  if (bundleInFlight) {
+    bundleQueued = true
+    return bundleInFlight
+  }
+  bundleInFlight = fetchDashboardBundle().finally(() => {
+    bundleInFlight = null
+    if (bundleQueued && !unmounted) {
+      bundleQueued = false
+      loadDashboardBundle()
+    }
+  })
+  return bundleInFlight
+}
+async function fetchDashboardBundle() {
   let bundle = null
   try {
     bundle = await auth.apiFetch('/api/dashboard')
@@ -913,14 +935,21 @@ onMounted(async () => {
   // emits so the strip updates the moment something happens.
   // Polling continues as a fallback.
   attachSocketHandlers()
+  document.addEventListener('visibilitychange', onVisibilityChange)
   // (P4) the activity ticker was removed, nothing to start here.
 })
 onUnmounted(() => {
+  unmounted = true
   stopPulsePolling()
   detachSocketHandlers()
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 
 // ---- Live polling ------------------------------------------
+// A tab nobody is looking at doesn't need fresh counts, and each bundle
+// is about a dozen queries, so ticks and socket signals are skipped
+// while the page is hidden. Coming back refetches once (the count
+// watchers still flash whatever changed) and restarts the 30 s clock.
 const POLL_MS = 30_000
 let pollTimer = null
 function startPulsePolling() {
@@ -933,11 +962,17 @@ function stopPulsePolling() {
     pollTimer = null
   }
 }
+function onVisibilityChange() {
+  if (document.hidden || !pollTimer) return
+  loadDashboardBundle()
+  startPulsePolling()
+}
 // Refetch the data the pulse depends on. Now goes through the
 // /api/dashboard bundle so a poll tick is one HTTP round trip
 // rather than 5–6. Watchers on the underlying refs flash the
 // chips when counts change.
 async function refetchPulseData() {
+  if (document.hidden) return
   await loadDashboardBundle()
 }
 
