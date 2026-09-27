@@ -56,7 +56,7 @@ Your country's federation is on DivingHQ, and it approves new clubs before they 
 
 It depends on who runs your country on DivingHQ:
 
-- **No federation yet:** your club's admins, on **My club**, or the admins of your club's region. They can approve divers, judges and referees. Nobody can approve themselves as a judge or referee, so a club admin's own request goes to another admin or to DivingHQ. If your club has no admin at all, DivingHQ reviews it.
+- **No federation yet:** your club's admins, on **My club**, or the admins of your club's region. They can approve divers, judges and coaches; referee requests go to DivingHQ. Nobody can approve themselves for anything but diver, so a club admin's own judge or coach request goes to another admin, the region, or DivingHQ. If your club has no admin at all, DivingHQ reviews it.
 - **Under a federation:** the federation's admins, in **User Manager**.
 
 Either way you can sign in while you wait. You're a spectator until it's approved.

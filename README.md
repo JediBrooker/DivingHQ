@@ -13,7 +13,7 @@ It's built for clubs, state bodies and federations alike. **A club can start on 
 
 Built around five audiences:
 
-- **Divers** — Diver Portal for building and submitting dive lists per event (with World Aquatics DD lookup, height filter, synchro partner autocomplete), plus a personal profile with PBs, score-trend sparkline, average DD, best single dive, and a customisable analytics dashboard with 10+ widgets. Divers can also request a **club change** (subject to org-admin approval) from their Dive Sheets page.
+- **Divers** — Diver Portal for building and submitting dive lists per event (with World Aquatics DD lookup, height filter, synchro partner autocomplete), plus a personal profile with PBs, score-trend sparkline, average DD, best single dive, and a customisable analytics dashboard with 10+ widgets. Divers can also request a **club change** from their Dive Sheets page (approved by an org admin, or, in a country with no federation on DivingHQ yet, by the admins of the club being joined or its region).
 - **Coaches** — A `coach` role with a per-coach roster of linked divers, on-behalf-of dive-list submission, a real-time "your diver is up next" push alert, and one-click access to each diver's profile.
 - **Meet operators** — Control room view advances divers, broadcasts state to judges and the public scoreboard, finalises events — and runs **two or more events simultaneously from one window**, each pool with its own shot clock and controls. 60-second shot clock, hold/resume, score correction, queue reorder, late entry, audit-logged referee actions. Events are organised in a master–detail **Meet Manager** (meets on the left, their events on the right). Org admins run their federation from a **User Manager** — edit a member’s competition details (name, DOB, gender, nationality), assign clubs, suspend / reactivate accounts, trigger password-reset and email-verification emails, grant org roles, and approve **club-change requests**, including cross-federation **transfers** via a source-org + target-org + diver handshake. Every change is written to the Audit Log.
 - **Judges** — Single-purpose phone-friendly view that submits scores back to the server in real time. Synchro panels see role hints (Exec A / Exec B / Sync) so they know which judging slot they're filling. **Judge Analysis** (`/judge-profile`) gives every judge a self-service dashboard showing how their scoring tracks against the panel-kept mean (post World Aquatics trim, PART FOUR Article 13) — overall bias, drop rate (with high vs low split), and breakdowns per board height, dive group, country, club, individual diver, round, and DD difficulty. Fully customisable widget catalogue, mirroring the diver dashboard pattern. A separate per-event **Judge Analysis** matrix (`/judge-analysis` — a tabbed By-Event / By-Judge page, with the app shell for signed-in users and a standalone view for the public) shows how each judge’s calls would have re-ranked the field, with World-Aquatics-correct synchro role breakdowns (Exec A / Exec B / Sync contributions that sum to the pair total, per Article 9.1.5).
@@ -680,7 +680,7 @@ Top of the food chain inside one federation — the person whose name is on the 
 - Approve or reject coach⇄diver linking requests
 - Edit or delete any event in their org
 - Set `entries_close_at` on events to enforce registration deadlines
-- Sign off federation records (`records_federation`)
+- Claim the country's account so its national record book reads as official (records update themselves, there's nothing to sign off)
 - Manage clubs and teams within the federation
 
 ### `region_admins` — State, province or home-nation body
@@ -699,7 +699,7 @@ Runs one club (migration 087). In an **unclaimed** country (`organisations.claim
 
 **What they can do:**
 - Host meets (`meets.host_club_id`) and run them end to end as the event's delegate: events, entries, panels, the schedule, the Control Room
-- Review their members' requests for `diver`, `judge` and `referee` in an unclaimed country (never approving themselves as an official)
+- Review their members' requests for `diver`, `judge` and `coach` in an unclaimed country (never approving their own, except diver; `referee` requests go to the system admin, see `lib/role-requests.js`)
 - Add and remove co-admins and set the club's region while the country is unclaimed
 - Vote on claims (`/claims`) when a federation or state body applies to take over
 

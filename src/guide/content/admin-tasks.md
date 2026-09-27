@@ -119,7 +119,7 @@ The short code matters more than you'd think — it's the cyan pill that shows n
 
 `/club` (**My club** in the sidebar), for anyone who admins a club.
 
-- **Role requests** — members asking to dive, judge or referee. Approve or reject each one. In a country with no federation on DivingHQ yet this is where they land; under a federation they go to the federation's admins instead.
+- **Role requests** — members asking to dive, judge or coach. Approve or reject each one. (Referee requests go to DivingHQ, since a referee can act at any club's meet in the country.) In a country with no federation on DivingHQ yet this is where they land; under a federation they go to the federation's admins instead.
 - **Admins** — the club's admins. While the country has no federation you can add co-admins from your members and remove them. The last admin can't step down: their **Remove** stays greyed out until there's a co-admin. Under a federation this list is read-only, because the federation appoints club admins.
 - **Region** — which state, province or home nation the club is in, in countries that have them. Same rule: yours to set until a federation arrives.
 

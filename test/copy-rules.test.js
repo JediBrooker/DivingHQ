@@ -1,0 +1,29 @@
+// Copy that has to agree with the code. Guide pages, the README, the
+// privacy policy and a few locale strings were written in parallel with
+// the rules they describe and went stale when those rules moved. These
+// pin the specific sentences that did, so the next change to a rule has
+// to update what users read about it too.
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const root = path.join(__dirname, "..");
+const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
+const en = JSON.parse(read("src/locales/en.json"));
+
+// lib/role-requests.js: CLUB_GRANTABLE_ROLES is diver, judge, coach.
+// Referee reaches every meet in the country, so it goes to DivingHQ.
+test("nothing tells a club admin they approve referees", () => {
+  const { CLUB_GRANTABLE_ROLES } = require("../lib/role-requests");
+  assert.ok(!CLUB_GRANTABLE_ROLES.includes("referee"));
+  assert.ok(CLUB_GRANTABLE_ROLES.includes("coach"));
+  assert.doesNotMatch(en.home.clubs.step2_desc, /referee/i);
+  assert.match(en.home.clubs.step2_desc, /coach/i);
+  const stale = [/dive, judge or referee/i, /divers, judges and referees/i, /`diver`, `judge` and `referee`/];
+  for (const file of ["src/guide/content/roles-and-permissions.md", "src/guide/content/admin-tasks.md",
+    "src/guide/content/faq.md", "README.md"]) {
+    for (const re of stale) assert.doesNotMatch(read(file), re, `${file} still says ${re}`);
+  }
+  assert.doesNotMatch(read("README.md"), /Sign off federation records/);
+});
