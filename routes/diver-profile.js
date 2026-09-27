@@ -40,6 +40,50 @@ const KNOWN_WIDGETS = new Set([
   "compare_peers", "event_type_splits", "year_over_year",
 ]);
 
+// The placings widget, counted from the diver's ranked rows. This was
+// a COUNT(*) FILTER query and the keys and ::int types match it. rank
+// comes out of RANK() as a bigint, which pg hands us as a string,
+// hence the Number().
+function placingsFrom(rows) {
+  const out = { gold: 0, silver: 0, bronze: 0, finalist: 0, further: 0, total_meets: rows.length };
+  for (const row of rows) {
+    const r = Number(row.rank);
+    if (r === 1) out.gold++;
+    else if (r === 2) out.silver++;
+    else if (r === 3) out.bronze++;
+    else if (r >= 4 && r <= 8) out.finalist++;
+    else if (r > 8) out.further++;
+  }
+  return out;
+}
+
+// Streak: consecutive top-3 finishes from the most recent meet
+// backwards (rows arrive newest first). Reads "win" while it's all
+// golds and drops to "podium" once a 2nd or 3rd turns up.
+function streakFrom(rows) {
+  let length = 0;
+  let kind = null;
+  for (const row of rows) {
+    const r = Number(row.rank);
+    if (r === 1) {
+      if (kind === "podium" || kind === "win" || kind === null) {
+        kind = kind === "podium" ? "podium" : "win";
+        length++;
+      } else break;
+    } else if (r <= 3) {
+      if (kind === null || kind === "podium") {
+        kind = "podium";
+        length++;
+      } else if (kind === "win") {
+        // Win streak broken; switch to podium streak count
+        kind = "podium";
+        length++;
+      } else break;
+    } else break;
+  }
+  return { kind, length };
+}
+
 // Diver competitive profiles are now publicly readable: same
 // data the meet scoreboards and event archives already expose to
 // the open web. The handler still gates owner-private fields
@@ -325,8 +369,13 @@ module.exports = function createDiverProfileRouter({
         }
       };
 
-      const queries = await Promise.all([
-        runQuery("recent_form",
+      const [ranked, heights, rounds, quality, ddRisk, frequent,
+             comparePeers, eventTypeSplits, yearOverYear] = await Promise.all([
+        // The diver's row from FULL_FIELD_RANKING for every event, newest
+        // first. recent_form, placings and streak are all cut from this
+        // one read below; they used to be three queries that each
+        // rebuilt the whole field ranking.
+        runQuery("ranked_events",
           `WITH ${FULL_FIELD_RANKING}
            SELECT e.id AS event_id, e.name AS event_name, e.created_at,
                   r.total, r.rank,
@@ -337,21 +386,7 @@ module.exports = function createDiverProfileRouter({
            FROM ranked r
            JOIN events e ON e.id = r.event_id
            WHERE r.competitor_id = $1
-           ORDER BY e.created_at DESC
-           LIMIT 5`,
-          [id, fromDate, toDate],
-        ),
-
-        runQuery("placings",
-          `WITH ${FULL_FIELD_RANKING}
-           SELECT
-             COUNT(*) FILTER (WHERE rank = 1)::int AS gold,
-             COUNT(*) FILTER (WHERE rank = 2)::int AS silver,
-             COUNT(*) FILTER (WHERE rank = 3)::int AS bronze,
-             COUNT(*) FILTER (WHERE rank BETWEEN 4 AND 8)::int  AS finalist,
-             COUNT(*) FILTER (WHERE rank > 8)::int              AS further,
-             COUNT(*)::int                                      AS total_meets
-           FROM ranked WHERE competitor_id = $1`,
+           ORDER BY e.created_at DESC`,
           [id, fromDate, toDate],
         ),
 
@@ -425,19 +460,6 @@ module.exports = function createDiverProfileRouter({
            GROUP BY dive_code, position, height
            ORDER BY attempts DESC, avg_score DESC
            LIMIT 5`,
-          [id, fromDate, toDate],
-        ),
-
-        runQuery("streak",
-          `WITH ${FULL_FIELD_RANKING},
-           streak_rows AS (
-             SELECT r.event_id, r.rank, e.created_at
-             FROM ranked r JOIN events e ON e.id = r.event_id
-             WHERE r.competitor_id = $1
-           )
-           SELECT event_id, rank, created_at
-           FROM streak_rows
-           ORDER BY created_at DESC`,
           [id, fromDate, toDate],
         ),
 
@@ -521,8 +543,7 @@ module.exports = function createDiverProfileRouter({
         ),
       ]);
 
-      const [recent, placings, heights, rounds, quality, ddRisk, frequent, streak,
-             comparePeers, eventTypeSplits, yearOverYear] = queries;
+      const recent = ranked.slice(0, 5);
 
       // Recent Form expansion: for each meet returned, fetch
       // every dive the diver did with the per-judge raw scores so
@@ -568,35 +589,9 @@ module.exports = function createDiverProfileRouter({
         }
       }
 
-      // Streak post-processing: count consecutive top-3 from the
-      // most recent meet backwards.
-      let streakLen = 0;
-      let streakKind = null;
-      for (const row of streak) {
-        const r = Number(row.rank);
-        if (r === 1) {
-          if (streakKind === "podium" || streakKind === "win" || streakKind === null) {
-            streakKind = streakKind === "podium" ? "podium" : "win";
-            streakLen++;
-          } else break;
-        } else if (r <= 3) {
-          if (streakKind === null || streakKind === "podium") {
-            streakKind = "podium";
-            streakLen++;
-          } else if (streakKind === "win") {
-            // Win streak broken; switch to podium streak count
-            streakKind = "podium";
-            streakLen++;
-          } else break;
-        } else break;
-      }
-
       res.json({
         recent_form: recent,
-        placings: placings[0] || {
-          gold: 0, silver: 0, bronze: 0,
-          finalist: 0, further: 0, total_meets: 0,
-        },
+        placings: placingsFrom(ranked),
         height_breakdown: heights,
         round_stamina: rounds,
         quality_mix: quality[0] || {
@@ -608,7 +603,7 @@ module.exports = function createDiverProfileRouter({
           avg_score_at_highest_dd: null, attempts_at_highest_dd: 0,
         },
         frequent_dives: frequent,
-        streak: { kind: streakKind, length: streakLen },
+        streak: streakFrom(ranked),
         compare_peers: comparePeers[0] || {
           my_avg_dd: null, peer_avg_dd: null,
           my_max_dd: null, peer_max_dd: null,
@@ -661,3 +656,5 @@ module.exports = function createDiverProfileRouter({
 
   return router;
 };
+
+module.exports.__test__ = { placingsFrom, streakFrom };
