@@ -612,26 +612,6 @@ module.exports = function createCoachRouter({
       }
       const event = evRes.rows[0];
 
-      const eligible = await pool.query(
-        `SELECT 1
-           FROM coach_diver_links link
-           JOIN users u ON u.id = link.diver_id
-          WHERE link.coach_id = $1
-            AND (
-              u.org_id = $2
-              OR link.org_id = $2
-              OR EXISTS (
-                SELECT 1 FROM event_participating_orgs epo
-                 WHERE epo.event_id = $3 AND epo.org_id = u.org_id
-              )
-            )
-          LIMIT 1`,
-        [req.user.id, event.org_id, req.params.event_id],
-      );
-      if (!eligible.rows.length) {
-        return res.status(403).json({ error: "No linked divers are eligible for this event" });
-      }
-
       const [prescribedRes, diverRes] = await Promise.all([
         pool.query(
           `SELECT round_number, dive_id, height
@@ -721,6 +701,14 @@ module.exports = function createCoachRouter({
           [req.user.id, req.params.event_id, event.org_id],
         ),
       ]);
+      // No eligible linked diver, no editor. my_divers above is exactly
+      // the eligibility check (same link + org filter; users.org_id is
+      // NOT NULL so the organisations join can't drop anyone) and the
+      // result has one row per my_divers row, so an empty result is the
+      // 403. This used to be its own query before the two above.
+      if (!diverRes.rows.length) {
+        return res.status(403).json({ error: "No linked divers are eligible for this event" });
+      }
 
       // Cross-federation body-field leak guard. Even though the
       // eligibility check above lets a coach see the diver-list shape

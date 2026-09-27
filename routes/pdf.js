@@ -1055,7 +1055,7 @@ module.exports = function createPdfRouter({ pool }) {
   // -------------------------------------------------------------
   router.get("/api/events/:id/results.csv", async (req, res) => {
     try {
-      const [evRes, divesRes] = await Promise.all([
+      const [evRes, divesRes, totalsRes] = await Promise.all([
         pool.query(
           "SELECT e.name, e.gender, e.height, e.event_type, o.name AS org_name FROM events e JOIN organisations o ON o.id = e.org_id WHERE e.id = $1",
           [req.params.id],
@@ -1093,6 +1093,28 @@ module.exports = function createPdfRouter({ pool }) {
            ORDER BY u.full_name ASC, u.id ASC, s.round_number ASC`,
           [req.params.id],
         ),
+        // Final placings, fetched alongside so the CSV's per-dive rows
+        // can carry both the dive total and the diver's final rank.
+        // Keyed by competitor_id (not full_name) so two same-named
+        // divers don't collide. World Aquatics Art 4.1.5: equal totals
+        // share a place, so RANK() over total alone gives the placing.
+        pool.query(
+          `WITH ${perDivePointsCte({
+             select:      ["s.competitor_id"],
+             pointsAlias: "pts",
+             groupBy:     ["s.competitor_id", "s.round_number"],
+           })},
+           totals AS (
+             SELECT competitor_id, SUM(pts)::numeric(8,2) AS total
+             FROM per_dive GROUP BY competitor_id
+           )
+           SELECT u.id AS competitor_id, u.full_name AS diver_name,
+                  t.total,
+                  RANK() OVER (ORDER BY t.total DESC) AS final_rank
+           FROM totals t
+           JOIN users u ON u.id = t.competitor_id`,
+          [req.params.id],
+        ),
       ]);
       if (!evRes.rows.length) return res.status(404).json({ error: "Event not found" });
       const event = evRes.rows[0];
@@ -1101,28 +1123,6 @@ module.exports = function createPdfRouter({ pool }) {
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_results.csv"`);
 
-      // Compute final placings up front so the CSV's per-dive rows
-      // can carry both the dive total and the diver's final rank.
-      // Keyed by competitor_id (not full_name) so two same-named
-      // divers don't collide. World Aquatics Art 4.1.5: equal totals
-      // share a place, so RANK() over total alone gives the placing.
-      const totalsRes = await pool.query(
-        `WITH ${perDivePointsCte({
-           select:      ["s.competitor_id"],
-           pointsAlias: "pts",
-           groupBy:     ["s.competitor_id", "s.round_number"],
-         })},
-         totals AS (
-           SELECT competitor_id, SUM(pts)::numeric(8,2) AS total
-           FROM per_dive GROUP BY competitor_id
-         )
-         SELECT u.id AS competitor_id, u.full_name AS diver_name,
-                t.total,
-                RANK() OVER (ORDER BY t.total DESC) AS final_rank
-         FROM totals t
-         JOIN users u ON u.id = t.competitor_id`,
-        [req.params.id],
-      );
       const placingById = new Map(
         totalsRes.rows.map((r) => [r.competitor_id, { total: r.total, rank: r.final_rank }]),
       );

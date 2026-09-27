@@ -155,9 +155,12 @@ module.exports = function createDiverProfileRouter({
         AND ($2::date IS NULL OR e.created_at >= $2::date)
         AND ($3::date IS NULL OR e.created_at < $3::date + INTERVAL '1 day')`;
 
+      // The three reads below are independent, so they're started
+      // together and awaited once before the response.
+      //
       // Top-level stats: total events, total dives, average DD,
       // best single dive total.
-      const stats = await reads.query(
+      const statsQuery = reads.query(
         `WITH ${perDivePointsCte({
            name:        "dive_totals",
            select:      ["s.event_id", "s.round_number"],
@@ -183,7 +186,7 @@ module.exports = function createDiverProfileRouter({
       // historical scores from PB calculations. Dive-by-dive scope:
       // d.dd is a grouping column, so it feeds the UDF directly
       // (no MAX() wrapper).
-      const pb = await reads.query(
+      const pbQuery = reads.query(
         `WITH ${perDivePointsCte({
            name: "dive_totals",
            select: [
@@ -221,7 +224,7 @@ module.exports = function createDiverProfileRouter({
 
       // Score trend: per-event total + final placing, oldest first
       // so a chart can plot it as a line.
-      const trend = await reads.query(
+      const trendQuery = reads.query(
         `WITH diver_events AS (
            SELECT DISTINCT s.event_id
            FROM scores s
@@ -275,6 +278,7 @@ module.exports = function createDiverProfileRouter({
          ORDER BY e.created_at ASC`,
         [req.params.id, fromDate, toDate],
       );
+      const [stats, pb, trend] = await Promise.all([statsQuery, pbQuery, trendQuery]);
 
       res.json({
         diver: {
