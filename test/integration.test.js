@@ -6915,3 +6915,29 @@ test("migration 098 rewrites alpha-2 entry snapshots so a country prints one cod
     await teardownFixture(st);
   }
 });
+
+// Same thing through the real route, following the live flags.
+test("sitemap.xml lists the payments and classes guides only while they're switched on", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { features } = require("../server.js");
+  const saved = { payments: features.enabled("payments"), classes: features.enabled("classes") };
+  const sitemap = () => new Promise((resolve, reject) => {
+    http.get(`${baseUrl}/sitemap.xml`, (res) => {
+      const chunks = []; res.on("data", (c) => chunks.push(c)); res.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    }).on("error", reject);
+  });
+  try {
+    await features.set("payments", false);
+    await features.set("classes", false);
+    let xml = await sitemap();
+    assert.ok(!xml.includes("/guide/payments") && !xml.includes("/guide/classes"), "not while they'd say Topic not found");
+    assert.ok(xml.includes("/guide/quick-start"));
+    await features.set("payments", true);
+    xml = await sitemap();
+    assert.ok(xml.includes("/guide/payments") && !xml.includes("/guide/classes"));
+  } finally {
+    await features.set("payments", saved.payments);
+    await features.set("classes", saved.classes);
+  }
+});

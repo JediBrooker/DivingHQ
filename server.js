@@ -263,7 +263,9 @@ function createSearchLimiter() {
 // canonical link and og:url name the page actually requested, not the home
 // page (see lib/spa-shell.js). "/" is answered before express.static, which
 // would otherwise hand out dist/index.html untouched.
-const { publicOrigin, renderShell, renderCrawlerFile } = require("./lib/spa-shell");
+const {
+  publicOrigin, renderShell, renderCrawlerFile, gatedGuideTopics, dropGatedGuidePages,
+} = require("./lib/spa-shell");
 const SPA_SHELL = path.join(__dirname, "dist", "index.html");
 async function sendSpaShell(req, res, next) {
   try {
@@ -284,10 +286,19 @@ app.get("/", sendSpaShell);
 // public/ is the source, which also covers a server running without a
 // fresh build (the test suite, a dev box). /robots.txt must never fall
 // through to the SPA fallback, which answered crawlers with a 200 of HTML.
+// Guide topics behind a feature flag leave the sitemap while it's off.
+// Read once: which topics are gated only changes with a deploy.
+let gatedGuide = [];
+try {
+  gatedGuide = gatedGuideTopics(require("node:fs").readFileSync(path.join(__dirname, "src", "guide", "topics.js"), "utf8"));
+} catch (err) {
+  console.warn("[sitemap] couldn't read src/guide/topics.js, listing every guide topic:", err.message);
+}
 for (const [file, type] of [["robots.txt", "text/plain"], ["sitemap.xml", "application/xml"]]) {
   app.get(`/${file}`, async (req, res, next) => {
     try {
-      const text = await require("node:fs").promises.readFile(path.join(__dirname, "public", file), "utf8");
+      let text = await require("node:fs").promises.readFile(path.join(__dirname, "public", file), "utf8");
+      if (file === "sitemap.xml") text = dropGatedGuidePages(text, gatedGuide, (k) => features.enabled(k));
       res.type(type).send(renderCrawlerFile(text, { origin: publicOrigin(), xml: type === "application/xml" }));
     } catch (err) {
       next(err);
