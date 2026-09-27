@@ -5405,3 +5405,43 @@ test("club short codes: clubs racing for the same code, only one gets it", async
     await claimKit.wipe(CODE);
   }
 });
+
+// robots.txt and sitemap.xml come out of public/ naming divinghq.app. A
+// self-hosted copy sets APP_BASE_URL, and its crawler files have to name it
+// too, the way the shell's canonical links already did. publicOrigin() reads
+// the env per request, so flipping it here is enough.
+test("robots.txt and sitemap.xml name APP_BASE_URL's origin when it's set", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const get = (p) => new Promise((resolve, reject) => {
+    http.get(baseUrl + p, (res) => {
+      const chunks = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("end", () => resolve({ status: res.statusCode, type: res.headers["content-type"] || "", body: Buffer.concat(chunks).toString("utf8") }));
+    }).on("error", reject);
+  });
+  const saved = process.env.APP_BASE_URL;
+  try {
+    process.env.APP_BASE_URL = "https://diving.example.org/some/path";
+    const robots = await get("/robots.txt");
+    assert.equal(robots.status, 200);
+    assert.match(robots.type, /^text\/plain/);
+    assert.match(robots.body, /^Sitemap: https:\/\/diving\.example\.org\/sitemap\.xml$/m);
+    assert.match(robots.body, /^Disallow: \/api\/$/m);
+    const sitemap = await get("/sitemap.xml");
+    assert.equal(sitemap.status, 200);
+    assert.match(sitemap.type, /^application\/xml/);
+    assert.match(sitemap.body, /<loc>https:\/\/diving\.example\.org\/guide\/quick-start<\/loc>/);
+    assert.ok(!sitemap.body.includes("https://divinghq.app") && !robots.body.includes("https://divinghq.app"),
+      "nothing left pointing at the hosted site");
+
+    // Unset (or junk), the hosted site's files go out as written.
+    delete process.env.APP_BASE_URL;
+    assert.match((await get("/robots.txt")).body, /^Sitemap: https:\/\/divinghq\.app\/sitemap\.xml$/m);
+    process.env.APP_BASE_URL = "not a url";
+    assert.match((await get("/sitemap.xml")).body, /<loc>https:\/\/divinghq\.app\/privacy<\/loc>/);
+  } finally {
+    if (saved === undefined) delete process.env.APP_BASE_URL;
+    else process.env.APP_BASE_URL = saved;
+  }
+});

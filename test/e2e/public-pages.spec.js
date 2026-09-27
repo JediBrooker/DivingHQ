@@ -167,10 +167,13 @@ test.describe("titles and link previews", () => {
   test("robots.txt and sitemap.xml aren't the SPA shell", async ({ request }) => {
     const robots = await request.get("/robots.txt");
     expect(robots.headers()["content-type"]).toMatch(/^text\/plain/);
-    expect(await robots.text()).toContain("Sitemap: https://divinghq.app/sitemap.xml");
+    // The origin is APP_BASE_URL's when the server has one (lib/spa-shell.js),
+    // so don't pin divinghq.app, just that both files agree on it.
+    const origin = (await robots.text()).match(/^Sitemap: (https?:\/\/[^/\s]+)\/sitemap\.xml$/m)?.[1];
+    expect(origin).toBeTruthy();
     const sitemap = await request.get("/sitemap.xml");
     expect(sitemap.headers()["content-type"]).toMatch(/xml/);
-    expect(await sitemap.text()).toContain("<loc>https://divinghq.app/privacy</loc>");
+    expect(await sitemap.text()).toContain(`<loc>${origin}/privacy</loc>`);
   });
 });
 
