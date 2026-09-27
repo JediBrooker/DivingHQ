@@ -98,7 +98,8 @@
       "website_hint": "Se o seu e-mail estiver no mesmo domínio, os votantes veem-no como verificado.",
       "claim_note_country": "Já há clubes de {country} no DivingHQ, por isso isto abre uma reivindicação da conta deles. Depois de verificar o e-mail, eles votam. Se ainda puderem votar poucos, o DivingHQ analisa.",
       "claim_note_region_parent": "{org} já gere este país no DivingHQ, por isso decide a sua reivindicação de {region}.",
-      "claim_note_region": "Isto abre uma reivindicação de {region}. Os seus clubes votam depois de verificar o e-mail, ou o DivingHQ analisa se ainda não houver suficientes."
+      "claim_note_region": "Isto abre uma reivindicação de {region}. Os seus clubes votam depois de verificar o e-mail, ou o DivingHQ analisa se ainda não houver suficientes.",
+      "website_invalid": "Isso não parece um endereço web. Experimente algo como diving.org.au."
     },
     "forgot": {
       "title": "Repor Palavra-passe",

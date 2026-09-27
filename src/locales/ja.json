@@ -98,7 +98,8 @@
       "website_hint": "メールアドレスが同じドメインなら、投票者には確認済みとして表示されます。",
       "claim_note_country": "{country} のクラブはすでに DivingHQ を利用しているため、そのアカウントへの引き継ぎ申請になります。メールを確認すると投票が始まります。投票できるクラブがまだ少ない場合は DivingHQ が審査します。",
       "claim_note_region_parent": "{org} がすでにこの国を DivingHQ で運営しているため、{region} への申請は同連盟が判断します。",
-      "claim_note_region": "{region} への申請になります。メール確認後に所属クラブが投票します。クラブがまだ少ない場合は DivingHQ が審査します。"
+      "claim_note_region": "{region} への申請になります。メール確認後に所属クラブが投票します。クラブがまだ少ない場合は DivingHQ が審査します。",
+      "website_invalid": "ウェブアドレスではないようです。diving.org.au のように入力してください。"
     },
     "forgot": {
       "title": "パスワードをリセット",

@@ -98,7 +98,8 @@
       "website_hint": "Jika alamat e-mel anda pada domain yang sama, pengundi melihatnya sebagai disahkan.",
       "claim_note_country": "Kelab dari {country} sudah berada di DivingHQ, jadi ini membuka tuntutan ke atas akaun mereka. Selepas e-mel anda disahkan, mereka mengundi. Jika terlalu sedikit yang boleh mengundi, DivingHQ menyemaknya.",
       "claim_note_region_parent": "{org} sudah mengurus negara ini di DivingHQ, jadi mereka memutuskan tuntutan anda ke atas {region}.",
-      "claim_note_region": "Ini membuka tuntutan ke atas {region}. Kelab-kelabnya mengundi selepas e-mel anda disahkan, atau DivingHQ menyemaknya jika belum cukup."
+      "claim_note_region": "Ini membuka tuntutan ke atas {region}. Kelab-kelabnya mengundi selepas e-mel anda disahkan, atau DivingHQ menyemaknya jika belum cukup.",
+      "website_invalid": "Itu tidak kelihatan seperti alamat web. Cuba sesuatu seperti diving.org.au."
     },
     "forgot": {
       "title": "Tetapkan semula kata laluan",

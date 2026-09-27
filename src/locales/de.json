@@ -98,7 +98,8 @@
       "website_hint": "Liegt Ihre E-Mail-Adresse auf derselben Domain, sehen die Abstimmenden sie als bestätigt.",
       "claim_note_country": "Vereine aus {country} sind bereits auf DivingHQ, daher wird ein Anspruch auf ihr Konto eröffnet. Sobald Sie Ihre E-Mail bestätigt haben, stimmen sie darüber ab. Können noch zu wenige abstimmen, prüft DivingHQ ihn.",
       "claim_note_region_parent": "{org} führt dieses Land bereits auf DivingHQ und entscheidet daher über Ihren Anspruch auf {region}.",
-      "claim_note_region": "Damit wird ein Anspruch auf {region} eröffnet. Nach Bestätigung Ihrer E-Mail stimmen die Vereine dort ab, oder DivingHQ prüft ihn, wenn es noch zu wenige sind."
+      "claim_note_region": "Damit wird ein Anspruch auf {region} eröffnet. Nach Bestätigung Ihrer E-Mail stimmen die Vereine dort ab, oder DivingHQ prüft ihn, wenn es noch zu wenige sind.",
+      "website_invalid": "Das sieht nicht nach einer Webadresse aus. Versuchen Sie etwa diving.org.au."
     },
     "forgot": {
       "title": "Passwort zurücksetzen",

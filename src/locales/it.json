@@ -98,7 +98,8 @@
       "website_hint": "Se la tua email è sullo stesso dominio, i votanti la vedono come verificata.",
       "claim_note_country": "I club di {country} sono già su DivingHQ, quindi si apre una rivendicazione sul loro account. Dopo la verifica della tua email la votano. Se possono votare ancora in pochi, la esamina DivingHQ.",
       "claim_note_region_parent": "{org} gestisce già questo paese su DivingHQ e decide quindi la tua rivendicazione su {region}.",
-      "claim_note_region": "Si apre una rivendicazione su {region}. I suoi club la votano dopo la verifica della tua email, oppure la esamina DivingHQ se non sono ancora abbastanza."
+      "claim_note_region": "Si apre una rivendicazione su {region}. I suoi club la votano dopo la verifica della tua email, oppure la esamina DivingHQ se non sono ancora abbastanza.",
+      "website_invalid": "Non sembra un indirizzo web. Prova qualcosa come diving.org.au."
     },
     "forgot": {
       "title": "Reimposta password",

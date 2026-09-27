@@ -98,7 +98,8 @@
       "website_hint": "Jos sähköpostiosoitteesi on samassa verkkotunnuksessa, äänestäjät näkevät sen vahvistettuna.",
       "claim_note_country": "Maasta {country} on jo seuroja DivingHQ:ssa, joten tämä avaa vaatimuksen niiden tiliin. Kun olet vahvistanut sähköpostisi, ne äänestävät siitä. Jos äänestäjiä on vielä liian vähän, DivingHQ käsittelee sen.",
       "claim_note_region_parent": "{org} hallinnoi jo tätä maata DivingHQ:ssa, joten se päättää vaatimuksestasi alueeseen {region}.",
-      "claim_note_region": "Tämä avaa vaatimuksen alueeseen {region}. Sen seurat äänestävät, kun olet vahvistanut sähköpostisi, tai DivingHQ käsittelee sen, jos seuroja ei ole vielä tarpeeksi."
+      "claim_note_region": "Tämä avaa vaatimuksen alueeseen {region}. Sen seurat äänestävät, kun olet vahvistanut sähköpostisi, tai DivingHQ käsittelee sen, jos seuroja ei ole vielä tarpeeksi.",
+      "website_invalid": "Tämä ei näytä verkko-osoitteelta. Kokeile esimerkiksi diving.org.au."
     },
     "forgot": {
       "title": "Palauta salasana",

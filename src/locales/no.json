@@ -98,7 +98,8 @@
       "website_hint": "Hvis e-postadressen din er på samme domene, ser de som stemmer den som bekreftet.",
       "claim_note_country": "Klubber fra {country} er allerede på DivingHQ, så dette åpner et krav på kontoen deres. Når du har bekreftet e-posten, stemmer de over det. Kan for få stemme ennå, vurderer DivingHQ det.",
       "claim_note_region_parent": "{org} driver allerede landet på DivingHQ og avgjør derfor kravet ditt på {region}.",
-      "claim_note_region": "Dette åpner et krav på {region}. Klubbene stemmer når du har bekreftet e-posten, eller DivingHQ vurderer det hvis det ikke er nok av dem ennå."
+      "claim_note_region": "Dette åpner et krav på {region}. Klubbene stemmer når du har bekreftet e-posten, eller DivingHQ vurderer det hvis det ikke er nok av dem ennå.",
+      "website_invalid": "Det ser ikke ut som en nettadresse. Prøv noe som diving.org.au."
     },
     "forgot": {
       "title": "Tilbakestill passord",

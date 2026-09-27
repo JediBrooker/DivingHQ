@@ -98,7 +98,8 @@
       "website_hint": "If your email address is on the same domain, voters see it as verified.",
       "claim_note_country": "Clubs from {country} are already on DivingHQ, so this opens a claim on their account. Once you verify your email, they vote on it. If too few of them can vote yet, DivingHQ reviews it.",
       "claim_note_region_parent": "{org} already runs this country on DivingHQ, so they decide your claim on {region}.",
-      "claim_note_region": "This opens a claim on {region}. Its clubs vote on it once you verify your email, or DivingHQ reviews it if there aren't enough of them yet."
+      "claim_note_region": "This opens a claim on {region}. Its clubs vote on it once you verify your email, or DivingHQ reviews it if there aren't enough of them yet.",
+      "website_invalid": "That doesn't look like a web address. Try something like diving.org.au."
     },
     "forgot": {
       "title": "Reset Password",

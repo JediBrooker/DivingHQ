@@ -98,7 +98,8 @@
       "website_hint": "Ha e-mail-címe ugyanazon a domainen van, a szavazók ellenőrzöttnek látják.",
       "claim_note_country": "{country} klubjai már a DivingHQ-n vannak, így ez igényt nyit a fiókjukra. Miután megerősítette e-mailjét, szavaznak róla. Ha még túl kevesen szavazhatnak, a DivingHQ bírálja el.",
       "claim_note_region_parent": "{org} már ezt az országot vezeti a DivingHQ-n, ezért ők döntenek a(z) {region} iránti igényéről.",
-      "claim_note_region": "Ez igényt nyit a(z) {region} régióra. A klubjai szavaznak, miután megerősítette e-mailjét, vagy a DivingHQ bírálja el, ha még nincsenek elegen."
+      "claim_note_region": "Ez igényt nyit a(z) {region} régióra. A klubjai szavaznak, miután megerősítette e-mailjét, vagy a DivingHQ bírálja el, ha még nincsenek elegen.",
+      "website_invalid": "Ez nem tűnik webcímnek. Próbáljon valami ilyesmit: diving.org.au."
     },
     "forgot": {
       "title": "Jelszó visszaállítása",

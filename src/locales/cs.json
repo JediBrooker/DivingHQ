@@ -98,7 +98,8 @@
       "website_hint": "Pokud je vaše e-mailová adresa na stejné doméně, hlasující ji uvidí jako ověřenou.",
       "claim_note_country": "Kluby ze země {country} už jsou na DivingHQ, proto se otevře nárok na jejich účet. Jakmile ověříte e-mail, hlasují o něm. Pokud zatím může hlasovat příliš málo z nich, posoudí ho DivingHQ.",
       "claim_note_region_parent": "{org} už tuto zemi na DivingHQ spravuje, a proto rozhoduje o vašem nároku na {region}.",
-      "claim_note_region": "Tím se otevře nárok na {region}. Po ověření e-mailu o něm hlasují jeho kluby, nebo ho posoudí DivingHQ, pokud jich zatím není dost."
+      "claim_note_region": "Tím se otevře nárok na {region}. Po ověření e-mailu o něm hlasují jeho kluby, nebo ho posoudí DivingHQ, pokud jich zatím není dost.",
+      "website_invalid": "Tohle nevypadá jako webová adresa. Zkuste třeba diving.org.au."
     },
     "forgot": {
       "title": "Obnovení hesla",

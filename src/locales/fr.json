@@ -98,7 +98,8 @@
       "website_hint": "Si votre adresse e-mail est sur le même domaine, les votants la voient comme vérifiée.",
       "claim_note_country": "Des clubs de {country} sont déjà sur DivingHQ : cela ouvre une revendication sur leur compte. Une fois votre e-mail vérifié, ils votent. S'ils sont trop peu à pouvoir voter, DivingHQ l'examine.",
       "claim_note_region_parent": "{org} gère déjà ce pays sur DivingHQ et décide donc de votre revendication sur {region}.",
-      "claim_note_region": "Cela ouvre une revendication sur {region}. Ses clubs votent une fois votre e-mail vérifié, ou DivingHQ l'examine s'ils ne sont pas encore assez nombreux."
+      "claim_note_region": "Cela ouvre une revendication sur {region}. Ses clubs votent une fois votre e-mail vérifié, ou DivingHQ l'examine s'ils ne sont pas encore assez nombreux.",
+      "website_invalid": "Cela ne ressemble pas à une adresse web. Essayez par exemple diving.org.au."
     },
     "forgot": {
       "title": "Réinitialiser le mot de passe",

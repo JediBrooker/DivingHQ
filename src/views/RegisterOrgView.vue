@@ -92,9 +92,32 @@ function onSlugInput() {
   slugManuallyEdited.value = true
 }
 
+// The website is optional and people type it the way they'd say it,
+// "nswdiving.org.au", which a type="url" input refused (so the browser
+// blocked the whole form over an optional field). The claim code adds the
+// https:// itself (lib/claims.js domainMatches, ClaimsView's link), so
+// all we check is that it's a plausible host.
+const websiteTouched = ref(false)
+function websiteLooksWrong(value) {
+  const v = value.trim()
+  if (!v) return false
+  if (/\s/.test(v)) return true
+  try {
+    const u = new URL(/^https?:\/\//i.test(v) ? v : `https://${v}`)
+    return !u.hostname.includes('.')
+  } catch {
+    return true
+  }
+}
+const websiteInvalid = computed(() => websiteLooksWrong(website.value))
+
 async function handleSubmit() {
   msg.value = ''
   msgType.value = ''
+  if (websiteInvalid.value) {
+    websiteTouched.value = true
+    return
+  }
   loading.value = true
   try {
     const body = {
@@ -168,7 +191,12 @@ async function handleSubmit() {
         </div>
         <div class="field">
           <label class="label" for="org-website">{{ $t('auth.register_org.website') }}</label>
-          <input id="org-website" class="input" type="url" v-model="website" placeholder="https://" autocomplete="url">
+          <input id="org-website" class="input" type="text" inputmode="url" v-model="website"
+                 placeholder="www.example.org" autocomplete="url"
+                 autocapitalize="none" autocorrect="off" spellcheck="false"
+                 :aria-invalid="websiteTouched && websiteInvalid ? 'true' : 'false'"
+                 @blur="websiteTouched = true">
+          <span v-if="websiteTouched && websiteInvalid" class="hint-line hint-error" role="alert">{{ $t('auth.register_org.website_invalid') }}</span>
           <span class="hint-line">{{ $t('auth.register_org.website_hint') }}</span>
         </div>
         <!-- A claim takes over the existing account, it has no slug of its
@@ -266,6 +294,7 @@ h1 { font-size: 44px; font-style: italic; margin-bottom: 0.25rem; }
 .slug-preview { font-size: 11px; color: var(--text-3); margin-top: 0.25rem; font-family: var(--font-mono); }
 .slug-preview span { color: var(--cyan); }
 .hint-line { margin-top: 0.4rem; font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
+.hint-error { color: var(--danger-fg); }
 .claim-note {
   margin: 0; font-size: 12px; line-height: 1.55; color: var(--fg-2);
   padding: 0.75rem; border-radius: var(--radius-sm);

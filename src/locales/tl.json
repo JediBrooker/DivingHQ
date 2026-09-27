@@ -98,7 +98,8 @@
       "website_hint": "Kung nasa parehong domain ang email mo, makikita ito ng mga boboto bilang beripikado.",
       "claim_note_country": "Nasa DivingHQ na ang mga club mula sa {country}, kaya magbubukas ito ng claim sa kanilang account. Kapag na-verify mo ang email mo, boboto sila. Kung kakaunti pa ang puwedeng bumoto, susuriin ito ng DivingHQ.",
       "claim_note_region_parent": "Pinapatakbo na ng {org} ang bansang ito sa DivingHQ, kaya sila ang magpapasya sa claim mo sa {region}.",
-      "claim_note_region": "Magbubukas ito ng claim sa {region}. Boboto ang mga club nito kapag na-verify mo ang email mo, o susuriin ito ng DivingHQ kung kulang pa sila."
+      "claim_note_region": "Magbubukas ito ng claim sa {region}. Boboto ang mga club nito kapag na-verify mo ang email mo, o susuriin ito ng DivingHQ kung kulang pa sila.",
+      "website_invalid": "Mukhang hindi iyan web address. Subukan ang tulad ng diving.org.au."
     },
     "forgot": {
       "title": "I-reset ang password",

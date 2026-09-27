@@ -98,7 +98,8 @@
       "website_hint": "E-posta adresiniz aynı alan adındaysa, oy verenler onu doğrulanmış olarak görür.",
       "claim_note_country": "{country} kulüpleri zaten DivingHQ'da, bu yüzden hesaplarını devralma talebi açılır. E-postanızı doğruladığınızda oy verirler. Henüz çok azı oy verebiliyorsa DivingHQ inceler.",
       "claim_note_region_parent": "{org} bu ülkeyi zaten DivingHQ'da yönetiyor, bu yüzden {region} talebinize o karar verir.",
-      "claim_note_region": "Bu, {region} için bir talep açar. E-postanızı doğruladığınızda kulüpleri oy verir, ya da henüz yeterli değillerse DivingHQ inceler."
+      "claim_note_region": "Bu, {region} için bir talep açar. E-postanızı doğruladığınızda kulüpleri oy verir, ya da henüz yeterli değillerse DivingHQ inceler.",
+      "website_invalid": "Bu bir web adresine benzemiyor. diving.org.au gibi bir şey deneyin."
     },
     "forgot": {
       "title": "Şifre Sıfırlama",

@@ -98,7 +98,8 @@
       "website_hint": "Jeśli twój adres e-mail jest w tej samej domenie, głosujący zobaczą go jako zweryfikowany.",
       "claim_note_country": "Kluby z kraju {country} są już w DivingHQ, więc otwiera to roszczenie do ich konta. Po weryfikacji e-maila głosują nad nim. Jeśli zbyt mało z nich może jeszcze głosować, rozpatrzy je DivingHQ.",
       "claim_note_region_parent": "{org} prowadzi już ten kraj w DivingHQ, więc decyduje o twoim roszczeniu do {region}.",
-      "claim_note_region": "Otwiera to roszczenie do {region}. Jego kluby głosują po weryfikacji twojego e-maila albo rozpatruje je DivingHQ, jeśli jest ich jeszcze za mało."
+      "claim_note_region": "Otwiera to roszczenie do {region}. Jego kluby głosują po weryfikacji twojego e-maila albo rozpatruje je DivingHQ, jeśli jest ich jeszcze za mało.",
+      "website_invalid": "To nie wygląda na adres strony. Spróbuj czegoś w rodzaju diving.org.au."
     },
     "forgot": {
       "title": "Resetuj hasło",

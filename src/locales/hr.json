@@ -98,7 +98,8 @@
       "website_hint": "Ako je vaša e-adresa na istoj domeni, glasači je vide kao potvrđenu.",
       "claim_note_country": "Klubovi iz zemlje {country} već su na DivingHQ-u, pa se otvara zahtjev za preuzimanje njihova računa. Kad potvrdite e-poštu, oni glasaju. Ako ih još premalo može glasati, pregledava ga DivingHQ.",
       "claim_note_region_parent": "{org} već vodi ovu zemlju na DivingHQ-u pa odlučuje o vašem zahtjevu za {region}.",
-      "claim_note_region": "Otvara se zahtjev za {region}. Njezini klubovi glasaju kad potvrdite e-poštu, ili ga pregledava DivingHQ ako ih još nema dovoljno."
+      "claim_note_region": "Otvara se zahtjev za {region}. Njezini klubovi glasaju kad potvrdite e-poštu, ili ga pregledava DivingHQ ako ih još nema dovoljno.",
+      "website_invalid": "To ne izgleda kao web-adresa. Pokušajte nešto poput diving.org.au."
     },
     "forgot": {
       "title": "Resetiranje lozinke",

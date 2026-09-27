@@ -98,7 +98,8 @@
       "website_hint": "Si tu correo está en el mismo dominio, los votantes lo ven como verificado.",
       "claim_note_country": "Ya hay clubes de {country} en DivingHQ, así que esto abre una reclamación sobre su cuenta. Cuando verifiques tu correo, la votan. Si aún pueden votar muy pocos, la revisa DivingHQ.",
       "claim_note_region_parent": "{org} ya gestiona este país en DivingHQ, así que decide tu reclamación sobre {region}.",
-      "claim_note_region": "Esto abre una reclamación sobre {region}. Sus clubes la votan cuando verifiques tu correo, o la revisa DivingHQ si aún no hay suficientes."
+      "claim_note_region": "Esto abre una reclamación sobre {region}. Sus clubes la votan cuando verifiques tu correo, o la revisa DivingHQ si aún no hay suficientes.",
+      "website_invalid": "Eso no parece una dirección web. Prueba algo como diving.org.au."
     },
     "forgot": {
       "title": "Restablecer Contraseña",

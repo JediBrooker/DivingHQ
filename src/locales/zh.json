@@ -98,7 +98,8 @@
       "website_hint": "如果您的邮箱与网站同域名，投票者会看到“已验证”。",
       "claim_note_country": "{country} 的俱乐部已在使用 DivingHQ，因此这将对其账户发起接管申请。验证邮箱后由俱乐部投票。如果能投票的俱乐部太少，则由 DivingHQ 审核。",
       "claim_note_region_parent": "{org} 已在 DivingHQ 上管理该国家，因此由其决定您对 {region} 的申请。",
-      "claim_note_region": "这将对 {region} 发起申请。验证邮箱后由其俱乐部投票；如果数量尚不足，则由 DivingHQ 审核。"
+      "claim_note_region": "这将对 {region} 发起申请。验证邮箱后由其俱乐部投票；如果数量尚不足，则由 DivingHQ 审核。",
+      "website_invalid": "这看起来不像网址。请尝试类似 diving.org.au 的格式。"
     },
     "forgot": {
       "title": "重置密码",

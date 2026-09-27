@@ -98,7 +98,8 @@
       "website_hint": "Jika alamat email Anda di domain yang sama, pemberi suara melihatnya sebagai terverifikasi.",
       "claim_note_country": "Klub dari {country} sudah ada di DivingHQ, jadi ini membuka klaim atas akun mereka. Setelah email Anda terverifikasi, mereka memberi suara. Jika yang bisa memberi suara masih terlalu sedikit, DivingHQ meninjaunya.",
       "claim_note_region_parent": "{org} sudah mengelola negara ini di DivingHQ, jadi mereka memutuskan klaim Anda atas {region}.",
-      "claim_note_region": "Ini membuka klaim atas {region}. Klub-klubnya memberi suara setelah email Anda terverifikasi, atau DivingHQ meninjaunya jika jumlahnya belum cukup."
+      "claim_note_region": "Ini membuka klaim atas {region}. Klub-klubnya memberi suara setelah email Anda terverifikasi, atau DivingHQ meninjaunya jika jumlahnya belum cukup.",
+      "website_invalid": "Itu tidak terlihat seperti alamat web. Coba sesuatu seperti diving.org.au."
     },
     "forgot": {
       "title": "Setel ulang kata sandi",
