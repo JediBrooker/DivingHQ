@@ -1946,7 +1946,7 @@ test("region co-admins: a region's own admins manage them, and an orphaned regio
   }
 });
 
-test("club region moves: self-serve between unclaimed regions, a claimed region's admin decides its own", async (t) => {
+test("club region moves: self-serve between unclaimed regions, both sides agree on a claimed one", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   if (!serverReady) return t.skip("server didn't boot — see warning above");
   const CODE = "CAN";
@@ -1960,38 +1960,75 @@ test("club region moves: self-serve between unclaimed regions, a claimed region'
     const move = (tok, clubId, regionId) =>
       fetchJson("PUT", `/api/clubs/${clubId}/region`, { token: tok, body: { region_id: regionId } });
     const regionOf = async (clubId) => (await pool.query("SELECT region_id FROM clubs WHERE id = $1", [clubId])).rows[0].region_id;
+    const askedFor = async (clubId) => (await pool.query("SELECT requested_region_id FROM clubs WHERE id = $1", [clubId])).rows[0].requested_region_id;
 
     // Nobody's claimed anything yet: the club decides.
     assert.equal((await move(A.token, A.clubId, qc)).status, 200);
-    assert.equal((await move(A.token, A.clubId, on)).status, 200);
+    assert.equal((await move(A.token, A.clubId, on.toUpperCase())).status, 200);
+    assert.equal(await regionOf(A.clubId), on);
 
     // Ontario's body claims it.
     const R = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
     await pool.query("UPDATE regions SET claim_state = 'claimed', claimed_name = 'Diving Ontario' WHERE id = $1", [on]);
     await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [on, R.id, A.orgId]);
 
-    // Now Sudbury can't walk out, and Gatineau can't walk in.
+    // Sudbury can't walk out on its own.
     const out = await move(A.token, A.clubId, null);
     assert.equal(out.status, 403, JSON.stringify(out.body));
     assert.equal(out.body.code, "region_admin_required");
     assert.equal((await move(A.token, A.clubId, qc)).status, 403);
     assert.equal(await regionOf(A.clubId), on);
-    assert.equal((await move(B.token, B.clubId, on)).status, 403);
     // Moves that don't touch Ontario stay self-serve.
     assert.equal((await move(B.token, B.clubId, nb)).status, 200);
 
-    // Ontario's admin places and releases clubs, but can't shuffle other
-    // clubs between regions it doesn't run.
+    // Ontario can't annex a club that never asked...
+    const annex = await move(R.token, B.clubId, on);
+    assert.equal(annex.status, 403, JSON.stringify(annex.body));
+    assert.equal(annex.body.code, "club_request_required");
+    assert.equal(await regionOf(B.clubId), nb);
+
+    // ...but Gatineau can ask, which moves nothing yet and tells Ontario.
+    const ask = await move(B.token, B.clubId, on);
+    assert.equal(ask.status, 202, JSON.stringify(ask.body));
+    assert.equal(ask.body.requested, true);
+    assert.equal(await regionOf(B.clubId), nb);
+    assert.equal(await askedFor(B.clubId), on);
+    const told = await pool.query(
+      "SELECT action_url FROM notifications WHERE user_id = $1 AND category = 'region_request'", [R.id]);
+    assert.equal(told.rows[0]?.action_url, "/region");
+    const overview = (await fetchJson("GET", `/api/regions/${on}/overview`, { token: R.token })).body;
+    assert.deepEqual(overview.join_requests.map((c) => c.id), [B.clubId]);
+    const mine = (await fetchJson("GET", `/api/clubs/${B.clubId}/admins`, { token: B.token })).body;
+    assert.equal(mine.region_request.region_id, on);
+
+    // Only the asking club's admin or Ontario can withdraw or decline it.
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${B.clubId}/region-request`, { token: A.token })).status, 403);
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${B.clubId}/region-request`, { token: R.token })).status, 200);
+    assert.equal(await askedFor(B.clubId), null);
+    assert.equal((await move(R.token, B.clubId, on)).body.code, "club_request_required");
+
+    // Asked again, Ontario accepts, and Gatineau hears about it.
+    assert.equal((await move(B.token, B.clubId, on)).status, 202);
     assert.equal((await move(R.token, B.clubId, on)).status, 200);
     assert.equal(await regionOf(B.clubId), on);
+    assert.equal(await askedFor(B.clubId), null);
+    const heard = await pool.query(
+      "SELECT title FROM notifications WHERE user_id = $1 AND category = 'region_request'", [B.id]);
+    assert.match(heard.rows[0]?.title || "", /now in Diving Ontario/);
+
+    // Ontario lets clubs go, but can't pick where they land.
+    assert.equal((await move(R.token, B.clubId, qc)).status, 403);
     assert.equal((await move(R.token, B.clubId, null)).status, 200);
+    assert.equal(await regionOf(B.clubId), null);
     assert.equal((await move(R.token, B.clubId, qc)).status, 403);
 
-    // Nor pull a club out of another body's claimed region.
+    // Nor can it take a club out of another body's claimed region, even
+    // one that asked to join Ontario.
     await move(B.token, B.clubId, qc);
     const R2 = await delegateSignUp({ country_code: CODE, club_id: B.clubId });
     await pool.query("UPDATE regions SET claim_state = 'claimed' WHERE id = $1", [qc]);
     await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [qc, R2.id, A.orgId]);
+    assert.equal((await move(B.token, B.clubId, on)).body.code, "region_admin_required");
     assert.equal((await move(R.token, B.clubId, on)).status, 403);
     assert.equal(await regionOf(B.clubId), qc);
   } finally {

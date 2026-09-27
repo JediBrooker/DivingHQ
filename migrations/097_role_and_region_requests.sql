@@ -1,4 +1,8 @@
--- 097_role_request_repeats.sql
+-- 097_role_and_region_requests.sql
+--
+-- Two kinds of asking, both new with the delegate-permission work.
+--
+-- 1. Role requests after signup.
 --
 -- Role requests can now be made after signup (POST /api/role-requests),
 -- which means the same person can ask for the same role more than once
@@ -46,6 +50,26 @@ CREATE UNIQUE INDEX IF NOT EXISTS role_requests_one_pending
 -- "My requests" on the profile reads by user.
 CREATE INDEX IF NOT EXISTS idx_role_requests_user
     ON public.role_requests (user_id, created_at DESC);
+
+-- 2. A club asking to join a claimed region.
+--
+-- Where there's no federation, which region a club sits in decides who
+-- runs its meets alongside it (isEventDelegate follows clubs.region_id),
+-- who reviews its members' role requests and who can appoint its
+-- admins. Once a state body has claimed a region, neither side gets to
+-- decide that alone: the club's admin asks (requested_region_id), the
+-- region's admin accepts, and PUT /api/clubs/:id/region clears it once
+-- the club moves. One outstanding ask per club, a new one replaces it.
+ALTER TABLE public.clubs
+    ADD COLUMN IF NOT EXISTS requested_region_id uuid
+        REFERENCES public.regions(id) ON DELETE SET NULL;
+ALTER TABLE public.clubs
+    ADD COLUMN IF NOT EXISTS region_requested_at timestamptz;
+
+-- The region page lists clubs asking to join it.
+CREATE INDEX IF NOT EXISTS idx_clubs_requested_region
+    ON public.clubs (requested_region_id)
+    WHERE requested_region_id IS NOT NULL;
 
 -- ---- bump schema version --------------------------------------
 INSERT INTO public.schema_meta (id, version, applied_at)

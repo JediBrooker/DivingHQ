@@ -804,7 +804,9 @@
       "generic": "Avviso",
       "claim_vote": "Votazione",
       "claim_review": "Rivendicazione",
-      "claim_decided": "Rivendicazione"
+      "claim_decided": "Rivendicazione",
+      "club_change": "Cambio club",
+      "region_request": "Regione"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Aggiungi",
     "remove": "Rimuovi",
     "federation_appoints": "Gli amministratori di questo club sono nominati dalla tua federazione.",
-    "region_claimed_note": "Quando l'ente di governo di una regione l'ha rivendicata, solo gli amministratori di quella regione possono spostarvi dentro o fuori i club.",
+    "region_claimed_note": "Una regione rivendicata dal suo ente di governo decide da sé quali club accogliere. Sceglierla invia una richiesta ai suoi amministratori, e solo loro possono poi togliere un club.",
     "join_requests": "Richieste di iscrizione",
     "no_join_requests_title": "Nessuno in attesa di entrare",
     "no_join_requests_body": "Quando qualcuno chiede di entrare nel tuo club dal proprio profilo, la richiesta compare qui.",
     "wants_to_join": "vuole entrare in {club}",
-    "currently_at": "attualmente in {club}"
+    "currently_at": "attualmente in {club}",
+    "region_request_pending": "In attesa che {region} accetti il tuo club.",
+    "region_request_cancel": "Ritira la richiesta",
+    "region_request_sent": "Richiesta inviata. {region} deciderà se accogliere il tuo club."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Scegli un membro dei club della tua regione —",
     "no_candidates": "Ancora nessuno da aggiungere. Qui compaiono i membri dei club della tua regione.",
     "release_club": "Togli dalla regione",
-    "add_club": "Aggiungi un club a questa regione",
-    "pick_club": "— Scegli un club —"
+    "club_requests": "Club che chiedono di entrare",
+    "currently_in": "ora in {region}"
   },
   "claims": {
     "title": "Rivendicazioni",

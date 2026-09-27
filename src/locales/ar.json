@@ -793,7 +793,9 @@
       "generic": "إشعار",
       "claim_vote": "تصويت",
       "claim_review": "طلب تولٍّ",
-      "claim_decided": "طلب تولٍّ"
+      "claim_decided": "طلب تولٍّ",
+      "club_change": "تغيير النادي",
+      "region_request": "المنطقة"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "إضافة",
     "remove": "إزالة",
     "federation_appoints": "يعيّن اتحادك مشرفي هذا النادي.",
-    "region_claimed_note": "بعد أن تطالب الهيئة المسؤولة بمنطقة ما، لا يستطيع نقل الأندية إليها أو منها إلا مشرفو تلك المنطقة.",
+    "region_claimed_note": "المنطقة التي طالبت بها هيئتها المسؤولة تقرر بنفسها الأندية التي تقبلها. اختيارها يرسل طلبًا إلى مشرفيها، وهم وحدهم من يستطيع إخراج نادٍ منها بعد ذلك.",
     "join_requests": "طلبات الانضمام",
     "no_join_requests_title": "لا أحد ينتظر الانضمام",
     "no_join_requests_body": "عندما يطلب أحدهم الانضمام إلى ناديك من ملفه الشخصي، يظهر طلبه هنا.",
     "wants_to_join": "يريد الانضمام إلى {club}",
-    "currently_at": "حالياً في {club}"
+    "currently_at": "حالياً في {club}",
+    "region_request_pending": "بانتظار أن تقبل {region} ناديك.",
+    "region_request_cancel": "سحب الطلب",
+    "region_request_sent": "تم إرسال الطلب. {region} تقرر ما إذا كانت ستقبل ناديك."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— اختر عضواً في أحد أندية منطقتك —",
     "no_candidates": "لا يوجد من يمكن إضافته بعد. يظهر هنا أعضاء أندية منطقتك.",
     "release_club": "إخراج من المنطقة",
-    "add_club": "إضافة نادٍ إلى هذه المنطقة",
-    "pick_club": "— اختر نادياً —"
+    "club_requests": "أندية تطلب الانضمام",
+    "currently_in": "حاليًا في {region}"
   },
   "claims": {
     "title": "طلبات التولّي",

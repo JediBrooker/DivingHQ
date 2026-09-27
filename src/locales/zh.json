@@ -793,7 +793,9 @@
       "generic": "通知",
       "claim_vote": "接管投票",
       "claim_review": "接管申请",
-      "claim_decided": "接管申请"
+      "claim_decided": "接管申请",
+      "club_change": "俱乐部变更",
+      "region_request": "地区"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "添加",
     "remove": "移除",
     "federation_appoints": "本俱乐部的管理员由您的联合会任命。",
-    "region_claimed_note": "地区的管理机构认领该地区后，只有该地区的管理员才能将俱乐部移入或移出该地区。",
+    "region_claimed_note": "已被管理机构认领的地区自行决定接收哪些俱乐部。选择该地区会向其管理员发送申请，之后也只有他们能将俱乐部移出。",
     "join_requests": "入会申请",
     "no_join_requests_title": "暂无待加入的人",
     "no_join_requests_body": "有人从个人资料页申请加入您的俱乐部时，会显示在这里。",
     "wants_to_join": "希望加入 {club}",
-    "currently_at": "目前在 {club}"
+    "currently_at": "目前在 {club}",
+    "region_request_pending": "正在等待{region}接收您的俱乐部。",
+    "region_request_cancel": "撤回申请",
+    "region_request_sent": "申请已发送。是否接收您的俱乐部由{region}决定。"
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— 选择您所在地区俱乐部的会员 —",
     "no_candidates": "暂时没有可添加的人。您所在地区各俱乐部的会员会显示在这里。",
     "release_club": "移出地区",
-    "add_club": "将俱乐部加入此地区",
-    "pick_club": "— 选择俱乐部 —"
+    "club_requests": "申请加入的俱乐部",
+    "currently_in": "当前所在地区：{region}"
   },
   "claims": {
     "title": "接管申请",

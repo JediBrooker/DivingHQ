@@ -793,7 +793,9 @@
       "generic": "공지",
       "claim_vote": "인수 투표",
       "claim_review": "인수 신청",
-      "claim_decided": "인수 신청"
+      "claim_decided": "인수 신청",
+      "club_change": "클럽 변경",
+      "region_request": "지역"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "추가",
     "remove": "제거",
     "federation_appoints": "이 클럽의 관리자는 연맹이 임명합니다.",
-    "region_claimed_note": "지역 관리 단체가 지역을 인수하면 그 지역의 관리자만 클럽을 지역에 넣거나 뺄 수 있습니다.",
+    "region_claimed_note": "관리 단체가 인수한 지역은 어떤 클럽을 받을지 스스로 정합니다. 그 지역을 선택하면 관리자에게 요청이 전송되며, 나중에 클럽을 뺄 수 있는 것도 관리자뿐입니다.",
     "join_requests": "가입 요청",
     "no_join_requests_title": "가입을 기다리는 사람이 없습니다",
     "no_join_requests_body": "누군가 자신의 프로필에서 클럽 가입을 요청하면 여기에 표시됩니다.",
     "wants_to_join": "{club} 가입 희망",
-    "currently_at": "현재 소속: {club}"
+    "currently_at": "현재 소속: {club}",
+    "region_request_pending": "{region}에서 클럽을 받아 주기를 기다리는 중입니다.",
+    "region_request_cancel": "요청 철회",
+    "region_request_sent": "요청을 보냈습니다. 클럽을 받을지는 {region}에서 결정합니다."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— 지역 내 클럽 회원 선택 —",
     "no_candidates": "아직 추가할 사람이 없습니다. 지역 내 클럽 회원이 여기에 표시됩니다.",
     "release_club": "지역에서 제외",
-    "add_club": "이 지역에 클럽 추가",
-    "pick_club": "— 클럽 선택 —"
+    "club_requests": "가입을 요청한 클럽",
+    "currently_in": "현재 지역: {region}"
   },
   "claims": {
     "title": "인수 신청",

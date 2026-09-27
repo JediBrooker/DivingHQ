@@ -793,7 +793,9 @@
       "generic": "Obavijest",
       "claim_vote": "Glasanje",
       "claim_review": "Zahtjev",
-      "claim_decided": "Zahtjev"
+      "claim_decided": "Zahtjev",
+      "club_change": "Promjena kluba",
+      "region_request": "Regija"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Dodaj",
     "remove": "Ukloni",
     "federation_appoints": "Administratore ovog kluba imenuje vaš savez.",
-    "region_claimed_note": "Kad upravno tijelo regije preuzme regiju, samo njezini administratori mogu premještati klubove u nju ili iz nje.",
+    "region_claimed_note": "Regija koju je preuzelo njezino upravno tijelo sama odlučuje koje klubove prima. Kad je odaberete, njezinim administratorima šalje se zahtjev i samo oni poslije mogu izvaditi klub iz nje.",
     "join_requests": "Zahtjevi za učlanjenje",
     "no_join_requests_title": "Nitko ne čeka učlanjenje",
     "no_join_requests_body": "Kad netko sa svog profila zatraži učlanjenje u vaš klub, pojavit će se ovdje.",
     "wants_to_join": "želi se učlaniti u {club}",
-    "currently_at": "trenutačno u {club}"
+    "currently_at": "trenutačno u {club}",
+    "region_request_pending": "Čeka se da regija {region} primi vaš klub.",
+    "region_request_cancel": "Povuci zahtjev",
+    "region_request_sent": "Zahtjev je poslan. Regija {region} odlučuje hoće li primiti vaš klub."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Odaberite člana nekog kluba iz vaše regije —",
     "no_candidates": "Još nema koga dodati. Ovdje se prikazuju članovi klubova iz vaše regije.",
     "release_club": "Izvadi iz regije",
-    "add_club": "Dodaj klub u ovu regiju",
-    "pick_club": "— Odaberite klub —"
+    "club_requests": "Klubovi koji traže ulazak",
+    "currently_in": "trenutačno u regiji {region}"
   },
   "claims": {
     "title": "Zahtjevi",

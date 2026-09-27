@@ -793,7 +793,9 @@
       "generic": "Pemberitahuan",
       "claim_vote": "Pemungutan suara",
       "claim_review": "Klaim",
-      "claim_decided": "Klaim"
+      "claim_decided": "Klaim",
+      "club_change": "Pindah klub",
+      "region_request": "Wilayah"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Tambah",
     "remove": "Hapus",
     "federation_appoints": "Federasi Anda menunjuk admin klub ini.",
-    "region_claimed_note": "Setelah badan pengelola wilayah mengklaimnya, hanya admin wilayah itu yang dapat memindahkan klub masuk ke atau keluar dari wilayah tersebut.",
+    "region_claimed_note": "Wilayah yang sudah diklaim badan pengelolanya memutuskan sendiri klub mana yang diterima. Memilihnya akan mengirim permintaan ke admin wilayah itu, dan hanya mereka yang nantinya dapat mengeluarkan klub.",
     "join_requests": "Permintaan bergabung",
     "no_join_requests_title": "Tidak ada yang menunggu bergabung",
     "no_join_requests_body": "Saat seseorang meminta bergabung dengan klub Anda dari profilnya, permintaan itu muncul di sini.",
     "wants_to_join": "ingin bergabung dengan {club}",
-    "currently_at": "saat ini di {club}"
+    "currently_at": "saat ini di {club}",
+    "region_request_pending": "Menunggu {region} menerima klub Anda.",
+    "region_request_cancel": "Tarik permintaan",
+    "region_request_sent": "Permintaan terkirim. {region} akan memutuskan apakah klub Anda diterima."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Pilih anggota klub di wilayah Anda —",
     "no_candidates": "Belum ada yang bisa ditambahkan. Anggota klub di wilayah Anda muncul di sini.",
     "release_club": "Keluarkan dari wilayah",
-    "add_club": "Tambahkan klub ke wilayah ini",
-    "pick_club": "— Pilih klub —"
+    "club_requests": "Klub yang ingin bergabung",
+    "currently_in": "saat ini di {region}"
   },
   "claims": {
     "title": "Klaim",

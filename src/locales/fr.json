@@ -804,7 +804,9 @@
       "generic": "Avis",
       "claim_vote": "Vote",
       "claim_review": "Revendication",
-      "claim_decided": "Revendication"
+      "claim_decided": "Revendication",
+      "club_change": "Changement de club",
+      "region_request": "Région"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Ajouter",
     "remove": "Retirer",
     "federation_appoints": "Votre fédération nomme les administrateurs de ce club.",
-    "region_claimed_note": "Une fois qu'une région a été revendiquée par son instance dirigeante, seuls les administrateurs de cette région peuvent y faire entrer ou en faire sortir des clubs.",
+    "region_claimed_note": "Une région revendiquée par son instance dirigeante décide elle-même des clubs qu'elle accueille. La choisir envoie une demande à ses administrateurs, et eux seuls peuvent ensuite en retirer un club.",
     "join_requests": "Demandes d'adhésion",
     "no_join_requests_title": "Personne n'attend pour rejoindre le club",
     "no_join_requests_body": "Quand quelqu'un demande à rejoindre votre club depuis son profil, la demande apparaît ici.",
     "wants_to_join": "souhaite rejoindre {club}",
-    "currently_at": "actuellement à {club}"
+    "currently_at": "actuellement à {club}",
+    "region_request_pending": "En attente de l'accord de {region} pour votre club.",
+    "region_request_cancel": "Retirer la demande",
+    "region_request_sent": "Demande envoyée. {region} décidera d'accueillir ou non votre club."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Choisissez un membre des clubs de votre région —",
     "no_candidates": "Personne à ajouter pour l'instant. Les membres des clubs de votre région apparaissent ici.",
     "release_club": "Retirer de la région",
-    "add_club": "Ajouter un club à cette région",
-    "pick_club": "— Choisissez un club —"
+    "club_requests": "Clubs qui demandent à rejoindre la région",
+    "currently_in": "actuellement dans {region}"
   },
   "claims": {
     "title": "Revendications",

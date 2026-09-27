@@ -793,7 +793,9 @@
       "generic": "Notis",
       "claim_vote": "Undian",
       "claim_review": "Tuntutan",
-      "claim_decided": "Tuntutan"
+      "claim_decided": "Tuntutan",
+      "club_change": "Tukar kelab",
+      "region_request": "Rantau"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Tambah",
     "remove": "Alih keluar",
     "federation_appoints": "Persekutuan anda melantik pentadbir kelab ini.",
-    "region_claimed_note": "Sebaik sahaja badan pentadbir rantau menuntutnya, hanya pentadbir rantau itu boleh memindahkan kelab masuk ke atau keluar dari rantau tersebut.",
+    "region_claimed_note": "Rantau yang telah dituntut oleh badan pentadbirnya memutuskan sendiri kelab mana yang diterima. Memilihnya akan menghantar permintaan kepada pentadbir rantau itu, dan hanya mereka boleh mengeluarkan kelab kemudian.",
     "join_requests": "Permintaan menyertai",
     "no_join_requests_title": "Tiada sesiapa menunggu untuk menyertai",
     "no_join_requests_body": "Apabila seseorang meminta untuk menyertai kelab anda dari profil mereka, ia dipaparkan di sini.",
     "wants_to_join": "mahu menyertai {club}",
-    "currently_at": "kini di {club}"
+    "currently_at": "kini di {club}",
+    "region_request_pending": "Menunggu {region} menerima kelab anda.",
+    "region_request_cancel": "Tarik balik permintaan",
+    "region_request_sent": "Permintaan dihantar. {region} akan memutuskan sama ada menerima kelab anda."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Pilih ahli kelab dalam rantau anda —",
     "no_candidates": "Belum ada sesiapa untuk ditambah. Ahli kelab dalam rantau anda dipaparkan di sini.",
     "release_club": "Keluarkan dari rantau",
-    "add_club": "Tambah kelab ke rantau ini",
-    "pick_club": "— Pilih kelab —"
+    "club_requests": "Kelab yang ingin menyertai",
+    "currently_in": "kini di {region}"
   },
   "claims": {
     "title": "Tuntutan",

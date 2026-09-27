@@ -53,6 +53,9 @@ const CATEGORY_LANES = {
   role_request:             'action',
   org_pending:              'action',
   club_created:             'ops',
+  // Asking to join a club or a region: both wait on the reader to decide.
+  club_change:              'action',
+  region_request:           'action',
   claim_vote:               'action',
   claim_review:             'action',
   claim_decided:            'ops',
@@ -182,6 +185,8 @@ const CATEGORY_LABEL_KEYS = {
   org_pending:                 'org_pending',
   org_decision:                'org_decision',
   club_created:                'club_created',
+  club_change:                 'club_change',
+  region_request:              'region_request',
   claim_vote:                  'claim_vote',
   claim_review:                'claim_review',
   claim_decided:               'claim_decided',

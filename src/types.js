@@ -74,6 +74,28 @@
  */
 
 /**
+ * @typedef {Object} ClubAdmins
+ * GET /api/clubs/:id/admins (org admin, or the club's / its region's
+ * admins where there's no federation).
+ *
+ * @property {{id: string, full_name: string, username: string, created_at: string}[]} admins  live accounts only
+ * @property {{id: string, full_name: string, username: string}[]} members
+ * @property {?{region_id: string, requested_at: string}} region_request
+ *   a claimed region this club has asked to join and is waiting on (PUT
+ *   /api/clubs/:id/region answered 202 {requested: true})
+ */
+
+/**
+ * @typedef {Object} RegionOverview
+ * GET /api/regions/:id/overview (the region's admins, or the org admin).
+ *
+ * @property {{id: string, name: string, short_code: string, claim_state: 'claimed'|'unclaimed', claimed_name: ?string, label: ?string, org_id: string}} region
+ * @property {{id: string, name: string, short_code: ?string, member_count: number, admins: {id: string, full_name: string}[]}[]} clubs
+ * @property {{id: string, name: string, short_code: ?string, member_count: number, requested_at: string, current_region_name: ?string}[]} join_requests
+ *   clubs asking to join; accept with PUT /api/clubs/:id/region, decline with DELETE /api/clubs/:id/region-request
+ */
+
+/**
  * @typedef {Object} DiverSummary
  * The lightweight diver row returned from the cross-org search and
  * browse endpoints. Used for autocomplete + filterable lists.

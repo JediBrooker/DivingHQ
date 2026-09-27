@@ -804,7 +804,9 @@
       "generic": "Ilmoitus",
       "claim_vote": "Äänestys",
       "claim_review": "Vaatimus",
-      "claim_decided": "Vaatimus"
+      "claim_decided": "Vaatimus",
+      "club_change": "Seuran vaihto",
+      "region_request": "Alue"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Lisää",
     "remove": "Poista",
     "federation_appoints": "Liittosi nimeää tämän seuran ylläpitäjät.",
-    "region_claimed_note": "Kun alueen hallintoelin on ottanut alueen hoitaakseen, vain alueen ylläpitäjät voivat siirtää seuroja sinne tai sieltä pois.",
+    "region_claimed_note": "Alue, jonka hallintoelin on ottanut hoitaakseen, päättää itse, mitkä seurat se ottaa mukaan. Kun valitset sen, sen ylläpitäjille lähtee pyyntö, ja vain he voivat myöhemmin poistaa seuran alueelta.",
     "join_requests": "Liittymispyynnöt",
     "no_join_requests_title": "Kukaan ei odota liittymistä",
     "no_join_requests_body": "Kun joku pyytää profiilistaan liittymistä seuraasi, pyyntö näkyy tässä.",
     "wants_to_join": "haluaa liittyä seuraan {club}",
-    "currently_at": "nyt seurassa {club}"
+    "currently_at": "nyt seurassa {club}",
+    "region_request_pending": "Odotetaan, että alue {region} hyväksyy seurasi.",
+    "region_request_cancel": "Peru pyyntö",
+    "region_request_sent": "Pyyntö lähetetty. Alue {region} päättää, otetaanko seurasi mukaan."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Valitse alueesi seuran jäsen —",
     "no_candidates": "Lisättäviä ei vielä ole. Alueesi seurojen jäsenet näkyvät tässä.",
     "release_club": "Poista alueelta",
-    "add_club": "Lisää seura tälle alueelle",
-    "pick_club": "— Valitse seura —"
+    "club_requests": "Seurat, jotka pyytävät liittymistä",
+    "currently_in": "nyt alueella {region}"
   },
   "claims": {
     "title": "Vaatimukset",

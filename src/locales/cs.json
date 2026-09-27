@@ -793,7 +793,9 @@
       "generic": "Upozornění",
       "claim_vote": "Hlasování",
       "claim_review": "Nárok",
-      "claim_decided": "Nárok"
+      "claim_decided": "Nárok",
+      "club_change": "Změna klubu",
+      "region_request": "Region"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Přidat",
     "remove": "Odebrat",
     "federation_appoints": "Správce tohoto klubu jmenuje vaše federace.",
-    "region_claimed_note": "Jakmile si region převezme jeho řídící orgán, mohou kluby do něj a z něj přesouvat jen správci tohoto regionu.",
+    "region_claimed_note": "Region, který si převzal jeho řídící orgán, sám rozhoduje, které kluby přijme. Když ho vyberete, odešle se žádost jeho správcům a jen oni mohou klub z regionu zase vyjmout.",
     "join_requests": "Žádosti o vstup",
     "no_join_requests_title": "Nikdo nečeká na přijetí",
     "no_join_requests_body": "Když někdo ze svého profilu požádá o vstup do vašeho klubu, objeví se to tady.",
     "wants_to_join": "chce vstoupit do {club}",
-    "currently_at": "nyní v {club}"
+    "currently_at": "nyní v {club}",
+    "region_request_pending": "Čeká se, až váš klub přijme region {region}.",
+    "region_request_cancel": "Stáhnout žádost",
+    "region_request_sent": "Žádost odeslána. Region {region} rozhodne, zda váš klub přijme."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Vyberte člena některého klubu ve vašem regionu —",
     "no_candidates": "Zatím není koho přidat. Zobrazí se tu členové klubů ve vašem regionu.",
     "release_club": "Vyjmout z regionu",
-    "add_club": "Přidat klub do tohoto regionu",
-    "pick_club": "— Vyberte klub —"
+    "club_requests": "Kluby, které žádají o vstup",
+    "currently_in": "nyní v regionu {region}"
   },
   "claims": {
     "title": "Nároky",

@@ -8,7 +8,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { showError } from '@/composables/useNotify'
+import { showError, showSuccess } from '@/composables/useNotify'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
 import JoinRequestQueue from '@/components/JoinRequestQueue.vue'
 
@@ -33,9 +33,10 @@ async function loadRegions() {
   } catch { /* no regions, nothing to show */ }
 }
 
-// A region its state body has claimed decides which clubs are in it
-// (PUT /api/clubs/:id/region), so a club admin can't pick their way in
-// or out of one. Unless they happen to admin that region too.
+// A region its state body has claimed decides which clubs it takes and
+// lets go (PUT /api/clubs/:id/region). Picking one asks its admins, it
+// doesn't move the club, and a club already in one can't pick its way
+// out. Unless the person here happens to admin that region too.
 const myRegionIds = computed(() => new Set((auth.regionAdminOf || []).map(r => r.id)))
 function regionLocked(r) {
   return r?.claim_state === 'claimed' && !myRegionIds.value.has(r.id)
@@ -43,20 +44,49 @@ function regionLocked(r) {
 function currentRegion(club) {
   return regions.value.regions.find(r => r.id === club.region_id) || null
 }
+function regionById(id) {
+  return regions.value.regions.find(r => r.id === id) || null
+}
 function regionOptionLabel(r) {
   return r.claim_state === 'claimed' && r.claimed_name ? `${r.name} · ${r.claimed_name}` : r.name
 }
+// In a sentence the body's own name reads better than "Region · Body".
+function regionDisplayName(id) {
+  const r = regionById(id)
+  return r ? (r.claimed_name || r.name) : ''
+}
 const anyClaimedRegion = computed(() => regions.value.regions.some(r => r.claim_state === 'claimed'))
 
-async function setRegion(club, regionId) {
+async function setRegion(club, regionId, selectEl) {
   busyId.value = club.id
   try {
-    await auth.apiFetch(`/api/clubs/${club.id}/region`, {
+    const out = await auth.apiFetch(`/api/clubs/${club.id}/region`, {
       method: 'PUT',
       body: JSON.stringify({ region_id: regionId || null }),
     })
+    if (out?.requested) {
+      // Nothing moved yet, so the picker goes back to where the club is.
+      if (selectEl) selectEl.value = club.region_id || ''
+      showSuccess(t('my_club.region_request_sent', { region: regionDisplayName(regionId) }))
+      await loadClub(club)
+      return
+    }
     // Keeps auth.clubAdminOf (and so the meet screens) in step.
     await auth.fetchMe()
+    await loadClub(club)
+  } catch (err) {
+    if (selectEl) selectEl.value = club.region_id || ''
+    showError(err.message)
+  } finally {
+    busyId.value = null
+  }
+}
+
+async function withdrawRegionRequest(club) {
+  busyId.value = club.id
+  try {
+    await auth.apiFetch(`/api/clubs/${club.id}/region-request`, { method: 'DELETE' })
+    await loadClub(club)
   } catch (err) {
     showError(err.message)
   } finally {
@@ -69,10 +99,11 @@ async function loadClub(club) {
     const body = await auth.apiFetch(`/api/clubs/${club.id}/admins`)
     clubState.value[club.id] = {
       admins: body.admins || [], members: body.members || [], canManage: true, toAdd: '',
+      regionRequest: body.region_request || null,
     }
   } catch {
     // 403 under a federation: it appoints admins, not the club.
-    clubState.value[club.id] = { admins: [], members: [], canManage: false, toAdd: '' }
+    clubState.value[club.id] = { admins: [], members: [], canManage: false, toAdd: '', regionRequest: null }
   }
 }
 
@@ -158,14 +189,20 @@ onMounted(() => {
           <label class="label" :for="`region-${club.id}`">{{ regionLabel }}</label>
           <select :id="`region-${club.id}`" class="select" :value="club.region_id || ''"
                   :disabled="busyId === club.id || regionLocked(currentRegion(club))"
-                  @change="setRegion(club, $event.target.value)">
+                  @change="setRegion(club, $event.target.value, $event.target)">
             <option value="">{{ $t('regions.pick') }}</option>
-            <option v-for="r in regions.regions" :key="r.id" :value="r.id"
-                    :disabled="r.id !== club.region_id && regionLocked(r)">{{ regionOptionLabel(r) }}</option>
+            <option v-for="r in regions.regions" :key="r.id" :value="r.id">{{ regionOptionLabel(r) }}</option>
           </select>
           <p v-if="anyClaimedRegion" class="muted hint" data-test-id="region-claimed-note">
             {{ $t('my_club.region_claimed_note') }}
           </p>
+          <div v-if="clubState[club.id].regionRequest" class="pending-row" data-test-id="region-request-pending">
+            <span class="muted">
+              {{ $t('my_club.region_request_pending', { region: regionDisplayName(clubState[club.id].regionRequest.region_id) }) }}
+            </span>
+            <button class="btn btn-ghost btn-sm" :disabled="busyId === club.id"
+                    @click="withdrawRegionRequest(club)">{{ $t('my_club.region_request_cancel') }}</button>
+          </div>
         </div>
         <p v-if="!clubState[club.id].canManage" class="muted">{{ $t('my_club.federation_appoints') }}</p>
         <template v-else>
@@ -218,6 +255,7 @@ onMounted(() => {
 .add-row .select { flex: 1; min-width: 0; }
 .muted { color: var(--fg-3); font-size: var(--text-sm); margin: 0; }
 .hint { font-size: var(--text-xs); }
+.pending-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
 @media (max-width: 720px) {
   .main { padding: var(--space-4); }
   .row { flex-direction: column; align-items: stretch; }

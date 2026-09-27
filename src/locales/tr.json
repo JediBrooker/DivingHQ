@@ -793,7 +793,9 @@
       "generic": "Duyuru",
       "claim_vote": "Oylama",
       "claim_review": "Talep",
-      "claim_decided": "Talep"
+      "claim_decided": "Talep",
+      "club_change": "Kulüp değişikliği",
+      "region_request": "Bölge"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Ekle",
     "remove": "Kaldır",
     "federation_appoints": "Bu kulübün yöneticilerini federasyonunuz atar.",
-    "region_claimed_note": "Bir bölgeyi yönetim organı üstlendiğinde, kulüpleri o bölgeye alıp çıkarmayı yalnızca bölgenin yöneticileri yapabilir.",
+    "region_claimed_note": "Yönetim organının üstlendiği bir bölge, hangi kulüpleri alacağına kendisi karar verir. Bölgeyi seçtiğinizde yöneticilerine bir talep gider ve bir kulübü sonradan bölgeden yalnızca onlar çıkarabilir.",
     "join_requests": "Katılım talepleri",
     "no_join_requests_title": "Katılmayı bekleyen kimse yok",
     "no_join_requests_body": "Biri profilinden kulübünüze katılmak istediğinde burada görünür.",
     "wants_to_join": "{club} kulübüne katılmak istiyor",
-    "currently_at": "şu anda {club} kulübünde"
+    "currently_at": "şu anda {club} kulübünde",
+    "region_request_pending": "{region} bölgesinin kulübünüzü kabul etmesi bekleniyor.",
+    "region_request_cancel": "Talebi geri çek",
+    "region_request_sent": "Talep gönderildi. Kulübünüzü kabul edip etmeyeceğine {region} bölgesi karar verecek."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Bölgenizdeki kulüplerden bir üye seçin —",
     "no_candidates": "Henüz eklenecek kimse yok. Bölgenizdeki kulüplerin üyeleri burada görünür.",
     "release_club": "Bölgeden çıkar",
-    "add_club": "Bu bölgeye kulüp ekle",
-    "pick_club": "— Bir kulüp seçin —"
+    "club_requests": "Katılmak isteyen kulüpler",
+    "currently_in": "şu anki bölge: {region}"
   },
   "claims": {
     "title": "Devralma talepleri",

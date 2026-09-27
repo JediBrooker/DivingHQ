@@ -804,7 +804,9 @@
       "generic": "Értesítés",
       "claim_vote": "Szavazás",
       "claim_review": "Igény",
-      "claim_decided": "Igény"
+      "claim_decided": "Igény",
+      "club_change": "Klubváltás",
+      "region_request": "Régió"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Hozzáadás",
     "remove": "Eltávolítás",
     "federation_appoints": "A klub adminisztrátorait a szövetsége nevezi ki.",
-    "region_claimed_note": "Ha egy régiót már átvett az irányító szerve, klubot csak a régió adminisztrátorai tehetnek be oda vagy vehetnek ki onnan.",
+    "region_claimed_note": "Az a régió, amelyet már átvett az irányító szerve, maga dönti el, mely klubokat fogadja be. Ha kiválasztja, kérelem megy a régió adminisztrátorainak, és később csak ők vehetnek ki klubot a régióból.",
     "join_requests": "Csatlakozási kérelmek",
     "no_join_requests_title": "Senki sem vár csatlakozásra",
     "no_join_requests_body": "Ha valaki a profiljáról kéri a csatlakozást a klubjához, itt jelenik meg.",
     "wants_to_join": "csatlakozna ide: {club}",
-    "currently_at": "jelenleg: {club}"
+    "currently_at": "jelenleg: {club}",
+    "region_request_pending": "Várakozás arra, hogy a(z) {region} régió befogadja a klubját.",
+    "region_request_cancel": "Kérelem visszavonása",
+    "region_request_sent": "Kérelem elküldve. A(z) {region} régió dönti el, befogadja-e a klubját."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Válasszon tagot a régiója klubjaiból —",
     "no_candidates": "Még nincs kit hozzáadni. Itt jelennek meg a régiója klubjainak tagjai.",
     "release_club": "Kivétel a régióból",
-    "add_club": "Klub hozzáadása ehhez a régióhoz",
-    "pick_club": "— Válasszon klubot —"
+    "club_requests": "Csatlakozni kívánó klubok",
+    "currently_in": "jelenleg: {region}"
   },
   "claims": {
     "title": "Igények",

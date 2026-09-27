@@ -804,7 +804,9 @@
       "generic": "Melding",
       "claim_vote": "Avstemning",
       "claim_review": "Krav",
-      "claim_decided": "Krav"
+      "claim_decided": "Krav",
+      "club_change": "Klubbytte",
+      "region_request": "Region"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Legg til",
     "remove": "Fjern",
     "federation_appoints": "Forbundet ditt utnevner klubbens administratorer.",
-    "region_claimed_note": "Når en regions styrende organ har gjort krav på den, kan bare regionens administratorer flytte klubber inn i eller ut av den.",
+    "region_claimed_note": "En region som dens styrende organ har gjort krav på, bestemmer selv hvilke klubber den tar inn. Velger du den, sendes en forespørsel til administratorene, og bare de kan ta en klubb ut igjen.",
     "join_requests": "Forespørsler om medlemskap",
     "no_join_requests_title": "Ingen venter på å bli med",
     "no_join_requests_body": "Når noen ber om å bli med i klubben din fra profilen sin, vises det her.",
     "wants_to_join": "vil bli med i {club}",
-    "currently_at": "nå i {club}"
+    "currently_at": "nå i {club}",
+    "region_request_pending": "Venter på at {region} tar inn klubben din.",
+    "region_request_cancel": "Trekk tilbake forespørselen",
+    "region_request_sent": "Forespørsel sendt. {region} avgjør om klubben din tas inn."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Velg et medlem av en klubb i regionen din —",
     "no_candidates": "Ingen å legge til ennå. Medlemmer av klubbene i regionen din vises her.",
     "release_club": "Ta ut av regionen",
-    "add_club": "Legg til en klubb i denne regionen",
-    "pick_club": "— Velg en klubb —"
+    "club_requests": "Klubber som ber om å bli med",
+    "currently_in": "nå i {region}"
   },
   "claims": {
     "title": "Krav",

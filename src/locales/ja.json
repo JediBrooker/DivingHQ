@@ -793,7 +793,9 @@
       "generic": "お知らせ",
       "claim_vote": "申請の投票",
       "claim_review": "引き継ぎ申請",
-      "claim_decided": "引き継ぎ申請"
+      "claim_decided": "引き継ぎ申請",
+      "club_change": "クラブ変更",
+      "region_request": "地域"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "追加",
     "remove": "削除",
     "federation_appoints": "このクラブの管理者は連盟が任命します。",
-    "region_claimed_note": "地域の統括団体がその地域を申請して承認されると、クラブをその地域に出し入れできるのはその地域の管理者だけになります。",
+    "region_claimed_note": "統括団体が申請して承認された地域は、どのクラブを受け入れるかを自ら決めます。その地域を選ぶと管理者に申請が送られ、あとからクラブを外せるのも管理者だけです。",
     "join_requests": "入会申請",
     "no_join_requests_title": "入会待ちの人はいません",
     "no_join_requests_body": "誰かがプロフィールからあなたのクラブへの入会を申請すると、ここに表示されます。",
     "wants_to_join": "{club}への入会を希望",
-    "currently_at": "現在の所属: {club}"
+    "currently_at": "現在の所属: {club}",
+    "region_request_pending": "{region}がクラブを受け入れるのを待っています。",
+    "region_request_cancel": "申請を取り下げる",
+    "region_request_sent": "申請を送信しました。クラブを受け入れるかどうかは{region}が決めます。"
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— 地域内のクラブのメンバーを選択 —",
     "no_candidates": "まだ追加できる人がいません。地域内のクラブのメンバーがここに表示されます。",
     "release_club": "地域から外す",
-    "add_club": "この地域にクラブを追加",
-    "pick_club": "— クラブを選択 —"
+    "club_requests": "加入を希望するクラブ",
+    "currently_in": "現在の地域: {region}"
   },
   "claims": {
     "title": "引き継ぎ申請",

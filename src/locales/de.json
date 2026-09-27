@@ -804,7 +804,9 @@
       "generic": "Hinweis",
       "claim_vote": "Abstimmung",
       "claim_review": "Anspruch",
-      "claim_decided": "Anspruch"
+      "claim_decided": "Anspruch",
+      "club_change": "Vereinswechsel",
+      "region_request": "Region"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Hinzufügen",
     "remove": "Entfernen",
     "federation_appoints": "Ihr Verband ernennt die Admins dieses Vereins.",
-    "region_claimed_note": "Sobald der zuständige Verband eine Region übernommen hat, können nur deren Admins Vereine in die Region aufnehmen oder aus ihr herausnehmen.",
+    "region_claimed_note": "Eine Region, die ihr zuständiger Verband übernommen hat, entscheidet selbst, welche Vereine sie aufnimmt. Wenn Sie sie auswählen, geht eine Anfrage an ihre Admins, und nur diese können einen Verein wieder herausnehmen.",
     "join_requests": "Beitrittsanfragen",
     "no_join_requests_title": "Niemand wartet auf Aufnahme",
     "no_join_requests_body": "Wenn jemand über sein Profil den Beitritt zu Ihrem Verein anfragt, erscheint das hier.",
     "wants_to_join": "möchte {club} beitreten",
-    "currently_at": "derzeit bei {club}"
+    "currently_at": "derzeit bei {club}",
+    "region_request_pending": "Wartet darauf, dass {region} Ihren Verein aufnimmt.",
+    "region_request_cancel": "Anfrage zurückziehen",
+    "region_request_sent": "Anfrage gesendet. {region} entscheidet, ob Ihr Verein aufgenommen wird."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Mitglied eines Vereins Ihrer Region auswählen —",
     "no_candidates": "Noch niemand zum Hinzufügen. Mitglieder der Vereine Ihrer Region erscheinen hier.",
     "release_club": "Aus der Region nehmen",
-    "add_club": "Verein zu dieser Region hinzufügen",
-    "pick_club": "— Verein auswählen —"
+    "club_requests": "Vereine mit Beitrittsanfrage",
+    "currently_in": "derzeit in {region}"
   },
   "claims": {
     "title": "Ansprüche",

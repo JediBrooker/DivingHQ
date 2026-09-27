@@ -533,10 +533,19 @@ falls back to the catalogue for a country nobody has started yet.
 **Putting clubs in regions.** Under a federation, the federation decides
 (Region column on the Clubs screen). Where there's no federation, the
 club's own admin picks, on My club (`PUT /api/clubs/:id/region`), as
-long as neither side of the move is a claimed region. Moving a club into
-or out of a claimed region is that region's admin's call (from My
-region), because the region decides who can step in on the club's meets
-and review its requests.
+long as neither side of the move is a claimed region. Once a state body
+has claimed a region, the region decides who can step in on the club's
+meets, review its requests and appoint or remove its admins, so neither
+side moves a club alone:
+
+- **Joining** takes both. The club's admin picks the region, which only
+  records the ask (`202`, `clubs.requested_region_id`, migration 097) and
+  tells the region's admins; they accept on My region with the same PUT
+  (`403 club_request_required` if the club never asked). Either side can
+  drop the ask with `DELETE /api/clubs/:id/region-request`.
+- **Leaving** is the region's call: its admin takes the club out (to no
+  region) on My region. The club's admin gets `403 region_admin_required`.
+  The region can let a club go but not pick where it lands.
 
 **Region admins** are appointed by the federation's org admin or the
 sysadmin (a region chip on the Clubs screen opens `RegionAdminsModal`).

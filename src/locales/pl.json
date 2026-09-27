@@ -804,7 +804,9 @@
       "generic": "Powiadomienie",
       "claim_vote": "Głosowanie",
       "claim_review": "Roszczenie",
-      "claim_decided": "Roszczenie"
+      "claim_decided": "Roszczenie",
+      "club_change": "Zmiana klubu",
+      "region_request": "Region"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Dodaj",
     "remove": "Usuń",
     "federation_appoints": "Administratorów tego klubu wyznacza twoja federacja.",
-    "region_claimed_note": "Gdy organ zarządzający regionem przejmie go, tylko administratorzy tego regionu mogą przenosić do niego kluby lub je z niego usuwać.",
+    "region_claimed_note": "Region przejęty przez swój organ zarządzający sam decyduje, które kluby przyjmuje. Wybranie go wysyła prośbę do jego administratorów i tylko oni mogą później usunąć z niego klub.",
     "join_requests": "Prośby o dołączenie",
     "no_join_requests_title": "Nikt nie czeka na dołączenie",
     "no_join_requests_body": "Gdy ktoś poprosi ze swojego profilu o dołączenie do twojego klubu, pojawi się to tutaj.",
     "wants_to_join": "chce dołączyć do {club}",
-    "currently_at": "obecnie w {club}"
+    "currently_at": "obecnie w {club}",
+    "region_request_pending": "Czekamy, aż region {region} przyjmie twój klub.",
+    "region_request_cancel": "Wycofaj prośbę",
+    "region_request_sent": "Prośba wysłana. Region {region} zdecyduje, czy przyjąć twój klub."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Wybierz członka klubu z twojego regionu —",
     "no_candidates": "Na razie nie ma kogo dodać. Tutaj pojawiają się członkowie klubów z twojego regionu.",
     "release_club": "Usuń z regionu",
-    "add_club": "Dodaj klub do tego regionu",
-    "pick_club": "— Wybierz klub —"
+    "club_requests": "Kluby proszące o dołączenie",
+    "currently_in": "obecnie w regionie {region}"
   },
   "claims": {
     "title": "Roszczenia",

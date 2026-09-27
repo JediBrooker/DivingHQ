@@ -417,7 +417,7 @@ module.exports = function createOrgsRouter({
       return null;
     }
     const c = await pool.query(
-      `SELECT c.id, c.org_id, c.name, o.claim_state,
+      `SELECT c.id, c.org_id, c.name, o.claim_state, c.requested_region_id, c.region_requested_at,
               EXISTS (SELECT 1 FROM club_admins ca
                        WHERE ca.club_id = c.id AND ca.user_id = $2) AS caller_is_admin,
               EXISTS (SELECT 1 FROM region_admins ra
@@ -465,7 +465,12 @@ module.exports = function createOrgsRouter({
           ORDER BY lower(full_name)`,
         [club.id],
       );
-      res.json({ admins: admins.rows, members: members.rows });
+      // A claimed region the club has asked to join and is waiting on
+      // (routes/regions.js), so My club can say so and offer to withdraw.
+      const regionRequest = club.requested_region_id
+        ? { region_id: club.requested_region_id, requested_at: club.region_requested_at }
+        : null;
+      res.json({ admins: admins.rows, members: members.rows, region_request: regionRequest });
     } catch (err) {
       console.error("[Club Admins List Error]", err.message);
       res.status(500).json({ error: "Internal server error" });

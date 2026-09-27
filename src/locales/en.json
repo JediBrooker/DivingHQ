@@ -793,7 +793,9 @@
       "generic": "Notice",
       "claim_vote": "Claim vote",
       "claim_review": "Claim",
-      "claim_decided": "Claim"
+      "claim_decided": "Claim",
+      "club_change": "Club change",
+      "region_request": "Region"
     }
   },
   "compare": {
@@ -1930,12 +1932,15 @@
     "add": "Add",
     "remove": "Remove",
     "federation_appoints": "Your federation appoints this club's admins.",
-    "region_claimed_note": "Once a region's governing body has claimed it, only that region's admins can move clubs into or out of it.",
+    "region_claimed_note": "A region its governing body has claimed decides which clubs it takes. Picking one sends its admins a request, and only they can take a club out again.",
     "join_requests": "Join requests",
     "no_join_requests_title": "Nobody waiting to join",
     "no_join_requests_body": "When someone asks to join your club from their profile, it shows up here.",
     "wants_to_join": "wants to join {club}",
-    "currently_at": "currently at {club}"
+    "currently_at": "currently at {club}",
+    "region_request_pending": "Waiting for {region} to accept your club.",
+    "region_request_cancel": "Withdraw request",
+    "region_request_sent": "Request sent. {region} decides whether to take your club."
   },
   "regions": {
     "label": {
@@ -1959,8 +1964,8 @@
     "pick_member": "— Pick a member of your region's clubs —",
     "no_candidates": "Nobody to add yet. Members of your region's clubs show up here.",
     "release_club": "Take out of region",
-    "add_club": "Add a club to this region",
-    "pick_club": "— Pick a club —"
+    "club_requests": "Clubs asking to join",
+    "currently_in": "currently in {region}"
   },
   "claims": {
     "title": "Claims",

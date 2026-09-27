@@ -4,7 +4,9 @@
 // members. Region admins sit one level above club admins, so they can
 // act on any of these requests, not just ones whose club has no admin.
 // Where there's no federation they also add and remove their own
-// co-admins here (the server says so with can_manage).
+// co-admins here (the server says so with can_manage), and once their
+// body has claimed the region they accept or turn down clubs asking to
+// join it and can let a club go.
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
@@ -39,48 +41,18 @@ async function load(region) {
       canManage: !!admins.can_manage,
       toAdd: '',
     }
-    if (placesClubs(region.id)) await loadOrgClubs(overview.region?.org_id)
   } catch (err) {
     showError(err.message)
   }
 }
 
-// A state body that has claimed its region decides which clubs are in
-// it (a club admin can't move in or out on their own there), so it gets
-// the controls. Other clubs in the org come from the public club list.
-const orgClubs = ref({})       // org id -> clubs
-const orgRegions = ref({})     // org id -> regions
-const clubToAdd = ref({})      // region id -> club id
-
+// A state body that has claimed its region decides which clubs it takes
+// and lets go: clubs ask to join (PUT /api/clubs/:id/region answers 202),
+// the region accepts or declines here, and can take a club back out.
+// It can't pull in a club that never asked.
 function placesClubs(regionId) {
   const d = detail.value[regionId]
   return !!d && d.canManage && d.region?.claim_state === 'claimed'
-}
-
-async function loadOrgClubs(orgId) {
-  if (!orgId || orgClubs.value[orgId]) return
-  try {
-    const [clubs, regionList] = await Promise.all([
-      auth.apiFetch(`/api/orgs/${orgId}/clubs`),
-      auth.apiFetch(`/api/orgs/${orgId}/regions`),
-    ])
-    orgClubs.value[orgId] = Array.isArray(clubs) ? clubs : []
-    orgRegions.value[orgId] = regionList?.regions || []
-  } catch { /* the add picker just stays empty */ }
-}
-
-// Clubs this admin could bring in: not already here, and not sitting in
-// another claimed region they don't run (that one's admin decides).
-function clubsToAdd(regionId) {
-  const d = detail.value[regionId]
-  const orgId = d?.region?.org_id
-  const mine = new Set((auth.regionAdminOf || []).map(r => r.id))
-  const regionsById = new Map((orgRegions.value[orgId] || []).map(r => [r.id, r]))
-  return (orgClubs.value[orgId] || []).filter(c => {
-    if (c.region_id === regionId) return false
-    const from = c.region_id ? regionsById.get(c.region_id) : null
-    return !(from?.claim_state === 'claimed' && !mine.has(from.id))
-  })
 }
 
 async function moveClub(region, clubId, regionId) {
@@ -90,11 +62,19 @@ async function moveClub(region, clubId, regionId) {
       method: 'PUT',
       body: JSON.stringify({ region_id: regionId }),
     })
-    clubToAdd.value[region.id] = ''
-    const orgId = detail.value[region.id]?.region?.org_id
-    if (orgId) delete orgClubs.value[orgId]
     await load(region)
-    await loadOrgClubs(orgId)
+  } catch (err) {
+    showError(err.message)
+  } finally {
+    busyId.value = null
+  }
+}
+
+async function declineClub(region, clubId) {
+  busyId.value = region.id
+  try {
+    await auth.apiFetch(`/api/clubs/${clubId}/region-request`, { method: 'DELETE' })
+    await load(region)
   } catch (err) {
     showError(err.message)
   } finally {
@@ -199,15 +179,26 @@ onMounted(reloadAll)
                     @click="moveClub(r, c.id, null)">{{ $t('my_region.release_club') }}</button>
           </li>
         </ul>
-        <div v-if="placesClubs(r.id)" class="add-row" data-test-id="region-add-club">
-          <select class="select" v-model="clubToAdd[r.id]" :disabled="!clubsToAdd(r.id).length"
-                  :aria-label="$t('my_region.add_club')">
-            <option value="">{{ $t('my_region.pick_club') }}</option>
-            <option v-for="c in clubsToAdd(r.id)" :key="c.id" :value="c.id">{{ c.name }}</option>
-          </select>
-          <button class="btn btn-primary btn-sm" :disabled="!clubToAdd[r.id] || busyId === r.id"
-                  @click="moveClub(r, clubToAdd[r.id], r.id)">{{ $t('my_club.add') }}</button>
-        </div>
+        <template v-if="placesClubs(r.id) && detail[r.id].join_requests?.length">
+          <h3 class="sub-title">{{ $t('my_region.club_requests') }}</h3>
+          <ul class="rows" data-test-id="region-club-requests">
+            <li v-for="c in detail[r.id].join_requests" :key="c.id" class="row card-sm">
+              <div class="who">
+                <span class="name">{{ c.name }}<template v-if="c.short_code"> · {{ c.short_code }}</template></span>
+                <span class="meta">
+                  {{ $t('my_region.members', { n: c.member_count }) }}
+                  <template v-if="c.current_region_name"> · {{ $t('my_region.currently_in', { region: c.current_region_name }) }}</template>
+                </span>
+              </div>
+              <div class="actions">
+                <button class="btn btn-ghost btn-sm" :disabled="busyId === r.id"
+                        @click="declineClub(r, c.id)">{{ $t('my_club.reject') }}</button>
+                <button class="btn btn-primary btn-sm" :disabled="busyId === r.id"
+                        @click="moveClub(r, c.id, r.id)">{{ $t('my_club.approve') }}</button>
+              </div>
+            </li>
+          </ul>
+        </template>
 
         <h3 class="sub-title">{{ $t('my_region.region_admins') }}</h3>
         <template v-if="detail[r.id].canManage">
@@ -259,6 +250,7 @@ onMounted(reloadAll)
 .meta { font-size: var(--text-xs); color: var(--fg-3); margin: 0; }
 .admins { text-align: end; }
 .add-row { display: flex; gap: var(--space-2); align-items: center; }
+.actions { display: flex; gap: var(--space-2); flex-shrink: 0; }
 .add-row .select { flex: 1; min-width: 0; }
 @media (max-width: 720px) {
   .main { padding: var(--space-4); }
