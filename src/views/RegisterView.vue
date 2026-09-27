@@ -73,6 +73,12 @@ const regionAsks = computed(() => {
   return r?.claim_state === 'claimed' && r.has_live_admin !== false ? (r.claimed_name || r.name) : null
 })
 
+// Founding a club where there's no federation makes you its only admin, and
+// a coach or judge request can't be self-approved, so it isn't "your club's
+// admin" who reviews it.
+const founderAsksUp = computed(() =>
+  noFederation.value && clubChoice.value === 'new' && ['coach', 'judge'].includes(requestedRole.value))
+
 // Bumped on every loadRegions call. A slow answer for a country or org
 // the registrant has since moved off must not land on top of the current
 // one (Australian states under Canada, then a 400 on submit), so each
@@ -445,12 +451,23 @@ async function handleSubmit() {
         <p v-if="noFederation && requestedRole === 'referee'" class="hint-line" data-test-id="referee-note">
           {{ $t('auth.register.referee_note_unclaimed') }}
         </p>
+        <!-- A founder is their club's only admin, and nobody approves their
+             own request for anything but diver (lib/role-requests.js), so
+             the default coach request goes up a level. -->
+        <p v-else-if="founderAsksUp" class="hint-line" data-testid="founder-role-note">
+          {{ $t('auth.register.founder_role_note') }}
+        </p>
       </div>
       <div class="field" v-if="requestedRole">
         <label class="label">{{ $t('auth.register.note_label') }}</label>
         <input class="input" type="text" v-model="note" :placeholder="$t('auth.register.note_placeholder')">
       </div>
-      <p class="note">{{ noFederation ? $t('auth.register.spectator_note_club') : $t('auth.register.spectator_note') }}</p>
+      <!-- Where a note under the role already says who reviews it (referee,
+           a founder's own coach or judge request), don't contradict it. -->
+      <p class="note" data-testid="spectator-note">{{
+        !noFederation ? $t('auth.register.spectator_note')
+          : founderAsksUp || requestedRole === 'referee' ? $t('auth.register.spectator_note_see_above')
+            : $t('auth.register.spectator_note_club') }}</p>
       <div v-if="msg" :class="['msg', msgType === 'success' ? 'msg-success' : 'msg-error']">{{ msg }}</div>
       <button type="submit" class="btn btn-primary-lg" style="margin-top:0.25rem" :disabled="loading">
         {{ loading ? $t('auth.register.submit_loading') : $t('auth.register.submit_idle') }}

@@ -82,7 +82,9 @@
       "club_needs_approval": "Inaaprubahan ng {org} ang mga bagong club bago lumabas ang mga ito. Hihingi kami ng pag-apruba sa kanila kapag nakumpirma mo na ang iyong email, at habang naghihintay ay puwede kang mag-sign in at makipagkumpitensya.",
       "club_joins_now": "Agad na sumasali sa {org} ang mga bagong club. Ang {org} ang nagtatalaga ng mga admin ng bawat club.",
       "success_club_pending": "Naghihintay ang {club} ng pag-apruba ng {org}. Makikita nila ito kapag nakumpirma mo na ang iyong email, at mag-e-email kami sa iyo kapag nakapagpasya na sila.",
-      "region_will_ask": "Ang {region} ang nagpapasya kung aling mga club ang tatanggapin nito, kaya padadalhan ito ng hiling kapag na-verify mo na ang iyong email. Hangga't hindi pa ito tumatanggap, wala pa sa rehiyon ang iyong club."
+      "region_will_ask": "Ang {region} ang nagpapasya kung aling mga club ang tatanggapin nito, kaya padadalhan ito ng hiling kapag na-verify mo na ang iyong email. Hangga't hindi pa ito tumatanggap, wala pa sa rehiyon ang iyong club.",
+      "founder_role_note": "Bilang tagapagtatag ng club, hindi mo maaaprubahan ang sarili mong kahilingan bilang tagasanay o hukom, kaya susuriin ito ng mga admin ng iyong rehiyon o ng DivingHQ.",
+      "spectator_note_see_above": "Lahat ng account ay nagsisimula bilang Manonood. Ang role na hihilingin mo sa itaas ay susuriin ayon sa nakasaad sa paalala sa ilalim nito. Makakapag-log in ka kapag na-verify na ang iyong email."
     },
     "register_org": {
       "title": "Irehistro ang organisasyon",

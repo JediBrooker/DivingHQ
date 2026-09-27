@@ -82,7 +82,9 @@
       "club_needs_approval": "Organizace {org} schvaluje nové kluby, než se zobrazí ostatním. Požádáme ji o to, jakmile potvrdíte svůj e-mail; do té doby se můžete přihlásit a závodit.",
       "club_joins_now": "Nové kluby se k organizaci {org} připojí hned. Správce každého klubu jmenuje organizace {org}.",
       "success_club_pending": "Klub {club} čeká na schválení organizací {org}. Uvidí ho, jakmile potvrdíte svůj e-mail, a o rozhodnutí vám pošleme e-mail.",
-      "region_will_ask": "Region {region} rozhoduje, které kluby přijme, takže jakmile ověříte e-mail, dostane žádost o přijetí vašeho klubu. Dokud ji nepřijme, váš klub v regionu není."
+      "region_will_ask": "Region {region} rozhoduje, které kluby přijme, takže jakmile ověříte e-mail, dostane žádost o přijetí vašeho klubu. Dokud ji nepřijme, váš klub v regionu není.",
+      "founder_role_note": "Jako zakladatel klubu nemůžete schválit vlastní žádost o roli trenéra nebo rozhodčího, proto ji posoudí správci vašeho regionu, nebo DivingHQ.",
+      "spectator_note_see_above": "Všechny účty začínají jako Divák. Roli, o kterou výše požádáte, posoudí ten, koho uvádí poznámka pod ní. Přihlásit se můžete po ověření e-mailu."
     },
     "register_org": {
       "title": "Registrace organizace",

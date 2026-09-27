@@ -82,7 +82,9 @@
       "club_needs_approval": "{org} genehmigt neue Vereine, bevor sie freigeschaltet werden. Wir fragen dort nach, sobald Sie Ihre E-Mail-Adresse bestätigt haben, und bis dahin können Sie sich anmelden und springen.",
       "club_joins_now": "Neue Vereine treten {org} sofort bei. {org} ernennt die Admins jedes Vereins.",
       "success_club_pending": "{club} wartet auf die Genehmigung durch {org}. Dort sieht man ihn, sobald Sie Ihre E-Mail-Adresse bestätigt haben, und wir benachrichtigen Sie per E-Mail über die Entscheidung.",
-      "region_will_ask": "{region} entscheidet selbst, welche Vereine aufgenommen werden. Sobald Sie Ihre E-Mail-Adresse bestätigt haben, erhält die Region eine Anfrage. Bis sie zustimmt, gehört Ihr Verein nicht zur Region."
+      "region_will_ask": "{region} entscheidet selbst, welche Vereine aufgenommen werden. Sobald Sie Ihre E-Mail-Adresse bestätigt haben, erhält die Region eine Anfrage. Bis sie zustimmt, gehört Ihr Verein nicht zur Region.",
+      "founder_role_note": "Als Gründer des Vereins können Sie Ihre eigene Anfrage als Trainer oder Kampfrichter nicht genehmigen. Sie geht an die Admins Ihrer Region oder an DivingHQ.",
+      "spectator_note_see_above": "Alle Konten beginnen als Zuschauer. Eine Rolle, die Sie oben anfordern, wird so geprüft, wie es der Hinweis darunter beschreibt. Sie können sich anmelden, sobald Ihre E-Mail bestätigt ist."
     },
     "register_org": {
       "title": "Organisation registrieren",

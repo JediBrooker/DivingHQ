@@ -53,6 +53,10 @@ test("a founder signs up by country and runs their club's first meet", async ({ 
   await club.selectOption("new");
   await page.getByPlaceholder("e.g. Sydney Springboard").fill("Nuku'alofa Divers");
   await expect(page.getByText(/You'll be this club's admin/)).toBeVisible();
+  // A founder's default coach request can't be self-approved, so the form
+  // doesn't say their club's admin (themselves) will review it.
+  await expect(page.getByTestId("founder-role-note")).toContainText("can't approve your own coach or judge request");
+  await expect(page.getByTestId("spectator-note")).not.toContainText("your club's admin");
   // No federation, so no org-wide meet manager on offer.
   await expect(page.locator('option[value="meet_manager"]')).toHaveCount(0);
 

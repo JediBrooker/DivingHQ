@@ -82,7 +82,9 @@
       "club_needs_approval": "{org} meluluskan kelab baharu sebelum ia dipaparkan. Kami akan memohon kelulusan sebaik sahaja anda mengesahkan e-mel, dan sementara itu anda boleh log masuk dan bertanding.",
       "club_joins_now": "Kelab baharu terus menyertai {org}. {org} melantik pentadbir setiap kelab.",
       "success_club_pending": "{club} sedang menunggu kelulusan {org}. Mereka akan melihatnya sebaik sahaja anda mengesahkan e-mel, dan kami akan menghantar e-mel kepada anda apabila mereka membuat keputusan.",
-      "region_will_ask": "{region} menentukan kelab yang diterimanya, jadi permintaan akan dihantar sebaik sahaja anda mengesahkan e-mel. Sehingga ia menerima, kelab anda belum berada dalam rantau itu."
+      "region_will_ask": "{region} menentukan kelab yang diterimanya, jadi permintaan akan dihantar sebaik sahaja anda mengesahkan e-mel. Sehingga ia menerima, kelab anda belum berada dalam rantau itu.",
+      "founder_role_note": "Sebagai pengasas kelab, anda tidak boleh meluluskan sendiri permintaan anda sebagai jurulatih atau hakim, jadi ia disemak oleh pentadbir rantau anda atau DivingHQ.",
+      "spectator_note_see_above": "Semua akaun bermula sebagai Penonton. Peranan yang anda minta di atas disemak seperti yang diterangkan dalam nota di bawahnya. Anda boleh log masuk selepas e-mel anda disahkan."
     },
     "register_org": {
       "title": "Daftarkan organisasi",

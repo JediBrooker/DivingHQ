@@ -82,7 +82,9 @@
       "club_needs_approval": "{org} godkänner nya klubbar innan de syns. Vi frågar dem så snart du har bekräftat din e-post, och under tiden kan du logga in och hoppa.",
       "club_joins_now": "Nya klubbar går med i {org} direkt. {org} utser varje klubbs administratörer.",
       "success_club_pending": "{club} väntar på godkännande från {org}. De ser den så snart du har bekräftat din e-post, och vi mejlar dig när de har bestämt sig.",
-      "region_will_ask": "{region} bestämmer själv vilka klubbar den tar in, så den får en förfrågan när du har bekräftat din e-post. Tills den tackar ja är din klubb inte med i regionen."
+      "region_will_ask": "{region} bestämmer själv vilka klubbar den tar in, så den får en förfrågan när du har bekräftat din e-post. Tills den tackar ja är din klubb inte med i regionen.",
+      "founder_role_note": "Som klubbens grundare kan du inte godkänna din egen förfrågan om att bli tränare eller domare, så den går till regionens administratörer eller till DivingHQ.",
+      "spectator_note_see_above": "Alla konton börjar som åskådare. En roll du begär ovan granskas som anteckningen under den säger. Du kan logga in när din e-post är verifierad."
     },
     "register_org": {
       "title": "Registrera organisation",

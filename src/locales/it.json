@@ -82,7 +82,9 @@
       "club_needs_approval": "{org} approva i nuovi club prima che vengano pubblicati. Glielo chiederemo appena confermi la tua email; nel frattempo puoi accedere e gareggiare.",
       "club_joins_now": "I nuovi club entrano subito in {org}. {org} nomina gli amministratori di ogni club.",
       "success_club_pending": "{club} è in attesa dell'approvazione di {org}. Lo vedranno appena confermi la tua email, e ti scriveremo quando avranno deciso.",
-      "region_will_ask": "{region} decide quali club accogliere, quindi riceverà una richiesta appena avrai verificato l'email. Finché non accetta, il tuo club non fa parte della regione."
+      "region_will_ask": "{region} decide quali club accogliere, quindi riceverà una richiesta appena avrai verificato l'email. Finché non accetta, il tuo club non fa parte della regione.",
+      "founder_role_note": "Come fondatore del club non puoi approvare la tua richiesta di allenatore o giudice, quindi la esaminano gli amministratori della tua regione o DivingHQ.",
+      "spectator_note_see_above": "Tutti gli account partono come Spettatore. Il ruolo che richiedi qui sopra viene esaminato come indica la nota sotto. Potrai accedere dopo aver verificato la tua email."
     },
     "register_org": {
       "title": "Registra organizzazione",
