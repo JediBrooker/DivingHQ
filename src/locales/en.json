@@ -13,7 +13,9 @@
     "back": "← Back",
     "dashboard": "← Dashboard",
     "error_generic": "Something went wrong",
-    "view_profile": "View profile →"
+    "view_profile": "View profile →",
+    "load_failed": "Couldn't load this. Check your connection and try again.",
+    "retry": "Try again"
   },
   "auth": {
     "login": {

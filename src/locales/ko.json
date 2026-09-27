@@ -13,7 +13,9 @@
     "back": "← 뒤로",
     "dashboard": "← 대시보드",
     "error_generic": "문제가 발생했습니다",
-    "view_profile": "프로필 보기 →"
+    "view_profile": "프로필 보기 →",
+    "load_failed": "불러오지 못했습니다. 연결을 확인한 후 다시 시도하세요.",
+    "retry": "다시 시도"
   },
   "auth": {
     "login": {

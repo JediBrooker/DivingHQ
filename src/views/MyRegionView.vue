@@ -7,10 +7,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { showError } from '@/composables/useNotify'
 import { usePlural } from '@/composables/usePlural'
 import EmptyState from '@/components/EmptyState.vue'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
+import LoadError from '@/components/LoadError.vue'
 
 const { t } = useI18n()
 const { tn } = usePlural()
@@ -19,20 +19,23 @@ const auth = useAuthStore()
 const regions = computed(() => auth.regionAdminOf)
 // Per region id: { region, clubs, admins }
 const detail = ref({})
+// Region ids whose load failed, each gets a retry instead of a blank section.
+const failed = ref({})
 
 function labelFor(key) {
   return key ? t(`regions.label.${key}`) : ''
 }
 
 async function load(region) {
+  failed.value[region.id] = false
   try {
     const [overview, admins] = await Promise.all([
       auth.apiFetch(`/api/regions/${region.id}/overview`),
       auth.apiFetch(`/api/regions/${region.id}/admins`),
     ])
     detail.value[region.id] = { ...overview, admins: admins.admins || [] }
-  } catch (err) {
-    showError(err.message)
+  } catch {
+    failed.value[region.id] = true
   }
 }
 
@@ -61,6 +64,7 @@ onMounted(() => {
         {{ r.name }}
         <span v-if="detail[r.id]?.region?.label" class="kind">{{ labelFor(detail[r.id].region.label) }}</span>
       </h2>
+      <LoadError v-if="failed[r.id] && !detail[r.id]" @retry="load(r)" />
       <template v-if="detail[r.id]">
         <h3 class="sub-title">{{ $t('my_region.clubs') }}</h3>
         <EmptyState

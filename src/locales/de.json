@@ -13,7 +13,9 @@
     "back": "← Zurück",
     "dashboard": "← Übersicht",
     "error_generic": "Etwas ist schiefgelaufen",
-    "view_profile": "Profil ansehen →"
+    "view_profile": "Profil ansehen →",
+    "load_failed": "Konnte nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "retry": "Erneut versuchen"
   },
   "auth": {
     "login": {

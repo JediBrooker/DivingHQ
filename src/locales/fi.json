@@ -13,7 +13,9 @@
     "back": "← Takaisin",
     "dashboard": "← Hallintapaneeli",
     "error_generic": "Jotain meni vikaan",
-    "view_profile": "Näytä profiili →"
+    "view_profile": "Näytä profiili →",
+    "load_failed": "Lataus epäonnistui. Tarkista yhteys ja yritä uudelleen.",
+    "retry": "Yritä uudelleen"
   },
   "auth": {
     "login": {

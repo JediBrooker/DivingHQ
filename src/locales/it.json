@@ -13,7 +13,9 @@
     "back": "← Indietro",
     "dashboard": "← Pannello",
     "error_generic": "Qualcosa è andato storto",
-    "view_profile": "Vedi profilo →"
+    "view_profile": "Vedi profilo →",
+    "load_failed": "Impossibile caricare. Controlla la connessione e riprova.",
+    "retry": "Riprova"
   },
   "auth": {
     "login": {

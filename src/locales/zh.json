@@ -13,7 +13,9 @@
     "back": "← 返回",
     "dashboard": "← 控制台",
     "error_generic": "出现错误",
-    "view_profile": "查看个人资料 →"
+    "view_profile": "查看个人资料 →",
+    "load_failed": "无法加载。请检查网络连接后重试。",
+    "retry": "重试"
   },
   "auth": {
     "login": {

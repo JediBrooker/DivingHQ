@@ -13,7 +13,9 @@
     "back": "← 戻る",
     "dashboard": "← ダッシュボード",
     "error_generic": "問題が発生しました",
-    "view_profile": "プロフィールを見る →"
+    "view_profile": "プロフィールを見る →",
+    "load_failed": "読み込めませんでした。接続を確認して、もう一度お試しください。",
+    "retry": "再試行"
   },
   "auth": {
     "login": {

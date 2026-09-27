@@ -13,7 +13,9 @@
     "back": "← Natrag",
     "dashboard": "← Nadzorna ploča",
     "error_generic": "Nešto je pošlo po zlu",
-    "view_profile": "Pogledaj profil →"
+    "view_profile": "Pogledaj profil →",
+    "load_failed": "Učitavanje nije uspjelo. Provjerite vezu i pokušajte ponovno.",
+    "retry": "Pokušaj ponovno"
   },
   "auth": {
     "login": {

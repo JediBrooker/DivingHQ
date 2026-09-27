@@ -13,7 +13,9 @@
     "back": "← Wstecz",
     "dashboard": "← Panel",
     "error_generic": "Coś poszło nie tak",
-    "view_profile": "Zobacz profil →"
+    "view_profile": "Zobacz profil →",
+    "load_failed": "Nie udało się wczytać. Sprawdź połączenie i spróbuj ponownie.",
+    "retry": "Spróbuj ponownie"
   },
   "auth": {
     "login": {

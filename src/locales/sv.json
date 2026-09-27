@@ -13,7 +13,9 @@
     "back": "← Tillbaka",
     "dashboard": "← Översikt",
     "error_generic": "Något gick fel",
-    "view_profile": "Visa profil →"
+    "view_profile": "Visa profil →",
+    "load_failed": "Kunde inte läsas in. Kontrollera anslutningen och försök igen.",
+    "retry": "Försök igen"
   },
   "auth": {
     "login": {

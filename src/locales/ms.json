@@ -13,7 +13,9 @@
     "back": "← Kembali",
     "dashboard": "← Papan pemuka",
     "error_generic": "Terdapat ralat",
-    "view_profile": "Lihat profil →"
+    "view_profile": "Lihat profil →",
+    "load_failed": "Gagal dimuatkan. Semak sambungan anda dan cuba lagi.",
+    "retry": "Cuba lagi"
   },
   "auth": {
     "login": {

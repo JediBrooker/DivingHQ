@@ -13,7 +13,9 @@
     "back": "← Zpět",
     "dashboard": "← Nástěnka",
     "error_generic": "Něco se pokazilo",
-    "view_profile": "Zobrazit profil →"
+    "view_profile": "Zobrazit profil →",
+    "load_failed": "Nepodařilo se načíst. Zkontrolujte připojení a zkuste to znovu.",
+    "retry": "Zkusit znovu"
   },
   "auth": {
     "login": {

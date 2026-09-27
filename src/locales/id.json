@@ -13,7 +13,9 @@
     "back": "← Kembali",
     "dashboard": "← Dasbor",
     "error_generic": "Terjadi kesalahan",
-    "view_profile": "Lihat profil →"
+    "view_profile": "Lihat profil →",
+    "load_failed": "Gagal memuat. Periksa koneksi Anda dan coba lagi.",
+    "retry": "Coba lagi"
   },
   "auth": {
     "login": {

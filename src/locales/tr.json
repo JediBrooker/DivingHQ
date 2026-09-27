@@ -13,7 +13,9 @@
     "back": "← Geri",
     "dashboard": "← Panel",
     "error_generic": "Bir şeyler ters gitti",
-    "view_profile": "Profili görüntüle →"
+    "view_profile": "Profili görüntüle →",
+    "load_failed": "Yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.",
+    "retry": "Tekrar dene"
   },
   "auth": {
     "login": {

@@ -11,12 +11,18 @@ import { showError, showSuccess } from '@/composables/useNotify'
 import { confirmAction } from '@/composables/useConfirm'
 import { fmtDate } from '@/lib/format'
 import EmptyState from '@/components/EmptyState.vue'
+import LoadError from '@/components/LoadError.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 
 const claims = ref([])
 const loading = ref(true)
+// The first load failed, so we can't say whether there's anything here.
+// Kept apart from an empty list: "No claims" on a 500 told a club admin
+// with an open vote that there was nothing to do.
+const loadError = ref(false)
+const loaded = ref(false)
 const busyId = ref(null)
 // Per claim: which of my clubs is voting, and the objection being typed.
 const draft = ref({})
@@ -41,8 +47,13 @@ async function load() {
   loading.value = true
   try {
     claims.value = await auth.apiFetch('/api/claims')
+    loaded.value = true
+    loadError.value = false
   } catch (err) {
-    showError(err.message)
+    // A refresh after a vote keeps the list it already had and just says
+    // what went wrong; with nothing loaded yet, show the retry state.
+    if (loaded.value) showError(err.message)
+    else loadError.value = true
   } finally {
     loading.value = false
   }
@@ -94,6 +105,7 @@ onMounted(load)
     </header>
 
     <div v-if="loading" class="muted">…</div>
+    <LoadError v-else-if="loadError" @retry="load" />
     <EmptyState v-else-if="!claims.length" icon="⚖" :title="$t('claims.empty_title')" :body="$t('claims.empty_body')" />
 
     <template v-else>

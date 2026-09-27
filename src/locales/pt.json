@@ -13,7 +13,9 @@
     "back": "← Voltar",
     "dashboard": "← Painel",
     "error_generic": "Algo correu mal",
-    "view_profile": "Ver perfil →"
+    "view_profile": "Ver perfil →",
+    "load_failed": "Não foi possível carregar. Verifique a sua ligação e tente novamente.",
+    "retry": "Tentar novamente"
   },
   "auth": {
     "login": {

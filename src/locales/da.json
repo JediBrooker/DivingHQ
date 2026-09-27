@@ -13,7 +13,9 @@
     "back": "← Tilbage",
     "dashboard": "← Oversigt",
     "error_generic": "Noget gik galt",
-    "view_profile": "Se profil →"
+    "view_profile": "Se profil →",
+    "load_failed": "Kunne ikke indlæses. Tjek din forbindelse, og prøv igen.",
+    "retry": "Prøv igen"
   },
   "auth": {
     "login": {

@@ -13,7 +13,9 @@
     "back": "← Bumalik",
     "dashboard": "← Dashboard board",
     "error_generic": "May nangyaring mali",
-    "view_profile": "Tingnan ang profile →"
+    "view_profile": "Tingnan ang profile →",
+    "load_failed": "Hindi ma-load. Suriin ang iyong koneksyon at subukang muli.",
+    "retry": "Subukang muli"
   },
   "auth": {
     "login": {

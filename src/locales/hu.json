@@ -13,7 +13,9 @@
     "back": "← Vissza",
     "dashboard": "← Vezérlőpult",
     "error_generic": "Hiba történt",
-    "view_profile": "Profil megtekintése →"
+    "view_profile": "Profil megtekintése →",
+    "load_failed": "Nem sikerült betölteni. Ellenőrizze a kapcsolatot, és próbálja újra.",
+    "retry": "Újrapróbálás"
   },
   "auth": {
     "login": {

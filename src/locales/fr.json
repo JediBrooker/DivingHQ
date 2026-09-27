@@ -13,7 +13,9 @@
     "back": "← Retour",
     "dashboard": "← Tableau de bord",
     "error_generic": "Une erreur est survenue",
-    "view_profile": "Voir le profil →"
+    "view_profile": "Voir le profil →",
+    "load_failed": "Chargement impossible. Vérifiez votre connexion et réessayez.",
+    "retry": "Réessayer"
   },
   "auth": {
     "login": {
