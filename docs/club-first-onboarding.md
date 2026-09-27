@@ -264,6 +264,7 @@ everything beneath it, never sideways.
 | Appoint club admins for… | own club (co-admins) | clubs in region | any club | |
 | See member data for… | own club | clubs in region | whole org | |
 | Set fees / take payments | own club | own region | org | |
+| Approve clubs founded at signup | n/a | no (v1) | own org, or let them join automatically (§20) | nobody, they join straight away |
 
 Concretely:
 
@@ -456,7 +457,8 @@ approval step.
 *Deviation from §6.1:* under a claimed federation nothing changed. A new
 club is still created straight away with no approval step, and its
 founder does **not** become club admin (the federation appoints admins
-from Clubs → Admins). Club approval for federations is left for later.
+from Clubs → Admins). Club approval for federations was left for later,
+and has since been built: see §20.
 
 *Deviation from §6.3:* `/register-org` for a country that already has an
 unclaimed account is refused (`409 country_has_clubs`) until claims exist
@@ -749,3 +751,33 @@ A founder used to land on a dashboard built for federations: the setup wizard is
 - **Invite link** on My club (`src/components/ClubSetupCard.vue`): `/register?country=<alpha-3>&club=<club id>`. RegisterView takes the country only if it's in `lib/countries.json` and the club only once it appears in that country's club list, selecting its region too. Junk parameters leave the form as it would be anyway.
 - **Short code** on the same card, `PUT /api/clubs/:id/short-code` (`routes/club-setup.js`): trimmed, upper-cased, up to 8 letters / digits / dashes, unique within the org, audit-logged as `club.code_changed`. Same rule as the region picker: the club's admins set it where the country is unclaimed, the federation's org admin (or the sysadmin) otherwise.
 - The sidebar section holding My club / My region is headed **Organisation**, not "Federation".
+
+## 20. Federation club approval as built (migration 096)
+
+The part of §6.1 phase 1 left out. Under a claimed federation a club founded at signup used to go live at once, with no admin and nobody told.
+
+**Schema.** `clubs.status` (`'pending'` or `'active'`, default `'active'`, CHECK constraint), `clubs.submitted_at`, `clubs.approved_at`, and `organisations.auto_approve_clubs` (default `false` for every org, existing federations included, so they start getting a queue). Everything that inserts a club without naming a status gets `'active'`, which is today's behaviour, so the default fails open to what already happened and never to extra privilege. `approved_at` is NULL for clubs that never waited. `event_rep_code()` also skips a pending club's short code (below). `init.sql` stays pinned.
+
+**Signup.** `lib/club-approvals.js` `needsApproval(org)` is `claim_state = 'claimed' AND NOT auto_approve_clubs`. When it holds, the club `POST /api/auth/register` creates is pending; otherwise it's active. Unclaimed countries are unchanged: active, founder is club admin, the sysadmin gets `club_created`. With "join automatically" on, the club is active, the founder is **not** made admin (the federation appoints), and the org admins get an in-app `club_created` heads-up, no email. The response carries `club_status` and `org_name`, and the form says which of the two will happen before submitting. `club_id` on register must be an active club.
+
+**Asking.** A pending club reaches the federation only once the founder verifies their email: verify-email and a password reset call `submitForUser`, which stamps `submitted_at` in the same UPDATE that picks the clubs (so a double click sends one notice) and tells the reviewers in-app (`club_pending`, the inbox's Action lane) and by email. Reviewers are the org's live org admins, or the sysadmins if it has none. The queue itself (`GET /api/clubs`) derives visibility from the founder's `email_verified_at`, not `submitted_at`, because an admin or the e2e suite can verify someone without the route. Unverified founders' clubs are never swept for now; they just never reach anyone. Founders see `pending_club` on the login and `/api/auth/me` bodies (a dashboard chip) and a line in the welcome email.
+
+**Deciding.** Org admin of the club's own org, or the sysadmin; region admins don't (v1). Routes use `requireOrgAdmin` and the lib re-checks the org, since that gate lets any org's admin through.
+
+- `POST /api/clubs/:id/approve` `{ name?, short_code?, region_id?, make_founder_admin = true }`. Locks the row (`FOR UPDATE`), 409 `club_not_pending` if someone got there first. Code follows the club-setup rules (`CLUB_CODE_RE`, upper case) and must not clash with an active club in the org. The founder becomes admin only if they're still in the club, not deleted and not suspended. Audit `club.approved` with the edits.
+- `POST /api/clubs/:id/reject` `{ reason?, move_members_to? }`. Deletes the club (the audit log keeps `club.rejected` with name, code, founder, reason, target and member count), optionally moving its members into an active club in the same org first. `payments.payer_club_id` is RESTRICT; a 23503 comes back as 409 `club_has_payments` and nothing changes. The founder keeps their account either way.
+- `GET`/`PUT /api/orgs/:id/club-settings` `{ auto_approve_clubs }`, 409 `org_unclaimed` on a country the clubs started, audit `org.club_settings_changed`. Switching it on doesn't approve the clubs already waiting.
+
+Founders hear the outcome in-app (`club_decision`) and by email. Admin and founder emails are English, like the other admin notices; every UI string is translated.
+
+**What a pending club can't do.** Filtered with `status = 'active'` (each has a test): the public club list `GET /api/orgs/:id/clubs` (signup, profile, competitor, records pickers), register's `club_id`, meet hosting, club-change targets, `PUT /api/users/:id/club`, the sysadmin's `/api/me/club-admin-clubs`, region `club_count` and the region overview, the public archive club list, role-request routing to club and region admins (`lib/role-requests.js`), and claim voters (`eligibleClubs`, which also ages a club from `approved_at`). Refused with 409 `club_pending` (after the permission check, so it gives nothing away): rename / delete, club admin grants, club setup (invite link, short code), club region moves, and everything behind `requireClubAdmin` / `requireClubAdminOnly` (affiliation checkout, classes, payouts, Connect onboarding).
+
+*Deviation from the design:* it let club records accrue under a pending club and the rep snapshot show its code. Both would put an unvetted name in public (a record book, the `record_broken` broadcast, scoreboard and team chips), so a pending club gets no club records (the diver's own bests still count) and `event_rep_code()` falls back to the home country for it. The entry snapshot still records the club, so its code appears once it's approved.
+
+**Claims.** Pending clubs only exist under a claimed federation. A revoked national claim (`lib/claims.js` `unwindOrgClaim`) activates them with their founders as admins (`activateAllPending`) and tells the founders; the revoke response lists `activated_clubs`. It also no longer strips a founder's admin seat on their own club, which the federation gave them on approval and which they'd have had from day one in an unclaimed country. The claimant's approval email mentions the new queue.
+
+**Notices.** `lib/notices.js` is the shared in-app + email sender (it was claims' private `notify()`); `lib/email.js` `sendNoticeEmail(userIds, { subject, body, path })` is the generic mail, with `sendClaimEmail` a thin wrapper that keeps the claim wording.
+
+**Frontend.** Clubs gets a Waiting for approval panel (founder, email-verified badge, waiting since, and a "Looks like …" warning when an active club in the org has the same code or much the same name), Approve and Reject dialogs on `BaseModal`, a Waiting stat, and the "New clubs from signup" setting. Pending clubs stay out of the table and its counts. Dashboard: a New clubs chip and attention card for org admins and the sysadmin, and a "club awaiting approval" chip for the founder. Register shows whether a new club waits or joins now, and the pending note after signup.
+
+**Tests.** Integration: the club approval tests at the end of `test/integration.test.js`. e2e: `test/e2e/club-approval.spec.js`.
