@@ -31,7 +31,7 @@
  *   Body-only (login + /api/auth/me): clubs this user admins, and whether
  *   their org has a federation (claimed) or the clubs run it (unclaimed).
  *   UI hint only, the server re-reads club_admins on every club-scoped route.
- * @property {{id: string, name: string, short_code: string}[]} [region_admin_of]
+ * @property {{id: string, name: string, short_code: string, org_claim_state: 'claimed'|'unclaimed'}[]} [region_admin_of]
  *   Body-only, same deal for region_admins (migration 088).
  * @property {boolean} [has_claim]
  *   Body-only: this user filed a claim (lib/claims.js, any status but
@@ -679,7 +679,9 @@
  * `records`, and matches a dive by competitor_id + dive_code + position
  * + score. Personal bests and first marks never appear here.
  * @property {'club'|'region'|'federation'|'continental'} scope
+ * @property {string}  scope_id     the book's club / region / org id, or the continent key
  * @property {string}  scope_code   club / region short code, country code, or the continent key
+ * @property {string}  height       e.g. '3m'; with scope, scope_id, gender, dive_code and position it names the book
  * @property {boolean} official     false for an unclaimed region or country
  * @property {'Male'|'Female'} gender
  * @property {string}  competitor_id
@@ -855,7 +857,8 @@
  *
  * @property {true} ok
  * @property {Object} removed
- * @property {{user_id: string, full_name: string, role: 'org_admin'|'meet_manager'}[]} removed.org_roles
+ * @property {{user_id: string, full_name: string, role: 'org_admin'|'meet_manager'|'referee'}[]} removed.org_roles
+ *   referee only when granted since the approval by someone other than a sysadmin
  * @property {{user_id: string, full_name: string, club_id: string, club_name: string}[]} removed.club_admins
  * @property {{user_id: string, full_name: string, region_id: string, region_name: string}[]} removed.region_admins
  * @property {{user_id: string, full_name: string, event_id: string, event_name: string}[]} removed.event_managers

@@ -17,9 +17,9 @@
 
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
-// Letters in any script, digits and dashes, up to eight. Shared with the
-// approve dialog so a code can't pass one and fail the other.
-const { CLUB_CODE_RE: CODE_RE } = require("../lib/club-approvals");
+// The code rule and clash check are shared with signup, the approve dialog
+// and the Clubs screen, so a code can't pass one and fail another.
+const { normaliseClubCode, assertCodeFree, ClubApprovalError } = require("../lib/club-approvals");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -103,14 +103,12 @@ module.exports = function createClubSetupRouter({ pool, verifyToken }) {
     if (!req.body || !Object.prototype.hasOwnProperty.call(req.body, "short_code")) {
       return res.status(400).json({ error: "short_code is required (null clears it)" });
     }
-    const raw = req.body.short_code;
-    if (raw !== null && typeof raw !== "string") {
-      return res.status(400).json({ error: "short_code must be a string or null" });
-    }
-    // Upper case like country codes, so "syd" and "SYD" can't both exist.
-    const code = typeof raw === "string" && raw.trim() ? raw.trim().toUpperCase() : null;
-    if (code && !CODE_RE.test(code)) {
-      return res.status(400).json({ error: "Use up to 8 letters, numbers or dashes", code: "bad_short_code" });
+    let code;
+    try {
+      // Upper case like country codes, so "syd" and "SYD" can't both exist.
+      code = normaliseClubCode(req.body.short_code);
+    } catch (err) {
+      return res.status(err.status).json({ error: err.message, ...(err.code ? { code: err.code } : {}) });
     }
     try {
       const club = await loadClub(req, res);
@@ -118,30 +116,19 @@ module.exports = function createClubSetupRouter({ pool, verifyToken }) {
       if (!club.canEditCode) {
         return res.status(403).json({ error: "Your federation sets your club's code" });
       }
-      // Check-then-write, so it has to be one step. Without the lock two
-      // clubs saving the same code at the same moment both passed the
-      // check and both got it. The lock is per org, so countries don't
-      // queue behind each other. Not a unique index, because live data
-      // can already hold duplicates from before this check existed.
+      // Check-then-write in one transaction under the per-org lock
+      // (assertCodeFree), or two clubs saving the same code at the same
+      // moment would both pass the check.
       const client = await pool.connect();
       let previous;
       try {
         await client.query("BEGIN");
-        if (code) {
-          await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`club-short-code:${club.org_id}`]);
-          // Two clubs showing the same code would make the club label
-          // useless, so a clash within the org is refused. Only approved
-          // clubs count, same as the approve dialog: a signup still waiting
-          // on the federation doesn't get to squat on a code an existing
-          // club wants.
-          const clash = await client.query(
-            "SELECT 1 FROM clubs WHERE org_id = $1 AND upper(short_code) = $2 AND id <> $3 AND status = 'active' LIMIT 1",
-            [club.org_id, code, club.id],
-          );
-          if (clash.rows.length) {
-            await client.query("ROLLBACK");
-            return res.status(409).json({ error: "Another club already uses that code", code: "short_code_taken" });
-          }
+        try {
+          await assertCodeFree(client, club.org_id, code, club.id);
+        } catch (err) {
+          if (!(err instanceof ClubApprovalError)) throw err;
+          await client.query("ROLLBACK");
+          return res.status(err.status).json({ error: err.message, code: err.code });
         }
         // Read under the row lock so the audit's "from" is what we
         // actually replaced, even if a co-admin saved a moment ago.

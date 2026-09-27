@@ -5575,6 +5575,22 @@ test("club approval: a waiting club can't host, be joined, be managed or be paid
     assert.equal((await pool.query("SELECT count(*)::int AS n FROM records_club WHERE club_id = $1", [P])).rows[0].n, 0);
     const archive = (await fetchJson("GET", "/api/archive/clubs?limit=500")).body;
     assert.ok(!archive.some((c) => c.id === P), "not in the public archive's club list");
+    // Nor its founder-typed name and code, on anything the public reads.
+    const clubName = (await approvalKit.club(P)).name;
+    const standing = async () => (await fetchJson("GET", `/api/scoreboard/${ev.body.id}?cache=skip`)).body
+      .standings.find((r) => r.competitor_id === A.id);
+    assert.equal((await standing()).club_name, null, "scoreboard standings");
+    const profile = (await fetchJson("GET", `/api/divers/${A.id}/profile`)).body;
+    assert.equal(profile.club_name ?? null, null, "public diver profile");
+    assert.equal(profile.club_code ?? null, null);
+    const csv = await new Promise((resolve, reject) => {
+      http.get(`${baseUrl}/api/events/${ev.body.id}/results.csv`, (r) => {
+        const chunks = []; r.on("data", (c) => chunks.push(c)); r.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+      }).on("error", reject);
+    });
+    // As a field of its own: the founder's name has the club's in it.
+    const esc = clubName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.ok(!new RegExp(`(^|,)"?${esc}"?(,|$)`, "m").test(csv), "results.csv");
 
     // Payments RESTRICT a club's deletion. Shouldn't happen to a waiting
     // club, but if it does, reject says so instead of a 500.
@@ -5593,6 +5609,7 @@ test("club approval: a waiting club can't host, be joined, be managed or be paid
     // Once approved, all of that opens up.
     assert.equal((await fetchJson("POST", `/api/clubs/${P}/approve`, { token: fx.adminToken, body: {} })).status, 200);
     assert.equal(await rep(), "TAD", "the entry snapshot picks the code up by itself");
+    assert.equal((await standing()).club_name, (await approvalKit.club(P)).name, "and the name shows once it's approved");
     const hosted = await fetchJson("POST", "/api/meets", { token: fx.adminToken, body: { name: "Gulf Open", host_club_id: P } });
     assert.equal(hosted.status, 201, JSON.stringify(hosted.body));
     assert.equal((await fetchJson("POST", "/api/club-change-requests", { token: diver.token, body: { to_club_id: P } })).status, 201);
@@ -5699,7 +5716,8 @@ test("club approval: the federation approves, fixing details and making the foun
     assert.equal(audit[0].actor_id, fx.adminId);
     assert.deepEqual(audit[0].metadata.edits, {
       name: { from: "malabo divers", to: "Malabo Divers" },
-      short_code: { from: "mal", to: "MLB" },
+      // Signup upper-cases the code now, even for a club that waits.
+      short_code: { from: "MAL", to: "MLB" },
       region_id: { from: bioko, to: litoral },
     });
     assert.equal(audit[0].metadata.founder_admin, true);
@@ -5922,6 +5940,10 @@ test("club approval: unclaimed countries are unchanged, and a revoked claim lets
     assert.equal(P.res.club_status, "pending");
     assert.equal((await fetchJson("POST", `/api/clubs/${Q.clubId}/approve`, { token: fedToken, body: {} })).status, 200);
     assert.equal(await approvalKit.isAdmin(Q.clubId, Q.id), true);
+    // The federation lets new clubs straight in from here on.
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const flip = await fetchJson("PUT", `/api/orgs/${orgId}/club-settings`, { token: fedToken, body: { auto_approve_clubs: true } });
+    assert.equal(flip.status, 200, JSON.stringify(flip.body));
 
     const rv = await fetchJson("POST", `/api/claims/${claimId}/revoke`, { token: sys.token, body: { reason: "Test" } });
     assert.equal(rv.status, 200, JSON.stringify(rv.body));
@@ -5940,6 +5962,10 @@ test("club approval: unclaimed countries are unchanged, and a revoked claim lets
       "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'claim.revoked'", [claimId],
     )).rows[0].metadata;
     assert.deepEqual(audit.activated_clubs, [P.clubId]);
+    // Its "join automatically" goes with it, so the next claimant starts
+    // with the queue their approval email describes.
+    assert.equal((await pool.query("SELECT auto_approve_clubs FROM organisations WHERE id = $1", [orgId])).rows[0].auto_approve_clubs, false);
+    assert.equal(audit.auto_approve_clubs_reset, true);
     const act = (await pool.query(
       "SELECT actor_id, metadata FROM audit_log WHERE entity_id = $1 AND action = 'club.approved'", [P.clubId],
     )).rows[0];
@@ -6238,5 +6264,680 @@ test("robots.txt and sitemap.xml name APP_BASE_URL's origin when it's set", asyn
   } finally {
     if (saved === undefined) delete process.env.APP_BASE_URL;
     else process.env.APP_BASE_URL = saved;
+  }
+});
+
+// ---------------------------------------------------------------------
+// Release review fixes (track/review).
+// ---------------------------------------------------------------------
+
+// Referee runs any meet in the org, same as org_admin, so a revoked
+// federation can't leave its referees behind. A sysadmin's grant and one
+// made before the claim stay put.
+test("claims: a national revoke also takes back referees the federation appointed", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "AFG";
+  await claimKit.wipe(CODE);
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+    const A = await claimKit.founder(CODE, "Kabul Divers");
+    const B = await claimKit.founder(CODE, "Herat Divers");
+    const C = await claimKit.founder(CODE, "Mazar Divers");
+    const D = await claimKit.founder(CODE, "Kandahar Divers");
+    for (const x of [A, B]) await claimKit.makeEligible(x.clubId);
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    // Before any claim: DivingHQ made C a referee, and D has an old grant.
+    await pool.query(
+      "INSERT INTO user_org_roles (user_id, org_id, role, granted_by) VALUES ($1, $2, 'referee', $3)",
+      [C.id, orgId, sys.id],
+    );
+    await pool.query(
+      "INSERT INTO user_org_roles (user_id, org_id, role, granted_at) VALUES ($1, $2, 'referee', now() - interval '30 days')",
+      [D.id, orgId],
+    );
+
+    const fed = await claimKit.claim({ org_name: "Afghan Diving Federation", country_code: CODE });
+    assert.equal(fed.res.body.approver, "clubs");
+    await claimKit.verify(fed.id);
+    const id = fed.res.body.claim_id;
+    for (const x of [A, B]) await fetchJson("POST", `/api/claims/${id}/vote`, { token: x.token, body: { vote: "approve" } });
+    assert.equal((await claimStatus(id)).status, "approved");
+
+    // Running the country, it makes an accomplice and itself referees.
+    const fedToken = (await claimKit.login(fed.username)).token;
+    const put = async (userId, roles) => (await fetchJson("PUT", `/api/users/${userId}/roles`, { token: fedToken, body: { roles } })).status;
+    assert.equal(await put(A.id, ["referee", "spectator"]), 200);
+    assert.equal(await put(fed.id, ["org_admin", "referee"]), 200);
+    const versionOf = async (u) => (await pool.query("SELECT token_version FROM users WHERE id = $1", [u])).rows[0].token_version;
+    const aBefore = await versionOf(A.id);
+
+    const rv = await fetchJson("POST", `/api/claims/${id}/revoke`, { token: sys.token, body: { reason: "Not the federation" } });
+    assert.equal(rv.status, 200, JSON.stringify(rv.body));
+
+    const referees = (await pool.query(
+      "SELECT user_id FROM user_org_roles WHERE org_id = $1 AND role = 'referee'", [orgId],
+    )).rows.map((r) => r.user_id).sort();
+    assert.deepEqual(referees, [C.id, D.id].sort(), "only the sysadmin's and the pre-claim referee are left");
+    const pairs = rv.body.removed.org_roles.map((r) => `${r.user_id}:${r.role}`).sort();
+    assert.ok(pairs.includes(`${A.id}:referee`), JSON.stringify(pairs));
+    assert.ok(pairs.includes(`${fed.id}:referee`), JSON.stringify(pairs));
+    assert.ok(!pairs.includes(`${C.id}:referee`) && !pairs.includes(`${D.id}:referee`));
+    const audit = (await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'claim.revoked'", [id],
+    )).rows[0].metadata;
+    assert.ok(audit.removed.org_roles.some((r) => r.user_id === A.id && r.role === "referee"));
+    // The JWT carries org_roles, so A has to sign in again to lose it.
+    assert.ok((await versionOf(A.id)) > aBefore, "token_version bumped");
+    assert.ok((await pool.query("SELECT 1 FROM user_org_roles WHERE user_id = $1 AND org_id = $2", [A.id, orgId])).rows.length);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+// A region re-claimed after its admins have all gone: the new claim
+// retires the old one, and the old one can't be revoked out from under it.
+test("claims: re-claiming an orphaned region retires the old claim and its dead admin rows", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "ALB";
+  await claimKit.wipe(CODE);
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+    const A = await claimKit.founder(CODE, "Tirana Divers");
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const tr = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Tirana', 'TR') RETURNING id", [orgId],
+    )).rows[0].id;
+    const approve = async (who) => {
+      await claimKit.verify(who.id);
+      const r = await fetchJson("POST", `/api/claims/${who.res.body.claim_id}/decide`, { token: sys.token, body: { decision: "approve" } });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+    };
+    const first = await claimKit.claim({ org_name: "Tirana Diving", country_code: CODE, region_code: "TR" });
+    assert.equal(first.res.status, 201, JSON.stringify(first.res.body));
+    await approve(first);
+    // Its only admin is suspended, so the region is open to a new body.
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [first.id]);
+    const second = await claimKit.claim({ org_name: "Tirana Diving Two", country_code: CODE, region_code: "TR" });
+    assert.equal(second.res.status, 201, JSON.stringify(second.res.body));
+    await approve(second);
+
+    const old = await claimStatus(first.res.body.claim_id);
+    assert.equal(old.status, "revoked");
+    assert.match(old.status_reason, /newer approved claim/);
+    assert.equal((await claimStatus(second.res.body.claim_id)).status, "approved");
+    const admins = (await pool.query("SELECT user_id FROM region_admins WHERE region_id = $1", [tr])).rows.map((r) => r.user_id);
+    assert.deepEqual(admins, [second.id], "the suspended claimant's row is gone, the new one's stays");
+    // Nothing left for a revoke of the old claim to unwind.
+    assert.equal((await fetchJson("POST", `/api/claims/${first.res.body.claim_id}/revoke`, { token: sys.token, body: {} })).status, 409);
+
+    // Rows from before this fix can still have two approved claims. The
+    // older one is refused rather than stripping the current state body.
+    await pool.query("UPDATE claims SET status = 'approved', decided_at = now() - interval '1 day' WHERE id = $1", [first.res.body.claim_id]);
+    const legacy = await fetchJson("POST", `/api/claims/${first.res.body.claim_id}/revoke`, { token: sys.token, body: {} });
+    assert.equal(legacy.status, 409, JSON.stringify(legacy.body));
+    assert.equal(legacy.body.code, "claim_superseded");
+    assert.equal((await pool.query("SELECT claim_state FROM regions WHERE id = $1", [tr])).rows[0].claim_state, "claimed");
+    assert.ok((await pool.query("SELECT 1 FROM region_admins WHERE region_id = $1 AND user_id = $2", [tr, second.id])).rows.length);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+// A club admin who transfers to another federation leaves their seats in
+// the old one behind: club, region and event manager. A row stranded by an
+// older transfer doesn't count either.
+test("org transfer: the mover's admin seats in the old federation go with the move", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: true });
+  const Y = await setupFixture({ withEvent: false });
+  try {
+    const club = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, 'Old Town Divers') RETURNING id", [X.orgId],
+    )).rows[0].id;
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Old Shire', 'OSH') RETURNING id", [X.orgId],
+    )).rows[0].id;
+    const mover = await insertUser({ orgId: X.orgId, username: `int-mv-${X.slug}`, fullName: "Mover Person", role: "diver" });
+    const stayer = await insertUser({ orgId: X.orgId, username: `int-st-${X.slug}`, fullName: "Stayer Person", role: "diver" });
+    for (const u of [mover, stayer]) {
+      await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, u, X.orgId]);
+    }
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region, mover, X.orgId]);
+    const meet = (await pool.query(
+      "INSERT INTO meets (org_id, name, host_club_id) VALUES ($1, 'Club night', $2) RETURNING id", [X.orgId, club],
+    )).rows[0].id;
+    await pool.query("UPDATE events SET meet_id = $2 WHERE id = $1", [X.eventId, meet]);
+    const other = (await fetchJson("POST", "/api/events", {
+      token: X.adminToken,
+      body: { name: `Other ${X.slug}`, gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 6, event_type: "individual" },
+    })).body.id;
+    await pool.query("INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2)", [other, mover]);
+
+    const signIn = async () => (await fetchJson("POST", "/api/auth/login", {
+      body: { username: `int-mv-${X.slug}`, password: "not-used-here" },
+    })).body.token;
+    let token = await signIn();
+    assert.equal((await fetchJson("GET", `/api/events/${X.eventId}/score-audit`, { token })).status, 200);
+    const tv = async () => (await pool.query("SELECT token_version FROM users WHERE id = $1", [mover])).rows[0].token_version;
+    const before = await tv();
+
+    const ask = await fetchJson("POST", "/api/club-change-requests", { token, body: { to_org_id: Y.orgId } });
+    assert.equal(ask.status, 201, JSON.stringify(ask.body));
+    assert.equal(ask.body.kind, "org_transfer");
+    const review = (tok) => fetchJson("POST", `/api/club-change-requests/${ask.body.id}/review`, { token: tok, body: { decision: "approved" } });
+    assert.equal((await review(X.adminToken)).body.status, "pending");
+    assert.equal((await review(Y.adminToken)).body.status, "approved");
+
+    const count = async (sql) => (await pool.query(sql, [mover])).rows[0].n;
+    assert.equal(await count("SELECT count(*)::int AS n FROM club_admins WHERE user_id = $1"), 0);
+    assert.equal(await count("SELECT count(*)::int AS n FROM region_admins WHERE user_id = $1"), 0);
+    assert.equal(await count("SELECT count(*)::int AS n FROM event_managers WHERE user_id = $1"), 0);
+    assert.ok((await pool.query("SELECT 1 FROM club_admins WHERE club_id = $1 AND user_id = $2", [club, stayer])).rows.length);
+    assert.ok((await tv()) > before, "the old token, carrying org X, is dead");
+    // The co-admin hears about it; the region had nobody else, so X's admin does.
+    const titles = async (u) => (await pool.query("SELECT title FROM notifications WHERE user_id = $1", [u])).rows.map((r) => r.title);
+    assert.ok((await titles(stayer)).includes("Old Town Divers has one admin fewer"));
+    assert.ok((await titles(X.adminId)).includes("Old Shire has no admin now"));
+    const audit = (await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'user.org_transferred'", [mover],
+    )).rows[0].metadata;
+    assert.deepEqual(audit.removed.club_admins, [club]);
+
+    token = await signIn();
+    assert.equal((await fetchJson("GET", `/api/events/${X.eventId}/score-audit`, { token })).status, 403);
+    // A row an earlier transfer stranded doesn't bring the access back.
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, mover, X.orgId]);
+    assert.equal((await fetchJson("GET", `/api/events/${X.eventId}/score-audit`, { token })).status, 403);
+  } finally {
+    await pool.query("DELETE FROM club_change_requests WHERE from_org_id = $1 OR to_org_id = $1", [X.orgId]).catch(() => {});
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [X.orgId]).catch(() => {});
+    // The mover lives in Y now; move them back so X's teardown takes them.
+    await pool.query("UPDATE users SET org_id = $1 WHERE username = $2", [X.orgId, `int-mv-${X.slug}`]).catch(() => {});
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [X.orgId]).catch(() => {});
+    await teardownFixture(Y);
+    await teardownFixture(X);
+  }
+});
+
+// Signup used to store a new club's code as typed, cut to 8: no upper
+// case, no format check, no clash check, and a club that goes live at once
+// (no federation) never met the rule club setup and approval apply. The
+// federation's Clubs screen skipped it too.
+test("club short codes: signup and the Clubs screen follow the same rule as club setup", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "DZA";
+  await claimKit.wipe(CODE);
+  const fed = await setupFixture({ withEvent: false });
+  try {
+    const signUp = (clubName, code) => {
+      const username = `int-sc-${crypto.randomBytes(4).toString("hex")}`;
+      return fetchJson("POST", "/api/auth/register", {
+        body: { username, full_name: `${clubName} Admin`, password: TEST_PASSWORD, email: `${username}@example.test`,
+                country_code: CODE, new_club_name: clubName, new_club_short_code: code },
+      });
+    };
+    const codeOf = async (name) => (await pool.query(
+      "SELECT c.short_code FROM clubs c JOIN organisations o ON o.id = c.org_id WHERE o.country_code = $1 AND c.name = $2",
+      [CODE, name],
+    )).rows[0]?.short_code;
+
+    assert.equal((await signUp("Algiers Divers", " sdc ")).status, 201);
+    assert.equal(await codeOf("Algiers Divers"), "SDC", "upper-cased and trimmed");
+    // No federation, so the club is live now: its code has to be free now.
+    for (const clash of ["SDC", "sdc"]) {
+      const r = await signUp("Oran Divers", clash);
+      assert.equal(r.status, 409, JSON.stringify(r.body));
+      assert.equal(r.body.code, "short_code_taken");
+    }
+    // Too long is refused, not quietly cut to eight.
+    const long = await signUp("Melbourne Divers", "MELBOURNE");
+    assert.equal(long.status, 400);
+    assert.equal(long.body.code, "bad_short_code");
+    assert.equal(await codeOf("Melbourne Divers"), undefined, "nothing was created");
+    assert.equal((await signUp("Blida Divers", "kab-1")).status, 201);
+    assert.equal(await codeOf("Blida Divers"), "KAB-1");
+
+    // The federation's own Clubs screen, same rule.
+    const post = (code) => fetchJson("POST", `/api/orgs/${fed.orgId}/clubs`, { token: fed.adminToken, body: { name: `Club ${code}`, short_code: code } });
+    const first = await post("cap");
+    assert.equal(first.status, 201, JSON.stringify(first.body));
+    assert.equal(first.body.short_code, "CAP");
+    assert.equal((await post("CAP")).body.code, "short_code_taken");
+    assert.equal((await post("TOO LONG CODE")).body.code, "bad_short_code");
+    const second = (await post("DUP")).body;
+    // A pair that already share a code (from before the rule) can still be
+    // renamed; only a change of code is checked.
+    await pool.query("UPDATE clubs SET short_code = 'cap' WHERE id = $1", [second.id]);
+    const rename = await fetchJson("PUT", `/api/clubs/${second.id}`, { token: fed.adminToken, body: { name: "Renamed", short_code: "cap" } });
+    assert.equal(rename.status, 200, JSON.stringify(rename.body));
+    assert.equal(rename.body.short_code, "CAP");
+    const clash = await fetchJson("PUT", `/api/clubs/${first.body.id}`, { token: fed.adminToken, body: { name: "Club cap", short_code: "dup2" } });
+    assert.equal(clash.status, 200);
+    const taken = await fetchJson("PUT", `/api/clubs/${second.id}`, { token: fed.adminToken, body: { name: "Renamed", short_code: "DUP2" } });
+    assert.equal(taken.status, 409);
+    assert.equal(taken.body.code, "short_code_taken");
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [fed.orgId]).catch(() => {});
+    await teardownFixture(fed);
+    await claimKit.wipe(CODE);
+  }
+});
+
+// A dive's club and region records go to the club and region the diver was
+// entered from, the same rule as the scoreboard label, in the live path and
+// in rebuild-records. The live path used the diver's club at scoring time;
+// the replay filled a club-less snapshot from the diver's current club and
+// ignored whether a club was still waiting on its federation.
+test("records: club and region come from the entry, live and in the replay", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { rebuildRecords } = require("../scripts/rebuild-records");
+  const st = await setupFixture({ withEvent: false });
+  const client = await pool.connect();
+  try {
+    const lib = recordKit.lib();
+    const region = async (name, code) => (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, $2, $3) RETURNING id", [st.orgId, name, code],
+    )).rows[0].id;
+    const north = await region("Entry North", "ENN");
+    const south = await region("Entry South", "ENS");
+    const clubA = await recordKit.club(st.orgId, "Entry A Divers", "ENA", north);
+    const clubB = await recordKit.club(st.orgId, "Entry B Divers", "ENB", south);
+    const clubC = await recordKit.club(st.orgId, "Entry C Divers", "ENC", south);
+    const waiting = await recordKit.club(st.orgId, "Entry Waiting Divers", "ENW", south);
+    await pool.query("UPDATE clubs SET status = 'pending' WHERE id = $1", [waiting]);
+    const dive = await recordKit.threeMetreDive();
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+
+    // Entered from A, moves to B before the dive completes.
+    const mover = await recordKit.diver(st.orgId, clubA, "female", "Gia Entry");
+    await recordKit.dive(women, mover, 1, dive, 6);
+    await pool.query("UPDATE users SET club_id = $2 WHERE id = $1", [mover, clubB]);
+    const broken = await lib.checkAndApplyRecords({ eventId: women.id, competitorId: mover, roundNumber: 1 });
+    assert.equal(broken.find((b) => b.scope === "club")?.scope_id, clubA, JSON.stringify(broken));
+    assert.equal(broken.find((b) => b.scope === "club").scope_code, "ENA");
+    assert.equal(broken.find((b) => b.scope === "region")?.scope_id, north);
+    const inBook = async (tbl, col, id) => (await pool.query(`SELECT count(*)::int AS n FROM ${tbl} WHERE ${col} = $1`, [id])).rows[0].n;
+    assert.equal(await inBook("records_club", "club_id", clubB), 0, "the club they moved to gets nothing");
+
+    // Entered with no club, joins C (in the south) afterwards.
+    const loner = await recordKit.diver(st.orgId, null, "female", "Hana Entry");
+    await recordKit.dive(women, loner, 1, dive, 7);
+    await pool.query("UPDATE users SET club_id = $2 WHERE id = $1", [loner, clubC]);
+    // A founder whose club is still waiting.
+    const founder = await recordKit.diver(st.orgId, waiting, "female", "Iva Entry");
+    await recordKit.dive(women, founder, 1, dive, 8);
+    for (const who of [loner, founder]) {
+      await lib.checkAndApplyRecords({ eventId: women.id, competitorId: who, roundNumber: 1 });
+    }
+    assert.equal(await inBook("records_club", "club_id", clubC), 0);
+    assert.equal(await inBook("records_club", "club_id", waiting), 0);
+    // The waiting club's region still counts (only its name is unvetted);
+    // the club-less entry never reaches the south at all.
+    const southHolders = (await pool.query("SELECT holder_id FROM records_region WHERE region_id = $1", [south])).rows;
+    assert.deepEqual(southHolders.map((r) => r.holder_id), [founder]);
+
+    // The replay agrees with every one of those: nothing to add or change
+    // in the club or region books.
+    const dry = await rebuildRecords(client, { orgId: st.orgId });
+    for (const scope of ["club", "region"]) {
+      const c = dry.find((r) => r.scope === scope).counts;
+      assert.equal(c.added + c.changed + c.removed, 0, `${scope}: ${JSON.stringify(c)}`);
+    }
+  } finally {
+    client.release();
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// Records only ever went up: a record-setting dive that was Failed,
+// capped or corrected down kept its record, and one corrected up
+// "beat" its own earlier total. recomputeRecordKeys replays the dive's
+// books; a redive's stale panel doesn't count until every judge has
+// scored again.
+test("records: a changed dive's books are replayed, down as well as up", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const lib = recordKit.lib();
+    const club = await recordKit.club(st.orgId, "Replay Divers", "RPD");
+    const old = await recordKit.diver(st.orgId, club, "female", "Jo Standing");
+    const star = await recordKit.diver(st.orgId, club, "female", "Kit Rising");
+    const dive = await recordKit.threeMetreDive();
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(women, old, 1, dive, 6);
+    await lib.checkAndApplyRecords({ eventId: women.id, competitorId: old, roundNumber: 1 });
+    await recordKit.dive(women, star, 1, dive, 6.5);
+    await lib.checkAndApplyRecords({ eventId: women.id, competitorId: star, roundNumber: 1 });
+    const book = async () => (await pool.query(
+      "SELECT holder_id, score::float, prev_score::float, event_id FROM records_club WHERE club_id = $1", [club],
+    )).rows[0];
+    const standing = (await pool.query(
+      "SELECT score::float FROM records_personal WHERE user_id = $1", [old],
+    )).rows[0].score;
+    assert.equal((await book()).holder_id, star);
+    const setScores = (v, extra = "") => pool.query(
+      `UPDATE scores SET score = $3 ${extra} WHERE event_id = $1 AND competitor_id = $2 AND round_number = 1`,
+      [women.id, star, v],
+    );
+    const replay = () => lib.recomputeRecordKeys({ eventId: women.id, competitorId: star, roundNumber: 1 });
+
+    // Failed: the old holder gets the book back, first mark again.
+    await setScores(0);
+    let out = await replay();
+    assert.deepEqual(out.broken, [], "nothing to announce on the way down");
+    assert.equal(out.changed, true);
+    assert.deepEqual(await book(), { holder_id: old, score: standing, prev_score: null, event_id: women.id });
+
+    // Corrected up past it: announced, and what it beat is the other
+    // diver's mark, never its own earlier total.
+    await setScores(7);
+    out = await replay();
+    const mark = out.broken.find((b) => b.scope === "club");
+    assert.ok(mark, JSON.stringify(out.broken));
+    assert.equal(mark.prev_score, standing);
+    assert.equal(mark.prev_holder_name, "Jo Standing");
+    const raised = await book();
+    assert.equal(raised.holder_id, star);
+    await setScores(8);
+    out = await replay();
+    assert.equal((await book()).prev_score, standing, "still what it beat, not its own 7s");
+    assert.ok(out.broken.some((b) => b.scope === "club"));
+    // Unchanged scores: nothing written, nothing said.
+    out = await replay();
+    assert.deepEqual(out, { broken: [], changed: false });
+
+    // Redive: the stale panel stops counting straight away, and one fresh
+    // score isn't a completed dive.
+    await setScores(8, ", status = 'redive'");
+    await replay();
+    assert.equal((await book()).holder_id, old);
+    await pool.query(
+      "UPDATE scores SET score = 9, status = 'active' WHERE event_id = $1 AND competitor_id = $2 AND judge_id = $3",
+      [women.id, star, women.judges[0]],
+    );
+    assert.deepEqual((await lib.checkAndApplyRecords({ eventId: women.id, competitorId: star, roundNumber: 1 })), []);
+    await replay();
+    assert.equal((await book()).holder_id, old);
+    await setScores(9, ", status = 'active'");
+    await replay();
+    assert.equal((await book()).holder_id, star);
+
+    // The HTTP correction path replays too: two judges corrected to 0
+    // (the first is trimmed, the second isn't) drops it below Jo's mark.
+    const ids = (await pool.query(
+      "SELECT s.id FROM scores s JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id WHERE s.event_id = $1 AND s.competitor_id = $2 ORDER BY ej.judge_number",
+      [women.id, star],
+    )).rows.map((r) => r.id);
+    for (const id of ids.slice(0, 3)) {
+      const r = await fetchJson("PUT", `/api/scores/${id}`, { token: st.adminToken, body: { score: 0, reason: "test" } });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+    }
+    assert.equal((await book()).holder_id, old, "the correction took the record away");
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// scores reference competitor_dive_lists(event, competitor, round) with no
+// ON UPDATE, so moving the dive lists and the scores in two statements
+// failed the whole claim for anyone who had ever been scored.
+test("claiming a past account with scored dives moves them", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const old = await recordKit.diver(st.orgId, null, "female", "Mo Scored");
+    const meName = `int-me-${crypto.randomBytes(3).toString("hex")}`;
+    const me = await insertUser({ orgId: st.orgId, role: "diver", username: meName, fullName: "Mo Scored" });
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(women, old, 1, await recordKit.threeMetreDive(), 6);
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [old]);
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username: meName, password: "not-used-here" } });
+    const claim = await fetchJson("POST", "/api/users/me/claim", {
+      token: login.body.token, body: { old_user_ids: [old], password: "not-used-here" },
+    });
+    assert.equal(claim.status, 200, JSON.stringify(claim.body));
+    assert.equal(claim.body.counts.dives, 1);
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM scores WHERE competitor_id = $1", [me])).rows[0].n, 5);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// Claiming a past account hard-deletes the old user, and the record books
+// cascade off users. The old account's records have to move over first,
+// or a national record holder who deletes and comes back loses every one.
+test("claiming a past account carries its records over", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const lib = recordKit.lib();
+    const club = await recordKit.club(st.orgId, "Comeback Divers", "CBD");
+    const old = await recordKit.diver(st.orgId, club, "female", "Lou Comeback");
+    const meName = `int-me-${crypto.randomBytes(3).toString("hex")}`;
+    const me = await insertUser({ orgId: st.orgId, role: "diver", username: meName, fullName: "Lou Comeback" });
+    await pool.query("UPDATE users SET club_id = $2, gender = 'female' WHERE id = $1", [me, club]);
+    const [d1, d2] = (await pool.query(
+      "SELECT id FROM dive_directory WHERE height = 3 AND is_custom = FALSE ORDER BY dive_code, position LIMIT 2",
+    )).rows.map((r) => r.id);
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+    // The old account holds the club and national record on d1, and a
+    // personal best on d2. The new one has a lower personal best on d1.
+    await recordKit.dive(women, old, 1, d1, 7);
+    await lib.checkAndApplyRecords({ eventId: women.id, competitorId: old, roundNumber: 1 });
+    await recordKit.dive(women, old, 2, d2, 5);
+    await lib.checkAndApplyRecords({ eventId: women.id, competitorId: old, roundNumber: 2 });
+    // Another event: a claim refuses two entries for the same round.
+    const later = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(later, me, 1, d1, 6);
+    await lib.checkAndApplyRecords({ eventId: later.id, competitorId: me, roundNumber: 1 });
+    const oldBest = (await pool.query(
+      "SELECT score::float FROM records_personal WHERE user_id = $1 AND dive_code = (SELECT dive_code FROM dive_directory WHERE id = $2)",
+      [old, d1],
+    )).rows[0].score;
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [old]);
+
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username: meName, password: "not-used-here" } });
+    const claim = await fetchJson("POST", "/api/users/me/claim", {
+      token: login.body.token, body: { old_user_ids: [old], password: "not-used-here" },
+    });
+    assert.equal(claim.status, 200, JSON.stringify(claim.body));
+
+    const holders = async (tbl) => (await pool.query(
+      `SELECT holder_id FROM ${tbl} WHERE event_id = $1`, [women.id],
+    )).rows.map((r) => r.holder_id);
+    for (const tbl of ["records_club", "records_federation"]) {
+      const h = await holders(tbl);
+      assert.ok(h.length === 2 && h.every((id) => id === me), `${tbl} survived under the new account: ${JSON.stringify(h)}`);
+    }
+    // And the scores came with the dive lists (they used to trip the
+    // scores -> dive list foreign key and fail the whole claim).
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM scores WHERE competitor_id = $1 AND event_id = $2", [me, women.id])).rows[0].n, 10);
+    const pbs = (await pool.query(
+      "SELECT dive_code, score::float FROM records_personal WHERE user_id = $1 ORDER BY dive_code", [me],
+    )).rows;
+    assert.equal(pbs.length, 2, JSON.stringify(pbs));
+    assert.ok(pbs.some((r) => r.score === oldBest), "the better personal best on d1 is the one kept");
+    const archived = (await pool.query(
+      "SELECT score::float FROM records_personal_history WHERE user_id = $1", [me],
+    )).rows.map((r) => r.score);
+    assert.ok(archived.length >= 1 && archived.every((s) => s < oldBest), JSON.stringify(archived));
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// Where there's no federation, joining a claimed region takes both sides
+// (PUT /api/clubs/:id/region answers 202). Signup used to set the region
+// straight away, so a founder could put a club in a state body's region,
+// and into its official records, without it ever being asked.
+test("signup into a claimed region asks it, once the founder has verified", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "AGO";
+  await claimKit.wipe(CODE);
+  try {
+    const R = await claimKit.founder(CODE, "Benguela Divers");
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [R.id])).rows[0].org_id;
+    const region = async (name, code, claimed) => (await pool.query(
+      `INSERT INTO regions (org_id, name, short_code, claim_state, claimed_name)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [orgId, name, code, claimed ? "claimed" : "unclaimed", claimed ? `${name} Diving` : null],
+    )).rows[0].id;
+    const lu = await region("Luanda", "LU", true);
+    const hu = await region("Huambo", "HU", false);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [lu, R.id, orgId]);
+
+    const signUp = async (clubName, regionCode) => {
+      const username = `int-ra-${crypto.randomBytes(4).toString("hex")}`;
+      const r = await fetchJson("POST", "/api/auth/register", {
+        body: { username, full_name: `${clubName} Admin`, password: TEST_PASSWORD, email: `${username}@example.test`,
+                country_code: CODE, new_club_name: clubName, region_code: regionCode },
+      });
+      assert.equal(r.status, 201, JSON.stringify(r.body));
+      const u = (await pool.query("SELECT id, club_id FROM users WHERE username = $1", [username])).rows[0];
+      return { id: u.id, clubId: u.club_id };
+    };
+    const clubRow = async (id) => (await pool.query(
+      "SELECT region_id, requested_region_id FROM clubs WHERE id = $1", [id],
+    )).rows[0];
+    const asksFor = async () => (await pool.query(
+      "SELECT count(*)::int AS n FROM notifications WHERE user_id = $1 AND category = 'region_request'", [R.id],
+    )).rows[0].n;
+    const overview = async () => (await fetchJson("GET", `/api/regions/${lu}/overview`, { token: R.token })).body;
+
+    const B = await signUp("Cacuaco Divers", "LU");
+    assert.deepEqual(await clubRow(B.clubId), { region_id: null, requested_region_id: lu });
+    // Not yet verified: nobody's pinged and the ask isn't listed.
+    assert.equal(await asksFor(), 0);
+    assert.deepEqual((await overview()).join_requests, []);
+    await claimKit.verify(B.id);
+    assert.equal(await asksFor(), 1);
+    assert.deepEqual((await overview()).join_requests.map((c) => c.id), [B.clubId]);
+    await claimKit.verify(B.id);
+    assert.equal(await asksFor(), 1, "a second click doesn't ask again");
+    // The region accepts the usual way.
+    const ok = await fetchJson("PUT", `/api/clubs/${B.clubId}/region`, { token: R.token, body: { region_id: lu } });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.deepEqual(await clubRow(B.clubId), { region_id: lu, requested_region_id: null });
+
+    // An unclaimed region is still the founder's pick.
+    const C = await signUp("Huambo Divers", "HU");
+    assert.deepEqual(await clubRow(C.clubId), { region_id: hu, requested_region_id: null });
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+// A claimed federation whose only admin has gone (deleted, or suspended)
+// stays claimed. New role requests there emailed nobody; the sysadmin
+// hears instead, the way club approvals already fall back.
+test("role requests: a federation with no live admin sends new ones to DivingHQ", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { reviewersFor } = require("../lib/role-requests");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const member = await insertUser({ orgId: st.orgId, role: "spectator", username: `int-rr-${st.slug}`, fullName: "Asking Member" });
+    assert.equal((await reviewersFor(pool, member, st.orgId, "judge")).via, "org");
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [st.adminId]);
+    const suspended = await reviewersFor(pool, member, st.orgId, "judge");
+    assert.equal(suspended.via, "sysadmin", "not a suspended admin who can't act on it");
+    await pool.query("UPDATE users SET suspended_at = NULL, deleted_at = now() WHERE id = $1", [st.adminId]);
+    const gone = await reviewersFor(pool, member, st.orgId, "judge");
+    assert.equal(gone.via, "sysadmin");
+    assert.ok(!gone.recipients.some((r) => r.email === `${st.username}@example.test`));
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// A denied (or pulled) federation is 'suspended'. The verify link used to
+// tell its members their organisation was waiting for approval and they'd
+// be emailed when it was reviewed.
+test("verify-email tells a suspended org's member it's suspended, not pending", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const u = await insertUser({ orgId: st.orgId, role: "diver", username: `int-vs-${st.slug}`, fullName: "Suspended Member" });
+    const verify = async () => {
+      const token = claimKit.jwt.sign({ sub: u, type: "email_verify" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+      return (await fetchJson("POST", "/api/auth/verify-email", { body: { token } })).body.next;
+    };
+    await pool.query("UPDATE organisations SET status = 'suspended' WHERE id = $1", [st.orgId]);
+    assert.equal(await verify(), "org_suspended");
+    await pool.query("UPDATE organisations SET status = 'pending' WHERE id = $1", [st.orgId]);
+    assert.equal(await verify(), "org_pending");
+    await pool.query("UPDATE organisations SET status = 'active' WHERE id = $1", [st.orgId]);
+    assert.equal(await verify(), "sign_in");
+  } finally {
+    await teardownFixture(st);
+  }
+});
+
+// 093 fixed organisations.country_code but not the entry snapshots taken
+// from it, which event_rep_code prefers. 098 rewrites those too.
+test("migration 098 rewrites alpha-2 entry snapshots so a country prints one code", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const diver = await recordKit.diver(st.orgId, null, "female", "Sina Samoa");
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(ev, diver, 1, await recordKit.threeMetreDive(), 6);
+    // What an entry from a federation stored as 'WS' looks like after 093.
+    await pool.query("UPDATE competitor_dive_lists SET rep_country = 'ws' WHERE event_id = $1", [ev.id]);
+    await pool.query(fs.readFileSync(path.join(__dirname, "..", "migrations", "098_rep_country_alpha3.sql"), "utf8"));
+    const row = (await pool.query(
+      "SELECT rep_country, event_rep_code($1, $2, 'XXX') AS code FROM competitor_dive_lists WHERE event_id = $1",
+      [ev.id, diver],
+    )).rows[0];
+    assert.equal(row.rep_country, "WSM");
+    assert.equal(row.code, "WSM");
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+// Same thing through the real route, following the live flags.
+test("sitemap.xml lists the payments and classes guides only while they're switched on", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { features } = require("../server.js");
+  const saved = { payments: features.enabled("payments"), classes: features.enabled("classes") };
+  const sitemap = () => new Promise((resolve, reject) => {
+    http.get(`${baseUrl}/sitemap.xml`, (res) => {
+      const chunks = []; res.on("data", (c) => chunks.push(c)); res.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    }).on("error", reject);
+  });
+  try {
+    await features.set("payments", false);
+    await features.set("classes", false);
+    let xml = await sitemap();
+    assert.ok(!xml.includes("/guide/payments") && !xml.includes("/guide/classes"), "not while they'd say Topic not found");
+    assert.ok(xml.includes("/guide/quick-start"));
+    await features.set("payments", true);
+    xml = await sitemap();
+    assert.ok(xml.includes("/guide/payments") && !xml.includes("/guide/classes"));
+  } finally {
+    await features.set("payments", saved.payments);
+    await features.set("classes", saved.classes);
   }
 });

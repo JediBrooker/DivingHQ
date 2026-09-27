@@ -36,8 +36,10 @@ const inviteUrl = computed(() => {
   const q = new URLSearchParams({ country: setup.value.country_code, club: setup.value.id })
   return `${window.location.origin}/register?${q}`
 })
+// Both sides upper-cased: a code stored before the rule ('sdc') isn't
+// an edit nobody made.
 const codeDirty = computed(() =>
-  code.value.trim().toUpperCase() !== (setup.value?.short_code || ''))
+  code.value.trim().toUpperCase() !== (setup.value?.short_code || '').toUpperCase())
 
 async function load() {
   try {
@@ -71,7 +73,8 @@ async function saveCode() {
     showSuccess(t('my_club.setup.code_saved'))
     emit('updated')
   } catch (err) {
-    showError(err.message)
+    const known = { bad_short_code: 'my_club.setup.code_bad', short_code_taken: 'my_club.setup.code_taken' }[err.code]
+    showError(known ? t(known) : err.message)
   } finally {
     saving.value = false
   }

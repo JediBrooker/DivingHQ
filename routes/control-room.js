@@ -30,6 +30,7 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 const createIdempotency = require("../lib/idempotency");
 const { t } = require("../lib/server-i18n");
 const { perDiveSelect } = require("../lib/scoring-sql");
+const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // Mirrors init.sql's dive_position enum. Heads up: pre-validating
 // each CSV cell keeps a bad value from ever reaching the
@@ -1859,7 +1860,7 @@ module.exports = function createControlRoomRouter({
           extraJoins: [
             "JOIN users u ON s.competitor_id = u.id",
             "JOIN organisations o ON u.org_id = o.id",
-            "LEFT JOIN clubs cl ON cl.id = u.club_id",
+            PUBLIC_CLUB_JOIN,
             "LEFT JOIN users pu ON pu.id = cdl.partner_id",
             "LEFT JOIN organisations po ON po.id = pu.org_id",
             "LEFT JOIN teams t ON t.id = cdl.team_id",

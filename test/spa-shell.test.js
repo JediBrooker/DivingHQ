@@ -119,3 +119,19 @@ test("an origin with XML-special characters can't break the sitemap", () => {
   assert.match(x, /<loc>https:\/\/a&amp;b\.example\/<\/loc>/);
   assert.doesNotMatch(x, /&(?!amp;)/, "every ampersand is escaped");
 });
+
+// /guide/payments and /guide/classes render "Topic not found" while their
+// flags are off, so the served sitemap leaves them out until they're on.
+test("the sitemap drops guide topics whose feature flag is off", () => {
+  const { gatedGuideTopics, dropGatedGuidePages } = require("../lib/spa-shell");
+  const topics = fs.readFileSync(path.join(ROOT, "src", "guide", "topics.js"), "utf8");
+  const gated = gatedGuideTopics(topics);
+  assert.deepEqual(gated.map((g) => g.slug).sort(), ["classes", "payments"]);
+  const xml = fs.readFileSync(path.join(ROOT, "public", "sitemap.xml"), "utf8");
+  const off = dropGatedGuidePages(xml, gated, () => false);
+  assert.ok(!off.includes("/guide/payments") && !off.includes("/guide/classes"));
+  assert.ok(off.includes("/guide/quick-start") && off.includes("/guide/faq"), "everything else stays");
+  assert.match(off, /<\/urlset>\s*$/);
+  const on = dropGatedGuidePages(xml, gated, (k) => k === "payments");
+  assert.ok(on.includes("/guide/payments") && !on.includes("/guide/classes"));
+});

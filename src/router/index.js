@@ -235,7 +235,8 @@ const routes = [
     // sits on a public scoreboard, so there's nothing to sign in for.
     path: '/records/:scope?/:id?',
     component: () => import('@/views/RecordsView.vue'),
-    meta: { appShell: true },
+    // In the sitemap, so it needs a real tab / search-result title.
+    meta: { appShell: true, titleKey: 'records.title' },
   },
   {
     // Judge Analysis: public-accessible landing surface that composes

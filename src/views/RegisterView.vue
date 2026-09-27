@@ -62,6 +62,22 @@ const regionCode = ref('')
 const regionLabel = computed(() => regionList.value.label ? t(`regions.label.${regionList.value.label}`) : '')
 const selectedRegionId = computed(() =>
   regionList.value.regions.find(r => r.short_code === regionCode.value)?.id || null)
+// A new club picking a region its state body has claimed (with someone
+// still running it) asks to join rather than joining, same as on My club.
+// Only the org's own list carries claim_state; the built-in catalogue is
+// only used before anyone's there to claim anything.
+
+const regionAsks = computed(() => {
+  if (clubChoice.value !== 'new' || !noFederation.value) return null
+  const r = regionList.value.regions.find(x => x.short_code === regionCode.value)
+  return r?.claim_state === 'claimed' && r.has_live_admin !== false ? (r.claimed_name || r.name) : null
+})
+
+// Founding a club where there's no federation makes you its only admin, and
+// a coach or judge request can't be self-approved, so it isn't "your club's
+// admin" who reviews it.
+const founderAsksUp = computed(() =>
+  noFederation.value && clubChoice.value === 'new' && ['coach', 'judge'].includes(requestedRole.value))
 
 // Bumped on every loadRegions call. A slow answer for a country or org
 // the registrant has since moved off must not land on top of the current
@@ -100,6 +116,8 @@ const clubs = ref([])
 const clubChoice = ref('')           // '' | 'new' | <club_id>
 const newClubName = ref('')
 const newClubCode = ref('')
+// The server's reason a code was refused, in the reader's language.
+const codeError = ref('')
 
 const msg = ref('')
 const msgType = ref('')
@@ -256,7 +274,14 @@ async function handleSubmit() {
       body: JSON.stringify(body),
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.error || t('auth.register.failed'))
+    if (!res.ok) {
+      const codeMsg = { bad_short_code: 'my_club.setup.code_bad', short_code_taken: 'my_club.setup.code_taken' }[data.code]
+      if (codeMsg) {
+        codeError.value = t(codeMsg)
+        throw new Error(codeError.value)
+      }
+      throw new Error(data.error || t('auth.register.failed'))
+    }
     registered.value = {
       email: email.value.trim(),
       username: username.value.trim(),
@@ -364,6 +389,9 @@ async function handleSubmit() {
           <option value="">{{ $t('regions.pick') }}</option>
           <option v-for="r in regionList.regions" :key="r.short_code" :value="r.short_code">{{ r.name }}</option>
         </select>
+        <p v-if="regionAsks" class="hint-line" data-testid="region-will-ask">
+          {{ $t('auth.register.region_will_ask', { region: regionAsks }) }}
+        </p>
       </div>
 
       <!-- Club: pick an existing one, create a new one inline, or skip. -->
@@ -389,7 +417,13 @@ async function handleSubmit() {
         </div>
         <div class="field">
           <label class="label">{{ $t('auth.register.short_code_optional') }}</label>
-          <input class="input" type="text" v-model="newClubCode" :placeholder="$t('auth.register.short_code_placeholder')" maxlength="20">
+          <!-- Same rule the server applies (lib/club-approvals.js): up to 8,
+               upper case. It used to take 20 and quietly keep the first 8. -->
+          <input class="input code-input" type="text" v-model="newClubCode" :placeholder="$t('auth.register.short_code_placeholder')"
+                 maxlength="8" autocapitalize="characters" autocomplete="off" data-testid="new-club-code"
+                 :aria-invalid="codeError ? 'true' : undefined" @input="codeError = ''">
+          <p v-if="codeError" class="hint-line code-error" data-testid="new-club-code-error">{{ codeError }}</p>
+          <p v-else class="hint-line">{{ $t('my_club.setup.code_hint') }}</p>
         </div>
         <p v-if="noFederation" class="hint-line founder-note">{{ $t('auth.register.founder_note') }}</p>
         <!-- Under a federation a new club either waits for it or, where it
@@ -417,12 +451,23 @@ async function handleSubmit() {
         <p v-if="noFederation && requestedRole === 'referee'" class="hint-line" data-test-id="referee-note">
           {{ $t('auth.register.referee_note_unclaimed') }}
         </p>
+        <!-- A founder is their club's only admin, and nobody approves their
+             own request for anything but diver (lib/role-requests.js), so
+             the default coach request goes up a level. -->
+        <p v-else-if="founderAsksUp" class="hint-line" data-testid="founder-role-note">
+          {{ $t('auth.register.founder_role_note') }}
+        </p>
       </div>
       <div class="field" v-if="requestedRole">
         <label class="label">{{ $t('auth.register.note_label') }}</label>
         <input class="input" type="text" v-model="note" :placeholder="$t('auth.register.note_placeholder')">
       </div>
-      <p class="note">{{ noFederation ? $t('auth.register.spectator_note_club') : $t('auth.register.spectator_note') }}</p>
+      <!-- Where a note under the role already says who reviews it (referee,
+           a founder's own coach or judge request), don't contradict it. -->
+      <p class="note" data-testid="spectator-note">{{
+        !noFederation ? $t('auth.register.spectator_note')
+          : founderAsksUp || requestedRole === 'referee' ? $t('auth.register.spectator_note_see_above')
+            : $t('auth.register.spectator_note_club') }}</p>
       <div v-if="msg" :class="['msg', msgType === 'success' ? 'msg-success' : 'msg-error']">{{ msg }}</div>
       <button type="submit" class="btn btn-primary-lg" style="margin-top:0.25rem" :disabled="loading">
         {{ loading ? $t('auth.register.submit_loading') : $t('auth.register.submit_idle') }}
@@ -463,6 +508,9 @@ h1 { font-size: 48px; font-style: italic; margin-bottom: 0.25rem; }
 .footer-link a { color: var(--cyan); text-decoration: none; }
 .note { font-size: 11px; color: var(--text-3); line-height: 1.6; padding: 0.75rem; background: var(--bg-3); border-radius: var(--radius-sm); border: 1px solid var(--border); }
 .hint-line { margin-top: 0.4rem; font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
+.code-input { text-transform: uppercase; font-family: var(--font-mono); }
+.code-input::placeholder { text-transform: none; }
+.code-error { color: var(--danger-fg); }
 .founder-note { margin-top: 0; color: var(--text-2); }
 .club-pending-note { margin-top: 1rem; color: var(--text-2); }
 .new-club-block {

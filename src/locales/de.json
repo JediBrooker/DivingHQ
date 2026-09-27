@@ -81,7 +81,10 @@
       "short_code_placeholder": "z. B. SYD",
       "club_needs_approval": "{org} genehmigt neue Vereine, bevor sie freigeschaltet werden. Wir fragen dort nach, sobald Sie Ihre E-Mail-Adresse bestätigt haben, und bis dahin können Sie sich anmelden und springen.",
       "club_joins_now": "Neue Vereine treten {org} sofort bei. {org} ernennt die Admins jedes Vereins.",
-      "success_club_pending": "{club} wartet auf die Genehmigung durch {org}. Dort sieht man ihn, sobald Sie Ihre E-Mail-Adresse bestätigt haben, und wir benachrichtigen Sie per E-Mail über die Entscheidung."
+      "success_club_pending": "{club} wartet auf die Genehmigung durch {org}. Dort sieht man ihn, sobald Sie Ihre E-Mail-Adresse bestätigt haben, und wir benachrichtigen Sie per E-Mail über die Entscheidung.",
+      "region_will_ask": "{region} entscheidet selbst, welche Vereine aufgenommen werden. Sobald Sie Ihre E-Mail-Adresse bestätigt haben, erhält die Region eine Anfrage. Bis sie zustimmt, gehört Ihr Verein nicht zur Region.",
+      "founder_role_note": "Als Gründer des Vereins können Sie Ihre eigene Anfrage als Trainer oder Kampfrichter nicht genehmigen. Sie geht an die Admins Ihrer Region oder an DivingHQ.",
+      "spectator_note_see_above": "Alle Konten beginnen als Zuschauer. Eine Rolle, die Sie oben anfordern, wird so geprüft, wie es der Hinweis darunter beschreibt. Sie können sich anmelden, sobald Ihre E-Mail bestätigt ist."
     },
     "register_org": {
       "title": "Organisation registrieren",
@@ -164,7 +167,8 @@
       "resend_prompt": "Neuen Link benötigt? Geben Sie Ihren Benutzernamen oder Ihre E-Mail-Adresse ein.",
       "resend_label": "Benutzername oder E-Mail",
       "resend_button": "Neuen Link senden",
-      "resend_sent": "Falls dieses Konto auf Bestätigung wartet, ist ein neuer Link unterwegs. Sehen Sie in Ihrem Posteingang nach."
+      "resend_sent": "Falls dieses Konto auf Bestätigung wartet, ist ein neuer Link unterwegs. Sehen Sie in Ihrem Posteingang nach.",
+      "success_org_suspended": "Ihre E-Mail ist bestätigt, aber der Zugang Ihrer Organisation zu DivingHQ wurde gesperrt. Wenn Sie das für einen Fehler halten, wenden Sie sich an den DivingHQ-Support."
     },
     "check_inbox": {
       "title": "Sehen Sie in Ihrem Posteingang nach",
@@ -302,7 +306,7 @@
       "step1_title": "Verein anlegen",
       "step1_desc": "Registrieren Sie sich, wählen Sie Ihr Land und geben Sie Ihrem Verein einen Namen. Ist Ihr Verband noch nicht auf DivingHQ, sind Sie von Anfang an sein Admin.",
       "step2_title": "Springer und Kampfrichter einladen",
-      "step2_desc": "Senden Sie Ihren Mitgliedern den Registrierungslink. Sie wählen Ihren Verein, und Sie genehmigen, wer springt, wertet oder als Schiedsrichter tätig ist.",
+      "step2_desc": "Senden Sie Ihren Mitgliedern den Registrierungslink. Sie wählen Ihren Verein, und Sie genehmigen, wer springt, wertet oder trainiert.",
       "step3_title": "Den ersten Wettkampf ausrichten",
       "step3_desc": "Legen Sie Events an, steuern Sie den Wettkampf aus dem Kontrollraum, während die Kampfrichter auf ihren Smartphones werten, und die Ergebnisse erscheinen nach jedem gewerteten Sprung.",
       "note": "Sie brauchen keinen Verband, um zu starten. Tritt Ihr Verband oder Landesverband später DivingHQ bei, übernimmt er die Verwaltung des Landes oder der Region, und Ihr Verein behält seine Wettkämpfe, Ergebnisse und Rekorde."
@@ -659,7 +663,7 @@
         "desc": "Sie führen Ihren Verein. Wo der Verband Ihres Landes noch nicht auf DivingHQ ist, richtet der Verein seine Wettkämpfe selbst aus: anlegen, aus dem <strong>Kontrollraum</strong> steuern und die Rollenanfragen Ihrer Mitglieder genehmigen. Unter einem Verband genehmigt dieser Ihren neuen Verein und kann Sie zum Admin machen.",
         "step_1": "Registrieren Sie sich, wählen Sie Ihr Land und legen Sie Ihren Verein an; Sie werden sein erster Admin (unter einem Verband, sobald dieser den Verein genehmigt)",
         "step_2": "Öffnen Sie den <strong>Wettkampf-Manager</strong> und legen Sie einen Wettkampf Ihres Vereins an",
-        "step_3": "Genehmigen Sie auf <strong>Mein Verein</strong> Beitrittsanfragen und Mitglieder, die springen, werten oder trainieren möchten",
+        "step_3": "Wo es noch keinen Verband gibt: Genehmigen Sie auf <strong>Mein Verein</strong> Beitrittsanfragen und Mitglieder, die springen, werten oder trainieren möchten",
         "step_4": "Am Wettkampftag steuern Sie die Wertung aus dem <strong>Kontrollraum</strong>",
         "step_5": "Kommt Ihr Verband oder Landesverband dazu, stimmen Sie unter <strong>Ansprüche</strong> über seinen Anspruch ab",
         "cta": "Einen Wettkampf ausrichten ↗",
@@ -667,10 +671,10 @@
       },
       "region_admin": {
         "name": "Regionsadmin",
-        "desc": "Sie betreuen einen Bundesstaat, eine Provinz oder einen Landesteil: Sie richten die Meisterschaften aus, können bei den Wettkämpfen aller Vereine einspringen und genehmigen Rollenanfragen der Vereinsmitglieder. Ihr Verband ernennt Sie. Solange es keinen gibt, übernimmt Ihr Landesverband die Region, und weitere Admins fügen Sie selbst hinzu. Ein Landesverband kann über <strong>Organisation registrieren</strong> beantragen, seine Region zu führen.",
+        "desc": "Sie betreuen einen Bundesstaat, eine Provinz oder einen Landesteil: Sie richten die Meisterschaften aus und können bei den Wettkämpfen aller Vereine einspringen. Wo es noch keinen Verband gibt, genehmigen Sie außerdem Rollenanfragen der Vereinsmitglieder. Ihr Verband ernennt Sie. Solange es keinen gibt, übernimmt Ihr Landesverband die Region, und weitere Admins fügen Sie selbst hinzu. Ein Landesverband kann über <strong>Organisation registrieren</strong> beantragen, seine Region zu führen.",
         "step_1": "Öffnen Sie <strong>Meine Region</strong> für Ihre Vereine und deren Leitung",
         "step_2": "Legen Sie Ihre Meisterschaften im <strong>Wettkampf-Manager</strong> mit Ihrer Region als Ausrichter an",
-        "step_3": "Genehmigen Sie Mitglieder, die springen, werten oder trainieren möchten, und Vereine, die Ihrer Region beitreten wollen",
+        "step_3": "Wo es noch keinen Verband gibt: Genehmigen Sie Mitglieder, die springen, werten oder trainieren möchten, und Vereine, die Ihrer Region beitreten wollen",
         "cta": "Einen Wettkampf ausrichten ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "z. B. SYD",
       "code_saved": "Vereinskürzel gespeichert",
       "code_none": "Noch kein Kürzel.",
-      "code_federation": "Das Kürzel Ihres Vereins legt Ihr Verband fest."
+      "code_federation": "Das Kürzel Ihres Vereins legt Ihr Verband fest.",
+      "code_bad": "Verwenden Sie bis zu 8 Buchstaben, Ziffern oder Bindestriche.",
+      "code_taken": "Ein anderer Verein verwendet dieses Kürzel bereits. Wählen Sie ein anderes."
     },
     "admins_intro_meets": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet. Verbandsweite Rechte bekommen sie nicht.",
     "admins_intro_classes": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet, und kümmern sich um seine Kurse. Verbandsweite Rechte bekommen sie nicht.",
     "admins_intro_payments": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet, und kümmern sich um Auszahlungen und Mitgliedsbeiträge. Verbandsweite Rechte bekommen sie nicht.",
-    "last_admin_tip": "Ein Verein braucht mindestens einen Admin. Fügen Sie einen weiteren Admin hinzu, bevor Sie diesen entfernen."
+    "last_admin_tip": "Ein Verein braucht mindestens einen Admin. Fügen Sie einen weiteren Admin hinzu, bevor Sie diesen entfernen.",
+    "intro_federation": "Einladungslink, Kürzel und Admins Ihres Vereins. Ihr Verband ernennt die Admins und bearbeitet die Rollenanfragen Ihrer Mitglieder.",
+    "requests_federation": "Ihr Verband bearbeitet die Rollenanfragen Ihrer Mitglieder."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Aus der Region nehmen",
     "club_requests": "Vereine mit Beitrittsanfrage",
     "currently_in": "derzeit in {region}",
-    "last_admin_tip": "Eine Region braucht mindestens einen Admin. Fügen Sie einen weiteren Admin hinzu, bevor Sie diesen entfernen."
+    "last_admin_tip": "Eine Region braucht mindestens einen Admin. Fügen Sie einen weiteren Admin hinzu, bevor Sie diesen entfernen.",
+    "leave_title": "Sich selbst als Admin von {region} entfernen?",
+    "leave_body": "Sie können dann keine Wettkämpfe der Region mehr ausrichten und ihre Vereine nicht mehr betreuen. Nur ein anderer Admin kann Sie wieder hinzufügen.",
+    "left_notice": "Sie sind kein Admin von {region} mehr.",
+    "intro_federation": "Die Vereine Ihrer Region und wer sie führt. Ihr Verband bearbeitet die Rollenanfragen ihrer Mitglieder.",
+    "requests_federation": "Ihr Verband bearbeitet die Rollenanfragen der Mitglieder Ihrer Vereine."
   },
   "claims": {
     "title": "Ansprüche",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Abstimmungszeitraum (Tage)",
-      "description": "Nach Ablauf: mindestens eine Zustimmung und keine Einwände lassen den Anspruch durchgehen, sonst geht er an den Systemadmin."
+      "description": "Läuft sie ab, ohne dass genügend Zustimmungen vorliegen (die beiden Regeln oben), geht der Anspruch an den Systemadmin. Allein durch Zeitablauf geht er nie durch."
     }
   },
   "nav": {

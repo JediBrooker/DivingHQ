@@ -263,7 +263,9 @@ function createSearchLimiter() {
 // canonical link and og:url name the page actually requested, not the home
 // page (see lib/spa-shell.js). "/" is answered before express.static, which
 // would otherwise hand out dist/index.html untouched.
-const { publicOrigin, renderShell, renderCrawlerFile } = require("./lib/spa-shell");
+const {
+  publicOrigin, renderShell, renderCrawlerFile, gatedGuideTopics, dropGatedGuidePages,
+} = require("./lib/spa-shell");
 const SPA_SHELL = path.join(__dirname, "dist", "index.html");
 async function sendSpaShell(req, res, next) {
   try {
@@ -284,10 +286,19 @@ app.get("/", sendSpaShell);
 // public/ is the source, which also covers a server running without a
 // fresh build (the test suite, a dev box). /robots.txt must never fall
 // through to the SPA fallback, which answered crawlers with a 200 of HTML.
+// Guide topics behind a feature flag leave the sitemap while it's off.
+// Read once: which topics are gated only changes with a deploy.
+let gatedGuide = [];
+try {
+  gatedGuide = gatedGuideTopics(require("node:fs").readFileSync(path.join(__dirname, "src", "guide", "topics.js"), "utf8"));
+} catch (err) {
+  console.warn("[sitemap] couldn't read src/guide/topics.js, listing every guide topic:", err.message);
+}
 for (const [file, type] of [["robots.txt", "text/plain"], ["sitemap.xml", "application/xml"]]) {
   app.get(`/${file}`, async (req, res, next) => {
     try {
-      const text = await require("node:fs").promises.readFile(path.join(__dirname, "public", file), "utf8");
+      let text = await require("node:fs").promises.readFile(path.join(__dirname, "public", file), "utf8");
+      if (file === "sitemap.xml") text = dropGatedGuidePages(text, gatedGuide, (k) => features.enabled(k));
       res.type(type).send(renderCrawlerFile(text, { origin: publicOrigin(), xml: type === "application/xml" }));
     } catch (err) {
       next(err);
@@ -911,7 +922,7 @@ app.use(require("./routes/users")({
 }));
 
 // Club-change requests + cross-org transfers (Migration 057).
-app.use(require("./routes/club-changes")({ pool, verifyToken }));
+app.use(require("./routes/club-changes")({ pool, verifyToken, bumpTokenVersion }));
 
 // =============================================================
 // MEET ROUTES
@@ -1059,6 +1070,14 @@ app.use(require("./routes/scoreboard")({
 // socket event to the event's room, which needs both io and the
 // cache as factory deps.
 // =============================================================
+// Built here rather than down in [SECTION: RECORDS]: every path that
+// writes a score needs it, and this is the first of them. Score
+// correction, conflict resolution, manual entry and the socket all
+// hand a changed dive to recomputeRecordKeys (a new one to
+// checkAndApplyRecords).
+const { checkAndApplyRecords, recomputeRecordKeys, router: recordsRouter } =
+  require("./lib/records")({ pool, readPool, optionalAuth });
+
 app.use(require("./routes/score-correction")({
   pool,
   io,
@@ -1067,6 +1086,7 @@ app.use(require("./routes/score-correction")({
   requireEventManager,
   requireRoleOrEventDelegate,
   isEventDelegate,
+  recomputeRecordKeys,
 }));
 
 // =============================================================
@@ -1125,7 +1145,7 @@ app.use(require("./routes/templates")({ pool, verifyToken }));
 // docs/offline-p1-design.md §4.
 // =============================================================
 app.use(require("./routes/conflicts")({
-  pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate,
+  pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate, recomputeRecordKeys,
 }));
 
 // =============================================================
@@ -1145,14 +1165,11 @@ app.use(require("./routes/late-arrivals")({ pool, requireOrgRole, requireRoleOrE
 // showing values on phone screens). See docs/offline-p1-design.md
 // §Phase 5.
 // =============================================================
-// Built here rather than down in [SECTION: RECORDS] because manual
-// entry completes dives too and needs the record check handed to it.
-const { checkAndApplyRecords, router: recordsRouter } =
-  require("./lib/records")({ pool, readPool, optionalAuth });
-
+// The record check comes from lib/records, built up by the score
+// correction section: manual entry completes dives too.
 app.use(require("./routes/manual-scores")({
   pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate,
-  checkAndApplyRecords,
+  checkAndApplyRecords, recomputeRecordKeys,
 }));
 
 // =============================================================
@@ -1203,7 +1220,7 @@ app.use(limitRoutes(createSearchLimiter(), require("./routes/diver-profile")({
 // /api/judges/:id/profile, /api/judges/:id/analytics, and
 // /api/users/me/judge-dashboard. The analytics endpoint computes
 // per-judge metrics referenced against the World Aquatics-trim
-// kept mean for each dive (PART FOUR Article 13 trim rules), the
+// kept mean for each dive (PART FOUR Article 9.1.5 trim rules), the
 // same "kept set" the dive-points formula uses, so a judge's
 // deviation from it is the same signal an WA judges' assessor
 // would compute by hand. See routes/judge-analytics.js for the
@@ -1262,6 +1279,7 @@ require("./routes/socket")({
   isValidScore,
   isTokenVersionCurrent,
   checkAndApplyRecords,
+  recomputeRecordKeys,
   activeDivers,
   meetHolds,
   getEventController,

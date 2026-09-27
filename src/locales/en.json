@@ -81,7 +81,10 @@
       "short_code_placeholder": "e.g. SYD",
       "club_needs_approval": "{org} approves new clubs before they go live. We'll ask them once you've confirmed your email, and you can sign in and dive meanwhile.",
       "club_joins_now": "New clubs join {org} straight away. {org} appoints each club's admins.",
-      "success_club_pending": "{club} is waiting for {org} to approve it. They'll see it once you've confirmed your email, and we'll email you when they decide."
+      "success_club_pending": "{club} is waiting for {org} to approve it. They'll see it once you've confirmed your email, and we'll email you when they decide.",
+      "region_will_ask": "{region} decides which clubs it takes, so it will be asked to take yours once you've verified your email. Until it accepts, your club isn't in the region.",
+      "founder_role_note": "As the club's founder you can't approve your own coach or judge request, so it goes to your region's admins, or to DivingHQ.",
+      "spectator_note_see_above": "All accounts start as Spectator. A role you request above is reviewed as the note under it says. You can log in once your email is verified."
     },
     "register_org": {
       "title": "Register Organisation",
@@ -164,7 +167,8 @@
       "resend_prompt": "Need a new link? Enter your username or email address.",
       "resend_label": "Username or email",
       "resend_button": "Send a new link",
-      "resend_sent": "If that account is waiting for verification, a new link is on its way. Check your inbox."
+      "resend_sent": "If that account is waiting for verification, a new link is on its way. Check your inbox.",
+      "success_org_suspended": "Your email is verified, but your organisation's access to DivingHQ has been suspended. If you think this is a mistake, contact DivingHQ support."
     },
     "check_inbox": {
       "title": "Check your inbox",
@@ -302,7 +306,7 @@
       "step1_title": "Create your club",
       "step1_desc": "Sign up, pick your country and name your club. If your federation isn't on DivingHQ yet, you're its admin from the start.",
       "step2_title": "Invite divers and judges",
-      "step2_desc": "Send members the sign-up link. They pick your club, and you approve who dives, judges or referees.",
+      "step2_desc": "Send members the sign-up link. They pick your club, and you approve who dives, judges or coaches.",
       "step3_title": "Run your first meet",
       "step3_desc": "Set up events, run the meet from the Control Room while judges score on their phones, and results publish as each dive is scored.",
       "note": "No federation needed to start. If your federation or state body joins DivingHQ later, it takes over running the country or region, and your club keeps its meets, results and records."
@@ -648,7 +652,7 @@
         "desc": "You run your club. Where your country's federation isn't on DivingHQ yet, the club runs its own meets: create them, run them from the <strong>Control Room</strong>, and approve your members' role requests. Under a federation, it approves your new club and can make you its admin.",
         "step_1": "Sign up, pick your country and create your club; you'll be its first admin (under a federation, once it approves the club)",
         "step_2": "Open <strong>Meet Manager</strong> and create a meet hosted by your club",
-        "step_3": "On <strong>My club</strong>, approve people asking to join and members who want to dive, judge or coach",
+        "step_3": "On <strong>My club</strong>, where there's no federation yet, approve people asking to join and members who want to dive, judge or coach",
         "step_4": "On the day, drive scoring from <strong>Control Room</strong>",
         "step_5": "When your federation or state body arrives, vote on its claim on <strong>Claims</strong>",
         "cta": "Running a meet ↗",
@@ -656,10 +660,10 @@
       },
       "region_admin": {
         "name": "Region Admin",
-        "desc": "You look after a state, province or home nation: run its championships, step in on any of its clubs' meets, and approve role requests from its clubs' members. Your federation appoints you. Where there isn't one yet, your state body claims the region and you add your own co-admins. A state body can apply to run its region from <strong>Register your org</strong>.",
+        "desc": "You look after a state, province or home nation: run its championships and step in on any of its clubs' meets. Where there's no federation yet, you also approve role requests from its clubs' members. Your federation appoints you. Where there isn't one yet, your state body claims the region and you add your own co-admins. A state body can apply to run its region from <strong>Register your org</strong>.",
         "step_1": "Open <strong>My region</strong> to see your clubs and who runs them",
         "step_2": "Create your championships in <strong>Meet Manager</strong>, hosted by your region",
-        "step_3": "Approve members who want to dive, judge or coach, and clubs asking to join your region",
+        "step_3": "Where there's no federation yet, approve members who want to dive, judge or coach, and clubs asking to join your region",
         "cta": "Running a meet ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "e.g. SYD",
       "code_saved": "Club code saved",
       "code_none": "No code yet.",
-      "code_federation": "Your federation sets your club's code."
+      "code_federation": "Your federation sets your club's code.",
+      "code_bad": "Use up to 8 letters, numbers or dashes.",
+      "code_taken": "Another club already uses that code. Pick a different one."
     },
     "admins_intro_meets": "Club admins run the meets their club hosts. They get no federation-wide access.",
     "admins_intro_classes": "Club admins run the meets their club hosts and look after its classes. They get no federation-wide access.",
     "admins_intro_payments": "Club admins run the meets their club hosts and look after its payouts and affiliation payments. They get no federation-wide access.",
-    "last_admin_tip": "A club needs at least one admin. Add a co-admin before removing this one."
+    "last_admin_tip": "A club needs at least one admin. Add a co-admin before removing this one.",
+    "intro_federation": "Your club's invite link, code and admins. Your federation appoints the admins and reviews your members' role requests.",
+    "requests_federation": "Your federation reviews your members' role requests."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Take out of region",
     "club_requests": "Clubs asking to join",
     "currently_in": "currently in {region}",
-    "last_admin_tip": "A region needs at least one admin. Add a co-admin before removing this one."
+    "last_admin_tip": "A region needs at least one admin. Add a co-admin before removing this one.",
+    "leave_title": "Remove yourself as an admin of {region}?",
+    "leave_body": "You won't be able to run the region's meets or look after its clubs any more. Only another admin can add you back.",
+    "left_notice": "You're no longer an admin of {region}.",
+    "intro_federation": "Your region's clubs and who runs them. Your federation reviews their members' role requests.",
+    "requests_federation": "Your federation reviews role requests from your clubs' members."
   },
   "claims": {
     "title": "Claims",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Voting window (days)",
-      "description": "When it runs out: at least one approval and no objections passes the claim, otherwise it goes to the sysadmin."
+      "description": "When it runs out without enough approvals to pass (the two rules above), the claim goes to the sysadmin. It never passes on the clock alone."
     }
   },
   "nav": {

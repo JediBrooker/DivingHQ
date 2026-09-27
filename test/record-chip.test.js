@@ -125,3 +125,25 @@ test("announceRecords leaves the cache alone when nothing was set, and never thr
   });
   assert.equal(noCache.length, 1);
 });
+
+// A book has one record at a time. When a second dive in the same event
+// breaks it again, the first dive's chip has to go for the people who
+// were watching too, not only for anyone who reloads.
+test("a newer mark in the same book takes the older one's chip away", async () => {
+  const { withoutBook, indexRecordMarks, marksForDive } = await load();
+  const first = mark({ competitor_id: "diver-1", scope_id: "club-1", height: "3m", score: 72, prev_score: 60 });
+  const second = mark({ holder_id: "diver-2", competitor_id: undefined, scope_id: "club-1", height: "3m", score: 75, prev_score: 72 });
+  const otherBook = mark({ competitor_id: "diver-3", scope_id: "club-1", height: "1m", score: 40, prev_score: 30 });
+  let live = [first, otherBook];
+  let payload = [first];
+  live = withoutBook(live, second);
+  payload = withoutBook(payload, second);
+  live = [...live, second];
+  const index = indexRecordMarks(payload, live);
+  const dive = (who, total, height = "3m") => ({ competitor_id: who, dive_code: "105", position: "B", total_dive_score: total, height });
+  assert.deepEqual(marksForDive(index, dive("diver-1", 72)), [], "the first diver's chip is gone");
+  assert.equal(marksForDive(index, dive("diver-2", 75)).length, 1);
+  assert.equal(marksForDive(index, dive("diver-3", 40, "1m")).length, 1, "a different board is a different book");
+  // Marks without the book's identity (an older server) are left alone.
+  assert.deepEqual(withoutBook([mark()], second), [mark()]);
+});

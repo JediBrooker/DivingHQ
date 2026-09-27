@@ -81,7 +81,10 @@
       "short_code_placeholder": "t.ex. SYD",
       "club_needs_approval": "{org} godkänner nya klubbar innan de syns. Vi frågar dem så snart du har bekräftat din e-post, och under tiden kan du logga in och hoppa.",
       "club_joins_now": "Nya klubbar går med i {org} direkt. {org} utser varje klubbs administratörer.",
-      "success_club_pending": "{club} väntar på godkännande från {org}. De ser den så snart du har bekräftat din e-post, och vi mejlar dig när de har bestämt sig."
+      "success_club_pending": "{club} väntar på godkännande från {org}. De ser den så snart du har bekräftat din e-post, och vi mejlar dig när de har bestämt sig.",
+      "region_will_ask": "{region} bestämmer själv vilka klubbar den tar in, så den får en förfrågan när du har bekräftat din e-post. Tills den tackar ja är din klubb inte med i regionen.",
+      "founder_role_note": "Som klubbens grundare kan du inte godkänna din egen förfrågan om att bli tränare eller domare, så den går till regionens administratörer eller till DivingHQ.",
+      "spectator_note_see_above": "Alla konton börjar som åskådare. En roll du begär ovan granskas som anteckningen under den säger. Du kan logga in när din e-post är verifierad."
     },
     "register_org": {
       "title": "Registrera organisation",
@@ -164,7 +167,8 @@
       "resend_prompt": "Behöver du en ny länk? Ange ditt användarnamn eller din e-postadress.",
       "resend_label": "Användarnamn eller e-post",
       "resend_button": "Skicka en ny länk",
-      "resend_sent": "Om kontot väntar på verifiering är en ny länk på väg. Kolla din inkorg."
+      "resend_sent": "Om kontot väntar på verifiering är en ny länk på väg. Kolla din inkorg.",
+      "success_org_suspended": "Din e-post är bekräftad, men din organisations åtkomst till DivingHQ har stängts av. Om du tror att det är ett misstag, kontakta DivingHQ:s support."
     },
     "check_inbox": {
       "title": "Kolla din inkorg",
@@ -302,7 +306,7 @@
       "step1_title": "Skapa din klubb",
       "step1_desc": "Registrera dig, välj land och ge klubben ett namn. Finns ditt förbund inte på DivingHQ ännu är du klubbens administratör från start.",
       "step2_title": "Bjud in hoppare och domare",
-      "step2_desc": "Skicka registreringslänken till medlemmarna. De väljer din klubb, och du godkänner vem som hoppar, dömer eller är överdomare.",
+      "step2_desc": "Skicka registreringslänken till medlemmarna. De väljer din klubb, och du godkänner vem som hoppar, dömer eller är tränare.",
       "step3_title": "Arrangera din första tävling",
       "step3_desc": "Lägg upp grenar, styr tävlingen från kontrollrummet medan domarna ger poäng i mobilen, och resultaten publiceras allt eftersom varje hopp bedöms.",
       "note": "Du behöver inget förbund för att komma igång. Om ditt förbund eller distriktsförbund ansluter till DivingHQ senare tar det över driften av landet eller regionen, och din klubb behåller sina tävlingar, resultat och rekord."
@@ -659,7 +663,7 @@
         "desc": "Du driver din klubb. Där ditt lands förbund ännu inte finns på DivingHQ arrangerar klubben sina egna tävlingar: skapa dem, styr dem från <strong>Kontrollrummet</strong> och godkänn medlemmarnas rollförfrågningar. Under ett förbund godkänner förbundet din nya klubb och kan göra dig till dess administratör.",
         "step_1": "Registrera dig, välj land och skapa din klubb; du blir dess första administratör (under ett förbund när det har godkänt klubben)",
         "step_2": "Öppna <strong>Tävlingshanteraren</strong> och skapa en tävling som din klubb arrangerar",
-        "step_3": "Godkänn på <strong>Min klubb</strong> dem som ber om att gå med och medlemmar som vill hoppa, döma eller vara tränare",
+        "step_3": "Där det ännu inte finns något förbund: godkänn på <strong>Min klubb</strong> dem som ber om att gå med och medlemmar som vill hoppa, döma eller vara tränare",
         "step_4": "På tävlingsdagen styr du poängsättningen från <strong>Kontrollrummet</strong>",
         "step_5": "När ditt förbund eller regionala organ ansluter röstar du om dess anspråk under <strong>Anspråk</strong>",
         "cta": "Arrangera en tävling ↗",
@@ -667,10 +671,10 @@
       },
       "region_admin": {
         "name": "Regionadministratör",
-        "desc": "Du ansvarar för en delstat, provins eller nation: arrangerar mästerskapen, kan kliva in på alla klubbars tävlingar och godkänner rollförfrågningar från klubbarnas medlemmar. Ditt förbund utser dig. Finns det inget ännu gör ditt regionala organ anspråk på regionen, och du lägger själv till dina medadministratörer. Ett delstatsförbund kan ansöka om att driva sin region via <strong>Registrera din organisation</strong>.",
+        "desc": "Du ansvarar för en delstat, provins eller nation: arrangerar mästerskapen och kan kliva in på alla klubbars tävlingar. Där det ännu inte finns något förbund godkänner du också rollförfrågningar från klubbarnas medlemmar. Ditt förbund utser dig. Finns det inget ännu gör ditt regionala organ anspråk på regionen, och du lägger själv till dina medadministratörer. Ett delstatsförbund kan ansöka om att driva sin region via <strong>Registrera din organisation</strong>.",
         "step_1": "Öppna <strong>Min region</strong> för att se dina klubbar och vem som driver dem",
         "step_2": "Skapa mästerskapen i <strong>Tävlingshanterare</strong> med regionen som arrangör",
-        "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara tränare, och klubbar som vill gå med i din region",
+        "step_3": "Där det ännu inte finns något förbund: godkänn medlemmar som vill hoppa, döma eller vara tränare, och klubbar som vill gå med i din region",
         "cta": "Arrangera en tävling ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "t.ex. SYD",
       "code_saved": "Klubbkoden har sparats",
       "code_none": "Ingen kod än.",
-      "code_federation": "Ditt förbund bestämmer klubbens kod."
+      "code_federation": "Ditt förbund bestämmer klubbens kod.",
+      "code_bad": "Använd högst 8 bokstäver, siffror eller bindestreck.",
+      "code_taken": "En annan klubb använder redan den koden. Välj en annan."
     },
     "admins_intro_meets": "Klubbadministratörer sköter tävlingarna som klubben arrangerar. De får ingen åtkomst på förbundsnivå.",
     "admins_intro_classes": "Klubbadministratörer sköter tävlingarna som klubben arrangerar och tar hand om klubbens kurser. De får ingen åtkomst på förbundsnivå.",
     "admins_intro_payments": "Klubbadministratörer sköter tävlingarna som klubben arrangerar och tar hand om utbetalningar och medlemsavgifter. De får ingen åtkomst på förbundsnivå.",
-    "last_admin_tip": "En klubb måste ha minst en administratör. Lägg till en medadministratör innan du tar bort den här."
+    "last_admin_tip": "En klubb måste ha minst en administratör. Lägg till en medadministratör innan du tar bort den här.",
+    "intro_federation": "Klubbens inbjudningslänk, kod och administratörer. Ditt förbund utser administratörerna och hanterar medlemmarnas rollförfrågningar.",
+    "requests_federation": "Ditt förbund hanterar dina medlemmars rollförfrågningar."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Ta bort ur regionen",
     "club_requests": "Klubbar som vill gå med",
     "currently_in": "just nu i {region}",
-    "last_admin_tip": "En region måste ha minst en administratör. Lägg till en medadministratör innan du tar bort den här."
+    "last_admin_tip": "En region måste ha minst en administratör. Lägg till en medadministratör innan du tar bort den här.",
+    "leave_title": "Ta bort dig själv som administratör för {region}?",
+    "leave_body": "Du kommer inte längre att kunna arrangera regionens tävlingar eller ta hand om dess klubbar. Bara en annan administratör kan lägga till dig igen.",
+    "left_notice": "Du är inte längre administratör för {region}.",
+    "intro_federation": "Regionens klubbar och vem som driver dem. Ditt förbund hanterar deras medlemmars rollförfrågningar.",
+    "requests_federation": "Ditt förbund hanterar rollförfrågningar från medlemmarna i dina klubbar."
   },
   "claims": {
     "title": "Anspråk",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Röstningsperiod (dagar)",
-      "description": "När den löper ut: minst ett godkännande och inga invändningar antar anspråket, annars går det till systemadministratören."
+      "description": "Om den löper ut utan tillräckligt många godkännanden (de två reglerna ovan) går anspråket till systemadministratören. Det antas aldrig bara för att tiden gått ut."
     }
   },
   "nav": {

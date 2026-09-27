@@ -78,7 +78,7 @@ const divers = computed(() => payloadView.value?.divers || [])
 const eventType = computed(() => payloadView.value?.event?.event_type || 'individual')
 const numJudges = computed(() => payloadView.value?.event?.number_of_judges || judges.value.length)
 
-// Synchro role assignment per WA Article 13. Mirrors
+// Synchro role assignment per WA Article 9.1.5.3 / 9.1.5.4. Mirrors
 // src/composables/useScoreCategories.js synchroJudgeGroups so the
 // table groups judges identically to how the scoreboard already
 // renders synchro chip groups.

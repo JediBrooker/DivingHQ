@@ -244,10 +244,11 @@ An unclaimed org or region becomes claimed through `lib/claims.js`
 (migration 089), never by editing `claim_state` by hand: approval also
 grants the claimant their role, audit-logs it and notifies the clubs, and a
 revoke has to undo it. A national revoke goes further than the claimant's
-own role: every org_admin and meet_manager in the org, club / region admin
-rows created since the approval, event manager seats those people handed
-out, and region claims the federation approved (migration 092,
-`unwindOrgClaim`). If you add a new way to hand out
+own role: every org_admin and meet_manager in the org, referee grants made
+since the approval by anyone but a sysadmin (referee reaches every meet in
+the org, same as the other two), club / region admin rows created since the
+approval, event manager seats those people handed out, and region claims
+the federation approved (migration 092, `unwindOrgClaim`). If you add a new way to hand out
 authority inside an org, check that revoke still takes it back.
 
 **One org per country at signup** (migration 093). `organisations.country_code`
@@ -315,6 +316,14 @@ Every change goes in **two** places:
 Run `npm run migrate` against a target DB to apply pending migrations in
 order. The runner reads `schema_meta.version` and applies any numbered file
 above it.
+
+`deploy.sh` migrates, runs the tests, and only then restarts PM2, so the
+previous release keeps serving against the new schema for a few minutes (and
+indefinitely if the tests fail). If a migration breaks that code (dropping
+or re-keying something it writes through, like 094's records keys), add it
+to `scripts/migration-compat.js`. `deploy.sh` then stops before migrating
+until the operator has switched maintenance mode on and passed
+`--allow-breaking`, and its failure message says roll forward, not back.
 
 ---
 

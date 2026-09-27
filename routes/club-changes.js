@@ -23,7 +23,7 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 
-module.exports = function createClubChangesRouter({ pool, verifyToken }) {
+module.exports = function createClubChangesRouter({ pool, verifyToken, bumpTokenVersion }) {
   if (!pool) throw new Error("createClubChangesRouter requires { pool }");
   const router = express.Router();
 
@@ -108,6 +108,60 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
     return gone.rows;
   }
 
+  // Admin seats belong to the org they were handed out in. The checks
+  // that honour them (isEventDelegate, requireClubAdmin, the claim votes)
+  // match a seat against the club's or event's org, and both of those are
+  // still the old one, so someone who transferred away kept running their
+  // old club's meets from the new federation. Club and region seats in
+  // any other org go, and so do their event manager seats there.
+  // A club_change within one org leaves them alone: running a club has
+  // never depended on being a member of it.
+  async function dropSeatsLeftBehind(client, userId, toOrgId) {
+    const clubs = await client.query(
+      `DELETE FROM club_admins ca USING clubs c
+        WHERE c.id = ca.club_id AND ca.user_id = $1 AND ca.org_id <> $2
+        RETURNING ca.club_id AS id, c.name, ca.org_id`,
+      [userId, toOrgId],
+    );
+    const regions = await client.query(
+      `DELETE FROM region_admins ra USING regions rg
+        WHERE rg.id = ra.region_id AND ra.user_id = $1 AND ra.org_id <> $2
+        RETURNING ra.region_id AS id, rg.name, ra.org_id`,
+      [userId, toOrgId],
+    );
+    const events = await client.query(
+      `DELETE FROM event_managers em USING events e
+        WHERE e.id = em.event_id AND em.user_id = $1 AND e.org_id <> $2
+        RETURNING em.event_id AS id, e.name`,
+      [userId, toOrgId],
+    );
+    return { clubs: clubs.rows, regions: regions.rows, events: events.rows };
+  }
+
+  // Whoever's still running a club or region the mover just left. If
+  // nobody is, its federation's admins, or DivingHQ where there isn't one,
+  // so a club with no admin doesn't just sit there unnoticed.
+  async function whoIsLeft(client, scope, row) {
+    const table = scope === "club" ? "club_admins" : "region_admins";
+    const col = scope === "club" ? "club_id" : "region_id";
+    const left = (await client.query(
+      `SELECT a.user_id FROM ${table} a JOIN users u ON u.id = a.user_id
+        WHERE a.${col} = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
+      [row.id],
+    )).rows.map((x) => x.user_id);
+    if (left.length) return { ids: left, orphaned: false };
+    const orgAdmins = (await client.query(
+      `SELECT r.user_id FROM user_org_roles r JOIN users u ON u.id = r.user_id
+        WHERE r.org_id = $1 AND r.role = 'org_admin' AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
+      [row.org_id],
+    )).rows.map((x) => x.user_id);
+    if (orgAdmins.length) return { ids: orgAdmins, orphaned: true };
+    const sys = (await client.query(
+      "SELECT id FROM users WHERE is_system_admin AND deleted_at IS NULL AND suspended_at IS NULL",
+    )).rows.map((x) => x.id);
+    return { ids: sys, orphaned: true };
+  }
+
   async function finalizeIfReady(client, r, req) {
     const ready =
       r.kind === "club_change"
@@ -116,12 +170,17 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
     if (!ready) return false;
 
     let revokedLinks = [];
+    let seats = { clubs: [], regions: [], events: [] };
 
     if (r.kind === "org_transfer") {
       await client.query(
         "UPDATE users SET org_id = $1, club_id = $2 WHERE id = $3",
         [r.to_org_id, r.to_club_id || null, r.user_id],
       );
+      seats = await dropSeatsLeftBehind(client, r.user_id, r.to_org_id);
+      // Their token still carries the old org and its roles until it
+      // expires, so make them sign in again.
+      if (typeof bumpTokenVersion === "function") await bumpTokenVersion(client, r.user_id);
       // Carry the diver role into the receiving org so they show up
       // on its roster; leave any historical roles behind in the old
       // org.
@@ -169,6 +228,13 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
         from_club_id: r.from_club_id,
         to_club_id: r.to_club_id,
         revoked_guardian_links: revokedLinks.length,
+        ...(r.kind === "org_transfer" ? {
+          removed: {
+            club_admins: seats.clubs.map((c) => c.id),
+            region_admins: seats.regions.map((g) => g.id),
+            event_managers: seats.events.map((e) => e.id),
+          },
+        } : {}),
       },
       note: r.note || null,
     });
@@ -179,6 +245,22 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
       action_url: "/profile",
       data: { request_id: r.id, kind: r.kind },
     });
+
+    for (const [scope, list] of [["club", seats.clubs], ["region", seats.regions]]) {
+      for (const row of list) {
+        const { ids, orphaned } = await whoIsLeft(client, scope, row);
+        for (const id of ids) {
+          if (id === r.user_id) continue;
+          await notify(client, id, {
+            title: orphaned ? `${row.name} has no admin now` : `${row.name} has one admin fewer`,
+            body: `${fullName || "One of its admins"} transferred to another federation, so they no longer run ${row.name}.`
+              + (orphaned ? " Appoint a new admin so someone can run its meets." : ""),
+            action_url: orphaned ? "/clubs" : (scope === "club" ? "/club" : "/region"),
+            data: { request_id: r.id, kind: r.kind, [`${scope}_id`]: row.id },
+          });
+        }
+      }
+    }
 
     // Tell the other half of every link we just closed. The mover already
     // got their own notification above, so skip them.

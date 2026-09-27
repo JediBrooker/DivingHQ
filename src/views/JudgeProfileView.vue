@@ -361,7 +361,7 @@ watch(() => route.params.id, () => { load() })
         <button v-if="fromDate || toDate" class="btn btn-ghost btn-sm" @click="clearDateFilter">Clear</button>
       </div>
       <p class="date-filter-hint">
-        WA Article 13 trim rules apply throughout — the reference is the
+        WA Article 9.1.5 trim rules apply throughout — the reference is the
         kept mean (post-trim) for each dive, the same kept set the
         dive-points formula uses.
       </p>

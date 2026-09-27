@@ -81,7 +81,10 @@
       "short_code_placeholder": "hal. SYD",
       "club_needs_approval": "Inaaprubahan ng {org} ang mga bagong club bago lumabas ang mga ito. Hihingi kami ng pag-apruba sa kanila kapag nakumpirma mo na ang iyong email, at habang naghihintay ay puwede kang mag-sign in at makipagkumpitensya.",
       "club_joins_now": "Agad na sumasali sa {org} ang mga bagong club. Ang {org} ang nagtatalaga ng mga admin ng bawat club.",
-      "success_club_pending": "Naghihintay ang {club} ng pag-apruba ng {org}. Makikita nila ito kapag nakumpirma mo na ang iyong email, at mag-e-email kami sa iyo kapag nakapagpasya na sila."
+      "success_club_pending": "Naghihintay ang {club} ng pag-apruba ng {org}. Makikita nila ito kapag nakumpirma mo na ang iyong email, at mag-e-email kami sa iyo kapag nakapagpasya na sila.",
+      "region_will_ask": "Ang {region} ang nagpapasya kung aling mga club ang tatanggapin nito, kaya padadalhan ito ng hiling kapag na-verify mo na ang iyong email. Hangga't hindi pa ito tumatanggap, wala pa sa rehiyon ang iyong club.",
+      "founder_role_note": "Bilang tagapagtatag ng club, hindi mo maaaprubahan ang sarili mong kahilingan bilang tagasanay o hukom, kaya susuriin ito ng mga admin ng iyong rehiyon o ng DivingHQ.",
+      "spectator_note_see_above": "Lahat ng account ay nagsisimula bilang Manonood. Ang role na hihilingin mo sa itaas ay susuriin ayon sa nakasaad sa paalala sa ilalim nito. Makakapag-log in ka kapag na-verify na ang iyong email."
     },
     "register_org": {
       "title": "Irehistro ang organisasyon",
@@ -164,7 +167,8 @@
       "resend_prompt": "Kailangan ng bagong link? Ilagay ang iyong username o email address.",
       "resend_label": "Username o email",
       "resend_button": "Magpadala ng bagong link",
-      "resend_sent": "Kung naghihintay ng verification ang account na iyon, papunta na ang bagong link. Tingnan ang iyong inbox."
+      "resend_sent": "Kung naghihintay ng verification ang account na iyon, papunta na ang bagong link. Tingnan ang iyong inbox.",
+      "success_org_suspended": "Na-verify na ang iyong email, pero sinuspinde ang access ng iyong organisasyon sa DivingHQ. Kung sa tingin mo ay pagkakamali ito, makipag-ugnayan sa suporta ng DivingHQ."
     },
     "check_inbox": {
       "title": "Tingnan ang iyong inbox",
@@ -302,7 +306,7 @@
       "step1_title": "Gawin ang iyong club",
       "step1_desc": "Mag-sign up, piliin ang iyong bansa at pangalanan ang iyong club. Kung wala pa sa DivingHQ ang iyong pederasyon, ikaw ang admin nito mula sa simula.",
       "step2_title": "Imbitahan ang mga maninisid at hukom",
-      "step2_desc": "Ipadala sa mga miyembro ang sign-up link. Pipiliin nila ang iyong club, at ikaw ang mag-aapruba kung sino ang sisisid, huhusga o magiging pangunahing hukom.",
+      "step2_desc": "Ipadala sa mga miyembro ang sign-up link. Pipiliin nila ang iyong club, at ikaw ang mag-aapruba kung sino ang sisisid, huhusga o magiging tagasanay.",
       "step3_title": "Patakbuhin ang iyong unang meet",
       "step3_desc": "Ihanda ang mga event, patakbuhin ang meet mula sa Control Room habang nagbibigay ng iskor ang mga hukom sa kanilang telepono, at lumalabas ang mga resulta habang naiiskor ang bawat dive.",
       "note": "Hindi kailangan ng pederasyon para magsimula. Kapag sumali sa DivingHQ ang iyong pederasyon o panrehiyong samahan, sila na ang mamamahala sa bansa o rehiyon, at mananatili sa iyong club ang mga meet, resulta at rekord nito."
@@ -648,7 +652,7 @@
         "desc": "Ikaw ang nagpapatakbo ng iyong club. Kung wala pa sa DivingHQ ang pederasyon ng iyong bansa, ang club ang nagpapatakbo ng sariling kompetisyon: gawin ang mga ito, patakbuhin mula sa <strong>Control Room</strong>, at aprubahan ang mga hiling na role ng mga miyembro. Kung may pederasyon, ito ang mag-aapruba sa bago mong club at puwede ka nitong gawing admin.",
         "step_1": "Mag-sign up, piliin ang iyong bansa at gawin ang iyong club; ikaw ang magiging unang admin nito (kung may pederasyon, kapag naaprubahan na nito ang club)",
         "step_2": "Buksan ang <strong>Tagapamahala ng meet</strong> at gumawa ng kompetisyong hino-host ng iyong club",
-        "step_3": "Sa <strong>Aking club</strong>, aprubahan ang mga humihiling na sumali at ang mga miyembrong gustong mag-dive, humusga o maging tagasanay",
+        "step_3": "Sa <strong>Aking club</strong>, kung wala pang pederasyon, aprubahan ang mga humihiling na sumali at ang mga miyembrong gustong mag-dive, humusga o maging tagasanay",
         "step_4": "Sa araw ng kompetisyon, patakbuhin ang pagmamarka mula sa <strong>Control Room</strong>",
         "step_5": "Kapag dumating ang iyong pederasyon o panrehiyong lupon, bumoto sa claim nito sa <strong>Mga claim</strong>",
         "cta": "Pagpapatakbo ng kompetisyon ↗",
@@ -656,10 +660,10 @@
       },
       "region_admin": {
         "name": "Admin ng rehiyon",
-        "desc": "Ikaw ang nangangalaga sa isang estado, lalawigan o bansa: pinapatakbo ang mga kampeonato nito, maaaring tumulong sa mga kompetisyon ng alinman sa mga club nito, at inaaprubahan ang mga hiling na role ng mga miyembro. Itinatalaga ka ng iyong pederasyon. Kung wala pa, kine-claim ng iyong panrehiyong lupon ang rehiyon at ikaw mismo ang nagdaragdag ng mga kapwa admin. Maaaring mag-apply ang isang state body na patakbuhin ang rehiyon nito mula sa <strong>Irehistro ang iyong org</strong>.",
+        "desc": "Ikaw ang nangangalaga sa isang estado, lalawigan o bansa: pinapatakbo ang mga kampeonato nito at maaaring tumulong sa mga kompetisyon ng alinman sa mga club nito. Kung wala pang pederasyon, ikaw rin ang nag-aapruba ng mga hiling na role ng mga miyembro. Itinatalaga ka ng iyong pederasyon. Kung wala pa, kine-claim ng iyong panrehiyong lupon ang rehiyon at ikaw mismo ang nagdaragdag ng mga kapwa admin. Maaaring mag-apply ang isang state body na patakbuhin ang rehiyon nito mula sa <strong>Irehistro ang iyong org</strong>.",
         "step_1": "Buksan ang <strong>Aking rehiyon</strong> para makita ang mga club at kung sino ang nagpapatakbo",
         "step_2": "Gumawa ng mga kampeonato sa <strong>Tagapamahala ng meet</strong> na hino-host ng iyong rehiyon",
-        "step_3": "Aprubahan ang mga miyembrong gustong mag-dive, humusga o maging tagasanay, at ang mga club na humihiling na sumali sa iyong rehiyon",
+        "step_3": "Kung wala pang pederasyon, aprubahan ang mga miyembrong gustong mag-dive, humusga o maging tagasanay, at ang mga club na humihiling na sumali sa iyong rehiyon",
         "cta": "Pagpapatakbo ng kompetisyon ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "hal. SYD",
       "code_saved": "Nai-save ang code ng club",
       "code_none": "Wala pang code.",
-      "code_federation": "Ang iyong federation ang nagtatakda ng code ng iyong club."
+      "code_federation": "Ang iyong federation ang nagtatakda ng code ng iyong club.",
+      "code_bad": "Gumamit ng hanggang 8 titik, numero o gitling.",
+      "code_taken": "May ibang club na gumagamit na ng code na iyan. Pumili ng iba."
     },
     "admins_intro_meets": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club. Wala silang access sa buong pederasyon.",
     "admins_intro_classes": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club at inaasikaso ang mga klase nito. Wala silang access sa buong pederasyon.",
     "admins_intro_payments": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club at inaasikaso ang mga payout at bayad sa pagsapi nito. Wala silang access sa buong pederasyon.",
-    "last_admin_tip": "Kailangan ng club ng kahit isang admin. Magdagdag muna ng isa pang admin bago alisin ang isang ito."
+    "last_admin_tip": "Kailangan ng club ng kahit isang admin. Magdagdag muna ng isa pang admin bago alisin ang isang ito.",
+    "intro_federation": "Ang invite link, code at mga admin ng iyong club. Ang iyong pederasyon ang nagtatalaga ng mga admin at nagsusuri ng mga hiling na role ng iyong mga miyembro.",
+    "requests_federation": "Ang iyong pederasyon ang nagsusuri ng mga hiling na role ng iyong mga miyembro."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Alisin sa rehiyon",
     "club_requests": "Mga club na gustong sumali",
     "currently_in": "kasalukuyang nasa {region}",
-    "last_admin_tip": "Kailangan ng rehiyon ng kahit isang admin. Magdagdag muna ng isa pang admin bago alisin ang isang ito."
+    "last_admin_tip": "Kailangan ng rehiyon ng kahit isang admin. Magdagdag muna ng isa pang admin bago alisin ang isang ito.",
+    "leave_title": "Alisin ang sarili bilang admin ng {region}?",
+    "leave_body": "Hindi mo na mapapatakbo ang mga kompetisyon ng rehiyon o maaasikaso ang mga club nito. Ibang admin lang ang makapagbabalik sa iyo.",
+    "left_notice": "Hindi ka na admin ng {region}.",
+    "intro_federation": "Ang mga club sa iyong rehiyon at kung sino ang nagpapatakbo sa kanila. Ang iyong pederasyon ang nagsusuri ng mga hiling na role ng kanilang mga miyembro.",
+    "requests_federation": "Ang iyong pederasyon ang nagsusuri ng mga hiling na role mula sa mga miyembro ng iyong mga club."
   },
   "claims": {
     "title": "Mga claim",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Panahon ng botohan (araw)",
-      "description": "Pagkatapos nito: kahit isang pag-apruba at walang tutol ay pumapasa sa claim, kung hindi ay mapupunta ito sa sysadmin."
+      "description": "Kapag natapos ito nang kulang ang pag-apruba para pumasa (ang dalawang tuntunin sa itaas), mapupunta ang claim sa sysadmin. Hindi ito kailanman pumapasa dahil lang natapos ang oras."
     }
   },
   "nav": {

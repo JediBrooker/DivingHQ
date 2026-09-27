@@ -81,7 +81,10 @@
       "short_code_placeholder": "ex. SYD",
       "club_needs_approval": "{org} approuve les nouveaux clubs avant leur mise en ligne. Nous lui transmettrons la demande dès que vous aurez confirmé votre e-mail ; en attendant, vous pouvez vous connecter et plonger.",
       "club_joins_now": "Les nouveaux clubs rejoignent {org} immédiatement. {org} nomme les administrateurs de chaque club.",
-      "success_club_pending": "{club} attend l'approbation de {org}. La demande lui parviendra dès que vous aurez confirmé votre e-mail, et nous vous écrirons dès qu'une décision sera prise."
+      "success_club_pending": "{club} attend l'approbation de {org}. La demande lui parviendra dès que vous aurez confirmé votre e-mail, et nous vous écrirons dès qu'une décision sera prise.",
+      "region_will_ask": "{region} choisit les clubs qu'elle accueille : une demande lui sera envoyée dès que vous aurez vérifié votre e-mail. Tant qu'elle n'a pas accepté, votre club n'est pas dans la région.",
+      "founder_role_note": "En tant que fondateur du club, vous ne pouvez pas approuver votre propre demande d'entraîneur ou de juge : elle part aux administrateurs de votre région, ou à DivingHQ.",
+      "spectator_note_see_above": "Tous les comptes commencent en tant que Spectateur. Le rôle que vous demandez ci-dessus est examiné comme l'indique la note juste en dessous. Vous pourrez vous connecter une fois votre e-mail vérifié."
     },
     "register_org": {
       "title": "Inscrire une organisation",
@@ -164,7 +167,8 @@
       "resend_prompt": "Besoin d'un nouveau lien ? Saisissez votre nom d'utilisateur ou votre adresse e-mail.",
       "resend_label": "Nom d'utilisateur ou e-mail",
       "resend_button": "Envoyer un nouveau lien",
-      "resend_sent": "Si ce compte attend une vérification, un nouveau lien est en route. Consultez votre boîte de réception."
+      "resend_sent": "Si ce compte attend une vérification, un nouveau lien est en route. Consultez votre boîte de réception.",
+      "success_org_suspended": "Votre e-mail est vérifié, mais l'accès de votre organisation à DivingHQ a été suspendu. Si vous pensez qu'il s'agit d'une erreur, contactez l'assistance DivingHQ."
     },
     "check_inbox": {
       "title": "Consultez votre boîte de réception",
@@ -302,7 +306,7 @@
       "step1_title": "Créez votre club",
       "step1_desc": "Inscrivez-vous, choisissez votre pays et nommez votre club. Si votre fédération n'est pas encore sur DivingHQ, vous en êtes l'administrateur dès le départ.",
       "step2_title": "Invitez plongeurs et juges",
-      "step2_desc": "Envoyez le lien d'inscription à vos membres. Ils choisissent votre club, et vous approuvez qui plonge, juge ou arbitre.",
+      "step2_desc": "Envoyez le lien d'inscription à vos membres. Ils choisissent votre club, et vous approuvez qui plonge, juge ou entraîne.",
       "step3_title": "Organisez votre première compétition",
       "step3_desc": "Créez les épreuves, pilotez la compétition depuis la salle de contrôle pendant que les juges notent sur leur téléphone, et les résultats sont publiés au fil des plongeons notés.",
       "note": "Pas besoin de fédération pour commencer. Si votre fédération ou votre ligue régionale rejoint DivingHQ plus tard, elle prend en charge le pays ou la région, et votre club conserve ses compétitions, résultats et records."
@@ -659,7 +663,7 @@
         "desc": "Vous gérez votre club. Là où la fédération de votre pays n'est pas encore sur DivingHQ, le club organise ses propres compétitions : créez-les, pilotez-les depuis la <strong>Salle de contrôle</strong> et approuvez les demandes de rôle de vos membres. Sous une fédération, c'est elle qui approuve votre nouveau club et peut vous en nommer administrateur.",
         "step_1": "Inscrivez-vous, choisissez votre pays et créez votre club : vous en serez le premier administrateur (sous une fédération, une fois qu'elle l'aura approuvé)",
         "step_2": "Ouvrez le <strong>Gestionnaire de compétitions</strong> et créez une compétition organisée par votre club",
-        "step_3": "Dans <strong>Mon club</strong>, approuvez les personnes qui demandent à rejoindre le club et les membres qui veulent plonger, juger ou entraîner",
+        "step_3": "Dans <strong>Mon club</strong>, là où il n'y a pas encore de fédération, approuvez les personnes qui demandent à rejoindre le club et les membres qui veulent plonger, juger ou entraîner",
         "step_4": "Le jour J, pilotez la notation depuis la <strong>Salle de contrôle</strong>",
         "step_5": "Quand votre fédération ou votre organe régional arrive, votez sur sa revendication dans <strong>Revendications</strong>",
         "cta": "Organiser une compétition ↗",
@@ -667,10 +671,10 @@
       },
       "region_admin": {
         "name": "Administrateur régional",
-        "desc": "Vous vous occupez d'un État, d'une province ou d'une nation : vous organisez ses championnats, pouvez intervenir sur les compétitions de n'importe lequel de ses clubs et approuvez les demandes de rôle de leurs membres. Votre fédération vous nomme. Tant qu'il n'y en a pas, votre organe régional revendique la région et vous ajoutez vous-même vos co-administrateurs. Un organisme d'État peut demander à gérer sa région depuis <strong>Enregistrer votre organisation</strong>.",
+        "desc": "Vous vous occupez d'un État, d'une province ou d'une nation : vous organisez ses championnats et pouvez intervenir sur les compétitions de n'importe lequel de ses clubs. Là où il n'y a pas encore de fédération, vous approuvez aussi les demandes de rôle de leurs membres. Votre fédération vous nomme. Tant qu'il n'y en a pas, votre organe régional revendique la région et vous ajoutez vous-même vos co-administrateurs. Un organisme d'État peut demander à gérer sa région depuis <strong>Enregistrer votre organisation</strong>.",
         "step_1": "Ouvrez <strong>Ma région</strong> pour voir vos clubs et qui les gère",
         "step_2": "Créez vos championnats dans le <strong>Gestionnaire de compétitions</strong>, organisés par votre région",
-        "step_3": "Approuvez les membres qui veulent plonger, juger ou entraîner, et les clubs qui demandent à rejoindre votre région",
+        "step_3": "Là où il n'y a pas encore de fédération, approuvez les membres qui veulent plonger, juger ou entraîner, et les clubs qui demandent à rejoindre votre région",
         "cta": "Organiser une compétition ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "ex. SYD",
       "code_saved": "Code du club enregistré",
       "code_none": "Pas encore de code.",
-      "code_federation": "C'est votre fédération qui fixe le code de votre club."
+      "code_federation": "C'est votre fédération qui fixe le code de votre club.",
+      "code_bad": "Utilisez jusqu'à 8 lettres, chiffres ou tirets.",
+      "code_taken": "Un autre club utilise déjà ce code. Choisissez-en un autre."
     },
     "admins_intro_meets": "Les administrateurs du club organisent les compétitions que leur club accueille. Ils n'ont aucun accès à l'échelle de la fédération.",
     "admins_intro_classes": "Les administrateurs du club organisent les compétitions que leur club accueille et gèrent ses cours. Ils n'ont aucun accès à l'échelle de la fédération.",
     "admins_intro_payments": "Les administrateurs du club organisent les compétitions que leur club accueille et gèrent ses versements et ses cotisations d'affiliation. Ils n'ont aucun accès à l'échelle de la fédération.",
-    "last_admin_tip": "Un club doit avoir au moins un administrateur. Ajoutez un autre administrateur avant de retirer celui-ci."
+    "last_admin_tip": "Un club doit avoir au moins un administrateur. Ajoutez un autre administrateur avant de retirer celui-ci.",
+    "intro_federation": "Le lien d'invitation, le code et les administrateurs de votre club. Votre fédération nomme les administrateurs et examine les demandes de rôle de vos membres.",
+    "requests_federation": "Votre fédération examine les demandes de rôle de vos membres."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Retirer de la région",
     "club_requests": "Clubs qui demandent à rejoindre la région",
     "currently_in": "actuellement dans {region}",
-    "last_admin_tip": "Une région doit avoir au moins un administrateur. Ajoutez un autre administrateur avant de retirer celui-ci."
+    "last_admin_tip": "Une région doit avoir au moins un administrateur. Ajoutez un autre administrateur avant de retirer celui-ci.",
+    "leave_title": "Vous retirer des administrateurs de {region} ?",
+    "leave_body": "Vous ne pourrez plus organiser les compétitions de la région ni vous occuper de ses clubs. Seul un autre administrateur pourra vous rajouter.",
+    "left_notice": "Vous n'êtes plus administrateur de {region}.",
+    "intro_federation": "Les clubs de votre région et qui les gère. Votre fédération examine les demandes de rôle de leurs membres.",
+    "requests_federation": "Votre fédération examine les demandes de rôle des membres de vos clubs."
   },
   "claims": {
     "title": "Revendications",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Durée du vote (jours)",
-      "description": "À son terme : au moins une approbation et aucune objection valident la revendication, sinon elle part à l'administrateur système."
+      "description": "Si elle se termine sans assez d'approbations pour la valider (les deux règles ci-dessus), la revendication part à l'administrateur système. Elle n'est jamais validée du seul fait du délai."
     }
   },
   "nav": {

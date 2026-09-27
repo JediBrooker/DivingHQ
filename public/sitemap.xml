@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- The public pages of divinghq.app. Guide topics must match
-     src/guide/topics.js; test/spa-shell.test.js checks that they do. -->
+     src/guide/topics.js; test/spa-shell.test.js checks that they do.
+     Topics behind a feature flag (payments, classes) are left out when
+     it's served while the flag is off (server.js). -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://divinghq.app/</loc></url>
   <url><loc>https://divinghq.app/guide</loc></url>

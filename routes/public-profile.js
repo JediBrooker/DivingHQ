@@ -24,6 +24,7 @@
 const express = require("express");
 const sharp = require("sharp");
 const { perDivePointsCte } = require("../lib/scoring-sql");
+const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // In-memory cache of rendered OG cards. Each crawler hits the
 // og:image once per share-to-cache (Twitter / FB / LinkedIn all
@@ -113,7 +114,7 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
                 u.club_id, cl.name AS club_name, cl.short_code AS club_code
          FROM users u
          JOIN organisations o ON u.org_id = o.id
-         LEFT JOIN clubs cl ON cl.id = u.club_id
+         ${PUBLIC_CLUB_JOIN}
          WHERE u.public_slug = $1
            AND u.deleted_at IS NULL`,
         [slug],
@@ -242,7 +243,7 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
                 cl.name AS club_name
          FROM users u
          JOIN organisations o ON u.org_id = o.id
-         LEFT JOIN clubs cl ON cl.id = u.club_id
+         ${PUBLIC_CLUB_JOIN}
          WHERE u.public_slug = $1
            AND u.deleted_at IS NULL`,
         [slug],
@@ -351,7 +352,7 @@ module.exports = function createPublicProfileRouter({ pool, readPool }) {
         `SELECT u.full_name, o.name AS org_name, o.country_code, cl.name AS club_name
          FROM users u
          JOIN organisations o ON u.org_id = o.id
-         LEFT JOIN clubs cl ON cl.id = u.club_id
+         ${PUBLIC_CLUB_JOIN}
          WHERE u.public_slug = $1
            AND u.deleted_at IS NULL`,
         [slug],

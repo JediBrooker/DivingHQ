@@ -27,6 +27,7 @@ const resent = ref(false)
 const successText = computed(() => ({
   claim_open:  t('auth.verify_email.success_claim'),
   org_pending: t('auth.verify_email.success_org_pending'),
+  org_suspended: t('auth.verify_email.success_org_suspended'),
 }[next.value] || t('auth.verify_email.success_sign_in')))
 
 async function verify() {

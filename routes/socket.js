@@ -44,6 +44,7 @@ module.exports = function attachSocket({
   isTokenVersionCurrent,
   // From lib/records:
   checkAndApplyRecords,
+  recomputeRecordKeys,
   // From lib/live-state:
   activeDivers,
   meetHolds,
@@ -658,9 +659,11 @@ module.exports = function attachSocket({
         if (existing && existing.score_source === "manual_entry") {
           if (oldScore === score) {
             // Same value, reconcile by flipping the source.
+            // status back to active too: this is the judge scoring again
+            // after a redive, same as the upsert below.
             await client.query(
               `UPDATE scores SET score_source = 'manual_then_reconciled',
-                                 actor_local_time = $2
+                                 actor_local_time = $2, status = 'active'
                WHERE id = $1`,
               [existing.id, actorLocalTime],
             );
@@ -833,8 +836,14 @@ module.exports = function attachSocket({
         }
       }
 
+      // A new score can only raise a book. One that replaced a score
+      // already there (a corrected score, a judge scoring again after a
+      // redive) can lower it, or raise a mark the dive itself set, so
+      // those replay the dive's books instead.
       announceRecords({
-        checkAndApplyRecords, io, scoreboardCache,
+        checkAndApplyRecords,
+        recomputeRecordKeys: isInsert ? null : recomputeRecordKeys,
+        io, scoreboardCache,
         eventId:      data.event_id,
         competitorId: data.competitor_id,
         roundNumber:  round,
@@ -1020,6 +1029,16 @@ module.exports = function attachSocket({
           // the round via submit_score on the same UNIQUE key), but we
           // still record the referee action so the audit trail shows
           // it. No UPDATE → old_score == new_score == current score.
+          //
+          // The old panel's rows are marked 'redive' though, and each
+          // judge's new score flips its row back to active. Records
+          // only count a dive whose whole panel is active, so a dive
+          // with one fresh score and six stale ones can't set one.
+          await client.query(
+            `UPDATE scores SET status = 'redive'
+              WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
+            [data.event_id, data.competitor_id, data.round_number],
+          );
           await client.query(
             `INSERT INTO score_audit_log
                (score_id, event_id, competitor_id, judge_id, round_number,
@@ -1051,6 +1070,15 @@ module.exports = function attachSocket({
       // changed (or could change) the standings; flush so the
       // next /api/scoreboard read rebuilds.
       scoreboardCache?.invalidate(data.event_id);
+      // A Failed or capped dive that already set a record doesn't hold
+      // it any more, and a redive's old total never counted. Replay its
+      // books. Not awaited, same as submit_score's check.
+      if (recomputeRecordKeys) {
+        announceRecords({
+          recomputeRecordKeys, io, scoreboardCache,
+          eventId: data.event_id, competitorId: data.competitor_id, roundNumber: data.round_number,
+        });
+      }
       return true;
     }
 

@@ -81,7 +81,10 @@
       "short_code_placeholder": "npr. SYD",
       "club_needs_approval": "{org} odobrava nove klubove prije nego što postanu vidljivi. Zatražit ćemo odobrenje čim potvrdite svoju e-poštu, a u međuvremenu se možete prijaviti i natjecati.",
       "club_joins_now": "Novi klubovi odmah se pridružuju organizaciji {org}. {org} imenuje administratore svakog kluba.",
-      "success_club_pending": "Klub {club} čeka odobrenje organizacije {org}. Vidjet će ga čim potvrdite svoju e-poštu, a javit ćemo vam e-poštom kad odluče."
+      "success_club_pending": "Klub {club} čeka odobrenje organizacije {org}. Vidjet će ga čim potvrdite svoju e-poštu, a javit ćemo vam e-poštom kad odluče.",
+      "region_will_ask": "Regija {region} sama odlučuje koje klubove prima, pa će joj zahtjev stići čim potvrdite e-poštu. Dok ga ne prihvati, vaš klub nije u regiji.",
+      "founder_role_note": "Kao osnivač kluba ne možete odobriti vlastiti zahtjev za trenera ili suca, pa ga pregledavaju administratori vaše regije ili DivingHQ.",
+      "spectator_note_see_above": "Svi računi počinju kao Gledatelj. Uloga koju gore zatražite pregledava se kako kaže napomena ispod nje. Moći ćete se prijaviti nakon potvrde e-pošte."
     },
     "register_org": {
       "title": "Registracija organizacije",
@@ -164,7 +167,8 @@
       "resend_prompt": "Trebate novu poveznicu? Unesite korisničko ime ili adresu e-pošte.",
       "resend_label": "Korisničko ime ili e-pošta",
       "resend_button": "Pošalji novu poveznicu",
-      "resend_sent": "Ako taj račun čeka potvrdu, nova poveznica je na putu. Provjerite svoj sandučić."
+      "resend_sent": "Ako taj račun čeka potvrdu, nova poveznica je na putu. Provjerite svoj sandučić.",
+      "success_org_suspended": "Vaša e-pošta je potvrđena, ali pristup vaše organizacije DivingHQ-u je obustavljen. Ako mislite da je riječ o pogrešci, obratite se podršci DivingHQ-a."
     },
     "check_inbox": {
       "title": "Provjerite svoj sandučić",
@@ -302,7 +306,7 @@
       "step1_title": "Stvorite svoj klub",
       "step1_desc": "Registrirajte se, odaberite državu i dajte ime svom klubu. Ako vaš savez još nije na DivingHQ-u, od početka ste administrator kluba.",
       "step2_title": "Pozovite skakače i suce",
-      "step2_desc": "Pošaljite članovima poveznicu za registraciju. Oni odaberu vaš klub, a vi odobravate tko skače, sudi ili je glavni sudac.",
+      "step2_desc": "Pošaljite članovima poveznicu za registraciju. Oni odaberu vaš klub, a vi odobravate tko skače, sudi ili je trener.",
       "step3_title": "Održite svoje prvo natjecanje",
       "step3_desc": "Postavite discipline, vodite natjecanje iz kontrolne sobe dok suci ocjenjuju na mobitelima, a rezultati se objavljuju nakon svakog ocijenjenog skoka.",
       "note": "Za početak vam ne treba savez. Ako se vaš savez ili regionalni savez kasnije pridruži DivingHQ-u, preuzima vođenje države ili regije, a vaš klub zadržava svoja natjecanja, rezultate i rekorde."
@@ -648,7 +652,7 @@
         "desc": "Vodite svoj klub. Gdje savez vaše države još nije na DivingHQ-u, klub sam organizira natjecanja: stvorite ih, vodite iz <strong>Kontrolne sobe</strong> i odobravajte zahtjeve članova za uloge. Pod savezom savez odobrava vaš novi klub i može vas imenovati njegovim administratorom.",
         "step_1": "Registrirajte se, odaberite državu i stvorite klub; bit ćete njegov prvi administrator (pod savezom nakon što savez odobri klub)",
         "step_2": "Otvorite <strong>Menadžer natjecanja</strong> i stvorite natjecanje koje organizira vaš klub",
-        "step_3": "Na stranici <strong>Moj klub</strong> odobrite one koji traže učlanjenje i članove koji žele skakati, suditi ili trenirati druge",
+        "step_3": "Na stranici <strong>Moj klub</strong>, gdje još nema saveza, odobrite one koji traže učlanjenje i članove koji žele skakati, suditi ili trenirati druge",
         "step_4": "Na dan natjecanja vodite bodovanje iz <strong>Kontrolne sobe</strong>",
         "step_5": "Kad stigne vaš savez ili regionalno tijelo, glasajte o njegovu zahtjevu u <strong>Zahtjevima</strong>",
         "cta": "Organizacija natjecanja ↗",
@@ -656,10 +660,10 @@
       },
       "region_admin": {
         "name": "Administrator regije",
-        "desc": "Brinete se o saveznoj državi, provinciji ili naciji: organizirate njezina prvenstva, možete uskočiti u natjecanja bilo kojeg njezinog kluba i odobravate zahtjeve članova klubova za uloge. Imenuje vas savez. Dok saveza nema, vaše regionalno tijelo preuzima regiju, a ostale administratore dodajete sami. Tijelo savezne države može zatražiti vođenje svoje regije putem <strong>Registrirajte svoju organizaciju</strong>.",
+        "desc": "Brinete se o saveznoj državi, provinciji ili naciji: organizirate njezina prvenstva i možete uskočiti u natjecanja bilo kojeg njezinog kluba. Gdje još nema saveza, odobravate i zahtjeve članova klubova za uloge. Imenuje vas savez. Dok saveza nema, vaše regionalno tijelo preuzima regiju, a ostale administratore dodajete sami. Tijelo savezne države može zatražiti vođenje svoje regije putem <strong>Registrirajte svoju organizaciju</strong>.",
         "step_1": "Otvorite <strong>Moja regija</strong> za svoje klubove i tko ih vodi",
         "step_2": "Stvorite prvenstva u <strong>Menadžeru natjecanja</strong> s regijom kao organizatorom",
-        "step_3": "Odobrite članove koji žele skakati, suditi ili trenirati druge te klubove koji traže ulazak u vašu regiju",
+        "step_3": "Gdje još nema saveza, odobrite članove koji žele skakati, suditi ili trenirati druge te klubove koji traže ulazak u vašu regiju",
         "cta": "Organizacija natjecanja ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "npr. SYD",
       "code_saved": "Oznaka kluba spremljena",
       "code_none": "Još nema oznake.",
-      "code_federation": "Oznaku vašeg kluba određuje vaš savez."
+      "code_federation": "Oznaku vašeg kluba određuje vaš savez.",
+      "code_bad": "Koristite do 8 slova, brojki ili crtica.",
+      "code_taken": "Tu oznaku već koristi drugi klub. Odaberite drugu."
     },
     "admins_intro_meets": "Administratori kluba vode natjecanja koja njihov klub organizira. Nemaju pristup na razini saveza.",
     "admins_intro_classes": "Administratori kluba vode natjecanja koja njihov klub organizira i brinu o njegovim tečajevima. Nemaju pristup na razini saveza.",
     "admins_intro_payments": "Administratori kluba vode natjecanja koja njihov klub organizira i brinu o njegovim isplatama i članarinama. Nemaju pristup na razini saveza.",
-    "last_admin_tip": "Klub mora imati barem jednog administratora. Dodajte još jednog administratora prije nego što uklonite ovog."
+    "last_admin_tip": "Klub mora imati barem jednog administratora. Dodajte još jednog administratora prije nego što uklonite ovog.",
+    "intro_federation": "Poveznica za pozivnicu, oznaka i administratori vašeg kluba. Vaš savez imenuje administratore i obrađuje zahtjeve vaših članova za uloge.",
+    "requests_federation": "Vaš savez obrađuje zahtjeve vaših članova za uloge."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Izvadi iz regije",
     "club_requests": "Klubovi koji traže ulazak",
     "currently_in": "trenutačno u regiji {region}",
-    "last_admin_tip": "Regija mora imati barem jednog administratora. Dodajte još jednog administratora prije nego što uklonite ovog."
+    "last_admin_tip": "Regija mora imati barem jednog administratora. Dodajte još jednog administratora prije nego što uklonite ovog.",
+    "leave_title": "Ukloniti se iz administratora regije {region}?",
+    "leave_body": "Više nećete moći organizirati natjecanja regije ni brinuti se o njezinim klubovima. Natrag vas može dodati samo drugi administrator.",
+    "left_notice": "Više niste administrator regije {region}.",
+    "intro_federation": "Klubovi vaše regije i tko ih vodi. Vaš savez obrađuje zahtjeve njihovih članova za uloge.",
+    "requests_federation": "Vaš savez obrađuje zahtjeve članova vaših klubova za uloge."
   },
   "claims": {
     "title": "Zahtjevi",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Trajanje glasanja (dani)",
-      "description": "Kad istekne: barem jedno odobrenje i nijedan prigovor znače da zahtjev prolazi, inače ide administratoru sustava."
+      "description": "Ako istekne bez dovoljno odobrenja za prolaz (dva pravila iznad), zahtjev ide administratoru sustava. Nikada ne prolazi samo zato što je vrijeme isteklo."
     }
   },
   "nav": {

@@ -81,7 +81,10 @@
       "short_code_placeholder": "pl. SYD",
       "club_needs_approval": "Az új klubokat a szövetség ({org}) hagyja jóvá, mielőtt megjelennek. Amint megerősítette e-mail-címét, továbbítjuk nekik a kérést; addig is bejelentkezhet és versenyezhet.",
       "club_joins_now": "Az új klubok azonnal csatlakoznak ehhez: {org}. Az egyes klubok adminisztrátorait a szövetség ({org}) nevezi ki.",
-      "success_club_pending": "A klub ({club}) a szövetség ({org}) jóváhagyására vár. Amint megerősítette e-mail-címét, látni fogják, és e-mailben értesítjük a döntésről."
+      "success_club_pending": "A klub ({club}) a szövetség ({org}) jóváhagyására vár. Amint megerősítette e-mail-címét, látni fogják, és e-mailben értesítjük a döntésről.",
+      "region_will_ask": "A(z) {region} régió maga dönti el, mely klubokat fogadja be, ezért az e-mail-címe megerősítése után kérelmet kap. Amíg nem fogadja el, a klubja nem tartozik a régióhoz.",
+      "founder_role_note": "A klub alapítójaként nem hagyhatja jóvá saját edzői vagy pontozóbírói kérelmét, ezért azt a régiója adminisztrátorai vagy a DivingHQ bírálja el.",
+      "spectator_note_see_above": "Minden fiók Nézőként indul. A fent kért szerepkört az alatta lévő megjegyzés szerint bírálják el. Az e-mail-címe megerősítése után bejelentkezhet."
     },
     "register_org": {
       "title": "Szervezet regisztrációja",
@@ -164,7 +167,8 @@
       "resend_prompt": "Új hivatkozásra van szükséged? Add meg a felhasználóneved vagy az e-mail-címed.",
       "resend_label": "Felhasználónév vagy e-mail",
       "resend_button": "Új hivatkozás küldése",
-      "resend_sent": "Ha a fiók megerősítésre vár, az új hivatkozás úton van. Nézd meg a beérkezett üzeneteidet."
+      "resend_sent": "Ha a fiók megerősítésre vár, az új hivatkozás úton van. Nézd meg a beérkezett üzeneteidet.",
+      "success_org_suspended": "Az e-mail-címed megerősítve, de a szervezeted hozzáférése a DivingHQ-hoz fel van függesztve. Ha szerinted ez tévedés, fordulj a DivingHQ ügyfélszolgálatához."
     },
     "check_inbox": {
       "title": "Nézd meg a beérkező leveleidet",
@@ -302,7 +306,7 @@
       "step1_title": "Hozza létre a klubját",
       "step1_desc": "Regisztráljon, válassza ki az országát, és nevezze el a klubját. Ha a szövetsége még nincs a DivingHQ-n, kezdettől Ön a klub adminisztrátora.",
       "step2_title": "Hívjon meg műugrókat és pontozóbírókat",
-      "step2_desc": "Küldje el a tagoknak a regisztrációs linket. Ők kiválasztják a klubját, Ön pedig jóváhagyja, ki ugrik, pontoz vagy versenybíró.",
+      "step2_desc": "Küldje el a tagoknak a regisztrációs linket. Ők kiválasztják a klubját, Ön pedig jóváhagyja, ki ugrik, pontoz vagy edz.",
       "step3_title": "Rendezze meg az első versenyét",
       "step3_desc": "Hozza létre a versenyszámokat, irányítsa a versenyt a vezérlőszobából, miközben a pontozóbírók a telefonjukon pontoznak, és az eredmények minden pontozott ugrás után megjelennek.",
       "note": "Az induláshoz nincs szükség szövetségre. Ha a szövetsége vagy regionális szövetsége később csatlakozik a DivingHQ-hoz, átveszi az ország vagy a régió irányítását, a klubja pedig megtartja versenyeit, eredményeit és rekordjait."
@@ -659,7 +663,7 @@
         "desc": "Ön vezeti a klubját. Ahol országa szövetsége még nincs a DivingHQ-n, a klub maga rendezi a versenyeit: hozza létre őket, irányítsa a <strong>Vezérlőszobából</strong>, és hagyja jóvá a tagok szerepkör-kérelmeit. Szövetség alatt a szövetség hagyja jóvá az új klubot, és kinevezheti Önt az adminisztrátorává.",
         "step_1": "Regisztráljon, válassza ki az országát és hozza létre a klubját; Ön lesz az első adminisztrátora (szövetség alatt, miután az jóváhagyta a klubot)",
         "step_2": "Nyissa meg a <strong>Versenymenedzsert</strong>, és hozzon létre a klubja által rendezett versenyt",
-        "step_3": "A <strong>Saját klubom</strong> oldalon hagyja jóvá a csatlakozni kívánókat és a műugrani, bíráskodni vagy edzősködni kívánó tagokat",
+        "step_3": "Ahol még nincs szövetség, a <strong>Saját klubom</strong> oldalon hagyja jóvá a csatlakozni kívánókat és a műugrani, bíráskodni vagy edzősködni kívánó tagokat",
         "step_4": "A versenynapon a <strong>Vezérlőszobából</strong> irányítja a pontozást",
         "step_5": "Amikor szövetsége vagy regionális testülete csatlakozik, szavazzon az igényéről az <strong>Igények</strong> oldalon",
         "cta": "Verseny rendezése ↗",
@@ -667,10 +671,10 @@
       },
       "region_admin": {
         "name": "Régió-adminisztrátor",
-        "desc": "Egy államért, tartományért vagy országért felel: rendezi a bajnokságait, beavatkozhat bármely klubja versenyeibe, és jóváhagyja a klubtagok szerepkör-kérelmeit. A szövetsége nevezi ki. Amíg nincs szövetség, a regionális testülete veszi át a régiót, és a további adminisztrátorokat Ön adja hozzá. Egy állami szervezet a <strong>Szervezet regisztrálása</strong> oldalon kérheti, hogy ő irányítsa a régióját.",
+        "desc": "Egy államért, tartományért vagy országért felel: rendezi a bajnokságait, és beavatkozhat bármely klubja versenyeibe. Ahol még nincs szövetség, a klubtagok szerepkör-kérelmeit is Ön hagyja jóvá. A szövetsége nevezi ki. Amíg nincs szövetség, a regionális testülete veszi át a régiót, és a további adminisztrátorokat Ön adja hozzá. Egy állami szervezet a <strong>Szervezet regisztrálása</strong> oldalon kérheti, hogy ő irányítsa a régióját.",
         "step_1": "Nyissa meg a <strong>Saját régióm</strong> oldalt a klubokért és vezetőikért",
         "step_2": "Hozza létre bajnokságait a <strong>Versenymenedzserben</strong> a régió rendezésében",
-        "step_3": "Hagyja jóvá a műugrani, bíráskodni vagy edzősködni kívánó tagokat és a régiójához csatlakozni kívánó klubokat",
+        "step_3": "Ahol még nincs szövetség, hagyja jóvá a műugrani, bíráskodni vagy edzősködni kívánó tagokat és a régiójához csatlakozni kívánó klubokat",
         "cta": "Verseny rendezése ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "pl. SYD",
       "code_saved": "Klubkód mentve",
       "code_none": "Még nincs kód.",
-      "code_federation": "A klubod kódját a szövetséged állítja be."
+      "code_federation": "A klubod kódját a szövetséged állítja be.",
+      "code_bad": "Legfeljebb 8 betűt, számot vagy kötőjelet használjon.",
+      "code_taken": "Ezt a kódot már egy másik klub használja. Válasszon másikat."
     },
     "admins_intro_meets": "A klubadminok a klubjuk által rendezett versenyeket vezetik. Szövetségi szintű hozzáférést nem kapnak.",
     "admins_intro_classes": "A klubadminok a klubjuk által rendezett versenyeket vezetik, és gondoskodnak a klub foglalkozásairól. Szövetségi szintű hozzáférést nem kapnak.",
     "admins_intro_payments": "A klubadminok a klubjuk által rendezett versenyeket vezetik, és gondoskodnak a klub kifizetéseiről és tagdíjairól. Szövetségi szintű hozzáférést nem kapnak.",
-    "last_admin_tip": "Egy klubnak legalább egy adminisztrátorra van szüksége. Adjon hozzá egy másik adminisztrátort, mielőtt ezt eltávolítja."
+    "last_admin_tip": "Egy klubnak legalább egy adminisztrátorra van szüksége. Adjon hozzá egy másik adminisztrátort, mielőtt ezt eltávolítja.",
+    "intro_federation": "A klub meghívó linkje, kódja és adminisztrátorai. Az adminisztrátorokat a szövetsége nevezi ki, és a tagok szerepkör-kérelmeit is ő bírálja el.",
+    "requests_federation": "A tagok szerepkör-kérelmeit a szövetsége bírálja el."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Kivétel a régióból",
     "club_requests": "Csatlakozni kívánó klubok",
     "currently_in": "jelenleg: {region}",
-    "last_admin_tip": "Egy régiónak legalább egy adminisztrátorra van szüksége. Adjon hozzá egy másik adminisztrátort, mielőtt ezt eltávolítja."
+    "last_admin_tip": "Egy régiónak legalább egy adminisztrátorra van szüksége. Adjon hozzá egy másik adminisztrátort, mielőtt ezt eltávolítja.",
+    "leave_title": "Eltávolítja magát a(z) {region} adminisztrátorai közül?",
+    "leave_body": "Ezután nem rendezhet versenyeket a régió nevében, és nem foglalkozhat a klubjaival. Csak egy másik adminisztrátor veheti vissza.",
+    "left_notice": "Már nem adminisztrátora ennek a régiónak: {region}.",
+    "intro_federation": "A régió klubjai és azok vezetői. A tagjaik szerepkör-kérelmeit a szövetsége bírálja el.",
+    "requests_federation": "A klubjai tagjainak szerepkör-kérelmeit a szövetsége bírálja el."
   },
   "claims": {
     "title": "Igények",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Szavazási idő (nap)",
-      "description": "Lejártakor: legalább egy jóváhagyás és egyetlen kifogás sem esetén az igény elfogadott, különben a rendszergazdához kerül."
+      "description": "Ha úgy jár le, hogy nincs elég jóváhagyás az elfogadáshoz (a fenti két szabály), az igény a rendszergazdához kerül. Pusztán az idő lejártával soha nem fogadják el."
     }
   },
   "nav": {

@@ -81,7 +81,10 @@
       "short_code_placeholder": "esim. SYD",
       "club_needs_approval": "{org} hyväksyy uudet seurat ennen kuin ne tulevat näkyviin. Kysymme sitä heti, kun olet vahvistanut sähköpostiosoitteesi, ja sillä välin voit kirjautua sisään ja kilpailla.",
       "club_joins_now": "Uudet seurat liittyvät organisaatioon {org} heti. {org} nimeää kunkin seuran ylläpitäjät.",
-      "success_club_pending": "{club} odottaa organisaation {org} hyväksyntää. He näkevät sen, kun olet vahvistanut sähköpostiosoitteesi, ja lähetämme sinulle sähköpostia, kun päätös on tehty."
+      "success_club_pending": "{club} odottaa organisaation {org} hyväksyntää. He näkevät sen, kun olet vahvistanut sähköpostiosoitteesi, ja lähetämme sinulle sähköpostia, kun päätös on tehty.",
+      "region_will_ask": "Alue {region} päättää itse, mitkä seurat se ottaa, joten siltä kysytään, kun olet vahvistanut sähköpostisi. Ennen hyväksyntää seurasi ei kuulu alueeseen.",
+      "founder_role_note": "Seuran perustajana et voi hyväksyä omaa valmentaja- tai tuomaripyyntöäsi, joten sen käsittelevät alueesi ylläpitäjät tai DivingHQ.",
+      "spectator_note_see_above": "Kaikki tilit alkavat katsojan oikeuksilla. Yllä pyytämäsi rooli käsitellään sen alla olevan huomautuksen mukaisesti. Voit kirjautua, kun sähköpostisi on vahvistettu."
     },
     "register_org": {
       "title": "Rekisteröi organisaatio",
@@ -164,7 +167,8 @@
       "resend_prompt": "Tarvitsetko uuden linkin? Anna käyttäjätunnuksesi tai sähköpostiosoitteesi.",
       "resend_label": "Käyttäjätunnus tai sähköposti",
       "resend_button": "Lähetä uusi linkki",
-      "resend_sent": "Jos tili odottaa vahvistusta, uusi linkki on matkalla. Tarkista saapuneet viestisi."
+      "resend_sent": "Jos tili odottaa vahvistusta, uusi linkki on matkalla. Tarkista saapuneet viestisi.",
+      "success_org_suspended": "Sähköpostisi on vahvistettu, mutta organisaatiosi pääsy DivingHQ:hun on keskeytetty. Jos uskot tämän olevan virhe, ota yhteyttä DivingHQ:n tukeen."
     },
     "check_inbox": {
       "title": "Tarkista saapuneet viestisi",
@@ -302,7 +306,7 @@
       "step1_title": "Perusta seura",
       "step1_desc": "Rekisteröidy, valitse maasi ja nimeä seurasi. Jos liittosi ei vielä ole DivingHQ:ssa, olet seuran ylläpitäjä alusta asti.",
       "step2_title": "Kutsu hyppääjät ja tuomarit",
-      "step2_desc": "Lähetä jäsenille rekisteröitymislinkki. He valitsevat seurasi, ja sinä hyväksyt, kuka hyppää, tuomaroi tai toimii ylituomarina.",
+      "step2_desc": "Lähetä jäsenille rekisteröitymislinkki. He valitsevat seurasi, ja sinä hyväksyt, kuka hyppää, tuomaroi tai valmentaa.",
       "step3_title": "Järjestä ensimmäiset kilpailusi",
       "step3_desc": "Luo lajit, vedä kilpailua ohjaamosta tuomareiden pisteyttäessä puhelimillaan, ja tulokset julkaistaan sitä mukaa kuin hypyt pisteytetään.",
       "note": "Aloittamiseen ei tarvita liittoa. Jos liittosi tai alueliittosi liittyy DivingHQ:hun myöhemmin, se ottaa maan tai alueen hallintaansa, ja seurasi säilyttää kilpailunsa, tuloksensa ja ennätyksensä."
@@ -659,7 +663,7 @@
         "desc": "Johdat seuraasi. Jos maasi liitto ei vielä ole DivingHQ:ssa, seura järjestää kilpailunsa itse: luo ne, ohjaa niitä <strong>Ohjaamosta</strong> ja hyväksy jäsenten roolipyynnöt. Liiton alaisuudessa liitto hyväksyy uuden seurasi ja voi nimetä sinut sen ylläpitäjäksi.",
         "step_1": "Rekisteröidy, valitse maasi ja luo seurasi; sinusta tulee sen ensimmäinen ylläpitäjä (liiton alaisuudessa, kun liitto on hyväksynyt seuran)",
         "step_2": "Avaa <strong>Kilpailun hallinta</strong> ja luo seurasi järjestämä kilpailu",
-        "step_3": "Hyväksy <strong>Oma seura</strong> -sivulla liittymistä pyytävät sekä jäsenet, jotka haluavat hypätä, tuomita tai valmentaa",
+        "step_3": "Missä liittoa ei vielä ole, hyväksy <strong>Oma seura</strong> -sivulla liittymistä pyytävät sekä jäsenet, jotka haluavat hypätä, tuomita tai valmentaa",
         "step_4": "Kilpailupäivänä ohjaat pisteytystä <strong>Ohjaamosta</strong>",
         "step_5": "Kun liittosi tai alueellinen elin liittyy, äänestä sen vaatimuksesta sivulla <strong>Vaatimukset</strong>",
         "cta": "Kilpailun järjestäminen ↗",
@@ -667,10 +671,10 @@
       },
       "region_admin": {
         "name": "Alueen ylläpitäjä",
-        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut, voit tarttua minkä tahansa sen seuran kilpailuihin ja hyväksyt seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut. Jos liittoa ei vielä ole, alueellinen elimesi ottaa alueen hoitaakseen ja lisäät muut ylläpitäjät itse. Osavaltion liitto voi hakea alueensa hallintaa kohdasta <strong>Rekisteröi organisaatio</strong>.",
+        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut ja voit tarttua minkä tahansa sen seuran kilpailuihin. Missä liittoa ei vielä ole, hyväksyt myös seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut. Jos liittoa ei vielä ole, alueellinen elimesi ottaa alueen hoitaakseen ja lisäät muut ylläpitäjät itse. Osavaltion liitto voi hakea alueensa hallintaa kohdasta <strong>Rekisteröi organisaatio</strong>.",
         "step_1": "Avaa <strong>Oma alue</strong> nähdäksesi seurasi ja niiden vetäjät",
         "step_2": "Luo mestaruuskilpailusi <strong>Kilpailun hallinnassa</strong> alueesi järjestämänä",
-        "step_3": "Hyväksy jäsenet, jotka haluavat hypätä, tuomita tai valmentaa, sekä seurat, jotka pyytävät liittymistä alueellesi",
+        "step_3": "Missä liittoa ei vielä ole, hyväksy jäsenet, jotka haluavat hypätä, tuomita tai valmentaa, sekä seurat, jotka pyytävät liittymistä alueellesi",
         "cta": "Kilpailun järjestäminen ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "esim. SYD",
       "code_saved": "Seuran lyhenne tallennettu",
       "code_none": "Ei vielä lyhennettä.",
-      "code_federation": "Liittosi määrittää seurasi lyhenteen."
+      "code_federation": "Liittosi määrittää seurasi lyhenteen.",
+      "code_bad": "Käytä enintään 8 kirjainta, numeroa tai viivaa.",
+      "code_taken": "Toinen seura käyttää jo tätä tunnusta. Valitse toinen."
     },
     "admins_intro_meets": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut. Heillä ei ole liittotason oikeuksia.",
     "admins_intro_classes": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen ryhmistä. Heillä ei ole liittotason oikeuksia.",
     "admins_intro_payments": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen tilityksistä ja jäsenmaksuista. Heillä ei ole liittotason oikeuksia.",
-    "last_admin_tip": "Seuralla on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän."
+    "last_admin_tip": "Seuralla on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän.",
+    "intro_federation": "Seurasi kutsulinkki, tunnus ja ylläpitäjät. Liittosi nimeää ylläpitäjät ja käsittelee jäsentesi roolipyynnöt.",
+    "requests_federation": "Liittosi käsittelee jäsentesi roolipyynnöt."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Poista alueelta",
     "club_requests": "Seurat, jotka pyytävät liittymistä",
     "currently_in": "nyt alueella {region}",
-    "last_admin_tip": "Alueella on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän."
+    "last_admin_tip": "Alueella on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän.",
+    "leave_title": "Poistetaanko sinut alueen {region} ylläpitäjistä?",
+    "leave_body": "Et voi enää järjestää alueen kilpailuja etkä hoitaa sen seuroja. Vain toinen ylläpitäjä voi lisätä sinut takaisin.",
+    "left_notice": "Et ole enää alueen {region} ylläpitäjä.",
+    "intro_federation": "Alueesi seurat ja kuka niitä johtaa. Liittosi käsittelee niiden jäsenten roolipyynnöt.",
+    "requests_federation": "Liittosi käsittelee seurojesi jäsenten roolipyynnöt."
   },
   "claims": {
     "title": "Vaatimukset",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Äänestysaika (päivää)",
-      "description": "Kun se päättyy: vähintään yksi hyväksyntä ilman vastalauseita hyväksyy vaatimuksen, muuten se siirtyy järjestelmänvalvojalle."
+      "description": "Jos se päättyy ilman riittäviä hyväksyntöjä (kaksi yllä olevaa sääntöä), vaatimus siirtyy järjestelmänvalvojalle. Pelkkä ajan kuluminen ei koskaan hyväksy sitä."
     }
   },
   "nav": {

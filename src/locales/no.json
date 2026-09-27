@@ -81,7 +81,10 @@
       "short_code_placeholder": "f.eks. SYD",
       "club_needs_approval": "{org} godkjenner nye klubber før de blir synlige. Vi spør dem så snart du har bekreftet e-posten din, og i mellomtiden kan du logge inn og stupe.",
       "club_joins_now": "Nye klubber blir med i {org} med en gang. {org} utnevner administratorene for hver klubb.",
-      "success_club_pending": "{club} venter på godkjenning fra {org}. De ser den så snart du har bekreftet e-posten din, og vi sender deg en e-post når de har bestemt seg."
+      "success_club_pending": "{club} venter på godkjenning fra {org}. De ser den så snart du har bekreftet e-posten din, og vi sender deg en e-post når de har bestemt seg.",
+      "region_will_ask": "{region} bestemmer selv hvilke klubber den tar inn, så den blir spurt når du har bekreftet e-posten din. Før den sier ja, er ikke klubben din i regionen.",
+      "founder_role_note": "Som klubbens grunnlegger kan du ikke godkjenne din egen forespørsel om å bli trener eller dommer, så den går til regionens administratorer eller til DivingHQ.",
+      "spectator_note_see_above": "Alle kontoer starter som tilskuer. En rolle du ber om ovenfor, vurderes slik merknaden under den sier. Du kan logge inn når e-posten din er bekreftet."
     },
     "register_org": {
       "title": "Registrer organisasjon",
@@ -164,7 +167,8 @@
       "resend_prompt": "Trenger du en ny lenke? Skriv inn brukernavnet eller e-postadressen din.",
       "resend_label": "Brukernavn eller e-post",
       "resend_button": "Send en ny lenke",
-      "resend_sent": "Hvis kontoen venter på bekreftelse, er en ny lenke på vei. Sjekk innboksen din."
+      "resend_sent": "Hvis kontoen venter på bekreftelse, er en ny lenke på vei. Sjekk innboksen din.",
+      "success_org_suspended": "E-posten din er bekreftet, men organisasjonens tilgang til DivingHQ er suspendert. Hvis du mener dette er en feil, kontakt DivingHQs brukerstøtte."
     },
     "check_inbox": {
       "title": "Sjekk innboksen din",
@@ -302,7 +306,7 @@
       "step1_title": "Opprett klubben din",
       "step1_desc": "Registrer deg, velg land og gi klubben et navn. Er forbundet ditt ikke på DivingHQ ennå, er du klubbens administrator fra første stund.",
       "step2_title": "Inviter stupere og dommere",
-      "step2_desc": "Send medlemmene registreringslenken. De velger klubben din, og du godkjenner hvem som stuper, dømmer eller er overdommer.",
+      "step2_desc": "Send medlemmene registreringslenken. De velger klubben din, og du godkjenner hvem som stuper, dømmer eller er trener.",
       "step3_title": "Arranger ditt første stevne",
       "step3_desc": "Sett opp øvelser, styr stevnet fra kontrollrommet mens dommerne gir poeng på mobilen, og resultatene publiseres etter hvert som hvert stup er bedømt.",
       "note": "Du trenger ikke et forbund for å komme i gang. Blir forbundet eller regionsforbundet ditt med i DivingHQ senere, overtar det driften av landet eller regionen, og klubben din beholder stevnene, resultatene og rekordene sine."
@@ -659,7 +663,7 @@
         "desc": "Du driver klubben din. Der landets forbund ennå ikke er på DivingHQ, arrangerer klubben sine egne stevner: opprett dem, styr dem fra <strong>Kontrollrommet</strong> og godkjenn medlemmenes rolleforespørsler. Under et forbund godkjenner forbundet den nye klubben din og kan gjøre deg til administrator.",
         "step_1": "Registrer deg, velg land og opprett klubben; du blir dens første administrator (under et forbund når det har godkjent klubben)",
         "step_2": "Åpne <strong>Stevneadministrator</strong> og opprett et stevne klubben din arrangerer",
-        "step_3": "Godkjenn på <strong>Min klubb</strong> dem som ber om å bli med, og medlemmer som vil stupe, dømme eller være trener",
+        "step_3": "Der det ennå ikke finnes et forbund: godkjenn på <strong>Min klubb</strong> dem som ber om å bli med, og medlemmer som vil stupe, dømme eller være trener",
         "step_4": "På stevnedagen styrer du poenggivningen fra <strong>Kontrollrommet</strong>",
         "step_5": "Når forbundet eller det regionale organet ditt kommer, stemmer du over kravet under <strong>Krav</strong>",
         "cta": "Arrangere et stevne ↗",
@@ -667,10 +671,10 @@
       },
       "region_admin": {
         "name": "Regionsadministrator",
-        "desc": "Du tar deg av en delstat, provins eller nasjon: arrangerer mesterskapene, kan tre inn på stevnene til alle klubbene der og godkjenner rolleforespørsler fra klubbmedlemmene. Forbundet ditt utnevner deg. Finnes det ikke ennå, gjør det regionale organet ditt krav på regionen, og du legger selv til med-administratorene. Et delstatsforbund kan søke om å drive regionen sin fra <strong>Registrer organisasjonen</strong>.",
+        "desc": "Du tar deg av en delstat, provins eller nasjon: arrangerer mesterskapene og kan tre inn på stevnene til alle klubbene der. Der det ennå ikke finnes et forbund, godkjenner du også rolleforespørsler fra klubbmedlemmene. Forbundet ditt utnevner deg. Finnes det ikke ennå, gjør det regionale organet ditt krav på regionen, og du legger selv til med-administratorene. Et delstatsforbund kan søke om å drive regionen sin fra <strong>Registrer organisasjonen</strong>.",
         "step_1": "Åpne <strong>Min region</strong> for å se klubbene og hvem som driver dem",
         "step_2": "Opprett mesterskapene i <strong>Stevneadministrator</strong> med regionen som arrangør",
-        "step_3": "Godkjenn medlemmer som vil stupe, dømme eller være trener, og klubber som ber om å bli med i regionen din",
+        "step_3": "Der det ennå ikke finnes et forbund: godkjenn medlemmer som vil stupe, dømme eller være trener, og klubber som ber om å bli med i regionen din",
         "cta": "Arrangere et stevne ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "f.eks. SYD",
       "code_saved": "Klubbkoden er lagret",
       "code_none": "Ingen kode ennå.",
-      "code_federation": "Forbundet ditt bestemmer klubbens kode."
+      "code_federation": "Forbundet ditt bestemmer klubbens kode.",
+      "code_bad": "Bruk opptil 8 bokstaver, tall eller bindestreker.",
+      "code_taken": "En annen klubb bruker allerede den koden. Velg en annen."
     },
     "admins_intro_meets": "Klubbadministratorer står for stevnene klubben arrangerer. De får ingen tilgang på forbundsnivå.",
     "admins_intro_classes": "Klubbadministratorer står for stevnene klubben arrangerer og tar seg av klubbens kurs. De får ingen tilgang på forbundsnivå.",
     "admins_intro_payments": "Klubbadministratorer står for stevnene klubben arrangerer og tar seg av utbetalinger og medlemskontingenter. De får ingen tilgang på forbundsnivå.",
-    "last_admin_tip": "En klubb må ha minst én administrator. Legg til en medadministrator før du fjerner denne."
+    "last_admin_tip": "En klubb må ha minst én administrator. Legg til en medadministrator før du fjerner denne.",
+    "intro_federation": "Klubbens invitasjonslenke, kode og administratorer. Forbundet ditt utnevner administratorene og behandler medlemmenes rolleforespørsler.",
+    "requests_federation": "Forbundet ditt behandler medlemmenes rolleforespørsler."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Ta ut av regionen",
     "club_requests": "Klubber som ber om å bli med",
     "currently_in": "nå i {region}",
-    "last_admin_tip": "En region må ha minst én administrator. Legg til en medadministrator før du fjerner denne."
+    "last_admin_tip": "En region må ha minst én administrator. Legg til en medadministrator før du fjerner denne.",
+    "leave_title": "Vil du fjerne deg selv som administrator for {region}?",
+    "leave_body": "Du kan ikke lenger arrangere regionens stevner eller ta deg av klubbene i den. Bare en annen administrator kan legge deg til igjen.",
+    "left_notice": "Du er ikke lenger administrator for {region}.",
+    "intro_federation": "Regionens klubber og hvem som driver dem. Forbundet ditt behandler medlemmenes rolleforespørsler.",
+    "requests_federation": "Forbundet ditt behandler rolleforespørsler fra medlemmene i klubbene dine."
   },
   "claims": {
     "title": "Krav",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Stemmeperiode (dager)",
-      "description": "Når den er ute: minst én godkjenning og ingen innsigelser vedtar kravet, ellers går det til systemadministratoren."
+      "description": "Går den ut uten nok godkjenninger til å vedta kravet (de to reglene over), går kravet til systemadministratoren. Det vedtas aldri bare fordi tiden er ute."
     }
   },
   "nav": {

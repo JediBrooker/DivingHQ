@@ -116,6 +116,11 @@ test("a club founded under a federation waits for it, then its founder runs it",
     await nav.getByRole("link", { name: /My club/ }).click();
     await founderPage.waitForURL(/\/club$/);
     await expect(founderPage.getByText("Bamako Divers").first()).toBeVisible();
+    // Under a federation its role requests go to the federation, so My club
+    // says that rather than promising requests that never come.
+    await expect(founderPage.getByTestId("requests-federation")).toHaveText("Your federation reviews your members' role requests.");
+    await expect(founderPage.getByText("No requests waiting")).toHaveCount(0);
+    await expect(founderPage.getByText(/Approve your members' role requests/)).toHaveCount(0);
   } finally {
     await founderCtx.close();
   }

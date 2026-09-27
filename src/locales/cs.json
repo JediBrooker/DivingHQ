@@ -81,7 +81,10 @@
       "short_code_placeholder": "např. SYD",
       "club_needs_approval": "Organizace {org} schvaluje nové kluby, než se zobrazí ostatním. Požádáme ji o to, jakmile potvrdíte svůj e-mail; do té doby se můžete přihlásit a závodit.",
       "club_joins_now": "Nové kluby se k organizaci {org} připojí hned. Správce každého klubu jmenuje organizace {org}.",
-      "success_club_pending": "Klub {club} čeká na schválení organizací {org}. Uvidí ho, jakmile potvrdíte svůj e-mail, a o rozhodnutí vám pošleme e-mail."
+      "success_club_pending": "Klub {club} čeká na schválení organizací {org}. Uvidí ho, jakmile potvrdíte svůj e-mail, a o rozhodnutí vám pošleme e-mail.",
+      "region_will_ask": "Region {region} rozhoduje, které kluby přijme, takže jakmile ověříte e-mail, dostane žádost o přijetí vašeho klubu. Dokud ji nepřijme, váš klub v regionu není.",
+      "founder_role_note": "Jako zakladatel klubu nemůžete schválit vlastní žádost o roli trenéra nebo rozhodčího, proto ji posoudí správci vašeho regionu, nebo DivingHQ.",
+      "spectator_note_see_above": "Všechny účty začínají jako Divák. Roli, o kterou výše požádáte, posoudí ten, koho uvádí poznámka pod ní. Přihlásit se můžete po ověření e-mailu."
     },
     "register_org": {
       "title": "Registrace organizace",
@@ -164,7 +167,8 @@
       "resend_prompt": "Potřebujete nový odkaz? Zadejte uživatelské jméno nebo e-mailovou adresu.",
       "resend_label": "Uživatelské jméno nebo e-mail",
       "resend_button": "Poslat nový odkaz",
-      "resend_sent": "Pokud tento účet čeká na ověření, nový odkaz je na cestě. Zkontrolujte svou schránku."
+      "resend_sent": "Pokud tento účet čeká na ověření, nový odkaz je na cestě. Zkontrolujte svou schránku.",
+      "success_org_suspended": "Váš e-mail je ověřen, ale přístup vaší organizace k DivingHQ byl pozastaven. Pokud si myslíte, že jde o omyl, kontaktujte podporu DivingHQ."
     },
     "check_inbox": {
       "title": "Zkontrolujte svou schránku",
@@ -302,7 +306,7 @@
       "step1_title": "Založte klub",
       "step1_desc": "Zaregistrujte se, vyberte zemi a pojmenujte svůj klub. Pokud vaše federace na DivingHQ ještě není, jste od začátku správcem klubu.",
       "step2_title": "Pozvěte skokany a rozhodčí",
-      "step2_desc": "Pošlete členům odkaz na registraci. Vyberou si váš klub a vy schválíte, kdo skáče, rozhoduje nebo je vrchním rozhodčím.",
+      "step2_desc": "Pošlete členům odkaz na registraci. Vyberou si váš klub a vy schválíte, kdo skáče, rozhoduje nebo trénuje.",
       "step3_title": "Uspořádejte první závody",
       "step3_desc": "Připravte disciplíny, řiďte závody z řídicí místnosti, zatímco rozhodčí hodnotí na telefonech, a výsledky se zveřejňují po každém skoku.",
       "note": "K začátku nepotřebujete federaci. Pokud se vaše federace nebo krajský svaz později připojí k DivingHQ, převezme správu země nebo regionu a váš klub si ponechá své závody, výsledky i rekordy."
@@ -648,7 +652,7 @@
         "desc": "Řídíte svůj klub. Kde federace vaší země na DivingHQ zatím není, klub pořádá závody sám: vytvořte je, řiďte z <strong>Řídicí místnosti</strong> a schvalujte žádosti členů o role. Pod federací váš nový klub schvaluje ona a může vás jmenovat jeho správcem.",
         "step_1": "Zaregistrujte se, vyberte zemi a založte klub; stanete se jeho prvním správcem (pod federací až poté, co klub schválí)",
         "step_2": "Otevřete <strong>Správa závodů</strong> a vytvořte závod pořádaný vaším klubem",
-        "step_3": "Na stránce <strong>Můj klub</strong> schvalujte zájemce o vstup a členy, kteří chtějí skákat, soudit nebo trénovat",
+        "step_3": "Na stránce <strong>Můj klub</strong> schvalujte, kde zatím není federace, zájemce o vstup a členy, kteří chtějí skákat, soudit nebo trénovat",
         "step_4": "V den závodu řiďte bodování z <strong>Řídicí místnosti</strong>",
         "step_5": "Až dorazí vaše federace nebo krajský svaz, hlasujte o jejím nároku na stránce <strong>Nároky</strong>",
         "cta": "Pořádání závodu ↗",
@@ -656,10 +660,10 @@
       },
       "region_admin": {
         "name": "Správce regionu",
-        "desc": "Staráte se o stát, provincii či zemi: pořádáte její mistrovství, můžete zasáhnout do závodů kteréhokoli jejího klubu a schvalujete žádosti členů jejích klubů o role. Jmenuje vás federace. Pokud federace zatím není, převezme region váš krajský svaz a další správce si přidáváte sami. Zemský svaz může o správu svého regionu požádat přes <strong>Zaregistrujte svou organizaci</strong>.",
+        "desc": "Staráte se o stát, provincii či zemi: pořádáte její mistrovství a můžete zasáhnout do závodů kteréhokoli jejího klubu. Kde zatím není federace, schvalujete také žádosti členů jejích klubů o role. Jmenuje vás federace. Pokud federace zatím není, převezme region váš krajský svaz a další správce si přidáváte sami. Zemský svaz může o správu svého regionu požádat přes <strong>Zaregistrujte svou organizaci</strong>.",
         "step_1": "Otevřete <strong>Můj region</strong> a uvidíte své kluby a jejich vedení",
         "step_2": "Vytvořte mistrovství ve <strong>Správě závodů</strong> pořádané vaším regionem",
-        "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo trénovat, a kluby, které žádají o vstup do vašeho regionu",
+        "step_3": "Kde zatím není federace, schvalujte členy, kteří chtějí skákat, soudit nebo trénovat, a kluby, které žádají o vstup do vašeho regionu",
         "cta": "Pořádání závodu ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "např. SYD",
       "code_saved": "Kód klubu uložen",
       "code_none": "Zatím bez kódu.",
-      "code_federation": "Kód vašeho klubu určuje vaše federace."
+      "code_federation": "Kód vašeho klubu určuje vaše federace.",
+      "code_bad": "Použijte nejvýše 8 písmen, číslic nebo pomlček.",
+      "code_taken": "Tento kód už používá jiný klub. Zvolte jiný."
     },
     "admins_intro_meets": "Správci klubu řídí závody, které jejich klub pořádá. Přístup v rámci celého svazu nemají.",
     "admins_intro_classes": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho kurzy. Přístup v rámci celého svazu nemají.",
     "admins_intro_payments": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho výplaty a členské příspěvky. Přístup v rámci celého svazu nemají.",
-    "last_admin_tip": "Klub potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce."
+    "last_admin_tip": "Klub potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce.",
+    "intro_federation": "Odkaz na pozvánku do vašeho klubu, jeho kód a správci. Správce jmenuje vaše federace, která také posuzuje žádosti vašich členů o role.",
+    "requests_federation": "Žádosti vašich členů o role posuzuje vaše federace."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Vyjmout z regionu",
     "club_requests": "Kluby, které žádají o vstup",
     "currently_in": "nyní v regionu {region}",
-    "last_admin_tip": "Region potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce."
+    "last_admin_tip": "Region potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce.",
+    "leave_title": "Odebrat se ze správců regionu {region}?",
+    "leave_body": "Už nebudete moci pořádat závody regionu ani spravovat jeho kluby. Zpět vás může přidat jen jiný správce.",
+    "left_notice": "Už nejste správcem regionu {region}.",
+    "intro_federation": "Kluby vašeho regionu a kdo je vede. Žádosti jejich členů o role posuzuje vaše federace.",
+    "requests_federation": "Žádosti členů vašich klubů o role posuzuje vaše federace."
   },
   "claims": {
     "title": "Nároky",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Doba hlasování (dny)",
-      "description": "Po jejím uplynutí nárok projde s alespoň jedním schválením a bez námitek, jinak jde systémovému správci."
+      "description": "Když uplyne a nárok nemá dost schválení (podle dvou pravidel výše), jde systémovému správci. Samotným uplynutím času nárok nikdy neprojde."
     }
   },
   "nav": {

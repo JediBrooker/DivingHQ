@@ -81,7 +81,10 @@
       "short_code_placeholder": "p. ex. SYD",
       "club_needs_approval": "{org} aprova os novos clubes antes de ficarem ativos. Enviamos o pedido assim que confirmar o seu e-mail; entretanto, pode iniciar sessão e competir.",
       "club_joins_now": "Os novos clubes entram em {org} de imediato. {org} nomeia os administradores de cada clube.",
-      "success_club_pending": "{club} aguarda a aprovação de {org}. O pedido chega-lhes assim que confirmar o seu e-mail, e enviamos-lhe um e-mail quando decidirem."
+      "success_club_pending": "{club} aguarda a aprovação de {org}. O pedido chega-lhes assim que confirmar o seu e-mail, e enviamos-lhe um e-mail quando decidirem.",
+      "region_will_ask": "{region} decide que clubes aceita, por isso receberá um pedido assim que verificar o seu e-mail. Até aceitar, o seu clube não pertence à região.",
+      "founder_role_note": "Como fundador do clube, não pode aprovar o seu próprio pedido de treinador ou juiz, por isso é analisado pelos administradores da sua região ou pela DivingHQ.",
+      "spectator_note_see_above": "Todas as contas começam como Espectador. A função que solicitar acima é analisada como indica a nota por baixo. Pode iniciar sessão depois de verificar o seu e-mail."
     },
     "register_org": {
       "title": "Registar Organização",
@@ -164,7 +167,8 @@
       "resend_prompt": "Precisa de uma nova ligação? Introduza o seu nome de utilizador ou endereço de e-mail.",
       "resend_label": "Nome de utilizador ou e-mail",
       "resend_button": "Enviar nova ligação",
-      "resend_sent": "Se essa conta aguarda verificação, uma nova ligação está a caminho. Verifique a sua caixa de entrada."
+      "resend_sent": "Se essa conta aguarda verificação, uma nova ligação está a caminho. Verifique a sua caixa de entrada.",
+      "success_org_suspended": "O seu e-mail está verificado, mas o acesso da sua organização ao DivingHQ foi suspenso. Se achar que se trata de um erro, contacte o apoio do DivingHQ."
     },
     "check_inbox": {
       "title": "Verifique a sua caixa de entrada",
@@ -302,7 +306,7 @@
       "step1_title": "Crie o seu clube",
       "step1_desc": "Registe-se, escolha o seu país e dê um nome ao clube. Se a sua federação ainda não estiver no DivingHQ, é o administrador desde o início.",
       "step2_title": "Convide saltadores e juízes",
-      "step2_desc": "Envie aos membros a ligação de registo. Eles escolhem o seu clube e cabe-lhe a si aprovar quem salta, julga ou arbitra.",
+      "step2_desc": "Envie aos membros a ligação de registo. Eles escolhem o seu clube e cabe-lhe a si aprovar quem salta, julga ou treina.",
       "step3_title": "Organize a sua primeira competição",
       "step3_desc": "Prepare as provas, conduza a competição a partir da sala de controlo enquanto os juízes pontuam no telemóvel, e os resultados são publicados à medida que cada salto é pontuado.",
       "note": "Não precisa de uma federação para começar. Se a sua federação ou associação regional aderir mais tarde ao DivingHQ, passa a gerir o país ou a região, e o seu clube mantém as suas competições, resultados e recordes."
@@ -659,7 +663,7 @@
         "desc": "Gere o seu clube. Onde a federação do seu país ainda não está no DivingHQ, o clube organiza as suas próprias provas: crie-as, conduza-as a partir da <strong>Sala de Controlo</strong> e aprove os pedidos de função dos membros. Sob uma federação, é ela que aprova o seu novo clube e pode nomeá-lo administrador.",
         "step_1": "Registe-se, escolha o país e crie o seu clube; será o primeiro administrador (sob uma federação, depois de esta aprovar o clube)",
         "step_2": "Abra o <strong>Gestor de Competições</strong> e crie uma prova organizada pelo seu clube",
-        "step_3": "Aprove em <strong>O meu clube</strong> quem pede para aderir e os membros que querem saltar, julgar ou treinar",
+        "step_3": "Onde ainda não há federação, aprove em <strong>O meu clube</strong> quem pede para aderir e os membros que querem saltar, julgar ou treinar",
         "step_4": "No dia da prova, conduza a pontuação a partir da <strong>Sala de Controlo</strong>",
         "step_5": "Quando a sua federação ou organismo regional chegar, vote a reivindicação em <strong>Reivindicações</strong>",
         "cta": "Organizar uma prova ↗",
@@ -667,10 +671,10 @@
       },
       "region_admin": {
         "name": "Administrador regional",
-        "desc": "Cuida de um estado, província ou nação: organiza os campeonatos, pode intervir nas provas de qualquer clube e aprova os pedidos de função dos membros dos clubes. A sua federação nomeia-o. Enquanto não houver, o seu organismo regional reivindica a região e os restantes administradores são acrescentados por si. Um organismo estadual pode candidatar-se a gerir a sua região em <strong>Registar a sua organização</strong>.",
+        "desc": "Cuida de um estado, província ou nação: organiza os campeonatos e pode intervir nas provas de qualquer clube. Onde ainda não há federação, também aprova os pedidos de função dos membros dos clubes. A sua federação nomeia-o. Enquanto não houver, o seu organismo regional reivindica a região e os restantes administradores são acrescentados por si. Um organismo estadual pode candidatar-se a gerir a sua região em <strong>Registar a sua organização</strong>.",
         "step_1": "Abra <strong>A minha região</strong> para ver os clubes e quem os gere",
         "step_2": "Crie os campeonatos no <strong>Gestor de Competições</strong>, organizados pela sua região",
-        "step_3": "Aprove os membros que querem saltar, julgar ou treinar, e os clubes que pedem para aderir à sua região",
+        "step_3": "Onde ainda não há federação, aprove os membros que querem saltar, julgar ou treinar, e os clubes que pedem para aderir à sua região",
         "cta": "Organizar uma prova ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "p. ex. SYD",
       "code_saved": "Código do clube guardado",
       "code_none": "Ainda sem código.",
-      "code_federation": "O código do seu clube é definido pela sua federação."
+      "code_federation": "O código do seu clube é definido pela sua federação.",
+      "code_bad": "Use até 8 letras, números ou hífenes.",
+      "code_taken": "Outro clube já usa esse código. Escolha outro."
     },
     "admins_intro_meets": "Os administradores do clube gerem as provas que o clube organiza. Não têm acesso ao nível da federação.",
     "admins_intro_classes": "Os administradores do clube gerem as provas que o clube organiza e tratam das suas aulas. Não têm acesso ao nível da federação.",
     "admins_intro_payments": "Os administradores do clube gerem as provas que o clube organiza e tratam dos seus pagamentos e quotas de filiação. Não têm acesso ao nível da federação.",
-    "last_admin_tip": "Um clube precisa de pelo menos um administrador. Adicione outro administrador antes de remover este."
+    "last_admin_tip": "Um clube precisa de pelo menos um administrador. Adicione outro administrador antes de remover este.",
+    "intro_federation": "A ligação de convite, o código e os administradores do seu clube. A sua federação nomeia os administradores e analisa os pedidos de função dos seus membros.",
+    "requests_federation": "A sua federação analisa os pedidos de função dos seus membros."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Retirar da região",
     "club_requests": "Clubes que pedem para aderir",
     "currently_in": "atualmente em {region}",
-    "last_admin_tip": "Uma região precisa de pelo menos um administrador. Adicione outro administrador antes de remover este."
+    "last_admin_tip": "Uma região precisa de pelo menos um administrador. Adicione outro administrador antes de remover este.",
+    "leave_title": "Remover-se dos administradores de {region}?",
+    "leave_body": "Deixará de poder organizar as provas da região ou gerir os seus clubes. Só outro administrador o pode voltar a adicionar.",
+    "left_notice": "Já não é administrador de {region}.",
+    "intro_federation": "Os clubes da sua região e quem os gere. A sua federação analisa os pedidos de função dos membros.",
+    "requests_federation": "A sua federação analisa os pedidos de função dos membros dos seus clubes."
   },
   "claims": {
     "title": "Reivindicações",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Prazo de votação (dias)",
-      "description": "Quando termina: pelo menos uma aprovação e nenhuma objeção aprovam a reivindicação; caso contrário, passa para o administrador do sistema."
+      "description": "Se terminar sem aprovações suficientes para passar (as duas regras acima), a reivindicação passa para o administrador do sistema. Nunca é aprovada apenas por o prazo terminar."
     }
   },
   "nav": {

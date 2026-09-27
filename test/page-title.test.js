@@ -41,3 +41,26 @@ test("formatTitle trims and ignores blanks", () => {
   assert.equal(formatTitle(""), "DivingHQ");
   assert.equal(formatTitle(undefined), "DivingHQ");
 });
+
+// Every page the sitemap sends crawlers to gets a real title, not just
+// "DivingHQ". /records came in on another branch without one.
+test("every sitemap page's route has a title key", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const root = path.join(__dirname, "..");
+  const router = fs.readFileSync(path.join(root, "src", "router", "index.js"), "utf8");
+  const en = JSON.parse(fs.readFileSync(path.join(root, "src", "locales", "en.json"), "utf8"));
+  const xml = fs.readFileSync(path.join(root, "public", "sitemap.xml"), "utf8");
+  const paths = [...xml.matchAll(/<loc>https:\/\/divinghq\.app([^<]*)<\/loc>/g)]
+    .map((m) => m[1] || "/")
+    .filter((p) => !p.startsWith("/guide/"));   // one route, checked via /guide/:topic
+  for (const p of [...new Set(paths)]) {
+    const esc = p.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+    // The first route whose path is this one, optionally with params after it.
+    const m = router.match(new RegExp(`path: '${esc}(?:/:[^']*)?',[\\s\\S]*?meta: \\{([^}]*)\\}`));
+    assert.ok(m, `no route for ${p}`);
+    const key = m[1].match(/titleKey: '([^']+)'/)?.[1];
+    assert.ok(key, `${p} has no titleKey`);
+    assert.ok(key.split(".").reduce((o, k) => o?.[k], en), `${p}: ${key} isn't in en.json`);
+  }
+});

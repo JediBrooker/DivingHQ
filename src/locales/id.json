@@ -81,7 +81,10 @@
       "short_code_placeholder": "mis. SYD",
       "club_needs_approval": "{org} menyetujui klub baru sebelum ditampilkan. Kami akan meminta persetujuan begitu Anda mengonfirmasi email, dan sementara itu Anda bisa masuk dan bertanding.",
       "club_joins_now": "Klub baru langsung bergabung dengan {org}. {org} menunjuk admin setiap klub.",
-      "success_club_pending": "{club} menunggu persetujuan {org}. Mereka akan melihatnya begitu Anda mengonfirmasi email, dan kami akan mengirim email kepada Anda setelah mereka memutuskan."
+      "success_club_pending": "{club} menunggu persetujuan {org}. Mereka akan melihatnya begitu Anda mengonfirmasi email, dan kami akan mengirim email kepada Anda setelah mereka memutuskan.",
+      "region_will_ask": "{region} memutuskan klub mana yang diterimanya, jadi permintaan akan dikirim setelah Anda memverifikasi email. Sampai diterima, klub Anda belum masuk wilayah itu.",
+      "founder_role_note": "Sebagai pendiri klub, Anda tidak bisa menyetujui sendiri permintaan Anda menjadi pelatih atau juri, jadi permintaan itu ditinjau oleh admin wilayah Anda atau oleh DivingHQ.",
+      "spectator_note_see_above": "Semua akun dimulai sebagai Penonton. Peran yang Anda minta di atas ditinjau seperti yang dijelaskan catatan di bawahnya. Anda dapat masuk setelah email Anda terverifikasi."
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -164,7 +167,8 @@
       "resend_prompt": "Perlu tautan baru? Masukkan nama pengguna atau alamat email Anda.",
       "resend_label": "Nama pengguna atau email",
       "resend_button": "Kirim tautan baru",
-      "resend_sent": "Jika akun itu menunggu verifikasi, tautan baru sedang dikirim. Periksa kotak masuk Anda."
+      "resend_sent": "Jika akun itu menunggu verifikasi, tautan baru sedang dikirim. Periksa kotak masuk Anda.",
+      "success_org_suspended": "Email Anda sudah terverifikasi, tetapi akses organisasi Anda ke DivingHQ ditangguhkan. Jika menurut Anda ini keliru, hubungi dukungan DivingHQ."
     },
     "check_inbox": {
       "title": "Periksa kotak masuk Anda",
@@ -302,7 +306,7 @@
       "step1_title": "Buat klub Anda",
       "step1_desc": "Daftar, pilih negara Anda, dan beri nama klub Anda. Jika federasi Anda belum ada di DivingHQ, Anda adminnya sejak awal.",
       "step2_title": "Undang peloncat dan juri",
-      "step2_desc": "Kirim tautan pendaftaran ke anggota. Mereka memilih klub Anda, dan Anda menyetujui siapa yang meloncat, menjadi juri, atau wasit kepala.",
+      "step2_desc": "Kirim tautan pendaftaran ke anggota. Mereka memilih klub Anda, dan Anda menyetujui siapa yang meloncat, menjadi juri, atau melatih.",
       "step3_title": "Selenggarakan kompetisi pertama Anda",
       "step3_desc": "Siapkan nomor lomba, jalankan kompetisi dari Ruang Kontrol sementara juri menilai di ponsel mereka, dan hasil terbit setiap kali loncatan selesai dinilai.",
       "note": "Tidak perlu federasi untuk memulai. Jika federasi atau badan provinsi Anda bergabung dengan DivingHQ nanti, badan itu mengambil alih pengelolaan negara atau wilayah, dan klub Anda tetap menyimpan kompetisi, hasil, dan rekornya."
@@ -648,7 +652,7 @@
         "desc": "Anda mengelola klub Anda. Jika federasi negara Anda belum ada di DivingHQ, klub menyelenggarakan kompetisinya sendiri: buat, jalankan dari <strong>Ruang Kontrol</strong>, dan setujui permintaan peran anggota. Di bawah federasi, federasilah yang menyetujui klub baru Anda dan dapat menjadikan Anda admin.",
         "step_1": "Daftar, pilih negara, dan buat klub Anda; Anda menjadi admin pertamanya (di bawah federasi, setelah federasi menyetujui klub)",
         "step_2": "Buka <strong>Pengelola Kompetisi</strong> dan buat kompetisi yang diselenggarakan klub Anda",
-        "step_3": "Di <strong>Klub saya</strong>, setujui orang yang ingin bergabung dan anggota yang ingin menjadi atlet, juri, atau pelatih",
+        "step_3": "Di <strong>Klub saya</strong>, jika belum ada federasi, setujui orang yang ingin bergabung dan anggota yang ingin menjadi atlet, juri, atau pelatih",
         "step_4": "Pada hari kompetisi, jalankan penilaian dari <strong>Ruang Kontrol</strong>",
         "step_5": "Saat federasi atau badan wilayah Anda bergabung, beri suara atas klaimnya di <strong>Klaim</strong>",
         "cta": "Menyelenggarakan kompetisi ↗",
@@ -656,10 +660,10 @@
       },
       "region_admin": {
         "name": "Admin wilayah",
-        "desc": "Anda mengurus negara bagian, provinsi, atau bangsa: menyelenggarakan kejuaraannya, dapat turun tangan di kompetisi klub mana pun di dalamnya, dan menyetujui permintaan peran anggota klubnya. Federasi Anda menunjuk Anda. Jika belum ada federasi, badan wilayah Anda mengklaim wilayah itu dan Anda sendiri yang menambahkan rekan admin. Badan negara bagian dapat mengajukan diri untuk mengelola wilayahnya dari <strong>Daftarkan organisasi Anda</strong>.",
+        "desc": "Anda mengurus negara bagian, provinsi, atau bangsa: menyelenggarakan kejuaraannya dan dapat turun tangan di kompetisi klub mana pun di dalamnya. Jika belum ada federasi, Anda juga menyetujui permintaan peran anggota klubnya. Federasi Anda menunjuk Anda. Jika belum ada federasi, badan wilayah Anda mengklaim wilayah itu dan Anda sendiri yang menambahkan rekan admin. Badan negara bagian dapat mengajukan diri untuk mengelola wilayahnya dari <strong>Daftarkan organisasi Anda</strong>.",
         "step_1": "Buka <strong>Wilayah saya</strong> untuk melihat klub dan pengelolanya",
         "step_2": "Buat kejuaraan Anda di <strong>Pengelola kompetisi</strong> dengan wilayah Anda sebagai tuan rumah",
-        "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau pelatih, serta klub yang ingin bergabung ke wilayah Anda",
+        "step_3": "Jika belum ada federasi, setujui anggota yang ingin menjadi atlet, juri, atau pelatih, serta klub yang ingin bergabung ke wilayah Anda",
         "cta": "Menyelenggarakan kompetisi ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "mis. SYD",
       "code_saved": "Kode klub disimpan",
       "code_none": "Belum ada kode.",
-      "code_federation": "Kode klub Anda ditetapkan oleh federasi Anda."
+      "code_federation": "Kode klub Anda ditetapkan oleh federasi Anda.",
+      "code_bad": "Gunakan maksimal 8 huruf, angka, atau tanda hubung.",
+      "code_taken": "Klub lain sudah memakai kode itu. Pilih kode lain."
     },
     "admins_intro_meets": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya. Mereka tidak mendapat akses tingkat federasi.",
     "admins_intro_classes": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya dan mengurus kelasnya. Mereka tidak mendapat akses tingkat federasi.",
     "admins_intro_payments": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya dan mengurus pembayaran serta iuran afiliasinya. Mereka tidak mendapat akses tingkat federasi.",
-    "last_admin_tip": "Klub memerlukan setidaknya satu admin. Tambahkan admin lain sebelum menghapus admin ini."
+    "last_admin_tip": "Klub memerlukan setidaknya satu admin. Tambahkan admin lain sebelum menghapus admin ini.",
+    "intro_federation": "Tautan undangan, kode, dan admin klub Anda. Federasi Anda menunjuk admin dan meninjau permintaan peran anggota Anda.",
+    "requests_federation": "Federasi Anda meninjau permintaan peran anggota Anda."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Keluarkan dari wilayah",
     "club_requests": "Klub yang ingin bergabung",
     "currently_in": "saat ini di {region}",
-    "last_admin_tip": "Wilayah memerlukan setidaknya satu admin. Tambahkan admin lain sebelum menghapus admin ini."
+    "last_admin_tip": "Wilayah memerlukan setidaknya satu admin. Tambahkan admin lain sebelum menghapus admin ini.",
+    "leave_title": "Hapus diri Anda sebagai admin {region}?",
+    "leave_body": "Anda tidak akan bisa lagi mengelola kompetisi wilayah atau mengurus klub-klubnya. Hanya admin lain yang bisa menambahkan Anda kembali.",
+    "left_notice": "Anda bukan lagi admin {region}.",
+    "intro_federation": "Klub di wilayah Anda dan siapa pengelolanya. Federasi Anda meninjau permintaan peran anggotanya.",
+    "requests_federation": "Federasi Anda meninjau permintaan peran dari anggota klub Anda."
   },
   "claims": {
     "title": "Klaim",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Masa pemungutan suara (hari)",
-      "description": "Saat berakhir: minimal satu persetujuan tanpa keberatan meloloskan klaim, jika tidak diteruskan ke admin sistem."
+      "description": "Jika berakhir tanpa cukup persetujuan untuk lolos (dua aturan di atas), klaim diteruskan ke admin sistem. Klaim tidak pernah lolos hanya karena waktunya habis."
     }
   },
   "nav": {

@@ -81,7 +81,10 @@
       "short_code_placeholder": "cth. SYD",
       "club_needs_approval": "{org} meluluskan kelab baharu sebelum ia dipaparkan. Kami akan memohon kelulusan sebaik sahaja anda mengesahkan e-mel, dan sementara itu anda boleh log masuk dan bertanding.",
       "club_joins_now": "Kelab baharu terus menyertai {org}. {org} melantik pentadbir setiap kelab.",
-      "success_club_pending": "{club} sedang menunggu kelulusan {org}. Mereka akan melihatnya sebaik sahaja anda mengesahkan e-mel, dan kami akan menghantar e-mel kepada anda apabila mereka membuat keputusan."
+      "success_club_pending": "{club} sedang menunggu kelulusan {org}. Mereka akan melihatnya sebaik sahaja anda mengesahkan e-mel, dan kami akan menghantar e-mel kepada anda apabila mereka membuat keputusan.",
+      "region_will_ask": "{region} menentukan kelab yang diterimanya, jadi permintaan akan dihantar sebaik sahaja anda mengesahkan e-mel. Sehingga ia menerima, kelab anda belum berada dalam rantau itu.",
+      "founder_role_note": "Sebagai pengasas kelab, anda tidak boleh meluluskan sendiri permintaan anda sebagai jurulatih atau hakim, jadi ia disemak oleh pentadbir rantau anda atau DivingHQ.",
+      "spectator_note_see_above": "Semua akaun bermula sebagai Penonton. Peranan yang anda minta di atas disemak seperti yang diterangkan dalam nota di bawahnya. Anda boleh log masuk selepas e-mel anda disahkan."
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -164,7 +167,8 @@
       "resend_prompt": "Perlukan pautan baharu? Masukkan nama pengguna atau alamat e-mel anda.",
       "resend_label": "Nama pengguna atau e-mel",
       "resend_button": "Hantar pautan baharu",
-      "resend_sent": "Jika akaun itu menunggu pengesahan, pautan baharu sedang dihantar. Semak peti masuk anda."
+      "resend_sent": "Jika akaun itu menunggu pengesahan, pautan baharu sedang dihantar. Semak peti masuk anda.",
+      "success_org_suspended": "E-mel anda telah disahkan, tetapi akses organisasi anda ke DivingHQ telah digantung. Jika anda rasa ini satu kesilapan, hubungi sokongan DivingHQ."
     },
     "check_inbox": {
       "title": "Semak peti masuk anda",
@@ -302,7 +306,7 @@
       "step1_title": "Cipta kelab anda",
       "step1_desc": "Daftar, pilih negara anda dan namakan kelab anda. Jika persekutuan anda belum ada di DivingHQ, anda pentadbirnya sejak awal.",
       "step2_title": "Jemput peterjun dan hakim",
-      "step2_desc": "Hantar pautan pendaftaran kepada ahli. Mereka memilih kelab anda, dan anda meluluskan siapa yang terjun, menghakimi atau menjadi hakim utama.",
+      "step2_desc": "Hantar pautan pendaftaran kepada ahli. Mereka memilih kelab anda, dan anda meluluskan siapa yang terjun, menghakimi atau menjadi jurulatih.",
       "step3_title": "Jalankan pertandingan pertama anda",
       "step3_desc": "Sediakan acara, kendalikan pertandingan dari Bilik Kawalan sementara hakim memberi markah di telefon mereka, dan keputusan diterbitkan sebaik setiap terjunan dinilai.",
       "note": "Tidak perlu persekutuan untuk bermula. Jika persekutuan atau badan negeri anda menyertai DivingHQ kemudian, ia mengambil alih pengurusan negara atau rantau itu, dan kelab anda mengekalkan pertandingan, keputusan dan rekodnya."
@@ -648,7 +652,7 @@
         "desc": "Anda mengurus kelab anda. Jika persekutuan negara anda belum berada di DivingHQ, kelab menganjurkan pertandingannya sendiri: ciptanya, jalankan dari <strong>Bilik Kawalan</strong>, dan luluskan permintaan peranan ahli. Di bawah persekutuan, persekutuan yang meluluskan kelab baharu anda dan boleh melantik anda sebagai pentadbirnya.",
         "step_1": "Daftar, pilih negara dan cipta kelab anda; anda menjadi pentadbir pertamanya (di bawah persekutuan, selepas persekutuan meluluskan kelab)",
         "step_2": "Buka <strong>Pengurus Pertandingan</strong> dan cipta pertandingan anjuran kelab anda",
-        "step_3": "Di <strong>Kelab saya</strong>, luluskan orang yang ingin menyertai dan ahli yang mahu menerjun, menghakimi atau melatih",
+        "step_3": "Di <strong>Kelab saya</strong>, di tempat yang belum ada persekutuan, luluskan orang yang ingin menyertai dan ahli yang mahu menerjun, menghakimi atau melatih",
         "step_4": "Pada hari pertandingan, kendalikan pemarkahan dari <strong>Bilik Kawalan</strong>",
         "step_5": "Apabila persekutuan atau badan wilayah anda tiba, undi tuntutannya di <strong>Tuntutan</strong>",
         "cta": "Menganjurkan pertandingan ↗",
@@ -656,10 +660,10 @@
       },
       "region_admin": {
         "name": "Pentadbir rantau",
-        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya, boleh campur tangan dalam pertandingan mana-mana kelabnya, dan meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda. Jika belum ada persekutuan, badan wilayah anda menuntut rantau itu dan anda sendiri menambah rakan pentadbir. Badan negeri boleh memohon untuk mengendalikan wilayahnya melalui <strong>Daftarkan organisasi anda</strong>.",
+        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya dan boleh campur tangan dalam pertandingan mana-mana kelabnya. Di tempat yang belum ada persekutuan, anda juga meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda. Jika belum ada persekutuan, badan wilayah anda menuntut rantau itu dan anda sendiri menambah rakan pentadbir. Badan negeri boleh memohon untuk mengendalikan wilayahnya melalui <strong>Daftarkan organisasi anda</strong>.",
         "step_1": "Buka <strong>Rantau saya</strong> untuk melihat kelab dan pengurusnya",
         "step_2": "Cipta kejohanan anda dalam <strong>Pengurus pertandingan</strong> dengan rantau anda sebagai tuan rumah",
-        "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau melatih, serta kelab yang ingin menyertai rantau anda",
+        "step_3": "Di tempat yang belum ada persekutuan, luluskan ahli yang mahu menerjun, menghakimi atau melatih, serta kelab yang ingin menyertai rantau anda",
         "cta": "Menganjurkan pertandingan ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "cth. SYD",
       "code_saved": "Kod kelab disimpan",
       "code_none": "Belum ada kod.",
-      "code_federation": "Kod kelab anda ditetapkan oleh persekutuan anda."
+      "code_federation": "Kod kelab anda ditetapkan oleh persekutuan anda.",
+      "code_bad": "Gunakan sehingga 8 huruf, nombor atau sengkang.",
+      "code_taken": "Kelab lain sudah menggunakan kod itu. Pilih kod lain."
     },
     "admins_intro_meets": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka. Mereka tidak mendapat akses peringkat persekutuan.",
     "admins_intro_classes": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka dan menguruskan kelasnya. Mereka tidak mendapat akses peringkat persekutuan.",
     "admins_intro_payments": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka dan menguruskan pembayaran serta yuran gabungannya. Mereka tidak mendapat akses peringkat persekutuan.",
-    "last_admin_tip": "Kelab memerlukan sekurang-kurangnya seorang pentadbir. Tambah pentadbir lain sebelum mengalih keluar pentadbir ini."
+    "last_admin_tip": "Kelab memerlukan sekurang-kurangnya seorang pentadbir. Tambah pentadbir lain sebelum mengalih keluar pentadbir ini.",
+    "intro_federation": "Pautan jemputan, kod dan pentadbir kelab anda. Persekutuan anda melantik pentadbir dan menyemak permintaan peranan ahli anda.",
+    "requests_federation": "Persekutuan anda menyemak permintaan peranan ahli anda."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Keluarkan dari rantau",
     "club_requests": "Kelab yang ingin menyertai",
     "currently_in": "kini di {region}",
-    "last_admin_tip": "Rantau memerlukan sekurang-kurangnya seorang pentadbir. Tambah pentadbir lain sebelum mengalih keluar pentadbir ini."
+    "last_admin_tip": "Rantau memerlukan sekurang-kurangnya seorang pentadbir. Tambah pentadbir lain sebelum mengalih keluar pentadbir ini.",
+    "leave_title": "Alih keluar diri anda sebagai pentadbir {region}?",
+    "leave_body": "Anda tidak lagi boleh menganjurkan pertandingan rantau atau menguruskan kelab-kelabnya. Hanya pentadbir lain boleh menambah anda semula.",
+    "left_notice": "Anda bukan lagi pentadbir {region}.",
+    "intro_federation": "Kelab di rantau anda dan siapa yang mengurusnya. Persekutuan anda menyemak permintaan peranan ahlinya.",
+    "requests_federation": "Persekutuan anda menyemak permintaan peranan daripada ahli kelab anda."
   },
   "claims": {
     "title": "Tuntutan",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Tempoh mengundi (hari)",
-      "description": "Apabila tamat: sekurang-kurangnya satu kelulusan tanpa bantahan meluluskan tuntutan, jika tidak ia dihantar kepada pentadbir sistem."
+      "description": "Jika tamat tanpa kelulusan yang cukup untuk lulus (dua peraturan di atas), tuntutan dihantar kepada pentadbir sistem. Ia tidak pernah lulus hanya kerana masa tamat."
     }
   },
   "nav": {

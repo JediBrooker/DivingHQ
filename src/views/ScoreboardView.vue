@@ -16,7 +16,7 @@ import { diveDescription } from '@/composables/useDiveLabel'
 import { cachedFetch, idbInvalidate } from '@/lib/idbCache'
 import { SCOREBOARD_LIVE_TTL_MS, SCOREBOARD_ARCHIVE_TTL_MS } from '@/lib/cache-policy'
 import { resolveOverlay, overlayClasses } from '@/lib/overlayParts'
-import { indexRecordMarks, marksForDive, isChipMark } from '@/lib/recordMarks'
+import { indexRecordMarks, marksForDive, isChipMark, withoutBook } from '@/lib/recordMarks'
 import { fmtDate, ordinal, rankClass } from '@/lib/format'
 import DiverIdentity from '@/components/DiverIdentity.vue'
 import ScoreHistoryButton from '@/components/ScoreHistoryButton.vue'
@@ -829,6 +829,10 @@ useSocketEvent(socket, 'record_broken', (data) => {
   // ours too so a reload in the next few seconds still shows the chip.
   if (data?.event_id) idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
   if (!currentEventId.value || data?.event_id !== currentEventId.value) return
+  // Whoever held this book before doesn't any more, chip or not: take
+  // their mark off both lists, not just add the new one.
+  payloadRecords.value = withoutBook(payloadRecords.value, data)
+  liveRecords.value = withoutBook(liveRecords.value, data)
   if (!isChipMark(data)) return
   liveRecords.value = [...liveRecords.value, data]
 })

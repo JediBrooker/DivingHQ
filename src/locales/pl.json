@@ -81,7 +81,10 @@
       "short_code_placeholder": "np. SYD",
       "club_needs_approval": "{org} zatwierdza nowe kluby, zanim staną się widoczne. Poprosimy o zatwierdzenie, gdy tylko potwierdzisz e-mail, a w międzyczasie możesz się zalogować i startować w zawodach.",
       "club_joins_now": "Nowe kluby od razu dołączają do {org}. {org} wyznacza administratorów każdego klubu.",
-      "success_club_pending": "Klub {club} czeka na zatwierdzenie przez {org}. Zobaczą go, gdy tylko potwierdzisz e-mail, a o decyzji poinformujemy cię e-mailem."
+      "success_club_pending": "Klub {club} czeka na zatwierdzenie przez {org}. Zobaczą go, gdy tylko potwierdzisz e-mail, a o decyzji poinformujemy cię e-mailem.",
+      "region_will_ask": "Region {region} sam decyduje, które kluby przyjmuje, więc po potwierdzeniu adresu e-mail dostanie prośbę o przyjęcie twojego klubu. Dopóki jej nie przyjmie, twój klub nie należy do regionu.",
+      "founder_role_note": "Jako założyciel klubu nie możesz zatwierdzić własnej prośby o rolę trenera lub sędziego, więc rozpatrują ją administratorzy twojego regionu albo DivingHQ.",
+      "spectator_note_see_above": "Wszystkie konta zaczynają jako Widz. Rolę, o którą prosisz powyżej, rozpatruje się tak, jak mówi uwaga pod nią. Zalogujesz się po potwierdzeniu adresu e-mail."
     },
     "register_org": {
       "title": "Rejestracja organizacji",
@@ -164,7 +167,8 @@
       "resend_prompt": "Potrzebujesz nowego linku? Podaj nazwę użytkownika lub adres e-mail.",
       "resend_label": "Nazwa użytkownika lub e-mail",
       "resend_button": "Wyślij nowy link",
-      "resend_sent": "Jeśli to konto czeka na weryfikację, nowy link jest w drodze. Sprawdź skrzynkę odbiorczą."
+      "resend_sent": "Jeśli to konto czeka na weryfikację, nowy link jest w drodze. Sprawdź skrzynkę odbiorczą.",
+      "success_org_suspended": "Twój e-mail został zweryfikowany, ale dostęp Twojej organizacji do DivingHQ został zawieszony. Jeśli uważasz, że to pomyłka, skontaktuj się z pomocą DivingHQ."
     },
     "check_inbox": {
       "title": "Sprawdź skrzynkę odbiorczą",
@@ -302,7 +306,7 @@
       "step1_title": "Utwórz swój klub",
       "step1_desc": "Zarejestruj się, wybierz kraj i nazwij swój klub. Jeśli twojej federacji nie ma jeszcze w DivingHQ, od początku jesteś administratorem klubu.",
       "step2_title": "Zaproś skoczków i sędziów",
-      "step2_desc": "Wyślij członkom link do rejestracji. Wybierają twój klub, a ty zatwierdzasz, kto skacze, sędziuje lub jest sędzią głównym.",
+      "step2_desc": "Wyślij członkom link do rejestracji. Wybierają twój klub, a ty zatwierdzasz, kto skacze, sędziuje lub trenuje.",
       "step3_title": "Poprowadź pierwsze zawody",
       "step3_desc": "Przygotuj konkurencje, prowadź zawody z pokoju kontroli, gdy sędziowie oceniają na telefonach, a wyniki publikują się po każdym ocenionym skoku.",
       "note": "Do startu nie potrzebujesz federacji. Jeśli twoja federacja lub związek regionalny dołączy później do DivingHQ, przejmie prowadzenie kraju lub regionu, a twój klub zachowa swoje zawody, wyniki i rekordy."
@@ -659,7 +663,7 @@
         "desc": "Prowadzisz swój klub. Tam, gdzie federacji twojego kraju nie ma jeszcze w DivingHQ, klub sam organizuje zawody: twórz je, prowadź z <strong>Pokoju kontroli</strong> i zatwierdzaj prośby członków o role. W ramach federacji to ona zatwierdza twój nowy klub i może wyznaczyć cię jego administratorem.",
         "step_1": "Zarejestruj się, wybierz kraj i utwórz klub; zostaniesz jego pierwszym administratorem (w ramach federacji, gdy zatwierdzi klub)",
         "step_2": "Otwórz <strong>Menedżer zawodów</strong> i utwórz zawody organizowane przez twój klub",
-        "step_3": "Na stronie <strong>Mój klub</strong> zatwierdzaj chętnych do dołączenia i członków, którzy chcą skakać, sędziować lub trenować",
+        "step_3": "Na stronie <strong>Mój klub</strong>, tam, gdzie nie ma jeszcze federacji, zatwierdzaj chętnych do dołączenia i członków, którzy chcą skakać, sędziować lub trenować",
         "step_4": "W dniu zawodów prowadź punktację z <strong>Pokoju kontroli</strong>",
         "step_5": "Gdy dołączy twoja federacja lub organ regionalny, zagłosuj nad jej roszczeniem w <strong>Roszczeniach</strong>",
         "cta": "Organizacja zawodów ↗",
@@ -667,10 +671,10 @@
       },
       "region_admin": {
         "name": "Administrator regionu",
-        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa, możesz wkroczyć w zawody każdego z klubów i zatwierdzasz prośby członków klubów o role. Wyznacza cię federacja. Dopóki jej nie ma, region przejmuje twój organ regionalny, a kolejnych administratorów dodajesz sam. Organizacja stanowa może złożyć wniosek o prowadzenie swojego regionu przez <strong>Zarejestruj organizację</strong>.",
+        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa i możesz wkroczyć w zawody każdego z klubów. Tam, gdzie nie ma jeszcze federacji, zatwierdzasz też prośby członków klubów o role. Wyznacza cię federacja. Dopóki jej nie ma, region przejmuje twój organ regionalny, a kolejnych administratorów dodajesz sam. Organizacja stanowa może złożyć wniosek o prowadzenie swojego regionu przez <strong>Zarejestruj organizację</strong>.",
         "step_1": "Otwórz <strong>Mój region</strong>, aby zobaczyć kluby i kto je prowadzi",
         "step_2": "Utwórz mistrzostwa w <strong>Menedżerze zawodów</strong>, organizowane przez twój region",
-        "step_3": "Zatwierdzaj członków, którzy chcą skakać, sędziować lub trenować, oraz kluby proszące o dołączenie do twojego regionu",
+        "step_3": "Tam, gdzie nie ma jeszcze federacji, zatwierdzaj członków, którzy chcą skakać, sędziować lub trenować, oraz kluby proszące o dołączenie do twojego regionu",
         "cta": "Organizacja zawodów ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "np. SYD",
       "code_saved": "Zapisano kod klubu",
       "code_none": "Brak kodu.",
-      "code_federation": "Kod klubu ustala Twoja federacja."
+      "code_federation": "Kod klubu ustala Twoja federacja.",
+      "code_bad": "Użyj maksymalnie 8 liter, cyfr lub myślników.",
+      "code_taken": "Ten kod jest już używany przez inny klub. Wybierz inny."
     },
     "admins_intro_meets": "Administratorzy klubu prowadzą zawody organizowane przez swój klub. Nie mają dostępu na poziomie całego związku.",
     "admins_intro_classes": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego zajęciami. Nie mają dostępu na poziomie całego związku.",
     "admins_intro_payments": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego wypłatami oraz składkami członkowskimi. Nie mają dostępu na poziomie całego związku.",
-    "last_admin_tip": "Klub musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora."
+    "last_admin_tip": "Klub musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora.",
+    "intro_federation": "Link z zaproszeniem, kod i administratorzy twojego klubu. Twoja federacja wyznacza administratorów i rozpatruje prośby członków o role.",
+    "requests_federation": "Prośby twoich członków o role rozpatruje twoja federacja."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Usuń z regionu",
     "club_requests": "Kluby proszące o dołączenie",
     "currently_in": "obecnie w regionie {region}",
-    "last_admin_tip": "Region musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora."
+    "last_admin_tip": "Region musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora.",
+    "leave_title": "Usunąć się z administratorów regionu {region}?",
+    "leave_body": "Nie będziesz już mógł organizować zawodów regionu ani zajmować się jego klubami. Z powrotem może cię dodać tylko inny administrator.",
+    "left_notice": "Nie jesteś już administratorem regionu {region}.",
+    "intro_federation": "Kluby twojego regionu i kto je prowadzi. Prośby ich członków o role rozpatruje twoja federacja.",
+    "requests_federation": "Prośby członków twoich klubów o role rozpatruje twoja federacja."
   },
   "claims": {
     "title": "Roszczenia",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Czas głosowania (dni)",
-      "description": "Po jego upływie: co najmniej jedna zgoda i brak sprzeciwów oznaczają przyjęcie, w przeciwnym razie roszczenie trafia do administratora systemu."
+      "description": "Jeśli upłynie bez wystarczającej liczby zgód (dwie reguły powyżej), roszczenie trafia do administratora systemu. Samo upłynięcie czasu nigdy go nie przyjmuje."
     }
   },
   "nav": {

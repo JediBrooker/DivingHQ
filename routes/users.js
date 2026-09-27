@@ -943,8 +943,9 @@ module.exports = function createUsersRouter({
         }
 
         // FK references to users.id that carry sporting-record
-        // value. Grep `REFERENCES public.users` over init.sql +
-        // migrations/* to keep this list current when new FKs land.
+        // value (the record books among them, further down). Grep
+        // `REFERENCES public.users` over init.sql + migrations/* to
+        // keep this list current when new FKs land.
         // Tables NOT touched here are either ON DELETE CASCADE (row
         // goes away when we hard-delete below) or ON DELETE SET
         // NULL (they survive with a null pointer, which is the
@@ -952,12 +953,22 @@ module.exports = function createUsersRouter({
         //
         // Tables we explicitly migrate so the historical entry
         // reads under the new account:
-        const moveDives = await client.query(
-          `UPDATE competitor_dive_lists
-              SET competitor_id = $2
-            WHERE competitor_id = $1`,
+        // Dive list rows and the competitor's scores move in ONE statement.
+        // scores has a foreign key onto competitor_dive_lists(event_id,
+        // competitor_id, round_number) with no ON UPDATE, so moving either
+        // side on its own orphans the other and the claim died with a 500
+        // for anyone who'd ever been scored. Within one statement the
+        // check runs once both have moved.
+        const moved = (await client.query(
+          `WITH dives AS (
+             UPDATE competitor_dive_lists SET competitor_id = $2 WHERE competitor_id = $1 RETURNING 1
+           ), comp AS (
+             UPDATE scores SET competitor_id = $2 WHERE competitor_id = $1 RETURNING 1
+           )
+           SELECT (SELECT count(*) FROM dives)::int AS dives, (SELECT count(*) FROM comp)::int AS scores`,
           [oldId, me.id],
-        );
+        )).rows[0];
+        const moveDives = { rowCount: moved.dives };
         counts.dives += moveDives.rowCount || 0;
 
         // Changing partner_id normally re-snapshots the partner's club
@@ -973,10 +984,7 @@ module.exports = function createUsersRouter({
           [oldId, me.id],
         );
 
-        const moveScoresComp = await client.query(
-          `UPDATE scores SET competitor_id = $2 WHERE competitor_id = $1`,
-          [oldId, me.id],
-        );
+        const moveScoresComp = { rowCount: moved.scores };
         const moveScoresJudge = await client.query(
           `UPDATE scores SET judge_id = $2 WHERE judge_id = $1`,
           [oldId, me.id],
@@ -1032,6 +1040,50 @@ module.exports = function createUsersRouter({
           [oldId, me.id],
         );
 
+        // Record books. records_personal.user_id and holder_id on the
+        // club, region and federation books are ON DELETE CASCADE, so the
+        // delete below used to wipe every record the old account held,
+        // leaving that dive's book empty (the mark it had replaced sits in
+        // history, nothing puts it back). Move them. A personal best can
+        // collide with one the new account already has for the same dive:
+        // the better one stays (the earlier on a tie) and the other goes
+        // to history, same as a beaten record.
+        const pbClash = (await client.query(
+          `SELECT o.id AS old_row, n.id AS new_row,
+                  (o.score > n.score OR (o.score = n.score AND o.set_at <= n.set_at)) AS old_wins
+             FROM records_personal o
+             JOIN records_personal n
+               ON n.user_id = $2 AND n.gender = o.gender AND n.height = o.height
+              AND n.dive_code = o.dive_code AND n.position = o.position
+            WHERE o.user_id = $1`,
+          [oldId, me.id],
+        )).rows;
+        for (const c of pbClash) {
+          const loser = c.old_wins ? c.new_row : c.old_row;
+          await client.query(
+            `INSERT INTO records_personal_history
+               (user_id, gender, height, dive_code, position, score, prev_score, event_id, set_at)
+             SELECT $2, gender, height, dive_code, position, score, prev_score, event_id, set_at
+               FROM records_personal WHERE id = $1`,
+            [loser, me.id],
+          );
+          await client.query("DELETE FROM records_personal WHERE id = $1", [loser]);
+        }
+        const moveRecords = await client.query(
+          "UPDATE records_personal SET user_id = $2 WHERE user_id = $1", [oldId, me.id],
+        );
+        let recordsMoved = moveRecords.rowCount || 0;
+        for (const tbl of ["records_club", "records_region", "records_federation", "records_continental"]) {
+          const moved = await client.query(`UPDATE ${tbl} SET holder_id = $2 WHERE holder_id = $1`, [oldId, me.id]);
+          recordsMoved += moved.rowCount || 0;
+        }
+        // History has no FKs, so nothing's lost there; this is only so the
+        // earlier holders still read under the diver's name.
+        await client.query("UPDATE records_personal_history SET user_id = $2 WHERE user_id = $1", [oldId, me.id]);
+        for (const tbl of ["records_club_history", "records_region_history", "records_federation_history", "records_continental_history"]) {
+          await client.query(`UPDATE ${tbl} SET holder_id = $2 WHERE holder_id = $1`, [oldId, me.id]);
+        }
+
         // The shell row is now disconnected from every
         // sporting-record FK we care about, safe to hard-delete.
         // Everything that ON DELETE CASCADEs from here (e.g.
@@ -1060,6 +1112,7 @@ module.exports = function createUsersRouter({
             score_count_moved: (moveScoresComp.rowCount || 0) +
                                (moveScoresJudge.rowCount || 0),
             panel_count_moved:  movePanels.rowCount || 0,
+            record_count_moved: recordsMoved,
           },
         });
       }

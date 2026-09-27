@@ -382,7 +382,7 @@ diver's org at the time of the dive (`lib/records.js`).
 
 ## 10. Records
 
-- `records_club`: unchanged.
+- `records_club`: keyed on the club the diver was entered from (`event_rep_ids`, the entry snapshot; today's club only for entries from before 090), the same rule as the region scope and the scoreboard label. `scripts/rebuild-records.js` replays with the same rule (`recordDivesSql` in `lib/records.js`).
 - **New** region scope next to `records_federation`, keyed on the
   snapshotted `rep_region_id`.
 - National records in an **unclaimed** org are shown with an
@@ -544,7 +544,11 @@ side moves a club alone:
   records the ask (`202`, `clubs.requested_region_id`, migration 097) and
   tells the region's admins; they accept on My region with the same PUT
   (`403 club_request_required` if the club never asked). Either side can
-  drop the ask with `DELETE /api/clubs/:id/region-request`.
+  drop the ask with `DELETE /api/clubs/:id/region-request`. Founding a
+  club at signup into such a region works the same way: the club is
+  created outside it with the ask recorded, and the region's admins are
+  told once the founder verifies their email (`askRegionsForUser`); until
+  then the ask isn't on My region either.
 - **Leaving** is the region's call: its admin takes the club out (to no
   region) on My region. The club's admin gets `403 region_admin_required`.
   The region can let a club go but not pick where it lands.
@@ -563,7 +567,12 @@ State bodies appointing themselves via claims is phase 3. Where there's
 no federation, a region's own admins add and remove co-admins on
 `/region` (members of the region's clubs only, never down to no live
 admin, via `lib/admin-rows.js`). A claimed region whose admins have all
-gone can be claimed again through `/register-org`. A region admin:
+gone can be claimed again through `/register-org`. Approving the new claim
+marks the old approved one `revoked` ("replaced by a newer approved claim")
+and deletes the region's dead admin rows, so reactivating an old account
+can't bring its region back, and a revoke of an older approved claim is
+refused (409 `claim_superseded`) rather than unwinding the current body. A
+region admin:
 - runs meets hosted by their region or by any club in it: the
   `isEventDelegate` / `isMeetHostAdmin` checks now include the host region
   and the host club's region, so every phase-1 gate follows;
@@ -652,7 +661,10 @@ That reverts the target, and a national org gets its country name back.
 Revoking also takes back what was handed out under the claim, because the
 claimant could grant access to anyone while they ran it:
 - a national claim removes **every** `org_admin` and `meet_manager` grant in
-  the org (unclaimed means none of either), club and region admin rows
+  the org (unclaimed means none of either), every `referee` grant made since
+  the approval by anyone other than a sysadmin, plus the claimant's own
+  (referee runs any meet in the org, which is why unclaimed countries send
+  those requests to DivingHQ), club and region admin rows
   created since the approval (under a federation, only its admins or
   DivingHQ can make those), and region claims the federation itself
   approved, which are revoked with it. Region claims still waiting on the
@@ -737,7 +749,7 @@ Three holes let a country end up with two accounts, and there's no merge, so the
 
 **A pending federation holds the country.** `resolveCountryOrg` refuses (`409 federation_pending`) instead of starting an unclaimed account when a pending org exists for the country, covering legacy rows. Letting the club join the pending org was the alternative, but that puts people into an org nobody can sign in to and that the sysadmin might still deny. From the other side, `PUT /api/orgs/:id/status` won't approve a pending org without a country, or one whose country the clubs have already started (`409 country_has_unclaimed_org`).
 
-**Country codes.** Migration 093 rewrites 2-letter codes to alpha-3 from a mapping generated out of `lib/countries.json` (a test keeps the two identical). Lookups also match the alpha-2 form until the backfill has run everywhere. NULL and unrecognised codes (IOC codes like `GER`) can't be inferred: `GET /api/orgs/needs-country` lists them, `PUT /api/orgs/:id/country` sets one, and User Manager's Pending tab shows both with a picker.
+**Country codes.** Migration 093 rewrites 2-letter codes to alpha-3 from a mapping generated out of `lib/countries.json` (a test keeps the two identical). Lookups also match the alpha-2 form until the backfill has run everywhere. Migration 098 applies the same mapping to the entry snapshots (`competitor_dive_lists.rep_country`), which `event_rep_code()` prefers over the live code, so entries made from a 2-letter org between the 090 and 093 deploys don't keep printing the old code next to new ones. NULL and unrecognised codes (IOC codes like `GER`) can't be inferred: `GET /api/orgs/needs-country` lists them, `PUT /api/orgs/:id/country` sets one, and User Manager's Pending tab shows both with a picker.
 
 **`/register-org` copy.** A callout sends clubs to `/register`; the name field reads "Organisation name"; the note under the country says which of the above is about to happen, and warns a state body when the country has no regions to pick from.
 
@@ -749,7 +761,7 @@ A founder used to land on a dashboard built for federations: the setup wizard is
 
 - **Get started panel** (`src/components/dashboard/ClubGettingStarted.vue`), above the dashboard tabs for anyone in `club_admin_of`: create a meet, invite members, set the short code, read the guide. The first three tick themselves off from `GET /api/clubs/:id/setup` (meet count, member count, `short_code`); the guide step ticks when opened from the panel. The code step is hidden when the federation owns the code and hasn't set one. Hiding the panel is per user in localStorage.
 - **Invite link** on My club (`src/components/ClubSetupCard.vue`): `/register?country=<alpha-3>&club=<club id>`. RegisterView takes the country only if it's in `lib/countries.json` and the club only once it appears in that country's club list, selecting its region too. Junk parameters leave the form as it would be anyway.
-- **Short code** on the same card, `PUT /api/clubs/:id/short-code` (`routes/club-setup.js`): trimmed, upper-cased, up to 8 letters / digits / dashes, unique within the org, audit-logged as `club.code_changed`. Same rule as the region picker: the club's admins set it where the country is unclaimed, the federation's org admin (or the sysadmin) otherwise.
+- **Short code** on the same card, `PUT /api/clubs/:id/short-code` (`routes/club-setup.js`): trimmed, upper-cased, up to 8 letters / digits / dashes, unique within the org, audit-logged as `club.code_changed`. Same rule as the region picker: the club's admins set it where the country is unclaimed, the federation's org admin (or the sysadmin) otherwise. The rule and the clash check are `normaliseClubCode` / `assertCodeFree` in `lib/club-approvals.js`, shared with signup (a club that goes live at once is clash-checked there, a waiting one at approval), the approve dialog and the Clubs screen's create and edit, all under one per-org advisory lock.
 - The sidebar section holding My club / My region is headed **Organisation**, not "Federation".
 
 ## 20. Federation club approval as built (migration 096)

@@ -132,7 +132,7 @@ watch([orgId, countryCode], () => {
         <p class="page-sub">
           Every judge in the system, with a transparent breakdown
           of how their calls track against the panel-kept mean
-          (post World Aquatics trim, PART FOUR Article 13). Click a
+          (post World Aquatics trim, PART FOUR Article 9.1.5). Click a
           judge to see their full per-country, per-club,
           per-board-height bias breakdown.
         </p>

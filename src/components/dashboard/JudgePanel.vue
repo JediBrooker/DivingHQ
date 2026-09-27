@@ -29,7 +29,7 @@ const roundsJudges = (ev) => t('dashboard.judge_panel.rounds_judges', {
          live assignments so a judge can check their own tracking
          between meets. The metrics on /judge-profile compare each
          award against the panel-kept mean (post World Aquatics trim,
-         PART FOUR Article 13). -->
+         PART FOUR Article 9.1.5). -->
     <div class="panel-section">
       <div class="panel-section-label">{{ $t('dashboard.sections.your_tools') }}</div>
       <RouterLink to="/judge-profile" class="judge-tool-row">

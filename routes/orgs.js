@@ -460,16 +460,34 @@ module.exports = function createOrgsRouter({
       }
       // The approve dialog is where a waiting club's details get fixed.
       if (target.rows[0].status === "pending") return pendingConflict(res);
-      const r = await pool.query(
-        `UPDATE clubs SET name = $1, short_code = $2
-         WHERE id = $3
-         RETURNING id, name, short_code`,
-        [name.trim(), short_code?.trim() || null, req.params.id],
-      );
-      res.json(r.rows[0]);
+      const code = clubApprovals.normaliseClubCode(short_code);
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        // Only a code that's actually changing is checked, so a club that
+        // already shares one from before the rule can still be renamed.
+        const current = (await client.query(
+          "SELECT short_code FROM clubs WHERE id = $1 FOR UPDATE", [req.params.id],
+        )).rows[0]?.short_code || null;
+        if (code && code !== (current || "").toUpperCase()) {
+          await clubApprovals.assertCodeFree(client, target.rows[0].org_id, code, req.params.id);
+        }
+        const r = await client.query(
+          `UPDATE clubs SET name = $1, short_code = $2
+           WHERE id = $3
+           RETURNING id, name, short_code`,
+          [name.trim(), code, req.params.id],
+        );
+        await client.query("COMMIT");
+        res.json(r.rows[0]);
+      } catch (err) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw err;
+      } finally {
+        client.release();
+      }
     } catch (err) {
-      console.error("[Update Club Error]", err.message);
-      res.status(500).json({ error: "Internal server error" });
+      approvalError(res, err, "[Update Club Error]");
     }
   });
 
@@ -539,17 +557,24 @@ module.exports = function createOrgsRouter({
     const { name, short_code } = req.body || {};
     if (!name || !name.trim())
       return res.status(400).json({ error: "Club name is required" });
+    const client = await pool.connect();
     try {
-      const r = await pool.query(
+      const code = clubApprovals.normaliseClubCode(short_code);
+      await client.query("BEGIN");
+      await clubApprovals.assertCodeFree(client, req.params.id, code);
+      const r = await client.query(
         `INSERT INTO clubs (org_id, name, short_code)
          VALUES ($1, $2, $3)
          RETURNING id, name, short_code`,
-        [req.params.id, name.trim(), short_code?.trim() || null],
+        [req.params.id, name.trim(), code],
       );
+      await client.query("COMMIT");
       res.status(201).json(r.rows[0]);
     } catch (err) {
-      console.error("[Create Club Error]", err.message);
-      res.status(500).json({ error: "Internal server error" });
+      await client.query("ROLLBACK").catch(() => {});
+      approvalError(res, err, "[Create Club Error]");
+    } finally {
+      client.release();
     }
   });
 

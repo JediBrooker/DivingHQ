@@ -105,7 +105,7 @@ The move only finalises once all three are in. Every approval and the final tran
 ![Clubs registry listing every club in the federation with its short code and member count](/guide-screenshots/clubs.png)
 
 - **List** — every club in your org, with member counts derived from `users.club_id`
-- **+ New Club** — name + short code (3 – 6 chars; surfaces as the cyan pill in scoreboards)
+- **+ New Club** — name + short code (up to 8 letters, numbers or dashes, unique among the federation's clubs; surfaces as the cyan pill in scoreboards)
 - **Edit** — rename, change short code
 - **Delete** — non-destructive; clubs with members can't be deleted (prevents orphaning users)
 - **Admins** — appoint or remove the club's admins (see [Club admins](#club-admins))
@@ -119,7 +119,7 @@ The short code matters more than you'd think — it's the cyan pill that shows n
 
 `/club` (**My club** in the sidebar), for anyone who admins a club.
 
-- **Role requests** — members asking to dive, judge or referee. Approve or reject each one. In a country with no federation on DivingHQ yet this is where they land; under a federation they go to the federation's admins instead.
+- **Role requests** — members asking to dive, judge or coach. Approve or reject each one. (Referee requests go to DivingHQ, since a referee can act at any club's meet in the country.) In a country with no federation on DivingHQ yet this is where they land; under a federation they go to the federation's admins instead.
 - **Admins** — the club's admins. While the country has no federation you can add co-admins from your members and remove them. The last admin can't step down: their **Remove** stays greyed out until there's a co-admin. Under a federation this list is read-only, because the federation appoints club admins.
 - **Region** — which state, province or home nation the club is in, in countries that have them. Same rule: yours to set until a federation arrives.
 
@@ -265,7 +265,7 @@ Signups find their federation by country, so a live organisation with no country
 
 ### Rebuilding the record books
 
-Records are written as scores land, so a book can drift from the scores behind it: a correction that lowered a record-setting dive, say, or books written before migration 094 split them by gender (back then a man's dive could replace a woman's club record, and synchro dives counted). The system admin can replay every book from the scores themselves:
+Records are written as scores land, and when a dive that's already scored changes (the referee fails or caps it, a score is corrected, a conflict is resolved, a redive is scored again) its books are replayed, so a record goes back to whoever held it before. A book can still drift from the scores behind it, mostly books written before migration 094 split them by gender (back then a man's dive could replace a woman's club record, and synchro dives counted). The system admin can replay every book from the scores themselves:
 
 ```
 node scripts/rebuild-records.js                  # dry run: counts per book, writes nothing
@@ -274,7 +274,7 @@ node scripts/rebuild-records.js --org <uuid>     # one federation's books (conti
 node scripts/rebuild-records.js --apply          # actually write it
 ```
 
-Nothing is written without `--apply`. With it, every row that's replaced or removed is copied to the matching history table first, and the whole rebuild runs in one transaction with the record tables locked, so a dive finishing mid-rebuild just waits for it. Records whose event has since been deleted can't be checked against scores, so they're left alone unless the replay beats them.
+Nothing is written without `--apply`. With it, every row that's replaced or removed is copied to the matching history table first, and the whole rebuild runs in one transaction with the record tables locked, so a dive finishing mid-rebuild just waits for it. Records whose event has since been deleted can't be checked against scores, so they're left alone unless the replay beats them. A dive counts for the club and state its diver was entered from, the same as when it was scored live, and a club still waiting for its federation's approval gets no club records.
 
 ### Cross-org user lookup
 

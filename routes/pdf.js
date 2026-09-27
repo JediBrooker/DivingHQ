@@ -26,6 +26,7 @@ const express = require("express");
 const PDFDocument = require("pdfkit");
 const { t: serverTranslate } = require("../lib/server-i18n");
 const { perDiveSelect, perDivePointsCte, teamStandingsCte } = require("../lib/scoring-sql");
+const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // CSV escaping + spreadsheet-formula-injection guard.
 //
@@ -119,7 +120,7 @@ module.exports = function createPdfRouter({ pool }) {
            FROM competitor_dive_lists cdl
            JOIN users u ON u.id = cdl.competitor_id
            JOIN organisations o ON o.id = u.org_id
-           LEFT JOIN clubs cl ON cl.id = u.club_id
+           ${PUBLIC_CLUB_JOIN}
            LEFT JOIN users pu ON pu.id = cdl.partner_id
            LEFT JOIN teams tm ON tm.id = cdl.team_id
            LEFT JOIN dive_directory d ON d.id = cdl.dive_id
@@ -141,7 +142,7 @@ module.exports = function createPdfRouter({ pool }) {
            FROM event_judges ej
            JOIN users u ON u.id = ej.judge_id
            JOIN organisations o ON o.id = u.org_id
-           LEFT JOIN clubs cl ON cl.id = u.club_id
+           ${PUBLIC_CLUB_JOIN}
           WHERE ej.event_id = ANY($1::uuid[])
           ORDER BY ej.event_id, ej.judge_number ASC NULLS LAST`,
         [eventIds],
@@ -720,7 +721,7 @@ module.exports = function createPdfRouter({ pool }) {
            FROM users u
            JOIN competitor_dive_lists cdl ON u.id = cdl.competitor_id
            JOIN organisations o ON u.org_id = o.id
-           LEFT JOIN clubs cl  ON cl.id = u.club_id
+           ${PUBLIC_CLUB_JOIN}
            LEFT JOIN users pu  ON pu.id = cdl.partner_id
            LEFT JOIN teams tm  ON tm.id = cdl.team_id
            LEFT JOIN dive_directory d ON d.id = cdl.dive_id
@@ -912,7 +913,7 @@ module.exports = function createPdfRouter({ pool }) {
                   cl.name AS club_name, cl.short_code AS club_code
            FROM users u
            JOIN organisations o ON o.id = u.org_id
-           LEFT JOIN clubs cl ON cl.id = u.club_id
+           ${PUBLIC_CLUB_JOIN}
            WHERE u.id = $1`,
           [diverId, eventId],
         ),
@@ -1128,7 +1129,7 @@ module.exports = function createPdfRouter({ pool }) {
             extraJoins: [
               "JOIN users u  ON u.id = s.competitor_id",
               "JOIN organisations o ON o.id = u.org_id",
-              "LEFT JOIN clubs cl  ON cl.id = u.club_id",
+              PUBLIC_CLUB_JOIN,
               "LEFT JOIN users pu ON pu.id = cdl.partner_id",
               "LEFT JOIN teams tm ON tm.id = cdl.team_id",
             ],
@@ -1236,7 +1237,7 @@ module.exports = function createPdfRouter({ pool }) {
              FROM per_dive pd
              JOIN users u ON u.id = pd.competitor_id
              JOIN organisations o ON o.id = u.org_id
-             LEFT JOIN clubs cl ON cl.id = u.club_id
+             ${PUBLIC_CLUB_JOIN}
              LEFT JOIN LATERAL (
                SELECT DISTINCT cdl.partner_id FROM competitor_dive_lists cdl
                WHERE cdl.event_id = $1 AND cdl.competitor_id = pd.competitor_id
@@ -1288,7 +1289,7 @@ module.exports = function createPdfRouter({ pool }) {
             extraJoins: [
               "JOIN users u ON s.competitor_id = u.id",
               "JOIN organisations o ON o.id = u.org_id",
-              "LEFT JOIN clubs cl ON cl.id = u.club_id",
+              PUBLIC_CLUB_JOIN,
               "LEFT JOIN users pu ON pu.id = cdl.partner_id",
               "LEFT JOIN teams tm ON tm.id = cdl.team_id",
             ],

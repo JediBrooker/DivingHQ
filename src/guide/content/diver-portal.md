@@ -215,6 +215,8 @@ If you are transferring to a club in a different federation, the request becomes
 
 Every step is audit-logged. The transfer is only applied once all three confirmations are recorded.
 
+If you admin a club or region in your old federation, or manage any of its events, those seats end with the move: they belong to the federation that gave them. The club's other admins are told, or its federation if nobody else runs it. You'll be asked to sign in again.
+
 ## Cross-org browse
 
 The **Diver Search** at `/divers` lets anyone (logged in or not) find a diver by name across every federation on the platform. Click a result to land on their public profile. Useful for finding a diver whose federation slug you don't know.

@@ -81,7 +81,10 @@
       "short_code_placeholder": "f.eks. SYD",
       "club_needs_approval": "{org} godkender nye klubber, før de bliver synlige. Vi spørger dem, så snart du har bekræftet din e-mail, og imens kan du logge ind og springe.",
       "club_joins_now": "Nye klubber kommer med i {org} med det samme. {org} udpeger hver klubs administratorer.",
-      "success_club_pending": "{club} venter på godkendelse fra {org}. De ser den, så snart du har bekræftet din e-mail, og vi skriver til dig, når de har besluttet sig."
+      "success_club_pending": "{club} venter på godkendelse fra {org}. De ser den, så snart du har bekræftet din e-mail, og vi skriver til dig, når de har besluttet sig.",
+      "region_will_ask": "{region} bestemmer selv, hvilke klubber den optager, så den bliver spurgt, når du har bekræftet din e-mail. Indtil den siger ja, er din klub ikke i regionen.",
+      "founder_role_note": "Som klubbens stifter kan du ikke godkende din egen anmodning om at blive træner eller dommer, så den går til din regions administratorer eller til DivingHQ.",
+      "spectator_note_see_above": "Alle konti starter som tilskuer. En rolle, du anmoder om ovenfor, gennemgås som noten under den beskriver. Du kan logge ind, når din e-mail er bekræftet."
     },
     "register_org": {
       "title": "Registrér organisation",
@@ -164,7 +167,8 @@
       "resend_prompt": "Brug for et nyt link? Indtast dit brugernavn eller din e-mailadresse.",
       "resend_label": "Brugernavn eller e-mail",
       "resend_button": "Send et nyt link",
-      "resend_sent": "Hvis kontoen venter på bekræftelse, er et nyt link på vej. Tjek din indbakke."
+      "resend_sent": "Hvis kontoen venter på bekræftelse, er et nyt link på vej. Tjek din indbakke.",
+      "success_org_suspended": "Din e-mail er bekræftet, men din organisations adgang til DivingHQ er suspenderet. Hvis du mener, det er en fejl, så kontakt DivingHQ's support."
     },
     "check_inbox": {
       "title": "Tjek din indbakke",
@@ -302,7 +306,7 @@
       "step1_title": "Opret din klub",
       "step1_desc": "Tilmeld dig, vælg dit land, og giv klubben et navn. Er dit forbund ikke på DivingHQ endnu, er du klubbens administrator fra starten.",
       "step2_title": "Inviter udspringere og dommere",
-      "step2_desc": "Send medlemmerne tilmeldingslinket. De vælger din klub, og du godkender, hvem der springer, dømmer eller er overdommer.",
+      "step2_desc": "Send medlemmerne tilmeldingslinket. De vælger din klub, og du godkender, hvem der springer, dømmer eller træner.",
       "step3_title": "Afvikl dit første stævne",
       "step3_desc": "Opret konkurrencer, styr stævnet fra kontrolrummet, mens dommerne giver point på deres telefoner, og resultaterne offentliggøres, efterhånden som hvert spring er bedømt.",
       "note": "Du behøver ikke et forbund for at komme i gang. Hvis dit forbund eller regionale forbund senere kommer på DivingHQ, overtager det driften af landet eller regionen, og din klub beholder sine stævner, resultater og rekorder."
@@ -659,7 +663,7 @@
         "desc": "Du driver din klub. Hvor dit lands forbund endnu ikke er på DivingHQ, afvikler klubben sine egne stævner: opret dem, styr dem fra <strong>Kontrolrummet</strong>, og godkend medlemmernes rolleanmodninger. Under et forbund godkender forbundet din nye klub og kan gøre dig til dens administrator.",
         "step_1": "Tilmeld dig, vælg dit land og opret din klub; du bliver dens første administrator (under et forbund, når det har godkendt klubben)",
         "step_2": "Åbn <strong>Stævnehåndtering</strong> og opret et stævne, som din klub er vært for",
-        "step_3": "Godkend på <strong>Min klub</strong> dem, der beder om at blive medlem, og medlemmer, der vil springe, dømme eller være træner",
+        "step_3": "Hvor der endnu ikke er et forbund: godkend på <strong>Min klub</strong> dem, der beder om at blive medlem, og medlemmer, der vil springe, dømme eller være træner",
         "step_4": "På dagen styrer du pointgivningen fra <strong>Kontrolrummet</strong>",
         "step_5": "Når dit forbund eller regionale organ kommer til, stemmer du om dets krav under <strong>Krav</strong>",
         "cta": "Afvikling af et stævne ↗",
@@ -667,10 +671,10 @@
       },
       "region_admin": {
         "name": "Regionsadministrator",
-        "desc": "Du tager dig af en delstat, provins eller nation: afvikler dens mesterskaber, træder til ved alle dens klubbers stævner og godkender rolleanmodninger fra klubbernes medlemmer. Dit forbund udpeger dig. Hvis der ikke er et endnu, gør dit regionale organ krav på regionen, og du tilføjer selv dine medadministratorer. Et delstatsforbund kan ansøge om at drive sin region via <strong>Registrér din organisation</strong>.",
+        "desc": "Du tager dig af en delstat, provins eller nation: afvikler dens mesterskaber og træder til ved alle dens klubbers stævner. Hvor der endnu ikke er et forbund, godkender du også rolleanmodninger fra klubbernes medlemmer. Dit forbund udpeger dig. Hvis der ikke er et endnu, gør dit regionale organ krav på regionen, og du tilføjer selv dine medadministratorer. Et delstatsforbund kan ansøge om at drive sin region via <strong>Registrér din organisation</strong>.",
         "step_1": "Åbn <strong>Min region</strong> for at se dine klubber og hvem der driver dem",
         "step_2": "Opret dine mesterskaber i <strong>Stævnehåndtering</strong> med din region som vært",
-        "step_3": "Godkend medlemmer, der vil springe, dømme eller være træner, og klubber, der beder om optagelse i din region",
+        "step_3": "Hvor der endnu ikke er et forbund: godkend medlemmer, der vil springe, dømme eller være træner, og klubber, der beder om optagelse i din region",
         "cta": "Afvikling af et stævne ↗"
       },
       "org_admin": {
@@ -2097,12 +2101,16 @@
       "code_placeholder": "f.eks. SYD",
       "code_saved": "Klubkoden er gemt",
       "code_none": "Ingen kode endnu.",
-      "code_federation": "Dit forbund fastsætter din klubs kode."
+      "code_federation": "Dit forbund fastsætter din klubs kode.",
+      "code_bad": "Brug højst 8 bogstaver, tal eller bindestreger.",
+      "code_taken": "En anden klub bruger allerede den kode. Vælg en anden."
     },
     "admins_intro_meets": "Klubadministratorer står for de stævner, klubben arrangerer. De får ingen adgang på forbundsniveau.",
     "admins_intro_classes": "Klubadministratorer står for de stævner, klubben arrangerer, og tager sig af dens hold. De får ingen adgang på forbundsniveau.",
     "admins_intro_payments": "Klubadministratorer står for de stævner, klubben arrangerer, og tager sig af dens udbetalinger og medlemskontingenter. De får ingen adgang på forbundsniveau.",
-    "last_admin_tip": "En klub skal have mindst én administrator. Tilføj en medadministrator, før du fjerner denne."
+    "last_admin_tip": "En klub skal have mindst én administrator. Tilføj en medadministrator, før du fjerner denne.",
+    "intro_federation": "Din klubs invitationslink, kode og administratorer. Dit forbund udpeger administratorerne og behandler dine medlemmers rolleanmodninger.",
+    "requests_federation": "Dit forbund behandler dine medlemmers rolleanmodninger."
   },
   "regions": {
     "label": {
@@ -2136,7 +2144,12 @@
     "release_club": "Tag ud af regionen",
     "club_requests": "Klubber, der beder om optagelse",
     "currently_in": "i øjeblikket i {region}",
-    "last_admin_tip": "En region skal have mindst én administrator. Tilføj en medadministrator, før du fjerner denne."
+    "last_admin_tip": "En region skal have mindst én administrator. Tilføj en medadministrator, før du fjerner denne.",
+    "leave_title": "Vil du fjerne dig selv som administrator for {region}?",
+    "leave_body": "Du vil ikke længere kunne afvikle regionens stævner eller tage dig af dens klubber. Kun en anden administrator kan tilføje dig igen.",
+    "left_notice": "Du er ikke længere administrator for {region}.",
+    "intro_federation": "Din regions klubber og hvem der driver dem. Dit forbund behandler deres medlemmers rolleanmodninger.",
+    "requests_federation": "Dit forbund behandler rolleanmodninger fra dine klubbers medlemmer."
   },
   "claims": {
     "title": "Krav",
@@ -2303,7 +2316,7 @@
     },
     "claim_timeout_days": {
       "label": "Afstemningsperiode (dage)",
-      "description": "Når den udløber: mindst én godkendelse og ingen indsigelser vedtager kravet, ellers går det til systemadministratoren."
+      "description": "Når den udløber uden nok godkendelser til at vedtage kravet (de to regler ovenfor), går kravet til systemadministratoren. Det vedtages aldrig alene fordi tiden løber ud."
     }
   },
   "nav": {

@@ -25,6 +25,7 @@ const express = require("express");
 const { PER_DIVE: SHARED_PER_DIVE, FULL_FIELD_RANKING } =
   require("../db/queries");
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
+const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // Catalog of widget IDs the diver can enable on their dashboard.
 // Validated against the inbound array so a typo can't poison the
@@ -104,7 +105,7 @@ module.exports = function createDiverProfileRouter({
                 u.dashboard_widgets
          FROM users u
          JOIN organisations o ON u.org_id = o.id
-         LEFT JOIN clubs cl ON cl.id = u.club_id
+         ${PUBLIC_CLUB_JOIN}
          WHERE u.id = $1
            AND u.deleted_at IS NULL`,
         [req.params.id],

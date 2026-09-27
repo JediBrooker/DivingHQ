@@ -24,6 +24,7 @@
 
 const express = require("express");
 const createIdempotency = require("../lib/idempotency");
+const { announceRecords } = require("../lib/records");
 
 module.exports = function createScoreCorrectionRouter({
   pool,
@@ -34,6 +35,8 @@ module.exports = function createScoreCorrectionRouter({
   // Optional, migration 087. Without them this is the old role-only gate.
   requireRoleOrEventDelegate,
   isEventDelegate,
+  // Optional; lib/records.js. A corrected score can move a record.
+  recomputeRecordKeys,
 }) {
   if (!pool || !io) throw new Error("createScoreCorrectionRouter requires { pool, io, … }");
   const router = express.Router();
@@ -169,6 +172,15 @@ module.exports = function createScoreCorrectionRouter({
           reason: reason || null,
           actor_user_id: req.user.id,
         });
+
+        // The dive's total moved, so its record books might have too:
+        // lowered below a record it set, or raised past one.
+        if (recomputeRecordKeys) {
+          await announceRecords({
+            recomputeRecordKeys, io, scoreboardCache,
+            eventId: existing.event_id, competitorId: existing.competitor_id, roundNumber: existing.round_number,
+          });
+        }
 
         res.json({ ok: true, old_score: oldScore, new_score: newScore });
       } catch (err) {

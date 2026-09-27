@@ -7,6 +7,10 @@
 //   npm run migrate -- --to 12    : stop after 0NN_*.sql where NN <= 12
 //   npm run migrate -- --status   : print the ledger, don't change anything
 //   npm run migrate -- --redo 51  : re-apply specific migrations (comma separated)
+//   npm run migrate -- --check-breaking
+//                                 : exit 3 if a pending migration breaks the
+//                                   code that's running now (see
+//                                   scripts/migration-compat.js), else 0
 //
 // WHAT RAN IS RECORDED PER FILE
 // -----------------------------
@@ -52,9 +56,12 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { Client } = require("pg");
+const { breakingAmong } = require("./migration-compat");
 
 const args = process.argv.slice(2);
-const DRY_RUN = args.includes("--dry") || args.includes("--dry-run");
+const CHECK_BREAKING = args.includes("--check-breaking");
+// --check-breaking only looks, so it's as read-only as a dry run.
+const DRY_RUN = args.includes("--dry") || args.includes("--dry-run") || CHECK_BREAKING;
 const STATUS_ONLY = args.includes("--status");
 const toIdx = args.indexOf("--to");
 const TARGET_VERSION = toIdx >= 0 ? Number(args[toIdx + 1]) : Infinity;
@@ -266,11 +273,25 @@ async function printStatus(client, migs, ledger) {
       );
     }
 
+    const breaking = breakingAmong(pending.map((m) => m.version));
+    if (CHECK_BREAKING) {
+      if (!breaking.length) {
+        console.log("[migrate] nothing pending breaks the running code.");
+        return;
+      }
+      for (const b of breaking) console.log(`[migrate] v${b.version} breaks the running code: ${b.reason}`);
+      process.exitCode = 3;
+      return;
+    }
+
     console.log(
       `[migrate] ${pending.length} migration${pending.length === 1 ? "" : "s"} to apply` +
         (DRY_RUN ? " (dry run, no writes)" : "") +
         ".",
     );
+    for (const b of breaking) {
+      console.warn(`[migrate] note: v${b.version} breaks the code that's running now until it restarts. ${b.reason}`);
+    }
 
     if (!pending.length) {
       console.log("[migrate] up to date.");
