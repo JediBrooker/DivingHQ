@@ -508,6 +508,9 @@ h1 { font-size: 48px; font-style: italic; margin-bottom: 0.25rem; }
 .footer-link a { color: var(--cyan); text-decoration: none; }
 .note { font-size: 11px; color: var(--text-3); line-height: 1.6; padding: 0.75rem; background: var(--bg-3); border-radius: var(--radius-sm); border: 1px solid var(--border); }
 .hint-line { margin-top: 0.4rem; font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
+/* The browser's default blue underline stood out against everything else on the form. */
+.hint-line a { color: var(--cyan); text-decoration: none; }
+.hint-line a:hover { text-decoration: underline; }
 .code-input { text-transform: uppercase; font-family: var(--font-mono); }
 .code-input::placeholder { text-transform: none; }
 .code-error { color: var(--danger-fg); }
