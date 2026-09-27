@@ -72,19 +72,10 @@ export function attentionMarker(coreReadiness = [], clientExtras = [], opts = {}
   return null
 }
 
-// Caller helper: the server's workflow_actions rows already match the
-// coreReadiness shape (buildReadinessFromRow -> {key,label,done,hint,...}).
-// Pass them straight through, this just guards null/non-arrays so a
-// bundle-in-flight (workflowActions === []/undefined) yields an empty,
-// zero-count attention instead of a NaN somewhere downstream.
-export function coreFromWorkflowActions(workflowActions) {
-  return Array.isArray(workflowActions) ? workflowActions : []
-}
-
-// Caller helper for the Dashboard diver chip: an event only contributes
-// if the diver's actually entered in it. diverEventIds === null means
-// the bundle is still in flight -> treat as "entered" (no blink), matching
-// the existing diverIsEntered(null) => true fallback.
+// Caller helper for the Dashboard diver chip and cards: an event only
+// contributes if the diver's actually entered in it. diverEventIds ===
+// null means the bundle is still in flight -> treat as "entered" (no
+// blink).
 export function contributesToDiverChip(eventId, diverEventIds) {
   if (diverEventIds == null) return true
   return diverEventIds.includes(eventId)

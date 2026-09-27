@@ -20,9 +20,9 @@
 //      still a valid tab for this user → that tab.
 //   4. Else fallback to most-privileged role.
 //
-// Each tab loads its own data lazily on first activation, once
-// loaded, switches are instant. Pulse data loads up front since
-// it's needed for the strip and for the smart-pick computation.
+// Every tab's data comes from one /api/dashboard bundle, loaded up
+// front (the strip and smart-pick need it anyway) and refreshed by the
+// poll and socket signals, so switching tabs never fetches.
 //
 // Brand-new org admins (zero clubs, zero events, no
 // dismiss/complete stamp) still get the auto-redirect to
@@ -93,14 +93,11 @@ function writeStoredTab(id) {
 function setTab(id) {
   activeTab.value = id
   writeStoredTab(id)
-  // Lazy-load data for the new tab if we haven't yet.
-  ensureTabDataLoaded(id)
 }
 
 // ---- Pulse + per-tab data refs -----------------------------
-// Loaded lazily; first hit triggers fetch, then cached. The
-// `loaded` map prevents double-fetch on re-tab visits.
-const events             = ref([])     // /api/events, used by org_admin + meet_manager + diver
+// All hydrated from the /api/dashboard bundle (loadDashboardBundle).
+const events             = ref([])     // used by org_admin + meet_manager + diver
 const roleRequests       = ref([])     // /api/role-requests
 const pendingOrgs        = ref([])     // /api/orgs filtered to pending (sysadmin)
 const claimsToAct        = ref(0)      // claims waiting on my vote / decision (phase 3)
@@ -117,13 +114,25 @@ const diverEventIds      = ref(null)   // event ids the caller has an entry in
                                        // [] = loaded + zero entries). Lets
                                        // the diver-tab cards skip events
                                        // /me-meet-day will 403 on.
-const tabsLoaded         = ref(new Set())  // tab ids whose data is loaded
+
+// Live events, and upcoming ones soonest-closing first (no close date
+// sorts last). Shared by the pulse chips, the attention cards, the meet
+// manager rows and the diver's next meet, which all used to filter and
+// sort their own copy.
+const liveEvents = computed(() => events.value.filter((e) => e.status === 'Live'))
+const upcomingByClose = computed(() =>
+  events.value
+    .filter((e) => e.status === 'Upcoming')
+    .sort((a, b) => {
+      const ad = a.entries_close_at ? +new Date(a.entries_close_at) : Infinity
+      const bd = b.entries_close_at ? +new Date(b.entries_close_at) : Infinity
+      return ad - bd
+    }),
+)
 
 // Pulse derived from currently-loaded data. Each entry is
 // optional (zero / null for users who don't have that role).
-const liveCount = computed(() =>
-  events.value.filter((e) => e.status === 'Live').length,
-)
+const liveCount = computed(() => liveEvents.value.length)
 const upcomingCount = computed(() =>
   events.value.filter((e) => e.status === 'Upcoming').length,
 )
@@ -200,7 +209,6 @@ const pulseChips = computed(() => {
 
   // Live events, operator chip
   if (liveCount.value && auth.hasAnyRole(['org_admin', 'meet_manager'])) {
-    const liveEvents = events.value.filter((e) => e.status === 'Live')
     chips.push({
       id:           'live',
       kind:         'live',
@@ -210,7 +218,7 @@ const pulseChips = computed(() => {
       layout:       'count-first',
       targetTab:    auth.hasRole('org_admin') ? 'org_admin' : 'meet_manager',
       popoverTitle: liveCount.value === 1 ? '1 live event' : `${liveCount.value} live events`,
-      items: liveEvents.map((e) => ({
+      items: liveEvents.value.map((e) => ({
         id:    'ev-' + e.id,
         title: e.name,
         meta:  'Open Control Room',
@@ -224,13 +232,6 @@ const pulseChips = computed(() => {
   // marker if the entries-close window is under 24h.
   if (upcomingCount.value && auth.hasAnyRole(['org_admin', 'meet_manager'])) {
     const now = Date.now()
-    const upcomingEvents = events.value
-      .filter((e) => e.status === 'Upcoming')
-      .sort((a, b) => {
-        const ad = a.entries_close_at ? +new Date(a.entries_close_at) : Infinity
-        const bd = b.entries_close_at ? +new Date(b.entries_close_at) : Infinity
-        return ad - bd
-      })
     chips.push({
       id:           'upcoming',
       kind:         'upcoming',
@@ -240,7 +241,7 @@ const pulseChips = computed(() => {
       layout:       'count-first',
       targetTab:    auth.hasRole('org_admin') ? 'org_admin' : 'meet_manager',
       popoverTitle: upcomingCount.value === 1 ? '1 upcoming event' : `${upcomingCount.value} upcoming events`,
-      items: upcomingEvents.slice(0, 8).map((e) => {
+      items: upcomingByClose.value.slice(0, 8).map((e) => {
         const closeMs = e.entries_close_at ? +new Date(e.entries_close_at) - now : null
         return {
           id:    'up-' + e.id,
@@ -617,7 +618,6 @@ watch(
 // Called after the initial pulse fetch. Returns a tab id that
 // the user should see first.
 function pickInitialTab() {
-  const roles = auth.user?.org_roles || []
   const visible = new Set(visibleTabs.value.map((t) => t.id))
   const has = (r) => visible.has(r) || (auth.user?.is_system_admin && TABS.some((t) => t.id === r))
 
@@ -644,69 +644,14 @@ function pickInitialTab() {
   return 'other'
 }
 
-// ---- Loaders -----------------------------------------------
-// Each loader is idempotent, the `tabsLoaded` set prevents
-// re-fetch on re-tab visits. Errors just get swallowed, just in
-// case, and the panel renders an empty state if its data is missing.
-async function loadOperatorEvents() {
-  if (events.value.length || tabsLoaded.value.has('events')) return
-  try {
-    events.value = await auth.apiFetch('/api/events')
-  } catch { /* silent */ }
-  tabsLoaded.value.add('events')
-}
-async function loadRoleRequests() {
-  if (tabsLoaded.value.has('role-requests')) return
-  if (!auth.hasRole('org_admin') && !delegateReviewPath.value) return
-  try {
-    roleRequests.value = await auth.apiFetch('/api/role-requests')
-  } catch { /* silent */ }
-  tabsLoaded.value.add('role-requests')
-}
-async function loadPendingOrgs() {
-  if (tabsLoaded.value.has('pending-orgs')) return
-  if (!auth.user?.is_system_admin) return
-  try {
-    const orgs = await auth.apiFetch('/api/orgs')
-    pendingOrgs.value = (orgs || []).filter((o) => o.status === 'pending')
-  } catch { /* silent */ }
-  tabsLoaded.value.add('pending-orgs')
-}
-async function loadRecentActivity() {
-  if (tabsLoaded.value.has('activity')) return
-  if (!auth.hasRole('org_admin')) return
-  try {
-    recentActivity.value = await auth.apiFetch('/api/audit/recent?limit=10&days=7')
-  } catch { /* silent */ }
-  tabsLoaded.value.add('activity')
-}
-async function loadJudgeEvents() {
-  if (tabsLoaded.value.has('judge')) return
-  if (!auth.hasRole('judge')) return
-  try {
-    judgeEvents.value = await auth.apiFetch('/api/judge/my-events')
-  } catch { /* silent */ }
-  tabsLoaded.value.add('judge')
-}
-async function loadCoachData() {
-  if (tabsLoaded.value.has('coach')) return
-  if (!auth.hasRole('coach')) return
-  try {
-    coachData.value = await auth.apiFetch('/api/coach/dashboard')
-  } catch { /* silent */ }
-  tabsLoaded.value.add('coach')
-}
-
 // One-shot bundle endpoint that returns every role-scoped slice
 // the dashboard needs in a single round trip. Hydrates all
-// the per-role refs simultaneously, marks the corresponding
-// tabsLoaded flags so per-tab loaders short-circuit, and the
-// pulse strip + smart-pick can act on the data right away.
+// the per-role refs simultaneously, so the pulse strip +
+// smart-pick can act on the data right away.
 //
-// Used on initial mount and on every poll/socket-driven
-// refresh. The per-tab loaders (loadOperatorEvents, etc.) are
-// kept as a fallback for any code path that doesn't go through
-// the bundle.
+// Used on initial mount and on every poll/socket-driven refresh.
+// Returns false when the call failed, so the mount can tell "no
+// events" apart from "couldn't ask".
 async function loadDashboardBundle() {
   let bundle = null
   try {
@@ -732,39 +677,7 @@ async function loadDashboardBundle() {
   if (Array.isArray(bundle.diver_event_ids)) {
     diverEventIds.value = bundle.diver_event_ids
   }
-  // mark tabsLoaded so per-tab loaders don't refetch what we
-  // already have. Recent-activity is the only org-admin slice
-  // that has a separate tabsLoaded key.
-  tabsLoaded.value.add('events')
-  tabsLoaded.value.add('role-requests')
-  tabsLoaded.value.add('pending-orgs')
-  tabsLoaded.value.add('activity')
-  tabsLoaded.value.add('judge')
-  tabsLoaded.value.add('coach')
   return true
-}
-
-// Per-tab dispatcher. Org admin wants events + role requests +
-// pending orgs (sysadmin) + recent activity. Meet manager
-// reuses events. Judge / Coach are independent.
-async function ensureTabDataLoaded(tab) {
-  if (tab === 'org_admin') {
-    await Promise.all([
-      loadOperatorEvents(),
-      loadRoleRequests(),
-      loadPendingOrgs(),
-      loadRecentActivity(),
-    ])
-  } else if (tab === 'meet_manager') {
-    await loadOperatorEvents()
-  } else if (tab === 'judge') {
-    await loadJudgeEvents()
-  } else if (tab === 'coach') {
-    await loadCoachData()
-  } else if (tab === 'diver') {
-    await loadOperatorEvents()  // for "your next meet", heuristic
-  }
-  // 'referee' and 'other' need no extra data right now.
 }
 
 // ---- Find Diver typeahead (preserved) -----------------------
@@ -816,17 +729,12 @@ function onDiverSearchBlur() {
 const welcomeName = computed(() => auth.user?.full_name?.toUpperCase() || '—')
 const roleLine    = computed(() => auth.formatRoles(auth.user?.org_roles || []))
 
-function logout() {
-  auth.clearSession()
-  router.push('/login')
-}
-
 // Org-admin's "what needs your attention" cards, preserved
 // from the old action-strip but now scoped inside the org_admin
 // panel. Each card is one row.
 const attentionCards = computed(() => {
   const cards = []
-  for (const ev of events.value.filter((e) => e.status === 'Live')) {
+  for (const ev of liveEvents.value) {
     cards.push({
       id: 'live-' + ev.id,
       kind: 'live',
@@ -836,14 +744,7 @@ const attentionCards = computed(() => {
       to: `/control?event=${ev.id}`,
     })
   }
-  const upcoming = events.value
-    .filter((e) => e.status === 'Upcoming')
-    .sort((a, b) => {
-      const ad = a.entries_close_at ? +new Date(a.entries_close_at) : Infinity
-      const bd = b.entries_close_at ? +new Date(b.entries_close_at) : Infinity
-      return ad - bd
-    })
-  for (const ev of upcoming) {
+  for (const ev of upcomingByClose.value) {
     cards.push({
       id: 'upcoming-' + ev.id,
       kind: 'upcoming',
@@ -901,23 +802,15 @@ const attentionCards = computed(() => {
   return cards
 })
 
-// Meet Manager events, same /api/events fetch but presented
+// Meet Manager events, the same bundle events but presented
 // as compact rows instead of attention cards.
 const operatorEvents = computed(() => {
   // sorted: live first, then upcoming by entries_close_at, then completed by date desc
-  const live = events.value.filter((e) => e.status === 'Live')
-  const upcoming = events.value
-    .filter((e) => e.status === 'Upcoming')
-    .sort((a, b) => {
-      const ad = a.entries_close_at ? +new Date(a.entries_close_at) : Infinity
-      const bd = b.entries_close_at ? +new Date(b.entries_close_at) : Infinity
-      return ad - bd
-    })
   const completed = events.value
     .filter((e) => e.status === 'Completed')
     .sort((a, b) => +new Date(b.scheduled_at || 0) - +new Date(a.scheduled_at || 0))
     .slice(0, 3)
-  return [...live, ...upcoming, ...completed]
+  return [...liveEvents.value, ...upcomingByClose.value, ...completed]
 })
 
 // Diver next-meet heuristic, closest upcoming event by entries.
@@ -925,30 +818,12 @@ const operatorEvents = computed(() => {
 // row for, sourced from the dashboard bundle's `diver_event_ids`
 // slice. Same gate as /api/events/:id/me-meet-day, so a card
 // surfaced here always opens cleanly. While the bundle is in
-// flight (diverEventIds === null) we fall back to the legacy
-// "any event in the org" pool so the card doesn't blink during
-// the first frame.
-const diverEnteredSet = computed(() => {
-  if (!Array.isArray(diverEventIds.value)) return null
-  return new Set(diverEventIds.value)
-})
-function diverIsEntered(eventId) {
-  const set = diverEnteredSet.value
-  if (set === null) return true   // bundle not back yet, don't hide
-  return set.has(eventId)
-}
-
-const diverNextMeet = computed(() => {
-  const upcoming = events.value
-    .filter((e) => e.status === 'Upcoming')
-    .filter((e) => diverIsEntered(e.id))
-    .sort((a, b) => {
-      const ad = a.entries_close_at ? +new Date(a.entries_close_at) : Infinity
-      const bd = b.entries_close_at ? +new Date(b.entries_close_at) : Infinity
-      return ad - bd
-    })
-  return upcoming[0] || null
-})
+// flight (diverEventIds === null) contributesToDiverChip counts
+// every event as entered so the card doesn't blink during the
+// first frame.
+const diverNextMeet = computed(() =>
+  upcomingByClose.value.find((e) => contributesToDiverChip(e.id, diverEventIds.value)) || null,
+)
 
 // Live event the diver is currently competing in. Surfaces the
 // meet-day CTA at the top of the diver panel when relevant.
@@ -956,9 +831,8 @@ const diverNextMeet = computed(() => {
 // gate as /api/events/:id/me-meet-day) so clicking the card
 // never dead-ends at "You're not entered in this event".
 const diverLiveMeet = computed(() => {
-  const live = events.value
-    .filter((e) => e.status === 'Live')
-    .filter((e) => diverIsEntered(e.id))
+  const live = liveEvents.value
+    .filter((e) => contributesToDiverChip(e.id, diverEventIds.value))
     .sort((a, b) => (b.created_at ? +new Date(b.created_at) : 0)
                   - (a.created_at ? +new Date(a.created_at) : 0))
   return live[0] || null
@@ -989,61 +863,44 @@ function badgeFor(id) {
 
 // ---- Mount -------------------------------------------------
 onMounted(async () => {
-  // First-run wizard auto-redirect (preserved). Triggers BEFORE
-  // we touch tab logic, so a fresh org admin doesn't briefly
-  // see the empty dashboard before bouncing.
-  if (auth.hasRole('org_admin')) {
+  // One-shot bundle endpoint that returns every role-scoped
+  // slice in a single round trip.
+  const bundled = await loadDashboardBundle()
+
+  // First-run wizard auto-redirect (preserved). Runs BEFORE we
+  // touch tab logic, so a fresh org admin doesn't briefly see the
+  // empty dashboard before bouncing. The bundle's events are the
+  // same set /api/events would list for an org admin (same scope,
+  // capped at 100), so "none at all" is the same answer without a
+  // second, unbounded request. A failed bundle proves nothing, so
+  // no redirect then.
+  if (bundled && events.value.length === 0 && auth.hasRole('org_admin')) {
     let dismissed = false, completed = false
     try {
       dismissed = localStorage.getItem('setup.wizardDismissed.v1') === '1'
       completed = localStorage.getItem('setup.wizardCompleted.v1') === '1'
     } catch { /* localStorage blocked */ }
     if (!dismissed && !completed) {
-      // Need event count to decide; load events first.
-      await loadOperatorEvents()
-      if (events.value.length === 0) {
-        let clubCount = 0
-        try {
-          const clubs = await auth.apiFetch('/api/clubs')
-          // Clubs waiting on approval count too (migration 096): the
-          // dashboard is where their chip is, the wizard would hide it.
-          clubCount = (clubs || []).length
-        } catch { /* leave 0 */ }
-        if (clubCount === 0) {
-          router.replace('/setup')
-          return
-        }
+      let clubCount = 0
+      try {
+        const clubs = await auth.apiFetch('/api/clubs')
+        // Clubs waiting on approval count too (migration 096): the
+        // dashboard is where their chip is, the wizard would hide it.
+        clubCount = (clubs || []).length
+      } catch { /* leave 0 */ }
+      if (clubCount === 0) {
+        router.replace('/setup')
+        return
       }
     }
   }
 
-  // One-shot bundle endpoint that returns every role-scoped
-  // slice in a single round trip. Replaces the previous
-  // 5-6 parallel API calls, much nicer on the network tab. If
-  // the bundle endpoint isn't available (older server, network
-  // glitch), fall back to the per-source loaders.
-  const bundled = await loadDashboardBundle()
-  if (!bundled) {
-    await Promise.all([
-      auth.hasAnyRole(['org_admin', 'meet_manager']) ? loadOperatorEvents() : Promise.resolve(),
-      // loadRoleRequests does its own org_admin / club admin check.
-      loadRoleRequests(),
-      auth.hasRole('org_admin')   ? loadRecentActivity()  : Promise.resolve(),
-      auth.user?.is_system_admin  ? loadPendingOrgs()     : Promise.resolve(),
-      auth.hasRole('judge')       ? loadJudgeEvents()     : Promise.resolve(),
-      auth.hasRole('coach')       ? loadCoachData()       : Promise.resolve(),
-      auth.hasRole('diver')       ? loadOperatorEvents()  : Promise.resolve(),
-    ])
-  }
   // Initial fetch settled, flip the skeleton off so the real
   // chips render.
   pulseInitiallyLoaded.value = true
 
   // Now smart-pick has the signals it needs.
   activeTab.value = pickInitialTab()
-  // Make sure the picked tab's data is fully loaded (some need
-  // fetches the pulse step skipped, e.g. recent activity).
-  await ensureTabDataLoaded(activeTab.value)
 
   // Live polling, refetch the pulse-driving sources every
   // POLL_MS so the strip stays current without a full page
@@ -1115,8 +972,11 @@ const dashboardSocket = useSocket()
 // creation). Keeps the chip counts in sync without client-side
 // polling latency.
 function onPulseSignal() { refetchPulseData() }
-// Score events also bump recent-activity for the ticker; they
-// don't move the count chips but they keep the ticker current.
+// A score correction lands in the audit log, so refresh the recent
+// activity list OrgAdminPanel shows. It only arrives for events this
+// socket has joined (event:<id> rooms), which in practice means ones the
+// admin had open in the Control Room earlier in the session: the socket
+// is pooled per user and never leaves a room.
 function onScoreActivity() {
   if (auth.hasRole('org_admin')) {
     auth.apiFetch('/api/audit/recent?limit=10&days=7')
@@ -1129,7 +989,6 @@ function attachSocketHandlers() {
   if (!dashboardSocket) return
   dashboardSocket.on('event_status_changed', onPulseSignal)
   dashboardSocket.on('role_request_created', onPulseSignal)
-  dashboardSocket.on('score_committed', onScoreActivity)
   dashboardSocket.on('score_corrected', onScoreActivity)
 }
 
@@ -1137,7 +996,6 @@ function detachSocketHandlers() {
   if (!dashboardSocket) return
   dashboardSocket.off('event_status_changed', onPulseSignal)
   dashboardSocket.off('role_request_created', onPulseSignal)
-  dashboardSocket.off('score_committed', onScoreActivity)
   dashboardSocket.off('score_corrected', onScoreActivity)
 }
 </script>
