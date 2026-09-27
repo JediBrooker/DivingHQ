@@ -94,7 +94,7 @@ test("crawler UA on /diver/:slug receives OG-tagged HTML when slug exists",
       extraHTTPHeaders: { "User-Agent": "Twitterbot/1.0" },
     });
     const r = await ctx.get(
-      `${process.env.E2E_BASE_URL || "http://127.0.0.1:3097"}/diver/0123456789abcdef0123456789abcdef`
+      `${process.env.E2E_BASE_URL || `http://127.0.0.1:${process.env.E2E_PORT || 3097}`}/diver/0123456789abcdef0123456789abcdef`
     );
     expect(r.status()).toBe(200);
     expect(r.headers()["content-type"]).toMatch(/text\/html/);

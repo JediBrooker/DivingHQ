@@ -402,7 +402,7 @@ test("setup: build host federation, 3 events, divers + judges + coach", async ({
       // Open judge sockets just long enough to land scores.
       const judgeSockets = [];
       for (const j of world.judges) {
-        const s = await openSocket(world.baseURL || "http://127.0.0.1:3097", j.token);
+        const s = await openSocket(world.baseURL || `http://127.0.0.1:${process.env.E2E_PORT || 3097}`, j.token);
         s.emit("subscribe_event", { event_id: event.id });
         judgeSockets.push(s);
       }
@@ -445,7 +445,7 @@ test("setup: build host federation, 3 events, divers + judges + coach", async ({
   // Playwright `page` yet (we're in the setup test), so we
   // hard-code 127.0.0.1 matching the Playwright config's baseURL.
   // -------------------------------------------------------------
-  world.baseURL = process.env.E2E_BASE_URL || "http://127.0.0.1:3097";
+  world.baseURL = process.env.E2E_BASE_URL || `http://127.0.0.1:${process.env.E2E_PORT || 3097}`;
 
   const live = await buildEvent({
     name: "Women 3m Springboard — Final",
@@ -1618,7 +1618,7 @@ test("extras: pre-meet checklist / judge analysis / user drawer / language switc
 
   const scoreSockets = [];
   for (const j of world.judges.slice(0, 3)) {
-    const s = await openSocket(world.baseURL || "http://127.0.0.1:3097", j.token);
+    const s = await openSocket(world.baseURL || `http://127.0.0.1:${process.env.E2E_PORT || 3097}`, j.token);
     s.emit("subscribe_event", { event_id: world.liveEvent.id });
     scoreSockets.push(s);
   }

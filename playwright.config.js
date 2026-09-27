@@ -14,6 +14,10 @@
 const { defineConfig, devices } = require("@playwright/test");
 
 const DOCS_E2E = process.env.E2E_DOCS === "1";
+// E2E_PORT moves the auto-booted server off 3097, so two checkouts (git
+// worktrees, say) can run the suite side by side without one quietly
+// reusing the other's server and database.
+const E2E_PORT = process.env.E2E_PORT || "3097";
 const requestedCiWorkers = Number(process.env.PW_WORKERS);
 const ciWorkers = Number.isFinite(requestedCiWorkers) && requestedCiWorkers > 0
   ? Math.floor(requestedCiWorkers)
@@ -57,7 +61,7 @@ module.exports = defineConfig({
     timeout: 5_000,
   },
   use: {
-    baseURL: process.env.E2E_BASE_URL || "http://127.0.0.1:3097",
+    baseURL: process.env.E2E_BASE_URL || `http://127.0.0.1:${E2E_PORT}`,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -177,15 +181,15 @@ module.exports = defineConfig({
     // would just repeat work already on the critical path. Locally
     // (flag unset) we always build so dist/ stays fresh.
     command: process.env.PW_SKIP_BUILD
-      ? "PORT=3097 node server.js"
-      : "npm run build && PORT=3097 node server.js",
-    url: "http://127.0.0.1:3097/api/health",
+      ? `PORT=${E2E_PORT} node server.js`
+      : `npm run build && PORT=${E2E_PORT} node server.js`,
+    url: `http://127.0.0.1:${E2E_PORT}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
     stdout: "pipe",
     stderr: "pipe",
     env: {
-      PORT: "3097",
+      PORT: E2E_PORT,
       // Point at the local test DB created in `npm test` setup.
       DB_DATABASE: process.env.DB_DATABASE || "divinghq_test",
       // Disable the auth + bulk-write rate limiters for the suite.
