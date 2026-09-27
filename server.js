@@ -911,7 +911,7 @@ app.use(require("./routes/users")({
 }));
 
 // Club-change requests + cross-org transfers (Migration 057).
-app.use(require("./routes/club-changes")({ pool, verifyToken }));
+app.use(require("./routes/club-changes")({ pool, verifyToken, bumpTokenVersion }));
 
 // =============================================================
 // MEET ROUTES

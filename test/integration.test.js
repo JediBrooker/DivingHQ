@@ -6360,3 +6360,80 @@ test("claims: re-claiming an orphaned region retires the old claim and its dead 
     await claimKit.wipe(CODE);
   }
 });
+
+// A club admin who transfers to another federation leaves their seats in
+// the old one behind: club, region and event manager. A row stranded by an
+// older transfer doesn't count either.
+test("org transfer: the mover's admin seats in the old federation go with the move", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: true });
+  const Y = await setupFixture({ withEvent: false });
+  try {
+    const club = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, 'Old Town Divers') RETURNING id", [X.orgId],
+    )).rows[0].id;
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Old Shire', 'OSH') RETURNING id", [X.orgId],
+    )).rows[0].id;
+    const mover = await insertUser({ orgId: X.orgId, username: `int-mv-${X.slug}`, fullName: "Mover Person", role: "diver" });
+    const stayer = await insertUser({ orgId: X.orgId, username: `int-st-${X.slug}`, fullName: "Stayer Person", role: "diver" });
+    for (const u of [mover, stayer]) {
+      await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, u, X.orgId]);
+    }
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region, mover, X.orgId]);
+    const meet = (await pool.query(
+      "INSERT INTO meets (org_id, name, host_club_id) VALUES ($1, 'Club night', $2) RETURNING id", [X.orgId, club],
+    )).rows[0].id;
+    await pool.query("UPDATE events SET meet_id = $2 WHERE id = $1", [X.eventId, meet]);
+    const other = (await fetchJson("POST", "/api/events", {
+      token: X.adminToken,
+      body: { name: `Other ${X.slug}`, gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 6, event_type: "individual" },
+    })).body.id;
+    await pool.query("INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2)", [other, mover]);
+
+    const signIn = async () => (await fetchJson("POST", "/api/auth/login", {
+      body: { username: `int-mv-${X.slug}`, password: "not-used-here" },
+    })).body.token;
+    let token = await signIn();
+    assert.equal((await fetchJson("GET", `/api/events/${X.eventId}/score-audit`, { token })).status, 200);
+    const tv = async () => (await pool.query("SELECT token_version FROM users WHERE id = $1", [mover])).rows[0].token_version;
+    const before = await tv();
+
+    const ask = await fetchJson("POST", "/api/club-change-requests", { token, body: { to_org_id: Y.orgId } });
+    assert.equal(ask.status, 201, JSON.stringify(ask.body));
+    assert.equal(ask.body.kind, "org_transfer");
+    const review = (tok) => fetchJson("POST", `/api/club-change-requests/${ask.body.id}/review`, { token: tok, body: { decision: "approved" } });
+    assert.equal((await review(X.adminToken)).body.status, "pending");
+    assert.equal((await review(Y.adminToken)).body.status, "approved");
+
+    const count = async (sql) => (await pool.query(sql, [mover])).rows[0].n;
+    assert.equal(await count("SELECT count(*)::int AS n FROM club_admins WHERE user_id = $1"), 0);
+    assert.equal(await count("SELECT count(*)::int AS n FROM region_admins WHERE user_id = $1"), 0);
+    assert.equal(await count("SELECT count(*)::int AS n FROM event_managers WHERE user_id = $1"), 0);
+    assert.ok((await pool.query("SELECT 1 FROM club_admins WHERE club_id = $1 AND user_id = $2", [club, stayer])).rows.length);
+    assert.ok((await tv()) > before, "the old token, carrying org X, is dead");
+    // The co-admin hears about it; the region had nobody else, so X's admin does.
+    const titles = async (u) => (await pool.query("SELECT title FROM notifications WHERE user_id = $1", [u])).rows.map((r) => r.title);
+    assert.ok((await titles(stayer)).includes("Old Town Divers has one admin fewer"));
+    assert.ok((await titles(X.adminId)).includes("Old Shire has no admin now"));
+    const audit = (await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'user.org_transferred'", [mover],
+    )).rows[0].metadata;
+    assert.deepEqual(audit.removed.club_admins, [club]);
+
+    token = await signIn();
+    assert.equal((await fetchJson("GET", `/api/events/${X.eventId}/score-audit`, { token })).status, 403);
+    // A row an earlier transfer stranded doesn't bring the access back.
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, mover, X.orgId]);
+    assert.equal((await fetchJson("GET", `/api/events/${X.eventId}/score-audit`, { token })).status, 403);
+  } finally {
+    await pool.query("DELETE FROM club_change_requests WHERE from_org_id = $1 OR to_org_id = $1", [X.orgId]).catch(() => {});
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [X.orgId]).catch(() => {});
+    // The mover lives in Y now; move them back so X's teardown takes them.
+    await pool.query("UPDATE users SET org_id = $1 WHERE username = $2", [X.orgId, `int-mv-${X.slug}`]).catch(() => {});
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [X.orgId]).catch(() => {});
+    await teardownFixture(Y);
+    await teardownFixture(X);
+  }
+});
