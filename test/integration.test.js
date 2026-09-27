@@ -1653,3 +1653,74 @@ test("unclaimed country: referee requests go to the sysadmin, judge stays with t
     await claimKit.wipe(CODE);
   }
 });
+
+test("referee credential sign-off: eligibility before bcrypt, one answer for every failure, throttled", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "COM";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  const pw = "referee-password-9876";
+  const hash = await bcrypt.hash(pw, 4);
+  const mkUser = async (orgId, { role, verified = true } = {}) => {
+    const username = `int-so-${crypto.randomBytes(4).toString("hex")}`;
+    const id = (await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+       VALUES ($1, $2, $1, $3, ${verified ? "now()" : "NULL"}) RETURNING id`,
+      [username, hash, orgId],
+    )).rows[0].id;
+    if (role) await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, $3)", [id, orgId, role]);
+    return { id, username };
+  };
+  try {
+    // A self-serve founder, which is exactly who could reach this before.
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Moroni Divers" });
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Moroni Open" } });
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "1m", gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 5, event_type: "individual", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const url = `/api/events/${ev.body.id}/dive-order/sign-off/credential`;
+    const ref = await mkUser(A.orgId, { role: "referee" });
+    const plain = await mkUser(A.orgId, { role: "diver" });
+    const unverified = await mkUser(A.orgId, { role: "referee", verified: false });
+    const outsider = await mkUser(state.orgId, { role: "referee" });
+
+    // Right password for the wrong person looks exactly like a wrong one.
+    const wrong = await fetchJson("POST", url, { token: A.token, body: { username: ref.username, password: "nope-nope-nope" } });
+    assert.equal(wrong.status, 401);
+    for (const who of [plain, unverified, outsider, { username: "nobody-at-all-here" }]) {
+      const r = await fetchJson("POST", url, { token: A.token, body: { username: who.username, password: pw } });
+      assert.equal(r.status, 401, `${who.username}: ${JSON.stringify(r.body)}`);
+      assert.deepEqual(r.body, wrong.body);
+    }
+    assert.equal((await fetchJson("POST", url, { token: A.token, body: { username: ["x"], password: pw } })).status, 400);
+
+    const ok = await fetchJson("POST", url, { token: A.token, body: { username: ref.username, password: pw } });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    const signed = await pool.query("SELECT dive_order_signed_off_by FROM events WHERE id = $1", [ev.body.id]);
+    assert.equal(signed.rows[0].dive_order_signed_off_by, ref.id);
+
+    // With the limiter on (the suite runs with it off), five misses on one
+    // referee and the sixth try is refused before any password check.
+    process.env.RATE_LIMIT_DISABLED = "false";
+    try {
+      const target = await mkUser(A.orgId, { role: "referee" });
+      for (let i = 0; i < 5; i++) {
+        const r = await fetchJson("POST", url, { token: A.token, body: { username: target.username, password: `guess-${i}` } });
+        assert.equal(r.status, 401);
+      }
+      const blocked = await fetchJson("POST", url, { token: A.token, body: { username: target.username, password: pw } });
+      assert.equal(blocked.status, 429, JSON.stringify(blocked.body));
+      // Another referee isn't caught by that one's budget.
+      const other = await mkUser(A.orgId, { role: "referee" });
+      assert.equal((await fetchJson("POST", url, { token: A.token, body: { username: other.username, password: "x" } })).status, 401);
+    } finally {
+      process.env.RATE_LIMIT_DISABLED = "true";
+    }
+  } finally {
+    await teardownFixture(state);
+    await claimKit.wipe(CODE);
+  }
+});

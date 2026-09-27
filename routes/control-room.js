@@ -23,6 +23,7 @@
 //   app.use(require('./routes/control-room')({ … }))
 
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const QRCode  = require("qrcode");
 const { publicId } = require("../lib/public-id");
 const { recordAudit, auditFromReq } = require("../lib/audit");
@@ -1128,13 +1129,53 @@ module.exports = function createControlRoomRouter({
   // on). Server verifies, ensures they hold the referee role for
   // this event's org, and stamps signed_off_by = their user id.
   // The manager's session is untouched, no JWT swap.
+  //
+  // This is a password check reachable by anyone who runs an event,
+  // and in a country with no federation that's anyone who founds a
+  // club. So it's treated like a login form: throttled per IP and per
+  // target username, and the account has to be a live, verified
+  // referee in this event's org BEFORE bcrypt runs. Every way of
+  // failing, wrong password or wrong person, gets the same 401, and
+  // bcrypt runs exactly once either way so the timing doesn't split
+  // them either. Only a real referee's correct password gets further
+  // (to the TOTP prompt or the sign-off).
+  const CREDENTIAL_FAIL = "Invalid referee username or password";
+  const credentialLimitSkip = () => process.env.RATE_LIMIT_DISABLED === "true";
+  const credentialIpLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    // Only failures count, so a venue signing off a dozen events from
+    // one laptop never trips it.
+    skipSuccessfulRequests: true,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "Too many sign-off attempts, please try again in 15 minutes." },
+    // Read per request, not at construction, so a test can switch it
+    // back on for itself without restarting the server.
+    skip: credentialLimitSkip,
+  });
+  const credentialTargetLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    skipSuccessfulRequests: true,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    keyGenerator: (req) => `signoff-target:${String(req.body?.username || "").trim().toLowerCase()}`,
+    message: { error: "Too many sign-off attempts for that referee, please try again in 15 minutes." },
+    skip: credentialLimitSkip,
+  });
+  // Same cost factor as real hashes, so a miss takes as long as a hit.
+  const FAKE_BCRYPT_HASH = "$2b$12$00000000000000000000000000000000000000000000000000000";
+
   router.post("/api/events/:id/dive-order/sign-off/credential",
-              requireMeetController, async (req, res) => {
+              requireMeetController, credentialIpLimiter, credentialTargetLimiter,
+              async (req, res) => {
     if (!bcrypt) {
       return res.status(503).json({ error: "Credential verifier not wired" });
     }
     const { username, password, code } = req.body || {};
-    if (!username || !password) {
+    if (typeof username !== "string" || typeof password !== "string" || !username || !password
+        || username.length > 100 || password.length > 1024) {
       return res.status(400).json({ error: "username + password required" });
     }
     try {
@@ -1150,44 +1191,24 @@ module.exports = function createControlRoomRouter({
         });
       }
 
-      // Look up the user by username. Pull totp fields too so we
-      // can enforce the second factor in the same round-trip.
+      // Only a live, verified referee of this event's org can be the
+      // answer. Anything else (no such user, another org, not a
+      // referee, unverified, deleted, suspended) is decided here and
+      // compared against the dummy hash instead of their real one.
       const u = await pool.query(
-        `SELECT id, password, org_id, email_verified_at,
-                totp_enabled_at, totp_secret, totp_recovery_codes
-         FROM users WHERE username = $1`,
-        [username],
+        `SELECT u.id, u.password, u.totp_enabled_at, u.totp_secret, u.totp_recovery_codes
+           FROM users u
+          WHERE u.username = $1 AND u.org_id = $2
+            AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+            AND u.email_verified_at IS NOT NULL AND u.password IS NOT NULL
+            AND EXISTS (SELECT 1 FROM user_org_roles r
+                         WHERE r.user_id = u.id AND r.org_id = $2 AND r.role = 'referee')`,
+        [username, ev.rows[0].org_id],
       );
-      const user = u.rows[0];
-      // Constant-time compare against a dummy when the user
-      // doesn't exist, same hardening as the main login flow.
-      // Copy-pasted shape rather than imported, a little hacky
-      // but keeps this module standalone.
-      const fakeHash = "$2b$12$00000000000000000000000000000000000000000000000000000";
-      const passwordOk = await bcrypt.compare(password, user?.password || fakeHash);
+      const user = u.rows[0] || null;
+      const passwordOk = await bcrypt.compare(password, user ? user.password : FAKE_BCRYPT_HASH);
       if (!user || !passwordOk) {
-        return res.status(401).json({ error: "Invalid username or password" });
-      }
-      if (!user.email_verified_at) {
-        return res.status(403).json({ error: "Account email not verified" });
-      }
-      // Org match: the referee must be in the same org as the
-      // event (or sysadmin). Stops a referee from another org
-      // accidently signing off the wrong meet.
-      if (user.org_id !== ev.rows[0].org_id) {
-        return res.status(403).json({ error: "Referee is not in this event's org" });
-      }
-      // Referee role check, done BEFORE the TOTP block so a one-time
-      // recovery code is never consumed for a user who turns out not
-      // to be a referee (a 403 they'd get regardless anyway). Also
-      // tightens the password oracle: a non-referee learns nothing new.
-      const roleQ = await pool.query(
-        `SELECT 1 FROM user_org_roles
-         WHERE user_id = $1 AND org_id = $2 AND role = 'referee' LIMIT 1`,
-        [user.id, ev.rows[0].org_id],
-      );
-      if (!roleQ.rows.length) {
-        return res.status(403).json({ error: "User is not a referee" });
+        return res.status(401).json({ error: CREDENTIAL_FAIL });
       }
       // TOTP if enabled.
       if (user.totp_enabled_at) {
