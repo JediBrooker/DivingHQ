@@ -1981,5 +1981,33 @@
     "reject": "Ablehnen",
     "revoke": "Widerrufen",
     "revoke_body": "{body} führt {target} nicht mehr, alles wird wie vor dem Anspruch."
+  },
+  "records": {
+    "title": "Rekorde",
+    "intro": "Die höchsten Punktzahlen für jeden Sprung, jede Position und jede Höhe, erzielt bei Einzelwettbewerben auf DivingHQ.",
+    "book_label": "Rekordliste",
+    "book_national": "National",
+    "book_club": "Verein",
+    "book_continental": "Kontinental",
+    "gender_label": "Rekorde der Damen oder Herren",
+    "women": "Damen",
+    "men": "Herren",
+    "all_heights": "Alle Höhen",
+    "search": "Sprungcode, z. B. 105 oder 5253",
+    "col_dive": "Sprung",
+    "col_score": "Punkte",
+    "col_holder": "Rekordhalter",
+    "col_set_at": "Aufgestellt bei",
+    "unofficial": "Inoffiziell",
+    "unofficial_body": "Noch kein Verband hat {name} auf DivingHQ beansprucht. Dies sind die besten Leistungen aus Wettkämpfen, die hier ausgetragen wurden, und sie gelten als offiziell, sobald ein Verband das tut.",
+    "claim_cta": "Sind Sie der zuständige Verband? Jetzt beanspruchen →",
+    "pick_title": "Wählen Sie eine Rekordliste",
+    "pick_body": "Wählen Sie ein Land und dann dessen nationale, regionale, Vereins- oder Kontinentalrekorde.",
+    "empty_title": "Noch keine Rekorde",
+    "empty_body": "Rekorde entstehen von selbst: Der erste vollständig bewertete Einzelsprung jeder Art bei einem Wettkampf auf DivingHQ stellt einen auf, und jede bessere Wertung ersetzt ihn.",
+    "no_match": "Keine Rekorde entsprechen diesen Filtern.",
+    "clear_filters": "Filter zurücksetzen",
+    "retry": "Erneut versuchen",
+    "view": "Rekorde →"
   }
 }

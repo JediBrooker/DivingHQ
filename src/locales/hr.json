@@ -1981,5 +1981,33 @@
     "reject": "Odbij",
     "revoke": "Opozovi",
     "revoke_body": "{body} više ne vodi {target}, sve se vraća kako je bilo prije zahtjeva."
+  },
+  "records": {
+    "title": "Rekordi",
+    "intro": "Najbolji bodovi za svaki skok, položaj i visinu, postignuti na pojedinačnim natjecanjima održanima na DivingHQ-u.",
+    "book_label": "Knjiga rekorda",
+    "book_national": "Nacionalni",
+    "book_club": "Klupski",
+    "book_continental": "Kontinentalni",
+    "gender_label": "Rekordi žena ili muškaraca",
+    "women": "Žene",
+    "men": "Muškarci",
+    "all_heights": "Sve visine",
+    "search": "Šifra skoka, npr. 105 ili 5253",
+    "col_dive": "Skok",
+    "col_score": "Bodovi",
+    "col_holder": "Nositelj",
+    "col_set_at": "Postavljen na",
+    "unofficial": "Neslužbeno",
+    "unofficial_body": "Nijedno upravljačko tijelo još nije zatražilo {name} na DivingHQ-u. Ovo su najbolji rezultati s natjecanja održanih ovdje i postat će službeni čim ga neko zatraži.",
+    "claim_cta": "Jeste li vi njegovo upravljačko tijelo? Zatražite ga →",
+    "pick_title": "Odaberite knjigu rekorda",
+    "pick_body": "Odaberite državu, a zatim njezine nacionalne, regionalne, klupske ili kontinentalne rekorde.",
+    "empty_title": "Još nema rekorda",
+    "empty_body": "Rekordi nastaju sami: prvi potpuno ocijenjeni pojedinačni skok svake vrste na natjecanju u DivingHQ-u postavlja rekord, a svaki bolji rezultat ga zamjenjuje.",
+    "no_match": "Nijedan rekord ne odgovara ovim filtrima.",
+    "clear_filters": "Očisti filtre",
+    "retry": "Pokušajte ponovno",
+    "view": "Rekordi →"
   }
 }

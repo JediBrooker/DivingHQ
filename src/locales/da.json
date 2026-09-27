@@ -1981,5 +1981,33 @@
     "reject": "Afvis",
     "revoke": "Tilbagekald",
     "revoke_body": "{body} driver ikke længere {target}, som vender tilbage til, som det var før kravet."
+  },
+  "records": {
+    "title": "Rekorder",
+    "intro": "De højeste point for hvert spring, hver position og højde, sat ved individuelle konkurrencer afviklet på DivingHQ.",
+    "book_label": "Rekordbog",
+    "book_national": "National",
+    "book_club": "Klub",
+    "book_continental": "Kontinental",
+    "gender_label": "Kvinders eller mænds rekorder",
+    "women": "Kvinder",
+    "men": "Mænd",
+    "all_heights": "Alle højder",
+    "search": "Springkode, f.eks. 105 eller 5253",
+    "col_dive": "Spring",
+    "col_score": "Point",
+    "col_holder": "Indehaver",
+    "col_set_at": "Sat ved",
+    "unofficial": "Uofficiel",
+    "unofficial_body": "Intet styrende organ har endnu gjort krav på {name} på DivingHQ. Det er de bedste resultater fra stævner afviklet her, og de bliver officielle, så snart et gør det.",
+    "claim_cta": "Er I det styrende organ? Gør krav på det →",
+    "pick_title": "Vælg en rekordbog",
+    "pick_body": "Vælg et land og derefter dets nationale, regionale, klub- eller kontinentale rekorder.",
+    "empty_title": "Ingen rekorder endnu",
+    "empty_body": "Rekorder opstår af sig selv: det første fuldt bedømte individuelle spring af hver slags ved et stævne på DivingHQ sætter en, og hver bedre score erstatter den.",
+    "no_match": "Ingen rekorder matcher disse filtre.",
+    "clear_filters": "Ryd filtre",
+    "retry": "Prøv igen",
+    "view": "Rekorder →"
   }
 }

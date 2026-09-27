@@ -1981,5 +1981,33 @@
     "reject": "Tolak",
     "revoke": "Cabut",
     "revoke_body": "{body} tidak lagi mengelola {target}, semuanya kembali seperti sebelum klaim."
+  },
+  "records": {
+    "title": "Rekor",
+    "intro": "Poin terbaik untuk setiap loncatan, posisi, dan ketinggian, dicetak di nomor perorangan yang digelar di DivingHQ.",
+    "book_label": "Buku rekor",
+    "book_national": "Nasional",
+    "book_club": "Klub",
+    "book_continental": "Kontinental",
+    "gender_label": "Rekor putri atau putra",
+    "women": "Putri",
+    "men": "Putra",
+    "all_heights": "Semua ketinggian",
+    "search": "Kode loncatan, mis. 105 atau 5253",
+    "col_dive": "Loncatan",
+    "col_score": "Poin",
+    "col_holder": "Pemegang rekor",
+    "col_set_at": "Dicetak di",
+    "unofficial": "Tidak resmi",
+    "unofficial_body": "Belum ada badan pengelola yang mengklaim {name} di DivingHQ. Ini adalah catatan terbaik dari kejuaraan yang digelar di sini, dan akan menjadi resmi begitu ada yang mengklaimnya.",
+    "claim_cta": "Apakah Anda badan pengelolanya? Klaim sekarang →",
+    "pick_title": "Pilih buku rekor",
+    "pick_body": "Pilih negara, lalu rekor nasional, regional, klub, atau kontinentalnya.",
+    "empty_title": "Belum ada rekor",
+    "empty_body": "Rekor tercipta dengan sendirinya: loncatan perorangan pertama yang dinilai lengkap dari tiap jenis di kejuaraan DivingHQ menciptakan rekor, dan setiap skor yang lebih baik menggantikannya.",
+    "no_match": "Tidak ada rekor yang cocok dengan filter ini.",
+    "clear_filters": "Hapus filter",
+    "retry": "Coba lagi",
+    "view": "Rekor →"
   }
 }

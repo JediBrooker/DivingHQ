@@ -1981,5 +1981,33 @@
     "reject": "拒绝",
     "revoke": "撤销",
     "revoke_body": "{body} 将不再管理 {target}，一切恢复到申请之前的状态。"
+  },
+  "records": {
+    "title": "纪录",
+    "intro": "在 DivingHQ 举办的个人项目中，每个动作、姿势和高度的最高得分。",
+    "book_label": "纪录册",
+    "book_national": "国家级",
+    "book_club": "俱乐部",
+    "book_continental": "洲际",
+    "gender_label": "女子或男子纪录",
+    "women": "女子",
+    "men": "男子",
+    "all_heights": "所有高度",
+    "search": "动作代码，例如 105 或 5253",
+    "col_dive": "动作",
+    "col_score": "得分",
+    "col_holder": "纪录保持者",
+    "col_set_at": "创造于",
+    "unofficial": "非正式",
+    "unofficial_body": "尚无管理机构在 DivingHQ 上申请接管 {name}。这些是在此举办的比赛中的最佳成绩，一旦有机构接管，它们就会成为正式纪录。",
+    "claim_cta": "您是其管理机构吗？申请接管 →",
+    "pick_title": "请选择纪录册",
+    "pick_body": "选择一个国家，然后选择其国家级、地区、俱乐部或洲际纪录。",
+    "empty_title": "暂无纪录",
+    "empty_body": "纪录自动产生：在 DivingHQ 比赛中，每种动作第一个获得完整评分的个人动作即成为纪录，之后每个更高的得分都会取而代之。",
+    "no_match": "没有符合这些筛选条件的纪录。",
+    "clear_filters": "清除筛选",
+    "retry": "重试",
+    "view": "纪录 →"
   }
 }

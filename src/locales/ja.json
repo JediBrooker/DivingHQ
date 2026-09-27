@@ -1981,5 +1981,33 @@
     "reject": "却下",
     "revoke": "取り消す",
     "revoke_body": "{body} は {target} の運営をやめ、申請前の状態に戻ります。"
+  },
+  "records": {
+    "title": "記録",
+    "intro": "DivingHQ で行われた個人種目での、演技・姿勢・高さごとの最高得点です。",
+    "book_label": "記録一覧",
+    "book_national": "国内",
+    "book_club": "クラブ",
+    "book_continental": "大陸",
+    "gender_label": "女子または男子の記録",
+    "women": "女子",
+    "men": "男子",
+    "all_heights": "すべての高さ",
+    "search": "演技番号（例: 105 や 5253）",
+    "col_dive": "演技",
+    "col_score": "得点",
+    "col_holder": "記録保持者",
+    "col_set_at": "樹立大会",
+    "unofficial": "非公式",
+    "unofficial_body": "{name} はまだ DivingHQ でどの統括団体にも引き継ぎ申請されていません。これはここで行われた大会の最高記録で、申請が認められれば公式記録になります。",
+    "claim_cta": "統括団体の方ですか？ 引き継ぎを申請する →",
+    "pick_title": "記録一覧を選んでください",
+    "pick_body": "国を選び、次に国内・地域・クラブ・大陸の記録を選んでください。",
+    "empty_title": "まだ記録はありません",
+    "empty_body": "記録は自動で生まれます。DivingHQ の大会で各演技を初めて全審判が採点した個人演技が記録となり、より高い得点が出るたびに更新されます。",
+    "no_match": "条件に一致する記録はありません。",
+    "clear_filters": "絞り込みを解除",
+    "retry": "再試行",
+    "view": "記録 →"
   }
 }

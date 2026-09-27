@@ -1844,6 +1844,7 @@ test("records: every book is public and carries what the records page prints", a
       assert.equal(row.dd, catalogue.dd);
       assert.equal(row.description, catalogue.description);
       assert.equal(row.official, scope !== "region", `${scope} official flag`);
+      assert.equal(row.book_org_id, st.orgId);
     }
 
     await pool.query(
@@ -1886,6 +1887,7 @@ test("records: every book is public and carries what the records page prints", a
     await pool.query("UPDATE organisations SET continent = 'africa' WHERE id = $1", [st.orgId]);
     const active = await fetchJson("GET", "/api/orgs/active");
     assert.equal(active.body.find((o) => o.id === st.orgId)?.continent, "africa");
+    assert.equal(active.body.find((o) => o.id === st.orgId)?.claim_state, "claimed");
   } finally {
     await pool.query("DELETE FROM records_continental WHERE dive_code = $1", [oddCode]);
     await pool.query("DELETE FROM records_federation WHERE dive_code = $1", [oddCode]);

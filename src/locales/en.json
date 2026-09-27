@@ -1981,5 +1981,33 @@
     "reject": "Reject",
     "revoke": "Revoke",
     "revoke_body": "{body} stops running {target}, and it goes back to how it was before the claim."
+  },
+  "records": {
+    "title": "Records",
+    "intro": "The best points for each dive, position and board height, set at individual events run on DivingHQ.",
+    "book_label": "Record book",
+    "book_national": "National",
+    "book_club": "Club",
+    "book_continental": "Continental",
+    "gender_label": "Women's or men's records",
+    "women": "Women",
+    "men": "Men",
+    "all_heights": "All heights",
+    "search": "Dive code, e.g. 105 or 5253",
+    "col_dive": "Dive",
+    "col_score": "Points",
+    "col_holder": "Holder",
+    "col_set_at": "Set at",
+    "unofficial": "Unofficial",
+    "unofficial_body": "No governing body has claimed {name} on DivingHQ yet. These are the best marks from meets run here, and they'll count as official once one does.",
+    "claim_cta": "Are you its governing body? Claim it →",
+    "pick_title": "Pick a record book",
+    "pick_body": "Choose a country, then its national, regional, club or continental records.",
+    "empty_title": "No records yet",
+    "empty_body": "Records set themselves: the first fully scored individual dive of each kind at a DivingHQ meet sets one, and every better score replaces it.",
+    "no_match": "No records match these filters.",
+    "clear_filters": "Clear filters",
+    "retry": "Try again",
+    "view": "Records →"
   }
 }

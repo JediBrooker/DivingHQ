@@ -1981,5 +1981,33 @@
     "reject": "Respingi",
     "revoke": "Revoca",
     "revoke_body": "{body} non gestisce più {target}, che torna com'era prima della rivendicazione."
+  },
+  "records": {
+    "title": "Record",
+    "intro": "I punteggi migliori per ogni tuffo, posizione e altezza, stabiliti in gare individuali disputate su DivingHQ.",
+    "book_label": "Albo dei record",
+    "book_national": "Nazionali",
+    "book_club": "Società",
+    "book_continental": "Continentali",
+    "gender_label": "Record femminili o maschili",
+    "women": "Femminile",
+    "men": "Maschile",
+    "all_heights": "Tutte le altezze",
+    "search": "Codice del tuffo, es. 105 o 5253",
+    "col_dive": "Tuffo",
+    "col_score": "Punti",
+    "col_holder": "Detentore",
+    "col_set_at": "Stabilito a",
+    "unofficial": "Non ufficiale",
+    "unofficial_body": "Nessun organo di governo ha ancora rivendicato {name} su DivingHQ. Sono le migliori prestazioni delle gare disputate qui e diventeranno ufficiali non appena uno lo farà.",
+    "claim_cta": "Sei il suo organo di governo? Rivendicalo →",
+    "pick_title": "Scegli un albo dei record",
+    "pick_body": "Scegli un paese, poi i suoi record nazionali, regionali, di società o continentali.",
+    "empty_title": "Ancora nessun record",
+    "empty_body": "I record si stabiliscono da soli: il primo tuffo individuale valutato per intero di ogni tipo in una gara su DivingHQ ne fissa uno, e ogni punteggio migliore lo sostituisce.",
+    "no_match": "Nessun record corrisponde a questi filtri.",
+    "clear_filters": "Cancella filtri",
+    "retry": "Riprova",
+    "view": "Record →"
   }
 }

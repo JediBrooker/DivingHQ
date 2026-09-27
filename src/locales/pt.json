@@ -1981,5 +1981,33 @@
     "reject": "Rejeitar",
     "revoke": "Revogar",
     "revoke_body": "{body} deixa de gerir {target}, que volta ao que era antes da reivindicação."
+  },
+  "records": {
+    "title": "Recordes",
+    "intro": "As melhores pontuações de cada salto, posição e altura, obtidas em provas individuais realizadas no DivingHQ.",
+    "book_label": "Livro de recordes",
+    "book_national": "Nacionais",
+    "book_club": "Clube",
+    "book_continental": "Continentais",
+    "gender_label": "Recordes femininos ou masculinos",
+    "women": "Femininos",
+    "men": "Masculinos",
+    "all_heights": "Todas as alturas",
+    "search": "Código do salto, p. ex. 105 ou 5253",
+    "col_dive": "Salto",
+    "col_score": "Pontos",
+    "col_holder": "Detentor",
+    "col_set_at": "Obtido em",
+    "unofficial": "Não oficial",
+    "unofficial_body": "Nenhum órgão dirigente reivindicou ainda {name} no DivingHQ. Estas são as melhores marcas das competições realizadas aqui, e passam a ser oficiais assim que um o fizer.",
+    "claim_cta": "É o seu órgão dirigente? Reivindique-o →",
+    "pick_title": "Escolha um livro de recordes",
+    "pick_body": "Escolha um país e depois os seus recordes nacionais, regionais, de clube ou continentais.",
+    "empty_title": "Ainda não há recordes",
+    "empty_body": "Os recordes estabelecem-se sozinhos: o primeiro salto individual totalmente pontuado de cada tipo numa competição do DivingHQ fixa um, e cada pontuação melhor substitui-o.",
+    "no_match": "Nenhum recorde corresponde a estes filtros.",
+    "clear_filters": "Limpar filtros",
+    "retry": "Tentar novamente",
+    "view": "Recordes →"
   }
 }

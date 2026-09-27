@@ -507,6 +507,7 @@
  * @property {string|null} event_id  null once the event is deleted
  * @property {string|null} event_name
  * @property {boolean} official     false for a region or country nobody has claimed yet
+ * @property {string|null} book_org_id  the federation the club / region / national book belongs to; null for personal and continental
  * @property {string|null} dd       from the dive directory, arrives as text
  * @property {string|null} description
  */
@@ -519,6 +520,7 @@
  * @property {string|null} country_code
  * @property {string}      slug
  * @property {'africa'|'americas'|'asia'|'europe'|'oceania'|null} continent
+ * @property {'claimed'|'unclaimed'} claim_state  unclaimed = a country account the clubs started (migration 087)
  */
 
 // ---- /api/coach/events ------------------------------------------

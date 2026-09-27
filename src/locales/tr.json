@@ -1981,5 +1981,33 @@
     "reject": "Reddet",
     "revoke": "İptal et",
     "revoke_body": "{body} artık {target} yönetmiyor, her şey talepten önceki haline döner."
+  },
+  "records": {
+    "title": "Rekorlar",
+    "intro": "DivingHQ'da düzenlenen bireysel yarışmalarda her atlama, pozisyon ve yükseklik için elde edilen en yüksek puanlar.",
+    "book_label": "Rekor defteri",
+    "book_national": "Ulusal",
+    "book_club": "Kulüp",
+    "book_continental": "Kıta",
+    "gender_label": "Kadınlar veya erkekler rekorları",
+    "women": "Kadınlar",
+    "men": "Erkekler",
+    "all_heights": "Tüm yükseklikler",
+    "search": "Atlama kodu, ör. 105 veya 5253",
+    "col_dive": "Atlama",
+    "col_score": "Puan",
+    "col_holder": "Rekor sahibi",
+    "col_set_at": "Yarışma",
+    "unofficial": "Resmî değil",
+    "unofficial_body": "Henüz hiçbir yönetim organı DivingHQ'da {name} için devralma talebinde bulunmadı. Bunlar burada düzenlenen yarışmaların en iyi dereceleri ve biri talepte bulunduğunda resmîleşecek.",
+    "claim_cta": "Yönetim organı siz misiniz? Devralma talep edin →",
+    "pick_title": "Bir rekor defteri seçin",
+    "pick_body": "Bir ülke seçin, ardından ulusal, bölgesel, kulüp veya kıta rekorlarını seçin.",
+    "empty_title": "Henüz rekor yok",
+    "empty_body": "Rekorlar kendiliğinden oluşur: DivingHQ'daki bir yarışmada her türden ilk kez tam puanlanan bireysel atlama rekor olur ve her daha iyi puan onun yerini alır.",
+    "no_match": "Bu filtrelere uyan rekor yok.",
+    "clear_filters": "Filtreleri temizle",
+    "retry": "Tekrar deneyin",
+    "view": "Rekorlar →"
   }
 }

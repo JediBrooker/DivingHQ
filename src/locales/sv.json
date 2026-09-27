@@ -1981,5 +1981,33 @@
     "reject": "Avslå",
     "revoke": "Återkalla",
     "revoke_body": "{body} driver inte längre {target}, som återgår till hur det var före anspråket."
+  },
+  "records": {
+    "title": "Rekord",
+    "intro": "De högsta poängen för varje hopp, position och höjd, satta i individuella grenar på tävlingar som körts på DivingHQ.",
+    "book_label": "Rekordlista",
+    "book_national": "Nationella",
+    "book_club": "Klubb",
+    "book_continental": "Kontinentala",
+    "gender_label": "Rekord för damer eller herrar",
+    "women": "Damer",
+    "men": "Herrar",
+    "all_heights": "Alla höjder",
+    "search": "Hoppkod, t.ex. 105 eller 5253",
+    "col_dive": "Hopp",
+    "col_score": "Poäng",
+    "col_holder": "Innehavare",
+    "col_set_at": "Satt vid",
+    "unofficial": "Inofficiellt",
+    "unofficial_body": "Inget styrande organ har gjort anspråk på {name} på DivingHQ ännu. Det här är de bästa resultaten från tävlingar som körts här, och de blir officiella så snart något gör det.",
+    "claim_cta": "Är ni dess styrande organ? Gör anspråk →",
+    "pick_title": "Välj en rekordlista",
+    "pick_body": "Välj ett land och sedan dess nationella, regionala, klubb- eller kontinentala rekord.",
+    "empty_title": "Inga rekord än",
+    "empty_body": "Rekord uppstår av sig själva: det första fullt bedömda individuella hoppet av varje slag på en DivingHQ-tävling sätter ett, och varje bättre poäng ersätter det.",
+    "no_match": "Inga rekord matchar de här filtren.",
+    "clear_filters": "Rensa filter",
+    "retry": "Försök igen",
+    "view": "Rekord →"
   }
 }

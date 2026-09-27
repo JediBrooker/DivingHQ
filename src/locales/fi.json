@@ -1981,5 +1981,33 @@
     "reject": "Hylkää",
     "revoke": "Peru",
     "revoke_body": "{body} ei enää hallinnoi kohdetta {target}, joka palaa vaatimusta edeltäneeseen tilaan."
+  },
+  "records": {
+    "title": "Ennätykset",
+    "intro": "Parhaat pisteet jokaiselle hypylle, asennolle ja korkeudelle, tehty DivingHQ:ssa järjestetyissä henkilökohtaisissa kilpailuissa.",
+    "book_label": "Ennätysluettelo",
+    "book_national": "Kansallinen",
+    "book_club": "Seura",
+    "book_continental": "Maanosa",
+    "gender_label": "Naisten tai miesten ennätykset",
+    "women": "Naiset",
+    "men": "Miehet",
+    "all_heights": "Kaikki korkeudet",
+    "search": "Hypyn koodi, esim. 105 tai 5253",
+    "col_dive": "Hyppy",
+    "col_score": "Pisteet",
+    "col_holder": "Haltija",
+    "col_set_at": "Tehty kilpailussa",
+    "unofficial": "Epävirallinen",
+    "unofficial_body": "Mikään hallintoelin ei ole vielä vaatinut itselleen tiliä {name} DivingHQ:ssa. Nämä ovat parhaat tulokset täällä järjestetyistä kilpailuista, ja ne muuttuvat virallisiksi heti, kun jokin hallintoelin vaatii sen.",
+    "claim_cta": "Oletko sen hallintoelin? Vaadi se →",
+    "pick_title": "Valitse ennätysluettelo",
+    "pick_body": "Valitse maa ja sitten sen kansalliset, alueelliset, seura- tai maanosaennätykset.",
+    "empty_title": "Ei vielä ennätyksiä",
+    "empty_body": "Ennätykset syntyvät itsestään: ensimmäinen täysin arvosteltu henkilökohtainen hyppy kustakin lajista DivingHQ-kilpailussa tekee ennätyksen, ja jokainen parempi tulos korvaa sen.",
+    "no_match": "Mikään ennätys ei vastaa näitä suodattimia.",
+    "clear_filters": "Tyhjennä suodattimet",
+    "retry": "Yritä uudelleen",
+    "view": "Ennätykset →"
   }
 }

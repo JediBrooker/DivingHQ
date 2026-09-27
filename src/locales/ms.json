@@ -1981,5 +1981,33 @@
     "reject": "Tolak",
     "revoke": "Batalkan",
     "revoke_body": "{body} tidak lagi mengurus {target}, semuanya kembali seperti sebelum tuntutan."
+  },
+  "records": {
+    "title": "Rekod",
+    "intro": "Mata terbaik bagi setiap terjunan, kedudukan dan ketinggian, dicatat dalam acara individu yang dijalankan di DivingHQ.",
+    "book_label": "Buku rekod",
+    "book_national": "Kebangsaan",
+    "book_club": "Kelab",
+    "book_continental": "Benua",
+    "gender_label": "Rekod wanita atau lelaki",
+    "women": "Wanita",
+    "men": "Lelaki",
+    "all_heights": "Semua ketinggian",
+    "search": "Kod terjunan, cth. 105 atau 5253",
+    "col_dive": "Terjunan",
+    "col_score": "Mata",
+    "col_holder": "Pemegang rekod",
+    "col_set_at": "Dicatat di",
+    "unofficial": "Tidak rasmi",
+    "unofficial_body": "Belum ada badan induk yang menuntut {name} di DivingHQ. Ini ialah pencapaian terbaik daripada kejohanan yang diadakan di sini, dan akan menjadi rasmi sebaik sahaja ada yang menuntutnya.",
+    "claim_cta": "Adakah anda badan induknya? Tuntut sekarang →",
+    "pick_title": "Pilih buku rekod",
+    "pick_body": "Pilih negara, kemudian rekod kebangsaan, serantau, kelab atau benuanya.",
+    "empty_title": "Belum ada rekod",
+    "empty_body": "Rekod tercipta dengan sendirinya: terjunan individu pertama yang dinilai sepenuhnya bagi setiap jenis di kejohanan DivingHQ mencipta rekod, dan setiap skor yang lebih baik menggantikannya.",
+    "no_match": "Tiada rekod yang sepadan dengan penapis ini.",
+    "clear_filters": "Kosongkan penapis",
+    "retry": "Cuba lagi",
+    "view": "Rekod →"
   }
 }

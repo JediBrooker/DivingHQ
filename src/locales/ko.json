@@ -1981,5 +1981,33 @@
     "reject": "거절",
     "revoke": "취소",
     "revoke_body": "{body}은(는) 더 이상 {target}을(를) 운영하지 않으며 신청 이전 상태로 돌아갑니다."
+  },
+  "records": {
+    "title": "기록",
+    "intro": "DivingHQ에서 열린 개인 종목에서 다이빙, 자세, 높이별로 세운 최고 점수입니다.",
+    "book_label": "기록부",
+    "book_national": "국가",
+    "book_club": "클럽",
+    "book_continental": "대륙",
+    "gender_label": "여자 또는 남자 기록",
+    "women": "여자",
+    "men": "남자",
+    "all_heights": "모든 높이",
+    "search": "다이빙 코드, 예: 105 또는 5253",
+    "col_dive": "다이빙",
+    "col_score": "점수",
+    "col_holder": "기록 보유자",
+    "col_set_at": "수립 대회",
+    "unofficial": "비공식",
+    "unofficial_body": "아직 어떤 관리 단체도 DivingHQ에서 {name}의 인수를 신청하지 않았습니다. 이곳에서 열린 대회의 최고 기록이며, 인수가 이루어지면 공식 기록이 됩니다.",
+    "claim_cta": "관리 단체이십니까? 인수 신청하기 →",
+    "pick_title": "기록부를 선택하십시오",
+    "pick_body": "국가를 선택한 다음 국가, 지역, 클럽 또는 대륙 기록을 선택하십시오.",
+    "empty_title": "아직 기록이 없습니다",
+    "empty_body": "기록은 자동으로 세워집니다. DivingHQ 대회에서 종류별로 처음 모든 심판의 채점을 받은 개인 다이빙이 기록이 되고, 더 높은 점수가 나올 때마다 바뀝니다.",
+    "no_match": "이 필터에 맞는 기록이 없습니다.",
+    "clear_filters": "필터 지우기",
+    "retry": "다시 시도",
+    "view": "기록 →"
   }
 }

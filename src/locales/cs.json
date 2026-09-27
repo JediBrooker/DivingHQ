@@ -1981,5 +1981,33 @@
     "reject": "Zamítnout",
     "revoke": "Odvolat",
     "revoke_body": "{body} přestane spravovat {target}, vše se vrátí do stavu před nárokem."
+  },
+  "records": {
+    "title": "Rekordy",
+    "intro": "Nejlepší body za každý skok, polohu a výšku, dosažené v individuálních soutěžích pořádaných na DivingHQ.",
+    "book_label": "Kniha rekordů",
+    "book_national": "Národní",
+    "book_club": "Klubové",
+    "book_continental": "Kontinentální",
+    "gender_label": "Rekordy žen nebo mužů",
+    "women": "Ženy",
+    "men": "Muži",
+    "all_heights": "Všechny výšky",
+    "search": "Kód skoku, např. 105 nebo 5253",
+    "col_dive": "Skok",
+    "col_score": "Body",
+    "col_holder": "Držitel",
+    "col_set_at": "Vytvořen na",
+    "unofficial": "Neoficiální",
+    "unofficial_body": "Na {name} zatím na DivingHQ nevznesl nárok žádný řídicí orgán. Jde o nejlepší výkony ze soutěží, které se konaly zde, a jakmile se tak stane, budou platit jako oficiální.",
+    "claim_cta": "Jste jeho řídicím orgánem? Vzneste nárok →",
+    "pick_title": "Vyberte knihu rekordů",
+    "pick_body": "Zvolte zemi a pak její národní, regionální, klubové nebo kontinentální rekordy.",
+    "empty_title": "Zatím žádné rekordy",
+    "empty_body": "Rekordy vznikají samy: první plně ohodnocený individuální skok každého druhu na soutěži v DivingHQ vytvoří rekord a každý lepší výsledek ho nahradí.",
+    "no_match": "Těmto filtrům neodpovídají žádné rekordy.",
+    "clear_filters": "Zrušit filtry",
+    "retry": "Zkusit znovu",
+    "view": "Rekordy →"
   }
 }

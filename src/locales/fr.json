@@ -1981,5 +1981,33 @@
     "reject": "Rejeter",
     "revoke": "Révoquer",
     "revoke_body": "{body} ne gère plus {target}, qui revient à l'état d'avant la revendication."
+  },
+  "records": {
+    "title": "Records",
+    "intro": "Les meilleurs points pour chaque plongeon, position et hauteur, établis lors d'épreuves individuelles organisées sur DivingHQ.",
+    "book_label": "Livre des records",
+    "book_national": "Nationaux",
+    "book_club": "Clubs",
+    "book_continental": "Continentaux",
+    "gender_label": "Records dames ou messieurs",
+    "women": "Dames",
+    "men": "Messieurs",
+    "all_heights": "Toutes les hauteurs",
+    "search": "Code du plongeon, p. ex. 105 ou 5253",
+    "col_dive": "Plongeon",
+    "col_score": "Points obtenus",
+    "col_holder": "Détenteur",
+    "col_set_at": "Établi à",
+    "unofficial": "Non officiel",
+    "unofficial_body": "Aucune instance dirigeante n'a encore revendiqué {name} sur DivingHQ. Ce sont les meilleures performances des compétitions organisées ici, et elles deviendront officielles dès qu'une instance l'aura fait.",
+    "claim_cta": "Vous êtes son instance dirigeante ? Revendiquez-le →",
+    "pick_title": "Choisissez un livre des records",
+    "pick_body": "Choisissez un pays, puis ses records nationaux, régionaux, de club ou continentaux.",
+    "empty_title": "Aucun record pour l'instant",
+    "empty_body": "Les records s'établissent d'eux-mêmes : le premier plongeon individuel entièrement noté de chaque type lors d'une compétition DivingHQ en établit un, et chaque meilleur score le remplace.",
+    "no_match": "Aucun record ne correspond à ces filtres.",
+    "clear_filters": "Effacer les filtres",
+    "retry": "Réessayer",
+    "view": "Voir les records →"
   }
 }

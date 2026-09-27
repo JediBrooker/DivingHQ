@@ -1981,5 +1981,33 @@
     "reject": "Elutasítás",
     "revoke": "Visszavonás",
     "revoke_body": "{body} többé nem vezeti ezt: {target}, minden visszaáll az igény előtti állapotra."
+  },
+  "records": {
+    "title": "Rekordok",
+    "intro": "A legmagasabb pontszámok minden ugrásra, helyzetre és magasságra, a DivingHQ-n rendezett egyéni versenyszámokból.",
+    "book_label": "Rekordlista",
+    "book_national": "Országos",
+    "book_club": "Klub",
+    "book_continental": "Kontinentális",
+    "gender_label": "Női vagy férfi rekordok",
+    "women": "Nők",
+    "men": "Férfiak",
+    "all_heights": "Minden magasság",
+    "search": "Ugráskód, pl. 105 vagy 5253",
+    "col_dive": "Ugrás",
+    "col_score": "Pontok",
+    "col_holder": "Csúcstartó",
+    "col_set_at": "Verseny",
+    "unofficial": "Nem hivatalos",
+    "unofficial_body": "Még egyetlen irányító testület sem tartott igényt a(z) {name} fiókra a DivingHQ-n. Ezek az itt rendezett versenyek legjobb eredményei, és hivatalossá válnak, amint egy testület igényt tart rá.",
+    "claim_cta": "Ön az irányító testülete? Tartson rá igényt →",
+    "pick_title": "Válasszon rekordlistát",
+    "pick_body": "Válasszon országot, majd annak országos, regionális, klub- vagy kontinentális rekordjait.",
+    "empty_title": "Még nincsenek rekordok",
+    "empty_body": "A rekordok maguktól születnek: minden fajtából az első teljesen pontozott egyéni ugrás egy DivingHQ-versenyen rekordot állít fel, és minden jobb pontszám felváltja.",
+    "no_match": "Egy rekord sem felel meg ezeknek a szűrőknek.",
+    "clear_filters": "Szűrők törlése",
+    "retry": "Próbálja újra",
+    "view": "Rekordok →"
   }
 }

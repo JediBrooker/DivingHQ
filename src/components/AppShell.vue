@@ -20,7 +20,7 @@ import {
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award, Gavel,
-  History, Receipt, Heart, Layers, Wallet, UserCheck, SlidersHorizontal, Scale,
+  History, Receipt, Heart, Layers, Wallet, UserCheck, SlidersHorizontal, Scale, Medal,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -60,6 +60,7 @@ const NAV = [
     { to: '/competitor',     label: 'Dive Sheets',    icon: Waves,         roles: ['diver'] },
     { to: '/judge',          label: 'Judge Terminal', icon: Calculator,    roles: ['judge'] },
     { to: '/scoreboard',     label: 'Scoreboard & Results', labelKey: 'scoreboard.page_label',  icon: ListChecks },
+    { to: '/records',        label: 'Records',        labelKey: 'records.title',          icon: Medal },
     { to: '/judge-analysis', label: 'Judge Analysis', icon: ChartColumn },
     { to: '/dive-directory', label: 'Dive directory', labelKey: 'dive_directory.title',   icon: BookOpen },
   ] },

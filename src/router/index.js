@@ -203,6 +203,15 @@ const routes = [
     meta: { appShell: true },
   },
   {
+    // Record books: /records/:scope?/:id? where scope is federation,
+    // region, club or continental and id is that book's uuid (or the
+    // continent). Public like /scoreboard: every mark in a book already
+    // sits on a public scoreboard, so there's nothing to sign in for.
+    path: '/records/:scope?/:id?',
+    component: () => import('@/views/RecordsView.vue'),
+    meta: { appShell: true },
+  },
+  {
     // Judge Analysis: public-accessible landing surface that composes
     // the per-event ranking matrix (By Event) and the public judge
     // directory (By Judge). Shell for signed-in users, standalone for
