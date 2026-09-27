@@ -117,10 +117,12 @@ async function refreshQueuedEntries() {
     || e.status === 'conflict'
   )
 }
-if (outboxInstance) {
-  outboxInstance.on('change', refreshQueuedEntries)
-  refreshQueuedEntries()
-}
+// The outbox is a module singleton that outlives this view, so the
+// listener has to come off again on unmount. Without that every visit to
+// the judge screen left one more listener behind, each doing a full IDB
+// list() on every outbox change for the rest of the session.
+const offQueuedEntries = outboxInstance?.on('change', refreshQueuedEntries)
+if (outboxInstance) refreshQueuedEntries()
 
 // Per-entry send function for outbox.drain. Uses socket.io's
 // ack callback (3rd arg to socket.emit) so the drain protocol
@@ -275,6 +277,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  offQueuedEntries?.()
   document.removeEventListener('visibilitychange', onVisibilityChange)
   window.removeEventListener('beforeunload', onJudgeBeforeUnload)
   try { wakeLock.value?.release?.() } catch { /* ignore */ }
