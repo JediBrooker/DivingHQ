@@ -198,9 +198,9 @@ test("a federation claims a country and the clubs vote it in", async ({ page, re
     await setup.installClickHighlight(page);
     const fedUser = `e2e-fsmfed-${setup.rand()}`;
     await page.goto("/register-org");
-    await page.getByPlaceholder("e.g. Swimming Australia").fill("Micronesia Diving Federation");
+    await page.locator("#org-name").fill("Micronesia Diving Federation");
     await page.locator("#org-country").selectOption(FSM);
-    await expect(page.locator(".claim-note")).toContainText("already on DivingHQ");
+    await expect(page.getByTestId("claim-note")).toContainText("taking over from the clubs that started it");
     await page.locator('input[autocomplete="name"]').fill("Kasio Ehsa");
     await page.locator('input[type="email"]').fill(`${fedUser}@example.test`);
     await page.locator('input[autocomplete="username"]').fill(fedUser);
@@ -233,5 +233,66 @@ test("a federation claims a country and the clubs vote it in", async ({ page, re
     expect(org.rows[0]).toEqual({ name: "Micronesia Diving Federation", claim_state: "claimed" });
   } finally {
     await wipeFsm();
+  }
+});
+
+// R5 / R6 / R19: the register-org page sends clubs to /register, asks for
+// a country and no slug, and says up front what registering will do.
+test("register-org explains what registering does for each kind of country", async ({ page, request }) => {
+  const NEW = "SMR";   // San Marino: nobody there, the account gets started
+  const TAKEN = "LIE"; // Liechtenstein: a federation already runs it
+  const wipe = async () => {
+    const orgs = await setup.pool.query("SELECT id FROM organisations WHERE country_code IN ($1, $2)", [NEW, TAKEN]);
+    for (const { id } of orgs.rows) {
+      await setup.pool.query("DELETE FROM claims WHERE org_id = $1", [id]);
+      await setup.deleteOrg(id);
+    }
+  };
+  await wipe();
+  try {
+    await setup.createOrgAndAdmin(request, { countryCode: TAKEN, orgName: "Liechtenstein Diving" });
+    await setup.installClickHighlight(page);
+    await page.goto("/register-org");
+
+    // Clubs are pointed at the page meant for them.
+    const callout = page.getByTestId("club-callout");
+    await expect(callout).toContainText("Registering a club?");
+    await callout.getByRole("link", { name: "Clubs sign up here instead" }).click();
+    await page.waitForURL(/\/register$/);
+    await page.goto("/register-org");
+
+    // No slug, no made-up domain, and the country is required.
+    await expect(page.getByText(/divedmeet|URL Slug/)).toHaveCount(0);
+    await expect(page.locator("#org-country")).toHaveAttribute("required", "");
+    await expect(page.getByText("Organisation name", { exact: true })).toBeVisible();
+
+    // A country with a federation already: say so, and don't submit.
+    await page.locator("#org-country").selectOption(TAKEN);
+    await expect(page.getByTestId("claim-note")).toContainText("Liechtenstein Diving already runs");
+    await expect(page.getByRole("button", { name: /Submit Registration/i })).toBeDisabled();
+
+    // Nobody from the country yet: the account is started and claimed.
+    const fedUser = `e2e-smr-${setup.rand()}`;
+    await page.locator("#org-name").fill("San Marino Diving");
+    await page.locator("#org-country").selectOption(NEW);
+    await expect(page.getByTestId("claim-note")).toContainText("Nobody from San Marino is on DivingHQ yet");
+    await expect(page.getByText(/State or regional body\?/)).toBeVisible();
+    await page.locator('input[autocomplete="name"]').fill("Marco Rossi");
+    await page.locator('input[type="email"]').fill(`${fedUser}@example.test`);
+    await page.locator('input[autocomplete="username"]').fill(fedUser);
+    await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
+    await page.getByRole("button", { name: /Submit Registration/i }).click();
+    await expect(page.locator(".msg-success")).toContainText("DivingHQ reviews it");
+
+    const orgs = await setup.pool.query(
+      "SELECT status, claim_state FROM organisations WHERE country_code = $1", [NEW],
+    );
+    expect(orgs.rows).toEqual([{ status: "active", claim_state: "unclaimed" }]);
+    const claim = await setup.pool.query(
+      "SELECT body_name, approver FROM claims c JOIN users u ON u.id = c.claimant_id WHERE u.username = $1", [fedUser],
+    );
+    expect(claim.rows).toEqual([{ body_name: "San Marino Diving", approver: "sysadmin" }]);
+  } finally {
+    await wipe();
   }
 });

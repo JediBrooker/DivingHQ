@@ -630,3 +630,17 @@ Migration 090 adds `meets.represent_as`, `competitor_dive_lists.rep_club_id` / `
 
 **Tests.** Integration covers labels switching across region / club / country, a diver who changes club after entering keeping their entry-time state, the Control Room roster agreeing, and a state record reading unofficial until the region is claimed.
 
+
+## 18. One org per country (migration 093)
+
+Three holes let a country end up with two accounts, and there's no merge, so they're closed at the source.
+
+**Every real-country registration is a claim.** `POST /api/auth/register-org` now needs a country, exactly three capital letters. For any code in `lib/countries.json` it opens a claim: on the clubs' unclaimed account, on a region, or, when nobody from the country is on DivingHQ yet, on a country account it starts right there (reviewed by the sysadmin, since nobody else can vote). That retires §6.3's "no account yet: create it claimed-pending", which is what used to leave a pending federation for the country's first club to sit an unclaimed account next to. A country that already has a claimed federation gets `409 already_claimed` (a state body can still claim its region). The legacy pending org survives only for codes outside the catalogue, which no signup can reach by country; the test fixtures use `TST`. The slug is generated from the name now, and the form no longer shows one.
+
+**A pending federation holds the country.** `resolveCountryOrg` refuses (`409 federation_pending`) instead of starting an unclaimed account when a pending org exists for the country, covering legacy rows. Letting the club join the pending org was the alternative, but that puts people into an org nobody can sign in to and that the sysadmin might still deny. From the other side, `PUT /api/orgs/:id/status` won't approve a pending org without a country, or one whose country the clubs have already started (`409 country_has_unclaimed_org`).
+
+**Country codes.** Migration 093 rewrites 2-letter codes to alpha-3 from a mapping generated out of `lib/countries.json` (a test keeps the two identical). Lookups also match the alpha-2 form until the backfill has run everywhere. NULL and unrecognised codes (IOC codes like `GER`) can't be inferred: `GET /api/orgs/needs-country` lists them, `PUT /api/orgs/:id/country` sets one, and User Manager's Pending tab shows both with a picker.
+
+**`/register-org` copy.** A callout sends clubs to `/register`; the name field reads "Organisation name"; the note under the country says which of the above is about to happen, and warns a state body when the country has no regions to pick from.
+
+**Not done:** a claimed federation that's suspended still doesn't hold its country, so a club signing up meanwhile starts an unclaimed account and reactivating the federation leaves two. Blocking it would also block every country whose junk registration was once denied (also `suspended`), so it needs a proper "denied" state first.
