@@ -1667,3 +1667,55 @@ test("support email: public config and the contact lines in messages", async (t)
     await claimKit.wipe(CODE);
   }
 });
+
+// Account deletion has to live up to the privacy policy (docs/privacy-
+// policy.md section 7): the competition details and the club admin seat go
+// with the account, the name stays on the sporting record. Cocos (Keeling)
+// Islands, which nothing else in the suite uses.
+test("account deletion clears personal details and admin seats", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CCK";
+  await claimKit.wipe(CODE);
+  try {
+    const founder = await claimKit.founder(CODE, "West Island Divers");
+    assert.ok(founder.clubId, "founder admins the club they started");
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [founder.id])).rows[0].org_id;
+    await pool.query(
+      "UPDATE users SET date_of_birth = '2010-04-02', gender = 'Female', nationality = 'AUS' WHERE id = $1",
+      [founder.id],
+    );
+    // A state seat as well, the same cleanup has to cover region_admins.
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Home Island', 'HMI') RETURNING id", [orgId],
+    )).rows[0];
+    await pool.query(
+      "INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region.id, founder.id, orgId],
+    );
+
+    const del = await fetchJson("POST", "/api/users/me/delete", {
+      token: founder.token, body: { password: TEST_PASSWORD },
+    });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+
+    const row = (await pool.query(
+      "SELECT full_name, email, date_of_birth, gender, nationality, deleted_at FROM users WHERE id = $1", [founder.id],
+    )).rows[0];
+    assert.ok(row.deleted_at);
+    assert.equal(row.full_name, "West Island Divers Admin", "the name stays for the sporting record");
+    assert.equal(row.email, null);
+    assert.equal(row.date_of_birth, null);
+    assert.equal(row.gender, null);
+    assert.equal(row.nationality, null);
+    const seats = await pool.query(
+      `SELECT (SELECT count(*)::int FROM club_admins WHERE user_id = $1) AS clubs,
+              (SELECT count(*)::int FROM region_admins WHERE user_id = $1) AS regions`, [founder.id],
+    );
+    assert.deepEqual(seats.rows[0], { clubs: 0, regions: 0 });
+  } finally {
+    await pool.query(
+      "DELETE FROM regions WHERE org_id IN (SELECT id FROM organisations WHERE country_code = $1)", [CODE],
+    ).catch(() => {});
+    await claimKit.wipe(CODE);
+  }
+});

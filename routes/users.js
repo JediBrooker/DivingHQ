@@ -546,6 +546,9 @@ module.exports = function createUsersRouter({
             locale                   = NULL,
             dashboard_widgets        = NULL,
             judge_dashboard_widgets  = NULL,
+            date_of_birth            = NULL,
+            gender                   = NULL,
+            nationality              = NULL,
             deleted_at               = NOW(),
             token_version            = token_version + 1,
             username                 = 'deleted-' || left(id::text, 8)
@@ -574,6 +577,12 @@ module.exports = function createUsersRouter({
         "DELETE FROM user_org_roles WHERE user_id = $1",
         [req.user.id],
       );
+      // Club and region admin seats too. Left behind, a deleted account
+      // still showed up as the club's admin and was counted when working
+      // out whether a co-admin could be removed, and the privacy policy
+      // (section 7) promises these go with the account.
+      await client.query("DELETE FROM club_admins WHERE user_id = $1", [req.user.id]);
+      await client.query("DELETE FROM region_admins WHERE user_id = $1", [req.user.id]);
 
       // Audit. Best-effort, recordAudit swallows its own errors.
       // metadata carries summary counts but never any PII, the
