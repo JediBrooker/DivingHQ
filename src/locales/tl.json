@@ -46,6 +46,8 @@
       "password": "Password ng account",
       "organisation": "Organisasyon",
       "org_placeholder": "— Piliin ang iyong organisasyon —",
+      "org_missing": "Hindi mahanap ang iyong organisasyon?",
+      "no_orgs": "Wala pang organisasyong nakarehistro sa DivingHQ.",
       "club": "Samahan",
       "club_independent": "— Walang club / nag-iisa —",
       "club_new": "+ Gumawa ng bagong club",

@@ -46,6 +46,8 @@
       "password": "Lösenord",
       "organisation": "Förening",
       "org_placeholder": "— Välj din organisation —",
+      "org_missing": "Hittar du inte din organisation?",
+      "no_orgs": "Det finns inga organisationer på DivingHQ ännu.",
       "club": "Klubb",
       "club_independent": "— Ingen klubb / oberoende —",
       "club_new": "+ Skapa en ny klubb",

@@ -46,6 +46,8 @@
       "password": "Şifre",
       "organisation": "Kuruluş",
       "org_placeholder": "— Kuruluşunuzu seçin —",
+      "org_missing": "Kuruluşunuzu bulamıyor musunuz?",
+      "no_orgs": "DivingHQ'da henüz kayıtlı bir kuruluş yok.",
       "club": "Kulüp",
       "club_independent": "— Kulüpsüz / bağımsız —",
       "club_new": "+ Yeni kulüp oluştur",

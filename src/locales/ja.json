@@ -46,6 +46,8 @@
       "password": "パスワード",
       "organisation": "組織",
       "org_placeholder": "— 組織を選択してください —",
+      "org_missing": "組織が見つかりませんか？",
+      "no_orgs": "DivingHQ にはまだ登録された組織がありません。",
       "club": "クラブ",
       "club_independent": "— クラブなし / 個人 —",
       "club_new": "+ 新しいクラブを作成",

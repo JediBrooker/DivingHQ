@@ -46,6 +46,8 @@
       "password": "Adgangskode",
       "organisation": "Forening",
       "org_placeholder": "— Vælg din organisation —",
+      "org_missing": "Kan du ikke finde din organisation?",
+      "no_orgs": "Der er endnu ingen organisationer på DivingHQ.",
       "club": "Klub",
       "club_independent": "— Ingen klub / uafhængig —",
       "club_new": "+ Opret en ny klub",

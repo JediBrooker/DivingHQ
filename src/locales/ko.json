@@ -46,6 +46,8 @@
       "password": "비밀번호",
       "organisation": "조직",
       "org_placeholder": "— 조직을 선택하십시오 —",
+      "org_missing": "조직을 찾을 수 없습니까?",
+      "no_orgs": "DivingHQ에 아직 등록된 조직이 없습니다.",
       "club": "클럽",
       "club_independent": "— 클럽 없음 / 무소속 —",
       "club_new": "+ 새 클럽 만들기",

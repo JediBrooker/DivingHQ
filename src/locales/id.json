@@ -46,6 +46,8 @@
       "password": "Kata sandi",
       "organisation": "Organisasi",
       "org_placeholder": "— Pilih organisasi Anda —",
+      "org_missing": "Tidak menemukan organisasi Anda?",
+      "no_orgs": "Belum ada organisasi yang terdaftar di DivingHQ.",
       "club": "Klub",
       "club_independent": "— Tanpa klub / independen —",
       "club_new": "+ Buat klub baru",

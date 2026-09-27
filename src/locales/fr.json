@@ -46,6 +46,8 @@
       "password": "Mot de passe",
       "organisation": "Fédération",
       "org_placeholder": "— Sélectionnez votre organisation —",
+      "org_missing": "Vous ne trouvez pas votre organisation ?",
+      "no_orgs": "Aucune organisation n'est encore inscrite sur DivingHQ.",
       "club": "Club sportif",
       "club_independent": "— Aucun club / indépendant —",
       "club_new": "+ Créer un nouveau club",

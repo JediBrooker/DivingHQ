@@ -46,6 +46,8 @@
       "password": "Jelszó",
       "organisation": "Szervezet",
       "org_placeholder": "— Válassza ki a szervezetét —",
+      "org_missing": "Nem találja a szervezetét?",
+      "no_orgs": "A DivingHQ-ban még nincs regisztrált szervezet.",
       "club": "Klub",
       "club_independent": "— Klub nélkül / független —",
       "club_new": "+ Új klub létrehozása",

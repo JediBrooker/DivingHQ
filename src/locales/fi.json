@@ -46,6 +46,8 @@
       "password": "Salasana",
       "organisation": "Organisaatio",
       "org_placeholder": "— Valitse organisaatiosi —",
+      "org_missing": "Etkö löydä organisaatiotasi?",
+      "no_orgs": "DivingHQ:ssa ei ole vielä yhtään organisaatiota.",
       "club": "Seura",
       "club_independent": "— Ei seuraa / itsenäinen —",
       "club_new": "+ Luo uusi seura",

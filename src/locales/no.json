@@ -46,6 +46,8 @@
       "password": "Passord",
       "organisation": "Organisasjon",
       "org_placeholder": "— Velg organisasjonen din —",
+      "org_missing": "Finner du ikke organisasjonen din?",
+      "no_orgs": "Det er ingen organisasjoner på DivingHQ ennå.",
       "club": "Klubb",
       "club_independent": "— Ingen klubb / uavhengig —",
       "club_new": "+ Opprett en ny klubb",

@@ -46,6 +46,8 @@
       "password": "Heslo",
       "organisation": "Organizace",
       "org_placeholder": "— Vyberte svou organizaci —",
+      "org_missing": "Nemůžete najít svou organizaci?",
+      "no_orgs": "Na DivingHQ zatím není zaregistrovaná žádná organizace.",
       "club": "Klub",
       "club_independent": "— Bez klubu / nezávislý —",
       "club_new": "+ Vytvořit nový klub",

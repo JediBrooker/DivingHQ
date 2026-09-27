@@ -46,6 +46,8 @@
       "password": "كلمة المرور",
       "organisation": "المنظمة",
       "org_placeholder": "— اختر منظمتك —",
+      "org_missing": "لا تجد منظمتك؟",
+      "no_orgs": "لا توجد منظمات مسجّلة على DivingHQ بعد.",
       "club": "النادي",
       "club_independent": "— بدون نادٍ / مستقل —",
       "club_new": "+ إنشاء نادٍ جديد",

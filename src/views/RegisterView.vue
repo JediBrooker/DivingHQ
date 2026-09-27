@@ -14,6 +14,9 @@ const orgId = ref('')
 const requestedRole = ref('diver')
 const note = ref('')
 const orgs = ref([])
+// Flips once /api/orgs/active has answered, so the "nothing set up yet"
+// hint doesn't flash up while the list is still loading.
+const orgsLoaded = ref(false)
 
 // Club state, populated whenever an org is picked. The club
 // dropdown has three modes: pick an existing one, "I want to create
@@ -43,6 +46,7 @@ onMounted(async () => {
     const res = await fetch('/api/orgs/active')
     orgs.value = await res.json()
   } catch { /* leave empty */ }
+  orgsLoaded.value = true
 })
 
 watch(orgId, async (id) => {
@@ -157,6 +161,16 @@ async function handleSubmit() {
             {{ org.name }}{{ org.country_code ? ` (${org.country_code})` : '' }}
           </option>
         </select>
+        <!-- Without this an empty list is a dead end: the select is
+             required, so the form just won't submit and nobody says why. -->
+        <p v-if="orgsLoaded && !orgs.length" class="hint-line">
+          {{ $t('auth.register.no_orgs') }}
+          <RouterLink to="/register-org">{{ $t('auth.login.register_federation_action') }}</RouterLink>
+        </p>
+        <p v-else-if="orgsLoaded" class="hint-line">
+          {{ $t('auth.register.org_missing') }}
+          <RouterLink to="/register-org">{{ $t('auth.login.register_federation_action') }}</RouterLink>
+        </p>
       </div>
 
       <!-- Club, only meaningful once an org is picked. Lets you

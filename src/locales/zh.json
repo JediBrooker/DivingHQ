@@ -46,6 +46,8 @@
       "password": "密码",
       "organisation": "机构",
       "org_placeholder": "— 请选择您的机构 —",
+      "org_missing": "找不到您的机构？",
+      "no_orgs": "DivingHQ 上还没有注册任何机构。",
       "club": "俱乐部",
       "club_independent": "— 无俱乐部 / 独立 —",
       "club_new": "+ 创建新俱乐部",

@@ -46,6 +46,8 @@
       "password": "Lozinka",
       "organisation": "Organizacija",
       "org_placeholder": "— Odaberite svoju organizaciju —",
+      "org_missing": "Ne možete pronaći svoju organizaciju?",
+      "no_orgs": "Na DivingHQ-u još nema registriranih organizacija.",
       "club": "Klub",
       "club_independent": "— Bez kluba / nezavisni —",
       "club_new": "+ Stvori novi klub",
