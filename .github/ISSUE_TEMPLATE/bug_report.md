@@ -10,7 +10,7 @@ assignees: ''
 Thanks for taking the time to file a bug. The more of the sections below
 you fill in, the faster we can fix it.
 
-PLEASE DO NOT paste passwords, JWT signatures, SMTP credentials, or
+PLEASE DO NOT paste passwords, JWT signatures, API tokens, or
 anything else secret. If a JWT helps diagnosis, redact the signature
 (the third dot-separated segment) — the header + payload are enough
 for us to see the role and expiry.
@@ -82,7 +82,7 @@ Quick triage list — tick what you've already tried:
 - [ ] Hard-refreshed (Cmd-Shift-R / Ctrl-Shift-R) — service worker is network-first now
 - [ ] Signed out + back in (refreshes the JWT and any role flags)
 - [ ] Checked the Connection-lost banner on the live view
-- [ ] Confirmed `SMTP_HOST` is set (for email-related bugs)
+- [ ] Confirmed `CF_ACCOUNT_ID` / `CF_EMAIL_TOKEN` are set (for email-related bugs)
 - [ ] Ran the latest migrations (for schema-version errors)
 
 ## Anything else?

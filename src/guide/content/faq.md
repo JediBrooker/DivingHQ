@@ -36,15 +36,15 @@ If you got redirected to `/setup` and you'd rather not deal with it right now, c
 
 ### "Email isn't sending — registration didn't get a welcome message"
 
-Without `SMTP_HOST` set in `.env`, the email helpers silently no-op. Configure SMTP if you want welcomes / password resets / meet notifications:
+Without `CF_ACCOUNT_ID` and `CF_EMAIL_TOKEN` set in `.env`, the email helpers silently no-op. DivingHQ sends through Cloudflare Email Sending; configure it if you want welcomes / password resets / meet notifications:
 
 ```
-SMTP_HOST=smtp.your-provider.com
-SMTP_PORT=587
-SMTP_USER=...
-SMTP_PASS=...
-SMTP_FROM="DivingHQ <noreply@your-domain>"
+CF_ACCOUNT_ID=...            # your Cloudflare account ID
+CF_EMAIL_TOKEN=...           # API token with the Email Sending permission
+EMAIL_FROM=noreply@your-domain
 ```
+
+The `EMAIL_FROM` domain must be onboarded to Cloudflare Email Sending.
 
 `APP_BASE_URL` also needs to be set so reset-password links point at the right host.
 

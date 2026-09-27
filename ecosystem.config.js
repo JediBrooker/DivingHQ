@@ -78,7 +78,7 @@ module.exports = {
       // node-args / env. NODE_ENV stays separate from the .env
       // file because Express + several libraries condition
       // behaviour on it (caching, error formatting). Everything
-      // else (DB creds, JWT secret, SMTP) lives in .env and is
+      // else (DB creds, JWT secret, email creds) lives in .env and is
       // loaded by dotenv at the top of server.js.
       env: {
         NODE_ENV: "production",

@@ -242,7 +242,7 @@ Clicking Finalise opens a confirm modal listing what'll happen:
 
 - Public scoreboard switches to recap mode (podium + full standings + dive-by-dive)
 - Event lands in the public Results Archive
-- "Results posted" emails go out to every competitor (if SMTP is configured)
+- "Results posted" emails go out to every competitor (if email is configured)
 - Reversible by an org admin via Meet Manager → set status back to Live
 
 Click `Finalise & publish` to commit. A success toast confirms the recap is live, and an Undo snackbar (12 second window) at the bottom of the screen catches misclicks.

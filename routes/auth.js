@@ -1139,7 +1139,7 @@ module.exports = function createAuthRouter({
         [normalisedNew, tokenHash, req.user.id],
       );
 
-      // Fire-and-forget the send so a stuck SMTP host can't hold
+      // Fire-and-forget the send so a stuck mail API can't hold
       // the request open. The user sees an immediate "check your
       // inbox" response either way.
       if (typeof sendEmailChangeVerify === "function") {
@@ -1281,7 +1281,7 @@ module.exports = function createAuthRouter({
     const { email } = req.body || {};
     // Always respond 200 + ok:true so callers can't enumerate which
     // emails are registered. To avoid timing-based enumeration we
-    // also do equal work in both branches and dispatch SMTP fully
+    // also do equal work in both branches and dispatch the email fully
     // out-of-band (setImmediate) so the email-send latency doesn't
     // leak through the response time either.
     try {
@@ -1303,7 +1303,7 @@ module.exports = function createAuthRouter({
           JWT_SECRET,
           { expiresIn: "30m" },
         );
-        // Defer the SMTP round-trip so the response time doesn't
+        // Defer the mail API round-trip so the response time doesn't
         // depend on whether we found a user. The catch is swallowed
         // intentionally, we never tell the caller about delivery.
         // Pass `req` so the email lands in the locale the user's

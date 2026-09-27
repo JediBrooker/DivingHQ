@@ -377,18 +377,16 @@ cp .env.example .env
 # edit .env with your local DB credentials and a JWT secret
 ```
 
-For password-reset and notification emails to actually send, also configure SMTP:
+For password-reset and notification emails to actually send, also configure [Cloudflare Email Sending](https://developers.cloudflare.com/email-service/):
 
 ```
 APP_BASE_URL=https://your-domain.example.com
-SMTP_HOST=smtp.your-provider.com
-SMTP_PORT=587
-SMTP_USER=...
-SMTP_PASS=...
-SMTP_FROM="DivingHQ <noreply@your-domain.example.com>"
+CF_ACCOUNT_ID=...            # your Cloudflare account ID
+CF_EMAIL_TOKEN=...           # API token with the Email Sending permission
+EMAIL_FROM=noreply@your-domain.example.com
 ```
 
-Without `SMTP_HOST` set, every email helper silently no-ops — registrations and password changes work, just no email is dispatched. `APP_BASE_URL` is used to build the reset-password link AND the referee sign-off code QR/deep-link; the server refuses to issue a sign-off code when it isn't set, so make sure the value is configured in production.
+The `EMAIL_FROM` domain has to be onboarded to Email Sending first (`wrangler email sending enable`, which provisions SPF/DKIM/DMARC). Without `CF_ACCOUNT_ID` and `CF_EMAIL_TOKEN` set, every email helper silently no-ops — registrations and password changes work, just no email is dispatched. `APP_BASE_URL` is used to build the reset-password link AND the referee sign-off code QR/deep-link; the server refuses to issue a sign-off code when it isn't set, so make sure the value is configured in production.
 
 ### 6. Sign in
 
@@ -751,7 +749,7 @@ Bug reports go through GitHub Issues. The repo has a template that prompts for t
 
 - **White page after a deploy?** Hard refresh (Cmd-Shift-R / Ctrl-Shift-R) once. The service worker is now network-first so subsequent deploys reach you on a normal refresh.
 - **Schema-version errors?** On the server, check the boot log for `📊 Schema version N`. If `N` is lower than the current migration count under `migrations/`, run the missing migrations in order.
-- **Email not sending?** `SMTP_HOST` must be set in the env. Without it, every email helper silently no-ops.
+- **Email not sending?** `CF_ACCOUNT_ID`, `CF_EMAIL_TOKEN` and `EMAIL_FROM` must be set in the env. Without the first two, every email helper silently no-ops.
 - **Live scoring not updating?** Check the **Connection-lost banner** at the top of the Judge / Scoreboard view — if it's showing, the socket is disconnected.
 
 If you're a paying customer or running a production federation, urgent issues can be flagged via email — see `SUPPORT.md` (if present) for the escalation path; otherwise the issue tracker is the canonical channel.

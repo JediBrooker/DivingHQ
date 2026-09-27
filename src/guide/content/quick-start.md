@@ -1,6 +1,6 @@
 # Quick Start
 
-This walks you from a fresh DivingHQ install to running your first meet end-to-end. About **ten minutes** if you have a database ready and an SMTP account for outbound email (the email steps degrade gracefully if you don't, so you can skip SMTP for a local trial).
+This walks you from a fresh DivingHQ install to running your first meet end-to-end. About **ten minutes** if you have a database ready and a Cloudflare Email Sending setup for outbound email (the email steps degrade gracefully if you don't, so you can skip email for a local trial).
 
 ## 0. Prerequisites
 

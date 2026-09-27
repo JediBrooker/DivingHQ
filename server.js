@@ -452,7 +452,7 @@ app.use(maintenanceGate);
 
 // Email helpers, moved into lib/email.js. Factory takes the pool
 // so the test runner can swap it. Every helper is best-effort and
-// silently no-ops when SMTP_HOST isnt set (dev-mode default).
+// silently no-ops when CF_ACCOUNT_ID / CF_EMAIL_TOKEN arent set (dev-mode default).
 const email = require("./lib/email")({ pool });
 const {
   hashFingerprint,

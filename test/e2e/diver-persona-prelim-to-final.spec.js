@@ -200,7 +200,7 @@ test("persona: prelim → semi (13th, reserve) → promoted into final → edits
 
   // The advance fired a `dive_list_reserve` notification; the
   // notifications table should carry it. Push delivery is
-  // best-effort + may no-op if SMTP isn't configured, but the
+  // best-effort + may no-op if email isn't configured, but the
   // row should still be queued.
   const reserveNotif = await setup.pool.query(
     `SELECT category, title FROM notifications

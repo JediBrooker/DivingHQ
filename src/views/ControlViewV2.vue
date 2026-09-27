@@ -386,8 +386,8 @@ async function finalisePool(ev) {
         'Public scoreboard switches to recap mode (podium + full standings)',
         'Event lands in the public Results Archive',
         n
-          ? `"Results posted" emails go out to ${n} competitor${n === 1 ? '' : 's'} (if SMTP is configured)`
-          : '"Results posted" emails go out to every competitor (if SMTP is configured)',
+          ? `"Results posted" emails go out to ${n} competitor${n === 1 ? '' : 's'} (if email is configured)`
+          : '"Results posted" emails go out to every competitor (if email is configured)',
         'Reversible by an org admin via Meet Manager → set status back to Live',
       ],
       confirmLabel: 'Finalise & publish',

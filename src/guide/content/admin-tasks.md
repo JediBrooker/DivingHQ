@@ -59,7 +59,7 @@ Click any user's row to open the **edit drawer** on the right. The drawer shows:
 - **Account lifecycle** — four actions, each available to an org admin:
   - **Suspend account** — requires confirmation; the user is blocked at login immediately. Suspended accounts show a badge and a **Reactivate** button instead.
   - **Resend verification email** — only shown when the user's email is unverified.
-  - **Send password reset** — emails a single-use reset link to the user (requires SMTP; without it the URL is returned in the response for manual delivery).
+  - **Send password reset** — emails a single-use reset link to the user (requires email to be configured; see [Notifications](#notifications)).
 - **Roles** — current roles in this org, toggled as checkboxes; each change saves automatically and updates the role audit log.
 - **Role audit history** — every grant/revoke ever applied to this user, with actor + timestamp.
 - **Coach links** — list of coach ↔ diver links involving this user, with add/remove controls.
@@ -217,7 +217,7 @@ System admins can see every user across every federation via the User Manager. U
 
 ### Resetting a password
 
-System admins (and org admins for their own federation's users) can send a password reset from the User Manager drawer — click the user's row, then **Send password reset** in the Account section. The user is emailed a single-use reset link (or, if SMTP isn't configured, the reset URL is returned in the response for manual delivery). The user's existing tokens are invalidated once they complete the reset.
+System admins (and org admins for their own federation's users) can send a password reset from the User Manager drawer — click the user's row, then **Send password reset** in the Account section. The user is emailed a single-use reset link, so this only works when email is configured on the server. The user's existing tokens are invalidated once they complete the reset.
 
 ### Migrations
 
@@ -304,7 +304,7 @@ Email notifications fire automatically (best-effort, never block the response):
 | Meet went Live | Every competitor in any event of the meet |
 | Results posted | Every competitor in the finalised event |
 
-Without `SMTP_HOST` configured, all email helpers silently no-op. Registrations + password changes still work; just no email.
+Without `CF_ACCOUNT_ID` and `CF_EMAIL_TOKEN` configured (Cloudflare Email Sending), all email helpers silently no-op. Registrations + password changes still work; just no email.
 
 ### In-app inbox
 

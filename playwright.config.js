@@ -201,11 +201,11 @@ module.exports = defineConfig({
       // force-on only, so nothing here can flip a flag back off mid-run.
       // 'maintenance' is intentionally absent, its specs toggle it per-test.
       FEATURE_FLAGS_ON: "payments,classes,signups",
-      // Local .env often points SMTP_HOST at smtp.example.com so
-      // registration tests can exercise email-triggering paths.
-      // For e2e, force the helper into documented dev no-op mode:
-      // no DNS lookups, no noisy best-effort mailer failures.
-      SMTP_HOST: "",
+      // A local .env might carry real Cloudflare Email Sending creds, and
+      // we really dont want the e2e run mailing fixture addresses. Blank
+      // them so lib/email drops into its documented no-op mode.
+      CF_ACCOUNT_ID: "",
+      CF_EMAIL_TOKEN: "",
     },
   },
 });
