@@ -1,11 +1,20 @@
 <script setup>
-// Who admins a club. Club admins run the meets their club hosts, and
-// its classes, Stripe payouts and affiliation payments where those are
-// switched on. Before this dialog there was no way to appoint one
-// outside the database.
-// Opened from the Clubs screen by the federation's org_admin (or a
-// sysadmin); the server enforces the same rule.
+// Who admins a club or a region. Opened from the Clubs screen by the
+// federation's org_admin (or a sysadmin); the server enforces the same
+// rule. Before this dialog there was no way to appoint one outside the
+// database.
+//
+// Club admins run the meets their club hosts, and its classes, Stripe
+// payouts and affiliation payments where those are switched on. Region
+// admins (state, province...) reach the meets of every club in the
+// region, and their candidates are members of those clubs, so each one
+// is shown with the club they come from.
+//
+// The two used to be separate components that differed only in the URL,
+// the name of the candidate list and the wording, which is all `kind`
+// picks between here.
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/BaseModal.vue'
 import ModalHeader from '@/components/control/ModalHeader.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -13,40 +22,62 @@ import { useFeaturesStore } from '@/stores/features'
 import { showError } from '@/composables/useNotify'
 
 const props = defineProps({
-  club: { type: Object, required: true },   // { id, name }
+  kind: { type: String, required: true, validator: (v) => v === 'club' || v === 'region' },
+  target: { type: Object, required: true },   // the club or region, { id, name }
 })
 defineEmits(['close'])
 
 const auth = useAuthStore()
-
-// What the job involves. Hosting the club's own meets always is; classes
-// and the money side only while those areas are switched on, otherwise
-// we'd be describing screens the new admin can't find.
+const { t } = useI18n()
 const features = useFeaturesStore()
-const introKey = computed(() => {
-  if (features.classes && features.payments) return 'my_club.admins_intro'
-  if (features.classes) return 'my_club.admins_intro_classes'
-  if (features.payments) return 'my_club.admins_intro_payments'
-  return 'my_club.admins_intro_meets'
-})
+
+const isClub = computed(() => props.kind === 'club')
+const baseUrl = computed(() => `/api/${isClub.value ? 'clubs' : 'regions'}/${props.target.id}/admins`)
+
+// What a club admin's job involves. Hosting the club's own meets always
+// is; classes and the money side only while those areas are switched on,
+// otherwise we'd be describing screens the new admin can't find.
+function clubIntro() {
+  if (features.classes && features.payments) return t('my_club.admins_intro')
+  if (features.classes) return t('my_club.admins_intro_classes')
+  if (features.payments) return t('my_club.admins_intro_payments')
+  return t('my_club.admins_intro_meets')
+}
+const text = computed(() => isClub.value
+  ? {
+      title: t('my_club.admins'),
+      intro: clubIntro(),
+      nobody: t('my_club.nobody_admins'),
+      pick: t('my_club.pick_member'),
+      none: t('my_club.no_other_members'),
+    }
+  : {
+      title: t('my_region.region_admins'),
+      intro: t('regions.admins_intro'),
+      nobody: t('regions.nobody_admins'),
+      pick: t('regions.pick_member'),
+      none: t('regions.no_candidates'),
+    })
+
 const admins = ref([])
-const members = ref([])
+const candidates = ref([])
 const loading = ref(true)
 const busy = ref(false)
 const toAdd = ref('')
 
-// Everyone in the club who isn't already an admin.
+// Everyone who could be appointed and isn't already an admin.
 const addable = computed(() => {
   const taken = new Set(admins.value.map(a => a.id))
-  return members.value.filter(m => !taken.has(m.id))
+  return candidates.value.filter(m => !taken.has(m.id))
 })
 
 async function load() {
   loading.value = true
   try {
-    const body = await auth.apiFetch(`/api/clubs/${props.club.id}/admins`)
+    const body = await auth.apiFetch(baseUrl.value)
     admins.value = body.admins || []
-    members.value = body.members || []
+    // The club endpoint calls its list members, the region one candidates.
+    candidates.value = (isClub.value ? body.members : body.candidates) || []
   } catch (err) {
     showError(err.message)
   } finally {
@@ -58,7 +89,7 @@ async function add() {
   if (!toAdd.value) return
   busy.value = true
   try {
-    await auth.apiFetch(`/api/clubs/${props.club.id}/admins`, {
+    await auth.apiFetch(baseUrl.value, {
       method: 'POST',
       body: JSON.stringify({ user_id: toAdd.value }),
     })
@@ -74,7 +105,7 @@ async function add() {
 async function remove(admin) {
   busy.value = true
   try {
-    await auth.apiFetch(`/api/clubs/${props.club.id}/admins/${admin.id}`, { method: 'DELETE' })
+    await auth.apiFetch(`${baseUrl.value}/${admin.id}`, { method: 'DELETE' })
     await load()
   } catch (err) {
     showError(err.message)
@@ -89,9 +120,9 @@ onMounted(load)
 <template>
   <BaseModal max-width="520px" @close="$emit('close')">
     <template #default="{ titleId }">
-      <ModalHeader :title-id="titleId" :title="$t('my_club.admins')" :subtitle="club.name" @close="$emit('close')" />
+      <ModalHeader :title-id="titleId" :title="text.title" :subtitle="target.name" @close="$emit('close')" />
       <div class="lb-body">
-        <p class="hint-line intro">{{ $t(introKey) }}</p>
+        <p class="hint-line intro">{{ text.intro }}</p>
 
         <div class="section-label">{{ $t('my_club.current_admins', { n: admins.length }) }}</div>
         <div v-if="loading" class="empty">{{ $t('common.loading') }}</div>
@@ -101,19 +132,19 @@ onMounted(load)
             <button class="btn btn-danger btn-sm" :disabled="busy" @click="remove(a)">{{ $t('my_club.remove') }}</button>
           </li>
         </ul>
-        <div v-else class="empty">{{ $t('my_club.nobody_admins') }}</div>
+        <div v-else class="empty">{{ text.nobody }}</div>
 
         <div class="section-label" style="margin-top:1.25rem">{{ $t('my_club.add_admin') }}</div>
         <div class="add-row">
           <select class="select" v-model="toAdd" :disabled="loading || !addable.length" :aria-label="$t('my_club.add_admin')">
-            <option value="">{{ $t('my_club.pick_member') }}</option>
+            <option value="">{{ text.pick }}</option>
             <option v-for="m in addable" :key="m.id" :value="m.id">
-              {{ m.full_name }} (@{{ m.username }})
+              {{ m.full_name }} (@{{ m.username }})<template v-if="!isClub"> · {{ m.club_name }}</template>
             </option>
           </select>
           <button class="btn btn-primary btn-sm" :disabled="!toAdd || busy" @click="add">{{ $t('my_club.add') }}</button>
         </div>
-        <p v-if="!loading && !addable.length" class="hint-line">{{ $t('my_club.no_other_members') }}</p>
+        <p v-if="!loading && !addable.length" class="hint-line">{{ text.none }}</p>
       </div>
     </template>
   </BaseModal>
