@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Wettkampfmanagement-Plattform",
-      "tagline": "Wassersprung-Wettkampfmanagement von A bis Z — von der Eventeinrichtung und Sprunglisten-Einreichung über das Live-Kampfgericht bis zur Ergebnisübertragung und Endklassierung.",
+      "tagline": "Richten Sie die Wasserspringen-Wettkämpfe Ihres Vereins schon heute aus: Sprunglisten, Live-Wertung per Smartphone, eine öffentliche Anzeigetafel und Ergebnisse. Sie brauchen keinen Verband, um zu starten, und wenn Ihr Verband oder Landesverband dazukommt, bleibt die Geschichte Ihres Vereins erhalten.",
       "btn_sign_in": "Anmelden",
       "btn_create_account": "Konto erstellen",
       "btn_scoreboard": "Anzeigetafel & Ergebnisse",
       "btn_judge_analysis": "Kampfrichter-Analyse",
-      "guide_link": "Neu hier? Lesen Sie die 5-Minuten-Anleitung →"
+      "guide_link": "Neu hier? Lesen Sie die 5-Minuten-Anleitung →",
+      "btn_start_club": "Verein gründen",
+      "federation_link": "Verband oder Landesverband? Registrieren Sie Ihre Organisation →"
     },
     "live_strip": {
       "pill": "LIVE AKTIV",
       "text": "Die Live-Anzeigetafel ist für alle offen — keine Anmeldung nötig",
-      "watch": "Live ansehen →"
+      "watch": "Live ansehen →",
+      "pill_idle": "Live-Ergebnisse",
+      "text_live": "Gerade wird live gewertet. Verfolgen Sie jeden Sprung, ohne Anmeldung.",
+      "browse": "Ergebnisse ansehen →"
     },
     "features": {
       "section_label": "Für jede Rolle am Beckenrand",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Wettkampf-Manager",
       "meet_manager_desc": "Erstellen Sie Events, konfigurieren Sie Runden und Panel-Größen, weisen Sie Kampfrichter zu und verwalten Sie die gesamte Wettkampfstruktur.",
       "user_manager_title": "Benutzerverwaltung",
-      "user_manager_desc": "Genehmigen Sie Rollenanfragen und steuern Sie den Mitgliederzugriff in Ihrem Verband. Jede Rollenänderung läuft über einen Anfrage-Workflow."
+      "user_manager_desc": "Genehmigen Sie Rollenanfragen und steuern Sie den Mitgliederzugriff in Ihrem Verein oder Verband. Jede Rollenänderung läuft über einen Anfrage-Workflow."
     },
     "how": {
       "section_label": "So läuft ein Wettkampf ab",
       "step01_title": "Event einrichten",
-      "step01_desc": "Der Wettkampf-Manager erstellt Events, legt die Zahl der Runden und Kampfrichter fest und besetzt das Panel.",
+      "step01_desc": "Der Veranstalter (ein Vereinsadmin oder Wettkampf-Manager) erstellt Events, legt die Zahl der Runden und Kampfrichter fest und besetzt das Panel.",
       "step02_title": "Springer reichen Listen ein",
       "step02_desc": "Jeder Springer meldet sich an und reicht seine Sprungkarte ein. DD-Werte werden automatisch aus dem offiziellen Verzeichnis übernommen.",
       "step03_title": "Wertung geht live",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Anmelden",
       "register": "Registrieren",
-      "register_federation": "Verband registrieren",
+      "register_federation": "Für Verbände und Landesverbände",
       "scoreboard": "Anzeigetafel & Ergebnisse",
       "user_guide": "📖 Anleitung",
       "report_bug": "🐛 Fehler melden"
+    },
+    "clubs": {
+      "section_label": "Für Vereine",
+      "step1_title": "Verein anlegen",
+      "step1_desc": "Registrieren Sie sich, wählen Sie Ihr Land und geben Sie Ihrem Verein einen Namen. Sie sind von Anfang an sein Admin.",
+      "step2_title": "Springer und Kampfrichter einladen",
+      "step2_desc": "Senden Sie Ihren Mitgliedern den Registrierungslink. Sie wählen Ihren Verein, und Sie genehmigen, wer springt, wertet oder als Schiedsrichter tätig ist.",
+      "step3_title": "Den ersten Wettkampf ausrichten",
+      "step3_desc": "Legen Sie Events an, steuern Sie den Wettkampf aus dem Kontrollraum, während die Kampfrichter auf ihren Smartphones werten, und die Ergebnisse erscheinen nach jedem gewerteten Sprung.",
+      "note": "Sie brauchen keinen Verband, um zu starten. Tritt Ihr Verband oder Landesverband später DivingHQ bei, übernimmt er die Verwaltung des Landes oder der Region, und Ihr Verein behält seine Wettkämpfe, Ergebnisse und Rekorde."
     }
   },
   "dashboard": {

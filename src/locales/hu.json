@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Versenykezelő platform",
-      "tagline": "A műugró versenyek teljes körű kezelése — az esemény beállításától és az ugráslisták leadásától az élő pontozásig, az eredmények közvetítéséig és a végső eredményekig.",
+      "tagline": "Rendezze meg klubja műugróversenyeit már ma: ugráslisták, élő pontozás telefonról, nyilvános eredménytábla és eredmények. Az induláshoz nincs szükség szövetségre, és amikor a szövetsége vagy regionális szövetsége csatlakozik, a klub története megmarad.",
       "btn_sign_in": "Bejelentkezés",
       "btn_create_account": "Fiók létrehozása",
       "btn_scoreboard": "Eredménytábla",
       "btn_judge_analysis": "Pontozóbíró-elemzés",
-      "guide_link": "Új itt? Olvasd el az 5 perces útmutatót →"
+      "guide_link": "Új itt? Olvasd el az 5 perces útmutatót →",
+      "btn_start_club": "Indítsa el klubját",
+      "federation_link": "Szövetség vagy regionális testület? Regisztrálja szervezetét →"
     },
     "live_strip": {
       "pill": "ÉLŐ",
       "text": "Az élő eredménytábla mindenki számára elérhető — nem kell bejelentkezni",
-      "watch": "Élő nézés →"
+      "watch": "Élő nézés →",
+      "pill_idle": "Élő eredmények",
+      "text_live": "Épp élő pontozás zajlik. Kövessen minden ugrást bejelentkezés nélkül.",
+      "browse": "Eredmények böngészése →"
     },
     "features": {
       "section_label": "Minden szerephez a medence partján",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Versenymenedzser",
       "meet_manager_desc": "Hozz létre eseményeket, állítsd be a fordulókat és a paneleket, oszd ki a pontozóbírókat, és kezeld a verseny teljes szerkezetét.",
       "user_manager_title": "Felhasználókezelő",
-      "user_manager_desc": "Hagyd jóvá a szerepkör-kéréseket, és szabályozd a szövetséged tagjainak hozzáférését. Minden szerepkörváltozás kérési folyamaton keresztül történik."
+      "user_manager_desc": "Hagyja jóvá a szerepkör-kéréseket, és szabályozza a tagok hozzáférését a klubjában vagy szövetségében. Minden szerepkörváltozás kérési folyamaton keresztül történik."
     },
     "how": {
       "section_label": "Így zajlik egy verseny",
       "step01_title": "Esemény beállítása",
-      "step01_desc": "A versenymenedzser létrehozza az eseményeket, beállítja a fordulók és a pontozóbírók számát, és kiosztja a panelt.",
+      "step01_desc": "A szervező (klubadminisztrátor vagy versenymenedzser) létrehozza az eseményeket, beállítja a fordulók és a pontozóbírók számát, és kiosztja a panelt.",
       "step02_title": "A műugrók beküldik a listákat",
       "step02_desc": "Minden műugró bejelentkezik és beküldi az ugráslistáját. A DD értékek automatikusan a hivatalos jegyzékből kerülnek be.",
       "step03_title": "A pontozás élőben indul",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Bejelentkezés",
       "register": "Regisztráció",
-      "register_federation": "Szövetség regisztrálása",
+      "register_federation": "Szövetségeknek és regionális testületeknek",
       "scoreboard": "Eredménytábla",
       "user_guide": "📖 Felhasználói útmutató",
       "report_bug": "🐛 Hiba jelentése"
+    },
+    "clubs": {
+      "section_label": "Kluboknak",
+      "step1_title": "Hozza létre a klubját",
+      "step1_desc": "Regisztráljon, válassza ki az országát, és nevezze el a klubját. Kezdettől Ön az adminisztrátora.",
+      "step2_title": "Hívjon meg műugrókat és pontozóbírókat",
+      "step2_desc": "Küldje el a tagoknak a regisztrációs linket. Ők kiválasztják a klubját, Ön pedig jóváhagyja, ki ugrik, pontoz vagy versenybíró.",
+      "step3_title": "Rendezze meg az első versenyét",
+      "step3_desc": "Hozza létre a versenyszámokat, irányítsa a versenyt a vezérlőszobából, miközben a pontozóbírók a telefonjukon pontoznak, és az eredmények minden pontozott ugrás után megjelennek.",
+      "note": "Az induláshoz nincs szükség szövetségre. Ha a szövetsége vagy regionális szövetsége később csatlakozik a DivingHQ-hoz, átveszi az ország vagy a régió irányítását, a klubja pedig megtartja versenyeit, eredményeit és rekordjait."
     }
   },
   "dashboard": {

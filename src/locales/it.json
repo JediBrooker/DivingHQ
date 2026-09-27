@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Piattaforma di gestione gare",
-      "tagline": "Gestione completa delle gare di tuffi — dall'allestimento dell'evento e l'invio delle liste tuffi al giudizio in diretta, ai punteggi trasmessi e ai risultati finali.",
+      "tagline": "Organizza oggi stesso le gare di tuffi del tuo club: liste dei tuffi, giudizio in diretta dal telefono, un tabellone pubblico e i risultati. Non serve una federazione per iniziare, e quando la tua federazione o il tuo comitato regionale arriva, la storia del tuo club viene con te.",
       "btn_sign_in": "Accedi",
       "btn_create_account": "Crea account",
       "btn_scoreboard": "Tabellone e risultati",
       "btn_judge_analysis": "Analisi dei giudici",
-      "guide_link": "Sei nuovo? Leggi la guida in 5 minuti →"
+      "guide_link": "Sei nuovo? Leggi la guida in 5 minuti →",
+      "btn_start_club": "Avvia il tuo club",
+      "federation_link": "Federazione o comitato regionale? Registra la tua organizzazione →"
     },
     "live_strip": {
       "pill": "DIRETTA",
       "text": "Il tabellone in diretta è aperto a tutti — nessuna registrazione richiesta",
-      "watch": "Guarda in diretta →"
+      "watch": "Guarda in diretta →",
+      "pill_idle": "Punteggi in diretta",
+      "text_live": "Si sta giudicando in diretta proprio ora. Segui ogni tuffo senza accedere.",
+      "browse": "Sfoglia i risultati →"
     },
     "features": {
       "section_label": "Pensato per ogni ruolo a bordo piscina",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Gestore gare",
       "meet_manager_desc": "Crea eventi, configura manche e pannelli, assegna i giudici e amministra l'intera struttura della competizione.",
       "user_manager_title": "Gestore utenti",
-      "user_manager_desc": "Approva le richieste di ruolo e controlla l'accesso dei membri all'interno della tua federazione. Ogni modifica di ruolo passa da un flusso di richiesta."
+      "user_manager_desc": "Approva le richieste di ruolo e controlla l'accesso dei membri nel tuo club o nella tua federazione. Ogni modifica di ruolo passa da un flusso di richiesta."
     },
     "how": {
       "section_label": "Come si svolge una gara",
       "step01_title": "Configura l'evento",
-      "step01_desc": "Il gestore crea gli eventi, imposta il numero di manche e di giudici e assegna il pannello.",
+      "step01_desc": "L'organizzatore (un amministratore del club o il gestore della gara) crea gli eventi, imposta il numero di manche e di giudici e assegna il pannello.",
       "step02_title": "I tuffatori inviano le liste",
       "step02_desc": "Ogni tuffatore accede e invia la sua lista tuffi. I valori DD sono importati automaticamente dal registro ufficiale.",
       "step03_title": "Inizia il giudizio",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Accedi",
       "register": "Registrati",
-      "register_federation": "Registra una federazione",
+      "register_federation": "Per federazioni e comitati regionali",
       "scoreboard": "Tabellone e risultati",
       "user_guide": "📖 Guida utente",
       "report_bug": "🐛 Segnala un bug"
+    },
+    "clubs": {
+      "section_label": "Per i club",
+      "step1_title": "Crea il tuo club",
+      "step1_desc": "Registrati, scegli il tuo paese e dai un nome al club. Ne sei l'amministratore fin dall'inizio.",
+      "step2_title": "Invita tuffatori e giudici",
+      "step2_desc": "Invia ai membri il link di registrazione. Scelgono il tuo club e tu approvi chi si tuffa, giudica o fa l'arbitro.",
+      "step3_title": "Organizza la tua prima gara",
+      "step3_desc": "Crea le prove, gestisci la gara dalla sala di controllo mentre i giudici votano dal telefono, e i risultati vengono pubblicati man mano che ogni tuffo viene giudicato.",
+      "note": "Non serve una federazione per iniziare. Se la tua federazione o il tuo comitato regionale entra in DivingHQ più avanti, assume la gestione del paese o della regione, e il tuo club conserva gare, risultati e record."
     }
   },
   "dashboard": {

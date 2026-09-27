@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Platforma za upravljanje natjecanjima",
-      "tagline": "Cjelovito upravljanje natjecanjima u skokovima u vodu — od postavljanja događaja i predaje lista skokova do suđenja uživo, prijenosa rezultata i konačnih ishoda.",
+      "tagline": "Organizirajte skakačka natjecanja svog kluba već danas: popisi skokova, ocjenjivanje uživo na mobitelima, javna tablica rezultata i rezultati. Za početak vam ne treba savez, a kada se pridruži vaš savez ili regionalni savez, povijest vašeg kluba ide s vama.",
       "btn_sign_in": "Prijava",
       "btn_create_account": "Stvori račun",
       "btn_scoreboard": "Pločica i rezultati",
       "btn_judge_analysis": "Analiza sudaca",
-      "guide_link": "Novi ste ovdje? Pročitajte 5-minutni vodič →"
+      "guide_link": "Novi ste ovdje? Pročitajte 5-minutni vodič →",
+      "btn_start_club": "Pokrenite svoj klub",
+      "federation_link": "Savez ili regionalno tijelo? Registrirajte svoju organizaciju →"
     },
     "live_strip": {
       "pill": "UŽIVO",
       "text": "Pločica uživo otvorena je svima — prijava nije potrebna",
-      "watch": "Gledaj uživo →"
+      "watch": "Gledaj uživo →",
+      "pill_idle": "Rezultati uživo",
+      "text_live": "Ocjenjivanje je upravo u tijeku uživo. Pratite svaki skok bez prijave.",
+      "browse": "Pregledaj rezultate →"
     },
     "features": {
       "section_label": "Stvoreno za svaku ulogu na bazenu",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Menadžer natjecanja",
       "meet_manager_desc": "Stvarajte događaje, konfigurirajte runde i sastav panela, dodjeljujte suce i upravljajte cijelom strukturom natjecanja.",
       "user_manager_title": "Upravitelj korisnika",
-      "user_manager_desc": "Odobravajte zahtjeve za uloge i kontrolirajte pristup članova u vašoj federaciji. Svaka promjena uloge prolazi kroz proces zahtjeva."
+      "user_manager_desc": "Odobravajte zahtjeve za uloge i kontrolirajte pristup članova u svom klubu ili savezu. Svaka promjena uloge prolazi kroz proces zahtjeva."
     },
     "how": {
       "section_label": "Kako teče natjecanje",
       "step01_title": "Postavi događaj",
-      "step01_desc": "Menadžer natjecanja stvara događaje, postavlja broj rundi i sudaca te dodjeljuje panel.",
+      "step01_desc": "Organizator (administrator kluba ili menadžer natjecanja) stvara događaje, postavlja broj rundi i sudaca te dodjeljuje panel.",
       "step02_title": "Skakači šalju liste",
       "step02_desc": "Svaki skakač se prijavljuje i šalje svoju listu skokova. DD vrijednosti se automatski dohvaćaju iz službenog registra.",
       "step03_title": "Ocjenjivanje kreće uživo",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Prijava",
       "register": "Registracija",
-      "register_federation": "Registracija federacije",
+      "register_federation": "Za saveze i regionalna tijela",
       "scoreboard": "Pločica i rezultati",
       "user_guide": "📖 Korisnički vodič",
       "report_bug": "🐛 Prijavi grešku"
+    },
+    "clubs": {
+      "section_label": "Za klubove",
+      "step1_title": "Stvorite svoj klub",
+      "step1_desc": "Registrirajte se, odaberite državu i dajte ime svom klubu. Od početka ste njegov administrator.",
+      "step2_title": "Pozovite skakače i suce",
+      "step2_desc": "Pošaljite članovima poveznicu za registraciju. Oni odaberu vaš klub, a vi odobravate tko skače, sudi ili je glavni sudac.",
+      "step3_title": "Održite svoje prvo natjecanje",
+      "step3_desc": "Postavite discipline, vodite natjecanje iz kontrolne sobe dok suci ocjenjuju na mobitelima, a rezultati se objavljuju nakon svakog ocijenjenog skoka.",
+      "note": "Za početak vam ne treba savez. Ako se vaš savez ili regionalni savez kasnije pridruži DivingHQ-u, preuzima vođenje države ili regije, a vaš klub zadržava svoja natjecanja, rezultate i rekorde."
     }
   },
   "dashboard": {

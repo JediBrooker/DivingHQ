@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Platform til stævnehåndtering",
-      "tagline": "End-to-end-håndtering af udspringsstævner — fra opsætning af stævnet og indsendelse af springlister til live-dommerarbejde, transmission af resultater og endelige slutresultater.",
+      "tagline": "Afvikl din klubs udspringsstævner allerede i dag: springlister, live-bedømmelse på telefoner, en offentlig resultattavle og resultater. Du behøver ikke et forbund for at komme i gang, og når dit forbund eller regionale forbund kommer med, følger klubbens historie med.",
       "btn_sign_in": "Log ind",
       "btn_create_account": "Opret konto",
       "btn_scoreboard": "Resultattavle",
       "btn_judge_analysis": "Dommeranalyse",
-      "guide_link": "Ny her? Læs guiden på 5 minutter →"
+      "guide_link": "Ny her? Læs guiden på 5 minutter →",
+      "btn_start_club": "Start din klub",
+      "federation_link": "Forbund eller regionalt forbund? Registrér din organisation →"
     },
     "live_strip": {
       "pill": "DIREKTE",
       "text": "Live-resultattavlen er åben for alle — ingen login påkrævet",
-      "watch": "Se live →"
+      "watch": "Se live →",
+      "pill_idle": "Live-resultater",
+      "text_live": "Der bedømmes live lige nu. Følg hvert spring, uden login.",
+      "browse": "Se resultater →"
     },
     "features": {
       "section_label": "Bygget til hver rolle ved bassinkanten",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Stævnehåndtering",
       "meet_manager_desc": "Opret konkurrencer, konfigurer runder og paneler, tildel dommere og administrér hele stævnets struktur.",
       "user_manager_title": "Brugerhåndtering",
-      "user_manager_desc": "Godkend rolleanmodninger og styr medlemmernes adgang i dit forbund. Enhver rolleændring går gennem en anmodningsproces."
+      "user_manager_desc": "Godkend rolleanmodninger og styr medlemmernes adgang i din klub eller dit forbund. Enhver rolleændring går gennem en anmodningsproces."
     },
     "how": {
       "section_label": "Sådan forløber et stævne",
       "step01_title": "Sæt konkurrencen op",
-      "step01_desc": "Stævnelederen opretter konkurrencer, fastsætter antallet af runder og dommere og tildeler panelet.",
+      "step01_desc": "Arrangøren (en klubadministrator eller stævneleder) opretter konkurrencer, fastsætter antallet af runder og dommere og tildeler panelet.",
       "step02_title": "Udspringere indsender lister",
       "step02_desc": "Hver udspringer logger ind og indsender sin springliste. Sværhedsgrader hentes automatisk fra det officielle kartotek.",
       "step03_title": "Bedømmelsen går live",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Log ind",
       "register": "Tilmeld",
-      "register_federation": "Registrér forbund",
+      "register_federation": "For forbund og regionale forbund",
       "scoreboard": "Resultattavle",
       "user_guide": "📖 Brugervejledning",
       "report_bug": "🐛 Rapportér en fejl"
+    },
+    "clubs": {
+      "section_label": "For klubber",
+      "step1_title": "Opret din klub",
+      "step1_desc": "Tilmeld dig, vælg dit land, og giv klubben et navn. Du er dens administrator fra starten.",
+      "step2_title": "Inviter udspringere og dommere",
+      "step2_desc": "Send medlemmerne tilmeldingslinket. De vælger din klub, og du godkender, hvem der springer, dømmer eller er overdommer.",
+      "step3_title": "Afvikl dit første stævne",
+      "step3_desc": "Opret konkurrencer, styr stævnet fra kontrolrummet, mens dommerne giver point på deres telefoner, og resultaterne offentliggøres, efterhånden som hvert spring er bedømt.",
+      "note": "Du behøver ikke et forbund for at komme i gang. Hvis dit forbund eller regionale forbund senere kommer på DivingHQ, overtager det driften af landet eller regionen, og din klub beholder sine stævner, resultater og rekorder."
     }
   },
   "dashboard": {

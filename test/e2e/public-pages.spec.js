@@ -66,3 +66,45 @@ test.describe("support contact", () => {
     await expect(footer.getByRole("link", { name: "Terms of Service" })).toHaveAttribute("href", "/terms");
   });
 });
+
+test.describe("home page", () => {
+  test("leads with starting a club, federations get the quieter link", async ({ page }) => {
+    await page.goto("/");
+    const primary = page.locator(".hero-cta .btn-primary");
+    await expect(primary).toHaveCount(1);
+    await expect(primary).toHaveText("Start your club");
+    await expect(primary).toHaveAttribute("href", "/register");
+    await expect(page.locator(".lede")).toContainText("No federation needed to start");
+    await expect(page.getByTestId("hero-federation")).toHaveAttribute("href", "/register-org");
+    await expect(page.getByTestId("for-clubs")).toContainText("Invite divers and judges");
+    await expect(page.getByTestId("footer-federation")).toHaveText("For federations & state bodies");
+  });
+
+  // The strip's pill used to pulse red on every visit. Pin both states by
+  // answering the live-events query ourselves, so what the shared test DB
+  // happens to have running doesn't matter.
+  const pulse = (page) => page.locator(".live-pill").evaluate((el) => getComputedStyle(el, "::before").animationName);
+
+  test("the LIVE pill stays quiet when nothing is live", async ({ page }) => {
+    await page.route("**/api/events?status=Live*", (route) => route.fulfill({ json: [] }));
+    await page.goto("/");
+    const strip = page.getByTestId("live-strip");
+    await expect(strip).toHaveAttribute("data-live", "no");
+    await expect(strip.locator(".live-pill")).toHaveText("Live scores");
+    await expect(strip.getByRole("link")).toHaveText("Browse results →");
+    expect(await pulse(page)).toBe("none");
+  });
+
+  test("the LIVE pill pulses while an event is live", async ({ page }) => {
+    await page.route("**/api/events?status=Live*", (route) => route.fulfill({
+      json: [{ id: "00000000-0000-0000-0000-000000000abc", name: "Women 3m", status: "Live" }],
+    }));
+    await page.goto("/");
+    const strip = page.getByTestId("live-strip");
+    await expect(strip).toHaveAttribute("data-live", "yes");
+    await expect(strip.locator(".live-pill")).toHaveText("LIVE");
+    await expect(strip.getByRole("link")).toHaveText("Watch Live →");
+    // Scoped styles suffix the keyframes name with the component's hash.
+    expect(await pulse(page)).toMatch(/^pulse-red/);
+  });
+});

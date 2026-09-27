@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Platform Pengurusan Pertandingan",
-      "tagline": "Pengurusan pertandingan terjun hujung ke hujung — dari penyediaan acara dan penghantaran senarai terjunan hingga pengadilan langsung, siaran markah, dan keputusan akhir.",
+      "tagline": "Jalankan pertandingan terjun kelab anda hari ini: senarai terjunan, penjurian langsung melalui telefon, papan markah awam dan keputusan. Tidak perlu persekutuan untuk bermula, dan apabila persekutuan atau badan negeri anda menyertai, sejarah kelab anda kekal bersama anda.",
       "btn_sign_in": "Log Masuk",
       "btn_create_account": "Cipta Akaun",
       "btn_scoreboard": "Papan markah & keputusan",
       "btn_judge_analysis": "Analisis hakim",
-      "guide_link": "Baru di sini? Baca panduan pengguna 5 minit →"
+      "guide_link": "Baru di sini? Baca panduan pengguna 5 minit →",
+      "btn_start_club": "Mulakan kelab anda",
+      "federation_link": "Persekutuan atau badan negeri? Daftarkan organisasi anda →"
     },
     "live_strip": {
       "pill": "LANGSUNG",
       "text": "Papan markah langsung terbuka kepada semua — tiada log masuk diperlukan",
-      "watch": "Tonton langsung →"
+      "watch": "Tonton langsung →",
+      "pill_idle": "Markah langsung",
+      "text_live": "Penjurian sedang berlangsung secara langsung. Ikuti setiap terjunan tanpa log masuk.",
+      "browse": "Lihat keputusan →"
     },
     "features": {
       "section_label": "Dibina untuk setiap peranan di kolam",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Pengurus Pertandingan",
       "meet_manager_desc": "Cipta acara, konfigurasi pusingan dan saiz panel, tugaskan hakim, dan urus seluruh struktur pertandingan.",
       "user_manager_title": "Pengurus Pengguna",
-      "user_manager_desc": "Luluskan permintaan peranan dan kawal akses ahli di seluruh persekutuan anda. Setiap perubahan peranan melalui aliran kerja permintaan."
+      "user_manager_desc": "Luluskan permintaan peranan dan kawal akses ahli di seluruh kelab atau persekutuan anda. Setiap perubahan peranan melalui aliran kerja permintaan."
     },
     "how": {
       "section_label": "Bagaimana pertandingan berjalan",
       "step01_title": "Sediakan acara",
-      "step01_desc": "Pengurus pertandingan mencipta acara, menetapkan bilangan pusingan dan hakim, dan menugaskan panel.",
+      "step01_desc": "Penganjur (pentadbir kelab atau pengurus pertandingan) mencipta acara, menetapkan bilangan pusingan dan hakim, dan menugaskan panel.",
       "step02_title": "Peterjun menghantar senarai",
       "step02_desc": "Setiap peterjun log masuk dan menghantar senarai terjunan mereka. Nilai DD diambil daripada direktori rasmi secara automatik.",
       "step03_title": "Pemarkahan berjalan langsung",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Log Masuk",
       "register": "Daftar",
-      "register_federation": "Daftar Persekutuan",
+      "register_federation": "Untuk persekutuan dan badan negeri",
       "scoreboard": "Papan markah & keputusan",
       "user_guide": "📖 Panduan pengguna",
       "report_bug": "🐛 Laporkan pepijat"
+    },
+    "clubs": {
+      "section_label": "Untuk kelab",
+      "step1_title": "Cipta kelab anda",
+      "step1_desc": "Daftar, pilih negara anda dan namakan kelab anda. Anda pentadbirnya sejak awal.",
+      "step2_title": "Jemput peterjun dan hakim",
+      "step2_desc": "Hantar pautan pendaftaran kepada ahli. Mereka memilih kelab anda, dan anda meluluskan siapa yang terjun, menghakimi atau menjadi hakim utama.",
+      "step3_title": "Jalankan pertandingan pertama anda",
+      "step3_desc": "Sediakan acara, kendalikan pertandingan dari Bilik Kawalan sementara hakim memberi markah di telefon mereka, dan keputusan diterbitkan sebaik setiap terjunan dinilai.",
+      "note": "Tidak perlu persekutuan untuk bermula. Jika persekutuan atau badan negeri anda menyertai DivingHQ kemudian, ia mengambil alih pengurusan negara atau rantau itu, dan kelab anda mengekalkan pertandingan, keputusan dan rekodnya."
     }
   },
   "dashboard": {

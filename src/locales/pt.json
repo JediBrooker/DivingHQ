@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Plataforma de gestão de competições",
-      "tagline": "Gestão completa de competições de saltos — desde a configuração do evento e o envio das listas de saltos até à arbitragem em direto, transmissão de pontuações e resultados finais.",
+      "tagline": "Organize hoje mesmo as competições de saltos do seu clube: listas de saltos, pontuação em direto no telemóvel, um painel de resultados público e resultados. Não precisa de uma federação para começar e, quando a sua federação ou associação regional aderir, o historial do seu clube vem consigo.",
       "btn_sign_in": "Iniciar sessão",
       "btn_create_account": "Criar conta",
       "btn_scoreboard": "Painel e resultados",
       "btn_judge_analysis": "Análise de juízes",
-      "guide_link": "É novo por aqui? Leia o guia rápido de 5 minutos →"
+      "guide_link": "É novo por aqui? Leia o guia rápido de 5 minutos →",
+      "btn_start_club": "Crie o seu clube",
+      "federation_link": "Federação ou associação regional? Registe a sua organização →"
     },
     "live_strip": {
       "pill": "EM DIRETO",
       "text": "O painel em direto está aberto a todos — não é necessário iniciar sessão",
-      "watch": "Ver em direto →"
+      "watch": "Ver em direto →",
+      "pill_idle": "Resultados em direto",
+      "text_live": "Está a decorrer pontuação em direto neste momento. Acompanhe cada salto sem iniciar sessão.",
+      "browse": "Ver resultados →"
     },
     "features": {
       "section_label": "Concebido para cada papel à beira da piscina",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Gestor de competições",
       "meet_manager_desc": "Crie eventos, configure rondas e painéis, atribua juízes e administre toda a estrutura da competição.",
       "user_manager_title": "Gestor de utilizadores",
-      "user_manager_desc": "Aprove pedidos de função e controle o acesso dos membros na sua federação. Cada alteração de função passa por um fluxo de pedido."
+      "user_manager_desc": "Aprove pedidos de função e controle o acesso dos membros no seu clube ou federação. Cada alteração de função passa por um fluxo de pedido."
     },
     "how": {
       "section_label": "Como decorre uma competição",
       "step01_title": "Configurar o evento",
-      "step01_desc": "O gestor cria os eventos, define o número de rondas e juízes, e atribui o painel.",
+      "step01_desc": "O organizador (um administrador do clube ou o gestor da competição) cria os eventos, define o número de rondas e juízes, e atribui o painel.",
       "step02_title": "Os saltadores enviam as listas",
       "step02_desc": "Cada saltador inicia sessão e envia a sua lista de saltos. Os valores de DD são obtidos automaticamente do registo oficial.",
       "step03_title": "A pontuação fica em direto",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Iniciar sessão",
       "register": "Registar",
-      "register_federation": "Registar federação",
+      "register_federation": "Para federações e associações regionais",
       "scoreboard": "Painel e resultados",
       "user_guide": "📖 Guia do utilizador",
       "report_bug": "🐛 Reportar um erro"
+    },
+    "clubs": {
+      "section_label": "Para clubes",
+      "step1_title": "Crie o seu clube",
+      "step1_desc": "Registe-se, escolha o seu país e dê um nome ao clube. É o administrador desde o início.",
+      "step2_title": "Convide saltadores e juízes",
+      "step2_desc": "Envie aos membros a ligação de registo. Eles escolhem o seu clube e cabe-lhe a si aprovar quem salta, julga ou arbitra.",
+      "step3_title": "Organize a sua primeira competição",
+      "step3_desc": "Prepare as provas, conduza a competição a partir da sala de controlo enquanto os juízes pontuam no telemóvel, e os resultados são publicados à medida que cada salto é pontuado.",
+      "note": "Não precisa de uma federação para começar. Se a sua federação ou associação regional aderir mais tarde ao DivingHQ, passa a gerir o país ou a região, e o seu clube mantém as suas competições, resultados e recordes."
     }
   },
   "dashboard": {

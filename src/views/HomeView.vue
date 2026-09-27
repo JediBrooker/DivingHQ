@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
@@ -12,8 +12,31 @@ const router = useRouter()
 const auth = useAuthStore()
 const supportEmail = useSupportEmail()
 
+// How many events are Live right now, for the strip under the hero. The
+// red pill used to pulse on every visit, which told a club looking at the
+// site for the first time that something was running when usually nothing
+// was. Now it only turns red, and only pulses, when the public events list
+// says so. Anonymous callers only ever get Live/Completed, non-rehearsal
+// events there, so this is the same thing the scoreboard would show them.
+const liveCount = ref(0)
+const isLive = computed(() => liveCount.value > 0)
+
+async function loadLiveCount() {
+  try {
+    const res = await fetch('/api/events?status=Live&limit=100', { credentials: 'same-origin' })
+    const rows = res.ok ? await res.json() : []
+    liveCount.value = Array.isArray(rows) ? rows.length : 0
+  } catch {
+    liveCount.value = 0
+  }
+}
+
 onMounted(() => {
-  if (auth.isLoggedIn) router.push('/dashboard')
+  if (auth.isLoggedIn) {
+    router.push('/dashboard')
+    return
+  }
+  loadLiveCount()
 })
 </script>
 
@@ -41,13 +64,19 @@ onMounted(() => {
       <div class="eyebrow">{{ $t('home.hero.mark') }}</div>
       <h1 class="hero-logo brand-wordmark">DIVING<span>HQ</span></h1>
       <p class="lede">{{ $t('home.hero.tagline') }}</p>
+      <!-- Clubs are who we're talking to first (club-first rollout), so
+           starting one is the primary action. Federations get a quieter
+           link underneath, and the footer. -->
       <div class="hero-cta">
-        <RouterLink to="/login" class="btn btn-primary btn-lg">{{ $t('home.hero.btn_sign_in') }}</RouterLink>
-        <RouterLink to="/register" class="btn btn-ghost btn-lg">{{ $t('home.hero.btn_create_account') }}</RouterLink>
+        <RouterLink to="/register" class="btn btn-primary btn-lg" data-testid="hero-start-club">{{ $t('home.hero.btn_start_club') }}</RouterLink>
+        <RouterLink to="/login" class="btn btn-ghost btn-lg">{{ $t('home.hero.btn_sign_in') }}</RouterLink>
         <RouterLink to="/scoreboard" class="btn btn-ghost btn-lg">{{ $t('home.hero.btn_scoreboard') }}</RouterLink>
         <RouterLink to="/judges" class="btn btn-ghost btn-lg">{{ $t('home.hero.btn_judge_analysis') }}</RouterLink>
       </div>
-      <RouterLink to="/guide" class="hero-guide-link">{{ $t('home.hero.guide_link') }}</RouterLink>
+      <div class="hero-links">
+        <RouterLink to="/guide" class="hero-guide-link">{{ $t('home.hero.guide_link') }}</RouterLink>
+        <RouterLink to="/register-org" class="hero-guide-link" data-testid="hero-federation">{{ $t('home.hero.federation_link') }}</RouterLink>
+      </div>
 
       <!-- Product-preview mock (decorative) -->
       <div class="preview" aria-hidden="true">
@@ -77,12 +106,40 @@ onMounted(() => {
       </div>
     </header>
 
-    <!-- Live strip -->
-    <div class="live-strip">
-      <span class="live-pill">{{ $t('home.live_strip.pill') }}</span>
-      <span class="live-text">{{ $t('home.live_strip.text') }}</span>
-      <RouterLink to="/scoreboard" class="btn btn-ghost btn-sm">{{ $t('home.live_strip.watch') }}</RouterLink>
+    <!-- Live strip: red and pulsing only while an event is actually Live. -->
+    <div class="live-strip" data-testid="live-strip" :data-live="isLive ? 'yes' : 'no'">
+      <span :class="['live-pill', { 'is-live': isLive }]">{{ isLive ? $t('home.live_strip.pill') : $t('home.live_strip.pill_idle') }}</span>
+      <span class="live-text">{{ isLive ? $t('home.live_strip.text_live') : $t('home.live_strip.text') }}</span>
+      <RouterLink to="/scoreboard" class="btn btn-ghost btn-sm">{{ isLive ? $t('home.live_strip.watch') : $t('home.live_strip.browse') }}</RouterLink>
     </div>
+
+    <!-- For clubs: the three steps from nothing to a first meet, and the
+         promise that matters most to a club starting before its federation. -->
+    <section class="section clubs" data-testid="for-clubs">
+      <div class="section-label">{{ $t('home.clubs.section_label') }}</div>
+      <div class="how-steps clubs-steps">
+        <div class="how-step">
+          <div class="step-num">01</div>
+          <div class="step-title">{{ $t('home.clubs.step1_title') }}</div>
+          <div class="step-desc">{{ $t('home.clubs.step1_desc') }}</div>
+        </div>
+        <div class="how-step">
+          <div class="step-num">02</div>
+          <div class="step-title">{{ $t('home.clubs.step2_title') }}</div>
+          <div class="step-desc">{{ $t('home.clubs.step2_desc') }}</div>
+        </div>
+        <div class="how-step">
+          <div class="step-num">03</div>
+          <div class="step-title">{{ $t('home.clubs.step3_title') }}</div>
+          <div class="step-desc">{{ $t('home.clubs.step3_desc') }}</div>
+        </div>
+      </div>
+      <p class="clubs-note">{{ $t('home.clubs.note') }}</p>
+      <div class="clubs-cta">
+        <RouterLink to="/register" class="btn btn-primary">{{ $t('home.hero.btn_start_club') }}</RouterLink>
+        <RouterLink to="/guide/quick-start" class="btn btn-ghost">{{ $t('guide.next.bookmark_quickstart') }}</RouterLink>
+      </div>
+    </section>
 
     <!-- Features -->
     <section class="section">
@@ -197,7 +254,7 @@ onMounted(() => {
         <div class="footer-links">
           <RouterLink to="/login">{{ $t('home.footer.sign_in') }}</RouterLink>
           <RouterLink to="/register">{{ $t('home.footer.register') }}</RouterLink>
-          <RouterLink to="/register-org">{{ $t('home.footer.register_federation') }}</RouterLink>
+          <RouterLink to="/register-org" data-testid="footer-federation">{{ $t('home.footer.register_federation') }}</RouterLink>
           <RouterLink to="/scoreboard">{{ $t('home.footer.scoreboard') }}</RouterLink>
           <RouterLink to="/guide">{{ $t('home.footer.user_guide') }}</RouterLink>
           <RouterLink to="/privacy">{{ $t('legal.privacy_title') }}</RouterLink>
@@ -268,8 +325,12 @@ onMounted(() => {
 }
 .hero-cta { display: flex; gap: 0.7rem; flex-wrap: wrap; justify-content: center; }
 .btn-lg { padding: 0.7rem 1.4rem; font-size: 14px; }
+.hero-links {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem 1.5rem;
+  margin-top: 1.25rem;
+}
 .hero-guide-link {
-  display: inline-block; margin-top: 1.25rem;
+  display: inline-block;
   font-size: 13px; color: var(--fg-2); text-decoration: none;
   border-bottom: 1px dashed transparent; transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
@@ -320,10 +381,15 @@ onMounted(() => {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 11.5px; font-weight: 600;
   padding: 0.2rem 0.6rem; border-radius: var(--radius-pill);
-  background: var(--danger-bg); color: var(--danger-fg);
+  background: var(--accent-soft); color: var(--accent);
 }
-.live-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--danger-solid); animation: pulse-red 2s infinite; }
+.live-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.live-pill.is-live { background: var(--danger-bg); color: var(--danger-fg); }
+.live-pill.is-live::before { background: var(--danger-solid); animation: pulse-red 2s infinite; }
 @keyframes pulse-red { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) {
+  .live-pill.is-live::before { animation: none; }
+}
 .live-text { font-size: 14px; font-weight: 500; color: var(--fg-2); }
 
 /* ── Sections ── */
@@ -354,6 +420,15 @@ onMounted(() => {
   padding: 0.15rem 0.55rem; border-radius: var(--radius-pill);
 }
 .feat-tag .d { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* ── For clubs ── */
+.clubs { max-width: 1000px; padding-bottom: 1.5rem; }
+.how-steps.clubs-steps { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+.clubs-note {
+  max-width: 680px; margin: 2rem auto 0; text-align: center;
+  font-size: 14px; line-height: 1.6; color: var(--fg-2);
+}
+.clubs-cta { display: flex; gap: 0.7rem; flex-wrap: wrap; justify-content: center; margin-top: 1.5rem; }
 
 /* ── How it works ── */
 .how { max-width: 1000px; }

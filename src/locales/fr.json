@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Plateforme de gestion de compétitions",
-      "tagline": "Gestion complète des compétitions de plongeon — de la configuration de l'événement et la soumission des listes de plongeons jusqu'à l'arbitrage en direct, la diffusion des scores et les résultats finaux.",
+      "tagline": "Organisez dès aujourd'hui les compétitions de plongeon de votre club : listes de plongeons, notation en direct sur téléphone, tableau des scores public et résultats. Pas besoin de fédération pour commencer, et quand votre fédération ou votre ligue régionale arrive, l'historique de votre club vous suit.",
       "btn_sign_in": "Se connecter",
       "btn_create_account": "Créer un compte",
       "btn_scoreboard": "Tableau et résultats",
       "btn_judge_analysis": "Analyse des juges",
-      "guide_link": "Nouveau ici ? Lisez le guide rapide de 5 minutes →"
+      "guide_link": "Nouveau ici ? Lisez le guide rapide de 5 minutes →",
+      "btn_start_club": "Créez votre club",
+      "federation_link": "Fédération ou ligue régionale ? Inscrivez votre organisation →"
     },
     "live_strip": {
       "pill": "DIRECT",
       "text": "Le tableau en direct est ouvert à tous — aucune connexion requise",
-      "watch": "Regarder en direct →"
+      "watch": "Regarder en direct →",
+      "pill_idle": "Scores en direct",
+      "text_live": "La notation est en direct en ce moment. Suivez chaque plongeon, sans connexion.",
+      "browse": "Parcourir les résultats →"
     },
     "features": {
       "section_label": "Conçu pour chaque rôle au bord du bassin",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Gestionnaire de compétitions",
       "meet_manager_desc": "Créez des événements, configurez les manches et les panneaux, assignez les juges et gérez toute la structure d'une compétition.",
       "user_manager_title": "Gestionnaire d'utilisateurs",
-      "user_manager_desc": "Approuvez les demandes de rôle et contrôlez l'accès des membres au sein de votre fédération. Chaque changement de rôle passe par un flux de demande."
+      "user_manager_desc": "Approuvez les demandes de rôle et contrôlez l'accès des membres au sein de votre club ou de votre fédération. Chaque changement de rôle passe par un flux de demande."
     },
     "how": {
       "section_label": "Comment se déroule une compétition",
       "step01_title": "Configurer l'événement",
-      "step01_desc": "Le gestionnaire crée les événements, fixe le nombre de manches et de juges, et assigne le panneau.",
+      "step01_desc": "L'organisateur (un administrateur de club ou le gestionnaire de la compétition) crée les épreuves, fixe le nombre de manches et de juges, et assigne le panneau.",
       "step02_title": "Les plongeurs soumettent leur liste",
       "step02_desc": "Chaque plongeur se connecte et soumet sa liste de plongeons. Les coefficients sont récupérés automatiquement depuis le répertoire officiel.",
       "step03_title": "L'arbitrage démarre",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Se connecter",
       "register": "S'inscrire",
-      "register_federation": "Inscrire une fédération",
+      "register_federation": "Pour les fédérations et ligues régionales",
       "scoreboard": "Tableau et résultats",
       "user_guide": "📖 Guide d'utilisation",
       "report_bug": "🐛 Signaler un bug"
+    },
+    "clubs": {
+      "section_label": "Pour les clubs",
+      "step1_title": "Créez votre club",
+      "step1_desc": "Inscrivez-vous, choisissez votre pays et nommez votre club. Vous en êtes l'administrateur dès le départ.",
+      "step2_title": "Invitez plongeurs et juges",
+      "step2_desc": "Envoyez le lien d'inscription à vos membres. Ils choisissent votre club, et vous approuvez qui plonge, juge ou arbitre.",
+      "step3_title": "Organisez votre première compétition",
+      "step3_desc": "Créez les épreuves, pilotez la compétition depuis la salle de contrôle pendant que les juges notent sur leur téléphone, et les résultats sont publiés au fil des plongeons notés.",
+      "note": "Pas besoin de fédération pour commencer. Si votre fédération ou votre ligue régionale rejoint DivingHQ plus tard, elle prend en charge le pays ou la région, et votre club conserve ses compétitions, résultats et records."
     }
   },
   "dashboard": {

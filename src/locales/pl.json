@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Platforma do zarządzania zawodami",
-      "tagline": "Kompleksowe zarządzanie zawodami w skokach do wody — od konfiguracji wydarzenia i przesyłania list skoków po sędziowanie na żywo, transmisję wyników i klasyfikację końcową.",
+      "tagline": "Prowadź zawody w skokach do wody swojego klubu już dziś: listy skoków, ocenianie na żywo z telefonów, publiczna tablica wyników i wyniki. Do startu nie potrzebujesz federacji, a gdy dołączy twoja federacja lub związek regionalny, historia twojego klubu pójdzie za tobą.",
       "btn_sign_in": "Zaloguj się",
       "btn_create_account": "Utwórz konto",
       "btn_scoreboard": "Tablica wyników",
       "btn_judge_analysis": "Analiza sędziów",
-      "guide_link": "Jesteś tu nowy? Przeczytaj 5-minutowy przewodnik →"
+      "guide_link": "Jesteś tu nowy? Przeczytaj 5-minutowy przewodnik →",
+      "btn_start_club": "Załóż swój klub",
+      "federation_link": "Federacja lub związek regionalny? Zarejestruj swoją organizację →"
     },
     "live_strip": {
       "pill": "NA ŻYWO",
       "text": "Tablica wyników na żywo jest dostępna dla każdego — bez logowania",
-      "watch": "Oglądaj na żywo →"
+      "watch": "Oglądaj na żywo →",
+      "pill_idle": "Wyniki na żywo",
+      "text_live": "Właśnie trwa ocenianie na żywo. Śledź każdy skok bez logowania.",
+      "browse": "Przeglądaj wyniki →"
     },
     "features": {
       "section_label": "Stworzone dla każdej roli przy basenie",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Menedżer zawodów",
       "meet_manager_desc": "Twórz wydarzenia, konfiguruj rundy i panele, przypisuj sędziów i zarządzaj całą strukturą zawodów.",
       "user_manager_title": "Menedżer użytkowników",
-      "user_manager_desc": "Zatwierdzaj wnioski o role i kontroluj dostęp członków federacji. Każda zmiana roli przechodzi przez proces wniosku."
+      "user_manager_desc": "Zatwierdzaj wnioski o role i kontroluj dostęp członków w swoim klubie lub federacji. Każda zmiana roli przechodzi przez proces wniosku."
     },
     "how": {
       "section_label": "Jak przebiegają zawody",
       "step01_title": "Skonfiguruj wydarzenie",
-      "step01_desc": "Menedżer zawodów tworzy wydarzenia, ustawia liczbę rund i sędziów oraz przydziela panel.",
+      "step01_desc": "Organizator (administrator klubu lub menedżer zawodów) tworzy wydarzenia, ustawia liczbę rund i sędziów oraz przydziela panel.",
       "step02_title": "Skoczkowie przesyłają listy",
       "step02_desc": "Każdy skoczek loguje się i przesyła swoją listę skoków. Wartości DD są automatycznie pobierane z oficjalnego katalogu.",
       "step03_title": "Ocenianie startuje na żywo",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Zaloguj się",
       "register": "Zarejestruj się",
-      "register_federation": "Zarejestruj federację",
+      "register_federation": "Dla federacji i związków regionalnych",
       "scoreboard": "Tablica wyników",
       "user_guide": "📖 Przewodnik użytkownika",
       "report_bug": "🐛 Zgłoś błąd"
+    },
+    "clubs": {
+      "section_label": "Dla klubów",
+      "step1_title": "Utwórz swój klub",
+      "step1_desc": "Zarejestruj się, wybierz kraj i nazwij swój klub. Od początku jesteś jego administratorem.",
+      "step2_title": "Zaproś skoczków i sędziów",
+      "step2_desc": "Wyślij członkom link do rejestracji. Wybierają twój klub, a ty zatwierdzasz, kto skacze, sędziuje lub jest sędzią głównym.",
+      "step3_title": "Poprowadź pierwsze zawody",
+      "step3_desc": "Przygotuj konkurencje, prowadź zawody z pokoju kontroli, gdy sędziowie oceniają na telefonach, a wyniki publikują się po każdym ocenionym skoku.",
+      "note": "Do startu nie potrzebujesz federacji. Jeśli twoja federacja lub związek regionalny dołączy później do DivingHQ, przejmie prowadzenie kraju lub regionu, a twój klub zachowa swoje zawody, wyniki i rekordy."
     }
   },
   "dashboard": {

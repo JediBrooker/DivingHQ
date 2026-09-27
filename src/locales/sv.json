@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Plattform för tävlingshantering",
-      "tagline": "Helhetslösning för simhoppstävlingar — från evenemangsinställning och inlämning av hopplistor till live-bedömning, sändning av poäng och slutresultat.",
+      "tagline": "Arrangera klubbens simhopptävlingar redan i dag: hopplistor, livebedömning i mobilen, en offentlig resultattavla och resultat. Du behöver inget förbund för att komma igång, och när ditt förbund eller distriktsförbund ansluter följer klubbens historik med.",
       "btn_sign_in": "Logga in",
       "btn_create_account": "Skapa konto",
       "btn_scoreboard": "Resultattavla",
       "btn_judge_analysis": "Domaranalys",
-      "guide_link": "Ny här? Läs guiden på 5 minuter →"
+      "guide_link": "Ny här? Läs guiden på 5 minuter →",
+      "btn_start_club": "Starta din klubb",
+      "federation_link": "Förbund eller distriktsorgan? Registrera din organisation →"
     },
     "live_strip": {
       "pill": "PÅGÅR",
       "text": "Live-resultattavlan är öppen för alla — ingen inloggning krävs",
-      "watch": "Se direktsändning →"
+      "watch": "Se direktsändning →",
+      "pill_idle": "Liveresultat",
+      "text_live": "Bedömningen pågår live just nu. Följ varje hopp, utan inloggning.",
+      "browse": "Bläddra bland resultat →"
     },
     "features": {
       "section_label": "Byggd för varje roll vid bassängkanten",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Tävlingshanterare",
       "meet_manager_desc": "Skapa grenar, konfigurera omgångar och paneler, tilldela domare och hantera tävlingens hela struktur.",
       "user_manager_title": "Användarhantering",
-      "user_manager_desc": "Godkänn rollförfrågningar och styr medlemmarnas åtkomst i ditt förbund. Varje rolländring går via en förfrågningsprocess."
+      "user_manager_desc": "Godkänn rollförfrågningar och styr medlemmarnas åtkomst i din klubb eller ditt förbund. Varje rolländring går via en förfrågningsprocess."
     },
     "how": {
       "section_label": "Så går en tävling till",
       "step01_title": "Sätt upp grenen",
-      "step01_desc": "Tävlingsledaren skapar grenar, anger antal omgångar och domare och tillsätter panelen.",
+      "step01_desc": "Arrangören (en klubbadministratör eller tävlingsledare) skapar grenar, anger antal omgångar och domare och tillsätter panelen.",
       "step02_title": "Hopparna skickar in listor",
       "step02_desc": "Varje hoppare loggar in och skickar in sin hopplista. Svårighetsvärden hämtas automatiskt från den officiella katalogen.",
       "step03_title": "Bedömningen går live",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Logga in",
       "register": "Registrera",
-      "register_federation": "Registrera förbund",
+      "register_federation": "För förbund och distriktsorgan",
       "scoreboard": "Resultattavla",
       "user_guide": "📖 Användarguide",
       "report_bug": "🐛 Rapportera ett fel"
+    },
+    "clubs": {
+      "section_label": "För klubbar",
+      "step1_title": "Skapa din klubb",
+      "step1_desc": "Registrera dig, välj land och ge klubben ett namn. Du är dess administratör från start.",
+      "step2_title": "Bjud in hoppare och domare",
+      "step2_desc": "Skicka registreringslänken till medlemmarna. De väljer din klubb, och du godkänner vem som hoppar, dömer eller är överdomare.",
+      "step3_title": "Arrangera din första tävling",
+      "step3_desc": "Lägg upp grenar, styr tävlingen från kontrollrummet medan domarna ger poäng i mobilen, och resultaten publiceras allt eftersom varje hopp bedöms.",
+      "note": "Du behöver inget förbund för att komma igång. Om ditt förbund eller distriktsförbund ansluter till DivingHQ senare tar det över driften av landet eller regionen, och din klubb behåller sina tävlingar, resultat och rekord."
     }
   },
   "dashboard": {

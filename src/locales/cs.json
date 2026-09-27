@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Platforma pro řízení závodů",
-      "tagline": "Komplexní řízení závodů ve skocích do vody — od přípravy disciplín a odeslání seznamů skoků až po živé bodování, vysílání výsledků a konečné pořadí.",
+      "tagline": "Pořádejte skokanské závody svého klubu už dnes: seznamy skoků, živé hodnocení na telefonech, veřejná výsledková tabule a výsledky. K začátku nepotřebujete federaci, a až se přidá vaše federace nebo krajský svaz, historie vašeho klubu zůstane s vámi.",
       "btn_sign_in": "Přihlásit se",
       "btn_create_account": "Vytvořit účet",
       "btn_scoreboard": "Výsledková tabule a výsledky",
       "btn_judge_analysis": "Analýza rozhodčích",
-      "guide_link": "Jste tu noví? Přečtěte si 5minutovou uživatelskou příručku →"
+      "guide_link": "Jste tu noví? Přečtěte si 5minutovou uživatelskou příručku →",
+      "btn_start_club": "Založte svůj klub",
+      "federation_link": "Jste federace nebo krajský svaz? Zaregistrujte svou organizaci →"
     },
     "live_strip": {
       "pill": "ŽIVĚ",
       "text": "Živá výsledková tabule je přístupná všem — bez přihlášení",
-      "watch": "Sledovat živě →"
+      "watch": "Sledovat živě →",
+      "pill_idle": "Živé výsledky",
+      "text_live": "Právě probíhá živé hodnocení. Sledujte každý skok, bez přihlášení.",
+      "browse": "Procházet výsledky →"
     },
     "features": {
       "section_label": "Vytvořeno pro každou roli u bazénu",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Správa závodů",
       "meet_manager_desc": "Vytvářejte disciplíny, nastavujte kola a velikost panelu, přidělujte rozhodčí a spravujte celou strukturu závodu.",
       "user_manager_title": "Správa uživatelů",
-      "user_manager_desc": "Schvalujte žádosti o role a řiďte přístup členů ve své federaci. Každá změna role prochází schvalovacím procesem."
+      "user_manager_desc": "Schvalujte žádosti o role a řiďte přístup členů ve svém klubu nebo federaci. Každá změna role prochází schvalovacím procesem."
     },
     "how": {
       "section_label": "Jak závod probíhá",
       "step01_title": "Příprava disciplíny",
-      "step01_desc": "Vedoucí závodu vytvoří disciplíny, nastaví počet kol a rozhodčích a sestaví panel.",
+      "step01_desc": "Pořadatel (správce klubu nebo vedoucí závodu) vytvoří disciplíny, nastaví počet kol a rozhodčích a sestaví panel.",
       "step02_title": "Skokani odešlou seznamy",
       "step02_desc": "Každý skokan se přihlásí a odešle svůj seznam skoků. Hodnoty DD se automaticky načtou z oficiálního katalogu.",
       "step03_title": "Bodování naživo",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Přihlásit se",
       "register": "Registrace",
-      "register_federation": "Registrace federace",
+      "register_federation": "Pro federace a krajské svazy",
       "scoreboard": "Výsledková tabule a výsledky",
       "user_guide": "📖 Uživatelská příručka",
       "report_bug": "🐛 Nahlásit chybu"
+    },
+    "clubs": {
+      "section_label": "Pro kluby",
+      "step1_title": "Založte klub",
+      "step1_desc": "Zaregistrujte se, vyberte zemi a pojmenujte svůj klub. Od začátku jste jeho správcem.",
+      "step2_title": "Pozvěte skokany a rozhodčí",
+      "step2_desc": "Pošlete členům odkaz na registraci. Vyberou si váš klub a vy schválíte, kdo skáče, rozhoduje nebo je vrchním rozhodčím.",
+      "step3_title": "Uspořádejte první závody",
+      "step3_desc": "Připravte disciplíny, řiďte závody z řídicí místnosti, zatímco rozhodčí hodnotí na telefonech, a výsledky se zveřejňují po každém skoku.",
+      "note": "K začátku nepotřebujete federaci. Pokud se vaše federace nebo krajský svaz později připojí k DivingHQ, převezme správu země nebo regionu a váš klub si ponechá své závody, výsledky i rekordy."
     }
   },
   "dashboard": {

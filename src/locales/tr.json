@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Yarışma Yönetim Platformu",
-      "tagline": "Uçtan uca atlama yarışması yönetimi — etkinlik kurulumundan ve atlama listesi göndermekten canlı hakemliğe, yayın skorlarına ve nihai sonuçlara kadar.",
+      "tagline": "Kulübünüzün atlama yarışmalarını bugünden itibaren yönetin: atlama listeleri, telefonlardan canlı hakemlik, herkese açık skor tablosu ve sonuçlar. Başlamak için federasyona gerek yok; federasyonunuz ya da bölge kuruluşunuz katıldığında kulübünüzün geçmişi de sizinle gelir.",
       "btn_sign_in": "Giriş Yap",
       "btn_create_account": "Hesap Oluştur",
       "btn_scoreboard": "Skor Tablosu ve Sonuçlar",
       "btn_judge_analysis": "Hakem Analizi",
-      "guide_link": "Yeni mi geldiniz? 5 dakikalık kullanıcı kılavuzunu okuyun →"
+      "guide_link": "Yeni mi geldiniz? 5 dakikalık kullanıcı kılavuzunu okuyun →",
+      "btn_start_club": "Kulübünüzü başlatın",
+      "federation_link": "Federasyon veya bölge kuruluşu musunuz? Kuruluşunuzu kaydedin →"
     },
     "live_strip": {
       "pill": "CANLI",
       "text": "Canlı skor tablosu herkese açık — giriş gerekmez",
-      "watch": "Canlı izle →"
+      "watch": "Canlı izle →",
+      "pill_idle": "Canlı skorlar",
+      "text_live": "Şu anda canlı puanlama yapılıyor. Her atlayışı giriş yapmadan takip edin.",
+      "browse": "Sonuçlara göz atın →"
     },
     "features": {
       "section_label": "Havuzdaki her rol için tasarlandı",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Yarışma Yöneticisi",
       "meet_manager_desc": "Etkinlikler oluşturun, turları ve kurul boyutlarını yapılandırın, hakemleri atayın ve bir yarışmanın tüm yapısını yönetin.",
       "user_manager_title": "Kullanıcı Yöneticisi",
-      "user_manager_desc": "Rol taleplerini onaylayın ve federasyonunuz genelinde üye erişimini kontrol edin. Her rol değişikliği bir talep iş akışından geçer."
+      "user_manager_desc": "Rol taleplerini onaylayın ve kulübünüz ya da federasyonunuz genelinde üye erişimini kontrol edin. Her rol değişikliği bir talep iş akışından geçer."
     },
     "how": {
       "section_label": "Bir yarışma nasıl yürür",
       "step01_title": "Etkinliği kur",
-      "step01_desc": "Yarışma yöneticisi etkinlikleri oluşturur, tur ve hakem sayısını belirler ve kurulu atar.",
+      "step01_desc": "Organizatör (bir kulüp yöneticisi veya yarışma yöneticisi) etkinlikleri oluşturur, tur ve hakem sayısını belirler ve kurulu atar.",
       "step02_title": "Atlamacılar listelerini gönderir",
       "step02_desc": "Her atlamacı giriş yapar ve atlama listesini gönderir. DD değerleri resmî dizinden otomatik olarak çekilir.",
       "step03_title": "Puanlama canlıya geçer",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Giriş Yap",
       "register": "Kayıt Ol",
-      "register_federation": "Federasyon Kaydı",
+      "register_federation": "Federasyonlar ve bölge kuruluşları için",
       "scoreboard": "Skor Tablosu ve Sonuçlar",
       "user_guide": "📖 Kullanıcı Kılavuzu",
       "report_bug": "🐛 Hata bildir"
+    },
+    "clubs": {
+      "section_label": "Kulüpler için",
+      "step1_title": "Kulübünüzü oluşturun",
+      "step1_desc": "Kaydolun, ülkenizi seçin ve kulübünüze bir ad verin. Başından beri kulübün yöneticisi sizsiniz.",
+      "step2_title": "Atlamacıları ve hakemleri davet edin",
+      "step2_desc": "Üyelere kayıt bağlantısını gönderin. Kulübünüzü seçerler; kimin atlayacağını, hakemlik yapacağını veya baş hakem olacağını siz onaylarsınız.",
+      "step3_title": "İlk yarışmanızı düzenleyin",
+      "step3_desc": "Branşları oluşturun, hakemler telefonlarından puan verirken yarışmayı Kontrol Odası'ndan yönetin; sonuçlar her atlayış puanlandıkça yayımlanır.",
+      "note": "Başlamak için federasyona gerek yok. Federasyonunuz ya da bölge kuruluşunuz daha sonra DivingHQ'ya katılırsa ülkenin veya bölgenin yönetimini devralır; kulübünüz yarışmalarını, sonuçlarını ve rekorlarını korur."
     }
   },
   "dashboard": {

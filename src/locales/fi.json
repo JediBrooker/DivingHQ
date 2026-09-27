@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Kilpailujen hallintajärjestelmä",
-      "tagline": "Uimahyppyjen kilpailujen kokonaisvaltainen hallinta — tapahtuman luomisesta ja hyppylistojen lähettämisestä live-tuomarointiin, tulosten lähetykseen ja loppusijoituksiin.",
+      "tagline": "Järjestä seurasi hyppykilpailut jo tänään: hyppylistat, suora tuomarointi puhelimilla, julkinen tulostaulu ja tulokset. Aloittamiseen ei tarvita liittoa, ja kun liittosi tai alueliittosi tulee mukaan, seurasi historia kulkee mukanasi.",
       "btn_sign_in": "Kirjaudu sisään",
       "btn_create_account": "Luo tili",
       "btn_scoreboard": "Tulostaulu ja tulokset",
       "btn_judge_analysis": "Tuomarianalyysi",
-      "guide_link": "Uusi täällä? Lue 5 minuutin opas →"
+      "guide_link": "Uusi täällä? Lue 5 minuutin opas →",
+      "btn_start_club": "Perusta seurasi",
+      "federation_link": "Liitto tai alueellinen järjestö? Rekisteröi organisaatiosi →"
     },
     "live_strip": {
       "pill": "LIVE-LÄHETYS",
       "text": "Live-tulostaulu on avoinna kaikille — sisäänkirjautumista ei tarvita",
-      "watch": "Katso suorana →"
+      "watch": "Katso suorana →",
+      "pill_idle": "Suorat tulokset",
+      "text_live": "Pisteytys on käynnissä juuri nyt. Seuraa jokaista hyppyä ilman kirjautumista.",
+      "browse": "Selaa tuloksia →"
     },
     "features": {
       "section_label": "Suunniteltu jokaiselle roolille altaan reunalla",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Kilpailun hallinta",
       "meet_manager_desc": "Luo tapahtumia, määritä kierrokset ja paneelit, nimeä tuomarit ja hallinnoi kilpailun koko rakennetta.",
       "user_manager_title": "Käyttäjähallinta",
-      "user_manager_desc": "Hyväksy roolipyynnöt ja hallinnoi jäsenten pääsyä liitossasi. Jokainen roolin muutos kulkee pyyntöprosessin kautta."
+      "user_manager_desc": "Hyväksy roolipyynnöt ja hallinnoi jäsenten pääsyä seurassasi tai liitossasi. Jokainen roolin muutos kulkee pyyntöprosessin kautta."
     },
     "how": {
       "section_label": "Näin kilpailu etenee",
       "step01_title": "Aseta tapahtuma",
-      "step01_desc": "Kilpailupäällikkö luo tapahtumat, asettaa kierrosten ja tuomareiden määrän ja nimeää paneelin.",
+      "step01_desc": "Järjestäjä (seuran ylläpitäjä tai kilpailupäällikkö) luo tapahtumat, asettaa kierrosten ja tuomareiden määrän ja nimeää paneelin.",
       "step02_title": "Hyppääjät lähettävät listat",
       "step02_desc": "Jokainen hyppääjä kirjautuu ja lähettää hyppylistansa. DD-arvot haetaan automaattisesti virallisesta luettelosta.",
       "step03_title": "Pisteytys käynnistyy livenä",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Kirjaudu sisään",
       "register": "Rekisteröidy",
-      "register_federation": "Rekisteröi liitto",
+      "register_federation": "Liitoille ja alueliitoille",
       "scoreboard": "Tulostaulu ja tulokset",
       "user_guide": "📖 Käyttöopas",
       "report_bug": "🐛 Ilmoita virheestä"
+    },
+    "clubs": {
+      "section_label": "Seuroille",
+      "step1_title": "Perusta seura",
+      "step1_desc": "Rekisteröidy, valitse maasi ja nimeä seurasi. Olet sen ylläpitäjä alusta asti.",
+      "step2_title": "Kutsu hyppääjät ja tuomarit",
+      "step2_desc": "Lähetä jäsenille rekisteröitymislinkki. He valitsevat seurasi, ja sinä hyväksyt, kuka hyppää, tuomaroi tai toimii ylituomarina.",
+      "step3_title": "Järjestä ensimmäiset kilpailusi",
+      "step3_desc": "Luo lajit, vedä kilpailua ohjaamosta tuomareiden pisteyttäessä puhelimillaan, ja tulokset julkaistaan sitä mukaa kuin hypyt pisteytetään.",
+      "note": "Aloittamiseen ei tarvita liittoa. Jos liittosi tai alueliittosi liittyy DivingHQ:hun myöhemmin, se ottaa maan tai alueen hallintaansa, ja seurasi säilyttää kilpailunsa, tuloksensa ja ennätyksensä."
     }
   },
   "dashboard": {

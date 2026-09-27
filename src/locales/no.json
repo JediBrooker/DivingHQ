@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Plattform for stevnehåndtering",
-      "tagline": "Helhetlig håndtering av stupstevner — fra oppsett av stevnet og innsending av stuplister til live-dømming, sending av poeng og endelige resultater.",
+      "tagline": "Arranger klubbens stupestevner allerede i dag: stupelister, direkte bedømming på mobil, en offentlig resultattavle og resultater. Du trenger ikke et forbund for å komme i gang, og når forbundet eller regionsforbundet ditt blir med, følger klubbens historikk med.",
       "btn_sign_in": "Logg inn",
       "btn_create_account": "Opprett konto",
       "btn_scoreboard": "Resultattavle",
       "btn_judge_analysis": "Dommeranalyse",
-      "guide_link": "Ny her? Les 5-minutters-veiledningen →"
+      "guide_link": "Ny her? Les 5-minutters-veiledningen →",
+      "btn_start_club": "Start klubben din",
+      "federation_link": "Forbund eller regionalt organ? Registrer organisasjonen din →"
     },
     "live_strip": {
       "pill": "DIREKTE",
       "text": "Live-resultattavlen er åpen for alle — ingen innlogging kreves",
-      "watch": "Se direkte →"
+      "watch": "Se direkte →",
+      "pill_idle": "Direkte resultater",
+      "text_live": "Det bedømmes direkte akkurat nå. Følg hvert stup, uten innlogging.",
+      "browse": "Se resultater →"
     },
     "features": {
       "section_label": "Bygget for hver rolle ved bassengkanten",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Stevneadministrator",
       "meet_manager_desc": "Opprett øvelser, konfigurer runder og paneler, tildel dommere og administrer hele stevnets struktur.",
       "user_manager_title": "Brukeradministrasjon",
-      "user_manager_desc": "Godkjenn rolleforespørsler og styr medlemmenes tilgang i forbundet ditt. Hver rolleendring går via en forespørselsflyt."
+      "user_manager_desc": "Godkjenn rolleforespørsler og styr medlemmenes tilgang i klubben eller forbundet ditt. Hver rolleendring går via en forespørselsflyt."
     },
     "how": {
       "section_label": "Slik forløper et stevne",
       "step01_title": "Sett opp øvelsen",
-      "step01_desc": "Stevneleder oppretter øvelser, setter antall runder og dommere og tildeler panelet.",
+      "step01_desc": "Arrangøren (en klubbadministrator eller stevneleder) oppretter øvelser, setter antall runder og dommere og tildeler panelet.",
       "step02_title": "Stupere sender inn lister",
       "step02_desc": "Hver stuper logger inn og sender inn sin stupliste. Vanskelighetsgrader hentes automatisk fra det offisielle registeret.",
       "step03_title": "Dømming går live",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Logg inn",
       "register": "Registrer deg",
-      "register_federation": "Registrer forbund",
+      "register_federation": "For forbund og regionale organer",
       "scoreboard": "Resultattavle",
       "user_guide": "📖 Brukerveiledning",
       "report_bug": "🐛 Rapporter en feil"
+    },
+    "clubs": {
+      "section_label": "For klubber",
+      "step1_title": "Opprett klubben din",
+      "step1_desc": "Registrer deg, velg land og gi klubben et navn. Du er administrator fra første stund.",
+      "step2_title": "Inviter stupere og dommere",
+      "step2_desc": "Send medlemmene registreringslenken. De velger klubben din, og du godkjenner hvem som stuper, dømmer eller er overdommer.",
+      "step3_title": "Arranger ditt første stevne",
+      "step3_desc": "Sett opp øvelser, styr stevnet fra kontrollrommet mens dommerne gir poeng på mobilen, og resultatene publiseres etter hvert som hvert stup er bedømt.",
+      "note": "Du trenger ikke et forbund for å komme i gang. Blir forbundet eller regionsforbundet ditt med i DivingHQ senere, overtar det driften av landet eller regionen, og klubben din beholder stevnene, resultatene og rekordene sine."
     }
   },
   "dashboard": {

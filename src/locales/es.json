@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Plataforma de gestión de competiciones",
-      "tagline": "Gestión integral de competiciones de saltos — desde la configuración del evento y la presentación de listas de saltos hasta el arbitraje en directo, los resultados retransmitidos y la clasificación final.",
+      "tagline": "Organiza hoy mismo las competiciones de saltos de tu club: listas de saltos, puntuación en directo desde el móvil, un marcador público y resultados. No necesitas una federación para empezar, y cuando tu federación o tu federación autonómica se sume, la historia de tu club viene contigo.",
       "btn_sign_in": "Iniciar sesión",
       "btn_create_account": "Crear cuenta",
       "btn_scoreboard": "Marcador y resultados",
       "btn_judge_analysis": "Análisis de jueces",
-      "guide_link": "¿Eres nuevo? Lee la guía rápida de 5 minutos →"
+      "guide_link": "¿Eres nuevo? Lee la guía rápida de 5 minutos →",
+      "btn_start_club": "Crea tu club",
+      "federation_link": "¿Eres una federación u organismo regional? Registra tu organización →"
     },
     "live_strip": {
       "pill": "EN DIRECTO",
       "text": "El marcador en directo está abierto a todos — no requiere registro",
-      "watch": "Ver en directo →"
+      "watch": "Ver en directo →",
+      "pill_idle": "Resultados en directo",
+      "text_live": "Se está puntuando en directo ahora mismo. Sigue cada salto sin iniciar sesión.",
+      "browse": "Ver resultados →"
     },
     "features": {
       "section_label": "Diseñado para cada rol en la piscina",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Gestor de competiciones",
       "meet_manager_desc": "Crea eventos, configura rondas y paneles, asigna jueces y administra la estructura completa de la competición.",
       "user_manager_title": "Gestor de usuarios",
-      "user_manager_desc": "Aprueba solicitudes de rol y controla el acceso de los miembros de tu federación. Todo cambio de rol pasa por un flujo de solicitud."
+      "user_manager_desc": "Aprueba solicitudes de rol y controla el acceso de los miembros de tu club o federación. Todo cambio de rol pasa por un flujo de solicitud."
     },
     "how": {
       "section_label": "Cómo se desarrolla una competición",
       "step01_title": "Configura el evento",
-      "step01_desc": "El gestor crea los eventos, establece el número de rondas y jueces, y asigna el panel.",
+      "step01_desc": "El organizador (un administrador del club o el gestor de la competición) crea los eventos, establece el número de rondas y jueces, y asigna el panel.",
       "step02_title": "Los saltadores envían sus listas",
       "step02_desc": "Cada saltador inicia sesión y envía su lista de saltos. Los valores de DD se importan automáticamente del directorio oficial.",
       "step03_title": "Empieza el arbitraje",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Iniciar sesión",
       "register": "Registrarse",
-      "register_federation": "Registrar federación",
+      "register_federation": "Para federaciones y organismos regionales",
       "scoreboard": "Marcador y resultados",
       "user_guide": "📖 Guía de uso",
       "report_bug": "🐛 Reportar un error"
+    },
+    "clubs": {
+      "section_label": "Para clubes",
+      "step1_title": "Crea tu club",
+      "step1_desc": "Regístrate, elige tu país y ponle nombre a tu club. Eres su administrador desde el principio.",
+      "step2_title": "Invita a saltadores y jueces",
+      "step2_desc": "Envía a los miembros el enlace de registro. Eligen tu club y tú apruebas quién salta, juzga o arbitra.",
+      "step3_title": "Organiza tu primera competición",
+      "step3_desc": "Prepara las pruebas, dirige la competición desde la sala de control mientras los jueces puntúan en sus móviles, y los resultados se publican a medida que se puntúa cada salto.",
+      "note": "No necesitas una federación para empezar. Si tu federación o tu organismo regional se une a DivingHQ más adelante, pasa a gestionar el país o la región, y tu club conserva sus competiciones, resultados y récords."
     }
   },
   "dashboard": {

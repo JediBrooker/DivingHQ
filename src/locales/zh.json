@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "比赛管理平台",
-      "tagline": "端到端的跳水比赛管理 — 从赛事建立、动作单提交，到实况裁判、转播比分及最终成绩。",
+      "tagline": "今天就开始举办俱乐部的跳水比赛：动作清单、手机实时打分、公开记分牌和成绩。起步无需联合会；当你的联合会或州级机构加入时，俱乐部的历史记录会随你保留。",
       "btn_sign_in": "登录",
       "btn_create_account": "创建账户",
       "btn_scoreboard": "记分牌与成绩",
       "btn_judge_analysis": "裁判分析",
-      "guide_link": "初次使用？阅读 5 分钟用户指南 →"
+      "guide_link": "初次使用？阅读 5 分钟用户指南 →",
+      "btn_start_club": "创建你的俱乐部",
+      "federation_link": "联合会或州级机构？注册你的组织 →"
     },
     "live_strip": {
       "pill": "实况",
       "text": "实况记分牌对所有人开放 — 无需登录",
-      "watch": "观看实况 →"
+      "watch": "观看实况 →",
+      "pill_idle": "实时比分",
+      "text_live": "现在正在实时打分。无需登录即可关注每一跳。",
+      "browse": "浏览成绩 →"
     },
     "features": {
       "section_label": "为泳池中每一个角色而生",
@@ -243,12 +248,12 @@
       "meet_manager_title": "赛事经理",
       "meet_manager_desc": "创建项目、配置轮次和裁判组规模、指派裁判，并管理比赛的完整结构。",
       "user_manager_title": "用户管理",
-      "user_manager_desc": "审批角色申请，管理联合会内的成员访问权限。每一次角色变更都通过申请流程进行控制。"
+      "user_manager_desc": "审批角色申请，管理俱乐部或联合会内的成员访问权限。每一次角色变更都通过申请流程进行控制。"
     },
     "how": {
       "section_label": "比赛流程一览",
       "step01_title": "建立赛事",
-      "step01_desc": "赛事经理创建项目、设置轮次和裁判数量，并指派裁判组。",
+      "step01_desc": "组织者（俱乐部管理员或赛事经理）创建项目、设置轮次和裁判数量，并指派裁判组。",
       "step02_title": "运动员提交动作单",
       "step02_desc": "每位运动员登录并提交跳水动作单。难度系数将自动从官方目录获取。",
       "step03_title": "实况打分",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "登录",
       "register": "注册",
-      "register_federation": "注册联合会",
+      "register_federation": "面向联合会和州级机构",
       "scoreboard": "记分牌与成绩",
       "user_guide": "📖 用户指南",
       "report_bug": "🐛 报告错误"
+    },
+    "clubs": {
+      "section_label": "面向俱乐部",
+      "step1_title": "创建俱乐部",
+      "step1_desc": "注册、选择国家并为俱乐部命名。从一开始你就是俱乐部管理员。",
+      "step2_title": "邀请运动员和裁判",
+      "step2_desc": "把注册链接发给成员。他们选择你的俱乐部，由你批准谁担任运动员、裁判或主裁判。",
+      "step3_title": "举办你的第一场比赛",
+      "step3_desc": "设置比赛项目，在裁判用手机打分的同时从控制室推进比赛，每一跳打分完成后成绩即时发布。",
+      "note": "起步无需联合会。如果你的联合会或州级机构日后加入 DivingHQ，它将接管该国家或地区的运营，而你的俱乐部会保留自己的比赛、成绩和纪录。"
     }
   },
   "dashboard": {

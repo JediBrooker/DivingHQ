@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Platform sa pamamahala ng kumpetensya",
-      "tagline": "End-to-end na pamamahala ng diving competition — mula sa pag-setup ng event at pagsumite ng dive list hanggang sa live na pag-judge, broadcast scores, at final results.",
+      "tagline": "Patakbuhin ang mga diving meet ng iyong club simula ngayon: mga dive list, live na paghusga sa telepono, pampublikong scoreboard at mga resulta. Hindi kailangan ng pederasyon para magsimula, at kapag sumali ang iyong pederasyon o panrehiyong samahan, kasama mo pa rin ang kasaysayan ng iyong club.",
       "btn_sign_in": "Mag-sign In",
       "btn_create_account": "Gumawa ng Account",
       "btn_scoreboard": "Scoreboard at Resulta",
       "btn_judge_analysis": "Pagsusuri ng judge",
-      "guide_link": "Bago dito? Basahin ang 5-minutong user guide →"
+      "guide_link": "Bago dito? Basahin ang 5-minutong user guide →",
+      "btn_start_club": "Simulan ang iyong club",
+      "federation_link": "Pederasyon o panrehiyong samahan? Irehistro ang iyong organisasyon →"
     },
     "live_strip": {
       "pill": "KASALUKUYAN",
       "text": "Bukas ang live scoreboard sa lahat — hindi kailangang mag-login",
-      "watch": "Manood Live →"
+      "watch": "Manood Live →",
+      "pill_idle": "Live na iskor",
+      "text_live": "May live na paghusga ngayon. Subaybayan ang bawat dive, walang login.",
+      "browse": "Tingnan ang mga resulta →"
     },
     "features": {
       "section_label": "Ginawa para sa bawat tungkulin sa pool",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Tagapamahala ng meet",
       "meet_manager_desc": "Gumawa ng mga event, i-configure ang mga round at panel size, mag-assign ng judges, at pamahalaan ang buong istruktura ng kumpetensya.",
       "user_manager_title": "Tagapamahala ng user",
-      "user_manager_desc": "Aprubahan ang mga role request at kontrolin ang access ng member sa iyong pederasyon. Bawat pagbabago ng role ay dumadaan sa request workflow."
+      "user_manager_desc": "Aprubahan ang mga role request at kontrolin ang access ng member sa iyong club o pederasyon. Bawat pagbabago ng role ay dumadaan sa request workflow."
     },
     "how": {
       "section_label": "Paano tumatakbo ang isang meet",
       "step01_title": "I-set up ang event",
-      "step01_desc": "Gumagawa ang meet manager ng mga event, nagtatakda ng bilang ng mga round at judge, at nag-aassign ng panel.",
+      "step01_desc": "Ang organizer (isang admin ng club o meet manager) ang gumagawa ng mga event, nagtatakda ng bilang ng mga round at hukom, at nag-aassign ng panel.",
       "step02_title": "Nagsusumite ng list ang mga diver",
       "step02_desc": "Bawat diver ay nag-lo-log in at nagsusumite ng kanyang dive list. Awtomatikong kinukuha ang DD values mula sa opisyal na direktoryo.",
       "step03_title": "Live na ang scoring",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Mag-sign In",
       "register": "Magrehistro",
-      "register_federation": "Magrehistro ng Pederasyon",
+      "register_federation": "Para sa mga pederasyon at panrehiyong samahan",
       "scoreboard": "Scoreboard at Resulta",
       "user_guide": "📖 Gabay ng user",
       "report_bug": "🐛 Mag-ulat ng bug"
+    },
+    "clubs": {
+      "section_label": "Para sa mga club",
+      "step1_title": "Gawin ang iyong club",
+      "step1_desc": "Mag-sign up, piliin ang iyong bansa at pangalanan ang iyong club. Ikaw ang admin nito mula sa simula.",
+      "step2_title": "Imbitahan ang mga maninisid at hukom",
+      "step2_desc": "Ipadala sa mga miyembro ang sign-up link. Pipiliin nila ang iyong club, at ikaw ang mag-aapruba kung sino ang sisisid, huhusga o magiging pangunahing hukom.",
+      "step3_title": "Patakbuhin ang iyong unang meet",
+      "step3_desc": "Ihanda ang mga event, patakbuhin ang meet mula sa Control Room habang nagbibigay ng iskor ang mga hukom sa kanilang telepono, at lumalabas ang mga resulta habang naiiskor ang bawat dive.",
+      "note": "Hindi kailangan ng pederasyon para magsimula. Kapag sumali sa DivingHQ ang iyong pederasyon o panrehiyong samahan, sila na ang mamamahala sa bansa o rehiyon, at mananatili sa iyong club ang mga meet, resulta at rekord nito."
     }
   },
   "dashboard": {

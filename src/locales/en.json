@@ -218,17 +218,22 @@
   "home": {
     "hero": {
       "mark": "Competition Management Platform",
-      "tagline": "End-to-end diving competition management — from event setup and dive list submission through to live judging, broadcast scores, and final results.",
+      "tagline": "Run your club's diving meets today: dive lists, live judging on phones, a public scoreboard and results. No federation needed to start, and when your federation or state body joins, your club's history comes with you.",
       "btn_sign_in": "Sign In",
       "btn_create_account": "Create Account",
       "btn_scoreboard": "Scoreboard & Results",
       "btn_judge_analysis": "Judge Analysis",
-      "guide_link": "New here? Read the 5-minute user guide →"
+      "guide_link": "New here? Read the 5-minute user guide →",
+      "btn_start_club": "Start your club",
+      "federation_link": "Federation or state body? Register your organisation →"
     },
     "live_strip": {
       "pill": "LIVE",
       "text": "Live scoreboard is open to everyone — no login required",
-      "watch": "Watch Live →"
+      "watch": "Watch Live →",
+      "pill_idle": "Live scores",
+      "text_live": "Scoring is live right now. Follow every dive, no login needed.",
+      "browse": "Browse results →"
     },
     "features": {
       "section_label": "Built for every role in the pool",
@@ -243,12 +248,12 @@
       "meet_manager_title": "Meet Manager",
       "meet_manager_desc": "Create events, configure rounds and panel sizes, assign judges, and manage the full structure of a competition.",
       "user_manager_title": "User Manager",
-      "user_manager_desc": "Approve role requests and control member access across your federation. Every role change is gated through a request workflow."
+      "user_manager_desc": "Approve role requests and control member access across your club or federation. Every role change goes through a request workflow."
     },
     "how": {
       "section_label": "How a meet runs",
       "step01_title": "Set up the event",
-      "step01_desc": "The meet manager creates events, sets the number of rounds and judges, and assigns the panel.",
+      "step01_desc": "The organiser (a club admin or meet manager) creates events, sets the number of rounds and judges, and assigns the panel.",
       "step02_title": "Divers submit lists",
       "step02_desc": "Each diver logs in and submits their dive list. DD values are pulled from the official directory automatically.",
       "step03_title": "Scoring goes live",
@@ -259,10 +264,20 @@
     "footer": {
       "sign_in": "Sign In",
       "register": "Register",
-      "register_federation": "Register Federation",
+      "register_federation": "For federations & state bodies",
       "scoreboard": "Scoreboard & Results",
       "user_guide": "📖 User Guide",
       "report_bug": "🐛 Report a bug"
+    },
+    "clubs": {
+      "section_label": "For clubs",
+      "step1_title": "Create your club",
+      "step1_desc": "Sign up, pick your country and name your club. You're its admin from the start.",
+      "step2_title": "Invite divers and judges",
+      "step2_desc": "Send members the sign-up link. They pick your club, and you approve who dives, judges or referees.",
+      "step3_title": "Run your first meet",
+      "step3_desc": "Set up events, run the meet from the Control Room while judges score on their phones, and results publish as each dive is scored.",
+      "note": "No federation needed to start. If your federation or state body joins DivingHQ later, it takes over running the country or region, and your club keeps its meets, results and records."
     }
   },
   "dashboard": {
