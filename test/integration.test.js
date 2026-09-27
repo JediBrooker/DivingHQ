@@ -1582,12 +1582,12 @@ test("email verification: the link signs you in, a lost one can be resent", asyn
 test("new meets default 'divers represent' to the host's level", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   if (!serverReady) return t.skip("server didn't boot — see warning above");
-  const CODE = "SHN";
+  const CODE = "BLM";
   await claimKit.wipe(CODE);
   const state = await setupFixture({ withEvent: false });
   try {
-    const A = await claimKit.founder(CODE, "Jamestown Divers");
-    const clubNight = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Jamestown Club Night" } });
+    const A = await claimKit.founder(CODE, "Gustavia Divers");
+    const clubNight = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Gustavia Club Night" } });
     assert.equal(clubNight.status, 201, JSON.stringify(clubNight.body));
     assert.equal(clubNight.body.host_club_id, A.clubId);
     assert.equal(clubNight.body.represent_as, "club");
@@ -1600,7 +1600,7 @@ test("new meets default 'divers represent' to the host's level", async (t) => {
     // A region admin's meet (defaulted to their only region) goes by region.
     const orgId = (await pool.query("SELECT org_id FROM clubs WHERE id = $1", [A.clubId])).rows[0].org_id;
     const regionId = (await pool.query(
-      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Saint Helena Island', 'SHI') RETURNING id", [orgId],
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Saint-Barthélemy', 'SBH') RETURNING id", [orgId],
     )).rows[0].id;
     const rUser = `int-ra-${crypto.randomBytes(4).toString("hex")}`;
     const reg = await fetchJson("POST", "/api/auth/register", {
@@ -1640,16 +1640,16 @@ test("new meets default 'divers represent' to the host's level", async (t) => {
 test("club setup: a founder's progress, invite parts and short code", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   if (!serverReady) return t.skip("server didn't boot — see warning above");
-  const CODE = "MSR";
+  const CODE = "SXM";
   await claimKit.wipe(CODE);
   const state = await setupFixture({ withEvent: false });
   try {
-    const A = await claimKit.founder(CODE, "Plymouth Divers");
-    const B = await claimKit.founder(CODE, "Brades Divers", { new_club_short_code: "BRD" });
+    const A = await claimKit.founder(CODE, "Philipsburg Divers");
+    const B = await claimKit.founder(CODE, "Simpson Bay Divers", { new_club_short_code: "SBY" });
 
     const fresh = await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token });
     assert.equal(fresh.status, 200, JSON.stringify(fresh.body));
-    assert.equal(fresh.body.name, "Plymouth Divers");
+    assert.equal(fresh.body.name, "Philipsburg Divers");
     assert.equal(fresh.body.country_code, CODE, "invite link needs the country");
     assert.equal(fresh.body.short_code, null);
     assert.equal(fresh.body.claim_state, "unclaimed");
@@ -1665,29 +1665,29 @@ test("club setup: a founder's progress, invite parts and short code", async (t) 
               email: `${member}@example.test`, country_code: CODE, club_id: A.clubId },
     });
     assert.equal(joined.status, 201, JSON.stringify(joined.body));
-    assert.equal((await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Plymouth Club Night" } })).status, 201);
+    assert.equal((await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Philipsburg Club Night" } })).status, 201);
     const later = (await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body;
     assert.equal(later.member_count, 2);
     assert.equal(later.meet_count, 1);
 
     // The code: trimmed, upper-cased, validated, unique within the country.
-    const set = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: " ply " } });
+    const set = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: " phi " } });
     assert.equal(set.status, 200, JSON.stringify(set.body));
-    assert.equal(set.body.short_code, "PLY");
-    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body.short_code, "PLY");
+    assert.equal(set.body.short_code, "PHI");
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/setup`, { token: A.token })).body.short_code, "PHI");
     for (const bad of ["WAY-TOO-LONG", "P L Y", "<b>", 42]) {
       const r = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: bad } });
       assert.equal(r.status, 400, `${JSON.stringify(bad)} should be refused`);
     }
     // A body without the field doesn't quietly clear the code.
     assert.equal((await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: {} })).status, 400);
-    const taken = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: "brd" } });
+    const taken = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: "sby" } });
     assert.equal(taken.status, 409);
     assert.equal(taken.body.code, "short_code_taken");
     const audit = await pool.query(
       "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'club.code_changed'", [A.clubId],
     );
-    assert.deepEqual(audit.rows.map((r) => r.metadata), [{ from: null, to: "PLY" }]);
+    assert.deepEqual(audit.rows.map((r) => r.metadata), [{ from: null, to: "PHI" }]);
     // Clearing it is allowed too.
     const cleared = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: "" } });
     assert.equal(cleared.status, 200);

@@ -18,8 +18,9 @@
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
-// St Pierre & Miquelon: no other spec or seed uses it.
-const COUNTRY = "SPM";
+// French Polynesia: no other spec, test or seed uses it. Specs run in
+// parallel and each wipes its own country, so it has to stay that way.
+const COUNTRY = "PYF";
 
 async function wipeCountry() {
   const orgs = await setup.pool.query("SELECT id FROM organisations WHERE country_code = $1", [COUNTRY]);
@@ -72,11 +73,11 @@ test.afterAll(wipeCountry);
 
 test("a club founder's checklist, invite link, club code and first meet", async ({ page, browser, request }) => {
   await setup.installClickHighlight(page);
-  const F = await founder(request, "Saint-Pierre Divers");
+  const F = await founder(request, "Papeete Divers");
   await signIn(page, F.username);
 
   const panel = page.getByTestId("club-getting-started");
-  await expect(panel).toContainText("Saint-Pierre Divers");
+  await expect(panel).toContainText("Papeete Divers");
   await expect(panel).toContainText("0 of 4 done");
   for (const id of ["meet", "invite", "code", "guide"]) {
     await expect(page.getByTestId(`gs-step-${id}`)).toHaveAttribute("data-done", "false");
@@ -93,21 +94,21 @@ test("a club founder's checklist, invite link, club code and first meet", async 
   const invite = card.getByTestId("club-invite-url");
   await expect(invite).toHaveValue(new RegExp(`/register\\?country=${COUNTRY}&club=${F.clubId}$`));
   const inviteUrl = await invite.inputValue();
-  await card.getByLabel("Club code").fill("spd");
+  await card.getByLabel("Club code").fill("ppt");
   await card.getByRole("button", { name: "Save" }).click();
-  await expect(card.getByLabel("Club code")).toHaveValue("SPD");
+  await expect(card.getByLabel("Club code")).toHaveValue("PPT");
   await expect.poll(async () =>
     (await setup.pool.query("SELECT short_code FROM clubs WHERE id = $1", [F.clubId])).rows[0].short_code,
-  ).toBe("SPD");
+  ).toBe("PPT");
 
   // A new meet defaults to club codes, and Edit meet leaves the fee panels
   // (and their 403s) out entirely for a club admin.
   await page.goto("/manager");
   await page.getByRole("button", { name: /New meet/i }).click();
   await expect(page.locator("#new-meet-represent")).toHaveValue("club");
-  await page.getByPlaceholder("e.g. 2026 National Open").fill("Miquelon Club Night");
+  await page.getByPlaceholder("e.g. 2026 National Open").fill("Tahiti Club Night");
   await page.getByRole("button", { name: /Create meet/i }).click();
-  await page.locator(".mgr-acc-header", { hasText: "Miquelon Club Night" }).click();
+  await page.locator(".mgr-acc-header", { hasText: "Tahiti Club Night" }).click();
   const feeCalls = [];
   page.on("request", (r) => {
     if (/\/fees\/config|\/access-fee|\/bundle\/config/.test(r.url())) feeCalls.push(r.url());
@@ -120,7 +121,7 @@ test("a club founder's checklist, invite link, club code and first meet", async 
   await expect(page.locator(".notify-bar-error")).toHaveCount(0);
   expect(feeCalls).toEqual([]);
   const meetRow = await setup.pool.query(
-    "SELECT represent_as FROM meets WHERE name = 'Miquelon Club Night' AND host_club_id = $1", [F.clubId],
+    "SELECT represent_as FROM meets WHERE name = 'Tahiti Club Night' AND host_club_id = $1", [F.clubId],
   );
   expect(meetRow.rows[0].represent_as).toBe("club");
 
@@ -169,7 +170,7 @@ test("a club founder's checklist, invite link, club code and first meet", async 
 });
 
 test("invite parameters that don't check out leave the signup form alone", async ({ page, request }) => {
-  const F = await founder(request, "Miquelon Divers");
+  const F = await founder(request, "Moorea Divers");
   await page.goto("/register?country=ZZZ&club=not-a-club");
   const country = page.locator("select").first();
   await expect(country).toBeVisible();
