@@ -305,7 +305,14 @@ for (const [file, type] of [["robots.txt", "text/plain"], ["sitemap.xml", "appli
   });
 }
 
-// Serve the built Vue app (run `npm run build` before starting the server)
+// Serve the built Vue app (run `npm run build` before starting the server).
+// Everything under /assets is a Vite output with a content hash in its
+// name, so a URL there never changes what it points at. Browsers and the
+// Cloudflare edge can keep those for a year without asking again. The
+// rest of dist/ (index.html, sw.js, the manifest, icons) isn't hashed and
+// keeps the default max-age=0 revalidation. A name that isn't on disk
+// falls through to the next mount and then the SPA fallback, as before.
+app.use("/assets", express.static(path.join(__dirname, "dist", "assets"), { immutable: true, maxAge: "1y" }));
 app.use(express.static(path.join(__dirname, 'dist')))
 
 // [SECTION: DB POOL & JWT_SECRET]
