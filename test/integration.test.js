@@ -2168,3 +2168,29 @@ test("claims: a long name still gets its in-app notice", async (t) => {
     await claimKit.wipe(CODE);
   }
 });
+
+test("claims: only a real voter hears that their address matches the claimant's", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "BES";
+  await claimKit.wipe(CODE);
+  try {
+    const tag = crypto.randomBytes(4).toString("hex");
+    const A = await claimKit.founder(CODE, "Kralendijk Divers");
+    const B = await claimKit.founder(CODE, "Rincon Divers");
+    for (const x of [A, B]) await claimKit.makeEligible(x.clubId);
+    // A member of the country with no vote at all, on the body's domain.
+    const nosy = await claimKit.founder(CODE, "Sorobon Divers");
+    await pool.query("UPDATE users SET email = $2 WHERE id = $1", [nosy.id, `nosy-${tag}@bonairediving-${tag}.example.org`]);
+
+    const fed = await claimKit.claim({ org_name: "Bonaire Diving", country_code: CODE, email: `office-${tag}@bonairediving-${tag}.example.org` });
+    assert.equal(fed.res.body.approver, "clubs");
+    await claimKit.verify(fed.id);
+    const id = fed.res.body.claim_id;
+    const probe = await fetchJson("POST", `/api/claims/${id}/vote`, { token: nosy.token, body: { vote: "approve" } });
+    assert.equal(probe.status, 403);
+    assert.doesNotMatch(probe.body.error, /claimant/, "no hint about the claimant's address to someone without a vote");
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
