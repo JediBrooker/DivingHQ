@@ -37,3 +37,14 @@ test("slugFromName falls back when nothing Latin survives", () => {
   assert.equal(slugFromName("中国跳水协会", "org-chn"), "org-chn");
   assert.equal(slugFromName("", "org-tst"), "org-tst");
 });
+
+test("countryFromStored reads what an organisations row can hold", () => {
+  const { countryFromStored, countryByCode } = require("../lib/countries");
+  assert.equal(countryFromStored("WSM")?.a3, "WSM");
+  assert.equal(countryFromStored("WS ")?.a3, "WSM", "char(3) pads a 2-letter code");
+  assert.equal(countryFromStored("ws")?.a3, "WSM");
+  assert.equal(countryFromStored("GER"), null, "IOC codes aren't ISO");
+  assert.equal(countryFromStored(null), null);
+  // User input stays alpha-3 only.
+  assert.equal(countryByCode("WS"), null);
+});

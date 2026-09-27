@@ -24,7 +24,7 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
-const { countryByCode } = require("../lib/countries");
+const { countryByCode, countryFromStored } = require("../lib/countries");
 
 module.exports = function createOrgsRouter({
   pool,
@@ -198,7 +198,9 @@ module.exports = function createOrgsRouter({
             code: "country_required",
           });
         }
-        const country = countryByCode(code);
+        // Stored code, so 'WS' counts as Samoa here too: a pending row the
+        // backfill hasn't reached must not slip past the check below.
+        const country = countryFromStored(code);
         const clubsAccount = await pool.query(
           `SELECT name FROM organisations
             WHERE country_code IN ($1, $2) AND claim_state = 'unclaimed'

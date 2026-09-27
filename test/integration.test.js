@@ -1862,3 +1862,31 @@ test("sysadmin: org countries, and approvals that would split a country", async 
     await claimKit.wipe(CODE);
   }
 });
+
+// Review follow-up to the approval guard: before migration 093 has run, a
+// pending federation can still be stored as 'IM'. It's the Isle of Man all
+// the same, so approving it next to the clubs' IMN account is refused too.
+test("approving a pending org stored with an alpha-2 code can't split its country", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const sys = await claimKit.login("admin", "admin");
+  if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+  const CODE = "IMN";
+  await claimKit.wipe(CODE);
+  await claimKit.wipe("IM");
+  try {
+    await claimKit.founder(CODE, "Douglas Divers");
+    const fed = (await pool.query(
+      `INSERT INTO organisations (name, country_code, slug, status)
+       VALUES ('Manx Diving', 'IM', $1, 'pending') RETURNING id`,
+      [`int-im-${crypto.randomBytes(4).toString("hex")}`],
+    )).rows[0].id;
+    const r = await fetchJson("PUT", `/api/orgs/${fed}/status`, { token: sys.token, body: { status: "active" } });
+    assert.equal(r.status, 409, JSON.stringify(r.body));
+    assert.equal(r.body.code, "country_has_unclaimed_org");
+    assert.equal((await pool.query("SELECT status FROM organisations WHERE id = $1", [fed])).rows[0].status, "pending");
+  } finally {
+    await claimKit.wipe(CODE);
+    await claimKit.wipe("IM");
+  }
+});
