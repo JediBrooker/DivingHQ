@@ -1,6 +1,6 @@
 # Club-first onboarding — design
 
-> **Status:** Phases 1 and 2 built (see §14, §15). Phases 3 and 4 are still design.
+> **Status:** Phases 1 to 3 built (see §14 to §16). Phase 4 is still design.
 > Author: Christian Brooker (with Claude). Last updated: 2026-09-27.
 
 ## 1. Problem
@@ -539,4 +539,69 @@ treat club and region admins alike.
 moves, federation seeding and appointment, and Ontario's admin against
 Ottawa (reachable) and Montreal (not). e2e: a Canadian founder picks a
 province at signup.
+
+## 16. Phase 3 as built
+
+Migration 089 adds `claims`, `claim_voters`, `claim_votes` and
+`platform_settings`. `lib/claims.js` holds the whole lifecycle. The API is
+`routes/claims.js`, and claims open through `POST /api/auth/register-org`.
+
+**Where claims start.** `/register-org` (now country and region pickers,
+plus an optional website) opens a claim instead of a new federation when:
+- the country has an unclaimed account (a national claim), or
+- the body names a region (a region claim). If nobody from the country is
+  on DivingHQ yet, the country account is started first so there's a region
+  to claim.
+
+The claimant gets an ordinary account in that org. A second claim on the
+same target is refused while one is open or escalated.
+
+**Who approves** follows §8.1, with one deviation. A national claim goes to
+the claimed regions if there are enough of them, **otherwise to the clubs
+even when the country has regions**. That keeps more cases off the
+sysadmin's desk. Voters are snapshotted when the claim opens; `claim_voters`
+is an addition to §5 that makes this possible.
+
+**Activation.** A claim is invisible, and nobody is notified, until the
+claimant verifies their email (`activateForUser`, called from verify-email).
+The voting window starts then. Claims that stay unverified for 7 days are
+withdrawn by the sweep.
+
+**Outcomes** follow §8.3 and §8.4. An objection needs a reason, and the
+reason goes to the sysadmin with the escalation. For parent-approved region
+claims, the timeout escalates to the sysadmin. Sysadmin-approved claims just
+wait in their queue.
+
+**On approval**:
+- a national claim renames the org to the body and makes the claimant
+  org_admin (with a token bump);
+- a region claim sets `regions.claimed_name` and makes the claimant a
+  region admin.
+
+Everything that phases 1 and 2 keyed on `claim_state` then switches over
+automatically: role requests go to org admins, register-org stops opening
+claims on that org, and so on. The sysadmin can revoke an approved claim.
+That reverts the target, and a national org gets its country name back.
+
+**Deviations from §8.5:**
+- notifications are in-app only (`claim_vote`, `claim_review` and
+  `claim_decided` in the inbox), with no email yet;
+- club admins in scope aren't offered an after-the-fact "object" link. They
+  contact DivingHQ.
+
+**UI**:
+- `/claims` for voters, federations, the sysadmin and claimants;
+- a dashboard chip for claims waiting on you;
+- a "Claim voting rules" section on `/admin/features` for the five
+  settings;
+- a Club Admin guide step.
+
+**Tests.** Integration covers:
+- a club vote passing;
+- an objection escalating, then sysadmin approve and revoke;
+- a federation deciding a provincial claim;
+- the sweep.
+
+e2e covers a federation claiming via `/register-org` and two clubs voting
+it in on `/claims`.
 

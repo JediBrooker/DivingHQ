@@ -230,6 +230,11 @@ the host club should pass, and use the shared helpers rather than a fresh
 `org_roles.includes` check. `club_admin_of` rides on the login and
 `/api/auth/me` bodies for the SPA; the server never trusts it.
 
+An unclaimed org or region becomes claimed through `lib/claims.js`
+(migration 089), never by editing `claim_state` by hand: approval also
+grants the claimant their role, audit-logs it and notifies the clubs, and a
+revoke has to undo exactly that.
+
 Regions (migration 088) sit one level above clubs: a `region_admins` row
 reaches meets hosted by the region or by any club in it, never another
 region's. Same helpers, same rule. `region_admin_of` rides alongside
@@ -288,6 +293,8 @@ above it.
 | ISO country list (server validation + signup picker) | `countryByCode(a3)` / `countries.json` | `lib/countries.js` |
 | Built-in regions per country, copy them into an org | `catalogFor(a3)` / `materializeRegions(db, orgId, a3)` / `regions.json` | `lib/regions.js` |
 | Approve/reject list for club and region admin pages | `<RoleRequestQueue>` | `src/components/RoleRequestQueue.vue` |
+| Claims lifecycle (open, activate, vote, decide, revoke, sweep) | `lib/claims.js` | `lib/claims.js` |
+| Sysadmin-tunable numeric settings (claim vote rules) | `getAll` / `describeAll` / `set` | `lib/platform-settings.js` |
 
 If you write the third copy of any of these, **stop and consolidate** into
 a helper. The repo has bled time on duplicated patterns.
