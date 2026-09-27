@@ -116,13 +116,16 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
   });
 
   // Inbox notice, best effort: a failed insert never undoes a move.
-  async function notifyUsers(userIds, { title, body, action_url, data }) {
+  // 'region_request' is a club asking, for the region to act on;
+  // 'region_decision' tells the club how it went. Same split as
+  // role_request / role_decision, so only the asks sit under Action.
+  async function notifyUsers(userIds, { title, body, action_url, data, category }) {
     for (const id of userIds) {
       try {
         await pool.query(
           `INSERT INTO notifications (user_id, category, title, body, data, action_url, status)
-           VALUES ($1, 'region_request', $2, $3, $4::jsonb, $5, 'sent')`,
-          [id, String(title).slice(0, 160), body || null, JSON.stringify(data || {}), action_url || null],
+           VALUES ($1, $6, $2, $3, $4::jsonb, $5, 'sent')`,
+          [id, String(title).slice(0, 160), body || null, JSON.stringify(data || {}), action_url || null, category],
         );
       } catch (err) {
         console.error("[region-request] notify failed:", err.message);
@@ -221,6 +224,7 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
               action: "club.region_requested", metadata: { from: club.region_id, to: to.id },
             });
             await notifyUsers(await liveAdminIds("region", to.id, req.user.id), {
+              category: "region_request",
               title: `${club.name} wants to join ${regionName(to)}`,
               body: "Accept or decline it on your region page.",
               action_url: "/region",
@@ -257,6 +261,7 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
       // letting go, or the federation), so the club hears about it.
       if (!club.caller_is_admin) {
         await notifyUsers(await liveAdminIds("club", club.id, req.user.id), {
+          category: "region_decision",
           title: to ? `${club.name} is now in ${regionName(to)}` : `${club.name} was taken out of ${regionName(from)}`,
           body: null,
           action_url: "/club",
@@ -302,6 +307,7 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
       });
       if (!club.caller_is_admin) {
         await notifyUsers(await liveAdminIds("club", club.id, req.user.id), {
+          category: "region_decision",
           title: `${club.claimed_name || club.region_name} declined ${club.name}'s request to join`,
           body: null,
           action_url: "/club",

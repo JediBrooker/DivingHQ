@@ -2013,7 +2013,7 @@ test("club region moves: self-serve between unclaimed regions, both sides agree 
     assert.equal(await regionOf(B.clubId), on);
     assert.equal(await askedFor(B.clubId), null);
     const heard = await pool.query(
-      "SELECT title FROM notifications WHERE user_id = $1 AND category = 'region_request'", [B.id]);
+      "SELECT title FROM notifications WHERE user_id = $1 AND category = 'region_decision'", [B.id]);
     assert.match(heard.rows[0]?.title || "", /now in Diving Ontario/);
 
     // Ontario lets clubs go, but can't pick where they land.
@@ -2059,7 +2059,7 @@ test("unclaimed country: people ask to join a club and its admins say yes", asyn
     assert.equal(ask.status, 201, JSON.stringify(ask.body));
     assert.equal(ask.body.finalised, false);
     const note = await pool.query(
-      "SELECT action_url FROM notifications WHERE user_id = $1 AND category = 'club_change'", [A.id]);
+      "SELECT action_url FROM notifications WHERE user_id = $1 AND category = 'club_join_request'", [A.id]);
     assert.equal(note.rows[0]?.action_url, "/club", "A is told");
 
     // A sees it, B doesn't and can't decide it.
@@ -2078,6 +2078,9 @@ test("unclaimed country: people ask to join a club and its admins say yes", asyn
     const audit = await pool.query(
       "SELECT 1 FROM audit_log WHERE entity_id = $1 AND action = 'user.club_changed'", [D.id]);
     assert.equal(audit.rows.length, 1);
+    // The ask was for A to act on; the answer is only news for D.
+    const dNotes = await pool.query("SELECT category FROM notifications WHERE user_id = $1", [D.id]);
+    assert.deepEqual(dNotes.rows.map((r) => r.category), ["club_change"]);
 
     // Now a member: their diver request is A's to review, and A can make
     // them a co-admin.

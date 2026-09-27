@@ -69,12 +69,15 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
   }
 
   // Best-effort inbox notification, never aborts the parent tx.
-  async function notify(db, userId, { title, body, action_url, data }) {
+  // 'club_change' is the outcome (approved, declined, a link closed) and
+  // files under Operations in the inbox; 'club_join_request' is someone
+  // waiting on the reader to decide, and lands under Action required.
+  async function notify(db, userId, { title, body, action_url, data, category = "club_change" }) {
     try {
       await db.query(
         `INSERT INTO notifications (user_id, category, title, body, data, action_url, status)
-         VALUES ($1, 'club_change', $2, $3, $4::jsonb, $5, 'sent')`,
-        [userId, title, body || null, data ? JSON.stringify(data) : "{}", action_url || null],
+         VALUES ($1, $6, $2, $3, $4::jsonb, $5, 'sent')`,
+        [userId, title, body || null, data ? JSON.stringify(data) : "{}", action_url || null, category],
       );
     } catch (err) {
       console.error("[club-change] notify failed:", err.message);
@@ -284,6 +287,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
       await client.query("COMMIT");
       for (const id of tellIds) {
         await notify(pool, id, {
+          category: "club_join_request",
           title: `${u.full_name} wants to join your club`,
           body: "Approve or decline it on your club page.",
           action_url: "/club",

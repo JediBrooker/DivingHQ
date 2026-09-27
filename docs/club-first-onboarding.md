@@ -547,6 +547,10 @@ side moves a club alone:
   region) on My region. The club's admin gets `403 region_admin_required`.
   The region can let a club go but not pick where it lands.
 
+The notices follow the inbox's ask/outcome split: `region_request` and
+`club_join_request` go to whoever has to decide (Action required);
+`region_decision` and `club_change` tell the other side how it went.
+
 **Region admins** are appointed by the federation's org admin or the
 sysadmin (a region chip on the Clubs screen opens `RegionAdminsModal`).
 State bodies appointing themselves via claims is phase 3. Where there's
