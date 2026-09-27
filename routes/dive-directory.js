@@ -86,18 +86,26 @@ module.exports = function createDiveDirectoryRouter({ pool, verifyToken, require
     try {
       // in_use surfaces "this dive has been filed on a roster or
       // scored in a meet" so the SPA can lock its row from edits /
-      // deletion. The two EXISTS subqueries short-circuit so this
-      // doesn't materially slow the catalog read on large
-      // databases. Core rows commonly hit this on day one of any
+      // deletion. Core rows commonly hit this on day one of any
       // active org; custom rows are independently tracked so a
       // newly added drill stays editable until it's picked up by
       // a diver's list.
+      //
+      // Careful with the shape here. This used to be two correlated
+      // EXISTS inside an OR, which postgres can't turn into a join,
+      // so it seq-scanned all of scores once per catalog row (22s on
+      // a 600k-score db, neither dive_id column is indexed). The
+      // uncorrelated IN lists get built once and hashed. The DISTINCT
+      // matters too: without it the planner sizes the hash off the
+      // raw row count and on a busy prod box (every live score sets
+      // dive_id) it gives up on hashing and goes back to a per-row
+      // scan. With it the estimate is the handful of distinct dives.
       const r = await pool.query(
         `SELECT dd.id, dd.dive_code, dd.height, dd.position, dd.dd,
                 dd.description,
                 dd.is_custom, dd.created_by, dd.created_org_id, dd.created_at,
-                (EXISTS (SELECT 1 FROM competitor_dive_lists cdl WHERE cdl.dive_id = dd.id)
-                 OR EXISTS (SELECT 1 FROM scores s              WHERE s.dive_id   = dd.id))
+                (dd.id IN (SELECT DISTINCT dive_id FROM competitor_dive_lists WHERE dive_id IS NOT NULL)
+                 OR dd.id IN (SELECT DISTINCT dive_id FROM scores WHERE dive_id IS NOT NULL))
                   AS in_use
          FROM dive_directory dd
          ORDER BY dd.is_custom ASC, dd.dive_code ASC, dd.height ASC`,
