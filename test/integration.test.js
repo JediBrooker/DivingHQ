@@ -1890,3 +1890,49 @@ test("approving a pending org stored with an alpha-2 code can't split its countr
     await claimKit.wipe("IM");
   }
 });
+
+// The edges of R19's "every real country is a claim": two federations
+// racing for the same empty country, a country whose clubs' account the
+// sysadmin has paused, and a state body behind a pending federation.
+test("register-org: a race for a new country, a paused country, a region behind a pending org", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const codes = ["JEY", "GGY", "GIB"];
+  for (const c of codes) await claimKit.wipe(c);
+  const count = async (code) =>
+    (await pool.query("SELECT count(*)::int AS n FROM organisations WHERE country_code = $1", [code])).rows[0].n;
+  try {
+    // Both see an empty Jersey. One account comes out of it, and the
+    // loser is told someone's claim is already being decided.
+    const [a, b] = await Promise.all([
+      claimKit.claim({ org_name: "Jersey Diving", country_code: "JEY" }),
+      claimKit.claim({ org_name: "Jersey Aquatics", country_code: "JEY" }),
+    ]);
+    const statuses = [a.res.status, b.res.status].sort();
+    assert.deepEqual(statuses, [201, 409], JSON.stringify([a.res.body, b.res.body]));
+    assert.equal([a, b].find((x) => x.res.status === 409).res.body.code, "claim_in_progress");
+    assert.equal(await count("JEY"), 1);
+    assert.equal([a, b].filter((x) => x.id).length, 1, "the loser's account was rolled back");
+
+    // The sysadmin paused Guernsey's account: no second one beside it.
+    await claimKit.founder("GGY", "St Peter Port Divers");
+    await pool.query("UPDATE organisations SET status = 'suspended' WHERE country_code = 'GGY'");
+    const paused = await claimKit.claim({ org_name: "Guernsey Diving", country_code: "GGY" });
+    assert.equal(paused.res.status, 409, JSON.stringify(paused.res.body));
+    assert.equal(paused.res.body.code, "claim_needs_support");
+    assert.equal(await count("GGY"), 1);
+    assert.equal(paused.id, undefined);
+
+    // A pending federation holds the country against a state body too.
+    await pool.query(
+      `INSERT INTO organisations (name, country_code, slug, status) VALUES ('Gibraltar Diving', 'GIB', $1, 'pending')`,
+      [`int-gib-${crypto.randomBytes(4).toString("hex")}`],
+    );
+    const region = await claimKit.claim({ org_name: "Upper Rock Diving", country_code: "GIB", region_code: "UR" });
+    assert.equal(region.res.status, 409, JSON.stringify(region.res.body));
+    assert.equal(region.res.body.code, "federation_pending");
+    assert.equal(await count("GIB"), 1);
+  } finally {
+    for (const c of codes) await claimKit.wipe(c);
+  }
+});
