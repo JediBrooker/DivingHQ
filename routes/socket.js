@@ -29,6 +29,7 @@
 const jwt = require("jsonwebtoken");
 const createIdempotency = require("../lib/idempotency");
 const { readSessionCookie } = require("../lib/session-cookie");
+const { announceRecords } = require("../lib/records");
 
 module.exports = function attachSocket({
   io,
@@ -832,15 +833,12 @@ module.exports = function attachSocket({
         }
       }
 
-      checkAndApplyRecords({
+      announceRecords({
+        checkAndApplyRecords, io, scoreboardCache,
         eventId:      data.event_id,
         competitorId: data.competitor_id,
         roundNumber:  round,
-      }).then((broken) => {
-        for (const b of broken) {
-          io.to(`event:${data.event_id}`).emit("record_broken", b);
-        }
-      }).catch((e) => console.error("[Records broadcast]", e.message));
+      });
     });
 
     socket.on("announce_score", async (data, ack) => {

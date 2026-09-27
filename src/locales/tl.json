@@ -632,7 +632,9 @@
       "tfa_q": "Paano paganahin ang two-factor authentication?",
       "tfa_a": "Buksan ang <strong>My Profile</strong> → <strong>Security</strong> → <strong>Two-factor authentication</strong> at i-scan ang QR code gamit ang iyong authenticator app (1Password, Authy, Google Authenticator). I-save ang recovery codes sa ligtas na lugar — iyon lang ang paraan para makabalik kung mawala ang iyong phone.",
       "account_q": "Paano palitan ang aking email, password, o burahin ang aking account?",
-      "account_a": "Nasa <strong>My Profile</strong> → <strong>Account settings</strong> lahat. Ang pagpalit ng email ay nangangailangan ng muling pag-verify sa bagong address. Permanente ang pagbura ng iyong account at inaalis nito ang iyong sign-in; mananatili ang mga historical na iskor sa public scoreboard sa ilalim ng rekord ng federation (ina-anonymize kapag hiniling — makipag-ugnayan sa iyong federation admin)."
+      "account_a": "Nasa <strong>My Profile</strong> → <strong>Account settings</strong> lahat. Ang pagpalit ng email ay nangangailangan ng muling pag-verify sa bagong address. Permanente ang pagbura ng iyong account at inaalis nito ang iyong sign-in; mananatili ang mga historical na iskor sa public scoreboard sa ilalim ng rekord ng federation (ina-anonymize kapag hiniling — makipag-ugnayan sa iyong federation admin).",
+      "records_q": "Paano gumagana ang mga rekord?",
+      "records_a": "Kusang naa-update ang mga rekord. Sa sandaling maiskor ng huling hurado ang isang indibidwal na dive, ikinukumpara ito ng DivingHQ sa mga rekord ng club, rehiyon, bansa, at kontinente ng diver, hiwalay para sa kababaihan at kalalakihan, at pinapalitan ang anumang markang nalampasan nito. Nasa pahinang {records_link} ang lahat ng talaan ng rekord, kahit hindi naka-sign in. Hindi opisyal ang isang talaan hangga't hindi ito kine-claim ng namamahalang lupon nito sa DivingHQ, at nagiging opisyal ang parehong mga marka kapag naaprubahan ang claim. Nasa profile ng bawat diver ang kanilang personal best."
     },
     "next": {
       "lede": "Kailangan ng deep-dive version? Sakop ng {guide_link} ang bawat screen, bawat role, bawat patakaran ng World Aquatics na encoded ng app. Ang mga page na sulit i-bookmark:",
@@ -2041,5 +2043,36 @@
     "status_pending": "Naghihintay",
     "status_approved": "Naaprubahan",
     "status_rejected": "Tinanggihan"
+  },
+  "records": {
+    "title": "Mga Rekord",
+    "intro": "Ang pinakamataas na puntos para sa bawat dive, posisyon at taas, na naitala sa mga indibidwal na event na idinaos sa DivingHQ.",
+    "book_label": "Aklat ng rekord",
+    "book_national": "Pambansa",
+    "book_club": "Club",
+    "book_continental": "Kontinental",
+    "gender_label": "Rekord ng kababaihan o kalalakihan",
+    "women": "Kababaihan",
+    "men": "Kalalakihan",
+    "all_heights": "Lahat ng taas",
+    "search": "Dive code, hal. 105 o 5253",
+    "col_dive": "Dive",
+    "col_score": "Puntos",
+    "col_holder": "May-hawak",
+    "col_set_at": "Naitala sa",
+    "unofficial": "Hindi opisyal",
+    "unofficial_body": "Wala pang namamahalang lupon na nag-claim sa {name} sa DivingHQ. Ito ang pinakamahuhusay na marka mula sa mga kompetisyong idinaos dito, at magiging opisyal ang mga ito kapag may nag-claim na.",
+    "claim_cta": "Kayo ba ang namamahalang lupon nito? I-claim ito →",
+    "pick_title": "Pumili ng aklat ng rekord",
+    "pick_body": "Pumili ng bansa, pagkatapos ang pambansa, panrehiyon, pang-club o kontinental na rekord nito.",
+    "empty_title": "Wala pang rekord",
+    "empty_body": "Kusang nabubuo ang mga rekord: ang unang buong naiskor na indibidwal na dive ng bawat uri sa isang DivingHQ na kompetisyon ang nagtatakda nito, at pinapalitan ito ng bawat mas mataas na iskor.",
+    "no_match": "Walang rekord na tumutugma sa mga filter na ito.",
+    "clear_filters": "I-clear ang mga filter",
+    "retry": "Subukang muli",
+    "view": "Mga Rekord →",
+    "chip": "Rekord ng {name}",
+    "chip_prev": "Dating rekord: {score}",
+    "unofficial_tip": "Hindi opisyal hangga't hindi ito kine-claim ng namamahalang lupon sa DivingHQ."
   }
 }

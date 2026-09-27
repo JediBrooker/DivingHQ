@@ -55,6 +55,7 @@ const helmet = require("helmet");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const rateLimit = require("express-rate-limit");
+const { limitRoutes } = require("./lib/scoped-limiter");
 require("dotenv").config();
 
 const logger = require("./lib/logger");
@@ -226,6 +227,12 @@ const exportLimiter = rateLimit({
   skip: skipWhenDisabled,
 });
 
+// Every limiter below is mounted through limitRoutes() so it only
+// counts requests for the router it guards. A bare app.use(limiter,
+// router) counts everything that passes that point in the stack,
+// scoreboard polls and page loads included; lib/scoped-limiter.js has
+// the story.
+//
 // Search-class read endpoints (diver search, paginated diver
 // browse). Authenticated but every signed-in user can call them,
 // which means a freshly-registered spectator can enumerate the
@@ -822,12 +829,12 @@ app.use(require("./routes/classes")({
 // the read pool. 60/min is comfortably above a bridge's legitimate
 // poll cadence (the socket subscribe_venue is the real-time path).
 // =============================================================
-app.use(createSearchLimiter(), require("./routes/venue")({ pool }));
+app.use(limitRoutes(createSearchLimiter(), require("./routes/venue")({ pool })));
 
 // Cross-org diver search + browse + orgs/all live in routes/
 // diver-search.js, extracted to keep server.js manageable. See
 // AGENTS.md for the modularisation plan.
-app.use(createSearchLimiter(), require("./routes/diver-search")({ pool, verifyToken }));
+app.use(limitRoutes(createSearchLimiter(), require("./routes/diver-search")({ pool, verifyToken })));
 
 // =============================================================
 // USER & ROLE MANAGEMENT ROUTES
@@ -1091,8 +1098,14 @@ app.use(require("./routes/late-arrivals")({ pool, requireOrgRole, requireRoleOrE
 // showing values on phone screens). See docs/offline-p1-design.md
 // §Phase 5.
 // =============================================================
+// Built here rather than down in [SECTION: RECORDS] because manual
+// entry completes dives too and needs the record check handed to it.
+const { checkAndApplyRecords, router: recordsRouter } =
+  require("./lib/records")({ pool, readPool, optionalAuth });
+
 app.use(require("./routes/manual-scores")({
   pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate,
+  checkAndApplyRecords,
 }));
 
 // =============================================================
@@ -1129,13 +1142,13 @@ app.use(require("./routes/dive-directory")({ pool, verifyToken, requireOrgRole }
 // and fans out ~12 multi-join aggregate CTEs per request, so an
 // unauth client could otherwise saturate the read pool.
 // =============================================================
-app.use(createSearchLimiter(), require("./routes/diver-profile")({
+app.use(limitRoutes(createSearchLimiter(), require("./routes/diver-profile")({
   pool,
   readPool,
   verifyToken,
   optionalAuth,
   parseDateRange,
-}));
+})));
 
 // =============================================================
 // JUDGE ANALYSIS
@@ -1158,26 +1171,30 @@ app.use(createSearchLimiter(), require("./routes/diver-profile")({
 // COUNT(*) over all scores. Both are public; without a limiter an
 // unauth client can saturate the read pool. searchLimiter (60/min/
 // IP) is well above any legitimate typeahead use of the directory.
-app.use(createSearchLimiter(), require("./routes/judge-analytics")({
+app.use(limitRoutes(createSearchLimiter(), require("./routes/judge-analytics")({
   pool,
   readPool,
   verifyToken,
   optionalAuth,
   parseDateRange,
-}));
+})));
 
 // =============================================================
 // RECORDS
 // [SECTION: RECORDS]
 // Moved into lib/records.js (Phase 2 of the server.js split).
-// The factory exposes both checkAndApplyRecords (called from the
-// socket submit_score handler when a dive completes) and a tiny
-// Express router with the public GET /api/records endpoint. We
-// destructure both here and mount the router immediately.
+// The factory (built above the manual-scores mount) exposes both
+// checkAndApplyRecords (run whenever a dive completes, from the
+// socket submit_score handler and from manual entry) and a tiny
+// Express router with the public GET /api/records endpoint (the
+// /records page), mounted here.
+//
+// It used to sit behind verifyToken. Now that anyone can read it,
+// it gets the same 60/min/IP throttle as the other public reads
+// (profiles, judge analytics, the archives); a person paging
+// through books makes a request per book, nowhere near that.
 // =============================================================
-const { checkAndApplyRecords, router: recordsRouter } =
-  require("./lib/records")({ pool, verifyToken });
-app.use(recordsRouter);
+app.use(limitRoutes(createSearchLimiter(), recordsRouter));
 
 // =============================================================
 // SOCKET ENGINE
@@ -1238,13 +1255,13 @@ setInterval(() => {
 // /api/archive, /api/archive/clubs, /api/archive/:eventId/results
 // extracted into routes/archive.js.
 // =============================================================
-app.use(exportLimiter, require("./routes/archive")({ pool, readPool }));
+app.use(limitRoutes(exportLimiter, require("./routes/archive")({ pool, readPool })));
 
 // DiveRecorder mined archive (dr_* tables): public, read-only
 // browse of historical results imported from diverecorder.co.uk.
 // Anonymous-readable like the live archive; throttled with the same
 // public-read limiter.
-app.use(createSearchLimiter(), require("./routes/dr-archive")({ pool, readPool, requireSystemAdmin }));
+app.use(limitRoutes(createSearchLimiter(), require("./routes/dr-archive")({ pool, readPool, requireSystemAdmin })));
 
 // Optional scheduled DiveRecorder incremental sync. Off by default;
 // set DR_IMPORT_SYNC_HOURS=24 (or any positive number) to pull newly
@@ -1270,7 +1287,7 @@ app.use(createSearchLimiter(), require("./routes/dr-archive")({ pool, readPool, 
 // the local csvCell / csvRow helpers and the World Aquatics trim
 // annotation used by the score sheet.
 // =============================================================
-app.use(exportLimiter, require("./routes/pdf")({ pool }));
+app.use(limitRoutes(exportLimiter, require("./routes/pdf")({ pool })));
 
 // =============================================================
 // JUDGE RANKING ANALYSIS
@@ -1281,7 +1298,7 @@ app.use(exportLimiter, require("./routes/pdf")({ pool }));
 // + PDF exports for federation reporting. See routes/judge-
 // ranking.js for the rationale (public read; v1 individual only).
 // =============================================================
-app.use(exportLimiter, require("./routes/judge-ranking")({ pool }));
+app.use(limitRoutes(exportLimiter, require("./routes/judge-ranking")({ pool })));
 
 // =============================================================
 // PUBLIC DIVER PROFILE
@@ -1291,7 +1308,7 @@ app.use(exportLimiter, require("./routes/judge-ranking")({ pool }));
 // SPA fall-through for browsers). Mounted BEFORE the SPA static
 // fallback so the crawler path can next() into it.
 // =============================================================
-app.use(exportLimiter, require("./routes/public-profile")({ pool, readPool }));
+app.use(limitRoutes(exportLimiter, require("./routes/public-profile")({ pool, readPool })));
 
 // =============================================================
 // SPA FALLBACK (must come after all API routes)

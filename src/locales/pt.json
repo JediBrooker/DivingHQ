@@ -643,7 +643,9 @@
       "tfa_q": "Como ativo a autenticação de dois fatores?",
       "tfa_a": "Abre <strong>O Meu Perfil</strong> → <strong>Segurança</strong> → <strong>Autenticação de dois fatores</strong> e lê o código QR com a tua app de autenticação (1Password, Authy, Google Authenticator). Guarda os códigos de recuperação num sítio seguro — são a única forma de voltar a entrar se perderes o telemóvel.",
       "account_q": "Como altero o meu email, a palavra-passe, ou elimino a minha conta?",
-      "account_a": "Tudo em <strong>O Meu Perfil</strong> → <strong>Definições da conta</strong>. As alterações de email precisam de nova verificação no novo endereço. Eliminar a conta é permanente e remove o teu acesso; as pontuações históricas mantêm-se no marcador público sob o registo da federação (anonimizadas a pedido — contacta o admin da tua federação)."
+      "account_a": "Tudo em <strong>O Meu Perfil</strong> → <strong>Definições da conta</strong>. As alterações de email precisam de nova verificação no novo endereço. Eliminar a conta é permanente e remove o teu acesso; as pontuações históricas mantêm-se no marcador público sob o registo da federação (anonimizadas a pedido — contacta o admin da tua federação).",
+      "records_q": "Como funcionam os recordes?",
+      "records_a": "Os recordes mantêm-se sozinhos. Assim que o último juiz pontua um salto individual, o DivingHQ compara-o com os recordes do clube, regionais, nacionais e continentais do saltador, separados em femininos e masculinos, e substitui qualquer marca que supere. Todas as tabelas de recordes estão na página {records_link}, sem necessidade de iniciar sessão. Uma tabela aparece como não oficial até o respetivo órgão dirigente a reivindicar no DivingHQ, e as mesmas marcas passam a oficiais assim que uma reivindicação é aprovada. Os recordes pessoais estão no perfil de cada saltador."
     },
     "next": {
       "lede": "Precisas da versão completa? O {guide_link} cobre cada ecrã, cada papel, cada regra da World Aquatics que a app implementa. As páginas mais úteis para guardar nos favoritos:",
@@ -2041,5 +2043,36 @@
     "status_pending": "Pendente",
     "status_approved": "Aprovado",
     "status_rejected": "Recusado"
+  },
+  "records": {
+    "title": "Recordes",
+    "intro": "As melhores pontuações de cada salto, posição e altura, obtidas em provas individuais realizadas no DivingHQ.",
+    "book_label": "Livro de recordes",
+    "book_national": "Nacionais",
+    "book_club": "Clube",
+    "book_continental": "Continentais",
+    "gender_label": "Recordes femininos ou masculinos",
+    "women": "Femininos",
+    "men": "Masculinos",
+    "all_heights": "Todas as alturas",
+    "search": "Código do salto, p. ex. 105 ou 5253",
+    "col_dive": "Salto",
+    "col_score": "Pontos",
+    "col_holder": "Detentor",
+    "col_set_at": "Obtido em",
+    "unofficial": "Não oficial",
+    "unofficial_body": "Nenhum órgão dirigente reivindicou ainda {name} no DivingHQ. Estas são as melhores marcas das competições realizadas aqui, e passam a ser oficiais assim que um o fizer.",
+    "claim_cta": "É o seu órgão dirigente? Reivindique-o →",
+    "pick_title": "Escolha um livro de recordes",
+    "pick_body": "Escolha um país e depois os seus recordes nacionais, regionais, de clube ou continentais.",
+    "empty_title": "Ainda não há recordes",
+    "empty_body": "Os recordes estabelecem-se sozinhos: o primeiro salto individual totalmente pontuado de cada tipo numa competição do DivingHQ fixa um, e cada pontuação melhor substitui-o.",
+    "no_match": "Nenhum recorde corresponde a estes filtros.",
+    "clear_filters": "Limpar filtros",
+    "retry": "Tentar novamente",
+    "view": "Recordes →",
+    "chip": "Recorde {name}",
+    "chip_prev": "Recorde anterior: {score}",
+    "unofficial_tip": "Não oficial até o respetivo órgão dirigente o reivindicar no DivingHQ."
   }
 }

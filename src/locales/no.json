@@ -643,7 +643,9 @@
       "tfa_q": "Hvordan slår jeg på tofaktorautentisering?",
       "tfa_a": "Åpne <strong>Min profil</strong> → <strong>Sikkerhet</strong> → <strong>Tofaktorautentisering</strong> og skann QR-koden med autentiseringsappen din (1Password, Authy, Google Authenticator). Lagre gjenopprettingskodene et trygt sted — de er den eneste veien inn igjen hvis du mister telefonen.",
       "account_q": "Hvordan endrer jeg e-post eller passord, eller sletter kontoen min?",
-      "account_a": "Alt sammen under <strong>Min profil</strong> → <strong>Kontoinnstillinger</strong>. Endring av e-post krever ny bekreftelse på den nye adressen. Sletting av kontoen er permanent og fjerner innloggingen din; historiske poengsummer blir stående på den offentlige scoretavlen under forbundets registrering (anonymiseres på forespørsel — kontakt forbundsadministratoren din)."
+      "account_a": "Alt sammen under <strong>Min profil</strong> → <strong>Kontoinnstillinger</strong>. Endring av e-post krever ny bekreftelse på den nye adressen. Sletting av kontoen er permanent og fjerner innloggingen din; historiske poengsummer blir stående på den offentlige scoretavlen under forbundets registrering (anonymiseres på forespørsel — kontakt forbundsadministratoren din).",
+      "records_q": "Hvordan fungerer rekorder?",
+      "records_a": "Rekordene holder seg oppdatert av seg selv. Så snart siste dommer har bedømt et individuelt stup, sammenligner DivingHQ det med stuperens klubb-, regions-, nasjonale og kontinentale rekorder, delt i kvinner og menn, og erstatter hver rekord stupet slår. Alle rekordlistene finnes på siden {records_link}, uten innlogging. En liste står som uoffisiell til det styrende organet har gjort krav på den på DivingHQ, og de samme resultatene blir offisielle så snart et krav er godkjent. Personlige rekorder står på profilen til hver stuper."
     },
     "next": {
       "lede": "Trenger du den dyptgående versjonen? {guide_link} dekker hver skjerm, hver rolle, hver World Aquatics-regel som appen har kodet inn. Sidene som er verdt å bokmerke:",
@@ -2041,5 +2043,36 @@
     "status_pending": "Venter",
     "status_approved": "Godkjent",
     "status_rejected": "Avslått"
+  },
+  "records": {
+    "title": "Rekorder",
+    "intro": "De høyeste poengsummene for hvert stup, hver posisjon og høyde, satt i individuelle øvelser arrangert på DivingHQ.",
+    "book_label": "Rekordliste",
+    "book_national": "Nasjonale",
+    "book_club": "Klubb",
+    "book_continental": "Kontinentale",
+    "gender_label": "Rekorder for kvinner eller menn",
+    "women": "Kvinner",
+    "men": "Menn",
+    "all_heights": "Alle høyder",
+    "search": "Stupkode, f.eks. 105 eller 5253",
+    "col_dive": "Stup",
+    "col_score": "Poeng",
+    "col_holder": "Innehaver",
+    "col_set_at": "Satt i",
+    "unofficial": "Uoffisiell",
+    "unofficial_body": "Ingen styrende organer har gjort krav på {name} på DivingHQ ennå. Dette er de beste resultatene fra stevner arrangert her, og de blir offisielle så snart noen gjør det.",
+    "claim_cta": "Er dere det styrende organet? Gjør krav på det →",
+    "pick_title": "Velg en rekordliste",
+    "pick_body": "Velg et land, og deretter nasjonale, regionale, klubb- eller kontinentale rekorder.",
+    "empty_title": "Ingen rekorder ennå",
+    "empty_body": "Rekorder oppstår av seg selv: det første fullt bedømte individuelle stupet av hver type på et DivingHQ-stevne setter en rekord, og hver bedre poengsum erstatter den.",
+    "no_match": "Ingen rekorder passer til disse filtrene.",
+    "clear_filters": "Fjern filtre",
+    "retry": "Prøv igjen",
+    "view": "Rekorder →",
+    "chip": "{name}-rekord",
+    "chip_prev": "Tidligere rekord: {score}",
+    "unofficial_tip": "Uoffisiell til det styrende organet gjør krav på kontoen på DivingHQ."
   }
 }

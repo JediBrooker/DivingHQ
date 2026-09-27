@@ -643,7 +643,9 @@
       "tfa_q": "Miten otan kaksivaiheisen tunnistuksen käyttöön?",
       "tfa_a": "Avaa <strong>Oma profiili</strong> → <strong>Turvallisuus</strong> → <strong>Kaksivaiheinen tunnistus</strong> ja skannaa QR-koodi todennussovelluksellasi (1Password, Authy, Google Authenticator). Tallenna palautuskoodit turvalliseen paikkaan — ne ovat ainoa tie takaisin, jos kadotat puhelimesi.",
       "account_q": "Miten vaihdan sähköpostini tai salasanani tai poistan tilini?",
-      "account_a": "Kaikki kohdassa <strong>Oma profiili</strong> → <strong>Tilin asetukset</strong>. Sähköpostin vaihto vaatii uuden vahvistuksen uudessa osoitteessa. Tilin poistaminen on pysyvää ja poistaa kirjautumisesi; aiemmat pisteet säilyvät julkisella tulostaululla liiton kirjauksen alla (anonymisoidaan pyynnöstä — ota yhteyttä liittokoordinaattoriisi)."
+      "account_a": "Kaikki kohdassa <strong>Oma profiili</strong> → <strong>Tilin asetukset</strong>. Sähköpostin vaihto vaatii uuden vahvistuksen uudessa osoitteessa. Tilin poistaminen on pysyvää ja poistaa kirjautumisesi; aiemmat pisteet säilyvät julkisella tulostaululla liiton kirjauksen alla (anonymisoidaan pyynnöstä — ota yhteyttä liittokoordinaattoriisi).",
+      "records_q": "Miten ennätykset toimivat?",
+      "records_a": "Ennätykset pitävät itse itsensä ajan tasalla. Heti kun viimeinen tuomari on arvostellut henkilökohtaisen hypyn, DivingHQ vertaa sitä hyppääjän seura-, alue-, kansallisiin ja maanosaennätyksiin, erikseen naisille ja miehille, ja korvaa jokaisen tuloksen, jonka hyppy ylittää. Kaikki ennätysluettelot ovat sivulla {records_link}, ilman kirjautumista. Luettelo on epävirallinen, kunnes sen hallintoelin on ottanut sen haltuunsa DivingHQ:ssa, ja samat tulokset muuttuvat virallisiksi heti, kun vaatimus hyväksytään. Henkilökohtaiset ennätykset näkyvät jokaisen hyppääjän profiilissa."
     },
     "next": {
       "lede": "Tarvitsetko syväluotaavaa versiota? {guide_link} kattaa jokaisen näytön, jokaisen roolin ja jokaisen World Aquatics -säännön, jonka sovellus on koodannut. Kirjanmerkkien arvoiset sivut:",
@@ -2041,5 +2043,36 @@
     "status_pending": "Odottaa",
     "status_approved": "Hyväksytty",
     "status_rejected": "Hylätty"
+  },
+  "records": {
+    "title": "Ennätykset",
+    "intro": "Parhaat pisteet jokaiselle hypylle, asennolle ja korkeudelle, tehty DivingHQ:ssa järjestetyissä henkilökohtaisissa kilpailuissa.",
+    "book_label": "Ennätysluettelo",
+    "book_national": "Kansallinen",
+    "book_club": "Seura",
+    "book_continental": "Maanosa",
+    "gender_label": "Naisten tai miesten ennätykset",
+    "women": "Naiset",
+    "men": "Miehet",
+    "all_heights": "Kaikki korkeudet",
+    "search": "Hypyn koodi, esim. 105 tai 5253",
+    "col_dive": "Hyppy",
+    "col_score": "Pisteet",
+    "col_holder": "Haltija",
+    "col_set_at": "Tehty kilpailussa",
+    "unofficial": "Epävirallinen",
+    "unofficial_body": "Mikään hallintoelin ei ole vielä vaatinut itselleen tiliä {name} DivingHQ:ssa. Nämä ovat parhaat tulokset täällä järjestetyistä kilpailuista, ja ne muuttuvat virallisiksi heti, kun jokin hallintoelin vaatii sen.",
+    "claim_cta": "Oletko sen hallintoelin? Vaadi se →",
+    "pick_title": "Valitse ennätysluettelo",
+    "pick_body": "Valitse maa ja sitten sen kansalliset, alueelliset, seura- tai maanosaennätykset.",
+    "empty_title": "Ei vielä ennätyksiä",
+    "empty_body": "Ennätykset syntyvät itsestään: ensimmäinen täysin arvosteltu henkilökohtainen hyppy kustakin lajista DivingHQ-kilpailussa tekee ennätyksen, ja jokainen parempi tulos korvaa sen.",
+    "no_match": "Mikään ennätys ei vastaa näitä suodattimia.",
+    "clear_filters": "Tyhjennä suodattimet",
+    "retry": "Yritä uudelleen",
+    "view": "Ennätykset →",
+    "chip": "{name}-ennätys",
+    "chip_prev": "Edellinen ennätys: {score}",
+    "unofficial_tip": "Epävirallinen, kunnes hallintoelin ottaa tilin haltuunsa DivingHQ:ssa."
   }
 }

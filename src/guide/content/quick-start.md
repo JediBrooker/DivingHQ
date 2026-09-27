@@ -177,7 +177,7 @@ When the last dive of the last round is scored, the operator clicks **Finalise E
 - The scoreboard switches to a recap layout (podium spotlight, full standings, dive-by-dive breakdown).
 - The event appears in the public **Results Archive** (`/scoreboard` with no event id).
 - PDFs (program, start list, score sheet, results) are one click away.
-- Per-diver profiles update with new PBs, score-trend sparklines, and any new records.
+- Per-diver profiles update with new PBs and score-trend sparklines, and any record the meet set is in the record books at `/records`.
 
 ## Next steps
 

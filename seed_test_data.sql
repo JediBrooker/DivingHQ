@@ -8133,6 +8133,7 @@ INSERT INTO push_subscriptions (user_id, endpoint, p256dh_key, auth_key, user_ag
 -- ---- records (derived from completed individual scores via calc_dive_points) ----
 CREATE TEMP TABLE seed_record_candidates ON COMMIT DROP AS
 SELECT cdl.competitor_id AS user_id, u.org_id, u.club_id, o.continent,
+       public.record_gender(e.gender, u.gender) AS gender,
        e.height, d.dive_code, d.position,
        public.calc_dive_points(arr.scores, e.number_of_judges, d.dd) AS points,
        e.id AS event_id, e.created_at AS set_at
@@ -8144,35 +8145,36 @@ JOIN competitor_dive_lists cdl ON cdl.event_id = arr.event_id AND cdl.competitor
 JOIN dive_directory d ON d.id = cdl.dive_id
 JOIN users u ON u.id = cdl.competitor_id
 JOIN organisations o ON o.id = u.org_id
-WHERE u.org_id IN (SELECT id FROM organisations WHERE slug LIKE 'seed-%');
+WHERE u.org_id IN (SELECT id FROM organisations WHERE slug LIKE 'seed-%')
+  AND public.record_gender(e.gender, u.gender) IS NOT NULL;
 
-INSERT INTO records_personal (user_id, height, dive_code, position, score, event_id, set_at)
-SELECT DISTINCT ON (user_id, height, dive_code, position)
-       user_id, height, dive_code, position, points, event_id, set_at
+INSERT INTO records_personal (user_id, gender, height, dive_code, position, score, event_id, set_at)
+SELECT DISTINCT ON (user_id, gender, height, dive_code, position)
+       user_id, gender, height, dive_code, position, points, event_id, set_at
 FROM seed_record_candidates
-ORDER BY user_id, height, dive_code, position, points DESC
-ON CONFLICT (user_id, height, dive_code, position) DO NOTHING;
+ORDER BY user_id, gender, height, dive_code, position, points DESC
+ON CONFLICT (user_id, gender, height, dive_code, position) DO NOTHING;
 
-INSERT INTO records_federation (org_id, holder_id, height, dive_code, position, score, event_id, set_at)
-SELECT DISTINCT ON (org_id, height, dive_code, position)
-       org_id, user_id, height, dive_code, position, points, event_id, set_at
+INSERT INTO records_federation (org_id, holder_id, gender, height, dive_code, position, score, event_id, set_at)
+SELECT DISTINCT ON (org_id, gender, height, dive_code, position)
+       org_id, user_id, gender, height, dive_code, position, points, event_id, set_at
 FROM seed_record_candidates
-ORDER BY org_id, height, dive_code, position, points DESC
-ON CONFLICT (org_id, height, dive_code, position) DO NOTHING;
+ORDER BY org_id, gender, height, dive_code, position, points DESC
+ON CONFLICT (org_id, gender, height, dive_code, position) DO NOTHING;
 
-INSERT INTO records_club (club_id, holder_id, height, dive_code, position, score, event_id, set_at)
-SELECT DISTINCT ON (club_id, height, dive_code, position)
-       club_id, user_id, height, dive_code, position, points, event_id, set_at
+INSERT INTO records_club (club_id, holder_id, gender, height, dive_code, position, score, event_id, set_at)
+SELECT DISTINCT ON (club_id, gender, height, dive_code, position)
+       club_id, user_id, gender, height, dive_code, position, points, event_id, set_at
 FROM seed_record_candidates WHERE club_id IS NOT NULL
-ORDER BY club_id, height, dive_code, position, points DESC
-ON CONFLICT (club_id, height, dive_code, position) DO NOTHING;
+ORDER BY club_id, gender, height, dive_code, position, points DESC
+ON CONFLICT (club_id, gender, height, dive_code, position) DO NOTHING;
 
-INSERT INTO records_continental (continent, holder_id, height, dive_code, position, score, event_id, set_at)
-SELECT DISTINCT ON (continent, height, dive_code, position)
-       continent, user_id, height, dive_code, position, points, event_id, set_at
+INSERT INTO records_continental (continent, holder_id, gender, height, dive_code, position, score, event_id, set_at)
+SELECT DISTINCT ON (continent, gender, height, dive_code, position)
+       continent, user_id, gender, height, dive_code, position, points, event_id, set_at
 FROM seed_record_candidates WHERE continent IS NOT NULL
-ORDER BY continent, height, dive_code, position, points DESC
-ON CONFLICT (continent, height, dive_code, position) DO NOTHING;
+ORDER BY continent, gender, height, dive_code, position, points DESC
+ON CONFLICT (continent, gender, height, dive_code, position) DO NOTHING;
 
 COMMIT;
 

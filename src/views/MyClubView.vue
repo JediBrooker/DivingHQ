@@ -182,7 +182,11 @@ onMounted(() => {
     </section>
 
     <section v-for="club in clubs" :key="club.id" class="block">
-      <h2 class="block-title">{{ $t('my_club.admins') }} · {{ club.name }}</h2>
+      <div class="block-head">
+        <h2 class="block-title">{{ $t('my_club.admins') }} · {{ club.name }}</h2>
+        <RouterLink :to="{ path: `/records/club/${club.id}`, query: auth.user?.org_id ? { org: auth.user.org_id } : {} }"
+                    class="records-link" :data-testid="`club-records-${club.id}`">{{ $t('records.view') }}</RouterLink>
+      </div>
       <template v-if="clubState[club.id]">
         <!-- Which region the club is in. Same rule as the admins list:
              the club decides where there's no federation. -->
@@ -244,6 +248,8 @@ onMounted(() => {
 .intro { margin: var(--space-1) 0 0; color: var(--fg-3); font-size: var(--text-sm); max-width: 56ch; }
 .block { display: flex; flex-direction: column; gap: var(--space-3); }
 .block-title { font-size: var(--text-h3); font-weight: 600; font-style: normal; color: var(--fg); margin: 0; }
+.block-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+.records-link { font-size: var(--text-sm); font-weight: 600; white-space: nowrap; }
 .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
 .who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

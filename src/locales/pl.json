@@ -643,7 +643,9 @@
       "tfa_q": "Jak włączyć uwierzytelnianie dwuskładnikowe?",
       "tfa_a": "Otwórz <strong>Mój profil</strong> → <strong>Bezpieczeństwo</strong> → <strong>Uwierzytelnianie dwuskładnikowe</strong> i zeskanuj kod QR aplikacją uwierzytelniającą (1Password, Authy, Google Authenticator). Zapisz kody odzyskiwania w bezpiecznym miejscu — to jedyna droga powrotu, jeśli zgubisz telefon.",
       "account_q": "Jak zmienić e-mail, hasło lub usunąć konto?",
-      "account_a": "Wszystko w <strong>Mój profil</strong> → <strong>Ustawienia konta</strong>. Zmiana e-maila wymaga ponownej weryfikacji pod nowym adresem. Usunięcie konta jest trwałe i likwiduje Twój login; historyczne wyniki pozostają na publicznej tablicy wyników w rekordzie federacji (anonimizowane na życzenie — skontaktuj się z administratorem swojej federacji)."
+      "account_a": "Wszystko w <strong>Mój profil</strong> → <strong>Ustawienia konta</strong>. Zmiana e-maila wymaga ponownej weryfikacji pod nowym adresem. Usunięcie konta jest trwałe i likwiduje Twój login; historyczne wyniki pozostają na publicznej tablicy wyników w rekordzie federacji (anonimizowane na życzenie — skontaktuj się z administratorem swojej federacji).",
+      "records_q": "Jak działają rekordy?",
+      "records_a": "Rekordy aktualizują się same. Gdy tylko ostatni sędzia oceni skok indywidualny, DivingHQ porównuje go z rekordami klubowymi, regionalnymi, krajowymi i kontynentalnymi skoczka, osobno dla kobiet i mężczyzn, i zastępuje każdy wynik, który pobije. Wszystkie tabele rekordów są na stronie {records_link}, bez logowania. Tabela jest nieoficjalna, dopóki właściwy organ zarządzający nie przejmie jej w DivingHQ, a te same wyniki stają się oficjalne, gdy tylko roszczenie zostanie zatwierdzone. Rekordy życiowe są w profilu każdego skoczka."
     },
     "next": {
       "lede": "Potrzebujesz pełnej, szczegółowej wersji? {guide_link} omawia każdy ekran, każdą rolę, każdą regułę World Aquatics, którą wspiera aplikacja. Strony, które warto dodać do zakładek:",
@@ -2041,5 +2043,36 @@
     "status_pending": "Oczekuje",
     "status_approved": "Zatwierdzona",
     "status_rejected": "Odrzucona"
+  },
+  "records": {
+    "title": "Rekordy",
+    "intro": "Najlepsze wyniki punktowe dla każdego skoku, pozycji i wysokości, ustanowione w konkurencjach indywidualnych rozgrywanych w DivingHQ.",
+    "book_label": "Księga rekordów",
+    "book_national": "Krajowe",
+    "book_club": "Klubowe",
+    "book_continental": "Kontynentalne",
+    "gender_label": "Rekordy kobiet lub mężczyzn",
+    "women": "Kobiety",
+    "men": "Mężczyźni",
+    "all_heights": "Wszystkie wysokości",
+    "search": "Kod skoku, np. 105 lub 5253",
+    "col_dive": "Skok",
+    "col_score": "Punkty",
+    "col_holder": "Rekordzista",
+    "col_set_at": "Ustanowiony na",
+    "unofficial": "Nieoficjalne",
+    "unofficial_body": "Żaden organ zarządzający nie zgłosił jeszcze roszczenia do {name} w DivingHQ. To najlepsze wyniki z zawodów rozegranych tutaj i staną się oficjalne, gdy tylko ktoś to zrobi.",
+    "claim_cta": "Jesteś jego organem zarządzającym? Zgłoś roszczenie →",
+    "pick_title": "Wybierz księgę rekordów",
+    "pick_body": "Wybierz kraj, a potem jego rekordy krajowe, regionalne, klubowe lub kontynentalne.",
+    "empty_title": "Jeszcze brak rekordów",
+    "empty_body": "Rekordy ustanawiają się same: pierwszy w pełni oceniony skok indywidualny każdego rodzaju na zawodach w DivingHQ ustanawia rekord, a każdy lepszy wynik go zastępuje.",
+    "no_match": "Żaden rekord nie pasuje do tych filtrów.",
+    "clear_filters": "Wyczyść filtry",
+    "retry": "Spróbuj ponownie",
+    "view": "Rekordy →",
+    "chip": "Rekord {name}",
+    "chip_prev": "Poprzedni rekord: {score}",
+    "unofficial_tip": "Nieoficjalny, dopóki właściwy organ zarządzający nie przejmie konta w DivingHQ."
   }
 }

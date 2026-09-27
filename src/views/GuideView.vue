@@ -381,6 +381,15 @@ onBeforeUnmount(() => observer?.disconnect())
             </details>
 
             <details class="guide-faq-item">
+              <summary>{{ $t('guide.faq.records_q') }}</summary>
+              <i18n-t keypath="guide.faq.records_a" tag="div" class="guide-faq-body">
+                <template #records_link>
+                  <RouterLink to="/records">{{ $t('records.title') }}</RouterLink>
+                </template>
+              </i18n-t>
+            </details>
+
+            <details class="guide-faq-item">
               <summary>{{ $t('guide.faq.schedule_q') }}</summary>
               <div class="guide-faq-body" v-html="$t('guide.faq.schedule_a')"></div>
             </details>

@@ -643,7 +643,9 @@
       "tfa_q": "Wie aktiviere ich die Zwei-Faktor-Authentifizierung?",
       "tfa_a": "Öffnen Sie <strong>Mein Profil</strong> → <strong>Sicherheit</strong> → <strong>Zwei-Faktor-Authentifizierung</strong> und scannen Sie den QR-Code mit Ihrer Authenticator-App (1Password, Authy, Google Authenticator). Bewahren Sie die Wiederherstellungscodes an einem sicheren Ort auf — sie sind der einzige Weg zurück, falls Sie Ihr Smartphone verlieren.",
       "account_q": "Wie ändere ich meine E-Mail, mein Passwort oder lösche mein Konto?",
-      "account_a": "Alles unter <strong>Mein Profil</strong> → <strong>Kontoeinstellungen</strong>. E-Mail-Änderungen erfordern eine erneute Bestätigung an der neuen Adresse. Das Löschen Ihres Kontos ist endgültig und entfernt Ihren Login; historische Wertungen bleiben unter dem Eintrag des Verbands auf der öffentlichen Anzeigetafel (auf Anfrage anonymisiert — wenden Sie sich an Ihren Verbandsadmin)."
+      "account_a": "Alles unter <strong>Mein Profil</strong> → <strong>Kontoeinstellungen</strong>. E-Mail-Änderungen erfordern eine erneute Bestätigung an der neuen Adresse. Das Löschen Ihres Kontos ist endgültig und entfernt Ihren Login; historische Wertungen bleiben unter dem Eintrag des Verbands auf der öffentlichen Anzeigetafel (auf Anfrage anonymisiert — wenden Sie sich an Ihren Verbandsadmin).",
+      "records_q": "Wie funktionieren Rekorde?",
+      "records_a": "Rekorde pflegen sich selbst. Sobald der letzte Kampfrichter einen Einzelsprung bewertet hat, gleicht DivingHQ ihn mit den Vereins-, Regional-, National- und Kontinentalrekorden des Springers ab, jeweils getrennt nach Damen und Herren, und ersetzt jede Bestmarke, die er übertrifft. Alle Rekordlisten finden Sie auf der Seite {records_link}, ganz ohne Anmeldung. Eine Liste gilt als inoffiziell, bis der zuständige Verband sie auf DivingHQ beansprucht hat; sobald ein Anspruch bestätigt ist, gelten dieselben Bestmarken als offiziell. Persönliche Bestleistungen stehen im Profil jedes Springers."
     },
     "next": {
       "lede": "Brauchen Sie die ausführliche Version? Das {guide_link} behandelt jeden Bildschirm, jede Rolle und jede World-Aquatics-Regel, die die App umsetzt. Die Seiten, die einen Lesezeichen wert sind:",
@@ -2041,5 +2043,36 @@
     "status_pending": "Ausstehend",
     "status_approved": "Genehmigt",
     "status_rejected": "Abgelehnt"
+  },
+  "records": {
+    "title": "Rekorde",
+    "intro": "Die höchsten Punktzahlen für jeden Sprung, jede Position und jede Höhe, erzielt bei Einzelwettbewerben auf DivingHQ.",
+    "book_label": "Rekordliste",
+    "book_national": "National",
+    "book_club": "Verein",
+    "book_continental": "Kontinental",
+    "gender_label": "Rekorde der Damen oder Herren",
+    "women": "Damen",
+    "men": "Herren",
+    "all_heights": "Alle Höhen",
+    "search": "Sprungcode, z. B. 105 oder 5253",
+    "col_dive": "Sprung",
+    "col_score": "Punkte",
+    "col_holder": "Rekordhalter",
+    "col_set_at": "Aufgestellt bei",
+    "unofficial": "Inoffiziell",
+    "unofficial_body": "Noch kein Verband hat {name} auf DivingHQ beansprucht. Dies sind die besten Leistungen aus Wettkämpfen, die hier ausgetragen wurden, und sie gelten als offiziell, sobald ein Verband das tut.",
+    "claim_cta": "Sind Sie der zuständige Verband? Jetzt beanspruchen →",
+    "pick_title": "Wählen Sie eine Rekordliste",
+    "pick_body": "Wählen Sie ein Land und dann dessen nationale, regionale, Vereins- oder Kontinentalrekorde.",
+    "empty_title": "Noch keine Rekorde",
+    "empty_body": "Rekorde entstehen von selbst: Der erste vollständig bewertete Einzelsprung jeder Art bei einem Wettkampf auf DivingHQ stellt einen auf, und jede bessere Wertung ersetzt ihn.",
+    "no_match": "Keine Rekorde entsprechen diesen Filtern.",
+    "clear_filters": "Filter zurücksetzen",
+    "retry": "Erneut versuchen",
+    "view": "Rekorde →",
+    "chip": "{name}-Rekord",
+    "chip_prev": "Bisheriger Rekord: {score}",
+    "unofficial_tip": "Inoffiziell, bis der zuständige Verband das Konto auf DivingHQ beansprucht."
   }
 }

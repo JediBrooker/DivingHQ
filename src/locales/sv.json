@@ -643,7 +643,9 @@
       "tfa_q": "Hur aktiverar jag tvåfaktorsautentisering?",
       "tfa_a": "Öppna <strong>Min profil</strong> → <strong>Säkerhet</strong> → <strong>Tvåfaktorsautentisering</strong> och skanna QR-koden med din autentiseringsapp (1Password, Authy, Google Authenticator). Spara återställningskoderna på ett säkert ställe — de är enda vägen tillbaka in om du tappar bort mobilen.",
       "account_q": "Hur byter jag e-post, lösenord eller tar bort mitt konto?",
-      "account_a": "Allt finns under <strong>Min profil</strong> → <strong>Kontoinställningar</strong>. E-postbyten kräver ny verifiering på den nya adressen. Att ta bort kontot är permanent och tar bort din inloggning; historiska poäng finns kvar på den publika resultattavlan under förbundets post (anonymiseras på begäran — kontakta din förbundsadministratör)."
+      "account_a": "Allt finns under <strong>Min profil</strong> → <strong>Kontoinställningar</strong>. E-postbyten kräver ny verifiering på den nya adressen. Att ta bort kontot är permanent och tar bort din inloggning; historiska poäng finns kvar på den publika resultattavlan under förbundets post (anonymiseras på begäran — kontakta din förbundsadministratör).",
+      "records_q": "Hur fungerar rekord?",
+      "records_a": "Rekorden håller sig själva uppdaterade. Så snart den sista domaren har bedömt ett individuellt hopp jämför DivingHQ det med hopparens klubb-, regions-, nationella och kontinentala rekord, uppdelat på damer och herrar, och ersätter varje notering som hoppet slår. Alla rekordlistor finns på sidan {records_link}, utan inloggning. En lista räknas som inofficiell tills dess styrande organ har gjort anspråk på den på DivingHQ, och samma resultat blir officiella så snart ett anspråk godkänns. Personbästan finns på varje hoppares profil."
     },
     "next": {
       "lede": "Vill du ha den fördjupade versionen? {guide_link} täcker varje skärm, varje roll och varje World Aquatics-regel som appen kodat in. Sidorna värda att bokmärka:",
@@ -2041,5 +2043,36 @@
     "status_pending": "Väntar",
     "status_approved": "Godkänd",
     "status_rejected": "Avslagen"
+  },
+  "records": {
+    "title": "Rekord",
+    "intro": "De högsta poängen för varje hopp, position och höjd, satta i individuella grenar på tävlingar som körts på DivingHQ.",
+    "book_label": "Rekordlista",
+    "book_national": "Nationella",
+    "book_club": "Klubb",
+    "book_continental": "Kontinentala",
+    "gender_label": "Rekord för damer eller herrar",
+    "women": "Damer",
+    "men": "Herrar",
+    "all_heights": "Alla höjder",
+    "search": "Hoppkod, t.ex. 105 eller 5253",
+    "col_dive": "Hopp",
+    "col_score": "Poäng",
+    "col_holder": "Innehavare",
+    "col_set_at": "Satt vid",
+    "unofficial": "Inofficiellt",
+    "unofficial_body": "Inget styrande organ har gjort anspråk på {name} på DivingHQ ännu. Det här är de bästa resultaten från tävlingar som körts här, och de blir officiella så snart något gör det.",
+    "claim_cta": "Är ni dess styrande organ? Gör anspråk →",
+    "pick_title": "Välj en rekordlista",
+    "pick_body": "Välj ett land och sedan dess nationella, regionala, klubb- eller kontinentala rekord.",
+    "empty_title": "Inga rekord än",
+    "empty_body": "Rekord uppstår av sig själva: det första fullt bedömda individuella hoppet av varje slag på en DivingHQ-tävling sätter ett, och varje bättre poäng ersätter det.",
+    "no_match": "Inga rekord matchar de här filtren.",
+    "clear_filters": "Rensa filter",
+    "retry": "Försök igen",
+    "view": "Rekord →",
+    "chip": "{name}-rekord",
+    "chip_prev": "Tidigare rekord: {score}",
+    "unofficial_tip": "Inofficiellt tills det styrande organet gör anspråk på kontot på DivingHQ."
   }
 }

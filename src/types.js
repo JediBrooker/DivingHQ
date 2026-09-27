@@ -557,6 +557,24 @@
  * @property {StandingsRow[]}   standings  With rank; no public_id / is_tied_on_total here.
  * @property {Object[]}         dives
  * @property {ScoreboardPanelRow[]} panel
+ * @property {ScoreboardRecordMark[]} records  Records this event's dives currently hold.
+ */
+
+/**
+ * @typedef {Object} ScoreboardRecordMark
+ * A record one of this event's dives currently holds. Rides on
+ * GET /api/scoreboard/:eventId and GET /api/archive/:eventId/results as
+ * `records`, and matches a dive by competitor_id + dive_code + position
+ * + score. Personal bests and first marks never appear here.
+ * @property {'club'|'region'|'federation'|'continental'} scope
+ * @property {string}  scope_code   club / region short code, country code, or the continent key
+ * @property {boolean} official     false for an unclaimed region or country
+ * @property {'Male'|'Female'} gender
+ * @property {string}  competitor_id
+ * @property {string}  dive_code
+ * @property {string}  position
+ * @property {number}  score
+ * @property {number}  prev_score   the record this one beat
  */
 
 /**
@@ -565,6 +583,48 @@
  * @property {Object[]}            history
  * @property {ScoreboardUpcomingRow[]} upcoming
  * @property {ScoreboardPanelRow[]} panel
+ * @property {ScoreboardRecordMark[]} records
+ */
+
+// ---- /api/records ------------------------------------------------
+
+/**
+ * @typedef {Object} RecordRow
+ * One row of GET /api/records (public). A bare array of these, sorted by
+ * board height, dive code, position, then gender.
+ *
+ * @property {string}  id
+ * @property {'personal'|'club'|'region'|'federation'|'continental'} scope
+ * @property {string}  scope_id     uuid, or the continent key for 'continental'
+ * @property {string}  scope_name   club / region / federation name, the continent, or the diver for 'personal'
+ * @property {'Male'|'Female'|null} gender  Which book (migration 094). null = an old row that couldn't be resolved; the /records page hides those.
+ * @property {string}  height       board_height, e.g. '3m'
+ * @property {string}  dive_code
+ * @property {string}  position     A / B / C / D
+ * @property {string}  score        numeric, arrives as text
+ * @property {string|null} prev_score  what this record beat; null for a first mark
+ * @property {string}  set_at
+ * @property {string|null} holder_id
+ * @property {string|null} holder_name
+ * @property {string|null} holder_country_code  the holder's federation country
+ * @property {boolean} holder_deleted  the account is gone, so don't link /profile/:id
+ * @property {string|null} event_id  null once the event is deleted
+ * @property {string|null} event_name
+ * @property {boolean} official     false for a region or country nobody has claimed yet
+ * @property {string|null} book_org_id  the federation the club / region / national book belongs to; null for personal and continental
+ * @property {string|null} dd       from the dive directory, arrives as text
+ * @property {string|null} description
+ */
+
+/**
+ * @typedef {Object} ActiveOrg
+ * One row of GET /api/orgs/active (public).
+ * @property {string}      id
+ * @property {string}      name
+ * @property {string|null} country_code
+ * @property {string}      slug
+ * @property {'africa'|'americas'|'asia'|'europe'|'oceania'|null} continent
+ * @property {'claimed'|'unclaimed'} claim_state  unclaimed = a country account the clubs started (migration 087)
  */
 
 // ---- /api/coach/events ------------------------------------------

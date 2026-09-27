@@ -643,7 +643,9 @@
       "tfa_q": "Hvordan slår jeg tofaktorgodkendelse til?",
       "tfa_a": "Åbn <strong>Min profil</strong> → <strong>Sikkerhed</strong> → <strong>Tofaktorgodkendelse</strong> og scan QR-koden med din godkendelses-app (1Password, Authy, Google Authenticator). Gem gendannelseskoderne et sikkert sted — de er den eneste vej tilbage, hvis du mister din telefon.",
       "account_q": "Hvordan ændrer jeg min e-mail eller adgangskode, eller sletter min konto?",
-      "account_a": "Alt sammen under <strong>Min profil</strong> → <strong>Kontoindstillinger</strong>. Ændring af e-mail kræver fornyet bekræftelse på den nye adresse. Sletning af din konto er permanent og fjerner dit login; historiske scoringer bliver stående på den offentlige scoringstavle under forbundets registrering (anonymiseres på anmodning — kontakt din forbundsadministrator)."
+      "account_a": "Alt sammen under <strong>Min profil</strong> → <strong>Kontoindstillinger</strong>. Ændring af e-mail kræver fornyet bekræftelse på den nye adresse. Sletning af din konto er permanent og fjerner dit login; historiske scoringer bliver stående på den offentlige scoringstavle under forbundets registrering (anonymiseres på anmodning — kontakt din forbundsadministrator).",
+      "records_q": "Hvordan fungerer rekorder?",
+      "records_a": "Rekorderne holder sig selv ajour. Så snart den sidste dommer har bedømt et individuelt spring, sammenligner DivingHQ det med udspringerens klub-, regions-, nationale og kontinentale rekorder, delt i kvinder og mænd, og erstatter enhver rekord, springet slår. Alle rekordlister findes på siden {records_link}, uden login. En liste står som uofficiel, indtil dens styrende organ har gjort krav på den på DivingHQ, og de samme resultater tæller som officielle, så snart et krav er godkendt. Personlige rekorder står på hver udspringers profil."
     },
     "next": {
       "lede": "Brug for den dybdegående version? {guide_link} dækker hvert skærmbillede, hver rolle, hver World Aquatics-regel som appen har kodet ind. De sider, der er værd at bogmærke:",
@@ -2041,5 +2043,36 @@
     "status_pending": "Venter",
     "status_approved": "Godkendt",
     "status_rejected": "Afvist"
+  },
+  "records": {
+    "title": "Rekorder",
+    "intro": "De højeste point for hvert spring, hver position og højde, sat ved individuelle konkurrencer afviklet på DivingHQ.",
+    "book_label": "Rekordbog",
+    "book_national": "National",
+    "book_club": "Klub",
+    "book_continental": "Kontinental",
+    "gender_label": "Kvinders eller mænds rekorder",
+    "women": "Kvinder",
+    "men": "Mænd",
+    "all_heights": "Alle højder",
+    "search": "Springkode, f.eks. 105 eller 5253",
+    "col_dive": "Spring",
+    "col_score": "Point",
+    "col_holder": "Indehaver",
+    "col_set_at": "Sat ved",
+    "unofficial": "Uofficiel",
+    "unofficial_body": "Intet styrende organ har endnu gjort krav på {name} på DivingHQ. Det er de bedste resultater fra stævner afviklet her, og de bliver officielle, så snart et gør det.",
+    "claim_cta": "Er I det styrende organ? Gør krav på det →",
+    "pick_title": "Vælg en rekordbog",
+    "pick_body": "Vælg et land og derefter dets nationale, regionale, klub- eller kontinentale rekorder.",
+    "empty_title": "Ingen rekorder endnu",
+    "empty_body": "Rekorder opstår af sig selv: det første fuldt bedømte individuelle spring af hver slags ved et stævne på DivingHQ sætter en, og hver bedre score erstatter den.",
+    "no_match": "Ingen rekorder matcher disse filtre.",
+    "clear_filters": "Ryd filtre",
+    "retry": "Prøv igen",
+    "view": "Rekorder →",
+    "chip": "{name}-rekord",
+    "chip_prev": "Tidligere rekord: {score}",
+    "unofficial_tip": "Uofficiel, indtil det styrende organ gør krav på kontoen på DivingHQ."
   }
 }

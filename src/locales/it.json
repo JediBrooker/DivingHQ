@@ -643,7 +643,9 @@
       "tfa_q": "Come abilito l'autenticazione a due fattori?",
       "tfa_a": "Apra <strong>Il mio profilo</strong> → <strong>Sicurezza</strong> → <strong>Autenticazione a due fattori</strong> e scansioni il codice QR con la sua app di autenticazione (1Password, Authy, Google Authenticator). Salvi i codici di recupero in un luogo sicuro — sono l'unico modo per rientrare se perde il telefono.",
       "account_q": "Come cambio email, password, o elimino il mio account?",
-      "account_a": "Tutto in <strong>Il mio profilo</strong> → <strong>Impostazioni dell'account</strong>. Il cambio email richiede una nuova verifica al nuovo indirizzo. Eliminare l'account è permanente e rimuove l'accesso; i punteggi storici restano sul tabellone pubblico sotto il registro della federazione (anonimizzati su richiesta — contatti l'admin della sua federazione)."
+      "account_a": "Tutto in <strong>Il mio profilo</strong> → <strong>Impostazioni dell'account</strong>. Il cambio email richiede una nuova verifica al nuovo indirizzo. Eliminare l'account è permanente e rimuove l'accesso; i punteggi storici restano sul tabellone pubblico sotto il registro della federazione (anonimizzati su richiesta — contatti l'admin della sua federazione).",
+      "records_q": "Come funzionano i record?",
+      "records_a": "I record si aggiornano da soli. Appena l'ultimo giudice valuta un tuffo individuale, DivingHQ lo confronta con i record di società, regionali, nazionali e continentali del tuffatore, divisi tra femminile e maschile, e sostituisce ogni primato che supera. Tutti gli albi dei record sono nella pagina {records_link}, senza bisogno di accedere. Un albo resta non ufficiale finché il suo organo di governo non lo rivendica su DivingHQ, e gli stessi primati diventano ufficiali appena una rivendicazione viene approvata. I migliori risultati personali sono nel profilo di ogni tuffatore."
     },
     "next": {
       "lede": "Le serve la versione approfondita? Il {guide_link} copre ogni schermata, ogni ruolo, ogni regola World Aquatics che l'app implementa. Le pagine più utili da salvare nei preferiti:",
@@ -2041,5 +2043,36 @@
     "status_pending": "In attesa",
     "status_approved": "Approvata",
     "status_rejected": "Rifiutata"
+  },
+  "records": {
+    "title": "Record",
+    "intro": "I punteggi migliori per ogni tuffo, posizione e altezza, stabiliti in gare individuali disputate su DivingHQ.",
+    "book_label": "Albo dei record",
+    "book_national": "Nazionali",
+    "book_club": "Società",
+    "book_continental": "Continentali",
+    "gender_label": "Record femminili o maschili",
+    "women": "Femminile",
+    "men": "Maschile",
+    "all_heights": "Tutte le altezze",
+    "search": "Codice del tuffo, es. 105 o 5253",
+    "col_dive": "Tuffo",
+    "col_score": "Punti",
+    "col_holder": "Detentore",
+    "col_set_at": "Stabilito a",
+    "unofficial": "Non ufficiale",
+    "unofficial_body": "Nessun organo di governo ha ancora rivendicato {name} su DivingHQ. Sono le migliori prestazioni delle gare disputate qui e diventeranno ufficiali non appena uno lo farà.",
+    "claim_cta": "Sei il suo organo di governo? Rivendicalo →",
+    "pick_title": "Scegli un albo dei record",
+    "pick_body": "Scegli un paese, poi i suoi record nazionali, regionali, di società o continentali.",
+    "empty_title": "Ancora nessun record",
+    "empty_body": "I record si stabiliscono da soli: il primo tuffo individuale valutato per intero di ogni tipo in una gara su DivingHQ ne fissa uno, e ogni punteggio migliore lo sostituisce.",
+    "no_match": "Nessun record corrisponde a questi filtri.",
+    "clear_filters": "Cancella filtri",
+    "retry": "Riprova",
+    "view": "Record →",
+    "chip": "Record {name}",
+    "chip_prev": "Record precedente: {score}",
+    "unofficial_tip": "Non ufficiale finché il relativo organo di governo non lo rivendica su DivingHQ."
   }
 }

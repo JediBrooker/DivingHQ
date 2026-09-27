@@ -643,7 +643,9 @@
       "tfa_q": "Comment activer l'authentification à deux facteurs ?",
       "tfa_a": "Ouvre <strong>Mon profil</strong> → <strong>Sécurité</strong> → <strong>Authentification à deux facteurs</strong> et scanne le code QR avec ton application d'authentification (1Password, Authy, Google Authenticator). Conserve les codes de récupération en lieu sûr — c'est le seul moyen de te reconnecter si tu perds ton téléphone.",
       "account_q": "Comment changer mon e-mail, mon mot de passe, ou supprimer mon compte ?",
-      "account_a": "Tout se passe dans <strong>Mon profil</strong> → <strong>Paramètres du compte</strong>. Un changement d'e-mail demande une nouvelle vérification à la nouvelle adresse. Supprimer ton compte est définitif et retire ta connexion ; les scores historiques restent sur le tableau d'affichage public sous le registre de la fédération (anonymisés sur demande — contacte l'admin de ta fédération)."
+      "account_a": "Tout se passe dans <strong>Mon profil</strong> → <strong>Paramètres du compte</strong>. Un changement d'e-mail demande une nouvelle vérification à la nouvelle adresse. Supprimer ton compte est définitif et retire ta connexion ; les scores historiques restent sur le tableau d'affichage public sous le registre de la fédération (anonymisés sur demande — contacte l'admin de ta fédération).",
+      "records_q": "Comment fonctionnent les records ?",
+      "records_a": "Les records se tiennent à jour tout seuls. Dès que le dernier juge a noté un plongeon individuel, DivingHQ le compare aux records du club, de la région, du pays et du continent du plongeur, chacun séparé entre dames et messieurs, et remplace toute marque qu'il bat. Tous les livres de records sont sur la page {records_link}, sans connexion. Un livre reste non officiel tant que son instance dirigeante ne l'a pas revendiqué sur DivingHQ, et les mêmes marques deviennent officielles dès qu'une revendication est approuvée. Les records personnels figurent sur le profil de chaque plongeur."
     },
     "next": {
       "lede": "Besoin de la version détaillée ? Le {guide_link} couvre chaque écran, chaque rôle, chaque règle World Aquatics que l'app applique. Les pages à mettre en favoris :",
@@ -2041,5 +2043,36 @@
     "status_pending": "En attente",
     "status_approved": "Approuvée",
     "status_rejected": "Refusée"
+  },
+  "records": {
+    "title": "Records",
+    "intro": "Les meilleurs points pour chaque plongeon, position et hauteur, établis lors d'épreuves individuelles organisées sur DivingHQ.",
+    "book_label": "Livre des records",
+    "book_national": "Nationaux",
+    "book_club": "Clubs",
+    "book_continental": "Continentaux",
+    "gender_label": "Records dames ou messieurs",
+    "women": "Dames",
+    "men": "Messieurs",
+    "all_heights": "Toutes les hauteurs",
+    "search": "Code du plongeon, p. ex. 105 ou 5253",
+    "col_dive": "Plongeon",
+    "col_score": "Points obtenus",
+    "col_holder": "Détenteur",
+    "col_set_at": "Établi à",
+    "unofficial": "Non officiel",
+    "unofficial_body": "Aucune instance dirigeante n'a encore revendiqué {name} sur DivingHQ. Ce sont les meilleures performances des compétitions organisées ici, et elles deviendront officielles dès qu'une instance l'aura fait.",
+    "claim_cta": "Vous êtes son instance dirigeante ? Revendiquez-le →",
+    "pick_title": "Choisissez un livre des records",
+    "pick_body": "Choisissez un pays, puis ses records nationaux, régionaux, de club ou continentaux.",
+    "empty_title": "Aucun record pour l'instant",
+    "empty_body": "Les records s'établissent d'eux-mêmes : le premier plongeon individuel entièrement noté de chaque type lors d'une compétition DivingHQ en établit un, et chaque meilleur score le remplace.",
+    "no_match": "Aucun record ne correspond à ces filtres.",
+    "clear_filters": "Effacer les filtres",
+    "retry": "Réessayer",
+    "view": "Voir les records →",
+    "chip": "Record {name}",
+    "chip_prev": "Record précédent : {score}",
+    "unofficial_tip": "Non officiel tant que l'instance dirigeante ne l'a pas revendiqué sur DivingHQ."
   }
 }

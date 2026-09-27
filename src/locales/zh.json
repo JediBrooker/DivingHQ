@@ -632,7 +632,9 @@
       "tfa_q": "如何启用双重验证？",
       "tfa_a": "打开 <strong>我的资料</strong> → <strong>安全</strong> → <strong>双重验证</strong>，然后用您的身份验证器应用（1Password、Authy、Google Authenticator）扫描 QR 码。请将恢复代码保存在安全的地方 — 万一您丢失手机，它们是唯一的找回方式。",
       "account_q": "如何更改我的邮箱、密码，或删除我的账户？",
-      "account_a": "全部在 <strong>我的资料</strong> → <strong>账户设置</strong> 中。更改邮箱需要在新地址重新验证。删除账户是永久性的，会移除您的登录方式；历史成绩将以联合会记录的形式保留在公开记分牌上（如需匿名化请提出申请 — 联系您所在联合会的管理员）。"
+      "account_a": "全部在 <strong>我的资料</strong> → <strong>账户设置</strong> 中。更改邮箱需要在新地址重新验证。删除账户是永久性的，会移除您的登录方式；历史成绩将以联合会记录的形式保留在公开记分牌上（如需匿名化请提出申请 — 联系您所在联合会的管理员）。",
+      "records_q": "纪录是如何运作的？",
+      "records_a": "纪录会自动更新。个人项目的动作一旦由最后一名裁判打完分，DivingHQ 就会将其与该运动员所属俱乐部、地区、国家和洲际的纪录进行比较（女子和男子分开），并替换被超越的成绩。所有纪录都在 {records_link} 页面上，无需登录即可查看。在管理机构于 DivingHQ 上接管之前，纪录显示为非正式；接管申请获批后，同样的成绩即成为正式纪录。个人最佳成绩显示在每位运动员的个人资料中。"
     },
     "next": {
       "lede": "需要深入版本?{guide_link} 涵盖每个屏幕、每个角色、应用编码的每条 World Aquatics 规则。最值得收藏的页面:",
@@ -2041,5 +2043,36 @@
     "status_pending": "等待中",
     "status_approved": "已批准",
     "status_rejected": "已拒绝"
+  },
+  "records": {
+    "title": "纪录",
+    "intro": "在 DivingHQ 举办的个人项目中，每个动作、姿势和高度的最高得分。",
+    "book_label": "纪录册",
+    "book_national": "国家级",
+    "book_club": "俱乐部",
+    "book_continental": "洲际",
+    "gender_label": "女子或男子纪录",
+    "women": "女子",
+    "men": "男子",
+    "all_heights": "所有高度",
+    "search": "动作代码，例如 105 或 5253",
+    "col_dive": "动作",
+    "col_score": "得分",
+    "col_holder": "纪录保持者",
+    "col_set_at": "创造于",
+    "unofficial": "非正式",
+    "unofficial_body": "尚无管理机构在 DivingHQ 上申请接管 {name}。这些是在此举办的比赛中的最佳成绩，一旦有机构接管，它们就会成为正式纪录。",
+    "claim_cta": "您是其管理机构吗？申请接管 →",
+    "pick_title": "请选择纪录册",
+    "pick_body": "选择一个国家，然后选择其国家级、地区、俱乐部或洲际纪录。",
+    "empty_title": "暂无纪录",
+    "empty_body": "纪录自动产生：在 DivingHQ 比赛中，每种动作第一个获得完整评分的个人动作即成为纪录，之后每个更高的得分都会取而代之。",
+    "no_match": "没有符合这些筛选条件的纪录。",
+    "clear_filters": "清除筛选",
+    "retry": "重试",
+    "view": "纪录 →",
+    "chip": "{name}纪录",
+    "chip_prev": "原纪录：{score}",
+    "unofficial_tip": "在其管理机构于 DivingHQ 上接管之前为非正式纪录。"
   }
 }

@@ -39,7 +39,7 @@ Sign out and back in for the change to take effect — the JWT carries the flag.
 
 ## Org admin
 
-Top of the food chain inside one federation — the person whose name is on the records book. They don't usually run meets themselves but they decide who does: promoting meet managers, certifying judges, approving coach-diver links.
+Top of the food chain inside one federation — the person whose name is on the national record book. They don't usually run meets themselves but they decide who does: promoting meet managers, certifying judges, approving coach-diver links.
 
 **Can:**
 - Create events and meets
@@ -47,7 +47,7 @@ Top of the food chain inside one federation — the person whose name is on the 
 - Approve or reject coach⇄diver linking requests
 - Edit or delete any event in their org
 - Set `entries_close_at` on events to enforce registration deadlines
-- Sign off federation records
+- Claim the country's account so its national record book reads as official (records themselves are automatic, there's nothing to sign off)
 - Manage clubs and teams within the federation
 
 ### User Manager — per-user drawer
@@ -155,7 +155,7 @@ Friends, family, sponsors. Often anonymous — no account, no token. Frequently 
 - Open any public scoreboard URL
 - Watch scores update live over the socket as judges submit
 - See only events in Live or Completed status
-- See published records (personal, club, federation)
+- Browse the record books at `/records` (national, state, club, continental) and each diver's personal bests on their profile
 - Browse the Results Archive of completed meets
 
 **Cannot:**

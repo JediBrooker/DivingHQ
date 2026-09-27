@@ -643,7 +643,9 @@
       "tfa_q": "Hogyan kapcsolom be a kétlépcsős hitelesítést?",
       "tfa_a": "Nyissa meg a <strong>Saját profil</strong> → <strong>Biztonság</strong> → <strong>Kétlépcsős hitelesítés</strong> menüt, és olvassa be a QR-kódot a hitelesítő alkalmazásával (1Password, Authy, Google Authenticator). Mentse a helyreállítási kódokat biztonságos helyre — ezek az egyetlen módja a visszajutásnak, ha elveszíti a telefonját.",
       "account_q": "Hogyan módosítom az e-mail-címem, a jelszavam, vagy hogyan törlöm a fiókom?",
-      "account_a": "Mind a <strong>Saját profil</strong> → <strong>Fiókbeállítások</strong> alatt. Az e-mail-cím módosításához újra meg kell erősíteni az új címet. A fiók törlése végleges, és eltávolítja a bejelentkezését; a korábbi pontszámok a nyilvános eredménytáblán maradnak a szövetség nyilvántartása alatt (kérésre anonimizálva — vegye fel a kapcsolatot a szövetségi adminisztrátorral)."
+      "account_a": "Mind a <strong>Saját profil</strong> → <strong>Fiókbeállítások</strong> alatt. Az e-mail-cím módosításához újra meg kell erősíteni az új címet. A fiók törlése végleges, és eltávolítja a bejelentkezését; a korábbi pontszámok a nyilvános eredménytáblán maradnak a szövetség nyilvántartása alatt (kérésre anonimizálva — vegye fel a kapcsolatot a szövetségi adminisztrátorral).",
+      "records_q": "Hogyan működnek a rekordok?",
+      "records_a": "A rekordok maguktól frissülnek. Amint az utolsó bíró pontozta az egyéni ugrást, a DivingHQ összeveti az ugró klub-, regionális, országos és kontinentális rekordjaival, külön a nőknél és a férfiaknál, és lecserél minden eredményt, amelyet megdönt. Minden rekordlista megtalálható a(z) {records_link} oldalon, bejelentkezés nélkül. Egy lista addig nem hivatalos, amíg az illetékes irányító testület igényt nem tart rá a DivingHQ-n; az igény jóváhagyásával ugyanazok az eredmények hivatalossá válnak. Az egyéni csúcsok minden ugró profilján láthatók."
     },
     "next": {
       "lede": "Részletes verzióra van szüksége? A {guide_link} minden képernyőt, minden szerepkört, minden World Aquatics szabályt lefed, amelyet az alkalmazás kódol. A leginkább könyvjelzőzésre érdemes oldalak:",
@@ -2041,5 +2043,36 @@
     "status_pending": "Függőben",
     "status_approved": "Jóváhagyva",
     "status_rejected": "Elutasítva"
+  },
+  "records": {
+    "title": "Rekordok",
+    "intro": "A legmagasabb pontszámok minden ugrásra, helyzetre és magasságra, a DivingHQ-n rendezett egyéni versenyszámokból.",
+    "book_label": "Rekordlista",
+    "book_national": "Országos",
+    "book_club": "Klub",
+    "book_continental": "Kontinentális",
+    "gender_label": "Női vagy férfi rekordok",
+    "women": "Nők",
+    "men": "Férfiak",
+    "all_heights": "Minden magasság",
+    "search": "Ugráskód, pl. 105 vagy 5253",
+    "col_dive": "Ugrás",
+    "col_score": "Pontok",
+    "col_holder": "Csúcstartó",
+    "col_set_at": "Verseny",
+    "unofficial": "Nem hivatalos",
+    "unofficial_body": "Még egyetlen irányító testület sem tartott igényt a(z) {name} fiókra a DivingHQ-n. Ezek az itt rendezett versenyek legjobb eredményei, és hivatalossá válnak, amint egy testület igényt tart rá.",
+    "claim_cta": "Ön az irányító testülete? Tartson rá igényt →",
+    "pick_title": "Válasszon rekordlistát",
+    "pick_body": "Válasszon országot, majd annak országos, regionális, klub- vagy kontinentális rekordjait.",
+    "empty_title": "Még nincsenek rekordok",
+    "empty_body": "A rekordok maguktól születnek: minden fajtából az első teljesen pontozott egyéni ugrás egy DivingHQ-versenyen rekordot állít fel, és minden jobb pontszám felváltja.",
+    "no_match": "Egy rekord sem felel meg ezeknek a szűrőknek.",
+    "clear_filters": "Szűrők törlése",
+    "retry": "Próbálja újra",
+    "view": "Rekordok →",
+    "chip": "{name}-rekord",
+    "chip_prev": "Előző rekord: {score}",
+    "unofficial_tip": "Nem hivatalos, amíg az illetékes irányító testület igényt nem tart rá a DivingHQ-n."
   }
 }

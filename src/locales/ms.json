@@ -632,7 +632,9 @@
       "tfa_q": "Bagaimana saya mengaktifkan pengesahan dua faktor?",
       "tfa_a": "Buka <strong>Profil Saya</strong> → <strong>Keselamatan</strong> → <strong>Pengesahan dua faktor</strong> dan imbas kod QR dengan aplikasi pengesah anda (1Password, Authy, Google Authenticator). Simpan kod pemulihan di tempat yang selamat — itulah satu-satunya cara masuk semula jika anda kehilangan telefon.",
       "account_q": "Bagaimana saya menukar e-mel, kata laluan, atau memadam akaun saya?",
-      "account_a": "Kesemuanya dalam <strong>Profil Saya</strong> → <strong>Tetapan akaun</strong>. Perubahan e-mel memerlukan pengesahan semula pada alamat baharu. Memadam akaun anda adalah kekal dan membuang log masuk anda; markah bersejarah kekal pada papan markah awam di bawah rekod persekutuan (dianonimkan atas permintaan — hubungi admin persekutuan anda)."
+      "account_a": "Kesemuanya dalam <strong>Profil Saya</strong> → <strong>Tetapan akaun</strong>. Perubahan e-mel memerlukan pengesahan semula pada alamat baharu. Memadam akaun anda adalah kekal dan membuang log masuk anda; markah bersejarah kekal pada papan markah awam di bawah rekod persekutuan (dianonimkan atas permintaan — hubungi admin persekutuan anda).",
+      "records_q": "Bagaimanakah rekod berfungsi?",
+      "records_a": "Rekod dikemas kini dengan sendirinya. Sebaik sahaja hakim terakhir menilai terjunan individu, DivingHQ membandingkannya dengan rekod kelab, wilayah, kebangsaan dan benua penerjun, berasingan bagi wanita dan lelaki, lalu menggantikan sebarang pencapaian yang diatasinya. Semua senarai rekod ada di halaman {records_link}, tanpa perlu log masuk. Sesuatu senarai dianggap tidak rasmi sehingga badan induknya menuntutnya di DivingHQ, dan pencapaian yang sama menjadi rasmi sebaik sahaja tuntutan diluluskan. Rekod peribadi terdapat pada profil setiap penerjun."
     },
     "next": {
       "lede": "Perlukan versi terperinci? {guide_link} merangkumi setiap skrin, setiap peranan, setiap peraturan World Aquatics yang dikodkan oleh aplikasi. Halaman yang paling berbaloi ditanda buku:",
@@ -2041,5 +2043,36 @@
     "status_pending": "Menunggu",
     "status_approved": "Diluluskan",
     "status_rejected": "Ditolak"
+  },
+  "records": {
+    "title": "Rekod",
+    "intro": "Mata terbaik bagi setiap terjunan, kedudukan dan ketinggian, dicatat dalam acara individu yang dijalankan di DivingHQ.",
+    "book_label": "Buku rekod",
+    "book_national": "Kebangsaan",
+    "book_club": "Kelab",
+    "book_continental": "Benua",
+    "gender_label": "Rekod wanita atau lelaki",
+    "women": "Wanita",
+    "men": "Lelaki",
+    "all_heights": "Semua ketinggian",
+    "search": "Kod terjunan, cth. 105 atau 5253",
+    "col_dive": "Terjunan",
+    "col_score": "Mata",
+    "col_holder": "Pemegang rekod",
+    "col_set_at": "Dicatat di",
+    "unofficial": "Tidak rasmi",
+    "unofficial_body": "Belum ada badan induk yang menuntut {name} di DivingHQ. Ini ialah pencapaian terbaik daripada kejohanan yang diadakan di sini, dan akan menjadi rasmi sebaik sahaja ada yang menuntutnya.",
+    "claim_cta": "Adakah anda badan induknya? Tuntut sekarang →",
+    "pick_title": "Pilih buku rekod",
+    "pick_body": "Pilih negara, kemudian rekod kebangsaan, serantau, kelab atau benuanya.",
+    "empty_title": "Belum ada rekod",
+    "empty_body": "Rekod tercipta dengan sendirinya: terjunan individu pertama yang dinilai sepenuhnya bagi setiap jenis di kejohanan DivingHQ mencipta rekod, dan setiap skor yang lebih baik menggantikannya.",
+    "no_match": "Tiada rekod yang sepadan dengan penapis ini.",
+    "clear_filters": "Kosongkan penapis",
+    "retry": "Cuba lagi",
+    "view": "Rekod →",
+    "chip": "Rekod {name}",
+    "chip_prev": "Rekod sebelumnya: {score}",
+    "unofficial_tip": "Tidak rasmi sehingga badan induknya menuntutnya di DivingHQ."
   }
 }

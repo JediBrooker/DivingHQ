@@ -632,7 +632,9 @@
       "tfa_q": "Jak zapnu dvoufaktorové ověření?",
       "tfa_a": "Otevřete <strong>Můj profil</strong> → <strong>Zabezpečení</strong> → <strong>Dvoufaktorové ověření</strong> a naskenujte QR kód svou ověřovací aplikací (1Password, Authy, Google Authenticator). Záložní kódy uložte na bezpečné místo — jsou jedinou cestou zpět, pokud telefon ztratíte.",
       "account_q": "Jak změním e-mail, heslo nebo smažu účet?",
-      "account_a": "Vše v <strong>Mém profilu</strong> → <strong>Nastavení účtu</strong>. Změna e-mailu vyžaduje opětovné ověření na nové adrese. Smazání účtu je trvalé a odstraní vaše přihlášení; historické známky zůstávají na veřejné výsledkové tabuli v záznamu federace (na požádání anonymizovány — kontaktujte administrátora své federace)."
+      "account_a": "Vše v <strong>Mém profilu</strong> → <strong>Nastavení účtu</strong>. Změna e-mailu vyžaduje opětovné ověření na nové adrese. Smazání účtu je trvalé a odstraní vaše přihlášení; historické známky zůstávají na veřejné výsledkové tabuli v záznamu federace (na požádání anonymizovány — kontaktujte administrátora své federace).",
+      "records_q": "Jak fungují rekordy?",
+      "records_a": "Rekordy se udržují samy. Jakmile poslední rozhodčí ohodnotí individuální skok, DivingHQ ho porovná s klubovými, regionálními, národními a kontinentálními rekordy skokana, zvlášť pro ženy a muže, a nahradí každý výkon, který překoná. Všechny tabulky rekordů najdete na stránce {records_link}, bez přihlášení. Tabulka je neoficiální, dokud si ji na DivingHQ nenárokuje příslušný řídicí orgán; jakmile je nárok schválen, stejné výkony platí jako oficiální. Osobní rekordy jsou v profilu každého skokana."
     },
     "next": {
       "lede": "Potřebujete podrobnou verzi? {guide_link} pokrývá každou obrazovku, každou roli a každé pravidlo World Aquatics, které aplikace zachycuje. Stránky, které stojí za přidání do záložek:",
@@ -2041,5 +2043,36 @@
     "status_pending": "Čeká",
     "status_approved": "Schváleno",
     "status_rejected": "Zamítnuto"
+  },
+  "records": {
+    "title": "Rekordy",
+    "intro": "Nejlepší body za každý skok, polohu a výšku, dosažené v individuálních soutěžích pořádaných na DivingHQ.",
+    "book_label": "Kniha rekordů",
+    "book_national": "Národní",
+    "book_club": "Klubové",
+    "book_continental": "Kontinentální",
+    "gender_label": "Rekordy žen nebo mužů",
+    "women": "Ženy",
+    "men": "Muži",
+    "all_heights": "Všechny výšky",
+    "search": "Kód skoku, např. 105 nebo 5253",
+    "col_dive": "Skok",
+    "col_score": "Body",
+    "col_holder": "Držitel",
+    "col_set_at": "Vytvořen na",
+    "unofficial": "Neoficiální",
+    "unofficial_body": "Na {name} zatím na DivingHQ nevznesl nárok žádný řídicí orgán. Jde o nejlepší výkony ze soutěží, které se konaly zde, a jakmile se tak stane, budou platit jako oficiální.",
+    "claim_cta": "Jste jeho řídicím orgánem? Vzneste nárok →",
+    "pick_title": "Vyberte knihu rekordů",
+    "pick_body": "Zvolte zemi a pak její národní, regionální, klubové nebo kontinentální rekordy.",
+    "empty_title": "Zatím žádné rekordy",
+    "empty_body": "Rekordy vznikají samy: první plně ohodnocený individuální skok každého druhu na soutěži v DivingHQ vytvoří rekord a každý lepší výsledek ho nahradí.",
+    "no_match": "Těmto filtrům neodpovídají žádné rekordy.",
+    "clear_filters": "Zrušit filtry",
+    "retry": "Zkusit znovu",
+    "view": "Rekordy →",
+    "chip": "Rekord {name}",
+    "chip_prev": "Předchozí rekord: {score}",
+    "unofficial_tip": "Neoficiální, dokud si účet na DivingHQ nenárokuje příslušný řídicí orgán."
   }
 }

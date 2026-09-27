@@ -30,10 +30,12 @@
 
 const express = require("express");
 const createIdempotency = require("../lib/idempotency");
+const { announceRecords } = require("../lib/records");
 
 module.exports = function createManualScoresRouter({
   pool, io, scoreboardCache, requireOrgRole,
   requireRoleOrEventDelegate,   // optional, migration 087
+  checkAndApplyRecords,         // optional; lib/records.js
 }) {
   if (!pool || !io) throw new Error("createManualScoresRouter requires { pool, io, … }");
   const router = express.Router();
@@ -70,6 +72,14 @@ module.exports = function createManualScoresRouter({
       }
 
       const client = await pool.connect();
+      // Released early once the score commits (see the records check
+      // below), so the finally block has to know not to do it twice.
+      let released = false;
+      const release = () => {
+        if (released) return;
+        released = true;
+        client.release();
+      };
       try {
         await client.query("BEGIN");
 
@@ -195,6 +205,11 @@ module.exports = function createManualScoresRouter({
         }
 
         await client.query("COMMIT");
+        // Hand the connection back now. The records check below takes
+        // its own from the same pool, and holding this one while it
+        // waits is how a burst of manual entries could end up with
+        // every connection held by a request waiting for another.
+        release();
 
         // Invalidate the scoreboard cache and broadcast like
         // submit_score does, so spectators see the new score
@@ -209,6 +224,17 @@ module.exports = function createManualScoresRouter({
           score_source: "manual_entry",
         });
 
+        // The operator typing the last judge's score in completes the
+        // dive just like that judge's own submit would have, so it can
+        // set a record too. Before this, a meet run on manual entry
+        // through an outage never set a single one.
+        if (checkAndApplyRecords) {
+          await announceRecords({
+            checkAndApplyRecords, io, scoreboardCache,
+            eventId: event_id, competitorId: competitor_id, roundNumber: round,
+          });
+        }
+
         res.json({
           ok: true,
           score_id: scoreId,
@@ -217,11 +243,11 @@ module.exports = function createManualScoresRouter({
           source: "manual_entry",
         });
       } catch (err) {
-        await client.query("ROLLBACK").catch(() => {});
+        if (!released) await client.query("ROLLBACK").catch(() => {});
         console.error("[Manual Score Entry]", err.message);
         res.status(500).json({ error: "Internal server error" });
       } finally {
-        client.release();
+        release();
       }
     },
   );

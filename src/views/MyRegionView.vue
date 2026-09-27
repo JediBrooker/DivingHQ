@@ -153,10 +153,14 @@ onMounted(reloadAll)
     </section>
 
     <section v-for="r in regions" :key="r.id" class="block">
-      <h2 class="block-title">
-        {{ r.name }}
-        <span v-if="detail[r.id]?.region?.label" class="kind">{{ labelFor(detail[r.id].region.label) }}</span>
-      </h2>
+      <div class="block-head">
+        <h2 class="block-title">
+          {{ r.name }}
+          <span v-if="detail[r.id]?.region?.label" class="kind">{{ labelFor(detail[r.id].region.label) }}</span>
+        </h2>
+        <RouterLink :to="{ path: `/records/region/${r.id}`, query: detail[r.id]?.region?.org_id ? { org: detail[r.id].region.org_id } : {} }"
+                    class="records-link" :data-testid="`region-records-${r.id}`">{{ $t('records.view') }}</RouterLink>
+      </div>
       <template v-if="detail[r.id]">
         <h3 class="sub-title">{{ $t('my_region.clubs') }}</h3>
         <EmptyState
@@ -241,6 +245,8 @@ onMounted(reloadAll)
 .intro { margin: var(--space-1) 0 0; color: var(--fg-3); font-size: var(--text-sm); max-width: 56ch; }
 .block { display: flex; flex-direction: column; gap: var(--space-3); }
 .block-title { font-size: var(--text-h3); font-weight: 600; font-style: normal; color: var(--fg); margin: 0; display: flex; align-items: baseline; gap: var(--space-2); }
+.block-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+.records-link { font-size: var(--text-sm); font-weight: 600; white-space: nowrap; }
 .kind { font-size: var(--text-xs); font-weight: 500; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.08em; }
 .sub-title { font-size: var(--text-sm); font-weight: 600; color: var(--fg-2); margin: var(--space-2) 0 0; }
 .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }

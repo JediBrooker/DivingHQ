@@ -16,6 +16,7 @@ import { diveDescription } from '@/composables/useDiveLabel'
 import { cachedFetch, idbInvalidate } from '@/lib/idbCache'
 import { SCOREBOARD_LIVE_TTL_MS, SCOREBOARD_ARCHIVE_TTL_MS } from '@/lib/cache-policy'
 import { resolveOverlay, overlayClasses } from '@/lib/overlayParts'
+import { indexRecordMarks, marksForDive, isChipMark } from '@/lib/recordMarks'
 import { fmtDate, ordinal, rankClass } from '@/lib/format'
 import DiverIdentity from '@/components/DiverIdentity.vue'
 import ScoreHistoryButton from '@/components/ScoreHistoryButton.vue'
@@ -23,6 +24,7 @@ import JargonTip from '@/components/JargonTip.vue'
 import JudgeRankingTable from '@/components/JudgeRankingTable.vue'
 import MeetsBrowser from '@/components/scoreboard/MeetsBrowser.vue'
 import SponsorRotation from '@/components/scoreboard/SponsorRotation.vue'
+import RecordChip from '@/components/scoreboard/RecordChip.vue'
 
 const route  = useRoute()
 const router = useRouter()
@@ -215,6 +217,9 @@ const liveJudgeScores = ref([])
 // event has status === 'Completed'. Drives the dive breakdown,
 // podium and event-stats panels.
 const archiveResults = ref(null)
+// Record marks for the record chip, see recordIndex further down.
+const payloadRecords = ref([])
+const liveRecords = ref([])
 
 // Panel for the current event: `[{judge_id, judge_number,
 // full_name, country_code, club_code, org_name, club_name}, …]`
@@ -542,6 +547,8 @@ function selectEvent(id, { pushUrl = true } = {}) {
   // inheriting a previous event's expanded view.
   historyShowAll.value = false
   upNextShowAll.value  = false
+  payloadRecords.value = []
+  liveRecords.value = []
   refreshData()
   // Pull the current active diver from the server. socket.io
   // buffers the emit until the connection is up, so this works
@@ -570,6 +577,8 @@ function resetToEventPicker({ pushUrl = true } = {}) {
   leaderboardRounds.value = []
   expandedRound.value = null
   archiveResults.value = null
+  payloadRecords.value = []
+  liveRecords.value = []
   // Reset the judge-ranking section so opening a different event
   // doesn't leak stale ranks into the chip tooltips.
   judgeRankingPayload.value = null
@@ -641,6 +650,7 @@ async function refreshData() {
       leaderboardRounds.value = leaderboard.rounds || []
       // Panel comes from the archive payload for completed events.
       eventPanel.value = archive.panel || []
+      payloadRecords.value = archive.records || []
       // Eager-fetch the JRA payload so per-chip tooltips have rank
       // context on first hover. The section UI itself stays v-if'd
       // (lazy mount), the data lifecycle lives on the parent now so
@@ -679,6 +689,7 @@ async function refreshData() {
       leaderboardRounds.value = leaderboard.rounds || []
       // Panel comes from the scoreboard payload for live events.
       eventPanel.value = scoreboard.panel || []
+      payloadRecords.value = scoreboard.records || []
     }
     if (expandedRound.value === null && leaderboardRounds.value.length) {
       expandedRound.value = leaderboardRounds.value[leaderboardRounds.value.length - 1].round_number
@@ -705,13 +716,24 @@ function movementSymbol(m) {
   return '–'
 }
 
-// Record-broken toasts (PB / club / federation) used to pop in the
-// top-right of the scoreboard on each new record. Removed, they
-// distracted from the live standings panel they overlapped. The
-// server still fires record_broken, we just don't render it here.
-// If a quieter celebration UX is wanted later, re-listen for
-// record_broken and pick a presentation that doesn't sit on top of
-// the standings.
+// Record chips. A dive that beat a standing club, state, national or
+// continental record wears one small chip on its history card and its
+// recap row (RecordChip.vue). There used to be record toasts in the
+// top-right instead, pulled because they sat on the standings and went
+// off for almost every dive; recordMarks.js has the filtering that keeps
+// the chip from repeating that. The marks come with the scoreboard
+// payload and then live off record_broken, kept apart so a refetch that
+// raced the records transaction can't wipe a mark the socket already
+// delivered. Not on the broadcast or overlay screens, which stay bare.
+// (payloadRecords / liveRecords are declared up with archiveResults.)
+const recordIndex = computed(() => indexRecordMarks(payloadRecords.value, liveRecords.value))
+const showRecordChips = computed(() => !broadcastMode.value && !overlayMode.value)
+
+function recordMarksFor(d) {
+  if (!showRecordChips.value || !recordIndex.value.size) return null
+  const marks = marksForDive(recordIndex.value, d)
+  return marks.length ? marks : null
+}
 
 // All listeners below go through useSocketEvent so they're torn
 // down with the view rather than relying on the spectator pool's
@@ -800,6 +822,15 @@ useSocketEvent(socket, 'final_score_announced', () => {
   // from the score_received pills × DD), so just trigger a
   // standings refresh and let the inline UI carry the spotlight.
   refreshData()
+})
+
+useSocketEvent(socket, 'record_broken', (data) => {
+  // The server dropped its cached payload when the record landed; drop
+  // ours too so a reload in the next few seconds still shows the chip.
+  if (data?.event_id) idbInvalidate(`/api/scoreboard/${data.event_id}`).catch(() => {})
+  if (!currentEventId.value || data?.event_id !== currentEventId.value) return
+  if (!isChipMark(data)) return
+  liveRecords.value = [...liveRecords.value, data]
 })
 
 // rankClass + ordinal imported from @/lib/format, single source of
@@ -1221,6 +1252,7 @@ onMounted(async () => {
             <div class="hist-dive-line">
               <span class="hist-code">{{ h.dive_code ? `${h.dive_code}${h.position || ''}` : '—' }}</span>
               <span v-if="h.dd != null" class="hist-dd">DD {{ parseFloat(h.dd).toFixed(1) }}</span>
+              <RecordChip v-if="recordMarksFor(h)" :marks="recordMarksFor(h)" />
               <span v-if="h.description" class="hist-desc">{{ diveDescription(h) }}</span>
             </div>
             <div v-if="h.judge_array" class="hist-scores">
@@ -1828,6 +1860,7 @@ onMounted(async () => {
                         <template v-else>{{ d.full_name }}</template>
                       </span>
                       <span class="dr-code-main">{{ [d.dive_code, d.position].filter(Boolean).join(' ') }}</span>
+                      <RecordChip v-if="recordMarksFor(d)" :marks="recordMarksFor(d)" class="dr-record" />
                       <span v-if="d.description" class="dr-code-desc">{{ diveDescription(d) }}</span>
                     </div>
                     <div class="dr-dd">{{ d.dd != null ? parseFloat(d.dd).toFixed(1) : '—' }}</div>

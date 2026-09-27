@@ -632,7 +632,9 @@
       "tfa_q": "Bagaimana cara mengaktifkan autentikasi dua faktor?",
       "tfa_a": "Buka <strong>Profil Saya</strong> → <strong>Keamanan</strong> → <strong>Autentikasi dua faktor</strong> dan pindai kode QR dengan aplikasi autentikator Anda (1Password, Authy, Google Authenticator). Simpan kode pemulihan di tempat yang aman — itulah satu-satunya cara masuk kembali jika Anda kehilangan ponsel.",
       "account_q": "Bagaimana cara mengubah email, kata sandi, atau menghapus akun saya?",
-      "account_a": "Semuanya ada di <strong>Profil Saya</strong> → <strong>Pengaturan akun</strong>. Perubahan email memerlukan verifikasi ulang di alamat yang baru. Menghapus akun Anda bersifat permanen dan menghapus akses masuk Anda; skor historis tetap ada di papan skor publik dalam catatan federasi (dianonimkan atas permintaan — hubungi admin federasi Anda)."
+      "account_a": "Semuanya ada di <strong>Profil Saya</strong> → <strong>Pengaturan akun</strong>. Perubahan email memerlukan verifikasi ulang di alamat yang baru. Menghapus akun Anda bersifat permanen dan menghapus akses masuk Anda; skor historis tetap ada di papan skor publik dalam catatan federasi (dianonimkan atas permintaan — hubungi admin federasi Anda).",
+      "records_q": "Bagaimana rekor bekerja?",
+      "records_a": "Rekor diperbarui dengan sendirinya. Begitu juri terakhir menilai loncatan perorangan, DivingHQ membandingkannya dengan rekor klub, regional, nasional, dan kontinental milik peloncat, terpisah untuk putri dan putra, lalu menggantikan setiap catatan yang dilampauinya. Semua daftar rekor ada di halaman {records_link}, tanpa perlu masuk. Sebuah daftar tercatat tidak resmi sampai badan pengelolanya mengklaimnya di DivingHQ, dan catatan yang sama menjadi resmi begitu klaim disetujui. Rekor pribadi ada di profil setiap peloncat."
     },
     "next": {
       "lede": "Butuh versi mendalam? {guide_link} mencakup setiap layar, setiap peran, setiap aturan World Aquatics yang diterapkan aplikasi. Halaman yang paling layak ditandai:",
@@ -2041,5 +2043,36 @@
     "status_pending": "Menunggu",
     "status_approved": "Disetujui",
     "status_rejected": "Ditolak"
+  },
+  "records": {
+    "title": "Rekor",
+    "intro": "Poin terbaik untuk setiap loncatan, posisi, dan ketinggian, dicetak di nomor perorangan yang digelar di DivingHQ.",
+    "book_label": "Buku rekor",
+    "book_national": "Nasional",
+    "book_club": "Klub",
+    "book_continental": "Kontinental",
+    "gender_label": "Rekor putri atau putra",
+    "women": "Putri",
+    "men": "Putra",
+    "all_heights": "Semua ketinggian",
+    "search": "Kode loncatan, mis. 105 atau 5253",
+    "col_dive": "Loncatan",
+    "col_score": "Poin",
+    "col_holder": "Pemegang rekor",
+    "col_set_at": "Dicetak di",
+    "unofficial": "Tidak resmi",
+    "unofficial_body": "Belum ada badan pengelola yang mengklaim {name} di DivingHQ. Ini adalah catatan terbaik dari kejuaraan yang digelar di sini, dan akan menjadi resmi begitu ada yang mengklaimnya.",
+    "claim_cta": "Apakah Anda badan pengelolanya? Klaim sekarang →",
+    "pick_title": "Pilih buku rekor",
+    "pick_body": "Pilih negara, lalu rekor nasional, regional, klub, atau kontinentalnya.",
+    "empty_title": "Belum ada rekor",
+    "empty_body": "Rekor tercipta dengan sendirinya: loncatan perorangan pertama yang dinilai lengkap dari tiap jenis di kejuaraan DivingHQ menciptakan rekor, dan setiap skor yang lebih baik menggantikannya.",
+    "no_match": "Tidak ada rekor yang cocok dengan filter ini.",
+    "clear_filters": "Hapus filter",
+    "retry": "Coba lagi",
+    "view": "Rekor →",
+    "chip": "Rekor {name}",
+    "chip_prev": "Rekor sebelumnya: {score}",
+    "unofficial_tip": "Tidak resmi sampai badan pengelolanya mengklaimnya di DivingHQ."
   }
 }

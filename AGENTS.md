@@ -310,6 +310,7 @@ above it.
 | Auth gate for socket events | `socketRequireRole(socket, [...])` | `lib/middleware.js` |
 | Validate a score from the wire (0–10, half-points) | `isValidScore(s)` | `lib/middleware.js` |
 | Parse `?from_date=&to_date=` query params | `parseDateRange(query)` | `lib/middleware.js` |
+| Rate-limit one router's routes (never `app.use(limiter, router)`, that counts every later request too) | `limitRoutes(limiter, router)` | `lib/scoped-limiter.js` |
 | Per-query catch-and-log (analytics) | `runQuery(label, sql, params)` | inline in `/api/divers/:id/analytics` |
 | Standard analytics CTE for per-dive rows | `PER_DIVE` | `db/queries.js` |
 | Standard analytics CTE for full-field ranking | `FULL_FIELD_RANKING` | `db/queries.js` |
@@ -415,6 +416,7 @@ A non-exhaustive checklist:
 | A SQL function | `init.sql`, all migrations that touch it, `test/calc.test.js` if there's a closed-form test |
 | `KNOWN_WIDGETS` (diver) | `WIDGET_CATALOG` in `src/views/DiverProfileView.vue` |
 | `KNOWN_WIDGETS` in `routes/judge-analytics.js` | `JUDGE_WIDGET_CATALOG` in `src/views/JudgeProfileView.vue` |
+| Record scopes, record columns, or who sets a record | `lib/records.js` (`RECORD_TABLES`, `checkAndApplyRecords`, the `GET /api/records` UNION, `eventRecordMarks`), `record_gender()` (migration 094), `scripts/rebuild-records.js` (replays with the same rules), `src/views/RecordsView.vue`, the scoreboard chip (`src/lib/recordMarks.js`, `RecordChip.vue`), `record_broken` in `docs/socket-events.md`, `src/types.js` (`RecordRow`, `ScoreboardRecordMark`), and the Records section of `src/guide/content/admin-tasks.md` |
 | A socket event | `socketRequireRole` gate, every consumer (`socket.on('eventName')` grep), `docs/socket-events.md` |
 | Anything in `src/composables/` | The handful of consumers, since composables aren't auto-typed |
 | A user-visible feature, screen, or role capability (e.g. coach phases, scheduler, broadcast modes) | `src/views/GuideView.vue` — the in-app `/guide` primer should still describe what each role does. Linked from the dashboard top menu, footer, sign-in page, and home hero. Most prose is hardcoded English today; if you add new `$t('guide.*')` keys, also drop the English source into `src/locales/en.json` and **translate to every other locale** (see below). |
