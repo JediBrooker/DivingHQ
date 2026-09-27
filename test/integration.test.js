@@ -1193,6 +1193,7 @@ test("claims: the clubs vote a national federation in", async (t) => {
     assert.equal(list.length, 1);
     assert.equal(list[0].can_vote, true);
     assert.equal(list[0].tally.eligible, 3, "the young club doesn't count");
+    assert.deepEqual(list[0].my_votes, [{ voter_id: A.clubId, name: "Apia Divers", vote: null }]);
 
     // The young club and the claimant don't get a vote.
     assert.equal((await fetchJson("POST", `/api/claims/${claimRow.id}/vote`, { token: young.token, body: { vote: "approve" } })).status, 403);
@@ -1203,6 +1204,13 @@ test("claims: the clubs vote a national federation in", async (t) => {
     let v = await fetchJson("POST", `/api/claims/${claimRow.id}/vote`, { token: A.token, body: { vote: "approve" } });
     assert.equal(v.body.status, "open");
     assert.equal((await fetchJson("POST", `/api/claims/${claimRow.id}/vote`, { token: A.token, body: { vote: "approve" } })).status, 403, "one vote per club");
+    // The listing folds the tally and the caller's seats into its one
+    // query, so check it reads the same as the vote just cast.
+    const voted = (await fetchJson("GET", "/api/claims", { token: A.token })).body[0];
+    assert.deepEqual(voted.tally, { eligible: 3, approvals: 1, objections: 0 });
+    assert.deepEqual(voted.my_votes, [{ voter_id: A.clubId, name: "Apia Divers", vote: "approve" }]);
+    assert.equal(voted.can_vote, false, "its one seat has voted");
+    assert.deepEqual(voted.objections, []);
     v = await fetchJson("POST", `/api/claims/${claimRow.id}/vote`, { token: B.token, body: { vote: "approve" } });
     assert.equal(v.body.status, "approved");
 
@@ -1246,6 +1254,9 @@ test("claims: an objection goes to the sysadmin, who can decide and revoke", asy
     const sysList = (await fetchJson("GET", "/api/claims", { token: sys.token })).body.find((c) => c.id === id);
     assert.deepEqual(sysList.objections, ["Not our federation"]);
     assert.equal(sysList.can_decide, true);
+    const aList = (await fetchJson("GET", "/api/claims", { token: A.token })).body.find((c) => c.id === id);
+    assert.deepEqual(aList.objections, [], "only the sysadmin reads the reasons");
+    assert.deepEqual(aList.tally, { eligible: 2, approvals: 0, objections: 1 });
 
     assert.equal((await fetchJson("POST", `/api/claims/${id}/decide`, { token: sys.token, body: { decision: "approve" } })).status, 200);
     let org = (await pool.query("SELECT name, claim_state FROM organisations WHERE country_code = $1", [CODE])).rows[0];
