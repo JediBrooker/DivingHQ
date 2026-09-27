@@ -33,9 +33,12 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
       req.user.org_id === orgId);
 
   // Can this club (or region) admin decide this request? Only a within-org
-  // move into a club they run, in an org with no federation to ask.
+  // move into a club they run, in an org with no federation to ask, and
+  // never their own: a region admin asking to join one of the region's
+  // clubs waits for that club's admins like anyone else.
   async function isJoinReviewer(db, userId, r) {
     if (r.kind !== "club_change" || !r.to_club_id || r.from_org_id !== r.to_org_id) return false;
+    if (r.user_id === userId) return false;
     const q = await db.query(
       `SELECT 1 FROM clubs c JOIN organisations o ON o.id = c.org_id
         WHERE c.id = $1 AND o.id = $2 AND o.claim_state = 'unclaimed'

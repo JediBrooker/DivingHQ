@@ -2266,3 +2266,36 @@ test("referee credential sign-off: the 2FA prompt doesn't use up the lockout bud
     await claimKit.wipe(CODE);
   }
 });
+
+test("unclaimed country: a region admin can't approve their own request to join a club", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "BRB";
+  await claimKit.wipe(CODE);
+  try {
+    const X = await delegateSignUp({ country_code: CODE, new_club_name: "Bridgetown Divers" });
+    const Y = await delegateSignUp({ country_code: CODE, new_club_name: "Oistins Divers" });
+    const R = await delegateSignUp({ country_code: CODE, club_id: X.clubId });
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Christ Church', 'CC') RETURNING id", [X.orgId],
+    )).rows[0].id;
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = ANY($2::uuid[])", [region, [X.clubId, Y.clubId]]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region, R.id, X.orgId]);
+
+    const ask = await fetchJson("POST", "/api/club-change-requests", { token: R.token, body: { to_club_id: Y.clubId } });
+    assert.equal(ask.status, 201, JSON.stringify(ask.body));
+    const review = (tok, decision) => fetchJson("POST", `/api/club-change-requests/${ask.body.id}/review`, {
+      token: tok, body: { decision },
+    });
+    assert.equal((await review(R.token, "approved")).status, 403);
+    assert.equal((await pool.query("SELECT club_id FROM users WHERE id = $1", [R.id])).rows[0].club_id, X.clubId);
+    // Y's own admin decides it.
+    assert.equal((await review(Y.token, "approved")).status, 200);
+    assert.equal((await pool.query("SELECT club_id FROM users WHERE id = $1", [R.id])).rows[0].club_id, Y.clubId);
+  } finally {
+    await pool.query(
+      "DELETE FROM club_change_requests WHERE from_org_id IN (SELECT id FROM organisations WHERE country_code = $1)", [CODE],
+    ).catch(() => {});
+    await claimKit.wipe(CODE);
+  }
+});
