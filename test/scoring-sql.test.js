@@ -117,7 +117,7 @@ test("snapshot: perDiveJoins with extraJoins appended after the chain", () => {
 
 const CALL_SITES = [
   {
-    site: "lib/super-final-helpers.js loadH2hPairResults + loadSfCumulative SF totals; routes/events/super-final-bridge.js F tier; routes/competitor.js live standings; routes/pdf.js results.pdf standings; routes/judge-ranking.js individual standings",
+    site: "lib/super-final-helpers.js loadH2hPairResults + loadSfCumulative SF totals; routes/events/super-final-bridge.js F tier; routes/competitor.js live standings; routes/judge-ranking.js individual standings",
     sql: () => perDivePointsCte(),
     pointsAlias: "dive_points",
     where: "s.event_id = $1",
@@ -275,6 +275,7 @@ const CALL_SITES = [
       select: [
         "u.id  AS user_id", "u.club_id", "u.org_id", "o.continent",
         "cl.name AS club_name", "o.name  AS org_name",
+        "rg.id   AS region_id", "rg.name AS region_name",
         "u.full_name AS holder_name",
         "e.height", "e.event_type", "e.number_of_judges", "e.is_rehearsal",
         "d.dive_code", "d.position", "d.dd", "d.description",
@@ -286,10 +287,13 @@ const CALL_SITES = [
         "JOIN users u  ON u.id = s.competitor_id",
         "LEFT JOIN clubs cl ON cl.id = u.club_id",
         "JOIN organisations o ON o.id = u.org_id",
+        "LEFT JOIN LATERAL event_rep_ids(s.event_id, s.competitor_id) rep ON true",
+        "LEFT JOIN regions rg ON rg.id = rep.region_id",
       ],
       where: "s.event_id = $1 AND s.competitor_id = $2 AND s.round_number = $3",
       groupBy: [
         "u.id", "u.club_id", "u.org_id", "o.continent", "cl.name", "o.name", "u.full_name",
+        "rg.id", "rg.name",
         "e.height", "e.is_rehearsal",
         "d.dive_code", "d.position", "d.dd", "d.description",
       ],
@@ -301,6 +305,10 @@ const CALL_SITES = [
       assert.ok(sql.includes("COUNT(s.score)::int AS judges_in"));
       // Extra joins ride after the canonical chain.
       assert.ok(sql.indexOf("JOIN users u ") > sql.indexOf("dive_directory d"));
+      // The state record keys off the entry snapshot (migration 095),
+      // not a straight join on the diver's current club.
+      assert.ok(sql.includes("LEFT JOIN regions rg ON rg.id = rep.region_id"));
+      assert.ok(!sql.includes("cl.region_id"));
     },
   },
   {
@@ -578,11 +586,22 @@ const CALL_SITES = [
     expect: (sql) => assert.ok(sql.includes("LEFT JOIN teams tm ON tm.id = cdl.team_id")),
   },
   {
+    site: "routes/pdf.js results.pdf standings per_dive",
+    sql: () => perDivePointsCte({ select: ["s.competitor_id", "cdl.team_id", "s.round_number"] }),
+    pointsAlias: "dive_points",
+    where: "s.event_id = $1",
+    // teamStandingsCte() reads pd.team_id, so it has to be projected.
+    expect: (sql) => assert.ok(sql.includes(
+      "GROUP BY s.competitor_id, cdl.team_id, s.round_number, e.number_of_judges, e.event_type")),
+  },
+  {
     site: "routes/pdf.js results.pdf dive results",
     sql: () => perDiveSelect({
       select: [
         "u.id AS competitor_id", "u.full_name", "cl.name AS club_name",
+        "event_rep_code($1, u.id, o.country_code) AS country_code",
         "pu.full_name AS partner_name",
+        "cdl.team_id", "tm.name AS team_name",
         "s.round_number", "d.dive_code", "d.position", "d.dd",
       ],
       dd:          "d.dd",
@@ -592,19 +611,27 @@ const CALL_SITES = [
       ],
       extraJoins: [
         "JOIN users u ON s.competitor_id = u.id",
+        "JOIN organisations o ON o.id = u.org_id",
         "LEFT JOIN clubs cl ON cl.id = u.club_id",
         "LEFT JOIN users pu ON pu.id = cdl.partner_id",
+        "LEFT JOIN teams tm ON tm.id = cdl.team_id",
       ],
       where: "s.event_id = $1",
       groupBy: [
-        "u.id", "u.full_name", "cl.name", "pu.full_name",
+        "u.id", "u.full_name", "cl.name", "o.country_code", "pu.full_name",
+        "cdl.team_id", "tm.name",
         "s.round_number", "d.dive_code", "d.position", "d.dd",
       ],
     }),
     pointsAlias: "total_dive_score",
     dd: "d.dd",
     where: "s.event_id = $1",
-    expect: (sql) => assert.ok(sql.includes("AS judge_scores")),
+    expect: (sql) => {
+      assert.ok(sql.includes("AS judge_scores"));
+      // Team sheets group by team, so team_id rides on every dive row.
+      assert.ok(sql.includes("LEFT JOIN teams tm ON tm.id = cdl.team_id"));
+      assert.ok(/GROUP BY .*cdl\.team_id, tm\.name/.test(sql));
+    },
   },
   {
     site: "routes/archive.js results standings per_dive",
