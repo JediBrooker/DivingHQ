@@ -37,3 +37,18 @@ test("the claim timeout never passes a claim, wherever it's described", () => {
   assert.doesNotMatch(en.admin_settings.claim_timeout_days.description, /at least one approval and no objections passes/);
   assert.doesNotMatch(read("src/guide/content/roles-and-permissions.md"), /at least one approval and no objections passes/);
 });
+
+// docs/privacy-policy.md is the /privacy page, and its browser-storage
+// table is presented as the full list. Two keys from this release were
+// missing, and the revoke paragraph said appointments survive a revoke
+// (lib/claims.js unwindOrgClaim removes them).
+test("the privacy policy lists what the app stores and what a revoke removes", () => {
+  const policy = read("docs/privacy-policy.md");
+  for (const key of ["divinghq.records.last_book", "dashboard.gettingStarted.*"]) {
+    assert.ok(policy.includes(`\`${key}\``), `storage table is missing ${key}`);
+  }
+  assert.match(read("src/views/RecordsView.vue"), /divinghq\.records\.last_book/);
+  assert.match(read("src/components/dashboard/ClubGettingStarted.vue"), /dashboard\.gettingStarted\./);
+  assert.doesNotMatch(policy, /appointed while it had access stay in place/);
+  assert.match(policy, /referee roles, club and region admins appointed since the approval/);
+});
