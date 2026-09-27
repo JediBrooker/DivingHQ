@@ -2205,3 +2205,64 @@ test("request a role after signup: routed like signup, one pending per role, a d
     await claimKit.wipe(CODE);
   }
 });
+
+test("referee credential sign-off: the 2FA prompt doesn't use up the lockout budget", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "ATG";
+  await claimKit.wipe(CODE);
+  const speakeasy = require("speakeasy");
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "St John's Divers" });
+    const meet = (await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "St John's Open" } })).body.id;
+    const mkEvent = async (name) => (await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name, gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 5, event_type: "individual", meet_id: meet },
+    })).body.id;
+
+    const pw = "referee-2fa-password";
+    const secret = speakeasy.generateSecret({ length: 20 }).base32;
+    const username = `int-so2-${crypto.randomBytes(4).toString("hex")}`;
+    const refId = (await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, email_verified_at, totp_enabled_at, totp_secret)
+       VALUES ($1, $2, $1, $3, now(), now(), $4) RETURNING id`,
+      [username, await bcrypt.hash(pw, 4), A.orgId, secret],
+    )).rows[0].id;
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'referee')", [refId, A.orgId]);
+
+    process.env.RATE_LIMIT_DISABLED = "false";
+    try {
+      // A morning's worth of events: each one asks for the code first.
+      const events = [];
+      for (let i = 0; i < 6; i++) events.push(await mkEvent(`1m heat ${i}`));
+      for (const id of events) {
+        const r = await fetchJson("POST", `/api/events/${id}/dive-order/sign-off/credential`, {
+          token: A.token, body: { username, password: pw },
+        });
+        assert.equal(r.status, 401, JSON.stringify(r.body));
+        assert.equal(r.body.needs_totp, true);
+      }
+      // Still let in with the code, well past five prompts.
+      await pool.query("UPDATE users SET totp_last_used_step = NULL WHERE id = $1", [refId]);
+      const ok = await fetchJson("POST", `/api/events/${events[5]}/dive-order/sign-off/credential`, {
+        token: A.token, body: { username, password: pw, code: speakeasy.totp({ secret, encoding: "base32" }) },
+      });
+      assert.equal(ok.status, 200, JSON.stringify(ok.body));
+
+      // Wrong passwords still count.
+      for (let i = 0; i < 5; i++) {
+        const r = await fetchJson("POST", `/api/events/${events[0]}/dive-order/sign-off/credential`, {
+          token: A.token, body: { username, password: `nope-${i}` },
+        });
+        assert.equal(r.status, 401);
+      }
+      assert.equal((await fetchJson("POST", `/api/events/${events[0]}/dive-order/sign-off/credential`, {
+        token: A.token, body: { username, password: pw },
+      })).status, 429);
+    } finally {
+      process.env.RATE_LIMIT_DISABLED = "true";
+    }
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

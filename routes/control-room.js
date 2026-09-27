@@ -1141,12 +1141,19 @@ module.exports = function createControlRoomRouter({
   // (to the TOTP prompt or the sign-off).
   const CREDENTIAL_FAIL = "Invalid referee username or password";
   const credentialLimitSkip = () => process.env.RATE_LIMIT_DISABLED === "true";
+  // What counts as a miss. The "now your 2FA code" reply is a 401 too,
+  // but it only comes back after the right password for a real referee,
+  // so it isn't a guess. Counting it meant a referee with 2FA signing off
+  // a morning's events on the manager's laptop locked themselves out by
+  // the fifth.
+  const credentialAttemptOk = (_req, res) => res.statusCode < 400 || res.locals.signoffNeedsTotp === true;
   const credentialIpLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 20,
     // Only failures count, so a venue signing off a dozen events from
     // one laptop never trips it.
     skipSuccessfulRequests: true,
+    requestWasSuccessful: credentialAttemptOk,
     standardHeaders: "draft-7",
     legacyHeaders: false,
     message: { error: "Too many sign-off attempts, please try again in 15 minutes." },
@@ -1158,6 +1165,7 @@ module.exports = function createControlRoomRouter({
     windowMs: 15 * 60 * 1000,
     limit: 5,
     skipSuccessfulRequests: true,
+    requestWasSuccessful: credentialAttemptOk,
     standardHeaders: "draft-7",
     legacyHeaders: false,
     keyGenerator: (req) => `signoff-target:${String(req.body?.username || "").trim().toLowerCase()}`,
@@ -1213,7 +1221,10 @@ module.exports = function createControlRoomRouter({
       // TOTP if enabled.
       if (user.totp_enabled_at) {
         if (!totp) return res.status(503).json({ error: "TOTP verifier not wired" });
-        if (!code) return res.status(401).json({ error: "TOTP code required", needs_totp: true });
+        if (!code) {
+          res.locals.signoffNeedsTotp = true;
+          return res.status(401).json({ error: "TOTP code required", needs_totp: true });
+        }
         const looksLikeTotp = typeof code === "string" && /^\d{6}$/.test(code);
         // Replay guard (migration 063), same shape as the main
         // login flow: consume the matched time-step via a
