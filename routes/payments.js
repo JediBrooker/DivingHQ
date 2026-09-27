@@ -436,20 +436,18 @@ module.exports = function createPaymentsRouter({
     // second live payment for the same slot; a blocked insert resumes the
     // earlier attempt's still-open session or retires a dead one and
     // retries (see insertPaymentOrResume).
+    // subject_user_id has no default, so a NULL here (buying for
+    // yourself) is the same row as leaving the column out.
     const feeScoped = subjectType === "event_entry" || subjectType === "membership";
-    const insertCols = subjectUserId
-      ? "org_id, fee_definition_id, payer_user_id, subject_user_id, subject_type, event_id, meet_id, amount_cents, platform_fee_cents, currency, fee_payer, status"
-      : "org_id, fee_definition_id, payer_user_id, subject_type, event_id, meet_id, amount_cents, platform_fee_cents, currency, fee_payer, status";
-    const insertVals = subjectUserId
-      ? "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending'"
-      : "$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending'";
-    const insertParams = subjectUserId
-      ? [org.id, fee.id, userId, subjectUserId, subjectType, eventId || null, meetId || null, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer]
-      : [org.id, fee.id, userId, subjectType, eventId || null, meetId || null, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer];
     const attempt = await insertPaymentOrResume({
       insert: async () => (await pool.query(
-        `INSERT INTO payments (${insertCols}) VALUES (${insertVals}) RETURNING id`,
-        insertParams,
+        `INSERT INTO payments
+            (org_id, fee_definition_id, payer_user_id, subject_user_id, subject_type, event_id, meet_id,
+             amount_cents, platform_fee_cents, currency, fee_payer, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending')
+         RETURNING id`,
+        [org.id, fee.id, userId, subjectUserId || null, subjectType, eventId || null, meetId || null,
+         chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
       )).rows[0].id,
       findBlocking: async () => (await pool.query(
         `SELECT id, status, stripe_checkout_session FROM payments

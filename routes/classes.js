@@ -1010,18 +1010,18 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       let paymentId;
       for (let attemptNo = 0; ; attemptNo++) {
         try {
-          const classSubjectId = isGuardian ? enr.diver_user_id : null;
-          const cols = "org_id, payer_user_id, payer_type, subject_type, club_id, recipient_type, class_enrolment_id, amount_cents, platform_fee_cents, currency, fee_payer, status";
-          const vals = "$1, $2, 'user', 'class_enrolment', $3, 'club', $4, $5, $6, $7, 'absorb', 'pending'";
-          const params = [enr.org_id, req.user.id, enr.club_id, enr.id, chargeAmountCents, applicationFeeCents, currency];
-          if (classSubjectId) {
-            params.push(classSubjectId);
-          }
+          // subject_user_id (the dependent, when a guardian pays) has no
+          // default, so NULL for the diver's own payment is the same row as
+          // leaving the column out.
           paymentId = (await pool.query(
-            `INSERT INTO payments (${cols}${classSubjectId ? ", subject_user_id" : ""})
-             VALUES (${vals}${classSubjectId ? `, $${params.length}` : ""})
+            `INSERT INTO payments
+                (org_id, payer_user_id, payer_type, subject_type, club_id, recipient_type,
+                 class_enrolment_id, amount_cents, platform_fee_cents, currency, fee_payer, status,
+                 subject_user_id)
+             VALUES ($1, $2, 'user', 'class_enrolment', $3, 'club', $4, $5, $6, $7, 'absorb', 'pending', $8)
              RETURNING id`,
-            params,
+            [enr.org_id, req.user.id, enr.club_id, enr.id, chargeAmountCents, applicationFeeCents, currency,
+             isGuardian ? enr.diver_user_id : null],
           )).rows[0].id;
           break;
         } catch (e) {
