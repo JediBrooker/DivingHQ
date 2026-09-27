@@ -1,6 +1,7 @@
 /* =============================================================
    DIVING APP: Design System v2
-   Place at: public/css/app.css
+   Lives in src/styles/ and is imported by src/main.js, so Vite
+   bundles it into the content-hashed entry CSS.
 
    Fonts: see index.html. The Google Fonts stylesheet used to be
    imported here with @import, which blocks first paint while the
@@ -10,8 +11,8 @@
    <link rel="stylesheet">, which lets the HTML parser kick off
    the DNS lookup + TLS handshake in parallel with this CSS
    bundle's download. First contentful paint is faster, and
-   "Barlow Condensed" still resolves before the design needs it
-   because display=swap means we render with the fallback first.
+   IBM Plex Sans / DM Mono swap in when they arrive, because
+   display=swap means we render with the system fallback first.
    ============================================================= */
 
 /* =============================================================
