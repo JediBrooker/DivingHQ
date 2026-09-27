@@ -28,7 +28,7 @@ const props = defineProps({
   meetId:      { type: String, required: true },
   // Hydrated form snapshot from the parent's /api/meets/:id fetch:
   // { name, venue, start_date, end_date, description,
-  //   sponsor_name, sponsor_link_url }
+  //   sponsor_name, sponsor_link_url, represent_as }
   initialForm: { type: Object, required: true },
 })
 const emit = defineEmits(['close', 'saved'])
@@ -61,6 +61,7 @@ async function saveMeet() {
         // We keep `sponsor_link_url` on the meet row for the
         // pre-045 fallback path.
         sponsor_link_url: editMeetForm.value.sponsor_link_url.trim() || null,
+        represent_as:     editMeetForm.value.represent_as || 'country',
       }),
     })
     showSuccess('Meet updated')
@@ -104,6 +105,18 @@ async function saveMeet() {
           <label class="label">Description (optional)</label>
           <textarea class="input" rows="2" v-model="editMeetForm.description"
                     placeholder="Public meet blurb — shown on the meet landing page."></textarea>
+        </div>
+        <!-- What the chip next to each diver shows on scoreboards, results
+             and PDFs (migration 090). Taken from who they were when they
+             entered, so later club moves don't rewrite this meet. -->
+        <div class="field">
+          <label class="label" for="meet-represent">Divers represent</label>
+          <select id="meet-represent" class="select" v-model="editMeetForm.represent_as">
+            <option value="country">Their country (international meets)</option>
+            <option value="region">Their state / province (national championships)</option>
+            <option value="club">Their club (club and inter-club meets)</option>
+          </select>
+          <p class="hint">Shown next to each diver on the scoreboard, results and PDFs, and what the medal table groups by. A diver with no state or club code falls back to their country.</p>
         </div>
 
         <hr style="border:0;border-top:1px solid var(--border);margin:0.5rem 0 0">

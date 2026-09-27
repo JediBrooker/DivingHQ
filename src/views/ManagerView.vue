@@ -1005,6 +1005,7 @@ async function openEditMeet(meet) {
         description:      m.description || '',
         sponsor_name:     m.sponsor_name || '',
         sponsor_link_url: m.sponsor_link_url || '',
+        represent_as:     m.represent_as || 'country',
       },
     }
   } catch (err) {
