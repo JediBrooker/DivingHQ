@@ -199,9 +199,16 @@ Don't spread the object (`{...payments}`) or you'll freeze it. Same reason
 `lib/auto-withdraw.js` re-checks the flag each sweep instead of at `start()`.
 
 Frontend: a route hides behind `meta.feature`, a nav entry behind `feature:`
-(`src/components/AppShell.vue`). The e2e suite forces flags on with
+(`src/components/AppShell.vue`), a guide topic behind `feature:` in
+`src/guide/topics.js`, and anything mounted inside an ungated screen (fee
+cards, the Billing column, fee editors) behind `useFeaturesStore()`. The fee
+editors go through `useCanEditFees()`, which also wants an org role the fee
+routes accept, so club and region admins never mount them and never eat a
+403 toast. The e2e suite forces flags on with
 `FEATURE_FLAGS_ON=payments,classes,signups` in `playwright.config.js` (that
-env var is a force-ON-only override, read once at construction).
+env var is a force-ON-only override, read once at construction); to see a
+screen with a flag off, fake `/api/features` per page like
+`test/e2e/club-onboarding.spec.js` does.
 
 **Registration** (`signups`, migration 086, seeded ON) is a flag too, not the
 old `SIGNUPS_ENABLED` env var. The gate lives in `routes/auth.js`
@@ -299,6 +306,8 @@ above it.
 | Meet routes open to club admins (then pin with `isMeetHostAdmin`) | `requireMeetEditorOrClubAdmin` / server.js `requireMeetOrClubEditor` | `lib/middleware.js` |
 | Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForClubAdmin` / `clubAdminCanReview` / `reviewersFor` | `lib/role-requests.js` |
 | Narrow a meet screen to a club admin's own meets | `useClubScope()` | `src/composables/useClubScope.js` |
+| Should the meet / event fee editors mount (payments on + org_admin or meet_manager) | `useCanEditFees()` | `src/composables/useCanEditFees.js` |
+| "After signing up" panel (address, resend with cooldown, sign-in link) | `<CheckInboxPanel>` | `src/components/CheckInboxPanel.vue` |
 | ISO country list (server validation + signup picker) | `countryByCode(a3)` / `countries.json` | `lib/countries.js` |
 | What a diver represents in an event (country / state / club code) | `event_rep_code(event_id, user_id, home_country)` SQL function | `migrations/090_representation.sql` |
 | Built-in regions per country, copy them into an org | `catalogFor(a3)` / `materializeRegions(db, orgId, a3)` / `regions.json` | `lib/regions.js` |
