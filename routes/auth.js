@@ -7,7 +7,8 @@
 // Mounted at the app root in server.js as:
 //     app.use(require('./routes/auth')({ ... }))
 //
-// Every route here was moved verbatim, no behaviour changes.
+// It started as a straight move out of server.js and has grown a lot
+// since (club-first signup, claims, 2FA).
 
 const express = require("express");
 const bcrypt  = require("bcrypt");
@@ -96,15 +97,6 @@ function validatePassword(pw) {
   return null;
 }
 
-// Does this user look after anybody? A guardian with an approved
-// dependent gets to reach the payment surfaces even when they hold no
-// role beyond 'spectator', which is what registration hands out. See
-// the router's allowGuardian meta.
-//
-// Deliberately NOT folded into buildTokenPayload: that shape gets
-// signed into the JWT, and an approval that lands after the cookie was
-// minted would sit stale until the next sign-in. This rides on the
-// response body instead, so /api/auth/me refreshes it on every boot.
 // Clubs this user admins, [{ id, name, region_id, org_claim_state }]. Same reasoning as
 // has_dependents below: a club admin grant lands whenever the federation
 // (or signup) makes it, so it rides on the response body, never the JWT.
@@ -141,6 +133,15 @@ async function loadRegionAdminOf(pool, userId) {
   return r.rows;
 }
 
+// Does this user look after anybody? A guardian with an approved
+// dependent gets to reach the payment surfaces even when they hold no
+// role beyond 'spectator', which is what registration hands out. See
+// the router's allowGuardian meta.
+//
+// Deliberately NOT folded into buildTokenPayload: that shape gets
+// signed into the JWT, and an approval that lands after the cookie was
+// minted would sit stale until the next sign-in. This rides on the
+// response body instead, so /api/auth/me refreshes it on every boot.
 async function loadHasDependents(pool, userId) {
   const r = await pool.query(
     `SELECT 1 FROM guardians
@@ -1422,7 +1423,7 @@ module.exports = function createAuthRouter({
       // Mint + send the email-verification token, same flow as
       // /api/auth/register. The previous register-org omitted
       // this step, which left the founding org_admin permanently
-      // unable to log in (the login gate at line 82-87 refuses
+      // unable to log in (the login gate in /api/auth/login refuses
       // bcrypt-correct credentials when email_verified_at IS
       // NULL). The operational workaround was for a sysadmin to
       // UPDATE-stamp email_verified_at directly, bypassing

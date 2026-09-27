@@ -12,6 +12,23 @@
 //   GET  /api/users/:id/role-audit   per-user audit history
 //   GET  /api/judges                 list judges in caller's org
 //
+//   Account lifecycle (migrations 053, 058):
+//   POST /api/users/me/delete        self-delete (password re-auth)
+//   POST /api/users/me/claim-candidates  deleted accounts that could be mine
+//   POST /api/users/me/claim         re-link them to this account
+//   PUT  /api/users/:id/profile      org admin edits name, DOB, etc.
+//   POST /api/users/:id/suspend      ...and suspends
+//   POST /api/users/:id/reactivate   ...and lifts it
+//   POST /api/users/:id/resend-verification  re-send the verify link
+//   POST /api/users/:id/reset-password       send a reset link
+//
+//   Guardians (migration 083):
+//   GET  /api/guardians/my-dependents
+//   POST /api/guardians/request
+//   GET  /api/guardian-requests      org admin's queue
+//   POST /api/guardian-requests/:id/review
+//   POST /api/guardians/:id/revoke
+//
 // Both writes that change a user's privilege set call
 // bumpTokenVersion inside the same transaction, so a rollback rolls
 // back the bump too: the freshly-revoked role takes effect on the
