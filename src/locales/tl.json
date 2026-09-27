@@ -2194,7 +2194,7 @@
     "intro_unclaimed": "Habang wala pang federation dito, ang mga admin ng iyong club ang sumusuri sa mga kahilingan para sa maninisid, hukom at tagasanay, at ang DivingHQ sa iba pa. Makakatanggap ka ng email kapag may desisyon na.",
     "no_club_hint": "Wala ka sa anumang club, kaya DivingHQ ang susuri nito. Kung mas gusto mong isang club ang magpasya, humiling munang sumali sa isa.",
     "you_have": "Iyong mga role: {roles}",
-    "role_label": "Role",
+    "role_label": "Tungkulin",
     "pick_role": "— Pumili ng role —",
     "note_label": "Tala para sa susuri (opsyonal)",
     "submit": "Ipadala ang kahilingan",
