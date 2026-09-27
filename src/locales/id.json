@@ -603,7 +603,8 @@
         "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau wasit di <strong>Klub saya</strong>",
         "step_4": "Pada hari kompetisi, jalankan penilaian dari <strong>Ruang Kontrol</strong>",
         "step_5": "Saat federasi atau badan wilayah Anda bergabung, beri suara atas klaimnya di <strong>Klaim</strong>",
-        "cta": "Menyelenggarakan kompetisi ↗"
+        "cta": "Menyelenggarakan kompetisi ↗",
+        "step_invite": "Di <strong>Klub saya</strong>, bagikan tautan undangan klub Anda dan atur kode klub"
       },
       "region_admin": {
         "name": "Admin wilayah",

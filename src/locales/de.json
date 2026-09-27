@@ -614,7 +614,8 @@
         "step_3": "Genehmigen Sie auf <strong>Mein Verein</strong> Mitglieder, die springen, werten oder Schiedsrichter sein möchten",
         "step_4": "Am Wettkampftag steuern Sie die Wertung aus dem <strong>Kontrollraum</strong>",
         "step_5": "Kommt Ihr Verband oder Landesverband dazu, stimmen Sie unter <strong>Ansprüche</strong> über seinen Anspruch ab",
-        "cta": "Einen Wettkampf ausrichten ↗"
+        "cta": "Einen Wettkampf ausrichten ↗",
+        "step_invite": "Teilen Sie unter <strong>Mein Verein</strong> den Einladungslink Ihres Vereins und legen Sie das Vereinskürzel fest"
       },
       "region_admin": {
         "name": "Regionsadmin",

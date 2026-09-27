@@ -603,7 +603,8 @@
         "step_3": "Aprubahan sa <strong>Aking club</strong> ang mga miyembrong gustong mag-dive, humusga o maging referee",
         "step_4": "Sa araw ng kompetisyon, patakbuhin ang pagmamarka mula sa <strong>Control Room</strong>",
         "step_5": "Kapag dumating ang iyong pederasyon o panrehiyong lupon, bumoto sa claim nito sa <strong>Mga claim</strong>",
-        "cta": "Pagpapatakbo ng kompetisyon ↗"
+        "cta": "Pagpapatakbo ng kompetisyon ↗",
+        "step_invite": "Sa <strong>Aking club</strong>, ibahagi ang invite link ng iyong club at itakda ang code ng club"
       },
       "region_admin": {
         "name": "Admin ng rehiyon",

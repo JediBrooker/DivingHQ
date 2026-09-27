@@ -158,6 +158,7 @@ test("a club founder's checklist, invite link, club code and first meet", async 
   await page.getByTestId("gs-step-guide").click();
   await page.waitForURL(/\/guide#club-admin$/);
   await expect(page.locator("#club-admin")).toBeInViewport();
+  await expect(page.locator("#club-admin")).toContainText("share your club's invite link");
   await page.goto("/dashboard");
   await expect(panel).toContainText("4 of 4 done");
 

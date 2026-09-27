@@ -614,7 +614,8 @@
         "step_3": "Na stronie <strong>Mój klub</strong> zatwierdzaj członków, którzy chcą skakać, sędziować lub być sędzią głównym",
         "step_4": "W dniu zawodów prowadź punktację z <strong>Pokoju kontroli</strong>",
         "step_5": "Gdy dołączy twoja federacja lub organ regionalny, zagłosuj nad jej roszczeniem w <strong>Roszczeniach</strong>",
-        "cta": "Organizacja zawodów ↗"
+        "cta": "Organizacja zawodów ↗",
+        "step_invite": "Na stronie <strong>Mój klub</strong> udostępnij link z zaproszeniem do klubu i ustaw kod klubu"
       },
       "region_admin": {
         "name": "Administrator regionu",

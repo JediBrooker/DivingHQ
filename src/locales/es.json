@@ -603,7 +603,8 @@
         "step_3": "Aprueba en <strong>Mi club</strong> a los miembros que quieren saltar, juzgar o arbitrar",
         "step_4": "El día de la competición, dirige la puntuación desde la <strong>Sala de control</strong>",
         "step_5": "Cuando llegue tu federación u organismo regional, vota su reclamación en <strong>Reclamaciones</strong>",
-        "cta": "Organizar una competición ↗"
+        "cta": "Organizar una competición ↗",
+        "step_invite": "En <strong>Mi club</strong>, comparte el enlace de invitación de tu club y define el código del club"
       },
       "region_admin": {
         "name": "Administrador regional",

@@ -603,7 +603,8 @@
         "step_3": "在<strong>我的俱乐部</strong>中审批希望成为运动员、裁判或裁判长的会员",
         "step_4": "比赛当天，在<strong>控制室</strong>中主持评分",
         "step_5": "当您的联合会或地区机构加入时，请在<strong>接管申请</strong>中对其申请投票",
-        "cta": "组织比赛 ↗"
+        "cta": "组织比赛 ↗",
+        "step_invite": "在<strong>我的俱乐部</strong>中分享俱乐部的邀请链接，并设置俱乐部代码"
       },
       "region_admin": {
         "name": "地区管理员",

@@ -614,7 +614,8 @@
         "step_3": "A <strong>Saját klubom</strong> oldalon hagyja jóvá a műugrani, bíráskodni vagy vezetőbíró lenni kívánó tagokat",
         "step_4": "A versenynapon a <strong>Vezérlőszobából</strong> irányítja a pontozást",
         "step_5": "Amikor szövetsége vagy regionális testülete csatlakozik, szavazzon az igényéről az <strong>Igények</strong> oldalon",
-        "cta": "Verseny rendezése ↗"
+        "cta": "Verseny rendezése ↗",
+        "step_invite": "A <strong>Saját klubom</strong> oldalon ossza meg klubja meghívó linkjét, és állítsa be a klubkódot"
       },
       "region_admin": {
         "name": "Régió-adminisztrátor",

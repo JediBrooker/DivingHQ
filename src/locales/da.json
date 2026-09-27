@@ -614,7 +614,8 @@
         "step_3": "Godkend medlemmer, der vil springe, dømme eller være overdommer, på <strong>Min klub</strong>",
         "step_4": "På dagen styrer du pointgivningen fra <strong>Kontrolrummet</strong>",
         "step_5": "Når dit forbund eller regionale organ kommer til, stemmer du om dets krav under <strong>Krav</strong>",
-        "cta": "Afvikling af et stævne ↗"
+        "cta": "Afvikling af et stævne ↗",
+        "step_invite": "Del klubbens invitationslink og angiv klubkoden under <strong>Min klub</strong>"
       },
       "region_admin": {
         "name": "Regionsadministrator",

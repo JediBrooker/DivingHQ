@@ -614,7 +614,8 @@
         "step_3": "Approva in <strong>Il mio club</strong> i membri che vogliono tuffarsi, giudicare o arbitrare",
         "step_4": "Il giorno della gara, dirigi i punteggi dalla <strong>Sala Controllo</strong>",
         "step_5": "Quando arriva la tua federazione o l'ente regionale, vota la sua rivendicazione in <strong>Rivendicazioni</strong>",
-        "cta": "Organizzare una gara ↗"
+        "cta": "Organizzare una gara ↗",
+        "step_invite": "In <strong>Il mio club</strong>, condividi il link di invito del tuo club e imposta il codice del club"
       },
       "region_admin": {
         "name": "Amministratore regionale",

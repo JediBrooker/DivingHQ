@@ -250,6 +250,7 @@ onBeforeUnmount(() => observer?.disconnect())
               <ol class="role-steps">
                 <li v-html="$t('guide.role.club_admin.step_1')"></li>
                 <li v-html="$t('guide.role.club_admin.step_2')"></li>
+                <li v-html="$t('guide.role.club_admin.step_invite')"></li>
                 <li v-html="$t('guide.role.club_admin.step_3')"></li>
                 <li v-html="$t('guide.role.club_admin.step_4')"></li>
                 <li v-html="$t('guide.role.club_admin.step_5')"></li>

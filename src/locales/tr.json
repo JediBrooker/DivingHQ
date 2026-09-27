@@ -603,7 +603,8 @@
         "step_3": "<strong>Kulübüm</strong> sayfasında atlamak, hakemlik yapmak veya başhakem olmak isteyen üyeleri onaylayın",
         "step_4": "Yarışma günü puanlamayı <strong>Kontrol Odası</strong>'ndan yönetin",
         "step_5": "Federasyonunuz veya bölgesel kurumunuz geldiğinde, talebini <strong>Devralma talepleri</strong> sayfasında oylayın",
-        "cta": "Yarışma düzenlemek ↗"
+        "cta": "Yarışma düzenlemek ↗",
+        "step_invite": "<strong>Kulübüm</strong> sayfasında kulübünüzün davet bağlantısını paylaşın ve kulüp kodunu belirleyin"
       },
       "region_admin": {
         "name": "Bölge yöneticisi",

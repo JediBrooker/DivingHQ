@@ -614,7 +614,8 @@
         "step_3": "Approuvez dans <strong>Mon club</strong> les membres qui veulent plonger, juger ou arbitrer",
         "step_4": "Le jour J, pilotez la notation depuis la <strong>Salle de contrôle</strong>",
         "step_5": "Quand votre fédération ou votre organe régional arrive, votez sur sa revendication dans <strong>Revendications</strong>",
-        "cta": "Organiser une compétition ↗"
+        "cta": "Organiser une compétition ↗",
+        "step_invite": "Dans <strong>Mon club</strong>, partagez le lien d'invitation de votre club et définissez son code"
       },
       "region_admin": {
         "name": "Administrateur régional",

@@ -614,7 +614,8 @@
         "step_3": "Aprove em <strong>O meu clube</strong> os membros que querem saltar, julgar ou arbitrar",
         "step_4": "No dia da prova, conduza a pontuação a partir da <strong>Sala de Controlo</strong>",
         "step_5": "Quando a sua federação ou organismo regional chegar, vote a reivindicação em <strong>Reivindicações</strong>",
-        "cta": "Organizar uma prova ↗"
+        "cta": "Organizar uma prova ↗",
+        "step_invite": "Em <strong>O meu clube</strong>, partilhe a ligação de convite do seu clube e defina o código do clube"
       },
       "region_admin": {
         "name": "Administrador regional",

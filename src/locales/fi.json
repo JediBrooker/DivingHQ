@@ -614,7 +614,8 @@
         "step_3": "Hyväksy <strong>Oma seura</strong> -sivulla jäsenet, jotka haluavat hypätä, tuomita tai toimia päätuomarina",
         "step_4": "Kilpailupäivänä ohjaat pisteytystä <strong>Ohjaamosta</strong>",
         "step_5": "Kun liittosi tai alueellinen elin liittyy, äänestä sen vaatimuksesta sivulla <strong>Vaatimukset</strong>",
-        "cta": "Kilpailun järjestäminen ↗"
+        "cta": "Kilpailun järjestäminen ↗",
+        "step_invite": "Jaa seurasi kutsulinkki ja aseta seuran lyhenne sivulla <strong>Oma seura</strong>"
       },
       "region_admin": {
         "name": "Alueen ylläpitäjä",

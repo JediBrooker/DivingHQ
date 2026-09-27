@@ -603,7 +603,8 @@
         "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo řídit, na stránce <strong>Můj klub</strong>",
         "step_4": "V den závodu řiďte bodování z <strong>Řídicí místnosti</strong>",
         "step_5": "Až dorazí vaše federace nebo krajský svaz, hlasujte o jejím nároku na stránce <strong>Nároky</strong>",
-        "cta": "Pořádání závodu ↗"
+        "cta": "Pořádání závodu ↗",
+        "step_invite": "Na stránce <strong>Můj klub</strong> sdílejte pozvánkový odkaz klubu a nastavte kód klubu"
       },
       "region_admin": {
         "name": "Správce regionu",

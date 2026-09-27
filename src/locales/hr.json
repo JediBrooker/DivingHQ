@@ -603,7 +603,8 @@
         "step_3": "Na stranici <strong>Moj klub</strong> odobrite članove koji žele skakati, suditi ili biti glavni sudac",
         "step_4": "Na dan natjecanja vodite bodovanje iz <strong>Kontrolne sobe</strong>",
         "step_5": "Kad stigne vaš savez ili regionalno tijelo, glasajte o njegovu zahtjevu u <strong>Zahtjevima</strong>",
-        "cta": "Organizacija natjecanja ↗"
+        "cta": "Organizacija natjecanja ↗",
+        "step_invite": "Na stranici <strong>Moj klub</strong> podijelite poveznicu za pozivnicu svojeg kluba i postavite oznaku kluba"
       },
       "region_admin": {
         "name": "Administrator regije",

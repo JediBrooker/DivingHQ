@@ -603,7 +603,8 @@
         "step_3": "Approve members who want to dive, judge or referee on <strong>My club</strong>",
         "step_4": "On the day, drive scoring from <strong>Control Room</strong>",
         "step_5": "When your federation or state body arrives, vote on its claim on <strong>Claims</strong>",
-        "cta": "Running a meet ↗"
+        "cta": "Running a meet ↗",
+        "step_invite": "On <strong>My club</strong>, share your club's invite link and set its club code"
       },
       "region_admin": {
         "name": "Region Admin",

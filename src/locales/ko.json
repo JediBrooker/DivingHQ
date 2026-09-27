@@ -603,7 +603,8 @@
         "step_3": "<strong>내 클럽</strong>에서 선수, 심판, 주심을 희망하는 회원을 승인합니다",
         "step_4": "대회 당일에는 <strong>컨트롤 룸</strong>에서 채점을 진행합니다",
         "step_5": "연맹이나 지역 단체가 합류하면 <strong>인수 신청</strong>에서 투표합니다",
-        "cta": "대회 운영하기 ↗"
+        "cta": "대회 운영하기 ↗",
+        "step_invite": "<strong>내 클럽</strong>에서 클럽 초대 링크를 공유하고 클럽 코드를 설정합니다"
       },
       "region_admin": {
         "name": "지역 관리자",

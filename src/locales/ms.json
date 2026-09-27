@@ -603,7 +603,8 @@
         "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau menjadi pengadil di <strong>Kelab saya</strong>",
         "step_4": "Pada hari pertandingan, kendalikan pemarkahan dari <strong>Bilik Kawalan</strong>",
         "step_5": "Apabila persekutuan atau badan wilayah anda tiba, undi tuntutannya di <strong>Tuntutan</strong>",
-        "cta": "Menganjurkan pertandingan ↗"
+        "cta": "Menganjurkan pertandingan ↗",
+        "step_invite": "Di <strong>Kelab saya</strong>, kongsi pautan jemputan kelab anda dan tetapkan kod kelab"
       },
       "region_admin": {
         "name": "Pentadbir rantau",

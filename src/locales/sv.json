@@ -614,7 +614,8 @@
         "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara överdomare på <strong>Min klubb</strong>",
         "step_4": "På tävlingsdagen styr du poängsättningen från <strong>Kontrollrummet</strong>",
         "step_5": "När ditt förbund eller regionala organ ansluter röstar du om dess anspråk under <strong>Anspråk</strong>",
-        "cta": "Arrangera en tävling ↗"
+        "cta": "Arrangera en tävling ↗",
+        "step_invite": "Dela klubbens inbjudningslänk och ange klubbkoden under <strong>Min klubb</strong>"
       },
       "region_admin": {
         "name": "Regionadministratör",
