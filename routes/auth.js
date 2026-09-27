@@ -17,6 +17,7 @@ const totp    = require("../lib/totp");
 const { SESSION_COOKIE, cookieOptions } = require("../lib/session-cookie");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { countryByCode } = require("../lib/countries");
+const { materializeRegions } = require("../lib/regions");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -102,6 +103,19 @@ async function loadClubAdminOf(pool, userId) {
        FROM club_admins ca JOIN clubs c ON c.id = ca.club_id
       WHERE ca.user_id = $1
       ORDER BY lower(c.name)`,
+    [userId],
+  );
+  return r.rows;
+}
+
+// Regions this user admins, [{ id, name, short_code }]. Body-only like
+// club_admin_of, for the SPA's meet screens and region page.
+async function loadRegionAdminOf(pool, userId) {
+  const r = await pool.query(
+    `SELECT rg.id, rg.name, rg.short_code
+       FROM region_admins ra JOIN regions rg ON rg.id = ra.region_id
+      WHERE ra.user_id = $1
+      ORDER BY rg.name`,
     [userId],
   );
   return r.rows;
@@ -216,6 +230,7 @@ module.exports = function createAuthRouter({
       const payload = await buildTokenPayload(req.user.id);
       payload.has_dependents = await loadHasDependents(pool, req.user.id);
       payload.club_admin_of = await loadClubAdminOf(pool, req.user.id);
+      payload.region_admin_of = await loadRegionAdminOf(pool, req.user.id);
       res.json({ user: payload });
     } catch (err) {
       console.error("[Auth Me Error]", err.message);
@@ -329,6 +344,7 @@ module.exports = function createAuthRouter({
       // After signing, so the flag never enters the JWT.
       payload.has_dependents = await loadHasDependents(pool, user.id);
       payload.club_admin_of = await loadClubAdminOf(pool, user.id);
+      payload.region_admin_of = await loadRegionAdminOf(pool, user.id);
       const resBody = { user: payload, ...payload };
       if (includeBodyToken(req)) resBody.token = token;
       res.json(resBody);
@@ -426,6 +442,7 @@ module.exports = function createAuthRouter({
       // Same body-only extras as the password login.
       payload.has_dependents = await loadHasDependents(pool, user.id);
       payload.club_admin_of = await loadClubAdminOf(pool, user.id);
+      payload.region_admin_of = await loadRegionAdminOf(pool, user.id);
       const resBody = {
         user: payload,
         ...payload,
@@ -740,7 +757,7 @@ module.exports = function createAuthRouter({
     }
     const {
       username, password, email, org_id, country_code, requested_role, note,
-      club_id, new_club_name, new_club_short_code,
+      club_id, new_club_name, new_club_short_code, region_code,
     } = req.body || {};
     // Club-first signup (migration 087) sends a country instead of an org.
     // org_id still wins when both are present: that's the form telling us
@@ -784,6 +801,7 @@ module.exports = function createAuthRouter({
       let orgId;
       let orgClaimState;
       let orgName = country ? country.name : null;
+      let orgCountry = country ? country.a3 : null;
       let startedCountry = false;
       if (country) {
         const found = await resolveCountryOrg(client, country);
@@ -804,7 +822,7 @@ module.exports = function createAuthRouter({
         // same filter as /api/orgs/active so a hand-crafted POST can't
         // get round the missing dropdown entry.
         const org = await client.query(
-          "SELECT id, name, claim_state FROM organisations WHERE id = $1 AND status = 'active' AND id <> $2",
+          "SELECT id, name, claim_state, country_code FROM organisations WHERE id = $1 AND status = 'active' AND id <> $2",
           [org_id, ADMIN_ORG_ID],
         );
         if (!org.rows.length) {
@@ -816,6 +834,7 @@ module.exports = function createAuthRouter({
         orgId = org.rows[0].id;
         orgClaimState = org.rows[0].claim_state;
         orgName = org.rows[0].name;
+        orgCountry = org.rows[0].country_code;
       }
       const unclaimed = orgClaimState === "unclaimed";
 
@@ -844,11 +863,28 @@ module.exports = function createAuthRouter({
         }
         resolvedClubId = club_id;
       } else if (cleanClubName) {
+        // Regions (migration 088). A country the clubs started gets its
+        // built-in list the first time anyone founds a club there, which
+        // also catches accounts started before regions existed. Where the
+        // org has regions, a new club has to say which one it's in.
+        if (unclaimed) await materializeRegions(client, orgId, orgCountry);
+        let regionId = null;
+        const regions = await client.query(
+          "SELECT id, short_code FROM regions WHERE org_id = $1", [orgId],
+        );
+        if (regions.rows.length) {
+          const code = typeof region_code === "string" ? region_code.toUpperCase() : "";
+          regionId = regions.rows.find((r) => r.short_code === code)?.id || null;
+          if (!regionId) {
+            await client.query("ROLLBACK");
+            return res.status(400).json({ error: "Pick which state or region your club is in", code: "region_required" });
+          }
+        }
         const cnew = await client.query(
-          `INSERT INTO clubs (org_id, name, short_code)
-           VALUES ($1, $2, $3)
+          `INSERT INTO clubs (org_id, name, short_code, region_id)
+           VALUES ($1, $2, $3, $4)
            RETURNING id`,
-          [orgId, cleanClubName, safeText(new_club_short_code, 8) || null],
+          [orgId, cleanClubName, safeText(new_club_short_code, 8) || null, regionId],
         );
         resolvedClubId = cnew.rows[0].id;
         createdClubId = resolvedClubId;

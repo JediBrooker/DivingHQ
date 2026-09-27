@@ -232,7 +232,7 @@ module.exports = function createOrgsRouter({
   router.get("/api/orgs/:id/clubs", async (req, res) => {
     try {
       const r = await pool.query(
-        `SELECT id, name, short_code
+        `SELECT id, name, short_code, region_id
          FROM clubs WHERE org_id = $1
          ORDER BY name ASC`,
         [req.params.id],

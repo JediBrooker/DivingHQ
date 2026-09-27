@@ -928,3 +928,92 @@ test("club admins review their own members' role requests", async (t) => {
     await wipe();
   }
 });
+
+// Phase 2: regions. Canada is the club-first country here (nobody else in
+// the suite uses it); the claimed fixture org plays a federation.
+test("regions: built-in lists, signup, club moves and region admins", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CAN";
+  const wipe = async () => {
+    const orgs = await pool.query("SELECT id FROM organisations WHERE country_code = $1 AND claim_state = 'unclaimed'", [CODE]);
+    for (const { id } of orgs.rows) await teardownFixture({ orgId: id });
+  };
+  await wipe();
+  const signUp = async (body) => {
+    const username = `int-rg-${crypto.randomBytes(4).toString("hex")}`;
+    const r = await fetchJson("POST", "/api/auth/register", {
+      body: { username, full_name: username, password: TEST_PASSWORD, email: `${username}@example.test`, ...body },
+    });
+    if (r.status !== 201) return { status: r.status, body: r.body };
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1", [username]);
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username, password: TEST_PASSWORD } });
+    return { status: 201, token: login.body.token, id: login.body.id, clubs: login.body.club_admin_of, login: login.body };
+  };
+  const state = await setupFixture({ withEvent: false });
+  try {
+    const cat = await fetchJson("GET", `/api/countries/${CODE}/regions`);
+    assert.equal(cat.body.label, "province");
+    assert.equal(cat.body.regions.length, 13);
+
+    // A new club in a country with regions has to say which one.
+    const noRegion = await signUp({ country_code: CODE, new_club_name: "Toronto Divers" });
+    assert.equal(noRegion.status, 400);
+    assert.equal(noRegion.body.code, "region_required");
+    const A = await signUp({ country_code: CODE, new_club_name: "Toronto Divers", region_code: "on" });
+    assert.equal(A.status, 201, JSON.stringify(A.body));
+
+    const org = (await pool.query(
+      "SELECT id, region_label FROM organisations WHERE country_code = $1 AND claim_state = 'unclaimed'", [CODE],
+    )).rows[0];
+    assert.equal(org.region_label, "province");
+    const regions = await fetchJson("GET", `/api/orgs/${org.id}/regions`);
+    assert.equal(regions.body.regions.length, 13);
+    const on = regions.body.regions.find((r) => r.short_code === "ON");
+    const qc = regions.body.regions.find((r) => r.short_code === "QC");
+    assert.equal(on.club_count, 1);
+    const clubs = await fetchJson("GET", `/api/orgs/${org.id}/clubs`);
+    assert.equal(clubs.body[0].region_id, on.id);
+
+    // The club's own admin can move it (no federation to ask)...
+    const clubId = A.clubs[0].id;
+    assert.equal((await fetchJson("PUT", `/api/clubs/${clubId}/region`, { token: A.token, body: { region_id: qc.id } })).status, 200);
+    // ...a member can't, and nobody can move it into another org's region.
+    const B = await signUp({ country_code: CODE, club_id: clubId });
+    assert.equal((await fetchJson("PUT", `/api/clubs/${clubId}/region`, { token: B.token, body: { region_id: on.id } })).status, 403);
+
+    // Nobody can appoint region admins in an unclaimed country but the
+    // sysadmin (claims come later).
+    assert.equal((await fetchJson("POST", `/api/regions/${qc.id}/admins`, { token: A.token, body: { user_id: B.id } })).status, 403);
+
+    // A federation opts in to regions and appoints a state admin.
+    await pool.query("UPDATE organisations SET country_code = 'GBR' WHERE id = $1", [state.orgId]);
+    const seed = await fetchJson("POST", `/api/orgs/${state.orgId}/regions/seed`, { token: state.adminToken });
+    assert.equal(seed.status, 200, JSON.stringify(seed.body));
+    assert.equal(seed.body.added, 4);
+    const again = await fetchJson("POST", `/api/orgs/${state.orgId}/regions/seed`, { token: state.adminToken });
+    assert.equal(again.body.added, 0, "seeding twice adds nothing");
+    const gbr = await fetchJson("GET", `/api/orgs/${state.orgId}/regions`);
+    const sco = gbr.body.regions.find((r) => r.short_code === "SCO");
+    const fedClub = await fetchJson("POST", `/api/orgs/${state.orgId}/clubs`, { token: state.adminToken, body: { name: "Edinburgh Test Club" } });
+    assert.equal((await fetchJson("PUT", `/api/clubs/${fedClub.body.id}/region`, { token: state.adminToken, body: { region_id: sco.id } })).status, 200);
+    // Someone from another org can't be appointed.
+    assert.equal((await fetchJson("POST", `/api/regions/${sco.id}/admins`, { token: state.adminToken, body: { user_id: A.id } })).status, 400);
+    const scotAdmin = (await pool.query(
+      `INSERT INTO users (username, password, full_name, email, org_id, club_id, email_verified_at)
+       VALUES ($1, $2, 'Scot Admin', $3, $4, $5, now()) RETURNING id`,
+      [`int-scot-${state.slug}`, await require("bcrypt").hash(TEST_PASSWORD, 4), `scot-${state.slug}@example.test`, state.orgId, fedClub.body.id],
+    )).rows[0].id;
+    const appoint = await fetchJson("POST", `/api/regions/${sco.id}/admins`, { token: state.adminToken, body: { user_id: scotAdmin } });
+    assert.equal(appoint.status, 201);
+    const scotLogin = await fetchJson("POST", "/api/auth/login", { body: { username: `int-scot-${state.slug}`, password: TEST_PASSWORD } });
+    assert.deepEqual(scotLogin.body.region_admin_of.map((r) => r.short_code), ["SCO"]);
+    const overview = await fetchJson("GET", `/api/regions/${sco.id}/overview`, { token: scotLogin.body.token });
+    assert.equal(overview.status, 200);
+    assert.deepEqual(overview.body.clubs.map((c) => c.name), ["Edinburgh Test Club"]);
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [state.orgId]).catch(() => {});
+    await teardownFixture(state);
+    await wipe();
+  }
+});

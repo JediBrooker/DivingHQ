@@ -696,6 +696,9 @@ app.use(require("./routes/orgs")({
   sendOrgDecisionEmail,
 }));
 
+// Regions (states / provinces / home nations), migration 088.
+app.use(require("./routes/regions")({ pool, verifyToken, isInSameOrg }));
+
 // =============================================================
 // PAYMENTS ROUTES (platform is merchant of record, per Migration 075)
 // [SECTION: ROUTES: PAYMENTS]
