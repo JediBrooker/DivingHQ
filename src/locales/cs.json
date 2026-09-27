@@ -480,7 +480,7 @@
       "confirming": "Nárokování…",
       "password_label": "Potvrďte svým heslem",
       "password_placeholder": "Vaše současné heslo",
-      "conflict": "Nelze sloučit: starý účet i váš současný účet mají záznamy pro stejnou disciplínu a kolo. Odškrtněte kolidujícího kandidáta nebo kontaktujte administrátora federace, aby provedl sloučení ručně.",
+      "conflict": "Nelze sloučit: starý účet i váš současný účet mají záznamy pro stejnou disciplínu a kolo. Odškrtněte kolidujícího kandidáta, nebo napište na {email} a sloučíme je ručně.",
       "success_toast": "Minulé výsledky byly znovu propojeny s vaším profilem."
     }
   },
@@ -631,13 +631,13 @@
       "schedule_q": "Jak naplánuji celý den mistrovství?",
       "schedule_a": "Přidejte k disciplínám závodu naplánované časy a poté otevřete <strong>Harmonogram</strong> ze stránky závodu jako administrátor organizace nebo vedoucí závodu. DivingHQ připraví první plán se 45minutovými rozcvičkami, bloky disciplín a přiřazením prken. Zapněte <strong>Režim úprav</strong> pro přetahování, změnu velikosti, vkládání, mazání nebo duplikování bloků; zásuvka kolizí označí překrývající se prkna, rozhodčí, skokany a vrchní rozhodčí. Trenéři, skokani a diváci si mohou prohlédnout veřejný harmonogram nebo se přihlásit k odběru kanálu iCal.",
       "bug_q": "Jak nahlásím chybu?",
-      "bug_a": "Klepněte na odkaz <strong>🐛 Nahlásit chybu</strong> v dolní části úvodní stránky nebo vaší nástěnky. Otevře se předvyplněné hlášení na GitHubu připravené k popisu problému. Snímky obrazovky velmi pomáhají.",
+      "bug_a": "Klepněte na odkaz <strong>🐛 Nahlásit chybu</strong> v dolní části úvodní stránky nebo vaší nástěnky. Otevře se předvyplněné hlášení na GitHubu připravené k popisu problému. Snímky obrazovky velmi pomáhají. Nemáte účet na GitHubu? Napište na {email}.",
       "install_q": "Jak nainstaluji DivingHQ jako aplikaci?",
       "install_a": "Na iPhonu: otevřete web v Safari, klepněte na tlačítko Sdílet a poté na <strong>Přidat na plochu</strong>. Na Androidu: otevřete v Chromu, klepněte na nabídku a poté na <strong>Nainstalovat aplikaci</strong>. Ikona spustí celoobrazovkové zobrazení bez prvků prohlížeče — rychlejší start, bez adresního řádku.",
       "tfa_q": "Jak zapnu dvoufaktorové ověření?",
       "tfa_a": "Otevřete <strong>Můj profil</strong> → <strong>Zabezpečení</strong> → <strong>Dvoufaktorové ověření</strong> a naskenujte QR kód svou ověřovací aplikací (1Password, Authy, Google Authenticator). Záložní kódy uložte na bezpečné místo — jsou jedinou cestou zpět, pokud telefon ztratíte.",
       "account_q": "Jak změním e-mail, heslo nebo smažu účet?",
-      "account_a": "Vše v <strong>Mém profilu</strong> → <strong>Nastavení účtu</strong>. Změna e-mailu vyžaduje opětovné ověření na nové adrese. Smazání účtu je trvalé a odstraní vaše přihlášení; historické známky zůstávají na veřejné výsledkové tabuli v záznamu federace (na požádání anonymizovány — kontaktujte administrátora své federace)."
+      "account_a": "Vše v <strong>Mém profilu</strong>: e-mail nebo heslo změníte nahoře a <strong>Smazat můj účet</strong> najdete dole. Nová e-mailová adresa musí být před použitím potvrzena. Smazání účtu je trvalé a odstraní vaše přihlášení i osobní údaje; vaše jméno zůstane u výsledků závodů, kterých jste se účastnili, jako sportovní záznam. Pokud je potřeba výsledek odstranit úplně, napište na {email}."
     },
     "next": {
       "lede": "Potřebujete podrobnou verzi? {guide_link} pokrývá každou obrazovku, každou roli a každé pravidlo World Aquatics, které aplikace zachycuje. Stránky, které stojí za přidání do záložek:",

@@ -306,6 +306,7 @@ above it.
 | Claims lifecycle (open, activate, vote, decide, revoke, sweep) | `lib/claims.js` | `lib/claims.js` |
 | Sysadmin-tunable numeric settings (claim vote rules) | `getAll` / `describeAll` / `set` | `lib/platform-settings.js` |
 | The support address (Reply-To on mail, "contact support" in messages; SPA reads `GET /api/public-config`) | `supportEmail()` / `supportContact()` | `lib/support.js` |
+| What a suspended account is told (login and verifyToken; club admin in unclaimed countries) | `suspendedAccountMessage(claimState)` | `lib/support.js` |
 
 If you write the third copy of any of these, **stop and consolidate** into
 a helper. The repo has bled time on duplicated patterns.

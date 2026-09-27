@@ -18,7 +18,7 @@ import MarkdownArticle from '@/components/MarkdownArticle.vue'
 import LogoMark from '@/components/LogoMark.vue'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
-import { useSupportEmail, DEFAULT_SUPPORT_EMAIL } from '@/composables/useSupportEmail'
+import { useSupportEmail } from '@/composables/useSupportEmail'
 
 const props = defineProps({
   doc: { type: String, required: true, validator: (v) => ['privacy', 'terms'].includes(v) },
@@ -29,13 +29,9 @@ const DOCS = { privacy: privacyMd, terms: termsMd }
 const { locale } = useI18n()
 const supportEmail = useSupportEmail()
 
-// The documents name the hosted inbox. A deployment that set its own
-// SUPPORT_EMAIL should show that one instead, everywhere it appears.
-const md = computed(() => {
-  const src = DOCS[props.doc] || ''
-  const addr = supportEmail.value
-  return addr && addr !== DEFAULT_SUPPORT_EMAIL ? src.replaceAll(DEFAULT_SUPPORT_EMAIL, addr) : src
-})
+// MarkdownArticle swaps in this deployment's SUPPORT_EMAIL where the
+// documents name the hosted inbox.
+const md = computed(() => DOCS[props.doc] || '')
 
 // The router has no scrollBehavior, so hopping between the two documents
 // from the footer would otherwise land halfway down the new one.

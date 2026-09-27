@@ -19,7 +19,7 @@ const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { countryByCode } = require("../lib/countries");
 const { materializeRegions } = require("../lib/regions");
 const claims = require("../lib/claims");
-const { supportContact } = require("../lib/support");
+const { supportContact, suspendedAccountMessage } = require("../lib/support");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -298,11 +298,8 @@ module.exports = function createAuthRouter({
       // In a club-first country there's no federation to ask (nobody
       // there holds org_admin), so point them at their club and at us.
       if (user.suspended_at != null) {
-        const who = user.org_claim_state === "unclaimed"
-          ? "your club admin"
-          : "your federation administrator";
         return res.status(403).json({
-          error: `Your account has been suspended. Contact ${who} or ${supportContact()}.`,
+          error: suspendedAccountMessage(user.org_claim_state),
           code: "account_suspended",
         });
       }

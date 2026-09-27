@@ -480,7 +480,7 @@
       "confirming": "Talep ediliyor…",
       "password_label": "Şifrenizle onaylayın",
       "password_placeholder": "Mevcut şifreniz",
-      "conflict": "Birleştirilemez: eski hesap ve mevcut hesabınızın ikisinde de aynı etkinlik ve tur için kayıtlar var. Çakışan adayın işaretini kaldırın veya manuel birleştirme için federasyon yöneticinizle iletişime geçin.",
+      "conflict": "Birleştirilemez: eski hesap ve mevcut hesabınızın ikisinde de aynı etkinlik ve tur için kayıtlar var. Çakışan adayın işaretini kaldırın ya da {email} adresine yazın, hesapları elle birleştirelim.",
       "success_toast": "Geçmiş sonuçlar profilinize yeniden bağlandı."
     }
   },
@@ -631,13 +631,13 @@
       "schedule_q": "Bir günlük şampiyona programını nasıl planlarım?",
       "schedule_a": "Yarışmanın etkinliklerine zamanlanmış saatler ekleyin, ardından kuruluş yöneticisi veya yarışma yöneticisi olarak yarışma sayfasından <strong>Program</strong>'ı açın. DivingHQ ilk planı 45 dakikalık ısınmalar, etkinlik blokları ve tahta atamalarıyla hazırlar. <strong>Düzenleme modu</strong>'nu açarak oturumları sürükleyin, yeniden boyutlandırın, ekleyin, silin veya çoğaltın; çakışma çekmecesi üst üste binen tahtaları, hakemleri, atlamacıları ve baş hakemleri işaretler. Antrenörler, atlamacılar ve seyirciler herkese açık zaman çizelgesini görebilir veya iCal akışına abone olabilir.",
       "bug_q": "Bir hatayı nasıl bildiririm?",
-      "bug_a": "Ana sayfanın veya panonuzun altındaki <strong>🐛 Hata bildir</strong> bağlantısına tıklayın. Sorunu açıklamanız için önceden doldurulmuş bir GitHub konusu açılır. Ekran görüntüleri çok yardımcı olur.",
+      "bug_a": "Ana sayfanın veya panonuzun altındaki <strong>🐛 Hata bildir</strong> bağlantısına tıklayın. Sorunu açıklamanız için önceden doldurulmuş bir GitHub konusu açılır. Ekran görüntüleri çok yardımcı olur. GitHub hesabınız yok mu? Bunun yerine {email} adresine yazın.",
       "install_q": "DivingHQ'yu uygulama olarak nasıl kurarım?",
       "install_a": "iPhone'da: siteyi Safari'de açın, Paylaş düğmesine dokunun, ardından <strong>Ana Ekrana Ekle</strong>'ye dokunun. Android'de: Chrome'da açın, menüye dokunun, ardından <strong>Uygulamayı yükle</strong>'ye dokunun. Simge, çerçevesiz tam ekran bir görünüm açar — daha hızlı başlatma, tarayıcı çubuğu yok.",
       "tfa_q": "İki adımlı doğrulamayı nasıl etkinleştiririm?",
       "tfa_a": "<strong>Profilim</strong> → <strong>Güvenlik</strong> → <strong>İki adımlı doğrulama</strong>'yı açın ve QR kodunu kimlik doğrulayıcı uygulamanızla (1Password, Authy, Google Authenticator) tarayın. Kurtarma kodlarını güvenli bir yere kaydedin — telefonunuzu kaybederseniz geri dönmenin tek yolu onlardır.",
       "account_q": "E-postamı, parolamı nasıl değiştiririm veya hesabımı nasıl silerim?",
-      "account_a": "Hepsi <strong>Profilim</strong> → <strong>Hesap ayarları</strong>'nda. E-posta değişiklikleri yeni adreste yeniden doğrulama gerektirir. Hesabınızı silmek kalıcıdır ve girişinizi kaldırır; geçmiş puanlar federasyonun kaydı altında herkese açık skor tablosunda kalır (talep üzerine anonimleştirilir — federasyon yöneticinizle iletişime geçin)."
+      "account_a": "Hepsi <strong>Profilim</strong> sayfasında: e-postanızı veya parolanızı üstten değiştirin, <strong>Hesabımı sil</strong> ise en altta. Yeni bir e-posta adresi geçerli olmadan önce doğrulanmalıdır. Hesabı silmek kalıcıdır ve girişinizi ile kişisel bilgilerinizi kaldırır; adınız, katıldığınız yarışmaların sonuçlarında spor kaydı olarak kalır. Bir sonucun tamamen kaldırılması gerekiyorsa {email} adresine yazın."
     },
     "next": {
       "lede": "Daha kapsamlı sürümü mi gerekiyor? {guide_link} her ekranı, her rolü ve uygulamanın kodladığı her World Aquatics kuralını kapsar. Yer imine eklemeye değer sayfalar:",

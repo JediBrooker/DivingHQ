@@ -37,14 +37,17 @@
  * <i18n-t> with named slots so the RouterLink is preserved but
  * the wording stays translatable.
  */
-import { onMounted, onBeforeUnmount, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe, Users, Map } from '@lucide/vue'
-import { useSupportEmail } from '@/composables/useSupportEmail'
+import { useSupportEmail, DEFAULT_SUPPORT_EMAIL } from '@/composables/useSupportEmail'
 
 const supportEmail = useSupportEmail()
+// The FAQ answers print the address inline. Until /api/public-config has
+// answered, show the hosted one rather than a hole in the sentence.
+const contactEmail = computed(() => supportEmail.value || DEFAULT_SUPPORT_EMAIL)
 
 // TOC entries match the in-template section ids. Order matters,
 // it's the visual reading order. Keep the keys aligned with the
@@ -390,7 +393,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
             <details class="guide-faq-item">
               <summary>{{ $t('guide.faq.bug_q') }}</summary>
-              <div class="guide-faq-body" v-html="$t('guide.faq.bug_a')"></div>
+              <div class="guide-faq-body" v-html="$t('guide.faq.bug_a', { email: contactEmail })"></div>
             </details>
 
             <details class="guide-faq-item">
@@ -405,7 +408,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
             <details class="guide-faq-item">
               <summary>{{ $t('guide.faq.account_q') }}</summary>
-              <div class="guide-faq-body" v-html="$t('guide.faq.account_a')"></div>
+              <div class="guide-faq-body" v-html="$t('guide.faq.account_a', { email: contactEmail })"></div>
             </details>
           </div>
         </section>

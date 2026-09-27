@@ -1749,3 +1749,75 @@ test("robots.txt and sitemap.xml are real files, not the SPA shell", async (t) =
   assert.match(sitemap.body, /<loc>https:\/\/divinghq\.app\/guide\/quick-start<\/loc>/);
   assert.doesNotMatch(sitemap.body, /<div id="app">/);
 });
+
+// A session that was already open when the account got suspended is cut off
+// by verifyToken, not the login handler, and it used to send everyone to
+// "your federation administrator", club-first countries included. Both paths
+// share lib/support.js now. The merge-conflict refusal on "claim past
+// results" also named a federation admin, who can't merge accounts anyway.
+// Cayman Islands for the club-first half, nothing else in the suite uses it.
+test("support email: suspended sessions and merge conflicts say who to ask", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CYM";
+  const saved = process.env.SUPPORT_EMAIL;
+  process.env.SUPPORT_EMAIL = "help@cayman-diving.example.test";
+  const addr = /help@cayman-diving\.example\.test/;
+  await claimKit.wipe(CODE);
+  // No event through the API: that request would warm the 30s auth-state
+  // cache for the admin, and the suspension below wouldn't show until it
+  // expired. The merge check further down makes its own event in SQL.
+  const state = await setupFixture({ withEvent: false });
+  try {
+    // Neither token has been through verifyToken yet, so the cache is cold
+    // and the suspension is seen on the very next request.
+    const founder = await claimKit.founder(CODE, "George Town Divers");
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = ANY($1)", [[founder.id, state.adminId]]);
+
+    let res = await fetchJson("GET", "/api/claims", { token: founder.token });
+    assert.equal(res.status, 401);
+    assert.equal(res.body.code, "account_suspended");
+    assert.match(res.body.error, /club admin/);
+    assert.doesNotMatch(res.body.error, /federation/);
+    assert.match(res.body.error, addr);
+
+    res = await fetchJson("GET", "/api/claims", { token: state.adminToken });
+    assert.equal(res.status, 401);
+    assert.equal(res.body.code, "account_suspended");
+    assert.match(res.body.error, /federation administrator/);
+    assert.match(res.body.error, addr);
+    await pool.query("UPDATE users SET suspended_at = NULL WHERE id = $1", [state.adminId]);
+
+    // Claim-past-results where both accounts entered the same round: refused,
+    // and pointed at support rather than a federation admin.
+    const oldId = await insertUser({ orgId: state.orgId, username: `int-old-${state.slug}`, fullName: "Ebanks Twin", role: "diver" });
+    const newId = await insertUser({ orgId: state.orgId, username: `int-new-${state.slug}`, fullName: "Ebanks Twin", role: "diver" });
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [oldId]);
+    const dive = (await pool.query("SELECT id FROM dive_directory LIMIT 1")).rows[0].id;
+    const eventId = (await pool.query(
+      "INSERT INTO events (org_id, name, gender, number_of_judges) VALUES ($1, 'Seven Mile Open', 'Mixed', 5) RETURNING id",
+      [state.orgId],
+    )).rows[0].id;
+    for (const id of [oldId, newId]) {
+      await pool.query(
+        "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+        [eventId, id, dive],
+      );
+    }
+    // insertUser's fixture password.
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username: `int-new-${state.slug}`, password: "not-used-here" } });
+    assert.equal(login.status, 200, JSON.stringify(login.body));
+    res = await fetchJson("POST", "/api/users/me/claim", {
+      token: login.body.token, body: { old_user_ids: [oldId], password: "not-used-here" },
+    });
+    assert.equal(res.status, 409, JSON.stringify(res.body));
+    assert.match(res.body.error, /^Cannot merge/);
+    assert.match(res.body.error, addr);
+    assert.doesNotMatch(res.body.error, /federation admin/);
+  } finally {
+    if (saved === undefined) delete process.env.SUPPORT_EMAIL;
+    else process.env.SUPPORT_EMAIL = saved;
+    await teardownFixture(state);
+    await claimKit.wipe(CODE);
+  }
+});

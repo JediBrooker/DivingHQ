@@ -24,6 +24,7 @@ const roleRequests = require("../lib/role-requests");
 const bcrypt  = require("bcrypt");
 const jwt     = require("jsonwebtoken");
 const { recordAudit, auditFromReq } = require("../lib/audit");
+const { supportContact } = require("../lib/support");
 
 // Enum values from init.sql's CREATE TYPE org_role. system_admin is
 // intentionally NOT in this set, it's a column on users, not a role
@@ -718,8 +719,8 @@ module.exports = function createUsersRouter({
   // the old account also entered, we can't silently merge them,
   // they're distinct entries by design. We abort the whole
   // transaction with 409 in that case; the caller decides whether
-  // to un-tick the colliding candidate or contact an admin to
-  // merge manually.
+  // to un-tick the colliding candidate or ask support to merge by
+  // hand (nobody in the org can, it's a database job).
   //
   // Password re-auth: claim irreversibly attaches PII to an
   // account, so the same hijacked-session defence we use on
@@ -794,7 +795,7 @@ module.exports = function createUsersRouter({
           return res.status(409).json({
             error:
               "Cannot merge: the old account and your current account both have entries for the same event and round. " +
-              "Contact your federation admin to merge manually.",
+              `Untick that one, or contact ${supportContact()} to merge them by hand.`,
             old_user_id: oldId,
           });
         }

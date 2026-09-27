@@ -9,7 +9,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 
-const { supportEmail, supportContact, DEFAULT_SUPPORT_EMAIL } = require("../lib/support");
+const { supportEmail, supportContact, suspendedAccountMessage, DEFAULT_SUPPORT_EMAIL } = require("../lib/support");
 
 // Set env vars for the length of fn, then put everything back the way it was
 // (deleting the ones that weren't set), even if fn throws.
@@ -35,6 +35,21 @@ test("supportEmail defaults to the hosted inbox", async () => {
   await withEnv({ SUPPORT_EMAIL: undefined }, () => {
     assert.equal(supportEmail(), DEFAULT_SUPPORT_EMAIL);
     assert.equal(supportContact(), "DivingHQ support at support@divinghq.app");
+  });
+});
+
+test("a suspended account is sent to its club admin only where there's no federation", async () => {
+  await withEnv({ SUPPORT_EMAIL: undefined }, () => {
+    assert.equal(
+      suspendedAccountMessage("unclaimed"),
+      "Your account has been suspended. Contact your club admin or DivingHQ support at support@divinghq.app.",
+    );
+    for (const state of ["claimed", null, undefined]) {
+      assert.equal(
+        suspendedAccountMessage(state),
+        "Your account has been suspended. Contact your federation administrator or DivingHQ support at support@divinghq.app.",
+      );
+    }
   });
 });
 

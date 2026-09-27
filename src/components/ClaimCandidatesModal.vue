@@ -21,6 +21,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useSupportEmail, DEFAULT_SUPPORT_EMAIL } from '@/composables/useSupportEmail'
 
 const props = defineProps({
   // Pre-fetched candidates, for when the caller already has them.
@@ -40,6 +41,9 @@ const emit = defineEmits(['close', 'claimed', 'skipped'])
 useBodyScrollLock().lock()
 
 const { t, locale } = useI18n()
+// A merge the conflict check refuses is a database job for us, so the
+// message names the support address.
+const supportEmail = useSupportEmail()
 const auth = useAuthStore()
 
 const loading = ref(false)
@@ -130,7 +134,7 @@ async function confirm() {
     // our own localised string instead of the raw server text so
     // re-translators stay in control of the wording.
     if (/Cannot merge/i.test(msg)) {
-      error.value = t('profile.claim.conflict')
+      error.value = t('profile.claim.conflict', { email: supportEmail.value || DEFAULT_SUPPORT_EMAIL })
     } else {
       error.value = msg
     }

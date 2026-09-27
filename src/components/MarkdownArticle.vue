@@ -10,14 +10,24 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { renderMarkdown } from '@/lib/markdown'
+import { useSupportEmail, DEFAULT_SUPPORT_EMAIL } from '@/composables/useSupportEmail'
 
 const props = defineProps({
   md: { type: String, required: true },
 })
 
 const router = useRouter()
+// The documents are written for divinghq.app and name its support inbox.
+// A deployment with its own SUPPORT_EMAIL should show that one instead,
+// in the guide and the legal pages alike.
+const supportEmail = useSupportEmail()
+const source = computed(() => {
+  const addr = supportEmail.value
+  return addr && addr !== DEFAULT_SUPPORT_EMAIL ? props.md.replaceAll(DEFAULT_SUPPORT_EMAIL, addr) : props.md
+})
+
 // renderMarkdown gives every heading an id, so "#setup" links resolve.
-const html = computed(() => renderMarkdown(props.md))
+const html = computed(() => renderMarkdown(source.value))
 
 // In-app links in the markdown ("/guide/faq", "/privacy") are plain <a>
 // tags, so route them through the router instead of reloading the SPA.
