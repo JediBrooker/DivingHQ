@@ -21,12 +21,15 @@ import ParticipatingOrgsModal from '@/components/manager/ParticipatingOrgsModal.
 import AdvanceStageModal from '@/components/manager/AdvanceStageModal.vue'
 import RoundDivesEditor from '@/components/manager/RoundDivesEditor.vue'
 import EditMeetModal from '@/components/manager/EditMeetModal.vue'
+import { useCanEditFees } from '@/composables/useCanEditFees'
 import { filterStandardTemplates } from '@/lib/standard-templates'
 import { RULE_REFERENCES } from '@/lib/ruleReferences'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 const { t } = useI18n()
 const auth = useAuthStore()
+// Event fee panels: payments on, and an org role the fee routes accept.
+const canEditFees = useCanEditFees()
 
 const events = ref([])
 const meets = ref([])
@@ -2427,10 +2430,12 @@ onUnmounted(() => {
             No deadline set — entries close when the event goes Live.
           </p>
         </div>
-        <EntryFeeEditor v-if="editId" :event-id="editId" />
-        <LateFeeEditor v-if="editId" :event-id="editId" />
-        <PenaltyFeesEditor v-if="editId" :event-id="editId" />
-        <EventPenaltiesPanel v-if="editId" :event-id="editId" />
+        <template v-if="editId && canEditFees">
+          <EntryFeeEditor :event-id="editId" />
+          <LateFeeEditor :event-id="editId" />
+          <PenaltyFeesEditor :event-id="editId" />
+          <EventPenaltiesPanel :event-id="editId" />
+        </template>
         <div v-if="editErr" class="msg msg-error">{{ editErr }}</div>
         <button type="submit" class="btn btn-primary-lg">{{ $t('manager.modals.edit_event_submit') }}</button>
       </form>

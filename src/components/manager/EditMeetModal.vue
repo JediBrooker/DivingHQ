@@ -19,6 +19,7 @@
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { showSuccess } from '@/composables/useNotify'
+import { useCanEditFees } from '@/composables/useCanEditFees'
 import SponsorLogosManager from '@/components/manager/SponsorLogosManager.vue'
 import MeetFeesEditor from '@/components/manager/MeetFeesEditor.vue'
 import MeetAccessEditor from '@/components/manager/MeetAccessEditor.vue'
@@ -34,6 +35,9 @@ const props = defineProps({
 const emit = defineEmits(['close', 'saved'])
 
 const auth = useAuthStore()
+// Club / region admins edit their meets here too, but the fee panels
+// are federation-only (and pointless with payments off).
+const canEditFees = useCanEditFees()
 
 const editMeetForm = ref({ ...props.initialForm })
 const editMeetErr = ref('')
@@ -140,20 +144,22 @@ async function saveMeet() {
           <SponsorLogosManager :meet-id="meetId" />
         </div>
 
-        <div class="field" style="margin-top:0.25rem">
-          <label class="label">Registration fees</label>
-          <MeetFeesEditor :meet-id="meetId" />
-        </div>
+        <template v-if="canEditFees">
+          <div class="field" style="margin-top:0.25rem">
+            <label class="label">Registration fees</label>
+            <MeetFeesEditor :meet-id="meetId" />
+          </div>
 
-        <div class="field" style="margin-top:0.25rem">
-          <label class="label">Tickets, livestream &amp; programme</label>
-          <MeetAccessEditor :meet-id="meetId" />
-        </div>
+          <div class="field" style="margin-top:0.25rem">
+            <label class="label">Tickets, livestream &amp; programme</label>
+            <MeetAccessEditor :meet-id="meetId" />
+          </div>
 
-        <div class="field" style="margin-top:0.25rem">
-          <label class="label">Discounted bundle</label>
-          <MeetBundleEditor :meet-id="meetId" />
-        </div>
+          <div class="field" style="margin-top:0.25rem">
+            <label class="label">Discounted bundle</label>
+            <MeetBundleEditor :meet-id="meetId" />
+          </div>
+        </template>
 
         <div v-if="editMeetErr" class="msg msg-error">{{ editMeetErr }}</div>
         <div style="display:flex;justify-content:flex-end;gap:0.5rem">
