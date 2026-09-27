@@ -772,6 +772,9 @@ module.exports = function createMeetsRouter({
   // already exist in the same org.
   router.put("/api/events/:id/meet", requireEventManager(), async (req, res) => {
     const { meet_id } = req.body || {};
+    if (meet_id && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(meet_id))) {
+      return res.status(400).json({ error: "Meet not found" });
+    }
     try {
       // For non-sysadmin the meet must live in their own org.
       // sysadmin can move events between meets across any org.
@@ -789,13 +792,40 @@ module.exports = function createMeetsRouter({
             .json({ error: "Meet not found in this organisation" });
         }
       }
-      // A club admin gets here as the event's delegate. Moving it into a
-      // neighbouring club's meet (or out to the org) would hand it to
-      // someone else, so they can only move it between their own meets.
-      if (!req.user.is_system_admin && !isOrgEditor(req.user)
-          && !(req.user.org_roles || []).includes("org_admin")) {
-        if (!meet_id || !isMeetHostAdmin || !(await isMeetHostAdmin(meet_id, req.user.id))) {
-          return res.status(403).json({ error: "You can only move events between your own club's meets" });
+      // Everyone else got past requireEventManager as a delegate of this
+      // event, by one of two doors with different reach:
+      //
+      //   * admin of the club or region hosting its meet. That covers
+      //     their own meets and nothing else, so they move it between
+      //     those (out to a neighbour or the org would hand it on). This
+      //     wins even when they also have an event_managers row, which
+      //     every event's creator gets automatically.
+      //   * otherwise an event_managers row: asked to help run this one
+      //     event. They could always move it between the org's meets, or
+      //     detach it, and still can. What they can't do is pull it into
+      //     a meet they host: once there, requireEventDeleter would let
+      //     them delete it and their club's and region's admins would
+      //     all become its delegates. That's the source-meet check, for
+      //     a club admin helping run, say, the federation's Nationals.
+      if (!req.user.is_system_admin && !isOrgEditor(req.user)) {
+        const cur = await pool.query(
+          `SELECT e.meet_id,
+                  EXISTS (SELECT 1 FROM event_managers em
+                           WHERE em.event_id = e.id AND em.user_id = $2) AS is_manager
+             FROM events e WHERE e.id = $1`,
+          [req.params.id, req.user.id],
+        );
+        const hosts = async (id) => !!id && !!isMeetHostAdmin && isMeetHostAdmin(id, req.user.id);
+        const hostsSource = await hosts(cur.rows[0]?.meet_id || null);
+        const hostsTarget = await hosts(meet_id);
+        if (hostsSource) {
+          if (!hostsTarget) {
+            return res.status(403).json({ error: "You can only move events between your own club's meets" });
+          }
+        } else if (hostsTarget) {
+          return res.status(403).json({ error: "You can't move an event you don't host into your own club's meet" });
+        } else if (!cur.rows[0]?.is_manager) {
+          return res.status(403).json({ error: "Forbidden" });
         }
       }
       const r = await pool.query(

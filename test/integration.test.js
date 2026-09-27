@@ -1772,3 +1772,70 @@ test("editing an event can't chain it onto a neighbouring club's stage", async (
     await claimKit.wipe(CODE);
   }
 });
+
+test("moving an event between meets: managers keep their reach, club admins can't pull events in", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const state = await setupFixture({ withEvent: true });
+  const mkMember = async (clubId = null) => {
+    const username = `int-mv-${crypto.randomBytes(4).toString("hex")}`;
+    await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, club_id, email_verified_at)
+       VALUES ($1, $2, $1, $3, $4, now())`,
+      [username, await bcrypt.hash(TEST_PASSWORD, 4), state.orgId, clubId],
+    );
+    const login = await claimKit.login(username);
+    return { id: login.id, token: login.token };
+  };
+  const adm = state.adminToken;
+  const meet = async (body) => {
+    const r = await fetchJson("POST", "/api/meets", { token: adm, body });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    return r.body.id;
+  };
+  try {
+    // A federation with a club whose admin also helps run Nationals.
+    const club = (await fetchJson("POST", `/api/orgs/${state.orgId}/clubs`, { token: adm, body: { name: "Mover Club" } })).body.id;
+    const C = await mkMember(club);
+    assert.equal((await fetchJson("POST", `/api/clubs/${club}/admins`, { token: adm, body: { user_id: C.id } })).status, 201);
+    const nationals = await meet({ name: "Nationals" });
+    const nationals2 = await meet({ name: "Nationals Day 2" });
+    const clubMeet = await meet({ name: "Mover Club Night", host_club_id: club });
+    const clubMeet2 = await meet({ name: "Mover Club Night 2", host_club_id: club });
+    const E = state.eventId;
+    assert.equal((await fetchJson("PUT", `/api/events/${E}/meet`, { token: adm, body: { meet_id: nationals } })).status, 200);
+    await pool.query("INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2)", [E, C.id]);
+
+    // C can't pull the federation's event into their club's meet (and so
+    // can't go on to delete it).
+    const pull = await fetchJson("PUT", `/api/events/${E}/meet`, { token: C.token, body: { meet_id: clubMeet } });
+    assert.equal(pull.status, 403, JSON.stringify(pull.body));
+    assert.equal((await pool.query("SELECT meet_id FROM events WHERE id = $1", [E])).rows[0].meet_id, nationals);
+    assert.equal((await fetchJson("DELETE", `/api/events/${E}`, { token: C.token })).status, 403);
+    // As its manager they can still move it around the federation's meets.
+    assert.equal((await fetchJson("PUT", `/api/events/${E}/meet`, { token: C.token, body: { meet_id: nationals2 } })).status, 200);
+
+    // A plain event manager keeps the old behaviour, including detaching.
+    const M = await mkMember();
+    await pool.query("INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2)", [E, M.id]);
+    assert.equal((await fetchJson("PUT", `/api/events/${E}/meet`, { token: M.token, body: { meet_id: nationals } })).status, 200);
+    assert.equal((await fetchJson("PUT", `/api/events/${E}/meet`, { token: M.token, body: { meet_id: null } })).status, 200);
+    assert.equal((await fetchJson("PUT", `/api/events/${E}/meet`, { token: M.token, body: { meet_id: "junk" } })).status, 400);
+
+    // A club admin with no manager row moves their own event between
+    // their own meets, and nowhere else.
+    const own = await fetchJson("POST", "/api/events", {
+      token: C.token,
+      body: { name: "Club 1m", gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 5, event_type: "individual", meet_id: clubMeet },
+    });
+    assert.equal(own.status, 201, JSON.stringify(own.body));
+    assert.equal((await fetchJson("PUT", `/api/events/${own.body.id}/meet`, { token: C.token, body: { meet_id: clubMeet2 } })).status, 200);
+    assert.equal((await fetchJson("PUT", `/api/events/${own.body.id}/meet`, { token: C.token, body: { meet_id: nationals } })).status, 403);
+    assert.equal((await fetchJson("PUT", `/api/events/${own.body.id}/meet`, { token: C.token, body: { meet_id: null } })).status, 403);
+  } finally {
+    await pool.query("DELETE FROM events WHERE org_id = $1", [state.orgId]);
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [state.orgId]);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [state.orgId]).catch(() => {});
+    await teardownFixture(state);
+  }
+});
