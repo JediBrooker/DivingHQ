@@ -1575,3 +1575,95 @@ test("email verification: the link signs you in, a lost one can be resent", asyn
     await claimKit.wipe("FSM");
   }
 });
+
+// SUPPORT_EMAIL (lib/support.js). The SPA footers read it from a public
+// endpoint, and the messages that used to say "contact support" with no way
+// to do so now carry the address. Uses Svalbard for the club-first account,
+// a country code nothing else in the suite touches.
+test("support email: public config and the contact lines in messages", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { supportEmail } = require("../lib/support");
+  const claimsLib = require("../lib/claims");
+  const CODE = "SJM";
+  const saved = process.env.SUPPORT_EMAIL;
+  const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  try {
+    // Anonymous, cacheable, and follows the env var.
+    let cfg = await fetchJson("GET", "/api/public-config");
+    assert.equal(cfg.status, 200);
+    assert.deepEqual(Object.keys(cfg.body), ["support_email"]);
+    assert.equal(cfg.body.support_email, supportEmail());
+    process.env.SUPPORT_EMAIL = "help@svalbard-diving.example.test";
+    cfg = await fetchJson("GET", "/api/public-config");
+    assert.equal(cfg.body.support_email, "help@svalbard-diving.example.test");
+    const addr = new RegExp(escape("help@svalbard-diving.example.test"));
+
+    // Suspended under a real federation: the federation admin, and us.
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [state.adminId]);
+    let res = await fetchJson("POST", "/api/auth/login", { body: { username: state.username, password: TEST_PASSWORD } });
+    assert.equal(res.status, 403);
+    assert.equal(res.body.code, "account_suspended");
+    assert.match(res.body.error, /federation administrator/);
+    assert.match(res.body.error, addr);
+
+    // Suspended in a club-first country, where nobody holds org_admin:
+    // don't send them looking for a federation that doesn't exist.
+    const founder = await claimKit.founder(CODE, "Longyearbyen Divers");
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [founder.id]);
+    res = await fetchJson("POST", "/api/auth/login", { body: { username: founder.username, password: TEST_PASSWORD } });
+    assert.equal(res.status, 403);
+    assert.equal(res.body.code, "account_suspended");
+    assert.match(res.body.error, /club admin/);
+    assert.doesNotMatch(res.body.error, /federation/);
+    assert.match(res.body.error, addr);
+    await pool.query("UPDATE users SET suspended_at = NULL WHERE id = $1", [founder.id]);
+
+    // A suspended organisation says where to go too.
+    await pool.query("UPDATE users SET suspended_at = NULL WHERE id = $1", [state.adminId]);
+    await pool.query("UPDATE organisations SET status = 'suspended' WHERE id = $1", [state.orgId]);
+    res = await fetchJson("POST", "/api/auth/login", { body: { username: state.username, password: TEST_PASSWORD } });
+    assert.equal(res.body.code, "org_suspended");
+    assert.match(res.body.error, addr);
+
+    // Claim notices that used to say "contact DivingHQ" name the inbox. A
+    // brand-new club can't vote yet, so this claim lands with the sysadmin.
+    const sent = [];
+    const pushed = [];
+    const deps = {
+      email: { sendClaimEmail: async (userIds, msg) => { sent.push({ userIds, ...msg }); } },
+      push: { sendNotification: async (userIds, msg) => { pushed.push({ userIds, ...msg }); } },
+    };
+    const fed = await claimKit.claim({ org_name: "Svalbard Aquatics", country_code: CODE });
+    assert.equal(fed.res.status, 201, JSON.stringify(fed.res.body));
+    assert.equal(fed.res.body.approver, "sysadmin");
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [fed.id]);
+    await claimsLib.activateForUser(pool, fed.id, deps);
+    sent.length = 0;
+    pushed.length = 0;
+    await claimsLib.decide(pool, {
+      claimId: fed.res.body.claim_id, user: { is_system_admin: true, id: null }, decision: "reject",
+    }, deps);
+    const rejected = sent.find((m) => m.userIds.includes(fed.id));
+    assert.ok(rejected, "the claimant is emailed");
+    assert.match(rejected.body, /Reply to this email/);
+    assert.match(rejected.body, addr);
+    const inApp = pushed.find((m) => m.userIds.includes(fed.id));
+    assert.match(inApp.body, addr);
+
+    // A second claim while one is live is refused with the address in it.
+    const again = await claimKit.claim({ org_name: "Svalbard Diving", country_code: CODE });
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [again.id]);
+    await claimsLib.activateForUser(pool, again.id, deps);
+    const dup = await claimKit.claim({ org_name: "Svalbard Diving Two", country_code: CODE });
+    assert.equal(dup.res.status, 409, JSON.stringify(dup.res.body));
+    assert.match(dup.res.body.error, addr);
+  } finally {
+    if (saved === undefined) delete process.env.SUPPORT_EMAIL;
+    else process.env.SUPPORT_EMAIL = saved;
+    await teardownFixture(state);
+    await claimKit.wipe(CODE);
+  }
+});

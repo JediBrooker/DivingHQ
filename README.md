@@ -388,6 +388,12 @@ EMAIL_FROM=noreply@your-domain.example.com
 
 The `EMAIL_FROM` domain has to be onboarded to Email Sending first (`wrangler email sending enable`, which provisions SPF/DKIM/DMARC). Without `CF_ACCOUNT_ID` and `CF_EMAIL_TOKEN` set, every email helper silently no-ops — registrations and password changes work, just no email is dispatched. `APP_BASE_URL` is used to build the reset-password link AND the referee sign-off code QR/deep-link; the server refuses to issue a sign-off code when it isn't set, so make sure the value is configured in production.
 
+`SUPPORT_EMAIL` (default `support@divinghq.app`) is where people reach a person. It goes out as the Reply-To on every email, into the "contact support" lines of error messages and claim notices, and into the home, sign-in, privacy and terms footers (the SPA reads it from the public `GET /api/public-config`). If you run your own copy, set it to an inbox you read:
+
+```
+SUPPORT_EMAIL=help@your-domain.example.com
+```
+
 ### 6. Sign in
 
 | Account | Username | Password |

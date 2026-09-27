@@ -589,6 +589,10 @@ app.get("/api/health", async (_req, res) => {
   }
 });
 
+// Public deployment settings for the signed-out SPA (the support address
+// in the home / login / legal footers). See routes/public-config.js.
+app.use(require("./routes/public-config")());
+
 // =============================================================
 // METRICS: Prometheus scrape target
 // =============================================================

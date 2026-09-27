@@ -19,6 +19,7 @@ const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { countryByCode } = require("../lib/countries");
 const { materializeRegions } = require("../lib/regions");
 const claims = require("../lib/claims");
+const { supportContact } = require("../lib/support");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -267,7 +268,7 @@ module.exports = function createAuthRouter({
       const result = await pool.query(
         `SELECT u.id, u.password, u.email_verified_at, u.totp_enabled_at,
                 u.deleted_at, u.suspended_at, u.is_system_admin,
-                o.status AS org_status
+                o.status AS org_status, o.claim_state AS org_claim_state
            FROM users u
            LEFT JOIN organisations o ON o.id = u.org_id
           WHERE u.username = $1`,
@@ -293,9 +294,15 @@ module.exports = function createAuthRouter({
       // correct password but a suspended flag, return a clear,
       // distinct message (the legitimate owner knows the password,
       // so this leaks nothing useful to an attacker).
+      //
+      // In a club-first country there's no federation to ask (nobody
+      // there holds org_admin), so point them at their club and at us.
       if (user.suspended_at != null) {
+        const who = user.org_claim_state === "unclaimed"
+          ? "your club admin"
+          : "your federation administrator";
         return res.status(403).json({
-          error: "Your account has been suspended. Contact your federation administrator.",
+          error: `Your account has been suspended. Contact ${who} or ${supportContact()}.`,
           code: "account_suspended",
         });
       }
@@ -321,7 +328,7 @@ module.exports = function createAuthRouter({
         return res.status(403).json({
           error: pending
             ? "Your organisation is still waiting for approval. We'll email you as soon as it's reviewed."
-            : "Your organisation's access to DivingHQ has been suspended. Contact support if you think this is a mistake.",
+            : `Your organisation's access to DivingHQ has been suspended. If you think this is a mistake, contact ${supportContact()}.`,
           code: pending ? "org_pending" : "org_suspended",
         });
       }
@@ -809,7 +816,7 @@ module.exports = function createAuthRouter({
         const found = await resolveCountryOrg(client, country);
         if (found.closed) {
           await client.query("ROLLBACK");
-          return res.status(400).json({ error: `Signups from ${country.name} are paused. Contact support.` });
+          return res.status(400).json({ error: `Signups from ${country.name} are paused. Contact ${supportContact()}.` });
         }
         if (found.choose) {
           await client.query("ROLLBACK");
@@ -1157,14 +1164,14 @@ module.exports = function createAuthRouter({
             if (!orgRow) {
               if (claimedOrgs.length > 1) {
                 await client.query("ROLLBACK");
-                return res.status(409).json({ error: "Several federations share this country on DivingHQ. Contact support to claim your region.", code: "claim_needs_support" });
+                return res.status(409).json({ error: `Several federations share this country on DivingHQ. Contact ${supportContact()} to claim your region.`, code: "claim_needs_support" });
               }
               // Nobody from this country is here yet. Start its account so
               // the state body has something to claim a region of.
               const found = await resolveCountryOrg(client, country);
               if (found.closed || found.choose) {
                 await client.query("ROLLBACK");
-                return res.status(409).json({ error: "Contact support to claim your region.", code: "claim_needs_support" });
+                return res.status(409).json({ error: `Contact ${supportContact()} to claim your region.`, code: "claim_needs_support" });
               }
               orgRow = { id: found.id, claim_state: found.claim_state };
             }
@@ -1179,7 +1186,7 @@ module.exports = function createAuthRouter({
             }
             if (rg.claim_state === "claimed") {
               await client.query("ROLLBACK");
-              return res.status(409).json({ error: "That region already has its body on DivingHQ. Contact support if that's wrong.", code: "already_claimed" });
+              return res.status(409).json({ error: `That region already has its body on DivingHQ. If that's wrong, contact ${supportContact()}.`, code: "already_claimed" });
             }
             target = { kind: "region", id: rg.id, orgId: orgRow.id };
           } else {
