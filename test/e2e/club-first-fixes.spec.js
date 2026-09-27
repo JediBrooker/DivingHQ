@@ -290,4 +290,6 @@ test("dashboard: the pending chip names the requested role in the reader's words
   const popover = chip.locator(".pulse-popover");
   await expect(popover.locator(".pulse-popover-item", { hasText: "Would-be Manager" })).toContainText("wants to be: Meet Manager");
   await expect(popover.locator(".pulse-popover-item", { hasText: "Would-be Coach" })).toContainText("wants to be: Coach");
+  // The attention card counts them through the plural keys (counts.*).
+  await expect(page.locator(".action-card", { hasText: "2 role requests waiting" })).toBeVisible();
 });

@@ -815,7 +815,7 @@ const attentionCards = computed(() => {
       id:    'pending-roles',
       kind:  'pending',
       icon:  UserCog,
-      title: t(n === 1 ? 'dashboard.attention.role_requests_one' : 'dashboard.attention.role_requests_many', { count: n }),
+      title: tn('counts.role_requests_waiting', n),
       meta:  t('dashboard.attention.role_requests_meta'),
       // Club / region admins (no federation yet) review on their own page.
       to:    auth.hasRole('org_admin') ? '/users' : (auth.isClubAdmin ? '/club' : '/region'),
@@ -838,7 +838,7 @@ const attentionCards = computed(() => {
       id:    'pending-orgs',
       kind:  'pending',
       icon:  Building2,
-      title: t(n === 1 ? 'dashboard.attention.orgs_one' : 'dashboard.attention.orgs_many', { count: n }),
+      title: tn('counts.federations_awaiting', n),
       meta:  t('dashboard.attention.orgs_meta'),
       to:    '/users',
     })
