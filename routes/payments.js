@@ -217,18 +217,13 @@ module.exports = function createPaymentsRouter({
       err.status = 403;
       throw err;
     }
-    let found = false;
-    try {
-      found = (await pool.query(
-        `SELECT 1 FROM guardians
-          WHERE guardian_user_id = $1 AND dependent_user_id = $2
-            AND org_id = $3 AND status = 'approved'
-          LIMIT 1`,
-        [req.user.id, subjectUserId, req.user.org_id],
-      )).rows.length > 0;
-    } catch (e) {
-      if (!/relation "guardians" does not exist/.test(e.message)) throw e;
-    }
+    const found = (await pool.query(
+      `SELECT 1 FROM guardians
+        WHERE guardian_user_id = $1 AND dependent_user_id = $2
+          AND org_id = $3 AND status = 'approved'
+        LIMIT 1`,
+      [req.user.id, subjectUserId, req.user.org_id],
+    )).rows.length > 0;
     if (!found) {
       const err = new Error("You are not an approved guardian of this user.");
       err.status = 403;
@@ -2735,54 +2730,27 @@ module.exports = function createPaymentsRouter({
   // localises the description/status client-side (fully i18n).
   router.get("/api/me/payments", verifyToken, async (req, res) => {
     try {
-      let rows;
-      try {
-        rows = (await pool.query(
-          `SELECT p.id, p.created_at, p.paid_at, p.subject_type, p.status,
-                  p.amount_cents, p.currency, p.payer_role_type, p.subject_user_id,
-                  su.full_name AS subject_name,
-                  e.name  AS event_name,
-                  m.name  AS meet_name,
-                  f.reason AS fine_reason,
-                  fd.tier AS membership_tier,
-                  fd.name AS fee_name
-             FROM payments p
-             LEFT JOIN users su           ON su.id = p.subject_user_id
-             LEFT JOIN events e           ON e.id  = p.event_id
-             LEFT JOIN meets  m           ON m.id  = p.meet_id
-             LEFT JOIN fines  f           ON f.id  = p.fine_id
-             LEFT JOIN fee_definitions fd ON fd.id = p.fee_definition_id
-            WHERE p.payer_user_id = $1
-              AND COALESCE(p.payer_type, 'user') <> 'club'
-            ORDER BY p.created_at DESC
-            LIMIT 500`,
-          [req.user.id],
-        )).rows;
-      } catch (e) {
-        if (/column .* does not exist/.test(e.message)) {
-          rows = (await pool.query(
-            `SELECT p.id, p.created_at, p.paid_at, p.subject_type, p.status,
-                    p.amount_cents, p.currency, p.payer_role_type,
-                    e.name  AS event_name,
-                    m.name  AS meet_name,
-                    f.reason AS fine_reason,
-                    fd.tier AS membership_tier,
-                    fd.name AS fee_name
-               FROM payments p
-               LEFT JOIN events e           ON e.id  = p.event_id
-               LEFT JOIN meets  m           ON m.id  = p.meet_id
-               LEFT JOIN fines  f           ON f.id  = p.fine_id
-               LEFT JOIN fee_definitions fd ON fd.id = p.fee_definition_id
-              WHERE p.payer_user_id = $1
-                AND COALESCE(p.payer_type, 'user') <> 'club'
-              ORDER BY p.created_at DESC
-              LIMIT 500`,
-            [req.user.id],
-          )).rows;
-        } else {
-          throw e;
-        }
-      }
+      const rows = (await pool.query(
+        `SELECT p.id, p.created_at, p.paid_at, p.subject_type, p.status,
+                p.amount_cents, p.currency, p.payer_role_type, p.subject_user_id,
+                su.full_name AS subject_name,
+                e.name  AS event_name,
+                m.name  AS meet_name,
+                f.reason AS fine_reason,
+                fd.tier AS membership_tier,
+                fd.name AS fee_name
+           FROM payments p
+           LEFT JOIN users su           ON su.id = p.subject_user_id
+           LEFT JOIN events e           ON e.id  = p.event_id
+           LEFT JOIN meets  m           ON m.id  = p.meet_id
+           LEFT JOIN fines  f           ON f.id  = p.fine_id
+           LEFT JOIN fee_definitions fd ON fd.id = p.fee_definition_id
+          WHERE p.payer_user_id = $1
+            AND COALESCE(p.payer_type, 'user') <> 'club'
+          ORDER BY p.created_at DESC
+          LIMIT 500`,
+        [req.user.id],
+      )).rows;
       return res.json({ payments: rows, payments_enabled: payments.enabled });
     } catch (err) {
       logger.error({ err: err.message }, "[payments] read my payments failed");

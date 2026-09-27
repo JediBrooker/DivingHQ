@@ -411,7 +411,6 @@ module.exports = function createJudgeRankingRouter({ pool }) {
     try {
       const result = await buildAnalysis(pool, req.params.id);
       if (result.notFound) return res.status(404).json({ error: "Event not found" });
-      if (result.badRequest) return res.status(400).json({ error: result.badRequest });
       res.json(result);
     } catch (err) {
       console.error("[Judge Ranking Analysis Error]", err.message);
@@ -429,7 +428,6 @@ module.exports = function createJudgeRankingRouter({ pool }) {
     try {
       const result = await buildAnalysis(pool, req.params.id);
       if (result.notFound) return res.status(404).json({ error: "Event not found" });
-      if (result.badRequest) return res.status(400).json({ error: result.badRequest });
       const { event, judges, divers } = result;
       const slug = slugify(event.name);
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -474,7 +472,6 @@ module.exports = function createJudgeRankingRouter({ pool }) {
     try {
       const result = await buildAnalysis(pool, req.params.id);
       if (result.notFound) return res.status(404).json({ error: "Event not found" });
-      if (result.badRequest) return res.status(400).json({ error: result.badRequest });
       const { event, judges, divers } = result;
       const slug = slugify(event.name);
 

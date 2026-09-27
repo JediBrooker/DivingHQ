@@ -971,19 +971,12 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       )).rows[0];
       if (!enr) return res.status(404).json({ error: "Enrolment not found" });
       const isDiver = enr.diver_user_id === req.user.id;
-      let isGuardian = false;
-      if (!isDiver) {
-        try {
-          isGuardian = (await pool.query(
-            `SELECT 1 FROM guardians
-              WHERE guardian_user_id = $1 AND dependent_user_id = $2
-                AND org_id = $3 AND status = 'approved' LIMIT 1`,
-            [req.user.id, enr.diver_user_id, enr.org_id],
-          )).rows.length > 0;
-        } catch (e) {
-          if (!/relation "guardians" does not exist/.test(e.message)) throw e;
-        }
-      }
+      const isGuardian = !isDiver && (await pool.query(
+        `SELECT 1 FROM guardians
+          WHERE guardian_user_id = $1 AND dependent_user_id = $2
+            AND org_id = $3 AND status = 'approved' LIMIT 1`,
+        [req.user.id, enr.diver_user_id, enr.org_id],
+      )).rows.length > 0;
       if (!isDiver && !isGuardian) return res.status(403).json({ error: "Forbidden" });
       if (enr.status !== "pending") return res.status(409).json({ error: `This enrolment is ${enr.status}.` });
       // A pending enrolment with NO price (amount_cents NULL) is un-priced,

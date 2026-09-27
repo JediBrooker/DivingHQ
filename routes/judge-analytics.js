@@ -426,9 +426,8 @@ module.exports = function createJudgeAnalyticsRouter({
   // Public-read endpoints (profile + analytics + directory) decode
   // the token if one is sent so we still see req.user for owner-
   // only branches (e.g. dashboard_widgets), but anonymous requests
-  // are accepted. Falls back to verifyToken if the host hasn't
-  // been updated yet, belt-and-braces during the rollout.
-  const maybeAuth = optionalAuth || verifyToken;
+  // are accepted.
+  const maybeAuth = optionalAuth;
   // Profile + analytics are heavy historical reads; route through
   // the optional read replica when available.
   const reads = readPool || pool;

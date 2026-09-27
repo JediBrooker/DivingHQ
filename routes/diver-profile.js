@@ -8,10 +8,10 @@
 //   PUT /api/users/me/dashboard     persist the diver's widget
 //                                   layout (validated whitelist)
 //
-// Profile + analytics are visible to any authenticated user. The
-// data they expose is already public via the meet scoreboards and
-// the archive (and cross-org comparison was the explicit feature
-// request that drove that). dashboard_widgets is private though;
+// Profile + analytics are public, signed in or not. The data they
+// expose is already public via the meet scoreboards and the archive
+// (and cross-org comparison was the explicit feature request that
+// drove that). dashboard_widgets is private though;
 // canViewDiverPrivate gates that single field.
 //
 // All the heavy SQL CTEs (PER_DIVE, FULL_FIELD_RANKING) live in
@@ -84,18 +84,6 @@ function streakFrom(rows) {
   return { kind, length };
 }
 
-// Diver competitive profiles are now publicly readable: same
-// data the meet scoreboards and event archives already expose to
-// the open web. The handler still gates owner-private fields
-// (dashboard_widgets) via canViewDiverPrivate. Anonymous spectators
-// landing on /profile/<id> from a scoreboard link see the
-// competitive history without being bounced to /login. (Originally
-// gated to authenticated viewers, relaxed when the scoreboard's
-// diver-name links became expected to work for unauth visitors.)
-function canViewDiverProfile(/* viewer, diverRow */) {
-  return true;
-}
-
 // True when the viewer can see diver-private fields (UI
 // preferences, dashboard layout, etc.) on top of the public
 // competitive history. Applied inline in the handler to redact
@@ -120,9 +108,7 @@ module.exports = function createDiverProfileRouter({
   // Public-read endpoints (profile + analytics) decode the token if
   // one is sent so we still see req.user for owner-only branches
   // (e.g. dashboard_widgets), but anonymous requests are accepted.
-  // Falls back to verifyToken if the host hasn't been updated yet,
-  // belt-and-braces during the rollout.
-  const maybeAuth = optionalAuth || verifyToken;
+  const maybeAuth = optionalAuth;
   // Profile + analytics are heavy historical reads: per_dive
   // CTEs across the whole scores table, FULL_FIELD_RANKING
   // window functions. Route through the optional read replica
@@ -158,8 +144,10 @@ module.exports = function createDiverProfileRouter({
         return res.status(404).json({ error: "Diver not found" });
       const diver = diverRes.rows[0];
 
-      if (!canViewDiverProfile(req.user, diver))
-        return res.status(403).json({ error: "Not permitted to view this profile" });
+      // No view gate on purpose: competitive profiles are public, same
+      // data the scoreboards and archive already show the open web, so a
+      // spectator following a scoreboard link isn't bounced to /login.
+      // Only dashboard_widgets is owner-private (canViewDiverPrivate).
 
       // Date-range filter pushed into every aggregate. $2/$3 are nullable;
       // when null the AND clause is a no-op so unfiltered callers still work.
@@ -340,9 +328,6 @@ module.exports = function createDiverProfileRouter({
       );
       if (!diverRes.rows.length) {
         return res.status(404).json({ error: "Diver not found" });
-      }
-      if (!canViewDiverProfile(req.user, diverRes.rows[0])) {
-        return res.status(403).json({ error: "Not permitted to view this profile" });
       }
       const id = req.params.id;
       const orgId = diverRes.rows[0].org_id;

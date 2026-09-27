@@ -96,7 +96,7 @@ module.exports = function createPdfRouter({ pool }) {
   // right slice when it walks the schedule. Each slice is null when
   // its include token wasn't requested, so the renderer can do a
   // simple presence check before printing the section.
-  async function loadProgramEnrichments(meetId, events, include) {
+  async function loadProgramEnrichments(events, include) {
     const eventIds = events.map((e) => e.id);
     const empty = { diveLists: null, judges: null };
     if (!eventIds.length || (!include.has("dive_lists") && !include.has("judges"))) {
@@ -312,7 +312,7 @@ module.exports = function createPdfRouter({ pool }) {
       // for so the schedule loop can stream sections inline. The
       // single batched query per enrichment is cheaper than
       // running one-per-event inside the loop.
-      const enrichments = await loadProgramEnrichments(meet.id, events, include);
+      const enrichments = await loadProgramEnrichments(events, include);
 
       const slug = (meet.name || "meet")
         .toLowerCase()
@@ -577,7 +577,7 @@ module.exports = function createPdfRouter({ pool }) {
       }
       const meet = meetRes.rows[0];
       const events = eventsRes.rows;
-      const enrichments = await loadProgramEnrichments(meet.id, events, include);
+      const enrichments = await loadProgramEnrichments(events, include);
 
       const slug = (meet.name || "meet")
         .toLowerCase()
