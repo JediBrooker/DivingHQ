@@ -193,7 +193,7 @@ The books are public at [`/records`](/records) (**Records** in the sidebar's Com
 - **Continental** — every diver whose federation the system admin has given a continent (see [Continental records](#continental-records)).
 - **Personal bests** aren't a book. They live on each diver's profile.
 
-Every book is split into **Women's** and **Men's**, and each record is one board height, dive code and position, so a 105B from 3 m and a 105B from 1 m are separate records. Only individual events count: a synchro dive is two people's work credited to one of them, so synchro and team events never set records. A Mixed event files each dive under the diver's own profile gender, and skips the dive if the profile doesn't give one. Rehearsal events never touch the books.
+Every book is split into **Women's** and **Men's**, and each record is one board height, dive code and position, so a 105B from 3 m and a 105B from 1 m are separate records. Only individual events count: a synchro dive is two people's work credited to one of them, so synchro and team events never set records. A Mixed event files each dive under the diver's own profile gender, and skips the dive if the profile doesn't give one. Rehearsal events never touch the books, and nor do scores typed in through manual entry while an event is still Upcoming (that's somebody trying the Control Room out, not a competition).
 
 Each club links to its book from **My club**, and each region from **My region**.
 

@@ -200,7 +200,7 @@ Records are checked once, the moment the last judge's score for a dive lands (fr
 - Was the dive points total actually higher? An equal score doesn't take a record; the first to reach it keeps it.
 - Is it the same dive, position and board height? A 105B from 3 m and a 105C from 3 m are separate records.
 - Are you looking at the right book? Books are split into Women's and Men's, and the toggle sits above the table.
-- Was it an individual event? Synchro and team dives never set records, and neither do rehearsal events.
+- Was it an individual event? Synchro and team dives never set records, and neither do rehearsal events or scores typed into an event that was still Upcoming.
 - Was it a Mixed event? Then the dive goes in the book the diver's profile gender says, and a profile with no gender sets nothing.
 - Did every judge on the panel score it? A dive only counts once the whole panel is in.
 

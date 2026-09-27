@@ -1406,6 +1406,8 @@ test("records: a dive sets a state record, unofficial until the state is claimed
       body: { name: "3m", gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 1, event_type: "individual", meet_id: meet.body.id },
     });
     assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    // Judges only score a Live event, and an Upcoming one sets no records.
+    await pool.query("UPDATE events SET status = 'Live' WHERE id = $1", [ev.body.id]);
     const dive = (await pool.query("SELECT id FROM dive_directory WHERE height = 3 LIMIT 1")).rows[0].id;
     await pool.query(
       "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
@@ -1975,6 +1977,63 @@ test("scoreboard: record chips ride on the payload, first marks and personal bes
     await lib.checkAndApplyRecords({ eventId: later.id, competitorId: first, roundNumber: 1 });
     const after = await fetchJson("GET", `/api/scoreboard/${ev.id}?cache=skip`);
     assert.deepEqual(after.body.records, []);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+test("records: scores typed into an event that hasn't started set nothing", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { rebuildRecords } = require("../scripts/rebuild-records");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const lib = recordKit.lib();
+    const club = await recordKit.club(st.orgId, "Try-out Divers", "TOD");
+    const her = await recordKit.diver(st.orgId, club, "female", "Kit Tryout");
+    const dive = await recordKit.threeMetreDive();
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    // Judges can't score an Upcoming event, but manual entry doesn't
+    // check, so an operator trying the Control Room out can complete
+    // a dive there. Four scores straight in, the fifth by hand.
+    await pool.query("UPDATE events SET status = 'Upcoming' WHERE id = $1", [ev.id]);
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+      [ev.id, her, dive]);
+    for (const j of ev.judges.slice(0, 4)) {
+      await pool.query(
+        "INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, 1, 7)",
+        [ev.id, her, j, dive]);
+    }
+    const entry = await fetchJson("POST", "/api/scores/manual-entry", {
+      token: st.adminToken,
+      body: { event_id: ev.id, competitor_id: her, round_number: 1, judge_id: ev.judges[4], score: 7 },
+    });
+    assert.equal(entry.status, 200, JSON.stringify(entry.body));
+    const held = async () => {
+      let n = 0;
+      for (const tbl of ["records_personal", "records_club", "records_federation", "records_continental", "records_region"]) {
+        n += (await pool.query(`SELECT count(*)::int AS n FROM ${tbl} WHERE event_id = $1`, [ev.id])).rows[0].n;
+      }
+      return n;
+    };
+    assert.equal(await held(), 0, "nothing from an Upcoming event reaches the books");
+
+    // A replay applies the same rule, or it'd add what the live path skipped.
+    const client = await pool.connect();
+    try {
+      const dry = await rebuildRecords(client, { orgId: st.orgId });
+      assert.equal(dry.find((r) => r.scope === "club").counts.added, 0);
+    } finally {
+      client.release();
+    }
+
+    // Sign-off still counts: that's scores being typed up after the
+    // event ran, and they're real results.
+    await pool.query("UPDATE events SET status = 'pending_signoff' WHERE id = $1", [ev.id]);
+    const broken = await lib.checkAndApplyRecords({ eventId: ev.id, competitorId: her, roundNumber: 1 });
+    assert.ok(broken.some((b) => b.scope === "club"), JSON.stringify(broken));
   } finally {
     await recordKit.cleanup(st.orgId);
     await teardownFixture(st);

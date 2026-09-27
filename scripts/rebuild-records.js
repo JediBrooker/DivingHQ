@@ -20,8 +20,9 @@
 //
 // WHAT IT DOES
 // ------------
-// Every fully scored individual dive (not rehearsal, gender resolved the
-// same way as the live path, via record_gender()) is replayed in the
+// Every fully scored individual dive (not rehearsal, not an event still
+// Upcoming, gender resolved the same way as the live path, via
+// record_gender()) is replayed in the
 // order it was scored. For each book the record is the best score, first
 // to reach it wins a tie, and prev_score is whatever it beat. Then each
 // book is compared with what's in the table now:
@@ -93,7 +94,10 @@ function candidateDivesSql() {
           "JOIN organisations o ON o.id = u.org_id",
           "LEFT JOIN clubs rc ON rc.id = COALESCE(cdl.rep_club_id, u.club_id)",
         ],
-        where: "e.event_type = 'individual' AND COALESCE(e.is_rehearsal, FALSE) = FALSE",
+        // Same gates as checkAndApplyRecords, Upcoming included, or a
+        // replay would promote Control Room try-outs the live path skips.
+        where: `e.event_type = 'individual' AND COALESCE(e.is_rehearsal, FALSE) = FALSE
+                AND e.status <> 'Upcoming'`,
         groupBy: [
           "s.event_id", "s.competitor_id", "s.round_number",
           "e.height", "d.dive_code", "d.position", "d.dd", "e.gender", "u.gender",
@@ -282,6 +286,12 @@ if (require.main === module) {
   const verbose = args.includes("--verbose");
   const orgIdx = args.indexOf("--org");
   const orgId = orgIdx >= 0 ? args[orgIdx + 1] : null;
+  // A bare trailing --org would otherwise read as "no filter" and, with
+  // --apply in front of it, rebuild every federation's books.
+  if (orgIdx >= 0 && !orgId) {
+    console.error("[rebuild-records] --org needs an organisation UUID after it");
+    process.exit(1);
+  }
   (async () => {
     const client = makeClient();
     await client.connect();
