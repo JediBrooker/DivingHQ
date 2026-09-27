@@ -1209,6 +1209,9 @@ module.exports = function createAuthRouter({
         const orgs = await countryOrgs(client, country, "active");
         const unclaimedOrg = orgs.find((o) => o.claim_state === "unclaimed");
         const claimedOrgs = orgs.filter((o) => o.claim_state === "claimed");
+        // Callers `return await` this. Without the await, the finally below
+        // hands the client back to the pool while the ROLLBACK is still
+        // running, and a ROLLBACK that fails never reaches the catch.
         const refuse = async (status, body) => {
           await client.query("ROLLBACK");
           return res.status(status).json(body);
@@ -1218,14 +1221,14 @@ module.exports = function createAuthRouter({
           let orgRow = unclaimedOrg || (claimedOrgs.length === 1 ? claimedOrgs[0] : null);
           if (!orgRow) {
             if (claimedOrgs.length > 1) {
-              return refuse(409, { error: "Several federations share this country on DivingHQ. Contact support to claim your region.", code: "claim_needs_support" });
+              return await refuse(409, { error: "Several federations share this country on DivingHQ. Contact support to claim your region.", code: "claim_needs_support" });
             }
             // Nobody from this country is here yet. Start its account so
             // the state body has something to claim a region of.
             const found = await resolveCountryOrg(client, country);
-            if (found.pending) return refuse(409, federationPendingBody(country));
+            if (found.pending) return await refuse(409, federationPendingBody(country));
             if (found.closed || found.choose) {
-              return refuse(409, { error: "Contact support to claim your region.", code: "claim_needs_support" });
+              return await refuse(409, { error: "Contact support to claim your region.", code: "claim_needs_support" });
             }
             orgRow = { id: found.id, claim_state: found.claim_state };
           }
@@ -1235,16 +1238,16 @@ module.exports = function createAuthRouter({
             [orgRow.id, regionCode],
           )).rows[0];
           if (!rg) {
-            return refuse(400, { error: "That region isn't set up on DivingHQ for this country", code: "region_unknown" });
+            return await refuse(400, { error: "That region isn't set up on DivingHQ for this country", code: "region_unknown" });
           }
           if (rg.claim_state === "claimed") {
-            return refuse(409, { error: "That region already has its body on DivingHQ. Contact support if that's wrong.", code: "already_claimed" });
+            return await refuse(409, { error: "That region already has its body on DivingHQ. Contact support if that's wrong.", code: "already_claimed" });
           }
           target = { kind: "region", id: rg.id, orgId: orgRow.id };
         } else {
           let orgId = unclaimedOrg?.id;
           if (!orgId && claimedOrgs.length) {
-            return refuse(409, {
+            return await refuse(409, {
               error: `${claimedOrgs[0].name} already runs ${country.name} on DivingHQ. `
                 + "A state or regional body can claim its region instead. Otherwise, contact DivingHQ support.",
               code: "already_claimed",
@@ -1252,9 +1255,9 @@ module.exports = function createAuthRouter({
           }
           if (!orgId) {
             const found = await resolveCountryOrg(client, country);
-            if (found.pending) return refuse(409, federationPendingBody(country));
+            if (found.pending) return await refuse(409, federationPendingBody(country));
             if (found.closed || found.choose || found.claim_state !== "unclaimed") {
-              return refuse(409, { error: `Contact DivingHQ support to register for ${country.name}.`, code: "claim_needs_support" });
+              return await refuse(409, { error: `Contact DivingHQ support to register for ${country.name}.`, code: "claim_needs_support" });
             }
             orgId = found.id;
           }
