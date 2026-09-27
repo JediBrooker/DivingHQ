@@ -265,7 +265,7 @@ Signups find their federation by country, so a live organisation with no country
 
 ### Rebuilding the record books
 
-Records are written as scores land, so a book can drift from the scores behind it: a correction that lowered a record-setting dive, say, or books written before migration 094 split them by gender (back then a man's dive could replace a woman's club record, and synchro dives counted). The system admin can replay every book from the scores themselves:
+Records are written as scores land, and when a dive that's already scored changes (the referee fails or caps it, a score is corrected, a conflict is resolved, a redive is scored again) its books are replayed, so a record goes back to whoever held it before. A book can still drift from the scores behind it, mostly books written before migration 094 split them by gender (back then a man's dive could replace a woman's club record, and synchro dives counted). The system admin can replay every book from the scores themselves:
 
 ```
 node scripts/rebuild-records.js                  # dry run: counts per book, writes nothing

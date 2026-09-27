@@ -36,6 +36,7 @@ module.exports = function createManualScoresRouter({
   pool, io, scoreboardCache, requireOrgRole,
   requireRoleOrEventDelegate,   // optional, migration 087
   checkAndApplyRecords,         // optional; lib/records.js
+  recomputeRecordKeys,          // optional; lib/records.js
 }) {
   if (!pool || !io) throw new Error("createManualScoresRouter requires { pool, io, … }");
   const router = express.Router();
@@ -228,9 +229,13 @@ module.exports = function createManualScoresRouter({
         // dive just like that judge's own submit would have, so it can
         // set a record too. Before this, a meet run on manual entry
         // through an outage never set a single one.
+        // A typo fix on a score that was already there can lower the
+        // dive, so that replays its books rather than only raising them.
         if (checkAndApplyRecords) {
           await announceRecords({
-            checkAndApplyRecords, io, scoreboardCache,
+            checkAndApplyRecords,
+            recomputeRecordKeys: isInsert ? null : recomputeRecordKeys,
+            io, scoreboardCache,
             eventId: event_id, competitorId: competitor_id, roundNumber: round,
           });
         }

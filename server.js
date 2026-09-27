@@ -1059,6 +1059,14 @@ app.use(require("./routes/scoreboard")({
 // socket event to the event's room, which needs both io and the
 // cache as factory deps.
 // =============================================================
+// Built here rather than down in [SECTION: RECORDS]: every path that
+// writes a score needs it, and this is the first of them. Score
+// correction, conflict resolution, manual entry and the socket all
+// hand a changed dive to recomputeRecordKeys (a new one to
+// checkAndApplyRecords).
+const { checkAndApplyRecords, recomputeRecordKeys, router: recordsRouter } =
+  require("./lib/records")({ pool, readPool, optionalAuth });
+
 app.use(require("./routes/score-correction")({
   pool,
   io,
@@ -1067,6 +1075,7 @@ app.use(require("./routes/score-correction")({
   requireEventManager,
   requireRoleOrEventDelegate,
   isEventDelegate,
+  recomputeRecordKeys,
 }));
 
 // =============================================================
@@ -1125,7 +1134,7 @@ app.use(require("./routes/templates")({ pool, verifyToken }));
 // docs/offline-p1-design.md §4.
 // =============================================================
 app.use(require("./routes/conflicts")({
-  pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate,
+  pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate, recomputeRecordKeys,
 }));
 
 // =============================================================
@@ -1145,14 +1154,11 @@ app.use(require("./routes/late-arrivals")({ pool, requireOrgRole, requireRoleOrE
 // showing values on phone screens). See docs/offline-p1-design.md
 // §Phase 5.
 // =============================================================
-// Built here rather than down in [SECTION: RECORDS] because manual
-// entry completes dives too and needs the record check handed to it.
-const { checkAndApplyRecords, router: recordsRouter } =
-  require("./lib/records")({ pool, readPool, optionalAuth });
-
+// The record check comes from lib/records, built up by the score
+// correction section: manual entry completes dives too.
 app.use(require("./routes/manual-scores")({
   pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate,
-  checkAndApplyRecords,
+  checkAndApplyRecords, recomputeRecordKeys,
 }));
 
 // =============================================================
@@ -1262,6 +1268,7 @@ require("./routes/socket")({
   isValidScore,
   isTokenVersionCurrent,
   checkAndApplyRecords,
+  recomputeRecordKeys,
   activeDivers,
   meetHolds,
   getEventController,

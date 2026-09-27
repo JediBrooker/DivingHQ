@@ -6571,3 +6571,94 @@ test("records: club and region come from the entry, live and in the replay", asy
     await teardownFixture(st);
   }
 });
+
+// Records only ever went up: a record-setting dive that was Failed,
+// capped or corrected down kept its record, and one corrected up
+// "beat" its own earlier total. recomputeRecordKeys replays the dive's
+// books; a redive's stale panel doesn't count until every judge has
+// scored again.
+test("records: a changed dive's books are replayed, down as well as up", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const lib = recordKit.lib();
+    const club = await recordKit.club(st.orgId, "Replay Divers", "RPD");
+    const old = await recordKit.diver(st.orgId, club, "female", "Jo Standing");
+    const star = await recordKit.diver(st.orgId, club, "female", "Kit Rising");
+    const dive = await recordKit.threeMetreDive();
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(women, old, 1, dive, 6);
+    await lib.checkAndApplyRecords({ eventId: women.id, competitorId: old, roundNumber: 1 });
+    await recordKit.dive(women, star, 1, dive, 6.5);
+    await lib.checkAndApplyRecords({ eventId: women.id, competitorId: star, roundNumber: 1 });
+    const book = async () => (await pool.query(
+      "SELECT holder_id, score::float, prev_score::float, event_id FROM records_club WHERE club_id = $1", [club],
+    )).rows[0];
+    const standing = (await pool.query(
+      "SELECT score::float FROM records_personal WHERE user_id = $1", [old],
+    )).rows[0].score;
+    assert.equal((await book()).holder_id, star);
+    const setScores = (v, extra = "") => pool.query(
+      `UPDATE scores SET score = $3 ${extra} WHERE event_id = $1 AND competitor_id = $2 AND round_number = 1`,
+      [women.id, star, v],
+    );
+    const replay = () => lib.recomputeRecordKeys({ eventId: women.id, competitorId: star, roundNumber: 1 });
+
+    // Failed: the old holder gets the book back, first mark again.
+    await setScores(0);
+    let out = await replay();
+    assert.deepEqual(out.broken, [], "nothing to announce on the way down");
+    assert.equal(out.changed, true);
+    assert.deepEqual(await book(), { holder_id: old, score: standing, prev_score: null, event_id: women.id });
+
+    // Corrected up past it: announced, and what it beat is the other
+    // diver's mark, never its own earlier total.
+    await setScores(7);
+    out = await replay();
+    const mark = out.broken.find((b) => b.scope === "club");
+    assert.ok(mark, JSON.stringify(out.broken));
+    assert.equal(mark.prev_score, standing);
+    assert.equal(mark.prev_holder_name, "Jo Standing");
+    const raised = await book();
+    assert.equal(raised.holder_id, star);
+    await setScores(8);
+    out = await replay();
+    assert.equal((await book()).prev_score, standing, "still what it beat, not its own 7s");
+    assert.ok(out.broken.some((b) => b.scope === "club"));
+    // Unchanged scores: nothing written, nothing said.
+    out = await replay();
+    assert.deepEqual(out, { broken: [], changed: false });
+
+    // Redive: the stale panel stops counting straight away, and one fresh
+    // score isn't a completed dive.
+    await setScores(8, ", status = 'redive'");
+    await replay();
+    assert.equal((await book()).holder_id, old);
+    await pool.query(
+      "UPDATE scores SET score = 9, status = 'active' WHERE event_id = $1 AND competitor_id = $2 AND judge_id = $3",
+      [women.id, star, women.judges[0]],
+    );
+    assert.deepEqual((await lib.checkAndApplyRecords({ eventId: women.id, competitorId: star, roundNumber: 1 })), []);
+    await replay();
+    assert.equal((await book()).holder_id, old);
+    await setScores(9, ", status = 'active'");
+    await replay();
+    assert.equal((await book()).holder_id, star);
+
+    // The HTTP correction path replays too: two judges corrected to 0
+    // (the first is trimmed, the second isn't) drops it below Jo's mark.
+    const ids = (await pool.query(
+      "SELECT s.id FROM scores s JOIN event_judges ej ON ej.event_id = s.event_id AND ej.judge_id = s.judge_id WHERE s.event_id = $1 AND s.competitor_id = $2 ORDER BY ej.judge_number",
+      [women.id, star],
+    )).rows.map((r) => r.id);
+    for (const id of ids.slice(0, 3)) {
+      const r = await fetchJson("PUT", `/api/scores/${id}`, { token: st.adminToken, body: { score: 0, reason: "test" } });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+    }
+    assert.equal((await book()).holder_id, old, "the correction took the record away");
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

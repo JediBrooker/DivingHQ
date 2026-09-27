@@ -35,9 +35,11 @@
 
 const express = require("express");
 const { recordAudit } = require("../lib/audit");
+const { announceRecords } = require("../lib/records");
 
 module.exports = function createConflictsRouter({
   pool, io, scoreboardCache, requireOrgRole,
+  recomputeRecordKeys,          // optional; lib/records.js
   requireRoleOrEventDelegate,   // optional, migration 087
 }) {
   if (!pool) throw new Error("createConflictsRouter requires { pool, requireOrgRole }");
@@ -194,6 +196,16 @@ module.exports = function createConflictsRouter({
             new_score: newScore,
             reason: reason || "conflict resolved",
             actor_user_id: req.user.id,
+          });
+        }
+
+        // Taking the judge's value moves the dive's total, so replay
+        // its record books. Not awaited: this request still holds its
+        // own connection, and the replay takes another.
+        if (recomputeRecordKeys) {
+          announceRecords({
+            recomputeRecordKeys, io, scoreboardCache,
+            eventId: row.event_id, competitorId: row.competitor_id, roundNumber: row.round_number,
           });
         }
 
