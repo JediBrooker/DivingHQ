@@ -583,11 +583,20 @@ automatically: role requests go to org admins, register-org stops opening
 claims on that org, and so on. The sysadmin can revoke an approved claim.
 That reverts the target, and a national org gets its country name back.
 
-**Deviations from §8.5:**
-- notifications are in-app only (`claim_vote`, `claim_review` and
-  `claim_decided` in the inbox), with no email yet;
-- club admins in scope aren't offered an after-the-fact "object" link. They
-  contact DivingHQ.
+**Notifications.** Every notice goes out both in-app (`claim_vote`,
+`claim_review` and `claim_decided` in the inbox) and by email
+(`sendClaimEmail` in `lib/email.js`, English like the other admin emails).
+The emails carry what someone needs to act without opening the app:
+- the claimant and their website, and whether their email domain matches it;
+- the closing date and the rules;
+- objection reasons, on escalations to the sysadmin.
+
+The claimant is also told when their claim goes live, when it's decided and
+if it's revoked.
+
+**Deviation from §8.5:** club admins in scope aren't offered an
+after-the-fact "object" link. The approval email tells them to contact
+DivingHQ.
 
 **UI**:
 - `/claims` for voters, federations, the sysadmin and claimants;

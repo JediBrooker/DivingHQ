@@ -673,6 +673,7 @@ app.use(
     sendPasswordResetEmail,
     sendEmailChangeVerify,
     sendEmailChangedNotice,
+    sendClaimEmail: email.sendClaimEmail,
     bumpTokenVersion,
     JWT_SECRET,
     JWT_EXPIRY,
@@ -701,7 +702,7 @@ app.use(require("./routes/regions")({ pool, verifyToken, isInSameOrg }));
 
 // Claims: a federation or state body taking over an account the clubs
 // started (migration 089, lib/claims.js).
-app.use(require("./routes/claims")({ pool, push, verifyToken, requireSystemAdmin, bumpTokenVersion }));
+app.use(require("./routes/claims")({ pool, push, email, verifyToken, requireSystemAdmin, bumpTokenVersion }));
 
 // =============================================================
 // PAYMENTS ROUTES (platform is merchant of record, per Migration 075)
@@ -1403,7 +1404,7 @@ async function bootChecks() {
   // Claims sweep (migration 089): hourly, resolves votes whose window has
   // closed and withdraws claims nobody verified. Not payments-gated.
   try {
-    require("./lib/claims").start({ pool, push, bumpTokenVersion, logger });
+    require("./lib/claims").start({ pool, push, email, bumpTokenVersion, logger });
   } catch (err) {
     logger.warn({ err: err.message }, "claims sweeper start failed");
   }

@@ -1438,3 +1438,72 @@ test("records: a dive sets a state record, unofficial until the state is claimed
     await claimKit.wipe(CODE);
   }
 });
+
+// Claim notices go out by email as well as in-app, with enough in them to
+// act on without opening the app. A fake mailer records every send.
+test("claims: voters, claimant and clubs get the right emails", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const claimsLib = require("../lib/claims");
+  const CODE = "COK";
+  await claimKit.wipe(CODE);
+  const sent = [];
+  const email = { sendClaimEmail: async (userIds, msg) => { sent.push({ userIds: [...userIds].sort(), ...msg }); } };
+  const deps = { email };
+  try {
+    const A = await claimKit.founder(CODE, "Avarua Divers");
+    const B = await claimKit.founder(CODE, "Arorangi Divers");
+    for (const x of [A, B]) await claimKit.makeEligible(x.clubId);
+    const fed = await claimKit.claim({ org_name: "Cook Islands Aquatics", country_code: CODE, website: "cookislandsaquatics.ck" });
+    assert.equal(fed.res.body.approver, "clubs");
+
+    // Going live: the two voting clubs' admins, and the claimant.
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [fed.id]);
+    assert.equal(await claimsLib.activateForUser(pool, fed.id, deps), 1);
+    const voters = sent.find((m) => m.userIds.includes(A.id));
+    assert.deepEqual(voters.userIds, [A.id, B.id].sort());
+    assert.match(voters.subject, /Cook Islands Aquatics wants to run Cook Islands/);
+    assert.match(voters.body, /Voting closes on \d{1,2} \w+ \d{4}/);
+    assert.match(voters.body, /cookislandsaquatics\.ck/);
+    const opened = sent.find((m) => m.userIds.includes(fed.id));
+    assert.match(opened.subject, /Your claim on Cook Islands is open/);
+
+    // Two approvals pass it: the claimant and the clubs hear separately.
+    sent.length = 0;
+    const id = fed.res.body.claim_id;
+    const asUser = async (u) => ({ id: u.id, org_id: (await pool.query("SELECT org_id FROM users WHERE id = $1", [u.id])).rows[0].org_id, org_roles: [] });
+    await claimsLib.castVote(pool, { claimId: id, user: await asUser(A), vote: "approve" }, deps);
+    assert.equal(sent.length, 0, "one approval of two isn't a decision yet");
+    await claimsLib.castVote(pool, { claimId: id, user: await asUser(B), vote: "approve" }, deps);
+    const toClaimant = sent.find((m) => m.userIds.includes(fed.id));
+    assert.match(toClaimant.subject, /was approved/);
+    assert.match(toClaimant.body, /federation admin access/);
+    const toClubs = sent.find((m) => !m.userIds.includes(fed.id));
+    assert.deepEqual(toClubs.userIds, [A.id, B.id].sort());
+    assert.match(toClubs.subject, /Cook Islands Aquatics now runs Cook Islands/);
+
+    // Revoking tells the claimant, with the reason.
+    sent.length = 0;
+    await claimsLib.revoke(pool, { claimId: id, user: { is_system_admin: true, id: null }, reason: "Duplicate body" }, deps);
+    assert.equal(sent.length, 1);
+    assert.deepEqual(sent[0].userIds, [fed.id]);
+    assert.match(sent[0].body, /Duplicate body/);
+
+    // A fresh claim that a club objects to: the sysadmin's email carries
+    // the objection so they can decide from the inbox.
+    const rival = await claimKit.claim({ org_name: "Rarotonga Diving", country_code: CODE });
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [rival.id]);
+    await claimsLib.activateForUser(pool, rival.id, deps);
+    sent.length = 0;
+    await claimsLib.castVote(pool, {
+      claimId: rival.res.body.claim_id, user: await asUser(A), vote: "object", reason: "Not a real body",
+    }, deps);
+    const sysIds = (await pool.query("SELECT id FROM users WHERE is_system_admin")).rows.map((r) => r.id).sort();
+    const toSys = sent.find((m) => m.subject.startsWith("Claim needs a decision"));
+    assert.ok(toSys, "the sysadmin is emailed");
+    assert.deepEqual(toSys.userIds, sysIds);
+    assert.match(toSys.body, /"Not a real body"/);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

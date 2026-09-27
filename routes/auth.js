@@ -211,6 +211,7 @@ module.exports = function createAuthRouter({
   bumpTokenVersion,
   JWT_SECRET,
   JWT_EXPIRY,
+  sendClaimEmail,      // optional, claim notices by email (lib/claims.js)
 }) {
   const router = express.Router();
 
@@ -1019,7 +1020,7 @@ module.exports = function createAuthRouter({
       // A federation / state body's claim goes live now (lib/claims.js).
       // Best-effort: a hiccup here mustn't fail the verification itself,
       // and the next verify-email click (or support) can redo it.
-      await claims.activateForUser(pool, decoded.sub, { push }).catch((err) =>
+      await claims.activateForUser(pool, decoded.sub, { push, email: { sendClaimEmail } }).catch((err) =>
         console.error("[Claim Activate Error]", err.message));
       res.json({ ok: true });
     } catch (err) {
