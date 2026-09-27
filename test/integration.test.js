@@ -1911,17 +1911,22 @@ test("register-org: a race for a new country, a paused country, a region behind 
   const count = async (code) =>
     (await pool.query("SELECT count(*)::int AS n FROM organisations WHERE country_code = $1", [code])).rows[0].n;
   try {
-    // Both see an empty Jersey. One account comes out of it, and the
-    // loser is told someone's claim is already being decided.
+    // Both see an empty Jersey. One country account comes out of it.
+    // Unverified claims don't hold a target (migration 092), so both are
+    // accepted, and it's settled when they verify: only one goes live.
     const [a, b] = await Promise.all([
       claimKit.claim({ org_name: "Jersey Diving", country_code: "JEY" }),
       claimKit.claim({ org_name: "Jersey Aquatics", country_code: "JEY" }),
     ]);
-    const statuses = [a.res.status, b.res.status].sort();
-    assert.deepEqual(statuses, [201, 409], JSON.stringify([a.res.body, b.res.body]));
-    assert.equal([a, b].find((x) => x.res.status === 409).res.body.code, "claim_in_progress");
+    assert.deepEqual([a.res.status, b.res.status], [201, 201], JSON.stringify([a.res.body, b.res.body]));
     assert.equal(await count("JEY"), 1);
-    assert.equal([a, b].filter((x) => x.id).length, 1, "the loser's account was rolled back");
+    await claimKit.verify(a.id);
+    await claimKit.verify(b.id);
+    const jey = (await pool.query(
+      "SELECT status FROM claims WHERE id = ANY($1::uuid[]) ORDER BY status",
+      [[a.res.body.claim_id, b.res.body.claim_id]],
+    )).rows.map((r) => r.status);
+    assert.deepEqual(jey, ["open", "withdrawn"]);
 
     // The sysadmin paused Guernsey's account: no second one beside it.
     await claimKit.founder("GGY", "St Peter Port Divers");
