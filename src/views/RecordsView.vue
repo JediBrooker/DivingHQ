@@ -528,7 +528,9 @@ onMounted(async () => {
   background: var(--surface);
 }
 .records-table { min-width: 640px; }
-.records-narrow { display: none; }
+/* Doubled up so it outranks .records-desc (display: block), which the
+   same span also carries for its type style. */
+.records-desc.records-narrow { display: none; }
 .records-group th {
   background: var(--bg-sunken); color: var(--fg); font-size: var(--text-sm);
   text-transform: none; letter-spacing: 0; padding-block: var(--space-2);
@@ -551,7 +553,7 @@ onMounted(async () => {
 @media (max-width: 600px) {
   .records-table { min-width: 0; }
   .records-wide { display: none; }
-  .records-narrow { display: block; }
+  .records-desc.records-narrow { display: block; }
   .records-table th, .records-table td { padding-inline: var(--space-3); }
 }
 </style>
