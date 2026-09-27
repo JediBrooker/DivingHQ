@@ -244,7 +244,7 @@ onMounted(reloadAll)
               <div class="who">
                 <span class="name">{{ c.name }}<template v-if="c.short_code"> · {{ c.short_code }}</template></span>
                 <span class="meta">
-                  {{ $t('my_region.members', { n: c.member_count }) }}
+                  {{ tn('counts.members', c.member_count) }}
                   <template v-if="c.current_region_name"> · {{ $t('my_region.currently_in', { region: c.current_region_name }) }}</template>
                 </span>
               </div>
