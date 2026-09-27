@@ -88,7 +88,9 @@ async function load() {
       auth.apiFetch(`/api/teams/${teamId.value}/members`),
       auth.apiFetch(`/api/teams/${teamId.value}/events/${eventId.value}/dive-list`),
       auth.cachedApiFetch('/api/dive-directory', {
-        cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS },
+        cache: { maxAgeMs: DIVE_DIRECTORY_TTL_MS, onUpdate: (fresh) => {
+          if (Array.isArray(fresh)) directory.value = fresh
+        } },
       }),
       // Load the team itself by listing the user's org teams; we
       // don't have a direct GET /api/teams/:id endpoint, but we
@@ -102,7 +104,8 @@ async function load() {
       return
     }
     members.value = teamMembers
-    directory.value = allDives
+    // cachedApiFetch hands back { data, fromCache, age }, not the rows.
+    directory.value = Array.isArray(allDives?.data) ? allDives.data : []
 
     // Try to find the team in the user's org; fall back to a
     // synthetic placeholder if the team is in another org and
