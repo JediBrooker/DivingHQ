@@ -1895,3 +1895,88 @@ test("records: every book is public and carries what the records page prints", a
     await teardownFixture(st);
   }
 });
+
+test("scoreboard: record chips ride on the payload, first marks and personal bests don't", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const lib = recordKit.lib();
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Chip Province', 'CPV') RETURNING id",
+      [st.orgId])).rows[0].id;
+    const club = await recordKit.club(st.orgId, "Chip Divers", "CHD", region);
+    const first = await recordKit.diver(st.orgId, club, "female", "Hana First");
+    const second = await recordKit.diver(st.orgId, club, "female", "Ivy Second");
+    const dive = await recordKit.threeMetreDive();
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    const scoreboard = async () => {
+      const r = await fetchJson("GET", `/api/scoreboard/${ev.id}`);
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      return r.body;
+    };
+
+    // Hana's dive is the first anyone has done here, so it opens every
+    // book. None of that is worth a chip.
+    await recordKit.dive(ev, first, 1, dive, 6);
+    const opened = await lib.checkAndApplyRecords({ eventId: ev.id, competitorId: first, roundNumber: 1 });
+    assert.deepEqual(opened.map((b) => b.scope).sort(), ["club", "federation", "personal", "region"]);
+    const hers = opened[0].score;
+    assert.deepEqual((await scoreboard()).records, []);
+
+    // Ivy beats it. Four of her five scores go straight in, and the
+    // scoreboard gets fetched (and cached) before the fifth, which the
+    // operator types in through manual entry like a meet that lost its
+    // judges' phones.
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+      [ev.id, second, dive]);
+    for (const j of ev.judges.slice(0, 4)) {
+      await pool.query(
+        "INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, 1, 7)",
+        [ev.id, second, j, dive]);
+    }
+    assert.deepEqual((await scoreboard()).records, []);
+    const entry = await fetchJson("POST", "/api/scores/manual-entry", {
+      token: st.adminToken,
+      body: { event_id: ev.id, competitor_id: second, round_number: 1, judge_id: ev.judges[4], score: 7 },
+    });
+    assert.equal(entry.status, 200, JSON.stringify(entry.body));
+
+    // No ?cache=skip: whatever the server hands a spectator now has to
+    // include the marks. Her personal best is her first go at the dive,
+    // so it stays out.
+    const sb = await scoreboard();
+    const marks = [...sb.records].sort((a, b) => a.scope.localeCompare(b.scope));
+    assert.deepEqual(marks.map((m) => m.scope), ["club", "federation", "region"]);
+    assert.deepEqual(marks.map((m) => m.scope_code), ["CHD", "TST", "CPV"]);
+    assert.deepEqual(marks.map((m) => m.official), [true, true, false], "the province is unclaimed");
+    for (const m of marks) {
+      assert.equal(m.competitor_id, second);
+      assert.equal(m.gender, "Female");
+      assert.equal(m.dive_code, opened[0].dive_code);
+      assert.equal(m.position, opened[0].position);
+      assert.equal(typeof m.score, "number");
+      assert.equal(m.prev_score, hers);
+    }
+    // The history card the chip hangs off carries the same points.
+    const card = sb.history.find((h) => h.competitor_id === second);
+    assert.ok(Math.abs(Number(card.total_dive_score) - marks[0].score) < 0.01);
+
+    // The recap carries the same list.
+    const recap = await fetchJson("GET", `/api/archive/${ev.id}/results`);
+    assert.equal(recap.status, 200);
+    assert.deepEqual(recap.body.records.map((m) => m.scope).sort(), ["club", "federation", "region"]);
+
+    // Once Hana takes those records back at a later meet, this event no
+    // longer holds them and the chips go with them.
+    const later = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(later, first, 1, dive, 8);
+    await lib.checkAndApplyRecords({ eventId: later.id, competitorId: first, roundNumber: 1 });
+    const after = await fetchJson("GET", `/api/scoreboard/${ev.id}?cache=skip`);
+    assert.deepEqual(after.body.records, []);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

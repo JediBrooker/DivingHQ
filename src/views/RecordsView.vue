@@ -17,6 +17,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { fmtDate } from '@/lib/format'
+import { CONTINENTS, continentName as nameContinent } from '@/lib/continents'
 import EmptyState from '@/components/EmptyState.vue'
 import LogoMark from '@/components/LogoMark.vue'
 
@@ -26,10 +27,6 @@ const auth = useAuthStore()
 const { t, locale } = useI18n()
 
 const SCOPES = ['federation', 'region', 'club', 'continental']
-const CONTINENTS = ['africa', 'americas', 'asia', 'europe', 'oceania']
-// UN M49 area codes. Intl.DisplayNames names them in whatever language
-// the viewer reads, which beats shipping five more keys to 26 locales.
-const CONTINENT_M49 = { africa: '002', americas: '019', asia: '142', europe: '150', oceania: '009' }
 const HEIGHTS = ['0m', '1m', '3m', '5m', '7.5m', '10m']
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const LAST_BOOK_KEY = 'divinghq.records.last_book'
@@ -74,12 +71,7 @@ function orgLabel(o) {
 }
 
 function continentName(key) {
-  try {
-    const names = new Intl.DisplayNames([locale.value], { type: 'region' })
-    return names.of(CONTINENT_M49[key]) || key
-  } catch {
-    return key.charAt(0).toUpperCase() + key.slice(1)
-  }
+  return nameContinent(key, locale.value)
 }
 
 const regionLabel = computed(() => t(`regions.label.${regions.value.label || 'region'}`))

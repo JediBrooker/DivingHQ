@@ -1244,6 +1244,7 @@
 .dr-round { font-family: var(--font-mono); color: var(--text-3); }
 .dr-code-main { font-family: var(--font-mono); font-weight: 700; color: var(--text); }
 .dr-code-desc { font-size: 10px; color: var(--text-3); margin-inline-start: 0.4rem; }
+.dr-record { margin-inline-start: 0.4rem; vertical-align: 1px; }
 .dr-team-member { font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--text-2); margin-inline-end: 0.5rem; }
 .dr-dd {
   font-family: var(--font-display); font-size: 12px; font-weight: 700;

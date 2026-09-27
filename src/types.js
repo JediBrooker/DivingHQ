@@ -475,11 +475,29 @@
  */
 
 /**
+ * @typedef {Object} ScoreboardRecordMark
+ * A record one of this event's dives currently holds. Rides on
+ * GET /api/scoreboard/:eventId and GET /api/archive/:eventId/results as
+ * `records`, and matches a dive by competitor_id + dive_code + position
+ * + score. Personal bests and first marks never appear here.
+ * @property {'club'|'region'|'federation'|'continental'} scope
+ * @property {string}  scope_code   club / region short code, country code, or the continent key
+ * @property {boolean} official     false for an unclaimed region or country
+ * @property {'Male'|'Female'} gender
+ * @property {string}  competitor_id
+ * @property {string}  dive_code
+ * @property {string}  position
+ * @property {number}  score
+ * @property {number}  prev_score   the record this one beat
+ */
+
+/**
  * @typedef {Object} ScoreboardPayload
  * @property {StandingsRow[]}      standings
  * @property {Object[]}            history
  * @property {ScoreboardUpcomingRow[]} upcoming
  * @property {ScoreboardPanelRow[]} panel
+ * @property {ScoreboardRecordMark[]} records
  */
 
 // ---- /api/records ------------------------------------------------

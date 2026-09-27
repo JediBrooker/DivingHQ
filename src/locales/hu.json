@@ -2008,6 +2008,9 @@
     "no_match": "Egy rekord sem felel meg ezeknek a szűrőknek.",
     "clear_filters": "Szűrők törlése",
     "retry": "Próbálja újra",
-    "view": "Rekordok →"
+    "view": "Rekordok →",
+    "chip": "{name}-rekord",
+    "chip_prev": "Előző rekord: {score}",
+    "unofficial_tip": "Nem hivatalos, amíg az illetékes irányító testület igényt nem tart rá a DivingHQ-n."
   }
 }

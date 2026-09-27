@@ -2008,6 +2008,9 @@
     "no_match": "이 필터에 맞는 기록이 없습니다.",
     "clear_filters": "필터 지우기",
     "retry": "다시 시도",
-    "view": "기록 →"
+    "view": "기록 →",
+    "chip": "{name} 기록",
+    "chip_prev": "이전 기록: {score}",
+    "unofficial_tip": "관리 단체가 DivingHQ에서 인수할 때까지 비공식입니다."
   }
 }

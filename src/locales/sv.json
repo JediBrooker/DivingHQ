@@ -2008,6 +2008,9 @@
     "no_match": "Inga rekord matchar de här filtren.",
     "clear_filters": "Rensa filter",
     "retry": "Försök igen",
-    "view": "Rekord →"
+    "view": "Rekord →",
+    "chip": "{name}-rekord",
+    "chip_prev": "Tidigare rekord: {score}",
+    "unofficial_tip": "Inofficiellt tills det styrande organet gör anspråk på kontot på DivingHQ."
   }
 }

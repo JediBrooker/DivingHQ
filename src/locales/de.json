@@ -2008,6 +2008,9 @@
     "no_match": "Keine Rekorde entsprechen diesen Filtern.",
     "clear_filters": "Filter zurücksetzen",
     "retry": "Erneut versuchen",
-    "view": "Rekorde →"
+    "view": "Rekorde →",
+    "chip": "{name}-Rekord",
+    "chip_prev": "Bisheriger Rekord: {score}",
+    "unofficial_tip": "Inoffiziell, bis der zuständige Verband das Konto auf DivingHQ beansprucht."
   }
 }

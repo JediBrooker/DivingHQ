@@ -17,6 +17,7 @@
 
 const express = require("express");
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
+const { eventRecordMarks } = require("../lib/records");
 
 // Short-TTL cache for the two unbounded all-time aggregations
 // (/api/archive and /api/archive/clubs). Lives in
@@ -207,10 +208,11 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   //              points
   //   dives:     dive-by-dive history with judge scores chips
   //              ordered by panel position
+  //   records:   record marks the event's dives hold (scoreboard chip)
   // -------------------------------------------------------------
   router.get("/api/archive/:eventId/results", async (req, res) => {
     try {
-      const [ev, standings, history, panel] = await Promise.all([
+      const [ev, standings, history, panel, records] = await Promise.all([
         reads.query(
           `SELECT e.name, e.gender, e.height, e.total_rounds,
                   e.number_of_judges, e.event_type, o.name AS org_name
@@ -364,6 +366,12 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
            ORDER BY ej.judge_number ASC`,
           [req.params.eventId],
         ),
+        // Same record marks the live scoreboard carries, so a record set
+        // at this meet still wears its chip on the recap.
+        eventRecordMarks(reads, req.params.eventId).catch((err) => {
+          console.error("[Archive Records]", err.message);
+          return [];
+        }),
       ]);
       if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
       res.json({
@@ -371,6 +379,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
         standings: standings.rows,
         dives: history.rows,
         panel: panel.rows,
+        records,
       });
     } catch (err) {
       console.error("[Archive Results Error]", err.message);

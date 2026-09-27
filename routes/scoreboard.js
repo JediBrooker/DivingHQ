@@ -1,7 +1,7 @@
 // Scoreboard routes: public endpoints that drive the live
 // broadcast layout and the round-by-round leaderboard.
 //
-// /api/scoreboard/:eventId            standings + history + up next
+// /api/scoreboard/:eventId            standings + history + up next + record marks
 // /api/scoreboard/:eventId/leaderboard cumulative rank with movement
 //
 // Mounted via:
@@ -20,6 +20,7 @@
 const express = require("express");
 const { publicId } = require("../lib/public-id");
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
+const { eventRecordMarks } = require("../lib/records");
 
 module.exports = function createScoreboardRouter({
   pool,
@@ -76,7 +77,7 @@ module.exports = function createScoreboardRouter({
       // they're in flight stops this payload being cached (see
       // lib/scoreboard-cache.js).
       const gen = scoreboardCache?.generation?.(eventId);
-      const [st, hi, up, panel] = await Promise.all([
+      const [st, hi, up, panel, records] = await Promise.all([
         // Standings: per-dive points (trimmed × DD × scaling) summed
         // across all of a competitor's dives in the event.
         //
@@ -309,6 +310,14 @@ module.exports = function createScoreboardRouter({
            ORDER BY ej.judge_number ASC`,
           [req.params.eventId],
         ),
+        // Record marks this event's dives hold, for the quiet record
+        // chip on history cards (see eventRecordMarks for what's left
+        // out and why). A records hiccup shouldn't cost spectators the
+        // standings, so it degrades to no chips.
+        eventRecordMarks(pool, eventId).catch((err) => {
+          console.error("[Scoreboard Records]", err.message);
+          return [];
+        }),
       ]);
 
       // Compute the public_id hash in Node from competitor_id /
@@ -332,13 +341,14 @@ module.exports = function createScoreboardRouter({
         history: hi.rows,
         upcoming: up.rows,
         panel: panel.rows,
+        records,
       };
       if (scoreboardCache) scoreboardCache.set(eventId, payload, gen);
       res.set("X-Scoreboard-Cache", "miss");
       res.json(payload);
     } catch (err) {
       console.error("[Scoreboard Error]", err.message);
-      res.status(500).json({ standings: [], history: [], upcoming: [], panel: [] });
+      res.status(500).json({ standings: [], history: [], upcoming: [], panel: [], records: [] });
     }
   });
 

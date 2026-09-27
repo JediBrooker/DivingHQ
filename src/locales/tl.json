@@ -2008,6 +2008,9 @@
     "no_match": "Walang rekord na tumutugma sa mga filter na ito.",
     "clear_filters": "I-clear ang mga filter",
     "retry": "Subukang muli",
-    "view": "Mga Rekord →"
+    "view": "Mga Rekord →",
+    "chip": "Rekord ng {name}",
+    "chip_prev": "Dating rekord: {score}",
+    "unofficial_tip": "Hindi opisyal hangga't hindi ito kine-claim ng namamahalang lupon sa DivingHQ."
   }
 }

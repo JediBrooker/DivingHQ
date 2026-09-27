@@ -2008,6 +2008,9 @@
     "no_match": "Bu filtrelere uyan rekor yok.",
     "clear_filters": "Filtreleri temizle",
     "retry": "Tekrar deneyin",
-    "view": "Rekorlar →"
+    "view": "Rekorlar →",
+    "chip": "{name} rekoru",
+    "chip_prev": "Önceki rekor: {score}",
+    "unofficial_tip": "Yönetim organı DivingHQ'da devralana kadar resmî değil."
   }
 }

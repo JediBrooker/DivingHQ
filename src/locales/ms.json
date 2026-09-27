@@ -2008,6 +2008,9 @@
     "no_match": "Tiada rekod yang sepadan dengan penapis ini.",
     "clear_filters": "Kosongkan penapis",
     "retry": "Cuba lagi",
-    "view": "Rekod →"
+    "view": "Rekod →",
+    "chip": "Rekod {name}",
+    "chip_prev": "Rekod sebelumnya: {score}",
+    "unofficial_tip": "Tidak rasmi sehingga badan induknya menuntutnya di DivingHQ."
   }
 }

@@ -217,7 +217,7 @@ module.exports = function createManualScoresRouter({
         // through an outage never set a single one.
         if (checkAndApplyRecords) {
           await announceRecords({
-            checkAndApplyRecords, io,
+            checkAndApplyRecords, io, scoreboardCache,
             eventId: event_id, competitorId: competitor_id, roundNumber: round,
           });
         }

@@ -834,7 +834,7 @@ module.exports = function attachSocket({
       }
 
       announceRecords({
-        checkAndApplyRecords, io,
+        checkAndApplyRecords, io, scoreboardCache,
         eventId:      data.event_id,
         competitorId: data.competitor_id,
         roundNumber:  round,

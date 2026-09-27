@@ -25,6 +25,10 @@
 --                'prefer_not_to_say' from the User Manager), hence the
 --                normalising.
 --
+--   idx_records_*_event
+--                event_id on the five current books, for the scoreboard's
+--                record chip (bottom of the file).
+--
 -- Existing rows: additive backfill only, nothing is deleted. A row gets
 -- the gender its event says, else its holder's profile gender. Rows set
 -- at synchro or team events are left NULL on purpose: under the new
@@ -131,6 +135,16 @@ BEGIN
     END IF;
   END LOOP;
 END $$;
+
+-- The scoreboard asks "which records does this event hold?" every time
+-- it rebuilds its cache (eventRecordMarks in lib/records.js), and
+-- deleting an event nulls event_id right across the books. Neither had
+-- an index to lean on, so each was a scan of every record table.
+CREATE INDEX IF NOT EXISTS idx_records_personal_event    ON public.records_personal (event_id);
+CREATE INDEX IF NOT EXISTS idx_records_club_event        ON public.records_club (event_id);
+CREATE INDEX IF NOT EXISTS idx_records_region_event      ON public.records_region (event_id);
+CREATE INDEX IF NOT EXISTS idx_records_federation_event  ON public.records_federation (event_id);
+CREATE INDEX IF NOT EXISTS idx_records_continental_event ON public.records_continental (event_id);
 
 -- ---- bump schema version --------------------------------------
 INSERT INTO public.schema_meta (id, version, applied_at)

@@ -2008,6 +2008,9 @@
     "no_match": "Nessun record corrisponde a questi filtri.",
     "clear_filters": "Cancella filtri",
     "retry": "Riprova",
-    "view": "Record →"
+    "view": "Record →",
+    "chip": "Record {name}",
+    "chip_prev": "Record precedente: {score}",
+    "unofficial_tip": "Non ufficiale finché il relativo organo di governo non lo rivendica su DivingHQ."
   }
 }

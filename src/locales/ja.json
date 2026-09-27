@@ -2008,6 +2008,9 @@
     "no_match": "条件に一致する記録はありません。",
     "clear_filters": "絞り込みを解除",
     "retry": "再試行",
-    "view": "記録 →"
+    "view": "記録 →",
+    "chip": "{name}記録",
+    "chip_prev": "従来の記録: {score}",
+    "unofficial_tip": "統括団体が DivingHQ で引き継ぐまでは非公式です。"
   }
 }

@@ -188,9 +188,12 @@ before(async () => {
   };
 
   // Stub io that just remembers what it was asked to send, so the
-  // records test below can look for record_broken.
+  // records test below can look for record_broken. Cache drops go in
+  // the same log so the order of the two can be checked.
   const io = { to: (room) => ({ emit: (name, payload) => emitted.push({ room, name, payload }) }) };
-  const scoreboardCache = { invalidate: () => {} };
+  const scoreboardCache = {
+    invalidate: (eventId) => emitted.push({ name: "cache_invalidate", payload: { event_id: eventId } }),
+  };
   const { checkAndApplyRecords } = require("../lib/records")({ pool, verifyToken: (_q, _s, n) => n() });
 
   app.use(require("../routes/manual-scores")({
@@ -538,4 +541,10 @@ test("manual entry that completes a dive sets records and announces them", async
   assert.deepEqual(sent.map((e) => e.payload.scope).sort(), ["federation", "personal"]);
   assert.ok(sent.every((e) => e.room === `event:${recordEventId}`));
   assert.ok(sent.every((e) => e.payload.round_number === 1));
+
+  // The scoreboard cache is dropped again once the records are in, not
+  // just when the score landed, so the record chip can't miss a refresh
+  // that rebuilt the cache in between.
+  const firstRecord = emitted.findIndex((e) => e.name === "record_broken" && e.payload.event_id === recordEventId);
+  assert.deepEqual(emitted[firstRecord - 1], { name: "cache_invalidate", payload: { event_id: recordEventId } });
 });

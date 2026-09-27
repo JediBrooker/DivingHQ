@@ -2008,6 +2008,9 @@
     "no_match": "Mikään ennätys ei vastaa näitä suodattimia.",
     "clear_filters": "Tyhjennä suodattimet",
     "retry": "Yritä uudelleen",
-    "view": "Ennätykset →"
+    "view": "Ennätykset →",
+    "chip": "{name}-ennätys",
+    "chip_prev": "Edellinen ennätys: {score}",
+    "unofficial_tip": "Epävirallinen, kunnes hallintoelin ottaa tilin haltuunsa DivingHQ:ssa."
   }
 }

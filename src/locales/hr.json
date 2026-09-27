@@ -2008,6 +2008,9 @@
     "no_match": "Nijedan rekord ne odgovara ovim filtrima.",
     "clear_filters": "Očisti filtre",
     "retry": "Pokušajte ponovno",
-    "view": "Rekordi →"
+    "view": "Rekordi →",
+    "chip": "Rekord {name}",
+    "chip_prev": "Prethodni rekord: {score}",
+    "unofficial_tip": "Neslužbeno dok ga nadležno upravljačko tijelo ne zatraži na DivingHQ-u."
   }
 }

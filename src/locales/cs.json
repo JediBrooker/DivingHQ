@@ -2008,6 +2008,9 @@
     "no_match": "Těmto filtrům neodpovídají žádné rekordy.",
     "clear_filters": "Zrušit filtry",
     "retry": "Zkusit znovu",
-    "view": "Rekordy →"
+    "view": "Rekordy →",
+    "chip": "Rekord {name}",
+    "chip_prev": "Předchozí rekord: {score}",
+    "unofficial_tip": "Neoficiální, dokud si účet na DivingHQ nenárokuje příslušný řídicí orgán."
   }
 }

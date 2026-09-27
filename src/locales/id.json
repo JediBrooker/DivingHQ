@@ -2008,6 +2008,9 @@
     "no_match": "Tidak ada rekor yang cocok dengan filter ini.",
     "clear_filters": "Hapus filter",
     "retry": "Coba lagi",
-    "view": "Rekor →"
+    "view": "Rekor →",
+    "chip": "Rekor {name}",
+    "chip_prev": "Rekor sebelumnya: {score}",
+    "unofficial_tip": "Tidak resmi sampai badan pengelolanya mengklaimnya di DivingHQ."
   }
 }

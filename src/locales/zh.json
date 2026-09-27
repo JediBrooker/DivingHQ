@@ -2008,6 +2008,9 @@
     "no_match": "没有符合这些筛选条件的纪录。",
     "clear_filters": "清除筛选",
     "retry": "重试",
-    "view": "纪录 →"
+    "view": "纪录 →",
+    "chip": "{name}纪录",
+    "chip_prev": "原纪录：{score}",
+    "unofficial_tip": "在其管理机构于 DivingHQ 上接管之前为非正式纪录。"
   }
 }
