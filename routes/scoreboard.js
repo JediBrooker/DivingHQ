@@ -19,7 +19,7 @@
 
 const express = require("express");
 const { publicId } = require("../lib/public-id");
-const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
+const { perDiveSelect, perDivePointsCte, teamStandingsCte } = require("../lib/scoring-sql");
 
 module.exports = function createScoreboardRouter({
   pool,
@@ -101,21 +101,9 @@ module.exports = function createScoreboardRouter({
               computed in Node from team_id below, we expose team_id
               here so the router can hash it. The spectator-facing
               JSON drops team_id and only emits public_id, so internal
-              UUIDs still aren't leaked. */
-           team_standings AS (
-             SELECT t.id AS team_id,
-                    t.name AS full_name,
-                    NULL::char(3) AS country_code,
-                    t.short_code AS club_name,
-                    NULL::varchar AS partner_name,
-                    NULL::uuid AS partner_id,
-                    NULL::char(3) AS partner_country,
-                    SUM(pd.dive_points) AS total
-             FROM per_dive pd
-             JOIN teams t ON t.id = pd.team_id
-             WHERE (SELECT event_type FROM events WHERE id = $1) = 'team'
-             GROUP BY t.id, t.name, t.short_code
-           ),
+              UUIDs still aren't leaked. country_code is the code the
+              team's divers share (migration 095). */
+           ${teamStandingsCte()},
            /* Individual / synchro branch: aggregate by competitor.
               partner_id is exposed on the row so the spectator
               scoreboard can render the synchro partner's name as

@@ -388,10 +388,12 @@ const divesByDiver = computed(() => {
       // rides on every dive of that diver.
       const standRow = archiveResults.value.standings
         .find(s => s.full_name === key)
+      // A team's chip and short code live on its standings row (the code
+      // its divers share, migration 095); its dive rows are per member.
       return {
         name: key,
-        country: teamMode ? null : (dives[0]?.country_code || null),
-        club: teamMode ? null : (dives[0]?.club_name || null),
+        country: teamMode ? (standRow?.country_code || null) : (dives[0]?.country_code || null),
+        club: teamMode ? (standRow?.club_name || null) : (dives[0]?.club_name || null),
         partner: teamMode ? null : (dives[0]?.partner_name || null),
         partner_id: teamMode ? null : (standRow?.partner_id || dives.find(d => d.partner_id)?.partner_id || null),
         partner_country: teamMode ? null : (dives[0]?.partner_country || null),

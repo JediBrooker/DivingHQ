@@ -628,7 +628,9 @@ Migration 095 tightened this. When a snapshot exists it is the whole answer: an 
 
 **Records.** A `region` scope keyed on the entry's region. `GET /api/records` returns `official: false` for national records in an unclaimed country and state records in an unclaimed region.
 
-**Not done:** team events keep their team codes, since a team is its own entity and isn't relabelled by state. Records still have no frontend screen.
+**Teams** (migration 095). A team has no club or region of its own, so its standings row takes the code its divers share: `event_team_rep_code(event, team)` runs `event_rep_code()` for everyone on the team's non-withdrawn, non-reserve rows (synchro partners included), ignores divers with no code, and uses the result if they all agree. A mixed team, or one with nobody left, reads as the team org's country, the same fallback a diver gets. So in a state-mode meet a team of Ontario divers reads ON and an Ontario/Quebec team reads CAN; in club mode a one-club team reads as that club. The team short code stays underneath as the subline. It's derived from the entry snapshots, so history is safe without any new column. The scoreboard, recap (and so the medal table) and results.pdf share one builder, `teamStandingsCte()` in `lib/scoring-sql.js`; results.pdf also gained a team branch, ranking teams and grouping the dive list by team. Teams still have no club or region owner, and club and region admins still can't create or edit teams; that's a separate follow-up that needs an owner column first. The by-round leaderboard, venue board and results.csv rank still rank team members individually.
 
-**Tests.** Integration covers labels switching across region / club / country, a diver who changes club after entering keeping their entry-time state, the Control Room roster agreeing, and a state record reading unofficial until the region is claimed.
+**Not done:** records still have no frontend screen.
+
+**Tests.** Integration covers labels switching across region / club / country, a diver who changes club after entering keeping their entry-time state, the Control Room roster agreeing, and a state record reading unofficial until the region is claimed. Migration 095 added a regression test for club moves, club deletion and synchro-partner snapshots, and one for team labels in each mode, across the scoreboard, recap and results.pdf.
 

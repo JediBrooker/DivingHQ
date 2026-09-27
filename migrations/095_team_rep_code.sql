@@ -30,6 +30,18 @@
 --       The club / region / country an entry resolves to, in one place,
 --       so event_rep_code() and the region-record lookup in lib/records.js
 --       can't drift apart. Own entry row first, then a partner snapshot.
+--
+--   event_team_rep_code(event_id, team_id)
+--       The code on a team's standings row. A team has no club or region
+--       of its own, so it takes the one its divers share: each diver on
+--       its non-withdrawn, non-reserve rows (synchro partners included)
+--       gets their usual event_rep_code() for this event, divers with no
+--       code are left out, and if the rest all agree (all ON, all OTT)
+--       that's the team's code. Otherwise, or with nobody left, it's the
+--       team org's country, the same fallback a diver with no state or
+--       club gets. For an international mixed team that is simply its
+--       country, since World Aquatics 5.4.1 has every member from the same
+--       Member Federation.
 
 BEGIN;
 
@@ -133,6 +145,29 @@ LANGUAGE sql STABLE AS $$
   LEFT JOIN public.meets m ON m.id = e.meet_id
   LEFT JOIN LATERAL public.event_rep_ids(e.id, p_user) r ON true
   WHERE e.id = p_event
+$$;
+
+CREATE OR REPLACE FUNCTION public.event_team_rep_code(p_event uuid, p_team uuid)
+RETURNS text
+LANGUAGE sql STABLE AS $$
+  SELECT COALESCE(
+    (SELECT CASE WHEN COUNT(DISTINCT m.code) = 1 THEN MIN(m.code) END
+       FROM (SELECT public.event_rep_code(p_event, x.diver_id, NULL) AS code
+               FROM (SELECT cdl.competitor_id AS diver_id
+                       FROM public.competitor_dive_lists cdl
+                      WHERE cdl.event_id = p_event AND cdl.team_id = p_team
+                        AND cdl.withdrawn_at IS NULL AND cdl.is_reserve = FALSE
+                     UNION
+                     SELECT cdl.partner_id
+                       FROM public.competitor_dive_lists cdl
+                      WHERE cdl.event_id = p_event AND cdl.team_id = p_team
+                        AND cdl.partner_id IS NOT NULL
+                        AND cdl.withdrawn_at IS NULL AND cdl.is_reserve = FALSE) x) m
+      WHERE m.code IS NOT NULL),
+    (SELECT o.country_code::text
+       FROM public.teams t
+       JOIN public.organisations o ON o.id = t.org_id
+      WHERE t.id = p_team))
 $$;
 
 -- ---- bump schema version --------------------------------------

@@ -23,6 +23,7 @@ const {
   perDiveJoins,
   perDiveSelect,
   perDivePointsCte,
+  teamStandingsCte,
 } = require("../lib/scoring-sql");
 
 // ---------------------------------------------------------------
@@ -734,4 +735,47 @@ test("CTE wrapper is name AS ( <select> )", () => {
   assert.ok(cte.endsWith("\n)"));
   // Inner body is exactly the bare-select form.
   assert.equal(cte, `x AS (\n${perDiveSelect()}\n)`);
+});
+
+// ---------------------------------------------------------------
+// 4. Team standings (scoreboard, archive recap, results.pdf).
+// ---------------------------------------------------------------
+
+test("snapshot: teamStandingsCte default", () => {
+  assert.equal(
+    teamStandingsCte(),
+    `team_standings AS (
+SELECT t.id AS team_id,
+       t.name AS full_name,
+       event_team_rep_code($1, t.id) AS country_code,
+       t.short_code AS club_name,
+       NULL::uuid AS partner_id,
+       NULL::varchar AS partner_name,
+       NULL::text AS partner_country,
+       SUM(pd.dive_points) AS total
+FROM per_dive pd
+JOIN teams t ON t.id = pd.team_id
+WHERE (SELECT event_type FROM events WHERE id = $1) = 'team'
+GROUP BY t.id, t.name, t.short_code
+)`,
+  );
+});
+
+test("teamStandingsCte: the label comes from the divers, the short code stays the subline", () => {
+  const sql = teamStandingsCte();
+  // Not NULL any more: team rows get the code their divers share.
+  assert.ok(sql.includes("event_team_rep_code($1, t.id) AS country_code"));
+  assert.ok(!/NULL::char\(3\) AS country_code/.test(sql));
+  assert.ok(sql.includes("t.short_code AS club_name"));
+  // One row per team, never per same-named team.
+  assert.ok(/GROUP BY t\.id\b/.test(sql));
+});
+
+test("teamStandingsCte: name, source and event placeholder are the caller's", () => {
+  const sql = teamStandingsCte({ name: "teams_x", perDive: "pd_src", eventId: "$2" });
+  assert.ok(sql.startsWith("teams_x AS (\n"));
+  assert.ok(sql.includes("FROM pd_src pd"));
+  assert.ok(sql.includes("event_team_rep_code($2, t.id)"));
+  assert.ok(sql.includes("WHERE id = $2) = 'team'"));
+  assert.ok(!sql.includes("$1"));
 });

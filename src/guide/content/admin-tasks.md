@@ -120,6 +120,8 @@ The members drawer lets you add or remove divers, with a search across your fede
 
 Team names show as a **purple chip** in history cards and the active-diver block — it's the visual signal that this is a team event entry.
 
+On the standings, recap and results PDF a team's row gets the same kind of chip its divers would. It follows the meet's **Divers represent** setting: if every diver on the team is from one state (or one club, in a club meet) the team shows that code, and a team mixing states or clubs shows its country. The team's short code sits underneath. It's worked out from who the divers were when they were entered, so a diver moving club later doesn't change an old result.
+
 ## Score Audit Log
 
 `/events/<id>/audit` — every score insert, update, and delete for one event.
