@@ -129,6 +129,8 @@ onMounted(load)
 .cs-row { display: flex; gap: var(--space-2); align-items: center; }
 .cs-url { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: var(--text-xs); }
 .cs-code { width: 9rem; text-transform: uppercase; font-family: var(--font-mono); }
+/* The code itself is shown upper case, the "e.g." in the placeholder isn't. */
+.cs-code::placeholder { text-transform: none; }
 .cs-readonly { margin: 0; display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
 .cs-chip {
   font-family: var(--font-mono); font-size: var(--text-xs); font-weight: 600;
