@@ -172,26 +172,23 @@ module.exports = function createUsersRouter({
         );
       }
 
-      // Best-effort audit writes, same pattern as the score audit
-      // log: don't let an audit failure roll back the legitimate
-      // role change (e.g. before the migration ran).
-      try {
-        for (const role of granted) {
-          await client.query(
-            `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id)
-             VALUES ($1, $2, $3, 'granted', $4)`,
-            [req.params.id, targetOrgId, role, req.user.id],
-          );
-        }
-        for (const role of revoked) {
-          await client.query(
-            `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id)
-             VALUES ($1, $2, $3, 'revoked', $4)`,
-            [req.params.id, targetOrgId, role, req.user.id],
-          );
-        }
-      } catch (auditErr) {
-        console.error("[Role Audit Skipped]", auditErr.message);
+      // In the same transaction as the change. A failed insert aborts
+      // it either way (Postgres won't run another statement after one
+      // fails), so the change and its audit rows land together or not at
+      // all.
+      for (const role of granted) {
+        await client.query(
+          `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id)
+           VALUES ($1, $2, $3, 'granted', $4)`,
+          [req.params.id, targetOrgId, role, req.user.id],
+        );
+      }
+      for (const role of revoked) {
+        await client.query(
+          `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id)
+           VALUES ($1, $2, $3, 'revoked', $4)`,
+          [req.params.id, targetOrgId, role, req.user.id],
+        );
       }
 
       // Invalidate the target user's existing JWTs (Migration 021).
@@ -296,21 +293,17 @@ module.exports = function createUsersRouter({
           "INSERT INTO user_org_roles (user_id, org_id, role, granted_by) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING",
           [rq.user_id, rq.org_id, rq.requested_role, req.user.id],
         );
-        try {
-          await client.query(
-            `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id, note)
-             VALUES ($1, $2, $3, 'granted', $4, $5)`,
-            [
-              rq.user_id,
-              rq.org_id,
-              rq.requested_role,
-              req.user.id,
-              "approved from role request",
-            ],
-          );
-        } catch (auditErr) {
-          console.error("[Role Audit Skipped]", auditErr.message);
-        }
+        await client.query(
+          `INSERT INTO role_audit_log (user_id, org_id, role, action, actor_id, note)
+           VALUES ($1, $2, $3, 'granted', $4, $5)`,
+          [
+            rq.user_id,
+            rq.org_id,
+            rq.requested_role,
+            req.user.id,
+            "approved from role request",
+          ],
+        );
         // Bump token_version so the freshly-granted role takes
         // effect on the user's next request without waiting for
         // their current JWT to expire.
