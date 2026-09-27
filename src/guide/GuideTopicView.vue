@@ -1,9 +1,9 @@
 <script setup>
-import { computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { setPageTitle } from '@/lib/pageTitle'
-import { visibleSections, getTopicBySlug, getAdjacentTopics } from './topics.js'
+import { visibleSections, getTopicBySlug, getAdjacentTopics, loadTopicBody } from './topics.js'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import MarkdownArticle from '@/components/MarkdownArticle.vue'
@@ -33,11 +33,31 @@ function headingFor(hash) {
     return null // a mangled %-escape in a hand-typed URL
   }
 }
-watch([slug, () => route.hash], ([newSlug, hash], old) => nextTick(() => {
+function scrollToHash(hash, newTopic) {
   const el = headingFor(hash)
   if (el) el.scrollIntoView()
-  else if (!old || old[0] !== newSlug) window.scrollTo(0, 0)
-}), { immediate: true })
+  else if (newTopic) window.scrollTo(0, 0)
+}
+
+// The markdown is its own chunk per topic (see topics.js), so a new topic
+// has to wait for its body before there's a heading to scroll to. The old
+// body stays up until the new one lands, and a load that finishes after
+// the reader has already moved on to another topic is dropped.
+const body = ref(null)
+watch(slug, async (s) => {
+  let md = null
+  try {
+    md = await loadTopicBody(s)
+  } catch {
+    // offline and this topic's chunk was never cached
+  }
+  if (s !== slug.value) return
+  body.value = md
+  await nextTick()
+  scrollToHash(route.hash, true)
+}, { immediate: true })
+// A jump to a heading inside the topic that's already showing.
+watch(() => route.hash, (hash) => nextTick(() => scrollToHash(hash, false)))
 
 // The route only knows it's "User Guide"; the tab should say which topic.
 // flush 'post' so this lands after the router's own title hook, which also
@@ -78,7 +98,7 @@ watch([topic, locale, () => route.fullPath], ([t]) => {
       </nav>
 
       <article class="gt-body">
-        <MarkdownArticle :md="topic.md" />
+        <MarkdownArticle v-if="body" :md="body" />
 
         <nav class="gt-pager">
           <router-link v-if="adjacent.prev" :to="`/guide/${adjacent.prev.slug}`" class="gt-pager-link gt-pager-prev">
