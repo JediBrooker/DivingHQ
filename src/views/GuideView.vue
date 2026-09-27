@@ -122,7 +122,9 @@ onMounted(() => {
   // The router has no scrollBehavior, so an in-app link like
   // /guide#club-admin would otherwise land at the top of the page.
   if (window.location.hash.length > 1) {
-    document.getElementById(decodeURIComponent(window.location.hash.slice(1)))?.scrollIntoView()
+    try {
+      document.getElementById(decodeURIComponent(window.location.hash.slice(1)))?.scrollIntoView()
+    } catch { /* a malformed hash just leaves us at the top */ }
   }
   if (!('IntersectionObserver' in window)) return
   observer = new IntersectionObserver((entries) => {

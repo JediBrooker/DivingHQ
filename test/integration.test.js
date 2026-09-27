@@ -1679,6 +1679,8 @@ test("club setup: a founder's progress, invite parts and short code", async (t) 
       const r = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: bad } });
       assert.equal(r.status, 400, `${JSON.stringify(bad)} should be refused`);
     }
+    // A body without the field doesn't quietly clear the code.
+    assert.equal((await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: {} })).status, 400);
     const taken = await fetchJson("PUT", `/api/clubs/${A.clubId}/short-code`, { token: A.token, body: { short_code: "brd" } });
     assert.equal(taken.status, 409);
     assert.equal(taken.body.code, "short_code_taken");

@@ -92,8 +92,12 @@ module.exports = function createClubSetupRouter({ pool, verifyToken }) {
   });
 
   router.put("/api/clubs/:id/short-code", verifyToken, async (req, res) => {
-    const raw = req.body?.short_code;
-    if (raw !== null && raw !== undefined && typeof raw !== "string") {
+    // Clearing is an explicit null or "", never a body that forgot the field.
+    if (!req.body || !Object.prototype.hasOwnProperty.call(req.body, "short_code")) {
+      return res.status(400).json({ error: "short_code is required (null clears it)" });
+    }
+    const raw = req.body.short_code;
+    if (raw !== null && typeof raw !== "string") {
       return res.status(400).json({ error: "short_code must be a string or null" });
     }
     // Upper case like country codes, so "syd" and "SYD" can't both exist.
