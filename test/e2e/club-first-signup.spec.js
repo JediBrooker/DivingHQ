@@ -215,7 +215,7 @@ test("a federation claims a country and the clubs vote it in", async ({ page, re
     await page.locator('input[autocomplete="username"]').fill(fedUser);
     await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
     await page.getByRole("button", { name: /Submit Registration/i }).click();
-    await expect(page.getByTestId("check-inbox")).toContainText(`${fedUser}@example.test`);
+    await expect(page.getByTestId("check-inbox")).toContainText(`${fedUser}@fsmdiving.example.org`);
     await expect(page.getByTestId("register-org-next")).toContainText("clubs already on DivingHQ there vote");
 
     // Stand in for the emailed link: what the verify-email route does, done
@@ -292,7 +292,7 @@ test("register-org explains what registering does for each kind of country", asy
     await page.locator('input[autocomplete="username"]').fill(fedUser);
     await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
     await page.getByRole("button", { name: /Submit Registration/i }).click();
-    await expect(page.locator(".msg-success")).toContainText("DivingHQ reviews it");
+    await expect(page.getByTestId("register-org-next")).toContainText("the DivingHQ team reviews it");
 
     const orgs = await setup.pool.query(
       "SELECT status, claim_state FROM organisations WHERE country_code = $1", [NEW],

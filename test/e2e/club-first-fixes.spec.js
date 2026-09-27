@@ -118,7 +118,7 @@ test("a claimant finds their claim after signing in; a failed load offers a retr
   // The website goes in the way people write it, no https://.
   const fedUser = `e2e-cfc-${setup.rand()}`;
   await page.goto("/register-org");
-  await page.getByPlaceholder("e.g. Swimming Australia").fill("Falklands Diving Association");
+  await page.locator("#org-name").fill("Falklands Diving Association");
   await page.locator("#org-country").selectOption("FLK");
   await expect(page.locator(".claim-note")).toBeVisible();
   await page.locator("#org-website").fill("falklandsdiving.fk");
@@ -127,7 +127,7 @@ test("a claimant finds their claim after signing in; a failed load offers a retr
   await page.locator('input[autocomplete="username"]').fill(fedUser);
   await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
   await page.getByRole("button", { name: /Submit Registration/i }).click();
-  await expect(page.locator(".msg-success")).toBeVisible();
+  await expect(page.getByTestId("register-org-next")).toBeVisible();
   const claimRow = await setup.pool.query(
     `SELECT cl.website FROM claims cl JOIN users u ON u.id = cl.claimant_id WHERE u.username = $1`, [fedUser],
   );

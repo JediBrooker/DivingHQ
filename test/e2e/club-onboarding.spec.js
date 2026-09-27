@@ -279,7 +279,7 @@ test("with payments on an org admin still gets the fee panels and billing column
     await expect(page.getByText("Live Payments Club")).toBeVisible();
     await expect(page.locator("th", { hasText: "Billing" })).toBeVisible();
     await page.locator("tr", { hasText: "Live Payments Club" }).getByRole("button", { name: "Admins" }).click();
-    await expect(page.getByRole("dialog")).toContainText("plus its classes and its payouts and affiliation payments");
+    await expect(page.getByRole("dialog")).toContainText("look after its classes, payouts and affiliation payments");
     await page.keyboard.press("Escape");
 
     await page.goto("/manager");
