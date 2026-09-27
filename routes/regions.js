@@ -83,7 +83,10 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
       const org = await pool.query("SELECT region_label, country_code FROM organisations WHERE id = $1", [req.params.id]);
       const r = await pool.query(
         `SELECT rg.id, rg.name, rg.short_code, rg.claim_state, rg.claimed_name,
-                (SELECT count(*)::int FROM clubs c WHERE c.region_id = rg.id) AS club_count,
+                -- Approved clubs only; one waiting on the federation isn't
+                -- a club of the region yet (migration 096).
+                (SELECT count(*)::int FROM clubs c
+                  WHERE c.region_id = rg.id AND c.status = 'active') AS club_count,
                 -- My club locks the picker for a claimed region, but only
                 -- while it still has someone running it (PUT below).
                 EXISTS (SELECT 1 FROM region_admins ra JOIN users u ON u.id = ra.user_id
@@ -187,7 +190,7 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
     const regionId = raw === null ? null : String(raw).toLowerCase();
     try {
       const c = await pool.query(
-        `SELECT c.id, c.org_id, c.name, c.region_id, c.requested_region_id, o.claim_state,
+        `SELECT c.id, c.org_id, c.name, c.region_id, c.requested_region_id, c.status, o.claim_state,
                 EXISTS (SELECT 1 FROM club_admins ca WHERE ca.club_id = c.id AND ca.user_id = $2) AS caller_is_admin
            FROM clubs c JOIN organisations o ON o.id = c.org_id
           WHERE c.id = $1`,
@@ -195,6 +198,13 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
       );
       if (!c.rows.length) return res.status(404).json({ error: "Club not found" });
       const club = c.rows[0];
+      // A club waiting on its federation gets its region set in the
+      // approve dialog (POST /api/clubs/:id/approve), and nobody else has
+      // any say over it yet.
+      if (club.status === "pending") {
+        if (!isOrgAdminOf(req.user, club.org_id)) return res.status(403).json({ error: "Forbidden" });
+        return res.status(409).json({ error: "Approve or reject this club first", code: "club_pending" });
+      }
       if (regionId) {
         const rg = await pool.query("SELECT 1 FROM regions WHERE id = $1 AND org_id = $2", [regionId, club.org_id]);
         if (!rg.rows.length) return res.status(400).json({ error: "That region isn't in this club's organisation" });
@@ -362,7 +372,7 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
                 COALESCE((SELECT json_agg(json_build_object('id', u.id, 'full_name', u.full_name) ORDER BY u.full_name)
                             FROM club_admins ca JOIN users u ON u.id = ca.user_id
                            WHERE ca.club_id = c.id AND u.deleted_at IS NULL), '[]'::json) AS admins
-           FROM clubs c WHERE c.region_id = $1
+           FROM clubs c WHERE c.region_id = $1 AND c.status = 'active'
           ORDER BY lower(c.name)`,
         [region.id],
       );
@@ -373,7 +383,7 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
                 cur.name AS current_region_name,
                 (SELECT count(*)::int FROM users u WHERE u.club_id = c.id AND u.deleted_at IS NULL) AS member_count
            FROM clubs c LEFT JOIN regions cur ON cur.id = c.region_id
-          WHERE c.requested_region_id = $1
+          WHERE c.requested_region_id = $1 AND c.status = 'active'
           ORDER BY c.region_requested_at`,
         [region.id],
       );

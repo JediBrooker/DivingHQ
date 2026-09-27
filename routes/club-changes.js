@@ -224,10 +224,12 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
         return res.status(403).json({ error: "Not allowed to request a change for this diver" });
       }
 
-      // Validate the destination club belongs to the destination org.
+      // Validate the destination club belongs to the destination org,
+      // and has been approved: nobody can ask their way into a club that's
+      // still waiting on its federation (migration 096).
       if (to_club_id) {
         const c = await client.query(
-          "SELECT id FROM clubs WHERE id = $1 AND org_id = $2",
+          "SELECT id FROM clubs WHERE id = $1 AND org_id = $2 AND status = 'active'",
           [to_club_id, toOrg],
         );
         if (!c.rows.length) {

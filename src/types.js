@@ -36,6 +36,10 @@
  * @property {boolean} [has_claim]
  *   Body-only: this user filed a claim (lib/claims.js, any status but
  *   withdrawn). Puts Claims in a claimant's nav.
+ * @property {?{id: string, name: string, org_name: string}} [pending_club]
+ *   Body-only: a club this user started that's still waiting for its
+ *   federation to approve it (migration 096, lib/club-approvals.js).
+ *   null once it's approved or rejected.
  */
 
 /**
@@ -69,6 +73,56 @@
  * @property {string} name
  * @property {string} country_code
  * @property {'claimed'|'unclaimed'} claim_state  unclaimed = started by clubs, no federation yet
+ * @property {boolean} auto_approve_clubs  claimed orgs only: a new club joins straight
+ *   away instead of waiting for the federation to approve it (migration 096)
+ */
+
+/**
+ * @typedef {Object} RegisterResult
+ * POST /api/auth/register, 201.
+ *
+ * @property {string} message
+ * @property {?('pending'|'active')} club_status  the club they joined or started;
+ *   'pending' = a new club waiting for the federation (null when no club)
+ * @property {?string} org_name  the org they joined, for "waiting for {org}"
+ */
+
+/**
+ * @typedef {Object} ClubRow
+ * One row of GET /api/clubs (org admin, meet manager, sysadmin). Rows with
+ * status 'pending' only go to the org admin and the sysadmin, and only once
+ * the founder has verified their email; only those carry the founder_*
+ * fields and submitted_at (null on active rows).
+ * Decide with POST /api/clubs/:id/approve { name?, short_code?, region_id?,
+ * make_founder_admin } or POST /api/clubs/:id/reject { reason?, move_members_to? }.
+ *
+ * @property {string} id
+ * @property {string} name
+ * @property {?string} short_code
+ * @property {string} created_at
+ * @property {?string} region_id
+ * @property {'active'|'pending'} status
+ * @property {string} org_id
+ * @property {string} org_name
+ * @property {?string} country_code
+ * @property {number} member_count
+ * @property {boolean} affiliation_active
+ * @property {boolean} accreditation_active
+ * @property {?string} submitted_at   when the federation was asked
+ * @property {?string} founder_id
+ * @property {?string} founder_name
+ * @property {?string} founder_username
+ * @property {?string} founder_email
+ * @property {?boolean} founder_email_verified
+ */
+
+/**
+ * @typedef {Object} ClubSettings
+ * GET / PUT /api/orgs/:id/club-settings (org admin of that org, sysadmin).
+ * PUT answers 409 org_unclaimed for a country the clubs started.
+ *
+ * @property {boolean} auto_approve_clubs  new clubs join without approval
+ * @property {'claimed'|'unclaimed'} claim_state
  */
 
 /**

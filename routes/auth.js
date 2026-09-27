@@ -22,6 +22,7 @@ const claims = require("../lib/claims");
 const { supportContact, suspendedAccountMessage } = require("../lib/support");
 const { liveAdminCount } = require("../lib/admin-rows");
 const roleRequests = require("../lib/role-requests");
+const clubApprovals = require("../lib/club-approvals");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -171,6 +172,13 @@ async function addSessionExtras(pool, payload, userId) {
   // A claimant signs in as a plain spectator; this is what puts Claims
   // in their nav so they can follow their claim.
   payload.has_claim = await claims.hasOwnClaim(pool, userId);
+  // A founder whose club is waiting on the federation (migration 096).
+  // A box that hasn't run 096 yet has no clubs.status, which just means
+  // nothing is waiting.
+  payload.pending_club = await clubApprovals.pendingClubFor(pool, userId).catch((err) => {
+    if (err.code === "42703") return null;
+    throw err;
+  });
   return payload;
 }
 
@@ -280,6 +288,7 @@ module.exports = function createAuthRouter({
   JWT_SECRET,
   JWT_EXPIRY,
   sendClaimEmail,      // optional, claim notices by email (lib/claims.js)
+  sendNoticeEmail,     // optional, club approval notices by email (lib/club-approvals.js)
 }) {
   const router = express.Router();
 
@@ -870,6 +879,7 @@ module.exports = function createAuthRouter({
       let orgName = country ? country.name : null;
       let orgCountry = country ? country.a3 : null;
       let startedCountry = false;
+      let orgAutoApprove = false;
       if (country) {
         const found = await resolveCountryOrg(client, country);
         if (found.pending) {
@@ -888,12 +898,21 @@ module.exports = function createAuthRouter({
           });
         }
         ({ id: orgId, claim_state: orgClaimState, created: startedCountry } = found);
+        // The federation's own name (not the country's) and whether it
+        // lets new clubs straight in. resolveCountryOrg doesn't carry either.
+        const o = (await client.query(
+          "SELECT name, auto_approve_clubs FROM organisations WHERE id = $1", [orgId],
+        )).rows[0];
+        if (o) {
+          orgName = o.name;
+          orgAutoApprove = o.auto_approve_clubs;
+        }
       } else {
         // The Administration org is active but never open to the public,
         // same filter as /api/orgs/active so a hand-crafted POST can't
         // get round the missing dropdown entry.
         const org = await client.query(
-          "SELECT id, name, claim_state, country_code FROM organisations WHERE id = $1 AND status = 'active' AND id <> $2",
+          "SELECT id, name, claim_state, country_code, auto_approve_clubs FROM organisations WHERE id = $1 AND status = 'active' AND id <> $2",
           [org_id, ADMIN_ORG_ID],
         );
         if (!org.rows.length) {
@@ -906,6 +925,7 @@ module.exports = function createAuthRouter({
         orgClaimState = org.rows[0].claim_state;
         orgName = org.rows[0].name;
         orgCountry = org.rows[0].country_code;
+        orgAutoApprove = org.rows[0].auto_approve_clubs;
       }
       const unclaimed = orgClaimState === "unclaimed";
 
@@ -921,9 +941,12 @@ module.exports = function createAuthRouter({
 
       let resolvedClubId = null;
       let createdClubId = null;
+      let clubStatus = null;
       if (club_id) {
+        // Active clubs only. A pending one isn't in the picker, and a
+        // hand-made POST mustn't be a way to join it before it's approved.
         const club = await client.query(
-          "SELECT id FROM clubs WHERE id = $1 AND org_id = $2",
+          "SELECT id FROM clubs WHERE id = $1 AND org_id = $2 AND status = 'active'",
           [club_id, orgId],
         );
         if (!club.rows.length) {
@@ -933,6 +956,7 @@ module.exports = function createAuthRouter({
             .json({ error: "Selected club doesn't belong to that organisation" });
         }
         resolvedClubId = club_id;
+        clubStatus = "active";
       } else if (cleanClubName) {
         // Regions (migration 088). A country the clubs started gets its
         // built-in list the first time anyone founds a club there, which
@@ -951,11 +975,15 @@ module.exports = function createAuthRouter({
             return res.status(400).json({ error: "Pick which state or region your club is in", code: "region_required" });
           }
         }
+        // Under a federation a new club waits for its org admin, unless
+        // it lets clubs join automatically (lib/club-approvals.js).
+        clubStatus = clubApprovals.needsApproval({ claim_state: orgClaimState, auto_approve_clubs: orgAutoApprove })
+          ? "pending" : "active";
         const cnew = await client.query(
-          `INSERT INTO clubs (org_id, name, short_code, region_id)
-           VALUES ($1, $2, $3, $4)
+          `INSERT INTO clubs (org_id, name, short_code, region_id, status)
+           VALUES ($1, $2, $3, $4, $5)
            RETURNING id`,
-          [orgId, cleanClubName, safeText(new_club_short_code, 8) || null, regionId],
+          [orgId, cleanClubName, safeText(new_club_short_code, 8) || null, regionId, clubStatus],
         );
         resolvedClubId = cnew.rows[0].id;
         createdClubId = resolvedClubId;
@@ -974,8 +1002,9 @@ module.exports = function createAuthRouter({
         await client.query("UPDATE clubs SET created_by = $1 WHERE id = $2", [newUserId, createdClubId]);
         // In an unclaimed country the founder runs their club, there's
         // nobody above them to appoint anyone. Under a real federation
-        // it stays the federation's call (Clubs -> Admins), same as
-        // before club-first signup existed.
+        // it stays the federation's call: approving the club can make
+        // the founder its admin, and an auto-joined club gets its admins
+        // from Clubs -> Admins, same as before club-first signup existed.
         if (unclaimed) {
           await client.query(
             "INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)",
@@ -1049,10 +1078,20 @@ module.exports = function createAuthRouter({
           startedCountry,
         });
       }
+      // A federation that lets clubs join automatically still likes to
+      // know. One that approves them hears once the founder has verified
+      // their email (verify-email below), not now.
+      if (createdClubId && !unclaimed && clubStatus === "active") {
+        clubApprovals.announceAutoJoin(pool, { clubId: createdClubId }, { push })
+          .catch((err) => console.error("[Club Joined Notification Skipped]", err.message));
+      }
 
       res.status(201).json({
         message:
           "Registration successful. Check your email for a verification link before signing in.",
+        // Lets the page say "your club is waiting for {org}" straight away.
+        club_status: clubStatus,
+        org_name: orgName,
       });
     } catch (err) {
       await client.query("ROLLBACK");
@@ -1096,6 +1135,9 @@ module.exports = function createAuthRouter({
       // and the next verify-email click (or support) can redo it.
       const opened = await claims.activateForUser(pool, decoded.sub, { push, email: { sendClaimEmail } })
         .catch((err) => { console.error("[Claim Activate Error]", err.message); return 0; });
+      // Same rule for a club waiting on its federation: now it asks.
+      await clubApprovals.submitForUser(pool, decoded.sub, { push, email: { sendNoticeEmail } })
+        .catch((err) => console.error("[Club Submit Error]", err.message));
       // Welcome mail only once, and only when they can actually sign in.
       // A pending federation hears from us when it's approved instead.
       if (fresh && orgStatus === "active") sendWelcomeEmail(decoded.sub).catch(() => {});
@@ -1871,9 +1913,12 @@ module.exports = function createAuthRouter({
         client2.release();
       }
       sendPasswordChangedEmail(user.id).catch(() => {});
-      // Same as verify-email: a claim waiting on the inbox goes live.
+      // Same as verify-email: a claim waiting on the inbox goes live, and
+      // so does a club waiting to be put in front of its federation.
       await claims.activateForUser(pool, user.id, { push, email: { sendClaimEmail } }).catch((err) =>
         console.error("[Claim Activate Error]", err.message));
+      await clubApprovals.submitForUser(pool, user.id, { push, email: { sendNoticeEmail } }).catch((err) =>
+        console.error("[Club Submit Error]", err.message));
       res.json({ ok: true });
     } catch (err) {
       console.error("[Reset Password Error]", err.message);

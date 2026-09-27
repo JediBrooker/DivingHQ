@@ -176,6 +176,8 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
         const hit = archiveCacheGet("clubs");
         if (hit) return res.json(hit);
       }
+      // Approved clubs only: a founder waiting on their federation can
+      // dive as an individual, but the club's name isn't public yet.
       const r = await reads.query(
         `SELECT DISTINCT cl.id, cl.name, cl.short_code,
                 cl.org_id, o.name AS org_name, o.country_code
@@ -186,6 +188,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
           AND e.status IN ('Live', 'Completed')
           AND COALESCE(e.is_rehearsal, FALSE) = FALSE
          JOIN organisations o ON o.id = cl.org_id
+         WHERE cl.status = 'active'
          ORDER BY o.country_code ASC, cl.name ASC
          LIMIT $1`,
         [limit],

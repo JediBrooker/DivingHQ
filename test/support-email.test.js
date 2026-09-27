@@ -182,3 +182,13 @@ test("notice emails link to their page, claim emails still point at /claims", as
   assert.match(sent[0].body.text, /Decide on Clubs\.\n\nOpen it on DivingHQ: https:\/\/hq\.example\.test\/clubs\n\nDivingHQ$/);
   assert.match(sent[1].body.text, /See the claim on DivingHQ: https:\/\/hq\.example\.test\/claims/);
 });
+
+// Under a federation the founder's club waits for approval (migration
+// 096), and the welcome email is where they first hear that.
+test("the welcome email tells a founder their club is with the federation", async () => {
+  const sent = await captureMail(async (email) => {
+    await email.sendWelcomeEmail("00000000-0000-0000-0000-000000000006");
+  }, { is_club_admin: false, pending_club_name: "Thimphu Divers", org_name: "Bhutan Aquatics" });
+  assert.match(sent[0].body.text, /You started Thimphu Divers\. Bhutan Aquatics approves new clubs on DivingHQ/);
+  assert.doesNotMatch(sent[0].body.text, /admin already/);
+});

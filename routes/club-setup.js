@@ -17,11 +17,11 @@
 
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
+// Letters in any script, digits and dashes, up to eight. Shared with the
+// approve dialog so a code can't pass one and fail the other.
+const { CLUB_CODE_RE: CODE_RE } = require("../lib/club-approvals");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-// Letters in any script, digits and dashes. Eight is what signup allows
-// for a new club's code, and about what fits in a scoreboard chip.
-const CODE_RE = /^[\p{L}\p{N}-]{1,8}$/u;
 
 module.exports = function createClubSetupRouter({ pool, verifyToken }) {
   if (!pool || !verifyToken) throw new Error("createClubSetupRouter requires { pool, verifyToken }");
@@ -40,7 +40,7 @@ module.exports = function createClubSetupRouter({ pool, verifyToken }) {
       return null;
     }
     const r = await pool.query(
-      `SELECT c.id, c.org_id, c.name, c.short_code, o.country_code, o.claim_state,
+      `SELECT c.id, c.org_id, c.name, c.short_code, c.status, o.country_code, o.claim_state,
               EXISTS (SELECT 1 FROM club_admins ca
                        WHERE ca.club_id = c.id AND ca.user_id = $2) AS caller_is_admin
          FROM clubs c JOIN organisations o ON o.id = c.org_id
@@ -54,6 +54,13 @@ module.exports = function createClubSetupRouter({ pool, verifyToken }) {
     }
     if (!club.caller_is_admin && !isOrgAdminOf(req.user, club.org_id)) {
       res.status(403).json({ error: "Forbidden" });
+      return null;
+    }
+    // No setup for a club still waiting on its federation: its invite link
+    // would lead to a club signup refuses, and the approve dialog is where
+    // its code gets fixed (migration 096).
+    if (club.status === "pending") {
+      res.status(409).json({ error: "Approve or reject this club first", code: "club_pending" });
       return null;
     }
     club.canEditCode = isOrgAdminOf(req.user, club.org_id)

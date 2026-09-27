@@ -19,6 +19,8 @@
 //       role_requests:    [...],   // org_admin, or club / region admins
 //                                  // where there's no federation yet
 //       claims_to_act:    n,       // claims waiting on my vote or decision
+//       clubs_pending:    n,       // new clubs waiting for my approval
+//                                  // (org_admin: own org; sysadmin: all)
 //       my_claims:        [...],   // claims I filed that are still open
 //       pending_orgs:     [...],   // sysadmin only
 //       recent_activity:  [...],   // org_admin only
@@ -52,6 +54,7 @@ const express = require("express");
 const { buildReadinessFromRow } = require("../lib/workflow");
 const roleRequests = require("../lib/role-requests");
 const claims = require("../lib/claims");
+const clubApprovals = require("../lib/club-approvals");
 
 module.exports = function createDashboardRouter({ pool, verifyToken }) {
   if (!pool || !verifyToken) {
@@ -197,6 +200,10 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
     tasks.claims_to_act = claims.countActionable(pool, user).catch(() => 0);
     // ...and the ones this user filed, while they're still being decided.
     tasks.my_claims = claims.openForClaimant(pool, user.id).catch(() => []);
+
+    // ---- New clubs waiting on the federation (migration 096). Zero for
+    // anyone who isn't an org admin or the sysadmin. ----
+    tasks.clubs_pending = clubApprovals.countForUser(pool, user).catch(() => 0);
 
     // ---- Pending org registrations (sysadmin only) ----
     if (isSysAdmin) {

@@ -10,10 +10,17 @@
 //                                       own admin(s) of the decision)
 //   GET    /api/orgs/:id/divers         per-org diver list (in-org auth)
 //   GET    /api/orgs/:id/clubs          public club list for register form
-//   GET    /api/clubs                   admin clubs grid (member counts)
+//                                       (approved clubs only)
+//   GET    /api/clubs                   admin clubs grid (member counts),
+//                                       plus clubs waiting for approval
+//                                       for the org admin / sysadmin
 //   PUT    /api/clubs/:id               rename / re-code
 //   DELETE /api/clubs/:id               cascade members to NULL
 //   POST   /api/orgs/:id/clubs          create a club in an org
+//   POST   /api/clubs/:id/approve       federation approves a new club
+//   POST   /api/clubs/:id/reject        ...or turns it down (deletes it)
+//   GET    /api/orgs/:id/club-settings  whether new clubs join automatically
+//   PUT    /api/orgs/:id/club-settings  org admin / sysadmin changes that
 //   GET    /api/clubs/:id/admins        club admins + the club's members
 //   POST   /api/clubs/:id/admins        make a same-org user a club admin
 //   DELETE /api/clubs/:id/admins/:userId  take it away again
@@ -26,17 +33,23 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { countryByCode, countryFromStored } = require("../lib/countries");
 const { removeAdmin } = require("../lib/admin-rows");
+const clubApprovals = require("../lib/club-approvals");
 
 module.exports = function createOrgsRouter({
   pool,
   push,
+  email,               // lib/email, for club approval notices (sendNoticeEmail)
   verifyToken,
   requireSystemAdmin,
   requireMeetEditor,
+  requireOrgAdmin,
   isInSameOrg,
   sendOrgDecisionEmail,
 }) {
   if (!pool) throw new Error("createOrgsRouter requires { pool, … }");
+  // Club decisions re-check the org match in lib/club-approvals, so a
+  // router built without the org-admin gate still refuses the wrong people.
+  const orgAdminGate = requireOrgAdmin || verifyToken;
   const router = express.Router();
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -80,12 +93,15 @@ module.exports = function createOrgsRouter({
   //
   // Same lookup resolveCountryOrg in routes/auth.js does, alpha-2 included,
   // so the form shows the org the server is actually going to pick.
+  //
+  // auto_approve_clubs tells the form whether a new club there waits for
+  // the federation or joins straight away, so it can say which.
   router.get("/api/orgs/by-country/:code", async (req, res) => {
     const country = countryByCode(String(req.params.code || ""));
     if (!country) return res.json([]);
     try {
       const r = await pool.query(
-        `SELECT id, name, country_code, claim_state
+        `SELECT id, name, country_code, claim_state, auto_approve_clubs
            FROM organisations
           WHERE country_code IN ($1, $2) AND status = 'active' AND id <> $3
           ORDER BY claim_state = 'unclaimed', name ASC`,
@@ -350,12 +366,15 @@ module.exports = function createOrgsRouter({
 
   // -------- Clubs --------
   // Clubs in an organisation. Public, used by the registration
-  // form's club picker before the user has an account.
+  // form's club picker before the user has an account, and by the
+  // club pickers on the profile and competitor screens. Approved clubs
+  // only: one waiting on its federation hasn't been vetted, so its name
+  // doesn't go out to the public and nobody can pick it yet.
   router.get("/api/orgs/:id/clubs", async (req, res) => {
     try {
       const r = await pool.query(
         `SELECT id, name, short_code, region_id
-         FROM clubs WHERE org_id = $1
+         FROM clubs WHERE org_id = $1 AND status = 'active'
          ORDER BY name ASC`,
         [req.params.id],
       );
@@ -370,12 +389,25 @@ module.exports = function createOrgsRouter({
   // admins see every club across all orgs; org_admin / meet_manager
   // see only thier own org's. Each row carries a live member count
   // so admins can spot empty clubs.
+  //
+  // Clubs waiting for approval (status 'pending', migration 096) come
+  // back too, but only to whoever decides them: the org admin and the
+  // sysadmin. Meet managers never see them. Only once the founder has
+  // verified their email, and only those rows carry the founder's
+  // details, which the approval panel shows.
   router.get("/api/clubs", requireMeetEditor, async (req, res) => {
     try {
       const isSysAdmin = !!req.user.is_system_admin;
+      const decides = isSysAdmin || (req.user.org_roles || []).includes("org_admin");
       const r = await pool.query(
-        `SELECT cl.id, cl.name, cl.short_code, cl.created_at, cl.region_id,
+        `SELECT cl.id, cl.name, cl.short_code, cl.created_at, cl.region_id, cl.status,
                 cl.org_id, o.name AS org_name, o.country_code,
+                CASE WHEN cl.status = 'pending' THEN COALESCE(cl.submitted_at, cl.created_at) END AS submitted_at,
+                CASE WHEN cl.status = 'pending' THEN f.id END AS founder_id,
+                CASE WHEN cl.status = 'pending' THEN f.full_name END AS founder_name,
+                CASE WHEN cl.status = 'pending' THEN f.username END AS founder_username,
+                CASE WHEN cl.status = 'pending' THEN f.email END AS founder_email,
+                CASE WHEN cl.status = 'pending' THEN f.email_verified_at IS NOT NULL END AS founder_email_verified,
                 COALESCE(stat.member_count, 0)::int AS member_count,
                 EXISTS (
                   SELECT 1 FROM club_affiliations ca
@@ -393,9 +425,11 @@ module.exports = function createOrgsRouter({
            SELECT COUNT(*) AS member_count
            FROM users WHERE club_id = cl.id
          ) stat ON true
+         LEFT JOIN users f ON f.id = cl.created_by
          WHERE ($2::boolean OR cl.org_id = $1)
+           AND (cl.status = 'active' OR ($3::boolean AND ${clubApprovals.visiblePendingSql("cl")}))
          ORDER BY o.name ASC, cl.name ASC`,
-        [req.user.org_id, isSysAdmin],
+        [req.user.org_id, isSysAdmin, decides],
       );
       res.json(r.rows);
     } catch (err) {
@@ -411,7 +445,7 @@ module.exports = function createOrgsRouter({
       return res.status(400).json({ error: "Club name is required" });
     try {
       const target = await pool.query(
-        "SELECT org_id FROM clubs WHERE id = $1",
+        "SELECT org_id, status FROM clubs WHERE id = $1",
         [req.params.id],
       );
       if (!target.rows.length)
@@ -424,6 +458,8 @@ module.exports = function createOrgsRouter({
           .status(403)
           .json({ error: "Cannot edit clubs in other organisations" });
       }
+      // The approve dialog is where a waiting club's details get fixed.
+      if (target.rows[0].status === "pending") return pendingConflict(res);
       const r = await pool.query(
         `UPDATE clubs SET name = $1, short_code = $2
          WHERE id = $3
@@ -446,7 +482,7 @@ module.exports = function createOrgsRouter({
       // Pull org_id + name in one read so the audit row has both
       // (post-delete the row is gone).
       const target = await pool.query(
-        "SELECT id, org_id, name, short_code FROM clubs WHERE id = $1",
+        "SELECT id, org_id, name, short_code, status FROM clubs WHERE id = $1",
         [req.params.id],
       );
       if (!target.rows.length)
@@ -460,6 +496,9 @@ module.exports = function createOrgsRouter({
           .status(403)
           .json({ error: "Cannot delete clubs in other organisations" });
       }
+      // Deleting a waiting club would be a rejection nobody hears about.
+      // Reject says why, can move the founder, and tells them.
+      if (club.status === "pending") return pendingConflict(res);
       const memberCount = await pool.query(
         "SELECT COUNT(*)::int AS n FROM users WHERE club_id = $1",
         [req.params.id],
@@ -514,6 +553,84 @@ module.exports = function createOrgsRouter({
     }
   });
 
+  // -------- Club approval (migration 096, lib/club-approvals.js) --------
+
+  function pendingConflict(res) {
+    return res.status(409).json({ error: "Approve or reject this club first", code: "club_pending" });
+  }
+
+  function approvalError(res, err, label) {
+    if (err instanceof clubApprovals.ClubApprovalError) {
+      return res.status(err.status).json({ error: err.message, ...(err.code ? { code: err.code } : {}) });
+    }
+    console.error(label, err.message);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+
+  // Body: { name?, short_code?, region_id?, make_founder_admin = true }.
+  // Leaving a field out keeps what the founder gave; null clears the code
+  // or the region.
+  router.post("/api/clubs/:id/approve", orgAdminGate, async (req, res) => {
+    const b = req.body || {};
+    try {
+      const out = await clubApprovals.approve(pool, {
+        clubId: req.params.id,
+        user: req.user,
+        name: b.name,
+        shortCode: b.short_code,
+        regionId: b.region_id,
+        makeFounderAdmin: b.make_founder_admin !== false,
+        audit: auditFromReq(req),
+      }, { push, email });
+      res.json(out);
+    } catch (err) {
+      approvalError(res, err, "[Club Approve Error]");
+    }
+  });
+
+  // Body: { reason?, move_members_to? }. Deletes the club; the founder
+  // keeps their account, in the club named here or in none.
+  router.post("/api/clubs/:id/reject", orgAdminGate, async (req, res) => {
+    const b = req.body || {};
+    try {
+      const out = await clubApprovals.reject(pool, {
+        clubId: req.params.id,
+        user: req.user,
+        reason: b.reason,
+        moveMembersTo: b.move_members_to,
+        audit: auditFromReq(req),
+      }, { push, email });
+      res.json(out);
+    } catch (err) {
+      approvalError(res, err, "[Club Reject Error]");
+    }
+  });
+
+  router.get("/api/orgs/:id/club-settings", orgAdminGate, async (req, res) => {
+    try {
+      const org = await clubApprovals.getSettings(pool, req.params.id);
+      if (!org) return res.status(404).json({ error: "Organisation not found" });
+      if (!clubApprovals.canDecide(req.user, org.id)) return res.status(403).json({ error: "Forbidden" });
+      res.json({ auto_approve_clubs: org.auto_approve_clubs, claim_state: org.claim_state });
+    } catch (err) {
+      approvalError(res, err, "[Club Settings Error]");
+    }
+  });
+
+  router.put("/api/orgs/:id/club-settings", orgAdminGate, async (req, res) => {
+    try {
+      const out = await clubApprovals.setAutoApprove(pool, {
+        orgId: req.params.id,
+        user: req.user,
+        value: req.body?.auto_approve_clubs,
+        audit: auditFromReq(req),
+      });
+      res.json(out);
+    } catch (err) {
+      approvalError(res, err, "[Club Settings Error]");
+    }
+  });
+
   // -------- Club admins --------
   //
   // club_admins (migration 067) is what requireClubAdmin /
@@ -537,7 +654,7 @@ module.exports = function createOrgsRouter({
       return null;
     }
     const c = await pool.query(
-      `SELECT c.id, c.org_id, c.name, o.claim_state, c.requested_region_id, c.region_requested_at,
+      `SELECT c.id, c.org_id, c.name, c.status, o.claim_state, c.requested_region_id, c.region_requested_at,
               EXISTS (SELECT 1 FROM club_admins ca
                        WHERE ca.club_id = c.id AND ca.user_id = $2) AS caller_is_admin,
               EXISTS (SELECT 1 FROM region_admins ra
@@ -551,16 +668,22 @@ module.exports = function createOrgsRouter({
       return null;
     }
     const club = c.rows[0];
-    if (req.user.is_system_admin) return club;
     const isOrgAdmin = (req.user.org_roles || []).includes("org_admin");
-    if (isOrgAdmin && club.org_id === req.user.org_id) return club;
     // The club's own admins, or its region's admins one level up.
-    if (club.claim_state === "unclaimed" && (club.caller_is_admin || club.caller_is_region_admin)) {
+    if (!req.user.is_system_admin && !(isOrgAdmin && club.org_id === req.user.org_id)) {
+      if (!(club.claim_state === "unclaimed" && (club.caller_is_admin || club.caller_is_region_admin))) {
+        res.status(403).json({ error: "Only your federation's admin can manage club admins" });
+        return null;
+      }
       club.viaClubAdmin = true;
-      return club;
     }
-    res.status(403).json({ error: "Only your federation's admin can manage club admins" });
-    return null;
+    // A waiting club gets its first admin by being approved, never before.
+    // Checked after the permission so it's no way to find out who's waiting.
+    if (club.status === "pending") {
+      pendingConflict(res);
+      return null;
+    }
+    return club;
   }
 
   router.get("/api/clubs/:id/admins", verifyToken, async (req, res) => {

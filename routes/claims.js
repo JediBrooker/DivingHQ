@@ -64,11 +64,14 @@ module.exports = function createClaimsRouter({ pool, push, email, verifyToken, r
   });
 
   // removed: every grant the revoke took back, so the sysadmin can see
-  // (and re-grant) anything that should have stayed.
+  // (and re-grant) anything that should have stayed. activated_clubs: the
+  // clubs that were waiting on the federation and joined instead.
   router.post("/api/claims/:id/revoke", verifyToken, async (req, res) => {
     try {
-      const removed = await claims.revoke(pool, { claimId: req.params.id, user: req.user, reason: req.body?.reason }, deps);
-      res.json({ ok: true, removed });
+      const { activated_clubs: activatedClubs, ...removed } = await claims.revoke(
+        pool, { claimId: req.params.id, user: req.user, reason: req.body?.reason }, deps,
+      );
+      res.json({ ok: true, removed, activated_clubs: activatedClubs });
     } catch (err) {
       fail(res, err, "Claim Revoke Error");
     }
