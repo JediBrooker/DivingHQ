@@ -1086,8 +1086,14 @@ app.use(require("./routes/late-arrivals")({ pool, requireOrgRole, requireRoleOrE
 // showing values on phone screens). See docs/offline-p1-design.md
 // §Phase 5.
 // =============================================================
+// Built here rather than down in [SECTION: RECORDS] because manual
+// entry completes dives too and needs the record check handed to it.
+const { checkAndApplyRecords, router: recordsRouter } =
+  require("./lib/records")({ pool, verifyToken });
+
 app.use(require("./routes/manual-scores")({
   pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate,
+  checkAndApplyRecords,
 }));
 
 // =============================================================
@@ -1165,13 +1171,11 @@ app.use(createSearchLimiter(), require("./routes/judge-analytics")({
 // RECORDS
 // [SECTION: RECORDS]
 // Moved into lib/records.js (Phase 2 of the server.js split).
-// The factory exposes both checkAndApplyRecords (called from the
-// socket submit_score handler when a dive completes) and a tiny
-// Express router with the public GET /api/records endpoint. We
-// destructure both here and mount the router immediately.
+// The factory (built above the manual-scores mount) exposes both
+// checkAndApplyRecords (run whenever a dive completes, from the
+// socket submit_score handler and from manual entry) and a tiny
+// Express router with the GET /api/records endpoint, mounted here.
 // =============================================================
-const { checkAndApplyRecords, router: recordsRouter } =
-  require("./lib/records")({ pool, verifyToken });
 app.use(recordsRouter);
 
 // =============================================================

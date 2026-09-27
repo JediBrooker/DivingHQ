@@ -30,10 +30,12 @@
 
 const express = require("express");
 const createIdempotency = require("../lib/idempotency");
+const { announceRecords } = require("../lib/records");
 
 module.exports = function createManualScoresRouter({
   pool, io, scoreboardCache, requireOrgRole,
   requireRoleOrEventDelegate,   // optional, migration 087
+  checkAndApplyRecords,         // optional; lib/records.js
 }) {
   if (!pool || !io) throw new Error("createManualScoresRouter requires { pool, io, … }");
   const router = express.Router();
@@ -208,6 +210,17 @@ module.exports = function createManualScoresRouter({
           score: scoreVal,
           score_source: "manual_entry",
         });
+
+        // The operator typing the last judge's score in completes the
+        // dive just like that judge's own submit would have, so it can
+        // set a record too. Before this, a meet run on manual entry
+        // through an outage never set a single one.
+        if (checkAndApplyRecords) {
+          await announceRecords({
+            checkAndApplyRecords, io,
+            eventId: event_id, competitorId: competitor_id, roundNumber: round,
+          });
+        }
 
         res.json({
           ok: true,

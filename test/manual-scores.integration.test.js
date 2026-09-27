@@ -45,7 +45,10 @@ let harnessPort;
 
 // Test-fixture row ids, cleaned up in after().
 let testOrgId, testEventId, testOperatorId, testJudgeId, testCompetitorId;
+let recordEventId;
 let testDiveId;
+// Everything the stub io was asked to broadcast.
+const emitted = [];
 
 before(async () => {
   pool = process.env.DATABASE_URL
@@ -184,13 +187,14 @@ before(async () => {
     next();
   };
 
-  // Stub io with a no-op so the manual-scores router's broadcast
-  // call doesn't throw. We don't verify the broadcast here.
-  const io = { to: () => ({ emit: () => {} }) };
+  // Stub io that just remembers what it was asked to send, so the
+  // records test below can look for record_broken.
+  const io = { to: (room) => ({ emit: (name, payload) => emitted.push({ room, name, payload }) }) };
   const scoreboardCache = { invalidate: () => {} };
+  const { checkAndApplyRecords } = require("../lib/records")({ pool, verifyToken: (_q, _s, n) => n() });
 
   app.use(require("../routes/manual-scores")({
-    pool, io, scoreboardCache, requireOrgRole,
+    pool, io, scoreboardCache, requireOrgRole, checkAndApplyRecords,
   }));
   app.use(require("../routes/conflicts")({
     pool, io, scoreboardCache, requireOrgRole,
@@ -211,6 +215,11 @@ after(async () => {
       // dive lists via the table CASCADE, panel + event explicit.
       if (testEventId) {
         await pool.query(`DELETE FROM events WHERE id = $1`, [testEventId]);
+      }
+      if (recordEventId) {
+        await pool.query(`DELETE FROM events WHERE id = $1`, [recordEventId]);
+        await pool.query(`DELETE FROM users WHERE org_id = $1 AND id <> ALL($2::uuid[])`,
+          [testOrgId, [testOperatorId, testJudgeId, testCompetitorId]]);
       }
       if (testOperatorId) await pool.query(`DELETE FROM users WHERE id = $1`, [testOperatorId]);
       if (testJudgeId) await pool.query(`DELETE FROM users WHERE id = $1`, [testJudgeId]);
@@ -466,4 +475,67 @@ test("POST /api/conflicts/:id/resolve rejects accept_proposed without valid prop
   );
   assert.equal(r.status, 400);
   assert.ok(/between 0 and 10/i.test(r.body.error));
+});
+
+// ---- Records ---------------------------------------------------
+
+test("manual entry that completes a dive sets records and announces them", async (t) => {
+  if (!dbReachable || !migrationsApplied) { t.skip(); return; }
+  // A fresh women's event with a full three-judge panel. The shared
+  // fixture event only seats one of its three judges, so no dive there
+  // ever completes.
+  const suffix = crypto.randomBytes(4).toString("hex");
+  const ev = await pool.query(
+    `INSERT INTO events (org_id, name, gender, status, height, event_type, total_rounds, number_of_judges)
+     VALUES ($1, $2, 'Female', 'Live', '1m', 'individual', 5, 3) RETURNING id`,
+    [testOrgId, `Manual records ${suffix}`],
+  );
+  recordEventId = ev.rows[0].id;
+  const judges = [];
+  for (let i = 1; i <= 3; i++) {
+    const u = await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+       VALUES ($1, 'x', $2, $3, now()) RETURNING id`,
+      [`mj${i}-${suffix}`, `Manual Judge ${i}`, testOrgId],
+    );
+    judges.push(u.rows[0].id);
+    await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)",
+      [recordEventId, u.rows[0].id, i]);
+  }
+  const diver = (await pool.query(
+    `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+     VALUES ($1, 'x', 'Manual Record Diver', $2, now()) RETURNING id`,
+    [`md-${suffix}`, testOrgId],
+  )).rows[0].id;
+  await pool.query(
+    "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+    [recordEventId, diver, testDiveId],
+  );
+
+  const enter = (judgeId, score) => httpPost(
+    "/api/scores/manual-entry",
+    { event_id: recordEventId, competitor_id: diver, round_number: 1, judge_id: judgeId, score },
+    { userId: testOperatorId, roles: ["org_admin"] },
+  );
+  const records = () => pool.query(
+    "SELECT gender::text, score::float, prev_score FROM records_federation WHERE org_id = $1 AND event_id = $2",
+    [testOrgId, recordEventId],
+  );
+
+  // Two of three scores in: not a dive yet, nothing set.
+  assert.equal((await enter(judges[0], 7)).status, 200);
+  assert.equal((await enter(judges[1], 7)).status, 200);
+  assert.equal((await records()).rows.length, 0);
+
+  // The third completes it.
+  assert.equal((await enter(judges[2], 7)).status, 200);
+  const rows = (await records()).rows;
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].gender, "Female");
+  assert.equal(rows[0].prev_score, null);
+
+  const sent = emitted.filter((e) => e.name === "record_broken" && e.payload.event_id === recordEventId);
+  assert.deepEqual(sent.map((e) => e.payload.scope).sort(), ["federation", "personal"]);
+  assert.ok(sent.every((e) => e.room === `event:${recordEventId}`));
+  assert.ok(sent.every((e) => e.payload.round_number === 1));
 });
