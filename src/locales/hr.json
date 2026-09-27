@@ -71,7 +71,13 @@
       "submit_idle": "Stvori račun",
       "submit_loading": "Stvaranje...",
       "already_have_account": "Već imate račun?",
-      "sign_in_link": "Prijava"
+      "sign_in_link": "Prijava",
+      "coming_soon": "Uskoro",
+      "coming_soon_note": "Registracija računa još nije otvorena — dorađujemo DivingHQ. Navratite uskoro.",
+      "failed": "Registracija nije uspjela",
+      "success": "Registracija je uspjela. Prije prijave pronađite poveznicu za potvrdu u e-pošti.",
+      "new_club_placeholder": "npr. Sydney Springboard",
+      "short_code_placeholder": "npr. SYD"
     },
     "register_org": {
       "title": "Registracija organizacije",
@@ -99,7 +105,8 @@
       "claim_note_country": "Klubovi iz zemlje {country} već su na DivingHQ-u, pa se otvara zahtjev za preuzimanje njihova računa. Kad potvrdite e-poštu, oni glasaju. Ako ih još premalo može glasati, pregledava ga DivingHQ.",
       "claim_note_region_parent": "{org} već vodi ovu zemlju na DivingHQ-u pa odlučuje o vašem zahtjevu za {region}.",
       "claim_note_region": "Otvara se zahtjev za {region}. Njezini klubovi glasaju kad potvrdite e-poštu, ili ga pregledava DivingHQ ako ih još nema dovoljno.",
-      "website_invalid": "To ne izgleda kao web-adresa. Pokušajte nešto poput diving.org.au."
+      "website_invalid": "To ne izgleda kao web-adresa. Pokušajte nešto poput diving.org.au.",
+      "coming_soon_note": "Registracija saveza još nije otvorena — dorađujemo DivingHQ. Navratite uskoro."
     },
     "forgot": {
       "title": "Resetiranje lozinke",

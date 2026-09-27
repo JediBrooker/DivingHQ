@@ -71,7 +71,13 @@
       "submit_idle": "Fiók létrehozása",
       "submit_loading": "Létrehozás...",
       "already_have_account": "Már van fiókja?",
-      "sign_in_link": "Bejelentkezés"
+      "sign_in_link": "Bejelentkezés",
+      "coming_soon": "Hamarosan",
+      "coming_soon_note": "A fiókregisztráció még nem nyílt meg — az utolsó simításokat végezzük a DivingHQ-n. Nézzen vissza hamarosan.",
+      "failed": "A regisztráció nem sikerült",
+      "success": "Sikeres regisztráció. Bejelentkezés előtt keresse meg e-mailjében a megerősítő linket.",
+      "new_club_placeholder": "pl. Sydney Springboard",
+      "short_code_placeholder": "pl. SYD"
     },
     "register_org": {
       "title": "Szervezet regisztrációja",
@@ -99,7 +105,8 @@
       "claim_note_country": "{country} klubjai már a DivingHQ-n vannak, így ez igényt nyit a fiókjukra. Miután megerősítette e-mailjét, szavaznak róla. Ha még túl kevesen szavazhatnak, a DivingHQ bírálja el.",
       "claim_note_region_parent": "{org} már ezt az országot vezeti a DivingHQ-n, ezért ők döntenek a(z) {region} iránti igényéről.",
       "claim_note_region": "Ez igényt nyit a(z) {region} régióra. A klubjai szavaznak, miután megerősítette e-mailjét, vagy a DivingHQ bírálja el, ha még nincsenek elegen.",
-      "website_invalid": "Ez nem tűnik webcímnek. Próbáljon valami ilyesmit: diving.org.au."
+      "website_invalid": "Ez nem tűnik webcímnek. Próbáljon valami ilyesmit: diving.org.au.",
+      "coming_soon_note": "A szövetségek regisztrációja még nem nyílt meg — az utolsó simításokat végezzük a DivingHQ-n. Nézzen vissza hamarosan."
     },
     "forgot": {
       "title": "Jelszó visszaállítása",

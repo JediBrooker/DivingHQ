@@ -71,7 +71,13 @@
       "submit_idle": "Gumawa ng account",
       "submit_loading": "Ginagawa...",
       "already_have_account": "May account ka na?",
-      "sign_in_link": "Mag-sign in"
+      "sign_in_link": "Mag-sign in",
+      "coming_soon": "Malapit na",
+      "coming_soon_note": "Hindi pa bukas ang pag-sign up ng account — tinatapos pa namin ang DivingHQ. Bumalik ka ulit sa lalong madaling panahon.",
+      "failed": "Hindi nagtagumpay ang pagrehistro",
+      "success": "Matagumpay ang pagrehistro. Tingnan ang iyong email para sa link ng beripikasyon bago mag-sign in.",
+      "new_club_placeholder": "hal. Sydney Springboard",
+      "short_code_placeholder": "hal. SYD"
     },
     "register_org": {
       "title": "Irehistro ang organisasyon",
@@ -99,7 +105,8 @@
       "claim_note_country": "Nasa DivingHQ na ang mga club mula sa {country}, kaya magbubukas ito ng claim sa kanilang account. Kapag na-verify mo ang email mo, boboto sila. Kung kakaunti pa ang puwedeng bumoto, susuriin ito ng DivingHQ.",
       "claim_note_region_parent": "Pinapatakbo na ng {org} ang bansang ito sa DivingHQ, kaya sila ang magpapasya sa claim mo sa {region}.",
       "claim_note_region": "Magbubukas ito ng claim sa {region}. Boboto ang mga club nito kapag na-verify mo ang email mo, o susuriin ito ng DivingHQ kung kulang pa sila.",
-      "website_invalid": "Mukhang hindi iyan web address. Subukan ang tulad ng diving.org.au."
+      "website_invalid": "Mukhang hindi iyan web address. Subukan ang tulad ng diving.org.au.",
+      "coming_soon_note": "Hindi pa bukas ang pag-sign up ng pederasyon — tinatapos pa namin ang DivingHQ. Bumalik ka ulit sa lalong madaling panahon."
     },
     "forgot": {
       "title": "I-reset ang password",

@@ -71,7 +71,13 @@
       "submit_idle": "Créer un compte",
       "submit_loading": "Création...",
       "already_have_account": "Vous avez déjà un compte ?",
-      "sign_in_link": "Se connecter"
+      "sign_in_link": "Se connecter",
+      "coming_soon": "Bientôt disponible",
+      "coming_soon_note": "Les inscriptions ne sont pas encore ouvertes — nous peaufinons DivingHQ. Revenez bientôt.",
+      "failed": "Échec de l'inscription",
+      "success": "Inscription réussie. Cherchez le lien de vérification dans votre e-mail avant de vous connecter.",
+      "new_club_placeholder": "ex. Sydney Springboard",
+      "short_code_placeholder": "ex. SYD"
     },
     "register_org": {
       "title": "Inscrire une organisation",
@@ -99,7 +105,8 @@
       "claim_note_country": "Des clubs de {country} sont déjà sur DivingHQ : cela ouvre une revendication sur leur compte. Une fois votre e-mail vérifié, ils votent. S'ils sont trop peu à pouvoir voter, DivingHQ l'examine.",
       "claim_note_region_parent": "{org} gère déjà ce pays sur DivingHQ et décide donc de votre revendication sur {region}.",
       "claim_note_region": "Cela ouvre une revendication sur {region}. Ses clubs votent une fois votre e-mail vérifié, ou DivingHQ l'examine s'ils ne sont pas encore assez nombreux.",
-      "website_invalid": "Cela ne ressemble pas à une adresse web. Essayez par exemple diving.org.au."
+      "website_invalid": "Cela ne ressemble pas à une adresse web. Essayez par exemple diving.org.au.",
+      "coming_soon_note": "Les inscriptions des fédérations ne sont pas encore ouvertes — nous peaufinons DivingHQ. Revenez bientôt."
     },
     "forgot": {
       "title": "Réinitialiser le mot de passe",

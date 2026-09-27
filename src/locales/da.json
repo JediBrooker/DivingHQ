@@ -71,7 +71,13 @@
       "submit_idle": "Opret konto",
       "submit_loading": "Opretter...",
       "already_have_account": "Har du allerede en konto?",
-      "sign_in_link": "Log ind"
+      "sign_in_link": "Log ind",
+      "coming_soon": "Kommer snart",
+      "coming_soon_note": "Oprettelse af konti er ikke åben endnu — vi lægger sidste hånd på DivingHQ. Kig forbi igen snart.",
+      "failed": "Registreringen mislykkedes",
+      "success": "Registreringen lykkedes. Find bekræftelseslinket i din e-mail, før du logger ind.",
+      "new_club_placeholder": "f.eks. Sydney Springboard",
+      "short_code_placeholder": "f.eks. SYD"
     },
     "register_org": {
       "title": "Registrér organisation",
@@ -99,7 +105,8 @@
       "claim_note_country": "Klubber fra {country} er allerede på DivingHQ, så dette åbner et krav på deres konto. Når du har bekræftet din e-mail, stemmer de om det. Kan for få stemme endnu, gennemgår DivingHQ det.",
       "claim_note_region_parent": "{org} driver allerede landet på DivingHQ og afgør derfor dit krav på {region}.",
       "claim_note_region": "Dette åbner et krav på {region}. Klubberne stemmer, når du har bekræftet din e-mail, eller DivingHQ gennemgår det, hvis der ikke er nok endnu.",
-      "website_invalid": "Det ligner ikke en webadresse. Prøv noget i stil med diving.org.au."
+      "website_invalid": "Det ligner ikke en webadresse. Prøv noget i stil med diving.org.au.",
+      "coming_soon_note": "Tilmelding af forbund er ikke åben endnu — vi lægger sidste hånd på DivingHQ. Kig forbi igen snart."
     },
     "forgot": {
       "title": "Nulstil adgangskode",

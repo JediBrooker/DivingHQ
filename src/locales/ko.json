@@ -71,7 +71,13 @@
       "submit_idle": "계정 만들기",
       "submit_loading": "만드는 중...",
       "already_have_account": "이미 계정이 있으십니까?",
-      "sign_in_link": "로그인"
+      "sign_in_link": "로그인",
+      "coming_soon": "곧 공개",
+      "coming_soon_note": "아직 계정 가입을 받지 않습니다. DivingHQ를 마무리하는 중입니다. 곧 다시 방문해 주세요.",
+      "failed": "가입에 실패했습니다",
+      "success": "가입이 완료되었습니다. 로그인하기 전에 이메일의 인증 링크를 확인하세요.",
+      "new_club_placeholder": "예: Sydney Springboard",
+      "short_code_placeholder": "예: SYD"
     },
     "register_org": {
       "title": "조직 등록",
@@ -99,7 +105,8 @@
       "claim_note_country": "{country}의 클럽들이 이미 DivingHQ에 있으므로 해당 계정에 대한 인수 신청이 열립니다. 이메일을 인증하면 클럽들이 투표합니다. 투표할 수 있는 클럽이 아직 너무 적으면 DivingHQ가 검토합니다.",
       "claim_note_region_parent": "{org}이(가) 이미 이 나라를 DivingHQ에서 운영하고 있어 {region}에 대한 신청은 해당 연맹이 결정합니다.",
       "claim_note_region": "{region}에 대한 신청이 열립니다. 이메일 인증 후 소속 클럽들이 투표하며, 아직 충분하지 않으면 DivingHQ가 검토합니다.",
-      "website_invalid": "웹 주소처럼 보이지 않습니다. diving.org.au 같은 형식으로 입력해 보세요."
+      "website_invalid": "웹 주소처럼 보이지 않습니다. diving.org.au 같은 형식으로 입력해 보세요.",
+      "coming_soon_note": "아직 연맹 가입을 받지 않습니다. DivingHQ를 마무리하는 중입니다. 곧 다시 방문해 주세요."
     },
     "forgot": {
       "title": "비밀번호 재설정",

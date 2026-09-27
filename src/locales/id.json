@@ -71,7 +71,13 @@
       "submit_idle": "Buat akun",
       "submit_loading": "Membuat...",
       "already_have_account": "Sudah punya akun?",
-      "sign_in_link": "Masuk"
+      "sign_in_link": "Masuk",
+      "coming_soon": "Segera hadir",
+      "coming_soon_note": "Pendaftaran akun belum dibuka — kami sedang menyempurnakan DivingHQ. Silakan kembali lagi nanti.",
+      "failed": "Pendaftaran gagal",
+      "success": "Pendaftaran berhasil. Periksa email Anda untuk tautan verifikasi sebelum masuk.",
+      "new_club_placeholder": "mis. Sydney Springboard",
+      "short_code_placeholder": "mis. SYD"
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -99,7 +105,8 @@
       "claim_note_country": "Klub dari {country} sudah ada di DivingHQ, jadi ini membuka klaim atas akun mereka. Setelah email Anda terverifikasi, mereka memberi suara. Jika yang bisa memberi suara masih terlalu sedikit, DivingHQ meninjaunya.",
       "claim_note_region_parent": "{org} sudah mengelola negara ini di DivingHQ, jadi mereka memutuskan klaim Anda atas {region}.",
       "claim_note_region": "Ini membuka klaim atas {region}. Klub-klubnya memberi suara setelah email Anda terverifikasi, atau DivingHQ meninjaunya jika jumlahnya belum cukup.",
-      "website_invalid": "Itu tidak terlihat seperti alamat web. Coba sesuatu seperti diving.org.au."
+      "website_invalid": "Itu tidak terlihat seperti alamat web. Coba sesuatu seperti diving.org.au.",
+      "coming_soon_note": "Pendaftaran federasi belum dibuka — kami sedang menyempurnakan DivingHQ. Silakan kembali lagi nanti."
     },
     "forgot": {
       "title": "Setel ulang kata sandi",

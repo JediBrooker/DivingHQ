@@ -71,7 +71,13 @@
       "submit_idle": "Utwórz konto",
       "submit_loading": "Tworzenie...",
       "already_have_account": "Masz już konto?",
-      "sign_in_link": "Zaloguj się"
+      "sign_in_link": "Zaloguj się",
+      "coming_soon": "Już wkrótce",
+      "coming_soon_note": "Rejestracja kont nie jest jeszcze otwarta — dopracowujemy DivingHQ. Zajrzyj wkrótce.",
+      "failed": "Rejestracja nie powiodła się",
+      "success": "Rejestracja zakończona. Przed zalogowaniem znajdź w e-mailu link weryfikacyjny.",
+      "new_club_placeholder": "np. Sydney Springboard",
+      "short_code_placeholder": "np. SYD"
     },
     "register_org": {
       "title": "Rejestracja organizacji",
@@ -99,7 +105,8 @@
       "claim_note_country": "Kluby z kraju {country} są już w DivingHQ, więc otwiera to roszczenie do ich konta. Po weryfikacji e-maila głosują nad nim. Jeśli zbyt mało z nich może jeszcze głosować, rozpatrzy je DivingHQ.",
       "claim_note_region_parent": "{org} prowadzi już ten kraj w DivingHQ, więc decyduje o twoim roszczeniu do {region}.",
       "claim_note_region": "Otwiera to roszczenie do {region}. Jego kluby głosują po weryfikacji twojego e-maila albo rozpatruje je DivingHQ, jeśli jest ich jeszcze za mało.",
-      "website_invalid": "To nie wygląda na adres strony. Spróbuj czegoś w rodzaju diving.org.au."
+      "website_invalid": "To nie wygląda na adres strony. Spróbuj czegoś w rodzaju diving.org.au.",
+      "coming_soon_note": "Rejestracja federacji nie jest jeszcze otwarta — dopracowujemy DivingHQ. Zajrzyj wkrótce."
     },
     "forgot": {
       "title": "Resetuj hasło",

@@ -212,8 +212,10 @@ async function handleSubmit() {
       body: JSON.stringify(body),
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Registration failed')
-    msg.value = data.message
+    if (!res.ok) throw new Error(data.error || t('auth.register.failed'))
+    // The server's message is English and always the same one, so say it
+    // in the reader's language instead.
+    msg.value = t('auth.register.success')
     msgType.value = 'success'
     setTimeout(() => router.push('/login'), 2500)
   } catch (err) {
@@ -231,8 +233,8 @@ async function handleSubmit() {
 
     <template v-if="signupsEnabled === false">
       <h1>{{ $t('auth.register.title') }}</h1>
-      <p class="subtitle">Coming soon</p>
-      <p class="note">Account sign-ups aren't open just yet — we're putting the finishing touches on DivingHQ. Please check back soon.</p>
+      <p class="subtitle">{{ $t('auth.register.coming_soon') }}</p>
+      <p class="note">{{ $t('auth.register.coming_soon_note') }}</p>
       <p class="footer-link">{{ $t('auth.register.already_have_account') }} <RouterLink to="/login">{{ $t('auth.register.sign_in_link') }}</RouterLink></p>
     </template>
 
@@ -331,11 +333,11 @@ async function handleSubmit() {
       <div v-if="showClubPicker && clubChoice === 'new'" class="field new-club-block">
         <div class="field">
           <label class="label">{{ $t('auth.register.new_club_name') }}</label>
-          <input class="input" type="text" v-model="newClubName" placeholder="e.g. Sydney Springboard" required>
+          <input class="input" type="text" v-model="newClubName" :placeholder="$t('auth.register.new_club_placeholder')" required>
         </div>
         <div class="field">
           <label class="label">{{ $t('auth.register.short_code_optional') }}</label>
-          <input class="input" type="text" v-model="newClubCode" placeholder="e.g. SYD" maxlength="20">
+          <input class="input" type="text" v-model="newClubCode" :placeholder="$t('auth.register.short_code_placeholder')" maxlength="20">
         </div>
         <p v-if="noFederation" class="hint-line founder-note">{{ $t('auth.register.founder_note') }}</p>
       </div>

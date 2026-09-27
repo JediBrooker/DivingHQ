@@ -71,7 +71,13 @@
       "submit_idle": "Hesap Oluştur",
       "submit_loading": "Oluşturuluyor...",
       "already_have_account": "Zaten hesabınız var mı?",
-      "sign_in_link": "Giriş yapın"
+      "sign_in_link": "Giriş yapın",
+      "coming_soon": "Çok yakında",
+      "coming_soon_note": "Hesap kaydı henüz açılmadı — DivingHQ’ye son rötuşları yapıyoruz. Lütfen yakında tekrar uğrayın.",
+      "failed": "Kayıt başarısız",
+      "success": "Kayıt başarılı. Giriş yapmadan önce e-postanızdaki doğrulama bağlantısını açın.",
+      "new_club_placeholder": "ör. Sydney Springboard",
+      "short_code_placeholder": "ör. SYD"
     },
     "register_org": {
       "title": "Kuruluş Kaydı",
@@ -99,7 +105,8 @@
       "claim_note_country": "{country} kulüpleri zaten DivingHQ'da, bu yüzden hesaplarını devralma talebi açılır. E-postanızı doğruladığınızda oy verirler. Henüz çok azı oy verebiliyorsa DivingHQ inceler.",
       "claim_note_region_parent": "{org} bu ülkeyi zaten DivingHQ'da yönetiyor, bu yüzden {region} talebinize o karar verir.",
       "claim_note_region": "Bu, {region} için bir talep açar. E-postanızı doğruladığınızda kulüpleri oy verir, ya da henüz yeterli değillerse DivingHQ inceler.",
-      "website_invalid": "Bu bir web adresine benzemiyor. diving.org.au gibi bir şey deneyin."
+      "website_invalid": "Bu bir web adresine benzemiyor. diving.org.au gibi bir şey deneyin.",
+      "coming_soon_note": "Federasyon kaydı henüz açılmadı — DivingHQ’ye son rötuşları yapıyoruz. Lütfen yakında tekrar uğrayın."
     },
     "forgot": {
       "title": "Şifre Sıfırlama",

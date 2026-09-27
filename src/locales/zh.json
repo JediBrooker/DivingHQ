@@ -71,7 +71,13 @@
       "submit_idle": "创建账户",
       "submit_loading": "创建中...",
       "already_have_account": "已有账户？",
-      "sign_in_link": "登录"
+      "sign_in_link": "登录",
+      "coming_soon": "即将开放",
+      "coming_soon_note": "账户注册尚未开放 — 我们正在为 DivingHQ 做最后的完善。请稍后再来。",
+      "failed": "注册失败",
+      "success": "注册成功。登录前请在邮箱中查收验证链接。",
+      "new_club_placeholder": "例如 Sydney Springboard",
+      "short_code_placeholder": "例如 SYD"
     },
     "register_org": {
       "title": "注册机构",
@@ -99,7 +105,8 @@
       "claim_note_country": "{country} 的俱乐部已在使用 DivingHQ，因此这将对其账户发起接管申请。验证邮箱后由俱乐部投票。如果能投票的俱乐部太少，则由 DivingHQ 审核。",
       "claim_note_region_parent": "{org} 已在 DivingHQ 上管理该国家，因此由其决定您对 {region} 的申请。",
       "claim_note_region": "这将对 {region} 发起申请。验证邮箱后由其俱乐部投票；如果数量尚不足，则由 DivingHQ 审核。",
-      "website_invalid": "这看起来不像网址。请尝试类似 diving.org.au 的格式。"
+      "website_invalid": "这看起来不像网址。请尝试类似 diving.org.au 的格式。",
+      "coming_soon_note": "联合会注册尚未开放 — 我们正在为 DivingHQ 做最后的完善。请稍后再来。"
     },
     "forgot": {
       "title": "重置密码",

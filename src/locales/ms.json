@@ -71,7 +71,13 @@
       "submit_idle": "Cipta akaun",
       "submit_loading": "Mencipta...",
       "already_have_account": "Sudah ada akaun?",
-      "sign_in_link": "Log masuk"
+      "sign_in_link": "Log masuk",
+      "coming_soon": "Akan datang",
+      "coming_soon_note": "Pendaftaran akaun belum dibuka — kami sedang memperkemas DivingHQ. Sila kembali tidak lama lagi.",
+      "failed": "Pendaftaran gagal",
+      "success": "Pendaftaran berjaya. Semak e-mel anda untuk pautan pengesahan sebelum log masuk.",
+      "new_club_placeholder": "cth. Sydney Springboard",
+      "short_code_placeholder": "cth. SYD"
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -99,7 +105,8 @@
       "claim_note_country": "Kelab dari {country} sudah berada di DivingHQ, jadi ini membuka tuntutan ke atas akaun mereka. Selepas e-mel anda disahkan, mereka mengundi. Jika terlalu sedikit yang boleh mengundi, DivingHQ menyemaknya.",
       "claim_note_region_parent": "{org} sudah mengurus negara ini di DivingHQ, jadi mereka memutuskan tuntutan anda ke atas {region}.",
       "claim_note_region": "Ini membuka tuntutan ke atas {region}. Kelab-kelabnya mengundi selepas e-mel anda disahkan, atau DivingHQ menyemaknya jika belum cukup.",
-      "website_invalid": "Itu tidak kelihatan seperti alamat web. Cuba sesuatu seperti diving.org.au."
+      "website_invalid": "Itu tidak kelihatan seperti alamat web. Cuba sesuatu seperti diving.org.au.",
+      "coming_soon_note": "Pendaftaran persekutuan belum dibuka — kami sedang memperkemas DivingHQ. Sila kembali tidak lama lagi."
     },
     "forgot": {
       "title": "Tetapkan semula kata laluan",

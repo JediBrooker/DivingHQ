@@ -71,7 +71,13 @@
       "submit_idle": "إنشاء حساب",
       "submit_loading": "جارٍ الإنشاء...",
       "already_have_account": "لديك حساب بالفعل؟",
-      "sign_in_link": "تسجيل الدخول"
+      "sign_in_link": "تسجيل الدخول",
+      "coming_soon": "قريبًا",
+      "coming_soon_note": "التسجيل في الحسابات غير متاح بعد — نضع اللمسات الأخيرة على DivingHQ. يُرجى العودة قريبًا.",
+      "failed": "فشل التسجيل",
+      "success": "تم التسجيل بنجاح. تحقّق من بريدك الإلكتروني للعثور على رابط التأكيد قبل تسجيل الدخول.",
+      "new_club_placeholder": "مثال: Sydney Springboard",
+      "short_code_placeholder": "مثال: SYD"
     },
     "register_org": {
       "title": "تسجيل منظمة",
@@ -99,7 +105,8 @@
       "claim_note_country": "أندية {country} موجودة بالفعل على DivingHQ، لذا يُفتح طلب لتولّي حسابها. بعد تأكيد بريدك تصوّت عليه. إذا كان عدد من يحق لهم التصويت قليلاً جداً، يراجعه DivingHQ.",
       "claim_note_region_parent": "{org} يدير هذا البلد بالفعل على DivingHQ، لذا يقرّر في طلبك على {region}.",
       "claim_note_region": "يُفتح طلب على {region}. تصوّت أنديتها بعد تأكيد بريدك، أو يراجعه DivingHQ إن لم يكن عددها كافياً بعد.",
-      "website_invalid": "لا يبدو هذا عنوان موقع ويب. جرّب شيئًا مثل diving.org.au."
+      "website_invalid": "لا يبدو هذا عنوان موقع ويب. جرّب شيئًا مثل diving.org.au.",
+      "coming_soon_note": "تسجيل الاتحادات غير متاح بعد — نضع اللمسات الأخيرة على DivingHQ. يُرجى العودة قريبًا."
     },
     "forgot": {
       "title": "إعادة تعيين كلمة المرور",
