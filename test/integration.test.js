@@ -6888,3 +6888,30 @@ test("verify-email tells a suspended org's member it's suspended, not pending", 
     await teardownFixture(st);
   }
 });
+
+// 093 fixed organisations.country_code but not the entry snapshots taken
+// from it, which event_rep_code prefers. 098 rewrites those too.
+test("migration 098 rewrites alpha-2 entry snapshots so a country prints one code", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const diver = await recordKit.diver(st.orgId, null, "female", "Sina Samoa");
+    const ev = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(ev, diver, 1, await recordKit.threeMetreDive(), 6);
+    // What an entry from a federation stored as 'WS' looks like after 093.
+    await pool.query("UPDATE competitor_dive_lists SET rep_country = 'ws' WHERE event_id = $1", [ev.id]);
+    await pool.query(fs.readFileSync(path.join(__dirname, "..", "migrations", "098_rep_country_alpha3.sql"), "utf8"));
+    const row = (await pool.query(
+      "SELECT rep_country, event_rep_code($1, $2, 'XXX') AS code FROM competitor_dive_lists WHERE event_id = $1",
+      [ev.id, diver],
+    )).rows[0];
+    assert.equal(row.rep_country, "WSM");
+    assert.equal(row.code, "WSM");
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});

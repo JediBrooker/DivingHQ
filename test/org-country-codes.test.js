@@ -21,6 +21,17 @@ test("migration 093's mapping is exactly lib/countries.json", () => {
   assert.deepEqual(pairs, expected);
 });
 
+// 098 rewrites the entry snapshots (competitor_dive_lists.rep_country) with
+// the same mapping, so a country entered as 'WS' doesn't print twice.
+test("migration 098's snapshot mapping is exactly lib/countries.json too", () => {
+  const sql = fs.readFileSync(
+    path.join(__dirname, "..", "migrations", "098_rep_country_alpha3.sql"), "utf8",
+  );
+  const pairs = [...sql.matchAll(/\('([A-Z]{2})','([A-Z]{3})'\)/g)].map((m) => `${m[1]}>${m[2]}`);
+  assert.deepEqual(pairs, COUNTRIES.map((c) => `${c.a2}>${c.a3}`));
+  assert.match(sql, /UPDATE public\.competitor_dive_lists c\s+SET rep_country = m\.a3/);
+});
+
 test("slugFromName makes a URL-safe slug", () => {
   assert.equal(slugFromName("Diving Australia", "x"), "diving-australia");
   assert.equal(slugFromName("Fédération Française de Natation", "x"), "federation-francaise-de-natation");
