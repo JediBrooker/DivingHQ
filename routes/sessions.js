@@ -749,9 +749,17 @@ module.exports = function createSessionsRouter({
   // mention `blockId`. Tolerates a missing detector return (empty
   // array) so a downstream change to the detector shape doesn't
   // break the write path.
+  //
+  // The full result goes into the conflict cache on the way. Every
+  // caller runs this after its write has autocommitted, so it's the
+  // current picture, and the editing tab re-GETs /conflicts straight
+  // after each edit; without this that GET ran the whole detector a
+  // second time. Don't call it inside an open transaction, the cache
+  // would hold uncommitted rows.
   async function conflictsTouchingBlock(client, meetId, blockId) {
     try {
       const all = await detectConflicts(meetId, client);
+      conflictCache.set(meetId, { at: Date.now(), value: all });
       return all.filter(
         (c) => c.block_a?.id === blockId || c.block_b?.id === blockId,
       );
