@@ -1,4 +1,4 @@
-// International participation (routes/events/index.js): the two ways a
+// International participation (routes/events/participation.js): the two ways a
 // host brings another federation in, an invite it has to accept and a
 // straight add, share one set of refusals (loadInviteContext), and all
 // three notifications go to the other side's org admins through

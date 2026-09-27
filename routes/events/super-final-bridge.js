@@ -21,7 +21,7 @@
 //
 // Extracted out of routes/events.js as part of the Phase-5 split,
 // once the file crossed 4,000 lines. Shares helpers with the
-// seed-semi / seed-final POST handlers that remain in index.js:
+// seed-semi / seed-final POST handlers in super-final-seeding.js:
 // loadH2hPairResults + loadSfCumulative live in
 // lib/super-final-helpers.js for that reason.
 

@@ -137,7 +137,7 @@ const CALL_SITES = [
     },
   },
   {
-    site: "routes/events/index.js rankedDiversForAdvance + buildH2hSeedingPlan; routes/scoreboard.js leaderboard",
+    site: "routes/events/index.js rankedDiversForAdvance + super-final-seeding.js buildH2hSeedingPlan; routes/scoreboard.js leaderboard",
     sql: () => perDivePointsCte({ name: "dive_totals", pointsAlias: "round_total" }),
     pointsAlias: "round_total",
     where: "s.event_id = $1",
