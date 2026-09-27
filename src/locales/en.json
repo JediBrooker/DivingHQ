@@ -455,7 +455,7 @@
       "dialog_confirm": "Delete my account",
       "dialog_cancel": "Cancel",
       "dialog_what_goes": "Removed:",
-      "dialog_what_goes_items": "Login + password, contact email, push subscriptions, dashboard settings, role grants, coach-diver links, public profile slug.",
+      "dialog_what_goes_items": "Login + password, contact email, date of birth, gender and nationality, push subscriptions, dashboard settings, role grants, club and region admin roles, coach-diver links, public profile slug.",
       "dialog_what_stays": "Kept:",
       "dialog_what_stays_items": "Your name on the dives you competed in, judging panels you sat on, and the events you appeared in. Audit log entries you triggered (purged on the normal 30-day rotation).",
       "confirmation_toast": "Account deleted. Your competition history is anonymised. Sign in with a new account to claim it back later.",

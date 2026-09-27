@@ -466,7 +466,7 @@
       "dialog_confirm": "Slet min konto",
       "dialog_cancel": "Annullér",
       "dialog_what_goes": "Fjernes:",
-      "dialog_what_goes_items": "Login og adgangskode, kontakt-e-mail, push-abonnementer, dashboardindstillinger, rolletildelinger, træner-springer-forbindelser, offentlig profil-slug.",
+      "dialog_what_goes_items": "Login og adgangskode, kontakt-e-mail, fødselsdato, køn og nationalitet, push-abonnementer, dashboardindstillinger, rolletildelinger, klub- og regionsadministratorroller, træner-springer-forbindelser, offentlig profil-slug.",
       "dialog_what_stays": "Bevares:",
       "dialog_what_stays_items": "Dit navn på de spring, du konkurrerede i, de dommerpaneler, du sad i, og de stævner, du optrådte i. Auditlogposter, du udløste (slettes ved den normale 30-dages rotation).",
       "confirmation_toast": "Konto slettet. Din konkurrencehistorik er anonymiseret. Log ind med en ny konto for at gøre krav på den senere.",

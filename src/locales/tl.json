@@ -455,7 +455,7 @@
       "dialog_confirm": "Tanggalin ang aking account",
       "dialog_cancel": "Kanselahin",
       "dialog_what_goes": "Matatanggal:",
-      "dialog_what_goes_items": "Login at password, contact email, push subscriptions, dashboard settings, role grants, koneksyong coach-diver, public profile slug.",
+      "dialog_what_goes_items": "Login at password, contact email, petsa ng kapanganakan, kasarian at nasyonalidad, push subscriptions, dashboard settings, role grants, mga role na club at region admin, koneksyong coach-diver, public profile slug.",
       "dialog_what_stays": "Mananatili:",
       "dialog_what_stays_items": "Ang iyong pangalan sa mga dive na sinalihan mo, mga judging panel na inupuan mo, at mga event na ginanapan mo. Mga audit log entry na pinagana mo (mapupurga sa normal na 30-araw na rotation).",
       "confirmation_toast": "Na-delete ang account. Anonymized ang iyong competition history. Mag-sign in gamit ang bagong account para ma-claim ito ulit mamaya.",

@@ -466,7 +466,7 @@
       "dialog_confirm": "Eliminar a minha conta",
       "dialog_cancel": "Cancelar",
       "dialog_what_goes": "Removido:",
-      "dialog_what_goes_items": "Acesso e palavra-passe, e-mail de contacto, subscrições push, definições do painel, atribuições de papel, ligações treinador-saltador, slug do perfil público.",
+      "dialog_what_goes_items": "Acesso e palavra-passe, e-mail de contacto, data de nascimento, género e nacionalidade, subscrições push, definições do painel, atribuições de papel, funções de administrador de clube e de região, ligações treinador-saltador, slug do perfil público.",
       "dialog_what_stays": "Mantido:",
       "dialog_what_stays_items": "O teu nome nos saltos em que competiste, nos júris em que estiveste e nas provas em que apareceste. Entradas do registo de auditoria que geraste (eliminadas na rotação normal de 30 dias).",
       "confirmation_toast": "Conta eliminada. O teu historial de competição foi anonimizado. Inicia sessão com uma nova conta para o reclamares mais tarde.",

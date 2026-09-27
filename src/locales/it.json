@@ -466,7 +466,7 @@
       "dialog_confirm": "Elimina il mio account",
       "dialog_cancel": "Annulla",
       "dialog_what_goes": "Rimosso:",
-      "dialog_what_goes_items": "Login e password, email di contatto, iscrizioni push, impostazioni della dashboard, assegnazioni di ruolo, collegamenti allenatore-tuffatore, slug del profilo pubblico.",
+      "dialog_what_goes_items": "Login e password, email di contatto, data di nascita, genere e nazionalità, iscrizioni push, impostazioni della dashboard, assegnazioni di ruolo, ruoli di amministratore di club e regione, collegamenti allenatore-tuffatore, slug del profilo pubblico.",
       "dialog_what_stays": "Conservato:",
       "dialog_what_stays_items": "Il tuo nome sui tuffi in cui hai gareggiato, sulle giurie a cui hai partecipato e sugli eventi in cui sei comparso. Le voci del registro di audit che hai generato (eliminate con la normale rotazione di 30 giorni).",
       "confirmation_toast": "Account eliminato. Il tuo storico gare è anonimizzato. Accedi con un nuovo account per riprenderlo in seguito.",

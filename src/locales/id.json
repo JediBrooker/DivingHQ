@@ -455,7 +455,7 @@
       "dialog_confirm": "Hapus akun saya",
       "dialog_cancel": "Batal",
       "dialog_what_goes": "Dihapus:",
-      "dialog_what_goes_items": "Login dan kata sandi, email kontak, langganan push, pengaturan dasbor, pemberian peran, tautan pelatih-penyelam, slug profil publik.",
+      "dialog_what_goes_items": "Login dan kata sandi, email kontak, tanggal lahir, jenis kelamin, dan kewarganegaraan, langganan push, pengaturan dasbor, pemberian peran, peran admin klub dan wilayah, tautan pelatih-penyelam, slug profil publik.",
       "dialog_what_stays": "Tetap ada:",
       "dialog_what_stays_items": "Nama Anda pada loncatan yang Anda ikuti, panel juri yang Anda jalani, dan acara di mana Anda muncul. Entri log audit yang Anda picu (dihapus dalam rotasi normal 30 hari).",
       "confirmation_toast": "Akun dihapus. Riwayat kompetisi Anda telah dianonimkan. Masuk dengan akun baru untuk mengklaimnya kembali nanti.",

@@ -466,7 +466,7 @@
       "dialog_confirm": "Poista tilini",
       "dialog_cancel": "Peruuta",
       "dialog_what_goes": "Poistuu:",
-      "dialog_what_goes_items": "Kirjautuminen ja salasana, yhteystietosähköposti, push-tilaukset, paneelin asetukset, roolien myönnöt, valmentaja-hyppääjä-yhteydet, julkisen profiilin slug.",
+      "dialog_what_goes_items": "Kirjautuminen ja salasana, yhteystietosähköposti, syntymäaika, sukupuoli ja kansallisuus, push-tilaukset, paneelin asetukset, roolien myönnöt, seuran ja alueen ylläpitäjän roolit, valmentaja-hyppääjä-yhteydet, julkisen profiilin slug.",
       "dialog_what_stays": "Säilyy:",
       "dialog_what_stays_items": "Nimesi hypyissä, joissa kilpailit, tuomaristoissa, joissa istuit, ja tapahtumissa, joissa esiinnyit. Auditointilokin merkinnät, jotka aiheutit (poistetaan normaalin 30 päivän kierron mukaan).",
       "confirmation_toast": "Tili poistettu. Kilpailuhistoriasi on anonymisoitu. Kirjaudu uudella tilillä saadaksesi sen takaisin myöhemmin.",

@@ -466,7 +466,7 @@
       "dialog_confirm": "Supprimer mon compte",
       "dialog_cancel": "Annuler",
       "dialog_what_goes": "Supprimé :",
-      "dialog_what_goes_items": "Identifiant et mot de passe, e-mail de contact, abonnements push, paramètres du tableau de bord, attributions de rôle, liens entraîneur-plongeur, slug de profil public.",
+      "dialog_what_goes_items": "Identifiant et mot de passe, e-mail de contact, date de naissance, genre et nationalité, abonnements push, paramètres du tableau de bord, attributions de rôle, rôles d'administrateur de club et de région, liens entraîneur-plongeur, slug de profil public.",
       "dialog_what_stays": "Conservé :",
       "dialog_what_stays_items": "Votre nom sur les plongeons que vous avez disputés, les jurys auxquels vous avez siégé et les épreuves auxquelles vous avez participé. Les entrées du journal d’audit que vous avez déclenchées (purgées selon la rotation normale de 30 jours).",
       "confirmation_toast": "Compte supprimé. Votre historique de compétition est anonymisé. Connectez-vous avec un nouveau compte pour le récupérer plus tard.",

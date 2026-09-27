@@ -455,7 +455,7 @@
       "dialog_confirm": "Smazat můj účet",
       "dialog_cancel": "Zrušit",
       "dialog_what_goes": "Odstraní se:",
-      "dialog_what_goes_items": "Přihlášení a heslo, kontaktní e-mail, push odběry, nastavení nástěnky, přidělené role, propojení trenér–skokan, veřejný slug profilu.",
+      "dialog_what_goes_items": "Přihlášení a heslo, kontaktní e-mail, datum narození, pohlaví a státní příslušnost, push odběry, nastavení nástěnky, přidělené role, role správce klubu a regionu, propojení trenér–skokan, veřejný slug profilu.",
       "dialog_what_stays": "Zachová se:",
       "dialog_what_stays_items": "Vaše jméno u skoků, ve kterých jste závodili, u panelů rozhodčích, ve kterých jste zasedali, a u disciplín, ve kterých jste vystupovali. Záznamy protokolu auditu, které jste vyvolali (mazány při běžné 30denní rotaci).",
       "confirmation_toast": "Účet smazán. Vaše závodní historie je anonymizována. Přihlaste se novým účtem, abyste si ji později nárokovali zpět.",

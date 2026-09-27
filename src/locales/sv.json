@@ -466,7 +466,7 @@
       "dialog_confirm": "Ta bort mitt konto",
       "dialog_cancel": "Avbryt",
       "dialog_what_goes": "Tas bort:",
-      "dialog_what_goes_items": "Inloggning och lösenord, kontaktmejl, push-prenumerationer, dashboard-inställningar, rolltilldelningar, tränare-hoppare-kopplingar, publik profil-slug.",
+      "dialog_what_goes_items": "Inloggning och lösenord, kontaktmejl, födelsedatum, kön och nationalitet, push-prenumerationer, dashboard-inställningar, rolltilldelningar, klubb- och regionadministratörsroller, tränare-hoppare-kopplingar, publik profil-slug.",
       "dialog_what_stays": "Behålls:",
       "dialog_what_stays_items": "Ditt namn på de hopp du tävlade i, de domarpaneler du satt i och de tävlingar du deltog i. Granskningsloggposter du utlöste (rensas i normal 30-dagars rotation).",
       "confirmation_toast": "Konto borttaget. Din tävlingshistorik är anonymiserad. Logga in med ett nytt konto för att återta den senare.",

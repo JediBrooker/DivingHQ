@@ -455,7 +455,7 @@
       "dialog_confirm": "Izbriši moj račun",
       "dialog_cancel": "Odustani",
       "dialog_what_goes": "Uklanja se:",
-      "dialog_what_goes_items": "Prijava i lozinka, kontakt e-pošta, push pretplate, postavke nadzorne ploče, dodjele uloga, veze trener-skakač, javni profil slug.",
+      "dialog_what_goes_items": "Prijava i lozinka, kontakt e-pošta, datum rođenja, spol i državljanstvo, push pretplate, postavke nadzorne ploče, dodjele uloga, uloge administratora kluba i regije, veze trener-skakač, javni profil slug.",
       "dialog_what_stays": "Ostaje:",
       "dialog_what_stays_items": "Tvoje ime na skokovima u kojima si se natjecao, sudačkim panelima u kojima si sudjelovao i događajima u kojima si se pojavio. Zapisi revizijskog dnevnika koje si pokrenuo (brišu se uobičajenom rotacijom od 30 dana).",
       "confirmation_toast": "Račun izbrisan. Tvoja povijest natjecanja je anonimizirana. Prijavi se s novim računom da je kasnije zatražiš natrag.",

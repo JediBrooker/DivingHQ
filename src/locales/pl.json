@@ -466,7 +466,7 @@
       "dialog_confirm": "Usuń moje konto",
       "dialog_cancel": "Anuluj",
       "dialog_what_goes": "Usuwane:",
-      "dialog_what_goes_items": "Login i hasło, e-mail kontaktowy, subskrypcje push, ustawienia pulpitu, przypisania ról, powiązania trener-skoczek, publiczny slug profilu.",
+      "dialog_what_goes_items": "Login i hasło, e-mail kontaktowy, data urodzenia, płeć i obywatelstwo, subskrypcje push, ustawienia pulpitu, przypisania ról, role administratora klubu i regionu, powiązania trener-skoczek, publiczny slug profilu.",
       "dialog_what_stays": "Zachowane:",
       "dialog_what_stays_items": "Twoje imię przy skokach, w których startowałeś, panelach sędziowskich, w których zasiadałeś, i wydarzeniach, w których wystąpiłeś. Wpisy dziennika audytu, które wywołałeś (usuwane w normalnej rotacji 30-dniowej).",
       "confirmation_toast": "Konto usunięte. Twoja historia startów została zanonimizowana. Zaloguj się na nowe konto, aby odzyskać ją później.",

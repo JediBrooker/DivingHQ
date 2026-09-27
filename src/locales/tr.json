@@ -455,7 +455,7 @@
       "dialog_confirm": "Hesabımı sil",
       "dialog_cancel": "İptal",
       "dialog_what_goes": "Silinen:",
-      "dialog_what_goes_items": "Oturum açma bilgileri ve şifre, iletişim e-postası, push abonelikleri, panel ayarları, rol atamaları, antrenör-atlayıcı bağlantıları, herkese açık profil slug'ı.",
+      "dialog_what_goes_items": "Oturum açma bilgileri ve şifre, iletişim e-postası, doğum tarihi, cinsiyet ve uyruk, push abonelikleri, panel ayarları, rol atamaları, kulüp ve bölge yöneticisi rolleri, antrenör-atlayıcı bağlantıları, herkese açık profil slug'ı.",
       "dialog_what_stays": "Korunan:",
       "dialog_what_stays_items": "Yarıştığınız atlayışlardaki, görev aldığınız hakem kurullarındaki ve katıldığınız etkinliklerdeki adınız. Tetiklediğiniz denetim günlüğü kayıtları (normal 30 günlük rotasyonla silinir).",
       "confirmation_toast": "Hesap silindi. Yarışma geçmişiniz anonimleştirildi. Daha sonra geri talep etmek için yeni bir hesapla oturum açın.",

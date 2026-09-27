@@ -466,7 +466,7 @@
       "dialog_confirm": "Slett kontoen min",
       "dialog_cancel": "Avbryt",
       "dialog_what_goes": "Fjernes:",
-      "dialog_what_goes_items": "Innlogging og passord, kontakt-e-post, push-abonnementer, dashbordinnstillinger, rolletildelinger, trener-hopper-koblinger, offentlig profil-slug.",
+      "dialog_what_goes_items": "Innlogging og passord, kontakt-e-post, fødselsdato, kjønn og nasjonalitet, push-abonnementer, dashbordinnstillinger, rolletildelinger, klubb- og regionadministratorroller, trener-hopper-koblinger, offentlig profil-slug.",
       "dialog_what_stays": "Beholdes:",
       "dialog_what_stays_items": "Navnet ditt på hoppene du konkurrerte i, dommerpanelene du satt i og stevnene du var med i. Logginnslag du utløste (slettes ved den vanlige 30-dagers rotasjonen).",
       "confirmation_toast": "Konto slettet. Konkurransehistorikken din er anonymisert. Logg inn med en ny konto for å hente den tilbake senere.",

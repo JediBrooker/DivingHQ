@@ -466,7 +466,7 @@
       "dialog_confirm": "Fiókom törlése",
       "dialog_cancel": "Mégse",
       "dialog_what_goes": "Eltávolítva:",
-      "dialog_what_goes_items": "Bejelentkezés és jelszó, kapcsolati e-mail, push-feliratkozások, irányítópult-beállítások, szerepkör-hozzárendelések, edző-ugró kapcsolatok, nyilvános profil-slug.",
+      "dialog_what_goes_items": "Bejelentkezés és jelszó, kapcsolati e-mail, születési dátum, nem és állampolgárság, push-feliratkozások, irányítópult-beállítások, szerepkör-hozzárendelések, klub- és régióadminisztrátori szerepkörök, edző-ugró kapcsolatok, nyilvános profil-slug.",
       "dialog_what_stays": "Megmarad:",
       "dialog_what_stays_items": "A neved azokon az ugrásokon, amelyeken versenyeztél, azokon a zsűripaneleken, amelyekben részt vettél, és azokon az eseményeken, amelyeken megjelentél. Az általad kiváltott auditnapló-bejegyzések (a normál 30 napos rotációval törlődnek).",
       "confirmation_toast": "Fiók törölve. A versenytörténeted anonimizálva van. Jelentkezz be új fiókkal, hogy később visszaigényeld.",

@@ -455,7 +455,7 @@
       "dialog_confirm": "删除我的账户",
       "dialog_cancel": "取消",
       "dialog_what_goes": "将被删除：",
-      "dialog_what_goes_items": "登录和密码、联系邮箱、推送订阅、控制台设置、角色授予、教练-跳水运动员关联、公开个人资料 slug。",
+      "dialog_what_goes_items": "登录和密码、联系邮箱、出生日期、性别和国籍、推送订阅、控制台设置、角色授予、俱乐部和地区管理员身份、教练-跳水运动员关联、公开个人资料 slug。",
       "dialog_what_stays": "将保留：",
       "dialog_what_stays_items": "你参赛跳水的姓名、你担任评委的裁判组以及你出现的赛事。你触发的审计日志条目（按正常 30 天轮换清理）。",
       "confirmation_toast": "账户已删除。你的比赛历史已匿名化。稍后可以使用新账户登录以重新认领。",

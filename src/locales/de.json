@@ -466,7 +466,7 @@
       "dialog_confirm": "Mein Konto löschen",
       "dialog_cancel": "Abbrechen",
       "dialog_what_goes": "Wird entfernt:",
-      "dialog_what_goes_items": "Login und Passwort, Kontakt-E-Mail, Push-Abonnements, Dashboard-Einstellungen, Rollenzuweisungen, Trainer-Springer-Verknüpfungen, öffentlicher Profil-Slug.",
+      "dialog_what_goes_items": "Login und Passwort, Kontakt-E-Mail, Geburtsdatum, Geschlecht und Nationalität, Push-Abonnements, Dashboard-Einstellungen, Rollenzuweisungen, Vereins- und Regionsadmin-Rollen, Trainer-Springer-Verknüpfungen, öffentlicher Profil-Slug.",
       "dialog_what_stays": "Bleibt erhalten:",
       "dialog_what_stays_items": "Dein Name bei den Sprüngen, bei denen du angetreten bist, bei den Kampfgerichten, in denen du gesessen hast, und bei den Veranstaltungen, an denen du teilgenommen hast. Audit-Log-Einträge, die du ausgelöst hast (werden in der normalen 30-Tage-Rotation gelöscht).",
       "confirmation_toast": "Konto gelöscht. Dein Wettkampfverlauf wurde anonymisiert. Melde dich später mit einem neuen Konto an, um ihn zurückzufordern.",
