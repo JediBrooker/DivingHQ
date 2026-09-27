@@ -1920,7 +1920,7 @@
     "run_meets": "Run your meets",
     "requests": "Role requests",
     "no_requests_title": "No requests waiting",
-    "no_requests_body": "When a member asks to be a diver, judge or referee, it shows up here.",
+    "no_requests_body": "When a member asks to be a diver, judge or coach, it shows up here.",
     "wants_role": "wants to be: {role}",
     "approve": "Approve",
     "reject": "Reject",

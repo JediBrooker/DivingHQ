@@ -1920,7 +1920,7 @@
     "run_meets": "Wettkämpfe ausrichten",
     "requests": "Rollenanfragen",
     "no_requests_title": "Keine offenen Anfragen",
-    "no_requests_body": "Wenn ein Mitglied Springer, Kampfrichter oder Schiedsrichter werden möchte, erscheint die Anfrage hier.",
+    "no_requests_body": "Wenn ein Mitglied Springer, Kampfrichter oder Trainer werden möchte, erscheint die Anfrage hier.",
     "wants_role": "möchte werden: {role}",
     "approve": "Genehmigen",
     "reject": "Ablehnen",

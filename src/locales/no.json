@@ -1920,7 +1920,7 @@
     "run_meets": "Arranger stevnene dine",
     "requests": "Rolleforespørsler",
     "no_requests_title": "Ingen ventende forespørsler",
-    "no_requests_body": "Når et medlem ber om å bli stuper, dommer eller overdommer, vises det her.",
+    "no_requests_body": "Når et medlem ber om å bli stuper, dommer eller trener, vises det her.",
     "wants_role": "vil være: {role}",
     "approve": "Godkjenn",
     "reject": "Avslå",

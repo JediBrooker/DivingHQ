@@ -477,11 +477,16 @@ international invitations, the audit log, and the 2FA requirement.
 
 **Role requests.** `lib/role-requests.js` decides who reviews: org admins
 under a federation; in an unclaimed country the requester's club admins
-(diver/judge only, never self-approving an official role); the
+(diver/judge/coach only, never self-approving anything but diver); the
 sysadmin as fallback. Referee went to the sysadmin after launch: it's an
 org-wide controller role (`socketCanManageEvent` and every
 `requireRoleOrEventDelegate([... 'referee'])` gate), so a club-minted
-referee could drive any other club's live meet in the country. Club
+referee could drive any other club's live meet in the country. Judge and
+coach aren't controller roles anywhere: a judge only scores events whose
+panel (`event_judges`) the host picked, and a coach only reaches divers
+an org admin linked (`coach_diver_links`) and their own club's classes.
+Coach is on the signup form too, and it's the default for someone
+founding a club. Club
 admins review on `/club` (My club), where in an unclaimed country they
 also manage co-admins (members only, never the last live one).
 

@@ -1920,7 +1920,7 @@
     "run_meets": "Patakbuhin ang iyong mga kompetisyon",
     "requests": "Mga hiling na role",
     "no_requests_title": "Walang naghihintay na hiling",
-    "no_requests_body": "Kapag humiling ang isang miyembro na maging diver, hurado o referee, lalabas ito rito.",
+    "no_requests_body": "Kapag humiling ang isang miyembro na maging diver, hukom o tagasanay, lalabas ito rito.",
     "wants_role": "gustong maging: {role}",
     "approve": "Aprubahan",
     "reject": "Tanggihan",

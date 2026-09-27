@@ -1920,7 +1920,7 @@
     "run_meets": "Järjestä kilpailuja",
     "requests": "Roolipyynnöt",
     "no_requests_title": "Ei odottavia pyyntöjä",
-    "no_requests_body": "Kun jäsen pyytää hyppääjän, tuomarin tai päätuomarin roolia, pyyntö näkyy tässä.",
+    "no_requests_body": "Kun jäsen pyytää hyppääjän, tuomarin tai valmentajan roolia, pyyntö näkyy tässä.",
     "wants_role": "haluaa olla: {role}",
     "approve": "Hyväksy",
     "reject": "Hylkää",

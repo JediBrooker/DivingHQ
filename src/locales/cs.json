@@ -1920,7 +1920,7 @@
     "run_meets": "Pořádat závody",
     "requests": "Žádosti o role",
     "no_requests_title": "Žádné čekající žádosti",
-    "no_requests_body": "Když člen požádá o roli skokana, rozhodčího nebo vrchního rozhodčího, objeví se to zde.",
+    "no_requests_body": "Když člen požádá o roli skokana, rozhodčího nebo trenéra, objeví se to zde.",
     "wants_role": "chce být: {role}",
     "approve": "Schválit",
     "reject": "Zamítnout",

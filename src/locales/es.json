@@ -1920,7 +1920,7 @@
     "run_meets": "Organizar competiciones",
     "requests": "Solicitudes de rol",
     "no_requests_title": "No hay solicitudes pendientes",
-    "no_requests_body": "Cuando un miembro pide ser saltador, juez o árbitro, aparece aquí.",
+    "no_requests_body": "Cuando un miembro pide ser saltador, juez o entrenador, aparece aquí.",
     "wants_role": "quiere ser: {role}",
     "approve": "Aprobar",
     "reject": "Rechazar",

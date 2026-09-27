@@ -1920,7 +1920,7 @@
     "run_meets": "Kelola kompetisi Anda",
     "requests": "Permintaan peran",
     "no_requests_title": "Tidak ada permintaan tertunda",
-    "no_requests_body": "Saat anggota meminta menjadi atlet, juri, atau wasit, permintaannya muncul di sini.",
+    "no_requests_body": "Saat anggota meminta menjadi atlet, juri, atau pelatih, permintaannya muncul di sini.",
     "wants_role": "ingin menjadi: {role}",
     "approve": "Setujui",
     "reject": "Tolak",

@@ -1920,7 +1920,7 @@
     "run_meets": "Afvikl dine stævner",
     "requests": "Rolleanmodninger",
     "no_requests_title": "Ingen ventende anmodninger",
-    "no_requests_body": "Når et medlem beder om at blive udspringer, dommer eller overdommer, vises det her.",
+    "no_requests_body": "Når et medlem beder om at blive udspringer, dommer eller træner, vises det her.",
     "wants_role": "vil være: {role}",
     "approve": "Godkend",
     "reject": "Afvis",

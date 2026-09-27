@@ -1920,7 +1920,7 @@
     "run_meets": "Anjurkan pertandingan anda",
     "requests": "Permintaan peranan",
     "no_requests_title": "Tiada permintaan menunggu",
-    "no_requests_body": "Apabila ahli meminta menjadi penerjun, hakim atau pengadil, ia dipaparkan di sini.",
+    "no_requests_body": "Apabila ahli meminta menjadi penerjun, hakim atau jurulatih, ia dipaparkan di sini.",
     "wants_role": "mahu menjadi: {role}",
     "approve": "Luluskan",
     "reject": "Tolak",

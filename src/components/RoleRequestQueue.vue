@@ -21,8 +21,11 @@ const requests = ref([])
 const loading = ref(true)
 const busyId = ref(null)
 
+// user_manager.role_* has every role, coach and meet manager included.
 function roleLabel(role) {
-  return ['diver', 'judge', 'referee'].includes(role) ? t(`role.${role}`) : role
+  return ['diver', 'coach', 'judge', 'referee', 'meet_manager'].includes(role)
+    ? t(`user_manager.role_${role}`)
+    : role
 }
 
 async function load() {

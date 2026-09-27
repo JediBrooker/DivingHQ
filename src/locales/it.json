@@ -1920,7 +1920,7 @@
     "run_meets": "Organizza le tue gare",
     "requests": "Richieste di ruolo",
     "no_requests_title": "Nessuna richiesta in attesa",
-    "no_requests_body": "Quando un membro chiede di diventare tuffatore, giudice o arbitro, la richiesta compare qui.",
+    "no_requests_body": "Quando un membro chiede di diventare tuffatore, giudice o allenatore, la richiesta compare qui.",
     "wants_role": "vuole essere: {role}",
     "approve": "Approva",
     "reject": "Rifiuta",

@@ -1920,7 +1920,7 @@
     "run_meets": "Organiser vos compétitions",
     "requests": "Demandes de rôle",
     "no_requests_title": "Aucune demande en attente",
-    "no_requests_body": "Quand un membre demande à devenir plongeur, juge ou arbitre, la demande apparaît ici.",
+    "no_requests_body": "Quand un membre demande à devenir plongeur, juge ou entraîneur, la demande apparaît ici.",
     "wants_role": "souhaite devenir : {role}",
     "approve": "Approuver",
     "reject": "Refuser",

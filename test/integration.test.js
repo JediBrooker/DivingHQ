@@ -2071,3 +2071,46 @@ test("unclaimed country: people ask to join a club and its admins say yes", asyn
     await claimKit.wipe(CODE);
   }
 });
+
+test("coach: requestable at signup, a club grants it, a founder can't grant it to themselves", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "VCT";
+  await claimKit.wipe(CODE);
+  const roleRequests = require("../lib/role-requests");
+  const pendingFor = async (userId) => (await pool.query(
+    "SELECT id, requested_role FROM role_requests WHERE user_id = $1 AND status = 'pending'", [userId],
+  )).rows;
+  try {
+    // The founder brings the club in as its coach.
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Kingstown Divers", requested_role: "coach" });
+    const coach = await delegateSignUp({ country_code: CODE, club_id: A.clubId, requested_role: "coach" });
+    // Signup used to drop 'coach' on the floor.
+    assert.deepEqual((await pendingFor(coach.id)).map((r) => r.requested_role), ["coach"]);
+
+    // A member's coach request is the club's to decide...
+    assert.equal((await roleRequests.reviewersFor(pool, coach.id, A.orgId, "coach")).via, "club");
+    const list = (await fetchJson("GET", "/api/role-requests", { token: A.token })).body;
+    assert.ok(list.some((r) => r.user_id === coach.id && r.requested_role === "coach"));
+
+    // ...but not the founder's own: that goes up to DivingHQ.
+    const own = (await pendingFor(A.id))[0];
+    assert.equal(own.requested_role, "coach");
+    assert.ok(!list.some((r) => r.id === own.id), "never offered to approve their own");
+    assert.equal((await roleRequests.reviewersFor(pool, A.id, A.orgId, "coach")).via, "sysadmin");
+    assert.equal((await fetchJson("POST", `/api/role-requests/${own.id}/review`, {
+      token: A.token, body: { decision: "approved" },
+    })).status, 403);
+
+    const rq = list.find((r) => r.user_id === coach.id).id;
+    assert.equal((await fetchJson("POST", `/api/role-requests/${rq}/review`, {
+      token: A.token, body: { decision: "approved" },
+    })).status, 200);
+    const held = await pool.query(
+      "SELECT 1 FROM user_org_roles WHERE user_id = $1 AND org_id = $2 AND role = 'coach'", [coach.id, A.orgId],
+    );
+    assert.equal(held.rows.length, 1);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

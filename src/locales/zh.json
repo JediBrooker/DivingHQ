@@ -1920,7 +1920,7 @@
     "run_meets": "组织比赛",
     "requests": "角色申请",
     "no_requests_title": "没有待处理的申请",
-    "no_requests_body": "当会员申请成为运动员、裁判或裁判长时，会显示在这里。",
+    "no_requests_body": "当会员申请成为运动员、裁判或教练时，会显示在这里。",
     "wants_role": "申请成为：{role}",
     "approve": "批准",
     "reject": "拒绝",

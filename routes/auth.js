@@ -20,6 +20,7 @@ const { countryByCode } = require("../lib/countries");
 const { materializeRegions } = require("../lib/regions");
 const claims = require("../lib/claims");
 const { liveAdminCount } = require("../lib/admin-rows");
+const roleRequests = require("../lib/role-requests");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -921,8 +922,8 @@ module.exports = function createAuthRouter({
         [newUserId, orgId],
       );
 
-      const validRoles = ["meet_manager", "referee", "judge", "diver"];
-      if (requested_role && validRoles.includes(requested_role)) {
+      // Same list the signed-in request path uses (lib/role-requests.js).
+      if (requested_role && roleRequests.REQUESTABLE_ROLES.includes(requested_role)) {
         await client.query(
           "INSERT INTO role_requests (user_id, org_id, requested_role, note) VALUES ($1,$2,$3,$4)",
           [newUserId, orgId, requested_role, safeText(note, 500)],

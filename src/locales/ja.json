@@ -1920,7 +1920,7 @@
     "run_meets": "大会を運営する",
     "requests": "役割申請",
     "no_requests_title": "保留中の申請はありません",
-    "no_requests_body": "メンバーが選手・審判・レフェリーを申請すると、ここに表示されます。",
+    "no_requests_body": "メンバーが選手・審判・コーチを申請すると、ここに表示されます。",
     "wants_role": "希望する役割: {role}",
     "approve": "承認",
     "reject": "却下",

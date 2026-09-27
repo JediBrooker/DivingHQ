@@ -1920,7 +1920,7 @@
     "run_meets": "Versenyek rendezése",
     "requests": "Szerepkör-kérelmek",
     "no_requests_title": "Nincs függőben lévő kérelem",
-    "no_requests_body": "Ha egy tag műugró, bíró vagy vezetőbíró szeretne lenni, itt jelenik meg.",
+    "no_requests_body": "Ha egy tag műugró, bíró vagy edző szeretne lenni, itt jelenik meg.",
     "wants_role": "szeretne lenni: {role}",
     "approve": "Jóváhagyás",
     "reject": "Elutasítás",

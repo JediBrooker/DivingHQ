@@ -1920,7 +1920,7 @@
     "run_meets": "Organizirajte natjecanja",
     "requests": "Zahtjevi za uloge",
     "no_requests_title": "Nema zahtjeva na čekanju",
-    "no_requests_body": "Kad član zatraži ulogu skakača, suca ili glavnog suca, zahtjev se pojavljuje ovdje.",
+    "no_requests_body": "Kad član zatraži ulogu skakača, suca ili trenera, zahtjev se pojavljuje ovdje.",
     "wants_role": "želi biti: {role}",
     "approve": "Odobri",
     "reject": "Odbij",

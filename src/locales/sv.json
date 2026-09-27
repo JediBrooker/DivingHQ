@@ -1920,7 +1920,7 @@
     "run_meets": "Arrangera dina tävlingar",
     "requests": "Rollförfrågningar",
     "no_requests_title": "Inga väntande förfrågningar",
-    "no_requests_body": "När en medlem ber om att bli hoppare, domare eller överdomare visas det här.",
+    "no_requests_body": "När en medlem ber om att bli hoppare, domare eller tränare visas det här.",
     "wants_role": "vill vara: {role}",
     "approve": "Godkänn",
     "reject": "Avslå",
