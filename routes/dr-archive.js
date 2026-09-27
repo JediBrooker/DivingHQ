@@ -21,6 +21,36 @@
 const express = require("express");
 const { startImport, getImportStatus } = require("../lib/diverecorder-import-runner");
 
+// The q / nat / from / to filters shared by /meets and /meets-count, so
+// the page count can't disagree with the list it's paging. Returns the
+// WHERE clause (or "") and its params, numbered from $1. Callers that
+// add more params (the list's LIMIT/OFFSET) push them after these.
+function buildMeetFilters(query) {
+  const q = (query.q || "").toString().trim();
+  const nat = (query.nat || "").toString().trim().toUpperCase();
+  const from = (query.from || "").toString().trim();
+  const to = (query.to || "").toString().trim();
+  const params = [];
+  const conds = [];
+  if (q) {
+    params.push(`%${q}%`);
+    conds.push(`m.name ILIKE $${params.length}`);
+  }
+  if (nat) {
+    params.push(nat);
+    conds.push(`m.country_code = $${params.length}`);
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(from)) {
+    params.push(from);
+    conds.push(`m.meet_date >= $${params.length}`);
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    params.push(to);
+    conds.push(`m.meet_date <= $${params.length}`);
+  }
+  return { where: conds.length ? `WHERE ${conds.join(" AND ")}` : "", params };
+}
+
 module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemAdmin }) {
   if (!pool) throw new Error("createDrArchiveRouter requires { pool }");
   const reads = readPool || pool;
@@ -48,31 +78,9 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
   // range (from/to, ISO yyyy-mm-dd). All optional and combinable.
   router.get("/api/dr-archive/meets", async (req, res) => {
     try {
-      const q = (req.query.q || "").toString().trim();
-      const nat = (req.query.nat || "").toString().trim().toUpperCase();
-      const from = (req.query.from || "").toString().trim();
-      const to = (req.query.to || "").toString().trim();
       const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
       const offset = Math.max(Number(req.query.offset) || 0, 0);
-      const params = [];
-      const conds = [];
-      if (q) {
-        params.push(`%${q}%`);
-        conds.push(`m.name ILIKE $${params.length}`);
-      }
-      if (nat) {
-        params.push(nat);
-        conds.push(`m.country_code = $${params.length}`);
-      }
-      if (/^\d{4}-\d{2}-\d{2}$/.test(from)) {
-        params.push(from);
-        conds.push(`m.meet_date >= $${params.length}`);
-      }
-      if (/^\d{4}-\d{2}-\d{2}$/.test(to)) {
-        params.push(to);
-        conds.push(`m.meet_date <= $${params.length}`);
-      }
-      const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+      const { where, params } = buildMeetFilters(req.query);
       params.push(limit, offset);
       const r = await reads.query(
         `SELECT m.id, m.name, to_char(m.meet_date,'YYYY-MM-DD') AS meet_date, m.source_mref,
@@ -100,29 +108,7 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
   // Hyphenated path so it never collides with /meets/:id.
   router.get("/api/dr-archive/meets-count", async (req, res) => {
     try {
-      const q = (req.query.q || "").toString().trim();
-      const nat = (req.query.nat || "").toString().trim().toUpperCase();
-      const from = (req.query.from || "").toString().trim();
-      const to = (req.query.to || "").toString().trim();
-      const params = [];
-      const conds = [];
-      if (q) {
-        params.push(`%${q}%`);
-        conds.push(`m.name ILIKE $${params.length}`);
-      }
-      if (nat) {
-        params.push(nat);
-        conds.push(`m.country_code = $${params.length}`);
-      }
-      if (/^\d{4}-\d{2}-\d{2}$/.test(from)) {
-        params.push(from);
-        conds.push(`m.meet_date >= $${params.length}`);
-      }
-      if (/^\d{4}-\d{2}-\d{2}$/.test(to)) {
-        params.push(to);
-        conds.push(`m.meet_date <= $${params.length}`);
-      }
-      const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+      const { where, params } = buildMeetFilters(req.query);
       const r = await reads.query(
         `SELECT COUNT(*)::int AS total FROM dr_meets m ${where}`,
         params,
@@ -327,3 +313,5 @@ module.exports = function createDrArchiveRouter({ pool, readPool, requireSystemA
 
   return router;
 };
+
+module.exports.buildMeetFilters = buildMeetFilters;
