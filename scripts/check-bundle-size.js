@@ -25,6 +25,9 @@ const CHUNKS = {
   "vendor-vue": /^vendor-vue-.*\.js$/,
   "vendor-i18n": /^vendor-i18n-.*\.js$/,
   "vendor-socket": /^vendor-socket-.*\.js$/,
+  // The English messages, split out of the entry in vite.config.js so
+  // the entry ceiling tracks code, and UI text growth shows up here.
+  "locale-en": /^locale-en-.*\.js$/,
   // The per-route Control Room chunk (ControlViewV2, the optional V2
   // suffix also tolerates a future rename back to ControlView).
   control: /^ControlView(V2)?-.*\.js$/,

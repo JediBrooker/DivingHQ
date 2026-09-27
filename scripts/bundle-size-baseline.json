@@ -1,17 +1,19 @@
 {
   "generated": "P0 baseline",
   "measured": {
-    "entry": 197603,
+    "entry": 97385,
     "vendor-vue": 111562,
     "vendor-i18n": 48948,
     "vendor-socket": 41576,
-    "control": 86985
+    "locale-en": 160099,
+    "control": 89833
   },
   "ceilings": {
-    "entry": 227328,
+    "entry": 112640,
     "vendor-vue": 129024,
     "vendor-i18n": 56320,
     "vendor-socket": 48128,
-    "control": 100352
+    "locale-en": 184320,
+    "control": 103424
   }
 }

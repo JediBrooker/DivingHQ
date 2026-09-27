@@ -42,6 +42,12 @@ export default defineConfig({
           'vendor-vue': ['vue', 'vue-router', 'pinia'],
           'vendor-i18n': ['vue-i18n'],
           'vendor-socket': ['socket.io-client'],
+          // The English messages are the fallback every locale leans on, so
+          // they're loaded up front, but as their own chunk (preloaded in
+          // parallel, cached apart from the app code). Kept in the entry
+          // they were most of it, and every release that added UI text
+          // looked like a code-weight regression to check:size.
+          'locale-en': [resolve(__dirname, 'src/locales/en.json')],
         },
       },
     },
