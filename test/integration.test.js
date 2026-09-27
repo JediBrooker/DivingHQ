@@ -1732,3 +1732,61 @@ test("platform settings: an empty or non-numeric value is refused, not saved as 
   assert.equal(ok.status, 200, JSON.stringify(ok.body));
   assert.equal(ok.body.value, before.value);
 });
+
+// Review follow-up. The claimant flag and chip are meant to follow the
+// claim, not stick to the account: a withdrawn claim (the sweep does
+// this to one whose email was never verified) drops both, and a claim on
+// a region is named for the region rather than the country.
+test("claims: a region claim is named for its region, and a withdrawn one drops the claimant flag", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "GUM";
+  await claimKit.wipe(CODE);
+  try {
+    // Guam has no built-in region list, so the regions go in by hand
+    // once the first club has started the country's account.
+    await claimKit.founder(CODE, "Hagatna Divers");
+    const orgId = (await pool.query(
+      "SELECT id FROM organisations WHERE country_code = $1 AND claim_state = 'unclaimed'", [CODE],
+    )).rows[0].id;
+    await pool.query("UPDATE organisations SET region_label = 'region' WHERE id = $1", [orgId]);
+    await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Northern Guam', 'NG'), ($1, 'Southern Guam', 'SG')",
+      [orgId],
+    );
+    const catalogue = await fetchJson("GET", `/api/orgs/${orgId}/regions`);
+    assert.equal(catalogue.body.catalogue, false, "no built-in list for Guam, even with regions added by hand");
+    assert.equal(catalogue.body.regions.length, 2);
+
+    const body = await claimKit.claim({ org_name: "North Guam Diving", country_code: CODE, region_code: "ng" });
+    assert.equal(body.res.status, 201, JSON.stringify(body.res.body));
+    assert.equal(body.res.body.target_kind, "region");
+    await claimKit.verify(body.id);
+
+    const login = await claimKit.login(body.username);
+    assert.equal(login.has_claim, true);
+    const dash = await fetchJson("GET", "/api/dashboard", { token: login.token });
+    assert.equal(dash.body.my_claims.length, 1);
+    assert.equal(dash.body.my_claims[0].target_kind, "region");
+    assert.equal(dash.body.my_claims[0].target_name, "Northern Guam");
+
+    await pool.query("UPDATE claims SET status = 'withdrawn' WHERE claimant_id = $1", [body.id]);
+    const after = await claimKit.login(body.username);
+    assert.equal(after.has_claim, false, "a withdrawn claim isn't one to follow");
+    const me = await fetchJson("GET", "/api/auth/me", { token: after.token });
+    assert.equal(me.body.user.has_claim, false);
+    assert.deepEqual((await fetchJson("GET", "/api/dashboard", { token: after.token })).body.my_claims, []);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+// Any well-formed id gets the same answer shape, so the Clubs screen
+// never reads catalogue off undefined for an org that's since gone.
+test("regions: an unknown org's region list is empty with no catalogue", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const r = await fetchJson("GET", `/api/orgs/${crypto.randomUUID()}/regions`);
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body, { label: null, regions: [], catalogue: false });
+});
