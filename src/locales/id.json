@@ -996,6 +996,13 @@
       "roster_import_section_label": "Impor Daftar Peserta",
       "roster_import_submit": "Impor",
       "roster_importing": "Mengimpor…"
+    },
+    "represent": {
+      "label": "Atlet mewakili",
+      "country": "Negaranya (kompetisi internasional)",
+      "region": "Negara bagian / provinsinya (kejuaraan nasional)",
+      "club": "Klubnya (kompetisi klub dan antarklub)",
+      "hint": "Ditampilkan di samping setiap atlet pada papan skor, hasil, dan PDF, serta menjadi dasar pengelompokan tabel medali. Atlet tanpa kode negara bagian atau klub akan ditampilkan dengan negaranya."
     }
   },
   "user_manager": {

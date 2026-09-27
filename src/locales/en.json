@@ -996,6 +996,13 @@
       "roster_import_section_label": "Import Roster",
       "roster_import_submit": "Import",
       "roster_importing": "Importing…"
+    },
+    "represent": {
+      "label": "Divers represent",
+      "country": "Their country (international meets)",
+      "region": "Their state / province (national championships)",
+      "club": "Their club (club and inter-club meets)",
+      "hint": "Shown next to each diver on the scoreboard, results and PDFs, and what the medal table groups by. A diver with no state or club code falls back to their country."
     }
   },
   "user_manager": {

@@ -1007,6 +1007,13 @@
       "roster_import_section_label": "Importer startliste",
       "roster_import_submit": "Importer",
       "roster_importing": "Importerer…"
+    },
+    "represent": {
+      "label": "Stuperne representerer",
+      "country": "Landet sitt (internasjonale stevner)",
+      "region": "Delstaten / provinsen sin (nasjonale mesterskap)",
+      "club": "Klubben sin (klubb- og mellomklubbstevner)",
+      "hint": "Vises ved hver stuper på resultattavlen, i resultater og PDF-er, og er det medaljeoversikten grupperes etter. En stuper uten delstats- eller klubbkode vises med landet sitt."
     }
   },
   "user_manager": {

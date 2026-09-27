@@ -996,6 +996,13 @@
       "roster_import_section_label": "Kadroyu İçe Aktar",
       "roster_import_submit": "İçe Aktar",
       "roster_importing": "İçe aktarılıyor…"
+    },
+    "represent": {
+      "label": "Atlayıcılar neyi temsil ediyor",
+      "country": "Ülkelerini (uluslararası yarışmalar)",
+      "region": "Eyaletlerini / illerini (ulusal şampiyonalar)",
+      "club": "Kulüplerini (kulüp ve kulüplerarası yarışmalar)",
+      "hint": "Skor tablosunda, sonuçlarda ve PDF'lerde her atlayıcının yanında gösterilir ve madalya tablosu buna göre gruplanır. Eyalet veya kulüp kodu olmayan atlayıcı ülkesiyle gösterilir."
     }
   },
   "user_manager": {

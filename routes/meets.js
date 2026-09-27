@@ -580,8 +580,8 @@ module.exports = function createMeetsRouter({
     if (hostClubId && hostRegionId) {
       return res.status(400).json({ error: "A meet has one host: a club or a region" });
     }
-    const representAs = req.body?.represent_as ?? "country";
-    if (!REPRESENT_AS.includes(representAs)) {
+    const askedRepresent = req.body?.represent_as ?? null;
+    if (askedRepresent !== null && !REPRESENT_AS.includes(askedRepresent)) {
       return res.status(400).json({ error: `represent_as must be one of: ${REPRESENT_AS.join(", ")}` });
     }
     const editor = req.user.is_system_admin || isOrgEditor(req.user);
@@ -623,6 +623,12 @@ module.exports = function createMeetsRouter({
       ).catch(() => ({ rows: [] }));
       if (!rg.rows.length) return res.status(400).json({ error: "Host region not found in your organisation" });
     }
+    // Left unset, divers show as whatever level the host is: a club's
+    // meet labels them by club, a region's by region, the federation's by
+    // country. The column default is 'country', which on a club night put
+    // the same country code next to every single diver.
+    const representAs = askedRepresent
+      || (hostClubId ? "club" : hostRegionId ? "region" : "country");
     const safeLogo = rejectIfUnsafeUrl(res, "sponsor_logo_url", sponsor_logo_url);
     if (safeLogo === false) return;
     const safeLink = rejectIfUnsafeUrl(res, "sponsor_link_url", sponsor_link_url);

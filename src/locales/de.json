@@ -1007,6 +1007,13 @@
       "roster_import_section_label": "Roster importieren",
       "roster_import_submit": "Importieren",
       "roster_importing": "Import läuft…"
+    },
+    "represent": {
+      "label": "Springer vertreten",
+      "country": "Ihr Land (internationale Wettkämpfe)",
+      "region": "Ihren Bundesstaat / ihre Provinz (nationale Meisterschaften)",
+      "club": "Ihren Verein (Vereins- und Vergleichswettkämpfe)",
+      "hint": "Wird neben jedem Springer auf der Anzeigetafel, in den Ergebnissen und PDFs angezeigt und bestimmt die Gruppierung des Medaillenspiegels. Springer ohne Bundesstaats- oder Vereinskürzel werden mit ihrem Land angezeigt."
     }
   },
   "user_manager": {

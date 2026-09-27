@@ -996,6 +996,13 @@
       "roster_import_section_label": "명단 가져오기",
       "roster_import_submit": "가져오기",
       "roster_importing": "가져오는 중…"
+    },
+    "represent": {
+      "label": "선수 소속 표시",
+      "country": "국가 (국제 대회)",
+      "region": "주 / 도 (전국 선수권)",
+      "club": "클럽 (클럽 및 클럽 대항 대회)",
+      "hint": "스코어보드, 결과, PDF에서 각 선수 옆에 표시되며 메달 집계의 기준이 됩니다. 주나 클럽 코드가 없는 선수는 국가로 표시됩니다."
     }
   },
   "user_manager": {

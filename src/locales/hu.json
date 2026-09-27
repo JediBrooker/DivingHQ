@@ -1007,6 +1007,13 @@
       "roster_import_section_label": "Nevezés importálása",
       "roster_import_submit": "Importálás",
       "roster_importing": "Importálás…"
+    },
+    "represent": {
+      "label": "A műugrók képviselik",
+      "country": "Az országukat (nemzetközi versenyek)",
+      "region": "Az államukat / tartományukat (országos bajnokságok)",
+      "club": "A klubjukat (klub- és klubközi versenyek)",
+      "hint": "Minden műugró mellett megjelenik az eredményjelzőn, az eredményekben és a PDF-ekben, és ez alapján csoportosul az éremtáblázat. Akinek nincs állam- vagy klubkódja, az országával jelenik meg."
     }
   },
   "user_manager": {

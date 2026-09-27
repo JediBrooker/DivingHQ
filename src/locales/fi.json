@@ -1007,6 +1007,13 @@
       "roster_import_section_label": "Tuo osallistujat",
       "roster_import_submit": "Tuo",
       "roster_importing": "Tuodaan…"
+    },
+    "represent": {
+      "label": "Hyppääjät edustavat",
+      "country": "Maataan (kansainväliset kilpailut)",
+      "region": "Osavaltiotaan / provinssiaan (kansalliset mestaruuskilpailut)",
+      "club": "Seuraansa (seura- ja seurojen väliset kilpailut)",
+      "hint": "Näkyy jokaisen hyppääjän vieressä tulostaululla, tuloksissa ja PDF-tiedostoissa, ja mitalitaulukko ryhmitellään sen mukaan. Jos hyppääjällä ei ole osavaltio- tai seuralyhennettä, näytetään hänen maansa."
     }
   },
   "user_manager": {

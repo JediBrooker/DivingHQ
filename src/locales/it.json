@@ -1007,6 +1007,13 @@
       "roster_import_section_label": "Importa Roster",
       "roster_import_submit": "Importa",
       "roster_importing": "Importazione…"
+    },
+    "represent": {
+      "label": "I tuffatori rappresentano",
+      "country": "Il loro paese (gare internazionali)",
+      "region": "Il loro stato / provincia (campionati nazionali)",
+      "club": "Il loro club (gare di club e interclub)",
+      "hint": "Mostrato accanto a ogni tuffatore sul tabellone, nei risultati e nei PDF, ed è ciò per cui si raggruppa il medagliere. Un tuffatore senza codice di stato o di club compare con il suo paese."
     }
   },
   "user_manager": {

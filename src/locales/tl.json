@@ -996,6 +996,13 @@
       "roster_import_section_label": "Mag-import ng Roster",
       "roster_import_submit": "I-import",
       "roster_importing": "Nag-iimport…"
+    },
+    "represent": {
+      "label": "Kinakatawan ng mga diver",
+      "country": "Ang kanilang bansa (mga pandaigdigang paligsahan)",
+      "region": "Ang kanilang estado / lalawigan (mga pambansang kampeonato)",
+      "club": "Ang kanilang club (mga paligsahan ng club at inter-club)",
+      "hint": "Ipinapakita sa tabi ng bawat diver sa scoreboard, mga resulta at PDF, at ito ang batayan ng pagpapangkat sa medal table. Ang diver na walang code ng estado o club ay ipapakita kasama ang kanyang bansa."
     }
   },
   "user_manager": {

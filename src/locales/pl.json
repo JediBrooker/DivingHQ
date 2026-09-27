@@ -1007,6 +1007,13 @@
       "roster_import_section_label": "Importuj Roster",
       "roster_import_submit": "Importuj",
       "roster_importing": "Importowanie…"
+    },
+    "represent": {
+      "label": "Skoczkowie reprezentują",
+      "country": "Swój kraj (zawody międzynarodowe)",
+      "region": "Swój stan / prowincję (mistrzostwa krajowe)",
+      "club": "Swój klub (zawody klubowe i międzyklubowe)",
+      "hint": "Wyświetlane obok każdego skoczka na tablicy wyników, w wynikach i plikach PDF; według tego grupuje się też klasyfikacja medalowa. Skoczek bez kodu stanu lub klubu pojawia się ze swoim krajem."
     }
   },
   "user_manager": {

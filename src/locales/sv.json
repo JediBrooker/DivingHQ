@@ -1007,6 +1007,13 @@
       "roster_import_section_label": "Importera startlista",
       "roster_import_submit": "Importera",
       "roster_importing": "Importerar…"
+    },
+    "represent": {
+      "label": "Hopparna representerar",
+      "country": "Sitt land (internationella tävlingar)",
+      "region": "Sin delstat / provins (nationella mästerskap)",
+      "club": "Sin klubb (klubb- och mellanklubbstävlingar)",
+      "hint": "Visas bredvid varje hoppare på resultattavlan, i resultat och PDF:er, och är det som medaljtabellen grupperas efter. En hoppare utan delstats- eller klubbkod visas med sitt land."
     }
   },
   "user_manager": {

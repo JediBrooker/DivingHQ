@@ -114,13 +114,13 @@ async function saveMeet() {
              and PDFs (migration 090). Taken from who they were when they
              entered, so later club moves don't rewrite this meet. -->
         <div class="field">
-          <label class="label" for="meet-represent">Divers represent</label>
+          <label class="label" for="meet-represent">{{ $t('manager.represent.label') }}</label>
           <select id="meet-represent" class="select" v-model="editMeetForm.represent_as">
-            <option value="country">Their country (international meets)</option>
-            <option value="region">Their state / province (national championships)</option>
-            <option value="club">Their club (club and inter-club meets)</option>
+            <option value="country">{{ $t('manager.represent.country') }}</option>
+            <option value="region">{{ $t('manager.represent.region') }}</option>
+            <option value="club">{{ $t('manager.represent.club') }}</option>
           </select>
-          <p class="hint">Shown next to each diver on the scoreboard, results and PDFs, and what the medal table groups by. A diver with no state or club code falls back to their country.</p>
+          <p class="hint">{{ $t('manager.represent.hint') }}</p>
         </div>
 
         <hr style="border:0;border-top:1px solid var(--border);margin:0.5rem 0 0">

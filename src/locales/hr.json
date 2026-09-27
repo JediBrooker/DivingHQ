@@ -996,6 +996,13 @@
       "roster_import_section_label": "Uvezi popis",
       "roster_import_submit": "Uvezi",
       "roster_importing": "Uvoz…"
+    },
+    "represent": {
+      "label": "Skakači predstavljaju",
+      "country": "Svoju zemlju (međunarodna natjecanja)",
+      "region": "Svoju saveznu državu / pokrajinu (državna prvenstva)",
+      "club": "Svoj klub (klupska i međuklupska natjecanja)",
+      "hint": "Prikazuje se uz svakog skakača na semaforu, u rezultatima i PDF-ovima, a prema tome se grupira i tablica medalja. Skakač bez oznake savezne države ili kluba prikazuje se sa svojom zemljom."
     }
   },
   "user_manager": {
