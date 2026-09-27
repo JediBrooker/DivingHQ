@@ -26,6 +26,7 @@
  * need to know our internal label format.
  */
 import { ref, computed } from 'vue'
+import { blankRoundSlot } from '@/lib/event-form'
 
 const props = defineProps({
   modelValue:    { type: Array,   required: true },  // round_dives array
@@ -106,10 +107,7 @@ function clearDiveForRow(idx) {
 function addRoundDive() {
   // Emit a new array reference for v-model so the parent's ref updates
   // even when the binding is shallow-watched.
-  emit('update:modelValue', [
-    ...props.modelValue,
-    { dive_id: null, height: null, _label: '', _meta: null },
-  ])
+  emit('update:modelValue', [...props.modelValue, blankRoundSlot()])
 }
 function removeRoundDive(idx) {
   const next = props.modelValue.slice()

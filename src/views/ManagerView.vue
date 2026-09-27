@@ -23,6 +23,10 @@ import RoundDivesEditor from '@/components/manager/RoundDivesEditor.vue'
 import EditMeetModal from '@/components/manager/EditMeetModal.vue'
 import { useCanEditFees } from '@/composables/useCanEditFees'
 import { filterStandardTemplates } from '@/lib/standard-templates'
+import {
+  newRoundSection, roundSectionsTotal, sectionsFromRoundRules, roundRulesFromSections,
+  blankRoundSlots, roundDivesPayload,
+} from '@/lib/event-form'
 import { RULE_REFERENCES } from '@/lib/ruleReferences'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
@@ -297,39 +301,17 @@ const createDdLimitValue  = ref('')     // '' = no limit; numeric otherwise
 // also express "5 dives drawn from 4 different groups" (one group
 // is allowed to repeat) or "1 dive from any group" (leave
 // min_distinct_groups blank).
+//
+// The create and edit forms share the section helpers in
+// src/lib/event-form.js; the template hands each one its own list.
 const createRoundSections = ref([])
-function addRoundSection(preset) {
-  const next = preset || {
-    label: createRoundSections.value.length === 0 ? 'Voluntary' : 'Optional',
-    rounds: 4,
-    dd_limit: '',                     // '' = unlimited
-    min_distinct_groups: '',          // '' = no group constraint
-  }
-  createRoundSections.value.push(next)
+function addRoundSection(sections) {
+  sections.push(newRoundSection(sections.length))
 }
-function removeRoundSection(idx) {
-  createRoundSections.value.splice(idx, 1)
+function removeRoundSection(sections, idx) {
+  sections.splice(idx, 1)
 }
-const sectionsRoundsTotal = computed(() =>
-  createRoundSections.value.reduce((sum, s) => sum + (parseInt(s.rounds) || 0), 0),
-)
-function buildRoundRulesPayload() {
-  // Empty array → null (legacy mode); non-empty → JSON object
-  // shaped per migration 038 / lib/round-rules.js.
-  if (!createRoundSections.value.length) return null
-  return {
-    sections: createRoundSections.value.map(s => ({
-      label: s.label || null,
-      rounds: parseInt(s.rounds) || 0,
-      dd_limit: s.dd_limit === '' || s.dd_limit == null
-        ? null
-        : Number(parseFloat(s.dd_limit).toFixed(1)),
-      min_distinct_groups: s.min_distinct_groups === '' || s.min_distinct_groups == null
-        ? null
-        : parseInt(s.min_distinct_groups) || null,
-    })),
-  }
-}
+const sectionsRoundsTotal = computed(() => roundSectionsTotal(createRoundSections.value))
 
 // Event templates: saved form configurations the manager can apply
 // to a fresh event with one click.
@@ -355,14 +337,6 @@ function applyEventTemplate(t) {
   if (c.gender)            createGender.value = c.gender
   if (c.height !== undefined) createHeight.value = c.height || ''
   if (c.number_of_judges)  createJudges.value = c.number_of_judges
-  if (c.total_rounds) {
-    // Templates carry total_rounds (legacy); seed N free slots so
-    // the operator can pin specific dives or leave the slots blank
-    // for diver choice.
-    createRoundDives.value = Array.from({ length: c.total_rounds }, () => ({
-      dive_id: null, height: null, _label: '',
-    }))
-  }
   if (c.event_type)        createType.value = c.event_type
   if (c.age_group !== undefined) {
     // age_group is now a computed; decompose the stored string
@@ -380,20 +354,12 @@ function applyEventTemplate(t) {
   // Round structure (migration 038). When the template carries
   // round_rules, hydrate the editor; otherwise clear so the
   // form falls back to the legacy DD-limit pair.
-  if (c.round_rules && Array.isArray(c.round_rules.sections)) {
-    createRoundSections.value = c.round_rules.sections.map(s => ({
-      label: s.label || '',
-      rounds: s.rounds,
-      dd_limit: s.dd_limit == null ? '' : String(s.dd_limit),
-      min_distinct_groups: s.min_distinct_groups == null ? '' : String(s.min_distinct_groups),
-    }))
-  } else {
-    createRoundSections.value = []
-  }
+  createRoundSections.value = sectionsFromRoundRules(c.round_rules)
   // Hydrate prescribed round dives if the template specifies any.
   // Most standard templates leave them blank, operator pins per
-  // event. Length seeds free slots if total_rounds is set so the
-  // editor reflects the round count.
+  // event. Templates that only carry total_rounds (the older shape)
+  // get that many free slots, so the operator can pin specific dives
+  // or leave them for diver choice.
   if (Array.isArray(c.round_dives) && c.round_dives.length) {
     createRoundDives.value = c.round_dives.map((slot) => ({
       dive_id: slot.dive_id || null,
@@ -402,9 +368,7 @@ function applyEventTemplate(t) {
       _meta:   null,
     }))
   } else if (c.total_rounds) {
-    createRoundDives.value = Array.from({ length: c.total_rounds }, () => ({
-      dive_id: null, height: null, _label: '', _meta: null,
-    }))
+    createRoundDives.value = blankRoundSlots(c.total_rounds)
   }
 }
 
@@ -455,7 +419,7 @@ async function saveAsEventTemplate() {
       dd_limit_value: createDdLimitValue.value
         ? parseFloat(createDdLimitValue.value)
         : null,
-      round_rules: buildRoundRulesPayload(),
+      round_rules: roundRulesFromSections(createRoundSections.value),
     }
     const saved = await auth.apiFetch('/api/event-templates', {
       method: 'POST',
@@ -838,35 +802,7 @@ const editRoundDives    = ref([])
 // Migration 038: round structure (sections). Edit modal previously
 // couldn't touch round_rules at all, fixed that here.
 const editRoundSections = ref([])
-function addEditRoundSection() {
-  editRoundSections.value.push({
-    label: editRoundSections.value.length === 0 ? 'Voluntary' : 'Optional',
-    rounds: 4,
-    dd_limit: '',
-    min_distinct_groups: '',
-  })
-}
-function removeEditRoundSection(idx) {
-  editRoundSections.value.splice(idx, 1)
-}
-const editSectionsRoundsTotal = computed(() =>
-  editRoundSections.value.reduce((sum, s) => sum + (parseInt(s.rounds) || 0), 0),
-)
-function buildEditRoundRulesPayload() {
-  if (!editRoundSections.value.length) return null
-  return {
-    sections: editRoundSections.value.map(s => ({
-      label: s.label || null,
-      rounds: parseInt(s.rounds) || 0,
-      dd_limit: s.dd_limit === '' || s.dd_limit == null
-        ? null
-        : Number(parseFloat(s.dd_limit).toFixed(1)),
-      min_distinct_groups: s.min_distinct_groups === '' || s.min_distinct_groups == null
-        ? null
-        : parseInt(s.min_distinct_groups) || null,
-    })),
-  }
-}
+const editSectionsRoundsTotal = computed(() => roundSectionsTotal(editRoundSections.value))
 // Team enrolment modal, opens when "Teams" is clicked on a
 // team-event row. Lists + busy state live in <TeamsEnrolmentModal>;
 // v-if mount re-fetches per open. Non-null = open.
@@ -1076,13 +1012,7 @@ async function createEvent() {
         // still work, the server prefers round_dives when both are
         // present.
         total_rounds: createRoundDives.value.length,
-        round_dives: createRoundDives.value.map((slot, i) => ({
-          round_number: i + 1,
-          dive_id: slot.dive_id || null,
-          height: slot.height == null || slot.height === ''
-            ? null
-            : Number(slot.height),
-        })),
+        round_dives: roundDivesPayload(createRoundDives.value),
         event_type: createType.value,
         meet_id: createMeetId.value || null,
         age_group: createAgeGroup.value || null,
@@ -1100,7 +1030,7 @@ async function createEvent() {
         dd_limit_value: createDdLimitValue.value
           ? parseFloat(createDdLimitValue.value)
           : null,
-        round_rules: buildRoundRulesPayload(),
+        round_rules: roundRulesFromSections(createRoundSections.value),
         enforce_referee_signoff: createEnforceSignoff.value,
         is_mixed_height:         createMixedHeight.value,
         is_rehearsal:            createIsRehearsal.value,
@@ -1168,16 +1098,7 @@ async function openEdit(ev) {
   }
   editErr.value = ''
   // Hydrate round_rules sections from the event row.
-  if (ev.round_rules && Array.isArray(ev.round_rules.sections)) {
-    editRoundSections.value = ev.round_rules.sections.map((s) => ({
-      label: s.label || '',
-      rounds: s.rounds,
-      dd_limit: s.dd_limit == null ? '' : String(s.dd_limit),
-      min_distinct_groups: s.min_distinct_groups == null ? '' : String(s.min_distinct_groups),
-    }))
-  } else {
-    editRoundSections.value = []
-  }
+  editRoundSections.value = sectionsFromRoundRules(ev.round_rules)
   // Hydrate prescribed round_dives. The event row's `total_rounds`
   // is the source of truth for slot count when no rows exist; we
   // fetch the enriched array from the dedicated endpoint so each
@@ -1204,15 +1125,10 @@ async function openEdit(ev) {
       // No prescribed rows yet, so synthesise free slots matching
       // the event's stored total_rounds, otherwise the editor's
       // empty.
-      const n = ev.total_rounds || 0
-      editRoundDives.value = Array.from({ length: n }, () => ({
-        dive_id: null, height: null, _label: '', _meta: null,
-      }))
+      editRoundDives.value = blankRoundSlots(ev.total_rounds)
     }
   } catch {
-    editRoundDives.value = Array.from({ length: ev.total_rounds || 0 }, () => ({
-      dive_id: null, height: null, _label: '', _meta: null,
-    }))
+    editRoundDives.value = blankRoundSlots(ev.total_rounds)
   }
   showEditModal.value = true
 }
@@ -1252,14 +1168,8 @@ async function saveEdit() {
         // Migration 038/039: round_rules + round_dives are
         // editable here too. round_dives = [] clears all
         // prescriptions; non-empty replaces them atomically.
-        round_rules: buildEditRoundRulesPayload(),
-        round_dives: editRoundDives.value.map((slot, i) => ({
-          round_number: i + 1,
-          dive_id: slot.dive_id || null,
-          height: slot.height == null || slot.height === ''
-            ? null
-            : Number(slot.height),
-        })),
+        round_rules: roundRulesFromSections(editRoundSections.value),
+        round_dives: roundDivesPayload(editRoundDives.value),
       }),
     })
     showEditModal.value = false
@@ -1623,7 +1533,7 @@ onUnmounted(() => {
             <div class="rr-section-row">
               <input class="input rr-label" type="text" v-model="s.label" placeholder="Section name (e.g. Voluntary)">
               <button type="button" class="btn btn-ghost btn-sm rr-remove"
-                      @click="removeRoundSection(i)" v-tip="'Remove section'">✕</button>
+                      @click="removeRoundSection(createRoundSections, i)" v-tip="'Remove section'">✕</button>
             </div>
             <div class="rr-section-row">
               <label class="rr-cell">
@@ -1656,7 +1566,7 @@ onUnmounted(() => {
           </div>
 
           <div class="rr-actions">
-            <button type="button" class="btn btn-ghost btn-sm" @click="addRoundSection()">
+            <button type="button" class="btn btn-ghost btn-sm" @click="addRoundSection(createRoundSections)">
               + Add section
             </button>
           </div>
@@ -2361,7 +2271,7 @@ onUnmounted(() => {
             <div class="rr-section-row">
               <input class="input rr-label" type="text" v-model="s.label" placeholder="Section name (e.g. Voluntary)">
               <button type="button" class="btn btn-ghost btn-sm rr-remove"
-                      @click="removeEditRoundSection(i)" v-tip="'Remove section'">✕</button>
+                      @click="removeRoundSection(editRoundSections, i)" v-tip="'Remove section'">✕</button>
             </div>
             <div class="rr-section-row">
               <label class="rr-cell">
@@ -2381,7 +2291,7 @@ onUnmounted(() => {
             </div>
           </div>
           <div class="rr-actions">
-            <button type="button" class="btn btn-ghost btn-sm" @click="addEditRoundSection()">
+            <button type="button" class="btn btn-ghost btn-sm" @click="addRoundSection(editRoundSections)">
               + Add section
             </button>
           </div>
