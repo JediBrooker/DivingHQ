@@ -5,23 +5,23 @@ import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [
-    vue(),
-    // Pre-compile vue-i18n message JSON into render functions at
-    // build time. Without this plugin, vue-i18n falls back to
-    // `new Function(...)` to compile messages at runtime, which
-    // violates our `script-src 'self'` CSP and leaves the SPA as
-    // a blank page in production. This transforms every
-    // src/locales/*.json import into a pre-baked module so no eval
-    // ever runs in the browser.
+    // Every component is <script setup>, so the Options API runtime is
+    // dead weight in vendor-vue. A component that uses data()/methods
+    // would silently do nothing with this off.
+    vue({ features: { optionsAPI: false } }),
+    // Pre-compile the src/locales/*.json messages to an AST at build time.
+    // The default vue-i18n build compiles them in the browser with
+    // `new Function`, which our `script-src 'self'` CSP blocks (blank page
+    // in production). Since the runtime never compiles a message, the
+    // compiler itself goes too (dropMessageCompiler). The catch: any
+    // message that doesn't come through this plugin, like t(key, 'default
+    // text'), useI18n({ messages }) or a mergeLocaleMessage with plain
+    // strings, has nothing to compile it and breaks at render.
     VueI18nPlugin({
       include: resolve(__dirname, 'src/locales/**'),
-      // Force the runtime-only vue-i18n build via the plugin's
-      // alias and pre-compile every src/locales/*.json into a
-      // ready-to-execute message function. Needed for our
-      // strict CSP, since the default build inlines a JIT compiler
-      // that uses `new Function`, which is blocked.
       runtimeOnly: true,
       compositionOnly: true,
+      dropMessageCompiler: true,
       strictMessage: false,
       escapeHtml: false,
     }),
