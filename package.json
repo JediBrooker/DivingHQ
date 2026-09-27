@@ -9,7 +9,6 @@
     "preview": "vite preview",
     "start": "node server.js",
     "lint": "node --check server.js && eslint .",
-    "lint:frontend": "eslint .",
     "test": "node scripts/run-tests.js full",
     "test:safe": "node scripts/run-tests.js safe",
     "test:e2e": "playwright test",
