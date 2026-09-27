@@ -9,7 +9,7 @@ By creating an account you agree to these terms. If you don't agree, please don'
 ## 1. Your account
 
 - Give your real name and an email address you can receive mail at. Results carry your name, so it should be the one you compete or officiate under.
-- One account per person. Don't share your password; you're responsible for what happens under your account. Turning on two-factor authentication is a good idea, and some roles require it.
+- One account per person. Don't share your password; you're responsible for what happens under your account. Turning on two-factor authentication is a good idea, and admin roles may require it.
 - If you're a child, a parent or guardian should be involved in creating your account (see the Privacy Policy, §9).
 - Tell us at [support@divinghq.app](mailto:support@divinghq.app) straight away if you think someone else has used your account.
 
@@ -17,7 +17,7 @@ By creating an account you agree to these terms. If you don't agree, please don'
 
 If you create a club, run a meet, or apply for a federation or state body, you're confirming that you're allowed to act for that organisation.
 
-- **Clubs** can start on DivingHQ before their federation. The person who creates a club becomes its first club admin and is responsible for how the club uses DivingHQ: its meets, the roles it approves and the accuracy of what it publishes.
+- **Clubs** can start on DivingHQ before their federation. In a country whose federation isn't on DivingHQ yet, the person who creates a club becomes its first club admin; under a federation, the federation appoints club admins. A club's admins are responsible for how the club uses DivingHQ: its meets, the roles it approves and the accuracy of what it publishes.
 - **Claims.** A federation or state body can apply to run its country or region on DivingHQ. Only apply for a body you genuinely represent. If a claim is approved, that body's admins can see and manage the accounts of members of clubs in its area, as the Privacy Policy (§6) describes. Clubs that join before their federation accept that this can happen. DivingHQ can revoke a claim, for example if the body isn't who it said it was.
 - **Admins** must use what they can see about members only to run their organisation's diving, never for anything unrelated.
 

@@ -272,7 +272,7 @@
     "clubs": {
       "section_label": "Per i club",
       "step1_title": "Crea il tuo club",
-      "step1_desc": "Registrati, scegli il tuo paese e dai un nome al club. Ne sei l'amministratore fin dall'inizio.",
+      "step1_desc": "Registrati, scegli il tuo paese e dai un nome al club. Se la tua federazione non è ancora su DivingHQ, ne sei l'amministratore fin dall'inizio.",
       "step2_title": "Invita tuffatori e giudici",
       "step2_desc": "Invia ai membri il link di registrazione. Scelgono il tuo club e tu approvi chi si tuffa, giudica o fa l'arbitro.",
       "step3_title": "Organizza la tua prima gara",

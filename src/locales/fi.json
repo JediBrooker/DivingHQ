@@ -272,7 +272,7 @@
     "clubs": {
       "section_label": "Seuroille",
       "step1_title": "Perusta seura",
-      "step1_desc": "Rekisteröidy, valitse maasi ja nimeä seurasi. Olet sen ylläpitäjä alusta asti.",
+      "step1_desc": "Rekisteröidy, valitse maasi ja nimeä seurasi. Jos liittosi ei vielä ole DivingHQ:ssa, olet seuran ylläpitäjä alusta asti.",
       "step2_title": "Kutsu hyppääjät ja tuomarit",
       "step2_desc": "Lähetä jäsenille rekisteröitymislinkki. He valitsevat seurasi, ja sinä hyväksyt, kuka hyppää, tuomaroi tai toimii ylituomarina.",
       "step3_title": "Järjestä ensimmäiset kilpailusi",

@@ -272,7 +272,7 @@
     "clubs": {
       "section_label": "För klubbar",
       "step1_title": "Skapa din klubb",
-      "step1_desc": "Registrera dig, välj land och ge klubben ett namn. Du är dess administratör från start.",
+      "step1_desc": "Registrera dig, välj land och ge klubben ett namn. Finns ditt förbund inte på DivingHQ ännu är du klubbens administratör från start.",
       "step2_title": "Bjud in hoppare och domare",
       "step2_desc": "Skicka registreringslänken till medlemmarna. De väljer din klubb, och du godkänner vem som hoppar, dömer eller är överdomare.",
       "step3_title": "Arrangera din första tävling",

@@ -272,7 +272,7 @@
     "clubs": {
       "section_label": "For klubber",
       "step1_title": "Opret din klub",
-      "step1_desc": "Tilmeld dig, vælg dit land, og giv klubben et navn. Du er dens administrator fra starten.",
+      "step1_desc": "Tilmeld dig, vælg dit land, og giv klubben et navn. Er dit forbund ikke på DivingHQ endnu, er du klubbens administrator fra starten.",
       "step2_title": "Inviter udspringere og dommere",
       "step2_desc": "Send medlemmerne tilmeldingslinket. De vælger din klub, og du godkender, hvem der springer, dømmer eller er overdommer.",
       "step3_title": "Afvikl dit første stævne",

@@ -272,7 +272,7 @@
     "clubs": {
       "section_label": "Dla klubów",
       "step1_title": "Utwórz swój klub",
-      "step1_desc": "Zarejestruj się, wybierz kraj i nazwij swój klub. Od początku jesteś jego administratorem.",
+      "step1_desc": "Zarejestruj się, wybierz kraj i nazwij swój klub. Jeśli twojej federacji nie ma jeszcze w DivingHQ, od początku jesteś administratorem klubu.",
       "step2_title": "Zaproś skoczków i sędziów",
       "step2_desc": "Wyślij członkom link do rejestracji. Wybierają twój klub, a ty zatwierdzasz, kto skacze, sędziuje lub jest sędzią głównym.",
       "step3_title": "Poprowadź pierwsze zawody",
