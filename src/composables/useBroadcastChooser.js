@@ -90,7 +90,10 @@ export function useBroadcastChooser({ closeHeaderMenu = () => {} } = {}) {
     broadcastLiveLoading.value = true
     broadcastLiveError.value = ''
     try {
-      const res = await fetch('/api/events', { credentials: 'same-origin' })
+      // Ask the server for Live rows only (same visibility rules as the
+      // full list) instead of pulling every Completed event of the season
+      // and throwing them away. The client filter stays as a guard.
+      const res = await fetch('/api/events?status=Live', { credentials: 'same-origin' })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       const live = (data || []).filter((e) => e.status === 'Live')

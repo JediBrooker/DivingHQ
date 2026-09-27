@@ -191,17 +191,20 @@ watch(
   },
 )
 
+// The two fetches don't depend on each other, so they go out together and
+// a refresh after each dive costs the slower one, not both back to back.
+// Each still only overwrites its own panel on success.
 async function loadPoolPanels(eventId) {
   if (!eventId) return
-  try {
-    const h = await auth.apiFetch(`/api/events/${eventId}/history`)
-    // /history comes back round ASC, name ASC; reverse so the latest dive is on top.
-    histories[eventId] = Array.isArray(h) ? h.slice().reverse() : []
-  } catch { /* leave prior history in place */ }
-  try {
-    const sb = await auth.apiFetch(`/api/scoreboard/${eventId}`)
-    standingsByEvent[eventId] = Array.isArray(sb?.standings) ? sb.standings : []
-  } catch { /* leave prior standings in place */ }
+  await Promise.all([
+    auth.apiFetch(`/api/events/${eventId}/history`).then((h) => {
+      // /history comes back round ASC, name ASC; reverse so the latest dive is on top.
+      histories[eventId] = Array.isArray(h) ? h.slice().reverse() : []
+    }).catch(() => { /* leave prior history in place */ }),
+    auth.apiFetch(`/api/scoreboard/${eventId}`).then((sb) => {
+      standingsByEvent[eventId] = Array.isArray(sb?.standings) ? sb.standings : []
+    }).catch(() => { /* leave prior standings in place */ }),
+  ])
 }
 
 function fmtTotal(v) {
