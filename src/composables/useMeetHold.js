@@ -13,15 +13,19 @@
 // were migrated to.
 //
 // Options:
-//   socket : the pooled socket from useSocket()
-//   event  : getter returning the current event row (or null)
-//   onHold : called after a hold is broadcast; the Control Room
-//            passes a shot-clock pause here ("diver can't be on
-//            the clock during a hold")
+//   socket            : the pooled socket from useSocket(), only used
+//                       to listen for meet_held / meet_resumed
+//   event             : getter returning the current event row (or null)
+//   onHold            : called after a hold is broadcast; the pool card
+//                       passes a shot-clock reset here ("diver can't be
+//                       on the clock during a hold")
+//   queueSocketAction : the outbox sender from useHttpOutbox(). Both
+//                       emits go through it so a hold survives a wifi
+//                       blip; there's no raw socket.emit fallback.
 import { ref } from 'vue'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 
-export function useMeetHold({ socket, event, onHold = () => {}, queueSocketAction = null }) {
+export function useMeetHold({ socket, event, onHold = () => {}, queueSocketAction }) {
   const isHeld = ref(false)
   const holdReason = ref('')
   const holdPromptOpen = ref(false)
@@ -35,9 +39,7 @@ export function useMeetHold({ socket, event, onHold = () => {}, queueSocketActio
     if (!event()) return
     isHeld.value = true
     holdReason.value = holdReasonInput.value.trim()
-    const holdPayload = { event_id: event().id, reason: holdReason.value || null }
-    if (queueSocketAction) queueSocketAction('meet_hold', holdPayload)
-    else socket.emit('meet_hold', holdPayload)
+    queueSocketAction('meet_hold', { event_id: event().id, reason: holdReason.value || null })
     holdPromptOpen.value = false
     // Pause the shot clock, diver can't be "on the clock" during a hold
     onHold()
@@ -46,9 +48,7 @@ export function useMeetHold({ socket, event, onHold = () => {}, queueSocketActio
     if (!event()) return
     isHeld.value = false
     holdReason.value = ''
-    const resumePayload = { event_id: event().id }
-    if (queueSocketAction) queueSocketAction('meet_resume', resumePayload)
-    else socket.emit('meet_resume', resumePayload)
+    queueSocketAction('meet_resume', { event_id: event().id })
   }
 
   // Hold-state sync: for multi-operator setups + late-joining

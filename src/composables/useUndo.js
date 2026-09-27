@@ -1,7 +1,7 @@
-// Legacy "undo snackbar" API. Originally its own standalone
-// composable, now it's a thin shim over the more general useNotify
-// system in ./useNotify.js so withdraw / finalise / etc. call sites
-// keep working without any churn.
+// Undo-flavoured toast. This used to be its own snackbar system; now
+// it's one small wrapper over the general useNotify toasts in
+// ./useNotify.js (UndoBar renders those directly). The Control Room's
+// finalise undo is the caller today.
 //
 //   import { showUndo } from '@/composables/useUndo'
 //   showUndo({
@@ -13,12 +13,7 @@
 // (showSuccess / showError / showInfo / showWarning) or showNotify
 // directly when an action button is wanted.
 
-import {
-  showNotify,
-  dismissNotify,
-  fireAction,
-  useNotifyState,
-} from './useNotify'
+import { showNotify } from './useNotify'
 
 /**
  * Undo-flavoured toast. Defaults to an 8-second auto-dismiss
@@ -38,9 +33,3 @@ export function showUndo({
     timeoutMs,
   })
 }
-
-// Back-compat re-exports so UndoBar.vue and any view that
-// imported these names continues to work.
-export const dismissUndo = dismissNotify
-export const fireUndo    = fireAction
-export const useUndoState = useNotifyState
