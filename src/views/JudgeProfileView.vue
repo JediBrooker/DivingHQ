@@ -1,7 +1,8 @@
 <script setup>
 // Judge Analysis dashboard, a self-service "how am I tracking" view
-// for the judge persona. Mirrors the DiverProfileView widget pattern
-// (catalog + drag-to-reorder + per-user persistence), but the metrics
+// for the judge persona. Same widget pattern as DiverProfileView
+// (catalog + drag-to-reorder + per-user persistence, both through
+// useWidgetDashboard), but the metrics
 // here are WA-judging-programme analytics: deviation from the
 // panel-kept mean, drop rate, per-(country/club/height/group/DD)
 // breakdowns. The numeric reference for every metric is the post-trim
@@ -29,6 +30,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useWidgetDashboard } from '@/composables/useWidgetDashboard'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -79,152 +81,62 @@ const JUDGE_WIDGET_CATALOG = [
     desc: 'How often your scores differ from the rest of the panel — per dive and per event. Two cohorts: dropped outliers (your score fell outside the kept-trim slice) and substantive disagreements (≥1.0 from the panel kept-mean).' },
 ]
 
-// =============================================================
-// State for customise modal + persistence
-// =============================================================
-const customizing = ref(false)
-// Lock background scroll while the dashboard-customize modal is open.
-useBodyScrollLock().lockWhile(customizing)
-const customizeSaving = ref(false)
-const customizeErr = ref('')
-const dragIndex = ref(null)
-const dragOverIndex = ref(null)
-
-// Date range filter. Empty strings mean no filter on that side.
-const fromDate = ref('')
-const toDate = ref('')
-
 const targetId = computed(() => route.params.id || auth.user?.id)
 const isSelf = computed(() => targetId.value && targetId.value === auth.user?.id)
 
-const enabledWidgets = computed(() =>
-  Array.isArray(profile.value?.dashboard_widgets)
-    ? profile.value.dashboard_widgets
-    : ['bias_summary', 'deviation_distribution', 'height_breakdown', 'recent_meets'],
-)
-const orderedEnabled = computed(() => {
-  const known = new Set(JUDGE_WIDGET_CATALOG.map(w => w.id))
-  return enabledWidgets.value.filter(id => known.has(id))
+// Widget toggles + order (Customise modal), the date-range filter and
+// the print button, shared with the diver profile.
+const {
+  customizing, customizeSaving, customizeErr, dragIndex, dragOverIndex, fromDate, toDate,
+  isEnabled, widgetOrder, customizeList, toggleWidget,
+  onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
+  dateQS, applyDateFilter, clearDateFilter, exportPDF,
+} = useWidgetDashboard({
+  auth,
+  catalog: JUDGE_WIDGET_CATALOG,
+  defaults: ['bias_summary', 'deviation_distribution', 'height_breakdown', 'recent_meets'],
+  saveUrl: '/api/users/me/judge-dashboard',
+  profile,
+  isSelf,
+  reload: () => load(),
 })
-function isEnabled(id) { return enabledWidgets.value.includes(id) }
-function widgetOrder(id) {
-  const idx = orderedEnabled.value.indexOf(id)
-  return idx === -1 ? 999 : idx
-}
-
-const customizeList = computed(() => {
-  const enabledSet = new Set(enabledWidgets.value)
-  const enabledOrdered = enabledWidgets.value
-    .filter(id => enabledSet.has(id))
-    .map(id => JUDGE_WIDGET_CATALOG.find(w => w.id === id))
-    .filter(Boolean)
-  const disabled = JUDGE_WIDGET_CATALOG.filter(w => !enabledSet.has(w.id))
-  return [...enabledOrdered, ...disabled]
-})
-
-async function saveWidgets(next) {
-  customizeSaving.value = true
-  customizeErr.value = ''
-  try {
-    const r = await auth.apiFetch('/api/users/me/judge-dashboard', {
-      method: 'PUT',
-      body: JSON.stringify({ widgets: next }),
-    })
-    profile.value.dashboard_widgets = r.widgets
-  } catch (err) {
-    customizeErr.value = err.message || 'Save failed'
-  } finally {
-    customizeSaving.value = false
-  }
-}
-async function toggleWidget(id) {
-  if (!isSelf.value) return
-  const next = isEnabled(id)
-    ? enabledWidgets.value.filter(w => w !== id)
-    : [...enabledWidgets.value, id]
-  await saveWidgets(next)
-}
-
-function onDragStart(idx, ev) {
-  dragIndex.value = idx
-  if (ev.dataTransfer) {
-    ev.dataTransfer.effectAllowed = 'move'
-    try { ev.dataTransfer.setData('text/plain', String(idx)) } catch { /* ignore */ }
-  }
-}
-function onDragOver(idx, ev) {
-  if (dragIndex.value == null) return
-  ev.preventDefault()
-  dragOverIndex.value = idx
-}
-function onDragLeave(idx) {
-  if (dragOverIndex.value === idx) dragOverIndex.value = null
-}
-async function onDrop(idx, ev) {
-  ev.preventDefault()
-  const from = dragIndex.value
-  dragIndex.value = null
-  dragOverIndex.value = null
-  if (from == null || from === idx) return
-  const list = customizeList.value.slice()
-  const [moved] = list.splice(from, 1)
-  list.splice(idx, 0, moved)
-  const enabledSet = new Set(enabledWidgets.value)
-  const next = list.map(w => w.id).filter(id => enabledSet.has(id))
-  await saveWidgets(next)
-}
-function onDragEnd() {
-  dragIndex.value = null
-  dragOverIndex.value = null
-}
-
-function dateQS() {
-  const parts = []
-  if (fromDate.value) parts.push(`from_date=${encodeURIComponent(fromDate.value)}`)
-  if (toDate.value)   parts.push(`to_date=${encodeURIComponent(toDate.value)}`)
-  return parts.length ? `?${parts.join('&')}` : ''
-}
+// Lock background scroll while the dashboard-customize modal is open.
+useBodyScrollLock().lockWhile(customizing)
 
 async function load() {
   if (!targetId.value) {
     error.value = 'Sign in to see your judge analysis.'
     return
   }
-  loading.value = true
-  error.value = ''
-  try {
-    profile.value = await auth.apiFetch(
-      `/api/judges/${targetId.value}/profile${dateQS()}`,
-    )
-  } catch (err) {
-    error.value = err.message || 'Could not load judge profile'
-    profile.value = null
-  } finally {
-    loading.value = false
+  const qs = dateQS()
+  // Both requests go out together: the heavy analytics shouldn't hold up
+  // the header, and waiting for the profile first only cost a round trip.
+  // load() still resolves once both have landed, so Apply's await does too.
+  async function loadProfile() {
+    loading.value = true
+    error.value = ''
+    try {
+      profile.value = await auth.apiFetch(`/api/judges/${targetId.value}/profile${qs}`)
+    } catch (err) {
+      error.value = err.message || 'Could not load judge profile'
+      profile.value = null
+    } finally {
+      loading.value = false
+    }
   }
-  // Analytics fires in parallel, heavy aggregations don't block the
-  // header render.
-  analyticsLoading.value = true
-  try {
-    analytics.value = await auth.apiFetch(
-      `/api/judges/${targetId.value}/analytics${dateQS()}`,
-    )
-  } catch (err) {
-    // Analytics failure isn't fatal, the header still renders.
-    console.error('[JudgeProfile] analytics failed', err)
-    analytics.value = null
-  } finally {
-    analyticsLoading.value = false
+  async function loadAnalytics() {
+    analyticsLoading.value = true
+    try {
+      analytics.value = await auth.apiFetch(`/api/judges/${targetId.value}/analytics${qs}`)
+    } catch (err) {
+      // Analytics failure isn't fatal, the header still renders.
+      console.error('[JudgeProfile] analytics failed', err)
+      analytics.value = null
+    } finally {
+      analyticsLoading.value = false
+    }
   }
-}
-
-async function applyDateFilter() {
-  await load()
-}
-function clearDateFilter() {
-  fromDate.value = ''
-  toDate.value = ''
-  load()
+  await Promise.all([loadProfile(), loadAnalytics()])
 }
 
 // =============================================================
@@ -300,18 +212,6 @@ const biasInsight = computed(() => {
   }
   return `Across ${s.sample_size} comparable dives you score on average ${mag.toFixed(2)} ${dir} than the panel-kept mean.`
 })
-
-// Print / "save as PDF" button. Relies on the browser's print dialog
-// and our @media print stylesheet.
-function exportPDF() {
-  document.body.classList.add('printing-dashboard')
-  const cleanup = () => {
-    document.body.classList.remove('printing-dashboard')
-    window.removeEventListener('afterprint', cleanup)
-  }
-  window.addEventListener('afterprint', cleanup)
-  requestAnimationFrame(() => window.print())
-}
 
 onMounted(load)
 watch(() => route.params.id, () => { load() })

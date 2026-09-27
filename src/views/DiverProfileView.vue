@@ -7,6 +7,7 @@ import { cachedFetch, idbDelete } from '@/lib/idbCache'
 import { isValidPassword } from '@/lib/passwordPolicy'
 import { showSuccess } from '@/composables/useNotify'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+import { useWidgetDashboard } from '@/composables/useWidgetDashboard'
 
 // Migration 053 surfaces: self-delete + reunite-on-return.
 import DeleteAccountDialog   from '@/components/DeleteAccountDialog.vue'
@@ -74,156 +75,27 @@ const WIDGET_CATALOG = [
   { id: 'event_type_splits', label: 'Synchro vs Individual', desc: 'Per-event-type split: meets, dive count, average + best totals.' },
   { id: 'year_over_year',    label: 'Year-over-Year',        desc: 'Calendar-year deltas: meets, average, best, podiums per year.' },
 ]
-const customizing = ref(false)
-const customizeSaving = ref(false)
-const customizeErr = ref('')
-// Index of the widget currently being dragged in the customize modal,
-// or null when no drag is in progress. Used to drive the drop-target
-// styling and to re-order on drop.
-const dragIndex = ref(null)
-const dragOverIndex = ref(null)
-// Date-range filter state. Empty strings = "no filter on that side".
-// The two inputs round-trip through query params on the analytics
-// endpoint; the cache key in IndexedDB is the URL, so each distinct
-// range gets its own cached payload.
-const fromDate = ref('')
-const toDate = ref('')
-
-const enabledWidgets = computed(() =>
-  Array.isArray(profile.value?.dashboard_widgets)
-    ? profile.value.dashboard_widgets
-    : ['score_trend', 'personal_bests', 'recent_form', 'placings'],
-)
-// Display order on the dashboard mirrors the saved order in
-// dashboard_widgets, but only includes IDs that are still in the
-// catalog (so a future widget removal doesn't leave a ghost entry).
-const orderedEnabled = computed(() => {
-  const known = new Set(WIDGET_CATALOG.map(w => w.id))
-  return enabledWidgets.value.filter(id => known.has(id))
-})
-function isEnabled(id) { return enabledWidgets.value.includes(id) }
-// Order index used by each widget card's inline `style="order: N"`
-// so the dashboard reflects the saved drag order without repeating
-// the entire template inside a v-for.
-function widgetOrder(id) {
-  const idx = orderedEnabled.value.indexOf(id)
-  return idx === -1 ? 999 : idx
-}
-async function saveWidgets(next) {
-  customizeSaving.value = true
-  customizeErr.value = ''
-  try {
-    const r = await auth.apiFetch('/api/users/me/dashboard', {
-      method: 'PUT',
-      body: JSON.stringify({ widgets: next }),
-    })
-    profile.value.dashboard_widgets = r.widgets
-  } catch (err) {
-    customizeErr.value = err.message || 'Save failed'
-  } finally {
-    customizeSaving.value = false
-  }
-}
-async function toggleWidget(id) {
-  if (!isSelf.value) return
-  const next = isEnabled(id)
-    ? enabledWidgets.value.filter(w => w !== id)
-    : [...enabledWidgets.value, id]
-  await saveWidgets(next)
-}
-
-// Customize modal builds its own list (catalog order, with enabled
-// items first in saved order, then disabled items in catalog order)
-// so drag-to-reorder operates on a stable, complete list.
-const customizeList = computed(() => {
-  const enabledSet = new Set(enabledWidgets.value)
-  // Enabled, in saved order; fall back to catalog order for any
-  // saved IDs that aren't in the catalog (defensive).
-  const enabledOrdered = enabledWidgets.value
-    .filter(id => enabledSet.has(id))
-    .map(id => WIDGET_CATALOG.find(w => w.id === id))
-    .filter(Boolean)
-  const disabled = WIDGET_CATALOG.filter(w => !enabledSet.has(w.id))
-  return [...enabledOrdered, ...disabled]
-})
-
-function onDragStart(idx, ev) {
-  dragIndex.value = idx
-  // Required for Firefox drag init.
-  if (ev.dataTransfer) {
-    ev.dataTransfer.effectAllowed = 'move'
-    try { ev.dataTransfer.setData('text/plain', String(idx)) } catch { /* ignore */ }
-  }
-}
-function onDragOver(idx, ev) {
-  if (dragIndex.value == null) return
-  ev.preventDefault()  // allow drop
-  dragOverIndex.value = idx
-}
-function onDragLeave(idx) {
-  if (dragOverIndex.value === idx) dragOverIndex.value = null
-}
-async function onDrop(idx, ev) {
-  ev.preventDefault()
-  const from = dragIndex.value
-  dragIndex.value = null
-  dragOverIndex.value = null
-  if (from == null || from === idx) return
-  // Apply the move to a copy of the customize list, then derive the
-  // new enabled-only order from it (drag works across enabled +
-  // disabled rows; only enabled IDs get persisted to the server).
-  const list = customizeList.value.slice()
-  const [moved] = list.splice(from, 1)
-  list.splice(idx, 0, moved)
-  const enabledSet = new Set(enabledWidgets.value)
-  const next = list.map(w => w.id).filter(id => enabledSet.has(id))
-  await saveWidgets(next)
-}
-function onDragEnd() {
-  dragIndex.value = null
-  dragOverIndex.value = null
-}
-
-// Apply the date-range filter: re-fetches profile + analytics with
-// the new query params. Triggered by the Apply button so a half-typed
-// date doesn't fire a request mid-keystroke.
-async function applyDateFilter() {
-  await load()
-}
-function clearDateFilter() {
-  fromDate.value = ''
-  toDate.value = ''
-  load()
-}
-
-// Build the query string for /profile and /analytics. Empty when no
-// filter is set, otherwise leading "?".
-function dateQS() {
-  const parts = []
-  if (fromDate.value) parts.push(`from_date=${encodeURIComponent(fromDate.value)}`)
-  if (toDate.value)   parts.push(`to_date=${encodeURIComponent(toDate.value)}`)
-  return parts.length ? `?${parts.join('&')}` : ''
-}
-
-// Print / "save as PDF": relies on the browser's print dialog and
-// our @media print stylesheet, which hides headers, buttons, and
-// modals so the dashboard cards print cleanly across pages.
-function exportPDF() {
-  // Add a body class so print CSS can also kick in if the dialog is
-  // dismissed (e.g. user takes a screenshot). Removed on afterprint.
-  document.body.classList.add('printing-dashboard')
-  const cleanup = () => {
-    document.body.classList.remove('printing-dashboard')
-    window.removeEventListener('afterprint', cleanup)
-  }
-  window.addEventListener('afterprint', cleanup)
-  // Defer to next frame so the class lands before the print snapshot.
-  requestAnimationFrame(() => window.print())
-}
-
 // :id route param is optional, falls back to the logged-in user.
 const targetId = computed(() => route.params.id || auth.user?.id)
 const isSelf = computed(() => targetId.value && targetId.value === auth.user?.id)
+
+// Widget toggles + order (Customise modal), the date-range filter and
+// the print button, shared with the judge analysis page. Choices persist
+// via PUT /api/users/me/dashboard, which validates against the same ids.
+const {
+  customizing, customizeSaving, customizeErr, dragIndex, dragOverIndex, fromDate, toDate,
+  orderedEnabled, isEnabled, widgetOrder, customizeList, toggleWidget,
+  onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
+  dateQS, applyDateFilter, clearDateFilter, exportPDF,
+} = useWidgetDashboard({
+  auth,
+  catalog: WIDGET_CATALOG,
+  defaults: ['score_trend', 'personal_bests', 'recent_form', 'placings'],
+  saveUrl: '/api/users/me/dashboard',
+  profile,
+  isSelf,
+  reload: () => load(),
+})
 
 // Inline club edit state
 const editing = ref(false)
@@ -475,6 +347,11 @@ async function savePassword() {
 
 async function load() {
   if (!targetId.value) return
+  // Analytics goes out alongside the profile rather than after it: it's
+  // a separate endpoint so the heavy aggregations don't hold up the
+  // headline stats, and waiting for the profile first only cost a round
+  // trip. Cached too, so a return visit feels instant.
+  loadAnalytics()
   const url = `/api/divers/${targetId.value}/profile${dateQS()}`
   loading.value = true
   error.value = ''
@@ -514,10 +391,6 @@ async function load() {
   } finally {
     loading.value = false
   }
-  // Analytics in parallel, separate endpoint so it doesn't
-  // block the headline-stats / personal-bests / score-trend
-  // render. Cached too, so a return visit feels instant.
-  loadAnalytics()
 }
 
 async function loadAnalytics() {
