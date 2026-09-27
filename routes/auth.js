@@ -135,19 +135,12 @@ async function loadRegionAdminOf(pool, userId) {
 }
 
 async function loadHasDependents(pool, userId) {
-  try {
-    const r = await pool.query(
-      `SELECT 1 FROM guardians
-        WHERE guardian_user_id = $1 AND status = 'approved' LIMIT 1`,
-      [userId],
-    );
-    return r.rows.length > 0;
-  } catch (err) {
-    // Migration 083 might not have landed on this box yet. A missing
-    // table just means nobody has dependents.
-    if (err.code === "42P01") return false;
-    throw err;
-  }
+  const r = await pool.query(
+    `SELECT 1 FROM guardians
+      WHERE guardian_user_id = $1 AND status = 'approved' LIMIT 1`,
+    [userId],
+  );
+  return r.rows.length > 0;
 }
 
 // Orgs in this country with the given status, skipping the sysadmin's
@@ -177,12 +170,7 @@ async function addSessionExtras(pool, payload, userId) {
   // in their nav so they can follow their claim.
   payload.has_claim = await claims.hasOwnClaim(pool, userId);
   // A founder whose club is waiting on the federation (migration 096).
-  // A box that hasn't run 096 yet has no clubs.status, which just means
-  // nothing is waiting.
-  payload.pending_club = await clubApprovals.pendingClubFor(pool, userId).catch((err) => {
-    if (err.code === "42703") return null;
-    throw err;
-  });
+  payload.pending_club = await clubApprovals.pendingClubFor(pool, userId);
   return payload;
 }
 
@@ -796,11 +784,8 @@ module.exports = function createAuthRouter({
   // 'signups' feature flag (migration 086), toggled at /admin/features. Login
   // and every existing-account flow (password reset, email change, 2FA) are
   // NEVER gated, since the super admin must always be able to sign in.
-  //
-  // The env fallback is only for a router constructed without a features
-  // service (some unit tests do this); the real server always passes one.
   function signupsOpen() {
-    return features ? features.enabled("signups") : process.env.SIGNUPS_ENABLED === "true";
+    return features.enabled("signups");
   }
 
   router.get("/api/auth/signups-status", (req, res) => {
