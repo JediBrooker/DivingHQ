@@ -9,14 +9,15 @@
 // it user content without a sanitiser in front.
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { marked } from 'marked'
+import { renderMarkdown } from '@/lib/markdown'
 
 const props = defineProps({
   md: { type: String, required: true },
 })
 
 const router = useRouter()
-const html = computed(() => marked.parse(props.md, { breaks: false, gfm: true }))
+// renderMarkdown gives every heading an id, so "#setup" links resolve.
+const html = computed(() => renderMarkdown(props.md))
 
 // In-app links in the markdown ("/guide/faq", "/privacy") are plain <a>
 // tags, so route them through the router instead of reloading the SPA.
@@ -52,6 +53,9 @@ function onClick(e) {
   line-height: 1.2;
   color: var(--fg);
 }
+/* Headings are link targets (#setup and friends), so leave a little air
+   above one when the page jumps to it. */
+.md-article :deep(:is(h1, h2, h3, h4)) { scroll-margin-top: 1rem; }
 .md-article :deep(h2) {
   font-size: 20px;
   font-weight: 600;

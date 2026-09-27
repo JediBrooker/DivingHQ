@@ -30,7 +30,7 @@ The strip is socket-driven — counts update the moment something happens (an ev
 
 For system admins, the strip also includes pending org registrations in the `👥 PENDING` count.
 
-The right edge of the strip carries an **activity ticker** — a single auto-cycling chip showing the most recent audit row across the federation (`⚡ Avery Ueno withdrawn from R3 · 2h ago` style). Click → opens the full [Audit Log](#).
+The right edge of the strip carries an **activity ticker** — a single auto-cycling chip showing the most recent audit row across the federation (`⚡ Avery Ueno withdrawn from R3 · 2h ago` style). Click it to open the full [Audit Log](/audit).
 
 ### Drilling deeper
 

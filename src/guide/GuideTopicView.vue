@@ -14,7 +14,23 @@ const slug = computed(() => route.params.topic)
 const topic = computed(() => getTopicBySlug(slug.value))
 const adjacent = computed(() => getAdjacentTopics(slug.value))
 
-watch(slug, () => nextTick(() => window.scrollTo(0, 0)))
+// The router has no scrollBehavior. A new topic starts at the top, unless
+// the link named a heading (/guide/roles-and-permissions#claims), in which
+// case go there once the article has rendered. Headings get their ids from
+// src/lib/markdown.js.
+function headingFor(hash) {
+  if (!hash) return null
+  try {
+    return document.getElementById(decodeURIComponent(hash.slice(1)))
+  } catch {
+    return null // a mangled %-escape in a hand-typed URL
+  }
+}
+watch([slug, () => route.hash], ([newSlug, hash], old) => nextTick(() => {
+  const el = headingFor(hash)
+  if (el) el.scrollIntoView()
+  else if (!old || old[0] !== newSlug) window.scrollTo(0, 0)
+}), { immediate: true })
 
 // The route only knows it's "User Guide"; the tab should say which topic.
 // flush 'post' so this lands after the router's own title hook, which also
