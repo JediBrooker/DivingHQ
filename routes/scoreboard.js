@@ -72,6 +72,10 @@ module.exports = function createScoreboardRouter({
         }
       }
       metrics?.scoreboardCacheMisses.inc();
+      // Taken before the reads, so a score or record that lands while
+      // they're in flight stops this payload being cached (see
+      // lib/scoreboard-cache.js).
+      const gen = scoreboardCache?.generation?.(eventId);
       const [st, hi, up, panel] = await Promise.all([
         // Standings: per-dive points (trimmed × DD × scaling) summed
         // across all of a competitor's dives in the event.
@@ -329,7 +333,7 @@ module.exports = function createScoreboardRouter({
         upcoming: up.rows,
         panel: panel.rows,
       };
-      if (scoreboardCache) scoreboardCache.set(eventId, payload);
+      if (scoreboardCache) scoreboardCache.set(eventId, payload, gen);
       res.set("X-Scoreboard-Cache", "miss");
       res.json(payload);
     } catch (err) {
@@ -366,6 +370,7 @@ module.exports = function createScoreboardRouter({
         }
       }
       metrics?.scoreboardCacheMisses.inc();
+      const gen = scoreboardCache?.generation?.(eventId);
       const r = await pool.query(
         `WITH ${perDivePointsCte({
            name:        "dive_totals",
@@ -479,7 +484,7 @@ module.exports = function createScoreboardRouter({
 
       const payload = { rounds };
       if (scoreboardCache?.setDerived) {
-        scoreboardCache.setDerived(eventId, "leaderboard", payload);
+        scoreboardCache.setDerived(eventId, "leaderboard", payload, gen);
       }
       res.set("X-Scoreboard-Cache", "miss");
       res.json(payload);
