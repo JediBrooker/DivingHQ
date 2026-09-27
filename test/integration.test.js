@@ -2169,6 +2169,68 @@ test("claims: a long name still gets its in-app notice", async (t) => {
   }
 });
 
+test("claims: a national revoke also takes back event manager seats handed out under it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "ALA";
+  await claimKit.wipe(CODE);
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+    const A = await claimKit.founder(CODE, "Mariehamn Divers");
+    const B = await claimKit.founder(CODE, "Jomala Divers");
+    for (const x of [A, B]) await claimKit.makeEligible(x.clubId);
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+
+    // A runs its own club night, from before anyone claimed the country.
+    const meet = (await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Mariehamn Club Night" } })).body;
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "Mariehamn 1m", gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 5, event_type: "individual", meet_id: meet.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const eventId = ev.body.id;
+
+    const fed = await claimKit.claim({ org_name: "Ålands Simförbund", country_code: CODE });
+    assert.equal(fed.res.body.approver, "clubs");
+    await claimKit.verify(fed.id);
+    const id = fed.res.body.claim_id;
+    for (const x of [A, B]) await fetchJson("POST", `/api/claims/${id}/vote`, { token: x.token, body: { vote: "approve" } });
+    assert.equal((await claimStatus(id)).status, "approved");
+
+    // Running the country, the federation seats itself and a friend on
+    // the club's event.
+    const fedToken = (await claimKit.login(fed.username)).token;
+    const friend = await insertUser({ orgId, role: "spectator", username: `int-friend-${crypto.randomBytes(3).toString("hex")}`, fullName: "Friend" });
+    for (const who of [fed.id, friend]) {
+      assert.equal((await fetchJson("POST", `/api/events/${eventId}/managers`, { token: fedToken, body: { user_id: who } })).status, 200);
+    }
+    // A state body registers under the federation but hasn't verified yet.
+    await pool.query("INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Norra Åland', 'NA')", [orgId]);
+    const state = await claimKit.claim({ org_name: "Norra Ålands Simklubbar", country_code: CODE, region_code: "NA" });
+    assert.equal(state.res.body.approver, "parent");
+
+    const rv = await fetchJson("POST", `/api/claims/${id}/revoke`, { token: sys.token, body: {} });
+    assert.equal(rv.status, 200, JSON.stringify(rv.body));
+    // Nobody's left to be its "parent", so DivingHQ gets it once it's live.
+    assert.equal((await pool.query("SELECT approver FROM claims WHERE id = $1", [state.res.body.claim_id])).rows[0].approver, "sysadmin");
+    const seats = (await pool.query("SELECT user_id FROM event_managers WHERE event_id = $1", [eventId])).rows.map((r) => r.user_id);
+    assert.deepEqual(seats, [A.id], "only the club's own seat is left");
+    assert.deepEqual(rv.body.removed.event_managers.map((r) => r.user_id).sort(), [fed.id, friend].sort());
+    assert.ok(rv.body.removed.event_managers.every((r) => r.event_id === eventId && r.event_name === "Mariehamn 1m"));
+    const audit = (await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'claim.revoked'", [id],
+    )).rows[0].metadata;
+    assert.equal(audit.removed.event_managers.length, 2);
+
+    // With a fresh token the ex-federation can't touch the event any more.
+    const again = (await claimKit.login(fed.username)).token;
+    assert.equal((await fetchJson("POST", `/api/events/${eventId}/managers`, { token: again, body: { user_id: friend } })).status, 403);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
 test("claims: only a real voter hears that their address matches the claimant's", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   if (!serverReady) return t.skip("server didn't boot — see warning above");
@@ -2191,6 +2253,60 @@ test("claims: only a real voter hears that their address matches the claimant's"
     assert.equal(probe.status, 403);
     assert.doesNotMatch(probe.body.error, /claimant/, "no hint about the claimant's address to someone without a vote");
   } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("claims: a region revoke takes back the event seats its admins handed out", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "GGY";
+  await claimKit.wipe(CODE);
+  const fedFx = await setupFixture({ withEvent: false });
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+    await pool.query("UPDATE organisations SET country_code = $2 WHERE id = $1", [fedFx.orgId, CODE]);
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'St Peter Port', 'SPP') RETURNING id", [fedFx.orgId],
+    )).rows[0].id;
+    const meet = (await pool.query(
+      "INSERT INTO meets (org_id, name, host_region_id) VALUES ($1, 'St Peter Port Open', $2) RETURNING id", [fedFx.orgId, region],
+    )).rows[0].id;
+    const mkEvent = async (name) => {
+      const ev = await fetchJson("POST", "/api/events", {
+        token: fedFx.adminToken,
+        body: { name, gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 5, event_type: "individual", meet_id: meet },
+      });
+      assert.equal(ev.status, 201, JSON.stringify(ev.body));
+      return ev.body.id;
+    };
+    const ev1 = await mkEvent("SPP 3m");
+    const ev2 = await mkEvent("SPP 1m");
+
+    const body = await claimKit.claim({ org_name: "St Peter Port Diving", country_code: CODE, region_code: "SPP" });
+    await claimKit.verify(body.id);
+    assert.equal((await fetchJson("POST", `/api/claims/${body.res.body.claim_id}/decide`, { token: fedFx.adminToken, body: { decision: "approve" } })).status, 200);
+
+    // The state body seats itself and a friend on the region's event; the
+    // federation seats the state body on another one, its own call.
+    const token = (await claimKit.login(body.username)).token;
+    const friend = await insertUser({ orgId: fedFx.orgId, role: "spectator", username: `int-sppf-${crypto.randomBytes(3).toString("hex")}`, fullName: "SPP Friend" });
+    for (const who of [body.id, friend]) {
+      assert.equal((await fetchJson("POST", `/api/events/${ev1}/managers`, { token, body: { user_id: who } })).status, 200);
+    }
+    assert.equal((await fetchJson("POST", `/api/events/${ev2}/managers`, { token: fedFx.adminToken, body: { user_id: body.id } })).status, 200);
+
+    const rv = await fetchJson("POST", `/api/claims/${body.res.body.claim_id}/revoke`, { token: sys.token, body: {} });
+    assert.equal(rv.status, 200, JSON.stringify(rv.body));
+    const seats = async (ev) => (await pool.query("SELECT user_id FROM event_managers WHERE event_id = $1", [ev])).rows.map((r) => r.user_id).sort();
+    assert.deepEqual(await seats(ev1), [fedFx.adminId]);
+    assert.deepEqual((await seats(ev2)).sort(), [fedFx.adminId, body.id].sort());
+    assert.deepEqual(rv.body.removed.event_managers.map((r) => r.user_id).sort(), [body.id, friend].sort());
+  } finally {
+    await pool.query("DELETE FROM claims WHERE org_id = $1", [fedFx.orgId]).catch(() => {});
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [fedFx.orgId]).catch(() => {});
+    await teardownFixture(fedFx);
     await claimKit.wipe(CODE);
   }
 });

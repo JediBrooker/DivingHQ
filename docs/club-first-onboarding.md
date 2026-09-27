@@ -612,9 +612,15 @@ claimant could grant access to anyone while they ran it:
   the org (unclaimed means none of either), club and region admin rows
   created since the approval (under a federation, only its admins or
   DivingHQ can make those), and region claims the federation itself
-  approved, which are revoked with it;
+  approved, which are revoked with it. Region claims still waiting on the
+  federation go to the sysadmin (escalated if live, approver switched if
+  not yet verified);
 - a region claim removes the region's admin rows created since the approval,
-  plus the claimant's own.
+  plus the claimant's own;
+- both remove the `event_managers` seats handed out since the approval by
+  anyone who just lost access (and, for a national claim, seats held by
+  them). An org admin can seat anyone, themselves included, on any event in
+  the org, and `isEventDelegate` honours that seat on its own.
 
 Everyone who lost something has their token bumped and is told. The
 response and the `claim.revoked` audit row list every removed grant, so the

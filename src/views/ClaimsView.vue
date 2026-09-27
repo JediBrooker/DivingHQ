@@ -92,7 +92,7 @@ async function revoke(c) {
   // Just the count here. The names are in the response and the ids in
   // the audit log, for anyone who needs to re-grant something.
   const removed = res.removed || {}
-  const count = ['org_roles', 'club_admins', 'region_admins']
+  const count = ['org_roles', 'club_admins', 'region_admins', 'event_managers']
     .reduce((n, k) => n + (removed[k]?.length || 0), 0)
   showSuccess(t('claims.revoked_summary', { count }))
 }

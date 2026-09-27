@@ -601,6 +601,8 @@
  * @property {{user_id: string, full_name: string, role: 'org_admin'|'meet_manager'}[]} removed.org_roles
  * @property {{user_id: string, full_name: string, club_id: string, club_name: string}[]} removed.club_admins
  * @property {{user_id: string, full_name: string, region_id: string, region_name: string}[]} removed.region_admins
+ * @property {{user_id: string, full_name: string, event_id: string, event_name: string}[]} removed.event_managers
+ *   event manager seats handed out (or held) under the claim since it was approved
  * @property {{id: string, body_name: string}[]} removed.region_claims
  *   region claims the federation approved, revoked along with it
  */
