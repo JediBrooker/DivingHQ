@@ -5351,3 +5351,57 @@ test("admin lists say who's live and whether the caller has to keep one", async 
     await teardownFixture(state);
   }
 });
+
+// PUT /api/clubs/:id/short-code checks for a clash and then writes, so two
+// clubs saving the same code at the same moment used to both get it. The
+// per-org lock makes it one step: exactly one wins, whatever the timing.
+// Bhutan, nothing else here uses it.
+test("club short codes: clubs racing for the same code, only one gets it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "BTN";
+  await claimKit.wipe(CODE);
+  try {
+    const founders = [];
+    for (const name of ["Thimphu", "Paro", "Punakha", "Bumthang", "Haa"]) {
+      founders.push(await claimKit.founder(CODE, `${name} Divers`));
+    }
+    const holders = async (code) => (await pool.query(
+      `SELECT c.id FROM clubs c JOIN organisations o ON o.id = c.org_id
+        WHERE o.country_code = $1 AND upper(c.short_code) = $2`, [CODE, code],
+    )).rows.map((r) => r.id);
+
+    // A few rounds, since it's a race. Each round every club asks for the
+    // same fresh code at once.
+    for (const want of ["THI", "PRO", "DZO"]) {
+      const outs = await Promise.all(founders.map((f) =>
+        fetchJson("PUT", `/api/clubs/${f.clubId}/short-code`, { token: f.token, body: { short_code: want.toLowerCase() } })));
+      const statuses = outs.map((o) => o.status);
+      assert.equal(statuses.filter((s) => s === 200).length, 1, `${want}: ${statuses.join(",")}`);
+      assert.equal(statuses.filter((s) => s === 409).length, founders.length - 1, `${want}: ${statuses.join(",")}`);
+      for (const o of outs.filter((x) => x.status === 409)) assert.equal(o.body.code, "short_code_taken");
+      const winner = founders[statuses.indexOf(200)];
+      assert.deepEqual(await holders(want), [winner.clubId]);
+      // The winner lets it go again, so the next round starts clean.
+      assert.equal((await fetchJson("PUT", `/api/clubs/${winner.clubId}/short-code`, { token: winner.token, body: { short_code: null } })).status, 200);
+    }
+
+    // Clearing codes at the same time never clashes, and the audit trail
+    // says what each club actually had.
+    await Promise.all(founders.map((f, i) =>
+      fetchJson("PUT", `/api/clubs/${f.clubId}/short-code`, { token: f.token, body: { short_code: `B${i}` } })));
+    const cleared = await Promise.all(founders.map((f) =>
+      fetchJson("PUT", `/api/clubs/${f.clubId}/short-code`, { token: f.token, body: { short_code: "" } })));
+    assert.deepEqual(cleared.map((o) => o.status), founders.map(() => 200));
+    const last = await pool.query(
+      `SELECT DISTINCT ON (entity_id) entity_id, metadata FROM audit_log
+        WHERE entity_id = ANY($1::uuid[]) AND action = 'club.code_changed'
+        ORDER BY entity_id, created_at DESC`,
+      [founders.map((f) => f.clubId)],
+    );
+    const byClub = Object.fromEntries(last.rows.map((r) => [r.entity_id, r.metadata]));
+    founders.forEach((f, i) => assert.deepEqual(byClub[f.clubId], { from: `B${i}`, to: null }));
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
