@@ -1404,6 +1404,8 @@
       "label_org_created": "組織を作成",
       "label_org_status_changed": "組織ステータスを変更",
       "label_club_deleted": "クラブを削除",
+      "label_club_admin_added": "クラブ管理者を追加",
+      "label_club_admin_removed": "クラブ管理者を削除",
       "label_team_deleted": "チームを削除",
       "label_roster_withdrew": "選手を取り下げ",
       "label_roster_reinstated": "選手を復帰",

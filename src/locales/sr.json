@@ -1404,6 +1404,8 @@
       "label_org_created": "Организација креирана",
       "label_org_status_changed": "Статус организације промењен",
       "label_club_deleted": "Клуб обрисан",
+      "label_club_admin_added": "Додат администратор клуба",
+      "label_club_admin_removed": "Уклоњен администратор клуба",
       "label_team_deleted": "Екипа обрисана",
       "label_roster_withdrew": "Скакач повучен",
       "label_roster_reinstated": "Скакач враћен",

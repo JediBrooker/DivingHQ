@@ -1404,6 +1404,8 @@
       "label_org_created": "Kuruluş oluşturuldu",
       "label_org_status_changed": "Kuruluş durumu değişti",
       "label_club_deleted": "Kulüp silindi",
+      "label_club_admin_added": "Kulüp yöneticisi eklendi",
+      "label_club_admin_removed": "Kulüp yöneticisi kaldırıldı",
       "label_team_deleted": "Takım silindi",
       "label_roster_withdrew": "Atlamacı çekildi",
       "label_roster_reinstated": "Atlamacı yeniden eklendi",

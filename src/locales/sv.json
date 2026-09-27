@@ -1404,6 +1404,8 @@
       "label_org_created": "Förbund skapat",
       "label_org_status_changed": "Förbundets status ändrad",
       "label_club_deleted": "Klubb raderad",
+      "label_club_admin_added": "Klubbadministratör tillagd",
+      "label_club_admin_removed": "Klubbadministratör borttagen",
       "label_team_deleted": "Lag raderat",
       "label_roster_withdrew": "Hoppare återkallad",
       "label_roster_reinstated": "Hoppare återinsatt",

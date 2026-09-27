@@ -1404,6 +1404,8 @@
       "label_org_created": "Organisation angelegt",
       "label_org_status_changed": "Organisationsstatus geändert",
       "label_club_deleted": "Verein gelöscht",
+      "label_club_admin_added": "Vereinsadmin hinzugefügt",
+      "label_club_admin_removed": "Vereinsadmin entfernt",
       "label_team_deleted": "Mannschaft gelöscht",
       "label_roster_withdrew": "Springer zurückgezogen",
       "label_roster_reinstated": "Springer wieder aufgenommen",

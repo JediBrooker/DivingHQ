@@ -1404,6 +1404,8 @@
       "label_org_created": "Організацію створено",
       "label_org_status_changed": "Статус організації змінено",
       "label_club_deleted": "Клуб видалено",
+      "label_club_admin_added": "Додано адміністратора клубу",
+      "label_club_admin_removed": "Видалено адміністратора клубу",
       "label_team_deleted": "Команду видалено",
       "label_roster_withdrew": "Стрибуна знято",
       "label_roster_reinstated": "Стрибуна поновлено",

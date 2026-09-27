@@ -11,6 +11,9 @@
 //   PUT    /api/clubs/:id               rename / re-code
 //   DELETE /api/clubs/:id               cascade members to NULL
 //   POST   /api/orgs/:id/clubs          create a club in an org
+//   GET    /api/clubs/:id/admins        club admins + the club's members
+//   POST   /api/clubs/:id/admins        make a same-org user a club admin
+//   DELETE /api/clubs/:id/admins/:userId  take it away again
 //
 // Mounted via:
 //   app.use(require('./routes/orgs')({ … }))
@@ -25,6 +28,7 @@ module.exports = function createOrgsRouter({
   verifyToken,
   requireSystemAdmin,
   requireMeetEditor,
+  isInSameOrg,
   sendOrgDecisionEmail,
 }) {
   if (!pool) throw new Error("createOrgsRouter requires { pool, … }");
@@ -360,6 +364,133 @@ module.exports = function createOrgsRouter({
       res.status(201).json(r.rows[0]);
     } catch (err) {
       console.error("[Create Club Error]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // -------- Club admins --------
+  //
+  // club_admins (migration 067) is what requireClubAdmin /
+  // requireClubAdminOnly check for classes, club payouts and club-paid
+  // fees, but until now nothing outside the tests ever wrote a row, so a
+  // club had no way to get an admin. The federation's org_admin hands the
+  // role out here. Meet managers can see the Clubs screen but don't get
+  // this, it's a trust decision about who runs a club's money.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  async function loadClubForAdminGrant(req, res) {
+    // A malformed id would reach postgres as a uuid cast error and come
+    // back as a 500, so treat it as the missing club it is.
+    if (!UUID_RE.test(req.params.id)) {
+      res.status(404).json({ error: "Club not found" });
+      return null;
+    }
+    const c = await pool.query(
+      "SELECT id, org_id, name FROM clubs WHERE id = $1",
+      [req.params.id],
+    );
+    if (!c.rows.length) {
+      res.status(404).json({ error: "Club not found" });
+      return null;
+    }
+    const club = c.rows[0];
+    if (req.user.is_system_admin) return club;
+    const isOrgAdmin = (req.user.org_roles || []).includes("org_admin");
+    if (!isOrgAdmin || club.org_id !== req.user.org_id) {
+      res.status(403).json({ error: "Only your federation's admin can manage club admins" });
+      return null;
+    }
+    return club;
+  }
+
+  router.get("/api/clubs/:id/admins", verifyToken, async (req, res) => {
+    try {
+      const club = await loadClubForAdminGrant(req, res);
+      if (!club) return;
+      const admins = await pool.query(
+        `SELECT u.id, u.full_name, u.username, ca.created_at
+           FROM club_admins ca
+           JOIN users u ON u.id = ca.user_id
+          WHERE ca.club_id = $1 AND u.deleted_at IS NULL
+          ORDER BY lower(u.full_name)`,
+        [club.id],
+      );
+      // The members come along so the picker doesn't need its own
+      // endpoint. Someone outside the club can still be granted via the
+      // API, the UI just starts from the obvious people.
+      const members = await pool.query(
+        `SELECT id, full_name, username
+           FROM users
+          WHERE club_id = $1 AND deleted_at IS NULL
+          ORDER BY lower(full_name)`,
+        [club.id],
+      );
+      res.json({ admins: admins.rows, members: members.rows });
+    } catch (err) {
+      console.error("[Club Admins List Error]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  router.post("/api/clubs/:id/admins", verifyToken, async (req, res) => {
+    const userId = req.body?.user_id;
+    if (typeof userId !== "string" || !UUID_RE.test(userId))
+      return res.status(400).json({ error: "user_id is required" });
+    try {
+      const club = await loadClubForAdminGrant(req, res);
+      if (!club) return;
+      // Cross-org grant would be an IDOR, same rule as judges/managers.
+      if (!(await isInSameOrg(pool, club.org_id, userId, "users"))) {
+        return res.status(400).json({ error: "That user isn't in this club's organisation" });
+      }
+      const ins = await pool.query(
+        `INSERT INTO club_admins (club_id, user_id, org_id)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (club_id, user_id) DO NOTHING
+         RETURNING id`,
+        [club.id, userId, club.org_id],
+      );
+      if (ins.rows.length) {
+        await recordAudit(pool, {
+          ...auditFromReq(req),
+          org_id:      club.org_id,
+          entity_type: "club",
+          entity_id:   club.id,
+          entity_name: club.name,
+          action:      "club.admin_added",
+          metadata:    { user_id: userId },
+        });
+      }
+      res.status(ins.rows.length ? 201 : 200).json({ ok: true });
+    } catch (err) {
+      console.error("[Club Admin Grant Error]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  router.delete("/api/clubs/:id/admins/:userId", verifyToken, async (req, res) => {
+    try {
+      const club = await loadClubForAdminGrant(req, res);
+      if (!club) return;
+      if (!UUID_RE.test(req.params.userId))
+        return res.status(404).json({ error: "Not a club admin" });
+      const del = await pool.query(
+        "DELETE FROM club_admins WHERE club_id = $1 AND user_id = $2 RETURNING id",
+        [club.id, req.params.userId],
+      );
+      if (!del.rows.length) return res.status(404).json({ error: "Not a club admin" });
+      await recordAudit(pool, {
+        ...auditFromReq(req),
+        org_id:      club.org_id,
+        entity_type: "club",
+        entity_id:   club.id,
+        entity_name: club.name,
+        action:      "club.admin_removed",
+        metadata:    { user_id: req.params.userId },
+      });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[Club Admin Revoke Error]", err.message);
       res.status(500).json({ error: "Internal server error" });
     }
   });

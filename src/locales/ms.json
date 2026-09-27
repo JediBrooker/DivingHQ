@@ -1404,6 +1404,8 @@
       "label_org_created": "Org dicipta",
       "label_org_status_changed": "Status org berubah",
       "label_club_deleted": "Kelab dipadam",
+      "label_club_admin_added": "Pentadbir kelab ditambah",
+      "label_club_admin_removed": "Pentadbir kelab dialih keluar",
       "label_team_deleted": "Pasukan dipadam",
       "label_roster_withdrew": "Peterjun ditarik balik",
       "label_roster_reinstated": "Peterjun dikembalikan",

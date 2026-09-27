@@ -1132,6 +1132,8 @@
       "label_org_created": "Org created",
       "label_org_status_changed": "Org status changed",
       "label_club_deleted": "Club deleted",
+      "label_club_admin_added": "Club admin added",
+      "label_club_admin_removed": "Club admin removed",
       "label_team_deleted": "Team deleted",
       "label_roster_withdrew": "Diver withdrawn",
       "label_roster_reinstated": "Diver reinstated",

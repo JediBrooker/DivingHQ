@@ -8,6 +8,8 @@ const { t } = useI18n()
 import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { fmtDate } from '@/lib/format'
+import ClubAdminsModal from '@/components/ClubAdminsModal.vue'
+import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 const auth = useAuthStore()
 
@@ -30,6 +32,10 @@ const createBusy  = ref(false)
 // Inline rename state, keyed by club id while editing
 const editing = ref(null)          // { id, name, short_code }
 const editBusy = ref(false)
+
+// Club whose admins dialog is open, null when it's closed.
+const adminsFor = ref(null)
+useBodyScrollLock().lockWhile(computed(() => !!adminsFor.value))
 
 const isSysAdmin = computed(() => !!auth.user?.is_system_admin)
 // Only the federation admin configures club fees. Meet managers can view
@@ -324,6 +330,8 @@ onMounted(async () => {
               </td>
               <td class="dim">{{ fmtDate(c.created_at) }}</td>
               <td class="actions-col">
+                <button v-if="isOrgAdmin || isSysAdmin" class="btn btn-ghost btn-sm"
+                        @click="adminsFor = c">Admins</button>
                 <button class="btn btn-ghost btn-sm" @click="openEdit(c)">Rename</button>
                 <button class="btn btn-danger btn-sm" @click="deleteClub(c)">Delete</button>
               </td>
@@ -356,6 +364,8 @@ onMounted(async () => {
       </table></div>
     </div>
   </div>
+
+  <ClubAdminsModal v-if="adminsFor" :club="adminsFor" @close="adminsFor = null" />
 </template>
 
 <style scoped>
@@ -419,7 +429,7 @@ onMounted(async () => {
 }
 .dim { color: var(--text-3); }
 .num-col { text-align: end; width: 110px; }
-.actions-col { text-align: end; width: 200px; white-space: nowrap; }
+.actions-col { text-align: end; width: 260px; white-space: nowrap; }
 .actions-col .btn + .btn { margin-inline-start: 0.4rem; }
 
 .member-count {

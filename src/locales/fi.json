@@ -1404,6 +1404,8 @@
       "label_org_created": "Liitto luotu",
       "label_org_status_changed": "Liiton tila muuttui",
       "label_club_deleted": "Seura poistettu",
+      "label_club_admin_added": "Seuran ylläpitäjä lisätty",
+      "label_club_admin_removed": "Seuran ylläpitäjä poistettu",
       "label_team_deleted": "Joukkue poistettu",
       "label_roster_withdrew": "Hyppääjä vedetty pois",
       "label_roster_reinstated": "Hyppääjä palautettu",

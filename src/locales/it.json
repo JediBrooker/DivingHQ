@@ -1404,6 +1404,8 @@
       "label_org_created": "Organizzazione creata",
       "label_org_status_changed": "Stato dell'organizzazione cambiato",
       "label_club_deleted": "Club eliminato",
+      "label_club_admin_added": "Amministratore del club aggiunto",
+      "label_club_admin_removed": "Amministratore del club rimosso",
       "label_team_deleted": "Squadra eliminata",
       "label_roster_withdrew": "Tuffatore ritirato",
       "label_roster_reinstated": "Tuffatore reintegrato",

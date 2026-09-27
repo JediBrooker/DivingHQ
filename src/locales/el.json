@@ -1404,6 +1404,8 @@
       "label_org_created": "Δημιουργήθηκε ομοσπονδία",
       "label_org_status_changed": "Άλλαξε η κατάσταση ομοσπονδίας",
       "label_club_deleted": "Διαγράφηκε σύλλογος",
+      "label_club_admin_added": "Προστέθηκε διαχειριστής συλλόγου",
+      "label_club_admin_removed": "Αφαιρέθηκε διαχειριστής συλλόγου",
       "label_team_deleted": "Διαγράφηκε ομάδα",
       "label_roster_withdrew": "Καταδύτης αποσύρθηκε",
       "label_roster_reinstated": "Καταδύτης επανεντάχθηκε",

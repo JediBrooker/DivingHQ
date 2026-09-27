@@ -1132,6 +1132,8 @@
       "label_org_created": "Organizace vytvořena",
       "label_org_status_changed": "Změněn stav organizace",
       "label_club_deleted": "Klub smazán",
+      "label_club_admin_added": "Přidán správce klubu",
+      "label_club_admin_removed": "Odebrán správce klubu",
       "label_team_deleted": "Tým smazán",
       "label_roster_withdrew": "Skokan odhlášen",
       "label_roster_reinstated": "Skokan znovu přihlášen",

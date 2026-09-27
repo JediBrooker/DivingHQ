@@ -1404,6 +1404,8 @@
       "label_org_created": "Organización creada",
       "label_org_status_changed": "Estado de organización cambiado",
       "label_club_deleted": "Club borrado",
+      "label_club_admin_added": "Administrador del club añadido",
+      "label_club_admin_removed": "Administrador del club eliminado",
       "label_team_deleted": "Equipo borrado",
       "label_roster_withdrew": "Saltador retirado",
       "label_roster_reinstated": "Saltador reincorporado",

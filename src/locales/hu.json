@@ -1404,6 +1404,8 @@
       "label_org_created": "Szervezet létrehozva",
       "label_org_status_changed": "Szervezet állapota módosult",
       "label_club_deleted": "Klub törölve",
+      "label_club_admin_added": "Klubadminisztrátor hozzáadva",
+      "label_club_admin_removed": "Klubadminisztrátor eltávolítva",
       "label_team_deleted": "Csapat törölve",
       "label_roster_withdrew": "Műugró visszalépett",
       "label_roster_reinstated": "Műugró visszahelyezve",

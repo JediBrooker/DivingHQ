@@ -267,6 +267,8 @@ const ACTIVITY_LABEL_KEYS = {
   'org.created':             'audit.activity.label_org_created',
   'org.status_changed':      'audit.activity.label_org_status_changed',
   'club.deleted':            'audit.activity.label_club_deleted',
+  'club.admin_added':        'audit.activity.label_club_admin_added',
+  'club.admin_removed':      'audit.activity.label_club_admin_removed',
   'team.deleted':            'audit.activity.label_team_deleted',
   'roster.withdrew':         'audit.activity.label_roster_withdrew',
   'roster.reinstated':       'audit.activity.label_roster_reinstated',
@@ -288,6 +290,8 @@ function actionClass(a) {
   // Activity-log actions: positive (created / reinstated /
   // started), warn (status_changed / workflow_reset / late_entry),
   // negative (deleted / withdrew / unfinalised).
+  if (a === 'club.admin_added')   return 'act-pos'
+  if (a === 'club.admin_removed') return 'act-neg'
   if (a.endsWith('.created'))    return 'act-pos'
   if (a.endsWith('.started'))    return 'act-pos'
   if (a.endsWith('.finalised'))  return 'act-pos'

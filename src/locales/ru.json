@@ -1404,6 +1404,8 @@
       "label_org_created": "Организация создана",
       "label_org_status_changed": "Статус организации изменён",
       "label_club_deleted": "Клуб удалён",
+      "label_club_admin_added": "Добавлен администратор клуба",
+      "label_club_admin_removed": "Удалён администратор клуба",
       "label_team_deleted": "Команда удалена",
       "label_roster_withdrew": "Прыгун снят",
       "label_roster_reinstated": "Прыгун восстановлен",

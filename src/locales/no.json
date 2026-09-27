@@ -1404,6 +1404,8 @@
       "label_org_created": "Forbund opprettet",
       "label_org_status_changed": "Forbundsstatus endret",
       "label_club_deleted": "Klubb slettet",
+      "label_club_admin_added": "Klubbadministrator lagt til",
+      "label_club_admin_removed": "Klubbadministrator fjernet",
       "label_team_deleted": "Lag slettet",
       "label_roster_withdrew": "Stuper trukket",
       "label_roster_reinstated": "Stuper gjeninnsatt",

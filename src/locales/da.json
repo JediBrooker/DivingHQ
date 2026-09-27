@@ -1404,6 +1404,8 @@
       "label_org_created": "Forbund oprettet",
       "label_org_status_changed": "Forbundsstatus ændret",
       "label_club_deleted": "Klub slettet",
+      "label_club_admin_added": "Klubadministrator tilføjet",
+      "label_club_admin_removed": "Klubadministrator fjernet",
       "label_team_deleted": "Hold slettet",
       "label_roster_withdrew": "Udspringer trukket ud",
       "label_roster_reinstated": "Udspringer genindsat",

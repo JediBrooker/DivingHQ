@@ -1404,6 +1404,8 @@
       "label_org_created": "Organisation créée",
       "label_org_status_changed": "Statut d'organisation modifié",
       "label_club_deleted": "Club supprimé",
+      "label_club_admin_added": "Administrateur du club ajouté",
+      "label_club_admin_removed": "Administrateur du club retiré",
       "label_team_deleted": "Équipe supprimée",
       "label_roster_withdrew": "Plongeur retiré",
       "label_roster_reinstated": "Plongeur réintégré",

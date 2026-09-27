@@ -1404,6 +1404,8 @@
       "label_org_created": "Organizacija stvorena",
       "label_org_status_changed": "Status organizacije promijenjen",
       "label_club_deleted": "Klub izbrisan",
+      "label_club_admin_added": "Dodan administrator kluba",
+      "label_club_admin_removed": "Uklonjen administrator kluba",
       "label_team_deleted": "Ekipa izbrisana",
       "label_roster_withdrew": "Skakač povučen",
       "label_roster_reinstated": "Skakač vraćen",

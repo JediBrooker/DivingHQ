@@ -1404,6 +1404,8 @@
       "label_org_created": "Org dibuat",
       "label_org_status_changed": "Status org berubah",
       "label_club_deleted": "Klub dihapus",
+      "label_club_admin_added": "Admin klub ditambahkan",
+      "label_club_admin_removed": "Admin klub dihapus",
       "label_team_deleted": "Tim dihapus",
       "label_roster_withdrew": "Peloncat ditarik",
       "label_roster_reinstated": "Peloncat dipulihkan",

@@ -1404,6 +1404,8 @@
       "label_org_created": "组织已创建",
       "label_org_status_changed": "组织状态已变更",
       "label_club_deleted": "俱乐部已删除",
+      "label_club_admin_added": "已添加俱乐部管理员",
+      "label_club_admin_removed": "已移除俱乐部管理员",
       "label_team_deleted": "团队已删除",
       "label_roster_withdrew": "运动员已退出",
       "label_roster_reinstated": "运动员已恢复",

@@ -1404,6 +1404,8 @@
       "label_org_created": "Nagawa ang org",
       "label_org_status_changed": "Nagbago ang status ng org",
       "label_club_deleted": "Binura ang club",
+      "label_club_admin_added": "Nagdagdag ng admin ng club",
+      "label_club_admin_removed": "Tinanggal ang admin ng club",
       "label_team_deleted": "Binura ang team",
       "label_roster_withdrew": "Umatras ang diver",
       "label_roster_reinstated": "Naibalik ang diver",

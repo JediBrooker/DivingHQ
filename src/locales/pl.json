@@ -1404,6 +1404,8 @@
       "label_org_created": "Utworzono organizację",
       "label_org_status_changed": "Zmieniono status organizacji",
       "label_club_deleted": "Usunięto klub",
+      "label_club_admin_added": "Dodano administratora klubu",
+      "label_club_admin_removed": "Usunięto administratora klubu",
       "label_team_deleted": "Usunięto drużynę",
       "label_roster_withdrew": "Skoczek wycofany",
       "label_roster_reinstated": "Skoczek przywrócony",

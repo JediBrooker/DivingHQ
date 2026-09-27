@@ -614,3 +614,58 @@ test("a pending or suspended federation can't sign in", async (t) => {
     await teardownFixture(state);
   }
 });
+
+// Nothing outside the tests used to write club_admins, so a club could
+// never get an admin. The federation admin can now hand it out, but only
+// to people in their own org.
+test("a federation admin can appoint and remove club admins", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { ADMIN_ORG_ID } = require("../lib/admin-org");
+  const state = await setupFixture({ withEvent: false });
+  try {
+    const club = await fetchJson("POST", `/api/orgs/${state.orgId}/clubs`, {
+      token: state.adminToken, body: { name: "Admin Grant Club" },
+    });
+    assert.equal(club.status, 201);
+    const clubId = club.body.id;
+    const member = await pool.query(
+      `INSERT INTO users (username, password, full_name, email, org_id, club_id)
+       VALUES ($1, 'x', 'Club Volunteer', $2, $3, $4) RETURNING id`,
+      [`int-vol-${state.slug}`, `vol-${state.slug}@example.test`, state.orgId, clubId],
+    );
+    const memberId = member.rows[0].id;
+
+    let list = await fetchJson("GET", `/api/clubs/${clubId}/admins`, { token: state.adminToken });
+    assert.equal(list.status, 200);
+    assert.deepEqual(list.body.admins, []);
+    assert.ok(list.body.members.some((m) => m.id === memberId), "member is offered in the picker");
+
+    const add = await fetchJson("POST", `/api/clubs/${clubId}/admins`, {
+      token: state.adminToken, body: { user_id: memberId },
+    });
+    assert.equal(add.status, 201);
+    list = await fetchJson("GET", `/api/clubs/${clubId}/admins`, { token: state.adminToken });
+    assert.deepEqual(list.body.admins.map((a) => a.id), [memberId]);
+
+    // Someone from another org can't be slipped in.
+    const outsider = await pool.query("SELECT id FROM users WHERE org_id = $1 LIMIT 1", [ADMIN_ORG_ID]);
+    if (outsider.rows.length) {
+      const cross = await fetchJson("POST", `/api/clubs/${clubId}/admins`, {
+        token: state.adminToken, body: { user_id: outsider.rows[0].id },
+      });
+      assert.equal(cross.status, 400);
+    }
+
+    const del = await fetchJson("DELETE", `/api/clubs/${clubId}/admins/${memberId}`, { token: state.adminToken });
+    assert.equal(del.status, 200);
+    list = await fetchJson("GET", `/api/clubs/${clubId}/admins`, { token: state.adminToken });
+    assert.deepEqual(list.body.admins, []);
+
+    const bogus = await fetchJson("GET", "/api/clubs/not-a-uuid/admins", { token: state.adminToken });
+    assert.equal(bogus.status, 404);
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [state.orgId]).catch(() => {});
+    await teardownFixture(state);
+  }
+});

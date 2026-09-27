@@ -682,6 +682,7 @@ app.use(require("./routes/orgs")({
   verifyToken,
   requireSystemAdmin,
   requireMeetEditor,
+  isInSameOrg,
   sendOrgDecisionEmail,
 }));
 

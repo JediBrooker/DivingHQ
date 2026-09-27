@@ -1404,6 +1404,8 @@
       "label_org_created": "تم إنشاء المؤسسة",
       "label_org_status_changed": "تغيّرت حالة المؤسسة",
       "label_club_deleted": "تم حذف النادي",
+      "label_club_admin_added": "تمت إضافة مسؤول للنادي",
+      "label_club_admin_removed": "تمت إزالة مسؤول النادي",
       "label_team_deleted": "تم حذف الفريق",
       "label_roster_withdrew": "انسحب الغطّاس",
       "label_roster_reinstated": "أُعيد الغطّاس",

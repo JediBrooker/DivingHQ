@@ -1404,6 +1404,8 @@
       "label_org_created": "조직 생성됨",
       "label_org_status_changed": "조직 상태 변경됨",
       "label_club_deleted": "클럽 삭제됨",
+      "label_club_admin_added": "클럽 관리자 추가됨",
+      "label_club_admin_removed": "클럽 관리자 제거됨",
       "label_team_deleted": "팀 삭제됨",
       "label_roster_withdrew": "다이버 기권",
       "label_roster_reinstated": "다이버 복귀",
