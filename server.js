@@ -1096,7 +1096,7 @@ app.use(require("./routes/late-arrivals")({ pool, requireOrgRole, requireRoleOrE
 // Built here rather than down in [SECTION: RECORDS] because manual
 // entry completes dives too and needs the record check handed to it.
 const { checkAndApplyRecords, router: recordsRouter } =
-  require("./lib/records")({ pool, verifyToken });
+  require("./lib/records")({ pool, readPool, optionalAuth });
 
 app.use(require("./routes/manual-scores")({
   pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate,
@@ -1181,7 +1181,8 @@ app.use(limitRoutes(createSearchLimiter(), require("./routes/judge-analytics")({
 // The factory (built above the manual-scores mount) exposes both
 // checkAndApplyRecords (run whenever a dive completes, from the
 // socket submit_score handler and from manual entry) and a tiny
-// Express router with the GET /api/records endpoint, mounted here.
+// Express router with the public GET /api/records endpoint (the
+// /records page), mounted here.
 // =============================================================
 app.use(recordsRouter);
 

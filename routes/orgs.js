@@ -48,13 +48,15 @@ module.exports = function createOrgsRouter({
     }
   });
 
-  // List active orgs, used by register form to populate the org picker.
-  // The sysadmin's own Administration org is active too, so skip it or
-  // strangers can sign up straight into it.
+  // List active orgs, used by register form to populate the org picker
+  // and by the /records page's country picker (hence continent, so the
+  // Continental tab can open on the right book). The sysadmin's own
+  // Administration org is active too, so skip it or strangers can sign
+  // up straight into it.
   router.get("/api/orgs/active", async (req, res) => {
     try {
       const r = await pool.query(
-        "SELECT id, name, country_code, slug FROM organisations WHERE status = 'active' AND id <> $1 ORDER BY name ASC",
+        "SELECT id, name, country_code, slug, continent FROM organisations WHERE status = 'active' AND id <> $1 ORDER BY name ASC",
         [ADMIN_ORG_ID],
       );
       res.json(r.rows);

@@ -1433,6 +1433,10 @@ test("records: a dive sets a state record, unofficial until the state is claimed
     let reg = await list("region", on);
     assert.equal(reg.length, 1);
     assert.equal(reg[0].official, false, "Ontario has no state body yet");
+    // Same answer for somebody who isn't signed in: the books are public.
+    const anon = await fetchJson("GET", `/api/records?scope=region&scope_id=${on}`);
+    assert.equal(anon.status, 200);
+    assert.equal(anon.body[0].official, false);
     assert.equal((await list("federation", orgId))[0].official, false, "nor Canada a federation");
     await pool.query("UPDATE regions SET claim_state = 'claimed' WHERE id = $1", [on]);
     reg = await list("region", on);
@@ -1788,6 +1792,103 @@ test("records: rebuild-records reports on a dry run and repairs a book with --ap
     assert.equal(c2.changed + c2.added + c2.removed, 0, JSON.stringify(c2));
   } finally {
     client.release();
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+test("records: every book is public and carries what the records page prints", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { ADMIN_ORG_ID } = require("../lib/admin-org");
+  const st = await setupFixture({ withEvent: false });
+  // A continental row with a dive code no real book uses, so asserting on
+  // it can't trip over marks other tests or the seed left in 'africa'.
+  const oddCode = `9${crypto.randomBytes(2).toString("hex")}`;
+  try {
+    const lib = recordKit.lib();
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Public Province', 'PP') RETURNING id",
+      [st.orgId])).rows[0].id;
+    const club = await recordKit.club(st.orgId, "Public Book Divers", "PBD", region);
+    const her = await recordKit.diver(st.orgId, club, "female", "Gia Public");
+    const dive = await recordKit.threeMetreDive();
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(women, her, 1, dive, 6.5);
+    await lib.checkAndApplyRecords({ eventId: women.id, competitorId: her, roundNumber: 1 });
+    const catalogue = (await pool.query(
+      "SELECT dd::text, description FROM dive_directory WHERE id = $1", [dive])).rows[0];
+
+    // No token anywhere below: this used to be 401.
+    const book = async (scope, id) => {
+      const r = await fetchJson("GET", `/api/records?scope=${scope}&scope_id=${id}`);
+      assert.equal(r.status, 200, `${scope}: ${JSON.stringify(r.body)}`);
+      return r.body;
+    };
+    for (const [scope, id, name] of [
+      ["club", club, "Public Book Divers"],
+      ["region", region, "Public Province"],
+      ["federation", st.orgId, `Integration Test ${st.slug}`],
+    ]) {
+      const rows = await book(scope, id);
+      assert.equal(rows.length, 1, scope);
+      const row = rows[0];
+      assert.equal(row.scope_name, name);
+      assert.equal(row.gender, "Female");
+      assert.equal(row.prev_score, null);
+      assert.equal(row.holder_id, her);
+      assert.equal(row.holder_name, "Gia Public");
+      assert.equal(row.holder_country_code, "TST");
+      assert.equal(row.holder_deleted, false);
+      assert.equal(row.event_id, women.id);
+      assert.equal(row.dd, catalogue.dd);
+      assert.equal(row.description, catalogue.description);
+      assert.equal(row.official, scope !== "region", `${scope} official flag`);
+    }
+
+    await pool.query(
+      `INSERT INTO records_continental (continent, holder_id, gender, height, dive_code, position, score)
+       VALUES ('africa', $1, 'Female', '3m', $2, 'B', 12.34)`, [her, oddCode]);
+    const africa = (await book("continental", "africa")).find((r) => r.dive_code === oddCode);
+    assert.ok(africa, "the continental row is there");
+    assert.equal(africa.scope_name, "Africa");
+    assert.equal(africa.holder_country_code, "TST");
+    assert.equal(africa.dd, null, "no catalogue row for a made-up dive");
+
+    // The same 400s as before, signed in or not.
+    assert.equal((await fetchJson("GET", "/api/records")).status, 400);
+    assert.equal((await fetchJson("GET", `/api/records?scope=nope&scope_id=${club}`)).status, 400);
+    assert.equal((await fetchJson("GET", "/api/records?scope=club&scope_id=not-a-uuid")).status, 400);
+    assert.equal((await fetchJson("GET", "/api/records?scope=continental&scope_id=atlantis")).status, 400);
+    assert.equal((await fetchJson("GET", "/api/records?event_id=nope")).status, 400);
+    assert.ok(Array.isArray((await fetchJson("GET", `/api/records?event_id=${women.id}`)).body));
+
+    // A holder who deleted their account keeps the mark, but the page
+    // mustn't link to a profile that 404s.
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [her]);
+    assert.equal((await book("club", club))[0].holder_deleted, true);
+
+    // A suspended federation's books go dark, club and region included.
+    await pool.query("UPDATE organisations SET status = 'suspended' WHERE id = $1", [st.orgId]);
+    for (const [scope, id] of [["club", club], ["region", region], ["federation", st.orgId]]) {
+      assert.deepEqual(await book(scope, id), [], `${scope} of a suspended org`);
+    }
+    await pool.query("UPDATE organisations SET status = 'active' WHERE id = $1", [st.orgId]);
+
+    // And the sysadmins' own Administration org never has a public book.
+    await pool.query(
+      `INSERT INTO records_federation (org_id, holder_id, gender, height, dive_code, position, score)
+       VALUES ($1, $2, 'Female', '3m', $3, 'B', 1)`, [ADMIN_ORG_ID, her, oddCode]);
+    assert.deepEqual(await book("federation", ADMIN_ORG_ID), []);
+
+    // The country picker gets the continent so the Continental tab can
+    // open on the right book.
+    await pool.query("UPDATE organisations SET continent = 'africa' WHERE id = $1", [st.orgId]);
+    const active = await fetchJson("GET", "/api/orgs/active");
+    assert.equal(active.body.find((o) => o.id === st.orgId)?.continent, "africa");
+  } finally {
+    await pool.query("DELETE FROM records_continental WHERE dive_code = $1", [oddCode]);
+    await pool.query("DELETE FROM records_federation WHERE dive_code = $1", [oddCode]);
     await recordKit.cleanup(st.orgId);
     await teardownFixture(st);
   }
