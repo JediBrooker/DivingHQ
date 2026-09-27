@@ -106,7 +106,7 @@ The judge view closes itself when the event flips to Completed. You can sign bac
 
 ## Judge Analysis — how am I tracking?
 
-Every judge has a **public** analytics page at `/judge-profile/:id` that shows how their scoring tracks against the panel-kept mean (post-trim, per **PART FOUR Article 13**). It's the same kept set the dive-points formula uses, so your deviation from it is the same signal a WA judges' assessor would compute by hand.
+Every judge has a **public** analytics page at `/judge-profile/:id` that shows how their scoring tracks against the panel-kept mean (post-trim, per **PART FOUR Article 9.1.5**). It's the same kept set the dive-points formula uses, so your deviation from it is the same signal a WA judges' assessor would compute by hand.
 
 The page is **public on purpose** — every score the rollups aggregate is already visible on the live scoreboard and the archived meet pages. Pre-aggregating per-judge just makes patterns visible (per-country bias, per-club drift) instead of leaving them buried in the per-dive HTML. The transparency cuts both ways: the judge gets a self-evaluation tool, and the federation has an evidence trail before invoking **Article 8.4.9** (Referee may remove a judge whose judgement is regarded as unsatisfactory).
 
@@ -129,7 +129,7 @@ Judge Analysis ships with the same drag-to-reorder + customise pattern as the di
 
 - **Bias Summary** — headline mean signed deviation, MAD, stddev, sample size.
 - **Deviation Distribution** — histogram of how often you score above or below the panel kept-mean, bucketed at 0.5-point bands.
-- **Agreement Rate** — % of your calls within ±0.5 (one increment per Article 7.9.4) and ±1.0.
+- **Agreement Rate** — % of your calls within ±0.5 (one increment, since awards go up in half points per Article 10.1.1) and ±1.0.
 - **Drop Rate** — how often your score gets trimmed off the panel, with the high-vs-low split. A balanced split is expected; a 50/5% high-vs-low skew is the hi-bias signal Article 8.4.9 cares about.
 - **By Board Height** / **By Dive Group** / **By DD Difficulty** / **By Round** — deviation broken out per axis.
 - **By Diver Country** / **By Diver Club** / **By Individual Diver** — top-N by absolute deviation. Surface a per-country bias signal before the FINAL panel is seated (Article 7.4 already restricts FINAL panels to non-same-nationality judges; this gives the same data ahead of time).

@@ -12,7 +12,7 @@
 // The numeric reference for every "how is this judge tracking?"
 // metric is the **panel-kept mean**, the arithmetic mean of the
 // scores that survived the World Aquatics trim for that dive
-// (PART FOUR, Article 13 trim rules). That's the same kept set the
+// (PART FOUR, Article 9.1.5 trim rules). That's the same kept set the
 // dive-points formula uses, so a judge's deviation from it is the
 // same signal an WA judges' assessor would compute by hand.
 //

@@ -138,7 +138,7 @@ const FULL_FIELD_RANKING = `
 //     of the post World Aquatics-trim scores for that dive. This is
 //     the reference point judge analytics measures against, not the
 //     raw panel mean: the trim is what the dive-points formula
-//     itself uses (Article 13 / dispatch via calc_event_dive_points)
+//     itself uses (Article 9.1.5 / dispatch via calc_event_dive_points)
 //     and it's what spectators / referees compare a judge against
 //     when checking whether the judge's call lined up with the
 //     panel's consensus.
@@ -280,7 +280,7 @@ const JUDGE_PER_DIVE = `
   LEFT JOIN LATERAL (
     SELECT
       array_agg(s2.score ORDER BY s2.score)::numeric[] AS panel_scores,
-      /* drop_count by panel size (Article 13 / calc_dive_points). */
+      /* drop_count by panel size (Article 9.1.5.1-9.1.5.2 / calc_dive_points). */
       CASE
         WHEN e.number_of_judges = 5  THEN 1
         WHEN e.number_of_judges = 7  THEN 2

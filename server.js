@@ -1220,7 +1220,7 @@ app.use(limitRoutes(createSearchLimiter(), require("./routes/diver-profile")({
 // /api/judges/:id/profile, /api/judges/:id/analytics, and
 // /api/users/me/judge-dashboard. The analytics endpoint computes
 // per-judge metrics referenced against the World Aquatics-trim
-// kept mean for each dive (PART FOUR Article 13 trim rules), the
+// kept mean for each dive (PART FOUR Article 9.1.5 trim rules), the
 // same "kept set" the dive-points formula uses, so a judge's
 // deviation from it is the same signal an WA judges' assessor
 // would compute by hand. See routes/judge-analytics.js for the

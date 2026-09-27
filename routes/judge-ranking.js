@@ -34,7 +34,7 @@
 // scaling factor follows the World Aquatics dive-points formula:
 //
 //   individual    → ×1.0
-//   synchro_pair  → ×0.6  (per Article 13 synchro rule)
+//   synchro_pair  → ×0.6  (the 3/5 factor, Article 9.1.5.5)
 //   team          → ×1.0  (with per-dive partner-bonus folded in
 //                          via the existing has_partner branch
 //                          for synchro dives within team events)
@@ -104,7 +104,7 @@ async function buildAnalysis(pool, eventId) {
   if (!evRes.rows.length) return { notFound: true };
   const event = evRes.rows[0];
 
-  // Synchro contributions scale ×0.6 per WA Article 13. Team
+  // Synchro contributions scale ×0.6 per WA Article 9.1.5.5. Team
   // events fold the synchro-bonus into has_partner at the
   // calc_event_dive_points level; the judge-ranking aggregate
   // applies ×0.6 only when the event itself is a pure synchro

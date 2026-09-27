@@ -78,3 +78,24 @@ test("the guide names the Clubs sidebar entry as it appears", () => {
     assert.doesNotMatch(read(file), /\*\*Clubs & teams\*\*/, file);
   }
 });
+
+// docs/2026-02-18_World-Aquatics_CR-Final.pdf, PART FOUR: Article 13 is
+// age group eligibility. Cancelling the highest and lowest awards is
+// 9.1.5.1-9.1.5.4 (the synchro 3/5 factor 9.1.5.5), and half-point awards
+// are 10.1.1. The trim was cited as "Article 13" for months, publicly.
+test("World Aquatics citations for the trim point at Article 9.1.5, not 13", () => {
+  const files = [
+    "src/guide/content/judging.md", "src/views/JudgeProfileView.vue", "src/views/JudgeDirectoryView.vue",
+    "README.md", "server.js", "routes/judge-analytics.js", "routes/judge-ranking.js", "db/queries.js",
+    "src/components/JudgeRankingTable.vue", "src/components/dashboard/JudgePanel.vue",
+  ];
+  for (const file of files) {
+    for (const line of read(file).split("\n")) {
+      // Age-group lines cite 13 correctly (and can mention synchro).
+      if (/Article 13(?![.\d])/.test(line) && /trim|kept|synchro|drop/i.test(line) && !/age group/i.test(line)) {
+        assert.fail(`${file} cites Article 13 for the trim: ${line.trim()}`);
+      }
+    }
+  }
+  assert.doesNotMatch(read("src/guide/content/judging.md"), /Article 7\.9\.4/);
+});
