@@ -1134,6 +1134,24 @@ module.exports = function createAuthRouter({
     }
   });
 
+  // Following a verify link, or a reset link, proves the inbox, and a few
+  // things wait on exactly that: a federation or state body's claim goes
+  // live (lib/claims.js), a club waiting on its federation gets put in
+  // front of it, and a new club that picked a claimed region asks to join.
+  // Both routes run this one list so a new step can't land in only one.
+  // Best effort: a hiccup mustn't fail the verification or the reset, and
+  // the next click (or support) can redo it. Returns how many claims went
+  // live, which verify-email uses to pick what to say next.
+  async function afterInboxProven(userId) {
+    const opened = await claims.activateForUser(pool, userId, { push, email: { sendClaimEmail } })
+      .catch((err) => { console.error("[Claim Activate Error]", err.message); return 0; });
+    await clubApprovals.submitForUser(pool, userId, { push, email: { sendNoticeEmail } })
+      .catch((err) => console.error("[Club Submit Error]", err.message));
+    await clubApprovals.askRegionsForUser(pool, userId)
+      .catch((err) => console.error("[Club Region Ask Error]", err.message));
+    return opened;
+  }
+
   // Verify email: clicked from the link sent at registration.
   // Single-use via the email_verified_at column, once stamped,
   // re-presenting the same token has no effect.
@@ -1162,17 +1180,7 @@ module.exports = function createAuthRouter({
         return res.status(400).json({ error: "Verification link is invalid" });
       }
       const { fresh, org_status: orgStatus } = r.rows[0];
-      // A federation / state body's claim goes live now (lib/claims.js).
-      // Best-effort: a hiccup here mustn't fail the verification itself,
-      // and the next verify-email click (or support) can redo it.
-      const opened = await claims.activateForUser(pool, decoded.sub, { push, email: { sendClaimEmail } })
-        .catch((err) => { console.error("[Claim Activate Error]", err.message); return 0; });
-      // Same rule for a club waiting on its federation: now it asks.
-      await clubApprovals.submitForUser(pool, decoded.sub, { push, email: { sendNoticeEmail } })
-        .catch((err) => console.error("[Club Submit Error]", err.message));
-      // And for a new club that picked a claimed region at signup.
-      await clubApprovals.askRegionsForUser(pool, decoded.sub)
-        .catch((err) => console.error("[Club Region Ask Error]", err.message));
+      const opened = await afterInboxProven(decoded.sub);
       // Welcome mail only once, and only when they can actually sign in.
       // A pending federation hears from us when it's approved instead.
       if (fresh && orgStatus === "active") sendWelcomeEmail(decoded.sub).catch(() => {});
@@ -1952,14 +1960,7 @@ module.exports = function createAuthRouter({
         client2.release();
       }
       sendPasswordChangedEmail(user.id).catch(() => {});
-      // Same as verify-email: a claim waiting on the inbox goes live, and
-      // so does a club waiting to be put in front of its federation.
-      await claims.activateForUser(pool, user.id, { push, email: { sendClaimEmail } }).catch((err) =>
-        console.error("[Claim Activate Error]", err.message));
-      await clubApprovals.submitForUser(pool, user.id, { push, email: { sendNoticeEmail } }).catch((err) =>
-        console.error("[Club Submit Error]", err.message));
-      await clubApprovals.askRegionsForUser(pool, user.id).catch((err) =>
-        console.error("[Club Region Ask Error]", err.message));
+      await afterInboxProven(user.id);
       res.json({ ok: true });
     } catch (err) {
       console.error("[Reset Password Error]", err.message);
