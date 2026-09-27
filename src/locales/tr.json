@@ -2006,5 +2006,35 @@
     "open_claims_few": "açık talep",
     "open_claims_many": "açık talep",
     "open_claims_other": "açık talep"
+  },
+  "admin_settings": {
+    "title": "Devralma talebi oylama kuralları",
+    "intro": "Bir federasyonun veya bölge kuruluşunun kulüplerin başlattığı bir hesap üzerindeki talebinin nasıl karara bağlanacağı. Yeni değerler bundan sonra açılan taleplere (veya verilen oylara) uygulanır.",
+    "bounds": "Varsayılan {default_value}, izin verilen {min} ile {max} arası",
+    "saved": "{label} değeri {value} olarak ayarlandı.",
+    "required": "Bir değer girin.",
+    "not_number": "Bir sayı girin.",
+    "whole": "Bir tam sayı girin.",
+    "range": "{min} ile {max} arasında bir değer girin.",
+    "claim_voter_min_age_days": {
+      "label": "Oy için kulüp yaşı (gün)",
+      "description": "Bir kulüp ancak bu kadar süredir DivingHQ’de ise talepte oy veren sayılır."
+    },
+    "claim_voter_min_members": {
+      "label": "Oy için üye sayısı",
+      "description": "…ve e-postası doğrulanmış en az bu kadar üyesi vardır ya da bir yarışmaya ev sahipliği yapmıştır."
+    },
+    "claim_quorum_min": {
+      "label": "En az oy veren",
+      "description": "Oy hakkı olanlar bundan azsa talep sistem yöneticisine gider. Aynı zamanda talebi geçirebilecek en az onay sayısıdır."
+    },
+    "claim_majority": {
+      "label": "Gereken çoğunluk",
+      "description": "Onaylar, oy hakkı olanların bu oranından fazla olmalıdır (0.5 = basit çoğunluk)."
+    },
+    "claim_timeout_days": {
+      "label": "Oylama süresi (gün)",
+      "description": "Süre dolduğunda: en az bir onay ve hiç itiraz yoksa talep kabul edilir, aksi halde sistem yöneticisine gider."
+    }
   }
 }

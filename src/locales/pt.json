@@ -2006,5 +2006,35 @@
     "open_claims_few": "reivindicações abertas",
     "open_claims_many": "de reivindicações abertas",
     "open_claims_other": "reivindicações abertas"
+  },
+  "admin_settings": {
+    "title": "Regras de votação das reivindicações",
+    "intro": "Como é decidida a reivindicação de uma federação ou organismo regional sobre uma conta iniciada pelos clubes. Os novos valores aplicam-se às reivindicações abertas (ou votos emitidos) a partir de agora.",
+    "bounds": "Predefinição {default_value}, permitido de {min} a {max}",
+    "saved": "{label} definido para {value}.",
+    "required": "Introduza um valor.",
+    "not_number": "Introduza um número.",
+    "whole": "Introduza um número inteiro.",
+    "range": "Introduza um valor entre {min} e {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Antiguidade do clube para votar (dias)",
+      "description": "Um clube só conta como votante numa reivindicação depois de estar no DivingHQ durante este tempo."
+    },
+    "claim_voter_min_members": {
+      "label": "Membros para votar",
+      "description": "…e tem pelo menos este número de membros com o e-mail verificado, ou já organizou uma prova."
+    },
+    "claim_quorum_min": {
+      "label": "Mínimo de votantes",
+      "description": "Com menos votantes elegíveis, a reivindicação passa para o administrador do sistema. É também o número mínimo de aprovações para a aprovar."
+    },
+    "claim_majority": {
+      "label": "Maioria necessária",
+      "description": "As aprovações têm de ultrapassar esta proporção dos votantes elegíveis (0.5 = maioria simples)."
+    },
+    "claim_timeout_days": {
+      "label": "Prazo de votação (dias)",
+      "description": "Quando termina: pelo menos uma aprovação e nenhuma objeção aprovam a reivindicação; caso contrário, passa para o administrador do sistema."
+    }
   }
 }

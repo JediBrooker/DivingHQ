@@ -2006,5 +2006,35 @@
     "open_claims_few": "个进行中的申请",
     "open_claims_many": "个进行中的申请",
     "open_claims_other": "个进行中的申请"
+  },
+  "admin_settings": {
+    "title": "接管申请投票规则",
+    "intro": "联合会或州级机构对俱乐部创建的账户提出接管申请时如何决定。新数值适用于从现在起开启的申请（或投出的票）。",
+    "bounds": "默认 {default_value}，允许范围 {min} 至 {max}",
+    "saved": "已将{label}设为 {value}。",
+    "required": "请输入一个值。",
+    "not_number": "请输入数字。",
+    "whole": "请输入整数。",
+    "range": "请输入 {min} 至 {max} 之间的值。",
+    "claim_voter_min_age_days": {
+      "label": "俱乐部投票所需时长（天）",
+      "description": "俱乐部在 DivingHQ 上满这段时间后才算接管申请的投票方。"
+    },
+    "claim_voter_min_members": {
+      "label": "投票所需会员数",
+      "description": "……并且至少有这么多邮箱已验证的会员，或已举办过比赛。"
+    },
+    "claim_quorum_min": {
+      "label": "最少投票方",
+      "description": "有资格的投票方少于此数时，申请改交系统管理员处理。这也是申请通过所需的最少批准数。"
+    },
+    "claim_majority": {
+      "label": "所需多数",
+      "description": "批准数必须超过有资格投票方的这个比例（0.5 = 简单多数）。"
+    },
+    "claim_timeout_days": {
+      "label": "投票期限（天）",
+      "description": "期满时：至少一票批准且无人反对即通过，否则交由系统管理员处理。"
+    }
   }
 }

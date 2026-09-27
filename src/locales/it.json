@@ -2006,5 +2006,35 @@
     "open_claims_few": "rivendicazioni aperte",
     "open_claims_many": "di rivendicazioni aperte",
     "open_claims_other": "rivendicazioni aperte"
+  },
+  "admin_settings": {
+    "title": "Regole di voto sulle rivendicazioni",
+    "intro": "Come si decide la rivendicazione di una federazione o di un ente regionale su un account avviato dai club. I nuovi valori valgono per le rivendicazioni aperte (o i voti espressi) da ora in poi.",
+    "bounds": "Predefinito {default_value}, consentito da {min} a {max}",
+    "saved": "{label} impostato a {value}.",
+    "required": "Inserisci un valore.",
+    "not_number": "Inserisci un numero.",
+    "whole": "Inserisci un numero intero.",
+    "range": "Inserisci un valore da {min} a {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Anzianità del club per votare (giorni)",
+      "description": "Un club conta come votante su una rivendicazione solo dopo essere stato su DivingHQ per questo tempo."
+    },
+    "claim_voter_min_members": {
+      "label": "Membri per votare",
+      "description": "…e ha almeno questo numero di membri con email verificata, oppure ha organizzato una gara."
+    },
+    "claim_quorum_min": {
+      "label": "Votanti minimi",
+      "description": "Con meno votanti aventi diritto la rivendicazione passa all'amministratore di sistema. È anche il numero minimo di approvazioni per farla passare."
+    },
+    "claim_majority": {
+      "label": "Maggioranza necessaria",
+      "description": "Le approvazioni devono superare questa quota dei votanti aventi diritto (0.5 = maggioranza semplice)."
+    },
+    "claim_timeout_days": {
+      "label": "Durata del voto (giorni)",
+      "description": "Alla scadenza: almeno un'approvazione e nessuna obiezione fanno passare la rivendicazione, altrimenti va all'amministratore di sistema."
+    }
   }
 }

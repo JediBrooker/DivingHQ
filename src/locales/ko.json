@@ -2006,5 +2006,35 @@
     "open_claims_few": "건 진행 중",
     "open_claims_many": "건 진행 중",
     "open_claims_other": "건 진행 중"
+  },
+  "admin_settings": {
+    "title": "인수 신청 투표 규칙",
+    "intro": "클럽들이 시작한 계정에 대한 연맹이나 지역 단체의 인수 신청을 어떻게 결정할지 정합니다. 새 값은 지금부터 열리는 신청(또는 투표)에 적용됩니다.",
+    "bounds": "기본값 {default_value}, 허용 범위 {min}~{max}",
+    "saved": "{label}을(를) {value}(으)로 설정했습니다.",
+    "required": "값을 입력하세요.",
+    "not_number": "숫자를 입력하세요.",
+    "whole": "정수를 입력하세요.",
+    "range": "{min}~{max} 사이의 값을 입력하세요.",
+    "claim_voter_min_age_days": {
+      "label": "투표 가능한 클럽 기간(일)",
+      "description": "클럽은 DivingHQ에 이 기간 이상 있어야 인수 신청 투표자로 인정됩니다."
+    },
+    "claim_voter_min_members": {
+      "label": "투표에 필요한 회원 수",
+      "description": "…그리고 이메일 인증을 마친 회원이 이 수 이상이거나 대회를 개최한 적이 있어야 합니다."
+    },
+    "claim_quorum_min": {
+      "label": "최소 투표자 수",
+      "description": "투표 자격이 있는 클럽이 이보다 적으면 신청은 시스템 관리자에게 넘어갑니다. 신청을 통과시키는 최소 승인 수이기도 합니다."
+    },
+    "claim_majority": {
+      "label": "필요한 과반",
+      "description": "승인이 투표 자격자 중 이 비율을 넘어야 합니다(0.5 = 단순 과반)."
+    },
+    "claim_timeout_days": {
+      "label": "투표 기간(일)",
+      "description": "기간이 끝나면 승인이 1건 이상이고 이의가 없으면 통과되며, 그렇지 않으면 시스템 관리자에게 넘어갑니다."
+    }
   }
 }

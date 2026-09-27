@@ -2006,5 +2006,35 @@
     "open_claims_few": "klaim terbuka",
     "open_claims_many": "klaim terbuka",
     "open_claims_other": "klaim terbuka"
+  },
+  "admin_settings": {
+    "title": "Aturan pemungutan suara klaim",
+    "intro": "Cara klaim federasi atau badan wilayah atas akun yang dirintis klub diputuskan. Nilai baru berlaku untuk klaim yang dibuka (atau suara yang diberikan) mulai sekarang.",
+    "bounds": "Bawaan {default_value}, diizinkan {min} sampai {max}",
+    "saved": "{label} diatur ke {value}.",
+    "required": "Masukkan nilai.",
+    "not_number": "Masukkan angka.",
+    "whole": "Masukkan bilangan bulat.",
+    "range": "Masukkan nilai dari {min} sampai {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Usia klub untuk memilih (hari)",
+      "description": "Klub baru dihitung sebagai pemilih klaim setelah berada di DivingHQ selama ini."
+    },
+    "claim_voter_min_members": {
+      "label": "Anggota untuk memilih",
+      "description": "…dan memiliki setidaknya sebanyak ini anggota yang emailnya terverifikasi, atau pernah menggelar kompetisi."
+    },
+    "claim_quorum_min": {
+      "label": "Pemilih minimum",
+      "description": "Jika pemilih yang berhak kurang dari ini, klaim diteruskan ke admin sistem. Juga jumlah persetujuan paling sedikit untuk meloloskan klaim."
+    },
+    "claim_majority": {
+      "label": "Mayoritas yang dibutuhkan",
+      "description": "Persetujuan harus melebihi proporsi ini dari pemilih yang berhak (0.5 = mayoritas sederhana)."
+    },
+    "claim_timeout_days": {
+      "label": "Masa pemungutan suara (hari)",
+      "description": "Saat berakhir: minimal satu persetujuan tanpa keberatan meloloskan klaim, jika tidak diteruskan ke admin sistem."
+    }
   }
 }

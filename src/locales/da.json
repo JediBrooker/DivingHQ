@@ -2006,5 +2006,35 @@
     "open_claims_few": "åbne krav",
     "open_claims_many": "åbne krav",
     "open_claims_other": "åbne krav"
+  },
+  "admin_settings": {
+    "title": "Afstemningsregler for krav",
+    "intro": "Hvordan et forbunds eller et regionalt organs krav på en konto, som klubberne har oprettet, bliver afgjort. Nye værdier gælder for krav, der åbnes (eller stemmer, der afgives) fra nu af.",
+    "bounds": "Standard {default_value}, tilladt {min} til {max}",
+    "saved": "{label} sat til {value}.",
+    "required": "Angiv en værdi.",
+    "not_number": "Angiv et tal.",
+    "whole": "Angiv et helt tal.",
+    "range": "Angiv en værdi fra {min} til {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Klubbens alder for at stemme (dage)",
+      "description": "En klub tæller først som stemmeberettiget om et krav, når den har været på DivingHQ så længe."
+    },
+    "claim_voter_min_members": {
+      "label": "Medlemmer for at stemme",
+      "description": "…og den har mindst så mange medlemmer med bekræftet e-mail, eller den har afholdt et stævne."
+    },
+    "claim_quorum_min": {
+      "label": "Mindste antal stemmeberettigede",
+      "description": "Er der færre stemmeberettigede end dette, går kravet i stedet til systemadministratoren. Også det mindste antal godkendelser, der kan vedtage et krav."
+    },
+    "claim_majority": {
+      "label": "Nødvendigt flertal",
+      "description": "Godkendelserne skal udgøre mere end denne andel af de stemmeberettigede (0.5 = simpelt flertal)."
+    },
+    "claim_timeout_days": {
+      "label": "Afstemningsperiode (dage)",
+      "description": "Når den udløber: mindst én godkendelse og ingen indsigelser vedtager kravet, ellers går det til systemadministratoren."
+    }
   }
 }

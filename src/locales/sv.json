@@ -2006,5 +2006,35 @@
     "open_claims_few": "öppna anspråk",
     "open_claims_many": "öppna anspråk",
     "open_claims_other": "öppna anspråk"
+  },
+  "admin_settings": {
+    "title": "Omröstningsregler för anspråk",
+    "intro": "Hur ett förbunds eller en regional organisations anspråk på ett konto som klubbarna startat avgörs. Nya värden gäller för anspråk som öppnas (eller röster som läggs) från och med nu.",
+    "bounds": "Standard {default_value}, tillåtet {min} till {max}",
+    "saved": "{label} satt till {value}.",
+    "required": "Ange ett värde.",
+    "not_number": "Ange ett tal.",
+    "whole": "Ange ett heltal.",
+    "range": "Ange ett värde från {min} till {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Klubbens ålder för att rösta (dagar)",
+      "description": "En klubb räknas som röstberättigad i ett anspråk först när den har funnits på DivingHQ så länge."
+    },
+    "claim_voter_min_members": {
+      "label": "Medlemmar för att rösta",
+      "description": "…och den har minst så många medlemmar med bekräftad e-post, eller har arrangerat en tävling."
+    },
+    "claim_quorum_min": {
+      "label": "Minsta antal röstande",
+      "description": "Är de röstberättigade färre än så går anspråket i stället till systemadministratören. Också det minsta antal godkännanden som kan anta ett anspråk."
+    },
+    "claim_majority": {
+      "label": "Majoritet som krävs",
+      "description": "Godkännandena måste vara fler än denna andel av de röstberättigade (0.5 = enkel majoritet)."
+    },
+    "claim_timeout_days": {
+      "label": "Röstningsperiod (dagar)",
+      "description": "När den löper ut: minst ett godkännande och inga invändningar antar anspråket, annars går det till systemadministratören."
+    }
   }
 }

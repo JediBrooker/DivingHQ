@@ -2006,5 +2006,35 @@
     "open_claims_few": "件の進行中の申請",
     "open_claims_many": "件の進行中の申請",
     "open_claims_other": "件の進行中の申請"
+  },
+  "admin_settings": {
+    "title": "引き継ぎ申請の投票ルール",
+    "intro": "クラブが立ち上げたアカウントに対する連盟や地域団体の引き継ぎ申請をどう決めるか。新しい値は今後開かれる申請（または投じられる票）に適用されます。",
+    "bounds": "既定値 {default_value}、許容範囲 {min}〜{max}",
+    "saved": "{label} を {value} に設定しました。",
+    "required": "値を入力してください。",
+    "not_number": "数値を入力してください。",
+    "whole": "整数を入力してください。",
+    "range": "{min}〜{max} の値を入力してください。",
+    "claim_voter_min_age_days": {
+      "label": "投票できるクラブ歴（日）",
+      "description": "クラブは DivingHQ に登録してからこの期間が経って初めて投票者に数えられます。"
+    },
+    "claim_voter_min_members": {
+      "label": "投票に必要な会員数",
+      "description": "…かつ、メール確認済みの会員がこの人数以上いるか、大会を開催したことがあること。"
+    },
+    "claim_quorum_min": {
+      "label": "最少投票者数",
+      "description": "投票資格のあるクラブがこれより少ない場合、申請はシステム管理者に回ります。申請を通すのに必要な最少承認数でもあります。"
+    },
+    "claim_majority": {
+      "label": "必要な多数",
+      "description": "承認数が投票資格者のこの割合を超える必要があります（0.5 = 単純過半数）。"
+    },
+    "claim_timeout_days": {
+      "label": "投票期間（日）",
+      "description": "期間終了時、承認が 1 件以上あり異議がなければ申請は承認され、そうでなければシステム管理者に回ります。"
+    }
   }
 }

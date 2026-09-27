@@ -2006,5 +2006,35 @@
     "open_claims_few": "otevřené nároky",
     "open_claims_many": "otevřeného nároku",
     "open_claims_other": "otevřených nároků"
+  },
+  "admin_settings": {
+    "title": "Pravidla hlasování o nárocích",
+    "intro": "Jak se rozhoduje o nároku federace nebo krajského svazu na účet, který založily kluby. Nové hodnoty platí pro nároky otevřené (nebo hlasy odevzdané) od této chvíle.",
+    "bounds": "Výchozí {default_value}, povoleno {min} až {max}",
+    "saved": "{label} nastaveno na {value}.",
+    "required": "Zadejte hodnotu.",
+    "not_number": "Zadejte číslo.",
+    "whole": "Zadejte celé číslo.",
+    "range": "Zadejte hodnotu od {min} do {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Stáří klubu pro hlasování (dny)",
+      "description": "Klub se počítá jako hlasující o nároku, až když je na DivingHQ alespoň takto dlouho."
+    },
+    "claim_voter_min_members": {
+      "label": "Členů pro hlasování",
+      "description": "…a má alespoň tolik členů s ověřeným e-mailem, nebo už pořádal závody."
+    },
+    "claim_quorum_min": {
+      "label": "Minimum hlasujících",
+      "description": "Při menším počtu oprávněných hlasujících jde nárok místo toho systémovému správci. Zároveň nejmenší počet schválení, kterým nárok projde."
+    },
+    "claim_majority": {
+      "label": "Potřebná většina",
+      "description": "Schválení musí tvořit víc než tento podíl oprávněných hlasujících (0.5 = prostá většina)."
+    },
+    "claim_timeout_days": {
+      "label": "Doba hlasování (dny)",
+      "description": "Po jejím uplynutí nárok projde s alespoň jedním schválením a bez námitek, jinak jde systémovému správci."
+    }
   }
 }

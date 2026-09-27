@@ -2006,5 +2006,35 @@
     "open_claims_few": "tuntutan terbuka",
     "open_claims_many": "tuntutan terbuka",
     "open_claims_other": "tuntutan terbuka"
+  },
+  "admin_settings": {
+    "title": "Peraturan undian tuntutan",
+    "intro": "Cara tuntutan persekutuan atau badan negeri ke atas akaun yang dimulakan oleh kelab diputuskan. Nilai baharu terpakai pada tuntutan yang dibuka (atau undi yang dibuang) mulai sekarang.",
+    "bounds": "Lalai {default_value}, dibenarkan {min} hingga {max}",
+    "saved": "{label} ditetapkan kepada {value}.",
+    "required": "Masukkan nilai.",
+    "not_number": "Masukkan nombor.",
+    "whole": "Masukkan nombor bulat.",
+    "range": "Masukkan nilai dari {min} hingga {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Umur kelab untuk mengundi (hari)",
+      "description": "Kelab hanya dikira sebagai pengundi tuntutan selepas berada di DivingHQ selama ini."
+    },
+    "claim_voter_min_members": {
+      "label": "Ahli untuk mengundi",
+      "description": "…dan mempunyai sekurang-kurangnya seramai ini ahli yang e-melnya disahkan, atau pernah menganjurkan pertandingan."
+    },
+    "claim_quorum_min": {
+      "label": "Pengundi minimum",
+      "description": "Jika pengundi layak kurang daripada ini, tuntutan dihantar kepada pentadbir sistem. Juga bilangan kelulusan paling sedikit untuk meluluskan tuntutan."
+    },
+    "claim_majority": {
+      "label": "Majoriti diperlukan",
+      "description": "Kelulusan mesti melebihi bahagian ini daripada pengundi layak (0.5 = majoriti mudah)."
+    },
+    "claim_timeout_days": {
+      "label": "Tempoh mengundi (hari)",
+      "description": "Apabila tamat: sekurang-kurangnya satu kelulusan tanpa bantahan meluluskan tuntutan, jika tidak ia dihantar kepada pentadbir sistem."
+    }
   }
 }

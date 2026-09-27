@@ -1706,3 +1706,29 @@ test("regions: an org's region list says whether its country has a built-in cata
     for (const id of ids) await pool.query("DELETE FROM organisations WHERE id = $1", [id]).catch(() => {});
   }
 });
+
+// Number('') is 0, and 0 is inside most claim-rule ranges, so an emptied
+// field on /admin/features used to save as 0. The server now refuses
+// anything that isn't a number (or a string spelling one).
+test("platform settings: an empty or non-numeric value is refused, not saved as 0", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const sys = await claimKit.login("admin", "admin");
+  if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+  const KEY = "claim_voter_min_age_days";
+  const before = (await fetchJson("GET", "/api/admin/settings", { token: sys.token })).body.find((s) => s.key === KEY);
+  assert.ok(before, "the setting is listed");
+  for (const value of ["", "   ", null, false, "abc", [], {}]) {
+    const r = await fetchJson("PUT", `/api/admin/settings/${KEY}`, { token: sys.token, body: { value } });
+    assert.equal(r.status, 400, `value ${JSON.stringify(value)} should be refused, got ${r.status}`);
+  }
+  // Leaving value out entirely is the same as empty.
+  assert.equal((await fetchJson("PUT", `/api/admin/settings/${KEY}`, { token: sys.token, body: {} })).status, 400);
+  const after = (await fetchJson("GET", "/api/admin/settings", { token: sys.token })).body.find((s) => s.key === KEY);
+  assert.equal(after.value, before.value, "nothing was written");
+  // A numeric string with stray spaces is still a number. Re-save the
+  // current value so the shared test DB ends up where it started.
+  const ok = await fetchJson("PUT", `/api/admin/settings/${KEY}`, { token: sys.token, body: { value: ` ${before.value} ` } });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  assert.equal(ok.body.value, before.value);
+});

@@ -2006,5 +2006,35 @@
     "open_claims_few": "nyitott igény",
     "open_claims_many": "nyitott igény",
     "open_claims_other": "nyitott igény"
+  },
+  "admin_settings": {
+    "title": "Az igényekről szóló szavazás szabályai",
+    "intro": "Hogyan születik döntés egy szövetség vagy területi szervezet igényéről egy klubok által indított fiókra. Az új értékek mostantól nyitott igényekre (és leadott szavazatokra) érvényesek.",
+    "bounds": "Alapértelmezés {default_value}, megengedett {min}–{max}",
+    "saved": "{label} beállítva: {value}.",
+    "required": "Adjon meg egy értéket.",
+    "not_number": "Adjon meg egy számot.",
+    "whole": "Adjon meg egy egész számot.",
+    "range": "Adjon meg egy értéket {min} és {max} között.",
+    "claim_voter_min_age_days": {
+      "label": "A klub kora a szavazáshoz (nap)",
+      "description": "Egy klub csak akkor számít szavazónak, ha legalább ennyi ideje van a DivingHQ-n."
+    },
+    "claim_voter_min_members": {
+      "label": "Tagok a szavazáshoz",
+      "description": "…és legalább ennyi megerősített e-mail-című tagja van, vagy már rendezett versenyt."
+    },
+    "claim_quorum_min": {
+      "label": "Szavazók minimális száma",
+      "description": "Ha ennél kevesebb a szavazásra jogosult, az igény a rendszergazdához kerül. Egyben ennyi jóváhagyás kell legalább az elfogadáshoz."
+    },
+    "claim_majority": {
+      "label": "Szükséges többség",
+      "description": "A jóváhagyásoknak a jogosult szavazók ennél nagyobb hányadát kell kitenniük (0.5 = egyszerű többség)."
+    },
+    "claim_timeout_days": {
+      "label": "Szavazási idő (nap)",
+      "description": "Lejártakor: legalább egy jóváhagyás és egyetlen kifogás sem esetén az igény elfogadott, különben a rendszergazdához kerül."
+    }
   }
 }

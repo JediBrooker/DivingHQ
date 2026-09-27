@@ -2006,5 +2006,35 @@
     "open_claims_few": "open claims",
     "open_claims_many": "open claims",
     "open_claims_other": "open claims"
+  },
+  "admin_settings": {
+    "title": "Claim voting rules",
+    "intro": "How a federation or state body's claim on an account the clubs started gets decided. New values apply to claims opened (or votes cast) from now on.",
+    "bounds": "Default {default_value}, allowed {min} to {max}",
+    "saved": "{label} set to {value}.",
+    "required": "Enter a value.",
+    "not_number": "Enter a number.",
+    "whole": "Enter a whole number.",
+    "range": "Enter a value from {min} to {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Club age to vote (days)",
+      "description": "A club only counts as a voter on a claim once it's been on DivingHQ this long."
+    },
+    "claim_voter_min_members": {
+      "label": "Members to vote",
+      "description": "…and it has at least this many email-verified members, or has hosted a meet."
+    },
+    "claim_quorum_min": {
+      "label": "Minimum voters",
+      "description": "Fewer eligible voters than this and the claim goes to the sysadmin instead. Also the fewest approvals that can pass a claim."
+    },
+    "claim_majority": {
+      "label": "Majority needed",
+      "description": "Approvals have to be more than this share of the eligible voters (0.5 = a simple majority)."
+    },
+    "claim_timeout_days": {
+      "label": "Voting window (days)",
+      "description": "When it runs out: at least one approval and no objections passes the claim, otherwise it goes to the sysadmin."
+    }
   }
 }

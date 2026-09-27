@@ -2006,5 +2006,35 @@
     "open_claims_few": "otvorena zahtjeva",
     "open_claims_many": "otvorenih zahtjeva",
     "open_claims_other": "otvorenih zahtjeva"
+  },
+  "admin_settings": {
+    "title": "Pravila glasanja o zahtjevima",
+    "intro": "Kako se odlučuje o zahtjevu saveza ili regionalnog tijela za preuzimanje računa koji su pokrenuli klubovi. Nove vrijednosti vrijede za zahtjeve otvorene (ili glasove dane) od sada.",
+    "bounds": "Zadano {default_value}, dopušteno od {min} do {max}",
+    "saved": "{label} postavljeno na {value}.",
+    "required": "Unesite vrijednost.",
+    "not_number": "Unesite broj.",
+    "whole": "Unesite cijeli broj.",
+    "range": "Unesite vrijednost od {min} do {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Starost kluba za glasanje (dani)",
+      "description": "Klub se računa kao glasač o zahtjevu tek kad je toliko dugo na DivingHQ-u."
+    },
+    "claim_voter_min_members": {
+      "label": "Članova za glasanje",
+      "description": "…i ima barem toliko članova s potvrđenom e-poštom ili je već organizirao natjecanje."
+    },
+    "claim_quorum_min": {
+      "label": "Najmanje glasača",
+      "description": "Ako je glasača manje od ovoga, zahtjev ide administratoru sustava. Ujedno najmanji broj odobrenja kojim zahtjev prolazi."
+    },
+    "claim_majority": {
+      "label": "Potrebna većina",
+      "description": "Odobrenja moraju činiti više od ovog udjela glasača s pravom glasa (0.5 = obična većina)."
+    },
+    "claim_timeout_days": {
+      "label": "Trajanje glasanja (dani)",
+      "description": "Kad istekne: barem jedno odobrenje i nijedan prigovor znače da zahtjev prolazi, inače ide administratoru sustava."
+    }
   }
 }

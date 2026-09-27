@@ -2006,5 +2006,35 @@
     "open_claims_few": "bukas na claim",
     "open_claims_many": "bukas na claim",
     "open_claims_other": "bukas na claim"
+  },
+  "admin_settings": {
+    "title": "Mga patakaran sa botohan ng claim",
+    "intro": "Paano pinagpapasyahan ang claim ng pederasyon o panrehiyong lupon sa isang account na sinimulan ng mga club. Ang mga bagong halaga ay para sa mga claim na bubuksan (o botong ibibigay) mula ngayon.",
+    "bounds": "Default {default_value}, pinapayagan mula {min} hanggang {max}",
+    "saved": "Itinakda ang {label} sa {value}.",
+    "required": "Maglagay ng halaga.",
+    "not_number": "Maglagay ng numero.",
+    "whole": "Maglagay ng buong numero.",
+    "range": "Maglagay ng halaga mula {min} hanggang {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Tagal ng club para makaboto (araw)",
+      "description": "Ibinibilang lang ang club bilang botante sa claim kapag ganito na katagal ito sa DivingHQ."
+    },
+    "claim_voter_min_members": {
+      "label": "Mga miyembro para makaboto",
+      "description": "…at may hindi bababa sa ganitong dami ng miyembrong beripikado ang email, o nakapag-host na ng kompetisyon."
+    },
+    "claim_quorum_min": {
+      "label": "Pinakamababang bilang ng botante",
+      "description": "Kapag mas kaunti rito ang karapat-dapat na botante, mapupunta ang claim sa sysadmin. Ito rin ang pinakakaunting pag-apruba para pumasa ang claim."
+    },
+    "claim_majority": {
+      "label": "Kinakailangang mayorya",
+      "description": "Dapat lumampas ang mga pag-apruba sa bahaging ito ng mga karapat-dapat na botante (0.5 = simpleng mayorya)."
+    },
+    "claim_timeout_days": {
+      "label": "Panahon ng botohan (araw)",
+      "description": "Pagkatapos nito: kahit isang pag-apruba at walang tutol ay pumapasa sa claim, kung hindi ay mapupunta ito sa sysadmin."
+    }
   }
 }

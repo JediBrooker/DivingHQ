@@ -2006,5 +2006,35 @@
     "open_claims_few": "otwarte roszczenia",
     "open_claims_many": "otwartych roszczeń",
     "open_claims_other": "otwartego roszczenia"
+  },
+  "admin_settings": {
+    "title": "Zasady głosowania nad roszczeniami",
+    "intro": "Jak rozstrzyga się roszczenie federacji lub organu regionalnego do konta założonego przez kluby. Nowe wartości dotyczą roszczeń otwartych (lub głosów oddanych) od teraz.",
+    "bounds": "Domyślnie {default_value}, dozwolone od {min} do {max}",
+    "saved": "Ustawiono {label} na {value}.",
+    "required": "Wpisz wartość.",
+    "not_number": "Wpisz liczbę.",
+    "whole": "Wpisz liczbę całkowitą.",
+    "range": "Wpisz wartość od {min} do {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Staż klubu do głosowania (dni)",
+      "description": "Klub liczy się jako głosujący nad roszczeniem dopiero, gdy jest na DivingHQ co najmniej tyle czasu."
+    },
+    "claim_voter_min_members": {
+      "label": "Członkowie do głosowania",
+      "description": "…i ma co najmniej tylu członków z potwierdzonym e-mailem albo zorganizował już zawody."
+    },
+    "claim_quorum_min": {
+      "label": "Minimum głosujących",
+      "description": "Przy mniejszej liczbie uprawnionych roszczenie trafia do administratora systemu. To też najmniejsza liczba zgód, przy której roszczenie przechodzi."
+    },
+    "claim_majority": {
+      "label": "Wymagana większość",
+      "description": "Zgody muszą stanowić więcej niż ten odsetek uprawnionych do głosowania (0.5 = zwykła większość)."
+    },
+    "claim_timeout_days": {
+      "label": "Czas głosowania (dni)",
+      "description": "Po jego upływie: co najmniej jedna zgoda i brak sprzeciwów oznaczają przyjęcie, w przeciwnym razie roszczenie trafia do administratora systemu."
+    }
   }
 }

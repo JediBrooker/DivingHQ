@@ -2006,5 +2006,35 @@
     "open_claims_few": "offene Ansprüche",
     "open_claims_many": "offene Ansprüche",
     "open_claims_other": "offene Ansprüche"
+  },
+  "admin_settings": {
+    "title": "Abstimmungsregeln für Ansprüche",
+    "intro": "Wie über den Anspruch eines Verbands oder Landesverbands auf ein von den Vereinen gegründetes Konto entschieden wird. Neue Werte gelten ab jetzt für eröffnete Ansprüche (bzw. abgegebene Stimmen).",
+    "bounds": "Standard {default_value}, zulässig {min} bis {max}",
+    "saved": "{label} auf {value} gesetzt.",
+    "required": "Geben Sie einen Wert ein.",
+    "not_number": "Geben Sie eine Zahl ein.",
+    "whole": "Geben Sie eine ganze Zahl ein.",
+    "range": "Geben Sie einen Wert von {min} bis {max} ein.",
+    "claim_voter_min_age_days": {
+      "label": "Vereinsalter zum Abstimmen (Tage)",
+      "description": "Ein Verein zählt erst als stimmberechtigt, wenn er so lange auf DivingHQ ist."
+    },
+    "claim_voter_min_members": {
+      "label": "Mitglieder zum Abstimmen",
+      "description": "…und mindestens so viele Mitglieder mit bestätigter E-Mail hat oder schon einen Wettkampf ausgerichtet hat."
+    },
+    "claim_quorum_min": {
+      "label": "Mindestzahl Stimmberechtigter",
+      "description": "Gibt es weniger Stimmberechtigte, geht der Anspruch stattdessen an den Systemadmin. Zugleich die Mindestzahl an Zustimmungen, mit der ein Anspruch durchgeht."
+    },
+    "claim_majority": {
+      "label": "Erforderliche Mehrheit",
+      "description": "Die Zustimmungen müssen mehr als diesen Anteil der Stimmberechtigten ausmachen (0.5 = einfache Mehrheit)."
+    },
+    "claim_timeout_days": {
+      "label": "Abstimmungszeitraum (Tage)",
+      "description": "Nach Ablauf: mindestens eine Zustimmung und keine Einwände lassen den Anspruch durchgehen, sonst geht er an den Systemadmin."
+    }
   }
 }

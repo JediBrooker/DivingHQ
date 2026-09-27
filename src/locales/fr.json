@@ -2006,5 +2006,35 @@
     "open_claims_few": "revendications ouvertes",
     "open_claims_many": "de revendications ouvertes",
     "open_claims_other": "revendications ouvertes"
+  },
+  "admin_settings": {
+    "title": "Règles de vote des revendications",
+    "intro": "Comment est tranchée la revendication d'une fédération ou d'un organisme régional sur un compte créé par les clubs. Les nouvelles valeurs s'appliquent aux revendications ouvertes (ou aux votes exprimés) à partir de maintenant.",
+    "bounds": "Par défaut {default_value}, autorisé de {min} à {max}",
+    "saved": "{label} réglé sur {value}.",
+    "required": "Saisissez une valeur.",
+    "not_number": "Saisissez un nombre.",
+    "whole": "Saisissez un nombre entier.",
+    "range": "Saisissez une valeur entre {min} et {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Ancienneté du club pour voter (jours)",
+      "description": "Un club ne compte comme votant sur une revendication qu'une fois présent sur DivingHQ depuis ce délai."
+    },
+    "claim_voter_min_members": {
+      "label": "Membres pour voter",
+      "description": "…et il compte au moins ce nombre de membres à l’e-mail vérifié, ou a déjà organisé une compétition."
+    },
+    "claim_quorum_min": {
+      "label": "Nombre minimal de votants",
+      "description": "En dessous de ce nombre de votants admissibles, la revendication part plutôt à l'administrateur système. C'est aussi le nombre minimal d'approbations pour l'accepter."
+    },
+    "claim_majority": {
+      "label": "Majorité requise",
+      "description": "Les approbations doivent dépasser cette part des votants admissibles (0.5 = majorité simple)."
+    },
+    "claim_timeout_days": {
+      "label": "Durée du vote (jours)",
+      "description": "À son terme : au moins une approbation et aucune objection valident la revendication, sinon elle part à l'administrateur système."
+    }
   }
 }

@@ -2006,5 +2006,35 @@
     "open_claims_few": "avointa vaatimusta",
     "open_claims_many": "avointa vaatimusta",
     "open_claims_other": "avointa vaatimusta"
+  },
+  "admin_settings": {
+    "title": "Vaatimusten äänestyssäännöt",
+    "intro": "Miten liiton tai alueellisen toimijan vaatimus seurojen perustamaan tiliin ratkaistaan. Uudet arvot koskevat tästä eteenpäin avattuja vaatimuksia (tai annettuja ääniä).",
+    "bounds": "Oletus {default_value}, sallittu {min}–{max}",
+    "saved": "{label} asetettu arvoon {value}.",
+    "required": "Anna arvo.",
+    "not_number": "Anna luku.",
+    "whole": "Anna kokonaisluku.",
+    "range": "Anna arvo väliltä {min}–{max}.",
+    "claim_voter_min_age_days": {
+      "label": "Seuran ikä äänestämiseen (päivää)",
+      "description": "Seura lasketaan äänestäjäksi vasta, kun se on ollut DivingHQ:ssa näin kauan."
+    },
+    "claim_voter_min_members": {
+      "label": "Jäseniä äänestämiseen",
+      "description": "…ja sillä on vähintään näin monta sähköpostinsa vahvistanutta jäsentä, tai se on järjestänyt kilpailun."
+    },
+    "claim_quorum_min": {
+      "label": "Äänestäjiä vähintään",
+      "description": "Jos äänioikeutettuja on vähemmän, vaatimus siirtyy järjestelmänvalvojalle. Samalla pienin hyväksyntöjen määrä, jolla vaatimus menee läpi."
+    },
+    "claim_majority": {
+      "label": "Tarvittava enemmistö",
+      "description": "Hyväksyntöjä on oltava enemmän kuin tämä osuus äänioikeutetuista (0.5 = yksinkertainen enemmistö)."
+    },
+    "claim_timeout_days": {
+      "label": "Äänestysaika (päivää)",
+      "description": "Kun se päättyy: vähintään yksi hyväksyntä ilman vastalauseita hyväksyy vaatimuksen, muuten se siirtyy järjestelmänvalvojalle."
+    }
   }
 }

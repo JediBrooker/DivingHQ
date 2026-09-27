@@ -2006,5 +2006,35 @@
     "open_claims_few": "reclamaciones abiertas",
     "open_claims_many": "de reclamaciones abiertas",
     "open_claims_other": "reclamaciones abiertas"
+  },
+  "admin_settings": {
+    "title": "Reglas de votación de reclamaciones",
+    "intro": "Cómo se decide la reclamación de una federación u organismo regional sobre una cuenta que crearon los clubes. Los nuevos valores se aplican a las reclamaciones abiertas (o votos emitidos) a partir de ahora.",
+    "bounds": "Predeterminado {default_value}, permitido de {min} a {max}",
+    "saved": "{label} establecido en {value}.",
+    "required": "Introduce un valor.",
+    "not_number": "Introduce un número.",
+    "whole": "Introduce un número entero.",
+    "range": "Introduce un valor entre {min} y {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Antigüedad del club para votar (días)",
+      "description": "Un club solo cuenta como votante en una reclamación cuando lleva este tiempo en DivingHQ."
+    },
+    "claim_voter_min_members": {
+      "label": "Miembros para votar",
+      "description": "…y tiene al menos esta cantidad de miembros con el correo verificado, o ha organizado una competición."
+    },
+    "claim_quorum_min": {
+      "label": "Mínimo de votantes",
+      "description": "Si hay menos votantes habilitados, la reclamación pasa al administrador del sistema. También es el mínimo de aprobaciones con el que se aprueba."
+    },
+    "claim_majority": {
+      "label": "Mayoría necesaria",
+      "description": "Las aprobaciones deben superar esta proporción de los votantes habilitados (0.5 = mayoría simple)."
+    },
+    "claim_timeout_days": {
+      "label": "Plazo de votación (días)",
+      "description": "Al terminar: al menos una aprobación y ninguna objeción aprueban la reclamación; si no, pasa al administrador del sistema."
+    }
   }
 }
