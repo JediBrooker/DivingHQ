@@ -88,7 +88,14 @@
       "submit_idle": "Skicka registrering",
       "submit_loading": "Skickar...",
       "already_registered": "Redan registrerad?",
-      "sign_in_link": "Logga in"
+      "sign_in_link": "Logga in",
+      "represents": "Er organisation representerar",
+      "represents_national": "Hela {country} (nationellt förbund)",
+      "website": "Webbplats (valfritt)",
+      "website_hint": "Om din e-postadress har samma domän ser de röstande den som verifierad.",
+      "claim_note_country": "Klubbar från {country} finns redan på DivingHQ, så detta öppnar ett anspråk på deras konto. När du har verifierat din e-post röstar de om det. Kan för få rösta ännu granskar DivingHQ det.",
+      "claim_note_region_parent": "{org} driver redan landet på DivingHQ och avgör därför ditt anspråk på {region}.",
+      "claim_note_region": "Detta öppnar ett anspråk på {region}. Dess klubbar röstar när du har verifierat din e-post, eller så granskar DivingHQ det om de inte är tillräckligt många än."
     },
     "forgot": {
       "title": "Återställ lösenord",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Granska rollförfrågningar i Användarhantering",
       "orgs_one": "{count} federation väntar på godkännande",
       "orgs_many": "{count} federationer väntar på godkännande",
-      "orgs_meta": "Granska i Användarhantering → organisationsfilter"
+      "orgs_meta": "Granska i Användarhantering → organisationsfilter",
+      "claims_one": "1 anspråk väntar på dig",
+      "claims_many": "{count} anspråk väntar på dig",
+      "claims_meta": "Ett förbund vill ta över ett konto"
     }
   },
   "role": {
@@ -556,6 +566,7 @@
         "step_2": "Öppna <strong>Tävlingshanteraren</strong> och skapa en tävling som din klubb arrangerar",
         "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara överdomare på <strong>Min klubb</strong>",
         "step_4": "På tävlingsdagen styr du poängsättningen från <strong>Kontrollrummet</strong>",
+        "step_5": "När ditt förbund eller regionala organ ansluter röstar du om dess anspråk under <strong>Anspråk</strong>",
         "cta": "Arrangera en tävling ↗"
       },
       "region_admin": {
@@ -771,7 +782,10 @@
       "h2h_seeded": "H2H seedad",
       "sf_seeded": "Semi seedad",
       "f_seeded": "Final seedad",
-      "generic": "Meddelande"
+      "generic": "Meddelande",
+      "claim_vote": "Omröstning",
+      "claim_review": "Anspråk",
+      "claim_decided": "Anspråk"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} medlemmar",
     "no_admin": "Ingen administratör ännu",
     "region_admins": "Regionadministratörer"
+  },
+  "claims": {
+    "title": "Anspråk",
+    "intro": "När ett förbund eller ett regionalt organ vill ta över ett konto som klubbarna startade avgörs det här.",
+    "empty_title": "Inga anspråk",
+    "empty_body": "När ett förbund gör anspråk på ditt land eller din region röstar du här.",
+    "kind_org": "Nationellt",
+    "kind_region": "Region",
+    "by": "anspråk av {name}",
+    "awaiting_email": "Väntar på e-postverifiering",
+    "status_open": "Omröstning",
+    "status_escalated": "Hos DivingHQ",
+    "status_approved": "Godkänt",
+    "status_rejected": "Avslaget",
+    "status_revoked": "Återkallat",
+    "approver_clubs": "Klubbarna röstar.",
+    "approver_regions": "Delstaterna och provinserna röstar.",
+    "approver_parent": "Förbundet avgör.",
+    "approver_sysadmin": "DivingHQ avgör.",
+    "tally": "{approvals} av {eligible} godkänner, {objections} invänder",
+    "closes": "Omröstningen stänger {date}",
+    "domain_verified": "e-post matchar webbplats",
+    "objections": "Invändningar",
+    "voted_approve": "{club} godkände",
+    "voted_object": "{club} invände",
+    "voting_for": "Röstar för",
+    "approve": "Godkänn",
+    "object": "Invänd",
+    "object_reason": "Varför invänder du? Det skickas till DivingHQ med anspråket.",
+    "send_objection": "Skicka invändning",
+    "reject": "Avslå",
+    "revoke": "Återkalla",
+    "revoke_body": "{body} driver inte längre {target}, som återgår till hur det var före anspråket."
   }
 }

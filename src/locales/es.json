@@ -88,7 +88,14 @@
       "submit_idle": "Enviar Registro",
       "submit_loading": "Enviando...",
       "already_registered": "¿Ya estás registrado?",
-      "sign_in_link": "Iniciar sesión"
+      "sign_in_link": "Iniciar sesión",
+      "represents": "Tu organismo representa",
+      "represents_national": "Todo {country} (federación nacional)",
+      "website": "Sitio web (opcional)",
+      "website_hint": "Si tu correo está en el mismo dominio, los votantes lo ven como verificado.",
+      "claim_note_country": "Ya hay clubes de {country} en DivingHQ, así que esto abre una reclamación sobre su cuenta. Cuando verifiques tu correo, la votan. Si aún pueden votar muy pocos, la revisa DivingHQ.",
+      "claim_note_region_parent": "{org} ya gestiona este país en DivingHQ, así que decide tu reclamación sobre {region}.",
+      "claim_note_region": "Esto abre una reclamación sobre {region}. Sus clubes la votan cuando verifiques tu correo, o la revisa DivingHQ si aún no hay suficientes."
     },
     "forgot": {
       "title": "Restablecer Contraseña",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Revisad las solicitudes de rol en el Gestor de usuarios",
       "orgs_one": "{count} federación pendiente de aprobación",
       "orgs_many": "{count} federaciones pendientes de aprobación",
-      "orgs_meta": "Revisad en Gestor de usuarios → filtro de organización"
+      "orgs_meta": "Revisad en Gestor de usuarios → filtro de organización",
+      "claims_one": "1 reclamación te espera",
+      "claims_many": "{count} reclamaciones te esperan",
+      "claims_meta": "Una federación quiere hacerse cargo"
     }
   },
   "profile": {
@@ -545,6 +555,7 @@
         "step_2": "Abre el <strong>Gestor de competiciones</strong> y crea una competición organizada por tu club",
         "step_3": "Aprueba en <strong>Mi club</strong> a los miembros que quieren saltar, juzgar o arbitrar",
         "step_4": "El día de la competición, dirige la puntuación desde la <strong>Sala de control</strong>",
+        "step_5": "Cuando llegue tu federación u organismo regional, vota su reclamación en <strong>Reclamaciones</strong>",
         "cta": "Organizar una competición ↗"
       },
       "region_admin": {
@@ -760,7 +771,10 @@
       "h2h_seeded": "H2H clasificado",
       "sf_seeded": "Clasificado a semifinal",
       "f_seeded": "Clasificado a final",
-      "generic": "Aviso"
+      "generic": "Aviso",
+      "claim_vote": "Votación",
+      "claim_review": "Reclamación",
+      "claim_decided": "Reclamación"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} miembros",
     "no_admin": "Aún sin administrador",
     "region_admins": "Administradores de la región"
+  },
+  "claims": {
+    "title": "Reclamaciones",
+    "intro": "Cuando una federación u organismo regional pide hacerse cargo de una cuenta que empezaron los clubes, se decide aquí.",
+    "empty_title": "No hay reclamaciones",
+    "empty_body": "Cuando una federación reclame tu país o región, votarás aquí.",
+    "kind_org": "Nacional",
+    "kind_region": "Región",
+    "by": "reclamado por {name}",
+    "awaiting_email": "Esperando verificación del correo",
+    "status_open": "En votación",
+    "status_escalated": "En DivingHQ",
+    "status_approved": "Aprobada",
+    "status_rejected": "Rechazada",
+    "status_revoked": "Revocada",
+    "approver_clubs": "Votan los clubes.",
+    "approver_regions": "Votan los estados y provincias.",
+    "approver_parent": "Decide la federación.",
+    "approver_sysadmin": "Decide DivingHQ.",
+    "tally": "{approvals} de {eligible} aprueban, {objections} se oponen",
+    "closes": "La votación cierra el {date}",
+    "domain_verified": "el correo coincide con la web",
+    "objections": "Objeciones",
+    "voted_approve": "{club} aprobó",
+    "voted_object": "{club} se opuso",
+    "voting_for": "Votando por",
+    "approve": "Aprobar",
+    "object": "Oponerse",
+    "object_reason": "¿Por qué te opones? Se envía a DivingHQ con la reclamación.",
+    "send_objection": "Enviar objeción",
+    "reject": "Rechazar",
+    "revoke": "Revocar",
+    "revoke_body": "{body} deja de gestionar {target}, que vuelve a como estaba antes de la reclamación."
   }
 }

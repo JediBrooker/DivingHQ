@@ -88,7 +88,14 @@
       "submit_idle": "Hantar pendaftaran",
       "submit_loading": "Menghantar...",
       "already_registered": "Sudah berdaftar?",
-      "sign_in_link": "Log masuk"
+      "sign_in_link": "Log masuk",
+      "represents": "Badan anda mewakili",
+      "represents_national": "Seluruh {country} (persekutuan kebangsaan)",
+      "website": "Laman web (pilihan)",
+      "website_hint": "Jika alamat e-mel anda pada domain yang sama, pengundi melihatnya sebagai disahkan.",
+      "claim_note_country": "Kelab dari {country} sudah berada di DivingHQ, jadi ini membuka tuntutan ke atas akaun mereka. Selepas e-mel anda disahkan, mereka mengundi. Jika terlalu sedikit yang boleh mengundi, DivingHQ menyemaknya.",
+      "claim_note_region_parent": "{org} sudah mengurus negara ini di DivingHQ, jadi mereka memutuskan tuntutan anda ke atas {region}.",
+      "claim_note_region": "Ini membuka tuntutan ke atas {region}. Kelab-kelabnya mengundi selepas e-mel anda disahkan, atau DivingHQ menyemaknya jika belum cukup."
     },
     "forgot": {
       "title": "Tetapkan semula kata laluan",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Semak permintaan peranan dalam Pengurus Pengguna",
       "orgs_one": "{count} persekutuan menunggu kelulusan",
       "orgs_many": "{count} persekutuan menunggu kelulusan",
-      "orgs_meta": "Semak dalam Pengurus Pengguna → penapis organisasi"
+      "orgs_meta": "Semak dalam Pengurus Pengguna → penapis organisasi",
+      "claims_one": "1 tuntutan menunggu anda",
+      "claims_many": "{count} tuntutan menunggu anda",
+      "claims_meta": "Persekutuan mahu mengambil alih akaun"
     }
   },
   "profile": {
@@ -545,6 +555,7 @@
         "step_2": "Buka <strong>Pengurus Pertandingan</strong> dan cipta pertandingan anjuran kelab anda",
         "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau menjadi pengadil di <strong>Kelab saya</strong>",
         "step_4": "Pada hari pertandingan, kendalikan pemarkahan dari <strong>Bilik Kawalan</strong>",
+        "step_5": "Apabila persekutuan atau badan wilayah anda tiba, undi tuntutannya di <strong>Tuntutan</strong>",
         "cta": "Menganjurkan pertandingan ↗"
       },
       "region_admin": {
@@ -760,7 +771,10 @@
       "h2h_seeded": "H2H disusun",
       "sf_seeded": "Separuh akhir disusun",
       "f_seeded": "Final disusun",
-      "generic": "Notis"
+      "generic": "Notis",
+      "claim_vote": "Undian",
+      "claim_review": "Tuntutan",
+      "claim_decided": "Tuntutan"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} ahli",
     "no_admin": "Belum ada pentadbir",
     "region_admins": "Pentadbir rantau"
+  },
+  "claims": {
+    "title": "Tuntutan",
+    "intro": "Apabila persekutuan atau badan wilayah mahu mengambil alih akaun yang dimulakan kelab, ia diputuskan di sini.",
+    "empty_title": "Tiada tuntutan",
+    "empty_body": "Apabila persekutuan menuntut negara atau rantau anda, anda mengundi di sini.",
+    "kind_org": "Kebangsaan",
+    "kind_region": "Rantau",
+    "by": "dituntut oleh {name}",
+    "awaiting_email": "Menunggu pengesahan e-mel",
+    "status_open": "Mengundi",
+    "status_escalated": "Di DivingHQ",
+    "status_approved": "Diluluskan",
+    "status_rejected": "Ditolak",
+    "status_revoked": "Dibatalkan",
+    "approver_clubs": "Kelab mengundi.",
+    "approver_regions": "Negeri dan wilayah mengundi.",
+    "approver_parent": "Persekutuan memutuskan.",
+    "approver_sysadmin": "DivingHQ memutuskan.",
+    "tally": "{approvals} daripada {eligible} bersetuju, {objections} membantah",
+    "closes": "Undian ditutup {date}",
+    "domain_verified": "e-mel sepadan dengan laman web",
+    "objections": "Bantahan",
+    "voted_approve": "{club} bersetuju",
+    "voted_object": "{club} membantah",
+    "voting_for": "Mengundi untuk",
+    "approve": "Luluskan",
+    "object": "Bantah",
+    "object_reason": "Mengapa anda membantah? Ia dihantar kepada DivingHQ bersama tuntutan.",
+    "send_objection": "Hantar bantahan",
+    "reject": "Tolak",
+    "revoke": "Batalkan",
+    "revoke_body": "{body} tidak lagi mengurus {target}, semuanya kembali seperti sebelum tuntutan."
   }
 }

@@ -48,6 +48,7 @@
 const express = require("express");
 const { buildReadinessFromRow } = require("../lib/workflow");
 const roleRequests = require("../lib/role-requests");
+const claims = require("../lib/claims");
 
 module.exports = function createDashboardRouter({ pool, verifyToken }) {
   if (!pool || !verifyToken) {
@@ -188,6 +189,9 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
       // Empty for anyone who isn't a club or region admin, so no pre-check.
       tasks.role_requests = roleRequests.listForDelegate(pool, user.id).catch(() => []);
     }
+
+    // ---- Claims waiting on this user's vote or decision (phase 3) ----
+    tasks.claims_to_act = claims.countActionable(pool, user).catch(() => 0);
 
     // ---- Pending org registrations (sysadmin only) ----
     if (isSysAdmin) {

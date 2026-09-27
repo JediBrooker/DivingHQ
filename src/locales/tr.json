@@ -88,7 +88,14 @@
       "submit_idle": "Kaydı Gönder",
       "submit_loading": "Gönderiliyor...",
       "already_registered": "Zaten kayıtlı mısınız?",
-      "sign_in_link": "Giriş yapın"
+      "sign_in_link": "Giriş yapın",
+      "represents": "Kuruluşunuz şunu temsil ediyor",
+      "represents_national": "Tüm {country} (ulusal federasyon)",
+      "website": "Web sitesi (isteğe bağlı)",
+      "website_hint": "E-posta adresiniz aynı alan adındaysa, oy verenler onu doğrulanmış olarak görür.",
+      "claim_note_country": "{country} kulüpleri zaten DivingHQ'da, bu yüzden hesaplarını devralma talebi açılır. E-postanızı doğruladığınızda oy verirler. Henüz çok azı oy verebiliyorsa DivingHQ inceler.",
+      "claim_note_region_parent": "{org} bu ülkeyi zaten DivingHQ'da yönetiyor, bu yüzden {region} talebinize o karar verir.",
+      "claim_note_region": "Bu, {region} için bir talep açar. E-postanızı doğruladığınızda kulüpleri oy verir, ya da henüz yeterli değillerse DivingHQ inceler."
     },
     "forgot": {
       "title": "Şifre Sıfırlama",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Kullanıcı Yönetimi'nde rol isteklerini inceleyin",
       "orgs_one": "{count} federasyon onay bekliyor",
       "orgs_many": "{count} federasyon onay bekliyor",
-      "orgs_meta": "Kullanıcı Yönetimi'nde inceleyin → org filtresi"
+      "orgs_meta": "Kullanıcı Yönetimi'nde inceleyin → org filtresi",
+      "claims_one": "Sizi bekleyen 1 talep var",
+      "claims_many": "Sizi bekleyen {count} talep var",
+      "claims_meta": "Bir federasyon bir hesabı devralmak istiyor"
     }
   },
   "profile": {
@@ -545,6 +555,7 @@
         "step_2": "<strong>Yarışma Yöneticisi</strong>'ni açın ve kulübünüzün ev sahipliği yaptığı bir yarışma oluşturun",
         "step_3": "<strong>Kulübüm</strong> sayfasında atlamak, hakemlik yapmak veya başhakem olmak isteyen üyeleri onaylayın",
         "step_4": "Yarışma günü puanlamayı <strong>Kontrol Odası</strong>'ndan yönetin",
+        "step_5": "Federasyonunuz veya bölgesel kurumunuz geldiğinde, talebini <strong>Devralma talepleri</strong> sayfasında oylayın",
         "cta": "Yarışma düzenlemek ↗"
       },
       "region_admin": {
@@ -760,7 +771,10 @@
       "h2h_seeded": "H2H sıralandı",
       "sf_seeded": "Yarı final sıralandı",
       "f_seeded": "Final sıralandı",
-      "generic": "Duyuru"
+      "generic": "Duyuru",
+      "claim_vote": "Oylama",
+      "claim_review": "Talep",
+      "claim_decided": "Talep"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} üye",
     "no_admin": "Henüz yönetici yok",
     "region_admins": "Bölge yöneticileri"
+  },
+  "claims": {
+    "title": "Devralma talepleri",
+    "intro": "Bir federasyon veya bölgesel kurum kulüplerin başlattığı bir hesabı devralmak istediğinde burada karar verilir.",
+    "empty_title": "Talep yok",
+    "empty_body": "Bir federasyon ülkenizi veya bölgenizi talep ettiğinde burada oy vereceksiniz.",
+    "kind_org": "Ulusal",
+    "kind_region": "Bölge",
+    "by": "talep eden: {name}",
+    "awaiting_email": "E-posta doğrulaması bekleniyor",
+    "status_open": "Oylama",
+    "status_escalated": "DivingHQ'da",
+    "status_approved": "Onaylandı",
+    "status_rejected": "Reddedildi",
+    "status_revoked": "İptal edildi",
+    "approver_clubs": "Kulüpler oy verir.",
+    "approver_regions": "Eyaletler ve iller oy verir.",
+    "approver_parent": "Federasyon karar verir.",
+    "approver_sysadmin": "DivingHQ karar verir.",
+    "tally": "{eligible} oydan {approvals} onay, {objections} itiraz",
+    "closes": "Oylama {date} tarihinde kapanır",
+    "domain_verified": "e-posta web sitesiyle eşleşiyor",
+    "objections": "İtirazlar",
+    "voted_approve": "{club} onayladı",
+    "voted_object": "{club} itiraz etti",
+    "voting_for": "Oy veren",
+    "approve": "Onayla",
+    "object": "İtiraz et",
+    "object_reason": "Neden itiraz ediyorsunuz? Talep ile birlikte DivingHQ'ya gider.",
+    "send_objection": "İtirazı gönder",
+    "reject": "Reddet",
+    "revoke": "İptal et",
+    "revoke_body": "{body} artık {target} yönetmiyor, her şey talepten önceki haline döner."
   }
 }

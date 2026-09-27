@@ -20,7 +20,7 @@ import {
   ListChecks, BookOpen, Users, Building2, ScrollText,
   PanelLeftClose, PanelLeftOpen, ChevronRight, Search, CircleHelp,
   Bell, User, Inbox, LogOut, EllipsisVertical, CreditCard, Award, Gavel,
-  History, Receipt, Heart, Layers, Wallet, UserCheck, SlidersHorizontal,
+  History, Receipt, Heart, Layers, Wallet, UserCheck, SlidersHorizontal, Scale,
 } from '@lucide/vue'
 
 const router = useRouter()
@@ -94,6 +94,7 @@ const NAV = [
   { key: 'federation', group: 'Federation', icon: Building2, items: [
     { to: '/club',     label: 'My club',            labelKey: 'my_club.title',      icon: Building2,  clubAdminOnly: true },
     { to: '/region',   label: 'My region',          labelKey: 'my_region.title',    icon: Building2,  regionAdminOnly: true },
+    { to: '/claims',   label: 'Claims',             labelKey: 'claims.title',       icon: Scale,      roles: ['org_admin'], allowDelegateAdmin: true },
     { to: '/users',    label: 'User Manager',       labelKey: 'user_manager.title', icon: Users,      roles: ['org_admin'] },
     { to: '/clubs',    label: 'Clubs & teams',      labelKey: 'clubs.title',        icon: Building2,  roles: ['org_admin', 'meet_manager'] },
     { to: '/fines',    label: 'Fines',              icon: Gavel,      roles: ['referee', 'org_admin'], feature: 'payments' },

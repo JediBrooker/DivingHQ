@@ -88,7 +88,14 @@
       "submit_idle": "Invia registrazione",
       "submit_loading": "Invio...",
       "already_registered": "Sei già registrato?",
-      "sign_in_link": "Accedi"
+      "sign_in_link": "Accedi",
+      "represents": "Il tuo ente rappresenta",
+      "represents_national": "Tutto {country} (federazione nazionale)",
+      "website": "Sito web (facoltativo)",
+      "website_hint": "Se la tua email è sullo stesso dominio, i votanti la vedono come verificata.",
+      "claim_note_country": "I club di {country} sono già su DivingHQ, quindi si apre una rivendicazione sul loro account. Dopo la verifica della tua email la votano. Se possono votare ancora in pochi, la esamina DivingHQ.",
+      "claim_note_region_parent": "{org} gestisce già questo paese su DivingHQ e decide quindi la tua rivendicazione su {region}.",
+      "claim_note_region": "Si apre una rivendicazione su {region}. I suoi club la votano dopo la verifica della tua email, oppure la esamina DivingHQ se non sono ancora abbastanza."
     },
     "forgot": {
       "title": "Reimposta password",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Esamini le richieste di ruolo in Gestione utenti",
       "orgs_one": "{count} federazione in attesa di approvazione",
       "orgs_many": "{count} federazioni in attesa di approvazione",
-      "orgs_meta": "Verifichi in Gestione utenti → filtro organizzazioni"
+      "orgs_meta": "Verifichi in Gestione utenti → filtro organizzazioni",
+      "claims_one": "1 rivendicazione ti aspetta",
+      "claims_many": "{count} rivendicazioni ti aspettano",
+      "claims_meta": "Una federazione vuole subentrare"
     }
   },
   "role": {
@@ -556,6 +566,7 @@
         "step_2": "Apri il <strong>Gestore gare</strong> e crea una gara organizzata dal tuo club",
         "step_3": "Approva in <strong>Il mio club</strong> i membri che vogliono tuffarsi, giudicare o arbitrare",
         "step_4": "Il giorno della gara, dirigi i punteggi dalla <strong>Sala Controllo</strong>",
+        "step_5": "Quando arriva la tua federazione o l'ente regionale, vota la sua rivendicazione in <strong>Rivendicazioni</strong>",
         "cta": "Organizzare una gara ↗"
       },
       "region_admin": {
@@ -771,7 +782,10 @@
       "h2h_seeded": "H2H teste di serie",
       "sf_seeded": "Teste di serie semifinali",
       "f_seeded": "Teste di serie finali",
-      "generic": "Avviso"
+      "generic": "Avviso",
+      "claim_vote": "Votazione",
+      "claim_review": "Rivendicazione",
+      "claim_decided": "Rivendicazione"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} membri",
     "no_admin": "Ancora nessun amministratore",
     "region_admins": "Amministratori della regione"
+  },
+  "claims": {
+    "title": "Rivendicazioni",
+    "intro": "Quando una federazione o un ente regionale chiede di prendere in carico un account avviato dai club, si decide qui.",
+    "empty_title": "Nessuna rivendicazione",
+    "empty_body": "Quando una federazione rivendica il tuo paese o la tua regione, voterai qui.",
+    "kind_org": "Nazionale",
+    "kind_region": "Regione",
+    "by": "rivendicato da {name}",
+    "awaiting_email": "In attesa di verifica email",
+    "status_open": "In votazione",
+    "status_escalated": "Presso DivingHQ",
+    "status_approved": "Approvata",
+    "status_rejected": "Respinta",
+    "status_revoked": "Revocata",
+    "approver_clubs": "Votano i club.",
+    "approver_regions": "Votano stati e province.",
+    "approver_parent": "Decide la federazione.",
+    "approver_sysadmin": "Decide DivingHQ.",
+    "tally": "{approvals} su {eligible} approvano, {objections} contrari",
+    "closes": "La votazione chiude il {date}",
+    "domain_verified": "l'email corrisponde al sito",
+    "objections": "Obiezioni",
+    "voted_approve": "{club} ha approvato",
+    "voted_object": "{club} si è opposto",
+    "voting_for": "Vota per",
+    "approve": "Approva",
+    "object": "Opponiti",
+    "object_reason": "Perché ti opponi? Va a DivingHQ insieme alla rivendicazione.",
+    "send_objection": "Invia obiezione",
+    "reject": "Respingi",
+    "revoke": "Revoca",
+    "revoke_body": "{body} non gestisce più {target}, che torna com'era prima della rivendicazione."
   }
 }

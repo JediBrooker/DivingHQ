@@ -35,7 +35,7 @@ import { useSocket } from '@/composables/useSocket'
 import { contributesToDiverChip, rankAttentionChips } from '@/composables/useAttention'
 import AttentionLane from '@/components/dashboard/AttentionLane.vue'
 import { fmtCloses, fmtRelative } from '@/lib/format'
-import { Building2, Calendar, MonitorPlay, UserCog } from '@lucide/vue'
+import { Building2, Calendar, MonitorPlay, Scale, UserCog } from '@lucide/vue'
 
 
 // Per-role panels, async-imported so each tab's chunk only
@@ -99,6 +99,7 @@ function setTab(id) {
 const events             = ref([])     // /api/events, used by org_admin + meet_manager + diver
 const roleRequests       = ref([])     // /api/role-requests
 const pendingOrgs        = ref([])     // /api/orgs filtered to pending (sysadmin)
+const claimsToAct        = ref(0)      // claims waiting on my vote / decision (phase 3)
 const recentActivity     = ref([])     // /api/audit/recent
 const judgeEvents        = ref([])     // /api/judge/my-events
 const coachData          = ref(null)   // /api/coach/dashboard
@@ -265,6 +266,25 @@ const pulseChips = computed(() => {
     }
   }
 
+  // Claims waiting on this person's vote or decision. Club and region
+  // admins have no dashboard tab of their own, so this chip links
+  // straight to /claims rather than switching tabs.
+  if (claimsToAct.value) {
+    const n = claimsToAct.value
+    const title = t(n === 1 ? 'dashboard.attention.claims_one' : 'dashboard.attention.claims_many', { count: n })
+    chips.push({
+      id:           'claims',
+      kind:         'pending',
+      glyph:        '⚖',
+      number:       n,
+      label:        'CLAIMS',
+      layout:       'count-first',
+      to:           '/claims',
+      popoverTitle: title,
+      items: [{ id: 'claims', title, meta: t('dashboard.attention.claims_meta'), to: '/claims', urgency: null }],
+    })
+  }
+
   // Pending governance work, org admin chip. Items older than
   // 7 days get an `overdue` marker.
   if (pendingCount.value && auth.hasRole('org_admin')) {
@@ -412,7 +432,12 @@ const hasHoverCapability = () => {
 //     navigates immediately on first tap, no point opening an
 //     empty dropdown.
 function onPulseChipClick(chip) {
-  if (!chip || !chip.targetTab) return
+  if (!chip) return
+  // A chip that belongs to no dashboard tab (claims) links to its page.
+  if (!chip.targetTab) {
+    if (chip.to) router.push(chip.to)
+    return
+  }
   const touchOnly = !hasHoverCapability()
   const hasPopover = (chip.items?.length || 0) > 0
   if (touchOnly && hasPopover && openChipId.value !== chip.id) {
@@ -588,6 +613,7 @@ async function loadDashboardBundle() {
   if (Array.isArray(bundle.events))           events.value          = bundle.events
   if (Array.isArray(bundle.role_requests))    roleRequests.value    = bundle.role_requests
   if (Array.isArray(bundle.pending_orgs))     pendingOrgs.value     = bundle.pending_orgs
+  if (typeof bundle.claims_to_act === 'number') claimsToAct.value  = bundle.claims_to_act
   if (Array.isArray(bundle.recent_activity))  recentActivity.value  = bundle.recent_activity
   if (Array.isArray(bundle.judge_events))     judgeEvents.value     = bundle.judge_events
   if (Array.isArray(bundle.workflow_actions)) workflowActions.value = bundle.workflow_actions
@@ -730,6 +756,17 @@ const attentionCards = computed(() => {
       meta:  t('dashboard.attention.role_requests_meta'),
       // Club / region admins (no federation yet) review on their own page.
       to:    auth.hasRole('org_admin') ? '/users' : (auth.isClubAdmin ? '/club' : '/region'),
+    })
+  }
+  if (claimsToAct.value) {
+    const n = claimsToAct.value
+    cards.push({
+      id:    'claims',
+      kind:  'pending',
+      icon:  Scale,
+      title: t(n === 1 ? 'dashboard.attention.claims_one' : 'dashboard.attention.claims_many', { count: n }),
+      meta:  t('dashboard.attention.claims_meta'),
+      to:    '/claims',
     })
   }
   if (auth.user?.is_system_admin && pendingOrgs.value.length) {

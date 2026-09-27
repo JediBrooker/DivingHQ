@@ -88,7 +88,14 @@
       "submit_idle": "Regisztráció beküldése",
       "submit_loading": "Beküldés...",
       "already_registered": "Már regisztrált?",
-      "sign_in_link": "Bejelentkezés"
+      "sign_in_link": "Bejelentkezés",
+      "represents": "Szervezete képviseli",
+      "represents_national": "Egész {country} (nemzeti szövetség)",
+      "website": "Weboldal (nem kötelező)",
+      "website_hint": "Ha e-mail-címe ugyanazon a domainen van, a szavazók ellenőrzöttnek látják.",
+      "claim_note_country": "{country} klubjai már a DivingHQ-n vannak, így ez igényt nyit a fiókjukra. Miután megerősítette e-mailjét, szavaznak róla. Ha még túl kevesen szavazhatnak, a DivingHQ bírálja el.",
+      "claim_note_region_parent": "{org} már ezt az országot vezeti a DivingHQ-n, ezért ők döntenek a(z) {region} iránti igényéről.",
+      "claim_note_region": "Ez igényt nyit a(z) {region} régióra. A klubjai szavaznak, miután megerősítette e-mailjét, vagy a DivingHQ bírálja el, ha még nincsenek elegen."
     },
     "forgot": {
       "title": "Jelszó visszaállítása",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Tekintse át a szerepkérelemeket a Felhasználókezelőben.",
       "orgs_one": "{count} szövetség vár jóváhagyásra",
       "orgs_many": "{count} szövetség vár jóváhagyásra",
-      "orgs_meta": "Tekintse át a Felhasználókezelőben → szervezet-szűrő"
+      "orgs_meta": "Tekintse át a Felhasználókezelőben → szervezet-szűrő",
+      "claims_one": "1 igény vár Önre",
+      "claims_many": "{count} igény vár Önre",
+      "claims_meta": "Egy szövetség át szeretne venni egy fiókot"
     }
   },
   "role": {
@@ -556,6 +566,7 @@
         "step_2": "Nyissa meg a <strong>Versenymenedzsert</strong>, és hozzon létre a klubja által rendezett versenyt",
         "step_3": "A <strong>Saját klubom</strong> oldalon hagyja jóvá a műugrani, bíráskodni vagy vezetőbíró lenni kívánó tagokat",
         "step_4": "A versenynapon a <strong>Vezérlőszobából</strong> irányítja a pontozást",
+        "step_5": "Amikor szövetsége vagy regionális testülete csatlakozik, szavazzon az igényéről az <strong>Igények</strong> oldalon",
         "cta": "Verseny rendezése ↗"
       },
       "region_admin": {
@@ -771,7 +782,10 @@
       "h2h_seeded": "H2H kiemelt",
       "sf_seeded": "Elődöntő kiemelt",
       "f_seeded": "Döntő kiemelt",
-      "generic": "Értesítés"
+      "generic": "Értesítés",
+      "claim_vote": "Szavazás",
+      "claim_review": "Igény",
+      "claim_decided": "Igény"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} tag",
     "no_admin": "Még nincs adminisztrátor",
     "region_admins": "Régió-adminisztrátorok"
+  },
+  "claims": {
+    "title": "Igények",
+    "intro": "Ha egy szövetség vagy regionális testület át szeretné venni a klubok által indított fiókot, itt dől el.",
+    "empty_title": "Nincs igény",
+    "empty_body": "Ha egy szövetség igényt tart országára vagy régiójára, itt szavaz.",
+    "kind_org": "Nemzeti",
+    "kind_region": "Régió",
+    "by": "igénylő: {name}",
+    "awaiting_email": "E-mail-megerősítésre vár",
+    "status_open": "Szavazás",
+    "status_escalated": "A DivingHQ-nál",
+    "status_approved": "Jóváhagyva",
+    "status_rejected": "Elutasítva",
+    "status_revoked": "Visszavonva",
+    "approver_clubs": "A klubok szavaznak.",
+    "approver_regions": "Az államok és tartományok szavaznak.",
+    "approver_parent": "A szövetség dönt.",
+    "approver_sysadmin": "A DivingHQ dönt.",
+    "tally": "{eligible}-ból {approvals} támogatja, {objections} ellenzi",
+    "closes": "A szavazás zárul: {date}",
+    "domain_verified": "az e-mail egyezik a weboldallal",
+    "objections": "Kifogások",
+    "voted_approve": "{club} jóváhagyta",
+    "voted_object": "{club} kifogást emelt",
+    "voting_for": "Szavaz:",
+    "approve": "Jóváhagyás",
+    "object": "Kifogás",
+    "object_reason": "Miért emel kifogást? Az igénnyel együtt a DivingHQ-hoz kerül.",
+    "send_objection": "Kifogás küldése",
+    "reject": "Elutasítás",
+    "revoke": "Visszavonás",
+    "revoke_body": "{body} többé nem vezeti ezt: {target}, minden visszaáll az igény előtti állapotra."
   }
 }

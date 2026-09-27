@@ -38,7 +38,7 @@ const emit = defineEmits(['chip-click'])
           flashing.has(chip.id) ? 'pulse-flash' : '',
           openId === chip.id ? 'is-open' : '',
         ]"
-        :aria-label="`${chip.popoverTitle} — click to view in ${chip.targetTab.replace('_', ' ')} tab`"
+        :aria-label="chip.targetTab ? `${chip.popoverTitle} — click to view in ${chip.targetTab.replace('_', ' ')} tab` : chip.popoverTitle"
         @click="emit('chip-click', chip)"
         @keydown.enter.prevent="emit('chip-click', chip)"
         @keydown.space.prevent="emit('chip-click', chip)"

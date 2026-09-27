@@ -88,7 +88,14 @@
       "submit_idle": "Wyślij zgłoszenie",
       "submit_loading": "Wysyłanie...",
       "already_registered": "Jesteś już zarejestrowany?",
-      "sign_in_link": "Zaloguj się"
+      "sign_in_link": "Zaloguj się",
+      "represents": "Twoja organizacja reprezentuje",
+      "represents_national": "Cały kraj: {country} (federacja krajowa)",
+      "website": "Strona internetowa (opcjonalnie)",
+      "website_hint": "Jeśli twój adres e-mail jest w tej samej domenie, głosujący zobaczą go jako zweryfikowany.",
+      "claim_note_country": "Kluby z kraju {country} są już w DivingHQ, więc otwiera to roszczenie do ich konta. Po weryfikacji e-maila głosują nad nim. Jeśli zbyt mało z nich może jeszcze głosować, rozpatrzy je DivingHQ.",
+      "claim_note_region_parent": "{org} prowadzi już ten kraj w DivingHQ, więc decyduje o twoim roszczeniu do {region}.",
+      "claim_note_region": "Otwiera to roszczenie do {region}. Jego kluby głosują po weryfikacji twojego e-maila albo rozpatruje je DivingHQ, jeśli jest ich jeszcze za mało."
     },
     "forgot": {
       "title": "Resetuj hasło",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Przejrzyj prośby o role w Menedżerze użytkowników",
       "orgs_one": "{count} federacja oczekuje na zatwierdzenie",
       "orgs_many": "{count} federacje oczekują na zatwierdzenie",
-      "orgs_meta": "Przejrzyj w Menedżerze użytkowników → filtr organizacji"
+      "orgs_meta": "Przejrzyj w Menedżerze użytkowników → filtr organizacji",
+      "claims_one": "Czeka na ciebie 1 roszczenie",
+      "claims_many": "Czeka na ciebie roszczeń: {count}",
+      "claims_meta": "Federacja chce przejąć konto"
     }
   },
   "role": {
@@ -556,6 +566,7 @@
         "step_2": "Otwórz <strong>Menedżer zawodów</strong> i utwórz zawody organizowane przez twój klub",
         "step_3": "Na stronie <strong>Mój klub</strong> zatwierdzaj członków, którzy chcą skakać, sędziować lub być sędzią głównym",
         "step_4": "W dniu zawodów prowadź punktację z <strong>Pokoju kontroli</strong>",
+        "step_5": "Gdy dołączy twoja federacja lub organ regionalny, zagłosuj nad jej roszczeniem w <strong>Roszczeniach</strong>",
         "cta": "Organizacja zawodów ↗"
       },
       "region_admin": {
@@ -771,7 +782,10 @@
       "h2h_seeded": "Rozstawienie H2H",
       "sf_seeded": "Rozstawienie półfinałowe",
       "f_seeded": "Rozstawienie finałowe",
-      "generic": "Powiadomienie"
+      "generic": "Powiadomienie",
+      "claim_vote": "Głosowanie",
+      "claim_review": "Roszczenie",
+      "claim_decided": "Roszczenie"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} członków",
     "no_admin": "Brak administratora",
     "region_admins": "Administratorzy regionu"
+  },
+  "claims": {
+    "title": "Roszczenia",
+    "intro": "Gdy federacja lub organ regionalny chce przejąć konto założone przez kluby, decyzja zapada tutaj.",
+    "empty_title": "Brak roszczeń",
+    "empty_body": "Gdy federacja zgłosi roszczenie do twojego kraju lub regionu, zagłosujesz tutaj.",
+    "kind_org": "Krajowe",
+    "kind_region": "Region",
+    "by": "zgłasza {name}",
+    "awaiting_email": "Czeka na weryfikację e-maila",
+    "status_open": "Głosowanie",
+    "status_escalated": "W DivingHQ",
+    "status_approved": "Zatwierdzone",
+    "status_rejected": "Odrzucone",
+    "status_revoked": "Cofnięte",
+    "approver_clubs": "Głosują kluby.",
+    "approver_regions": "Głosują stany i prowincje.",
+    "approver_parent": "Decyduje federacja.",
+    "approver_sysadmin": "Decyduje DivingHQ.",
+    "tally": "{approvals} z {eligible} za, {objections} sprzeciwów",
+    "closes": "Głosowanie kończy się {date}",
+    "domain_verified": "e-mail zgodny ze stroną",
+    "objections": "Sprzeciwy",
+    "voted_approve": "{club} zatwierdził",
+    "voted_object": "{club} zgłosił sprzeciw",
+    "voting_for": "Głos za",
+    "approve": "Zatwierdź",
+    "object": "Sprzeciw",
+    "object_reason": "Dlaczego się sprzeciwiasz? Trafi to do DivingHQ razem z roszczeniem.",
+    "send_objection": "Wyślij sprzeciw",
+    "reject": "Odrzuć",
+    "revoke": "Cofnij",
+    "revoke_body": "{body} przestaje prowadzić {target}, wszystko wraca do stanu sprzed roszczenia."
   }
 }

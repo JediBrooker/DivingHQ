@@ -88,7 +88,14 @@
       "submit_idle": "إرسال التسجيل",
       "submit_loading": "جارٍ الإرسال...",
       "already_registered": "مسجّل بالفعل؟",
-      "sign_in_link": "تسجيل الدخول"
+      "sign_in_link": "تسجيل الدخول",
+      "represents": "جهتكم تمثّل",
+      "represents_national": "كامل {country} (اتحاد وطني)",
+      "website": "الموقع الإلكتروني (اختياري)",
+      "website_hint": "إذا كان بريدك على النطاق نفسه، يراه المصوّتون موثّقاً.",
+      "claim_note_country": "أندية {country} موجودة بالفعل على DivingHQ، لذا يُفتح طلب لتولّي حسابها. بعد تأكيد بريدك تصوّت عليه. إذا كان عدد من يحق لهم التصويت قليلاً جداً، يراجعه DivingHQ.",
+      "claim_note_region_parent": "{org} يدير هذا البلد بالفعل على DivingHQ، لذا يقرّر في طلبك على {region}.",
+      "claim_note_region": "يُفتح طلب على {region}. تصوّت أنديتها بعد تأكيد بريدك، أو يراجعه DivingHQ إن لم يكن عددها كافياً بعد."
     },
     "forgot": {
       "title": "إعادة تعيين كلمة المرور",
@@ -375,7 +382,10 @@
       "role_requests_meta": "راجع طلبات الأدوار في إدارة المستخدمين",
       "orgs_one": "{count} اتحاد بانتظار الموافقة",
       "orgs_many": "{count} اتحادات بانتظار الموافقة",
-      "orgs_meta": "راجع في إدارة المستخدمين → مرشح الاتحاد"
+      "orgs_meta": "راجع في إدارة المستخدمين → مرشح الاتحاد",
+      "claims_one": "طلب واحد بانتظارك",
+      "claims_many": "{count} طلبات بانتظارك",
+      "claims_meta": "اتحاد يريد تولّي حساب"
     }
   },
   "profile": {
@@ -545,6 +555,7 @@
         "step_2": "افتح <strong>مدير البطولات</strong> وأنشئ منافسة يستضيفها ناديك",
         "step_3": "وافق على الأعضاء الذين يريدون الغطس أو التحكيم من صفحة <strong>ناديي</strong>",
         "step_4": "في يوم المنافسة، أدر التسجيل من <strong>غرفة التحكم</strong>",
+        "step_5": "عندما ينضم اتحادك أو هيئة ولايتك، صوّت على طلبه في <strong>طلبات التولّي</strong>",
         "cta": "إدارة منافسة ↗"
       },
       "region_admin": {
@@ -760,7 +771,10 @@
       "h2h_seeded": "تم تصنيف H2H",
       "sf_seeded": "مصنف لنصف النهائي",
       "f_seeded": "مصنف للنهائي",
-      "generic": "إشعار"
+      "generic": "إشعار",
+      "claim_vote": "تصويت",
+      "claim_review": "طلب تولٍّ",
+      "claim_decided": "طلب تولٍّ"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} أعضاء",
     "no_admin": "لا يوجد مشرف بعد",
     "region_admins": "مشرفو المنطقة"
+  },
+  "claims": {
+    "title": "طلبات التولّي",
+    "intro": "عندما يطلب اتحاد أو جهة إقليمية تولّي حساب أنشأته الأندية، يُحسم الأمر هنا.",
+    "empty_title": "لا توجد طلبات",
+    "empty_body": "عندما يطالب اتحاد ببلدك أو منطقتك، ستصوّت هنا.",
+    "kind_org": "وطني",
+    "kind_region": "منطقة",
+    "by": "مقدّم الطلب: {name}",
+    "awaiting_email": "بانتظار تأكيد البريد",
+    "status_open": "تصويت",
+    "status_escalated": "لدى DivingHQ",
+    "status_approved": "مقبول",
+    "status_rejected": "مرفوض",
+    "status_revoked": "ملغى",
+    "approver_clubs": "تصوّت الأندية.",
+    "approver_regions": "تصوّت الولايات والمقاطعات.",
+    "approver_parent": "يقرّر الاتحاد.",
+    "approver_sysadmin": "يقرّر DivingHQ.",
+    "tally": "{approvals} من {eligible} يوافقون، {objections} يعترضون",
+    "closes": "يُغلق التصويت {date}",
+    "domain_verified": "البريد يطابق الموقع",
+    "objections": "الاعتراضات",
+    "voted_approve": "وافق {club}",
+    "voted_object": "اعترض {club}",
+    "voting_for": "التصويت باسم",
+    "approve": "موافقة",
+    "object": "اعتراض",
+    "object_reason": "لماذا تعترض؟ يُرسل ذلك إلى DivingHQ مع الطلب.",
+    "send_objection": "إرسال الاعتراض",
+    "reject": "رفض",
+    "revoke": "إلغاء",
+    "revoke_body": "لن يعود {body} يدير {target}، ويعود كل شيء كما كان قبل الطلب."
   }
 }

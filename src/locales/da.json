@@ -88,7 +88,14 @@
       "submit_idle": "Send tilmelding",
       "submit_loading": "Sender...",
       "already_registered": "Allerede tilmeldt?",
-      "sign_in_link": "Log ind"
+      "sign_in_link": "Log ind",
+      "represents": "Jeres organisation repræsenterer",
+      "represents_national": "Hele {country} (nationalt forbund)",
+      "website": "Hjemmeside (valgfri)",
+      "website_hint": "Hvis din e-mailadresse er på samme domæne, ser de stemmeberettigede den som bekræftet.",
+      "claim_note_country": "Klubber fra {country} er allerede på DivingHQ, så dette åbner et krav på deres konto. Når du har bekræftet din e-mail, stemmer de om det. Kan for få stemme endnu, gennemgår DivingHQ det.",
+      "claim_note_region_parent": "{org} driver allerede landet på DivingHQ og afgør derfor dit krav på {region}.",
+      "claim_note_region": "Dette åbner et krav på {region}. Klubberne stemmer, når du har bekræftet din e-mail, eller DivingHQ gennemgår det, hvis der ikke er nok endnu."
     },
     "forgot": {
       "title": "Nulstil adgangskode",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Gennemse rolleanmodninger i Brugeradministration",
       "orgs_one": "{count} forbund afventer godkendelse",
       "orgs_many": "{count} forbund afventer godkendelse",
-      "orgs_meta": "Gennemse i Brugeradministration → org-filter"
+      "orgs_meta": "Gennemse i Brugeradministration → org-filter",
+      "claims_one": "1 krav venter på dig",
+      "claims_many": "{count} krav venter på dig",
+      "claims_meta": "Et forbund vil overtage en konto"
     }
   },
   "role": {
@@ -556,6 +566,7 @@
         "step_2": "Åbn <strong>Stævnehåndtering</strong> og opret et stævne, som din klub er vært for",
         "step_3": "Godkend medlemmer, der vil springe, dømme eller være overdommer, på <strong>Min klub</strong>",
         "step_4": "På dagen styrer du pointgivningen fra <strong>Kontrolrummet</strong>",
+        "step_5": "Når dit forbund eller regionale organ kommer til, stemmer du om dets krav under <strong>Krav</strong>",
         "cta": "Afvikling af et stævne ↗"
       },
       "region_admin": {
@@ -771,7 +782,10 @@
       "h2h_seeded": "H2H seedet",
       "sf_seeded": "Semifinale seedet",
       "f_seeded": "Finale seedet",
-      "generic": "Besked"
+      "generic": "Besked",
+      "claim_vote": "Afstemning",
+      "claim_review": "Krav",
+      "claim_decided": "Krav"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} medlemmer",
     "no_admin": "Ingen administrator endnu",
     "region_admins": "Regionsadministratorer"
+  },
+  "claims": {
+    "title": "Krav",
+    "intro": "Når et forbund eller et regionalt organ vil overtage en konto, klubberne startede, afgøres det her.",
+    "empty_title": "Ingen krav",
+    "empty_body": "Når et forbund gør krav på dit land eller din region, stemmer du her.",
+    "kind_org": "National",
+    "kind_region": "Region",
+    "by": "krævet af {name}",
+    "awaiting_email": "Venter på e-mailbekræftelse",
+    "status_open": "Afstemning",
+    "status_escalated": "Hos DivingHQ",
+    "status_approved": "Godkendt",
+    "status_rejected": "Afvist",
+    "status_revoked": "Tilbagekaldt",
+    "approver_clubs": "Klubberne stemmer.",
+    "approver_regions": "Delstaterne og provinserne stemmer.",
+    "approver_parent": "Forbundet afgør.",
+    "approver_sysadmin": "DivingHQ afgør.",
+    "tally": "{approvals} af {eligible} godkender, {objections} gør indsigelse",
+    "closes": "Afstemningen lukker {date}",
+    "domain_verified": "e-mail matcher hjemmeside",
+    "objections": "Indsigelser",
+    "voted_approve": "{club} godkendte",
+    "voted_object": "{club} gjorde indsigelse",
+    "voting_for": "Stemmer for",
+    "approve": "Godkend",
+    "object": "Gør indsigelse",
+    "object_reason": "Hvorfor gør du indsigelse? Det sendes til DivingHQ sammen med kravet.",
+    "send_objection": "Send indsigelse",
+    "reject": "Afvis",
+    "revoke": "Tilbagekald",
+    "revoke_body": "{body} driver ikke længere {target}, som vender tilbage til, som det var før kravet."
   }
 }

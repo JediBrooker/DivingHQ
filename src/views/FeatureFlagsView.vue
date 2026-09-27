@@ -16,6 +16,38 @@ const features = useFeaturesStore()
 
 const flags = ref([])
 const loading = ref(true)
+
+// Claim-vote rules (platform_settings, migration 089, lib/claims.js).
+// Numbers, not switches, so they get their own little form below.
+const settings = ref([])
+const settingDraft = ref({})
+const settingSaving = ref({})
+
+async function loadSettings() {
+  try {
+    settings.value = await auth.apiFetch('/api/admin/settings')
+    settingDraft.value = Object.fromEntries(settings.value.map(s => [s.key, s.value]))
+  } catch (err) {
+    showError(err.message || 'Could not load the claim settings.')
+  }
+}
+
+async function saveSetting(s) {
+  settingSaving.value = { ...settingSaving.value, [s.key]: true }
+  try {
+    const res = await auth.apiFetch(`/api/admin/settings/${s.key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value: Number(settingDraft.value[s.key]) }),
+    })
+    s.value = res.value
+    showSuccess(`${s.label} set to ${res.value}.`)
+  } catch (err) {
+    showError(err.message)
+    settingDraft.value[s.key] = s.value
+  } finally {
+    settingSaving.value = { ...settingSaving.value, [s.key]: false }
+  }
+}
 // Keyed by flag so one row's spinner doesn't freeze the others.
 const saving = ref({})
 
@@ -60,7 +92,7 @@ function whenLine(flag) {
   return flag.updated_by_name ? `${when} by ${flag.updated_by_name}` : when
 }
 
-onMounted(load)
+onMounted(() => { load(); loadSettings() })
 </script>
 
 <template>
@@ -105,6 +137,29 @@ onMounted(load)
           <code>STRIPE_WEBHOOK_SECRET</code> in the environment. Without them the
           checkout routes stay dark whatever this switch says.
         </p>
+
+        <div v-if="settings.length" class="ff-head ff-section">
+          <h2 class="ff-h2">Claim voting rules</h2>
+          <p class="ff-sub">
+            How a federation or state body's claim on an account the clubs started gets decided.
+            New values apply to claims opened (or votes cast) from now on.
+          </p>
+        </div>
+        <div v-for="s in settings" :key="s.key" class="card ff-row">
+          <div class="ff-info">
+            <label class="ff-name" :for="`set-${s.key}`">{{ s.label }}</label>
+            <p class="ff-desc">{{ s.description }}</p>
+            <p class="ff-meta">Default {{ s.default }}, allowed {{ s.min }} to {{ s.max }}</p>
+          </div>
+          <div class="ff-setting">
+            <input :id="`set-${s.key}`" class="input input-num" type="number"
+                   :min="s.min" :max="s.max" :step="s.integer ? 1 : 0.05"
+                   v-model="settingDraft[s.key]">
+            <button type="button" class="btn btn-sm btn-primary"
+                    :disabled="settingSaving[s.key] || Number(settingDraft[s.key]) === s.value"
+                    @click="saveSetting(s)">Save</button>
+          </div>
+        </div>
       </template>
     </div>
   </div>
@@ -145,6 +200,11 @@ onMounted(load)
   background: var(--surface-2, #eee); padding: .05rem .3rem;
   border-radius: .25rem; font-size: .95em;
 }
+
+.ff-section { margin-top: 2rem; }
+.ff-h2 { font-size: var(--text-h2); font-weight: 650; color: var(--text); margin: 0; }
+.ff-setting { display: flex; gap: .5rem; align-items: center; flex: none; }
+.input-num { width: 5.5rem; }
 
 /* The button must not shrink under a long description. */
 .ff-row > .btn { flex: none; }

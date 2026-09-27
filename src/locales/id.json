@@ -88,7 +88,14 @@
       "submit_idle": "Kirim pendaftaran",
       "submit_loading": "Mengirim...",
       "already_registered": "Sudah terdaftar?",
-      "sign_in_link": "Masuk"
+      "sign_in_link": "Masuk",
+      "represents": "Badan Anda mewakili",
+      "represents_national": "Seluruh {country} (federasi nasional)",
+      "website": "Situs web (opsional)",
+      "website_hint": "Jika alamat email Anda di domain yang sama, pemberi suara melihatnya sebagai terverifikasi.",
+      "claim_note_country": "Klub dari {country} sudah ada di DivingHQ, jadi ini membuka klaim atas akun mereka. Setelah email Anda terverifikasi, mereka memberi suara. Jika yang bisa memberi suara masih terlalu sedikit, DivingHQ meninjaunya.",
+      "claim_note_region_parent": "{org} sudah mengelola negara ini di DivingHQ, jadi mereka memutuskan klaim Anda atas {region}.",
+      "claim_note_region": "Ini membuka klaim atas {region}. Klub-klubnya memberi suara setelah email Anda terverifikasi, atau DivingHQ meninjaunya jika jumlahnya belum cukup."
     },
     "forgot": {
       "title": "Setel ulang kata sandi",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Tinjau permintaan peran di Pengelola Pengguna",
       "orgs_one": "{count} federasi menunggu persetujuan",
       "orgs_many": "{count} federasi menunggu persetujuan",
-      "orgs_meta": "Tinjau di Pengelola Pengguna → filter organisasi"
+      "orgs_meta": "Tinjau di Pengelola Pengguna → filter organisasi",
+      "claims_one": "1 klaim menunggu Anda",
+      "claims_many": "{count} klaim menunggu Anda",
+      "claims_meta": "Sebuah federasi ingin mengambil alih akun"
     }
   },
   "profile": {
@@ -545,6 +555,7 @@
         "step_2": "Buka <strong>Pengelola Kompetisi</strong> dan buat kompetisi yang diselenggarakan klub Anda",
         "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau wasit di <strong>Klub saya</strong>",
         "step_4": "Pada hari kompetisi, jalankan penilaian dari <strong>Ruang Kontrol</strong>",
+        "step_5": "Saat federasi atau badan wilayah Anda bergabung, beri suara atas klaimnya di <strong>Klaim</strong>",
         "cta": "Menyelenggarakan kompetisi ↗"
       },
       "region_admin": {
@@ -760,7 +771,10 @@
       "h2h_seeded": "H2H diberi unggulan",
       "sf_seeded": "Semi diberi unggulan",
       "f_seeded": "Final diberi unggulan",
-      "generic": "Pemberitahuan"
+      "generic": "Pemberitahuan",
+      "claim_vote": "Pemungutan suara",
+      "claim_review": "Klaim",
+      "claim_decided": "Klaim"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} anggota",
     "no_admin": "Belum ada admin",
     "region_admins": "Admin wilayah"
+  },
+  "claims": {
+    "title": "Klaim",
+    "intro": "Saat federasi atau badan wilayah meminta mengambil alih akun yang dimulai klub, keputusannya di sini.",
+    "empty_title": "Tidak ada klaim",
+    "empty_body": "Saat federasi mengklaim negara atau wilayah Anda, Anda memberi suara di sini.",
+    "kind_org": "Nasional",
+    "kind_region": "Wilayah",
+    "by": "diklaim oleh {name}",
+    "awaiting_email": "Menunggu verifikasi email",
+    "status_open": "Pemungutan suara",
+    "status_escalated": "Di DivingHQ",
+    "status_approved": "Disetujui",
+    "status_rejected": "Ditolak",
+    "status_revoked": "Dicabut",
+    "approver_clubs": "Klub memberi suara.",
+    "approver_regions": "Negara bagian dan provinsi memberi suara.",
+    "approver_parent": "Federasi yang memutuskan.",
+    "approver_sysadmin": "DivingHQ yang memutuskan.",
+    "tally": "{approvals} dari {eligible} setuju, {objections} keberatan",
+    "closes": "Pemungutan suara ditutup {date}",
+    "domain_verified": "email cocok dengan situs",
+    "objections": "Keberatan",
+    "voted_approve": "{club} menyetujui",
+    "voted_object": "{club} keberatan",
+    "voting_for": "Memberi suara untuk",
+    "approve": "Setujui",
+    "object": "Keberatan",
+    "object_reason": "Mengapa Anda keberatan? Ini dikirim ke DivingHQ bersama klaim.",
+    "send_objection": "Kirim keberatan",
+    "reject": "Tolak",
+    "revoke": "Cabut",
+    "revoke_body": "{body} tidak lagi mengelola {target}, semuanya kembali seperti sebelum klaim."
   }
 }

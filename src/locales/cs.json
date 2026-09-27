@@ -88,7 +88,14 @@
       "submit_idle": "Odeslat registraci",
       "submit_loading": "Odesílání...",
       "already_registered": "Již registrováni?",
-      "sign_in_link": "Přihlaste se"
+      "sign_in_link": "Přihlaste se",
+      "represents": "Vaše organizace zastupuje",
+      "represents_national": "Celou zemi {country} (národní federace)",
+      "website": "Web (nepovinné)",
+      "website_hint": "Pokud je vaše e-mailová adresa na stejné doméně, hlasující ji uvidí jako ověřenou.",
+      "claim_note_country": "Kluby ze země {country} už jsou na DivingHQ, proto se otevře nárok na jejich účet. Jakmile ověříte e-mail, hlasují o něm. Pokud zatím může hlasovat příliš málo z nich, posoudí ho DivingHQ.",
+      "claim_note_region_parent": "{org} už tuto zemi na DivingHQ spravuje, a proto rozhoduje o vašem nároku na {region}.",
+      "claim_note_region": "Tím se otevře nárok na {region}. Po ověření e-mailu o něm hlasují jeho kluby, nebo ho posoudí DivingHQ, pokud jich zatím není dost."
     },
     "forgot": {
       "title": "Obnovení hesla",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Zkontrolujte žádosti o role ve Správci uživatelů",
       "orgs_one": "{count} federace čeká na schválení",
       "orgs_many": "{count} federací čeká na schválení",
-      "orgs_meta": "Zkontrolujte ve Správci uživatelů → filtr organizací"
+      "orgs_meta": "Zkontrolujte ve Správci uživatelů → filtr organizací",
+      "claims_one": "Čeká na vás 1 nárok",
+      "claims_many": "Čeká na vás nároků: {count}",
+      "claims_meta": "Federace chce převzít účet"
     }
   },
   "profile": {
@@ -545,6 +555,7 @@
         "step_2": "Otevřete <strong>Správa závodů</strong> a vytvořte závod pořádaný vaším klubem",
         "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo řídit, na stránce <strong>Můj klub</strong>",
         "step_4": "V den závodu řiďte bodování z <strong>Řídicí místnosti</strong>",
+        "step_5": "Až dorazí vaše federace nebo krajský svaz, hlasujte o jejím nároku na stránce <strong>Nároky</strong>",
         "cta": "Pořádání závodu ↗"
       },
       "region_admin": {
@@ -760,7 +771,10 @@
       "h2h_seeded": "Nasazení H2H",
       "sf_seeded": "Nasazení do semifinále",
       "f_seeded": "Nasazení do finále",
-      "generic": "Upozornění"
+      "generic": "Upozornění",
+      "claim_vote": "Hlasování",
+      "claim_review": "Nárok",
+      "claim_decided": "Nárok"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} členů",
     "no_admin": "Zatím bez správce",
     "region_admins": "Správci regionu"
+  },
+  "claims": {
+    "title": "Nároky",
+    "intro": "Když federace nebo regionální svaz žádá o převzetí účtu, který založily kluby, rozhoduje se zde.",
+    "empty_title": "Žádné nároky",
+    "empty_body": "Když federace vznese nárok na vaši zemi nebo region, budete hlasovat zde.",
+    "kind_org": "Národní",
+    "kind_region": "Region",
+    "by": "nárok vznesl(a) {name}",
+    "awaiting_email": "Čeká na ověření e-mailu",
+    "status_open": "Hlasování",
+    "status_escalated": "U DivingHQ",
+    "status_approved": "Schváleno",
+    "status_rejected": "Zamítnuto",
+    "status_revoked": "Odvoláno",
+    "approver_clubs": "Hlasují kluby.",
+    "approver_regions": "Hlasují státy a provincie.",
+    "approver_parent": "Rozhoduje federace.",
+    "approver_sysadmin": "Rozhoduje DivingHQ.",
+    "tally": "{approvals} z {eligible} souhlasí, {objections} namítá",
+    "closes": "Hlasování končí {date}",
+    "domain_verified": "e-mail odpovídá webu",
+    "objections": "Námitky",
+    "voted_approve": "{club} souhlasil",
+    "voted_object": "{club} vznesl námitku",
+    "voting_for": "Hlasuje za",
+    "approve": "Schválit",
+    "object": "Namítnout",
+    "object_reason": "Proč máte námitku? Půjde s nárokem na DivingHQ.",
+    "send_objection": "Odeslat námitku",
+    "reject": "Zamítnout",
+    "revoke": "Odvolat",
+    "revoke_body": "{body} přestane spravovat {target}, vše se vrátí do stavu před nárokem."
   }
 }

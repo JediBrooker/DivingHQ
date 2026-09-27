@@ -88,7 +88,14 @@
       "submit_idle": "Lähetä rekisteröinti",
       "submit_loading": "Lähetetään...",
       "already_registered": "Oletko jo rekisteröitynyt?",
-      "sign_in_link": "Kirjaudu sisään"
+      "sign_in_link": "Kirjaudu sisään",
+      "represents": "Järjestönne edustaa",
+      "represents_national": "Koko {country} (kansallinen liitto)",
+      "website": "Verkkosivusto (valinnainen)",
+      "website_hint": "Jos sähköpostiosoitteesi on samassa verkkotunnuksessa, äänestäjät näkevät sen vahvistettuna.",
+      "claim_note_country": "Maasta {country} on jo seuroja DivingHQ:ssa, joten tämä avaa vaatimuksen niiden tiliin. Kun olet vahvistanut sähköpostisi, ne äänestävät siitä. Jos äänestäjiä on vielä liian vähän, DivingHQ käsittelee sen.",
+      "claim_note_region_parent": "{org} hallinnoi jo tätä maata DivingHQ:ssa, joten se päättää vaatimuksestasi alueeseen {region}.",
+      "claim_note_region": "Tämä avaa vaatimuksen alueeseen {region}. Sen seurat äänestävät, kun olet vahvistanut sähköpostisi, tai DivingHQ käsittelee sen, jos seuroja ei ole vielä tarpeeksi."
     },
     "forgot": {
       "title": "Palauta salasana",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Tarkastele roolipyyntöjä Käyttäjien hallinnassa",
       "orgs_one": "{count} liitto odottaa hyväksyntää",
       "orgs_many": "{count} liittoa odottaa hyväksyntää",
-      "orgs_meta": "Tarkastele Käyttäjien hallinnassa → organisaatiosuodatin"
+      "orgs_meta": "Tarkastele Käyttäjien hallinnassa → organisaatiosuodatin",
+      "claims_one": "1 vaatimus odottaa sinua",
+      "claims_many": "{count} vaatimusta odottaa sinua",
+      "claims_meta": "Liitto haluaa ottaa tilin haltuunsa"
     }
   },
   "role": {
@@ -556,6 +566,7 @@
         "step_2": "Avaa <strong>Kilpailun hallinta</strong> ja luo seurasi järjestämä kilpailu",
         "step_3": "Hyväksy <strong>Oma seura</strong> -sivulla jäsenet, jotka haluavat hypätä, tuomita tai toimia päätuomarina",
         "step_4": "Kilpailupäivänä ohjaat pisteytystä <strong>Ohjaamosta</strong>",
+        "step_5": "Kun liittosi tai alueellinen elin liittyy, äänestä sen vaatimuksesta sivulla <strong>Vaatimukset</strong>",
         "cta": "Kilpailun järjestäminen ↗"
       },
       "region_admin": {
@@ -771,7 +782,10 @@
       "h2h_seeded": "H2H-sijoitettu",
       "sf_seeded": "Semifinaali sijoitettu",
       "f_seeded": "Finaali sijoitettu",
-      "generic": "Ilmoitus"
+      "generic": "Ilmoitus",
+      "claim_vote": "Äänestys",
+      "claim_review": "Vaatimus",
+      "claim_decided": "Vaatimus"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} jäsentä",
     "no_admin": "Ei vielä ylläpitäjää",
     "region_admins": "Alueen ylläpitäjät"
+  },
+  "claims": {
+    "title": "Vaatimukset",
+    "intro": "Kun liitto tai alueellinen elin haluaa ottaa haltuunsa seurojen aloittaman tilin, asia ratkaistaan täällä.",
+    "empty_title": "Ei vaatimuksia",
+    "empty_body": "Kun liitto vaatii maatasi tai aluettasi, äänestät täällä.",
+    "kind_org": "Kansallinen",
+    "kind_region": "Alue",
+    "by": "vaatija: {name}",
+    "awaiting_email": "Odottaa sähköpostin vahvistusta",
+    "status_open": "Äänestys",
+    "status_escalated": "DivingHQ:lla",
+    "status_approved": "Hyväksytty",
+    "status_rejected": "Hylätty",
+    "status_revoked": "Peruttu",
+    "approver_clubs": "Seurat äänestävät.",
+    "approver_regions": "Osavaltiot ja provinssit äänestävät.",
+    "approver_parent": "Liitto päättää.",
+    "approver_sysadmin": "DivingHQ päättää.",
+    "tally": "{approvals}/{eligible} hyväksyy, {objections} vastustaa",
+    "closes": "Äänestys päättyy {date}",
+    "domain_verified": "sähköposti vastaa sivustoa",
+    "objections": "Vastalauseet",
+    "voted_approve": "{club} hyväksyi",
+    "voted_object": "{club} vastusti",
+    "voting_for": "Äänestää",
+    "approve": "Hyväksy",
+    "object": "Vastusta",
+    "object_reason": "Miksi vastustat? Tämä menee DivingHQ:lle vaatimuksen mukana.",
+    "send_objection": "Lähetä vastalause",
+    "reject": "Hylkää",
+    "revoke": "Peru",
+    "revoke_body": "{body} ei enää hallinnoi kohdetta {target}, joka palaa vaatimusta edeltäneeseen tilaan."
   }
 }

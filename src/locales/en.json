@@ -88,7 +88,14 @@
       "submit_idle": "Submit Registration",
       "submit_loading": "Submitting...",
       "already_registered": "Already registered?",
-      "sign_in_link": "Sign in"
+      "sign_in_link": "Sign in",
+      "represents": "Your body represents",
+      "represents_national": "All of {country} (national federation)",
+      "website": "Website (optional)",
+      "website_hint": "If your email address is on the same domain, voters see it as verified.",
+      "claim_note_country": "Clubs from {country} are already on DivingHQ, so this opens a claim on their account. Once you verify your email, they vote on it. If too few of them can vote yet, DivingHQ reviews it.",
+      "claim_note_region_parent": "{org} already runs this country on DivingHQ, so they decide your claim on {region}.",
+      "claim_note_region": "This opens a claim on {region}. Its clubs vote on it once you verify your email, or DivingHQ reviews it if there aren't enough of them yet."
     },
     "forgot": {
       "title": "Reset Password",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Review role requests in User Manager",
       "orgs_one": "{count} federation awaiting approval",
       "orgs_many": "{count} federations awaiting approval",
-      "orgs_meta": "Review in User Manager → org filter"
+      "orgs_meta": "Review in User Manager → org filter",
+      "claims_one": "1 claim waiting on you",
+      "claims_many": "{count} claims waiting on you",
+      "claims_meta": "A federation or state body wants to take over"
     }
   },
   "profile": {
@@ -545,6 +555,7 @@
         "step_2": "Open <strong>Meet Manager</strong> and create a meet hosted by your club",
         "step_3": "Approve members who want to dive, judge or referee on <strong>My club</strong>",
         "step_4": "On the day, drive scoring from <strong>Control Room</strong>",
+        "step_5": "When your federation or state body arrives, vote on its claim on <strong>Claims</strong>",
         "cta": "Running a meet ↗"
       },
       "region_admin": {
@@ -760,7 +771,10 @@
       "h2h_seeded": "H2H seeded",
       "sf_seeded": "Semi seeded",
       "f_seeded": "Final seeded",
-      "generic": "Notice"
+      "generic": "Notice",
+      "claim_vote": "Claim vote",
+      "claim_review": "Claim",
+      "claim_decided": "Claim"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} members",
     "no_admin": "No admin yet",
     "region_admins": "Region admins"
+  },
+  "claims": {
+    "title": "Claims",
+    "intro": "When a federation or state body asks to take over an account the clubs started, it's decided here.",
+    "empty_title": "No claims",
+    "empty_body": "When a federation or state body claims your country or region, you'll vote on it here.",
+    "kind_org": "National",
+    "kind_region": "Region",
+    "by": "claimed by {name}",
+    "awaiting_email": "Waiting for email verification",
+    "status_open": "Voting",
+    "status_escalated": "With DivingHQ",
+    "status_approved": "Approved",
+    "status_rejected": "Rejected",
+    "status_revoked": "Revoked",
+    "approver_clubs": "The clubs vote.",
+    "approver_regions": "The states and provinces vote.",
+    "approver_parent": "The federation decides.",
+    "approver_sysadmin": "DivingHQ decides.",
+    "tally": "{approvals} of {eligible} approve, {objections} objecting",
+    "closes": "Voting closes {date}",
+    "domain_verified": "email matches website",
+    "objections": "Objections",
+    "voted_approve": "{club} approved",
+    "voted_object": "{club} objected",
+    "voting_for": "Voting for",
+    "approve": "Approve",
+    "object": "Object",
+    "object_reason": "Why do you object? This goes to DivingHQ with the claim.",
+    "send_objection": "Send objection",
+    "reject": "Reject",
+    "revoke": "Revoke",
+    "revoke_body": "{body} stops running {target}, and it goes back to how it was before the claim."
   }
 }

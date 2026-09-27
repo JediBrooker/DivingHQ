@@ -88,7 +88,14 @@
       "submit_idle": "提交注册",
       "submit_loading": "提交中...",
       "already_registered": "已经注册？",
-      "sign_in_link": "登录"
+      "sign_in_link": "登录",
+      "represents": "贵机构代表",
+      "represents_national": "整个 {country}（国家联合会）",
+      "website": "网站（可选）",
+      "website_hint": "如果您的邮箱与网站同域名，投票者会看到“已验证”。",
+      "claim_note_country": "{country} 的俱乐部已在使用 DivingHQ，因此这将对其账户发起接管申请。验证邮箱后由俱乐部投票。如果能投票的俱乐部太少，则由 DivingHQ 审核。",
+      "claim_note_region_parent": "{org} 已在 DivingHQ 上管理该国家，因此由其决定您对 {region} 的申请。",
+      "claim_note_region": "这将对 {region} 发起申请。验证邮箱后由其俱乐部投票；如果数量尚不足，则由 DivingHQ 审核。"
     },
     "forgot": {
       "title": "重置密码",
@@ -375,7 +382,10 @@
       "role_requests_meta": "在用户管理中审核角色请求",
       "orgs_one": "有 {count} 个协会等待批准",
       "orgs_many": "有 {count} 个协会等待批准",
-      "orgs_meta": "在用户管理中审核 → 组织筛选"
+      "orgs_meta": "在用户管理中审核 → 组织筛选",
+      "claims_one": "有 1 个申请等待您处理",
+      "claims_many": "有 {count} 个申请等待您处理",
+      "claims_meta": "有联合会申请接管账户"
     }
   },
   "profile": {
@@ -545,6 +555,7 @@
         "step_2": "打开<strong>赛事经理</strong>，创建由您的俱乐部主办的比赛",
         "step_3": "在<strong>我的俱乐部</strong>中审批希望成为运动员、裁判或裁判长的会员",
         "step_4": "比赛当天，在<strong>控制室</strong>中主持评分",
+        "step_5": "当您的联合会或地区机构加入时，请在<strong>接管申请</strong>中对其申请投票",
         "cta": "组织比赛 ↗"
       },
       "region_admin": {
@@ -760,7 +771,10 @@
       "h2h_seeded": "H2H 已排位",
       "sf_seeded": "半决赛已排位",
       "f_seeded": "决赛已排位",
-      "generic": "通知"
+      "generic": "通知",
+      "claim_vote": "接管投票",
+      "claim_review": "接管申请",
+      "claim_decided": "接管申请"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} 名会员",
     "no_admin": "尚无管理员",
     "region_admins": "地区管理员"
+  },
+  "claims": {
+    "title": "接管申请",
+    "intro": "当联合会或地区机构申请接管俱乐部创建的账户时，在此决定。",
+    "empty_title": "暂无申请",
+    "empty_body": "当联合会申请接管您的国家或地区时，您将在此投票。",
+    "kind_org": "国家级",
+    "kind_region": "地区",
+    "by": "申请人：{name}",
+    "awaiting_email": "等待邮箱验证",
+    "status_open": "投票中",
+    "status_escalated": "DivingHQ 审核中",
+    "status_approved": "已批准",
+    "status_rejected": "已拒绝",
+    "status_revoked": "已撤销",
+    "approver_clubs": "由俱乐部投票。",
+    "approver_regions": "由州和省投票。",
+    "approver_parent": "由联合会决定。",
+    "approver_sysadmin": "由 DivingHQ 决定。",
+    "tally": "{eligible} 票中 {approvals} 票赞成，{objections} 票反对",
+    "closes": "投票截止：{date}",
+    "domain_verified": "邮箱与网站一致",
+    "objections": "反对意见",
+    "voted_approve": "{club} 已赞成",
+    "voted_object": "{club} 已反对",
+    "voting_for": "代表投票",
+    "approve": "批准",
+    "object": "反对",
+    "object_reason": "请说明反对理由，它将随申请一并发送给 DivingHQ。",
+    "send_objection": "发送反对意见",
+    "reject": "拒绝",
+    "revoke": "撤销",
+    "revoke_body": "{body} 将不再管理 {target}，一切恢复到申请之前的状态。"
   }
 }

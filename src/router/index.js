@@ -250,6 +250,13 @@ const routes = [
     meta: { requiresAuth: true, requiresClubAdmin: true, appShell: true },
   },
   {
+    // Claims (phase 3): anyone signed in; the page only lists what this
+    // person may see (their own claim, votes, decisions).
+    path: '/claims',
+    component: () => import('@/views/ClaimsView.vue'),
+    meta: { requiresAuth: true, appShell: true },
+  },
+  {
     // A region admin's page: the region's clubs and its pending role
     // requests (migration 088).
     path: '/region',

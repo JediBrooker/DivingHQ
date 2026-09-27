@@ -88,7 +88,14 @@
       "submit_idle": "Envoyer l'inscription",
       "submit_loading": "Envoi...",
       "already_registered": "Déjà inscrit ?",
-      "sign_in_link": "Se connecter"
+      "sign_in_link": "Se connecter",
+      "represents": "Votre organisme représente",
+      "represents_national": "Tout le pays : {country} (fédération nationale)",
+      "website": "Site web (facultatif)",
+      "website_hint": "Si votre adresse e-mail est sur le même domaine, les votants la voient comme vérifiée.",
+      "claim_note_country": "Des clubs de {country} sont déjà sur DivingHQ : cela ouvre une revendication sur leur compte. Une fois votre e-mail vérifié, ils votent. S'ils sont trop peu à pouvoir voter, DivingHQ l'examine.",
+      "claim_note_region_parent": "{org} gère déjà ce pays sur DivingHQ et décide donc de votre revendication sur {region}.",
+      "claim_note_region": "Cela ouvre une revendication sur {region}. Ses clubs votent une fois votre e-mail vérifié, ou DivingHQ l'examine s'ils ne sont pas encore assez nombreux."
     },
     "forgot": {
       "title": "Réinitialiser le mot de passe",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Examinez les demandes de rôle dans le Gestionnaire d'utilisateurs",
       "orgs_one": "{count} fédération en attente d'approbation",
       "orgs_many": "{count} fédérations en attente d'approbation",
-      "orgs_meta": "Examinez dans le Gestionnaire d'utilisateurs → filtre d'organisation"
+      "orgs_meta": "Examinez dans le Gestionnaire d'utilisateurs → filtre d'organisation",
+      "claims_one": "1 revendication vous attend",
+      "claims_many": "{count} revendications vous attendent",
+      "claims_meta": "Une fédération souhaite reprendre un compte"
     }
   },
   "role": {
@@ -556,6 +566,7 @@
         "step_2": "Ouvrez le <strong>Gestionnaire de compétitions</strong> et créez une compétition organisée par votre club",
         "step_3": "Approuvez dans <strong>Mon club</strong> les membres qui veulent plonger, juger ou arbitrer",
         "step_4": "Le jour J, pilotez la notation depuis la <strong>Salle de contrôle</strong>",
+        "step_5": "Quand votre fédération ou votre organe régional arrive, votez sur sa revendication dans <strong>Revendications</strong>",
         "cta": "Organiser une compétition ↗"
       },
       "region_admin": {
@@ -771,7 +782,10 @@
       "h2h_seeded": "H2H tête de série",
       "sf_seeded": "Tête de série (demi‑finale)",
       "f_seeded": "Tête de série (finale)",
-      "generic": "Avis"
+      "generic": "Avis",
+      "claim_vote": "Vote",
+      "claim_review": "Revendication",
+      "claim_decided": "Revendication"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} membres",
     "no_admin": "Pas encore d'administrateur",
     "region_admins": "Administrateurs de la région"
+  },
+  "claims": {
+    "title": "Revendications",
+    "intro": "Quand une fédération ou un organe régional demande à reprendre un compte créé par les clubs, c'est décidé ici.",
+    "empty_title": "Aucune revendication",
+    "empty_body": "Quand une fédération revendique votre pays ou votre région, vous voterez ici.",
+    "kind_org": "National",
+    "kind_region": "Région",
+    "by": "revendiqué par {name}",
+    "awaiting_email": "En attente de vérification de l'e-mail",
+    "status_open": "Vote en cours",
+    "status_escalated": "Chez DivingHQ",
+    "status_approved": "Approuvée",
+    "status_rejected": "Rejetée",
+    "status_revoked": "Révoquée",
+    "approver_clubs": "Les clubs votent.",
+    "approver_regions": "Les États et provinces votent.",
+    "approver_parent": "La fédération décide.",
+    "approver_sysadmin": "DivingHQ décide.",
+    "tally": "{approvals} sur {eligible} approuvent, {objections} s'opposent",
+    "closes": "Le vote se termine le {date}",
+    "domain_verified": "l'e-mail correspond au site",
+    "objections": "Objections",
+    "voted_approve": "{club} a approuvé",
+    "voted_object": "{club} s'est opposé",
+    "voting_for": "Vote pour",
+    "approve": "Approuver",
+    "object": "S'opposer",
+    "object_reason": "Pourquoi vous opposez-vous ? Cela part chez DivingHQ avec la revendication.",
+    "send_objection": "Envoyer l'objection",
+    "reject": "Rejeter",
+    "revoke": "Révoquer",
+    "revoke_body": "{body} ne gère plus {target}, qui revient à l'état d'avant la revendication."
   }
 }

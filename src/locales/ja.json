@@ -88,7 +88,14 @@
       "submit_idle": "登録を送信",
       "submit_loading": "送信中...",
       "already_registered": "すでに登録済みですか？",
-      "sign_in_link": "サインイン"
+      "sign_in_link": "サインイン",
+      "represents": "団体の代表範囲",
+      "represents_national": "{country} 全体（国内連盟）",
+      "website": "ウェブサイト（任意）",
+      "website_hint": "メールアドレスが同じドメインなら、投票者には確認済みとして表示されます。",
+      "claim_note_country": "{country} のクラブはすでに DivingHQ を利用しているため、そのアカウントへの引き継ぎ申請になります。メールを確認すると投票が始まります。投票できるクラブがまだ少ない場合は DivingHQ が審査します。",
+      "claim_note_region_parent": "{org} がすでにこの国を DivingHQ で運営しているため、{region} への申請は同連盟が判断します。",
+      "claim_note_region": "{region} への申請になります。メール確認後に所属クラブが投票します。クラブがまだ少ない場合は DivingHQ が審査します。"
     },
     "forgot": {
       "title": "パスワードをリセット",
@@ -375,7 +382,10 @@
       "role_requests_meta": "ユーザー管理で役割リクエストを確認してください",
       "orgs_one": "{count} 件の連盟が承認待ちです",
       "orgs_many": "{count} 件の連盟が承認待ちです",
-      "orgs_meta": "ユーザー管理で確認してください → 組織フィルター"
+      "orgs_meta": "ユーザー管理で確認してください → 組織フィルター",
+      "claims_one": "1 件の申請があなたを待っています",
+      "claims_many": "{count} 件の申請があなたを待っています",
+      "claims_meta": "連盟がアカウントの引き継ぎを求めています"
     }
   },
   "profile": {
@@ -545,6 +555,7 @@
         "step_2": "<strong>大会マネージャー</strong>を開き、クラブ主催の大会を作成します",
         "step_3": "<strong>マイクラブ</strong>で、選手・審判・レフェリー希望のメンバーを承認します",
         "step_4": "当日は<strong>コントロールルーム</strong>で採点を進行します",
+        "step_5": "連盟や地域団体が参加したら、<strong>引き継ぎ申請</strong>で投票します",
         "cta": "大会の運営 ↗"
       },
       "region_admin": {
@@ -760,7 +771,10 @@
       "h2h_seeded": "H2Hシード済み",
       "sf_seeded": "準決勝シード済み",
       "f_seeded": "決勝シード済み",
-      "generic": "お知らせ"
+      "generic": "お知らせ",
+      "claim_vote": "申請の投票",
+      "claim_review": "引き継ぎ申請",
+      "claim_decided": "引き継ぎ申請"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "メンバー {n} 人",
     "no_admin": "管理者未設定",
     "region_admins": "地域の管理者"
+  },
+  "claims": {
+    "title": "引き継ぎ申請",
+    "intro": "連盟や地域団体がクラブの始めたアカウントの引き継ぎを求めると、ここで決まります。",
+    "empty_title": "申請はありません",
+    "empty_body": "連盟があなたの国や地域を申請すると、ここで投票します。",
+    "kind_org": "国内",
+    "kind_region": "地域",
+    "by": "申請者: {name}",
+    "awaiting_email": "メール確認待ち",
+    "status_open": "投票中",
+    "status_escalated": "DivingHQ で審査中",
+    "status_approved": "承認済み",
+    "status_rejected": "却下",
+    "status_revoked": "取り消し",
+    "approver_clubs": "クラブが投票します。",
+    "approver_regions": "州が投票します。",
+    "approver_parent": "連盟が判断します。",
+    "approver_sysadmin": "DivingHQ が判断します。",
+    "tally": "{eligible} 中 {approvals} が賛成、{objections} が反対",
+    "closes": "投票締切 {date}",
+    "domain_verified": "メールがサイトと一致",
+    "objections": "反対意見",
+    "voted_approve": "{club} は賛成",
+    "voted_object": "{club} は反対",
+    "voting_for": "投票するクラブ",
+    "approve": "承認",
+    "object": "反対",
+    "object_reason": "反対の理由を入力してください。申請とともに DivingHQ に送られます。",
+    "send_objection": "反対を送信",
+    "reject": "却下",
+    "revoke": "取り消す",
+    "revoke_body": "{body} は {target} の運営をやめ、申請前の状態に戻ります。"
   }
 }

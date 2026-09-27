@@ -88,7 +88,14 @@
       "submit_idle": "Pošalji registraciju",
       "submit_loading": "Slanje...",
       "already_registered": "Već ste registrirani?",
-      "sign_in_link": "Prijava"
+      "sign_in_link": "Prijava",
+      "represents": "Vaše tijelo predstavlja",
+      "represents_national": "Cijela zemlja: {country} (nacionalni savez)",
+      "website": "Web-stranica (neobavezno)",
+      "website_hint": "Ako je vaša e-adresa na istoj domeni, glasači je vide kao potvrđenu.",
+      "claim_note_country": "Klubovi iz zemlje {country} već su na DivingHQ-u, pa se otvara zahtjev za preuzimanje njihova računa. Kad potvrdite e-poštu, oni glasaju. Ako ih još premalo može glasati, pregledava ga DivingHQ.",
+      "claim_note_region_parent": "{org} već vodi ovu zemlju na DivingHQ-u pa odlučuje o vašem zahtjevu za {region}.",
+      "claim_note_region": "Otvara se zahtjev za {region}. Njezini klubovi glasaju kad potvrdite e-poštu, ili ga pregledava DivingHQ ako ih još nema dovoljno."
     },
     "forgot": {
       "title": "Resetiranje lozinke",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Pregledajte zahtjeve za uloge u Upravitelju korisnika",
       "orgs_one": "{count} federacija čeka odobrenje",
       "orgs_many": "{count} federacija čeka odobrenje",
-      "orgs_meta": "Pregledajte u Upravitelju korisnika → filtar organizacije"
+      "orgs_meta": "Pregledajte u Upravitelju korisnika → filtar organizacije",
+      "claims_one": "1 zahtjev čeka na vas",
+      "claims_many": "Zahtjeva koji čekaju na vas: {count}",
+      "claims_meta": "Savez želi preuzeti račun"
     }
   },
   "profile": {
@@ -545,6 +555,7 @@
         "step_2": "Otvorite <strong>Menadžer natjecanja</strong> i stvorite natjecanje koje organizira vaš klub",
         "step_3": "Na stranici <strong>Moj klub</strong> odobrite članove koji žele skakati, suditi ili biti glavni sudac",
         "step_4": "Na dan natjecanja vodite bodovanje iz <strong>Kontrolne sobe</strong>",
+        "step_5": "Kad stigne vaš savez ili regionalno tijelo, glasajte o njegovu zahtjevu u <strong>Zahtjevima</strong>",
         "cta": "Organizacija natjecanja ↗"
       },
       "region_admin": {
@@ -760,7 +771,10 @@
       "h2h_seeded": "H2H nositelji",
       "sf_seeded": "Polufinalni nositelji",
       "f_seeded": "Finalni nositelji",
-      "generic": "Obavijest"
+      "generic": "Obavijest",
+      "claim_vote": "Glasanje",
+      "claim_review": "Zahtjev",
+      "claim_decided": "Zahtjev"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} članova",
     "no_admin": "Još nema administratora",
     "region_admins": "Administratori regije"
+  },
+  "claims": {
+    "title": "Zahtjevi",
+    "intro": "Kad savez ili regionalno tijelo želi preuzeti račun koji su pokrenuli klubovi, odlučuje se ovdje.",
+    "empty_title": "Nema zahtjeva",
+    "empty_body": "Kad savez zatraži vašu zemlju ili regiju, glasat ćete ovdje.",
+    "kind_org": "Nacionalno",
+    "kind_region": "Regija",
+    "by": "podnositelj: {name}",
+    "awaiting_email": "Čeka potvrdu e-pošte",
+    "status_open": "Glasanje",
+    "status_escalated": "Kod DivingHQ-a",
+    "status_approved": "Odobreno",
+    "status_rejected": "Odbijeno",
+    "status_revoked": "Opozvano",
+    "approver_clubs": "Glasaju klubovi.",
+    "approver_regions": "Glasaju savezne države i provincije.",
+    "approver_parent": "Odlučuje savez.",
+    "approver_sysadmin": "Odlučuje DivingHQ.",
+    "tally": "{approvals} od {eligible} za, {objections} protiv",
+    "closes": "Glasanje se zatvara {date}",
+    "domain_verified": "e-pošta odgovara web-stranici",
+    "objections": "Prigovori",
+    "voted_approve": "{club} je odobrio",
+    "voted_object": "{club} je uložio prigovor",
+    "voting_for": "Glasa za",
+    "approve": "Odobri",
+    "object": "Uloži prigovor",
+    "object_reason": "Zašto prigovarate? To ide DivingHQ-u uz zahtjev.",
+    "send_objection": "Pošalji prigovor",
+    "reject": "Odbij",
+    "revoke": "Opozovi",
+    "revoke_body": "{body} više ne vodi {target}, sve se vraća kako je bilo prije zahtjeva."
   }
 }

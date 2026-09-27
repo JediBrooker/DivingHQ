@@ -88,7 +88,14 @@
       "submit_idle": "Registrierung senden",
       "submit_loading": "Senden...",
       "already_registered": "Bereits registriert?",
-      "sign_in_link": "Anmelden"
+      "sign_in_link": "Anmelden",
+      "represents": "Ihre Organisation vertritt",
+      "represents_national": "Ganz {country} (nationaler Verband)",
+      "website": "Website (optional)",
+      "website_hint": "Liegt Ihre E-Mail-Adresse auf derselben Domain, sehen die Abstimmenden sie als bestätigt.",
+      "claim_note_country": "Vereine aus {country} sind bereits auf DivingHQ, daher wird ein Anspruch auf ihr Konto eröffnet. Sobald Sie Ihre E-Mail bestätigt haben, stimmen sie darüber ab. Können noch zu wenige abstimmen, prüft DivingHQ ihn.",
+      "claim_note_region_parent": "{org} führt dieses Land bereits auf DivingHQ und entscheidet daher über Ihren Anspruch auf {region}.",
+      "claim_note_region": "Damit wird ein Anspruch auf {region} eröffnet. Nach Bestätigung Ihrer E-Mail stimmen die Vereine dort ab, oder DivingHQ prüft ihn, wenn es noch zu wenige sind."
     },
     "forgot": {
       "title": "Passwort zurücksetzen",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Prüfen Sie Rollenanfragen in der Benutzerverwaltung",
       "orgs_one": "{count} Föderation wartet auf Genehmigung",
       "orgs_many": "{count} Föderationen warten auf Genehmigung",
-      "orgs_meta": "Prüfen Sie in der Benutzerverwaltung → Organisationsfilter"
+      "orgs_meta": "Prüfen Sie in der Benutzerverwaltung → Organisationsfilter",
+      "claims_one": "1 Anspruch wartet auf Sie",
+      "claims_many": "{count} Ansprüche warten auf Sie",
+      "claims_meta": "Ein Verband möchte ein Konto übernehmen"
     }
   },
   "role": {
@@ -556,6 +566,7 @@
         "step_2": "Öffnen Sie den <strong>Wettkampf-Manager</strong> und legen Sie einen Wettkampf Ihres Vereins an",
         "step_3": "Genehmigen Sie auf <strong>Mein Verein</strong> Mitglieder, die springen, werten oder Schiedsrichter sein möchten",
         "step_4": "Am Wettkampftag steuern Sie die Wertung aus dem <strong>Kontrollraum</strong>",
+        "step_5": "Kommt Ihr Verband oder Landesverband dazu, stimmen Sie unter <strong>Ansprüche</strong> über seinen Anspruch ab",
         "cta": "Einen Wettkampf ausrichten ↗"
       },
       "region_admin": {
@@ -771,7 +782,10 @@
       "h2h_seeded": "H2H gesetzt",
       "sf_seeded": "Halbfinale gesetzt",
       "f_seeded": "Finale gesetzt",
-      "generic": "Hinweis"
+      "generic": "Hinweis",
+      "claim_vote": "Abstimmung",
+      "claim_review": "Anspruch",
+      "claim_decided": "Anspruch"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} Mitglieder",
     "no_admin": "Noch kein Admin",
     "region_admins": "Regionsadmins"
+  },
+  "claims": {
+    "title": "Ansprüche",
+    "intro": "Wenn ein Verband oder Landesverband ein Konto übernehmen möchte, das die Vereine begonnen haben, wird hier entschieden.",
+    "empty_title": "Keine Ansprüche",
+    "empty_body": "Wenn ein Verband Ihr Land oder Ihre Region beansprucht, stimmen Sie hier ab.",
+    "kind_org": "National",
+    "kind_region": "Region",
+    "by": "beansprucht von {name}",
+    "awaiting_email": "Wartet auf E-Mail-Bestätigung",
+    "status_open": "Abstimmung",
+    "status_escalated": "Bei DivingHQ",
+    "status_approved": "Genehmigt",
+    "status_rejected": "Abgelehnt",
+    "status_revoked": "Widerrufen",
+    "approver_clubs": "Die Vereine stimmen ab.",
+    "approver_regions": "Die Bundesstaaten und Provinzen stimmen ab.",
+    "approver_parent": "Der Verband entscheidet.",
+    "approver_sysadmin": "DivingHQ entscheidet.",
+    "tally": "{approvals} von {eligible} stimmen zu, {objections} widersprechen",
+    "closes": "Abstimmung endet am {date}",
+    "domain_verified": "E-Mail passt zur Website",
+    "objections": "Einwände",
+    "voted_approve": "{club} hat zugestimmt",
+    "voted_object": "{club} hat widersprochen",
+    "voting_for": "Stimme für",
+    "approve": "Zustimmen",
+    "object": "Widersprechen",
+    "object_reason": "Warum widersprechen Sie? Das geht mit dem Anspruch an DivingHQ.",
+    "send_objection": "Einwand senden",
+    "reject": "Ablehnen",
+    "revoke": "Widerrufen",
+    "revoke_body": "{body} führt {target} nicht mehr, alles wird wie vor dem Anspruch."
   }
 }

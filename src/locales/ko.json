@@ -88,7 +88,14 @@
       "submit_idle": "등록 제출",
       "submit_loading": "제출하는 중...",
       "already_registered": "이미 등록하셨습니까?",
-      "sign_in_link": "로그인"
+      "sign_in_link": "로그인",
+      "represents": "단체가 대표하는 범위",
+      "represents_national": "{country} 전체 (국가 연맹)",
+      "website": "웹사이트 (선택)",
+      "website_hint": "이메일 주소가 같은 도메인이면 투표자에게 인증된 것으로 표시됩니다.",
+      "claim_note_country": "{country}의 클럽들이 이미 DivingHQ에 있으므로 해당 계정에 대한 인수 신청이 열립니다. 이메일을 인증하면 클럽들이 투표합니다. 투표할 수 있는 클럽이 아직 너무 적으면 DivingHQ가 검토합니다.",
+      "claim_note_region_parent": "{org}이(가) 이미 이 나라를 DivingHQ에서 운영하고 있어 {region}에 대한 신청은 해당 연맹이 결정합니다.",
+      "claim_note_region": "{region}에 대한 신청이 열립니다. 이메일 인증 후 소속 클럽들이 투표하며, 아직 충분하지 않으면 DivingHQ가 검토합니다."
     },
     "forgot": {
       "title": "비밀번호 재설정",
@@ -375,7 +382,10 @@
       "role_requests_meta": "사용자 관리에서 역할 요청을 검토하세요",
       "orgs_one": "{count}개의 연맹 승인 대기 중입니다",
       "orgs_many": "{count}개의 연맹 승인 대기 중입니다",
-      "orgs_meta": "사용자 관리에서 검토 → org 필터"
+      "orgs_meta": "사용자 관리에서 검토 → org 필터",
+      "claims_one": "신청 1건이 기다리고 있습니다",
+      "claims_many": "신청 {count}건이 기다리고 있습니다",
+      "claims_meta": "연맹이 계정 인수를 요청했습니다"
     }
   },
   "profile": {
@@ -545,6 +555,7 @@
         "step_2": "<strong>대회 매니저</strong>를 열고 클럽이 주최하는 대회를 만듭니다",
         "step_3": "<strong>내 클럽</strong>에서 선수, 심판, 주심을 희망하는 회원을 승인합니다",
         "step_4": "대회 당일에는 <strong>컨트롤 룸</strong>에서 채점을 진행합니다",
+        "step_5": "연맹이나 지역 단체가 합류하면 <strong>인수 신청</strong>에서 투표합니다",
         "cta": "대회 운영하기 ↗"
       },
       "region_admin": {
@@ -760,7 +771,10 @@
       "h2h_seeded": "H2H 시드 배정",
       "sf_seeded": "준결승 시드 배정",
       "f_seeded": "결승 시드 배정",
-      "generic": "공지"
+      "generic": "공지",
+      "claim_vote": "인수 투표",
+      "claim_review": "인수 신청",
+      "claim_decided": "인수 신청"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "회원 {n}명",
     "no_admin": "관리자 없음",
     "region_admins": "지역 관리자"
+  },
+  "claims": {
+    "title": "인수 신청",
+    "intro": "연맹이나 지역 단체가 클럽이 시작한 계정을 인수하려 할 때 여기서 결정됩니다.",
+    "empty_title": "신청이 없습니다",
+    "empty_body": "연맹이 국가나 지역을 신청하면 여기서 투표합니다.",
+    "kind_org": "국가",
+    "kind_region": "지역",
+    "by": "신청자: {name}",
+    "awaiting_email": "이메일 인증 대기 중",
+    "status_open": "투표 중",
+    "status_escalated": "DivingHQ 검토 중",
+    "status_approved": "승인됨",
+    "status_rejected": "거절됨",
+    "status_revoked": "취소됨",
+    "approver_clubs": "클럽이 투표합니다.",
+    "approver_regions": "주가 투표합니다.",
+    "approver_parent": "연맹이 결정합니다.",
+    "approver_sysadmin": "DivingHQ가 결정합니다.",
+    "tally": "{eligible} 중 {approvals} 찬성, {objections} 반대",
+    "closes": "투표 마감 {date}",
+    "domain_verified": "이메일이 웹사이트와 일치",
+    "objections": "반대 의견",
+    "voted_approve": "{club} 찬성",
+    "voted_object": "{club} 반대",
+    "voting_for": "투표할 클럽",
+    "approve": "승인",
+    "object": "반대",
+    "object_reason": "반대하는 이유는 무엇입니까? 신청과 함께 DivingHQ로 전달됩니다.",
+    "send_objection": "반대 보내기",
+    "reject": "거절",
+    "revoke": "취소",
+    "revoke_body": "{body}은(는) 더 이상 {target}을(를) 운영하지 않으며 신청 이전 상태로 돌아갑니다."
   }
 }

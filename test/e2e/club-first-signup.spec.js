@@ -139,3 +139,83 @@ test("a founder in a country with provinces picks one", async ({ page }) => {
     await wipeCan();
   }
 });
+
+// Phase 3: a federation claims a country its clubs started, and the
+// clubs vote it in through the Claims page.
+test("a federation claims a country and the clubs vote it in", async ({ page, request }) => {
+  const FSM = "FSM";
+  const wipeFsm = async () => {
+    const orgs = await setup.pool.query("SELECT id FROM organisations WHERE country_code = $1", [FSM]);
+    for (const { id } of orgs.rows) {
+      await setup.pool.query("DELETE FROM claims WHERE org_id = $1", [id]);
+      await setup.pool.query("DELETE FROM meets WHERE org_id = $1", [id]);
+      await setup.deleteOrg(id);
+    }
+  };
+  await wipeFsm();
+  try {
+    // Two established clubs: signed up, backdated, each with a meet.
+    const founders = [];
+    for (const name of ["Pohnpei Divers", "Chuuk Divers"]) {
+      const username = `e2e-fsm-${setup.rand()}`;
+      const r = await request.post("/api/auth/register", {
+        data: { username, full_name: `${name} Admin`, password: setup.TEST_PASSWORD,
+                email: `${username}@example.test`, country_code: FSM, new_club_name: name },
+      });
+      expect(r.status()).toBe(201);
+      founders.push(username);
+    }
+    await setup.pool.query(
+      `UPDATE users SET email_verified_at = now() WHERE username = ANY($1::text[])`, [founders],
+    );
+    await setup.pool.query(
+      `UPDATE clubs SET created_at = now() - interval '90 days'
+        WHERE org_id IN (SELECT id FROM organisations WHERE country_code = $1)`, [FSM],
+    );
+    await setup.pool.query(
+      `INSERT INTO meets (org_id, name, host_club_id)
+       SELECT org_id, name || ' Night', id FROM clubs
+        WHERE org_id IN (SELECT id FROM organisations WHERE country_code = $1)`, [FSM],
+    );
+
+    // The federation registers through the UI and gets a claim.
+    await setup.installClickHighlight(page);
+    const fedUser = `e2e-fsmfed-${setup.rand()}`;
+    await page.goto("/register-org");
+    await page.getByPlaceholder("e.g. Swimming Australia").fill("Micronesia Diving Federation");
+    await page.locator("#org-country").selectOption(FSM);
+    await expect(page.locator(".claim-note")).toContainText("already on DivingHQ");
+    await page.locator('input[autocomplete="name"]').fill("Kasio Ehsa");
+    await page.locator('input[type="email"]').fill(`${fedUser}@example.test`);
+    await page.locator('input[autocomplete="username"]').fill(fedUser);
+    await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
+    await page.getByRole("button", { name: /Submit Registration/i }).click();
+    await expect(page.locator(".msg-success")).toContainText("Verify your email");
+
+    // Stand in for the emailed link: what the verify-email route does, done
+    // directly, so the test doesn't need the server's JWT secret.
+    const fedId = (await setup.pool.query("SELECT id FROM users WHERE username = $1", [fedUser])).rows[0].id;
+    await setup.pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [fedId]);
+    expect(await require("../../lib/claims").activateForUser(setup.pool, fedId)).toBe(1);
+
+    // Both clubs approve on the Claims page; the second vote passes it.
+    for (const username of founders) {
+      await page.goto("/login");
+      await page.locator('input[autocomplete="username"]').fill(username);
+      await page.locator('input[autocomplete="current-password"]').fill(setup.TEST_PASSWORD);
+      await page.getByRole("button", { name: /Sign In/i }).click();
+      await page.waitForURL(/\/dashboard$/, { timeout: 10_000 });
+      await page.goto("/claims");
+      await expect(page.getByText("Micronesia Diving Federation")).toBeVisible();
+      await page.getByRole("button", { name: /^Approve$/ }).click();
+      await expect(page.getByText(/approved$/)).toBeVisible();
+      await page.context().clearCookies();
+    }
+    const org = await setup.pool.query(
+      "SELECT name, claim_state FROM organisations WHERE country_code = $1", [FSM],
+    );
+    expect(org.rows[0]).toEqual({ name: "Micronesia Diving Federation", claim_state: "claimed" });
+  } finally {
+    await wipeFsm();
+  }
+});

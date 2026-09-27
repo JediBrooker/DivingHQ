@@ -88,7 +88,14 @@
       "submit_idle": "Submeter Registo",
       "submit_loading": "A submeter...",
       "already_registered": "Já está registado?",
-      "sign_in_link": "Iniciar sessão"
+      "sign_in_link": "Iniciar sessão",
+      "represents": "O seu organismo representa",
+      "represents_national": "Todo o país: {country} (federação nacional)",
+      "website": "Website (opcional)",
+      "website_hint": "Se o seu e-mail estiver no mesmo domínio, os votantes veem-no como verificado.",
+      "claim_note_country": "Já há clubes de {country} no DivingHQ, por isso isto abre uma reivindicação da conta deles. Depois de verificar o e-mail, eles votam. Se ainda puderem votar poucos, o DivingHQ analisa.",
+      "claim_note_region_parent": "{org} já gere este país no DivingHQ, por isso decide a sua reivindicação de {region}.",
+      "claim_note_region": "Isto abre uma reivindicação de {region}. Os seus clubes votam depois de verificar o e-mail, ou o DivingHQ analisa se ainda não houver suficientes."
     },
     "forgot": {
       "title": "Repor Palavra-passe",
@@ -375,7 +382,10 @@
       "role_requests_meta": "Revise pedidos de função no Gestor de Utilizadores",
       "orgs_one": "{count} federação à espera de aprovação",
       "orgs_many": "{count} federações à espera de aprovação",
-      "orgs_meta": "Revise no Gestor de Utilizadores → filtro de organização"
+      "orgs_meta": "Revise no Gestor de Utilizadores → filtro de organização",
+      "claims_one": "1 reivindicação à sua espera",
+      "claims_many": "{count} reivindicações à sua espera",
+      "claims_meta": "Uma federação quer assumir uma conta"
     }
   },
   "role": {
@@ -556,6 +566,7 @@
         "step_2": "Abra o <strong>Gestor de Competições</strong> e crie uma prova organizada pelo seu clube",
         "step_3": "Aprove em <strong>O meu clube</strong> os membros que querem saltar, julgar ou arbitrar",
         "step_4": "No dia da prova, conduza a pontuação a partir da <strong>Sala de Controlo</strong>",
+        "step_5": "Quando a sua federação ou organismo regional chegar, vote a reivindicação em <strong>Reivindicações</strong>",
         "cta": "Organizar uma prova ↗"
       },
       "region_admin": {
@@ -771,7 +782,10 @@
       "h2h_seeded": "H2H cabeças-de-série",
       "sf_seeded": "Semi cabeças-de-série",
       "f_seeded": "Final cabeças-de-série",
-      "generic": "Aviso"
+      "generic": "Aviso",
+      "claim_vote": "Votação",
+      "claim_review": "Reivindicação",
+      "claim_decided": "Reivindicação"
     }
   },
   "compare": {
@@ -1917,5 +1931,38 @@
     "members": "{n} membros",
     "no_admin": "Ainda sem administrador",
     "region_admins": "Administradores da região"
+  },
+  "claims": {
+    "title": "Reivindicações",
+    "intro": "Quando uma federação ou organismo regional pede para assumir uma conta criada pelos clubes, decide-se aqui.",
+    "empty_title": "Sem reivindicações",
+    "empty_body": "Quando uma federação reivindicar o seu país ou região, vota aqui.",
+    "kind_org": "Nacional",
+    "kind_region": "Região",
+    "by": "reivindicado por {name}",
+    "awaiting_email": "À espera de verificação do e-mail",
+    "status_open": "Em votação",
+    "status_escalated": "No DivingHQ",
+    "status_approved": "Aprovada",
+    "status_rejected": "Rejeitada",
+    "status_revoked": "Revogada",
+    "approver_clubs": "Os clubes votam.",
+    "approver_regions": "Os estados e províncias votam.",
+    "approver_parent": "A federação decide.",
+    "approver_sysadmin": "O DivingHQ decide.",
+    "tally": "{approvals} de {eligible} aprovam, {objections} contra",
+    "closes": "A votação fecha a {date}",
+    "domain_verified": "o e-mail corresponde ao site",
+    "objections": "Objeções",
+    "voted_approve": "{club} aprovou",
+    "voted_object": "{club} opôs-se",
+    "voting_for": "A votar por",
+    "approve": "Aprovar",
+    "object": "Opor-se",
+    "object_reason": "Porque se opõe? Segue para o DivingHQ com a reivindicação.",
+    "send_objection": "Enviar objeção",
+    "reject": "Rejeitar",
+    "revoke": "Revogar",
+    "revoke_body": "{body} deixa de gerir {target}, que volta ao que era antes da reivindicação."
   }
 }
