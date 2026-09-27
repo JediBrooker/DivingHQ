@@ -205,21 +205,10 @@ function rosterTemplateHeader(ev) {
 </template>
 
 <style scoped>
-/* Roster styles MOVED from ManagerView.css (exclusive to this
-   modal: .roster-* and the .modal.roster-modal viewport pin).
-   .teams-section-label and .hint are COPIED from ManagerView.css
-   (shared with the teams / federations / readiness modals and the
-   rest of the manager page). */
-
-.roster-modal { max-width: 720px; }
-.roster-modal .mono { font-family: var(--font-mono); }
-.roster-modal textarea { resize: vertical; min-height: 180px; }
-.roster-modal .hint code {
-  font-family: var(--font-mono); font-size: 10.5px;
-  background: var(--bg-2); border: 1px solid var(--border);
-  padding: 0.05rem 0.3rem; border-radius: 3px;
-  color: var(--cyan);
-}
+/* Roster styles moved here from ManagerView.css (the .roster-* rules
+   are exclusive to this modal). .teams-section-label and .hint are
+   copies of the ManagerView.css ones, shared with the teams /
+   federations / readiness modals and the rest of the manager page. */
 
 .roster-result { margin-top: 0.75rem; }
 .roster-preview-list {

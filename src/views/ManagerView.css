@@ -1,16 +1,7 @@
-.page-header { display:flex;align-items:center;justify-content:space-between;padding:1.5rem 2rem;border-bottom:1px solid var(--border);max-width:1400px;margin:0 auto; }
 /* Single-column layout: the New Event form lives in a modal
    now (migration 039). Inline page hosts the events list + meets
    list stacked vertically. */
 .main { max-width:1100px;margin:0 auto;padding:2rem;display:grid;grid-template-columns:1fr;gap:2rem;align-items:start; }
-
-.manager-toolbar {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:0.5rem;
-  flex-wrap:wrap;
-}
 
 /* dvh, not vh: heads up, iOS Safari's collapsing URL bar makes
    100vh = the *large* viewport (bar collapsed). With the bar
@@ -60,10 +51,6 @@
 .org-badge-ctry {
   font-family: var(--font-mono); font-size: 9px; font-weight: 600;
   color: var(--role-admin-fg); margin-inline-start: 0.4rem;
-}
-.events-subcount {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 400;
-  color: var(--text-3); font-style: normal;
 }
 .org-filter {
   display: flex; align-items: center; gap: 0.6rem;
@@ -156,17 +143,6 @@
 .std-template:hover { border-color: var(--cyan); background: rgba(0, 224, 255, 0.06); }
 .std-template:hover .event-template-name { color: var(--cyan); }
 
-/* Advance-to-final action, green to suggest "promote".
-   Only shows up on preliminary rows whose final exists. */
-.advance-btn {
-  color: var(--green) !important;
-  border-color: rgba(16,185,129,0.4) !important;
-  background: var(--green-dim) !important;
-}
-.advance-btn:hover {
-  background: var(--green) !important;
-  color: var(--bg) !important;
-}
 .actions{display:flex;gap:0.5rem;flex-shrink:0;align-items:center;}
 
 /* The "LIVE - Open" pill, live primary action. Same dimensions as
@@ -266,10 +242,6 @@
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
   padding: 0.75rem 1rem;
-}
-.events-toolbar-actions {
-  margin-inline-start: auto;
-  display: flex; gap: 0.5rem; flex-shrink: 0;
 }
 /* =====================================================================
    Page heading + one-line summary. Mirrors the Judge Analysis header:
@@ -378,18 +350,8 @@
    The button keeps its natural (standard) width; no full-bleed. */
 .mgr-acc-toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
-/* RIGHT PANE: contextual header + the existing toolbar/list. */
-.mgr-detail { min-width: 0; display: flex; flex-direction: column; }
-.mgr-detail-head {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 1rem; flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
+/* Section body head: the meet's sub-line beside its actions. */
 .mgr-detail-head-text { min-width: 0; flex: 1; }
-.mgr-detail-title {
-  font-family: var(--font-display); font-size: 20px; font-weight: 700;
-  color: var(--text); margin: 0;
-}
 .mgr-detail-sub {
   font-family: var(--font-mono); font-size: 12px; color: var(--text-3);
   margin-top: 0.3rem;
@@ -478,7 +440,6 @@
   padding: 0.6rem 0.75rem; margin-top: 0.4rem;
   background: var(--bg-3); border-inline-start: 3px solid var(--cyan); border-radius: 3px;
 }
-.hint-line { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); margin-top: 0.5rem; }
 .hint-warn  {
   border-inline-start-color: var(--amber);
   background: rgba(245,158,11,0.08);
@@ -526,19 +487,6 @@
 .rr-remove:hover { color: var(--red); }
 .rr-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
-.meet-list { display: flex; flex-direction: column; gap: 0.5rem; }
-.meet-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0.6rem 0.85rem;
-  background: var(--bg-3); border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-}
-.meet-row-id   { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
-.meet-row-name {
-  font-family: var(--font-sans); font-size: 14px; font-weight: 600;
-  font-style: normal; color: var(--fg); text-decoration: none;
-}
-
 /* Create/edit forms render as full-page panels in the content area
    (the sidebar stays visible) rather than floating modal popups. */
 .mgr-form-page { padding: 0 0 2rem; }
@@ -551,12 +499,6 @@
   width: 100%;
   margin: 0 auto;
 }
-.meet-row-name:hover { color: var(--cyan); }
-.meet-row-meta {
-  font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
-}
-.meet-live { color: var(--red); font-weight: 700; margin-inline-start: 0.4rem; }
-.meet-row-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
 
 /* Modal styles moved out with their components when each was
    extracted from this view (all scoped):
@@ -603,10 +545,6 @@
 /* The accordion is single-column at every width, so it needs no
    stacking breakpoint, just the phone-specific tightening below. */
 @media (max-width: 600px) {
-  /* Header: shrink the desktop padding so the title + button row
-     doesn't dominate above-the-fold on a phone. */
-  .page-header { padding: 1rem; }
-
   /* Accordion body head: stack the meet sub-line above its action
      buttons so the dates/venue get the full row instead of being
      squeezed into a narrow column beside the buttons. */
@@ -630,14 +568,6 @@
   .modal-create-dive {
     max-width: 100%;
     width: 100%;
-  }
-
-  /* Meet row: name + meta stack above the action chips. */
-  .meet-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
-    padding: 0.55rem 0.7rem;
   }
 
   /* Templates strip: collapse the apply / delete row when the
