@@ -165,7 +165,8 @@
       "resend_prompt": "Perlu tautan baru? Masukkan nama pengguna atau alamat email Anda.",
       "resend_label": "Nama pengguna atau email",
       "resend_button": "Kirim tautan baru",
-      "resend_sent": "Jika akun itu menunggu verifikasi, tautan baru sedang dikirim. Periksa kotak masuk Anda."
+      "resend_sent": "Jika akun itu menunggu verifikasi, tautan baru sedang dikirim. Periksa kotak masuk Anda.",
+      "success_org_suspended": "Email Anda sudah terverifikasi, tetapi akses organisasi Anda ke DivingHQ ditangguhkan. Jika menurut Anda ini keliru, hubungi dukungan DivingHQ."
     },
     "check_inbox": {
       "title": "Periksa kotak masuk Anda",

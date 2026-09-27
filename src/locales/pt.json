@@ -165,7 +165,8 @@
       "resend_prompt": "Precisa de uma nova ligação? Introduza o seu nome de utilizador ou endereço de e-mail.",
       "resend_label": "Nome de utilizador ou e-mail",
       "resend_button": "Enviar nova ligação",
-      "resend_sent": "Se essa conta aguarda verificação, uma nova ligação está a caminho. Verifique a sua caixa de entrada."
+      "resend_sent": "Se essa conta aguarda verificação, uma nova ligação está a caminho. Verifique a sua caixa de entrada.",
+      "success_org_suspended": "O seu e-mail está verificado, mas o acesso da sua organização ao DivingHQ foi suspenso. Se achar que se trata de um erro, contacte o apoio do DivingHQ."
     },
     "check_inbox": {
       "title": "Verifique a sua caixa de entrada",

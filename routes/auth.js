@@ -1192,8 +1192,12 @@ module.exports = function createAuthRouter({
       // A pending federation hears from us when it's approved instead.
       if (fresh && orgStatus === "active") sendWelcomeEmail(decoded.sub).catch(() => {});
       // Tells the page what to say next. A claimant can sign in straight
-      // away (as a spectator) while their claim runs.
-      const next = orgStatus !== "active" ? "org_pending" : opened ? "claim_open" : "sign_in";
+      // away (as a spectator) while their claim runs. A denied federation
+      // (or one pulled later) is 'suspended', and nobody's going to email
+      // that one about a review, so it gets its own answer.
+      const next = orgStatus === "pending" ? "org_pending"
+        : orgStatus !== "active" ? "org_suspended"
+          : opened ? "claim_open" : "sign_in";
       res.json({ ok: true, next });
     } catch (err) {
       console.error("[Verify Email Error]", err.message);

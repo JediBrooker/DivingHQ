@@ -165,7 +165,8 @@
       "resend_prompt": "Need a new link? Enter your username or email address.",
       "resend_label": "Username or email",
       "resend_button": "Send a new link",
-      "resend_sent": "If that account is waiting for verification, a new link is on its way. Check your inbox."
+      "resend_sent": "If that account is waiting for verification, a new link is on its way. Check your inbox.",
+      "success_org_suspended": "Your email is verified, but your organisation's access to DivingHQ has been suspended. If you think this is a mistake, contact DivingHQ support."
     },
     "check_inbox": {
       "title": "Check your inbox",

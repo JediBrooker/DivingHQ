@@ -165,7 +165,8 @@
       "resend_prompt": "需要新链接？请输入你的用户名或邮箱地址。",
       "resend_label": "用户名或邮箱",
       "resend_button": "发送新链接",
-      "resend_sent": "如果该账户正在等待验证，新链接已发出。请查看收件箱。"
+      "resend_sent": "如果该账户正在等待验证，新链接已发出。请查看收件箱。",
+      "success_org_suspended": "你的邮箱已验证，但你的组织对 DivingHQ 的访问已被暂停。如果你认为这是误会，请联系 DivingHQ 支持团队。"
     },
     "check_inbox": {
       "title": "请查看收件箱",

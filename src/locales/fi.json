@@ -165,7 +165,8 @@
       "resend_prompt": "Tarvitsetko uuden linkin? Anna käyttäjätunnuksesi tai sähköpostiosoitteesi.",
       "resend_label": "Käyttäjätunnus tai sähköposti",
       "resend_button": "Lähetä uusi linkki",
-      "resend_sent": "Jos tili odottaa vahvistusta, uusi linkki on matkalla. Tarkista saapuneet viestisi."
+      "resend_sent": "Jos tili odottaa vahvistusta, uusi linkki on matkalla. Tarkista saapuneet viestisi.",
+      "success_org_suspended": "Sähköpostisi on vahvistettu, mutta organisaatiosi pääsy DivingHQ:hun on keskeytetty. Jos uskot tämän olevan virhe, ota yhteyttä DivingHQ:n tukeen."
     },
     "check_inbox": {
       "title": "Tarkista saapuneet viestisi",

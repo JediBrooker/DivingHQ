@@ -165,7 +165,8 @@
       "resend_prompt": "Potrzebujesz nowego linku? Podaj nazwę użytkownika lub adres e-mail.",
       "resend_label": "Nazwa użytkownika lub e-mail",
       "resend_button": "Wyślij nowy link",
-      "resend_sent": "Jeśli to konto czeka na weryfikację, nowy link jest w drodze. Sprawdź skrzynkę odbiorczą."
+      "resend_sent": "Jeśli to konto czeka na weryfikację, nowy link jest w drodze. Sprawdź skrzynkę odbiorczą.",
+      "success_org_suspended": "Twój e-mail został zweryfikowany, ale dostęp Twojej organizacji do DivingHQ został zawieszony. Jeśli uważasz, że to pomyłka, skontaktuj się z pomocą DivingHQ."
     },
     "check_inbox": {
       "title": "Sprawdź skrzynkę odbiorczą",

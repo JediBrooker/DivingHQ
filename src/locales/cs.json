@@ -165,7 +165,8 @@
       "resend_prompt": "Potřebujete nový odkaz? Zadejte uživatelské jméno nebo e-mailovou adresu.",
       "resend_label": "Uživatelské jméno nebo e-mail",
       "resend_button": "Poslat nový odkaz",
-      "resend_sent": "Pokud tento účet čeká na ověření, nový odkaz je na cestě. Zkontrolujte svou schránku."
+      "resend_sent": "Pokud tento účet čeká na ověření, nový odkaz je na cestě. Zkontrolujte svou schránku.",
+      "success_org_suspended": "Váš e-mail je ověřen, ale přístup vaší organizace k DivingHQ byl pozastaven. Pokud si myslíte, že jde o omyl, kontaktujte podporu DivingHQ."
     },
     "check_inbox": {
       "title": "Zkontrolujte svou schránku",

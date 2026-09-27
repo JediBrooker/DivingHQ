@@ -165,7 +165,8 @@
       "resend_prompt": "Yeni bir bağlantıya mı ihtiyacınız var? Kullanıcı adınızı veya e-posta adresinizi girin.",
       "resend_label": "Kullanıcı adı veya e-posta",
       "resend_button": "Yeni bağlantı gönder",
-      "resend_sent": "Bu hesap doğrulama bekliyorsa yeni bir bağlantı yolda. Gelen kutunuzu kontrol edin."
+      "resend_sent": "Bu hesap doğrulama bekliyorsa yeni bir bağlantı yolda. Gelen kutunuzu kontrol edin.",
+      "success_org_suspended": "E-postanız doğrulandı, ancak kuruluşunuzun DivingHQ erişimi askıya alındı. Bunun bir hata olduğunu düşünüyorsanız DivingHQ desteğiyle iletişime geçin."
     },
     "check_inbox": {
       "title": "Gelen kutunuzu kontrol edin",

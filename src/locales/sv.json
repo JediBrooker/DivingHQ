@@ -165,7 +165,8 @@
       "resend_prompt": "Behöver du en ny länk? Ange ditt användarnamn eller din e-postadress.",
       "resend_label": "Användarnamn eller e-post",
       "resend_button": "Skicka en ny länk",
-      "resend_sent": "Om kontot väntar på verifiering är en ny länk på väg. Kolla din inkorg."
+      "resend_sent": "Om kontot väntar på verifiering är en ny länk på väg. Kolla din inkorg.",
+      "success_org_suspended": "Din e-post är bekräftad, men din organisations åtkomst till DivingHQ har stängts av. Om du tror att det är ett misstag, kontakta DivingHQ:s support."
     },
     "check_inbox": {
       "title": "Kolla din inkorg",

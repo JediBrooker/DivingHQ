@@ -6864,3 +6864,27 @@ test("role requests: a federation with no live admin sends new ones to DivingHQ"
     await teardownFixture(st);
   }
 });
+
+// A denied (or pulled) federation is 'suspended'. The verify link used to
+// tell its members their organisation was waiting for approval and they'd
+// be emailed when it was reviewed.
+test("verify-email tells a suspended org's member it's suspended, not pending", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const u = await insertUser({ orgId: st.orgId, role: "diver", username: `int-vs-${st.slug}`, fullName: "Suspended Member" });
+    const verify = async () => {
+      const token = claimKit.jwt.sign({ sub: u, type: "email_verify" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+      return (await fetchJson("POST", "/api/auth/verify-email", { body: { token } })).body.next;
+    };
+    await pool.query("UPDATE organisations SET status = 'suspended' WHERE id = $1", [st.orgId]);
+    assert.equal(await verify(), "org_suspended");
+    await pool.query("UPDATE organisations SET status = 'pending' WHERE id = $1", [st.orgId]);
+    assert.equal(await verify(), "org_pending");
+    await pool.query("UPDATE organisations SET status = 'active' WHERE id = $1", [st.orgId]);
+    assert.equal(await verify(), "sign_in");
+  } finally {
+    await teardownFixture(st);
+  }
+});

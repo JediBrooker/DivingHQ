@@ -165,7 +165,8 @@
       "resend_prompt": "Brug for et nyt link? Indtast dit brugernavn eller din e-mailadresse.",
       "resend_label": "Brugernavn eller e-mail",
       "resend_button": "Send et nyt link",
-      "resend_sent": "Hvis kontoen venter på bekræftelse, er et nyt link på vej. Tjek din indbakke."
+      "resend_sent": "Hvis kontoen venter på bekræftelse, er et nyt link på vej. Tjek din indbakke.",
+      "success_org_suspended": "Din e-mail er bekræftet, men din organisations adgang til DivingHQ er suspenderet. Hvis du mener, det er en fejl, så kontakt DivingHQ's support."
     },
     "check_inbox": {
       "title": "Tjek din indbakke",

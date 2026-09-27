@@ -165,7 +165,8 @@
       "resend_prompt": "¿Necesitas un enlace nuevo? Introduce tu nombre de usuario o tu correo electrónico.",
       "resend_label": "Usuario o correo electrónico",
       "resend_button": "Enviar un enlace nuevo",
-      "resend_sent": "Si esa cuenta está pendiente de verificación, hay un enlace nuevo en camino. Revisa tu bandeja de entrada."
+      "resend_sent": "Si esa cuenta está pendiente de verificación, hay un enlace nuevo en camino. Revisa tu bandeja de entrada.",
+      "success_org_suspended": "Tu correo está verificado, pero el acceso de tu organización a DivingHQ está suspendido. Si crees que es un error, contacta con el soporte de DivingHQ."
     },
     "check_inbox": {
       "title": "Revisa tu bandeja de entrada",

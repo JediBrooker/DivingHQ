@@ -165,7 +165,8 @@
       "resend_prompt": "Besoin d'un nouveau lien ? Saisissez votre nom d'utilisateur ou votre adresse e-mail.",
       "resend_label": "Nom d'utilisateur ou e-mail",
       "resend_button": "Envoyer un nouveau lien",
-      "resend_sent": "Si ce compte attend une vérification, un nouveau lien est en route. Consultez votre boîte de réception."
+      "resend_sent": "Si ce compte attend une vérification, un nouveau lien est en route. Consultez votre boîte de réception.",
+      "success_org_suspended": "Votre e-mail est vérifié, mais l'accès de votre organisation à DivingHQ a été suspendu. Si vous pensez qu'il s'agit d'une erreur, contactez l'assistance DivingHQ."
     },
     "check_inbox": {
       "title": "Consultez votre boîte de réception",

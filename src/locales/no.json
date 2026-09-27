@@ -165,7 +165,8 @@
       "resend_prompt": "Trenger du en ny lenke? Skriv inn brukernavnet eller e-postadressen din.",
       "resend_label": "Brukernavn eller e-post",
       "resend_button": "Send en ny lenke",
-      "resend_sent": "Hvis kontoen venter på bekreftelse, er en ny lenke på vei. Sjekk innboksen din."
+      "resend_sent": "Hvis kontoen venter på bekreftelse, er en ny lenke på vei. Sjekk innboksen din.",
+      "success_org_suspended": "E-posten din er bekreftet, men organisasjonens tilgang til DivingHQ er suspendert. Hvis du mener dette er en feil, kontakt DivingHQs brukerstøtte."
     },
     "check_inbox": {
       "title": "Sjekk innboksen din",

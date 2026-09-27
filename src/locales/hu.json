@@ -165,7 +165,8 @@
       "resend_prompt": "Új hivatkozásra van szükséged? Add meg a felhasználóneved vagy az e-mail-címed.",
       "resend_label": "Felhasználónév vagy e-mail",
       "resend_button": "Új hivatkozás küldése",
-      "resend_sent": "Ha a fiók megerősítésre vár, az új hivatkozás úton van. Nézd meg a beérkezett üzeneteidet."
+      "resend_sent": "Ha a fiók megerősítésre vár, az új hivatkozás úton van. Nézd meg a beérkezett üzeneteidet.",
+      "success_org_suspended": "Az e-mail-címed megerősítve, de a szervezeted hozzáférése a DivingHQ-hoz fel van függesztve. Ha szerinted ez tévedés, fordulj a DivingHQ ügyfélszolgálatához."
     },
     "check_inbox": {
       "title": "Nézd meg a beérkező leveleidet",

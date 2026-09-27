@@ -165,7 +165,8 @@
       "resend_prompt": "Trebate novu poveznicu? Unesite korisničko ime ili adresu e-pošte.",
       "resend_label": "Korisničko ime ili e-pošta",
       "resend_button": "Pošalji novu poveznicu",
-      "resend_sent": "Ako taj račun čeka potvrdu, nova poveznica je na putu. Provjerite svoj sandučić."
+      "resend_sent": "Ako taj račun čeka potvrdu, nova poveznica je na putu. Provjerite svoj sandučić.",
+      "success_org_suspended": "Vaša e-pošta je potvrđena, ali pristup vaše organizacije DivingHQ-u je obustavljen. Ako mislite da je riječ o pogrešci, obratite se podršci DivingHQ-a."
     },
     "check_inbox": {
       "title": "Provjerite svoj sandučić",

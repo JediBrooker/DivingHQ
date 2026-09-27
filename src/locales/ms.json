@@ -165,7 +165,8 @@
       "resend_prompt": "Perlukan pautan baharu? Masukkan nama pengguna atau alamat e-mel anda.",
       "resend_label": "Nama pengguna atau e-mel",
       "resend_button": "Hantar pautan baharu",
-      "resend_sent": "Jika akaun itu menunggu pengesahan, pautan baharu sedang dihantar. Semak peti masuk anda."
+      "resend_sent": "Jika akaun itu menunggu pengesahan, pautan baharu sedang dihantar. Semak peti masuk anda.",
+      "success_org_suspended": "E-mel anda telah disahkan, tetapi akses organisasi anda ke DivingHQ telah digantung. Jika anda rasa ini satu kesilapan, hubungi sokongan DivingHQ."
     },
     "check_inbox": {
       "title": "Semak peti masuk anda",

@@ -165,7 +165,8 @@
       "resend_prompt": "Neuen Link benötigt? Geben Sie Ihren Benutzernamen oder Ihre E-Mail-Adresse ein.",
       "resend_label": "Benutzername oder E-Mail",
       "resend_button": "Neuen Link senden",
-      "resend_sent": "Falls dieses Konto auf Bestätigung wartet, ist ein neuer Link unterwegs. Sehen Sie in Ihrem Posteingang nach."
+      "resend_sent": "Falls dieses Konto auf Bestätigung wartet, ist ein neuer Link unterwegs. Sehen Sie in Ihrem Posteingang nach.",
+      "success_org_suspended": "Ihre E-Mail ist bestätigt, aber der Zugang Ihrer Organisation zu DivingHQ wurde gesperrt. Wenn Sie das für einen Fehler halten, wenden Sie sich an den DivingHQ-Support."
     },
     "check_inbox": {
       "title": "Sehen Sie in Ihrem Posteingang nach",

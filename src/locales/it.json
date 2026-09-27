@@ -165,7 +165,8 @@
       "resend_prompt": "Ti serve un nuovo link? Inserisci il tuo nome utente o indirizzo email.",
       "resend_label": "Nome utente o email",
       "resend_button": "Invia un nuovo link",
-      "resend_sent": "Se quell'account è in attesa di verifica, un nuovo link è in arrivo. Controlla la tua casella di posta."
+      "resend_sent": "Se quell'account è in attesa di verifica, un nuovo link è in arrivo. Controlla la tua casella di posta.",
+      "success_org_suspended": "La tua email è verificata, ma l'accesso della tua organizzazione a DivingHQ è stato sospeso. Se pensi che sia un errore, contatta l'assistenza DivingHQ."
     },
     "check_inbox": {
       "title": "Controlla la tua casella di posta",
