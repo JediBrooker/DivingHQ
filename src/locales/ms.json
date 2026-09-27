@@ -402,7 +402,10 @@
       "orgs_meta": "Semak dalam Pengurus Pengguna → penapis organisasi",
       "claims_one": "1 tuntutan menunggu anda",
       "claims_many": "{count} tuntutan menunggu anda",
-      "claims_meta": "Persekutuan mahu mengambil alih akaun"
+      "claims_meta": "Persekutuan mahu mengambil alih akaun",
+      "chip_pending": "Belum selesai",
+      "chip_claims": "Tuntutan",
+      "review_title": "Menunggu semakan anda"
     }
   },
   "profile": {

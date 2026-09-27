@@ -402,7 +402,10 @@
       "orgs_meta": "Przejrzyj w Menedżerze użytkowników → filtr organizacji",
       "claims_one": "Czeka na ciebie 1 roszczenie",
       "claims_many": "Czeka na ciebie roszczeń: {count}",
-      "claims_meta": "Federacja chce przejąć konto"
+      "claims_meta": "Federacja chce przejąć konto",
+      "chip_pending": "Oczekujące",
+      "chip_claims": "Roszczenia",
+      "review_title": "Czeka na twoją decyzję"
     }
   },
   "role": {

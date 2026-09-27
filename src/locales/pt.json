@@ -402,7 +402,10 @@
       "orgs_meta": "Revise no Gestor de Utilizadores → filtro de organização",
       "claims_one": "1 reivindicação à sua espera",
       "claims_many": "{count} reivindicações à sua espera",
-      "claims_meta": "Uma federação quer assumir uma conta"
+      "claims_meta": "Uma federação quer assumir uma conta",
+      "chip_pending": "Pendentes",
+      "chip_claims": "Reivindicações",
+      "review_title": "À espera da sua análise"
     }
   },
   "role": {

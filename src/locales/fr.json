@@ -402,7 +402,10 @@
       "orgs_meta": "Examinez dans le Gestionnaire d'utilisateurs → filtre d'organisation",
       "claims_one": "1 revendication vous attend",
       "claims_many": "{count} revendications vous attendent",
-      "claims_meta": "Une fédération souhaite reprendre un compte"
+      "claims_meta": "Une fédération souhaite reprendre un compte",
+      "chip_pending": "En attente",
+      "chip_claims": "Revendications",
+      "review_title": "En attente de votre examen"
     }
   },
   "role": {

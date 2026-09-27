@@ -402,7 +402,10 @@
       "orgs_meta": "Pregledajte u Upravitelju korisnika → filtar organizacije",
       "claims_one": "1 zahtjev čeka na vas",
       "claims_many": "Zahtjeva koji čekaju na vas: {count}",
-      "claims_meta": "Savez želi preuzeti račun"
+      "claims_meta": "Savez želi preuzeti račun",
+      "chip_pending": "Na čekanju",
+      "chip_claims": "Zahtjevi",
+      "review_title": "Čeka vaš pregled"
     }
   },
   "profile": {

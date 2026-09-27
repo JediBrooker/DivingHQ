@@ -402,7 +402,10 @@
       "orgs_meta": "Prüfen Sie in der Benutzerverwaltung → Organisationsfilter",
       "claims_one": "1 Anspruch wartet auf Sie",
       "claims_many": "{count} Ansprüche warten auf Sie",
-      "claims_meta": "Ein Verband möchte ein Konto übernehmen"
+      "claims_meta": "Ein Verband möchte ein Konto übernehmen",
+      "chip_pending": "Offen",
+      "chip_claims": "Ansprüche",
+      "review_title": "Wartet auf Ihre Prüfung"
     }
   },
   "role": {

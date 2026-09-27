@@ -402,7 +402,10 @@
       "orgs_meta": "Gå gjennom i Brukeradministrasjon → org-filter",
       "claims_one": "1 krav venter på deg",
       "claims_many": "{count} krav venter på deg",
-      "claims_meta": "Et forbund vil overta en konto"
+      "claims_meta": "Et forbund vil overta en konto",
+      "chip_pending": "Venter",
+      "chip_claims": "Krav",
+      "review_title": "Venter på din vurdering"
     }
   },
   "role": {

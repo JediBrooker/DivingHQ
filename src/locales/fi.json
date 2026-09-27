@@ -402,7 +402,10 @@
       "orgs_meta": "Tarkastele Käyttäjien hallinnassa → organisaatiosuodatin",
       "claims_one": "1 vaatimus odottaa sinua",
       "claims_many": "{count} vaatimusta odottaa sinua",
-      "claims_meta": "Liitto haluaa ottaa tilin haltuunsa"
+      "claims_meta": "Liitto haluaa ottaa tilin haltuunsa",
+      "chip_pending": "Odottaa",
+      "chip_claims": "Vaatimukset",
+      "review_title": "Odottaa tarkistustasi"
     }
   },
   "role": {

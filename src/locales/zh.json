@@ -402,7 +402,10 @@
       "orgs_meta": "在用户管理中审核 → 组织筛选",
       "claims_one": "有 1 个申请等待您处理",
       "claims_many": "有 {count} 个申请等待您处理",
-      "claims_meta": "有联合会申请接管账户"
+      "claims_meta": "有联合会申请接管账户",
+      "chip_pending": "待处理",
+      "chip_claims": "接管申请",
+      "review_title": "等待您审核"
     }
   },
   "profile": {

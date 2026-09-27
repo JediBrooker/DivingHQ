@@ -402,7 +402,10 @@
       "orgs_meta": "Tekintse át a Felhasználókezelőben → szervezet-szűrő",
       "claims_one": "1 igény vár Önre",
       "claims_many": "{count} igény vár Önre",
-      "claims_meta": "Egy szövetség át szeretne venni egy fiókot"
+      "claims_meta": "Egy szövetség át szeretne venni egy fiókot",
+      "chip_pending": "Függőben",
+      "chip_claims": "Igények",
+      "review_title": "Az Ön jóváhagyására vár"
     }
   },
   "role": {

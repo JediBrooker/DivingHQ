@@ -402,7 +402,10 @@
       "orgs_meta": "Review in User Manager → org filter",
       "claims_one": "1 claim waiting on you",
       "claims_many": "{count} claims waiting on you",
-      "claims_meta": "A federation or state body wants to take over"
+      "claims_meta": "A federation or state body wants to take over",
+      "chip_pending": "Pending",
+      "chip_claims": "Claims",
+      "review_title": "Awaiting your review"
     }
   },
   "profile": {

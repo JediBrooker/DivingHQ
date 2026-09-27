@@ -402,7 +402,10 @@
       "orgs_meta": "Verifichi in Gestione utenti → filtro organizzazioni",
       "claims_one": "1 rivendicazione ti aspetta",
       "claims_many": "{count} rivendicazioni ti aspettano",
-      "claims_meta": "Una federazione vuole subentrare"
+      "claims_meta": "Una federazione vuole subentrare",
+      "chip_pending": "In attesa",
+      "chip_claims": "Rivendicazioni",
+      "review_title": "In attesa della tua revisione"
     }
   },
   "role": {

@@ -402,7 +402,10 @@
       "orgs_meta": "Revisad en Gestor de usuarios → filtro de organización",
       "claims_one": "1 reclamación te espera",
       "claims_many": "{count} reclamaciones te esperan",
-      "claims_meta": "Una federación quiere hacerse cargo"
+      "claims_meta": "Una federación quiere hacerse cargo",
+      "chip_pending": "Pendiente",
+      "chip_claims": "Reclamaciones",
+      "review_title": "Pendiente de tu revisión"
     }
   },
   "profile": {

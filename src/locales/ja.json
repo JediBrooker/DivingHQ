@@ -402,7 +402,10 @@
       "orgs_meta": "ユーザー管理で確認してください → 組織フィルター",
       "claims_one": "1 件の申請があなたを待っています",
       "claims_many": "{count} 件の申請があなたを待っています",
-      "claims_meta": "連盟がアカウントの引き継ぎを求めています"
+      "claims_meta": "連盟がアカウントの引き継ぎを求めています",
+      "chip_pending": "保留中",
+      "chip_claims": "引き継ぎ申請",
+      "review_title": "確認待ち"
     }
   },
   "profile": {

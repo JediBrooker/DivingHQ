@@ -150,6 +150,17 @@ const diverEntryCloseDays = computed(() => {
   return Math.max(0, Math.round(nearest / 86_400_000))
 })
 
+// Where a club or region admin (no org_admin) approves their members'
+// role requests. null for everyone else, who has nothing to review.
+const delegateReviewPath = computed(() =>
+  auth.isClubAdmin ? '/club' : (auth.isRegionAdmin ? '/region' : null))
+
+// role.* only has keys for the shorter names.
+const ROLE_LABEL_KEYS = { diver: 'role.diver', judge: 'role.judge', referee: 'role.referee', meet_manager: 'role.manager' }
+function requestRoleLabel(role) {
+  return ROLE_LABEL_KEYS[role] ? t(ROLE_LABEL_KEYS[role]) : role
+}
+
 // ---- Pulse chips ------------------------------------------
 // Structured config for every chip the strip can render. Each
 // chip carries:
@@ -277,7 +288,7 @@ const pulseChips = computed(() => {
       kind:         'pending',
       glyph:        '⚖',
       number:       n,
-      label:        'CLAIMS',
+      label:        t('dashboard.attention.chip_claims'),
       layout:       'count-first',
       to:           '/claims',
       popoverTitle: title,
@@ -285,18 +296,26 @@ const pulseChips = computed(() => {
     })
   }
 
-  // Pending governance work, org admin chip. Items older than
+  // Pending governance work. Org admins review on their tab. A club or
+  // region admin in a country with no federation yet has no dashboard tab
+  // at all, so their chip goes straight to the page where they approve
+  // (/club or /region), same as the claims chip above. Items older than
   // 7 days get an `overdue` marker.
-  if (pendingCount.value && auth.hasRole('org_admin')) {
+  const isOrgAdmin = auth.hasRole('org_admin')
+  const reviewPath = isOrgAdmin ? '/users' : delegateReviewPath.value
+  if (pendingCount.value && reviewPath) {
     const now = Date.now()
     const items = []
     for (const rr of roleRequests.value) {
       const ageMs = rr.created_at ? now - +new Date(rr.created_at) : 0
+      // The org name tells a sysadmin which federation; a club admin
+      // wants to know which of their clubs.
+      const where = isOrgAdmin ? rr.org_name : rr.club_name
       items.push({
         id:    'rr-' + rr.id,
         title: rr.full_name || rr.username || 'User',
-        meta:  `requesting ${rr.requested_role}${rr.org_name ? ` · ${rr.org_name}` : ''}`,
-        to:    '/users',
+        meta:  t('my_club.wants_role', { role: requestRoleLabel(rr.requested_role) }) + (where ? ` · ${where}` : ''),
+        to:    reviewPath,
         urgency: ageMs > 7 * 86_400_000 ? 'overdue' : null,
       })
     }
@@ -317,10 +336,11 @@ const pulseChips = computed(() => {
       kind:         'pending',
       glyph:        '👥',
       number:       pendingCount.value,
-      label:        'PENDING',
+      label:        t('dashboard.attention.chip_pending'),
       layout:       'count-first',
-      targetTab:    'org_admin',
-      popoverTitle: 'Awaiting your review',
+      targetTab:    isOrgAdmin ? 'org_admin' : undefined,
+      to:           isOrgAdmin ? undefined : reviewPath,
+      popoverTitle: t('dashboard.attention.review_title'),
       items,
     })
   }
@@ -552,7 +572,7 @@ async function loadOperatorEvents() {
 }
 async function loadRoleRequests() {
   if (tabsLoaded.value.has('role-requests')) return
-  if (!auth.hasRole('org_admin')) return
+  if (!auth.hasRole('org_admin') && !delegateReviewPath.value) return
   try {
     roleRequests.value = await auth.apiFetch('/api/role-requests')
   } catch { /* silent */ }
@@ -906,7 +926,8 @@ onMounted(async () => {
   if (!bundled) {
     await Promise.all([
       auth.hasAnyRole(['org_admin', 'meet_manager']) ? loadOperatorEvents() : Promise.resolve(),
-      auth.hasRole('org_admin')   ? loadRoleRequests()    : Promise.resolve(),
+      // loadRoleRequests does its own org_admin / club admin check.
+      loadRoleRequests(),
       auth.hasRole('org_admin')   ? loadRecentActivity()  : Promise.resolve(),
       auth.user?.is_system_admin  ? loadPendingOrgs()     : Promise.resolve(),
       auth.hasRole('judge')       ? loadJudgeEvents()     : Promise.resolve(),

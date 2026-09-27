@@ -402,7 +402,10 @@
       "orgs_meta": "사용자 관리에서 검토 → org 필터",
       "claims_one": "신청 1건이 기다리고 있습니다",
       "claims_many": "신청 {count}건이 기다리고 있습니다",
-      "claims_meta": "연맹이 계정 인수를 요청했습니다"
+      "claims_meta": "연맹이 계정 인수를 요청했습니다",
+      "chip_pending": "대기 중",
+      "chip_claims": "인수 신청",
+      "review_title": "검토 대기 중"
     }
   },
   "profile": {

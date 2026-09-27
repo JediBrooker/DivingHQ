@@ -402,7 +402,10 @@
       "orgs_meta": "Suriin sa User Manager → org filter",
       "claims_one": "May 1 claim na naghihintay sa iyo",
       "claims_many": "May {count} claim na naghihintay sa iyo",
-      "claims_meta": "Gustong pamahalaan ng isang pederasyon ang account"
+      "claims_meta": "Gustong pamahalaan ng isang pederasyon ang account",
+      "chip_pending": "Nakabinbin",
+      "chip_claims": "Mga claim",
+      "review_title": "Naghihintay ng iyong pagsusuri"
     }
   },
   "profile": {

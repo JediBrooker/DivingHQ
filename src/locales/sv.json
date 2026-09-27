@@ -402,7 +402,10 @@
       "orgs_meta": "Granska i Användarhantering → organisationsfilter",
       "claims_one": "1 anspråk väntar på dig",
       "claims_many": "{count} anspråk väntar på dig",
-      "claims_meta": "Ett förbund vill ta över ett konto"
+      "claims_meta": "Ett förbund vill ta över ett konto",
+      "chip_pending": "Väntar",
+      "chip_claims": "Anspråk",
+      "review_title": "Väntar på din granskning"
     }
   },
   "role": {

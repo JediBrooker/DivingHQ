@@ -402,7 +402,10 @@
       "orgs_meta": "Zkontrolujte ve Správci uživatelů → filtr organizací",
       "claims_one": "Čeká na vás 1 nárok",
       "claims_many": "Čeká na vás nároků: {count}",
-      "claims_meta": "Federace chce převzít účet"
+      "claims_meta": "Federace chce převzít účet",
+      "chip_pending": "Čeká",
+      "chip_claims": "Nároky",
+      "review_title": "Čeká na vaši kontrolu"
     }
   },
   "profile": {

@@ -402,7 +402,10 @@
       "orgs_meta": "Kullanıcı Yönetimi'nde inceleyin → org filtresi",
       "claims_one": "Sizi bekleyen 1 talep var",
       "claims_many": "Sizi bekleyen {count} talep var",
-      "claims_meta": "Bir federasyon bir hesabı devralmak istiyor"
+      "claims_meta": "Bir federasyon bir hesabı devralmak istiyor",
+      "chip_pending": "Bekleyen",
+      "chip_claims": "Devralma talepleri",
+      "review_title": "İncelemenizi bekliyor"
     }
   },
   "profile": {
