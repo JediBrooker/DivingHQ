@@ -28,13 +28,18 @@ const sending = ref(false)
 const resent = ref(false)
 let timer = null
 
+// Counts down from a deadline rather than decrementing per tick: a
+// background tab throttles intervals to once a minute, and the button
+// shouldn't still say 40s when they come back to it.
 function startCooldown() {
-  wait.value = COOLDOWN_S
-  clearInterval(timer)
-  timer = setInterval(() => {
-    wait.value = Math.max(0, wait.value - 1)
+  const readyAt = Date.now() + COOLDOWN_S * 1000
+  const tick = () => {
+    wait.value = Math.max(0, Math.ceil((readyAt - Date.now()) / 1000))
     if (!wait.value) clearInterval(timer)
-  }, 1000)
+  }
+  clearInterval(timer)
+  tick()
+  timer = setInterval(tick, 1000)
 }
 
 async function resend() {
