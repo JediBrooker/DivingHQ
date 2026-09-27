@@ -317,6 +317,14 @@ Run `npm run migrate` against a target DB to apply pending migrations in
 order. The runner reads `schema_meta.version` and applies any numbered file
 above it.
 
+`deploy.sh` migrates, runs the tests, and only then restarts PM2, so the
+previous release keeps serving against the new schema for a few minutes (and
+indefinitely if the tests fail). If a migration breaks that code (dropping
+or re-keying something it writes through, like 094's records keys), add it
+to `scripts/migration-compat.js`. `deploy.sh` then stops before migrating
+until the operator has switched maintenance mode on and passed
+`--allow-breaking`, and its failure message says roll forward, not back.
+
 ---
 
 ## Repeated patterns and where the helpers live

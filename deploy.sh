@@ -9,12 +9,14 @@
 #     (broken syntax, TDZ, missing import, build error) surfaces
 #     before we touch the DB.
 #   * Migrate runs BEFORE restart so the new code starts against
-#     the new schema. Every migration in this repo is additive
-#     (ADD COLUMN, CREATE INDEX, etc.) so the OLD code keeps
-#     working against the new schema during the brief window
-#     between migrate and restart. If you ever ship a destructive
-#     migration (DROP COLUMN, RENAME), use a two-deploy dance
-#     instead, don't change this script.
+#     the new schema. Most migrations are additive (ADD COLUMN,
+#     CREATE INDEX, etc.) so the OLD code keeps working against the
+#     new schema until the restart. Not all of them: one that
+#     reshapes something the old code writes through (094 swapped
+#     the records_* unique keys) breaks it for that whole window,
+#     tests included. Those are listed in scripts/migration-compat.js
+#     and this script stops before migrating unless you've switched
+#     on maintenance mode and passed --allow-breaking.
 #   * Health check at the end fails the deploy script (non-zero
 #     exit) if the service didn't actually come back up. CI / cron
 #     wrappers will see the failure.
@@ -34,6 +36,9 @@
 #     ./deploy.sh --skip-tests          : emergency hotfix path; tests skipped
 #     ./deploy.sh --no-restart-if-noop  : exit early if there are no new commits
 #                                         (legacy behaviour from before May 2026)
+#     ./deploy.sh --allow-breaking      : go ahead with a migration the running
+#                                         code can't live with (put the site in
+#                                         maintenance mode at /admin/features first)
 #     ./deploy.sh --dry                 : print every step, change nothing
 
 set -euo pipefail
@@ -49,9 +54,14 @@ HEALTH_TIMEOUT_S=10            # max time to wait for the service to come up
 SKIP_TESTS=0
 DRY_RUN=0
 NO_RESTART_IF_NOOP=0
+ALLOW_BREAKING=0
+# Set when this run applied a migration the previous code can't run
+# against, which changes what a failed health check should tell you.
+BREAKING_APPLIED=0
 for arg in "$@"; do
   case "$arg" in
     --skip-tests) SKIP_TESTS=1 ;;
+    --allow-breaking) ALLOW_BREAKING=1 ;;
     --dry|--dry-run) DRY_RUN=1 ;;
     --no-restart-if-noop) NO_RESTART_IF_NOOP=1 ;;
     *) echo "[deploy] unknown arg: $arg"; exit 2 ;;
@@ -164,9 +174,38 @@ if [[ $NOOP -eq 0 ]]; then
   # Migrate runs BEFORE tests because new code commonly adds
   # columns its own logic queries; running the test suite against
   # a DB one schema version behind would 500 on those queries.
-  # Migrations in this repo are strictly additive (ADD COLUMN IF
-  # NOT EXISTS, etc.), so the running PM2 process keeps serving
-  # correctly against the new schema until restart at step 6.
+  # An additive migration leaves the running PM2 process serving
+  # correctly against the new schema until restart at step 6. One
+  # listed in scripts/migration-compat.js doesn't (094 made every
+  # record write of the old code fail, silently, during a live
+  # meet), so that needs maintenance mode on for the window and an
+  # explicit --allow-breaking. Maintenance mode is an in-memory flag
+  # of the running process, flip it from /admin/features, not SQL.
+  step "migrate (compatibility check)"
+  if [[ $DRY_RUN -eq 0 ]]; then
+    set +e
+    npm run --silent migrate -- --check-breaking
+    compat=$?
+    set -e
+    if [[ $compat -eq 3 ]]; then
+      if [[ $ALLOW_BREAKING -eq 0 ]]; then
+        echo "[deploy] STOPPED — a pending migration breaks the code that's running now (above)."
+        echo "[deploy]   1. Switch on Maintenance mode at /admin/features, so nothing is scored"
+        echo "[deploy]      against the new schema by the old process."
+        echo "[deploy]   2. Re-run: ./deploy.sh --allow-breaking"
+        echo "[deploy]   3. After the health check passes, switch maintenance mode off."
+        echo "[deploy] If tests or the health check fail after that, roll FORWARD: the previous"
+        echo "[deploy] code can't run against the new schema and there's no down migration."
+        exit 1
+      fi
+      BREAKING_APPLIED=1
+    elif [[ $compat -ne 0 ]]; then
+      echo "[deploy] FAILED — migration compatibility check exited ${compat}."
+      exit 1
+    fi
+  else
+    echo "          DRY: npm run migrate -- --check-breaking"
+  fi
   step "migrate (preview)"
   run npm run migrate -- --dry
   step "migrate (apply)"
@@ -249,8 +288,13 @@ while true; do
   fi
   if (( $(date +%s) >= deadline )); then
     echo "[deploy] FAILED — ${HEALTH_URL} did not return 200 within ${HEALTH_TIMEOUT_S}s."
-    echo "[deploy] To roll back: git reset --hard ${PREV_SHA} && pm2 restart ${PM2_PROCESS_NAME}"
-    echo "[deploy] (note: any migrations applied in this run are additive and safe to leave)."
+    if [[ $BREAKING_APPLIED -eq 1 ]]; then
+      echo "[deploy] Do NOT roll back to ${PREV_SHA}: this run applied a migration that code"
+      echo "[deploy] can't run against (scripts/migration-compat.js). Fix forward and restart."
+    else
+      echo "[deploy] To roll back: git reset --hard ${PREV_SHA} && pm2 restart ${PM2_PROCESS_NAME}"
+      echo "[deploy] (note: the migrations applied in this run are additive and safe to leave)."
+    fi
     exit 1
   fi
   sleep 1
