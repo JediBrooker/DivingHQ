@@ -572,17 +572,17 @@
         "desc": "Anda mengurus kelab anda. Jika persekutuan negara anda belum berada di DivingHQ, kelab menganjurkan pertandingannya sendiri: ciptanya, jalankan dari <strong>Bilik Kawalan</strong>, dan luluskan permintaan peranan ahli. Di bawah persekutuan, persekutuan yang melantik anda.",
         "step_1": "Daftar, pilih negara dan cipta kelab anda; anda menjadi pentadbir pertamanya",
         "step_2": "Buka <strong>Pengurus Pertandingan</strong> dan cipta pertandingan anjuran kelab anda",
-        "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau menjadi pengadil di <strong>Kelab saya</strong>",
+        "step_3": "Di <strong>Kelab saya</strong>, luluskan orang yang ingin menyertai dan ahli yang mahu menerjun, menghakimi atau melatih",
         "step_4": "Pada hari pertandingan, kendalikan pemarkahan dari <strong>Bilik Kawalan</strong>",
         "step_5": "Apabila persekutuan atau badan wilayah anda tiba, undi tuntutannya di <strong>Tuntutan</strong>",
         "cta": "Menganjurkan pertandingan ↗"
       },
       "region_admin": {
         "name": "Pentadbir rantau",
-        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya, boleh campur tangan dalam pertandingan mana-mana kelabnya, dan meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda, atau DivingHQ jika belum ada persekutuan.",
+        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya, boleh campur tangan dalam pertandingan mana-mana kelabnya, dan meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda. Jika belum ada persekutuan, badan wilayah anda menuntut rantau itu dan anda sendiri menambah rakan pentadbir.",
         "step_1": "Buka <strong>Rantau saya</strong> untuk melihat kelab dan pengurusnya",
         "step_2": "Cipta kejohanan anda dalam <strong>Pengurus pertandingan</strong> dengan rantau anda sebagai tuan rumah",
-        "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau menjadi pengadil",
+        "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau melatih, serta kelab yang ingin menyertai rantau anda",
         "cta": "Menganjurkan pertandingan ↗"
       },
       "org_admin": {

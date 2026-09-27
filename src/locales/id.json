@@ -572,17 +572,17 @@
         "desc": "Anda mengelola klub Anda. Jika federasi negara Anda belum ada di DivingHQ, klub menyelenggarakan kompetisinya sendiri: buat, jalankan dari <strong>Ruang Kontrol</strong>, dan setujui permintaan peran anggota. Di bawah federasi, federasilah yang menunjuk Anda.",
         "step_1": "Daftar, pilih negara, dan buat klub Anda; Anda menjadi admin pertamanya",
         "step_2": "Buka <strong>Pengelola Kompetisi</strong> dan buat kompetisi yang diselenggarakan klub Anda",
-        "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau wasit di <strong>Klub saya</strong>",
+        "step_3": "Di <strong>Klub saya</strong>, setujui orang yang ingin bergabung dan anggota yang ingin menjadi atlet, juri, atau pelatih",
         "step_4": "Pada hari kompetisi, jalankan penilaian dari <strong>Ruang Kontrol</strong>",
         "step_5": "Saat federasi atau badan wilayah Anda bergabung, beri suara atas klaimnya di <strong>Klaim</strong>",
         "cta": "Menyelenggarakan kompetisi ↗"
       },
       "region_admin": {
         "name": "Admin wilayah",
-        "desc": "Anda mengurus negara bagian, provinsi, atau bangsa: menyelenggarakan kejuaraannya, dapat turun tangan di kompetisi klub mana pun di dalamnya, dan menyetujui permintaan peran anggota klubnya. Federasi Anda menunjuk Anda, atau DivingHQ jika belum ada federasi.",
+        "desc": "Anda mengurus negara bagian, provinsi, atau bangsa: menyelenggarakan kejuaraannya, dapat turun tangan di kompetisi klub mana pun di dalamnya, dan menyetujui permintaan peran anggota klubnya. Federasi Anda menunjuk Anda. Jika belum ada federasi, badan wilayah Anda mengklaim wilayah itu dan Anda sendiri yang menambahkan rekan admin.",
         "step_1": "Buka <strong>Wilayah saya</strong> untuk melihat klub dan pengelolanya",
         "step_2": "Buat kejuaraan Anda di <strong>Pengelola kompetisi</strong> dengan wilayah Anda sebagai tuan rumah",
-        "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau wasit",
+        "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau pelatih, serta klub yang ingin bergabung ke wilayah Anda",
         "cta": "Menyelenggarakan kompetisi ↗"
       },
       "org_admin": {

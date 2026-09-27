@@ -583,17 +583,17 @@
         "desc": "Du driver din klub. Hvor dit lands forbund endnu ikke er på DivingHQ, afvikler klubben sine egne stævner: opret dem, styr dem fra <strong>Kontrolrummet</strong>, og godkend medlemmernes rolleanmodninger. Under et forbund udpeger forbundet dig.",
         "step_1": "Tilmeld dig, vælg dit land og opret din klub, så bliver du dens første administrator",
         "step_2": "Åbn <strong>Stævnehåndtering</strong> og opret et stævne, som din klub er vært for",
-        "step_3": "Godkend medlemmer, der vil springe, dømme eller være overdommer, på <strong>Min klub</strong>",
+        "step_3": "Godkend på <strong>Min klub</strong> dem, der beder om at blive medlem, og medlemmer, der vil springe, dømme eller være træner",
         "step_4": "På dagen styrer du pointgivningen fra <strong>Kontrolrummet</strong>",
         "step_5": "Når dit forbund eller regionale organ kommer til, stemmer du om dets krav under <strong>Krav</strong>",
         "cta": "Afvikling af et stævne ↗"
       },
       "region_admin": {
         "name": "Regionsadministrator",
-        "desc": "Du tager dig af en delstat, provins eller nation: afvikler dens mesterskaber, træder til ved alle dens klubbers stævner og godkender rolleanmodninger fra klubbernes medlemmer. Dit forbund udpeger dig, eller DivingHQ hvis der ikke er et endnu.",
+        "desc": "Du tager dig af en delstat, provins eller nation: afvikler dens mesterskaber, træder til ved alle dens klubbers stævner og godkender rolleanmodninger fra klubbernes medlemmer. Dit forbund udpeger dig. Hvis der ikke er et endnu, gør dit regionale organ krav på regionen, og du tilføjer selv dine medadministratorer.",
         "step_1": "Åbn <strong>Min region</strong> for at se dine klubber og hvem der driver dem",
         "step_2": "Opret dine mesterskaber i <strong>Stævnehåndtering</strong> med din region som vært",
-        "step_3": "Godkend medlemmer, der vil springe, dømme eller være overdommer",
+        "step_3": "Godkend medlemmer, der vil springe, dømme eller være træner, og klubber, der beder om optagelse i din region",
         "cta": "Afvikling af et stævne ↗"
       },
       "org_admin": {

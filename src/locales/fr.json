@@ -583,17 +583,17 @@
         "desc": "Vous gérez votre club. Là où la fédération de votre pays n'est pas encore sur DivingHQ, le club organise ses propres compétitions : créez-les, pilotez-les depuis la <strong>Salle de contrôle</strong> et approuvez les demandes de rôle de vos membres. Sous une fédération, c'est elle qui vous nomme.",
         "step_1": "Inscrivez-vous, choisissez votre pays et créez votre club : vous en serez le premier administrateur",
         "step_2": "Ouvrez le <strong>Gestionnaire de compétitions</strong> et créez une compétition organisée par votre club",
-        "step_3": "Approuvez dans <strong>Mon club</strong> les membres qui veulent plonger, juger ou arbitrer",
+        "step_3": "Dans <strong>Mon club</strong>, approuvez les personnes qui demandent à rejoindre le club et les membres qui veulent plonger, juger ou entraîner",
         "step_4": "Le jour J, pilotez la notation depuis la <strong>Salle de contrôle</strong>",
         "step_5": "Quand votre fédération ou votre organe régional arrive, votez sur sa revendication dans <strong>Revendications</strong>",
         "cta": "Organiser une compétition ↗"
       },
       "region_admin": {
         "name": "Administrateur régional",
-        "desc": "Vous vous occupez d'un État, d'une province ou d'une nation : vous organisez ses championnats, pouvez intervenir sur les compétitions de n'importe lequel de ses clubs et approuvez les demandes de rôle de leurs membres. Votre fédération vous nomme, ou DivingHQ tant qu'il n'y en a pas.",
+        "desc": "Vous vous occupez d'un État, d'une province ou d'une nation : vous organisez ses championnats, pouvez intervenir sur les compétitions de n'importe lequel de ses clubs et approuvez les demandes de rôle de leurs membres. Votre fédération vous nomme. Tant qu'il n'y en a pas, votre organe régional revendique la région et vous ajoutez vous-même vos co-administrateurs.",
         "step_1": "Ouvrez <strong>Ma région</strong> pour voir vos clubs et qui les gère",
         "step_2": "Créez vos championnats dans le <strong>Gestionnaire de compétitions</strong>, organisés par votre région",
-        "step_3": "Approuvez les membres qui veulent plonger, juger ou arbitrer",
+        "step_3": "Approuvez les membres qui veulent plonger, juger ou entraîner, et les clubs qui demandent à rejoindre votre région",
         "cta": "Organiser une compétition ↗"
       },
       "org_admin": {

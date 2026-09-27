@@ -572,17 +572,17 @@
         "desc": "Ikaw ang nagpapatakbo ng iyong club. Kung wala pa sa DivingHQ ang pederasyon ng iyong bansa, ang club ang nagpapatakbo ng sariling kompetisyon: gawin ang mga ito, patakbuhin mula sa <strong>Control Room</strong>, at aprubahan ang mga hiling na role ng mga miyembro. Kung may pederasyon, ito ang magtatalaga sa iyo.",
         "step_1": "Mag-sign up, piliin ang iyong bansa at gawin ang iyong club; ikaw ang magiging unang admin nito",
         "step_2": "Buksan ang <strong>Tagapamahala ng meet</strong> at gumawa ng kompetisyong hino-host ng iyong club",
-        "step_3": "Aprubahan sa <strong>Aking club</strong> ang mga miyembrong gustong mag-dive, humusga o maging referee",
+        "step_3": "Sa <strong>Aking club</strong>, aprubahan ang mga humihiling na sumali at ang mga miyembrong gustong mag-dive, humusga o maging tagasanay",
         "step_4": "Sa araw ng kompetisyon, patakbuhin ang pagmamarka mula sa <strong>Control Room</strong>",
         "step_5": "Kapag dumating ang iyong pederasyon o panrehiyong lupon, bumoto sa claim nito sa <strong>Mga claim</strong>",
         "cta": "Pagpapatakbo ng kompetisyon ↗"
       },
       "region_admin": {
         "name": "Admin ng rehiyon",
-        "desc": "Ikaw ang nangangalaga sa isang estado, lalawigan o bansa: pinapatakbo ang mga kampeonato nito, maaaring tumulong sa mga kompetisyon ng alinman sa mga club nito, at inaaprubahan ang mga hiling na role ng mga miyembro. Itinatalaga ka ng iyong pederasyon, o ng DivingHQ kung wala pa.",
+        "desc": "Ikaw ang nangangalaga sa isang estado, lalawigan o bansa: pinapatakbo ang mga kampeonato nito, maaaring tumulong sa mga kompetisyon ng alinman sa mga club nito, at inaaprubahan ang mga hiling na role ng mga miyembro. Itinatalaga ka ng iyong pederasyon. Kung wala pa, kine-claim ng iyong panrehiyong lupon ang rehiyon at ikaw mismo ang nagdaragdag ng mga kapwa admin.",
         "step_1": "Buksan ang <strong>Aking rehiyon</strong> para makita ang mga club at kung sino ang nagpapatakbo",
         "step_2": "Gumawa ng mga kampeonato sa <strong>Tagapamahala ng meet</strong> na hino-host ng iyong rehiyon",
-        "step_3": "Aprubahan ang mga miyembrong gustong mag-dive, humusga o maging referee",
+        "step_3": "Aprubahan ang mga miyembrong gustong mag-dive, humusga o maging tagasanay, at ang mga club na humihiling na sumali sa iyong rehiyon",
         "cta": "Pagpapatakbo ng kompetisyon ↗"
       },
       "org_admin": {

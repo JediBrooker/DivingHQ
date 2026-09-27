@@ -138,7 +138,7 @@ Yes. The URL updates to `/judge-analysis?event=<id>` when you pick an event — 
 
 ### "How do I request a club change?"
 
-Open your **Dive Sheets** page (`/competitor`). The **My club** card at the top shows your current club. Click **Request club change**, pick the new club, add an optional note, and submit. Your org admin reviews and approves or rejects the request in **User Manager → Requests**.
+Open your **Dive Sheets** page (`/competitor`). The **My club** card at the top shows your current club. Click **Request club change**, pick the new club, add an optional note, and submit. (**Change Club** on **My Profile** does the same.) Your org admin reviews and approves or rejects the request in **User Manager → Requests**. If your country has no federation on DivingHQ yet, the club you're joining decides: its admins approve it on **My club**.
 
 ### "I'm transferring to a club in a different federation — why does it say 'Pending' for so long?"
 

@@ -74,7 +74,7 @@ A diver requests a club change from the "My club" card on their own profile. The
 
 | Request type | Who must approve |
 |---|---|
-| Same-org club change | The diver's current org admin |
+| Same-org club change | The diver's current org admin. Where the country has no federation on DivingHQ yet, an admin of the club being joined (or of its region) on **My club** / **My region** |
 | Cross-org transfer | Source-org admin **+** target-org admin **+** the diver's own confirmation (3-way handshake) |
 
 For cross-org transfers the Requests tab shows which of the three approvals have been received (Source / Target / Diver). The transfer only completes when all three are in. Everything is audit-logged.
@@ -161,6 +161,17 @@ Friends, family, sponsors. Often anonymous — no account, no token. Frequently 
 **Cannot:**
 - See anyone's dive list before the event goes Live (locked to authenticated users)
 - Submit anything
+
+## Club and region admins (no federation yet)
+
+In a country whose federation isn't on DivingHQ yet, the clubs run themselves. Whoever founds a club is its first **club admin**; a state, province or home nation can have **region admins** above its clubs (appointed by DivingHQ, or a state body whose claim on the region passed). Both run the meets their club or region hosts from Meet Manager and the Control Room. On **My club** and **My region** they:
+
+- Approve their members' role requests for **diver, judge and coach**. Referee requests go to DivingHQ instead: a referee can act at any club's meet in the country, so no single club hands that out. Nobody approves their own request for anything but diver.
+- Approve **join requests**. Nobody lands in a club without asking: the person picks the club under **Change Club** on their profile, and the club's admins (or its region's) say yes or no. Nobody approves their own.
+- Add and remove **co-admins** from their own members. A club or region always keeps at least one live admin: deleted or suspended accounts don't count, and two admins removing each other at the same moment can't leave it with none. A region whose admins have all gone can be claimed again.
+- Pick the club's **region**. Between regions nobody has claimed, that's the club's call. A region its state body has claimed decides which clubs it takes: the club's admin asks, the region's admin accepts or declines on **My region**, and only the region can take a club back out.
+
+Once the federation arrives and its claim passes, all of this goes back to the org admin.
 
 ## Multiple roles per user
 

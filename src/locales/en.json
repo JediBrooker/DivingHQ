@@ -572,17 +572,17 @@
         "desc": "You run your club. Where your country's federation isn't on DivingHQ yet, the club runs its own meets: create them, run them from the <strong>Control Room</strong>, and approve your members' role requests. Under a federation, it appoints you.",
         "step_1": "Sign up, pick your country and create your club, you'll be its first admin",
         "step_2": "Open <strong>Meet Manager</strong> and create a meet hosted by your club",
-        "step_3": "Approve members who want to dive, judge or referee on <strong>My club</strong>",
+        "step_3": "On <strong>My club</strong>, approve people asking to join and members who want to dive, judge or coach",
         "step_4": "On the day, drive scoring from <strong>Control Room</strong>",
         "step_5": "When your federation or state body arrives, vote on its claim on <strong>Claims</strong>",
         "cta": "Running a meet ↗"
       },
       "region_admin": {
         "name": "Region Admin",
-        "desc": "You look after a state, province or home nation: run its championships, step in on any of its clubs' meets, and approve role requests from its clubs' members. Your federation, or DivingHQ where there isn't one yet, appoints you.",
+        "desc": "You look after a state, province or home nation: run its championships, step in on any of its clubs' meets, and approve role requests from its clubs' members. Your federation appoints you. Where there isn't one yet, your state body claims the region and you add your own co-admins.",
         "step_1": "Open <strong>My region</strong> to see your clubs and who runs them",
         "step_2": "Create your championships in <strong>Meet Manager</strong>, hosted by your region",
-        "step_3": "Approve members who want to dive, judge or referee",
+        "step_3": "Approve members who want to dive, judge or coach, and clubs asking to join your region",
         "cta": "Running a meet ↗"
       },
       "org_admin": {

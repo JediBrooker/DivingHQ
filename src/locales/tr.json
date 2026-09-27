@@ -572,17 +572,17 @@
         "desc": "Kulübünüzü yönetirsiniz. Ülkenizin federasyonu henüz DivingHQ'da değilse kulüp kendi yarışmalarını düzenler: oluşturun, <strong>Kontrol Odası</strong>'ndan yönetin ve üyelerinizin rol taleplerini onaylayın. Bir federasyon varsa sizi o atar.",
         "step_1": "Kaydolun, ülkenizi seçin ve kulübünüzü oluşturun; ilk yöneticisi siz olursunuz",
         "step_2": "<strong>Yarışma Yöneticisi</strong>'ni açın ve kulübünüzün ev sahipliği yaptığı bir yarışma oluşturun",
-        "step_3": "<strong>Kulübüm</strong> sayfasında atlamak, hakemlik yapmak veya başhakem olmak isteyen üyeleri onaylayın",
+        "step_3": "<strong>Kulübüm</strong> sayfasında katılmak isteyenleri ve atlamak, hakemlik yapmak veya antrenörlük yapmak isteyen üyeleri onaylayın",
         "step_4": "Yarışma günü puanlamayı <strong>Kontrol Odası</strong>'ndan yönetin",
         "step_5": "Federasyonunuz veya bölgesel kurumunuz geldiğinde, talebini <strong>Devralma talepleri</strong> sayfasında oylayın",
         "cta": "Yarışma düzenlemek ↗"
       },
       "region_admin": {
         "name": "Bölge yöneticisi",
-        "desc": "Bir eyalet, il ya da ülkeden sorumlusunuz: şampiyonalarını düzenler, kulüplerinden herhangi birinin yarışmalarına müdahale edebilir ve kulüp üyelerinin rol taleplerini onaylarsınız. Sizi federasyonunuz, federasyon yoksa DivingHQ atar.",
+        "desc": "Bir eyalet, il ya da ülkeden sorumlusunuz: şampiyonalarını düzenler, kulüplerinden herhangi birinin yarışmalarına müdahale edebilir ve kulüp üyelerinin rol taleplerini onaylarsınız. Sizi federasyonunuz atar. Federasyon henüz yoksa bölgeyi bölgesel kurumunuz üstlenir ve diğer yöneticileri siz eklersiniz.",
         "step_1": "Kulüplerinizi ve yöneticilerini görmek için <strong>Bölgem</strong>'i açın",
         "step_2": "Şampiyonalarınızı bölgenizin ev sahipliğinde <strong>Yarışma Yöneticisi</strong>'nde oluşturun",
-        "step_3": "Atlamak, hakemlik yapmak veya başhakem olmak isteyen üyeleri onaylayın",
+        "step_3": "Atlamak, hakemlik yapmak veya antrenörlük yapmak isteyen üyeleri ve bölgenize katılmak isteyen kulüpleri onaylayın",
         "cta": "Yarışma düzenlemek ↗"
       },
       "org_admin": {

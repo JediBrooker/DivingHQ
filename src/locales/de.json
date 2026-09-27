@@ -583,17 +583,17 @@
         "desc": "Sie führen Ihren Verein. Wo der Verband Ihres Landes noch nicht auf DivingHQ ist, richtet der Verein seine Wettkämpfe selbst aus: anlegen, aus dem <strong>Kontrollraum</strong> steuern und die Rollenanfragen Ihrer Mitglieder genehmigen. Unter einem Verband ernennt dieser Sie.",
         "step_1": "Registrieren Sie sich, wählen Sie Ihr Land und legen Sie Ihren Verein an, Sie werden sein erster Admin",
         "step_2": "Öffnen Sie den <strong>Wettkampf-Manager</strong> und legen Sie einen Wettkampf Ihres Vereins an",
-        "step_3": "Genehmigen Sie auf <strong>Mein Verein</strong> Mitglieder, die springen, werten oder Schiedsrichter sein möchten",
+        "step_3": "Genehmigen Sie auf <strong>Mein Verein</strong> Beitrittsanfragen und Mitglieder, die springen, werten oder trainieren möchten",
         "step_4": "Am Wettkampftag steuern Sie die Wertung aus dem <strong>Kontrollraum</strong>",
         "step_5": "Kommt Ihr Verband oder Landesverband dazu, stimmen Sie unter <strong>Ansprüche</strong> über seinen Anspruch ab",
         "cta": "Einen Wettkampf ausrichten ↗"
       },
       "region_admin": {
         "name": "Regionsadmin",
-        "desc": "Sie betreuen einen Bundesstaat, eine Provinz oder einen Landesteil: Sie richten die Meisterschaften aus, können bei den Wettkämpfen aller Vereine einspringen und genehmigen Rollenanfragen der Vereinsmitglieder. Ihr Verband ernennt Sie, oder DivingHQ, solange es noch keinen gibt.",
+        "desc": "Sie betreuen einen Bundesstaat, eine Provinz oder einen Landesteil: Sie richten die Meisterschaften aus, können bei den Wettkämpfen aller Vereine einspringen und genehmigen Rollenanfragen der Vereinsmitglieder. Ihr Verband ernennt Sie. Solange es keinen gibt, übernimmt Ihr Landesverband die Region, und weitere Admins fügen Sie selbst hinzu.",
         "step_1": "Öffnen Sie <strong>Meine Region</strong> für Ihre Vereine und deren Leitung",
         "step_2": "Legen Sie Ihre Meisterschaften im <strong>Wettkampf-Manager</strong> mit Ihrer Region als Ausrichter an",
-        "step_3": "Genehmigen Sie Mitglieder, die springen, werten oder Schiedsrichter sein möchten",
+        "step_3": "Genehmigen Sie Mitglieder, die springen, werten oder trainieren möchten, und Vereine, die Ihrer Region beitreten wollen",
         "cta": "Einen Wettkampf ausrichten ↗"
       },
       "org_admin": {

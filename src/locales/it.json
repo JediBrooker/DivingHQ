@@ -583,17 +583,17 @@
         "desc": "Gestisci il tuo club. Dove la federazione del tuo paese non è ancora su DivingHQ, il club organizza le proprie gare: creale, dirigile dalla <strong>Sala Controllo</strong> e approva le richieste di ruolo dei membri. Sotto una federazione, è lei a nominarti.",
         "step_1": "Registrati, scegli il paese e crea il tuo club: ne sarai il primo amministratore",
         "step_2": "Apri il <strong>Gestore gare</strong> e crea una gara organizzata dal tuo club",
-        "step_3": "Approva in <strong>Il mio club</strong> i membri che vogliono tuffarsi, giudicare o arbitrare",
+        "step_3": "In <strong>Il mio club</strong> approva chi chiede di entrare e i membri che vogliono tuffarsi, giudicare o allenare",
         "step_4": "Il giorno della gara, dirigi i punteggi dalla <strong>Sala Controllo</strong>",
         "step_5": "Quando arriva la tua federazione o l'ente regionale, vota la sua rivendicazione in <strong>Rivendicazioni</strong>",
         "cta": "Organizzare una gara ↗"
       },
       "region_admin": {
         "name": "Amministratore regionale",
-        "desc": "Ti occupi di uno stato, una provincia o una nazione: organizzi i suoi campionati, puoi intervenire sulle gare di qualsiasi suo club e approvi le richieste di ruolo dei membri dei club. Ti nomina la tua federazione, o DivingHQ finché non c'è.",
+        "desc": "Ti occupi di uno stato, una provincia o una nazione: organizzi i suoi campionati, puoi intervenire sulle gare di qualsiasi suo club e approvi le richieste di ruolo dei membri dei club. Ti nomina la tua federazione. Finché non c'è, il tuo ente regionale rivendica la regione e aggiungi tu gli altri amministratori.",
         "step_1": "Apri <strong>La mia regione</strong> per vedere i tuoi club e chi li gestisce",
         "step_2": "Crea i tuoi campionati nel <strong>Gestore gare</strong>, organizzati dalla tua regione",
-        "step_3": "Approva i membri che vogliono tuffarsi, giudicare o arbitrare",
+        "step_3": "Approva i membri che vogliono tuffarsi, giudicare o allenare, e i club che chiedono di entrare nella tua regione",
         "cta": "Organizzare una gara ↗"
       },
       "org_admin": {

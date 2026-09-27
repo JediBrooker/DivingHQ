@@ -583,17 +583,17 @@
         "desc": "Johdat seuraasi. Jos maasi liitto ei vielä ole DivingHQ:ssa, seura järjestää kilpailunsa itse: luo ne, ohjaa niitä <strong>Ohjaamosta</strong> ja hyväksy jäsenten roolipyynnöt. Liiton alaisuudessa liitto nimeää sinut.",
         "step_1": "Rekisteröidy, valitse maasi ja luo seurasi, sinusta tulee sen ensimmäinen ylläpitäjä",
         "step_2": "Avaa <strong>Kilpailun hallinta</strong> ja luo seurasi järjestämä kilpailu",
-        "step_3": "Hyväksy <strong>Oma seura</strong> -sivulla jäsenet, jotka haluavat hypätä, tuomita tai toimia päätuomarina",
+        "step_3": "Hyväksy <strong>Oma seura</strong> -sivulla liittymistä pyytävät sekä jäsenet, jotka haluavat hypätä, tuomita tai valmentaa",
         "step_4": "Kilpailupäivänä ohjaat pisteytystä <strong>Ohjaamosta</strong>",
         "step_5": "Kun liittosi tai alueellinen elin liittyy, äänestä sen vaatimuksesta sivulla <strong>Vaatimukset</strong>",
         "cta": "Kilpailun järjestäminen ↗"
       },
       "region_admin": {
         "name": "Alueen ylläpitäjä",
-        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut, voit tarttua minkä tahansa sen seuran kilpailuihin ja hyväksyt seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut, tai DivingHQ, jos liittoa ei vielä ole.",
+        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut, voit tarttua minkä tahansa sen seuran kilpailuihin ja hyväksyt seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut. Jos liittoa ei vielä ole, alueellinen elimesi ottaa alueen hoitaakseen ja lisäät muut ylläpitäjät itse.",
         "step_1": "Avaa <strong>Oma alue</strong> nähdäksesi seurasi ja niiden vetäjät",
         "step_2": "Luo mestaruuskilpailusi <strong>Kilpailun hallinnassa</strong> alueesi järjestämänä",
-        "step_3": "Hyväksy jäsenet, jotka haluavat hypätä, tuomita tai toimia päätuomarina",
+        "step_3": "Hyväksy jäsenet, jotka haluavat hypätä, tuomita tai valmentaa, sekä seurat, jotka pyytävät liittymistä alueellesi",
         "cta": "Kilpailun järjestäminen ↗"
       },
       "org_admin": {

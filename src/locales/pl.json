@@ -583,17 +583,17 @@
         "desc": "Prowadzisz swój klub. Tam, gdzie federacji twojego kraju nie ma jeszcze w DivingHQ, klub sam organizuje zawody: twórz je, prowadź z <strong>Pokoju kontroli</strong> i zatwierdzaj prośby członków o role. W ramach federacji to ona cię wyznacza.",
         "step_1": "Zarejestruj się, wybierz kraj i utwórz klub, zostaniesz jego pierwszym administratorem",
         "step_2": "Otwórz <strong>Menedżer zawodów</strong> i utwórz zawody organizowane przez twój klub",
-        "step_3": "Na stronie <strong>Mój klub</strong> zatwierdzaj członków, którzy chcą skakać, sędziować lub być sędzią głównym",
+        "step_3": "Na stronie <strong>Mój klub</strong> zatwierdzaj chętnych do dołączenia i członków, którzy chcą skakać, sędziować lub trenować",
         "step_4": "W dniu zawodów prowadź punktację z <strong>Pokoju kontroli</strong>",
         "step_5": "Gdy dołączy twoja federacja lub organ regionalny, zagłosuj nad jej roszczeniem w <strong>Roszczeniach</strong>",
         "cta": "Organizacja zawodów ↗"
       },
       "region_admin": {
         "name": "Administrator regionu",
-        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa, możesz wkroczyć w zawody każdego z klubów i zatwierdzasz prośby członków klubów o role. Wyznacza cię federacja, a dopóki jej nie ma, DivingHQ.",
+        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa, możesz wkroczyć w zawody każdego z klubów i zatwierdzasz prośby członków klubów o role. Wyznacza cię federacja. Dopóki jej nie ma, region przejmuje twój organ regionalny, a kolejnych administratorów dodajesz sam.",
         "step_1": "Otwórz <strong>Mój region</strong>, aby zobaczyć kluby i kto je prowadzi",
         "step_2": "Utwórz mistrzostwa w <strong>Menedżerze zawodów</strong>, organizowane przez twój region",
-        "step_3": "Zatwierdzaj członków, którzy chcą skakać, sędziować lub być sędzią głównym",
+        "step_3": "Zatwierdzaj członków, którzy chcą skakać, sędziować lub trenować, oraz kluby proszące o dołączenie do twojego regionu",
         "cta": "Organizacja zawodów ↗"
       },
       "org_admin": {

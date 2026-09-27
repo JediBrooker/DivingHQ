@@ -572,17 +572,17 @@
         "desc": "Řídíte svůj klub. Kde federace vaší země na DivingHQ zatím není, klub pořádá závody sám: vytvořte je, řiďte z <strong>Řídicí místnosti</strong> a schvalujte žádosti členů o role. Pod federací vás jmenuje ona.",
         "step_1": "Zaregistrujte se, vyberte zemi a založte klub, stanete se jeho prvním správcem",
         "step_2": "Otevřete <strong>Správa závodů</strong> a vytvořte závod pořádaný vaším klubem",
-        "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo řídit, na stránce <strong>Můj klub</strong>",
+        "step_3": "Na stránce <strong>Můj klub</strong> schvalujte zájemce o vstup a členy, kteří chtějí skákat, soudit nebo trénovat",
         "step_4": "V den závodu řiďte bodování z <strong>Řídicí místnosti</strong>",
         "step_5": "Až dorazí vaše federace nebo krajský svaz, hlasujte o jejím nároku na stránce <strong>Nároky</strong>",
         "cta": "Pořádání závodu ↗"
       },
       "region_admin": {
         "name": "Správce regionu",
-        "desc": "Staráte se o stát, provincii či zemi: pořádáte její mistrovství, můžete zasáhnout do závodů kteréhokoli jejího klubu a schvalujete žádosti členů jejích klubů o role. Jmenuje vás federace, nebo DivingHQ, pokud federace zatím není.",
+        "desc": "Staráte se o stát, provincii či zemi: pořádáte její mistrovství, můžete zasáhnout do závodů kteréhokoli jejího klubu a schvalujete žádosti členů jejích klubů o role. Jmenuje vás federace. Pokud federace zatím není, převezme region váš krajský svaz a další správce si přidáváte sami.",
         "step_1": "Otevřete <strong>Můj region</strong> a uvidíte své kluby a jejich vedení",
         "step_2": "Vytvořte mistrovství ve <strong>Správě závodů</strong> pořádané vaším regionem",
-        "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo řídit",
+        "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo trénovat, a kluby, které žádají o vstup do vašeho regionu",
         "cta": "Pořádání závodu ↗"
       },
       "org_admin": {

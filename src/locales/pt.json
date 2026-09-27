@@ -583,17 +583,17 @@
         "desc": "Gere o seu clube. Onde a federação do seu país ainda não está no DivingHQ, o clube organiza as suas próprias provas: crie-as, conduza-as a partir da <strong>Sala de Controlo</strong> e aprove os pedidos de função dos membros. Sob uma federação, é ela que o nomeia.",
         "step_1": "Registe-se, escolha o país e crie o seu clube; será o primeiro administrador",
         "step_2": "Abra o <strong>Gestor de Competições</strong> e crie uma prova organizada pelo seu clube",
-        "step_3": "Aprove em <strong>O meu clube</strong> os membros que querem saltar, julgar ou arbitrar",
+        "step_3": "Aprove em <strong>O meu clube</strong> quem pede para aderir e os membros que querem saltar, julgar ou treinar",
         "step_4": "No dia da prova, conduza a pontuação a partir da <strong>Sala de Controlo</strong>",
         "step_5": "Quando a sua federação ou organismo regional chegar, vote a reivindicação em <strong>Reivindicações</strong>",
         "cta": "Organizar uma prova ↗"
       },
       "region_admin": {
         "name": "Administrador regional",
-        "desc": "Cuida de um estado, província ou nação: organiza os campeonatos, pode intervir nas provas de qualquer clube e aprova os pedidos de função dos membros dos clubes. A sua federação nomeia-o, ou o DivingHQ enquanto não houver.",
+        "desc": "Cuida de um estado, província ou nação: organiza os campeonatos, pode intervir nas provas de qualquer clube e aprova os pedidos de função dos membros dos clubes. A sua federação nomeia-o. Enquanto não houver, o seu organismo regional reivindica a região e os restantes administradores são acrescentados por si.",
         "step_1": "Abra <strong>A minha região</strong> para ver os clubes e quem os gere",
         "step_2": "Crie os campeonatos no <strong>Gestor de Competições</strong>, organizados pela sua região",
-        "step_3": "Aprove os membros que querem saltar, julgar ou arbitrar",
+        "step_3": "Aprove os membros que querem saltar, julgar ou treinar, e os clubes que pedem para aderir à sua região",
         "cta": "Organizar uma prova ↗"
       },
       "org_admin": {

@@ -572,17 +572,17 @@
         "desc": "Vodite svoj klub. Gdje savez vaše države još nije na DivingHQ-u, klub sam organizira natjecanja: stvorite ih, vodite iz <strong>Kontrolne sobe</strong> i odobravajte zahtjeve članova za uloge. Pod savezom vas imenuje savez.",
         "step_1": "Registrirajte se, odaberite državu i stvorite klub, bit ćete njegov prvi administrator",
         "step_2": "Otvorite <strong>Menadžer natjecanja</strong> i stvorite natjecanje koje organizira vaš klub",
-        "step_3": "Na stranici <strong>Moj klub</strong> odobrite članove koji žele skakati, suditi ili biti glavni sudac",
+        "step_3": "Na stranici <strong>Moj klub</strong> odobrite one koji traže učlanjenje i članove koji žele skakati, suditi ili trenirati druge",
         "step_4": "Na dan natjecanja vodite bodovanje iz <strong>Kontrolne sobe</strong>",
         "step_5": "Kad stigne vaš savez ili regionalno tijelo, glasajte o njegovu zahtjevu u <strong>Zahtjevima</strong>",
         "cta": "Organizacija natjecanja ↗"
       },
       "region_admin": {
         "name": "Administrator regije",
-        "desc": "Brinete se o saveznoj državi, provinciji ili naciji: organizirate njezina prvenstva, možete uskočiti u natjecanja bilo kojeg njezinog kluba i odobravate zahtjeve članova klubova za uloge. Imenuje vas savez, ili DivingHQ dok saveza nema.",
+        "desc": "Brinete se o saveznoj državi, provinciji ili naciji: organizirate njezina prvenstva, možete uskočiti u natjecanja bilo kojeg njezinog kluba i odobravate zahtjeve članova klubova za uloge. Imenuje vas savez. Dok saveza nema, vaše regionalno tijelo preuzima regiju, a ostale administratore dodajete sami.",
         "step_1": "Otvorite <strong>Moja regija</strong> za svoje klubove i tko ih vodi",
         "step_2": "Stvorite prvenstva u <strong>Menadžeru natjecanja</strong> s regijom kao organizatorom",
-        "step_3": "Odobrite članove koji žele skakati, suditi ili biti glavni sudac",
+        "step_3": "Odobrite članove koji žele skakati, suditi ili trenirati druge te klubove koji traže ulazak u vašu regiju",
         "cta": "Organizacija natjecanja ↗"
       },
       "org_admin": {

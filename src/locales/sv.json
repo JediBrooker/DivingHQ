@@ -583,17 +583,17 @@
         "desc": "Du driver din klubb. Där ditt lands förbund ännu inte finns på DivingHQ arrangerar klubben sina egna tävlingar: skapa dem, styr dem från <strong>Kontrollrummet</strong> och godkänn medlemmarnas rollförfrågningar. Under ett förbund utser förbundet dig.",
         "step_1": "Registrera dig, välj land och skapa din klubb, du blir dess första administratör",
         "step_2": "Öppna <strong>Tävlingshanteraren</strong> och skapa en tävling som din klubb arrangerar",
-        "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara överdomare på <strong>Min klubb</strong>",
+        "step_3": "Godkänn på <strong>Min klubb</strong> dem som ber om att gå med och medlemmar som vill hoppa, döma eller vara tränare",
         "step_4": "På tävlingsdagen styr du poängsättningen från <strong>Kontrollrummet</strong>",
         "step_5": "När ditt förbund eller regionala organ ansluter röstar du om dess anspråk under <strong>Anspråk</strong>",
         "cta": "Arrangera en tävling ↗"
       },
       "region_admin": {
         "name": "Regionadministratör",
-        "desc": "Du ansvarar för en delstat, provins eller nation: arrangerar mästerskapen, kan kliva in på alla klubbars tävlingar och godkänner rollförfrågningar från klubbarnas medlemmar. Ditt förbund utser dig, eller DivingHQ om det inte finns något ännu.",
+        "desc": "Du ansvarar för en delstat, provins eller nation: arrangerar mästerskapen, kan kliva in på alla klubbars tävlingar och godkänner rollförfrågningar från klubbarnas medlemmar. Ditt förbund utser dig. Finns det inget ännu gör ditt regionala organ anspråk på regionen, och du lägger själv till dina medadministratörer.",
         "step_1": "Öppna <strong>Min region</strong> för att se dina klubbar och vem som driver dem",
         "step_2": "Skapa mästerskapen i <strong>Tävlingshanterare</strong> med regionen som arrangör",
-        "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara överdomare",
+        "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara tränare, och klubbar som vill gå med i din region",
         "cta": "Arrangera en tävling ↗"
       },
       "org_admin": {

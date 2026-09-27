@@ -583,17 +583,17 @@
         "desc": "Ön vezeti a klubját. Ahol országa szövetsége még nincs a DivingHQ-n, a klub maga rendezi a versenyeit: hozza létre őket, irányítsa a <strong>Vezérlőszobából</strong>, és hagyja jóvá a tagok szerepkör-kérelmeit. Szövetség alatt a szövetség nevezi ki.",
         "step_1": "Regisztráljon, válassza ki az országát és hozza létre a klubját, Ön lesz az első adminisztrátora",
         "step_2": "Nyissa meg a <strong>Versenymenedzsert</strong>, és hozzon létre a klubja által rendezett versenyt",
-        "step_3": "A <strong>Saját klubom</strong> oldalon hagyja jóvá a műugrani, bíráskodni vagy vezetőbíró lenni kívánó tagokat",
+        "step_3": "A <strong>Saját klubom</strong> oldalon hagyja jóvá a csatlakozni kívánókat és a műugrani, bíráskodni vagy edzősködni kívánó tagokat",
         "step_4": "A versenynapon a <strong>Vezérlőszobából</strong> irányítja a pontozást",
         "step_5": "Amikor szövetsége vagy regionális testülete csatlakozik, szavazzon az igényéről az <strong>Igények</strong> oldalon",
         "cta": "Verseny rendezése ↗"
       },
       "region_admin": {
         "name": "Régió-adminisztrátor",
-        "desc": "Egy államért, tartományért vagy országért felel: rendezi a bajnokságait, beavatkozhat bármely klubja versenyeibe, és jóváhagyja a klubtagok szerepkör-kérelmeit. A szövetsége nevezi ki, vagy a DivingHQ, amíg nincs szövetség.",
+        "desc": "Egy államért, tartományért vagy országért felel: rendezi a bajnokságait, beavatkozhat bármely klubja versenyeibe, és jóváhagyja a klubtagok szerepkör-kérelmeit. A szövetsége nevezi ki. Amíg nincs szövetség, a regionális testülete veszi át a régiót, és a további adminisztrátorokat Ön adja hozzá.",
         "step_1": "Nyissa meg a <strong>Saját régióm</strong> oldalt a klubokért és vezetőikért",
         "step_2": "Hozza létre bajnokságait a <strong>Versenymenedzserben</strong> a régió rendezésében",
-        "step_3": "Hagyja jóvá a műugrani, bíráskodni vagy vezetőbíró lenni kívánó tagokat",
+        "step_3": "Hagyja jóvá a műugrani, bíráskodni vagy edzősködni kívánó tagokat és a régiójához csatlakozni kívánó klubokat",
         "cta": "Verseny rendezése ↗"
       },
       "org_admin": {
