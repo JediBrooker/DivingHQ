@@ -1419,6 +1419,9 @@ test("records: a dive sets a state record, unofficial until the state is claimed
         [ev.body.id, A.id, j, dive],
       );
     }
+    // A Mixed event files the dive under the diver's own gender
+    // (migration 094), so give the founder one or nothing is set.
+    await pool.query("UPDATE users SET gender = 'female' WHERE id = $1", [A.id]);
     const records = require("../lib/records")({ pool, verifyToken: (_req, _res, next) => next() });
     const broken = await records.checkAndApplyRecords({ eventId: ev.body.id, competitorId: A.id, roundNumber: 1 });
     const region = broken.find((b) => b.scope === "region");
@@ -1573,5 +1576,219 @@ test("email verification: the link signs you in, a lost one can be resent", asyn
   } finally {
     await claimKit.wipe(CODE);
     await claimKit.wipe("FSM");
+  }
+});
+
+// ---------------------------------------------------------------------
+// Records split by gender, individual dives only (migration 094).
+// ---------------------------------------------------------------------
+
+// Direct-SQL fixtures for the record tests: a live event with a full
+// panel, and a dive scored by every judge so checkAndApplyRecords sees
+// a complete dive. Everything hangs off a setupFixture() org, so the
+// books these tests write can't collide with anybody else's.
+const recordKit = {
+  lib() {
+    return require("../lib/records")({ pool, verifyToken: (_req, _res, next) => next() });
+  },
+  async club(orgId, name, shortCode, regionId = null) {
+    return (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code, region_id) VALUES ($1, $2, $3, $4) RETURNING id",
+      [orgId, name, shortCode, regionId],
+    )).rows[0].id;
+  },
+  async diver(orgId, clubId, gender, name = "Record Diver") {
+    const id = await insertUser({
+      orgId, role: "diver", fullName: name,
+      username: `int-rd-${crypto.randomBytes(4).toString("hex")}`,
+    });
+    await pool.query("UPDATE users SET club_id = $2, gender = $3 WHERE id = $1", [id, clubId, gender]);
+    return id;
+  },
+  async event(orgId, { gender, eventType = "individual" }) {
+    const id = (await pool.query(
+      `INSERT INTO events (org_id, name, gender, height, number_of_judges, total_rounds, event_type, status)
+       VALUES ($1, $2, $3, '3m', 5, 6, $4, 'Live') RETURNING id`,
+      [orgId, `Records ${gender} ${eventType}`, gender, eventType],
+    )).rows[0].id;
+    const judges = [];
+    for (let i = 1; i <= 5; i++) {
+      const j = await insertUser({
+        orgId, role: "judge", fullName: `Judge ${i}`,
+        username: `int-rj-${crypto.randomBytes(4).toString("hex")}`,
+      });
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)", [id, j, i]);
+      judges.push(j);
+    }
+    return { id, judges };
+  },
+  async dive(ev, competitorId, round, diveId, judgeScore, { partnerId = null } = {}) {
+    await pool.query(
+      `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number, partner_id)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [ev.id, competitorId, diveId, round, partnerId],
+    );
+    for (const j of ev.judges) {
+      await pool.query(
+        "INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, $5, $6)",
+        [ev.id, competitorId, j, diveId, round, judgeScore],
+      );
+    }
+  },
+  // History tables carry no FKs (on purpose, see init.sql), so they
+  // outlive teardownFixture unless we sweep them first.
+  async cleanup(orgId) {
+    await pool.query("DELETE FROM records_personal_history WHERE user_id IN (SELECT id FROM users WHERE org_id = $1)", [orgId]);
+    await pool.query("DELETE FROM records_club_history WHERE club_id IN (SELECT id FROM clubs WHERE org_id = $1)", [orgId]);
+    await pool.query("DELETE FROM records_region_history WHERE region_id IN (SELECT id FROM regions WHERE org_id = $1)", [orgId]);
+    await pool.query("DELETE FROM records_federation_history WHERE org_id = $1", [orgId]);
+  },
+  async threeMetreDive() {
+    return (await pool.query(
+      "SELECT id FROM dive_directory WHERE height = 3 AND is_custom = FALSE ORDER BY dive_code, position LIMIT 1",
+    )).rows[0].id;
+  },
+};
+
+test("records: Women's and Men's books stay apart, and only individual dives count", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const lib = recordKit.lib();
+    const club = await recordKit.club(st.orgId, "Split Book Divers", "SBD");
+    const her = await recordKit.diver(st.orgId, club, null, "Ana Record");
+    const him = await recordKit.diver(st.orgId, club, "male", "Ben Record");
+    const mixedHer = await recordKit.diver(st.orgId, club, "Female ", "Cleo Record");
+    const unknown = await recordKit.diver(st.orgId, club, "prefer_not_to_say", "Dee Record");
+    const dive = await recordKit.threeMetreDive();
+    const clubRows = async () => (await pool.query(
+      "SELECT gender::text, holder_id, score::float, prev_score::float, event_id FROM records_club WHERE club_id = $1 ORDER BY gender",
+      [club],
+    )).rows;
+
+    // A women's event decides the book even with no profile gender.
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(women, her, 1, dive, 6);
+    let broken = await lib.checkAndApplyRecords({ eventId: women.id, competitorId: her, roundNumber: 1 });
+    let mark = broken.find((b) => b.scope === "club");
+    assert.ok(mark, JSON.stringify(broken));
+    assert.equal(mark.gender, "Female");
+    assert.equal(mark.prev_score, null, "a first mark beats nothing");
+    assert.equal(mark.round_number, 1);
+    assert.equal(mark.scope_code, "SBD");
+    assert.equal(mark.official, true);
+    assert.equal(broken.find((b) => b.scope === "federation").scope_code, "TST");
+    const hers = mark.score;
+
+    // A man scoring more on the same dive gets his own record and
+    // leaves hers alone. Under the old key he'd have archived it.
+    const men = await recordKit.event(st.orgId, { gender: "Male" });
+    await recordKit.dive(men, him, 1, dive, 8);
+    broken = await lib.checkAndApplyRecords({ eventId: men.id, competitorId: him, roundNumber: 1 });
+    assert.equal(broken.find((b) => b.scope === "club")?.gender, "Male");
+    let rows = await clubRows();
+    assert.deepEqual(rows.map((r) => [r.gender, r.holder_id]), [["Female", her], ["Male", him]]);
+    assert.equal(rows[0].score, hers);
+
+    // She beats her own mark: prev_score carries what she beat, and the
+    // old row goes to history with its gender.
+    await recordKit.dive(women, her, 2, dive, 7);
+    broken = await lib.checkAndApplyRecords({ eventId: women.id, competitorId: her, roundNumber: 2 });
+    mark = broken.find((b) => b.scope === "club");
+    assert.equal(mark.prev_score, hers);
+    assert.equal(mark.round_number, 2);
+    rows = await clubRows();
+    assert.equal(rows.find((r) => r.gender === "Female").prev_score, hers);
+    const hist = await pool.query(
+      "SELECT gender::text, score::float FROM records_club_history WHERE club_id = $1", [club]);
+    assert.deepEqual(hist.rows, [{ gender: "Female", score: hers }]);
+
+    // Mixed individual event: the profile gender decides ('Female ' with
+    // stray case and space still counts), and no usable gender means no
+    // record at all rather than a guess.
+    const mixed = await recordKit.event(st.orgId, { gender: "Mixed" });
+    await recordKit.dive(mixed, mixedHer, 1, dive, 9);
+    broken = await lib.checkAndApplyRecords({ eventId: mixed.id, competitorId: mixedHer, roundNumber: 1 });
+    assert.equal(broken.find((b) => b.scope === "club")?.gender, "Female");
+    await recordKit.dive(mixed, unknown, 1, dive, 9.5);
+    broken = await lib.checkAndApplyRecords({ eventId: mixed.id, competitorId: unknown, roundNumber: 1 });
+    assert.deepEqual(broken, []);
+
+    // Synchro dives don't set records, however good.
+    const synchro = await recordKit.event(st.orgId, { gender: "Male", eventType: "synchro_pair" });
+    await recordKit.dive(synchro, him, 1, dive, 10, { partnerId: unknown });
+    broken = await lib.checkAndApplyRecords({ eventId: synchro.id, competitorId: him, roundNumber: 1 });
+    assert.deepEqual(broken, []);
+    for (const tbl of ["records_personal", "records_club", "records_federation", "records_continental", "records_region"]) {
+      const n = (await pool.query(`SELECT count(*)::int AS n FROM ${tbl} WHERE event_id = $1`, [synchro.id])).rows[0].n;
+      assert.equal(n, 0, `${tbl} has nothing from the synchro event`);
+    }
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
+
+test("records: rebuild-records reports on a dry run and repairs a book with --apply", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { rebuildRecords } = require("../scripts/rebuild-records");
+  const st = await setupFixture({ withEvent: false });
+  const client = await pool.connect();
+  try {
+    const lib = recordKit.lib();
+    const club = await recordKit.club(st.orgId, "Rebuild Divers", "RBD");
+    const her = await recordKit.diver(st.orgId, club, "female", "Eve Rebuild");
+    const him = await recordKit.diver(st.orgId, club, "male", "Finn Rebuild");
+    const dive = await recordKit.threeMetreDive();
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+    const men = await recordKit.event(st.orgId, { gender: "Male" });
+    await recordKit.dive(women, her, 1, dive, 6);
+    await lib.checkAndApplyRecords({ eventId: women.id, competitorId: her, roundNumber: 1 });
+    await recordKit.dive(men, him, 1, dive, 8);
+    await lib.checkAndApplyRecords({ eventId: men.id, competitorId: him, roundNumber: 1 });
+
+    // Recreate what the old single book did: his dive sitting on the
+    // women's record, no men's row, and a leftover synchro mark that
+    // 094 couldn't give a gender to.
+    const his = (await pool.query(
+      "SELECT score FROM records_club WHERE club_id = $1 AND gender = 'Male'", [club])).rows[0].score;
+    await pool.query("DELETE FROM records_club WHERE club_id = $1 AND gender = 'Male'", [club]);
+    await pool.query(
+      "UPDATE records_club SET holder_id = $2, score = $3, event_id = $4 WHERE club_id = $1 AND gender = 'Female'",
+      [club, him, his, men.id]);
+    const synchro = await recordKit.event(st.orgId, { gender: "Male", eventType: "synchro_pair" });
+    await pool.query(
+      `INSERT INTO records_club (club_id, holder_id, gender, height, dive_code, position, score, event_id)
+       SELECT $1, $2, NULL, '3m', dive_code, position, 99, $3 FROM dive_directory WHERE id = $4`,
+      [club, him, synchro.id, dive]);
+    const snapshot = async () => (await pool.query(
+      "SELECT gender::text, holder_id, score::float FROM records_club WHERE club_id = $1 ORDER BY gender NULLS LAST", [club])).rows;
+    const before = await snapshot();
+
+    const dry = await rebuildRecords(client, { orgId: st.orgId });
+    const clubCounts = dry.find((r) => r.scope === "club").counts;
+    assert.equal(clubCounts.changed, 1, JSON.stringify(clubCounts));
+    assert.equal(clubCounts.added, 1);
+    assert.equal(clubCounts.removed, 1);
+    assert.deepEqual(await snapshot(), before, "a dry run writes nothing");
+    assert.ok(!dry.some((r) => r.scope === "continental"), "--org leaves the continental books alone");
+
+    await rebuildRecords(client, { orgId: st.orgId, apply: true });
+    const after = await snapshot();
+    assert.deepEqual(after.map((r) => [r.gender, r.holder_id]), [["Female", her], ["Male", him]]);
+    const archived = await pool.query(
+      "SELECT gender::text, score::float FROM records_club_history WHERE club_id = $1 ORDER BY score", [club]);
+    assert.deepEqual(archived.rows.map((r) => r.gender), ["Female", null], "both replaced rows kept in history");
+
+    // Running it again finds nothing left to do.
+    const again = await rebuildRecords(client, { orgId: st.orgId });
+    const c2 = again.find((r) => r.scope === "club").counts;
+    assert.equal(c2.changed + c2.added + c2.removed, 0, JSON.stringify(c2));
+  } finally {
+    client.release();
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
   }
 });

@@ -24,6 +24,7 @@ that's intentional, but every privileged event must call
 | `referee_action_failed`   | `{ event_id, competitor_id, round_number, … }` | Referee marks a dive failed. |
 | `referee_action_cap`      | `{ event_id, competitor_id, round_number, cap_value, … }` | Referee caps the panel's scores at `cap_value` (default 2.0). |
 | `referee_action_redive`   | `{ event_id, competitor_id, round_number, … }` | Referee orders a re-dive. |
+| `record_broken`           | `{ event_id, round_number, scope: 'personal' \| 'club' \| 'region' \| 'federation' \| 'continental', scope_id, scope_name, scope_code, official, gender: 'Male' \| 'Female', height, dive_code, position, score, prev_score \| null, holder_id, holder_name, prev_holder_name \| null }` | A completed individual dive set one or more records (`lib/records.js` `checkAndApplyRecords`). One emit per book, to room `event:<event_id>`, server-only. `scope_code` is the short label (club or region short code, country code, or the continent key); `prev_score` is null for a first mark; `official` is false for an unclaimed region or country. |
 | `meet_held`               | `{ event_id, reason \| null, since: <ms epoch> }` | Operator holds the meet, or a new client joins while a hold is active. |
 | `meet_resumed`            | `{ event_id }` | Operator resumes the meet. |
 | `venue.scoreboard_state`  | Canonical venue payload from `lib/venue-state.js` | Emitted to `venue:<event_id>` subscribers after subscribe, active-diver changes, score changes, score announce, hold, and resume. Used by hardware bridges. |
