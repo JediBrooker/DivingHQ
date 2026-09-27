@@ -23,7 +23,7 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { NOTICE_TITLE_MAX } = require("../lib/notices");
-const { isOrgAdminOf } = require("../lib/admin-rows");
+const { isOrgAdminOf, liveAdminIds, liveOrgAdminIds } = require("../lib/admin-rows");
 
 module.exports = function createClubChangesRouter({ pool, verifyToken, bumpTokenVersion }) {
   if (!pool) throw new Error("createClubChangesRouter requires { pool }");
@@ -49,12 +49,8 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
   // Who to tell about a new join request where there's no federation:
   // the club's live admins, or its region's if the club has none.
   async function joinReviewerIds(db, clubId) {
-    const club = await db.query(
-      `SELECT ca.user_id FROM club_admins ca JOIN users u ON u.id = ca.user_id
-        WHERE ca.club_id = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
-      [clubId],
-    );
-    if (club.rows.length) return club.rows.map((r) => r.user_id);
+    const clubAdmins = await liveAdminIds(db, "club", clubId);
+    if (clubAdmins.length) return clubAdmins;
     const region = await db.query(
       `SELECT ra.user_id FROM clubs c
          JOIN region_admins ra ON ra.region_id = c.region_id
@@ -150,19 +146,9 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
   // nobody is, its federation's admins, or DivingHQ where there isn't one,
   // so a club with no admin doesn't just sit there unnoticed.
   async function whoIsLeft(client, scope, row) {
-    const table = scope === "club" ? "club_admins" : "region_admins";
-    const col = scope === "club" ? "club_id" : "region_id";
-    const left = (await client.query(
-      `SELECT a.user_id FROM ${table} a JOIN users u ON u.id = a.user_id
-        WHERE a.${col} = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
-      [row.id],
-    )).rows.map((x) => x.user_id);
+    const left = await liveAdminIds(client, scope, row.id);
     if (left.length) return { ids: left, orphaned: false };
-    const orgAdmins = (await client.query(
-      `SELECT r.user_id FROM user_org_roles r JOIN users u ON u.id = r.user_id
-        WHERE r.org_id = $1 AND r.role = 'org_admin' AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
-      [row.org_id],
-    )).rows.map((x) => x.user_id);
+    const orgAdmins = await liveOrgAdminIds(client, row.org_id);
     if (orgAdmins.length) return { ids: orgAdmins, orphaned: true };
     const sys = (await client.query(
       "SELECT id FROM users WHERE is_system_admin AND deleted_at IS NULL AND suspended_at IS NULL",

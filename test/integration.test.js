@@ -6526,6 +6526,47 @@ test("org transfer: a long club name can't sink the move with its notice", async
   }
 });
 
+// lib/admin-rows.js recipient lookups, shared by region requests, club
+// join requests, the transfer notices, club approvals and claims. Live
+// means not deleted and not suspended; sysadminIds has no filter at all.
+test("admin-rows: live admin lookups skip deleted and suspended accounts", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const adminRows = require("../lib/admin-rows");
+  const X = await setupFixture({ withEvent: false });
+  try {
+    const club = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, 'Lookup Divers') RETURNING id", [X.orgId],
+    )).rows[0].id;
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Lookup Shire', 'LKS') RETURNING id", [X.orgId],
+    )).rows[0].id;
+    const mk = (tag) => insertUser({ orgId: X.orgId, username: `int-lk-${tag}-${X.slug}`, fullName: tag, role: "diver" });
+    const [live, other, suspended, gone] = [await mk("live"), await mk("other"), await mk("susp"), await mk("gone")];
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [suspended]);
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [gone]);
+    for (const u of [live, other, suspended, gone]) {
+      await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, u, X.orgId]);
+      await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region, u, X.orgId]);
+      await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'org_admin')", [u, X.orgId]);
+    }
+    const sorted = (ids) => [...ids].sort();
+    assert.deepEqual(sorted(await adminRows.liveAdminIds(pool, "club", club)), sorted([live, other]));
+    assert.deepEqual(await adminRows.liveAdminIds(pool, "region", region, { except: other }), [live]);
+    assert.deepEqual(
+      sorted(await adminRows.liveOrgAdminIds(pool, X.orgId)), sorted([X.adminId, live, other]),
+      "the fixture's own org admin plus the two live ones",
+    );
+    const sys = await adminRows.sysadminIds(pool);
+    const expected = (await pool.query("SELECT id FROM users WHERE is_system_admin = true")).rows.map((r) => r.id);
+    assert.deepEqual(sorted(sys), sorted(expected));
+    await assert.rejects(adminRows.liveAdminIds(pool, "meet", club), /unknown scope/);
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [X.orgId]).catch(() => {});
+    await teardownFixture(X);
+  }
+});
+
 // Signup used to store a new club's code as typed, cut to 8: no upper
 // case, no format check, no clash check, and a club that goes live at once
 // (no federation) never met the rule club setup and approval apply. The

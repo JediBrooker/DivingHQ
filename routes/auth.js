@@ -20,7 +20,7 @@ const { countryByCode } = require("../lib/countries");
 const { materializeRegions } = require("../lib/regions");
 const claims = require("../lib/claims");
 const { supportContact, suspendedAccountMessage } = require("../lib/support");
-const { liveAdminCount } = require("../lib/admin-rows");
+const { liveAdminCount, sysadminIds } = require("../lib/admin-rows");
 const roleRequests = require("../lib/role-requests");
 const clubApprovals = require("../lib/club-approvals");
 const { recordAudit } = require("../lib/audit");
@@ -789,8 +789,7 @@ module.exports = function createAuthRouter({
     if (!push || typeof push.sendNotification !== "function") return;
     (async () => {
       try {
-        const admins = await pool.query("SELECT id FROM users WHERE is_system_admin = true");
-        const adminIds = admins.rows.map((r) => r.id);
+        const adminIds = await sysadminIds(pool);
         if (!adminIds.length) return;
         const where = countryName || "an unclaimed country";
         await push.sendNotification(adminIds, {
@@ -1440,10 +1439,7 @@ module.exports = function createAuthRouter({
       if (push && typeof push.sendNotification === "function") {
         (async () => {
           try {
-            const admins = await pool.query(
-              "SELECT id FROM users WHERE is_system_admin = true",
-            );
-            const adminIds = admins.rows.map((r) => r.id);
+            const adminIds = await sysadminIds(pool);
             if (adminIds.length) {
               await push.sendNotification(adminIds, {
                 category:   "org_pending",

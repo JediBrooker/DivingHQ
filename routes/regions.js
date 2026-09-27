@@ -29,7 +29,7 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { catalogFor, materializeRegions } = require("../lib/regions");
-const { removeAdmin, isOrgAdminOf } = require("../lib/admin-rows");
+const { removeAdmin, isOrgAdminOf, liveAdminIds } = require("../lib/admin-rows");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -146,18 +146,6 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
     }
   }
 
-  // Live admins of a club or region, less whoever is acting.
-  async function liveAdminIds(scope, id, exceptId) {
-    const [table, column] = scope === "club" ? ["club_admins", "club_id"] : ["region_admins", "region_id"];
-    const r = await pool.query(
-      `SELECT a.user_id FROM ${table} a JOIN users u ON u.id = a.user_id
-        WHERE a.${column} = $1 AND a.user_id <> $2
-          AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
-      [id, exceptId],
-    );
-    return r.rows.map((row) => row.user_id);
-  }
-
   const regionName = (rg) => rg?.claimed_name || rg?.name || "no region";
 
   // Put a club in a region (or take it out with region_id: null). The
@@ -255,7 +243,7 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
               org_id: club.org_id, entity_type: "club", entity_id: club.id, entity_name: club.name,
               action: "club.region_requested", metadata: { from: club.region_id, to: to.id },
             });
-            await notifyUsers(await liveAdminIds("region", to.id, req.user.id), {
+            await notifyUsers(await liveAdminIds(pool, "region", to.id, { except: req.user.id }), {
               category: "region_request",
               title: `${club.name} wants to join ${regionName(to)}`,
               body: "Accept or decline it on your region page.",
@@ -292,7 +280,7 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
       // Someone other than the club moved it (a region accepting or
       // letting go, or the federation), so the club hears about it.
       if (!club.caller_is_admin) {
-        await notifyUsers(await liveAdminIds("club", club.id, req.user.id), {
+        await notifyUsers(await liveAdminIds(pool, "club", club.id, { except: req.user.id }), {
           category: "region_decision",
           title: to ? `${club.name} is now in ${regionName(to)}` : `${club.name} was taken out of ${regionName(from)}`,
           body: null,
@@ -338,7 +326,7 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
         metadata: { region_id: club.requested_region_id },
       });
       if (!club.caller_is_admin) {
-        await notifyUsers(await liveAdminIds("club", club.id, req.user.id), {
+        await notifyUsers(await liveAdminIds(pool, "club", club.id, { except: req.user.id }), {
           category: "region_decision",
           title: `${club.claimed_name || club.region_name} declined ${club.name}'s request to join`,
           body: null,
