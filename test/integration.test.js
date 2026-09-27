@@ -2023,3 +2023,85 @@ test("claiming an old account keeps its synchro-partner snapshot", async (t) => 
     await claimKit.wipe(CODE);
   }
 });
+
+// event_team_rep_code only polls the divers actually on the team's
+// entry. A withdrawn diver or a reserve from another state shouldn't
+// knock an all-North team down to the country code.
+test("team labels leave withdrawn and reserve divers out of the vote", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CXR";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Flying Fish Cove Divers", { new_club_short_code: "FFC" });
+    const B = await claimKit.founder(CODE, "Drumsite Divers", { new_club_short_code: "DRM" });
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const region = async (name, code) => (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, $2, $3) RETURNING id", [orgId, name, code],
+    )).rows[0].id;
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [await region("North", "NTH"), A.clubId]);
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [await region("South", "STH"), B.clubId]);
+
+    const diver = async (fullName, clubId) => {
+      const id = await insertUser({ orgId, role: "diver", fullName, username: `int-tw-${crypto.randomBytes(3).toString("hex")}` });
+      await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [clubId, id]);
+      return id;
+    };
+    const n1 = await diver("North One", A.clubId);
+    const n2 = await diver("North Two", A.clubId);
+    const quitter = await diver("South Withdrawn", B.clubId);
+    const bench = await diver("South Reserve", B.clubId);
+
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Island Teams", represent_as: "region" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "Mixed Team", gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 3, event_type: "team", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const eventId = ev.body.id;
+    const teamId = (await pool.query(
+      "INSERT INTO teams (org_id, name, short_code) VALUES ($1, 'Cove A', 'CVA') RETURNING id", [orgId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO event_teams (event_id, team_id) VALUES ($1, $2)", [eventId, teamId]);
+    const dive = (await pool.query("SELECT id FROM dive_directory WHERE height = 3 LIMIT 1")).rows[0].id;
+    const judges = [];
+    for (let i = 1; i <= 5; i++) {
+      const j = await insertUser({ orgId, role: "judge", fullName: `Judge ${i}`, username: `int-twj${i}-${crypto.randomBytes(3).toString("hex")}` });
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)", [eventId, j, i]);
+      judges.push(j);
+    }
+    for (const [who, round, reserve] of [[n1, 1, false], [n2, 2, false], [quitter, 3, false], [bench, 3, true]]) {
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, team_id, dive_id, round_number, is_reserve)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [eventId, who, teamId, dive, round, reserve],
+      );
+    }
+    for (const [who, round] of [[n1, 1], [n2, 2]]) {
+      for (const j of judges) {
+        await pool.query(
+          "INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, $5, 7)",
+          [eventId, who, j, dive, round],
+        );
+      }
+    }
+    await pool.query("UPDATE competitor_dive_lists SET withdrawn_at = now() WHERE event_id = $1 AND competitor_id = $2", [eventId, quitter]);
+
+    const label = async () => {
+      const r = await fetchJson("GET", `/api/scoreboard/${eventId}?cache=skip`, { token: A.token });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      assert.equal(r.body.standings.length, 1, JSON.stringify(r.body.standings));
+      return `${r.body.standings[0].country_code}/${r.body.standings[0].club_name}`;
+    };
+    assert.equal(await label(), "NTH/CVA");
+
+    // Put the southerner back on the team and the vote is split, so the
+    // team falls back to the country. Proves the withdrawn row was what
+    // kept it out, not some accident of the fixture.
+    await pool.query("UPDATE competitor_dive_lists SET withdrawn_at = NULL WHERE event_id = $1 AND competitor_id = $2", [eventId, quitter]);
+    assert.equal(await label(), `${CODE}/CVA`);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
