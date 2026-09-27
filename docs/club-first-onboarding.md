@@ -477,8 +477,11 @@ international invitations, the audit log, and the 2FA requirement.
 
 **Role requests.** `lib/role-requests.js` decides who reviews: org admins
 under a federation; in an unclaimed country the requester's club admins
-(diver/judge/referee only, never self-approving an official role); the
-sysadmin as fallback. Club admins review on `/club` (My club), where in an
+(diver/judge only, never self-approving an official role); the
+sysadmin as fallback. Referee went to the sysadmin after launch: it's an
+org-wide controller role (`socketCanManageEvent` and every
+`requireRoleOrEventDelegate([... 'referee'])` gate), so a club-minted
+referee could drive any other club's live meet in the country. Club admins review on `/club` (My club), where in an
 unclaimed country they also manage co-admins (members only, never the
 last one).
 

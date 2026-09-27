@@ -69,7 +69,8 @@
       "submit_idle": "Konto erstellen",
       "submit_loading": "Erstellen...",
       "already_have_account": "Sie haben bereits ein Konto?",
-      "sign_in_link": "Anmelden"
+      "sign_in_link": "Anmelden",
+      "referee_note_unclaimed": "Solange es hier noch keinen Verband gibt, prüft DivingHQ Anfragen für die Schiedsrichterrolle, nicht Ihr Verein: Ein Schiedsrichter kann bei den Wettkämpfen jedes Vereins eingreifen."
     },
     "register_org": {
       "title": "Organisation registrieren",

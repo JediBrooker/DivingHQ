@@ -69,7 +69,8 @@
       "submit_idle": "Utwórz konto",
       "submit_loading": "Tworzenie...",
       "already_have_account": "Masz już konto?",
-      "sign_in_link": "Zaloguj się"
+      "sign_in_link": "Zaloguj się",
+      "referee_note_unclaimed": "Dopóki nie ma tu federacji, prośby o rolę sędziego głównego rozpatruje DivingHQ, a nie Twój klub: sędzia główny może działać na zawodach każdego klubu."
     },
     "register_org": {
       "title": "Rejestracja organizacji",

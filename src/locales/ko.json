@@ -69,7 +69,8 @@
       "submit_idle": "계정 만들기",
       "submit_loading": "만드는 중...",
       "already_have_account": "이미 계정이 있으십니까?",
-      "sign_in_link": "로그인"
+      "sign_in_link": "로그인",
+      "referee_note_unclaimed": "아직 이 나라에 연맹이 없으므로 주심 요청은 클럽이 아니라 DivingHQ가 검토합니다. 주심은 모든 클럽의 대회에서 권한을 가질 수 있기 때문입니다."
     },
     "register_org": {
       "title": "조직 등록",

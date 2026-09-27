@@ -69,7 +69,8 @@
       "submit_idle": "Opprett konto",
       "submit_loading": "Oppretter...",
       "already_have_account": "Har du allerede en konto?",
-      "sign_in_link": "Logg inn"
+      "sign_in_link": "Logg inn",
+      "referee_note_unclaimed": "Så lenge det ikke finnes et forbund her, vurderer DivingHQ forespørsler om å bli overdommer, ikke klubben din: en overdommer kan handle ved alle klubbers stevner."
     },
     "register_org": {
       "title": "Registrer organisasjon",

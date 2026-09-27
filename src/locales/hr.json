@@ -69,7 +69,8 @@
       "submit_idle": "Stvori račun",
       "submit_loading": "Stvaranje...",
       "already_have_account": "Već imate račun?",
-      "sign_in_link": "Prijava"
+      "sign_in_link": "Prijava",
+      "referee_note_unclaimed": "Dok ovdje nema saveza, zahtjeve za ulogu glavnog suca pregledava DivingHQ, a ne vaš klub: glavni sudac može djelovati na natjecanjima bilo kojeg kluba."
     },
     "register_org": {
       "title": "Registracija organizacije",

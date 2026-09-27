@@ -69,7 +69,8 @@
       "submit_idle": "Skapa konto",
       "submit_loading": "Skapar...",
       "already_have_account": "Har du redan ett konto?",
-      "sign_in_link": "Logga in"
+      "sign_in_link": "Logga in",
+      "referee_note_unclaimed": "Så länge det inte finns något förbund här granskar DivingHQ förfrågningar om att bli överdomare, inte din klubb: en överdomare kan agera vid alla klubbars tävlingar."
     },
     "register_org": {
       "title": "Registrera organisation",

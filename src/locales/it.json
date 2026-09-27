@@ -69,7 +69,8 @@
       "submit_idle": "Crea account",
       "submit_loading": "Creazione...",
       "already_have_account": "Hai già un account?",
-      "sign_in_link": "Accedi"
+      "sign_in_link": "Accedi",
+      "referee_note_unclaimed": "Finché qui non c'è una federazione, le richieste di arbitro le esamina DivingHQ, non il tuo club: un arbitro può intervenire nelle gare di qualsiasi club."
     },
     "register_org": {
       "title": "Registra organizzazione",

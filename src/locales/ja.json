@@ -69,7 +69,8 @@
       "submit_idle": "アカウントを作成",
       "submit_loading": "作成中...",
       "already_have_account": "すでにアカウントをお持ちですか？",
-      "sign_in_link": "サインイン"
+      "sign_in_link": "サインイン",
+      "referee_note_unclaimed": "この国にはまだ連盟がないため、主審の申請はクラブではなくDivingHQが審査します。主審はどのクラブの大会にも関与できるためです。"
     },
     "register_org": {
       "title": "組織を登録",

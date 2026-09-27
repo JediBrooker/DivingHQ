@@ -1575,3 +1575,81 @@ test("email verification: the link signs you in, a lost one can be resent", asyn
     await claimKit.wipe("FSM");
   }
 });
+
+// ---------------------------------------------------------------------
+// Delegate permissions (track c). Each test owns one country code nobody
+// else in test/ uses, and wipes it before and after.
+// ---------------------------------------------------------------------
+
+// Sign up in a country (or org), verify, sign in. Returns the login body
+// bits the tests below lean on.
+async function delegateSignUp(body) {
+  const username = `int-dg-${crypto.randomBytes(4).toString("hex")}`;
+  const r = await fetchJson("POST", "/api/auth/register", {
+    body: { username, full_name: body.full_name || username, password: TEST_PASSWORD,
+            email: `${username}@example.test`, ...body },
+  });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  await pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1", [username]);
+  const login = await fetchJson("POST", "/api/auth/login", { body: { username, password: TEST_PASSWORD } });
+  assert.equal(login.status, 200, JSON.stringify(login.body));
+  return {
+    username, id: login.body.id, token: login.body.token,
+    clubId: login.body.club_admin_of?.[0]?.id || null,
+    orgId: (await pool.query("SELECT org_id FROM users WHERE id = $1", [login.body.id])).rows[0].org_id,
+  };
+}
+
+test("unclaimed country: referee requests go to the sysadmin, judge stays with the club", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "STP";
+  await claimKit.wipe(CODE);
+  const roleRequests = require("../lib/role-requests");
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Sao Tome Divers" });
+    const ref = await delegateSignUp({ country_code: CODE, club_id: A.clubId, requested_role: "referee" });
+    const judge = await delegateSignUp({ country_code: CODE, club_id: A.clubId, requested_role: "judge" });
+
+    // Who gets told: the club for a judge, the sysadmin for a referee.
+    assert.equal((await roleRequests.reviewersFor(pool, ref.id, A.orgId, "referee")).via, "sysadmin");
+    assert.equal((await roleRequests.reviewersFor(pool, judge.id, A.orgId, "judge")).via, "club");
+
+    const aList = (await fetchJson("GET", "/api/role-requests", { token: A.token })).body;
+    assert.ok(aList.some((r) => r.user_id === judge.id), "the club still reviews judges");
+    assert.ok(!aList.some((r) => r.user_id === ref.id), "but never sees the referee request");
+    const refRq = (await pool.query(
+      "SELECT id FROM role_requests WHERE user_id = $1 AND status = 'pending'", [ref.id],
+    )).rows[0].id;
+    assert.equal((await fetchJson("POST", `/api/role-requests/${refRq}/review`, {
+      token: A.token, body: { decision: "approved" },
+    })).status, 403);
+    const dash = await fetchJson("GET", "/api/dashboard", { token: A.token });
+    assert.ok(!(dash.body.role_requests || []).some((r) => r.user_id === ref.id), "dashboard feed agrees");
+
+    // A region admin one level up can't grant it either.
+    const reg = await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Principe', 'PRI') RETURNING id", [A.orgId],
+    );
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [reg.rows[0].id, A.clubId]);
+    const R = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [reg.rows[0].id, R.id, A.orgId]);
+    assert.equal((await fetchJson("POST", `/api/role-requests/${refRq}/review`, {
+      token: R.token, body: { decision: "approved" },
+    })).status, 403);
+
+    // The sysadmin sees it and decides.
+    const sys = await claimKit.login("admin", "admin");
+    const sysList = (await fetchJson("GET", "/api/role-requests", { token: sys.token })).body;
+    assert.ok(sysList.some((r) => r.id === refRq));
+    assert.equal((await fetchJson("POST", `/api/role-requests/${refRq}/review`, {
+      token: sys.token, body: { decision: "approved" },
+    })).status, 200);
+    const judgeRq = aList.find((r) => r.user_id === judge.id).id;
+    assert.equal((await fetchJson("POST", `/api/role-requests/${judgeRq}/review`, {
+      token: A.token, body: { decision: "approved" },
+    })).status, 200);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

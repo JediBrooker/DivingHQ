@@ -69,7 +69,8 @@
       "submit_idle": "Luo tili",
       "submit_loading": "Luodaan...",
       "already_have_account": "Onko sinulla jo tili?",
-      "sign_in_link": "Kirjaudu sisään"
+      "sign_in_link": "Kirjaudu sisään",
+      "referee_note_unclaimed": "Koska täällä ei vielä ole liittoa, DivingHQ käsittelee ylituomaripyynnöt eikä seurasi: ylituomari voi toimia minkä tahansa seuran kilpailuissa."
     },
     "register_org": {
       "title": "Rekisteröi organisaatio",

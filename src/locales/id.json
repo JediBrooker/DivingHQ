@@ -69,7 +69,8 @@
       "submit_idle": "Buat akun",
       "submit_loading": "Membuat...",
       "already_have_account": "Sudah punya akun?",
-      "sign_in_link": "Masuk"
+      "sign_in_link": "Masuk",
+      "referee_note_unclaimed": "Selama belum ada federasi di sini, DivingHQ yang meninjau permintaan wasit kepala, bukan klub Anda: wasit kepala dapat bertindak di kompetisi klub mana pun."
     },
     "register_org": {
       "title": "Daftarkan organisasi",

@@ -69,7 +69,8 @@
       "submit_idle": "Créer un compte",
       "submit_loading": "Création...",
       "already_have_account": "Vous avez déjà un compte ?",
-      "sign_in_link": "Se connecter"
+      "sign_in_link": "Se connecter",
+      "referee_note_unclaimed": "Tant qu'il n'y a pas de fédération ici, c'est DivingHQ qui examine les demandes d'arbitre, pas votre club : un arbitre peut intervenir sur les compétitions de n'importe quel club."
     },
     "register_org": {
       "title": "Inscrire une organisation",

@@ -69,7 +69,8 @@
       "submit_idle": "Fiók létrehozása",
       "submit_loading": "Létrehozás...",
       "already_have_account": "Már van fiókja?",
-      "sign_in_link": "Bejelentkezés"
+      "sign_in_link": "Bejelentkezés",
+      "referee_note_unclaimed": "Amíg itt nincs szövetség, a versenybírói kérelmeket a DivingHQ bírálja el, nem a klubja: a versenybíró bármely klub versenyén eljárhat."
     },
     "register_org": {
       "title": "Szervezet regisztrációja",

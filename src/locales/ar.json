@@ -69,7 +69,8 @@
       "submit_idle": "إنشاء حساب",
       "submit_loading": "جارٍ الإنشاء...",
       "already_have_account": "لديك حساب بالفعل؟",
-      "sign_in_link": "تسجيل الدخول"
+      "sign_in_link": "تسجيل الدخول",
+      "referee_note_unclaimed": "لا يوجد اتحاد هنا بعد، لذا تراجع DivingHQ طلبات الحكم الرئيسي وليس ناديك: فالحكم الرئيسي يمكنه العمل في لقاء أي نادٍ."
     },
     "register_org": {
       "title": "تسجيل منظمة",

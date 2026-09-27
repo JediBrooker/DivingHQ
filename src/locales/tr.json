@@ -69,7 +69,8 @@
       "submit_idle": "Hesap Oluştur",
       "submit_loading": "Oluşturuluyor...",
       "already_have_account": "Zaten hesabınız var mı?",
-      "sign_in_link": "Giriş yapın"
+      "sign_in_link": "Giriş yapın",
+      "referee_note_unclaimed": "Burada henüz bir federasyon olmadığından baş hakem taleplerini kulübünüz değil DivingHQ inceler: baş hakem her kulübün yarışmasında yetki kullanabilir."
     },
     "register_org": {
       "title": "Kuruluş Kaydı",

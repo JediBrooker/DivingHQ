@@ -69,7 +69,8 @@
       "submit_idle": "Cipta akaun",
       "submit_loading": "Mencipta...",
       "already_have_account": "Sudah ada akaun?",
-      "sign_in_link": "Log masuk"
+      "sign_in_link": "Log masuk",
+      "referee_note_unclaimed": "Selagi belum ada persekutuan di sini, DivingHQ yang menyemak permintaan hakim utama, bukan kelab anda: hakim utama boleh bertindak di pertandingan mana-mana kelab."
     },
     "register_org": {
       "title": "Daftarkan organisasi",

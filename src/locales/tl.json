@@ -69,7 +69,8 @@
       "submit_idle": "Gumawa ng account",
       "submit_loading": "Ginagawa...",
       "already_have_account": "May account ka na?",
-      "sign_in_link": "Mag-sign in"
+      "sign_in_link": "Mag-sign in",
+      "referee_note_unclaimed": "Habang wala pang federation dito, ang DivingHQ ang sumusuri sa mga kahilingan para sa pangunahing hukom, hindi ang iyong club: puwedeng kumilos ang pangunahing hukom sa meet ng anumang club."
     },
     "register_org": {
       "title": "Irehistro ang organisasyon",

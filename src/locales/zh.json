@@ -69,7 +69,8 @@
       "submit_idle": "创建账户",
       "submit_loading": "创建中...",
       "already_have_account": "已有账户？",
-      "sign_in_link": "登录"
+      "sign_in_link": "登录",
+      "referee_note_unclaimed": "此地尚无协会，因此主裁判申请由 DivingHQ 而非您的俱乐部审核：主裁判可以在任何俱乐部的比赛中行使职权。"
     },
     "register_org": {
       "title": "注册机构",

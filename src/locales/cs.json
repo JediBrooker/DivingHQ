@@ -69,7 +69,8 @@
       "submit_idle": "Vytvořit účet",
       "submit_loading": "Vytváření...",
       "already_have_account": "Už máte účet?",
-      "sign_in_link": "Přihlaste se"
+      "sign_in_link": "Přihlaste se",
+      "referee_note_unclaimed": "Dokud tu není federace, žádosti o roli vrchního rozhodčího posuzuje DivingHQ, ne váš klub: vrchní rozhodčí může zasahovat do závodů kteréhokoli klubu."
     },
     "register_org": {
       "title": "Registrace organizace",

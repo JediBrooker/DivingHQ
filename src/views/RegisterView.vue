@@ -324,6 +324,11 @@ async function handleSubmit() {
           <option v-if="!noFederation" value="meet_manager">{{ $t('role.manager') }}</option>
           <option value="">{{ $t('auth.register.role_spectator') }}</option>
         </select>
+        <!-- A club can't hand out referee where there's no federation
+             (lib/role-requests.js), so say who will look at it. -->
+        <p v-if="noFederation && requestedRole === 'referee'" class="hint-line" data-test-id="referee-note">
+          {{ $t('auth.register.referee_note_unclaimed') }}
+        </p>
       </div>
       <div class="field" v-if="requestedRole">
         <label class="label">{{ $t('auth.register.note_label') }}</label>
