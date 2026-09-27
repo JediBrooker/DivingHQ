@@ -41,7 +41,13 @@ import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import { useFeaturesStore } from '@/stores/features'
 import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe, Users, Map } from '@lucide/vue'
+
+// Payments and classes are switched off at launch (migration 085). Their
+// guide pages stay out of the bookmarks until the flags come on, rather
+// than advertising screens nobody can open.
+const features = useFeaturesStore()
 
 // TOC entries match the in-template section ids. Order matters,
 // it's the visual reading order. Keep the keys aligned with the
@@ -436,11 +442,11 @@ onBeforeUnmount(() => observer?.disconnect())
               <RouterLink to="/guide/keyboard-shortcuts">{{ $t('guide.next.bookmark_shortcuts') }}</RouterLink>
               — {{ $t('guide.next.bookmark_shortcuts_desc') }}
             </li>
-            <li>
+            <li v-if="features.payments">
               <RouterLink to="/guide/payments">{{ $t('guide.next.bookmark_payments') }}</RouterLink>
               — {{ $t('guide.next.bookmark_payments_desc') }}
             </li>
-            <li>
+            <li v-if="features.classes">
               <RouterLink to="/guide/classes">{{ $t('guide.next.bookmark_classes') }}</RouterLink>
               — {{ $t('guide.next.bookmark_classes_desc') }}
             </li>

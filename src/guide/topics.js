@@ -45,8 +45,8 @@ export const GUIDE_SECTIONS = [
   {
     label: 'Payments & classes',
     topics: [
-      { slug: 'payments', title: 'Payments', md: payments },
-      { slug: 'classes', title: 'Classes', md: classes },
+      { slug: 'payments', title: 'Payments', md: payments, feature: 'payments' },
+      { slug: 'classes', title: 'Classes', md: classes, feature: 'classes' },
     ],
   },
   {
@@ -66,16 +66,30 @@ export const GUIDE_SECTIONS = [
   },
 ]
 
-const ALL_TOPICS = GUIDE_SECTIONS.flatMap(s => s.topics)
-
-export function getTopicBySlug(slug) {
-  return ALL_TOPICS.find(t => t.slug === slug) ?? null
+// A topic with a `feature` only exists while that kill switch is on
+// (src/stores/features). `isOn` is the store's enabled(); leave it out and
+// every topic counts, which is what a caller without the store wants.
+// Sections whose topics all drop out go with them, so there's no empty
+// "Payments & classes" header in the sidebar.
+export function visibleSections(isOn = () => true) {
+  return GUIDE_SECTIONS
+    .map(s => ({ ...s, topics: s.topics.filter(t => !t.feature || isOn(t.feature)) }))
+    .filter(s => s.topics.length)
 }
 
-export function getAdjacentTopics(slug) {
-  const idx = ALL_TOPICS.findIndex(t => t.slug === slug)
+function visibleTopics(isOn) {
+  return visibleSections(isOn).flatMap(s => s.topics)
+}
+
+export function getTopicBySlug(slug, isOn) {
+  return visibleTopics(isOn).find(t => t.slug === slug) ?? null
+}
+
+export function getAdjacentTopics(slug, isOn) {
+  const all = visibleTopics(isOn)
+  const idx = all.findIndex(t => t.slug === slug)
   return {
-    prev: idx > 0 ? ALL_TOPICS[idx - 1] : null,
-    next: idx >= 0 && idx < ALL_TOPICS.length - 1 ? ALL_TOPICS[idx + 1] : null,
+    prev: idx > 0 ? all[idx - 1] : null,
+    next: idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null,
   }
 }

@@ -2,16 +2,23 @@
 import { computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
-import { GUIDE_SECTIONS, getTopicBySlug, getAdjacentTopics } from './topics.js'
+import { visibleSections, getTopicBySlug, getAdjacentTopics } from './topics.js'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import { useFeaturesStore } from '@/stores/features'
 
 const route = useRoute()
 const router = useRouter()
 
+// Topics for switched-off areas (payments, classes) are left out of the
+// sidebar and pager, and a direct link to one reads as not found.
+const features = useFeaturesStore()
+const isOn = (key) => features.enabled(key)
+const sections = computed(() => visibleSections(isOn))
+
 const slug = computed(() => route.params.topic)
-const topic = computed(() => getTopicBySlug(slug.value))
-const adjacent = computed(() => getAdjacentTopics(slug.value))
+const topic = computed(() => getTopicBySlug(slug.value, isOn))
+const adjacent = computed(() => getAdjacentTopics(slug.value, isOn))
 
 const rendered = computed(() => {
   if (!topic.value) return ''
@@ -44,7 +51,7 @@ watch(slug, () => nextTick(() => window.scrollTo(0, 0)))
     <div class="gt-shell">
       <nav class="gt-sidebar">
         <router-link to="/guide" class="gt-home-link">User Guide</router-link>
-        <template v-for="section in GUIDE_SECTIONS" :key="section.label">
+        <template v-for="section in sections" :key="section.label">
           <div class="gt-group-label">{{ section.label }}</div>
           <ul class="gt-group-list">
             <li v-for="t in section.topics" :key="t.slug">

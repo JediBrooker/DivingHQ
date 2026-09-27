@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useFeaturesStore } from '@/stores/features'
 
 const { t } = useI18n()
 import { confirmAction } from '@/composables/useConfirm'
@@ -43,6 +44,15 @@ const isSysAdmin = computed(() => !!auth.user?.is_system_admin)
 // Only the federation admin configures club fees. Meet managers can view
 // the roster + who's paid but not the billing setup.
 const isOrgAdmin = computed(() => (auth.user?.org_roles || []).includes('org_admin'))
+// Affiliation / accreditation are paid through Stripe. With payments
+// switched off nobody can have paid, so the column read as every club
+// being in arrears. Hide it (and the note pointing at hidden pages).
+const features = useFeaturesStore()
+const billingOn = computed(() => features.enabled('payments'))
+// Full-width rows (loading, empty, errors) span however many columns
+// are actually showing.
+const tableCols = computed(() =>
+  5 + (isSysAdmin.value ? 1 : 0) + (regions.value.regions.length ? 1 : 0) + (billingOn.value ? 1 : 0))
 
 const clubOrgs = computed(() => {
   const seen = new Map()
@@ -258,7 +268,7 @@ onMounted(async () => {
     </div>
 
     <!-- Club billing (affiliation + accreditation) -->
-    <p v-if="isOrgAdmin" class="billing-note">
+    <p v-if="isOrgAdmin && billingOn" class="billing-note">
       Set your clubs’ affiliation and accreditation prices in Payments →
       Fees &amp; pricing. Club admins pay from their club’s Classes → Payouts
       page; the Billing column below shows who’s paid.
@@ -338,20 +348,20 @@ onMounted(async () => {
             <th v-if="isSysAdmin">Organisation</th>
             <th v-if="regions.regions.length">Region</th>
             <th class="num-col">{{ $t('clubs.col_members') }}</th>
-            <th class="affil-head">Billing</th>
+            <th v-if="billingOn" class="affil-head">Billing</th>
             <th>{{ $t('clubs.col_created') }}</th>
             <th class="actions-col">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td :colspan="(isSysAdmin ? 7 : 6) + (regions.regions.length ? 1 : 0)" class="empty-state">Loading…</td>
+            <td :colspan="tableCols" class="empty-state">Loading…</td>
           </tr>
           <tr v-else-if="errorMsg">
-            <td :colspan="(isSysAdmin ? 7 : 6) + (regions.regions.length ? 1 : 0)" class="empty-state">{{ errorMsg }}</td>
+            <td :colspan="tableCols" class="empty-state">{{ errorMsg }}</td>
           </tr>
           <tr v-else-if="!filteredClubs.length && !clubs.length">
-            <td :colspan="(isSysAdmin ? 7 : 6) + (regions.regions.length ? 1 : 0)">
+            <td :colspan="tableCols">
               <div class="empty-state-card">
                 <div class="empty-state-icon">🏢</div>
                 <div class="empty-state-title">No clubs yet</div>
@@ -366,7 +376,7 @@ onMounted(async () => {
             </td>
           </tr>
           <tr v-else-if="!filteredClubs.length">
-            <td :colspan="(isSysAdmin ? 7 : 6) + (regions.regions.length ? 1 : 0)" class="empty-state">
+            <td :colspan="tableCols" class="empty-state">
               No clubs match the current filter.
             </td>
           </tr>
@@ -395,7 +405,7 @@ onMounted(async () => {
                 <span v-if="c.member_count" class="member-count">{{ c.member_count }}</span>
                 <span v-else class="empty-pill">empty</span>
               </td>
-              <td class="affil-cell">
+              <td v-if="billingOn" class="affil-cell">
                 <span class="affil-pill" :class="c.affiliation_active ? 'on' : 'off'"
                       v-tip="'Annual affiliation'">Affil {{ c.affiliation_active ? '✓' : '—' }}</span>
                 <span class="affil-pill" :class="c.accreditation_active ? 'on' : 'off'"
@@ -422,7 +432,7 @@ onMounted(async () => {
               <td v-if="isSysAdmin" class="dim">{{ c.org_name }}</td>
               <td v-if="regions.regions.length" class="dim">—</td>
               <td class="num-col dim">{{ c.member_count }}</td>
-              <td class="dim">—</td>
+              <td v-if="billingOn" class="dim">—</td>
               <td class="dim">{{ fmtDate(c.created_at) }}</td>
               <td class="actions-col">
                 <button class="btn btn-ghost btn-sm" @click="cancelEdit">Cancel</button>
