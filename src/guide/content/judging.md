@@ -6,7 +6,7 @@ The judge view (`/judge`) is the single-purpose, phone-friendly screen that scor
 
 ## Before the meet
 
-You'll need an account with the `judge` role in your federation. The org admin or meet manager creates it from User Manager → see [Admin Tasks](/guide/admin-tasks). They'll send you a username + temporary password.
+You'll need an account with the `judge` role. [Sign up](/register), pick your club, and choose **Judge** under "I want to register as". Your club admin (or your federation, once it runs your country on DivingHQ) approves it, and you can sign in while you wait. A federation admin can also create the account for you from User Manager (see [Admin Tasks](/guide/admin-tasks)) and send you the details.
 
 When the meet manager assigns the panel for an event, you become officially eligible to score that event. You'll see it listed when you sign in.
 

@@ -1,53 +1,46 @@
 # FAQ & Troubleshooting
 
-Common questions, error states, and "why is X happening" answers, plus a glossary of terms used elsewhere in the wiki.
+Common questions, error states, and "why is X happening" answers, plus a glossary of terms used elsewhere in the guide.
 
 ## Find the right fix
 
 | If the problem is about… | Start here |
 |---|---|
-| Login, registration, email, setup wizard | [Setup](#setup) |
+| Signing up, confirming your email, signing in | [Getting started](#getting-started) |
 | Clubs, regions, federations and claims | [Clubs and federations](#clubs-and-federations) |
 | Start Event, Control Room, scoring, judges | [Running a meet](#running-a-meet) |
 | Boards, warmups, judge overlaps, delays | [Session scheduler](#session-scheduler) |
 | Synchro panels and partners | [Synchro events](#synchro-events) |
+| Passwords, two-factor, signing out everywhere | [Authentication](#authentication) |
 | Scoreboard, PDFs, performance | [Performance](#performance) |
 
-## Setup
+Can't find it here? Write to [support@divinghq.app](mailto:support@divinghq.app) and a person will answer.
 
-### "I just registered my federation, but I can't sign in"
+## Getting started
 
-New federations land in `pending` status. The system administrator (the person running the DivingHQ server) needs to approve it. If you self-host, the bootstrap `admin` account can approve from User Manager → org filter → status = pending.
+### "I signed up, but I can't sign in yet"
 
-### "Where do I get the system admin account?"
+Confirm your email address first. As soon as you sign up we send a "confirm your email" message with a link; click it, then sign in. The link lasts 24 hours.
 
-`init.sql` creates one on first install: username `admin`, password `admin`. **Change the password immediately** from User Manager. If you've lost it, a sysadmin with database access can reset:
+Nothing arrived? Give it a few minutes and check your spam or junk folder. Then try to sign in anyway: the sign-in page tells you the address isn't confirmed yet and offers **Send a new verification link**.
 
-```sql
-UPDATE users
-SET password = crypt('new-password', gen_salt('bf'))
-WHERE username = 'admin';
-```
+Roles don't hold up signing in. Everyone starts as a spectator, and the role you asked for (diver, judge, referee) arrives once your club admin or federation approves it. Until then you can sign in and look around.
 
-### "I just signed up as an org admin and the dashboard sent me to /setup — what is that?"
+### "I registered a federation and it says it's waiting for approval"
 
-The **first-run setup wizard**. New federations land on a dashboard with empty everything and no obvious starting point, so DivingHQ auto-redirects fresh org admins (zero events AND zero clubs) to a four-step wizard: Welcome → Create your first club → Invite your people (with a copy-able registration link) → Build your first event. Each step is skip-able; the top-right `Skip setup →` link bails out entirely. The redirect doesn't fire on subsequent visits — a localStorage stamp remembers you've been there.
+When nobody from your country is on DivingHQ yet, DivingHQ reviews a new federation before it goes live, so nobody can become a country's governing body just by saying so. You'll get an email as soon as it's approved.
 
-If you got redirected to `/setup` and you'd rather not deal with it right now, click `Skip setup →`. You won't be redirected again.
+If clubs from your country were already on DivingHQ, your registration opened a claim instead, and they vote on it. See [Roles & Permissions → Claims](/guide/roles-and-permissions#claims).
 
-### "Email isn't sending — registration didn't get a welcome message"
+### "I just signed up as a federation admin and the dashboard sent me to /setup. What is that?"
 
-Without `CF_ACCOUNT_ID` and `CF_EMAIL_TOKEN` set in `.env`, the email helpers silently no-op. DivingHQ sends through Cloudflare Email Sending; configure it if you want welcomes / password resets / meet notifications:
+The **first-run setup wizard**. A new federation starts with an empty dashboard and no obvious first step, so DivingHQ sends a federation admin with no events and no clubs to a four-step wizard: Welcome → Create your first club → Invite your people (with a registration link to copy) → Build your first event. Every step can be skipped, and the `Skip setup →` link at the top leaves it entirely. It only redirects you once: your browser remembers you've been.
 
-```
-CF_ACCOUNT_ID=...            # your Cloudflare account ID
-CF_EMAIL_TOKEN=...           # API token with the Email Sending permission
-EMAIL_FROM=noreply@your-domain
-```
+### "My members aren't getting our emails"
 
-The `EMAIL_FROM` domain must be onboarded to Cloudflare Email Sending.
+Every DivingHQ email comes from the same sender, so ask them to check spam or junk first, and to add the sender to their contacts. Most missing emails are sitting there. A member waiting on a confirmation link can get a fresh one from the sign-in page, and a federation admin can resend it from the member's row in **User Manager**.
 
-`APP_BASE_URL` also needs to be set so reset-password links point at the right host.
+Still nothing, or the address was mistyped at sign-up? Write to [support@divinghq.app](mailto:support@divinghq.app) with the address and we'll look into it.
 
 ## Clubs and federations
 
@@ -235,7 +228,7 @@ If all three check out and it's still wrong, the system admin can re-run the rec
 
 ### "I forgot my password"
 
-Click **Reset it** on the login page. Enter your username + email; you'll get a single-use link valid for 30 minutes. Use it from any device.
+Click **Reset it** on the sign-in page and enter the email address on your account. You'll get a single-use link valid for 30 minutes. Use it from any device.
 
 ### "The reset link doesn't work / says 'expired'"
 
@@ -247,13 +240,13 @@ The link is single-use AND time-limited. Causes of failure:
 
 ### "I need to log out everywhere"
 
-Change your password from your account settings. Every existing JWT for your user becomes invalid (token version is bumped server-side); every session is forced to re-login.
+Change your password from your profile (**Change Password**). Every existing session for your user becomes invalid (token version is bumped server-side); every session is forced to re-login.
 
 The system admin can also force a logout for any user from User Manager — useful if a phone is lost.
 
-### "Two-factor authentication?"
+### "How do I turn on two-factor authentication?"
 
-DivingHQ doesn't currently support TOTP/2FA. Org admins can mitigate with strong passwords and the email-verified gate (a new account can't log in until the email is verified). 2FA is planned for a future release.
+Open your profile and click **🔐 Two-Factor Auth**. Scan the QR code with an authenticator app (1Password, Authy, Google Authenticator and the like), type in the 6-digit code it shows, and save the recovery codes somewhere safe. From then on sign-in asks for a code after your password. If you lose your phone, a recovery code gets you in once; each works a single time.
 
 ## Performance
 

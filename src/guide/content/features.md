@@ -187,7 +187,7 @@ Includes everything a meet manager can do, plus:
 | International | Country medal table on the meet recap | [Admin Tasks → Country medal table](/guide/admin-tasks#country-medal-table) |
 | Bulk operations | Bulk-promote reserves, bulk-update roster | [Admin Tasks → Bulk operations](/guide/admin-tasks#bulk-operations) |
 | Notifications | Send broadcast notifications to a federation (e.g. "meet starts in 24h") | [Admin Tasks → Notifications](/guide/admin-tasks#notifications) |
-| First-run | `/setup` wizard for brand-new federations | [Quick Start → 2a. First-run setup wizard](/guide/quick-start#2a-first-run-setup-wizard) |
+| First-run | `/setup` wizard for brand-new federations | [FAQ → First-run setup wizard](/guide/faq#i-just-signed-up-as-a-federation-admin-and-the-dashboard-sent-me-to-setup-what-is-that) |
 
 ### 🛠️ System administrator
 
@@ -212,13 +212,12 @@ Includes everything an org admin can do, **across every federation**, plus:
 
 | Persona | Feature | Where |
 |---|---|---|
-| Anyone | Register an account (or federation if first user) | [Quick Start → 1. Sign in or register](/guide/quick-start#1-sign-in-or-register-your-federation) |
-| Anyone | Email verification | [FAQ → Setup](/guide/faq#setup) |
+| Anyone | Register an account, and start or join a club | [Quick Start → 1. Create your account and your club](/guide/quick-start#1-create-your-account-and-your-club) |
+| Anyone | Email verification | [FAQ → Getting started](/guide/faq#getting-started) |
 | Anyone | Forgot password / reset link | [FAQ → "I forgot my password"](/guide/faq#i-forgot-my-password) |
 | Anyone | "Log out everywhere" | [FAQ → "I need to log out everywhere"](/guide/faq#i-need-to-log-out-everywhere) |
-| Anyone | Two-factor authentication (TOTP) | [FAQ → Two-factor authentication?](/guide/faq#two-factor-authentication) |
-| Anyone | SSO / OAuth for org-managed federations | [Roles & Permissions](/guide/roles-and-permissions) |
-| Org admin | First-run `/setup` wizard | [Quick Start → 2a](/guide/quick-start#2a-first-run-setup-wizard) |
+| Anyone | Two-factor authentication (TOTP) | [FAQ → Two-factor authentication](/guide/faq#how-do-i-turn-on-two-factor-authentication) |
+| Org admin | First-run `/setup` wizard | [FAQ → First-run setup wizard](/guide/faq#i-just-signed-up-as-a-federation-admin-and-the-dashboard-sent-me-to-setup-what-is-that) |
 
 ### Meet setup
 
