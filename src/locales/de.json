@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet. Verbandsweite Rechte bekommen sie nicht.",
     "admins_intro_classes": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet, und kümmern sich um seine Kurse. Verbandsweite Rechte bekommen sie nicht.",
-    "admins_intro_payments": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet, und kümmern sich um Auszahlungen und Mitgliedsbeiträge. Verbandsweite Rechte bekommen sie nicht."
+    "admins_intro_payments": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet, und kümmern sich um Auszahlungen und Mitgliedsbeiträge. Verbandsweite Rechte bekommen sie nicht.",
+    "last_admin_tip": "Ein Verein braucht mindestens einen Admin. Fügen Sie einen weiteren Admin hinzu, bevor Sie diesen entfernen."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Noch niemand zum Hinzufügen. Mitglieder der Vereine Ihrer Region erscheinen hier.",
     "release_club": "Aus der Region nehmen",
     "club_requests": "Vereine mit Beitrittsanfrage",
-    "currently_in": "derzeit in {region}"
+    "currently_in": "derzeit in {region}",
+    "last_admin_tip": "Eine Region braucht mindestens einen Admin. Fügen Sie einen weiteren Admin hinzu, bevor Sie diesen entfernen."
   },
   "claims": {
     "title": "Ansprüche",

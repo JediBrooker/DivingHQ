@@ -91,6 +91,10 @@ test("a club asks to join a claimed region, and the region accepts", async ({ pa
   await page.context().clearCookies();
   await signIn(page, world.freeport.username);
   await page.goto("/region");
+  // Grand Bahama's only admin can't step down, and the button says why.
+  const soleRemove = page.locator("[data-test-id=region-admins] li").getByRole("button", { name: "Remove" });
+  await expect(soleRemove).toBeDisabled();
+  await expect(soleRemove).toHaveAttribute("data-tip", /A region needs at least one admin/);
   const asking = page.locator("[data-test-id=region-club-requests]");
   await expect(asking).toContainText("Nassau Divers");
   await asking.getByRole("button", { name: "Approve" }).click();

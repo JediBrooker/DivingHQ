@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka. Mereka tidak mendapat akses peringkat persekutuan.",
     "admins_intro_classes": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka dan menguruskan kelasnya. Mereka tidak mendapat akses peringkat persekutuan.",
-    "admins_intro_payments": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka dan menguruskan pembayaran serta yuran gabungannya. Mereka tidak mendapat akses peringkat persekutuan."
+    "admins_intro_payments": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka dan menguruskan pembayaran serta yuran gabungannya. Mereka tidak mendapat akses peringkat persekutuan.",
+    "last_admin_tip": "Kelab memerlukan sekurang-kurangnya seorang pentadbir. Tambah pentadbir lain sebelum mengalih keluar pentadbir ini."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Belum ada sesiapa untuk ditambah. Ahli kelab dalam rantau anda dipaparkan di sini.",
     "release_club": "Keluarkan dari rantau",
     "club_requests": "Kelab yang ingin menyertai",
-    "currently_in": "kini di {region}"
+    "currently_in": "kini di {region}",
+    "last_admin_tip": "Rantau memerlukan sekurang-kurangnya seorang pentadbir. Tambah pentadbir lain sebelum mengalih keluar pentadbir ini."
   },
   "claims": {
     "title": "Tuntutan",

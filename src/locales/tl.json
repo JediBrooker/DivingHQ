@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club. Wala silang access sa buong pederasyon.",
     "admins_intro_classes": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club at inaasikaso ang mga klase nito. Wala silang access sa buong pederasyon.",
-    "admins_intro_payments": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club at inaasikaso ang mga payout at bayad sa pagsapi nito. Wala silang access sa buong pederasyon."
+    "admins_intro_payments": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club at inaasikaso ang mga payout at bayad sa pagsapi nito. Wala silang access sa buong pederasyon.",
+    "last_admin_tip": "Kailangan ng club ng kahit isang admin. Magdagdag muna ng isa pang admin bago alisin ang isang ito."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Wala pang maidadagdag. Lalabas dito ang mga miyembro ng mga club sa iyong rehiyon.",
     "release_club": "Alisin sa rehiyon",
     "club_requests": "Mga club na gustong sumali",
-    "currently_in": "kasalukuyang nasa {region}"
+    "currently_in": "kasalukuyang nasa {region}",
+    "last_admin_tip": "Kailangan ng rehiyon ng kahit isang admin. Magdagdag muna ng isa pang admin bago alisin ang isang ito."
   },
   "claims": {
     "title": "Mga claim",

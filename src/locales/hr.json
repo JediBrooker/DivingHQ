@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Administratori kluba vode natjecanja koja njihov klub organizira. Nemaju pristup na razini saveza.",
     "admins_intro_classes": "Administratori kluba vode natjecanja koja njihov klub organizira i brinu o njegovim tečajevima. Nemaju pristup na razini saveza.",
-    "admins_intro_payments": "Administratori kluba vode natjecanja koja njihov klub organizira i brinu o njegovim isplatama i članarinama. Nemaju pristup na razini saveza."
+    "admins_intro_payments": "Administratori kluba vode natjecanja koja njihov klub organizira i brinu o njegovim isplatama i članarinama. Nemaju pristup na razini saveza.",
+    "last_admin_tip": "Klub mora imati barem jednog administratora. Dodajte još jednog administratora prije nego što uklonite ovog."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Još nema koga dodati. Ovdje se prikazuju članovi klubova iz vaše regije.",
     "release_club": "Izvadi iz regije",
     "club_requests": "Klubovi koji traže ulazak",
-    "currently_in": "trenutačno u regiji {region}"
+    "currently_in": "trenutačno u regiji {region}",
+    "last_admin_tip": "Regija mora imati barem jednog administratora. Dodajte još jednog administratora prije nego što uklonite ovog."
   },
   "claims": {
     "title": "Zahtjevi",

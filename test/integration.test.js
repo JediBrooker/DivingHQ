@@ -5282,3 +5282,72 @@ test("club setup: a founder's progress, invite parts and short code", async (t) 
     await teardownFixture(state);
   }
 });
+
+// My club and My region grey out Remove on the last live admin before
+// anyone clicks it, so the admins lists have to say who's live and whether
+// the caller is held to the rule at all. Monaco, nothing else here uses it.
+test("admin lists say who's live and whether the caller has to keep one", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MCO";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Monte Carlo Divers" });
+    const club = A.clubId;
+    const clubList = async (token = A.token) => {
+      const r = await fetchJson("GET", `/api/clubs/${club}/admins`, { token });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      return r.body;
+    };
+    let list = await clubList();
+    assert.equal(list.keep_one_live, true, "a club admin can't leave the club with nobody");
+    assert.deepEqual(list.admins.map((a) => [a.id, a.live]), [[A.id, true]]);
+
+    // A suspended co-admin stays on the list, so it can be cleared out, but
+    // it isn't live, and the server agrees with what the page will show.
+    const S = await delegateSignUp({ country_code: CODE, club_id: club, full_name: "Suspended Co-admin" });
+    assert.equal((await fetchJson("POST", `/api/clubs/${club}/admins`, { token: A.token, body: { user_id: S.id } })).status, 201);
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [S.id]);
+    list = await clubList();
+    assert.deepEqual(Object.fromEntries(list.admins.map((a) => [a.id, a.live])), { [A.id]: true, [S.id]: false });
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${club}/admins/${A.id}`, { token: A.token })).status, 409);
+
+    // A second live admin frees them both up.
+    const B = await delegateSignUp({ country_code: CODE, club_id: club });
+    assert.equal((await fetchJson("POST", `/api/clubs/${club}/admins`, { token: A.token, body: { user_id: B.id } })).status, 201);
+    list = await clubList();
+    assert.equal(list.admins.filter((a) => a.live).length, 2);
+
+    // Same fields on a region's list.
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Monaco-Ville', 'MV') RETURNING id", [A.orgId],
+    )).rows[0].id;
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [region, club]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region, A.id, A.orgId]);
+    const rl = await fetchJson("GET", `/api/regions/${region}/admins`, { token: A.token });
+    assert.equal(rl.status, 200, JSON.stringify(rl.body));
+    assert.equal(rl.body.can_manage, true);
+    assert.equal(rl.body.keep_one_live, true);
+    assert.deepEqual(rl.body.admins.map((a) => [a.id, a.live]), [[A.id, true]]);
+    assert.equal((await fetchJson("DELETE", `/api/regions/${region}/admins/${A.id}`, { token: A.token })).status, 409);
+
+    // A federation's admin appoints club admins and can clear the list, so
+    // they aren't held to it and their Remove stays live.
+    const fedClub = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, 'Federation Club') RETURNING id", [state.orgId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [fedClub, state.adminId, state.orgId]);
+    const fed = await fetchJson("GET", `/api/clubs/${fedClub}/admins`, { token: state.adminToken });
+    assert.equal(fed.status, 200, JSON.stringify(fed.body));
+    assert.equal(fed.body.keep_one_live, false);
+    assert.deepEqual(fed.body.admins.map((a) => [a.id, a.live]), [[state.adminId, true]]);
+  } finally {
+    await pool.query(
+      "DELETE FROM regions WHERE org_id IN (SELECT id FROM organisations WHERE country_code = $1)", [CODE],
+    ).catch(() => {});
+    await claimKit.wipe(CODE);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [state.orgId]).catch(() => {});
+    await teardownFixture(state);
+  }
+});

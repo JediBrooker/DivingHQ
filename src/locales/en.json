@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Club admins run the meets their club hosts. They get no federation-wide access.",
     "admins_intro_classes": "Club admins run the meets their club hosts and look after its classes. They get no federation-wide access.",
-    "admins_intro_payments": "Club admins run the meets their club hosts and look after its payouts and affiliation payments. They get no federation-wide access."
+    "admins_intro_payments": "Club admins run the meets their club hosts and look after its payouts and affiliation payments. They get no federation-wide access.",
+    "last_admin_tip": "A club needs at least one admin. Add a co-admin before removing this one."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Nobody to add yet. Members of your region's clubs show up here.",
     "release_club": "Take out of region",
     "club_requests": "Clubs asking to join",
-    "currently_in": "currently in {region}"
+    "currently_in": "currently in {region}",
+    "last_admin_tip": "A region needs at least one admin. Add a co-admin before removing this one."
   },
   "claims": {
     "title": "Claims",

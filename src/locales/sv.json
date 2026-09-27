@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Klubbadministratörer sköter tävlingarna som klubben arrangerar. De får ingen åtkomst på förbundsnivå.",
     "admins_intro_classes": "Klubbadministratörer sköter tävlingarna som klubben arrangerar och tar hand om klubbens kurser. De får ingen åtkomst på förbundsnivå.",
-    "admins_intro_payments": "Klubbadministratörer sköter tävlingarna som klubben arrangerar och tar hand om utbetalningar och medlemsavgifter. De får ingen åtkomst på förbundsnivå."
+    "admins_intro_payments": "Klubbadministratörer sköter tävlingarna som klubben arrangerar och tar hand om utbetalningar och medlemsavgifter. De får ingen åtkomst på förbundsnivå.",
+    "last_admin_tip": "En klubb måste ha minst en administratör. Lägg till en medadministratör innan du tar bort den här."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Ingen att lägga till än. Medlemmar i klubbarna i din region visas här.",
     "release_club": "Ta bort ur regionen",
     "club_requests": "Klubbar som vill gå med",
-    "currently_in": "just nu i {region}"
+    "currently_in": "just nu i {region}",
+    "last_admin_tip": "En region måste ha minst en administratör. Lägg till en medadministratör innan du tar bort den här."
   },
   "claims": {
     "title": "Anspråk",

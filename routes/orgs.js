@@ -567,8 +567,11 @@ module.exports = function createOrgsRouter({
     try {
       const club = await loadClubForAdminGrant(req, res);
       if (!club) return;
+      // live and keep_one_live let My club grey out Remove on the last
+      // live admin, instead of letting them click it and eat the 409.
       const admins = await pool.query(
-        `SELECT u.id, u.full_name, u.username, ca.created_at
+        `SELECT u.id, u.full_name, u.username, ca.created_at,
+                (u.suspended_at IS NULL) AS live
            FROM club_admins ca
            JOIN users u ON u.id = ca.user_id
           WHERE ca.club_id = $1 AND u.deleted_at IS NULL
@@ -590,7 +593,12 @@ module.exports = function createOrgsRouter({
       const regionRequest = club.requested_region_id
         ? { region_id: club.requested_region_id, requested_at: club.region_requested_at }
         : null;
-      res.json({ admins: admins.rows, members: members.rows, region_request: regionRequest });
+      res.json({
+        admins: admins.rows, members: members.rows, region_request: regionRequest,
+        // Whoever's asking is held to the one-live-admin rule, same test
+        // the DELETE below hands to removeAdmin.
+        keep_one_live: !!club.viaClubAdmin,
+      });
     } catch (err) {
       console.error("[Club Admins List Error]", err.message);
       res.status(500).json({ error: "Internal server error" });

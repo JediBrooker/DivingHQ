@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Administratorzy klubu prowadzą zawody organizowane przez swój klub. Nie mają dostępu na poziomie całego związku.",
     "admins_intro_classes": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego zajęciami. Nie mają dostępu na poziomie całego związku.",
-    "admins_intro_payments": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego wypłatami oraz składkami członkowskimi. Nie mają dostępu na poziomie całego związku."
+    "admins_intro_payments": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego wypłatami oraz składkami członkowskimi. Nie mają dostępu na poziomie całego związku.",
+    "last_admin_tip": "Klub musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Na razie nie ma kogo dodać. Tutaj pojawiają się członkowie klubów z twojego regionu.",
     "release_club": "Usuń z regionu",
     "club_requests": "Kluby proszące o dołączenie",
-    "currently_in": "obecnie w regionie {region}"
+    "currently_in": "obecnie w regionie {region}",
+    "last_admin_tip": "Region musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora."
   },
   "claims": {
     "title": "Roszczenia",

@@ -396,10 +396,14 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
     try {
       const region = await loadRegion(req, res);
       if (!region) return;
-      const canManage = isOrgAdminOf(req.user, region.org_id) || viaRegionAdmin(region);
+      const asOrgAdmin = isOrgAdminOf(req.user, region.org_id);
+      const canManage = asOrgAdmin || viaRegionAdmin(region);
       if (!canManage && !region.caller_is_admin) return res.status(403).json({ error: "Forbidden" });
+      // live + keep_one_live: My region greys out Remove on the last live
+      // admin up front, so nobody has to click it to find out.
       const admins = await pool.query(
-        `SELECT u.id, u.full_name, u.username, ra.created_at
+        `SELECT u.id, u.full_name, u.username, ra.created_at,
+                (u.suspended_at IS NULL) AS live
            FROM region_admins ra JOIN users u ON u.id = ra.user_id
           WHERE ra.region_id = $1 AND u.deleted_at IS NULL
           ORDER BY lower(u.full_name)`,
@@ -415,7 +419,8 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
             [region.id],
           )).rows
         : [];
-      res.json({ admins: admins.rows, candidates, can_manage: canManage });
+      // keep_one_live mirrors what the DELETE below passes to removeAdmin.
+      res.json({ admins: admins.rows, candidates, can_manage: canManage, keep_one_live: !asOrgAdmin });
     } catch (err) {
       console.error("[Region Admins Error]", err.message);
       res.status(500).json({ error: "Internal server error" });

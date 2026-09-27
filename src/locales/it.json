@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Gli amministratori del club gestiscono le gare organizzate dal loro club. Non hanno accesso a livello di federazione.",
     "admins_intro_classes": "Gli amministratori del club gestiscono le gare organizzate dal loro club e si occupano dei suoi corsi. Non hanno accesso a livello di federazione.",
-    "admins_intro_payments": "Gli amministratori del club gestiscono le gare organizzate dal loro club e si occupano dei suoi pagamenti e delle quote di affiliazione. Non hanno accesso a livello di federazione."
+    "admins_intro_payments": "Gli amministratori del club gestiscono le gare organizzate dal loro club e si occupano dei suoi pagamenti e delle quote di affiliazione. Non hanno accesso a livello di federazione.",
+    "last_admin_tip": "Un club deve avere almeno un amministratore. Aggiungi un altro amministratore prima di rimuovere questo."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Ancora nessuno da aggiungere. Qui compaiono i membri dei club della tua regione.",
     "release_club": "Togli dalla regione",
     "club_requests": "Club che chiedono di entrare",
-    "currently_in": "ora in {region}"
+    "currently_in": "ora in {region}",
+    "last_admin_tip": "Una regione deve avere almeno un amministratore. Aggiungi un altro amministratore prima di rimuovere questo."
   },
   "claims": {
     "title": "Rivendicazioni",

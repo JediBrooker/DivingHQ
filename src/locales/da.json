@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Klubadministratorer står for de stævner, klubben arrangerer. De får ingen adgang på forbundsniveau.",
     "admins_intro_classes": "Klubadministratorer står for de stævner, klubben arrangerer, og tager sig af dens hold. De får ingen adgang på forbundsniveau.",
-    "admins_intro_payments": "Klubadministratorer står for de stævner, klubben arrangerer, og tager sig af dens udbetalinger og medlemskontingenter. De får ingen adgang på forbundsniveau."
+    "admins_intro_payments": "Klubadministratorer står for de stævner, klubben arrangerer, og tager sig af dens udbetalinger og medlemskontingenter. De får ingen adgang på forbundsniveau.",
+    "last_admin_tip": "En klub skal have mindst én administrator. Tilføj en medadministrator, før du fjerner denne."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Der er ingen at tilføje endnu. Medlemmer af klubberne i din region vises her.",
     "release_club": "Tag ud af regionen",
     "club_requests": "Klubber, der beder om optagelse",
-    "currently_in": "i øjeblikket i {region}"
+    "currently_in": "i øjeblikket i {region}",
+    "last_admin_tip": "En region skal have mindst én administrator. Tilføj en medadministrator, før du fjerner denne."
   },
   "claims": {
     "title": "Krav",

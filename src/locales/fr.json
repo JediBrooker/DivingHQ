@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Les administrateurs du club organisent les compétitions que leur club accueille. Ils n'ont aucun accès à l'échelle de la fédération.",
     "admins_intro_classes": "Les administrateurs du club organisent les compétitions que leur club accueille et gèrent ses cours. Ils n'ont aucun accès à l'échelle de la fédération.",
-    "admins_intro_payments": "Les administrateurs du club organisent les compétitions que leur club accueille et gèrent ses versements et ses cotisations d'affiliation. Ils n'ont aucun accès à l'échelle de la fédération."
+    "admins_intro_payments": "Les administrateurs du club organisent les compétitions que leur club accueille et gèrent ses versements et ses cotisations d'affiliation. Ils n'ont aucun accès à l'échelle de la fédération.",
+    "last_admin_tip": "Un club doit avoir au moins un administrateur. Ajoutez un autre administrateur avant de retirer celui-ci."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Personne à ajouter pour l'instant. Les membres des clubs de votre région apparaissent ici.",
     "release_club": "Retirer de la région",
     "club_requests": "Clubs qui demandent à rejoindre la région",
-    "currently_in": "actuellement dans {region}"
+    "currently_in": "actuellement dans {region}",
+    "last_admin_tip": "Une région doit avoir au moins un administrateur. Ajoutez un autre administrateur avant de retirer celui-ci."
   },
   "claims": {
     "title": "Revendications",

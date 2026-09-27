@@ -94,11 +94,19 @@ test("a club admin sees members' requests on the dashboard, and can step down cl
   await expect(page.getByText("Mele Christian", { exact: true })).toBeVisible();
   await expect(page.getByText("2 members")).toBeVisible();
 
+  // Alone, the founder can't step down, and the button says why instead
+  // of letting them click through to the server's refusal.
+  const myRow = page.locator(".row", { hasText: "Adamstown Divers Admin" });
+  const removeMe = myRow.getByRole("button", { name: "Remove" });
+  await expect(removeMe).toBeDisabled();
+  await expect(removeMe).toHaveAttribute("data-tip", /A club needs at least one admin/);
+
   // Make the member a co-admin, then the founder removes themselves.
   await page.getByRole("combobox", { name: "Add an admin" }).selectOption({ label: `Mele Christian (@${memberName})` });
   await page.getByRole("button", { name: "Add", exact: true }).click();
-  const myRow = page.locator(".row", { hasText: "Adamstown Divers Admin" });
-  await myRow.getByRole("button", { name: "Remove" }).click();
+  await expect(removeMe).toBeEnabled();
+  await expect(removeMe).not.toHaveAttribute("data-tip", /./);
+  await removeMe.click();
   await page.getByRole("button", { name: "Remove me" }).click();
 
   // Straight back to the dashboard, with the club gone from the nav.

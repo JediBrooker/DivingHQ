@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Správci klubu řídí závody, které jejich klub pořádá. Přístup v rámci celého svazu nemají.",
     "admins_intro_classes": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho kurzy. Přístup v rámci celého svazu nemají.",
-    "admins_intro_payments": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho výplaty a členské příspěvky. Přístup v rámci celého svazu nemají."
+    "admins_intro_payments": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho výplaty a členské příspěvky. Přístup v rámci celého svazu nemají.",
+    "last_admin_tip": "Klub potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Zatím není koho přidat. Zobrazí se tu členové klubů ve vašem regionu.",
     "release_club": "Vyjmout z regionu",
     "club_requests": "Kluby, které žádají o vstup",
-    "currently_in": "nyní v regionu {region}"
+    "currently_in": "nyní v regionu {region}",
+    "last_admin_tip": "Region potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce."
   },
   "claims": {
     "title": "Nároky",

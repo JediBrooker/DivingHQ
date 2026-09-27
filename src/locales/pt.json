@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Os administradores do clube gerem as provas que o clube organiza. Não têm acesso ao nível da federação.",
     "admins_intro_classes": "Os administradores do clube gerem as provas que o clube organiza e tratam das suas aulas. Não têm acesso ao nível da federação.",
-    "admins_intro_payments": "Os administradores do clube gerem as provas que o clube organiza e tratam dos seus pagamentos e quotas de filiação. Não têm acesso ao nível da federação."
+    "admins_intro_payments": "Os administradores do clube gerem as provas que o clube organiza e tratam dos seus pagamentos e quotas de filiação. Não têm acesso ao nível da federação.",
+    "last_admin_tip": "Um clube precisa de pelo menos um administrador. Adicione outro administrador antes de remover este."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Ainda não há ninguém para adicionar. Os membros dos clubes da sua região aparecem aqui.",
     "release_club": "Retirar da região",
     "club_requests": "Clubes que pedem para aderir",
-    "currently_in": "atualmente em {region}"
+    "currently_in": "atualmente em {region}",
+    "last_admin_tip": "Uma região precisa de pelo menos um administrador. Adicione outro administrador antes de remover este."
   },
   "claims": {
     "title": "Reivindicações",

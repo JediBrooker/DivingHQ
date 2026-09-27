@@ -127,11 +127,24 @@
  * GET /api/clubs/:id/admins (org admin, or the club's / its region's
  * admins where there's no federation).
  *
- * @property {{id: string, full_name: string, username: string, created_at: string}[]} admins  deleted accounts left out (suspended ones stay, so they can be removed)
+ * @property {{id: string, full_name: string, username: string, created_at: string, live: boolean}[]} admins  deleted accounts left out (suspended ones stay, so they can be removed); live is false for a suspended one
  * @property {{id: string, full_name: string, username: string}[]} members
  * @property {?{region_id: string, requested_at: string}} region_request
  *   a claimed region this club has asked to join and is waiting on (PUT
  *   /api/clubs/:id/region answered 202 {requested: true})
+ * @property {boolean} keep_one_live  the caller can't remove the last live
+ *   admin (DELETE answers 409): true for the club's own and its region's
+ *   admins, false for the org admin and the sysadmin
+ */
+
+/**
+ * @typedef {Object} RegionAdmins
+ * GET /api/regions/:id/admins (the region's admins, or the org admin).
+ *
+ * @property {{id: string, full_name: string, username: string, created_at: string, live: boolean}[]} admins  same rules as ClubAdmins.admins
+ * @property {{id: string, full_name: string, username: string, club_name: string}[]} candidates  live members of the region's clubs; empty unless can_manage
+ * @property {boolean} can_manage  may add and remove admins here (org admin, or a region admin where there's no federation)
+ * @property {boolean} keep_one_live  same as ClubAdmins.keep_one_live: false only for the org admin and the sysadmin
  */
 
 /**

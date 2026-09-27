@@ -118,7 +118,7 @@ The short code matters more than you'd think — it's the cyan pill that shows n
 `/club` (**My club** in the sidebar), for anyone who admins a club.
 
 - **Role requests** — members asking to dive, judge or referee. Approve or reject each one. In a country with no federation on DivingHQ yet this is where they land; under a federation they go to the federation's admins instead.
-- **Admins** — the club's admins. While the country has no federation you can add co-admins from your members and remove them (the last admin can't step down). Under a federation this list is read-only, because the federation appoints club admins.
+- **Admins** — the club's admins. While the country has no federation you can add co-admins from your members and remove them. The last admin can't step down: their **Remove** stays greyed out until there's a co-admin. Under a federation this list is read-only, because the federation appoints club admins.
 - **Region** — which state, province or home nation the club is in, in countries that have them. Same rule: yours to set until a federation arrives.
 
 A club admin also runs the club's meets. In Meet Manager, **+ New meet** creates a meet hosted by your club, and from there you have the same tools as a meet manager for that meet's events: entries, panels, the schedule and the Control Room.
@@ -128,7 +128,7 @@ A club admin also runs the club's meets. In Meet Manager, **+ New meet** creates
 `/region` (**My region** in the sidebar), for anyone who admins a region.
 
 - Every club in the region, with who runs it.
-- The region's own admins.
+- The region's own admins. While the country has no federation you add and remove co-admins here, and as with clubs the last one can't step down.
 
 Region admins approve role requests from any club in the region (in a country with no federation yet), create the region's championships in Meet Manager, and can step in on any of the region's clubs' meets. Federation admins appoint them from **Clubs** → the regions strip; a state body can also apply for its region from [Register your org](/register-org), which opens a claim.
 

@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya. Mereka tidak mendapat akses tingkat federasi.",
     "admins_intro_classes": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya dan mengurus kelasnya. Mereka tidak mendapat akses tingkat federasi.",
-    "admins_intro_payments": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya dan mengurus pembayaran serta iuran afiliasinya. Mereka tidak mendapat akses tingkat federasi."
+    "admins_intro_payments": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya dan mengurus pembayaran serta iuran afiliasinya. Mereka tidak mendapat akses tingkat federasi.",
+    "last_admin_tip": "Klub memerlukan setidaknya satu admin. Tambahkan admin lain sebelum menghapus admin ini."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Belum ada yang bisa ditambahkan. Anggota klub di wilayah Anda muncul di sini.",
     "release_club": "Keluarkan dari wilayah",
     "club_requests": "Klub yang ingin bergabung",
-    "currently_in": "saat ini di {region}"
+    "currently_in": "saat ini di {region}",
+    "last_admin_tip": "Wilayah memerlukan setidaknya satu admin. Tambahkan admin lain sebelum menghapus admin ini."
   },
   "claims": {
     "title": "Klaim",

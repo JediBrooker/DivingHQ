@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "俱乐部管理员负责运营本俱乐部主办的比赛，没有全联合会范围的权限。",
     "admins_intro_classes": "俱乐部管理员负责运营本俱乐部主办的比赛并管理其课程，没有全联合会范围的权限。",
-    "admins_intro_payments": "俱乐部管理员负责运营本俱乐部主办的比赛并管理其付款和会费，没有全联合会范围的权限。"
+    "admins_intro_payments": "俱乐部管理员负责运营本俱乐部主办的比赛并管理其付款和会费，没有全联合会范围的权限。",
+    "last_admin_tip": "每个俱乐部至少需要一名管理员。请先添加另一名管理员，再移除这一位。"
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "暂时没有可添加的人。您所在地区各俱乐部的会员会显示在这里。",
     "release_club": "移出地区",
     "club_requests": "申请加入的俱乐部",
-    "currently_in": "当前所在地区：{region}"
+    "currently_in": "当前所在地区：{region}",
+    "last_admin_tip": "每个地区至少需要一名管理员。请先添加另一名管理员，再移除这一位。"
   },
   "claims": {
     "title": "接管申请",

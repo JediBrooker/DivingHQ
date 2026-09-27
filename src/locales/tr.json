@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür. Federasyon genelinde erişimleri yoktur.",
     "admins_intro_classes": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür ve kulübün kurslarıyla ilgilenir. Federasyon genelinde erişimleri yoktur.",
-    "admins_intro_payments": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür ve kulübün ödemeleriyle üyelik aidatlarıyla ilgilenir. Federasyon genelinde erişimleri yoktur."
+    "admins_intro_payments": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür ve kulübün ödemeleriyle üyelik aidatlarıyla ilgilenir. Federasyon genelinde erişimleri yoktur.",
+    "last_admin_tip": "Bir kulübün en az bir yöneticisi olmalıdır. Bunu kaldırmadan önce başka bir yönetici ekleyin."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Henüz eklenecek kimse yok. Bölgenizdeki kulüplerin üyeleri burada görünür.",
     "release_club": "Bölgeden çıkar",
     "club_requests": "Katılmak isteyen kulüpler",
-    "currently_in": "şu anki bölge: {region}"
+    "currently_in": "şu anki bölge: {region}",
+    "last_admin_tip": "Bir bölgenin en az bir yöneticisi olmalıdır. Bunu kaldırmadan önce başka bir yönetici ekleyin."
   },
   "claims": {
     "title": "Devralma talepleri",

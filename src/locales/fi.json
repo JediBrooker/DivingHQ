@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut. Heillä ei ole liittotason oikeuksia.",
     "admins_intro_classes": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen ryhmistä. Heillä ei ole liittotason oikeuksia.",
-    "admins_intro_payments": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen tilityksistä ja jäsenmaksuista. Heillä ei ole liittotason oikeuksia."
+    "admins_intro_payments": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen tilityksistä ja jäsenmaksuista. Heillä ei ole liittotason oikeuksia.",
+    "last_admin_tip": "Seuralla on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Lisättäviä ei vielä ole. Alueesi seurojen jäsenet näkyvät tässä.",
     "release_club": "Poista alueelta",
     "club_requests": "Seurat, jotka pyytävät liittymistä",
-    "currently_in": "nyt alueella {region}"
+    "currently_in": "nyt alueella {region}",
+    "last_admin_tip": "Alueella on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän."
   },
   "claims": {
     "title": "Vaatimukset",

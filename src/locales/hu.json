@@ -2065,7 +2065,8 @@
     },
     "admins_intro_meets": "A klubadminok a klubjuk által rendezett versenyeket vezetik. Szövetségi szintű hozzáférést nem kapnak.",
     "admins_intro_classes": "A klubadminok a klubjuk által rendezett versenyeket vezetik, és gondoskodnak a klub foglalkozásairól. Szövetségi szintű hozzáférést nem kapnak.",
-    "admins_intro_payments": "A klubadminok a klubjuk által rendezett versenyeket vezetik, és gondoskodnak a klub kifizetéseiről és tagdíjairól. Szövetségi szintű hozzáférést nem kapnak."
+    "admins_intro_payments": "A klubadminok a klubjuk által rendezett versenyeket vezetik, és gondoskodnak a klub kifizetéseiről és tagdíjairól. Szövetségi szintű hozzáférést nem kapnak.",
+    "last_admin_tip": "Egy klubnak legalább egy adminisztrátorra van szüksége. Adjon hozzá egy másik adminisztrátort, mielőtt ezt eltávolítja."
   },
   "regions": {
     "label": {
@@ -2098,7 +2099,8 @@
     "no_candidates": "Még nincs kit hozzáadni. Itt jelennek meg a régiója klubjainak tagjai.",
     "release_club": "Kivétel a régióból",
     "club_requests": "Csatlakozni kívánó klubok",
-    "currently_in": "jelenleg: {region}"
+    "currently_in": "jelenleg: {region}",
+    "last_admin_tip": "Egy régiónak legalább egy adminisztrátorra van szüksége. Adjon hozzá egy másik adminisztrátort, mielőtt ezt eltávolítja."
   },
   "claims": {
     "title": "Igények",
