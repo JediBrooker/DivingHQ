@@ -238,7 +238,7 @@ module.exports = function createPaymentsRouter({
   // trust-destroying surprise at pay time).
   function payerTotalCents(def, org, baseAmountCents) {
     if (baseAmountCents == null) return null;
-    const feeBps = def.platform_fee_bps != null ? def.platform_fee_bps : org?.platform_fee_bps;
+    const feeBps = resolveFeeBps(def, org);
     if (feeBps == null) return baseAmountCents;
     return priceCharge({ baseAmountCents, feeBps, feePayer: def.fee_payer }).chargeAmountCents;
   }
@@ -363,6 +363,56 @@ module.exports = function createPaymentsRouter({
     return { feeId: def.id, surchargeCents: chosen.amount_cents, applies, trigger: def.late_fee_trigger, triggerAt };
   }
 
+  // Every checkout needs a currency before it can charge. Returns it, or
+  // throws the 409 the payer sees when their federation hasn't set one.
+  function requireCurrency(currency) {
+    if (!currency) {
+      const err = new Error("The federation's currency is not configured.");
+      err.status = 409;
+      throw err;
+    }
+    return currency;
+  }
+
+  // The platform fee rate: a fee definition's own override if it has one,
+  // else the federation's default. Fines have no fee definition, so they
+  // get the federation's rate.
+  function resolveFeeBps(fee, org) {
+    return fee?.platform_fee_bps != null ? fee.platform_fee_bps : org?.platform_fee_bps;
+  }
+
+  // Second half of every checkout: open the Stripe session for a payment
+  // row we just inserted and stamp the session id on it. afterStamp (the
+  // fine / entry-charge link back to the payment) runs inside the same
+  // try. If any of it throws, the row is marked failed so its one-live
+  // slot comes free, and the error goes back to the caller. Pass either a
+  // return-page `flow` or explicit success/cancel URLs.
+  async function openCheckoutSession({
+    paymentId, currency, chargeAmountCents, applicationFeeCents, productName,
+    customerEmail, metadata, flow, successUrl, cancelUrl, afterStamp,
+  }) {
+    try {
+      const session = await payments.createCheckoutSession({
+        currency,
+        chargeAmountCents,
+        applicationFeeCents,
+        productName,
+        customerEmail,
+        clientReferenceId: paymentId,
+        metadata,
+        successUrl: successUrl || `${APP_BASE_URL}/payments/return?status=paid&flow=${flow}`,
+        cancelUrl: cancelUrl || `${APP_BASE_URL}/payments/return?status=canceled&flow=${flow}`,
+      });
+      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
+      if (afterStamp) await afterStamp();
+      return { url: session.url, paymentId };
+    } catch (err) {
+      // Stripe failed after we inserted the row, so release the slot.
+      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
+      throw err;
+    }
+  }
+
   // Shared checkout core. Resolves the price for the payer, records a
   // pending payment, and opens a Checkout Session on the federation's
   // connected account. An optional `surchargeCents` (the late-entry fee)
@@ -381,12 +431,7 @@ module.exports = function createPaymentsRouter({
       err.status = 409;
       throw err;
     }
-    const currency = fee.currency || org.default_currency;
-    if (!currency) {
-      const err = new Error("The federation's currency is not configured.");
-      err.status = 409;
-      throw err;
-    }
+    const currency = requireCurrency(fee.currency || org.default_currency);
     if (subjectType === "membership") {
       await refuseOutsideRenewalWindow({
         sql: `SELECT MAX(period_end) AS until FROM memberships
@@ -397,7 +442,7 @@ module.exports = function createPaymentsRouter({
         what: subjectUserId ? "This membership" : "Your membership",
       });
     }
-    const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
+    const feeBps = resolveFeeBps(fee, org);
     const { chargeAmountCents, applicationFeeCents } = priceCharge({
       baseAmountCents: chosen.amount_cents + (surchargeCents || 0),
       feeBps,
@@ -465,32 +510,20 @@ module.exports = function createPaymentsRouter({
     if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
     const paymentId = attempt.paymentId;
 
-    try {
-      const session = await payments.createCheckoutSession({
-        currency,
-        chargeAmountCents,
-        applicationFeeCents,
-        productName,
-        customerEmail: req.user.email,
-        clientReferenceId: paymentId,
-        metadata: {
-          payment_id: paymentId,
-          scope: subjectType,
-          org_id: org.id,
-          user_id: userId,
-          ...(eventId ? { event_id: eventId } : {}),
-          ...(meetId ? { meet_id: meetId } : {}),
-        },
-        successUrl,
-        cancelUrl,
-      });
-      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
-      return { url: session.url, paymentId };
-    } catch (err) {
-      // Stripe failed after we inserted the row, so release the slot.
-      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
-      throw err;
-    }
+    return openCheckoutSession({
+      paymentId, currency, chargeAmountCents, applicationFeeCents, productName,
+      customerEmail: req.user.email,
+      metadata: {
+        payment_id: paymentId,
+        scope: subjectType,
+        org_id: org.id,
+        user_id: userId,
+        ...(eventId ? { event_id: eventId } : {}),
+        ...(meetId ? { meet_id: meetId } : {}),
+      },
+      successUrl,
+      cancelUrl,
+    });
   }
 
   // Club-payer checkout core. A CLUB (not an individual) pays the
@@ -505,12 +538,7 @@ module.exports = function createPaymentsRouter({
       err.status = 409;
       throw err;
     }
-    const currency = fee.currency || org.default_currency;
-    if (!currency) {
-      const err = new Error("The federation's currency is not configured.");
-      err.status = 409;
-      throw err;
-    }
+    const currency = requireCurrency(fee.currency || org.default_currency);
     const subjectType = clubScope(kind);
     await refuseOutsideRenewalWindow({
       sql: `SELECT MAX(period_end) AS until FROM club_affiliations
@@ -520,7 +548,7 @@ module.exports = function createPaymentsRouter({
       params: [org.id, club.id, kind, RENEWAL_WINDOW_DAYS],
       what: `This club's ${kind}`,
     });
-    const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
+    const feeBps = resolveFeeBps(fee, org);
     const { chargeAmountCents, applicationFeeCents } = priceCharge({
       baseAmountCents: chosen.amount_cents,
       feeBps,
@@ -552,30 +580,19 @@ module.exports = function createPaymentsRouter({
     if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
     const paymentId = attempt.paymentId;
 
-    try {
-      const session = await payments.createCheckoutSession({
-        currency,
-        chargeAmountCents,
-        applicationFeeCents,
-        productName: `${org.name} club ${kind} — ${club.name}`,
-        customerEmail: req.user.email,
-        clientReferenceId: paymentId,
-        metadata: {
-          payment_id: paymentId,
-          scope: subjectType,
-          org_id: org.id,
-          club_id: club.id,
-          initiated_by: req.user.id,
-        },
-        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=club`,
-        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=club`,
-      });
-      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
-      return { url: session.url, paymentId };
-    } catch (err) {
-      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
-      throw err;
-    }
+    return openCheckoutSession({
+      paymentId, currency, chargeAmountCents, applicationFeeCents,
+      productName: `${org.name} club ${kind} — ${club.name}`,
+      customerEmail: req.user.email,
+      metadata: {
+        payment_id: paymentId,
+        scope: subjectType,
+        org_id: org.id,
+        club_id: club.id,
+        initiated_by: req.user.id,
+      },
+      flow: "club",
+    });
   }
 
   // Resolve the club fee that applies to one club: prefer a club-specific
@@ -618,12 +635,7 @@ module.exports = function createPaymentsRouter({
       err.status = 409;
       throw err;
     }
-    const currency = fee.currency || org.default_currency;
-    if (!currency) {
-      const err = new Error("The federation's currency is not configured.");
-      err.status = 409;
-      throw err;
-    }
+    const currency = requireCurrency(fee.currency || org.default_currency);
     await refuseOutsideRenewalWindow({
       sql: `SELECT MAX(period_end) AS until FROM official_accreditations
              WHERE org_id = $1 AND user_id = $2 AND role_type = $3 AND meet_id IS NULL
@@ -632,7 +644,7 @@ module.exports = function createPaymentsRouter({
       params: [org.id, userId, roleType, RENEWAL_WINDOW_DAYS],
       what: `Your ${roleType} accreditation`,
     });
-    const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
+    const feeBps = resolveFeeBps(fee, org);
     const { chargeAmountCents, applicationFeeCents } = priceCharge({
       baseAmountCents: chosen.amount_cents,
       feeBps,
@@ -661,30 +673,19 @@ module.exports = function createPaymentsRouter({
     if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
     const paymentId = attempt.paymentId;
 
-    try {
-      const session = await payments.createCheckoutSession({
-        currency,
-        chargeAmountCents,
-        applicationFeeCents,
-        productName: `${org.name} ${roleType} accreditation`,
-        customerEmail: req.user.email,
-        clientReferenceId: paymentId,
-        metadata: {
-          payment_id: paymentId,
-          scope: "official_accreditation",
-          org_id: org.id,
-          user_id: userId,
-          role_type: roleType,
-        },
-        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=accreditation`,
-        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=accreditation`,
-      });
-      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
-      return { url: session.url, paymentId };
-    } catch (err) {
-      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
-      throw err;
-    }
+    return openCheckoutSession({
+      paymentId, currency, chargeAmountCents, applicationFeeCents,
+      productName: `${org.name} ${roleType} accreditation`,
+      customerEmail: req.user.email,
+      metadata: {
+        payment_id: paymentId,
+        scope: "official_accreditation",
+        org_id: org.id,
+        user_id: userId,
+        role_type: roleType,
+      },
+      flow: "accreditation",
+    });
   }
 
   // The entrant pays an owed scratch/no-show charge. Unlike the other
@@ -693,13 +694,8 @@ module.exports = function createPaymentsRouter({
   // Links the new payment back onto the charge; the webhook marks it paid.
   async function startChargeCheckout({ req, org, charge, fee, onBehalf = false }) {
     const userId = req.user.id;
-    const currency = fee.currency || org.default_currency;
-    if (!currency) {
-      const err = new Error("The federation's currency is not configured.");
-      err.status = 409;
-      throw err;
-    }
-    const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
+    const currency = requireCurrency(fee.currency || org.default_currency);
+    const feeBps = resolveFeeBps(fee, org);
     const { chargeAmountCents, applicationFeeCents } = priceCharge({
       baseAmountCents: charge.amount_cents,
       feeBps,
@@ -737,33 +733,22 @@ module.exports = function createPaymentsRouter({
     if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
     const paymentId = attempt.paymentId;
 
-    try {
-      const session = await payments.createCheckoutSession({
-        currency,
-        chargeAmountCents,
-        applicationFeeCents,
-        productName: `${penaltyLabel(charge.kind)} — ${org.name}`,
-        customerEmail: req.user.email,
-        clientReferenceId: paymentId,
-        metadata: {
-          payment_id: paymentId,
-          scope: charge.kind,
-          org_id: org.id,
-          user_id: userId,
-          event_id: charge.event_id,
-          entry_charge_id: charge.id,
-        },
-        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=charges`,
-        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=charges`,
-      });
-      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
+    return openCheckoutSession({
+      paymentId, currency, chargeAmountCents, applicationFeeCents,
+      productName: `${penaltyLabel(charge.kind)} — ${org.name}`,
+      customerEmail: req.user.email,
+      metadata: {
+        payment_id: paymentId,
+        scope: charge.kind,
+        org_id: org.id,
+        user_id: userId,
+        event_id: charge.event_id,
+        entry_charge_id: charge.id,
+      },
+      flow: "charges",
       // Link the payment onto the charge so the webhook can settle it.
-      await pool.query("UPDATE entry_charges SET payment_id = $1 WHERE id = $2", [paymentId, charge.id]);
-      return { url: session.url, paymentId };
-    } catch (err) {
-      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
-      throw err;
-    }
+      afterStamp: () => pool.query("UPDATE entry_charges SET payment_id = $1 WHERE id = $2", [paymentId, charge.id]),
+    });
   }
 
   // A signed-in supporter donates a chosen amount to the federation. The
@@ -772,13 +757,8 @@ module.exports = function createPaymentsRouter({
   // are fine.
   async function startDonationCheckout({ req, org, fee, amountCents }) {
     const userId = req.user.id;
-    const currency = fee.currency || org.default_currency;
-    if (!currency) {
-      const err = new Error("The federation's currency is not configured.");
-      err.status = 409;
-      throw err;
-    }
-    const feeBps = fee.platform_fee_bps != null ? fee.platform_fee_bps : org.platform_fee_bps;
+    const currency = requireCurrency(fee.currency || org.default_currency);
+    const feeBps = resolveFeeBps(fee, org);
     const { chargeAmountCents, applicationFeeCents } = priceCharge({
       baseAmountCents: amountCents,
       feeBps,
@@ -793,24 +773,13 @@ module.exports = function createPaymentsRouter({
       [org.id, fee.id, userId, chargeAmountCents, applicationFeeCents, currency, fee.fee_payer],
     );
     const paymentId = ins.rows[0].id;
-    try {
-      const session = await payments.createCheckoutSession({
-        currency,
-        chargeAmountCents,
-        applicationFeeCents,
-        productName: `Donation to ${org.name}`,
-        customerEmail: req.user.email,
-        clientReferenceId: paymentId,
-        metadata: { payment_id: paymentId, scope: "donation", org_id: org.id, user_id: userId },
-        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=donation`,
-        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=donation`,
-      });
-      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
-      return { url: session.url, paymentId };
-    } catch (err) {
-      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
-      throw err;
-    }
+    return openCheckoutSession({
+      paymentId, currency, chargeAmountCents, applicationFeeCents,
+      productName: `Donation to ${org.name}`,
+      customerEmail: req.user.email,
+      metadata: { payment_id: paymentId, scope: "donation", org_id: org.id, user_id: userId },
+      flow: "donation",
+    });
   }
 
   // The fined person pays their own fine (payer_user_id = liable_user_id).
@@ -818,12 +787,7 @@ module.exports = function createPaymentsRouter({
   // fines carry no fee_definition. One-live guard is per-fine (fine_id).
   async function startFineCheckout({ req, org, fine, onBehalf = false }) {
     const userId = req.user.id;
-    const currency = fine.currency || org.default_currency;
-    if (!currency) {
-      const err = new Error("The federation's currency is not configured.");
-      err.status = 409;
-      throw err;
-    }
+    const currency = requireCurrency(fine.currency || org.default_currency);
     const feeBps = org.platform_fee_bps;
     const { chargeAmountCents, applicationFeeCents } = priceCharge({
       baseAmountCents: fine.amount_cents,
@@ -857,25 +821,14 @@ module.exports = function createPaymentsRouter({
     });
     if (attempt.resumedUrl) return { url: attempt.resumedUrl, paymentId: attempt.paymentId };
     const paymentId = attempt.paymentId;
-    try {
-      const session = await payments.createCheckoutSession({
-        currency,
-        chargeAmountCents,
-        applicationFeeCents,
-        productName: `Fine — ${org.name}`,
-        customerEmail: req.user.email,
-        clientReferenceId: paymentId,
-        metadata: { payment_id: paymentId, scope: "fine", org_id: org.id, user_id: userId, fine_id: fine.id },
-        successUrl: `${APP_BASE_URL}/payments/return?status=paid&flow=charges`,
-        cancelUrl: `${APP_BASE_URL}/payments/return?status=canceled&flow=charges`,
-      });
-      await pool.query("UPDATE payments SET stripe_checkout_session = $1 WHERE id = $2", [session.id, paymentId]);
-      await pool.query("UPDATE fines SET payment_id = $1 WHERE id = $2", [paymentId, fine.id]);
-      return { url: session.url, paymentId };
-    } catch (err) {
-      await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [paymentId]);
-      throw err;
-    }
+    return openCheckoutSession({
+      paymentId, currency, chargeAmountCents, applicationFeeCents,
+      productName: `Fine — ${org.name}`,
+      customerEmail: req.user.email,
+      metadata: { payment_id: paymentId, scope: "fine", org_id: org.id, user_id: userId, fine_id: fine.id },
+      flow: "charges",
+      afterStamp: () => pool.query("UPDATE fines SET payment_id = $1 WHERE id = $2", [paymentId, fine.id]),
+    });
   }
 
   // ---- Payout setup (platform is merchant of record) --------------
