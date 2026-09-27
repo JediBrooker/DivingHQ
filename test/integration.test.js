@@ -1963,3 +1963,63 @@ test("recap event block carries represent_as and the region label", async (t) =>
     await claimKit.wipe(CODE);
   }
 });
+
+// Claiming an old account moves its entries to the claimant, synchro
+// partner slots included. It's the same diver, so the partner snapshot
+// taken at entry has to survive the move (routes/users.js sets
+// divinghq.keep_rep_snapshot for that transaction).
+test("claiming an old account keeps its synchro-partner snapshot", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "WLF";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Mata-Utu Divers", { new_club_short_code: "MUD" });
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const leava = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, 'Leava Divers', 'LVD') RETURNING id", [orgId],
+    )).rows[0].id;
+    const mk = async (fullName, clubId) => {
+      const username = `int-cm-${crypto.randomBytes(3).toString("hex")}`;
+      const id = await insertUser({ orgId, role: "diver", username, fullName });
+      await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [clubId, id]);
+      return { id, username };
+    };
+    const lead = await mk("Lead Diver", A.clubId);
+    const old = await mk("Old Me", A.clubId);
+    const me = await mk("New Me", leava);
+
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Wallis Open", represent_as: "club" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "Synchro 3m", gender: "Mixed", height: "3m", number_of_judges: 7, total_rounds: 1, event_type: "synchro_pair", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const dive = (await pool.query("SELECT id FROM dive_directory WHERE height = 3 LIMIT 1")).rows[0].id;
+    // One row for the pair, the old account only as partner_id.
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, partner_id, dive_id, round_number) VALUES ($1, $2, $3, $4, 1)",
+      [ev.body.id, lead.id, old.id, dive],
+    );
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [old.id]);
+
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username: me.username, password: "not-used-here" } });
+    assert.equal(login.status, 200, JSON.stringify(login.body));
+    const claim = await fetchJson("POST", "/api/users/me/claim", {
+      token: login.body.token, body: { old_user_ids: [old.id], password: "not-used-here" },
+    });
+    assert.equal(claim.status, 200, JSON.stringify(claim.body));
+    assert.deepEqual(claim.body.claimed, [old.id]);
+
+    const row = (await pool.query(
+      "SELECT partner_id, partner_rep_club_id FROM competitor_dive_lists WHERE event_id = $1", [ev.body.id],
+    )).rows[0];
+    assert.equal(row.partner_id, me.id);
+    assert.equal(row.partner_rep_club_id, A.clubId, "entered from Mata-Utu, still Mata-Utu");
+    const sb = await fetchJson("GET", `/api/scoreboard/${ev.body.id}?cache=skip`, { token: A.token });
+    assert.equal(sb.body.upcoming[0].partner_country, "MUD");
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
