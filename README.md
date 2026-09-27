@@ -57,19 +57,19 @@ The public landing page. Anyone can sign in, create an account, watch a live mee
 
 #### Sign In
 
-Three entry points from one screen: existing users sign in, individuals join an existing federation via "Register here", and a brand-new federation admin clicks "Register your org". Forgot-password sends a single-use 30-min reset link.
+Three entry points from one screen: existing users sign in, individuals and clubs sign up via "Register here", and a national federation or state body clicks "Register your org". Forgot-password sends a single-use 30-min reset link.
 
 ![Sign In](./public/guide-screenshots/login.png)
 
 #### Sign Up (individual)
 
-The path for an individual diver, judge, or coach to join an existing federation. Pick the federation from the dropdown, role from the chips, fill in details. New accounts go through email verification and (for non-diver roles) admin approval before they can sign in.
+The path for a diver, judge, coach or club founder. Pick your country and you join whoever runs diving there (the form only asks which federation when a country has more than one); in a country nobody's on yet, you can start your club in the same form. New accounts go through email verification, and a requested role above spectator needs approval from the federation or club admin.
 
 ![Sign Up](./public/guide-screenshots/register.png)
 
 #### Register a Federation
 
-The first-time path for a country federation or club to register an organisation on DivingHQ. Org admin lands here, fills in name + country code + slug + admin credentials, and the request goes to the system administrator's queue for approval before the federation can run meets.
+For national federations and state bodies only; clubs sign up through "Register here", and the page says so at the top. The body gives its name, country (required) and optionally its state, and registering opens a claim on that country's account (or region) instead of creating a parallel org. The clubs already there vote, or the system administrator reviews it when there aren't enough of them or nobody from the country is on DivingHQ yet. The claimant can sign in once their email is verified and takes over when the claim is approved.
 
 ![Register a Federation](./public/guide-screenshots/register-org.png)
 

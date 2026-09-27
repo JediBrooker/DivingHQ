@@ -1522,8 +1522,8 @@ test("email verification: the link signs you in, a lost one can be resent", asyn
   if (!serverReady) return t.skip("server didn't boot — see warning above");
   const CODE = "KIR";
   await claimKit.wipe(CODE);
-  await claimKit.wipe("FSM");
   const link = (sub) => claimKit.jwt.sign({ sub, type: "email_verify" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  let pendingOrgId = null;
   try {
     const username = `int-cl-${crypto.randomBytes(4).toString("hex")}`;
     const reg = await fetchJson("POST", "/api/auth/register", {
@@ -1556,13 +1556,16 @@ test("email verification: the link signs you in, a lost one can be resent", asyn
     const cl = await fetchJson("POST", "/api/auth/verify-email", { body: { token: link(fed.id) } });
     assert.equal(cl.body.next, "claim_open");
 
-    // A brand new federation waits for approval.
+    // A federation from a code outside the country list still gets the
+    // old pending org, and the page says it's waiting for approval. (A
+    // real country opens a claim now, covered further down.)
     const pendingUser = `int-cf-${crypto.randomBytes(4).toString("hex")}`;
     const pend = await fetchJson("POST", "/api/auth/register-org", {
-      body: { org_name: "Micronesia Diving", country_code: "FSM", slug: `fsm-${crypto.randomBytes(3).toString("hex")}`,
-              username: pendingUser, password: TEST_PASSWORD, full_name: "FSM Admin", email: `${pendingUser}@example.test` },
+      body: { org_name: "Test Land Diving", country_code: "TST", slug: `tst-${crypto.randomBytes(3).toString("hex")}`,
+              username: pendingUser, password: TEST_PASSWORD, full_name: "TST Admin", email: `${pendingUser}@example.test` },
     });
     assert.equal(pend.status, 201, JSON.stringify(pend.body));
+    pendingOrgId = pend.body.org_id;
     const pid = (await pool.query("SELECT id FROM users WHERE username = $1", [pendingUser])).rows[0].id;
     assert.equal((await fetchJson("POST", "/api/auth/verify-email", { body: { token: link(pid) } })).body.next, "org_pending");
 
@@ -1581,7 +1584,365 @@ test("email verification: the link signs you in, a lost one can be resent", asyn
     assert.equal((await fetchJson("POST", "/api/auth/login", { body: { username: u2, password: TEST_PASSWORD + "x" } })).status, 200);
   } finally {
     await claimKit.wipe(CODE);
-    await claimKit.wipe("FSM");
+    await teardownFixture({ orgId: pendingOrgId });
+  }
+});
+
+// ---------------------------------------------------------------------
+// Countries and federations at signup (migration 093).
+// ---------------------------------------------------------------------
+
+// R19: a federation from a country nobody's on yet doesn't get a pending
+// org of its own any more. It claims a freshly started country account,
+// so the country's first club lands in the same place.
+test("register-org: a federation from a brand-new country claims its account", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "WLF";
+  await claimKit.wipe(CODE);
+  try {
+    const fed = await claimKit.claim({ org_name: "Wallis and Futuna Diving", country_code: CODE, slug: undefined });
+    assert.equal(fed.res.status, 201, JSON.stringify(fed.res.body));
+    assert.equal(fed.res.body.approver, "sysadmin", "nobody there to vote yet");
+    assert.equal(fed.res.body.target_kind, "org");
+    assert.equal(fed.res.body.org_id, undefined, "no org of its own");
+
+    const orgs = (await pool.query(
+      "SELECT id, status, claim_state, name FROM organisations WHERE country_code = $1", [CODE],
+    )).rows;
+    assert.equal(orgs.length, 1, "one account for the country, no pending twin");
+    assert.equal(orgs[0].status, "active");
+    assert.equal(orgs[0].claim_state, "unclaimed");
+    assert.equal(orgs[0].name, "Wallis & Futuna");
+    const claim = (await pool.query("SELECT * FROM claims WHERE id = $1", [fed.res.body.claim_id])).rows[0];
+    assert.equal(claim.target_id, orgs[0].id);
+    assert.equal(claim.body_name, "Wallis and Futuna Diving");
+
+    // They can sign in (as a spectator) while it's reviewed.
+    const v = await fetchJson("POST", "/api/auth/verify-email", {
+      body: { token: claimKit.jwt.sign({ sub: fed.id, type: "email_verify" }, process.env.JWT_SECRET, { expiresIn: "1h" }) },
+    });
+    assert.equal(v.body.next, "claim_open");
+    const me = await claimKit.login(fed.username);
+    assert.ok(me.token, "claimant can sign in");
+    assert.equal(me.org_id, orgs[0].id);
+
+    // The country's first club joins that account rather than starting another.
+    await claimKit.founder(CODE, "Mata-Utu Divers");
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM organisations WHERE country_code = $1", [CODE])).rows[0].n, 1);
+
+    // A second federation for the same country is told it's already claimed for.
+    const again = await claimKit.claim({ org_name: "Rival Wallis Diving", country_code: CODE });
+    assert.equal(again.res.status, 409);
+    assert.equal(again.res.body.code, "claim_in_progress");
+
+    // DivingHQ approves: the account becomes the federation.
+    const sys = await claimKit.login("admin", "admin");
+    if (sys?.token) {
+      const d = await fetchJson("POST", `/api/claims/${claim.id}/decide`, { token: sys.token, body: { decision: "approve" } });
+      assert.equal(d.status, 200, JSON.stringify(d.body));
+      const after = (await pool.query("SELECT name, claim_state FROM organisations WHERE id = $1", [orgs[0].id])).rows[0];
+      assert.deepEqual(after, { name: "Wallis and Futuna Diving", claim_state: "claimed" });
+      const roles = (await claimKit.login(fed.username)).org_roles;
+      assert.ok(roles.includes("org_admin"));
+    }
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+// R6: a country is required and has to be alpha-3; the slug is ours to make.
+test("register-org: country is required and the slug comes from the name", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const made = [];
+  const register = async (body) => {
+    const username = `int-slug-${crypto.randomBytes(4).toString("hex")}`;
+    const r = await fetchJson("POST", "/api/auth/register-org", {
+      body: { username, password: TEST_PASSWORD, full_name: "Slug Tester", email: `${username}@example.test`, ...body },
+    });
+    if (r.body?.org_id) made.push(r.body.org_id);
+    return r;
+  };
+  try {
+    for (const country_code of [undefined, "", "AU", "aus", "AUST", 12]) {
+      const r = await register({ org_name: "No Country Diving", country_code });
+      assert.equal(r.status, 400, `country_code ${JSON.stringify(country_code)}: ${JSON.stringify(r.body)}`);
+      assert.equal(r.body.code, "country_required");
+    }
+
+    // An uncatalogued code keeps the old pending path, and without a slug
+    // one is made from the name, suffixed when it's taken.
+    const tag = crypto.randomBytes(3).toString("hex");
+    const a = await register({ org_name: `Fédération Test ${tag}`, country_code: "TST" });
+    assert.equal(a.status, 201, JSON.stringify(a.body));
+    const b = await register({ org_name: `Fédération Test ${tag}`, country_code: "TST" });
+    assert.equal(b.status, 201, JSON.stringify(b.body));
+    const slugs = (await pool.query(
+      "SELECT id, slug, status, country_code FROM organisations WHERE id = ANY($1::uuid[]) ORDER BY created_at",
+      [[a.body.org_id, b.body.org_id]],
+    )).rows;
+    assert.equal(slugs.length, 2);
+    assert.equal(slugs.find((o) => o.id === a.body.org_id).slug, `federation-test-${tag}`);
+    assert.match(slugs.find((o) => o.id === b.body.org_id).slug, new RegExp(`^federation-test-${tag}-[0-9a-f]{4}$`));
+    assert.ok(slugs.every((o) => o.status === "pending" && o.country_code === "TST"));
+
+    // Nothing Latin in the name: falls back to the country.
+    const c = await register({ org_name: "Федерация прыжков", country_code: "TST" });
+    assert.equal(c.status, 201, JSON.stringify(c.body));
+    const cs = (await pool.query("SELECT slug FROM organisations WHERE id = $1", [c.body.org_id])).rows[0].slug;
+    assert.match(cs, /^org-tst(-[0-9a-f]{4})?$/);
+
+    // An explicit slug still works, has to be URL-safe, and is the
+    // client's to lose on a clash.
+    const own = `int-own-${tag}`;
+    const d = await register({ org_name: "Own Slug Diving", country_code: "TST", slug: own });
+    assert.equal(d.status, 201, JSON.stringify(d.body));
+    assert.equal((await pool.query("SELECT slug FROM organisations WHERE id = $1", [d.body.org_id])).rows[0].slug, own);
+    const taken = await register({ org_name: "Own Slug Again", country_code: "TST", slug: own });
+    assert.equal(taken.status, 400);
+    assert.match(taken.body.error, /already taken/);
+    const bad = await register({ org_name: "Bad Slug", country_code: "TST", slug: "Not A Slug" });
+    assert.equal(bad.status, 400);
+  } finally {
+    for (const orgId of made) await teardownFixture({ orgId });
+  }
+});
+
+// #8 / #26: a federation still waiting for approval is that country's org
+// being set up. A club signing up meanwhile is told so, instead of
+// starting an unclaimed account the approval would then sit next to.
+test("a pending federation blocks a parallel country account", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "SPM";
+  await claimKit.wipe(CODE);
+  await claimKit.wipe("PM");
+  try {
+    // Legacy rows: register-org can't make these for a real country now.
+    for (const code of [CODE, "PM"]) {
+      const pending = (await pool.query(
+        `INSERT INTO organisations (name, country_code, slug, status)
+         VALUES ('Saint Pierre Diving', $1, $2, 'pending') RETURNING id`,
+        [code, `int-spm-${crypto.randomBytes(4).toString("hex")}`],
+      )).rows[0].id;
+
+      const username = `int-spm-${crypto.randomBytes(4).toString("hex")}`;
+      const club = await fetchJson("POST", "/api/auth/register", {
+        body: { username, full_name: "Club Founder", password: TEST_PASSWORD, email: `${username}@example.test`,
+                country_code: CODE, new_club_name: "Saint-Pierre Plongeon" },
+      });
+      assert.equal(club.status, 409, `${code}: ${JSON.stringify(club.body)}`);
+      assert.equal(club.body.code, "federation_pending");
+      assert.match(club.body.error, /waiting for approval/);
+
+      const fed = await claimKit.claim({ org_name: "Another SPM Body", country_code: CODE });
+      assert.equal(fed.res.status, 409, JSON.stringify(fed.res.body));
+      assert.equal(fed.res.body.code, "federation_pending");
+
+      const n = (await pool.query(
+        "SELECT count(*)::int AS n FROM organisations WHERE country_code IN ('SPM', 'PM')",
+      )).rows[0].n;
+      assert.equal(n, 1, "nothing started next to the pending federation");
+      assert.equal((await pool.query("SELECT 1 FROM users WHERE username = $1", [username])).rows.length, 0);
+      await teardownFixture({ orgId: pending });
+    }
+
+    // Once there's nothing pending, the country's first club starts it as usual.
+    await claimKit.founder(CODE, "Miquelon Divers");
+    const org = (await pool.query("SELECT claim_state FROM organisations WHERE country_code = $1", [CODE])).rows;
+    assert.deepEqual(org, [{ claim_state: "unclaimed" }]);
+  } finally {
+    await claimKit.wipe(CODE);
+    await claimKit.wipe("PM");
+  }
+});
+
+// #6 belt and braces: until migration 093 has run on a box, a federation
+// stored with its alpha-2 code must still be the one its country joins.
+test("a federation stored with an alpha-2 code is still found by country", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MSR";
+  await claimKit.wipe(CODE);
+  await claimKit.wipe("MS");
+  try {
+    const fedId = (await pool.query(
+      `INSERT INTO organisations (name, country_code, slug, status)
+       VALUES ('Montserrat Diving', 'MS', $1, 'active') RETURNING id`,
+      [`int-msr-${crypto.randomBytes(4).toString("hex")}`],
+    )).rows[0].id;
+
+    const lookup = await fetchJson("GET", `/api/orgs/by-country/${CODE}`);
+    assert.deepEqual(lookup.body.map((o) => o.id), [fedId]);
+
+    const username = `int-msr-${crypto.randomBytes(4).toString("hex")}`;
+    const reg = await fetchJson("POST", "/api/auth/register", {
+      body: { username, full_name: "Plymouth Diver", password: TEST_PASSWORD, email: `${username}@example.test`, country_code: CODE },
+    });
+    assert.equal(reg.status, 201, JSON.stringify(reg.body));
+    assert.equal((await pool.query("SELECT org_id FROM users WHERE username = $1", [username])).rows[0].org_id, fedId);
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM organisations WHERE country_code = $1", [CODE])).rows[0].n, 0,
+      "no unclaimed Montserrat next to the real one");
+
+    // And a second body for the country is sent to support, not handed a
+    // pending org of its own.
+    const fed = await claimKit.claim({ org_name: "Montserrat Aquatics", country_code: CODE });
+    assert.equal(fed.res.status, 409, JSON.stringify(fed.res.body));
+    assert.equal(fed.res.body.code, "already_claimed");
+    assert.match(fed.res.body.error, /Montserrat Diving already runs Montserrat/);
+  } finally {
+    await claimKit.wipe(CODE);
+    await claimKit.wipe("MS");
+  }
+});
+
+// The sysadmin side of #6 / #26: approving needs a country and won't split
+// one, and live orgs with no usable country can be given one.
+test("sysadmin: org countries, and approvals that would split a country", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const sys = await claimKit.login("admin", "admin");
+  if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+  const CODE = "FRO";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  const made = [];
+  const mkOrg = async (country, status) => {
+    const id = (await pool.query(
+      `INSERT INTO organisations (name, country_code, slug, status) VALUES ($1, $2, $3, $4) RETURNING id`,
+      [`Int Country ${crypto.randomBytes(3).toString("hex")}`, country, `int-cc-${crypto.randomBytes(4).toString("hex")}`, status],
+    )).rows[0].id;
+    made.push(id);
+    return id;
+  };
+  try {
+    // No country, no approval.
+    const noCountry = await mkOrg(null, "pending");
+    const st = await fetchJson("PUT", `/api/orgs/${noCountry}/status`, { token: sys.token, body: { status: "active" } });
+    assert.equal(st.status, 400, JSON.stringify(st.body));
+    assert.equal(st.body.code, "country_required");
+    assert.equal((await fetchJson("PUT", `/api/orgs/${noCountry}/status`, { token: sys.token, body: { status: "bogus" } })).status, 400);
+
+    // Live orgs signups can't find by country are listed for fixing.
+    const lost = await mkOrg(null, "active");
+    const ioc = await mkOrg("GER", "active");
+    const fine = await mkOrg("GRL", "active");
+    const list = (await fetchJson("GET", "/api/orgs/needs-country", { token: sys.token })).body;
+    const ids = list.map((o) => o.id);
+    assert.ok(ids.includes(lost) && ids.includes(ioc), "NULL and non-ISO codes are listed");
+    assert.ok(!ids.includes(fine) && !ids.includes(noCountry), "real codes and pending orgs aren't");
+    assert.equal((await fetchJson("GET", "/api/orgs/needs-country", { token: state.adminToken })).status, 403);
+
+    // Give one its country.
+    assert.equal((await fetchJson("PUT", `/api/orgs/${lost}/country`, { token: sys.token, body: { country_code: "XX" } })).body.code, "country_unknown");
+    assert.equal((await fetchJson("PUT", `/api/orgs/${lost}/country`, { token: state.adminToken, body: { country_code: "GRL" } })).status, 403);
+    const set = await fetchJson("PUT", `/api/orgs/${lost}/country`, { token: sys.token, body: { country_code: "grl" } });
+    assert.equal(set.status, 200, JSON.stringify(set.body));
+    assert.equal(set.body.country_code, "GRL");
+    const audit = await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'org.country_changed'", [lost],
+    );
+    assert.deepEqual(audit.rows[0]?.metadata, { from: null, to: "GRL" });
+    assert.ok(!(await fetchJson("GET", "/api/orgs/needs-country", { token: sys.token })).body.some((o) => o.id === lost));
+    await pool.query("DELETE FROM audit_log WHERE entity_id = $1", [lost]);
+
+    // Clubs started the Faroes; approving a pending Faroese federation now
+    // would give the country two accounts.
+    await claimKit.founder(CODE, "Tórshavn Divers");
+    const clubsOrg = (await pool.query(
+      "SELECT id FROM organisations WHERE country_code = $1 AND claim_state = 'unclaimed'", [CODE],
+    )).rows[0].id;
+    const fed = await mkOrg(CODE, "pending");
+    const clash = await fetchJson("PUT", `/api/orgs/${fed}/status`, { token: sys.token, body: { status: "active" } });
+    assert.equal(clash.status, 409, JSON.stringify(clash.body));
+    assert.equal(clash.body.code, "country_has_unclaimed_org");
+    assert.equal((await pool.query("SELECT status FROM organisations WHERE id = $1", [fed])).rows[0].status, "pending");
+    // Denying it is still fine.
+    assert.equal((await fetchJson("PUT", `/api/orgs/${fed}/status`, { token: sys.token, body: { status: "suspended" } })).status, 200);
+    // And the clubs' own account keeps its country.
+    const fixed = await fetchJson("PUT", `/api/orgs/${clubsOrg}/country`, { token: sys.token, body: { country_code: "GRL" } });
+    assert.equal(fixed.status, 409);
+    assert.equal(fixed.body.code, "unclaimed_country_fixed");
+  } finally {
+    await pool.query("DELETE FROM audit_log WHERE entity_id = ANY($1::uuid[])", [made]).catch(() => {});
+    for (const orgId of made) await teardownFixture({ orgId });
+    await teardownFixture(state);
+    await claimKit.wipe(CODE);
+  }
+});
+
+// Review follow-up to the approval guard: before migration 093 has run, a
+// pending federation can still be stored as 'IM'. It's the Isle of Man all
+// the same, so approving it next to the clubs' IMN account is refused too.
+test("approving a pending org stored with an alpha-2 code can't split its country", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const sys = await claimKit.login("admin", "admin");
+  if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+  const CODE = "IMN";
+  await claimKit.wipe(CODE);
+  await claimKit.wipe("IM");
+  try {
+    await claimKit.founder(CODE, "Douglas Divers");
+    const fed = (await pool.query(
+      `INSERT INTO organisations (name, country_code, slug, status)
+       VALUES ('Manx Diving', 'IM', $1, 'pending') RETURNING id`,
+      [`int-im-${crypto.randomBytes(4).toString("hex")}`],
+    )).rows[0].id;
+    const r = await fetchJson("PUT", `/api/orgs/${fed}/status`, { token: sys.token, body: { status: "active" } });
+    assert.equal(r.status, 409, JSON.stringify(r.body));
+    assert.equal(r.body.code, "country_has_unclaimed_org");
+    assert.equal((await pool.query("SELECT status FROM organisations WHERE id = $1", [fed])).rows[0].status, "pending");
+  } finally {
+    await claimKit.wipe(CODE);
+    await claimKit.wipe("IM");
+  }
+});
+
+// The edges of R19's "every real country is a claim": two federations
+// racing for the same empty country, a country whose clubs' account the
+// sysadmin has paused, and a state body behind a pending federation.
+test("register-org: a race for a new country, a paused country, a region behind a pending org", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const codes = ["JEY", "GGY", "GIB"];
+  for (const c of codes) await claimKit.wipe(c);
+  const count = async (code) =>
+    (await pool.query("SELECT count(*)::int AS n FROM organisations WHERE country_code = $1", [code])).rows[0].n;
+  try {
+    // Both see an empty Jersey. One account comes out of it, and the
+    // loser is told someone's claim is already being decided.
+    const [a, b] = await Promise.all([
+      claimKit.claim({ org_name: "Jersey Diving", country_code: "JEY" }),
+      claimKit.claim({ org_name: "Jersey Aquatics", country_code: "JEY" }),
+    ]);
+    const statuses = [a.res.status, b.res.status].sort();
+    assert.deepEqual(statuses, [201, 409], JSON.stringify([a.res.body, b.res.body]));
+    assert.equal([a, b].find((x) => x.res.status === 409).res.body.code, "claim_in_progress");
+    assert.equal(await count("JEY"), 1);
+    assert.equal([a, b].filter((x) => x.id).length, 1, "the loser's account was rolled back");
+
+    // The sysadmin paused Guernsey's account: no second one beside it.
+    await claimKit.founder("GGY", "St Peter Port Divers");
+    await pool.query("UPDATE organisations SET status = 'suspended' WHERE country_code = 'GGY'");
+    const paused = await claimKit.claim({ org_name: "Guernsey Diving", country_code: "GGY" });
+    assert.equal(paused.res.status, 409, JSON.stringify(paused.res.body));
+    assert.equal(paused.res.body.code, "claim_needs_support");
+    assert.equal(await count("GGY"), 1);
+    assert.equal(paused.id, undefined);
+
+    // A pending federation holds the country against a state body too.
+    await pool.query(
+      `INSERT INTO organisations (name, country_code, slug, status) VALUES ('Gibraltar Diving', 'GIB', $1, 'pending')`,
+      [`int-gib-${crypto.randomBytes(4).toString("hex")}`],
+    );
+    const region = await claimKit.claim({ org_name: "Upper Rock Diving", country_code: "GIB", region_code: "UR" });
+    assert.equal(region.res.status, 409, JSON.stringify(region.res.body));
+    assert.equal(region.res.body.code, "federation_pending");
+    assert.equal(await count("GIB"), 1);
+  } finally {
+    for (const c of codes) await claimKit.wipe(c);
   }
 });
 

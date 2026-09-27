@@ -45,6 +45,21 @@
  * @property {'claimed'|'unclaimed'} claim_state  unclaimed = started by clubs, no federation yet
  */
 
+/**
+ * @typedef {Object} OrgNeedingCountry
+ * One row of GET /api/orgs/needs-country (sysadmin): a live org whose
+ * country_code is missing or not in lib/countries.json, so no signup can
+ * find it. PUT /api/orgs/:id/country { country_code } fixes one and
+ * answers with the whole organisations row.
+ *
+ * @property {string} id
+ * @property {string} name
+ * @property {?string} country_code  trimmed; null when there's none
+ * @property {'active'|'suspended'} status
+ * @property {'claimed'|'unclaimed'} claim_state
+ * @property {string} created_at
+ */
+
 // Note (migration 090): on diver rows from the scoreboard, recap, Control
 // Room, PDF and venue endpoints, `country_code` / `partner_country` hold
 // the meet's representation code (country, state short code or club

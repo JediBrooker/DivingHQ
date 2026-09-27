@@ -165,10 +165,15 @@ async function createOrgAndAdmin(request, opts = {}) {
   // The synthetic mailbox doesn't exist, but step 2 below
   // marks the admin email-verified directly via SQL so no
   // verification email is actually needed.
+  //
+  // Always registered as "TST". A real country now opens a claim on
+  // that country's account instead of making a fresh federation, and
+  // every spec here wants an org of its own, so the real code goes
+  // on in step 2 along with the approval.
   const reg = await request.post("/api/auth/register-org", {
     data: {
       org_name:     orgName,
-      country_code: countryCode,
+      country_code: "TST",
       slug,
       username,
       password:     TEST_PASSWORD,
@@ -186,8 +191,8 @@ async function createOrgAndAdmin(request, opts = {}) {
   //    org and the admin to click an email link; both are
   //    out-of-band for an e2e and would 10× the test runtime.
   await pool.query(
-    "UPDATE organisations SET status = 'active' WHERE id = $1",
-    [orgId],
+    "UPDATE organisations SET status = 'active', country_code = $2 WHERE id = $1",
+    [orgId, countryCode],
   );
   const u = await pool.query(
     `UPDATE users SET email_verified_at = now()

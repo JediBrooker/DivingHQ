@@ -2,12 +2,14 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-// Same file the server validates against (lib/countries.js), so the
-// picker can't offer a code the API then refuses.
+import { useCountryOptions } from '@/composables/useCountryOptions'
+// Same file the server validates against (lib/countries.js). The picker
+// comes from useCountryOptions; this is just for the locale guess below.
 import COUNTRIES from '../../lib/countries.json'
 
 const router = useRouter()
-const { locale, t } = useI18n()
+const { t } = useI18n()
+const { countryOptions, countryName: nameOfCountry } = useCountryOptions()
 
 const fullName = ref('')
 const username = ref('')
@@ -27,17 +29,7 @@ const countryOrgs = ref([])
 const countryLoaded = ref(false)
 const orgId = ref('')
 
-// Country names in the reader's own language where the browser knows
-// them, falling back to the English name stored in the JSON.
-const countryOptions = computed(() => {
-  let dn = null
-  try { dn = new Intl.DisplayNames([locale.value, 'en'], { type: 'region' }) } catch { /* old browser */ }
-  return COUNTRIES
-    .map(c => ({ code: c.a3, name: (dn && dn.of(c.a2)) || c.name }))
-    .sort((a, b) => a.name.localeCompare(b.name, locale.value))
-})
-const countryName = computed(() =>
-  countryOptions.value.find(c => c.code === countryCode.value)?.name || '')
+const countryName = computed(() => nameOfCountry(countryCode.value))
 
 const selectedOrg = computed(() => countryOrgs.value.find(o => o.id === orgId.value) || null)
 

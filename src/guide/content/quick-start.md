@@ -12,11 +12,11 @@ You need a running DivingHQ server — see the main README for installation. Fro
 
 Go to `/login`. You have three options:
 
-- **Sign in** — if your federation is already set up and an admin has given you an account.
-- **Register here** — create a personal account inside an existing federation.
-- **Register your org** — create a brand-new federation. Most first-time admins start here.
+- **Sign in** — if you already have an account.
+- **Register here** — create a personal account. Pick your country and you join whoever runs diving there; if nobody from your country is on DivingHQ yet, you can create your club in the same form and run its meets straight away. **Clubs start here.**
+- **Register your org** — only for a national federation or a state body. You pick your country (and your state, where the country has them), and it opens a **claim** on that account rather than creating a second one. The clubs already there vote on it; if there aren't enough of them yet, or nobody from the country is on DivingHQ, the system administrator reviews it.
 
-The system administrator (the person who set up the DivingHQ server) needs to **approve the federation** before you can sign in. New federations land in `pending` status until then. If you self-host, the bootstrap `admin` account (created by `init.sql`, password `admin`) can approve it from `/users` → org filter.
+You can sign in as soon as your email is verified. A claimant gets their admin access when the claim is approved. If you self-host, the bootstrap `admin` account (created by `init.sql`, password `admin`) decides claims from `/claims`.
 
 > **Change the bootstrap admin password the moment you log in.** It's `admin / admin` by default and that's a strong invitation for anyone who knows the project.
 

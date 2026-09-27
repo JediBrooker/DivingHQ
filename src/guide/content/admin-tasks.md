@@ -199,9 +199,18 @@ The system admin (set via `is_system_admin = true` in the DB) has a few extra su
 
 ### Approving new federations
 
-When someone clicks "Register your org" on the login page, their federation lands in `pending` status. The system admin sees pending orgs from User Manager → org filter → status = pending. Click → review name + country code + admin's contact email → approve or reject.
+A national federation or state body registering from a real country doesn't wait in a queue any more: it opens a **claim** on that country's account (or its region), and when nobody from the country is on DivingHQ yet, the account is started for it and the claim comes to you. Decide those on the **Claims** page (`/claims`).
 
-Approved orgs are immediately usable; rejected orgs send a notification email and stay in the database in `rejected` status (for audit purposes).
+Only an organisation registered with a code outside the country list still lands in `pending` status. Those, and any left over from before, show under User Manager → **Pending requests** → *Federation registrations*, with the admin's contact email. Approve or deny from there. Two rules protect the country lookup that signups rely on:
+
+- An organisation with **no country** can't be approved. Pick its country on the card and click **Set country** first.
+- If clubs have already started that country's account, approving would give the country two. The card says so and Approve stays off: deny it and have the federation claim the clubs' account from Register organisation instead.
+
+Approved orgs are immediately usable; denied orgs are suspended, the admin gets a notification email, and the row stays in the database for audit purposes.
+
+### Organisations without a country
+
+Signups find their federation by country, so a live organisation with no country (or a code that isn't on the list, like an old 2-letter code or an IOC code such as `GER`) is one nobody can join. User Manager → **Pending requests** lists them under *Organisations without a country*. Pick the country and click **Set country**; the change is audit-logged. An account the clubs started keeps the country it was started for.
 
 ### Approving system-wide records
 
