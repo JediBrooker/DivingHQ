@@ -249,11 +249,80 @@ module.exports = function createEventsRouter({
     return admins.rows.map((row) => row.id);
   }
 
+  // Every org_admin of the org, gated on the role row alone and not on
+  // users.org_id: an admin whose primary org is elsewhere still counts.
+  // `payload` can be an async function, called only when there's
+  // someone to tell, so a title that needs another lookup doesn't run
+  // it for nobody.
   async function notifyOrgAdmins(orgId, payload) {
     if (!push || typeof push.sendNotification !== "function") return;
     const ids = await orgAdminIds(orgId);
     if (!ids.length) return;
-    await push.sendNotification(ids, payload);
+    await push.sendNotification(ids, typeof payload === "function" ? await payload() : payload);
+  }
+
+  async function orgName(orgId) {
+    const r = await pool.query("SELECT name FROM organisations WHERE id = $1", [orgId]);
+    return r.rows[0]?.name;
+  }
+
+  // The checks both ways of bringing in another federation share (an
+  // invite it has to accept, or a straight add): the event exists, the
+  // caller hosts it, it isn't Completed, and the target is some other,
+  // active org. Sends the refusal and returns null, otherwise
+  // { ev, target }.
+  async function loadInviteContext(req, res, orgId) {
+    const evRes = await pool.query(
+      "SELECT id, org_id, name, status FROM events WHERE id = $1",
+      [req.params.id],
+    );
+    const ev = evRes.rows[0];
+    if (!ev) {
+      res.status(404).json({ error: "Event not found" });
+      return null;
+    }
+    // Only the HOST org's admin (or sysadmin) can bring other
+    // federations in. requireOrgAdmin already confirmed `org_admin`
+    // somewhere; this tightens it to "this event's host org".
+    if (!req.user.is_system_admin && ev.org_id !== req.user.org_id) {
+      res.status(403).json({ error: "You don't host this event" });
+      return null;
+    }
+    // Inviting a federation post-Completed sends a stale "your divers
+    // can now self-enter" notification (the entry gate would reject
+    // every actual submit) AND opens a way to spam foreign admins by
+    // toggling Completed -> Upcoming and back.
+    if (ev.status === "Completed") {
+      res.status(409).json({
+        error: "Event is already Completed — re-open it before inviting more federations",
+      });
+      return null;
+    }
+    // The host's own org is the implicit entry path, never a
+    // participating-org row.
+    if (orgId === ev.org_id) {
+      res.status(400).json({
+        error: "Host org is implicit — don't list it as a participating org",
+      });
+      return null;
+    }
+    // Active orgs only: pending/rejected/suspended can't participate.
+    const targetRes = await pool.query(
+      "SELECT id, name, status FROM organisations WHERE id = $1",
+      [orgId],
+    );
+    const target = targetRes.rows[0];
+    if (!target) {
+      res.status(404).json({ error: "Target org not found" });
+      return null;
+    }
+    if (target.status !== "active") {
+      res.status(409).json({
+        error: `${target.name} is ${target.status}; only active orgs can participate`,
+      });
+      return null;
+    }
+    return { ev, target };
   }
 
   // Stamp (or clear) dive_list_locks_at on an event. World
@@ -1318,40 +1387,15 @@ module.exports = function createEventsRouter({
     const { org_id, note } = req.body || {};
     if (!org_id) return res.status(400).json({ error: "org_id is required" });
     try {
-      const ev = await pool.query(
-        "SELECT id, org_id, name, status FROM events WHERE id = $1",
-        [req.params.id],
-      );
-      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
-      if (!req.user.is_system_admin && ev.rows[0].org_id !== req.user.org_id) {
-        return res.status(403).json({ error: "You don't host this event" });
-      }
-      if (ev.rows[0].status === "Completed") {
-        return res.status(409).json({
-          error: "Event is already Completed — re-open it before inviting more federations",
-        });
-      }
-      if (org_id === ev.rows[0].org_id) {
-        return res.status(400).json({
-          error: "Host org is implicit — don't list it as a participating org",
-        });
-      }
-      const target = await pool.query(
-        "SELECT id, name, status FROM organisations WHERE id = $1",
-        [org_id],
-      );
-      if (!target.rows.length) return res.status(404).json({ error: "Target org not found" });
-      if (target.rows[0].status !== "active") {
-        return res.status(409).json({
-          error: `${target.rows[0].name} is ${target.rows[0].status}; only active orgs can participate`,
-        });
-      }
+      const ctx = await loadInviteContext(req, res, org_id);
+      if (!ctx) return;
+      const { ev, target } = ctx;
       const accepted = await pool.query(
         "SELECT 1 FROM event_participating_orgs WHERE event_id = $1 AND org_id = $2",
         [req.params.id, org_id],
       );
       if (accepted.rows.length) {
-        return res.status(409).json({ error: `${target.rows[0].name} is already participating` });
+        return res.status(409).json({ error: `${target.name} is already participating` });
       }
       const request = await pool.query(
         `INSERT INTO event_participation_requests
@@ -1370,36 +1414,32 @@ module.exports = function createEventsRouter({
       try {
         await recordAudit(pool, {
           ...auditFromReq(req),
-          org_id: ev.rows[0].org_id,
+          org_id: ev.org_id,
           entity_type: "event",
-          entity_id: ev.rows[0].id,
-          entity_name: ev.rows[0].name,
+          entity_id: ev.id,
+          entity_name: ev.name,
           action: "event.participation_request.created",
           metadata: {
             request_id: request.rows[0].id,
             participating_org_id: org_id,
-            participating_org_name: target.rows[0].name,
+            participating_org_name: target.name,
           },
         });
       } catch (auditErr) {
         console.error("[Participation Request Audit Skipped]", auditErr.message);
       }
       try {
-        const hostOrg = await pool.query(
-          "SELECT name FROM organisations WHERE id = $1",
-          [ev.rows[0].org_id],
-        );
-        await notifyOrgAdmins(org_id, {
+        await notifyOrgAdmins(org_id, async () => ({
           category: "international_invite",
-          title: `${hostOrg.rows[0]?.name || "A host federation"} invited you to "${ev.rows[0].name}"`,
+          title: `${(await orgName(ev.org_id)) || "A host federation"} invited you to "${ev.name}"`,
           body: "Open Meet Manager to accept or decline participation.",
           data: {
             request_id: request.rows[0].id,
-            event_id: ev.rows[0].id,
-            host_org_id: ev.rows[0].org_id,
+            event_id: ev.id,
+            host_org_id: ev.org_id,
           },
-          action_url: `/manager?event=${ev.rows[0].id}`,
-        });
+          action_url: `/manager?event=${ev.id}`,
+        }));
       } catch (notifErr) {
         console.error("[Participation Request Notification Skipped]", notifErr.message);
       }
@@ -1507,47 +1547,9 @@ module.exports = function createEventsRouter({
     const { org_id } = req.body || {};
     if (!org_id) return res.status(400).json({ error: "org_id is required" });
     try {
-      const ev = await pool.query(
-        "SELECT id, org_id, name, status FROM events WHERE id = $1",
-        [req.params.id],
-      );
-      if (!ev.rows.length) return res.status(404).json({ error: "Event not found" });
-      // Only the HOST org's admin (or sysadmin) can grant
-      // entry to other federations. requireOrgAdmin already
-      // confirmed `org_admin` somewhere; tighten to "this event's
-      // host org".
-      if (!req.user.is_system_admin && ev.rows[0].org_id !== req.user.org_id) {
-        return res.status(403).json({ error: "You don't host this event" });
-      }
-      // Refuse on already-finalised events, inviting a federation
-      // post-Completed sends a stale "your divers can now self-
-      // enter" notification (the entry-gate middleware would
-      // reject every actual submit) AND opens a way to spam
-      // foreign admins by toggling Completed → Upcoming and back.
-      if (ev.rows[0].status === "Completed") {
-        return res.status(409).json({
-          error: "Event is already Completed — re-open it before inviting more federations",
-        });
-      }
-      // Disallow listing the host's own org, that's the implicit
-      // entry path, not a participating-org row.
-      if (org_id === ev.rows[0].org_id) {
-        return res.status(400).json({
-          error: "Host org is implicit — don't list it as a participating org",
-        });
-      }
-      // Active orgs only: pending/rejected/suspended can't
-      // participate.
-      const target = await pool.query(
-        "SELECT id, name, status FROM organisations WHERE id = $1",
-        [org_id],
-      );
-      if (!target.rows.length) return res.status(404).json({ error: "Target org not found" });
-      if (target.rows[0].status !== "active") {
-        return res.status(409).json({
-          error: `${target.rows[0].name} is ${target.rows[0].status}; only active orgs can participate`,
-        });
-      }
+      const ctx = await loadInviteContext(req, res, org_id);
+      if (!ctx) return;
+      const { ev, target } = ctx;
       const inserted = await pool.query(
         `INSERT INTO event_participating_orgs (event_id, org_id, added_by)
          VALUES ($1, $2, $3)
@@ -1560,12 +1562,12 @@ module.exports = function createEventsRouter({
       try {
         await recordAudit(pool, {
           ...auditFromReq(req),
-          org_id:      ev.rows[0].org_id,
+          org_id:      ev.org_id,
           entity_type: "event",
-          entity_id:   ev.rows[0].id,
-          entity_name: ev.rows[0].name,
+          entity_id:   ev.id,
+          entity_name: ev.name,
           action:      "event.participating_org.added",
-          metadata: { participating_org_id: org_id, participating_org_name: target.rows[0].name },
+          metadata: { participating_org_id: org_id, participating_org_name: target.name },
         });
       } catch (auditErr) {
         console.error("[Participating Org Audit Skipped]", auditErr.message);
@@ -1576,35 +1578,15 @@ module.exports = function createEventsRouter({
       // is wired they also buzz the admin's phone. ON CONFLICT
       // returning empty = the row already existed (re-add of an
       // already-invited org); skip the notification spam.
-      if (inserted.rows.length && push && typeof push.sendNotification === "function") {
+      if (inserted.rows.length) {
         try {
-          // Find every user with org_admin in the invited org.
-          // Gate on user_org_roles.role alone, NOT on
-          // users.org_id matching. A user can hold org_admin in
-          // an org that isn't their primary; the previous
-          // r.org_id = u.org_id predicate silently dropped those
-          // admins from the fan-out.
-          const admins = await pool.query(
-            `SELECT DISTINCT u.id
-               FROM user_org_roles r
-               JOIN users u ON u.id = r.user_id
-              WHERE r.org_id = $1 AND r.role = 'org_admin'`,
-            [org_id],
-          );
-          const adminIds = admins.rows.map(r => r.id);
-          if (adminIds.length) {
-            const hostOrg = await pool.query(
-              "SELECT name FROM organisations WHERE id = $1",
-              [ev.rows[0].org_id],
-            );
-            await push.sendNotification(adminIds, {
-              category:  "international_invite",
-              title:     `${hostOrg.rows[0]?.name || "A host federation"} invited you to "${ev.rows[0].name}"`,
-              body:      "Your divers can now self-enter this event. Open Meet Manager to see who's competing.",
-              data:      { event_id: ev.rows[0].id, host_org_id: ev.rows[0].org_id },
-              action_url: `/manager?event=${ev.rows[0].id}`,
-            });
-          }
+          await notifyOrgAdmins(org_id, async () => ({
+            category:  "international_invite",
+            title:     `${(await orgName(ev.org_id)) || "A host federation"} invited you to "${ev.name}"`,
+            body:      "Your divers can now self-enter this event. Open Meet Manager to see who's competing.",
+            data:      { event_id: ev.id, host_org_id: ev.org_id },
+            action_url: `/manager?event=${ev.id}`,
+          }));
         } catch (notifErr) {
           console.error("[Invite Notification Skipped]", notifErr.message);
         }
@@ -1679,31 +1661,15 @@ module.exports = function createEventsRouter({
       // self-withdraws, they need to know their roster expectation
       // changed. (Host-driven removal doesn't need this, the host
       // initiated it.)
-      if (isSelfWithdraw && !isHostAdmin && push && typeof push.sendNotification === "function") {
+      if (isSelfWithdraw && !isHostAdmin) {
         try {
-          // Same multi-org-admin fix as the invite-fanout: gate
-          // on r.role alone, not on r.org_id = u.org_id.
-          const hostAdmins = await pool.query(
-            `SELECT DISTINCT u.id
-               FROM user_org_roles r
-               JOIN users u ON u.id = r.user_id
-              WHERE r.org_id = $1 AND r.role = 'org_admin'`,
-            [ev.rows[0].org_id],
-          );
-          const adminIds = hostAdmins.rows.map(r => r.id);
-          if (adminIds.length) {
-            const leavingOrg = await pool.query(
-              "SELECT name FROM organisations WHERE id = $1",
-              [orgId],
-            );
-            await push.sendNotification(adminIds, {
-              category:  "international_invite",
-              title:     `${leavingOrg.rows[0]?.name || "A federation"} withdrew from "${ev.rows[0].name}"`,
-              body:      "Their divers will no longer be able to enter new dive lists. Existing entries stay intact.",
-              data:      { event_id: ev.rows[0].id, withdrawing_org_id: orgId },
-              action_url: `/manager?event=${ev.rows[0].id}`,
-            });
-          }
+          await notifyOrgAdmins(ev.rows[0].org_id, async () => ({
+            category:  "international_invite",
+            title:     `${(await orgName(orgId)) || "A federation"} withdrew from "${ev.rows[0].name}"`,
+            body:      "Their divers will no longer be able to enter new dive lists. Existing entries stay intact.",
+            data:      { event_id: ev.rows[0].id, withdrawing_org_id: orgId },
+            action_url: `/manager?event=${ev.rows[0].id}`,
+          }));
         } catch (notifErr) {
           console.error("[Withdraw Notification Skipped]", notifErr.message);
         }
