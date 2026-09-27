@@ -1981,5 +1981,13 @@
     "reject": "Avslå",
     "revoke": "Återkalla",
     "revoke_body": "{body} driver inte längre {target}, som återgår till hur det var före anspråket."
+  },
+  "legal": {
+    "privacy_title": "Integritetspolicy",
+    "terms_title": "Användarvillkor",
+    "consent": "Genom att skapa ett konto godkänner du {terms} och {privacy}.",
+    "contact": "Kontakt",
+    "need_help": "Behöver du hjälp?",
+    "english_only": "Den här sidan finns bara på engelska, och det är den engelska texten som gäller."
   }
 }

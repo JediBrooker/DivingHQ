@@ -1981,5 +1981,13 @@
     "reject": "Rechazar",
     "revoke": "Revocar",
     "revoke_body": "{body} deja de gestionar {target}, que vuelve a como estaba antes de la reclamación."
+  },
+  "legal": {
+    "privacy_title": "Política de privacidad",
+    "terms_title": "Términos del servicio",
+    "consent": "Al crear una cuenta, aceptas los {terms} y la {privacy}.",
+    "contact": "Contacto",
+    "need_help": "¿Necesitas ayuda?",
+    "english_only": "Esta página solo está disponible en inglés, y el texto que se aplica es el inglés."
   }
 }

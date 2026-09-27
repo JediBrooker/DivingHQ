@@ -1,209 +1,240 @@
 # DivingHQ Privacy Policy
 
-Last updated: May 19, 2026
+Last updated: 27 September 2026
 
-> Draft. Replace bracketed placeholders before publishing.
->
-> **Before-publish checklist:**
-> - `[Legal entity name]` (appears 3 times)
-> - `[Physical mailing address]` (appears 2 times)
-> - `[privacy@your-domain.example]` (appears 4 times)
-> - `[https://your-domain.example]` (appears 2 times)
-> - The "Where DivingHQ runs" row in §3 needs your actual hosting setup
-
-This policy explains what DivingHQ collects, why, who can see it, how long it's kept, and how to get it removed.
+This policy explains what DivingHQ collects, why, who can see it, how long it's kept, and how to get it removed. It covers the hosted service at [divinghq.app](https://divinghq.app).
 
 ## 1. The short version
 
-DivingHQ is a diving competition platform. We collect the data needed to run meets — accounts, dive lists, scores, judging assignments — and we publish ordinary sporting results (names, clubs, rankings, scores) the way every other competition does. We don't sell data, we don't run ads, and we don't track you across other websites.
+DivingHQ is diving competition software for clubs, state and regional bodies, and federations. We collect what's needed to run meets (accounts, dive lists, scores, judging assignments) and we publish ordinary sporting results (names, clubs, rankings, scores) the way every competition does. We don't sell data, we don't run ads, and we don't track you across other websites.
 
-Two things are worth knowing up front:
+Three things are worth knowing up front:
 
-- **Public results are permanent.** Competition records live in the public archive indefinitely, the same way they'd appear in a printed program. Your *name* stays attached to the dives you actually competed in — that's the sporting record. Deleting your account removes the *profile* (login, contact details, settings, analytics), not the historical entry.
-- **You can delete your account at any time** from your profile page. We delete personal data immediately and revoke every session within seconds. If you create a new account later — even years later — you can claim your old competition entries and they show up under your new profile. See §7.
+- **Public results are permanent.** Competition records stay in the public archive, the same way they'd appear in a printed programme. Your *name* stays attached to the dives you actually competed in, because that's the sporting record. Deleting your account removes the *profile* (login, contact details, settings, analytics), not the historical entry.
+- **Your club's data can come under a federation later.** A club can start on DivingHQ before its national federation or state body does. If that body later joins and its claim is approved, its administrators can see and manage the accounts of members of clubs in its area. See §6.
+- **You can delete your account at any time** from your profile page. We delete personal data straight away and sign out every session. If you create a new account later, you can claim your old competition entries back. See §7.
 
 ## 2. Who we are
 
-DivingHQ is operated by **[Legal entity name]**.
+DivingHQ is operated by **DivingHQ (divinghq.app)**.
 
-- Postal address: [Physical mailing address]
-- Privacy contact: [privacy@your-domain.example]
-- Website: [https://your-domain.example]
+- Website: [https://divinghq.app](https://divinghq.app)
+- Privacy and support contact: [support@divinghq.app](mailto:support@divinghq.app)
 
-If you use DivingHQ through a federation, club, or meet host, that organisation also has responsibility for how your data is used for its events. DivingHQ provides the software; the organisation runs the meet.
+When you use DivingHQ through a club, a state or regional body, a federation or a meet host, that organisation is also responsible for how it uses your data for its own members and events. DivingHQ provides the software and runs the service; the organisation runs its meets and decides who holds which role.
 
 ## 3. Data map
 
-A summary of every category of data DivingHQ stores. Detail follows in §4.
+A summary of every kind of data DivingHQ stores. Detail follows in §4 and §6.
 
 | Data | Where it comes from | Who can see it | How long we keep it |
 |---|---|---|---|
-| Account (username, name, email, password hash, organisation, club) | You at sign-up | You + your org admins | Until you delete the account |
-| Dive lists, partner pairings | You / your coach | You + your org + spectators once an event goes Live | Permanent (sporting record) |
-| Scores, rankings, judging history | Judges, your operator | Public from event Live onwards | Permanent (sporting record) |
-| 2FA secret + recovery codes (hashed) | You at 2FA setup | Only used at login | Until you turn 2FA off or delete the account |
-| Push subscriptions | Your browser | Internal only | Until you revoke or delete the account |
-| Audit log (operator actions) | Server, on every privileged action | Org admins | **30 days**, then purged |
-| Security logs (IP, user agent, login attempts) | Server | DivingHQ ops | 30 days |
-| Language preference, scoreboard view preferences | Your browser localStorage | Only your browser | Until you clear browser storage |
+| Account (username, full name, email, password hash, country, club, state or region) | You, at sign-up | You; your club's admins; your region's admins; your federation's admins once there is one (§6) | Until you delete the account |
+| Competition details (date of birth, gender, nationality) | An admin in your organisation | You; the admins above; used for age groups and eligibility | Until you delete the account |
+| Role requests (the role you asked for and your note) | You | The admins who review them (§6) | Until you delete the account |
+| Dive lists, synchro partner pairings | You or your coach | You, your coach and the meet's organisers; everyone once the event goes Live | Permanent (sporting record) |
+| Scores, rankings, judging history | Judges and meet officials | Public from the moment an event goes Live | Permanent (sporting record) |
+| Claims (the body's name, website, votes and objection reasons) | The body applying, and the clubs or regions voting | The claimant, the voters, the deciding admins, DivingHQ | Kept as the record of who runs an account |
+| Two-factor secret and recovery codes (hashed) | You, at 2FA setup | Only used at sign-in | Until you turn 2FA off or delete the account |
+| Notifications and push subscriptions | Your browser and the app | Only you | Until you revoke them or delete the account |
+| Audit log of privileged actions | The server, on every privileged action | Admins of the organisation concerned | **30 days**, then purged |
+| Security logs (IP address, user agent, sign-in attempts) | The server | DivingHQ operations | 30 days |
 
-Where DivingHQ runs: [Your hosting region, e.g. "AWS Sydney (ap-southeast-2)"]. Backups are encrypted and retained for [N] days.
+**Where DivingHQ runs.** The application and its database run on servers operated by DivingHQ. Every request to divinghq.app reaches them through Cloudflare, which handles the encrypted connection and protects the service from abuse (see §6). We keep database backups so we can recover from a failure. They're access-restricted and used for nothing else. Data you delete can remain in a backup until that backup is replaced.
 
 ## 4. What we collect in detail
 
 ### Account
 
-When you sign up: **username, full name, email, password (stored hashed, never readable), organisation, club**.
+When you sign up: **username, full name, email address, password** (stored as a bcrypt hash, never readable), **country**, and your **club** and **state or region** if you pick or create one. If you ask for a role (diver, judge, referee), we store the request and any note you add.
 
-Optional, set later:
-- **Two-factor authentication** — a TOTP secret + bcrypt-hashed recovery codes. We never store the readable codes; you see them once at setup and they're hashed on save.
-- **Language preference** — one of 26 supported locales.
-- **Dashboard widgets** — which analytics panels you've pinned.
+Set later:
 
-Self-service updates (name, email, password, 2FA) live on your profile page.
+- **Competition details**: date of birth, gender and nationality, entered by an admin in your organisation and used for age groups, event eligibility and results.
+- **Two-factor authentication**: a TOTP secret and bcrypt-hashed recovery codes. You see the codes once at setup; we only keep their hashes.
+- **Language preference**: one of the 26 supported languages.
+- **Dashboard widgets**: which analytics panels you've pinned.
+
+You can update your name, email, password and 2FA from your profile page.
 
 ### Competition data
 
-- **Dive lists** — the dives you (or your coach) submitted for each event.
-- **Scores** — every judge's score for every dive you performed, plus the trimmed total.
-- **Rankings, results, dive-off records, score corrections** — the live state of every meet you appeared in.
-- **Judging assignments** — if you're a judge, which events you sat on and which panel position.
-- **Synchro pairings** — who your partner was for each synchro event.
+- **Dive lists**: the dives you (or your coach) entered for each event.
+- **Scores**: every judge's score for every dive you performed, and the resulting points.
+- **Rankings, results, dive-offs and score corrections** for every meet you took part in.
+- **Representation**: what you represented at each meet (your club, state or country, depending on the meet's "Divers represent" setting). It's saved on your entry when you enter, so results don't change if you move club later.
+- **Judging assignments**: if you're a judge, which events you sat on and in which panel position.
+- **Synchro pairings**: who your partner was for each synchro event.
 
 ### Server logs
 
-Like every web service, we record IP address, user agent, timestamps, and request paths so we can debug, secure, and operate the service. Failed logins, rate-limit trips, and audit-log writes for privileged actions (score corrections, withdrawals, role grants) are all stored.
+Like every web service, we record IP addresses, user agents, timestamps and request paths so we can debug, secure and operate the service. Failed sign-ins, rate-limit trips and privileged actions (score corrections, withdrawals, role grants, suspensions) are logged.
 
-### Push subscriptions
+### Email
 
-If you opt in to push notifications (coach "your diver is up next" alerts, meet-day reminders), your browser hands us a push endpoint URL plus a pair of keys. The endpoint URL goes to your browser's push service (Google for Chrome / Edge, Mozilla for Firefox, Apple for Safari). We encrypt every push payload; the push service relays without seeing the content.
+We send service email only: confirming your address, password resets, email changes, role decisions, claim notices, and meet notices for events you're entered in. We don't send marketing email.
+
+### Push notifications
+
+If you turn on push notifications (for example a coach's "your diver is up next" alert), your browser gives us an endpoint URL and a pair of keys. The endpoint belongs to your browser's push service (Google for Chrome and Edge, Mozilla for Firefox, Apple for Safari). Every payload is encrypted, so the push service relays it without seeing the content.
+
+### Payments (not switched on yet)
+
+DivingHQ can take payments (entry fees, memberships, fines) through **Stripe**, but payments are switched off on the hosted service today. When they're switched on, Stripe collects and processes card details directly. We never see or store card numbers; we keep a record of each payment (amount, currency, status and Stripe's reference). We'll update this policy before payments go live.
 
 ### Browser storage
 
-DivingHQ stores a handful of values in your browser:
+DivingHQ keeps a few things in your browser:
 
-| Storage | Key | Purpose |
+| Storage | Name | Purpose |
 |---|---|---|
-| localStorage | `auth_token` | Your signed-in JWT |
-| localStorage | `locale` | Language preference (also synced to server when signed in) |
-| localStorage | `sb_sort_by`, `sb_view_mode` | Scoreboard view + sort preferences |
-| localStorage | `setup.wizardCompleted.v1`, `setup.wizardDismissed.v1` | First-run setup wizard state |
-| Service Worker cache | `divinghq-shell-v7` | Offline app shell + cached assets (PWA mode) |
-| IndexedDB | Browser push subscription | Owned by your browser; we read the endpoint when you opt in |
+| Cookie (httpOnly) | `dhq_session` | Keeps you signed in. A session cookie, cleared when you close the browser, and unreadable by scripts on the page |
+| sessionStorage | `dhq_identity`, `profile.claim.seen` | Who's signed in on this tab, so a refresh on bad venue Wi-Fi doesn't sign you out; whether you've already dismissed the "claim past results" prompt |
+| localStorage | `locale`, `dhq-theme`, `dhq-sidebar` | Language, light or dark theme, sidebar collapsed or not |
+| localStorage | `sb_sort_by`, `dashboard.activeTab.v1`, `setup.wizard*` | Scoreboard sort order, last dashboard tab, first-run wizard state |
+| IndexedDB | `dive-recorder-cache` | Copies of recent pages so the app works offline. Kept per user and cleared when you sign out |
+| IndexedDB | `divinghq-outbox` | Scores and other meet-day actions waiting to be sent while offline |
+| Service worker cache | `divinghq-shell-*` | The app's own code and assets, so it opens offline once installed |
 
-No third-party cookies. No analytics scripts. No ad pixels.
+No third-party cookies, no analytics scripts, no ad pixels.
 
 ### What we deliberately don't collect
 
-DivingHQ isn't designed to collect medical records, government identity numbers, payment card details, or biometric data. Don't type any of that into free-text fields (score-correction reasons, withdrawal reasons, role-request notes, coach-diver link notes) — those fields are stored verbatim.
+DivingHQ isn't designed for medical records, government identity numbers, payment card details or biometric data. Please don't type any of that into free-text fields (role-request notes, score-correction reasons, withdrawal reasons, objection reasons). Those fields are stored as written.
 
-## 5. How we use it
+## 5. How we use it, and why we're allowed to
 
 We use the data above to:
 
-- run accounts: sign-in, password reset, email verification, 2FA;
-- run meets: events, dive lists, judging panels, scoring, results, archives;
-- send service emails (verify-your-email, password reset, email change) and the push notifications you opted in to;
-- generate PDFs and CSV exports (programs, start lists, score sheets);
-- give athletes, coaches, and judges their personal analytics dashboards;
-- audit privileged actions for forensic / dispute purposes;
-- secure the service against abuse, fraud, and unauthorised access;
-- debug and improve DivingHQ.
+- run your account: sign-in, password reset, email confirmation, 2FA (**to provide the service you signed up for**);
+- run meets: events, dive lists, judging panels, scoring, results and archives (**to provide the service**, for you and for the organisations running the meets);
+- publish results and keep the sporting record (**legitimate interest** in accurate, public competition results, the same as any printed programme);
+- send the service emails and push notifications described in §4 (**to provide the service**; push only with your **consent**, which you can withdraw in your browser);
+- produce PDFs and CSV exports (programmes, start lists, score sheets, results);
+- give divers, coaches and judges their analytics dashboards;
+- keep an audit trail of privileged actions for disputes and integrity (**legitimate interest**);
+- protect the service against abuse, fraud and unauthorised access, and debug and improve it (**legitimate interest**).
 
-We don't sell data. We don't run ads. We don't share with third parties for behavioural targeting.
+We don't sell data, run ads, or share data with anyone for advertising or profiling.
 
 ## 6. Who else sees your data
 
-**Your organisation** (federation / club / meet host) sees the data they need to run meets: roster, dive lists, scores. Org admins can see audit logs scoped to their org.
+### People in your sport
 
-**Spectators and the public** see what every meet program has always shown: athletes' names, clubs, countries, events, dive lists, scores, rankings. This is true from the moment an event goes Live and stays true in the public archive afterwards.
+Access follows the structure of your sport on DivingHQ. Each admin controls their own level and the levels beneath it, never sideways.
 
-**DivingHQ operations staff** see what's needed to keep the service running — logs, errors, support tickets if you contact us.
+- **Club admins** see their own club's members: names, usernames and role requests. They run their club's meets and approve their members' role requests.
+- **Region admins** (a state, province or home nation body) see the same for every club in their region, and run the region's meets.
+- **Federation admins** see and manage the accounts of everyone in their country's organisation on DivingHQ: names, usernames, email addresses, clubs, regions, roles, competition details, account status and competition entries. They approve role requests, appoint club admins, and can suspend accounts. They can also read the audit log for their organisation.
+- **Meet organisers and officials** see what they need to run a meet: entries, dive lists and scores for their events.
+- **Coaches** see the profiles and analytics of divers they're linked to as a coach.
 
-**Service providers**, where used, only act as our processors. Federations who self-host DivingHQ pick their own providers; for the hosted service, the current list is:
+### Clubs that join before their federation (claims)
 
-| Provider | Purpose | Region |
+A club can start on DivingHQ before its national federation or state body is here. Until one arrives, the country's account is "unclaimed" and each club runs its own meets.
+
+If that federation or state body later joins, it applies to run the country or region on DivingHQ. This is called a **claim**. Here is what happens:
+
+- **The clubs are told.** When a claim opens, the club admins it affects are notified by email and in the app, with the body's name, its website, and whether the applicant's email address is on that website's domain.
+- **The clubs decide.** Where enough clubs are eligible, the clubs in that country or region vote (for a national claim, the state bodies already on DivingHQ may vote instead). Any single objection sends the claim to DivingHQ for a decision, together with the reason given. Where there aren't enough eligible voters, DivingHQ reviews the claim itself. A state body's claim in a country whose federation is already on DivingHQ is decided by that federation.
+- **What an approved body can see.** Once a claim is approved, the body's administrators become the federation admins (for a country) or region admins (for a state or region) described above. For a country, that means they can see and manage the accounts of members of every club in that country, including names, usernames, email addresses, clubs, roles and competition entries, and they can approve role requests and appoint club admins. For a region, it's the same for the clubs in that region. Club admins keep seeing their own members as before.
+- **Nothing is copied or moved.** Your data stays where it is. The body gets access to the account your club is already in, and your club's history (meets, results, records) stays with it.
+- **The clubs hear the result.** When a claim is approved, the club admins in its area are told who now runs it.
+- **Revocation.** DivingHQ can revoke an approved claim at any time, for example if a body turns out not to be who it said it was. Revoking returns the country or region to unclaimed and removes the admin access the claim granted. Roles and club admins the body appointed while it had access stay in place until an admin changes them, and its actions stay in the audit log for the normal 30 days.
+
+If you think a claim affecting your club is wrong, reply to the claim email or write to [support@divinghq.app](mailto:support@divinghq.app).
+
+### The public
+
+Spectators see what every meet programme has always shown: divers' names, clubs, states or countries, events, dive lists, scores and rankings. This is public from the moment an event goes Live and stays public in the results archive afterwards. Judges' scores are public too, and so is the analysis of how each judge scored.
+
+### DivingHQ
+
+DivingHQ operations staff see what's needed to keep the service running: logs, errors, and your messages if you contact us. System administrators can see across every organisation to review claims, handle support requests and investigate abuse.
+
+### Service providers
+
+These providers process data for us, only to run the service:
+
+| Provider | What for | What they see |
 |---|---|---|
-| [Hosting provider] | App hosting, database, backups | [Region] |
-| [Email provider] | Verification + password-reset emails | [Region] |
+| Cloudflare | Every request to divinghq.app passes through Cloudflare (encrypted connection, abuse protection) | Your IP address, browser details and the pages you request |
+| Cloudflare Email Sending | Delivering our service emails | Your name, email address and the email's content |
+| Google Fonts | The typefaces the pages use (IBM Plex Sans, DM Mono), loaded from Google's servers | Your IP address and browser details when your browser fetches the fonts |
+| Your browser's push service (Google, Mozilla or Apple) | Delivering push notifications you turned on | An encrypted payload it can't read |
+| Stripe (only once payments are switched on) | Taking payments | What you enter on Stripe's payment page |
+
+Cloudflare and Google operate worldwide, so this data may be processed outside your country.
+
+**Translation tooling** (used to keep the app's interface in 26 languages) processes only the app's own English interface text, never user data or competition records.
 
 We don't use third-party analytics or marketing tools.
 
-**Translation tooling** (used to maintain the app's UI in 26 languages) processes only the English UI dictionary — never user data, never competition records.
-
 ## 7. Deleting your account
 
-You can delete your account from **Profile → Delete account**. We ask for your password before processing the request.
+You can delete your account from **Profile → Delete account**. We ask for your password first.
 
-**What we delete, within seconds**:
+**What we delete, straight away:**
 
-- The login itself — password, email, 2FA secret + recovery codes.
-- Personal settings — language preference, dashboard widget layout, notification preferences, push subscriptions.
-- Anything that links your *account* to other people — coach-diver links, pending role requests, your public profile slug (so `/profile/<you>` 404s).
+- The login itself: password, email address, 2FA secret and recovery codes.
+- Personal details and settings: date of birth, gender, nationality, language, dashboard layout, push subscriptions.
+- Anything that links your *account* to other people: roles, coach links, role requests, club and region admin roles, your public profile address (so `/profile/<you>` stops working).
 - Every active session, on every device. You're signed out immediately.
 
-**What stays — and why**:
+**What stays, and why:**
 
-- **Your name on your historical competition entries.** Diving meets are public sporting records — the same way a printed program from a 1970s nationals still has every name in it. Your dive lists, scores, rankings, and the events you competed in (or judged) keep your name on them. What changes is that your name is no longer a link — there's no profile, no analytics, no contact details behind it.
-- **Audit log entries** of privileged actions you took (e.g. score corrections you signed off as a referee). Kept for dispute and integrity reasons, then purged on the normal 30-day rotation.
+- **Your name on your historical competition entries.** Diving meets are public sporting records, like a printed programme from a national championship decades ago that still lists every diver. Your dive lists, scores, rankings, and the events you competed in or judged keep your name, and your club and country stay on those entries. What changes is that your name is no longer a link: there's no profile, no analytics and no contact details behind it.
+- **Audit log entries** of privileged actions you took (for example score corrections you signed off as a referee). Kept for dispute and integrity reasons, then purged on the normal 30-day cycle.
 
-**Coming back later — claim your old results**:
+**Coming back later: claim your old results.**
 
-If you create a new account at any point in the future — months, years — and use the same name, we'll check whether any historical entries in your federation match. At sign-up we'll show you a list of past meets that look like they could be yours; you pick the ones that are, and we re-link them to your new profile. From that point on, your new profile page shows your full competition history, including everything from before the deletion.
+If you create a new account in the future with the same name, we check whether any historical entries in your organisation match. At sign-in we show you past meets that look like yours; you pick the ones that are, and we link them to your new profile. You can also do this from **Profile → Claim past competition entries**. We ask you to confirm rather than matching automatically, because two divers can share a name.
 
-You can also trigger the claim flow manually from **Profile → Claim past competition entries** if you skipped it at sign-up.
-
-We require user confirmation rather than auto-matching because two athletes can genuinely share a name; you decide which entries are yours.
-
-**If you need a result fully removed** (safeguarding, child protection, court order, mistaken identity) — contact your federation first, and us at [privacy@your-domain.example]. We'll work with the organisation that ran the event.
+**If a result needs removing completely** (safeguarding, child protection, a court order, mistaken identity), contact the club or federation that ran the event, and us at [support@divinghq.app](mailto:support@divinghq.app). We'll work with the organisation that ran it.
 
 ## 8. Security
 
-- Passwords stored with bcrypt; never readable.
-- 2FA via TOTP with one-time recovery codes (also bcrypt-hashed).
-- All traffic over HTTPS.
-- Per-session JWT with a version stamp — an admin (or you, via account-delete) can invalidate every active session in one operation.
-- Rate limiting on login, password reset, and bulk-write endpoints.
-- Strict Content-Security-Policy (no third-party scripts, no inline JavaScript).
-- Audit log on every privileged action.
+- Passwords are stored with bcrypt and are never readable.
+- Two-factor authentication with an authenticator app, with one-time recovery codes (also hashed).
+- All traffic is encrypted (HTTPS).
+- Your session lives in an httpOnly cookie that scripts on the page can't read, and sessions can be ended everywhere at once: changing your password, a change to your roles, a suspension or deleting the account signs out every device.
+- Rate limits on sign-in, password reset and bulk actions.
+- A strict Content Security Policy: no third-party scripts and no inline JavaScript.
+- An audit log of every privileged action.
 
-No service can promise absolute security. Keep your password strong, turn 2FA on, and tell us at [privacy@your-domain.example] if you suspect unauthorised access.
+No service can promise perfect security. Use a strong password, turn on 2FA, and tell us at [support@divinghq.app](mailto:support@divinghq.app) if you think someone has got into your account.
 
-## 9. Children and minors
+## 9. Children
 
-Diving is a youth sport. Children compete on DivingHQ through their federation or club, which is responsible for obtaining the necessary parental consents.
+Diving is a youth sport, and many divers on DivingHQ are children. Children usually join through their club, and their club (or federation) is responsible for getting the consent it needs from parents or guardians.
 
-A child shouldn't sign up directly without their parent or guardian's involvement. If you believe a child has signed up directly without consent, contact us at [privacy@your-domain.example] and we'll remove the account.
+A child shouldn't create an account without a parent or guardian's involvement. If you think a child has signed up without that, contact us at [support@divinghq.app](mailto:support@divinghq.app) and we'll remove the account.
 
 ## 10. Your rights
 
 You can:
 
-- **Access** the data we hold about you — download a copy from your profile (or email us).
-- **Correct** anything wrong — most fields are self-service from your profile; email us for the rest.
+- **Access** the data we hold about you: most of it is on your profile, or email us for a copy.
+- **Correct** anything that's wrong: most fields are self-service on your profile; email us for the rest.
 - **Delete** your account at any time (see §7).
-- **Object** to specific processing — contact us.
-- **Complain** to a privacy regulator if you're not satisfied with our response.
+- **Object** to, or ask us to **restrict**, specific processing: contact us.
+- **Complain** to your data protection regulator if you're not happy with our answer.
 
-Email [privacy@your-domain.example] for any of these. We'll verify it's really you before acting and respond within 30 days.
+Email [support@divinghq.app](mailto:support@divinghq.app) for any of these. We'll check it's really you before acting, and we'll answer within 30 days.
 
 ## 11. Data breaches
 
-If your data is exposed, we will:
+If personal data is exposed, we will:
 
-1. Contain and investigate within 24 hours of detection.
-2. Notify affected users + the affected federation's nominated administrator within 72 hours of confirming personal data was exposed.
-3. Notify the relevant privacy regulator within whichever timeframe applies (e.g. 72 hours under GDPR).
-4. Publish a public post-incident summary at [https://your-domain.example]/security once remediation is complete.
+1. Contain it and start investigating within 24 hours of finding out.
+2. Tell affected users, and the admins of the affected clubs and organisations, within 72 hours of confirming that personal data was exposed.
+3. Tell the relevant regulator within whatever time the law requires (72 hours under GDPR).
+4. Publish a summary of what happened once it's fixed.
 
-## 12. Changes
+## 12. Changes to this policy
 
-We may update this policy. If the change is material — new data category, new third party, change to your rights — we'll notify account holders by email before it takes effect. The "Last updated" date above shows the most recent change.
+We may update this policy. If a change is material (a new kind of data, a new provider, or a change to your rights), we'll email account holders before it takes effect. The date at the top shows the latest change.
 
 ## 13. Contact
 
-Privacy questions, deletion requests, complaints, child-safeguarding concerns:
-
-**[Legal entity name]**
-[Physical mailing address]
-[privacy@your-domain.example]
+Privacy questions, deletion requests, complaints and safeguarding concerns: write to **DivingHQ (divinghq.app)** at [support@divinghq.app](mailto:support@divinghq.app).

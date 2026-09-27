@@ -1981,5 +1981,13 @@
     "reject": "Elutasítás",
     "revoke": "Visszavonás",
     "revoke_body": "{body} többé nem vezeti ezt: {target}, minden visszaáll az igény előtti állapotra."
+  },
+  "legal": {
+    "privacy_title": "Adatvédelmi irányelvek",
+    "terms_title": "Felhasználási feltételek",
+    "consent": "A fiók létrehozásával elfogadja a következőket: {terms} és {privacy}.",
+    "contact": "Kapcsolat",
+    "need_help": "Segítségre van szüksége?",
+    "english_only": "Ez az oldal csak angolul érhető el, és az angol szöveg az irányadó."
   }
 }

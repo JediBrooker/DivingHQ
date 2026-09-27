@@ -1981,5 +1981,13 @@
     "reject": "거절",
     "revoke": "취소",
     "revoke_body": "{body}은(는) 더 이상 {target}을(를) 운영하지 않으며 신청 이전 상태로 돌아갑니다."
+  },
+  "legal": {
+    "privacy_title": "개인정보 처리방침",
+    "terms_title": "서비스 약관",
+    "consent": "계정을 만들면 {terms} 및 {privacy}에 동의하는 것으로 간주됩니다.",
+    "contact": "문의하기",
+    "need_help": "도움이 필요하신가요?",
+    "english_only": "이 페이지는 영어로만 제공되며, 영어 원문이 적용됩니다."
   }
 }

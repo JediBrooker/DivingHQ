@@ -1981,5 +1981,13 @@
     "reject": "Reddet",
     "revoke": "İptal et",
     "revoke_body": "{body} artık {target} yönetmiyor, her şey talepten önceki haline döner."
+  },
+  "legal": {
+    "privacy_title": "Gizlilik Politikası",
+    "terms_title": "Hizmet Koşulları",
+    "consent": "Hesap oluşturarak {terms} ve {privacy} belgelerini kabul etmiş olursunuz.",
+    "contact": "İletişim",
+    "need_help": "Yardıma mı ihtiyacınız var?",
+    "english_only": "Bu sayfa yalnızca İngilizce olarak sunulmaktadır ve geçerli olan İngilizce metindir."
   }
 }

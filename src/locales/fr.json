@@ -1981,5 +1981,13 @@
     "reject": "Rejeter",
     "revoke": "Révoquer",
     "revoke_body": "{body} ne gère plus {target}, qui revient à l'état d'avant la revendication."
+  },
+  "legal": {
+    "privacy_title": "Politique de confidentialité",
+    "terms_title": "Conditions d'utilisation",
+    "consent": "En créant un compte, vous acceptez les {terms} et la {privacy}.",
+    "contact": "Contact",
+    "need_help": "Besoin d'aide ?",
+    "english_only": "Cette page n'est disponible qu'en anglais, et c'est le texte anglais qui fait foi."
   }
 }

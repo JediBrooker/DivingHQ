@@ -1981,5 +1981,13 @@
     "reject": "Tanggihan",
     "revoke": "Bawiin",
     "revoke_body": "Hindi na pamamahalaan ng {body} ang {target}, babalik ito sa dati bago ang claim."
+  },
+  "legal": {
+    "privacy_title": "Patakaran sa Privacy",
+    "terms_title": "Mga Tuntunin ng Serbisyo",
+    "consent": "Sa paggawa ng account, sumasang-ayon ka sa {terms} at sa {privacy}.",
+    "contact": "Makipag-ugnayan",
+    "need_help": "Kailangan mo ng tulong?",
+    "english_only": "Sa Ingles lang available ang pahinang ito, at ang tekstong Ingles ang siyang umiiral."
   }
 }

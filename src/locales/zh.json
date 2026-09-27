@@ -1981,5 +1981,13 @@
     "reject": "拒绝",
     "revoke": "撤销",
     "revoke_body": "{body} 将不再管理 {target}，一切恢复到申请之前的状态。"
+  },
+  "legal": {
+    "privacy_title": "隐私政策",
+    "terms_title": "服务条款",
+    "consent": "创建账户即表示您同意{terms}和{privacy}。",
+    "contact": "联系我们",
+    "need_help": "需要帮助？",
+    "english_only": "此页面仅提供英文版本，以英文文本为准。"
   }
 }

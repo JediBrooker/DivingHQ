@@ -1981,5 +1981,13 @@
     "reject": "却下",
     "revoke": "取り消す",
     "revoke_body": "{body} は {target} の運営をやめ、申請前の状態に戻ります。"
+  },
+  "legal": {
+    "privacy_title": "プライバシーポリシー",
+    "terms_title": "利用規約",
+    "consent": "アカウントを作成すると、{terms}と{privacy}に同意したものとみなされます。",
+    "contact": "お問い合わせ",
+    "need_help": "お困りですか？",
+    "english_only": "このページは英語版のみです。英語の本文が正式なものとなります。"
   }
 }

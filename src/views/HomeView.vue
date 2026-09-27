@@ -6,9 +6,11 @@ import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import LogoMark from '@/components/LogoMark.vue'
 import { CircleHelp } from '@lucide/vue'
+import { useSupportEmail } from '@/composables/useSupportEmail'
 
 const router = useRouter()
 const auth = useAuthStore()
+const supportEmail = useSupportEmail()
 
 onMounted(() => {
   if (auth.isLoggedIn) router.push('/dashboard')
@@ -198,6 +200,9 @@ onMounted(() => {
           <RouterLink to="/register-org">{{ $t('home.footer.register_federation') }}</RouterLink>
           <RouterLink to="/scoreboard">{{ $t('home.footer.scoreboard') }}</RouterLink>
           <RouterLink to="/guide">{{ $t('home.footer.user_guide') }}</RouterLink>
+          <RouterLink to="/privacy">{{ $t('legal.privacy_title') }}</RouterLink>
+          <RouterLink to="/terms">{{ $t('legal.terms_title') }}</RouterLink>
+          <a v-if="supportEmail" :href="`mailto:${supportEmail}`" data-testid="home-contact">{{ $t('legal.contact') }}</a>
           <a href="https://github.com/JediBrooker/DivingHQ/issues/new?labels=bug&amp;title=Bug%3A%20"
              target="_blank" rel="noopener" class="footer-bug">{{ $t('home.footer.report_bug') }}</a>
         </div>

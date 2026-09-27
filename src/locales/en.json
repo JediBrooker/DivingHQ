@@ -1981,5 +1981,13 @@
     "reject": "Reject",
     "revoke": "Revoke",
     "revoke_body": "{body} stops running {target}, and it goes back to how it was before the claim."
+  },
+  "legal": {
+    "privacy_title": "Privacy Policy",
+    "terms_title": "Terms of Service",
+    "consent": "By creating an account you agree to the {terms} and the {privacy}.",
+    "contact": "Contact",
+    "need_help": "Need help?",
+    "english_only": "This page is only available in English, and the English text is the one that applies."
   }
 }

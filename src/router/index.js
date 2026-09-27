@@ -31,6 +31,18 @@ const routes = [
     component: () => import('@/views/RegisterOrgView.vue'),
   },
   {
+    // Legal pages, public, linked from every sign-up form. One view, the
+    // text comes from docs/*.md (see LegalView for why it stays English).
+    path: '/privacy',
+    component: () => import('@/views/LegalView.vue'),
+    props: { doc: 'privacy' },
+  },
+  {
+    path: '/terms',
+    component: () => import('@/views/LegalView.vue'),
+    props: { doc: 'terms' },
+  },
+  {
     path: '/forgot-password',
     component: () => import('@/views/ForgotPasswordView.vue'),
   },

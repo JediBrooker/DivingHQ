@@ -1981,5 +1981,13 @@
     "reject": "Ablehnen",
     "revoke": "Widerrufen",
     "revoke_body": "{body} führt {target} nicht mehr, alles wird wie vor dem Anspruch."
+  },
+  "legal": {
+    "privacy_title": "Datenschutzerklärung",
+    "terms_title": "Nutzungsbedingungen",
+    "consent": "Mit der Erstellung eines Kontos stimmen Sie den {terms} und der {privacy} zu.",
+    "contact": "Kontakt",
+    "need_help": "Brauchen Sie Hilfe?",
+    "english_only": "Diese Seite ist nur auf Englisch verfügbar. Maßgeblich ist der englische Text."
   }
 }

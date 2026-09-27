@@ -1981,5 +1981,13 @@
     "reject": "Hylkää",
     "revoke": "Peru",
     "revoke_body": "{body} ei enää hallinnoi kohdetta {target}, joka palaa vaatimusta edeltäneeseen tilaan."
+  },
+  "legal": {
+    "privacy_title": "Tietosuojakäytäntö",
+    "terms_title": "Käyttöehdot",
+    "consent": "Luomalla tilin hyväksyt seuraavat: {terms} ja {privacy}.",
+    "contact": "Yhteystiedot",
+    "need_help": "Tarvitsetko apua?",
+    "english_only": "Tämä sivu on saatavilla vain englanniksi, ja sovellettava teksti on englanninkielinen."
   }
 }

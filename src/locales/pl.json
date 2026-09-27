@@ -1981,5 +1981,13 @@
     "reject": "Odrzuć",
     "revoke": "Cofnij",
     "revoke_body": "{body} przestaje prowadzić {target}, wszystko wraca do stanu sprzed roszczenia."
+  },
+  "legal": {
+    "privacy_title": "Polityka prywatności",
+    "terms_title": "Warunki korzystania",
+    "consent": "Tworząc konto, akceptujesz dokumenty {terms} i {privacy}.",
+    "contact": "Kontakt",
+    "need_help": "Potrzebujesz pomocy?",
+    "english_only": "Ta strona jest dostępna tylko w języku angielskim i obowiązuje tekst angielski."
   }
 }

@@ -1981,5 +1981,13 @@
     "reject": "Respingi",
     "revoke": "Revoca",
     "revoke_body": "{body} non gestisce più {target}, che torna com'era prima della rivendicazione."
+  },
+  "legal": {
+    "privacy_title": "Informativa sulla privacy",
+    "terms_title": "Termini di servizio",
+    "consent": "Creando un account accetti i {terms} e l'{privacy}.",
+    "contact": "Contatti",
+    "need_help": "Serve aiuto?",
+    "english_only": "Questa pagina è disponibile solo in inglese e fa fede il testo inglese."
   }
 }

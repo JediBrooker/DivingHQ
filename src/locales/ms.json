@@ -1981,5 +1981,13 @@
     "reject": "Tolak",
     "revoke": "Batalkan",
     "revoke_body": "{body} tidak lagi mengurus {target}, semuanya kembali seperti sebelum tuntutan."
+  },
+  "legal": {
+    "privacy_title": "Dasar Privasi",
+    "terms_title": "Terma Perkhidmatan",
+    "consent": "Dengan membuat akaun, anda bersetuju dengan {terms} dan {privacy}.",
+    "contact": "Hubungi",
+    "need_help": "Perlukan bantuan?",
+    "english_only": "Halaman ini hanya tersedia dalam bahasa Inggeris, dan teks bahasa Inggeris yang terpakai."
   }
 }

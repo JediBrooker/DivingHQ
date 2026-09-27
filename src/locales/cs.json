@@ -1981,5 +1981,13 @@
     "reject": "Zamítnout",
     "revoke": "Odvolat",
     "revoke_body": "{body} přestane spravovat {target}, vše se vrátí do stavu před nárokem."
+  },
+  "legal": {
+    "privacy_title": "Zásady ochrany osobních údajů",
+    "terms_title": "Podmínky služby",
+    "consent": "Vytvořením účtu souhlasíte s dokumenty {terms} a {privacy}.",
+    "contact": "Kontakt",
+    "need_help": "Potřebujete pomoc?",
+    "english_only": "Tato stránka je k dispozici pouze v angličtině a platí anglické znění."
   }
 }

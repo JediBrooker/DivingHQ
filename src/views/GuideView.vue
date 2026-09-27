@@ -42,6 +42,9 @@ import { RouterLink } from 'vue-router'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe, Users, Map } from '@lucide/vue'
+import { useSupportEmail } from '@/composables/useSupportEmail'
+
+const supportEmail = useSupportEmail()
 
 // TOC entries match the in-template section ids. Order matters,
 // it's the visual reading order. Keep the keys aligned with the
@@ -457,6 +460,12 @@ onBeforeUnmount(() => observer?.disconnect())
         </section>
       </div>
     </div>
+
+    <footer class="guide-footer">
+      <RouterLink to="/privacy">{{ $t('legal.privacy_title') }}</RouterLink>
+      <RouterLink to="/terms">{{ $t('legal.terms_title') }}</RouterLink>
+      <a v-if="supportEmail" :href="`mailto:${supportEmail}`">{{ $t('legal.need_help') }} {{ supportEmail }}</a>
+    </footer>
   </div>
 </template>
 
@@ -837,6 +846,16 @@ onBeforeUnmount(() => observer?.disconnect())
 /* Narrow viewports: collapse the TOC into a horizontal scroll
    strip pinned above the content. The strip is still sticky
    but slimmer, and the link spacing turns horizontal. */
+.guide-footer {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem;
+  margin-top: 3rem; padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.guide-footer a {
+  font-size: 13px; font-weight: 500; color: var(--fg-2); text-decoration: none;
+}
+.guide-footer a:hover { color: var(--accent); }
+
 @media (max-width: 860px) {
   .guide-shell {
     grid-template-columns: 1fr;

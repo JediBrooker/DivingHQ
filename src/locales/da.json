@@ -1981,5 +1981,13 @@
     "reject": "Afvis",
     "revoke": "Tilbagekald",
     "revoke_body": "{body} driver ikke længere {target}, som vender tilbage til, som det var før kravet."
+  },
+  "legal": {
+    "privacy_title": "Privatlivspolitik",
+    "terms_title": "Servicevilkår",
+    "consent": "Ved at oprette en konto accepterer du {terms} og {privacy}.",
+    "contact": "Kontakt",
+    "need_help": "Brug for hjælp?",
+    "english_only": "Denne side findes kun på engelsk, og det er den engelske tekst, der gælder."
   }
 }

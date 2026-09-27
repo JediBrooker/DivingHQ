@@ -1981,5 +1981,13 @@
     "reject": "Odbij",
     "revoke": "Opozovi",
     "revoke_body": "{body} više ne vodi {target}, sve se vraća kako je bilo prije zahtjeva."
+  },
+  "legal": {
+    "privacy_title": "Pravila privatnosti",
+    "terms_title": "Uvjeti korištenja",
+    "consent": "Izradom računa prihvaćate dokumente {terms} i {privacy}.",
+    "contact": "Kontakt",
+    "need_help": "Trebate pomoć?",
+    "english_only": "Ova je stranica dostupna samo na engleskom jeziku i mjerodavan je engleski tekst."
   }
 }

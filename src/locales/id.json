@@ -1981,5 +1981,13 @@
     "reject": "Tolak",
     "revoke": "Cabut",
     "revoke_body": "{body} tidak lagi mengelola {target}, semuanya kembali seperti sebelum klaim."
+  },
+  "legal": {
+    "privacy_title": "Kebijakan Privasi",
+    "terms_title": "Ketentuan Layanan",
+    "consent": "Dengan membuat akun, Anda menyetujui {terms} dan {privacy}.",
+    "contact": "Kontak",
+    "need_help": "Butuh bantuan?",
+    "english_only": "Halaman ini hanya tersedia dalam bahasa Inggris, dan teks bahasa Inggris yang berlaku."
   }
 }
