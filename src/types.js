@@ -45,6 +45,11 @@
  * @property {'claimed'|'unclaimed'} claim_state  unclaimed = started by clubs, no federation yet
  */
 
+// Note (migration 090): on diver rows from the scoreboard, recap, Control
+// Room, PDF and venue endpoints, `country_code` / `partner_country` hold
+// the meet's representation code (country, state short code or club
+// short code, per meets.represent_as), not necessarily a country.
+
 /**
  * @typedef {Object} RegionList
  * GET /api/orgs/:id/regions and GET /api/countries/:code/regions.

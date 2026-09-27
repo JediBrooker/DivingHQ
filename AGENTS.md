@@ -235,6 +235,15 @@ An unclaimed org or region becomes claimed through `lib/claims.js`
 grants the claimant their role, audit-logs it and notifies the clubs, and a
 revoke has to undo exactly that.
 
+**`country_code` on a diver row is the representation code** (migration
+090): the scoreboard, recap, Control Room, PDF and venue queries emit
+`event_rep_code(event, user, home_country)` in that slot, which is the
+diver's country, state short code or club short code depending on the
+meet's `represent_as`, taken from the entry-time snapshot on
+`competitor_dive_lists`. When you add a diver-facing query, use the same
+function rather than `o.country_code`, or that surface will ignore the
+meet's setting. Judges, orgs and meets keep a real country code.
+
 Regions (migration 088) sit one level above clubs: a `region_admins` row
 reaches meets hosted by the region or by any club in it, never another
 region's. Same helpers, same rule. `region_admin_of` rides alongside
@@ -291,6 +300,7 @@ above it.
 | Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForClubAdmin` / `clubAdminCanReview` / `reviewersFor` | `lib/role-requests.js` |
 | Narrow a meet screen to a club admin's own meets | `useClubScope()` | `src/composables/useClubScope.js` |
 | ISO country list (server validation + signup picker) | `countryByCode(a3)` / `countries.json` | `lib/countries.js` |
+| What a diver represents in an event (country / state / club code) | `event_rep_code(event_id, user_id, home_country)` SQL function | `migrations/090_representation.sql` |
 | Built-in regions per country, copy them into an org | `catalogFor(a3)` / `materializeRegions(db, orgId, a3)` / `regions.json` | `lib/regions.js` |
 | Approve/reject list for club and region admin pages | `<RoleRequestQueue>` | `src/components/RoleRequestQueue.vue` |
 | Claims lifecycle (open, activate, vote, decide, revoke, sweep) | `lib/claims.js` | `lib/claims.js` |

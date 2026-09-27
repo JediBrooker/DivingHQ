@@ -1,6 +1,6 @@
 # Club-first onboarding — design
 
-> **Status:** Phases 1 to 3 built (see §14 to §16). Phase 4 is still design.
+> **Status:** All four phases built (see §14 to §17).
 > Author: Christian Brooker (with Claude). Last updated: 2026-09-27.
 
 ## 1. Problem
@@ -604,4 +604,20 @@ That reverts the target, and a national org gets its country name back.
 
 e2e covers a federation claiming via `/register-org` and two clubs voting
 it in on `/claims`.
+
+## 17. Phase 4 as built
+
+Migration 090 adds `meets.represent_as`, `competitor_dive_lists.rep_club_id` / `rep_region_id` / `rep_country`, the `cdl_snapshot_rep` trigger and `event_rep_code()`. Migration 091 adds `records_region`.
+
+**Default is `country`, not `club`** (deviation from §5). Every existing screen already showed the diver's country chip, so defaulting to club would have silently changed every meet. Organisers opt in per meet: "Divers represent" in the meet's Edit dialog.
+
+**Snapshot by trigger.** Rather than touching the eleven code paths that insert entries, a `BEFORE INSERT` trigger copies the diver's club, region and country onto the row. `event_rep_code(event, user, home_country)` reads the snapshot, falls back to the diver's current club and region for pre-090 rows, and falls back to the country when there's nothing better.
+
+**One slot.** The diver-row queries emit `event_rep_code` as `country_code` / `partner_country`: scoreboard, recap, Control Room roster / history / attendance (and therefore the live active-diver payload, venue boards and judge screens), programme / start list / score sheet / results CSV + PDF, and the venue leaderboard. All chips, and the medal table (which groups by `country_code`), follow without frontend changes, so a nationals set to "state" gets a state medal table. Judges' rows are untouched. Changing the setting clears the scoreboard cache; an already-announced active diver keeps its old label until the next `set_active_diver`.
+
+**Records.** A `region` scope keyed on the entry's region. `GET /api/records` returns `official: false` for national records in an unclaimed country and state records in an unclaimed region.
+
+**Not done:** team events keep their team codes, since a team is its own entity and isn't relabelled by state. Records still have no frontend screen.
+
+**Tests.** Integration covers labels switching across region / club / country, a diver who changes club after entering keeping their entry-time state, the Control Room roster agreeing, and a state record reading unofficial until the region is claimed.
 
