@@ -170,14 +170,14 @@ services:
   # untrusted images.
   # -----------------------------------------------------------
   watchtower:
-    image: containrrr/watchtower:latest
+    image: nickfedor/watchtower:latest
     container_name: dive-recorder-watchtower
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       WATCHTOWER_LABEL_ENABLE: "true"
       WATCHTOWER_CLEANUP: "true"
-      WATCHTOWER_ROLLING_RESTART: "true"
+      WATCHTOWER_ROLLING_RESTART: "false"   # incompatible with depends_on chains (grafana -> loki,prometheus)
       WATCHTOWER_SCHEDULE: "0 0 4 * * *"
       WATCHTOWER_TIMEOUT: "30s"
       # Set your timezone so the 4 AM schedule fires at LOCAL time
