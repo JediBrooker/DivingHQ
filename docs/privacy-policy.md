@@ -92,6 +92,7 @@ DivingHQ keeps a few things in your browser:
 | sessionStorage | `dhq_identity`, `profile.claim.seen` | Who's signed in on this tab, so a refresh on bad venue Wi-Fi doesn't sign you out; whether you've already dismissed the "claim past results" prompt |
 | localStorage | `locale`, `dhq-theme`, `dhq-sidebar` | Language, light or dark theme, sidebar collapsed or not |
 | localStorage | `sb_sort_by`, `dashboard.activeTab.v1`, `setup.wizard*` | Scoreboard sort order, last dashboard tab, first-run wizard state |
+| localStorage | `dr_tour_seen_*`, `scheduler.*`, `dr_control_auto_advance_seconds*` | Which role tours you've already seen, the scheduler's drawer settings, the Control Room's auto-advance delay |
 | IndexedDB | `dive-recorder-cache` | Copies of recent pages so the app works offline. Kept per user and cleared when you sign out |
 | IndexedDB | `divinghq-outbox` | Scores and other meet-day actions waiting to be sent while offline |
 | Service worker cache | `divinghq-shell-*` | The app's own code and assets, so it opens offline once installed |
