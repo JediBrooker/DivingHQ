@@ -148,12 +148,27 @@ export function useBlockDrag({
         if (Array.isArray(resolved)) nextBoards = resolved
       }
 
+      const startsAt = new Date(nextStart).toISOString()
+      const endsAt = new Date(nextEnd).toISOString()
+      // Pointermove fires every pixel but the preview only moves a snap
+      // step at a time (48px at the default 30 min). Assigning a fresh
+      // object anyway re-rendered the whole timeline on every move, so
+      // leave the ref alone until the snapped window or column changes.
+      // resolveColumnAtX hands back a new array each call, hence sameArray.
+      const cur = dragState.value
+      if (
+        cur && cur.blockId === block.id &&
+        cur.preview.starts_at === startsAt &&
+        cur.preview.ends_at === endsAt &&
+        sameArray(cur.preview.board_ids, nextBoards)
+      ) return
+
       dragState.value = {
         blockId: block.id,
         mode,
         preview: {
-          starts_at: new Date(nextStart).toISOString(),
-          ends_at: new Date(nextEnd).toISOString(),
+          starts_at: startsAt,
+          ends_at: endsAt,
           board_ids: nextBoards,
         },
       }
