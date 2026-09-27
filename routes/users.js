@@ -944,6 +944,12 @@ module.exports = function createUsersRouter({
         );
         counts.dives += moveDives.rowCount || 0;
 
+        // Changing partner_id normally re-snapshots the partner's club
+        // and region (cdl_snapshot_rep, migration 095), since it usually
+        // means a different person. Here it's the same diver under another
+        // account, so keep what they were entered as, the way the
+        // competitor_id move above does. Local to this transaction.
+        await client.query("SELECT set_config('divinghq.keep_rep_snapshot', 'on', true)");
         await client.query(
           `UPDATE competitor_dive_lists
               SET partner_id = $2

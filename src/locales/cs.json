@@ -514,7 +514,15 @@
     "view_recap": "Zobrazit souhrn →",
     "stream_overlay": "Překryv pro stream",
     "broadcast": "Vysílání",
-    "pdf_recap": "📄 Souhrn v PDF"
+    "pdf_recap": "📄 Souhrn v PDF",
+    "medal_title_country": "Medailové pořadí zemí",
+    "medal_title_club": "Medailové pořadí klubů",
+    "medal_title_state": "Medailové pořadí států",
+    "medal_title_province": "Medailové pořadí provincií",
+    "medal_title_home_nation": "Medailové pořadí zemí (UK)",
+    "medal_title_region": "Medailové pořadí regionů",
+    "medal_col_country": "Země",
+    "medal_col_club": "Klub"
   },
   "guide": {
     "title": "Uživatelská příručka",

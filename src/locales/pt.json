@@ -525,7 +525,15 @@
     "view_recap": "Ver resumo →",
     "stream_overlay": "Sobreposição de transmissão",
     "broadcast": "Transmissão",
-    "pdf_recap": "📄 Resumo em PDF"
+    "pdf_recap": "📄 Resumo em PDF",
+    "medal_title_country": "Quadro de medalhas por país",
+    "medal_title_club": "Quadro de medalhas por clube",
+    "medal_title_state": "Quadro de medalhas por estado",
+    "medal_title_province": "Quadro de medalhas por província",
+    "medal_title_home_nation": "Quadro de medalhas por nação",
+    "medal_title_region": "Quadro de medalhas por região",
+    "medal_col_country": "País",
+    "medal_col_club": "Clube"
   },
   "guide": {
     "title": "Guia do Utilizador",

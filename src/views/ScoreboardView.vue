@@ -388,10 +388,12 @@ const divesByDiver = computed(() => {
       // rides on every dive of that diver.
       const standRow = archiveResults.value.standings
         .find(s => s.full_name === key)
+      // A team's chip and short code live on its standings row (the code
+      // its divers share, migration 095); its dive rows are per member.
       return {
         name: key,
-        country: teamMode ? null : (dives[0]?.country_code || null),
-        club: teamMode ? null : (dives[0]?.club_name || null),
+        country: teamMode ? (standRow?.country_code || null) : (dives[0]?.country_code || null),
+        club: teamMode ? (standRow?.club_name || null) : (dives[0]?.club_name || null),
         partner: teamMode ? null : (dives[0]?.partner_name || null),
         partner_id: teamMode ? null : (standRow?.partner_id || dives.find(d => d.partner_id)?.partner_id || null),
         partner_country: teamMode ? null : (dives[0]?.partner_country || null),
@@ -403,12 +405,29 @@ const divesByDiver = computed(() => {
     })
 })
 
-// Country medal table: counts gold/silver/bronze per country from
-// the archive standings. Only renders when at least two distinct
-// countries appear in the result, which is the indicator that this
-// was an international meet (ties the audience-facing surface to
-// the same threshold the host org's event_participating_orgs entry
-// implies). Sort by gold desc, silver desc, bronze desc, then total
+// Heading for the medal table below. It groups by whatever the chips
+// show (country, state or club code, per the meet's represent_as), so it
+// should say which. A state championship gets a state table, named the
+// way its country names its regions (province in Canada, home nation in
+// the UK).
+const REGION_LABELS = ['state', 'province', 'home_nation', 'region']
+const medalTableHeading = computed(() => {
+  const ev = archiveResults.value?.event || {}
+  if (ev.represent_as === 'club') {
+    return { title: t('scoreboard.medal_title_club'), column: t('scoreboard.medal_col_club') }
+  }
+  if (ev.represent_as === 'region') {
+    const label = REGION_LABELS.includes(ev.region_label) ? ev.region_label : 'region'
+    return { title: t(`scoreboard.medal_title_${label}`), column: t(`regions.label.${label}`) }
+  }
+  return { title: t('scoreboard.medal_title_country'), column: t('scoreboard.medal_col_country') }
+})
+
+// Medal table: counts gold/silver/bronze per country_code from the
+// archive standings (team rows included since migration 095). Only
+// renders when at least two distinct codes appear, the sign of an
+// international meet or a state / club meet with more than one state or
+// club in it. Sort by gold desc, silver desc, bronze desc, then total
 // desc as tiebreaker, matches how WA + Olympics rank countries.
 const countryMedalTable = computed(() => {
   if (!archiveResults.value) return null
@@ -1656,19 +1675,19 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Country medal table: only when 2+ distinct countries appeared
-             on the standings (i.e. the meet was actually
-             international). Shows gold/silver/bronze count per
-             country, sorted Olympic-style. -->
+        <!-- Medal table: only when 2+ distinct codes appeared on the
+             standings (an international meet, or a state / club meet
+             with more than one state or club in it). Gold/silver/bronze
+             per code, sorted Olympic-style, headed by what the codes are. -->
         <div v-if="countryMedalTable" class="recap-card medal-card">
           <div class="col-head">
-            <span>Country Medal Table</span>
+            <span>{{ medalTableHeading.title }}</span>
           </div>
           <div class="col-body">
             <div class="medal-grid">
               <div class="medal-head-row">
                 <div class="medal-rank">#</div>
-                <div class="medal-country">Country</div>
+                <div class="medal-country">{{ medalTableHeading.column }}</div>
                 <div class="medal-cell medal-gold-head">🥇</div>
                 <div class="medal-cell medal-silver-head">🥈</div>
                 <div class="medal-cell medal-bronze-head">🥉</div>

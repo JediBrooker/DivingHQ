@@ -514,7 +514,15 @@
     "view_recap": "Погледај сажетак →",
     "stream_overlay": "Преклапање стрима",
     "broadcast": "Пренос",
-    "pdf_recap": "📄 PDF сажетак"
+    "pdf_recap": "📄 PDF сажетак",
+    "medal_title_country": "Табела медаља по државама",
+    "medal_title_club": "Табела медаља по клубовима",
+    "medal_title_state": "Табела медаља по савезним државама",
+    "medal_title_province": "Табела медаља по провинцијама",
+    "medal_title_home_nation": "Табела медаља по нацијама",
+    "medal_title_region": "Табела медаља по регијама",
+    "medal_col_country": "Држава",
+    "medal_col_club": "Клуб"
   },
   "guide": {
     "title": "Корисничко упутство",

@@ -116,7 +116,7 @@ async function saveMeet() {
             <option value="region">Their state / province (national championships)</option>
             <option value="club">Their club (club and inter-club meets)</option>
           </select>
-          <p class="hint">Shown next to each diver on the scoreboard, results and PDFs, and what the medal table groups by. A diver with no state or club code falls back to their country.</p>
+          <p class="hint">Shown next to each diver on the scoreboard, results and PDFs, and what the medal table groups by. A diver with no state or club code falls back to their country. A team shows the state or club all its divers share, otherwise its country.</p>
         </div>
 
         <hr style="border:0;border-top:1px solid var(--border);margin:0.5rem 0 0">

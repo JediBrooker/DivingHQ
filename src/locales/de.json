@@ -525,7 +525,15 @@
     "view_recap": "Rückblick ansehen →",
     "stream_overlay": "Stream-Overlay",
     "broadcast": "Übertragung",
-    "pdf_recap": "📄 PDF-Rückblick"
+    "pdf_recap": "📄 PDF-Rückblick",
+    "medal_title_country": "Medaillenspiegel nach Ländern",
+    "medal_title_club": "Medaillenspiegel nach Vereinen",
+    "medal_title_state": "Medaillenspiegel nach Bundesstaaten",
+    "medal_title_province": "Medaillenspiegel nach Provinzen",
+    "medal_title_home_nation": "Medaillenspiegel nach Landesteilen",
+    "medal_title_region": "Medaillenspiegel nach Regionen",
+    "medal_col_country": "Land",
+    "medal_col_club": "Verein"
   },
   "guide": {
     "title": "Anleitung",

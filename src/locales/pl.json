@@ -525,7 +525,15 @@
     "view_recap": "Zobacz podsumowanie →",
     "stream_overlay": "Nakładka transmisji",
     "broadcast": "Transmisja",
-    "pdf_recap": "📄 Podsumowanie PDF"
+    "pdf_recap": "📄 Podsumowanie PDF",
+    "medal_title_country": "Klasyfikacja medalowa krajów",
+    "medal_title_club": "Klasyfikacja medalowa klubów",
+    "medal_title_state": "Klasyfikacja medalowa stanów",
+    "medal_title_province": "Klasyfikacja medalowa prowincji",
+    "medal_title_home_nation": "Klasyfikacja medalowa krajów (UK)",
+    "medal_title_region": "Klasyfikacja medalowa regionów",
+    "medal_col_country": "Kraj",
+    "medal_col_club": "Klub"
   },
   "guide": {
     "title": "Przewodnik użytkownika",

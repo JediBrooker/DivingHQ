@@ -514,7 +514,15 @@
     "view_recap": "요약 보기 →",
     "stream_overlay": "스트림 오버레이",
     "broadcast": "중계",
-    "pdf_recap": "📄 PDF 요약"
+    "pdf_recap": "📄 PDF 요약",
+    "medal_title_country": "국가별 메달 순위",
+    "medal_title_club": "클럽별 메달 순위",
+    "medal_title_state": "주별 메달 순위",
+    "medal_title_province": "주별 메달 순위",
+    "medal_title_home_nation": "구성국별 메달 순위",
+    "medal_title_region": "지역별 메달 순위",
+    "medal_col_country": "국가",
+    "medal_col_club": "클럽"
   },
   "guide": {
     "title": "사용자 가이드",

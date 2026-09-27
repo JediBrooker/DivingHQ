@@ -3624,3 +3624,533 @@ test("club region moves: a claimed region with nobody left running it doesn't ho
     await claimKit.wipe(CODE);
   }
 });
+
+// Migration 095: an entry's snapshot is the whole answer. A club move
+// after the meet, or the entry club being deleted, mustn't relabel old
+// results, and a synchro partner entered on the lead's row (late add /
+// CSV import, no row of their own) keeps a snapshot of their own.
+test("representation: a later club move doesn't rewrite past results", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "SHN";
+  await claimKit.wipe(CODE);
+  try {
+    // Both founders first: once the org has regions, signup insists on one.
+    const A = await claimKit.founder(CODE, "Jamestown Divers", { new_club_short_code: "JTD" });
+    const B = await claimKit.founder(CODE, "Longwood Divers", { new_club_short_code: "LWD" });
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    // St Helena has no built-in regions, so make two. Jamestown stays unplaced for now.
+    const region = async (name, code) => (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, $2, $3) RETURNING id", [orgId, name, code],
+    )).rows[0].id;
+    const east = await region("East", "EA");
+    const west = await region("West", "WE");
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [west, B.clubId]);
+    const doomed = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, 'Half Tree Hollow Divers', 'HTH') RETURNING id", [orgId],
+    )).rows[0].id;
+
+    const diver = async (fullName, clubId) => {
+      const id = await insertUser({ orgId, role: "diver", fullName, username: `int-rp-${crypto.randomBytes(3).toString("hex")}` });
+      await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [clubId, id]);
+      return id;
+    };
+    const mover   = await diver("Mover", A.clubId);
+    const orphan  = await diver("Orphan", doomed);
+    const lead    = await diver("Lead", A.clubId);
+    const partner = await diver("Partner", B.clubId);
+    const standIn = await diver("Stand In", A.clubId);
+
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Island Champs", represent_as: "region" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
+    const setMode = async (mode) => assert.equal((await fetchJson("PUT", `/api/meets/${meet.body.id}`, {
+      token: A.token, body: { represent_as: mode },
+    })).status, 200);
+    const mkEvent = async (body) => {
+      const r = await fetchJson("POST", "/api/events", {
+        token: A.token, body: { gender: "Mixed", height: "1m", total_rounds: 1, meet_id: meet.body.id, ...body },
+      });
+      assert.equal(r.status, 201, JSON.stringify(r.body));
+      return r.body.id;
+    };
+    const indiv = await mkEvent({ name: "Open 1m", number_of_judges: 5, event_type: "individual" });
+    const sync = await mkEvent({ name: "Synchro 1m", number_of_judges: 7, event_type: "synchro_pair" });
+    const dive = (await pool.query("SELECT id FROM dive_directory LIMIT 1")).rows[0].id;
+    for (const id of [mover, orphan]) {
+      await pool.query(
+        "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+        [indiv, id, dive],
+      );
+    }
+    const lateAdd = (partnerId) => fetchJson("POST", `/api/events/${sync}/roster`, {
+      token: A.token, body: { competitor_id: lead, partner_id: partnerId, dive_id: dive, round_number: 1 },
+    });
+    assert.equal((await lateAdd(partner)).status, 201);
+    assert.equal((await pool.query("SELECT 1 FROM competitor_dive_lists WHERE event_id = $1 AND competitor_id = $2", [sync, partner])).rows.length, 0,
+      "the partner has no row of their own, only the lead's partner_id");
+
+    // cache=skip: a cached payload would pass these trivially.
+    const codes = async () => {
+      const read = async (id) => {
+        const r = await fetchJson("GET", `/api/scoreboard/${id}?cache=skip`, { token: A.token });
+        assert.equal(r.status, 200, JSON.stringify(r.body));
+        return r.body.upcoming;
+      };
+      const out = Object.fromEntries((await read(indiv)).map((u) => [u.full_name, u.country_code]));
+      const [pair] = await read(sync);
+      return { ...out, Lead: pair.country_code, Partner: pair.partner_country };
+    };
+    // Jamestown and Half Tree Hollow have no region, so their divers read as the country.
+    assert.deepEqual(await codes(), { Mover: "SHN", Orphan: "SHN", Lead: "SHN", Partner: "WE" });
+
+    // Next season: Mover and Orphan join Longwood (West), Partner joins
+    // Jamestown, and Half Tree Hollow folds.
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = ANY($2::uuid[])", [B.clubId, [mover, orphan]]);
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [A.clubId, partner]);
+    await pool.query("DELETE FROM clubs WHERE id = $1", [doomed]);
+    assert.deepEqual(await codes(), { Mover: "SHN", Orphan: "SHN", Lead: "SHN", Partner: "WE" });
+    // The region record lookup (lib/records.js) resolves the same way.
+    const repRegion = async (ev, id) =>
+      (await pool.query("SELECT region_id FROM event_rep_ids($1, $2)", [ev, id])).rows[0].region_id;
+    assert.equal(await repRegion(indiv, mover), null, "not West, where Mover is now");
+    assert.equal(await repRegion(sync, partner), west);
+
+    await setMode("club");
+    assert.deepEqual(await codes(), { Mover: "JTD", Orphan: "SHN", Lead: "JTD", Partner: "LWD" });
+
+    // Jamestown gets placed in East afterwards. Same club, so its old
+    // entries pick the region up.
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [east, A.clubId]);
+    await setMode("region");
+    assert.deepEqual(await codes(), { Mover: "EA", Orphan: "SHN", Lead: "EA", Partner: "WE" });
+    assert.equal(await repRegion(indiv, mover), east);
+
+    // Swapping the partner through the upsert takes the new partner's snapshot.
+    assert.equal((await lateAdd(standIn)).status, 200);
+    assert.equal((await codes()).Partner, "EA");
+
+    // An account merge moves partner_id to the same person's other account
+    // and asks the trigger to keep the snapshot (routes/users.js).
+    const c = await pool.connect();
+    try {
+      await c.query("BEGIN");
+      await c.query("SELECT set_config('divinghq.keep_rep_snapshot', 'on', true)");
+      await c.query("UPDATE competitor_dive_lists SET partner_id = $1 WHERE event_id = $2", [mover, sync]);
+      const kept = (await c.query("SELECT partner_rep_club_id FROM competitor_dive_lists WHERE event_id = $1", [sync])).rows[0];
+      assert.equal(kept.partner_rep_club_id, A.clubId, "Stand In's snapshot, not Mover's Longwood");
+      await c.query("ROLLBACK");
+    } finally {
+      c.release();
+    }
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+// Pull the drawn text out of a PDFKit file: inflate each content stream
+// and decode the hex strings in its TJ operators, one line per operator.
+function pdfText(buf) {
+  const zlib = require("node:zlib");
+  const raw = buf.toString("latin1");
+  const lines = [];
+  const streamRe = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  let m;
+  while ((m = streamRe.exec(raw))) {
+    let body;
+    try { body = zlib.inflateSync(Buffer.from(m[1], "latin1")).toString("latin1"); } catch { continue; }
+    for (const tj of body.matchAll(/\[([^\]]*)\]\s*TJ/g)) {
+      lines.push([...tj[1].matchAll(/<([0-9a-fA-F]*)>/g)]
+        .map((h) => Buffer.from(h[1], "hex").toString("latin1")).join(""));
+    }
+  }
+  return lines;
+}
+
+// Migration 095: a team's standings row carries the code its divers
+// share (state, club or country per the meet), otherwise the team org's
+// country, and keeps the team short code as its subline.
+test("team labels follow the meet's represent_as", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "PCN";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Adamstown Divers", { new_club_short_code: "ADM" });
+    const B = await claimKit.founder(CODE, "Bounty Bay Divers", { new_club_short_code: "BBY" });
+    const C = await claimKit.founder(CODE, "Christian's Cave Divers", { new_club_short_code: "CCV" });
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const region = async (name, code) => (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, $2, $3) RETURNING id", [orgId, name, code],
+    )).rows[0].id;
+    const north = await region("North", "NO");
+    const south = await region("South", "SO");
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = ANY($2::uuid[])", [north, [A.clubId, B.clubId]]);
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [south, C.clubId]);
+
+    const diver = async (fullName, clubId) => {
+      const id = await insertUser({ orgId, role: "diver", fullName, username: `int-tl-${crypto.randomBytes(3).toString("hex")}` });
+      if (clubId) await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [clubId, id]);
+      return id;
+    };
+    const a1 = await diver("Ada One", A.clubId);
+    const a2 = await diver("Ada Two", A.clubId);
+    const a3 = await diver("Ada Three", A.clubId);
+    const a4 = await diver("Ada Four", A.clubId);
+    const b1 = await diver("Bea One", B.clubId);
+    const c1 = await diver("Cal One", C.clubId);
+    const loner = await diver("No Club", null);
+
+    const team = async (name, short, members) => {
+      const id = (await pool.query(
+        "INSERT INTO teams (org_id, name, short_code) VALUES ($1, $2, $3) RETURNING id", [orgId, name, short],
+      )).rows[0].id;
+      for (const u of members) await pool.query("INSERT INTO team_members (team_id, user_id) VALUES ($1, $2)", [id, u]);
+      return id;
+    };
+    // Two northern clubs; a northerner diving synchro with a southerner
+    // (the partner has no row of their own, and still counts); one club
+    // plus a diver with no club at all, who doesn't get a say.
+    const northern = await team("Northern", "NTH", [a1, b1]);
+    const mixed = await team("Mixed", "MIX", [a2, c1]);
+    const adamstown = await team("Adamstown A", "ADA", [a3, a4, loner]);
+
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Pitcairn Team Champs", represent_as: "region" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
+    const setMode = async (mode) => assert.equal((await fetchJson("PUT", `/api/meets/${meet.body.id}`, {
+      token: A.token, body: { represent_as: mode },
+    })).status, 200);
+    const mkTeamEvent = async (extra) => {
+      const r = await fetchJson("POST", "/api/events", {
+        token: A.token,
+        body: { name: "Mixed Team", gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 3, event_type: "team", ...extra },
+      });
+      assert.equal(r.status, 201, JSON.stringify(r.body));
+      return r.body.id;
+    };
+    const ev = await mkTeamEvent({ meet_id: meet.body.id });
+    const dive = (await pool.query("SELECT id FROM dive_directory WHERE height = 3 LIMIT 1")).rows[0].id;
+    const judges = [];
+    for (let i = 1; i <= 5; i++) {
+      judges.push(await insertUser({ orgId, role: "judge", fullName: `Judge ${i}`, username: `int-tlj${i}-${crypto.randomBytes(3).toString("hex")}` }));
+    }
+    const enter = async (eventId, teamId, rows, score) => {
+      await pool.query("INSERT INTO event_teams (event_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [eventId, teamId]);
+      for (const [competitor, round, partner] of rows) {
+        await pool.query(
+          `INSERT INTO competitor_dive_lists (event_id, competitor_id, partner_id, team_id, dive_id, round_number)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [eventId, competitor, partner || null, teamId, dive, round],
+        );
+        for (let j = 0; j < 5; j++) {
+          await pool.query(
+            "INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, $5, $6)",
+            [eventId, competitor, judges[j], dive, round, score],
+          );
+        }
+      }
+    };
+    for (let i = 0; i < 5; i++) {
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)", [ev, judges[i], i + 1]);
+    }
+    await enter(ev, northern, [[a1, 1], [b1, 2]], 8);
+    await enter(ev, mixed, [[a2, 1, c1]], 7);
+    await enter(ev, adamstown, [[a3, 1], [a4, 2], [loner, 3]], 6);
+
+    const labels = async (eventId = ev) => {
+      const r = await fetchJson("GET", `/api/scoreboard/${eventId}?cache=skip`, { token: A.token });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      for (const s of r.body.standings) assert.equal(s.competitor_id ?? null, null, "team events rank teams, not divers");
+      return Object.fromEntries(r.body.standings.map((s) => [s.full_name, `${s.country_code}/${s.club_name}`]));
+    };
+    assert.deepEqual(await labels(), { "Northern": "NO/NTH", "Mixed": "PCN/MIX", "Adamstown A": "NO/ADA" });
+    await setMode("club");
+    assert.deepEqual(await labels(), { "Northern": "PCN/NTH", "Mixed": "PCN/MIX", "Adamstown A": "ADM/ADA" });
+    await setMode("country");
+    assert.deepEqual(await labels(), { "Northern": "PCN/NTH", "Mixed": "PCN/MIX", "Adamstown A": "PCN/ADA" });
+
+    // Bea joins a southern club after the entry: the team keeps what she entered as.
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [C.clubId, b1]);
+    await setMode("region");
+    assert.equal((await labels()).Northern, "NO/NTH");
+
+    // The recap reads the same rows, so a team event now gets a medal
+    // table (two distinct codes) where every row used to be blank.
+    await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [ev]);
+    const recap = await fetchJson("GET", `/api/archive/${ev}/results`);
+    assert.equal(recap.status, 200, JSON.stringify(recap.body));
+    assert.deepEqual(
+      Object.fromEntries(recap.body.standings.map((s) => [s.full_name, `${s.country_code}/${s.club_name}`])),
+      { "Northern": "NO/NTH", "Mixed": "PCN/MIX", "Adamstown A": "NO/ADA" },
+    );
+    assert.ok(recap.body.standings.every((s) => s.competitor_id == null));
+
+    // results.pdf ranks teams too, each dive line naming its diver, and
+    // a mixed team's members show their own state.
+    const pdf = await fetch(`${baseUrl}/api/events/${ev}/results.pdf`);
+    assert.equal(pdf.status, 200);
+    assert.match(pdf.headers.get("content-type"), /application\/pdf/);
+    const text = pdfText(Buffer.from(await pdf.arrayBuffer())).join("\n");
+    assert.match(text, /\d\.\s+Northern {2}NO\n/);
+    assert.match(text, /\d\.\s+Mixed {2}PCN\n/);
+    assert.match(text, /\d\.\s+Adamstown A {2}NO\n\S*\s*ADA/);
+    assert.match(text, /R1\s+Ada Two \(NO\) & Cal One\s/);
+    assert.ok(!/\d\.\s+Ada One/.test(text), "members aren't ranked on their own");
+
+    // An event outside any meet reads as the team org's country. (Club
+    // admins can only create events inside meets they host, hence SQL.)
+    const loose = (await pool.query(
+      `INSERT INTO events (org_id, name, gender, height, number_of_judges, total_rounds, event_type)
+       VALUES ($1, 'Friendly', 'Mixed', '3m', 5, 3, 'team') RETURNING id`, [orgId],
+    )).rows[0].id;
+    for (let i = 0; i < 5; i++) {
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)", [loose, judges[i], i + 1]);
+    }
+    await enter(loose, adamstown, [[a3, 1]], 6);
+    assert.deepEqual(await labels(loose), { "Adamstown A": "PCN/ADA" });
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+// Host club admins run team events in an unclaimed country, so they need
+// the event's team list: the Control Room late-entry picker reads it.
+test("an event's team list opens to its delegates, and only them", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MSR";
+  await claimKit.wipe(CODE);
+  await claimKit.wipe("AIA");
+  try {
+    const A = await claimKit.founder(CODE, "Plymouth Divers");
+    const B = await claimKit.founder(CODE, "Salem Divers");
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Montserrat Open" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "Mixed Team", gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 3, event_type: "team", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const teamId = (await pool.query(
+      "INSERT INTO teams (org_id, name, short_code) VALUES ($1, 'Plymouth A', 'PLA') RETURNING id", [orgId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO event_teams (event_id, team_id) VALUES ($1, $2)", [ev.body.id, teamId]);
+
+    const list = (token) => fetchJson("GET", `/api/events/${ev.body.id}/teams`, { token });
+    const host = await list(A.token);
+    assert.equal(host.status, 200, JSON.stringify(host.body));
+    assert.deepEqual(host.body.map((r) => [r.name, r.short_code]), [["Plymouth A", "PLA"]]);
+    assert.equal((await list(B.token)).status, 403, "another club's admin doesn't run this meet");
+    // No token at all: verifyToken answers 403 (its long-standing contract).
+    const anon = await list(null);
+    assert.equal(anon.status, 403);
+    assert.ok(!Array.isArray(anon.body));
+
+    // The org editors keep their way in; another org's don't get one.
+    const signIn = async (org, role) => {
+      const username = `int-et-${crypto.randomBytes(3).toString("hex")}`;
+      await insertUser({ orgId: org, role, username, fullName: "Meet Manager" });
+      const r = await fetchJson("POST", "/api/auth/login", { body: { username, password: "not-used-here" } });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      return r.body.token;
+    };
+    assert.equal((await list(await signIn(orgId, "meet_manager"))).status, 200);
+    const X = await claimKit.founder("AIA", "Anguilla Divers");
+    const otherOrg = (await pool.query("SELECT org_id FROM users WHERE id = $1", [X.id])).rows[0].org_id;
+    assert.equal((await list(await signIn(otherOrg, "meet_manager"))).status, 403);
+
+    // With the list readable, the host's late-entry flow goes through.
+    const diver = await insertUser({ orgId, role: "diver", username: `int-et-${crypto.randomBytes(3).toString("hex")}`, fullName: "Walk Up" });
+    await pool.query("INSERT INTO team_members (team_id, user_id) VALUES ($1, $2)", [teamId, diver]);
+    const dive = (await pool.query("SELECT id FROM dive_directory WHERE height = 3 LIMIT 1")).rows[0].id;
+    const late = await fetchJson("POST", `/api/events/${ev.body.id}/roster`, {
+      token: A.token, body: { competitor_id: diver, dive_id: dive, round_number: 1, team_id: host.body[0].id },
+    });
+    assert.equal(late.status, 201, JSON.stringify(late.body));
+  } finally {
+    await claimKit.wipe(CODE);
+    await claimKit.wipe("AIA");
+  }
+});
+
+// The recap titles its medal table by what the codes are, so the archive
+// event block says how the meet represents divers and what the host
+// country calls its regions.
+test("recap event block carries represent_as and the region label", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "FLK";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Stanley Divers");
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    await pool.query("UPDATE organisations SET region_label = 'province' WHERE id = $1", [orgId]);
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Falklands Champs", represent_as: "region" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "1m", gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 1, event_type: "individual", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const loose = (await pool.query(
+      `INSERT INTO events (org_id, name, gender, height, number_of_judges, total_rounds, status)
+       VALUES ($1, 'Friendly', 'Mixed', '1m', 5, 1, 'Completed') RETURNING id`, [orgId],
+    )).rows[0].id;
+    await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [ev.body.id]);
+
+    const meta = async (id) => {
+      const r = await fetchJson("GET", `/api/archive/${id}/results`);
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      return { represent_as: r.body.event.represent_as, region_label: r.body.event.region_label };
+    };
+    assert.deepEqual(await meta(ev.body.id), { represent_as: "region", region_label: "province" });
+    assert.equal((await fetchJson("PUT", `/api/meets/${meet.body.id}`, { token: A.token, body: { represent_as: "club" } })).status, 200);
+    assert.equal((await meta(ev.body.id)).represent_as, "club");
+    // No meet, no setting: the chips are countries, so is the heading.
+    assert.equal((await meta(loose)).represent_as, "country");
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+// Claiming an old account moves its entries to the claimant, synchro
+// partner slots included. It's the same diver, so the partner snapshot
+// taken at entry has to survive the move (routes/users.js sets
+// divinghq.keep_rep_snapshot for that transaction).
+test("claiming an old account keeps its synchro-partner snapshot", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "WLF";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Mata-Utu Divers", { new_club_short_code: "MUD" });
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const leava = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, 'Leava Divers', 'LVD') RETURNING id", [orgId],
+    )).rows[0].id;
+    const mk = async (fullName, clubId) => {
+      const username = `int-cm-${crypto.randomBytes(3).toString("hex")}`;
+      const id = await insertUser({ orgId, role: "diver", username, fullName });
+      await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [clubId, id]);
+      return { id, username };
+    };
+    const lead = await mk("Lead Diver", A.clubId);
+    const old = await mk("Old Me", A.clubId);
+    const me = await mk("New Me", leava);
+
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Wallis Open", represent_as: "club" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "Synchro 3m", gender: "Mixed", height: "3m", number_of_judges: 7, total_rounds: 1, event_type: "synchro_pair", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const dive = (await pool.query("SELECT id FROM dive_directory WHERE height = 3 LIMIT 1")).rows[0].id;
+    // One row for the pair, the old account only as partner_id.
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, partner_id, dive_id, round_number) VALUES ($1, $2, $3, $4, 1)",
+      [ev.body.id, lead.id, old.id, dive],
+    );
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [old.id]);
+
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username: me.username, password: "not-used-here" } });
+    assert.equal(login.status, 200, JSON.stringify(login.body));
+    const claim = await fetchJson("POST", "/api/users/me/claim", {
+      token: login.body.token, body: { old_user_ids: [old.id], password: "not-used-here" },
+    });
+    assert.equal(claim.status, 200, JSON.stringify(claim.body));
+    assert.deepEqual(claim.body.claimed, [old.id]);
+
+    const row = (await pool.query(
+      "SELECT partner_id, partner_rep_club_id FROM competitor_dive_lists WHERE event_id = $1", [ev.body.id],
+    )).rows[0];
+    assert.equal(row.partner_id, me.id);
+    assert.equal(row.partner_rep_club_id, A.clubId, "entered from Mata-Utu, still Mata-Utu");
+    const sb = await fetchJson("GET", `/api/scoreboard/${ev.body.id}?cache=skip`, { token: A.token });
+    assert.equal(sb.body.upcoming[0].partner_country, "MUD");
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+// event_team_rep_code only polls the divers actually on the team's
+// entry. A withdrawn diver or a reserve from another state shouldn't
+// knock an all-North team down to the country code.
+test("team labels leave withdrawn and reserve divers out of the vote", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CXR";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Flying Fish Cove Divers", { new_club_short_code: "FFC" });
+    const B = await claimKit.founder(CODE, "Drumsite Divers", { new_club_short_code: "DRM" });
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const region = async (name, code) => (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, $2, $3) RETURNING id", [orgId, name, code],
+    )).rows[0].id;
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [await region("North", "NTH"), A.clubId]);
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [await region("South", "STH"), B.clubId]);
+
+    const diver = async (fullName, clubId) => {
+      const id = await insertUser({ orgId, role: "diver", fullName, username: `int-tw-${crypto.randomBytes(3).toString("hex")}` });
+      await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [clubId, id]);
+      return id;
+    };
+    const n1 = await diver("North One", A.clubId);
+    const n2 = await diver("North Two", A.clubId);
+    const quitter = await diver("South Withdrawn", B.clubId);
+    const bench = await diver("South Reserve", B.clubId);
+
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Island Teams", represent_as: "region" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "Mixed Team", gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 3, event_type: "team", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const eventId = ev.body.id;
+    const teamId = (await pool.query(
+      "INSERT INTO teams (org_id, name, short_code) VALUES ($1, 'Cove A', 'CVA') RETURNING id", [orgId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO event_teams (event_id, team_id) VALUES ($1, $2)", [eventId, teamId]);
+    const dive = (await pool.query("SELECT id FROM dive_directory WHERE height = 3 LIMIT 1")).rows[0].id;
+    const judges = [];
+    for (let i = 1; i <= 5; i++) {
+      const j = await insertUser({ orgId, role: "judge", fullName: `Judge ${i}`, username: `int-twj${i}-${crypto.randomBytes(3).toString("hex")}` });
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)", [eventId, j, i]);
+      judges.push(j);
+    }
+    for (const [who, round, reserve] of [[n1, 1, false], [n2, 2, false], [quitter, 3, false], [bench, 3, true]]) {
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, team_id, dive_id, round_number, is_reserve)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [eventId, who, teamId, dive, round, reserve],
+      );
+    }
+    for (const [who, round] of [[n1, 1], [n2, 2]]) {
+      for (const j of judges) {
+        await pool.query(
+          "INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, $5, 7)",
+          [eventId, who, j, dive, round],
+        );
+      }
+    }
+    await pool.query("UPDATE competitor_dive_lists SET withdrawn_at = now() WHERE event_id = $1 AND competitor_id = $2", [eventId, quitter]);
+
+    const label = async () => {
+      const r = await fetchJson("GET", `/api/scoreboard/${eventId}?cache=skip`, { token: A.token });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      assert.equal(r.body.standings.length, 1, JSON.stringify(r.body.standings));
+      return `${r.body.standings[0].country_code}/${r.body.standings[0].club_name}`;
+    };
+    assert.equal(await label(), "NTH/CVA");
+
+    // Put the southerner back on the team and the vote is split, so the
+    // team falls back to the country. Proves the withdrawn row was what
+    // kept it out, not some accident of the fixture.
+    await pool.query("UPDATE competitor_dive_lists SET withdrawn_at = NULL WHERE event_id = $1 AND competitor_id = $2", [eventId, quitter]);
+    assert.equal(await label(), `${CODE}/CVA`);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

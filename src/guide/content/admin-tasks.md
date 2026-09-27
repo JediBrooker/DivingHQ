@@ -120,6 +120,8 @@ The members drawer lets you add or remove divers, with a search across your fede
 
 Team names show as a **purple chip** in history cards and the active-diver block — it's the visual signal that this is a team event entry.
 
+On the standings, recap and results PDF a team's row gets the same kind of chip its divers would. It follows the meet's **Divers represent** setting: if every diver on the team is from one state (or one club, in a club meet) the team shows that code, and a team mixing states or clubs shows its country. The team's short code sits underneath. It's worked out from who the divers were when they were entered, so a diver moving club later doesn't change an old result.
+
 ## Score Audit Log
 
 `/events/<id>/audit` — every score insert, update, and delete for one event.
@@ -268,6 +270,8 @@ When you click **Invite** in the Federations modal, every org_admin in the invit
 ### Country medal table
 
 Once any event in the meet has finalised with ≥2 distinct countries on the standings, the public recap automatically grows an Olympic-style country medal table card alongside the per-diver leaderboard — sorted by gold count, then silver, then bronze. Spectators see who topped the federation count without you doing anything extra.
+
+The table groups by whatever the chips next to each diver show, so it follows the meet's **Divers represent** setting. A national championship set to states gets a state medal table (called a province or home-nation table where that's what the country uses), a club meet gets a club medal table, and the heading says which. Team events count too: each team sits under the state, club or country its divers share.
 
 ### Continental records
 

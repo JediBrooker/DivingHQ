@@ -525,7 +525,15 @@
     "view_recap": "Voir le récapitulatif →",
     "stream_overlay": "Incrustation diffusion",
     "broadcast": "Diffusion",
-    "pdf_recap": "📄 Récapitulatif PDF"
+    "pdf_recap": "📄 Récapitulatif PDF",
+    "medal_title_country": "Tableau des médailles par pays",
+    "medal_title_club": "Tableau des médailles par club",
+    "medal_title_state": "Tableau des médailles par État",
+    "medal_title_province": "Tableau des médailles par province",
+    "medal_title_home_nation": "Tableau des médailles par nation",
+    "medal_title_region": "Tableau des médailles par région",
+    "medal_col_country": "Pays",
+    "medal_col_club": "Club sportif"
   },
   "guide": {
     "title": "Guide d'utilisation",

@@ -262,7 +262,15 @@ diver's country, state short code or club short code depending on the
 meet's `represent_as`, taken from the entry-time snapshot on
 `competitor_dive_lists`. When you add a diver-facing query, use the same
 function rather than `o.country_code`, or that surface will ignore the
-meet's setting. Judges, orgs and meets keep a real country code.
+meet's setting. Judges, orgs and meets keep a real country code. The
+snapshot wins outright when there is one (migration 095): today's club is
+only consulted for entries older than 090, and a synchro partner entered
+on the lead's row has their own `partner_rep_*` snapshot. Anything that
+needs the underlying club / region ids rather than the printed code (the
+region-record lookup does) goes through `event_rep_ids()`, not its own
+join on `users.club_id`. Team standings rows put `event_team_rep_code()` in
+the same slot and the team short code in `club_name`; build them with
+`teamStandingsCte()` rather than a fourth inline copy.
 
 Regions (migration 088) sit one level above clubs: a `region_admins` row
 reaches meets hosted by the region or by any club in it, never another
@@ -320,7 +328,10 @@ above it.
 | Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForClubAdmin` / `clubAdminCanReview` / `reviewersFor` | `lib/role-requests.js` |
 | Narrow a meet screen to a club admin's own meets | `useClubScope()` | `src/composables/useClubScope.js` |
 | ISO country list (server validation + signup picker) | `countryByCode(a3)` / `countryFromStored(dbCode)` / `countries.json` | `lib/countries.js` |
-| What a diver represents in an event (country / state / club code) | `event_rep_code(event_id, user_id, home_country)` SQL function | `migrations/090_representation.sql` |
+| What a diver represents in an event (country / state / club code) | `event_rep_code(event_id, user_id, home_country)` SQL function | `migrations/090_representation.sql`, `095_team_rep_code.sql` |
+| The club / region / country ids an entry resolves to (snapshot first, partner snapshot next) | `event_rep_ids(event_id, user_id)` SQL function | `migrations/095_team_rep_code.sql` |
+| What a team represents in an event (the code its divers share, else the team org's country) | `event_team_rep_code(event_id, team_id)` SQL function | `migrations/095_team_rep_code.sql` |
+| Team-event standings rows (scoreboard, recap, results.pdf) | `teamStandingsCte()` | `lib/scoring-sql.js` |
 | Built-in regions per country, copy them into an org | `catalogFor(a3)` / `materializeRegions(db, orgId, a3)` / `regions.json` | `lib/regions.js` |
 | Approve/reject list for club and region admin pages | `<RoleRequestQueue>` | `src/components/RoleRequestQueue.vue` |
 | Claims lifecycle (open, activate, vote, decide, revoke, sweep) | `lib/claims.js` | `lib/claims.js` |

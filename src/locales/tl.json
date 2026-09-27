@@ -514,7 +514,15 @@
     "view_recap": "Tingnan ang recap →",
     "stream_overlay": "Overlay ng stream",
     "broadcast": "Pag-broadcast",
-    "pdf_recap": "📄 Buod na PDF"
+    "pdf_recap": "📄 Buod na PDF",
+    "medal_title_country": "Talaan ng medalya ayon sa bansa",
+    "medal_title_club": "Talaan ng medalya ayon sa samahan",
+    "medal_title_state": "Talaan ng medalya ayon sa estado",
+    "medal_title_province": "Talaan ng medalya ayon sa lalawigan",
+    "medal_title_home_nation": "Talaan ng medalya ayon sa bansa (UK)",
+    "medal_title_region": "Talaan ng medalya ayon sa rehiyon",
+    "medal_col_country": "Bansa",
+    "medal_col_club": "Samahan"
   },
   "guide": {
     "title": "Gabay ng user",

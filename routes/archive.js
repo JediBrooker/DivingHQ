@@ -16,7 +16,7 @@
 //   app.use(require('./routes/archive')({ pool }))
 
 const express = require("express");
-const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
+const { perDiveSelect, perDivePointsCte, teamStandingsCte } = require("../lib/scoring-sql");
 
 // Short-TTL cache for the two unbounded all-time aggregations
 // (/api/archive and /api/archive/clubs). Lives in
@@ -201,7 +201,8 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
   // GET /api/archive/:eventId/results: per-event recap.
   //
   // Returns:
-  //   event:     event metadata
+  //   event:     event metadata, plus the meet's represent_as and the
+  //              org's region_label for the medal table heading
   //   standings: total per competitor (or per team, for team
   //              events), World Aquatics tie-break by descending dive
   //              points
@@ -212,10 +213,17 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
     try {
       const [ev, standings, history, panel] = await Promise.all([
         reads.query(
+          /* represent_as (and what the host country calls its regions)
+             let the recap title its medal table State / Club / Country
+             to match the codes it groups by. An event outside any meet
+             labels as country, same as event_rep_code(). */
           `SELECT e.name, e.gender, e.height, e.total_rounds,
-                  e.number_of_judges, e.event_type, o.name AS org_name
+                  e.number_of_judges, e.event_type, o.name AS org_name,
+                  COALESCE(m.represent_as, 'country') AS represent_as,
+                  o.region_label
            FROM events e
            JOIN organisations o ON e.org_id = o.id
+           LEFT JOIN meets m ON m.id = e.meet_id
            WHERE e.id = $1
              AND e.status IN ('Live', 'Completed')
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
@@ -227,19 +235,9 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
              where: `s.event_id = $1
                AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
            })},
-           team_standings AS (
-             SELECT t.name AS full_name,
-                    NULL::char(3) AS country_code,
-                    t.short_code AS club_name,
-                    NULL::uuid AS partner_id,
-                    NULL::varchar AS partner_name,
-                    NULL::char(3) AS partner_country,
-                    SUM(pd.dive_points) AS total
-             FROM per_dive pd
-             JOIN teams t ON t.id = pd.team_id
-             WHERE (SELECT event_type FROM events WHERE id = $1) = 'team'
-             GROUP BY t.id, t.name, t.short_code
-           ),
+           /* Team rows carry the code their divers share (migration
+              095), so team events get chips and a medal table too. */
+           ${teamStandingsCte()},
            comp_standings AS (
              /* Group by u.id (not just u.full_name): two divers
                 sharing a name would otherwise merge into one
@@ -273,21 +271,22 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
              GROUP BY u.id, u.full_name, o.country_code, cl.name,
                       p.partner_id, pu.full_name, pl.country_code
            ),
-           team_standings_padded AS (
-             /* Pad the team-standings shape so the UNION below
-                lines up: team rows have no individual competitor,
-                so competitor_id is NULL. */
-             SELECT NULL::uuid AS competitor_id, *
+           merged AS (
+             /* Columns by name, not *: team rows have no individual
+                competitor, so competitor_id is NULL, and team_id stays
+                out of the public payload. */
+             SELECT NULL::uuid AS competitor_id, full_name, country_code, club_name,
+                    partner_id, partner_name, partner_country, total
              FROM team_standings
+             UNION ALL
+             SELECT competitor_id, full_name, country_code, club_name,
+                    partner_id, partner_name, partner_country, total
+             FROM comp_standings
            )
            SELECT competitor_id, full_name, country_code, club_name,
                   partner_id, partner_name, partner_country, total,
                   RANK() OVER (ORDER BY total DESC) AS rank
-           FROM (
-             SELECT * FROM team_standings_padded
-             UNION ALL
-             SELECT * FROM comp_standings
-           ) merged
+           FROM merged
            /* World Aquatics Art 4.1.5: equal totals share a place, so
               RANK() over total alone gives the shared placing. Rows are
               ordered by total then name for a stable, rank-neutral

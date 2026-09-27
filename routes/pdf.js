@@ -25,7 +25,7 @@
 const express = require("express");
 const PDFDocument = require("pdfkit");
 const { t: serverTranslate } = require("../lib/server-i18n");
-const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
+const { perDiveSelect, perDivePointsCte, teamStandingsCte } = require("../lib/scoring-sql");
 
 // CSV escaping + spreadsheet-formula-injection guard.
 //
@@ -1206,7 +1206,8 @@ module.exports = function createPdfRouter({ pool }) {
   // RESULTS PDF: final standings + dive-by-dive grouped by
   // diver. Synchro events regroup the judge chips into A / B /
   // Sync sub-panels so the printed page matches the on-screen
-  // layout the audience saw.
+  // layout the audience saw. Team events rank and group by team,
+  // same as the scoreboard and recap.
   // -------------------------------------------------------------
   router.get("/api/events/:id/results.pdf", async (req, res) => {
     try {
@@ -1216,32 +1217,48 @@ module.exports = function createPdfRouter({ pool }) {
           [req.params.id],
         ),
         pool.query(
-          `WITH ${perDivePointsCte()}
+          `WITH ${perDivePointsCte({ select: ["s.competitor_id", "cdl.team_id", "s.round_number"] })},
+           /* Team events print one line per team, like the scoreboard:
+              team name, the code its divers share, team short code
+              underneath. This used to list every member separately. */
+           ${teamStandingsCte()},
            /* Group by u.id (not u.full_name) so two divers with the
               same full name don't collapse into one row with summed
               totals. Prior versions of this query merged "Sarah
               Williams" + "Sarah Williams" into a single PDF line
               with double points. */
-           SELECT u.full_name,
-                  event_rep_code($1, u.id, o.country_code) AS country_code,
-                  cl.name AS club_name,
-                  pu.full_name AS partner_name,
-                  SUM(pd.dive_points) AS total,
-                  RANK() OVER (ORDER BY SUM(pd.dive_points) DESC) AS rank
-           FROM per_dive pd
-           JOIN users u ON u.id = pd.competitor_id
-           JOIN organisations o ON o.id = u.org_id
-           LEFT JOIN clubs cl ON cl.id = u.club_id
-           LEFT JOIN LATERAL (
-             SELECT DISTINCT cdl.partner_id FROM competitor_dive_lists cdl
-             WHERE cdl.event_id = $1 AND cdl.competitor_id = pd.competitor_id
-               AND cdl.partner_id IS NOT NULL LIMIT 1
-           ) p ON true
-           LEFT JOIN users pu ON pu.id = p.partner_id
-           GROUP BY u.id, u.full_name, o.country_code, cl.name, pu.full_name
+           comp_standings AS (
+             SELECT u.full_name,
+                    event_rep_code($1, u.id, o.country_code) AS country_code,
+                    cl.name AS club_name,
+                    pu.full_name AS partner_name,
+                    SUM(pd.dive_points) AS total
+             FROM per_dive pd
+             JOIN users u ON u.id = pd.competitor_id
+             JOIN organisations o ON o.id = u.org_id
+             LEFT JOIN clubs cl ON cl.id = u.club_id
+             LEFT JOIN LATERAL (
+               SELECT DISTINCT cdl.partner_id FROM competitor_dive_lists cdl
+               WHERE cdl.event_id = $1 AND cdl.competitor_id = pd.competitor_id
+                 AND cdl.partner_id IS NOT NULL LIMIT 1
+             ) p ON true
+             LEFT JOIN users pu ON pu.id = p.partner_id
+             WHERE (SELECT event_type FROM events WHERE id = $1) <> 'team'
+             GROUP BY u.id, u.full_name, o.country_code, cl.name, pu.full_name
+           ),
+           merged AS (
+             SELECT team_id, full_name, country_code, club_name, partner_name, total
+             FROM team_standings
+             UNION ALL
+             SELECT NULL::uuid, full_name, country_code, club_name, partner_name, total
+             FROM comp_standings
+           )
            /* World Aquatics Art 4.1.5: equal totals share a place.
               RANK() over total gives the shared placing; rows ordered
               by total then name for a stable display order. */
+           SELECT team_id, full_name, country_code, club_name, partner_name, total,
+                  RANK() OVER (ORDER BY total DESC) AS rank
+           FROM merged
            ORDER BY total DESC, full_name ASC`,
           [req.params.id],
         ),
@@ -1257,7 +1274,10 @@ module.exports = function createPdfRouter({ pool }) {
           `${perDiveSelect({
             select: [
               "u.id AS competitor_id", "u.full_name", "cl.name AS club_name",
+              // Only printed for team events, next to each member's dive.
+              "event_rep_code($1, u.id, o.country_code) AS country_code",
               "pu.full_name AS partner_name",
+              "cdl.team_id", "tm.name AS team_name",
               "s.round_number", "d.dive_code", "d.position", "d.dd",
             ],
             dd:          "d.dd",
@@ -1267,12 +1287,15 @@ module.exports = function createPdfRouter({ pool }) {
             ],
             extraJoins: [
               "JOIN users u ON s.competitor_id = u.id",
+              "JOIN organisations o ON o.id = u.org_id",
               "LEFT JOIN clubs cl ON cl.id = u.club_id",
               "LEFT JOIN users pu ON pu.id = cdl.partner_id",
+              "LEFT JOIN teams tm ON tm.id = cdl.team_id",
             ],
             where: "s.event_id = $1",
             groupBy: [
-              "u.id", "u.full_name", "cl.name", "pu.full_name",
+              "u.id", "u.full_name", "cl.name", "o.country_code", "pu.full_name",
+              "cdl.team_id", "tm.name",
               "s.round_number", "d.dive_code", "d.position", "d.dd",
             ],
           })}
@@ -1323,18 +1346,44 @@ module.exports = function createPdfRouter({ pool }) {
       // Group rows by competitor_id (not full_name) so two divers
       // with the same name don't collapse into one section. The
       // section header still shows full_name for readability.
+      //
+      // Team events group by team instead, sections in team-name order
+      // and dives in round order, with the diver named on each line.
+      // Keyed by team_id for the same reason as above, two teams can
+      // share a name.
+      const isTeam = event.event_type === "team";
+      const teamRow = new Map(
+        standings.rows.filter((r) => r.team_id).map((r) => [r.team_id, r]),
+      );
       const byDiver = new Map();
       dives.rows.forEach((row) => {
-        const key = row.competitor_id;
+        const key = isTeam ? `team:${row.team_id || "none"}` : row.competitor_id;
         if (!byDiver.has(key)) {
-          byDiver.set(key, {
-            name: row.full_name,
-            club: row.club_name || null,
-            rows: [],
-          });
+          const team = teamRow.get(row.team_id);
+          byDiver.set(key, isTeam
+            ? {
+                name: row.team_name || "Unattached",
+                code: team?.country_code || null,
+                club: team?.club_name || null,
+                rows: [],
+              }
+            : {
+                name: row.full_name,
+                code: null,
+                club: row.club_name || null,
+                rows: [],
+              });
         }
         byDiver.get(key).rows.push(row);
       });
+      if (isTeam) {
+        for (const group of byDiver.values()) {
+          group.rows.sort((a, b) => a.round_number - b.round_number
+            || String(a.full_name).localeCompare(String(b.full_name)));
+        }
+      }
+      const sections = [...byDiver.values()];
+      if (isTeam) sections.sort((a, b) => a.name.localeCompare(b.name));
 
       // For synchro events, regroup judge scores into A / B / Sync
       // blocks so the PDF reflects the same grouping the web UI does.
@@ -1354,9 +1403,10 @@ module.exports = function createPdfRouter({ pool }) {
         return scoresStr;
       };
 
-      for (const [, group] of byDiver) {
+      for (const group of sections) {
         if (doc.y > 680) doc.addPage();
-        doc.fontSize(11).font("Helvetica-Bold").fillColor("#000").text(group.name);
+        doc.fontSize(11).font("Helvetica-Bold").fillColor("#000")
+          .text(group.code ? `${group.name}  ${group.code}` : group.name);
         if (group.club) {
           doc.fontSize(9).font("Helvetica").fillColor("#666").text(group.club);
           doc.fillColor("#000");
@@ -1368,8 +1418,18 @@ module.exports = function createPdfRouter({ pool }) {
             ? formatSynchroScores(r.judge_scores)
             : (r.judge_scores || "");
           const total = Number(r.total_dive_score).toFixed(2);
+          // On a team sheet each line needs its diver. Their own code only
+          // earns a place when it isn't the team's (a mixed team reading
+          // as the country shows each member's state), and it goes right
+          // after their name so it can't be read as the partner's.
+          let who = "";
+          if (isTeam) {
+            const own = r.country_code && r.country_code !== group.code ? ` (${r.country_code})` : "";
+            const partner = r.partner_name ? ` & ${r.partner_name}` : "";
+            who = `${r.full_name}${own}${partner}  `;
+          }
           doc.fontSize(9).font("Helvetica")
-            .text(`  R${r.round_number}  ${code}  ${dd}    Judges: ${scores}    Total: ${total}`);
+            .text(`  R${r.round_number}  ${who}${code}  ${dd}    Judges: ${scores}    Total: ${total}`);
         });
         doc.moveDown(0.5);
       }

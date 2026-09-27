@@ -525,7 +525,15 @@
     "view_recap": "Відкрити огляд →",
     "stream_overlay": "Оверлей трансляції",
     "broadcast": "Трансляція",
-    "pdf_recap": "📄 Огляд PDF"
+    "pdf_recap": "📄 Огляд PDF",
+    "medal_title_country": "Медальний залік за країнами",
+    "medal_title_club": "Медальний залік за клубами",
+    "medal_title_state": "Медальний залік за штатами",
+    "medal_title_province": "Медальний залік за провінціями",
+    "medal_title_home_nation": "Медальний залік за країнами (UK)",
+    "medal_title_region": "Медальний залік за регіонами",
+    "medal_col_country": "Країна",
+    "medal_col_club": "Клуб"
   },
   "guide": {
     "title": "Посібник користувача",

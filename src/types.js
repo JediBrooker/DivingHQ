@@ -64,6 +64,9 @@
 // Room, PDF and venue endpoints, `country_code` / `partner_country` hold
 // the meet's representation code (country, state short code or club
 // short code, per meets.represent_as), not necessarily a country.
+// Team standings rows (migration 095) carry the code the team's divers
+// share in `country_code` (event_team_rep_code, falling back to the team
+// org's country) and the team short code in `club_name`.
 
 /**
  * @typedef {Object} RegionList
@@ -482,11 +485,14 @@
 
 /**
  * @typedef {Object} StandingsRow
- * One row of /api/scoreboard/:eventId standings.
+ * One row of /api/scoreboard/:eventId standings. In a team event each
+ * row is a team: full_name is the team name, competitor_id is null.
  *
+ * @property {string|null}  [competitor_id]
  * @property {string}       full_name
- * @property {string}       [country_code]
- * @property {string}       [club_name]
+ * @property {string}       [country_code]     Representation code, see the migration 090 note.
+ *                                             Team rows: the code the team's divers share.
+ * @property {string}       [club_name]        Team rows: the team short code.
  * @property {string}       [partner_name]
  * @property {string}       [partner_country]
  * @property {number}       total
@@ -526,6 +532,31 @@
  * @property {string|null} [position]
  * @property {string|null} [description]
  * @property {number|string|null} [dd] PostgreSQL numeric fields may arrive as text.
+ */
+
+/**
+ * @typedef {Object} ArchiveEventMeta
+ * The `event` block of GET /api/archive/:eventId/results.
+ *
+ * @property {string}      name
+ * @property {string}      [gender]
+ * @property {string}      [height]
+ * @property {number}      total_rounds
+ * @property {number}      number_of_judges
+ * @property {'individual'|'synchro_pair'|'team'} event_type
+ * @property {string}      org_name
+ * @property {'country'|'region'|'club'} represent_as  The meet's setting; 'country' outside a meet.
+ * @property {?('state'|'province'|'home_nation'|'region')} region_label  What the org calls its regions, null = none.
+ */
+
+/**
+ * @typedef {Object} ArchiveResultsPayload
+ * GET /api/archive/:eventId/results, the completed-event recap.
+ *
+ * @property {ArchiveEventMeta} event
+ * @property {StandingsRow[]}   standings  With rank; no public_id / is_tied_on_total here.
+ * @property {Object[]}         dives
+ * @property {ScoreboardPanelRow[]} panel
  */
 
 /**

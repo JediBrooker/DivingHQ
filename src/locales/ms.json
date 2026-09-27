@@ -514,7 +514,15 @@
     "view_recap": "Lihat rumusan →",
     "stream_overlay": "Tindanan siaran",
     "broadcast": "Siaran",
-    "pdf_recap": "📄 Rumusan PDF"
+    "pdf_recap": "📄 Rumusan PDF",
+    "medal_title_country": "Jadual pingat mengikut negara",
+    "medal_title_club": "Jadual pingat mengikut kelab",
+    "medal_title_state": "Jadual pingat mengikut negeri",
+    "medal_title_province": "Jadual pingat mengikut wilayah",
+    "medal_title_home_nation": "Jadual pingat mengikut negara (UK)",
+    "medal_title_region": "Jadual pingat mengikut rantau",
+    "medal_col_country": "Negara",
+    "medal_col_club": "Kelab"
   },
   "guide": {
     "title": "Panduan pengguna",

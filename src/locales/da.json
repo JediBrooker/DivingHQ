@@ -525,7 +525,15 @@
     "view_recap": "Vis opsummering →",
     "stream_overlay": "Streamoverlay",
     "broadcast": "Transmission",
-    "pdf_recap": "📄 PDF-opsummering"
+    "pdf_recap": "📄 PDF-opsummering",
+    "medal_title_country": "Medaljeoversigt efter land",
+    "medal_title_club": "Medaljeoversigt efter klub",
+    "medal_title_state": "Medaljeoversigt efter delstat",
+    "medal_title_province": "Medaljeoversigt efter provins",
+    "medal_title_home_nation": "Medaljeoversigt efter nation",
+    "medal_title_region": "Medaljeoversigt efter region",
+    "medal_col_country": "Land",
+    "medal_col_club": "Klub"
   },
   "guide": {
     "title": "Brugervejledning",
