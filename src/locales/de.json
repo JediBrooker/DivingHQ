@@ -2136,7 +2136,10 @@
     "release_club": "Aus der Region nehmen",
     "club_requests": "Vereine mit Beitrittsanfrage",
     "currently_in": "derzeit in {region}",
-    "last_admin_tip": "Eine Region braucht mindestens einen Admin. Fügen Sie einen weiteren Admin hinzu, bevor Sie diesen entfernen."
+    "last_admin_tip": "Eine Region braucht mindestens einen Admin. Fügen Sie einen weiteren Admin hinzu, bevor Sie diesen entfernen.",
+    "leave_title": "Sich selbst als Admin von {region} entfernen?",
+    "leave_body": "Sie können dann keine Wettkämpfe der Region mehr ausrichten und ihre Vereine nicht mehr betreuen. Nur ein anderer Admin kann Sie wieder hinzufügen.",
+    "left_notice": "Sie sind kein Admin von {region} mehr."
   },
   "claims": {
     "title": "Ansprüche",

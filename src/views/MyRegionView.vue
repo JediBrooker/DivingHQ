@@ -9,10 +9,11 @@
 // join it and can let a club go.
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { usePlural } from '@/composables/usePlural'
-import { showError } from '@/composables/useNotify'
+import { showError, showInfo } from '@/composables/useNotify'
+import { confirmAction } from '@/composables/useConfirm'
 import EmptyState from '@/components/EmptyState.vue'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
 import JoinRequestQueue from '@/components/JoinRequestQueue.vue'
@@ -21,8 +22,13 @@ import LoadError from '@/components/LoadError.vue'
 const { t } = useI18n()
 const { tn } = usePlural()
 const auth = useAuthStore()
+const router = useRouter()
 
 const regions = computed(() => auth.regionAdminOf)
+// Bumped to remount the request queues. They load once on mount and
+// have no reload of their own, so after you step down from one region
+// (but still run another) they'd keep offering its requests.
+const queueKey = ref(0)
 // Per region id: { region, clubs, admins, candidates, canManage, keepOneLive, toAdd }
 const detail = ref({})
 const busyId = ref(null)
@@ -48,9 +54,26 @@ async function load(region) {
       keepOneLive: !!admins.keep_one_live,
       toAdd: '',
     }
-  } catch {
+  } catch (err) {
+    // 403 on a region we were listed for: somebody took us off it since
+    // sign-in. Catch the session up rather than show a retry.
+    if (err?.status === 403) return refreshAfterLosingRegion(region)
     failed.value[region.id] = true
   }
+}
+
+// Same as My club: regionAdminOf drives the nav entry and the /region
+// guard, so it has to catch up straight away. With no region left the
+// page has nothing to show, so go to the dashboard and say why.
+async function refreshAfterLosingRegion(region) {
+  await auth.fetchMe()
+  if (!auth.isRegionAdmin && !auth.user?.is_system_admin) {
+    showInfo(t('my_region.left_notice', { region: region.name }))
+    router.push('/dashboard')
+    return
+  }
+  delete detail.value[region.id]
+  queueKey.value++
 }
 
 // A state body that has claimed its region decides which clubs it takes
@@ -122,11 +145,19 @@ async function addAdmin(region) {
 }
 
 async function removeAdmin(region, admin) {
+  const self = admin.id === auth.user?.id
+  // Only another admin can put you back, so ask first (My club does too).
+  if (self && !await confirmAction({
+    title: t('my_region.leave_title', { region: region.name }),
+    body: t('my_region.leave_body'),
+    confirmLabel: t('my_club.leave_confirm'),
+    cancelLabel: t('common.cancel'),
+    confirmKind: 'danger',
+  })) return
   busyId.value = region.id
   try {
     await auth.apiFetch(`/api/regions/${region.id}/admins/${admin.id}`, { method: 'DELETE' })
-    // Taking yourself off loses you the page, so re-read who you are.
-    if (admin.id === auth.user?.id) await auth.fetchMe()
+    if (self) await refreshAfterLosingRegion(region)
     else await load(region)
   } catch (err) {
     // Stale page, same as My club: someone else left first. Translated
@@ -164,14 +195,14 @@ onMounted(reloadAll)
 
     <section class="block">
       <h2 class="block-title">{{ $t('my_club.requests') }}</h2>
-      <RoleRequestQueue show-club />
+      <RoleRequestQueue :key="`rq-${queueKey}`" show-club />
     </section>
 
     <!-- Only where there's no federation: that's when a region admin can
          approve someone into one of its clubs. -->
     <section v-if="selfRun" class="block">
       <h2 class="block-title">{{ $t('my_club.join_requests') }}</h2>
-      <JoinRequestQueue show-club @decided="reloadAll" />
+      <JoinRequestQueue :key="`jq-${queueKey}`" show-club @decided="reloadAll" />
     </section>
 
     <section v-for="r in regions" :key="r.id" class="block">

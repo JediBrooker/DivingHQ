@@ -146,10 +146,40 @@ test("a stale My region page explains the last-admin refusal", async ({ page, re
 
   await setup.pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [co.id]);
   await mine.click();
+  await page.getByRole("button", { name: "Remove me" }).click();
   await expect(page.getByText("A region needs at least one admin. Add a co-admin before removing this one.")).toBeVisible();
   await expect(mine).toBeDisabled();
   const still = await setup.pool.query(
     "SELECT 1 FROM region_admins WHERE region_id = $1 AND user_id = $2", [world.regionId, world.freeport.id],
   );
   expect(still.rows).toHaveLength(1);
+  await setup.pool.query("UPDATE users SET suspended_at = NULL WHERE id = $1", [co.id]);
+  world.coAdmin = co.id;
+});
+
+// Stepping down yourself: it asks first, since only another admin can put
+// you back, then leaves the page (you've nothing left to see there).
+test("removing yourself from My region asks first, then takes you to the dashboard", async ({ page }) => {
+  await signIn(page, world.freeport.username);
+  await page.goto("/region");
+  const mine = page.locator("[data-test-id=region-admins] li", { hasText: "Freeport Admin" })
+    .getByRole("button", { name: "Remove" });
+  await expect(mine).toBeEnabled();
+
+  // Cancelling changes nothing.
+  await mine.click();
+  await expect(page.getByText("Remove yourself as an admin of Grand Bahama?")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  const seat = () => setup.pool.query(
+    "SELECT 1 FROM region_admins WHERE region_id = $1 AND user_id = $2", [world.regionId, world.freeport.id],
+  );
+  expect((await seat()).rows).toHaveLength(1);
+
+  await mine.click();
+  await page.getByRole("button", { name: "Remove me" }).click();
+  await page.waitForURL(/\/dashboard$/);
+  await expect(page.getByText("You're no longer an admin of Grand Bahama.")).toBeVisible();
+  const nav = page.getByRole("navigation", { name: "Primary" });
+  await expect(nav.getByRole("link", { name: /My region/ })).toHaveCount(0);
+  expect((await seat()).rows).toHaveLength(0);
 });

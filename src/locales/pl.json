@@ -2136,7 +2136,10 @@
     "release_club": "Usuń z regionu",
     "club_requests": "Kluby proszące o dołączenie",
     "currently_in": "obecnie w regionie {region}",
-    "last_admin_tip": "Region musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora."
+    "last_admin_tip": "Region musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora.",
+    "leave_title": "Usunąć się z administratorów regionu {region}?",
+    "leave_body": "Nie będziesz już mógł organizować zawodów regionu ani zajmować się jego klubami. Z powrotem może cię dodać tylko inny administrator.",
+    "left_notice": "Nie jesteś już administratorem regionu {region}."
   },
   "claims": {
     "title": "Roszczenia",

@@ -2136,7 +2136,10 @@
     "release_club": "Keluarkan dari wilayah",
     "club_requests": "Klub yang ingin bergabung",
     "currently_in": "saat ini di {region}",
-    "last_admin_tip": "Wilayah memerlukan setidaknya satu admin. Tambahkan admin lain sebelum menghapus admin ini."
+    "last_admin_tip": "Wilayah memerlukan setidaknya satu admin. Tambahkan admin lain sebelum menghapus admin ini.",
+    "leave_title": "Hapus diri Anda sebagai admin {region}?",
+    "leave_body": "Anda tidak akan bisa lagi mengelola kompetisi wilayah atau mengurus klub-klubnya. Hanya admin lain yang bisa menambahkan Anda kembali.",
+    "left_notice": "Anda bukan lagi admin {region}."
   },
   "claims": {
     "title": "Klaim",

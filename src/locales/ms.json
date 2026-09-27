@@ -2136,7 +2136,10 @@
     "release_club": "Keluarkan dari rantau",
     "club_requests": "Kelab yang ingin menyertai",
     "currently_in": "kini di {region}",
-    "last_admin_tip": "Rantau memerlukan sekurang-kurangnya seorang pentadbir. Tambah pentadbir lain sebelum mengalih keluar pentadbir ini."
+    "last_admin_tip": "Rantau memerlukan sekurang-kurangnya seorang pentadbir. Tambah pentadbir lain sebelum mengalih keluar pentadbir ini.",
+    "leave_title": "Alih keluar diri anda sebagai pentadbir {region}?",
+    "leave_body": "Anda tidak lagi boleh menganjurkan pertandingan rantau atau menguruskan kelab-kelabnya. Hanya pentadbir lain boleh menambah anda semula.",
+    "left_notice": "Anda bukan lagi pentadbir {region}."
   },
   "claims": {
     "title": "Tuntutan",

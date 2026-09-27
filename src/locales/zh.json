@@ -2136,7 +2136,10 @@
     "release_club": "移出地区",
     "club_requests": "申请加入的俱乐部",
     "currently_in": "当前所在地区：{region}",
-    "last_admin_tip": "每个地区至少需要一名管理员。请先添加另一名管理员，再移除这一位。"
+    "last_admin_tip": "每个地区至少需要一名管理员。请先添加另一名管理员，再移除这一位。",
+    "leave_title": "要将自己从 {region} 的管理员中移除吗？",
+    "leave_body": "您将无法再组织本地区的比赛或管理其俱乐部。只有其他管理员才能将您重新添加。",
+    "left_notice": "您已不再是 {region} 的管理员。"
   },
   "claims": {
     "title": "接管申请",

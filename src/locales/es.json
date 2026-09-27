@@ -2136,7 +2136,10 @@
     "release_club": "Sacar de la región",
     "club_requests": "Clubes que piden unirse",
     "currently_in": "ahora en {region}",
-    "last_admin_tip": "Una región necesita al menos un administrador. Añade otro administrador antes de quitar a este."
+    "last_admin_tip": "Una región necesita al menos un administrador. Añade otro administrador antes de quitar a este.",
+    "leave_title": "¿Quitarte como administrador de {region}?",
+    "leave_body": "Ya no podrás organizar las competiciones de la región ni ocuparte de sus clubes. Solo otro administrador puede volver a añadirte.",
+    "left_notice": "Ya no eres administrador de {region}."
   },
   "claims": {
     "title": "Reclamaciones",

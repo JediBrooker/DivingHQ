@@ -2136,7 +2136,10 @@
     "release_club": "Vyjmout z regionu",
     "club_requests": "Kluby, které žádají o vstup",
     "currently_in": "nyní v regionu {region}",
-    "last_admin_tip": "Region potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce."
+    "last_admin_tip": "Region potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce.",
+    "leave_title": "Odebrat se ze správců regionu {region}?",
+    "leave_body": "Už nebudete moci pořádat závody regionu ani spravovat jeho kluby. Zpět vás může přidat jen jiný správce.",
+    "left_notice": "Už nejste správcem regionu {region}."
   },
   "claims": {
     "title": "Nároky",

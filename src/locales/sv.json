@@ -2136,7 +2136,10 @@
     "release_club": "Ta bort ur regionen",
     "club_requests": "Klubbar som vill gå med",
     "currently_in": "just nu i {region}",
-    "last_admin_tip": "En region måste ha minst en administratör. Lägg till en medadministratör innan du tar bort den här."
+    "last_admin_tip": "En region måste ha minst en administratör. Lägg till en medadministratör innan du tar bort den här.",
+    "leave_title": "Ta bort dig själv som administratör för {region}?",
+    "leave_body": "Du kommer inte längre att kunna arrangera regionens tävlingar eller ta hand om dess klubbar. Bara en annan administratör kan lägga till dig igen.",
+    "left_notice": "Du är inte längre administratör för {region}."
   },
   "claims": {
     "title": "Anspråk",

@@ -2136,7 +2136,10 @@
     "release_club": "Kivétel a régióból",
     "club_requests": "Csatlakozni kívánó klubok",
     "currently_in": "jelenleg: {region}",
-    "last_admin_tip": "Egy régiónak legalább egy adminisztrátorra van szüksége. Adjon hozzá egy másik adminisztrátort, mielőtt ezt eltávolítja."
+    "last_admin_tip": "Egy régiónak legalább egy adminisztrátorra van szüksége. Adjon hozzá egy másik adminisztrátort, mielőtt ezt eltávolítja.",
+    "leave_title": "Eltávolítja magát a(z) {region} adminisztrátorai közül?",
+    "leave_body": "Ezután nem rendezhet versenyeket a régió nevében, és nem foglalkozhat a klubjaival. Csak egy másik adminisztrátor veheti vissza.",
+    "left_notice": "Már nem adminisztrátora ennek a régiónak: {region}."
   },
   "claims": {
     "title": "Igények",

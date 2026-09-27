@@ -2136,7 +2136,10 @@
     "release_club": "Togli dalla regione",
     "club_requests": "Club che chiedono di entrare",
     "currently_in": "ora in {region}",
-    "last_admin_tip": "Una regione deve avere almeno un amministratore. Aggiungi un altro amministratore prima di rimuovere questo."
+    "last_admin_tip": "Una regione deve avere almeno un amministratore. Aggiungi un altro amministratore prima di rimuovere questo.",
+    "leave_title": "Rimuoverti dagli amministratori di {region}?",
+    "leave_body": "Non potrai più organizzare le gare della regione né occuparti dei suoi club. Solo un altro amministratore può aggiungerti di nuovo.",
+    "left_notice": "Non sei più amministratore di {region}."
   },
   "claims": {
     "title": "Rivendicazioni",

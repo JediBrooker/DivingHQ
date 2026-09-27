@@ -2136,7 +2136,10 @@
     "release_club": "Izvadi iz regije",
     "club_requests": "Klubovi koji traže ulazak",
     "currently_in": "trenutačno u regiji {region}",
-    "last_admin_tip": "Regija mora imati barem jednog administratora. Dodajte još jednog administratora prije nego što uklonite ovog."
+    "last_admin_tip": "Regija mora imati barem jednog administratora. Dodajte još jednog administratora prije nego što uklonite ovog.",
+    "leave_title": "Ukloniti se iz administratora regije {region}?",
+    "leave_body": "Više nećete moći organizirati natjecanja regije ni brinuti se o njezinim klubovima. Natrag vas može dodati samo drugi administrator.",
+    "left_notice": "Više niste administrator regije {region}."
   },
   "claims": {
     "title": "Zahtjevi",

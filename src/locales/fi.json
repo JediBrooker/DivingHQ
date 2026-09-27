@@ -2136,7 +2136,10 @@
     "release_club": "Poista alueelta",
     "club_requests": "Seurat, jotka pyytävät liittymistä",
     "currently_in": "nyt alueella {region}",
-    "last_admin_tip": "Alueella on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän."
+    "last_admin_tip": "Alueella on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän.",
+    "leave_title": "Poistetaanko sinut alueen {region} ylläpitäjistä?",
+    "leave_body": "Et voi enää järjestää alueen kilpailuja etkä hoitaa sen seuroja. Vain toinen ylläpitäjä voi lisätä sinut takaisin.",
+    "left_notice": "Et ole enää alueen {region} ylläpitäjä."
   },
   "claims": {
     "title": "Vaatimukset",

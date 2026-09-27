@@ -2136,7 +2136,10 @@
     "release_club": "Alisin sa rehiyon",
     "club_requests": "Mga club na gustong sumali",
     "currently_in": "kasalukuyang nasa {region}",
-    "last_admin_tip": "Kailangan ng rehiyon ng kahit isang admin. Magdagdag muna ng isa pang admin bago alisin ang isang ito."
+    "last_admin_tip": "Kailangan ng rehiyon ng kahit isang admin. Magdagdag muna ng isa pang admin bago alisin ang isang ito.",
+    "leave_title": "Alisin ang sarili bilang admin ng {region}?",
+    "leave_body": "Hindi mo na mapapatakbo ang mga kompetisyon ng rehiyon o maaasikaso ang mga club nito. Ibang admin lang ang makapagbabalik sa iyo.",
+    "left_notice": "Hindi ka na admin ng {region}."
   },
   "claims": {
     "title": "Mga claim",

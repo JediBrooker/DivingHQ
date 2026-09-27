@@ -2136,7 +2136,10 @@
     "release_club": "Retirer de la région",
     "club_requests": "Clubs qui demandent à rejoindre la région",
     "currently_in": "actuellement dans {region}",
-    "last_admin_tip": "Une région doit avoir au moins un administrateur. Ajoutez un autre administrateur avant de retirer celui-ci."
+    "last_admin_tip": "Une région doit avoir au moins un administrateur. Ajoutez un autre administrateur avant de retirer celui-ci.",
+    "leave_title": "Vous retirer des administrateurs de {region} ?",
+    "leave_body": "Vous ne pourrez plus organiser les compétitions de la région ni vous occuper de ses clubs. Seul un autre administrateur pourra vous rajouter.",
+    "left_notice": "Vous n'êtes plus administrateur de {region}."
   },
   "claims": {
     "title": "Revendications",

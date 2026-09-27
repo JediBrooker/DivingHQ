@@ -2136,7 +2136,10 @@
     "release_club": "Take out of region",
     "club_requests": "Clubs asking to join",
     "currently_in": "currently in {region}",
-    "last_admin_tip": "A region needs at least one admin. Add a co-admin before removing this one."
+    "last_admin_tip": "A region needs at least one admin. Add a co-admin before removing this one.",
+    "leave_title": "Remove yourself as an admin of {region}?",
+    "leave_body": "You won't be able to run the region's meets or look after its clubs any more. Only another admin can add you back.",
+    "left_notice": "You're no longer an admin of {region}."
   },
   "claims": {
     "title": "Claims",

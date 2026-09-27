@@ -2136,7 +2136,10 @@
     "release_club": "Bölgeden çıkar",
     "club_requests": "Katılmak isteyen kulüpler",
     "currently_in": "şu anki bölge: {region}",
-    "last_admin_tip": "Bir bölgenin en az bir yöneticisi olmalıdır. Bunu kaldırmadan önce başka bir yönetici ekleyin."
+    "last_admin_tip": "Bir bölgenin en az bir yöneticisi olmalıdır. Bunu kaldırmadan önce başka bir yönetici ekleyin.",
+    "leave_title": "Kendinizi {region} yöneticilerinden çıkarmak istiyor musunuz?",
+    "leave_body": "Artık bölgenin yarışmalarını düzenleyemez ve kulüpleriyle ilgilenemezsiniz. Sizi yalnızca başka bir yönetici geri ekleyebilir.",
+    "left_notice": "Artık {region} yöneticisi değilsiniz."
   },
   "claims": {
     "title": "Devralma talepleri",

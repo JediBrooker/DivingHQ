@@ -2136,7 +2136,10 @@
     "release_club": "Ta ut av regionen",
     "club_requests": "Klubber som ber om å bli med",
     "currently_in": "nå i {region}",
-    "last_admin_tip": "En region må ha minst én administrator. Legg til en medadministrator før du fjerner denne."
+    "last_admin_tip": "En region må ha minst én administrator. Legg til en medadministrator før du fjerner denne.",
+    "leave_title": "Vil du fjerne deg selv som administrator for {region}?",
+    "leave_body": "Du kan ikke lenger arrangere regionens stevner eller ta deg av klubbene i den. Bare en annen administrator kan legge deg til igjen.",
+    "left_notice": "Du er ikke lenger administrator for {region}."
   },
   "claims": {
     "title": "Krav",
