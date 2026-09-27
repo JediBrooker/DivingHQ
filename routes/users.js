@@ -618,27 +618,6 @@ module.exports = function createUsersRouter({
 
       await client.query("BEGIN");
 
-      // Count the side-effect deletes BEFORE we run them so the
-      // audit-log metadata has accurate numbers. Cheap enough,
-      // these are tiny per-user tables.
-      const subCount = await client.query(
-        "SELECT COUNT(*)::int AS n FROM push_subscriptions WHERE user_id = $1",
-        [req.user.id],
-      );
-      const coachCount = await client.query(
-        `SELECT COUNT(*)::int AS n FROM coach_diver_links
-         WHERE coach_id = $1 OR diver_id = $1`,
-        [req.user.id],
-      );
-      const roleReqCount = await client.query(
-        "SELECT COUNT(*)::int AS n FROM role_requests WHERE user_id = $1",
-        [req.user.id],
-      );
-      const grantCount = await client.query(
-        "SELECT COUNT(*)::int AS n FROM user_org_roles WHERE user_id = $1",
-        [req.user.id],
-      );
-
       // The big-redact UPDATE. Keep full_name, org_id, club_id
       // intact, they anchor the historical sporting record and the
       // claim-on-return flow. Rewrite username so a future sign-up
@@ -680,21 +659,22 @@ module.exports = function createUsersRouter({
       // Cut every link to other people. push_subscriptions also
       // FK-cascades on user delete, but we don't hard-delete the
       // user row here, so wipe these manually. Same story for
-      // coach links, role requests, and held grants.
-      await client.query(
+      // coach links, role requests, and held grants. Their rowCounts
+      // are what the audit row below reports.
+      const subRows = await client.query(
         "DELETE FROM push_subscriptions WHERE user_id = $1",
         [req.user.id],
       );
-      await client.query(
+      const coachRows = await client.query(
         `DELETE FROM coach_diver_links
          WHERE coach_id = $1 OR diver_id = $1`,
         [req.user.id],
       );
-      await client.query(
+      const roleReqRows = await client.query(
         "DELETE FROM role_requests WHERE user_id = $1",
         [req.user.id],
       );
-      await client.query(
+      const grantRows = await client.query(
         "DELETE FROM user_org_roles WHERE user_id = $1",
         [req.user.id],
       );
@@ -731,10 +711,10 @@ module.exports = function createUsersRouter({
         entity_name: null,
         action: "user.self_delete",
         metadata: {
-          push_subscriptions_removed: subCount.rows[0].n,
-          coach_links_removed:        coachCount.rows[0].n,
-          role_requests_removed:      roleReqCount.rows[0].n,
-          role_grants_removed:        grantCount.rows[0].n,
+          push_subscriptions_removed: subRows.rowCount,
+          coach_links_removed:        coachRows.rowCount,
+          role_requests_removed:      roleReqRows.rowCount,
+          role_grants_removed:        grantRows.rowCount,
           club_admin_rows_removed:    clubAdminRows.rowCount,
           region_admin_rows_removed:  regionAdminRows.rowCount,
           claims_withdrawn:           claimsWithdrawn,
@@ -964,8 +944,7 @@ module.exports = function createUsersRouter({
            SELECT (SELECT count(*) FROM dives)::int AS dives, (SELECT count(*) FROM comp)::int AS scores`,
           [oldId, me.id],
         )).rows[0];
-        const moveDives = { rowCount: moved.dives };
-        counts.dives += moveDives.rowCount || 0;
+        counts.dives += moved.dives;
 
         // Changing partner_id normally re-snapshots the partner's club
         // and region (cdl_snapshot_rep, migration 095), since it usually
@@ -980,13 +959,11 @@ module.exports = function createUsersRouter({
           [oldId, me.id],
         );
 
-        const moveScoresComp = { rowCount: moved.scores };
         const moveScoresJudge = await client.query(
           `UPDATE scores SET judge_id = $2 WHERE judge_id = $1`,
           [oldId, me.id],
         );
-        counts.scores += (moveScoresComp.rowCount || 0) +
-                         (moveScoresJudge.rowCount || 0);
+        counts.scores += moved.scores + (moveScoresJudge.rowCount || 0);
 
         const movePanels = await client.query(
           `UPDATE event_judges SET judge_id = $2 WHERE judge_id = $1`,
@@ -1070,8 +1047,8 @@ module.exports = function createUsersRouter({
         );
         let recordsMoved = moveRecords.rowCount || 0;
         for (const tbl of ["records_club", "records_region", "records_federation", "records_continental"]) {
-          const moved = await client.query(`UPDATE ${tbl} SET holder_id = $2 WHERE holder_id = $1`, [oldId, me.id]);
-          recordsMoved += moved.rowCount || 0;
+          const held = await client.query(`UPDATE ${tbl} SET holder_id = $2 WHERE holder_id = $1`, [oldId, me.id]);
+          recordsMoved += held.rowCount || 0;
         }
         // History has no FKs, so nothing's lost there; this is only so the
         // earlier holders still read under the diver's name.
@@ -1104,9 +1081,8 @@ module.exports = function createUsersRouter({
           action: "user.claimed_past_account",
           metadata: {
             old_user_id:        oldId,
-            dive_count_moved:   moveDives.rowCount || 0,
-            score_count_moved: (moveScoresComp.rowCount || 0) +
-                               (moveScoresJudge.rowCount || 0),
+            dive_count_moved:   moved.dives,
+            score_count_moved:  moved.scores + (moveScoresJudge.rowCount || 0),
             panel_count_moved:  movePanels.rowCount || 0,
             record_count_moved: recordsMoved,
           },
