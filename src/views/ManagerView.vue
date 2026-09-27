@@ -94,12 +94,20 @@ const createRoundDives = ref([])
 // `createRounds` keeps working without churn.
 const createRounds = computed(() => createRoundDives.value.length)
 
-// Dive directory: loaded once on mount and passed into BOTH
-// <RoundDivesEditor> instances (Create + Edit modals) as a prop.
-// The editor owns the per-row autocomplete UI, this view just
-// hands it the data and forwards "new dive" requests to the
-// sub-modal below.
+// Dive directory: passed into BOTH <RoundDivesEditor> instances
+// (Create + Edit forms) as a prop. The editor owns the per-row
+// autocomplete UI, this view just hands it the data and forwards
+// "new dive" requests to the sub-modal below.
+//
+// It's ~250 KB and cachedFetch always revalidates over the network,
+// so it's loaded the first time a form opens rather than on every
+// Manager visit. Once per mount, same as when it rode along on mount.
 const diveDirectory = ref([])
+let diveDirectoryLoading = null
+function ensureDiveDirectory() {
+  if (!diveDirectoryLoading) diveDirectoryLoading = loadDiveDirectory()
+  return diveDirectoryLoading
+}
 
 async function loadDiveDirectory() {
   try {
@@ -327,6 +335,13 @@ async function loadEventTemplates() {
   } catch {
     eventTemplates.value = []
   }
+}
+// Saved templates only show inside the create form, so fetch them when
+// it first opens.
+let eventTemplatesLoading = null
+function ensureEventTemplates() {
+  if (!eventTemplatesLoading) eventTemplatesLoading = loadEventTemplates()
+  return eventTemplatesLoading
 }
 
 function applyEventTemplate(t) {
@@ -704,6 +719,8 @@ function openCreateEvent(meetId = '') {
   // No standalone events in club mode, so start them on a meet.
   createMeetId.value = meetId || (clubMode.value ? (meets.value[0]?.id || '') : '')
   createStep.value = 0
+  ensureDiveDirectory()
+  ensureEventTemplates()
   showCreateModal.value = true
 }
 
@@ -839,11 +856,17 @@ const HEIGHT_LABELS = {
   '10m': '10m Platform',
 }
 
-async function loadEvents() {
+// meetsLoading: on mount loadMeets runs alongside this. In club mode we
+// wait for it so narrowEvents reuses that meet list; without the wait
+// meets.value was still [] and narrowEvents fetched the very same
+// /api/orgs/:id/meets a second time. The later refreshes (after a save,
+// an advance, a delete) call this with no argument and meets already
+// loaded.
+async function loadEvents(meetsLoading = null) {
   try {
-    // loadMeets may be running alongside, so narrowEvents fetches the
-    // meet list itself when ours isn't loaded yet.
-    events.value = await narrowEvents(await auth.apiFetch('/api/events'), meets.value)
+    const list = await auth.apiFetch('/api/events')
+    if (meetsLoading && clubMode.value) await meetsLoading
+    events.value = await narrowEvents(list, meets.value)
   } catch (err) {
     formErr.value = err.message
   }
@@ -1065,6 +1088,7 @@ async function createEvent() {
 }
 
 async function openEdit(ev) {
+  ensureDiveDirectory()
   editId.value = ev.id
   editName.value = ev.name
   editGender.value = ev.gender
@@ -1265,7 +1289,8 @@ function onOutsideClick(e) {
 }
 
 onMounted(async () => {
-  await Promise.all([loadEvents(), loadMeets(), loadEventTemplates(), loadDiveDirectory()])
+  const meetsLoading = loadMeets()
+  await Promise.all([loadEvents(meetsLoading), meetsLoading])
   // Capture-phase mousedown closes the overflow menu when the user
   // clicks anywhere outside its wrapper. Capture phase matters here
   // so the row's own ⋯ trigger still fires its toggle before this
