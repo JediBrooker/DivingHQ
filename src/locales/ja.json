@@ -1934,7 +1934,12 @@
     "pick_member": "— クラブメンバーを選択 —",
     "add": "追加",
     "remove": "削除",
-    "federation_appoints": "このクラブの管理者は連盟が任命します。"
+    "federation_appoints": "このクラブの管理者は連盟が任命します。",
+    "not_admin": "このクラブの管理者ではなくなりました。",
+    "left_notice": "{club} の管理者ではなくなりました。",
+    "leave_title": "{club} の管理者から自分を外しますか？",
+    "leave_body": "クラブの大会運営やメンバーの申請承認ができなくなります。元に戻せるのは他の管理者だけです。",
+    "leave_confirm": "自分を外す"
   },
   "regions": {
     "label": {

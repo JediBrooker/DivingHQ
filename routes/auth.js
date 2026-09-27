@@ -93,15 +93,19 @@ function validatePassword(pw) {
 // signed into the JWT, and an approval that lands after the cookie was
 // minted would sit stale until the next sign-in. This rides on the
 // response body instead, so /api/auth/me refreshes it on every boot.
-// Clubs this user admins, [{ id, name, region_id }]. Same reasoning as
+// Clubs this user admins, [{ id, name, region_id, org_claim_state }]. Same reasoning as
 // has_dependents below: a club admin grant lands whenever the federation
 // (or signup) makes it, so it rides on the response body, never the JWT.
-// The SPA uses it to show the meet screens and pick a host club. The
-// server never trusts it, every club-scoped route re-reads club_admins.
+// The SPA uses it to show the meet screens and pick a host club, and
+// org_claim_state tells My club whether a federation appoints the club's
+// admins. The server never trusts any of it, every club-scoped route
+// re-reads club_admins.
 async function loadClubAdminOf(pool, userId) {
   const r = await pool.query(
-    `SELECT c.id, c.name, c.region_id
-       FROM club_admins ca JOIN clubs c ON c.id = ca.club_id
+    `SELECT c.id, c.name, c.region_id, o.claim_state AS org_claim_state
+       FROM club_admins ca
+       JOIN clubs c ON c.id = ca.club_id
+       JOIN organisations o ON o.id = c.org_id
       WHERE ca.user_id = $1
       ORDER BY lower(c.name)`,
     [userId],

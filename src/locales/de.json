@@ -1934,7 +1934,12 @@
     "pick_member": "— Vereinsmitglied auswählen —",
     "add": "Hinzufügen",
     "remove": "Entfernen",
-    "federation_appoints": "Ihr Verband ernennt die Admins dieses Vereins."
+    "federation_appoints": "Ihr Verband ernennt die Admins dieses Vereins.",
+    "not_admin": "Sie sind kein Admin dieses Vereins mehr.",
+    "left_notice": "Sie sind kein Admin von {club} mehr.",
+    "leave_title": "Sich selbst als Admin von {club} entfernen?",
+    "leave_body": "Sie können dann keine Wettkämpfe des Vereins mehr ausrichten und keine Anfragen seiner Mitglieder mehr genehmigen. Nur ein anderer Admin kann Sie wieder hinzufügen.",
+    "leave_confirm": "Mich entfernen"
   },
   "regions": {
     "label": {

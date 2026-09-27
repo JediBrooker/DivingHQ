@@ -1934,7 +1934,12 @@
     "pick_member": "— Bir kulüp üyesi seçin —",
     "add": "Ekle",
     "remove": "Kaldır",
-    "federation_appoints": "Bu kulübün yöneticilerini federasyonunuz atar."
+    "federation_appoints": "Bu kulübün yöneticilerini federasyonunuz atar.",
+    "not_admin": "Artık bu kulübün yöneticisi değilsiniz.",
+    "left_notice": "Artık {club} yöneticisi değilsiniz.",
+    "leave_title": "Kendinizi {club} yöneticilerinden çıkarmak istiyor musunuz?",
+    "leave_body": "Artık kulübün yarışmalarını düzenleyemez ve üyelerinin isteklerini onaylayamazsınız. Sizi yalnızca başka bir yönetici geri ekleyebilir.",
+    "leave_confirm": "Beni çıkar"
   },
   "regions": {
     "label": {

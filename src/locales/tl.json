@@ -1934,7 +1934,12 @@
     "pick_member": "— Pumili ng miyembro ng club —",
     "add": "Idagdag",
     "remove": "Alisin",
-    "federation_appoints": "Ang iyong pederasyon ang nagtatalaga ng mga admin ng club na ito."
+    "federation_appoints": "Ang iyong pederasyon ang nagtatalaga ng mga admin ng club na ito.",
+    "not_admin": "Hindi ka na admin ng club na ito.",
+    "left_notice": "Hindi ka na admin ng {club}.",
+    "leave_title": "Alisin ang sarili bilang admin ng {club}?",
+    "leave_body": "Hindi mo na mapapatakbo ang mga kompetisyon ng club o maaaprubahan ang mga kahilingan ng mga miyembro nito. Ibang admin lang ang makapagbabalik sa iyo.",
+    "leave_confirm": "Alisin ako"
   },
   "regions": {
     "label": {

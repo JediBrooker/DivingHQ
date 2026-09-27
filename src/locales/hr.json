@@ -1934,7 +1934,12 @@
     "pick_member": "— Odaberite člana kluba —",
     "add": "Dodaj",
     "remove": "Ukloni",
-    "federation_appoints": "Administratore ovog kluba imenuje vaš savez."
+    "federation_appoints": "Administratore ovog kluba imenuje vaš savez.",
+    "not_admin": "Više niste administrator ovog kluba.",
+    "left_notice": "Više niste administrator kluba {club}.",
+    "leave_title": "Ukloniti se iz administratora kluba {club}?",
+    "leave_body": "Više nećete moći organizirati natjecanja kluba ni odobravati zahtjeve njegovih članova. Natrag vas može dodati samo drugi administrator.",
+    "leave_confirm": "Ukloni me"
   },
   "regions": {
     "label": {

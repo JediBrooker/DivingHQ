@@ -1934,7 +1934,12 @@
     "pick_member": "— Pilih anggota klub —",
     "add": "Tambah",
     "remove": "Hapus",
-    "federation_appoints": "Federasi Anda menunjuk admin klub ini."
+    "federation_appoints": "Federasi Anda menunjuk admin klub ini.",
+    "not_admin": "Anda bukan lagi admin klub ini.",
+    "left_notice": "Anda bukan lagi admin {club}.",
+    "leave_title": "Hapus diri Anda sebagai admin {club}?",
+    "leave_body": "Anda tidak akan bisa lagi mengelola kompetisi klub atau menyetujui permintaan anggotanya. Hanya admin lain yang bisa menambahkan Anda kembali.",
+    "leave_confirm": "Hapus saya"
   },
   "regions": {
     "label": {

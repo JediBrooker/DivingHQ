@@ -1630,3 +1630,52 @@ test("claims: a claimant is told about their own claim on sign-in and on the das
     await claimKit.wipe(CODE);
   }
 });
+
+// My club tells "your federation appoints the admins" apart from "you're
+// not an admin any more" by the org's claim_state on club_admin_of, and
+// after removing yourself the session body has to stop listing the club.
+test("club admins: club_admin_of says who runs the org, and self-removal drops the club", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "SLB";
+  await claimKit.wipe(CODE);
+  const fedState = await setupFixture({ withEvent: false });
+  try {
+    const A = await claimKit.founder(CODE, "Honiara Divers");
+    const login = await claimKit.login(A.username);
+    assert.equal(login.club_admin_of[0].org_claim_state, "unclaimed");
+
+    // A second admin, so the club isn't left with none.
+    const orgId = (await pool.query("SELECT org_id FROM clubs WHERE id = $1", [A.clubId])).rows[0].org_id;
+    const bId = await insertUser({ orgId, username: `int-slb-${crypto.randomBytes(4).toString("hex")}`, fullName: "Gizo Admin", role: "spectator" });
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [A.clubId, bId]);
+    assert.equal((await fetchJson("POST", `/api/clubs/${A.clubId}/admins`, { token: A.token, body: { user_id: bId } })).status, 201);
+
+    // A takes themselves off. Their session no longer lists the club and
+    // the admins list now refuses them, which My club reads as "not an
+    // admin any more" because the org is unclaimed.
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${A.clubId}/admins/${A.id}`, { token: A.token })).status, 200);
+    const me = await fetchJson("GET", "/api/auth/me", { token: A.token });
+    assert.deepEqual(me.body.user.club_admin_of, []);
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/admins`, { token: A.token })).status, 403);
+
+    // Under a federation the same row says claimed.
+    const clubId = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, 'Federation Club') RETURNING id", [fedState.orgId],
+    )).rows[0].id;
+    const judgeName = `int-fedclub-${fedState.slug}`;
+    const judgeId = await insertUser({ orgId: fedState.orgId, username: judgeName, fullName: "Fed Club Admin", role: "judge" });
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [clubId, judgeId, fedState.orgId]);
+    // insertUser's fixture password.
+    const fedLogin = await claimKit.login(judgeName, "not-used-here");
+    assert.equal(fedLogin.club_admin_of[0].org_claim_state, "claimed");
+    assert.equal((await fetchJson("GET", `/api/clubs/${clubId}/admins`, { token: fedLogin.token })).status, 403,
+      "the federation appoints, a club admin there can't manage the list");
+  } finally {
+    await pool.query("DELETE FROM club_admins WHERE org_id = $1", [fedState.orgId]).catch(() => {});
+    await pool.query("DELETE FROM users WHERE org_id = $1", [fedState.orgId]).catch(() => {});
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [fedState.orgId]).catch(() => {});
+    await teardownFixture(fedState);
+    await claimKit.wipe(CODE);
+  }
+});

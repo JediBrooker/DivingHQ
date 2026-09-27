@@ -1934,7 +1934,12 @@
     "pick_member": "— Välj en klubbmedlem —",
     "add": "Lägg till",
     "remove": "Ta bort",
-    "federation_appoints": "Ditt förbund utser klubbens administratörer."
+    "federation_appoints": "Ditt förbund utser klubbens administratörer.",
+    "not_admin": "Du är inte längre administratör för den här klubben.",
+    "left_notice": "Du är inte längre administratör för {club}.",
+    "leave_title": "Ta bort dig själv som administratör för {club}?",
+    "leave_body": "Du kommer inte längre att kunna arrangera klubbens tävlingar eller godkänna medlemmarnas förfrågningar. Bara en annan administratör kan lägga till dig igen.",
+    "leave_confirm": "Ta bort mig"
   },
   "regions": {
     "label": {

@@ -1934,7 +1934,12 @@
     "pick_member": "— Wybierz członka klubu —",
     "add": "Dodaj",
     "remove": "Usuń",
-    "federation_appoints": "Administratorów tego klubu wyznacza twoja federacja."
+    "federation_appoints": "Administratorów tego klubu wyznacza twoja federacja.",
+    "not_admin": "Nie jesteś już administratorem tego klubu.",
+    "left_notice": "Nie jesteś już administratorem klubu {club}.",
+    "leave_title": "Usunąć się z administratorów klubu {club}?",
+    "leave_body": "Nie będziesz już mógł organizować zawodów klubu ani zatwierdzać próśb jego członków. Z powrotem może cię dodać tylko inny administrator.",
+    "leave_confirm": "Usuń mnie"
   },
   "regions": {
     "label": {

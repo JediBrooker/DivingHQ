@@ -1934,7 +1934,12 @@
     "pick_member": "— 选择俱乐部会员 —",
     "add": "添加",
     "remove": "移除",
-    "federation_appoints": "本俱乐部的管理员由您的联合会任命。"
+    "federation_appoints": "本俱乐部的管理员由您的联合会任命。",
+    "not_admin": "您已不再是本俱乐部的管理员。",
+    "left_notice": "您已不再是 {club} 的管理员。",
+    "leave_title": "要将自己从 {club} 的管理员中移除吗？",
+    "leave_body": "您将无法再组织俱乐部的比赛或批准其成员的申请。只有其他管理员才能将您重新添加。",
+    "leave_confirm": "移除我"
   },
   "regions": {
     "label": {

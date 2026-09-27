@@ -1934,7 +1934,12 @@
     "pick_member": "— Válasszon klubtagot —",
     "add": "Hozzáadás",
     "remove": "Eltávolítás",
-    "federation_appoints": "A klub adminisztrátorait a szövetsége nevezi ki."
+    "federation_appoints": "A klub adminisztrátorait a szövetsége nevezi ki.",
+    "not_admin": "Már nem adminisztrátora ennek a klubnak.",
+    "left_notice": "Már nem adminisztrátora ennek a klubnak: {club}.",
+    "leave_title": "Eltávolítja magát a(z) {club} adminisztrátorai közül?",
+    "leave_body": "Ezután nem rendezhet versenyeket a klub nevében, és nem hagyhatja jóvá a tagok kérelmeit. Csak egy másik adminisztrátor veheti vissza.",
+    "leave_confirm": "Eltávolítás"
   },
   "regions": {
     "label": {

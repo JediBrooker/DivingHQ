@@ -1934,7 +1934,12 @@
     "pick_member": "— Pick a club member —",
     "add": "Add",
     "remove": "Remove",
-    "federation_appoints": "Your federation appoints this club's admins."
+    "federation_appoints": "Your federation appoints this club's admins.",
+    "not_admin": "You're not an admin of this club any more.",
+    "left_notice": "You're no longer an admin of {club}.",
+    "leave_title": "Remove yourself as an admin of {club}?",
+    "leave_body": "You won't be able to run the club's meets or approve its members' requests any more. Only another admin can add you back.",
+    "leave_confirm": "Remove me"
   },
   "regions": {
     "label": {

@@ -1934,7 +1934,12 @@
     "pick_member": "— Valitse seuran jäsen —",
     "add": "Lisää",
     "remove": "Poista",
-    "federation_appoints": "Liittosi nimeää tämän seuran ylläpitäjät."
+    "federation_appoints": "Liittosi nimeää tämän seuran ylläpitäjät.",
+    "not_admin": "Et ole enää tämän seuran ylläpitäjä.",
+    "left_notice": "Et ole enää seuran {club} ylläpitäjä.",
+    "leave_title": "Poistetaanko sinut seuran {club} ylläpitäjistä?",
+    "leave_body": "Et voi enää järjestää seuran kilpailuja etkä hyväksyä sen jäsenten pyyntöjä. Vain toinen ylläpitäjä voi lisätä sinut takaisin.",
+    "leave_confirm": "Poista minut"
   },
   "regions": {
     "label": {

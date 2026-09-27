@@ -200,7 +200,12 @@ export const useAuthStore = defineStore('auth', () => {
           useFeaturesStore().apply('maintenance', true)
         })
       }
-      throw new Error(body.error || res.statusText)
+      // status and code ride along so a caller can tell "you may not"
+      // (403) from "that didn't work" without matching on English text.
+      const err = new Error(body.error || res.statusText)
+      err.status = res.status
+      if (body.code) err.code = body.code
+      throw err
     }
     return res.json()
   }

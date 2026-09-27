@@ -1934,7 +1934,12 @@
     "pick_member": "— Vyberte člena klubu —",
     "add": "Přidat",
     "remove": "Odebrat",
-    "federation_appoints": "Správce tohoto klubu jmenuje vaše federace."
+    "federation_appoints": "Správce tohoto klubu jmenuje vaše federace.",
+    "not_admin": "Už nejste správcem tohoto klubu.",
+    "left_notice": "Už nejste správcem klubu {club}.",
+    "leave_title": "Odebrat se ze správců klubu {club}?",
+    "leave_body": "Už nebudete moci pořádat závody klubu ani schvalovat žádosti jeho členů. Zpět vás může přidat jen jiný správce.",
+    "leave_confirm": "Odebrat mě"
   },
   "regions": {
     "label": {

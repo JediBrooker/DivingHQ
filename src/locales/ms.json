@@ -1934,7 +1934,12 @@
     "pick_member": "— Pilih ahli kelab —",
     "add": "Tambah",
     "remove": "Alih keluar",
-    "federation_appoints": "Persekutuan anda melantik pentadbir kelab ini."
+    "federation_appoints": "Persekutuan anda melantik pentadbir kelab ini.",
+    "not_admin": "Anda bukan lagi pentadbir kelab ini.",
+    "left_notice": "Anda bukan lagi pentadbir {club}.",
+    "leave_title": "Alih keluar diri anda sebagai pentadbir {club}?",
+    "leave_body": "Anda tidak lagi boleh menganjurkan pertandingan kelab atau meluluskan permintaan ahlinya. Hanya pentadbir lain boleh menambah anda semula.",
+    "leave_confirm": "Alih keluar saya"
   },
   "regions": {
     "label": {
