@@ -1329,3 +1329,62 @@ test("claims: the sweep resolves expired votes and drops unverified claims", asy
     await claimKit.wipe(CODE);
   }
 });
+
+// Phase 4: what divers represent, per meet, snapshotted at entry.
+test("representation: meet setting drives the label, entries keep their snapshot", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CAN";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Ottawa Divers", { region_code: "ON", new_club_short_code: "OTT" });
+    const B = await claimKit.founder(CODE, "Montreal Divers", { region_code: "QC", new_club_short_code: "MTL" });
+    const meet = await fetchJson("POST", "/api/meets", {
+      token: A.token, body: { name: "Canadian Club Champs", represent_as: "region" },
+    });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
+    assert.equal(meet.body.represent_as, "region");
+    assert.equal((await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "x", represent_as: "planet" } })).status, 400);
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "Open 1m", gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 1, event_type: "individual", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const dive = (await pool.query("SELECT id FROM dive_directory LIMIT 1")).rows[0].id;
+    // Entered the plain way: the trigger snapshots club, region and country.
+    for (const d of [A, B]) {
+      await pool.query(
+        "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+        [ev.body.id, d.id, dive],
+      );
+    }
+    const labels = async () => {
+      const r = await fetchJson("GET", `/api/scoreboard/${ev.body.id}`, { token: A.token });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      return Object.fromEntries((r.body.upcoming || []).map((u) => [u.full_name, u.country_code]));
+    };
+    assert.deepEqual(await labels(), { "Ottawa Divers Admin": "ON", "Montreal Divers Admin": "QC" });
+
+    // Montreal's diver moves to Ottawa's club after entering: this
+    // event still shows where they entered from.
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [A.clubId, B.id]);
+    assert.equal((await labels())["Montreal Divers Admin"], "QC");
+
+    // Switching the meet re-labels straight away (cache dropped).
+    assert.equal((await fetchJson("PUT", `/api/meets/${meet.body.id}`, { token: A.token, body: { represent_as: "club" } })).status, 200);
+    assert.deepEqual(await labels(), { "Ottawa Divers Admin": "OTT", "Montreal Divers Admin": "MTL" });
+    assert.equal((await fetchJson("PUT", `/api/meets/${meet.body.id}`, { token: A.token, body: { represent_as: "country" } })).status, 200);
+    assert.deepEqual(await labels(), { "Ottawa Divers Admin": "CAN", "Montreal Divers Admin": "CAN" });
+    assert.equal((await fetchJson("PUT", `/api/meets/${meet.body.id}`, { token: A.token, body: { represent_as: "nope" } })).status, 400);
+
+    // The Control Room roster (and so the venue / judge payload) agrees.
+    await fetchJson("PUT", `/api/meets/${meet.body.id}`, { token: A.token, body: { represent_as: "region" } });
+    const roster = await fetchJson("GET", `/api/events/${ev.body.id}/roster`, { token: A.token });
+    assert.equal(roster.status, 200);
+    assert.ok(Array.isArray(roster.body), "roster is an array of entry rows");
+    const codes = new Set(roster.body.map((r) => r.country_code));
+    assert.deepEqual([...codes].sort(), ["ON", "QC"]);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

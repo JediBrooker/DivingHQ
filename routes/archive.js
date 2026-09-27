@@ -249,9 +249,14 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
                 partner_name so the synchro partner gets the same
                 /profile/<id> link. */
              SELECT u.id AS competitor_id,
-                    u.full_name, o.country_code, cl.name AS club_name,
+                    u.full_name,
+                    /* Migration 090: the meet's representation code
+                       (country / state / club), in the country slot. */
+                    event_rep_code($1, u.id, o.country_code) AS country_code,
+                    cl.name AS club_name,
                     p.partner_id AS partner_id,
-                    pu.full_name AS partner_name, pl.country_code AS partner_country,
+                    pu.full_name AS partner_name,
+                    event_rep_code($1, p.partner_id, pl.country_code) AS partner_country,
                     SUM(pd.dive_points) AS total
              FROM per_dive pd
              JOIN users u ON u.id = pd.competitor_id
@@ -299,8 +304,11 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
           // feeds straight into the UDF (no MAX() wrapper needed).
           `${perDiveSelect({
             select: [
-              "u.id AS competitor_id", "u.full_name", "o.country_code", "cl.name AS club_name",
-              "pu.id AS partner_id", "pu.full_name AS partner_name", "pl.country_code AS partner_country",
+              "u.id AS competitor_id", "u.full_name",
+              "event_rep_code($1, u.id, o.country_code) AS country_code",
+              "cl.name AS club_name",
+              "pu.id AS partner_id", "pu.full_name AS partner_name",
+              "event_rep_code($1, pu.id, pl.country_code) AS partner_country",
               "t.id AS team_id", "t.name AS team_name",
               "s.round_number",
               "d.dive_code", "d.position", "d.description", "d.dd",

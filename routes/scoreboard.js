@@ -122,9 +122,16 @@ module.exports = function createScoreboardRouter({
               a profile link (parallels the lead diver's link). */
            comp_standings AS (
              SELECT u.id AS competitor_id,
-                    u.full_name, o.country_code, cl.name AS club_name,
+                    u.full_name,
+                    /* Migration 090: the meet's representation (country,
+                       state or club code), from the entry snapshot.
+                       Emitted as country_code so every chip, and the
+                       medal table, follow it. */
+                    event_rep_code($1, u.id, o.country_code) AS country_code,
+                    cl.name AS club_name,
                     p.partner_id AS partner_id,
-                    pu.full_name AS partner_name, pl.country_code AS partner_country,
+                    pu.full_name AS partner_name,
+                    event_rep_code($1, p.partner_id, pl.country_code) AS partner_country,
                     SUM(pd.dive_points) AS total
              FROM per_dive pd
              JOIN users u ON u.id = pd.competitor_id
@@ -176,8 +183,12 @@ module.exports = function createScoreboardRouter({
           // feeds the UDF directly (no MAX() wrapper).
           `${perDiveSelect({
             select: [
-              "s.competitor_id", "u.full_name", "o.country_code", "cl.name AS club_name",
-              "pu.id AS partner_id", "pu.full_name AS partner_name", "pl.country_code AS partner_country",
+              "s.competitor_id", "u.full_name",
+              // Representation code (migration 090), see comp_standings.
+              "event_rep_code($1, s.competitor_id, o.country_code) AS country_code",
+              "cl.name AS club_name",
+              "pu.id AS partner_id", "pu.full_name AS partner_name",
+              "event_rep_code($1, pu.id, pl.country_code) AS partner_country",
               "t.id AS team_id", "t.name AS team_name",
               "d.dive_code", "d.position", "d.description", "d.dd", "s.round_number",
             ],
@@ -247,9 +258,11 @@ module.exports = function createScoreboardRouter({
            )
            SELECT ordered.round_number, ordered.round_order::int AS round_order,
                   ordered.competitor_id, ordered.partner_id,
-                  u.full_name, o.country_code,
+                  u.full_name,
+                  event_rep_code($1, ordered.competitor_id, o.country_code) AS country_code,
                   cl.name AS club_name,
-                  pu.full_name AS partner_name, pl.country_code AS partner_country,
+                  pu.full_name AS partner_name,
+                  event_rep_code($1, ordered.partner_id, pl.country_code) AS partner_country,
                   t.name AS team_name,
                   d.dive_code, d.position, d.description, d.dd
            FROM ordered
@@ -421,7 +434,9 @@ module.exports = function createScoreboardRouter({
                   LAG(r.rnk) OVER (PARTITION BY r.competitor_id ORDER BY r.round_number) AS prev_rnk
            FROM ranked r
          )
-         SELECT wp.competitor_id, u.full_name, o.country_code, cl.name AS club_name,
+         SELECT wp.competitor_id, u.full_name,
+                event_rep_code($1, wp.competitor_id, o.country_code) AS country_code,
+                cl.name AS club_name,
                 wp.round_number,
                 wp.round_total,
                 wp.cumulative_total,

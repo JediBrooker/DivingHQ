@@ -51,10 +51,15 @@ module.exports = function createMeetsRouter({
   // router behaves exactly as before, org-wide editors only.
   requireMeetOrClubEditor,
   isMeetHostAdmin,
+  // Optional: cleared for the meet's events when represent_as changes.
+  scoreboardCache,
 }) {
   if (!pool) throw new Error("createMeetsRouter requires { pool, … }");
   const router = express.Router();
   const maybeAuth = optionalAuth || ((req, _res, next) => next());
+
+  // What divers represent on this meet's scoreboards (migration 090).
+  const REPRESENT_AS = ["country", "region", "club"];
 
   // org_admin / meet_manager, the org-wide meet editors.
   function isOrgEditor(user) {
@@ -575,6 +580,10 @@ module.exports = function createMeetsRouter({
     if (hostClubId && hostRegionId) {
       return res.status(400).json({ error: "A meet has one host: a club or a region" });
     }
+    const representAs = req.body?.represent_as ?? "country";
+    if (!REPRESENT_AS.includes(representAs)) {
+      return res.status(400).json({ error: `represent_as must be one of: ${REPRESENT_AS.join(", ")}` });
+    }
     const editor = req.user.is_system_admin || isOrgEditor(req.user);
     if (!editor) {
       const clubs = req.clubAdminOf || [];
@@ -622,12 +631,14 @@ module.exports = function createMeetsRouter({
       const r = await pool.query(
         `INSERT INTO meets
            (org_id, name, venue, start_date, end_date, description,
-            sponsor_name, sponsor_logo_url, sponsor_link_url, host_club_id, host_region_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+            sponsor_name, sponsor_logo_url, sponsor_link_url, host_club_id, host_region_id,
+            represent_as)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
         [
           req.user.org_id, name.trim(), venue || null,
           start_date || null, end_date || null, description || null,
           sponsor_name || null, safeLogo, safeLink, hostClubId, hostRegionId,
+          representAs,
         ],
       );
       res.status(201).json(r.rows[0]);
@@ -660,6 +671,12 @@ module.exports = function createMeetsRouter({
     if (hasOwn(body, "end_date")) setField("end_date", end_date || null);
     if (hasOwn(body, "description")) setField("description", description || null);
     if (hasOwn(body, "sponsor_name")) setField("sponsor_name", sponsor_name || null);
+    if (hasOwn(body, "represent_as")) {
+      if (!REPRESENT_AS.includes(body.represent_as)) {
+        return res.status(400).json({ error: `represent_as must be one of: ${REPRESENT_AS.join(", ")}` });
+      }
+      setField("represent_as", body.represent_as);
+    }
     if (hasOwn(body, "sponsor_logo_url")) {
       const safeLogo = rejectIfUnsafeUrl(res, "sponsor_logo_url", sponsor_logo_url);
       if (safeLogo === false) return;
@@ -683,6 +700,12 @@ module.exports = function createMeetsRouter({
         params,
       );
       if (!r.rows.length) return res.status(404).json({ error: "Meet not found" });
+      // Labels are computed per request but the scoreboard caches them;
+      // drop its entries so a switch to "state" shows on the next poll.
+      if (hasOwn(body, "represent_as") && scoreboardCache) {
+        const evs = await pool.query("SELECT id FROM events WHERE meet_id = $1", [req.params.id]);
+        for (const ev of evs.rows) scoreboardCache.invalidate(ev.id);
+      }
       res.json(r.rows[0]);
     } catch (err) {
       console.error("[Update Meet Error]", err.message);

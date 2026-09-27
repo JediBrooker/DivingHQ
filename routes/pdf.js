@@ -107,7 +107,8 @@ module.exports = function createPdfRouter({ pool }) {
       tasks.push(pool.query(
         `SELECT cdl.event_id,
                 u.id AS competitor_id, u.full_name,
-                o.country_code,
+                /* Migration 090: the meet's representation code. */
+                event_rep_code(cdl.event_id, u.id, o.country_code) AS country_code,
                 cl.short_code AS club_code, cl.name AS club_name,
                 pu.full_name  AS partner_name,
                 tm.name       AS team_name,
@@ -709,7 +710,8 @@ module.exports = function createPdfRouter({ pool }) {
           [req.params.id],
         ),
         pool.query(
-          `SELECT u.id AS competitor_id, u.full_name, o.country_code,
+          `SELECT u.id AS competitor_id, u.full_name,
+                  event_rep_code($1, u.id, o.country_code) AS country_code,
                   cl.name AS club_name, cl.short_code AS club_code,
                   pu.full_name AS partner_name,
                   tm.name AS team_name,
@@ -905,13 +907,14 @@ module.exports = function createPdfRouter({ pool }) {
           [eventId],
         ),
         pool.query(
-          `SELECT u.id, u.full_name, o.country_code,
+          `SELECT u.id, u.full_name,
+                  event_rep_code($2, u.id, o.country_code) AS country_code,
                   cl.name AS club_name, cl.short_code AS club_code
            FROM users u
            JOIN organisations o ON o.id = u.org_id
            LEFT JOIN clubs cl ON cl.id = u.club_id
            WHERE u.id = $1`,
-          [diverId],
+          [diverId, eventId],
         ),
         pool.query(
           `${perDiveSelect({
@@ -1111,7 +1114,8 @@ module.exports = function createPdfRouter({ pool }) {
           // feeds the UDF directly (no MAX() wrapper).
           `${perDiveSelect({
             select: [
-              "u.id AS competitor_id", "u.full_name AS diver_name", "o.country_code",
+              "u.id AS competitor_id", "u.full_name AS diver_name",
+              "event_rep_code($1, u.id, o.country_code) AS country_code",
               "cl.name AS club_name", "cl.short_code AS club_code",
               "pu.full_name AS partner_name", "tm.name AS team_name",
               "s.round_number", "d.dive_code", "d.position", "d.dd",
@@ -1218,7 +1222,9 @@ module.exports = function createPdfRouter({ pool }) {
               totals. Prior versions of this query merged "Sarah
               Williams" + "Sarah Williams" into a single PDF line
               with double points. */
-           SELECT u.full_name, o.country_code, cl.name AS club_name,
+           SELECT u.full_name,
+                  event_rep_code($1, u.id, o.country_code) AS country_code,
+                  cl.name AS club_name,
                   pu.full_name AS partner_name,
                   SUM(pd.dive_points) AS total,
                   RANK() OVER (ORDER BY SUM(pd.dive_points) DESC) AS rank

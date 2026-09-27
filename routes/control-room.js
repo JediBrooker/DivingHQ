@@ -354,9 +354,14 @@ module.exports = function createControlRoomRouter({
                 u.id AS competitor_id, u.full_name,
                 o.id AS competitor_org_id,
                 o.name AS competitor_org_name,
-                o.country_code,
+                /* Migration 090: the meet's representation code (country,
+                   state or club) in the country slot. This row becomes the
+                   set_active_diver payload, so the venue board and judge
+                   screens show it too. */
+                event_rep_code($1, u.id, o.country_code) AS country_code,
                 cl.name AS club_name, cl.short_code AS club_code,
-                cdl.partner_id, pu.full_name AS partner_name, po.country_code AS partner_country,
+                cdl.partner_id, pu.full_name AS partner_name,
+                event_rep_code($1, cdl.partner_id, po.country_code) AS partner_country,
                 cdl.team_id, t.name AS team_name, t.short_code AS team_code,
                 /* public_id + team_public_id used to be computed
                    inline with pgcrypto's digest() — but pgcrypto
@@ -1560,7 +1565,7 @@ module.exports = function createControlRoomRouter({
       if (!(await ensureEventOrgGate(req, res, "id"))) return;
       const r = await pool.query(
         `SELECT u.id AS competitor_id, u.full_name,
-                o.country_code,
+                event_rep_code($1, u.id, o.country_code) AS country_code,
                 cl.name AS club_name, cl.short_code AS club_code,
                 ea.status::text  AS status,
                 ea.set_at,
@@ -1792,10 +1797,11 @@ module.exports = function createControlRoomRouter({
       const r = await pool.query(
         `${perDiveSelect({
           select: [
-            `u.full_name AS "diverName"`, "o.country_code",
+            `u.full_name AS "diverName"`,
+            "event_rep_code($1, s.competitor_id, o.country_code) AS country_code",
             "cl.name AS club_name", "cl.short_code AS club_code",
             "pu.full_name AS partner_name",
-            "po.country_code AS partner_country",
+            "event_rep_code($1, pu.id, po.country_code) AS partner_country",
             "t.name AS team_name", "t.short_code AS team_code",
             "s.competitor_id", "s.event_id", "s.round_number",
             "d.dive_code", "d.position", "d.dd", "d.description",
@@ -1821,7 +1827,7 @@ module.exports = function createControlRoomRouter({
           ],
           groupBy: [
             "u.full_name", "o.country_code", "cl.name", "cl.short_code",
-            "pu.full_name", "po.country_code", "t.name", "t.short_code",
+            "pu.id", "pu.full_name", "po.country_code", "t.name", "t.short_code",
             "s.competitor_id", "s.event_id", "s.round_number",
             "d.dive_code", "d.position", "d.dd", "d.description",
           ],

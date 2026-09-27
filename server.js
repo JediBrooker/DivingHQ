@@ -867,6 +867,7 @@ app.use(require("./routes/meets")({
   payments,
   requireMeetOrClubEditor,
   isMeetHostAdmin,
+  scoreboardCache,
 }));
 
 // =============================================================
