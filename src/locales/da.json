@@ -415,7 +415,11 @@
       "chip_claims": "Krav",
       "review_title": "Afventer din gennemgang",
       "my_claims_title": "Dine krav",
-      "my_claim": "Dit krav på {target}"
+      "my_claim": "Dit krav på {target}",
+      "quiet": "Alt er stille, intet venter.",
+      "pill_urgent": "lukker snart",
+      "pill_overdue": "forsinket",
+      "chip_aria_tab": "{title}. Åbner den tilhørende fane i denne oversigt."
     }
   },
   "role": {

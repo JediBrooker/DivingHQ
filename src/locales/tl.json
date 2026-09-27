@@ -415,7 +415,11 @@
       "chip_claims": "Mga claim",
       "review_title": "Naghihintay ng iyong pagsusuri",
       "my_claims_title": "Ang iyong mga claim",
-      "my_claim": "Ang iyong claim sa {target}"
+      "my_claim": "Ang iyong claim sa {target}",
+      "quiet": "Tahimik, walang nakabinbin.",
+      "pill_urgent": "malapit nang magsara",
+      "pill_overdue": "lampas na",
+      "chip_aria_tab": "{title}. Binubuksan ang tab nito sa dashboard na ito."
     }
   },
   "profile": {

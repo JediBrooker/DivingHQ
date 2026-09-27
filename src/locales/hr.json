@@ -415,7 +415,11 @@
       "chip_claims": "Zahtjevi",
       "review_title": "Čeka vaš pregled",
       "my_claims_title": "Vaši zahtjevi",
-      "my_claim": "Vaš zahtjev za {target}"
+      "my_claim": "Vaš zahtjev za {target}",
+      "quiet": "Sve mirno, ništa ne čeka.",
+      "pill_urgent": "uskoro se zatvara",
+      "pill_overdue": "kasni",
+      "chip_aria_tab": "{title}. Otvara pripadajuću karticu na ovoj nadzornoj ploči."
     }
   },
   "profile": {

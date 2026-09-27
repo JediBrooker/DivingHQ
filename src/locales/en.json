@@ -415,7 +415,11 @@
       "chip_claims": "Claims",
       "review_title": "Awaiting your review",
       "my_claims_title": "Your claims",
-      "my_claim": "Your claim on {target}"
+      "my_claim": "Your claim on {target}",
+      "quiet": "All quiet, nothing pending.",
+      "pill_urgent": "closing soon",
+      "pill_overdue": "overdue",
+      "chip_aria_tab": "{title}. Opens its tab on this dashboard."
     }
   },
   "profile": {

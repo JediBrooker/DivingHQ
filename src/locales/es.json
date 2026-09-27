@@ -415,7 +415,11 @@
       "chip_claims": "Reclamaciones",
       "review_title": "Pendiente de tu revisión",
       "my_claims_title": "Tus reclamaciones",
-      "my_claim": "Tu reclamación sobre {target}"
+      "my_claim": "Tu reclamación sobre {target}",
+      "quiet": "Sin novedades, nada pendiente.",
+      "pill_urgent": "cierra pronto",
+      "pill_overdue": "atrasado",
+      "chip_aria_tab": "{title}. Abre su pestaña en este panel."
     }
   },
   "profile": {

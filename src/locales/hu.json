@@ -415,7 +415,11 @@
       "chip_claims": "Igények",
       "review_title": "Az Ön jóváhagyására vár",
       "my_claims_title": "Az Ön igényei",
-      "my_claim": "Az Ön igénye: {target}"
+      "my_claim": "Az Ön igénye: {target}",
+      "quiet": "Minden csendes, nincs függőben semmi.",
+      "pill_urgent": "hamarosan zárul",
+      "pill_overdue": "lejárt",
+      "chip_aria_tab": "{title}. Megnyitja a hozzá tartozó lapot ezen a vezérlőpulton."
     }
   },
   "role": {

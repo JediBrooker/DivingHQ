@@ -415,7 +415,11 @@
       "chip_claims": "Klaim",
       "review_title": "Menunggu tinjauan Anda",
       "my_claims_title": "Klaim Anda",
-      "my_claim": "Klaim Anda atas {target}"
+      "my_claim": "Klaim Anda atas {target}",
+      "quiet": "Semua tenang, tidak ada yang tertunda.",
+      "pill_urgent": "segera ditutup",
+      "pill_overdue": "terlambat",
+      "chip_aria_tab": "{title}. Membuka tabnya di dasbor ini."
     }
   },
   "profile": {

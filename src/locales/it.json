@@ -415,7 +415,11 @@
       "chip_claims": "Rivendicazioni",
       "review_title": "In attesa della tua revisione",
       "my_claims_title": "Le tue rivendicazioni",
-      "my_claim": "La tua rivendicazione su {target}"
+      "my_claim": "La tua rivendicazione su {target}",
+      "quiet": "Tutto tranquillo, niente in sospeso.",
+      "pill_urgent": "chiude a breve",
+      "pill_overdue": "in ritardo",
+      "chip_aria_tab": "{title}. Apre la scheda corrispondente in questo pannello."
     }
   },
   "role": {

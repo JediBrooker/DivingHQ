@@ -415,7 +415,11 @@
       "chip_claims": "Vaatimukset",
       "review_title": "Odottaa tarkistustasi",
       "my_claims_title": "Omat vaatimuksesi",
-      "my_claim": "Vaatimuksesi: {target}"
+      "my_claim": "Vaatimuksesi: {target}",
+      "quiet": "Kaikki hiljaista, mikään ei odota.",
+      "pill_urgent": "sulkeutuu pian",
+      "pill_overdue": "myöhässä",
+      "chip_aria_tab": "{title}. Avaa sen välilehden tässä hallintapaneelissa."
     }
   },
   "role": {

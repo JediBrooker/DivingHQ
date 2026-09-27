@@ -415,7 +415,11 @@
       "chip_claims": "Anspråk",
       "review_title": "Väntar på din granskning",
       "my_claims_title": "Dina anspråk",
-      "my_claim": "Ditt anspråk på {target}"
+      "my_claim": "Ditt anspråk på {target}",
+      "quiet": "Allt lugnt, inget väntar.",
+      "pill_urgent": "stänger snart",
+      "pill_overdue": "försenad",
+      "chip_aria_tab": "{title}. Öppnar tillhörande flik i den här översikten."
     }
   },
   "role": {

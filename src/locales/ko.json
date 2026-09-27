@@ -415,7 +415,11 @@
       "chip_claims": "인수 신청",
       "review_title": "검토 대기 중",
       "my_claims_title": "내 인수 신청",
-      "my_claim": "{target} 인수 신청"
+      "my_claim": "{target} 인수 신청",
+      "quiet": "대기 중인 항목이 없습니다.",
+      "pill_urgent": "곧 마감",
+      "pill_overdue": "기한 초과",
+      "chip_aria_tab": "{title}. 이 대시보드의 해당 탭을 엽니다."
     }
   },
   "profile": {

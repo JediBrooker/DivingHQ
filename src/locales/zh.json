@@ -415,7 +415,11 @@
       "chip_claims": "接管申请",
       "review_title": "等待您审核",
       "my_claims_title": "您的接管申请",
-      "my_claim": "您对 {target} 的接管申请"
+      "my_claim": "您对 {target} 的接管申请",
+      "quiet": "一切平静，没有待处理事项。",
+      "pill_urgent": "即将截止",
+      "pill_overdue": "已逾期",
+      "chip_aria_tab": "{title}。打开此控制台上的对应标签页。"
     }
   },
   "profile": {

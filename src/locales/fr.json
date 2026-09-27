@@ -415,7 +415,11 @@
       "chip_claims": "Revendications",
       "review_title": "En attente de votre examen",
       "my_claims_title": "Vos revendications",
-      "my_claim": "Votre revendication sur {target}"
+      "my_claim": "Votre revendication sur {target}",
+      "quiet": "Tout est calme, rien en attente.",
+      "pill_urgent": "clôture proche",
+      "pill_overdue": "en retard",
+      "chip_aria_tab": "{title}. Ouvre l'onglet correspondant de ce tableau de bord."
     }
   },
   "role": {

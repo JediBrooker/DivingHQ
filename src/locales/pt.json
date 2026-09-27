@@ -415,7 +415,11 @@
       "chip_claims": "Reivindicações",
       "review_title": "À espera da sua análise",
       "my_claims_title": "As suas reivindicações",
-      "my_claim": "A sua reivindicação sobre {target}"
+      "my_claim": "A sua reivindicação sobre {target}",
+      "quiet": "Tudo calmo, nada pendente.",
+      "pill_urgent": "encerra em breve",
+      "pill_overdue": "em atraso",
+      "chip_aria_tab": "{title}. Abre o separador correspondente neste painel."
     }
   },
   "role": {

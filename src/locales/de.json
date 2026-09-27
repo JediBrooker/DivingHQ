@@ -415,7 +415,11 @@
       "chip_claims": "Ansprüche",
       "review_title": "Wartet auf Ihre Prüfung",
       "my_claims_title": "Ihre Ansprüche",
-      "my_claim": "Ihr Anspruch auf {target}"
+      "my_claim": "Ihr Anspruch auf {target}",
+      "quiet": "Alles ruhig, nichts ausstehend.",
+      "pill_urgent": "schließt bald",
+      "pill_overdue": "überfällig",
+      "chip_aria_tab": "{title}. Öffnet die zugehörige Registerkarte in dieser Übersicht."
     }
   },
   "role": {

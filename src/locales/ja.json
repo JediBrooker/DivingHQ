@@ -415,7 +415,11 @@
       "chip_claims": "引き継ぎ申請",
       "review_title": "確認待ち",
       "my_claims_title": "あなたの引き継ぎ申請",
-      "my_claim": "{target} の引き継ぎ申請"
+      "my_claim": "{target} の引き継ぎ申請",
+      "quiet": "保留中の項目はありません。",
+      "pill_urgent": "まもなく締切",
+      "pill_overdue": "期限超過",
+      "chip_aria_tab": "{title}。このダッシュボードの該当タブを開きます。"
     }
   },
   "profile": {

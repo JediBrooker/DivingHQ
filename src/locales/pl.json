@@ -415,7 +415,11 @@
       "chip_claims": "Roszczenia",
       "review_title": "Czeka na twoją decyzję",
       "my_claims_title": "Twoje roszczenia",
-      "my_claim": "Twoje roszczenie do {target}"
+      "my_claim": "Twoje roszczenie do {target}",
+      "quiet": "Wszystko spokojnie, nic nie czeka.",
+      "pill_urgent": "wkrótce koniec",
+      "pill_overdue": "zaległe",
+      "chip_aria_tab": "{title}. Otwiera odpowiednią kartę na tym panelu."
     }
   },
   "role": {

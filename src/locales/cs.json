@@ -415,7 +415,11 @@
       "chip_claims": "Nároky",
       "review_title": "Čeká na vaši kontrolu",
       "my_claims_title": "Vaše nároky",
-      "my_claim": "Váš nárok na {target}"
+      "my_claim": "Váš nárok na {target}",
+      "quiet": "Všechno klidné, nic nečeká.",
+      "pill_urgent": "brzy končí",
+      "pill_overdue": "po termínu",
+      "chip_aria_tab": "{title}. Otevře příslušnou kartu na této nástěnce."
     }
   },
   "profile": {
