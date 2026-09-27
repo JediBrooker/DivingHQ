@@ -20,6 +20,7 @@
 //   app.use(require('./routes/users')({ … }))
 
 const express = require("express");
+const roleRequests = require("../lib/role-requests");
 const bcrypt  = require("bcrypt");
 const jwt     = require("jsonwebtoken");
 const { recordAudit, auditFromReq } = require("../lib/audit");
@@ -202,27 +203,40 @@ module.exports = function createUsersRouter({
     }
   });
 
-  router.get("/api/role-requests", requireOrgAdmin, async (req, res) => {
+  // Org admins review everything in their org, as before. Club admins
+  // in a country with no federation yet review their own members'
+  // everyday role requests (lib/role-requests.js has the rules). Both
+  // get through this gate; each handler then scopes to what they may see.
+  const isOrgAdminUser = (user) =>
+    !!user.is_system_admin || (user.org_roles || []).includes("org_admin");
+  const requireRequestReviewer = [
+    (req, res, next) => verifyToken(req, res, async () => {
+      if (isOrgAdminUser(req.user)) return next();
+      try {
+        const r = await pool.query("SELECT 1 FROM club_admins WHERE user_id = $1 LIMIT 1", [req.user.id]);
+        if (r.rows.length) return next();
+      } catch (err) {
+        console.error("[requireRequestReviewer]", err.message);
+        return res.status(500).json({ error: "Internal server error" });
+      }
+      res.status(403).json({ error: "Forbidden" });
+    }),
+    // requireOrgAdmin's second half is the 2FA gate; keep it.
+    ...(Array.isArray(requireOrgAdmin) ? requireOrgAdmin.slice(1) : []),
+  ];
+
+  router.get("/api/role-requests", requireRequestReviewer, async (req, res) => {
     try {
-      const isSysAdmin = !!req.user.is_system_admin;
-      const r = await pool.query(
-        `SELECT rr.id, rr.requested_role, rr.status, rr.note, rr.created_at,
-                rr.org_id, o.name AS org_name, o.country_code,
-                u.id AS user_id, u.username, u.full_name
-         FROM role_requests rr
-         JOIN users u ON rr.user_id = u.id
-         JOIN organisations o ON rr.org_id = o.id
-         WHERE rr.status = 'pending' AND ($2::boolean OR rr.org_id = $1)
-         ORDER BY o.name ASC, rr.created_at ASC`,
-        [req.user.org_id, isSysAdmin],
-      );
-      res.json(r.rows);
+      const rows = isOrgAdminUser(req.user)
+        ? await roleRequests.listForOrgAdmin(pool, req.user)
+        : await roleRequests.listForClubAdmin(pool, req.user.id);
+      res.json(rows);
     } catch (err) {
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  router.post("/api/role-requests/:id/review", requireOrgAdmin, async (req, res) => {
+  router.post("/api/role-requests/:id/review", requireRequestReviewer, async (req, res) => {
     const { decision } = req.body || {}; // 'approved' | 'rejected'
     if (!["approved", "rejected"].includes(decision)) {
       return res.status(400).json({ error: "decision must be 'approved' or 'rejected'" });
@@ -250,6 +264,10 @@ module.exports = function createUsersRouter({
         return res
           .status(403)
           .json({ error: "Cannot review requests in other organisations" });
+      }
+      if (!isOrgAdminUser(req.user) && !(await roleRequests.clubAdminCanReview(client, req.user.id, rq))) {
+        await client.query("ROLLBACK");
+        return res.status(403).json({ error: "Only your own club members' requests" });
       }
 
       await client.query(

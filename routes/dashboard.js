@@ -47,6 +47,7 @@
 
 const express = require("express");
 const { buildReadinessFromRow } = require("../lib/workflow");
+const roleRequests = require("../lib/role-requests");
 
 module.exports = function createDashboardRouter({ pool, verifyToken }) {
   if (!pool || !verifyToken) {
@@ -179,19 +180,13 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
       ).then((r) => r.rows.map(buildReadinessFromRow)).catch(() => []);
     }
 
-    // ---- Role requests (org_admin / sysadmin) ----
+    // ---- Role requests (org_admin / sysadmin, or club admins in an
+    // unclaimed country; lib/role-requests.js decides who sees what) ----
     if (has("org_admin")) {
-      tasks.role_requests = pool.query(
-        `SELECT rr.id, rr.requested_role, rr.status, rr.note, rr.created_at,
-                rr.org_id, o.name AS org_name, o.country_code,
-                u.id AS user_id, u.username, u.full_name
-         FROM role_requests rr
-         JOIN users u           ON rr.user_id = u.id
-         JOIN organisations o   ON rr.org_id = o.id
-         WHERE rr.status = 'pending' AND ($2::boolean OR rr.org_id = $1)
-         ORDER BY o.name ASC, rr.created_at ASC`,
-        [user.org_id, isSysAdmin],
-      ).then((r) => r.rows).catch(() => []);
+      tasks.role_requests = roleRequests.listForOrgAdmin(pool, user).catch(() => []);
+    } else {
+      // Empty for anyone who isn't a club admin, so no pre-check needed.
+      tasks.role_requests = roleRequests.listForClubAdmin(pool, user.id).catch(() => []);
     }
 
     // ---- Pending org registrations (sysadmin only) ----

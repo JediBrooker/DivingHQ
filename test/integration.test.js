@@ -845,3 +845,74 @@ test("club admins run their own club's meets and nobody else's", async (t) => {
     await wipe();
   }
 });
+
+// With no federation, a member's role request goes to their club's
+// admins, and only theirs.
+test("club admins review their own members' role requests", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "PLW";
+  const wipe = async () => {
+    const orgs = await pool.query("SELECT id FROM organisations WHERE country_code = $1", [CODE]);
+    for (const { id } of orgs.rows) await teardownFixture({ orgId: id });
+  };
+  await wipe();
+  const signUp = async (body) => {
+    const username = `int-rr-${crypto.randomBytes(4).toString("hex")}`;
+    const r = await fetchJson("POST", "/api/auth/register", {
+      body: { username, full_name: username, password: TEST_PASSWORD, email: `${username}@example.test`, country_code: CODE, ...body },
+    });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1", [username]);
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username, password: TEST_PASSWORD } });
+    return { username, token: login.body.token, id: login.body.id, clubs: login.body.club_admin_of };
+  };
+  try {
+    const A = await signUp({ new_club_name: "Koror Divers" });
+    const B = await signUp({ new_club_name: "Melekeok Divers" });
+    const member = await signUp({ club_id: A.clubs[0].id, requested_role: "judge", note: "Level 2 judge" });
+
+    const aList = await fetchJson("GET", "/api/role-requests", { token: A.token });
+    assert.equal(aList.status, 200);
+    const mine = aList.body.filter((r) => r.user_id === member.id);
+    assert.equal(mine.length, 1, "A sees their member's request");
+    assert.equal(mine[0].club_name, "Koror Divers");
+    // Founders asked for 'diver' by default at signup, so filter to the member.
+    const bList = await fetchJson("GET", "/api/role-requests", { token: B.token });
+    assert.ok(!bList.body.some((r) => r.user_id === member.id), "B doesn't see A's member");
+
+    const dash = await fetchJson("GET", "/api/dashboard", { token: A.token });
+    assert.ok((dash.body.role_requests || []).some((r) => r.user_id === member.id), "dashboard feed agrees");
+
+    // A plain member can't review anything.
+    assert.equal((await fetchJson("GET", "/api/role-requests", { token: member.token })).status, 403);
+
+    const rqId = mine[0].id;
+    const bReview = await fetchJson("POST", `/api/role-requests/${rqId}/review`, {
+      token: B.token, body: { decision: "approved" },
+    });
+    assert.equal(bReview.status, 403);
+    const aReview = await fetchJson("POST", `/api/role-requests/${rqId}/review`, {
+      token: A.token, body: { decision: "approved" },
+    });
+    assert.equal(aReview.status, 200, JSON.stringify(aReview.body));
+    const granted = await pool.query(
+      "SELECT 1 FROM user_org_roles WHERE user_id = $1 AND role = 'judge'", [member.id],
+    );
+    assert.equal(granted.rows.length, 1);
+
+    // A founder who asks to judge can't wave it through themselves.
+    const C = await signUp({ new_club_name: "Airai Divers", requested_role: "judge" });
+    const own = await pool.query(
+      "SELECT id FROM role_requests WHERE user_id = $1 AND status = 'pending'", [C.id],
+    );
+    const cList = await fetchJson("GET", "/api/role-requests", { token: C.token });
+    assert.ok(!cList.body.some((r) => r.id === own.rows[0].id));
+    const self = await fetchJson("POST", `/api/role-requests/${own.rows[0].id}/review`, {
+      token: C.token, body: { decision: "approved" },
+    });
+    assert.equal(self.status, 403);
+  } finally {
+    await wipe();
+  }
+});
