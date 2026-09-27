@@ -1948,7 +1948,6 @@
     "clubs": "Seurat",
     "no_clubs_title": "Ei vielä seuroja",
     "no_clubs_body": "Seurat näkyvät tässä, kun ne ovat valinneet alueesi rekisteröityessä tai seurasivullaan.",
-    "members": "{n} jäsentä",
     "no_admin": "Ei vielä ylläpitäjää",
     "region_admins": "Alueen ylläpitäjät"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Hylkää",
     "revoke": "Peru",
     "revoke_body": "{body} ei enää hallinnoi kohdetta {target}, joka palaa vaatimusta edeltäneeseen tilaan."
+  },
+  "counts": {
+    "members_zero": "{n} jäsentä",
+    "members_one": "{n} jäsen",
+    "members_two": "{n} jäsentä",
+    "members_few": "{n} jäsentä",
+    "members_many": "{n} jäsentä",
+    "members_other": "{n} jäsentä"
   }
 }

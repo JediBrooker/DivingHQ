@@ -1948,7 +1948,6 @@
     "clubs": "Kelab",
     "no_clubs_title": "Belum ada kelab",
     "no_clubs_body": "Kelab dipaparkan di sini selepas memilih rantau anda semasa pendaftaran atau di halaman kelab.",
-    "members": "{n} ahli",
     "no_admin": "Belum ada pentadbir",
     "region_admins": "Pentadbir rantau"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Tolak",
     "revoke": "Batalkan",
     "revoke_body": "{body} tidak lagi mengurus {target}, semuanya kembali seperti sebelum tuntutan."
+  },
+  "counts": {
+    "members_zero": "{n} ahli",
+    "members_one": "{n} ahli",
+    "members_two": "{n} ahli",
+    "members_few": "{n} ahli",
+    "members_many": "{n} ahli",
+    "members_other": "{n} ahli"
   }
 }

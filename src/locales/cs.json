@@ -1948,7 +1948,6 @@
     "clubs": "Kluby",
     "no_clubs_title": "Zatím žádné kluby",
     "no_clubs_body": "Kluby se tu objeví, jakmile si váš region vyberou při registraci nebo na stránce klubu.",
-    "members": "{n} členů",
     "no_admin": "Zatím bez správce",
     "region_admins": "Správci regionu"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Zamítnout",
     "revoke": "Odvolat",
     "revoke_body": "{body} přestane spravovat {target}, vše se vrátí do stavu před nárokem."
+  },
+  "counts": {
+    "members_zero": "{n} členů",
+    "members_one": "{n} člen",
+    "members_two": "{n} členů",
+    "members_few": "{n} členové",
+    "members_many": "{n} člena",
+    "members_other": "{n} členů"
   }
 }

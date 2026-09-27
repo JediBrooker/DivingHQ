@@ -1948,7 +1948,6 @@
     "clubs": "Klubbar",
     "no_clubs_title": "Inga klubbar ännu",
     "no_clubs_body": "Klubbar visas här när de har valt din region vid registrering eller på sin klubbsida.",
-    "members": "{n} medlemmar",
     "no_admin": "Ingen administratör ännu",
     "region_admins": "Regionadministratörer"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Avslå",
     "revoke": "Återkalla",
     "revoke_body": "{body} driver inte längre {target}, som återgår till hur det var före anspråket."
+  },
+  "counts": {
+    "members_zero": "{n} medlemmar",
+    "members_one": "{n} medlem",
+    "members_two": "{n} medlemmar",
+    "members_few": "{n} medlemmar",
+    "members_many": "{n} medlemmar",
+    "members_other": "{n} medlemmar"
   }
 }

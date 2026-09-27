@@ -1948,7 +1948,6 @@
     "clubs": "클럽",
     "no_clubs_title": "아직 클럽이 없습니다",
     "no_clubs_body": "클럽이 가입 시 또는 클럽 페이지에서 지역을 선택하면 여기에 표시됩니다.",
-    "members": "회원 {n}명",
     "no_admin": "관리자 없음",
     "region_admins": "지역 관리자"
   },
@@ -1984,5 +1983,13 @@
     "reject": "거절",
     "revoke": "취소",
     "revoke_body": "{body}은(는) 더 이상 {target}을(를) 운영하지 않으며 신청 이전 상태로 돌아갑니다."
+  },
+  "counts": {
+    "members_zero": "회원 {n}명",
+    "members_one": "회원 {n}명",
+    "members_two": "회원 {n}명",
+    "members_few": "회원 {n}명",
+    "members_many": "회원 {n}명",
+    "members_other": "회원 {n}명"
   }
 }

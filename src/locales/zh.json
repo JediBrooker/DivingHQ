@@ -1948,7 +1948,6 @@
     "clubs": "俱乐部",
     "no_clubs_title": "还没有俱乐部",
     "no_clubs_body": "俱乐部在注册时或在俱乐部页面选择您的地区后会显示在这里。",
-    "members": "{n} 名会员",
     "no_admin": "尚无管理员",
     "region_admins": "地区管理员"
   },
@@ -1984,5 +1983,13 @@
     "reject": "拒绝",
     "revoke": "撤销",
     "revoke_body": "{body} 将不再管理 {target}，一切恢复到申请之前的状态。"
+  },
+  "counts": {
+    "members_zero": "{n} 名会员",
+    "members_one": "{n} 名会员",
+    "members_two": "{n} 名会员",
+    "members_few": "{n} 名会员",
+    "members_many": "{n} 名会员",
+    "members_other": "{n} 名会员"
   }
 }

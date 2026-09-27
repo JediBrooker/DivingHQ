@@ -1948,7 +1948,6 @@
     "clubs": "Klubber",
     "no_clubs_title": "Ingen klubber endnu",
     "no_clubs_body": "Klubber vises her, når de har valgt din region ved tilmelding eller på deres klubside.",
-    "members": "{n} medlemmer",
     "no_admin": "Ingen administrator endnu",
     "region_admins": "Regionsadministratorer"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Afvis",
     "revoke": "Tilbagekald",
     "revoke_body": "{body} driver ikke længere {target}, som vender tilbage til, som det var før kravet."
+  },
+  "counts": {
+    "members_zero": "{n} medlemmer",
+    "members_one": "{n} medlem",
+    "members_two": "{n} medlemmer",
+    "members_few": "{n} medlemmer",
+    "members_many": "{n} medlemmer",
+    "members_other": "{n} medlemmer"
   }
 }

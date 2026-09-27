@@ -1948,7 +1948,6 @@
     "clubs": "Clubs",
     "no_clubs_title": "No clubs yet",
     "no_clubs_body": "Clubs show up here once they've picked your region, at sign-up or on their club page.",
-    "members": "{n} members",
     "no_admin": "No admin yet",
     "region_admins": "Region admins"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Reject",
     "revoke": "Revoke",
     "revoke_body": "{body} stops running {target}, and it goes back to how it was before the claim."
+  },
+  "counts": {
+    "members_zero": "{n} members",
+    "members_one": "{n} member",
+    "members_two": "{n} members",
+    "members_few": "{n} members",
+    "members_many": "{n} members",
+    "members_other": "{n} members"
   }
 }

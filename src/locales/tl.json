@@ -1948,7 +1948,6 @@
     "clubs": "Mga club",
     "no_clubs_title": "Wala pang club",
     "no_clubs_body": "Lalabas dito ang mga club kapag napili na nila ang iyong rehiyon, sa pag-sign up o sa kanilang club page.",
-    "members": "{n} miyembro",
     "no_admin": "Wala pang admin",
     "region_admins": "Mga admin ng rehiyon"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Tanggihan",
     "revoke": "Bawiin",
     "revoke_body": "Hindi na pamamahalaan ng {body} ang {target}, babalik ito sa dati bago ang claim."
+  },
+  "counts": {
+    "members_zero": "{n} miyembro",
+    "members_one": "{n} miyembro",
+    "members_two": "{n} miyembro",
+    "members_few": "{n} miyembro",
+    "members_many": "{n} miyembro",
+    "members_other": "{n} miyembro"
   }
 }

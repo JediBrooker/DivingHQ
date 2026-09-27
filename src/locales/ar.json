@@ -1948,7 +1948,6 @@
     "clubs": "الأندية",
     "no_clubs_title": "لا توجد أندية بعد",
     "no_clubs_body": "تظهر الأندية هنا بعد أن تختار منطقتك، عند التسجيل أو من صفحة النادي.",
-    "members": "{n} أعضاء",
     "no_admin": "لا يوجد مشرف بعد",
     "region_admins": "مشرفو المنطقة"
   },
@@ -1984,5 +1983,13 @@
     "reject": "رفض",
     "revoke": "إلغاء",
     "revoke_body": "لن يعود {body} يدير {target}، ويعود كل شيء كما كان قبل الطلب."
+  },
+  "counts": {
+    "members_zero": "{n} عضو",
+    "members_one": "{n} عضو",
+    "members_two": "{n} عضوان",
+    "members_few": "{n} أعضاء",
+    "members_many": "{n} عضوًا",
+    "members_other": "{n} عضو"
   }
 }

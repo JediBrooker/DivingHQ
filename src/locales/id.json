@@ -1948,7 +1948,6 @@
     "clubs": "Klub",
     "no_clubs_title": "Belum ada klub",
     "no_clubs_body": "Klub muncul di sini setelah memilih wilayah Anda saat mendaftar atau di halaman klubnya.",
-    "members": "{n} anggota",
     "no_admin": "Belum ada admin",
     "region_admins": "Admin wilayah"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Tolak",
     "revoke": "Cabut",
     "revoke_body": "{body} tidak lagi mengelola {target}, semuanya kembali seperti sebelum klaim."
+  },
+  "counts": {
+    "members_zero": "{n} anggota",
+    "members_one": "{n} anggota",
+    "members_two": "{n} anggota",
+    "members_few": "{n} anggota",
+    "members_many": "{n} anggota",
+    "members_other": "{n} anggota"
   }
 }

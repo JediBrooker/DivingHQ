@@ -1948,7 +1948,6 @@
     "clubs": "Clubs",
     "no_clubs_title": "Aucun club pour l'instant",
     "no_clubs_body": "Les clubs apparaissent ici dès qu'ils ont choisi votre région, à l'inscription ou sur leur page de club.",
-    "members": "{n} membres",
     "no_admin": "Pas encore d'administrateur",
     "region_admins": "Administrateurs de la région"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Rejeter",
     "revoke": "Révoquer",
     "revoke_body": "{body} ne gère plus {target}, qui revient à l'état d'avant la revendication."
+  },
+  "counts": {
+    "members_zero": "{n} membres",
+    "members_one": "{n} membre",
+    "members_two": "{n} membres",
+    "members_few": "{n} membres",
+    "members_many": "{n} de membres",
+    "members_other": "{n} membres"
   }
 }

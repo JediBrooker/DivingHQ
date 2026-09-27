@@ -1948,7 +1948,6 @@
     "clubs": "Klubovi",
     "no_clubs_title": "Još nema klubova",
     "no_clubs_body": "Klubovi se ovdje pojavljuju kad odaberu vašu regiju, pri registraciji ili na stranici kluba.",
-    "members": "{n} članova",
     "no_admin": "Još nema administratora",
     "region_admins": "Administratori regije"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Odbij",
     "revoke": "Opozovi",
     "revoke_body": "{body} više ne vodi {target}, sve se vraća kako je bilo prije zahtjeva."
+  },
+  "counts": {
+    "members_zero": "{n} članova",
+    "members_one": "{n} član",
+    "members_two": "{n} članova",
+    "members_few": "{n} člana",
+    "members_many": "{n} članova",
+    "members_other": "{n} članova"
   }
 }

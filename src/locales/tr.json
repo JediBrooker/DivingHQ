@@ -1948,7 +1948,6 @@
     "clubs": "Kulüpler",
     "no_clubs_title": "Henüz kulüp yok",
     "no_clubs_body": "Kulüpler, kayıt sırasında veya kulüp sayfasında bölgenizi seçtiklerinde burada görünür.",
-    "members": "{n} üye",
     "no_admin": "Henüz yönetici yok",
     "region_admins": "Bölge yöneticileri"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Reddet",
     "revoke": "İptal et",
     "revoke_body": "{body} artık {target} yönetmiyor, her şey talepten önceki haline döner."
+  },
+  "counts": {
+    "members_zero": "{n} üye",
+    "members_one": "{n} üye",
+    "members_two": "{n} üye",
+    "members_few": "{n} üye",
+    "members_many": "{n} üye",
+    "members_other": "{n} üye"
   }
 }

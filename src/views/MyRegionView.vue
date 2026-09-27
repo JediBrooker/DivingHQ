@@ -8,10 +8,12 @@ import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
+import { usePlural } from '@/composables/usePlural'
 import EmptyState from '@/components/EmptyState.vue'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
 
 const { t } = useI18n()
+const { tn } = usePlural()
 const auth = useAuthStore()
 
 const regions = computed(() => auth.regionAdminOf)
@@ -71,7 +73,7 @@ onMounted(() => {
           <li v-for="c in detail[r.id].clubs" :key="c.id" class="row card-sm">
             <div class="who">
               <span class="name">{{ c.name }}<template v-if="c.short_code"> · {{ c.short_code }}</template></span>
-              <span class="meta">{{ $t('my_region.members', { n: c.member_count }) }}</span>
+              <span class="meta">{{ tn('counts.members', c.member_count) }}</span>
             </div>
             <span class="meta admins">
               <template v-if="c.admins.length">{{ c.admins.map(a => a.full_name).join(', ') }}</template>

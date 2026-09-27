@@ -1948,7 +1948,6 @@
     "clubs": "Vereine",
     "no_clubs_title": "Noch keine Vereine",
     "no_clubs_body": "Vereine erscheinen hier, sobald sie Ihre Region bei der Registrierung oder auf ihrer Vereinsseite gewählt haben.",
-    "members": "{n} Mitglieder",
     "no_admin": "Noch kein Admin",
     "region_admins": "Regionsadmins"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Ablehnen",
     "revoke": "Widerrufen",
     "revoke_body": "{body} führt {target} nicht mehr, alles wird wie vor dem Anspruch."
+  },
+  "counts": {
+    "members_zero": "{n} Mitglieder",
+    "members_one": "{n} Mitglied",
+    "members_two": "{n} Mitglieder",
+    "members_few": "{n} Mitglieder",
+    "members_many": "{n} Mitglieder",
+    "members_other": "{n} Mitglieder"
   }
 }

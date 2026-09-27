@@ -1948,7 +1948,6 @@
     "clubs": "Klubok",
     "no_clubs_title": "Még nincsenek klubok",
     "no_clubs_body": "A klubok akkor jelennek meg itt, ha regisztrációkor vagy a klub oldalán az Ön régióját választják.",
-    "members": "{n} tag",
     "no_admin": "Még nincs adminisztrátor",
     "region_admins": "Régió-adminisztrátorok"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Elutasítás",
     "revoke": "Visszavonás",
     "revoke_body": "{body} többé nem vezeti ezt: {target}, minden visszaáll az igény előtti állapotra."
+  },
+  "counts": {
+    "members_zero": "{n} tag",
+    "members_one": "{n} tag",
+    "members_two": "{n} tag",
+    "members_few": "{n} tag",
+    "members_many": "{n} tag",
+    "members_other": "{n} tag"
   }
 }

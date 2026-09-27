@@ -1948,7 +1948,6 @@
     "clubs": "Kluby",
     "no_clubs_title": "Brak klubów",
     "no_clubs_body": "Kluby pojawią się tutaj, gdy wybiorą twój region przy rejestracji lub na stronie klubu.",
-    "members": "{n} członków",
     "no_admin": "Brak administratora",
     "region_admins": "Administratorzy regionu"
   },
@@ -1984,5 +1983,13 @@
     "reject": "Odrzuć",
     "revoke": "Cofnij",
     "revoke_body": "{body} przestaje prowadzić {target}, wszystko wraca do stanu sprzed roszczenia."
+  },
+  "counts": {
+    "members_zero": "{n} członków",
+    "members_one": "{n} członek",
+    "members_two": "{n} członków",
+    "members_few": "{n} członkowie",
+    "members_many": "{n} członków",
+    "members_other": "{n} członka"
   }
 }
