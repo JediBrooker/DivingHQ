@@ -52,3 +52,13 @@ test("the privacy policy lists what the app stores and what a revoke removes", (
   assert.doesNotMatch(policy, /appointed while it had access stay in place/);
   assert.match(policy, /referee roles, club and region admins appointed since the approval/);
 });
+
+// Since migration 093 every register-org from a listed country opens a
+// claim (routes/auth.js), and 096 makes new clubs under a federation wait
+// by default. Three passages still described a pending federation that
+// lets clubs straight in.
+test("docs describe a federation registration as a claim", () => {
+  assert.doesNotMatch(read("README.md"), /in a country with no account yet waits in `pending`/);
+  assert.doesNotMatch(read("src/guide/content/faq.md"), /DivingHQ reviews a new federation before it goes live/);
+  assert.doesNotMatch(read("src/guide/content/quick-start.md"), /join your federation directly/);
+});

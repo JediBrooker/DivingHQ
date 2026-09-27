@@ -526,7 +526,7 @@ WHERE username = 'admin';
 
 ### Approving federations and deciding claims
 
-A federation registered at `/register-org` in a country with no account yet waits in `pending` until a system administrator approves it: **User Manager** → organisation filter → status `pending`. Claims that go to DivingHQ (too few voters, an objection, or a vote that ran out) wait on **Claims** (`/claims`), and the vote rules are tunable at `/admin/features`.
+A federation or state body registering at `/register-org` from a listed country opens a claim. When nobody from the country is on DivingHQ yet, the country's account is started for it and the claim goes to the system administrator on **Claims** (`/claims`), the same place as claims with too few voters, an objection or a vote that ran out. The vote rules are tunable at `/admin/features`. Only a registration with a code outside the country list still lands in `pending`, under **User Manager** → Pending requests → Federation registrations.
 
 ### Email and support
 

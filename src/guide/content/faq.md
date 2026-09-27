@@ -24,13 +24,13 @@ Confirm your email address first. As soon as you sign up we send a "confirm your
 
 Nothing arrived? Give it a few minutes and check your spam or junk folder. Then try to sign in anyway: the sign-in page tells you the address isn't confirmed yet and offers **Send a new verification link**.
 
-Roles don't hold up signing in. Everyone starts as a spectator, and the role you asked for (diver, judge, referee) arrives once your club admin or federation approves it. Until then you can sign in and look around.
+Roles don't hold up signing in. Everyone starts as a spectator, and the role you asked for (diver, judge, coach, referee) arrives once whoever reviews it approves it: your club admin, your federation, or DivingHQ. Until then you can sign in and look around.
 
 ### "I registered a federation and it says it's waiting for approval"
 
-When nobody from your country is on DivingHQ yet, DivingHQ reviews a new federation before it goes live, so nobody can become a country's governing body just by saying so. You'll get an email as soon as it's approved.
+Every federation registration from a listed country opens a **claim** on that country's account. When nobody from your country is on DivingHQ yet, DivingHQ reviews it, so nobody can become a country's governing body just by saying so, and you'll get an email as soon as it's decided. You can sign in meanwhile.
 
-If clubs from your country were already on DivingHQ, your registration opened a claim instead, and they vote on it. See [Roles & Permissions → Claims](/guide/roles-and-permissions#claims).
+If clubs or state bodies from your country were already on DivingHQ, they vote on it instead. See [Roles & Permissions → Claims](/guide/roles-and-permissions#claims).
 
 ### "I just signed up as a federation admin and the dashboard sent me to /setup. What is that?"
 

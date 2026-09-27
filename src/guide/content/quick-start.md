@@ -96,7 +96,7 @@ When the last dive is scored, click **Finalise Event**. The scoreboard switches 
 If you represent a national federation or a state, provincial or home-nation body, register at [Register your org](/register-org) and say which country, and optionally which region, you represent.
 
 - **Clubs from your country are already on DivingHQ.** Your registration opens a **claim** to take over the account they started. Once you confirm your email, the clubs (or, for a national claim, the state bodies already here) vote on it on **Claims**. If there aren't enough eligible voters, or anyone objects, DivingHQ decides. A state body in a country whose federation already runs DivingHQ is approved by that federation instead. Once it's approved you become its federation admin, or region admin for a state, and everything the clubs built stays in place: meets, results, records and members.
-- **Nobody from your country is here yet.** DivingHQ reviews your registration first. Once it's approved, clubs from your country that sign up join your federation directly.
+- **Nobody from your country is here yet.** Your registration still opens a claim, and DivingHQ reviews it. Once it's approved you become the federation admin, and new clubs from your country then wait for your approval on **Clubs**, unless you switch **New clubs from signup** to join automatically.
 
 Either way, [Roles & Permissions](/guide/roles-and-permissions#claims) explains what changes once you're in, and [Admin Tasks](/guide/admin-tasks) covers running a federation day to day.
 
