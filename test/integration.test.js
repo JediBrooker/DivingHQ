@@ -6689,3 +6689,68 @@ test("claiming a past account with scored dives moves them", async (t) => {
     await teardownFixture(st);
   }
 });
+
+// Claiming a past account hard-deletes the old user, and the record books
+// cascade off users. The old account's records have to move over first,
+// or a national record holder who deletes and comes back loses every one.
+test("claiming a past account carries its records over", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const lib = recordKit.lib();
+    const club = await recordKit.club(st.orgId, "Comeback Divers", "CBD");
+    const old = await recordKit.diver(st.orgId, club, "female", "Lou Comeback");
+    const meName = `int-me-${crypto.randomBytes(3).toString("hex")}`;
+    const me = await insertUser({ orgId: st.orgId, role: "diver", username: meName, fullName: "Lou Comeback" });
+    await pool.query("UPDATE users SET club_id = $2, gender = 'female' WHERE id = $1", [me, club]);
+    const [d1, d2] = (await pool.query(
+      "SELECT id FROM dive_directory WHERE height = 3 AND is_custom = FALSE ORDER BY dive_code, position LIMIT 2",
+    )).rows.map((r) => r.id);
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+    // The old account holds the club and national record on d1, and a
+    // personal best on d2. The new one has a lower personal best on d1.
+    await recordKit.dive(women, old, 1, d1, 7);
+    await lib.checkAndApplyRecords({ eventId: women.id, competitorId: old, roundNumber: 1 });
+    await recordKit.dive(women, old, 2, d2, 5);
+    await lib.checkAndApplyRecords({ eventId: women.id, competitorId: old, roundNumber: 2 });
+    // Another event: a claim refuses two entries for the same round.
+    const later = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(later, me, 1, d1, 6);
+    await lib.checkAndApplyRecords({ eventId: later.id, competitorId: me, roundNumber: 1 });
+    const oldBest = (await pool.query(
+      "SELECT score::float FROM records_personal WHERE user_id = $1 AND dive_code = (SELECT dive_code FROM dive_directory WHERE id = $2)",
+      [old, d1],
+    )).rows[0].score;
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [old]);
+
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username: meName, password: "not-used-here" } });
+    const claim = await fetchJson("POST", "/api/users/me/claim", {
+      token: login.body.token, body: { old_user_ids: [old], password: "not-used-here" },
+    });
+    assert.equal(claim.status, 200, JSON.stringify(claim.body));
+
+    const holders = async (tbl) => (await pool.query(
+      `SELECT holder_id FROM ${tbl} WHERE event_id = $1`, [women.id],
+    )).rows.map((r) => r.holder_id);
+    for (const tbl of ["records_club", "records_federation"]) {
+      const h = await holders(tbl);
+      assert.ok(h.length === 2 && h.every((id) => id === me), `${tbl} survived under the new account: ${JSON.stringify(h)}`);
+    }
+    // And the scores came with the dive lists (they used to trip the
+    // scores -> dive list foreign key and fail the whole claim).
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM scores WHERE competitor_id = $1 AND event_id = $2", [me, women.id])).rows[0].n, 10);
+    const pbs = (await pool.query(
+      "SELECT dive_code, score::float FROM records_personal WHERE user_id = $1 ORDER BY dive_code", [me],
+    )).rows;
+    assert.equal(pbs.length, 2, JSON.stringify(pbs));
+    assert.ok(pbs.some((r) => r.score === oldBest), "the better personal best on d1 is the one kept");
+    const archived = (await pool.query(
+      "SELECT score::float FROM records_personal_history WHERE user_id = $1", [me],
+    )).rows.map((r) => r.score);
+    assert.ok(archived.length >= 1 && archived.every((s) => s < oldBest), JSON.stringify(archived));
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
