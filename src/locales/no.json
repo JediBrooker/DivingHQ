@@ -557,7 +557,7 @@
       "diver": {
         "name": "Stuper",
         "desc": "Du konkurrerer. Du sender inn en stupliste (hvilke stup du gjør per runde) før hver konkurranses påmeldingsfrist, og åpner så <strong>Stevnedagsvisning</strong> på dagen for å se din plass i køen og hva som venter.",
-        "step_1": "Logg inn, eller godta invitasjonen fra forbundsadministratoren din",
+        "step_1": "Registrer deg og velg klubben din",
         "step_2": "Åpne <strong>Send inn stuplister</strong> og velg stupene dine per runde",
         "step_3": "På stevnedagen åpner du <strong>Stevnedagsvisning</strong> på telefonen",
         "step_4": "Resultatene dine og analysene ligger under <strong>Min profil</strong>",
@@ -604,7 +604,7 @@
       },
       "region_admin": {
         "name": "Regionsadministrator",
-        "desc": "Du tar deg av en delstat, provins eller nasjon: arrangerer mesterskapene, kan tre inn på stevnene til alle klubbene der og godkjenner rolleforespørsler fra klubbmedlemmene. Forbundet ditt utnevner deg, eller DivingHQ hvis det ikke finnes ennå.",
+        "desc": "Du tar deg av en delstat, provins eller nasjon: arrangerer mesterskapene, kan tre inn på stevnene til alle klubbene der og godkjenner rolleforespørsler fra klubbmedlemmene. Forbundet ditt utnevner deg, eller DivingHQ hvis det ikke finnes ennå. Et delstatsforbund kan søke om å drive regionen sin fra <strong>Registrer organisasjonen</strong>.",
         "step_1": "Åpne <strong>Min region</strong> for å se klubbene og hvem som driver dem",
         "step_2": "Opprett mesterskapene i <strong>Stevneadministrator</strong> med regionen som arrangør",
         "step_3": "Godkjenn medlemmer som vil stupe, dømme eller være overdommer",
@@ -632,7 +632,7 @@
     },
     "faq": {
       "register_q": "Jeg har akkurat registrert meg, men kan ikke logge inn enda.",
-      "register_a": "E-postbekreftelse først — klikk på lenken i velkomstmeldingen. For andre roller enn stuper (dommer, trener, stevneleder) må forbundsadministratoren også godkjenne deg. Begge bør skje innen minutter; hvis du ikke ser e-posten etter 10 minutter, sjekk søppelpost og be så administratoren bekrefte at kontoen er aktiv.",
+      "register_a": "Bekreft e-posten din først: klikk på lenken i bekreftelses-e-posten vi sendte da du registrerte deg. Ingenting der? Sjekk søppelposten, eller prøv å logge inn og be om en ny lenke. Roller blokkerer ikke innlogging: du starter som tilskuer og får mer når klubb- eller forbundsadministratoren din godkjenner det.",
       "judge_device_q": "Jeg er dommer — hvilken enhet bør jeg bruke?",
       "judge_device_a": "Enhver moderne telefon med nettleser fungerer. iPhone 12 / Pixel 6 eller nyere er ideelt. Visningen er laget for mobil; du kommer til å trykke tall hele stevnet, så en telefon du holder behagelig med én hånd er riktig valg. Wifi foretrekkes framfor 4G hvis hallen har det — poengsummene synkroniseres også via 4G, men nettverkets svartid er merkbart lengre.",
       "scoring_q": "Hvordan fungerer poenggivningen?",

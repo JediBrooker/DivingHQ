@@ -557,7 +557,7 @@
       "diver": {
         "name": "Hoppare",
         "desc": "Du tävlar. Du lämnar in en hopplista (vilka hopp du gör per omgång) före varje tävlings anmälningsdeadline och kollar sedan <strong>Tävlingsdagsvyn</strong> på dagen för att se din plats i kön och vad som väntar.",
-        "step_1": "Logga in eller acceptera inbjudan från din förbundsadministratör",
+        "step_1": "Registrera dig och välj din klubb",
         "step_2": "Öppna <strong>Lämna in hopplistor</strong> och välj dina hopp per omgång",
         "step_3": "På tävlingsdagen öppnar du <strong>Tävlingsdagsvyn</strong> i mobilen",
         "step_4": "Dina poäng och din analys finns under <strong>Min profil</strong>",
@@ -604,7 +604,7 @@
       },
       "region_admin": {
         "name": "Regionadministratör",
-        "desc": "Du ansvarar för en delstat, provins eller nation: arrangerar mästerskapen, kan kliva in på alla klubbars tävlingar och godkänner rollförfrågningar från klubbarnas medlemmar. Ditt förbund utser dig, eller DivingHQ om det inte finns något ännu.",
+        "desc": "Du ansvarar för en delstat, provins eller nation: arrangerar mästerskapen, kan kliva in på alla klubbars tävlingar och godkänner rollförfrågningar från klubbarnas medlemmar. Ditt förbund utser dig, eller DivingHQ om det inte finns något ännu. Ett delstatsförbund kan ansöka om att driva sin region via <strong>Registrera din organisation</strong>.",
         "step_1": "Öppna <strong>Min region</strong> för att se dina klubbar och vem som driver dem",
         "step_2": "Skapa mästerskapen i <strong>Tävlingshanterare</strong> med regionen som arrangör",
         "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara överdomare",
@@ -632,7 +632,7 @@
     },
     "faq": {
       "register_q": "Jag har precis registrerat mig men kan inte logga in än.",
-      "register_a": "Först e-postverifiering — klicka på länken i välkomstmejlet. För andra roller än hoppare (domare, tränare, tävlingsledare) måste din förbundsadministratör också godkänna dig. Båda brukar gå på några minuter; om du inte ser mejlet efter 10 minuter, kolla skräpposten och be sedan administratören bekräfta att kontot är aktivt.",
+      "register_a": "Bekräfta din e-post först: klicka på länken i bekräftelsemejlet vi skickade när du registrerade dig. Inget där? Kolla skräpposten, eller försök logga in och be om en ny länk. Roller hindrar inte inloggning: du börjar som åskådare och får mer när din klubb- eller förbundsadministratör godkänner det.",
       "judge_device_q": "Jag är domare — vilken enhet ska jag använda?",
       "judge_device_a": "Vilken modern mobil med webbläsare som helst funkar. iPhone 12 / Pixel 6 eller nyare är idealiskt. Vyn är gjord för mobilen; du kommer trycka in siffror hela tävlingen, så en mobil du kan greppa bekvämt med en hand är rätt val. Wifi är att föredra framför 4G om lokalen har det — poängen synkas via 4G också, men svarstiden är märkbart längre.",
       "scoring_q": "Hur fungerar poängsättningen?",

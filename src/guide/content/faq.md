@@ -7,6 +7,7 @@ Common questions, error states, and "why is X happening" answers, plus a glossar
 | If the problem is about… | Start here |
 |---|---|
 | Login, registration, email, setup wizard | [Setup](#setup) |
+| Clubs, regions, federations and claims | [Clubs and federations](#clubs-and-federations) |
 | Start Event, Control Room, scoring, judges | [Running a meet](#running-a-meet) |
 | Boards, warmups, judge overlaps, delays | [Session scheduler](#session-scheduler) |
 | Synchro panels and partners | [Synchro events](#synchro-events) |
@@ -47,6 +48,33 @@ EMAIL_FROM=noreply@your-domain
 The `EMAIL_FROM` domain must be onboarded to Cloudflare Email Sending.
 
 `APP_BASE_URL` also needs to be set so reset-password links point at the right host.
+
+## Clubs and federations
+
+### "Our federation isn't on DivingHQ. Can our club still use it?"
+
+Yes. Clubs can start before their federation. [Create an account](/register), pick your country and choose **+ Create a new club**; in a country with no federation on DivingHQ yet, that makes you the club's admin. You can run your own meets, approve your members and add co-admins from **My club**. See the [Quick Start](/guide/quick-start).
+
+### "Who approves my role request?"
+
+It depends on who runs your country on DivingHQ:
+
+- **No federation yet:** your club's admins, on **My club**, or the admins of your club's region. They can approve divers, judges and referees. Nobody can approve themselves as a judge or referee, so a club admin's own request goes to another admin or to DivingHQ. If your club has no admin at all, DivingHQ reviews it.
+- **Under a federation:** the federation's admins, in **User Manager**.
+
+Either way you can sign in while you wait. You're a spectator until it's approved.
+
+### "Our federation (or state body) wants to take over. How does that work?"
+
+It registers at [Register your org](/register-org). Because your clubs are already here, that opens a **claim** instead of a second account. The club admins affected are told by email and in the app, and vote on it on **Claims**. Any objection sends it to DivingHQ to decide. Once it's approved the body runs the country or region, and your club keeps all its meets, results, records and members. The full rules are in [Roles & Permissions → Claims](/guide/roles-and-permissions#claims).
+
+### "What changes for our club after a claim is approved?"
+
+Your club admins keep running your club's meets. What moves to the federation (or state body) is the paperwork above the club: approving role requests, appointing club admins, and seeing members across the whole country or region. Nothing you've built is copied or moved. If you think a claim was wrong, write to [support@divinghq.app](mailto:support@divinghq.app).
+
+### "Why does the scoreboard show a club code instead of a country?"
+
+That's the meet's **Divers represent** setting, on the meet's **Edit** dialog in Meet Manager. A club meet usually shows each diver's club, a national championship their state or province, and an international meet their country. It also decides what the medal table groups by. See [Roles & Permissions → Divers represent](/guide/roles-and-permissions#divers-represent).
 
 ## Running a meet
 
@@ -134,7 +162,7 @@ Yes. The URL updates to `/judge-analysis?event=<id>` when you pick an event — 
 
 ### "How do I request a club change?"
 
-Open your **Dive Sheets** page (`/competitor`). The **My club** card at the top shows your current club. Click **Request club change**, pick the new club, add an optional note, and submit. Your org admin reviews and approves or rejects the request in **User Manager → Requests**.
+Open your **Dive Sheets** page (`/competitor`). The **My club** card at the top shows your current club. Click **Request club change**, pick the new club, add an optional note, and submit. Your federation admin reviews and approves or rejects the request in **User Manager → Requests**. In a country with no federation on DivingHQ yet, DivingHQ reviews it.
 
 ### "I'm transferring to a club in a different federation — why does it say 'Pending' for so long?"
 
@@ -189,7 +217,7 @@ A 5-judge synchro panel doesn't have enough slots for the role split. Use 7, 9, 
 
 ### "Synchro pair from two countries — only one country chip showing"
 
-The composable shows a second chip only when the partner's country differs from the lead's. If both divers are flagged the same country in your DB, only one chip renders (intentional — it'd be a duplicate). Check the partner's account — their `country_code` (org-level) should differ.
+The scoreboard shows a second chip only when the partner represents something different from the lead. If both divers represent the same country (or state, or club, depending on the meet's **Divers represent** setting), only one chip renders, since the second would be a duplicate. If they really come from different places, check each diver's club and country on their profile: what a diver represents is taken from their account at the moment they're entered in the event.
 
 ## Records
 

@@ -557,7 +557,7 @@
       "diver": {
         "name": "Műugró",
         "desc": "Ön versenyez. Minden esemény nevezési határideje előtt benyújt egy ugráslapot (mely ugrásokat fogja végrehajtani fordulónként), majd a versenynapon megnyitja a <strong>Versenynapi nézetet</strong>, ahol látja a soraiban elfoglalt helyét és azt, amit pontoznia kell.",
-        "step_1": "Jelentkezzen be vagy fogadja el a szövetségi adminisztrátor meghívását",
+        "step_1": "Regisztráljon, és válassza ki a klubját",
         "step_2": "Nyissa meg az <strong>Ugráslapok beküldése</strong> oldalt, és válassza ki ugrásait fordulónként",
         "step_3": "A verseny napján nyissa meg a <strong>Versenynapi nézetet</strong> a telefonján",
         "step_4": "Pontszámai és elemzései a <strong>Saját profil</strong> alatt találhatók",
@@ -604,7 +604,7 @@
       },
       "region_admin": {
         "name": "Régió-adminisztrátor",
-        "desc": "Egy államért, tartományért vagy országért felel: rendezi a bajnokságait, beavatkozhat bármely klubja versenyeibe, és jóváhagyja a klubtagok szerepkör-kérelmeit. A szövetsége nevezi ki, vagy a DivingHQ, amíg nincs szövetség.",
+        "desc": "Egy államért, tartományért vagy országért felel: rendezi a bajnokságait, beavatkozhat bármely klubja versenyeibe, és jóváhagyja a klubtagok szerepkör-kérelmeit. A szövetsége nevezi ki, vagy a DivingHQ, amíg nincs szövetség. Egy állami szervezet a <strong>Szervezet regisztrálása</strong> oldalon kérheti, hogy ő irányítsa a régióját.",
         "step_1": "Nyissa meg a <strong>Saját régióm</strong> oldalt a klubokért és vezetőikért",
         "step_2": "Hozza létre bajnokságait a <strong>Versenymenedzserben</strong> a régió rendezésében",
         "step_3": "Hagyja jóvá a műugrani, bíráskodni vagy vezetőbíró lenni kívánó tagokat",
@@ -632,7 +632,7 @@
     },
     "faq": {
       "register_q": "Most regisztráltam, de még nem tudok bejelentkezni.",
-      "register_a": "Először e-mail-megerősítés — kattintson az üdvözlő e-mailben lévő linkre. Nem-műugró szerepkörökhöz (pontozóbíró, edző, versenyvezető) a szövetségi adminisztrátornak is jóvá kell hagynia Önt. Mindkettő néhány percen belül megtörténik; ha 10 perc után sem látja az e-mailt, ellenőrizze a spam mappát, majd kérdezze meg az adminisztrátort, hogy aktív-e fiókja.",
+      "register_a": "Először erősítse meg az e-mail-címét: kattintson a regisztrációkor küldött megerősítő e-mailben lévő linkre. Nem találja? Nézze meg a spam mappát, vagy próbáljon bejelentkezni, és kérjen új linket. A szerepkörök nem akadályozzák a bejelentkezést: nézőként kezd, és továbbiakat kap, amint a klubja vagy szövetsége adminisztrátora jóváhagyja.",
       "judge_device_q": "Pontozóbíró vagyok — milyen eszközt használjak?",
       "judge_device_a": "Bármely modern, böngészővel rendelkező telefon működik. iPhone 12 / Pixel 6 vagy újabb ideális. A nézet mobil-első; a verseny során számokat fog koppintani, ezért egy kézzel kényelmesen tartható telefon a jó választás. A WiFi előnyösebb a 4G-nél, ha a helyszín támogatja — a pontszámok 4G-n is szinkronizálódnak, de a hálózati körút észrevehetően hosszabb.",
       "scoring_q": "Hogyan működik a pontozás?",

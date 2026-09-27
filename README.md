@@ -9,6 +9,8 @@
 
 A multi-tenant diving competition scoring app. Real-time judge scoring over WebSockets, World Aquatics-compliant point calculations, prelim → semi → final progression, role-based dashboards (diver / coach / referee / meet manager), self-serve analytics, and a printable program / results pipeline that goes from "live broadcast" to "PDF export" without leaving the app. The interface is a clean, responsive CRM layout — a persistent collapsible sidebar, light **and** dark themes — built on IBM Plex Sans + DM Mono.
 
+It's built for clubs, state bodies and federations alike. **A club can start on its own**, before its national federation or state body is on DivingHQ: whoever creates the club is its admin and can run its meets straight away. When the federation or state body arrives it *claims* the account the clubs started (the clubs vote on it), and every meet, result and record stays where it is.
+
 Built around five audiences:
 
 - **Divers** — Diver Portal for building and submitting dive lists per event (with World Aquatics DD lookup, height filter, synchro partner autocomplete), plus a personal profile with PBs, score-trend sparkline, average DD, best single dive, and a customisable analytics dashboard with 10+ widgets. Divers can also request a **club change** (subject to org-admin approval) from their Dive Sheets page.
@@ -57,19 +59,19 @@ The public landing page. Anyone can sign in, create an account, watch a live mee
 
 #### Sign In
 
-Three entry points from one screen: existing users sign in, individuals join an existing federation via "Register here", and a brand-new federation admin clicks "Register your org". Forgot-password sends a single-use 30-min reset link.
+Three entry points from one screen: existing users sign in, everyone else (divers, officials, and anyone starting a club) creates an account via "Register here", and a national federation or state body clicks "Register your org". Forgot-password sends a single-use 30-min reset link, and an account whose email isn't confirmed yet gets a "send a new verification link" button.
 
 ![Sign In](./public/guide-screenshots/login.png)
 
 #### Sign Up (individual)
 
-The path for an individual diver, judge, or coach to join an existing federation. Pick the federation from the dropdown, role from the chips, fill in details. New accounts go through email verification and (for non-diver roles) admin approval before they can sign in.
+The path for everyone who isn't a governing body. Pick your country (the page says whether anyone from it is on DivingHQ yet), your state or province where the country has them, then your club, or **+ Create a new club** to start one. In a country with no federation on DivingHQ yet, creating a club makes you its club admin. Pick the role you want (diver, judge, referee); everyone starts as a spectator and gets the role once a club, region or federation admin approves it. New accounts confirm their email before they can sign in.
 
 ![Sign Up](./public/guide-screenshots/register.png)
 
-#### Register a Federation
+#### Register a Federation or State Body
 
-The first-time path for a country federation or club to register an organisation on DivingHQ. Org admin lands here, fills in name + country code + slug + admin credentials, and the request goes to the system administrator's queue for approval before the federation can run meets.
+For national federations and state, provincial or home-nation bodies, not clubs (clubs use Sign Up). The body gives its name, country, optionally its region, and its admin's account details. If clubs from that country or region are already on DivingHQ, this opens a **claim** on the account they started: once the applicant confirms their email the clubs vote on it, and DivingHQ decides when there are too few voters or anyone objects. If nobody from the country is on DivingHQ yet, DivingHQ reviews the registration before the federation goes live.
 
 ![Register a Federation](./public/guide-screenshots/register-org.png)
 
@@ -617,7 +619,7 @@ The split is the result of an incremental refactor from a single 6,400-line `ser
 <details>
 <summary><h2 id="roles">Roles</h2></summary>
 
-DivingHQ has eight role personas — seven values in the `org_role` enum plus the `is_system_admin` boolean flag. Each persona below describes the role's context and the things that role can actually do in the app.
+DivingHQ has ten role personas: seven values in the `org_role` enum, the `is_system_admin` boolean flag, and two body-level admin seats that aren't org roles at all, club admin (`club_admins`) and region admin (`region_admins`). Each persona below describes the role's context and the things that role can actually do in the app. The in-app [Roles & Permissions](https://divinghq.app/guide/roles-and-permissions) page covers the same ground for users, including how claims work.
 
 ### `is_system_admin` — Platform operator
 
@@ -625,6 +627,7 @@ The platform operator runs DivingHQ as a multi-tenant SaaS — the only person w
 
 **What they can do:**
 - Approve or reject new federation sign-ups (`/api/orgs/pending`)
+- Decide escalated claims and revoke approved ones (`lib/claims.js`)
 - Run database migrations and inspect `schema_meta` to confirm the deployed version
 - Read `score_audit_log` and `role_audit_log` across every org
 - See every event in every org via `/api/events` (no org filter)
@@ -643,6 +646,26 @@ Top of the food chain inside one federation — the person whose name is on the 
 - Set `entries_close_at` on events to enforce registration deadlines
 - Sign off federation records (`records_federation`)
 - Manage clubs and teams within the federation
+
+### `region_admins` — State, province or home-nation body
+
+Looks after one region of a country (migration 088). Appointed by the federation's org admins, by the sysadmin where the country has no federation yet, or by an approved claim when a state body registers through `/register-org`.
+
+**What they can do:**
+- See every club in the region and who admins it (`/region`)
+- Host the region's championships (`meets.host_region_id`) and act as a delegate on any meet hosted by one of the region's clubs (`isEventDelegate`)
+- Review role requests from members of the region's clubs, in an unclaimed country (`lib/role-requests.js`)
+- Vote on a national claim once the region itself is claimed
+
+### `club_admins` — Club administrator
+
+Runs one club (migration 087). In an **unclaimed** country (`organisations.claim_state = 'unclaimed'`, no federation yet) the person who created the club is its first admin and can add co-admins; under a federation, the org admins appoint club admins.
+
+**What they can do:**
+- Host meets (`meets.host_club_id`) and run them end to end as the event's delegate: events, entries, panels, the schedule, the Control Room
+- Review their members' requests for `diver`, `judge` and `referee` in an unclaimed country (never approving themselves as an official)
+- Add and remove co-admins and set the club's region while the country is unclaimed
+- Vote on claims (`/claims`) when a federation or state body applies to take over
 
 ### `meet_manager` — Meet organiser
 
@@ -720,6 +743,8 @@ Friends, family, sponsors. Often anonymous — no account, no token. Frequently 
 |---|---|---|---|
 | `is_system_admin` | Cross-org | Admin console + audit logs | Operate the platform across every federation |
 | `org_admin` | One org, full control | ManagerView | Run the federation: events, roles, records, deadlines |
+| `region_admins` row | One region | MyRegionView + ManagerView | Run the region's championships and its clubs' role requests |
+| `club_admins` row | One club | MyClubView + ManagerView | Run the club's meets and approve its members |
 | `meet_manager` | Events they manage | ManagerView + ControlView | Run the meet on the day, including late-entry override |
 | `referee` | Per-event assignment | ScoreboardView + audit log | Defend panel integrity, authorise score edits |
 | `judge` | Per-event assignment | JudgeView (phone) | Score dives over the socket |

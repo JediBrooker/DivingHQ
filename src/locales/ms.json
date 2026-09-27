@@ -546,7 +546,7 @@
       "diver": {
         "name": "Peterjun",
         "desc": "Anda bertanding. Anda akan menghantar senarai terjunan (terjunan mana yang akan anda lakukan, mengikut pusingan) sebelum tarikh akhir pendaftaran setiap acara, kemudian semak <strong>Paparan Hari Pertandingan</strong> pada hari itu untuk melihat kedudukan baris gilir anda dan apa yang anda perlu lakukan.",
-        "step_1": "Log masuk atau terima jemputan daripada pentadbir persekutuan anda",
+        "step_1": "Daftar dan pilih kelab anda",
         "step_2": "Buka <strong>Hantar Senarai Terjunan</strong> dan pilih terjunan setiap pusingan",
         "step_3": "Pada hari pertandingan, buka <strong>Paparan Hari Pertandingan</strong> pada telefon anda",
         "step_4": "Markah + analitik anda tersedia di <strong>Profil Saya</strong>",
@@ -593,7 +593,7 @@
       },
       "region_admin": {
         "name": "Pentadbir rantau",
-        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya, boleh campur tangan dalam pertandingan mana-mana kelabnya, dan meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda, atau DivingHQ jika belum ada persekutuan.",
+        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya, boleh campur tangan dalam pertandingan mana-mana kelabnya, dan meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda, atau DivingHQ jika belum ada persekutuan. Badan negeri boleh memohon untuk mengendalikan wilayahnya melalui <strong>Daftarkan organisasi anda</strong>.",
         "step_1": "Buka <strong>Rantau saya</strong> untuk melihat kelab dan pengurusnya",
         "step_2": "Cipta kejohanan anda dalam <strong>Pengurus pertandingan</strong> dengan rantau anda sebagai tuan rumah",
         "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau menjadi pengadil",
@@ -621,7 +621,7 @@
     },
     "faq": {
       "register_q": "Saya baru sahaja mendaftar, tetapi belum boleh log masuk.",
-      "register_a": "Pengesahan e-mel dahulu — klik pautan dalam e-mel alu-aluan. Untuk peranan selain peterjun (hakim, jurulatih, pengurus pertandingan), pentadbir persekutuan anda juga perlu meluluskan anda. Kedua-duanya patut berlaku dalam beberapa minit; jika anda tidak melihat e-mel selepas 10 minit, semak spam, kemudian minta pentadbir mengesahkan akaun anda aktif.",
+      "register_a": "Sahkan e-mel anda dahulu: klik pautan dalam e-mel pengesahan yang kami hantar semasa anda mendaftar. Tiada? Semak folder spam, atau cuba log masuk dan minta pautan baharu. Peranan tidak menghalang log masuk: anda bermula sebagai penonton dan mendapat lebih apabila pentadbir kelab atau persekutuan anda meluluskannya.",
       "judge_device_q": "Saya hakim — peranti apa yang patut saya gunakan?",
       "judge_device_a": "Mana-mana telefon moden dengan pelayar berfungsi. iPhone 12 / Pixel 6 dan lebih baharu ialah ideal. Paparan dibuat khas untuk mudah alih; anda akan menghabiskan masa pertandingan mengetik nombor, jadi telefon yang selesa digenggam sebelah tangan adalah pilihan tepat. WiFi lebih diutamakan daripada 4G jika tempat itu ada — markah anda tetap menyelaras menerusi 4G tetapi laluan rangkaian lebih lambat.",
       "scoring_q": "Bagaimana pemarkahan berfungsi?",

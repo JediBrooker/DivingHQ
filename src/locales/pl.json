@@ -557,7 +557,7 @@
       "diver": {
         "name": "Skoczek",
         "desc": "Startujesz. Złożysz kartę skoków (jakie skoki wykonasz, w której rundzie) przed terminem zgłoszeń każdej konkurencji, a następnie w dniu zawodów otworzysz <strong>Widok Dnia Zawodów</strong>, aby zobaczyć swoją pozycję w kolejce i co masz do wykonania.",
-        "step_1": "Zaloguj się lub przyjmij zaproszenie od administratora swojej federacji",
+        "step_1": "Zarejestruj się i wybierz swój klub",
         "step_2": "Otwórz <strong>Złóż Karty Skoków</strong> i wybierz swoje skoki na każdą rundę",
         "step_3": "W dniu zawodów otwórz na telefonie <strong>Widok Dnia Zawodów</strong>",
         "step_4": "Twoje wyniki i analizy znajdziesz w <strong>Mój Profil</strong>",
@@ -604,7 +604,7 @@
       },
       "region_admin": {
         "name": "Administrator regionu",
-        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa, możesz wkroczyć w zawody każdego z klubów i zatwierdzasz prośby członków klubów o role. Wyznacza cię federacja, a dopóki jej nie ma, DivingHQ.",
+        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa, możesz wkroczyć w zawody każdego z klubów i zatwierdzasz prośby członków klubów o role. Wyznacza cię federacja, a dopóki jej nie ma, DivingHQ. Organizacja stanowa może złożyć wniosek o prowadzenie swojego regionu przez <strong>Zarejestruj organizację</strong>.",
         "step_1": "Otwórz <strong>Mój region</strong>, aby zobaczyć kluby i kto je prowadzi",
         "step_2": "Utwórz mistrzostwa w <strong>Menedżerze zawodów</strong>, organizowane przez twój region",
         "step_3": "Zatwierdzaj członków, którzy chcą skakać, sędziować lub być sędzią głównym",
@@ -632,7 +632,7 @@
     },
     "faq": {
       "register_q": "Właśnie się zarejestrowałem, ale jeszcze nie mogę się zalogować.",
-      "register_a": "Najpierw weryfikacja e-maila — kliknij link w wiadomości powitalnej. W przypadku ról innych niż skoczek (sędzia, trener, dyrektor zawodów) administrator Twojej federacji musi Cię też zatwierdzić. Oba kroki powinny zająć kilka minut; jeśli po 10 minutach nie widzisz maila, sprawdź spam, a potem poproś administratora o potwierdzenie, że Twoje konto jest aktywne.",
+      "register_a": "Najpierw potwierdź e-mail: kliknij link w wiadomości potwierdzającej, którą wysłaliśmy przy rejestracji. Nie ma jej? Sprawdź folder spam albo spróbuj się zalogować i poproś o nowy link. Role nie blokują logowania: zaczynasz jako widz, a więcej uprawnień dostajesz, gdy zatwierdzi je administrator twojego klubu lub federacji.",
       "judge_device_q": "Jestem sędzią — jakiego urządzenia powinienem użyć?",
       "judge_device_a": "Wystarczy dowolny współczesny telefon z przeglądarką. Idealnie iPhone 12 / Pixel 6 lub nowszy. Widok jest projektowany pod telefon; spędzisz zawody, stukając w cyfry, więc telefon, który wygodnie trzymasz w jednej dłoni, to dobry wybór. Wifi jest lepsze od 4G, jeśli obiekt je oferuje — noty zsynchronizują się i przez 4G, ale czas podróży po sieci jest zauważalnie dłuższy.",
       "scoring_q": "Jak działa ocenianie?",

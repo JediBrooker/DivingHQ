@@ -557,7 +557,7 @@
       "diver": {
         "name": "Udspringer",
         "desc": "Du konkurrerer. Du indsender en springliste (hvilke spring du laver pr. runde) inden hver konkurrences tilmeldingsfrist og åbner derefter <strong>Stævnedag-visning</strong> på dagen for at se din plads i køen og hvad der venter.",
-        "step_1": "Log ind, eller acceptér invitationen fra din forbundsadministrator",
+        "step_1": "Opret dig og vælg din klub",
         "step_2": "Åbn <strong>Indsend springlister</strong> og vælg dine spring pr. runde",
         "step_3": "På stævnedagen åbnes <strong>Stævnedag-visning</strong> på din telefon",
         "step_4": "Dine scoringer og analyser ligger under <strong>Min profil</strong>",
@@ -604,7 +604,7 @@
       },
       "region_admin": {
         "name": "Regionsadministrator",
-        "desc": "Du tager dig af en delstat, provins eller nation: afvikler dens mesterskaber, træder til ved alle dens klubbers stævner og godkender rolleanmodninger fra klubbernes medlemmer. Dit forbund udpeger dig, eller DivingHQ hvis der ikke er et endnu.",
+        "desc": "Du tager dig af en delstat, provins eller nation: afvikler dens mesterskaber, træder til ved alle dens klubbers stævner og godkender rolleanmodninger fra klubbernes medlemmer. Dit forbund udpeger dig, eller DivingHQ hvis der ikke er et endnu. Et delstatsforbund kan ansøge om at drive sin region via <strong>Registrér din organisation</strong>.",
         "step_1": "Åbn <strong>Min region</strong> for at se dine klubber og hvem der driver dem",
         "step_2": "Opret dine mesterskaber i <strong>Stævnehåndtering</strong> med din region som vært",
         "step_3": "Godkend medlemmer, der vil springe, dømme eller være overdommer",
@@ -632,7 +632,7 @@
     },
     "faq": {
       "register_q": "Jeg har lige registreret mig, men kan ikke logge ind endnu.",
-      "register_a": "Først e-mailbekræftelse — klik på linket i velkomstmailen. For andre roller end udspringer (dommer, træner, stævneleder) skal din forbundsadministrator også godkende dig. Begge dele bør ske inden for få minutter; hvis du ikke ser mailen efter 10 minutter, så tjek spam, og bed derefter administratoren bekræfte, at din konto er aktiv.",
+      "register_a": "Bekræft først din e-mail: klik på linket i bekræftelsesmailen, vi sendte, da du oprettede dig. Ingenting? Tjek din spammappe, eller prøv at logge ind og bed om et nyt link. Roller blokerer ikke login: du starter som tilskuer og får mere, når din klub- eller forbundsadministrator godkender det.",
       "judge_device_q": "Jeg er dommer — hvilken enhed skal jeg bruge?",
       "judge_device_a": "Enhver moderne telefon med browser virker. iPhone 12 / Pixel 6 og nyere er ideelt. Visningen er bygget til mobil; du kommer til at trykke tal hele stævnet, så en telefon, der ligger godt i én hånd, er det rigtige valg. Wifi er at foretrække frem for 4G, hvis hallen har det — scoringer synkroniseres også via 4G, men netværket har mærkbart længere svartid.",
       "scoring_q": "Hvordan fungerer scoringen?",

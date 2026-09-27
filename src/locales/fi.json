@@ -557,7 +557,7 @@
       "diver": {
         "name": "Hyppääjä",
         "desc": "Sinä kilpailet. Ilmoittautumisajan päättyessä lähetät hyppylistasi (mitä hyppyjä teet, kierroksittain) ja kisapäivänä avaat <strong>Kisapäivänäkymän</strong> nähdäksesi paikkasi jonossa ja seuraavan hyppysi.",
-        "step_1": "Kirjaudu sisään tai hyväksy liittokoordinaattorin kutsu",
+        "step_1": "Rekisteröidy ja valitse seurasi",
         "step_2": "Avaa <strong>Lähetä hyppylistat</strong> ja valitse hyppysi kierroksittain",
         "step_3": "Kisapäivänä avaa <strong>Kisapäivänäkymä</strong> puhelimellasi",
         "step_4": "Tuloksesi ja analytiikkasi löytyvät kohdasta <strong>Oma profiili</strong>",
@@ -604,7 +604,7 @@
       },
       "region_admin": {
         "name": "Alueen ylläpitäjä",
-        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut, voit tarttua minkä tahansa sen seuran kilpailuihin ja hyväksyt seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut, tai DivingHQ, jos liittoa ei vielä ole.",
+        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut, voit tarttua minkä tahansa sen seuran kilpailuihin ja hyväksyt seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut, tai DivingHQ, jos liittoa ei vielä ole. Osavaltion liitto voi hakea alueensa hallintaa kohdasta <strong>Rekisteröi organisaatio</strong>.",
         "step_1": "Avaa <strong>Oma alue</strong> nähdäksesi seurasi ja niiden vetäjät",
         "step_2": "Luo mestaruuskilpailusi <strong>Kilpailun hallinnassa</strong> alueesi järjestämänä",
         "step_3": "Hyväksy jäsenet, jotka haluavat hypätä, tuomita tai toimia päätuomarina",
@@ -632,7 +632,7 @@
     },
     "faq": {
       "register_q": "Rekisteröidyin juuri, mutta en pääse vielä kirjautumaan sisään.",
-      "register_a": "Ensin sähköpostin vahvistus — napsauta tervetuloviestin linkkiä. Muille rooleille kuin hyppääjälle (tuomari, valmentaja, kisanjohtaja) tarvitaan myös liittokoordinaattorin hyväksyntä. Molemmat tapahtuvat yleensä minuuteissa; jos viestiä ei näy 10 minuutin kuluttua, tarkista roskaposti ja pyydä sitten koordinaattoria varmistamaan, että tilisi on aktiivinen.",
+      "register_a": "Vahvista ensin sähköpostiosoitteesi: napsauta linkkiä vahvistusviestissä, jonka lähetimme rekisteröityessäsi. Eikö viestiä näy? Tarkista roskapostikansio tai yritä kirjautua sisään ja pyydä uusi linkki. Roolit eivät estä kirjautumista: aloitat katsojana ja saat lisää, kun seurasi tai liittosi ylläpitäjä hyväksyy.",
       "judge_device_q": "Olen tuomari — millä laitteella kannattaa toimia?",
       "judge_device_a": "Mikä tahansa moderni puhelin selaimella toimii. iPhone 12 / Pixel 6 tai uudempi on ihanteellinen. Näkymä on suunniteltu mobiilille; tulet näpäyttämään numeroita koko kisan ajan, joten yhdellä kädellä mukavasti pidettävä puhelin on oikea valinta. Wifi on parempi kuin 4G, jos halli sellaisen tarjoaa — pisteet synkronoituvat myös 4G:n kautta, mutta verkon edestakainen viive on selvästi pidempi.",
       "scoring_q": "Miten pisteytys toimii?",

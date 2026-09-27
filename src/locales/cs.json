@@ -546,7 +546,7 @@
       "diver": {
         "name": "Skokan",
         "desc": "Závodíte. Před uzávěrkou přihlášek každé disciplíny odešlete soupis skoků (které skoky a v jakém kole provedete) a v den závodu pak otevřete <strong>Pohled pro den závodu</strong>, kde uvidíte svou pozici ve frontě a co vás čeká.",
-        "step_1": "Přihlaste se nebo přijměte pozvánku od administrátora své federace",
+        "step_1": "Zaregistrujte se a vyberte svůj klub",
         "step_2": "Otevřete <strong>Odeslat soupisy skoků</strong> a vyberte své skoky pro každé kolo",
         "step_3": "V den závodu otevřete na telefonu <strong>Pohled pro den závodu</strong>",
         "step_4": "Vaše známky a analýzy najdete na <strong>Mém profilu</strong>",
@@ -593,7 +593,7 @@
       },
       "region_admin": {
         "name": "Správce regionu",
-        "desc": "Staráte se o stát, provincii či zemi: pořádáte její mistrovství, můžete zasáhnout do závodů kteréhokoli jejího klubu a schvalujete žádosti členů jejích klubů o role. Jmenuje vás federace, nebo DivingHQ, pokud federace zatím není.",
+        "desc": "Staráte se o stát, provincii či zemi: pořádáte její mistrovství, můžete zasáhnout do závodů kteréhokoli jejího klubu a schvalujete žádosti členů jejích klubů o role. Jmenuje vás federace, nebo DivingHQ, pokud federace zatím není. Zemský svaz může o správu svého regionu požádat přes <strong>Zaregistrujte svou organizaci</strong>.",
         "step_1": "Otevřete <strong>Můj region</strong> a uvidíte své kluby a jejich vedení",
         "step_2": "Vytvořte mistrovství ve <strong>Správě závodů</strong> pořádané vaším regionem",
         "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo řídit",
@@ -621,7 +621,7 @@
     },
     "faq": {
       "register_q": "Právě jsem se zaregistroval, ale ještě se nemohu přihlásit.",
-      "register_a": "Nejprve ověření e-mailu — klepněte na odkaz v uvítacím e-mailu. U rolí mimo skokana (rozhodčí, trenér, vedoucí závodu) vás navíc musí schválit administrátor vaší federace. Obojí by mělo proběhnout během několika minut; pokud e-mail po 10 minutách nevidíte, zkontrolujte spam a poté požádejte administrátora o potvrzení, že je váš účet aktivní.",
+      "register_a": "Nejprve potvrďte svůj e-mail: klikněte na odkaz v potvrzovacím e-mailu, který jsme vám poslali při registraci. Nic nepřišlo? Podívejte se do spamu, nebo se zkuste přihlásit a požádejte o nový odkaz. Role přihlášení neblokují: začínáte jako divák a další role získáte, jakmile je schválí administrátor vašeho klubu nebo federace.",
       "judge_device_q": "Jsem rozhodčí — jaké zařízení mám použít?",
       "judge_device_a": "Stačí jakýkoli moderní telefon s prohlížečem. Ideální je iPhone 12 / Pixel 6 a novější. Zobrazení je primárně pro mobil; po celý závod budete klepat na čísla, takže telefon, který pohodlně udržíte v jedné ruce, je správná volba. Pokud je k dispozici, je wi-fi lepší než 4G — známky se synchronizují i přes 4G, ale cesta po síti je znatelně delší.",
       "scoring_q": "Jak funguje bodování?",

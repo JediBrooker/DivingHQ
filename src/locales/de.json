@@ -557,7 +557,7 @@
       "diver": {
         "name": "Springer",
         "desc": "Sie treten an. Sie reichen eine Sprungkarte (welche Sprünge Sie pro Runde zeigen) vor dem Meldeschluss jedes Wettbewerbs ein und prüfen am Wettkampftag in der <strong>Wettkampftag-Ansicht</strong> Ihre Position in der Reihenfolge und welche Sprünge anstehen.",
-        "step_1": "Melden Sie sich an oder akzeptieren Sie die Einladung Ihres Verbandsadmins",
+        "step_1": "Registrieren Sie sich und wählen Sie Ihren Verein",
         "step_2": "Öffnen Sie <strong>Sprungkarten einreichen</strong> und wählen Sie Ihre Sprünge pro Runde",
         "step_3": "Öffnen Sie am Wettkampftag die <strong>Wettkampftag-Ansicht</strong> auf Ihrem Smartphone",
         "step_4": "Ihre Wertungen und Analysen finden Sie unter <strong>Mein Profil</strong>",
@@ -604,7 +604,7 @@
       },
       "region_admin": {
         "name": "Regionsadmin",
-        "desc": "Sie betreuen einen Bundesstaat, eine Provinz oder einen Landesteil: Sie richten die Meisterschaften aus, können bei den Wettkämpfen aller Vereine einspringen und genehmigen Rollenanfragen der Vereinsmitglieder. Ihr Verband ernennt Sie, oder DivingHQ, solange es noch keinen gibt.",
+        "desc": "Sie betreuen einen Bundesstaat, eine Provinz oder einen Landesteil: Sie richten die Meisterschaften aus, können bei den Wettkämpfen aller Vereine einspringen und genehmigen Rollenanfragen der Vereinsmitglieder. Ihr Verband ernennt Sie, oder DivingHQ, solange es noch keinen gibt. Ein Landesverband kann über <strong>Organisation registrieren</strong> beantragen, seine Region zu führen.",
         "step_1": "Öffnen Sie <strong>Meine Region</strong> für Ihre Vereine und deren Leitung",
         "step_2": "Legen Sie Ihre Meisterschaften im <strong>Wettkampf-Manager</strong> mit Ihrer Region als Ausrichter an",
         "step_3": "Genehmigen Sie Mitglieder, die springen, werten oder Schiedsrichter sein möchten",
@@ -632,7 +632,7 @@
     },
     "faq": {
       "register_q": "Ich habe mich gerade registriert, kann mich aber noch nicht anmelden.",
-      "register_a": "Erst die E-Mail-Bestätigung — klicken Sie auf den Link in der Willkommens-E-Mail. Für Nicht-Springer-Rollen (Kampfrichter, Trainer, Wettkampfleiter) muss zusätzlich Ihr Verbandsadmin Sie freigeben. Beides sollte binnen Minuten passieren; wenn Sie nach 10 Minuten keine E-Mail sehen, prüfen Sie den Spam-Ordner und bitten Sie dann Ihren Admin zu bestätigen, dass Ihr Konto aktiv ist.",
+      "register_a": "Bestätigen Sie zuerst Ihre E-Mail-Adresse: Klicken Sie auf den Link in der Bestätigungs-E-Mail, die wir Ihnen bei der Registrierung geschickt haben. Nichts angekommen? Sehen Sie im Spam-Ordner nach, oder versuchen Sie sich anzumelden und fordern Sie einen neuen Link an. Rollen blockieren die Anmeldung nicht: Sie beginnen als Zuschauer und erhalten mehr, sobald Ihr Vereins- oder Verbandsadmin zustimmt.",
       "judge_device_q": "Ich bin Kampfrichter — welches Gerät soll ich verwenden?",
       "judge_device_a": "Jedes moderne Smartphone mit Browser funktioniert. iPhone 12 / Pixel 6 oder neuer ist ideal. Die Ansicht ist mobile-first; Sie werden den Wettkampf über tippen, daher ist ein Smartphone, das Sie bequem in einer Hand halten können, die richtige Wahl. WLAN ist gegenüber 4G zu bevorzugen, falls die Halle es bietet — die Wertungen werden zwar auch über 4G synchronisiert, aber die Netzwerklaufzeit ist spürbar länger.",
       "scoring_q": "Wie funktioniert die Wertung?",

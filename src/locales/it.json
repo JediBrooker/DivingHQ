@@ -557,7 +557,7 @@
       "diver": {
         "name": "Tuffatore",
         "desc": "Lei gareggia. Invierà una lista tuffi (quali tuffi eseguirà, per manche) prima della scadenza di iscrizione di ogni gara, poi consulterà <strong>Vista Giorno di Gara</strong> il giorno stesso per vedere la sua posizione nella fila e cosa dovrà eseguire.",
-        "step_1": "Acceda o accetti l'invito dell'amministratore della sua federazione",
+        "step_1": "Si registri e scelga il suo club",
         "step_2": "Apra <strong>Invia Liste Tuffi</strong> e scelga i suoi tuffi per ciascuna manche",
         "step_3": "Il giorno di gara, apra <strong>Vista Giorno di Gara</strong> sul telefono",
         "step_4": "I suoi punteggi e le analisi sono su <strong>Il Mio Profilo</strong>",
@@ -604,7 +604,7 @@
       },
       "region_admin": {
         "name": "Amministratore regionale",
-        "desc": "Ti occupi di uno stato, una provincia o una nazione: organizzi i suoi campionati, puoi intervenire sulle gare di qualsiasi suo club e approvi le richieste di ruolo dei membri dei club. Ti nomina la tua federazione, o DivingHQ finché non c'è.",
+        "desc": "Ti occupi di uno stato, una provincia o una nazione: organizzi i suoi campionati, puoi intervenire sulle gare di qualsiasi suo club e approvi le richieste di ruolo dei membri dei club. Ti nomina la tua federazione, o DivingHQ finché non c'è. Un ente statale può chiedere di gestire la propria regione da <strong>Registra la tua organizzazione</strong>.",
         "step_1": "Apri <strong>La mia regione</strong> per vedere i tuoi club e chi li gestisce",
         "step_2": "Crea i tuoi campionati nel <strong>Gestore gare</strong>, organizzati dalla tua regione",
         "step_3": "Approva i membri che vogliono tuffarsi, giudicare o arbitrare",
@@ -632,7 +632,7 @@
     },
     "faq": {
       "register_q": "Mi sono appena registrato, ma non riesco ancora ad accedere.",
-      "register_a": "Prima la verifica dell'email — clicchi il link nella mail di benvenuto. Per i ruoli diversi da tuffatore (giudice, allenatore, direttore di gara) anche l'admin della federazione deve approvarla. Entrambe le cose dovrebbero avvenire in pochi minuti; se non vede la mail entro 10 minuti, controlli lo spam e poi chieda all'admin di confermare che l'account sia attivo.",
+      "register_a": "Prima confermi la sua email: clicchi il link nell'email di conferma che le abbiamo inviato alla registrazione. Non la trova? Controlli la cartella spam, oppure provi ad accedere e chieda un nuovo link. I ruoli non bloccano l'accesso: si parte come spettatore e si ottiene di più quando l'admin del suo club o della federazione approva.",
       "judge_device_q": "Sono un giudice — quale dispositivo devo usare?",
       "judge_device_a": "Qualsiasi telefono moderno con browser funziona. L'ideale è iPhone 12 / Pixel 6 o più recenti. La vista è pensata per il mobile; passerà la gara a digitare numeri, quindi un telefono che riesca a tenere comodamente in una mano è la scelta giusta. Il wifi è preferibile al 4G se l'impianto ne dispone — i punteggi si sincronizzano anche in 4G, ma il round trip di rete è sensibilmente più lungo.",
       "scoring_q": "Come funziona la valutazione?",

@@ -546,7 +546,7 @@
       "diver": {
         "name": "Atlamacı",
         "desc": "Yarışıyorsunuz. Her etkinliğin kayıt tarihinden önce atlama listenizi (turlara göre hangi atlamaları yapacağınızı) göndereceksiniz, ardından yarış günü <strong>Yarış Günü Görünümü</strong>'nü açarak sıradaki konumunuzu ve puanlamanız gerekenleri göreceksiniz.",
-        "step_1": "Federasyon yöneticinizden gelen davetiyeyi kabul edin veya giriş yapın",
+        "step_1": "Kaydolun ve kulübünüzü seçin",
         "step_2": "<strong>Atlama Listesi Gönder</strong>'i açın ve her tur için atlamalarınızı seçin",
         "step_3": "Yarış günü <strong>Yarış Günü Görünümü</strong>'nü telefonunuzda açın",
         "step_4": "Puanlarınız ve analizleriniz <strong>Profilim</strong>'de yer alır",
@@ -593,7 +593,7 @@
       },
       "region_admin": {
         "name": "Bölge yöneticisi",
-        "desc": "Bir eyalet, il ya da ülkeden sorumlusunuz: şampiyonalarını düzenler, kulüplerinden herhangi birinin yarışmalarına müdahale edebilir ve kulüp üyelerinin rol taleplerini onaylarsınız. Sizi federasyonunuz, federasyon yoksa DivingHQ atar.",
+        "desc": "Bir eyalet, il ya da ülkeden sorumlusunuz: şampiyonalarını düzenler, kulüplerinden herhangi birinin yarışmalarına müdahale edebilir ve kulüp üyelerinin rol taleplerini onaylarsınız. Sizi federasyonunuz, federasyon yoksa DivingHQ atar. Bir eyalet kuruluşu, bölgesini yönetmek için <strong>Kuruluşunuzu kaydedin</strong> üzerinden başvurabilir.",
         "step_1": "Kulüplerinizi ve yöneticilerini görmek için <strong>Bölgem</strong>'i açın",
         "step_2": "Şampiyonalarınızı bölgenizin ev sahipliğinde <strong>Yarışma Yöneticisi</strong>'nde oluşturun",
         "step_3": "Atlamak, hakemlik yapmak veya başhakem olmak isteyen üyeleri onaylayın",
@@ -621,7 +621,7 @@
     },
     "faq": {
       "register_q": "Yeni kaydoldum ama henüz giriş yapamıyorum.",
-      "register_a": "Önce e-posta doğrulaması — hoş geldiniz e-postasındaki bağlantıya tıklayın. Atlamacı dışı roller (hakem, antrenör, yarışma yöneticisi) için federasyon yöneticinizin de sizi onaylaması gerekir. Her ikisi de dakikalar içinde olmalı; e-postayı 10 dakika sonra hâlâ görmüyorsanız spam'i kontrol edin ve ardından hesabınızın etkin olduğunu yöneticinizden teyit etmesini isteyin.",
+      "register_a": "Önce e-postanızı doğrulayın: kaydolduğunuzda gönderdiğimiz doğrulama e-postasındaki bağlantıya tıklayın. Göremiyor musunuz? Spam klasörüne bakın ya da giriş yapmayı deneyip yeni bir bağlantı isteyin. Roller girişi engellemez: izleyici olarak başlarsınız, kulübünüzün veya federasyonunuzun yöneticisi onayladığında daha fazlasını alırsınız.",
       "judge_device_q": "Hakemim — hangi cihazı kullanmalıyım?",
       "judge_device_a": "Tarayıcısı olan herhangi bir modern telefon çalışır. iPhone 12 / Pixel 6 ve yenisi idealdir. Görünüm mobile-first; yarışı sayıları tıklayarak geçireceksiniz, bu yüzden tek elle rahatça tutabildiğiniz bir telefon doğru seçimdir. Mekânda WiFi varsa 4G'ye tercih edilir — puanlarınız 4G üzerinden de senkronize olur ama ağın gidiş-dönüşü gözle görülür biçimde uzar.",
       "scoring_q": "Puanlama nasıl çalışır?",

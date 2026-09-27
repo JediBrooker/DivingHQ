@@ -546,7 +546,7 @@
       "diver": {
         "name": "Peloncat",
         "desc": "Anda berkompetisi. Anda akan mengirim daftar loncatan (loncatan apa yang akan Anda lakukan, per ronde) sebelum tenggat pendaftaran setiap acara, lalu cek <strong>Tampilan Hari Lomba</strong> di hari itu untuk melihat posisi antrean dan apa yang harus Anda nilai.",
-        "step_1": "Masuk atau terima undangan dari admin federasi Anda",
+        "step_1": "Daftar dan pilih klub Anda",
         "step_2": "Buka <strong>Kirim Daftar Loncatan</strong> dan pilih loncatan per ronde",
         "step_3": "Pada hari lomba, buka <strong>Tampilan Hari Lomba</strong> di ponsel Anda",
         "step_4": "Skor + analitik Anda ada di <strong>Profil Saya</strong>",
@@ -593,7 +593,7 @@
       },
       "region_admin": {
         "name": "Admin wilayah",
-        "desc": "Anda mengurus negara bagian, provinsi, atau bangsa: menyelenggarakan kejuaraannya, dapat turun tangan di kompetisi klub mana pun di dalamnya, dan menyetujui permintaan peran anggota klubnya. Federasi Anda menunjuk Anda, atau DivingHQ jika belum ada federasi.",
+        "desc": "Anda mengurus negara bagian, provinsi, atau bangsa: menyelenggarakan kejuaraannya, dapat turun tangan di kompetisi klub mana pun di dalamnya, dan menyetujui permintaan peran anggota klubnya. Federasi Anda menunjuk Anda, atau DivingHQ jika belum ada federasi. Badan negara bagian dapat mengajukan diri untuk mengelola wilayahnya dari <strong>Daftarkan organisasi Anda</strong>.",
         "step_1": "Buka <strong>Wilayah saya</strong> untuk melihat klub dan pengelolanya",
         "step_2": "Buat kejuaraan Anda di <strong>Pengelola kompetisi</strong> dengan wilayah Anda sebagai tuan rumah",
         "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau wasit",
@@ -621,7 +621,7 @@
     },
     "faq": {
       "register_q": "Saya baru saja mendaftar tapi belum bisa masuk.",
-      "register_a": "Verifikasi email dulu — klik tautan di email selamat datang. Untuk peran selain peloncat (juri, pelatih, pengelola kompetisi), admin federasi Anda juga perlu menyetujui Anda. Keduanya harus terjadi dalam hitungan menit; jika setelah 10 menit email belum terlihat, cek folder spam, lalu minta admin Anda memastikan akun Anda aktif.",
+      "register_a": "Konfirmasi email Anda dulu: klik tautan di email konfirmasi yang kami kirim saat Anda mendaftar. Tidak ada? Periksa folder spam, atau coba masuk dan minta tautan baru. Peran tidak menghalangi masuk: Anda mulai sebagai penonton dan mendapat lebih banyak setelah admin klub atau federasi Anda menyetujui.",
       "judge_device_q": "Saya juri — perangkat apa yang sebaiknya saya pakai?",
       "judge_device_a": "Setiap ponsel modern dengan peramban bisa. iPhone 12 / Pixel 6 dan yang lebih baru ideal. Tampilan dirancang untuk seluler; Anda akan menghabiskan kompetisi mengetuk angka, jadi ponsel yang nyaman digenggam satu tangan adalah pilihan tepat. WiFi lebih disukai daripada 4G jika venue memiliki — skor Anda tetap tersinkron lewat 4G tapi waktu tempuh jaringan jelas lebih lama.",
       "scoring_q": "Bagaimana cara penilaian bekerja?",

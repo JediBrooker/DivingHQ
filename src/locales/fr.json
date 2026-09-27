@@ -557,7 +557,7 @@
       "diver": {
         "name": "Plongeur",
         "desc": "Tu participes. Tu soumets une feuille de plongeons (les plongeons que tu vas exécuter, par manche) avant la clôture des inscriptions de chaque épreuve, puis tu consultes la <strong>Vue du Jour de Compétition</strong> le jour J pour voir ta position dans la file et ce qui t'attend.",
-        "step_1": "Connecte-toi ou accepte l'invitation de l'administrateur de ta fédération",
+        "step_1": "Inscris-toi et choisis ton club",
         "step_2": "Ouvre <strong>Soumettre les Feuilles de Plongeons</strong> et choisis tes plongeons par manche",
         "step_3": "Le jour de la compétition, ouvre <strong>Vue du Jour de Compétition</strong> sur ton téléphone",
         "step_4": "Tes notes et analyses sont sur <strong>Mon Profil</strong>",
@@ -604,7 +604,7 @@
       },
       "region_admin": {
         "name": "Administrateur régional",
-        "desc": "Vous vous occupez d'un État, d'une province ou d'une nation : vous organisez ses championnats, pouvez intervenir sur les compétitions de n'importe lequel de ses clubs et approuvez les demandes de rôle de leurs membres. Votre fédération vous nomme, ou DivingHQ tant qu'il n'y en a pas.",
+        "desc": "Vous vous occupez d'un État, d'une province ou d'une nation : vous organisez ses championnats, pouvez intervenir sur les compétitions de n'importe lequel de ses clubs et approuvez les demandes de rôle de leurs membres. Votre fédération vous nomme, ou DivingHQ tant qu'il n'y en a pas. Un organisme d'État peut demander à gérer sa région depuis <strong>Enregistrer votre organisation</strong>.",
         "step_1": "Ouvrez <strong>Ma région</strong> pour voir vos clubs et qui les gère",
         "step_2": "Créez vos championnats dans le <strong>Gestionnaire de compétitions</strong>, organisés par votre région",
         "step_3": "Approuvez les membres qui veulent plonger, juger ou arbitrer",
@@ -632,7 +632,7 @@
     },
     "faq": {
       "register_q": "Je viens de m'inscrire, mais je ne peux pas encore me connecter.",
-      "register_a": "D'abord la vérification de l'e-mail — clique sur le lien dans le mail de bienvenue. Pour les rôles autres que plongeur (juge, entraîneur, gestionnaire de compétition) ton admin de fédération doit aussi t'approuver. Les deux étapes doivent prendre quelques minutes ; si tu ne vois pas le mail au bout de 10 minutes, vérifie les spams, puis demande à ton admin de confirmer que ton compte est actif.",
+      "register_a": "Confirme d'abord ton e-mail : clique sur le lien de l'e-mail de confirmation envoyé à ton inscription. Rien reçu ? Regarde dans tes spams, ou essaie de te connecter et demande un nouveau lien. Les rôles ne bloquent pas la connexion : tu commences comme spectateur et tu en obtiens davantage dès que l'admin de ton club ou de ta fédération valide.",
       "judge_device_q": "Je suis juge — quel appareil dois-je utiliser ?",
       "judge_device_a": "Tout téléphone moderne avec un navigateur fonctionne. L'idéal est un iPhone 12 / Pixel 6 ou plus récent. La vue est conçue mobile-first ; tu vas passer la compétition à taper des chiffres, donc un téléphone que tu peux tenir confortablement d'une main est le bon choix. Le wifi est préférable à la 4G si la salle en dispose — les notes se synchronisent aussi en 4G mais l'aller-retour réseau est sensiblement plus long.",
       "scoring_q": "Comment fonctionne la notation ?",

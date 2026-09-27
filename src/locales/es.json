@@ -546,7 +546,7 @@
       "diver": {
         "name": "Saltador",
         "desc": "Tú compites. Enviarás una lista de saltos (qué saltos harás, por ronda) antes del cierre de inscripción de cada evento, y luego consultarás <strong>Vista del Día de Competición</strong> el mismo día para ver tu posición en la cola y qué tienes que puntuar.",
-        "step_1": "Inicia sesión o acepta la invitación de tu administrador de federación",
+        "step_1": "Regístrate y elige tu club",
         "step_2": "Abre <strong>Enviar Listas de Saltos</strong> y elige tus saltos por ronda",
         "step_3": "El día de la competición, abre <strong>Vista del Día de Competición</strong> en tu móvil",
         "step_4": "Tus puntuaciones y análisis están en <strong>Mi Perfil</strong>",
@@ -593,7 +593,7 @@
       },
       "region_admin": {
         "name": "Administrador regional",
-        "desc": "Te ocupas de un estado, provincia o nación: organizas sus campeonatos, puedes intervenir en las competiciones de cualquiera de sus clubes y apruebas las solicitudes de rol de sus miembros. Te nombra tu federación, o DivingHQ si aún no la hay.",
+        "desc": "Te ocupas de un estado, provincia o nación: organizas sus campeonatos, puedes intervenir en las competiciones de cualquiera de sus clubes y apruebas las solicitudes de rol de sus miembros. Te nombra tu federación, o DivingHQ si aún no la hay. Un organismo estatal puede solicitar dirigir su región desde <strong>Registra tu organización</strong>.",
         "step_1": "Abre <strong>Mi región</strong> para ver tus clubes y quién los gestiona",
         "step_2": "Crea tus campeonatos en el <strong>Gestor de competiciones</strong>, organizados por tu región",
         "step_3": "Aprueba a los miembros que quieren saltar, juzgar o arbitrar",
@@ -621,7 +621,7 @@
     },
     "faq": {
       "register_q": "Acabo de registrarme, pero todavía no puedo iniciar sesión.",
-      "register_a": "Primero verifica el correo — haz clic en el enlace del correo de bienvenida. Para roles que no sean saltador (juez, entrenador, gestor de competición) también necesitas que tu admin de federación te apruebe. Ambos pasos deberían darse en pocos minutos; si no ves el correo en 10 minutos, revisa el spam y luego pide a tu admin que confirme que tu cuenta está activa.",
+      "register_a": "Primero confirma tu correo: haz clic en el enlace del correo de confirmación que te enviamos al registrarte. ¿No lo ves? Revisa la carpeta de spam, o intenta iniciar sesión y pide un enlace nuevo. Los roles no bloquean el inicio de sesión: empiezas como espectador y obtienes más cuando el administrador de tu club o de tu federación lo aprueba.",
       "judge_device_q": "Soy juez — ¿qué dispositivo debo usar?",
       "judge_device_a": "Cualquier móvil moderno con navegador funciona. Lo ideal es iPhone 12 / Pixel 6 o más nuevos. La vista está pensada para móvil; pasarás la competición pulsando números, así que un móvil que puedas sujetar cómodamente con una mano es la mejor opción. El wifi es preferible al 4G si el pabellón lo tiene — las puntuaciones se sincronizan también por 4G, pero la latencia de red es notablemente mayor.",
       "scoring_q": "¿Cómo funciona la puntuación?",

@@ -557,7 +557,7 @@
       "diver": {
         "name": "Saltador",
         "desc": "Tu compétes. Vais submeter uma lista de saltos (que saltos vais executar, por ronda) antes do prazo de inscrição de cada prova e depois consultas a <strong>Vista do Dia de Prova</strong> nesse dia para veres a tua posição na fila e o que tens para pontuar.",
-        "step_1": "Inicia sessão ou aceita o convite do administrador da tua federação",
+        "step_1": "Regista-te e escolhe o teu clube",
         "step_2": "Abre <strong>Submeter Listas de Saltos</strong> e escolhe os teus saltos por ronda",
         "step_3": "No dia da prova, abre a <strong>Vista do Dia de Prova</strong> no telemóvel",
         "step_4": "As tuas pontuações e análises estão em <strong>O Meu Perfil</strong>",
@@ -604,7 +604,7 @@
       },
       "region_admin": {
         "name": "Administrador regional",
-        "desc": "Cuida de um estado, província ou nação: organiza os campeonatos, pode intervir nas provas de qualquer clube e aprova os pedidos de função dos membros dos clubes. A sua federação nomeia-o, ou o DivingHQ enquanto não houver.",
+        "desc": "Cuida de um estado, província ou nação: organiza os campeonatos, pode intervir nas provas de qualquer clube e aprova os pedidos de função dos membros dos clubes. A sua federação nomeia-o, ou o DivingHQ enquanto não houver. Um organismo estadual pode candidatar-se a gerir a sua região em <strong>Registar a sua organização</strong>.",
         "step_1": "Abra <strong>A minha região</strong> para ver os clubes e quem os gere",
         "step_2": "Crie os campeonatos no <strong>Gestor de Competições</strong>, organizados pela sua região",
         "step_3": "Aprove os membros que querem saltar, julgar ou arbitrar",
@@ -632,7 +632,7 @@
     },
     "faq": {
       "register_q": "Acabei de me registar, mas ainda não consigo entrar.",
-      "register_a": "Primeiro a verificação de e-mail — clica no link no e-mail de boas-vindas. Para papéis que não sejam saltador (juiz, treinador, diretor de prova) o admin da tua federação também precisa de te aprovar. Ambas as coisas devem acontecer em minutos; se não vires o e-mail ao fim de 10 minutos, vê o spam e depois pede ao admin para confirmar que a tua conta está ativa.",
+      "register_a": "Confirma primeiro o teu e-mail: clica no link do e-mail de confirmação que te enviámos quando te registaste. Não o encontras? Vê a pasta de spam, ou tenta iniciar sessão e pede um novo link. Os papéis não impedem o início de sessão: começas como espectador e recebes mais quando o administrador do teu clube ou da tua federação aprovar.",
       "judge_device_q": "Sou juiz — que dispositivo devo usar?",
       "judge_device_a": "Qualquer telemóvel moderno com navegador funciona. O ideal é iPhone 12 / Pixel 6 ou mais recente. A vista foi desenhada para telemóvel; vais passar a prova a tocar em números, por isso um telemóvel que consigas segurar confortavelmente com uma mão é a escolha certa. O wifi é preferível ao 4G se o pavilhão tiver — as pontuações também sincronizam por 4G, mas o tempo de ida e volta da rede é notavelmente mais longo.",
       "scoring_q": "Como funciona a pontuação?",

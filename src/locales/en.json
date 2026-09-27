@@ -546,7 +546,7 @@
       "diver": {
         "name": "Diver",
         "desc": "You compete. You'll submit a dive sheet (which dives you'll do, by round) before each event's entry deadline, then check <strong>Meet Day View</strong> on the day to see your queue position and what you need to score.",
-        "step_1": "Sign in or accept the invite from your federation admin",
+        "step_1": "Sign up and pick your club",
         "step_2": "Open <strong>Submit Dive Sheets</strong> and pick your dives per round",
         "step_3": "On meet day, open <strong>Meet Day View</strong> on your phone",
         "step_4": "Your scores + analytics live on <strong>My Profile</strong>",
@@ -593,7 +593,7 @@
       },
       "region_admin": {
         "name": "Region Admin",
-        "desc": "You look after a state, province or home nation: run its championships, step in on any of its clubs' meets, and approve role requests from its clubs' members. Your federation, or DivingHQ where there isn't one yet, appoints you.",
+        "desc": "You look after a state, province or home nation: run its championships, step in on any of its clubs' meets, and approve role requests from its clubs' members. Your federation, or DivingHQ where there isn't one yet, appoints you. A state body can apply to run its region from <strong>Register your org</strong>.",
         "step_1": "Open <strong>My region</strong> to see your clubs and who runs them",
         "step_2": "Create your championships in <strong>Meet Manager</strong>, hosted by your region",
         "step_3": "Approve members who want to dive, judge or referee",
@@ -621,7 +621,7 @@
     },
     "faq": {
       "register_q": "I just registered, but I can't sign in yet.",
-      "register_a": "Email verification first — click the link in the welcome email. For non-diver roles (judge, coach, meet manager) your federation admin also needs to approve you. Both should happen within minutes; if you don't see the email after 10 minutes, check spam, then ask your admin to confirm your account is active.",
+      "register_a": "Confirm your email first: click the link in the confirmation email we sent when you signed up. Nothing there? Check your spam folder, or try signing in and ask for a new link. Roles don't block sign-in: you start as a spectator and get more once your club or federation admin approves.",
       "judge_device_q": "I'm a judge — what device should I use?",
       "judge_device_a": "Any modern phone with a browser works. iPhone 12 / Pixel 6 and newer is ideal. The view is mobile-first; you'll spend the meet tapping numbers, so a phone you can grip comfortably in one hand is the right call. WiFi is preferred over 4G if the venue has it — your scores still sync over 4G but the network round trip is noticeably longer.",
       "scoring_q": "How does scoring work?",
