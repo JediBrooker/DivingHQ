@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 import EmptyState from '@/components/EmptyState.vue'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
+import JoinRequestQueue from '@/components/JoinRequestQueue.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -139,9 +140,14 @@ async function removeAdmin(region, admin) {
   }
 }
 
-onMounted(() => {
+// can_manage from the admins endpoint means "no federation here".
+const selfRun = computed(() => regions.value.some(r => detail.value[r.id]?.canManage))
+
+function reloadAll() {
   for (const r of regions.value) load(r)
-})
+}
+
+onMounted(reloadAll)
 </script>
 
 <template>
@@ -157,6 +163,13 @@ onMounted(() => {
     <section class="block">
       <h2 class="block-title">{{ $t('my_club.requests') }}</h2>
       <RoleRequestQueue show-club />
+    </section>
+
+    <!-- Only where there's no federation: that's when a region admin can
+         approve someone into one of its clubs. -->
+    <section v-if="selfRun" class="block">
+      <h2 class="block-title">{{ $t('my_club.join_requests') }}</h2>
+      <JoinRequestQueue show-club @decided="reloadAll" />
     </section>
 
     <section v-for="r in regions" :key="r.id" class="block">

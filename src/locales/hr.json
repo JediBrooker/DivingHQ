@@ -467,7 +467,8 @@
       "password_placeholder": "Tvoja trenutna lozinka",
       "conflict": "Spajanje nije moguće: stari račun i tvoj trenutni račun imaju zapise za isti događaj i krug. Odznači sukobljenog kandidata ili se obrati administratoru svoje federacije za ručno spajanje.",
       "success_toast": "Prošli rezultati ponovno povezani s tvojim profilom."
-    }
+    },
+    "club_request_sent": "Zahtjev je poslan. Premjestit ćete se kad bude odobren: od vašeg saveza ili, gdje ga još nema, od administratora novog kluba."
   },
   "diver_profile": {
     "back": "← Natrag",
@@ -1929,7 +1930,12 @@
     "add": "Dodaj",
     "remove": "Ukloni",
     "federation_appoints": "Administratore ovog kluba imenuje vaš savez.",
-    "region_claimed_note": "Kad upravno tijelo regije preuzme regiju, samo njezini administratori mogu premještati klubove u nju ili iz nje."
+    "region_claimed_note": "Kad upravno tijelo regije preuzme regiju, samo njezini administratori mogu premještati klubove u nju ili iz nje.",
+    "join_requests": "Zahtjevi za učlanjenje",
+    "no_join_requests_title": "Nitko ne čeka učlanjenje",
+    "no_join_requests_body": "Kad netko sa svog profila zatraži učlanjenje u vaš klub, pojavit će se ovdje.",
+    "wants_to_join": "želi se učlaniti u {club}",
+    "currently_at": "trenutačno u {club}"
   },
   "regions": {
     "label": {

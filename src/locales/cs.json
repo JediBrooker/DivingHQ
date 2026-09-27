@@ -467,7 +467,8 @@
       "password_placeholder": "Vaše současné heslo",
       "conflict": "Nelze sloučit: starý účet i váš současný účet mají záznamy pro stejnou disciplínu a kolo. Odškrtněte kolidujícího kandidáta nebo kontaktujte administrátora federace, aby provedl sloučení ručně.",
       "success_toast": "Minulé výsledky byly znovu propojeny s vaším profilem."
-    }
+    },
+    "club_request_sent": "Žádost odeslána. Přesun proběhne po schválení: vaší federací, nebo tam, kde zatím není, správci nového klubu."
   },
   "diver_profile": {
     "back": "← Zpět",
@@ -1929,7 +1930,12 @@
     "add": "Přidat",
     "remove": "Odebrat",
     "federation_appoints": "Správce tohoto klubu jmenuje vaše federace.",
-    "region_claimed_note": "Jakmile si region převezme jeho řídící orgán, mohou kluby do něj a z něj přesouvat jen správci tohoto regionu."
+    "region_claimed_note": "Jakmile si region převezme jeho řídící orgán, mohou kluby do něj a z něj přesouvat jen správci tohoto regionu.",
+    "join_requests": "Žádosti o vstup",
+    "no_join_requests_title": "Nikdo nečeká na přijetí",
+    "no_join_requests_body": "Když někdo ze svého profilu požádá o vstup do vašeho klubu, objeví se to tady.",
+    "wants_to_join": "chce vstoupit do {club}",
+    "currently_at": "nyní v {club}"
   },
   "regions": {
     "label": {

@@ -321,7 +321,9 @@ module.exports = function createUsersRouter({
   //   * Self-edit can ONLY clear the club. A club matters for
   //     visibility scoping (rosters, coach links), so a malicious
   //     diver self-assigning into a rival club would be a tenancy
-  //     gap. Switching club is org_admin-only.
+  //     gap. Joining one goes through /api/club-change-requests,
+  //     approved by the org admin or, with no federation, by the
+  //     club's own admins (routes/club-changes.js).
   //   * Admin (org_admin in target's org / system_admin) can set or
   //     clear any user's club to one in the target's own org.
   router.put("/api/users/:id/club", verifyToken, async (req, res) => {
@@ -353,7 +355,7 @@ module.exports = function createUsersRouter({
       // Foo divers" could get polluted by anyone in the org.
       if (isSelf && !isAdmin && club_id) {
         return res.status(403).json({
-          error: "Switching clubs requires an org admin. You can clear your club yourself.",
+          error: "Joining or switching clubs needs approval: send a club change request (Change Club on your profile). You can clear your club yourself.",
         });
       }
 

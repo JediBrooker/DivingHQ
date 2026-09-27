@@ -467,7 +467,8 @@
       "password_placeholder": "Ang kasalukuyang password mo",
       "conflict": "Hindi pwedeng i-merge: ang lumang account at ang kasalukuyang account mo ay parehong may entry para sa parehong event at round. I-untick ang nag-conflict na candidate o makipag-ugnayan sa federation admin mo para mano-manong i-merge.",
       "success_toast": "Naka-link ulit sa profile mo ang nakaraang resulta."
-    }
+    },
+    "club_request_sent": "Naipadala ang kahilingan. Lilipat ka kapag naaprubahan na ito: ng iyong federation, o kung wala pa, ng mga admin ng bagong club."
   },
   "diver_profile": {
     "back": "← Bumalik",
@@ -1929,7 +1930,12 @@
     "add": "Idagdag",
     "remove": "Alisin",
     "federation_appoints": "Ang iyong pederasyon ang nagtatalaga ng mga admin ng club na ito.",
-    "region_claimed_note": "Kapag na-claim na ng namamahalang lupon ang isang rehiyon, ang mga admin lang ng rehiyong iyon ang makapaglilipat ng mga club papasok o palabas dito."
+    "region_claimed_note": "Kapag na-claim na ng namamahalang lupon ang isang rehiyon, ang mga admin lang ng rehiyong iyon ang makapaglilipat ng mga club papasok o palabas dito.",
+    "join_requests": "Mga kahilingang sumali",
+    "no_join_requests_title": "Walang naghihintay na sumali",
+    "no_join_requests_body": "Kapag may humiling na sumali sa iyong club mula sa kanilang profile, lalabas ito dito.",
+    "wants_to_join": "gustong sumali sa {club}",
+    "currently_at": "kasalukuyang nasa {club}"
   },
   "regions": {
     "label": {

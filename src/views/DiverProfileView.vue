@@ -230,6 +230,7 @@ const clubs = ref([])
 const clubChoice = ref('')           // selected club_id or ''
 const savingClub = ref(false)
 const saveError = ref('')
+const clubRequestSent = ref(false)    // a join / switch went off as a request
 
 // Password change state
 const pwEditing  = ref(false)
@@ -538,6 +539,7 @@ async function loadAnalytics() {
 
 async function openClubEditor() {
   saveError.value = ''
+  clubRequestSent.value = false
   editing.value = true
   clubChoice.value = profile.value?.diver?.club_id ?? ''
   // Lazy-load clubs only when the editor opens
@@ -556,10 +558,28 @@ function closeClubEditor() {
   saveError.value = ''
 }
 
+// Leaving a club is yours to do. Joining or switching one needs whoever
+// runs it to say yes (the federation, or where there's none yet the
+// club's own admins), so that files a club change request instead of
+// trying the direct PUT, which would only answer 403.
 async function saveClub() {
   savingClub.value = true
   saveError.value = ''
+  clubRequestSent.value = false
+  const current = profile.value?.diver?.club_id || ''
   try {
+    if (clubChoice.value && clubChoice.value !== current) {
+      await auth.apiFetch('/api/club-change-requests', {
+        method: 'POST',
+        body: JSON.stringify({ to_club_id: clubChoice.value }),
+      })
+      clubRequestSent.value = true
+      return
+    }
+    if (clubChoice.value === current) {
+      editing.value = false
+      return
+    }
     await auth.apiFetch(`/api/users/${targetId.value}/club`, {
       method: 'PUT',
       body: JSON.stringify({ club_id: clubChoice.value || null }),
@@ -959,9 +979,12 @@ function onClaimed() {
           </p>
         </div>
         <div v-if="saveError" class="msg msg-error">{{ saveError }}</div>
+        <div v-if="clubRequestSent" class="msg msg-success" data-test-id="club-request-sent">
+          {{ $t('profile.club_request_sent') }}
+        </div>
         <div class="modal-actions">
           <button class="btn btn-ghost btn-sm" @click="closeClubEditor">Cancel</button>
-          <button class="btn btn-primary btn-sm" :disabled="savingClub" @click="saveClub">
+          <button v-if="!clubRequestSent" class="btn btn-primary btn-sm" :disabled="savingClub" @click="saveClub">
             {{ savingClub ? 'Saving…' : 'Save' }}
           </button>
         </div>

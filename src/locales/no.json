@@ -478,7 +478,8 @@
       "password_placeholder": "Ditt nåværende passord",
       "conflict": "Kan ikke slå sammen: både den gamle kontoen og din nåværende konto har oppføringer for samme stevne og runde. Fjern haken fra kandidaten som kolliderer, eller kontakt forbundsadministratoren for å slå sammen manuelt.",
       "success_toast": "Tidligere resultater knyttet til profilen din igjen."
-    }
+    },
+    "club_request_sent": "Forespørselen er sendt. Du flyttes når den er godkjent: av forbundet ditt, eller der det ikke finnes et ennå, av den nye klubbens administratorer."
   },
   "diver_profile": {
     "back": "← Tilbake",
@@ -1929,7 +1930,12 @@
     "add": "Legg til",
     "remove": "Fjern",
     "federation_appoints": "Forbundet ditt utnevner klubbens administratorer.",
-    "region_claimed_note": "Når en regions styrende organ har gjort krav på den, kan bare regionens administratorer flytte klubber inn i eller ut av den."
+    "region_claimed_note": "Når en regions styrende organ har gjort krav på den, kan bare regionens administratorer flytte klubber inn i eller ut av den.",
+    "join_requests": "Forespørsler om medlemskap",
+    "no_join_requests_title": "Ingen venter på å bli med",
+    "no_join_requests_body": "Når noen ber om å bli med i klubben din fra profilen sin, vises det her.",
+    "wants_to_join": "vil bli med i {club}",
+    "currently_at": "nå i {club}"
   },
   "regions": {
     "label": {

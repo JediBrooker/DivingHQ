@@ -467,7 +467,8 @@
       "password_placeholder": "Mevcut şifreniz",
       "conflict": "Birleştirilemez: eski hesap ve mevcut hesabınızın ikisinde de aynı etkinlik ve tur için kayıtlar var. Çakışan adayın işaretini kaldırın veya manuel birleştirme için federasyon yöneticinizle iletişime geçin.",
       "success_toast": "Geçmiş sonuçlar profilinize yeniden bağlandı."
-    }
+    },
+    "club_request_sent": "Talep gönderildi. Onaylandığında geçiş yapılır: federasyonunuz tarafından ya da henüz federasyon yoksa yeni kulübün yöneticileri tarafından."
   },
   "diver_profile": {
     "back": "← Geri",
@@ -1929,7 +1930,12 @@
     "add": "Ekle",
     "remove": "Kaldır",
     "federation_appoints": "Bu kulübün yöneticilerini federasyonunuz atar.",
-    "region_claimed_note": "Bir bölgeyi yönetim organı üstlendiğinde, kulüpleri o bölgeye alıp çıkarmayı yalnızca bölgenin yöneticileri yapabilir."
+    "region_claimed_note": "Bir bölgeyi yönetim organı üstlendiğinde, kulüpleri o bölgeye alıp çıkarmayı yalnızca bölgenin yöneticileri yapabilir.",
+    "join_requests": "Katılım talepleri",
+    "no_join_requests_title": "Katılmayı bekleyen kimse yok",
+    "no_join_requests_body": "Biri profilinden kulübünüze katılmak istediğinde burada görünür.",
+    "wants_to_join": "{club} kulübüne katılmak istiyor",
+    "currently_at": "şu anda {club} kulübünde"
   },
   "regions": {
     "label": {

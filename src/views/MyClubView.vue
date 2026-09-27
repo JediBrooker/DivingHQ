@@ -10,6 +10,7 @@ import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
+import JoinRequestQueue from '@/components/JoinRequestQueue.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -75,6 +76,17 @@ async function loadClub(club) {
   }
 }
 
+// Join requests are only this page's business where the club runs
+// itself; under a federation the federation approves them. The admins
+// endpoint answering is how we know (403 under a federation).
+const selfRun = computed(() => clubs.value.some(c => clubState.value[c.id]?.canManage))
+
+function onJoinDecided({ request, decision }) {
+  if (decision !== 'approved') return
+  const club = clubs.value.find(c => c.id === request.to_club_id)
+  if (club) loadClub(club)
+}
+
 function addable(clubId) {
   const st = clubState.value[clubId]
   if (!st) return []
@@ -130,6 +142,11 @@ onMounted(() => {
     <section class="block">
       <h2 class="block-title">{{ $t('my_club.requests') }}</h2>
       <RoleRequestQueue :show-club="clubs.length > 1" />
+    </section>
+
+    <section v-if="selfRun" class="block">
+      <h2 class="block-title">{{ $t('my_club.join_requests') }}</h2>
+      <JoinRequestQueue :show-club="clubs.length > 1" @decided="onJoinDecided" />
     </section>
 
     <section v-for="club in clubs" :key="club.id" class="block">

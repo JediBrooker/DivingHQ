@@ -467,7 +467,8 @@
       "password_placeholder": "Tu contraseña actual",
       "conflict": "No se puede fusionar: la cuenta antigua y tu cuenta actual tienen ambas inscripciones para el mismo evento y ronda. Desmarca el candidato en conflicto o contacta con el admin de tu federación para fusionar manualmente.",
       "success_toast": "Resultados anteriores re-vinculados a tu perfil."
-    }
+    },
+    "club_request_sent": "Solicitud enviada. Te cambiarás cuando se apruebe: por tu federación o, donde aún no la haya, por los administradores del nuevo club."
   },
   "diver_profile": {
     "back": "← Volver",
@@ -1929,7 +1930,12 @@
     "add": "Añadir",
     "remove": "Quitar",
     "federation_appoints": "Tu federación nombra a los administradores de este club.",
-    "region_claimed_note": "Cuando el organismo rector de una región la ha reclamado, solo los administradores de esa región pueden mover clubes dentro o fuera de ella."
+    "region_claimed_note": "Cuando el organismo rector de una región la ha reclamado, solo los administradores de esa región pueden mover clubes dentro o fuera de ella.",
+    "join_requests": "Solicitudes de ingreso",
+    "no_join_requests_title": "Nadie esperando para unirse",
+    "no_join_requests_body": "Cuando alguien pida unirse a tu club desde su perfil, aparecerá aquí.",
+    "wants_to_join": "quiere unirse a {club}",
+    "currently_at": "ahora en {club}"
   },
   "regions": {
     "label": {

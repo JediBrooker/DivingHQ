@@ -481,9 +481,17 @@ under a federation; in an unclaimed country the requester's club admins
 sysadmin as fallback. Referee went to the sysadmin after launch: it's an
 org-wide controller role (`socketCanManageEvent` and every
 `requireRoleOrEventDelegate([... 'referee'])` gate), so a club-minted
-referee could drive any other club's live meet in the country. Club admins review on `/club` (My club), where in an
-unclaimed country they also manage co-admins (members only, never the
-last one).
+referee could drive any other club's live meet in the country. Club
+admins review on `/club` (My club), where in an unclaimed country they
+also manage co-admins (members only, never the last live one).
+
+**Joining a club.** Setting `users.club_id` directly stays org-admin only.
+Everyone else asks: Change Club on the profile files a `club_change`
+request (`routes/club-changes.js`), which the org admin approves under a
+federation and, in an unclaimed country, the admins of the club being
+joined (or its region's). They get an inbox notice and a Join requests
+list on `/club` / `/region`. Without this, anyone who signed up
+Independent or left their club could never get into one.
 
 **Frontend.** `auth.clubAdminOf` / `auth.isClubAdmin` come from the login
 and `/api/auth/me` bodies (not the JWT). `useClubScope` narrows the

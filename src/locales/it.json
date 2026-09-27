@@ -478,7 +478,8 @@
       "password_placeholder": "La tua password attuale",
       "conflict": "Impossibile unire: l’account vecchio e quello attuale hanno entrambi iscrizioni per lo stesso evento e turno. Deseleziona il candidato in conflitto o contatta l’amministratore della tua federazione per unire manualmente.",
       "success_toast": "Risultati passati ricollegati al tuo profilo."
-    }
+    },
+    "club_request_sent": "Richiesta inviata. Il passaggio avverrà dopo l'approvazione: della tua federazione o, dove non c'è ancora, degli amministratori del nuovo club."
   },
   "diver_profile": {
     "back": "← Indietro",
@@ -1929,7 +1930,12 @@
     "add": "Aggiungi",
     "remove": "Rimuovi",
     "federation_appoints": "Gli amministratori di questo club sono nominati dalla tua federazione.",
-    "region_claimed_note": "Quando l'ente di governo di una regione l'ha rivendicata, solo gli amministratori di quella regione possono spostarvi dentro o fuori i club."
+    "region_claimed_note": "Quando l'ente di governo di una regione l'ha rivendicata, solo gli amministratori di quella regione possono spostarvi dentro o fuori i club.",
+    "join_requests": "Richieste di iscrizione",
+    "no_join_requests_title": "Nessuno in attesa di entrare",
+    "no_join_requests_body": "Quando qualcuno chiede di entrare nel tuo club dal proprio profilo, la richiesta compare qui.",
+    "wants_to_join": "vuole entrare in {club}",
+    "currently_at": "attualmente in {club}"
   },
   "regions": {
     "label": {

@@ -467,7 +467,8 @@
       "password_placeholder": "Your current password",
       "conflict": "Cannot merge: the old account and your current account both have entries for the same event and round. Untick the colliding candidate or contact your federation admin to merge manually.",
       "success_toast": "Past results re-linked to your profile."
-    }
+    },
+    "club_request_sent": "Request sent. You'll move once it's approved: by your federation, or where there isn't one yet, by the new club's admins."
   },
   "diver_profile": {
     "back": "← Back",
@@ -1929,7 +1930,12 @@
     "add": "Add",
     "remove": "Remove",
     "federation_appoints": "Your federation appoints this club's admins.",
-    "region_claimed_note": "Once a region's governing body has claimed it, only that region's admins can move clubs into or out of it."
+    "region_claimed_note": "Once a region's governing body has claimed it, only that region's admins can move clubs into or out of it.",
+    "join_requests": "Join requests",
+    "no_join_requests_title": "Nobody waiting to join",
+    "no_join_requests_body": "When someone asks to join your club from their profile, it shows up here.",
+    "wants_to_join": "wants to join {club}",
+    "currently_at": "currently at {club}"
   },
   "regions": {
     "label": {

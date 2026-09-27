@@ -478,7 +478,8 @@
       "password_placeholder": "Votre mot de passe actuel",
       "conflict": "Fusion impossible : l’ancien compte et votre compte actuel ont tous deux des inscriptions pour la même épreuve et le même tour. Décochez le candidat en conflit ou contactez l’administrateur de votre fédération pour fusionner manuellement.",
       "success_toast": "Résultats passés re-rattachés à votre profil."
-    }
+    },
+    "club_request_sent": "Demande envoyée. Le changement se fera une fois approuvé : par votre fédération, ou là où il n'y en a pas encore, par les administrateurs du nouveau club."
   },
   "diver_profile": {
     "back": "← Retour",
@@ -1929,7 +1930,12 @@
     "add": "Ajouter",
     "remove": "Retirer",
     "federation_appoints": "Votre fédération nomme les administrateurs de ce club.",
-    "region_claimed_note": "Une fois qu'une région a été revendiquée par son instance dirigeante, seuls les administrateurs de cette région peuvent y faire entrer ou en faire sortir des clubs."
+    "region_claimed_note": "Une fois qu'une région a été revendiquée par son instance dirigeante, seuls les administrateurs de cette région peuvent y faire entrer ou en faire sortir des clubs.",
+    "join_requests": "Demandes d'adhésion",
+    "no_join_requests_title": "Personne n'attend pour rejoindre le club",
+    "no_join_requests_body": "Quand quelqu'un demande à rejoindre votre club depuis son profil, la demande apparaît ici.",
+    "wants_to_join": "souhaite rejoindre {club}",
+    "currently_at": "actuellement à {club}"
   },
   "regions": {
     "label": {

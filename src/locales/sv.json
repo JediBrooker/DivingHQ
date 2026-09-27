@@ -478,7 +478,8 @@
       "password_placeholder": "Ditt nuvarande lösenord",
       "conflict": "Kan inte slå samman: både det gamla kontot och ditt nuvarande konto har anmälningar för samma tävling och omgång. Bocka av den krockande kandidaten eller kontakta din förbundsadministratör för att slå samman manuellt.",
       "success_toast": "Tidigare resultat omkopplade till din profil."
-    }
+    },
+    "club_request_sent": "Förfrågan skickad. Du flyttas när den godkänts: av ditt förbund, eller där det ännu inte finns något, av den nya klubbens administratörer."
   },
   "diver_profile": {
     "back": "← Tillbaka",
@@ -1929,7 +1930,12 @@
     "add": "Lägg till",
     "remove": "Ta bort",
     "federation_appoints": "Ditt förbund utser klubbens administratörer.",
-    "region_claimed_note": "När en regions styrande organ har gjort anspråk på den kan bara regionens administratörer flytta klubbar in i eller ut ur den."
+    "region_claimed_note": "När en regions styrande organ har gjort anspråk på den kan bara regionens administratörer flytta klubbar in i eller ut ur den.",
+    "join_requests": "Förfrågningar om medlemskap",
+    "no_join_requests_title": "Ingen väntar på att gå med",
+    "no_join_requests_body": "När någon ber om att gå med i din klubb från sin profil visas det här.",
+    "wants_to_join": "vill gå med i {club}",
+    "currently_at": "just nu i {club}"
   },
   "regions": {
     "label": {

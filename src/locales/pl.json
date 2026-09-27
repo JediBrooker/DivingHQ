@@ -478,7 +478,8 @@
       "password_placeholder": "Twoje aktualne hasło",
       "conflict": "Nie można scalić: stare konto i Twoje obecne konto mają wpisy dla tego samego wydarzenia i rundy. Odznacz kolidującego kandydata lub skontaktuj się z administratorem federacji, aby scalić ręcznie.",
       "success_toast": "Wcześniejsze wyniki ponownie powiązane z Twoim profilem."
-    }
+    },
+    "club_request_sent": "Prośba wysłana. Przeniesienie nastąpi po jej zatwierdzeniu: przez twoją federację lub, tam gdzie jej jeszcze nie ma, przez administratorów nowego klubu."
   },
   "diver_profile": {
     "back": "← Wstecz",
@@ -1929,7 +1930,12 @@
     "add": "Dodaj",
     "remove": "Usuń",
     "federation_appoints": "Administratorów tego klubu wyznacza twoja federacja.",
-    "region_claimed_note": "Gdy organ zarządzający regionem przejmie go, tylko administratorzy tego regionu mogą przenosić do niego kluby lub je z niego usuwać."
+    "region_claimed_note": "Gdy organ zarządzający regionem przejmie go, tylko administratorzy tego regionu mogą przenosić do niego kluby lub je z niego usuwać.",
+    "join_requests": "Prośby o dołączenie",
+    "no_join_requests_title": "Nikt nie czeka na dołączenie",
+    "no_join_requests_body": "Gdy ktoś poprosi ze swojego profilu o dołączenie do twojego klubu, pojawi się to tutaj.",
+    "wants_to_join": "chce dołączyć do {club}",
+    "currently_at": "obecnie w {club}"
   },
   "regions": {
     "label": {

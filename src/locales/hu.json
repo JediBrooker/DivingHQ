@@ -478,7 +478,8 @@
       "password_placeholder": "A jelenlegi jelszavad",
       "conflict": "Nem egyesíthető: a régi fiók és a jelenlegi fiókod is rendelkezik bejegyzésekkel ugyanarra az eseményre és fordulóra. Vedd ki a pipát az ütköző jelöltről, vagy kérd a szövetséged adminisztrátorát a kézi egyesítéshez.",
       "success_toast": "Korábbi eredmények újra a profilodhoz kapcsolva."
-    }
+    },
+    "club_request_sent": "Kérelem elküldve. Az átlépés a jóváhagyás után történik meg: a szövetsége, vagy ahol még nincs ilyen, az új klub adminisztrátorai hagyják jóvá."
   },
   "diver_profile": {
     "back": "← Vissza",
@@ -1929,7 +1930,12 @@
     "add": "Hozzáadás",
     "remove": "Eltávolítás",
     "federation_appoints": "A klub adminisztrátorait a szövetsége nevezi ki.",
-    "region_claimed_note": "Ha egy régiót már átvett az irányító szerve, klubot csak a régió adminisztrátorai tehetnek be oda vagy vehetnek ki onnan."
+    "region_claimed_note": "Ha egy régiót már átvett az irányító szerve, klubot csak a régió adminisztrátorai tehetnek be oda vagy vehetnek ki onnan.",
+    "join_requests": "Csatlakozási kérelmek",
+    "no_join_requests_title": "Senki sem vár csatlakozásra",
+    "no_join_requests_body": "Ha valaki a profiljáról kéri a csatlakozást a klubjához, itt jelenik meg.",
+    "wants_to_join": "csatlakozna ide: {club}",
+    "currently_at": "jelenleg: {club}"
   },
   "regions": {
     "label": {

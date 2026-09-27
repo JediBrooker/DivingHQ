@@ -1998,3 +1998,76 @@ test("club region moves: self-serve between unclaimed regions, a claimed region'
     await claimKit.wipe(CODE);
   }
 });
+
+test("unclaimed country: people ask to join a club and its admins say yes", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "LCA";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Castries Divers" });
+    const B = await delegateSignUp({ country_code: CODE, new_club_name: "Soufriere Divers" });
+    // Signed up Independent, and asked to dive.
+    const D = await delegateSignUp({ country_code: CODE, requested_role: "diver" });
+    const clubOf = async (id) => (await pool.query("SELECT club_id FROM users WHERE id = $1", [id])).rows[0].club_id;
+
+    // Setting a club directly is still not theirs (or a club admin's) to do.
+    assert.equal((await fetchJson("PUT", `/api/users/${D.id}/club`, { token: D.token, body: { club_id: A.clubId } })).status, 403);
+    assert.equal((await fetchJson("PUT", `/api/users/${D.id}/club`, { token: A.token, body: { club_id: A.clubId } })).status, 403);
+
+    // A club admin can't sign someone up; the person asks.
+    assert.equal((await fetchJson("POST", "/api/club-change-requests", {
+      token: A.token, body: { user_id: D.id, to_club_id: A.clubId } })).status, 403);
+    const ask = await fetchJson("POST", "/api/club-change-requests", { token: D.token, body: { to_club_id: A.clubId, note: "Training at Castries" } });
+    assert.equal(ask.status, 201, JSON.stringify(ask.body));
+    assert.equal(ask.body.finalised, false);
+    const note = await pool.query(
+      "SELECT action_url FROM notifications WHERE user_id = $1 AND category = 'club_change'", [A.id]);
+    assert.equal(note.rows[0]?.action_url, "/club", "A is told");
+
+    // A sees it, B doesn't and can't decide it.
+    const aInbox = (await fetchJson("GET", "/api/club-change-requests", { token: A.token })).body;
+    assert.ok(aInbox.some((r) => r.id === ask.body.id));
+    const bInbox = (await fetchJson("GET", "/api/club-change-requests", { token: B.token })).body;
+    assert.ok(!bInbox.some((r) => r.id === ask.body.id));
+    assert.equal((await fetchJson("POST", `/api/club-change-requests/${ask.body.id}/review`, {
+      token: B.token, body: { decision: "approved" } })).status, 403);
+    assert.equal((await fetchJson("POST", `/api/club-change-requests/${ask.body.id}/review`, {
+      token: D.token, body: { decision: "approved" } })).status, 403);
+
+    assert.equal((await fetchJson("POST", `/api/club-change-requests/${ask.body.id}/review`, {
+      token: A.token, body: { decision: "approved" } })).status, 200);
+    assert.equal(await clubOf(D.id), A.clubId);
+    const audit = await pool.query(
+      "SELECT 1 FROM audit_log WHERE entity_id = $1 AND action = 'user.club_changed'", [D.id]);
+    assert.equal(audit.rows.length, 1);
+
+    // Now a member: their diver request is A's to review, and A can make
+    // them a co-admin.
+    assert.ok((await fetchJson("GET", "/api/role-requests", { token: A.token })).body.some((r) => r.user_id === D.id));
+    assert.equal((await fetchJson("POST", `/api/clubs/${A.clubId}/admins`, { token: A.token, body: { user_id: D.id } })).status, 201);
+
+    // Switching to B goes to B, and B can turn it down.
+    const sw = await fetchJson("POST", "/api/club-change-requests", { token: D.token, body: { to_club_id: B.clubId } });
+    assert.equal(sw.status, 201);
+    assert.ok(!(await fetchJson("GET", "/api/club-change-requests", { token: A.token })).body
+      .some((r) => r.id === sw.body.id && r.user_id !== A.id && r.to_club_id === A.clubId));
+    assert.equal((await fetchJson("POST", `/api/club-change-requests/${sw.body.id}/review`, {
+      token: A.token, body: { decision: "approved" } })).status, 403);
+    assert.equal((await fetchJson("POST", `/api/club-change-requests/${sw.body.id}/review`, {
+      token: B.token, body: { decision: "rejected" } })).status, 200);
+    assert.equal(await clubOf(D.id), A.clubId);
+
+    // Under a real federation this stays the org admin's call.
+    await pool.query("UPDATE organisations SET claim_state = 'claimed' WHERE id = $1", [A.orgId]);
+    const fed = await fetchJson("POST", "/api/club-change-requests", { token: D.token, body: { to_club_id: B.clubId } });
+    assert.equal(fed.status, 201);
+    assert.equal((await fetchJson("POST", `/api/club-change-requests/${fed.body.id}/review`, {
+      token: B.token, body: { decision: "approved" } })).status, 403);
+  } finally {
+    await pool.query(
+      "DELETE FROM club_change_requests WHERE from_org_id IN (SELECT id FROM organisations WHERE country_code = $1)", [CODE],
+    ).catch(() => {});
+    await claimKit.wipe(CODE);
+  }
+});

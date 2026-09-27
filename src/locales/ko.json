@@ -467,7 +467,8 @@
       "password_placeholder": "현재 비밀번호",
       "conflict": "병합할 수 없습니다: 이전 계정과 현재 계정 모두 동일한 경기와 라운드에 대한 기록을 가지고 있습니다. 충돌하는 후보의 체크를 해제하거나 연맹 관리자에게 연락하여 수동으로 병합하세요.",
       "success_toast": "과거 결과를 프로필에 다시 연결했습니다."
-    }
+    },
+    "club_request_sent": "요청을 보냈습니다. 승인되면 이동합니다. 연맹이, 아직 연맹이 없는 곳에서는 새 클럽의 관리자가 승인합니다."
   },
   "diver_profile": {
     "back": "← 뒤로",
@@ -1929,7 +1930,12 @@
     "add": "추가",
     "remove": "제거",
     "federation_appoints": "이 클럽의 관리자는 연맹이 임명합니다.",
-    "region_claimed_note": "지역 관리 단체가 지역을 인수하면 그 지역의 관리자만 클럽을 지역에 넣거나 뺄 수 있습니다."
+    "region_claimed_note": "지역 관리 단체가 지역을 인수하면 그 지역의 관리자만 클럽을 지역에 넣거나 뺄 수 있습니다.",
+    "join_requests": "가입 요청",
+    "no_join_requests_title": "가입을 기다리는 사람이 없습니다",
+    "no_join_requests_body": "누군가 자신의 프로필에서 클럽 가입을 요청하면 여기에 표시됩니다.",
+    "wants_to_join": "{club} 가입 희망",
+    "currently_at": "현재 소속: {club}"
   },
   "regions": {
     "label": {

@@ -467,7 +467,8 @@
       "password_placeholder": "Kata sandi Anda saat ini",
       "conflict": "Tidak dapat digabungkan: akun lama dan akun Anda saat ini sama-sama memiliki entri untuk acara dan ronde yang sama. Hapus centang pada kandidat yang bertabrakan atau hubungi admin federasi Anda untuk menggabungkan secara manual.",
       "success_toast": "Hasil sebelumnya kembali ditautkan ke profil Anda."
-    }
+    },
+    "club_request_sent": "Permintaan terkirim. Anda akan pindah setelah disetujui: oleh federasi Anda, atau jika belum ada, oleh admin klub yang baru."
   },
   "diver_profile": {
     "back": "← Kembali",
@@ -1929,7 +1930,12 @@
     "add": "Tambah",
     "remove": "Hapus",
     "federation_appoints": "Federasi Anda menunjuk admin klub ini.",
-    "region_claimed_note": "Setelah badan pengelola wilayah mengklaimnya, hanya admin wilayah itu yang dapat memindahkan klub masuk ke atau keluar dari wilayah tersebut."
+    "region_claimed_note": "Setelah badan pengelola wilayah mengklaimnya, hanya admin wilayah itu yang dapat memindahkan klub masuk ke atau keluar dari wilayah tersebut.",
+    "join_requests": "Permintaan bergabung",
+    "no_join_requests_title": "Tidak ada yang menunggu bergabung",
+    "no_join_requests_body": "Saat seseorang meminta bergabung dengan klub Anda dari profilnya, permintaan itu muncul di sini.",
+    "wants_to_join": "ingin bergabung dengan {club}",
+    "currently_at": "saat ini di {club}"
   },
   "regions": {
     "label": {

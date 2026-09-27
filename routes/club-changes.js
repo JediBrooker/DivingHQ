@@ -9,6 +9,13 @@
 //
 // Flows (see migration 057):
 //   club_change (within-org): diver asks, one org_admin approves.
+//     In a country with no federation (claim_state 'unclaimed') there's
+//     no org_admin, so the admins of the club being joined approve it
+//     instead (or of that club's region, one level up). Otherwise
+//     anyone who signed up Independent, or left their club, could never
+//     get into one: PUT /api/users/:id/club is org-admin only for
+//     setting a club. The person asks, so nobody gets signed up to a
+//     club without saying so.
 //   org_transfer (cross-org): three-way handshake, source admin +
 //     target admin + diver, in any order, finalises once all three
 //     are in. Updates users.org_id/club_id atomically and audits it.
@@ -24,6 +31,39 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
     !!req.user.is_system_admin ||
     ((req.user.org_roles || []).includes("org_admin") &&
       req.user.org_id === orgId);
+
+  // Can this club (or region) admin decide this request? Only a within-org
+  // move into a club they run, in an org with no federation to ask.
+  async function isJoinReviewer(db, userId, r) {
+    if (r.kind !== "club_change" || !r.to_club_id || r.from_org_id !== r.to_org_id) return false;
+    const q = await db.query(
+      `SELECT 1 FROM clubs c JOIN organisations o ON o.id = c.org_id
+        WHERE c.id = $1 AND o.id = $2 AND o.claim_state = 'unclaimed'
+          AND (EXISTS (SELECT 1 FROM club_admins ca WHERE ca.club_id = c.id AND ca.user_id = $3)
+               OR EXISTS (SELECT 1 FROM region_admins ra WHERE ra.region_id = c.region_id AND ra.user_id = $3))`,
+      [r.to_club_id, r.to_org_id, userId],
+    );
+    return q.rows.length > 0;
+  }
+
+  // Who to tell about a new join request where there's no federation:
+  // the club's live admins, or its region's if the club has none.
+  async function joinReviewerIds(db, clubId) {
+    const club = await db.query(
+      `SELECT ca.user_id FROM club_admins ca JOIN users u ON u.id = ca.user_id
+        WHERE ca.club_id = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
+      [clubId],
+    );
+    if (club.rows.length) return club.rows.map((r) => r.user_id);
+    const region = await db.query(
+      `SELECT ra.user_id FROM clubs c
+         JOIN region_admins ra ON ra.region_id = c.region_id
+         JOIN users u ON u.id = ra.user_id
+        WHERE c.id = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`,
+      [clubId],
+    );
+    return region.rows.map((r) => r.user_id);
+  }
 
   // Best-effort inbox notification, never aborts the parent tx.
   async function notify(db, userId, { title, body, action_url, data }) {
@@ -86,9 +126,13 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
       );
       revokedLinks = await revokeGuardianLinks(client, r.user_id, req.user.id);
     } else {
-      await client.query("UPDATE users SET club_id = $1 WHERE id = $2", [
+      // Pinned to the org the request was made in, so a request that
+      // outlived an org transfer can't drop someone into a club of the
+      // org they left.
+      await client.query("UPDATE users SET club_id = $1 WHERE id = $2 AND org_id = $3", [
         r.to_club_id || null,
         r.user_id,
+        r.to_org_id,
       ]);
     }
 
@@ -221,14 +265,28 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
       // fully approved → apply immediately.
       const finalised = await finalizeIfReady(client, r, req);
 
-      // Notify the relevant approvers if still pending.
-      if (!finalised) {
-        if (kind === "club_change") {
-          // diver asked, ping the org admins of their org via audit.
-          // inbox is the admin's GET; no direct per-admin row here.
+      // Org admins see a pending club change in their inbox GET. Where
+      // there's no federation, the club being joined is who decides, so
+      // tell its admins directly. Looked up inside the transaction,
+      // sent after it, so a notification hiccup can't undo the request.
+      let tellIds = [];
+      if (!finalised && kind === "club_change" && r.to_club_id) {
+        const unclaimed = await client.query(
+          "SELECT 1 FROM organisations WHERE id = $1 AND claim_state = 'unclaimed'", [toOrg],
+        );
+        if (unclaimed.rows.length) {
+          tellIds = (await joinReviewerIds(client, r.to_club_id)).filter((id) => id !== targetId);
         }
       }
       await client.query("COMMIT");
+      for (const id of tellIds) {
+        await notify(pool, id, {
+          title: `${u.full_name} wants to join your club`,
+          body: "Approve or decline it on your club page.",
+          action_url: "/club",
+          data: { request_id: r.id, kind: r.kind },
+        });
+      }
       res.status(201).json({ ...r, finalised });
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});
@@ -258,6 +316,12 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
            LEFT JOIN clubs tc      ON tc.id = cr.to_club_id
           WHERE cr.user_id = $1
              OR ($2::boolean AND ($3::uuid IS NULL OR cr.from_org_id = $3 OR cr.to_org_id = $3))
+             -- Club and region admins where there's no federation: pending
+             -- requests to join a club they run (isJoinReviewer, as a filter).
+             OR (cr.status = 'pending' AND cr.kind = 'club_change'
+                 AND cr.from_org_id = cr.to_org_id AND to_.claim_state = 'unclaimed'
+                 AND (EXISTS (SELECT 1 FROM club_admins ca WHERE ca.club_id = cr.to_club_id AND ca.user_id = $1)
+                      OR EXISTS (SELECT 1 FROM region_admins ra WHERE ra.region_id = tc.region_id AND ra.user_id = $1)))
           ORDER BY cr.created_at DESC`,
         [req.user.id, isAdmin, req.user.is_system_admin ? null : req.user.org_id],
       );
@@ -287,11 +351,21 @@ module.exports = function createClubChangesRouter({ pool, verifyToken }) {
       const r = await loadPending(client, req.params.id);
       if (!r) { await client.query("ROLLBACK"); return res.status(404).json({ error: "Request not found" }); }
 
-      const canSource = isOrgAdminOf(req, r.from_org_id);
+      // A club (or region) admin approving someone into their club counts
+      // as the one approval a club_change needs.
+      const canSource = isOrgAdminOf(req, r.from_org_id)
+        || await isJoinReviewer(client, req.user.id, r);
       const canTarget = isOrgAdminOf(req, r.to_org_id);
       if (!canSource && !canTarget) {
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "Not an admin of either organisation in this request" });
+      }
+      if (decision === "approved" && r.kind === "club_change") {
+        const still = await client.query("SELECT 1 FROM users WHERE id = $1 AND org_id = $2", [r.user_id, r.to_org_id]);
+        if (!still.rows.length) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({ error: "That person has moved to another organisation" });
+        }
       }
 
       if (decision === "rejected") {

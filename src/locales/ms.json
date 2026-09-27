@@ -467,7 +467,8 @@
       "password_placeholder": "Kata laluan semasa anda",
       "conflict": "Tidak boleh digabungkan: akaun lama dan akaun semasa anda kedua-duanya mempunyai entri untuk acara dan pusingan yang sama. Buang tandakan calon yang bercanggah atau hubungi pentadbir persekutuan anda untuk menggabungkan secara manual.",
       "success_toast": "Keputusan lampau dipautkan semula ke profil anda."
-    }
+    },
+    "club_request_sent": "Permintaan dihantar. Anda akan berpindah selepas ia diluluskan: oleh persekutuan anda, atau jika belum ada, oleh pentadbir kelab baharu."
   },
   "diver_profile": {
     "back": "← Kembali",
@@ -1929,7 +1930,12 @@
     "add": "Tambah",
     "remove": "Alih keluar",
     "federation_appoints": "Persekutuan anda melantik pentadbir kelab ini.",
-    "region_claimed_note": "Sebaik sahaja badan pentadbir rantau menuntutnya, hanya pentadbir rantau itu boleh memindahkan kelab masuk ke atau keluar dari rantau tersebut."
+    "region_claimed_note": "Sebaik sahaja badan pentadbir rantau menuntutnya, hanya pentadbir rantau itu boleh memindahkan kelab masuk ke atau keluar dari rantau tersebut.",
+    "join_requests": "Permintaan menyertai",
+    "no_join_requests_title": "Tiada sesiapa menunggu untuk menyertai",
+    "no_join_requests_body": "Apabila seseorang meminta untuk menyertai kelab anda dari profil mereka, ia dipaparkan di sini.",
+    "wants_to_join": "mahu menyertai {club}",
+    "currently_at": "kini di {club}"
   },
   "regions": {
     "label": {

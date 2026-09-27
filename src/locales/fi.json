@@ -478,7 +478,8 @@
       "password_placeholder": "Nykyinen salasanasi",
       "conflict": "Yhdistäminen ei onnistu: sekä vanhalla tilillä että nykyisellä tililläsi on merkintöjä samasta tapahtumasta ja erästä. Poista rasti ristiriitaiselta ehdokkaalta tai ota yhteyttä liiton ylläpitäjään yhdistääksesi manuaalisesti.",
       "success_toast": "Aiemmat tulokset uudelleenliitetty profiiliisi."
-    }
+    },
+    "club_request_sent": "Pyyntö lähetetty. Siirryt, kun se on hyväksytty: liittosi tai, jos liittoa ei vielä ole, uuden seuran ylläpitäjät hyväksyvät sen."
   },
   "diver_profile": {
     "back": "← Takaisin",
@@ -1929,7 +1930,12 @@
     "add": "Lisää",
     "remove": "Poista",
     "federation_appoints": "Liittosi nimeää tämän seuran ylläpitäjät.",
-    "region_claimed_note": "Kun alueen hallintoelin on ottanut alueen hoitaakseen, vain alueen ylläpitäjät voivat siirtää seuroja sinne tai sieltä pois."
+    "region_claimed_note": "Kun alueen hallintoelin on ottanut alueen hoitaakseen, vain alueen ylläpitäjät voivat siirtää seuroja sinne tai sieltä pois.",
+    "join_requests": "Liittymispyynnöt",
+    "no_join_requests_title": "Kukaan ei odota liittymistä",
+    "no_join_requests_body": "Kun joku pyytää profiilistaan liittymistä seuraasi, pyyntö näkyy tässä.",
+    "wants_to_join": "haluaa liittyä seuraan {club}",
+    "currently_at": "nyt seurassa {club}"
   },
   "regions": {
     "label": {

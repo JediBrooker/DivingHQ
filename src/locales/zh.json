@@ -467,7 +467,8 @@
       "password_placeholder": "你当前的密码",
       "conflict": "无法合并：旧账户与你当前账户均对同一赛事和同一轮次有记录。请取消勾选冲突的候选项，或联系你的联合会管理员手动合并。",
       "success_toast": "过往成绩已重新关联到你的个人资料。"
-    }
+    },
+    "club_request_sent": "申请已发送。获批后即完成转会：由您的协会审批，尚无协会的地区则由新俱乐部的管理员审批。"
   },
   "diver_profile": {
     "back": "← 返回",
@@ -1929,7 +1930,12 @@
     "add": "添加",
     "remove": "移除",
     "federation_appoints": "本俱乐部的管理员由您的联合会任命。",
-    "region_claimed_note": "地区的管理机构认领该地区后，只有该地区的管理员才能将俱乐部移入或移出该地区。"
+    "region_claimed_note": "地区的管理机构认领该地区后，只有该地区的管理员才能将俱乐部移入或移出该地区。",
+    "join_requests": "入会申请",
+    "no_join_requests_title": "暂无待加入的人",
+    "no_join_requests_body": "有人从个人资料页申请加入您的俱乐部时，会显示在这里。",
+    "wants_to_join": "希望加入 {club}",
+    "currently_at": "目前在 {club}"
   },
   "regions": {
     "label": {
