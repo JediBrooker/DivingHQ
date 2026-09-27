@@ -168,3 +168,17 @@ test("the welcome email only says 'you're its admin' to a club admin", async () 
   assert.doesNotMatch(member[0].body.text, /admin already/);
   assert.match(member[0].body.text, /\n\nDivingHQ$/);
 });
+
+// lib/notices.js mails through sendNoticeEmail, which links to whatever
+// page the notice is about. Claim mail keeps its own wording on top.
+test("notice emails link to their page, claim emails still point at /claims", async () => {
+  const sent = await withEnv({ APP_BASE_URL: "https://hq.example.test" }, () => captureMail(async (email) => {
+    await email.sendNoticeEmail(["00000000-0000-0000-0000-000000000005"], {
+      subject: "A club is waiting", body: "Decide on Clubs.", path: "/clubs",
+    });
+    await email.sendClaimEmail(["00000000-0000-0000-0000-000000000005"], { subject: "A claim", body: "Details" });
+  }));
+  assert.equal(sent.length, 2);
+  assert.match(sent[0].body.text, /Decide on Clubs\.\n\nOpen it on DivingHQ: https:\/\/hq\.example\.test\/clubs\n\nDivingHQ$/);
+  assert.match(sent[1].body.text, /See the claim on DivingHQ: https:\/\/hq\.example\.test\/claims/);
+});
