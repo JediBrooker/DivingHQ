@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import CheckInboxPanel from '@/components/CheckInboxPanel.vue'
 import COUNTRIES from '../../lib/countries.json'
 
 const { locale, t } = useI18n()
@@ -30,6 +31,24 @@ const msgType = ref('')
 const loading = ref(false)
 const slugManuallyEdited = ref(false)
 const website = ref('')
+// After a successful submit: who to tell to check their inbox, and what
+// happens once they have. `approver` comes back on a claim (clubs,
+// regions, parent or sysadmin); a brand-new federation has none and waits
+// for a sysadmin instead.
+const registered = ref(null)   // { email, username, approver }
+const NEXT_STEP = {
+  clubs:    'auth.check_inbox.next_claim_clubs',
+  regions:  'auth.check_inbox.next_claim_regions',
+  parent:   'auth.check_inbox.next_claim_parent',
+  sysadmin: 'auth.check_inbox.next_claim_sysadmin',
+}
+const nextStep = computed(() => {
+  if (!registered.value) return ''
+  const a = registered.value.approver
+  // Any claim we don't have words for still gets a sensible line.
+  if (a) return t(NEXT_STEP[a] || NEXT_STEP.sysadmin)
+  return t('auth.check_inbox.next_org_pending')
+})
 
 // Claims (phase 3). Where clubs already started this country, or the
 // body is a state / province, registering opens a claim on what's there
@@ -118,8 +137,11 @@ async function handleSubmit() {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || 'Registration failed')
-    msg.value = data.message
-    msgType.value = 'success'
+    registered.value = {
+      email: email.value.trim(),
+      username: username.value.trim(),
+      approver: data.approver || null,
+    }
   } catch (err) {
     msg.value = err.message
     msgType.value = 'error'
@@ -144,7 +166,10 @@ async function handleSubmit() {
     <h1>{{ $t('auth.register_org.title') }}</h1>
     <p class="subtitle">{{ $t('auth.register_org.subtitle') }}</p>
 
-    <form @submit.prevent="handleSubmit" class="form-stack">
+    <CheckInboxPanel v-if="registered" :email="registered.email" :username="registered.username">
+      <p class="next-note" data-testid="register-org-next">{{ nextStep }}</p>
+    </CheckInboxPanel>
+    <form v-else @submit.prevent="handleSubmit" class="form-stack">
       <div class="section">
         <div class="section-label">{{ $t('auth.register_org.section_org') }}</div>
         <div class="field">
@@ -227,7 +252,7 @@ async function handleSubmit() {
         {{ loading ? $t('auth.register_org.submit_loading') : $t('auth.register_org.submit_idle') }}
       </button>
     </form>
-    <p class="footer-link">{{ $t('auth.register_org.already_registered') }} <RouterLink to="/login">{{ $t('auth.register_org.sign_in_link') }}</RouterLink></p>
+    <p v-if="!registered" class="footer-link">{{ $t('auth.register_org.already_registered') }} <RouterLink to="/login">{{ $t('auth.register_org.sign_in_link') }}</RouterLink></p>
     </template>
   </div>
 </template>
@@ -266,6 +291,11 @@ h1 { font-size: 44px; font-style: italic; margin-bottom: 0.25rem; }
 .slug-preview { font-size: 11px; color: var(--text-3); margin-top: 0.25rem; font-family: var(--font-mono); }
 .slug-preview span { color: var(--cyan); }
 .hint-line { margin-top: 0.4rem; font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
+.next-note {
+  margin: 0; font-size: 13px; line-height: 1.55; color: var(--fg-2);
+  padding: 0.75rem; border-radius: var(--radius-sm);
+  background: var(--accent-soft); border: 1px solid var(--accent-soft-2);
+}
 .claim-note {
   margin: 0; font-size: 12px; line-height: 1.55; color: var(--fg-2);
   padding: 0.75rem; border-radius: var(--radius-sm);

@@ -150,6 +150,19 @@
       "resend_label": "Korisničko ime ili e-pošta",
       "resend_button": "Pošalji novu poveznicu",
       "resend_sent": "Ako taj račun čeka potvrdu, nova poveznica je na putu. Provjerite svoj sandučić."
+    },
+    "check_inbox": {
+      "title": "Provjerite svoj sandučić",
+      "body": "Poslali smo poveznicu za potvrdu na {email}. Kliknite je kako biste dovršili postavljanje računa.",
+      "no_mail": "Ništa ni nakon nekoliko minuta? Provjerite mapu neželjene pošte ili zatražite novu poveznicu.",
+      "resend_wait": "Pošalji novu poveznicu ({seconds} s)",
+      "resent": "Nova poveznica je na putu na {email}.",
+      "already": "Već ste kliknuli poveznicu?",
+      "next_org_pending": "Nakon potvrde DivingHQ pregledava vaš savez. Javit ćemo vam e-poštom kad bude odobren, a od tada se možete prijaviti.",
+      "next_claim_clubs": "Nakon potvrde vaš se zahtjev otvara, a klubovi koji su tamo već na DivingHQ-u glasaju o njemu. Možete se prijaviti dok se odlučuje.",
+      "next_claim_regions": "Nakon potvrde vaš se zahtjev otvara, a savezne države i pokrajine koje su već na DivingHQ-u glasaju o njemu. Možete se prijaviti dok se odlučuje.",
+      "next_claim_parent": "Nakon potvrde vaš se zahtjev otvara, a o njemu odlučuje vaš savez. Možete se prijaviti dok se odlučuje.",
+      "next_claim_sysadmin": "Nakon potvrde vaš se zahtjev otvara, a pregledava ga tim DivingHQ-a. Možete se prijaviti dok se odlučuje."
     }
   },
   "coach": {

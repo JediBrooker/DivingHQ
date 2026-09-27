@@ -150,6 +150,19 @@
       "resend_label": "Nama pengguna atau email",
       "resend_button": "Kirim tautan baru",
       "resend_sent": "Jika akun itu menunggu verifikasi, tautan baru sedang dikirim. Periksa kotak masuk Anda."
+    },
+    "check_inbox": {
+      "title": "Periksa kotak masuk Anda",
+      "body": "Kami telah mengirim tautan verifikasi ke {email}. Klik tautan itu untuk menyelesaikan pengaturan akun Anda.",
+      "no_mail": "Belum ada setelah beberapa menit? Periksa folder spam, atau kirim tautan baru.",
+      "resend_wait": "Kirim tautan baru ({seconds} dtk)",
+      "resent": "Tautan baru sedang dikirim ke {email}.",
+      "already": "Sudah mengeklik tautannya?",
+      "next_org_pending": "Setelah Anda terverifikasi, DivingHQ akan meninjau federasi Anda. Kami akan mengirim email saat federasi disetujui, dan sejak itu Anda bisa masuk.",
+      "next_claim_clubs": "Setelah Anda terverifikasi, klaim Anda dibuka dan klub-klub yang sudah ada di DivingHQ di sana akan memberikan suara. Anda bisa masuk selama keputusan diambil.",
+      "next_claim_regions": "Setelah Anda terverifikasi, klaim Anda dibuka dan negara bagian serta provinsi yang sudah ada di DivingHQ akan memberikan suara. Anda bisa masuk selama keputusan diambil.",
+      "next_claim_parent": "Setelah Anda terverifikasi, klaim Anda dibuka dan federasi Anda yang memutuskan. Anda bisa masuk selama keputusan diambil.",
+      "next_claim_sysadmin": "Setelah Anda terverifikasi, klaim Anda dibuka dan tim DivingHQ akan meninjaunya. Anda bisa masuk selama keputusan diambil."
     }
   },
   "coach": {

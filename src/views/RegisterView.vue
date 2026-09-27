@@ -1,12 +1,12 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import CheckInboxPanel from '@/components/CheckInboxPanel.vue'
 // Same file the server validates against (lib/countries.js), so the
 // picker can't offer a code the API then refuses.
 import COUNTRIES from '../../lib/countries.json'
 
-const router = useRouter()
 const { locale, t } = useI18n()
 
 const fullName = ref('')
@@ -82,6 +82,9 @@ const newClubCode = ref('')
 const msg = ref('')
 const msgType = ref('')
 const loading = ref(false)
+// Set once the account exists: the form gives way to the check-your-inbox
+// panel, which stays until they leave (no timed bounce to /login).
+const registered = ref(null)   // { email, username }
 
 // Public signups are gated off by default (coming-soon launch). null means
 // still checking, true is open (show the form), false is closed (show the notice).
@@ -188,9 +191,7 @@ async function handleSubmit() {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || 'Registration failed')
-    msg.value = data.message
-    msgType.value = 'success'
-    setTimeout(() => router.push('/login'), 2500)
+    registered.value = { email: email.value.trim(), username: username.value.trim() }
   } catch (err) {
     msg.value = err.message
     msgType.value = 'error'
@@ -215,7 +216,8 @@ async function handleSubmit() {
     <h1>{{ $t('auth.register.title') }}</h1>
     <p class="subtitle">{{ $t('auth.register.subtitle') }}</p>
 
-    <form @submit.prevent="handleSubmit" class="form-stack">
+    <CheckInboxPanel v-if="registered" :email="registered.email" :username="registered.username" />
+    <form v-else @submit.prevent="handleSubmit" class="form-stack">
       <div class="field">
         <label class="label">{{ $t('auth.register.full_name') }}</label>
         <!-- autocomplete="name" lets iOS surface the contact-card
@@ -335,7 +337,7 @@ async function handleSubmit() {
         {{ loading ? $t('auth.register.submit_loading') : $t('auth.register.submit_idle') }}
       </button>
     </form>
-    <p class="footer-link">{{ $t('auth.register.already_have_account') }} <RouterLink to="/login">{{ $t('auth.register.sign_in_link') }}</RouterLink></p>
+    <p v-if="!registered" class="footer-link">{{ $t('auth.register.already_have_account') }} <RouterLink to="/login">{{ $t('auth.register.sign_in_link') }}</RouterLink></p>
     </template>
   </div>
 </template>

@@ -150,6 +150,19 @@
       "resend_label": "Användarnamn eller e-post",
       "resend_button": "Skicka en ny länk",
       "resend_sent": "Om kontot väntar på verifiering är en ny länk på väg. Kolla din inkorg."
+    },
+    "check_inbox": {
+      "title": "Kolla din inkorg",
+      "body": "Vi har skickat en verifieringslänk till {email}. Klicka på den för att slutföra ditt konto.",
+      "no_mail": "Inget efter några minuter? Kolla skräppostmappen, eller skicka en ny länk.",
+      "resend_wait": "Skicka en ny länk ({seconds} s)",
+      "resent": "En ny länk är på väg till {email}.",
+      "already": "Har du redan klickat på länken?",
+      "next_org_pending": "När du har verifierat granskar DivingHQ ditt förbund. Vi mejlar dig när det är godkänt, och från och med då kan du logga in.",
+      "next_claim_clubs": "När du har verifierat öppnas ditt anspråk och klubbarna som redan finns på DivingHQ där röstar om det. Du kan logga in medan det avgörs.",
+      "next_claim_regions": "När du har verifierat öppnas ditt anspråk och delstaterna och provinserna som redan finns på DivingHQ röstar om det. Du kan logga in medan det avgörs.",
+      "next_claim_parent": "När du har verifierat öppnas ditt anspråk och ditt förbund avgör det. Du kan logga in medan det avgörs.",
+      "next_claim_sysadmin": "När du har verifierat öppnas ditt anspråk och DivingHQ-teamet granskar det. Du kan logga in medan det avgörs."
     }
   },
   "coach": {

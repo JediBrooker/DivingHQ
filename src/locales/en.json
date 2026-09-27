@@ -150,6 +150,19 @@
       "resend_label": "Username or email",
       "resend_button": "Send a new link",
       "resend_sent": "If that account is waiting for verification, a new link is on its way. Check your inbox."
+    },
+    "check_inbox": {
+      "title": "Check your inbox",
+      "body": "We've sent a verification link to {email}. Click it to finish setting up your account.",
+      "no_mail": "Nothing after a few minutes? Check your spam folder, or send a new link.",
+      "resend_wait": "Send a new link ({seconds}s)",
+      "resent": "A new link is on its way to {email}.",
+      "already": "Clicked the link already?",
+      "next_org_pending": "Once you've verified, DivingHQ reviews your federation. We'll email you when it's approved, and you can sign in from then on.",
+      "next_claim_clubs": "Once you've verified, your claim opens and the clubs already on DivingHQ there vote on it. You can sign in while it's decided.",
+      "next_claim_regions": "Once you've verified, your claim opens and the states and provinces already on DivingHQ vote on it. You can sign in while it's decided.",
+      "next_claim_parent": "Once you've verified, your claim opens and your federation decides on it. You can sign in while it's decided.",
+      "next_claim_sysadmin": "Once you've verified, your claim opens and the DivingHQ team reviews it. You can sign in while it's decided."
     }
   },
   "coach": {

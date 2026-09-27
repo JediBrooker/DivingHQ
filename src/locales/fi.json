@@ -150,6 +150,19 @@
       "resend_label": "Käyttäjätunnus tai sähköposti",
       "resend_button": "Lähetä uusi linkki",
       "resend_sent": "Jos tili odottaa vahvistusta, uusi linkki on matkalla. Tarkista saapuneet viestisi."
+    },
+    "check_inbox": {
+      "title": "Tarkista saapuneet viestisi",
+      "body": "Lähetimme vahvistuslinkin osoitteeseen {email}. Viimeistele tilisi napsauttamalla sitä.",
+      "no_mail": "Eikö mitään muutaman minuutin jälkeen? Katso roskapostikansio tai lähetä uusi linkki.",
+      "resend_wait": "Lähetä uusi linkki ({seconds} s)",
+      "resent": "Uusi linkki on matkalla osoitteeseen {email}.",
+      "already": "Napsautitko jo linkkiä?",
+      "next_org_pending": "Vahvistuksen jälkeen DivingHQ käsittelee liittosi. Lähetämme sähköpostia, kun se on hyväksytty, ja siitä lähtien voit kirjautua sisään.",
+      "next_claim_clubs": "Vahvistuksen jälkeen vaateesi avataan ja siellä jo DivingHQ:ssa olevat seurat äänestävät siitä. Voit kirjautua sisään päätöksen aikana.",
+      "next_claim_regions": "Vahvistuksen jälkeen vaateesi avataan ja jo DivingHQ:ssa olevat osavaltiot ja provinssit äänestävät siitä. Voit kirjautua sisään päätöksen aikana.",
+      "next_claim_parent": "Vahvistuksen jälkeen vaateesi avataan ja liittosi päättää siitä. Voit kirjautua sisään päätöksen aikana.",
+      "next_claim_sysadmin": "Vahvistuksen jälkeen vaateesi avataan ja DivingHQ-tiimi käsittelee sen. Voit kirjautua sisään päätöksen aikana."
     }
   },
   "coach": {

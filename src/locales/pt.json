@@ -150,6 +150,19 @@
       "resend_label": "Nome de utilizador ou e-mail",
       "resend_button": "Enviar nova ligação",
       "resend_sent": "Se essa conta aguarda verificação, uma nova ligação está a caminho. Verifique a sua caixa de entrada."
+    },
+    "check_inbox": {
+      "title": "Verifique a sua caixa de entrada",
+      "body": "Enviámos uma ligação de verificação para {email}. Clique nela para concluir a configuração da sua conta.",
+      "no_mail": "Nada ao fim de alguns minutos? Verifique a pasta de spam, ou envie uma nova ligação.",
+      "resend_wait": "Enviar nova ligação ({seconds} s)",
+      "resent": "Uma nova ligação está a caminho de {email}.",
+      "already": "Já clicou na ligação?",
+      "next_org_pending": "Depois da verificação, a DivingHQ analisa a sua federação. Enviaremos um e-mail quando for aprovada e, a partir daí, poderá iniciar sessão.",
+      "next_claim_clubs": "Depois da verificação, a sua reivindicação é aberta e os clubes que já estão na DivingHQ nesse país votam. Pode iniciar sessão enquanto se decide.",
+      "next_claim_regions": "Depois da verificação, a sua reivindicação é aberta e os estados e províncias que já estão na DivingHQ votam. Pode iniciar sessão enquanto se decide.",
+      "next_claim_parent": "Depois da verificação, a sua reivindicação é aberta e a sua federação decide. Pode iniciar sessão enquanto se decide.",
+      "next_claim_sysadmin": "Depois da verificação, a sua reivindicação é aberta e a equipa da DivingHQ analisa-a. Pode iniciar sessão enquanto se decide."
     }
   },
   "coach": {

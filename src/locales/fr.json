@@ -150,6 +150,19 @@
       "resend_label": "Nom d'utilisateur ou e-mail",
       "resend_button": "Envoyer un nouveau lien",
       "resend_sent": "Si ce compte attend une vérification, un nouveau lien est en route. Consultez votre boîte de réception."
+    },
+    "check_inbox": {
+      "title": "Consultez votre boîte de réception",
+      "body": "Nous avons envoyé un lien de vérification à {email}. Cliquez dessus pour terminer la création de votre compte.",
+      "no_mail": "Rien au bout de quelques minutes ? Vérifiez vos courriers indésirables, ou demandez un nouveau lien.",
+      "resend_wait": "Envoyer un nouveau lien ({seconds} s)",
+      "resent": "Un nouveau lien est en route vers {email}.",
+      "already": "Vous avez déjà cliqué sur le lien ?",
+      "next_org_pending": "Une fois la vérification faite, DivingHQ examine votre fédération. Nous vous écrirons dès qu'elle sera approuvée, et vous pourrez alors vous connecter.",
+      "next_claim_clubs": "Une fois la vérification faite, votre revendication s'ouvre et les clubs déjà présents sur DivingHQ dans ce pays votent. Vous pouvez vous connecter pendant la décision.",
+      "next_claim_regions": "Une fois la vérification faite, votre revendication s'ouvre et les États et provinces déjà présents sur DivingHQ votent. Vous pouvez vous connecter pendant la décision.",
+      "next_claim_parent": "Une fois la vérification faite, votre revendication s'ouvre et votre fédération la tranche. Vous pouvez vous connecter pendant la décision.",
+      "next_claim_sysadmin": "Une fois la vérification faite, votre revendication s'ouvre et l'équipe DivingHQ l'examine. Vous pouvez vous connecter pendant la décision."
     }
   },
   "coach": {

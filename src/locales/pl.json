@@ -150,6 +150,19 @@
       "resend_label": "Nazwa użytkownika lub e-mail",
       "resend_button": "Wyślij nowy link",
       "resend_sent": "Jeśli to konto czeka na weryfikację, nowy link jest w drodze. Sprawdź skrzynkę odbiorczą."
+    },
+    "check_inbox": {
+      "title": "Sprawdź skrzynkę odbiorczą",
+      "body": "Wysłaliśmy link weryfikacyjny na adres {email}. Kliknij go, aby dokończyć zakładanie konta.",
+      "no_mail": "Nic po kilku minutach? Sprawdź folder spamu albo wyślij nowy link.",
+      "resend_wait": "Wyślij nowy link ({seconds} s)",
+      "resent": "Nowy link jest w drodze na adres {email}.",
+      "already": "Link już kliknięty?",
+      "next_org_pending": "Po weryfikacji DivingHQ rozpatrzy Twoją federację. Napiszemy, gdy zostanie zatwierdzona, i od tego momentu będzie można się logować.",
+      "next_claim_clubs": "Po weryfikacji Twoje zgłoszenie zostanie otwarte, a kluby, które już są tam na DivingHQ, zagłosują nad nim. W trakcie decyzji możesz się logować.",
+      "next_claim_regions": "Po weryfikacji Twoje zgłoszenie zostanie otwarte, a stany i prowincje, które już są na DivingHQ, zagłosują nad nim. W trakcie decyzji możesz się logować.",
+      "next_claim_parent": "Po weryfikacji Twoje zgłoszenie zostanie otwarte, a decyzję podejmie Twoja federacja. W trakcie decyzji możesz się logować.",
+      "next_claim_sysadmin": "Po weryfikacji Twoje zgłoszenie zostanie otwarte, a rozpatrzy je zespół DivingHQ. W trakcie decyzji możesz się logować."
     }
   },
   "coach": {

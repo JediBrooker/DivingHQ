@@ -150,6 +150,19 @@
       "resend_label": "Nama pengguna atau e-mel",
       "resend_button": "Hantar pautan baharu",
       "resend_sent": "Jika akaun itu menunggu pengesahan, pautan baharu sedang dihantar. Semak peti masuk anda."
+    },
+    "check_inbox": {
+      "title": "Semak peti masuk anda",
+      "body": "Kami telah menghantar pautan pengesahan ke {email}. Klik pautan itu untuk melengkapkan persediaan akaun anda.",
+      "no_mail": "Tiada apa-apa selepas beberapa minit? Semak folder spam, atau hantar pautan baharu.",
+      "resend_wait": "Hantar pautan baharu ({seconds} saat)",
+      "resent": "Pautan baharu sedang dihantar ke {email}.",
+      "already": "Sudah klik pautan itu?",
+      "next_org_pending": "Selepas disahkan, DivingHQ akan menyemak persekutuan anda. Kami akan menghantar e-mel apabila ia diluluskan, dan sejak itu anda boleh log masuk.",
+      "next_claim_clubs": "Selepas disahkan, tuntutan anda dibuka dan kelab yang sudah ada di DivingHQ di sana akan mengundi. Anda boleh log masuk sementara keputusan dibuat.",
+      "next_claim_regions": "Selepas disahkan, tuntutan anda dibuka dan negeri serta wilayah yang sudah ada di DivingHQ akan mengundi. Anda boleh log masuk sementara keputusan dibuat.",
+      "next_claim_parent": "Selepas disahkan, tuntutan anda dibuka dan persekutuan anda yang memutuskannya. Anda boleh log masuk sementara keputusan dibuat.",
+      "next_claim_sysadmin": "Selepas disahkan, tuntutan anda dibuka dan pasukan DivingHQ akan menyemaknya. Anda boleh log masuk sementara keputusan dibuat."
     }
   },
   "coach": {

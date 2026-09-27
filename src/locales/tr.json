@@ -150,6 +150,19 @@
       "resend_label": "Kullanıcı adı veya e-posta",
       "resend_button": "Yeni bağlantı gönder",
       "resend_sent": "Bu hesap doğrulama bekliyorsa yeni bir bağlantı yolda. Gelen kutunuzu kontrol edin."
+    },
+    "check_inbox": {
+      "title": "Gelen kutunuzu kontrol edin",
+      "body": "{email} adresine bir doğrulama bağlantısı gönderdik. Hesabınızın kurulumunu tamamlamak için bağlantıya tıklayın.",
+      "no_mail": "Birkaç dakika sonra hâlâ bir şey yok mu? İstenmeyen posta klasörünü kontrol edin veya yeni bir bağlantı gönderin.",
+      "resend_wait": "Yeni bağlantı gönder ({seconds} sn)",
+      "resent": "{email} adresine yeni bir bağlantı yolda.",
+      "already": "Bağlantıya zaten tıkladınız mı?",
+      "next_org_pending": "Doğrulamadan sonra DivingHQ federasyonunuzu inceler. Onaylandığında size e-posta göndeririz ve o andan itibaren giriş yapabilirsiniz.",
+      "next_claim_clubs": "Doğrulamadan sonra talebiniz açılır ve oradaki, zaten DivingHQ'da olan kulüpler oy verir. Karar verilirken giriş yapabilirsiniz.",
+      "next_claim_regions": "Doğrulamadan sonra talebiniz açılır ve zaten DivingHQ'da olan eyaletler ve iller oy verir. Karar verilirken giriş yapabilirsiniz.",
+      "next_claim_parent": "Doğrulamadan sonra talebiniz açılır ve kararı federasyonunuz verir. Karar verilirken giriş yapabilirsiniz.",
+      "next_claim_sysadmin": "Doğrulamadan sonra talebiniz açılır ve DivingHQ ekibi inceler. Karar verilirken giriş yapabilirsiniz."
     }
   },
   "coach": {

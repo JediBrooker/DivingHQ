@@ -150,6 +150,19 @@
       "resend_label": "Brugernavn eller e-mail",
       "resend_button": "Send et nyt link",
       "resend_sent": "Hvis kontoen venter på bekræftelse, er et nyt link på vej. Tjek din indbakke."
+    },
+    "check_inbox": {
+      "title": "Tjek din indbakke",
+      "body": "Vi har sendt et bekræftelseslink til {email}. Klik på det for at gøre din konto færdig.",
+      "no_mail": "Intet efter et par minutter? Tjek din spam-mappe, eller send et nyt link.",
+      "resend_wait": "Send et nyt link ({seconds} s)",
+      "resent": "Et nyt link er på vej til {email}.",
+      "already": "Har du allerede klikket på linket?",
+      "next_org_pending": "Når du er bekræftet, gennemgår DivingHQ dit forbund. Vi sender dig en e-mail, når det er godkendt, og derefter kan du logge ind.",
+      "next_claim_clubs": "Når du er bekræftet, åbnes dit krav, og de klubber, der allerede er på DivingHQ der, stemmer om det. Du kan logge ind, mens det afgøres.",
+      "next_claim_regions": "Når du er bekræftet, åbnes dit krav, og de stater og provinser, der allerede er på DivingHQ, stemmer om det. Du kan logge ind, mens det afgøres.",
+      "next_claim_parent": "Når du er bekræftet, åbnes dit krav, og dit forbund afgør det. Du kan logge ind, mens det afgøres.",
+      "next_claim_sysadmin": "Når du er bekræftet, åbnes dit krav, og DivingHQ-teamet gennemgår det. Du kan logge ind, mens det afgøres."
     }
   },
   "coach": {

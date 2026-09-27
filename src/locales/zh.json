@@ -150,6 +150,19 @@
       "resend_label": "用户名或邮箱",
       "resend_button": "发送新链接",
       "resend_sent": "如果该账户正在等待验证，新链接已发出。请查看收件箱。"
+    },
+    "check_inbox": {
+      "title": "请查看收件箱",
+      "body": "我们已向 {email} 发送验证链接。点击该链接即可完成账户设置。",
+      "no_mail": "几分钟后仍未收到？请查看垃圾邮件文件夹，或发送新链接。",
+      "resend_wait": "发送新链接（{seconds} 秒）",
+      "resent": "新链接正在发往 {email}。",
+      "already": "已经点击过链接了？",
+      "next_org_pending": "验证后，DivingHQ 会审核你的协会。获批后我们会发邮件通知你，此后即可登录。",
+      "next_claim_clubs": "验证后，你的认领申请即开启，由当地已在 DivingHQ 上的俱乐部投票。决定期间你也可以登录。",
+      "next_claim_regions": "验证后，你的认领申请即开启，由已在 DivingHQ 上的州和省投票。决定期间你也可以登录。",
+      "next_claim_parent": "验证后，你的认领申请即开启，由你的协会决定。决定期间你也可以登录。",
+      "next_claim_sysadmin": "验证后，你的认领申请即开启，由 DivingHQ 团队审核。决定期间你也可以登录。"
     }
   },
   "coach": {
