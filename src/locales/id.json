@@ -13,7 +13,9 @@
     "back": "← Kembali",
     "dashboard": "← Dasbor",
     "error_generic": "Terjadi kesalahan",
-    "view_profile": "Lihat profil →"
+    "view_profile": "Lihat profil →",
+    "load_failed": "Gagal memuat. Periksa koneksi Anda dan coba lagi.",
+    "retry": "Coba lagi"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Klub",
       "club_independent": "— Tanpa klub / independen —",
       "club_new": "+ Buat klub baru",
-      "club_no_clubs": "Belum ada klub yang terdaftar di organisasi ini. Anda dapat membuatnya di atas.",
+      "club_no_clubs": "Belum ada klub di sini. Pilih \"+ Buat klub baru\" di daftar.",
       "new_club_name": "Nama klub baru",
       "short_code_optional": "Kode singkat (opsional)",
       "requested_role": "Saya ingin mendaftar sebagai",
       "role_default": "Peloncat (default)",
       "role_spectator": "Penonton saja",
-      "note_label": "Catatan untuk admin organisasi (opsional)",
+      "note_label": "Catatan untuk yang menyetujui Anda (opsional)",
       "note_placeholder": "mis. saya bertanding di kejurnas tahun lalu",
-      "spectator_note": "Semua akun dimulai sebagai Penonton. Jika Anda meminta peran di atas, admin organisasi Anda akan meninjau dan menyetujuinya. Anda dapat langsung masuk.",
+      "spectator_note": "Semua akun dimulai sebagai Penonton. Jika Anda meminta peran di atas, admin federasi Anda akan meninjaunya. Anda dapat masuk setelah mengonfirmasi email Anda.",
       "submit_idle": "Buat akun",
       "submit_loading": "Membuat...",
       "already_have_account": "Sudah punya akun?",
       "sign_in_link": "Masuk",
-      "referee_note_unclaimed": "Selama belum ada federasi di sini, DivingHQ yang meninjau permintaan wasit kepala, bukan klub Anda: wasit kepala dapat bertindak di kompetisi klub mana pun."
+      "referee_note_unclaimed": "Selama belum ada federasi di sini, DivingHQ yang meninjau permintaan wasit kepala, bukan klub Anda: wasit kepala dapat bertindak di kompetisi klub mana pun.",
+      "coming_soon": "Segera hadir",
+      "coming_soon_note": "Pendaftaran akun belum dibuka — kami sedang menyempurnakan DivingHQ. Silakan kembali lagi nanti.",
+      "failed": "Pendaftaran gagal",
+      "success": "Pendaftaran berhasil. Periksa email Anda untuk tautan verifikasi sebelum masuk.",
+      "new_club_placeholder": "mis. Sydney Springboard",
+      "short_code_placeholder": "mis. SYD"
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "Belum ada orang dari {country} di DivingHQ. Pendaftaran ini membuat akun {country} dengan badan Anda sebagai federasi nasionalnya. DivingHQ meninjaunya setelah email Anda terverifikasi, dan sementara itu Anda bisa masuk.",
       "country_taken": "{org} sudah mengelola {country} di DivingHQ, jadi tidak ada federasi nasional yang perlu didaftarkan di sini. Hubungi dukungan DivingHQ jika ini keliru.",
       "country_taken_region": "{org} sudah mengelola {country} di DivingHQ. Badan daerah memilih wilayahnya di atas; selain itu, hubungi dukungan DivingHQ.",
-      "no_regions_hint": "Badan daerah? Hubungi dukungan DivingHQ: wilayah untuk {country} belum disiapkan."
+      "no_regions_hint": "Badan daerah? Hubungi dukungan DivingHQ: wilayah untuk {country} belum disiapkan.",
+      "website_invalid": "Itu tidak terlihat seperti alamat web. Coba sesuatu seperti diving.org.au.",
+      "coming_soon_note": "Pendaftaran federasi belum dibuka — kami sedang menyempurnakan DivingHQ. Silakan kembali lagi nanti."
     },
     "forgot": {
       "title": "Setel ulang kata sandi",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} federasi menunggu persetujuan",
       "orgs_many": "{count} federasi menunggu persetujuan",
       "orgs_meta": "Tinjau di Pengelola Pengguna → filter organisasi",
-      "claims_one": "1 klaim menunggu Anda",
-      "claims_many": "{count} klaim menunggu Anda",
-      "claims_meta": "Sebuah federasi ingin mengambil alih akun"
+      "claims_meta": "Sebuah federasi ingin mengambil alih akun",
+      "chip_pending": "Tertunda",
+      "chip_claims": "Klaim",
+      "review_title": "Menunggu tinjauan Anda",
+      "my_claims_title": "Klaim Anda",
+      "my_claim": "Klaim Anda atas {target}",
+      "quiet": "Semua tenang, tidak ada yang tertunda.",
+      "pill_urgent": "segera ditutup",
+      "pill_overdue": "terlambat",
+      "chip_aria_tab": "{title}. Membuka tabnya di dasbor ini."
     }
   },
   "profile": {
@@ -1027,6 +1044,19 @@
       "roster_import_section_label": "Impor Daftar Peserta",
       "roster_import_submit": "Impor",
       "roster_importing": "Mengimpor…"
+    },
+    "club_mode": {
+      "pick_meet": "Pilih kompetisi klub Anda yang menjadi tempat nomor ini",
+      "create_meet_first": "Buat kompetisi untuk klub Anda terlebih dahulu, nomor lomba ada di dalamnya",
+      "hosted_by": "Tuan rumah",
+      "pick_host": "— Pilih klub atau wilayah Anda —"
+    },
+    "represent": {
+      "label": "Penyelam mewakili",
+      "country": "Negaranya (kompetisi internasional)",
+      "region": "Negara bagian / provinsinya (kejuaraan nasional)",
+      "club": "Klubnya (kompetisi klub dan antarklub)",
+      "hint": "Ditampilkan di samping setiap penyelam pada papan skor, hasil, dan PDF, serta menjadi dasar pengelompokan tabel medali. Penyelam tanpa kode negara bagian atau klub ditampilkan dengan negaranya. Tim menampilkan negara bagian atau klub yang sama bagi semua atletnya; jika tidak, negaranya."
     }
   },
   "user_manager": {
@@ -1208,7 +1238,11 @@
     "col_name": "Nama",
     "col_code": "Kode",
     "col_members": "Anggota",
-    "col_created": "Dibuat"
+    "col_created": "Dibuat",
+    "col_billing": "Tagihan",
+    "col_actions": "Tindakan",
+    "admins_button": "Admin",
+    "rename": "Ganti nama"
   },
   "teams": {
     "title": "Tim",
@@ -1978,7 +2012,16 @@
     "currently_at": "saat ini di {club}",
     "region_request_pending": "Menunggu {region} menerima klub Anda.",
     "region_request_cancel": "Tarik permintaan",
-    "region_request_sent": "Permintaan terkirim. {region} akan memutuskan apakah klub Anda diterima."
+    "region_request_sent": "Permintaan terkirim. {region} akan memutuskan apakah klub Anda diterima.",
+    "not_admin": "Anda bukan lagi admin klub ini.",
+    "left_notice": "Anda bukan lagi admin {club}.",
+    "leave_title": "Hapus diri Anda sebagai admin {club}?",
+    "leave_body": "Anda tidak akan bisa lagi mengelola kompetisi klub atau menyetujui permintaan anggotanya. Hanya admin lain yang bisa menambahkan Anda kembali.",
+    "leave_confirm": "Hapus saya",
+    "admins_intro": "Admin klub menjalankan kompetisi klubnya dan mengurus kelas, pembayaran, serta iuran afiliasinya. Mereka tidak mendapat akses di tingkat federasi.",
+    "current_admins": "Admin saat ini ({n})",
+    "nobody_admins": "Klub ini belum punya admin.",
+    "no_other_members": "Tidak ada anggota lain di klub ini. Pindahkan seseorang ke klub ini dari Pengelola Pengguna terlebih dahulu."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Wilayah"
     },
     "pick": "— Pilih salah satu —",
-    "required": "{label}: pilih satu untuk klub baru Anda."
+    "required": "{label}: pilih satu untuk klub baru Anda.",
+    "admins_intro": "Admin wilayah menjalankan kompetisi yang diselenggarakan wilayahnya atau klub-klubnya, dan meninjau permintaan peran dari klub di wilayah itu.",
+    "nobody_admins": "Wilayah ini belum punya admin.",
+    "pick_member": "— Pilih anggota klub di wilayah ini —",
+    "no_candidates": "Belum ada yang bisa ditambahkan. Masukkan klub ke wilayah ini dulu, anggotanya akan muncul di sini.",
+    "strip_title": "Wilayah",
+    "manage_admins": "Kelola admin {name}",
+    "none_set_up": "Belum ada wilayah (negara bagian, provinsi…) yang disiapkan untuk organisasi ini.",
+    "set_up": "Siapkan wilayah",
+    "region_for": "Wilayah untuk {club}"
   },
   "my_region": {
     "title": "Wilayah saya",
@@ -1996,7 +2048,6 @@
     "clubs": "Klub",
     "no_clubs_title": "Belum ada klub",
     "no_clubs_body": "Klub muncul di sini setelah memilih wilayah Anda saat mendaftar atau di halaman klubnya.",
-    "members": "{n} anggota",
     "no_admin": "Belum ada admin",
     "region_admins": "Admin wilayah",
     "pick_member": "— Pilih anggota klub di wilayah Anda —",
@@ -2098,5 +2149,61 @@
     "contact": "Kontak",
     "need_help": "Butuh bantuan?",
     "english_only": "Halaman ini hanya tersedia dalam bahasa Inggris, dan teks bahasa Inggris yang berlaku."
+  },
+  "counts": {
+    "members_zero": "{n} anggota",
+    "members_one": "{n} anggota",
+    "members_two": "{n} anggota",
+    "members_few": "{n} anggota",
+    "members_many": "{n} anggota",
+    "members_other": "{n} anggota",
+    "open_claims_zero": "klaim terbuka",
+    "open_claims_one": "klaim terbuka",
+    "open_claims_two": "klaim terbuka",
+    "open_claims_few": "klaim terbuka",
+    "open_claims_many": "klaim terbuka",
+    "open_claims_other": "klaim terbuka",
+    "regions_added_zero": "{n} wilayah ditambahkan",
+    "regions_added_one": "{n} wilayah ditambahkan",
+    "regions_added_two": "{n} wilayah ditambahkan",
+    "regions_added_few": "{n} wilayah ditambahkan",
+    "regions_added_many": "{n} wilayah ditambahkan",
+    "regions_added_other": "{n} wilayah ditambahkan",
+    "claims_waiting_zero": "{n} klaim menunggu Anda",
+    "claims_waiting_one": "{n} klaim menunggu Anda",
+    "claims_waiting_two": "{n} klaim menunggu Anda",
+    "claims_waiting_few": "{n} klaim menunggu Anda",
+    "claims_waiting_many": "{n} klaim menunggu Anda",
+    "claims_waiting_other": "{n} klaim menunggu Anda"
+  },
+  "admin_settings": {
+    "title": "Aturan pemungutan suara klaim",
+    "intro": "Cara klaim federasi atau badan wilayah atas akun yang dirintis klub diputuskan. Nilai baru berlaku untuk klaim yang dibuka (atau suara yang diberikan) mulai sekarang.",
+    "bounds": "Bawaan {default_value}, diizinkan {min} sampai {max}",
+    "saved": "{label} diatur ke {value}.",
+    "required": "Masukkan nilai.",
+    "not_number": "Masukkan angka.",
+    "whole": "Masukkan bilangan bulat.",
+    "range": "Masukkan nilai dari {min} sampai {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Usia klub untuk memilih (hari)",
+      "description": "Klub baru dihitung sebagai pemilih klaim setelah berada di DivingHQ selama ini."
+    },
+    "claim_voter_min_members": {
+      "label": "Anggota untuk memilih",
+      "description": "…dan memiliki setidaknya sebanyak ini anggota yang emailnya terverifikasi, atau pernah menggelar kompetisi."
+    },
+    "claim_quorum_min": {
+      "label": "Pemilih minimum",
+      "description": "Jika pemilih yang berhak kurang dari ini, klaim diteruskan ke admin sistem. Juga jumlah persetujuan paling sedikit untuk meloloskan klaim."
+    },
+    "claim_majority": {
+      "label": "Mayoritas yang dibutuhkan",
+      "description": "Persetujuan harus melebihi proporsi ini dari pemilih yang berhak (0.5 = mayoritas sederhana)."
+    },
+    "claim_timeout_days": {
+      "label": "Masa pemungutan suara (hari)",
+      "description": "Saat berakhir: minimal satu persetujuan tanpa keberatan meloloskan klaim, jika tidak diteruskan ke admin sistem."
+    }
   }
 }

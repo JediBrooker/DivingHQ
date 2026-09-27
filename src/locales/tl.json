@@ -13,7 +13,9 @@
     "back": "← Bumalik",
     "dashboard": "← Dashboard board",
     "error_generic": "May nangyaring mali",
-    "view_profile": "Tingnan ang profile →"
+    "view_profile": "Tingnan ang profile →",
+    "load_failed": "Hindi ma-load. Suriin ang iyong koneksyon at subukang muli.",
+    "retry": "Subukang muli"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Samahan",
       "club_independent": "— Walang club / nag-iisa —",
       "club_new": "+ Gumawa ng bagong club",
-      "club_no_clubs": "Wala pang nakarehistrong club sa org na ito. Pwede kang gumawa ng isa sa itaas.",
+      "club_no_clubs": "Wala pang club dito. Piliin ang \"+ Gumawa ng bagong club\" sa listahan.",
       "new_club_name": "Pangalan ng bagong club",
       "short_code_optional": "Maikling code (opsyonal)",
       "requested_role": "Gusto kong magrehistro bilang",
       "role_default": "Diver (karaniwan)",
       "role_spectator": "Manonood lamang",
-      "note_label": "Tala sa org admin (opsyonal)",
+      "note_label": "Tala para sa mag-aapruba sa iyo (opsyonal)",
       "note_placeholder": "hal. lumahok ako sa nationals noong nakaraang taon",
-      "spectator_note": "Lahat ng account ay nagsisimula bilang Manonood. Kung humiling ka ng role sa itaas, susuriin at aaprubahan ito ng iyong org admin. Maaari kang agad mag-log in.",
+      "spectator_note": "Lahat ng account ay nagsisimula bilang Manonood. Kung humiling ka ng role sa itaas, susuriin ito ng admin ng iyong pederasyon. Makakapag-log in ka kapag nakumpirma mo na ang iyong email.",
       "submit_idle": "Gumawa ng account",
       "submit_loading": "Ginagawa...",
       "already_have_account": "May account ka na?",
       "sign_in_link": "Mag-sign in",
-      "referee_note_unclaimed": "Habang wala pang federation dito, ang DivingHQ ang sumusuri sa mga kahilingan para sa pangunahing hukom, hindi ang iyong club: puwedeng kumilos ang pangunahing hukom sa meet ng anumang club."
+      "referee_note_unclaimed": "Habang wala pang federation dito, ang DivingHQ ang sumusuri sa mga kahilingan para sa pangunahing hukom, hindi ang iyong club: puwedeng kumilos ang pangunahing hukom sa meet ng anumang club.",
+      "coming_soon": "Malapit na",
+      "coming_soon_note": "Hindi pa bukas ang pag-sign up ng account — tinatapos pa namin ang DivingHQ. Bumalik ka ulit sa lalong madaling panahon.",
+      "failed": "Hindi nagtagumpay ang pagrehistro",
+      "success": "Matagumpay ang pagrehistro. Tingnan ang iyong email para sa link ng beripikasyon bago mag-sign in.",
+      "new_club_placeholder": "hal. Sydney Springboard",
+      "short_code_placeholder": "hal. SYD"
     },
     "register_org": {
       "title": "Irehistro ang organisasyon",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "Wala pang taga-{country} sa DivingHQ. Sa pagrehistro, gagawin ang account ng {country} na ang inyong katawan ang pambansang pederasyon. Susuriin ito ng DivingHQ kapag na-verify mo ang email mo, at puwede kang mag-sign in habang naghihintay.",
       "country_taken": "Pinapatakbo na ng {org} ang {country} sa DivingHQ, kaya walang pambansang pederasyong irerehistro rito. Makipag-ugnayan sa suporta ng DivingHQ kung mali ito.",
       "country_taken_region": "Pinapatakbo na ng {org} ang {country} sa DivingHQ. Pinipili ng panrehiyong katawan ang rehiyon nito sa itaas; ang iba, makipag-ugnayan sa suporta ng DivingHQ.",
-      "no_regions_hint": "Panrehiyong katawan? Makipag-ugnayan sa suporta ng DivingHQ: hindi pa naka-set up ang mga rehiyon ng {country}."
+      "no_regions_hint": "Panrehiyong katawan? Makipag-ugnayan sa suporta ng DivingHQ: hindi pa naka-set up ang mga rehiyon ng {country}.",
+      "website_invalid": "Mukhang hindi iyan web address. Subukan ang tulad ng diving.org.au.",
+      "coming_soon_note": "Hindi pa bukas ang pag-sign up ng pederasyon — tinatapos pa namin ang DivingHQ. Bumalik ka ulit sa lalong madaling panahon."
     },
     "forgot": {
       "title": "I-reset ang password",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} pederasyon ang naghihintay ng pag-apruba",
       "orgs_many": "{count} mga pederasyon ang naghihintay ng pag-apruba",
       "orgs_meta": "Suriin sa User Manager → org filter",
-      "claims_one": "May 1 claim na naghihintay sa iyo",
-      "claims_many": "May {count} claim na naghihintay sa iyo",
-      "claims_meta": "Gustong pamahalaan ng isang pederasyon ang account"
+      "claims_meta": "Gustong pamahalaan ng isang pederasyon ang account",
+      "chip_pending": "Nakabinbin",
+      "chip_claims": "Mga claim",
+      "review_title": "Naghihintay ng iyong pagsusuri",
+      "my_claims_title": "Ang iyong mga claim",
+      "my_claim": "Ang iyong claim sa {target}",
+      "quiet": "Tahimik, walang nakabinbin.",
+      "pill_urgent": "malapit nang magsara",
+      "pill_overdue": "lampas na",
+      "chip_aria_tab": "{title}. Binubuksan ang tab nito sa dashboard na ito."
     }
   },
   "profile": {
@@ -1027,6 +1044,19 @@
       "roster_import_section_label": "Mag-import ng Roster",
       "roster_import_submit": "I-import",
       "roster_importing": "Nag-iimport…"
+    },
+    "club_mode": {
+      "pick_meet": "Piliin kung aling kompetisyon ng iyong club kabilang ang event na ito",
+      "create_meet_first": "Gumawa muna ng kompetisyon para sa iyong club, doon napapasok ang mga event",
+      "hosted_by": "Host",
+      "pick_host": "— Piliin ang iyong club o rehiyon —"
+    },
+    "represent": {
+      "label": "Kinakatawan ng mga diver ang",
+      "country": "Kanilang bansa (mga internasyonal na kompetisyon)",
+      "region": "Kanilang estado / lalawigan (mga pambansang kampeonato)",
+      "club": "Kanilang club (mga kompetisyon ng club at inter-club)",
+      "hint": "Ipinapakita sa tabi ng bawat diver sa scoreboard, mga resulta at PDF, at ito ang batayan ng pagpapangkat sa medal table. Ang diver na walang code ng estado o club ay ipinapakita sa kanyang bansa. Ipinapakita ng isang koponan ang estado o club na pareho sa lahat ng diver nito, kung hindi ay ang bansa nito."
     }
   },
   "user_manager": {
@@ -1208,7 +1238,11 @@
     "col_name": "Pangalan",
     "col_code": "Kodigo",
     "col_members": "Mga miyembro",
-    "col_created": "Ginawa"
+    "col_created": "Ginawa",
+    "col_billing": "Pagsingil",
+    "col_actions": "Mga aksyon",
+    "admins_button": "Mga admin",
+    "rename": "Palitan ang pangalan"
   },
   "teams": {
     "title": "Mga Team",
@@ -1978,7 +2012,16 @@
     "currently_at": "kasalukuyang nasa {club}",
     "region_request_pending": "Hinihintay na tanggapin ng {region} ang iyong club.",
     "region_request_cancel": "Bawiin ang hiling",
-    "region_request_sent": "Naipadala ang hiling. Ang {region} ang magpapasya kung tatanggapin ang iyong club."
+    "region_request_sent": "Naipadala ang hiling. Ang {region} ang magpapasya kung tatanggapin ang iyong club.",
+    "not_admin": "Hindi ka na admin ng club na ito.",
+    "left_notice": "Hindi ka na admin ng {club}.",
+    "leave_title": "Alisin ang sarili bilang admin ng {club}?",
+    "leave_body": "Hindi mo na mapapatakbo ang mga kompetisyon ng club o maaaprubahan ang mga kahilingan ng mga miyembro nito. Ibang admin lang ang makapagbabalik sa iyo.",
+    "leave_confirm": "Alisin ako",
+    "admins_intro": "Pinapatakbo ng mga admin ng club ang mga kompetisyon ng kanilang club at inaasikaso ang mga klase, bayad, at bayarin sa pagkakaanib nito. Wala silang access sa buong pederasyon.",
+    "current_admins": "Kasalukuyang mga admin ({n})",
+    "nobody_admins": "Wala pang admin ang club na ito.",
+    "no_other_members": "Walang ibang miyembro sa club na ito. Ilipat muna ang isang tao rito mula sa User Manager."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Rehiyon"
     },
     "pick": "— Pumili ng isa —",
-    "required": "{label}: pumili ng isa para sa iyong bagong club."
+    "required": "{label}: pumili ng isa para sa iyong bagong club.",
+    "admins_intro": "Pinapatakbo ng mga admin ng rehiyon ang mga kompetisyong hino-host ng kanilang rehiyon o mga club nito, at sinusuri ang mga kahilingan sa role mula sa mga club ng rehiyon.",
+    "nobody_admins": "Wala pang admin ang rehiyong ito.",
+    "pick_member": "— Pumili ng miyembro ng mga club sa rehiyong ito —",
+    "no_candidates": "Wala pang maidadagdag. Ilagay muna ang mga club sa rehiyong ito, lalabas dito ang kanilang mga miyembro.",
+    "strip_title": "Mga rehiyon",
+    "manage_admins": "Pamahalaan ang mga admin ng {name}",
+    "none_set_up": "Wala pang naka-set up na rehiyon (estado, lalawigan…) para sa organisasyong ito.",
+    "set_up": "I-set up ang mga rehiyon",
+    "region_for": "Rehiyon ng {club}"
   },
   "my_region": {
     "title": "Aking rehiyon",
@@ -1996,7 +2048,6 @@
     "clubs": "Mga club",
     "no_clubs_title": "Wala pang club",
     "no_clubs_body": "Lalabas dito ang mga club kapag napili na nila ang iyong rehiyon, sa pag-sign up o sa kanilang club page.",
-    "members": "{n} miyembro",
     "no_admin": "Wala pang admin",
     "region_admins": "Mga admin ng rehiyon",
     "pick_member": "— Pumili ng miyembro ng mga club sa iyong rehiyon —",
@@ -2098,5 +2149,61 @@
     "contact": "Makipag-ugnayan",
     "need_help": "Kailangan mo ng tulong?",
     "english_only": "Sa Ingles lang available ang pahinang ito, at ang tekstong Ingles ang siyang umiiral."
+  },
+  "counts": {
+    "members_zero": "{n} miyembro",
+    "members_one": "{n} miyembro",
+    "members_two": "{n} miyembro",
+    "members_few": "{n} miyembro",
+    "members_many": "{n} miyembro",
+    "members_other": "{n} miyembro",
+    "open_claims_zero": "bukas na claim",
+    "open_claims_one": "bukas na claim",
+    "open_claims_two": "bukas na claim",
+    "open_claims_few": "bukas na claim",
+    "open_claims_many": "bukas na claim",
+    "open_claims_other": "bukas na claim",
+    "regions_added_zero": "Nagdagdag ng {n} rehiyon",
+    "regions_added_one": "Nagdagdag ng {n} rehiyon",
+    "regions_added_two": "Nagdagdag ng {n} rehiyon",
+    "regions_added_few": "Nagdagdag ng {n} rehiyon",
+    "regions_added_many": "Nagdagdag ng {n} rehiyon",
+    "regions_added_other": "Nagdagdag ng {n} rehiyon",
+    "claims_waiting_zero": "May {n} claim na naghihintay sa iyo",
+    "claims_waiting_one": "May {n} claim na naghihintay sa iyo",
+    "claims_waiting_two": "May {n} claim na naghihintay sa iyo",
+    "claims_waiting_few": "May {n} claim na naghihintay sa iyo",
+    "claims_waiting_many": "May {n} claim na naghihintay sa iyo",
+    "claims_waiting_other": "May {n} claim na naghihintay sa iyo"
+  },
+  "admin_settings": {
+    "title": "Mga patakaran sa botohan ng claim",
+    "intro": "Paano pinagpapasyahan ang claim ng pederasyon o panrehiyong lupon sa isang account na sinimulan ng mga club. Ang mga bagong halaga ay para sa mga claim na bubuksan (o botong ibibigay) mula ngayon.",
+    "bounds": "Default {default_value}, pinapayagan mula {min} hanggang {max}",
+    "saved": "Itinakda ang {label} sa {value}.",
+    "required": "Maglagay ng halaga.",
+    "not_number": "Maglagay ng numero.",
+    "whole": "Maglagay ng buong numero.",
+    "range": "Maglagay ng halaga mula {min} hanggang {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Tagal ng club para makaboto (araw)",
+      "description": "Ibinibilang lang ang club bilang botante sa claim kapag ganito na katagal ito sa DivingHQ."
+    },
+    "claim_voter_min_members": {
+      "label": "Mga miyembro para makaboto",
+      "description": "…at may hindi bababa sa ganitong dami ng miyembrong beripikado ang email, o nakapag-host na ng kompetisyon."
+    },
+    "claim_quorum_min": {
+      "label": "Pinakamababang bilang ng botante",
+      "description": "Kapag mas kaunti rito ang karapat-dapat na botante, mapupunta ang claim sa sysadmin. Ito rin ang pinakakaunting pag-apruba para pumasa ang claim."
+    },
+    "claim_majority": {
+      "label": "Kinakailangang mayorya",
+      "description": "Dapat lumampas ang mga pag-apruba sa bahaging ito ng mga karapat-dapat na botante (0.5 = simpleng mayorya)."
+    },
+    "claim_timeout_days": {
+      "label": "Panahon ng botohan (araw)",
+      "description": "Pagkatapos nito: kahit isang pag-apruba at walang tutol ay pumapasa sa claim, kung hindi ay mapupunta ito sa sysadmin."
+    }
   }
 }

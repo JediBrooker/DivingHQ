@@ -13,7 +13,9 @@
     "back": "← Indietro",
     "dashboard": "← Pannello",
     "error_generic": "Qualcosa è andato storto",
-    "view_profile": "Vedi profilo →"
+    "view_profile": "Vedi profilo →",
+    "load_failed": "Impossibile caricare. Controlla la connessione e riprova.",
+    "retry": "Riprova"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Società",
       "club_independent": "— Nessun club / indipendente —",
       "club_new": "+ Crea un nuovo club",
-      "club_no_clubs": "Ancora nessun club registrato per questa organizzazione. Puoi crearne uno qui sopra.",
+      "club_no_clubs": "Qui non ci sono ancora club. Scegli «+ Crea un nuovo club» nell’elenco.",
       "new_club_name": "Nome del nuovo club",
       "short_code_optional": "Codice breve (facoltativo)",
       "requested_role": "Voglio registrarmi come",
       "role_default": "Tuffatore (predefinito)",
       "role_spectator": "Solo spettatore",
-      "note_label": "Nota per l'admin dell'organizzazione (facoltativa)",
+      "note_label": "Nota per chi ti approva (facoltativa)",
       "note_placeholder": "es. ho gareggiato ai campionati nazionali l'anno scorso",
-      "spectator_note": "Tutti gli account partono come Spettatore. Se richiedi un ruolo qui sopra, l'admin della tua organizzazione lo esaminerà e lo approverà. Potrai accedere immediatamente.",
+      "spectator_note": "Tutti gli account partono come Spettatore. Se richiedi un ruolo qui sopra, lo esaminerà l'amministratore della tua federazione. Potrai accedere dopo aver confermato la tua email.",
       "submit_idle": "Crea account",
       "submit_loading": "Creazione...",
       "already_have_account": "Hai già un account?",
       "sign_in_link": "Accedi",
-      "referee_note_unclaimed": "Finché qui non c'è una federazione, le richieste di arbitro le esamina DivingHQ, non il tuo club: un arbitro può intervenire nelle gare di qualsiasi club."
+      "referee_note_unclaimed": "Finché qui non c'è una federazione, le richieste di arbitro le esamina DivingHQ, non il tuo club: un arbitro può intervenire nelle gare di qualsiasi club.",
+      "coming_soon": "Presto disponibile",
+      "coming_soon_note": "Le registrazioni non sono ancora aperte — stiamo dando gli ultimi ritocchi a DivingHQ. Torna a trovarci presto.",
+      "failed": "Registrazione non riuscita",
+      "success": "Registrazione completata. Prima di accedere, cerca nella tua email il link di verifica.",
+      "new_club_placeholder": "es. Sydney Springboard",
+      "short_code_placeholder": "es. SYD"
     },
     "register_org": {
       "title": "Registra organizzazione",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "Nessuno da {country} è ancora su DivingHQ. Registrandoti crei l'account di {country} con il tuo ente come federazione nazionale. DivingHQ lo esamina dopo la verifica della tua email e nel frattempo puoi accedere.",
       "country_taken": "{org} gestisce già {country} su DivingHQ, quindi qui non c'è nessuna federazione nazionale da registrare. Contatta il supporto DivingHQ se è un errore.",
       "country_taken_region": "{org} gestisce già {country} su DivingHQ. Un ente regionale sceglie la propria regione qui sopra; per tutto il resto, contatta il supporto DivingHQ.",
-      "no_regions_hint": "Ente regionale? Contatta il supporto DivingHQ: le regioni di {country} non sono ancora configurate."
+      "no_regions_hint": "Ente regionale? Contatta il supporto DivingHQ: le regioni di {country} non sono ancora configurate.",
+      "website_invalid": "Non sembra un indirizzo web. Prova qualcosa come diving.org.au.",
+      "coming_soon_note": "Le registrazioni delle federazioni non sono ancora aperte — stiamo dando gli ultimi ritocchi a DivingHQ. Torna a trovarci presto."
     },
     "forgot": {
       "title": "Reimposta password",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} federazione in attesa di approvazione",
       "orgs_many": "{count} federazioni in attesa di approvazione",
       "orgs_meta": "Verifichi in Gestione utenti → filtro organizzazioni",
-      "claims_one": "1 rivendicazione ti aspetta",
-      "claims_many": "{count} rivendicazioni ti aspettano",
-      "claims_meta": "Una federazione vuole subentrare"
+      "claims_meta": "Una federazione vuole subentrare",
+      "chip_pending": "In attesa",
+      "chip_claims": "Rivendicazioni",
+      "review_title": "In attesa della tua revisione",
+      "my_claims_title": "Le tue rivendicazioni",
+      "my_claim": "La tua rivendicazione su {target}",
+      "quiet": "Tutto tranquillo, niente in sospeso.",
+      "pill_urgent": "chiude a breve",
+      "pill_overdue": "in ritardo",
+      "chip_aria_tab": "{title}. Apre la scheda corrispondente in questo pannello."
     }
   },
   "role": {
@@ -1038,6 +1055,19 @@
       "roster_import_section_label": "Importa Roster",
       "roster_import_submit": "Importa",
       "roster_importing": "Importazione…"
+    },
+    "club_mode": {
+      "pick_meet": "Scegli a quale gara del tuo club appartiene questo evento",
+      "create_meet_first": "Crea prima una gara per il tuo club, gli eventi vanno al suo interno",
+      "hosted_by": "Organizzato da",
+      "pick_host": "— Scegli il tuo club o la tua regione —"
+    },
+    "represent": {
+      "label": "I tuffatori rappresentano",
+      "country": "Il loro paese (gare internazionali)",
+      "region": "Il loro stato / provincia (campionati nazionali)",
+      "club": "Il loro club (gare di club e interclub)",
+      "hint": "Compare accanto a ogni tuffatore sul tabellone, nei risultati e nei PDF, ed è il criterio con cui si raggruppa il medagliere. Un tuffatore senza codice di stato o club compare con il suo paese. Una squadra mostra lo stato o il club comune a tutti i suoi tuffatori, altrimenti il suo paese."
     }
   },
   "user_manager": {
@@ -1219,7 +1249,11 @@
     "col_name": "Nome",
     "col_code": "Codice",
     "col_members": "Membri",
-    "col_created": "Creato il"
+    "col_created": "Creato il",
+    "col_billing": "Fatturazione",
+    "col_actions": "Azioni",
+    "admins_button": "Amministratori",
+    "rename": "Rinomina"
   },
   "teams": {
     "title": "Squadre",
@@ -1978,7 +2012,16 @@
     "currently_at": "attualmente in {club}",
     "region_request_pending": "In attesa che {region} accetti il tuo club.",
     "region_request_cancel": "Ritira la richiesta",
-    "region_request_sent": "Richiesta inviata. {region} deciderà se accogliere il tuo club."
+    "region_request_sent": "Richiesta inviata. {region} deciderà se accogliere il tuo club.",
+    "not_admin": "Non sei più amministratore di questo club.",
+    "left_notice": "Non sei più amministratore di {club}.",
+    "leave_title": "Rimuoverti dagli amministratori di {club}?",
+    "leave_body": "Non potrai più organizzare le gare del club né approvare le richieste dei suoi membri. Solo un altro amministratore può aggiungerti di nuovo.",
+    "leave_confirm": "Rimuovimi",
+    "admins_intro": "Gli amministratori del club organizzano le gare del proprio club e ne gestiscono corsi, pagamenti e quote di affiliazione. Non hanno accesso a livello di federazione.",
+    "current_admins": "Amministratori attuali ({n})",
+    "nobody_admins": "Questo club non ha ancora un amministratore.",
+    "no_other_members": "Nessun altro membro in questo club. Sposta prima qualcuno nel club dalla Gestione utenti."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Regione"
     },
     "pick": "— Scegline una —",
-    "required": "{label}: scegline una per il tuo nuovo club."
+    "required": "{label}: scegline una per il tuo nuovo club.",
+    "admins_intro": "Gli amministratori regionali organizzano le gare ospitate dalla loro regione o dai suoi club ed esaminano le richieste di ruolo dei club della regione.",
+    "nobody_admins": "Questa regione non ha ancora un amministratore.",
+    "pick_member": "— Scegli un membro dei club di questa regione —",
+    "no_candidates": "Ancora nessuno da aggiungere. Assegna prima dei club a questa regione, i loro membri compariranno qui.",
+    "strip_title": "Regioni",
+    "manage_admins": "Gestisci gli amministratori di {name}",
+    "none_set_up": "Nessuna regione (stati, province…) ancora configurata per questa organizzazione.",
+    "set_up": "Configura le regioni",
+    "region_for": "Regione di {club}"
   },
   "my_region": {
     "title": "La mia regione",
@@ -1996,7 +2048,6 @@
     "clubs": "Club",
     "no_clubs_title": "Ancora nessun club",
     "no_clubs_body": "I club compaiono qui quando scelgono la tua regione, all'iscrizione o nella pagina del club.",
-    "members": "{n} membri",
     "no_admin": "Ancora nessun amministratore",
     "region_admins": "Amministratori della regione",
     "pick_member": "— Scegli un membro dei club della tua regione —",
@@ -2098,5 +2149,61 @@
     "contact": "Contatti",
     "need_help": "Serve aiuto?",
     "english_only": "Questa pagina è disponibile solo in inglese e fa fede il testo inglese."
+  },
+  "counts": {
+    "members_zero": "{n} membri",
+    "members_one": "{n} membro",
+    "members_two": "{n} membri",
+    "members_few": "{n} membri",
+    "members_many": "{n} di membri",
+    "members_other": "{n} membri",
+    "open_claims_zero": "rivendicazioni aperte",
+    "open_claims_one": "rivendicazione aperta",
+    "open_claims_two": "rivendicazioni aperte",
+    "open_claims_few": "rivendicazioni aperte",
+    "open_claims_many": "di rivendicazioni aperte",
+    "open_claims_other": "rivendicazioni aperte",
+    "regions_added_zero": "{n} regioni aggiunte",
+    "regions_added_one": "{n} regione aggiunta",
+    "regions_added_two": "{n} regioni aggiunte",
+    "regions_added_few": "{n} regioni aggiunte",
+    "regions_added_many": "{n} di regioni aggiunte",
+    "regions_added_other": "{n} regioni aggiunte",
+    "claims_waiting_zero": "{n} rivendicazioni ti aspettano",
+    "claims_waiting_one": "{n} rivendicazione ti aspetta",
+    "claims_waiting_two": "{n} rivendicazioni ti aspettano",
+    "claims_waiting_few": "{n} rivendicazioni ti aspettano",
+    "claims_waiting_many": "{n} di rivendicazioni ti aspettano",
+    "claims_waiting_other": "{n} rivendicazioni ti aspettano"
+  },
+  "admin_settings": {
+    "title": "Regole di voto sulle rivendicazioni",
+    "intro": "Come si decide la rivendicazione di una federazione o di un ente regionale su un account avviato dai club. I nuovi valori valgono per le rivendicazioni aperte (o i voti espressi) da ora in poi.",
+    "bounds": "Predefinito {default_value}, consentito da {min} a {max}",
+    "saved": "{label} impostato a {value}.",
+    "required": "Inserisci un valore.",
+    "not_number": "Inserisci un numero.",
+    "whole": "Inserisci un numero intero.",
+    "range": "Inserisci un valore da {min} a {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Anzianità del club per votare (giorni)",
+      "description": "Un club conta come votante su una rivendicazione solo dopo essere stato su DivingHQ per questo tempo."
+    },
+    "claim_voter_min_members": {
+      "label": "Membri per votare",
+      "description": "…e ha almeno questo numero di membri con email verificata, oppure ha organizzato una gara."
+    },
+    "claim_quorum_min": {
+      "label": "Votanti minimi",
+      "description": "Con meno votanti aventi diritto la rivendicazione passa all'amministratore di sistema. È anche il numero minimo di approvazioni per farla passare."
+    },
+    "claim_majority": {
+      "label": "Maggioranza necessaria",
+      "description": "Le approvazioni devono superare questa quota dei votanti aventi diritto (0.5 = maggioranza semplice)."
+    },
+    "claim_timeout_days": {
+      "label": "Durata del voto (giorni)",
+      "description": "Alla scadenza: almeno un'approvazione e nessuna obiezione fanno passare la rivendicazione, altrimenti va all'amministratore di sistema."
+    }
   }
 }

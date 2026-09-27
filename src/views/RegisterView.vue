@@ -44,17 +44,28 @@ const regionLabel = computed(() => regionList.value.label ? t(`regions.label.${r
 const selectedRegionId = computed(() =>
   regionList.value.regions.find(r => r.short_code === regionCode.value)?.id || null)
 
+// Bumped on every loadRegions call. A slow answer for a country or org
+// the registrant has since moved off must not land on top of the current
+// one (Australian states under Canada, then a 400 on submit), so each
+// await checks it's still the latest request before touching state.
+let regionsReq = 0
+
 async function loadRegions() {
+  const req = ++regionsReq
   regionList.value = { label: null, regions: [] }
   regionCode.value = ''
   if (!countryLoaded.value) return
+  const code = countryCode.value
+  const id = orgId.value
   try {
     let list = null
-    if (orgId.value) list = await (await fetch(`/api/orgs/${orgId.value}/regions`)).json()
-    const useCatalog = !orgId.value
+    if (id) list = await (await fetch(`/api/orgs/${id}/regions`)).json()
+    if (req !== regionsReq) return
+    const useCatalog = !id
       ? !countryOrgs.value.length
       : !list?.regions?.length && selectedOrg.value?.claim_state === 'unclaimed'
-    if (useCatalog) list = await (await fetch(`/api/countries/${countryCode.value}/regions`)).json()
+    if (useCatalog) list = await (await fetch(`/api/countries/${code}/regions`)).json()
+    if (req !== regionsReq) return
     if (list?.regions) regionList.value = list
   } catch { /* no regions */ }
 }
@@ -127,8 +138,11 @@ watch(() => clubChoice.value, (choice, prev) => {
   if (choice === 'new' && requestedRole.value === 'diver') requestedRole.value = 'coach'
   else if (prev === 'new' && requestedRole.value === 'coach') requestedRole.value = 'diver'
 })
+// Same staleness guard as loadRegions, for the club list.
+let clubsReq = 0
 
 watch(orgId, async (id) => {
+  const req = ++clubsReq
   // Reset club state whenever the user changes org
   clubs.value = []
   clubChoice.value = ''
@@ -138,9 +152,10 @@ watch(orgId, async (id) => {
   try {
     const r = await fetch(`/api/orgs/${id}/clubs`)
     const body = await r.json()
+    if (req !== clubsReq) return
     clubs.value = Array.isArray(body) ? body : []
   } catch {
-    clubs.value = []
+    if (req === clubsReq) clubs.value = []
   }
 })
 
@@ -156,6 +171,15 @@ const visibleClubs = computed(() => {
 })
 
 watch([countryLoaded, orgId], () => { loadRegions() })
+
+// Narrowing to another region can hide the club already picked. The
+// select then shows blank but clubChoice still holds it, and it went off
+// with the form: someone who picked NSW, then Sydney DC, then switched to
+// VIC was signed up to Sydney DC. Drop a choice the list no longer shows.
+watch(regionCode, () => {
+  const c = clubChoice.value
+  if (c && c !== 'new' && !visibleClubs.value.some(v => v.id === c)) clubChoice.value = ''
+})
 
 async function handleSubmit() {
   msg.value = ''
@@ -189,8 +213,10 @@ async function handleSubmit() {
       body: JSON.stringify(body),
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Registration failed')
-    msg.value = data.message
+    if (!res.ok) throw new Error(data.error || t('auth.register.failed'))
+    // The server's message is English and always the same one, so say it
+    // in the reader's language instead.
+    msg.value = t('auth.register.success')
     msgType.value = 'success'
     setTimeout(() => router.push('/login'), 2500)
   } catch (err) {
@@ -208,8 +234,8 @@ async function handleSubmit() {
 
     <template v-if="signupsEnabled === false">
       <h1>{{ $t('auth.register.title') }}</h1>
-      <p class="subtitle">Coming soon</p>
-      <p class="note">Account sign-ups aren't open just yet — we're putting the finishing touches on DivingHQ. Please check back soon.</p>
+      <p class="subtitle">{{ $t('auth.register.coming_soon') }}</p>
+      <p class="note">{{ $t('auth.register.coming_soon_note') }}</p>
       <p class="footer-link">{{ $t('auth.register.already_have_account') }} <RouterLink to="/login">{{ $t('auth.register.sign_in_link') }}</RouterLink></p>
     </template>
 
@@ -308,11 +334,11 @@ async function handleSubmit() {
       <div v-if="showClubPicker && clubChoice === 'new'" class="field new-club-block">
         <div class="field">
           <label class="label">{{ $t('auth.register.new_club_name') }}</label>
-          <input class="input" type="text" v-model="newClubName" placeholder="e.g. Sydney Springboard" required>
+          <input class="input" type="text" v-model="newClubName" :placeholder="$t('auth.register.new_club_placeholder')" required>
         </div>
         <div class="field">
           <label class="label">{{ $t('auth.register.short_code_optional') }}</label>
-          <input class="input" type="text" v-model="newClubCode" placeholder="e.g. SYD" maxlength="20">
+          <input class="input" type="text" v-model="newClubCode" :placeholder="$t('auth.register.short_code_placeholder')" maxlength="20">
         </div>
         <p v-if="noFederation" class="hint-line founder-note">{{ $t('auth.register.founder_note') }}</p>
       </div>

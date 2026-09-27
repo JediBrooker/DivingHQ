@@ -96,15 +96,19 @@ function validatePassword(pw) {
 // signed into the JWT, and an approval that lands after the cookie was
 // minted would sit stale until the next sign-in. This rides on the
 // response body instead, so /api/auth/me refreshes it on every boot.
-// Clubs this user admins, [{ id, name, region_id }]. Same reasoning as
+// Clubs this user admins, [{ id, name, region_id, org_claim_state }]. Same reasoning as
 // has_dependents below: a club admin grant lands whenever the federation
 // (or signup) makes it, so it rides on the response body, never the JWT.
-// The SPA uses it to show the meet screens and pick a host club. The
-// server never trusts it, every club-scoped route re-reads club_admins.
+// The SPA uses it to show the meet screens and pick a host club, and
+// org_claim_state tells My club whether a federation appoints the club's
+// admins. The server never trusts any of it, every club-scoped route
+// re-reads club_admins.
 async function loadClubAdminOf(pool, userId) {
   const r = await pool.query(
-    `SELECT c.id, c.name, c.region_id
-       FROM club_admins ca JOIN clubs c ON c.id = ca.club_id
+    `SELECT c.id, c.name, c.region_id, o.claim_state AS org_claim_state
+       FROM club_admins ca
+       JOIN clubs c ON c.id = ca.club_id
+       JOIN organisations o ON o.id = c.org_id
       WHERE ca.user_id = $1
       ORDER BY lower(c.name)`,
     [userId],
@@ -154,6 +158,20 @@ async function countryOrgs(client, country, status) {
     [country.a3, country.a2, status, ADMIN_ORG_ID],
   );
   return r.rows;
+}
+
+// Everything the SPA gets alongside the token payload on sign-in and on
+// /api/auth/me, none of it signed into the JWT (see above for why). One
+// helper so the three places that build a session body can't drift:
+// has_claim was about to be the fourth copy-pasted line in each.
+async function addSessionExtras(pool, payload, userId) {
+  payload.has_dependents = await loadHasDependents(pool, userId);
+  payload.club_admin_of = await loadClubAdminOf(pool, userId);
+  payload.region_admin_of = await loadRegionAdminOf(pool, userId);
+  // A claimant signs in as a plain spectator; this is what puts Claims
+  // in their nav so they can follow their claim.
+  payload.has_claim = await claims.hasOwnClaim(pool, userId);
+  return payload;
 }
 
 // Club-first signup (migration 087): find the org a registrant from this
@@ -280,9 +298,7 @@ module.exports = function createAuthRouter({
       // was minted is reflected without forcing a re-login. Same goes
       // for a guardian link an admin approved five minutes ago.
       const payload = await buildTokenPayload(req.user.id);
-      payload.has_dependents = await loadHasDependents(pool, req.user.id);
-      payload.club_admin_of = await loadClubAdminOf(pool, req.user.id);
-      payload.region_admin_of = await loadRegionAdminOf(pool, req.user.id);
+      await addSessionExtras(pool, payload, req.user.id);
       res.json({ user: payload });
     } catch (err) {
       console.error("[Auth Me Error]", err.message);
@@ -396,10 +412,8 @@ module.exports = function createAuthRouter({
       const payload = await buildTokenPayload(user.id);
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
       setSessionCookie(res, token);
-      // After signing, so the flag never enters the JWT.
-      payload.has_dependents = await loadHasDependents(pool, user.id);
-      payload.club_admin_of = await loadClubAdminOf(pool, user.id);
-      payload.region_admin_of = await loadRegionAdminOf(pool, user.id);
+      // After signing, so the flags never enter the JWT.
+      await addSessionExtras(pool, payload, user.id);
       const resBody = { user: payload, ...payload };
       if (includeBodyToken(req)) resBody.token = token;
       res.json(resBody);
@@ -495,9 +509,7 @@ module.exports = function createAuthRouter({
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
       setSessionCookie(res, token);
       // Same body-only extras as the password login.
-      payload.has_dependents = await loadHasDependents(pool, user.id);
-      payload.club_admin_of = await loadClubAdminOf(pool, user.id);
-      payload.region_admin_of = await loadRegionAdminOf(pool, user.id);
+      await addSessionExtras(pool, payload, user.id);
       const resBody = {
         user: payload,
         ...payload,

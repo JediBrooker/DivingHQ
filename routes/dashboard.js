@@ -16,7 +16,10 @@
 //
 //     {
 //       events:           [...],   // filtered to roles the user can see
-//       role_requests:    [...],   // org_admin only
+//       role_requests:    [...],   // org_admin, or club / region admins
+//                                  // where there's no federation yet
+//       claims_to_act:    n,       // claims waiting on my vote or decision
+//       my_claims:        [...],   // claims I filed that are still open
 //       pending_orgs:     [...],   // sysadmin only
 //       recent_activity:  [...],   // org_admin only
 //       judge_events:     [...],   // judge role only
@@ -192,6 +195,8 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
 
     // ---- Claims waiting on this user's vote or decision (phase 3) ----
     tasks.claims_to_act = claims.countActionable(pool, user).catch(() => 0);
+    // ...and the ones this user filed, while they're still being decided.
+    tasks.my_claims = claims.openForClaimant(pool, user.id).catch(() => []);
 
     // ---- Pending org registrations (sysadmin only) ----
     if (isSysAdmin) {

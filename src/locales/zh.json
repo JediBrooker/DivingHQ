@@ -13,7 +13,9 @@
     "back": "← 返回",
     "dashboard": "← 控制台",
     "error_generic": "出现错误",
-    "view_profile": "查看个人资料 →"
+    "view_profile": "查看个人资料 →",
+    "load_failed": "无法加载。请检查网络连接后重试。",
+    "retry": "重试"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "俱乐部",
       "club_independent": "— 无俱乐部 / 独立 —",
       "club_new": "+ 创建新俱乐部",
-      "club_no_clubs": "此机构尚未注册任何俱乐部。您可以在上方创建。",
+      "club_no_clubs": "这里还没有俱乐部。请在列表中选择“+ 创建新俱乐部”。",
       "new_club_name": "新俱乐部名称",
       "short_code_optional": "简称（选填）",
       "requested_role": "我希望注册为",
       "role_default": "跳水运动员（默认）",
       "role_spectator": "仅观众",
-      "note_label": "致机构管理员的备注（选填）",
+      "note_label": "给审批人的备注（选填）",
       "note_placeholder": "例如：去年我参加了全国比赛",
-      "spectator_note": "所有账户起初均为观众。如果您在上方申请角色，您的机构管理员将进行审核并批准。您可立即登录。",
+      "spectator_note": "所有账户起初均为观众。如果您在上方申请角色，将由您的联合会管理员审核。确认邮箱后即可登录。",
       "submit_idle": "创建账户",
       "submit_loading": "创建中...",
       "already_have_account": "已有账户？",
       "sign_in_link": "登录",
-      "referee_note_unclaimed": "此地尚无协会，因此主裁判申请由 DivingHQ 而非您的俱乐部审核：主裁判可以在任何俱乐部的比赛中行使职权。"
+      "referee_note_unclaimed": "此地尚无协会，因此主裁判申请由 DivingHQ 而非您的俱乐部审核：主裁判可以在任何俱乐部的比赛中行使职权。",
+      "coming_soon": "即将开放",
+      "coming_soon_note": "账户注册尚未开放 — 我们正在为 DivingHQ 做最后的完善。请稍后再来。",
+      "failed": "注册失败",
+      "success": "注册成功。登录前请在邮箱中查收验证链接。",
+      "new_club_placeholder": "例如 Sydney Springboard",
+      "short_code_placeholder": "例如 SYD"
     },
     "register_org": {
       "title": "注册机构",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "{country} 还没有人使用 DivingHQ。注册后将建立 {country} 的账户，由您的机构担任国家联合会。验证邮箱后由 DivingHQ 审核，期间您可以登录。",
       "country_taken": "{org} 已在 DivingHQ 上管理 {country}，因此这里没有可注册的国家联合会。如有错误，请联系 DivingHQ 支持。",
       "country_taken_region": "{org} 已在 DivingHQ 上管理 {country}。地区机构请在上方选择所属地区；其他情况请联系 DivingHQ 支持。",
-      "no_regions_hint": "地区机构？请联系 DivingHQ 支持：{country} 的地区尚未设置。"
+      "no_regions_hint": "地区机构？请联系 DivingHQ 支持：{country} 的地区尚未设置。",
+      "website_invalid": "这看起来不像网址。请尝试类似 diving.org.au 的格式。",
+      "coming_soon_note": "联合会注册尚未开放 — 我们正在为 DivingHQ 做最后的完善。请稍后再来。"
     },
     "forgot": {
       "title": "重置密码",
@@ -418,9 +428,16 @@
       "orgs_one": "有 {count} 个协会等待批准",
       "orgs_many": "有 {count} 个协会等待批准",
       "orgs_meta": "在用户管理中审核 → 组织筛选",
-      "claims_one": "有 1 个申请等待您处理",
-      "claims_many": "有 {count} 个申请等待您处理",
-      "claims_meta": "有联合会申请接管账户"
+      "claims_meta": "有联合会申请接管账户",
+      "chip_pending": "待处理",
+      "chip_claims": "接管申请",
+      "review_title": "等待您审核",
+      "my_claims_title": "您的接管申请",
+      "my_claim": "您对 {target} 的接管申请",
+      "quiet": "一切平静，没有待处理事项。",
+      "pill_urgent": "即将截止",
+      "pill_overdue": "已逾期",
+      "chip_aria_tab": "{title}。打开此控制台上的对应标签页。"
     }
   },
   "profile": {
@@ -1027,6 +1044,19 @@
       "roster_import_section_label": "导入名单",
       "roster_import_submit": "导入",
       "roster_importing": "导入中…"
+    },
+    "club_mode": {
+      "pick_meet": "请选择该项目所属的俱乐部比赛",
+      "create_meet_first": "请先为您的俱乐部创建比赛，项目放在比赛之下",
+      "hosted_by": "主办方",
+      "pick_host": "— 选择您的俱乐部或地区 —"
+    },
+    "represent": {
+      "label": "运动员代表",
+      "country": "所属国家（国际比赛）",
+      "region": "所属州 / 省（全国锦标赛）",
+      "club": "所属俱乐部（俱乐部及俱乐部间比赛）",
+      "hint": "显示在记分牌、成绩和 PDF 中每位运动员旁边，奖牌榜也按此分组。没有州或俱乐部代码的运动员显示其国家。团体显示其所有运动员共同所属的州或俱乐部，否则显示其国家。"
     }
   },
   "user_manager": {
@@ -1208,7 +1238,11 @@
     "col_name": "名称",
     "col_code": "代码",
     "col_members": "成员",
-    "col_created": "创建时间"
+    "col_created": "创建时间",
+    "col_billing": "账单",
+    "col_actions": "操作",
+    "admins_button": "管理员",
+    "rename": "重命名"
   },
   "teams": {
     "title": "队伍",
@@ -1978,7 +2012,16 @@
     "currently_at": "目前在 {club}",
     "region_request_pending": "正在等待{region}接收您的俱乐部。",
     "region_request_cancel": "撤回申请",
-    "region_request_sent": "申请已发送。是否接收您的俱乐部由{region}决定。"
+    "region_request_sent": "申请已发送。是否接收您的俱乐部由{region}决定。",
+    "not_admin": "您已不再是本俱乐部的管理员。",
+    "left_notice": "您已不再是 {club} 的管理员。",
+    "leave_title": "要将自己从 {club} 的管理员中移除吗？",
+    "leave_body": "您将无法再组织俱乐部的比赛或批准其成员的申请。只有其他管理员才能将您重新添加。",
+    "leave_confirm": "移除我",
+    "admins_intro": "俱乐部管理员负责组织本俱乐部的比赛，并管理其课程、收款和会籍费用。他们没有联合会范围的权限。",
+    "current_admins": "当前管理员（{n}）",
+    "nobody_admins": "该俱乐部还没有管理员。",
+    "no_other_members": "该俱乐部没有其他成员。请先在用户管理中将成员调入该俱乐部。"
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "地区"
     },
     "pick": "— 请选择 —",
-    "required": "{label}：请为新俱乐部选择一个。"
+    "required": "{label}：请为新俱乐部选择一个。",
+    "admins_intro": "地区管理员负责组织本地区或其俱乐部主办的比赛，并审核本地区俱乐部的角色申请。",
+    "nobody_admins": "该地区还没有管理员。",
+    "pick_member": "— 选择本地区俱乐部的成员 —",
+    "no_candidates": "暂时没有可添加的人。请先把俱乐部划入该地区，其成员会显示在这里。",
+    "strip_title": "地区",
+    "manage_admins": "管理 {name} 的管理员",
+    "none_set_up": "该机构尚未设置地区（州、省等）。",
+    "set_up": "设置地区",
+    "region_for": "{club} 所在地区"
   },
   "my_region": {
     "title": "我的地区",
@@ -1996,7 +2048,6 @@
     "clubs": "俱乐部",
     "no_clubs_title": "还没有俱乐部",
     "no_clubs_body": "俱乐部在注册时或在俱乐部页面选择您的地区后会显示在这里。",
-    "members": "{n} 名会员",
     "no_admin": "尚无管理员",
     "region_admins": "地区管理员",
     "pick_member": "— 选择您所在地区俱乐部的会员 —",
@@ -2098,5 +2149,61 @@
     "contact": "联系我们",
     "need_help": "需要帮助？",
     "english_only": "此页面仅提供英文版本，以英文文本为准。"
+  },
+  "counts": {
+    "members_zero": "{n} 名会员",
+    "members_one": "{n} 名会员",
+    "members_two": "{n} 名会员",
+    "members_few": "{n} 名会员",
+    "members_many": "{n} 名会员",
+    "members_other": "{n} 名会员",
+    "open_claims_zero": "个进行中的申请",
+    "open_claims_one": "个进行中的申请",
+    "open_claims_two": "个进行中的申请",
+    "open_claims_few": "个进行中的申请",
+    "open_claims_many": "个进行中的申请",
+    "open_claims_other": "个进行中的申请",
+    "regions_added_zero": "已添加 {n} 个地区",
+    "regions_added_one": "已添加 {n} 个地区",
+    "regions_added_two": "已添加 {n} 个地区",
+    "regions_added_few": "已添加 {n} 个地区",
+    "regions_added_many": "已添加 {n} 个地区",
+    "regions_added_other": "已添加 {n} 个地区",
+    "claims_waiting_zero": "有 {n} 个申请等待您处理",
+    "claims_waiting_one": "有 {n} 个申请等待您处理",
+    "claims_waiting_two": "有 {n} 个申请等待您处理",
+    "claims_waiting_few": "有 {n} 个申请等待您处理",
+    "claims_waiting_many": "有 {n} 个申请等待您处理",
+    "claims_waiting_other": "有 {n} 个申请等待您处理"
+  },
+  "admin_settings": {
+    "title": "接管申请投票规则",
+    "intro": "联合会或州级机构对俱乐部创建的账户提出接管申请时如何决定。新数值适用于从现在起开启的申请（或投出的票）。",
+    "bounds": "默认 {default_value}，允许范围 {min} 至 {max}",
+    "saved": "已将{label}设为 {value}。",
+    "required": "请输入一个值。",
+    "not_number": "请输入数字。",
+    "whole": "请输入整数。",
+    "range": "请输入 {min} 至 {max} 之间的值。",
+    "claim_voter_min_age_days": {
+      "label": "俱乐部投票所需时长（天）",
+      "description": "俱乐部在 DivingHQ 上满这段时间后才算接管申请的投票方。"
+    },
+    "claim_voter_min_members": {
+      "label": "投票所需会员数",
+      "description": "……并且至少有这么多邮箱已验证的会员，或已举办过比赛。"
+    },
+    "claim_quorum_min": {
+      "label": "最少投票方",
+      "description": "有资格的投票方少于此数时，申请改交系统管理员处理。这也是申请通过所需的最少批准数。"
+    },
+    "claim_majority": {
+      "label": "所需多数",
+      "description": "批准数必须超过有资格投票方的这个比例（0.5 = 简单多数）。"
+    },
+    "claim_timeout_days": {
+      "label": "投票期限（天）",
+      "description": "期满时：至少一票批准且无人反对即通过，否则交由系统管理员处理。"
+    }
   }
 }

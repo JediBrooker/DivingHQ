@@ -13,7 +13,9 @@
     "back": "← Geri",
     "dashboard": "← Panel",
     "error_generic": "Bir şeyler ters gitti",
-    "view_profile": "Profili görüntüle →"
+    "view_profile": "Profili görüntüle →",
+    "load_failed": "Yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.",
+    "retry": "Tekrar dene"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Kulüp",
       "club_independent": "— Kulüpsüz / bağımsız —",
       "club_new": "+ Yeni kulüp oluştur",
-      "club_no_clubs": "Bu kuruluş için henüz kayıtlı kulüp yok. Yukarıdan bir tane oluşturabilirsiniz.",
+      "club_no_clubs": "Burada henüz kulüp yok. Listeden \"+ Yeni kulüp oluştur\" seçeneğini seçin.",
       "new_club_name": "Yeni Kulüp Adı",
       "short_code_optional": "Kısa Kod (isteğe bağlı)",
       "requested_role": "Şu sıfatla kayıt olmak istiyorum",
       "role_default": "Atlamacı (varsayılan)",
       "role_spectator": "Sadece seyirci",
-      "note_label": "Kuruluş yöneticisine not (isteğe bağlı)",
+      "note_label": "Sizi onaylayacak kişiye not (isteğe bağlı)",
       "note_placeholder": "ör. geçen yıl ulusal şampiyonada yarıştım",
-      "spectator_note": "Tüm hesaplar Seyirci olarak başlar. Yukarıda bir rol talep ederseniz, kuruluş yöneticiniz inceleyip onaylayacaktır. Anında giriş yapabileceksiniz.",
+      "spectator_note": "Tüm hesaplar Seyirci olarak başlar. Yukarıda bir rol talep ederseniz, federasyonunuzun yöneticisi inceleyecektir. E-postanızı doğruladıktan sonra giriş yapabilirsiniz.",
       "submit_idle": "Hesap Oluştur",
       "submit_loading": "Oluşturuluyor...",
       "already_have_account": "Zaten hesabınız var mı?",
       "sign_in_link": "Giriş yapın",
-      "referee_note_unclaimed": "Burada henüz bir federasyon olmadığından baş hakem taleplerini kulübünüz değil DivingHQ inceler: baş hakem her kulübün yarışmasında yetki kullanabilir."
+      "referee_note_unclaimed": "Burada henüz bir federasyon olmadığından baş hakem taleplerini kulübünüz değil DivingHQ inceler: baş hakem her kulübün yarışmasında yetki kullanabilir.",
+      "coming_soon": "Çok yakında",
+      "coming_soon_note": "Hesap kaydı henüz açılmadı — DivingHQ’ye son rötuşları yapıyoruz. Lütfen yakında tekrar uğrayın.",
+      "failed": "Kayıt başarısız",
+      "success": "Kayıt başarılı. Giriş yapmadan önce e-postanızdaki doğrulama bağlantısını açın.",
+      "new_club_placeholder": "ör. Sydney Springboard",
+      "short_code_placeholder": "ör. SYD"
     },
     "register_org": {
       "title": "Kuruluş Kaydı",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "{country} ülkesinden henüz DivingHQ'da kimse yok. Kayıt, kuruluşunuzu ulusal federasyon olarak {country} hesabını oluşturur. DivingHQ, e-postanızı doğruladığınızda inceler; bu arada giriş yapabilirsiniz.",
       "country_taken": "{org} zaten DivingHQ'da {country} hesabını yönetiyor, bu yüzden burada kaydedilecek bir ulusal federasyon yok. Bu bir hataysa DivingHQ desteğiyle iletişime geçin.",
       "country_taken_region": "{org} zaten DivingHQ'da {country} hesabını yönetiyor. Bölgesel kuruluşlar bölgelerini yukarıdan seçer; diğer herkes DivingHQ desteğiyle iletişime geçsin.",
-      "no_regions_hint": "Bölgesel kuruluş musunuz? DivingHQ desteğiyle iletişime geçin: {country} için bölgeler henüz ayarlanmadı."
+      "no_regions_hint": "Bölgesel kuruluş musunuz? DivingHQ desteğiyle iletişime geçin: {country} için bölgeler henüz ayarlanmadı.",
+      "website_invalid": "Bu bir web adresine benzemiyor. diving.org.au gibi bir şey deneyin.",
+      "coming_soon_note": "Federasyon kaydı henüz açılmadı — DivingHQ’ye son rötuşları yapıyoruz. Lütfen yakında tekrar uğrayın."
     },
     "forgot": {
       "title": "Şifre Sıfırlama",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} federasyon onay bekliyor",
       "orgs_many": "{count} federasyon onay bekliyor",
       "orgs_meta": "Kullanıcı Yönetimi'nde inceleyin → org filtresi",
-      "claims_one": "Sizi bekleyen 1 talep var",
-      "claims_many": "Sizi bekleyen {count} talep var",
-      "claims_meta": "Bir federasyon bir hesabı devralmak istiyor"
+      "claims_meta": "Bir federasyon bir hesabı devralmak istiyor",
+      "chip_pending": "Bekleyen",
+      "chip_claims": "Devralma talepleri",
+      "review_title": "İncelemenizi bekliyor",
+      "my_claims_title": "Devralma talepleriniz",
+      "my_claim": "{target} için talebiniz",
+      "quiet": "Her şey sakin, bekleyen bir şey yok.",
+      "pill_urgent": "yakında kapanıyor",
+      "pill_overdue": "gecikmiş",
+      "chip_aria_tab": "{title}. Bu paneldeki ilgili sekmeyi açar."
     }
   },
   "profile": {
@@ -1027,6 +1044,19 @@
       "roster_import_section_label": "Kadroyu İçe Aktar",
       "roster_import_submit": "İçe Aktar",
       "roster_importing": "İçe aktarılıyor…"
+    },
+    "club_mode": {
+      "pick_meet": "Bu branşın kulübünüzün hangi yarışmasına ait olduğunu seçin",
+      "create_meet_first": "Önce kulübünüz için bir yarışma oluşturun, branşlar onun içinde yer alır",
+      "hosted_by": "Ev sahibi",
+      "pick_host": "— Kulübünüzü veya bölgenizi seçin —"
+    },
+    "represent": {
+      "label": "Atlayıcılar şunu temsil eder",
+      "country": "Ülkelerini (uluslararası yarışmalar)",
+      "region": "Eyaletlerini / illerini (ulusal şampiyonalar)",
+      "club": "Kulüplerini (kulüp ve kulüpler arası yarışmalar)",
+      "hint": "Skor tablosunda, sonuçlarda ve PDF’lerde her atlayıcının yanında gösterilir ve madalya tablosu buna göre gruplanır. Eyalet veya kulüp kodu olmayan atlayıcı ülkesiyle gösterilir. Takım, tüm atlayıcılarının ortak olduğu eyalet veya kulüple gösterilir, aksi halde ülkesiyle."
     }
   },
   "user_manager": {
@@ -1208,7 +1238,11 @@
     "col_name": "Ad",
     "col_code": "Kod",
     "col_members": "Üyeler",
-    "col_created": "Oluşturuldu"
+    "col_created": "Oluşturuldu",
+    "col_billing": "Faturalama",
+    "col_actions": "İşlemler",
+    "admins_button": "Yöneticiler",
+    "rename": "Yeniden adlandır"
   },
   "teams": {
     "title": "Takımlar",
@@ -1978,7 +2012,16 @@
     "currently_at": "şu anda {club} kulübünde",
     "region_request_pending": "{region} bölgesinin kulübünüzü kabul etmesi bekleniyor.",
     "region_request_cancel": "Talebi geri çek",
-    "region_request_sent": "Talep gönderildi. Kulübünüzü kabul edip etmeyeceğine {region} bölgesi karar verecek."
+    "region_request_sent": "Talep gönderildi. Kulübünüzü kabul edip etmeyeceğine {region} bölgesi karar verecek.",
+    "not_admin": "Artık bu kulübün yöneticisi değilsiniz.",
+    "left_notice": "Artık {club} yöneticisi değilsiniz.",
+    "leave_title": "Kendinizi {club} yöneticilerinden çıkarmak istiyor musunuz?",
+    "leave_body": "Artık kulübün yarışmalarını düzenleyemez ve üyelerinin isteklerini onaylayamazsınız. Sizi yalnızca başka bir yönetici geri ekleyebilir.",
+    "leave_confirm": "Beni çıkar",
+    "admins_intro": "Kulüp yöneticileri kulüplerinin yarışmalarını düzenler; derslerini, ödemelerini ve üyelik aidatlarını yönetir. Federasyon genelinde erişimleri yoktur.",
+    "current_admins": "Mevcut yöneticiler ({n})",
+    "nobody_admins": "Bu kulübün henüz yöneticisi yok.",
+    "no_other_members": "Bu kulüpte başka üye yok. Önce Kullanıcı Yöneticisi’nden birini bu kulübe taşıyın."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Bölge"
     },
     "pick": "— Birini seçin —",
-    "required": "{label}: yeni kulübünüz için birini seçin."
+    "required": "{label}: yeni kulübünüz için birini seçin.",
+    "admins_intro": "Bölge yöneticileri, bölgelerinin veya kulüplerinin ev sahipliği yaptığı yarışmaları düzenler ve bölge kulüplerinden gelen rol isteklerini inceler.",
+    "nobody_admins": "Bu bölgenin henüz yöneticisi yok.",
+    "pick_member": "— Bu bölgenin kulüplerinden bir üye seçin —",
+    "no_candidates": "Henüz eklenecek kimse yok. Önce bu bölgeye kulüp ekleyin, üyeleri burada görünür.",
+    "strip_title": "Bölgeler",
+    "manage_admins": "{name} yöneticilerini yönet",
+    "none_set_up": "Bu kuruluş için henüz bölge (eyalet, il…) ayarlanmadı.",
+    "set_up": "Bölgeleri ayarla",
+    "region_for": "{club} bölgesi"
   },
   "my_region": {
     "title": "Bölgem",
@@ -1996,7 +2048,6 @@
     "clubs": "Kulüpler",
     "no_clubs_title": "Henüz kulüp yok",
     "no_clubs_body": "Kulüpler, kayıt sırasında veya kulüp sayfasında bölgenizi seçtiklerinde burada görünür.",
-    "members": "{n} üye",
     "no_admin": "Henüz yönetici yok",
     "region_admins": "Bölge yöneticileri",
     "pick_member": "— Bölgenizdeki kulüplerden bir üye seçin —",
@@ -2098,5 +2149,61 @@
     "contact": "İletişim",
     "need_help": "Yardıma mı ihtiyacınız var?",
     "english_only": "Bu sayfa yalnızca İngilizce olarak sunulmaktadır ve geçerli olan İngilizce metindir."
+  },
+  "counts": {
+    "members_zero": "{n} üye",
+    "members_one": "{n} üye",
+    "members_two": "{n} üye",
+    "members_few": "{n} üye",
+    "members_many": "{n} üye",
+    "members_other": "{n} üye",
+    "open_claims_zero": "açık talep",
+    "open_claims_one": "açık talep",
+    "open_claims_two": "açık talep",
+    "open_claims_few": "açık talep",
+    "open_claims_many": "açık talep",
+    "open_claims_other": "açık talep",
+    "regions_added_zero": "{n} bölge eklendi",
+    "regions_added_one": "{n} bölge eklendi",
+    "regions_added_two": "{n} bölge eklendi",
+    "regions_added_few": "{n} bölge eklendi",
+    "regions_added_many": "{n} bölge eklendi",
+    "regions_added_other": "{n} bölge eklendi",
+    "claims_waiting_zero": "Sizi bekleyen {n} talep var",
+    "claims_waiting_one": "Sizi bekleyen {n} talep var",
+    "claims_waiting_two": "Sizi bekleyen {n} talep var",
+    "claims_waiting_few": "Sizi bekleyen {n} talep var",
+    "claims_waiting_many": "Sizi bekleyen {n} talep var",
+    "claims_waiting_other": "Sizi bekleyen {n} talep var"
+  },
+  "admin_settings": {
+    "title": "Devralma talebi oylama kuralları",
+    "intro": "Bir federasyonun veya bölge kuruluşunun kulüplerin başlattığı bir hesap üzerindeki talebinin nasıl karara bağlanacağı. Yeni değerler bundan sonra açılan taleplere (veya verilen oylara) uygulanır.",
+    "bounds": "Varsayılan {default_value}, izin verilen {min} ile {max} arası",
+    "saved": "{label} değeri {value} olarak ayarlandı.",
+    "required": "Bir değer girin.",
+    "not_number": "Bir sayı girin.",
+    "whole": "Bir tam sayı girin.",
+    "range": "{min} ile {max} arasında bir değer girin.",
+    "claim_voter_min_age_days": {
+      "label": "Oy için kulüp yaşı (gün)",
+      "description": "Bir kulüp ancak bu kadar süredir DivingHQ’de ise talepte oy veren sayılır."
+    },
+    "claim_voter_min_members": {
+      "label": "Oy için üye sayısı",
+      "description": "…ve e-postası doğrulanmış en az bu kadar üyesi vardır ya da bir yarışmaya ev sahipliği yapmıştır."
+    },
+    "claim_quorum_min": {
+      "label": "En az oy veren",
+      "description": "Oy hakkı olanlar bundan azsa talep sistem yöneticisine gider. Aynı zamanda talebi geçirebilecek en az onay sayısıdır."
+    },
+    "claim_majority": {
+      "label": "Gereken çoğunluk",
+      "description": "Onaylar, oy hakkı olanların bu oranından fazla olmalıdır (0.5 = basit çoğunluk)."
+    },
+    "claim_timeout_days": {
+      "label": "Oylama süresi (gün)",
+      "description": "Süre dolduğunda: en az bir onay ve hiç itiraz yoksa talep kabul edilir, aksi halde sistem yöneticisine gider."
+    }
   }
 }

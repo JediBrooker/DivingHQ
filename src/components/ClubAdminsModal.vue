@@ -1,7 +1,8 @@
 <script setup>
-// Who admins a club. Club admins are the people who run a club's
-// classes, its Stripe payouts and its affiliation payments, and before
-// this dialog there was no way to appoint one outside the database.
+// Who admins a club. Club admins run their club's meets (club-first
+// countries), its classes, its Stripe payouts and its affiliation
+// payments, and before this dialog there was no way to appoint one
+// outside the database.
 // Opened from the Clubs screen by the federation's org_admin (or a
 // sysadmin); the server enforces the same rule.
 import { ref, computed, onMounted } from 'vue'
@@ -76,36 +77,31 @@ onMounted(load)
 <template>
   <BaseModal max-width="520px" @close="$emit('close')">
     <template #default="{ titleId }">
-      <ModalHeader :title-id="titleId" title="Club admins" :subtitle="club.name" @close="$emit('close')" />
+      <ModalHeader :title-id="titleId" :title="$t('my_club.admins')" :subtitle="club.name" @close="$emit('close')" />
       <div class="lb-body">
-        <p class="hint-line intro">
-          Club admins run the club's classes, payouts and affiliation payments.
-          They don't get any federation-wide access.
-        </p>
+        <p class="hint-line intro">{{ $t('my_club.admins_intro') }}</p>
 
-        <div class="section-label">Current admins ({{ admins.length }})</div>
-        <div v-if="loading" class="empty">Loading…</div>
+        <div class="section-label">{{ $t('my_club.current_admins', { n: admins.length }) }}</div>
+        <div v-if="loading" class="empty">{{ $t('common.loading') }}</div>
         <ul v-else-if="admins.length" class="admin-list">
           <li v-for="a in admins" :key="a.id" class="admin-row">
             <span class="admin-name">{{ a.full_name }} <span class="admin-user">@{{ a.username }}</span></span>
-            <button class="btn btn-danger btn-sm" :disabled="busy" @click="remove(a)">Remove</button>
+            <button class="btn btn-danger btn-sm" :disabled="busy" @click="remove(a)">{{ $t('my_club.remove') }}</button>
           </li>
         </ul>
-        <div v-else class="empty">Nobody admins this club yet.</div>
+        <div v-else class="empty">{{ $t('my_club.nobody_admins') }}</div>
 
-        <div class="section-label" style="margin-top:1.25rem">Add an admin</div>
+        <div class="section-label" style="margin-top:1.25rem">{{ $t('my_club.add_admin') }}</div>
         <div class="add-row">
-          <select class="select" v-model="toAdd" :disabled="loading || !addable.length">
-            <option value="">— Pick a club member —</option>
+          <select class="select" v-model="toAdd" :disabled="loading || !addable.length" :aria-label="$t('my_club.add_admin')">
+            <option value="">{{ $t('my_club.pick_member') }}</option>
             <option v-for="m in addable" :key="m.id" :value="m.id">
               {{ m.full_name }} (@{{ m.username }})
             </option>
           </select>
-          <button class="btn btn-primary btn-sm" :disabled="!toAdd || busy" @click="add">Add</button>
+          <button class="btn btn-primary btn-sm" :disabled="!toAdd || busy" @click="add">{{ $t('my_club.add') }}</button>
         </div>
-        <p v-if="!loading && !addable.length" class="hint-line">
-          No other members in this club. Move someone into it from the User Manager first.
-        </p>
+        <p v-if="!loading && !addable.length" class="hint-line">{{ $t('my_club.no_other_members') }}</p>
       </div>
     </template>
   </BaseModal>

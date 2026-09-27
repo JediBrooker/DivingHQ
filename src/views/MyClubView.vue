@@ -6,14 +6,19 @@
 // (the federation reviews) and the admins list is read-only.
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { showError, showSuccess } from '@/composables/useNotify'
+import { showError, showInfo, showSuccess } from '@/composables/useNotify'
+import { confirmAction } from '@/composables/useConfirm'
+import { usePlural } from '@/composables/usePlural'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
 import JoinRequestQueue from '@/components/JoinRequestQueue.vue'
+import LoadError from '@/components/LoadError.vue'
 
 const { t } = useI18n()
+const { tn } = usePlural()
 const auth = useAuthStore()
+const router = useRouter()
 
 const busyId = ref(null)
 
@@ -22,7 +27,9 @@ const busyId = ref(null)
 const regions = ref({ label: null, regions: [] })
 const regionLabel = computed(() => regions.value.label ? t(`regions.label.${regions.value.label}`) : '')
 
-// Per club: { admins, members, canManage, toAdd }
+// Per club: { admins, members, canManage, denied, failed, toAdd }.
+// denied = the server said 403; failed = anything else went wrong, which
+// says nothing about who may manage the club, so it gets a retry.
 const clubState = ref({})
 const clubs = computed(() => auth.clubAdminOf)
 
@@ -102,9 +109,31 @@ async function loadClub(club) {
       admins: body.admins || [], members: body.members || [], canManage: true, toAdd: '',
       regionRequest: body.region_request || null,
     }
-  } catch {
-    // 403 under a federation: it appoints admins, not the club.
-    clubState.value[club.id] = { admins: [], members: [], canManage: false, toAdd: '', regionRequest: null }
+  } catch (err) {
+    const denied = err.status === 403
+    clubState.value[club.id] = {
+      admins: [], members: [], canManage: false, denied, failed: !denied, toAdd: '', regionRequest: null,
+    }
+    // Refused where the clubs run things means we aren't this club's admin
+    // any more (someone removed us). Our club list is stale, so refresh it.
+    if (denied && club.org_claim_state === 'unclaimed') await refreshAfterLosingClub(club)
+  }
+}
+
+// Under a federation it appoints the admins; otherwise a 403 only happens
+// once you've stopped being one, and refreshAfterLosingClub moves you on.
+function deniedMessage(club) {
+  return club.org_claim_state === 'unclaimed' ? t('my_club.not_admin') : t('my_club.federation_appoints')
+}
+
+// auth.clubAdminOf drives the My club nav entry, the /club route guard
+// and the meet screens' club mode, so it has to catch up the moment we
+// stop admining a club rather than on the next reload.
+async function refreshAfterLosingClub(club) {
+  await auth.fetchMe()
+  if (!auth.isClubAdmin) {
+    showInfo(t('my_club.left_notice', { club: club.name }))
+    router.push('/dashboard')
   }
 }
 
@@ -144,10 +173,21 @@ async function addAdmin(club) {
 }
 
 async function removeAdmin(club, admin) {
+  const self = admin.id === auth.user?.id
+  // Removing yourself locks you out of the club's meets and this page,
+  // and only another admin can undo it, so check first.
+  if (self && !await confirmAction({
+    title: t('my_club.leave_title', { club: club.name }),
+    body: t('my_club.leave_body'),
+    confirmLabel: t('my_club.leave_confirm'),
+    cancelLabel: t('common.cancel'),
+    confirmKind: 'danger',
+  })) return
   busyId.value = club.id
   try {
     await auth.apiFetch(`/api/clubs/${club.id}/admins/${admin.id}`, { method: 'DELETE' })
-    await loadClub(club)
+    if (self) await refreshAfterLosingClub(club)
+    else await loadClub(club)
   } catch (err) {
     showError(err.message)
   } finally {
@@ -187,7 +227,9 @@ onMounted(() => {
         <RouterLink :to="{ path: `/records/club/${club.id}`, query: auth.user?.org_id ? { org: auth.user.org_id } : {} }"
                     class="records-link" :data-testid="`club-records-${club.id}`">{{ $t('records.view') }}</RouterLink>
       </div>
-      <template v-if="clubState[club.id]">
+      <p v-if="clubState[club.id]?.canManage" class="muted">{{ tn('counts.members', clubState[club.id].members.length) }}</p>
+      <LoadError v-if="clubState[club.id]?.failed" @retry="loadClub(club)" />
+      <template v-else-if="clubState[club.id]">
         <!-- Which region the club is in. Same rule as the admins list:
              the club decides where there's no federation. -->
         <div v-if="regions.regions.length && clubState[club.id].canManage" class="region-row">
@@ -209,7 +251,7 @@ onMounted(() => {
                     @click="withdrawRegionRequest(club)">{{ $t('my_club.region_request_cancel') }}</button>
           </div>
         </div>
-        <p v-if="!clubState[club.id].canManage" class="muted">{{ $t('my_club.federation_appoints') }}</p>
+        <p v-if="!clubState[club.id].canManage" class="muted">{{ deniedMessage(club) }}</p>
         <template v-else>
           <ul class="rows">
             <li v-for="a in clubState[club.id].admins" :key="a.id" class="row card-sm">

@@ -228,7 +228,10 @@ anything you gate on `org_admin` alone is unreachable there. Club admins
 above. When you add a meet or event route, decide whether a club admin of
 the host club should pass, and use the shared helpers rather than a fresh
 `org_roles.includes` check. `club_admin_of` rides on the login and
-`/api/auth/me` bodies for the SPA; the server never trusts it.
+`/api/auth/me` bodies for the SPA; the server never trusts it. Those
+bodies are built in one place, `addSessionExtras()` in `routes/auth.js`
+(it also carries `has_dependents`, `region_admin_of` and `has_claim`), so
+add the next body-only flag there, not to each login path.
 
 An unclaimed org or region becomes claimed through `lib/claims.js`
 (migration 089), never by editing `claim_state` by hand: approval also
@@ -326,8 +329,10 @@ above it.
 | "Does this person run this event?" (event_managers row, or admin of the club / region hosting its meet, or of the host club's region) | `isEventDelegate(eventId, userId)` | `lib/middleware.js` |
 | Role gate that also lets the event's delegates in | `requireRoleOrEventDelegate(roles, eventIdOf)` | `lib/middleware.js` |
 | Meet routes open to club admins (then pin with `isMeetHostAdmin`) | `requireMeetEditorOrClubAdmin` / server.js `requireMeetOrClubEditor` | `lib/middleware.js` |
-| Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForClubAdmin` / `clubAdminCanReview` / `reviewersFor` | `lib/role-requests.js` |
-| Narrow a meet screen to a club admin's own meets | `useClubScope()` | `src/composables/useClubScope.js` |
+| Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForDelegate` / `delegateCanReview` / `reviewersFor` | `lib/role-requests.js` |
+| Narrow a meet screen to a club admin's own meets (pass the org roles the screen admits on its own, e.g. `CONTROL_ROOM_ROLES`, so a referee who also admins a club isn't narrowed) | `useClubScope(screenRoles)` | `src/composables/useClubScope.js` + `club-scope-core.js` |
+| Count-aware UI string (`counts.<base>_zero` … `_other`, one key per CLDR category; locale values can't use vue-i18n's `\|` plurals) | `usePlural().tn(base, n)` | `src/composables/usePlural.js` + `src/lib/plural.js` |
+| "Couldn't load this" + Try again, for a failed fetch that must not read as an empty list or a permission refusal | `<LoadError @retry>` | `src/components/LoadError.vue` |
 | ISO country list (server validation + signup picker) | `countryByCode(a3)` / `countryFromStored(dbCode)` / `countries.json` | `lib/countries.js` |
 | What a diver represents in an event (country / state / club code) | `event_rep_code(event_id, user_id, home_country)` SQL function | `migrations/090_representation.sql`, `095_team_rep_code.sql` |
 | The club / region / country ids an entry resolves to (snapshot first, partner snapshot next) | `event_rep_ids(event_id, user_id)` SQL function | `migrations/095_team_rep_code.sql` |

@@ -13,7 +13,9 @@
     "back": "← 戻る",
     "dashboard": "← ダッシュボード",
     "error_generic": "問題が発生しました",
-    "view_profile": "プロフィールを見る →"
+    "view_profile": "プロフィールを見る →",
+    "load_failed": "読み込めませんでした。接続を確認して、もう一度お試しください。",
+    "retry": "再試行"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "クラブ",
       "club_independent": "— クラブなし / 個人 —",
       "club_new": "+ 新しいクラブを作成",
-      "club_no_clubs": "この組織にはまだ登録されたクラブがありません。上で作成できます。",
+      "club_no_clubs": "ここにはまだクラブがありません。リストから「+ 新しいクラブを作成」を選んでください。",
       "new_club_name": "新しいクラブ名",
       "short_code_optional": "略称（任意）",
       "requested_role": "登録したい役割",
       "role_default": "飛び込み選手（デフォルト）",
       "role_spectator": "観戦者のみ",
-      "note_label": "組織管理者へのメモ（任意）",
+      "note_label": "承認する方へのメモ（任意）",
       "note_placeholder": "例：昨年の全国大会に出場しました",
-      "spectator_note": "すべてのアカウントは観戦者として開始します。上で役割を申請した場合、組織管理者が確認のうえ承認します。サインインはすぐに可能です。",
+      "spectator_note": "すべてのアカウントは観戦者として開始します。上で役割を申請した場合、連盟の管理者が確認します。メールアドレスの確認後にサインインできます。",
       "submit_idle": "アカウントを作成",
       "submit_loading": "作成中...",
       "already_have_account": "すでにアカウントをお持ちですか？",
       "sign_in_link": "サインイン",
-      "referee_note_unclaimed": "この国にはまだ連盟がないため、主審の申請はクラブではなくDivingHQが審査します。主審はどのクラブの大会にも関与できるためです。"
+      "referee_note_unclaimed": "この国にはまだ連盟がないため、主審の申請はクラブではなくDivingHQが審査します。主審はどのクラブの大会にも関与できるためです。",
+      "coming_soon": "近日公開",
+      "coming_soon_note": "アカウント登録はまだ受け付けていません。DivingHQ の最終調整中です。しばらくしてからまたお越しください。",
+      "failed": "登録に失敗しました",
+      "success": "登録が完了しました。サインインする前に、メールに届いた確認リンクを開いてください。",
+      "new_club_placeholder": "例: Sydney Springboard",
+      "short_code_placeholder": "例: SYD"
     },
     "register_org": {
       "title": "組織を登録",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "{country} からはまだ誰も DivingHQ を利用していません。登録すると、あなたの団体を国内連盟として {country} のアカウントが作成されます。メール確認後に DivingHQ が審査し、その間もサインインできます。",
       "country_taken": "{org} がすでに DivingHQ で {country} を運営しているため、ここで登録する国内連盟はありません。誤りの場合は DivingHQ サポートにお問い合わせください。",
       "country_taken_region": "{org} がすでに DivingHQ で {country} を運営しています。地域団体は上で地域を選択してください。それ以外の方は DivingHQ サポートにお問い合わせください。",
-      "no_regions_hint": "地域団体の方へ：{country} の地域はまだ設定されていません。DivingHQ サポートにお問い合わせください。"
+      "no_regions_hint": "地域団体の方へ：{country} の地域はまだ設定されていません。DivingHQ サポートにお問い合わせください。",
+      "website_invalid": "ウェブアドレスではないようです。diving.org.au のように入力してください。",
+      "coming_soon_note": "連盟の登録はまだ受け付けていません。DivingHQ の最終調整中です。しばらくしてからまたお越しください。"
     },
     "forgot": {
       "title": "パスワードをリセット",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} 件の連盟が承認待ちです",
       "orgs_many": "{count} 件の連盟が承認待ちです",
       "orgs_meta": "ユーザー管理で確認してください → 組織フィルター",
-      "claims_one": "1 件の申請があなたを待っています",
-      "claims_many": "{count} 件の申請があなたを待っています",
-      "claims_meta": "連盟がアカウントの引き継ぎを求めています"
+      "claims_meta": "連盟がアカウントの引き継ぎを求めています",
+      "chip_pending": "保留中",
+      "chip_claims": "引き継ぎ申請",
+      "review_title": "確認待ち",
+      "my_claims_title": "あなたの引き継ぎ申請",
+      "my_claim": "{target} の引き継ぎ申請",
+      "quiet": "保留中の項目はありません。",
+      "pill_urgent": "まもなく締切",
+      "pill_overdue": "期限超過",
+      "chip_aria_tab": "{title}。このダッシュボードの該当タブを開きます。"
     }
   },
   "profile": {
@@ -1027,6 +1044,19 @@
       "roster_import_section_label": "選手リストをインポート",
       "roster_import_submit": "インポート",
       "roster_importing": "インポート中…"
+    },
+    "club_mode": {
+      "pick_meet": "この種目を入れるクラブの大会を選んでください",
+      "create_meet_first": "まずクラブの大会を作成してください。種目はその中に入ります",
+      "hosted_by": "主催",
+      "pick_host": "— クラブまたは地域を選択 —"
+    },
+    "represent": {
+      "label": "選手の所属表示",
+      "country": "国（国際大会）",
+      "region": "州・県（全国選手権）",
+      "club": "クラブ（クラブ内・クラブ対抗大会）",
+      "hint": "スコアボード、結果、PDF で各選手の横に表示され、メダル表のグループ分けにも使われます。州やクラブのコードがない選手は国で表示されます。チームは、所属する全選手に共通する州またはクラブで表示され、そうでなければ国で表示されます。"
     }
   },
   "user_manager": {
@@ -1208,7 +1238,11 @@
     "col_name": "名称",
     "col_code": "コード",
     "col_members": "メンバー",
-    "col_created": "作成日"
+    "col_created": "作成日",
+    "col_billing": "請求",
+    "col_actions": "操作",
+    "admins_button": "管理者",
+    "rename": "名前を変更"
   },
   "teams": {
     "title": "チーム",
@@ -1978,7 +2012,16 @@
     "currently_at": "現在の所属: {club}",
     "region_request_pending": "{region}がクラブを受け入れるのを待っています。",
     "region_request_cancel": "申請を取り下げる",
-    "region_request_sent": "申請を送信しました。クラブを受け入れるかどうかは{region}が決めます。"
+    "region_request_sent": "申請を送信しました。クラブを受け入れるかどうかは{region}が決めます。",
+    "not_admin": "このクラブの管理者ではなくなりました。",
+    "left_notice": "{club} の管理者ではなくなりました。",
+    "leave_title": "{club} の管理者から自分を外しますか？",
+    "leave_body": "クラブの大会運営やメンバーの申請承認ができなくなります。元に戻せるのは他の管理者だけです。",
+    "leave_confirm": "自分を外す",
+    "admins_intro": "クラブ管理者は自クラブの大会を運営し、クラスや支払い、加盟費を管理します。連盟全体へのアクセス権はありません。",
+    "current_admins": "現在の管理者（{n}）",
+    "nobody_admins": "このクラブにはまだ管理者がいません。",
+    "no_other_members": "このクラブには他のメンバーがいません。まずユーザー管理から誰かをこのクラブに移してください。"
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "地域"
     },
     "pick": "— 選択してください —",
-    "required": "{label}: 新しいクラブの所属を選んでください。"
+    "required": "{label}: 新しいクラブの所属を選んでください。",
+    "admins_intro": "地域管理者は、地域またはその所属クラブが主催する大会を運営し、地域のクラブからの役割申請を審査します。",
+    "nobody_admins": "この地域にはまだ管理者がいません。",
+    "pick_member": "— この地域のクラブのメンバーを選択 —",
+    "no_candidates": "追加できる人がまだいません。まずクラブをこの地域に登録すると、そのメンバーがここに表示されます。",
+    "strip_title": "地域",
+    "manage_admins": "{name} の管理者を管理",
+    "none_set_up": "この組織にはまだ地域（州・県など）が設定されていません。",
+    "set_up": "地域を設定",
+    "region_for": "{club} の地域"
   },
   "my_region": {
     "title": "マイ地域",
@@ -1996,7 +2048,6 @@
     "clubs": "クラブ",
     "no_clubs_title": "まだクラブがありません",
     "no_clubs_body": "登録時やクラブページで地域を選ぶと、クラブがここに表示されます。",
-    "members": "メンバー {n} 人",
     "no_admin": "管理者未設定",
     "region_admins": "地域の管理者",
     "pick_member": "— 地域内のクラブのメンバーを選択 —",
@@ -2098,5 +2149,61 @@
     "contact": "お問い合わせ",
     "need_help": "お困りですか？",
     "english_only": "このページは英語版のみです。英語の本文が正式なものとなります。"
+  },
+  "counts": {
+    "members_zero": "メンバー {n} 人",
+    "members_one": "メンバー {n} 人",
+    "members_two": "メンバー {n} 人",
+    "members_few": "メンバー {n} 人",
+    "members_many": "メンバー {n} 人",
+    "members_other": "メンバー {n} 人",
+    "open_claims_zero": "件の進行中の申請",
+    "open_claims_one": "件の進行中の申請",
+    "open_claims_two": "件の進行中の申請",
+    "open_claims_few": "件の進行中の申請",
+    "open_claims_many": "件の進行中の申請",
+    "open_claims_other": "件の進行中の申請",
+    "regions_added_zero": "{n} 件の地域を追加しました",
+    "regions_added_one": "{n} 件の地域を追加しました",
+    "regions_added_two": "{n} 件の地域を追加しました",
+    "regions_added_few": "{n} 件の地域を追加しました",
+    "regions_added_many": "{n} 件の地域を追加しました",
+    "regions_added_other": "{n} 件の地域を追加しました",
+    "claims_waiting_zero": "{n} 件の申請があなたを待っています",
+    "claims_waiting_one": "{n} 件の申請があなたを待っています",
+    "claims_waiting_two": "{n} 件の申請があなたを待っています",
+    "claims_waiting_few": "{n} 件の申請があなたを待っています",
+    "claims_waiting_many": "{n} 件の申請があなたを待っています",
+    "claims_waiting_other": "{n} 件の申請があなたを待っています"
+  },
+  "admin_settings": {
+    "title": "引き継ぎ申請の投票ルール",
+    "intro": "クラブが立ち上げたアカウントに対する連盟や地域団体の引き継ぎ申請をどう決めるか。新しい値は今後開かれる申請（または投じられる票）に適用されます。",
+    "bounds": "既定値 {default_value}、許容範囲 {min}〜{max}",
+    "saved": "{label} を {value} に設定しました。",
+    "required": "値を入力してください。",
+    "not_number": "数値を入力してください。",
+    "whole": "整数を入力してください。",
+    "range": "{min}〜{max} の値を入力してください。",
+    "claim_voter_min_age_days": {
+      "label": "投票できるクラブ歴（日）",
+      "description": "クラブは DivingHQ に登録してからこの期間が経って初めて投票者に数えられます。"
+    },
+    "claim_voter_min_members": {
+      "label": "投票に必要な会員数",
+      "description": "…かつ、メール確認済みの会員がこの人数以上いるか、大会を開催したことがあること。"
+    },
+    "claim_quorum_min": {
+      "label": "最少投票者数",
+      "description": "投票資格のあるクラブがこれより少ない場合、申請はシステム管理者に回ります。申請を通すのに必要な最少承認数でもあります。"
+    },
+    "claim_majority": {
+      "label": "必要な多数",
+      "description": "承認数が投票資格者のこの割合を超える必要があります（0.5 = 単純過半数）。"
+    },
+    "claim_timeout_days": {
+      "label": "投票期間（日）",
+      "description": "期間終了時、承認が 1 件以上あり異議がなければ申請は承認され、そうでなければシステム管理者に回ります。"
+    }
   }
 }

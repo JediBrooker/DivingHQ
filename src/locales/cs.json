@@ -13,7 +13,9 @@
     "back": "← Zpět",
     "dashboard": "← Nástěnka",
     "error_generic": "Něco se pokazilo",
-    "view_profile": "Zobrazit profil →"
+    "view_profile": "Zobrazit profil →",
+    "load_failed": "Nepodařilo se načíst. Zkontrolujte připojení a zkuste to znovu.",
+    "retry": "Zkusit znovu"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Klub",
       "club_independent": "— Bez klubu / nezávislý —",
       "club_new": "+ Vytvořit nový klub",
-      "club_no_clubs": "Pro tuto organizaci zatím nejsou registrovány žádné kluby. Můžete jej vytvořit výše.",
+      "club_no_clubs": "Zatím tu nejsou žádné kluby. V seznamu vyberte „+ Vytvořit nový klub“.",
       "new_club_name": "Název nového klubu",
       "short_code_optional": "Zkratka (volitelné)",
       "requested_role": "Chci se zaregistrovat jako",
       "role_default": "Skokan (výchozí)",
       "role_spectator": "Pouze divák",
-      "note_label": "Poznámka pro administrátora organizace (volitelné)",
+      "note_label": "Poznámka pro toho, kdo vás schvaluje (volitelné)",
       "note_placeholder": "např. Loni jsem závodil na mistrovství republiky",
-      "spectator_note": "Všechny účty začínají jako Divák. Pokud výše požádáte o roli, administrátor vaší organizace ji posoudí a schválí. Přihlásit se budete moci ihned.",
+      "spectator_note": "Všechny účty začínají jako Divák. Pokud výše požádáte o roli, posoudí ji správce vaší federace. Přihlásit se můžete po potvrzení e-mailu.",
       "submit_idle": "Vytvořit účet",
       "submit_loading": "Vytváření...",
       "already_have_account": "Už máte účet?",
       "sign_in_link": "Přihlaste se",
-      "referee_note_unclaimed": "Dokud tu není federace, žádosti o roli vrchního rozhodčího posuzuje DivingHQ, ne váš klub: vrchní rozhodčí může zasahovat do závodů kteréhokoli klubu."
+      "referee_note_unclaimed": "Dokud tu není federace, žádosti o roli vrchního rozhodčího posuzuje DivingHQ, ne váš klub: vrchní rozhodčí může zasahovat do závodů kteréhokoli klubu.",
+      "coming_soon": "Již brzy",
+      "coming_soon_note": "Registrace účtů zatím nejsou otevřené — dolaďujeme DivingHQ. Zkuste to prosím brzy znovu.",
+      "failed": "Registrace se nezdařila",
+      "success": "Registrace proběhla úspěšně. Před přihlášením si v e-mailu najděte ověřovací odkaz.",
+      "new_club_placeholder": "např. Sydney Springboard",
+      "short_code_placeholder": "např. SYD"
     },
     "register_org": {
       "title": "Registrace organizace",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "Ze země {country} zatím na DivingHQ nikdo není. Registrací založíte účet země {country} s vaším svazem jako národní federací. DivingHQ ji posoudí po ověření e-mailu a mezitím se můžete přihlásit.",
       "country_taken": "{org} už na DivingHQ spravuje zemi {country}, takže tu není žádná národní federace k registraci. Pokud je to chyba, kontaktujte podporu DivingHQ.",
       "country_taken_region": "{org} už na DivingHQ spravuje zemi {country}. Regionální svaz si výše vybere svůj region; ostatní ať kontaktují podporu DivingHQ.",
-      "no_regions_hint": "Regionální svaz? Kontaktujte podporu DivingHQ: regiony země {country} zatím nejsou nastavené."
+      "no_regions_hint": "Regionální svaz? Kontaktujte podporu DivingHQ: regiony země {country} zatím nejsou nastavené.",
+      "website_invalid": "Tohle nevypadá jako webová adresa. Zkuste třeba diving.org.au.",
+      "coming_soon_note": "Registrace federací zatím nejsou otevřené — dolaďujeme DivingHQ. Zkuste to prosím brzy znovu."
     },
     "forgot": {
       "title": "Obnovení hesla",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} federace čeká na schválení",
       "orgs_many": "{count} federací čeká na schválení",
       "orgs_meta": "Zkontrolujte ve Správci uživatelů → filtr organizací",
-      "claims_one": "Čeká na vás 1 nárok",
-      "claims_many": "Čeká na vás nároků: {count}",
-      "claims_meta": "Federace chce převzít účet"
+      "claims_meta": "Federace chce převzít účet",
+      "chip_pending": "Čeká",
+      "chip_claims": "Nároky",
+      "review_title": "Čeká na vaši kontrolu",
+      "my_claims_title": "Vaše nároky",
+      "my_claim": "Váš nárok na {target}",
+      "quiet": "Všechno klidné, nic nečeká.",
+      "pill_urgent": "brzy končí",
+      "pill_overdue": "po termínu",
+      "chip_aria_tab": "{title}. Otevře příslušnou kartu na této nástěnce."
     }
   },
   "profile": {
@@ -1027,6 +1044,19 @@
       "roster_import_section_label": "Importovat soupisku",
       "roster_import_submit": "Importovat",
       "roster_importing": "Importování…"
+    },
+    "club_mode": {
+      "pick_meet": "Vyberte, do kterých závodů vašeho klubu tato disciplína patří",
+      "create_meet_first": "Nejdřív vytvořte závody svého klubu, disciplíny patří do nich",
+      "hosted_by": "Pořadatel",
+      "pick_host": "— Vyberte svůj klub nebo kraj —"
+    },
+    "represent": {
+      "label": "Skokani reprezentují",
+      "country": "Svou zemi (mezinárodní závody)",
+      "region": "Svůj stát / provincii (národní mistrovství)",
+      "club": "Svůj klub (klubové a meziklubové závody)",
+      "hint": "Zobrazuje se u každého skokana na výsledkové tabuli, ve výsledcích a v PDF a podle toho se sestavuje medailová tabulka. Skokan bez kódu státu nebo klubu se zobrazí se svou zemí. Družstvo se zobrazí se státem nebo klubem, který sdílejí všichni jeho skokani, jinak se svou zemí."
     }
   },
   "user_manager": {
@@ -1306,7 +1336,11 @@
     "col_name": "Název",
     "col_code": "Kód",
     "col_members": "Členové",
-    "col_created": "Vytvořeno"
+    "col_created": "Vytvořeno",
+    "col_billing": "Platby",
+    "col_actions": "Akce",
+    "admins_button": "Správci",
+    "rename": "Přejmenovat"
   },
   "teams": {
     "title": "Týmy",
@@ -1978,7 +2012,16 @@
     "currently_at": "nyní v {club}",
     "region_request_pending": "Čeká se, až váš klub přijme region {region}.",
     "region_request_cancel": "Stáhnout žádost",
-    "region_request_sent": "Žádost odeslána. Region {region} rozhodne, zda váš klub přijme."
+    "region_request_sent": "Žádost odeslána. Region {region} rozhodne, zda váš klub přijme.",
+    "not_admin": "Už nejste správcem tohoto klubu.",
+    "left_notice": "Už nejste správcem klubu {club}.",
+    "leave_title": "Odebrat se ze správců klubu {club}?",
+    "leave_body": "Už nebudete moci pořádat závody klubu ani schvalovat žádosti jeho členů. Zpět vás může přidat jen jiný správce.",
+    "leave_confirm": "Odebrat mě",
+    "admins_intro": "Správci klubu pořádají jeho závody a starají se o jeho kurzy, výplaty a členské poplatky. Nezískávají žádný přístup v rámci celé federace.",
+    "current_admins": "Současní správci ({n})",
+    "nobody_admins": "Tento klub zatím nemá žádného správce.",
+    "no_other_members": "V tomto klubu nejsou žádní další členové. Nejdřív někoho přesuňte do klubu ve Správě uživatelů."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Region"
     },
     "pick": "— Vyberte —",
-    "required": "{label}: vyberte pro svůj nový klub."
+    "required": "{label}: vyberte pro svůj nový klub.",
+    "admins_intro": "Správci kraje pořádají závody, které hostí jejich kraj nebo jeho kluby, a posuzují žádosti o role od členů krajských klubů.",
+    "nobody_admins": "Tento kraj zatím nemá žádného správce.",
+    "pick_member": "— Vyberte člena klubu z tohoto kraje —",
+    "no_candidates": "Zatím není koho přidat. Nejdřív zařaďte do kraje kluby, jejich členové se objeví tady.",
+    "strip_title": "Kraje",
+    "manage_admins": "Spravovat správce: {name}",
+    "none_set_up": "Pro tuto organizaci zatím nejsou nastavené žádné kraje (státy, provincie…).",
+    "set_up": "Nastavit kraje",
+    "region_for": "Kraj klubu {club}"
   },
   "my_region": {
     "title": "Můj region",
@@ -1996,7 +2048,6 @@
     "clubs": "Kluby",
     "no_clubs_title": "Zatím žádné kluby",
     "no_clubs_body": "Kluby se tu objeví, jakmile si váš region vyberou při registraci nebo na stránce klubu.",
-    "members": "{n} členů",
     "no_admin": "Zatím bez správce",
     "region_admins": "Správci regionu",
     "pick_member": "— Vyberte člena některého klubu ve vašem regionu —",
@@ -2098,5 +2149,61 @@
     "contact": "Kontakt",
     "need_help": "Potřebujete pomoc?",
     "english_only": "Tato stránka je k dispozici pouze v angličtině a platí anglické znění."
+  },
+  "counts": {
+    "members_zero": "{n} členů",
+    "members_one": "{n} člen",
+    "members_two": "{n} členů",
+    "members_few": "{n} členové",
+    "members_many": "{n} člena",
+    "members_other": "{n} členů",
+    "open_claims_zero": "otevřených nároků",
+    "open_claims_one": "otevřený nárok",
+    "open_claims_two": "otevřených nároků",
+    "open_claims_few": "otevřené nároky",
+    "open_claims_many": "otevřeného nároku",
+    "open_claims_other": "otevřených nároků",
+    "regions_added_zero": "Přidáno {n} krajů",
+    "regions_added_one": "Přidán {n} kraj",
+    "regions_added_two": "Přidáno {n} krajů",
+    "regions_added_few": "Přidány {n} kraje",
+    "regions_added_many": "Přidáno {n} kraje",
+    "regions_added_other": "Přidáno {n} krajů",
+    "claims_waiting_zero": "Čeká na vás {n} nároků",
+    "claims_waiting_one": "Čeká na vás {n} nárok",
+    "claims_waiting_two": "Čeká na vás {n} nároků",
+    "claims_waiting_few": "Čekají na vás {n} nároky",
+    "claims_waiting_many": "Čeká na vás {n} nároku",
+    "claims_waiting_other": "Čeká na vás {n} nároků"
+  },
+  "admin_settings": {
+    "title": "Pravidla hlasování o nárocích",
+    "intro": "Jak se rozhoduje o nároku federace nebo krajského svazu na účet, který založily kluby. Nové hodnoty platí pro nároky otevřené (nebo hlasy odevzdané) od této chvíle.",
+    "bounds": "Výchozí {default_value}, povoleno {min} až {max}",
+    "saved": "{label} nastaveno na {value}.",
+    "required": "Zadejte hodnotu.",
+    "not_number": "Zadejte číslo.",
+    "whole": "Zadejte celé číslo.",
+    "range": "Zadejte hodnotu od {min} do {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Stáří klubu pro hlasování (dny)",
+      "description": "Klub se počítá jako hlasující o nároku, až když je na DivingHQ alespoň takto dlouho."
+    },
+    "claim_voter_min_members": {
+      "label": "Členů pro hlasování",
+      "description": "…a má alespoň tolik členů s ověřeným e-mailem, nebo už pořádal závody."
+    },
+    "claim_quorum_min": {
+      "label": "Minimum hlasujících",
+      "description": "Při menším počtu oprávněných hlasujících jde nárok místo toho systémovému správci. Zároveň nejmenší počet schválení, kterým nárok projde."
+    },
+    "claim_majority": {
+      "label": "Potřebná většina",
+      "description": "Schválení musí tvořit víc než tento podíl oprávněných hlasujících (0.5 = prostá většina)."
+    },
+    "claim_timeout_days": {
+      "label": "Doba hlasování (dny)",
+      "description": "Po jejím uplynutí nárok projde s alespoň jedním schválením a bez námitek, jinak jde systémovému správci."
+    }
   }
 }

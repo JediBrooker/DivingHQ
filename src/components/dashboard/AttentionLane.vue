@@ -7,6 +7,10 @@
 // chip-click back. The count -> named-items -> deep-link popover drill
 // is unchanged, only the host moved. Motion stays one-shot/static (the
 // P1 reduced-motion guard lives in app.css + the parents per-file guard).
+//
+// Its words go through $t too. Club and region admins, and anyone who
+// filed a claim, now get chips here (and often nothing else on the page),
+// so this strip is read in every language, not just by federation staff.
 defineProps({
   chips: { type: Array, default: () => [] },
   openId: { type: [String, null], default: null },
@@ -38,7 +42,7 @@ const emit = defineEmits(['chip-click'])
           flashing.has(chip.id) ? 'pulse-flash' : '',
           openId === chip.id ? 'is-open' : '',
         ]"
-        :aria-label="chip.targetTab ? `${chip.popoverTitle} — click to view in ${chip.targetTab.replace('_', ' ')} tab` : chip.popoverTitle"
+        :aria-label="chip.targetTab ? $t('dashboard.attention.chip_aria_tab', { title: chip.popoverTitle }) : chip.popoverTitle"
         @click="emit('chip-click', chip)"
         @keydown.enter.prevent="emit('chip-click', chip)"
         @keydown.space.prevent="emit('chip-click', chip)"
@@ -65,14 +69,14 @@ const emit = defineEmits(['chip-click'])
           >
             <span class="pulse-popover-item-title">{{ item.title }}</span>
             <span v-if="item.meta" class="pulse-popover-item-meta">{{ item.meta }}</span>
-            <span v-if="item.urgency === 'urgent'" class="pulse-urgency-pill pulse-urgency-urgent">closing soon</span>
-            <span v-else-if="item.urgency === 'overdue'" class="pulse-urgency-pill pulse-urgency-overdue">overdue</span>
-            <span v-else-if="item.urgency === 'live'" class="pulse-urgency-pill pulse-urgency-live">live</span>
+            <span v-if="item.urgency === 'urgent'" class="pulse-urgency-pill pulse-urgency-urgent">{{ $t('dashboard.attention.pill_urgent') }}</span>
+            <span v-else-if="item.urgency === 'overdue'" class="pulse-urgency-pill pulse-urgency-overdue">{{ $t('dashboard.attention.pill_overdue') }}</span>
+            <span v-else-if="item.urgency === 'live'" class="pulse-urgency-pill pulse-urgency-live">{{ $t('status.live') }}</span>
           </RouterLink>
         </div>
       </div>
 
-      <span v-if="!chips.length" class="pulse-quiet">All quiet — nothing pending.</span>
+      <span v-if="!chips.length" class="pulse-quiet">{{ $t('dashboard.attention.quiet') }}</span>
     </template>
   </div>
 </template>

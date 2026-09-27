@@ -13,7 +13,9 @@
     "back": "← 뒤로",
     "dashboard": "← 대시보드",
     "error_generic": "문제가 발생했습니다",
-    "view_profile": "프로필 보기 →"
+    "view_profile": "프로필 보기 →",
+    "load_failed": "불러오지 못했습니다. 연결을 확인한 후 다시 시도하세요.",
+    "retry": "다시 시도"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "클럽",
       "club_independent": "— 클럽 없음 / 무소속 —",
       "club_new": "+ 새 클럽 만들기",
-      "club_no_clubs": "이 조직에는 아직 등록된 클럽이 없습니다. 위에서 만들 수 있습니다.",
+      "club_no_clubs": "아직 클럽이 없습니다. 목록에서 \"+ 새 클럽 만들기\"를 선택하세요.",
       "new_club_name": "새 클럽 이름",
       "short_code_optional": "약칭 (선택)",
       "requested_role": "다음으로 등록하고 싶습니다",
       "role_default": "다이버 (기본값)",
       "role_spectator": "관중만",
-      "note_label": "조직 관리자에게 보내는 메모 (선택)",
+      "note_label": "승인하는 사람에게 남길 메모 (선택)",
       "note_placeholder": "예: 작년 전국대회에 출전했습니다",
-      "spectator_note": "모든 계정은 관중으로 시작합니다. 위에서 역할을 요청하면 조직 관리자가 검토 후 승인합니다. 즉시 로그인하실 수 있습니다.",
+      "spectator_note": "모든 계정은 관중으로 시작합니다. 위에서 역할을 요청하면 연맹 관리자가 검토합니다. 이메일을 확인한 후 로그인할 수 있습니다.",
       "submit_idle": "계정 만들기",
       "submit_loading": "만드는 중...",
       "already_have_account": "이미 계정이 있으십니까?",
       "sign_in_link": "로그인",
-      "referee_note_unclaimed": "아직 이 나라에 연맹이 없으므로 주심 요청은 클럽이 아니라 DivingHQ가 검토합니다. 주심은 모든 클럽의 대회에서 권한을 가질 수 있기 때문입니다."
+      "referee_note_unclaimed": "아직 이 나라에 연맹이 없으므로 주심 요청은 클럽이 아니라 DivingHQ가 검토합니다. 주심은 모든 클럽의 대회에서 권한을 가질 수 있기 때문입니다.",
+      "coming_soon": "곧 공개",
+      "coming_soon_note": "아직 계정 가입을 받지 않습니다. DivingHQ를 마무리하는 중입니다. 곧 다시 방문해 주세요.",
+      "failed": "가입에 실패했습니다",
+      "success": "가입이 완료되었습니다. 로그인하기 전에 이메일의 인증 링크를 확인하세요.",
+      "new_club_placeholder": "예: Sydney Springboard",
+      "short_code_placeholder": "예: SYD"
     },
     "register_org": {
       "title": "조직 등록",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "{country}에서는 아직 아무도 DivingHQ를 사용하지 않습니다. 등록하면 귀하의 단체를 국가 연맹으로 하여 {country} 계정이 만들어집니다. 이메일 인증 후 DivingHQ가 검토하며, 그동안 로그인할 수 있습니다.",
       "country_taken": "{org}이(가) 이미 DivingHQ에서 {country}을(를) 운영하고 있어 여기서 등록할 국가 연맹이 없습니다. 잘못된 경우 DivingHQ 지원팀에 문의하세요.",
       "country_taken_region": "{org}이(가) 이미 DivingHQ에서 {country}을(를) 운영하고 있습니다. 지역 단체는 위에서 지역을 선택하고, 그 외에는 DivingHQ 지원팀에 문의하세요.",
-      "no_regions_hint": "지역 단체이신가요? {country}의 지역이 아직 설정되지 않았으니 DivingHQ 지원팀에 문의하세요."
+      "no_regions_hint": "지역 단체이신가요? {country}의 지역이 아직 설정되지 않았으니 DivingHQ 지원팀에 문의하세요.",
+      "website_invalid": "웹 주소처럼 보이지 않습니다. diving.org.au 같은 형식으로 입력해 보세요.",
+      "coming_soon_note": "아직 연맹 가입을 받지 않습니다. DivingHQ를 마무리하는 중입니다. 곧 다시 방문해 주세요."
     },
     "forgot": {
       "title": "비밀번호 재설정",
@@ -418,9 +428,16 @@
       "orgs_one": "{count}개의 연맹 승인 대기 중입니다",
       "orgs_many": "{count}개의 연맹 승인 대기 중입니다",
       "orgs_meta": "사용자 관리에서 검토 → org 필터",
-      "claims_one": "신청 1건이 기다리고 있습니다",
-      "claims_many": "신청 {count}건이 기다리고 있습니다",
-      "claims_meta": "연맹이 계정 인수를 요청했습니다"
+      "claims_meta": "연맹이 계정 인수를 요청했습니다",
+      "chip_pending": "대기 중",
+      "chip_claims": "인수 신청",
+      "review_title": "검토 대기 중",
+      "my_claims_title": "내 인수 신청",
+      "my_claim": "{target} 인수 신청",
+      "quiet": "대기 중인 항목이 없습니다.",
+      "pill_urgent": "곧 마감",
+      "pill_overdue": "기한 초과",
+      "chip_aria_tab": "{title}. 이 대시보드의 해당 탭을 엽니다."
     }
   },
   "profile": {
@@ -1027,6 +1044,19 @@
       "roster_import_section_label": "명단 가져오기",
       "roster_import_submit": "가져오기",
       "roster_importing": "가져오는 중…"
+    },
+    "club_mode": {
+      "pick_meet": "이 종목이 속할 클럽 대회를 선택하세요",
+      "create_meet_first": "먼저 클럽 대회를 만드세요. 종목은 대회 안에 들어갑니다",
+      "hosted_by": "주최",
+      "pick_host": "— 클럽 또는 지역 선택 —"
+    },
+    "represent": {
+      "label": "선수 소속 표시",
+      "country": "국가 (국제 대회)",
+      "region": "주 / 도 (전국 선수권)",
+      "club": "클럽 (클럽 및 클럽 대항 대회)",
+      "hint": "스코어보드, 결과, PDF에서 각 선수 옆에 표시되며 메달 집계의 기준이 됩니다. 주 또는 클럽 코드가 없는 선수는 국가로 표시됩니다. 팀은 모든 선수가 공유하는 주나 클럽으로 표시되며, 그렇지 않으면 국가로 표시됩니다."
     }
   },
   "user_manager": {
@@ -1208,7 +1238,11 @@
     "col_name": "이름",
     "col_code": "코드",
     "col_members": "회원",
-    "col_created": "생성일"
+    "col_created": "생성일",
+    "col_billing": "청구",
+    "col_actions": "작업",
+    "admins_button": "관리자",
+    "rename": "이름 변경"
   },
   "teams": {
     "title": "팀",
@@ -1978,7 +2012,16 @@
     "currently_at": "현재 소속: {club}",
     "region_request_pending": "{region}에서 클럽을 받아 주기를 기다리는 중입니다.",
     "region_request_cancel": "요청 철회",
-    "region_request_sent": "요청을 보냈습니다. 클럽을 받을지는 {region}에서 결정합니다."
+    "region_request_sent": "요청을 보냈습니다. 클럽을 받을지는 {region}에서 결정합니다.",
+    "not_admin": "더 이상 이 클럽의 관리자가 아닙니다.",
+    "left_notice": "더 이상 {club}의 관리자가 아닙니다.",
+    "leave_title": "{club} 관리자에서 본인을 제거할까요?",
+    "leave_body": "더 이상 클럽 대회를 운영하거나 회원 요청을 승인할 수 없습니다. 다른 관리자만 다시 추가할 수 있습니다.",
+    "leave_confirm": "나를 제거",
+    "admins_intro": "클럽 관리자는 자기 클럽의 대회를 운영하고 강습, 정산, 가맹비를 관리합니다. 연맹 전체에 대한 권한은 없습니다.",
+    "current_admins": "현재 관리자 ({n})",
+    "nobody_admins": "이 클럽에는 아직 관리자가 없습니다.",
+    "no_other_members": "이 클럽에는 다른 회원이 없습니다. 먼저 사용자 관리에서 누군가를 이 클럽으로 옮기세요."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "지역"
     },
     "pick": "— 선택하십시오 —",
-    "required": "{label}: 새 클럽의 소속을 선택하십시오."
+    "required": "{label}: 새 클럽의 소속을 선택하십시오.",
+    "admins_intro": "지역 관리자는 지역이나 소속 클럽이 주최하는 대회를 운영하고, 지역 클럽의 역할 요청을 검토합니다.",
+    "nobody_admins": "이 지역에는 아직 관리자가 없습니다.",
+    "pick_member": "— 이 지역 클럽의 회원 선택 —",
+    "no_candidates": "아직 추가할 사람이 없습니다. 먼저 클럽을 이 지역에 넣으면 회원이 여기에 표시됩니다.",
+    "strip_title": "지역",
+    "manage_admins": "{name} 관리자 관리",
+    "none_set_up": "이 조직에는 아직 지역(주, 도 등)이 설정되지 않았습니다.",
+    "set_up": "지역 설정",
+    "region_for": "{club}의 지역"
   },
   "my_region": {
     "title": "내 지역",
@@ -1996,7 +2048,6 @@
     "clubs": "클럽",
     "no_clubs_title": "아직 클럽이 없습니다",
     "no_clubs_body": "클럽이 가입 시 또는 클럽 페이지에서 지역을 선택하면 여기에 표시됩니다.",
-    "members": "회원 {n}명",
     "no_admin": "관리자 없음",
     "region_admins": "지역 관리자",
     "pick_member": "— 지역 내 클럽 회원 선택 —",
@@ -2098,5 +2149,61 @@
     "contact": "문의하기",
     "need_help": "도움이 필요하신가요?",
     "english_only": "이 페이지는 영어로만 제공되며, 영어 원문이 적용됩니다."
+  },
+  "counts": {
+    "members_zero": "회원 {n}명",
+    "members_one": "회원 {n}명",
+    "members_two": "회원 {n}명",
+    "members_few": "회원 {n}명",
+    "members_many": "회원 {n}명",
+    "members_other": "회원 {n}명",
+    "open_claims_zero": "건 진행 중",
+    "open_claims_one": "건 진행 중",
+    "open_claims_two": "건 진행 중",
+    "open_claims_few": "건 진행 중",
+    "open_claims_many": "건 진행 중",
+    "open_claims_other": "건 진행 중",
+    "regions_added_zero": "지역 {n}개를 추가했습니다",
+    "regions_added_one": "지역 {n}개를 추가했습니다",
+    "regions_added_two": "지역 {n}개를 추가했습니다",
+    "regions_added_few": "지역 {n}개를 추가했습니다",
+    "regions_added_many": "지역 {n}개를 추가했습니다",
+    "regions_added_other": "지역 {n}개를 추가했습니다",
+    "claims_waiting_zero": "신청 {n}건이 기다리고 있습니다",
+    "claims_waiting_one": "신청 {n}건이 기다리고 있습니다",
+    "claims_waiting_two": "신청 {n}건이 기다리고 있습니다",
+    "claims_waiting_few": "신청 {n}건이 기다리고 있습니다",
+    "claims_waiting_many": "신청 {n}건이 기다리고 있습니다",
+    "claims_waiting_other": "신청 {n}건이 기다리고 있습니다"
+  },
+  "admin_settings": {
+    "title": "인수 신청 투표 규칙",
+    "intro": "클럽들이 시작한 계정에 대한 연맹이나 지역 단체의 인수 신청을 어떻게 결정할지 정합니다. 새 값은 지금부터 열리는 신청(또는 투표)에 적용됩니다.",
+    "bounds": "기본값 {default_value}, 허용 범위 {min}~{max}",
+    "saved": "{label}을(를) {value}(으)로 설정했습니다.",
+    "required": "값을 입력하세요.",
+    "not_number": "숫자를 입력하세요.",
+    "whole": "정수를 입력하세요.",
+    "range": "{min}~{max} 사이의 값을 입력하세요.",
+    "claim_voter_min_age_days": {
+      "label": "투표 가능한 클럽 기간(일)",
+      "description": "클럽은 DivingHQ에 이 기간 이상 있어야 인수 신청 투표자로 인정됩니다."
+    },
+    "claim_voter_min_members": {
+      "label": "투표에 필요한 회원 수",
+      "description": "…그리고 이메일 인증을 마친 회원이 이 수 이상이거나 대회를 개최한 적이 있어야 합니다."
+    },
+    "claim_quorum_min": {
+      "label": "최소 투표자 수",
+      "description": "투표 자격이 있는 클럽이 이보다 적으면 신청은 시스템 관리자에게 넘어갑니다. 신청을 통과시키는 최소 승인 수이기도 합니다."
+    },
+    "claim_majority": {
+      "label": "필요한 과반",
+      "description": "승인이 투표 자격자 중 이 비율을 넘어야 합니다(0.5 = 단순 과반)."
+    },
+    "claim_timeout_days": {
+      "label": "투표 기간(일)",
+      "description": "기간이 끝나면 승인이 1건 이상이고 이의가 없으면 통과되며, 그렇지 않으면 시스템 관리자에게 넘어갑니다."
+    }
   }
 }

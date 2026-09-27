@@ -30,6 +30,8 @@ The dashboard's **Pulse strip** is the operator's first signal of "what's happen
 - **`🔴 N LIVE`** — events currently live across your federation. Hover to see the event names; click any to drop into the Control Room with that event preselected. The chip breathes gently while there are live events.
 - **`📅 N UPCOMING`** — events with status Upcoming, sorted by closest entries-close. Items with entries closing within 24 h get an amber "closing soon" pill.
 
+Club and region admins in a country whose federation isn't on DivingHQ yet get the same **PENDING** chip for their own members' role requests. It links to **My club** (or **My region**), which is where they approve. Anyone with a vote on a claim sees **`⚖ N CLAIMS`**. Whoever filed a claim sees **`⚖ N OPEN CLAIM`** with where it stands (when voting closes, or that DivingHQ has it) until it's decided, and **Claims** stays in their sidebar afterwards so they can check how it went.
+
 The strip is socket-driven — counts update the moment something happens (an event flips Live, a new role request lands), and the affected chip flashes cyan so your eye lands on the change. A 30-second poll keeps everything in sync as a fallback.
 
 For system admins, the strip also includes pending org registrations in the `👥 PENDING` count.

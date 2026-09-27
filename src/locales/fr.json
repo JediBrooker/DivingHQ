@@ -13,7 +13,9 @@
     "back": "← Retour",
     "dashboard": "← Tableau de bord",
     "error_generic": "Une erreur est survenue",
-    "view_profile": "Voir le profil →"
+    "view_profile": "Voir le profil →",
+    "load_failed": "Chargement impossible. Vérifiez votre connexion et réessayez.",
+    "retry": "Réessayer"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Club sportif",
       "club_independent": "— Aucun club / indépendant —",
       "club_new": "+ Créer un nouveau club",
-      "club_no_clubs": "Aucun club enregistré pour cette organisation pour l'instant. Vous pouvez en créer un ci-dessus.",
+      "club_no_clubs": "Aucun club ici pour le moment. Choisissez « + Créer un nouveau club » dans la liste.",
       "new_club_name": "Nom du nouveau club",
       "short_code_optional": "Code court (facultatif)",
       "requested_role": "Je souhaite m'inscrire en tant que",
       "role_default": "Plongeur (par défaut)",
       "role_spectator": "Spectateur uniquement",
-      "note_label": "Note pour l'admin de l'organisation (facultatif)",
+      "note_label": "Note pour la personne qui vous approuve (facultatif)",
       "note_placeholder": "ex. j'ai concouru aux championnats nationaux l'année dernière",
-      "spectator_note": "Tous les comptes commencent en tant que Spectateur. Si vous demandez un rôle ci-dessus, l'admin de votre organisation l'examinera et l'approuvera. Vous pourrez vous connecter immédiatement.",
+      "spectator_note": "Tous les comptes commencent en tant que Spectateur. Si vous demandez un rôle ci-dessus, l'administrateur de votre fédération l'examinera. Vous pourrez vous connecter une fois votre e-mail confirmé.",
       "submit_idle": "Créer un compte",
       "submit_loading": "Création...",
       "already_have_account": "Vous avez déjà un compte ?",
       "sign_in_link": "Se connecter",
-      "referee_note_unclaimed": "Tant qu'il n'y a pas de fédération ici, c'est DivingHQ qui examine les demandes d'arbitre, pas votre club : un arbitre peut intervenir sur les compétitions de n'importe quel club."
+      "referee_note_unclaimed": "Tant qu'il n'y a pas de fédération ici, c'est DivingHQ qui examine les demandes d'arbitre, pas votre club : un arbitre peut intervenir sur les compétitions de n'importe quel club.",
+      "coming_soon": "Bientôt disponible",
+      "coming_soon_note": "Les inscriptions ne sont pas encore ouvertes — nous peaufinons DivingHQ. Revenez bientôt.",
+      "failed": "Échec de l'inscription",
+      "success": "Inscription réussie. Cherchez le lien de vérification dans votre e-mail avant de vous connecter.",
+      "new_club_placeholder": "ex. Sydney Springboard",
+      "short_code_placeholder": "ex. SYD"
     },
     "register_org": {
       "title": "Inscrire une organisation",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "Personne de {country} n'est encore sur DivingHQ. L'inscription crée le compte de {country} avec votre instance comme fédération nationale. DivingHQ l'examine une fois votre e-mail vérifié, et vous pouvez vous connecter en attendant.",
       "country_taken": "{org} gère déjà {country} sur DivingHQ : il n'y a donc pas de fédération nationale à inscrire ici. Contactez le support DivingHQ si c'est une erreur.",
       "country_taken_region": "{org} gère déjà {country} sur DivingHQ. Une instance régionale choisit sa région ci-dessus ; pour tout autre cas, contactez le support DivingHQ.",
-      "no_regions_hint": "Instance régionale ? Contactez le support DivingHQ : les régions de {country} ne sont pas encore configurées."
+      "no_regions_hint": "Instance régionale ? Contactez le support DivingHQ : les régions de {country} ne sont pas encore configurées.",
+      "website_invalid": "Cela ne ressemble pas à une adresse web. Essayez par exemple diving.org.au.",
+      "coming_soon_note": "Les inscriptions des fédérations ne sont pas encore ouvertes — nous peaufinons DivingHQ. Revenez bientôt."
     },
     "forgot": {
       "title": "Réinitialiser le mot de passe",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} fédération en attente d'approbation",
       "orgs_many": "{count} fédérations en attente d'approbation",
       "orgs_meta": "Examinez dans le Gestionnaire d'utilisateurs → filtre d'organisation",
-      "claims_one": "1 revendication vous attend",
-      "claims_many": "{count} revendications vous attendent",
-      "claims_meta": "Une fédération souhaite reprendre un compte"
+      "claims_meta": "Une fédération souhaite reprendre un compte",
+      "chip_pending": "En attente",
+      "chip_claims": "Revendications",
+      "review_title": "En attente de votre examen",
+      "my_claims_title": "Vos revendications",
+      "my_claim": "Votre revendication sur {target}",
+      "quiet": "Tout est calme, rien en attente.",
+      "pill_urgent": "clôture proche",
+      "pill_overdue": "en retard",
+      "chip_aria_tab": "{title}. Ouvre l'onglet correspondant de ce tableau de bord."
     }
   },
   "role": {
@@ -1038,6 +1055,19 @@
       "roster_import_section_label": "Importer le Roster",
       "roster_import_submit": "Importer",
       "roster_importing": "Import en cours…"
+    },
+    "club_mode": {
+      "pick_meet": "Choisissez à quelle compétition de votre club appartient cet événement",
+      "create_meet_first": "Créez d'abord une compétition pour votre club, les événements s'y rattachent",
+      "hosted_by": "Organisé par",
+      "pick_host": "— Choisissez votre club ou votre région —"
+    },
+    "represent": {
+      "label": "Les plongeurs représentent",
+      "country": "Leur pays (compétitions internationales)",
+      "region": "Leur État / province (championnats nationaux)",
+      "club": "Leur club (compétitions de club et interclubs)",
+      "hint": "Affiché à côté de chaque plongeur sur le tableau d'affichage, dans les résultats et les PDF, et sert à regrouper le tableau des médailles. Un plongeur sans code d'État ou de club apparaît avec son pays. Une équipe affiche l'État ou le club commun à tous ses plongeurs, sinon son pays."
     }
   },
   "user_manager": {
@@ -1219,7 +1249,11 @@
     "col_name": "Nom",
     "col_code": "Code club",
     "col_members": "Membres",
-    "col_created": "Créé le"
+    "col_created": "Créé le",
+    "col_billing": "Facturation",
+    "col_actions": "Gestion",
+    "admins_button": "Administrateurs",
+    "rename": "Renommer"
   },
   "teams": {
     "title": "Équipes",
@@ -1978,7 +2012,16 @@
     "currently_at": "actuellement à {club}",
     "region_request_pending": "En attente de l'accord de {region} pour votre club.",
     "region_request_cancel": "Retirer la demande",
-    "region_request_sent": "Demande envoyée. {region} décidera d'accueillir ou non votre club."
+    "region_request_sent": "Demande envoyée. {region} décidera d'accueillir ou non votre club.",
+    "not_admin": "Vous n'êtes plus administrateur de ce club.",
+    "left_notice": "Vous n'êtes plus administrateur de {club}.",
+    "leave_title": "Vous retirer des administrateurs de {club} ?",
+    "leave_body": "Vous ne pourrez plus organiser les compétitions du club ni approuver les demandes de ses membres. Seul un autre administrateur pourra vous rajouter.",
+    "leave_confirm": "Me retirer",
+    "admins_intro": "Les administrateurs du club organisent ses compétitions et gèrent ses cours, ses versements et ses cotisations d'affiliation. Ils n'ont aucun accès à l'échelle de la fédération.",
+    "current_admins": "Administrateurs actuels ({n})",
+    "nobody_admins": "Ce club n'a pas encore d'administrateur.",
+    "no_other_members": "Aucun autre membre dans ce club. Déplacez d'abord quelqu'un vers ce club depuis le Gestionnaire d'utilisateurs."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Région"
     },
     "pick": "— Choisissez —",
-    "required": "{label} : choisissez-en un pour votre nouveau club."
+    "required": "{label} : choisissez-en un pour votre nouveau club.",
+    "admins_intro": "Les administrateurs de région organisent les compétitions accueillies par leur région ou ses clubs, et examinent les demandes de rôle des clubs de la région.",
+    "nobody_admins": "Cette région n'a pas encore d'administrateur.",
+    "pick_member": "— Choisissez un membre d'un club de cette région —",
+    "no_candidates": "Personne à ajouter pour l'instant. Rattachez d'abord des clubs à cette région, leurs membres apparaîtront ici.",
+    "strip_title": "Régions",
+    "manage_admins": "Gérer les administrateurs de {name}",
+    "none_set_up": "Aucune région (États, provinces…) n'est encore configurée pour cette organisation.",
+    "set_up": "Configurer les régions",
+    "region_for": "Région de {club}"
   },
   "my_region": {
     "title": "Ma région",
@@ -1996,7 +2048,6 @@
     "clubs": "Clubs",
     "no_clubs_title": "Aucun club pour l'instant",
     "no_clubs_body": "Les clubs apparaissent ici dès qu'ils ont choisi votre région, à l'inscription ou sur leur page de club.",
-    "members": "{n} membres",
     "no_admin": "Pas encore d'administrateur",
     "region_admins": "Administrateurs de la région",
     "pick_member": "— Choisissez un membre des clubs de votre région —",
@@ -2098,5 +2149,61 @@
     "contact": "Contact",
     "need_help": "Besoin d'aide ?",
     "english_only": "Cette page n'est disponible qu'en anglais, et c'est le texte anglais qui fait foi."
+  },
+  "counts": {
+    "members_zero": "{n} membres",
+    "members_one": "{n} membre",
+    "members_two": "{n} membres",
+    "members_few": "{n} membres",
+    "members_many": "{n} de membres",
+    "members_other": "{n} membres",
+    "open_claims_zero": "revendications ouvertes",
+    "open_claims_one": "revendication ouverte",
+    "open_claims_two": "revendications ouvertes",
+    "open_claims_few": "revendications ouvertes",
+    "open_claims_many": "de revendications ouvertes",
+    "open_claims_other": "revendications ouvertes",
+    "regions_added_zero": "{n} région ajoutée",
+    "regions_added_one": "{n} région ajoutée",
+    "regions_added_two": "{n} régions ajoutées",
+    "regions_added_few": "{n} régions ajoutées",
+    "regions_added_many": "{n} de régions ajoutées",
+    "regions_added_other": "{n} régions ajoutées",
+    "claims_waiting_zero": "{n} revendications vous attendent",
+    "claims_waiting_one": "{n} revendication vous attend",
+    "claims_waiting_two": "{n} revendications vous attendent",
+    "claims_waiting_few": "{n} revendications vous attendent",
+    "claims_waiting_many": "{n} de revendications vous attendent",
+    "claims_waiting_other": "{n} revendications vous attendent"
+  },
+  "admin_settings": {
+    "title": "Règles de vote des revendications",
+    "intro": "Comment est tranchée la revendication d'une fédération ou d'un organisme régional sur un compte créé par les clubs. Les nouvelles valeurs s'appliquent aux revendications ouvertes (ou aux votes exprimés) à partir de maintenant.",
+    "bounds": "Par défaut {default_value}, autorisé de {min} à {max}",
+    "saved": "{label} réglé sur {value}.",
+    "required": "Saisissez une valeur.",
+    "not_number": "Saisissez un nombre.",
+    "whole": "Saisissez un nombre entier.",
+    "range": "Saisissez une valeur entre {min} et {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Ancienneté du club pour voter (jours)",
+      "description": "Un club ne compte comme votant sur une revendication qu'une fois présent sur DivingHQ depuis ce délai."
+    },
+    "claim_voter_min_members": {
+      "label": "Membres pour voter",
+      "description": "…et il compte au moins ce nombre de membres à l’e-mail vérifié, ou a déjà organisé une compétition."
+    },
+    "claim_quorum_min": {
+      "label": "Nombre minimal de votants",
+      "description": "En dessous de ce nombre de votants admissibles, la revendication part plutôt à l'administrateur système. C'est aussi le nombre minimal d'approbations pour l'accepter."
+    },
+    "claim_majority": {
+      "label": "Majorité requise",
+      "description": "Les approbations doivent dépasser cette part des votants admissibles (0.5 = majorité simple)."
+    },
+    "claim_timeout_days": {
+      "label": "Durée du vote (jours)",
+      "description": "À son terme : au moins une approbation et aucune objection valident la revendication, sinon elle part à l'administrateur système."
+    }
   }
 }

@@ -13,7 +13,9 @@
     "back": "← Back",
     "dashboard": "← Dashboard",
     "error_generic": "Something went wrong",
-    "view_profile": "View profile →"
+    "view_profile": "View profile →",
+    "load_failed": "Couldn't load this. Check your connection and try again.",
+    "retry": "Try again"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Club",
       "club_independent": "— No club / independent —",
       "club_new": "+ Create a new club",
-      "club_no_clubs": "No clubs registered for this org yet. You can create one above.",
+      "club_no_clubs": "No clubs here yet. Pick \"+ Create a new club\" in the list.",
       "new_club_name": "New Club Name",
       "short_code_optional": "Short Code (optional)",
       "requested_role": "I want to register as",
       "role_default": "Diver (default)",
       "role_spectator": "Spectator only",
-      "note_label": "Note to org admin (optional)",
+      "note_label": "Note for whoever approves you (optional)",
       "note_placeholder": "e.g. I competed at nationals last year",
-      "spectator_note": "All accounts start as Spectator. If you request a role above, your org admin will review and approve it. You'll be able to log in immediately.",
+      "spectator_note": "All accounts start as Spectator. If you request a role above, your federation admin will review it. You can log in once you've confirmed your email.",
       "submit_idle": "Create Account",
       "submit_loading": "Creating...",
       "already_have_account": "Already have an account?",
       "sign_in_link": "Sign in",
-      "referee_note_unclaimed": "With no federation here yet, DivingHQ reviews referee requests, not your club: a referee can act at any club's meet."
+      "referee_note_unclaimed": "With no federation here yet, DivingHQ reviews referee requests, not your club: a referee can act at any club's meet.",
+      "coming_soon": "Coming soon",
+      "coming_soon_note": "Account sign-ups aren't open just yet — we're putting the finishing touches on DivingHQ. Please check back soon.",
+      "failed": "Registration failed",
+      "success": "Registration successful. Check your email for a verification link before signing in.",
+      "new_club_placeholder": "e.g. Sydney Springboard",
+      "short_code_placeholder": "e.g. SYD"
     },
     "register_org": {
       "title": "Register Organisation",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "Nobody from {country} is on DivingHQ yet. Registering sets up {country}'s account with your body as its national federation. DivingHQ reviews it once you verify your email, and you can sign in meanwhile.",
       "country_taken": "{org} already runs {country} on DivingHQ, so there's no national federation to register here. Contact DivingHQ support if that's wrong.",
       "country_taken_region": "{org} already runs {country} on DivingHQ. A state or regional body picks its region above; anyone else, contact DivingHQ support.",
-      "no_regions_hint": "State or regional body? Contact DivingHQ support: {country}'s states and regions aren't set up yet."
+      "no_regions_hint": "State or regional body? Contact DivingHQ support: {country}'s states and regions aren't set up yet.",
+      "website_invalid": "That doesn't look like a web address. Try something like diving.org.au.",
+      "coming_soon_note": "Federation sign-ups aren't open just yet — we're putting the finishing touches on DivingHQ. Please check back soon."
     },
     "forgot": {
       "title": "Reset Password",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} federation awaiting approval",
       "orgs_many": "{count} federations awaiting approval",
       "orgs_meta": "Review in User Manager → org filter",
-      "claims_one": "1 claim waiting on you",
-      "claims_many": "{count} claims waiting on you",
-      "claims_meta": "A federation or state body wants to take over"
+      "claims_meta": "A federation or state body wants to take over",
+      "chip_pending": "Pending",
+      "chip_claims": "Claims",
+      "review_title": "Awaiting your review",
+      "my_claims_title": "Your claims",
+      "my_claim": "Your claim on {target}",
+      "quiet": "All quiet, nothing pending.",
+      "pill_urgent": "closing soon",
+      "pill_overdue": "overdue",
+      "chip_aria_tab": "{title}. Opens its tab on this dashboard."
     }
   },
   "profile": {
@@ -1027,6 +1044,19 @@
       "roster_import_section_label": "Import Roster",
       "roster_import_submit": "Import",
       "roster_importing": "Importing…"
+    },
+    "club_mode": {
+      "pick_meet": "Pick which of your club's meets this event is in",
+      "create_meet_first": "Create a meet for your club first, events go inside it",
+      "hosted_by": "Hosted by",
+      "pick_host": "— Pick your club or region —"
+    },
+    "represent": {
+      "label": "Divers represent",
+      "country": "Their country (international meets)",
+      "region": "Their state / province (national championships)",
+      "club": "Their club (club and inter-club meets)",
+      "hint": "Shown next to each diver on the scoreboard, results and PDFs, and what the medal table groups by. A diver with no state or club code falls back to their country. A team shows the state or club all its divers share, otherwise its country."
     }
   },
   "user_manager": {
@@ -1306,7 +1336,11 @@
     "col_name": "Name",
     "col_code": "Code",
     "col_members": "Members",
-    "col_created": "Created"
+    "col_created": "Created",
+    "col_billing": "Billing",
+    "col_actions": "Actions",
+    "admins_button": "Admins",
+    "rename": "Rename"
   },
   "teams": {
     "title": "Teams",
@@ -1978,7 +2012,16 @@
     "currently_at": "currently at {club}",
     "region_request_pending": "Waiting for {region} to accept your club.",
     "region_request_cancel": "Withdraw request",
-    "region_request_sent": "Request sent. {region} decides whether to take your club."
+    "region_request_sent": "Request sent. {region} decides whether to take your club.",
+    "not_admin": "You're not an admin of this club any more.",
+    "left_notice": "You're no longer an admin of {club}.",
+    "leave_title": "Remove yourself as an admin of {club}?",
+    "leave_body": "You won't be able to run the club's meets or approve its members' requests any more. Only another admin can add you back.",
+    "leave_confirm": "Remove me",
+    "admins_intro": "Club admins run their club's meets and look after its classes, payouts and affiliation payments. They get no federation-wide access.",
+    "current_admins": "Current admins ({n})",
+    "nobody_admins": "Nobody admins this club yet.",
+    "no_other_members": "No other members in this club. Move someone into it from the User Manager first."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Region"
     },
     "pick": "— Pick one —",
-    "required": "{label}: pick one for your new club."
+    "required": "{label}: pick one for your new club.",
+    "admins_intro": "Region admins run meets their region or its clubs host, and review role requests from the region's clubs.",
+    "nobody_admins": "Nobody admins this region yet.",
+    "pick_member": "— Pick a member of this region's clubs —",
+    "no_candidates": "No one to add yet. Put clubs in this region first, their members show up here.",
+    "strip_title": "Regions",
+    "manage_admins": "Manage who admins {name}",
+    "none_set_up": "No regions (states, provinces…) set up for this organisation yet.",
+    "set_up": "Set up regions",
+    "region_for": "Region for {club}"
   },
   "my_region": {
     "title": "My region",
@@ -1996,7 +2048,6 @@
     "clubs": "Clubs",
     "no_clubs_title": "No clubs yet",
     "no_clubs_body": "Clubs show up here once they've picked your region, at sign-up or on their club page.",
-    "members": "{n} members",
     "no_admin": "No admin yet",
     "region_admins": "Region admins",
     "pick_member": "— Pick a member of your region's clubs —",
@@ -2098,5 +2149,61 @@
     "contact": "Contact",
     "need_help": "Need help?",
     "english_only": "This page is only available in English, and the English text is the one that applies."
+  },
+  "counts": {
+    "members_zero": "{n} members",
+    "members_one": "{n} member",
+    "members_two": "{n} members",
+    "members_few": "{n} members",
+    "members_many": "{n} members",
+    "members_other": "{n} members",
+    "open_claims_zero": "open claims",
+    "open_claims_one": "open claim",
+    "open_claims_two": "open claims",
+    "open_claims_few": "open claims",
+    "open_claims_many": "open claims",
+    "open_claims_other": "open claims",
+    "regions_added_zero": "Added {n} regions",
+    "regions_added_one": "Added {n} region",
+    "regions_added_two": "Added {n} regions",
+    "regions_added_few": "Added {n} regions",
+    "regions_added_many": "Added {n} regions",
+    "regions_added_other": "Added {n} regions",
+    "claims_waiting_zero": "{n} claims waiting on you",
+    "claims_waiting_one": "{n} claim waiting on you",
+    "claims_waiting_two": "{n} claims waiting on you",
+    "claims_waiting_few": "{n} claims waiting on you",
+    "claims_waiting_many": "{n} claims waiting on you",
+    "claims_waiting_other": "{n} claims waiting on you"
+  },
+  "admin_settings": {
+    "title": "Claim voting rules",
+    "intro": "How a federation or state body's claim on an account the clubs started gets decided. New values apply to claims opened (or votes cast) from now on.",
+    "bounds": "Default {default_value}, allowed {min} to {max}",
+    "saved": "{label} set to {value}.",
+    "required": "Enter a value.",
+    "not_number": "Enter a number.",
+    "whole": "Enter a whole number.",
+    "range": "Enter a value from {min} to {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Club age to vote (days)",
+      "description": "A club only counts as a voter on a claim once it's been on DivingHQ this long."
+    },
+    "claim_voter_min_members": {
+      "label": "Members to vote",
+      "description": "…and it has at least this many email-verified members, or has hosted a meet."
+    },
+    "claim_quorum_min": {
+      "label": "Minimum voters",
+      "description": "Fewer eligible voters than this and the claim goes to the sysadmin instead. Also the fewest approvals that can pass a claim."
+    },
+    "claim_majority": {
+      "label": "Majority needed",
+      "description": "Approvals have to be more than this share of the eligible voters (0.5 = a simple majority)."
+    },
+    "claim_timeout_days": {
+      "label": "Voting window (days)",
+      "description": "When it runs out: at least one approval and no objections passes the claim, otherwise it goes to the sysadmin."
+    }
   }
 }

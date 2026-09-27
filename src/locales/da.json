@@ -13,7 +13,9 @@
     "back": "← Tilbage",
     "dashboard": "← Oversigt",
     "error_generic": "Noget gik galt",
-    "view_profile": "Se profil →"
+    "view_profile": "Se profil →",
+    "load_failed": "Kunne ikke indlæses. Tjek din forbindelse, og prøv igen.",
+    "retry": "Prøv igen"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Klub",
       "club_independent": "— Ingen klub / uafhængig —",
       "club_new": "+ Opret en ny klub",
-      "club_no_clubs": "Der er endnu ikke registreret nogen klubber for denne organisation. Du kan oprette en ovenfor.",
+      "club_no_clubs": "Her er ingen klubber endnu. Vælg \"+ Opret en ny klub\" på listen.",
       "new_club_name": "Navn på ny klub",
       "short_code_optional": "Kortkode (valgfri)",
       "requested_role": "Jeg vil registrere mig som",
       "role_default": "Udspringer (standard)",
       "role_spectator": "Kun tilskuer",
-      "note_label": "Besked til organisationens administrator (valgfrit)",
+      "note_label": "Besked til den, der godkender dig (valgfrit)",
       "note_placeholder": "f.eks. jeg deltog ved DM sidste år",
-      "spectator_note": "Alle konti starter som tilskuer. Hvis du anmoder om en rolle ovenfor, vil organisationens administrator gennemgå og godkende den. Du kan logge ind med det samme.",
+      "spectator_note": "Alle konti starter som tilskuer. Hvis du anmoder om en rolle ovenfor, gennemgår dit forbunds administrator den. Du kan logge ind, når du har bekræftet din e-mail.",
       "submit_idle": "Opret konto",
       "submit_loading": "Opretter...",
       "already_have_account": "Har du allerede en konto?",
       "sign_in_link": "Log ind",
-      "referee_note_unclaimed": "Så længe der ikke er noget forbund her, gennemgår DivingHQ anmodninger om at blive overdommer, ikke din klub: en overdommer kan handle ved enhver klubs stævne."
+      "referee_note_unclaimed": "Så længe der ikke er noget forbund her, gennemgår DivingHQ anmodninger om at blive overdommer, ikke din klub: en overdommer kan handle ved enhver klubs stævne.",
+      "coming_soon": "Kommer snart",
+      "coming_soon_note": "Oprettelse af konti er ikke åben endnu — vi lægger sidste hånd på DivingHQ. Kig forbi igen snart.",
+      "failed": "Registreringen mislykkedes",
+      "success": "Registreringen lykkedes. Find bekræftelseslinket i din e-mail, før du logger ind.",
+      "new_club_placeholder": "f.eks. Sydney Springboard",
+      "short_code_placeholder": "f.eks. SYD"
     },
     "register_org": {
       "title": "Registrér organisation",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "Ingen fra {country} er på DivingHQ endnu. Registreringen opretter {country}s konto med jeres organisation som nationalt forbund. DivingHQ gennemgår det, når du har bekræftet din e-mail, og du kan logge ind imens.",
       "country_taken": "{org} driver allerede {country} på DivingHQ, så der er intet nationalt forbund at registrere her. Kontakt DivingHQ-support, hvis det er forkert.",
       "country_taken_region": "{org} driver allerede {country} på DivingHQ. Et regionalt organ vælger sin region ovenfor; alle andre kontakter DivingHQ-support.",
-      "no_regions_hint": "Regionalt organ? Kontakt DivingHQ-support: {country}s regioner er ikke sat op endnu."
+      "no_regions_hint": "Regionalt organ? Kontakt DivingHQ-support: {country}s regioner er ikke sat op endnu.",
+      "website_invalid": "Det ligner ikke en webadresse. Prøv noget i stil med diving.org.au.",
+      "coming_soon_note": "Tilmelding af forbund er ikke åben endnu — vi lægger sidste hånd på DivingHQ. Kig forbi igen snart."
     },
     "forgot": {
       "title": "Nulstil adgangskode",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} forbund afventer godkendelse",
       "orgs_many": "{count} forbund afventer godkendelse",
       "orgs_meta": "Gennemse i Brugeradministration → org-filter",
-      "claims_one": "1 krav venter på dig",
-      "claims_many": "{count} krav venter på dig",
-      "claims_meta": "Et forbund vil overtage en konto"
+      "claims_meta": "Et forbund vil overtage en konto",
+      "chip_pending": "Afventer",
+      "chip_claims": "Krav",
+      "review_title": "Afventer din gennemgang",
+      "my_claims_title": "Dine krav",
+      "my_claim": "Dit krav på {target}",
+      "quiet": "Alt er stille, intet venter.",
+      "pill_urgent": "lukker snart",
+      "pill_overdue": "forsinket",
+      "chip_aria_tab": "{title}. Åbner den tilhørende fane i denne oversigt."
     }
   },
   "role": {
@@ -1038,6 +1055,19 @@
       "roster_import_section_label": "Importér startliste",
       "roster_import_submit": "Importér",
       "roster_importing": "Importerer…"
+    },
+    "club_mode": {
+      "pick_meet": "Vælg hvilket af klubbens stævner øvelsen hører til",
+      "create_meet_first": "Opret først et stævne for klubben, øvelserne ligger i det",
+      "hosted_by": "Arrangør",
+      "pick_host": "— Vælg din klub eller region —"
+    },
+    "represent": {
+      "label": "Udspringerne repræsenterer",
+      "country": "Deres land (internationale stævner)",
+      "region": "Deres stat / provins (nationale mesterskaber)",
+      "club": "Deres klub (klub- og mellemklubstævner)",
+      "hint": "Vises ved hver udspringer på resultattavlen, i resultater og PDF’er og bestemmer, hvordan medaljetabellen grupperes. En udspringer uden stats- eller klubkode vises med sit land. Et hold vises med den stat eller klub, alle dets udspringere har til fælles, ellers med sit land."
     }
   },
   "user_manager": {
@@ -1219,7 +1249,11 @@
     "col_name": "Navn",
     "col_code": "Kode",
     "col_members": "Medlemmer",
-    "col_created": "Oprettet"
+    "col_created": "Oprettet",
+    "col_billing": "Fakturering",
+    "col_actions": "Handlinger",
+    "admins_button": "Administratorer",
+    "rename": "Omdøb"
   },
   "teams": {
     "title": "Hold",
@@ -1978,7 +2012,16 @@
     "currently_at": "i øjeblikket i {club}",
     "region_request_pending": "Venter på, at {region} optager din klub.",
     "region_request_cancel": "Træk anmodningen tilbage",
-    "region_request_sent": "Anmodning sendt. {region} beslutter, om din klub optages."
+    "region_request_sent": "Anmodning sendt. {region} beslutter, om din klub optages.",
+    "not_admin": "Du er ikke længere administrator for denne klub.",
+    "left_notice": "Du er ikke længere administrator for {club}.",
+    "leave_title": "Vil du fjerne dig selv som administrator for {club}?",
+    "leave_body": "Du vil ikke længere kunne afvikle klubbens stævner eller godkende medlemmernes anmodninger. Kun en anden administrator kan tilføje dig igen.",
+    "leave_confirm": "Fjern mig",
+    "admins_intro": "Klubadministratorer afvikler klubbens stævner og tager sig af dens hold, udbetalinger og tilknytningsbetalinger. De får ingen adgang til hele forbundet.",
+    "current_admins": "Nuværende administratorer ({n})",
+    "nobody_admins": "Klubben har ingen administrator endnu.",
+    "no_other_members": "Der er ingen andre medlemmer i klubben. Flyt først nogen ind i den fra Brugerstyring."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Region"
     },
     "pick": "— Vælg én —",
-    "required": "{label}: vælg én til din nye klub."
+    "required": "{label}: vælg én til din nye klub.",
+    "admins_intro": "Regionsadministratorer afvikler stævner, som regionen eller dens klubber er vært for, og behandler rolleanmodninger fra regionens klubber.",
+    "nobody_admins": "Regionen har ingen administrator endnu.",
+    "pick_member": "— Vælg et medlem fra regionens klubber —",
+    "no_candidates": "Der er ingen at tilføje endnu. Placer først klubber i regionen, så dukker deres medlemmer op her.",
+    "strip_title": "Regioner",
+    "manage_admins": "Administrer hvem der styrer {name}",
+    "none_set_up": "Der er endnu ikke oprettet regioner (stater, provinser…) for denne organisation.",
+    "set_up": "Opret regioner",
+    "region_for": "Vælg region for {club}"
   },
   "my_region": {
     "title": "Min region",
@@ -1996,7 +2048,6 @@
     "clubs": "Klubber",
     "no_clubs_title": "Ingen klubber endnu",
     "no_clubs_body": "Klubber vises her, når de har valgt din region ved tilmelding eller på deres klubside.",
-    "members": "{n} medlemmer",
     "no_admin": "Ingen administrator endnu",
     "region_admins": "Regionsadministratorer",
     "pick_member": "— Vælg et medlem af en klub i din region —",
@@ -2098,5 +2149,61 @@
     "contact": "Kontakt",
     "need_help": "Brug for hjælp?",
     "english_only": "Denne side findes kun på engelsk, og det er den engelske tekst, der gælder."
+  },
+  "counts": {
+    "members_zero": "{n} medlemmer",
+    "members_one": "{n} medlem",
+    "members_two": "{n} medlemmer",
+    "members_few": "{n} medlemmer",
+    "members_many": "{n} medlemmer",
+    "members_other": "{n} medlemmer",
+    "open_claims_zero": "åbne krav",
+    "open_claims_one": "åbent krav",
+    "open_claims_two": "åbne krav",
+    "open_claims_few": "åbne krav",
+    "open_claims_many": "åbne krav",
+    "open_claims_other": "åbne krav",
+    "regions_added_zero": "Tilføjede {n} regioner",
+    "regions_added_one": "Tilføjede {n} region",
+    "regions_added_two": "Tilføjede {n} regioner",
+    "regions_added_few": "Tilføjede {n} regioner",
+    "regions_added_many": "Tilføjede {n} regioner",
+    "regions_added_other": "Tilføjede {n} regioner",
+    "claims_waiting_zero": "{n} krav venter på dig",
+    "claims_waiting_one": "{n} krav venter på dig",
+    "claims_waiting_two": "{n} krav venter på dig",
+    "claims_waiting_few": "{n} krav venter på dig",
+    "claims_waiting_many": "{n} krav venter på dig",
+    "claims_waiting_other": "{n} krav venter på dig"
+  },
+  "admin_settings": {
+    "title": "Afstemningsregler for krav",
+    "intro": "Hvordan et forbunds eller et regionalt organs krav på en konto, som klubberne har oprettet, bliver afgjort. Nye værdier gælder for krav, der åbnes (eller stemmer, der afgives) fra nu af.",
+    "bounds": "Standard {default_value}, tilladt {min} til {max}",
+    "saved": "{label} sat til {value}.",
+    "required": "Angiv en værdi.",
+    "not_number": "Angiv et tal.",
+    "whole": "Angiv et helt tal.",
+    "range": "Angiv en værdi fra {min} til {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Klubbens alder for at stemme (dage)",
+      "description": "En klub tæller først som stemmeberettiget om et krav, når den har været på DivingHQ så længe."
+    },
+    "claim_voter_min_members": {
+      "label": "Medlemmer for at stemme",
+      "description": "…og den har mindst så mange medlemmer med bekræftet e-mail, eller den har afholdt et stævne."
+    },
+    "claim_quorum_min": {
+      "label": "Mindste antal stemmeberettigede",
+      "description": "Er der færre stemmeberettigede end dette, går kravet i stedet til systemadministratoren. Også det mindste antal godkendelser, der kan vedtage et krav."
+    },
+    "claim_majority": {
+      "label": "Nødvendigt flertal",
+      "description": "Godkendelserne skal udgøre mere end denne andel af de stemmeberettigede (0.5 = simpelt flertal)."
+    },
+    "claim_timeout_days": {
+      "label": "Afstemningsperiode (dage)",
+      "description": "Når den udløber: mindst én godkendelse og ingen indsigelser vedtager kravet, ellers går det til systemadministratoren."
+    }
   }
 }

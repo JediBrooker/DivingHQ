@@ -34,7 +34,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { contributesToDiverChip, rankAttentionChips } from '@/composables/useAttention'
 import AttentionLane from '@/components/dashboard/AttentionLane.vue'
-import { fmtCloses, fmtRelative } from '@/lib/format'
+import { fmtCloses, fmtDate, fmtRelative } from '@/lib/format'
+import { usePlural } from '@/composables/usePlural'
 import { Building2, Calendar, MonitorPlay, Scale, UserCog } from '@lucide/vue'
 
 
@@ -51,7 +52,8 @@ const OtherPanel       = defineAsyncComponent(() => import('@/components/dashboa
 
 const router = useRouter()
 const auth = useAuthStore()
-const { t } = useI18n()
+const { t, te } = useI18n()
+const { tn } = usePlural()
 
 // ---- Tabs ---------------------------------------------------
 // Order matters: tabs render in this order (left → right).
@@ -100,6 +102,7 @@ const events             = ref([])     // /api/events, used by org_admin + meet_
 const roleRequests       = ref([])     // /api/role-requests
 const pendingOrgs        = ref([])     // /api/orgs filtered to pending (sysadmin)
 const claimsToAct        = ref(0)      // claims waiting on my vote / decision (phase 3)
+const myClaims           = ref([])     // claims I filed that are still being decided
 const recentActivity     = ref([])     // /api/audit/recent
 const judgeEvents        = ref([])     // /api/judge/my-events
 const coachData          = ref(null)   // /api/coach/dashboard
@@ -149,6 +152,29 @@ const diverEntryCloseDays = computed(() => {
   if (!Number.isFinite(nearest)) return null
   return Math.max(0, Math.round(nearest / 86_400_000))
 })
+
+// Where a club or region admin (no org_admin) approves their members'
+// role requests. null for everyone else, who has nothing to review.
+const delegateReviewPath = computed(() =>
+  auth.isClubAdmin ? '/club' : (auth.isRegionAdmin ? '/region' : null))
+
+// The User Manager's names for every role. role.* only covers a few, so an
+// org admin's chip read "Manager" for meet_manager and a raw "coach" for
+// a coach request.
+function requestRoleLabel(role) {
+  const key = `user_manager.role_${role}`
+  return te(key) ? t(key) : role
+}
+
+// Where one of my own claims stands, in the same words ClaimsView uses.
+function myClaimMeta(c) {
+  if (!c.activated) return t('claims.awaiting_email')
+  if (c.status === 'escalated') return t('claims.status_escalated')
+  if (['clubs', 'regions'].includes(c.approver) && c.closes_at) {
+    return t('claims.closes', { date: fmtDate(c.closes_at) })
+  }
+  return t(`claims.approver_${c.approver}`)
+}
 
 // ---- Pulse chips ------------------------------------------
 // Structured config for every chip the strip can render. Each
@@ -271,13 +297,14 @@ const pulseChips = computed(() => {
   // straight to /claims rather than switching tabs.
   if (claimsToAct.value) {
     const n = claimsToAct.value
-    const title = t(n === 1 ? 'dashboard.attention.claims_one' : 'dashboard.attention.claims_many', { count: n })
+    // Through tn, not a one/many pair: "2 заявки" and "5 заявок" differ.
+    const title = tn('counts.claims_waiting', n)
     chips.push({
       id:           'claims',
       kind:         'pending',
       glyph:        '⚖',
       number:       n,
-      label:        'CLAIMS',
+      label:        t('dashboard.attention.chip_claims'),
       layout:       'count-first',
       to:           '/claims',
       popoverTitle: title,
@@ -285,18 +312,50 @@ const pulseChips = computed(() => {
     })
   }
 
-  // Pending governance work, org admin chip. Items older than
+  // A claimant's own claim while it's being decided. Until it passes
+  // they're a plain spectator with nothing else on this page, so this
+  // (and Claims in the nav) is how they keep track of it.
+  if (myClaims.value.length) {
+    const n = myClaims.value.length
+    chips.push({
+      id:           'my-claims',
+      kind:         'pending',
+      glyph:        '⚖',
+      number:       n,
+      label:        tn('counts.open_claims', n),
+      layout:       'count-first',
+      to:           '/claims',
+      popoverTitle: t('dashboard.attention.my_claims_title'),
+      items: myClaims.value.map((c) => ({
+        id:    'mc-' + c.id,
+        title: t('dashboard.attention.my_claim', { target: c.target_name }),
+        meta:  myClaimMeta(c),
+        to:    '/claims',
+        urgency: null,
+      })),
+    })
+  }
+
+  // Pending governance work. Org admins review on their tab. A club or
+  // region admin in a country with no federation yet has no dashboard tab
+  // at all, so their chip goes straight to the page where they approve
+  // (/club or /region), same as the claims chip above. Items older than
   // 7 days get an `overdue` marker.
-  if (pendingCount.value && auth.hasRole('org_admin')) {
+  const isOrgAdmin = auth.hasRole('org_admin')
+  const reviewPath = isOrgAdmin ? '/users' : delegateReviewPath.value
+  if (pendingCount.value && reviewPath) {
     const now = Date.now()
     const items = []
     for (const rr of roleRequests.value) {
       const ageMs = rr.created_at ? now - +new Date(rr.created_at) : 0
+      // The org name tells a sysadmin which federation; a club admin
+      // wants to know which of their clubs.
+      const where = isOrgAdmin ? rr.org_name : rr.club_name
       items.push({
         id:    'rr-' + rr.id,
         title: rr.full_name || rr.username || 'User',
-        meta:  `requesting ${rr.requested_role}${rr.org_name ? ` · ${rr.org_name}` : ''}`,
-        to:    '/users',
+        meta:  t('my_club.wants_role', { role: requestRoleLabel(rr.requested_role) }) + (where ? ` · ${where}` : ''),
+        to:    reviewPath,
         urgency: ageMs > 7 * 86_400_000 ? 'overdue' : null,
       })
     }
@@ -317,10 +376,11 @@ const pulseChips = computed(() => {
       kind:         'pending',
       glyph:        '👥',
       number:       pendingCount.value,
-      label:        'PENDING',
+      label:        t('dashboard.attention.chip_pending'),
       layout:       'count-first',
-      targetTab:    'org_admin',
-      popoverTitle: 'Awaiting your review',
+      targetTab:    isOrgAdmin ? 'org_admin' : undefined,
+      to:           isOrgAdmin ? undefined : reviewPath,
+      popoverTitle: t('dashboard.attention.review_title'),
       items,
     })
   }
@@ -552,7 +612,7 @@ async function loadOperatorEvents() {
 }
 async function loadRoleRequests() {
   if (tabsLoaded.value.has('role-requests')) return
-  if (!auth.hasRole('org_admin')) return
+  if (!auth.hasRole('org_admin') && !delegateReviewPath.value) return
   try {
     roleRequests.value = await auth.apiFetch('/api/role-requests')
   } catch { /* silent */ }
@@ -614,6 +674,7 @@ async function loadDashboardBundle() {
   if (Array.isArray(bundle.role_requests))    roleRequests.value    = bundle.role_requests
   if (Array.isArray(bundle.pending_orgs))     pendingOrgs.value     = bundle.pending_orgs
   if (typeof bundle.claims_to_act === 'number') claimsToAct.value  = bundle.claims_to_act
+  if (Array.isArray(bundle.my_claims))        myClaims.value        = bundle.my_claims
   if (Array.isArray(bundle.recent_activity))  recentActivity.value  = bundle.recent_activity
   if (Array.isArray(bundle.judge_events))     judgeEvents.value     = bundle.judge_events
   if (Array.isArray(bundle.workflow_actions)) workflowActions.value = bundle.workflow_actions
@@ -764,7 +825,7 @@ const attentionCards = computed(() => {
       id:    'claims',
       kind:  'pending',
       icon:  Scale,
-      title: t(n === 1 ? 'dashboard.attention.claims_one' : 'dashboard.attention.claims_many', { count: n }),
+      title: tn('counts.claims_waiting', n),
       meta:  t('dashboard.attention.claims_meta'),
       to:    '/claims',
     })
@@ -906,7 +967,8 @@ onMounted(async () => {
   if (!bundled) {
     await Promise.all([
       auth.hasAnyRole(['org_admin', 'meet_manager']) ? loadOperatorEvents() : Promise.resolve(),
-      auth.hasRole('org_admin')   ? loadRoleRequests()    : Promise.resolve(),
+      // loadRoleRequests does its own org_admin / club admin check.
+      loadRoleRequests(),
       auth.hasRole('org_admin')   ? loadRecentActivity()  : Promise.resolve(),
       auth.user?.is_system_admin  ? loadPendingOrgs()     : Promise.resolve(),
       auth.hasRole('judge')       ? loadJudgeEvents()     : Promise.resolve(),

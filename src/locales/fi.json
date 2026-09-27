@@ -13,7 +13,9 @@
     "back": "← Takaisin",
     "dashboard": "← Hallintapaneeli",
     "error_generic": "Jotain meni vikaan",
-    "view_profile": "Näytä profiili →"
+    "view_profile": "Näytä profiili →",
+    "load_failed": "Lataus epäonnistui. Tarkista yhteys ja yritä uudelleen.",
+    "retry": "Yritä uudelleen"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Seura",
       "club_independent": "— Ei seuraa / itsenäinen —",
       "club_new": "+ Luo uusi seura",
-      "club_no_clubs": "Tähän organisaatioon ei ole vielä rekisteröity seuroja. Voit luoda sellaisen yllä.",
+      "club_no_clubs": "Täällä ei ole vielä seuroja. Valitse luettelosta ”+ Luo uusi seura”.",
       "new_club_name": "Uuden seuran nimi",
       "short_code_optional": "Lyhenne (valinnainen)",
       "requested_role": "Haluan rekisteröityä roolina",
       "role_default": "Hyppääjä (oletus)",
       "role_spectator": "Vain katsoja",
-      "note_label": "Viesti organisaation pääkäyttäjälle (valinnainen)",
+      "note_label": "Viesti hyväksyjälle (valinnainen)",
       "note_placeholder": "esim. kilpailin SM-kisoissa viime vuonna",
-      "spectator_note": "Kaikki tilit alkavat katsojan oikeuksilla. Jos pyydät yllä mainittua roolia, organisaatiosi pääkäyttäjä tarkistaa ja hyväksyy sen. Voit kirjautua sisään välittömästi.",
+      "spectator_note": "Kaikki tilit alkavat katsojan oikeuksilla. Jos pyydät yllä roolia, liittosi ylläpitäjä käsittelee sen. Voit kirjautua, kun olet vahvistanut sähköpostisi.",
       "submit_idle": "Luo tili",
       "submit_loading": "Luodaan...",
       "already_have_account": "Onko sinulla jo tili?",
       "sign_in_link": "Kirjaudu sisään",
-      "referee_note_unclaimed": "Koska täällä ei vielä ole liittoa, DivingHQ käsittelee ylituomaripyynnöt eikä seurasi: ylituomari voi toimia minkä tahansa seuran kilpailuissa."
+      "referee_note_unclaimed": "Koska täällä ei vielä ole liittoa, DivingHQ käsittelee ylituomaripyynnöt eikä seurasi: ylituomari voi toimia minkä tahansa seuran kilpailuissa.",
+      "coming_soon": "Tulossa pian",
+      "coming_soon_note": "Tilien rekisteröinti ei ole vielä auki — viimeistelemme DivingHQ:ta. Palaa pian uudelleen.",
+      "failed": "Rekisteröinti epäonnistui",
+      "success": "Rekisteröinti onnistui. Etsi sähköpostistasi vahvistuslinkki ennen kirjautumista.",
+      "new_club_placeholder": "esim. Sydney Springboard",
+      "short_code_placeholder": "esim. SYD"
     },
     "register_org": {
       "title": "Rekisteröi organisaatio",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "Maasta {country} ei ole vielä ketään DivingHQ:ssa. Rekisteröityminen perustaa maalle {country} tilin, jonka kansallinen liitto on järjestönne. DivingHQ käsittelee sen, kun olet vahvistanut sähköpostisi, ja voit kirjautua sillä välin.",
       "country_taken": "{org} hallinnoi jo maata {country} DivingHQ:ssa, joten täällä ei ole kansallista liittoa rekisteröitäväksi. Ota yhteyttä DivingHQ:n tukeen, jos tämä on virhe.",
       "country_taken_region": "{org} hallinnoi jo maata {country} DivingHQ:ssa. Alueellinen toimija valitsee alueensa yltä; muut ottavat yhteyttä DivingHQ:n tukeen.",
-      "no_regions_hint": "Alueellinen toimija? Ota yhteyttä DivingHQ:n tukeen: maan {country} alueita ei ole vielä määritetty."
+      "no_regions_hint": "Alueellinen toimija? Ota yhteyttä DivingHQ:n tukeen: maan {country} alueita ei ole vielä määritetty.",
+      "website_invalid": "Tämä ei näytä verkko-osoitteelta. Kokeile esimerkiksi diving.org.au.",
+      "coming_soon_note": "Liittojen rekisteröinti ei ole vielä auki — viimeistelemme DivingHQ:ta. Palaa pian uudelleen."
     },
     "forgot": {
       "title": "Palauta salasana",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} liitto odottaa hyväksyntää",
       "orgs_many": "{count} liittoa odottaa hyväksyntää",
       "orgs_meta": "Tarkastele Käyttäjien hallinnassa → organisaatiosuodatin",
-      "claims_one": "1 vaatimus odottaa sinua",
-      "claims_many": "{count} vaatimusta odottaa sinua",
-      "claims_meta": "Liitto haluaa ottaa tilin haltuunsa"
+      "claims_meta": "Liitto haluaa ottaa tilin haltuunsa",
+      "chip_pending": "Odottaa",
+      "chip_claims": "Vaatimukset",
+      "review_title": "Odottaa tarkistustasi",
+      "my_claims_title": "Omat vaatimuksesi",
+      "my_claim": "Vaatimuksesi: {target}",
+      "quiet": "Kaikki hiljaista, mikään ei odota.",
+      "pill_urgent": "sulkeutuu pian",
+      "pill_overdue": "myöhässä",
+      "chip_aria_tab": "{title}. Avaa sen välilehden tässä hallintapaneelissa."
     }
   },
   "role": {
@@ -1038,6 +1055,19 @@
       "roster_import_section_label": "Tuo osallistujat",
       "roster_import_submit": "Tuo",
       "roster_importing": "Tuodaan…"
+    },
+    "club_mode": {
+      "pick_meet": "Valitse, mihin seurasi kilpailuun tämä laji kuuluu",
+      "create_meet_first": "Luo ensin kilpailu seurallesi, lajit kuuluvat sen alle",
+      "hosted_by": "Järjestäjä",
+      "pick_host": "— Valitse seurasi tai alueesi —"
+    },
+    "represent": {
+      "label": "Hyppääjät edustavat",
+      "country": "Maataan (kansainväliset kilpailut)",
+      "region": "Osavaltiotaan / provinssiaan (kansalliset mestaruudet)",
+      "club": "Seuraansa (seura- ja seurojen väliset kilpailut)",
+      "hint": "Näytetään jokaisen hyppääjän vieressä tulostaululla, tuloksissa ja PDF-tiedostoissa, ja sen mukaan mitalitaulukko ryhmitellään. Hyppääjä ilman osavaltio- tai seuratunnusta näytetään maansa mukaan. Joukkue näytetään osavaltiolla tai seuralla, joka on kaikille sen hyppääjille yhteinen, muuten maallaan."
     }
   },
   "user_manager": {
@@ -1219,7 +1249,11 @@
     "col_name": "Nimi",
     "col_code": "Lyhenne",
     "col_members": "Jäseniä",
-    "col_created": "Luotu"
+    "col_created": "Luotu",
+    "col_billing": "Laskutus",
+    "col_actions": "Toiminnot",
+    "admins_button": "Ylläpitäjät",
+    "rename": "Nimeä uudelleen"
   },
   "teams": {
     "title": "Joukkueet",
@@ -1978,7 +2012,16 @@
     "currently_at": "nyt seurassa {club}",
     "region_request_pending": "Odotetaan, että alue {region} hyväksyy seurasi.",
     "region_request_cancel": "Peru pyyntö",
-    "region_request_sent": "Pyyntö lähetetty. Alue {region} päättää, otetaanko seurasi mukaan."
+    "region_request_sent": "Pyyntö lähetetty. Alue {region} päättää, otetaanko seurasi mukaan.",
+    "not_admin": "Et ole enää tämän seuran ylläpitäjä.",
+    "left_notice": "Et ole enää seuran {club} ylläpitäjä.",
+    "leave_title": "Poistetaanko sinut seuran {club} ylläpitäjistä?",
+    "leave_body": "Et voi enää järjestää seuran kilpailuja etkä hyväksyä sen jäsenten pyyntöjä. Vain toinen ylläpitäjä voi lisätä sinut takaisin.",
+    "leave_confirm": "Poista minut",
+    "admins_intro": "Seuran ylläpitäjät järjestävät seuransa kilpailut ja hoitavat sen ryhmät, tilitykset ja jäsenmaksut. He eivät saa liittotason oikeuksia.",
+    "current_admins": "Nykyiset ylläpitäjät ({n})",
+    "nobody_admins": "Tällä seuralla ei ole vielä ylläpitäjää.",
+    "no_other_members": "Seurassa ei ole muita jäseniä. Siirrä ensin joku seuraan käyttäjähallinnasta."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Alue"
     },
     "pick": "— Valitse —",
-    "required": "{label}: valitse uudelle seuralle."
+    "required": "{label}: valitse uudelle seuralle.",
+    "admins_intro": "Alueen ylläpitäjät järjestävät kilpailut, joita alue tai sen seurat isännöivät, ja käsittelevät alueen seurojen roolipyynnöt.",
+    "nobody_admins": "Tällä alueella ei ole vielä ylläpitäjää.",
+    "pick_member": "— Valitse alueen seuran jäsen —",
+    "no_candidates": "Lisättäviä ei ole vielä. Liitä ensin seuroja alueeseen, niin niiden jäsenet näkyvät täällä.",
+    "strip_title": "Alueet",
+    "manage_admins": "Hallitse alueen {name} ylläpitäjiä",
+    "none_set_up": "Tälle organisaatiolle ei ole vielä määritetty alueita (osavaltioita, provinsseja…).",
+    "set_up": "Määritä alueet",
+    "region_for": "Seuran {club} alue"
   },
   "my_region": {
     "title": "Oma alue",
@@ -1996,7 +2048,6 @@
     "clubs": "Seurat",
     "no_clubs_title": "Ei vielä seuroja",
     "no_clubs_body": "Seurat näkyvät tässä, kun ne ovat valinneet alueesi rekisteröityessä tai seurasivullaan.",
-    "members": "{n} jäsentä",
     "no_admin": "Ei vielä ylläpitäjää",
     "region_admins": "Alueen ylläpitäjät",
     "pick_member": "— Valitse alueesi seuran jäsen —",
@@ -2098,5 +2149,61 @@
     "contact": "Yhteystiedot",
     "need_help": "Tarvitsetko apua?",
     "english_only": "Tämä sivu on saatavilla vain englanniksi, ja sovellettava teksti on englanninkielinen."
+  },
+  "counts": {
+    "members_zero": "{n} jäsentä",
+    "members_one": "{n} jäsen",
+    "members_two": "{n} jäsentä",
+    "members_few": "{n} jäsentä",
+    "members_many": "{n} jäsentä",
+    "members_other": "{n} jäsentä",
+    "open_claims_zero": "avointa vaatimusta",
+    "open_claims_one": "avoin vaatimus",
+    "open_claims_two": "avointa vaatimusta",
+    "open_claims_few": "avointa vaatimusta",
+    "open_claims_many": "avointa vaatimusta",
+    "open_claims_other": "avointa vaatimusta",
+    "regions_added_zero": "Lisättiin {n} aluetta",
+    "regions_added_one": "Lisättiin {n} alue",
+    "regions_added_two": "Lisättiin {n} aluetta",
+    "regions_added_few": "Lisättiin {n} aluetta",
+    "regions_added_many": "Lisättiin {n} aluetta",
+    "regions_added_other": "Lisättiin {n} aluetta",
+    "claims_waiting_zero": "{n} vaatimusta odottaa sinua",
+    "claims_waiting_one": "{n} vaatimus odottaa sinua",
+    "claims_waiting_two": "{n} vaatimusta odottaa sinua",
+    "claims_waiting_few": "{n} vaatimusta odottaa sinua",
+    "claims_waiting_many": "{n} vaatimusta odottaa sinua",
+    "claims_waiting_other": "{n} vaatimusta odottaa sinua"
+  },
+  "admin_settings": {
+    "title": "Vaatimusten äänestyssäännöt",
+    "intro": "Miten liiton tai alueellisen toimijan vaatimus seurojen perustamaan tiliin ratkaistaan. Uudet arvot koskevat tästä eteenpäin avattuja vaatimuksia (tai annettuja ääniä).",
+    "bounds": "Oletus {default_value}, sallittu {min}–{max}",
+    "saved": "{label} asetettu arvoon {value}.",
+    "required": "Anna arvo.",
+    "not_number": "Anna luku.",
+    "whole": "Anna kokonaisluku.",
+    "range": "Anna arvo väliltä {min}–{max}.",
+    "claim_voter_min_age_days": {
+      "label": "Seuran ikä äänestämiseen (päivää)",
+      "description": "Seura lasketaan äänestäjäksi vasta, kun se on ollut DivingHQ:ssa näin kauan."
+    },
+    "claim_voter_min_members": {
+      "label": "Jäseniä äänestämiseen",
+      "description": "…ja sillä on vähintään näin monta sähköpostinsa vahvistanutta jäsentä, tai se on järjestänyt kilpailun."
+    },
+    "claim_quorum_min": {
+      "label": "Äänestäjiä vähintään",
+      "description": "Jos äänioikeutettuja on vähemmän, vaatimus siirtyy järjestelmänvalvojalle. Samalla pienin hyväksyntöjen määrä, jolla vaatimus menee läpi."
+    },
+    "claim_majority": {
+      "label": "Tarvittava enemmistö",
+      "description": "Hyväksyntöjä on oltava enemmän kuin tämä osuus äänioikeutetuista (0.5 = yksinkertainen enemmistö)."
+    },
+    "claim_timeout_days": {
+      "label": "Äänestysaika (päivää)",
+      "description": "Kun se päättyy: vähintään yksi hyväksyntä ilman vastalauseita hyväksyy vaatimuksen, muuten se siirtyy järjestelmänvalvojalle."
+    }
   }
 }

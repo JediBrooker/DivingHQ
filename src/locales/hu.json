@@ -13,7 +13,9 @@
     "back": "← Vissza",
     "dashboard": "← Vezérlőpult",
     "error_generic": "Hiba történt",
-    "view_profile": "Profil megtekintése →"
+    "view_profile": "Profil megtekintése →",
+    "load_failed": "Nem sikerült betölteni. Ellenőrizze a kapcsolatot, és próbálja újra.",
+    "retry": "Újrapróbálás"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Klub",
       "club_independent": "— Klub nélkül / független —",
       "club_new": "+ Új klub létrehozása",
-      "club_no_clubs": "Még nincsenek klubok regisztrálva ehhez a szervezethez. Fent létrehozhat egyet.",
+      "club_no_clubs": "Itt még nincsenek klubok. Válassza a listából a „+ Új klub létrehozása” lehetőséget.",
       "new_club_name": "Új klub neve",
       "short_code_optional": "Rövid kód (opcionális)",
       "requested_role": "Szeretnék regisztrálni mint",
       "role_default": "Műugró (alapértelmezett)",
       "role_spectator": "Csak néző",
-      "note_label": "Megjegyzés a szervezet adminisztrátorának (opcionális)",
+      "note_label": "Megjegyzés a jóváhagyónak (opcionális)",
       "note_placeholder": "pl. Tavaly indultam az országos bajnokságon",
-      "spectator_note": "Minden fiók Nézőként indul. Ha fent kér egy szerepkört, a szervezet adminisztrátora át fogja vizsgálni és jóváhagyni. Azonnal be tud jelentkezni.",
+      "spectator_note": "Minden fiók Nézőként indul. Ha fent szerepkört kér, a szövetsége adminisztrátora bírálja el. Az e-mail-címe megerősítése után bejelentkezhet.",
       "submit_idle": "Fiók létrehozása",
       "submit_loading": "Létrehozás...",
       "already_have_account": "Már van fiókja?",
       "sign_in_link": "Bejelentkezés",
-      "referee_note_unclaimed": "Amíg itt nincs szövetség, a versenybírói kérelmeket a DivingHQ bírálja el, nem a klubja: a versenybíró bármely klub versenyén eljárhat."
+      "referee_note_unclaimed": "Amíg itt nincs szövetség, a versenybírói kérelmeket a DivingHQ bírálja el, nem a klubja: a versenybíró bármely klub versenyén eljárhat.",
+      "coming_soon": "Hamarosan",
+      "coming_soon_note": "A fiókregisztráció még nem nyílt meg — az utolsó simításokat végezzük a DivingHQ-n. Nézzen vissza hamarosan.",
+      "failed": "A regisztráció nem sikerült",
+      "success": "Sikeres regisztráció. Bejelentkezés előtt keresse meg e-mailjében a megerősítő linket.",
+      "new_club_placeholder": "pl. Sydney Springboard",
+      "short_code_placeholder": "pl. SYD"
     },
     "register_org": {
       "title": "Szervezet regisztrációja",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "{country} országból még senki sincs a DivingHQ-n. A regisztrációval létrejön {country} fiókja, amelynek nemzeti szövetsége az Ön szervezete lesz. A DivingHQ az e-mail megerősítése után bírálja el, addig is bejelentkezhet.",
       "country_taken": "{org} már kezeli {country} fiókját a DivingHQ-n, így itt nincs regisztrálandó nemzeti szövetség. Ha ez tévedés, forduljon a DivingHQ ügyfélszolgálatához.",
       "country_taken_region": "{org} már kezeli {country} fiókját a DivingHQ-n. A regionális szervezet fent választja ki a régióját; mindenki más forduljon a DivingHQ ügyfélszolgálatához.",
-      "no_regions_hint": "Regionális szervezet? Forduljon a DivingHQ ügyfélszolgálatához: {country} régiói még nincsenek beállítva."
+      "no_regions_hint": "Regionális szervezet? Forduljon a DivingHQ ügyfélszolgálatához: {country} régiói még nincsenek beállítva.",
+      "website_invalid": "Ez nem tűnik webcímnek. Próbáljon valami ilyesmit: diving.org.au.",
+      "coming_soon_note": "A szövetségek regisztrációja még nem nyílt meg — az utolsó simításokat végezzük a DivingHQ-n. Nézzen vissza hamarosan."
     },
     "forgot": {
       "title": "Jelszó visszaállítása",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} szövetség vár jóváhagyásra",
       "orgs_many": "{count} szövetség vár jóváhagyásra",
       "orgs_meta": "Tekintse át a Felhasználókezelőben → szervezet-szűrő",
-      "claims_one": "1 igény vár Önre",
-      "claims_many": "{count} igény vár Önre",
-      "claims_meta": "Egy szövetség át szeretne venni egy fiókot"
+      "claims_meta": "Egy szövetség át szeretne venni egy fiókot",
+      "chip_pending": "Függőben",
+      "chip_claims": "Igények",
+      "review_title": "Az Ön jóváhagyására vár",
+      "my_claims_title": "Az Ön igényei",
+      "my_claim": "Az Ön igénye: {target}",
+      "quiet": "Minden csendes, nincs függőben semmi.",
+      "pill_urgent": "hamarosan zárul",
+      "pill_overdue": "lejárt",
+      "chip_aria_tab": "{title}. Megnyitja a hozzá tartozó lapot ezen a vezérlőpulton."
     }
   },
   "role": {
@@ -1038,6 +1055,19 @@
       "roster_import_section_label": "Nevezés importálása",
       "roster_import_submit": "Importálás",
       "roster_importing": "Importálás…"
+    },
+    "club_mode": {
+      "pick_meet": "Válassza ki, a klubja melyik versenyéhez tartozik ez a versenyszám",
+      "create_meet_first": "Előbb hozzon létre egy versenyt a klubjának, a versenyszámok abba kerülnek",
+      "hosted_by": "Rendező",
+      "pick_host": "— Válassza ki a klubját vagy régióját —"
+    },
+    "represent": {
+      "label": "A műugrók képviselik",
+      "country": "Az országukat (nemzetközi versenyek)",
+      "region": "Az államukat / tartományukat (országos bajnokságok)",
+      "club": "A klubjukat (klub- és klubközi versenyek)",
+      "hint": "Minden műugró mellett megjelenik az eredményjelzőn, az eredményekben és a PDF-ekben, és ez alapján csoportosul az éremtáblázat. Akinek nincs állam- vagy klubkódja, az országával jelenik meg. A csapat annál az államnál vagy klubnál jelenik meg, amely minden műugrójában közös, különben az országánál."
     }
   },
   "user_manager": {
@@ -1219,7 +1249,11 @@
     "col_name": "Név",
     "col_code": "Kód",
     "col_members": "Tagok",
-    "col_created": "Létrehozva"
+    "col_created": "Létrehozva",
+    "col_billing": "Számlázás",
+    "col_actions": "Műveletek",
+    "admins_button": "Adminisztrátorok",
+    "rename": "Átnevezés"
   },
   "teams": {
     "title": "Csapatok",
@@ -1978,7 +2012,16 @@
     "currently_at": "jelenleg: {club}",
     "region_request_pending": "Várakozás arra, hogy a(z) {region} régió befogadja a klubját.",
     "region_request_cancel": "Kérelem visszavonása",
-    "region_request_sent": "Kérelem elküldve. A(z) {region} régió dönti el, befogadja-e a klubját."
+    "region_request_sent": "Kérelem elküldve. A(z) {region} régió dönti el, befogadja-e a klubját.",
+    "not_admin": "Már nem adminisztrátora ennek a klubnak.",
+    "left_notice": "Már nem adminisztrátora ennek a klubnak: {club}.",
+    "leave_title": "Eltávolítja magát a(z) {club} adminisztrátorai közül?",
+    "leave_body": "Ezután nem rendezhet versenyeket a klub nevében, és nem hagyhatja jóvá a tagok kérelmeit. Csak egy másik adminisztrátor veheti vissza.",
+    "leave_confirm": "Eltávolítás",
+    "admins_intro": "A klubadminisztrátorok rendezik a klubjuk versenyeit, és intézik az edzéseit, kifizetéseit és tagdíjait. Szövetségi szintű hozzáférést nem kapnak.",
+    "current_admins": "Jelenlegi adminisztrátorok ({n})",
+    "nobody_admins": "Ennek a klubnak még nincs adminisztrátora.",
+    "no_other_members": "Nincs más tag ebben a klubban. Előbb helyezzen át valakit a klubba a Felhasználókezelőben."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Régió"
     },
     "pick": "— Válasszon —",
-    "required": "{label}: válasszon az új klubjához."
+    "required": "{label}: válasszon az új klubjához.",
+    "admins_intro": "A régióadminisztrátorok rendezik a régiójuk vagy annak klubjai által szervezett versenyeket, és elbírálják a régió klubjaiból érkező szerepkérelmeket.",
+    "nobody_admins": "Ennek a régiónak még nincs adminisztrátora.",
+    "pick_member": "— Válasszon tagot a régió klubjaiból —",
+    "no_candidates": "Még nincs kit hozzáadni. Előbb soroljon klubokat ebbe a régióba, tagjaik itt jelennek meg.",
+    "strip_title": "Régiók",
+    "manage_admins": "{name} adminisztrátorainak kezelése",
+    "none_set_up": "Ehhez a szervezethez még nincsenek régiók (államok, tartományok…) beállítva.",
+    "set_up": "Régiók beállítása",
+    "region_for": "{club} régiója"
   },
   "my_region": {
     "title": "Saját régióm",
@@ -1996,7 +2048,6 @@
     "clubs": "Klubok",
     "no_clubs_title": "Még nincsenek klubok",
     "no_clubs_body": "A klubok akkor jelennek meg itt, ha regisztrációkor vagy a klub oldalán az Ön régióját választják.",
-    "members": "{n} tag",
     "no_admin": "Még nincs adminisztrátor",
     "region_admins": "Régió-adminisztrátorok",
     "pick_member": "— Válasszon tagot a régiója klubjaiból —",
@@ -2098,5 +2149,61 @@
     "contact": "Kapcsolat",
     "need_help": "Segítségre van szüksége?",
     "english_only": "Ez az oldal csak angolul érhető el, és az angol szöveg az irányadó."
+  },
+  "counts": {
+    "members_zero": "{n} tag",
+    "members_one": "{n} tag",
+    "members_two": "{n} tag",
+    "members_few": "{n} tag",
+    "members_many": "{n} tag",
+    "members_other": "{n} tag",
+    "open_claims_zero": "nyitott igény",
+    "open_claims_one": "nyitott igény",
+    "open_claims_two": "nyitott igény",
+    "open_claims_few": "nyitott igény",
+    "open_claims_many": "nyitott igény",
+    "open_claims_other": "nyitott igény",
+    "regions_added_zero": "{n} régió hozzáadva",
+    "regions_added_one": "{n} régió hozzáadva",
+    "regions_added_two": "{n} régió hozzáadva",
+    "regions_added_few": "{n} régió hozzáadva",
+    "regions_added_many": "{n} régió hozzáadva",
+    "regions_added_other": "{n} régió hozzáadva",
+    "claims_waiting_zero": "{n} igény vár Önre",
+    "claims_waiting_one": "{n} igény vár Önre",
+    "claims_waiting_two": "{n} igény vár Önre",
+    "claims_waiting_few": "{n} igény vár Önre",
+    "claims_waiting_many": "{n} igény vár Önre",
+    "claims_waiting_other": "{n} igény vár Önre"
+  },
+  "admin_settings": {
+    "title": "Az igényekről szóló szavazás szabályai",
+    "intro": "Hogyan születik döntés egy szövetség vagy területi szervezet igényéről egy klubok által indított fiókra. Az új értékek mostantól nyitott igényekre (és leadott szavazatokra) érvényesek.",
+    "bounds": "Alapértelmezés {default_value}, megengedett {min}–{max}",
+    "saved": "{label} beállítva: {value}.",
+    "required": "Adjon meg egy értéket.",
+    "not_number": "Adjon meg egy számot.",
+    "whole": "Adjon meg egy egész számot.",
+    "range": "Adjon meg egy értéket {min} és {max} között.",
+    "claim_voter_min_age_days": {
+      "label": "A klub kora a szavazáshoz (nap)",
+      "description": "Egy klub csak akkor számít szavazónak, ha legalább ennyi ideje van a DivingHQ-n."
+    },
+    "claim_voter_min_members": {
+      "label": "Tagok a szavazáshoz",
+      "description": "…és legalább ennyi megerősített e-mail-című tagja van, vagy már rendezett versenyt."
+    },
+    "claim_quorum_min": {
+      "label": "Szavazók minimális száma",
+      "description": "Ha ennél kevesebb a szavazásra jogosult, az igény a rendszergazdához kerül. Egyben ennyi jóváhagyás kell legalább az elfogadáshoz."
+    },
+    "claim_majority": {
+      "label": "Szükséges többség",
+      "description": "A jóváhagyásoknak a jogosult szavazók ennél nagyobb hányadát kell kitenniük (0.5 = egyszerű többség)."
+    },
+    "claim_timeout_days": {
+      "label": "Szavazási idő (nap)",
+      "description": "Lejártakor: legalább egy jóváhagyás és egyetlen kifogás sem esetén az igény elfogadott, különben a rendszergazdához kerül."
+    }
   }
 }

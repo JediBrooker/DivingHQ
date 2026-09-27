@@ -13,7 +13,9 @@
     "back": "← Kembali",
     "dashboard": "← Papan pemuka",
     "error_generic": "Terdapat ralat",
-    "view_profile": "Lihat profil →"
+    "view_profile": "Lihat profil →",
+    "load_failed": "Gagal dimuatkan. Semak sambungan anda dan cuba lagi.",
+    "retry": "Cuba lagi"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Kelab",
       "club_independent": "— Tiada kelab / bebas —",
       "club_new": "+ Cipta kelab baharu",
-      "club_no_clubs": "Belum ada kelab yang didaftarkan untuk organisasi ini. Anda boleh mencipta satu di atas.",
+      "club_no_clubs": "Belum ada kelab di sini. Pilih \"+ Cipta kelab baharu\" dalam senarai.",
       "new_club_name": "Nama kelab baharu",
       "short_code_optional": "Kod ringkas (pilihan)",
       "requested_role": "Saya ingin mendaftar sebagai",
       "role_default": "Peterjun (lalai)",
       "role_spectator": "Penonton sahaja",
-      "note_label": "Nota kepada admin organisasi (pilihan)",
+      "note_label": "Nota kepada pihak yang meluluskan anda (pilihan)",
       "note_placeholder": "cth. saya bertanding di kejohanan kebangsaan tahun lalu",
-      "spectator_note": "Semua akaun bermula sebagai Penonton. Jika anda meminta peranan di atas, admin organisasi anda akan menyemak dan meluluskannya. Anda boleh log masuk dengan serta-merta.",
+      "spectator_note": "Semua akaun bermula sebagai Penonton. Jika anda meminta peranan di atas, pentadbir persekutuan anda akan menyemaknya. Anda boleh log masuk selepas mengesahkan e-mel anda.",
       "submit_idle": "Cipta akaun",
       "submit_loading": "Mencipta...",
       "already_have_account": "Sudah ada akaun?",
       "sign_in_link": "Log masuk",
-      "referee_note_unclaimed": "Selagi belum ada persekutuan di sini, DivingHQ yang menyemak permintaan hakim utama, bukan kelab anda: hakim utama boleh bertindak di pertandingan mana-mana kelab."
+      "referee_note_unclaimed": "Selagi belum ada persekutuan di sini, DivingHQ yang menyemak permintaan hakim utama, bukan kelab anda: hakim utama boleh bertindak di pertandingan mana-mana kelab.",
+      "coming_soon": "Akan datang",
+      "coming_soon_note": "Pendaftaran akaun belum dibuka — kami sedang memperkemas DivingHQ. Sila kembali tidak lama lagi.",
+      "failed": "Pendaftaran gagal",
+      "success": "Pendaftaran berjaya. Semak e-mel anda untuk pautan pengesahan sebelum log masuk.",
+      "new_club_placeholder": "cth. Sydney Springboard",
+      "short_code_placeholder": "cth. SYD"
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "Belum ada sesiapa dari {country} di DivingHQ. Pendaftaran ini membuka akaun {country} dengan badan anda sebagai persekutuan kebangsaannya. DivingHQ menyemaknya selepas e-mel anda disahkan, dan anda boleh log masuk sementara itu.",
       "country_taken": "{org} sudah menguruskan {country} di DivingHQ, jadi tiada persekutuan kebangsaan untuk didaftarkan di sini. Hubungi sokongan DivingHQ jika ini silap.",
       "country_taken_region": "{org} sudah menguruskan {country} di DivingHQ. Badan negeri memilih wilayahnya di atas; selain itu, hubungi sokongan DivingHQ.",
-      "no_regions_hint": "Badan negeri? Hubungi sokongan DivingHQ: wilayah untuk {country} belum disediakan."
+      "no_regions_hint": "Badan negeri? Hubungi sokongan DivingHQ: wilayah untuk {country} belum disediakan.",
+      "website_invalid": "Itu tidak kelihatan seperti alamat web. Cuba sesuatu seperti diving.org.au.",
+      "coming_soon_note": "Pendaftaran persekutuan belum dibuka — kami sedang memperkemas DivingHQ. Sila kembali tidak lama lagi."
     },
     "forgot": {
       "title": "Tetapkan semula kata laluan",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} persekutuan menunggu kelulusan",
       "orgs_many": "{count} persekutuan menunggu kelulusan",
       "orgs_meta": "Semak dalam Pengurus Pengguna → penapis organisasi",
-      "claims_one": "1 tuntutan menunggu anda",
-      "claims_many": "{count} tuntutan menunggu anda",
-      "claims_meta": "Persekutuan mahu mengambil alih akaun"
+      "claims_meta": "Persekutuan mahu mengambil alih akaun",
+      "chip_pending": "Belum selesai",
+      "chip_claims": "Tuntutan",
+      "review_title": "Menunggu semakan anda",
+      "my_claims_title": "Tuntutan anda",
+      "my_claim": "Tuntutan anda ke atas {target}",
+      "quiet": "Semua tenang, tiada yang menunggu.",
+      "pill_urgent": "ditutup tidak lama lagi",
+      "pill_overdue": "tertunggak",
+      "chip_aria_tab": "{title}. Membuka tabnya pada papan pemuka ini."
     }
   },
   "profile": {
@@ -1027,6 +1044,19 @@
       "roster_import_section_label": "Import Senarai Peserta",
       "roster_import_submit": "Import senarai",
       "roster_importing": "Mengimport…"
+    },
+    "club_mode": {
+      "pick_meet": "Pilih pertandingan kelab anda yang mengandungi acara ini",
+      "create_meet_first": "Cipta pertandingan untuk kelab anda dahulu, acara diletakkan di dalamnya",
+      "hosted_by": "Dihoskan oleh",
+      "pick_host": "— Pilih kelab atau wilayah anda —"
+    },
+    "represent": {
+      "label": "Penerjun mewakili",
+      "country": "Negara mereka (pertandingan antarabangsa)",
+      "region": "Negeri / wilayah mereka (kejohanan kebangsaan)",
+      "club": "Kelab mereka (pertandingan kelab dan antara kelab)",
+      "hint": "Dipaparkan di sebelah setiap penerjun pada papan skor, keputusan dan PDF, dan menjadi asas pengumpulan jadual pingat. Penerjun tanpa kod negeri atau kelab dipaparkan dengan negaranya. Pasukan dipaparkan dengan negeri atau kelab yang dikongsi semua penerjunnya, jika tidak, negaranya."
     }
   },
   "user_manager": {
@@ -1208,7 +1238,11 @@
     "col_name": "Nama",
     "col_code": "Kod",
     "col_members": "Ahli",
-    "col_created": "Dicipta"
+    "col_created": "Dicipta",
+    "col_billing": "Bil",
+    "col_actions": "Tindakan",
+    "admins_button": "Pentadbir",
+    "rename": "Namakan semula"
   },
   "teams": {
     "title": "Pasukan",
@@ -1978,7 +2012,16 @@
     "currently_at": "kini di {club}",
     "region_request_pending": "Menunggu {region} menerima kelab anda.",
     "region_request_cancel": "Tarik balik permintaan",
-    "region_request_sent": "Permintaan dihantar. {region} akan memutuskan sama ada menerima kelab anda."
+    "region_request_sent": "Permintaan dihantar. {region} akan memutuskan sama ada menerima kelab anda.",
+    "not_admin": "Anda bukan lagi pentadbir kelab ini.",
+    "left_notice": "Anda bukan lagi pentadbir {club}.",
+    "leave_title": "Alih keluar diri anda sebagai pentadbir {club}?",
+    "leave_body": "Anda tidak lagi boleh menganjurkan pertandingan kelab atau meluluskan permintaan ahlinya. Hanya pentadbir lain boleh menambah anda semula.",
+    "leave_confirm": "Alih keluar saya",
+    "admins_intro": "Pentadbir kelab menganjurkan pertandingan kelab mereka dan menguruskan kelas, pembayaran serta yuran gabungannya. Mereka tidak mendapat akses di peringkat persekutuan.",
+    "current_admins": "Pentadbir semasa ({n})",
+    "nobody_admins": "Kelab ini belum mempunyai pentadbir.",
+    "no_other_members": "Tiada ahli lain dalam kelab ini. Pindahkan seseorang ke kelab ini dari Pengurus Pengguna dahulu."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Rantau"
     },
     "pick": "— Pilih satu —",
-    "required": "{label}: pilih satu untuk kelab baharu anda."
+    "required": "{label}: pilih satu untuk kelab baharu anda.",
+    "admins_intro": "Pentadbir wilayah menganjurkan pertandingan yang dihoskan oleh wilayah atau kelab-kelabnya, dan menyemak permintaan peranan daripada kelab di wilayah itu.",
+    "nobody_admins": "Wilayah ini belum mempunyai pentadbir.",
+    "pick_member": "— Pilih ahli kelab dalam wilayah ini —",
+    "no_candidates": "Belum ada sesiapa untuk ditambah. Letakkan kelab dalam wilayah ini dahulu, ahli mereka akan muncul di sini.",
+    "strip_title": "Wilayah",
+    "manage_admins": "Urus pentadbir {name}",
+    "none_set_up": "Belum ada wilayah (negeri, wilayah…) yang disediakan untuk organisasi ini.",
+    "set_up": "Sediakan wilayah",
+    "region_for": "Wilayah untuk {club}"
   },
   "my_region": {
     "title": "Rantau saya",
@@ -1996,7 +2048,6 @@
     "clubs": "Kelab",
     "no_clubs_title": "Belum ada kelab",
     "no_clubs_body": "Kelab dipaparkan di sini selepas memilih rantau anda semasa pendaftaran atau di halaman kelab.",
-    "members": "{n} ahli",
     "no_admin": "Belum ada pentadbir",
     "region_admins": "Pentadbir rantau",
     "pick_member": "— Pilih ahli kelab dalam rantau anda —",
@@ -2098,5 +2149,61 @@
     "contact": "Hubungi",
     "need_help": "Perlukan bantuan?",
     "english_only": "Halaman ini hanya tersedia dalam bahasa Inggeris, dan teks bahasa Inggeris yang terpakai."
+  },
+  "counts": {
+    "members_zero": "{n} ahli",
+    "members_one": "{n} ahli",
+    "members_two": "{n} ahli",
+    "members_few": "{n} ahli",
+    "members_many": "{n} ahli",
+    "members_other": "{n} ahli",
+    "open_claims_zero": "tuntutan terbuka",
+    "open_claims_one": "tuntutan terbuka",
+    "open_claims_two": "tuntutan terbuka",
+    "open_claims_few": "tuntutan terbuka",
+    "open_claims_many": "tuntutan terbuka",
+    "open_claims_other": "tuntutan terbuka",
+    "regions_added_zero": "{n} wilayah ditambah",
+    "regions_added_one": "{n} wilayah ditambah",
+    "regions_added_two": "{n} wilayah ditambah",
+    "regions_added_few": "{n} wilayah ditambah",
+    "regions_added_many": "{n} wilayah ditambah",
+    "regions_added_other": "{n} wilayah ditambah",
+    "claims_waiting_zero": "{n} tuntutan menunggu anda",
+    "claims_waiting_one": "{n} tuntutan menunggu anda",
+    "claims_waiting_two": "{n} tuntutan menunggu anda",
+    "claims_waiting_few": "{n} tuntutan menunggu anda",
+    "claims_waiting_many": "{n} tuntutan menunggu anda",
+    "claims_waiting_other": "{n} tuntutan menunggu anda"
+  },
+  "admin_settings": {
+    "title": "Peraturan undian tuntutan",
+    "intro": "Cara tuntutan persekutuan atau badan negeri ke atas akaun yang dimulakan oleh kelab diputuskan. Nilai baharu terpakai pada tuntutan yang dibuka (atau undi yang dibuang) mulai sekarang.",
+    "bounds": "Lalai {default_value}, dibenarkan {min} hingga {max}",
+    "saved": "{label} ditetapkan kepada {value}.",
+    "required": "Masukkan nilai.",
+    "not_number": "Masukkan nombor.",
+    "whole": "Masukkan nombor bulat.",
+    "range": "Masukkan nilai dari {min} hingga {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Umur kelab untuk mengundi (hari)",
+      "description": "Kelab hanya dikira sebagai pengundi tuntutan selepas berada di DivingHQ selama ini."
+    },
+    "claim_voter_min_members": {
+      "label": "Ahli untuk mengundi",
+      "description": "…dan mempunyai sekurang-kurangnya seramai ini ahli yang e-melnya disahkan, atau pernah menganjurkan pertandingan."
+    },
+    "claim_quorum_min": {
+      "label": "Pengundi minimum",
+      "description": "Jika pengundi layak kurang daripada ini, tuntutan dihantar kepada pentadbir sistem. Juga bilangan kelulusan paling sedikit untuk meluluskan tuntutan."
+    },
+    "claim_majority": {
+      "label": "Majoriti diperlukan",
+      "description": "Kelulusan mesti melebihi bahagian ini daripada pengundi layak (0.5 = majoriti mudah)."
+    },
+    "claim_timeout_days": {
+      "label": "Tempoh mengundi (hari)",
+      "description": "Apabila tamat: sekurang-kurangnya satu kelulusan tanpa bantahan meluluskan tuntutan, jika tidak ia dihantar kepada pentadbir sistem."
+    }
   }
 }

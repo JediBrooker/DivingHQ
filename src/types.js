@@ -27,11 +27,29 @@
  * @property {number}   iat             issued-at, set by jsonwebtoken
  * @property {number}   exp             expiry, set by jsonwebtoken
  * @property {boolean}  [has_dependents] Body-only (login + /api/auth/me), never in the JWT.
- * @property {{id: string, name: string, region_id: ?string}[]} [club_admin_of]
- *   Body-only (login + /api/auth/me): clubs this user admins. UI hint
- *   only, the server re-reads club_admins on every club-scoped route.
+ * @property {{id: string, name: string, region_id: ?string, org_claim_state: 'claimed'|'unclaimed'}[]} [club_admin_of]
+ *   Body-only (login + /api/auth/me): clubs this user admins, and whether
+ *   their org has a federation (claimed) or the clubs run it (unclaimed).
+ *   UI hint only, the server re-reads club_admins on every club-scoped route.
  * @property {{id: string, name: string, short_code: string}[]} [region_admin_of]
  *   Body-only, same deal for region_admins (migration 088).
+ * @property {boolean} [has_claim]
+ *   Body-only: this user filed a claim (lib/claims.js, any status but
+ *   withdrawn). Puts Claims in a claimant's nav.
+ */
+
+/**
+ * @typedef {Object} MyOpenClaim
+ * One row of `my_claims` on GET /api/dashboard: a claim this user filed
+ * that's still being decided.
+ *
+ * @property {string} id
+ * @property {'org'|'region'} target_kind
+ * @property {string} target_name   the country's name for a national claim, else the region's
+ * @property {'open'|'escalated'} status
+ * @property {'clubs'|'regions'|'parent'|'sysadmin'} approver  who decides it
+ * @property {boolean} activated    false until the claimant verified their email
+ * @property {?string} closes_at    ISO timestamp, when voting ends
  */
 
 /**
@@ -86,6 +104,8 @@
  *   per-org list (the country list is the built-in catalogue). has_live_admin
  *   is false for a claimed region whose admins have all been deleted or
  *   suspended: it can be claimed again, and its clubs can leave it.
+ * @property {boolean} [catalogue]  per-org list only: DivingHQ has a built-in list
+ *   for the org's country, so POST /api/orgs/:id/regions/seed can work.
  */
 
 /**

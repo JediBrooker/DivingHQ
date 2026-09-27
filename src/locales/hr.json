@@ -13,7 +13,9 @@
     "back": "← Natrag",
     "dashboard": "← Nadzorna ploča",
     "error_generic": "Nešto je pošlo po zlu",
-    "view_profile": "Pogledaj profil →"
+    "view_profile": "Pogledaj profil →",
+    "load_failed": "Učitavanje nije uspjelo. Provjerite vezu i pokušajte ponovno.",
+    "retry": "Pokušaj ponovno"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Klub",
       "club_independent": "— Bez kluba / nezavisni —",
       "club_new": "+ Stvori novi klub",
-      "club_no_clubs": "Za ovu organizaciju još nema registriranih klubova. Možete ga stvoriti gore.",
+      "club_no_clubs": "Ovdje još nema klubova. Na popisu odaberite „+ Stvori novi klub”.",
       "new_club_name": "Naziv novog kluba",
       "short_code_optional": "Kratka oznaka (neobavezno)",
       "requested_role": "Želim se registrirati kao",
       "role_default": "Skakač (zadano)",
       "role_spectator": "Samo gledatelj",
-      "note_label": "Bilješka za admina organizacije (neobavezno)",
+      "note_label": "Bilješka za onoga tko vas odobrava (neobavezno)",
       "note_placeholder": "npr. natjecao sam se na državnom prvenstvu prošle godine",
-      "spectator_note": "Svi računi počinju kao Gledatelj. Ako gore zatražite ulogu, admin vaše organizacije će je pregledati i odobriti. Moći ćete se odmah prijaviti.",
+      "spectator_note": "Svi računi počinju kao Gledatelj. Ako gore zatražite ulogu, pregledat će je administrator vašeg saveza. Moći ćete se prijaviti nakon što potvrdite e-poštu.",
       "submit_idle": "Stvori račun",
       "submit_loading": "Stvaranje...",
       "already_have_account": "Već imate račun?",
       "sign_in_link": "Prijava",
-      "referee_note_unclaimed": "Dok ovdje nema saveza, zahtjeve za ulogu glavnog suca pregledava DivingHQ, a ne vaš klub: glavni sudac može djelovati na natjecanjima bilo kojeg kluba."
+      "referee_note_unclaimed": "Dok ovdje nema saveza, zahtjeve za ulogu glavnog suca pregledava DivingHQ, a ne vaš klub: glavni sudac može djelovati na natjecanjima bilo kojeg kluba.",
+      "coming_soon": "Uskoro",
+      "coming_soon_note": "Registracija računa još nije otvorena — dorađujemo DivingHQ. Navratite uskoro.",
+      "failed": "Registracija nije uspjela",
+      "success": "Registracija je uspjela. Prije prijave pronađite poveznicu za potvrdu u e-pošti.",
+      "new_club_placeholder": "npr. Sydney Springboard",
+      "short_code_placeholder": "npr. SYD"
     },
     "register_org": {
       "title": "Registracija organizacije",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "Iz države {country} još nitko nije na DivingHQ-u. Registracijom se otvara račun za {country} s vašim tijelom kao nacionalnim savezom. DivingHQ ga pregledava kad potvrdite e-poštu, a u međuvremenu se možete prijaviti.",
       "country_taken": "{org} već vodi {country} na DivingHQ-u, pa ovdje nema nacionalnog saveza za registraciju. Ako je to pogreška, obratite se podršci DivingHQ-a.",
       "country_taken_region": "{org} već vodi {country} na DivingHQ-u. Regionalno tijelo odabire svoju regiju iznad; svi ostali neka se obrate podršci DivingHQ-a.",
-      "no_regions_hint": "Regionalno tijelo? Obratite se podršci DivingHQ-a: regije za {country} još nisu postavljene."
+      "no_regions_hint": "Regionalno tijelo? Obratite se podršci DivingHQ-a: regije za {country} još nisu postavljene.",
+      "website_invalid": "To ne izgleda kao web-adresa. Pokušajte nešto poput diving.org.au.",
+      "coming_soon_note": "Registracija saveza još nije otvorena — dorađujemo DivingHQ. Navratite uskoro."
     },
     "forgot": {
       "title": "Resetiranje lozinke",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} federacija čeka odobrenje",
       "orgs_many": "{count} federacija čeka odobrenje",
       "orgs_meta": "Pregledajte u Upravitelju korisnika → filtar organizacije",
-      "claims_one": "1 zahtjev čeka na vas",
-      "claims_many": "Zahtjeva koji čekaju na vas: {count}",
-      "claims_meta": "Savez želi preuzeti račun"
+      "claims_meta": "Savez želi preuzeti račun",
+      "chip_pending": "Na čekanju",
+      "chip_claims": "Zahtjevi",
+      "review_title": "Čeka vaš pregled",
+      "my_claims_title": "Vaši zahtjevi",
+      "my_claim": "Vaš zahtjev za {target}",
+      "quiet": "Sve mirno, ništa ne čeka.",
+      "pill_urgent": "uskoro se zatvara",
+      "pill_overdue": "kasni",
+      "chip_aria_tab": "{title}. Otvara pripadajuću karticu na ovoj nadzornoj ploči."
     }
   },
   "profile": {
@@ -1027,6 +1044,19 @@
       "roster_import_section_label": "Uvezi popis",
       "roster_import_submit": "Uvezi",
       "roster_importing": "Uvoz…"
+    },
+    "club_mode": {
+      "pick_meet": "Odaberite kojem natjecanju vašeg kluba pripada ova disciplina",
+      "create_meet_first": "Najprije stvorite natjecanje za svoj klub, discipline idu unutar njega",
+      "hosted_by": "Domaćin",
+      "pick_host": "— Odaberite svoj klub ili regiju —"
+    },
+    "represent": {
+      "label": "Skakači predstavljaju",
+      "country": "Svoju zemlju (međunarodna natjecanja)",
+      "region": "Svoju državu / pokrajinu (nacionalna prvenstva)",
+      "club": "Svoj klub (klupska i međuklupska natjecanja)",
+      "hint": "Prikazuje se uz svakog skakača na semaforu, u rezultatima i PDF-ovima te određuje grupiranje tablice medalja. Skakač bez oznake države ili kluba prikazuje se sa svojom zemljom. Ekipa prikazuje državu ili klub koji dijele svi njezini skakači, inače svoju zemlju."
     }
   },
   "user_manager": {
@@ -1208,7 +1238,11 @@
     "col_name": "Naziv",
     "col_code": "Kod",
     "col_members": "Članovi",
-    "col_created": "Stvoreno"
+    "col_created": "Stvoreno",
+    "col_billing": "Naplata",
+    "col_actions": "Radnje",
+    "admins_button": "Administratori",
+    "rename": "Preimenuj"
   },
   "teams": {
     "title": "Timovi",
@@ -1978,7 +2012,16 @@
     "currently_at": "trenutačno u {club}",
     "region_request_pending": "Čeka se da regija {region} primi vaš klub.",
     "region_request_cancel": "Povuci zahtjev",
-    "region_request_sent": "Zahtjev je poslan. Regija {region} odlučuje hoće li primiti vaš klub."
+    "region_request_sent": "Zahtjev je poslan. Regija {region} odlučuje hoće li primiti vaš klub.",
+    "not_admin": "Više niste administrator ovog kluba.",
+    "left_notice": "Više niste administrator kluba {club}.",
+    "leave_title": "Ukloniti se iz administratora kluba {club}?",
+    "leave_body": "Više nećete moći organizirati natjecanja kluba ni odobravati zahtjeve njegovih članova. Natrag vas može dodati samo drugi administrator.",
+    "leave_confirm": "Ukloni me",
+    "admins_intro": "Administratori kluba organiziraju natjecanja svog kluba i brinu o njegovim tečajevima, isplatama i članarinama. Nemaju pristup na razini cijelog saveza.",
+    "current_admins": "Trenutačni administratori ({n})",
+    "nobody_admins": "Ovaj klub još nema administratora.",
+    "no_other_members": "U ovom klubu nema drugih članova. Najprije nekoga premjestite u klub putem Upravitelja korisnika."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Regija"
     },
     "pick": "— Odaberite —",
-    "required": "{label}: odaberite za svoj novi klub."
+    "required": "{label}: odaberite za svoj novi klub.",
+    "admins_intro": "Administratori regije organiziraju natjecanja kojima su domaćini njihova regija ili njezini klubovi te pregledavaju zahtjeve za uloge iz klubova regije.",
+    "nobody_admins": "Ova regija još nema administratora.",
+    "pick_member": "— Odaberite člana kluba iz ove regije —",
+    "no_candidates": "Još nema koga dodati. Najprije smjestite klubove u ovu regiju, njihovi će se članovi pojaviti ovdje.",
+    "strip_title": "Regije",
+    "manage_admins": "Upravljaj administratorima za {name}",
+    "none_set_up": "Za ovu organizaciju još nisu postavljene regije (države, pokrajine…).",
+    "set_up": "Postavi regije",
+    "region_for": "Regija kluba {club}"
   },
   "my_region": {
     "title": "Moja regija",
@@ -1996,7 +2048,6 @@
     "clubs": "Klubovi",
     "no_clubs_title": "Još nema klubova",
     "no_clubs_body": "Klubovi se ovdje pojavljuju kad odaberu vašu regiju, pri registraciji ili na stranici kluba.",
-    "members": "{n} članova",
     "no_admin": "Još nema administratora",
     "region_admins": "Administratori regije",
     "pick_member": "— Odaberite člana nekog kluba iz vaše regije —",
@@ -2098,5 +2149,61 @@
     "contact": "Kontakt",
     "need_help": "Trebate pomoć?",
     "english_only": "Ova je stranica dostupna samo na engleskom jeziku i mjerodavan je engleski tekst."
+  },
+  "counts": {
+    "members_zero": "{n} članova",
+    "members_one": "{n} član",
+    "members_two": "{n} članova",
+    "members_few": "{n} člana",
+    "members_many": "{n} članova",
+    "members_other": "{n} članova",
+    "open_claims_zero": "otvorenih zahtjeva",
+    "open_claims_one": "otvoreni zahtjev",
+    "open_claims_two": "otvorenih zahtjeva",
+    "open_claims_few": "otvorena zahtjeva",
+    "open_claims_many": "otvorenih zahtjeva",
+    "open_claims_other": "otvorenih zahtjeva",
+    "regions_added_zero": "Dodano {n} regija",
+    "regions_added_one": "Dodana {n} regija",
+    "regions_added_two": "Dodano {n} regija",
+    "regions_added_few": "Dodane {n} regije",
+    "regions_added_many": "Dodano {n} regija",
+    "regions_added_other": "Dodano {n} regija",
+    "claims_waiting_zero": "{n} zahtjeva čeka na vas",
+    "claims_waiting_one": "{n} zahtjev čeka na vas",
+    "claims_waiting_two": "{n} zahtjeva čeka na vas",
+    "claims_waiting_few": "{n} zahtjeva čekaju na vas",
+    "claims_waiting_many": "{n} zahtjeva čeka na vas",
+    "claims_waiting_other": "{n} zahtjeva čeka na vas"
+  },
+  "admin_settings": {
+    "title": "Pravila glasanja o zahtjevima",
+    "intro": "Kako se odlučuje o zahtjevu saveza ili regionalnog tijela za preuzimanje računa koji su pokrenuli klubovi. Nove vrijednosti vrijede za zahtjeve otvorene (ili glasove dane) od sada.",
+    "bounds": "Zadano {default_value}, dopušteno od {min} do {max}",
+    "saved": "{label} postavljeno na {value}.",
+    "required": "Unesite vrijednost.",
+    "not_number": "Unesite broj.",
+    "whole": "Unesite cijeli broj.",
+    "range": "Unesite vrijednost od {min} do {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Starost kluba za glasanje (dani)",
+      "description": "Klub se računa kao glasač o zahtjevu tek kad je toliko dugo na DivingHQ-u."
+    },
+    "claim_voter_min_members": {
+      "label": "Članova za glasanje",
+      "description": "…i ima barem toliko članova s potvrđenom e-poštom ili je već organizirao natjecanje."
+    },
+    "claim_quorum_min": {
+      "label": "Najmanje glasača",
+      "description": "Ako je glasača manje od ovoga, zahtjev ide administratoru sustava. Ujedno najmanji broj odobrenja kojim zahtjev prolazi."
+    },
+    "claim_majority": {
+      "label": "Potrebna većina",
+      "description": "Odobrenja moraju činiti više od ovog udjela glasača s pravom glasa (0.5 = obična većina)."
+    },
+    "claim_timeout_days": {
+      "label": "Trajanje glasanja (dani)",
+      "description": "Kad istekne: barem jedno odobrenje i nijedan prigovor znače da zahtjev prolazi, inače ide administratoru sustava."
+    }
   }
 }

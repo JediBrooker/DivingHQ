@@ -73,36 +73,31 @@ onMounted(load)
 <template>
   <BaseModal max-width="520px" @close="$emit('close')">
     <template #default="{ titleId }">
-      <ModalHeader :title-id="titleId" title="Region admins" :subtitle="region.name" @close="$emit('close')" />
+      <ModalHeader :title-id="titleId" :title="$t('my_region.region_admins')" :subtitle="region.name" @close="$emit('close')" />
       <div class="lb-body">
-        <p class="hint-line intro">
-          Region admins run meets their region or its clubs host, and review
-          role requests from the region's clubs.
-        </p>
+        <p class="hint-line intro">{{ $t('regions.admins_intro') }}</p>
 
-        <div class="section-label">Current admins ({{ admins.length }})</div>
-        <div v-if="loading" class="empty">Loading…</div>
+        <div class="section-label">{{ $t('my_club.current_admins', { n: admins.length }) }}</div>
+        <div v-if="loading" class="empty">{{ $t('common.loading') }}</div>
         <ul v-else-if="admins.length" class="admin-list">
           <li v-for="a in admins" :key="a.id" class="admin-row">
             <span class="admin-name">{{ a.full_name }} <span class="admin-user">@{{ a.username }}</span></span>
-            <button class="btn btn-danger btn-sm" :disabled="busy" @click="remove(a)">Remove</button>
+            <button class="btn btn-danger btn-sm" :disabled="busy" @click="remove(a)">{{ $t('my_club.remove') }}</button>
           </li>
         </ul>
-        <div v-else class="empty">Nobody admins this region yet.</div>
+        <div v-else class="empty">{{ $t('regions.nobody_admins') }}</div>
 
-        <div class="section-label" style="margin-top:1.25rem">Add an admin</div>
+        <div class="section-label" style="margin-top:1.25rem">{{ $t('my_club.add_admin') }}</div>
         <div class="add-row">
-          <select class="select" v-model="toAdd" :disabled="loading || !addable.length">
-            <option value="">— Pick a member of this region's clubs —</option>
+          <select class="select" v-model="toAdd" :disabled="loading || !addable.length" :aria-label="$t('my_club.add_admin')">
+            <option value="">{{ $t('regions.pick_member') }}</option>
             <option v-for="m in addable" :key="m.id" :value="m.id">
               {{ m.full_name }} (@{{ m.username }}) · {{ m.club_name }}
             </option>
           </select>
-          <button class="btn btn-primary btn-sm" :disabled="!toAdd || busy" @click="add">Add</button>
+          <button class="btn btn-primary btn-sm" :disabled="!toAdd || busy" @click="add">{{ $t('my_club.add') }}</button>
         </div>
-        <p v-if="!loading && !addable.length" class="hint-line">
-          No one to add yet. Put clubs in this region first, their members show up here.
-        </p>
+        <p v-if="!loading && !addable.length" class="hint-line">{{ $t('regions.no_candidates') }}</p>
       </div>
     </template>
   </BaseModal>

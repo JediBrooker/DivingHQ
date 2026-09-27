@@ -13,7 +13,9 @@
     "back": "← Tilbake",
     "dashboard": "← Oversikt",
     "error_generic": "Noe gikk galt",
-    "view_profile": "Vis profil →"
+    "view_profile": "Vis profil →",
+    "load_failed": "Kunne ikke lastes inn. Sjekk tilkoblingen og prøv igjen.",
+    "retry": "Prøv igjen"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Klubb",
       "club_independent": "— Ingen klubb / uavhengig —",
       "club_new": "+ Opprett en ny klubb",
-      "club_no_clubs": "Ingen klubber er registrert for denne organisasjonen ennå. Du kan opprette en ovenfor.",
+      "club_no_clubs": "Her er det ingen klubber ennå. Velg «+ Opprett en ny klubb» i listen.",
       "new_club_name": "Navn på ny klubb",
       "short_code_optional": "Kortkode (valgfri)",
       "requested_role": "Jeg vil registrere meg som",
       "role_default": "Stuper (standard)",
       "role_spectator": "Kun tilskuer",
-      "note_label": "Melding til organisasjonens administrator (valgfritt)",
+      "note_label": "Melding til den som godkjenner deg (valgfritt)",
       "note_placeholder": "f.eks. jeg konkurrerte på NM i fjor",
-      "spectator_note": "Alle kontoer starter som tilskuer. Hvis du ber om en rolle ovenfor, vil administratoren i organisasjonen din vurdere og godkjenne den. Du kan logge inn med en gang.",
+      "spectator_note": "Alle kontoer starter som tilskuer. Hvis du ber om en rolle ovenfor, vurderer forbundets administrator den. Du kan logge inn når du har bekreftet e-posten din.",
       "submit_idle": "Opprett konto",
       "submit_loading": "Oppretter...",
       "already_have_account": "Har du allerede en konto?",
       "sign_in_link": "Logg inn",
-      "referee_note_unclaimed": "Så lenge det ikke finnes et forbund her, vurderer DivingHQ forespørsler om å bli overdommer, ikke klubben din: en overdommer kan handle ved alle klubbers stevner."
+      "referee_note_unclaimed": "Så lenge det ikke finnes et forbund her, vurderer DivingHQ forespørsler om å bli overdommer, ikke klubben din: en overdommer kan handle ved alle klubbers stevner.",
+      "coming_soon": "Kommer snart",
+      "coming_soon_note": "Registrering av kontoer er ikke åpnet ennå — vi legger siste hånd på DivingHQ. Kom gjerne tilbake snart.",
+      "failed": "Registreringen mislyktes",
+      "success": "Registreringen er fullført. Finn bekreftelseslenken i e-posten din før du logger inn.",
+      "new_club_placeholder": "f.eks. Sydney Springboard",
+      "short_code_placeholder": "f.eks. SYD"
     },
     "register_org": {
       "title": "Registrer organisasjon",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "Ingen fra {country} er på DivingHQ ennå. Registreringen oppretter {country}s konto med organet ditt som nasjonalt forbund. DivingHQ vurderer det når du har bekreftet e-posten, og du kan logge inn i mellomtiden.",
       "country_taken": "{org} driver allerede {country} på DivingHQ, så det er ikke noe nasjonalt forbund å registrere her. Kontakt DivingHQ-støtte hvis det er feil.",
       "country_taken_region": "{org} driver allerede {country} på DivingHQ. Et regionalt organ velger regionen sin ovenfor; alle andre kontakter DivingHQ-støtte.",
-      "no_regions_hint": "Regionalt organ? Kontakt DivingHQ-støtte: regionene for {country} er ikke satt opp ennå."
+      "no_regions_hint": "Regionalt organ? Kontakt DivingHQ-støtte: regionene for {country} er ikke satt opp ennå.",
+      "website_invalid": "Det ser ikke ut som en nettadresse. Prøv noe som diving.org.au.",
+      "coming_soon_note": "Registrering av forbund er ikke åpnet ennå — vi legger siste hånd på DivingHQ. Kom gjerne tilbake snart."
     },
     "forgot": {
       "title": "Tilbakestill passord",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} forbund venter på godkjenning",
       "orgs_many": "{count} forbund venter på godkjenning",
       "orgs_meta": "Gå gjennom i Brukeradministrasjon → org-filter",
-      "claims_one": "1 krav venter på deg",
-      "claims_many": "{count} krav venter på deg",
-      "claims_meta": "Et forbund vil overta en konto"
+      "claims_meta": "Et forbund vil overta en konto",
+      "chip_pending": "Venter",
+      "chip_claims": "Krav",
+      "review_title": "Venter på din vurdering",
+      "my_claims_title": "Dine krav",
+      "my_claim": "Ditt krav på {target}",
+      "quiet": "Alt er rolig, ingenting venter.",
+      "pill_urgent": "stenger snart",
+      "pill_overdue": "forsinket",
+      "chip_aria_tab": "{title}. Åpner den tilhørende fanen i denne oversikten."
     }
   },
   "role": {
@@ -1038,6 +1055,19 @@
       "roster_import_section_label": "Importer startliste",
       "roster_import_submit": "Importer",
       "roster_importing": "Importerer…"
+    },
+    "club_mode": {
+      "pick_meet": "Velg hvilket av klubbens stevner øvelsen hører til",
+      "create_meet_first": "Opprett først et stevne for klubben, øvelsene ligger i det",
+      "hosted_by": "Arrangør",
+      "pick_host": "— Velg klubben eller regionen din —"
+    },
+    "represent": {
+      "label": "Stuperne representerer",
+      "country": "Landet sitt (internasjonale stevner)",
+      "region": "Delstaten / provinsen sin (nasjonale mesterskap)",
+      "club": "Klubben sin (klubb- og mellomklubbstevner)",
+      "hint": "Vises ved hver stuper på resultattavlen, i resultater og PDF-er og avgjør hvordan medaljeoversikten grupperes. En stuper uten delstats- eller klubbkode vises med landet sitt. Et lag vises med staten eller klubben alle stuperne deler, ellers med landet sitt."
     }
   },
   "user_manager": {
@@ -1219,7 +1249,11 @@
     "col_name": "Navn",
     "col_code": "Kode",
     "col_members": "Medlemmer",
-    "col_created": "Opprettet"
+    "col_created": "Opprettet",
+    "col_billing": "Fakturering",
+    "col_actions": "Handlinger",
+    "admins_button": "Administratorer",
+    "rename": "Gi nytt navn"
   },
   "teams": {
     "title": "Lag",
@@ -1978,7 +2012,16 @@
     "currently_at": "nå i {club}",
     "region_request_pending": "Venter på at {region} tar inn klubben din.",
     "region_request_cancel": "Trekk tilbake forespørselen",
-    "region_request_sent": "Forespørsel sendt. {region} avgjør om klubben din tas inn."
+    "region_request_sent": "Forespørsel sendt. {region} avgjør om klubben din tas inn.",
+    "not_admin": "Du er ikke lenger administrator for denne klubben.",
+    "left_notice": "Du er ikke lenger administrator for {club}.",
+    "leave_title": "Vil du fjerne deg selv som administrator for {club}?",
+    "leave_body": "Du kan ikke lenger arrangere klubbens stevner eller godkjenne medlemmenes forespørsler. Bare en annen administrator kan legge deg til igjen.",
+    "leave_confirm": "Fjern meg",
+    "admins_intro": "Klubbadministratorer arrangerer klubbens stevner og tar seg av dens partier, utbetalinger og tilknytningsavgifter. De får ingen tilgang til hele forbundet.",
+    "current_admins": "Nåværende administratorer ({n})",
+    "nobody_admins": "Klubben har ingen administrator ennå.",
+    "no_other_members": "Det er ingen andre medlemmer i klubben. Flytt først noen inn i den fra Brukerbehandling."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Region"
     },
     "pick": "— Velg én —",
-    "required": "{label}: velg én for den nye klubben din."
+    "required": "{label}: velg én for den nye klubben din.",
+    "admins_intro": "Regionsadministratorer arrangerer stevner som regionen eller klubbene i den er vert for, og behandler rolleforespørsler fra regionens klubber.",
+    "nobody_admins": "Regionen har ingen administrator ennå.",
+    "pick_member": "— Velg et medlem fra regionens klubber —",
+    "no_candidates": "Ingen å legge til ennå. Plasser først klubber i regionen, så dukker medlemmene deres opp her.",
+    "strip_title": "Regioner",
+    "manage_admins": "Administrer hvem som styrer {name}",
+    "none_set_up": "Det er ennå ikke satt opp regioner (delstater, provinser…) for denne organisasjonen.",
+    "set_up": "Sett opp regioner",
+    "region_for": "Velg region for {club}"
   },
   "my_region": {
     "title": "Min region",
@@ -1996,7 +2048,6 @@
     "clubs": "Klubber",
     "no_clubs_title": "Ingen klubber ennå",
     "no_clubs_body": "Klubber vises her når de har valgt regionen din ved registrering eller på klubbsiden.",
-    "members": "{n} medlemmer",
     "no_admin": "Ingen administrator ennå",
     "region_admins": "Regionsadministratorer",
     "pick_member": "— Velg et medlem av en klubb i regionen din —",
@@ -2098,5 +2149,61 @@
     "contact": "Kontakt",
     "need_help": "Trenger du hjelp?",
     "english_only": "Denne siden finnes bare på engelsk, og det er den engelske teksten som gjelder."
+  },
+  "counts": {
+    "members_zero": "{n} medlemmer",
+    "members_one": "{n} medlem",
+    "members_two": "{n} medlemmer",
+    "members_few": "{n} medlemmer",
+    "members_many": "{n} medlemmer",
+    "members_other": "{n} medlemmer",
+    "open_claims_zero": "åpne krav",
+    "open_claims_one": "åpent krav",
+    "open_claims_two": "åpne krav",
+    "open_claims_few": "åpne krav",
+    "open_claims_many": "åpne krav",
+    "open_claims_other": "åpne krav",
+    "regions_added_zero": "La til {n} regioner",
+    "regions_added_one": "La til {n} region",
+    "regions_added_two": "La til {n} regioner",
+    "regions_added_few": "La til {n} regioner",
+    "regions_added_many": "La til {n} regioner",
+    "regions_added_other": "La til {n} regioner",
+    "claims_waiting_zero": "{n} krav venter på deg",
+    "claims_waiting_one": "{n} krav venter på deg",
+    "claims_waiting_two": "{n} krav venter på deg",
+    "claims_waiting_few": "{n} krav venter på deg",
+    "claims_waiting_many": "{n} krav venter på deg",
+    "claims_waiting_other": "{n} krav venter på deg"
+  },
+  "admin_settings": {
+    "title": "Stemmeregler for krav",
+    "intro": "Hvordan et forbunds eller regionalt organs krav på en konto klubbene startet blir avgjort. Nye verdier gjelder for krav som åpnes (eller stemmer som avgis) fra nå av.",
+    "bounds": "Standard {default_value}, tillatt {min} til {max}",
+    "saved": "{label} satt til {value}.",
+    "required": "Skriv inn en verdi.",
+    "not_number": "Skriv inn et tall.",
+    "whole": "Skriv inn et heltall.",
+    "range": "Skriv inn en verdi fra {min} til {max}.",
+    "claim_voter_min_age_days": {
+      "label": "Klubbens alder for å stemme (dager)",
+      "description": "En klubb teller først som stemmeberettiget i et krav når den har vært på DivingHQ så lenge."
+    },
+    "claim_voter_min_members": {
+      "label": "Medlemmer for å stemme",
+      "description": "…og den har minst så mange medlemmer med bekreftet e-post, eller den har arrangert et stevne."
+    },
+    "claim_quorum_min": {
+      "label": "Minste antall stemmeberettigede",
+      "description": "Er det færre stemmeberettigede enn dette, går kravet i stedet til systemadministratoren. Også det minste antallet godkjenninger som kan vedta et krav."
+    },
+    "claim_majority": {
+      "label": "Nødvendig flertall",
+      "description": "Godkjenningene må utgjøre mer enn denne andelen av de stemmeberettigede (0.5 = simpelt flertall)."
+    },
+    "claim_timeout_days": {
+      "label": "Stemmeperiode (dager)",
+      "description": "Når den er ute: minst én godkjenning og ingen innsigelser vedtar kravet, ellers går det til systemadministratoren."
+    }
   }
 }

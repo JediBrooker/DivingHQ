@@ -11,24 +11,30 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { usePlural } from '@/composables/usePlural'
 import { showError } from '@/composables/useNotify'
 import EmptyState from '@/components/EmptyState.vue'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
 import JoinRequestQueue from '@/components/JoinRequestQueue.vue'
+import LoadError from '@/components/LoadError.vue'
 
 const { t } = useI18n()
+const { tn } = usePlural()
 const auth = useAuthStore()
 
 const regions = computed(() => auth.regionAdminOf)
 // Per region id: { region, clubs, admins, candidates, canManage, toAdd }
 const detail = ref({})
 const busyId = ref(null)
+// Region ids whose load failed, each gets a retry instead of a blank section.
+const failed = ref({})
 
 function labelFor(key) {
   return key ? t(`regions.label.${key}`) : ''
 }
 
 async function load(region) {
+  failed.value[region.id] = false
   try {
     const [overview, admins] = await Promise.all([
       auth.apiFetch(`/api/regions/${region.id}/overview`),
@@ -41,8 +47,8 @@ async function load(region) {
       canManage: !!admins.can_manage,
       toAdd: '',
     }
-  } catch (err) {
-    showError(err.message)
+  } catch {
+    failed.value[region.id] = true
   }
 }
 
@@ -161,6 +167,7 @@ onMounted(reloadAll)
         <RouterLink :to="{ path: `/records/region/${r.id}`, query: detail[r.id]?.region?.org_id ? { org: detail[r.id].region.org_id } : {} }"
                     class="records-link" :data-testid="`region-records-${r.id}`">{{ $t('records.view') }}</RouterLink>
       </div>
+      <LoadError v-if="failed[r.id] && !detail[r.id]" @retry="load(r)" />
       <template v-if="detail[r.id]">
         <h3 class="sub-title">{{ $t('my_region.clubs') }}</h3>
         <EmptyState
@@ -173,7 +180,7 @@ onMounted(reloadAll)
           <li v-for="c in detail[r.id].clubs" :key="c.id" class="row card-sm">
             <div class="who">
               <span class="name">{{ c.name }}<template v-if="c.short_code"> · {{ c.short_code }}</template></span>
-              <span class="meta">{{ $t('my_region.members', { n: c.member_count }) }}</span>
+              <span class="meta">{{ tn('counts.members', c.member_count) }}</span>
             </div>
             <span class="meta admins">
               <template v-if="c.admins.length">{{ c.admins.map(a => a.full_name).join(', ') }}</template>

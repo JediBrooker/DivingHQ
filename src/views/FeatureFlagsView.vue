@@ -3,14 +3,19 @@
 // enforced for real by requireSystemAdmin on the API; the route meta just
 // keeps the link out of everyone else's way.
 //
-// English-only, no i18n keys. Adding to en.json obliges a translation into
-// every locale (test/i18n-parity.test.js) and this screen is read by roughly
-// one person. Same call the payments admin UI already made.
+// The kill-switch half is English-only, no i18n keys. Adding to en.json
+// obliges a translation into every locale (test/i18n-parity.test.js) and
+// that part is read by roughly one person. Same call the payments admin UI
+// already made. The claim voting rules further down are translated: they
+// came in with the club-first screens, which all are.
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useFeaturesStore } from '@/stores/features'
 import { showSuccess, showError } from '@/composables/useNotify'
+import LoadError from '@/components/LoadError.vue'
 
+const { t, te } = useI18n()
 const auth = useAuthStore()
 const features = useFeaturesStore()
 
@@ -22,25 +27,58 @@ const loading = ref(true)
 const settings = ref([])
 const settingDraft = ref({})
 const settingSaving = ref({})
+const settingsFailed = ref(false)
 
 async function loadSettings() {
+  settingsFailed.value = false
   try {
     settings.value = await auth.apiFetch('/api/admin/settings')
     settingDraft.value = Object.fromEntries(settings.value.map(s => [s.key, s.value]))
-  } catch (err) {
-    showError(err.message || 'Could not load the claim settings.')
+  } catch {
+    settingsFailed.value = true
   }
 }
 
+// Label and description in the reader's language. The server's English
+// is the fallback for a knob added to lib/platform-settings.js before its
+// strings were.
+function settingText(s, field) {
+  const key = `admin_settings.${s.key}.${field}`
+  return te(key) ? t(key) : s[field]
+}
+
+// What's wrong with the draft, or '' if it's fine. An emptied type=number
+// field reads back as '', and Number('') is 0, which the old check took
+// for a new value and sent: clearing "Club age to vote" to retype it and
+// hitting Save let brand-new clubs vote on claims.
+function settingError(s) {
+  const raw = String(settingDraft.value[s.key] ?? '').trim()
+  if (raw === '') return t('admin_settings.required')
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return t('admin_settings.not_number')
+  if (s.integer && !Number.isInteger(n)) return t('admin_settings.whole')
+  if (n < s.min || n > s.max) return t('admin_settings.range', { min: s.min, max: s.max })
+  return ''
+}
+
+function settingUnchanged(s) {
+  return Number(String(settingDraft.value[s.key] ?? '').trim()) === s.value
+}
+
 async function saveSetting(s) {
+  // The button is disabled in both cases; this is the belt to its braces.
+  if (settingError(s) || settingUnchanged(s)) return
   settingSaving.value = { ...settingSaving.value, [s.key]: true }
   try {
     const res = await auth.apiFetch(`/api/admin/settings/${s.key}`, {
       method: 'PUT',
-      body: JSON.stringify({ value: Number(settingDraft.value[s.key]) }),
+      // The trimmed text as typed; the server parses it and refuses
+      // anything that isn't a number in range.
+      body: JSON.stringify({ value: String(settingDraft.value[s.key]).trim() }),
     })
     s.value = res.value
-    showSuccess(`${s.label} set to ${res.value}.`)
+    settingDraft.value[s.key] = res.value
+    showSuccess(t('admin_settings.saved', { label: settingText(s, 'label'), value: res.value }))
   } catch (err) {
     showError(err.message)
     settingDraft.value[s.key] = s.value
@@ -138,26 +176,30 @@ onMounted(() => { load(); loadSettings() })
           checkout routes stay dark whatever this switch says.
         </p>
 
-        <div v-if="settings.length" class="ff-head ff-section">
-          <h2 class="ff-h2">Claim voting rules</h2>
-          <p class="ff-sub">
-            How a federation or state body's claim on an account the clubs started gets decided.
-            New values apply to claims opened (or votes cast) from now on.
-          </p>
+        <div v-if="settings.length || settingsFailed" class="ff-head ff-section">
+          <h2 class="ff-h2">{{ $t('admin_settings.title') }}</h2>
+          <p class="ff-sub">{{ $t('admin_settings.intro') }}</p>
         </div>
+        <LoadError v-if="settingsFailed" @retry="loadSettings" />
         <div v-for="s in settings" :key="s.key" class="card ff-row">
           <div class="ff-info">
-            <label class="ff-name" :for="`set-${s.key}`">{{ s.label }}</label>
-            <p class="ff-desc">{{ s.description }}</p>
-            <p class="ff-meta">Default {{ s.default }}, allowed {{ s.min }} to {{ s.max }}</p>
+            <label class="ff-name" :for="`set-${s.key}`">{{ settingText(s, 'label') }}</label>
+            <p class="ff-desc">{{ settingText(s, 'description') }}</p>
+            <p class="ff-meta">{{ $t('admin_settings.bounds', { default_value: s.default, min: s.min, max: s.max }) }}</p>
           </div>
-          <div class="ff-setting">
-            <input :id="`set-${s.key}`" class="input input-num" type="number"
-                   :min="s.min" :max="s.max" :step="s.integer ? 1 : 0.05"
-                   v-model="settingDraft[s.key]">
-            <button type="button" class="btn btn-sm btn-primary"
-                    :disabled="settingSaving[s.key] || Number(settingDraft[s.key]) === s.value"
-                    @click="saveSetting(s)">Save</button>
+          <div class="ff-setting-col">
+            <div class="ff-setting">
+              <input :id="`set-${s.key}`" class="input input-num" type="number"
+                     :min="s.min" :max="s.max" :step="s.integer ? 1 : 0.05"
+                     :aria-invalid="settingError(s) ? 'true' : 'false'"
+                     :aria-describedby="settingError(s) ? `set-${s.key}-err` : undefined"
+                     v-model="settingDraft[s.key]"
+                     @keydown.enter.prevent="saveSetting(s)">
+              <button type="button" class="btn btn-sm btn-primary"
+                      :disabled="settingSaving[s.key] || !!settingError(s) || settingUnchanged(s)"
+                      @click="saveSetting(s)">{{ $t('common.save') }}</button>
+            </div>
+            <p v-if="settingError(s)" :id="`set-${s.key}-err`" class="ff-err" role="alert">{{ settingError(s) }}</p>
           </div>
         </div>
       </template>
@@ -203,7 +245,9 @@ onMounted(() => { load(); loadSettings() })
 
 .ff-section { margin-top: 2rem; }
 .ff-h2 { font-size: var(--text-h2); font-weight: 650; color: var(--text); margin: 0; }
-.ff-setting { display: flex; gap: .5rem; align-items: center; flex: none; }
+.ff-setting-col { display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; flex: none; max-width: 14rem; }
+.ff-setting { display: flex; gap: .5rem; align-items: center; }
+.ff-err { margin: 0; color: var(--danger-fg); font-size: .75rem; text-align: end; }
 .input-num { width: 5.5rem; }
 
 /* The button must not shrink under a long description. */

@@ -4917,3 +4917,218 @@ test("account deletion withdraws a live claim and ends guardian links", async (t
     await claimKit.wipe(CODE);
   }
 });
+
+// ---------------------------------------------------------------------
+// Track d: club-first follow-ups.
+// ---------------------------------------------------------------------
+
+// A claimant signs in as a plain spectator. has_claim on the session body
+// is what puts Claims in their nav, and my_claims on the dashboard bundle
+// is their chip while it's being decided.
+test("claims: a claimant is told about their own claim on sign-in and on the dashboard", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "VUT";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Port Vila Divers");
+    const B = await claimKit.founder(CODE, "Luganville Divers");
+    for (const x of [A, B]) await claimKit.makeEligible(x.clubId);
+    assert.equal((await claimKit.login(A.username)).has_claim, false, "a club founder hasn't claimed anything");
+
+    const fed = await claimKit.claim({ org_name: "Vanuatu Diving Federation", country_code: CODE });
+    assert.equal(fed.res.status, 201, JSON.stringify(fed.res.body));
+    await claimKit.verify(fed.id);
+
+    const login = await claimKit.login(fed.username);
+    assert.equal(login.has_claim, true);
+    assert.equal(login.user.has_claim, true, "the nested user object carries it too");
+    const me = await fetchJson("GET", "/api/auth/me", { token: login.token });
+    assert.equal(me.body.user.has_claim, true);
+
+    const dash = await fetchJson("GET", "/api/dashboard", { token: login.token });
+    assert.equal(dash.status, 200);
+    assert.equal(dash.body.my_claims.length, 1);
+    const mine = dash.body.my_claims[0];
+    assert.equal(mine.id, fed.res.body.claim_id);
+    assert.equal(mine.target_kind, "org");
+    assert.equal(mine.target_name, "Vanuatu", "a national claim is named for the country");
+    assert.equal(mine.status, "open");
+    assert.equal(mine.approver, "clubs");
+    assert.equal(mine.activated, true);
+    assert.ok(mine.closes_at, "voting has a closing date once activated");
+    // A voter's bundle doesn't list someone else's claim as theirs.
+    assert.deepEqual((await fetchJson("GET", "/api/dashboard", { token: A.token })).body.my_claims, []);
+
+    // Once it's decided the chip goes, but Claims stays in the nav so
+    // they can see how it went.
+    for (const x of [A, B]) {
+      await fetchJson("POST", `/api/claims/${mine.id}/vote`, { token: x.token, body: { vote: "approve" } });
+    }
+    const after = await claimKit.login(fed.username);
+    assert.deepEqual((await fetchJson("GET", "/api/dashboard", { token: after.token })).body.my_claims, []);
+    assert.equal(after.has_claim, true);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+// My club tells "your federation appoints the admins" apart from "you're
+// not an admin any more" by the org's claim_state on club_admin_of, and
+// after removing yourself the session body has to stop listing the club.
+test("club admins: club_admin_of says who runs the org, and self-removal drops the club", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "SLB";
+  await claimKit.wipe(CODE);
+  const fedState = await setupFixture({ withEvent: false });
+  try {
+    const A = await claimKit.founder(CODE, "Honiara Divers");
+    const login = await claimKit.login(A.username);
+    assert.equal(login.club_admin_of[0].org_claim_state, "unclaimed");
+
+    // A second admin, so the club isn't left with none.
+    const orgId = (await pool.query("SELECT org_id FROM clubs WHERE id = $1", [A.clubId])).rows[0].org_id;
+    const bId = await insertUser({ orgId, username: `int-slb-${crypto.randomBytes(4).toString("hex")}`, fullName: "Gizo Admin", role: "spectator" });
+    await pool.query("UPDATE users SET club_id = $1 WHERE id = $2", [A.clubId, bId]);
+    assert.equal((await fetchJson("POST", `/api/clubs/${A.clubId}/admins`, { token: A.token, body: { user_id: bId } })).status, 201);
+
+    // A takes themselves off. Their session no longer lists the club and
+    // the admins list now refuses them, which My club reads as "not an
+    // admin any more" because the org is unclaimed.
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${A.clubId}/admins/${A.id}`, { token: A.token })).status, 200);
+    const me = await fetchJson("GET", "/api/auth/me", { token: A.token });
+    assert.deepEqual(me.body.user.club_admin_of, []);
+    assert.equal((await fetchJson("GET", `/api/clubs/${A.clubId}/admins`, { token: A.token })).status, 403);
+
+    // Under a federation the same row says claimed.
+    const clubId = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, 'Federation Club') RETURNING id", [fedState.orgId],
+    )).rows[0].id;
+    const judgeName = `int-fedclub-${fedState.slug}`;
+    const judgeId = await insertUser({ orgId: fedState.orgId, username: judgeName, fullName: "Fed Club Admin", role: "judge" });
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [clubId, judgeId, fedState.orgId]);
+    // insertUser's fixture password.
+    const fedLogin = await claimKit.login(judgeName, "not-used-here");
+    assert.equal(fedLogin.club_admin_of[0].org_claim_state, "claimed");
+    assert.equal((await fetchJson("GET", `/api/clubs/${clubId}/admins`, { token: fedLogin.token })).status, 403,
+      "the federation appoints, a club admin there can't manage the list");
+  } finally {
+    await pool.query("DELETE FROM club_admins WHERE org_id = $1", [fedState.orgId]).catch(() => {});
+    await pool.query("DELETE FROM users WHERE org_id = $1", [fedState.orgId]).catch(() => {});
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [fedState.orgId]).catch(() => {});
+    await teardownFixture(fedState);
+    await claimKit.wipe(CODE);
+  }
+});
+
+// The Clubs screen only offers "Set up regions" where the seed route can
+// work, which is decided by lib/regions.json having a list for the org's
+// country. Pending orgs so nobody's by-country lookup trips over them.
+test("regions: an org's region list says whether its country has a built-in catalogue", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const ids = [];
+  try {
+    for (const code of ["GBR", "MHL"]) {
+      const slug = `int-cat-${code.toLowerCase()}-${crypto.randomBytes(3).toString("hex")}`;
+      ids.push((await pool.query(
+        "INSERT INTO organisations (name, slug, country_code, status) VALUES ($1, $2, $3, 'pending') RETURNING id",
+        [`Catalogue ${code}`, slug, code],
+      )).rows[0].id);
+    }
+    const gbr = await fetchJson("GET", `/api/orgs/${ids[0]}/regions`);
+    assert.equal(gbr.status, 200);
+    assert.equal(gbr.body.catalogue, true, "Britain's home nations ship in regions.json");
+    assert.deepEqual(gbr.body.regions, [], "nothing seeded until someone asks");
+    const mhl = await fetchJson("GET", `/api/orgs/${ids[1]}/regions`);
+    assert.equal(mhl.body.catalogue, false, "no list for the Marshall Islands");
+    assert.equal((await fetchJson("GET", "/api/orgs/not-a-uuid/regions")).body.catalogue, false);
+  } finally {
+    for (const id of ids) await pool.query("DELETE FROM organisations WHERE id = $1", [id]).catch(() => {});
+  }
+});
+
+// Number('') is 0, and 0 is inside most claim-rule ranges, so an emptied
+// field on /admin/features used to save as 0. The server now refuses
+// anything that isn't a number (or a string spelling one).
+test("platform settings: an empty or non-numeric value is refused, not saved as 0", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const sys = await claimKit.login("admin", "admin");
+  if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+  const KEY = "claim_voter_min_age_days";
+  const before = (await fetchJson("GET", "/api/admin/settings", { token: sys.token })).body.find((s) => s.key === KEY);
+  assert.ok(before, "the setting is listed");
+  for (const value of ["", "   ", null, false, "abc", [], {}]) {
+    const r = await fetchJson("PUT", `/api/admin/settings/${KEY}`, { token: sys.token, body: { value } });
+    assert.equal(r.status, 400, `value ${JSON.stringify(value)} should be refused, got ${r.status}`);
+  }
+  // Leaving value out entirely is the same as empty.
+  assert.equal((await fetchJson("PUT", `/api/admin/settings/${KEY}`, { token: sys.token, body: {} })).status, 400);
+  const after = (await fetchJson("GET", "/api/admin/settings", { token: sys.token })).body.find((s) => s.key === KEY);
+  assert.equal(after.value, before.value, "nothing was written");
+  // A numeric string with stray spaces is still a number. Re-save the
+  // current value so the shared test DB ends up where it started.
+  const ok = await fetchJson("PUT", `/api/admin/settings/${KEY}`, { token: sys.token, body: { value: ` ${before.value} ` } });
+  assert.equal(ok.status, 200, JSON.stringify(ok.body));
+  assert.equal(ok.body.value, before.value);
+});
+
+// Review follow-up. The claimant flag and chip are meant to follow the
+// claim, not stick to the account: a withdrawn claim (the sweep does
+// this to one whose email was never verified) drops both, and a claim on
+// a region is named for the region rather than the country.
+test("claims: a region claim is named for its region, and a withdrawn one drops the claimant flag", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "GUM";
+  await claimKit.wipe(CODE);
+  try {
+    // Guam has no built-in region list, so the regions go in by hand
+    // once the first club has started the country's account.
+    await claimKit.founder(CODE, "Hagatna Divers");
+    const orgId = (await pool.query(
+      "SELECT id FROM organisations WHERE country_code = $1 AND claim_state = 'unclaimed'", [CODE],
+    )).rows[0].id;
+    await pool.query("UPDATE organisations SET region_label = 'region' WHERE id = $1", [orgId]);
+    await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Northern Guam', 'NG'), ($1, 'Southern Guam', 'SG')",
+      [orgId],
+    );
+    const catalogue = await fetchJson("GET", `/api/orgs/${orgId}/regions`);
+    assert.equal(catalogue.body.catalogue, false, "no built-in list for Guam, even with regions added by hand");
+    assert.equal(catalogue.body.regions.length, 2);
+
+    const body = await claimKit.claim({ org_name: "North Guam Diving", country_code: CODE, region_code: "ng" });
+    assert.equal(body.res.status, 201, JSON.stringify(body.res.body));
+    assert.equal(body.res.body.target_kind, "region");
+    await claimKit.verify(body.id);
+
+    const login = await claimKit.login(body.username);
+    assert.equal(login.has_claim, true);
+    const dash = await fetchJson("GET", "/api/dashboard", { token: login.token });
+    assert.equal(dash.body.my_claims.length, 1);
+    assert.equal(dash.body.my_claims[0].target_kind, "region");
+    assert.equal(dash.body.my_claims[0].target_name, "Northern Guam");
+
+    await pool.query("UPDATE claims SET status = 'withdrawn' WHERE claimant_id = $1", [body.id]);
+    const after = await claimKit.login(body.username);
+    assert.equal(after.has_claim, false, "a withdrawn claim isn't one to follow");
+    const me = await fetchJson("GET", "/api/auth/me", { token: after.token });
+    assert.equal(me.body.user.has_claim, false);
+    assert.deepEqual((await fetchJson("GET", "/api/dashboard", { token: after.token })).body.my_claims, []);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+// Any well-formed id gets the same answer shape, so the Clubs screen
+// never reads catalogue off undefined for an org that's since gone.
+test("regions: an unknown org's region list is empty with no catalogue", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const r = await fetchJson("GET", `/api/orgs/${crypto.randomUUID()}/regions`);
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body, { label: null, regions: [], catalogue: false });
+});

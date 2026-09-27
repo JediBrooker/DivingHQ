@@ -11,7 +11,7 @@
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useClubScope } from '@/composables/useClubScope'
+import { useClubScope, CONTROL_ROOM_ROLES } from '@/composables/useClubScope'
 import { useControlStage, liveEventsInOrder } from '@/composables/useControlStage'
 import ControlTopBar from '@/components/control/ControlTopBar.vue'
 import SetupStage from '@/components/control/SetupStage.vue'
@@ -37,7 +37,9 @@ import { showError, showSuccess } from '@/composables/useNotify'
 
 const route = useRoute()
 const auth = useAuthStore()
-const { narrowEvents } = useClubScope()
+// Referees run any event in the org here, so only a club / region admin
+// with none of the Control Room's roles gets narrowed to their own meets.
+const { narrowEvents } = useClubScope(CONTROL_ROOM_ROLES)
 const { queueAction, queueSocketAction } = useHttpOutbox()
 
 // Socket + the concurrent-pool live-state engine are hoisted ABOVE the

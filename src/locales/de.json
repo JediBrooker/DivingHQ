@@ -13,7 +13,9 @@
     "back": "← Zurück",
     "dashboard": "← Übersicht",
     "error_generic": "Etwas ist schiefgelaufen",
-    "view_profile": "Profil ansehen →"
+    "view_profile": "Profil ansehen →",
+    "load_failed": "Konnte nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "retry": "Erneut versuchen"
   },
   "auth": {
     "login": {
@@ -57,20 +59,26 @@
       "club": "Verein",
       "club_independent": "— Kein Verein / unabhängig —",
       "club_new": "+ Neuen Verein anlegen",
-      "club_no_clubs": "Für diese Organisation sind noch keine Vereine registriert. Sie können oben einen anlegen.",
+      "club_no_clubs": "Hier gibt es noch keine Vereine. Wählen Sie in der Liste „+ Neuen Verein anlegen“.",
       "new_club_name": "Name des neuen Vereins",
       "short_code_optional": "Kurzcode (optional)",
       "requested_role": "Ich möchte mich registrieren als",
       "role_default": "Springer (Standard)",
       "role_spectator": "Nur Zuschauer",
-      "note_label": "Hinweis an den Org-Admin (optional)",
+      "note_label": "Hinweis an die Person, die Sie freigibt (optional)",
       "note_placeholder": "z. B. Ich habe letztes Jahr an den nationalen Meisterschaften teilgenommen",
-      "spectator_note": "Alle Konten beginnen als Zuschauer. Wenn Sie oben eine Rolle anfordern, prüft und genehmigt der Org-Admin diese. Sie können sich sofort anmelden.",
+      "spectator_note": "Alle Konten beginnen als Zuschauer. Wenn Sie oben eine Rolle anfordern, prüft der Admin Ihres Verbands sie. Sie können sich anmelden, sobald Sie Ihre E-Mail bestätigt haben.",
       "submit_idle": "Konto erstellen",
       "submit_loading": "Erstellen...",
       "already_have_account": "Sie haben bereits ein Konto?",
       "sign_in_link": "Anmelden",
-      "referee_note_unclaimed": "Solange es hier noch keinen Verband gibt, prüft DivingHQ Anfragen für die Schiedsrichterrolle, nicht Ihr Verein: Ein Schiedsrichter kann bei den Wettkämpfen jedes Vereins eingreifen."
+      "referee_note_unclaimed": "Solange es hier noch keinen Verband gibt, prüft DivingHQ Anfragen für die Schiedsrichterrolle, nicht Ihr Verein: Ein Schiedsrichter kann bei den Wettkämpfen jedes Vereins eingreifen.",
+      "coming_soon": "Demnächst verfügbar",
+      "coming_soon_note": "Die Kontoregistrierung ist noch nicht geöffnet — wir legen letzte Hand an DivingHQ. Bitte schauen Sie bald wieder vorbei.",
+      "failed": "Registrierung fehlgeschlagen",
+      "success": "Registrierung erfolgreich. Bitte bestätigen Sie vor der Anmeldung den Link in Ihrer E-Mail.",
+      "new_club_placeholder": "z. B. Sydney Springboard",
+      "short_code_placeholder": "z. B. SYD"
     },
     "register_org": {
       "title": "Organisation registrieren",
@@ -98,7 +106,9 @@
       "claim_note_new_country": "Aus {country} ist noch niemand auf DivingHQ. Mit der Registrierung wird das Konto für {country} angelegt, mit Ihrem Verband als nationalem Verband. DivingHQ prüft es, sobald Sie Ihre E-Mail bestätigt haben, und Sie können sich in der Zwischenzeit anmelden.",
       "country_taken": "{org} betreut {country} bereits auf DivingHQ, daher gibt es hier keinen nationalen Verband zu registrieren. Wenden Sie sich an den DivingHQ-Support, falls das nicht stimmt.",
       "country_taken_region": "{org} betreut {country} bereits auf DivingHQ. Ein Landes- oder Regionalverband wählt oben seine Region; alle anderen wenden sich bitte an den DivingHQ-Support.",
-      "no_regions_hint": "Landes- oder Regionalverband? Wenden Sie sich an den DivingHQ-Support: Die Regionen für {country} sind noch nicht eingerichtet."
+      "no_regions_hint": "Landes- oder Regionalverband? Wenden Sie sich an den DivingHQ-Support: Die Regionen für {country} sind noch nicht eingerichtet.",
+      "website_invalid": "Das sieht nicht nach einer Webadresse aus. Versuchen Sie etwa diving.org.au.",
+      "coming_soon_note": "Die Registrierung für Verbände ist noch nicht geöffnet — wir legen letzte Hand an DivingHQ. Bitte schauen Sie bald wieder vorbei."
     },
     "forgot": {
       "title": "Passwort zurücksetzen",
@@ -418,9 +428,16 @@
       "orgs_one": "{count} Föderation wartet auf Genehmigung",
       "orgs_many": "{count} Föderationen warten auf Genehmigung",
       "orgs_meta": "Prüfen Sie in der Benutzerverwaltung → Organisationsfilter",
-      "claims_one": "1 Anspruch wartet auf Sie",
-      "claims_many": "{count} Ansprüche warten auf Sie",
-      "claims_meta": "Ein Verband möchte ein Konto übernehmen"
+      "claims_meta": "Ein Verband möchte ein Konto übernehmen",
+      "chip_pending": "Offen",
+      "chip_claims": "Ansprüche",
+      "review_title": "Wartet auf Ihre Prüfung",
+      "my_claims_title": "Ihre Ansprüche",
+      "my_claim": "Ihr Anspruch auf {target}",
+      "quiet": "Alles ruhig, nichts ausstehend.",
+      "pill_urgent": "schließt bald",
+      "pill_overdue": "überfällig",
+      "chip_aria_tab": "{title}. Öffnet die zugehörige Registerkarte in dieser Übersicht."
     }
   },
   "role": {
@@ -1038,6 +1055,19 @@
       "roster_import_section_label": "Roster importieren",
       "roster_import_submit": "Importieren",
       "roster_importing": "Import läuft…"
+    },
+    "club_mode": {
+      "pick_meet": "Wählen Sie, zu welchem Wettkampf Ihres Vereins dieses Event gehört",
+      "create_meet_first": "Legen Sie zuerst einen Wettkampf für Ihren Verein an, Events gehören dort hinein",
+      "hosted_by": "Veranstalter",
+      "pick_host": "— Ihren Verein oder Ihre Region wählen —"
+    },
+    "represent": {
+      "label": "Springer vertreten",
+      "country": "Ihr Land (internationale Wettkämpfe)",
+      "region": "Ihr Bundesland / ihre Provinz (nationale Meisterschaften)",
+      "club": "Ihren Verein (Vereins- und Vergleichswettkämpfe)",
+      "hint": "Wird neben jedem Springer auf der Anzeigetafel, in den Ergebnissen und PDFs angezeigt und bestimmt die Gruppierung im Medaillenspiegel. Springer ohne Landes- oder Vereinskürzel erscheinen mit ihrem Land. Ein Team erscheint mit dem Bundesland oder Verein, den alle seine Springer gemeinsam haben, sonst mit seinem Land."
     }
   },
   "user_manager": {
@@ -1219,7 +1249,11 @@
     "col_name": "Vereinsname",
     "col_code": "Vereinskürzel",
     "col_members": "Mitglieder",
-    "col_created": "Erstellt am"
+    "col_created": "Erstellt am",
+    "col_billing": "Abrechnung",
+    "col_actions": "Aktionen",
+    "admins_button": "Vereinsadmins",
+    "rename": "Umbenennen"
   },
   "teams": {
     "title": "Mannschaften",
@@ -1978,7 +2012,16 @@
     "currently_at": "derzeit bei {club}",
     "region_request_pending": "Wartet darauf, dass {region} Ihren Verein aufnimmt.",
     "region_request_cancel": "Anfrage zurückziehen",
-    "region_request_sent": "Anfrage gesendet. {region} entscheidet, ob Ihr Verein aufgenommen wird."
+    "region_request_sent": "Anfrage gesendet. {region} entscheidet, ob Ihr Verein aufgenommen wird.",
+    "not_admin": "Sie sind kein Admin dieses Vereins mehr.",
+    "left_notice": "Sie sind kein Admin von {club} mehr.",
+    "leave_title": "Sich selbst als Admin von {club} entfernen?",
+    "leave_body": "Sie können dann keine Wettkämpfe des Vereins mehr ausrichten und keine Anfragen seiner Mitglieder mehr genehmigen. Nur ein anderer Admin kann Sie wieder hinzufügen.",
+    "leave_confirm": "Mich entfernen",
+    "admins_intro": "Vereinsadmins richten die Wettkämpfe ihres Vereins aus und kümmern sich um Kurse, Auszahlungen und Mitgliedsbeiträge. Verbandsweite Rechte bekommen sie nicht.",
+    "current_admins": "Aktuelle Admins ({n})",
+    "nobody_admins": "Dieser Verein hat noch keinen Admin.",
+    "no_other_members": "Keine weiteren Mitglieder in diesem Verein. Verschieben Sie zuerst jemanden über die Benutzerverwaltung hierher."
   },
   "regions": {
     "label": {
@@ -1988,7 +2031,16 @@
       "region": "Region"
     },
     "pick": "— Bitte wählen —",
-    "required": "{label}: bitte für Ihren neuen Verein wählen."
+    "required": "{label}: bitte für Ihren neuen Verein wählen.",
+    "admins_intro": "Regionsadmins richten Wettkämpfe aus, die ihre Region oder deren Vereine veranstalten, und prüfen Rollenanfragen aus den Vereinen der Region.",
+    "nobody_admins": "Diese Region hat noch keinen Admin.",
+    "pick_member": "— Mitglied eines Vereins dieser Region wählen —",
+    "no_candidates": "Noch niemand zum Hinzufügen. Ordnen Sie zuerst Vereine dieser Region zu, dann erscheinen deren Mitglieder hier.",
+    "strip_title": "Regionen",
+    "manage_admins": "Admins von {name} verwalten",
+    "none_set_up": "Für diese Organisation sind noch keine Regionen (Bundesländer, Provinzen…) eingerichtet.",
+    "set_up": "Regionen einrichten",
+    "region_for": "Region von {club}"
   },
   "my_region": {
     "title": "Meine Region",
@@ -1996,7 +2048,6 @@
     "clubs": "Vereine",
     "no_clubs_title": "Noch keine Vereine",
     "no_clubs_body": "Vereine erscheinen hier, sobald sie Ihre Region bei der Registrierung oder auf ihrer Vereinsseite gewählt haben.",
-    "members": "{n} Mitglieder",
     "no_admin": "Noch kein Admin",
     "region_admins": "Regionsadmins",
     "pick_member": "— Mitglied eines Vereins Ihrer Region auswählen —",
@@ -2098,5 +2149,61 @@
     "contact": "Kontakt",
     "need_help": "Brauchen Sie Hilfe?",
     "english_only": "Diese Seite ist nur auf Englisch verfügbar. Maßgeblich ist der englische Text."
+  },
+  "counts": {
+    "members_zero": "{n} Mitglieder",
+    "members_one": "{n} Mitglied",
+    "members_two": "{n} Mitglieder",
+    "members_few": "{n} Mitglieder",
+    "members_many": "{n} Mitglieder",
+    "members_other": "{n} Mitglieder",
+    "open_claims_zero": "offene Ansprüche",
+    "open_claims_one": "offener Anspruch",
+    "open_claims_two": "offene Ansprüche",
+    "open_claims_few": "offene Ansprüche",
+    "open_claims_many": "offene Ansprüche",
+    "open_claims_other": "offene Ansprüche",
+    "regions_added_zero": "{n} Regionen hinzugefügt",
+    "regions_added_one": "{n} Region hinzugefügt",
+    "regions_added_two": "{n} Regionen hinzugefügt",
+    "regions_added_few": "{n} Regionen hinzugefügt",
+    "regions_added_many": "{n} Regionen hinzugefügt",
+    "regions_added_other": "{n} Regionen hinzugefügt",
+    "claims_waiting_zero": "{n} Ansprüche warten auf Sie",
+    "claims_waiting_one": "{n} Anspruch wartet auf Sie",
+    "claims_waiting_two": "{n} Ansprüche warten auf Sie",
+    "claims_waiting_few": "{n} Ansprüche warten auf Sie",
+    "claims_waiting_many": "{n} Ansprüche warten auf Sie",
+    "claims_waiting_other": "{n} Ansprüche warten auf Sie"
+  },
+  "admin_settings": {
+    "title": "Abstimmungsregeln für Ansprüche",
+    "intro": "Wie über den Anspruch eines Verbands oder Landesverbands auf ein von den Vereinen gegründetes Konto entschieden wird. Neue Werte gelten ab jetzt für eröffnete Ansprüche (bzw. abgegebene Stimmen).",
+    "bounds": "Standard {default_value}, zulässig {min} bis {max}",
+    "saved": "{label} auf {value} gesetzt.",
+    "required": "Geben Sie einen Wert ein.",
+    "not_number": "Geben Sie eine Zahl ein.",
+    "whole": "Geben Sie eine ganze Zahl ein.",
+    "range": "Geben Sie einen Wert von {min} bis {max} ein.",
+    "claim_voter_min_age_days": {
+      "label": "Vereinsalter zum Abstimmen (Tage)",
+      "description": "Ein Verein zählt erst als stimmberechtigt, wenn er so lange auf DivingHQ ist."
+    },
+    "claim_voter_min_members": {
+      "label": "Mitglieder zum Abstimmen",
+      "description": "…und mindestens so viele Mitglieder mit bestätigter E-Mail hat oder schon einen Wettkampf ausgerichtet hat."
+    },
+    "claim_quorum_min": {
+      "label": "Mindestzahl Stimmberechtigter",
+      "description": "Gibt es weniger Stimmberechtigte, geht der Anspruch stattdessen an den Systemadmin. Zugleich die Mindestzahl an Zustimmungen, mit der ein Anspruch durchgeht."
+    },
+    "claim_majority": {
+      "label": "Erforderliche Mehrheit",
+      "description": "Die Zustimmungen müssen mehr als diesen Anteil der Stimmberechtigten ausmachen (0.5 = einfache Mehrheit)."
+    },
+    "claim_timeout_days": {
+      "label": "Abstimmungszeitraum (Tage)",
+      "description": "Nach Ablauf: mindestens eine Zustimmung und keine Einwände lassen den Anspruch durchgehen, sonst geht er an den Systemadmin."
+    }
   }
 }

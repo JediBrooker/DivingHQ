@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 import EmptyState from '@/components/EmptyState.vue'
+import LoadError from '@/components/LoadError.vue'
 
 defineProps({
   // Show which club each request comes from (region admins, or a club
@@ -19,6 +20,8 @@ const { t } = useI18n()
 const auth = useAuthStore()
 const requests = ref([])
 const loading = ref(true)
+// A failed load isn't "no requests waiting", so it gets its own state.
+const loadError = ref(false)
 const busyId = ref(null)
 
 // user_manager.role_* has every role, coach and meet manager included.
@@ -30,11 +33,12 @@ function roleLabel(role) {
 
 async function load() {
   loading.value = true
+  loadError.value = false
   try {
     const rows = await auth.apiFetch('/api/role-requests')
     requests.value = Array.isArray(rows) ? rows : []
-  } catch (err) {
-    showError(err.message)
+  } catch {
+    loadError.value = true
   } finally {
     loading.value = false
   }
@@ -60,6 +64,7 @@ onMounted(load)
 
 <template>
   <div v-if="loading" class="muted">…</div>
+  <LoadError v-else-if="loadError" @retry="load" />
   <EmptyState
     v-else-if="!requests.length"
     icon="✓"
