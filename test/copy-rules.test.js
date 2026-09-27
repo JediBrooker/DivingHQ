@@ -69,3 +69,12 @@ test("the guide says signup joins a club directly", () => {
   assert.doesNotMatch(read("src/guide/content/roles-and-permissions.md"), /Nobody lands in a club without asking/);
   assert.doesNotMatch(read("src/guide/content/quick-start.md"), /pick it: its admin approves you/);
 });
+
+// The sidebar entry renders t('clubs.title'), "Clubs"; the fallback label
+// is never shown. The guide pointed people at "Clubs & teams".
+test("the guide names the Clubs sidebar entry as it appears", () => {
+  assert.equal(en.clubs.title, "Clubs");
+  for (const file of ["src/guide/content/roles-and-permissions.md", "src/guide/content/admin-tasks.md"]) {
+    assert.doesNotMatch(read(file), /\*\*Clubs & teams\*\*/, file);
+  }
+});

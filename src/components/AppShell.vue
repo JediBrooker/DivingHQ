@@ -99,7 +99,7 @@ const NAV = [
     { to: '/region',   label: 'My region',          labelKey: 'my_region.title',    icon: Building2,  regionAdminOnly: true },
     { to: '/claims',   label: 'Claims',             labelKey: 'claims.title',       icon: Scale,      roles: ['org_admin'], allowDelegateAdmin: true, allowClaimant: true },
     { to: '/users',    label: 'User Manager',       labelKey: 'user_manager.title', icon: Users,      roles: ['org_admin'] },
-    { to: '/clubs',    label: 'Clubs & teams',      labelKey: 'clubs.title',        icon: Building2,  roles: ['org_admin', 'meet_manager'] },
+    { to: '/clubs',    label: 'Clubs',              labelKey: 'clubs.title',        icon: Building2,  roles: ['org_admin', 'meet_manager'] },
     { to: '/fines',    label: 'Fines',              icon: Gavel,      roles: ['referee', 'org_admin'], feature: 'payments' },
     { to: '/payments', label: 'Payments & payouts', icon: CreditCard, roles: ['org_admin'], feature: 'payments' },
     { to: '/audit',    label: 'Audit Log',          labelKey: 'audit.page_label',   icon: ScrollText, roles: ['org_admin'] },

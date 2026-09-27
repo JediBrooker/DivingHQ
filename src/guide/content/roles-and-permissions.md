@@ -54,8 +54,8 @@ Top of the food chain inside one country, the person whose name is on the record
 - Edit or delete any event in their org
 - Set `entries_close_at` on events to enforce registration deadlines
 - Claim the country's account so its national record book reads as official (records themselves are automatic, there's nothing to sign off)
-- Manage clubs and teams within the federation, and appoint each club's and region's admins from **Clubs & teams**
-- Approve or reject the clubs people start when they sign up in the country, or let new clubs join automatically (**Clubs & teams**)
+- Manage clubs and teams within the federation, and appoint each club's and region's admins from **Clubs**
+- Approve or reject the clubs people start when they sign up in the country, or let new clubs join automatically (**Clubs**)
 - Approve role requests from every member in the country
 - Decide a state body's claim on one of its regions
 
@@ -102,7 +102,7 @@ Club admins see their own members' names, usernames and role requests, not the r
 
 ## Region admin
 
-Looks after a state, province or home nation. The federation appoints region admins from **Clubs & teams**; where there's no federation yet, DivingHQ does. A state body can also apply to run its region from [Register your org](/register-org), which opens a [claim](#claims).
+Looks after a state, province or home nation. The federation appoints region admins from **Clubs**; where there's no federation yet, DivingHQ does. A state body can also apply to run its region from [Register your org](/register-org), which opens a [claim](#claims).
 
 **Can:**
 - See every club in the region and who runs it, on **My region**
