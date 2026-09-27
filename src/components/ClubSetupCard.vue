@@ -84,7 +84,7 @@ onMounted(load)
   <section v-if="setup" class="club-setup card-sm" :data-testid="`club-setup-${club.id}`">
     <h2 class="cs-title">{{ club.name }}</h2>
 
-    <div v-if="inviteUrl" id="club-invite" class="cs-block">
+    <div v-if="inviteUrl" class="cs-block">
       <h3 class="cs-label">{{ $t('my_club.setup.invite_title') }}</h3>
       <p class="cs-hint">{{ $t('my_club.setup.invite_body', { club: club.name }) }}</p>
       <div class="cs-row">
@@ -98,7 +98,7 @@ onMounted(load)
       </div>
     </div>
 
-    <div id="club-code" class="cs-block">
+    <div class="cs-block">
       <h3 class="cs-label">
         <label :for="`club-code-${club.id}`">{{ $t('my_club.setup.code_title') }}</label>
       </h3>
