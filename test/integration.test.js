@@ -5940,6 +5940,10 @@ test("club approval: unclaimed countries are unchanged, and a revoked claim lets
     assert.equal(P.res.club_status, "pending");
     assert.equal((await fetchJson("POST", `/api/clubs/${Q.clubId}/approve`, { token: fedToken, body: {} })).status, 200);
     assert.equal(await approvalKit.isAdmin(Q.clubId, Q.id), true);
+    // The federation lets new clubs straight in from here on.
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const flip = await fetchJson("PUT", `/api/orgs/${orgId}/club-settings`, { token: fedToken, body: { auto_approve_clubs: true } });
+    assert.equal(flip.status, 200, JSON.stringify(flip.body));
 
     const rv = await fetchJson("POST", `/api/claims/${claimId}/revoke`, { token: sys.token, body: { reason: "Test" } });
     assert.equal(rv.status, 200, JSON.stringify(rv.body));
@@ -5958,6 +5962,10 @@ test("club approval: unclaimed countries are unchanged, and a revoked claim lets
       "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'claim.revoked'", [claimId],
     )).rows[0].metadata;
     assert.deepEqual(audit.activated_clubs, [P.clubId]);
+    // Its "join automatically" goes with it, so the next claimant starts
+    // with the queue their approval email describes.
+    assert.equal((await pool.query("SELECT auto_approve_clubs FROM organisations WHERE id = $1", [orgId])).rows[0].auto_approve_clubs, false);
+    assert.equal(audit.auto_approve_clubs_reset, true);
     const act = (await pool.query(
       "SELECT actor_id, metadata FROM audit_log WHERE entity_id = $1 AND action = 'club.approved'", [P.clubId],
     )).rows[0];
