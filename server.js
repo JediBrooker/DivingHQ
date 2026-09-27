@@ -11,37 +11,50 @@
 // invariants (JWT shape, sysadmin bypass, org-resource cross-checks).
 //
 //   [SECTION: BOOTSTRAP]              app + io setup, helmet, limiters
-//   [SECTION: EMAIL]                  nodemailer + send-* helpers
+//   [SECTION: EMAIL]                  pointer to lib/email.js, then the
+//                                     SPA shell, robots/sitemap, static dist
 //   [SECTION: DB POOL & JWT_SECRET]   pool config, fail-closed secret
-//   [SECTION: MIDDLEWARE]             verifyToken, requireOrgRole,
-//                                     requireEventManager, requireSystemAdmin,
-//                                     ensureEventOrgGate, isInSameOrg,
-//                                     parseDateRange, isValidScore
+//   [SECTION: MIDDLEWARE]             feature flags + everything pulled out
+//                                     of lib/middleware.js
+//   [SECTION: MAINTENANCE GATE]       read-only lockdown for non-sysadmins
+//   [SECTION: LIVE STATE]             activeDivers / meetHolds (lib/live-state)
 //   [SECTION: TOKEN PAYLOAD]          buildTokenPayload (JWT shape)
+//   [SECTION: ROUTES: HEALTH]         /api/health, /metrics
+//   [SECTION: ROUTES: AUTH]           routes/auth.js
 //   [SECTION: ROUTES: ORGANISATIONS]  /api/orgs/*, /api/clubs/*
+//   [SECTION: ROUTES: PAYMENTS]       fees, checkout, refunds, payouts, webhook
 //   [SECTION: ROUTES: TEAMS]          /api/teams/*, /api/events/:id/teams
 //   [SECTION: ROUTES: COACH]          /api/coach/*
+//   [SECTION: ROUTES: CLASSES]        club-private training classes
+//   [SECTION: ROUTES: VENUE]          /api/venue/scoreboard-state/:event_id
 //   [SECTION: ROUTES: USERS]          /api/users/*, /api/role-requests/*
 //   [SECTION: ROUTES: MEETS]          /api/meets/*
 //   [SECTION: ROUTES: SESSIONS]       /api/meets/:id/sessions, schedule.ics
 //   [SECTION: ROUTES: EVENTS]         /api/events (CRUD + status)
-//   [SECTION: ROUTES: STAGE ADVANCE]  /api/events/:id/advance (top-N)
-//   [SECTION: ROUTES: TEMPLATES]      /api/orgs/:id/event-templates
-//   [SECTION: ROUTES: JUDGES]         /api/events/:id/judges
+//   [SECTION: ROUTES: EVENT STAFF]    event managers, judge panels
 //   [SECTION: ROUTES: CONTROL ROOM]   /api/events/:id/roster + reorder + DNS
-//   [SECTION: ROUTES: SCOREBOARD]     public scoreboard, score corrections
-//   [SECTION: MEET HOLD STATE]        in-memory hold map
-//   [SECTION: ROUTES: DIVE TEMPLATES]  /api/dive-list-templates/*
+//   [SECTION: ROUTES: SCOREBOARD]     /api/scoreboard/:eventId, /leaderboard
+//   [SECTION: ROUTES: SCORE CORRECTION] PUT /api/scores/:id, score audit
+//   [SECTION: ROUTES: DASHBOARD]      /api/dashboard bundle
+//   [SECTION: ROUTES: AUDIT]          /api/audit/*
+//   [SECTION: ROUTES: DIVE TEMPLATES] /api/dive-list-templates/*, then the
+//                                     conflict, late-arrival and manual-score
+//                                     mounts
 //   [SECTION: ROUTES: COMPETITOR]     /api/competitor/submit-list
-//   [SECTION: ROUTES: DIVE DIRECTORY]  /api/dive-directory
+//   [SECTION: ROUTES: DIVE DIRECTORY] /api/dive-directory
 //   [SECTION: ROUTES: DIVER PROFILE]  /api/divers/:id/profile, /analytics
-//   [SECTION: ROUTES: AUDIT LOG]      /api/events/:id/score-audit
-//   [SECTION: SOCKET ENGINE]          io.use, submit_score, referee_*,
-//                                     meet_hold/resume, set_active_diver
-//   [SECTION: ROUTES: ARCHIVE]        /api/archive
-//   [SECTION: ROUTES: PDF EXPORT]     /api/events/:id/results.pdf, /program.pdf
-//   [SECTION: SPA FALLBACK]           static + history-API rewrite
-//   [SECTION: START]                  server.listen (skipped under require())
+//   [SECTION: ROUTES: JUDGE ANALYTICS] /api/judges/:id/*
+//   [SECTION: RECORDS]                /api/records (lib/records.js)
+//   [SECTION: SOCKET ENGINE]          routes/socket.js (submit_score,
+//                                     referee_*, meet_hold, set_active_diver)
+//   [SECTION: ROUTES: WEB PUSH]       /api/push/*, /api/notifications/*
+//   [SECTION: ROUTES: ARCHIVE]        /api/archive, DiveRecorder archive
+//   [SECTION: ROUTES: PDF EXPORT]     PDFs + results CSV
+//   [SECTION: ROUTES: JUDGE RANKING]  "as if one judge scored" analysis
+//   [SECTION: ROUTES: PUBLIC PROFILE] /api/public/divers/*, /diver/*
+//   [SECTION: SPA FALLBACK]           history-API rewrite + final 404
+//   [SECTION: START]                  bootChecks, server.listen (skipped
+//                                     under require())
 // =============================================================
 
 const express = require("express");
@@ -550,6 +563,7 @@ const {
 // take it via dependency injection.
 const scoreboardCache = require("./lib/scoreboard-cache")();
 
+// [SECTION: LIVE STATE]
 // Live state: activeDivers (current performer per event) plus
 // meetHolds (per-event hold reason). Shared by
 // routes/events.js (PUT /:id/status clears them on Completed),
@@ -712,10 +726,9 @@ app.get("/metrics", async (req, res) => {
 
 // =============================================================
 // AUTH ROUTES
-// Moved into routes/auth.js. The factory pattern lets this slice
-// live in its own file without forcing every other slice (events,
-// users, scoreboard, archive…) to be extracted at the same time.
-// Subsequent batches can follow the same shape.
+// [SECTION: ROUTES: AUTH]
+// Login, register, password reset, email verification, 2FA and the
+// rest of the account flows live in routes/auth.js.
 // =============================================================
 
 app.use(
@@ -951,16 +964,14 @@ app.use(require("./routes/meets")({
 // [SECTION: ROUTES: SESSIONS]
 // /api/meets/:meetId/sessions:       sessions + inlined blocks
 // /api/meets/:meetId/schedule.ics:   public iCal feed
-// Phase 1 is read-only; phase 2-4 (conflicts, manual edit, live
-// re-flow) extend this same file. See docs/session-scheduler.md.
+// plus conflict detection, manual edits and live re-flow, all in the
+// same file. See docs/session-scheduler.md.
 // =============================================================
 app.use(require("./routes/sessions")({
   pool,
   optionalAuth,
-  // Phase 2 wires the dismissal endpoints and the
-  // schedule:conflict_dismissed socket emit; Phase 1 callers
-  // only used { pool, optionalAuth } so passing these is
-  // additive.
+  // For the conflict-dismissal endpoints and the
+  // schedule:conflict_dismissed socket emit.
   requireMeetEditor,
   io,
   // Club-hosted meets: a club admin edits their own meet's schedule.
@@ -1052,10 +1063,8 @@ app.use(require("./routes/control-room")({
 // =============================================================
 // SCOREBOARD (public)
 // [SECTION: ROUTES: SCOREBOARD]
-// Endpoints (/api/scoreboard/:eventId and /leaderboard) moved
-// to routes/scoreboard.js. The dive-list-templates section
-// below sits between the two original mounts and is kept here
-// since its per-diver state, not scoreboard-related.
+// /api/scoreboard/:eventId and /leaderboard, see routes/scoreboard.js
+// and lib/scoreboard-cache.js.
 // =============================================================
 
 app.use(require("./routes/scoreboard")({
@@ -1124,16 +1133,6 @@ app.use(require("./routes/audit")({
 }));
 
 // =============================================================
-// LIVE STATE (activeDivers + meetHolds)
-// [SECTION: LIVE STATE]
-// activeDivers + meetHolds are imported earlier in the file (just
-// after the email helpers) because the events router mounts before
-// this point and needs the references at module-load time. Re-exposed
-// in this section header for grep-ability.
-// =============================================================
-
-
-// =============================================================
 // DIVE LIST TEMPLATES
 // [SECTION: ROUTES: DIVE TEMPLATES]
 // Per-diver saved combinations (CompetitorView load/save)
@@ -1142,12 +1141,12 @@ app.use(require("./routes/audit")({
 app.use(require("./routes/templates")({ pool, verifyToken }));
 
 // =============================================================
-// CONFLICT RESOLUTION (P1 stub)
+// CONFLICT RESOLUTION
 // =============================================================
-// Companion endpoint to the conflict_pending socket event
-// (routes/socket.js submit_score). P1 stub returns 501; P4
-// wires the actual write + audit-log path. See
-// docs/offline-p1-design.md §4.
+// Companion endpoints to the conflict_pending socket event
+// (routes/socket.js submit_score): list a judge's pending
+// conflicts and resolve one, with the score write and audit log.
+// See routes/conflicts.js and docs/offline-p1-design.md §4.
 // =============================================================
 app.use(require("./routes/conflicts")({
   pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate, recomputeRecordKeys,
@@ -1233,11 +1232,12 @@ app.use(limitRoutes(createSearchLimiter(), require("./routes/diver-profile")({
 // referees see same-org judges; sysadmin sees all).
 // =============================================================
 // AUDIT FIX (Medium-2): wrap the public judge-analytics router in
-// searchLimiter. The /api/judges/:id/analytics endpoint fires 14
-// SQL queries per request (each invokes the JUDGE_PER_DIVE CTE
-// that scans scores ⨝ events ⨝ event_judges ⨝ competitor_dive_lists
-// ⨝ dive_directory). The directory endpoint runs ILIKE + a LATERAL
-// COUNT(*) over all scores. Both are public; without a limiter an
+// searchLimiter. The /api/judges/:id/analytics endpoint still
+// scans scores ⨝ events ⨝ event_judges ⨝ competitor_dive_lists ⨝
+// dive_directory per request, once in the bundled statement and once
+// in each of the three date-bearing widgets (see
+// JUDGE_ANALYTICS_BUNDLE). The directory endpoint runs ILIKE + a
+// LATERAL COUNT(*) over all scores. Both are public; without a limiter an
 // unauth client can saturate the read pool. searchLimiter (60/min/
 // IP) is well above any legitimate typeahead use of the directory.
 app.use(limitRoutes(createSearchLimiter(), require("./routes/judge-analytics")({
@@ -1414,9 +1414,10 @@ app.use((req, res) => {
 // START
 // =============================================================
 
-// Log schema version + run audit-log retention sweep at boot.
-// Both queries are best-effort: a failure (e.g. running against
-// an old DB that pre-dates migration 008) just logs warning.
+// Runs once before listen(): load the feature flags (fatal if it
+// can't), refuse a production box still on the default admin
+// password (fatal), then the best-effort bits that only warn on
+// failure: log the schema version, snapshot and purge the audit logs.
 async function bootChecks() {
   // Pull the feature flags into memory before we take a single request.
   // This is NOT best-effort. Serving with a guessed flag state is how you
@@ -1551,12 +1552,11 @@ async function bootChecks() {
   }
 }
 
-// Daily snapshot: writes the past 24 h of audit rows to JSONL
-// files in AUDIT_SNAPSHOT_DIR (one file per table per day).
-// Called from bootChecks before the purge so the rows about to
-// roll off the 30-day window survive externally. The operator
-// is expected to push the dir to S3 / off-site backup via a
-// seperate cron / systemd job.
+// Writes the 24 h of audit rows before now to JSONL files in
+// AUDIT_SNAPSHOT_DIR (one file per table per day). Only called from
+// bootChecks, before the purge, so it runs once per server start
+// rather than on a timer. The operator is expected to push the dir to
+// S3 / off-site backup via a separate cron / systemd job.
 async function snapshotAuditTables() {
   const fs = require("node:fs");
   const path = require("node:path");

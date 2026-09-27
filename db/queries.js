@@ -11,7 +11,8 @@
 // params in the right order. The helpers don't choose param
 // numbers themselves since pg-style positional parameters mean
 // outer queries that compose multiple CTEs need to control the
-// numbering. See server.js' /api/divers/:id/analytics for usage.
+// numbering. See /api/divers/:id/analytics in routes/diver-profile.js
+// for usage.
 
 const { perDiveSelect, perDivePointsCte } = require("../lib/scoring-sql");
 

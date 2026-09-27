@@ -47,8 +47,8 @@
 // as pending is a bug, not an inconvenience. See backfillLedger.
 //
 // Connection: same env as server.js, DATABASE_URL takes precedence,
-// otherwise the standard libpq vars (DB_HOST/DB_USER/DB_PASSWORD/
-// DB_NAME/DB_PORT). dotenv is loaded so a dev can `npm run
+// otherwise the app's DB_* vars (DB_HOST/DB_USER/DB_PASSWORD/
+// DB_DATABASE/DB_PORT). dotenv is loaded so a dev can `npm run
 // migrate` against a .env without exporting anything by hand.
 
 require("dotenv").config();
