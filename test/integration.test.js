@@ -6009,6 +6009,39 @@ test("club approval: whoever loses a race to decide is told it's decided, whiche
   }
 });
 
+test("club approval: a waiting club's code doesn't block an approved club from taking it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  // Approve ignores other waiting clubs' codes; club setup has to agree,
+  // or an unvetted signup could squat on a code a real club wants.
+  const CODE = "TCD";
+  await claimKit.wipe(CODE);
+  try {
+    const fx = await approvalKit.federation(CODE);
+    const real = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, 'Club de Plongeon de N''Djamena', 'NDJ') RETURNING id",
+      [fx.orgId],
+    )).rows[0].id;
+    const P = await approvalKit.signUp(CODE, "Chari Divers", { new_club_short_code: "chr" }, { verify: true });
+
+    const set = await fetchJson("PUT", `/api/clubs/${real}/short-code`, { token: fx.adminToken, body: { short_code: "CHR" } });
+    assert.equal(set.status, 200, JSON.stringify(set.body));
+    assert.equal(set.body.short_code, "CHR");
+
+    // Now it's the waiting club that has to pick something else.
+    const clash = await fetchJson("POST", `/api/clubs/${P.clubId}/approve`, { token: fx.adminToken, body: {} });
+    assert.equal(clash.status, 409, JSON.stringify(clash.body));
+    assert.equal(clash.body.code, "short_code_taken");
+    const ok = await fetchJson("POST", `/api/clubs/${P.clubId}/approve`, { token: fx.adminToken, body: { short_code: "CHA" } });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    // And an approved club's code still can't be taken twice.
+    const taken = await fetchJson("PUT", `/api/clubs/${real}/short-code`, { token: fx.adminToken, body: { short_code: "cha" } });
+    assert.equal(taken.status, 409, JSON.stringify(taken.body));
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
 test("club approval: a revoke activates waiting clubs but doesn't make a suspended founder admin", async (t) => {
   if (!dbReachable) return t.skip("DB not reachable");
   if (!serverReady) return t.skip("server didn't boot — see warning above");

@@ -120,9 +120,12 @@ module.exports = function createClubSetupRouter({ pool, verifyToken }) {
       }
       if (code) {
         // Two clubs showing the same code would make the club label
-        // useless, so a clash within the org is refused.
+        // useless, so a clash within the org is refused. Only approved
+        // clubs count, same as the approve dialog: a signup still waiting
+        // on the federation doesn't get to squat on a code an existing
+        // club wants.
         const clash = await pool.query(
-          "SELECT 1 FROM clubs WHERE org_id = $1 AND upper(short_code) = $2 AND id <> $3 LIMIT 1",
+          "SELECT 1 FROM clubs WHERE org_id = $1 AND upper(short_code) = $2 AND id <> $3 AND status = 'active' LIMIT 1",
           [club.org_id, code, club.id],
         );
         if (clash.rows.length) {
