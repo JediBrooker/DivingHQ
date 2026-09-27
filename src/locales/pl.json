@@ -558,6 +558,14 @@
         "step_4": "W dniu zawodów prowadź punktację z <strong>Pokoju kontroli</strong>",
         "cta": "Organizacja zawodów ↗"
       },
+      "region_admin": {
+        "name": "Administrator regionu",
+        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa, możesz wkroczyć w zawody każdego z klubów i zatwierdzasz prośby członków klubów o role. Wyznacza cię federacja, a dopóki jej nie ma, DivingHQ.",
+        "step_1": "Otwórz <strong>Mój region</strong>, aby zobaczyć kluby i kto je prowadzi",
+        "step_2": "Utwórz mistrzostwa w <strong>Menedżerze zawodów</strong>, organizowane przez twój region",
+        "step_3": "Zatwierdzaj członków, którzy chcą skakać, sędziować lub być sędzią głównym",
+        "cta": "Organizacja zawodów ↗"
+      },
       "org_admin": {
         "name": "Administrator Organizacji",
         "desc": "Konfigurujesz federację. Zarządzaj klubami, drużynami, użytkownikami i rolami. Każdy mityng utworzony przez dyrektora zawodów spina się z Twoją federacją; możesz też organizować zawody międzynarodowe i zapraszać federacje gościnne.",
@@ -1889,5 +1897,25 @@
     "add": "Dodaj",
     "remove": "Usuń",
     "federation_appoints": "Administratorów tego klubu wyznacza twoja federacja."
+  },
+  "regions": {
+    "label": {
+      "state": "Stan",
+      "province": "Prowincja",
+      "home_nation": "Kraj (UK)",
+      "region": "Region"
+    },
+    "pick": "— Wybierz —",
+    "required": "{label}: wybierz dla nowego klubu."
+  },
+  "my_region": {
+    "title": "Mój region",
+    "intro": "Kluby twojego regionu, kto je prowadzi i prośby członków o role.",
+    "clubs": "Kluby",
+    "no_clubs_title": "Brak klubów",
+    "no_clubs_body": "Kluby pojawią się tutaj, gdy wybiorą twój region przy rejestracji lub na stronie klubu.",
+    "members": "{n} członków",
+    "no_admin": "Brak administratora",
+    "region_admins": "Administratorzy regionu"
   }
 }

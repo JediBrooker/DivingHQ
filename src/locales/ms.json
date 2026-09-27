@@ -547,6 +547,14 @@
         "step_4": "Pada hari pertandingan, kendalikan pemarkahan dari <strong>Bilik Kawalan</strong>",
         "cta": "Menganjurkan pertandingan ↗"
       },
+      "region_admin": {
+        "name": "Pentadbir rantau",
+        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya, boleh campur tangan dalam pertandingan mana-mana kelabnya, dan meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda, atau DivingHQ jika belum ada persekutuan.",
+        "step_1": "Buka <strong>Rantau saya</strong> untuk melihat kelab dan pengurusnya",
+        "step_2": "Cipta kejohanan anda dalam <strong>Pengurus pertandingan</strong> dengan rantau anda sebagai tuan rumah",
+        "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau menjadi pengadil",
+        "cta": "Menganjurkan pertandingan ↗"
+      },
       "org_admin": {
         "name": "Pentadbir Organisasi",
         "desc": "Anda menyediakan persekutuan. Urus kelab, pasukan, pengguna, dan peranan. Setiap pertandingan yang dicipta oleh pengurus akan masuk ke persekutuan anda; anda juga boleh menjadi tuan rumah pertandingan antarabangsa dan menjemput persekutuan tetamu.",
@@ -1889,5 +1897,25 @@
     "add": "Tambah",
     "remove": "Alih keluar",
     "federation_appoints": "Persekutuan anda melantik pentadbir kelab ini."
+  },
+  "regions": {
+    "label": {
+      "state": "Negeri",
+      "province": "Wilayah",
+      "home_nation": "Negara (UK)",
+      "region": "Rantau"
+    },
+    "pick": "— Pilih satu —",
+    "required": "{label}: pilih satu untuk kelab baharu anda."
+  },
+  "my_region": {
+    "title": "Rantau saya",
+    "intro": "Kelab di rantau anda, siapa yang mengurusnya dan permintaan peranan ahlinya.",
+    "clubs": "Kelab",
+    "no_clubs_title": "Belum ada kelab",
+    "no_clubs_body": "Kelab dipaparkan di sini selepas memilih rantau anda semasa pendaftaran atau di halaman kelab.",
+    "members": "{n} ahli",
+    "no_admin": "Belum ada pentadbir",
+    "region_admins": "Pentadbir rantau"
   }
 }

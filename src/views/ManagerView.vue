@@ -528,8 +528,15 @@ const superFinalModals = ref(null)
 // bundle of events, org admins create them here so events can be
 // filed under e.g. "2026 National Open".
 const meetForm = ref({
-  name: '', venue: '', start_date: '', end_date: '', host_club_id: '',
+  name: '', venue: '', start_date: '', end_date: '', host: '',
 })
+// Who a club or region admin can host a meet as, 'club:<id>' or
+// 'region:<id>'. The picker only shows when there's more than one; with
+// a single option the server picks it.
+const hostOptions = computed(() => [
+  ...auth.clubAdminOf.map(c => ({ value: `club:${c.id}`, label: c.name })),
+  ...auth.regionAdminOf.map(r => ({ value: `region:${r.id}`, label: `${r.name} (${r.short_code})` })),
+])
 const meetFormErr = ref('')
 
 // Sysadmin-only org filter for the events list. The /api/events
@@ -950,12 +957,13 @@ async function createMeet() {
         venue:      meetForm.value.venue.trim() || null,
         start_date: meetForm.value.start_date || null,
         end_date:   meetForm.value.end_date   || null,
-        // Club admins host as one of their clubs; the server picks the
-        // only one when there's just the one.
-        host_club_id: meetForm.value.host_club_id || undefined,
+        // Club / region admins host as one of theirs; the server picks
+        // the only one when there's just the one.
+        host_club_id: meetForm.value.host.startsWith('club:') ? meetForm.value.host.slice(5) : undefined,
+        host_region_id: meetForm.value.host.startsWith('region:') ? meetForm.value.host.slice(7) : undefined,
       }),
     })
-    meetForm.value = { name: '', venue: '', start_date: '', end_date: '', host_club_id: '' }
+    meetForm.value = { name: '', venue: '', start_date: '', end_date: '', host: '' }
     showCreateMeetModal.value = false
     await loadMeets()
   } catch (err) {
@@ -2524,11 +2532,11 @@ onUnmounted(() => {
             <input class="input" type="date" v-model="meetForm.end_date">
           </div>
         </div>
-        <div v-if="clubMode && auth.clubAdminOf.length > 1" class="field">
+        <div v-if="clubMode && hostOptions.length > 1" class="field">
           <label class="label">Hosted by</label>
-          <select class="select" v-model="meetForm.host_club_id" required>
-            <option value="">— Pick your club —</option>
-            <option v-for="c in auth.clubAdminOf" :key="c.id" :value="c.id">{{ c.name }}</option>
+          <select class="select" v-model="meetForm.host" required>
+            <option value="">— Pick your club or region —</option>
+            <option v-for="h in hostOptions" :key="h.value" :value="h.value">{{ h.label }}</option>
           </select>
         </div>
         <div v-if="meetFormErr" class="msg msg-error">{{ meetFormErr }}</div>

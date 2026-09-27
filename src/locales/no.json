@@ -558,6 +558,14 @@
         "step_4": "På stevnedagen styrer du poenggivningen fra <strong>Kontrollrommet</strong>",
         "cta": "Arrangere et stevne ↗"
       },
+      "region_admin": {
+        "name": "Regionsadministrator",
+        "desc": "Du tar deg av en delstat, provins eller nasjon: arrangerer mesterskapene, kan tre inn på stevnene til alle klubbene der og godkjenner rolleforespørsler fra klubbmedlemmene. Forbundet ditt utnevner deg, eller DivingHQ hvis det ikke finnes ennå.",
+        "step_1": "Åpne <strong>Min region</strong> for å se klubbene og hvem som driver dem",
+        "step_2": "Opprett mesterskapene i <strong>Stevneadministrator</strong> med regionen som arrangør",
+        "step_3": "Godkjenn medlemmer som vil stupe, dømme eller være overdommer",
+        "cta": "Arrangere et stevne ↗"
+      },
       "org_admin": {
         "name": "Forbundsadministrator",
         "desc": "Du setter opp forbundet. Administrer klubber, lag, brukere og roller. Hvert stevne en stevneleder oppretter, ruller opp til forbundet ditt; du kan også arrangere internasjonale stevner og invitere gjesteforbund.",
@@ -1889,5 +1897,25 @@
     "add": "Legg til",
     "remove": "Fjern",
     "federation_appoints": "Forbundet ditt utnevner klubbens administratorer."
+  },
+  "regions": {
+    "label": {
+      "state": "Delstat",
+      "province": "Provins",
+      "home_nation": "Nasjon",
+      "region": "Region"
+    },
+    "pick": "— Velg én —",
+    "required": "{label}: velg én for den nye klubben din."
+  },
+  "my_region": {
+    "title": "Min region",
+    "intro": "Regionens klubber, hvem som driver dem, og medlemmenes rolleforespørsler.",
+    "clubs": "Klubber",
+    "no_clubs_title": "Ingen klubber ennå",
+    "no_clubs_body": "Klubber vises her når de har valgt regionen din ved registrering eller på klubbsiden.",
+    "members": "{n} medlemmer",
+    "no_admin": "Ingen administrator ennå",
+    "region_admins": "Regionsadministratorer"
   }
 }

@@ -155,6 +155,9 @@ export const useAuthStore = defineStore('auth', () => {
   // the server checks club_admins itself on every club-scoped route.
   const clubAdminOf = computed(() => user.value?.club_admin_of || [])
   const isClubAdmin = computed(() => clubAdminOf.value.length > 0)
+  // Same for regions (states / provinces, migration 088).
+  const regionAdminOf = computed(() => user.value?.region_admin_of || [])
+  const isRegionAdmin = computed(() => regionAdminOf.value.length > 0)
 
   function getHeaders() {
     // No Authorization header any more, the httpOnly session cookie
@@ -220,6 +223,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user, isLoggedIn, fingerprint, hasDependents, clubAdminOf, isClubAdmin,
+    regionAdminOf, isRegionAdmin,
     saveSession, clearSession, fetchMe,
     hasRole, hasAnyRole, getHeaders,
     apiFetch, cachedApiFetch,

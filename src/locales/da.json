@@ -558,6 +558,14 @@
         "step_4": "På dagen styrer du pointgivningen fra <strong>Kontrolrummet</strong>",
         "cta": "Afvikling af et stævne ↗"
       },
+      "region_admin": {
+        "name": "Regionsadministrator",
+        "desc": "Du tager dig af en delstat, provins eller nation: afvikler dens mesterskaber, træder til ved alle dens klubbers stævner og godkender rolleanmodninger fra klubbernes medlemmer. Dit forbund udpeger dig, eller DivingHQ hvis der ikke er et endnu.",
+        "step_1": "Åbn <strong>Min region</strong> for at se dine klubber og hvem der driver dem",
+        "step_2": "Opret dine mesterskaber i <strong>Stævnehåndtering</strong> med din region som vært",
+        "step_3": "Godkend medlemmer, der vil springe, dømme eller være overdommer",
+        "cta": "Afvikling af et stævne ↗"
+      },
       "org_admin": {
         "name": "Forbundsadministrator",
         "desc": "Du sætter forbundet op. Administrér klubber, hold, brugere og roller. Hvert stævne, en stævneleder opretter, ruller op til dit forbund; du kan også afholde internationale stævner og invitere besøgende forbund.",
@@ -1889,5 +1897,25 @@
     "add": "Tilføj",
     "remove": "Fjern",
     "federation_appoints": "Dit forbund udpeger klubbens administratorer."
+  },
+  "regions": {
+    "label": {
+      "state": "Delstat",
+      "province": "Provins",
+      "home_nation": "Nation",
+      "region": "Region"
+    },
+    "pick": "— Vælg én —",
+    "required": "{label}: vælg én til din nye klub."
+  },
+  "my_region": {
+    "title": "Min region",
+    "intro": "Din regions klubber, hvem der driver dem, og medlemmernes rolleanmodninger.",
+    "clubs": "Klubber",
+    "no_clubs_title": "Ingen klubber endnu",
+    "no_clubs_body": "Klubber vises her, når de har valgt din region ved tilmelding eller på deres klubside.",
+    "members": "{n} medlemmer",
+    "no_admin": "Ingen administrator endnu",
+    "region_admins": "Regionsadministratorer"
   }
 }

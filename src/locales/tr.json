@@ -547,6 +547,14 @@
         "step_4": "Yarışma günü puanlamayı <strong>Kontrol Odası</strong>'ndan yönetin",
         "cta": "Yarışma düzenlemek ↗"
       },
+      "region_admin": {
+        "name": "Bölge yöneticisi",
+        "desc": "Bir eyalet, il ya da ülkeden sorumlusunuz: şampiyonalarını düzenler, kulüplerinden herhangi birinin yarışmalarına müdahale edebilir ve kulüp üyelerinin rol taleplerini onaylarsınız. Sizi federasyonunuz, federasyon yoksa DivingHQ atar.",
+        "step_1": "Kulüplerinizi ve yöneticilerini görmek için <strong>Bölgem</strong>'i açın",
+        "step_2": "Şampiyonalarınızı bölgenizin ev sahipliğinde <strong>Yarışma Yöneticisi</strong>'nde oluşturun",
+        "step_3": "Atlamak, hakemlik yapmak veya başhakem olmak isteyen üyeleri onaylayın",
+        "cta": "Yarışma düzenlemek ↗"
+      },
       "org_admin": {
         "name": "Kuruluş Yöneticisi",
         "desc": "Federasyonu siz kurarsınız. Kulüpleri, takımları, kullanıcıları ve rolleri yönetin. Bir yarışma yöneticisinin oluşturduğu her yarışma sizin federasyonunuza bağlanır; ayrıca uluslararası yarışmalar düzenleyebilir ve konuk federasyonları davet edebilirsiniz.",
@@ -1889,5 +1897,25 @@
     "add": "Ekle",
     "remove": "Kaldır",
     "federation_appoints": "Bu kulübün yöneticilerini federasyonunuz atar."
+  },
+  "regions": {
+    "label": {
+      "state": "Eyalet",
+      "province": "Eyalet",
+      "home_nation": "Ülke (BK)",
+      "region": "Bölge"
+    },
+    "pick": "— Birini seçin —",
+    "required": "{label}: yeni kulübünüz için birini seçin."
+  },
+  "my_region": {
+    "title": "Bölgem",
+    "intro": "Bölgenizin kulüpleri, onları kimin yönettiği ve üyelerin rol talepleri.",
+    "clubs": "Kulüpler",
+    "no_clubs_title": "Henüz kulüp yok",
+    "no_clubs_body": "Kulüpler, kayıt sırasında veya kulüp sayfasında bölgenizi seçtiklerinde burada görünür.",
+    "members": "{n} üye",
+    "no_admin": "Henüz yönetici yok",
+    "region_admins": "Bölge yöneticileri"
   }
 }

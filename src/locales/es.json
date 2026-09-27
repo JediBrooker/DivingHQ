@@ -547,6 +547,14 @@
         "step_4": "El día de la competición, dirige la puntuación desde la <strong>Sala de control</strong>",
         "cta": "Organizar una competición ↗"
       },
+      "region_admin": {
+        "name": "Administrador regional",
+        "desc": "Te ocupas de un estado, provincia o nación: organizas sus campeonatos, puedes intervenir en las competiciones de cualquiera de sus clubes y apruebas las solicitudes de rol de sus miembros. Te nombra tu federación, o DivingHQ si aún no la hay.",
+        "step_1": "Abre <strong>Mi región</strong> para ver tus clubes y quién los gestiona",
+        "step_2": "Crea tus campeonatos en el <strong>Gestor de competiciones</strong>, organizados por tu región",
+        "step_3": "Aprueba a los miembros que quieren saltar, juzgar o arbitrar",
+        "cta": "Organizar una competición ↗"
+      },
       "org_admin": {
         "name": "Admin de Organización",
         "desc": "Tú configuras la federación. Gestiona clubes, equipos, usuarios y roles. Toda competición que cree un gestor depende de tu federación; también puedes organizar competiciones internacionales e invitar a federaciones visitantes.",
@@ -1889,5 +1897,25 @@
     "add": "Añadir",
     "remove": "Quitar",
     "federation_appoints": "Tu federación nombra a los administradores de este club."
+  },
+  "regions": {
+    "label": {
+      "state": "Estado",
+      "province": "Provincia",
+      "home_nation": "Nación",
+      "region": "Región"
+    },
+    "pick": "— Elige una —",
+    "required": "{label}: elige una para tu nuevo club."
+  },
+  "my_region": {
+    "title": "Mi región",
+    "intro": "Los clubes de tu región, quién los gestiona y las solicitudes de rol de sus miembros.",
+    "clubs": "Clubes",
+    "no_clubs_title": "Aún no hay clubes",
+    "no_clubs_body": "Los clubes aparecen aquí cuando eligen tu región, al registrarse o en la página del club.",
+    "members": "{n} miembros",
+    "no_admin": "Aún sin administrador",
+    "region_admins": "Administradores de la región"
   }
 }

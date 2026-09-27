@@ -547,6 +547,14 @@
         "step_4": "On the day, drive scoring from <strong>Control Room</strong>",
         "cta": "Running a meet ↗"
       },
+      "region_admin": {
+        "name": "Region Admin",
+        "desc": "You look after a state, province or home nation: run its championships, step in on any of its clubs' meets, and approve role requests from its clubs' members. Your federation, or DivingHQ where there isn't one yet, appoints you.",
+        "step_1": "Open <strong>My region</strong> to see your clubs and who runs them",
+        "step_2": "Create your championships in <strong>Meet Manager</strong>, hosted by your region",
+        "step_3": "Approve members who want to dive, judge or referee",
+        "cta": "Running a meet ↗"
+      },
       "org_admin": {
         "name": "Org Admin",
         "desc": "You set up the federation. Manage clubs, teams, users, and roles. Every meet a meet manager creates rolls up to your federation; you can also host international meets and invite visiting federations.",
@@ -1889,5 +1897,25 @@
     "add": "Add",
     "remove": "Remove",
     "federation_appoints": "Your federation appoints this club's admins."
+  },
+  "regions": {
+    "label": {
+      "state": "State",
+      "province": "Province",
+      "home_nation": "Home nation",
+      "region": "Region"
+    },
+    "pick": "— Pick one —",
+    "required": "{label}: pick one for your new club."
+  },
+  "my_region": {
+    "title": "My region",
+    "intro": "Your region's clubs, who runs them, and their members' role requests.",
+    "clubs": "Clubs",
+    "no_clubs_title": "No clubs yet",
+    "no_clubs_body": "Clubs show up here once they've picked your region, at sign-up or on their club page.",
+    "members": "{n} members",
+    "no_admin": "No admin yet",
+    "region_admins": "Region admins"
   }
 }

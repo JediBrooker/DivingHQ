@@ -41,7 +41,7 @@ import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
-import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe, Users } from '@lucide/vue'
+import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe, Users, Map } from '@lucide/vue'
 
 // TOC entries match the in-template section ids. Order matters,
 // it's the visual reading order. Keep the keys aligned with the
@@ -239,6 +239,19 @@ onBeforeUnmount(() => observer?.disconnect())
                 <li v-html="$t('guide.role.club_admin.step_4')"></li>
               </ol>
               <RouterLink to="/guide/running-a-meet" class="role-cta">{{ $t('guide.role.club_admin.cta') }}</RouterLink>
+            </article>
+
+            <!-- Region admin: a state / province / home nation (migration 088). -->
+            <article class="role-card">
+              <div class="role-icon" aria-hidden="true"><Map /></div>
+              <h3 class="role-name">{{ $t('guide.role.region_admin.name') }}</h3>
+              <p class="role-desc" v-html="$t('guide.role.region_admin.desc')"></p>
+              <ol class="role-steps">
+                <li v-html="$t('guide.role.region_admin.step_1')"></li>
+                <li v-html="$t('guide.role.region_admin.step_2')"></li>
+                <li v-html="$t('guide.role.region_admin.step_3')"></li>
+              </ol>
+              <RouterLink to="/guide/running-a-meet" class="role-cta">{{ $t('guide.role.region_admin.cta') }}</RouterLink>
             </article>
 
             <article class="role-card">

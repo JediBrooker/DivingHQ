@@ -558,6 +558,14 @@
         "step_4": "På tävlingsdagen styr du poängsättningen från <strong>Kontrollrummet</strong>",
         "cta": "Arrangera en tävling ↗"
       },
+      "region_admin": {
+        "name": "Regionadministratör",
+        "desc": "Du ansvarar för en delstat, provins eller nation: arrangerar mästerskapen, kan kliva in på alla klubbars tävlingar och godkänner rollförfrågningar från klubbarnas medlemmar. Ditt förbund utser dig, eller DivingHQ om det inte finns något ännu.",
+        "step_1": "Öppna <strong>Min region</strong> för att se dina klubbar och vem som driver dem",
+        "step_2": "Skapa mästerskapen i <strong>Tävlingshanterare</strong> med regionen som arrangör",
+        "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara överdomare",
+        "cta": "Arrangera en tävling ↗"
+      },
       "org_admin": {
         "name": "Förbundsadministratör",
         "desc": "Du sätter upp förbundet. Hantera klubbar, lag, användare och roller. Varje tävling som en tävlingsledare skapar hamnar under ditt förbund; du kan även arrangera internationella tävlingar och bjuda in gästförbund.",
@@ -1889,5 +1897,25 @@
     "add": "Lägg till",
     "remove": "Ta bort",
     "federation_appoints": "Ditt förbund utser klubbens administratörer."
+  },
+  "regions": {
+    "label": {
+      "state": "Delstat",
+      "province": "Provins",
+      "home_nation": "Nation",
+      "region": "Region"
+    },
+    "pick": "— Välj en —",
+    "required": "{label}: välj en för din nya klubb."
+  },
+  "my_region": {
+    "title": "Min region",
+    "intro": "Regionens klubbar, vem som driver dem och medlemmarnas rollförfrågningar.",
+    "clubs": "Klubbar",
+    "no_clubs_title": "Inga klubbar ännu",
+    "no_clubs_body": "Klubbar visas här när de har valt din region vid registrering eller på sin klubbsida.",
+    "members": "{n} medlemmar",
+    "no_admin": "Ingen administratör ännu",
+    "region_admins": "Regionadministratörer"
   }
 }

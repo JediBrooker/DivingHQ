@@ -252,7 +252,7 @@ module.exports = function createOrgsRouter({
     try {
       const isSysAdmin = !!req.user.is_system_admin;
       const r = await pool.query(
-        `SELECT cl.id, cl.name, cl.short_code, cl.created_at,
+        `SELECT cl.id, cl.name, cl.short_code, cl.created_at, cl.region_id,
                 cl.org_id, o.name AS org_name, o.country_code,
                 COALESCE(stat.member_count, 0)::int AS member_count,
                 EXISTS (

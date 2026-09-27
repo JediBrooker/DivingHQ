@@ -547,6 +547,14 @@
         "step_4": "Na dan natjecanja vodite bodovanje iz <strong>Kontrolne sobe</strong>",
         "cta": "Organizacija natjecanja ↗"
       },
+      "region_admin": {
+        "name": "Administrator regije",
+        "desc": "Brinete se o saveznoj državi, provinciji ili naciji: organizirate njezina prvenstva, možete uskočiti u natjecanja bilo kojeg njezinog kluba i odobravate zahtjeve članova klubova za uloge. Imenuje vas savez, ili DivingHQ dok saveza nema.",
+        "step_1": "Otvorite <strong>Moja regija</strong> za svoje klubove i tko ih vodi",
+        "step_2": "Stvorite prvenstva u <strong>Menadžeru natjecanja</strong> s regijom kao organizatorom",
+        "step_3": "Odobrite članove koji žele skakati, suditi ili biti glavni sudac",
+        "cta": "Organizacija natjecanja ↗"
+      },
       "org_admin": {
         "name": "Administrator organizacije",
         "desc": "Vi postavljate federaciju. Upravljate klubovima, ekipama, korisnicima i ulogama. Svako natjecanje koje voditelj natjecanja stvori pripada vašoj federaciji; možete ugostiti i međunarodna natjecanja te pozvati federacije u gostima.",
@@ -1889,5 +1897,25 @@
     "add": "Dodaj",
     "remove": "Ukloni",
     "federation_appoints": "Administratore ovog kluba imenuje vaš savez."
+  },
+  "regions": {
+    "label": {
+      "state": "Savezna država",
+      "province": "Provincija",
+      "home_nation": "Nacija",
+      "region": "Regija"
+    },
+    "pick": "— Odaberite —",
+    "required": "{label}: odaberite za svoj novi klub."
+  },
+  "my_region": {
+    "title": "Moja regija",
+    "intro": "Klubovi vaše regije, tko ih vodi i zahtjevi njihovih članova za uloge.",
+    "clubs": "Klubovi",
+    "no_clubs_title": "Još nema klubova",
+    "no_clubs_body": "Klubovi se ovdje pojavljuju kad odaberu vašu regiju, pri registraciji ili na stranici kluba.",
+    "members": "{n} članova",
+    "no_admin": "Još nema administratora",
+    "region_admins": "Administratori regije"
   }
 }

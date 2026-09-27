@@ -558,6 +558,14 @@
         "step_4": "Il giorno della gara, dirigi i punteggi dalla <strong>Sala Controllo</strong>",
         "cta": "Organizzare una gara ↗"
       },
+      "region_admin": {
+        "name": "Amministratore regionale",
+        "desc": "Ti occupi di uno stato, una provincia o una nazione: organizzi i suoi campionati, puoi intervenire sulle gare di qualsiasi suo club e approvi le richieste di ruolo dei membri dei club. Ti nomina la tua federazione, o DivingHQ finché non c'è.",
+        "step_1": "Apri <strong>La mia regione</strong> per vedere i tuoi club e chi li gestisce",
+        "step_2": "Crea i tuoi campionati nel <strong>Gestore gare</strong>, organizzati dalla tua regione",
+        "step_3": "Approva i membri che vogliono tuffarsi, giudicare o arbitrare",
+        "cta": "Organizzare una gara ↗"
+      },
       "org_admin": {
         "name": "Admin di Organizzazione",
         "desc": "Lei configura la federazione. Gestisce club, squadre, utenti e ruoli. Ogni gara creata da un direttore di gara rientra nella sua federazione; può anche ospitare gare internazionali e invitare federazioni ospiti.",
@@ -1889,5 +1897,25 @@
     "add": "Aggiungi",
     "remove": "Rimuovi",
     "federation_appoints": "Gli amministratori di questo club sono nominati dalla tua federazione."
+  },
+  "regions": {
+    "label": {
+      "state": "Stato",
+      "province": "Provincia",
+      "home_nation": "Nazione",
+      "region": "Regione"
+    },
+    "pick": "— Scegline una —",
+    "required": "{label}: scegline una per il tuo nuovo club."
+  },
+  "my_region": {
+    "title": "La mia regione",
+    "intro": "I club della tua regione, chi li gestisce e le richieste di ruolo dei loro membri.",
+    "clubs": "Club",
+    "no_clubs_title": "Ancora nessun club",
+    "no_clubs_body": "I club compaiono qui quando scelgono la tua regione, all'iscrizione o nella pagina del club.",
+    "members": "{n} membri",
+    "no_admin": "Ancora nessun amministratore",
+    "region_admins": "Amministratori della regione"
   }
 }

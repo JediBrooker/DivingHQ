@@ -558,6 +558,14 @@
         "step_4": "Le jour J, pilotez la notation depuis la <strong>Salle de contrôle</strong>",
         "cta": "Organiser une compétition ↗"
       },
+      "region_admin": {
+        "name": "Administrateur régional",
+        "desc": "Vous vous occupez d'un État, d'une province ou d'une nation : vous organisez ses championnats, pouvez intervenir sur les compétitions de n'importe lequel de ses clubs et approuvez les demandes de rôle de leurs membres. Votre fédération vous nomme, ou DivingHQ tant qu'il n'y en a pas.",
+        "step_1": "Ouvrez <strong>Ma région</strong> pour voir vos clubs et qui les gère",
+        "step_2": "Créez vos championnats dans le <strong>Gestionnaire de compétitions</strong>, organisés par votre région",
+        "step_3": "Approuvez les membres qui veulent plonger, juger ou arbitrer",
+        "cta": "Organiser une compétition ↗"
+      },
       "org_admin": {
         "name": "Admin de l'Organisation",
         "desc": "Tu configures la fédération. Gère les clubs, les équipes, les utilisateurs et les rôles. Toute compétition créée par un gestionnaire remonte à ta fédération ; tu peux aussi accueillir des compétitions internationales et inviter des fédérations visiteuses.",
@@ -1889,5 +1897,25 @@
     "add": "Ajouter",
     "remove": "Retirer",
     "federation_appoints": "Votre fédération nomme les administrateurs de ce club."
+  },
+  "regions": {
+    "label": {
+      "state": "État",
+      "province": "Province",
+      "home_nation": "Nation",
+      "region": "Région"
+    },
+    "pick": "— Choisissez —",
+    "required": "{label} : choisissez-en un pour votre nouveau club."
+  },
+  "my_region": {
+    "title": "Ma région",
+    "intro": "Les clubs de votre région, qui les gère, et les demandes de rôle de leurs membres.",
+    "clubs": "Clubs",
+    "no_clubs_title": "Aucun club pour l'instant",
+    "no_clubs_body": "Les clubs apparaissent ici dès qu'ils ont choisi votre région, à l'inscription ou sur leur page de club.",
+    "members": "{n} membres",
+    "no_admin": "Pas encore d'administrateur",
+    "region_admins": "Administrateurs de la région"
   }
 }

@@ -558,6 +558,14 @@
         "step_4": "Kilpailupäivänä ohjaat pisteytystä <strong>Ohjaamosta</strong>",
         "cta": "Kilpailun järjestäminen ↗"
       },
+      "region_admin": {
+        "name": "Alueen ylläpitäjä",
+        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut, voit tarttua minkä tahansa sen seuran kilpailuihin ja hyväksyt seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut, tai DivingHQ, jos liittoa ei vielä ole.",
+        "step_1": "Avaa <strong>Oma alue</strong> nähdäksesi seurasi ja niiden vetäjät",
+        "step_2": "Luo mestaruuskilpailusi <strong>Kilpailun hallinnassa</strong> alueesi järjestämänä",
+        "step_3": "Hyväksy jäsenet, jotka haluavat hypätä, tuomita tai toimia päätuomarina",
+        "cta": "Kilpailun järjestäminen ↗"
+      },
       "org_admin": {
         "name": "Liittokoordinaattori",
         "desc": "Sinä määrität liiton asetukset. Hallinnoit seuroja, joukkueita, käyttäjiä ja rooleja. Kaikki kisanjohtajien luomat kisat kuuluvat liittoosi; voit myös järjestää kansainvälisiä kisoja ja kutsua vieraita liittoja.",
@@ -1889,5 +1897,25 @@
     "add": "Lisää",
     "remove": "Poista",
     "federation_appoints": "Liittosi nimeää tämän seuran ylläpitäjät."
+  },
+  "regions": {
+    "label": {
+      "state": "Osavaltio",
+      "province": "Provinssi",
+      "home_nation": "Kansakunta",
+      "region": "Alue"
+    },
+    "pick": "— Valitse —",
+    "required": "{label}: valitse uudelle seuralle."
+  },
+  "my_region": {
+    "title": "Oma alue",
+    "intro": "Alueesi seurat, kuka niitä johtaa ja jäsenten roolipyynnöt.",
+    "clubs": "Seurat",
+    "no_clubs_title": "Ei vielä seuroja",
+    "no_clubs_body": "Seurat näkyvät tässä, kun ne ovat valinneet alueesi rekisteröityessä tai seurasivullaan.",
+    "members": "{n} jäsentä",
+    "no_admin": "Ei vielä ylläpitäjää",
+    "region_admins": "Alueen ylläpitäjät"
   }
 }

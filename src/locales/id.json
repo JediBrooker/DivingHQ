@@ -547,6 +547,14 @@
         "step_4": "Pada hari kompetisi, jalankan penilaian dari <strong>Ruang Kontrol</strong>",
         "cta": "Menyelenggarakan kompetisi ↗"
       },
+      "region_admin": {
+        "name": "Admin wilayah",
+        "desc": "Anda mengurus negara bagian, provinsi, atau bangsa: menyelenggarakan kejuaraannya, dapat turun tangan di kompetisi klub mana pun di dalamnya, dan menyetujui permintaan peran anggota klubnya. Federasi Anda menunjuk Anda, atau DivingHQ jika belum ada federasi.",
+        "step_1": "Buka <strong>Wilayah saya</strong> untuk melihat klub dan pengelolanya",
+        "step_2": "Buat kejuaraan Anda di <strong>Pengelola kompetisi</strong> dengan wilayah Anda sebagai tuan rumah",
+        "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau wasit",
+        "cta": "Menyelenggarakan kompetisi ↗"
+      },
       "org_admin": {
         "name": "Admin Organisasi",
         "desc": "Anda mengatur federasi. Kelola klub, tim, pengguna, dan peran. Setiap kompetisi yang dibuat pengelola masuk ke federasi Anda; Anda juga bisa menjadi tuan rumah kompetisi internasional dan mengundang federasi tamu.",
@@ -1889,5 +1897,25 @@
     "add": "Tambah",
     "remove": "Hapus",
     "federation_appoints": "Federasi Anda menunjuk admin klub ini."
+  },
+  "regions": {
+    "label": {
+      "state": "Negara bagian",
+      "province": "Provinsi",
+      "home_nation": "Bangsa",
+      "region": "Wilayah"
+    },
+    "pick": "— Pilih salah satu —",
+    "required": "{label}: pilih satu untuk klub baru Anda."
+  },
+  "my_region": {
+    "title": "Wilayah saya",
+    "intro": "Klub di wilayah Anda, siapa pengelolanya, dan permintaan peran anggotanya.",
+    "clubs": "Klub",
+    "no_clubs_title": "Belum ada klub",
+    "no_clubs_body": "Klub muncul di sini setelah memilih wilayah Anda saat mendaftar atau di halaman klubnya.",
+    "members": "{n} anggota",
+    "no_admin": "Belum ada admin",
+    "region_admins": "Admin wilayah"
   }
 }

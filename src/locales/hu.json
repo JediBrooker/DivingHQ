@@ -558,6 +558,14 @@
         "step_4": "A versenynapon a <strong>Vezérlőszobából</strong> irányítja a pontozást",
         "cta": "Verseny rendezése ↗"
       },
+      "region_admin": {
+        "name": "Régió-adminisztrátor",
+        "desc": "Egy államért, tartományért vagy országért felel: rendezi a bajnokságait, beavatkozhat bármely klubja versenyeibe, és jóváhagyja a klubtagok szerepkör-kérelmeit. A szövetsége nevezi ki, vagy a DivingHQ, amíg nincs szövetség.",
+        "step_1": "Nyissa meg a <strong>Saját régióm</strong> oldalt a klubokért és vezetőikért",
+        "step_2": "Hozza létre bajnokságait a <strong>Versenymenedzserben</strong> a régió rendezésében",
+        "step_3": "Hagyja jóvá a műugrani, bíráskodni vagy vezetőbíró lenni kívánó tagokat",
+        "cta": "Verseny rendezése ↗"
+      },
       "org_admin": {
         "name": "Szervezeti adminisztrátor",
         "desc": "Ön állítja be a szövetséget. Klubokat, csapatokat, felhasználókat és szerepköröket kezel. Minden verseny, amelyet egy versenyvezető létrehoz, az Ön szövetségéhez tartozik; nemzetközi versenyeket is rendezhet és meghívhat látogató szövetségeket.",
@@ -1889,5 +1897,25 @@
     "add": "Hozzáadás",
     "remove": "Eltávolítás",
     "federation_appoints": "A klub adminisztrátorait a szövetsége nevezi ki."
+  },
+  "regions": {
+    "label": {
+      "state": "Állam",
+      "province": "Tartomány",
+      "home_nation": "Ország (UK)",
+      "region": "Régió"
+    },
+    "pick": "— Válasszon —",
+    "required": "{label}: válasszon az új klubjához."
+  },
+  "my_region": {
+    "title": "Saját régióm",
+    "intro": "A régió klubjai, azok vezetői és a tagok szerepkör-kérelmei.",
+    "clubs": "Klubok",
+    "no_clubs_title": "Még nincsenek klubok",
+    "no_clubs_body": "A klubok akkor jelennek meg itt, ha regisztrációkor vagy a klub oldalán az Ön régióját választják.",
+    "members": "{n} tag",
+    "no_admin": "Még nincs adminisztrátor",
+    "region_admins": "Régió-adminisztrátorok"
   }
 }

@@ -26,6 +26,11 @@ async function wipeCountry() {
   }
 }
 
+// One worker for the whole file. The hooks run once per worker, so with
+// two workers the second one's clean-up deleted Tonga's account out from
+// under the first test mid-run.
+test.describe.configure({ mode: "serial" });
+
 test.beforeAll(wipeCountry);
 test.afterAll(wipeCountry);
 
@@ -91,4 +96,46 @@ test("a founder signs up by country and runs their club's first meet", async ({ 
   );
   expect(meet.rows).toHaveLength(1);
   expect(meet.rows[0].club).toBe("Nuku'alofa Divers");
+});
+
+// Phase 2: a country with regions (Canada has provinces) asks which one
+// before a new club can be created, and records it on the club.
+test("a founder in a country with provinces picks one", async ({ page }) => {
+  const CAN = "CAN";
+  const wipeCan = async () => {
+    const orgs = await setup.pool.query(
+      "SELECT id FROM organisations WHERE country_code = $1 AND claim_state = 'unclaimed'", [CAN],
+    );
+    for (const { id } of orgs.rows) await setup.deleteOrg(id);
+  };
+  await wipeCan();
+  try {
+    await setup.installClickHighlight(page);
+    const username = `e2e-prov-${setup.rand()}`;
+    await page.goto("/register");
+    await page.locator('input[autocomplete="name"]').fill("Marie Leblanc");
+    await page.locator('input[autocomplete="username"]').fill(username);
+    await page.locator('input[autocomplete="email"]').fill(`${username}@example.test`);
+    await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
+    await page.locator("select").first().selectOption(CAN);
+
+    const province = page.locator("#reg-region");
+    await expect(province).toBeVisible();
+    await expect(page.getByText("Province", { exact: true })).toBeVisible();
+    await page.locator("select").filter({ has: page.locator('option[value="new"]') }).selectOption("new");
+    await page.getByPlaceholder("e.g. Sydney Springboard").fill("Halifax Divers");
+    await province.selectOption("NS");
+    await page.getByRole("button", { name: /Create Account/i }).click();
+    await expect(page.locator(".msg-success")).toBeVisible();
+
+    const club = await setup.pool.query(
+      `SELECT rg.short_code FROM clubs c JOIN regions rg ON rg.id = c.region_id
+        JOIN organisations o ON o.id = c.org_id
+       WHERE o.country_code = $1 AND c.name = 'Halifax Divers'`,
+      [CAN],
+    );
+    expect(club.rows.map((r) => r.short_code)).toEqual(["NS"]);
+  } finally {
+    await wipeCan();
+  }
 });

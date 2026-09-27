@@ -55,9 +55,9 @@ const routes = [
   {
     path: '/manager',
     component: () => import('@/views/ManagerView.vue'),
-    // allowClubAdmin: a club admin runs the meets their club hosts, the
-    // view narrows itself to those.
-    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'], allowClubAdmin: true, appShell: true },
+    // allowDelegateAdmin: a club or region admin runs the meets they
+    // host, the view narrows itself to those.
+    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'], allowDelegateAdmin: true, appShell: true },
   },
   {
     path: '/payments',
@@ -158,7 +158,7 @@ const routes = [
     // pools with per-pool controllers + meet-day tools, and an advisory
     // operator lease.
     component: () => import('@/views/ControlViewV2.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager', 'referee'], allowClubAdmin: true, appShell: true },
+    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager', 'referee'], allowDelegateAdmin: true, appShell: true },
   },
   {
     path: '/judge',
@@ -248,6 +248,13 @@ const routes = [
     path: '/club',
     component: () => import('@/views/MyClubView.vue'),
     meta: { requiresAuth: true, requiresClubAdmin: true, appShell: true },
+  },
+  {
+    // A region admin's page: the region's clubs and its pending role
+    // requests (migration 088).
+    path: '/region',
+    component: () => import('@/views/MyRegionView.vue'),
+    meta: { requiresAuth: true, requiresRegionAdmin: true, appShell: true },
   },
   {
     path: '/clubs',
@@ -421,11 +428,14 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresClubAdmin && isLoggedIn && !auth.isClubAdmin && !auth.user?.is_system_admin) {
     return next('/dashboard')
   }
+  if (to.meta.requiresRegionAdmin && isLoggedIn && !auth.isRegionAdmin && !auth.user?.is_system_admin) {
+    return next('/dashboard')
+  }
 
   if (to.meta.requiresRole && isLoggedIn) {
     const allowed = auth.hasAnyRole(to.meta.requiresRole)
       || (to.meta.allowGuardian && auth.hasDependents)
-      || (to.meta.allowClubAdmin && auth.isClubAdmin)
+      || (to.meta.allowDelegateAdmin && (auth.isClubAdmin || auth.isRegionAdmin))
     if (!allowed) {
       return next('/dashboard')
     }

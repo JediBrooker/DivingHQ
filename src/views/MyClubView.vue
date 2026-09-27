@@ -9,43 +9,38 @@ import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
-import EmptyState from '@/components/EmptyState.vue'
+import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 
-const requests = ref([])
-const requestsLoading = ref(true)
 const busyId = ref(null)
+
+// The org's regions (states etc.), so a club admin can say which one
+// their club is in. Empty for countries without them.
+const regions = ref({ label: null, regions: [] })
+const regionLabel = computed(() => regions.value.label ? t(`regions.label.${regions.value.label}`) : '')
 
 // Per club: { admins, members, canManage, toAdd }
 const clubState = ref({})
 const clubs = computed(() => auth.clubAdminOf)
 
-function roleLabel(role) {
-  return ['diver', 'judge', 'referee'].includes(role) ? t(`role.${role}`) : role
+async function loadRegions() {
+  if (!auth.user?.org_id) return
+  try {
+    regions.value = await auth.apiFetch(`/api/orgs/${auth.user.org_id}/regions`)
+  } catch { /* no regions, nothing to show */ }
 }
 
-async function loadRequests() {
-  requestsLoading.value = true
+async function setRegion(club, regionId) {
+  busyId.value = club.id
   try {
-    const rows = await auth.apiFetch('/api/role-requests')
-    requests.value = Array.isArray(rows) ? rows : []
-  } catch (err) {
-    showError(err.message)
-  } finally {
-    requestsLoading.value = false
-  }
-}
-
-async function decide(rq, decision) {
-  busyId.value = rq.id
-  try {
-    await auth.apiFetch(`/api/role-requests/${rq.id}/review`, {
-      method: 'POST',
-      body: JSON.stringify({ decision }),
+    await auth.apiFetch(`/api/clubs/${club.id}/region`, {
+      method: 'PUT',
+      body: JSON.stringify({ region_id: regionId || null }),
     })
-    requests.value = requests.value.filter(r => r.id !== rq.id)
+    // Keeps auth.clubAdminOf (and so the meet screens) in step.
+    await auth.fetchMe()
   } catch (err) {
     showError(err.message)
   } finally {
@@ -102,7 +97,7 @@ async function removeAdmin(club, admin) {
 }
 
 onMounted(() => {
-  loadRequests()
+  loadRegions()
   for (const c of clubs.value) loadClub(c)
 })
 </script>
@@ -119,36 +114,22 @@ onMounted(() => {
 
     <section class="block">
       <h2 class="block-title">{{ $t('my_club.requests') }}</h2>
-      <div v-if="requestsLoading" class="muted">…</div>
-      <EmptyState
-        v-else-if="!requests.length"
-        icon="✓"
-        :title="$t('my_club.no_requests_title')"
-        :body="$t('my_club.no_requests_body')"
-      />
-      <ul v-else class="rows">
-        <li v-for="rq in requests" :key="rq.id" class="row card-sm">
-          <div class="who">
-            <span class="name">{{ rq.full_name || rq.username }}</span>
-            <span class="meta">
-              {{ $t('my_club.wants_role', { role: roleLabel(rq.requested_role) }) }}
-              <template v-if="clubs.length > 1 && rq.club_name"> · {{ rq.club_name }}</template>
-            </span>
-            <span v-if="rq.note" class="note">“{{ rq.note }}”</span>
-          </div>
-          <div class="actions">
-            <button class="btn btn-ghost btn-sm" :disabled="busyId === rq.id"
-                    @click="decide(rq, 'rejected')">{{ $t('my_club.reject') }}</button>
-            <button class="btn btn-primary btn-sm" :disabled="busyId === rq.id"
-                    @click="decide(rq, 'approved')">{{ $t('my_club.approve') }}</button>
-          </div>
-        </li>
-      </ul>
+      <RoleRequestQueue :show-club="clubs.length > 1" />
     </section>
 
     <section v-for="club in clubs" :key="club.id" class="block">
       <h2 class="block-title">{{ $t('my_club.admins') }} · {{ club.name }}</h2>
       <template v-if="clubState[club.id]">
+        <!-- Which region the club is in. Same rule as the admins list:
+             the club decides where there's no federation. -->
+        <div v-if="regions.regions.length && clubState[club.id].canManage" class="region-row">
+          <label class="label" :for="`region-${club.id}`">{{ regionLabel }}</label>
+          <select :id="`region-${club.id}`" class="select" :value="club.region_id || ''" :disabled="busyId === club.id"
+                  @change="setRegion(club, $event.target.value)">
+            <option value="">{{ $t('regions.pick') }}</option>
+            <option v-for="r in regions.regions" :key="r.id" :value="r.id">{{ r.name }}</option>
+          </select>
+        </div>
         <p v-if="!clubState[club.id].canManage" class="muted">{{ $t('my_club.federation_appoints') }}</p>
         <template v-else>
           <ul class="rows">
@@ -196,6 +177,7 @@ onMounted(() => {
 .note { font-size: var(--text-xs); color: var(--fg-2); font-style: italic; overflow-wrap: anywhere; }
 .actions { display: flex; gap: var(--space-2); flex-shrink: 0; }
 .add-row { display: flex; gap: var(--space-2); align-items: center; }
+.region-row { display: flex; flex-direction: column; gap: var(--space-1); max-width: 320px; }
 .add-row .select { flex: 1; min-width: 0; }
 .muted { color: var(--fg-3); font-size: var(--text-sm); margin: 0; }
 @media (max-width: 720px) {

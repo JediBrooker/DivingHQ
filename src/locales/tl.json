@@ -547,6 +547,14 @@
         "step_4": "Sa araw ng kompetisyon, patakbuhin ang pagmamarka mula sa <strong>Control Room</strong>",
         "cta": "Pagpapatakbo ng kompetisyon ↗"
       },
+      "region_admin": {
+        "name": "Admin ng rehiyon",
+        "desc": "Ikaw ang nangangalaga sa isang estado, lalawigan o bansa: pinapatakbo ang mga kampeonato nito, maaaring tumulong sa mga kompetisyon ng alinman sa mga club nito, at inaaprubahan ang mga hiling na role ng mga miyembro. Itinatalaga ka ng iyong pederasyon, o ng DivingHQ kung wala pa.",
+        "step_1": "Buksan ang <strong>Aking rehiyon</strong> para makita ang mga club at kung sino ang nagpapatakbo",
+        "step_2": "Gumawa ng mga kampeonato sa <strong>Tagapamahala ng meet</strong> na hino-host ng iyong rehiyon",
+        "step_3": "Aprubahan ang mga miyembrong gustong mag-dive, humusga o maging referee",
+        "cta": "Pagpapatakbo ng kompetisyon ↗"
+      },
       "org_admin": {
         "name": "Tagapangasiwa ng Organisasyon",
         "desc": "Ikaw ang nag-set up ng federation. Pamahalaan ang clubs, teams, users, at roles. Bawat meet na ginagawa ng meet manager ay nag-uugnay sa iyong federation; pwede ka ring mag-host ng international meets at mag-imbita ng visiting federations.",
@@ -1889,5 +1897,25 @@
     "add": "Idagdag",
     "remove": "Alisin",
     "federation_appoints": "Ang iyong pederasyon ang nagtatalaga ng mga admin ng club na ito."
+  },
+  "regions": {
+    "label": {
+      "state": "Estado",
+      "province": "Lalawigan",
+      "home_nation": "Bansa (UK)",
+      "region": "Rehiyon"
+    },
+    "pick": "— Pumili ng isa —",
+    "required": "{label}: pumili ng isa para sa iyong bagong club."
+  },
+  "my_region": {
+    "title": "Aking rehiyon",
+    "intro": "Ang mga club sa iyong rehiyon, sino ang nagpapatakbo, at ang mga hiling na role ng kanilang mga miyembro.",
+    "clubs": "Mga club",
+    "no_clubs_title": "Wala pang club",
+    "no_clubs_body": "Lalabas dito ang mga club kapag napili na nila ang iyong rehiyon, sa pag-sign up o sa kanilang club page.",
+    "members": "{n} miyembro",
+    "no_admin": "Wala pang admin",
+    "region_admins": "Mga admin ng rehiyon"
   }
 }

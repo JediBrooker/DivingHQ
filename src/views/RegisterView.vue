@@ -7,7 +7,7 @@ import { useI18n } from 'vue-i18n'
 import COUNTRIES from '../../lib/countries.json'
 
 const router = useRouter()
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 
 const fullName = ref('')
 const username = ref('')
@@ -40,6 +40,32 @@ const countryName = computed(() =>
   countryOptions.value.find(c => c.code === countryCode.value)?.name || '')
 
 const selectedOrg = computed(() => countryOrgs.value.find(o => o.id === orgId.value) || null)
+
+// Regions (states, provinces, home nations; migration 088). From the org
+// when it has them, otherwise the built-in list for the country, which
+// is what the server fills an unclaimed account in with when the first
+// club lands. A new club has to pick one; for joining, it just narrows
+// the club list.
+const regionList = ref({ label: null, regions: [] })
+const regionCode = ref('')
+const regionLabel = computed(() => regionList.value.label ? t(`regions.label.${regionList.value.label}`) : '')
+const selectedRegionId = computed(() =>
+  regionList.value.regions.find(r => r.short_code === regionCode.value)?.id || null)
+
+async function loadRegions() {
+  regionList.value = { label: null, regions: [] }
+  regionCode.value = ''
+  if (!countryLoaded.value) return
+  try {
+    let list = null
+    if (orgId.value) list = await (await fetch(`/api/orgs/${orgId.value}/regions`)).json()
+    const useCatalog = !orgId.value
+      ? !countryOrgs.value.length
+      : !list?.regions?.length && selectedOrg.value?.claim_state === 'unclaimed'
+    if (useCatalog) list = await (await fetch(`/api/countries/${countryCode.value}/regions`)).json()
+    if (list?.regions) regionList.value = list
+  } catch { /* no regions */ }
+}
 // No org yet (they'd create it) or an unclaimed one: no federation above
 // the clubs, so club admins run things and meet_manager isn't on offer.
 const noFederation = computed(() =>
@@ -120,6 +146,15 @@ watch(orgId, async (id) => {
 const showClubPicker = computed(() =>
   countryLoaded.value && (orgId.value || !countryOrgs.value.length))
 
+// With a region picked, its clubs plus any not yet placed in one (clubs
+// that signed up before their country had regions).
+const visibleClubs = computed(() => {
+  if (!selectedRegionId.value) return clubs.value
+  return clubs.value.filter(c => !c.region_id || c.region_id === selectedRegionId.value)
+})
+
+watch([countryLoaded, orgId], () => { loadRegions() })
+
 async function handleSubmit() {
   msg.value = ''
   msgType.value = ''
@@ -135,8 +170,12 @@ async function handleSubmit() {
     else body.country_code = countryCode.value
     if (requestedRole.value) body.requested_role = requestedRole.value
     if (note.value) body.note = note.value
+    if (clubChoice.value === 'new' && regionList.value.regions.length && !regionCode.value) {
+      throw new Error(t('regions.required', { label: regionLabel.value }))
+    }
     if (clubChoice.value === 'new' && newClubName.value.trim()) {
       body.new_club_name = newClubName.value.trim()
+      if (regionCode.value) body.region_code = regionCode.value
       if (newClubCode.value.trim()) body.new_club_short_code = newClubCode.value.trim()
     } else if (clubChoice.value && clubChoice.value !== 'new') {
       body.club_id = clubChoice.value
@@ -239,17 +278,26 @@ async function handleSubmit() {
         </select>
       </div>
 
+      <!-- Region, where the country has them. -->
+      <div class="field" v-if="showClubPicker && regionList.regions.length">
+        <label class="label" for="reg-region">{{ regionLabel }}</label>
+        <select id="reg-region" class="select" v-model="regionCode" :required="clubChoice === 'new'">
+          <option value="">{{ $t('regions.pick') }}</option>
+          <option v-for="r in regionList.regions" :key="r.short_code" :value="r.short_code">{{ r.name }}</option>
+        </select>
+      </div>
+
       <!-- Club: pick an existing one, create a new one inline, or skip. -->
       <div class="field" v-if="showClubPicker">
         <label class="label">{{ $t('auth.register.club') }}</label>
         <select class="select" v-model="clubChoice">
           <option value="">{{ $t('auth.register.club_independent') }}</option>
-          <option v-for="c in clubs" :key="c.id" :value="c.id">
+          <option v-for="c in visibleClubs" :key="c.id" :value="c.id">
             {{ c.name }}<template v-if="c.short_code"> ({{ c.short_code }})</template>
           </option>
           <option value="new">{{ $t('auth.register.club_new') }}</option>
         </select>
-        <p v-if="!clubs.length && clubChoice !== 'new'" class="hint-line">
+        <p v-if="!visibleClubs.length && clubChoice !== 'new'" class="hint-line">
           {{ $t('auth.register.club_no_clubs') }}
         </p>
       </div>

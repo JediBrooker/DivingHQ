@@ -27,9 +27,11 @@
  * @property {number}   iat             issued-at, set by jsonwebtoken
  * @property {number}   exp             expiry, set by jsonwebtoken
  * @property {boolean}  [has_dependents] Body-only (login + /api/auth/me), never in the JWT.
- * @property {{id: string, name: string}[]} [club_admin_of]
+ * @property {{id: string, name: string, region_id: ?string}[]} [club_admin_of]
  *   Body-only (login + /api/auth/me): clubs this user admins. UI hint
  *   only, the server re-reads club_admins on every club-scoped route.
+ * @property {{id: string, name: string, short_code: string}[]} [region_admin_of]
+ *   Body-only, same deal for region_admins (migration 088).
  */
 
 /**
@@ -41,6 +43,15 @@
  * @property {string} name
  * @property {string} country_code
  * @property {'claimed'|'unclaimed'} claim_state  unclaimed = started by clubs, no federation yet
+ */
+
+/**
+ * @typedef {Object} RegionList
+ * GET /api/orgs/:id/regions and GET /api/countries/:code/regions.
+ *
+ * @property {?('state'|'province'|'home_nation'|'region')} label  null = no regions
+ * @property {{id?: string, name: string, short_code: string, club_count?: number}[]} regions
+ *   id and club_count only on the per-org list (the country list is the built-in catalogue).
  */
 
 /**

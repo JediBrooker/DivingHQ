@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -9,6 +9,7 @@ import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import { fmtDate } from '@/lib/format'
 import ClubAdminsModal from '@/components/ClubAdminsModal.vue'
+import RegionAdminsModal from '@/components/RegionAdminsModal.vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 
 const auth = useAuthStore()
@@ -35,7 +36,8 @@ const editBusy = ref(false)
 
 // Club whose admins dialog is open, null when it's closed.
 const adminsFor = ref(null)
-useBodyScrollLock().lockWhile(computed(() => !!adminsFor.value))
+const regionAdminsFor = ref(null)
+useBodyScrollLock().lockWhile(computed(() => !!adminsFor.value || !!regionAdminsFor.value))
 
 const isSysAdmin = computed(() => !!auth.user?.is_system_admin)
 // Only the federation admin configures club fees. Meet managers can view
@@ -180,8 +182,54 @@ async function deleteClub(club) {
 
 // fmtDate imported from @/lib/format, single source of truth for this.
 
+// Regions (states, provinces, home nations; migration 088) for one org at
+// a time: your own, or, for a sysadmin, the org picked in the filter.
+const regionOrgId = computed(() =>
+  isSysAdmin.value ? (orgFilter.value || null) : (auth.user?.org_id || null))
+const regions = ref({ label: null, regions: [] })
+const regionsBusy = ref(false)
+const canManageRegions = computed(() => isSysAdmin.value || isOrgAdmin.value)
+
+async function loadRegions() {
+  regions.value = { label: null, regions: [] }
+  if (!regionOrgId.value) return
+  try {
+    regions.value = await auth.apiFetch(`/api/orgs/${regionOrgId.value}/regions`)
+  } catch { /* none */ }
+}
+
+// Opt in to the built-in list for this country. A federation isn't
+// given regions until it asks, it may run without them.
+async function seedRegions() {
+  regionsBusy.value = true
+  try {
+    const r = await auth.apiFetch(`/api/orgs/${regionOrgId.value}/regions/seed`, { method: 'POST' })
+    await loadRegions()
+    showSuccess(`Added ${r.added} region${r.added === 1 ? '' : 's'}`)
+  } catch (err) {
+    showError(err.message)
+  } finally {
+    regionsBusy.value = false
+  }
+}
+
+async function setClubRegion(club, regionId) {
+  try {
+    await auth.apiFetch(`/api/clubs/${club.id}/region`, {
+      method: 'PUT',
+      body: JSON.stringify({ region_id: regionId || null }),
+    })
+    club.region_id = regionId || null
+    await loadRegions()   // club counts
+  } catch (err) {
+    showError(err.message)
+  }
+}
+
+watch(regionOrgId, loadRegions)
+
 onMounted(async () => {
-  await Promise.all([loadClubs(), loadOrgs()])
+  await Promise.all([loadClubs(), loadOrgs(), loadRegions()])
 })
 </script>
 
@@ -215,6 +263,21 @@ onMounted(async () => {
       Fees &amp; pricing. Club admins pay from their club’s Classes → Payouts
       page; the Billing column below shows who’s paid.
     </p>
+
+    <!-- Regions: states / provinces / home nations for one org. -->
+    <div v-if="canManageRegions && regionOrgId" class="regions-panel">
+      <template v-if="regions.regions.length">
+        <span class="regions-head">Regions</span>
+        <button v-for="r in regions.regions" :key="r.id" class="region-chip" type="button"
+                v-tip="'Manage who admins ' + r.name" @click="regionAdminsFor = r">
+          {{ r.short_code }} <span class="region-count">{{ r.club_count }}</span>
+        </button>
+      </template>
+      <template v-else>
+        <span class="regions-empty">No regions (states, provinces…) set up for this organisation.</span>
+        <button class="btn btn-ghost btn-sm" :disabled="regionsBusy" @click="seedRegions">Set up regions</button>
+      </template>
+    </div>
 
     <!-- Filters + create -->
     <div class="toolbar">
@@ -273,6 +336,7 @@ onMounted(async () => {
             <th>{{ $t('clubs.col_name') }}</th>
             <th>{{ $t('clubs.col_code') }}</th>
             <th v-if="isSysAdmin">Organisation</th>
+            <th v-if="regions.regions.length">Region</th>
             <th class="num-col">{{ $t('clubs.col_members') }}</th>
             <th class="affil-head">Billing</th>
             <th>{{ $t('clubs.col_created') }}</th>
@@ -281,13 +345,13 @@ onMounted(async () => {
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td :colspan="isSysAdmin ? 7 : 6" class="empty-state">Loading…</td>
+            <td :colspan="(isSysAdmin ? 7 : 6) + (regions.regions.length ? 1 : 0)" class="empty-state">Loading…</td>
           </tr>
           <tr v-else-if="errorMsg">
-            <td :colspan="isSysAdmin ? 7 : 6" class="empty-state">{{ errorMsg }}</td>
+            <td :colspan="(isSysAdmin ? 7 : 6) + (regions.regions.length ? 1 : 0)" class="empty-state">{{ errorMsg }}</td>
           </tr>
           <tr v-else-if="!filteredClubs.length && !clubs.length">
-            <td :colspan="isSysAdmin ? 7 : 6">
+            <td :colspan="(isSysAdmin ? 7 : 6) + (regions.regions.length ? 1 : 0)">
               <div class="empty-state-card">
                 <div class="empty-state-icon">🏢</div>
                 <div class="empty-state-title">No clubs yet</div>
@@ -302,7 +366,7 @@ onMounted(async () => {
             </td>
           </tr>
           <tr v-else-if="!filteredClubs.length">
-            <td :colspan="isSysAdmin ? 7 : 6" class="empty-state">
+            <td :colspan="(isSysAdmin ? 7 : 6) + (regions.regions.length ? 1 : 0)" class="empty-state">
               No clubs match the current filter.
             </td>
           </tr>
@@ -317,6 +381,15 @@ onMounted(async () => {
               <td v-if="isSysAdmin" class="org-cell">
                 <span class="org-name">{{ c.org_name }}</span>
                 <span v-if="c.country_code" class="org-country">{{ c.country_code }}</span>
+              </td>
+              <td v-if="regions.regions.length">
+                <select v-if="canManageRegions && c.org_id === regionOrgId" class="select select-sm"
+                        :value="c.region_id || ''" @change="setClubRegion(c, $event.target.value)"
+                        :aria-label="'Region for ' + c.name">
+                  <option value="">—</option>
+                  <option v-for="r in regions.regions" :key="r.id" :value="r.id">{{ r.short_code }}</option>
+                </select>
+                <span v-else class="dim">—</span>
               </td>
               <td class="num-col">
                 <span v-if="c.member_count" class="member-count">{{ c.member_count }}</span>
@@ -347,6 +420,7 @@ onMounted(async () => {
                        placeholder="Code" maxlength="20" style="max-width:90px">
               </td>
               <td v-if="isSysAdmin" class="dim">{{ c.org_name }}</td>
+              <td v-if="regions.regions.length" class="dim">—</td>
               <td class="num-col dim">{{ c.member_count }}</td>
               <td class="dim">—</td>
               <td class="dim">{{ fmtDate(c.created_at) }}</td>
@@ -366,6 +440,7 @@ onMounted(async () => {
   </div>
 
   <ClubAdminsModal v-if="adminsFor" :club="adminsFor" @close="adminsFor = null" />
+  <RegionAdminsModal v-if="regionAdminsFor" :region="regionAdminsFor" @close="regionAdminsFor = null" />
 </template>
 
 <style scoped>
@@ -444,6 +519,23 @@ onMounted(async () => {
 /* Affiliation / accreditation billing status pills */
 .affil-head { width: 170px; }
 .affil-cell { white-space: nowrap; }
+
+/* Regions strip */
+.regions-panel {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  padding: 0.6rem 0.85rem; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.regions-head { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-3); margin-inline-end: 0.25rem; }
+.regions-empty { font-size: 13px; color: var(--fg-3); }
+.region-chip {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--fg-2);
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-pill);
+  padding: 0.2rem 0.6rem; cursor: pointer;
+}
+.region-chip:hover { border-color: var(--accent); color: var(--accent); }
+.region-count { font-weight: 400; color: var(--text-3); margin-inline-start: 0.2rem; }
+.select-sm { padding: 0.25rem 0.4rem; font-size: 12px; min-width: 70px; }
 .affil-pill {
   display: inline-block; font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   letter-spacing: 0.04em; border-radius: 3px; padding: 0.12rem 0.4rem;

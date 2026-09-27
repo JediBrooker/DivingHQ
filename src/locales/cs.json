@@ -547,6 +547,14 @@
         "step_4": "V den závodu řiďte bodování z <strong>Řídicí místnosti</strong>",
         "cta": "Pořádání závodu ↗"
       },
+      "region_admin": {
+        "name": "Správce regionu",
+        "desc": "Staráte se o stát, provincii či zemi: pořádáte její mistrovství, můžete zasáhnout do závodů kteréhokoli jejího klubu a schvalujete žádosti členů jejích klubů o role. Jmenuje vás federace, nebo DivingHQ, pokud federace zatím není.",
+        "step_1": "Otevřete <strong>Můj region</strong> a uvidíte své kluby a jejich vedení",
+        "step_2": "Vytvořte mistrovství ve <strong>Správě závodů</strong> pořádané vaším regionem",
+        "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo řídit",
+        "cta": "Pořádání závodu ↗"
+      },
       "org_admin": {
         "name": "Administrátor organizace",
         "desc": "Nastavujete federaci. Spravujte kluby, týmy, uživatele a role. Každý závod, který vedoucí závodu vytvoří, spadá pod vaši federaci; můžete také pořádat mezinárodní závody a zvát hostující federace.",
@@ -1889,5 +1897,25 @@
     "add": "Přidat",
     "remove": "Odebrat",
     "federation_appoints": "Správce tohoto klubu jmenuje vaše federace."
+  },
+  "regions": {
+    "label": {
+      "state": "Stát",
+      "province": "Provincie",
+      "home_nation": "Země (UK)",
+      "region": "Region"
+    },
+    "pick": "— Vyberte —",
+    "required": "{label}: vyberte pro svůj nový klub."
+  },
+  "my_region": {
+    "title": "Můj region",
+    "intro": "Kluby vašeho regionu, kdo je vede a žádosti jejich členů o role.",
+    "clubs": "Kluby",
+    "no_clubs_title": "Zatím žádné kluby",
+    "no_clubs_body": "Kluby se tu objeví, jakmile si váš region vyberou při registraci nebo na stránce klubu.",
+    "members": "{n} členů",
+    "no_admin": "Zatím bez správce",
+    "region_admins": "Správci regionu"
   }
 }

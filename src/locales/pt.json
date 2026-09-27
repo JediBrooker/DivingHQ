@@ -558,6 +558,14 @@
         "step_4": "No dia da prova, conduza a pontuação a partir da <strong>Sala de Controlo</strong>",
         "cta": "Organizar uma prova ↗"
       },
+      "region_admin": {
+        "name": "Administrador regional",
+        "desc": "Cuida de um estado, província ou nação: organiza os campeonatos, pode intervir nas provas de qualquer clube e aprova os pedidos de função dos membros dos clubes. A sua federação nomeia-o, ou o DivingHQ enquanto não houver.",
+        "step_1": "Abra <strong>A minha região</strong> para ver os clubes e quem os gere",
+        "step_2": "Crie os campeonatos no <strong>Gestor de Competições</strong>, organizados pela sua região",
+        "step_3": "Aprove os membros que querem saltar, julgar ou arbitrar",
+        "cta": "Organizar uma prova ↗"
+      },
       "org_admin": {
         "name": "Admin de Organização",
         "desc": "Tu configuras a federação. Gere clubes, equipas, utilizadores e papéis. Cada prova criada por um diretor de prova pertence à tua federação; também podes acolher provas internacionais e convidar federações visitantes.",
@@ -1889,5 +1897,25 @@
     "add": "Adicionar",
     "remove": "Remover",
     "federation_appoints": "A sua federação nomeia os administradores deste clube."
+  },
+  "regions": {
+    "label": {
+      "state": "Estado",
+      "province": "Província",
+      "home_nation": "Nação",
+      "region": "Região"
+    },
+    "pick": "— Escolha uma —",
+    "required": "{label}: escolha uma para o seu novo clube."
+  },
+  "my_region": {
+    "title": "A minha região",
+    "intro": "Os clubes da sua região, quem os gere e os pedidos de função dos membros.",
+    "clubs": "Clubes",
+    "no_clubs_title": "Ainda não há clubes",
+    "no_clubs_body": "Os clubes aparecem aqui quando escolhem a sua região, no registo ou na página do clube.",
+    "members": "{n} membros",
+    "no_admin": "Ainda sem administrador",
+    "region_admins": "Administradores da região"
   }
 }

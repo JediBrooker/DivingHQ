@@ -55,8 +55,8 @@ const NAV = [
   // Live-competition workflow, roughly in the order it's used:
   // set up → run → participate → judge → results → analysis → reference.
   { key: 'competition', group: 'Competition', icon: Trophy, items: [
-    { to: '/manager',        label: 'Meets & events', labelKey: 'manager.title',         icon: Trophy,        roles: ['org_admin', 'meet_manager'], allowClubAdmin: true },
-    { to: '/control',        label: 'Control Room',   labelKey: 'control.page_label',     icon: MonitorPlay,   roles: ['org_admin', 'meet_manager', 'referee'], allowClubAdmin: true },
+    { to: '/manager',        label: 'Meets & events', labelKey: 'manager.title',         icon: Trophy,        roles: ['org_admin', 'meet_manager'], allowDelegateAdmin: true },
+    { to: '/control',        label: 'Control Room',   labelKey: 'control.page_label',     icon: MonitorPlay,   roles: ['org_admin', 'meet_manager', 'referee'], allowDelegateAdmin: true },
     { to: '/competitor',     label: 'Dive Sheets',    icon: Waves,         roles: ['diver'] },
     { to: '/judge',          label: 'Judge Terminal', icon: Calculator,    roles: ['judge'] },
     { to: '/scoreboard',     label: 'Scoreboard & Results', labelKey: 'scoreboard.page_label',  icon: ListChecks },
@@ -93,6 +93,7 @@ const NAV = [
   // personal section above.
   { key: 'federation', group: 'Federation', icon: Building2, items: [
     { to: '/club',     label: 'My club',            labelKey: 'my_club.title',      icon: Building2,  clubAdminOnly: true },
+    { to: '/region',   label: 'My region',          labelKey: 'my_region.title',    icon: Building2,  regionAdminOnly: true },
     { to: '/users',    label: 'User Manager',       labelKey: 'user_manager.title', icon: Users,      roles: ['org_admin'] },
     { to: '/clubs',    label: 'Clubs & teams',      labelKey: 'clubs.title',        icon: Building2,  roles: ['org_admin', 'meet_manager'] },
     { to: '/fines',    label: 'Fines',              icon: Gavel,      roles: ['referee', 'org_admin'], feature: 'payments' },
@@ -119,9 +120,10 @@ function featureOn(entry) {
 function allowedBy(entry) {
   if (entry.sysadminOnly) return Boolean(auth.user?.is_system_admin)
   if (entry.clubAdminOnly) return Boolean(auth.isClubAdmin)
+  if (entry.regionAdminOnly) return Boolean(auth.isRegionAdmin)
   if (!entry.roles) return true
   if (entry.roles.some((r) => auth.hasRole(r))) return true
-  if (entry.allowClubAdmin && auth.isClubAdmin) return true
+  if (entry.allowDelegateAdmin && (auth.isClubAdmin || auth.isRegionAdmin)) return true
   return Boolean(entry.allowGuardian && auth.hasDependents)
 }
 function childVisible(c) {

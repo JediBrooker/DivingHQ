@@ -558,6 +558,14 @@
         "step_4": "Am Wettkampftag steuern Sie die Wertung aus dem <strong>Kontrollraum</strong>",
         "cta": "Einen Wettkampf ausrichten ↗"
       },
+      "region_admin": {
+        "name": "Regionsadmin",
+        "desc": "Sie betreuen einen Bundesstaat, eine Provinz oder einen Landesteil: Sie richten die Meisterschaften aus, können bei den Wettkämpfen aller Vereine einspringen und genehmigen Rollenanfragen der Vereinsmitglieder. Ihr Verband ernennt Sie, oder DivingHQ, solange es noch keinen gibt.",
+        "step_1": "Öffnen Sie <strong>Meine Region</strong> für Ihre Vereine und deren Leitung",
+        "step_2": "Legen Sie Ihre Meisterschaften im <strong>Wettkampf-Manager</strong> mit Ihrer Region als Ausrichter an",
+        "step_3": "Genehmigen Sie Mitglieder, die springen, werten oder Schiedsrichter sein möchten",
+        "cta": "Einen Wettkampf ausrichten ↗"
+      },
       "org_admin": {
         "name": "Verbandsadmin",
         "desc": "Sie richten den Verband ein. Verwalten Sie Vereine, Mannschaften, Benutzer und Rollen. Jeder Wettkampf, den ein Wettkampfleiter anlegt, gehört zu Ihrem Verband; Sie können auch internationale Wettkämpfe ausrichten und Gastverbände einladen.",
@@ -1889,5 +1897,25 @@
     "add": "Hinzufügen",
     "remove": "Entfernen",
     "federation_appoints": "Ihr Verband ernennt die Admins dieses Vereins."
+  },
+  "regions": {
+    "label": {
+      "state": "Bundesstaat",
+      "province": "Provinz",
+      "home_nation": "Landesteil",
+      "region": "Region"
+    },
+    "pick": "— Bitte wählen —",
+    "required": "{label}: bitte für Ihren neuen Verein wählen."
+  },
+  "my_region": {
+    "title": "Meine Region",
+    "intro": "Die Vereine Ihrer Region, wer sie führt, und die Rollenanfragen ihrer Mitglieder.",
+    "clubs": "Vereine",
+    "no_clubs_title": "Noch keine Vereine",
+    "no_clubs_body": "Vereine erscheinen hier, sobald sie Ihre Region bei der Registrierung oder auf ihrer Vereinsseite gewählt haben.",
+    "members": "{n} Mitglieder",
+    "no_admin": "Noch kein Admin",
+    "region_admins": "Regionsadmins"
   }
 }
