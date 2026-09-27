@@ -91,6 +91,10 @@ test("a club asks to join a claimed region, and the region accepts", async ({ pa
   await page.context().clearCookies();
   await signIn(page, world.freeport.username);
   await page.goto("/region");
+  // Grand Bahama's only admin can't step down, and the button says why.
+  const soleRemove = page.locator("[data-test-id=region-admins] li").getByRole("button", { name: "Remove" });
+  await expect(soleRemove).toBeDisabled();
+  await expect(soleRemove).toHaveAttribute("data-tip", /A region needs at least one admin/);
   const asking = page.locator("[data-test-id=region-club-requests]");
   await expect(asking).toContainText("Nassau Divers");
   await asking.getByRole("button", { name: "Approve" }).click();
@@ -113,4 +117,39 @@ test("a club can withdraw its ask", async ({ page }) => {
   await pending.getByRole("button", { name: "Withdraw request" }).click();
   await expect(pending).toHaveCount(0);
   expect(await regionOf(world.nassau.clubId)).toEqual({ region_id: null, requested_region_id: null });
+});
+
+// Two region admins, then the other one is suspended while the page is
+// open. Remove still looks live on the stale page; the server refuses,
+// and the page gives the reason in the reader's words rather than the
+// server's English, then greys the button out.
+test("a stale My region page explains the last-admin refusal", async ({ page, request }) => {
+  // A Freeport member, so a region admin the region could have picked itself.
+  const username = `e2e-rj-${setup.rand()}`;
+  const r = await request.post("/api/auth/register", {
+    data: { username, full_name: "Lucaya Co-admin", password: setup.TEST_PASSWORD,
+            email: `${username}@example.test`, org_id: world.freeport.orgId, club_id: world.freeport.clubId },
+  });
+  expect(r.status(), await r.text()).toBe(201);
+  const co = (await setup.pool.query(
+    "UPDATE users SET email_verified_at = now() WHERE username = $1 RETURNING id", [username],
+  )).rows[0];
+  await setup.pool.query(
+    "INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)",
+    [world.regionId, co.id, world.freeport.orgId],
+  );
+  await signIn(page, world.freeport.username);
+  await page.goto("/region");
+  const mine = page.locator("[data-test-id=region-admins] li", { hasText: "Freeport Admin" })
+    .getByRole("button", { name: "Remove" });
+  await expect(mine).toBeEnabled();
+
+  await setup.pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [co.id]);
+  await mine.click();
+  await expect(page.getByText("A region needs at least one admin. Add a co-admin before removing this one.")).toBeVisible();
+  await expect(mine).toBeDisabled();
+  const still = await setup.pool.query(
+    "SELECT 1 FROM region_admins WHERE region_id = $1 AND user_id = $2", [world.regionId, world.freeport.id],
+  );
+  expect(still.rows).toHaveLength(1);
 });

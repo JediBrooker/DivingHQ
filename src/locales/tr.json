@@ -438,11 +438,7 @@
       "live": "{name} CANLI",
       "prepare": "{name} için hazırlayın",
       "prepare_meta": "Ön-etkinlik iş akışını adım adım yürütün",
-      "role_requests_one": "{count} rol isteği bekliyor",
-      "role_requests_many": "{count} rol isteği bekliyor",
       "role_requests_meta": "Kullanıcı Yönetimi'nde rol isteklerini inceleyin",
-      "orgs_one": "{count} federasyon onay bekliyor",
-      "orgs_many": "{count} federasyon onay bekliyor",
       "orgs_meta": "Kullanıcı Yönetimi'nde inceleyin → org filtresi",
       "claims_meta": "Bir federasyon bir hesabı devralmak istiyor",
       "chip_pending": "Bekleyen",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür. Federasyon genelinde erişimleri yoktur.",
     "admins_intro_classes": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür ve kulübün kurslarıyla ilgilenir. Federasyon genelinde erişimleri yoktur.",
-    "admins_intro_payments": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür ve kulübün ödemeleriyle üyelik aidatlarıyla ilgilenir. Federasyon genelinde erişimleri yoktur."
+    "admins_intro_payments": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür ve kulübün ödemeleriyle üyelik aidatlarıyla ilgilenir. Federasyon genelinde erişimleri yoktur.",
+    "last_admin_tip": "Bir kulübün en az bir yöneticisi olmalıdır. Bunu kaldırmadan önce başka bir yönetici ekleyin."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Henüz eklenecek kimse yok. Bölgenizdeki kulüplerin üyeleri burada görünür.",
     "release_club": "Bölgeden çıkar",
     "club_requests": "Katılmak isteyen kulüpler",
-    "currently_in": "şu anki bölge: {region}"
+    "currently_in": "şu anki bölge: {region}",
+    "last_admin_tip": "Bir bölgenin en az bir yöneticisi olmalıdır. Bunu kaldırmadan önce başka bir yönetici ekleyin."
   },
   "claims": {
     "title": "Devralma talepleri",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "{n} yeni kulüp onay bekliyor",
     "clubs_waiting_few": "{n} yeni kulüp onay bekliyor",
     "clubs_waiting_many": "{n} yeni kulüp onay bekliyor",
-    "clubs_waiting_other": "{n} yeni kulüp onay bekliyor"
+    "clubs_waiting_other": "{n} yeni kulüp onay bekliyor",
+    "role_requests_waiting_zero": "{n} rol isteği bekliyor",
+    "role_requests_waiting_one": "{n} rol isteği bekliyor",
+    "role_requests_waiting_two": "{n} rol isteği bekliyor",
+    "role_requests_waiting_few": "{n} rol isteği bekliyor",
+    "role_requests_waiting_many": "{n} rol isteği bekliyor",
+    "role_requests_waiting_other": "{n} rol isteği bekliyor",
+    "federations_awaiting_zero": "{n} federasyon onay bekliyor",
+    "federations_awaiting_one": "{n} federasyon onay bekliyor",
+    "federations_awaiting_two": "{n} federasyon onay bekliyor",
+    "federations_awaiting_few": "{n} federasyon onay bekliyor",
+    "federations_awaiting_many": "{n} federasyon onay bekliyor",
+    "federations_awaiting_other": "{n} federasyon onay bekliyor"
   },
   "admin_settings": {
     "title": "Devralma talebi oylama kuralları",

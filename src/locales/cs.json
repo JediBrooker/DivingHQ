@@ -438,11 +438,7 @@
       "live": "{name} právě probíhá",
       "prepare": "Připravte {name}",
       "prepare_meta": "Projděte předzávodní postup",
-      "role_requests_one": "{count} žádost o roli čeká",
-      "role_requests_many": "{count} žádostí o role čeká",
       "role_requests_meta": "Zkontrolujte žádosti o role ve Správci uživatelů",
-      "orgs_one": "{count} federace čeká na schválení",
-      "orgs_many": "{count} federací čeká na schválení",
       "orgs_meta": "Zkontrolujte ve Správci uživatelů → filtr organizací",
       "claims_meta": "Federace chce převzít účet",
       "chip_pending": "Čeká",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Správci klubu řídí závody, které jejich klub pořádá. Přístup v rámci celého svazu nemají.",
     "admins_intro_classes": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho kurzy. Přístup v rámci celého svazu nemají.",
-    "admins_intro_payments": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho výplaty a členské příspěvky. Přístup v rámci celého svazu nemají."
+    "admins_intro_payments": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho výplaty a členské příspěvky. Přístup v rámci celého svazu nemají.",
+    "last_admin_tip": "Klub potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Zatím není koho přidat. Zobrazí se tu členové klubů ve vašem regionu.",
     "release_club": "Vyjmout z regionu",
     "club_requests": "Kluby, které žádají o vstup",
-    "currently_in": "nyní v regionu {region}"
+    "currently_in": "nyní v regionu {region}",
+    "last_admin_tip": "Region potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce."
   },
   "claims": {
     "title": "Nároky",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "{n} nových klubů čeká na schválení",
     "clubs_waiting_few": "{n} nové kluby čekají na schválení",
     "clubs_waiting_many": "{n} nového klubu čeká na schválení",
-    "clubs_waiting_other": "{n} nových klubů čeká na schválení"
+    "clubs_waiting_other": "{n} nových klubů čeká na schválení",
+    "role_requests_waiting_zero": "{n} žádostí o role čeká",
+    "role_requests_waiting_one": "{n} žádost o roli čeká",
+    "role_requests_waiting_two": "{n} žádostí o role čeká",
+    "role_requests_waiting_few": "{n} žádosti o role čekají",
+    "role_requests_waiting_many": "{n} žádosti o role čeká",
+    "role_requests_waiting_other": "{n} žádostí o role čeká",
+    "federations_awaiting_zero": "{n} federací čeká na schválení",
+    "federations_awaiting_one": "{n} federace čeká na schválení",
+    "federations_awaiting_two": "{n} federací čeká na schválení",
+    "federations_awaiting_few": "{n} federace čekají na schválení",
+    "federations_awaiting_many": "{n} federace čeká na schválení",
+    "federations_awaiting_other": "{n} federací čeká na schválení"
   },
   "admin_settings": {
     "title": "Pravidla hlasování o nárocích",

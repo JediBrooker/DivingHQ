@@ -438,11 +438,7 @@
       "live": "{name}님이 라이브 중입니다",
       "prepare": "{name}을 준비하세요",
       "prepare_meta": "사전 대회 워크플로우를 진행하세요",
-      "role_requests_one": "{count}개의 역할 요청이 대기 중입니다",
-      "role_requests_many": "{count}개의 역할 요청이 대기 중입니다",
       "role_requests_meta": "사용자 관리에서 역할 요청을 검토하세요",
-      "orgs_one": "{count}개의 연맹 승인 대기 중입니다",
-      "orgs_many": "{count}개의 연맹 승인 대기 중입니다",
       "orgs_meta": "사용자 관리에서 검토 → org 필터",
       "claims_meta": "연맹이 계정 인수를 요청했습니다",
       "chip_pending": "대기 중",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "클럽 관리자는 소속 클럽이 주최하는 대회를 운영합니다. 연맹 전체 권한은 없습니다.",
     "admins_intro_classes": "클럽 관리자는 소속 클럽이 주최하는 대회를 운영하고 강습을 관리합니다. 연맹 전체 권한은 없습니다.",
-    "admins_intro_payments": "클럽 관리자는 소속 클럽이 주최하는 대회를 운영하고 지급금과 가맹비를 관리합니다. 연맹 전체 권한은 없습니다."
+    "admins_intro_payments": "클럽 관리자는 소속 클럽이 주최하는 대회를 운영하고 지급금과 가맹비를 관리합니다. 연맹 전체 권한은 없습니다.",
+    "last_admin_tip": "클럽에는 관리자가 최소 한 명 있어야 합니다. 이 관리자를 제거하기 전에 다른 관리자를 추가하세요."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "아직 추가할 사람이 없습니다. 지역 내 클럽 회원이 여기에 표시됩니다.",
     "release_club": "지역에서 제외",
     "club_requests": "가입을 요청한 클럽",
-    "currently_in": "현재 지역: {region}"
+    "currently_in": "현재 지역: {region}",
+    "last_admin_tip": "지역에는 관리자가 최소 한 명 있어야 합니다. 이 관리자를 제거하기 전에 다른 관리자를 추가하세요."
   },
   "claims": {
     "title": "인수 신청",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "승인 대기 중인 새 클럽 {n}개",
     "clubs_waiting_few": "승인 대기 중인 새 클럽 {n}개",
     "clubs_waiting_many": "승인 대기 중인 새 클럽 {n}개",
-    "clubs_waiting_other": "승인 대기 중인 새 클럽 {n}개"
+    "clubs_waiting_other": "승인 대기 중인 새 클럽 {n}개",
+    "role_requests_waiting_zero": "역할 요청 {n}건이 대기 중입니다",
+    "role_requests_waiting_one": "역할 요청 {n}건이 대기 중입니다",
+    "role_requests_waiting_two": "역할 요청 {n}건이 대기 중입니다",
+    "role_requests_waiting_few": "역할 요청 {n}건이 대기 중입니다",
+    "role_requests_waiting_many": "역할 요청 {n}건이 대기 중입니다",
+    "role_requests_waiting_other": "역할 요청 {n}건이 대기 중입니다",
+    "federations_awaiting_zero": "연맹 {n}곳이 승인을 기다리고 있습니다",
+    "federations_awaiting_one": "연맹 {n}곳이 승인을 기다리고 있습니다",
+    "federations_awaiting_two": "연맹 {n}곳이 승인을 기다리고 있습니다",
+    "federations_awaiting_few": "연맹 {n}곳이 승인을 기다리고 있습니다",
+    "federations_awaiting_many": "연맹 {n}곳이 승인을 기다리고 있습니다",
+    "federations_awaiting_other": "연맹 {n}곳이 승인을 기다리고 있습니다"
   },
   "admin_settings": {
     "title": "인수 신청 투표 규칙",

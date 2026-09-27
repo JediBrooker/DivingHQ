@@ -28,7 +28,7 @@ const busyId = ref(null)
 const regions = ref({ label: null, regions: [] })
 const regionLabel = computed(() => regions.value.label ? t(`regions.label.${regions.value.label}`) : '')
 
-// Per club: { admins, members, canManage, denied, failed, toAdd }.
+// Per club: { admins, members, canManage, keepOneLive, denied, failed, toAdd }.
 // denied = the server said 403; failed = anything else went wrong, which
 // says nothing about who may manage the club, so it gets a retry.
 const clubState = ref({})
@@ -108,7 +108,7 @@ async function loadClub(club) {
     const body = await auth.apiFetch(`/api/clubs/${club.id}/admins`)
     clubState.value[club.id] = {
       admins: body.admins || [], members: body.members || [], canManage: true, toAdd: '',
-      regionRequest: body.region_request || null,
+      regionRequest: body.region_request || null, keepOneLive: !!body.keep_one_live,
     }
   } catch (err) {
     const denied = err.status === 403
@@ -147,6 +147,15 @@ function onJoinDecided({ request, decision }) {
   if (decision !== 'approved') return
   const club = clubs.value.find(c => c.id === request.to_club_id)
   if (club) loadClub(club)
+}
+
+// The server won't let a club admin take the club down to no live admin
+// (lib/admin-rows.js), so the last one's Remove is greyed out with the
+// reason on it rather than failing after the confirm dialog.
+function soleLiveAdmin(clubId, admin) {
+  const st = clubState.value[clubId]
+  if (!st?.keepOneLive || !admin.live) return false
+  return !st.admins.some(a => a.live && a.id !== admin.id)
 }
 
 function addable(clubId) {
@@ -190,7 +199,16 @@ async function removeAdmin(club, admin) {
     if (self) await refreshAfterLosingClub(club)
     else await loadClub(club)
   } catch (err) {
-    showError(err.message)
+    // 409 means the page was out of date: the other live admin stepped
+    // down or got suspended after we loaded. Give the reason in the
+    // reader's language, not the server's English, and reload so the
+    // button greys out the way it would have.
+    if (err.status === 409) {
+      showError(t('my_club.last_admin_tip'))
+      await loadClub(club)
+    } else {
+      showError(err.message)
+    }
   } finally {
     busyId.value = null
   }
@@ -263,7 +281,8 @@ onMounted(() => {
                 <span class="name">{{ a.full_name }}</span>
                 <span class="meta">@{{ a.username }}</span>
               </div>
-              <button class="btn btn-ghost btn-sm" :disabled="busyId === club.id"
+              <button class="btn btn-ghost btn-sm" :disabled="busyId === club.id || soleLiveAdmin(club.id, a)"
+                      v-tip="soleLiveAdmin(club.id, a) ? $t('my_club.last_admin_tip') : ''"
                       @click="removeAdmin(club, a)">{{ $t('my_club.remove') }}</button>
             </li>
           </ul>
@@ -304,6 +323,11 @@ onMounted(() => {
 .note { font-size: var(--text-xs); color: var(--fg-2); font-style: italic; overflow-wrap: anywhere; }
 .actions { display: flex; gap: var(--space-2); flex-shrink: 0; }
 .add-row { display: flex; gap: var(--space-2); align-items: center; }
+.row .btn:disabled { opacity: .55; cursor: not-allowed; }
+/* Remove sits at the end of its row, so the usual centred bubble would
+   hang off the side of the page on a narrow window. Line it up with the
+   button's end edge instead. */
+.row .btn[data-tip]::after { inset-inline-start: auto; inset-inline-end: 0; transform: none; }
 .region-row { display: flex; flex-direction: column; gap: var(--space-1); max-width: 320px; }
 .add-row .select { flex: 1; min-width: 0; }
 .muted { color: var(--fg-3); font-size: var(--text-sm); margin: 0; }

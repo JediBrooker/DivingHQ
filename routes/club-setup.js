@@ -118,26 +118,49 @@ module.exports = function createClubSetupRouter({ pool, verifyToken }) {
       if (!club.canEditCode) {
         return res.status(403).json({ error: "Your federation sets your club's code" });
       }
-      if (code) {
-        // Two clubs showing the same code would make the club label
-        // useless, so a clash within the org is refused. Only approved
-        // clubs count, same as the approve dialog: a signup still waiting
-        // on the federation doesn't get to squat on a code an existing
-        // club wants.
-        const clash = await pool.query(
-          "SELECT 1 FROM clubs WHERE org_id = $1 AND upper(short_code) = $2 AND id <> $3 AND status = 'active' LIMIT 1",
-          [club.org_id, code, club.id],
-        );
-        if (clash.rows.length) {
-          return res.status(409).json({ error: "Another club already uses that code", code: "short_code_taken" });
+      // Check-then-write, so it has to be one step. Without the lock two
+      // clubs saving the same code at the same moment both passed the
+      // check and both got it. The lock is per org, so countries don't
+      // queue behind each other. Not a unique index, because live data
+      // can already hold duplicates from before this check existed.
+      const client = await pool.connect();
+      let previous;
+      try {
+        await client.query("BEGIN");
+        if (code) {
+          await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`club-short-code:${club.org_id}`]);
+          // Two clubs showing the same code would make the club label
+          // useless, so a clash within the org is refused. Only approved
+          // clubs count, same as the approve dialog: a signup still waiting
+          // on the federation doesn't get to squat on a code an existing
+          // club wants.
+          const clash = await client.query(
+            "SELECT 1 FROM clubs WHERE org_id = $1 AND upper(short_code) = $2 AND id <> $3 AND status = 'active' LIMIT 1",
+            [club.org_id, code, club.id],
+          );
+          if (clash.rows.length) {
+            await client.query("ROLLBACK");
+            return res.status(409).json({ error: "Another club already uses that code", code: "short_code_taken" });
+          }
         }
+        // Read under the row lock so the audit's "from" is what we
+        // actually replaced, even if a co-admin saved a moment ago.
+        previous = (await client.query(
+          "SELECT short_code FROM clubs WHERE id = $1 FOR UPDATE", [club.id],
+        )).rows[0]?.short_code || null;
+        await client.query("UPDATE clubs SET short_code = $1 WHERE id = $2", [code, club.id]);
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw err;
+      } finally {
+        client.release();
       }
-      await pool.query("UPDATE clubs SET short_code = $1 WHERE id = $2", [code, club.id]);
-      if ((club.short_code || null) !== code) {
+      if (previous !== code) {
         await recordAudit(pool, {
           ...auditFromReq(req),
           org_id: club.org_id, entity_type: "club", entity_id: club.id, entity_name: club.name,
-          action: "club.code_changed", metadata: { from: club.short_code || null, to: code },
+          action: "club.code_changed", metadata: { from: previous, to: code },
         });
       }
       res.json({ ok: true, short_code: code });

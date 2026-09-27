@@ -6077,3 +6077,166 @@ test("club approval: a revoke activates waiting clubs but doesn't make a suspend
     await claimKit.wipe(CODE);
   }
 });
+
+// My club and My region grey out Remove on the last live admin before
+// anyone clicks it, so the admins lists have to say who's live and whether
+// the caller is held to the rule at all. Monaco, nothing else here uses it.
+test("admin lists say who's live and whether the caller has to keep one", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MCO";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Monte Carlo Divers" });
+    const club = A.clubId;
+    const clubList = async (token = A.token) => {
+      const r = await fetchJson("GET", `/api/clubs/${club}/admins`, { token });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      return r.body;
+    };
+    let list = await clubList();
+    assert.equal(list.keep_one_live, true, "a club admin can't leave the club with nobody");
+    assert.deepEqual(list.admins.map((a) => [a.id, a.live]), [[A.id, true]]);
+
+    // A suspended co-admin stays on the list, so it can be cleared out, but
+    // it isn't live, and the server agrees with what the page will show.
+    const S = await delegateSignUp({ country_code: CODE, club_id: club, full_name: "Suspended Co-admin" });
+    assert.equal((await fetchJson("POST", `/api/clubs/${club}/admins`, { token: A.token, body: { user_id: S.id } })).status, 201);
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [S.id]);
+    list = await clubList();
+    assert.deepEqual(Object.fromEntries(list.admins.map((a) => [a.id, a.live])), { [A.id]: true, [S.id]: false });
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${club}/admins/${A.id}`, { token: A.token })).status, 409);
+
+    // A second live admin frees them both up.
+    const B = await delegateSignUp({ country_code: CODE, club_id: club });
+    assert.equal((await fetchJson("POST", `/api/clubs/${club}/admins`, { token: A.token, body: { user_id: B.id } })).status, 201);
+    list = await clubList();
+    assert.equal(list.admins.filter((a) => a.live).length, 2);
+
+    // Same fields on a region's list.
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Monaco-Ville', 'MV') RETURNING id", [A.orgId],
+    )).rows[0].id;
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [region, club]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region, A.id, A.orgId]);
+    const rl = await fetchJson("GET", `/api/regions/${region}/admins`, { token: A.token });
+    assert.equal(rl.status, 200, JSON.stringify(rl.body));
+    assert.equal(rl.body.can_manage, true);
+    assert.equal(rl.body.keep_one_live, true);
+    assert.deepEqual(rl.body.admins.map((a) => [a.id, a.live]), [[A.id, true]]);
+    assert.equal((await fetchJson("DELETE", `/api/regions/${region}/admins/${A.id}`, { token: A.token })).status, 409);
+
+    // A federation's admin appoints club admins and can clear the list, so
+    // they aren't held to it and their Remove stays live.
+    const fedClub = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, 'Federation Club') RETURNING id", [state.orgId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [fedClub, state.adminId, state.orgId]);
+    const fed = await fetchJson("GET", `/api/clubs/${fedClub}/admins`, { token: state.adminToken });
+    assert.equal(fed.status, 200, JSON.stringify(fed.body));
+    assert.equal(fed.body.keep_one_live, false);
+    assert.deepEqual(fed.body.admins.map((a) => [a.id, a.live]), [[state.adminId, true]]);
+  } finally {
+    await pool.query(
+      "DELETE FROM regions WHERE org_id IN (SELECT id FROM organisations WHERE country_code = $1)", [CODE],
+    ).catch(() => {});
+    await claimKit.wipe(CODE);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [state.orgId]).catch(() => {});
+    await teardownFixture(state);
+  }
+});
+
+// PUT /api/clubs/:id/short-code checks for a clash and then writes, so two
+// clubs saving the same code at the same moment used to both get it. The
+// per-org lock makes it one step: exactly one wins, whatever the timing.
+// Bhutan, nothing else here uses it.
+test("club short codes: clubs racing for the same code, only one gets it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "BTN";
+  await claimKit.wipe(CODE);
+  try {
+    const founders = [];
+    for (const name of ["Thimphu", "Paro", "Punakha", "Bumthang", "Haa"]) {
+      founders.push(await claimKit.founder(CODE, `${name} Divers`));
+    }
+    const holders = async (code) => (await pool.query(
+      `SELECT c.id FROM clubs c JOIN organisations o ON o.id = c.org_id
+        WHERE o.country_code = $1 AND upper(c.short_code) = $2`, [CODE, code],
+    )).rows.map((r) => r.id);
+
+    // A few rounds, since it's a race. Each round every club asks for the
+    // same fresh code at once.
+    for (const want of ["THI", "PRO", "DZO"]) {
+      const outs = await Promise.all(founders.map((f) =>
+        fetchJson("PUT", `/api/clubs/${f.clubId}/short-code`, { token: f.token, body: { short_code: want.toLowerCase() } })));
+      const statuses = outs.map((o) => o.status);
+      assert.equal(statuses.filter((s) => s === 200).length, 1, `${want}: ${statuses.join(",")}`);
+      assert.equal(statuses.filter((s) => s === 409).length, founders.length - 1, `${want}: ${statuses.join(",")}`);
+      for (const o of outs.filter((x) => x.status === 409)) assert.equal(o.body.code, "short_code_taken");
+      const winner = founders[statuses.indexOf(200)];
+      assert.deepEqual(await holders(want), [winner.clubId]);
+      // The winner lets it go again, so the next round starts clean.
+      assert.equal((await fetchJson("PUT", `/api/clubs/${winner.clubId}/short-code`, { token: winner.token, body: { short_code: null } })).status, 200);
+    }
+
+    // Clearing codes at the same time never clashes, and the audit trail
+    // says what each club actually had.
+    await Promise.all(founders.map((f, i) =>
+      fetchJson("PUT", `/api/clubs/${f.clubId}/short-code`, { token: f.token, body: { short_code: `B${i}` } })));
+    const cleared = await Promise.all(founders.map((f) =>
+      fetchJson("PUT", `/api/clubs/${f.clubId}/short-code`, { token: f.token, body: { short_code: "" } })));
+    assert.deepEqual(cleared.map((o) => o.status), founders.map(() => 200));
+    const last = await pool.query(
+      `SELECT DISTINCT ON (entity_id) entity_id, metadata FROM audit_log
+        WHERE entity_id = ANY($1::uuid[]) AND action = 'club.code_changed'
+        ORDER BY entity_id, created_at DESC`,
+      [founders.map((f) => f.clubId)],
+    );
+    const byClub = Object.fromEntries(last.rows.map((r) => [r.entity_id, r.metadata]));
+    founders.forEach((f, i) => assert.deepEqual(byClub[f.clubId], { from: `B${i}`, to: null }));
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+// robots.txt and sitemap.xml come out of public/ naming divinghq.app. A
+// self-hosted copy sets APP_BASE_URL, and its crawler files have to name it
+// too, the way the shell's canonical links already did. publicOrigin() reads
+// the env per request, so flipping it here is enough.
+test("robots.txt and sitemap.xml name APP_BASE_URL's origin when it's set", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const get = (p) => new Promise((resolve, reject) => {
+    http.get(baseUrl + p, (res) => {
+      const chunks = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("end", () => resolve({ status: res.statusCode, type: res.headers["content-type"] || "", body: Buffer.concat(chunks).toString("utf8") }));
+    }).on("error", reject);
+  });
+  const saved = process.env.APP_BASE_URL;
+  try {
+    process.env.APP_BASE_URL = "https://diving.example.org/some/path";
+    const robots = await get("/robots.txt");
+    assert.equal(robots.status, 200);
+    assert.match(robots.type, /^text\/plain/);
+    assert.match(robots.body, /^Sitemap: https:\/\/diving\.example\.org\/sitemap\.xml$/m);
+    assert.match(robots.body, /^Disallow: \/api\/$/m);
+    const sitemap = await get("/sitemap.xml");
+    assert.equal(sitemap.status, 200);
+    assert.match(sitemap.type, /^application\/xml/);
+    assert.match(sitemap.body, /<loc>https:\/\/diving\.example\.org\/guide\/quick-start<\/loc>/);
+    assert.ok(!sitemap.body.includes("https://divinghq.app") && !robots.body.includes("https://divinghq.app"),
+      "nothing left pointing at the hosted site");
+
+    // Unset (or junk), the hosted site's files go out as written.
+    delete process.env.APP_BASE_URL;
+    assert.match((await get("/robots.txt")).body, /^Sitemap: https:\/\/divinghq\.app\/sitemap\.xml$/m);
+    process.env.APP_BASE_URL = "not a url";
+    assert.match((await get("/sitemap.xml")).body, /<loc>https:\/\/divinghq\.app\/privacy<\/loc>/);
+  } finally {
+    if (saved === undefined) delete process.env.APP_BASE_URL;
+    else process.env.APP_BASE_URL = saved;
+  }
+});

@@ -438,11 +438,7 @@
       "live": "{name} ist LIVE",
       "prepare": "Bereiten Sie {name} vor",
       "prepare_meta": "Führen Sie den Pre-Meet-Workflow durch",
-      "role_requests_one": "{count} Rollenanfrage wartet",
-      "role_requests_many": "{count} Rollenanfragen warten",
       "role_requests_meta": "Prüfen Sie Rollenanfragen in der Benutzerverwaltung",
-      "orgs_one": "{count} Föderation wartet auf Genehmigung",
-      "orgs_many": "{count} Föderationen warten auf Genehmigung",
       "orgs_meta": "Prüfen Sie in der Benutzerverwaltung → Organisationsfilter",
       "claims_meta": "Ein Verband möchte ein Konto übernehmen",
       "chip_pending": "Offen",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet. Verbandsweite Rechte bekommen sie nicht.",
     "admins_intro_classes": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet, und kümmern sich um seine Kurse. Verbandsweite Rechte bekommen sie nicht.",
-    "admins_intro_payments": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet, und kümmern sich um Auszahlungen und Mitgliedsbeiträge. Verbandsweite Rechte bekommen sie nicht."
+    "admins_intro_payments": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet, und kümmern sich um Auszahlungen und Mitgliedsbeiträge. Verbandsweite Rechte bekommen sie nicht.",
+    "last_admin_tip": "Ein Verein braucht mindestens einen Admin. Fügen Sie einen weiteren Admin hinzu, bevor Sie diesen entfernen."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Noch niemand zum Hinzufügen. Mitglieder der Vereine Ihrer Region erscheinen hier.",
     "release_club": "Aus der Region nehmen",
     "club_requests": "Vereine mit Beitrittsanfrage",
-    "currently_in": "derzeit in {region}"
+    "currently_in": "derzeit in {region}",
+    "last_admin_tip": "Eine Region braucht mindestens einen Admin. Fügen Sie einen weiteren Admin hinzu, bevor Sie diesen entfernen."
   },
   "claims": {
     "title": "Ansprüche",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "{n} neue Vereine warten auf Genehmigung",
     "clubs_waiting_few": "{n} neue Vereine warten auf Genehmigung",
     "clubs_waiting_many": "{n} neue Vereine warten auf Genehmigung",
-    "clubs_waiting_other": "{n} neue Vereine warten auf Genehmigung"
+    "clubs_waiting_other": "{n} neue Vereine warten auf Genehmigung",
+    "role_requests_waiting_zero": "{n} Rollenanfragen warten",
+    "role_requests_waiting_one": "{n} Rollenanfrage wartet",
+    "role_requests_waiting_two": "{n} Rollenanfragen warten",
+    "role_requests_waiting_few": "{n} Rollenanfragen warten",
+    "role_requests_waiting_many": "{n} Rollenanfragen warten",
+    "role_requests_waiting_other": "{n} Rollenanfragen warten",
+    "federations_awaiting_zero": "{n} Verbände warten auf Freigabe",
+    "federations_awaiting_one": "{n} Verband wartet auf Freigabe",
+    "federations_awaiting_two": "{n} Verbände warten auf Freigabe",
+    "federations_awaiting_few": "{n} Verbände warten auf Freigabe",
+    "federations_awaiting_many": "{n} Verbände warten auf Freigabe",
+    "federations_awaiting_other": "{n} Verbände warten auf Freigabe"
   },
   "admin_settings": {
     "title": "Abstimmungsregeln für Ansprüche",

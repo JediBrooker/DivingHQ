@@ -23,7 +23,7 @@ const { tn } = usePlural()
 const auth = useAuthStore()
 
 const regions = computed(() => auth.regionAdminOf)
-// Per region id: { region, clubs, admins, candidates, canManage, toAdd }
+// Per region id: { region, clubs, admins, candidates, canManage, keepOneLive, toAdd }
 const detail = ref({})
 const busyId = ref(null)
 // Region ids whose load failed, each gets a retry instead of a blank section.
@@ -45,6 +45,7 @@ async function load(region) {
       admins: admins.admins || [],
       candidates: admins.candidates || [],
       canManage: !!admins.can_manage,
+      keepOneLive: !!admins.keep_one_live,
       toAdd: '',
     }
   } catch {
@@ -88,6 +89,14 @@ async function declineClub(region, clubId) {
   }
 }
 
+// Same rule as My club: the last live region admin can't step down
+// until there's someone else, so say so on the button up front.
+function soleLiveAdmin(regionId, admin) {
+  const d = detail.value[regionId]
+  if (!d?.keepOneLive || !admin.live) return false
+  return !d.admins.some(a => a.live && a.id !== admin.id)
+}
+
 function addable(regionId) {
   const d = detail.value[regionId]
   if (!d) return []
@@ -120,7 +129,14 @@ async function removeAdmin(region, admin) {
     if (admin.id === auth.user?.id) await auth.fetchMe()
     else await load(region)
   } catch (err) {
-    showError(err.message)
+    // Stale page, same as My club: someone else left first. Translated
+    // reason, then reload so Remove shows up greyed out.
+    if (err.status === 409) {
+      showError(t('my_region.last_admin_tip'))
+      await load(region)
+    } else {
+      showError(err.message)
+    }
   } finally {
     busyId.value = null
   }
@@ -219,7 +235,8 @@ onMounted(reloadAll)
                 <span class="name">{{ a.full_name }}</span>
                 <span class="meta">@{{ a.username }}</span>
               </div>
-              <button class="btn btn-ghost btn-sm" :disabled="busyId === r.id"
+              <button class="btn btn-ghost btn-sm" :disabled="busyId === r.id || soleLiveAdmin(r.id, a)"
+                      v-tip="soleLiveAdmin(r.id, a) ? $t('my_region.last_admin_tip') : ''"
                       @click="removeAdmin(r, a)">{{ $t('my_club.remove') }}</button>
             </li>
           </ul>
@@ -263,6 +280,11 @@ onMounted(reloadAll)
 .meta { font-size: var(--text-xs); color: var(--fg-3); margin: 0; }
 .admins { text-align: end; }
 .add-row { display: flex; gap: var(--space-2); align-items: center; }
+.row .btn:disabled { opacity: .55; cursor: not-allowed; }
+/* Remove sits at the end of its row, so the usual centred bubble would
+   hang off the side of the page on a narrow window. Line it up with the
+   button's end edge instead. */
+.row .btn[data-tip]::after { inset-inline-start: auto; inset-inline-end: 0; transform: none; }
 .actions { display: flex; gap: var(--space-2); flex-shrink: 0; }
 .add-row .select { flex: 1; min-width: 0; }
 @media (max-width: 720px) {

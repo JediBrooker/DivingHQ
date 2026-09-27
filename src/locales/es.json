@@ -438,11 +438,7 @@
       "live": "{name} está EN DIRECTO",
       "prepare": "Preparad a {name}",
       "prepare_meta": "Recorred el flujo de trabajo previo al evento",
-      "role_requests_one": "{count} solicitud de rol en espera",
-      "role_requests_many": "{count} solicitudes de rol en espera",
       "role_requests_meta": "Revisad las solicitudes de rol en el Gestor de usuarios",
-      "orgs_one": "{count} federación pendiente de aprobación",
-      "orgs_many": "{count} federaciones pendientes de aprobación",
       "orgs_meta": "Revisad en Gestor de usuarios → filtro de organización",
       "claims_meta": "Una federación quiere hacerse cargo",
       "chip_pending": "Pendiente",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Los administradores del club dirigen las competiciones que organiza su club. No tienen acceso a nivel de federación.",
     "admins_intro_classes": "Los administradores del club dirigen las competiciones que organiza su club y se ocupan de sus clases. No tienen acceso a nivel de federación.",
-    "admins_intro_payments": "Los administradores del club dirigen las competiciones que organiza su club y se ocupan de sus pagos y cuotas de afiliación. No tienen acceso a nivel de federación."
+    "admins_intro_payments": "Los administradores del club dirigen las competiciones que organiza su club y se ocupan de sus pagos y cuotas de afiliación. No tienen acceso a nivel de federación.",
+    "last_admin_tip": "Un club necesita al menos un administrador. Añade otro administrador antes de quitar a este."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Todavía no hay nadie que añadir. Aquí aparecen los miembros de los clubes de tu región.",
     "release_club": "Sacar de la región",
     "club_requests": "Clubes que piden unirse",
-    "currently_in": "ahora en {region}"
+    "currently_in": "ahora en {region}",
+    "last_admin_tip": "Una región necesita al menos un administrador. Añade otro administrador antes de quitar a este."
   },
   "claims": {
     "title": "Reclamaciones",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "{n} clubes nuevos pendientes de aprobación",
     "clubs_waiting_few": "{n} clubes nuevos pendientes de aprobación",
     "clubs_waiting_many": "{n} de clubes nuevos pendientes de aprobación",
-    "clubs_waiting_other": "{n} clubes nuevos pendientes de aprobación"
+    "clubs_waiting_other": "{n} clubes nuevos pendientes de aprobación",
+    "role_requests_waiting_zero": "{n} solicitudes de rol en espera",
+    "role_requests_waiting_one": "{n} solicitud de rol en espera",
+    "role_requests_waiting_two": "{n} solicitudes de rol en espera",
+    "role_requests_waiting_few": "{n} solicitudes de rol en espera",
+    "role_requests_waiting_many": "{n} de solicitudes de rol en espera",
+    "role_requests_waiting_other": "{n} solicitudes de rol en espera",
+    "federations_awaiting_zero": "{n} federaciones pendientes de aprobación",
+    "federations_awaiting_one": "{n} federación pendiente de aprobación",
+    "federations_awaiting_two": "{n} federaciones pendientes de aprobación",
+    "federations_awaiting_few": "{n} federaciones pendientes de aprobación",
+    "federations_awaiting_many": "{n} de federaciones pendientes de aprobación",
+    "federations_awaiting_other": "{n} federaciones pendientes de aprobación"
   },
   "admin_settings": {
     "title": "Reglas de votación de reclamaciones",

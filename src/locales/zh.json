@@ -438,11 +438,7 @@
       "live": "{name} 正在进行",
       "prepare": "准备 {name}",
       "prepare_meta": "逐步完成赛前工作流程",
-      "role_requests_one": "有 {count} 条角色请求待处理",
-      "role_requests_many": "有 {count} 条角色请求待处理",
       "role_requests_meta": "在用户管理中审核角色请求",
-      "orgs_one": "有 {count} 个协会等待批准",
-      "orgs_many": "有 {count} 个协会等待批准",
       "orgs_meta": "在用户管理中审核 → 组织筛选",
       "claims_meta": "有联合会申请接管账户",
       "chip_pending": "待处理",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "俱乐部管理员负责运营本俱乐部主办的比赛，没有全联合会范围的权限。",
     "admins_intro_classes": "俱乐部管理员负责运营本俱乐部主办的比赛并管理其课程，没有全联合会范围的权限。",
-    "admins_intro_payments": "俱乐部管理员负责运营本俱乐部主办的比赛并管理其付款和会费，没有全联合会范围的权限。"
+    "admins_intro_payments": "俱乐部管理员负责运营本俱乐部主办的比赛并管理其付款和会费，没有全联合会范围的权限。",
+    "last_admin_tip": "每个俱乐部至少需要一名管理员。请先添加另一名管理员，再移除这一位。"
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "暂时没有可添加的人。您所在地区各俱乐部的会员会显示在这里。",
     "release_club": "移出地区",
     "club_requests": "申请加入的俱乐部",
-    "currently_in": "当前所在地区：{region}"
+    "currently_in": "当前所在地区：{region}",
+    "last_admin_tip": "每个地区至少需要一名管理员。请先添加另一名管理员，再移除这一位。"
   },
   "claims": {
     "title": "接管申请",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "有 {n} 个新俱乐部等待审批",
     "clubs_waiting_few": "有 {n} 个新俱乐部等待审批",
     "clubs_waiting_many": "有 {n} 个新俱乐部等待审批",
-    "clubs_waiting_other": "有 {n} 个新俱乐部等待审批"
+    "clubs_waiting_other": "有 {n} 个新俱乐部等待审批",
+    "role_requests_waiting_zero": "有 {n} 条角色请求待处理",
+    "role_requests_waiting_one": "有 {n} 条角色请求待处理",
+    "role_requests_waiting_two": "有 {n} 条角色请求待处理",
+    "role_requests_waiting_few": "有 {n} 条角色请求待处理",
+    "role_requests_waiting_many": "有 {n} 条角色请求待处理",
+    "role_requests_waiting_other": "有 {n} 条角色请求待处理",
+    "federations_awaiting_zero": "有 {n} 个联合会等待批准",
+    "federations_awaiting_one": "有 {n} 个联合会等待批准",
+    "federations_awaiting_two": "有 {n} 个联合会等待批准",
+    "federations_awaiting_few": "有 {n} 个联合会等待批准",
+    "federations_awaiting_many": "有 {n} 个联合会等待批准",
+    "federations_awaiting_other": "有 {n} 个联合会等待批准"
   },
   "admin_settings": {
     "title": "接管申请投票规则",

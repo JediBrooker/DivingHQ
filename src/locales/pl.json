@@ -438,11 +438,7 @@
       "live": "{name} jest NA ŻYWO",
       "prepare": "Przygotuj {name}",
       "prepare_meta": "Przejdź przez przedzawodowy przebieg",
-      "role_requests_one": "{count} prośba o rolę oczekuje",
-      "role_requests_many": "{count} próśb o rolę oczekuje",
       "role_requests_meta": "Przejrzyj prośby o role w Menedżerze użytkowników",
-      "orgs_one": "{count} federacja oczekuje na zatwierdzenie",
-      "orgs_many": "{count} federacje oczekują na zatwierdzenie",
       "orgs_meta": "Przejrzyj w Menedżerze użytkowników → filtr organizacji",
       "claims_meta": "Federacja chce przejąć konto",
       "chip_pending": "Oczekujące",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Administratorzy klubu prowadzą zawody organizowane przez swój klub. Nie mają dostępu na poziomie całego związku.",
     "admins_intro_classes": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego zajęciami. Nie mają dostępu na poziomie całego związku.",
-    "admins_intro_payments": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego wypłatami oraz składkami członkowskimi. Nie mają dostępu na poziomie całego związku."
+    "admins_intro_payments": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego wypłatami oraz składkami członkowskimi. Nie mają dostępu na poziomie całego związku.",
+    "last_admin_tip": "Klub musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Na razie nie ma kogo dodać. Tutaj pojawiają się członkowie klubów z twojego regionu.",
     "release_club": "Usuń z regionu",
     "club_requests": "Kluby proszące o dołączenie",
-    "currently_in": "obecnie w regionie {region}"
+    "currently_in": "obecnie w regionie {region}",
+    "last_admin_tip": "Region musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora."
   },
   "claims": {
     "title": "Roszczenia",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "{n} nowych klubów czeka na zatwierdzenie",
     "clubs_waiting_few": "{n} nowe kluby czekają na zatwierdzenie",
     "clubs_waiting_many": "{n} nowych klubów czeka na zatwierdzenie",
-    "clubs_waiting_other": "{n} nowego klubu czeka na zatwierdzenie"
+    "clubs_waiting_other": "{n} nowego klubu czeka na zatwierdzenie",
+    "role_requests_waiting_zero": "{n} próśb o rolę oczekuje",
+    "role_requests_waiting_one": "{n} prośba o rolę oczekuje",
+    "role_requests_waiting_two": "{n} próśb o rolę oczekuje",
+    "role_requests_waiting_few": "{n} prośby o rolę oczekują",
+    "role_requests_waiting_many": "{n} próśb o rolę oczekuje",
+    "role_requests_waiting_other": "{n} prośby o rolę oczekuje",
+    "federations_awaiting_zero": "{n} federacji oczekuje na zatwierdzenie",
+    "federations_awaiting_one": "{n} federacja oczekuje na zatwierdzenie",
+    "federations_awaiting_two": "{n} federacji oczekuje na zatwierdzenie",
+    "federations_awaiting_few": "{n} federacje oczekują na zatwierdzenie",
+    "federations_awaiting_many": "{n} federacji oczekuje na zatwierdzenie",
+    "federations_awaiting_other": "{n} federacji oczekuje na zatwierdzenie"
   },
   "admin_settings": {
     "title": "Zasady głosowania nad roszczeniami",

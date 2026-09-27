@@ -438,11 +438,7 @@
       "live": "{name} è IN DIRETTA",
       "prepare": "Prepari {name}",
       "prepare_meta": "Segua il flusso di lavoro pre-gara",
-      "role_requests_one": "{count} richiesta di ruolo in attesa",
-      "role_requests_many": "{count} richieste di ruolo in attesa",
       "role_requests_meta": "Esamini le richieste di ruolo in Gestione utenti",
-      "orgs_one": "{count} federazione in attesa di approvazione",
-      "orgs_many": "{count} federazioni in attesa di approvazione",
       "orgs_meta": "Verifichi in Gestione utenti → filtro organizzazioni",
       "claims_meta": "Una federazione vuole subentrare",
       "chip_pending": "In attesa",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Gli amministratori del club gestiscono le gare organizzate dal loro club. Non hanno accesso a livello di federazione.",
     "admins_intro_classes": "Gli amministratori del club gestiscono le gare organizzate dal loro club e si occupano dei suoi corsi. Non hanno accesso a livello di federazione.",
-    "admins_intro_payments": "Gli amministratori del club gestiscono le gare organizzate dal loro club e si occupano dei suoi pagamenti e delle quote di affiliazione. Non hanno accesso a livello di federazione."
+    "admins_intro_payments": "Gli amministratori del club gestiscono le gare organizzate dal loro club e si occupano dei suoi pagamenti e delle quote di affiliazione. Non hanno accesso a livello di federazione.",
+    "last_admin_tip": "Un club deve avere almeno un amministratore. Aggiungi un altro amministratore prima di rimuovere questo."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Ancora nessuno da aggiungere. Qui compaiono i membri dei club della tua regione.",
     "release_club": "Togli dalla regione",
     "club_requests": "Club che chiedono di entrare",
-    "currently_in": "ora in {region}"
+    "currently_in": "ora in {region}",
+    "last_admin_tip": "Una regione deve avere almeno un amministratore. Aggiungi un altro amministratore prima di rimuovere questo."
   },
   "claims": {
     "title": "Rivendicazioni",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "{n} nuovi club in attesa di approvazione",
     "clubs_waiting_few": "{n} nuovi club in attesa di approvazione",
     "clubs_waiting_many": "{n} di nuovi club in attesa di approvazione",
-    "clubs_waiting_other": "{n} nuovi club in attesa di approvazione"
+    "clubs_waiting_other": "{n} nuovi club in attesa di approvazione",
+    "role_requests_waiting_zero": "{n} richieste di ruolo in attesa",
+    "role_requests_waiting_one": "{n} richiesta di ruolo in attesa",
+    "role_requests_waiting_two": "{n} richieste di ruolo in attesa",
+    "role_requests_waiting_few": "{n} richieste di ruolo in attesa",
+    "role_requests_waiting_many": "{n} di richieste di ruolo in attesa",
+    "role_requests_waiting_other": "{n} richieste di ruolo in attesa",
+    "federations_awaiting_zero": "{n} federazioni in attesa di approvazione",
+    "federations_awaiting_one": "{n} federazione in attesa di approvazione",
+    "federations_awaiting_two": "{n} federazioni in attesa di approvazione",
+    "federations_awaiting_few": "{n} federazioni in attesa di approvazione",
+    "federations_awaiting_many": "{n} di federazioni in attesa di approvazione",
+    "federations_awaiting_other": "{n} federazioni in attesa di approvazione"
   },
   "admin_settings": {
     "title": "Regole di voto sulle rivendicazioni",

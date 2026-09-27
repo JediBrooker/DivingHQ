@@ -94,11 +94,32 @@ test("a club admin sees members' requests on the dashboard, and can step down cl
   await expect(page.getByText("Mele Christian", { exact: true })).toBeVisible();
   await expect(page.getByText("2 members")).toBeVisible();
 
+  // Alone, the founder can't step down, and the button says why instead
+  // of letting them click through to the server's refusal.
+  const myRow = page.locator(".row", { hasText: "Adamstown Divers Admin" });
+  const removeMe = myRow.getByRole("button", { name: "Remove" });
+  await expect(removeMe).toBeDisabled();
+  await expect(removeMe).toHaveAttribute("data-tip", /A club needs at least one admin/);
+
   // Make the member a co-admin, then the founder removes themselves.
   await page.getByRole("combobox", { name: "Add an admin" }).selectOption({ label: `Mele Christian (@${memberName})` });
   await page.getByRole("button", { name: "Add", exact: true }).click();
-  const myRow = page.locator(".row", { hasText: "Adamstown Divers Admin" });
-  await myRow.getByRole("button", { name: "Remove" }).click();
+  await expect(removeMe).toBeEnabled();
+  await expect(removeMe).not.toHaveAttribute("data-tip", /./);
+
+  // The page goes stale: the co-admin is suspended behind its back. The
+  // server still refuses, and the page says why in the reader's words
+  // (not the server's English) and greys the button out.
+  await setup.pool.query("UPDATE users SET suspended_at = now() WHERE username = $1", [memberName]);
+  await removeMe.click();
+  await page.getByRole("button", { name: "Remove me" }).click();
+  await expect(page.getByText("A club needs at least one admin. Add a co-admin before removing this one.")).toBeVisible();
+  await expect(removeMe).toBeDisabled();
+  await setup.pool.query("UPDATE users SET suspended_at = NULL WHERE username = $1", [memberName]);
+  await page.reload();
+  await expect(removeMe).toBeEnabled();
+
+  await removeMe.click();
   await page.getByRole("button", { name: "Remove me" }).click();
 
   // Straight back to the dashboard, with the club gone from the nav.
@@ -282,4 +303,6 @@ test("dashboard: the pending chip names the requested role in the reader's words
   const popover = chip.locator(".pulse-popover");
   await expect(popover.locator(".pulse-popover-item", { hasText: "Would-be Manager" })).toContainText("wants to be: Meet Manager");
   await expect(popover.locator(".pulse-popover-item", { hasText: "Would-be Coach" })).toContainText("wants to be: Coach");
+  // The attention card counts them through the plural keys (counts.*).
+  await expect(page.locator(".action-card", { hasText: "2 role requests waiting" })).toBeVisible();
 });

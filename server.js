@@ -263,7 +263,7 @@ function createSearchLimiter() {
 // canonical link and og:url name the page actually requested, not the home
 // page (see lib/spa-shell.js). "/" is answered before express.static, which
 // would otherwise hand out dist/index.html untouched.
-const { publicOrigin, renderShell } = require("./lib/spa-shell");
+const { publicOrigin, renderShell, renderCrawlerFile } = require("./lib/spa-shell");
 const SPA_SHELL = path.join(__dirname, "dist", "index.html");
 async function sendSpaShell(req, res, next) {
   try {
@@ -276,19 +276,27 @@ async function sendSpaShell(req, res, next) {
 }
 app.get("/", sendSpaShell);
 
-// Serve the built Vue app (run `npm run build` before starting the server)
-app.use(express.static(path.join(__dirname, 'dist')))
-
-// Crawler files. Vite copies public/ into dist/, so after a build the static
-// mount above answers these. The explicit routes cover a server running
-// without a fresh build (the test suite, a dev box): /robots.txt must never
-// fall through to the SPA fallback, which answered crawlers with a 200 of
-// HTML and told them nothing.
+// Crawler files. Both name https://divinghq.app, so they go through
+// renderCrawlerFile on the way out and a self-hosted copy points crawlers
+// at its own APP_BASE_URL, same as the shell's canonical links. That's why
+// they're answered here, ahead of the static mount: Vite copies public/
+// into dist/, and express.static would hand that copy out untouched.
+// public/ is the source, which also covers a server running without a
+// fresh build (the test suite, a dev box). /robots.txt must never fall
+// through to the SPA fallback, which answered crawlers with a 200 of HTML.
 for (const [file, type] of [["robots.txt", "text/plain"], ["sitemap.xml", "application/xml"]]) {
-  app.get(`/${file}`, (req, res, next) => {
-    res.type(type).sendFile(path.join(__dirname, "public", file), (err) => { if (err) next(err); });
+  app.get(`/${file}`, async (req, res, next) => {
+    try {
+      const text = await require("node:fs").promises.readFile(path.join(__dirname, "public", file), "utf8");
+      res.type(type).send(renderCrawlerFile(text, { origin: publicOrigin(), xml: type === "application/xml" }));
+    } catch (err) {
+      next(err);
+    }
   });
 }
+
+// Serve the built Vue app (run `npm run build` before starting the server)
+app.use(express.static(path.join(__dirname, 'dist')))
 
 // [SECTION: DB POOL & JWT_SECRET]
 //

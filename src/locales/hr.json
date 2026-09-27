@@ -438,11 +438,7 @@
       "live": "{name} je UŽIVO",
       "prepare": "Pripremite {name}",
       "prepare_meta": "Prođite kroz predsastavni tijek rada",
-      "role_requests_one": "{count} zahtjev za ulogu na čekanju",
-      "role_requests_many": "{count} zahtjeva za uloge na čekanju",
       "role_requests_meta": "Pregledajte zahtjeve za uloge u Upravitelju korisnika",
-      "orgs_one": "{count} federacija čeka odobrenje",
-      "orgs_many": "{count} federacija čeka odobrenje",
       "orgs_meta": "Pregledajte u Upravitelju korisnika → filtar organizacije",
       "claims_meta": "Savez želi preuzeti račun",
       "chip_pending": "Na čekanju",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Administratori kluba vode natjecanja koja njihov klub organizira. Nemaju pristup na razini saveza.",
     "admins_intro_classes": "Administratori kluba vode natjecanja koja njihov klub organizira i brinu o njegovim tečajevima. Nemaju pristup na razini saveza.",
-    "admins_intro_payments": "Administratori kluba vode natjecanja koja njihov klub organizira i brinu o njegovim isplatama i članarinama. Nemaju pristup na razini saveza."
+    "admins_intro_payments": "Administratori kluba vode natjecanja koja njihov klub organizira i brinu o njegovim isplatama i članarinama. Nemaju pristup na razini saveza.",
+    "last_admin_tip": "Klub mora imati barem jednog administratora. Dodajte još jednog administratora prije nego što uklonite ovog."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Još nema koga dodati. Ovdje se prikazuju članovi klubova iz vaše regije.",
     "release_club": "Izvadi iz regije",
     "club_requests": "Klubovi koji traže ulazak",
-    "currently_in": "trenutačno u regiji {region}"
+    "currently_in": "trenutačno u regiji {region}",
+    "last_admin_tip": "Regija mora imati barem jednog administratora. Dodajte još jednog administratora prije nego što uklonite ovog."
   },
   "claims": {
     "title": "Zahtjevi",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "{n} novih klubova čeka odobrenje",
     "clubs_waiting_few": "{n} nova kluba čekaju odobrenje",
     "clubs_waiting_many": "{n} novih klubova čeka odobrenje",
-    "clubs_waiting_other": "{n} novih klubova čeka odobrenje"
+    "clubs_waiting_other": "{n} novih klubova čeka odobrenje",
+    "role_requests_waiting_zero": "{n} zahtjeva za uloge na čekanju",
+    "role_requests_waiting_one": "{n} zahtjev za ulogu na čekanju",
+    "role_requests_waiting_two": "{n} zahtjeva za uloge na čekanju",
+    "role_requests_waiting_few": "{n} zahtjeva za uloge na čekanju",
+    "role_requests_waiting_many": "{n} zahtjeva za uloge na čekanju",
+    "role_requests_waiting_other": "{n} zahtjeva za uloge na čekanju",
+    "federations_awaiting_zero": "{n} saveza čeka odobrenje",
+    "federations_awaiting_one": "{n} savez čeka odobrenje",
+    "federations_awaiting_two": "{n} saveza čeka odobrenje",
+    "federations_awaiting_few": "{n} saveza čekaju odobrenje",
+    "federations_awaiting_many": "{n} saveza čeka odobrenje",
+    "federations_awaiting_other": "{n} saveza čeka odobrenje"
   },
   "admin_settings": {
     "title": "Pravila glasanja o zahtjevima",

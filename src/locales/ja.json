@@ -438,11 +438,7 @@
       "live": "{name} はライブ中です",
       "prepare": "{name} の準備をしてください",
       "prepare_meta": "プレミートのワークフローを順に進めてください",
-      "role_requests_one": "{count} 件の役割リクエストが保留中です",
-      "role_requests_many": "{count} 件の役割リクエストが保留中です",
       "role_requests_meta": "ユーザー管理で役割リクエストを確認してください",
-      "orgs_one": "{count} 件の連盟が承認待ちです",
-      "orgs_many": "{count} 件の連盟が承認待ちです",
       "orgs_meta": "ユーザー管理で確認してください → 組織フィルター",
       "claims_meta": "連盟がアカウントの引き継ぎを求めています",
       "chip_pending": "保留中",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "クラブ管理者は自クラブが主催する大会を運営します。連盟全体へのアクセス権はありません。",
     "admins_intro_classes": "クラブ管理者は自クラブが主催する大会を運営し、クラスを管理します。連盟全体へのアクセス権はありません。",
-    "admins_intro_payments": "クラブ管理者は自クラブが主催する大会を運営し、支払いや加盟費を管理します。連盟全体へのアクセス権はありません。"
+    "admins_intro_payments": "クラブ管理者は自クラブが主催する大会を運営し、支払いや加盟費を管理します。連盟全体へのアクセス権はありません。",
+    "last_admin_tip": "クラブには少なくとも1人の管理者が必要です。この管理者を削除する前に、別の管理者を追加してください。"
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "まだ追加できる人がいません。地域内のクラブのメンバーがここに表示されます。",
     "release_club": "地域から外す",
     "club_requests": "加入を希望するクラブ",
-    "currently_in": "現在の地域: {region}"
+    "currently_in": "現在の地域: {region}",
+    "last_admin_tip": "地域には少なくとも1人の管理者が必要です。この管理者を削除する前に、別の管理者を追加してください。"
   },
   "claims": {
     "title": "引き継ぎ申請",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "承認待ちの新しいクラブが {n} 件あります",
     "clubs_waiting_few": "承認待ちの新しいクラブが {n} 件あります",
     "clubs_waiting_many": "承認待ちの新しいクラブが {n} 件あります",
-    "clubs_waiting_other": "承認待ちの新しいクラブが {n} 件あります"
+    "clubs_waiting_other": "承認待ちの新しいクラブが {n} 件あります",
+    "role_requests_waiting_zero": "{n} 件の役割リクエストが保留中です",
+    "role_requests_waiting_one": "{n} 件の役割リクエストが保留中です",
+    "role_requests_waiting_two": "{n} 件の役割リクエストが保留中です",
+    "role_requests_waiting_few": "{n} 件の役割リクエストが保留中です",
+    "role_requests_waiting_many": "{n} 件の役割リクエストが保留中です",
+    "role_requests_waiting_other": "{n} 件の役割リクエストが保留中です",
+    "federations_awaiting_zero": "承認待ちの連盟が {n} 件あります",
+    "federations_awaiting_one": "承認待ちの連盟が {n} 件あります",
+    "federations_awaiting_two": "承認待ちの連盟が {n} 件あります",
+    "federations_awaiting_few": "承認待ちの連盟が {n} 件あります",
+    "federations_awaiting_many": "承認待ちの連盟が {n} 件あります",
+    "federations_awaiting_other": "承認待ちの連盟が {n} 件あります"
   },
   "admin_settings": {
     "title": "引き継ぎ申請の投票ルール",

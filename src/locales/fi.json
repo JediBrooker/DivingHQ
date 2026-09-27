@@ -438,11 +438,7 @@
       "live": "{name} on KÄYNNISSÄ",
       "prepare": "Valmistele {name}",
       "prepare_meta": "Käy ennakkotapahtuman työnkulku läpi",
-      "role_requests_one": "{count} roolipyyntö odottaa",
-      "role_requests_many": "{count} roolipyyntöä odottaa",
       "role_requests_meta": "Tarkastele roolipyyntöjä Käyttäjien hallinnassa",
-      "orgs_one": "{count} liitto odottaa hyväksyntää",
-      "orgs_many": "{count} liittoa odottaa hyväksyntää",
       "orgs_meta": "Tarkastele Käyttäjien hallinnassa → organisaatiosuodatin",
       "claims_meta": "Liitto haluaa ottaa tilin haltuunsa",
       "chip_pending": "Odottaa",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut. Heillä ei ole liittotason oikeuksia.",
     "admins_intro_classes": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen ryhmistä. Heillä ei ole liittotason oikeuksia.",
-    "admins_intro_payments": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen tilityksistä ja jäsenmaksuista. Heillä ei ole liittotason oikeuksia."
+    "admins_intro_payments": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen tilityksistä ja jäsenmaksuista. Heillä ei ole liittotason oikeuksia.",
+    "last_admin_tip": "Seuralla on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Lisättäviä ei vielä ole. Alueesi seurojen jäsenet näkyvät tässä.",
     "release_club": "Poista alueelta",
     "club_requests": "Seurat, jotka pyytävät liittymistä",
-    "currently_in": "nyt alueella {region}"
+    "currently_in": "nyt alueella {region}",
+    "last_admin_tip": "Alueella on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän."
   },
   "claims": {
     "title": "Vaatimukset",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "{n} uutta seuraa odottaa hyväksyntää",
     "clubs_waiting_few": "{n} uutta seuraa odottaa hyväksyntää",
     "clubs_waiting_many": "{n} uutta seuraa odottaa hyväksyntää",
-    "clubs_waiting_other": "{n} uutta seuraa odottaa hyväksyntää"
+    "clubs_waiting_other": "{n} uutta seuraa odottaa hyväksyntää",
+    "role_requests_waiting_zero": "{n} roolipyyntöä odottaa",
+    "role_requests_waiting_one": "{n} roolipyyntö odottaa",
+    "role_requests_waiting_two": "{n} roolipyyntöä odottaa",
+    "role_requests_waiting_few": "{n} roolipyyntöä odottaa",
+    "role_requests_waiting_many": "{n} roolipyyntöä odottaa",
+    "role_requests_waiting_other": "{n} roolipyyntöä odottaa",
+    "federations_awaiting_zero": "{n} liittoa odottaa hyväksyntää",
+    "federations_awaiting_one": "{n} liitto odottaa hyväksyntää",
+    "federations_awaiting_two": "{n} liittoa odottaa hyväksyntää",
+    "federations_awaiting_few": "{n} liittoa odottaa hyväksyntää",
+    "federations_awaiting_many": "{n} liittoa odottaa hyväksyntää",
+    "federations_awaiting_other": "{n} liittoa odottaa hyväksyntää"
   },
   "admin_settings": {
     "title": "Vaatimusten äänestyssäännöt",

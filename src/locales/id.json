@@ -438,11 +438,7 @@
       "live": "{name} SEDANG BERLANGSUNG",
       "prepare": "Siapkan {name}",
       "prepare_meta": "Jalani alur kerja pra-pertandingan",
-      "role_requests_one": "{count} permintaan peran menunggu",
-      "role_requests_many": "{count} permintaan peran menunggu",
       "role_requests_meta": "Tinjau permintaan peran di Pengelola Pengguna",
-      "orgs_one": "{count} federasi menunggu persetujuan",
-      "orgs_many": "{count} federasi menunggu persetujuan",
       "orgs_meta": "Tinjau di Pengelola Pengguna → filter organisasi",
       "claims_meta": "Sebuah federasi ingin mengambil alih akun",
       "chip_pending": "Tertunda",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya. Mereka tidak mendapat akses tingkat federasi.",
     "admins_intro_classes": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya dan mengurus kelasnya. Mereka tidak mendapat akses tingkat federasi.",
-    "admins_intro_payments": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya dan mengurus pembayaran serta iuran afiliasinya. Mereka tidak mendapat akses tingkat federasi."
+    "admins_intro_payments": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya dan mengurus pembayaran serta iuran afiliasinya. Mereka tidak mendapat akses tingkat federasi.",
+    "last_admin_tip": "Klub memerlukan setidaknya satu admin. Tambahkan admin lain sebelum menghapus admin ini."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Belum ada yang bisa ditambahkan. Anggota klub di wilayah Anda muncul di sini.",
     "release_club": "Keluarkan dari wilayah",
     "club_requests": "Klub yang ingin bergabung",
-    "currently_in": "saat ini di {region}"
+    "currently_in": "saat ini di {region}",
+    "last_admin_tip": "Wilayah memerlukan setidaknya satu admin. Tambahkan admin lain sebelum menghapus admin ini."
   },
   "claims": {
     "title": "Klaim",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "{n} klub baru menunggu persetujuan",
     "clubs_waiting_few": "{n} klub baru menunggu persetujuan",
     "clubs_waiting_many": "{n} klub baru menunggu persetujuan",
-    "clubs_waiting_other": "{n} klub baru menunggu persetujuan"
+    "clubs_waiting_other": "{n} klub baru menunggu persetujuan",
+    "role_requests_waiting_zero": "{n} permintaan peran menunggu",
+    "role_requests_waiting_one": "{n} permintaan peran menunggu",
+    "role_requests_waiting_two": "{n} permintaan peran menunggu",
+    "role_requests_waiting_few": "{n} permintaan peran menunggu",
+    "role_requests_waiting_many": "{n} permintaan peran menunggu",
+    "role_requests_waiting_other": "{n} permintaan peran menunggu",
+    "federations_awaiting_zero": "{n} federasi menunggu persetujuan",
+    "federations_awaiting_one": "{n} federasi menunggu persetujuan",
+    "federations_awaiting_two": "{n} federasi menunggu persetujuan",
+    "federations_awaiting_few": "{n} federasi menunggu persetujuan",
+    "federations_awaiting_many": "{n} federasi menunggu persetujuan",
+    "federations_awaiting_other": "{n} federasi menunggu persetujuan"
   },
   "admin_settings": {
     "title": "Aturan pemungutan suara klaim",

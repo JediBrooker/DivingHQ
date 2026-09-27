@@ -438,11 +438,7 @@
       "live": "{name} er LIVE",
       "prepare": "Forbered {name}",
       "prepare_meta": "Gå gjennom pre-meet-arbeidsflyten",
-      "role_requests_one": "{count} rolleforespørsel venter",
-      "role_requests_many": "{count} rolleforespørsler venter",
       "role_requests_meta": "Gå gjennom rolleforespørsler i Brukeradministrasjon",
-      "orgs_one": "{count} forbund venter på godkjenning",
-      "orgs_many": "{count} forbund venter på godkjenning",
       "orgs_meta": "Gå gjennom i Brukeradministrasjon → org-filter",
       "claims_meta": "Et forbund vil overta en konto",
       "chip_pending": "Venter",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Klubbadministratorer står for stevnene klubben arrangerer. De får ingen tilgang på forbundsnivå.",
     "admins_intro_classes": "Klubbadministratorer står for stevnene klubben arrangerer og tar seg av klubbens kurs. De får ingen tilgang på forbundsnivå.",
-    "admins_intro_payments": "Klubbadministratorer står for stevnene klubben arrangerer og tar seg av utbetalinger og medlemskontingenter. De får ingen tilgang på forbundsnivå."
+    "admins_intro_payments": "Klubbadministratorer står for stevnene klubben arrangerer og tar seg av utbetalinger og medlemskontingenter. De får ingen tilgang på forbundsnivå.",
+    "last_admin_tip": "En klubb må ha minst én administrator. Legg til en medadministrator før du fjerner denne."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Ingen å legge til ennå. Medlemmer av klubbene i regionen din vises her.",
     "release_club": "Ta ut av regionen",
     "club_requests": "Klubber som ber om å bli med",
-    "currently_in": "nå i {region}"
+    "currently_in": "nå i {region}",
+    "last_admin_tip": "En region må ha minst én administrator. Legg til en medadministrator før du fjerner denne."
   },
   "claims": {
     "title": "Krav",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "{n} nye klubber venter på godkjenning",
     "clubs_waiting_few": "{n} nye klubber venter på godkjenning",
     "clubs_waiting_many": "{n} nye klubber venter på godkjenning",
-    "clubs_waiting_other": "{n} nye klubber venter på godkjenning"
+    "clubs_waiting_other": "{n} nye klubber venter på godkjenning",
+    "role_requests_waiting_zero": "{n} rolleforespørsler venter",
+    "role_requests_waiting_one": "{n} rolleforespørsel venter",
+    "role_requests_waiting_two": "{n} rolleforespørsler venter",
+    "role_requests_waiting_few": "{n} rolleforespørsler venter",
+    "role_requests_waiting_many": "{n} rolleforespørsler venter",
+    "role_requests_waiting_other": "{n} rolleforespørsler venter",
+    "federations_awaiting_zero": "{n} forbund venter på godkjenning",
+    "federations_awaiting_one": "{n} forbund venter på godkjenning",
+    "federations_awaiting_two": "{n} forbund venter på godkjenning",
+    "federations_awaiting_few": "{n} forbund venter på godkjenning",
+    "federations_awaiting_many": "{n} forbund venter på godkjenning",
+    "federations_awaiting_other": "{n} forbund venter på godkjenning"
   },
   "admin_settings": {
     "title": "Stemmeregler for krav",

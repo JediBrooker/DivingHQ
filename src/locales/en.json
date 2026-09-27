@@ -438,11 +438,7 @@
       "live": "{name} is LIVE",
       "prepare": "Prepare {name}",
       "prepare_meta": "Walk through the pre-meet workflow",
-      "role_requests_one": "{count} role request waiting",
-      "role_requests_many": "{count} role requests waiting",
       "role_requests_meta": "Review role requests in User Manager",
-      "orgs_one": "{count} federation awaiting approval",
-      "orgs_many": "{count} federations awaiting approval",
       "orgs_meta": "Review in User Manager → org filter",
       "claims_meta": "A federation or state body wants to take over",
       "chip_pending": "Pending",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Club admins run the meets their club hosts. They get no federation-wide access.",
     "admins_intro_classes": "Club admins run the meets their club hosts and look after its classes. They get no federation-wide access.",
-    "admins_intro_payments": "Club admins run the meets their club hosts and look after its payouts and affiliation payments. They get no federation-wide access."
+    "admins_intro_payments": "Club admins run the meets their club hosts and look after its payouts and affiliation payments. They get no federation-wide access.",
+    "last_admin_tip": "A club needs at least one admin. Add a co-admin before removing this one."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Nobody to add yet. Members of your region's clubs show up here.",
     "release_club": "Take out of region",
     "club_requests": "Clubs asking to join",
-    "currently_in": "currently in {region}"
+    "currently_in": "currently in {region}",
+    "last_admin_tip": "A region needs at least one admin. Add a co-admin before removing this one."
   },
   "claims": {
     "title": "Claims",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "{n} new clubs waiting for approval",
     "clubs_waiting_few": "{n} new clubs waiting for approval",
     "clubs_waiting_many": "{n} new clubs waiting for approval",
-    "clubs_waiting_other": "{n} new clubs waiting for approval"
+    "clubs_waiting_other": "{n} new clubs waiting for approval",
+    "role_requests_waiting_zero": "{n} role requests waiting",
+    "role_requests_waiting_one": "{n} role request waiting",
+    "role_requests_waiting_two": "{n} role requests waiting",
+    "role_requests_waiting_few": "{n} role requests waiting",
+    "role_requests_waiting_many": "{n} role requests waiting",
+    "role_requests_waiting_other": "{n} role requests waiting",
+    "federations_awaiting_zero": "{n} federations awaiting approval",
+    "federations_awaiting_one": "{n} federation awaiting approval",
+    "federations_awaiting_two": "{n} federations awaiting approval",
+    "federations_awaiting_few": "{n} federations awaiting approval",
+    "federations_awaiting_many": "{n} federations awaiting approval",
+    "federations_awaiting_other": "{n} federations awaiting approval"
   },
   "admin_settings": {
     "title": "Claim voting rules",

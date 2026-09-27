@@ -438,11 +438,7 @@
       "live": "{name} är LIVE",
       "prepare": "Förbered {name}",
       "prepare_meta": "Gå igenom för-mötesflödet",
-      "role_requests_one": "{count} rollförfrågan väntar",
-      "role_requests_many": "{count} rollförfrågningar väntar",
       "role_requests_meta": "Granska rollförfrågningar i Användarhantering",
-      "orgs_one": "{count} federation väntar på godkännande",
-      "orgs_many": "{count} federationer väntar på godkännande",
       "orgs_meta": "Granska i Användarhantering → organisationsfilter",
       "claims_meta": "Ett förbund vill ta över ett konto",
       "chip_pending": "Väntar",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Klubbadministratörer sköter tävlingarna som klubben arrangerar. De får ingen åtkomst på förbundsnivå.",
     "admins_intro_classes": "Klubbadministratörer sköter tävlingarna som klubben arrangerar och tar hand om klubbens kurser. De får ingen åtkomst på förbundsnivå.",
-    "admins_intro_payments": "Klubbadministratörer sköter tävlingarna som klubben arrangerar och tar hand om utbetalningar och medlemsavgifter. De får ingen åtkomst på förbundsnivå."
+    "admins_intro_payments": "Klubbadministratörer sköter tävlingarna som klubben arrangerar och tar hand om utbetalningar och medlemsavgifter. De får ingen åtkomst på förbundsnivå.",
+    "last_admin_tip": "En klubb måste ha minst en administratör. Lägg till en medadministratör innan du tar bort den här."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Ingen att lägga till än. Medlemmar i klubbarna i din region visas här.",
     "release_club": "Ta bort ur regionen",
     "club_requests": "Klubbar som vill gå med",
-    "currently_in": "just nu i {region}"
+    "currently_in": "just nu i {region}",
+    "last_admin_tip": "En region måste ha minst en administratör. Lägg till en medadministratör innan du tar bort den här."
   },
   "claims": {
     "title": "Anspråk",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "{n} nya klubbar väntar på godkännande",
     "clubs_waiting_few": "{n} nya klubbar väntar på godkännande",
     "clubs_waiting_many": "{n} nya klubbar väntar på godkännande",
-    "clubs_waiting_other": "{n} nya klubbar väntar på godkännande"
+    "clubs_waiting_other": "{n} nya klubbar väntar på godkännande",
+    "role_requests_waiting_zero": "{n} rollförfrågningar väntar",
+    "role_requests_waiting_one": "{n} rollförfrågan väntar",
+    "role_requests_waiting_two": "{n} rollförfrågningar väntar",
+    "role_requests_waiting_few": "{n} rollförfrågningar väntar",
+    "role_requests_waiting_many": "{n} rollförfrågningar väntar",
+    "role_requests_waiting_other": "{n} rollförfrågningar väntar",
+    "federations_awaiting_zero": "{n} förbund väntar på godkännande",
+    "federations_awaiting_one": "{n} förbund väntar på godkännande",
+    "federations_awaiting_two": "{n} förbund väntar på godkännande",
+    "federations_awaiting_few": "{n} förbund väntar på godkännande",
+    "federations_awaiting_many": "{n} förbund väntar på godkännande",
+    "federations_awaiting_other": "{n} förbund väntar på godkännande"
   },
   "admin_settings": {
     "title": "Omröstningsregler för anspråk",

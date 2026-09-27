@@ -83,3 +83,52 @@ test('every counted string has all six category keys in every locale', () => {
     }
   }
 })
+
+// The dashboard's "N role requests waiting" and "N federations awaiting
+// approval" cards used a one/many pair, which reads wrong for 2-4 vs 5+ in
+// the Slavic languages and for most counts in Arabic. Checked against the
+// shipped locale files, not a stand-in table.
+test('dashboard attention counts pick the right form from the real locales', () => {
+  const dir = path.join(__dirname, '..', 'src', 'locales')
+  const say = (locale, base, n) => {
+    const counts = JSON.parse(fs.readFileSync(path.join(dir, `${locale}.json`), 'utf8')).counts
+    const messages = Object.fromEntries(Object.entries(counts).map(([k, v]) => [`counts.${k}`, v]))
+    const { t, te } = fakeI18n(messages)
+    return translatePlural(t, te, locale, `counts.${base}`, n)
+  }
+  assert.equal(say('en', 'role_requests_waiting', 1), '1 role request waiting')
+  assert.equal(say('en', 'role_requests_waiting', 3), '3 role requests waiting')
+  assert.equal(say('en', 'federations_awaiting', 2), '2 federations awaiting approval')
+
+  assert.equal(say('ru', 'role_requests_waiting', 1), '1 запрос на роль ожидает')
+  assert.equal(say('ru', 'role_requests_waiting', 3), '3 запроса на роль ожидают')
+  assert.equal(say('ru', 'role_requests_waiting', 5), '5 запросов на роль ожидают')
+  assert.equal(say('ru', 'role_requests_waiting', 22), '22 запроса на роль ожидают')
+  assert.equal(say('ru', 'federations_awaiting', 3), '3 федерации ожидают подтверждения')
+
+  assert.equal(say('pl', 'role_requests_waiting', 2), '2 prośby o rolę oczekują')
+  assert.equal(say('pl', 'role_requests_waiting', 5), '5 próśb o rolę oczekuje')
+  assert.equal(say('pl', 'federations_awaiting', 12), '12 federacji oczekuje na zatwierdzenie')
+
+  assert.equal(say('cs', 'role_requests_waiting', 3), '3 žádosti o role čekají')
+  assert.equal(say('cs', 'federations_awaiting', 7), '7 federací čeká na schválení')
+
+  assert.equal(say('uk', 'federations_awaiting', 4), '4 федерації очікують на затвердження')
+  assert.equal(say('sr', 'role_requests_waiting', 21), '21 захтев за улогу на чекању')
+
+  // Arabic: dual for 2, plural for 3-10, and a different form again past that.
+  assert.equal(say('ar', 'federations_awaiting', 2), '2 اتحادان بانتظار الموافقة')
+  assert.equal(say('ar', 'federations_awaiting', 4), '4 اتحادات بانتظار الموافقة')
+  assert.equal(say('ar', 'federations_awaiting', 11), '11 اتحادًا بانتظار الموافقة')
+
+  // Every locale gives something with the number in it, never a raw key.
+  for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.json') && !x.startsWith('server-'))) {
+    const locale = f.slice(0, -5)
+    for (const base of ['role_requests_waiting', 'federations_awaiting']) {
+      for (const n of [1, 2, 3, 5, 11, 21, 100]) {
+        const out = say(locale, base, n)
+        assert.ok(out.includes(String(n)) && !out.includes('counts.'), `${locale} ${base} ${n}: ${out}`)
+      }
+    }
+  }
+})

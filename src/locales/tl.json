@@ -438,11 +438,7 @@
       "live": "{name} ay LIVE",
       "prepare": "Ihanda ang {name}",
       "prepare_meta": "Sundan ang pre-meet workflow",
-      "role_requests_one": "{count} kahilingan sa tungkulin ang naghihintay",
-      "role_requests_many": "{count} kahilingan sa tungkulin ang naghihintay",
       "role_requests_meta": "Suriin ang mga kahilingan ng tungkulin sa User Manager",
-      "orgs_one": "{count} pederasyon ang naghihintay ng pag-apruba",
-      "orgs_many": "{count} mga pederasyon ang naghihintay ng pag-apruba",
       "orgs_meta": "Suriin sa User Manager → org filter",
       "claims_meta": "Gustong pamahalaan ng isang pederasyon ang account",
       "chip_pending": "Nakabinbin",
@@ -2105,7 +2101,8 @@
     },
     "admins_intro_meets": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club. Wala silang access sa buong pederasyon.",
     "admins_intro_classes": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club at inaasikaso ang mga klase nito. Wala silang access sa buong pederasyon.",
-    "admins_intro_payments": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club at inaasikaso ang mga payout at bayad sa pagsapi nito. Wala silang access sa buong pederasyon."
+    "admins_intro_payments": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club at inaasikaso ang mga payout at bayad sa pagsapi nito. Wala silang access sa buong pederasyon.",
+    "last_admin_tip": "Kailangan ng club ng kahit isang admin. Magdagdag muna ng isa pang admin bago alisin ang isang ito."
   },
   "regions": {
     "label": {
@@ -2138,7 +2135,8 @@
     "no_candidates": "Wala pang maidadagdag. Lalabas dito ang mga miyembro ng mga club sa iyong rehiyon.",
     "release_club": "Alisin sa rehiyon",
     "club_requests": "Mga club na gustong sumali",
-    "currently_in": "kasalukuyang nasa {region}"
+    "currently_in": "kasalukuyang nasa {region}",
+    "last_admin_tip": "Kailangan ng rehiyon ng kahit isang admin. Magdagdag muna ng isa pang admin bago alisin ang isang ito."
   },
   "claims": {
     "title": "Mga claim",
@@ -2264,7 +2262,19 @@
     "clubs_waiting_two": "May {n} bagong club na naghihintay ng pag-apruba",
     "clubs_waiting_few": "May {n} bagong club na naghihintay ng pag-apruba",
     "clubs_waiting_many": "May {n} bagong club na naghihintay ng pag-apruba",
-    "clubs_waiting_other": "May {n} bagong club na naghihintay ng pag-apruba"
+    "clubs_waiting_other": "May {n} bagong club na naghihintay ng pag-apruba",
+    "role_requests_waiting_zero": "{n} kahilingan sa tungkulin ang naghihintay",
+    "role_requests_waiting_one": "{n} kahilingan sa tungkulin ang naghihintay",
+    "role_requests_waiting_two": "{n} kahilingan sa tungkulin ang naghihintay",
+    "role_requests_waiting_few": "{n} kahilingan sa tungkulin ang naghihintay",
+    "role_requests_waiting_many": "{n} kahilingan sa tungkulin ang naghihintay",
+    "role_requests_waiting_other": "{n} kahilingan sa tungkulin ang naghihintay",
+    "federations_awaiting_zero": "{n} pederasyon ang naghihintay ng pag-apruba",
+    "federations_awaiting_one": "{n} pederasyon ang naghihintay ng pag-apruba",
+    "federations_awaiting_two": "{n} pederasyon ang naghihintay ng pag-apruba",
+    "federations_awaiting_few": "{n} pederasyon ang naghihintay ng pag-apruba",
+    "federations_awaiting_many": "{n} pederasyon ang naghihintay ng pag-apruba",
+    "federations_awaiting_other": "{n} pederasyon ang naghihintay ng pag-apruba"
   },
   "admin_settings": {
     "title": "Mga patakaran sa botohan ng claim",
