@@ -5,11 +5,11 @@
 // /scoreboard/:eventId surface for live broadcast or completed
 // recap.
 
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { fmtDate } from '@/lib/format'
-import { cachedFetch, prefetch } from '@/lib/idbCache'
+import { cachedFetch } from '@/lib/idbCache'
 import { MEET_METADATA_TTL_MS } from '@/lib/cache-policy'
 import { groupScoreboardEvents } from '@/composables/useProgressionGroups'
 import MeetEventGrid from '@/components/scoreboard/MeetEventGrid.vue'
@@ -121,18 +121,6 @@ async function load(id) {
     meet.value = body.meet
     events.value = Array.isArray(body.events) ? body.events : []
     participatingOrgs.value = Array.isArray(body.participating_orgs) ? body.participating_orgs : []
-
-    // Warm caches for the views the user is likely to navigate to
-    // next: the dive directory (used by every dive-list editor) +
-    // each live event's scoreboard. Fire-and-forget; failures are
-    // invisible to the meet page itself.
-    const prefetchUrls = ['/api/dive-directory']
-    for (const ev of events.value) {
-      if (ev.status === 'Live') {
-        prefetchUrls.push(`/api/scoreboard/${ev.id}`)
-      }
-    }
-    prefetch(prefetchUrls, { credentials: 'same-origin' })
   } catch (err) {
     error.value = err.message || 'Failed to load meet'
   } finally {
@@ -145,8 +133,6 @@ const completedCount = computed(() => events.value.filter(e => e.status === 'Com
 const upcomingCount = computed(() => events.value.filter(e => e.status === 'Upcoming').length)
 
 const liveEvents = computed(() => events.value.filter(e => e.status === 'Live'))
-const upcomingEvents = computed(() => events.value.filter(e => e.status === 'Upcoming'))
-const completedEvents = computed(() => events.value.filter(e => e.status === 'Completed'))
 
 // Progression grid: one row per discipline, prelim → semi → final
 // as aligned columns (same layout as the Scoreboard's meet browser).
@@ -163,8 +149,9 @@ const dateRange = computed(() => {
   return fmtDate(s || e)
 })
 
+// immediate covers the first mount too, so no onMounted load on top of it
+// (that used to fetch the meet twice on every visit).
 watch(() => route.params.id, (id) => { if (id) load(id) }, { immediate: true })
-onMounted(() => { if (route.params.id) load(route.params.id) })
 </script>
 
 <template>

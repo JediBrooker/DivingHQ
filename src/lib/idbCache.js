@@ -20,8 +20,8 @@
 // also wipes the store via clearSessionCache().
 //
 // Phase 3 of the offline-resilience work (docs/offline-p1-design.md
-// references P3) adds TTL, invalidate, and prefetch helpers on top
-// of the SWR base:
+// references P3) adds TTL and invalidate helpers on top of the SWR
+// base:
 //
 //   * cachedFetch(…, { maxAgeMs }): hard age boundary. If the cached
 //     entry is older than maxAgeMs we DON'T serve it, we await the
@@ -31,10 +31,6 @@
 //     URL matches the predicate. Wired to socket events
 //     (score_received → invalidate /api/scoreboard/:id; state_update
 //     → invalidate event metadata).
-//   * prefetch(urls, fetchOpts): fan-out cachedFetch over a list of
-//     URLs. Used at meet-load time to warm caches for dive directory,
-//     roster, panel, and schedule before the user lands on any view
-//     that consumes them.
 
 // Explicit .js extension: this module is also loaded by the node:test
 // suite, where extensionless ESM specifiers don't resolve.
@@ -251,19 +247,4 @@ export async function idbInvalidate(predicate) {
     tx.oncomplete = () => resolve(deleted)
     tx.onerror = () => resolve(deleted)
   })
-}
-
-// Pre-fetch a list of URLs into the cache. Fire-and-forget;
-// failures are swallowed. Called at meet-load time so the
-// downstream views (judge, scoreboard, control room) all hit
-// warm cache instead of cold network.
-//
-// Each url can be either a string or a { url, fetchOptions } pair.
-// fetchOptions defaults to the shared `fetchOptions` arg.
-export async function prefetch(urls, fetchOptions = {}) {
-  await Promise.all((urls || []).map((entry) => {
-    const url = typeof entry === 'string' ? entry : entry.url
-    const opts = (typeof entry === 'object' && entry.fetchOptions) || fetchOptions
-    return cachedFetch(url, opts).catch(() => null)
-  }))
 }
