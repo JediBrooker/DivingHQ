@@ -849,6 +849,9 @@
  *   event manager seats handed out (or held) under the claim since it was approved
  * @property {{id: string, body_name: string}[]} removed.region_claims
  *   region claims the federation approved, revoked along with it
+ * @property {{id: string, name: string}[]} activated_clubs
+ *   clubs that were waiting on the federation's approval (migration 096)
+ *   and joined when the claim went; empty for a region claim
  */
 
 // Force this file to be a module so import('@/types') works in
