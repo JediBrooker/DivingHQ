@@ -121,9 +121,11 @@ before(async () => {
   if (!JWT_SECRET || JWT_SECRET === "change_this_secret_in_production") { console.warn("[skip] classes: JWT_SECRET unset"); return; }
   try { await pool.query("SELECT 1 FROM classes LIMIT 1"); } catch { console.warn("[skip] classes: migration 077 not applied"); return; }
 
+  // status 'active': a pending org (the column default) locks its members
+  // out of every authed route now, same as production.
   const mkOrg = async (n) => (await pool.query(
-    `INSERT INTO organisations (name, slug, default_currency, platform_fee_bps)
-     VALUES ($1, $2, 'GBP', 1500) RETURNING id`,
+    `INSERT INTO organisations (name, slug, default_currency, platform_fee_bps, status)
+     VALUES ($1, $2, 'GBP', 1500, 'active') RETURNING id`,
     [n, n.toLowerCase().replace(/[^a-z0-9]+/g, "-")],
   )).rows[0].id;
   orgId = await mkOrg(`Classes Org ${suffix}`);
