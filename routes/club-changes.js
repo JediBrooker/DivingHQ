@@ -23,15 +23,11 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { NOTICE_TITLE_MAX } = require("../lib/notices");
+const { isOrgAdminOf } = require("../lib/admin-rows");
 
 module.exports = function createClubChangesRouter({ pool, verifyToken, bumpTokenVersion }) {
   if (!pool) throw new Error("createClubChangesRouter requires { pool }");
   const router = express.Router();
-
-  const isOrgAdminOf = (req, orgId) =>
-    !!req.user.is_system_admin ||
-    ((req.user.org_roles || []).includes("org_admin") &&
-      req.user.org_id === orgId);
 
   // Can this club (or region) admin decide this request? Only a within-org
   // move into a club they run, in an org with no federation to ask, and
@@ -313,7 +309,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
       // Permission: the diver themselves, or an org_admin of the
       // diver's CURRENT org (the side that releases them).
       const isSelf = req.user.id === targetId;
-      if (!isSelf && !isOrgAdminOf(req, u.org_id)) {
+      if (!isSelf && !isOrgAdminOf(req.user, u.org_id)) {
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "Not allowed to request a change for this diver" });
       }
@@ -339,7 +335,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
 
       // Seed handshake stamps based on who initiated.
       const diverConfirmed = isSelf ? "now()" : "NULL";
-      const sourceApproved = !isSelf && isOrgAdminOf(req, u.org_id) ? "now()" : "NULL";
+      const sourceApproved = !isSelf && isOrgAdminOf(req.user, u.org_id) ? "now()" : "NULL";
       const sourceApprovedBy = sourceApproved === "now()" ? req.user.id : null;
 
       let insRes;
@@ -456,9 +452,9 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
 
       // A club (or region) admin approving someone into their club counts
       // as the one approval a club_change needs.
-      const canSource = isOrgAdminOf(req, r.from_org_id)
+      const canSource = isOrgAdminOf(req.user, r.from_org_id)
         || await isJoinReviewer(client, req.user.id, r);
-      const canTarget = isOrgAdminOf(req, r.to_org_id);
+      const canTarget = isOrgAdminOf(req.user, r.to_org_id);
       if (!canSource && !canTarget) {
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "Not an admin of either organisation in this request" });
@@ -547,7 +543,7 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
         "SELECT * FROM club_change_requests WHERE id=$1 AND status='pending'",
         [req.params.id])).rows[0];
       if (!r) return res.status(404).json({ error: "Request not found" });
-      const allowed = r.user_id === req.user.id || isOrgAdminOf(req, r.from_org_id) || isOrgAdminOf(req, r.to_org_id);
+      const allowed = r.user_id === req.user.id || isOrgAdminOf(req.user, r.from_org_id) || isOrgAdminOf(req.user, r.to_org_id);
       if (!allowed) return res.status(403).json({ error: "Not allowed to cancel this request" });
       await pool.query(
         "UPDATE club_change_requests SET status='rejected', reviewed_by=$1, reviewed_at=now(), note=COALESCE(note,'') WHERE id=$2",

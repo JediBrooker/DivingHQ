@@ -32,7 +32,7 @@ const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { countryByCode, countryFromStored } = require("../lib/countries");
-const { removeAdmin } = require("../lib/admin-rows");
+const { removeAdmin, isOrgAdminOf } = require("../lib/admin-rows");
 const clubApprovals = require("../lib/club-approvals");
 
 module.exports = function createOrgsRouter({
@@ -635,7 +635,7 @@ module.exports = function createOrgsRouter({
     try {
       const org = await clubApprovals.getSettings(pool, req.params.id);
       if (!org) return res.status(404).json({ error: "Organisation not found" });
-      if (!clubApprovals.canDecide(req.user, org.id)) return res.status(403).json({ error: "Forbidden" });
+      if (!isOrgAdminOf(req.user, org.id)) return res.status(403).json({ error: "Forbidden" });
       res.json({ auto_approve_clubs: org.auto_approve_clubs, claim_state: org.claim_state });
     } catch (err) {
       approvalError(res, err, "[Club Settings Error]");
@@ -693,9 +693,8 @@ module.exports = function createOrgsRouter({
       return null;
     }
     const club = c.rows[0];
-    const isOrgAdmin = (req.user.org_roles || []).includes("org_admin");
     // The club's own admins, or its region's admins one level up.
-    if (!req.user.is_system_admin && !(isOrgAdmin && club.org_id === req.user.org_id)) {
+    if (!isOrgAdminOf(req.user, club.org_id)) {
       if (!(club.claim_state === "unclaimed" && (club.caller_is_admin || club.caller_is_region_admin))) {
         res.status(403).json({ error: "Only your federation's admin can manage club admins" });
         return null;

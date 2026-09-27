@@ -29,6 +29,7 @@ const createAuthLinks = require("../lib/auth-links");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { supportContact } = require("../lib/support");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
+const { isOrgAdminOf } = require("../lib/admin-rows");
 
 // Enum values from init.sql's CREATE TYPE org_role. system_admin is
 // intentionally NOT in this set, it's a column on users, not a role
@@ -455,10 +456,7 @@ module.exports = function createUsersRouter({
       const targetOrgId = target.rows[0].org_id;
 
       const isSelf = req.user.id === targetId;
-      const orgRoles = req.user.org_roles || [];
-      const isAdmin =
-        req.user.is_system_admin ||
-        (orgRoles.includes("org_admin") && targetOrgId === req.user.org_id);
+      const isAdmin = isOrgAdminOf(req.user, targetOrgId);
 
       if (!isSelf && !isAdmin) {
         return res
@@ -1399,10 +1397,7 @@ module.exports = function createUsersRouter({
       )).rows[0];
       if (!g) return res.status(404).json({ error: "Guardian link not found" });
       const isGuardian = g.guardian_user_id === req.user.id;
-      const isAdmin = req.user.is_system_admin || (
-        req.user.org_id === g.org_id &&
-        (req.user.org_roles || []).includes("org_admin")
-      );
+      const isAdmin = isOrgAdminOf(req.user, g.org_id);
       if (!isGuardian && !isAdmin) return res.status(403).json({ error: "Forbidden" });
       await pool.query(
         "UPDATE guardians SET status = 'revoked', reviewed_by = $1, reviewed_at = now() WHERE id = $2",

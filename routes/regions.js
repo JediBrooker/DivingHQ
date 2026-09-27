@@ -29,17 +29,13 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { catalogFor, materializeRegions } = require("../lib/regions");
-const { removeAdmin } = require("../lib/admin-rows");
+const { removeAdmin, isOrgAdminOf } = require("../lib/admin-rows");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }) {
   if (!pool || !verifyToken) throw new Error("createRegionsRouter requires { pool, verifyToken }");
   const router = express.Router();
-
-  const isOrgAdminOf = (user, orgId) =>
-    !!user.is_system_admin
-    || ((user.org_roles || []).includes("org_admin") && user.org_id === orgId);
 
   // A region admin looking after their own co-admins, which only happens
   // where there's no federation to do it.
