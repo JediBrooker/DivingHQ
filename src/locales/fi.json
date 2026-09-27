@@ -1980,6 +1980,9 @@
     "send_objection": "Lähetä vastalause",
     "reject": "Hylkää",
     "revoke": "Peru",
-    "revoke_body": "{body} ei enää hallinnoi kohdetta {target}, joka palaa vaatimusta edeltäneeseen tilaan."
+    "revoke_body": "{body} ei enää hallinnoi kohdetta {target}, joka palaa vaatimusta edeltäneeseen tilaan. Myös hyväksynnän jälkeen jaetut ylläpitäjän ja kisanjohtajan oikeudet poistetaan.",
+    "status_withdrawn": "Vedetty pois",
+    "status_open_review": "Odottaa päätöstä",
+    "revoked_summary": "Vaatimus peruttu. Poistetut oikeudet: {count}"
   }
 }

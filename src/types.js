@@ -558,6 +558,55 @@
  * @property {CoachDiveListDiver[]} divers
  */
 
+// ---- claims (lib/claims.js, migrations 089 + 092) -----------------
+
+/**
+ * @typedef {Object} Claim
+ * One row of GET /api/claims. Withdrawn claims come back to their
+ * claimant, and to anyone who could see them while they were live.
+ *
+ * @property {string}  id
+ * @property {'org'|'region'} target_kind
+ * @property {string}  target_name      the country's name for a national claim
+ * @property {?string} region_code
+ * @property {string}  org_name
+ * @property {string}  country_code
+ * @property {string}  body_name
+ * @property {?string} website
+ * @property {boolean} domain_verified
+ * @property {string}  claimant_name
+ * @property {string}  claimant_since
+ * @property {'parent'|'clubs'|'regions'|'sysadmin'} approver
+ * @property {'open'|'escalated'|'approved'|'rejected'|'withdrawn'|'revoked'} status
+ * @property {?string} status_reason    English, shown as-is
+ * @property {boolean} activated        false until the claimant verifies their email
+ * @property {?string} closes_at
+ * @property {string}  created_at
+ * @property {{eligible: number, approvals: number, objections: number}} tally
+ * @property {string[]} objections      reasons, sysadmin only (empty otherwise)
+ * @property {boolean} mine
+ * @property {{voter_id: string, name: string, vote: ?('approve'|'object')}[]} my_votes
+ * @property {boolean} can_vote
+ * @property {boolean} can_decide       only once activated
+ * @property {boolean} can_revoke
+ */
+
+/**
+ * @typedef {Object} ClaimRevokeResult
+ * POST /api/claims/:id/revoke. Everything the revoke took back, so the
+ * sysadmin can re-grant anything that should have stayed.
+ *
+ * @property {true} ok
+ * @property {Object} removed
+ * @property {{user_id: string, full_name: string, role: 'org_admin'|'meet_manager'}[]} removed.org_roles
+ * @property {{user_id: string, full_name: string, club_id: string, club_name: string}[]} removed.club_admins
+ * @property {{user_id: string, full_name: string, region_id: string, region_name: string}[]} removed.region_admins
+ * @property {{user_id: string, full_name: string, event_id: string, event_name: string}[]} removed.event_managers
+ *   event manager seats handed out (or held) under the claim since it was approved
+ * @property {{id: string, body_name: string}[]} removed.region_claims
+ *   region claims the federation approved, revoked along with it
+ */
+
 // Force this file to be a module so import('@/types') works in
 // editors that need an export to consider it an importable module.
 export {}

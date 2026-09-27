@@ -1980,6 +1980,9 @@
     "send_objection": "Einwand senden",
     "reject": "Ablehnen",
     "revoke": "Widerrufen",
-    "revoke_body": "{body} führt {target} nicht mehr, alles wird wie vor dem Anspruch."
+    "revoke_body": "{body} führt {target} nicht mehr, alles wird wie vor dem Anspruch. Admin- und Wettkampfleiter-Zugänge, die seit der Genehmigung dort vergeben wurden, werden ebenfalls entzogen.",
+    "status_withdrawn": "Zurückgezogen",
+    "status_open_review": "Wartet auf Entscheidung",
+    "revoked_summary": "Anspruch widerrufen. Entzogene Berechtigungen: {count}"
   }
 }

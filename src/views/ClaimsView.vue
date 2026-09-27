@@ -34,6 +34,9 @@ function d(c) {
 
 function statusLabel(c) {
   if (c.status === 'open' && !c.activated) return t('claims.awaiting_email')
+  // "Voting" only fits when somebody votes; the federation or DivingHQ
+  // just decides.
+  if (c.status === 'open' && !['clubs', 'regions'].includes(c.approver)) return t('claims.status_open_review')
   return t(`claims.status_${c.status}`)
 }
 
@@ -48,16 +51,20 @@ async function load() {
   }
 }
 
+// Resolves to the response body, or null if it failed. A refusal can
+// still have moved the claim on (a suspended claimant sends it to
+// DivingHQ), so the list reloads either way.
 async function post(c, path, body) {
   busyId.value = c.id
   try {
-    await auth.apiFetch(`/api/claims/${c.id}/${path}`, { method: 'POST', body: JSON.stringify(body) })
+    const res = await auth.apiFetch(`/api/claims/${c.id}/${path}`, { method: 'POST', body: JSON.stringify(body) })
     delete draft.value[c.id]
     await load()
-    return true
+    return res || {}
   } catch (err) {
     showError(err.message)
-    return false
+    load()
+    return null
   } finally {
     busyId.value = null
   }
@@ -80,7 +87,14 @@ async function revoke(c) {
     title: t('claims.revoke'), body: t('claims.revoke_body', { body: c.body_name, target: c.target_name }),
     confirmLabel: t('claims.revoke'), confirmKind: 'danger',
   })) return
-  await post(c, 'revoke', {})
+  const res = await post(c, 'revoke', {})
+  if (!res) return
+  // Just the count here. The names are in the response and the ids in
+  // the audit log, for anyone who needs to re-grant something.
+  const removed = res.removed || {}
+  const count = ['org_roles', 'club_admins', 'region_admins', 'event_managers']
+    .reduce((n, k) => n + (removed[k]?.length || 0), 0)
+  showSuccess(t('claims.revoked_summary', { count }))
 }
 
 onMounted(load)

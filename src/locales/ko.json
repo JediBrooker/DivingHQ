@@ -1980,6 +1980,9 @@
     "send_objection": "반대 보내기",
     "reject": "거절",
     "revoke": "취소",
-    "revoke_body": "{body}은(는) 더 이상 {target}을(를) 운영하지 않으며 신청 이전 상태로 돌아갑니다."
+    "revoke_body": "{body}은(는) 더 이상 {target}을(를) 운영하지 않으며 신청 이전 상태로 돌아갑니다. 승인 이후 그곳에서 부여된 관리자 및 대회 매니저 권한도 제거됩니다.",
+    "status_withdrawn": "철회됨",
+    "status_open_review": "결정 대기 중",
+    "revoked_summary": "신청이 취소되었습니다. 제거된 권한: {count}"
   }
 }

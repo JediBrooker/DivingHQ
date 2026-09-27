@@ -5,7 +5,7 @@
 //                                  the sysadmin
 //   POST /api/claims/:id/vote      { vote: 'approve'|'object', reason?, voter_id? }
 //   POST /api/claims/:id/decide    { decision: 'approve'|'reject', reason? }
-//   POST /api/claims/:id/revoke    sysadmin, { reason? }
+//   POST /api/claims/:id/revoke    sysadmin, { reason? } -> { ok, removed }
 //
 //   GET  /api/admin/settings       sysadmin, the claim-vote knobs
 //   PUT  /api/admin/settings/:key  sysadmin, { value }
@@ -63,10 +63,12 @@ module.exports = function createClaimsRouter({ pool, push, email, verifyToken, r
     }
   });
 
+  // removed: every grant the revoke took back, so the sysadmin can see
+  // (and re-grant) anything that should have stayed.
   router.post("/api/claims/:id/revoke", verifyToken, async (req, res) => {
     try {
-      await claims.revoke(pool, { claimId: req.params.id, user: req.user, reason: req.body?.reason }, deps);
-      res.json({ ok: true });
+      const removed = await claims.revoke(pool, { claimId: req.params.id, user: req.user, reason: req.body?.reason }, deps);
+      res.json({ ok: true, removed });
     } catch (err) {
       fail(res, err, "Claim Revoke Error");
     }

@@ -1980,6 +1980,9 @@
     "send_objection": "Send indsigelse",
     "reject": "Afvis",
     "revoke": "Tilbagekald",
-    "revoke_body": "{body} driver ikke længere {target}, som vender tilbage til, som det var før kravet."
+    "revoke_body": "{body} driver ikke længere {target}, som vender tilbage til, som det var før kravet. Administrator- og stævnelederadgang, der er givet siden godkendelsen, fjernes også.",
+    "status_withdrawn": "Trukket tilbage",
+    "status_open_review": "Afventer afgørelse",
+    "revoked_summary": "Kravet er tilbagekaldt. Fjernede rettigheder: {count}"
   }
 }

@@ -1980,6 +1980,9 @@
     "send_objection": "反対を送信",
     "reject": "却下",
     "revoke": "取り消す",
-    "revoke_body": "{body} は {target} の運営をやめ、申請前の状態に戻ります。"
+    "revoke_body": "{body} は {target} の運営をやめ、申請前の状態に戻ります。承認後にそこで付与された管理者と大会マネージャーの権限も削除されます。",
+    "status_withdrawn": "取り下げ",
+    "status_open_review": "判断待ち",
+    "revoked_summary": "申請を取り消しました。削除された権限: {count}"
   }
 }

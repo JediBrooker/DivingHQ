@@ -1980,6 +1980,9 @@
     "send_objection": "İtirazı gönder",
     "reject": "Reddet",
     "revoke": "İptal et",
-    "revoke_body": "{body} artık {target} yönetmiyor, her şey talepten önceki haline döner."
+    "revoke_body": "{body} artık {target} yönetmiyor, her şey talepten önceki haline döner. Onaylandığından beri orada verilen yönetici ve yarışma yöneticisi erişimleri de kaldırılır.",
+    "status_withdrawn": "Geri çekildi",
+    "status_open_review": "Karar bekleniyor",
+    "revoked_summary": "Talep iptal edildi. Kaldırılan yetkiler: {count}"
   }
 }

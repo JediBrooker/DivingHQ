@@ -1980,6 +1980,9 @@
     "send_objection": "Odeslat námitku",
     "reject": "Zamítnout",
     "revoke": "Odvolat",
-    "revoke_body": "{body} přestane spravovat {target}, vše se vrátí do stavu před nárokem."
+    "revoke_body": "{body} přestane spravovat {target}, vše se vrátí do stavu před nárokem. Odebrána budou i oprávnění administrátorů a vedoucích závodu udělená od jeho schválení.",
+    "status_withdrawn": "Staženo",
+    "status_open_review": "Čeká na rozhodnutí",
+    "revoked_summary": "Nárok odvolán. Odebraná oprávnění: {count}"
   }
 }

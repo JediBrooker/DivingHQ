@@ -1980,6 +1980,9 @@
     "send_objection": "Ipadala ang pagtutol",
     "reject": "Tanggihan",
     "revoke": "Bawiin",
-    "revoke_body": "Hindi na pamamahalaan ng {body} ang {target}, babalik ito sa dati bago ang claim."
+    "revoke_body": "Hindi na pamamahalaan ng {body} ang {target}, babalik ito sa dati bago ang claim. Aalisin din ang access ng tagapangasiwa at tagapamahala ng paligsahan na ibinigay roon mula nang maaprubahan ito.",
+    "status_withdrawn": "Iniurong",
+    "status_open_review": "Naghihintay ng desisyon",
+    "revoked_summary": "Binawi ang claim. Mga inalis na access: {count}"
   }
 }

@@ -1980,6 +1980,9 @@
     "send_objection": "Kirim keberatan",
     "reject": "Tolak",
     "revoke": "Cabut",
-    "revoke_body": "{body} tidak lagi mengelola {target}, semuanya kembali seperti sebelum klaim."
+    "revoke_body": "{body} tidak lagi mengelola {target}, semuanya kembali seperti sebelum klaim. Akses admin dan pengelola kompetisi yang diberikan di sana sejak klaim disetujui juga dihapus.",
+    "status_withdrawn": "Ditarik",
+    "status_open_review": "Menunggu keputusan",
+    "revoked_summary": "Klaim dicabut. Akses yang dihapus: {count}"
   }
 }

@@ -1980,6 +1980,9 @@
     "send_objection": "Enviar objeción",
     "reject": "Rechazar",
     "revoke": "Revocar",
-    "revoke_body": "{body} deja de gestionar {target}, que vuelve a como estaba antes de la reclamación."
+    "revoke_body": "{body} deja de gestionar {target}, que vuelve a como estaba antes de la reclamación. También se retiran los accesos de administrador y de gestor de competición concedidos allí desde su aprobación.",
+    "status_withdrawn": "Retirada",
+    "status_open_review": "Pendiente de decisión",
+    "revoked_summary": "Reclamación revocada. Permisos retirados: {count}"
   }
 }

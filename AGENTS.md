@@ -233,7 +233,12 @@ the host club should pass, and use the shared helpers rather than a fresh
 An unclaimed org or region becomes claimed through `lib/claims.js`
 (migration 089), never by editing `claim_state` by hand: approval also
 grants the claimant their role, audit-logs it and notifies the clubs, and a
-revoke has to undo exactly that.
+revoke has to undo it. A national revoke goes further than the claimant's
+own role: every org_admin and meet_manager in the org, club / region admin
+rows created since the approval, event manager seats those people handed
+out, and region claims the federation approved (migration 092,
+`unwindOrgClaim`). If you add a new way to hand out
+authority inside an org, check that revoke still takes it back.
 
 **`country_code` on a diver row is the representation code** (migration
 090): the scoreboard, recap, Control Room, PDF and venue queries emit
