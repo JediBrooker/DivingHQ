@@ -1928,7 +1928,8 @@
     "pick_member": "— Bir kulüp üyesi seçin —",
     "add": "Ekle",
     "remove": "Kaldır",
-    "federation_appoints": "Bu kulübün yöneticilerini federasyonunuz atar."
+    "federation_appoints": "Bu kulübün yöneticilerini federasyonunuz atar.",
+    "region_claimed_note": "Bir bölgeyi yönetim organı üstlendiğinde, kulüpleri o bölgeye alıp çıkarmayı yalnızca bölgenin yöneticileri yapabilir."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "Henüz yönetici yok",
     "region_admins": "Bölge yöneticileri",
     "pick_member": "— Bölgenizdeki kulüplerden bir üye seçin —",
-    "no_candidates": "Henüz eklenecek kimse yok. Bölgenizdeki kulüplerin üyeleri burada görünür."
+    "no_candidates": "Henüz eklenecek kimse yok. Bölgenizdeki kulüplerin üyeleri burada görünür.",
+    "release_club": "Bölgeden çıkar",
+    "add_club": "Bu bölgeye kulüp ekle",
+    "pick_club": "— Bir kulüp seçin —"
   },
   "claims": {
     "title": "Devralma talepleri",

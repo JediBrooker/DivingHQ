@@ -1928,7 +1928,8 @@
     "pick_member": "— Vereinsmitglied auswählen —",
     "add": "Hinzufügen",
     "remove": "Entfernen",
-    "federation_appoints": "Ihr Verband ernennt die Admins dieses Vereins."
+    "federation_appoints": "Ihr Verband ernennt die Admins dieses Vereins.",
+    "region_claimed_note": "Sobald der zuständige Verband eine Region übernommen hat, können nur deren Admins Vereine in die Region aufnehmen oder aus ihr herausnehmen."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "Noch kein Admin",
     "region_admins": "Regionsadmins",
     "pick_member": "— Mitglied eines Vereins Ihrer Region auswählen —",
-    "no_candidates": "Noch niemand zum Hinzufügen. Mitglieder der Vereine Ihrer Region erscheinen hier."
+    "no_candidates": "Noch niemand zum Hinzufügen. Mitglieder der Vereine Ihrer Region erscheinen hier.",
+    "release_club": "Aus der Region nehmen",
+    "add_club": "Verein zu dieser Region hinzufügen",
+    "pick_club": "— Verein auswählen —"
   },
   "claims": {
     "title": "Ansprüche",

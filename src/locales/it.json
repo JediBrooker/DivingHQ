@@ -1928,7 +1928,8 @@
     "pick_member": "— Scegli un membro del club —",
     "add": "Aggiungi",
     "remove": "Rimuovi",
-    "federation_appoints": "Gli amministratori di questo club sono nominati dalla tua federazione."
+    "federation_appoints": "Gli amministratori di questo club sono nominati dalla tua federazione.",
+    "region_claimed_note": "Quando l'ente di governo di una regione l'ha rivendicata, solo gli amministratori di quella regione possono spostarvi dentro o fuori i club."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "Ancora nessun amministratore",
     "region_admins": "Amministratori della regione",
     "pick_member": "— Scegli un membro dei club della tua regione —",
-    "no_candidates": "Ancora nessuno da aggiungere. Qui compaiono i membri dei club della tua regione."
+    "no_candidates": "Ancora nessuno da aggiungere. Qui compaiono i membri dei club della tua regione.",
+    "release_club": "Togli dalla regione",
+    "add_club": "Aggiungi un club a questa regione",
+    "pick_club": "— Scegli un club —"
   },
   "claims": {
     "title": "Rivendicazioni",

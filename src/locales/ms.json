@@ -1928,7 +1928,8 @@
     "pick_member": "— Pilih ahli kelab —",
     "add": "Tambah",
     "remove": "Alih keluar",
-    "federation_appoints": "Persekutuan anda melantik pentadbir kelab ini."
+    "federation_appoints": "Persekutuan anda melantik pentadbir kelab ini.",
+    "region_claimed_note": "Sebaik sahaja badan pentadbir rantau menuntutnya, hanya pentadbir rantau itu boleh memindahkan kelab masuk ke atau keluar dari rantau tersebut."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "Belum ada pentadbir",
     "region_admins": "Pentadbir rantau",
     "pick_member": "— Pilih ahli kelab dalam rantau anda —",
-    "no_candidates": "Belum ada sesiapa untuk ditambah. Ahli kelab dalam rantau anda dipaparkan di sini."
+    "no_candidates": "Belum ada sesiapa untuk ditambah. Ahli kelab dalam rantau anda dipaparkan di sini.",
+    "release_club": "Keluarkan dari rantau",
+    "add_club": "Tambah kelab ke rantau ini",
+    "pick_club": "— Pilih kelab —"
   },
   "claims": {
     "title": "Tuntutan",

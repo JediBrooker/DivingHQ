@@ -1928,7 +1928,8 @@
     "pick_member": "— Pick a club member —",
     "add": "Add",
     "remove": "Remove",
-    "federation_appoints": "Your federation appoints this club's admins."
+    "federation_appoints": "Your federation appoints this club's admins.",
+    "region_claimed_note": "Once a region's governing body has claimed it, only that region's admins can move clubs into or out of it."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "No admin yet",
     "region_admins": "Region admins",
     "pick_member": "— Pick a member of your region's clubs —",
-    "no_candidates": "Nobody to add yet. Members of your region's clubs show up here."
+    "no_candidates": "Nobody to add yet. Members of your region's clubs show up here.",
+    "release_club": "Take out of region",
+    "add_club": "Add a club to this region",
+    "pick_club": "— Pick a club —"
   },
   "claims": {
     "title": "Claims",

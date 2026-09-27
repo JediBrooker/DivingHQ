@@ -1928,7 +1928,8 @@
     "pick_member": "— Pumili ng miyembro ng club —",
     "add": "Idagdag",
     "remove": "Alisin",
-    "federation_appoints": "Ang iyong pederasyon ang nagtatalaga ng mga admin ng club na ito."
+    "federation_appoints": "Ang iyong pederasyon ang nagtatalaga ng mga admin ng club na ito.",
+    "region_claimed_note": "Kapag na-claim na ng namamahalang lupon ang isang rehiyon, ang mga admin lang ng rehiyong iyon ang makapaglilipat ng mga club papasok o palabas dito."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "Wala pang admin",
     "region_admins": "Mga admin ng rehiyon",
     "pick_member": "— Pumili ng miyembro ng mga club sa iyong rehiyon —",
-    "no_candidates": "Wala pang maidadagdag. Lalabas dito ang mga miyembro ng mga club sa iyong rehiyon."
+    "no_candidates": "Wala pang maidadagdag. Lalabas dito ang mga miyembro ng mga club sa iyong rehiyon.",
+    "release_club": "Alisin sa rehiyon",
+    "add_club": "Magdagdag ng club sa rehiyong ito",
+    "pick_club": "— Pumili ng club —"
   },
   "claims": {
     "title": "Mga claim",

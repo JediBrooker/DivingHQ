@@ -1928,7 +1928,8 @@
     "pick_member": "— Válasszon klubtagot —",
     "add": "Hozzáadás",
     "remove": "Eltávolítás",
-    "federation_appoints": "A klub adminisztrátorait a szövetsége nevezi ki."
+    "federation_appoints": "A klub adminisztrátorait a szövetsége nevezi ki.",
+    "region_claimed_note": "Ha egy régiót már átvett az irányító szerve, klubot csak a régió adminisztrátorai tehetnek be oda vagy vehetnek ki onnan."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "Még nincs adminisztrátor",
     "region_admins": "Régió-adminisztrátorok",
     "pick_member": "— Válasszon tagot a régiója klubjaiból —",
-    "no_candidates": "Még nincs kit hozzáadni. Itt jelennek meg a régiója klubjainak tagjai."
+    "no_candidates": "Még nincs kit hozzáadni. Itt jelennek meg a régiója klubjainak tagjai.",
+    "release_club": "Kivétel a régióból",
+    "add_club": "Klub hozzáadása ehhez a régióhoz",
+    "pick_club": "— Válasszon klubot —"
   },
   "claims": {
     "title": "Igények",

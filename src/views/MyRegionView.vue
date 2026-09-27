@@ -38,8 +38,66 @@ async function load(region) {
       canManage: !!admins.can_manage,
       toAdd: '',
     }
+    if (placesClubs(region.id)) await loadOrgClubs(overview.region?.org_id)
   } catch (err) {
     showError(err.message)
+  }
+}
+
+// A state body that has claimed its region decides which clubs are in
+// it (a club admin can't move in or out on their own there), so it gets
+// the controls. Other clubs in the org come from the public club list.
+const orgClubs = ref({})       // org id -> clubs
+const orgRegions = ref({})     // org id -> regions
+const clubToAdd = ref({})      // region id -> club id
+
+function placesClubs(regionId) {
+  const d = detail.value[regionId]
+  return !!d && d.canManage && d.region?.claim_state === 'claimed'
+}
+
+async function loadOrgClubs(orgId) {
+  if (!orgId || orgClubs.value[orgId]) return
+  try {
+    const [clubs, regionList] = await Promise.all([
+      auth.apiFetch(`/api/orgs/${orgId}/clubs`),
+      auth.apiFetch(`/api/orgs/${orgId}/regions`),
+    ])
+    orgClubs.value[orgId] = Array.isArray(clubs) ? clubs : []
+    orgRegions.value[orgId] = regionList?.regions || []
+  } catch { /* the add picker just stays empty */ }
+}
+
+// Clubs this admin could bring in: not already here, and not sitting in
+// another claimed region they don't run (that one's admin decides).
+function clubsToAdd(regionId) {
+  const d = detail.value[regionId]
+  const orgId = d?.region?.org_id
+  const mine = new Set((auth.regionAdminOf || []).map(r => r.id))
+  const regionsById = new Map((orgRegions.value[orgId] || []).map(r => [r.id, r]))
+  return (orgClubs.value[orgId] || []).filter(c => {
+    if (c.region_id === regionId) return false
+    const from = c.region_id ? regionsById.get(c.region_id) : null
+    return !(from?.claim_state === 'claimed' && !mine.has(from.id))
+  })
+}
+
+async function moveClub(region, clubId, regionId) {
+  busyId.value = region.id
+  try {
+    await auth.apiFetch(`/api/clubs/${clubId}/region`, {
+      method: 'PUT',
+      body: JSON.stringify({ region_id: regionId }),
+    })
+    clubToAdd.value[region.id] = ''
+    const orgId = detail.value[region.id]?.region?.org_id
+    if (orgId) delete orgClubs.value[orgId]
+    await load(region)
+    await loadOrgClubs(orgId)
+  } catch (err) {
+    showError(err.message)
+  } finally {
+    busyId.value = null
   }
 }
 
@@ -124,8 +182,19 @@ onMounted(() => {
               <template v-if="c.admins.length">{{ c.admins.map(a => a.full_name).join(', ') }}</template>
               <template v-else>{{ $t('my_region.no_admin') }}</template>
             </span>
+            <button v-if="placesClubs(r.id)" class="btn btn-ghost btn-sm" :disabled="busyId === r.id"
+                    @click="moveClub(r, c.id, null)">{{ $t('my_region.release_club') }}</button>
           </li>
         </ul>
+        <div v-if="placesClubs(r.id)" class="add-row" data-test-id="region-add-club">
+          <select class="select" v-model="clubToAdd[r.id]" :disabled="!clubsToAdd(r.id).length"
+                  :aria-label="$t('my_region.add_club')">
+            <option value="">{{ $t('my_region.pick_club') }}</option>
+            <option v-for="c in clubsToAdd(r.id)" :key="c.id" :value="c.id">{{ c.name }}</option>
+          </select>
+          <button class="btn btn-primary btn-sm" :disabled="!clubToAdd[r.id] || busyId === r.id"
+                  @click="moveClub(r, clubToAdd[r.id], r.id)">{{ $t('my_club.add') }}</button>
+        </div>
 
         <h3 class="sub-title">{{ $t('my_region.region_admins') }}</h3>
         <template v-if="detail[r.id].canManage">

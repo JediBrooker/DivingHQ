@@ -1928,7 +1928,8 @@
     "pick_member": "— Odaberite člana kluba —",
     "add": "Dodaj",
     "remove": "Ukloni",
-    "federation_appoints": "Administratore ovog kluba imenuje vaš savez."
+    "federation_appoints": "Administratore ovog kluba imenuje vaš savez.",
+    "region_claimed_note": "Kad upravno tijelo regije preuzme regiju, samo njezini administratori mogu premještati klubove u nju ili iz nje."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "Još nema administratora",
     "region_admins": "Administratori regije",
     "pick_member": "— Odaberite člana nekog kluba iz vaše regije —",
-    "no_candidates": "Još nema koga dodati. Ovdje se prikazuju članovi klubova iz vaše regije."
+    "no_candidates": "Još nema koga dodati. Ovdje se prikazuju članovi klubova iz vaše regije.",
+    "release_club": "Izvadi iz regije",
+    "add_club": "Dodaj klub u ovu regiju",
+    "pick_club": "— Odaberite klub —"
   },
   "claims": {
     "title": "Zahtjevi",

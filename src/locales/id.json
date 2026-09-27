@@ -1928,7 +1928,8 @@
     "pick_member": "— Pilih anggota klub —",
     "add": "Tambah",
     "remove": "Hapus",
-    "federation_appoints": "Federasi Anda menunjuk admin klub ini."
+    "federation_appoints": "Federasi Anda menunjuk admin klub ini.",
+    "region_claimed_note": "Setelah badan pengelola wilayah mengklaimnya, hanya admin wilayah itu yang dapat memindahkan klub masuk ke atau keluar dari wilayah tersebut."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "Belum ada admin",
     "region_admins": "Admin wilayah",
     "pick_member": "— Pilih anggota klub di wilayah Anda —",
-    "no_candidates": "Belum ada yang bisa ditambahkan. Anggota klub di wilayah Anda muncul di sini."
+    "no_candidates": "Belum ada yang bisa ditambahkan. Anggota klub di wilayah Anda muncul di sini.",
+    "release_club": "Keluarkan dari wilayah",
+    "add_club": "Tambahkan klub ke wilayah ini",
+    "pick_club": "— Pilih klub —"
   },
   "claims": {
     "title": "Klaim",

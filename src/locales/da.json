@@ -1928,7 +1928,8 @@
     "pick_member": "— Vælg et klubmedlem —",
     "add": "Tilføj",
     "remove": "Fjern",
-    "federation_appoints": "Dit forbund udpeger klubbens administratorer."
+    "federation_appoints": "Dit forbund udpeger klubbens administratorer.",
+    "region_claimed_note": "Når en regions styrende organ har gjort krav på den, kan kun regionens administratorer flytte klubber ind i eller ud af den."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "Ingen administrator endnu",
     "region_admins": "Regionsadministratorer",
     "pick_member": "— Vælg et medlem af en klub i din region —",
-    "no_candidates": "Der er ingen at tilføje endnu. Medlemmer af klubberne i din region vises her."
+    "no_candidates": "Der er ingen at tilføje endnu. Medlemmer af klubberne i din region vises her.",
+    "release_club": "Tag ud af regionen",
+    "add_club": "Tilføj en klub til denne region",
+    "pick_club": "— Vælg en klub —"
   },
   "claims": {
     "title": "Krav",

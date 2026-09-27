@@ -1945,3 +1945,56 @@ test("region co-admins: a region's own admins manage them, and an orphaned regio
     await claimKit.wipe(CODE);
   }
 });
+
+test("club region moves: self-serve between unclaimed regions, a claimed region's admin decides its own", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CAN";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Sudbury Divers", region_code: "ON" });
+    const B = await delegateSignUp({ country_code: CODE, new_club_name: "Gatineau Divers", region_code: "QC" });
+    const rid = async (code) => (await pool.query(
+      "SELECT id FROM regions WHERE org_id = $1 AND short_code = $2", [A.orgId, code])).rows[0].id;
+    const [on, qc, nb] = [await rid("ON"), await rid("QC"), await rid("NB")];
+    const move = (tok, clubId, regionId) =>
+      fetchJson("PUT", `/api/clubs/${clubId}/region`, { token: tok, body: { region_id: regionId } });
+    const regionOf = async (clubId) => (await pool.query("SELECT region_id FROM clubs WHERE id = $1", [clubId])).rows[0].region_id;
+
+    // Nobody's claimed anything yet: the club decides.
+    assert.equal((await move(A.token, A.clubId, qc)).status, 200);
+    assert.equal((await move(A.token, A.clubId, on)).status, 200);
+
+    // Ontario's body claims it.
+    const R = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
+    await pool.query("UPDATE regions SET claim_state = 'claimed', claimed_name = 'Diving Ontario' WHERE id = $1", [on]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [on, R.id, A.orgId]);
+
+    // Now Sudbury can't walk out, and Gatineau can't walk in.
+    const out = await move(A.token, A.clubId, null);
+    assert.equal(out.status, 403, JSON.stringify(out.body));
+    assert.equal(out.body.code, "region_admin_required");
+    assert.equal((await move(A.token, A.clubId, qc)).status, 403);
+    assert.equal(await regionOf(A.clubId), on);
+    assert.equal((await move(B.token, B.clubId, on)).status, 403);
+    // Moves that don't touch Ontario stay self-serve.
+    assert.equal((await move(B.token, B.clubId, nb)).status, 200);
+
+    // Ontario's admin places and releases clubs, but can't shuffle other
+    // clubs between regions it doesn't run.
+    assert.equal((await move(R.token, B.clubId, on)).status, 200);
+    assert.equal(await regionOf(B.clubId), on);
+    assert.equal((await move(R.token, B.clubId, null)).status, 200);
+    assert.equal((await move(R.token, B.clubId, qc)).status, 403);
+
+    // Nor pull a club out of another body's claimed region.
+    await move(B.token, B.clubId, qc);
+    const R2 = await delegateSignUp({ country_code: CODE, club_id: B.clubId });
+    await pool.query("UPDATE regions SET claim_state = 'claimed' WHERE id = $1", [qc]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [qc, R2.id, A.orgId]);
+    assert.equal((await move(R.token, B.clubId, on)).status, 403);
+    assert.equal(await regionOf(B.clubId), qc);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

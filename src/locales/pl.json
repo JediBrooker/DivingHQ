@@ -1928,7 +1928,8 @@
     "pick_member": "— Wybierz członka klubu —",
     "add": "Dodaj",
     "remove": "Usuń",
-    "federation_appoints": "Administratorów tego klubu wyznacza twoja federacja."
+    "federation_appoints": "Administratorów tego klubu wyznacza twoja federacja.",
+    "region_claimed_note": "Gdy organ zarządzający regionem przejmie go, tylko administratorzy tego regionu mogą przenosić do niego kluby lub je z niego usuwać."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "Brak administratora",
     "region_admins": "Administratorzy regionu",
     "pick_member": "— Wybierz członka klubu z twojego regionu —",
-    "no_candidates": "Na razie nie ma kogo dodać. Tutaj pojawiają się członkowie klubów z twojego regionu."
+    "no_candidates": "Na razie nie ma kogo dodać. Tutaj pojawiają się członkowie klubów z twojego regionu.",
+    "release_club": "Usuń z regionu",
+    "add_club": "Dodaj klub do tego regionu",
+    "pick_club": "— Wybierz klub —"
   },
   "claims": {
     "title": "Roszczenia",

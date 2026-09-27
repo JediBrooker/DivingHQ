@@ -1928,7 +1928,8 @@
     "pick_member": "— Valitse seuran jäsen —",
     "add": "Lisää",
     "remove": "Poista",
-    "federation_appoints": "Liittosi nimeää tämän seuran ylläpitäjät."
+    "federation_appoints": "Liittosi nimeää tämän seuran ylläpitäjät.",
+    "region_claimed_note": "Kun alueen hallintoelin on ottanut alueen hoitaakseen, vain alueen ylläpitäjät voivat siirtää seuroja sinne tai sieltä pois."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "Ei vielä ylläpitäjää",
     "region_admins": "Alueen ylläpitäjät",
     "pick_member": "— Valitse alueesi seuran jäsen —",
-    "no_candidates": "Lisättäviä ei vielä ole. Alueesi seurojen jäsenet näkyvät tässä."
+    "no_candidates": "Lisättäviä ei vielä ole. Alueesi seurojen jäsenet näkyvät tässä.",
+    "release_club": "Poista alueelta",
+    "add_club": "Lisää seura tälle alueelle",
+    "pick_club": "— Valitse seura —"
   },
   "claims": {
     "title": "Vaatimukset",

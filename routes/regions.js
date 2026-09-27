@@ -114,8 +114,14 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
   });
 
   // Put a club in a region (or take it out with region_id: null). The
-  // federation decides under a federation; where the clubs started the
-  // country themselves a club's own admin picks.
+  // federation decides under a federation. Where the clubs started the
+  // country themselves a club's own admin picks, as long as no claimed
+  // region is involved. Once a state body has claimed a region, moving a
+  // club into or out of it is that region's admin's call: which region a
+  // club is in decides who can step in on its meets (isEventDelegate
+  // follows clubs.region_id), who reviews its role requests and whose
+  // records its divers set, so a club admin flipping it on their own
+  // would cut the state body out of a meet that's already running.
   router.put("/api/clubs/:id/region", verifyToken, async (req, res) => {
     if (!UUID_RE.test(String(req.params.id))) return res.status(404).json({ error: "Club not found" });
     const regionId = req.body?.region_id ?? null;
@@ -132,13 +138,33 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
       );
       if (!c.rows.length) return res.status(404).json({ error: "Club not found" });
       const club = c.rows[0];
-      const allowed = isOrgAdminOf(req.user, club.org_id)
-        || (club.claim_state === "unclaimed" && club.caller_is_admin);
-      if (!allowed) return res.status(403).json({ error: "Forbidden" });
       if (regionId) {
         const rg = await pool.query("SELECT 1 FROM regions WHERE id = $1 AND org_id = $2", [regionId, club.org_id]);
         if (!rg.rows.length) return res.status(400).json({ error: "That region isn't in this club's organisation" });
       }
+      if (!isOrgAdminOf(req.user, club.org_id)) {
+        if (club.claim_state !== "unclaimed") return res.status(403).json({ error: "Forbidden" });
+        // The regions on either side of the move, and whether the caller
+        // admins each one.
+        const involved = [...new Set([club.region_id, regionId].filter(Boolean))];
+        const sides = (await pool.query(
+          `SELECT rg.id, rg.claim_state,
+                  EXISTS (SELECT 1 FROM region_admins ra
+                           WHERE ra.region_id = rg.id AND ra.user_id = $2) AS caller_is_admin
+             FROM regions rg WHERE rg.id = ANY($1::uuid[])`,
+          [involved, req.user.id],
+        )).rows;
+        const claimed = sides.filter((r) => r.claim_state === "claimed");
+        if (!claimed.length) {
+          if (!club.caller_is_admin) return res.status(403).json({ error: "Forbidden" });
+        } else if (!claimed.every((r) => r.caller_is_admin)) {
+          return res.status(403).json({
+            error: "A region its state body runs decides which clubs are in it. Ask that region's admin to move the club.",
+            code: "region_admin_required",
+          });
+        }
+      }
+      if ((club.region_id || null) === regionId) return res.json({ ok: true });
       await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [regionId, club.id]);
       await recordAudit(pool, {
         ...auditFromReq(req),

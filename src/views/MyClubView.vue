@@ -32,6 +32,21 @@ async function loadRegions() {
   } catch { /* no regions, nothing to show */ }
 }
 
+// A region its state body has claimed decides which clubs are in it
+// (PUT /api/clubs/:id/region), so a club admin can't pick their way in
+// or out of one. Unless they happen to admin that region too.
+const myRegionIds = computed(() => new Set((auth.regionAdminOf || []).map(r => r.id)))
+function regionLocked(r) {
+  return r?.claim_state === 'claimed' && !myRegionIds.value.has(r.id)
+}
+function currentRegion(club) {
+  return regions.value.regions.find(r => r.id === club.region_id) || null
+}
+function regionOptionLabel(r) {
+  return r.claim_state === 'claimed' && r.claimed_name ? `${r.name} · ${r.claimed_name}` : r.name
+}
+const anyClaimedRegion = computed(() => regions.value.regions.some(r => r.claim_state === 'claimed'))
+
 async function setRegion(club, regionId) {
   busyId.value = club.id
   try {
@@ -124,11 +139,16 @@ onMounted(() => {
              the club decides where there's no federation. -->
         <div v-if="regions.regions.length && clubState[club.id].canManage" class="region-row">
           <label class="label" :for="`region-${club.id}`">{{ regionLabel }}</label>
-          <select :id="`region-${club.id}`" class="select" :value="club.region_id || ''" :disabled="busyId === club.id"
+          <select :id="`region-${club.id}`" class="select" :value="club.region_id || ''"
+                  :disabled="busyId === club.id || regionLocked(currentRegion(club))"
                   @change="setRegion(club, $event.target.value)">
             <option value="">{{ $t('regions.pick') }}</option>
-            <option v-for="r in regions.regions" :key="r.id" :value="r.id">{{ r.name }}</option>
+            <option v-for="r in regions.regions" :key="r.id" :value="r.id"
+                    :disabled="r.id !== club.region_id && regionLocked(r)">{{ regionOptionLabel(r) }}</option>
           </select>
+          <p v-if="anyClaimedRegion" class="muted hint" data-test-id="region-claimed-note">
+            {{ $t('my_club.region_claimed_note') }}
+          </p>
         </div>
         <p v-if="!clubState[club.id].canManage" class="muted">{{ $t('my_club.federation_appoints') }}</p>
         <template v-else>
@@ -180,6 +200,7 @@ onMounted(() => {
 .region-row { display: flex; flex-direction: column; gap: var(--space-1); max-width: 320px; }
 .add-row .select { flex: 1; min-width: 0; }
 .muted { color: var(--fg-3); font-size: var(--text-sm); margin: 0; }
+.hint { font-size: var(--text-xs); }
 @media (max-width: 720px) {
   .main { padding: var(--space-4); }
   .row { flex-direction: column; align-items: stretch; }

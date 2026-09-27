@@ -1928,7 +1928,8 @@
     "pick_member": "— Vyberte člena klubu —",
     "add": "Přidat",
     "remove": "Odebrat",
-    "federation_appoints": "Správce tohoto klubu jmenuje vaše federace."
+    "federation_appoints": "Správce tohoto klubu jmenuje vaše federace.",
+    "region_claimed_note": "Jakmile si region převezme jeho řídící orgán, mohou kluby do něj a z něj přesouvat jen správci tohoto regionu."
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "Zatím bez správce",
     "region_admins": "Správci regionu",
     "pick_member": "— Vyberte člena některého klubu ve vašem regionu —",
-    "no_candidates": "Zatím není koho přidat. Zobrazí se tu členové klubů ve vašem regionu."
+    "no_candidates": "Zatím není koho přidat. Zobrazí se tu členové klubů ve vašem regionu.",
+    "release_club": "Vyjmout z regionu",
+    "add_club": "Přidat klub do tohoto regionu",
+    "pick_club": "— Vyberte klub —"
   },
   "claims": {
     "title": "Nároky",

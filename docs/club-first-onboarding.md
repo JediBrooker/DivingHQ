@@ -519,7 +519,11 @@ falls back to the catalogue for a country nobody has started yet.
 
 **Putting clubs in regions.** Under a federation, the federation decides
 (Region column on the Clubs screen). Where there's no federation, the
-club's own admin picks, on My club (`PUT /api/clubs/:id/region`).
+club's own admin picks, on My club (`PUT /api/clubs/:id/region`), as
+long as neither side of the move is a claimed region. Moving a club into
+or out of a claimed region is that region's admin's call (from My
+region), because the region decides who can step in on the club's meets
+and review its requests.
 
 **Region admins** are appointed by the federation's org admin or the
 sysadmin (a region chip on the Clubs screen opens `RegionAdminsModal`).

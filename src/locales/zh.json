@@ -1928,7 +1928,8 @@
     "pick_member": "— 选择俱乐部会员 —",
     "add": "添加",
     "remove": "移除",
-    "federation_appoints": "本俱乐部的管理员由您的联合会任命。"
+    "federation_appoints": "本俱乐部的管理员由您的联合会任命。",
+    "region_claimed_note": "地区的管理机构认领该地区后，只有该地区的管理员才能将俱乐部移入或移出该地区。"
   },
   "regions": {
     "label": {
@@ -1950,7 +1951,10 @@
     "no_admin": "尚无管理员",
     "region_admins": "地区管理员",
     "pick_member": "— 选择您所在地区俱乐部的会员 —",
-    "no_candidates": "暂时没有可添加的人。您所在地区各俱乐部的会员会显示在这里。"
+    "no_candidates": "暂时没有可添加的人。您所在地区各俱乐部的会员会显示在这里。",
+    "release_club": "移出地区",
+    "add_club": "将俱乐部加入此地区",
+    "pick_club": "— 选择俱乐部 —"
   },
   "claims": {
     "title": "接管申请",
