@@ -62,3 +62,10 @@ test("docs describe a federation registration as a claim", () => {
   assert.doesNotMatch(read("src/guide/content/faq.md"), /DivingHQ reviews a new federation before it goes live/);
   assert.doesNotMatch(read("src/guide/content/quick-start.md"), /join your federation directly/);
 });
+
+// Signup writes the chosen club straight into users.club_id (routes/auth.js
+// register); only moves made later go through a join request.
+test("the guide says signup joins a club directly", () => {
+  assert.doesNotMatch(read("src/guide/content/roles-and-permissions.md"), /Nobody lands in a club without asking/);
+  assert.doesNotMatch(read("src/guide/content/quick-start.md"), /pick it: its admin approves you/);
+});
