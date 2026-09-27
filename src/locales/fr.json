@@ -2001,5 +2001,13 @@
     "reject": "Rejeter",
     "revoke": "Révoquer",
     "revoke_body": "{body} ne gère plus {target}, qui revient à l'état d'avant la revendication."
+  },
+  "nav": {
+    "group": {
+      "competition": "Compétition",
+      "training": "Entraînement",
+      "payments": "Paiements",
+      "organisation": "Organisation"
+    }
   }
 }

@@ -2001,5 +2001,13 @@
     "reject": "Rechazar",
     "revoke": "Revocar",
     "revoke_body": "{body} deja de gestionar {target}, que vuelve a como estaba antes de la reclamación."
+  },
+  "nav": {
+    "group": {
+      "competition": "Competición",
+      "training": "Entrenamiento",
+      "payments": "Pagos",
+      "organisation": "Organización"
+    }
   }
 }

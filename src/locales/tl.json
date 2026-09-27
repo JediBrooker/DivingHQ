@@ -2001,5 +2001,13 @@
     "reject": "Tanggihan",
     "revoke": "Bawiin",
     "revoke_body": "Hindi na pamamahalaan ng {body} ang {target}, babalik ito sa dati bago ang claim."
+  },
+  "nav": {
+    "group": {
+      "competition": "Kompetisyon",
+      "training": "Pagsasanay",
+      "payments": "Mga Bayarin",
+      "organisation": "Organisasyon"
+    }
   }
 }

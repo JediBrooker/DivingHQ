@@ -2001,5 +2001,13 @@
     "reject": "却下",
     "revoke": "取り消す",
     "revoke_body": "{body} は {target} の運営をやめ、申請前の状態に戻ります。"
+  },
+  "nav": {
+    "group": {
+      "competition": "競技",
+      "training": "トレーニング",
+      "payments": "お支払い",
+      "organisation": "組織"
+    }
   }
 }

@@ -2001,5 +2001,13 @@
     "reject": "拒绝",
     "revoke": "撤销",
     "revoke_body": "{body} 将不再管理 {target}，一切恢复到申请之前的状态。"
+  },
+  "nav": {
+    "group": {
+      "competition": "比赛",
+      "training": "训练",
+      "payments": "付款",
+      "organisation": "机构"
+    }
   }
 }

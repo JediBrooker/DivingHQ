@@ -2001,5 +2001,13 @@
     "reject": "Tolak",
     "revoke": "Cabut",
     "revoke_body": "{body} tidak lagi mengelola {target}, semuanya kembali seperti sebelum klaim."
+  },
+  "nav": {
+    "group": {
+      "competition": "Kompetisi",
+      "training": "Latihan",
+      "payments": "Pembayaran",
+      "organisation": "Organisasi"
+    }
   }
 }

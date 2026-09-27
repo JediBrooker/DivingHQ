@@ -2001,5 +2001,13 @@
     "reject": "Elutasítás",
     "revoke": "Visszavonás",
     "revoke_body": "{body} többé nem vezeti ezt: {target}, minden visszaáll az igény előtti állapotra."
+  },
+  "nav": {
+    "group": {
+      "competition": "Verseny",
+      "training": "Edzés",
+      "payments": "Fizetések",
+      "organisation": "Szervezet"
+    }
   }
 }

@@ -2001,5 +2001,13 @@
     "reject": "Ablehnen",
     "revoke": "Widerrufen",
     "revoke_body": "{body} führt {target} nicht mehr, alles wird wie vor dem Anspruch."
+  },
+  "nav": {
+    "group": {
+      "competition": "Wettkampf",
+      "training": "Training",
+      "payments": "Zahlungen",
+      "organisation": "Organisation"
+    }
   }
 }

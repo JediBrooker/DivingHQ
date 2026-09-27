@@ -2001,5 +2001,13 @@
     "reject": "Odbij",
     "revoke": "Opozovi",
     "revoke_body": "{body} više ne vodi {target}, sve se vraća kako je bilo prije zahtjeva."
+  },
+  "nav": {
+    "group": {
+      "competition": "Natjecanje",
+      "training": "Trening",
+      "payments": "Plaćanja",
+      "organisation": "Organizacija"
+    }
   }
 }

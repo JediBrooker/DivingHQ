@@ -2001,5 +2001,13 @@
     "reject": "Avslå",
     "revoke": "Återkalla",
     "revoke_body": "{body} driver inte längre {target}, som återgår till hur det var före anspråket."
+  },
+  "nav": {
+    "group": {
+      "competition": "Tävling",
+      "training": "Träning",
+      "payments": "Betalningar",
+      "organisation": "Organisation"
+    }
   }
 }

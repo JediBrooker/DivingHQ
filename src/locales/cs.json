@@ -2001,5 +2001,13 @@
     "reject": "Zamítnout",
     "revoke": "Odvolat",
     "revoke_body": "{body} přestane spravovat {target}, vše se vrátí do stavu před nárokem."
+  },
+  "nav": {
+    "group": {
+      "competition": "Soutěž",
+      "training": "Trénink",
+      "payments": "Platby",
+      "organisation": "Organizace"
+    }
   }
 }

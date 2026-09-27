@@ -2001,5 +2001,13 @@
     "reject": "Reddet",
     "revoke": "İptal et",
     "revoke_body": "{body} artık {target} yönetmiyor, her şey talepten önceki haline döner."
+  },
+  "nav": {
+    "group": {
+      "competition": "Yarışma",
+      "training": "Antrenman",
+      "payments": "Ödemeler",
+      "organisation": "Kuruluş"
+    }
   }
 }

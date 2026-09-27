@@ -2001,5 +2001,13 @@
     "reject": "Reject",
     "revoke": "Revoke",
     "revoke_body": "{body} stops running {target}, and it goes back to how it was before the claim."
+  },
+  "nav": {
+    "group": {
+      "competition": "Competition",
+      "training": "Training",
+      "payments": "Payments",
+      "organisation": "Organisation"
+    }
   }
 }

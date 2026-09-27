@@ -2001,5 +2001,13 @@
     "reject": "رفض",
     "revoke": "إلغاء",
     "revoke_body": "لن يعود {body} يدير {target}، ويعود كل شيء كما كان قبل الطلب."
+  },
+  "nav": {
+    "group": {
+      "competition": "المنافسة",
+      "training": "التدريب",
+      "payments": "المدفوعات",
+      "organisation": "المنظمة"
+    }
   }
 }

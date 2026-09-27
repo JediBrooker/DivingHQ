@@ -2001,5 +2001,13 @@
     "reject": "Tolak",
     "revoke": "Batalkan",
     "revoke_body": "{body} tidak lagi mengurus {target}, semuanya kembali seperti sebelum tuntutan."
+  },
+  "nav": {
+    "group": {
+      "competition": "Pertandingan",
+      "training": "Latihan",
+      "payments": "Pembayaran",
+      "organisation": "Organisasi"
+    }
   }
 }

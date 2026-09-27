@@ -2001,5 +2001,13 @@
     "reject": "거절",
     "revoke": "취소",
     "revoke_body": "{body}은(는) 더 이상 {target}을(를) 운영하지 않으며 신청 이전 상태로 돌아갑니다."
+  },
+  "nav": {
+    "group": {
+      "competition": "경기",
+      "training": "훈련",
+      "payments": "결제",
+      "organisation": "조직"
+    }
   }
 }

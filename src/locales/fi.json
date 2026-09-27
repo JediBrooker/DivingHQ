@@ -2001,5 +2001,13 @@
     "reject": "Hylkää",
     "revoke": "Peru",
     "revoke_body": "{body} ei enää hallinnoi kohdetta {target}, joka palaa vaatimusta edeltäneeseen tilaan."
+  },
+  "nav": {
+    "group": {
+      "competition": "Kilpailu",
+      "training": "Harjoittelu",
+      "payments": "Maksut",
+      "organisation": "Organisaatio"
+    }
   }
 }
