@@ -1839,3 +1839,56 @@ test("moving an event between meets: managers keep their reach, club admins can'
     await teardownFixture(state);
   }
 });
+
+test("last club admin: only live admins count, and co-admins can't remove each other at once", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "KNA";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Basseterre Divers" });
+    const club = A.clubId;
+    const promote = async (u) => assert.equal(
+      (await fetchJson("POST", `/api/clubs/${club}/admins`, { token: A.token, body: { user_id: u.id } })).status, 201);
+    const liveAdmins = async () => (await pool.query(
+      `SELECT count(*)::int AS n FROM club_admins ca JOIN users u ON u.id = ca.user_id
+        WHERE ca.club_id = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`, [club],
+    )).rows[0].n;
+
+    // A deleted co-admin's row is left behind; it doesn't count.
+    const B = await delegateSignUp({ country_code: CODE, club_id: club });
+    await promote(B);
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [B.id]);
+    const alone = await fetchJson("DELETE", `/api/clubs/${club}/admins/${A.id}`, { token: A.token });
+    assert.equal(alone.status, 409, JSON.stringify(alone.body));
+    // Nor does a suspended one.
+    const S = await delegateSignUp({ country_code: CODE, club_id: club });
+    await promote(S);
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [S.id]);
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${club}/admins/${A.id}`, { token: A.token })).status, 409);
+    // Clearing out a dead account's row is fine, uppercase id and all.
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${club}/admins/${B.id.toUpperCase()}`, { token: A.token })).status, 200);
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${club}/admins/${B.id}`, { token: A.token })).status, 404);
+
+    // Two live co-admins removing each other at the same moment: exactly
+    // one wins, and the club keeps a live admin. A few rounds, since it's
+    // a race.
+    for (let round = 0; round < 3; round++) {
+      const keep = round === 0 ? A : (await pool.query(
+        `SELECT u.id, u.username FROM club_admins ca JOIN users u ON u.id = ca.user_id
+          WHERE ca.club_id = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`, [club],
+      )).rows[0];
+      const keepTok = keep.token || (await claimKit.login(keep.username)).token;
+      const C = await delegateSignUp({ country_code: CODE, club_id: club });
+      assert.equal((await fetchJson("POST", `/api/clubs/${club}/admins`, { token: keepTok, body: { user_id: C.id } })).status, 201);
+      const [x, y] = await Promise.all([
+        fetchJson("DELETE", `/api/clubs/${club}/admins/${C.id}`, { token: keepTok }),
+        fetchJson("DELETE", `/api/clubs/${club}/admins/${keep.id}`, { token: C.token }),
+      ]);
+      assert.deepEqual([x.status, y.status].sort(), [200, 409], `round ${round}: ${x.status} ${y.status}`);
+      assert.equal(await liveAdmins(), 1);
+    }
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
