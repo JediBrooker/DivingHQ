@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Platform til stævnehåndtering",
-      "tagline": "End-to-end-håndtering af udspringsstævner — fra opsætning af stævnet og indsendelse af springlister til live-dommerarbejde, transmission af resultater og endelige slutresultater.",
+      "tagline": "Afvikl din klubs udspringsstævner allerede i dag: springlister, live-bedømmelse på telefoner, en offentlig resultattavle og resultater. Du behøver ikke et forbund for at komme i gang, og når dit forbund eller regionale forbund kommer med, følger klubbens historie med.",
       "btn_sign_in": "Log ind",
       "btn_create_account": "Opret konto",
       "btn_scoreboard": "Resultattavle",
       "btn_judge_analysis": "Dommeranalyse",
-      "guide_link": "Ny her? Læs guiden på 5 minutter →"
+      "guide_link": "Ny her? Læs guiden på 5 minutter →",
+      "btn_start_club": "Start din klub",
+      "federation_link": "Forbund eller regionalt forbund? Registrér din organisation →"
     },
     "live_strip": {
       "pill": "DIREKTE",
       "text": "Live-resultattavlen er åben for alle — ingen login påkrævet",
-      "watch": "Se live →"
+      "watch": "Se live →",
+      "pill_idle": "Live-resultater",
+      "text_live": "Der bedømmes live lige nu. Følg hvert spring, uden login.",
+      "browse": "Se resultater →"
     },
     "features": {
       "section_label": "Bygget til hver rolle ved bassinkanten",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Stævnehåndtering",
       "meet_manager_desc": "Opret konkurrencer, konfigurer runder og paneler, tildel dommere og administrér hele stævnets struktur.",
       "user_manager_title": "Brugerhåndtering",
-      "user_manager_desc": "Godkend rolleanmodninger og styr medlemmernes adgang i dit forbund. Enhver rolleændring går gennem en anmodningsproces."
+      "user_manager_desc": "Godkend rolleanmodninger og styr medlemmernes adgang i din klub eller dit forbund. Enhver rolleændring går gennem en anmodningsproces."
     },
     "how": {
       "section_label": "Sådan forløber et stævne",
       "step01_title": "Sæt konkurrencen op",
-      "step01_desc": "Stævnelederen opretter konkurrencer, fastsætter antallet af runder og dommere og tildeler panelet.",
+      "step01_desc": "Arrangøren (en klubadministrator eller stævneleder) opretter konkurrencer, fastsætter antallet af runder og dommere og tildeler panelet.",
       "step02_title": "Udspringere indsender lister",
       "step02_desc": "Hver udspringer logger ind og indsender sin springliste. Sværhedsgrader hentes automatisk fra det officielle kartotek.",
       "step03_title": "Bedømmelsen går live",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Log ind",
       "register": "Tilmeld",
-      "register_federation": "Registrér forbund",
+      "register_federation": "For forbund og regionale forbund",
       "scoreboard": "Resultattavle",
       "user_guide": "📖 Brugervejledning",
       "report_bug": "🐛 Rapportér en fejl"
-    }
+    },
+    "clubs": {
+      "section_label": "For klubber",
+      "step1_title": "Opret din klub",
+      "step1_desc": "Tilmeld dig, vælg dit land, og giv klubben et navn. Er dit forbund ikke på DivingHQ endnu, er du klubbens administrator fra starten.",
+      "step2_title": "Inviter udspringere og dommere",
+      "step2_desc": "Send medlemmerne tilmeldingslinket. De vælger din klub, og du godkender, hvem der springer, dømmer eller er overdommer.",
+      "step3_title": "Afvikl dit første stævne",
+      "step3_desc": "Opret konkurrencer, styr stævnet fra kontrolrummet, mens dommerne giver point på deres telefoner, og resultaterne offentliggøres, efterhånden som hvert spring er bedømt.",
+      "note": "Du behøver ikke et forbund for at komme i gang. Hvis dit forbund eller regionale forbund senere kommer på DivingHQ, overtager det driften af landet eller regionen, og din klub beholder sine stævner, resultater og rekorder."
+    },
+    "meta_title": "Stævnesoftware til udspring for klubber og forbund"
   },
   "dashboard": {
     "search_divers": "Søg udspringere…",
@@ -452,7 +468,7 @@
       "dialog_confirm": "Slet min konto",
       "dialog_cancel": "Annullér",
       "dialog_what_goes": "Fjernes:",
-      "dialog_what_goes_items": "Login og adgangskode, kontakt-e-mail, push-abonnementer, dashboardindstillinger, rolletildelinger, træner-springer-forbindelser, offentlig profil-slug.",
+      "dialog_what_goes_items": "Login og adgangskode, kontakt-e-mail, fødselsdato, køn og nationalitet, push-abonnementer, dashboardindstillinger, rolletildelinger, klub- og regionsadministratorroller, træner-springer-forbindelser, offentlig profil-slug.",
       "dialog_what_stays": "Bevares:",
       "dialog_what_stays_items": "Dit navn på de spring, du konkurrerede i, de dommerpaneler, du sad i, og de stævner, du optrådte i. Auditlogposter, du udløste (slettes ved den normale 30-dages rotation).",
       "confirmation_toast": "Konto slettet. Din konkurrencehistorik er anonymiseret. Log ind med en ny konto for at gøre krav på den senere.",
@@ -477,7 +493,7 @@
       "confirming": "Gør krav på…",
       "password_label": "Bekræft med din adgangskode",
       "password_placeholder": "Din nuværende adgangskode",
-      "conflict": "Kan ikke flette: både den gamle konto og din nuværende konto har poster for samme stævne og runde. Fjern fluebenet fra den kolliderende kandidat, eller kontakt din forbundsadministrator for at flette manuelt.",
+      "conflict": "Kan ikke flette: både den gamle konto og din nuværende konto har poster for samme stævne og runde. Fjern fluebenet fra den kolliderende kandidat, eller skriv til {email}, så fletter vi dem manuelt.",
       "success_toast": "Tidligere resultater igen knyttet til din profil."
     },
     "club_request_sent": "Anmodningen er sendt. Du flytter, når den er godkendt: af dit forbund, eller hvor der endnu ikke er et, af den nye klubs administratorer."
@@ -552,7 +568,7 @@
       "diver": {
         "name": "Udspringer",
         "desc": "Du konkurrerer. Du indsender en springliste (hvilke spring du laver pr. runde) inden hver konkurrences tilmeldingsfrist og åbner derefter <strong>Stævnedag-visning</strong> på dagen for at se din plads i køen og hvad der venter.",
-        "step_1": "Log ind, eller acceptér invitationen fra din forbundsadministrator",
+        "step_1": "Opret dig og vælg din klub",
         "step_2": "Åbn <strong>Indsend springlister</strong> og vælg dine spring pr. runde",
         "step_3": "På stævnedagen åbnes <strong>Stævnedag-visning</strong> på din telefon",
         "step_4": "Dine scoringer og analyser ligger under <strong>Min profil</strong>",
@@ -599,7 +615,7 @@
       },
       "region_admin": {
         "name": "Regionsadministrator",
-        "desc": "Du tager dig af en delstat, provins eller nation: afvikler dens mesterskaber, træder til ved alle dens klubbers stævner og godkender rolleanmodninger fra klubbernes medlemmer. Dit forbund udpeger dig. Hvis der ikke er et endnu, gør dit regionale organ krav på regionen, og du tilføjer selv dine medadministratorer.",
+        "desc": "Du tager dig af en delstat, provins eller nation: afvikler dens mesterskaber, træder til ved alle dens klubbers stævner og godkender rolleanmodninger fra klubbernes medlemmer. Dit forbund udpeger dig. Hvis der ikke er et endnu, gør dit regionale organ krav på regionen, og du tilføjer selv dine medadministratorer. Et delstatsforbund kan ansøge om at drive sin region via <strong>Registrér din organisation</strong>.",
         "step_1": "Åbn <strong>Min region</strong> for at se dine klubber og hvem der driver dem",
         "step_2": "Opret dine mesterskaber i <strong>Stævnehåndtering</strong> med din region som vært",
         "step_3": "Godkend medlemmer, der vil springe, dømme eller være træner, og klubber, der beder om optagelse i din region",
@@ -627,7 +643,7 @@
     },
     "faq": {
       "register_q": "Jeg har lige registreret mig, men kan ikke logge ind endnu.",
-      "register_a": "Først e-mailbekræftelse — klik på linket i velkomstmailen. For andre roller end udspringer (dommer, træner, stævneleder) skal din forbundsadministrator også godkende dig. Begge dele bør ske inden for få minutter; hvis du ikke ser mailen efter 10 minutter, så tjek spam, og bed derefter administratoren bekræfte, at din konto er aktiv.",
+      "register_a": "Bekræft først din e-mail: klik på linket i bekræftelsesmailen, vi sendte, da du oprettede dig. Ingenting? Tjek din spammappe, eller prøv at logge ind og bed om et nyt link. Roller blokerer ikke login: du starter som tilskuer og får mere, når din klub- eller forbundsadministrator godkender det.",
       "judge_device_q": "Jeg er dommer — hvilken enhed skal jeg bruge?",
       "judge_device_a": "Enhver moderne telefon med browser virker. iPhone 12 / Pixel 6 og nyere er ideelt. Visningen er bygget til mobil; du kommer til at trykke tal hele stævnet, så en telefon, der ligger godt i én hånd, er det rigtige valg. Wifi er at foretrække frem for 4G, hvis hallen har det — scoringer synkroniseres også via 4G, men netværket har mærkbart længere svartid.",
       "scoring_q": "Hvordan fungerer scoringen?",
@@ -637,13 +653,13 @@
       "schedule_q": "Hvordan planlægger jeg en hel mesterskabsdag?",
       "schedule_a": "Tilføj planlagte tidspunkter til stævnets konkurrencer, og åbn så <strong>Skema</strong> fra stævnets side som forbundsadmin eller stævneleder. DivingHQ laver en første plan med 45-minutters opvarmninger, konkurrenceblokke og brættildelinger. Slå <strong>Redigeringstilstand</strong> til for at trække, ændre størrelse, indsætte, slette eller duplikere sessioner; konfliktpanelet markerer overlappende brætter, dommere, udspringere og overdommere. Trænere, udspringere og tilskuere kan se den offentlige tidslinje eller abonnere på iCal-feedet.",
       "bug_q": "Hvordan indberetter jeg en fejl?",
-      "bug_a": "Klik på linket <strong>🐛 Rapportér en fejl</strong> i bunden af forsiden eller dit panel. Det åbner et færdigudfyldt GitHub-issue, hvor du kan beskrive problemet. Skærmbilleder hjælper meget.",
+      "bug_a": "Klik på linket <strong>🐛 Rapportér en fejl</strong> i bunden af forsiden eller dit panel. Det åbner et færdigudfyldt GitHub-issue, hvor du kan beskrive problemet. Skærmbilleder hjælper meget. Ingen GitHub-konto? Skriv til {email} i stedet.",
       "install_q": "Hvordan installerer jeg DivingHQ som en app?",
       "install_a": "På iPhone: åbn siden i Safari, tryk på Del-knappen, og vælg så <strong>Føj til hjemmeskærm</strong>. På Android: åbn i Chrome, tryk på menuen, og vælg så <strong>Installér app</strong>. Ikonet starter en fuldskærmsvisning uden browserkrom — hurtigere opstart, ingen browserbjælke.",
       "tfa_q": "Hvordan slår jeg tofaktorgodkendelse til?",
       "tfa_a": "Åbn <strong>Min profil</strong> → <strong>Sikkerhed</strong> → <strong>Tofaktorgodkendelse</strong> og scan QR-koden med din godkendelses-app (1Password, Authy, Google Authenticator). Gem gendannelseskoderne et sikkert sted — de er den eneste vej tilbage, hvis du mister din telefon.",
       "account_q": "Hvordan ændrer jeg min e-mail eller adgangskode, eller sletter min konto?",
-      "account_a": "Alt sammen under <strong>Min profil</strong> → <strong>Kontoindstillinger</strong>. Ændring af e-mail kræver fornyet bekræftelse på den nye adresse. Sletning af din konto er permanent og fjerner dit login; historiske scoringer bliver stående på den offentlige scoringstavle under forbundets registrering (anonymiseres på anmodning — kontakt din forbundsadministrator).",
+      "account_a": "Alt sammen under <strong>Min profil</strong>: skift e-mail eller adgangskode øverst, og <strong>Slet min konto</strong> ligger nederst. En ny e-mailadresse skal bekræftes, før den tages i brug. Sletning af kontoen er permanent og fjerner dit login og dine personlige oplysninger; dit navn bliver stående på resultaterne fra de stævner, du deltog i, som sportslig historik. Skal et resultat fjernes helt, så skriv til {email}.",
       "records_q": "Hvordan fungerer rekorder?",
       "records_a": "Rekorderne holder sig selv ajour. Så snart den sidste dommer har bedømt et individuelt spring, sammenligner DivingHQ det med udspringerens klub-, regions-, nationale og kontinentale rekorder, delt i kvinder og mænd, og erstatter enhver rekord, springet slår. Alle rekordlister findes på siden {records_link}, uden login. En liste står som uofficiel, indtil dens styrende organ har gjort krav på den på DivingHQ, og de samme resultater tæller som officielle, så snart et krav er godkendt. Personlige rekorder står på hver udspringers profil."
     },
@@ -653,7 +669,7 @@
       "bookmark_features": "Funktioner pr. rolle",
       "bookmark_features_desc": "alle funktioner i appen, indekseret efter hvem der bruger dem",
       "bookmark_quickstart": "Hurtigstart (10 min)",
-      "bookmark_quickstart_desc": "registrér et forbund og afhold dit første stævne",
+      "bookmark_quickstart_desc": "start din klub og afhold dit første stævne",
       "bookmark_roles": "Roller og rettigheder",
       "bookmark_roles_desc": "hvad hver rolle kan og ikke kan",
       "bookmark_faq": "FAQ og fejlfinding",
@@ -2074,5 +2090,13 @@
     "chip": "{name}-rekord",
     "chip_prev": "Tidligere rekord: {score}",
     "unofficial_tip": "Uofficiel, indtil det styrende organ gør krav på kontoen på DivingHQ."
+  },
+  "legal": {
+    "privacy_title": "Privatlivspolitik",
+    "terms_title": "Servicevilkår",
+    "consent": "Ved at oprette en konto accepterer du {terms} og {privacy}.",
+    "contact": "Kontakt",
+    "need_help": "Brug for hjælp?",
+    "english_only": "Denne side findes kun på engelsk, og det er den engelske tekst, der gælder."
   }
 }

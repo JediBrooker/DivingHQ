@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Plataforma de gestão de competições",
-      "tagline": "Gestão completa de competições de saltos — desde a configuração do evento e o envio das listas de saltos até à arbitragem em direto, transmissão de pontuações e resultados finais.",
+      "tagline": "Organize hoje mesmo as competições de saltos do seu clube: listas de saltos, pontuação em direto no telemóvel, um painel de resultados público e resultados. Não precisa de uma federação para começar e, quando a sua federação ou associação regional aderir, o historial do seu clube vem consigo.",
       "btn_sign_in": "Iniciar sessão",
       "btn_create_account": "Criar conta",
       "btn_scoreboard": "Painel e resultados",
       "btn_judge_analysis": "Análise de juízes",
-      "guide_link": "É novo por aqui? Leia o guia rápido de 5 minutos →"
+      "guide_link": "É novo por aqui? Leia o guia rápido de 5 minutos →",
+      "btn_start_club": "Crie o seu clube",
+      "federation_link": "Federação ou associação regional? Registe a sua organização →"
     },
     "live_strip": {
       "pill": "EM DIRETO",
       "text": "O painel em direto está aberto a todos — não é necessário iniciar sessão",
-      "watch": "Ver em direto →"
+      "watch": "Ver em direto →",
+      "pill_idle": "Resultados em direto",
+      "text_live": "Está a decorrer pontuação em direto neste momento. Acompanhe cada salto sem iniciar sessão.",
+      "browse": "Ver resultados →"
     },
     "features": {
       "section_label": "Concebido para cada papel à beira da piscina",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Gestor de competições",
       "meet_manager_desc": "Crie eventos, configure rondas e painéis, atribua juízes e administre toda a estrutura da competição.",
       "user_manager_title": "Gestor de utilizadores",
-      "user_manager_desc": "Aprove pedidos de função e controle o acesso dos membros na sua federação. Cada alteração de função passa por um fluxo de pedido."
+      "user_manager_desc": "Aprove pedidos de função e controle o acesso dos membros no seu clube ou federação. Cada alteração de função passa por um fluxo de pedido."
     },
     "how": {
       "section_label": "Como decorre uma competição",
       "step01_title": "Configurar o evento",
-      "step01_desc": "O gestor cria os eventos, define o número de rondas e juízes, e atribui o painel.",
+      "step01_desc": "O organizador (um administrador do clube ou o gestor da competição) cria os eventos, define o número de rondas e juízes, e atribui o painel.",
       "step02_title": "Os saltadores enviam as listas",
       "step02_desc": "Cada saltador inicia sessão e envia a sua lista de saltos. Os valores de DD são obtidos automaticamente do registo oficial.",
       "step03_title": "A pontuação fica em direto",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Iniciar sessão",
       "register": "Registar",
-      "register_federation": "Registar federação",
+      "register_federation": "Para federações e associações regionais",
       "scoreboard": "Painel e resultados",
       "user_guide": "📖 Guia do utilizador",
       "report_bug": "🐛 Reportar um erro"
-    }
+    },
+    "clubs": {
+      "section_label": "Para clubes",
+      "step1_title": "Crie o seu clube",
+      "step1_desc": "Registe-se, escolha o seu país e dê um nome ao clube. Se a sua federação ainda não estiver no DivingHQ, é o administrador desde o início.",
+      "step2_title": "Convide saltadores e juízes",
+      "step2_desc": "Envie aos membros a ligação de registo. Eles escolhem o seu clube e cabe-lhe a si aprovar quem salta, julga ou arbitra.",
+      "step3_title": "Organize a sua primeira competição",
+      "step3_desc": "Prepare as provas, conduza a competição a partir da sala de controlo enquanto os juízes pontuam no telemóvel, e os resultados são publicados à medida que cada salto é pontuado.",
+      "note": "Não precisa de uma federação para começar. Se a sua federação ou associação regional aderir mais tarde ao DivingHQ, passa a gerir o país ou a região, e o seu clube mantém as suas competições, resultados e recordes."
+    },
+    "meta_title": "Software de competições de saltos para clubes e federações"
   },
   "dashboard": {
     "search_divers": "Procurar saltadores…",
@@ -452,7 +468,7 @@
       "dialog_confirm": "Eliminar a minha conta",
       "dialog_cancel": "Cancelar",
       "dialog_what_goes": "Removido:",
-      "dialog_what_goes_items": "Acesso e palavra-passe, e-mail de contacto, subscrições push, definições do painel, atribuições de papel, ligações treinador-saltador, slug do perfil público.",
+      "dialog_what_goes_items": "Acesso e palavra-passe, e-mail de contacto, data de nascimento, género e nacionalidade, subscrições push, definições do painel, atribuições de papel, funções de administrador de clube e de região, ligações treinador-saltador, slug do perfil público.",
       "dialog_what_stays": "Mantido:",
       "dialog_what_stays_items": "O teu nome nos saltos em que competiste, nos júris em que estiveste e nas provas em que apareceste. Entradas do registo de auditoria que geraste (eliminadas na rotação normal de 30 dias).",
       "confirmation_toast": "Conta eliminada. O teu historial de competição foi anonimizado. Inicia sessão com uma nova conta para o reclamares mais tarde.",
@@ -477,7 +493,7 @@
       "confirming": "A reclamar…",
       "password_label": "Confirma com a tua palavra-passe",
       "password_placeholder": "A tua palavra-passe atual",
-      "conflict": "Não é possível fundir: a conta antiga e a tua conta atual têm ambas inscrições para a mesma prova e ronda. Desmarca o candidato em conflito ou contacta o administrador da tua federação para fundir manualmente.",
+      "conflict": "Não é possível fundir: a conta antiga e a tua conta atual têm ambas inscrições para a mesma prova e ronda. Desmarca o candidato em conflito, ou escreve para {email} e fundimo-las manualmente.",
       "success_toast": "Resultados anteriores religados ao teu perfil."
     },
     "club_request_sent": "Pedido enviado. A mudança acontece depois de aprovada: pela sua federação ou, onde ainda não existe, pelos administradores do novo clube."
@@ -552,7 +568,7 @@
       "diver": {
         "name": "Saltador",
         "desc": "Tu compétes. Vais submeter uma lista de saltos (que saltos vais executar, por ronda) antes do prazo de inscrição de cada prova e depois consultas a <strong>Vista do Dia de Prova</strong> nesse dia para veres a tua posição na fila e o que tens para pontuar.",
-        "step_1": "Inicia sessão ou aceita o convite do administrador da tua federação",
+        "step_1": "Regista-te e escolhe o teu clube",
         "step_2": "Abre <strong>Submeter Listas de Saltos</strong> e escolhe os teus saltos por ronda",
         "step_3": "No dia da prova, abre a <strong>Vista do Dia de Prova</strong> no telemóvel",
         "step_4": "As tuas pontuações e análises estão em <strong>O Meu Perfil</strong>",
@@ -599,7 +615,7 @@
       },
       "region_admin": {
         "name": "Administrador regional",
-        "desc": "Cuida de um estado, província ou nação: organiza os campeonatos, pode intervir nas provas de qualquer clube e aprova os pedidos de função dos membros dos clubes. A sua federação nomeia-o. Enquanto não houver, o seu organismo regional reivindica a região e os restantes administradores são acrescentados por si.",
+        "desc": "Cuida de um estado, província ou nação: organiza os campeonatos, pode intervir nas provas de qualquer clube e aprova os pedidos de função dos membros dos clubes. A sua federação nomeia-o. Enquanto não houver, o seu organismo regional reivindica a região e os restantes administradores são acrescentados por si. Um organismo estadual pode candidatar-se a gerir a sua região em <strong>Registar a sua organização</strong>.",
         "step_1": "Abra <strong>A minha região</strong> para ver os clubes e quem os gere",
         "step_2": "Crie os campeonatos no <strong>Gestor de Competições</strong>, organizados pela sua região",
         "step_3": "Aprove os membros que querem saltar, julgar ou treinar, e os clubes que pedem para aderir à sua região",
@@ -627,7 +643,7 @@
     },
     "faq": {
       "register_q": "Acabei de me registar, mas ainda não consigo entrar.",
-      "register_a": "Primeiro a verificação de e-mail — clica no link no e-mail de boas-vindas. Para papéis que não sejam saltador (juiz, treinador, diretor de prova) o admin da tua federação também precisa de te aprovar. Ambas as coisas devem acontecer em minutos; se não vires o e-mail ao fim de 10 minutos, vê o spam e depois pede ao admin para confirmar que a tua conta está ativa.",
+      "register_a": "Confirma primeiro o teu e-mail: clica no link do e-mail de confirmação que te enviámos quando te registaste. Não o encontras? Vê a pasta de spam, ou tenta iniciar sessão e pede um novo link. Os papéis não impedem o início de sessão: começas como espectador e recebes mais quando o administrador do teu clube ou da tua federação aprovar.",
       "judge_device_q": "Sou juiz — que dispositivo devo usar?",
       "judge_device_a": "Qualquer telemóvel moderno com navegador funciona. O ideal é iPhone 12 / Pixel 6 ou mais recente. A vista foi desenhada para telemóvel; vais passar a prova a tocar em números, por isso um telemóvel que consigas segurar confortavelmente com uma mão é a escolha certa. O wifi é preferível ao 4G se o pavilhão tiver — as pontuações também sincronizam por 4G, mas o tempo de ida e volta da rede é notavelmente mais longo.",
       "scoring_q": "Como funciona a pontuação?",
@@ -637,13 +653,13 @@
       "schedule_q": "Como planeio um dia inteiro de campeonato?",
       "schedule_a": "Adiciona horários programados às provas do encontro e depois abre <strong>Calendário</strong> a partir da página do encontro como admin de organização ou diretor de prova. O DivingHQ gera um primeiro plano com aquecimentos de 45 minutos, blocos de prova e atribuição de pranchas. Ativa o <strong>Modo edição</strong> para arrastar, redimensionar, inserir, apagar ou duplicar sessões; a gaveta de conflitos sinaliza sobreposições de pranchas, juízes, saltadores e árbitros. Treinadores, saltadores e espectadores podem ver o calendário público ou subscrever o feed iCal.",
       "bug_q": "Como reporto um erro?",
-      "bug_a": "Clica no link <strong>🐛 Reportar um erro</strong> no fundo da página inicial ou do teu painel. Abre uma issue do GitHub pré-preenchida, pronta para descreveres o problema. As capturas de ecrã ajudam muito.",
+      "bug_a": "Clica no link <strong>🐛 Reportar um erro</strong> no fundo da página inicial ou do teu painel. Abre uma issue do GitHub pré-preenchida, pronta para descreveres o problema. As capturas de ecrã ajudam muito. Não tens conta no GitHub? Escreve para {email}.",
       "install_q": "Como instalo o DivingHQ como aplicação?",
       "install_a": "No iPhone: abre o site no Safari, toca no botão Partilhar e depois em <strong>Adicionar ao ecrã principal</strong>. No Android: abre no Chrome, toca no menu e depois em <strong>Instalar app</strong>. O ícone abre uma vista de ecrã inteiro sem barras — arranque mais rápido, sem barra de navegador.",
       "tfa_q": "Como ativo a autenticação de dois fatores?",
       "tfa_a": "Abre <strong>O Meu Perfil</strong> → <strong>Segurança</strong> → <strong>Autenticação de dois fatores</strong> e lê o código QR com a tua app de autenticação (1Password, Authy, Google Authenticator). Guarda os códigos de recuperação num sítio seguro — são a única forma de voltar a entrar se perderes o telemóvel.",
       "account_q": "Como altero o meu email, a palavra-passe, ou elimino a minha conta?",
-      "account_a": "Tudo em <strong>O Meu Perfil</strong> → <strong>Definições da conta</strong>. As alterações de email precisam de nova verificação no novo endereço. Eliminar a conta é permanente e remove o teu acesso; as pontuações históricas mantêm-se no marcador público sob o registo da federação (anonimizadas a pedido — contacta o admin da tua federação).",
+      "account_a": "Tudo em <strong>O meu perfil</strong>: muda o e-mail ou a palavra-passe no topo, e <strong>Eliminar a minha conta</strong> está no fundo. Um novo endereço de e-mail tem de ser confirmado antes de passar a valer. Eliminar a conta é definitivo e remove o teu acesso e os teus dados pessoais; o teu nome fica nos resultados das provas em que participaste, como registo desportivo. Se um resultado tiver de ser removido por completo, escreve para {email}.",
       "records_q": "Como funcionam os recordes?",
       "records_a": "Os recordes mantêm-se sozinhos. Assim que o último juiz pontua um salto individual, o DivingHQ compara-o com os recordes do clube, regionais, nacionais e continentais do saltador, separados em femininos e masculinos, e substitui qualquer marca que supere. Todas as tabelas de recordes estão na página {records_link}, sem necessidade de iniciar sessão. Uma tabela aparece como não oficial até o respetivo órgão dirigente a reivindicar no DivingHQ, e as mesmas marcas passam a oficiais assim que uma reivindicação é aprovada. Os recordes pessoais estão no perfil de cada saltador."
     },
@@ -653,7 +669,7 @@
       "bookmark_features": "Funcionalidades por papel",
       "bookmark_features_desc": "todas as funcionalidades da app, indexadas por quem as usa",
       "bookmark_quickstart": "Início Rápido (10 min)",
-      "bookmark_quickstart_desc": "regista uma federação e dirige a tua primeira prova",
+      "bookmark_quickstart_desc": "cria o teu clube e dirige a tua primeira prova",
       "bookmark_roles": "Papéis e permissões",
       "bookmark_roles_desc": "o que cada papel pode e não pode fazer",
       "bookmark_faq": "FAQ e resolução de problemas",
@@ -2074,5 +2090,13 @@
     "chip": "Recorde {name}",
     "chip_prev": "Recorde anterior: {score}",
     "unofficial_tip": "Não oficial até o respetivo órgão dirigente o reivindicar no DivingHQ."
+  },
+  "legal": {
+    "privacy_title": "Política de Privacidade",
+    "terms_title": "Termos de Serviço",
+    "consent": "Ao criar uma conta, concorda com os {terms} e a {privacy}.",
+    "contact": "Contacto",
+    "need_help": "Precisa de ajuda?",
+    "english_only": "Esta página só está disponível em inglês, e é o texto em inglês que se aplica."
   }
 }

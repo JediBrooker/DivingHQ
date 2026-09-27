@@ -35,6 +35,14 @@
  */
 
 /**
+ * @typedef {Object} PublicConfig
+ * GET /api/public-config, public. Deployment settings the signed-out
+ * pages need (routes/public-config.js).
+ *
+ * @property {string} support_email  SUPPORT_EMAIL, default support@divinghq.app
+ */
+
+/**
  * @typedef {Object} CountryOrg
  * One row of GET /api/orgs/by-country/:code, the org a registrant from
  * that country would join.

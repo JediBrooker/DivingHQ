@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Kilpailujen hallintajärjestelmä",
-      "tagline": "Uimahyppyjen kilpailujen kokonaisvaltainen hallinta — tapahtuman luomisesta ja hyppylistojen lähettämisestä live-tuomarointiin, tulosten lähetykseen ja loppusijoituksiin.",
+      "tagline": "Järjestä seurasi hyppykilpailut jo tänään: hyppylistat, suora tuomarointi puhelimilla, julkinen tulostaulu ja tulokset. Aloittamiseen ei tarvita liittoa, ja kun liittosi tai alueliittosi tulee mukaan, seurasi historia kulkee mukanasi.",
       "btn_sign_in": "Kirjaudu sisään",
       "btn_create_account": "Luo tili",
       "btn_scoreboard": "Tulostaulu ja tulokset",
       "btn_judge_analysis": "Tuomarianalyysi",
-      "guide_link": "Uusi täällä? Lue 5 minuutin opas →"
+      "guide_link": "Uusi täällä? Lue 5 minuutin opas →",
+      "btn_start_club": "Perusta seurasi",
+      "federation_link": "Liitto tai alueellinen järjestö? Rekisteröi organisaatiosi →"
     },
     "live_strip": {
       "pill": "LIVE-LÄHETYS",
       "text": "Live-tulostaulu on avoinna kaikille — sisäänkirjautumista ei tarvita",
-      "watch": "Katso suorana →"
+      "watch": "Katso suorana →",
+      "pill_idle": "Suorat tulokset",
+      "text_live": "Pisteytys on käynnissä juuri nyt. Seuraa jokaista hyppyä ilman kirjautumista.",
+      "browse": "Selaa tuloksia →"
     },
     "features": {
       "section_label": "Suunniteltu jokaiselle roolille altaan reunalla",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Kilpailun hallinta",
       "meet_manager_desc": "Luo tapahtumia, määritä kierrokset ja paneelit, nimeä tuomarit ja hallinnoi kilpailun koko rakennetta.",
       "user_manager_title": "Käyttäjähallinta",
-      "user_manager_desc": "Hyväksy roolipyynnöt ja hallinnoi jäsenten pääsyä liitossasi. Jokainen roolin muutos kulkee pyyntöprosessin kautta."
+      "user_manager_desc": "Hyväksy roolipyynnöt ja hallinnoi jäsenten pääsyä seurassasi tai liitossasi. Jokainen roolin muutos kulkee pyyntöprosessin kautta."
     },
     "how": {
       "section_label": "Näin kilpailu etenee",
       "step01_title": "Aseta tapahtuma",
-      "step01_desc": "Kilpailupäällikkö luo tapahtumat, asettaa kierrosten ja tuomareiden määrän ja nimeää paneelin.",
+      "step01_desc": "Järjestäjä (seuran ylläpitäjä tai kilpailupäällikkö) luo tapahtumat, asettaa kierrosten ja tuomareiden määrän ja nimeää paneelin.",
       "step02_title": "Hyppääjät lähettävät listat",
       "step02_desc": "Jokainen hyppääjä kirjautuu ja lähettää hyppylistansa. DD-arvot haetaan automaattisesti virallisesta luettelosta.",
       "step03_title": "Pisteytys käynnistyy livenä",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Kirjaudu sisään",
       "register": "Rekisteröidy",
-      "register_federation": "Rekisteröi liitto",
+      "register_federation": "Liitoille ja alueliitoille",
       "scoreboard": "Tulostaulu ja tulokset",
       "user_guide": "📖 Käyttöopas",
       "report_bug": "🐛 Ilmoita virheestä"
-    }
+    },
+    "clubs": {
+      "section_label": "Seuroille",
+      "step1_title": "Perusta seura",
+      "step1_desc": "Rekisteröidy, valitse maasi ja nimeä seurasi. Jos liittosi ei vielä ole DivingHQ:ssa, olet seuran ylläpitäjä alusta asti.",
+      "step2_title": "Kutsu hyppääjät ja tuomarit",
+      "step2_desc": "Lähetä jäsenille rekisteröitymislinkki. He valitsevat seurasi, ja sinä hyväksyt, kuka hyppää, tuomaroi tai toimii ylituomarina.",
+      "step3_title": "Järjestä ensimmäiset kilpailusi",
+      "step3_desc": "Luo lajit, vedä kilpailua ohjaamosta tuomareiden pisteyttäessä puhelimillaan, ja tulokset julkaistaan sitä mukaa kuin hypyt pisteytetään.",
+      "note": "Aloittamiseen ei tarvita liittoa. Jos liittosi tai alueliittosi liittyy DivingHQ:hun myöhemmin, se ottaa maan tai alueen hallintaansa, ja seurasi säilyttää kilpailunsa, tuloksensa ja ennätyksensä."
+    },
+    "meta_title": "Hyppykilpailujen ohjelmisto seuroille ja liitoille"
   },
   "dashboard": {
     "search_divers": "Etsi hyppääjiä…",
@@ -452,7 +468,7 @@
       "dialog_confirm": "Poista tilini",
       "dialog_cancel": "Peruuta",
       "dialog_what_goes": "Poistuu:",
-      "dialog_what_goes_items": "Kirjautuminen ja salasana, yhteystietosähköposti, push-tilaukset, paneelin asetukset, roolien myönnöt, valmentaja-hyppääjä-yhteydet, julkisen profiilin slug.",
+      "dialog_what_goes_items": "Kirjautuminen ja salasana, yhteystietosähköposti, syntymäaika, sukupuoli ja kansallisuus, push-tilaukset, paneelin asetukset, roolien myönnöt, seuran ja alueen ylläpitäjän roolit, valmentaja-hyppääjä-yhteydet, julkisen profiilin slug.",
       "dialog_what_stays": "Säilyy:",
       "dialog_what_stays_items": "Nimesi hypyissä, joissa kilpailit, tuomaristoissa, joissa istuit, ja tapahtumissa, joissa esiinnyit. Auditointilokin merkinnät, jotka aiheutit (poistetaan normaalin 30 päivän kierron mukaan).",
       "confirmation_toast": "Tili poistettu. Kilpailuhistoriasi on anonymisoitu. Kirjaudu uudella tilillä saadaksesi sen takaisin myöhemmin.",
@@ -477,7 +493,7 @@
       "confirming": "Haetaan…",
       "password_label": "Vahvista salasanallasi",
       "password_placeholder": "Nykyinen salasanasi",
-      "conflict": "Yhdistäminen ei onnistu: sekä vanhalla tilillä että nykyisellä tililläsi on merkintöjä samasta tapahtumasta ja erästä. Poista rasti ristiriitaiselta ehdokkaalta tai ota yhteyttä liiton ylläpitäjään yhdistääksesi manuaalisesti.",
+      "conflict": "Yhdistäminen ei onnistu: sekä vanhalla tilillä että nykyisellä tililläsi on merkintöjä samasta tapahtumasta ja erästä. Poista rasti ristiriitaiselta ehdokkaalta, tai kirjoita osoitteeseen {email}, niin yhdistämme tilit käsin.",
       "success_toast": "Aiemmat tulokset uudelleenliitetty profiiliisi."
     },
     "club_request_sent": "Pyyntö lähetetty. Siirryt, kun se on hyväksytty: liittosi tai, jos liittoa ei vielä ole, uuden seuran ylläpitäjät hyväksyvät sen."
@@ -552,7 +568,7 @@
       "diver": {
         "name": "Hyppääjä",
         "desc": "Sinä kilpailet. Ilmoittautumisajan päättyessä lähetät hyppylistasi (mitä hyppyjä teet, kierroksittain) ja kisapäivänä avaat <strong>Kisapäivänäkymän</strong> nähdäksesi paikkasi jonossa ja seuraavan hyppysi.",
-        "step_1": "Kirjaudu sisään tai hyväksy liittokoordinaattorin kutsu",
+        "step_1": "Rekisteröidy ja valitse seurasi",
         "step_2": "Avaa <strong>Lähetä hyppylistat</strong> ja valitse hyppysi kierroksittain",
         "step_3": "Kisapäivänä avaa <strong>Kisapäivänäkymä</strong> puhelimellasi",
         "step_4": "Tuloksesi ja analytiikkasi löytyvät kohdasta <strong>Oma profiili</strong>",
@@ -599,7 +615,7 @@
       },
       "region_admin": {
         "name": "Alueen ylläpitäjä",
-        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut, voit tarttua minkä tahansa sen seuran kilpailuihin ja hyväksyt seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut. Jos liittoa ei vielä ole, alueellinen elimesi ottaa alueen hoitaakseen ja lisäät muut ylläpitäjät itse.",
+        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut, voit tarttua minkä tahansa sen seuran kilpailuihin ja hyväksyt seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut. Jos liittoa ei vielä ole, alueellinen elimesi ottaa alueen hoitaakseen ja lisäät muut ylläpitäjät itse. Osavaltion liitto voi hakea alueensa hallintaa kohdasta <strong>Rekisteröi organisaatio</strong>.",
         "step_1": "Avaa <strong>Oma alue</strong> nähdäksesi seurasi ja niiden vetäjät",
         "step_2": "Luo mestaruuskilpailusi <strong>Kilpailun hallinnassa</strong> alueesi järjestämänä",
         "step_3": "Hyväksy jäsenet, jotka haluavat hypätä, tuomita tai valmentaa, sekä seurat, jotka pyytävät liittymistä alueellesi",
@@ -627,7 +643,7 @@
     },
     "faq": {
       "register_q": "Rekisteröidyin juuri, mutta en pääse vielä kirjautumaan sisään.",
-      "register_a": "Ensin sähköpostin vahvistus — napsauta tervetuloviestin linkkiä. Muille rooleille kuin hyppääjälle (tuomari, valmentaja, kisanjohtaja) tarvitaan myös liittokoordinaattorin hyväksyntä. Molemmat tapahtuvat yleensä minuuteissa; jos viestiä ei näy 10 minuutin kuluttua, tarkista roskaposti ja pyydä sitten koordinaattoria varmistamaan, että tilisi on aktiivinen.",
+      "register_a": "Vahvista ensin sähköpostiosoitteesi: napsauta linkkiä vahvistusviestissä, jonka lähetimme rekisteröityessäsi. Eikö viestiä näy? Tarkista roskapostikansio tai yritä kirjautua sisään ja pyydä uusi linkki. Roolit eivät estä kirjautumista: aloitat katsojana ja saat lisää, kun seurasi tai liittosi ylläpitäjä hyväksyy.",
       "judge_device_q": "Olen tuomari — millä laitteella kannattaa toimia?",
       "judge_device_a": "Mikä tahansa moderni puhelin selaimella toimii. iPhone 12 / Pixel 6 tai uudempi on ihanteellinen. Näkymä on suunniteltu mobiilille; tulet näpäyttämään numeroita koko kisan ajan, joten yhdellä kädellä mukavasti pidettävä puhelin on oikea valinta. Wifi on parempi kuin 4G, jos halli sellaisen tarjoaa — pisteet synkronoituvat myös 4G:n kautta, mutta verkon edestakainen viive on selvästi pidempi.",
       "scoring_q": "Miten pisteytys toimii?",
@@ -637,13 +653,13 @@
       "schedule_q": "Miten suunnittelen koko mestaruuspäivän?",
       "schedule_a": "Lisää aikataulun kellonajat kisan kisalajeihin ja avaa sitten <strong>Aikataulu</strong> kisan sivulta liittokoordinaattorina tai kisanjohtajana. DivingHQ luo pohjasuunnitelman 45 minuutin lämmittelyillä, kisalajilohkoilla ja lautajaolla. Ota käyttöön <strong>Muokkaustila</strong> raahataksesi, muuttaaksesi kokoa, lisätäksesi, poistaaksesi tai monistaaksesi sessioita; konfliktipaneeli merkitsee päällekkäiset laudat, tuomarit, hyppääjät ja ylituomarit. Valmentajat, hyppääjät ja katsojat voivat tarkastella julkista aikajanaa tai tilata iCal-syötteen.",
       "bug_q": "Miten raportoin virheestä?",
-      "bug_a": "Napsauta etusivun tai paneelin alalaidassa olevaa linkkiä <strong>🐛 Raportoi virhe</strong>. Avautuu valmiiksi täytetty GitHub-issue, jossa voit kuvata ongelman. Kuvakaappaukset auttavat paljon.",
+      "bug_a": "Napsauta etusivun tai paneelin alalaidassa olevaa linkkiä <strong>🐛 Raportoi virhe</strong>. Avautuu valmiiksi täytetty GitHub-issue, jossa voit kuvata ongelman. Kuvakaappaukset auttavat paljon. Eikö sinulla ole GitHub-tiliä? Kirjoita osoitteeseen {email}.",
       "install_q": "Miten asennan DivingHQ:n sovelluksena?",
       "install_a": "iPhonella: avaa sivusto Safarissa, napauta Jaa-painiketta ja valitse sitten <strong>Lisää aloitusnäytölle</strong>. Androidilla: avaa Chromessa, napauta valikkoa ja valitse sitten <strong>Asenna sovellus</strong>. Kuvake käynnistää koko ruudun selaimettoman näkymän — nopeampi käynnistys, ei selainpalkkia.",
       "tfa_q": "Miten otan kaksivaiheisen tunnistuksen käyttöön?",
       "tfa_a": "Avaa <strong>Oma profiili</strong> → <strong>Turvallisuus</strong> → <strong>Kaksivaiheinen tunnistus</strong> ja skannaa QR-koodi todennussovelluksellasi (1Password, Authy, Google Authenticator). Tallenna palautuskoodit turvalliseen paikkaan — ne ovat ainoa tie takaisin, jos kadotat puhelimesi.",
       "account_q": "Miten vaihdan sähköpostini tai salasanani tai poistan tilini?",
-      "account_a": "Kaikki kohdassa <strong>Oma profiili</strong> → <strong>Tilin asetukset</strong>. Sähköpostin vaihto vaatii uuden vahvistuksen uudessa osoitteessa. Tilin poistaminen on pysyvää ja poistaa kirjautumisesi; aiemmat pisteet säilyvät julkisella tulostaululla liiton kirjauksen alla (anonymisoidaan pyynnöstä — ota yhteyttä liittokoordinaattoriisi).",
+      "account_a": "Kaikki kohdassa <strong>Oma profiili</strong>: vaihda sähköposti tai salasana ylhäältä, ja <strong>Poista tilini</strong> löytyy alhaalta. Uusi sähköpostiosoite on vahvistettava ennen kuin se otetaan käyttöön. Tilin poistaminen on pysyvää ja poistaa kirjautumisesi ja henkilötietosi; nimesi jää niiden kilpailujen tuloksiin, joihin osallistuit, urheiluhistoriana. Jos tulos pitää poistaa kokonaan, kirjoita osoitteeseen {email}.",
       "records_q": "Miten ennätykset toimivat?",
       "records_a": "Ennätykset pitävät itse itsensä ajan tasalla. Heti kun viimeinen tuomari on arvostellut henkilökohtaisen hypyn, DivingHQ vertaa sitä hyppääjän seura-, alue-, kansallisiin ja maanosaennätyksiin, erikseen naisille ja miehille, ja korvaa jokaisen tuloksen, jonka hyppy ylittää. Kaikki ennätysluettelot ovat sivulla {records_link}, ilman kirjautumista. Luettelo on epävirallinen, kunnes sen hallintoelin on ottanut sen haltuunsa DivingHQ:ssa, ja samat tulokset muuttuvat virallisiksi heti, kun vaatimus hyväksytään. Henkilökohtaiset ennätykset näkyvät jokaisen hyppääjän profiilissa."
     },
@@ -653,7 +669,7 @@
       "bookmark_features": "Ominaisuudet rooleittain",
       "bookmark_features_desc": "kaikki sovelluksen ominaisuudet käyttäjäryhmittäin",
       "bookmark_quickstart": "Pika-aloitus (10 min)",
-      "bookmark_quickstart_desc": "rekisteröi liitto ja järjestä ensimmäinen kisasi",
+      "bookmark_quickstart_desc": "perusta seurasi ja järjestä ensimmäinen kisasi",
       "bookmark_roles": "Roolit ja oikeudet",
       "bookmark_roles_desc": "mitä kukin rooli voi ja ei voi tehdä",
       "bookmark_faq": "FAQ ja vianetsintä",
@@ -2074,5 +2090,13 @@
     "chip": "{name}-ennätys",
     "chip_prev": "Edellinen ennätys: {score}",
     "unofficial_tip": "Epävirallinen, kunnes hallintoelin ottaa tilin haltuunsa DivingHQ:ssa."
+  },
+  "legal": {
+    "privacy_title": "Tietosuojakäytäntö",
+    "terms_title": "Käyttöehdot",
+    "consent": "Luomalla tilin hyväksyt seuraavat: {terms} ja {privacy}.",
+    "contact": "Yhteystiedot",
+    "need_help": "Tarvitsetko apua?",
+    "english_only": "Tämä sivu on saatavilla vain englanniksi, ja sovellettava teksti on englanninkielinen."
   }
 }

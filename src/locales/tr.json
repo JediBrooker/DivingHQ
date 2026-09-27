@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Yarışma Yönetim Platformu",
-      "tagline": "Uçtan uca atlama yarışması yönetimi — etkinlik kurulumundan ve atlama listesi göndermekten canlı hakemliğe, yayın skorlarına ve nihai sonuçlara kadar.",
+      "tagline": "Kulübünüzün atlama yarışmalarını bugünden itibaren yönetin: atlama listeleri, telefonlardan canlı hakemlik, herkese açık skor tablosu ve sonuçlar. Başlamak için federasyona gerek yok; federasyonunuz ya da bölge kuruluşunuz katıldığında kulübünüzün geçmişi de sizinle gelir.",
       "btn_sign_in": "Giriş Yap",
       "btn_create_account": "Hesap Oluştur",
       "btn_scoreboard": "Skor Tablosu ve Sonuçlar",
       "btn_judge_analysis": "Hakem Analizi",
-      "guide_link": "Yeni mi geldiniz? 5 dakikalık kullanıcı kılavuzunu okuyun →"
+      "guide_link": "Yeni mi geldiniz? 5 dakikalık kullanıcı kılavuzunu okuyun →",
+      "btn_start_club": "Kulübünüzü başlatın",
+      "federation_link": "Federasyon veya bölge kuruluşu musunuz? Kuruluşunuzu kaydedin →"
     },
     "live_strip": {
       "pill": "CANLI",
       "text": "Canlı skor tablosu herkese açık — giriş gerekmez",
-      "watch": "Canlı izle →"
+      "watch": "Canlı izle →",
+      "pill_idle": "Canlı skorlar",
+      "text_live": "Şu anda canlı puanlama yapılıyor. Her atlayışı giriş yapmadan takip edin.",
+      "browse": "Sonuçlara göz atın →"
     },
     "features": {
       "section_label": "Havuzdaki her rol için tasarlandı",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Yarışma Yöneticisi",
       "meet_manager_desc": "Etkinlikler oluşturun, turları ve kurul boyutlarını yapılandırın, hakemleri atayın ve bir yarışmanın tüm yapısını yönetin.",
       "user_manager_title": "Kullanıcı Yöneticisi",
-      "user_manager_desc": "Rol taleplerini onaylayın ve federasyonunuz genelinde üye erişimini kontrol edin. Her rol değişikliği bir talep iş akışından geçer."
+      "user_manager_desc": "Rol taleplerini onaylayın ve kulübünüz ya da federasyonunuz genelinde üye erişimini kontrol edin. Her rol değişikliği bir talep iş akışından geçer."
     },
     "how": {
       "section_label": "Bir yarışma nasıl yürür",
       "step01_title": "Etkinliği kur",
-      "step01_desc": "Yarışma yöneticisi etkinlikleri oluşturur, tur ve hakem sayısını belirler ve kurulu atar.",
+      "step01_desc": "Organizatör (bir kulüp yöneticisi veya yarışma yöneticisi) etkinlikleri oluşturur, tur ve hakem sayısını belirler ve kurulu atar.",
       "step02_title": "Atlamacılar listelerini gönderir",
       "step02_desc": "Her atlamacı giriş yapar ve atlama listesini gönderir. DD değerleri resmî dizinden otomatik olarak çekilir.",
       "step03_title": "Puanlama canlıya geçer",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Giriş Yap",
       "register": "Kayıt Ol",
-      "register_federation": "Federasyon Kaydı",
+      "register_federation": "Federasyonlar ve bölge kuruluşları için",
       "scoreboard": "Skor Tablosu ve Sonuçlar",
       "user_guide": "📖 Kullanıcı Kılavuzu",
       "report_bug": "🐛 Hata bildir"
-    }
+    },
+    "clubs": {
+      "section_label": "Kulüpler için",
+      "step1_title": "Kulübünüzü oluşturun",
+      "step1_desc": "Kaydolun, ülkenizi seçin ve kulübünüze bir ad verin. Federasyonunuz henüz DivingHQ'da değilse, başından beri kulübün yöneticisi sizsiniz.",
+      "step2_title": "Atlamacıları ve hakemleri davet edin",
+      "step2_desc": "Üyelere kayıt bağlantısını gönderin. Kulübünüzü seçerler; kimin atlayacağını, hakemlik yapacağını veya baş hakem olacağını siz onaylarsınız.",
+      "step3_title": "İlk yarışmanızı düzenleyin",
+      "step3_desc": "Branşları oluşturun, hakemler telefonlarından puan verirken yarışmayı Kontrol Odası'ndan yönetin; sonuçlar her atlayış puanlandıkça yayımlanır.",
+      "note": "Başlamak için federasyona gerek yok. Federasyonunuz ya da bölge kuruluşunuz daha sonra DivingHQ'ya katılırsa ülkenin veya bölgenin yönetimini devralır; kulübünüz yarışmalarını, sonuçlarını ve rekorlarını korur."
+    },
+    "meta_title": "Kulüpler ve federasyonlar için atlama yarışması yazılımı"
   },
   "dashboard": {
     "search_divers": "Atlamacı ara…",
@@ -441,7 +457,7 @@
       "dialog_confirm": "Hesabımı sil",
       "dialog_cancel": "İptal",
       "dialog_what_goes": "Silinen:",
-      "dialog_what_goes_items": "Oturum açma bilgileri ve şifre, iletişim e-postası, push abonelikleri, panel ayarları, rol atamaları, antrenör-atlayıcı bağlantıları, herkese açık profil slug'ı.",
+      "dialog_what_goes_items": "Oturum açma bilgileri ve şifre, iletişim e-postası, doğum tarihi, cinsiyet ve uyruk, push abonelikleri, panel ayarları, rol atamaları, kulüp ve bölge yöneticisi rolleri, antrenör-atlayıcı bağlantıları, herkese açık profil slug'ı.",
       "dialog_what_stays": "Korunan:",
       "dialog_what_stays_items": "Yarıştığınız atlayışlardaki, görev aldığınız hakem kurullarındaki ve katıldığınız etkinliklerdeki adınız. Tetiklediğiniz denetim günlüğü kayıtları (normal 30 günlük rotasyonla silinir).",
       "confirmation_toast": "Hesap silindi. Yarışma geçmişiniz anonimleştirildi. Daha sonra geri talep etmek için yeni bir hesapla oturum açın.",
@@ -466,7 +482,7 @@
       "confirming": "Talep ediliyor…",
       "password_label": "Şifrenizle onaylayın",
       "password_placeholder": "Mevcut şifreniz",
-      "conflict": "Birleştirilemez: eski hesap ve mevcut hesabınızın ikisinde de aynı etkinlik ve tur için kayıtlar var. Çakışan adayın işaretini kaldırın veya manuel birleştirme için federasyon yöneticinizle iletişime geçin.",
+      "conflict": "Birleştirilemez: eski hesap ve mevcut hesabınızın ikisinde de aynı etkinlik ve tur için kayıtlar var. Çakışan adayın işaretini kaldırın ya da {email} adresine yazın, hesapları elle birleştirelim.",
       "success_toast": "Geçmiş sonuçlar profilinize yeniden bağlandı."
     },
     "club_request_sent": "Talep gönderildi. Onaylandığında geçiş yapılır: federasyonunuz tarafından ya da henüz federasyon yoksa yeni kulübün yöneticileri tarafından."
@@ -541,7 +557,7 @@
       "diver": {
         "name": "Atlamacı",
         "desc": "Yarışıyorsunuz. Her etkinliğin kayıt tarihinden önce atlama listenizi (turlara göre hangi atlamaları yapacağınızı) göndereceksiniz, ardından yarış günü <strong>Yarış Günü Görünümü</strong>'nü açarak sıradaki konumunuzu ve puanlamanız gerekenleri göreceksiniz.",
-        "step_1": "Federasyon yöneticinizden gelen davetiyeyi kabul edin veya giriş yapın",
+        "step_1": "Kaydolun ve kulübünüzü seçin",
         "step_2": "<strong>Atlama Listesi Gönder</strong>'i açın ve her tur için atlamalarınızı seçin",
         "step_3": "Yarış günü <strong>Yarış Günü Görünümü</strong>'nü telefonunuzda açın",
         "step_4": "Puanlarınız ve analizleriniz <strong>Profilim</strong>'de yer alır",
@@ -588,7 +604,7 @@
       },
       "region_admin": {
         "name": "Bölge yöneticisi",
-        "desc": "Bir eyalet, il ya da ülkeden sorumlusunuz: şampiyonalarını düzenler, kulüplerinden herhangi birinin yarışmalarına müdahale edebilir ve kulüp üyelerinin rol taleplerini onaylarsınız. Sizi federasyonunuz atar. Federasyon henüz yoksa bölgeyi bölgesel kurumunuz üstlenir ve diğer yöneticileri siz eklersiniz.",
+        "desc": "Bir eyalet, il ya da ülkeden sorumlusunuz: şampiyonalarını düzenler, kulüplerinden herhangi birinin yarışmalarına müdahale edebilir ve kulüp üyelerinin rol taleplerini onaylarsınız. Sizi federasyonunuz atar. Federasyon henüz yoksa bölgeyi bölgesel kurumunuz üstlenir ve diğer yöneticileri siz eklersiniz. Bir eyalet kuruluşu, bölgesini yönetmek için <strong>Kuruluşunuzu kaydedin</strong> üzerinden başvurabilir.",
         "step_1": "Kulüplerinizi ve yöneticilerini görmek için <strong>Bölgem</strong>'i açın",
         "step_2": "Şampiyonalarınızı bölgenizin ev sahipliğinde <strong>Yarışma Yöneticisi</strong>'nde oluşturun",
         "step_3": "Atlamak, hakemlik yapmak veya antrenörlük yapmak isteyen üyeleri ve bölgenize katılmak isteyen kulüpleri onaylayın",
@@ -616,7 +632,7 @@
     },
     "faq": {
       "register_q": "Yeni kaydoldum ama henüz giriş yapamıyorum.",
-      "register_a": "Önce e-posta doğrulaması — hoş geldiniz e-postasındaki bağlantıya tıklayın. Atlamacı dışı roller (hakem, antrenör, yarışma yöneticisi) için federasyon yöneticinizin de sizi onaylaması gerekir. Her ikisi de dakikalar içinde olmalı; e-postayı 10 dakika sonra hâlâ görmüyorsanız spam'i kontrol edin ve ardından hesabınızın etkin olduğunu yöneticinizden teyit etmesini isteyin.",
+      "register_a": "Önce e-postanızı doğrulayın: kaydolduğunuzda gönderdiğimiz doğrulama e-postasındaki bağlantıya tıklayın. Göremiyor musunuz? Spam klasörüne bakın ya da giriş yapmayı deneyip yeni bir bağlantı isteyin. Roller girişi engellemez: izleyici olarak başlarsınız, kulübünüzün veya federasyonunuzun yöneticisi onayladığında daha fazlasını alırsınız.",
       "judge_device_q": "Hakemim — hangi cihazı kullanmalıyım?",
       "judge_device_a": "Tarayıcısı olan herhangi bir modern telefon çalışır. iPhone 12 / Pixel 6 ve yenisi idealdir. Görünüm mobile-first; yarışı sayıları tıklayarak geçireceksiniz, bu yüzden tek elle rahatça tutabildiğiniz bir telefon doğru seçimdir. Mekânda WiFi varsa 4G'ye tercih edilir — puanlarınız 4G üzerinden de senkronize olur ama ağın gidiş-dönüşü gözle görülür biçimde uzar.",
       "scoring_q": "Puanlama nasıl çalışır?",
@@ -626,13 +642,13 @@
       "schedule_q": "Bir günlük şampiyona programını nasıl planlarım?",
       "schedule_a": "Yarışmanın etkinliklerine zamanlanmış saatler ekleyin, ardından kuruluş yöneticisi veya yarışma yöneticisi olarak yarışma sayfasından <strong>Program</strong>'ı açın. DivingHQ ilk planı 45 dakikalık ısınmalar, etkinlik blokları ve tahta atamalarıyla hazırlar. <strong>Düzenleme modu</strong>'nu açarak oturumları sürükleyin, yeniden boyutlandırın, ekleyin, silin veya çoğaltın; çakışma çekmecesi üst üste binen tahtaları, hakemleri, atlamacıları ve baş hakemleri işaretler. Antrenörler, atlamacılar ve seyirciler herkese açık zaman çizelgesini görebilir veya iCal akışına abone olabilir.",
       "bug_q": "Bir hatayı nasıl bildiririm?",
-      "bug_a": "Ana sayfanın veya panonuzun altındaki <strong>🐛 Hata bildir</strong> bağlantısına tıklayın. Sorunu açıklamanız için önceden doldurulmuş bir GitHub konusu açılır. Ekran görüntüleri çok yardımcı olur.",
+      "bug_a": "Ana sayfanın veya panonuzun altındaki <strong>🐛 Hata bildir</strong> bağlantısına tıklayın. Sorunu açıklamanız için önceden doldurulmuş bir GitHub konusu açılır. Ekran görüntüleri çok yardımcı olur. GitHub hesabınız yok mu? Bunun yerine {email} adresine yazın.",
       "install_q": "DivingHQ'yu uygulama olarak nasıl kurarım?",
       "install_a": "iPhone'da: siteyi Safari'de açın, Paylaş düğmesine dokunun, ardından <strong>Ana Ekrana Ekle</strong>'ye dokunun. Android'de: Chrome'da açın, menüye dokunun, ardından <strong>Uygulamayı yükle</strong>'ye dokunun. Simge, çerçevesiz tam ekran bir görünüm açar — daha hızlı başlatma, tarayıcı çubuğu yok.",
       "tfa_q": "İki adımlı doğrulamayı nasıl etkinleştiririm?",
       "tfa_a": "<strong>Profilim</strong> → <strong>Güvenlik</strong> → <strong>İki adımlı doğrulama</strong>'yı açın ve QR kodunu kimlik doğrulayıcı uygulamanızla (1Password, Authy, Google Authenticator) tarayın. Kurtarma kodlarını güvenli bir yere kaydedin — telefonunuzu kaybederseniz geri dönmenin tek yolu onlardır.",
       "account_q": "E-postamı, parolamı nasıl değiştiririm veya hesabımı nasıl silerim?",
-      "account_a": "Hepsi <strong>Profilim</strong> → <strong>Hesap ayarları</strong>'nda. E-posta değişiklikleri yeni adreste yeniden doğrulama gerektirir. Hesabınızı silmek kalıcıdır ve girişinizi kaldırır; geçmiş puanlar federasyonun kaydı altında herkese açık skor tablosunda kalır (talep üzerine anonimleştirilir — federasyon yöneticinizle iletişime geçin).",
+      "account_a": "Hepsi <strong>Profilim</strong> sayfasında: e-postanızı veya parolanızı üstten değiştirin, <strong>Hesabımı sil</strong> ise en altta. Yeni bir e-posta adresi geçerli olmadan önce doğrulanmalıdır. Hesabı silmek kalıcıdır ve girişinizi ile kişisel bilgilerinizi kaldırır; adınız, katıldığınız yarışmaların sonuçlarında spor kaydı olarak kalır. Bir sonucun tamamen kaldırılması gerekiyorsa {email} adresine yazın.",
       "records_q": "Rekorlar nasıl işler?",
       "records_a": "Rekorlar kendiliğinden güncellenir. Son hakem bireysel bir atlamayı puanladığı anda DivingHQ onu sporcunun kulüp, bölge, ulusal ve kıta rekorlarıyla, kadınlar ve erkekler için ayrı ayrı karşılaştırır ve geçtiği her dereceyi değiştirir. Tüm rekor listeleri giriş yapmadan {records_link} sayfasında görülebilir. Bir liste, yönetim organı onu DivingHQ'da devralana kadar resmî olmayan olarak görünür; talep onaylanınca aynı dereceler resmî sayılır. Kişisel rekorlar her sporcunun profilinde yer alır."
     },
@@ -642,7 +658,7 @@
       "bookmark_features": "Role göre özellikler",
       "bookmark_features_desc": "uygulamadaki her özellik, kullananına göre dizinlenmiş",
       "bookmark_quickstart": "Hızlı Başlangıç (10 dk)",
-      "bookmark_quickstart_desc": "bir federasyon kaydedin ve ilk yarışmanızı yürütün",
+      "bookmark_quickstart_desc": "kulübünüzü kurun ve ilk yarışmanızı yürütün",
       "bookmark_roles": "Roller ve izinler",
       "bookmark_roles_desc": "her rolün neyi yapıp yapamayacağı",
       "bookmark_faq": "SSS ve sorun giderme",
@@ -2074,5 +2090,13 @@
     "chip": "{name} rekoru",
     "chip_prev": "Önceki rekor: {score}",
     "unofficial_tip": "Yönetim organı DivingHQ'da devralana kadar resmî değil."
+  },
+  "legal": {
+    "privacy_title": "Gizlilik Politikası",
+    "terms_title": "Hizmet Koşulları",
+    "consent": "Hesap oluşturarak {terms} ve {privacy} belgelerini kabul etmiş olursunuz.",
+    "contact": "İletişim",
+    "need_help": "Yardıma mı ihtiyacınız var?",
+    "english_only": "Bu sayfa yalnızca İngilizce olarak sunulmaktadır ve geçerli olan İngilizce metindir."
   }
 }

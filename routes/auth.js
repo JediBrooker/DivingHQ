@@ -19,6 +19,7 @@ const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { countryByCode } = require("../lib/countries");
 const { materializeRegions } = require("../lib/regions");
 const claims = require("../lib/claims");
+const { supportContact, suspendedAccountMessage } = require("../lib/support");
 const { liveAdminCount } = require("../lib/admin-rows");
 const roleRequests = require("../lib/role-requests");
 
@@ -218,7 +219,7 @@ async function resolveCountryOrg(client, country) {
 function federationPendingBody(country) {
   return {
     error: `${country.name}'s federation has registered on DivingHQ and is waiting for approval. `
-      + "Try again once it's approved, or contact DivingHQ support.",
+      + `Try again once it's approved, or contact ${supportContact()}.`,
     code: "federation_pending",
   };
 }
@@ -316,7 +317,7 @@ module.exports = function createAuthRouter({
       const result = await pool.query(
         `SELECT u.id, u.password, u.email_verified_at, u.totp_enabled_at,
                 u.deleted_at, u.suspended_at, u.is_system_admin,
-                o.status AS org_status
+                o.status AS org_status, o.claim_state AS org_claim_state
            FROM users u
            LEFT JOIN organisations o ON o.id = u.org_id
           WHERE u.username = $1`,
@@ -342,9 +343,12 @@ module.exports = function createAuthRouter({
       // correct password but a suspended flag, return a clear,
       // distinct message (the legitimate owner knows the password,
       // so this leaks nothing useful to an attacker).
+      //
+      // In a club-first country there's no federation to ask (nobody
+      // there holds org_admin), so point them at their club and at us.
       if (user.suspended_at != null) {
         return res.status(403).json({
-          error: "Your account has been suspended. Contact your federation administrator.",
+          error: suspendedAccountMessage(user.org_claim_state),
           code: "account_suspended",
         });
       }
@@ -370,7 +374,7 @@ module.exports = function createAuthRouter({
         return res.status(403).json({
           error: pending
             ? "Your organisation is still waiting for approval. We'll email you as soon as it's reviewed."
-            : "Your organisation's access to DivingHQ has been suspended. Contact support if you think this is a mistake.",
+            : `Your organisation's access to DivingHQ has been suspended. If you think this is a mistake, contact ${supportContact()}.`,
           code: pending ? "org_pending" : "org_suspended",
         });
       }
@@ -862,7 +866,7 @@ module.exports = function createAuthRouter({
         }
         if (found.closed) {
           await client.query("ROLLBACK");
-          return res.status(400).json({ error: `Signups from ${country.name} are paused. Contact support.` });
+          return res.status(400).json({ error: `Signups from ${country.name} are paused. Contact ${supportContact()}.` });
         }
         if (found.choose) {
           await client.query("ROLLBACK");
@@ -1223,14 +1227,14 @@ module.exports = function createAuthRouter({
           let orgRow = unclaimedOrg || (claimedOrgs.length === 1 ? claimedOrgs[0] : null);
           if (!orgRow) {
             if (claimedOrgs.length > 1) {
-              return await refuse(409, { error: "Several federations share this country on DivingHQ. Contact support to claim your region.", code: "claim_needs_support" });
+              return await refuse(409, { error: `Several federations share this country on DivingHQ. Contact ${supportContact()} to claim your region.`, code: "claim_needs_support" });
             }
             // Nobody from this country is here yet. Start its account so
             // the state body has something to claim a region of.
             const found = await resolveCountryOrg(client, country);
             if (found.pending) return await refuse(409, federationPendingBody(country));
             if (found.closed || found.choose) {
-              return await refuse(409, { error: "Contact support to claim your region.", code: "claim_needs_support" });
+              return await refuse(409, { error: `Contact ${supportContact()} to claim your region.`, code: "claim_needs_support" });
             }
             orgRow = { id: found.id, claim_state: found.claim_state };
           }
@@ -1248,7 +1252,7 @@ module.exports = function createAuthRouter({
           // claim rather than stuck until support steps in. Approval
           // just stamps claimed_name again and adds the new admin.
           if (rg.claim_state === "claimed" && (await liveAdminCount(client, "region", rg.id)) > 0) {
-            return await refuse(409, { error: "That region already has its body on DivingHQ. Contact support if that's wrong.", code: "already_claimed" });
+            return await refuse(409, { error: `That region already has its body on DivingHQ. If that's wrong, contact ${supportContact()}.`, code: "already_claimed" });
           }
           target = { kind: "region", id: rg.id, orgId: orgRow.id };
         } else {
@@ -1256,7 +1260,7 @@ module.exports = function createAuthRouter({
           if (!orgId && claimedOrgs.length) {
             return await refuse(409, {
               error: `${claimedOrgs[0].name} already runs ${country.name} on DivingHQ. `
-                + "A state or regional body can claim its region instead. Otherwise, contact DivingHQ support.",
+                + `A state or regional body can claim its region instead. Otherwise, contact ${supportContact()}.`,
               code: "already_claimed",
             });
           }
@@ -1264,7 +1268,7 @@ module.exports = function createAuthRouter({
             const found = await resolveCountryOrg(client, country);
             if (found.pending) return await refuse(409, federationPendingBody(country));
             if (found.closed || found.choose || found.claim_state !== "unclaimed") {
-              return await refuse(409, { error: `Contact DivingHQ support to register for ${country.name}.`, code: "claim_needs_support" });
+              return await refuse(409, { error: `Contact ${supportContact()} to register for ${country.name}.`, code: "claim_needs_support" });
             }
             orgId = found.id;
           }

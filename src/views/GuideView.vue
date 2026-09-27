@@ -37,11 +37,17 @@
  * <i18n-t> with named slots so the RouterLink is preserved but
  * the wording stays translatable.
  */
-import { onMounted, onBeforeUnmount, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe, Users, Map } from '@lucide/vue'
+import { useSupportEmail, DEFAULT_SUPPORT_EMAIL } from '@/composables/useSupportEmail'
+
+const supportEmail = useSupportEmail()
+// The FAQ answers print the address inline. Until /api/public-config has
+// answered, show the hosted one rather than a hole in the sentence.
+const contactEmail = computed(() => supportEmail.value || DEFAULT_SUPPORT_EMAIL)
 
 // TOC entries match the in-template section ids. Order matters,
 // it's the visual reading order. Keep the keys aligned with the
@@ -396,7 +402,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
             <details class="guide-faq-item">
               <summary>{{ $t('guide.faq.bug_q') }}</summary>
-              <div class="guide-faq-body" v-html="$t('guide.faq.bug_a')"></div>
+              <div class="guide-faq-body" v-html="$t('guide.faq.bug_a', { email: contactEmail })"></div>
             </details>
 
             <details class="guide-faq-item">
@@ -411,7 +417,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
             <details class="guide-faq-item">
               <summary>{{ $t('guide.faq.account_q') }}</summary>
-              <div class="guide-faq-body" v-html="$t('guide.faq.account_a')"></div>
+              <div class="guide-faq-body" v-html="$t('guide.faq.account_a', { email: contactEmail })"></div>
             </details>
           </div>
         </section>
@@ -466,6 +472,12 @@ onBeforeUnmount(() => observer?.disconnect())
         </section>
       </div>
     </div>
+
+    <footer class="guide-footer">
+      <RouterLink to="/privacy">{{ $t('legal.privacy_title') }}</RouterLink>
+      <RouterLink to="/terms">{{ $t('legal.terms_title') }}</RouterLink>
+      <a v-if="supportEmail" :href="`mailto:${supportEmail}`">{{ $t('legal.need_help') }} {{ supportEmail }}</a>
+    </footer>
   </div>
 </template>
 
@@ -842,6 +854,16 @@ onBeforeUnmount(() => observer?.disconnect())
   display: flex; gap: 0.75rem; flex-wrap: wrap;
   margin-top: 1rem;
 }
+
+.guide-footer {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem;
+  margin-top: 3rem; padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.guide-footer a {
+  font-size: 13px; font-weight: 500; color: var(--fg-2); text-decoration: none;
+}
+.guide-footer a:hover { color: var(--accent); }
 
 /* Narrow viewports: collapse the TOC into a horizontal scroll
    strip pinned above the content. The strip is still sticky

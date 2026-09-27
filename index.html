@@ -1,7 +1,4 @@
 <!doctype html>
-<!-- NOTE: This is the Vite SPA shell. The old public/index.html (landing page) has been
-     superseded by src/views/HomeView.vue. You can delete or rename public/index.html
-     to avoid confusion — it is no longer served in development. -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -21,7 +18,28 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="DivingHQ">
-  <title>DivingHQ</title>
+  <title>DivingHQ · Diving competition software for clubs and federations</title>
+  <!-- Search and link-preview tags. This file is the shell for every SPA
+       route, so these describe the product as a whole. The router sets a
+       per-page document.title after boot, and the server rewrites the
+       canonical and og:url to the path actually requested, plus the
+       origin to APP_BASE_URL (lib/spa-shell.js). Keep the attribute order
+       as written, the rewrite matches on it. -->
+  <meta name="description" content="Diving competition software for clubs, states and federations: dive lists, live judging on phones, a public scoreboard and results. Clubs can start today, no federation needed.">
+  <link rel="canonical" href="https://divinghq.app/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="DivingHQ">
+  <meta property="og:title" content="DivingHQ · Diving competition software for clubs and federations">
+  <meta property="og:description" content="Dive lists, live judging on phones, a public scoreboard and results. Clubs can start today, no federation needed.">
+  <meta property="og:url" content="https://divinghq.app/">
+  <meta property="og:image" content="https://divinghq.app/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="DivingHQ: diving competition software for clubs, states and federations">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="DivingHQ · Diving competition software for clubs and federations">
+  <meta name="twitter:description" content="Dive lists, live judging on phones, a public scoreboard and results. Clubs can start today, no federation needed.">
+  <meta name="twitter:image" content="https://divinghq.app/og-image.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">

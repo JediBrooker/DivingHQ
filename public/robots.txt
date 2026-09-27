@@ -1,0 +1,8 @@
+# DivingHQ. Everything a visitor can see without an account is open to
+# crawlers. The API is data for the app, not pages, so keep bots out of it.
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /socket.io/
+
+Sitemap: https://divinghq.app/sitemap.xml

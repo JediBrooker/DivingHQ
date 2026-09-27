@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Versenykezelő platform",
-      "tagline": "A műugró versenyek teljes körű kezelése — az esemény beállításától és az ugráslisták leadásától az élő pontozásig, az eredmények közvetítéséig és a végső eredményekig.",
+      "tagline": "Rendezze meg klubja műugróversenyeit már ma: ugráslisták, élő pontozás telefonról, nyilvános eredménytábla és eredmények. Az induláshoz nincs szükség szövetségre, és amikor a szövetsége vagy regionális szövetsége csatlakozik, a klub története megmarad.",
       "btn_sign_in": "Bejelentkezés",
       "btn_create_account": "Fiók létrehozása",
       "btn_scoreboard": "Eredménytábla",
       "btn_judge_analysis": "Pontozóbíró-elemzés",
-      "guide_link": "Új itt? Olvasd el az 5 perces útmutatót →"
+      "guide_link": "Új itt? Olvasd el az 5 perces útmutatót →",
+      "btn_start_club": "Indítsa el klubját",
+      "federation_link": "Szövetség vagy regionális testület? Regisztrálja szervezetét →"
     },
     "live_strip": {
       "pill": "ÉLŐ",
       "text": "Az élő eredménytábla mindenki számára elérhető — nem kell bejelentkezni",
-      "watch": "Élő nézés →"
+      "watch": "Élő nézés →",
+      "pill_idle": "Élő eredmények",
+      "text_live": "Épp élő pontozás zajlik. Kövessen minden ugrást bejelentkezés nélkül.",
+      "browse": "Eredmények böngészése →"
     },
     "features": {
       "section_label": "Minden szerephez a medence partján",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Versenymenedzser",
       "meet_manager_desc": "Hozz létre eseményeket, állítsd be a fordulókat és a paneleket, oszd ki a pontozóbírókat, és kezeld a verseny teljes szerkezetét.",
       "user_manager_title": "Felhasználókezelő",
-      "user_manager_desc": "Hagyd jóvá a szerepkör-kéréseket, és szabályozd a szövetséged tagjainak hozzáférését. Minden szerepkörváltozás kérési folyamaton keresztül történik."
+      "user_manager_desc": "Hagyja jóvá a szerepkör-kéréseket, és szabályozza a tagok hozzáférését a klubjában vagy szövetségében. Minden szerepkörváltozás kérési folyamaton keresztül történik."
     },
     "how": {
       "section_label": "Így zajlik egy verseny",
       "step01_title": "Esemény beállítása",
-      "step01_desc": "A versenymenedzser létrehozza az eseményeket, beállítja a fordulók és a pontozóbírók számát, és kiosztja a panelt.",
+      "step01_desc": "A szervező (klubadminisztrátor vagy versenymenedzser) létrehozza az eseményeket, beállítja a fordulók és a pontozóbírók számát, és kiosztja a panelt.",
       "step02_title": "A műugrók beküldik a listákat",
       "step02_desc": "Minden műugró bejelentkezik és beküldi az ugráslistáját. A DD értékek automatikusan a hivatalos jegyzékből kerülnek be.",
       "step03_title": "A pontozás élőben indul",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Bejelentkezés",
       "register": "Regisztráció",
-      "register_federation": "Szövetség regisztrálása",
+      "register_federation": "Szövetségeknek és regionális testületeknek",
       "scoreboard": "Eredménytábla",
       "user_guide": "📖 Felhasználói útmutató",
       "report_bug": "🐛 Hiba jelentése"
-    }
+    },
+    "clubs": {
+      "section_label": "Kluboknak",
+      "step1_title": "Hozza létre a klubját",
+      "step1_desc": "Regisztráljon, válassza ki az országát, és nevezze el a klubját. Ha a szövetsége még nincs a DivingHQ-n, kezdettől Ön a klub adminisztrátora.",
+      "step2_title": "Hívjon meg műugrókat és pontozóbírókat",
+      "step2_desc": "Küldje el a tagoknak a regisztrációs linket. Ők kiválasztják a klubját, Ön pedig jóváhagyja, ki ugrik, pontoz vagy versenybíró.",
+      "step3_title": "Rendezze meg az első versenyét",
+      "step3_desc": "Hozza létre a versenyszámokat, irányítsa a versenyt a vezérlőszobából, miközben a pontozóbírók a telefonjukon pontoznak, és az eredmények minden pontozott ugrás után megjelennek.",
+      "note": "Az induláshoz nincs szükség szövetségre. Ha a szövetsége vagy regionális szövetsége később csatlakozik a DivingHQ-hoz, átveszi az ország vagy a régió irányítását, a klubja pedig megtartja versenyeit, eredményeit és rekordjait."
+    },
+    "meta_title": "Műugróverseny-szoftver kluboknak és szövetségeknek"
   },
   "dashboard": {
     "search_divers": "Műugrók keresése…",
@@ -452,7 +468,7 @@
       "dialog_confirm": "Fiókom törlése",
       "dialog_cancel": "Mégse",
       "dialog_what_goes": "Eltávolítva:",
-      "dialog_what_goes_items": "Bejelentkezés és jelszó, kapcsolati e-mail, push-feliratkozások, irányítópult-beállítások, szerepkör-hozzárendelések, edző-ugró kapcsolatok, nyilvános profil-slug.",
+      "dialog_what_goes_items": "Bejelentkezés és jelszó, kapcsolati e-mail, születési dátum, nem és állampolgárság, push-feliratkozások, irányítópult-beállítások, szerepkör-hozzárendelések, klub- és régióadminisztrátori szerepkörök, edző-ugró kapcsolatok, nyilvános profil-slug.",
       "dialog_what_stays": "Megmarad:",
       "dialog_what_stays_items": "A neved azokon az ugrásokon, amelyeken versenyeztél, azokon a zsűripaneleken, amelyekben részt vettél, és azokon az eseményeken, amelyeken megjelentél. Az általad kiváltott auditnapló-bejegyzések (a normál 30 napos rotációval törlődnek).",
       "confirmation_toast": "Fiók törölve. A versenytörténeted anonimizálva van. Jelentkezz be új fiókkal, hogy később visszaigényeld.",
@@ -477,7 +493,7 @@
       "confirming": "Igénylés…",
       "password_label": "Erősítsd meg a jelszavaddal",
       "password_placeholder": "A jelenlegi jelszavad",
-      "conflict": "Nem egyesíthető: a régi fiók és a jelenlegi fiókod is rendelkezik bejegyzésekkel ugyanarra az eseményre és fordulóra. Vedd ki a pipát az ütköző jelöltről, vagy kérd a szövetséged adminisztrátorát a kézi egyesítéshez.",
+      "conflict": "Nem egyesíthető: a régi fiók és a jelenlegi fiókod is rendelkezik bejegyzésekkel ugyanarra az eseményre és fordulóra. Vedd ki a pipát az ütköző jelöltről, vagy írj a(z) {email} címre, és kézzel egyesítjük őket.",
       "success_toast": "Korábbi eredmények újra a profilodhoz kapcsolva."
     },
     "club_request_sent": "Kérelem elküldve. Az átlépés a jóváhagyás után történik meg: a szövetsége, vagy ahol még nincs ilyen, az új klub adminisztrátorai hagyják jóvá."
@@ -552,7 +568,7 @@
       "diver": {
         "name": "Műugró",
         "desc": "Ön versenyez. Minden esemény nevezési határideje előtt benyújt egy ugráslapot (mely ugrásokat fogja végrehajtani fordulónként), majd a versenynapon megnyitja a <strong>Versenynapi nézetet</strong>, ahol látja a soraiban elfoglalt helyét és azt, amit pontoznia kell.",
-        "step_1": "Jelentkezzen be vagy fogadja el a szövetségi adminisztrátor meghívását",
+        "step_1": "Regisztráljon, és válassza ki a klubját",
         "step_2": "Nyissa meg az <strong>Ugráslapok beküldése</strong> oldalt, és válassza ki ugrásait fordulónként",
         "step_3": "A verseny napján nyissa meg a <strong>Versenynapi nézetet</strong> a telefonján",
         "step_4": "Pontszámai és elemzései a <strong>Saját profil</strong> alatt találhatók",
@@ -599,7 +615,7 @@
       },
       "region_admin": {
         "name": "Régió-adminisztrátor",
-        "desc": "Egy államért, tartományért vagy országért felel: rendezi a bajnokságait, beavatkozhat bármely klubja versenyeibe, és jóváhagyja a klubtagok szerepkör-kérelmeit. A szövetsége nevezi ki. Amíg nincs szövetség, a regionális testülete veszi át a régiót, és a további adminisztrátorokat Ön adja hozzá.",
+        "desc": "Egy államért, tartományért vagy országért felel: rendezi a bajnokságait, beavatkozhat bármely klubja versenyeibe, és jóváhagyja a klubtagok szerepkör-kérelmeit. A szövetsége nevezi ki. Amíg nincs szövetség, a regionális testülete veszi át a régiót, és a további adminisztrátorokat Ön adja hozzá. Egy állami szervezet a <strong>Szervezet regisztrálása</strong> oldalon kérheti, hogy ő irányítsa a régióját.",
         "step_1": "Nyissa meg a <strong>Saját régióm</strong> oldalt a klubokért és vezetőikért",
         "step_2": "Hozza létre bajnokságait a <strong>Versenymenedzserben</strong> a régió rendezésében",
         "step_3": "Hagyja jóvá a műugrani, bíráskodni vagy edzősködni kívánó tagokat és a régiójához csatlakozni kívánó klubokat",
@@ -627,7 +643,7 @@
     },
     "faq": {
       "register_q": "Most regisztráltam, de még nem tudok bejelentkezni.",
-      "register_a": "Először e-mail-megerősítés — kattintson az üdvözlő e-mailben lévő linkre. Nem-műugró szerepkörökhöz (pontozóbíró, edző, versenyvezető) a szövetségi adminisztrátornak is jóvá kell hagynia Önt. Mindkettő néhány percen belül megtörténik; ha 10 perc után sem látja az e-mailt, ellenőrizze a spam mappát, majd kérdezze meg az adminisztrátort, hogy aktív-e fiókja.",
+      "register_a": "Először erősítse meg az e-mail-címét: kattintson a regisztrációkor küldött megerősítő e-mailben lévő linkre. Nem találja? Nézze meg a spam mappát, vagy próbáljon bejelentkezni, és kérjen új linket. A szerepkörök nem akadályozzák a bejelentkezést: nézőként kezd, és továbbiakat kap, amint a klubja vagy szövetsége adminisztrátora jóváhagyja.",
       "judge_device_q": "Pontozóbíró vagyok — milyen eszközt használjak?",
       "judge_device_a": "Bármely modern, böngészővel rendelkező telefon működik. iPhone 12 / Pixel 6 vagy újabb ideális. A nézet mobil-első; a verseny során számokat fog koppintani, ezért egy kézzel kényelmesen tartható telefon a jó választás. A WiFi előnyösebb a 4G-nél, ha a helyszín támogatja — a pontszámok 4G-n is szinkronizálódnak, de a hálózati körút észrevehetően hosszabb.",
       "scoring_q": "Hogyan működik a pontozás?",
@@ -637,13 +653,13 @@
       "schedule_q": "Hogyan tervezhetek meg egy egész bajnoki napot?",
       "schedule_a": "Adjon ütemezett időpontokat a verseny eseményeihez, majd nyissa meg az <strong>Ütemtervet</strong> a verseny oldalról szervezeti adminisztrátorként vagy versenyvezetőként. A DivingHQ egy első tervet vet ki 45 perces bemelegítésekkel, eseménytömbökkel és deszka-hozzárendelésekkel. Kapcsolja be a <strong>Szerkesztési módot</strong> az ülések húzásához, átméretezéséhez, beszúrásához, törléséhez vagy duplikálásához; az ütközések fiók jelzi az átfedő deszkákat, pontozóbírókat, műugrókat és versenybírókat. Az edzők, műugrók és nézők megnézhetik a nyilvános idővonalat, vagy feliratkozhatnak az iCal-feedre.",
       "bug_q": "Hogyan jelenthetek hibát?",
-      "bug_a": "Kattintson a <strong>🐛 Hibajelentés</strong> linkre a kezdőlap vagy az irányítópult alján. Megnyit egy előre kitöltött GitHub-issue-t, amelyben leírhatja a problémát. A képernyőképek sokat segítenek.",
+      "bug_a": "Kattintson a <strong>🐛 Hibajelentés</strong> linkre a kezdőlap vagy az irányítópult alján. Megnyit egy előre kitöltött GitHub-issue-t, amelyben leírhatja a problémát. A képernyőképek sokat segítenek. Nincs GitHub-fiókja? Írjon a(z) {email} címre.",
       "install_q": "Hogyan telepítem a DivingHQ-t alkalmazásként?",
       "install_a": "iPhone-on: nyissa meg az oldalt Safariban, koppintson a Megosztás gombra, majd a <strong>Hozzáadás a kezdőképernyőhöz</strong> elemre. Androidon: nyissa meg Chrome-ban, koppintson a menüre, majd az <strong>Alkalmazás telepítése</strong> elemre. Az ikon vezérlőelem-mentes, teljes képernyős nézetet indít — gyorsabb indulás, böngészősáv nélkül.",
       "tfa_q": "Hogyan kapcsolom be a kétlépcsős hitelesítést?",
       "tfa_a": "Nyissa meg a <strong>Saját profil</strong> → <strong>Biztonság</strong> → <strong>Kétlépcsős hitelesítés</strong> menüt, és olvassa be a QR-kódot a hitelesítő alkalmazásával (1Password, Authy, Google Authenticator). Mentse a helyreállítási kódokat biztonságos helyre — ezek az egyetlen módja a visszajutásnak, ha elveszíti a telefonját.",
       "account_q": "Hogyan módosítom az e-mail-címem, a jelszavam, vagy hogyan törlöm a fiókom?",
-      "account_a": "Mind a <strong>Saját profil</strong> → <strong>Fiókbeállítások</strong> alatt. Az e-mail-cím módosításához újra meg kell erősíteni az új címet. A fiók törlése végleges, és eltávolítja a bejelentkezését; a korábbi pontszámok a nyilvános eredménytáblán maradnak a szövetség nyilvántartása alatt (kérésre anonimizálva — vegye fel a kapcsolatot a szövetségi adminisztrátorral).",
+      "account_a": "Mind a <strong>Profilom</strong> oldalon: az e-mail-címet vagy a jelszót fent módosíthatja, a <strong>Fiókom törlése</strong> pedig lent található. Az új e-mail-címet meg kell erősíteni, mielőtt érvénybe lép. A fiók törlése végleges, és eltávolítja a bejelentkezését és személyes adatait; a neve sportági nyilvántartásként megmarad azoknak a versenyeknek az eredményeinél, amelyeken részt vett. Ha egy eredményt teljesen el kell távolítani, írjon a(z) {email} címre.",
       "records_q": "Hogyan működnek a rekordok?",
       "records_a": "A rekordok maguktól frissülnek. Amint az utolsó bíró pontozta az egyéni ugrást, a DivingHQ összeveti az ugró klub-, regionális, országos és kontinentális rekordjaival, külön a nőknél és a férfiaknál, és lecserél minden eredményt, amelyet megdönt. Minden rekordlista megtalálható a(z) {records_link} oldalon, bejelentkezés nélkül. Egy lista addig nem hivatalos, amíg az illetékes irányító testület igényt nem tart rá a DivingHQ-n; az igény jóváhagyásával ugyanazok az eredmények hivatalossá válnak. Az egyéni csúcsok minden ugró profilján láthatók."
     },
@@ -653,7 +669,7 @@
       "bookmark_features": "Funkciók szerepkör szerint",
       "bookmark_features_desc": "minden funkció az alkalmazásban, indexelve aszerint, ki használja",
       "bookmark_quickstart": "Gyors kezdés (10 perc)",
-      "bookmark_quickstart_desc": "regisztráljon egy szövetséget és bonyolítsa le első versenyét",
+      "bookmark_quickstart_desc": "indítsa el a klubját, és bonyolítsa le első versenyét",
       "bookmark_roles": "Szerepkörök és jogosultságok",
       "bookmark_roles_desc": "mit tehet és mit nem tehet minden szerepkör",
       "bookmark_faq": "GYIK és hibaelhárítás",
@@ -2074,5 +2090,13 @@
     "chip": "{name}-rekord",
     "chip_prev": "Előző rekord: {score}",
     "unofficial_tip": "Nem hivatalos, amíg az illetékes irányító testület igényt nem tart rá a DivingHQ-n."
+  },
+  "legal": {
+    "privacy_title": "Adatvédelmi irányelvek",
+    "terms_title": "Felhasználási feltételek",
+    "consent": "A fiók létrehozásával elfogadja a következőket: {terms} és {privacy}.",
+    "contact": "Kapcsolat",
+    "need_help": "Segítségre van szüksége?",
+    "english_only": "Ez az oldal csak angolul érhető el, és az angol szöveg az irányadó."
   }
 }

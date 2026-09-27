@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Plataforma de gestión de competiciones",
-      "tagline": "Gestión integral de competiciones de saltos — desde la configuración del evento y la presentación de listas de saltos hasta el arbitraje en directo, los resultados retransmitidos y la clasificación final.",
+      "tagline": "Organiza hoy mismo las competiciones de saltos de tu club: listas de saltos, puntuación en directo desde el móvil, un marcador público y resultados. No necesitas una federación para empezar, y cuando tu federación o tu federación autonómica se sume, la historia de tu club viene contigo.",
       "btn_sign_in": "Iniciar sesión",
       "btn_create_account": "Crear cuenta",
       "btn_scoreboard": "Marcador y resultados",
       "btn_judge_analysis": "Análisis de jueces",
-      "guide_link": "¿Eres nuevo? Lee la guía rápida de 5 minutos →"
+      "guide_link": "¿Eres nuevo? Lee la guía rápida de 5 minutos →",
+      "btn_start_club": "Crea tu club",
+      "federation_link": "¿Eres una federación u organismo regional? Registra tu organización →"
     },
     "live_strip": {
       "pill": "EN DIRECTO",
       "text": "El marcador en directo está abierto a todos — no requiere registro",
-      "watch": "Ver en directo →"
+      "watch": "Ver en directo →",
+      "pill_idle": "Resultados en directo",
+      "text_live": "Se está puntuando en directo ahora mismo. Sigue cada salto sin iniciar sesión.",
+      "browse": "Ver resultados →"
     },
     "features": {
       "section_label": "Diseñado para cada rol en la piscina",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Gestor de competiciones",
       "meet_manager_desc": "Crea eventos, configura rondas y paneles, asigna jueces y administra la estructura completa de la competición.",
       "user_manager_title": "Gestor de usuarios",
-      "user_manager_desc": "Aprueba solicitudes de rol y controla el acceso de los miembros de tu federación. Todo cambio de rol pasa por un flujo de solicitud."
+      "user_manager_desc": "Aprueba solicitudes de rol y controla el acceso de los miembros de tu club o federación. Todo cambio de rol pasa por un flujo de solicitud."
     },
     "how": {
       "section_label": "Cómo se desarrolla una competición",
       "step01_title": "Configura el evento",
-      "step01_desc": "El gestor crea los eventos, establece el número de rondas y jueces, y asigna el panel.",
+      "step01_desc": "El organizador (un administrador del club o el gestor de la competición) crea los eventos, establece el número de rondas y jueces, y asigna el panel.",
       "step02_title": "Los saltadores envían sus listas",
       "step02_desc": "Cada saltador inicia sesión y envía su lista de saltos. Los valores de DD se importan automáticamente del directorio oficial.",
       "step03_title": "Empieza el arbitraje",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Iniciar sesión",
       "register": "Registrarse",
-      "register_federation": "Registrar federación",
+      "register_federation": "Para federaciones y organismos regionales",
       "scoreboard": "Marcador y resultados",
       "user_guide": "📖 Guía de uso",
       "report_bug": "🐛 Reportar un error"
-    }
+    },
+    "clubs": {
+      "section_label": "Para clubes",
+      "step1_title": "Crea tu club",
+      "step1_desc": "Regístrate, elige tu país y ponle nombre a tu club. Si tu federación aún no está en DivingHQ, eres su administrador desde el principio.",
+      "step2_title": "Invita a saltadores y jueces",
+      "step2_desc": "Envía a los miembros el enlace de registro. Eligen tu club y tú apruebas quién salta, juzga o arbitra.",
+      "step3_title": "Organiza tu primera competición",
+      "step3_desc": "Prepara las pruebas, dirige la competición desde la sala de control mientras los jueces puntúan en sus móviles, y los resultados se publican a medida que se puntúa cada salto.",
+      "note": "No necesitas una federación para empezar. Si tu federación o tu organismo regional se une a DivingHQ más adelante, pasa a gestionar el país o la región, y tu club conserva sus competiciones, resultados y récords."
+    },
+    "meta_title": "Software de competiciones de saltos para clubes y federaciones"
   },
   "dashboard": {
     "search_divers": "Buscar saltadores…",
@@ -441,7 +457,7 @@
       "dialog_confirm": "Eliminar mi cuenta",
       "dialog_cancel": "Cancelar",
       "dialog_what_goes": "Se elimina:",
-      "dialog_what_goes_items": "Inicio de sesión y contraseña, correo de contacto, suscripciones push, ajustes del panel, asignaciones de rol, vínculos entrenador-saltador, slug de perfil público.",
+      "dialog_what_goes_items": "Inicio de sesión y contraseña, correo de contacto, fecha de nacimiento, género y nacionalidad, suscripciones push, ajustes del panel, asignaciones de rol, funciones de administrador de club y región, vínculos entrenador-saltador, slug de perfil público.",
       "dialog_what_stays": "Se conserva:",
       "dialog_what_stays_items": "Tu nombre en los saltos en los que competiste, en los jurados en los que participaste y en los eventos en los que apareciste. Las entradas del registro de auditoría que generaste (se purgan en la rotación normal de 30 días).",
       "confirmation_toast": "Cuenta eliminada. Tu historial de competición queda anonimizado. Inicia sesión con una nueva cuenta para reclamarlo más adelante.",
@@ -466,7 +482,7 @@
       "confirming": "Reclamando…",
       "password_label": "Confirma con tu contraseña",
       "password_placeholder": "Tu contraseña actual",
-      "conflict": "No se puede fusionar: la cuenta antigua y tu cuenta actual tienen ambas inscripciones para el mismo evento y ronda. Desmarca el candidato en conflicto o contacta con el admin de tu federación para fusionar manualmente.",
+      "conflict": "No se puede fusionar: la cuenta antigua y tu cuenta actual tienen ambas inscripciones para el mismo evento y ronda. Desmarca el candidato en conflicto, o escribe a {email} y las fusionaremos a mano.",
       "success_toast": "Resultados anteriores re-vinculados a tu perfil."
     },
     "club_request_sent": "Solicitud enviada. Te cambiarás cuando se apruebe: por tu federación o, donde aún no la haya, por los administradores del nuevo club."
@@ -541,7 +557,7 @@
       "diver": {
         "name": "Saltador",
         "desc": "Tú compites. Enviarás una lista de saltos (qué saltos harás, por ronda) antes del cierre de inscripción de cada evento, y luego consultarás <strong>Vista del Día de Competición</strong> el mismo día para ver tu posición en la cola y qué tienes que puntuar.",
-        "step_1": "Inicia sesión o acepta la invitación de tu administrador de federación",
+        "step_1": "Regístrate y elige tu club",
         "step_2": "Abre <strong>Enviar Listas de Saltos</strong> y elige tus saltos por ronda",
         "step_3": "El día de la competición, abre <strong>Vista del Día de Competición</strong> en tu móvil",
         "step_4": "Tus puntuaciones y análisis están en <strong>Mi Perfil</strong>",
@@ -588,7 +604,7 @@
       },
       "region_admin": {
         "name": "Administrador regional",
-        "desc": "Te ocupas de un estado, provincia o nación: organizas sus campeonatos, puedes intervenir en las competiciones de cualquiera de sus clubes y apruebas las solicitudes de rol de sus miembros. Te nombra tu federación. Si aún no la hay, tu organismo regional reclama la región y tú añades a tus coadministradores.",
+        "desc": "Te ocupas de un estado, provincia o nación: organizas sus campeonatos, puedes intervenir en las competiciones de cualquiera de sus clubes y apruebas las solicitudes de rol de sus miembros. Te nombra tu federación. Si aún no la hay, tu organismo regional reclama la región y tú añades a tus coadministradores. Un organismo estatal puede solicitar dirigir su región desde <strong>Registra tu organización</strong>.",
         "step_1": "Abre <strong>Mi región</strong> para ver tus clubes y quién los gestiona",
         "step_2": "Crea tus campeonatos en el <strong>Gestor de competiciones</strong>, organizados por tu región",
         "step_3": "Aprueba a los miembros que quieren saltar, juzgar o entrenar, y a los clubes que piden unirse a tu región",
@@ -616,7 +632,7 @@
     },
     "faq": {
       "register_q": "Acabo de registrarme, pero todavía no puedo iniciar sesión.",
-      "register_a": "Primero verifica el correo — haz clic en el enlace del correo de bienvenida. Para roles que no sean saltador (juez, entrenador, gestor de competición) también necesitas que tu admin de federación te apruebe. Ambos pasos deberían darse en pocos minutos; si no ves el correo en 10 minutos, revisa el spam y luego pide a tu admin que confirme que tu cuenta está activa.",
+      "register_a": "Primero confirma tu correo: haz clic en el enlace del correo de confirmación que te enviamos al registrarte. ¿No lo ves? Revisa la carpeta de spam, o intenta iniciar sesión y pide un enlace nuevo. Los roles no bloquean el inicio de sesión: empiezas como espectador y obtienes más cuando el administrador de tu club o de tu federación lo aprueba.",
       "judge_device_q": "Soy juez — ¿qué dispositivo debo usar?",
       "judge_device_a": "Cualquier móvil moderno con navegador funciona. Lo ideal es iPhone 12 / Pixel 6 o más nuevos. La vista está pensada para móvil; pasarás la competición pulsando números, así que un móvil que puedas sujetar cómodamente con una mano es la mejor opción. El wifi es preferible al 4G si el pabellón lo tiene — las puntuaciones se sincronizan también por 4G, pero la latencia de red es notablemente mayor.",
       "scoring_q": "¿Cómo funciona la puntuación?",
@@ -626,13 +642,13 @@
       "schedule_q": "¿Cómo planifico una jornada completa de un campeonato?",
       "schedule_a": "Añade horarios programados a los eventos de la competición y luego abre <strong>Calendario</strong> desde la página de la competición como admin de organización o gestor de competición. DivingHQ genera un primer plan con calentamientos de 45 minutos, bloques de evento y asignación de trampolines. Activa el <strong>Modo edición</strong> para arrastrar, redimensionar, insertar, borrar o duplicar sesiones; el cajón de conflictos avisa de solapamientos en trampolines, jueces, saltadores y árbitros. Entrenadores, saltadores y espectadores pueden ver el calendario público o suscribirse al feed iCal.",
       "bug_q": "¿Cómo informo de un error?",
-      "bug_a": "Haz clic en el enlace <strong>🐛 Informar de un error</strong> al pie de la página de inicio o de tu panel. Abrirá un issue de GitHub prerellenado listo para que describas el problema. Las capturas de pantalla ayudan mucho.",
+      "bug_a": "Haz clic en el enlace <strong>🐛 Informar de un error</strong> al pie de la página de inicio o de tu panel. Abrirá un issue de GitHub prerellenado listo para que describas el problema. Las capturas de pantalla ayudan mucho. ¿No tienes cuenta de GitHub? Escribe a {email}.",
       "install_q": "¿Cómo instalo DivingHQ como aplicación?",
       "install_a": "En iPhone: abre el sitio en Safari, toca el botón Compartir y luego <strong>Añadir a la pantalla de inicio</strong>. En Android: ábrelo en Chrome, toca el menú y luego <strong>Instalar aplicación</strong>. El icono abre una vista a pantalla completa sin barras del navegador — arranque más rápido, sin barra del navegador.",
       "tfa_q": "¿Cómo activo la verificación en dos pasos?",
       "tfa_a": "Abre <strong>Mi Perfil</strong> → <strong>Seguridad</strong> → <strong>Verificación en dos pasos</strong> y escanea el código QR con tu app de autenticación (1Password, Authy, Google Authenticator). Guarda los códigos de recuperación en un lugar seguro — son la única forma de volver a entrar si pierdes el móvil.",
       "account_q": "¿Cómo cambio mi correo, mi contraseña o elimino mi cuenta?",
-      "account_a": "Todo en <strong>Mi Perfil</strong> → <strong>Ajustes de la cuenta</strong>. Los cambios de correo requieren volver a verificar la nueva dirección. Eliminar tu cuenta es permanente y elimina tu inicio de sesión; los resultados históricos permanecen en el marcador público bajo el registro de la federación (anonimizados si lo solicitas — contacta con el admin de tu federación).",
+      "account_a": "Todo en <strong>Mi perfil</strong>: cambia tu correo o contraseña arriba, y <strong>Eliminar mi cuenta</strong> está abajo. Una dirección de correo nueva tiene que confirmarse antes de sustituir a la anterior. Eliminar la cuenta es permanente y borra tu acceso y tus datos personales; tu nombre se queda en los resultados de las competiciones en las que participaste, como registro deportivo. Si hay que retirar un resultado por completo, escribe a {email}.",
       "records_q": "¿Cómo funcionan los récords?",
       "records_a": "Los récords se mantienen solos. En cuanto el último juez puntúa un salto individual, DivingHQ lo compara con los récords del club, regionales, nacionales y continentales del saltador, separados en femenino y masculino, y sustituye cualquier marca que supere. Todas las tablas de récords están en la página {records_link}, sin necesidad de iniciar sesión. Una tabla figura como no oficial hasta que su órgano rector la reclama en DivingHQ, y las mismas marcas pasan a ser oficiales en cuanto se aprueba una reclamación. Las mejores marcas personales están en el perfil de cada saltador."
     },
@@ -642,7 +658,7 @@
       "bookmark_features": "Funciones por rol",
       "bookmark_features_desc": "todas las funciones de la app, indexadas por quién las usa",
       "bookmark_quickstart": "Inicio Rápido (10 min)",
-      "bookmark_quickstart_desc": "registra una federación y dirige tu primera competición",
+      "bookmark_quickstart_desc": "crea tu club y dirige tu primera competición",
       "bookmark_roles": "Roles y permisos",
       "bookmark_roles_desc": "qué puede y qué no puede hacer cada rol",
       "bookmark_faq": "Preguntas frecuentes y solución de problemas",
@@ -2074,5 +2090,13 @@
     "chip": "Récord de {name}",
     "chip_prev": "Récord anterior: {score}",
     "unofficial_tip": "No oficial hasta que su órgano rector lo reclame en DivingHQ."
+  },
+  "legal": {
+    "privacy_title": "Política de privacidad",
+    "terms_title": "Términos del servicio",
+    "consent": "Al crear una cuenta, aceptas los {terms} y la {privacy}.",
+    "contact": "Contacto",
+    "need_help": "¿Necesitas ayuda?",
+    "english_only": "Esta página solo está disponible en inglés, y el texto que se aplica es el inglés."
   }
 }

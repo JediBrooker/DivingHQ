@@ -203,7 +203,7 @@ The **My club** card appears at the top of your Dive Sheets page (`/competitor`)
 
 ### Within the same federation
 
-Click **Request club change**, pick the destination club from the dropdown, add an optional note, and click **Submit request**. (**Change Club** on **My Profile** files the same request.) Your org admin reviews and approves or rejects the request in **User Manager → Requests**. Where your country has no federation on DivingHQ yet, the admins of the club you're joining decide instead, from their **My club** page. While your request is pending, the card shows a "Pending" badge with the target club; you can cancel it at any time.
+Click **Request club change**, pick the destination club from the dropdown, add an optional note, and click **Submit request**. (**Change Club** on **My Profile** files the same request.) Your federation admin reviews and approves or rejects the request in **User Manager → Requests**. Where your country has no federation on DivingHQ yet, the admins of the club you're joining decide instead, from their **My club** page. While your request is pending, the card shows a "Pending" badge with the target club; you can cancel it at any time.
 
 ### Cross-organisation transfer
 

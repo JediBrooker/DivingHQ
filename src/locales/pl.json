@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Platforma do zarządzania zawodami",
-      "tagline": "Kompleksowe zarządzanie zawodami w skokach do wody — od konfiguracji wydarzenia i przesyłania list skoków po sędziowanie na żywo, transmisję wyników i klasyfikację końcową.",
+      "tagline": "Prowadź zawody w skokach do wody swojego klubu już dziś: listy skoków, ocenianie na żywo z telefonów, publiczna tablica wyników i wyniki. Do startu nie potrzebujesz federacji, a gdy dołączy twoja federacja lub związek regionalny, historia twojego klubu pójdzie za tobą.",
       "btn_sign_in": "Zaloguj się",
       "btn_create_account": "Utwórz konto",
       "btn_scoreboard": "Tablica wyników",
       "btn_judge_analysis": "Analiza sędziów",
-      "guide_link": "Jesteś tu nowy? Przeczytaj 5-minutowy przewodnik →"
+      "guide_link": "Jesteś tu nowy? Przeczytaj 5-minutowy przewodnik →",
+      "btn_start_club": "Załóż swój klub",
+      "federation_link": "Federacja lub związek regionalny? Zarejestruj swoją organizację →"
     },
     "live_strip": {
       "pill": "NA ŻYWO",
       "text": "Tablica wyników na żywo jest dostępna dla każdego — bez logowania",
-      "watch": "Oglądaj na żywo →"
+      "watch": "Oglądaj na żywo →",
+      "pill_idle": "Wyniki na żywo",
+      "text_live": "Właśnie trwa ocenianie na żywo. Śledź każdy skok bez logowania.",
+      "browse": "Przeglądaj wyniki →"
     },
     "features": {
       "section_label": "Stworzone dla każdej roli przy basenie",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Menedżer zawodów",
       "meet_manager_desc": "Twórz wydarzenia, konfiguruj rundy i panele, przypisuj sędziów i zarządzaj całą strukturą zawodów.",
       "user_manager_title": "Menedżer użytkowników",
-      "user_manager_desc": "Zatwierdzaj wnioski o role i kontroluj dostęp członków federacji. Każda zmiana roli przechodzi przez proces wniosku."
+      "user_manager_desc": "Zatwierdzaj wnioski o role i kontroluj dostęp członków w swoim klubie lub federacji. Każda zmiana roli przechodzi przez proces wniosku."
     },
     "how": {
       "section_label": "Jak przebiegają zawody",
       "step01_title": "Skonfiguruj wydarzenie",
-      "step01_desc": "Menedżer zawodów tworzy wydarzenia, ustawia liczbę rund i sędziów oraz przydziela panel.",
+      "step01_desc": "Organizator (administrator klubu lub menedżer zawodów) tworzy wydarzenia, ustawia liczbę rund i sędziów oraz przydziela panel.",
       "step02_title": "Skoczkowie przesyłają listy",
       "step02_desc": "Każdy skoczek loguje się i przesyła swoją listę skoków. Wartości DD są automatycznie pobierane z oficjalnego katalogu.",
       "step03_title": "Ocenianie startuje na żywo",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Zaloguj się",
       "register": "Zarejestruj się",
-      "register_federation": "Zarejestruj federację",
+      "register_federation": "Dla federacji i związków regionalnych",
       "scoreboard": "Tablica wyników",
       "user_guide": "📖 Przewodnik użytkownika",
       "report_bug": "🐛 Zgłoś błąd"
-    }
+    },
+    "clubs": {
+      "section_label": "Dla klubów",
+      "step1_title": "Utwórz swój klub",
+      "step1_desc": "Zarejestruj się, wybierz kraj i nazwij swój klub. Jeśli twojej federacji nie ma jeszcze w DivingHQ, od początku jesteś administratorem klubu.",
+      "step2_title": "Zaproś skoczków i sędziów",
+      "step2_desc": "Wyślij członkom link do rejestracji. Wybierają twój klub, a ty zatwierdzasz, kto skacze, sędziuje lub jest sędzią głównym.",
+      "step3_title": "Poprowadź pierwsze zawody",
+      "step3_desc": "Przygotuj konkurencje, prowadź zawody z pokoju kontroli, gdy sędziowie oceniają na telefonach, a wyniki publikują się po każdym ocenionym skoku.",
+      "note": "Do startu nie potrzebujesz federacji. Jeśli twoja federacja lub związek regionalny dołączy później do DivingHQ, przejmie prowadzenie kraju lub regionu, a twój klub zachowa swoje zawody, wyniki i rekordy."
+    },
+    "meta_title": "Oprogramowanie do zawodów w skokach do wody dla klubów i federacji"
   },
   "dashboard": {
     "search_divers": "Szukaj skoczków…",
@@ -452,7 +468,7 @@
       "dialog_confirm": "Usuń moje konto",
       "dialog_cancel": "Anuluj",
       "dialog_what_goes": "Usuwane:",
-      "dialog_what_goes_items": "Login i hasło, e-mail kontaktowy, subskrypcje push, ustawienia pulpitu, przypisania ról, powiązania trener-skoczek, publiczny slug profilu.",
+      "dialog_what_goes_items": "Login i hasło, e-mail kontaktowy, data urodzenia, płeć i obywatelstwo, subskrypcje push, ustawienia pulpitu, przypisania ról, role administratora klubu i regionu, powiązania trener-skoczek, publiczny slug profilu.",
       "dialog_what_stays": "Zachowane:",
       "dialog_what_stays_items": "Twoje imię przy skokach, w których startowałeś, panelach sędziowskich, w których zasiadałeś, i wydarzeniach, w których wystąpiłeś. Wpisy dziennika audytu, które wywołałeś (usuwane w normalnej rotacji 30-dniowej).",
       "confirmation_toast": "Konto usunięte. Twoja historia startów została zanonimizowana. Zaloguj się na nowe konto, aby odzyskać ją później.",
@@ -477,7 +493,7 @@
       "confirming": "Odzyskiwanie…",
       "password_label": "Potwierdź hasłem",
       "password_placeholder": "Twoje aktualne hasło",
-      "conflict": "Nie można scalić: stare konto i Twoje obecne konto mają wpisy dla tego samego wydarzenia i rundy. Odznacz kolidującego kandydata lub skontaktuj się z administratorem federacji, aby scalić ręcznie.",
+      "conflict": "Nie można scalić: stare konto i Twoje obecne konto mają wpisy dla tego samego wydarzenia i rundy. Odznacz kolidującego kandydata albo napisz na {email}, a scalimy je ręcznie.",
       "success_toast": "Wcześniejsze wyniki ponownie powiązane z Twoim profilem."
     },
     "club_request_sent": "Prośba wysłana. Przeniesienie nastąpi po jej zatwierdzeniu: przez twoją federację lub, tam gdzie jej jeszcze nie ma, przez administratorów nowego klubu."
@@ -552,7 +568,7 @@
       "diver": {
         "name": "Skoczek",
         "desc": "Startujesz. Złożysz kartę skoków (jakie skoki wykonasz, w której rundzie) przed terminem zgłoszeń każdej konkurencji, a następnie w dniu zawodów otworzysz <strong>Widok Dnia Zawodów</strong>, aby zobaczyć swoją pozycję w kolejce i co masz do wykonania.",
-        "step_1": "Zaloguj się lub przyjmij zaproszenie od administratora swojej federacji",
+        "step_1": "Zarejestruj się i wybierz swój klub",
         "step_2": "Otwórz <strong>Złóż Karty Skoków</strong> i wybierz swoje skoki na każdą rundę",
         "step_3": "W dniu zawodów otwórz na telefonie <strong>Widok Dnia Zawodów</strong>",
         "step_4": "Twoje wyniki i analizy znajdziesz w <strong>Mój Profil</strong>",
@@ -599,7 +615,7 @@
       },
       "region_admin": {
         "name": "Administrator regionu",
-        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa, możesz wkroczyć w zawody każdego z klubów i zatwierdzasz prośby członków klubów o role. Wyznacza cię federacja. Dopóki jej nie ma, region przejmuje twój organ regionalny, a kolejnych administratorów dodajesz sam.",
+        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa, możesz wkroczyć w zawody każdego z klubów i zatwierdzasz prośby członków klubów o role. Wyznacza cię federacja. Dopóki jej nie ma, region przejmuje twój organ regionalny, a kolejnych administratorów dodajesz sam. Organizacja stanowa może złożyć wniosek o prowadzenie swojego regionu przez <strong>Zarejestruj organizację</strong>.",
         "step_1": "Otwórz <strong>Mój region</strong>, aby zobaczyć kluby i kto je prowadzi",
         "step_2": "Utwórz mistrzostwa w <strong>Menedżerze zawodów</strong>, organizowane przez twój region",
         "step_3": "Zatwierdzaj członków, którzy chcą skakać, sędziować lub trenować, oraz kluby proszące o dołączenie do twojego regionu",
@@ -627,7 +643,7 @@
     },
     "faq": {
       "register_q": "Właśnie się zarejestrowałem, ale jeszcze nie mogę się zalogować.",
-      "register_a": "Najpierw weryfikacja e-maila — kliknij link w wiadomości powitalnej. W przypadku ról innych niż skoczek (sędzia, trener, dyrektor zawodów) administrator Twojej federacji musi Cię też zatwierdzić. Oba kroki powinny zająć kilka minut; jeśli po 10 minutach nie widzisz maila, sprawdź spam, a potem poproś administratora o potwierdzenie, że Twoje konto jest aktywne.",
+      "register_a": "Najpierw potwierdź e-mail: kliknij link w wiadomości potwierdzającej, którą wysłaliśmy przy rejestracji. Nie ma jej? Sprawdź folder spam albo spróbuj się zalogować i poproś o nowy link. Role nie blokują logowania: zaczynasz jako widz, a więcej uprawnień dostajesz, gdy zatwierdzi je administrator twojego klubu lub federacji.",
       "judge_device_q": "Jestem sędzią — jakiego urządzenia powinienem użyć?",
       "judge_device_a": "Wystarczy dowolny współczesny telefon z przeglądarką. Idealnie iPhone 12 / Pixel 6 lub nowszy. Widok jest projektowany pod telefon; spędzisz zawody, stukając w cyfry, więc telefon, który wygodnie trzymasz w jednej dłoni, to dobry wybór. Wifi jest lepsze od 4G, jeśli obiekt je oferuje — noty zsynchronizują się i przez 4G, ale czas podróży po sieci jest zauważalnie dłuższy.",
       "scoring_q": "Jak działa ocenianie?",
@@ -637,13 +653,13 @@
       "schedule_q": "Jak zaplanować cały dzień mistrzostw?",
       "schedule_a": "Dodaj zaplanowane godziny do konkurencji mityngu i otwórz <strong>Harmonogram</strong> ze strony mityngu jako administrator organizacji lub dyrektor zawodów. DivingHQ proponuje pierwszy plan z 45-minutowymi rozgrzewkami, blokami konkurencji i przydziałem trampolin. Włącz <strong>Tryb edycji</strong>, aby przeciągać, zmieniać rozmiar, wstawiać, usuwać lub duplikować sesje; szuflada konfliktów wskazuje nakładające się trampoliny, sędziów, skoczków i sędziów głównych. Trenerzy, skoczkowie i widzowie mogą oglądać publiczny harmonogram lub zasubskrybować kanał iCal.",
       "bug_q": "Jak zgłosić błąd?",
-      "bug_a": "Kliknij link <strong>🐛 Zgłoś błąd</strong> u dołu strony głównej lub Twojej tablicy. Otworzy się wstępnie wypełnione zgłoszenie na GitHubie, gotowe, abyś opisał problem. Zrzuty ekranu bardzo pomagają.",
+      "bug_a": "Kliknij link <strong>🐛 Zgłoś błąd</strong> u dołu strony głównej lub Twojej tablicy. Otworzy się wstępnie wypełnione zgłoszenie na GitHubie, gotowe, abyś opisał problem. Zrzuty ekranu bardzo pomagają. Nie masz konta na GitHubie? Napisz na {email}.",
       "install_q": "Jak zainstalować DivingHQ jako aplikację?",
       "install_a": "Na iPhonie: otwórz stronę w Safari, dotknij przycisku Udostępnij, a następnie <strong>Dodaj do ekranu początkowego</strong>. Na Androidzie: otwórz w Chrome, dotknij menu, a następnie <strong>Zainstaluj aplikację</strong>. Ikona uruchamia pełnoekranowy widok bez ramek przeglądarki — szybszy start, bez paska adresu.",
       "tfa_q": "Jak włączyć uwierzytelnianie dwuskładnikowe?",
       "tfa_a": "Otwórz <strong>Mój profil</strong> → <strong>Bezpieczeństwo</strong> → <strong>Uwierzytelnianie dwuskładnikowe</strong> i zeskanuj kod QR aplikacją uwierzytelniającą (1Password, Authy, Google Authenticator). Zapisz kody odzyskiwania w bezpiecznym miejscu — to jedyna droga powrotu, jeśli zgubisz telefon.",
       "account_q": "Jak zmienić e-mail, hasło lub usunąć konto?",
-      "account_a": "Wszystko w <strong>Mój profil</strong> → <strong>Ustawienia konta</strong>. Zmiana e-maila wymaga ponownej weryfikacji pod nowym adresem. Usunięcie konta jest trwałe i likwiduje Twój login; historyczne wyniki pozostają na publicznej tablicy wyników w rekordzie federacji (anonimizowane na życzenie — skontaktuj się z administratorem swojej federacji).",
+      "account_a": "Wszystko w <strong>Mój profil</strong>: e-mail lub hasło zmienisz na górze, a <strong>Usuń moje konto</strong> jest na dole. Nowy adres e-mail trzeba potwierdzić, zanim zacznie obowiązywać. Usunięcie konta jest trwałe i usuwa Twoje logowanie oraz dane osobowe; Twoje imię i nazwisko zostaje w wynikach zawodów, w których startowałeś, jako zapis sportowy. Jeśli wynik trzeba usunąć całkowicie, napisz na {email}.",
       "records_q": "Jak działają rekordy?",
       "records_a": "Rekordy aktualizują się same. Gdy tylko ostatni sędzia oceni skok indywidualny, DivingHQ porównuje go z rekordami klubowymi, regionalnymi, krajowymi i kontynentalnymi skoczka, osobno dla kobiet i mężczyzn, i zastępuje każdy wynik, który pobije. Wszystkie tabele rekordów są na stronie {records_link}, bez logowania. Tabela jest nieoficjalna, dopóki właściwy organ zarządzający nie przejmie jej w DivingHQ, a te same wyniki stają się oficjalne, gdy tylko roszczenie zostanie zatwierdzone. Rekordy życiowe są w profilu każdego skoczka."
     },
@@ -653,7 +669,7 @@
       "bookmark_features": "Funkcje według roli",
       "bookmark_features_desc": "wszystkie funkcje aplikacji, posortowane według tego, kto ich używa",
       "bookmark_quickstart": "Szybki Start (10 min)",
-      "bookmark_quickstart_desc": "zarejestruj federację i poprowadź pierwszy mityng",
+      "bookmark_quickstart_desc": "załóż swój klub i poprowadź pierwszy mityng",
       "bookmark_roles": "Role i uprawnienia",
       "bookmark_roles_desc": "co każda rola może, a czego nie",
       "bookmark_faq": "FAQ i rozwiązywanie problemów",
@@ -2074,5 +2090,13 @@
     "chip": "Rekord {name}",
     "chip_prev": "Poprzedni rekord: {score}",
     "unofficial_tip": "Nieoficjalny, dopóki właściwy organ zarządzający nie przejmie konta w DivingHQ."
+  },
+  "legal": {
+    "privacy_title": "Polityka prywatności",
+    "terms_title": "Warunki korzystania",
+    "consent": "Tworząc konto, akceptujesz dokumenty {terms} i {privacy}.",
+    "contact": "Kontakt",
+    "need_help": "Potrzebujesz pomocy?",
+    "english_only": "Ta strona jest dostępna tylko w języku angielskim i obowiązuje tekst angielski."
   }
 }

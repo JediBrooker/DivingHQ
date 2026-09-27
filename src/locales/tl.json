@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Platform sa pamamahala ng kumpetensya",
-      "tagline": "End-to-end na pamamahala ng diving competition — mula sa pag-setup ng event at pagsumite ng dive list hanggang sa live na pag-judge, broadcast scores, at final results.",
+      "tagline": "Patakbuhin ang mga diving meet ng iyong club simula ngayon: mga dive list, live na paghusga sa telepono, pampublikong scoreboard at mga resulta. Hindi kailangan ng pederasyon para magsimula, at kapag sumali ang iyong pederasyon o panrehiyong samahan, kasama mo pa rin ang kasaysayan ng iyong club.",
       "btn_sign_in": "Mag-sign In",
       "btn_create_account": "Gumawa ng Account",
       "btn_scoreboard": "Scoreboard at Resulta",
       "btn_judge_analysis": "Pagsusuri ng judge",
-      "guide_link": "Bago dito? Basahin ang 5-minutong user guide →"
+      "guide_link": "Bago dito? Basahin ang 5-minutong user guide →",
+      "btn_start_club": "Simulan ang iyong club",
+      "federation_link": "Pederasyon o panrehiyong samahan? Irehistro ang iyong organisasyon →"
     },
     "live_strip": {
       "pill": "KASALUKUYAN",
       "text": "Bukas ang live scoreboard sa lahat — hindi kailangang mag-login",
-      "watch": "Manood Live →"
+      "watch": "Manood Live →",
+      "pill_idle": "Live na iskor",
+      "text_live": "May live na paghusga ngayon. Subaybayan ang bawat dive, walang login.",
+      "browse": "Tingnan ang mga resulta →"
     },
     "features": {
       "section_label": "Ginawa para sa bawat tungkulin sa pool",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Tagapamahala ng meet",
       "meet_manager_desc": "Gumawa ng mga event, i-configure ang mga round at panel size, mag-assign ng judges, at pamahalaan ang buong istruktura ng kumpetensya.",
       "user_manager_title": "Tagapamahala ng user",
-      "user_manager_desc": "Aprubahan ang mga role request at kontrolin ang access ng member sa iyong pederasyon. Bawat pagbabago ng role ay dumadaan sa request workflow."
+      "user_manager_desc": "Aprubahan ang mga role request at kontrolin ang access ng member sa iyong club o pederasyon. Bawat pagbabago ng role ay dumadaan sa request workflow."
     },
     "how": {
       "section_label": "Paano tumatakbo ang isang meet",
       "step01_title": "I-set up ang event",
-      "step01_desc": "Gumagawa ang meet manager ng mga event, nagtatakda ng bilang ng mga round at judge, at nag-aassign ng panel.",
+      "step01_desc": "Ang organizer (isang admin ng club o meet manager) ang gumagawa ng mga event, nagtatakda ng bilang ng mga round at hukom, at nag-aassign ng panel.",
       "step02_title": "Nagsusumite ng list ang mga diver",
       "step02_desc": "Bawat diver ay nag-lo-log in at nagsusumite ng kanyang dive list. Awtomatikong kinukuha ang DD values mula sa opisyal na direktoryo.",
       "step03_title": "Live na ang scoring",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Mag-sign In",
       "register": "Magrehistro",
-      "register_federation": "Magrehistro ng Pederasyon",
+      "register_federation": "Para sa mga pederasyon at panrehiyong samahan",
       "scoreboard": "Scoreboard at Resulta",
       "user_guide": "📖 Gabay ng user",
       "report_bug": "🐛 Mag-ulat ng bug"
-    }
+    },
+    "clubs": {
+      "section_label": "Para sa mga club",
+      "step1_title": "Gawin ang iyong club",
+      "step1_desc": "Mag-sign up, piliin ang iyong bansa at pangalanan ang iyong club. Kung wala pa sa DivingHQ ang iyong pederasyon, ikaw ang admin nito mula sa simula.",
+      "step2_title": "Imbitahan ang mga maninisid at hukom",
+      "step2_desc": "Ipadala sa mga miyembro ang sign-up link. Pipiliin nila ang iyong club, at ikaw ang mag-aapruba kung sino ang sisisid, huhusga o magiging pangunahing hukom.",
+      "step3_title": "Patakbuhin ang iyong unang meet",
+      "step3_desc": "Ihanda ang mga event, patakbuhin ang meet mula sa Control Room habang nagbibigay ng iskor ang mga hukom sa kanilang telepono, at lumalabas ang mga resulta habang naiiskor ang bawat dive.",
+      "note": "Hindi kailangan ng pederasyon para magsimula. Kapag sumali sa DivingHQ ang iyong pederasyon o panrehiyong samahan, sila na ang mamamahala sa bansa o rehiyon, at mananatili sa iyong club ang mga meet, resulta at rekord nito."
+    },
+    "meta_title": "Software para sa diving competition ng mga club at pederasyon"
   },
   "dashboard": {
     "search_divers": "Maghanap ng diver…",
@@ -441,7 +457,7 @@
       "dialog_confirm": "Tanggalin ang aking account",
       "dialog_cancel": "Kanselahin",
       "dialog_what_goes": "Matatanggal:",
-      "dialog_what_goes_items": "Login at password, contact email, push subscriptions, dashboard settings, role grants, koneksyong coach-diver, public profile slug.",
+      "dialog_what_goes_items": "Login at password, contact email, petsa ng kapanganakan, kasarian at nasyonalidad, push subscriptions, dashboard settings, role grants, mga role na club at region admin, koneksyong coach-diver, public profile slug.",
       "dialog_what_stays": "Mananatili:",
       "dialog_what_stays_items": "Ang iyong pangalan sa mga dive na sinalihan mo, mga judging panel na inupuan mo, at mga event na ginanapan mo. Mga audit log entry na pinagana mo (mapupurga sa normal na 30-araw na rotation).",
       "confirmation_toast": "Na-delete ang account. Anonymized ang iyong competition history. Mag-sign in gamit ang bagong account para ma-claim ito ulit mamaya.",
@@ -466,7 +482,7 @@
       "confirming": "Kini-claim…",
       "password_label": "Kumpirmahin gamit ang iyong password",
       "password_placeholder": "Ang kasalukuyang password mo",
-      "conflict": "Hindi pwedeng i-merge: ang lumang account at ang kasalukuyang account mo ay parehong may entry para sa parehong event at round. I-untick ang nag-conflict na candidate o makipag-ugnayan sa federation admin mo para mano-manong i-merge.",
+      "conflict": "Hindi pwedeng i-merge: ang lumang account at ang kasalukuyang account mo ay parehong may entry para sa parehong event at round. I-untick ang nag-conflict na candidate, o sumulat sa {email} at kami ang mano-manong magme-merge.",
       "success_toast": "Naka-link ulit sa profile mo ang nakaraang resulta."
     },
     "club_request_sent": "Naipadala ang kahilingan. Lilipat ka kapag naaprubahan na ito: ng iyong federation, o kung wala pa, ng mga admin ng bagong club."
@@ -541,7 +557,7 @@
       "diver": {
         "name": "Manlulusong",
         "desc": "Ikaw ang nag-compete. Magsa-submit ka ng dive sheet (anong mga sisid ang gagawin mo, bawat round) bago ang entry deadline ng bawat event, at saka tingnan ang <strong>Meet Day View</strong> sa araw mismo para makita ang iyong posisyon sa queue at kung ano ang dapat mong i-score.",
-        "step_1": "Mag-sign in o tanggapin ang invite mula sa iyong federation admin",
+        "step_1": "Mag-sign up at piliin ang iyong club",
         "step_2": "Buksan ang <strong>Submit Dive Sheets</strong> at piliin ang sisid bawat round",
         "step_3": "Sa meet day, buksan ang <strong>Meet Day View</strong> sa iyong phone",
         "step_4": "Ang iyong scores + analytics ay nasa <strong>My Profile</strong>",
@@ -588,7 +604,7 @@
       },
       "region_admin": {
         "name": "Admin ng rehiyon",
-        "desc": "Ikaw ang nangangalaga sa isang estado, lalawigan o bansa: pinapatakbo ang mga kampeonato nito, maaaring tumulong sa mga kompetisyon ng alinman sa mga club nito, at inaaprubahan ang mga hiling na role ng mga miyembro. Itinatalaga ka ng iyong pederasyon. Kung wala pa, kine-claim ng iyong panrehiyong lupon ang rehiyon at ikaw mismo ang nagdaragdag ng mga kapwa admin.",
+        "desc": "Ikaw ang nangangalaga sa isang estado, lalawigan o bansa: pinapatakbo ang mga kampeonato nito, maaaring tumulong sa mga kompetisyon ng alinman sa mga club nito, at inaaprubahan ang mga hiling na role ng mga miyembro. Itinatalaga ka ng iyong pederasyon. Kung wala pa, kine-claim ng iyong panrehiyong lupon ang rehiyon at ikaw mismo ang nagdaragdag ng mga kapwa admin. Maaaring mag-apply ang isang state body na patakbuhin ang rehiyon nito mula sa <strong>Irehistro ang iyong org</strong>.",
         "step_1": "Buksan ang <strong>Aking rehiyon</strong> para makita ang mga club at kung sino ang nagpapatakbo",
         "step_2": "Gumawa ng mga kampeonato sa <strong>Tagapamahala ng meet</strong> na hino-host ng iyong rehiyon",
         "step_3": "Aprubahan ang mga miyembrong gustong mag-dive, humusga o maging tagasanay, at ang mga club na humihiling na sumali sa iyong rehiyon",
@@ -616,7 +632,7 @@
     },
     "faq": {
       "register_q": "Bagong rehistro lang ako, pero hindi pa ako makasign-in.",
-      "register_a": "Email verification muna — i-click ang link sa welcome email. Para sa non-diver roles (judge, coach, meet manager) kailangan ding aprubahan ka ng iyong federation admin. Pareho dapat magaganap sa loob ng ilang minuto; kung hindi mo makita ang email pagkalipas ng 10 minuto, tingnan sa spam, saka hilingin sa admin mong kumpirmahin na aktibo ang account mo.",
+      "register_a": "Kumpirmahin muna ang email mo: i-click ang link sa confirmation email na ipinadala namin noong nag-sign up ka. Wala? Tingnan ang spam folder, o subukang mag-sign in at humingi ng bagong link. Hindi hinaharangan ng mga role ang pag-sign in: magsisimula ka bilang spectator at magkakaroon ng higit pa kapag inaprubahan ng admin ng iyong club o pederasyon.",
       "judge_device_q": "Judge ako — anong device ang dapat kong gamitin?",
       "judge_device_a": "Anumang modernong phone na may browser ay gagana. iPhone 12 / Pixel 6 at mas bago ang ideal. Mobile-first ang view; gagamitin mo ang meet na nag-ta-tap ng numero, kaya ang phone na komportableng hawakan ng isang kamay ang tamang pili. Mas inirerekomenda ang WiFi kaysa 4G kung may WiFi ang venue — magsi-sync pa rin ang scores mo sa 4G pero mas mahaba ang round trip ng network.",
       "scoring_q": "Paano gumagana ang scoring?",
@@ -626,13 +642,13 @@
       "schedule_q": "Paano magpaplano ng isang buong championship day?",
       "schedule_a": "Magdagdag ng scheduled times sa events ng meet, saka buksan ang <strong>Schedule</strong> mula sa meet page bilang org admin o meet manager. Naglalagay ang DivingHQ ng unang plano na may 45-minute warmups, event blocks, at board assignments. Buksan ang <strong>Edit mode</strong> para mag-drag, mag-resize, mag-insert, magbura, o mag-duplicate ng sessions; ipinapakita ng conflicts drawer ang sabay-sabay na boards, judges, divers, at referees. Pwedeng tingnan ng coaches, divers, at spectators ang public timeline o mag-subscribe sa iCal feed.",
       "bug_q": "Paano mag-report ng bug?",
-      "bug_a": "I-click ang <strong>🐛 Report a bug</strong> link sa ibaba ng home page o ng iyong dashboard. Magbubukas ang isang pre-filled GitHub issue na handa mong ilarawan ang problema. Malaking tulong ang screenshots.",
+      "bug_a": "I-click ang <strong>🐛 Report a bug</strong> link sa ibaba ng home page o ng iyong dashboard. Magbubukas ang isang pre-filled GitHub issue na handa mong ilarawan ang problema. Malaking tulong ang screenshots. Walang GitHub account? Mag-email sa {email}.",
       "install_q": "Paano i-install ang DivingHQ bilang isang app?",
       "install_a": "Sa iPhone: buksan ang site sa Safari, i-tap ang Share button, saka <strong>Add to Home Screen</strong>. Sa Android: buksan sa Chrome, i-tap ang menu, saka <strong>Install app</strong>. Ang icon ay naglulunsad ng chromeless full-screen view — mas mabilis ang startup, walang browser bar.",
       "tfa_q": "Paano paganahin ang two-factor authentication?",
       "tfa_a": "Buksan ang <strong>My Profile</strong> → <strong>Security</strong> → <strong>Two-factor authentication</strong> at i-scan ang QR code gamit ang iyong authenticator app (1Password, Authy, Google Authenticator). I-save ang recovery codes sa ligtas na lugar — iyon lang ang paraan para makabalik kung mawala ang iyong phone.",
       "account_q": "Paano palitan ang aking email, password, o burahin ang aking account?",
-      "account_a": "Nasa <strong>My Profile</strong> → <strong>Account settings</strong> lahat. Ang pagpalit ng email ay nangangailangan ng muling pag-verify sa bagong address. Permanente ang pagbura ng iyong account at inaalis nito ang iyong sign-in; mananatili ang mga historical na iskor sa public scoreboard sa ilalim ng rekord ng federation (ina-anonymize kapag hiniling — makipag-ugnayan sa iyong federation admin).",
+      "account_a": "Nasa <strong>Aking Profile</strong> lahat: palitan ang email o password sa itaas, at nasa ibaba ang <strong>Tanggalin ang aking account</strong>. Kailangang makumpirma muna ang bagong email address bago ito gamitin. Permanente ang pagtanggal ng account at inaalis nito ang iyong sign-in at personal na detalye; mananatili ang pangalan mo sa mga resulta ng mga meet na sinalihan mo, bilang sporting record. Kung kailangang tuluyang alisin ang isang resulta, sumulat sa {email}.",
       "records_q": "Paano gumagana ang mga rekord?",
       "records_a": "Kusang naa-update ang mga rekord. Sa sandaling maiskor ng huling hurado ang isang indibidwal na dive, ikinukumpara ito ng DivingHQ sa mga rekord ng club, rehiyon, bansa, at kontinente ng diver, hiwalay para sa kababaihan at kalalakihan, at pinapalitan ang anumang markang nalampasan nito. Nasa pahinang {records_link} ang lahat ng talaan ng rekord, kahit hindi naka-sign in. Hindi opisyal ang isang talaan hangga't hindi ito kine-claim ng namamahalang lupon nito sa DivingHQ, at nagiging opisyal ang parehong mga marka kapag naaprubahan ang claim. Nasa profile ng bawat diver ang kanilang personal best."
     },
@@ -642,7 +658,7 @@
       "bookmark_features": "Mga tampok ayon sa tungkulin",
       "bookmark_features_desc": "bawat feature sa app, naka-index ayon sa gumagamit",
       "bookmark_quickstart": "Mabilis na Panimula (10 min)",
-      "bookmark_quickstart_desc": "magrehistro ng federation at patakbuhin ang unang meet mo",
+      "bookmark_quickstart_desc": "simulan ang iyong club at patakbuhin ang unang meet mo",
       "bookmark_roles": "Mga tungkulin at pahintulot",
       "bookmark_roles_desc": "ano ang kayang gawin at hindi ng bawat role",
       "bookmark_faq": "FAQ at Pag-troubleshoot",
@@ -2074,5 +2090,13 @@
     "chip": "Rekord ng {name}",
     "chip_prev": "Dating rekord: {score}",
     "unofficial_tip": "Hindi opisyal hangga't hindi ito kine-claim ng namamahalang lupon sa DivingHQ."
+  },
+  "legal": {
+    "privacy_title": "Patakaran sa Privacy",
+    "terms_title": "Mga Tuntunin ng Serbisyo",
+    "consent": "Sa paggawa ng account, sumasang-ayon ka sa {terms} at sa {privacy}.",
+    "contact": "Makipag-ugnayan",
+    "need_help": "Kailangan mo ng tulong?",
+    "english_only": "Sa Ingles lang available ang pahinang ito, at ang tekstong Ingles ang siyang umiiral."
   }
 }

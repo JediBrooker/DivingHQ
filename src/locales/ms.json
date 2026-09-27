@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Platform Pengurusan Pertandingan",
-      "tagline": "Pengurusan pertandingan terjun hujung ke hujung — dari penyediaan acara dan penghantaran senarai terjunan hingga pengadilan langsung, siaran markah, dan keputusan akhir.",
+      "tagline": "Jalankan pertandingan terjun kelab anda hari ini: senarai terjunan, penjurian langsung melalui telefon, papan markah awam dan keputusan. Tidak perlu persekutuan untuk bermula, dan apabila persekutuan atau badan negeri anda menyertai, sejarah kelab anda kekal bersama anda.",
       "btn_sign_in": "Log Masuk",
       "btn_create_account": "Cipta Akaun",
       "btn_scoreboard": "Papan markah & keputusan",
       "btn_judge_analysis": "Analisis hakim",
-      "guide_link": "Baru di sini? Baca panduan pengguna 5 minit →"
+      "guide_link": "Baru di sini? Baca panduan pengguna 5 minit →",
+      "btn_start_club": "Mulakan kelab anda",
+      "federation_link": "Persekutuan atau badan negeri? Daftarkan organisasi anda →"
     },
     "live_strip": {
       "pill": "LANGSUNG",
       "text": "Papan markah langsung terbuka kepada semua — tiada log masuk diperlukan",
-      "watch": "Tonton langsung →"
+      "watch": "Tonton langsung →",
+      "pill_idle": "Markah langsung",
+      "text_live": "Penjurian sedang berlangsung secara langsung. Ikuti setiap terjunan tanpa log masuk.",
+      "browse": "Lihat keputusan →"
     },
     "features": {
       "section_label": "Dibina untuk setiap peranan di kolam",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Pengurus Pertandingan",
       "meet_manager_desc": "Cipta acara, konfigurasi pusingan dan saiz panel, tugaskan hakim, dan urus seluruh struktur pertandingan.",
       "user_manager_title": "Pengurus Pengguna",
-      "user_manager_desc": "Luluskan permintaan peranan dan kawal akses ahli di seluruh persekutuan anda. Setiap perubahan peranan melalui aliran kerja permintaan."
+      "user_manager_desc": "Luluskan permintaan peranan dan kawal akses ahli di seluruh kelab atau persekutuan anda. Setiap perubahan peranan melalui aliran kerja permintaan."
     },
     "how": {
       "section_label": "Bagaimana pertandingan berjalan",
       "step01_title": "Sediakan acara",
-      "step01_desc": "Pengurus pertandingan mencipta acara, menetapkan bilangan pusingan dan hakim, dan menugaskan panel.",
+      "step01_desc": "Penganjur (pentadbir kelab atau pengurus pertandingan) mencipta acara, menetapkan bilangan pusingan dan hakim, dan menugaskan panel.",
       "step02_title": "Peterjun menghantar senarai",
       "step02_desc": "Setiap peterjun log masuk dan menghantar senarai terjunan mereka. Nilai DD diambil daripada direktori rasmi secara automatik.",
       "step03_title": "Pemarkahan berjalan langsung",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Log Masuk",
       "register": "Daftar",
-      "register_federation": "Daftar Persekutuan",
+      "register_federation": "Untuk persekutuan dan badan negeri",
       "scoreboard": "Papan markah & keputusan",
       "user_guide": "📖 Panduan pengguna",
       "report_bug": "🐛 Laporkan pepijat"
-    }
+    },
+    "clubs": {
+      "section_label": "Untuk kelab",
+      "step1_title": "Cipta kelab anda",
+      "step1_desc": "Daftar, pilih negara anda dan namakan kelab anda. Jika persekutuan anda belum ada di DivingHQ, anda pentadbirnya sejak awal.",
+      "step2_title": "Jemput peterjun dan hakim",
+      "step2_desc": "Hantar pautan pendaftaran kepada ahli. Mereka memilih kelab anda, dan anda meluluskan siapa yang terjun, menghakimi atau menjadi hakim utama.",
+      "step3_title": "Jalankan pertandingan pertama anda",
+      "step3_desc": "Sediakan acara, kendalikan pertandingan dari Bilik Kawalan sementara hakim memberi markah di telefon mereka, dan keputusan diterbitkan sebaik setiap terjunan dinilai.",
+      "note": "Tidak perlu persekutuan untuk bermula. Jika persekutuan atau badan negeri anda menyertai DivingHQ kemudian, ia mengambil alih pengurusan negara atau rantau itu, dan kelab anda mengekalkan pertandingan, keputusan dan rekodnya."
+    },
+    "meta_title": "Perisian pertandingan terjun untuk kelab dan persekutuan"
   },
   "dashboard": {
     "search_divers": "Cari peterjun…",
@@ -441,7 +457,7 @@
       "dialog_confirm": "Padam akaun saya",
       "dialog_cancel": "Batal",
       "dialog_what_goes": "Dipadam:",
-      "dialog_what_goes_items": "Log masuk dan kata laluan, e-mel hubungan, langganan push, tetapan papan pemuka, pemberian peranan, pautan jurulatih-penyelam, slug profil awam.",
+      "dialog_what_goes_items": "Log masuk dan kata laluan, e-mel hubungan, tarikh lahir, jantina dan kewarganegaraan, langganan push, tetapan papan pemuka, pemberian peranan, peranan pentadbir kelab dan wilayah, pautan jurulatih-penyelam, slug profil awam.",
       "dialog_what_stays": "Dikekalkan:",
       "dialog_what_stays_items": "Nama anda pada terjunan yang anda sertai, panel hakim yang anda duduki, dan acara di mana anda muncul. Catatan log audit yang anda cetuskan (dipadam dalam putaran biasa 30 hari).",
       "confirmation_toast": "Akaun dipadam. Sejarah pertandingan anda telah dianonimkan. Log masuk dengan akaun baharu untuk menuntutnya semula kemudian.",
@@ -466,7 +482,7 @@
       "confirming": "Menuntut…",
       "password_label": "Sahkan dengan kata laluan anda",
       "password_placeholder": "Kata laluan semasa anda",
-      "conflict": "Tidak boleh digabungkan: akaun lama dan akaun semasa anda kedua-duanya mempunyai entri untuk acara dan pusingan yang sama. Buang tandakan calon yang bercanggah atau hubungi pentadbir persekutuan anda untuk menggabungkan secara manual.",
+      "conflict": "Tidak boleh digabungkan: akaun lama dan akaun semasa anda kedua-duanya mempunyai entri untuk acara dan pusingan yang sama. Buang tandakan calon yang bercanggah, atau tulis kepada {email} dan kami akan menggabungkannya secara manual.",
       "success_toast": "Keputusan lampau dipautkan semula ke profil anda."
     },
     "club_request_sent": "Permintaan dihantar. Anda akan berpindah selepas ia diluluskan: oleh persekutuan anda, atau jika belum ada, oleh pentadbir kelab baharu."
@@ -541,7 +557,7 @@
       "diver": {
         "name": "Peterjun",
         "desc": "Anda bertanding. Anda akan menghantar senarai terjunan (terjunan mana yang akan anda lakukan, mengikut pusingan) sebelum tarikh akhir pendaftaran setiap acara, kemudian semak <strong>Paparan Hari Pertandingan</strong> pada hari itu untuk melihat kedudukan baris gilir anda dan apa yang anda perlu lakukan.",
-        "step_1": "Log masuk atau terima jemputan daripada pentadbir persekutuan anda",
+        "step_1": "Daftar dan pilih kelab anda",
         "step_2": "Buka <strong>Hantar Senarai Terjunan</strong> dan pilih terjunan setiap pusingan",
         "step_3": "Pada hari pertandingan, buka <strong>Paparan Hari Pertandingan</strong> pada telefon anda",
         "step_4": "Markah + analitik anda tersedia di <strong>Profil Saya</strong>",
@@ -588,7 +604,7 @@
       },
       "region_admin": {
         "name": "Pentadbir rantau",
-        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya, boleh campur tangan dalam pertandingan mana-mana kelabnya, dan meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda. Jika belum ada persekutuan, badan wilayah anda menuntut rantau itu dan anda sendiri menambah rakan pentadbir.",
+        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya, boleh campur tangan dalam pertandingan mana-mana kelabnya, dan meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda. Jika belum ada persekutuan, badan wilayah anda menuntut rantau itu dan anda sendiri menambah rakan pentadbir. Badan negeri boleh memohon untuk mengendalikan wilayahnya melalui <strong>Daftarkan organisasi anda</strong>.",
         "step_1": "Buka <strong>Rantau saya</strong> untuk melihat kelab dan pengurusnya",
         "step_2": "Cipta kejohanan anda dalam <strong>Pengurus pertandingan</strong> dengan rantau anda sebagai tuan rumah",
         "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau melatih, serta kelab yang ingin menyertai rantau anda",
@@ -616,7 +632,7 @@
     },
     "faq": {
       "register_q": "Saya baru sahaja mendaftar, tetapi belum boleh log masuk.",
-      "register_a": "Pengesahan e-mel dahulu — klik pautan dalam e-mel alu-aluan. Untuk peranan selain peterjun (hakim, jurulatih, pengurus pertandingan), pentadbir persekutuan anda juga perlu meluluskan anda. Kedua-duanya patut berlaku dalam beberapa minit; jika anda tidak melihat e-mel selepas 10 minit, semak spam, kemudian minta pentadbir mengesahkan akaun anda aktif.",
+      "register_a": "Sahkan e-mel anda dahulu: klik pautan dalam e-mel pengesahan yang kami hantar semasa anda mendaftar. Tiada? Semak folder spam, atau cuba log masuk dan minta pautan baharu. Peranan tidak menghalang log masuk: anda bermula sebagai penonton dan mendapat lebih apabila pentadbir kelab atau persekutuan anda meluluskannya.",
       "judge_device_q": "Saya hakim — peranti apa yang patut saya gunakan?",
       "judge_device_a": "Mana-mana telefon moden dengan pelayar berfungsi. iPhone 12 / Pixel 6 dan lebih baharu ialah ideal. Paparan dibuat khas untuk mudah alih; anda akan menghabiskan masa pertandingan mengetik nombor, jadi telefon yang selesa digenggam sebelah tangan adalah pilihan tepat. WiFi lebih diutamakan daripada 4G jika tempat itu ada — markah anda tetap menyelaras menerusi 4G tetapi laluan rangkaian lebih lambat.",
       "scoring_q": "Bagaimana pemarkahan berfungsi?",
@@ -626,13 +642,13 @@
       "schedule_q": "Bagaimana saya merancang sehari kejohanan penuh?",
       "schedule_a": "Tambah masa berjadual pada acara pertandingan, kemudian buka <strong>Jadual</strong> dari halaman pertandingan sebagai pentadbir organisasi atau pengurus pertandingan. DivingHQ membenih pelan awal dengan pemanasan 45-minit, blok acara, dan penugasan papan. Hidupkan <strong>Mod edit</strong> untuk seret, saiz semula, sisip, padam, atau salin sesi; laci konflik menandakan papan, hakim, peterjun, dan hakim utama yang bertindih. Jurulatih, peterjun, dan penonton boleh melihat garis masa awam atau melanggan suapan iCal.",
       "bug_q": "Bagaimana saya melaporkan pepijat?",
-      "bug_a": "Klik pautan <strong>🐛 Laporkan pepijat</strong> di bahagian bawah halaman utama atau papan pemuka anda. Ia membuka isu GitHub yang telah diisi terdahulu sedia untuk anda menerangkan masalah. Tangkapan skrin amat membantu.",
+      "bug_a": "Klik pautan <strong>🐛 Laporkan pepijat</strong> di bahagian bawah halaman utama atau papan pemuka anda. Ia membuka isu GitHub yang telah diisi terdahulu sedia untuk anda menerangkan masalah. Tangkapan skrin amat membantu. Tiada akaun GitHub? E-mel {email}.",
       "install_q": "Bagaimana saya memasang DivingHQ sebagai aplikasi?",
       "install_a": "Pada iPhone: buka tapak di Safari, ketik butang Kongsi, kemudian <strong>Tambah ke Skrin Utama</strong>. Pada Android: buka di Chrome, ketik menu, kemudian <strong>Pasang aplikasi</strong>. Ikon tersebut melancarkan paparan skrin penuh tanpa bingkai — permulaan lebih pantas, tiada bar pelayar.",
       "tfa_q": "Bagaimana saya mengaktifkan pengesahan dua faktor?",
       "tfa_a": "Buka <strong>Profil Saya</strong> → <strong>Keselamatan</strong> → <strong>Pengesahan dua faktor</strong> dan imbas kod QR dengan aplikasi pengesah anda (1Password, Authy, Google Authenticator). Simpan kod pemulihan di tempat yang selamat — itulah satu-satunya cara masuk semula jika anda kehilangan telefon.",
       "account_q": "Bagaimana saya menukar e-mel, kata laluan, atau memadam akaun saya?",
-      "account_a": "Kesemuanya dalam <strong>Profil Saya</strong> → <strong>Tetapan akaun</strong>. Perubahan e-mel memerlukan pengesahan semula pada alamat baharu. Memadam akaun anda adalah kekal dan membuang log masuk anda; markah bersejarah kekal pada papan markah awam di bawah rekod persekutuan (dianonimkan atas permintaan — hubungi admin persekutuan anda).",
+      "account_a": "Kesemuanya dalam <strong>Profil saya</strong>: tukar e-mel atau kata laluan di bahagian atas, dan <strong>Padam akaun saya</strong> ada di bahagian bawah. Alamat e-mel baharu perlu disahkan sebelum ia digunakan. Memadam akaun adalah kekal dan membuang log masuk serta butiran peribadi anda; nama anda kekal pada keputusan pertandingan yang anda sertai, sebagai rekod sukan. Jika sesuatu keputusan perlu dibuang sepenuhnya, tulis kepada {email}.",
       "records_q": "Bagaimanakah rekod berfungsi?",
       "records_a": "Rekod dikemas kini dengan sendirinya. Sebaik sahaja hakim terakhir menilai terjunan individu, DivingHQ membandingkannya dengan rekod kelab, wilayah, kebangsaan dan benua penerjun, berasingan bagi wanita dan lelaki, lalu menggantikan sebarang pencapaian yang diatasinya. Semua senarai rekod ada di halaman {records_link}, tanpa perlu log masuk. Sesuatu senarai dianggap tidak rasmi sehingga badan induknya menuntutnya di DivingHQ, dan pencapaian yang sama menjadi rasmi sebaik sahaja tuntutan diluluskan. Rekod peribadi terdapat pada profil setiap penerjun."
     },
@@ -642,7 +658,7 @@
       "bookmark_features": "Ciri-ciri mengikut peranan",
       "bookmark_features_desc": "setiap ciri dalam aplikasi, diindeks mengikut pengguna",
       "bookmark_quickstart": "Permulaan Pantas (10 min)",
-      "bookmark_quickstart_desc": "daftarkan persekutuan dan jalankan pertandingan pertama anda",
+      "bookmark_quickstart_desc": "mulakan kelab anda dan jalankan pertandingan pertama anda",
       "bookmark_roles": "Peranan & keizinan",
       "bookmark_roles_desc": "apa yang boleh dan tidak boleh dilakukan oleh setiap peranan",
       "bookmark_faq": "FAQ & penyelesaian masalah",
@@ -2074,5 +2090,13 @@
     "chip": "Rekod {name}",
     "chip_prev": "Rekod sebelumnya: {score}",
     "unofficial_tip": "Tidak rasmi sehingga badan induknya menuntutnya di DivingHQ."
+  },
+  "legal": {
+    "privacy_title": "Dasar Privasi",
+    "terms_title": "Terma Perkhidmatan",
+    "consent": "Dengan membuat akaun, anda bersetuju dengan {terms} dan {privacy}.",
+    "contact": "Hubungi",
+    "need_help": "Perlukan bantuan?",
+    "english_only": "Halaman ini hanya tersedia dalam bahasa Inggeris, dan teks bahasa Inggeris yang terpakai."
   }
 }

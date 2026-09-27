@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Competition Management Platform",
-      "tagline": "End-to-end diving competition management — from event setup and dive list submission through to live judging, broadcast scores, and final results.",
+      "tagline": "Run your club's diving meets today: dive lists, live judging on phones, a public scoreboard and results. No federation needed to start, and when your federation or state body joins, your club's history comes with you.",
       "btn_sign_in": "Sign In",
       "btn_create_account": "Create Account",
       "btn_scoreboard": "Scoreboard & Results",
       "btn_judge_analysis": "Judge Analysis",
-      "guide_link": "New here? Read the 5-minute user guide →"
+      "guide_link": "New here? Read the 5-minute user guide →",
+      "btn_start_club": "Start your club",
+      "federation_link": "Federation or state body? Register your organisation →"
     },
     "live_strip": {
       "pill": "LIVE",
       "text": "Live scoreboard is open to everyone — no login required",
-      "watch": "Watch Live →"
+      "watch": "Watch Live →",
+      "pill_idle": "Live scores",
+      "text_live": "Scoring is live right now. Follow every dive, no login needed.",
+      "browse": "Browse results →"
     },
     "features": {
       "section_label": "Built for every role in the pool",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Meet Manager",
       "meet_manager_desc": "Create events, configure rounds and panel sizes, assign judges, and manage the full structure of a competition.",
       "user_manager_title": "User Manager",
-      "user_manager_desc": "Approve role requests and control member access across your federation. Every role change is gated through a request workflow."
+      "user_manager_desc": "Approve role requests and control member access across your club or federation. Every role change goes through a request workflow."
     },
     "how": {
       "section_label": "How a meet runs",
       "step01_title": "Set up the event",
-      "step01_desc": "The meet manager creates events, sets the number of rounds and judges, and assigns the panel.",
+      "step01_desc": "The organiser (a club admin or meet manager) creates events, sets the number of rounds and judges, and assigns the panel.",
       "step02_title": "Divers submit lists",
       "step02_desc": "Each diver logs in and submits their dive list. DD values are pulled from the official directory automatically.",
       "step03_title": "Scoring goes live",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Sign In",
       "register": "Register",
-      "register_federation": "Register Federation",
+      "register_federation": "For federations & state bodies",
       "scoreboard": "Scoreboard & Results",
       "user_guide": "📖 User Guide",
       "report_bug": "🐛 Report a bug"
-    }
+    },
+    "clubs": {
+      "section_label": "For clubs",
+      "step1_title": "Create your club",
+      "step1_desc": "Sign up, pick your country and name your club. If your federation isn't on DivingHQ yet, you're its admin from the start.",
+      "step2_title": "Invite divers and judges",
+      "step2_desc": "Send members the sign-up link. They pick your club, and you approve who dives, judges or referees.",
+      "step3_title": "Run your first meet",
+      "step3_desc": "Set up events, run the meet from the Control Room while judges score on their phones, and results publish as each dive is scored.",
+      "note": "No federation needed to start. If your federation or state body joins DivingHQ later, it takes over running the country or region, and your club keeps its meets, results and records."
+    },
+    "meta_title": "Diving competition software for clubs and federations"
   },
   "dashboard": {
     "search_divers": "Search divers…",
@@ -441,7 +457,7 @@
       "dialog_confirm": "Delete my account",
       "dialog_cancel": "Cancel",
       "dialog_what_goes": "Removed:",
-      "dialog_what_goes_items": "Login + password, contact email, push subscriptions, dashboard settings, role grants, coach-diver links, public profile slug.",
+      "dialog_what_goes_items": "Login + password, contact email, date of birth, gender and nationality, push subscriptions, dashboard settings, role grants, club and region admin roles, coach-diver links, public profile slug.",
       "dialog_what_stays": "Kept:",
       "dialog_what_stays_items": "Your name on the dives you competed in, judging panels you sat on, and the events you appeared in. Audit log entries you triggered (purged on the normal 30-day rotation).",
       "confirmation_toast": "Account deleted. Your competition history is anonymised. Sign in with a new account to claim it back later.",
@@ -466,7 +482,7 @@
       "confirming": "Claiming…",
       "password_label": "Confirm with your password",
       "password_placeholder": "Your current password",
-      "conflict": "Cannot merge: the old account and your current account both have entries for the same event and round. Untick the colliding candidate or contact your federation admin to merge manually.",
+      "conflict": "Cannot merge: the old account and your current account both have entries for the same event and round. Untick the colliding candidate, or write to {email} and we'll merge them by hand.",
       "success_toast": "Past results re-linked to your profile."
     },
     "club_request_sent": "Request sent. You'll move once it's approved: by your federation, or where there isn't one yet, by the new club's admins."
@@ -541,7 +557,7 @@
       "diver": {
         "name": "Diver",
         "desc": "You compete. You'll submit a dive sheet (which dives you'll do, by round) before each event's entry deadline, then check <strong>Meet Day View</strong> on the day to see your queue position and what you need to score.",
-        "step_1": "Sign in or accept the invite from your federation admin",
+        "step_1": "Sign up and pick your club",
         "step_2": "Open <strong>Submit Dive Sheets</strong> and pick your dives per round",
         "step_3": "On meet day, open <strong>Meet Day View</strong> on your phone",
         "step_4": "Your scores + analytics live on <strong>My Profile</strong>",
@@ -588,7 +604,7 @@
       },
       "region_admin": {
         "name": "Region Admin",
-        "desc": "You look after a state, province or home nation: run its championships, step in on any of its clubs' meets, and approve role requests from its clubs' members. Your federation appoints you. Where there isn't one yet, your state body claims the region and you add your own co-admins.",
+        "desc": "You look after a state, province or home nation: run its championships, step in on any of its clubs' meets, and approve role requests from its clubs' members. Your federation appoints you. Where there isn't one yet, your state body claims the region and you add your own co-admins. A state body can apply to run its region from <strong>Register your org</strong>.",
         "step_1": "Open <strong>My region</strong> to see your clubs and who runs them",
         "step_2": "Create your championships in <strong>Meet Manager</strong>, hosted by your region",
         "step_3": "Approve members who want to dive, judge or coach, and clubs asking to join your region",
@@ -616,7 +632,7 @@
     },
     "faq": {
       "register_q": "I just registered, but I can't sign in yet.",
-      "register_a": "Email verification first — click the link in the welcome email. For non-diver roles (judge, coach, meet manager) your federation admin also needs to approve you. Both should happen within minutes; if you don't see the email after 10 minutes, check spam, then ask your admin to confirm your account is active.",
+      "register_a": "Confirm your email first: click the link in the confirmation email we sent when you signed up. Nothing there? Check your spam folder, or try signing in and ask for a new link. Roles don't block sign-in: you start as a spectator and get more once your club or federation admin approves.",
       "judge_device_q": "I'm a judge — what device should I use?",
       "judge_device_a": "Any modern phone with a browser works. iPhone 12 / Pixel 6 and newer is ideal. The view is mobile-first; you'll spend the meet tapping numbers, so a phone you can grip comfortably in one hand is the right call. WiFi is preferred over 4G if the venue has it — your scores still sync over 4G but the network round trip is noticeably longer.",
       "scoring_q": "How does scoring work?",
@@ -626,13 +642,13 @@
       "schedule_q": "How do I plan a whole championship day?",
       "schedule_a": "Add scheduled times to the meet's events, then open <strong>Schedule</strong> from the meet page as an org admin or meet manager. DivingHQ seeds a first plan with 45-minute warmups, event blocks, and board assignments. Turn on <strong>Edit mode</strong> to drag, resize, insert, delete, or duplicate sessions; the conflicts drawer flags overlapping boards, judges, divers, and referees. Coaches, divers, and spectators can view the public timeline or subscribe to the iCal feed.",
       "bug_q": "How do I report a bug?",
-      "bug_a": "Click the <strong>🐛 Report a bug</strong> link at the bottom of the home page or your dashboard. It opens a pre-filled GitHub issue ready for you to describe the problem. Screenshots help a lot.",
+      "bug_a": "Click the <strong>🐛 Report a bug</strong> link at the bottom of the home page or your dashboard. It opens a pre-filled GitHub issue ready for you to describe the problem. Screenshots help a lot. No GitHub account? Email {email} instead.",
       "install_q": "How do I install DivingHQ as an app?",
       "install_a": "On iPhone: open the site in Safari, tap the Share button, then <strong>Add to Home Screen</strong>. On Android: open in Chrome, tap the menu, then <strong>Install app</strong>. The icon launches a chromeless full-screen view — faster startup, no browser bar.",
       "tfa_q": "How do I enable two-factor authentication?",
       "tfa_a": "Open <strong>My Profile</strong> → <strong>Security</strong> → <strong>Two-factor authentication</strong> and scan the QR code with your authenticator app (1Password, Authy, Google Authenticator). Save the recovery codes somewhere safe — they're the only way back in if you lose your phone.",
       "account_q": "How do I change my email, password, or delete my account?",
-      "account_a": "All in <strong>My Profile</strong> → <strong>Account settings</strong>. Email changes need re-verification at the new address. Deleting your account is permanent and removes your sign-in; historical scores stay on the public scoreboard under the federation's record (anonymised on request — contact your federation admin).",
+      "account_a": "All on <strong>My Profile</strong>: change your email or password at the top, and <strong>Delete my account</strong> is at the bottom. A new email address has to be confirmed before it takes over. Deleting your account is permanent and removes your sign-in and personal details; your name stays on the results of meets you competed in, as the sporting record. If a result needs removing completely, write to {email}.",
       "records_q": "How do records work?",
       "records_a": "Records keep themselves. The moment the last judge scores an individual dive, DivingHQ checks it against the diver's club, regional, national and continental books, each split into women's and men's, and replaces any mark it beats. Every book is on the {records_link} page, no sign-in needed. A book reads Unofficial until its governing body has claimed it on DivingHQ, and the same marks count as official once a claim is approved. Personal bests live on each diver's profile."
     },
@@ -642,7 +658,7 @@
       "bookmark_features": "Features by role",
       "bookmark_features_desc": "every feature in the app, indexed by who uses it",
       "bookmark_quickstart": "Quick Start (10 min)",
-      "bookmark_quickstart_desc": "register a federation and run your first meet",
+      "bookmark_quickstart_desc": "start your club and run your first meet",
       "bookmark_roles": "Roles & permissions",
       "bookmark_roles_desc": "what each role can and can't do",
       "bookmark_faq": "FAQ & troubleshooting",
@@ -2074,5 +2090,13 @@
     "chip": "{name} record",
     "chip_prev": "Previous record: {score}",
     "unofficial_tip": "Unofficial until its governing body claims it on DivingHQ."
+  },
+  "legal": {
+    "privacy_title": "Privacy Policy",
+    "terms_title": "Terms of Service",
+    "consent": "By creating an account you agree to the {terms} and the {privacy}.",
+    "contact": "Contact",
+    "need_help": "Need help?",
+    "english_only": "This page is only available in English, and the English text is the one that applies."
   }
 }

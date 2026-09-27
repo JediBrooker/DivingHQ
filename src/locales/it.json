@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Piattaforma di gestione gare",
-      "tagline": "Gestione completa delle gare di tuffi — dall'allestimento dell'evento e l'invio delle liste tuffi al giudizio in diretta, ai punteggi trasmessi e ai risultati finali.",
+      "tagline": "Organizza oggi stesso le gare di tuffi del tuo club: liste dei tuffi, giudizio in diretta dal telefono, un tabellone pubblico e i risultati. Non serve una federazione per iniziare, e quando la tua federazione o il tuo comitato regionale arriva, la storia del tuo club viene con te.",
       "btn_sign_in": "Accedi",
       "btn_create_account": "Crea account",
       "btn_scoreboard": "Tabellone e risultati",
       "btn_judge_analysis": "Analisi dei giudici",
-      "guide_link": "Sei nuovo? Leggi la guida in 5 minuti →"
+      "guide_link": "Sei nuovo? Leggi la guida in 5 minuti →",
+      "btn_start_club": "Avvia il tuo club",
+      "federation_link": "Federazione o comitato regionale? Registra la tua organizzazione →"
     },
     "live_strip": {
       "pill": "DIRETTA",
       "text": "Il tabellone in diretta è aperto a tutti — nessuna registrazione richiesta",
-      "watch": "Guarda in diretta →"
+      "watch": "Guarda in diretta →",
+      "pill_idle": "Punteggi in diretta",
+      "text_live": "Si sta giudicando in diretta proprio ora. Segui ogni tuffo senza accedere.",
+      "browse": "Sfoglia i risultati →"
     },
     "features": {
       "section_label": "Pensato per ogni ruolo a bordo piscina",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Gestore gare",
       "meet_manager_desc": "Crea eventi, configura manche e pannelli, assegna i giudici e amministra l'intera struttura della competizione.",
       "user_manager_title": "Gestore utenti",
-      "user_manager_desc": "Approva le richieste di ruolo e controlla l'accesso dei membri all'interno della tua federazione. Ogni modifica di ruolo passa da un flusso di richiesta."
+      "user_manager_desc": "Approva le richieste di ruolo e controlla l'accesso dei membri nel tuo club o nella tua federazione. Ogni modifica di ruolo passa da un flusso di richiesta."
     },
     "how": {
       "section_label": "Come si svolge una gara",
       "step01_title": "Configura l'evento",
-      "step01_desc": "Il gestore crea gli eventi, imposta il numero di manche e di giudici e assegna il pannello.",
+      "step01_desc": "L'organizzatore (un amministratore del club o il gestore della gara) crea gli eventi, imposta il numero di manche e di giudici e assegna il pannello.",
       "step02_title": "I tuffatori inviano le liste",
       "step02_desc": "Ogni tuffatore accede e invia la sua lista tuffi. I valori DD sono importati automaticamente dal registro ufficiale.",
       "step03_title": "Inizia il giudizio",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Accedi",
       "register": "Registrati",
-      "register_federation": "Registra una federazione",
+      "register_federation": "Per federazioni e comitati regionali",
       "scoreboard": "Tabellone e risultati",
       "user_guide": "📖 Guida utente",
       "report_bug": "🐛 Segnala un bug"
-    }
+    },
+    "clubs": {
+      "section_label": "Per i club",
+      "step1_title": "Crea il tuo club",
+      "step1_desc": "Registrati, scegli il tuo paese e dai un nome al club. Se la tua federazione non è ancora su DivingHQ, ne sei l'amministratore fin dall'inizio.",
+      "step2_title": "Invita tuffatori e giudici",
+      "step2_desc": "Invia ai membri il link di registrazione. Scelgono il tuo club e tu approvi chi si tuffa, giudica o fa l'arbitro.",
+      "step3_title": "Organizza la tua prima gara",
+      "step3_desc": "Crea le prove, gestisci la gara dalla sala di controllo mentre i giudici votano dal telefono, e i risultati vengono pubblicati man mano che ogni tuffo viene giudicato.",
+      "note": "Non serve una federazione per iniziare. Se la tua federazione o il tuo comitato regionale entra in DivingHQ più avanti, assume la gestione del paese o della regione, e il tuo club conserva gare, risultati e record."
+    },
+    "meta_title": "Software per gare di tuffi per club e federazioni"
   },
   "dashboard": {
     "search_divers": "Cerca tuffatori…",
@@ -452,7 +468,7 @@
       "dialog_confirm": "Elimina il mio account",
       "dialog_cancel": "Annulla",
       "dialog_what_goes": "Rimosso:",
-      "dialog_what_goes_items": "Login e password, email di contatto, iscrizioni push, impostazioni della dashboard, assegnazioni di ruolo, collegamenti allenatore-tuffatore, slug del profilo pubblico.",
+      "dialog_what_goes_items": "Login e password, email di contatto, data di nascita, genere e nazionalità, iscrizioni push, impostazioni della dashboard, assegnazioni di ruolo, ruoli di amministratore di club e regione, collegamenti allenatore-tuffatore, slug del profilo pubblico.",
       "dialog_what_stays": "Conservato:",
       "dialog_what_stays_items": "Il tuo nome sui tuffi in cui hai gareggiato, sulle giurie a cui hai partecipato e sugli eventi in cui sei comparso. Le voci del registro di audit che hai generato (eliminate con la normale rotazione di 30 giorni).",
       "confirmation_toast": "Account eliminato. Il tuo storico gare è anonimizzato. Accedi con un nuovo account per riprenderlo in seguito.",
@@ -477,7 +493,7 @@
       "confirming": "Recupero in corso…",
       "password_label": "Conferma con la tua password",
       "password_placeholder": "La tua password attuale",
-      "conflict": "Impossibile unire: l’account vecchio e quello attuale hanno entrambi iscrizioni per lo stesso evento e turno. Deseleziona il candidato in conflitto o contatta l’amministratore della tua federazione per unire manualmente.",
+      "conflict": "Impossibile unire: l’account vecchio e quello attuale hanno entrambi iscrizioni per lo stesso evento e turno. Deseleziona il candidato in conflitto, oppure scrivi a {email} e li uniremo a mano.",
       "success_toast": "Risultati passati ricollegati al tuo profilo."
     },
     "club_request_sent": "Richiesta inviata. Il passaggio avverrà dopo l'approvazione: della tua federazione o, dove non c'è ancora, degli amministratori del nuovo club."
@@ -552,7 +568,7 @@
       "diver": {
         "name": "Tuffatore",
         "desc": "Lei gareggia. Invierà una lista tuffi (quali tuffi eseguirà, per manche) prima della scadenza di iscrizione di ogni gara, poi consulterà <strong>Vista Giorno di Gara</strong> il giorno stesso per vedere la sua posizione nella fila e cosa dovrà eseguire.",
-        "step_1": "Acceda o accetti l'invito dell'amministratore della sua federazione",
+        "step_1": "Si registri e scelga il suo club",
         "step_2": "Apra <strong>Invia Liste Tuffi</strong> e scelga i suoi tuffi per ciascuna manche",
         "step_3": "Il giorno di gara, apra <strong>Vista Giorno di Gara</strong> sul telefono",
         "step_4": "I suoi punteggi e le analisi sono su <strong>Il Mio Profilo</strong>",
@@ -599,7 +615,7 @@
       },
       "region_admin": {
         "name": "Amministratore regionale",
-        "desc": "Ti occupi di uno stato, una provincia o una nazione: organizzi i suoi campionati, puoi intervenire sulle gare di qualsiasi suo club e approvi le richieste di ruolo dei membri dei club. Ti nomina la tua federazione. Finché non c'è, il tuo ente regionale rivendica la regione e aggiungi tu gli altri amministratori.",
+        "desc": "Ti occupi di uno stato, una provincia o una nazione: organizzi i suoi campionati, puoi intervenire sulle gare di qualsiasi suo club e approvi le richieste di ruolo dei membri dei club. Ti nomina la tua federazione. Finché non c'è, il tuo ente regionale rivendica la regione e aggiungi tu gli altri amministratori. Un ente statale può chiedere di gestire la propria regione da <strong>Registra la tua organizzazione</strong>.",
         "step_1": "Apri <strong>La mia regione</strong> per vedere i tuoi club e chi li gestisce",
         "step_2": "Crea i tuoi campionati nel <strong>Gestore gare</strong>, organizzati dalla tua regione",
         "step_3": "Approva i membri che vogliono tuffarsi, giudicare o allenare, e i club che chiedono di entrare nella tua regione",
@@ -627,7 +643,7 @@
     },
     "faq": {
       "register_q": "Mi sono appena registrato, ma non riesco ancora ad accedere.",
-      "register_a": "Prima la verifica dell'email — clicchi il link nella mail di benvenuto. Per i ruoli diversi da tuffatore (giudice, allenatore, direttore di gara) anche l'admin della federazione deve approvarla. Entrambe le cose dovrebbero avvenire in pochi minuti; se non vede la mail entro 10 minuti, controlli lo spam e poi chieda all'admin di confermare che l'account sia attivo.",
+      "register_a": "Prima confermi la sua email: clicchi il link nell'email di conferma che le abbiamo inviato alla registrazione. Non la trova? Controlli la cartella spam, oppure provi ad accedere e chieda un nuovo link. I ruoli non bloccano l'accesso: si parte come spettatore e si ottiene di più quando l'admin del suo club o della federazione approva.",
       "judge_device_q": "Sono un giudice — quale dispositivo devo usare?",
       "judge_device_a": "Qualsiasi telefono moderno con browser funziona. L'ideale è iPhone 12 / Pixel 6 o più recenti. La vista è pensata per il mobile; passerà la gara a digitare numeri, quindi un telefono che riesca a tenere comodamente in una mano è la scelta giusta. Il wifi è preferibile al 4G se l'impianto ne dispone — i punteggi si sincronizzano anche in 4G, ma il round trip di rete è sensibilmente più lungo.",
       "scoring_q": "Come funziona la valutazione?",
@@ -637,13 +653,13 @@
       "schedule_q": "Come pianifico un'intera giornata di campionato?",
       "schedule_a": "Aggiunga orari programmati alle gare dell'evento e poi apra <strong>Calendario</strong> dalla pagina dell'evento come admin di organizzazione o direttore di gara. DivingHQ propone un primo piano con riscaldamenti di 45 minuti, blocchi gara e assegnazione pedane. Attivi la <strong>Modalità modifica</strong> per trascinare, ridimensionare, inserire, eliminare o duplicare sessioni; il cassetto conflitti segnala sovrapposizioni di pedane, giudici, tuffatori e arbitri. Allenatori, tuffatori e spettatori possono vedere il calendario pubblico o iscriversi al feed iCal.",
       "bug_q": "Come segnalo un bug?",
-      "bug_a": "Clicchi il link <strong>🐛 Segnala un bug</strong> in fondo alla home page o alla sua dashboard. Apre una issue GitHub precompilata pronta perché possa descrivere il problema. Gli screenshot aiutano molto.",
+      "bug_a": "Clicchi il link <strong>🐛 Segnala un bug</strong> in fondo alla home page o alla sua dashboard. Apre una issue GitHub precompilata pronta perché possa descrivere il problema. Gli screenshot aiutano molto. Non ha un account GitHub? Scriva a {email}.",
       "install_q": "Come installo DivingHQ come applicazione?",
       "install_a": "Su iPhone: apra il sito in Safari, tocchi il pulsante Condividi, poi <strong>Aggiungi alla schermata Home</strong>. Su Android: lo apra in Chrome, tocchi il menu, poi <strong>Installa app</strong>. L'icona avvia una vista a schermo intero senza barre del browser — avvio più rapido, nessuna barra del browser.",
       "tfa_q": "Come abilito l'autenticazione a due fattori?",
       "tfa_a": "Apra <strong>Il mio profilo</strong> → <strong>Sicurezza</strong> → <strong>Autenticazione a due fattori</strong> e scansioni il codice QR con la sua app di autenticazione (1Password, Authy, Google Authenticator). Salvi i codici di recupero in un luogo sicuro — sono l'unico modo per rientrare se perde il telefono.",
       "account_q": "Come cambio email, password, o elimino il mio account?",
-      "account_a": "Tutto in <strong>Il mio profilo</strong> → <strong>Impostazioni dell'account</strong>. Il cambio email richiede una nuova verifica al nuovo indirizzo. Eliminare l'account è permanente e rimuove l'accesso; i punteggi storici restano sul tabellone pubblico sotto il registro della federazione (anonimizzati su richiesta — contatti l'admin della sua federazione).",
+      "account_a": "Tutto in <strong>Il mio profilo</strong>: cambi email o password in alto, mentre <strong>Elimina il mio account</strong> è in fondo. Un nuovo indirizzo email va confermato prima che sostituisca il precedente. L'eliminazione dell'account è definitiva e rimuove il suo accesso e i suoi dati personali; il suo nome resta nei risultati delle gare a cui ha partecipato, come archivio sportivo. Se un risultato va rimosso del tutto, scriva a {email}.",
       "records_q": "Come funzionano i record?",
       "records_a": "I record si aggiornano da soli. Appena l'ultimo giudice valuta un tuffo individuale, DivingHQ lo confronta con i record di società, regionali, nazionali e continentali del tuffatore, divisi tra femminile e maschile, e sostituisce ogni primato che supera. Tutti gli albi dei record sono nella pagina {records_link}, senza bisogno di accedere. Un albo resta non ufficiale finché il suo organo di governo non lo rivendica su DivingHQ, e gli stessi primati diventano ufficiali appena una rivendicazione viene approvata. I migliori risultati personali sono nel profilo di ogni tuffatore."
     },
@@ -653,7 +669,7 @@
       "bookmark_features": "Funzionalità per ruolo",
       "bookmark_features_desc": "tutte le funzionalità dell'app, indicizzate per utente",
       "bookmark_quickstart": "Avvio Rapido (10 min)",
-      "bookmark_quickstart_desc": "registri una federazione e diriga la sua prima gara",
+      "bookmark_quickstart_desc": "crei il suo club e diriga la sua prima gara",
       "bookmark_roles": "Ruoli e permessi",
       "bookmark_roles_desc": "cosa può e cosa non può fare ogni ruolo",
       "bookmark_faq": "FAQ e risoluzione problemi",
@@ -2074,5 +2090,13 @@
     "chip": "Record {name}",
     "chip_prev": "Record precedente: {score}",
     "unofficial_tip": "Non ufficiale finché il relativo organo di governo non lo rivendica su DivingHQ."
+  },
+  "legal": {
+    "privacy_title": "Informativa sulla privacy",
+    "terms_title": "Termini di servizio",
+    "consent": "Creando un account accetti i {terms} e l'{privacy}.",
+    "contact": "Contatti",
+    "need_help": "Serve aiuto?",
+    "english_only": "Questa pagina è disponibile solo in inglese e fa fede il testo inglese."
   }
 }

@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Plateforme de gestion de compétitions",
-      "tagline": "Gestion complète des compétitions de plongeon — de la configuration de l'événement et la soumission des listes de plongeons jusqu'à l'arbitrage en direct, la diffusion des scores et les résultats finaux.",
+      "tagline": "Organisez dès aujourd'hui les compétitions de plongeon de votre club : listes de plongeons, notation en direct sur téléphone, tableau des scores public et résultats. Pas besoin de fédération pour commencer, et quand votre fédération ou votre ligue régionale arrive, l'historique de votre club vous suit.",
       "btn_sign_in": "Se connecter",
       "btn_create_account": "Créer un compte",
       "btn_scoreboard": "Tableau et résultats",
       "btn_judge_analysis": "Analyse des juges",
-      "guide_link": "Nouveau ici ? Lisez le guide rapide de 5 minutes →"
+      "guide_link": "Nouveau ici ? Lisez le guide rapide de 5 minutes →",
+      "btn_start_club": "Créez votre club",
+      "federation_link": "Fédération ou ligue régionale ? Inscrivez votre organisation →"
     },
     "live_strip": {
       "pill": "DIRECT",
       "text": "Le tableau en direct est ouvert à tous — aucune connexion requise",
-      "watch": "Regarder en direct →"
+      "watch": "Regarder en direct →",
+      "pill_idle": "Scores en direct",
+      "text_live": "La notation est en direct en ce moment. Suivez chaque plongeon, sans connexion.",
+      "browse": "Parcourir les résultats →"
     },
     "features": {
       "section_label": "Conçu pour chaque rôle au bord du bassin",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Gestionnaire de compétitions",
       "meet_manager_desc": "Créez des événements, configurez les manches et les panneaux, assignez les juges et gérez toute la structure d'une compétition.",
       "user_manager_title": "Gestionnaire d'utilisateurs",
-      "user_manager_desc": "Approuvez les demandes de rôle et contrôlez l'accès des membres au sein de votre fédération. Chaque changement de rôle passe par un flux de demande."
+      "user_manager_desc": "Approuvez les demandes de rôle et contrôlez l'accès des membres au sein de votre club ou de votre fédération. Chaque changement de rôle passe par un flux de demande."
     },
     "how": {
       "section_label": "Comment se déroule une compétition",
       "step01_title": "Configurer l'événement",
-      "step01_desc": "Le gestionnaire crée les événements, fixe le nombre de manches et de juges, et assigne le panneau.",
+      "step01_desc": "L'organisateur (un administrateur de club ou le gestionnaire de la compétition) crée les épreuves, fixe le nombre de manches et de juges, et assigne le panneau.",
       "step02_title": "Les plongeurs soumettent leur liste",
       "step02_desc": "Chaque plongeur se connecte et soumet sa liste de plongeons. Les coefficients sont récupérés automatiquement depuis le répertoire officiel.",
       "step03_title": "L'arbitrage démarre",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Se connecter",
       "register": "S'inscrire",
-      "register_federation": "Inscrire une fédération",
+      "register_federation": "Pour les fédérations et ligues régionales",
       "scoreboard": "Tableau et résultats",
       "user_guide": "📖 Guide d'utilisation",
       "report_bug": "🐛 Signaler un bug"
-    }
+    },
+    "clubs": {
+      "section_label": "Pour les clubs",
+      "step1_title": "Créez votre club",
+      "step1_desc": "Inscrivez-vous, choisissez votre pays et nommez votre club. Si votre fédération n'est pas encore sur DivingHQ, vous en êtes l'administrateur dès le départ.",
+      "step2_title": "Invitez plongeurs et juges",
+      "step2_desc": "Envoyez le lien d'inscription à vos membres. Ils choisissent votre club, et vous approuvez qui plonge, juge ou arbitre.",
+      "step3_title": "Organisez votre première compétition",
+      "step3_desc": "Créez les épreuves, pilotez la compétition depuis la salle de contrôle pendant que les juges notent sur leur téléphone, et les résultats sont publiés au fil des plongeons notés.",
+      "note": "Pas besoin de fédération pour commencer. Si votre fédération ou votre ligue régionale rejoint DivingHQ plus tard, elle prend en charge le pays ou la région, et votre club conserve ses compétitions, résultats et records."
+    },
+    "meta_title": "Logiciel de compétitions de plongeon pour clubs et fédérations"
   },
   "dashboard": {
     "search_divers": "Rechercher des plongeurs…",
@@ -452,7 +468,7 @@
       "dialog_confirm": "Supprimer mon compte",
       "dialog_cancel": "Annuler",
       "dialog_what_goes": "Supprimé :",
-      "dialog_what_goes_items": "Identifiant et mot de passe, e-mail de contact, abonnements push, paramètres du tableau de bord, attributions de rôle, liens entraîneur-plongeur, slug de profil public.",
+      "dialog_what_goes_items": "Identifiant et mot de passe, e-mail de contact, date de naissance, genre et nationalité, abonnements push, paramètres du tableau de bord, attributions de rôle, rôles d'administrateur de club et de région, liens entraîneur-plongeur, slug de profil public.",
       "dialog_what_stays": "Conservé :",
       "dialog_what_stays_items": "Votre nom sur les plongeons que vous avez disputés, les jurys auxquels vous avez siégé et les épreuves auxquelles vous avez participé. Les entrées du journal d’audit que vous avez déclenchées (purgées selon la rotation normale de 30 jours).",
       "confirmation_toast": "Compte supprimé. Votre historique de compétition est anonymisé. Connectez-vous avec un nouveau compte pour le récupérer plus tard.",
@@ -477,7 +493,7 @@
       "confirming": "Récupération…",
       "password_label": "Confirmez avec votre mot de passe",
       "password_placeholder": "Votre mot de passe actuel",
-      "conflict": "Fusion impossible : l’ancien compte et votre compte actuel ont tous deux des inscriptions pour la même épreuve et le même tour. Décochez le candidat en conflit ou contactez l’administrateur de votre fédération pour fusionner manuellement.",
+      "conflict": "Fusion impossible : l’ancien compte et votre compte actuel ont tous deux des inscriptions pour la même épreuve et le même tour. Décochez le candidat en conflit, ou écrivez à {email} et nous les fusionnerons à la main.",
       "success_toast": "Résultats passés re-rattachés à votre profil."
     },
     "club_request_sent": "Demande envoyée. Le changement se fera une fois approuvé : par votre fédération, ou là où il n'y en a pas encore, par les administrateurs du nouveau club."
@@ -552,7 +568,7 @@
       "diver": {
         "name": "Plongeur",
         "desc": "Tu participes. Tu soumets une feuille de plongeons (les plongeons que tu vas exécuter, par manche) avant la clôture des inscriptions de chaque épreuve, puis tu consultes la <strong>Vue du Jour de Compétition</strong> le jour J pour voir ta position dans la file et ce qui t'attend.",
-        "step_1": "Connecte-toi ou accepte l'invitation de l'administrateur de ta fédération",
+        "step_1": "Inscris-toi et choisis ton club",
         "step_2": "Ouvre <strong>Soumettre les Feuilles de Plongeons</strong> et choisis tes plongeons par manche",
         "step_3": "Le jour de la compétition, ouvre <strong>Vue du Jour de Compétition</strong> sur ton téléphone",
         "step_4": "Tes notes et analyses sont sur <strong>Mon Profil</strong>",
@@ -599,7 +615,7 @@
       },
       "region_admin": {
         "name": "Administrateur régional",
-        "desc": "Vous vous occupez d'un État, d'une province ou d'une nation : vous organisez ses championnats, pouvez intervenir sur les compétitions de n'importe lequel de ses clubs et approuvez les demandes de rôle de leurs membres. Votre fédération vous nomme. Tant qu'il n'y en a pas, votre organe régional revendique la région et vous ajoutez vous-même vos co-administrateurs.",
+        "desc": "Vous vous occupez d'un État, d'une province ou d'une nation : vous organisez ses championnats, pouvez intervenir sur les compétitions de n'importe lequel de ses clubs et approuvez les demandes de rôle de leurs membres. Votre fédération vous nomme. Tant qu'il n'y en a pas, votre organe régional revendique la région et vous ajoutez vous-même vos co-administrateurs. Un organisme d'État peut demander à gérer sa région depuis <strong>Enregistrer votre organisation</strong>.",
         "step_1": "Ouvrez <strong>Ma région</strong> pour voir vos clubs et qui les gère",
         "step_2": "Créez vos championnats dans le <strong>Gestionnaire de compétitions</strong>, organisés par votre région",
         "step_3": "Approuvez les membres qui veulent plonger, juger ou entraîner, et les clubs qui demandent à rejoindre votre région",
@@ -627,7 +643,7 @@
     },
     "faq": {
       "register_q": "Je viens de m'inscrire, mais je ne peux pas encore me connecter.",
-      "register_a": "D'abord la vérification de l'e-mail — clique sur le lien dans le mail de bienvenue. Pour les rôles autres que plongeur (juge, entraîneur, gestionnaire de compétition) ton admin de fédération doit aussi t'approuver. Les deux étapes doivent prendre quelques minutes ; si tu ne vois pas le mail au bout de 10 minutes, vérifie les spams, puis demande à ton admin de confirmer que ton compte est actif.",
+      "register_a": "Confirme d'abord ton e-mail : clique sur le lien de l'e-mail de confirmation envoyé à ton inscription. Rien reçu ? Regarde dans tes spams, ou essaie de te connecter et demande un nouveau lien. Les rôles ne bloquent pas la connexion : tu commences comme spectateur et tu en obtiens davantage dès que l'admin de ton club ou de ta fédération valide.",
       "judge_device_q": "Je suis juge — quel appareil dois-je utiliser ?",
       "judge_device_a": "Tout téléphone moderne avec un navigateur fonctionne. L'idéal est un iPhone 12 / Pixel 6 ou plus récent. La vue est conçue mobile-first ; tu vas passer la compétition à taper des chiffres, donc un téléphone que tu peux tenir confortablement d'une main est le bon choix. Le wifi est préférable à la 4G si la salle en dispose — les notes se synchronisent aussi en 4G mais l'aller-retour réseau est sensiblement plus long.",
       "scoring_q": "Comment fonctionne la notation ?",
@@ -637,13 +653,13 @@
       "schedule_q": "Comment planifier une journée complète de championnat ?",
       "schedule_a": "Ajoute des horaires programmés aux épreuves de la compétition, puis ouvre <strong>Planning</strong> depuis la page de la compétition en tant qu'admin d'organisation ou gestionnaire de compétition. DivingHQ génère un premier planning avec des échauffements de 45 minutes, des blocs d'épreuves et l'affectation des plongeoirs. Active le <strong>Mode édition</strong> pour glisser, redimensionner, insérer, supprimer ou dupliquer des sessions ; le tiroir des conflits signale les chevauchements de plongeoirs, juges, plongeurs et arbitres. Entraîneurs, plongeurs et spectateurs peuvent voir la chronologie publique ou s'abonner au flux iCal.",
       "bug_q": "Comment signaler un bug ?",
-      "bug_a": "Clique sur le lien <strong>🐛 Signaler un bug</strong> en bas de la page d'accueil ou de ton tableau de bord. Cela ouvre un ticket GitHub pré-rempli prêt à décrire le problème. Les captures d'écran aident beaucoup.",
+      "bug_a": "Clique sur le lien <strong>🐛 Signaler un bug</strong> en bas de la page d'accueil ou de ton tableau de bord. Cela ouvre un ticket GitHub pré-rempli prêt à décrire le problème. Les captures d'écran aident beaucoup. Pas de compte GitHub ? Écris à {email}.",
       "install_q": "Comment installer DivingHQ comme application ?",
       "install_a": "Sur iPhone : ouvre le site dans Safari, touche le bouton Partager, puis <strong>Sur l'écran d'accueil</strong>. Sur Android : ouvre-le dans Chrome, touche le menu, puis <strong>Installer l'application</strong>. L'icône lance une vue plein écran sans habillage de navigateur — démarrage plus rapide, sans barre de navigateur.",
       "tfa_q": "Comment activer l'authentification à deux facteurs ?",
       "tfa_a": "Ouvre <strong>Mon profil</strong> → <strong>Sécurité</strong> → <strong>Authentification à deux facteurs</strong> et scanne le code QR avec ton application d'authentification (1Password, Authy, Google Authenticator). Conserve les codes de récupération en lieu sûr — c'est le seul moyen de te reconnecter si tu perds ton téléphone.",
       "account_q": "Comment changer mon e-mail, mon mot de passe, ou supprimer mon compte ?",
-      "account_a": "Tout se passe dans <strong>Mon profil</strong> → <strong>Paramètres du compte</strong>. Un changement d'e-mail demande une nouvelle vérification à la nouvelle adresse. Supprimer ton compte est définitif et retire ta connexion ; les scores historiques restent sur le tableau d'affichage public sous le registre de la fédération (anonymisés sur demande — contacte l'admin de ta fédération).",
+      "account_a": "Tout se passe dans <strong>Mon profil</strong> : change ton e-mail ou ton mot de passe en haut, et <strong>Supprimer mon compte</strong> se trouve en bas. Une nouvelle adresse e-mail doit être confirmée avant de remplacer l'ancienne. La suppression du compte est définitive et efface ta connexion et tes données personnelles ; ton nom reste sur les résultats des compétitions auxquelles tu as participé, comme archive sportive. Si un résultat doit être retiré complètement, écris à {email}.",
       "records_q": "Comment fonctionnent les records ?",
       "records_a": "Les records se tiennent à jour tout seuls. Dès que le dernier juge a noté un plongeon individuel, DivingHQ le compare aux records du club, de la région, du pays et du continent du plongeur, chacun séparé entre dames et messieurs, et remplace toute marque qu'il bat. Tous les livres de records sont sur la page {records_link}, sans connexion. Un livre reste non officiel tant que son instance dirigeante ne l'a pas revendiqué sur DivingHQ, et les mêmes marques deviennent officielles dès qu'une revendication est approuvée. Les records personnels figurent sur le profil de chaque plongeur."
     },
@@ -653,7 +669,7 @@
       "bookmark_features": "Fonctionnalités par rôle",
       "bookmark_features_desc": "toutes les fonctionnalités de l'app, indexées par qui les utilise",
       "bookmark_quickstart": "Démarrage Rapide (10 min)",
-      "bookmark_quickstart_desc": "inscris une fédération et lance ta première compétition",
+      "bookmark_quickstart_desc": "crée ton club et lance ta première compétition",
       "bookmark_roles": "Rôles et permissions",
       "bookmark_roles_desc": "ce que chaque rôle peut et ne peut pas faire",
       "bookmark_faq": "FAQ et dépannage",
@@ -2074,5 +2090,13 @@
     "chip": "Record {name}",
     "chip_prev": "Record précédent : {score}",
     "unofficial_tip": "Non officiel tant que l'instance dirigeante ne l'a pas revendiqué sur DivingHQ."
+  },
+  "legal": {
+    "privacy_title": "Politique de confidentialité",
+    "terms_title": "Conditions d'utilisation",
+    "consent": "En créant un compte, vous acceptez les {terms} et la {privacy}.",
+    "contact": "Contact",
+    "need_help": "Besoin d'aide ?",
+    "english_only": "Cette page n'est disponible qu'en anglais, et c'est le texte anglais qui fait foi."
   }
 }

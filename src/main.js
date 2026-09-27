@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, defineAsyncComponent } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
@@ -29,6 +29,11 @@ app.use(i18n)
 //   title="static"  →  v-tip="'static'"
 //   :title="expr"   →  v-tip="expr"
 app.directive('tip', tipDirective)
+// The sign-up consent line. Global so the two registration forms each carry
+// it as one <LegalConsent /> line, with no import to keep in sync. Async so
+// it rides in the register chunks and not the entry, which is near its
+// size budget (scripts/bundle-size-baseline.json).
+app.component('LegalConsent', defineAsyncComponent(() => import('./components/LegalConsent.vue')))
 
 // Await two things before mounting:
 //   * initI18n:  the detected locale's chunk, so non-English users

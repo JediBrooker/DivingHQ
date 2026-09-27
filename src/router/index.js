@@ -1,47 +1,72 @@
+import { watch } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useFeaturesStore } from '@/stores/features'
+import i18n from '@/i18n'
+import { routeTitle } from '@/lib/pageTitle'
 
 const routes = [
   {
     path: '/',
     component: () => import('@/views/HomeView.vue'),
-    meta: { guestOnly: true },
+    meta: { guestOnly: true, titleKey: 'home.meta_title', brandFirst: true },
   },
   {
     path: '/guide',
     component: () => import('@/views/GuideView.vue'),
+    meta: { titleKey: 'guide.title' },
   },
   {
+    // GuideTopicView swaps in the topic's own title once it knows it.
     path: '/guide/:topic',
     component: () => import('@/guide/GuideTopicView.vue'),
     props: true,
+    meta: { titleKey: 'guide.title' },
   },
   {
     path: '/login',
     component: () => import('@/views/LoginView.vue'),
-    meta: { guestOnly: true },
+    meta: { guestOnly: true, titleKey: 'auth.login.title' },
   },
   {
     path: '/register',
     component: () => import('@/views/RegisterView.vue'),
+    meta: { titleKey: 'auth.register.title' },
   },
   {
     path: '/register-org',
     component: () => import('@/views/RegisterOrgView.vue'),
+    meta: { titleKey: 'auth.register_org.title' },
+  },
+  {
+    // Legal pages, public, linked from every sign-up form. One view, the
+    // text comes from docs/*.md (see LegalView for why it stays English).
+    path: '/privacy',
+    component: () => import('@/views/LegalView.vue'),
+    props: { doc: 'privacy' },
+    meta: { titleKey: 'legal.privacy_title' },
+  },
+  {
+    path: '/terms',
+    component: () => import('@/views/LegalView.vue'),
+    props: { doc: 'terms' },
+    meta: { titleKey: 'legal.terms_title' },
   },
   {
     path: '/forgot-password',
     component: () => import('@/views/ForgotPasswordView.vue'),
+    meta: { titleKey: 'auth.forgot.title' },
   },
   {
     path: '/reset-password',
     component: () => import('@/views/ResetPasswordView.vue'),
+    meta: { titleKey: 'auth.reset.title' },
   },
   {
     // The link in the sign-up email. Public, the token is the credential.
     path: '/verify-email',
     component: () => import('@/views/VerifyEmailView.vue'),
+    meta: { titleKey: 'auth.verify_email.title' },
   },
   {
     // Step 2 of the self-service email change (Migration 044).
@@ -62,7 +87,7 @@ const routes = [
     component: () => import('@/views/ManagerView.vue'),
     // allowDelegateAdmin: a club or region admin runs the meets they
     // host, the view narrows itself to those.
-    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'], allowDelegateAdmin: true, appShell: true },
+    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'], allowDelegateAdmin: true, appShell: true, titleKey: 'manager.title' },
   },
   {
     path: '/payments',
@@ -163,7 +188,7 @@ const routes = [
     // pools with per-pool controllers + meet-day tools, and an advisory
     // operator lease.
     component: () => import('@/views/ControlViewV2.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager', 'referee'], allowDelegateAdmin: true, appShell: true },
+    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager', 'referee'], allowDelegateAdmin: true, appShell: true, titleKey: 'control.page_label' },
   },
   {
     path: '/judge',
@@ -189,6 +214,7 @@ const routes = [
     // surface for the public Judge Analysis pages.
     path: '/judges',
     component: () => import('@/views/JudgeDirectoryView.vue'),
+    meta: { titleKey: 'judges_directory.title' },
   },
   {
     // Unified live + archive surface. The old /archive route was
@@ -200,7 +226,7 @@ const routes = [
     // /scoreboard/:eventId/broadcast → projector / kiosk mode
     path: '/scoreboard/:eventId?/:mode?',
     component: () => import('@/views/ScoreboardView.vue'),
-    meta: { appShell: true },
+    meta: { appShell: true, titleKey: 'scoreboard.page_label' },
   },
   {
     // Record books: /records/:scope?/:id? where scope is federation,
@@ -219,7 +245,7 @@ const routes = [
     // flips the CRM shell).
     path: '/judge-analysis',
     component: () => import('@/views/JudgeAnalysisView.vue'),
-    meta: { appShell: true },
+    meta: { appShell: true, titleKey: 'home.hero.btn_judge_analysis' },
   },
   {
     // Results Archive: public, read-only browse of historical results
@@ -254,7 +280,7 @@ const routes = [
   {
     path: '/users',
     component: () => import('@/views/UserManagerView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin'], appShell: true },
+    meta: { requiresAuth: true, requiresRole: ['org_admin'], appShell: true, titleKey: 'user_manager.title' },
   },
   {
     // A club admin's own page: their members' pending role requests
@@ -268,7 +294,7 @@ const routes = [
     // person may see (their own claim, votes, decisions).
     path: '/claims',
     component: () => import('@/views/ClaimsView.vue'),
-    meta: { requiresAuth: true, appShell: true },
+    meta: { requiresAuth: true, appShell: true, titleKey: 'claims.title' },
   },
   {
     // A region admin's page: the region's clubs and its pending role
@@ -343,7 +369,7 @@ const routes = [
     // (each row is scoped server-side).
     path: '/inbox',
     component: () => import('@/views/InboxView.vue'),
-    meta: { requiresAuth: true, appShell: true },
+    meta: { requiresAuth: true, appShell: true, titleKey: 'inbox.title' },
   },
   {
     // Diver meet-day view: focused phone-deck experience for an
@@ -463,6 +489,15 @@ router.beforeEach((to, from, next) => {
   }
 
   next()
+})
+
+// Tab titles (src/lib/pageTitle.js). Re-applied when the language changes
+// too, since switching locale doesn't navigate.
+router.afterEach((to) => {
+  document.title = routeTitle(to, i18n.global.t)
+})
+watch(i18n.global.locale, () => {
+  document.title = routeTitle(router.currentRoute.value, i18n.global.t)
 })
 
 export default router

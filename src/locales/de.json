@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Wettkampfmanagement-Plattform",
-      "tagline": "Wassersprung-Wettkampfmanagement von A bis Z — von der Eventeinrichtung und Sprunglisten-Einreichung über das Live-Kampfgericht bis zur Ergebnisübertragung und Endklassierung.",
+      "tagline": "Richten Sie die Wasserspringen-Wettkämpfe Ihres Vereins schon heute aus: Sprunglisten, Live-Wertung per Smartphone, eine öffentliche Anzeigetafel und Ergebnisse. Sie brauchen keinen Verband, um zu starten, und wenn Ihr Verband oder Landesverband dazukommt, bleibt die Geschichte Ihres Vereins erhalten.",
       "btn_sign_in": "Anmelden",
       "btn_create_account": "Konto erstellen",
       "btn_scoreboard": "Anzeigetafel & Ergebnisse",
       "btn_judge_analysis": "Kampfrichter-Analyse",
-      "guide_link": "Neu hier? Lesen Sie die 5-Minuten-Anleitung →"
+      "guide_link": "Neu hier? Lesen Sie die 5-Minuten-Anleitung →",
+      "btn_start_club": "Verein gründen",
+      "federation_link": "Verband oder Landesverband? Registrieren Sie Ihre Organisation →"
     },
     "live_strip": {
       "pill": "LIVE AKTIV",
       "text": "Die Live-Anzeigetafel ist für alle offen — keine Anmeldung nötig",
-      "watch": "Live ansehen →"
+      "watch": "Live ansehen →",
+      "pill_idle": "Live-Ergebnisse",
+      "text_live": "Gerade wird live gewertet. Verfolgen Sie jeden Sprung, ohne Anmeldung.",
+      "browse": "Ergebnisse ansehen →"
     },
     "features": {
       "section_label": "Für jede Rolle am Beckenrand",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Wettkampf-Manager",
       "meet_manager_desc": "Erstellen Sie Events, konfigurieren Sie Runden und Panel-Größen, weisen Sie Kampfrichter zu und verwalten Sie die gesamte Wettkampfstruktur.",
       "user_manager_title": "Benutzerverwaltung",
-      "user_manager_desc": "Genehmigen Sie Rollenanfragen und steuern Sie den Mitgliederzugriff in Ihrem Verband. Jede Rollenänderung läuft über einen Anfrage-Workflow."
+      "user_manager_desc": "Genehmigen Sie Rollenanfragen und steuern Sie den Mitgliederzugriff in Ihrem Verein oder Verband. Jede Rollenänderung läuft über einen Anfrage-Workflow."
     },
     "how": {
       "section_label": "So läuft ein Wettkampf ab",
       "step01_title": "Event einrichten",
-      "step01_desc": "Der Wettkampf-Manager erstellt Events, legt die Zahl der Runden und Kampfrichter fest und besetzt das Panel.",
+      "step01_desc": "Der Veranstalter (ein Vereinsadmin oder Wettkampf-Manager) erstellt Events, legt die Zahl der Runden und Kampfrichter fest und besetzt das Panel.",
       "step02_title": "Springer reichen Listen ein",
       "step02_desc": "Jeder Springer meldet sich an und reicht seine Sprungkarte ein. DD-Werte werden automatisch aus dem offiziellen Verzeichnis übernommen.",
       "step03_title": "Wertung geht live",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Anmelden",
       "register": "Registrieren",
-      "register_federation": "Verband registrieren",
+      "register_federation": "Für Verbände und Landesverbände",
       "scoreboard": "Anzeigetafel & Ergebnisse",
       "user_guide": "📖 Anleitung",
       "report_bug": "🐛 Fehler melden"
-    }
+    },
+    "clubs": {
+      "section_label": "Für Vereine",
+      "step1_title": "Verein anlegen",
+      "step1_desc": "Registrieren Sie sich, wählen Sie Ihr Land und geben Sie Ihrem Verein einen Namen. Ist Ihr Verband noch nicht auf DivingHQ, sind Sie von Anfang an sein Admin.",
+      "step2_title": "Springer und Kampfrichter einladen",
+      "step2_desc": "Senden Sie Ihren Mitgliedern den Registrierungslink. Sie wählen Ihren Verein, und Sie genehmigen, wer springt, wertet oder als Schiedsrichter tätig ist.",
+      "step3_title": "Den ersten Wettkampf ausrichten",
+      "step3_desc": "Legen Sie Events an, steuern Sie den Wettkampf aus dem Kontrollraum, während die Kampfrichter auf ihren Smartphones werten, und die Ergebnisse erscheinen nach jedem gewerteten Sprung.",
+      "note": "Sie brauchen keinen Verband, um zu starten. Tritt Ihr Verband oder Landesverband später DivingHQ bei, übernimmt er die Verwaltung des Landes oder der Region, und Ihr Verein behält seine Wettkämpfe, Ergebnisse und Rekorde."
+    },
+    "meta_title": "Wettkampfsoftware für das Wasserspringen, für Vereine und Verbände"
   },
   "dashboard": {
     "search_divers": "Springer suchen…",
@@ -452,7 +468,7 @@
       "dialog_confirm": "Mein Konto löschen",
       "dialog_cancel": "Abbrechen",
       "dialog_what_goes": "Wird entfernt:",
-      "dialog_what_goes_items": "Login und Passwort, Kontakt-E-Mail, Push-Abonnements, Dashboard-Einstellungen, Rollenzuweisungen, Trainer-Springer-Verknüpfungen, öffentlicher Profil-Slug.",
+      "dialog_what_goes_items": "Login und Passwort, Kontakt-E-Mail, Geburtsdatum, Geschlecht und Nationalität, Push-Abonnements, Dashboard-Einstellungen, Rollenzuweisungen, Vereins- und Regionsadmin-Rollen, Trainer-Springer-Verknüpfungen, öffentlicher Profil-Slug.",
       "dialog_what_stays": "Bleibt erhalten:",
       "dialog_what_stays_items": "Dein Name bei den Sprüngen, bei denen du angetreten bist, bei den Kampfgerichten, in denen du gesessen hast, und bei den Veranstaltungen, an denen du teilgenommen hast. Audit-Log-Einträge, die du ausgelöst hast (werden in der normalen 30-Tage-Rotation gelöscht).",
       "confirmation_toast": "Konto gelöscht. Dein Wettkampfverlauf wurde anonymisiert. Melde dich später mit einem neuen Konto an, um ihn zurückzufordern.",
@@ -477,7 +493,7 @@
       "confirming": "Wird zurückgefordert…",
       "password_label": "Mit deinem Passwort bestätigen",
       "password_placeholder": "Dein aktuelles Passwort",
-      "conflict": "Zusammenführen nicht möglich: Sowohl das alte Konto als auch dein aktuelles Konto haben Einträge für dieselbe Veranstaltung und Runde. Hake den kollidierenden Kandidaten ab oder wende dich an deinen Verbandsadministrator, um manuell zusammenzuführen.",
+      "conflict": "Zusammenführen nicht möglich: Sowohl das alte Konto als auch Ihr aktuelles Konto haben Einträge für dieselbe Veranstaltung und Runde. Entfernen Sie das Häkchen beim kollidierenden Kandidaten, oder schreiben Sie an {email}, dann führen wir die Konten von Hand zusammen.",
       "success_toast": "Frühere Ergebnisse mit deinem Profil neu verknüpft."
     },
     "club_request_sent": "Anfrage gesendet. Der Wechsel erfolgt, sobald sie genehmigt ist: von Ihrem Verband oder, wo es noch keinen gibt, von den Admins des neuen Vereins."
@@ -552,7 +568,7 @@
       "diver": {
         "name": "Springer",
         "desc": "Sie treten an. Sie reichen eine Sprungkarte (welche Sprünge Sie pro Runde zeigen) vor dem Meldeschluss jedes Wettbewerbs ein und prüfen am Wettkampftag in der <strong>Wettkampftag-Ansicht</strong> Ihre Position in der Reihenfolge und welche Sprünge anstehen.",
-        "step_1": "Melden Sie sich an oder akzeptieren Sie die Einladung Ihres Verbandsadmins",
+        "step_1": "Registrieren Sie sich und wählen Sie Ihren Verein",
         "step_2": "Öffnen Sie <strong>Sprungkarten einreichen</strong> und wählen Sie Ihre Sprünge pro Runde",
         "step_3": "Öffnen Sie am Wettkampftag die <strong>Wettkampftag-Ansicht</strong> auf Ihrem Smartphone",
         "step_4": "Ihre Wertungen und Analysen finden Sie unter <strong>Mein Profil</strong>",
@@ -599,7 +615,7 @@
       },
       "region_admin": {
         "name": "Regionsadmin",
-        "desc": "Sie betreuen einen Bundesstaat, eine Provinz oder einen Landesteil: Sie richten die Meisterschaften aus, können bei den Wettkämpfen aller Vereine einspringen und genehmigen Rollenanfragen der Vereinsmitglieder. Ihr Verband ernennt Sie. Solange es keinen gibt, übernimmt Ihr Landesverband die Region, und weitere Admins fügen Sie selbst hinzu.",
+        "desc": "Sie betreuen einen Bundesstaat, eine Provinz oder einen Landesteil: Sie richten die Meisterschaften aus, können bei den Wettkämpfen aller Vereine einspringen und genehmigen Rollenanfragen der Vereinsmitglieder. Ihr Verband ernennt Sie. Solange es keinen gibt, übernimmt Ihr Landesverband die Region, und weitere Admins fügen Sie selbst hinzu. Ein Landesverband kann über <strong>Organisation registrieren</strong> beantragen, seine Region zu führen.",
         "step_1": "Öffnen Sie <strong>Meine Region</strong> für Ihre Vereine und deren Leitung",
         "step_2": "Legen Sie Ihre Meisterschaften im <strong>Wettkampf-Manager</strong> mit Ihrer Region als Ausrichter an",
         "step_3": "Genehmigen Sie Mitglieder, die springen, werten oder trainieren möchten, und Vereine, die Ihrer Region beitreten wollen",
@@ -627,7 +643,7 @@
     },
     "faq": {
       "register_q": "Ich habe mich gerade registriert, kann mich aber noch nicht anmelden.",
-      "register_a": "Erst die E-Mail-Bestätigung — klicken Sie auf den Link in der Willkommens-E-Mail. Für Nicht-Springer-Rollen (Kampfrichter, Trainer, Wettkampfleiter) muss zusätzlich Ihr Verbandsadmin Sie freigeben. Beides sollte binnen Minuten passieren; wenn Sie nach 10 Minuten keine E-Mail sehen, prüfen Sie den Spam-Ordner und bitten Sie dann Ihren Admin zu bestätigen, dass Ihr Konto aktiv ist.",
+      "register_a": "Bestätigen Sie zuerst Ihre E-Mail-Adresse: Klicken Sie auf den Link in der Bestätigungs-E-Mail, die wir Ihnen bei der Registrierung geschickt haben. Nichts angekommen? Sehen Sie im Spam-Ordner nach, oder versuchen Sie sich anzumelden und fordern Sie einen neuen Link an. Rollen blockieren die Anmeldung nicht: Sie beginnen als Zuschauer und erhalten mehr, sobald Ihr Vereins- oder Verbandsadmin zustimmt.",
       "judge_device_q": "Ich bin Kampfrichter — welches Gerät soll ich verwenden?",
       "judge_device_a": "Jedes moderne Smartphone mit Browser funktioniert. iPhone 12 / Pixel 6 oder neuer ist ideal. Die Ansicht ist mobile-first; Sie werden den Wettkampf über tippen, daher ist ein Smartphone, das Sie bequem in einer Hand halten können, die richtige Wahl. WLAN ist gegenüber 4G zu bevorzugen, falls die Halle es bietet — die Wertungen werden zwar auch über 4G synchronisiert, aber die Netzwerklaufzeit ist spürbar länger.",
       "scoring_q": "Wie funktioniert die Wertung?",
@@ -637,13 +653,13 @@
       "schedule_q": "Wie plane ich einen kompletten Meisterschaftstag?",
       "schedule_a": "Fügen Sie den Wettbewerben des Wettkampfs Zeitfenster hinzu und öffnen Sie dann <strong>Zeitplan</strong> auf der Wettkampfseite als Verbandsadmin oder Wettkampfleiter. DivingHQ schlägt einen ersten Plan mit 45-Minuten-Einschwimmblöcken, Wettbewerbsblöcken und Brettzuweisungen vor. Aktivieren Sie den <strong>Bearbeitungsmodus</strong>, um Sessions zu ziehen, zu skalieren, einzufügen, zu löschen oder zu duplizieren; die Konflikt-Schublade weist auf überlappende Bretter, Kampfrichter, Springer und Schiedsrichter hin. Trainer, Springer und Zuschauer sehen den öffentlichen Zeitplan oder abonnieren den iCal-Feed.",
       "bug_q": "Wie melde ich einen Fehler?",
-      "bug_a": "Klicken Sie auf den Link <strong>🐛 Fehler melden</strong> unten auf der Startseite oder Ihrem Dashboard. Das öffnet ein vorgefülltes GitHub-Issue, in dem Sie das Problem beschreiben können. Screenshots helfen sehr.",
+      "bug_a": "Klicken Sie auf den Link <strong>🐛 Fehler melden</strong> unten auf der Startseite oder Ihrem Dashboard. Das öffnet ein vorgefülltes GitHub-Issue, in dem Sie das Problem beschreiben können. Screenshots helfen sehr. Kein GitHub-Konto? Schreiben Sie stattdessen an {email}.",
       "install_q": "Wie installiere ich DivingHQ als App?",
       "install_a": "Auf dem iPhone: Öffnen Sie die Seite in Safari, tippen Sie auf die Teilen-Schaltfläche und dann auf <strong>Zum Home-Bildschirm</strong>. Auf Android: in Chrome öffnen, auf das Menü tippen und dann auf <strong>App installieren</strong>. Das Symbol startet eine randlose Vollbildansicht — schnellerer Start, keine Browserleiste.",
       "tfa_q": "Wie aktiviere ich die Zwei-Faktor-Authentifizierung?",
       "tfa_a": "Öffnen Sie <strong>Mein Profil</strong> → <strong>Sicherheit</strong> → <strong>Zwei-Faktor-Authentifizierung</strong> und scannen Sie den QR-Code mit Ihrer Authenticator-App (1Password, Authy, Google Authenticator). Bewahren Sie die Wiederherstellungscodes an einem sicheren Ort auf — sie sind der einzige Weg zurück, falls Sie Ihr Smartphone verlieren.",
       "account_q": "Wie ändere ich meine E-Mail, mein Passwort oder lösche mein Konto?",
-      "account_a": "Alles unter <strong>Mein Profil</strong> → <strong>Kontoeinstellungen</strong>. E-Mail-Änderungen erfordern eine erneute Bestätigung an der neuen Adresse. Das Löschen Ihres Kontos ist endgültig und entfernt Ihren Login; historische Wertungen bleiben unter dem Eintrag des Verbands auf der öffentlichen Anzeigetafel (auf Anfrage anonymisiert — wenden Sie sich an Ihren Verbandsadmin).",
+      "account_a": "Alles unter <strong>Mein Profil</strong>: E-Mail oder Passwort ändern Sie oben, <strong>Mein Konto löschen</strong> finden Sie unten. Eine neue E-Mail-Adresse muss bestätigt werden, bevor sie gilt. Das Löschen des Kontos ist endgültig und entfernt Ihre Anmeldung und Ihre persönlichen Daten; Ihr Name bleibt als sportliche Aufzeichnung bei den Ergebnissen der Wettkämpfe stehen, an denen Sie teilgenommen haben. Muss ein Ergebnis vollständig entfernt werden, schreiben Sie an {email}.",
       "records_q": "Wie funktionieren Rekorde?",
       "records_a": "Rekorde pflegen sich selbst. Sobald der letzte Kampfrichter einen Einzelsprung bewertet hat, gleicht DivingHQ ihn mit den Vereins-, Regional-, National- und Kontinentalrekorden des Springers ab, jeweils getrennt nach Damen und Herren, und ersetzt jede Bestmarke, die er übertrifft. Alle Rekordlisten finden Sie auf der Seite {records_link}, ganz ohne Anmeldung. Eine Liste gilt als inoffiziell, bis der zuständige Verband sie auf DivingHQ beansprucht hat; sobald ein Anspruch bestätigt ist, gelten dieselben Bestmarken als offiziell. Persönliche Bestleistungen stehen im Profil jedes Springers."
     },
@@ -653,7 +669,7 @@
       "bookmark_features": "Funktionen nach Rolle",
       "bookmark_features_desc": "alle Funktionen der App, geordnet nach Nutzergruppe",
       "bookmark_quickstart": "Schnellstart (10 Min.)",
-      "bookmark_quickstart_desc": "Verband registrieren und ersten Wettkampf durchführen",
+      "bookmark_quickstart_desc": "Verein anlegen und ersten Wettkampf durchführen",
       "bookmark_roles": "Rollen & Berechtigungen",
       "bookmark_roles_desc": "was jede Rolle darf und was nicht",
       "bookmark_faq": "FAQ & Fehlersuche",
@@ -2074,5 +2090,13 @@
     "chip": "{name}-Rekord",
     "chip_prev": "Bisheriger Rekord: {score}",
     "unofficial_tip": "Inoffiziell, bis der zuständige Verband das Konto auf DivingHQ beansprucht."
+  },
+  "legal": {
+    "privacy_title": "Datenschutzerklärung",
+    "terms_title": "Nutzungsbedingungen",
+    "consent": "Mit der Erstellung eines Kontos stimmen Sie den {terms} und der {privacy} zu.",
+    "contact": "Kontakt",
+    "need_help": "Brauchen Sie Hilfe?",
+    "english_only": "Diese Seite ist nur auf Englisch verfügbar. Maßgeblich ist der englische Text."
   }
 }

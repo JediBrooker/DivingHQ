@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Platforma za upravljanje natjecanjima",
-      "tagline": "Cjelovito upravljanje natjecanjima u skokovima u vodu — od postavljanja događaja i predaje lista skokova do suđenja uživo, prijenosa rezultata i konačnih ishoda.",
+      "tagline": "Organizirajte skakačka natjecanja svog kluba već danas: popisi skokova, ocjenjivanje uživo na mobitelima, javna tablica rezultata i rezultati. Za početak vam ne treba savez, a kada se pridruži vaš savez ili regionalni savez, povijest vašeg kluba ide s vama.",
       "btn_sign_in": "Prijava",
       "btn_create_account": "Stvori račun",
       "btn_scoreboard": "Pločica i rezultati",
       "btn_judge_analysis": "Analiza sudaca",
-      "guide_link": "Novi ste ovdje? Pročitajte 5-minutni vodič →"
+      "guide_link": "Novi ste ovdje? Pročitajte 5-minutni vodič →",
+      "btn_start_club": "Pokrenite svoj klub",
+      "federation_link": "Savez ili regionalno tijelo? Registrirajte svoju organizaciju →"
     },
     "live_strip": {
       "pill": "UŽIVO",
       "text": "Pločica uživo otvorena je svima — prijava nije potrebna",
-      "watch": "Gledaj uživo →"
+      "watch": "Gledaj uživo →",
+      "pill_idle": "Rezultati uživo",
+      "text_live": "Ocjenjivanje je upravo u tijeku uživo. Pratite svaki skok bez prijave.",
+      "browse": "Pregledaj rezultate →"
     },
     "features": {
       "section_label": "Stvoreno za svaku ulogu na bazenu",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Menadžer natjecanja",
       "meet_manager_desc": "Stvarajte događaje, konfigurirajte runde i sastav panela, dodjeljujte suce i upravljajte cijelom strukturom natjecanja.",
       "user_manager_title": "Upravitelj korisnika",
-      "user_manager_desc": "Odobravajte zahtjeve za uloge i kontrolirajte pristup članova u vašoj federaciji. Svaka promjena uloge prolazi kroz proces zahtjeva."
+      "user_manager_desc": "Odobravajte zahtjeve za uloge i kontrolirajte pristup članova u svom klubu ili savezu. Svaka promjena uloge prolazi kroz proces zahtjeva."
     },
     "how": {
       "section_label": "Kako teče natjecanje",
       "step01_title": "Postavi događaj",
-      "step01_desc": "Menadžer natjecanja stvara događaje, postavlja broj rundi i sudaca te dodjeljuje panel.",
+      "step01_desc": "Organizator (administrator kluba ili menadžer natjecanja) stvara događaje, postavlja broj rundi i sudaca te dodjeljuje panel.",
       "step02_title": "Skakači šalju liste",
       "step02_desc": "Svaki skakač se prijavljuje i šalje svoju listu skokova. DD vrijednosti se automatski dohvaćaju iz službenog registra.",
       "step03_title": "Ocjenjivanje kreće uživo",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Prijava",
       "register": "Registracija",
-      "register_federation": "Registracija federacije",
+      "register_federation": "Za saveze i regionalna tijela",
       "scoreboard": "Pločica i rezultati",
       "user_guide": "📖 Korisnički vodič",
       "report_bug": "🐛 Prijavi grešku"
-    }
+    },
+    "clubs": {
+      "section_label": "Za klubove",
+      "step1_title": "Stvorite svoj klub",
+      "step1_desc": "Registrirajte se, odaberite državu i dajte ime svom klubu. Ako vaš savez još nije na DivingHQ-u, od početka ste administrator kluba.",
+      "step2_title": "Pozovite skakače i suce",
+      "step2_desc": "Pošaljite članovima poveznicu za registraciju. Oni odaberu vaš klub, a vi odobravate tko skače, sudi ili je glavni sudac.",
+      "step3_title": "Održite svoje prvo natjecanje",
+      "step3_desc": "Postavite discipline, vodite natjecanje iz kontrolne sobe dok suci ocjenjuju na mobitelima, a rezultati se objavljuju nakon svakog ocijenjenog skoka.",
+      "note": "Za početak vam ne treba savez. Ako se vaš savez ili regionalni savez kasnije pridruži DivingHQ-u, preuzima vođenje države ili regije, a vaš klub zadržava svoja natjecanja, rezultate i rekorde."
+    },
+    "meta_title": "Softver za skakačka natjecanja za klubove i saveze"
   },
   "dashboard": {
     "search_divers": "Pretraži skakače…",
@@ -441,7 +457,7 @@
       "dialog_confirm": "Izbriši moj račun",
       "dialog_cancel": "Odustani",
       "dialog_what_goes": "Uklanja se:",
-      "dialog_what_goes_items": "Prijava i lozinka, kontakt e-pošta, push pretplate, postavke nadzorne ploče, dodjele uloga, veze trener-skakač, javni profil slug.",
+      "dialog_what_goes_items": "Prijava i lozinka, kontakt e-pošta, datum rođenja, spol i državljanstvo, push pretplate, postavke nadzorne ploče, dodjele uloga, uloge administratora kluba i regije, veze trener-skakač, javni profil slug.",
       "dialog_what_stays": "Ostaje:",
       "dialog_what_stays_items": "Tvoje ime na skokovima u kojima si se natjecao, sudačkim panelima u kojima si sudjelovao i događajima u kojima si se pojavio. Zapisi revizijskog dnevnika koje si pokrenuo (brišu se uobičajenom rotacijom od 30 dana).",
       "confirmation_toast": "Račun izbrisan. Tvoja povijest natjecanja je anonimizirana. Prijavi se s novim računom da je kasnije zatražiš natrag.",
@@ -466,7 +482,7 @@
       "confirming": "Zahtjev u tijeku…",
       "password_label": "Potvrdi svojom lozinkom",
       "password_placeholder": "Tvoja trenutna lozinka",
-      "conflict": "Spajanje nije moguće: stari račun i tvoj trenutni račun imaju zapise za isti događaj i krug. Odznači sukobljenog kandidata ili se obrati administratoru svoje federacije za ručno spajanje.",
+      "conflict": "Spajanje nije moguće: stari račun i tvoj trenutni račun imaju zapise za isti događaj i krug. Odznači sukobljenog kandidata ili piši na {email} pa ćemo ih spojiti ručno.",
       "success_toast": "Prošli rezultati ponovno povezani s tvojim profilom."
     },
     "club_request_sent": "Zahtjev je poslan. Premjestit ćete se kad bude odobren: od vašeg saveza ili, gdje ga još nema, od administratora novog kluba."
@@ -541,7 +557,7 @@
       "diver": {
         "name": "Skakač",
         "desc": "Vi se natječete. Prije roka za prijavu svakog natjecanja predajete listu skokova (koje skokove ćete izvesti, po rundi), a na dan natjecanja provjerite <strong>Pregled dana natjecanja</strong> kako biste vidjeli svoju poziciju u redu i što trebate ocijeniti.",
-        "step_1": "Prijavite se ili prihvatite poziv administratora federacije",
+        "step_1": "Registrirajte se i odaberite svoj klub",
         "step_2": "Otvorite <strong>Predaj liste skokova</strong> i odaberite skokove po rundi",
         "step_3": "Na dan natjecanja otvorite <strong>Pregled dana natjecanja</strong> na telefonu",
         "step_4": "Vaši rezultati i analitika nalaze se u <strong>Moj profil</strong>",
@@ -588,7 +604,7 @@
       },
       "region_admin": {
         "name": "Administrator regije",
-        "desc": "Brinete se o saveznoj državi, provinciji ili naciji: organizirate njezina prvenstva, možete uskočiti u natjecanja bilo kojeg njezinog kluba i odobravate zahtjeve članova klubova za uloge. Imenuje vas savez. Dok saveza nema, vaše regionalno tijelo preuzima regiju, a ostale administratore dodajete sami.",
+        "desc": "Brinete se o saveznoj državi, provinciji ili naciji: organizirate njezina prvenstva, možete uskočiti u natjecanja bilo kojeg njezinog kluba i odobravate zahtjeve članova klubova za uloge. Imenuje vas savez. Dok saveza nema, vaše regionalno tijelo preuzima regiju, a ostale administratore dodajete sami. Tijelo savezne države može zatražiti vođenje svoje regije putem <strong>Registrirajte svoju organizaciju</strong>.",
         "step_1": "Otvorite <strong>Moja regija</strong> za svoje klubove i tko ih vodi",
         "step_2": "Stvorite prvenstva u <strong>Menadžeru natjecanja</strong> s regijom kao organizatorom",
         "step_3": "Odobrite članove koji žele skakati, suditi ili trenirati druge te klubove koji traže ulazak u vašu regiju",
@@ -616,7 +632,7 @@
     },
     "faq": {
       "register_q": "Upravo sam se registrirao, ali se još ne mogu prijaviti.",
-      "register_a": "Prvo provjera e-pošte — kliknite poveznicu u e-poruci dobrodošlice. Za uloge koje nisu skakači (sudac, trener, voditelj natjecanja) vaš administrator federacije također vas mora odobriti. Oboje bi se trebalo dogoditi unutar nekoliko minuta; ako e-poštu ne vidite ni nakon 10 minuta, provjerite neželjenu poštu, a zatim zamolite administratora da potvrdi je li vaš račun aktivan.",
+      "register_a": "Najprije potvrdite e-poštu: kliknite poveznicu u e-poruci za potvrdu koju smo vam poslali pri registraciji. Nema je? Provjerite mapu neželjene pošte ili se pokušajte prijaviti i zatražite novu poveznicu. Uloge ne sprječavaju prijavu: počinjete kao gledatelj i dobivate više čim odobri administrator vašeg kluba ili saveza.",
       "judge_device_q": "Ja sam sudac — koji uređaj trebam koristiti?",
       "judge_device_a": "Bilo koji moderan telefon s preglednikom radi. iPhone 12 / Pixel 6 i noviji su idealni. Prikaz je optimiziran za mobilne uređaje; cijelo natjecanje ćete dodirivati brojeve, pa je telefon koji možete udobno držati jednom rukom prava odluka. WiFi je bolji od 4G ako ga objekt ima — vaše ocjene se sinkroniziraju i preko 4G, ali je mrežno putovanje primjetno dulje.",
       "scoring_q": "Kako ocjenjivanje funkcionira?",
@@ -626,13 +642,13 @@
       "schedule_q": "Kako planirati cijeli dan prvenstva?",
       "schedule_a": "Dodajte planirana vremena natjecanjima, a zatim otvorite <strong>Raspored</strong> sa stranice natjecanja kao administrator organizacije ili voditelj natjecanja. DivingHQ generira prvi plan s 45-minutnim zagrijavanjima, blokovima natjecanja i dodjelama dasaka. Uključite <strong>Način uređivanja</strong> za povlačenje, mijenjanje veličine, umetanje, brisanje ili dupliciranje sesija; ladica sukoba ističe preklapajuće daske, suce, skakače i glavne suce. Treneri, skakači i gledatelji mogu pregledati javnu vremensku liniju ili se pretplatiti na iCal feed.",
       "bug_q": "Kako prijaviti grešku?",
-      "bug_a": "Kliknite poveznicu <strong>🐛 Prijavi grešku</strong> na dnu početne stranice ili panela. Otvara se unaprijed popunjen GitHub issue spreman za opisivanje problema. Snimke zaslona puno pomažu.",
+      "bug_a": "Kliknite poveznicu <strong>🐛 Prijavi grešku</strong> na dnu početne stranice ili panela. Otvara se unaprijed popunjen GitHub issue spreman za opisivanje problema. Snimke zaslona puno pomažu. Nemate GitHub račun? Pišite na {email}.",
       "install_q": "Kako instalirati DivingHQ kao aplikaciju?",
       "install_a": "Na iPhoneu: otvorite stranicu u Safariju, dodirnite gumb Dijeljenje, zatim <strong>Dodaj na početni zaslon</strong>. Na Androidu: otvorite u Chromeu, dodirnite izbornik, zatim <strong>Instaliraj aplikaciju</strong>. Ikona pokreće prikaz preko cijelog zaslona bez okvira preglednika — brže pokretanje, bez trake preglednika.",
       "tfa_q": "Kako uključiti dvofaktorsku autentikaciju?",
       "tfa_a": "Otvorite <strong>Moj profil</strong> → <strong>Sigurnost</strong> → <strong>Dvofaktorska autentikacija</strong> i skenirajte QR kod svojom autentikacijskom aplikacijom (1Password, Authy, Google Authenticator). Spremite kodove za oporavak na sigurno mjesto — to je jedini način povratka ako izgubite telefon.",
       "account_q": "Kako promijeniti e-mail, lozinku ili obrisati račun?",
-      "account_a": "Sve u <strong>Moj profil</strong> → <strong>Postavke računa</strong>. Promjena e-maila zahtijeva ponovnu provjeru na novoj adresi. Brisanje računa je trajno i uklanja vašu prijavu; povijesni rezultati ostaju na javnom semaforu pod evidencijom federacije (anonimizirani na zahtjev — obratite se administratoru svoje federacije).",
+      "account_a": "Sve u <strong>Moj profil</strong>: e-poštu ili lozinku promijenite na vrhu, a <strong>Izbriši moj račun</strong> je na dnu. Novu adresu e-pošte treba potvrditi prije nego što zamijeni staru. Brisanje računa je trajno i uklanja vašu prijavu i osobne podatke; vaše ime ostaje na rezultatima natjecanja na kojima ste nastupili, kao sportski zapis. Ako rezultat treba potpuno ukloniti, pišite na {email}.",
       "records_q": "Kako funkcioniraju rekordi?",
       "records_a": "Rekordi se sami ažuriraju. Čim posljednji sudac ocijeni pojedinačni skok, DivingHQ ga uspoređuje s klupskim, regionalnim, nacionalnim i kontinentalnim rekordima skakača, odvojeno za žene i muškarce, i zamjenjuje svaki rezultat koji nadmaši. Sve tablice rekorda nalaze se na stranici {records_link}, bez prijave. Tablica je neslužbena dok je nadležno upravljačko tijelo ne zatraži na DivingHQ-u, a isti rezultati postaju službeni čim se zahtjev odobri. Osobni rekordi nalaze se na profilu svakog skakača."
     },
@@ -642,7 +658,7 @@
       "bookmark_features": "Značajke po ulozi",
       "bookmark_features_desc": "svaka značajka u aplikaciji, indeksirana prema tome tko je koristi",
       "bookmark_quickstart": "Brzi početak (10 min)",
-      "bookmark_quickstart_desc": "registrirajte federaciju i vodite svoje prvo natjecanje",
+      "bookmark_quickstart_desc": "pokrenite svoj klub i vodite svoje prvo natjecanje",
       "bookmark_roles": "Uloge i ovlasti",
       "bookmark_roles_desc": "što svaka uloga može i ne može",
       "bookmark_faq": "FAQ i rješavanje problema",
@@ -2074,5 +2090,13 @@
     "chip": "Rekord {name}",
     "chip_prev": "Prethodni rekord: {score}",
     "unofficial_tip": "Neslužbeno dok ga nadležno upravljačko tijelo ne zatraži na DivingHQ-u."
+  },
+  "legal": {
+    "privacy_title": "Pravila privatnosti",
+    "terms_title": "Uvjeti korištenja",
+    "consent": "Izradom računa prihvaćate dokumente {terms} i {privacy}.",
+    "contact": "Kontakt",
+    "need_help": "Trebate pomoć?",
+    "english_only": "Ova je stranica dostupna samo na engleskom jeziku i mjerodavan je engleski tekst."
   }
 }

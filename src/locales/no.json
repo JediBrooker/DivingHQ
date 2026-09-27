@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Plattform for stevnehåndtering",
-      "tagline": "Helhetlig håndtering av stupstevner — fra oppsett av stevnet og innsending av stuplister til live-dømming, sending av poeng og endelige resultater.",
+      "tagline": "Arranger klubbens stupestevner allerede i dag: stupelister, direkte bedømming på mobil, en offentlig resultattavle og resultater. Du trenger ikke et forbund for å komme i gang, og når forbundet eller regionsforbundet ditt blir med, følger klubbens historikk med.",
       "btn_sign_in": "Logg inn",
       "btn_create_account": "Opprett konto",
       "btn_scoreboard": "Resultattavle",
       "btn_judge_analysis": "Dommeranalyse",
-      "guide_link": "Ny her? Les 5-minutters-veiledningen →"
+      "guide_link": "Ny her? Les 5-minutters-veiledningen →",
+      "btn_start_club": "Start klubben din",
+      "federation_link": "Forbund eller regionalt organ? Registrer organisasjonen din →"
     },
     "live_strip": {
       "pill": "DIREKTE",
       "text": "Live-resultattavlen er åpen for alle — ingen innlogging kreves",
-      "watch": "Se direkte →"
+      "watch": "Se direkte →",
+      "pill_idle": "Direkte resultater",
+      "text_live": "Det bedømmes direkte akkurat nå. Følg hvert stup, uten innlogging.",
+      "browse": "Se resultater →"
     },
     "features": {
       "section_label": "Bygget for hver rolle ved bassengkanten",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Stevneadministrator",
       "meet_manager_desc": "Opprett øvelser, konfigurer runder og paneler, tildel dommere og administrer hele stevnets struktur.",
       "user_manager_title": "Brukeradministrasjon",
-      "user_manager_desc": "Godkjenn rolleforespørsler og styr medlemmenes tilgang i forbundet ditt. Hver rolleendring går via en forespørselsflyt."
+      "user_manager_desc": "Godkjenn rolleforespørsler og styr medlemmenes tilgang i klubben eller forbundet ditt. Hver rolleendring går via en forespørselsflyt."
     },
     "how": {
       "section_label": "Slik forløper et stevne",
       "step01_title": "Sett opp øvelsen",
-      "step01_desc": "Stevneleder oppretter øvelser, setter antall runder og dommere og tildeler panelet.",
+      "step01_desc": "Arrangøren (en klubbadministrator eller stevneleder) oppretter øvelser, setter antall runder og dommere og tildeler panelet.",
       "step02_title": "Stupere sender inn lister",
       "step02_desc": "Hver stuper logger inn og sender inn sin stupliste. Vanskelighetsgrader hentes automatisk fra det offisielle registeret.",
       "step03_title": "Dømming går live",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Logg inn",
       "register": "Registrer deg",
-      "register_federation": "Registrer forbund",
+      "register_federation": "For forbund og regionale organer",
       "scoreboard": "Resultattavle",
       "user_guide": "📖 Brukerveiledning",
       "report_bug": "🐛 Rapporter en feil"
-    }
+    },
+    "clubs": {
+      "section_label": "For klubber",
+      "step1_title": "Opprett klubben din",
+      "step1_desc": "Registrer deg, velg land og gi klubben et navn. Er forbundet ditt ikke på DivingHQ ennå, er du klubbens administrator fra første stund.",
+      "step2_title": "Inviter stupere og dommere",
+      "step2_desc": "Send medlemmene registreringslenken. De velger klubben din, og du godkjenner hvem som stuper, dømmer eller er overdommer.",
+      "step3_title": "Arranger ditt første stevne",
+      "step3_desc": "Sett opp øvelser, styr stevnet fra kontrollrommet mens dommerne gir poeng på mobilen, og resultatene publiseres etter hvert som hvert stup er bedømt.",
+      "note": "Du trenger ikke et forbund for å komme i gang. Blir forbundet eller regionsforbundet ditt med i DivingHQ senere, overtar det driften av landet eller regionen, og klubben din beholder stevnene, resultatene og rekordene sine."
+    },
+    "meta_title": "Stevneprogramvare for stuping, for klubber og forbund"
   },
   "dashboard": {
     "search_divers": "Søk etter stupere…",
@@ -452,7 +468,7 @@
       "dialog_confirm": "Slett kontoen min",
       "dialog_cancel": "Avbryt",
       "dialog_what_goes": "Fjernes:",
-      "dialog_what_goes_items": "Innlogging og passord, kontakt-e-post, push-abonnementer, dashbordinnstillinger, rolletildelinger, trener-hopper-koblinger, offentlig profil-slug.",
+      "dialog_what_goes_items": "Innlogging og passord, kontakt-e-post, fødselsdato, kjønn og nasjonalitet, push-abonnementer, dashbordinnstillinger, rolletildelinger, klubb- og regionadministratorroller, trener-hopper-koblinger, offentlig profil-slug.",
       "dialog_what_stays": "Beholdes:",
       "dialog_what_stays_items": "Navnet ditt på hoppene du konkurrerte i, dommerpanelene du satt i og stevnene du var med i. Logginnslag du utløste (slettes ved den vanlige 30-dagers rotasjonen).",
       "confirmation_toast": "Konto slettet. Konkurransehistorikken din er anonymisert. Logg inn med en ny konto for å hente den tilbake senere.",
@@ -477,7 +493,7 @@
       "confirming": "Krever…",
       "password_label": "Bekreft med passordet ditt",
       "password_placeholder": "Ditt nåværende passord",
-      "conflict": "Kan ikke slå sammen: både den gamle kontoen og din nåværende konto har oppføringer for samme stevne og runde. Fjern haken fra kandidaten som kolliderer, eller kontakt forbundsadministratoren for å slå sammen manuelt.",
+      "conflict": "Kan ikke slå sammen: både den gamle kontoen og din nåværende konto har oppføringer for samme stevne og runde. Fjern haken fra kandidaten som kolliderer, eller skriv til {email}, så slår vi dem sammen manuelt.",
       "success_toast": "Tidligere resultater knyttet til profilen din igjen."
     },
     "club_request_sent": "Forespørselen er sendt. Du flyttes når den er godkjent: av forbundet ditt, eller der det ikke finnes et ennå, av den nye klubbens administratorer."
@@ -552,7 +568,7 @@
       "diver": {
         "name": "Stuper",
         "desc": "Du konkurrerer. Du sender inn en stupliste (hvilke stup du gjør per runde) før hver konkurranses påmeldingsfrist, og åpner så <strong>Stevnedagsvisning</strong> på dagen for å se din plass i køen og hva som venter.",
-        "step_1": "Logg inn, eller godta invitasjonen fra forbundsadministratoren din",
+        "step_1": "Registrer deg og velg klubben din",
         "step_2": "Åpne <strong>Send inn stuplister</strong> og velg stupene dine per runde",
         "step_3": "På stevnedagen åpner du <strong>Stevnedagsvisning</strong> på telefonen",
         "step_4": "Resultatene dine og analysene ligger under <strong>Min profil</strong>",
@@ -599,7 +615,7 @@
       },
       "region_admin": {
         "name": "Regionsadministrator",
-        "desc": "Du tar deg av en delstat, provins eller nasjon: arrangerer mesterskapene, kan tre inn på stevnene til alle klubbene der og godkjenner rolleforespørsler fra klubbmedlemmene. Forbundet ditt utnevner deg. Finnes det ikke ennå, gjør det regionale organet ditt krav på regionen, og du legger selv til med-administratorene.",
+        "desc": "Du tar deg av en delstat, provins eller nasjon: arrangerer mesterskapene, kan tre inn på stevnene til alle klubbene der og godkjenner rolleforespørsler fra klubbmedlemmene. Forbundet ditt utnevner deg. Finnes det ikke ennå, gjør det regionale organet ditt krav på regionen, og du legger selv til med-administratorene. Et delstatsforbund kan søke om å drive regionen sin fra <strong>Registrer organisasjonen</strong>.",
         "step_1": "Åpne <strong>Min region</strong> for å se klubbene og hvem som driver dem",
         "step_2": "Opprett mesterskapene i <strong>Stevneadministrator</strong> med regionen som arrangør",
         "step_3": "Godkjenn medlemmer som vil stupe, dømme eller være trener, og klubber som ber om å bli med i regionen din",
@@ -627,7 +643,7 @@
     },
     "faq": {
       "register_q": "Jeg har akkurat registrert meg, men kan ikke logge inn enda.",
-      "register_a": "E-postbekreftelse først — klikk på lenken i velkomstmeldingen. For andre roller enn stuper (dommer, trener, stevneleder) må forbundsadministratoren også godkjenne deg. Begge bør skje innen minutter; hvis du ikke ser e-posten etter 10 minutter, sjekk søppelpost og be så administratoren bekrefte at kontoen er aktiv.",
+      "register_a": "Bekreft e-posten din først: klikk på lenken i bekreftelses-e-posten vi sendte da du registrerte deg. Ingenting der? Sjekk søppelposten, eller prøv å logge inn og be om en ny lenke. Roller blokkerer ikke innlogging: du starter som tilskuer og får mer når klubb- eller forbundsadministratoren din godkjenner det.",
       "judge_device_q": "Jeg er dommer — hvilken enhet bør jeg bruke?",
       "judge_device_a": "Enhver moderne telefon med nettleser fungerer. iPhone 12 / Pixel 6 eller nyere er ideelt. Visningen er laget for mobil; du kommer til å trykke tall hele stevnet, så en telefon du holder behagelig med én hånd er riktig valg. Wifi foretrekkes framfor 4G hvis hallen har det — poengsummene synkroniseres også via 4G, men nettverkets svartid er merkbart lengre.",
       "scoring_q": "Hvordan fungerer poenggivningen?",
@@ -637,13 +653,13 @@
       "schedule_q": "Hvordan planlegger jeg en hel mesterskapsdag?",
       "schedule_a": "Legg til planlagte tidspunkter til stevnets konkurranser, og åpne så <strong>Plan</strong> fra stevnets side som forbundsadmin eller stevneleder. DivingHQ lager en første plan med 45-minutters oppvarminger, konkurranseblokker og bretttildelinger. Slå på <strong>Redigeringsmodus</strong> for å dra, endre størrelse, sette inn, slette eller duplisere økter; konfliktpanelet markerer overlappende brett, dommere, stupere og overdommere. Trenere, stupere og tilskuere kan se den offentlige tidslinjen eller abonnere på iCal-feeden.",
       "bug_q": "Hvordan rapporterer jeg en feil?",
-      "bug_a": "Klikk på lenken <strong>🐛 Rapporter en feil</strong> nederst på hjemmesiden eller panelet ditt. Den åpner en forhåndsutfylt GitHub-sak hvor du kan beskrive problemet. Skjermbilder hjelper mye.",
+      "bug_a": "Klikk på lenken <strong>🐛 Rapporter en feil</strong> nederst på hjemmesiden eller panelet ditt. Den åpner en forhåndsutfylt GitHub-sak hvor du kan beskrive problemet. Skjermbilder hjelper mye. Ingen GitHub-konto? Skriv til {email} i stedet.",
       "install_q": "Hvordan installerer jeg DivingHQ som en app?",
       "install_a": "På iPhone: åpne siden i Safari, trykk på Del-knappen, og velg så <strong>Legg til på Hjem-skjerm</strong>. På Android: åpne i Chrome, trykk på menyen, og velg så <strong>Installer app</strong>. Ikonet starter en fullskjermsvisning uten nettleserkrom — raskere oppstart, ingen nettleserlinje.",
       "tfa_q": "Hvordan slår jeg på tofaktorautentisering?",
       "tfa_a": "Åpne <strong>Min profil</strong> → <strong>Sikkerhet</strong> → <strong>Tofaktorautentisering</strong> og skann QR-koden med autentiseringsappen din (1Password, Authy, Google Authenticator). Lagre gjenopprettingskodene et trygt sted — de er den eneste veien inn igjen hvis du mister telefonen.",
       "account_q": "Hvordan endrer jeg e-post eller passord, eller sletter kontoen min?",
-      "account_a": "Alt sammen under <strong>Min profil</strong> → <strong>Kontoinnstillinger</strong>. Endring av e-post krever ny bekreftelse på den nye adressen. Sletting av kontoen er permanent og fjerner innloggingen din; historiske poengsummer blir stående på den offentlige scoretavlen under forbundets registrering (anonymiseres på forespørsel — kontakt forbundsadministratoren din).",
+      "account_a": "Alt sammen under <strong>Min profil</strong>: bytt e-post eller passord øverst, og <strong>Slett kontoen min</strong> ligger nederst. En ny e-postadresse må bekreftes før den tas i bruk. Sletting av kontoen er permanent og fjerner innloggingen og personopplysningene dine; navnet ditt blir stående på resultatene fra stevnene du deltok i, som idrettshistorikk. Må et resultat fjernes helt, skriv til {email}.",
       "records_q": "Hvordan fungerer rekorder?",
       "records_a": "Rekordene holder seg oppdatert av seg selv. Så snart siste dommer har bedømt et individuelt stup, sammenligner DivingHQ det med stuperens klubb-, regions-, nasjonale og kontinentale rekorder, delt i kvinner og menn, og erstatter hver rekord stupet slår. Alle rekordlistene finnes på siden {records_link}, uten innlogging. En liste står som uoffisiell til det styrende organet har gjort krav på den på DivingHQ, og de samme resultatene blir offisielle så snart et krav er godkjent. Personlige rekorder står på profilen til hver stuper."
     },
@@ -653,7 +669,7 @@
       "bookmark_features": "Funksjoner per rolle",
       "bookmark_features_desc": "alle funksjoner i appen, indeksert etter hvem som bruker dem",
       "bookmark_quickstart": "Hurtigstart (10 min)",
-      "bookmark_quickstart_desc": "registrer et forbund og avhold ditt første stevne",
+      "bookmark_quickstart_desc": "start klubben din og avhold ditt første stevne",
       "bookmark_roles": "Roller og rettigheter",
       "bookmark_roles_desc": "hva hver rolle kan og ikke kan",
       "bookmark_faq": "FAQ og feilsøking",
@@ -2074,5 +2090,13 @@
     "chip": "{name}-rekord",
     "chip_prev": "Tidligere rekord: {score}",
     "unofficial_tip": "Uoffisiell til det styrende organet gjør krav på kontoen på DivingHQ."
+  },
+  "legal": {
+    "privacy_title": "Personvernerklæring",
+    "terms_title": "Tjenestevilkår",
+    "consent": "Ved å opprette en konto godtar du {terms} og {privacy}.",
+    "contact": "Kontakt",
+    "need_help": "Trenger du hjelp?",
+    "english_only": "Denne siden finnes bare på engelsk, og det er den engelske teksten som gjelder."
   }
 }

@@ -1,34 +1,47 @@
 <script setup>
 import { computed, watch, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { marked } from 'marked'
+import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { setPageTitle } from '@/lib/pageTitle'
 import { GUIDE_SECTIONS, getTopicBySlug, getAdjacentTopics } from './topics.js'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
+import MarkdownArticle from '@/components/MarkdownArticle.vue'
 
 const route = useRoute()
-const router = useRouter()
 
 const slug = computed(() => route.params.topic)
 const topic = computed(() => getTopicBySlug(slug.value))
 const adjacent = computed(() => getAdjacentTopics(slug.value))
 
-const rendered = computed(() => {
-  if (!topic.value) return ''
-  return marked.parse(topic.value.md, { breaks: false, gfm: true })
-})
-
-function handleClick(e) {
-  const a = e.target.closest('a[href]')
-  if (!a) return
-  const href = a.getAttribute('href')
-  if (href?.startsWith('/')) {
-    e.preventDefault()
-    router.push(href)
+// The router has no scrollBehavior. A new topic starts at the top, unless
+// the link named a heading (/guide/roles-and-permissions#claims), in which
+// case go there once the article has rendered. Headings get their ids from
+// src/lib/markdown.js.
+function headingFor(hash) {
+  if (!hash) return null
+  try {
+    return document.getElementById(decodeURIComponent(hash.slice(1)))
+  } catch {
+    return null // a mangled %-escape in a hand-typed URL
   }
 }
+watch([slug, () => route.hash], ([newSlug, hash], old) => nextTick(() => {
+  const el = headingFor(hash)
+  if (el) el.scrollIntoView()
+  else if (!old || old[0] !== newSlug) window.scrollTo(0, 0)
+}), { immediate: true })
 
-watch(slug, () => nextTick(() => window.scrollTo(0, 0)))
+// The route only knows it's "User Guide"; the tab should say which topic.
+// flush 'post' so this lands after the router's own title hook, which also
+// re-runs on a language switch. fullPath is in the list because a jump to a
+// heading (or Back from one) is a navigation too: the hook resets the title
+// while the topic stays the same, so watching the topic alone left the tab
+// saying "User Guide".
+const { locale } = useI18n()
+watch([topic, locale, () => route.fullPath], ([t]) => {
+  if (t) setPageTitle(t.title)
+}, { immediate: true, flush: 'post' })
 </script>
 
 <template>
@@ -57,8 +70,8 @@ watch(slug, () => nextTick(() => window.scrollTo(0, 0)))
         </template>
       </nav>
 
-      <article class="gt-body" @click="handleClick">
-        <div class="gt-content" v-html="rendered"></div>
+      <article class="gt-body">
+        <MarkdownArticle :md="topic.md" />
 
         <nav class="gt-pager">
           <router-link v-if="adjacent.prev" :to="`/guide/${adjacent.prev.slug}`" class="gt-pager-link gt-pager-prev">
@@ -154,141 +167,6 @@ watch(slug, () => nextTick(() => window.scrollTo(0, 0)))
 }
 
 .gt-body { min-width: 0; }
-
-.gt-content {
-  font-family: var(--font-sans);
-  font-size: 14.5px;
-  line-height: 1.7;
-  color: var(--fg);
-}
-.gt-content :deep(h1) {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin: 0 0 0.75rem;
-  line-height: 1.2;
-  color: var(--fg);
-}
-.gt-content :deep(h2) {
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  margin: 2rem 0 0.75rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-  color: var(--fg);
-}
-.gt-content :deep(h3) {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 1.5rem 0 0.5rem;
-  color: var(--fg);
-}
-.gt-content :deep(h4) {
-  font-size: 14px;
-  font-weight: 600;
-  margin: 1.25rem 0 0.4rem;
-  color: var(--fg);
-}
-.gt-content :deep(p) {
-  margin: 0 0 0.85rem;
-  color: var(--fg-2);
-}
-.gt-content :deep(ul),
-.gt-content :deep(ol) {
-  margin: 0 0 1rem;
-  padding-inline-start: 1.5rem;
-  color: var(--fg-2);
-}
-.gt-content :deep(li) {
-  margin-bottom: 0.3rem;
-}
-.gt-content :deep(li > ul),
-.gt-content :deep(li > ol) {
-  margin-top: 0.3rem;
-  margin-bottom: 0.3rem;
-}
-.gt-content :deep(strong) {
-  color: var(--fg);
-  font-weight: 600;
-}
-.gt-content :deep(code) {
-  font-family: var(--font-mono);
-  font-size: 0.9em;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.1em 0.35em;
-}
-.gt-content :deep(pre) {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 1rem;
-  overflow-x: auto;
-  margin: 0 0 1rem;
-  font-size: 13px;
-  line-height: 1.5;
-}
-.gt-content :deep(pre code) {
-  background: none;
-  border: none;
-  padding: 0;
-}
-.gt-content :deep(a) {
-  color: var(--cyan);
-  text-decoration: none;
-}
-.gt-content :deep(a:hover) {
-  text-decoration: underline;
-}
-.gt-content :deep(img) {
-  max-width: 100%;
-  height: auto;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  margin: 0.5rem 0 1rem;
-  display: block;
-}
-.gt-content :deep(blockquote) {
-  border-inline-start: 3px solid var(--accent);
-  margin: 0 0 1rem;
-  padding: 0.5rem 1rem;
-  color: var(--fg-2);
-  background: var(--surface);
-  border-radius: 0 var(--radius) var(--radius) 0;
-}
-.gt-content :deep(blockquote p:last-child) {
-  margin-bottom: 0;
-}
-.gt-content :deep(table) {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0 0 1rem;
-  font-size: 13.5px;
-  display: block;
-  overflow-x: auto;
-}
-.gt-content :deep(th),
-.gt-content :deep(td) {
-  text-align: start;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-}
-.gt-content :deep(th) {
-  background: var(--surface);
-  font-weight: 600;
-  color: var(--fg);
-  white-space: nowrap;
-}
-.gt-content :deep(td) {
-  color: var(--fg-2);
-}
-.gt-content :deep(hr) {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 2rem 0;
-}
 
 .gt-pager {
   display: flex;

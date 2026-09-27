@@ -1,6 +1,6 @@
 # Admin Tasks
 
-This page covers everything an org admin (or system admin) does when they're NOT actively running a meet — managing users, clubs, teams, audit logs, and record books.
+This page covers everything a federation (org), region or club admin, or a system admin, does when they're NOT actively running a meet — managing users, clubs, teams, claims, audit logs, and record books.
 
 ## Which admin task do I need?
 
@@ -9,6 +9,10 @@ This page covers everything an org admin (or system admin) does when they're NOT
 | Approve users, grant roles, reset passwords | [User Manager](#user-manager) |
 | Approve club changes and org transfers | [Club-change requests](#club-change-and-cross-org-transfer-requests) |
 | Create clubs or assign club codes | [Clubs](#clubs) |
+| Appoint club and region admins | [Clubs](#clubs) |
+| Run your club: members, co-admins, region | [Club admins](#club-admins) |
+| Look after a state, province or home nation | [Region admins](#region-admins) |
+| Vote on or decide a claim | [Claims](#claims) |
 | Create team entries | [Teams](#teams) |
 | Review score changes | [Score Audit Log](#score-audit-log) |
 | Review role changes | [Role Audit Log](#role-audit-log) |
@@ -16,7 +20,7 @@ This page covers everything an org admin (or system admin) does when they're NOT
 | Plan boards, warmups, and event timing | [Session Scheduler](/guide/session-scheduler) |
 | Approve new federations or run migrations | [System admin tasks](#system-admin-tasks) |
 
-Org admins work inside one federation. System admins work across every federation and should treat cross-org actions as production operations.
+Org admins work inside one federation, region admins inside one region, and club admins inside one club. System admins work across every federation and should treat cross-org actions as production operations.
 
 ## The dashboard at a glance
 
@@ -30,7 +34,7 @@ The strip is socket-driven — counts update the moment something happens (an ev
 
 For system admins, the strip also includes pending org registrations in the `👥 PENDING` count.
 
-The right edge of the strip carries an **activity ticker** — a single auto-cycling chip showing the most recent audit row across the federation (`⚡ Avery Ueno withdrawn from R3 · 2h ago` style). Click → opens the full [Audit Log](#).
+The right edge of the strip carries an **activity ticker** — a single auto-cycling chip showing the most recent audit row across the federation (`⚡ Avery Ueno withdrawn from R3 · 2h ago` style). Click it to open the full [Audit Log](/audit).
 
 ### Drilling deeper
 
@@ -102,8 +106,39 @@ The move only finalises once all three are in. Every approval and the final tran
 - **+ New Club** — name + short code (3 – 6 chars; surfaces as the cyan pill in scoreboards)
 - **Edit** — rename, change short code
 - **Delete** — non-destructive; clubs with members can't be deleted (prevents orphaning users)
+- **Admins** — appoint or remove the club's admins (see [Club admins](#club-admins))
+- **Regions** — the strip above the list shows your states, provinces or home nations with their club counts; click one to appoint its admins. If your country has no regions yet, **Set up regions** loads the standard list for Australia, Canada or the UK
 
 The short code matters more than you'd think — it's the cyan pill that shows next to the diver's name on the scoreboard, history cards, and Up Next tile. Pick something distinctive (e.g. `NZL-WLG` for "NZ Wellington" instead of just `WLG`).
+
+## Club admins
+
+`/club` (**My club** in the sidebar), for anyone who admins a club.
+
+- **Role requests** — members asking to dive, judge or referee. Approve or reject each one. In a country with no federation on DivingHQ yet this is where they land; under a federation they go to the federation's admins instead.
+- **Admins** — the club's admins. While the country has no federation you can add co-admins from your members and remove them (the last admin can't step down). Under a federation this list is read-only, because the federation appoints club admins.
+- **Region** — which state, province or home nation the club is in, in countries that have them. Same rule: yours to set until a federation arrives.
+
+A club admin also runs the club's meets. In Meet Manager, **+ New meet** creates a meet hosted by your club, and from there you have the same tools as a meet manager for that meet's events: entries, panels, the schedule and the Control Room.
+
+## Region admins
+
+`/region` (**My region** in the sidebar), for anyone who admins a region.
+
+- Every club in the region, with who runs it.
+- The region's own admins.
+
+Region admins approve role requests from any club in the region (in a country with no federation yet), create the region's championships in Meet Manager, and can step in on any of the region's clubs' meets. Federation admins appoint them from **Clubs** → the regions strip; a state body can also apply for its region from [Register your org](/register-org), which opens a claim.
+
+## Claims
+
+`/claims` (**Claims** in the sidebar). A claim is a federation or state body applying to take over a country or region that its clubs started. [Roles & Permissions → Claims](/guide/roles-and-permissions#claims) has the full rules; here's what each admin does with them.
+
+- **Club admins** (or, for a national claim, the admins of regions already claimed) see the claims they can vote on, with the body's name, its website, and whether the applicant's email is on that website's domain. **Approve**, or **Object** with a reason. An objection sends the claim to DivingHQ.
+- **Federation admins** decide a state body's claim on one of their regions.
+- **System admins** decide claims with too few voters, objected claims, and claims whose vote ran out without passing. They can also **revoke** an approved claim, which hands the country or region back to its clubs and removes the admin seat the claim gave.
+
+The dashboard's pulse strip counts claims waiting on you.
 
 ## Teams
 
@@ -329,7 +364,8 @@ Email notifications fire automatically (best-effort, never block the response):
 | Trigger | Recipient |
 |---|---|
 | User registers | The new user (welcome email) |
-| Role request | All org admins |
+| Role request | Whoever reviews it: the federation's admins, or in a country with no federation yet, the requester's club or region admins |
+| Claim opened, voted on or decided | The club (or region) admins voting, the claimant, and DivingHQ when it has to decide |
 | Role decision | The applicant |
 | Password changed | The user |
 | Password reset link | The user |

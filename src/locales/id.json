@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Platform Pengelolaan Kompetisi",
-      "tagline": "Pengelolaan kompetisi loncat indah ujung ke ujung — dari penyiapan nomor dan pengiriman daftar loncatan hingga penjurian langsung, siaran skor, dan hasil akhir.",
+      "tagline": "Selenggarakan kompetisi loncat indah klub Anda mulai hari ini: daftar loncatan, penjurian langsung lewat ponsel, papan skor publik, dan hasil. Tidak perlu federasi untuk memulai, dan ketika federasi atau badan provinsi Anda bergabung, riwayat klub Anda ikut bersama Anda.",
       "btn_sign_in": "Masuk",
       "btn_create_account": "Buat akun",
       "btn_scoreboard": "Papan skor & hasil",
       "btn_judge_analysis": "Analisis juri",
-      "guide_link": "Baru di sini? Baca panduan pengguna 5 menit →"
+      "guide_link": "Baru di sini? Baca panduan pengguna 5 menit →",
+      "btn_start_club": "Mulai klub Anda",
+      "federation_link": "Federasi atau badan provinsi? Daftarkan organisasi Anda →"
     },
     "live_strip": {
       "pill": "LANGSUNG",
       "text": "Papan skor langsung terbuka untuk semua orang — tidak perlu login",
-      "watch": "Tonton langsung →"
+      "watch": "Tonton langsung →",
+      "pill_idle": "Skor langsung",
+      "text_live": "Penilaian sedang berlangsung sekarang. Ikuti setiap loncatan tanpa login.",
+      "browse": "Lihat hasil →"
     },
     "features": {
       "section_label": "Dibuat untuk setiap peran di kolam",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Pengelola Kompetisi",
       "meet_manager_desc": "Buat nomor, konfigurasikan ronde dan ukuran panel, tetapkan juri, dan kelola seluruh struktur kompetisi.",
       "user_manager_title": "Pengelola Pengguna",
-      "user_manager_desc": "Setujui permintaan peran dan kendalikan akses anggota di federasi Anda. Setiap perubahan peran melewati alur permintaan."
+      "user_manager_desc": "Setujui permintaan peran dan kendalikan akses anggota di klub atau federasi Anda. Setiap perubahan peran melewati alur permintaan."
     },
     "how": {
       "section_label": "Bagaimana kompetisi berjalan",
       "step01_title": "Siapkan nomor",
-      "step01_desc": "Pengelola kompetisi membuat nomor, menetapkan jumlah ronde dan juri, dan menetapkan panel.",
+      "step01_desc": "Penyelenggara (admin klub atau pengelola kompetisi) membuat nomor, menetapkan jumlah ronde dan juri, dan menetapkan panel.",
       "step02_title": "Peloncat mengirim daftar",
       "step02_desc": "Setiap peloncat masuk dan mengirim daftar loncatannya. Nilai DD diambil dari direktori resmi secara otomatis.",
       "step03_title": "Penilaian berjalan langsung",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Masuk",
       "register": "Daftar",
-      "register_federation": "Daftarkan federasi",
+      "register_federation": "Untuk federasi dan badan provinsi",
       "scoreboard": "Papan skor & hasil",
       "user_guide": "📖 Panduan pengguna",
       "report_bug": "🐛 Laporkan bug"
-    }
+    },
+    "clubs": {
+      "section_label": "Untuk klub",
+      "step1_title": "Buat klub Anda",
+      "step1_desc": "Daftar, pilih negara Anda, dan beri nama klub Anda. Jika federasi Anda belum ada di DivingHQ, Anda adminnya sejak awal.",
+      "step2_title": "Undang peloncat dan juri",
+      "step2_desc": "Kirim tautan pendaftaran ke anggota. Mereka memilih klub Anda, dan Anda menyetujui siapa yang meloncat, menjadi juri, atau wasit kepala.",
+      "step3_title": "Selenggarakan kompetisi pertama Anda",
+      "step3_desc": "Siapkan nomor lomba, jalankan kompetisi dari Ruang Kontrol sementara juri menilai di ponsel mereka, dan hasil terbit setiap kali loncatan selesai dinilai.",
+      "note": "Tidak perlu federasi untuk memulai. Jika federasi atau badan provinsi Anda bergabung dengan DivingHQ nanti, badan itu mengambil alih pengelolaan negara atau wilayah, dan klub Anda tetap menyimpan kompetisi, hasil, dan rekornya."
+    },
+    "meta_title": "Perangkat lunak kompetisi loncat indah untuk klub dan federasi"
   },
   "dashboard": {
     "search_divers": "Cari peloncat…",
@@ -441,7 +457,7 @@
       "dialog_confirm": "Hapus akun saya",
       "dialog_cancel": "Batal",
       "dialog_what_goes": "Dihapus:",
-      "dialog_what_goes_items": "Login dan kata sandi, email kontak, langganan push, pengaturan dasbor, pemberian peran, tautan pelatih-penyelam, slug profil publik.",
+      "dialog_what_goes_items": "Login dan kata sandi, email kontak, tanggal lahir, jenis kelamin, dan kewarganegaraan, langganan push, pengaturan dasbor, pemberian peran, peran admin klub dan wilayah, tautan pelatih-penyelam, slug profil publik.",
       "dialog_what_stays": "Tetap ada:",
       "dialog_what_stays_items": "Nama Anda pada loncatan yang Anda ikuti, panel juri yang Anda jalani, dan acara di mana Anda muncul. Entri log audit yang Anda picu (dihapus dalam rotasi normal 30 hari).",
       "confirmation_toast": "Akun dihapus. Riwayat kompetisi Anda telah dianonimkan. Masuk dengan akun baru untuk mengklaimnya kembali nanti.",
@@ -466,7 +482,7 @@
       "confirming": "Mengklaim…",
       "password_label": "Konfirmasi dengan kata sandi Anda",
       "password_placeholder": "Kata sandi Anda saat ini",
-      "conflict": "Tidak dapat digabungkan: akun lama dan akun Anda saat ini sama-sama memiliki entri untuk acara dan ronde yang sama. Hapus centang pada kandidat yang bertabrakan atau hubungi admin federasi Anda untuk menggabungkan secara manual.",
+      "conflict": "Tidak dapat digabungkan: akun lama dan akun Anda saat ini sama-sama memiliki entri untuk acara dan ronde yang sama. Hapus centang pada kandidat yang bertabrakan, atau kirim email ke {email} dan kami akan menggabungkannya secara manual.",
       "success_toast": "Hasil sebelumnya kembali ditautkan ke profil Anda."
     },
     "club_request_sent": "Permintaan terkirim. Anda akan pindah setelah disetujui: oleh federasi Anda, atau jika belum ada, oleh admin klub yang baru."
@@ -541,7 +557,7 @@
       "diver": {
         "name": "Peloncat",
         "desc": "Anda berkompetisi. Anda akan mengirim daftar loncatan (loncatan apa yang akan Anda lakukan, per ronde) sebelum tenggat pendaftaran setiap acara, lalu cek <strong>Tampilan Hari Lomba</strong> di hari itu untuk melihat posisi antrean dan apa yang harus Anda nilai.",
-        "step_1": "Masuk atau terima undangan dari admin federasi Anda",
+        "step_1": "Daftar dan pilih klub Anda",
         "step_2": "Buka <strong>Kirim Daftar Loncatan</strong> dan pilih loncatan per ronde",
         "step_3": "Pada hari lomba, buka <strong>Tampilan Hari Lomba</strong> di ponsel Anda",
         "step_4": "Skor + analitik Anda ada di <strong>Profil Saya</strong>",
@@ -588,7 +604,7 @@
       },
       "region_admin": {
         "name": "Admin wilayah",
-        "desc": "Anda mengurus negara bagian, provinsi, atau bangsa: menyelenggarakan kejuaraannya, dapat turun tangan di kompetisi klub mana pun di dalamnya, dan menyetujui permintaan peran anggota klubnya. Federasi Anda menunjuk Anda. Jika belum ada federasi, badan wilayah Anda mengklaim wilayah itu dan Anda sendiri yang menambahkan rekan admin.",
+        "desc": "Anda mengurus negara bagian, provinsi, atau bangsa: menyelenggarakan kejuaraannya, dapat turun tangan di kompetisi klub mana pun di dalamnya, dan menyetujui permintaan peran anggota klubnya. Federasi Anda menunjuk Anda. Jika belum ada federasi, badan wilayah Anda mengklaim wilayah itu dan Anda sendiri yang menambahkan rekan admin. Badan negara bagian dapat mengajukan diri untuk mengelola wilayahnya dari <strong>Daftarkan organisasi Anda</strong>.",
         "step_1": "Buka <strong>Wilayah saya</strong> untuk melihat klub dan pengelolanya",
         "step_2": "Buat kejuaraan Anda di <strong>Pengelola kompetisi</strong> dengan wilayah Anda sebagai tuan rumah",
         "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau pelatih, serta klub yang ingin bergabung ke wilayah Anda",
@@ -616,7 +632,7 @@
     },
     "faq": {
       "register_q": "Saya baru saja mendaftar tapi belum bisa masuk.",
-      "register_a": "Verifikasi email dulu — klik tautan di email selamat datang. Untuk peran selain peloncat (juri, pelatih, pengelola kompetisi), admin federasi Anda juga perlu menyetujui Anda. Keduanya harus terjadi dalam hitungan menit; jika setelah 10 menit email belum terlihat, cek folder spam, lalu minta admin Anda memastikan akun Anda aktif.",
+      "register_a": "Konfirmasi email Anda dulu: klik tautan di email konfirmasi yang kami kirim saat Anda mendaftar. Tidak ada? Periksa folder spam, atau coba masuk dan minta tautan baru. Peran tidak menghalangi masuk: Anda mulai sebagai penonton dan mendapat lebih banyak setelah admin klub atau federasi Anda menyetujui.",
       "judge_device_q": "Saya juri — perangkat apa yang sebaiknya saya pakai?",
       "judge_device_a": "Setiap ponsel modern dengan peramban bisa. iPhone 12 / Pixel 6 dan yang lebih baru ideal. Tampilan dirancang untuk seluler; Anda akan menghabiskan kompetisi mengetuk angka, jadi ponsel yang nyaman digenggam satu tangan adalah pilihan tepat. WiFi lebih disukai daripada 4G jika venue memiliki — skor Anda tetap tersinkron lewat 4G tapi waktu tempuh jaringan jelas lebih lama.",
       "scoring_q": "Bagaimana cara penilaian bekerja?",
@@ -626,13 +642,13 @@
       "schedule_q": "Bagaimana cara merencanakan satu hari kejuaraan penuh?",
       "schedule_a": "Tambahkan waktu terjadwal ke acara kompetisi, lalu buka <strong>Jadwal</strong> dari halaman kompetisi sebagai admin organisasi atau pengelola. DivingHQ menyemai rencana awal dengan pemanasan 45 menit, blok acara, dan penugasan papan. Aktifkan <strong>Mode edit</strong> untuk seret, ubah ukuran, sisipkan, hapus, atau gandakan sesi; laci konflik menandai papan, juri, peloncat, dan wasit yang tumpang tindih. Pelatih, peloncat, dan penonton dapat melihat lini masa publik atau berlangganan umpan iCal.",
       "bug_q": "Bagaimana cara melaporkan bug?",
-      "bug_a": "Klik tautan <strong>🐛 Laporkan bug</strong> di bagian bawah halaman beranda atau dasbor Anda. Itu membuka isu GitHub yang sudah terisi siap untuk Anda jelaskan masalahnya. Tangkapan layar sangat membantu.",
+      "bug_a": "Klik tautan <strong>🐛 Laporkan bug</strong> di bagian bawah halaman beranda atau dasbor Anda. Itu membuka isu GitHub yang sudah terisi siap untuk Anda jelaskan masalahnya. Tangkapan layar sangat membantu. Tidak punya akun GitHub? Kirim email ke {email}.",
       "install_q": "Bagaimana cara memasang DivingHQ sebagai aplikasi?",
       "install_a": "Di iPhone: buka situs di Safari, ketuk tombol Bagikan, lalu <strong>Tambahkan ke Layar Utama</strong>. Di Android: buka di Chrome, ketuk menu, lalu <strong>Pasang aplikasi</strong>. Ikon tersebut meluncurkan tampilan layar penuh tanpa bingkai — startup lebih cepat, tanpa bilah peramban.",
       "tfa_q": "Bagaimana cara mengaktifkan autentikasi dua faktor?",
       "tfa_a": "Buka <strong>Profil Saya</strong> → <strong>Keamanan</strong> → <strong>Autentikasi dua faktor</strong> dan pindai kode QR dengan aplikasi autentikator Anda (1Password, Authy, Google Authenticator). Simpan kode pemulihan di tempat yang aman — itulah satu-satunya cara masuk kembali jika Anda kehilangan ponsel.",
       "account_q": "Bagaimana cara mengubah email, kata sandi, atau menghapus akun saya?",
-      "account_a": "Semuanya ada di <strong>Profil Saya</strong> → <strong>Pengaturan akun</strong>. Perubahan email memerlukan verifikasi ulang di alamat yang baru. Menghapus akun Anda bersifat permanen dan menghapus akses masuk Anda; skor historis tetap ada di papan skor publik dalam catatan federasi (dianonimkan atas permintaan — hubungi admin federasi Anda).",
+      "account_a": "Semuanya ada di <strong>Profil saya</strong>: ubah email atau kata sandi di bagian atas, dan <strong>Hapus akun saya</strong> ada di bagian bawah. Alamat email baru harus dikonfirmasi sebelum berlaku. Menghapus akun bersifat permanen dan menghapus akses masuk serta data pribadi Anda; nama Anda tetap ada di hasil kompetisi yang Anda ikuti, sebagai catatan olahraga. Jika sebuah hasil perlu dihapus sepenuhnya, kirim email ke {email}.",
       "records_q": "Bagaimana rekor bekerja?",
       "records_a": "Rekor diperbarui dengan sendirinya. Begitu juri terakhir menilai loncatan perorangan, DivingHQ membandingkannya dengan rekor klub, regional, nasional, dan kontinental milik peloncat, terpisah untuk putri dan putra, lalu menggantikan setiap catatan yang dilampauinya. Semua daftar rekor ada di halaman {records_link}, tanpa perlu masuk. Sebuah daftar tercatat tidak resmi sampai badan pengelolanya mengklaimnya di DivingHQ, dan catatan yang sama menjadi resmi begitu klaim disetujui. Rekor pribadi ada di profil setiap peloncat."
     },
@@ -642,7 +658,7 @@
       "bookmark_features": "Fitur menurut peran",
       "bookmark_features_desc": "setiap fitur dalam aplikasi, terindeks berdasarkan penggunanya",
       "bookmark_quickstart": "Memulai Cepat (10 menit)",
-      "bookmark_quickstart_desc": "daftarkan federasi dan jalankan kompetisi pertama Anda",
+      "bookmark_quickstart_desc": "mulai klub Anda dan jalankan kompetisi pertama Anda",
       "bookmark_roles": "Peran & izin",
       "bookmark_roles_desc": "apa yang bisa dan tidak bisa dilakukan setiap peran",
       "bookmark_faq": "FAQ & penyelesaian masalah",
@@ -2074,5 +2090,13 @@
     "chip": "Rekor {name}",
     "chip_prev": "Rekor sebelumnya: {score}",
     "unofficial_tip": "Tidak resmi sampai badan pengelolanya mengklaimnya di DivingHQ."
+  },
+  "legal": {
+    "privacy_title": "Kebijakan Privasi",
+    "terms_title": "Ketentuan Layanan",
+    "consent": "Dengan membuat akun, Anda menyetujui {terms} dan {privacy}.",
+    "contact": "Kontak",
+    "need_help": "Butuh bantuan?",
+    "english_only": "Halaman ini hanya tersedia dalam bahasa Inggris, dan teks bahasa Inggris yang berlaku."
   }
 }

@@ -220,17 +220,22 @@
   "home": {
     "hero": {
       "mark": "Plattform för tävlingshantering",
-      "tagline": "Helhetslösning för simhoppstävlingar — från evenemangsinställning och inlämning av hopplistor till live-bedömning, sändning av poäng och slutresultat.",
+      "tagline": "Arrangera klubbens simhopptävlingar redan i dag: hopplistor, livebedömning i mobilen, en offentlig resultattavla och resultat. Du behöver inget förbund för att komma igång, och när ditt förbund eller distriktsförbund ansluter följer klubbens historik med.",
       "btn_sign_in": "Logga in",
       "btn_create_account": "Skapa konto",
       "btn_scoreboard": "Resultattavla",
       "btn_judge_analysis": "Domaranalys",
-      "guide_link": "Ny här? Läs guiden på 5 minuter →"
+      "guide_link": "Ny här? Läs guiden på 5 minuter →",
+      "btn_start_club": "Starta din klubb",
+      "federation_link": "Förbund eller distriktsorgan? Registrera din organisation →"
     },
     "live_strip": {
       "pill": "PÅGÅR",
       "text": "Live-resultattavlan är öppen för alla — ingen inloggning krävs",
-      "watch": "Se direktsändning →"
+      "watch": "Se direktsändning →",
+      "pill_idle": "Liveresultat",
+      "text_live": "Bedömningen pågår live just nu. Följ varje hopp, utan inloggning.",
+      "browse": "Bläddra bland resultat →"
     },
     "features": {
       "section_label": "Byggd för varje roll vid bassängkanten",
@@ -245,12 +250,12 @@
       "meet_manager_title": "Tävlingshanterare",
       "meet_manager_desc": "Skapa grenar, konfigurera omgångar och paneler, tilldela domare och hantera tävlingens hela struktur.",
       "user_manager_title": "Användarhantering",
-      "user_manager_desc": "Godkänn rollförfrågningar och styr medlemmarnas åtkomst i ditt förbund. Varje rolländring går via en förfrågningsprocess."
+      "user_manager_desc": "Godkänn rollförfrågningar och styr medlemmarnas åtkomst i din klubb eller ditt förbund. Varje rolländring går via en förfrågningsprocess."
     },
     "how": {
       "section_label": "Så går en tävling till",
       "step01_title": "Sätt upp grenen",
-      "step01_desc": "Tävlingsledaren skapar grenar, anger antal omgångar och domare och tillsätter panelen.",
+      "step01_desc": "Arrangören (en klubbadministratör eller tävlingsledare) skapar grenar, anger antal omgångar och domare och tillsätter panelen.",
       "step02_title": "Hopparna skickar in listor",
       "step02_desc": "Varje hoppare loggar in och skickar in sin hopplista. Svårighetsvärden hämtas automatiskt från den officiella katalogen.",
       "step03_title": "Bedömningen går live",
@@ -261,11 +266,22 @@
     "footer": {
       "sign_in": "Logga in",
       "register": "Registrera",
-      "register_federation": "Registrera förbund",
+      "register_federation": "För förbund och distriktsorgan",
       "scoreboard": "Resultattavla",
       "user_guide": "📖 Användarguide",
       "report_bug": "🐛 Rapportera ett fel"
-    }
+    },
+    "clubs": {
+      "section_label": "För klubbar",
+      "step1_title": "Skapa din klubb",
+      "step1_desc": "Registrera dig, välj land och ge klubben ett namn. Finns ditt förbund inte på DivingHQ ännu är du klubbens administratör från start.",
+      "step2_title": "Bjud in hoppare och domare",
+      "step2_desc": "Skicka registreringslänken till medlemmarna. De väljer din klubb, och du godkänner vem som hoppar, dömer eller är överdomare.",
+      "step3_title": "Arrangera din första tävling",
+      "step3_desc": "Lägg upp grenar, styr tävlingen från kontrollrummet medan domarna ger poäng i mobilen, och resultaten publiceras allt eftersom varje hopp bedöms.",
+      "note": "Du behöver inget förbund för att komma igång. Om ditt förbund eller distriktsförbund ansluter till DivingHQ senare tar det över driften av landet eller regionen, och din klubb behåller sina tävlingar, resultat och rekord."
+    },
+    "meta_title": "Tävlingsprogram för simhopp, för klubbar och förbund"
   },
   "dashboard": {
     "search_divers": "Sök hoppare…",
@@ -452,7 +468,7 @@
       "dialog_confirm": "Ta bort mitt konto",
       "dialog_cancel": "Avbryt",
       "dialog_what_goes": "Tas bort:",
-      "dialog_what_goes_items": "Inloggning och lösenord, kontaktmejl, push-prenumerationer, dashboard-inställningar, rolltilldelningar, tränare-hoppare-kopplingar, publik profil-slug.",
+      "dialog_what_goes_items": "Inloggning och lösenord, kontaktmejl, födelsedatum, kön och nationalitet, push-prenumerationer, dashboard-inställningar, rolltilldelningar, klubb- och regionadministratörsroller, tränare-hoppare-kopplingar, publik profil-slug.",
       "dialog_what_stays": "Behålls:",
       "dialog_what_stays_items": "Ditt namn på de hopp du tävlade i, de domarpaneler du satt i och de tävlingar du deltog i. Granskningsloggposter du utlöste (rensas i normal 30-dagars rotation).",
       "confirmation_toast": "Konto borttaget. Din tävlingshistorik är anonymiserad. Logga in med ett nytt konto för att återta den senare.",
@@ -477,7 +493,7 @@
       "confirming": "Återtar…",
       "password_label": "Bekräfta med ditt lösenord",
       "password_placeholder": "Ditt nuvarande lösenord",
-      "conflict": "Kan inte slå samman: både det gamla kontot och ditt nuvarande konto har anmälningar för samma tävling och omgång. Bocka av den krockande kandidaten eller kontakta din förbundsadministratör för att slå samman manuellt.",
+      "conflict": "Kan inte slå samman: både det gamla kontot och ditt nuvarande konto har anmälningar för samma tävling och omgång. Bocka av den krockande kandidaten, eller skriv till {email} så slår vi ihop dem för hand.",
       "success_toast": "Tidigare resultat omkopplade till din profil."
     },
     "club_request_sent": "Förfrågan skickad. Du flyttas när den godkänts: av ditt förbund, eller där det ännu inte finns något, av den nya klubbens administratörer."
@@ -552,7 +568,7 @@
       "diver": {
         "name": "Hoppare",
         "desc": "Du tävlar. Du lämnar in en hopplista (vilka hopp du gör per omgång) före varje tävlings anmälningsdeadline och kollar sedan <strong>Tävlingsdagsvyn</strong> på dagen för att se din plats i kön och vad som väntar.",
-        "step_1": "Logga in eller acceptera inbjudan från din förbundsadministratör",
+        "step_1": "Registrera dig och välj din klubb",
         "step_2": "Öppna <strong>Lämna in hopplistor</strong> och välj dina hopp per omgång",
         "step_3": "På tävlingsdagen öppnar du <strong>Tävlingsdagsvyn</strong> i mobilen",
         "step_4": "Dina poäng och din analys finns under <strong>Min profil</strong>",
@@ -599,7 +615,7 @@
       },
       "region_admin": {
         "name": "Regionadministratör",
-        "desc": "Du ansvarar för en delstat, provins eller nation: arrangerar mästerskapen, kan kliva in på alla klubbars tävlingar och godkänner rollförfrågningar från klubbarnas medlemmar. Ditt förbund utser dig. Finns det inget ännu gör ditt regionala organ anspråk på regionen, och du lägger själv till dina medadministratörer.",
+        "desc": "Du ansvarar för en delstat, provins eller nation: arrangerar mästerskapen, kan kliva in på alla klubbars tävlingar och godkänner rollförfrågningar från klubbarnas medlemmar. Ditt förbund utser dig. Finns det inget ännu gör ditt regionala organ anspråk på regionen, och du lägger själv till dina medadministratörer. Ett delstatsförbund kan ansöka om att driva sin region via <strong>Registrera din organisation</strong>.",
         "step_1": "Öppna <strong>Min region</strong> för att se dina klubbar och vem som driver dem",
         "step_2": "Skapa mästerskapen i <strong>Tävlingshanterare</strong> med regionen som arrangör",
         "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara tränare, och klubbar som vill gå med i din region",
@@ -627,7 +643,7 @@
     },
     "faq": {
       "register_q": "Jag har precis registrerat mig men kan inte logga in än.",
-      "register_a": "Först e-postverifiering — klicka på länken i välkomstmejlet. För andra roller än hoppare (domare, tränare, tävlingsledare) måste din förbundsadministratör också godkänna dig. Båda brukar gå på några minuter; om du inte ser mejlet efter 10 minuter, kolla skräpposten och be sedan administratören bekräfta att kontot är aktivt.",
+      "register_a": "Bekräfta din e-post först: klicka på länken i bekräftelsemejlet vi skickade när du registrerade dig. Inget där? Kolla skräpposten, eller försök logga in och be om en ny länk. Roller hindrar inte inloggning: du börjar som åskådare och får mer när din klubb- eller förbundsadministratör godkänner det.",
       "judge_device_q": "Jag är domare — vilken enhet ska jag använda?",
       "judge_device_a": "Vilken modern mobil med webbläsare som helst funkar. iPhone 12 / Pixel 6 eller nyare är idealiskt. Vyn är gjord för mobilen; du kommer trycka in siffror hela tävlingen, så en mobil du kan greppa bekvämt med en hand är rätt val. Wifi är att föredra framför 4G om lokalen har det — poängen synkas via 4G också, men svarstiden är märkbart längre.",
       "scoring_q": "Hur fungerar poängsättningen?",
@@ -637,13 +653,13 @@
       "schedule_q": "Hur planerar jag en hel mästerskapsdag?",
       "schedule_a": "Lägg in schemalagda tider på tävlingens grenar och öppna sedan <strong>Schema</strong> från tävlingens sida som förbundsadmin eller tävlingsledare. DivingHQ skapar en första plan med 45-minuters uppvärmningar, grenblock och brädtilldelningar. Slå på <strong>Redigeringsläge</strong> för att dra, ändra storlek, lägga till, ta bort eller duplicera pass; konfliktpanelen flaggar krockande brädor, domare, hoppare och överdomare. Tränare, hoppare och åskådare kan se den publika tidslinjen eller prenumerera på iCal-flödet.",
       "bug_q": "Hur rapporterar jag en bugg?",
-      "bug_a": "Klicka på länken <strong>🐛 Rapportera en bugg</strong> längst ned på hemsidan eller din panel. Den öppnar ett färdigfyllt GitHub-ärende där du kan beskriva problemet. Skärmbilder hjälper mycket.",
+      "bug_a": "Klicka på länken <strong>🐛 Rapportera en bugg</strong> längst ned på hemsidan eller din panel. Den öppnar ett färdigfyllt GitHub-ärende där du kan beskriva problemet. Skärmbilder hjälper mycket. Inget GitHub-konto? Mejla {email} i stället.",
       "install_q": "Hur installerar jag DivingHQ som en app?",
       "install_a": "På iPhone: öppna sidan i Safari, tryck på Dela-knappen och sedan på <strong>Lägg till på hemskärmen</strong>. På Android: öppna i Chrome, tryck på menyn och sedan på <strong>Installera app</strong>. Ikonen startar en helskärmsvy utan webbläsarkrom — snabbare start, ingen webbläsarrad.",
       "tfa_q": "Hur aktiverar jag tvåfaktorsautentisering?",
       "tfa_a": "Öppna <strong>Min profil</strong> → <strong>Säkerhet</strong> → <strong>Tvåfaktorsautentisering</strong> och skanna QR-koden med din autentiseringsapp (1Password, Authy, Google Authenticator). Spara återställningskoderna på ett säkert ställe — de är enda vägen tillbaka in om du tappar bort mobilen.",
       "account_q": "Hur byter jag e-post, lösenord eller tar bort mitt konto?",
-      "account_a": "Allt finns under <strong>Min profil</strong> → <strong>Kontoinställningar</strong>. E-postbyten kräver ny verifiering på den nya adressen. Att ta bort kontot är permanent och tar bort din inloggning; historiska poäng finns kvar på den publika resultattavlan under förbundets post (anonymiseras på begäran — kontakta din förbundsadministratör).",
+      "account_a": "Allt finns under <strong>Min profil</strong>: byt e-post eller lösenord högst upp, och <strong>Ta bort mitt konto</strong> finns längst ned. En ny e-postadress måste bekräftas innan den gäller. Att ta bort kontot är permanent och tar bort din inloggning och dina personuppgifter; ditt namn står kvar i resultaten från tävlingarna du deltog i, som idrottshistorik. Behöver ett resultat tas bort helt, skriv till {email}.",
       "records_q": "Hur fungerar rekord?",
       "records_a": "Rekorden håller sig själva uppdaterade. Så snart den sista domaren har bedömt ett individuellt hopp jämför DivingHQ det med hopparens klubb-, regions-, nationella och kontinentala rekord, uppdelat på damer och herrar, och ersätter varje notering som hoppet slår. Alla rekordlistor finns på sidan {records_link}, utan inloggning. En lista räknas som inofficiell tills dess styrande organ har gjort anspråk på den på DivingHQ, och samma resultat blir officiella så snart ett anspråk godkänns. Personbästan finns på varje hoppares profil."
     },
@@ -653,7 +669,7 @@
       "bookmark_features": "Funktioner per roll",
       "bookmark_features_desc": "alla funktioner i appen, indexerade efter vem som använder dem",
       "bookmark_quickstart": "Snabbstart (10 min)",
-      "bookmark_quickstart_desc": "registrera ett förbund och kör din första tävling",
+      "bookmark_quickstart_desc": "starta din klubb och kör din första tävling",
       "bookmark_roles": "Roller och behörigheter",
       "bookmark_roles_desc": "vad varje roll kan och inte kan göra",
       "bookmark_faq": "FAQ och felsökning",
@@ -2074,5 +2090,13 @@
     "chip": "{name}-rekord",
     "chip_prev": "Tidigare rekord: {score}",
     "unofficial_tip": "Inofficiellt tills det styrande organet gör anspråk på kontot på DivingHQ."
+  },
+  "legal": {
+    "privacy_title": "Integritetspolicy",
+    "terms_title": "Användarvillkor",
+    "consent": "Genom att skapa ett konto godkänner du {terms} och {privacy}.",
+    "contact": "Kontakt",
+    "need_help": "Behöver du hjälp?",
+    "english_only": "Den här sidan finns bara på engelska, och det är den engelska texten som gäller."
   }
 }

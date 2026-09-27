@@ -225,6 +225,7 @@ async function handleSubmit() {
       <button type="submit" class="btn btn-primary-lg" :disabled="loading || claimKind === 'taken'">
         {{ loading ? $t('auth.register_org.submit_loading') : $t('auth.register_org.submit_idle') }}
       </button>
+      <LegalConsent />
     </form>
     <p class="footer-link">{{ $t('auth.register_org.already_registered') }} <RouterLink to="/login">{{ $t('auth.register_org.sign_in_link') }}</RouterLink></p>
     </template>

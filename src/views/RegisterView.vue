@@ -342,6 +342,7 @@ async function handleSubmit() {
       <button type="submit" class="btn btn-primary-lg" style="margin-top:0.25rem" :disabled="loading">
         {{ loading ? $t('auth.register.submit_loading') : $t('auth.register.submit_idle') }}
       </button>
+      <LegalConsent />
     </form>
     <p class="footer-link">{{ $t('auth.register.already_have_account') }} <RouterLink to="/login">{{ $t('auth.register.sign_in_link') }}</RouterLink></p>
     </template>

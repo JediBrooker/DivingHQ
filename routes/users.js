@@ -27,6 +27,7 @@ const claimsLib = require("../lib/claims");
 const bcrypt  = require("bcrypt");
 const jwt     = require("jsonwebtoken");
 const { recordAudit, auditFromReq } = require("../lib/audit");
+const { supportContact } = require("../lib/support");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 
 // Enum values from init.sql's CREATE TYPE org_role. system_admin is
@@ -668,6 +669,9 @@ module.exports = function createUsersRouter({
             locale                   = NULL,
             dashboard_widgets        = NULL,
             judge_dashboard_widgets  = NULL,
+            date_of_birth            = NULL,
+            gender                   = NULL,
+            nationality              = NULL,
             deleted_at               = NOW(),
             token_version            = token_version + 1,
             username                 = 'deleted-' || left(id::text, 8)
@@ -706,6 +710,16 @@ module.exports = function createUsersRouter({
       );
       const regionAdminRows = await client.query(
         "DELETE FROM region_admins WHERE user_id = $1", [req.user.id],
+      );
+      // Guardian links (parent pays for a child) are a link to another
+      // person as well. Revoked rather than deleted, the same way a club
+      // transfer ends them (routes/club-changes.js), so payment history
+      // that points at the link still makes sense.
+      await client.query(
+        `UPDATE guardians SET status = 'revoked', reviewed_by = $1, reviewed_at = now()
+          WHERE (guardian_user_id = $1 OR dependent_user_id = $1)
+            AND status IN ('pending', 'approved')`,
+        [req.user.id],
       );
 
       // Audit. Best-effort, recordAudit swallows its own errors.
@@ -845,8 +859,8 @@ module.exports = function createUsersRouter({
   // the old account also entered, we can't silently merge them,
   // they're distinct entries by design. We abort the whole
   // transaction with 409 in that case; the caller decides whether
-  // to un-tick the colliding candidate or contact an admin to
-  // merge manually.
+  // to un-tick the colliding candidate or ask support to merge by
+  // hand (nobody in the org can, it's a database job).
   //
   // Password re-auth: claim irreversibly attaches PII to an
   // account, so the same hijacked-session defence we use on
@@ -921,7 +935,7 @@ module.exports = function createUsersRouter({
           return res.status(409).json({
             error:
               "Cannot merge: the old account and your current account both have entries for the same event and round. " +
-              "Contact your federation admin to merge manually.",
+              `Untick that one, or contact ${supportContact()} to merge them by hand.`,
             old_user_id: oldId,
           });
         }

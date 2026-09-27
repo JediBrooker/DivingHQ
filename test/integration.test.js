@@ -4618,3 +4618,302 @@ test("records: scores typed into an event that hasn't started set nothing", asyn
     await teardownFixture(st);
   }
 });
+
+// SUPPORT_EMAIL (lib/support.js). The SPA footers read it from a public
+// endpoint, and the messages that used to say "contact support" with no way
+// to do so now carry the address. Uses Svalbard for the club-first account,
+// a country code nothing else in the suite touches.
+test("support email: public config and the contact lines in messages", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { supportEmail } = require("../lib/support");
+  const claimsLib = require("../lib/claims");
+  const CODE = "SJM";
+  const saved = process.env.SUPPORT_EMAIL;
+  const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  try {
+    // Anonymous, cacheable, and follows the env var.
+    let cfg = await fetchJson("GET", "/api/public-config");
+    assert.equal(cfg.status, 200);
+    assert.deepEqual(Object.keys(cfg.body), ["support_email"]);
+    assert.equal(cfg.body.support_email, supportEmail());
+    process.env.SUPPORT_EMAIL = "help@svalbard-diving.example.test";
+    cfg = await fetchJson("GET", "/api/public-config");
+    assert.equal(cfg.body.support_email, "help@svalbard-diving.example.test");
+    const addr = new RegExp(escape("help@svalbard-diving.example.test"));
+
+    // Suspended under a real federation: the federation admin, and us.
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [state.adminId]);
+    let res = await fetchJson("POST", "/api/auth/login", { body: { username: state.username, password: TEST_PASSWORD } });
+    assert.equal(res.status, 403);
+    assert.equal(res.body.code, "account_suspended");
+    assert.match(res.body.error, /federation administrator/);
+    assert.match(res.body.error, addr);
+
+    // Suspended in a club-first country, where nobody holds org_admin:
+    // don't send them looking for a federation that doesn't exist.
+    const founder = await claimKit.founder(CODE, "Longyearbyen Divers");
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [founder.id]);
+    res = await fetchJson("POST", "/api/auth/login", { body: { username: founder.username, password: TEST_PASSWORD } });
+    assert.equal(res.status, 403);
+    assert.equal(res.body.code, "account_suspended");
+    assert.match(res.body.error, /club admin/);
+    assert.doesNotMatch(res.body.error, /federation/);
+    assert.match(res.body.error, addr);
+    await pool.query("UPDATE users SET suspended_at = NULL WHERE id = $1", [founder.id]);
+
+    // A suspended organisation says where to go too.
+    await pool.query("UPDATE users SET suspended_at = NULL WHERE id = $1", [state.adminId]);
+    await pool.query("UPDATE organisations SET status = 'suspended' WHERE id = $1", [state.orgId]);
+    res = await fetchJson("POST", "/api/auth/login", { body: { username: state.username, password: TEST_PASSWORD } });
+    assert.equal(res.body.code, "org_suspended");
+    assert.match(res.body.error, addr);
+
+    // Claim notices that used to say "contact DivingHQ" name the inbox. A
+    // brand-new club can't vote yet, so this claim lands with the sysadmin.
+    const sent = [];
+    const pushed = [];
+    const deps = {
+      email: { sendClaimEmail: async (userIds, msg) => { sent.push({ userIds, ...msg }); } },
+      push: { sendNotification: async (userIds, msg) => { pushed.push({ userIds, ...msg }); } },
+    };
+    const fed = await claimKit.claim({ org_name: "Svalbard Aquatics", country_code: CODE });
+    assert.equal(fed.res.status, 201, JSON.stringify(fed.res.body));
+    assert.equal(fed.res.body.approver, "sysadmin");
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [fed.id]);
+    await claimsLib.activateForUser(pool, fed.id, deps);
+    sent.length = 0;
+    pushed.length = 0;
+    await claimsLib.decide(pool, {
+      claimId: fed.res.body.claim_id, user: { is_system_admin: true, id: null }, decision: "reject",
+    }, deps);
+    const rejected = sent.find((m) => m.userIds.includes(fed.id));
+    assert.ok(rejected, "the claimant is emailed");
+    assert.match(rejected.body, /Reply to this email/);
+    assert.match(rejected.body, addr);
+    const inApp = pushed.find((m) => m.userIds.includes(fed.id));
+    assert.match(inApp.body, addr);
+
+    // A second claim while one is live is refused with the address in it.
+    const again = await claimKit.claim({ org_name: "Svalbard Diving", country_code: CODE });
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [again.id]);
+    await claimsLib.activateForUser(pool, again.id, deps);
+    const dup = await claimKit.claim({ org_name: "Svalbard Diving Two", country_code: CODE });
+    assert.equal(dup.res.status, 409, JSON.stringify(dup.res.body));
+    assert.match(dup.res.body.error, addr);
+  } finally {
+    if (saved === undefined) delete process.env.SUPPORT_EMAIL;
+    else process.env.SUPPORT_EMAIL = saved;
+    await teardownFixture(state);
+    await claimKit.wipe(CODE);
+  }
+});
+
+// Account deletion has to live up to the privacy policy (docs/privacy-
+// policy.md section 7): the competition details and the club admin seat go
+// with the account, the name stays on the sporting record. Cocos (Keeling)
+// Islands, which nothing else in the suite uses.
+test("account deletion clears personal details and admin seats", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CCK";
+  await claimKit.wipe(CODE);
+  try {
+    const founder = await claimKit.founder(CODE, "West Island Divers");
+    assert.ok(founder.clubId, "founder admins the club they started");
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [founder.id])).rows[0].org_id;
+    await pool.query(
+      "UPDATE users SET date_of_birth = '2010-04-02', gender = 'Female', nationality = 'AUS' WHERE id = $1",
+      [founder.id],
+    );
+    // A state seat as well, the same cleanup has to cover region_admins.
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Home Island', 'HMI') RETURNING id", [orgId],
+    )).rows[0];
+    await pool.query(
+      "INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region.id, founder.id, orgId],
+    );
+
+    const del = await fetchJson("POST", "/api/users/me/delete", {
+      token: founder.token, body: { password: TEST_PASSWORD },
+    });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+
+    const row = (await pool.query(
+      "SELECT full_name, email, date_of_birth, gender, nationality, deleted_at FROM users WHERE id = $1", [founder.id],
+    )).rows[0];
+    assert.ok(row.deleted_at);
+    assert.equal(row.full_name, "West Island Divers Admin", "the name stays for the sporting record");
+    assert.equal(row.email, null);
+    assert.equal(row.date_of_birth, null);
+    assert.equal(row.gender, null);
+    assert.equal(row.nationality, null);
+    const seats = await pool.query(
+      `SELECT (SELECT count(*)::int FROM club_admins WHERE user_id = $1) AS clubs,
+              (SELECT count(*)::int FROM region_admins WHERE user_id = $1) AS regions`, [founder.id],
+    );
+    assert.deepEqual(seats.rows[0], { clubs: 0, regions: 0 });
+  } finally {
+    await pool.query(
+      "DELETE FROM regions WHERE org_id IN (SELECT id FROM organisations WHERE country_code = $1)", [CODE],
+    ).catch(() => {});
+    await claimKit.wipe(CODE);
+  }
+});
+
+// Crawler files. Before public/robots.txt and sitemap.xml existed, both paths
+// fell through to the SPA fallback and answered 200 with the app's HTML. The
+// integration server runs without a build, so this also proves the explicit
+// routes in server.js, not just a dist/ copy, serve them.
+test("robots.txt and sitemap.xml are real files, not the SPA shell", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const get = (p) => new Promise((resolve, reject) => {
+    http.get(baseUrl + p, (res) => {
+      const chunks = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("end", () => resolve({ status: res.statusCode, type: res.headers["content-type"] || "", body: Buffer.concat(chunks).toString("utf8") }));
+    }).on("error", reject);
+  });
+
+  const robots = await get("/robots.txt");
+  assert.equal(robots.status, 200);
+  assert.match(robots.type, /^text\/plain/);
+  assert.match(robots.body, /^Disallow: \/api\/$/m);
+  assert.match(robots.body, /^Sitemap: https:\/\/divinghq\.app\/sitemap\.xml$/m);
+  assert.doesNotMatch(robots.body, /<html/i);
+
+  const sitemap = await get("/sitemap.xml");
+  assert.equal(sitemap.status, 200);
+  assert.match(sitemap.type, /^application\/xml/);
+  assert.match(sitemap.body, /<urlset /);
+  assert.match(sitemap.body, /<loc>https:\/\/divinghq\.app\/guide\/quick-start<\/loc>/);
+  assert.doesNotMatch(sitemap.body, /<div id="app">/);
+});
+
+// A session that was already open when the account got suspended is cut off
+// by verifyToken, not the login handler, and it used to send everyone to
+// "your federation administrator", club-first countries included. Both paths
+// share lib/support.js now. The merge-conflict refusal on "claim past
+// results" also named a federation admin, who can't merge accounts anyway.
+// Cayman Islands for the club-first half, nothing else in the suite uses it.
+test("support email: suspended sessions and merge conflicts say who to ask", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CYM";
+  const saved = process.env.SUPPORT_EMAIL;
+  process.env.SUPPORT_EMAIL = "help@cayman-diving.example.test";
+  const addr = /help@cayman-diving\.example\.test/;
+  await claimKit.wipe(CODE);
+  // No event through the API: that request would warm the 30s auth-state
+  // cache for the admin, and the suspension below wouldn't show until it
+  // expired. The merge check further down makes its own event in SQL.
+  const state = await setupFixture({ withEvent: false });
+  try {
+    // Neither token has been through verifyToken yet, so the cache is cold
+    // and the suspension is seen on the very next request.
+    const founder = await claimKit.founder(CODE, "George Town Divers");
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = ANY($1)", [[founder.id, state.adminId]]);
+
+    let res = await fetchJson("GET", "/api/claims", { token: founder.token });
+    assert.equal(res.status, 401);
+    assert.equal(res.body.code, "account_suspended");
+    assert.match(res.body.error, /club admin/);
+    assert.doesNotMatch(res.body.error, /federation/);
+    assert.match(res.body.error, addr);
+
+    res = await fetchJson("GET", "/api/claims", { token: state.adminToken });
+    assert.equal(res.status, 401);
+    assert.equal(res.body.code, "account_suspended");
+    assert.match(res.body.error, /federation administrator/);
+    assert.match(res.body.error, addr);
+    await pool.query("UPDATE users SET suspended_at = NULL WHERE id = $1", [state.adminId]);
+
+    // Claim-past-results where both accounts entered the same round: refused,
+    // and pointed at support rather than a federation admin.
+    const oldId = await insertUser({ orgId: state.orgId, username: `int-old-${state.slug}`, fullName: "Ebanks Twin", role: "diver" });
+    const newId = await insertUser({ orgId: state.orgId, username: `int-new-${state.slug}`, fullName: "Ebanks Twin", role: "diver" });
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [oldId]);
+    const dive = (await pool.query("SELECT id FROM dive_directory LIMIT 1")).rows[0].id;
+    const eventId = (await pool.query(
+      "INSERT INTO events (org_id, name, gender, number_of_judges) VALUES ($1, 'Seven Mile Open', 'Mixed', 5) RETURNING id",
+      [state.orgId],
+    )).rows[0].id;
+    for (const id of [oldId, newId]) {
+      await pool.query(
+        "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+        [eventId, id, dive],
+      );
+    }
+    // insertUser's fixture password.
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username: `int-new-${state.slug}`, password: "not-used-here" } });
+    assert.equal(login.status, 200, JSON.stringify(login.body));
+    res = await fetchJson("POST", "/api/users/me/claim", {
+      token: login.body.token, body: { old_user_ids: [oldId], password: "not-used-here" },
+    });
+    assert.equal(res.status, 409, JSON.stringify(res.body));
+    assert.match(res.body.error, /^Cannot merge/);
+    assert.match(res.body.error, addr);
+    assert.doesNotMatch(res.body.error, /federation admin/);
+  } finally {
+    if (saved === undefined) delete process.env.SUPPORT_EMAIL;
+    else process.env.SUPPORT_EMAIL = saved;
+    await teardownFixture(state);
+    await claimKit.wipe(CODE);
+  }
+});
+
+// Deleting an account while a claim of yours is still being decided. The
+// claim used to stay live: the clubs (or DivingHQ) could still approve it and
+// hand org_admin to an account nobody can sign in to, leaving the country
+// "claimed" with no one running it. Guardian links, the other tie to another
+// person the deletion missed, get ended as well. Northern Mariana Islands,
+// which no other test file uses.
+test("account deletion withdraws a live claim and ends guardian links", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MNP";
+  const claimsLib = require("../lib/claims");
+  await claimKit.wipe(CODE);
+  try {
+    const club = await claimKit.founder(CODE, "Saipan Divers");
+    const fed = await claimKit.claim({ org_name: "Marianas Diving Federation", country_code: CODE });
+    assert.equal(fed.res.status, 201, JSON.stringify(fed.res.body));
+    const claimId = fed.res.body.claim_id;
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [fed.id]);
+    // Parked with DivingHQ, the state where a sysadmin could still approve it.
+    await pool.query("UPDATE claims SET status = 'escalated' WHERE id = $1", [claimId]);
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [fed.id])).rows[0].org_id;
+    const link = (await pool.query(
+      `INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id, status)
+       VALUES ($1, $2, $3, 'approved') RETURNING id`,
+      [orgId, fed.id, club.id],
+    )).rows[0].id;
+
+    const login = await claimKit.login(fed.username);
+    assert.ok(login.token, JSON.stringify(login));
+    const del = await fetchJson("POST", "/api/users/me/delete", { token: login.token, body: { password: TEST_PASSWORD } });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+
+    const claim = (await pool.query("SELECT status, status_reason FROM claims WHERE id = $1", [claimId])).rows[0];
+    assert.equal(claim.status, "withdrawn");
+    assert.match(claim.status_reason, /deleted their account/);
+    const g = (await pool.query("SELECT status FROM guardians WHERE id = $1", [link])).rows[0];
+    assert.equal(g.status, "revoked");
+
+    // A sysadmin can't approve it any more...
+    await assert.rejects(
+      claimsLib.decide(pool, { claimId, user: { is_system_admin: true, id: null }, decision: "approve" }, {}),
+      (err) => err.status === 409,
+    );
+    const org = (await pool.query("SELECT claim_state FROM organisations WHERE id = $1", [orgId])).rows[0];
+    assert.equal(org.claim_state, "unclaimed");
+    // ...and the country is free for the body to apply again properly.
+    const again = await claimKit.claim({ org_name: "Marianas Diving Federation", country_code: CODE });
+    assert.equal(again.res.status, 201, JSON.stringify(again.res.body));
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

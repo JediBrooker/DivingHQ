@@ -12,11 +12,15 @@ import { CircleHelp } from '@lucide/vue'
 // with the same name. The modal is dismissable, and checking is
 // just a single tiny POST so it doesn't slow the landing.
 import ClaimCandidatesModal from '@/components/ClaimCandidatesModal.vue'
+import { useSupportEmail } from '@/composables/useSupportEmail'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const { t } = useI18n()
+// Shown in the footer, and it's where the "contact support" login errors
+// (suspended account or organisation) point people.
+const supportEmail = useSupportEmail()
 
 const username = ref('')
 const password = ref('')
@@ -280,6 +284,12 @@ async function handleTotpSubmit() {
       <a href="https://github.com/JediBrooker/DivingHQ/issues/new?labels=bug&title=Bug%3A%20"
          target="_blank"
          rel="noopener">{{ $t('auth.login.found_bug') }} <span>{{ $t('auth.login.found_bug_action') }}</span></a>
+      <a v-if="supportEmail" :href="`mailto:${supportEmail}`" data-testid="login-support">{{ $t('legal.need_help') }} <span>{{ supportEmail }}</span></a>
+      <div class="legal-links">
+        <RouterLink to="/privacy">{{ $t('legal.privacy_title') }}</RouterLink>
+        <span aria-hidden="true">·</span>
+        <RouterLink to="/terms">{{ $t('legal.terms_title') }}</RouterLink>
+      </div>
     </div>
 
     <ClaimCandidatesModal
@@ -397,4 +407,10 @@ h1 {
 }
 .footer-links a:hover { color: var(--accent); }
 .footer-links a span { color: var(--accent); font-weight: 600; }
+.legal-links {
+  display: flex; justify-content: center; align-items: center; gap: 0.5rem;
+  margin-top: 0.5rem; font-size: 12px; color: var(--fg-3);
+}
+.footer-links .legal-links a { font-size: 12px; color: var(--fg-3); }
+.footer-links .legal-links a:hover { color: var(--accent); }
 </style>
