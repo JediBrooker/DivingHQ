@@ -13,7 +13,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { attentionMarker } from '@/composables/useAttention'
 import { orderWorkflowStateFor, liveEventsInOrder } from '@/composables/useControlStage'
 import { useOutbox } from '@/composables/useOutbox'
-import { useSocket } from '@/composables/useSocket'
 
 const props = defineProps({
   events: { type: Array, default: () => [] },
@@ -24,7 +23,6 @@ const props = defineProps({
 })
 const emit = defineEmits(['select', 'toggle-history', 'toggle-standings', 'toggle-recovery', 'open-tools'])
 
-const socket = useSocket()
 const { isOffline, offlineSince, pendingCount, failedCount, conflictCount } = useOutbox()
 
 const offlineDuration = ref('')

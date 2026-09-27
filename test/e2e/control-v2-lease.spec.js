@@ -1,8 +1,8 @@
-// Per-event control LEASE (#lease) + drop-detection (#7). When two
-// operators drive the SAME event, both get an advisory conflict warning
-// (the lease never actually blocks anything, just warns). And in normal
-// operation a confirmed set_active_diver should never raise the "not
-// confirmed" warning. Flag-on only for now.
+// Per-event control LEASE (#lease). When two operators drive the SAME
+// event, both get an advisory conflict warning (the lease never actually
+// blocks anything, just warns). The second test is a plain advance on a
+// leased pool; the old "not confirmed" banner it used to check for went
+// away with the outbox.
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
@@ -70,7 +70,7 @@ test("two operators on the same event both see a conflict warning", async ({ req
   await ctxB.close();
 });
 
-test("a confirmed set_active_diver raises no 'not confirmed' warning", async ({ request, page, baseURL }) => {
+test("advancing the pool puts the next diver on stage", async ({ request, page, baseURL }) => {
   test.setTimeout(120_000);
   const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Confirm Diving" });
   await setup.insertClub({ orgId, name: "CF Club", shortCode: "CFC" });
@@ -81,12 +81,9 @@ test("a confirmed set_active_diver raises no 'not confirmed' warning", async ({ 
   await page.waitForLoadState("networkidle");
   await setup.selectControlEvent(page, "Confirm Pool");
 
-  // Advance to the next diver, set_active_diver gets echoed back so the
-  // pool never shows the unconfirmed warning.
+  // Advance to the next diver once the panel is in.
   await setup.submitPanelScores({ baseURL, judges, eventId: event.id, competitorId: divers[0].userId, roundNumber: 1, diveId });
   await expect(page.locator(".cv2-primary")).toBeEnabled({ timeout: 6_000 });
   await page.locator(".cv2-primary").click();
   await expect(page.locator(".cv2-live-diver")).toContainText("ZZZ Diver");
-  await page.waitForTimeout(1_000);
-  await expect(page.locator(".cv2-pool-unconfirmed")).toHaveCount(0);
 });

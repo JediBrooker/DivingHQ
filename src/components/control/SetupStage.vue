@@ -103,7 +103,6 @@ function onSignedOff(patch) {
 }
 
 watch(() => props.event?.id, loadReadiness, { immediate: true })
-defineExpose({ reload: loadReadiness })
 </script>
 
 <template>

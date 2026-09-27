@@ -76,15 +76,6 @@ const pendingSeed = new Set() // events optimistically seeded, awaiting the serv
 const seedTimers = new Set() // fallback timers, cleared on unmount
 const SEED_GRACE_MS = 1500
 
-// Drop-detection: the server echoes set_active_diver back as state_update.
-// If the echo doesn't show up within CONFIRM_TIMEOUT_MS, the pool card
-// shows an "unconfirmed" warning. The outbox handles retries, this bit
-// is just UI feedback.
-const pendingConfirm = {}
-const unconfirmed = reactive({})
-const confirmTimers = new Set()
-const CONFIRM_TIMEOUT_MS = 4000
-
 // Lease conflict state: event_id -> true when another socket (operator or
 // window) is also controlling this event (server claim_event_control).
 const conflicts = reactive({})
@@ -92,13 +83,6 @@ const conflicts = reactive({})
 useSocketEvent(socket, 'state_update', (data) => {
   if (!data?.event_id) return
   pendingActive[data.event_id] = data
-  // Drop-detection: a state_update matching our pending diver confirms the
-  // set_active_diver landed -> clear the warning.
-  const pc = pendingConfirm[data.event_id]
-  if (pc && String(pc.competitor_id) === String(data.competitor_id) && Number(pc.round_number) === Number(data.round_number)) {
-    delete pendingConfirm[data.event_id]
-    delete unconfirmed[data.event_id]
-  }
   seedPoolFromServer(data.event_id)
 })
 
@@ -115,14 +99,13 @@ useSocketEvent(socket, 'event_control_granted', (d) => {
 
 // Queue set_active_diver through the outbox. It persists to IDB and
 // drains via socket ack when online; offline entries replay on
-// reconnect. Replaces the old token-bucket + drop-detection flow, since
-// the outbox's own pending/synced/failed states cover both now.
+// reconnect. That replaced the old token-bucket + drop-detection flow
+// (and its "unconfirmed / Retry" banner on the pool card), since the
+// outbox's own pending/synced/failed states cover retries now.
 function emitActiveDiver(ev) {
   const p = pools[ev.id]
   const a = p && p.currentActive
   if (!a) return
-  pendingConfirm[ev.id] = { competitor_id: a.competitor_id, round_number: a.round_number }
-  delete unconfirmed[ev.id]
   const payload = { ...a, status: 'ready' }
   queueSocketAction('set_active_diver', payload)
 }
@@ -325,15 +308,9 @@ async function advancePool(ev) {
     await finalisePool(ev)
   } else if (selectDiver(p, p.currentIndex + 1, totalJudges, diveDescription)) {
     // The pool's currentActive changed -> its card re-arms the shot clock.
-    // Routed through the bucket + drop-detection (#7).
+    // Goes out through the outbox, see emitActiveDiver.
     emitActiveDiver(ev)
   }
-}
-
-// Re-announce the focused/named pool's current active diver (the card's
-// "Retry" after a dropped set_active_diver).
-function retryActiveDiver(ev) {
-  if (ev) emitActiveDiver(ev)
 }
 
 // Referee call for the FOCUSED pool's active diver, the keyboard path
@@ -555,8 +532,6 @@ onMounted(async () => {
 onUnmounted(() => {
   seedTimers.forEach(clearTimeout)
   seedTimers.clear()
-  confirmTimers.forEach(clearTimeout)
-  confirmTimers.clear()
   window.removeEventListener('keydown', onKeydown)
   window.removeEventListener('beforeunload', onBeforeUnload)
 })
@@ -703,11 +678,9 @@ onMounted(() => {
               :focused="String(lp.event.id) === String(selectedEventId)"
               :total-judges="numberOfJudgesFor(lp.event.id)"
               :socket="socket"
-              :unconfirmed="!!unconfirmed[lp.event.id]"
               :conflict="conflicts[lp.event.id] || null"
               @focus="selectEvent"
               @advance="advancePool(lp.event)"
-              @retry-active="retryActiveDiver(lp.event)"
             />
           </div>
 
@@ -800,7 +773,6 @@ onMounted(() => {
   border-radius: var(--radius-lg); color: var(--text-2);
 }
 .cv2-mode-note { margin: 0 0 0.4rem; font-family: var(--font-mono); font-size: 13px; }
-.cv2-mode-state { margin: 0; font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
 /* Live mode: History | pool grid | Standings. The center holds one
    LivePoolCard per Live event (its own scoped styles). */
 .cv2-live-layout { display: flex; gap: 1rem; align-items: stretch; min-height: 62vh; }

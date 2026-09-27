@@ -35,7 +35,6 @@ async function load() {
 }
 
 watch(() => props.event?.id, load, { immediate: true })
-defineExpose({ reload: load })
 
 const top = computed(() => standings.value.slice(0, 8))
 </script>
