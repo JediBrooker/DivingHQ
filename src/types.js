@@ -679,7 +679,9 @@
  * `records`, and matches a dive by competitor_id + dive_code + position
  * + score. Personal bests and first marks never appear here.
  * @property {'club'|'region'|'federation'|'continental'} scope
+ * @property {string}  scope_id     the book's club / region / org id, or the continent key
  * @property {string}  scope_code   club / region short code, country code, or the continent key
+ * @property {string}  height       e.g. '3m'; with scope, scope_id, gender, dive_code and position it names the book
  * @property {boolean} official     false for an unclaimed region or country
  * @property {'Male'|'Female'} gender
  * @property {string}  competitor_id
