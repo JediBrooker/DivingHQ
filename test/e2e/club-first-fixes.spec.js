@@ -8,7 +8,7 @@
 const { test, expect } = require("@playwright/test");
 const setup = require("./_setup");
 
-const COUNTRIES = ["PCN", "FLK", "CXR", "ABW", "TCA", "VGB", "BMU"];
+const COUNTRIES = ["PCN", "FLK", "CXR", "ABW", "TCA", "VGB", "BMU", "ASM"];
 
 async function wipe() {
   const orgs = await setup.pool.query(
@@ -258,4 +258,28 @@ test("control room: a referee who also admins a club still sees the federation's
   await page.waitForLoadState("networkidle");
   await page.locator(".cv2-allbtn").click();
   await expect(page.locator(".cv2-allitem", { hasText: ev.name })).toBeVisible();
+});
+
+test("dashboard: the pending chip names the requested role in the reader's words", async ({ page, request }) => {
+  test.setTimeout(60_000);
+  await setup.installClickHighlight(page);
+  const { orgId, username } = await setup.createOrgAndAdmin(request, { countryCode: "ASM", orgName: "Samoa Pago Diving" });
+  // Two roles role.* never had a name for: the chip used to print
+  // "Manager" for one and the raw "coach" for the other.
+  const mm = await setup.insertUser({ orgId, role: "spectator", fullName: "Would-be Manager" });
+  const coach = await setup.insertUser({ orgId, role: "spectator", fullName: "Would-be Coach" });
+  await setup.pool.query(
+    "INSERT INTO role_requests (user_id, org_id, requested_role) VALUES ($1, $3, 'meet_manager'), ($2, $3, 'coach')",
+    [mm.userId, coach.userId, orgId],
+  );
+
+  // A fresh federation with no clubs is bounced to the setup wizard.
+  await page.addInitScript(() => localStorage.setItem("setup.wizardDismissed.v1", "1"));
+  await signIn(page, username);
+  const chip = page.locator(".pulse-chip", { hasText: /pending/i });
+  await expect(chip).toContainText("2");
+  await chip.hover();
+  const popover = chip.locator(".pulse-popover");
+  await expect(popover.locator(".pulse-popover-item", { hasText: "Would-be Manager" })).toContainText("wants to be: Meet Manager");
+  await expect(popover.locator(".pulse-popover-item", { hasText: "Would-be Coach" })).toContainText("wants to be: Coach");
 });

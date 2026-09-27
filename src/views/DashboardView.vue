@@ -52,7 +52,7 @@ const OtherPanel       = defineAsyncComponent(() => import('@/components/dashboa
 
 const router = useRouter()
 const auth = useAuthStore()
-const { t } = useI18n()
+const { t, te } = useI18n()
 const { tn } = usePlural()
 
 // ---- Tabs ---------------------------------------------------
@@ -158,10 +158,12 @@ const diverEntryCloseDays = computed(() => {
 const delegateReviewPath = computed(() =>
   auth.isClubAdmin ? '/club' : (auth.isRegionAdmin ? '/region' : null))
 
-// role.* only has keys for the shorter names.
-const ROLE_LABEL_KEYS = { diver: 'role.diver', judge: 'role.judge', referee: 'role.referee', meet_manager: 'role.manager' }
+// The User Manager's names for every role. role.* only covers a few, so an
+// org admin's chip read "Manager" for meet_manager and a raw "coach" for
+// a coach request.
 function requestRoleLabel(role) {
-  return ROLE_LABEL_KEYS[role] ? t(ROLE_LABEL_KEYS[role]) : role
+  const key = `user_manager.role_${role}`
+  return te(key) ? t(key) : role
 }
 
 // Where one of my own claims stands, in the same words ClaimsView uses.
