@@ -11,8 +11,15 @@ const RAW_KEY_RE = /\b(?:auth|common|dashboard|manager|home|coach|scoreboard|nav
 
 async function assertHealthyPage(page, label) {
   await expect(page.locator("body"), label).toBeVisible();
+  // Poll rather than sample once: right after goto() the route's lazy
+  // chunk and /api/auth/me may still be in flight, and a single read can
+  // land on the blank frame before the view mounts. A page that never
+  // renders still fails, just after the timeout instead of instantly.
+  await expect
+    .poll(async () => (await page.locator("body").innerText()).trim().length,
+      { message: `${label} rendered text`, timeout: 10_000 })
+    .toBeGreaterThan(40);
   const text = (await page.locator("body").innerText()).trim();
-  expect(text.length, `${label} rendered text`).toBeGreaterThan(40);
   expect(text, `${label} raw i18n key`).not.toMatch(RAW_KEY_RE);
 }
 
