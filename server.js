@@ -699,6 +699,10 @@ app.use(require("./routes/orgs")({
 // Regions (states / provinces / home nations), migration 088.
 app.use(require("./routes/regions")({ pool, verifyToken, isInSameOrg }));
 
+// Claims: a federation or state body taking over an account the clubs
+// started (migration 089, lib/claims.js).
+app.use(require("./routes/claims")({ pool, push, verifyToken, requireSystemAdmin, bumpTokenVersion }));
+
 // =============================================================
 // PAYMENTS ROUTES (platform is merchant of record, per Migration 075)
 // [SECTION: ROUTES: PAYMENTS]
@@ -1393,6 +1397,14 @@ async function bootChecks() {
     require("./lib/idempotency-sweeper").start({ pool });
   } catch (err) {
     logger.warn({ err: err.message }, "idempotency-sweeper start failed");
+  }
+
+  // Claims sweep (migration 089): hourly, resolves votes whose window has
+  // closed and withdraws claims nobody verified. Not payments-gated.
+  try {
+    require("./lib/claims").start({ pool, push, bumpTokenVersion, logger });
+  } catch (err) {
+    logger.warn({ err: err.message }, "claims sweeper start failed");
   }
 
   // Start the auto-withdraw sweeper (migrations 076/078): hourly, books a

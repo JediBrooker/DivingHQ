@@ -18,6 +18,7 @@ const { SESSION_COOKIE, cookieOptions } = require("../lib/session-cookie");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { countryByCode } = require("../lib/countries");
 const { materializeRegions } = require("../lib/regions");
+const claims = require("../lib/claims");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -1015,6 +1016,11 @@ module.exports = function createAuthRouter({
       if (!r.rows.length) {
         return res.status(400).json({ error: "Verification link is invalid" });
       }
+      // A federation / state body's claim goes live now (lib/claims.js).
+      // Best-effort: a hiccup here mustn't fail the verification itself,
+      // and the next verify-email click (or support) can redo it.
+      await claims.activateForUser(pool, decoded.sub, { push }).catch((err) =>
+        console.error("[Claim Activate Error]", err.message));
       res.json({ ok: true });
     } catch (err) {
       console.error("[Verify Email Error]", err.message);
@@ -1027,7 +1033,7 @@ module.exports = function createAuthRouter({
     if (!signupsOpen()) {
       return res.status(403).json({ error: "Account creation is coming soon.", code: "signups_disabled" });
     }
-    const { org_name, country_code, slug, username, password, full_name, email } =
+    const { org_name, country_code, slug, username, password, full_name, email, region_code, website } =
       req.body || {};
 
     // Apply the same input validation we run on /api/auth/register.
@@ -1075,20 +1081,90 @@ module.exports = function createAuthRouter({
     try {
       await client.query("BEGIN");
 
-      // Clubs from this country already share an unclaimed account. A
-      // second, separate federation org would split the country in two,
-      // and there's no merge. Claiming it properly is phase 3 of
-      // docs/club-first-onboarding.md; until then a person sorts it out.
-      if (country_code) {
-        const unclaimed = await client.query(
-          "SELECT name FROM organisations WHERE country_code = $1 AND claim_state = 'unclaimed'",
-          [country_code],
-        );
-        if (unclaimed.rows.length) {
-          await client.query("ROLLBACK");
-          return res.status(409).json({
-            error: `Clubs in ${unclaimed.rows[0].name} are already on DivingHQ. Contact support and we'll hand the country's account over to your federation.`,
-            code: "country_has_clubs",
+      // Phase 3 (migration 089): where clubs already started this country,
+      // or the body is a state / province naming its region, this is a
+      // claim on what's there rather than a second, parallel org (there's
+      // no merge). The claimant gets an ordinary account in that org and
+      // takes over only once the claim passes. lib/claims.js has the rules.
+      const country = countryByCode(country_code);
+      const regionCode = typeof region_code === "string" ? region_code.trim().toUpperCase() : "";
+      if (country) {
+        const orgs = (await client.query(
+          `SELECT id, name, claim_state FROM organisations
+            WHERE country_code = $1 AND status = 'active' AND id <> $2`,
+          [country.a3, ADMIN_ORG_ID],
+        )).rows;
+        const unclaimedOrg = orgs.find((o) => o.claim_state === "unclaimed");
+        const claimedOrgs = orgs.filter((o) => o.claim_state === "claimed");
+        if (unclaimedOrg || regionCode) {
+          let orgRow = unclaimedOrg || (claimedOrgs.length === 1 ? claimedOrgs[0] : null);
+          let target;
+          if (regionCode) {
+            if (!orgRow) {
+              if (claimedOrgs.length > 1) {
+                await client.query("ROLLBACK");
+                return res.status(409).json({ error: "Several federations share this country on DivingHQ. Contact support to claim your region.", code: "claim_needs_support" });
+              }
+              // Nobody from this country is here yet. Start its account so
+              // the state body has something to claim a region of.
+              const found = await resolveCountryOrg(client, country);
+              if (found.closed || found.choose) {
+                await client.query("ROLLBACK");
+                return res.status(409).json({ error: "Contact support to claim your region.", code: "claim_needs_support" });
+              }
+              orgRow = { id: found.id, claim_state: found.claim_state };
+            }
+            if (orgRow.claim_state === "unclaimed") await materializeRegions(client, orgRow.id, country.a3);
+            const rg = (await client.query(
+              "SELECT id, claim_state FROM regions WHERE org_id = $1 AND short_code = $2",
+              [orgRow.id, regionCode],
+            )).rows[0];
+            if (!rg) {
+              await client.query("ROLLBACK");
+              return res.status(400).json({ error: "That region isn't set up on DivingHQ for this country", code: "region_unknown" });
+            }
+            if (rg.claim_state === "claimed") {
+              await client.query("ROLLBACK");
+              return res.status(409).json({ error: "That region already has its body on DivingHQ. Contact support if that's wrong.", code: "already_claimed" });
+            }
+            target = { kind: "region", id: rg.id, orgId: orgRow.id };
+          } else {
+            target = { kind: "org", id: unclaimedOrg.id, orgId: unclaimedOrg.id };
+          }
+
+          const hash = await bcrypt.hash(password, 12);
+          const claimant = (await client.query(
+            "INSERT INTO users (username, password, full_name, email, org_id) VALUES ($1,$2,$3,$4,$5) RETURNING id",
+            [cleanUsername, hash, cleanFullName, email, target.orgId],
+          )).rows[0].id;
+          await client.query(
+            "INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1,$2,'spectator')",
+            [claimant, target.orgId],
+          );
+          const claim = await claims.openClaim(client, {
+            targetKind: target.kind, targetId: target.id, orgId: target.orgId,
+            claimantId: claimant, claimantEmail: email, bodyName: cleanOrgName,
+            website: safeText(website, 255),
+          });
+          await client.query("COMMIT");
+
+          // The claim goes live (and voters hear about it) when this link
+          // is clicked, see the verify-email handler.
+          const verifyLink = jwt.sign({ sub: claimant, type: "email_verify" }, JWT_SECRET, { expiresIn: "24h" });
+          if (typeof sendVerifyEmailEmail === "function") {
+            sendVerifyEmailEmail(claimant, verifyLink, { req }).catch(() => {});
+          }
+          const who = {
+            clubs:    "the clubs already on DivingHQ there vote on it",
+            regions:  "the states and provinces already on DivingHQ vote on it",
+            parent:   "your federation decides",
+            sysadmin: "DivingHQ reviews it",
+          }[claim.approver];
+          return res.status(201).json({
+            message: `Verify your email to open your claim. Then ${who}.`,
+            claim_id: claim.id,
+            approver: claim.approver,
+            target_kind: target.kind,
           });
         }
       }
@@ -1170,6 +1246,9 @@ module.exports = function createAuthRouter({
         });
     } catch (err) {
       await client.query("ROLLBACK");
+      if (err instanceof claims.ClaimError) {
+        return res.status(err.status).json({ error: err.message, ...(err.code ? { code: err.code } : {}) });
+      }
       console.error("[Register Org Error]", err.message);
       if (err.constraint === "organisations_slug_key")
         return res
