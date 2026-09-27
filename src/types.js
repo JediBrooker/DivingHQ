@@ -32,6 +32,23 @@
  *   only, the server re-reads club_admins on every club-scoped route.
  * @property {{id: string, name: string, short_code: string}[]} [region_admin_of]
  *   Body-only, same deal for region_admins (migration 088).
+ * @property {boolean} [has_claim]
+ *   Body-only: this user filed a claim (lib/claims.js, any status but
+ *   withdrawn). Puts Claims in a claimant's nav.
+ */
+
+/**
+ * @typedef {Object} MyOpenClaim
+ * One row of `my_claims` on GET /api/dashboard: a claim this user filed
+ * that's still being decided.
+ *
+ * @property {string} id
+ * @property {'org'|'region'} target_kind
+ * @property {string} target_name   the country's name for a national claim, else the region's
+ * @property {'open'|'escalated'} status
+ * @property {'clubs'|'regions'|'parent'|'sysadmin'} approver  who decides it
+ * @property {boolean} activated    false until the claimant verified their email
+ * @property {?string} closes_at    ISO timestamp, when voting ends
  */
 
 /**

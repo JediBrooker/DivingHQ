@@ -405,7 +405,9 @@
       "claims_meta": "Μια ομοσπονδία θέλει να αναλάβει λογαριασμό",
       "chip_pending": "Σε αναμονή",
       "chip_claims": "Αιτήματα ανάληψης",
-      "review_title": "Περιμένουν τον έλεγχό σας"
+      "review_title": "Περιμένουν τον έλεγχό σας",
+      "my_claims_title": "Τα αιτήματά σας",
+      "my_claim": "Το αίτημά σας για {target}"
     }
   },
   "profile": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} μέλη",
     "members_few": "{n} μέλη",
     "members_many": "{n} μέλη",
-    "members_other": "{n} μέλη"
+    "members_other": "{n} μέλη",
+    "open_claims_zero": "ανοιχτά αιτήματα",
+    "open_claims_one": "ανοιχτό αίτημα",
+    "open_claims_two": "ανοιχτά αιτήματα",
+    "open_claims_few": "ανοιχτά αιτήματα",
+    "open_claims_many": "ανοιχτά αιτήματα",
+    "open_claims_other": "ανοιχτά αιτήματα"
   }
 }

@@ -405,7 +405,9 @@
       "claims_meta": "Савез жели да преузме налог",
       "chip_pending": "На чекању",
       "chip_claims": "Захтеви",
-      "review_title": "Чека ваш преглед"
+      "review_title": "Чека ваш преглед",
+      "my_claims_title": "Ваши захтеви",
+      "my_claim": "Ваш захтев за {target}"
     }
   },
   "profile": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} чланова",
     "members_few": "{n} члана",
     "members_many": "{n} чланова",
-    "members_other": "{n} чланова"
+    "members_other": "{n} чланова",
+    "open_claims_zero": "отворених захтева",
+    "open_claims_one": "отворен захтев",
+    "open_claims_two": "отворених захтева",
+    "open_claims_few": "отворена захтева",
+    "open_claims_many": "отворених захтева",
+    "open_claims_other": "отворених захтева"
   }
 }

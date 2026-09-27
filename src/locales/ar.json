@@ -405,7 +405,9 @@
       "claims_meta": "اتحاد يريد تولّي حساب",
       "chip_pending": "معلّقة",
       "chip_claims": "طلبات التولّي",
-      "review_title": "بانتظار مراجعتك"
+      "review_title": "بانتظار مراجعتك",
+      "my_claims_title": "طلبات التولّي الخاصة بك",
+      "my_claim": "طلبك لتولّي {target}"
     }
   },
   "profile": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} عضوان",
     "members_few": "{n} أعضاء",
     "members_many": "{n} عضوًا",
-    "members_other": "{n} عضو"
+    "members_other": "{n} عضو",
+    "open_claims_zero": "طلبات تولٍّ مفتوحة",
+    "open_claims_one": "طلب تولٍّ مفتوح",
+    "open_claims_two": "طلبا تولٍّ مفتوحان",
+    "open_claims_few": "طلبات تولٍّ مفتوحة",
+    "open_claims_many": "طلب تولٍّ مفتوحًا",
+    "open_claims_other": "طلب تولٍّ مفتوح"
   }
 }

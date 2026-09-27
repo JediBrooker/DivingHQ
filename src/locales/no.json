@@ -405,7 +405,9 @@
       "claims_meta": "Et forbund vil overta en konto",
       "chip_pending": "Venter",
       "chip_claims": "Krav",
-      "review_title": "Venter på din vurdering"
+      "review_title": "Venter på din vurdering",
+      "my_claims_title": "Dine krav",
+      "my_claim": "Ditt krav på {target}"
     }
   },
   "role": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} medlemmer",
     "members_few": "{n} medlemmer",
     "members_many": "{n} medlemmer",
-    "members_other": "{n} medlemmer"
+    "members_other": "{n} medlemmer",
+    "open_claims_zero": "åpne krav",
+    "open_claims_one": "åpent krav",
+    "open_claims_two": "åpne krav",
+    "open_claims_few": "åpne krav",
+    "open_claims_many": "åpne krav",
+    "open_claims_other": "åpne krav"
   }
 }

@@ -405,7 +405,9 @@
       "claims_meta": "Una federazione vuole subentrare",
       "chip_pending": "In attesa",
       "chip_claims": "Rivendicazioni",
-      "review_title": "In attesa della tua revisione"
+      "review_title": "In attesa della tua revisione",
+      "my_claims_title": "Le tue rivendicazioni",
+      "my_claim": "La tua rivendicazione su {target}"
     }
   },
   "role": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} membri",
     "members_few": "{n} membri",
     "members_many": "{n} di membri",
-    "members_other": "{n} membri"
+    "members_other": "{n} membri",
+    "open_claims_zero": "rivendicazioni aperte",
+    "open_claims_one": "rivendicazione aperta",
+    "open_claims_two": "rivendicazioni aperte",
+    "open_claims_few": "rivendicazioni aperte",
+    "open_claims_many": "di rivendicazioni aperte",
+    "open_claims_other": "rivendicazioni aperte"
   }
 }

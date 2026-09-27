@@ -94,7 +94,7 @@ const NAV = [
   { key: 'federation', group: 'Federation', icon: Building2, items: [
     { to: '/club',     label: 'My club',            labelKey: 'my_club.title',      icon: Building2,  clubAdminOnly: true },
     { to: '/region',   label: 'My region',          labelKey: 'my_region.title',    icon: Building2,  regionAdminOnly: true },
-    { to: '/claims',   label: 'Claims',             labelKey: 'claims.title',       icon: Scale,      roles: ['org_admin'], allowDelegateAdmin: true },
+    { to: '/claims',   label: 'Claims',             labelKey: 'claims.title',       icon: Scale,      roles: ['org_admin'], allowDelegateAdmin: true, allowClaimant: true },
     { to: '/users',    label: 'User Manager',       labelKey: 'user_manager.title', icon: Users,      roles: ['org_admin'] },
     { to: '/clubs',    label: 'Clubs & teams',      labelKey: 'clubs.title',        icon: Building2,  roles: ['org_admin', 'meet_manager'] },
     { to: '/fines',    label: 'Fines',              icon: Gavel,      roles: ['referee', 'org_admin'], feature: 'payments' },
@@ -125,6 +125,9 @@ function allowedBy(entry) {
   if (!entry.roles) return true
   if (entry.roles.some((r) => auth.hasRole(r))) return true
   if (entry.allowDelegateAdmin && (auth.isClubAdmin || auth.isRegionAdmin)) return true
+  // Someone who filed a claim follows it on /claims (the route is open to
+  // any signed-in user, this just puts it in their nav).
+  if (entry.allowClaimant && auth.hasClaim) return true
   return Boolean(entry.allowGuardian && auth.hasDependents)
 }
 function childVisible(c) {

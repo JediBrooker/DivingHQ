@@ -405,7 +405,9 @@
       "claims_meta": "Una federación quiere hacerse cargo",
       "chip_pending": "Pendiente",
       "chip_claims": "Reclamaciones",
-      "review_title": "Pendiente de tu revisión"
+      "review_title": "Pendiente de tu revisión",
+      "my_claims_title": "Tus reclamaciones",
+      "my_claim": "Tu reclamación sobre {target}"
     }
   },
   "profile": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} miembros",
     "members_few": "{n} miembros",
     "members_many": "{n} de miembros",
-    "members_other": "{n} miembros"
+    "members_other": "{n} miembros",
+    "open_claims_zero": "reclamaciones abiertas",
+    "open_claims_one": "reclamación abierta",
+    "open_claims_two": "reclamaciones abiertas",
+    "open_claims_few": "reclamaciones abiertas",
+    "open_claims_many": "de reclamaciones abiertas",
+    "open_claims_other": "reclamaciones abiertas"
   }
 }

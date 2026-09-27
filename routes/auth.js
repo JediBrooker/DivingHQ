@@ -138,6 +138,20 @@ async function loadHasDependents(pool, userId) {
   }
 }
 
+// Everything the SPA gets alongside the token payload on sign-in and on
+// /api/auth/me, none of it signed into the JWT (see above for why). One
+// helper so the three places that build a session body can't drift:
+// has_claim was about to be the fourth copy-pasted line in each.
+async function addSessionExtras(pool, payload, userId) {
+  payload.has_dependents = await loadHasDependents(pool, userId);
+  payload.club_admin_of = await loadClubAdminOf(pool, userId);
+  payload.region_admin_of = await loadRegionAdminOf(pool, userId);
+  // A claimant signs in as a plain spectator; this is what puts Claims
+  // in their nav so they can follow their claim.
+  payload.has_claim = await claims.hasOwnClaim(pool, userId);
+  return payload;
+}
+
 // Club-first signup (migration 087): find the org a registrant from this
 // country joins, starting an unclaimed country account if there's none.
 //
@@ -230,9 +244,7 @@ module.exports = function createAuthRouter({
       // was minted is reflected without forcing a re-login. Same goes
       // for a guardian link an admin approved five minutes ago.
       const payload = await buildTokenPayload(req.user.id);
-      payload.has_dependents = await loadHasDependents(pool, req.user.id);
-      payload.club_admin_of = await loadClubAdminOf(pool, req.user.id);
-      payload.region_admin_of = await loadRegionAdminOf(pool, req.user.id);
+      await addSessionExtras(pool, payload, req.user.id);
       res.json({ user: payload });
     } catch (err) {
       console.error("[Auth Me Error]", err.message);
@@ -343,10 +355,8 @@ module.exports = function createAuthRouter({
       const payload = await buildTokenPayload(user.id);
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
       setSessionCookie(res, token);
-      // After signing, so the flag never enters the JWT.
-      payload.has_dependents = await loadHasDependents(pool, user.id);
-      payload.club_admin_of = await loadClubAdminOf(pool, user.id);
-      payload.region_admin_of = await loadRegionAdminOf(pool, user.id);
+      // After signing, so the flags never enter the JWT.
+      await addSessionExtras(pool, payload, user.id);
       const resBody = { user: payload, ...payload };
       if (includeBodyToken(req)) resBody.token = token;
       res.json(resBody);
@@ -442,9 +452,7 @@ module.exports = function createAuthRouter({
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
       setSessionCookie(res, token);
       // Same body-only extras as the password login.
-      payload.has_dependents = await loadHasDependents(pool, user.id);
-      payload.club_admin_of = await loadClubAdminOf(pool, user.id);
-      payload.region_admin_of = await loadRegionAdminOf(pool, user.id);
+      await addSessionExtras(pool, payload, user.id);
       const resBody = {
         user: payload,
         ...payload,

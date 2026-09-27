@@ -1575,3 +1575,58 @@ test("email verification: the link signs you in, a lost one can be resent", asyn
     await claimKit.wipe("FSM");
   }
 });
+
+// ---------------------------------------------------------------------
+// Track d: club-first follow-ups.
+// ---------------------------------------------------------------------
+
+// A claimant signs in as a plain spectator. has_claim on the session body
+// is what puts Claims in their nav, and my_claims on the dashboard bundle
+// is their chip while it's being decided.
+test("claims: a claimant is told about their own claim on sign-in and on the dashboard", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "VUT";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Port Vila Divers");
+    const B = await claimKit.founder(CODE, "Luganville Divers");
+    for (const x of [A, B]) await claimKit.makeEligible(x.clubId);
+    assert.equal((await claimKit.login(A.username)).has_claim, false, "a club founder hasn't claimed anything");
+
+    const fed = await claimKit.claim({ org_name: "Vanuatu Diving Federation", country_code: CODE });
+    assert.equal(fed.res.status, 201, JSON.stringify(fed.res.body));
+    await claimKit.verify(fed.id);
+
+    const login = await claimKit.login(fed.username);
+    assert.equal(login.has_claim, true);
+    assert.equal(login.user.has_claim, true, "the nested user object carries it too");
+    const me = await fetchJson("GET", "/api/auth/me", { token: login.token });
+    assert.equal(me.body.user.has_claim, true);
+
+    const dash = await fetchJson("GET", "/api/dashboard", { token: login.token });
+    assert.equal(dash.status, 200);
+    assert.equal(dash.body.my_claims.length, 1);
+    const mine = dash.body.my_claims[0];
+    assert.equal(mine.id, fed.res.body.claim_id);
+    assert.equal(mine.target_kind, "org");
+    assert.equal(mine.target_name, "Vanuatu", "a national claim is named for the country");
+    assert.equal(mine.status, "open");
+    assert.equal(mine.approver, "clubs");
+    assert.equal(mine.activated, true);
+    assert.ok(mine.closes_at, "voting has a closing date once activated");
+    // A voter's bundle doesn't list someone else's claim as theirs.
+    assert.deepEqual((await fetchJson("GET", "/api/dashboard", { token: A.token })).body.my_claims, []);
+
+    // Once it's decided the chip goes, but Claims stays in the nav so
+    // they can see how it went.
+    for (const x of [A, B]) {
+      await fetchJson("POST", `/api/claims/${mine.id}/vote`, { token: x.token, body: { vote: "approve" } });
+    }
+    const after = await claimKit.login(fed.username);
+    assert.deepEqual((await fetchJson("GET", "/api/dashboard", { token: after.token })).body.my_claims, []);
+    assert.equal(after.has_claim, true);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

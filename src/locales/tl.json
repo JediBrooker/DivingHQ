@@ -405,7 +405,9 @@
       "claims_meta": "Gustong pamahalaan ng isang pederasyon ang account",
       "chip_pending": "Nakabinbin",
       "chip_claims": "Mga claim",
-      "review_title": "Naghihintay ng iyong pagsusuri"
+      "review_title": "Naghihintay ng iyong pagsusuri",
+      "my_claims_title": "Ang iyong mga claim",
+      "my_claim": "Ang iyong claim sa {target}"
     }
   },
   "profile": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} miyembro",
     "members_few": "{n} miyembro",
     "members_many": "{n} miyembro",
-    "members_other": "{n} miyembro"
+    "members_other": "{n} miyembro",
+    "open_claims_zero": "bukas na claim",
+    "open_claims_one": "bukas na claim",
+    "open_claims_two": "bukas na claim",
+    "open_claims_few": "bukas na claim",
+    "open_claims_many": "bukas na claim",
+    "open_claims_other": "bukas na claim"
   }
 }

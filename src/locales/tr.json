@@ -405,7 +405,9 @@
       "claims_meta": "Bir federasyon bir hesabı devralmak istiyor",
       "chip_pending": "Bekleyen",
       "chip_claims": "Devralma talepleri",
-      "review_title": "İncelemenizi bekliyor"
+      "review_title": "İncelemenizi bekliyor",
+      "my_claims_title": "Devralma talepleriniz",
+      "my_claim": "{target} için talebiniz"
     }
   },
   "profile": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} üye",
     "members_few": "{n} üye",
     "members_many": "{n} üye",
-    "members_other": "{n} üye"
+    "members_other": "{n} üye",
+    "open_claims_zero": "açık talep",
+    "open_claims_one": "açık talep",
+    "open_claims_two": "açık talep",
+    "open_claims_few": "açık talep",
+    "open_claims_many": "açık talep",
+    "open_claims_other": "açık talep"
   }
 }

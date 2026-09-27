@@ -405,7 +405,9 @@
       "claims_meta": "Ein Verband möchte ein Konto übernehmen",
       "chip_pending": "Offen",
       "chip_claims": "Ansprüche",
-      "review_title": "Wartet auf Ihre Prüfung"
+      "review_title": "Wartet auf Ihre Prüfung",
+      "my_claims_title": "Ihre Ansprüche",
+      "my_claim": "Ihr Anspruch auf {target}"
     }
   },
   "role": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} Mitglieder",
     "members_few": "{n} Mitglieder",
     "members_many": "{n} Mitglieder",
-    "members_other": "{n} Mitglieder"
+    "members_other": "{n} Mitglieder",
+    "open_claims_zero": "offene Ansprüche",
+    "open_claims_one": "offener Anspruch",
+    "open_claims_two": "offene Ansprüche",
+    "open_claims_few": "offene Ansprüche",
+    "open_claims_many": "offene Ansprüche",
+    "open_claims_other": "offene Ansprüche"
   }
 }

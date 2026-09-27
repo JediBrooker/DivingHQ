@@ -405,7 +405,9 @@
       "claims_meta": "Une fédération souhaite reprendre un compte",
       "chip_pending": "En attente",
       "chip_claims": "Revendications",
-      "review_title": "En attente de votre examen"
+      "review_title": "En attente de votre examen",
+      "my_claims_title": "Vos revendications",
+      "my_claim": "Votre revendication sur {target}"
     }
   },
   "role": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} membres",
     "members_few": "{n} membres",
     "members_many": "{n} de membres",
-    "members_other": "{n} membres"
+    "members_other": "{n} membres",
+    "open_claims_zero": "revendications ouvertes",
+    "open_claims_one": "revendication ouverte",
+    "open_claims_two": "revendications ouvertes",
+    "open_claims_few": "revendications ouvertes",
+    "open_claims_many": "de revendications ouvertes",
+    "open_claims_other": "revendications ouvertes"
   }
 }

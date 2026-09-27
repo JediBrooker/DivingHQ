@@ -405,7 +405,9 @@
       "claims_meta": "Ett förbund vill ta över ett konto",
       "chip_pending": "Väntar",
       "chip_claims": "Anspråk",
-      "review_title": "Väntar på din granskning"
+      "review_title": "Väntar på din granskning",
+      "my_claims_title": "Dina anspråk",
+      "my_claim": "Ditt anspråk på {target}"
     }
   },
   "role": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} medlemmar",
     "members_few": "{n} medlemmar",
     "members_many": "{n} medlemmar",
-    "members_other": "{n} medlemmar"
+    "members_other": "{n} medlemmar",
+    "open_claims_zero": "öppna anspråk",
+    "open_claims_one": "öppet anspråk",
+    "open_claims_two": "öppna anspråk",
+    "open_claims_few": "öppna anspråk",
+    "open_claims_many": "öppna anspråk",
+    "open_claims_other": "öppna anspråk"
   }
 }

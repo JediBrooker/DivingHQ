@@ -405,7 +405,9 @@
       "claims_meta": "연맹이 계정 인수를 요청했습니다",
       "chip_pending": "대기 중",
       "chip_claims": "인수 신청",
-      "review_title": "검토 대기 중"
+      "review_title": "검토 대기 중",
+      "my_claims_title": "내 인수 신청",
+      "my_claim": "{target} 인수 신청"
     }
   },
   "profile": {
@@ -1990,6 +1992,12 @@
     "members_two": "회원 {n}명",
     "members_few": "회원 {n}명",
     "members_many": "회원 {n}명",
-    "members_other": "회원 {n}명"
+    "members_other": "회원 {n}명",
+    "open_claims_zero": "건 진행 중",
+    "open_claims_one": "건 진행 중",
+    "open_claims_two": "건 진행 중",
+    "open_claims_few": "건 진행 중",
+    "open_claims_many": "건 진행 중",
+    "open_claims_other": "건 진행 중"
   }
 }

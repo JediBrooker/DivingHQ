@@ -405,7 +405,9 @@
       "claims_meta": "Egy szövetség át szeretne venni egy fiókot",
       "chip_pending": "Függőben",
       "chip_claims": "Igények",
-      "review_title": "Az Ön jóváhagyására vár"
+      "review_title": "Az Ön jóváhagyására vár",
+      "my_claims_title": "Az Ön igényei",
+      "my_claim": "Az Ön igénye: {target}"
     }
   },
   "role": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} tag",
     "members_few": "{n} tag",
     "members_many": "{n} tag",
-    "members_other": "{n} tag"
+    "members_other": "{n} tag",
+    "open_claims_zero": "nyitott igény",
+    "open_claims_one": "nyitott igény",
+    "open_claims_two": "nyitott igény",
+    "open_claims_few": "nyitott igény",
+    "open_claims_many": "nyitott igény",
+    "open_claims_other": "nyitott igény"
   }
 }

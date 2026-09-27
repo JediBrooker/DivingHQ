@@ -405,7 +405,9 @@
       "claims_meta": "A federation or state body wants to take over",
       "chip_pending": "Pending",
       "chip_claims": "Claims",
-      "review_title": "Awaiting your review"
+      "review_title": "Awaiting your review",
+      "my_claims_title": "Your claims",
+      "my_claim": "Your claim on {target}"
     }
   },
   "profile": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} members",
     "members_few": "{n} members",
     "members_many": "{n} members",
-    "members_other": "{n} members"
+    "members_other": "{n} members",
+    "open_claims_zero": "open claims",
+    "open_claims_one": "open claim",
+    "open_claims_two": "open claims",
+    "open_claims_few": "open claims",
+    "open_claims_many": "open claims",
+    "open_claims_other": "open claims"
   }
 }

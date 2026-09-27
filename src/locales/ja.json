@@ -405,7 +405,9 @@
       "claims_meta": "連盟がアカウントの引き継ぎを求めています",
       "chip_pending": "保留中",
       "chip_claims": "引き継ぎ申請",
-      "review_title": "確認待ち"
+      "review_title": "確認待ち",
+      "my_claims_title": "あなたの引き継ぎ申請",
+      "my_claim": "{target} の引き継ぎ申請"
     }
   },
   "profile": {
@@ -1990,6 +1992,12 @@
     "members_two": "メンバー {n} 人",
     "members_few": "メンバー {n} 人",
     "members_many": "メンバー {n} 人",
-    "members_other": "メンバー {n} 人"
+    "members_other": "メンバー {n} 人",
+    "open_claims_zero": "件の進行中の申請",
+    "open_claims_one": "件の進行中の申請",
+    "open_claims_two": "件の進行中の申請",
+    "open_claims_few": "件の進行中の申請",
+    "open_claims_many": "件の進行中の申請",
+    "open_claims_other": "件の進行中の申請"
   }
 }

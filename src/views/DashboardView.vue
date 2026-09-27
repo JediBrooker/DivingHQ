@@ -34,7 +34,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useSocket } from '@/composables/useSocket'
 import { contributesToDiverChip, rankAttentionChips } from '@/composables/useAttention'
 import AttentionLane from '@/components/dashboard/AttentionLane.vue'
-import { fmtCloses, fmtRelative } from '@/lib/format'
+import { fmtCloses, fmtDate, fmtRelative } from '@/lib/format'
+import { usePlural } from '@/composables/usePlural'
 import { Building2, Calendar, MonitorPlay, Scale, UserCog } from '@lucide/vue'
 
 
@@ -52,6 +53,7 @@ const OtherPanel       = defineAsyncComponent(() => import('@/components/dashboa
 const router = useRouter()
 const auth = useAuthStore()
 const { t } = useI18n()
+const { tn } = usePlural()
 
 // ---- Tabs ---------------------------------------------------
 // Order matters: tabs render in this order (left → right).
@@ -100,6 +102,7 @@ const events             = ref([])     // /api/events, used by org_admin + meet_
 const roleRequests       = ref([])     // /api/role-requests
 const pendingOrgs        = ref([])     // /api/orgs filtered to pending (sysadmin)
 const claimsToAct        = ref(0)      // claims waiting on my vote / decision (phase 3)
+const myClaims           = ref([])     // claims I filed that are still being decided
 const recentActivity     = ref([])     // /api/audit/recent
 const judgeEvents        = ref([])     // /api/judge/my-events
 const coachData          = ref(null)   // /api/coach/dashboard
@@ -159,6 +162,16 @@ const delegateReviewPath = computed(() =>
 const ROLE_LABEL_KEYS = { diver: 'role.diver', judge: 'role.judge', referee: 'role.referee', meet_manager: 'role.manager' }
 function requestRoleLabel(role) {
   return ROLE_LABEL_KEYS[role] ? t(ROLE_LABEL_KEYS[role]) : role
+}
+
+// Where one of my own claims stands, in the same words ClaimsView uses.
+function myClaimMeta(c) {
+  if (!c.activated) return t('claims.awaiting_email')
+  if (c.status === 'escalated') return t('claims.status_escalated')
+  if (['clubs', 'regions'].includes(c.approver) && c.closes_at) {
+    return t('claims.closes', { date: fmtDate(c.closes_at) })
+  }
+  return t(`claims.approver_${c.approver}`)
 }
 
 // ---- Pulse chips ------------------------------------------
@@ -293,6 +306,30 @@ const pulseChips = computed(() => {
       to:           '/claims',
       popoverTitle: title,
       items: [{ id: 'claims', title, meta: t('dashboard.attention.claims_meta'), to: '/claims', urgency: null }],
+    })
+  }
+
+  // A claimant's own claim while it's being decided. Until it passes
+  // they're a plain spectator with nothing else on this page, so this
+  // (and Claims in the nav) is how they keep track of it.
+  if (myClaims.value.length) {
+    const n = myClaims.value.length
+    chips.push({
+      id:           'my-claims',
+      kind:         'pending',
+      glyph:        '⚖',
+      number:       n,
+      label:        tn('counts.open_claims', n),
+      layout:       'count-first',
+      to:           '/claims',
+      popoverTitle: t('dashboard.attention.my_claims_title'),
+      items: myClaims.value.map((c) => ({
+        id:    'mc-' + c.id,
+        title: t('dashboard.attention.my_claim', { target: c.target_name }),
+        meta:  myClaimMeta(c),
+        to:    '/claims',
+        urgency: null,
+      })),
     })
   }
 
@@ -634,6 +671,7 @@ async function loadDashboardBundle() {
   if (Array.isArray(bundle.role_requests))    roleRequests.value    = bundle.role_requests
   if (Array.isArray(bundle.pending_orgs))     pendingOrgs.value     = bundle.pending_orgs
   if (typeof bundle.claims_to_act === 'number') claimsToAct.value  = bundle.claims_to_act
+  if (Array.isArray(bundle.my_claims))        myClaims.value        = bundle.my_claims
   if (Array.isArray(bundle.recent_activity))  recentActivity.value  = bundle.recent_activity
   if (Array.isArray(bundle.judge_events))     judgeEvents.value     = bundle.judge_events
   if (Array.isArray(bundle.workflow_actions)) workflowActions.value = bundle.workflow_actions

@@ -158,6 +158,10 @@ export const useAuthStore = defineStore('auth', () => {
   // Same for regions (states / provinces, migration 088).
   const regionAdminOf = computed(() => user.value?.region_admin_of || [])
   const isRegionAdmin = computed(() => regionAdminOf.value.length > 0)
+  // Filed a claim on a country or region (lib/claims.js). A claimant is
+  // a plain spectator until it's approved, so without this the Claims
+  // page would be missing from their nav. UI only, like the two above.
+  const hasClaim = computed(() => Boolean(user.value?.has_claim))
 
   function getHeaders() {
     // No Authorization header any more, the httpOnly session cookie
@@ -223,7 +227,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user, isLoggedIn, fingerprint, hasDependents, clubAdminOf, isClubAdmin,
-    regionAdminOf, isRegionAdmin,
+    regionAdminOf, isRegionAdmin, hasClaim,
     saveSession, clearSession, fetchMe,
     hasRole, hasAnyRole, getHeaders,
     apiFetch, cachedApiFetch,

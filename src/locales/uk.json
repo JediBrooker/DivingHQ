@@ -405,7 +405,9 @@
       "claims_meta": "Федерація хоче взяти на себе обліковий запис",
       "chip_pending": "Очікують",
       "chip_claims": "Заявки",
-      "review_title": "Чекають вашого рішення"
+      "review_title": "Чекають вашого рішення",
+      "my_claims_title": "Ваші заявки",
+      "my_claim": "Ваша заявка на {target}"
     }
   },
   "role": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} учасників",
     "members_few": "{n} учасники",
     "members_many": "{n} учасників",
-    "members_other": "{n} учасника"
+    "members_other": "{n} учасника",
+    "open_claims_zero": "відкритих заявок",
+    "open_claims_one": "відкрита заявка",
+    "open_claims_two": "відкритих заявок",
+    "open_claims_few": "відкриті заявки",
+    "open_claims_many": "відкритих заявок",
+    "open_claims_other": "відкритої заявки"
   }
 }

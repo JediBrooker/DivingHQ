@@ -405,7 +405,9 @@
       "claims_meta": "Liitto haluaa ottaa tilin haltuunsa",
       "chip_pending": "Odottaa",
       "chip_claims": "Vaatimukset",
-      "review_title": "Odottaa tarkistustasi"
+      "review_title": "Odottaa tarkistustasi",
+      "my_claims_title": "Omat vaatimuksesi",
+      "my_claim": "Vaatimuksesi: {target}"
     }
   },
   "role": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} jäsentä",
     "members_few": "{n} jäsentä",
     "members_many": "{n} jäsentä",
-    "members_other": "{n} jäsentä"
+    "members_other": "{n} jäsentä",
+    "open_claims_zero": "avointa vaatimusta",
+    "open_claims_one": "avoin vaatimus",
+    "open_claims_two": "avointa vaatimusta",
+    "open_claims_few": "avointa vaatimusta",
+    "open_claims_many": "avointa vaatimusta",
+    "open_claims_other": "avointa vaatimusta"
   }
 }

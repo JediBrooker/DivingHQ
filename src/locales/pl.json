@@ -405,7 +405,9 @@
       "claims_meta": "Federacja chce przejąć konto",
       "chip_pending": "Oczekujące",
       "chip_claims": "Roszczenia",
-      "review_title": "Czeka na twoją decyzję"
+      "review_title": "Czeka na twoją decyzję",
+      "my_claims_title": "Twoje roszczenia",
+      "my_claim": "Twoje roszczenie do {target}"
     }
   },
   "role": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} członków",
     "members_few": "{n} członkowie",
     "members_many": "{n} członków",
-    "members_other": "{n} członka"
+    "members_other": "{n} członka",
+    "open_claims_zero": "otwartych roszczeń",
+    "open_claims_one": "otwarte roszczenie",
+    "open_claims_two": "otwartych roszczeń",
+    "open_claims_few": "otwarte roszczenia",
+    "open_claims_many": "otwartych roszczeń",
+    "open_claims_other": "otwartego roszczenia"
   }
 }

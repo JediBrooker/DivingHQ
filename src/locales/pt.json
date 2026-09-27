@@ -405,7 +405,9 @@
       "claims_meta": "Uma federação quer assumir uma conta",
       "chip_pending": "Pendentes",
       "chip_claims": "Reivindicações",
-      "review_title": "À espera da sua análise"
+      "review_title": "À espera da sua análise",
+      "my_claims_title": "As suas reivindicações",
+      "my_claim": "A sua reivindicação sobre {target}"
     }
   },
   "role": {
@@ -1990,6 +1992,12 @@
     "members_two": "{n} membros",
     "members_few": "{n} membros",
     "members_many": "{n} de membros",
-    "members_other": "{n} membros"
+    "members_other": "{n} membros",
+    "open_claims_zero": "reivindicações abertas",
+    "open_claims_one": "reivindicação aberta",
+    "open_claims_two": "reivindicações abertas",
+    "open_claims_few": "reivindicações abertas",
+    "open_claims_many": "de reivindicações abertas",
+    "open_claims_other": "reivindicações abertas"
   }
 }
