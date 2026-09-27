@@ -15,6 +15,7 @@ const jwt     = require("jsonwebtoken");
 const crypto  = require("node:crypto");
 const totp    = require("../lib/totp");
 const { SESSION_COOKIE, cookieOptions } = require("../lib/session-cookie");
+const { ADMIN_ORG_ID } = require("../lib/admin-org");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -177,7 +178,12 @@ module.exports = function createAuthRouter({
       // change that responds with the row directly can't leak the
       // password hash if it was never selected.
       const result = await pool.query(
-        "SELECT id, password, email_verified_at, totp_enabled_at, deleted_at, suspended_at FROM users WHERE username = $1",
+        `SELECT u.id, u.password, u.email_verified_at, u.totp_enabled_at,
+                u.deleted_at, u.suspended_at, u.is_system_admin,
+                o.status AS org_status
+           FROM users u
+           LEFT JOIN organisations o ON o.id = u.org_id
+          WHERE u.username = $1`,
         [username],
       );
       const user = result.rows[0];
@@ -215,6 +221,21 @@ module.exports = function createAuthRouter({
         return res.status(403).json({
           error: "Please verify your email — check your inbox for the link we sent at sign-up.",
           code: "email_not_verified",
+        });
+      }
+
+      // A federation stays 'pending' until a sysadmin approves it and
+      // goes 'suspended' when it's denied or pulled. Nobody in it signs
+      // in meanwhile, the register-org page already promises as much.
+      // Checked after the password so it can't be used to probe which
+      // usernames belong to a pending org.
+      if (!user.is_system_admin && user.org_status !== "active") {
+        const pending = user.org_status === "pending";
+        return res.status(403).json({
+          error: pending
+            ? "Your organisation is still waiting for approval. We'll email you as soon as it's reviewed."
+            : "Your organisation's access to DivingHQ has been suspended. Contact support if you think this is a mistake.",
+          code: pending ? "org_pending" : "org_suspended",
         });
       }
 
@@ -655,9 +676,12 @@ module.exports = function createAuthRouter({
     try {
       await client.query("BEGIN");
 
+      // The Administration org is active but never open to the public,
+      // same filter as /api/orgs/active so a hand-crafted POST can't
+      // get round the missing dropdown entry.
       const org = await client.query(
-        "SELECT id FROM organisations WHERE id = $1 AND status = 'active'",
-        [org_id],
+        "SELECT id FROM organisations WHERE id = $1 AND status = 'active' AND id <> $2",
+        [org_id, ADMIN_ORG_ID],
       );
       if (!org.rows.length) {
         await client.query("ROLLBACK");

@@ -17,6 +17,7 @@
 
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
+const { ADMIN_ORG_ID } = require("../lib/admin-org");
 
 module.exports = function createOrgsRouter({
   pool,
@@ -43,10 +44,13 @@ module.exports = function createOrgsRouter({
   });
 
   // List active orgs, used by register form to populate the org picker.
+  // The sysadmin's own Administration org is active too, so skip it or
+  // strangers can sign up straight into it.
   router.get("/api/orgs/active", async (req, res) => {
     try {
       const r = await pool.query(
-        "SELECT id, name, country_code, slug FROM organisations WHERE status = 'active' ORDER BY name ASC",
+        "SELECT id, name, country_code, slug FROM organisations WHERE status = 'active' AND id <> $1 ORDER BY name ASC",
+        [ADMIN_ORG_ID],
       );
       res.json(r.rows);
     } catch (err) {

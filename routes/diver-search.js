@@ -16,6 +16,7 @@
 // (full_name, club_code) as the human label.
 
 const express = require("express");
+const { ADMIN_ORG_ID } = require("../lib/admin-org");
 
 module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
   const router = express.Router();
@@ -106,8 +107,9 @@ module.exports = function createDiverSearchRouter({ pool, verifyToken }) {
       const r = await pool.query(
         `SELECT id, name, country_code
          FROM organisations
-         WHERE status = 'active'
+         WHERE status = 'active' AND id <> $1
          ORDER BY name ASC`,
+        [ADMIN_ORG_ID],
       );
       res.json(r.rows);
     } catch (err) {

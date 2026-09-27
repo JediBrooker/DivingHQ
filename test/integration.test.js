@@ -100,6 +100,11 @@ before(async () => {
   // Boot the real server on an ephemeral port. server.js skips
   // listen() when required as a module (require.main !== module)
   // so we control startup here and shut down cleanly in after().
+  // The suite logs in from 127.0.0.1 over and over, and the auth limiter
+  // (20 per 15 min) runs out right around the 20th login, after which every
+  // new test that signs in gets a 429. Nothing here tests the limiter, so
+  // switch it off like the e2e config does. server.js reads this at require.
+  process.env.RATE_LIMIT_DISABLED = "true";
   const mod = require("../server.js");
   httpServer = mod.server;
   await new Promise((resolve) => httpServer.listen(0, "127.0.0.1", resolve));
@@ -549,4 +554,63 @@ test("end-to-end happy path", async (t) => {
       await teardownFixture(state);
     }
   });
+});
+
+// The seeded Administration org is 'active' so the sysadmin can sign in,
+// which used to put it in the public register dropdown too.
+test("the Administration org is hidden from public signup", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { ADMIN_ORG_ID } = require("../lib/admin-org");
+
+  const list = await fetchJson("GET", "/api/orgs/active");
+  assert.equal(list.status, 200);
+  assert.ok(!list.body.some((o) => o.id === ADMIN_ORG_ID), "admin org must not be listed");
+
+  const reg = await fetchJson("POST", "/api/auth/register", {
+    body: {
+      username:  `int-sneak-${crypto.randomBytes(4).toString("hex")}`,
+      full_name: "Sneaky Registrant",
+      email:     "sneak@example.test",
+      password:  TEST_PASSWORD,
+      org_id:    ADMIN_ORG_ID,
+    },
+  });
+  assert.equal(reg.status, 400, `expected 400, got ${reg.status}: ${JSON.stringify(reg.body)}`);
+  assert.match(reg.body.error, /Organisation not found/);
+});
+
+// Pending means "waiting for a sysadmin", suspended means denied or
+// pulled. Neither should let anyone in, and an open session should
+// drop the moment verifyToken next looks.
+test("a pending or suspended federation can't sign in", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const state = await setupFixture({ withEvent: false });
+  try {
+    const login = () => fetchJson("POST", "/api/auth/login", {
+      body: { username: state.username, password: TEST_PASSWORD },
+    });
+
+    await pool.query("UPDATE organisations SET status = 'pending' WHERE id = $1", [state.orgId]);
+    let res = await login();
+    assert.equal(res.status, 403);
+    assert.equal(res.body.code, "org_pending");
+    // setupFixture never hit verifyToken with this token, so the 30s
+    // auth-state cache is cold and this read sees the new status.
+    const me = await fetchJson("GET", "/api/orgs/all", { token: state.adminToken });
+    assert.equal(me.status, 401);
+    assert.equal(me.body.code, "org_not_active");
+
+    await pool.query("UPDATE organisations SET status = 'suspended' WHERE id = $1", [state.orgId]);
+    res = await login();
+    assert.equal(res.status, 403);
+    assert.equal(res.body.code, "org_suspended");
+
+    await pool.query("UPDATE organisations SET status = 'active' WHERE id = $1", [state.orgId]);
+    res = await login();
+    assert.equal(res.status, 200, "an approved org signs in normally");
+  } finally {
+    await teardownFixture(state);
+  }
 });
