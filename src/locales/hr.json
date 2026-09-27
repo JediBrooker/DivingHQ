@@ -621,7 +621,9 @@
       "tfa_q": "Kako uključiti dvofaktorsku autentikaciju?",
       "tfa_a": "Otvorite <strong>Moj profil</strong> → <strong>Sigurnost</strong> → <strong>Dvofaktorska autentikacija</strong> i skenirajte QR kod svojom autentikacijskom aplikacijom (1Password, Authy, Google Authenticator). Spremite kodove za oporavak na sigurno mjesto — to je jedini način povratka ako izgubite telefon.",
       "account_q": "Kako promijeniti e-mail, lozinku ili obrisati račun?",
-      "account_a": "Sve u <strong>Moj profil</strong> → <strong>Postavke računa</strong>. Promjena e-maila zahtijeva ponovnu provjeru na novoj adresi. Brisanje računa je trajno i uklanja vašu prijavu; povijesni rezultati ostaju na javnom semaforu pod evidencijom federacije (anonimizirani na zahtjev — obratite se administratoru svoje federacije)."
+      "account_a": "Sve u <strong>Moj profil</strong> → <strong>Postavke računa</strong>. Promjena e-maila zahtijeva ponovnu provjeru na novoj adresi. Brisanje računa je trajno i uklanja vašu prijavu; povijesni rezultati ostaju na javnom semaforu pod evidencijom federacije (anonimizirani na zahtjev — obratite se administratoru svoje federacije).",
+      "records_q": "Kako funkcioniraju rekordi?",
+      "records_a": "Rekordi se sami ažuriraju. Čim posljednji sudac ocijeni pojedinačni skok, DivingHQ ga uspoređuje s klupskim, regionalnim, nacionalnim i kontinentalnim rekordima skakača, odvojeno za žene i muškarce, i zamjenjuje svaki rezultat koji nadmaši. Sve tablice rekorda nalaze se na stranici {records_link}, bez prijave. Tablica je neslužbena dok je nadležno upravljačko tijelo ne zatraži na DivingHQ-u, a isti rezultati postaju službeni čim se zahtjev odobri. Osobni rekordi nalaze se na profilu svakog skakača."
     },
     "next": {
       "lede": "Trebate detaljnu verziju? {guide_link} pokriva svaki zaslon, svaku ulogu, svako World Aquatics pravilo koje aplikacija kodira. Stranice koje najviše vrijedi zabilježiti:",

@@ -632,7 +632,9 @@
       "tfa_q": "Como ativo a autenticação de dois fatores?",
       "tfa_a": "Abre <strong>O Meu Perfil</strong> → <strong>Segurança</strong> → <strong>Autenticação de dois fatores</strong> e lê o código QR com a tua app de autenticação (1Password, Authy, Google Authenticator). Guarda os códigos de recuperação num sítio seguro — são a única forma de voltar a entrar se perderes o telemóvel.",
       "account_q": "Como altero o meu email, a palavra-passe, ou elimino a minha conta?",
-      "account_a": "Tudo em <strong>O Meu Perfil</strong> → <strong>Definições da conta</strong>. As alterações de email precisam de nova verificação no novo endereço. Eliminar a conta é permanente e remove o teu acesso; as pontuações históricas mantêm-se no marcador público sob o registo da federação (anonimizadas a pedido — contacta o admin da tua federação)."
+      "account_a": "Tudo em <strong>O Meu Perfil</strong> → <strong>Definições da conta</strong>. As alterações de email precisam de nova verificação no novo endereço. Eliminar a conta é permanente e remove o teu acesso; as pontuações históricas mantêm-se no marcador público sob o registo da federação (anonimizadas a pedido — contacta o admin da tua federação).",
+      "records_q": "Como funcionam os recordes?",
+      "records_a": "Os recordes mantêm-se sozinhos. Assim que o último juiz pontua um salto individual, o DivingHQ compara-o com os recordes do clube, regionais, nacionais e continentais do saltador, separados em femininos e masculinos, e substitui qualquer marca que supere. Todas as tabelas de recordes estão na página {records_link}, sem necessidade de iniciar sessão. Uma tabela aparece como não oficial até o respetivo órgão dirigente a reivindicar no DivingHQ, e as mesmas marcas passam a oficiais assim que uma reivindicação é aprovada. Os recordes pessoais estão no perfil de cada saltador."
     },
     "next": {
       "lede": "Precisas da versão completa? O {guide_link} cobre cada ecrã, cada papel, cada regra da World Aquatics que a app implementa. As páginas mais úteis para guardar nos favoritos:",

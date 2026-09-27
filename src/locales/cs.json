@@ -621,7 +621,9 @@
       "tfa_q": "Jak zapnu dvoufaktorové ověření?",
       "tfa_a": "Otevřete <strong>Můj profil</strong> → <strong>Zabezpečení</strong> → <strong>Dvoufaktorové ověření</strong> a naskenujte QR kód svou ověřovací aplikací (1Password, Authy, Google Authenticator). Záložní kódy uložte na bezpečné místo — jsou jedinou cestou zpět, pokud telefon ztratíte.",
       "account_q": "Jak změním e-mail, heslo nebo smažu účet?",
-      "account_a": "Vše v <strong>Mém profilu</strong> → <strong>Nastavení účtu</strong>. Změna e-mailu vyžaduje opětovné ověření na nové adrese. Smazání účtu je trvalé a odstraní vaše přihlášení; historické známky zůstávají na veřejné výsledkové tabuli v záznamu federace (na požádání anonymizovány — kontaktujte administrátora své federace)."
+      "account_a": "Vše v <strong>Mém profilu</strong> → <strong>Nastavení účtu</strong>. Změna e-mailu vyžaduje opětovné ověření na nové adrese. Smazání účtu je trvalé a odstraní vaše přihlášení; historické známky zůstávají na veřejné výsledkové tabuli v záznamu federace (na požádání anonymizovány — kontaktujte administrátora své federace).",
+      "records_q": "Jak fungují rekordy?",
+      "records_a": "Rekordy se udržují samy. Jakmile poslední rozhodčí ohodnotí individuální skok, DivingHQ ho porovná s klubovými, regionálními, národními a kontinentálními rekordy skokana, zvlášť pro ženy a muže, a nahradí každý výkon, který překoná. Všechny tabulky rekordů najdete na stránce {records_link}, bez přihlášení. Tabulka je neoficiální, dokud si ji na DivingHQ nenárokuje příslušný řídicí orgán; jakmile je nárok schválen, stejné výkony platí jako oficiální. Osobní rekordy jsou v profilu každého skokana."
     },
     "next": {
       "lede": "Potřebujete podrobnou verzi? {guide_link} pokrývá každou obrazovku, každou roli a každé pravidlo World Aquatics, které aplikace zachycuje. Stránky, které stojí za přidání do záložek:",

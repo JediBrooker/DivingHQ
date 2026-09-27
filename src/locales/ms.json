@@ -621,7 +621,9 @@
       "tfa_q": "Bagaimana saya mengaktifkan pengesahan dua faktor?",
       "tfa_a": "Buka <strong>Profil Saya</strong> → <strong>Keselamatan</strong> → <strong>Pengesahan dua faktor</strong> dan imbas kod QR dengan aplikasi pengesah anda (1Password, Authy, Google Authenticator). Simpan kod pemulihan di tempat yang selamat — itulah satu-satunya cara masuk semula jika anda kehilangan telefon.",
       "account_q": "Bagaimana saya menukar e-mel, kata laluan, atau memadam akaun saya?",
-      "account_a": "Kesemuanya dalam <strong>Profil Saya</strong> → <strong>Tetapan akaun</strong>. Perubahan e-mel memerlukan pengesahan semula pada alamat baharu. Memadam akaun anda adalah kekal dan membuang log masuk anda; markah bersejarah kekal pada papan markah awam di bawah rekod persekutuan (dianonimkan atas permintaan — hubungi admin persekutuan anda)."
+      "account_a": "Kesemuanya dalam <strong>Profil Saya</strong> → <strong>Tetapan akaun</strong>. Perubahan e-mel memerlukan pengesahan semula pada alamat baharu. Memadam akaun anda adalah kekal dan membuang log masuk anda; markah bersejarah kekal pada papan markah awam di bawah rekod persekutuan (dianonimkan atas permintaan — hubungi admin persekutuan anda).",
+      "records_q": "Bagaimanakah rekod berfungsi?",
+      "records_a": "Rekod dikemas kini dengan sendirinya. Sebaik sahaja hakim terakhir menilai terjunan individu, DivingHQ membandingkannya dengan rekod kelab, wilayah, kebangsaan dan benua penerjun, berasingan bagi wanita dan lelaki, lalu menggantikan sebarang pencapaian yang diatasinya. Semua senarai rekod ada di halaman {records_link}, tanpa perlu log masuk. Sesuatu senarai dianggap tidak rasmi sehingga badan induknya menuntutnya di DivingHQ, dan pencapaian yang sama menjadi rasmi sebaik sahaja tuntutan diluluskan. Rekod peribadi terdapat pada profil setiap penerjun."
     },
     "next": {
       "lede": "Perlukan versi terperinci? {guide_link} merangkumi setiap skrin, setiap peranan, setiap peraturan World Aquatics yang dikodkan oleh aplikasi. Halaman yang paling berbaloi ditanda buku:",

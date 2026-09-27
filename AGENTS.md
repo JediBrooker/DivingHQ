@@ -385,6 +385,7 @@ A non-exhaustive checklist:
 | A SQL function | `init.sql`, all migrations that touch it, `test/calc.test.js` if there's a closed-form test |
 | `KNOWN_WIDGETS` (diver) | `WIDGET_CATALOG` in `src/views/DiverProfileView.vue` |
 | `KNOWN_WIDGETS` in `routes/judge-analytics.js` | `JUDGE_WIDGET_CATALOG` in `src/views/JudgeProfileView.vue` |
+| Record scopes, record columns, or who sets a record | `lib/records.js` (`RECORD_TABLES`, `checkAndApplyRecords`, the `GET /api/records` UNION, `eventRecordMarks`), `record_gender()` (migration 094), `scripts/rebuild-records.js` (replays with the same rules), `src/views/RecordsView.vue`, the scoreboard chip (`src/lib/recordMarks.js`, `RecordChip.vue`), `record_broken` in `docs/socket-events.md`, `src/types.js` (`RecordRow`, `ScoreboardRecordMark`), and the Records section of `src/guide/content/admin-tasks.md` |
 | A socket event | `socketRequireRole` gate, every consumer (`socket.on('eventName')` grep), `docs/socket-events.md` |
 | Anything in `src/composables/` | The handful of consumers, since composables aren't auto-typed |
 | A user-visible feature, screen, or role capability (e.g. coach phases, scheduler, broadcast modes) | `src/views/GuideView.vue` — the in-app `/guide` primer should still describe what each role does. Linked from the dashboard top menu, footer, sign-in page, and home hero. Most prose is hardcoded English today; if you add new `$t('guide.*')` keys, also drop the English source into `src/locales/en.json` and **translate to every other locale** (see below). |

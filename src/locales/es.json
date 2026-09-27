@@ -621,7 +621,9 @@
       "tfa_q": "¿Cómo activo la verificación en dos pasos?",
       "tfa_a": "Abre <strong>Mi Perfil</strong> → <strong>Seguridad</strong> → <strong>Verificación en dos pasos</strong> y escanea el código QR con tu app de autenticación (1Password, Authy, Google Authenticator). Guarda los códigos de recuperación en un lugar seguro — son la única forma de volver a entrar si pierdes el móvil.",
       "account_q": "¿Cómo cambio mi correo, mi contraseña o elimino mi cuenta?",
-      "account_a": "Todo en <strong>Mi Perfil</strong> → <strong>Ajustes de la cuenta</strong>. Los cambios de correo requieren volver a verificar la nueva dirección. Eliminar tu cuenta es permanente y elimina tu inicio de sesión; los resultados históricos permanecen en el marcador público bajo el registro de la federación (anonimizados si lo solicitas — contacta con el admin de tu federación)."
+      "account_a": "Todo en <strong>Mi Perfil</strong> → <strong>Ajustes de la cuenta</strong>. Los cambios de correo requieren volver a verificar la nueva dirección. Eliminar tu cuenta es permanente y elimina tu inicio de sesión; los resultados históricos permanecen en el marcador público bajo el registro de la federación (anonimizados si lo solicitas — contacta con el admin de tu federación).",
+      "records_q": "¿Cómo funcionan los récords?",
+      "records_a": "Los récords se mantienen solos. En cuanto el último juez puntúa un salto individual, DivingHQ lo compara con los récords del club, regionales, nacionales y continentales del saltador, separados en femenino y masculino, y sustituye cualquier marca que supere. Todas las tablas de récords están en la página {records_link}, sin necesidad de iniciar sesión. Una tabla figura como no oficial hasta que su órgano rector la reclama en DivingHQ, y las mismas marcas pasan a ser oficiales en cuanto se aprueba una reclamación. Las mejores marcas personales están en el perfil de cada saltador."
     },
     "next": {
       "lede": "¿Necesitas la versión en profundidad? El {guide_link} cubre cada pantalla, cada rol y cada norma de World Aquatics que la app implementa. Las páginas más útiles para guardar como favoritos:",

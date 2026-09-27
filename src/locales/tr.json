@@ -621,7 +621,9 @@
       "tfa_q": "İki adımlı doğrulamayı nasıl etkinleştiririm?",
       "tfa_a": "<strong>Profilim</strong> → <strong>Güvenlik</strong> → <strong>İki adımlı doğrulama</strong>'yı açın ve QR kodunu kimlik doğrulayıcı uygulamanızla (1Password, Authy, Google Authenticator) tarayın. Kurtarma kodlarını güvenli bir yere kaydedin — telefonunuzu kaybederseniz geri dönmenin tek yolu onlardır.",
       "account_q": "E-postamı, parolamı nasıl değiştiririm veya hesabımı nasıl silerim?",
-      "account_a": "Hepsi <strong>Profilim</strong> → <strong>Hesap ayarları</strong>'nda. E-posta değişiklikleri yeni adreste yeniden doğrulama gerektirir. Hesabınızı silmek kalıcıdır ve girişinizi kaldırır; geçmiş puanlar federasyonun kaydı altında herkese açık skor tablosunda kalır (talep üzerine anonimleştirilir — federasyon yöneticinizle iletişime geçin)."
+      "account_a": "Hepsi <strong>Profilim</strong> → <strong>Hesap ayarları</strong>'nda. E-posta değişiklikleri yeni adreste yeniden doğrulama gerektirir. Hesabınızı silmek kalıcıdır ve girişinizi kaldırır; geçmiş puanlar federasyonun kaydı altında herkese açık skor tablosunda kalır (talep üzerine anonimleştirilir — federasyon yöneticinizle iletişime geçin).",
+      "records_q": "Rekorlar nasıl işler?",
+      "records_a": "Rekorlar kendiliğinden güncellenir. Son hakem bireysel bir atlamayı puanladığı anda DivingHQ onu sporcunun kulüp, bölge, ulusal ve kıta rekorlarıyla, kadınlar ve erkekler için ayrı ayrı karşılaştırır ve geçtiği her dereceyi değiştirir. Tüm rekor listeleri giriş yapmadan {records_link} sayfasında görülebilir. Bir liste, yönetim organı onu DivingHQ'da devralana kadar resmî olmayan olarak görünür; talep onaylanınca aynı dereceler resmî sayılır. Kişisel rekorlar her sporcunun profilinde yer alır."
     },
     "next": {
       "lede": "Daha kapsamlı sürümü mi gerekiyor? {guide_link} her ekranı, her rolü ve uygulamanın kodladığı her World Aquatics kuralını kapsar. Yer imine eklemeye değer sayfalar:",

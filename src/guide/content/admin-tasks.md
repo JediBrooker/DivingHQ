@@ -1,6 +1,6 @@
 # Admin Tasks
 
-This page covers everything an org admin (or system admin) does when they're NOT actively running a meet — managing users, clubs, teams, audit logs, and federation records.
+This page covers everything an org admin (or system admin) does when they're NOT actively running a meet — managing users, clubs, teams, audit logs, and record books.
 
 ## Which admin task do I need?
 
@@ -181,17 +181,27 @@ For every role grant or revoke:
 
 System admins can also query the table directly via `role_audit_log` if needed for cross-org analytics.
 
-## Federation records
+## Records
 
-`/records/<federation-slug>` — the public records book for your federation.
+Records keep themselves. There's nothing to submit and nothing to approve: when the last judge's score for an individual dive lands, whether from the judges' phones or typed in through manual entry, DivingHQ checks the dive against every book its diver belongs to and replaces any mark it beats.
 
-Records are tracked at three levels:
+The books are public at [`/records`](/records) (**Records** in the sidebar's Competition menu), no sign-in needed:
 
-- **Personal** — per-diver, per `(dive_code, position, board_height)`. Auto-set on every score insert via `checkAndApplyRecords`.
-- **Club** — per-club; auto-set when a member breaks the club's existing best
-- **Federation** — same shape but federation-wide; auto-set on the same trigger.
+- **National** — your federation's book, for divers whose home federation is yours.
+- **State / province / region** — the region the diver was entered from, labelled with your country's own word for it. Only shown for countries that have regions.
+- **Club** — the diver's club.
+- **Continental** — every diver whose federation the system admin has given a continent (see [Continental records](#continental-records)).
+- **Personal bests** aren't a book. They live on each diver's profile.
 
-If a federation needs an approval workflow before publishing a national record (so a panel error or a one-off score correction doesn't immediately publish a "new national record" the audience would later see retracted), that's a future enhancement — see the project README's roadmap.
+Every book is split into **Women's** and **Men's**, and each record is one board height, dive code and position, so a 105B from 3 m and a 105B from 1 m are separate records. Only individual events count: a synchro dive is two people's work credited to one of them, so synchro and team events never set records. A Mixed event files each dive under the diver's own profile gender, and skips the dive if the profile doesn't give one. Rehearsal events never touch the books.
+
+Each club links to its book from **My club**, and each region from **My region**.
+
+**Unofficial marks.** A national or state book whose governing body hasn't claimed its account on DivingHQ yet (a country the clubs started, or a state nobody has claimed) carries one **Unofficial** note with a link to the claim flow. The marks don't change when the claim is approved, they simply become official. Club and continental books always read as official.
+
+**Corrections and deletions don't re-check records.** A score corrected after the fact leaves the books as they were, and so does deleting an event: a record the original score set stands until somebody beats it, and a deleted event's records stay with their holder (the *Set at* column goes blank). If a book needs putting right, the system admin can [rebuild it from the scores](#rebuilding-the-record-books).
+
+There's no approval step before a national record shows publicly. If your federation needs one, that's a future enhancement.
 
 ## System admin tasks
 
@@ -203,9 +213,18 @@ When someone clicks "Register your org" on the login page, their federation land
 
 Approved orgs are immediately usable; rejected orgs send a notification email and stay in the database in `rejected` status (for audit purposes).
 
-### Approving system-wide records
+### Rebuilding the record books
 
-Some records (e.g. cross-federation continental records) are approved at the system-admin level. The same pending → approve flow as federation records, but visible only to system admins.
+Records are written as scores land, so a book can drift from the scores behind it: a correction that lowered a record-setting dive, say, or books written before migration 094 split them by gender (back then a man's dive could replace a woman's club record, and synchro dives counted). The system admin can replay every book from the scores themselves:
+
+```
+node scripts/rebuild-records.js                  # dry run: counts per book, writes nothing
+node scripts/rebuild-records.js --verbose        # ...plus the first rows that would change
+node scripts/rebuild-records.js --org <uuid>     # one federation's books (continental is skipped)
+node scripts/rebuild-records.js --apply          # actually write it
+```
+
+Nothing is written without `--apply`. With it, every row that's replaced or removed is copied to the matching history table first, and the whole rebuild runs in one transaction with the record tables locked, so a dive finishing mid-rebuild just waits for it. Records whose event has since been deleted can't be checked against scores, so they're left alone unless the replay beats them.
 
 ### Cross-org user lookup
 
@@ -237,11 +256,11 @@ When you want to run a competition that includes divers from other federations (
 
 ### What happens to records
 
-A foreign diver setting a personal best at your meet:
-- ☑ Writes to **their** personal best history (their home federation's profile page reflects it).
-- ☑ Writes to **their home federation's** records book (not yours) — `lib/records.js` already keys federation records off `users.org_id`, so this just works.
-- ☑ Counts toward their home club's record book (if they belong to a club in their home federation).
-- ✗ Does NOT pollute your federation's records book with foreign holders.
+A foreign diver's dive at your meet:
+- ☑ Counts toward **their** personal bests (their profile reflects it).
+- ☑ Counts toward **their home federation's** national book (not yours) — `lib/records.js` keys national records off `users.org_id`, so this just works.
+- ☑ Counts toward their own club's and state's books, and their continent's if their federation has one.
+- ✗ Does NOT pollute your federation's record books with foreign holders.
 
 ### What stays host-only
 
@@ -262,7 +281,7 @@ Once any event in the meet has finalised with ≥2 distinct countries on the sta
 
 ### Continental records
 
-Migration 037 added a fourth records scope alongside personal / club / federation. Each federation now has a **continent** field (`africa`, `americas`, `asia`, `europe`, `oceania`) — sysadmin sets this once per federation. When a diver whose home federation is classified sets a personal best, the dive is also compared against the continental record book. A junior setting an Oceania record at a Pacific Junior Champs now has a real place to land it; the records page (`/records/:slug`) gains a Continental tab.
+Each federation has a **continent** field (`africa`, `americas`, `asia`, `europe`, `oceania`, migration 037) — the sysadmin sets this once per federation. Every record-eligible dive by a diver whose home federation is classified is also checked against that continent's book, so a junior setting an Oceania record at a Pacific Junior Champs has a real place to land it. The book is the **Continental** tab on [`/records`](/records), which opens on the chosen country's continent.
 
 If your federation hasn't been classified yet, ask the sysadmin to set it.
 

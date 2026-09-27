@@ -621,7 +621,9 @@
       "tfa_q": "How do I enable two-factor authentication?",
       "tfa_a": "Open <strong>My Profile</strong> → <strong>Security</strong> → <strong>Two-factor authentication</strong> and scan the QR code with your authenticator app (1Password, Authy, Google Authenticator). Save the recovery codes somewhere safe — they're the only way back in if you lose your phone.",
       "account_q": "How do I change my email, password, or delete my account?",
-      "account_a": "All in <strong>My Profile</strong> → <strong>Account settings</strong>. Email changes need re-verification at the new address. Deleting your account is permanent and removes your sign-in; historical scores stay on the public scoreboard under the federation's record (anonymised on request — contact your federation admin)."
+      "account_a": "All in <strong>My Profile</strong> → <strong>Account settings</strong>. Email changes need re-verification at the new address. Deleting your account is permanent and removes your sign-in; historical scores stay on the public scoreboard under the federation's record (anonymised on request — contact your federation admin).",
+      "records_q": "How do records work?",
+      "records_a": "Records keep themselves. The moment the last judge scores an individual dive, DivingHQ checks it against the diver's club, regional, national and continental books, each split into women's and men's, and replaces any mark it beats. Every book is on the {records_link} page, no sign-in needed. A book reads Unofficial until its governing body has claimed it on DivingHQ, and the same marks count as official once a claim is approved. Personal bests live on each diver's profile."
     },
     "next": {
       "lede": "Need the deep-dive version? The {guide_link} covers every screen, every role, every World Aquatics rule the app encodes. The pages most worth bookmarking:",

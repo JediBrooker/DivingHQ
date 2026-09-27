@@ -626,7 +626,9 @@ Migration 090 adds `meets.represent_as`, `competitor_dive_lists.rep_club_id` / `
 
 **Records.** A `region` scope keyed on the entry's region. `GET /api/records` returns `official: false` for national records in an unclaimed country and state records in an unclaimed region.
 
-**Not done:** team events keep their team codes, since a team is its own entity and isn't relabelled by state. Records still have no frontend screen.
+**Not done:** team events keep their team codes, since a team is its own entity and isn't relabelled by state.
+
+**Records screen as built.** `/records/:scope?/:id?` is public (like `/scoreboard`) and shows the national, region, club and continental books for a chosen country, each split into Women's and Men's (migration 094 put gender in every record key and stopped synchro and team dives setting records). A national or region book that isn't claimed yet carries one Unofficial note linking to `/register-org`; the marks simply become official when a claim is approved, there's no accept-or-wipe step as §10 once sketched. Continental books read as official whatever the holder's country. Personal bests stay on the diver profile. The scoreboard and recap show a small record chip on a dive that beat a standing club / region / national / continental record (never for personal bests or first marks, and not in broadcast or overlay modes).
 
 **Tests.** Integration covers labels switching across region / club / country, a diver who changes club after entering keeping their entry-time state, the Control Room roster agreeing, and a state record reading unofficial until the region is claimed.
 

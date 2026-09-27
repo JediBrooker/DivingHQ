@@ -621,7 +621,9 @@
       "tfa_q": "Bagaimana cara mengaktifkan autentikasi dua faktor?",
       "tfa_a": "Buka <strong>Profil Saya</strong> → <strong>Keamanan</strong> → <strong>Autentikasi dua faktor</strong> dan pindai kode QR dengan aplikasi autentikator Anda (1Password, Authy, Google Authenticator). Simpan kode pemulihan di tempat yang aman — itulah satu-satunya cara masuk kembali jika Anda kehilangan ponsel.",
       "account_q": "Bagaimana cara mengubah email, kata sandi, atau menghapus akun saya?",
-      "account_a": "Semuanya ada di <strong>Profil Saya</strong> → <strong>Pengaturan akun</strong>. Perubahan email memerlukan verifikasi ulang di alamat yang baru. Menghapus akun Anda bersifat permanen dan menghapus akses masuk Anda; skor historis tetap ada di papan skor publik dalam catatan federasi (dianonimkan atas permintaan — hubungi admin federasi Anda)."
+      "account_a": "Semuanya ada di <strong>Profil Saya</strong> → <strong>Pengaturan akun</strong>. Perubahan email memerlukan verifikasi ulang di alamat yang baru. Menghapus akun Anda bersifat permanen dan menghapus akses masuk Anda; skor historis tetap ada di papan skor publik dalam catatan federasi (dianonimkan atas permintaan — hubungi admin federasi Anda).",
+      "records_q": "Bagaimana rekor bekerja?",
+      "records_a": "Rekor diperbarui dengan sendirinya. Begitu juri terakhir menilai loncatan perorangan, DivingHQ membandingkannya dengan rekor klub, regional, nasional, dan kontinental milik peloncat, terpisah untuk putri dan putra, lalu menggantikan setiap catatan yang dilampauinya. Semua daftar rekor ada di halaman {records_link}, tanpa perlu masuk. Sebuah daftar tercatat tidak resmi sampai badan pengelolanya mengklaimnya di DivingHQ, dan catatan yang sama menjadi resmi begitu klaim disetujui. Rekor pribadi ada di profil setiap peloncat."
     },
     "next": {
       "lede": "Butuh versi mendalam? {guide_link} mencakup setiap layar, setiap peran, setiap aturan World Aquatics yang diterapkan aplikasi. Halaman yang paling layak ditandai:",

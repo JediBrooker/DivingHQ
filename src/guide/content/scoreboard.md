@@ -33,7 +33,7 @@ Once the meet manager finalises the event, the layout switches to a recap:
 
 - **Podium spotlight** — top three with diver name, club, total score, country chip
 - **Full standings** — every diver, their final total, club, podium medals
-- **Dive-by-dive breakdown** — grouped by diver, every dive with all judge scores, World Aquatics-category coloured, dropped scores struck through
+- **Dive-by-dive breakdown** — grouped by diver, every dive with all judge scores, World Aquatics-category coloured, dropped scores struck through, and a [record chip](#record-chip) on any dive that still holds a record
 
 PDFs (program, start list, score sheet, results) and a CSV export are one click away from the recap header.
 
@@ -68,6 +68,14 @@ Every per-judge score chip on the scoreboard — live or recap, individual or sy
 - **Click** the chip and you land on `/judge-profile/<judge-id>` — the same public Judge Analysis page covered in [Judging](/guide/judging#judge-analysis--how-am-i-tracking).
 
 The link works for anonymous spectators too — judge profiles are public by design ([Judging](/guide/judging#judge-analysis--how-am-i-tracking) explains the transparency stance). It's the fastest way for a curious viewer to dig into a panel call: tap the chip, see whether the judge has a track record of scoring divers from country X higher than the panel kept-mean, or check their per-board-height bias.
+
+## Record chip
+
+A dive that beats a standing club, state, national or continental record gets one small chip next to its dive code, on the Completed Dives card and on the recap's dive-by-dive rows: **NSW record**, **AUS record**, **Oceania record**. It names the biggest book the dive got into; hover it for every book it made and the score each one beat. The chip is amber, or grey while that state or country hasn't been claimed by its governing body (the record is [unofficial](#record-books-records) until then).
+
+It's deliberately quiet. Personal bests never get a chip, and neither does the first mark in a book (the first time anyone at a club does a dive, it's the club record by default), so it only turns up when somebody actually beat somebody. It arrives live the moment the last judge's score lands, and the Broadcast and Stream Overlay screens leave it off.
+
+A chip belongs to the record, not the dive: if the record is broken again at a later meet, this event's chip goes away.
 
 ## Judge Analysis page
 
@@ -318,6 +326,18 @@ Because the source data is already public and carries no accounts, every endpoin
 
 **System-admin only:** an **Import new meets** panel at the top of the page pulls meets not yet stored from DiveRecorder and reports live progress (discovered / imported / skipped). Regular users never see it.
 
+## Record books (`/records`)
+
+The **Records** page (in the sidebar's Competition menu, and public like the scoreboard) shows the best dive points for every dive, position and board height, set at meets run on DivingHQ. Pick a country, then a book:
+
+- **National**, **State** (or Province, Region… whatever the country calls them, only when it has them), **Club** and **Continental**.
+- A **Women / Men** toggle, **height** chips for the boards the book has records on, and a **dive-code** box: `1` narrows to forward dives, `105` to one dive, `5253` to one twister.
+- Each row has the dive and its DD, the points, the holder (linked to their profile), the meet it was set at (linked to its scoreboard) and the date. On a phone the meet and date tuck in under the holder.
+
+Everything you pick lives in the URL, so a link to a filtered book opens that book. Coming back to plain `/records`, the page reopens the last book you looked at; the first time, signed-in users start on their own national book (or their club's, if they run a club in a country nobody has claimed yet).
+
+A book whose country or state hasn't been claimed by its governing body yet shows an **Unofficial** note above the table, with a link for the governing body to claim it. The marks become official as soon as a claim is approved. Only individual events set records; personal bests live on each diver's profile instead. [Admin Tasks → Records](/guide/admin-tasks#records) has the rules in full.
+
 ## Spectator-side performance
 
 The scoreboard is **PWA-installable**. On iOS / Android / desktop Chrome, look for "Add to Home Screen" / "Install" — the page becomes a standalone app with a service-worker cache. Effects:
@@ -332,7 +352,6 @@ The scoreboard intentionally never asks for location, contacts, camera, or any o
 
 - Dive lists for events that aren't yet Live (locked to authenticated users — divers don't want their game plan public the day before)
 - The score audit log (visible to org admins, referees, system admins via the Audit Log button)
-- Pending records still under federation review
 - Any data from a meet whose org status is `pending` or `suspended`
 
 Everything else — every score, every standing, every PDF — is openly viewable without an account.

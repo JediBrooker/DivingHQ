@@ -632,7 +632,9 @@
       "tfa_q": "Miten otan kaksivaiheisen tunnistuksen käyttöön?",
       "tfa_a": "Avaa <strong>Oma profiili</strong> → <strong>Turvallisuus</strong> → <strong>Kaksivaiheinen tunnistus</strong> ja skannaa QR-koodi todennussovelluksellasi (1Password, Authy, Google Authenticator). Tallenna palautuskoodit turvalliseen paikkaan — ne ovat ainoa tie takaisin, jos kadotat puhelimesi.",
       "account_q": "Miten vaihdan sähköpostini tai salasanani tai poistan tilini?",
-      "account_a": "Kaikki kohdassa <strong>Oma profiili</strong> → <strong>Tilin asetukset</strong>. Sähköpostin vaihto vaatii uuden vahvistuksen uudessa osoitteessa. Tilin poistaminen on pysyvää ja poistaa kirjautumisesi; aiemmat pisteet säilyvät julkisella tulostaululla liiton kirjauksen alla (anonymisoidaan pyynnöstä — ota yhteyttä liittokoordinaattoriisi)."
+      "account_a": "Kaikki kohdassa <strong>Oma profiili</strong> → <strong>Tilin asetukset</strong>. Sähköpostin vaihto vaatii uuden vahvistuksen uudessa osoitteessa. Tilin poistaminen on pysyvää ja poistaa kirjautumisesi; aiemmat pisteet säilyvät julkisella tulostaululla liiton kirjauksen alla (anonymisoidaan pyynnöstä — ota yhteyttä liittokoordinaattoriisi).",
+      "records_q": "Miten ennätykset toimivat?",
+      "records_a": "Ennätykset pitävät itse itsensä ajan tasalla. Heti kun viimeinen tuomari on arvostellut henkilökohtaisen hypyn, DivingHQ vertaa sitä hyppääjän seura-, alue-, kansallisiin ja maanosaennätyksiin, erikseen naisille ja miehille, ja korvaa jokaisen tuloksen, jonka hyppy ylittää. Kaikki ennätysluettelot ovat sivulla {records_link}, ilman kirjautumista. Luettelo on epävirallinen, kunnes sen hallintoelin on ottanut sen haltuunsa DivingHQ:ssa, ja samat tulokset muuttuvat virallisiksi heti, kun vaatimus hyväksytään. Henkilökohtaiset ennätykset näkyvät jokaisen hyppääjän profiilissa."
     },
     "next": {
       "lede": "Tarvitsetko syväluotaavaa versiota? {guide_link} kattaa jokaisen näytön, jokaisen roolin ja jokaisen World Aquatics -säännön, jonka sovellus on koodannut. Kirjanmerkkien arvoiset sivut:",

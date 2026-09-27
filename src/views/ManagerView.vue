@@ -1298,10 +1298,12 @@ async function deleteEvent(id) {
   const ev = events.value.find(e => e.id === id)
   if (!await confirmAction({
     title: `Delete "${ev?.name || 'this event'}"?`,
-    body:  'Removes the event entirely — roster, dive lists, scores, and any record entries derived from it.',
+    body:  'Removes the event entirely — roster, dive lists and scores.',
+    // Records aren't recomputed on delete (the FK just nulls event_id),
+    // so don't promise it. See the Records section of the admin guide.
     consequences: [
       'All dives, scores, and the audit log for this event are deleted',
-      'Personal bests / club records keyed off this event are recomputed from remaining data',
+      'Records set at this event stay with their holders, without the link back to the event',
       'This is not undoable',
     ],
     confirmLabel: 'Delete event',

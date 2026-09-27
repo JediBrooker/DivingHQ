@@ -35,6 +35,8 @@ The first section groups features **by persona** — pick your role to see what 
 | Results Archive | Search across event name, org name, country | [Scoreboard → Results Archive](/guide/scoreboard#completed-meets-index-scoreboard) |
 | Results Archive | CSV export of the filtered list | [Scoreboard → Results Archive](/guide/scoreboard#completed-meets-index-scoreboard) |
 | Results Archive (DiveRecorder) | Browse decades of historical UK/AUS results imported from DiveRecorder Meet Explorer — by meet, by diver, by date range (`/results-archive`) | [Scoreboard → Results Archive (DiveRecorder)](/guide/scoreboard#results-archive-diverecorder-historical-results) |
+| Records | Browse the national, state, club and continental record books, Women's and Men's, filtered by board and dive code (`/records`) | [Scoreboard → Record books](/guide/scoreboard#record-books-records) |
+| Live scoreboard | See a quiet record chip ("NSW record") on any dive that beat a standing record, live and on the recap | [Scoreboard → Record chip](/guide/scoreboard#record-chip) |
 | Judge profile | Open any judge's public analysis page from a score chip | [Judging → Judge Analysis](/guide/judging#judge-analysis--how-am-i-tracking) |
 | Judge Analysis | **By Event** tab (`/judge-analysis`) — pick a Completed event, see the per-judge ranking matrix (where each diver/pair/team would place under each judge's scores alone); synchro events segmented into Exec A / Exec B / Sync; CSV + PDF export | [Judging → Judge Analysis](/guide/judging#judge-analysis--how-am-i-tracking) |
 | Judge Analysis | **By Judge** tab — search the public judge directory, open any judge's `/judge-profile` analytics | [Judging → Judge Analysis](/guide/judging#judge-analysis--how-am-i-tracking) |
@@ -182,7 +184,7 @@ Includes everything a meet manager can do, plus:
 | Teams | Create teams + assign divers; per-team dive lists | [Admin Tasks → Teams](/guide/admin-tasks#teams) |
 | Score Audit Log | Read every score-related event for any meet in the federation | [Admin Tasks → Score Audit Log](/guide/admin-tasks#score-audit-log) |
 | Role Audit Log | Federation-wide log of role grants / revocations / promotions | [Admin Tasks → Role Audit Log](/guide/admin-tasks#role-audit-log) |
-| Federation records | Submit federation records for federation-wide tracking | [Admin Tasks → Federation records](/guide/admin-tasks#federation-records) |
+| Records | National, state and club record books keep themselves as scores land; read them at `/records` | [Admin Tasks → Records](/guide/admin-tasks#records) |
 | International | Invite other federations to host or visit a meet | [Admin Tasks → Hosting an international meet](/guide/admin-tasks#hosting-an-international-meet) |
 | International | Country medal table on the meet recap | [Admin Tasks → Country medal table](/guide/admin-tasks#country-medal-table) |
 | Bulk operations | Bulk-promote reserves, bulk-update roster | [Admin Tasks → Bulk operations](/guide/admin-tasks#bulk-operations) |
@@ -196,12 +198,12 @@ Includes everything an org admin can do, **across every federation**, plus:
 | Section | Feature | Where |
 |---|---|---|
 | Federation approvals | Approve / suspend new federations on signup | [Admin Tasks → Approving new federations](/guide/admin-tasks#approving-new-federations) |
-| System records | Approve system-wide records (continental + global) | [Admin Tasks → Approving system-wide records](/guide/admin-tasks#approving-system-wide-records) |
+| Record books | Replay every record book from the scores (`scripts/rebuild-records.js`, dry run unless `--apply`) | [Admin Tasks → Rebuilding the record books](/guide/admin-tasks#rebuilding-the-record-books) |
 | Cross-org user lookup | Search any user in the platform | [Admin Tasks → Cross-org user lookup](/guide/admin-tasks#cross-org-user-lookup) |
 | Password reset | Force a password reset for any user | [Admin Tasks → Resetting a password](/guide/admin-tasks#resetting-a-password) |
 | Migrations | Apply / inspect schema migrations | [Admin Tasks → Migrations](/guide/admin-tasks#migrations) |
 | All-orgs audit filter | "All orgs" filter inside the audit log view | [Admin Tasks → Score Audit Log](/guide/admin-tasks#score-audit-log) |
-| Continental records | Approve and track continental records | [Admin Tasks → Continental records](/guide/admin-tasks#continental-records) |
+| Continental records | Give a federation its continent so its divers count toward that continental book | [Admin Tasks → Continental records](/guide/admin-tasks#continental-records) |
 | Federation removal | Remove a federation (with safety checks for hosted meets) | [Admin Tasks → Removing a federation](/guide/admin-tasks#removing-a-federation) |
 
 ---

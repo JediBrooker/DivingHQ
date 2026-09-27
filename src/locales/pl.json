@@ -632,7 +632,9 @@
       "tfa_q": "Jak włączyć uwierzytelnianie dwuskładnikowe?",
       "tfa_a": "Otwórz <strong>Mój profil</strong> → <strong>Bezpieczeństwo</strong> → <strong>Uwierzytelnianie dwuskładnikowe</strong> i zeskanuj kod QR aplikacją uwierzytelniającą (1Password, Authy, Google Authenticator). Zapisz kody odzyskiwania w bezpiecznym miejscu — to jedyna droga powrotu, jeśli zgubisz telefon.",
       "account_q": "Jak zmienić e-mail, hasło lub usunąć konto?",
-      "account_a": "Wszystko w <strong>Mój profil</strong> → <strong>Ustawienia konta</strong>. Zmiana e-maila wymaga ponownej weryfikacji pod nowym adresem. Usunięcie konta jest trwałe i likwiduje Twój login; historyczne wyniki pozostają na publicznej tablicy wyników w rekordzie federacji (anonimizowane na życzenie — skontaktuj się z administratorem swojej federacji)."
+      "account_a": "Wszystko w <strong>Mój profil</strong> → <strong>Ustawienia konta</strong>. Zmiana e-maila wymaga ponownej weryfikacji pod nowym adresem. Usunięcie konta jest trwałe i likwiduje Twój login; historyczne wyniki pozostają na publicznej tablicy wyników w rekordzie federacji (anonimizowane na życzenie — skontaktuj się z administratorem swojej federacji).",
+      "records_q": "Jak działają rekordy?",
+      "records_a": "Rekordy aktualizują się same. Gdy tylko ostatni sędzia oceni skok indywidualny, DivingHQ porównuje go z rekordami klubowymi, regionalnymi, krajowymi i kontynentalnymi skoczka, osobno dla kobiet i mężczyzn, i zastępuje każdy wynik, który pobije. Wszystkie tabele rekordów są na stronie {records_link}, bez logowania. Tabela jest nieoficjalna, dopóki właściwy organ zarządzający nie przejmie jej w DivingHQ, a te same wyniki stają się oficjalne, gdy tylko roszczenie zostanie zatwierdzone. Rekordy życiowe są w profilu każdego skoczka."
     },
     "next": {
       "lede": "Potrzebujesz pełnej, szczegółowej wersji? {guide_link} omawia każdy ekran, każdą rolę, każdą regułę World Aquatics, którą wspiera aplikacja. Strony, które warto dodać do zakładek:",

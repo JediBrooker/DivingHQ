@@ -162,3 +162,14 @@ test("signed in, Records is in the menu and opens on your own national book", as
     await setup.deleteOrg(admin.orgId);
   }
 });
+
+test("the guide's FAQ explains records and links to the page", async ({ page }) => {
+  await setup.installClickHighlight(page);
+  await page.goto("/guide");
+  const item = page.locator("details.guide-faq-item", { hasText: "How do records work?" });
+  await item.locator("summary").click();
+  await expect(item).toContainText("Unofficial");
+  await item.getByRole("link", { name: "Records" }).click();
+  await expect(page).toHaveURL(/\/records/);
+  await expect(page.getByRole("heading", { level: 1, name: "Records" })).toBeVisible();
+});

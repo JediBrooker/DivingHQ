@@ -183,7 +183,7 @@ A small note appears when the edit shifts the trim selection (a different judge 
 
 The audit row is visible to org admins, referees, and system admins via `/events/<id>/audit` (also accessible from the **Audit Log** button on the event row in Meet Manager).
 
-The diver's totals + standings + records all recompute on the fly. The recap PDFs and archive views update automatically. A success toast (`Score correction saved`) confirms when the change reaches the server.
+The diver's totals and standings recompute on the fly, and the recap PDFs and archive views update automatically. Records don't: a record the original score set stands until somebody beats it (see [Admin Tasks → Records](/guide/admin-tasks#records) for how a system admin rebuilds a book). A success toast (`Score correction saved`) confirms when the change reaches the server.
 
 ## Late entries
 
@@ -333,7 +333,7 @@ Within each tier, ties resolve via the standard WA tie-break (cumulative_total D
 
 Every destructive or consequential action in the Control Room (and across the rest of the operator surfaces — Meet Manager, Clubs, Teams, User Manager, Dive Directory) opens a styled confirm modal rather than the browser's native `Are you sure?` popup. Each modal lists the actual side effects so the operator knows what they're committing to:
 
-- *Delete event?* — "All dives, scores, and the audit log for this event are deleted; personal bests / club records keyed off this event are recomputed from remaining data."
+- *Delete event?* — "All dives, scores, and the audit log for this event are deleted; records set at this event stay with their holders, without the link back to the event."
 - *Finalise event?* — "Public scoreboard switches to recap; results emails go out to N competitors; reversible by an org admin."
 - *Skip ahead with partial scores?* — "Only N of M judges have submitted; missing judges can still amend via score correction afterwards."
 

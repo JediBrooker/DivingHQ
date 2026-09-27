@@ -195,13 +195,20 @@ The composable shows a second chip only when the partner's country differs from 
 
 ### "An old record didn't update — my new score was higher"
 
-`checkAndApplyRecords` runs on every score insert AND on event finalise. Both paths compare against the current record. If neither updated:
+Records are checked once, the moment the last judge's score for a dive lands (from a judge's phone or through manual entry). Nothing re-checks them at finalise. If a book on [`/records`](/records) didn't move:
 
-- Was the score actually higher than the existing record? Check the records page for the current value.
-- Was the dive at the same `(dive_code, position, board_height)`? Records are keyed on all three.
-- Did the event's height match the records page? A 3 m record only updates from 3 m dives.
+- Was the dive points total actually higher? An equal score doesn't take a record; the first to reach it keeps it.
+- Is it the same dive, position and board height? A 105B from 3 m and a 105C from 3 m are separate records.
+- Are you looking at the right book? Books are split into Women's and Men's, and the toggle sits above the table.
+- Was it an individual event? Synchro and team dives never set records, and neither do rehearsal events.
+- Was it a Mixed event? Then the dive goes in the book the diver's profile gender says, and a profile with no gender sets nothing.
+- Did every judge on the panel score it? A dive only counts once the whole panel is in.
 
-If all three check out and it's still wrong, the system admin can re-run the records check via SQL — contact them.
+A score correction afterwards doesn't re-check records either way. If a book really is wrong, the system admin can [rebuild it from the scores](/guide/admin-tasks#rebuilding-the-record-books).
+
+### "The record book says Unofficial"
+
+The country (or state) hasn't been claimed on DivingHQ by its governing body yet, so nobody has vouched for its books. The marks are real results from real meets and they become official as soon as a claim is approved; the note links to the claim flow.
 
 ## Authentication
 
@@ -274,7 +281,7 @@ A cap on the maximum DD a diver can pick for round N. Common in junior events to
 
 ### Personal Best (PB)
 
-Your highest dive points on a specific `(dive_code, position, board_height)` combination. Auto-set on score insert via `checkAndApplyRecords`.
+Your highest dive points on a specific `(dive_code, position, board_height)` combination, from individual events. Kept automatically as scores land and shown on your profile; the public record books at `/records` hold club, state, national and continental records instead.
 
 ### Catch-up math
 
