@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -10,17 +10,8 @@ import { confirmAction } from '@/composables/useConfirm'
 import { showSuccess, showError } from '@/composables/useNotify'
 import StatusPill from '@/components/StatusPill.vue'
 import SuperFinalModals from '@/components/manager/SuperFinalModals.vue'
-import RosterImportModal from '@/components/manager/RosterImportModal.vue'
-import EntryFeeEditor from '@/components/payments/EntryFeeEditor.vue'
-import LateFeeEditor from '@/components/payments/LateFeeEditor.vue'
-import PenaltyFeesEditor from '@/components/payments/PenaltyFeesEditor.vue'
-import EventPenaltiesPanel from '@/components/payments/EventPenaltiesPanel.vue'
-import MeetReadinessModal from '@/components/manager/MeetReadinessModal.vue'
-import TeamsEnrolmentModal from '@/components/manager/TeamsEnrolmentModal.vue'
-import ParticipatingOrgsModal from '@/components/manager/ParticipatingOrgsModal.vue'
 import AdvanceStageModal from '@/components/manager/AdvanceStageModal.vue'
 import RoundDivesEditor from '@/components/manager/RoundDivesEditor.vue'
-import EditMeetModal from '@/components/manager/EditMeetModal.vue'
 import { useCanEditFees } from '@/composables/useCanEditFees'
 import { filterStandardTemplates } from '@/lib/standard-templates'
 import {
@@ -29,6 +20,22 @@ import {
 } from '@/lib/event-form'
 import { RULE_REFERENCES } from '@/lib/ruleReferences'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
+
+// Split out of the Manager chunk: each of these only mounts behind a v-if
+// (a row's overflow menu, a meet's Edit / Readiness button) or, for the fee
+// panels, inside the edit form and only while payments is on. None holds a
+// template ref. AdvanceStageModal and SuperFinalModals stay static on
+// purpose: they're meet-day stage steps, and a Manager tab left open across
+// a deploy mustn't find its chunk gone.
+const RosterImportModal = defineAsyncComponent(() => import('@/components/manager/RosterImportModal.vue'))
+const MeetReadinessModal = defineAsyncComponent(() => import('@/components/manager/MeetReadinessModal.vue'))
+const TeamsEnrolmentModal = defineAsyncComponent(() => import('@/components/manager/TeamsEnrolmentModal.vue'))
+const ParticipatingOrgsModal = defineAsyncComponent(() => import('@/components/manager/ParticipatingOrgsModal.vue'))
+const EditMeetModal = defineAsyncComponent(() => import('@/components/manager/EditMeetModal.vue'))
+const EntryFeeEditor = defineAsyncComponent(() => import('@/components/payments/EntryFeeEditor.vue'))
+const LateFeeEditor = defineAsyncComponent(() => import('@/components/payments/LateFeeEditor.vue'))
+const PenaltyFeesEditor = defineAsyncComponent(() => import('@/components/payments/PenaltyFeesEditor.vue'))
+const EventPenaltiesPanel = defineAsyncComponent(() => import('@/components/payments/EventPenaltiesPanel.vue'))
 
 const { t } = useI18n()
 const auth = useAuthStore()
