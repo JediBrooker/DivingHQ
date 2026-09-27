@@ -2097,7 +2097,9 @@
       "code_placeholder": "np. SYD",
       "code_saved": "Zapisano kod klubu",
       "code_none": "Brak kodu.",
-      "code_federation": "Kod klubu ustala Twoja federacja."
+      "code_federation": "Kod klubu ustala Twoja federacja.",
+      "code_bad": "Użyj maksymalnie 8 liter, cyfr lub myślników.",
+      "code_taken": "Ten kod jest już używany przez inny klub. Wybierz inny."
     },
     "admins_intro_meets": "Administratorzy klubu prowadzą zawody organizowane przez swój klub. Nie mają dostępu na poziomie całego związku.",
     "admins_intro_classes": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego zajęciami. Nie mają dostępu na poziomie całego związku.",

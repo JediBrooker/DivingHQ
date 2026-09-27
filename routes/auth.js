@@ -979,11 +979,24 @@ module.exports = function createAuthRouter({
         // it lets clubs join automatically (lib/club-approvals.js).
         clubStatus = clubApprovals.needsApproval({ claim_state: orgClaimState, auto_approve_clubs: orgAutoApprove })
           ? "pending" : "active";
+        // Same code rule as club setup and the approve dialog. A club that
+        // goes live straight away (no federation, or one that lets clubs
+        // straight in) has nobody checking its code later, so the clash
+        // check happens now. A waiting one gets checked when it's approved.
+        let newClubCode;
+        try {
+          newClubCode = clubApprovals.normaliseClubCode(new_club_short_code);
+          if (clubStatus === "active") await clubApprovals.assertCodeFree(client, orgId, newClubCode);
+        } catch (err) {
+          if (!(err instanceof clubApprovals.ClubApprovalError)) throw err;
+          await client.query("ROLLBACK");
+          return res.status(err.status).json({ error: err.message, code: err.code });
+        }
         const cnew = await client.query(
           `INSERT INTO clubs (org_id, name, short_code, region_id, status)
            VALUES ($1, $2, $3, $4, $5)
            RETURNING id`,
-          [orgId, cleanClubName, safeText(new_club_short_code, 8) || null, regionId, clubStatus],
+          [orgId, cleanClubName, newClubCode, regionId, clubStatus],
         );
         resolvedClubId = cnew.rows[0].id;
         createdClubId = resolvedClubId;

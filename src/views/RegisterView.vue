@@ -100,6 +100,8 @@ const clubs = ref([])
 const clubChoice = ref('')           // '' | 'new' | <club_id>
 const newClubName = ref('')
 const newClubCode = ref('')
+// The server's reason a code was refused, in the reader's language.
+const codeError = ref('')
 
 const msg = ref('')
 const msgType = ref('')
@@ -256,7 +258,14 @@ async function handleSubmit() {
       body: JSON.stringify(body),
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.error || t('auth.register.failed'))
+    if (!res.ok) {
+      const codeMsg = { bad_short_code: 'my_club.setup.code_bad', short_code_taken: 'my_club.setup.code_taken' }[data.code]
+      if (codeMsg) {
+        codeError.value = t(codeMsg)
+        throw new Error(codeError.value)
+      }
+      throw new Error(data.error || t('auth.register.failed'))
+    }
     registered.value = {
       email: email.value.trim(),
       username: username.value.trim(),
@@ -389,7 +398,13 @@ async function handleSubmit() {
         </div>
         <div class="field">
           <label class="label">{{ $t('auth.register.short_code_optional') }}</label>
-          <input class="input" type="text" v-model="newClubCode" :placeholder="$t('auth.register.short_code_placeholder')" maxlength="20">
+          <!-- Same rule the server applies (lib/club-approvals.js): up to 8,
+               upper case. It used to take 20 and quietly keep the first 8. -->
+          <input class="input code-input" type="text" v-model="newClubCode" :placeholder="$t('auth.register.short_code_placeholder')"
+                 maxlength="8" autocapitalize="characters" autocomplete="off" data-testid="new-club-code"
+                 :aria-invalid="codeError ? 'true' : undefined" @input="codeError = ''">
+          <p v-if="codeError" class="hint-line code-error" data-testid="new-club-code-error">{{ codeError }}</p>
+          <p v-else class="hint-line">{{ $t('my_club.setup.code_hint') }}</p>
         </div>
         <p v-if="noFederation" class="hint-line founder-note">{{ $t('auth.register.founder_note') }}</p>
         <!-- Under a federation a new club either waits for it or, where it
@@ -463,6 +478,9 @@ h1 { font-size: 48px; font-style: italic; margin-bottom: 0.25rem; }
 .footer-link a { color: var(--cyan); text-decoration: none; }
 .note { font-size: 11px; color: var(--text-3); line-height: 1.6; padding: 0.75rem; background: var(--bg-3); border-radius: var(--radius-sm); border: 1px solid var(--border); }
 .hint-line { margin-top: 0.4rem; font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
+.code-input { text-transform: uppercase; font-family: var(--font-mono); }
+.code-input::placeholder { text-transform: none; }
+.code-error { color: var(--danger-fg); }
 .founder-note { margin-top: 0; color: var(--text-2); }
 .club-pending-note { margin-top: 1rem; color: var(--text-2); }
 .new-club-block {

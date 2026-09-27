@@ -2097,7 +2097,9 @@
       "code_placeholder": "f.eks. SYD",
       "code_saved": "Klubkoden er gemt",
       "code_none": "Ingen kode endnu.",
-      "code_federation": "Dit forbund fastsætter din klubs kode."
+      "code_federation": "Dit forbund fastsætter din klubs kode.",
+      "code_bad": "Brug højst 8 bogstaver, tal eller bindestreger.",
+      "code_taken": "En anden klub bruger allerede den kode. Vælg en anden."
     },
     "admins_intro_meets": "Klubadministratorer står for de stævner, klubben arrangerer. De får ingen adgang på forbundsniveau.",
     "admins_intro_classes": "Klubadministratorer står for de stævner, klubben arrangerer, og tager sig af dens hold. De får ingen adgang på forbundsniveau.",

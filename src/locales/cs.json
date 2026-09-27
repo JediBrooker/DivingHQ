@@ -2097,7 +2097,9 @@
       "code_placeholder": "např. SYD",
       "code_saved": "Kód klubu uložen",
       "code_none": "Zatím bez kódu.",
-      "code_federation": "Kód vašeho klubu určuje vaše federace."
+      "code_federation": "Kód vašeho klubu určuje vaše federace.",
+      "code_bad": "Použijte nejvýše 8 písmen, číslic nebo pomlček.",
+      "code_taken": "Tento kód už používá jiný klub. Zvolte jiný."
     },
     "admins_intro_meets": "Správci klubu řídí závody, které jejich klub pořádá. Přístup v rámci celého svazu nemají.",
     "admins_intro_classes": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho kurzy. Přístup v rámci celého svazu nemají.",

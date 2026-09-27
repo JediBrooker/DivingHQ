@@ -2097,7 +2097,9 @@
       "code_placeholder": "esim. SYD",
       "code_saved": "Seuran lyhenne tallennettu",
       "code_none": "Ei vielä lyhennettä.",
-      "code_federation": "Liittosi määrittää seurasi lyhenteen."
+      "code_federation": "Liittosi määrittää seurasi lyhenteen.",
+      "code_bad": "Käytä enintään 8 kirjainta, numeroa tai viivaa.",
+      "code_taken": "Toinen seura käyttää jo tätä tunnusta. Valitse toinen."
     },
     "admins_intro_meets": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut. Heillä ei ole liittotason oikeuksia.",
     "admins_intro_classes": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen ryhmistä. Heillä ei ole liittotason oikeuksia.",

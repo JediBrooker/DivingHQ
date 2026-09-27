@@ -122,6 +122,38 @@ test("a founder signs up by country and runs their club's first meet", async ({ 
   expect(meet.rows[0].club).toBe("Nuku'alofa Divers");
 });
 
+// A second founder picks a code the first club already shows. With no
+// federation the club would go live at once, so the clash is caught now
+// and said next to the field, in the reader's words.
+test("a new club's short code is checked at signup", async ({ page }) => {
+  await setup.installClickHighlight(page);
+  await setup.pool.query(
+    "UPDATE clubs c SET short_code = 'NKD' FROM organisations o WHERE o.id = c.org_id AND o.country_code = $1",
+    [COUNTRY],
+  );
+  const username = `e2e-founder-${setup.rand()}`;
+  await page.goto("/register");
+  await page.locator('input[autocomplete="name"]').fill("Mele Tupou");
+  await page.locator('input[autocomplete="username"]').fill(username);
+  await page.locator('input[autocomplete="email"]').fill(`${username}@example.test`);
+  await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
+  await page.locator("select").first().selectOption(COUNTRY);
+  await page.locator("select").filter({ has: page.locator('option[value="new"]') }).selectOption("new");
+  await page.getByPlaceholder("e.g. Sydney Springboard").fill("Vava'u Divers");
+  const code = page.getByTestId("new-club-code");
+  await expect(code).toHaveAttribute("maxlength", "8");
+  await code.fill("nkd");
+  await page.getByRole("button", { name: /Create Account/i }).click();
+  await expect(page.getByTestId("new-club-code-error")).toHaveText("Another club already uses that code. Pick a different one.");
+
+  await code.fill("vav");
+  await expect(page.getByTestId("new-club-code-error")).toHaveCount(0);
+  await page.getByRole("button", { name: /Create Account/i }).click();
+  await expect(page.getByTestId("check-inbox")).toBeVisible();
+  const club = await setup.pool.query("SELECT short_code FROM clubs WHERE name = $1", ["Vava'u Divers"]);
+  expect(club.rows.map((r) => r.short_code)).toEqual(["VAV"]);
+});
+
 // Phase 2: a country with regions (Canada has provinces) asks which one
 // before a new club can be created, and records it on the club.
 test("a founder in a country with provinces picks one", async ({ page }) => {

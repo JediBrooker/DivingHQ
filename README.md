@@ -226,7 +226,7 @@ Search across the federation's users; filter by role chips and (system admins on
 
 #### Clubs
 
-The federation's club registry. Each club has a name + a 3 – 6 char short code (the cyan pill that surfaces next to the diver's name on the scoreboard). Members count is derived from `users.club_id`; non-empty clubs can't be deleted (prevents orphaning users).
+The federation's club registry. Each club has a name + a short code of up to 8 letters, digits or dashes, unique among the org's approved clubs (the cyan pill that surfaces next to the diver's name on the scoreboard). Members count is derived from `users.club_id`; non-empty clubs can't be deleted (prevents orphaning users).
 
 ![Clubs](./public/guide-screenshots/clubs.png)
 

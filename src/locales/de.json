@@ -2097,7 +2097,9 @@
       "code_placeholder": "z. B. SYD",
       "code_saved": "Vereinskürzel gespeichert",
       "code_none": "Noch kein Kürzel.",
-      "code_federation": "Das Kürzel Ihres Vereins legt Ihr Verband fest."
+      "code_federation": "Das Kürzel Ihres Vereins legt Ihr Verband fest.",
+      "code_bad": "Verwenden Sie bis zu 8 Buchstaben, Ziffern oder Bindestriche.",
+      "code_taken": "Ein anderer Verein verwendet dieses Kürzel bereits. Wählen Sie ein anderes."
     },
     "admins_intro_meets": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet. Verbandsweite Rechte bekommen sie nicht.",
     "admins_intro_classes": "Vereinsadmins richten die Wettkämpfe aus, die ihr Verein veranstaltet, und kümmern sich um seine Kurse. Verbandsweite Rechte bekommen sie nicht.",

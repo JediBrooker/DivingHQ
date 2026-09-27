@@ -2097,7 +2097,9 @@
       "code_placeholder": "npr. SYD",
       "code_saved": "Oznaka kluba spremljena",
       "code_none": "Još nema oznake.",
-      "code_federation": "Oznaku vašeg kluba određuje vaš savez."
+      "code_federation": "Oznaku vašeg kluba određuje vaš savez.",
+      "code_bad": "Koristite do 8 slova, brojki ili crtica.",
+      "code_taken": "Tu oznaku već koristi drugi klub. Odaberite drugu."
     },
     "admins_intro_meets": "Administratori kluba vode natjecanja koja njihov klub organizira. Nemaju pristup na razini saveza.",
     "admins_intro_classes": "Administratori kluba vode natjecanja koja njihov klub organizira i brinu o njegovim tečajevima. Nemaju pristup na razini saveza.",

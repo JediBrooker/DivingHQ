@@ -2097,7 +2097,9 @@
       "code_placeholder": "e.g. SYD",
       "code_saved": "Club code saved",
       "code_none": "No code yet.",
-      "code_federation": "Your federation sets your club's code."
+      "code_federation": "Your federation sets your club's code.",
+      "code_bad": "Use up to 8 letters, numbers or dashes.",
+      "code_taken": "Another club already uses that code. Pick a different one."
     },
     "admins_intro_meets": "Club admins run the meets their club hosts. They get no federation-wide access.",
     "admins_intro_classes": "Club admins run the meets their club hosts and look after its classes. They get no federation-wide access.",

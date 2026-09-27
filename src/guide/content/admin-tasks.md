@@ -105,7 +105,7 @@ The move only finalises once all three are in. Every approval and the final tran
 ![Clubs registry listing every club in the federation with its short code and member count](/guide-screenshots/clubs.png)
 
 - **List** — every club in your org, with member counts derived from `users.club_id`
-- **+ New Club** — name + short code (3 – 6 chars; surfaces as the cyan pill in scoreboards)
+- **+ New Club** — name + short code (up to 8 letters, numbers or dashes, unique among the federation's clubs; surfaces as the cyan pill in scoreboards)
 - **Edit** — rename, change short code
 - **Delete** — non-destructive; clubs with members can't be deleted (prevents orphaning users)
 - **Admins** — appoint or remove the club's admins (see [Club admins](#club-admins))

@@ -5699,7 +5699,8 @@ test("club approval: the federation approves, fixing details and making the foun
     assert.equal(audit[0].actor_id, fx.adminId);
     assert.deepEqual(audit[0].metadata.edits, {
       name: { from: "malabo divers", to: "Malabo Divers" },
-      short_code: { from: "mal", to: "MLB" },
+      // Signup upper-cases the code now, even for a club that waits.
+      short_code: { from: "MAL", to: "MLB" },
       region_id: { from: bioko, to: litoral },
     });
     assert.equal(audit[0].metadata.founder_admin, true);
@@ -6435,5 +6436,70 @@ test("org transfer: the mover's admin seats in the old federation go with the mo
     await pool.query("DELETE FROM clubs WHERE org_id = $1", [X.orgId]).catch(() => {});
     await teardownFixture(Y);
     await teardownFixture(X);
+  }
+});
+
+// Signup used to store a new club's code as typed, cut to 8: no upper
+// case, no format check, no clash check, and a club that goes live at once
+// (no federation) never met the rule club setup and approval apply. The
+// federation's Clubs screen skipped it too.
+test("club short codes: signup and the Clubs screen follow the same rule as club setup", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "DZA";
+  await claimKit.wipe(CODE);
+  const fed = await setupFixture({ withEvent: false });
+  try {
+    const signUp = (clubName, code) => {
+      const username = `int-sc-${crypto.randomBytes(4).toString("hex")}`;
+      return fetchJson("POST", "/api/auth/register", {
+        body: { username, full_name: `${clubName} Admin`, password: TEST_PASSWORD, email: `${username}@example.test`,
+                country_code: CODE, new_club_name: clubName, new_club_short_code: code },
+      });
+    };
+    const codeOf = async (name) => (await pool.query(
+      "SELECT c.short_code FROM clubs c JOIN organisations o ON o.id = c.org_id WHERE o.country_code = $1 AND c.name = $2",
+      [CODE, name],
+    )).rows[0]?.short_code;
+
+    assert.equal((await signUp("Algiers Divers", " sdc ")).status, 201);
+    assert.equal(await codeOf("Algiers Divers"), "SDC", "upper-cased and trimmed");
+    // No federation, so the club is live now: its code has to be free now.
+    for (const clash of ["SDC", "sdc"]) {
+      const r = await signUp("Oran Divers", clash);
+      assert.equal(r.status, 409, JSON.stringify(r.body));
+      assert.equal(r.body.code, "short_code_taken");
+    }
+    // Too long is refused, not quietly cut to eight.
+    const long = await signUp("Melbourne Divers", "MELBOURNE");
+    assert.equal(long.status, 400);
+    assert.equal(long.body.code, "bad_short_code");
+    assert.equal(await codeOf("Melbourne Divers"), undefined, "nothing was created");
+    assert.equal((await signUp("Blida Divers", "kab-1")).status, 201);
+    assert.equal(await codeOf("Blida Divers"), "KAB-1");
+
+    // The federation's own Clubs screen, same rule.
+    const post = (code) => fetchJson("POST", `/api/orgs/${fed.orgId}/clubs`, { token: fed.adminToken, body: { name: `Club ${code}`, short_code: code } });
+    const first = await post("cap");
+    assert.equal(first.status, 201, JSON.stringify(first.body));
+    assert.equal(first.body.short_code, "CAP");
+    assert.equal((await post("CAP")).body.code, "short_code_taken");
+    assert.equal((await post("TOO LONG CODE")).body.code, "bad_short_code");
+    const second = (await post("DUP")).body;
+    // A pair that already share a code (from before the rule) can still be
+    // renamed; only a change of code is checked.
+    await pool.query("UPDATE clubs SET short_code = 'cap' WHERE id = $1", [second.id]);
+    const rename = await fetchJson("PUT", `/api/clubs/${second.id}`, { token: fed.adminToken, body: { name: "Renamed", short_code: "cap" } });
+    assert.equal(rename.status, 200, JSON.stringify(rename.body));
+    assert.equal(rename.body.short_code, "CAP");
+    const clash = await fetchJson("PUT", `/api/clubs/${first.body.id}`, { token: fed.adminToken, body: { name: "Club cap", short_code: "dup2" } });
+    assert.equal(clash.status, 200);
+    const taken = await fetchJson("PUT", `/api/clubs/${second.id}`, { token: fed.adminToken, body: { name: "Renamed", short_code: "DUP2" } });
+    assert.equal(taken.status, 409);
+    assert.equal(taken.body.code, "short_code_taken");
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [fed.orgId]).catch(() => {});
+    await teardownFixture(fed);
+    await claimKit.wipe(CODE);
   }
 });

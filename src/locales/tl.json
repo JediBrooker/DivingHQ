@@ -2097,7 +2097,9 @@
       "code_placeholder": "hal. SYD",
       "code_saved": "Nai-save ang code ng club",
       "code_none": "Wala pang code.",
-      "code_federation": "Ang iyong federation ang nagtatakda ng code ng iyong club."
+      "code_federation": "Ang iyong federation ang nagtatakda ng code ng iyong club.",
+      "code_bad": "Gumamit ng hanggang 8 titik, numero o gitling.",
+      "code_taken": "May ibang club na gumagamit na ng code na iyan. Pumili ng iba."
     },
     "admins_intro_meets": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club. Wala silang access sa buong pederasyon.",
     "admins_intro_classes": "Pinapatakbo ng mga admin ng club ang mga paligsahang pinangangasiwaan ng kanilang club at inaasikaso ang mga klase nito. Wala silang access sa buong pederasyon.",

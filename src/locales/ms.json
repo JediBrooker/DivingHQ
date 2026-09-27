@@ -2097,7 +2097,9 @@
       "code_placeholder": "cth. SYD",
       "code_saved": "Kod kelab disimpan",
       "code_none": "Belum ada kod.",
-      "code_federation": "Kod kelab anda ditetapkan oleh persekutuan anda."
+      "code_federation": "Kod kelab anda ditetapkan oleh persekutuan anda.",
+      "code_bad": "Gunakan sehingga 8 huruf, nombor atau sengkang.",
+      "code_taken": "Kelab lain sudah menggunakan kod itu. Pilih kod lain."
     },
     "admins_intro_meets": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka. Mereka tidak mendapat akses peringkat persekutuan.",
     "admins_intro_classes": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka dan menguruskan kelasnya. Mereka tidak mendapat akses peringkat persekutuan.",

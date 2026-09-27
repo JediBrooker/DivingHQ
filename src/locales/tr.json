@@ -2097,7 +2097,9 @@
       "code_placeholder": "örn. SYD",
       "code_saved": "Kulüp kodu kaydedildi",
       "code_none": "Henüz kod yok.",
-      "code_federation": "Kulübünüzün kodunu federasyonunuz belirler."
+      "code_federation": "Kulübünüzün kodunu federasyonunuz belirler.",
+      "code_bad": "En fazla 8 harf, rakam veya tire kullanın.",
+      "code_taken": "Bu kodu başka bir kulüp zaten kullanıyor. Başka bir kod seçin."
     },
     "admins_intro_meets": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür. Federasyon genelinde erişimleri yoktur.",
     "admins_intro_classes": "Kulüp yöneticileri kulüplerinin düzenlediği yarışmaları yürütür ve kulübün kurslarıyla ilgilenir. Federasyon genelinde erişimleri yoktur.",

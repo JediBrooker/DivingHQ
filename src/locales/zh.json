@@ -2097,7 +2097,9 @@
       "code_placeholder": "例如 SYD",
       "code_saved": "俱乐部代码已保存",
       "code_none": "尚未设置代码。",
-      "code_federation": "俱乐部代码由你的协会设置。"
+      "code_federation": "俱乐部代码由你的协会设置。",
+      "code_bad": "请使用最多 8 个字母、数字或连字符。",
+      "code_taken": "已有其他俱乐部使用该代码。请换一个。"
     },
     "admins_intro_meets": "俱乐部管理员负责运营本俱乐部主办的比赛，没有全联合会范围的权限。",
     "admins_intro_classes": "俱乐部管理员负责运营本俱乐部主办的比赛并管理其课程，没有全联合会范围的权限。",

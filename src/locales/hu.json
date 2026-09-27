@@ -2097,7 +2097,9 @@
       "code_placeholder": "pl. SYD",
       "code_saved": "Klubkód mentve",
       "code_none": "Még nincs kód.",
-      "code_federation": "A klubod kódját a szövetséged állítja be."
+      "code_federation": "A klubod kódját a szövetséged állítja be.",
+      "code_bad": "Legfeljebb 8 betűt, számot vagy kötőjelet használjon.",
+      "code_taken": "Ezt a kódot már egy másik klub használja. Válasszon másikat."
     },
     "admins_intro_meets": "A klubadminok a klubjuk által rendezett versenyeket vezetik. Szövetségi szintű hozzáférést nem kapnak.",
     "admins_intro_classes": "A klubadminok a klubjuk által rendezett versenyeket vezetik, és gondoskodnak a klub foglalkozásairól. Szövetségi szintű hozzáférést nem kapnak.",

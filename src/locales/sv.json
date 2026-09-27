@@ -2097,7 +2097,9 @@
       "code_placeholder": "t.ex. SYD",
       "code_saved": "Klubbkoden har sparats",
       "code_none": "Ingen kod än.",
-      "code_federation": "Ditt förbund bestämmer klubbens kod."
+      "code_federation": "Ditt förbund bestämmer klubbens kod.",
+      "code_bad": "Använd högst 8 bokstäver, siffror eller bindestreck.",
+      "code_taken": "En annan klubb använder redan den koden. Välj en annan."
     },
     "admins_intro_meets": "Klubbadministratörer sköter tävlingarna som klubben arrangerar. De får ingen åtkomst på förbundsnivå.",
     "admins_intro_classes": "Klubbadministratörer sköter tävlingarna som klubben arrangerar och tar hand om klubbens kurser. De får ingen åtkomst på förbundsnivå.",

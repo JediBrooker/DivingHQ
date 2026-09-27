@@ -2097,7 +2097,9 @@
       "code_placeholder": "p. ej. SYD",
       "code_saved": "Código del club guardado",
       "code_none": "Todavía sin código.",
-      "code_federation": "El código de tu club lo fija tu federación."
+      "code_federation": "El código de tu club lo fija tu federación.",
+      "code_bad": "Usa hasta 8 letras, números o guiones.",
+      "code_taken": "Otro club ya usa ese código. Elige otro."
     },
     "admins_intro_meets": "Los administradores del club dirigen las competiciones que organiza su club. No tienen acceso a nivel de federación.",
     "admins_intro_classes": "Los administradores del club dirigen las competiciones que organiza su club y se ocupan de sus clases. No tienen acceso a nivel de federación.",

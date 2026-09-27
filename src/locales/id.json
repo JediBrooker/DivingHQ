@@ -2097,7 +2097,9 @@
       "code_placeholder": "mis. SYD",
       "code_saved": "Kode klub disimpan",
       "code_none": "Belum ada kode.",
-      "code_federation": "Kode klub Anda ditetapkan oleh federasi Anda."
+      "code_federation": "Kode klub Anda ditetapkan oleh federasi Anda.",
+      "code_bad": "Gunakan maksimal 8 huruf, angka, atau tanda hubung.",
+      "code_taken": "Klub lain sudah memakai kode itu. Pilih kode lain."
     },
     "admins_intro_meets": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya. Mereka tidak mendapat akses tingkat federasi.",
     "admins_intro_classes": "Admin klub menjalankan kompetisi yang diselenggarakan klubnya dan mengurus kelasnya. Mereka tidak mendapat akses tingkat federasi.",
