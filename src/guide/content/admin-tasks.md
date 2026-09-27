@@ -274,7 +274,7 @@ node scripts/rebuild-records.js --org <uuid>     # one federation's books (conti
 node scripts/rebuild-records.js --apply          # actually write it
 ```
 
-Nothing is written without `--apply`. With it, every row that's replaced or removed is copied to the matching history table first, and the whole rebuild runs in one transaction with the record tables locked, so a dive finishing mid-rebuild just waits for it. Records whose event has since been deleted can't be checked against scores, so they're left alone unless the replay beats them.
+Nothing is written without `--apply`. With it, every row that's replaced or removed is copied to the matching history table first, and the whole rebuild runs in one transaction with the record tables locked, so a dive finishing mid-rebuild just waits for it. Records whose event has since been deleted can't be checked against scores, so they're left alone unless the replay beats them. A dive counts for the club and state its diver was entered from, the same as when it was scored live, and a club still waiting for its federation's approval gets no club records.
 
 ### Cross-org user lookup
 

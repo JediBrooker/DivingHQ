@@ -382,7 +382,7 @@ diver's org at the time of the dive (`lib/records.js`).
 
 ## 10. Records
 
-- `records_club`: unchanged.
+- `records_club`: keyed on the club the diver was entered from (`event_rep_ids`, the entry snapshot; today's club only for entries from before 090), the same rule as the region scope and the scoreboard label. `scripts/rebuild-records.js` replays with the same rule (`recordDivesSql` in `lib/records.js`).
 - **New** region scope next to `records_federation`, keyed on the
   snapshotted `rep_region_id`.
 - National records in an **unclaimed** org are shown with an

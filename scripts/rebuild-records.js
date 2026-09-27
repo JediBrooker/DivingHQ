@@ -42,18 +42,20 @@
 // (a dive completing mid-rebuild just waits for it). The dry run runs
 // the same comparison, writes nothing and rolls back.
 //
-// KNOWN APPROXIMATION: the replay only knows a diver's club and region
-// from their entry snapshot (competitor_dive_lists.rep_*, migration 090)
-// and falls back to where they are today for older entries. Federation
-// and continent are always where the diver is today. A diver who has
-// changed federation will see their records follow them.
+// Which books a dive belongs to comes from lib/records.js recordDivesSql,
+// the same rule the live path uses: the club and region they were
+// entered from (event_rep_ids, the entry snapshot), falling back to
+// where they are today only for entries made before snapshots existed
+// (migration 090). A club still waiting on its federation gets no club
+// record. KNOWN APPROXIMATION: federation and continent are always where
+// the diver is today, so a diver who has changed federation will see
+// their records follow them.
 //
 // Connection: same env as server.js and scripts/migrate.js.
 
 require("dotenv").config();
 const { Client } = require("pg");
-const { perDiveSelect } = require("../lib/scoring-sql");
-const { RECORD_TABLES } = require("../lib/records");
+const { RECORD_TABLES, recordDivesSql, SCOPE_ORDER } = require("../lib/records");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CATEGORIES = ["kept", "prev", "changed", "added", "removed", "unverifiable"];
@@ -71,45 +73,10 @@ const SCOPE_SQL = {
   continental: { key: "continent",     inOrg: null },
 };
 
-// Every dive that could set a record, one row each. Same scoring SQL as
-// the live path (lib/scoring-sql.js), so a replayed score is the score
-// the scoreboard showed.
+// Every dive that could set a record, one row each (lib/records.js, so a
+// replayed score and book are what the live path would have written).
 function candidateDivesSql() {
-  return `CREATE TEMP TABLE rr_dives ON COMMIT DROP AS
-    SELECT * FROM (
-      ${perDiveSelect({
-        select: [
-          "s.event_id", "s.competitor_id", "s.round_number",
-          "e.height", "d.dive_code", "d.position",
-          "record_gender(e.gender, u.gender) AS gender",
-          "COALESCE(cdl.rep_club_id, u.club_id) AS club_id",
-          "COALESCE(cdl.rep_region_id, rc.region_id) AS region_id",
-          "u.org_id", "o.continent", "e.number_of_judges AS panel",
-        ],
-        dd:          "d.dd",
-        pointsAlias: "dive_total",
-        selectExtra: ["COUNT(s.score)::int AS judges_in", "MAX(s.created_at) AS set_at"],
-        extraJoins: [
-          "JOIN users u ON u.id = s.competitor_id",
-          "JOIN organisations o ON o.id = u.org_id",
-          "LEFT JOIN clubs rc ON rc.id = COALESCE(cdl.rep_club_id, u.club_id)",
-        ],
-        // Same gates as checkAndApplyRecords, Upcoming included, or a
-        // replay would promote Control Room try-outs the live path skips.
-        where: `e.event_type = 'individual' AND COALESCE(e.is_rehearsal, FALSE) = FALSE
-                AND e.status <> 'Upcoming'`,
-        groupBy: [
-          "s.event_id", "s.competitor_id", "s.round_number",
-          "e.height", "d.dive_code", "d.position", "d.dd", "e.gender", "u.gender",
-          "cdl.rep_club_id", "u.club_id", "cdl.rep_region_id", "rc.region_id",
-          "u.org_id", "o.continent",
-        ],
-      })}
-    ) per
-    WHERE judges_in >= panel
-      AND gender IS NOT NULL
-      AND dive_code IS NOT NULL AND position IS NOT NULL AND height IS NOT NULL
-      AND dive_total IS NOT NULL`;
+  return `CREATE TEMP TABLE rr_dives ON COMMIT DROP AS ${recordDivesSql()}`;
 }
 
 async function rebuildScope(client, scope, { orgId, apply }) {
@@ -225,10 +192,14 @@ async function rebuildRecords(client, { apply = false, orgId = null } = {}) {
     if (apply) {
       // Hold off the live writer (checkAndApplyRecords) for the few
       // seconds this takes, otherwise a dive finishing mid-rebuild could
-      // be overwritten by a replay that never saw it.
+      // be overwritten by a replay that never saw it. EXCLUSIVE, not
+      // SHARE ROW EXCLUSIVE: the live writer's SELECT ... FOR UPDATE takes
+      // ROW SHARE, which the weaker mode lets through, so a writer could
+      // hold a row this needs and the two deadlock. Same table order as
+      // the writer, for the same reason. Plain reads still go through.
       await client.query(
-        `LOCK TABLE ${Object.values(RECORD_TABLES).map((c) => c.table).join(", ")}
-         IN SHARE ROW EXCLUSIVE MODE`,
+        `LOCK TABLE ${SCOPE_ORDER.map((s) => RECORD_TABLES[s].table).join(", ")}
+         IN EXCLUSIVE MODE`,
       );
     }
     await client.query(candidateDivesSql());

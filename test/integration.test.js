@@ -6503,3 +6503,71 @@ test("club short codes: signup and the Clubs screen follow the same rule as club
     await claimKit.wipe(CODE);
   }
 });
+
+// A dive's club and region records go to the club and region the diver was
+// entered from, the same rule as the scoreboard label, in the live path and
+// in rebuild-records. The live path used the diver's club at scoring time;
+// the replay filled a club-less snapshot from the diver's current club and
+// ignored whether a club was still waiting on its federation.
+test("records: club and region come from the entry, live and in the replay", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { rebuildRecords } = require("../scripts/rebuild-records");
+  const st = await setupFixture({ withEvent: false });
+  const client = await pool.connect();
+  try {
+    const lib = recordKit.lib();
+    const region = async (name, code) => (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, $2, $3) RETURNING id", [st.orgId, name, code],
+    )).rows[0].id;
+    const north = await region("Entry North", "ENN");
+    const south = await region("Entry South", "ENS");
+    const clubA = await recordKit.club(st.orgId, "Entry A Divers", "ENA", north);
+    const clubB = await recordKit.club(st.orgId, "Entry B Divers", "ENB", south);
+    const clubC = await recordKit.club(st.orgId, "Entry C Divers", "ENC", south);
+    const waiting = await recordKit.club(st.orgId, "Entry Waiting Divers", "ENW", south);
+    await pool.query("UPDATE clubs SET status = 'pending' WHERE id = $1", [waiting]);
+    const dive = await recordKit.threeMetreDive();
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+
+    // Entered from A, moves to B before the dive completes.
+    const mover = await recordKit.diver(st.orgId, clubA, "female", "Gia Entry");
+    await recordKit.dive(women, mover, 1, dive, 6);
+    await pool.query("UPDATE users SET club_id = $2 WHERE id = $1", [mover, clubB]);
+    const broken = await lib.checkAndApplyRecords({ eventId: women.id, competitorId: mover, roundNumber: 1 });
+    assert.equal(broken.find((b) => b.scope === "club")?.scope_id, clubA, JSON.stringify(broken));
+    assert.equal(broken.find((b) => b.scope === "club").scope_code, "ENA");
+    assert.equal(broken.find((b) => b.scope === "region")?.scope_id, north);
+    const inBook = async (tbl, col, id) => (await pool.query(`SELECT count(*)::int AS n FROM ${tbl} WHERE ${col} = $1`, [id])).rows[0].n;
+    assert.equal(await inBook("records_club", "club_id", clubB), 0, "the club they moved to gets nothing");
+
+    // Entered with no club, joins C (in the south) afterwards.
+    const loner = await recordKit.diver(st.orgId, null, "female", "Hana Entry");
+    await recordKit.dive(women, loner, 1, dive, 7);
+    await pool.query("UPDATE users SET club_id = $2 WHERE id = $1", [loner, clubC]);
+    // A founder whose club is still waiting.
+    const founder = await recordKit.diver(st.orgId, waiting, "female", "Iva Entry");
+    await recordKit.dive(women, founder, 1, dive, 8);
+    for (const who of [loner, founder]) {
+      await lib.checkAndApplyRecords({ eventId: women.id, competitorId: who, roundNumber: 1 });
+    }
+    assert.equal(await inBook("records_club", "club_id", clubC), 0);
+    assert.equal(await inBook("records_club", "club_id", waiting), 0);
+    // The waiting club's region still counts (only its name is unvetted);
+    // the club-less entry never reaches the south at all.
+    const southHolders = (await pool.query("SELECT holder_id FROM records_region WHERE region_id = $1", [south])).rows;
+    assert.deepEqual(southHolders.map((r) => r.holder_id), [founder]);
+
+    // The replay agrees with every one of those: nothing to add or change
+    // in the club or region books.
+    const dry = await rebuildRecords(client, { orgId: st.orgId });
+    for (const scope of ["club", "region"]) {
+      const c = dry.find((r) => r.scope === scope).counts;
+      assert.equal(c.added + c.changed + c.removed, 0, `${scope}: ${JSON.stringify(c)}`);
+    }
+  } finally {
+    client.release();
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
