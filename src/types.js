@@ -31,7 +31,7 @@
  *   Body-only (login + /api/auth/me): clubs this user admins, and whether
  *   their org has a federation (claimed) or the clubs run it (unclaimed).
  *   UI hint only, the server re-reads club_admins on every club-scoped route.
- * @property {{id: string, name: string, short_code: string}[]} [region_admin_of]
+ * @property {{id: string, name: string, short_code: string, org_claim_state: 'claimed'|'unclaimed'}[]} [region_admin_of]
  *   Body-only, same deal for region_admins (migration 088).
  * @property {boolean} [has_claim]
  *   Body-only: this user filed a claim (lib/claims.js, any status but

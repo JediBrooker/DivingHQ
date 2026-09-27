@@ -659,7 +659,7 @@
         "desc": "Du driver klubben din. Der landets forbund ennå ikke er på DivingHQ, arrangerer klubben sine egne stevner: opprett dem, styr dem fra <strong>Kontrollrommet</strong> og godkjenn medlemmenes rolleforespørsler. Under et forbund godkjenner forbundet den nye klubben din og kan gjøre deg til administrator.",
         "step_1": "Registrer deg, velg land og opprett klubben; du blir dens første administrator (under et forbund når det har godkjent klubben)",
         "step_2": "Åpne <strong>Stevneadministrator</strong> og opprett et stevne klubben din arrangerer",
-        "step_3": "Godkjenn på <strong>Min klubb</strong> dem som ber om å bli med, og medlemmer som vil stupe, dømme eller være trener",
+        "step_3": "Der det ennå ikke finnes et forbund: godkjenn på <strong>Min klubb</strong> dem som ber om å bli med, og medlemmer som vil stupe, dømme eller være trener",
         "step_4": "På stevnedagen styrer du poenggivningen fra <strong>Kontrollrommet</strong>",
         "step_5": "Når forbundet eller det regionale organet ditt kommer, stemmer du over kravet under <strong>Krav</strong>",
         "cta": "Arrangere et stevne ↗",
@@ -667,10 +667,10 @@
       },
       "region_admin": {
         "name": "Regionsadministrator",
-        "desc": "Du tar deg av en delstat, provins eller nasjon: arrangerer mesterskapene, kan tre inn på stevnene til alle klubbene der og godkjenner rolleforespørsler fra klubbmedlemmene. Forbundet ditt utnevner deg. Finnes det ikke ennå, gjør det regionale organet ditt krav på regionen, og du legger selv til med-administratorene. Et delstatsforbund kan søke om å drive regionen sin fra <strong>Registrer organisasjonen</strong>.",
+        "desc": "Du tar deg av en delstat, provins eller nasjon: arrangerer mesterskapene og kan tre inn på stevnene til alle klubbene der. Der det ennå ikke finnes et forbund, godkjenner du også rolleforespørsler fra klubbmedlemmene. Forbundet ditt utnevner deg. Finnes det ikke ennå, gjør det regionale organet ditt krav på regionen, og du legger selv til med-administratorene. Et delstatsforbund kan søke om å drive regionen sin fra <strong>Registrer organisasjonen</strong>.",
         "step_1": "Åpne <strong>Min region</strong> for å se klubbene og hvem som driver dem",
         "step_2": "Opprett mesterskapene i <strong>Stevneadministrator</strong> med regionen som arrangør",
-        "step_3": "Godkjenn medlemmer som vil stupe, dømme eller være trener, og klubber som ber om å bli med i regionen din",
+        "step_3": "Der det ennå ikke finnes et forbund: godkjenn medlemmer som vil stupe, dømme eller være trener, og klubber som ber om å bli med i regionen din",
         "cta": "Arrangere et stevne ↗"
       },
       "org_admin": {
@@ -2104,7 +2104,9 @@
     "admins_intro_meets": "Klubbadministratorer står for stevnene klubben arrangerer. De får ingen tilgang på forbundsnivå.",
     "admins_intro_classes": "Klubbadministratorer står for stevnene klubben arrangerer og tar seg av klubbens kurs. De får ingen tilgang på forbundsnivå.",
     "admins_intro_payments": "Klubbadministratorer står for stevnene klubben arrangerer og tar seg av utbetalinger og medlemskontingenter. De får ingen tilgang på forbundsnivå.",
-    "last_admin_tip": "En klubb må ha minst én administrator. Legg til en medadministrator før du fjerner denne."
+    "last_admin_tip": "En klubb må ha minst én administrator. Legg til en medadministrator før du fjerner denne.",
+    "intro_federation": "Klubbens invitasjonslenke, kode og administratorer. Forbundet ditt utnevner administratorene og behandler medlemmenes rolleforespørsler.",
+    "requests_federation": "Forbundet ditt behandler medlemmenes rolleforespørsler."
   },
   "regions": {
     "label": {
@@ -2141,7 +2143,9 @@
     "last_admin_tip": "En region må ha minst én administrator. Legg til en medadministrator før du fjerner denne.",
     "leave_title": "Vil du fjerne deg selv som administrator for {region}?",
     "leave_body": "Du kan ikke lenger arrangere regionens stevner eller ta deg av klubbene i den. Bare en annen administrator kan legge deg til igjen.",
-    "left_notice": "Du er ikke lenger administrator for {region}."
+    "left_notice": "Du er ikke lenger administrator for {region}.",
+    "intro_federation": "Regionens klubber og hvem som driver dem. Forbundet ditt behandler medlemmenes rolleforespørsler.",
+    "requests_federation": "Forbundet ditt behandler rolleforespørsler fra medlemmene i klubbene dine."
   },
   "claims": {
     "title": "Krav",

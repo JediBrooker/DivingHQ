@@ -648,7 +648,7 @@
         "desc": "Řídíte svůj klub. Kde federace vaší země na DivingHQ zatím není, klub pořádá závody sám: vytvořte je, řiďte z <strong>Řídicí místnosti</strong> a schvalujte žádosti členů o role. Pod federací váš nový klub schvaluje ona a může vás jmenovat jeho správcem.",
         "step_1": "Zaregistrujte se, vyberte zemi a založte klub; stanete se jeho prvním správcem (pod federací až poté, co klub schválí)",
         "step_2": "Otevřete <strong>Správa závodů</strong> a vytvořte závod pořádaný vaším klubem",
-        "step_3": "Na stránce <strong>Můj klub</strong> schvalujte zájemce o vstup a členy, kteří chtějí skákat, soudit nebo trénovat",
+        "step_3": "Na stránce <strong>Můj klub</strong> schvalujte, kde zatím není federace, zájemce o vstup a členy, kteří chtějí skákat, soudit nebo trénovat",
         "step_4": "V den závodu řiďte bodování z <strong>Řídicí místnosti</strong>",
         "step_5": "Až dorazí vaše federace nebo krajský svaz, hlasujte o jejím nároku na stránce <strong>Nároky</strong>",
         "cta": "Pořádání závodu ↗",
@@ -656,10 +656,10 @@
       },
       "region_admin": {
         "name": "Správce regionu",
-        "desc": "Staráte se o stát, provincii či zemi: pořádáte její mistrovství, můžete zasáhnout do závodů kteréhokoli jejího klubu a schvalujete žádosti členů jejích klubů o role. Jmenuje vás federace. Pokud federace zatím není, převezme region váš krajský svaz a další správce si přidáváte sami. Zemský svaz může o správu svého regionu požádat přes <strong>Zaregistrujte svou organizaci</strong>.",
+        "desc": "Staráte se o stát, provincii či zemi: pořádáte její mistrovství a můžete zasáhnout do závodů kteréhokoli jejího klubu. Kde zatím není federace, schvalujete také žádosti členů jejích klubů o role. Jmenuje vás federace. Pokud federace zatím není, převezme region váš krajský svaz a další správce si přidáváte sami. Zemský svaz může o správu svého regionu požádat přes <strong>Zaregistrujte svou organizaci</strong>.",
         "step_1": "Otevřete <strong>Můj region</strong> a uvidíte své kluby a jejich vedení",
         "step_2": "Vytvořte mistrovství ve <strong>Správě závodů</strong> pořádané vaším regionem",
-        "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo trénovat, a kluby, které žádají o vstup do vašeho regionu",
+        "step_3": "Kde zatím není federace, schvalujte členy, kteří chtějí skákat, soudit nebo trénovat, a kluby, které žádají o vstup do vašeho regionu",
         "cta": "Pořádání závodu ↗"
       },
       "org_admin": {
@@ -2104,7 +2104,9 @@
     "admins_intro_meets": "Správci klubu řídí závody, které jejich klub pořádá. Přístup v rámci celého svazu nemají.",
     "admins_intro_classes": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho kurzy. Přístup v rámci celého svazu nemají.",
     "admins_intro_payments": "Správci klubu řídí závody, které jejich klub pořádá, a starají se o jeho výplaty a členské příspěvky. Přístup v rámci celého svazu nemají.",
-    "last_admin_tip": "Klub potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce."
+    "last_admin_tip": "Klub potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce.",
+    "intro_federation": "Odkaz na pozvánku do vašeho klubu, jeho kód a správci. Správce jmenuje vaše federace, která také posuzuje žádosti vašich členů o role.",
+    "requests_federation": "Žádosti vašich členů o role posuzuje vaše federace."
   },
   "regions": {
     "label": {
@@ -2141,7 +2143,9 @@
     "last_admin_tip": "Region potřebuje alespoň jednoho správce. Než tohoto odeberete, přidejte dalšího správce.",
     "leave_title": "Odebrat se ze správců regionu {region}?",
     "leave_body": "Už nebudete moci pořádat závody regionu ani spravovat jeho kluby. Zpět vás může přidat jen jiný správce.",
-    "left_notice": "Už nejste správcem regionu {region}."
+    "left_notice": "Už nejste správcem regionu {region}.",
+    "intro_federation": "Kluby vašeho regionu a kdo je vede. Žádosti jejich členů o role posuzuje vaše federace.",
+    "requests_federation": "Žádosti členů vašich klubů o role posuzuje vaše federace."
   },
   "claims": {
     "title": "Nároky",

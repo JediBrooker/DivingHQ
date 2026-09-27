@@ -648,7 +648,7 @@
         "desc": "You run your club. Where your country's federation isn't on DivingHQ yet, the club runs its own meets: create them, run them from the <strong>Control Room</strong>, and approve your members' role requests. Under a federation, it approves your new club and can make you its admin.",
         "step_1": "Sign up, pick your country and create your club; you'll be its first admin (under a federation, once it approves the club)",
         "step_2": "Open <strong>Meet Manager</strong> and create a meet hosted by your club",
-        "step_3": "On <strong>My club</strong>, approve people asking to join and members who want to dive, judge or coach",
+        "step_3": "On <strong>My club</strong>, where there's no federation yet, approve people asking to join and members who want to dive, judge or coach",
         "step_4": "On the day, drive scoring from <strong>Control Room</strong>",
         "step_5": "When your federation or state body arrives, vote on its claim on <strong>Claims</strong>",
         "cta": "Running a meet ↗",
@@ -656,10 +656,10 @@
       },
       "region_admin": {
         "name": "Region Admin",
-        "desc": "You look after a state, province or home nation: run its championships, step in on any of its clubs' meets, and approve role requests from its clubs' members. Your federation appoints you. Where there isn't one yet, your state body claims the region and you add your own co-admins. A state body can apply to run its region from <strong>Register your org</strong>.",
+        "desc": "You look after a state, province or home nation: run its championships and step in on any of its clubs' meets. Where there's no federation yet, you also approve role requests from its clubs' members. Your federation appoints you. Where there isn't one yet, your state body claims the region and you add your own co-admins. A state body can apply to run its region from <strong>Register your org</strong>.",
         "step_1": "Open <strong>My region</strong> to see your clubs and who runs them",
         "step_2": "Create your championships in <strong>Meet Manager</strong>, hosted by your region",
-        "step_3": "Approve members who want to dive, judge or coach, and clubs asking to join your region",
+        "step_3": "Where there's no federation yet, approve members who want to dive, judge or coach, and clubs asking to join your region",
         "cta": "Running a meet ↗"
       },
       "org_admin": {
@@ -2104,7 +2104,9 @@
     "admins_intro_meets": "Club admins run the meets their club hosts. They get no federation-wide access.",
     "admins_intro_classes": "Club admins run the meets their club hosts and look after its classes. They get no federation-wide access.",
     "admins_intro_payments": "Club admins run the meets their club hosts and look after its payouts and affiliation payments. They get no federation-wide access.",
-    "last_admin_tip": "A club needs at least one admin. Add a co-admin before removing this one."
+    "last_admin_tip": "A club needs at least one admin. Add a co-admin before removing this one.",
+    "intro_federation": "Your club's invite link, code and admins. Your federation appoints the admins and reviews your members' role requests.",
+    "requests_federation": "Your federation reviews your members' role requests."
   },
   "regions": {
     "label": {
@@ -2141,7 +2143,9 @@
     "last_admin_tip": "A region needs at least one admin. Add a co-admin before removing this one.",
     "leave_title": "Remove yourself as an admin of {region}?",
     "leave_body": "You won't be able to run the region's meets or look after its clubs any more. Only another admin can add you back.",
-    "left_notice": "You're no longer an admin of {region}."
+    "left_notice": "You're no longer an admin of {region}.",
+    "intro_federation": "Your region's clubs and who runs them. Your federation reviews their members' role requests.",
+    "requests_federation": "Your federation reviews role requests from your clubs' members."
   },
   "claims": {
     "title": "Claims",

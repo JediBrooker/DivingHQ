@@ -173,6 +173,10 @@ async function removeAdmin(region, admin) {
   }
 }
 
+// Same as My club: a region's admins only get role requests where the
+// country has no federation yet.
+const reviewsRequests = computed(() => regions.value.some(r => r.org_claim_state === 'unclaimed'))
+
 // can_manage from the admins endpoint means "no federation here".
 const selfRun = computed(() => regions.value.some(r => detail.value[r.id]?.canManage))
 
@@ -188,14 +192,15 @@ onMounted(reloadAll)
     <header class="head">
       <div>
         <h1 class="title">{{ $t('my_region.title') }}</h1>
-        <p class="intro">{{ $t('my_region.intro') }}</p>
+        <p class="intro">{{ reviewsRequests ? $t('my_region.intro') : $t('my_region.intro_federation') }}</p>
       </div>
       <RouterLink to="/manager" class="btn btn-primary btn-sm">{{ $t('my_club.run_meets') }}</RouterLink>
     </header>
 
     <section class="block">
       <h2 class="block-title">{{ $t('my_club.requests') }}</h2>
-      <RoleRequestQueue :key="`rq-${queueKey}`" show-club />
+      <RoleRequestQueue v-if="reviewsRequests" :key="`rq-${queueKey}`" show-club />
+      <p v-else class="meta" data-testid="requests-federation">{{ $t('my_region.requests_federation') }}</p>
     </section>
 
     <!-- Only where there's no federation: that's when a region admin can

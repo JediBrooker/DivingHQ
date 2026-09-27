@@ -138,6 +138,12 @@ async function refreshAfterLosingClub(club) {
   }
 }
 
+// Role requests only come to a club's admins where there's no federation
+// (lib/role-requests.js, listForDelegate). Under one they go to its org
+// admins, so an always-empty queue saying "they show up here" was a lie.
+// Known from the session, no need to wait for the admins call.
+const reviewsRequests = computed(() => clubs.value.some(c => c.org_claim_state === 'unclaimed'))
+
 // Join requests are only this page's business where the club runs
 // itself; under a federation the federation approves them. The admins
 // endpoint answering is how we know (403 under a federation).
@@ -225,7 +231,7 @@ onMounted(() => {
     <header class="head">
       <div>
         <h1 class="title">{{ $t('my_club.title') }}</h1>
-        <p class="intro">{{ $t('my_club.intro') }}</p>
+        <p class="intro">{{ reviewsRequests ? $t('my_club.intro') : $t('my_club.intro_federation') }}</p>
       </div>
       <RouterLink to="/manager" class="btn btn-primary btn-sm">{{ $t('my_club.run_meets') }}</RouterLink>
     </header>
@@ -235,7 +241,8 @@ onMounted(() => {
 
     <section class="block">
       <h2 class="block-title">{{ $t('my_club.requests') }}</h2>
-      <RoleRequestQueue :show-club="clubs.length > 1" />
+      <RoleRequestQueue v-if="reviewsRequests" :show-club="clubs.length > 1" />
+      <p v-else class="muted" data-testid="requests-federation">{{ $t('my_club.requests_federation') }}</p>
     </section>
 
     <section v-if="selfRun" class="block">

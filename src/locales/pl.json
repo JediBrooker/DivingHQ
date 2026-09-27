@@ -659,7 +659,7 @@
         "desc": "Prowadzisz swój klub. Tam, gdzie federacji twojego kraju nie ma jeszcze w DivingHQ, klub sam organizuje zawody: twórz je, prowadź z <strong>Pokoju kontroli</strong> i zatwierdzaj prośby członków o role. W ramach federacji to ona zatwierdza twój nowy klub i może wyznaczyć cię jego administratorem.",
         "step_1": "Zarejestruj się, wybierz kraj i utwórz klub; zostaniesz jego pierwszym administratorem (w ramach federacji, gdy zatwierdzi klub)",
         "step_2": "Otwórz <strong>Menedżer zawodów</strong> i utwórz zawody organizowane przez twój klub",
-        "step_3": "Na stronie <strong>Mój klub</strong> zatwierdzaj chętnych do dołączenia i członków, którzy chcą skakać, sędziować lub trenować",
+        "step_3": "Na stronie <strong>Mój klub</strong>, tam, gdzie nie ma jeszcze federacji, zatwierdzaj chętnych do dołączenia i członków, którzy chcą skakać, sędziować lub trenować",
         "step_4": "W dniu zawodów prowadź punktację z <strong>Pokoju kontroli</strong>",
         "step_5": "Gdy dołączy twoja federacja lub organ regionalny, zagłosuj nad jej roszczeniem w <strong>Roszczeniach</strong>",
         "cta": "Organizacja zawodów ↗",
@@ -667,10 +667,10 @@
       },
       "region_admin": {
         "name": "Administrator regionu",
-        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa, możesz wkroczyć w zawody każdego z klubów i zatwierdzasz prośby członków klubów o role. Wyznacza cię federacja. Dopóki jej nie ma, region przejmuje twój organ regionalny, a kolejnych administratorów dodajesz sam. Organizacja stanowa może złożyć wniosek o prowadzenie swojego regionu przez <strong>Zarejestruj organizację</strong>.",
+        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa i możesz wkroczyć w zawody każdego z klubów. Tam, gdzie nie ma jeszcze federacji, zatwierdzasz też prośby członków klubów o role. Wyznacza cię federacja. Dopóki jej nie ma, region przejmuje twój organ regionalny, a kolejnych administratorów dodajesz sam. Organizacja stanowa może złożyć wniosek o prowadzenie swojego regionu przez <strong>Zarejestruj organizację</strong>.",
         "step_1": "Otwórz <strong>Mój region</strong>, aby zobaczyć kluby i kto je prowadzi",
         "step_2": "Utwórz mistrzostwa w <strong>Menedżerze zawodów</strong>, organizowane przez twój region",
-        "step_3": "Zatwierdzaj członków, którzy chcą skakać, sędziować lub trenować, oraz kluby proszące o dołączenie do twojego regionu",
+        "step_3": "Tam, gdzie nie ma jeszcze federacji, zatwierdzaj członków, którzy chcą skakać, sędziować lub trenować, oraz kluby proszące o dołączenie do twojego regionu",
         "cta": "Organizacja zawodów ↗"
       },
       "org_admin": {
@@ -2104,7 +2104,9 @@
     "admins_intro_meets": "Administratorzy klubu prowadzą zawody organizowane przez swój klub. Nie mają dostępu na poziomie całego związku.",
     "admins_intro_classes": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego zajęciami. Nie mają dostępu na poziomie całego związku.",
     "admins_intro_payments": "Administratorzy klubu prowadzą zawody organizowane przez swój klub i zajmują się jego wypłatami oraz składkami członkowskimi. Nie mają dostępu na poziomie całego związku.",
-    "last_admin_tip": "Klub musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora."
+    "last_admin_tip": "Klub musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora.",
+    "intro_federation": "Link z zaproszeniem, kod i administratorzy twojego klubu. Twoja federacja wyznacza administratorów i rozpatruje prośby członków o role.",
+    "requests_federation": "Prośby twoich członków o role rozpatruje twoja federacja."
   },
   "regions": {
     "label": {
@@ -2141,7 +2143,9 @@
     "last_admin_tip": "Region musi mieć co najmniej jednego administratora. Zanim usuniesz tego, dodaj innego administratora.",
     "leave_title": "Usunąć się z administratorów regionu {region}?",
     "leave_body": "Nie będziesz już mógł organizować zawodów regionu ani zajmować się jego klubami. Z powrotem może cię dodać tylko inny administrator.",
-    "left_notice": "Nie jesteś już administratorem regionu {region}."
+    "left_notice": "Nie jesteś już administratorem regionu {region}.",
+    "intro_federation": "Kluby twojego regionu i kto je prowadzi. Prośby ich członków o role rozpatruje twoja federacja.",
+    "requests_federation": "Prośby członków twoich klubów o role rozpatruje twoja federacja."
   },
   "claims": {
     "title": "Roszczenia",

@@ -91,6 +91,8 @@ test("a club asks to join a claimed region, and the region accepts", async ({ pa
   await page.context().clearCookies();
   await signIn(page, world.freeport.username);
   await page.goto("/region");
+  // No federation in the Bahamas, so the region's admins do get role requests.
+  await expect(page.getByTestId("requests-federation")).toHaveCount(0);
   // Grand Bahama's only admin can't step down, and the button says why.
   const soleRemove = page.locator("[data-test-id=region-admins] li").getByRole("button", { name: "Remove" });
   await expect(soleRemove).toBeDisabled();

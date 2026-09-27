@@ -648,7 +648,7 @@
         "desc": "Anda mengurus kelab anda. Jika persekutuan negara anda belum berada di DivingHQ, kelab menganjurkan pertandingannya sendiri: ciptanya, jalankan dari <strong>Bilik Kawalan</strong>, dan luluskan permintaan peranan ahli. Di bawah persekutuan, persekutuan yang meluluskan kelab baharu anda dan boleh melantik anda sebagai pentadbirnya.",
         "step_1": "Daftar, pilih negara dan cipta kelab anda; anda menjadi pentadbir pertamanya (di bawah persekutuan, selepas persekutuan meluluskan kelab)",
         "step_2": "Buka <strong>Pengurus Pertandingan</strong> dan cipta pertandingan anjuran kelab anda",
-        "step_3": "Di <strong>Kelab saya</strong>, luluskan orang yang ingin menyertai dan ahli yang mahu menerjun, menghakimi atau melatih",
+        "step_3": "Di <strong>Kelab saya</strong>, di tempat yang belum ada persekutuan, luluskan orang yang ingin menyertai dan ahli yang mahu menerjun, menghakimi atau melatih",
         "step_4": "Pada hari pertandingan, kendalikan pemarkahan dari <strong>Bilik Kawalan</strong>",
         "step_5": "Apabila persekutuan atau badan wilayah anda tiba, undi tuntutannya di <strong>Tuntutan</strong>",
         "cta": "Menganjurkan pertandingan ↗",
@@ -656,10 +656,10 @@
       },
       "region_admin": {
         "name": "Pentadbir rantau",
-        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya, boleh campur tangan dalam pertandingan mana-mana kelabnya, dan meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda. Jika belum ada persekutuan, badan wilayah anda menuntut rantau itu dan anda sendiri menambah rakan pentadbir. Badan negeri boleh memohon untuk mengendalikan wilayahnya melalui <strong>Daftarkan organisasi anda</strong>.",
+        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya dan boleh campur tangan dalam pertandingan mana-mana kelabnya. Di tempat yang belum ada persekutuan, anda juga meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda. Jika belum ada persekutuan, badan wilayah anda menuntut rantau itu dan anda sendiri menambah rakan pentadbir. Badan negeri boleh memohon untuk mengendalikan wilayahnya melalui <strong>Daftarkan organisasi anda</strong>.",
         "step_1": "Buka <strong>Rantau saya</strong> untuk melihat kelab dan pengurusnya",
         "step_2": "Cipta kejohanan anda dalam <strong>Pengurus pertandingan</strong> dengan rantau anda sebagai tuan rumah",
-        "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau melatih, serta kelab yang ingin menyertai rantau anda",
+        "step_3": "Di tempat yang belum ada persekutuan, luluskan ahli yang mahu menerjun, menghakimi atau melatih, serta kelab yang ingin menyertai rantau anda",
         "cta": "Menganjurkan pertandingan ↗"
       },
       "org_admin": {
@@ -2104,7 +2104,9 @@
     "admins_intro_meets": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka. Mereka tidak mendapat akses peringkat persekutuan.",
     "admins_intro_classes": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka dan menguruskan kelasnya. Mereka tidak mendapat akses peringkat persekutuan.",
     "admins_intro_payments": "Pentadbir kelab mengendalikan kejohanan yang dianjurkan kelab mereka dan menguruskan pembayaran serta yuran gabungannya. Mereka tidak mendapat akses peringkat persekutuan.",
-    "last_admin_tip": "Kelab memerlukan sekurang-kurangnya seorang pentadbir. Tambah pentadbir lain sebelum mengalih keluar pentadbir ini."
+    "last_admin_tip": "Kelab memerlukan sekurang-kurangnya seorang pentadbir. Tambah pentadbir lain sebelum mengalih keluar pentadbir ini.",
+    "intro_federation": "Pautan jemputan, kod dan pentadbir kelab anda. Persekutuan anda melantik pentadbir dan menyemak permintaan peranan ahli anda.",
+    "requests_federation": "Persekutuan anda menyemak permintaan peranan ahli anda."
   },
   "regions": {
     "label": {
@@ -2141,7 +2143,9 @@
     "last_admin_tip": "Rantau memerlukan sekurang-kurangnya seorang pentadbir. Tambah pentadbir lain sebelum mengalih keluar pentadbir ini.",
     "leave_title": "Alih keluar diri anda sebagai pentadbir {region}?",
     "leave_body": "Anda tidak lagi boleh menganjurkan pertandingan rantau atau menguruskan kelab-kelabnya. Hanya pentadbir lain boleh menambah anda semula.",
-    "left_notice": "Anda bukan lagi pentadbir {region}."
+    "left_notice": "Anda bukan lagi pentadbir {region}.",
+    "intro_federation": "Kelab di rantau anda dan siapa yang mengurusnya. Persekutuan anda menyemak permintaan peranan ahlinya.",
+    "requests_federation": "Persekutuan anda menyemak permintaan peranan daripada ahli kelab anda."
   },
   "claims": {
     "title": "Tuntutan",

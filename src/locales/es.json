@@ -648,7 +648,7 @@
         "desc": "Diriges tu club. Donde la federación de tu país aún no está en DivingHQ, el club organiza sus propias competiciones: créalas, dirígelas desde la <strong>Sala de control</strong> y aprueba las solicitudes de rol de tus miembros. Bajo una federación, es ella quien aprueba tu club nuevo y puede nombrarte su administrador.",
         "step_1": "Regístrate, elige tu país y crea tu club; serás su primer administrador (bajo una federación, cuando esta apruebe el club)",
         "step_2": "Abre el <strong>Gestor de competiciones</strong> y crea una competición organizada por tu club",
-        "step_3": "Aprueba en <strong>Mi club</strong> a quienes piden unirse y a los miembros que quieren saltar, juzgar o entrenar",
+        "step_3": "Donde aún no hay federación, aprueba en <strong>Mi club</strong> a quienes piden unirse y a los miembros que quieren saltar, juzgar o entrenar",
         "step_4": "El día de la competición, dirige la puntuación desde la <strong>Sala de control</strong>",
         "step_5": "Cuando llegue tu federación u organismo regional, vota su reclamación en <strong>Reclamaciones</strong>",
         "cta": "Organizar una competición ↗",
@@ -656,10 +656,10 @@
       },
       "region_admin": {
         "name": "Administrador regional",
-        "desc": "Te ocupas de un estado, provincia o nación: organizas sus campeonatos, puedes intervenir en las competiciones de cualquiera de sus clubes y apruebas las solicitudes de rol de sus miembros. Te nombra tu federación. Si aún no la hay, tu organismo regional reclama la región y tú añades a tus coadministradores. Un organismo estatal puede solicitar dirigir su región desde <strong>Registra tu organización</strong>.",
+        "desc": "Te ocupas de un estado, provincia o nación: organizas sus campeonatos y puedes intervenir en las competiciones de cualquiera de sus clubes. Donde aún no hay federación, también apruebas las solicitudes de rol de sus miembros. Te nombra tu federación. Si aún no la hay, tu organismo regional reclama la región y tú añades a tus coadministradores. Un organismo estatal puede solicitar dirigir su región desde <strong>Registra tu organización</strong>.",
         "step_1": "Abre <strong>Mi región</strong> para ver tus clubes y quién los gestiona",
         "step_2": "Crea tus campeonatos en el <strong>Gestor de competiciones</strong>, organizados por tu región",
-        "step_3": "Aprueba a los miembros que quieren saltar, juzgar o entrenar, y a los clubes que piden unirse a tu región",
+        "step_3": "Donde aún no hay federación, aprueba a los miembros que quieren saltar, juzgar o entrenar, y a los clubes que piden unirse a tu región",
         "cta": "Organizar una competición ↗"
       },
       "org_admin": {
@@ -2104,7 +2104,9 @@
     "admins_intro_meets": "Los administradores del club dirigen las competiciones que organiza su club. No tienen acceso a nivel de federación.",
     "admins_intro_classes": "Los administradores del club dirigen las competiciones que organiza su club y se ocupan de sus clases. No tienen acceso a nivel de federación.",
     "admins_intro_payments": "Los administradores del club dirigen las competiciones que organiza su club y se ocupan de sus pagos y cuotas de afiliación. No tienen acceso a nivel de federación.",
-    "last_admin_tip": "Un club necesita al menos un administrador. Añade otro administrador antes de quitar a este."
+    "last_admin_tip": "Un club necesita al menos un administrador. Añade otro administrador antes de quitar a este.",
+    "intro_federation": "El enlace de invitación, el código y los administradores de tu club. Tu federación nombra a los administradores y revisa las solicitudes de rol de tus miembros.",
+    "requests_federation": "Tu federación revisa las solicitudes de rol de tus miembros."
   },
   "regions": {
     "label": {
@@ -2141,7 +2143,9 @@
     "last_admin_tip": "Una región necesita al menos un administrador. Añade otro administrador antes de quitar a este.",
     "leave_title": "¿Quitarte como administrador de {region}?",
     "leave_body": "Ya no podrás organizar las competiciones de la región ni ocuparte de sus clubes. Solo otro administrador puede volver a añadirte.",
-    "left_notice": "Ya no eres administrador de {region}."
+    "left_notice": "Ya no eres administrador de {region}.",
+    "intro_federation": "Los clubes de tu región y quién los gestiona. Tu federación revisa las solicitudes de rol de sus miembros.",
+    "requests_federation": "Tu federación revisa las solicitudes de rol de los miembros de tus clubes."
   },
   "claims": {
     "title": "Reclamaciones",

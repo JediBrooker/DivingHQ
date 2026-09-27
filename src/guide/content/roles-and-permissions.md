@@ -94,7 +94,7 @@ Runs one club. In a country whose federation isn't on DivingHQ yet, a club admin
 
 **Can:**
 - Create meets hosted by their club and run them end to end: events, entries, judging panels, the schedule and the Control Room
-- Approve their members' requests to dive, judge or coach on **My club**. Referee requests go to DivingHQ where the country has no federation yet, since a referee can act at any club's meet in the country. Nobody approves their own request for anything but diver: that goes to another admin, the region, or DivingHQ
+- Where there's no federation yet, approve their members' requests to dive, judge or coach on **My club** (under a federation, its admins review them). Referee requests go to DivingHQ where the country has no federation yet, since a referee can act at any club's meet in the country. Nobody approves their own request for anything but diver: that goes to another admin, the region, or DivingHQ
 - Add and remove co-admins, and say which region the club is in (while the country has no federation; under one, the federation does both)
 - Vote on a [claim](#claims) when a federation or state body applies to take over
 
@@ -107,7 +107,7 @@ Looks after a state, province or home nation. The federation appoints region adm
 **Can:**
 - See every club in the region and who runs it, on **My region**
 - Create the region's championships in Meet Manager, hosted by the region, and step in on any of its clubs' meets
-- Approve role requests from members of the region's clubs
+- Where there's no federation yet, approve role requests from members of the region's clubs (under a federation, its admins review them)
 - Vote on a national claim, once the region itself is claimed
 
 ## Claims

@@ -659,7 +659,7 @@
         "desc": "Gestisci il tuo club. Dove la federazione del tuo paese non è ancora su DivingHQ, il club organizza le proprie gare: creale, dirigile dalla <strong>Sala Controllo</strong> e approva le richieste di ruolo dei membri. Sotto una federazione, è lei ad approvare il tuo nuovo club e può nominarti amministratore.",
         "step_1": "Registrati, scegli il paese e crea il tuo club: ne sarai il primo amministratore (sotto una federazione, dopo che l'avrà approvato)",
         "step_2": "Apri il <strong>Gestore gare</strong> e crea una gara organizzata dal tuo club",
-        "step_3": "In <strong>Il mio club</strong> approva chi chiede di entrare e i membri che vogliono tuffarsi, giudicare o allenare",
+        "step_3": "In <strong>Il mio club</strong>, dove non c'è ancora una federazione, approva chi chiede di entrare e i membri che vogliono tuffarsi, giudicare o allenare",
         "step_4": "Il giorno della gara, dirigi i punteggi dalla <strong>Sala Controllo</strong>",
         "step_5": "Quando arriva la tua federazione o l'ente regionale, vota la sua rivendicazione in <strong>Rivendicazioni</strong>",
         "cta": "Organizzare una gara ↗",
@@ -667,10 +667,10 @@
       },
       "region_admin": {
         "name": "Amministratore regionale",
-        "desc": "Ti occupi di uno stato, una provincia o una nazione: organizzi i suoi campionati, puoi intervenire sulle gare di qualsiasi suo club e approvi le richieste di ruolo dei membri dei club. Ti nomina la tua federazione. Finché non c'è, il tuo ente regionale rivendica la regione e aggiungi tu gli altri amministratori. Un ente statale può chiedere di gestire la propria regione da <strong>Registra la tua organizzazione</strong>.",
+        "desc": "Ti occupi di uno stato, una provincia o una nazione: organizzi i suoi campionati e puoi intervenire sulle gare di qualsiasi suo club. Dove non c'è ancora una federazione, approvi anche le richieste di ruolo dei membri dei club. Ti nomina la tua federazione. Finché non c'è, il tuo ente regionale rivendica la regione e aggiungi tu gli altri amministratori. Un ente statale può chiedere di gestire la propria regione da <strong>Registra la tua organizzazione</strong>.",
         "step_1": "Apri <strong>La mia regione</strong> per vedere i tuoi club e chi li gestisce",
         "step_2": "Crea i tuoi campionati nel <strong>Gestore gare</strong>, organizzati dalla tua regione",
-        "step_3": "Approva i membri che vogliono tuffarsi, giudicare o allenare, e i club che chiedono di entrare nella tua regione",
+        "step_3": "Dove non c'è ancora una federazione, approva i membri che vogliono tuffarsi, giudicare o allenare, e i club che chiedono di entrare nella tua regione",
         "cta": "Organizzare una gara ↗"
       },
       "org_admin": {
@@ -2104,7 +2104,9 @@
     "admins_intro_meets": "Gli amministratori del club gestiscono le gare organizzate dal loro club. Non hanno accesso a livello di federazione.",
     "admins_intro_classes": "Gli amministratori del club gestiscono le gare organizzate dal loro club e si occupano dei suoi corsi. Non hanno accesso a livello di federazione.",
     "admins_intro_payments": "Gli amministratori del club gestiscono le gare organizzate dal loro club e si occupano dei suoi pagamenti e delle quote di affiliazione. Non hanno accesso a livello di federazione.",
-    "last_admin_tip": "Un club deve avere almeno un amministratore. Aggiungi un altro amministratore prima di rimuovere questo."
+    "last_admin_tip": "Un club deve avere almeno un amministratore. Aggiungi un altro amministratore prima di rimuovere questo.",
+    "intro_federation": "Il link di invito, il codice e gli amministratori del tuo club. La tua federazione nomina gli amministratori ed esamina le richieste di ruolo dei membri.",
+    "requests_federation": "La tua federazione esamina le richieste di ruolo dei tuoi membri."
   },
   "regions": {
     "label": {
@@ -2141,7 +2143,9 @@
     "last_admin_tip": "Una regione deve avere almeno un amministratore. Aggiungi un altro amministratore prima di rimuovere questo.",
     "leave_title": "Rimuoverti dagli amministratori di {region}?",
     "leave_body": "Non potrai più organizzare le gare della regione né occuparti dei suoi club. Solo un altro amministratore può aggiungerti di nuovo.",
-    "left_notice": "Non sei più amministratore di {region}."
+    "left_notice": "Non sei più amministratore di {region}.",
+    "intro_federation": "I club della tua regione e chi li gestisce. La tua federazione esamina le richieste di ruolo dei loro membri.",
+    "requests_federation": "La tua federazione esamina le richieste di ruolo dei membri dei tuoi club."
   },
   "claims": {
     "title": "Rivendicazioni",

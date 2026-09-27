@@ -117,12 +117,15 @@ async function loadClubAdminOf(pool, userId) {
   return r.rows;
 }
 
-// Regions this user admins, [{ id, name, short_code }]. Body-only like
-// club_admin_of, for the SPA's meet screens and region page.
+// Regions this user admins, [{ id, name, short_code, org_claim_state }].
+// Body-only like club_admin_of, for the SPA's meet screens and region page.
+// org_claim_state tells My region whether role requests come to it (only
+// where there's no federation, lib/role-requests.js).
 async function loadRegionAdminOf(pool, userId) {
   const r = await pool.query(
-    `SELECT rg.id, rg.name, rg.short_code
+    `SELECT rg.id, rg.name, rg.short_code, o.claim_state AS org_claim_state
        FROM region_admins ra JOIN regions rg ON rg.id = ra.region_id
+       JOIN organisations o ON o.id = rg.org_id
       WHERE ra.user_id = $1
       ORDER BY rg.name`,
     [userId],

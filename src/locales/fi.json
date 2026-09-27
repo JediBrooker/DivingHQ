@@ -659,7 +659,7 @@
         "desc": "Johdat seuraasi. Jos maasi liitto ei vielä ole DivingHQ:ssa, seura järjestää kilpailunsa itse: luo ne, ohjaa niitä <strong>Ohjaamosta</strong> ja hyväksy jäsenten roolipyynnöt. Liiton alaisuudessa liitto hyväksyy uuden seurasi ja voi nimetä sinut sen ylläpitäjäksi.",
         "step_1": "Rekisteröidy, valitse maasi ja luo seurasi; sinusta tulee sen ensimmäinen ylläpitäjä (liiton alaisuudessa, kun liitto on hyväksynyt seuran)",
         "step_2": "Avaa <strong>Kilpailun hallinta</strong> ja luo seurasi järjestämä kilpailu",
-        "step_3": "Hyväksy <strong>Oma seura</strong> -sivulla liittymistä pyytävät sekä jäsenet, jotka haluavat hypätä, tuomita tai valmentaa",
+        "step_3": "Missä liittoa ei vielä ole, hyväksy <strong>Oma seura</strong> -sivulla liittymistä pyytävät sekä jäsenet, jotka haluavat hypätä, tuomita tai valmentaa",
         "step_4": "Kilpailupäivänä ohjaat pisteytystä <strong>Ohjaamosta</strong>",
         "step_5": "Kun liittosi tai alueellinen elin liittyy, äänestä sen vaatimuksesta sivulla <strong>Vaatimukset</strong>",
         "cta": "Kilpailun järjestäminen ↗",
@@ -667,10 +667,10 @@
       },
       "region_admin": {
         "name": "Alueen ylläpitäjä",
-        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut, voit tarttua minkä tahansa sen seuran kilpailuihin ja hyväksyt seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut. Jos liittoa ei vielä ole, alueellinen elimesi ottaa alueen hoitaakseen ja lisäät muut ylläpitäjät itse. Osavaltion liitto voi hakea alueensa hallintaa kohdasta <strong>Rekisteröi organisaatio</strong>.",
+        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut ja voit tarttua minkä tahansa sen seuran kilpailuihin. Missä liittoa ei vielä ole, hyväksyt myös seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut. Jos liittoa ei vielä ole, alueellinen elimesi ottaa alueen hoitaakseen ja lisäät muut ylläpitäjät itse. Osavaltion liitto voi hakea alueensa hallintaa kohdasta <strong>Rekisteröi organisaatio</strong>.",
         "step_1": "Avaa <strong>Oma alue</strong> nähdäksesi seurasi ja niiden vetäjät",
         "step_2": "Luo mestaruuskilpailusi <strong>Kilpailun hallinnassa</strong> alueesi järjestämänä",
-        "step_3": "Hyväksy jäsenet, jotka haluavat hypätä, tuomita tai valmentaa, sekä seurat, jotka pyytävät liittymistä alueellesi",
+        "step_3": "Missä liittoa ei vielä ole, hyväksy jäsenet, jotka haluavat hypätä, tuomita tai valmentaa, sekä seurat, jotka pyytävät liittymistä alueellesi",
         "cta": "Kilpailun järjestäminen ↗"
       },
       "org_admin": {
@@ -2104,7 +2104,9 @@
     "admins_intro_meets": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut. Heillä ei ole liittotason oikeuksia.",
     "admins_intro_classes": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen ryhmistä. Heillä ei ole liittotason oikeuksia.",
     "admins_intro_payments": "Seuran ylläpitäjät vetävät seuransa järjestämät kilpailut ja huolehtivat sen tilityksistä ja jäsenmaksuista. Heillä ei ole liittotason oikeuksia.",
-    "last_admin_tip": "Seuralla on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän."
+    "last_admin_tip": "Seuralla on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän.",
+    "intro_federation": "Seurasi kutsulinkki, tunnus ja ylläpitäjät. Liittosi nimeää ylläpitäjät ja käsittelee jäsentesi roolipyynnöt.",
+    "requests_federation": "Liittosi käsittelee jäsentesi roolipyynnöt."
   },
   "regions": {
     "label": {
@@ -2141,7 +2143,9 @@
     "last_admin_tip": "Alueella on oltava vähintään yksi ylläpitäjä. Lisää toinen ylläpitäjä ennen kuin poistat tämän.",
     "leave_title": "Poistetaanko sinut alueen {region} ylläpitäjistä?",
     "leave_body": "Et voi enää järjestää alueen kilpailuja etkä hoitaa sen seuroja. Vain toinen ylläpitäjä voi lisätä sinut takaisin.",
-    "left_notice": "Et ole enää alueen {region} ylläpitäjä."
+    "left_notice": "Et ole enää alueen {region} ylläpitäjä.",
+    "intro_federation": "Alueesi seurat ja kuka niitä johtaa. Liittosi käsittelee niiden jäsenten roolipyynnöt.",
+    "requests_federation": "Liittosi käsittelee seurojesi jäsenten roolipyynnöt."
   },
   "claims": {
     "title": "Vaatimukset",
