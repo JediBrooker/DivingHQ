@@ -74,6 +74,28 @@ function parseCsv(text) {
   return rows.filter((r) => r.some((c) => c.trim() !== ""));
 }
 
+// Representation codes (migration 090) for everyone in event $1, one
+// event_rep_code() call per person. The function is plain SQL but it
+// can't be inlined, and each call probes events, meets and the entry
+// snapshot, so calling it per dive row (twice, with the partner) was
+// most of the roster and history cost. Partners are in here too.
+// Home is the person's own org country either way, which is what the
+// per-row calls passed, and a NULL partner simply doesn't join (the
+// function gave NULL for that as well). LEFT JOINs because the partner
+// side of the old calls was LEFT JOINed; `competitorsFrom` is the
+// table whose competitor_id column says who's in.
+function repCodesCte(competitorsFrom) {
+  return `reps AS MATERIALIZED (
+           SELECT x.id, event_rep_code($1, x.id, ro.country_code) AS code
+             FROM (SELECT competitor_id AS id FROM ${competitorsFrom} WHERE event_id = $1
+                   UNION
+                   SELECT partner_id FROM competitor_dive_lists
+                    WHERE event_id = $1 AND partner_id IS NOT NULL) x
+             LEFT JOIN users ru ON ru.id = x.id
+             LEFT JOIN organisations ro ON ro.id = ru.org_id
+         )`;
+}
+
 module.exports = function createControlRoomRouter({
   pool,
   requireOrgRole,
@@ -329,7 +351,8 @@ module.exports = function createControlRoomRouter({
        //      round_order skips them so spectators don't see
        //      "Diver 1 · Diver 3 · Diver 4" with no #2.
       const r = await pool.query(
-        `WITH ordered AS (
+        `WITH ${repCodesCte("competitor_dive_lists")},
+         ordered AS (
            SELECT cdl.id, cdl.event_id, cdl.competitor_id,
                   cdl.round_number, cdl.display_order, cdl.dive_id,
                   cdl.partner_id, cdl.team_id, cdl.withdrawn_at,
@@ -357,11 +380,11 @@ module.exports = function createControlRoomRouter({
                 /* Migration 090: the meet's representation code (country,
                    state or club) in the country slot. This row becomes the
                    set_active_diver payload, so the venue board and judge
-                   screens show it too. */
-                event_rep_code($1, u.id, o.country_code) AS country_code,
+                   screens show it too. Looked up once per person in reps. */
+                rc.code AS country_code,
                 cl.name AS club_name, cl.short_code AS club_code,
                 cdl.partner_id, pu.full_name AS partner_name,
-                event_rep_code($1, cdl.partner_id, po.country_code) AS partner_country,
+                rp.code AS partner_country,
                 cdl.team_id, t.name AS team_name, t.short_code AS team_code,
                 /* public_id + team_public_id used to be computed
                    inline with pgcrypto's digest() — but pgcrypto
@@ -406,8 +429,9 @@ module.exports = function createControlRoomRouter({
          JOIN events e ON e.id = cdl.event_id
          LEFT JOIN clubs cl ON cl.id = u.club_id
          LEFT JOIN users pu ON pu.id = cdl.partner_id
-         LEFT JOIN organisations po ON po.id = pu.org_id
          LEFT JOIN teams t ON t.id = cdl.team_id
+         LEFT JOIN reps rc ON rc.id = cdl.competitor_id
+         LEFT JOIN reps rp ON rp.id = cdl.partner_id
          WHERE cdl.event_id = $1
          ORDER BY cdl.round_number ASC,
                   t.name ASC NULLS LAST,
@@ -1831,14 +1855,18 @@ module.exports = function createControlRoomRouter({
     try {
       // Dive-by-dive scope: d.dd is a grouping column, so it
       // feeds the UDF directly (no MAX() wrapper).
+      // Rep codes come from the reps CTE, once per person rather than
+      // once per dive, since ControlViewV2 refetches this after every
+      // completed dive.
       const r = await pool.query(
-        `${perDiveSelect({
+        `WITH ${repCodesCte("scores")}
+         ${perDiveSelect({
           select: [
             `u.full_name AS "diverName"`,
-            "event_rep_code($1, s.competitor_id, o.country_code) AS country_code",
+            "rc.code AS country_code",
             "cl.name AS club_name", "cl.short_code AS club_code",
             "pu.full_name AS partner_name",
-            "event_rep_code($1, pu.id, po.country_code) AS partner_country",
+            "rp.code AS partner_country",
             "t.name AS team_name", "t.short_code AS team_code",
             "s.competitor_id", "s.event_id", "s.round_number",
             "d.dive_code", "d.position", "d.dd", "d.description",
@@ -1859,12 +1887,13 @@ module.exports = function createControlRoomRouter({
             "JOIN organisations o ON u.org_id = o.id",
             PUBLIC_CLUB_JOIN,
             "LEFT JOIN users pu ON pu.id = cdl.partner_id",
-            "LEFT JOIN organisations po ON po.id = pu.org_id",
             "LEFT JOIN teams t ON t.id = cdl.team_id",
+            "LEFT JOIN reps rc ON rc.id = s.competitor_id",
+            "LEFT JOIN reps rp ON rp.id = pu.id",
           ],
           groupBy: [
-            "u.full_name", "o.country_code", "cl.name", "cl.short_code",
-            "pu.id", "pu.full_name", "po.country_code", "t.name", "t.short_code",
+            "u.full_name", "rc.code", "cl.name", "cl.short_code",
+            "pu.id", "pu.full_name", "rp.code", "t.name", "t.short_code",
             "s.competitor_id", "s.event_id", "s.round_number",
             "d.dive_code", "d.position", "d.dd", "d.description",
           ],
