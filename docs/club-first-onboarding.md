@@ -1,6 +1,6 @@
 # Club-first onboarding — design
 
-> **Status:** draft for review. Nothing in this doc is built yet.
+> **Status:** Phase 1 built (see §14). Phases 2 to 4 are still design.
 > Author: Christian Brooker (with Claude). Last updated: 2026-09-27.
 
 ## 1. Problem
@@ -439,3 +439,55 @@ appoint club admins (`/api/clubs/:id/admins`).
   claims and is approved by vote; a nationals meet shows `NSW` labels.
 - **Unit**: eligibility and outcome functions pure, no DB, like
   `useScoreTrim`.
+
+## 14. Phase 1 as built
+
+Shipped in migration 087 and the commits after it. Where the build
+differs from the plan above, this section wins.
+
+**Signup.** `/register` asks for a country (`lib/countries.json`, shared
+with the server), then works out the org: none yet means an unclaimed
+country account is created (`resolveCountryOrg` in `routes/auth.js`,
+race-safe via the partial unique index), one means that org, several
+means the registrant picks. Founding a club in an unclaimed country makes
+you its club admin. Sysadmins get a `club_created` notification, not an
+approval step.
+
+*Deviation from §6.1:* under a claimed federation nothing changed. A new
+club is still created straight away with no approval step, and its
+founder does **not** become club admin (the federation appoints admins
+from Clubs → Admins). Club approval for federations is left for later.
+
+*Deviation from §6.3:* `/register-org` for a country that already has an
+unclaimed account is refused (`409 country_has_clubs`) until claims exist
+(phase 3). Until then a sysadmin hands the account over by hand.
+
+**Permissions.** One idea, used everywhere: a *delegate* for an event is
+someone with an `event_managers` row, or an admin of the club hosting the
+event's meet (`isEventDelegate` in `lib/middleware.js`).
+`requireEventManager`, `socketCanManageEvent` and the new
+`requireRoleOrEventDelegate` (Control Room, judge panel, conflicts,
+manual scores, late arrivals, score correction) all accept delegates.
+Meets go through `requireMeetEditorOrClubAdmin` + `isMeetHostAdmin`.
+Event create/delete accept the host club's admin. Club admins get this
+under a claimed federation too, but only for meets their club hosts.
+
+*Not yet club-scoped* (org roles only): teams, meet and event fees,
+international invitations, the audit log, and the 2FA requirement.
+
+**Role requests.** `lib/role-requests.js` decides who reviews: org admins
+under a federation; in an unclaimed country the requester's club admins
+(diver/judge/referee only, never self-approving an official role); the
+sysadmin as fallback. Club admins review on `/club` (My club), where in an
+unclaimed country they also manage co-admins (members only, never the
+last one).
+
+**Frontend.** `auth.clubAdminOf` / `auth.isClubAdmin` come from the login
+and `/api/auth/me` bodies (not the JWT). `useClubScope` narrows the
+Manager and Control Room to the user's own club's meets. The scheduler
+takes `can_edit` from the server. `/guide` has a Club Admin card.
+
+**Tests.** Integration: signup and the country race, two clubs' admins
+against each other, role-request routing and co-admins.
+e2e: `test/e2e/club-first-signup.spec.js`.
+

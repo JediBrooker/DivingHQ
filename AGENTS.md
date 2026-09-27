@@ -218,6 +218,18 @@ broadcast/overlay modes. `bootChecks()` loads flags before `listen()`, so a
 test that `require()`s `server.js` (only `integration.test.js` does) must call
 `features.load()` itself, everything reads fail-closed until it does.
 
+### Club-first orgs (migration 087)
+
+`organisations.claim_state` is `'claimed'` for a real federation and
+`'unclaimed'` for a country account clubs started themselves
+(`docs/club-first-onboarding.md`). An unclaimed org has **no org_admin**, so
+anything you gate on `org_admin` alone is unreachable there. Club admins
+(`club_admins` rows) run their own club's meets via the delegate helpers
+above. When you add a meet or event route, decide whether a club admin of
+the host club should pass, and use the shared helpers rather than a fresh
+`org_roles.includes` check. `club_admin_of` rides on the login and
+`/api/auth/me` bodies for the SPA; the server never trusts it.
+
 ### Schema migrations
 
 Every change goes in **two** places:
@@ -263,6 +275,12 @@ above it.
 | Judge analytics — one row per (judge, dive) with kept-mean + drop flags | `JUDGE_PER_DIVE` CTE | `db/queries.js` |
 | Instant tooltip (no native `title` lag) | `v-tip="…"` directive | `src/directives/tip.js` + `src/styles/app.css` |
 | Shared frontend tokens and primitives | Design-system guide | `docs/design-system.md` + `src/styles/app.css` |
+| "Does this person run this event?" (event_managers row, or admin of the club hosting its meet) | `isEventDelegate(eventId, userId)` | `lib/middleware.js` |
+| Role gate that also lets the event's delegates in | `requireRoleOrEventDelegate(roles, eventIdOf)` | `lib/middleware.js` |
+| Meet routes open to club admins (then pin with `isMeetHostAdmin`) | `requireMeetEditorOrClubAdmin` / server.js `requireMeetOrClubEditor` | `lib/middleware.js` |
+| Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForClubAdmin` / `clubAdminCanReview` / `reviewersFor` | `lib/role-requests.js` |
+| Narrow a meet screen to a club admin's own meets | `useClubScope()` | `src/composables/useClubScope.js` |
+| ISO country list (server validation + signup picker) | `countryByCode(a3)` / `countries.json` | `lib/countries.js` |
 
 If you write the third copy of any of these, **stop and consolidate** into
 a helper. The repo has bled time on duplicated patterns.
