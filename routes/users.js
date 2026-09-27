@@ -584,6 +584,26 @@ module.exports = function createUsersRouter({
       // (section 7) promises these go with the account.
       await client.query("DELETE FROM club_admins WHERE user_id = $1", [req.user.id]);
       await client.query("DELETE FROM region_admins WHERE user_id = $1", [req.user.id]);
+      // A claim still being decided goes too. Left live, the clubs could
+      // vote it through (or DivingHQ approve it) and applyApproval would
+      // hand org_admin to an account nobody can sign in to, leaving the
+      // country "claimed" with no one to run it. Withdrawn also frees the
+      // one-live-claim slot so the body can apply again from a real account.
+      await client.query(
+        `UPDATE claims SET status = 'withdrawn', status_reason = 'The applicant deleted their account'
+          WHERE claimant_id = $1 AND status IN ('open', 'escalated')`,
+        [req.user.id],
+      );
+      // Guardian links (parent pays for a child) are a link to another
+      // person as well. Revoked rather than deleted, the same way a club
+      // transfer ends them (routes/club-changes.js), so payment history
+      // that points at the link still makes sense.
+      await client.query(
+        `UPDATE guardians SET status = 'revoked', reviewed_by = $1, reviewed_at = now()
+          WHERE (guardian_user_id = $1 OR dependent_user_id = $1)
+            AND status IN ('pending', 'approved')`,
+        [req.user.id],
+      );
 
       // Audit. Best-effort, recordAudit swallows its own errors.
       // metadata carries summary counts but never any PII, the

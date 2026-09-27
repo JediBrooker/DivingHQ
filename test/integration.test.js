@@ -1821,3 +1821,56 @@ test("support email: suspended sessions and merge conflicts say who to ask", asy
     await claimKit.wipe(CODE);
   }
 });
+
+// Deleting an account while a claim of yours is still being decided. The
+// claim used to stay live: the clubs (or DivingHQ) could still approve it and
+// hand org_admin to an account nobody can sign in to, leaving the country
+// "claimed" with no one running it. Guardian links, the other tie to another
+// person the deletion missed, get ended as well. Northern Mariana Islands,
+// which no other test file uses.
+test("account deletion withdraws a live claim and ends guardian links", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MNP";
+  const claimsLib = require("../lib/claims");
+  await claimKit.wipe(CODE);
+  try {
+    const club = await claimKit.founder(CODE, "Saipan Divers");
+    const fed = await claimKit.claim({ org_name: "Marianas Diving Federation", country_code: CODE });
+    assert.equal(fed.res.status, 201, JSON.stringify(fed.res.body));
+    const claimId = fed.res.body.claim_id;
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [fed.id]);
+    // Parked with DivingHQ, the state where a sysadmin could still approve it.
+    await pool.query("UPDATE claims SET status = 'escalated' WHERE id = $1", [claimId]);
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [fed.id])).rows[0].org_id;
+    const link = (await pool.query(
+      `INSERT INTO guardians (org_id, guardian_user_id, dependent_user_id, status)
+       VALUES ($1, $2, $3, 'approved') RETURNING id`,
+      [orgId, fed.id, club.id],
+    )).rows[0].id;
+
+    const login = await claimKit.login(fed.username);
+    assert.ok(login.token, JSON.stringify(login));
+    const del = await fetchJson("POST", "/api/users/me/delete", { token: login.token, body: { password: TEST_PASSWORD } });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+
+    const claim = (await pool.query("SELECT status, status_reason FROM claims WHERE id = $1", [claimId])).rows[0];
+    assert.equal(claim.status, "withdrawn");
+    assert.match(claim.status_reason, /deleted their account/);
+    const g = (await pool.query("SELECT status FROM guardians WHERE id = $1", [link])).rows[0];
+    assert.equal(g.status, "revoked");
+
+    // A sysadmin can't approve it any more...
+    await assert.rejects(
+      claimsLib.decide(pool, { claimId, user: { is_system_admin: true, id: null }, decision: "approve" }, {}),
+      (err) => err.status === 409,
+    );
+    const org = (await pool.query("SELECT claim_state FROM organisations WHERE id = $1", [orgId])).rows[0];
+    assert.equal(org.claim_state, "unclaimed");
+    // ...and the country is free for the body to apply again properly.
+    const again = await claimKit.claim({ org_name: "Marianas Diving Federation", country_code: CODE });
+    assert.equal(again.res.status, 201, JSON.stringify(again.res.body));
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
