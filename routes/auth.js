@@ -1201,6 +1201,11 @@ module.exports = function createAuthRouter({
             website: safeText(website, 255),
           });
           await client.query("COMMIT");
+          // Whoever held an unverified claim on the same target hears it
+          // was replaced. Awaited like verify-email's notices, but a failed
+          // send doesn't undo a claim that's already committed.
+          await claims.deliver({ push, email: { sendClaimEmail } }, claim.notices)
+            .catch((err) => console.error("[Claim Notice Error]", err.message));
 
           // The claim goes live (and voters hear about it) when this link
           // is clicked, see the verify-email handler.

@@ -1133,11 +1133,13 @@ const claimKit = {
     )).rows[0];
     await pool.query("INSERT INTO meets (org_id, name, host_club_id) VALUES ($1, 'Club night', $2)", [c.org_id, clubId]);
   },
+  // The body's own domain, not the founders' example.test: a voter whose
+  // email shares the claimant's organisation domain loses their vote.
   async claim(body) {
     const username = `int-cf-${crypto.randomBytes(4).toString("hex")}`;
     const r = await fetchJson("POST", "/api/auth/register-org", {
       body: { slug: `claim-${crypto.randomBytes(3).toString("hex")}`, username, password: TEST_PASSWORD,
-              full_name: "Claimant", email: `${username}@example.test`, ...body },
+              full_name: "Claimant", email: `${username}@claimant.example.org`, ...body },
     });
     const id = (await pool.query("SELECT id FROM users WHERE username = $1", [username])).rows[0]?.id;
     return { res: r, username, id };
@@ -1308,13 +1310,15 @@ test("claims: the sweep resolves expired votes and drops unverified claims", asy
     const fed = await claimKit.claim({ org_name: "Norfolk Island Diving", country_code: CODE });
     await claimKit.verify(fed.id);
     const id = fed.res.body.claim_id;
-    // One approval of three isn't enough to pass on the spot...
+    // One approval of three isn't enough to pass on the spot, and a
+    // quiet window doesn't make it enough: it goes to the sysadmin.
     await fetchJson("POST", `/api/claims/${id}/vote`, { token: A.token, body: { vote: "approve" } });
-    // ...but when the window closes with no objections, it passes.
     await pool.query("UPDATE claims SET closes_at = now() - interval '1 minute' WHERE id = $1", [id]);
     const r = await sweepOnce({ pool });
     assert.ok(r.resolved >= 1);
-    assert.equal((await pool.query("SELECT status FROM claims WHERE id = $1", [id])).rows[0].status, "approved");
+    const swept = (await pool.query("SELECT status, status_reason FROM claims WHERE id = $1", [id])).rows[0];
+    assert.equal(swept.status, "escalated");
+    assert.match(swept.status_reason, /1 of 3 approving, short of the 2 needed/);
 
     // A claim nobody verified in a week is withdrawn.
     const stale = await pool.query(
@@ -1482,12 +1486,17 @@ test("claims: voters, claimant and clubs get the right emails", async (t) => {
     assert.deepEqual(toClubs.userIds, [A.id, B.id].sort());
     assert.match(toClubs.subject, /Cook Islands Aquatics now runs Cook Islands/);
 
-    // Revoking tells the claimant, with the reason.
+    // Revoking tells the claimant, with the reason, and the clubs that
+    // were told who runs things now (without it).
     sent.length = 0;
     await claimsLib.revoke(pool, { claimId: id, user: { is_system_admin: true, id: null }, reason: "Duplicate body" }, deps);
-    assert.equal(sent.length, 1);
-    assert.deepEqual(sent[0].userIds, [fed.id]);
-    assert.match(sent[0].body, /Duplicate body/);
+    const revokedMail = sent.find((m) => m.userIds.includes(fed.id));
+    assert.deepEqual(revokedMail.userIds, [fed.id]);
+    assert.match(revokedMail.body, /Duplicate body/);
+    const clubsMail = sent.find((m) => !m.userIds.includes(fed.id));
+    assert.deepEqual(clubsMail.userIds, [A.id, B.id].sort());
+    assert.match(clubsMail.subject, /no longer runs Cook Islands/);
+    assert.doesNotMatch(clubsMail.body, /Duplicate body/);
 
     // A fresh claim that a club objects to: the sysadmin's email carries
     // the objection so they can decide from the inbox.
@@ -1573,5 +1582,589 @@ test("email verification: the link signs you in, a lost one can be resent", asyn
   } finally {
     await claimKit.wipe(CODE);
     await claimKit.wipe("FSM");
+  }
+});
+
+// ---------------------------------------------------------------------
+// Claims hardening (migration 092).
+// ---------------------------------------------------------------------
+
+// Stands in for push + email when a test drives lib/claims directly.
+function claimInbox() {
+  const mail = [];
+  const inApp = [];
+  return {
+    mail,
+    inApp,
+    deps: {
+      email: { sendClaimEmail: async (userIds, msg) => { mail.push({ userIds: [...userIds].sort(), ...msg }); } },
+      push: { sendNotification: async (userIds, p) => { inApp.push({ userIds: [...userIds].sort(), ...p }); } },
+    },
+    mailTo(id, re) { return mail.find((m) => m.userIds.includes(id) && (!re || re.test(m.subject))); },
+    inAppTo(id, re) { return inApp.find((m) => m.userIds.includes(id) && (!re || re.test(m.title))); },
+    clear() { mail.length = 0; inApp.length = 0; },
+  };
+}
+
+// The shape lib/claims wants for req.user, read fresh from the row.
+async function claimActor(id) {
+  const u = (await pool.query("SELECT id, org_id, is_system_admin FROM users WHERE id = $1", [id])).rows[0];
+  const roles = (await pool.query("SELECT role::text AS role FROM user_org_roles WHERE user_id = $1 AND org_id = $2", [id, u.org_id])).rows;
+  return { id: u.id, org_id: u.org_id, is_system_admin: u.is_system_admin, org_roles: roles.map((r) => r.role) };
+}
+
+async function claimSysadmin() {
+  const id = (await pool.query("SELECT id FROM users WHERE is_system_admin ORDER BY created_at LIMIT 1")).rows[0]?.id;
+  return id ? { id, org_id: null, is_system_admin: true, org_roles: [] } : null;
+}
+
+const claimStatus = async (id) => (await pool.query("SELECT status, status_reason, activated_at FROM claims WHERE id = $1", [id])).rows[0];
+
+test("claims: a club admin's second account can't vote its own claim through", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "SHN";
+  await claimKit.wipe(CODE);
+  try {
+    const tag = crypto.randomBytes(4).toString("hex");
+    const A = await claimKit.founder(CODE, "Jamestown Divers");
+    const B = await claimKit.founder(CODE, "Longwood Divers");
+    const C = await claimKit.founder(CODE, "Half Tree Hollow Divers");
+    const D = await claimKit.founder(CODE, "Levelwood Divers");
+    for (const x of [A, B, C, D]) await claimKit.makeEligible(x.clubId);
+    // A runs a club from Gmail. B works for the body. D is on Gmail too,
+    // a different mailbox, which says nothing about who they are.
+    await pool.query("UPDATE users SET email = $2 WHERE id = $1", [A.id, `sh.boss.${tag}@gmail.com`]);
+    await pool.query("UPDATE users SET email = $2 WHERE id = $1", [B.id, `coach-${tag}@shdiving-${tag}.example.org`]);
+    await pool.query("UPDATE users SET email = $2 WHERE id = $1", [D.id, `someone.else.${tag}@gmail.com`]);
+    const voters = async (claimId) => (await pool.query(
+      "SELECT voter_id FROM claim_voters WHERE claim_id = $1", [claimId],
+    )).rows.map((r) => r.voter_id).sort();
+
+    // A opens a claim under the same mailbox, spelt differently: their
+    // own club doesn't get a vote on it.
+    const sock = await claimKit.claim({ org_name: "St Helena Diving", country_code: CODE, email: `shboss${tag}+fed@googlemail.com` });
+    assert.equal(sock.res.status, 201, JSON.stringify(sock.res.body));
+    assert.equal(sock.res.body.approver, "clubs");
+    assert.deepEqual(await voters(sock.res.body.claim_id), [B.clubId, C.clubId, D.clubId].sort());
+
+    // The body itself registers from its own domain (a subdomain of B's).
+    // That replaces the unverified one, and B's club sits this one out.
+    const fed = await claimKit.claim({ org_name: "St Helena Diving", country_code: CODE, email: `office-${tag}@mail.shdiving-${tag}.example.org` });
+    assert.equal(fed.res.status, 201, JSON.stringify(fed.res.body));
+    const id = fed.res.body.claim_id;
+    assert.deepEqual(await voters(id), [A.clubId, C.clubId, D.clubId].sort());
+    const opened = (await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'claim.opened'", [id],
+    )).rows[0].metadata;
+    assert.equal(opened.excluded_voters, 1);
+    assert.deepEqual(opened.replaced, [sock.res.body.claim_id]);
+    assert.equal((await claimStatus(sock.res.body.claim_id)).status, "withdrawn");
+
+    // B gets made an admin of a voting club after the snapshot: the same
+    // test runs when the vote is cast.
+    await claimKit.verify(fed.id);
+    await pool.query(
+      "INSERT INTO club_admins (club_id, user_id, org_id) SELECT id, $2, org_id FROM clubs WHERE id = $1",
+      [C.clubId, B.id],
+    );
+    const v = await fetchJson("POST", `/api/claims/${id}/vote`, { token: B.token, body: { vote: "approve", voter_id: C.clubId } });
+    assert.equal(v.status, 403, JSON.stringify(v.body));
+    assert.match(v.body.error, /matches the claimant/);
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM claim_votes WHERE claim_id = $1", [id])).rows[0].n, 0);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("claims: revoking a national claim takes back everything handed out under it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "SPM";
+  await claimKit.wipe(CODE);
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+    const A = await claimKit.founder(CODE, "Saint-Pierre Plongeon");
+    const B = await claimKit.founder(CODE, "Miquelon Plongeon");
+    const C = await claimKit.founder(CODE, "Langlade Plongeon");
+    for (const x of [A, B]) await claimKit.makeEligible(x.clubId);
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const region = async (name, code) => (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, $2, $3) RETURNING id", [orgId, name, code],
+    )).rows[0].id;
+    const north = await region("Nord", "NRD");
+    const south = await region("Sud", "SUD");
+    // Someone already looked after the south before any claim: that stays.
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [south, C.id, orgId]);
+
+    const fed = await claimKit.claim({ org_name: "Fédération de Plongeon SPM", country_code: CODE });
+    assert.equal(fed.res.body.approver, "clubs");
+    await claimKit.verify(fed.id);
+    const id = fed.res.body.claim_id;
+    for (const x of [A, B]) await fetchJson("POST", `/api/claims/${id}/vote`, { token: x.token, body: { vote: "approve" } });
+    assert.equal((await claimStatus(id)).status, "approved");
+
+    // While it runs the country, the federation hands out access.
+    const fedToken = (await claimKit.login(fed.username)).token;
+    const put = async (userId, roles) => (await fetchJson("PUT", `/api/users/${userId}/roles`, { token: fedToken, body: { roles } })).status;
+    assert.equal(await put(C.id, ["org_admin", "meet_manager", "spectator"]), 200);
+    assert.equal(await put(A.id, ["meet_manager", "spectator"]), 200);
+    assert.equal((await fetchJson("POST", `/api/clubs/${A.clubId}/admins`, { token: fedToken, body: { user_id: C.id } })).status, 201);
+    assert.equal((await fetchJson("POST", `/api/regions/${north}/admins`, { token: fedToken, body: { user_id: B.id } })).status, 201);
+    // ...and approves a state body.
+    const state = await claimKit.claim({ org_name: "Plongeon du Nord", country_code: CODE, region_code: "NRD" });
+    assert.equal(state.res.body.approver, "parent");
+    await claimKit.verify(state.id);
+    assert.equal((await fetchJson("POST", `/api/claims/${state.res.body.claim_id}/decide`, { token: fedToken, body: { decision: "approve" } })).status, 200);
+    // ...and has another waiting on its decision.
+    const waiting = await claimKit.claim({ org_name: "Plongeon du Sud", country_code: CODE, region_code: "SUD" });
+    assert.equal(waiting.res.body.approver, "parent");
+    await claimKit.verify(waiting.id);
+
+    const everyone = [fed.id, A.id, B.id, C.id, state.id];
+    const versions = async () => Object.fromEntries((await pool.query(
+      "SELECT id, token_version FROM users WHERE id = ANY($1::uuid[])", [everyone],
+    )).rows.map((r) => [r.id, r.token_version]));
+    const before = await versions();
+
+    const rv = await fetchJson("POST", `/api/claims/${id}/revoke`, { token: sys.token, body: { reason: "Not the federation" } });
+    assert.equal(rv.status, 200, JSON.stringify(rv.body));
+
+    // Unclaimed again means nobody holds org-wide power.
+    const orgRow = (await pool.query("SELECT claim_state, name FROM organisations WHERE id = $1", [orgId])).rows[0];
+    assert.deepEqual(orgRow, { claim_state: "unclaimed", name: "St. Pierre & Miquelon" });
+    assert.equal((await pool.query(
+      "SELECT count(*)::int AS n FROM user_org_roles WHERE org_id = $1 AND role IN ('org_admin', 'meet_manager')", [orgId],
+    )).rows[0].n, 0);
+    // Founders keep their own clubs; the admin the federation added goes.
+    const clubAdmins = (await pool.query(
+      "SELECT club_id, user_id FROM club_admins WHERE org_id = $1", [orgId],
+    )).rows.map((r) => `${r.club_id}:${r.user_id}`).sort();
+    assert.deepEqual(clubAdmins, [`${A.clubId}:${A.id}`, `${B.clubId}:${B.id}`, `${C.clubId}:${C.id}`].sort());
+    // Region admins from before the claim stay, the rest go, and so does
+    // the state body the federation approved.
+    const regionAdmins = (await pool.query("SELECT region_id, user_id FROM region_admins WHERE org_id = $1", [orgId])).rows;
+    assert.deepEqual(regionAdmins, [{ region_id: south, user_id: C.id }]);
+    assert.deepEqual((await pool.query("SELECT claim_state, claimed_name FROM regions WHERE id = $1", [north])).rows[0],
+      { claim_state: "unclaimed", claimed_name: null });
+    assert.equal((await claimStatus(state.res.body.claim_id)).status, "revoked");
+    // The one still waiting on the federation goes to DivingHQ instead.
+    const orphan = await claimStatus(waiting.res.body.claim_id);
+    assert.equal(orphan.status, "escalated");
+    assert.match(orphan.status_reason, /no longer runs the country/);
+    // Everyone who lost something signs in again.
+    const after = await versions();
+    for (const u of everyone) assert.ok(after[u] > before[u], `token_version bumped for ${u}`);
+    // Nobody is left with no role at all.
+    for (const u of [fed.id, C.id]) {
+      assert.ok((await pool.query("SELECT 1 FROM user_org_roles WHERE user_id = $1 AND org_id = $2", [u, orgId])).rows.length);
+    }
+
+    // The response and the audit log both say what went.
+    const pairs = (rows, key) => rows.map((r) => `${r.user_id}:${r[key]}`).sort();
+    const removed = rv.body.removed;
+    assert.deepEqual(pairs(removed.org_roles, "role"),
+      [`${fed.id}:org_admin`, `${C.id}:org_admin`, `${C.id}:meet_manager`, `${A.id}:meet_manager`].sort());
+    assert.deepEqual(pairs(removed.club_admins, "club_id"), [`${C.id}:${A.clubId}`]);
+    assert.deepEqual(pairs(removed.region_admins, "region_id"), [`${B.id}:${north}`, `${state.id}:${north}`].sort());
+    assert.deepEqual(removed.region_claims.map((r) => r.id), [state.res.body.claim_id]);
+    assert.ok(removed.org_roles.every((r) => r.full_name), "names come back for the sysadmin to read");
+    const audit = (await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'claim.revoked'", [id],
+    )).rows[0].metadata;
+    assert.equal(audit.reason, "Not the federation");
+    assert.equal(audit.removed.org_roles.length, 4);
+    assert.deepEqual(audit.removed.region_claims, [state.res.body.claim_id]);
+
+    // The appointees and the state body hear about it (in-app, real push).
+    const noticed = async (userId) => (await pool.query(
+      "SELECT title FROM notifications WHERE user_id = $1 AND data->>'claim_id' IS NOT NULL ORDER BY created_at", [userId],
+    )).rows.map((r) => r.title);
+    assert.ok((await noticed(C.id)).some((x) => /Your access in St\. Pierre & Miquelon has changed/.test(x)));
+    assert.ok((await noticed(state.id)).some((x) => /Your claim on Nord .* was revoked/.test(x)));
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("claims: revoking a region claim resets its admins, and nobody decides a claim before it's verified", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "WLF";
+  await claimKit.wipe(CODE);
+  const fedFx = await setupFixture({ withEvent: false });
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+    await pool.query("UPDATE organisations SET country_code = $2 WHERE id = $1", [fedFx.orgId, CODE]);
+    const uvea = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Uvea', 'UV') RETURNING id", [fedFx.orgId],
+    )).rows[0].id;
+    const early = await insertUser({ orgId: fedFx.orgId, role: "spectator", username: `int-early-${crypto.randomBytes(3).toString("hex")}`, fullName: "Early Admin" });
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [uvea, early, fedFx.orgId]);
+
+    const body = await claimKit.claim({ org_name: "Uvea Diving", country_code: CODE, region_code: "UV" });
+    assert.equal(body.res.body.approver, "parent");
+    const id = body.res.body.claim_id;
+
+    // Not verified yet: neither the federation nor the sysadmin can decide it.
+    for (const token of [fedFx.adminToken, sys.token]) {
+      const early409 = await fetchJson("POST", `/api/claims/${id}/decide`, { token, body: { decision: "approve" } });
+      assert.equal(early409.status, 409, JSON.stringify(early409.body));
+      assert.equal(early409.body.code, "claim_not_live");
+    }
+    const sysView = (await fetchJson("GET", "/api/claims", { token: sys.token })).body.find((c) => c.id === id);
+    assert.equal(sysView.can_decide, false);
+    assert.equal((await pool.query("SELECT claim_state FROM regions WHERE id = $1", [uvea])).rows[0].claim_state, "unclaimed");
+
+    await claimKit.verify(body.id);
+    assert.equal((await fetchJson("POST", `/api/claims/${id}/decide`, { token: fedFx.adminToken, body: { decision: "approve" } })).status, 200);
+    const later = await insertUser({ orgId: fedFx.orgId, role: "spectator", username: `int-later-${crypto.randomBytes(3).toString("hex")}`, fullName: "Later Admin" });
+    assert.equal((await fetchJson("POST", `/api/regions/${uvea}/admins`, { token: fedFx.adminToken, body: { user_id: later } })).status, 201);
+
+    const rv = await fetchJson("POST", `/api/claims/${id}/revoke`, { token: sys.token, body: {} });
+    assert.equal(rv.status, 200, JSON.stringify(rv.body));
+    assert.deepEqual(rv.body.removed.region_admins.map((r) => r.user_id).sort(), [body.id, later].sort());
+    assert.deepEqual(rv.body.removed.org_roles, [], "a region claim leaves the federation alone");
+    assert.deepEqual((await pool.query("SELECT user_id FROM region_admins WHERE region_id = $1", [uvea])).rows, [{ user_id: early }]);
+    assert.equal((await pool.query("SELECT claim_state FROM regions WHERE id = $1", [uvea])).rows[0].claim_state, "unclaimed");
+    // The federation above it is told.
+    const fedNotes = (await pool.query(
+      "SELECT title FROM notifications WHERE user_id = $1 AND data->>'claim_id' = $2", [fedFx.adminId, id],
+    )).rows.map((r) => r.title);
+    assert.ok(fedNotes.some((x) => /Uvea Diving no longer runs Uvea/.test(x)), JSON.stringify(fedNotes));
+  } finally {
+    await pool.query("DELETE FROM claims WHERE org_id = $1", [fedFx.orgId]).catch(() => {});
+    await teardownFixture(fedFx);
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("claims: an unverified claim doesn't hold its target, and only one claim goes live", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "AIA";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "The Valley Divers");
+    const B = await claimKit.founder(CODE, "Sandy Ground Divers");
+    for (const x of [A, B]) await claimKit.makeEligible(x.clubId);
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+
+    // A typo'd (or throwaway) claim nobody verifies doesn't block the next.
+    const first = await claimKit.claim({ org_name: "Anguilla Diving", country_code: CODE });
+    const second = await claimKit.claim({ org_name: "Anguilla Aquatics", country_code: CODE });
+    assert.equal(second.res.status, 201, JSON.stringify(second.res.body));
+    const replaced = await claimStatus(first.res.body.claim_id);
+    assert.equal(replaced.status, "withdrawn");
+    assert.match(replaced.status_reason, /newer claim/);
+    // Its claimant is told, and can still see it once they sign in.
+    const firstNote = (await pool.query("SELECT title FROM notifications WHERE user_id = $1", [first.id])).rows;
+    assert.ok(firstNote.some((n) => /Your claim on Anguilla was withdrawn/.test(n.title)), JSON.stringify(firstNote));
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [first.id]);
+    const mine = (await fetchJson("GET", "/api/claims", { token: (await claimKit.login(first.username)).token })).body;
+    assert.equal(mine.length, 1);
+    assert.equal(mine[0].status, "withdrawn");
+    assert.match(mine[0].status_reason, /newer claim/);
+    // ...but voters never saw it, and still don't.
+    assert.equal((await fetchJson("GET", "/api/claims", { token: A.token })).body.length, 0);
+
+    // Two unverified claims at once (one slipped in while the other was
+    // being opened): whichever verifies first goes live, the other is
+    // withdrawn when it verifies, and told.
+    const racer = await insertUser({ orgId, role: "spectator", username: `int-racer-${crypto.randomBytes(3).toString("hex")}`, fullName: "Racer" });
+    const racing = (await pool.query(
+      `INSERT INTO claims (target_kind, target_id, org_id, claimant_id, body_name, approver)
+       VALUES ('org', $1, $1, $2, 'Racing Body', 'sysadmin') RETURNING id`, [orgId, racer],
+    )).rows[0].id;
+    await claimKit.verify(second.id);
+    assert.ok((await claimStatus(second.res.body.claim_id)).activated_at);
+    await claimKit.verify(racer);
+    const lost = await claimStatus(racing);
+    assert.equal(lost.status, "withdrawn");
+    assert.match(lost.status_reason, /went live first/);
+    assert.equal(lost.activated_at, null);
+    assert.ok((await pool.query("SELECT 1 FROM notifications WHERE user_id = $1 AND title LIKE 'Your claim on % was withdrawn'", [racer])).rows.length);
+
+    // With one live, a new claim is still refused.
+    const third = await claimKit.claim({ org_name: "Rival Body", country_code: CODE });
+    assert.equal(third.res.status, 409);
+    assert.equal(third.res.body.code, "claim_in_progress");
+
+    // A pending claim can't outlive the approval of another one.
+    const late = await insertUser({ orgId, role: "spectator", username: `int-late-${crypto.randomBytes(3).toString("hex")}`, fullName: "Late" });
+    const lateClaim = (await pool.query(
+      `INSERT INTO claims (target_kind, target_id, org_id, claimant_id, body_name, approver)
+       VALUES ('org', $1, $1, $2, 'Late Body', 'sysadmin') RETURNING id`, [orgId, late],
+    )).rows[0].id;
+    for (const x of [A, B]) await fetchJson("POST", `/api/claims/${second.res.body.claim_id}/vote`, { token: x.token, body: { vote: "approve" } });
+    assert.equal((await claimStatus(second.res.body.claim_id)).status, "approved");
+    const gone = await claimStatus(lateClaim);
+    assert.equal(gone.status, "withdrawn");
+    assert.match(gone.status_reason, /already has its body/);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("claims: a deleted or suspended claimant is never approved", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const claimsLib = require("../lib/claims");
+  const CODE = "MSR";
+  await claimKit.wipe(CODE);
+  try {
+    const sys = await claimSysadmin();
+    if (!sys) return t.skip("no sysadmin in this DB");
+    const A = await claimKit.founder(CODE, "Brades Divers");
+    const B = await claimKit.founder(CODE, "Little Bay Divers");
+    const C = await claimKit.founder(CODE, "Salem Divers");
+    for (const x of [A, B, C]) await claimKit.makeEligible(x.clubId);
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const inbox = claimInbox();
+
+    // Suspended mid-vote: the vote that would pass it escalates instead.
+    const fed = await claimKit.claim({ org_name: "Montserrat Diving", country_code: CODE });
+    await claimKit.verify(fed.id);
+    const id = fed.res.body.claim_id;
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [fed.id]);
+    await claimsLib.castVote(pool, { claimId: id, user: await claimActor(A.id), vote: "approve" }, inbox.deps);
+    assert.equal(await claimsLib.castVote(pool, { claimId: id, user: await claimActor(B.id), vote: "approve" }, inbox.deps), "escalated");
+    assert.match((await claimStatus(id)).status_reason, /suspended/);
+    // The sysadmin can't approve past it either; nothing changes.
+    await assert.rejects(
+      claimsLib.decide(pool, { claimId: id, user: sys, decision: "approve" }, inbox.deps),
+      (err) => err.status === 409 && err.code === "claimant_suspended",
+    );
+    assert.equal((await claimStatus(id)).status, "escalated");
+    // Deleted instead: approving withdraws it, and says so.
+    await pool.query("UPDATE users SET suspended_at = NULL, deleted_at = now() WHERE id = $1", [fed.id]);
+    await assert.rejects(
+      claimsLib.decide(pool, { claimId: id, user: sys, decision: "approve" }, inbox.deps),
+      (err) => err.status === 409 && err.code === "claimant_gone",
+    );
+    assert.equal((await claimStatus(id)).status, "withdrawn");
+    assert.equal((await pool.query("SELECT claim_state FROM organisations WHERE id = $1", [orgId])).rows[0].claim_state, "unclaimed");
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM user_org_roles WHERE org_id = $1 AND role = 'org_admin'", [orgId])).rows[0].n, 0);
+
+    // Deleting your account through the API withdraws your claim in the
+    // same breath.
+    const fed2 = await claimKit.claim({ org_name: "Montserrat Aquatics", country_code: CODE });
+    await claimKit.verify(fed2.id);
+    const fed2Token = (await claimKit.login(fed2.username)).token;
+    const del = await fetchJson("POST", "/api/users/me/delete", { token: fed2Token, body: { password: TEST_PASSWORD } });
+    assert.equal(del.status, 200, JSON.stringify(del.body));
+    const w = await claimStatus(fed2.res.body.claim_id);
+    assert.equal(w.status, "withdrawn");
+    assert.match(w.status_reason, /deleted their account/);
+
+    // ...and a club founder's (or region admin's) authority goes with them.
+    const plymouth = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Plymouth', 'PLY') RETURNING id", [orgId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [plymouth, C.id, orgId]);
+    const delC = await fetchJson("POST", "/api/users/me/delete", { token: C.token, body: { password: TEST_PASSWORD } });
+    assert.equal(delC.status, 200, JSON.stringify(delC.body));
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM club_admins WHERE user_id = $1", [C.id])).rows[0].n, 0);
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM region_admins WHERE user_id = $1", [C.id])).rows[0].n, 0);
+    const deleted = (await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'user.self_delete'", [C.id],
+    )).rows[0].metadata;
+    assert.equal(deleted.club_admin_rows_removed, 1);
+    assert.equal(deleted.region_admin_rows_removed, 1);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("claims: the sweep tells unverified claimants, and passes only a real majority", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { sweepOnce } = require("../lib/claims");
+  const CODE = "FLK";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Stanley Divers");
+    const B = await claimKit.founder(CODE, "Goose Green Divers");
+    const C = await claimKit.founder(CODE, "Fox Bay Divers");
+    for (const x of [A, B, C]) await claimKit.makeEligible(x.clubId);
+    const inbox = claimInbox();
+    const expire = (id) => pool.query("UPDATE claims SET closes_at = now() - interval '1 minute' WHERE id = $1", [id]);
+    // Approvals that are on record but were never counted, as if the
+    // bar had been lowered since the votes came in.
+    const recordVotes = (id, voters) => pool.query(
+      `INSERT INTO claim_votes (claim_id, voter_kind, voter_id, user_id, vote)
+       SELECT $1, 'club', x.club_id, x.user_id, 'approve'
+         FROM unnest($2::uuid[], $3::uuid[]) AS x(club_id, user_id)`,
+      [id, voters.map((v) => v.clubId), voters.map((v) => v.id)],
+    );
+
+    // A week unverified: withdrawn, and the claimant hears in-app and by email.
+    const stale = await claimKit.claim({ org_name: "Falklands Diving", country_code: CODE });
+    await pool.query("UPDATE claims SET created_at = now() - interval '8 days' WHERE id = $1", [stale.res.body.claim_id]);
+    const r1 = await sweepOnce({ pool, ...inbox.deps });
+    assert.ok(r1.withdrawn >= 1);
+    assert.match((await claimStatus(stale.res.body.claim_id)).status_reason, /verified within a week/);
+    assert.ok(inbox.mailTo(stale.id, /Your claim on Falkland Islands was withdrawn/), JSON.stringify(inbox.mail));
+    assert.ok(inbox.inAppTo(stale.id, /was withdrawn/));
+
+    // Enough approvals, but the claimant has since gone: withdrawn, never approved.
+    const gone = await claimKit.claim({ org_name: "Falklands Aquatics", country_code: CODE });
+    await claimKit.verify(gone.id);
+    await recordVotes(gone.res.body.claim_id, [A, B]);
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [gone.id]);
+    await expire(gone.res.body.claim_id);
+    await sweepOnce({ pool, ...inbox.deps });
+    assert.equal((await claimStatus(gone.res.body.claim_id)).status, "withdrawn");
+
+    // Two of three approving clears the bar, so the sweep passes it.
+    inbox.clear();
+    const fed = await claimKit.claim({ org_name: "Falkland Islands Diving Association", country_code: CODE });
+    await claimKit.verify(fed.id);
+    await recordVotes(fed.res.body.claim_id, [A, B]);
+    await expire(fed.res.body.claim_id);
+    await sweepOnce({ pool, ...inbox.deps });
+    assert.equal((await claimStatus(fed.res.body.claim_id)).status, "approved");
+    assert.match(inbox.mailTo(A.id, /now runs/).body, /The clubs voted it through/);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("claims: outcome notices reach voters, the federation and the claimant with the right words", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const claimsLib = require("../lib/claims");
+  const CODE = "MYT";
+  const FED_CODE = "PCN";
+  await claimKit.wipe(CODE);
+  await claimKit.wipe(FED_CODE);
+  const fedFx = await setupFixture({ withEvent: false });
+  try {
+    const sys = await claimSysadmin();
+    if (!sys) return t.skip("no sysadmin in this DB");
+    const sysIds = (await pool.query("SELECT id FROM users WHERE is_system_admin")).rows.map((r) => r.id);
+    const inbox = claimInbox();
+    const A = await claimKit.founder(CODE, "Mamoudzou Divers");
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    // Two states already run by their bodies, each with its own admin.
+    const stateAdmins = [];
+    for (const [name, code] of [["Grande-Terre", "GT"], ["Petite-Terre", "PT"]]) {
+      const rg = (await pool.query(
+        "INSERT INTO regions (org_id, name, short_code, claim_state) VALUES ($1, $2, $3, 'claimed') RETURNING id",
+        [orgId, name, code],
+      )).rows[0].id;
+      const admin = await insertUser({ orgId, role: "spectator", username: `int-ra-${crypto.randomBytes(3).toString("hex")}`, fullName: `${name} Admin` });
+      await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [rg, admin, orgId]);
+      stateAdmins.push(admin);
+    }
+    const [X, Y] = stateAdmins;
+    const live = async (claim) => {
+      await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [claim.id]);
+      assert.equal(await claimsLib.activateForUser(pool, claim.id, inbox.deps), 1);
+    };
+
+    // The states vote, and the claimant is told that, not "the clubs".
+    const bad = await claimKit.claim({ org_name: "Mayotte Diving", country_code: CODE });
+    assert.equal(bad.res.body.approver, "regions");
+    await live(bad);
+    assert.match(inbox.inAppTo(bad.id, /is open/).body, /The states and provinces vote until/);
+    // An objection sends it to DivingHQ, and the claimant and the other
+    // voter hear so, not just the sysadmin.
+    inbox.clear();
+    await claimsLib.castVote(pool, { claimId: bad.res.body.claim_id, user: await claimActor(X), vote: "object", reason: "Never heard of them" }, inbox.deps);
+    assert.deepEqual(inbox.mailTo(sysIds[0], /needs a decision/).userIds, [...sysIds].sort());
+    assert.match(inbox.mailTo(bad.id, /has gone to DivingHQ/).body, /A voter objected/);
+    assert.ok(inbox.mailTo(Y, /has gone to DivingHQ/), "the voter who hadn't voted yet");
+    // Turned down: the voters and clubs hear it's off, without the reason.
+    inbox.clear();
+    await claimsLib.decide(pool, { claimId: bad.res.body.claim_id, user: sys, decision: "reject", reason: "Unknown body" }, inbox.deps);
+    assert.match(inbox.mailTo(bad.id, /wasn't approved/).body, /Unknown body/);
+    const offMail = inbox.mailTo(X, /wasn't approved/);
+    assert.deepEqual(offMail.userIds, [A.id, X, Y].sort());
+    assert.doesNotMatch(offMail.body, /Unknown body/);
+
+    // Passed by the states: the state admins who voted hear it, with the clubs.
+    const good = await claimKit.claim({ org_name: "Fédération Mahoraise", country_code: CODE });
+    await live(good);
+    inbox.clear();
+    for (const s of [X, Y]) await claimsLib.castVote(pool, { claimId: good.res.body.claim_id, user: await claimActor(s), vote: "approve" }, inbox.deps);
+    const passed = inbox.mailTo(X, /now runs/);
+    assert.deepEqual(passed.userIds, [A.id, X, Y].sort());
+    assert.match(passed.body, /The states and provinces voted it through/);
+
+    // A state body under a federation that doesn't decide in time: it
+    // goes to DivingHQ, the federation is told, and hears the outcome.
+    await pool.query("UPDATE organisations SET country_code = $2 WHERE id = $1", [fedFx.orgId, FED_CODE]);
+    await pool.query("INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Adamstown', 'ADM')", [fedFx.orgId]);
+    const body = await claimKit.claim({ org_name: "Adamstown Diving", country_code: FED_CODE, region_code: "ADM" });
+    assert.equal(body.res.body.approver, "parent");
+    inbox.clear();
+    await live(body);
+    assert.match(inbox.mailTo(fedFx.adminId, /wants to run/).body, /If nobody decides by .*, it goes to DivingHQ/);
+    assert.match(inbox.inAppTo(body.id, /is open/).body, /The federation decides/);
+    await pool.query("UPDATE claims SET closes_at = now() - interval '1 minute' WHERE id = $1", [body.res.body.claim_id]);
+    inbox.clear();
+    await claimsLib.sweepOnce({ pool, ...inbox.deps });
+    assert.equal((await claimStatus(body.res.body.claim_id)).status, "escalated");
+    assert.ok(inbox.mailTo(fedFx.adminId, /has gone to DivingHQ/));
+    inbox.clear();
+    await claimsLib.decide(pool, { claimId: body.res.body.claim_id, user: sys, decision: "approve" }, inbox.deps);
+    const toFed = inbox.mailTo(fedFx.adminId, /now runs/);
+    assert.ok(toFed, "the federation hears a state body now runs its region");
+    assert.match(toFed.body, /DivingHQ approved it/);
+    assert.match(toFed.body, /Role requests from its clubs still go to/);
+    assert.doesNotMatch(toFed.body, /review role requests/);
+
+    // Nobody to vote: the sysadmin's email doesn't tell them it goes to
+    // DivingHQ if they don't decide.
+    await claimKit.wipe("CXR");
+    const lone = await claimKit.founder("CXR", "Flying Fish Cove Divers");
+    const island = await claimKit.claim({ org_name: "Christmas Island Diving", country_code: "CXR" });
+    assert.equal(island.res.body.approver, "sysadmin");
+    inbox.clear();
+    await live(island);
+    const toSys = inbox.mailTo(sysIds[0], /wants to run/);
+    assert.match(toSys.body, /yours to decide/);
+    assert.doesNotMatch(toSys.body, /goes to DivingHQ/);
+    assert.ok(lone.id);
+  } finally {
+    await pool.query("DELETE FROM claims WHERE org_id = $1", [fedFx.orgId]).catch(() => {});
+    await teardownFixture(fedFx);
+    await claimKit.wipe(CODE);
+    await claimKit.wipe(FED_CODE);
+    await claimKit.wipe("CXR");
+  }
+});
+
+test("claims: a long name still gets its in-app notice", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CCK";
+  await claimKit.wipe(CODE);
+  const fedFx = await setupFixture({ withEvent: false });
+  try {
+    const fedName = `Federation of Underwater and Springboard Diving of the Cocos Keeling Islands ${"x".repeat(15)}`;
+    await pool.query("UPDATE organisations SET country_code = $2, name = $3 WHERE id = $1", [fedFx.orgId, CODE, fedName]);
+    const regionName = "Home Island and the Surrounding Southern Atoll Lagoon Territories";
+    await pool.query("INSERT INTO regions (org_id, name, short_code) VALUES ($1, $2, 'HI')", [fedFx.orgId, regionName]);
+    const bodyName = "Home Island Amateur Swimming, Diving and Water Polo Association Incorporated (Est. 1962)";
+    const body = await claimKit.claim({ org_name: bodyName, country_code: CODE, region_code: "HI" });
+    assert.equal(body.res.status, 201, JSON.stringify(body.res.body));
+    // Through the real verify link and the real push, which is where the
+    // varchar(160) insert used to throw and lose the notice.
+    await claimKit.verify(body.id);
+    const note = (await pool.query(
+      "SELECT title, body FROM notifications WHERE user_id = $1 AND category = 'claim_review'", [fedFx.adminId],
+    )).rows[0];
+    assert.ok(note, "the federation got its in-app notice");
+    assert.ok(Array.from(note.title).length <= 160);
+    assert.ok(note.title.endsWith("…"));
+    assert.ok(note.body.startsWith(`${bodyName} wants to run ${regionName} (${fedName}).`), note.body);
+  } finally {
+    await pool.query("DELETE FROM claims WHERE org_id = $1", [fedFx.orgId]).catch(() => {});
+    await teardownFixture(fedFx);
+    await claimKit.wipe(CODE);
   }
 });

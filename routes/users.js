@@ -21,6 +21,7 @@
 
 const express = require("express");
 const roleRequests = require("../lib/role-requests");
+const claimsLib = require("../lib/claims");
 const bcrypt  = require("bcrypt");
 const jwt     = require("jsonwebtoken");
 const { recordAudit, auditFromReq } = require("../lib/audit");
@@ -445,7 +446,8 @@ module.exports = function createUsersRouter({
   // POST /api/users/me/delete  (Migration 053)
   //
   // Self-service account deletion. Strips every PII column from the
-  // user row, wipes settings, push subscriptions, and role grants,
+  // user row, wipes settings, push subscriptions, role grants and
+  // club / region admin rows, withdraws any claim still being decided,
   // then stamps deleted_at = now(). What stays: full_name, org_id,
   // club_id, so the user's name remains on the dives they actually
   // competed in (sporting record). See docs/privacy-policy.md §7
@@ -574,6 +576,17 @@ module.exports = function createUsersRouter({
         "DELETE FROM user_org_roles WHERE user_id = $1",
         [req.user.id],
       );
+      // Club and region admin rows carry authority now (club-first,
+      // migrations 087/088), and a claim of theirs still open could be
+      // approved onto this tombstone. Same transaction, so none of it
+      // outlives the account.
+      const claimsWithdrawn = await claimsLib.withdrawForDeletedUser(client, req.user.id);
+      const clubAdminRows = await client.query(
+        "DELETE FROM club_admins WHERE user_id = $1", [req.user.id],
+      );
+      const regionAdminRows = await client.query(
+        "DELETE FROM region_admins WHERE user_id = $1", [req.user.id],
+      );
 
       // Audit. Best-effort, recordAudit swallows its own errors.
       // metadata carries summary counts but never any PII, the
@@ -590,6 +603,9 @@ module.exports = function createUsersRouter({
           coach_links_removed:        coachCount.rows[0].n,
           role_requests_removed:      roleReqCount.rows[0].n,
           role_grants_removed:        grantCount.rows[0].n,
+          club_admin_rows_removed:    clubAdminRows.rowCount,
+          region_admin_rows_removed:  regionAdminRows.rowCount,
+          claims_withdrawn:           claimsWithdrawn,
         },
       });
 

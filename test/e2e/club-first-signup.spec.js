@@ -202,7 +202,8 @@ test("a federation claims a country and the clubs vote it in", async ({ page, re
     await page.locator("#org-country").selectOption(FSM);
     await expect(page.locator(".claim-note")).toContainText("already on DivingHQ");
     await page.locator('input[autocomplete="name"]').fill("Kasio Ehsa");
-    await page.locator('input[type="email"]').fill(`${fedUser}@example.test`);
+    // Its own domain: a club admin on the claimant's domain wouldn't get a vote.
+    await page.locator('input[type="email"]').fill(`${fedUser}@fsmdiving.example.org`);
     await page.locator('input[autocomplete="username"]').fill(fedUser);
     await page.locator('input[autocomplete="new-password"]').fill(setup.TEST_PASSWORD);
     await page.getByRole("button", { name: /Submit Registration/i }).click();

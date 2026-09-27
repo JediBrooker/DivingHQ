@@ -554,7 +554,19 @@ plus an optional website) opens a claim instead of a new federation when:
   to claim.
 
 The claimant gets an ordinary account in that org. A second claim on the
-same target is refused while one is open or escalated.
+same target is refused while one is live (verified, and open or
+escalated). An unverified claim holds nothing: a newer claim replaces it
+(the old claimant is told), and if two verify at once only the first goes
+live, the other is withdrawn with a notice (migration 092).
+
+**Voters who are really the claimant.** register-org always makes a new
+account, so "none of its admins is the claimant" never matched anyone. A
+club or region is also left out of the voter set when one of its admins has
+the claimant's email address (lower-cased, +tags dropped, Gmail dots
+ignored) or, off webmail and the big ISPs, the same organisation's domain
+or a subdomain of it. The same check runs again when a vote is cast, for
+admins added after the snapshot. The audit row records how many voters were
+left out.
 
 **Who approves** follows §8.1, with one deviation. A national claim goes to
 the claimed regions if there are enough of them, **otherwise to the clubs
@@ -565,12 +577,23 @@ is an addition to §5 that makes this possible.
 **Activation.** A claim is invisible, and nobody is notified, until the
 claimant verifies their email (`activateForUser`, called from verify-email).
 The voting window starts then. Claims that stay unverified for 7 days are
-withdrawn by the sweep.
+withdrawn by the sweep, and the claimant is told (in-app, and by email) and
+still sees the withdrawn claim on `/claims`.
 
-**Outcomes** follow §8.3 and §8.4. An objection needs a reason, and the
-reason goes to the sysadmin with the escalation. For parent-approved region
-claims, the timeout escalates to the sysadmin. Sysadmin-approved claims just
-wait in their queue.
+**Outcomes** follow §8.3. An objection needs a reason, and the reason goes
+to the sysadmin with the escalation. **Deviation from §8.4:** the timeout
+never approves. A vote that closes without reaching the §8.3 bar (a
+majority and at least `claim_quorum_min` approvals) goes to the sysadmin,
+so one approval and two quiet weeks can't hand anyone a country. For
+parent-approved region claims, the timeout escalates to the sysadmin.
+Sysadmin-approved claims just wait in their queue. Nobody, sysadmin
+included, can decide a claim before it's verified (409 `claim_not_live`).
+
+**Claimants who've gone.** Deleting your account withdraws your open and
+escalated claims and removes your club and region admin rows in the same
+transaction. Every approval path re-reads the claimant first: a deleted one
+gets the claim withdrawn, a suspended one sends it to the sysadmin (who
+has to lift the suspension, or reject).
 
 **On approval**:
 - a national claim renames the org to the body and makes the claimant
@@ -583,6 +606,20 @@ automatically: role requests go to org admins, register-org stops opening
 claims on that org, and so on. The sysadmin can revoke an approved claim.
 That reverts the target, and a national org gets its country name back.
 
+Revoking also takes back what was handed out under the claim, because the
+claimant could grant access to anyone while they ran it:
+- a national claim removes **every** `org_admin` and `meet_manager` grant in
+  the org (unclaimed means none of either), club and region admin rows
+  created since the approval (under a federation, only its admins or
+  DivingHQ can make those), and region claims the federation itself
+  approved, which are revoked with it;
+- a region claim removes the region's admin rows created since the approval,
+  plus the claimant's own.
+
+Everyone who lost something has their token bumped and is told. The
+response and the `claim.revoked` audit row list every removed grant, so the
+sysadmin can re-grant anything that should have stayed.
+
 **Notifications.** Every notice goes out both in-app (`claim_vote`,
 `claim_review` and `claim_decided` in the inbox) and by email
 (`sendClaimEmail` in `lib/email.js`, English like the other admin emails).
@@ -591,8 +628,13 @@ The emails carry what someone needs to act without opening the app:
 - the closing date and the rules;
 - objection reasons, on escalations to the sysadmin.
 
-The claimant is also told when their claim goes live, when it's decided and
-if it's revoked.
+The claimant is also told when their claim goes live, when it's decided,
+when it goes to DivingHQ and if it's withdrawn or revoked. Outcomes go to
+whoever had a vote, plus every club and region admin in the country (a
+national claim) or the region's club admins and the federation above it (a
+region claim). The wording follows who decided and whether the country has
+a federation. In-app titles longer than the 160-character column are cut,
+with the full sentence moved into the body.
 
 **Deviation from §8.5:** club admins in scope aren't offered an
 after-the-fact "object" link. The approval email tells them to contact
