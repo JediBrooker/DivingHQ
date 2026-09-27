@@ -34,11 +34,14 @@ const USER_ID = "11111111-1111-1111-1111-111111111111";
 
 // Build a middleware instance whose DB returns one fixed users-row
 // auth state for the SELECT in fetchUserAuthState.
-function build({ token_version = 1, deleted_at = null, suspended_at = null } = {}) {
+function build({
+  token_version = 1, deleted_at = null, suspended_at = null,
+  org_status = "active", is_system_admin = false,
+} = {}) {
   const fakePool = {
     async query(sql) {
-      if (/FROM users WHERE id = \$1/.test(sql)) {
-        return { rows: [{ token_version, deleted_at, suspended_at }] };
+      if (/FROM users u\s+LEFT JOIN organisations o/.test(sql)) {
+        return { rows: [{ token_version, deleted_at, suspended_at, org_status, is_system_admin }] };
       }
       return { rows: [] };
     },
@@ -157,4 +160,33 @@ test("isTokenVersionCurrent: returns false for a suspended user (kicks live sock
 test("isTokenVersionCurrent: returns true for an active user with matching tv", async () => {
   const { isTokenVersionCurrent } = build({ token_version: 1, suspended_at: null });
   assert.equal(await isTokenVersionCurrent(USER_ID, 1), true);
+});
+
+// A federation that's pending approval or suspended locks out its
+// members' open sessions too, not just new logins. Sysadmins live in the
+// Administration org and are never caught by this.
+test("verifyToken: a user in a pending org is revoked", async () => {
+  const { verifyToken } = build({ org_status: "pending" });
+  const out = await runVerify(verifyToken, sign({ id: USER_ID, tv: 1 }));
+  assert.equal(out.type, "res");
+  assert.equal(out.statusCode, 401);
+  assert.equal(out.body.code, "org_not_active");
+});
+
+test("verifyToken: a sysadmin passes whatever their org's status", async () => {
+  const { verifyToken } = build({ org_status: "suspended", is_system_admin: true });
+  const out = await runVerify(verifyToken, sign({ id: USER_ID, tv: 1 }));
+  assert.equal(out.type, "next");
+});
+
+test("optionalAuth: a user in a suspended org reads as a guest", async () => {
+  const { optionalAuth } = build({ org_status: "suspended" });
+  const out = await runVerify(optionalAuth, sign({ id: USER_ID, tv: 1 }));
+  assert.equal(out.type, "next");
+  assert.equal(out.req.user, undefined);
+});
+
+test("isTokenVersionCurrent: false when the user's org isn't active", async () => {
+  const { isTokenVersionCurrent } = build({ org_status: "pending" });
+  assert.equal(await isTokenVersionCurrent(USER_ID, 1), false);
 });
