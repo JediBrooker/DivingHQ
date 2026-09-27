@@ -25,6 +25,7 @@
 const express = require("express");
 const createIdempotency = require("../lib/idempotency");
 const { announceRecords } = require("../lib/records");
+const { scoreBodyError, insertScoreAudit } = require("../lib/score-audit");
 
 module.exports = function createScoreCorrectionRouter({
   pool,
@@ -69,13 +70,9 @@ module.exports = function createScoreCorrectionRouter({
         return res.status(400).json({ error: "Invalid score id" });
       }
       const { score, reason } = req.body || {};
+      const scoreErr = scoreBodyError(score, "Score");
+      if (scoreErr) return res.status(400).json({ error: scoreErr });
       const newScore = Number(score);
-      if (Number.isNaN(newScore) || newScore < 0 || newScore > 10) {
-        return res.status(400).json({ error: "Score must be between 0 and 10" });
-      }
-      if (((newScore * 2) % 1) !== 0) {
-        return res.status(400).json({ error: "Score must be in 0.5 increments" });
-      }
       try {
         const prior = await pool.query(
           "SELECT id, score, event_id, competitor_id, judge_id, round_number FROM scores WHERE id = $1",
@@ -135,20 +132,17 @@ module.exports = function createScoreCorrectionRouter({
           const trimmedReason = typeof reason === "string"
             ? reason.trim().slice(0, 500)
             : null;
-          await pool.query(
-            `INSERT INTO score_audit_log
-               (score_id, event_id, competitor_id, judge_id, round_number,
-                action, old_score, new_score, actor_user_id, ip_address,
-                user_agent, reason)
-             VALUES ($1,$2,$3,$4,$5,'update',$6,$7,$8,$9,$10,$11)`,
-            [
-              existing.id, existing.event_id, existing.competitor_id,
-              existing.judge_id, existing.round_number,
-              oldScore, newScore, req.user.id,
-              req.ip, req.headers["user-agent"] || null,
-              trimmedReason || null,
-            ],
-          );
+          // No committedNow here: this path has never stamped
+          // server_committed_at (reported separately, not changed in
+          // passing).
+          await insertScoreAudit(pool, {
+            scoreId: existing.id, eventId: existing.event_id,
+            competitorId: existing.competitor_id, judgeId: existing.judge_id,
+            round: existing.round_number, action: "update",
+            oldScore, newScore,
+            actorId: req.user.id, ip: req.ip, userAgent: req.headers["user-agent"] || null,
+            reason: trimmedReason || null,
+          });
         } catch (auditErr) {
           console.error("[Score Correction Audit Skipped]", auditErr.message);
         }

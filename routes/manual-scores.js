@@ -31,6 +31,7 @@
 const express = require("express");
 const createIdempotency = require("../lib/idempotency");
 const { announceRecords } = require("../lib/records");
+const { scoreBodyError, insertScoreAudit } = require("../lib/score-audit");
 
 module.exports = function createManualScoresRouter({
   pool, io, scoreboardCache, requireOrgRole,
@@ -64,13 +65,9 @@ module.exports = function createManualScoresRouter({
       if (!Number.isInteger(round) || round < 1) {
         return res.status(400).json({ error: "round_number must be a positive integer" });
       }
+      const scoreErr = scoreBodyError(score, "score");
+      if (scoreErr) return res.status(400).json({ error: scoreErr });
       const scoreVal = Number(score);
-      if (!Number.isFinite(scoreVal) || scoreVal < 0 || scoreVal > 10) {
-        return res.status(400).json({ error: "score must be between 0 and 10" });
-      }
-      if (((scoreVal * 2) % 1) !== 0) {
-        return res.status(400).json({ error: "score must be in 0.5 increments" });
-      }
 
       const client = await pool.connect();
       // Released early once the score commits (see the records check
@@ -187,22 +184,14 @@ module.exports = function createManualScoresRouter({
           const trimmedReason = typeof reason === "string"
             ? reason.trim().slice(0, 500)
             : null;
-          await client.query(
-            `INSERT INTO score_audit_log
-               (score_id, event_id, competitor_id, judge_id, round_number,
-                action, old_score, new_score, actor_user_id, ip_address,
-                user_agent, reason, actor_local_time, server_committed_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())`,
-            [
-              scoreId, event_id, competitor_id, judge_id, round,
-              isInsert ? "insert" : "update",
-              oldScore, scoreVal,
-              req.user.id, req.ip,
-              req.headers["user-agent"] || null,
-              trimmedReason || "manual entry (P5 fallback)",
-              actorLocalTime,
-            ],
-          );
+          await insertScoreAudit(client, {
+            scoreId, eventId: event_id, competitorId: competitor_id, judgeId: judge_id, round,
+            action: isInsert ? "insert" : "update",
+            oldScore, newScore: scoreVal,
+            actorId: req.user.id, ip: req.ip, userAgent: req.headers["user-agent"] || null,
+            reason: trimmedReason || "manual entry (P5 fallback)",
+            actorLocalTime, committedNow: true,
+          });
         }
 
         await client.query("COMMIT");

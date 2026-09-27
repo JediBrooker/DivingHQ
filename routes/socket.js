@@ -30,6 +30,7 @@ const jwt = require("jsonwebtoken");
 const createIdempotency = require("../lib/idempotency");
 const { readSessionCookie } = require("../lib/session-cookie");
 const { announceRecords } = require("../lib/records");
+const { insertScoreAudit } = require("../lib/score-audit");
 // Held as the module object and called through it, never destructured:
 // test/socket-rate-limit.test.js swaps emitVenueState on this cached
 // module to keep the DB out of the unit tests.
@@ -675,21 +676,17 @@ module.exports = function attachSocket({
             // DON'T update the score; we audit-log the rejected
             // digital sync and emit conflict_pending for the
             // operator's review tray.
-            await client.query(
-              `INSERT INTO score_audit_log
-                 (score_id, event_id, competitor_id, judge_id, round_number,
-                  action, old_score, new_score, actor_user_id, ip_address, user_agent,
-                  reason, actor_local_time, server_committed_at)
-               VALUES ($1,$2,$3,$4,$5,'rejected_duplicate',$6,$7,$8,$9,$10,$11,$12,now())`,
-              [
-                existing.id, data.event_id, data.competitor_id, judgeId, round,
-                oldScore, score,  // old=operator's manual, new=judge's late sync (rejected)
-                socket.userId, clientIp(socket),
-                socket.handshake.headers["user-agent"] || null,
-                "P5 reconciliation: judge digital sync differs from manual entry; operator value retained",
-                actorLocalTime,
-              ],
-            );
+            await insertScoreAudit(client, {
+              scoreId: existing.id, eventId: data.event_id, competitorId: data.competitor_id,
+              judgeId, round, action: "rejected_duplicate",
+              // old = the operator's manual value, new = the judge's late
+              // sync, which is the one being rejected.
+              oldScore, newScore: score,
+              actorId: socket.userId, ip: clientIp(socket),
+              userAgent: socket.handshake.headers["user-agent"] || null,
+              reason: "P5 reconciliation: judge digital sync differs from manual entry; operator value retained",
+              actorLocalTime, committedNow: true,
+            });
             await client.query("COMMIT");
             // Emit conflict so the operator can see the mismatch.
             io.to(`event:${data.event_id}`).emit("conflict_pending", {
@@ -759,21 +756,14 @@ module.exports = function attachSocket({
           const auditAction = reconciledManual
             ? "reconcile_manual"
             : (isInsert ? "insert" : "update");
-          await client.query(
-            `INSERT INTO score_audit_log
-               (score_id, event_id, competitor_id, judge_id, round_number,
-                action, old_score, new_score, actor_user_id, ip_address, user_agent,
-                actor_local_time, server_committed_at)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now())`,
-            [
-              scoreId, data.event_id, data.competitor_id, judgeId, round,
-              auditAction,
-              oldScore, score,
-              socket.userId, clientIp(socket),
-              socket.handshake.headers["user-agent"] || null,
-              actorLocalTime,
-            ],
-          );
+          await insertScoreAudit(client, {
+            scoreId, eventId: data.event_id, competitorId: data.competitor_id,
+            judgeId, round, action: auditAction,
+            oldScore, newScore: score,
+            actorId: socket.userId, ip: clientIp(socket),
+            userAgent: socket.handshake.headers["user-agent"] || null,
+            actorLocalTime, committedNow: true,
+          });
         }
 
         await client.query("COMMIT");

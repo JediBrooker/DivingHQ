@@ -35,6 +35,7 @@
 
 const express = require("express");
 const { announceRecords } = require("../lib/records");
+const { scoreBodyError, insertScoreAudit } = require("../lib/score-audit");
 
 module.exports = function createConflictsRouter({
   pool, io, scoreboardCache, requireOrgRole,
@@ -79,13 +80,8 @@ module.exports = function createConflictsRouter({
       }
 
       if (decision === "accept_proposed") {
-        const n = Number(proposedScore);
-        if (!Number.isFinite(n) || n < 0 || n > 10) {
-          return res.status(400).json({ error: "proposed_score must be between 0 and 10" });
-        }
-        if (((n * 2) % 1) !== 0) {
-          return res.status(400).json({ error: "proposed_score must be in 0.5 increments" });
-        }
+        const scoreErr = scoreBodyError(proposedScore, "proposed_score");
+        if (scoreErr) return res.status(400).json({ error: scoreErr });
       }
 
       const client = await pool.connect();
@@ -126,20 +122,14 @@ module.exports = function createConflictsRouter({
             `UPDATE scores SET score_source = 'manual_then_reconciled' WHERE id = $1`,
             [row.id],
           );
-          await client.query(
-            `INSERT INTO score_audit_log
-               (score_id, event_id, competitor_id, judge_id, round_number,
-                action, old_score, new_score, actor_user_id, ip_address,
-                user_agent, reason, server_committed_at)
-             VALUES ($1,$2,$3,$4,$5,'reconcile_manual',$6,$7,$8,$9,$10,$11,NOW())`,
-            [
-              row.id, row.event_id, row.competitor_id, row.judge_id, row.round_number,
-              oldScore, oldScore,
-              req.user.id, req.ip,
-              req.headers["user-agent"] || null,
-              reason || "operator confirmed manual entry (conflict resolved)",
-            ],
-          );
+          await insertScoreAudit(client, {
+            scoreId: row.id, eventId: row.event_id, competitorId: row.competitor_id,
+            judgeId: row.judge_id, round: row.round_number,
+            action: "reconcile_manual", oldScore, newScore: oldScore,
+            actorId: req.user.id, ip: req.ip, userAgent: req.headers["user-agent"] || null,
+            reason: reason || "operator confirmed manual entry (conflict resolved)",
+            committedNow: true,
+          });
 
           await client.query("COMMIT");
 
@@ -165,20 +155,14 @@ module.exports = function createConflictsRouter({
           [row.id, newScore],
         );
 
-        await client.query(
-          `INSERT INTO score_audit_log
-             (score_id, event_id, competitor_id, judge_id, round_number,
-              action, old_score, new_score, actor_user_id, ip_address,
-              user_agent, reason, server_committed_at)
-           VALUES ($1,$2,$3,$4,$5,'update',$6,$7,$8,$9,$10,$11,NOW())`,
-          [
-            row.id, row.event_id, row.competitor_id, row.judge_id, row.round_number,
-            oldScore, newScore,
-            req.user.id, req.ip,
-            req.headers["user-agent"] || null,
-            reason || "operator accepted judge's digital sync value over manual entry",
-          ],
-        );
+        await insertScoreAudit(client, {
+          scoreId: row.id, eventId: row.event_id, competitorId: row.competitor_id,
+          judgeId: row.judge_id, round: row.round_number,
+          action: "update", oldScore, newScore,
+          actorId: req.user.id, ip: req.ip, userAgent: req.headers["user-agent"] || null,
+          reason: reason || "operator accepted judge's digital sync value over manual entry",
+          committedNow: true,
+        });
 
         await client.query("COMMIT");
 
