@@ -84,6 +84,18 @@ function parseCsv(text) {
 // function gave NULL for that as well). LEFT JOINs because the partner
 // side of the old calls was LEFT JOINed; `competitorsFrom` is the
 // table whose competitor_id column says who's in.
+function repCodesCte(competitorsFrom) {
+  return `reps AS MATERIALIZED (
+           SELECT x.id, event_rep_code($1, x.id, ro.country_code) AS code
+             FROM (SELECT competitor_id AS id FROM ${competitorsFrom} WHERE event_id = $1
+                   UNION
+                   SELECT partner_id FROM competitor_dive_lists
+                    WHERE event_id = $1 AND partner_id IS NOT NULL) x
+             LEFT JOIN users ru ON ru.id = x.id
+             LEFT JOIN organisations ro ON ro.id = ru.org_id
+         )`;
+}
+
 // The pre-meet gate the workflow and sign-off routes share: event :id
 // has to be in the caller's org (sysadmins anywhere) and still
 // Upcoming. On a miss it sends the 404/409 itself and returns null,
@@ -141,18 +153,6 @@ function expirePendingSignoffs(pool, eventId) {
      WHERE event_id = $1 AND status = 'pending'`,
     [eventId],
   );
-}
-
-function repCodesCte(competitorsFrom) {
-  return `reps AS MATERIALIZED (
-           SELECT x.id, event_rep_code($1, x.id, ro.country_code) AS code
-             FROM (SELECT competitor_id AS id FROM ${competitorsFrom} WHERE event_id = $1
-                   UNION
-                   SELECT partner_id FROM competitor_dive_lists
-                    WHERE event_id = $1 AND partner_id IS NOT NULL) x
-             LEFT JOIN users ru ON ru.id = x.id
-             LEFT JOIN organisations ro ON ro.id = ru.org_id
-         )`;
 }
 
 module.exports = function createControlRoomRouter({
