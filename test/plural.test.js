@@ -45,6 +45,14 @@ test('Arabic uses zero and two', () => {
   assert.equal(pluralCategory('ar', 5), 'few')
 })
 
+test('Portuguese follows Portugal, where zero is plural', () => {
+  // Bare 'pt' is Brazil's rules (0 is "one"); our pt.json is European.
+  assert.equal(pluralCategory('pt', 0), 'other')
+  assert.equal(pluralCategory('pt', 1), 'one')
+  const { t, te } = fakeI18n({ 'c.m_one': '{n} membro', 'c.m_other': '{n} membros' })
+  assert.equal(translatePlural(t, te, 'pt', 'c.m', 0), '0 membros')
+})
+
 test('a missing category key falls back to _other, never a raw key', () => {
   const { t, te } = fakeI18n({ 'c.m_other': '{n} membres' })
   assert.equal(translatePlural(t, te, 'fr', 'c.m', 1), '1 membres')

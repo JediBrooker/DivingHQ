@@ -14,9 +14,13 @@
 
 export const PLURAL_CATEGORIES = ['zero', 'one', 'two', 'few', 'many', 'other']
 
+// Our 'pt' is European Portuguese, but a bare 'pt' gets Brazil's rules,
+// where 0 is "one": a club with no members read "0 membro".
+const PLURAL_TAGS = { pt: 'pt-PT' }
+
 export function pluralCategory(locale, n) {
   try {
-    return new Intl.PluralRules(locale).select(n)
+    return new Intl.PluralRules(PLURAL_TAGS[locale] || locale).select(n)
   } catch {
     // Unknown tag or an ancient engine: English rules are a fine guess.
     return n === 1 ? 'one' : 'other'
