@@ -51,6 +51,7 @@ module.exports = function createUsersRouter({
   sendPasswordResetEmail,
   hashFingerprint,
   JWT_SECRET,
+  requireMeetOrClubEditor,   // optional, migration 087
 }) {
   if (!pool) throw new Error("createUsersRouter requires { pool, … }");
   const router = express.Router();
@@ -898,7 +899,9 @@ module.exports = function createUsersRouter({
   // picker only needs id + full_name; username is the credential
   // identifier and the meet_manager gate isn't a high enough bar to
   // justify spraying it across every response.
-  router.get("/api/judges", requireMeetEditor, async (req, res) => {
+  // Club admins pick judges for their own club's meets too, and it's
+  // only names of people already holding the judge role in the org.
+  router.get("/api/judges", requireMeetOrClubEditor || requireMeetEditor, async (req, res) => {
     try {
       const r = await pool.query(
         `SELECT u.id, u.full_name

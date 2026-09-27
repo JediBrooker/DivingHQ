@@ -36,13 +36,24 @@
 const express = require("express");
 const { recordAudit } = require("../lib/audit");
 
-module.exports = function createConflictsRouter({ pool, io, scoreboardCache, requireOrgRole }) {
+module.exports = function createConflictsRouter({
+  pool, io, scoreboardCache, requireOrgRole,
+  requireRoleOrEventDelegate,   // optional, migration 087
+}) {
   if (!pool) throw new Error("createConflictsRouter requires { pool, requireOrgRole }");
   const router = express.Router();
 
   router.post(
     "/api/conflicts/:conflict_id/resolve",
-    requireOrgRole(["referee", "meet_manager", "org_admin"]),
+    // The conflict id is the score row's id; its event decides whether
+    // a delegate (e.g. the host club's admin) gets in without the role.
+    requireRoleOrEventDelegate
+      ? requireRoleOrEventDelegate(["referee", "meet_manager", "org_admin"], async (req) => {
+          if (!/^[0-9a-f-]{36}$/i.test(String(req.params.conflict_id))) return null;
+          const r = await pool.query("SELECT event_id FROM scores WHERE id = $1", [req.params.conflict_id]);
+          return r.rows[0]?.event_id || null;
+        })
+      : requireOrgRole(["referee", "meet_manager", "org_admin"]),
     async (req, res) => {
       const { conflict_id } = req.params;
       const decision = req.body?.decision;

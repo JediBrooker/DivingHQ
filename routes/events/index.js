@@ -127,11 +127,47 @@ module.exports = function createEventsRouter({
   // Stripe module, needed by the deletion guard to retire
   // in-flight checkouts before cascade-deleting fee definitions.
   payments,
+  // Club-hosted meets (migration 087), all optional. Without them
+  // create/delete stay org_admin only.
+  isMeetHostAdmin,
+  isEventDelegate,
+  requireTotpForPrivilegedRoles,
 }) {
   if (!pool || !JWT_SECRET || !optionalAuth) {
     throw new Error("createEventsRouter requires { pool, JWT_SECRET, optionalAuth, … }");
   }
   const router = express.Router();
+
+  // org_admin, or admin of the club hosting the meet this is about. For
+  // create that's body.meet_id (there's no event yet); for delete it's
+  // the event's meet. Plain event_managers rows don't count here, being
+  // asked to help run one event was never permission to delete it.
+  function orgAdminOrMeetHost(meetIdOf) {
+    if (!isMeetHostAdmin || !verifyToken) return requireOrgAdmin;
+    return [
+      (req, res, next) => verifyToken(req, res, async () => {
+        if (req.user.is_system_admin || (req.user.org_roles || []).includes("org_admin")) return next();
+        try {
+          const meetId = await meetIdOf(req);
+          if (meetId && await isMeetHostAdmin(meetId, req.user.id)) {
+            req.viaHostClub = true;
+            return next();
+          }
+        } catch (err) {
+          console.error("[orgAdminOrMeetHost]", err.message);
+          return res.status(500).json({ error: "Internal server error" });
+        }
+        res.status(403).json({ error: "Forbidden" });
+      }),
+      ...(requireTotpForPrivilegedRoles ? [requireTotpForPrivilegedRoles] : []),
+    ];
+  }
+  const requireEventCreator = orgAdminOrMeetHost((req) => req.body?.meet_id);
+  const requireEventDeleter = orgAdminOrMeetHost(async (req) => {
+    if (!/^[0-9a-f-]{36}$/i.test(String(req.params.id))) return null;
+    const r = await pool.query("SELECT meet_id FROM events WHERE id = $1", [req.params.id]);
+    return r.rows[0]?.meet_id || null;
+  });
 
   // Idempotency middleware (lib/idempotency.js). Applied to the
   // status-flip route below since that's a meet-time write the
@@ -377,9 +413,10 @@ module.exports = function createEventsRouter({
   // POST /api/events: create an event in caller's org.
   //
   // org_admin only (no event_managers fallback becuase the event
-  // doesn't exist yet, there's no row to be a manager of).
+  // doesn't exist yet, there's no row to be a manager of), or the
+  // admin of the club hosting body.meet_id.
   // -------------------------------------------------------------
-  router.post("/api/events", requireOrgAdmin, async (req, res) => {
+  router.post("/api/events", requireEventCreator, async (req, res) => {
     const {
       name, gender, number_of_judges, total_rounds, height, event_type, meet_id,
       age_group, scheduled_at, event_format, parent_event_id, advance_count,
@@ -489,6 +526,12 @@ module.exports = function createEventsRouter({
           [parent_event_id],
         );
         if (!p.rows.length || p.rows[0].org_id !== req.user.org_id) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({ error: "Parent event not found in this org" });
+        }
+        // A club admin chains stages within their own events, not off a
+        // neighbouring club's.
+        if (req.viaHostClub && !(isEventDelegate && await isEventDelegate(parent_event_id, req.user.id))) {
           await client.query("ROLLBACK");
           return res.status(400).json({ error: "Parent event not found in this org" });
         }
@@ -844,7 +887,7 @@ module.exports = function createEventsRouter({
   // DELETE /api/events/:id: org_admin only. CASCADE down to
   // dive lists, judges, scores etc. via FKs in init.sql.
   // -------------------------------------------------------------
-  router.delete("/api/events/:id", requireOrgAdmin, async (req, res) => {
+  router.delete("/api/events/:id", requireEventDeleter, async (req, res) => {
     try {
       // Read the row first so the audit row carries the
       // (post-delete-orphaned) name + org. RETURNING * inside the

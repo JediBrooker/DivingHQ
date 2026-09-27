@@ -132,6 +132,10 @@ module.exports = function createSessionsRouter({
   // surface is live.
   requireMeetEditor,
   io,
+  // Club-hosted meets (migration 087), optional. With them a club admin
+  // can edit the schedule of a meet their club hosts.
+  requireMeetOrClubEditor,
+  isMeetHostAdmin,
 } = {}) {
   if (!pool) throw new Error("createSessionsRouter requires { pool, … }");
   const router = express.Router();
@@ -142,17 +146,19 @@ module.exports = function createSessionsRouter({
   // to a 503 if the host wired the router without it, so a
   // partially-configured deploy fails loudly instead of silently
   // accepting unauth'd dismissals.
-  const editorGate = requireMeetEditor || ((_req, res) =>
+  const editorGate = requireMeetOrClubEditor || requireMeetEditor || ((_req, res) =>
     res.status(503).json({
       error: "Conflict dismissal requires an authenticated configuration",
     }));
 
-  function userCanEditMeet(req, meet) {
+  async function userCanEditMeet(req, meet) {
     if (!req.user || !meet) return false;
     if (req.user.is_system_admin) return true;
     if (String(meet.org_id) !== String(req.user.org_id)) return false;
     const roles = req.user.org_roles || [];
-    return roles.includes("org_admin") || roles.includes("meet_manager");
+    if (roles.includes("org_admin") || roles.includes("meet_manager")) return true;
+    // Admin of the club hosting this meet.
+    return !!isMeetHostAdmin && isMeetHostAdmin(meet.id, req.user.id);
   }
 
   async function requireMeetEdit(client, req, res, meetId) {
@@ -165,7 +171,7 @@ module.exports = function createSessionsRouter({
       return null;
     }
     const meet = r.rows[0];
-    if (!userCanEditMeet(req, meet)) {
+    if (!(await userCanEditMeet(req, meet))) {
       res.status(403).json({ error: "You cannot edit this meet schedule" });
       return null;
     }
@@ -187,7 +193,7 @@ module.exports = function createSessionsRouter({
     }
     const row = r.rows[0];
     const meet = { id: row.id, org_id: row.org_id, name: row.name };
-    if (!userCanEditMeet(req, meet)) {
+    if (!(await userCanEditMeet(req, meet))) {
       res.status(403).json({ error: "You cannot edit this meet schedule" });
       return null;
     }
@@ -211,7 +217,7 @@ module.exports = function createSessionsRouter({
     }
     const row = r.rows[0];
     const meet = { id: row.meet_id, org_id: row.org_id, name: row.meet_name };
-    if (!userCanEditMeet(req, meet)) {
+    if (!(await userCanEditMeet(req, meet))) {
       res.status(403).json({ error: "You cannot edit this meet schedule" });
       return null;
     }
@@ -401,7 +407,7 @@ module.exports = function createSessionsRouter({
       }
       const meet = meetRes.rows[0];
       const orgId = meet.org_id;
-      const canSeed = userCanEditMeet(req, meet);
+      const canSeed = await userCanEditMeet(req, meet);
 
       if (canSeed) {
         // Only authenticated meet editors create the initial board
@@ -877,7 +883,7 @@ module.exports = function createSessionsRouter({
       const sessionId = row.session_id;
       const meetId = row.meet_id;
       const meet = { id: meetId, org_id: row.org_id, name: row.meet_name };
-      if (!userCanEditMeet(req, meet)) {
+      if (!(await userCanEditMeet(req, meet))) {
         return res.status(403).json({ error: "You cannot edit this meet schedule" });
       }
 
@@ -1322,7 +1328,7 @@ module.exports = function createSessionsRouter({
       }
       const src = srcRes.rows[0];
       const meet = { id: src.meet_id, org_id: src.org_id, name: src.meet_name };
-      if (!userCanEditMeet(req, meet)) {
+      if (!(await userCanEditMeet(req, meet))) {
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "You cannot edit this meet schedule" });
       }
@@ -1785,7 +1791,7 @@ module.exports = function createSessionsRouter({
       }
       const rowBefore = existing.rows[0];
       const meet = { id: rowBefore.meet_id, org_id: rowBefore.org_id, name: rowBefore.meet_name };
-      if (!userCanEditMeet(req, meet)) {
+      if (!(await userCanEditMeet(req, meet))) {
         return res.status(403).json({ error: "You cannot edit this meet schedule" });
       }
       const r = await pool.query(

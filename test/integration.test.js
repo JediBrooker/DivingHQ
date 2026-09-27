@@ -763,3 +763,85 @@ test("club-first signup starts an unclaimed country account", async (t) => {
     await wipe();
   }
 });
+
+// Phase 1 permissions: in an unclaimed country, a club admin runs the
+// meets their club hosts, and nothing of the club next door.
+test("club admins run their own club's meets and nobody else's", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "NIU";
+  const wipe = async () => {
+    const orgs = await pool.query("SELECT id FROM organisations WHERE country_code = $1", [CODE]);
+    for (const { id } of orgs.rows) {
+      await pool.query("DELETE FROM meets WHERE org_id = $1", [id]);
+      await teardownFixture({ orgId: id });
+    }
+  };
+  await wipe();
+  // Register a club founder, verify their email, sign in.
+  const founder = async (clubName) => {
+    const username = `int-ca-${crypto.randomBytes(4).toString("hex")}`;
+    const r = await fetchJson("POST", "/api/auth/register", {
+      body: {
+        username, full_name: `${clubName} Admin`, password: TEST_PASSWORD,
+        email: `${username}@example.test`, country_code: CODE, new_club_name: clubName,
+      },
+    });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1", [username]);
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username, password: TEST_PASSWORD } });
+    assert.equal(login.status, 200, JSON.stringify(login.body));
+    return { token: login.body.token, clubs: login.body.club_admin_of };
+  };
+  try {
+    const A = await founder("Alofi Divers");
+    const B = await founder("Tuapa Divers");
+    assert.equal(A.clubs.length, 1, "login response lists the club you admin");
+    const me = await fetchJson("GET", "/api/auth/me", { token: A.token });
+    assert.equal(me.body.user.club_admin_of[0].name, "Alofi Divers");
+
+    // A meet with no host named defaults to the admin's only club.
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Alofi Open" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
+    assert.equal(meet.body.host_club_id, A.clubs[0].id);
+    const meetId = meet.body.id;
+
+    // B can't host as A, edit A's meet, or add events to it.
+    const hostAsA = await fetchJson("POST", "/api/meets", {
+      token: B.token, body: { name: "Sneaky", host_club_id: A.clubs[0].id },
+    });
+    assert.equal(hostAsA.status, 400);
+    assert.equal((await fetchJson("PUT", `/api/meets/${meetId}`, { token: B.token, body: { name: "x" } })).status, 403);
+    const evBody = {
+      name: "Alofi 1m", gender: "Mixed", height: "1m", number_of_judges: 5,
+      total_rounds: 5, event_type: "individual", meet_id: meetId,
+    };
+    assert.equal((await fetchJson("POST", "/api/events", { token: B.token, body: evBody })).status, 403);
+
+    // A runs it end to end.
+    assert.equal((await fetchJson("PUT", `/api/meets/${meetId}`, { token: A.token, body: { venue: "Alofi Pool" } })).status, 200);
+    const ev = await fetchJson("POST", "/api/events", { token: A.token, body: evBody });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const eventId = ev.body.id;
+    assert.equal((await fetchJson("PUT", `/api/events/${eventId}`, { token: A.token, body: { name: "Alofi 1m Open" } })).status, 200);
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/roster`, { token: A.token })).status, 200,
+      "control room roster is open to the host club admin");
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/judges`, { token: A.token })).status, 200);
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/managers`, { token: A.token })).status, 200);
+    assert.equal((await fetchJson("GET", "/api/judges", { token: A.token })).status, 200);
+
+    // ...and B stays out of all of it.
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/roster`, { token: B.token })).status, 403);
+    assert.equal((await fetchJson("PUT", `/api/events/${eventId}`, { token: B.token, body: { name: "x" } })).status, 403);
+    assert.equal((await fetchJson("DELETE", `/api/events/${eventId}`, { token: B.token })).status, 403);
+
+    // A can't hand the event out of their own meets.
+    assert.equal((await fetchJson("PUT", `/api/events/${eventId}/meet`, { token: A.token, body: { meet_id: null } })).status, 403);
+
+    assert.equal((await fetchJson("DELETE", `/api/events/${eventId}`, { token: A.token })).status, 200);
+    assert.equal((await fetchJson("DELETE", `/api/meets/${meetId}`, { token: B.token })).status, 403);
+    assert.equal((await fetchJson("DELETE", `/api/meets/${meetId}`, { token: A.token })).status, 200);
+  } finally {
+    await wipe();
+  }
+});

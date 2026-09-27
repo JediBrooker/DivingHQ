@@ -92,6 +92,10 @@ module.exports = function createControlRoomRouter({
   push,
   bcrypt,
   totp,
+  // Club-hosted meets (migration 087). Optional so older test mounts
+  // keep working; without it the gates are the plain role check.
+  requireRoleOrEventDelegate,
+  requireTotpForPrivilegedRoles,
 }) {
   if (!pool || !ensureEventPreMeet) {
     throw new Error("createControlRoomRouter requires { pool, ensureEventPreMeet, … }");
@@ -100,7 +104,27 @@ module.exports = function createControlRoomRouter({
 
   // Tuple repeated 7× across the original section. Build it once
   // here so a typo can't drift one route's role gate.
-  const requireMeetController = requireOrgRole(["org_admin", "meet_manager", "referee"]);
+  //
+  // Anyone running this particular event without the org-wide role
+  // gets in too: an event_managers row, or admin of the club hosting
+  // the meet. For /api/events/:id/... the event is the :id; the
+  // /api/dive-lists/:id routes have to look it up from the row.
+  const orDelegate = (roles, eventIdOf) => (requireRoleOrEventDelegate
+    ? requireRoleOrEventDelegate(roles, eventIdOf)
+    : requireOrgRole(roles));
+  const CONTROLLER_ROLES = ["org_admin", "meet_manager", "referee"];
+  const requireMeetController = orDelegate(CONTROLLER_ROLES, (req) => req.params.id);
+  const requireDiveListController = orDelegate(CONTROLLER_ROLES, async (req) => {
+    if (!/^[0-9a-f-]{36}$/i.test(String(req.params.id))) return null;
+    const r = await pool.query("SELECT event_id FROM competitor_dive_lists WHERE id = $1", [req.params.id]);
+    return r.rows[0]?.event_id || null;
+  });
+  // Roster late-add and CSV import were meet-editor only. Same widening,
+  // keeping the 2FA step for the role holders it applies to.
+  const requireRosterEditor = requireRoleOrEventDelegate
+    ? [orDelegate(["org_admin", "meet_manager"], (req) => req.params.id),
+       ...(requireTotpForPrivilegedRoles ? [requireTotpForPrivilegedRoles] : [])]
+    : requireMeetEditor;
 
   // Idempotency middleware for the meet-time HTTP writes the
   // operator's outbox routes through. The middleware is opt-in
@@ -500,7 +524,7 @@ module.exports = function createControlRoomRouter({
   // PUT /api/dive-lists/:id/order: single-row reorder. Body:
   // { display_order: int | null }. Locked once status != Upcoming.
   // -------------------------------------------------------------
-  router.put("/api/dive-lists/:id/order", requireMeetController, idem("dive_list_reorder_one"), async (req, res) => {
+  router.put("/api/dive-lists/:id/order", requireDiveListController, idem("dive_list_reorder_one"), async (req, res) => {
     const { display_order } = req.body || {};
     if (display_order != null && !Number.isInteger(display_order)) {
       return res.status(400).json({ error: "display_order must be an integer or null" });
@@ -1486,7 +1510,7 @@ module.exports = function createControlRoomRouter({
   // { withdrawn: bool }. Standings still attribute prior dives;
   // the active queue excludes them from upcoming rounds.
   // -------------------------------------------------------------
-  router.put("/api/dive-lists/:id/withdraw", requireMeetController, idem("dive_list_withdraw"), async (req, res) => {
+  router.put("/api/dive-lists/:id/withdraw", requireDiveListController, idem("dive_list_withdraw"), async (req, res) => {
     const { withdrawn } = req.body || {};
     try {
       const r = await pool.query(
@@ -1599,7 +1623,7 @@ module.exports = function createControlRoomRouter({
   // diver shows up but didn't pre-submit a list. Single-row
   // version of the CSV import.
   // -------------------------------------------------------------
-  router.post("/api/events/:id/roster", requireMeetEditor, idem("roster_late_add"), async (req, res) => {
+  router.post("/api/events/:id/roster", requireRosterEditor, idem("roster_late_add"), async (req, res) => {
     const { competitor_id, dive_id, round_number, partner_id, team_id } = req.body || {};
     if (!competitor_id || !dive_id || !round_number) {
       return res.status(400).json({
@@ -1712,7 +1736,7 @@ module.exports = function createControlRoomRouter({
   // -------------------------------------------------------------
   router.post("/api/events/:id/roster/import",
     bulkWriteLimiter,
-    requireMeetEditor,
+    requireRosterEditor,
     async (req, res) => {
       const { csv, preview, dry_run } = req.body || {};
       if (typeof csv !== "string" || !csv.trim()) {

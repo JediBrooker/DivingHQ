@@ -22,12 +22,20 @@ module.exports = function createEventStaffRouter({
   requireEventManager,
   ensureEventOrgGate,
   isInSameOrg,
+  requireRoleOrEventDelegate,   // optional, migration 087
 }) {
   if (!pool) throw new Error("createEventStaffRouter requires { pool, … }");
   const router = express.Router();
 
   // -------- Event managers --------
-  router.get("/api/events/:id/managers", requireMeetEditor, async (req, res) => {
+  // Event delegates (a club admin running their own club's meet) need
+  // to see who else manages it, they can already add and remove people
+  // through requireEventManager below.
+  const requireManagerViewer = requireRoleOrEventDelegate
+    ? requireRoleOrEventDelegate(["org_admin", "meet_manager"], (req) => req.params.id)
+    : requireMeetEditor;
+
+  router.get("/api/events/:id/managers", requireManagerViewer, async (req, res) => {
     try {
       if (!(await ensureEventOrgGate(req, res, "id"))) return;
       const r = await pool.query(
@@ -76,7 +84,9 @@ module.exports = function createEventStaffRouter({
   // -------- Judge panel --------
   // Tuple repeated once here, but kept explicit since we don't
   // reuse it elsewhere in this file.
-  const requireMeetController = requireOrgRole(["org_admin", "meet_manager", "referee"]);
+  const requireMeetController = requireRoleOrEventDelegate
+    ? requireRoleOrEventDelegate(["org_admin", "meet_manager", "referee"], (req) => req.params.eventId)
+    : requireOrgRole(["org_admin", "meet_manager", "referee"]);
 
   router.get("/api/events/:eventId/judges", requireMeetController, async (req, res) => {
     try {

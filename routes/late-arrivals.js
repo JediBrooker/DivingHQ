@@ -20,20 +20,35 @@
 const express = require("express");
 const { recordAudit } = require("../lib/audit");
 
-module.exports = function createLateArrivalsRouter({ pool, requireOrgRole }) {
+module.exports = function createLateArrivalsRouter({
+  pool, requireOrgRole,
+  requireRoleOrEventDelegate,   // optional, migration 087
+}) {
   if (!pool) throw new Error("createLateArrivalsRouter requires { pool, requireOrgRole }");
   const router = express.Router();
 
-  const requireReviewer = requireOrgRole([
-    "referee", "meet_manager", "org_admin",
-  ]);
+  const REVIEWER_ROLES = ["referee", "meet_manager", "org_admin"];
+  const requireReviewer = requireOrgRole(REVIEWER_ROLES);
+  // A delegate for one event (say the host club's admin) only ever sees
+  // that event: the list needs ?event_id, and a decision is checked
+  // against the dive-list row's own event.
+  const requireListReviewer = requireRoleOrEventDelegate
+    ? requireRoleOrEventDelegate(REVIEWER_ROLES, (req) => req.query.event_id)
+    : requireReviewer;
+  const requireDecisionReviewer = requireRoleOrEventDelegate
+    ? requireRoleOrEventDelegate(REVIEWER_ROLES, async (req) => {
+        if (!/^[0-9a-f-]{36}$/i.test(String(req.params.id))) return null;
+        const r = await pool.query("SELECT event_id FROM competitor_dive_lists WHERE id = $1", [req.params.id]);
+        return r.rows[0]?.event_id || null;
+      })
+    : requireReviewer;
 
   // GET /api/late-arrivals
   //
   // Optional event_id query param scopes the list to one event.
   // Leave it off and you get every pending late-arrival row in
   // the caller's org. Sysadmin sees across orgs.
-  router.get("/api/late-arrivals", requireReviewer, async (req, res) => {
+  router.get("/api/late-arrivals", requireListReviewer, async (req, res) => {
     try {
       const eventId = req.query.event_id || null;
       const isSysAdmin = !!req.user.is_system_admin;
@@ -85,7 +100,7 @@ module.exports = function createLateArrivalsRouter({ pool, requireOrgRole }) {
   // decided what and when).
   router.post(
     "/api/late-arrivals/:id/decide",
-    requireReviewer,
+    requireDecisionReviewer,
     async (req, res) => {
       const { id } = req.params;
       const decision = req.body?.decision;

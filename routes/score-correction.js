@@ -31,6 +31,9 @@ module.exports = function createScoreCorrectionRouter({
   scoreboardCache,
   requireOrgRole,
   requireEventManager,
+  // Optional, migration 087. Without them this is the old role-only gate.
+  requireRoleOrEventDelegate,
+  isEventDelegate,
 }) {
   if (!pool || !io) throw new Error("createScoreCorrectionRouter requires { pool, io, … }");
   const router = express.Router();
@@ -46,7 +49,13 @@ module.exports = function createScoreCorrectionRouter({
 
   router.put(
     "/api/scores/:id",
-    requireOrgRole(["org_admin", "meet_manager", "referee"]),
+    requireRoleOrEventDelegate
+      ? requireRoleOrEventDelegate(["org_admin", "meet_manager", "referee"], async (req) => {
+          if (!/^[0-9a-f-]{36}$/i.test(String(req.params.id))) return null;
+          const r = await pool.query("SELECT event_id FROM scores WHERE id = $1", [req.params.id]);
+          return r.rows[0]?.event_id || null;
+        })
+      : requireOrgRole(["org_admin", "meet_manager", "referee"]),
     httpMiddleware("score_correction"),
     async (req, res) => {
       // Validate the score id shape before it reaches the query.
@@ -95,11 +104,15 @@ module.exports = function createScoreCorrectionRouter({
         const isOrgAdmin = req.user.is_system_admin
           || (req.user.org_roles || []).includes("org_admin");
         if (!isOrgAdmin) {
-          const ok = await pool.query(
-            "SELECT 1 FROM event_managers WHERE event_id = $1 AND user_id = $2",
-            [existing.event_id, req.user.id],
-          );
-          if (ok.rows.length === 0) {
+          // Delegate = event_managers row, or admin of the club hosting
+          // the meet. Falls back to the plain row check for old mounts.
+          const ok = isEventDelegate
+            ? await isEventDelegate(existing.event_id, req.user.id)
+            : (await pool.query(
+                "SELECT 1 FROM event_managers WHERE event_id = $1 AND user_id = $2",
+                [existing.event_id, req.user.id],
+              )).rows.length > 0;
+          if (!ok) {
             return res.status(403).json({
               error: "You are not a manager of this event",
             });

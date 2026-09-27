@@ -38,6 +38,13 @@ that's intentional, but every privileged event must call
 
 ## Client → server (`socket.on` handlers)
 
+The meet-control events below go through `socketCanManageEvent`
+(`lib/middleware.js`). The event has to be in the socket's org, and the
+socket needs one of the listed roles **or** has to be a delegate for that
+event: an `event_managers` row, or admin of the club hosting the event's
+meet (`meets.host_club_id`, migration 087). That second path is how a club
+in a country with no federation on DivingHQ runs its own meets.
+
 | Event | Required role | Payload | Notes |
 |---|---|---|---|
 | `set_active_diver`        | meet_manager / referee / org_admin / sysadmin | Roster row + status | Persists to in-memory `activeDivers[event_id]` so late-joiners see it. |

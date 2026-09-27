@@ -47,10 +47,24 @@ module.exports = function createMeetsRouter({
   requireMeetEditor,
   requireEventManager,
   payments,
+  // Club-hosted meets (migration 087). Optional: without them the
+  // router behaves exactly as before, org-wide editors only.
+  requireMeetOrClubEditor,
+  isMeetHostAdmin,
 }) {
   if (!pool) throw new Error("createMeetsRouter requires { pool, … }");
   const router = express.Router();
   const maybeAuth = optionalAuth || ((req, _res, next) => next());
+
+  // org_admin / meet_manager, the org-wide meet editors.
+  function isOrgEditor(user) {
+    const roles = user?.org_roles || [];
+    return roles.includes("org_admin") || roles.includes("meet_manager");
+  }
+
+  // Org editors, or club admins (who requireEditableMeet then pins to
+  // their own club's meets). req.clubAdminOf is set for the latter.
+  const meetEditorGate = requireMeetOrClubEditor || requireMeetEditor;
 
   function hasOwn(obj, key) {
     return Object.prototype.hasOwnProperty.call(obj || {}, key);
@@ -296,7 +310,7 @@ module.exports = function createMeetsRouter({
 
   async function requireEditableMeet(db, req, res) {
     const r = await db.query(
-      "SELECT id, org_id FROM meets WHERE id = $1",
+      "SELECT id, org_id, host_club_id FROM meets WHERE id = $1",
       [req.params.id],
     );
     if (!r.rows.length) {
@@ -307,6 +321,14 @@ module.exports = function createMeetsRouter({
     if (!req.user?.is_system_admin && meet.org_id !== req.user?.org_id) {
       res.status(403).json({ error: "Cannot manage meets in other organisations" });
       return null;
+    }
+    // Got past meetEditorGate as a club admin: only their own club's
+    // meets, never a neighbouring club's or the org's.
+    if (!req.user?.is_system_admin && !isOrgEditor(req.user)) {
+      if (!isMeetHostAdmin || !(await isMeetHostAdmin(meet.id, req.user.id))) {
+        res.status(403).json({ error: "You can only manage meets your club hosts" });
+        return null;
+      }
     }
     return meet;
   }
@@ -517,8 +539,9 @@ module.exports = function createMeetsRouter({
     }
   });
 
-  router.get("/api/meets/:id/readiness-report", requireMeetEditor, async (req, res) => {
+  router.get("/api/meets/:id/readiness-report", meetEditorGate, async (req, res) => {
     try {
+      if (!(await requireEditableMeet(pool, req, res))) return;
       const report = await buildMeetReadinessReport(pool, req.params.id, req.user);
       if (!report) return res.status(404).json({ error: "Meet not found" });
       if (String(req.query.format || "").toLowerCase() === "csv") {
@@ -531,13 +554,33 @@ module.exports = function createMeetsRouter({
     }
   });
 
-  router.post("/api/meets", requireMeetEditor, async (req, res) => {
+  router.post("/api/meets", meetEditorGate, async (req, res) => {
     const {
       name, venue, start_date, end_date, description,
       sponsor_name, sponsor_logo_url, sponsor_link_url,
     } = req.body || {};
     if (!name || !name.trim()) {
       return res.status(400).json({ error: "Meet name is required" });
+    }
+    // Which club hosts it. Org editors may leave it off (the org hosts,
+    // as always) or name any club in their org, e.g. setting a meet up
+    // on a club's behalf. A club admin can only host as their own club,
+    // and with just one club we don't make them say which.
+    let hostClubId = req.body?.host_club_id || null;
+    const editor = req.user.is_system_admin || isOrgEditor(req.user);
+    if (!editor) {
+      const mine = req.clubAdminOf || [];
+      if (!hostClubId && mine.length === 1) hostClubId = mine[0];
+      if (!hostClubId || !mine.includes(hostClubId)) {
+        return res.status(400).json({ error: "Pick which of your clubs is hosting this meet" });
+      }
+    }
+    if (hostClubId) {
+      const c = await pool.query(
+        "SELECT org_id FROM clubs WHERE id = $1 AND ($2::boolean OR org_id = $3)",
+        [hostClubId, !!req.user.is_system_admin, req.user.org_id],
+      ).catch(() => ({ rows: [] }));
+      if (!c.rows.length) return res.status(400).json({ error: "Host club not found in your organisation" });
     }
     const safeLogo = rejectIfUnsafeUrl(res, "sponsor_logo_url", sponsor_logo_url);
     if (safeLogo === false) return;
@@ -547,12 +590,12 @@ module.exports = function createMeetsRouter({
       const r = await pool.query(
         `INSERT INTO meets
            (org_id, name, venue, start_date, end_date, description,
-            sponsor_name, sponsor_logo_url, sponsor_link_url)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+            sponsor_name, sponsor_logo_url, sponsor_link_url, host_club_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
         [
           req.user.org_id, name.trim(), venue || null,
           start_date || null, end_date || null, description || null,
-          sponsor_name || null, safeLogo, safeLink,
+          sponsor_name || null, safeLogo, safeLink, hostClubId,
         ],
       );
       res.status(201).json(r.rows[0]);
@@ -562,7 +605,7 @@ module.exports = function createMeetsRouter({
     }
   });
 
-  router.put("/api/meets/:id", requireMeetEditor, async (req, res) => {
+  router.put("/api/meets/:id", meetEditorGate, async (req, res) => {
     const {
       name, venue, start_date, end_date, description,
       sponsor_name, sponsor_logo_url, sponsor_link_url,
@@ -615,7 +658,7 @@ module.exports = function createMeetsRouter({
     }
   });
 
-  router.delete("/api/meets/:id", requireMeetEditor, async (req, res) => {
+  router.delete("/api/meets/:id", meetEditorGate, async (req, res) => {
     try {
       if (!(await requireEditableMeet(pool, req, res))) return;
       const meetId = req.params.id;
@@ -689,6 +732,15 @@ module.exports = function createMeetsRouter({
           return res
             .status(400)
             .json({ error: "Meet not found in this organisation" });
+        }
+      }
+      // A club admin gets here as the event's delegate. Moving it into a
+      // neighbouring club's meet (or out to the org) would hand it to
+      // someone else, so they can only move it between their own meets.
+      if (!req.user.is_system_admin && !isOrgEditor(req.user)
+          && !(req.user.org_roles || []).includes("org_admin")) {
+        if (!meet_id || !isMeetHostAdmin || !(await isMeetHostAdmin(meet_id, req.user.id))) {
+          return res.status(403).json({ error: "You can only move events between your own club's meets" });
         }
       }
       const r = await pool.query(
@@ -855,7 +907,7 @@ module.exports = function createMeetsRouter({
   // single-file upload.
   router.post(
     "/api/meets/:id/sponsor-logos",
-    requireMeetEditor,
+    meetEditorGate,
     express.raw({
       type: ["image/png", "image/jpeg", "image/webp"],
       limit: SPONSOR_LOGO_MAX_BYTES,
@@ -965,7 +1017,7 @@ module.exports = function createMeetsRouter({
   // "reorder" as a UUID parameter.
   router.put(
     "/api/meets/:id/sponsor-logos/reorder",
-    requireMeetEditor,
+    meetEditorGate,
     async (req, res) => {
       const order = Array.isArray(req.body?.order) ? req.body.order : null;
       if (!order || !order.length) {
@@ -1021,7 +1073,7 @@ module.exports = function createMeetsRouter({
   // constraint stays consistent.
   router.put(
     "/api/meets/:id/sponsor-logos/:logoId",
-    requireMeetEditor,
+    meetEditorGate,
     async (req, res) => {
       try {
         if (!(await requireEditableMeet(pool, req, res))) return;
@@ -1083,7 +1135,7 @@ module.exports = function createMeetsRouter({
   // close it.
   router.delete(
     "/api/meets/:id/sponsor-logos/:logoId",
-    requireMeetEditor,
+    meetEditorGate,
     async (req, res) => {
       try {
         if (!(await requireEditableMeet(pool, req, res))) return;
@@ -1109,7 +1161,7 @@ module.exports = function createMeetsRouter({
   // render statically). Clamped to 0..60.
   router.put(
     "/api/meets/:id/sponsor-rotation",
-    requireMeetEditor,
+    meetEditorGate,
     async (req, res) => {
       try {
         if (!(await requireEditableMeet(pool, req, res))) return;

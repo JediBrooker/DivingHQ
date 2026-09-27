@@ -26,6 +26,21 @@
  * @property {boolean}  is_system_admin
  * @property {number}   iat             issued-at, set by jsonwebtoken
  * @property {number}   exp             expiry, set by jsonwebtoken
+ * @property {boolean}  [has_dependents] Body-only (login + /api/auth/me), never in the JWT.
+ * @property {{id: string, name: string}[]} [club_admin_of]
+ *   Body-only (login + /api/auth/me): clubs this user admins. UI hint
+ *   only, the server re-reads club_admins on every club-scoped route.
+ */
+
+/**
+ * @typedef {Object} CountryOrg
+ * One row of GET /api/orgs/by-country/:code, the org a registrant from
+ * that country would join.
+ *
+ * @property {string} id
+ * @property {string} name
+ * @property {string} country_code
+ * @property {'claimed'|'unclaimed'} claim_state  unclaimed = started by clubs, no federation yet
  */
 
 /**

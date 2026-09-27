@@ -91,6 +91,22 @@ function validatePassword(pw) {
 // signed into the JWT, and an approval that lands after the cookie was
 // minted would sit stale until the next sign-in. This rides on the
 // response body instead, so /api/auth/me refreshes it on every boot.
+// Clubs this user admins, [{ id, name }]. Same reasoning as
+// has_dependents below: a club admin grant lands whenever the federation
+// (or signup) makes it, so it rides on the response body, never the JWT.
+// The SPA uses it to show the meet screens and pick a host club. The
+// server never trusts it, every club-scoped route re-reads club_admins.
+async function loadClubAdminOf(pool, userId) {
+  const r = await pool.query(
+    `SELECT c.id, c.name
+       FROM club_admins ca JOIN clubs c ON c.id = ca.club_id
+      WHERE ca.user_id = $1
+      ORDER BY lower(c.name)`,
+    [userId],
+  );
+  return r.rows;
+}
+
 async function loadHasDependents(pool, userId) {
   try {
     const r = await pool.query(
@@ -189,6 +205,7 @@ module.exports = function createAuthRouter({
       // for a guardian link an admin approved five minutes ago.
       const payload = await buildTokenPayload(req.user.id);
       payload.has_dependents = await loadHasDependents(pool, req.user.id);
+      payload.club_admin_of = await loadClubAdminOf(pool, req.user.id);
       res.json({ user: payload });
     } catch (err) {
       console.error("[Auth Me Error]", err.message);
@@ -301,6 +318,7 @@ module.exports = function createAuthRouter({
       setSessionCookie(res, token);
       // After signing, so the flag never enters the JWT.
       payload.has_dependents = await loadHasDependents(pool, user.id);
+      payload.club_admin_of = await loadClubAdminOf(pool, user.id);
       const resBody = { user: payload, ...payload };
       if (includeBodyToken(req)) resBody.token = token;
       res.json(resBody);
@@ -395,6 +413,9 @@ module.exports = function createAuthRouter({
       const payload = await buildTokenPayload(user.id);
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
       setSessionCookie(res, token);
+      // Same body-only extras as the password login.
+      payload.has_dependents = await loadHasDependents(pool, user.id);
+      payload.club_admin_of = await loadClubAdminOf(pool, user.id);
       const resBody = {
         user: payload,
         ...payload,

@@ -376,6 +376,11 @@ const {
   requireOrgRole,
   requireSystemAdmin,
   requireEventManager,
+  requireRoleOrEventDelegate,
+  requireMeetEditorOrClubAdmin,
+  isEventDelegate,
+  isMeetHostAdmin,
+  clubAdminClubIds,
   requireClubAdmin,
   requireClubAdminOnly,
   ensureEventOrgGate,
@@ -410,6 +415,12 @@ const requireMeetEditor = [
 ];
 const requireOrgAdmin = [
   requireOrgRole(["org_admin"]),
+  requireTotpForPrivilegedRoles,
+];
+// Meet editors plus club admins (migration 087). Routes using this must
+// still pin club admins to their own club's meets, see isMeetHostAdmin.
+const requireMeetOrClubEditor = [
+  requireMeetEditorOrClubAdmin,
   requireTotpForPrivilegedRoles,
 ];
 
@@ -820,6 +831,7 @@ app.use(require("./routes/users")({
   verifyToken,
   requireOrgAdmin,
   requireMeetEditor,
+  requireMeetOrClubEditor,
   bumpTokenVersion,
   sendRoleDecisionEmail,
   // Self-delete + claim endpoints (Migration 053), rate-limited
@@ -847,6 +859,8 @@ app.use(require("./routes/meets")({
   requireMeetEditor,
   requireEventManager,
   payments,
+  requireMeetOrClubEditor,
+  isMeetHostAdmin,
 }));
 
 // =============================================================
@@ -866,6 +880,9 @@ app.use(require("./routes/sessions")({
   // additive.
   requireMeetEditor,
   io,
+  // Club-hosted meets: a club admin edits their own meet's schedule.
+  requireMeetOrClubEditor,
+  isMeetHostAdmin,
 }));
 
 // =============================================================
@@ -899,6 +916,9 @@ app.use(require("./routes/events")({
   // wired, the events router just falls back to a silent insert.
   push,
   payments,
+  isMeetHostAdmin,
+  isEventDelegate,
+  requireTotpForPrivilegedRoles,
 }));
 
 // =============================================================
@@ -915,6 +935,7 @@ app.use(require("./routes/event-staff")({
   requireEventManager,
   ensureEventOrgGate,
   isInSameOrg,
+  requireRoleOrEventDelegate,
 }));
 
 // =============================================================
@@ -940,6 +961,9 @@ app.use(require("./routes/control-room")({
   // everywhere), keeps the dive-order routes on the exact same
   // message/shape as the rest of the app.
   ensureEventPreMeet,
+  // Club-hosted meets: event delegates get past the operator gates.
+  requireRoleOrEventDelegate,
+  requireTotpForPrivilegedRoles,
 }));
 
 // =============================================================
@@ -974,6 +998,8 @@ app.use(require("./routes/score-correction")({
   scoreboardCache,
   requireOrgRole,
   requireEventManager,
+  requireRoleOrEventDelegate,
+  isEventDelegate,
 }));
 
 // =============================================================
@@ -1032,7 +1058,7 @@ app.use(require("./routes/templates")({ pool, verifyToken }));
 // docs/offline-p1-design.md §4.
 // =============================================================
 app.use(require("./routes/conflicts")({
-  pool, io, scoreboardCache, requireOrgRole,
+  pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate,
 }));
 
 // =============================================================
@@ -1042,7 +1068,7 @@ app.use(require("./routes/conflicts")({
 // (see lib/deadline-gate.js + DEC-04 in offline-inventory.md).
 // Lists pending late-arrival rows + accepts approve/deny.
 // =============================================================
-app.use(require("./routes/late-arrivals")({ pool, requireOrgRole }));
+app.use(require("./routes/late-arrivals")({ pool, requireOrgRole, requireRoleOrEventDelegate }));
 
 // =============================================================
 // MANUAL SCORE ENTRY (P5)
@@ -1053,7 +1079,7 @@ app.use(require("./routes/late-arrivals")({ pool, requireOrgRole }));
 // §Phase 5.
 // =============================================================
 app.use(require("./routes/manual-scores")({
-  pool, io, scoreboardCache, requireOrgRole,
+  pool, io, scoreboardCache, requireOrgRole, requireRoleOrEventDelegate,
 }));
 
 // =============================================================

@@ -33,6 +33,7 @@ const createIdempotency = require("../lib/idempotency");
 
 module.exports = function createManualScoresRouter({
   pool, io, scoreboardCache, requireOrgRole,
+  requireRoleOrEventDelegate,   // optional, migration 087
 }) {
   if (!pool || !io) throw new Error("createManualScoresRouter requires { pool, io, … }");
   const router = express.Router();
@@ -41,7 +42,9 @@ module.exports = function createManualScoresRouter({
 
   router.post(
     "/api/scores/manual-entry",
-    requireOrgRole(["org_admin", "meet_manager", "referee"]),
+    requireRoleOrEventDelegate
+      ? requireRoleOrEventDelegate(["org_admin", "meet_manager", "referee"], (req) => req.body?.event_id)
+      : requireOrgRole(["org_admin", "meet_manager", "referee"]),
     idem("score_manual_entry"),
     async (req, res) => {
       const {
