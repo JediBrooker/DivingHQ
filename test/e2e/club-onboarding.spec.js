@@ -198,6 +198,11 @@ test("the check-inbox panel stays put and its resend cools down", async ({ page 
 
   const inbox = page.getByTestId("check-inbox");
   await expect(inbox).toContainText(`${username}@example.test`);
+  // The submit button went with the form, so focus moves to the heading.
+  // The panel itself isn't a live region (the countdown would be read out
+  // every second); only the "new link" line is.
+  await expect(inbox.getByRole("heading", { name: "Check your inbox" })).toBeFocused();
+  await expect(inbox).not.toHaveAttribute("role", "status");
   const resend = page.getByTestId("check-inbox-resend");
   await expect(resend).toBeDisabled();
 
@@ -207,7 +212,7 @@ test("the check-inbox panel stays put and its resend cools down", async ({ page 
   await expect(resend).toBeEnabled();
   await resend.click();
   expect((await sent).postDataJSON()).toEqual({ username });
-  await expect(inbox).toContainText("A new link is on its way");
+  await expect(inbox.getByRole("status")).toContainText("A new link is on its way");
   await expect(resend).toBeDisabled();
 });
 

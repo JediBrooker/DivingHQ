@@ -14,7 +14,7 @@
 // sent and it can take a minute to land. The server has its own
 // per-account cooldown and answers ok regardless, so this is only about
 // not inviting a row of identical emails.
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, useId } from 'vue'
 import { RouterLink } from 'vue-router'
 
 const props = defineProps({
@@ -61,13 +61,24 @@ async function resend() {
   }
 }
 
-onMounted(startCooldown)
+// The form (and the submit button that had focus) is gone once this shows,
+// so focus lands on the heading and a screen reader reads where they are.
+const titleEl = ref(null)
+const titleId = `ci-title-${useId()}`
+
+onMounted(() => {
+  startCooldown()
+  titleEl.value?.focus()
+})
 onBeforeUnmount(() => clearInterval(timer))
 </script>
 
 <template>
-  <section class="check-inbox" data-testid="check-inbox" role="status">
-    <h2 class="ci-title">{{ $t('auth.check_inbox.title') }}</h2>
+  <!-- Not a live region as a whole: the countdown in the button changes
+       every second and would be read out every second. Only the "new link
+       sent" line below is announced. -->
+  <section class="check-inbox" data-testid="check-inbox" :aria-labelledby="titleId">
+    <h2 :id="titleId" ref="titleEl" class="ci-title" tabindex="-1">{{ $t('auth.check_inbox.title') }}</h2>
     <p class="ci-body">
       {{ $t('auth.check_inbox.body', { email }) }}
     </p>
@@ -77,7 +88,9 @@ onBeforeUnmount(() => clearInterval(timer))
             :disabled="wait > 0 || sending" @click="resend">
       {{ wait > 0 ? $t('auth.check_inbox.resend_wait', { seconds: wait }) : $t('auth.verify_email.resend_button') }}
     </button>
-    <p v-if="resent" class="msg msg-success ci-resent">{{ $t('auth.check_inbox.resent', { email }) }}</p>
+    <div class="ci-live" role="status">
+      <p v-if="resent" class="msg msg-success ci-resent">{{ $t('auth.check_inbox.resent', { email }) }}</p>
+    </div>
     <p class="ci-signin">
       {{ $t('auth.check_inbox.already') }}
       <RouterLink to="/login">{{ $t('auth.register.sign_in_link') }}</RouterLink>
@@ -93,10 +106,15 @@ onBeforeUnmount(() => clearInterval(timer))
   background: var(--surface);
 }
 .ci-title { margin: 0; font-size: var(--text-h3); font-weight: 600; font-style: normal; color: var(--fg); }
+.ci-title:focus { outline: none; }
 .ci-body { margin: 0; color: var(--fg); font-size: var(--text-sm); line-height: 1.55; overflow-wrap: anywhere; }
 .ci-hint { margin: 0; color: var(--fg-3); font-size: var(--text-xs); line-height: 1.5; }
 .ci-resend { align-self: flex-start; }
 .ci-resent { margin: 0; }
+/* Empty until a resend, and an empty flex child still costs a gap. Taken
+   out of the flow rather than hidden, so the live region already exists
+   when the message lands in it. */
+.ci-live:empty { position: absolute; }
 .ci-signin { margin: var(--space-2) 0 0; font-size: var(--text-sm); color: var(--fg-3); }
 .ci-signin a { color: var(--accent); }
 </style>
