@@ -1724,3 +1724,51 @@ test("referee credential sign-off: eligibility before bcrypt, one answer for eve
     await claimKit.wipe(CODE);
   }
 });
+
+test("editing an event can't chain it onto a neighbouring club's stage", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "DMA";
+  await claimKit.wipe(CODE);
+  const mkEvent = async (token, meetId, name, extra = {}) => {
+    const r = await fetchJson("POST", "/api/events", {
+      token,
+      body: { name, gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 5,
+              event_type: "individual", meet_id: meetId, ...extra },
+    });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    return r.body.id;
+  };
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Roseau Divers" });
+    const B = await delegateSignUp({ country_code: CODE, new_club_name: "Portsmouth Divers" });
+    const aMeet = (await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Roseau Open" } })).body.id;
+    const bMeet = (await fetchJson("POST", "/api/meets", { token: B.token, body: { name: "Portsmouth Open" } })).body.id;
+    // A's event is the older one, which is what made the hijack work.
+    const x = await mkEvent(A.token, aMeet, "Roseau 3m Final", { event_format: "final" });
+    const bPrelim = await mkEvent(B.token, bMeet, "Portsmouth 3m Prelim", { event_format: "preliminary" });
+    await mkEvent(B.token, bMeet, "Portsmouth 3m Final", { event_format: "final", parent_event_id: bPrelim });
+
+    const hijack = await fetchJson("PUT", `/api/events/${x}`, { token: A.token, body: { parent_event_id: bPrelim } });
+    assert.equal(hijack.status, 400, JSON.stringify(hijack.body));
+    const after = await pool.query("SELECT parent_event_id FROM events WHERE id = $1", [x]);
+    assert.equal(after.rows[0].parent_event_id, null);
+
+    // Chaining onto their own prelim is fine, and saving again with the
+    // parent unchanged still works.
+    const aPrelim = await mkEvent(A.token, aMeet, "Roseau 3m Prelim", { event_format: "preliminary" });
+    assert.equal((await fetchJson("PUT", `/api/events/${x}`, { token: A.token, body: { parent_event_id: aPrelim } })).status, 200);
+    assert.equal((await fetchJson("PUT", `/api/events/${x}`, { token: A.token, body: { parent_event_id: aPrelim, name: "Roseau 3m F" } })).status, 200);
+    // Nor can an event feed from itself, or from junk.
+    assert.equal((await fetchJson("PUT", `/api/events/${x}`, { token: A.token, body: { parent_event_id: x } })).status, 400);
+    assert.equal((await fetchJson("PUT", `/api/events/${x}`, { token: A.token, body: { parent_event_id: "not-a-uuid" } })).status, 400);
+
+    // A plain event manager of X (no club role) is held to the same rule.
+    const helper = await delegateSignUp({ country_code: CODE });
+    await pool.query("INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2)", [x, helper.id]);
+    assert.equal((await fetchJson("PUT", `/api/events/${x}`, { token: helper.token, body: { parent_event_id: bPrelim } })).status, 400);
+    assert.equal((await fetchJson("PUT", `/api/events/${x}`, { token: helper.token, body: { name: "Roseau 3m Final" } })).status, 200);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
