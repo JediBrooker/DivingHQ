@@ -26,6 +26,8 @@ module.exports = function createTeamsRouter({
   pool,
   requireMeetEditor,
   requireEventManager,
+  requireRoleOrEventDelegate,
+  requireTotpForPrivilegedRoles,
   bulkWriteLimiter,
   ensureEventOrgGate,
   isInSameOrg,
@@ -635,7 +637,20 @@ module.exports = function createTeamsRouter({
   );
 
   // -------- Teams ↔ Events --------
-  router.get("/api/events/:id/teams", requireMeetEditor, async (req, res) => {
+  // Reading an event's teams is open to the event's delegates (host club
+  // or region admins, event_managers rows) as well as the org editors.
+  // They can already enrol teams (requireEventManager below) and late-add
+  // team entries in the Control Room, whose team picker reads this list.
+  // With the editor-only gate that picker got a 403, quietly showed no
+  // teams and then refused to submit, which in an unclaimed country (no
+  // org_admin at all) left team events to the sysadmin. Names and short
+  // codes only, and the scoreboard shows those publicly anyway.
+  const requireEventTeamsReader = requireRoleOrEventDelegate
+    ? [requireRoleOrEventDelegate(["org_admin", "meet_manager"], (req) => req.params.id),
+       ...(requireTotpForPrivilegedRoles ? [requireTotpForPrivilegedRoles] : [])]
+    : requireMeetEditor;
+
+  router.get("/api/events/:id/teams", requireEventTeamsReader, async (req, res) => {
     try {
       if (!(await ensureEventOrgGate(req, res, "id"))) return;
       const r = await pool.query(

@@ -767,6 +767,8 @@ app.use(require("./routes/teams")({
   pool,
   requireMeetEditor,
   requireEventManager,
+  requireRoleOrEventDelegate,
+  requireTotpForPrivilegedRoles,
   bulkWriteLimiter,
   ensureEventOrgGate,
   isInSameOrg,

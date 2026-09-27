@@ -1862,3 +1862,64 @@ test("team labels follow the meet's represent_as", async (t) => {
     await claimKit.wipe(CODE);
   }
 });
+
+// Host club admins run team events in an unclaimed country, so they need
+// the event's team list: the Control Room late-entry picker reads it.
+test("an event's team list opens to its delegates, and only them", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MSR";
+  await claimKit.wipe(CODE);
+  await claimKit.wipe("AIA");
+  try {
+    const A = await claimKit.founder(CODE, "Plymouth Divers");
+    const B = await claimKit.founder(CODE, "Salem Divers");
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Montserrat Open" } });
+    assert.equal(meet.status, 201, JSON.stringify(meet.body));
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "Mixed Team", gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 3, event_type: "team", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const teamId = (await pool.query(
+      "INSERT INTO teams (org_id, name, short_code) VALUES ($1, 'Plymouth A', 'PLA') RETURNING id", [orgId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO event_teams (event_id, team_id) VALUES ($1, $2)", [ev.body.id, teamId]);
+
+    const list = (token) => fetchJson("GET", `/api/events/${ev.body.id}/teams`, { token });
+    const host = await list(A.token);
+    assert.equal(host.status, 200, JSON.stringify(host.body));
+    assert.deepEqual(host.body.map((r) => [r.name, r.short_code]), [["Plymouth A", "PLA"]]);
+    assert.equal((await list(B.token)).status, 403, "another club's admin doesn't run this meet");
+    // No token at all: verifyToken answers 403 (its long-standing contract).
+    const anon = await list(null);
+    assert.equal(anon.status, 403);
+    assert.ok(!Array.isArray(anon.body));
+
+    // The org editors keep their way in; another org's don't get one.
+    const signIn = async (org, role) => {
+      const username = `int-et-${crypto.randomBytes(3).toString("hex")}`;
+      await insertUser({ orgId: org, role, username, fullName: "Meet Manager" });
+      const r = await fetchJson("POST", "/api/auth/login", { body: { username, password: "not-used-here" } });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+      return r.body.token;
+    };
+    assert.equal((await list(await signIn(orgId, "meet_manager"))).status, 200);
+    const X = await claimKit.founder("AIA", "Anguilla Divers");
+    const otherOrg = (await pool.query("SELECT org_id FROM users WHERE id = $1", [X.id])).rows[0].org_id;
+    assert.equal((await list(await signIn(otherOrg, "meet_manager"))).status, 403);
+
+    // With the list readable, the host's late-entry flow goes through.
+    const diver = await insertUser({ orgId, role: "diver", username: `int-et-${crypto.randomBytes(3).toString("hex")}`, fullName: "Walk Up" });
+    await pool.query("INSERT INTO team_members (team_id, user_id) VALUES ($1, $2)", [teamId, diver]);
+    const dive = (await pool.query("SELECT id FROM dive_directory WHERE height = 3 LIMIT 1")).rows[0].id;
+    const late = await fetchJson("POST", `/api/events/${ev.body.id}/roster`, {
+      token: A.token, body: { competitor_id: diver, dive_id: dive, round_number: 1, team_id: host.body[0].id },
+    });
+    assert.equal(late.status, 201, JSON.stringify(late.body));
+  } finally {
+    await claimKit.wipe(CODE);
+    await claimKit.wipe("AIA");
+  }
+});
