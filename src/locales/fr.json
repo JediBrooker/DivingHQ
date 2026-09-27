@@ -549,6 +549,15 @@
         "step_5": "Le jour J, pilote la notation depuis la <strong>Salle de Contrôle</strong>",
         "cta": "Guide de la Salle de Contrôle ↗"
       },
+      "club_admin": {
+        "name": "Administrateur de club",
+        "desc": "Vous gérez votre club. Là où la fédération de votre pays n'est pas encore sur DivingHQ, le club organise ses propres compétitions : créez-les, pilotez-les depuis la <strong>Salle de contrôle</strong> et approuvez les demandes de rôle de vos membres. Sous une fédération, c'est elle qui vous nomme.",
+        "step_1": "Inscrivez-vous, choisissez votre pays et créez votre club : vous en serez le premier administrateur",
+        "step_2": "Ouvrez le <strong>Gestionnaire de compétitions</strong> et créez une compétition organisée par votre club",
+        "step_3": "Approuvez dans <strong>Mon club</strong> les membres qui veulent plonger, juger ou arbitrer",
+        "step_4": "Le jour J, pilotez la notation depuis la <strong>Salle de contrôle</strong>",
+        "cta": "Organiser une compétition ↗"
+      },
       "org_admin": {
         "name": "Admin de l'Organisation",
         "desc": "Tu configures la fédération. Gère les clubs, les équipes, les utilisateurs et les rôles. Toute compétition créée par un gestionnaire remonte à ta fédération ; tu peux aussi accueillir des compétitions internationales et inviter des fédérations visiteuses.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Vous-même",
     "admin_title": "Demandes de tuteur",
     "admin_empty": "Aucune demande de tuteur en attente."
+  },
+  "my_club": {
+    "title": "Mon club",
+    "intro": "Approuvez les demandes de rôle de vos membres et choisissez qui vous aide à gérer le club.",
+    "run_meets": "Organiser vos compétitions",
+    "requests": "Demandes de rôle",
+    "no_requests_title": "Aucune demande en attente",
+    "no_requests_body": "Quand un membre demande à devenir plongeur, juge ou arbitre, la demande apparaît ici.",
+    "wants_role": "souhaite devenir : {role}",
+    "approve": "Approuver",
+    "reject": "Refuser",
+    "admins": "Administrateurs du club",
+    "add_admin": "Ajouter un administrateur",
+    "pick_member": "— Choisissez un membre du club —",
+    "add": "Ajouter",
+    "remove": "Retirer",
+    "federation_appoints": "Votre fédération nomme les administrateurs de ce club."
   }
 }

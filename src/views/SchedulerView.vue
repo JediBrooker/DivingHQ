@@ -74,9 +74,12 @@ const sessions = ref([])
 const boards = ref([])
 const meetEvents = ref([])
 
+// The server's answer for this meet (org editors, or the admin of the
+// club hosting it). The role check covers the moment before it arrives.
+const serverCanEdit = ref(false)
 const canEditSchedule = computed(() => {
   if (!auth.user) return false
-  if (auth.user.is_system_admin) return true
+  if (auth.user.is_system_admin || serverCanEdit.value) return true
   const roles = auth.user.org_roles || []
   return roles.includes('org_admin') || roles.includes('meet_manager')
 })
@@ -174,6 +177,7 @@ async function load() {
     sessions.value = Array.isArray(body?.sessions) ? body.sessions : []
     boards.value = Array.isArray(body?.boards) ? body.boards : []
     meetEvents.value = Array.isArray(body?.events) ? body.events : []
+    serverCanEdit.value = !!body?.can_edit
   } catch (err) {
     error.value = err.message || t('scheduler.load_failed')
   } finally {

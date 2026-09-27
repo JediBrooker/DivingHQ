@@ -538,6 +538,15 @@
         "step_5": "Na sam dan vodite ocjenjivanje iz <strong>Kontrolne sobe</strong>",
         "cta": "Vodič za Kontrolnu sobu ↗"
       },
+      "club_admin": {
+        "name": "Administrator kluba",
+        "desc": "Vodite svoj klub. Gdje savez vaše države još nije na DivingHQ-u, klub sam organizira natjecanja: stvorite ih, vodite iz <strong>Kontrolne sobe</strong> i odobravajte zahtjeve članova za uloge. Pod savezom vas imenuje savez.",
+        "step_1": "Registrirajte se, odaberite državu i stvorite klub, bit ćete njegov prvi administrator",
+        "step_2": "Otvorite <strong>Menadžer natjecanja</strong> i stvorite natjecanje koje organizira vaš klub",
+        "step_3": "Na stranici <strong>Moj klub</strong> odobrite članove koji žele skakati, suditi ili biti glavni sudac",
+        "step_4": "Na dan natjecanja vodite bodovanje iz <strong>Kontrolne sobe</strong>",
+        "cta": "Organizacija natjecanja ↗"
+      },
       "org_admin": {
         "name": "Administrator organizacije",
         "desc": "Vi postavljate federaciju. Upravljate klubovima, ekipama, korisnicima i ulogama. Svako natjecanje koje voditelj natjecanja stvori pripada vašoj federaciji; možete ugostiti i međunarodna natjecanja te pozvati federacije u gostima.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Sebe",
     "admin_title": "Zahtjevi skrbnika",
     "admin_empty": "Nema zahtjeva skrbnika na čekanju."
+  },
+  "my_club": {
+    "title": "Moj klub",
+    "intro": "Odobravajte zahtjeve članova za uloge i odaberite tko vam pomaže voditi klub.",
+    "run_meets": "Organizirajte natjecanja",
+    "requests": "Zahtjevi za uloge",
+    "no_requests_title": "Nema zahtjeva na čekanju",
+    "no_requests_body": "Kad član zatraži ulogu skakača, suca ili glavnog suca, zahtjev se pojavljuje ovdje.",
+    "wants_role": "želi biti: {role}",
+    "approve": "Odobri",
+    "reject": "Odbij",
+    "admins": "Administratori kluba",
+    "add_admin": "Dodaj administratora",
+    "pick_member": "— Odaberite člana kluba —",
+    "add": "Dodaj",
+    "remove": "Ukloni",
+    "federation_appoints": "Administratore ovog kluba imenuje vaš savez."
   }
 }

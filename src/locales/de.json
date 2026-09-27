@@ -549,6 +549,15 @@
         "step_5": "Steuern Sie am Wettkampftag die Wertung aus dem <strong>Kontrollraum</strong>",
         "cta": "Leitfaden Kontrollraum ↗"
       },
+      "club_admin": {
+        "name": "Vereinsadmin",
+        "desc": "Sie führen Ihren Verein. Wo der Verband Ihres Landes noch nicht auf DivingHQ ist, richtet der Verein seine Wettkämpfe selbst aus: anlegen, aus dem <strong>Kontrollraum</strong> steuern und die Rollenanfragen Ihrer Mitglieder genehmigen. Unter einem Verband ernennt dieser Sie.",
+        "step_1": "Registrieren Sie sich, wählen Sie Ihr Land und legen Sie Ihren Verein an, Sie werden sein erster Admin",
+        "step_2": "Öffnen Sie den <strong>Wettkampf-Manager</strong> und legen Sie einen Wettkampf Ihres Vereins an",
+        "step_3": "Genehmigen Sie auf <strong>Mein Verein</strong> Mitglieder, die springen, werten oder Schiedsrichter sein möchten",
+        "step_4": "Am Wettkampftag steuern Sie die Wertung aus dem <strong>Kontrollraum</strong>",
+        "cta": "Einen Wettkampf ausrichten ↗"
+      },
       "org_admin": {
         "name": "Verbandsadmin",
         "desc": "Sie richten den Verband ein. Verwalten Sie Vereine, Mannschaften, Benutzer und Rollen. Jeder Wettkampf, den ein Wettkampfleiter anlegt, gehört zu Ihrem Verband; Sie können auch internationale Wettkämpfe ausrichten und Gastverbände einladen.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Sie selbst",
     "admin_title": "Verknüpfungsanfragen",
     "admin_empty": "Keine ausstehenden Verknüpfungsanfragen."
+  },
+  "my_club": {
+    "title": "Mein Verein",
+    "intro": "Genehmigen Sie die Rollenanfragen Ihrer Mitglieder und wählen Sie, wer Ihnen bei der Vereinsführung hilft.",
+    "run_meets": "Wettkämpfe ausrichten",
+    "requests": "Rollenanfragen",
+    "no_requests_title": "Keine offenen Anfragen",
+    "no_requests_body": "Wenn ein Mitglied Springer, Kampfrichter oder Schiedsrichter werden möchte, erscheint die Anfrage hier.",
+    "wants_role": "möchte werden: {role}",
+    "approve": "Genehmigen",
+    "reject": "Ablehnen",
+    "admins": "Vereinsadmins",
+    "add_admin": "Admin hinzufügen",
+    "pick_member": "— Vereinsmitglied auswählen —",
+    "add": "Hinzufügen",
+    "remove": "Entfernen",
+    "federation_appoints": "Ihr Verband ernennt die Admins dieses Vereins."
   }
 }

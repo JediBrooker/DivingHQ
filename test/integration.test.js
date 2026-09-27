@@ -912,6 +912,18 @@ test("club admins review their own members' role requests", async (t) => {
       token: C.token, body: { decision: "approved" },
     });
     assert.equal(self.status, 403);
+
+    // With no federation, A manages their own co-admins: members only,
+    // and never down to zero.
+    const clubA = A.clubs[0].id;
+    const asB = await fetchJson("POST", `/api/clubs/${clubA}/admins`, { token: A.token, body: { user_id: B.id } });
+    assert.equal(asB.status, 400, "B isn't a member of A's club");
+    const addMember = await fetchJson("POST", `/api/clubs/${clubA}/admins`, { token: A.token, body: { user_id: member.id } });
+    assert.equal(addMember.status, 201, JSON.stringify(addMember.body));
+    assert.equal((await fetchJson("GET", `/api/clubs/${clubA}/admins`, { token: B.token })).status, 403);
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${clubA}/admins/${member.id}`, { token: A.token })).status, 200);
+    const last = await fetchJson("DELETE", `/api/clubs/${clubA}/admins/${A.id}`, { token: A.token });
+    assert.equal(last.status, 409, "can't remove the last admin");
   } finally {
     await wipe();
   }

@@ -538,6 +538,15 @@
         "step_5": "Pada hari itu, kawal pemarkahan dari <strong>Bilik Kawalan</strong>",
         "cta": "Panduan Bilik Kawalan ↗"
       },
+      "club_admin": {
+        "name": "Pentadbir kelab",
+        "desc": "Anda mengurus kelab anda. Jika persekutuan negara anda belum berada di DivingHQ, kelab menganjurkan pertandingannya sendiri: ciptanya, jalankan dari <strong>Bilik Kawalan</strong>, dan luluskan permintaan peranan ahli. Di bawah persekutuan, persekutuan yang melantik anda.",
+        "step_1": "Daftar, pilih negara dan cipta kelab anda; anda menjadi pentadbir pertamanya",
+        "step_2": "Buka <strong>Pengurus Pertandingan</strong> dan cipta pertandingan anjuran kelab anda",
+        "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau menjadi pengadil di <strong>Kelab saya</strong>",
+        "step_4": "Pada hari pertandingan, kendalikan pemarkahan dari <strong>Bilik Kawalan</strong>",
+        "cta": "Menganjurkan pertandingan ↗"
+      },
       "org_admin": {
         "name": "Pentadbir Organisasi",
         "desc": "Anda menyediakan persekutuan. Urus kelab, pasukan, pengguna, dan peranan. Setiap pertandingan yang dicipta oleh pengurus akan masuk ke persekutuan anda; anda juga boleh menjadi tuan rumah pertandingan antarabangsa dan menjemput persekutuan tetamu.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Diri sendiri",
     "admin_title": "Permintaan Penjaga",
     "admin_empty": "Tiada permintaan penjaga yang belum selesai."
+  },
+  "my_club": {
+    "title": "Kelab saya",
+    "intro": "Luluskan permintaan peranan ahli anda dan pilih siapa yang membantu anda mengurus kelab.",
+    "run_meets": "Anjurkan pertandingan anda",
+    "requests": "Permintaan peranan",
+    "no_requests_title": "Tiada permintaan menunggu",
+    "no_requests_body": "Apabila ahli meminta menjadi penerjun, hakim atau pengadil, ia dipaparkan di sini.",
+    "wants_role": "mahu menjadi: {role}",
+    "approve": "Luluskan",
+    "reject": "Tolak",
+    "admins": "Pentadbir kelab",
+    "add_admin": "Tambah pentadbir",
+    "pick_member": "— Pilih ahli kelab —",
+    "add": "Tambah",
+    "remove": "Alih keluar",
+    "federation_appoints": "Persekutuan anda melantik pentadbir kelab ini."
   }
 }

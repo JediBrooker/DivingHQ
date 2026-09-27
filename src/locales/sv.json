@@ -549,6 +549,15 @@
         "step_5": "På dagen styr du poängsättningen från <strong>Kontrollrummet</strong>",
         "cta": "Guide till Kontrollrummet ↗"
       },
+      "club_admin": {
+        "name": "Klubbadministratör",
+        "desc": "Du driver din klubb. Där ditt lands förbund ännu inte finns på DivingHQ arrangerar klubben sina egna tävlingar: skapa dem, styr dem från <strong>Kontrollrummet</strong> och godkänn medlemmarnas rollförfrågningar. Under ett förbund utser förbundet dig.",
+        "step_1": "Registrera dig, välj land och skapa din klubb, du blir dess första administratör",
+        "step_2": "Öppna <strong>Tävlingshanteraren</strong> och skapa en tävling som din klubb arrangerar",
+        "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara överdomare på <strong>Min klubb</strong>",
+        "step_4": "På tävlingsdagen styr du poängsättningen från <strong>Kontrollrummet</strong>",
+        "cta": "Arrangera en tävling ↗"
+      },
       "org_admin": {
         "name": "Förbundsadministratör",
         "desc": "Du sätter upp förbundet. Hantera klubbar, lag, användare och roller. Varje tävling som en tävlingsledare skapar hamnar under ditt förbund; du kan även arrangera internationella tävlingar och bjuda in gästförbund.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Dig själv",
     "admin_title": "Vårdnadshavarförfrågningar",
     "admin_empty": "Inga väntande vårdnadshavarförfrågningar."
+  },
+  "my_club": {
+    "title": "Min klubb",
+    "intro": "Godkänn medlemmarnas rollförfrågningar och välj vem som hjälper dig att driva klubben.",
+    "run_meets": "Arrangera dina tävlingar",
+    "requests": "Rollförfrågningar",
+    "no_requests_title": "Inga väntande förfrågningar",
+    "no_requests_body": "När en medlem ber om att bli hoppare, domare eller överdomare visas det här.",
+    "wants_role": "vill vara: {role}",
+    "approve": "Godkänn",
+    "reject": "Avslå",
+    "admins": "Klubbadministratörer",
+    "add_admin": "Lägg till administratör",
+    "pick_member": "— Välj en klubbmedlem —",
+    "add": "Lägg till",
+    "remove": "Ta bort",
+    "federation_appoints": "Ditt förbund utser klubbens administratörer."
   }
 }

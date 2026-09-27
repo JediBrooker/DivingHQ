@@ -549,6 +549,15 @@
         "step_5": "W dniu zawodów steruj oceną z <strong>Pokoju Kontrolnego</strong>",
         "cta": "Przewodnik Pokoju Kontrolnego ↗"
       },
+      "club_admin": {
+        "name": "Administrator klubu",
+        "desc": "Prowadzisz swój klub. Tam, gdzie federacji twojego kraju nie ma jeszcze w DivingHQ, klub sam organizuje zawody: twórz je, prowadź z <strong>Pokoju kontroli</strong> i zatwierdzaj prośby członków o role. W ramach federacji to ona cię wyznacza.",
+        "step_1": "Zarejestruj się, wybierz kraj i utwórz klub, zostaniesz jego pierwszym administratorem",
+        "step_2": "Otwórz <strong>Menedżer zawodów</strong> i utwórz zawody organizowane przez twój klub",
+        "step_3": "Na stronie <strong>Mój klub</strong> zatwierdzaj członków, którzy chcą skakać, sędziować lub być sędzią głównym",
+        "step_4": "W dniu zawodów prowadź punktację z <strong>Pokoju kontroli</strong>",
+        "cta": "Organizacja zawodów ↗"
+      },
       "org_admin": {
         "name": "Administrator Organizacji",
         "desc": "Konfigurujesz federację. Zarządzaj klubami, drużynami, użytkownikami i rolami. Każdy mityng utworzony przez dyrektora zawodów spina się z Twoją federacją; możesz też organizować zawody międzynarodowe i zapraszać federacje gościnne.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Siebie",
     "admin_title": "Prośby opiekunów",
     "admin_empty": "Brak oczekujących próśb opiekunów."
+  },
+  "my_club": {
+    "title": "Mój klub",
+    "intro": "Zatwierdzaj prośby członków o role i wybierz, kto pomaga ci prowadzić klub.",
+    "run_meets": "Organizuj zawody",
+    "requests": "Prośby o role",
+    "no_requests_title": "Brak oczekujących próśb",
+    "no_requests_body": "Gdy członek poprosi o rolę skoczka, sędziego lub sędziego głównego, pojawi się to tutaj.",
+    "wants_role": "chce być: {role}",
+    "approve": "Zatwierdź",
+    "reject": "Odrzuć",
+    "admins": "Administratorzy klubu",
+    "add_admin": "Dodaj administratora",
+    "pick_member": "— Wybierz członka klubu —",
+    "add": "Dodaj",
+    "remove": "Usuń",
+    "federation_appoints": "Administratorów tego klubu wyznacza twoja federacja."
   }
 }

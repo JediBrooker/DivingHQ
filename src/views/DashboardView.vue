@@ -728,7 +728,8 @@ const attentionCards = computed(() => {
       icon:  UserCog,
       title: t(n === 1 ? 'dashboard.attention.role_requests_one' : 'dashboard.attention.role_requests_many', { count: n }),
       meta:  t('dashboard.attention.role_requests_meta'),
-      to:    '/users',
+      // Club admins (no federation yet) review on their club page.
+      to:    auth.hasRole('org_admin') ? '/users' : '/club',
     })
   }
   if (auth.user?.is_system_admin && pendingOrgs.value.length) {

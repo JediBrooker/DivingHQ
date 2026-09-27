@@ -549,6 +549,15 @@
         "step_5": "Kisapäivänä aja pisteytys <strong>Ohjaushuoneesta</strong>",
         "cta": "Ohjaushuoneen opas ↗"
       },
+      "club_admin": {
+        "name": "Seuran ylläpitäjä",
+        "desc": "Johdat seuraasi. Jos maasi liitto ei vielä ole DivingHQ:ssa, seura järjestää kilpailunsa itse: luo ne, ohjaa niitä <strong>Ohjaamosta</strong> ja hyväksy jäsenten roolipyynnöt. Liiton alaisuudessa liitto nimeää sinut.",
+        "step_1": "Rekisteröidy, valitse maasi ja luo seurasi, sinusta tulee sen ensimmäinen ylläpitäjä",
+        "step_2": "Avaa <strong>Kilpailun hallinta</strong> ja luo seurasi järjestämä kilpailu",
+        "step_3": "Hyväksy <strong>Oma seura</strong> -sivulla jäsenet, jotka haluavat hypätä, tuomita tai toimia päätuomarina",
+        "step_4": "Kilpailupäivänä ohjaat pisteytystä <strong>Ohjaamosta</strong>",
+        "cta": "Kilpailun järjestäminen ↗"
+      },
       "org_admin": {
         "name": "Liittokoordinaattori",
         "desc": "Sinä määrität liiton asetukset. Hallinnoit seuroja, joukkueita, käyttäjiä ja rooleja. Kaikki kisanjohtajien luomat kisat kuuluvat liittoosi; voit myös järjestää kansainvälisiä kisoja ja kutsua vieraita liittoja.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Itsesi",
     "admin_title": "Huoltajapyynnöt",
     "admin_empty": "Ei odottavia huoltajapyyntöjä."
+  },
+  "my_club": {
+    "title": "Oma seura",
+    "intro": "Hyväksy jäsenten roolipyynnöt ja valitse, ketkä auttavat seuran pyörittämisessä.",
+    "run_meets": "Järjestä kilpailuja",
+    "requests": "Roolipyynnöt",
+    "no_requests_title": "Ei odottavia pyyntöjä",
+    "no_requests_body": "Kun jäsen pyytää hyppääjän, tuomarin tai päätuomarin roolia, pyyntö näkyy tässä.",
+    "wants_role": "haluaa olla: {role}",
+    "approve": "Hyväksy",
+    "reject": "Hylkää",
+    "admins": "Seuran ylläpitäjät",
+    "add_admin": "Lisää ylläpitäjä",
+    "pick_member": "— Valitse seuran jäsen —",
+    "add": "Lisää",
+    "remove": "Poista",
+    "federation_appoints": "Liittosi nimeää tämän seuran ylläpitäjät."
   }
 }

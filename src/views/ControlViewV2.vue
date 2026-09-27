@@ -11,6 +11,7 @@
 import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useClubScope } from '@/composables/useClubScope'
 import { useControlStage, liveEventsInOrder } from '@/composables/useControlStage'
 import ControlTopBar from '@/components/control/ControlTopBar.vue'
 import SetupStage from '@/components/control/SetupStage.vue'
@@ -36,6 +37,7 @@ import { showError, showSuccess } from '@/composables/useNotify'
 
 const route = useRoute()
 const auth = useAuthStore()
+const { narrowEvents } = useClubScope()
 const { queueAction, queueSocketAction } = useHttpOutbox()
 
 // Socket + the concurrent-pool live-state engine are hoisted ABOVE the
@@ -496,7 +498,9 @@ async function selectEvent(id) {
 async function loadEvents() {
   loading.value = true
   try {
-    events.value = await auth.apiFetch('/api/events')
+    // Club admins without an org role only run their own club's meets,
+    // so don't list (or stand up live pools for) the neighbours'.
+    events.value = await narrowEvents(await auth.apiFetch('/api/events'))
     loadError.value = ''
     return true
   } catch (err) {

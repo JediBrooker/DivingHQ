@@ -538,6 +538,15 @@
         "step_5": "Sa araw mismo, patakbuhin ang scoring mula sa <strong>Control Room</strong>",
         "cta": "Gabay sa Control Room ↗"
       },
+      "club_admin": {
+        "name": "Admin ng club",
+        "desc": "Ikaw ang nagpapatakbo ng iyong club. Kung wala pa sa DivingHQ ang pederasyon ng iyong bansa, ang club ang nagpapatakbo ng sariling kompetisyon: gawin ang mga ito, patakbuhin mula sa <strong>Control Room</strong>, at aprubahan ang mga hiling na role ng mga miyembro. Kung may pederasyon, ito ang magtatalaga sa iyo.",
+        "step_1": "Mag-sign up, piliin ang iyong bansa at gawin ang iyong club; ikaw ang magiging unang admin nito",
+        "step_2": "Buksan ang <strong>Tagapamahala ng meet</strong> at gumawa ng kompetisyong hino-host ng iyong club",
+        "step_3": "Aprubahan sa <strong>Aking club</strong> ang mga miyembrong gustong mag-dive, humusga o maging referee",
+        "step_4": "Sa araw ng kompetisyon, patakbuhin ang pagmamarka mula sa <strong>Control Room</strong>",
+        "cta": "Pagpapatakbo ng kompetisyon ↗"
+      },
       "org_admin": {
         "name": "Tagapangasiwa ng Organisasyon",
         "desc": "Ikaw ang nag-set up ng federation. Pamahalaan ang clubs, teams, users, at roles. Bawat meet na ginagawa ng meet manager ay nag-uugnay sa iyong federation; pwede ka ring mag-host ng international meets at mag-imbita ng visiting federations.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Sarili mo",
     "admin_title": "Mga Kahilingan ng Guardian",
     "admin_empty": "Walang nakabinbing kahilingan ng guardian."
+  },
+  "my_club": {
+    "title": "Aking club",
+    "intro": "Aprubahan ang mga hiling na role ng iyong mga miyembro at piliin kung sino ang tutulong sa pagpapatakbo ng club.",
+    "run_meets": "Patakbuhin ang iyong mga kompetisyon",
+    "requests": "Mga hiling na role",
+    "no_requests_title": "Walang naghihintay na hiling",
+    "no_requests_body": "Kapag humiling ang isang miyembro na maging diver, hurado o referee, lalabas ito rito.",
+    "wants_role": "gustong maging: {role}",
+    "approve": "Aprubahan",
+    "reject": "Tanggihan",
+    "admins": "Mga admin ng club",
+    "add_admin": "Magdagdag ng admin",
+    "pick_member": "— Pumili ng miyembro ng club —",
+    "add": "Idagdag",
+    "remove": "Alisin",
+    "federation_appoints": "Ang iyong pederasyon ang nagtatalaga ng mga admin ng club na ito."
   }
 }

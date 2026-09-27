@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useClubScope } from '@/composables/useClubScope'
 import { idbInvalidate } from '@/lib/idbCache'
 import { DIVE_DIRECTORY_TTL_MS } from '@/lib/cache-policy'
 import { confirmAction } from '@/composables/useConfirm'
@@ -29,6 +30,10 @@ const auth = useAuthStore()
 
 const events = ref([])
 const meets = ref([])
+
+// Club admins without an org role only see their own club's meets
+// (src/composables/useClubScope.js).
+const { clubMode, isMyClubMeet, narrowEvents } = useClubScope()
 const formErr = ref('')
 const editErr = ref('')
 // One composable instance locks the body whenever any of this
@@ -523,7 +528,7 @@ const superFinalModals = ref(null)
 // bundle of events, org admins create them here so events can be
 // filed under e.g. "2026 National Open".
 const meetForm = ref({
-  name: '', venue: '', start_date: '', end_date: '',
+  name: '', venue: '', start_date: '', end_date: '', host_club_id: '',
 })
 const meetFormErr = ref('')
 
@@ -697,12 +702,15 @@ const accordionSections = computed(() => {
       country: m.country_code,
     })
   }
-  out.push({
-    key: 'ungrouped',
-    kind: 'ungrouped',
-    label: 'Ungrouped events',
-    count: ungroupedCount.value,
-  })
+  // Club admins only ever have events inside their meets.
+  if (!clubMode.value) {
+    out.push({
+      key: 'ungrouped',
+      kind: 'ungrouped',
+      label: 'Ungrouped events',
+      count: ungroupedCount.value,
+    })
+  }
   return out
 })
 
@@ -710,7 +718,8 @@ const accordionSections = computed(() => {
 // meet. Called from the rail / detail-header "+ New event" /
 // "+ Add event" buttons. Passing '' opens a standalone event.
 function openCreateEvent(meetId = '') {
-  createMeetId.value = meetId || ''
+  // No standalone events in club mode, so start them on a meet.
+  createMeetId.value = meetId || (clubMode.value ? (meets.value[0]?.id || '') : '')
   createStep.value = 0
   showCreateModal.value = true
 }
@@ -901,7 +910,9 @@ function statusColor(status) {
 
 async function loadEvents() {
   try {
-    events.value = await auth.apiFetch('/api/events')
+    // loadMeets may be running alongside, so narrowEvents fetches the
+    // meet list itself when ours isn't loaded yet.
+    events.value = await narrowEvents(await auth.apiFetch('/api/events'), meets.value)
   } catch (err) {
     formErr.value = err.message
   }
@@ -918,7 +929,8 @@ async function loadMeets() {
   if (!url) return
   try {
     const body = await auth.apiFetch(url)
-    meets.value = Array.isArray(body) ? body : []
+    const list = Array.isArray(body) ? body : []
+    meets.value = clubMode.value ? list.filter(isMyClubMeet) : list
   } catch {
     meets.value = []
   }
@@ -938,9 +950,12 @@ async function createMeet() {
         venue:      meetForm.value.venue.trim() || null,
         start_date: meetForm.value.start_date || null,
         end_date:   meetForm.value.end_date   || null,
+        // Club admins host as one of their clubs; the server picks the
+        // only one when there's just the one.
+        host_club_id: meetForm.value.host_club_id || undefined,
       }),
     })
-    meetForm.value = { name: '', venue: '', start_date: '', end_date: '' }
+    meetForm.value = { name: '', venue: '', start_date: '', end_date: '', host_club_id: '' }
     showCreateMeetModal.value = false
     await loadMeets()
   } catch (err) {
@@ -1048,6 +1063,15 @@ async function createEvent() {
   if (!createRoundDives.value.length) {
     formErr.value = 'Add at least one dive (or free slot) so the event has rounds'
     createStep.value = 1
+    return
+  }
+  // The server only lets a club admin create events inside their own
+  // club's meets. Say so here rather than surface a bare 403.
+  if (clubMode.value && !createMeetId.value) {
+    formErr.value = meets.value.length
+      ? "Pick which of your club's meets this event is in"
+      : "Create a meet for your club first, events go inside it"
+    createStep.value = 0
     return
   }
   try {
@@ -1460,7 +1484,7 @@ onUnmounted(() => {
         <div class="field">
           <label class="label">Add to meet</label>
           <select class="select" v-model="createMeetId">
-            <option value="">Standalone (no meet)</option>
+            <option v-if="!clubMode" value="">Standalone (no meet)</option>
             <option v-for="m in meets" :key="m.id" :value="m.id">{{ m.name }}</option>
           </select>
           <p class="hint">
@@ -2139,7 +2163,7 @@ onUnmounted(() => {
                           @click="openEdit(ev); overflowOpenEventId = null">
                     Edit event
                   </button>
-                  <RouterLink :to="`/events/${ev.id}/audit`"
+                  <RouterLink v-if="!clubMode" :to="`/events/${ev.id}/audit`"
                               class="dropdown-item">
                     Audit log
                   </RouterLink>
@@ -2147,7 +2171,7 @@ onUnmounted(() => {
                           @click="openRosterImport(ev); overflowOpenEventId = null">
                     Import roster…
                   </button>
-                  <button class="dropdown-item"
+                  <button v-if="!clubMode" class="dropdown-item"
                           @click="openPartOrgsModal(ev); overflowOpenEventId = null"
                           v-tip="'Invite other federations\' divers to enter this event'">
                     Federations…
@@ -2499,6 +2523,13 @@ onUnmounted(() => {
             <label class="label">End Date</label>
             <input class="input" type="date" v-model="meetForm.end_date">
           </div>
+        </div>
+        <div v-if="clubMode && auth.clubAdminOf.length > 1" class="field">
+          <label class="label">Hosted by</label>
+          <select class="select" v-model="meetForm.host_club_id" required>
+            <option value="">— Pick your club —</option>
+            <option v-for="c in auth.clubAdminOf" :key="c.id" :value="c.id">{{ c.name }}</option>
+          </select>
         </div>
         <div v-if="meetFormErr" class="msg msg-error">{{ meetFormErr }}</div>
         <button type="submit" class="btn btn-primary">{{ $t('manager.modals.new_meet_submit') }}</button>

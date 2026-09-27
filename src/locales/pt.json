@@ -549,6 +549,15 @@
         "step_5": "No dia, conduz a pontuação a partir da <strong>Sala de Controlo</strong>",
         "cta": "Guia da Sala de Controlo ↗"
       },
+      "club_admin": {
+        "name": "Administrador do clube",
+        "desc": "Gere o seu clube. Onde a federação do seu país ainda não está no DivingHQ, o clube organiza as suas próprias provas: crie-as, conduza-as a partir da <strong>Sala de Controlo</strong> e aprove os pedidos de função dos membros. Sob uma federação, é ela que o nomeia.",
+        "step_1": "Registe-se, escolha o país e crie o seu clube; será o primeiro administrador",
+        "step_2": "Abra o <strong>Gestor de Competições</strong> e crie uma prova organizada pelo seu clube",
+        "step_3": "Aprove em <strong>O meu clube</strong> os membros que querem saltar, julgar ou arbitrar",
+        "step_4": "No dia da prova, conduza a pontuação a partir da <strong>Sala de Controlo</strong>",
+        "cta": "Organizar uma prova ↗"
+      },
       "org_admin": {
         "name": "Admin de Organização",
         "desc": "Tu configuras a federação. Gere clubes, equipas, utilizadores e papéis. Cada prova criada por um diretor de prova pertence à tua federação; também podes acolher provas internacionais e convidar federações visitantes.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Si próprio",
     "admin_title": "Pedidos de Tutor",
     "admin_empty": "Não existem pedidos de tutor pendentes."
+  },
+  "my_club": {
+    "title": "O meu clube",
+    "intro": "Aprove os pedidos de função dos membros e escolha quem o ajuda a gerir o clube.",
+    "run_meets": "Organizar as suas provas",
+    "requests": "Pedidos de função",
+    "no_requests_title": "Não há pedidos pendentes",
+    "no_requests_body": "Quando um membro pede para ser saltador, juiz ou árbitro, aparece aqui.",
+    "wants_role": "quer ser: {role}",
+    "approve": "Aprovar",
+    "reject": "Rejeitar",
+    "admins": "Administradores do clube",
+    "add_admin": "Adicionar administrador",
+    "pick_member": "— Escolha um membro do clube —",
+    "add": "Adicionar",
+    "remove": "Remover",
+    "federation_appoints": "A sua federação nomeia os administradores deste clube."
   }
 }

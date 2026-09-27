@@ -400,6 +400,11 @@ module.exports = function createOrgsRouter({
   // club had no way to get an admin. The federation's org_admin hands the
   // role out here. Meet managers can see the Clubs screen but don't get
   // this, it's a trust decision about who runs a club's money.
+  //
+  // In a country with no federation yet (claim_state 'unclaimed') there's
+  // no org_admin to ask, so a club's own admins manage their co-admins.
+  // They can't remove the last one, a club with no admin has nobody to
+  // run it but the sysadmin.
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   async function loadClubForAdminGrant(req, res) {
@@ -410,8 +415,12 @@ module.exports = function createOrgsRouter({
       return null;
     }
     const c = await pool.query(
-      "SELECT id, org_id, name FROM clubs WHERE id = $1",
-      [req.params.id],
+      `SELECT c.id, c.org_id, c.name, o.claim_state,
+              EXISTS (SELECT 1 FROM club_admins ca
+                       WHERE ca.club_id = c.id AND ca.user_id = $2) AS caller_is_admin
+         FROM clubs c JOIN organisations o ON o.id = c.org_id
+        WHERE c.id = $1`,
+      [req.params.id, req.user.id],
     );
     if (!c.rows.length) {
       res.status(404).json({ error: "Club not found" });
@@ -420,11 +429,13 @@ module.exports = function createOrgsRouter({
     const club = c.rows[0];
     if (req.user.is_system_admin) return club;
     const isOrgAdmin = (req.user.org_roles || []).includes("org_admin");
-    if (!isOrgAdmin || club.org_id !== req.user.org_id) {
-      res.status(403).json({ error: "Only your federation's admin can manage club admins" });
-      return null;
+    if (isOrgAdmin && club.org_id === req.user.org_id) return club;
+    if (club.claim_state === "unclaimed" && club.caller_is_admin) {
+      club.viaClubAdmin = true;
+      return club;
     }
-    return club;
+    res.status(403).json({ error: "Only your federation's admin can manage club admins" });
+    return null;
   }
 
   router.get("/api/clubs/:id/admins", verifyToken, async (req, res) => {
@@ -467,6 +478,12 @@ module.exports = function createOrgsRouter({
       if (!(await isInSameOrg(pool, club.org_id, userId, "users"))) {
         return res.status(400).json({ error: "That user isn't in this club's organisation" });
       }
+      // A club admin promotes their own members, not strangers from
+      // another club in the country.
+      if (club.viaClubAdmin) {
+        const m = await pool.query("SELECT 1 FROM users WHERE id = $1 AND club_id = $2", [userId, club.id]);
+        if (!m.rows.length) return res.status(400).json({ error: "Only members of this club can be its admins" });
+      }
       const ins = await pool.query(
         `INSERT INTO club_admins (club_id, user_id, org_id)
          VALUES ($1, $2, $3)
@@ -498,6 +515,12 @@ module.exports = function createOrgsRouter({
       if (!club) return;
       if (!UUID_RE.test(req.params.userId))
         return res.status(404).json({ error: "Not a club admin" });
+      if (club.viaClubAdmin) {
+        const n = await pool.query("SELECT count(*)::int AS n FROM club_admins WHERE club_id = $1", [club.id]);
+        if (n.rows[0].n <= 1) {
+          return res.status(409).json({ error: "A club needs at least one admin. Add someone else first." });
+        }
+      }
       const del = await pool.query(
         "DELETE FROM club_admins WHERE club_id = $1 AND user_id = $2 RETURNING id",
         [club.id, req.params.userId],

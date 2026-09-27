@@ -538,6 +538,15 @@
         "step_5": "Yarış günü puanlamayı <strong>Kontrol Odası</strong>'ndan yönetin",
         "cta": "Kontrol Odası kılavuzu ↗"
       },
+      "club_admin": {
+        "name": "Kulüp yöneticisi",
+        "desc": "Kulübünüzü yönetirsiniz. Ülkenizin federasyonu henüz DivingHQ'da değilse kulüp kendi yarışmalarını düzenler: oluşturun, <strong>Kontrol Odası</strong>'ndan yönetin ve üyelerinizin rol taleplerini onaylayın. Bir federasyon varsa sizi o atar.",
+        "step_1": "Kaydolun, ülkenizi seçin ve kulübünüzü oluşturun; ilk yöneticisi siz olursunuz",
+        "step_2": "<strong>Yarışma Yöneticisi</strong>'ni açın ve kulübünüzün ev sahipliği yaptığı bir yarışma oluşturun",
+        "step_3": "<strong>Kulübüm</strong> sayfasında atlamak, hakemlik yapmak veya başhakem olmak isteyen üyeleri onaylayın",
+        "step_4": "Yarışma günü puanlamayı <strong>Kontrol Odası</strong>'ndan yönetin",
+        "cta": "Yarışma düzenlemek ↗"
+      },
       "org_admin": {
         "name": "Kuruluş Yöneticisi",
         "desc": "Federasyonu siz kurarsınız. Kulüpleri, takımları, kullanıcıları ve rolleri yönetin. Bir yarışma yöneticisinin oluşturduğu her yarışma sizin federasyonunuza bağlanır; ayrıca uluslararası yarışmalar düzenleyebilir ve konuk federasyonları davet edebilirsiniz.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Kendiniz",
     "admin_title": "Vasi Talepleri",
     "admin_empty": "Bekleyen vasi talebi yok."
+  },
+  "my_club": {
+    "title": "Kulübüm",
+    "intro": "Üyelerinizin rol taleplerini onaylayın ve kulübü yönetmenize kimin yardım edeceğini seçin.",
+    "run_meets": "Yarışmalarınızı düzenleyin",
+    "requests": "Rol talepleri",
+    "no_requests_title": "Bekleyen talep yok",
+    "no_requests_body": "Bir üye atlayıcı, hakem veya başhakem olmak istediğinde burada görünür.",
+    "wants_role": "olmak istiyor: {role}",
+    "approve": "Onayla",
+    "reject": "Reddet",
+    "admins": "Kulüp yöneticileri",
+    "add_admin": "Yönetici ekle",
+    "pick_member": "— Bir kulüp üyesi seçin —",
+    "add": "Ekle",
+    "remove": "Kaldır",
+    "federation_appoints": "Bu kulübün yöneticilerini federasyonunuz atar."
   }
 }

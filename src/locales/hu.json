@@ -549,6 +549,15 @@
         "step_5": "A verseny napján a <strong>Vezérlőteremből</strong> irányítja a pontozást",
         "cta": "Vezérlőterem útmutató ↗"
       },
+      "club_admin": {
+        "name": "Klubadminisztrátor",
+        "desc": "Ön vezeti a klubját. Ahol országa szövetsége még nincs a DivingHQ-n, a klub maga rendezi a versenyeit: hozza létre őket, irányítsa a <strong>Vezérlőszobából</strong>, és hagyja jóvá a tagok szerepkör-kérelmeit. Szövetség alatt a szövetség nevezi ki.",
+        "step_1": "Regisztráljon, válassza ki az országát és hozza létre a klubját, Ön lesz az első adminisztrátora",
+        "step_2": "Nyissa meg a <strong>Versenymenedzsert</strong>, és hozzon létre a klubja által rendezett versenyt",
+        "step_3": "A <strong>Saját klubom</strong> oldalon hagyja jóvá a műugrani, bíráskodni vagy vezetőbíró lenni kívánó tagokat",
+        "step_4": "A versenynapon a <strong>Vezérlőszobából</strong> irányítja a pontozást",
+        "cta": "Verseny rendezése ↗"
+      },
       "org_admin": {
         "name": "Szervezeti adminisztrátor",
         "desc": "Ön állítja be a szövetséget. Klubokat, csapatokat, felhasználókat és szerepköröket kezel. Minden verseny, amelyet egy versenyvezető létrehoz, az Ön szövetségéhez tartozik; nemzetközi versenyeket is rendezhet és meghívhat látogató szövetségeket.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Saját magad",
     "admin_title": "Gyámkérelmek",
     "admin_empty": "Nincsenek függőben lévő gyámkérelmek."
+  },
+  "my_club": {
+    "title": "Saját klubom",
+    "intro": "Hagyja jóvá a tagok szerepkör-kérelmeit, és válassza ki, kik segítenek a klub vezetésében.",
+    "run_meets": "Versenyek rendezése",
+    "requests": "Szerepkör-kérelmek",
+    "no_requests_title": "Nincs függőben lévő kérelem",
+    "no_requests_body": "Ha egy tag műugró, bíró vagy vezetőbíró szeretne lenni, itt jelenik meg.",
+    "wants_role": "szeretne lenni: {role}",
+    "approve": "Jóváhagyás",
+    "reject": "Elutasítás",
+    "admins": "Klubadminisztrátorok",
+    "add_admin": "Adminisztrátor hozzáadása",
+    "pick_member": "— Válasszon klubtagot —",
+    "add": "Hozzáadás",
+    "remove": "Eltávolítás",
+    "federation_appoints": "A klub adminisztrátorait a szövetsége nevezi ki."
   }
 }

@@ -549,6 +549,15 @@
         "step_5": "På dagen styrer du scoringen fra <strong>Kontrolrummet</strong>",
         "cta": "Vejledning til Kontrolrummet ↗"
       },
+      "club_admin": {
+        "name": "Klubadministrator",
+        "desc": "Du driver din klub. Hvor dit lands forbund endnu ikke er på DivingHQ, afvikler klubben sine egne stævner: opret dem, styr dem fra <strong>Kontrolrummet</strong>, og godkend medlemmernes rolleanmodninger. Under et forbund udpeger forbundet dig.",
+        "step_1": "Tilmeld dig, vælg dit land og opret din klub, så bliver du dens første administrator",
+        "step_2": "Åbn <strong>Stævnehåndtering</strong> og opret et stævne, som din klub er vært for",
+        "step_3": "Godkend medlemmer, der vil springe, dømme eller være overdommer, på <strong>Min klub</strong>",
+        "step_4": "På dagen styrer du pointgivningen fra <strong>Kontrolrummet</strong>",
+        "cta": "Afvikling af et stævne ↗"
+      },
       "org_admin": {
         "name": "Forbundsadministrator",
         "desc": "Du sætter forbundet op. Administrér klubber, hold, brugere og roller. Hvert stævne, en stævneleder opretter, ruller op til dit forbund; du kan også afholde internationale stævner og invitere besøgende forbund.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Dig selv",
     "admin_title": "Værgeanmodninger",
     "admin_empty": "Ingen afventende værgeanmodninger."
+  },
+  "my_club": {
+    "title": "Min klub",
+    "intro": "Godkend medlemmernes rolleanmodninger, og vælg hvem der hjælper dig med at drive klubben.",
+    "run_meets": "Afvikl dine stævner",
+    "requests": "Rolleanmodninger",
+    "no_requests_title": "Ingen ventende anmodninger",
+    "no_requests_body": "Når et medlem beder om at blive udspringer, dommer eller overdommer, vises det her.",
+    "wants_role": "vil være: {role}",
+    "approve": "Godkend",
+    "reject": "Afvis",
+    "admins": "Klubadministratorer",
+    "add_admin": "Tilføj en administrator",
+    "pick_member": "— Vælg et klubmedlem —",
+    "add": "Tilføj",
+    "remove": "Fjern",
+    "federation_appoints": "Dit forbund udpeger klubbens administratorer."
   }
 }

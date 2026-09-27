@@ -491,7 +491,9 @@ module.exports = function createSessionsRouter({
         ...s,
         blocks: blocksBySession.get(s.id) || [],
       }));
-      res.json({ sessions, boards: boardsRes.rows, events: eventsRes.rows });
+      // can_edit lets the page offer edit controls to a club admin for
+      // their own meet without re-deriving the host rule client-side.
+      res.json({ sessions, boards: boardsRes.rows, events: eventsRes.rows, can_edit: canSeed });
     } catch (err) {
       if (client) {
         try { await client.query("ROLLBACK"); } catch { /* swallow */ }

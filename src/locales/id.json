@@ -538,6 +538,15 @@
         "step_5": "Pada hari lomba, jalankan penilaian dari <strong>Ruang Kontrol</strong>",
         "cta": "Panduan Ruang Kontrol ↗"
       },
+      "club_admin": {
+        "name": "Admin klub",
+        "desc": "Anda mengelola klub Anda. Jika federasi negara Anda belum ada di DivingHQ, klub menyelenggarakan kompetisinya sendiri: buat, jalankan dari <strong>Ruang Kontrol</strong>, dan setujui permintaan peran anggota. Di bawah federasi, federasilah yang menunjuk Anda.",
+        "step_1": "Daftar, pilih negara, dan buat klub Anda; Anda menjadi admin pertamanya",
+        "step_2": "Buka <strong>Pengelola Kompetisi</strong> dan buat kompetisi yang diselenggarakan klub Anda",
+        "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau wasit di <strong>Klub saya</strong>",
+        "step_4": "Pada hari kompetisi, jalankan penilaian dari <strong>Ruang Kontrol</strong>",
+        "cta": "Menyelenggarakan kompetisi ↗"
+      },
       "org_admin": {
         "name": "Admin Organisasi",
         "desc": "Anda mengatur federasi. Kelola klub, tim, pengguna, dan peran. Setiap kompetisi yang dibuat pengelola masuk ke federasi Anda; Anda juga bisa menjadi tuan rumah kompetisi internasional dan mengundang federasi tamu.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Diri Anda sendiri",
     "admin_title": "Permintaan Wali",
     "admin_empty": "Tidak ada permintaan wali yang tertunda."
+  },
+  "my_club": {
+    "title": "Klub saya",
+    "intro": "Setujui permintaan peran anggota Anda dan pilih siapa yang membantu Anda mengelola klub.",
+    "run_meets": "Kelola kompetisi Anda",
+    "requests": "Permintaan peran",
+    "no_requests_title": "Tidak ada permintaan tertunda",
+    "no_requests_body": "Saat anggota meminta menjadi atlet, juri, atau wasit, permintaannya muncul di sini.",
+    "wants_role": "ingin menjadi: {role}",
+    "approve": "Setujui",
+    "reject": "Tolak",
+    "admins": "Admin klub",
+    "add_admin": "Tambah admin",
+    "pick_member": "— Pilih anggota klub —",
+    "add": "Tambah",
+    "remove": "Hapus",
+    "federation_appoints": "Federasi Anda menunjuk admin klub ini."
   }
 }

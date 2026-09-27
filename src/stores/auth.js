@@ -149,6 +149,13 @@ export const useAuthStore = defineStore('auth', () => {
   // gates UI only; every payment endpoint re-checks the guardian link.
   const hasDependents = computed(() => Boolean(user.value?.has_dependents))
 
+  // Clubs this user admins, [{ id, name }], from the login response and
+  // /api/auth/me. In a country with no federation on DivingHQ that's how
+  // someone runs their club's meets without an org role. UI gating only,
+  // the server checks club_admins itself on every club-scoped route.
+  const clubAdminOf = computed(() => user.value?.club_admin_of || [])
+  const isClubAdmin = computed(() => clubAdminOf.value.length > 0)
+
   function getHeaders() {
     // No Authorization header any more, the httpOnly session cookie
     // carries the credential and rides along on every same-origin
@@ -212,7 +219,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    user, isLoggedIn, fingerprint, hasDependents,
+    user, isLoggedIn, fingerprint, hasDependents, clubAdminOf, isClubAdmin,
     saveSession, clearSession, fetchMe,
     hasRole, hasAnyRole, getHeaders,
     apiFetch, cachedApiFetch,

@@ -538,6 +538,15 @@
         "step_5": "V den závodu řiďte bodování z <strong>Řídicí místnosti</strong>",
         "cta": "Příručka k Řídicí místnosti ↗"
       },
+      "club_admin": {
+        "name": "Správce klubu",
+        "desc": "Řídíte svůj klub. Kde federace vaší země na DivingHQ zatím není, klub pořádá závody sám: vytvořte je, řiďte z <strong>Řídicí místnosti</strong> a schvalujte žádosti členů o role. Pod federací vás jmenuje ona.",
+        "step_1": "Zaregistrujte se, vyberte zemi a založte klub, stanete se jeho prvním správcem",
+        "step_2": "Otevřete <strong>Správa závodů</strong> a vytvořte závod pořádaný vaším klubem",
+        "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo řídit, na stránce <strong>Můj klub</strong>",
+        "step_4": "V den závodu řiďte bodování z <strong>Řídicí místnosti</strong>",
+        "cta": "Pořádání závodu ↗"
+      },
       "org_admin": {
         "name": "Administrátor organizace",
         "desc": "Nastavujete federaci. Spravujte kluby, týmy, uživatele a role. Každý závod, který vedoucí závodu vytvoří, spadá pod vaši federaci; můžete také pořádat mezinárodní závody a zvát hostující federace.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Sebe",
     "admin_title": "Žádosti o opatrovnictví",
     "admin_empty": "Žádné nevyřízené žádosti o opatrovnictví."
+  },
+  "my_club": {
+    "title": "Můj klub",
+    "intro": "Schvalujte žádosti členů o role a vyberte, kdo vám pomůže klub řídit.",
+    "run_meets": "Pořádat závody",
+    "requests": "Žádosti o role",
+    "no_requests_title": "Žádné čekající žádosti",
+    "no_requests_body": "Když člen požádá o roli skokana, rozhodčího nebo vrchního rozhodčího, objeví se to zde.",
+    "wants_role": "chce být: {role}",
+    "approve": "Schválit",
+    "reject": "Zamítnout",
+    "admins": "Správci klubu",
+    "add_admin": "Přidat správce",
+    "pick_member": "— Vyberte člena klubu —",
+    "add": "Přidat",
+    "remove": "Odebrat",
+    "federation_appoints": "Správce tohoto klubu jmenuje vaše federace."
   }
 }

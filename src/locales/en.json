@@ -538,6 +538,15 @@
         "step_5": "On the day, drive scoring from <strong>Control Room</strong>",
         "cta": "Control Room guide ↗"
       },
+      "club_admin": {
+        "name": "Club Admin",
+        "desc": "You run your club. Where your country's federation isn't on DivingHQ yet, the club runs its own meets: create them, run them from the <strong>Control Room</strong>, and approve your members' role requests. Under a federation, it appoints you.",
+        "step_1": "Sign up, pick your country and create your club, you'll be its first admin",
+        "step_2": "Open <strong>Meet Manager</strong> and create a meet hosted by your club",
+        "step_3": "Approve members who want to dive, judge or referee on <strong>My club</strong>",
+        "step_4": "On the day, drive scoring from <strong>Control Room</strong>",
+        "cta": "Running a meet ↗"
+      },
       "org_admin": {
         "name": "Org Admin",
         "desc": "You set up the federation. Manage clubs, teams, users, and roles. Every meet a meet manager creates rolls up to your federation; you can also host international meets and invite visiting federations.",
@@ -1863,5 +1872,22 @@
     "paying_for_self": "Yourself",
     "admin_title": "Guardian Requests",
     "admin_empty": "No pending guardian requests."
+  },
+  "my_club": {
+    "title": "My club",
+    "intro": "Approve your members' role requests and choose who helps you run the club.",
+    "run_meets": "Run your meets",
+    "requests": "Role requests",
+    "no_requests_title": "No requests waiting",
+    "no_requests_body": "When a member asks to be a diver, judge or referee, it shows up here.",
+    "wants_role": "wants to be: {role}",
+    "approve": "Approve",
+    "reject": "Reject",
+    "admins": "Club admins",
+    "add_admin": "Add an admin",
+    "pick_member": "— Pick a club member —",
+    "add": "Add",
+    "remove": "Remove",
+    "federation_appoints": "Your federation appoints this club's admins."
   }
 }

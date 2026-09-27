@@ -380,7 +380,6 @@ const {
   requireMeetEditorOrClubAdmin,
   isEventDelegate,
   isMeetHostAdmin,
-  clubAdminClubIds,
   requireClubAdmin,
   requireClubAdminOnly,
   ensureEventOrgGate,

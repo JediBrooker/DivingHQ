@@ -41,7 +41,7 @@ import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
-import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe } from '@lucide/vue'
+import { Waves, Gavel, GraduationCap, MonitorPlay, Building2, Globe, Users } from '@lucide/vue'
 
 // TOC entries match the in-template section ids. Order matters,
 // it's the visual reading order. Keep the keys aligned with the
@@ -224,6 +224,21 @@ onBeforeUnmount(() => observer?.disconnect())
                 <li v-html="$t('guide.role.meet_manager.step_5')"></li>
               </ol>
               <RouterLink to="/guide/running-a-meet" class="role-cta">{{ $t('guide.role.meet_manager.cta') }}</RouterLink>
+            </article>
+
+            <!-- Club admin: runs their own club's meets where there's no
+                 federation on DivingHQ yet (club-first signup). -->
+            <article class="role-card">
+              <div class="role-icon" aria-hidden="true"><Users /></div>
+              <h3 class="role-name">{{ $t('guide.role.club_admin.name') }}</h3>
+              <p class="role-desc" v-html="$t('guide.role.club_admin.desc')"></p>
+              <ol class="role-steps">
+                <li v-html="$t('guide.role.club_admin.step_1')"></li>
+                <li v-html="$t('guide.role.club_admin.step_2')"></li>
+                <li v-html="$t('guide.role.club_admin.step_3')"></li>
+                <li v-html="$t('guide.role.club_admin.step_4')"></li>
+              </ol>
+              <RouterLink to="/guide/running-a-meet" class="role-cta">{{ $t('guide.role.club_admin.cta') }}</RouterLink>
             </article>
 
             <article class="role-card">

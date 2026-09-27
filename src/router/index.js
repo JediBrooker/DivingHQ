@@ -55,7 +55,9 @@ const routes = [
   {
     path: '/manager',
     component: () => import('@/views/ManagerView.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'], appShell: true },
+    // allowClubAdmin: a club admin runs the meets their club hosts, the
+    // view narrows itself to those.
+    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager'], allowClubAdmin: true, appShell: true },
   },
   {
     path: '/payments',
@@ -156,7 +158,7 @@ const routes = [
     // pools with per-pool controllers + meet-day tools, and an advisory
     // operator lease.
     component: () => import('@/views/ControlViewV2.vue'),
-    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager', 'referee'], appShell: true },
+    meta: { requiresAuth: true, requiresRole: ['org_admin', 'meet_manager', 'referee'], allowClubAdmin: true, appShell: true },
   },
   {
     path: '/judge',
@@ -239,6 +241,13 @@ const routes = [
     path: '/users',
     component: () => import('@/views/UserManagerView.vue'),
     meta: { requiresAuth: true, requiresRole: ['org_admin'], appShell: true },
+  },
+  {
+    // A club admin's own page: their members' pending role requests
+    // and who else admins the club.
+    path: '/club',
+    component: () => import('@/views/MyClubView.vue'),
+    meta: { requiresAuth: true, requiresClubAdmin: true, appShell: true },
   },
   {
     path: '/clubs',
@@ -409,9 +418,14 @@ router.beforeEach((to, from, next) => {
   // Require specific roles. Routes flagged allowGuardian also open up
   // for anyone with an approved dependent, since a parent paying on a
   // minor's behalf never gets a role of their own.
+  if (to.meta.requiresClubAdmin && isLoggedIn && !auth.isClubAdmin && !auth.user?.is_system_admin) {
+    return next('/dashboard')
+  }
+
   if (to.meta.requiresRole && isLoggedIn) {
     const allowed = auth.hasAnyRole(to.meta.requiresRole)
       || (to.meta.allowGuardian && auth.hasDependents)
+      || (to.meta.allowClubAdmin && auth.isClubAdmin)
     if (!allowed) {
       return next('/dashboard')
     }
