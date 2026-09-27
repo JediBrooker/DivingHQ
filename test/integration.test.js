@@ -6309,3 +6309,54 @@ test("claims: a national revoke also takes back referees the federation appointe
     await claimKit.wipe(CODE);
   }
 });
+
+// A region re-claimed after its admins have all gone: the new claim
+// retires the old one, and the old one can't be revoked out from under it.
+test("claims: re-claiming an orphaned region retires the old claim and its dead admin rows", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "ALB";
+  await claimKit.wipe(CODE);
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+    const A = await claimKit.founder(CODE, "Tirana Divers");
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const tr = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Tirana', 'TR') RETURNING id", [orgId],
+    )).rows[0].id;
+    const approve = async (who) => {
+      await claimKit.verify(who.id);
+      const r = await fetchJson("POST", `/api/claims/${who.res.body.claim_id}/decide`, { token: sys.token, body: { decision: "approve" } });
+      assert.equal(r.status, 200, JSON.stringify(r.body));
+    };
+    const first = await claimKit.claim({ org_name: "Tirana Diving", country_code: CODE, region_code: "TR" });
+    assert.equal(first.res.status, 201, JSON.stringify(first.res.body));
+    await approve(first);
+    // Its only admin is suspended, so the region is open to a new body.
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [first.id]);
+    const second = await claimKit.claim({ org_name: "Tirana Diving Two", country_code: CODE, region_code: "TR" });
+    assert.equal(second.res.status, 201, JSON.stringify(second.res.body));
+    await approve(second);
+
+    const old = await claimStatus(first.res.body.claim_id);
+    assert.equal(old.status, "revoked");
+    assert.match(old.status_reason, /newer approved claim/);
+    assert.equal((await claimStatus(second.res.body.claim_id)).status, "approved");
+    const admins = (await pool.query("SELECT user_id FROM region_admins WHERE region_id = $1", [tr])).rows.map((r) => r.user_id);
+    assert.deepEqual(admins, [second.id], "the suspended claimant's row is gone, the new one's stays");
+    // Nothing left for a revoke of the old claim to unwind.
+    assert.equal((await fetchJson("POST", `/api/claims/${first.res.body.claim_id}/revoke`, { token: sys.token, body: {} })).status, 409);
+
+    // Rows from before this fix can still have two approved claims. The
+    // older one is refused rather than stripping the current state body.
+    await pool.query("UPDATE claims SET status = 'approved', decided_at = now() - interval '1 day' WHERE id = $1", [first.res.body.claim_id]);
+    const legacy = await fetchJson("POST", `/api/claims/${first.res.body.claim_id}/revoke`, { token: sys.token, body: {} });
+    assert.equal(legacy.status, 409, JSON.stringify(legacy.body));
+    assert.equal(legacy.body.code, "claim_superseded");
+    assert.equal((await pool.query("SELECT claim_state FROM regions WHERE id = $1", [tr])).rows[0].claim_state, "claimed");
+    assert.ok((await pool.query("SELECT 1 FROM region_admins WHERE region_id = $1 AND user_id = $2", [tr, second.id])).rows.length);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

@@ -563,7 +563,12 @@ State bodies appointing themselves via claims is phase 3. Where there's
 no federation, a region's own admins add and remove co-admins on
 `/region` (members of the region's clubs only, never down to no live
 admin, via `lib/admin-rows.js`). A claimed region whose admins have all
-gone can be claimed again through `/register-org`. A region admin:
+gone can be claimed again through `/register-org`. Approving the new claim
+marks the old approved one `revoked` ("replaced by a newer approved claim")
+and deletes the region's dead admin rows, so reactivating an old account
+can't bring its region back, and a revoke of an older approved claim is
+refused (409 `claim_superseded`) rather than unwinding the current body. A
+region admin:
 - runs meets hosted by their region or by any club in it: the
   `isEventDelegate` / `isMeetHostAdmin` checks now include the host region
   and the host club's region, so every phase-1 gate follows;
