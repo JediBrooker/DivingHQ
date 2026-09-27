@@ -546,6 +546,10 @@ side moves a club alone:
 - **Leaving** is the region's call: its admin takes the club out (to no
   region) on My region. The club's admin gets `403 region_admin_required`.
   The region can let a club go but not pick where it lands.
+- A claimed region with **no live admin** (all deleted or suspended) gets
+  no say: its clubs come and go as if it were unclaimed until someone
+  claims it again. `GET /api/orgs/:id/regions` carries `has_live_admin`
+  so My club only locks the picker while somebody is there to decide.
 
 The notices follow the inbox's ask/outcome split: `region_request` and
 `club_join_request` go to whoever has to decide (Action required);

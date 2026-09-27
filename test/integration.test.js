@@ -2413,3 +2413,60 @@ test("referee credential sign-off: guesses from another org can't lock a federat
     await claimKit.wipe(CODE);
   }
 });
+
+test("club region moves: a claimed region with nobody left running it doesn't hold its clubs", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MAF";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Marigot Divers" });
+    const B = await delegateSignUp({ country_code: CODE, new_club_name: "Grand Case Divers" });
+    const mkRegion = async (name, code) => (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code, claim_state, claimed_name) VALUES ($1, $2, $3, 'claimed', $4) RETURNING id",
+      [A.orgId, name, code, `${name} Diving`],
+    )).rows[0].id;
+    const north = await mkRegion("North", "NTH");
+    const south = await mkRegion("South", "STH");
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [north, A.clubId]);
+    const R = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [north, R.id, A.orgId]);
+    const Rs = await delegateSignUp({ country_code: CODE, club_id: B.clubId });
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [south, Rs.id, A.orgId]);
+    const move = (tok, clubId, regionId) =>
+      fetchJson("PUT", `/api/clubs/${clubId}/region`, { token: tok, body: { region_id: regionId } });
+    const regionOf = async (clubId) => (await pool.query("SELECT region_id FROM clubs WHERE id = $1", [clubId])).rows[0].region_id;
+    const listed = async () => Object.fromEntries(
+      (await fetchJson("GET", `/api/orgs/${A.orgId}/regions`)).body.regions.map((r) => [r.id, r.has_live_admin]));
+
+    // While North's admin is around, it decides.
+    assert.equal((await move(A.token, A.clubId, null)).body.code, "region_admin_required");
+    assert.deepEqual(await listed(), { [north]: true, [south]: true });
+
+    // North's only admin deletes their account. Nobody is left to say yes,
+    // so the club's own admin can take it out again...
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [R.id]);
+    assert.equal((await listed())[north], false);
+    assert.equal((await move(A.token, A.clubId, null)).status, 200);
+    assert.equal(await regionOf(A.clubId), null);
+    // ...and back in, with nobody there to ask.
+    assert.equal((await move(A.token, A.clubId, north)).status, 200);
+    assert.equal(await regionOf(A.clubId), north);
+
+    // A region with a live admin still decides for itself: South hears
+    // an ask, and the club doesn't move until it says yes.
+    const ask = await move(A.token, A.clubId, south);
+    assert.equal(ask.status, 202, JSON.stringify(ask.body));
+    assert.equal(await regionOf(A.clubId), north);
+    const told = await pool.query(
+      "SELECT category FROM notifications WHERE user_id = $1", [Rs.id]);
+    assert.deepEqual(told.rows.map((r) => r.category), ["region_request"]);
+    assert.equal((await move(Rs.token, A.clubId, south)).status, 200);
+    assert.equal(await regionOf(A.clubId), south);
+    const heard = await pool.query(
+      "SELECT category FROM notifications WHERE user_id = $1", [A.id]);
+    assert.deepEqual(heard.rows.map((r) => r.category), ["region_decision"]);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

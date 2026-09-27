@@ -169,7 +169,7 @@ In a country whose federation isn't on DivingHQ yet, the clubs run themselves. W
 - Approve their members' role requests for **diver, judge and coach**. Referee requests go to DivingHQ instead: a referee can act at any club's meet in the country, so no single club hands that out. Nobody approves their own request for anything but diver.
 - Approve **join requests**. Nobody lands in a club without asking: the person picks the club under **Change Club** on their profile, and the club's admins (or its region's) say yes or no. Nobody approves their own.
 - Add and remove **co-admins** from their own members. A club or region always keeps at least one live admin: deleted or suspended accounts don't count, and two admins removing each other at the same moment can't leave it with none. A region whose admins have all gone can be claimed again.
-- Pick the club's **region**. Between regions nobody has claimed, that's the club's call. A region its state body has claimed decides which clubs it takes: the club's admin asks, the region's admin accepts or declines on **My region**, and only the region can take a club back out.
+- Pick the club's **region**. Between regions nobody has claimed, that's the club's call. A region its state body has claimed decides which clubs it takes: the club's admin asks, the region's admin accepts or declines on **My region**, and only the region can take a club back out. If a claimed region's admins have all gone, it has no say until someone claims it again.
 
 Once the federation arrives and its claim passes, all of this goes back to the org admin.
 

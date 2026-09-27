@@ -55,8 +55,11 @@
  * GET /api/orgs/:id/regions and GET /api/countries/:code/regions.
  *
  * @property {?('state'|'province'|'home_nation'|'region')} label  null = no regions
- * @property {{id?: string, name: string, short_code: string, club_count?: number}[]} regions
- *   id and club_count only on the per-org list (the country list is the built-in catalogue).
+ * @property {{id?: string, name: string, short_code: string, club_count?: number, claim_state?: 'claimed'|'unclaimed', claimed_name?: ?string, has_live_admin?: boolean}[]} regions
+ *   id, club_count, claim_state, claimed_name and has_live_admin only on the
+ *   per-org list (the country list is the built-in catalogue). has_live_admin
+ *   is false for a claimed region whose admins have all been deleted or
+ *   suspended: it can be claimed again, and its clubs can leave it.
  */
 
 /**
@@ -78,7 +81,7 @@
  * GET /api/clubs/:id/admins (org admin, or the club's / its region's
  * admins where there's no federation).
  *
- * @property {{id: string, full_name: string, username: string, created_at: string}[]} admins  live accounts only
+ * @property {{id: string, full_name: string, username: string, created_at: string}[]} admins  deleted accounts left out (suspended ones stay, so they can be removed)
  * @property {{id: string, full_name: string, username: string}[]} members
  * @property {?{region_id: string, requested_at: string}} region_request
  *   a claimed region this club has asked to join and is waiting on (PUT

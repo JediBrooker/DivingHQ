@@ -36,10 +36,11 @@ async function loadRegions() {
 // A region its state body has claimed decides which clubs it takes and
 // lets go (PUT /api/clubs/:id/region). Picking one asks its admins, it
 // doesn't move the club, and a club already in one can't pick its way
-// out. Unless the person here happens to admin that region too.
+// out. Unless the person here happens to admin that region too, or the
+// body's admins have all gone, in which case the server lets the club go.
 const myRegionIds = computed(() => new Set((auth.regionAdminOf || []).map(r => r.id)))
 function regionLocked(r) {
-  return r?.claim_state === 'claimed' && !myRegionIds.value.has(r.id)
+  return r?.claim_state === 'claimed' && r.has_live_admin !== false && !myRegionIds.value.has(r.id)
 }
 function currentRegion(club) {
   return regions.value.regions.find(r => r.id === club.region_id) || null

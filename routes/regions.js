@@ -81,7 +81,12 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
       const org = await pool.query("SELECT region_label FROM organisations WHERE id = $1", [req.params.id]);
       const r = await pool.query(
         `SELECT rg.id, rg.name, rg.short_code, rg.claim_state, rg.claimed_name,
-                (SELECT count(*)::int FROM clubs c WHERE c.region_id = rg.id) AS club_count
+                (SELECT count(*)::int FROM clubs c WHERE c.region_id = rg.id) AS club_count,
+                -- My club locks the picker for a claimed region, but only
+                -- while it still has someone running it (PUT below).
+                EXISTS (SELECT 1 FROM region_admins ra JOIN users u ON u.id = ra.user_id
+                         WHERE ra.region_id = rg.id
+                           AND u.deleted_at IS NULL AND u.suspended_at IS NULL) AS has_live_admin
            FROM regions rg WHERE rg.org_id = $1
           ORDER BY rg.name`,
         [req.params.id],
@@ -189,7 +194,10 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
       const sides = (await pool.query(
         `SELECT rg.id, rg.name, rg.claimed_name, rg.claim_state,
                 EXISTS (SELECT 1 FROM region_admins ra
-                         WHERE ra.region_id = rg.id AND ra.user_id = $2) AS caller_is_admin
+                         WHERE ra.region_id = rg.id AND ra.user_id = $2) AS caller_is_admin,
+                EXISTS (SELECT 1 FROM region_admins ra JOIN users u ON u.id = ra.user_id
+                         WHERE ra.region_id = rg.id
+                           AND u.deleted_at IS NULL AND u.suspended_at IS NULL) AS has_live_admin
            FROM regions rg WHERE rg.id = ANY($1::uuid[])`,
         [[club.region_id, regionId].filter(Boolean), req.user.id],
       )).rows;
@@ -198,8 +206,12 @@ module.exports = function createRegionsRouter({ pool, verifyToken, isInSameOrg }
 
       if (!isOrgAdminOf(req.user, club.org_id)) {
         if (club.claim_state !== "unclaimed") return res.status(403).json({ error: "Forbidden" });
-        const fromClaimed = from?.claim_state === "claimed";
-        const toClaimed = to?.claim_state === "claimed";
+        // A claimed region only gets a say while someone is alive to use
+        // it. Once every admin has gone it's up for claiming again (see
+        // register-org), and until then its clubs shouldn't be stuck
+        // waiting on a deleted account to let them leave.
+        const fromClaimed = from?.claim_state === "claimed" && from.has_live_admin;
+        const toClaimed = to?.claim_state === "claimed" && to.has_live_admin;
         if (!moving) {
           if (!club.caller_is_admin && !from?.caller_is_admin) return res.status(403).json({ error: "Forbidden" });
           return res.json({ ok: true });
