@@ -162,6 +162,11 @@ export const useAuthStore = defineStore('auth', () => {
   // a plain spectator until it's approved, so without this the Claims
   // page would be missing from their nav. UI only, like the two above.
   const hasClaim = computed(() => Boolean(user.value?.has_claim))
+  // A club this user started that's still waiting for its federation
+  // (migration 096): { id, name, org_name } or null. Drives the founder's
+  // dashboard notice; /api/auth/me refreshes it, so it clears on its own
+  // once the club is decided.
+  const pendingClub = computed(() => user.value?.pending_club || null)
 
   function getHeaders() {
     // No Authorization header any more, the httpOnly session cookie
@@ -232,7 +237,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user, isLoggedIn, fingerprint, hasDependents, clubAdminOf, isClubAdmin,
-    regionAdminOf, isRegionAdmin, hasClaim,
+    regionAdminOf, isRegionAdmin, hasClaim, pendingClub,
     saveSession, clearSession, fetchMe,
     hasRole, hasAnyRole, getHeaders,
     apiFetch, cachedApiFetch,

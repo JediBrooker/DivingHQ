@@ -78,7 +78,10 @@
       "failed": "Kayıt başarısız",
       "success": "Kayıt başarılı. Giriş yapmadan önce e-postanızdaki doğrulama bağlantısını açın.",
       "new_club_placeholder": "ör. Sydney Springboard",
-      "short_code_placeholder": "ör. SYD"
+      "short_code_placeholder": "ör. SYD",
+      "club_needs_approval": "{org} yeni kulüpleri görünür olmadan önce onaylar. E-postanızı doğruladığınız anda onlara sorarız; bu arada giriş yapıp yarışabilirsiniz.",
+      "club_joins_now": "Yeni kulüpler {org} kuruluşuna hemen katılır. Her kulübün yöneticilerini {org} atar.",
+      "success_club_pending": "{club}, {org} onayını bekliyor. E-postanızı doğruladığınız anda görecekler; karar verildiğinde size e-posta göndereceğiz."
     },
     "register_org": {
       "title": "Kuruluş Kaydı",
@@ -450,7 +453,12 @@
       "quiet": "Her şey sakin, bekleyen bir şey yok.",
       "pill_urgent": "yakında kapanıyor",
       "pill_overdue": "gecikmiş",
-      "chip_aria_tab": "{title}. Bu paneldeki ilgili sekmeyi açar."
+      "chip_aria_tab": "{title}. Bu paneldeki ilgili sekmeyi açar.",
+      "chip_clubs": "Yeni kulüpler",
+      "clubs_pending_meta": "Kulüpler sayfasında onaylayın veya reddedin",
+      "chip_my_club": "onay bekleyen kulüp",
+      "my_club_pending": "{club}, {org} onayını bekliyor",
+      "my_club_pending_meta": "Bu arada yarışabilirsiniz. Karar verildiğinde size e-posta göndereceğiz."
     },
     "getting_started": {
       "title": "{club} ile başlayın",
@@ -641,8 +649,8 @@
       },
       "club_admin": {
         "name": "Kulüp yöneticisi",
-        "desc": "Kulübünüzü yönetirsiniz. Ülkenizin federasyonu henüz DivingHQ'da değilse kulüp kendi yarışmalarını düzenler: oluşturun, <strong>Kontrol Odası</strong>'ndan yönetin ve üyelerinizin rol taleplerini onaylayın. Bir federasyon varsa sizi o atar.",
-        "step_1": "Kaydolun, ülkenizi seçin ve kulübünüzü oluşturun; ilk yöneticisi siz olursunuz",
+        "desc": "Kulübünüzü yönetirsiniz. Ülkenizin federasyonu henüz DivingHQ'da değilse kulüp kendi yarışmalarını düzenler: oluşturun, <strong>Kontrol Odası</strong>'ndan yönetin ve üyelerinizin rol taleplerini onaylayın. Bir federasyon varsa yeni kulübünüzü o onaylar ve sizi yöneticisi yapabilir.",
+        "step_1": "Kaydolun, ülkenizi seçin ve kulübünüzü oluşturun; ilk yöneticisi siz olursunuz (bir federasyon varsa, kulübü onayladıktan sonra)",
         "step_2": "<strong>Yarışma Yöneticisi</strong>'ni açın ve kulübünüzün ev sahipliği yaptığı bir yarışma oluşturun",
         "step_3": "<strong>Kulübüm</strong> sayfasında katılmak isteyenleri ve atlamak, hakemlik yapmak veya antrenörlük yapmak isteyen üyeleri onaylayın",
         "step_4": "Yarışma günü puanlamayı <strong>Kontrol Odası</strong>'ndan yönetin",
@@ -665,7 +673,8 @@
         "step_2": "<strong>Kurulum Sihirbazı</strong>'nı takip edin — kulüpler, davetler, ilk etkinlik",
         "step_3": "Ekibiniz büyüdükçe <strong>Kullanıcı Yöneticisi</strong>'nde roller verin",
         "step_4": "Federasyon genelindeki etkinlikler için <strong>Denetim Günlüğü</strong>'nü kontrol edin",
-        "cta": "Hızlı başlangıç ↗"
+        "cta": "Hızlı başlangıç ↗",
+        "step_5": "Yeni kulüpleri <strong>Kulüpler</strong> sayfasında onaylayın veya reddedin ya da otomatik katılmalarına izin verin"
       },
       "spectator": {
         "name": "Seyirci",
@@ -870,7 +879,9 @@
       "claim_review": "Talep",
       "claim_decided": "Talep",
       "club_change": "Kulüp değişikliği",
-      "region_request": "Bölge"
+      "region_request": "Bölge",
+      "club_pending": "Yeni kulüp",
+      "club_decision": "Kulüp"
     }
   },
   "compare": {
@@ -1273,7 +1284,33 @@
     "col_billing": "Faturalama",
     "col_actions": "İşlemler",
     "admins_button": "Yöneticiler",
-    "rename": "Yeniden adlandır"
+    "rename": "Yeniden adlandır",
+    "pending_title": "Onay bekliyor",
+    "pending_intro": "Ülkenizde kayıt olan kişilerin kurduğu kulüpler. Siz karar verene kadar hiçbir kulüp listesinde görünmezler ve yarışma düzenleyemezler.",
+    "stat_pending": "Bekleyen",
+    "pending_started_by": "Kuran: {name}",
+    "pending_waiting_since": "{date} tarihinden beri bekliyor",
+    "pending_similar": "{club} kulübüne benziyor; o zaten DivingHQ'da",
+    "email_verified": "E-posta doğrulandı",
+    "approve": "Onayla",
+    "reject": "Reddet",
+    "approve_title": "Kulübü onayla",
+    "approve_body": "Önce düzeltilmesi gerekenleri düzeltin. Onaylandıktan sonra kulüp, kulüp listelerinde görünür ve yarışma düzenleyebilir.",
+    "approve_make_admin": "{name} kulübün yöneticisi olsun",
+    "reject_title": "Kulübü reddet",
+    "reject_body": "Bu işlem {club} kulübünü siler. {name} hesabını korur ve gerekçenizi içeren bir e-posta alır.",
+    "reject_reason": "Gerekçe (isteğe bağlı, kurucuya gönderilir)",
+    "reject_move_to": "Üyeleri şuraya taşı",
+    "reject_move_none": "Hiçbir yere, kulüpsüz bırak",
+    "approved_toast": "{club} onaylandı",
+    "rejected_toast": "{club} reddedildi",
+    "setting_label": "Kayıtta kurulan yeni kulüpler",
+    "setting_approval": "Onayımı beklesin",
+    "setting_auto": "Otomatik katılsın",
+    "setting_approval_hint": "Kayıt sırasında kurulan kulüpler siz onaylayana kadar burada bekler.",
+    "setting_auto_hint": "Kayıt sırasında kurulan kulüpler hemen etkin olur. Yöneticilerini yine siz atarsınız.",
+    "setting_approval_saved": "Yeni kulüpler onayınızı bekleyecek",
+    "setting_auto_saved": "Yeni kulüpler otomatik katılacak"
   },
   "teams": {
     "title": "Takımlar",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} üye atamadan çıkarıldı",
       "member_unassigned_many": "{n} üye atamadan çıkarıldı",
       "members_count": "{n} üye",
-      "events_count": "{n} etkinlik"
+      "events_count": "{n} etkinlik",
+      "label_club_approved": "Kulüp onaylandı",
+      "label_club_rejected": "Kulüp reddedildi",
+      "label_org_club_settings_changed": "Yeni kulüp ayarı değiştirildi"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "Sizi bekleyen {n} talep var",
     "claims_waiting_few": "Sizi bekleyen {n} talep var",
     "claims_waiting_many": "Sizi bekleyen {n} talep var",
-    "claims_waiting_other": "Sizi bekleyen {n} talep var"
+    "claims_waiting_other": "Sizi bekleyen {n} talep var",
+    "clubs_waiting_zero": "{n} yeni kulüp onay bekliyor",
+    "clubs_waiting_one": "{n} yeni kulüp onay bekliyor",
+    "clubs_waiting_two": "{n} yeni kulüp onay bekliyor",
+    "clubs_waiting_few": "{n} yeni kulüp onay bekliyor",
+    "clubs_waiting_many": "{n} yeni kulüp onay bekliyor",
+    "clubs_waiting_other": "{n} yeni kulüp onay bekliyor"
   },
   "admin_settings": {
     "title": "Devralma talebi oylama kuralları",

@@ -78,7 +78,10 @@
       "failed": "Rejestracja nie powiodła się",
       "success": "Rejestracja zakończona. Przed zalogowaniem znajdź w e-mailu link weryfikacyjny.",
       "new_club_placeholder": "np. Sydney Springboard",
-      "short_code_placeholder": "np. SYD"
+      "short_code_placeholder": "np. SYD",
+      "club_needs_approval": "{org} zatwierdza nowe kluby, zanim staną się widoczne. Poprosimy o zatwierdzenie, gdy tylko potwierdzisz e-mail, a w międzyczasie możesz się zalogować i startować w zawodach.",
+      "club_joins_now": "Nowe kluby od razu dołączają do {org}. {org} wyznacza administratorów każdego klubu.",
+      "success_club_pending": "Klub {club} czeka na zatwierdzenie przez {org}. Zobaczą go, gdy tylko potwierdzisz e-mail, a o decyzji poinformujemy cię e-mailem."
     },
     "register_org": {
       "title": "Rejestracja organizacji",
@@ -450,7 +453,12 @@
       "quiet": "Wszystko spokojnie, nic nie czeka.",
       "pill_urgent": "wkrótce koniec",
       "pill_overdue": "zaległe",
-      "chip_aria_tab": "{title}. Otwiera odpowiednią kartę na tym panelu."
+      "chip_aria_tab": "{title}. Otwiera odpowiednią kartę na tym panelu.",
+      "chip_clubs": "Nowe kluby",
+      "clubs_pending_meta": "Zatwierdź je lub odrzuć w sekcji Kluby",
+      "chip_my_club": "klub czeka na zatwierdzenie",
+      "my_club_pending": "Klub {club} czeka na zatwierdzenie przez {org}",
+      "my_club_pending_meta": "W międzyczasie możesz startować. O decyzji poinformujemy cię e-mailem."
     },
     "getting_started": {
       "title": "Rozkręć {club}",
@@ -652,8 +660,8 @@
       },
       "club_admin": {
         "name": "Administrator klubu",
-        "desc": "Prowadzisz swój klub. Tam, gdzie federacji twojego kraju nie ma jeszcze w DivingHQ, klub sam organizuje zawody: twórz je, prowadź z <strong>Pokoju kontroli</strong> i zatwierdzaj prośby członków o role. W ramach federacji to ona cię wyznacza.",
-        "step_1": "Zarejestruj się, wybierz kraj i utwórz klub, zostaniesz jego pierwszym administratorem",
+        "desc": "Prowadzisz swój klub. Tam, gdzie federacji twojego kraju nie ma jeszcze w DivingHQ, klub sam organizuje zawody: twórz je, prowadź z <strong>Pokoju kontroli</strong> i zatwierdzaj prośby członków o role. W ramach federacji to ona zatwierdza twój nowy klub i może wyznaczyć cię jego administratorem.",
+        "step_1": "Zarejestruj się, wybierz kraj i utwórz klub; zostaniesz jego pierwszym administratorem (w ramach federacji, gdy zatwierdzi klub)",
         "step_2": "Otwórz <strong>Menedżer zawodów</strong> i utwórz zawody organizowane przez twój klub",
         "step_3": "Na stronie <strong>Mój klub</strong> zatwierdzaj chętnych do dołączenia i członków, którzy chcą skakać, sędziować lub trenować",
         "step_4": "W dniu zawodów prowadź punktację z <strong>Pokoju kontroli</strong>",
@@ -676,7 +684,8 @@
         "step_2": "Przejdź przez <strong>Kreatora Konfiguracji</strong> — kluby, zaproszenia, pierwsza konkurencja",
         "step_3": "Nadawaj role w <strong>Menedżerze Użytkowników</strong>, w miarę jak Twój zespół rośnie",
         "step_4": "Sprawdzaj <strong>Dziennik Audytu</strong> w razie aktywności w skali całej federacji",
-        "cta": "Szybki start ↗"
+        "cta": "Szybki start ↗",
+        "step_5": "Zatwierdzaj lub odrzucaj nowe kluby w sekcji <strong>Kluby</strong> albo pozwól im dołączać automatycznie"
       },
       "spectator": {
         "name": "Widz",
@@ -881,7 +890,9 @@
       "claim_review": "Roszczenie",
       "claim_decided": "Roszczenie",
       "club_change": "Zmiana klubu",
-      "region_request": "Region"
+      "region_request": "Region",
+      "club_pending": "Nowy klub",
+      "club_decision": "Klub"
     }
   },
   "compare": {
@@ -1284,7 +1295,33 @@
     "col_billing": "Rozliczenia",
     "col_actions": "Akcje",
     "admins_button": "Administratorzy",
-    "rename": "Zmień nazwę"
+    "rename": "Zmień nazwę",
+    "pending_title": "Czeka na zatwierdzenie",
+    "pending_intro": "Kluby założone przez osoby rejestrujące się w twoim kraju. Dopóki nie zdecydujesz, nie pojawiają się na żadnej liście klubów i nie mogą organizować zawodów.",
+    "stat_pending": "Oczekujące",
+    "pending_started_by": "Założyciel: {name}",
+    "pending_waiting_since": "Czeka od {date}",
+    "pending_similar": "Przypomina klub {club}, który jest już w DivingHQ",
+    "email_verified": "E-mail potwierdzony",
+    "approve": "Zatwierdź",
+    "reject": "Odrzuć",
+    "approve_title": "Zatwierdź klub",
+    "approve_body": "Najpierw popraw, co trzeba. Po zatwierdzeniu klub pojawi się na listach klubów i będzie mógł organizować zawody.",
+    "approve_make_admin": "Ustaw użytkownika {name} jako administratora klubu",
+    "reject_title": "Odrzuć klub",
+    "reject_body": "To usunie klub {club}. {name} zachowa konto i dostanie e-mail z twoim uzasadnieniem.",
+    "reject_reason": "Uzasadnienie (opcjonalne, wysyłane do założyciela)",
+    "reject_move_to": "Przenieś członków do",
+    "reject_move_none": "Nigdzie, zostaw ich bez klubu",
+    "approved_toast": "Klub {club} zatwierdzony",
+    "rejected_toast": "Klub {club} odrzucony",
+    "setting_label": "Nowe kluby z rejestracji",
+    "setting_approval": "Czekaj na moje zatwierdzenie",
+    "setting_auto": "Dołączaj automatycznie",
+    "setting_approval_hint": "Kluby zakładane przy rejestracji czekają tutaj, aż je zatwierdzisz.",
+    "setting_auto_hint": "Kluby zakładane przy rejestracji są aktywne od razu. Ich administratorów nadal wyznaczasz ty.",
+    "setting_approval_saved": "Nowe kluby będą czekać na twoje zatwierdzenie",
+    "setting_auto_saved": "Nowe kluby będą dołączać automatycznie"
   },
   "teams": {
     "title": "Drużyny",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} członek odpięty",
       "member_unassigned_many": "{n} członków odpiętych",
       "members_count": "{n} członków",
-      "events_count": "{n} konkurencji"
+      "events_count": "{n} konkurencji",
+      "label_club_approved": "Zatwierdzono klub",
+      "label_club_rejected": "Odrzucono klub",
+      "label_org_club_settings_changed": "Zmieniono ustawienie nowych klubów"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "Czeka na ciebie {n} roszczeń",
     "claims_waiting_few": "Czekają na ciebie {n} roszczenia",
     "claims_waiting_many": "Czeka na ciebie {n} roszczeń",
-    "claims_waiting_other": "Czeka na ciebie {n} roszczenia"
+    "claims_waiting_other": "Czeka na ciebie {n} roszczenia",
+    "clubs_waiting_zero": "{n} nowych klubów czeka na zatwierdzenie",
+    "clubs_waiting_one": "{n} nowy klub czeka na zatwierdzenie",
+    "clubs_waiting_two": "{n} nowych klubów czeka na zatwierdzenie",
+    "clubs_waiting_few": "{n} nowe kluby czekają na zatwierdzenie",
+    "clubs_waiting_many": "{n} nowych klubów czeka na zatwierdzenie",
+    "clubs_waiting_other": "{n} nowego klubu czeka na zatwierdzenie"
   },
   "admin_settings": {
     "title": "Zasady głosowania nad roszczeniami",

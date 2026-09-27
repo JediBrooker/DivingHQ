@@ -78,7 +78,10 @@
       "failed": "Registracija nije uspjela",
       "success": "Registracija je uspjela. Prije prijave pronađite poveznicu za potvrdu u e-pošti.",
       "new_club_placeholder": "npr. Sydney Springboard",
-      "short_code_placeholder": "npr. SYD"
+      "short_code_placeholder": "npr. SYD",
+      "club_needs_approval": "{org} odobrava nove klubove prije nego što postanu vidljivi. Zatražit ćemo odobrenje čim potvrdite svoju e-poštu, a u međuvremenu se možete prijaviti i natjecati.",
+      "club_joins_now": "Novi klubovi odmah se pridružuju organizaciji {org}. {org} imenuje administratore svakog kluba.",
+      "success_club_pending": "Klub {club} čeka odobrenje organizacije {org}. Vidjet će ga čim potvrdite svoju e-poštu, a javit ćemo vam e-poštom kad odluče."
     },
     "register_org": {
       "title": "Registracija organizacije",
@@ -450,7 +453,12 @@
       "quiet": "Sve mirno, ništa ne čeka.",
       "pill_urgent": "uskoro se zatvara",
       "pill_overdue": "kasni",
-      "chip_aria_tab": "{title}. Otvara pripadajuću karticu na ovoj nadzornoj ploči."
+      "chip_aria_tab": "{title}. Otvara pripadajuću karticu na ovoj nadzornoj ploči.",
+      "chip_clubs": "Novi klubovi",
+      "clubs_pending_meta": "Odobrite ih ili odbijte u Klubovima",
+      "chip_my_club": "klub čeka odobrenje",
+      "my_club_pending": "Klub {club} čeka odobrenje organizacije {org}",
+      "my_club_pending_meta": "U međuvremenu se možete natjecati. Javit ćemo vam e-poštom kad odluče."
     },
     "getting_started": {
       "title": "Pokrenite {club}",
@@ -641,8 +649,8 @@
       },
       "club_admin": {
         "name": "Administrator kluba",
-        "desc": "Vodite svoj klub. Gdje savez vaše države još nije na DivingHQ-u, klub sam organizira natjecanja: stvorite ih, vodite iz <strong>Kontrolne sobe</strong> i odobravajte zahtjeve članova za uloge. Pod savezom vas imenuje savez.",
-        "step_1": "Registrirajte se, odaberite državu i stvorite klub, bit ćete njegov prvi administrator",
+        "desc": "Vodite svoj klub. Gdje savez vaše države još nije na DivingHQ-u, klub sam organizira natjecanja: stvorite ih, vodite iz <strong>Kontrolne sobe</strong> i odobravajte zahtjeve članova za uloge. Pod savezom savez odobrava vaš novi klub i može vas imenovati njegovim administratorom.",
+        "step_1": "Registrirajte se, odaberite državu i stvorite klub; bit ćete njegov prvi administrator (pod savezom nakon što savez odobri klub)",
         "step_2": "Otvorite <strong>Menadžer natjecanja</strong> i stvorite natjecanje koje organizira vaš klub",
         "step_3": "Na stranici <strong>Moj klub</strong> odobrite one koji traže učlanjenje i članove koji žele skakati, suditi ili trenirati druge",
         "step_4": "Na dan natjecanja vodite bodovanje iz <strong>Kontrolne sobe</strong>",
@@ -665,7 +673,8 @@
         "step_2": "Prođite <strong>Čarobnjak za postavljanje</strong> — klubovi, pozivi, prvo natjecanje",
         "step_3": "Dodjelite uloge u <strong>Upravitelju korisnika</strong> kako vaš tim raste",
         "step_4": "Provjerite <strong>Dnevnik aktivnosti</strong> za sve aktivnosti unutar federacije",
-        "cta": "Brzi početak ↗"
+        "cta": "Brzi početak ↗",
+        "step_5": "Odobravajte ili odbijajte nove klubove u <strong>Klubovima</strong> ili ih pustite da se pridruže automatski"
       },
       "spectator": {
         "name": "Gledatelj",
@@ -870,7 +879,9 @@
       "claim_review": "Zahtjev",
       "claim_decided": "Zahtjev",
       "club_change": "Promjena kluba",
-      "region_request": "Regija"
+      "region_request": "Regija",
+      "club_pending": "Novi klub",
+      "club_decision": "Klub"
     }
   },
   "compare": {
@@ -1273,7 +1284,33 @@
     "col_billing": "Naplata",
     "col_actions": "Radnje",
     "admins_button": "Administratori",
-    "rename": "Preimenuj"
+    "rename": "Preimenuj",
+    "pending_title": "Čeka odobrenje",
+    "pending_intro": "Klubovi koje su osnovali ljudi pri registraciji u vašoj državi. Dok ne odlučite, ne prikazuju se ni na jednom popisu klubova i ne mogu organizirati natjecanja.",
+    "stat_pending": "Na čekanju",
+    "pending_started_by": "Osnivač: {name}",
+    "pending_waiting_since": "Čeka od {date}",
+    "pending_similar": "Sliči klubu {club}, koji je već na DivingHQ-u",
+    "email_verified": "E-pošta potvrđena",
+    "approve": "Odobri",
+    "reject": "Odbij",
+    "approve_title": "Odobri klub",
+    "approve_body": "Najprije ispravite što treba. Nakon odobrenja klub se prikazuje na popisima klubova i može organizirati natjecanja.",
+    "approve_make_admin": "Postavi korisnika {name} za administratora kluba",
+    "reject_title": "Odbij klub",
+    "reject_body": "Time se briše klub {club}. {name} zadržava račun i dobiva e-poruku s vašim obrazloženjem.",
+    "reject_reason": "Obrazloženje (neobavezno, šalje se osnivaču)",
+    "reject_move_to": "Premjesti članove u",
+    "reject_move_none": "Nikamo, ostavi ih bez kluba",
+    "approved_toast": "Klub {club} odobren",
+    "rejected_toast": "Klub {club} odbijen",
+    "setting_label": "Novi klubovi iz registracije",
+    "setting_approval": "Čekaj moje odobrenje",
+    "setting_auto": "Pridruži automatski",
+    "setting_approval_hint": "Klubovi osnovani pri registraciji čekaju ovdje dok ih ne odobrite.",
+    "setting_auto_hint": "Klubovi osnovani pri registraciji odmah su aktivni. Njihove administratore i dalje imenujete vi.",
+    "setting_approval_saved": "Novi klubovi čekat će vaše odobrenje",
+    "setting_auto_saved": "Novi klubovi pridružit će se automatski"
   },
   "teams": {
     "title": "Timovi",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} član razdijeljen",
       "member_unassigned_many": "{n} članova razdijeljeno",
       "members_count": "{n} članova",
-      "events_count": "{n} natjecanja"
+      "events_count": "{n} natjecanja",
+      "label_club_approved": "Klub odobren",
+      "label_club_rejected": "Klub odbijen",
+      "label_org_club_settings_changed": "Postavka novih klubova promijenjena"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "{n} zahtjeva čeka na vas",
     "claims_waiting_few": "{n} zahtjeva čekaju na vas",
     "claims_waiting_many": "{n} zahtjeva čeka na vas",
-    "claims_waiting_other": "{n} zahtjeva čeka na vas"
+    "claims_waiting_other": "{n} zahtjeva čeka na vas",
+    "clubs_waiting_zero": "{n} novih klubova čeka odobrenje",
+    "clubs_waiting_one": "{n} novi klub čeka odobrenje",
+    "clubs_waiting_two": "{n} novih klubova čeka odobrenje",
+    "clubs_waiting_few": "{n} nova kluba čekaju odobrenje",
+    "clubs_waiting_many": "{n} novih klubova čeka odobrenje",
+    "clubs_waiting_other": "{n} novih klubova čeka odobrenje"
   },
   "admin_settings": {
     "title": "Pravila glasanja o zahtjevima",

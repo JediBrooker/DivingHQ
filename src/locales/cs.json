@@ -78,7 +78,10 @@
       "failed": "Registrace se nezdařila",
       "success": "Registrace proběhla úspěšně. Před přihlášením si v e-mailu najděte ověřovací odkaz.",
       "new_club_placeholder": "např. Sydney Springboard",
-      "short_code_placeholder": "např. SYD"
+      "short_code_placeholder": "např. SYD",
+      "club_needs_approval": "Organizace {org} schvaluje nové kluby, než se zobrazí ostatním. Požádáme ji o to, jakmile potvrdíte svůj e-mail; do té doby se můžete přihlásit a závodit.",
+      "club_joins_now": "Nové kluby se k organizaci {org} připojí hned. Správce každého klubu jmenuje organizace {org}.",
+      "success_club_pending": "Klub {club} čeká na schválení organizací {org}. Uvidí ho, jakmile potvrdíte svůj e-mail, a o rozhodnutí vám pošleme e-mail."
     },
     "register_org": {
       "title": "Registrace organizace",
@@ -450,7 +453,12 @@
       "quiet": "Všechno klidné, nic nečeká.",
       "pill_urgent": "brzy končí",
       "pill_overdue": "po termínu",
-      "chip_aria_tab": "{title}. Otevře příslušnou kartu na této nástěnce."
+      "chip_aria_tab": "{title}. Otevře příslušnou kartu na této nástěnce.",
+      "chip_clubs": "Nové kluby",
+      "clubs_pending_meta": "Schvalte je nebo zamítněte v části Kluby",
+      "chip_my_club": "klub čeká na schválení",
+      "my_club_pending": "Klub {club} čeká na schválení organizací {org}",
+      "my_club_pending_meta": "Mezitím můžete závodit. O rozhodnutí vám pošleme e-mail."
     },
     "getting_started": {
       "title": "Rozjeďte {club}",
@@ -641,8 +649,8 @@
       },
       "club_admin": {
         "name": "Správce klubu",
-        "desc": "Řídíte svůj klub. Kde federace vaší země na DivingHQ zatím není, klub pořádá závody sám: vytvořte je, řiďte z <strong>Řídicí místnosti</strong> a schvalujte žádosti členů o role. Pod federací vás jmenuje ona.",
-        "step_1": "Zaregistrujte se, vyberte zemi a založte klub, stanete se jeho prvním správcem",
+        "desc": "Řídíte svůj klub. Kde federace vaší země na DivingHQ zatím není, klub pořádá závody sám: vytvořte je, řiďte z <strong>Řídicí místnosti</strong> a schvalujte žádosti členů o role. Pod federací váš nový klub schvaluje ona a může vás jmenovat jeho správcem.",
+        "step_1": "Zaregistrujte se, vyberte zemi a založte klub; stanete se jeho prvním správcem (pod federací až poté, co klub schválí)",
         "step_2": "Otevřete <strong>Správa závodů</strong> a vytvořte závod pořádaný vaším klubem",
         "step_3": "Na stránce <strong>Můj klub</strong> schvalujte zájemce o vstup a členy, kteří chtějí skákat, soudit nebo trénovat",
         "step_4": "V den závodu řiďte bodování z <strong>Řídicí místnosti</strong>",
@@ -665,7 +673,8 @@
         "step_2": "Projděte si <strong>Průvodce nastavením</strong> — kluby, pozvánky, první disciplína",
         "step_3": "Přidělujte role ve <strong>Správě uživatelů</strong>, jak váš tým roste",
         "step_4": "Sledujte <strong>Protokol auditu</strong> pro veškerou aktivitu v rámci federace",
-        "cta": "Rychlý start ↗"
+        "cta": "Rychlý start ↗",
+        "step_5": "Schvalujte nebo zamítejte nové kluby v části <strong>Kluby</strong>, nebo je nechte připojit automaticky"
       },
       "spectator": {
         "name": "Divák",
@@ -870,7 +879,9 @@
       "claim_review": "Nárok",
       "claim_decided": "Nárok",
       "club_change": "Změna klubu",
-      "region_request": "Region"
+      "region_request": "Region",
+      "club_pending": "Nový klub",
+      "club_decision": "Klub"
     }
   },
   "compare": {
@@ -1305,7 +1316,10 @@
       "member_unassigned_one": "{n} člen odebrán",
       "member_unassigned_many": "{n} členů odebráno",
       "members_count": "{n} členů",
-      "events_count": "{n} disciplín"
+      "events_count": "{n} disciplín",
+      "label_club_approved": "Klub schválen",
+      "label_club_rejected": "Klub zamítnut",
+      "label_org_club_settings_changed": "Nastavení nových klubů změněno"
     }
   },
   "setup": {
@@ -1371,7 +1385,33 @@
     "col_billing": "Platby",
     "col_actions": "Akce",
     "admins_button": "Správci",
-    "rename": "Přejmenovat"
+    "rename": "Přejmenovat",
+    "pending_title": "Čeká na schválení",
+    "pending_intro": "Kluby, které založili lidé při registraci ve vaší zemi. Dokud nerozhodnete, nezobrazují se v žádném seznamu klubů a nemohou pořádat závody.",
+    "stat_pending": "Čekající",
+    "pending_started_by": "Zakladatel: {name}",
+    "pending_waiting_since": "Čeká od {date}",
+    "pending_similar": "Podobá se klubu {club}, který už na DivingHQ je",
+    "email_verified": "E-mail ověřen",
+    "approve": "Schválit",
+    "reject": "Zamítnout",
+    "approve_title": "Schválit klub",
+    "approve_body": "Nejdřív opravte, co je potřeba. Po schválení se klub zobrazí v seznamech klubů a může pořádat závody.",
+    "approve_make_admin": "Jmenovat uživatele {name} správcem klubu",
+    "reject_title": "Zamítnout klub",
+    "reject_body": "Tím se klub {club} smaže. {name} si ponechá účet a dostane e-mail s vaším zdůvodněním.",
+    "reject_reason": "Důvod (nepovinný, pošle se zakladateli)",
+    "reject_move_to": "Přesunout členy do",
+    "reject_move_none": "Nikam, nechat je bez klubu",
+    "approved_toast": "Klub {club} schválen",
+    "rejected_toast": "Klub {club} zamítnut",
+    "setting_label": "Nové kluby z registrace",
+    "setting_approval": "Čekat na mé schválení",
+    "setting_auto": "Připojit automaticky",
+    "setting_approval_hint": "Kluby založené při registraci tu čekají, dokud je neschválíte.",
+    "setting_auto_hint": "Kluby založené při registraci jsou aktivní hned. Jejich správce ale dál jmenujete vy.",
+    "setting_approval_saved": "Nové kluby budou čekat na vaše schválení",
+    "setting_auto_saved": "Nové kluby se připojí automaticky"
   },
   "teams": {
     "title": "Týmy",
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "Čeká na vás {n} nároků",
     "claims_waiting_few": "Čekají na vás {n} nároky",
     "claims_waiting_many": "Čeká na vás {n} nároku",
-    "claims_waiting_other": "Čeká na vás {n} nároků"
+    "claims_waiting_other": "Čeká na vás {n} nároků",
+    "clubs_waiting_zero": "{n} nových klubů čeká na schválení",
+    "clubs_waiting_one": "{n} nový klub čeká na schválení",
+    "clubs_waiting_two": "{n} nových klubů čeká na schválení",
+    "clubs_waiting_few": "{n} nové kluby čekají na schválení",
+    "clubs_waiting_many": "{n} nového klubu čeká na schválení",
+    "clubs_waiting_other": "{n} nových klubů čeká na schválení"
   },
   "admin_settings": {
     "title": "Pravidla hlasování o nárocích",

@@ -78,7 +78,10 @@
       "failed": "가입에 실패했습니다",
       "success": "가입이 완료되었습니다. 로그인하기 전에 이메일의 인증 링크를 확인하세요.",
       "new_club_placeholder": "예: Sydney Springboard",
-      "short_code_placeholder": "예: SYD"
+      "short_code_placeholder": "예: SYD",
+      "club_needs_approval": "{org}에서 새 클럽을 공개하기 전에 승인합니다. 이메일을 확인하면 바로 승인을 요청하며, 그동안에도 로그인해서 대회에 참가할 수 있습니다.",
+      "club_joins_now": "새 클럽은 바로 {org}에 가입됩니다. 각 클럽의 관리자는 {org}에서 임명합니다.",
+      "success_club_pending": "{club} 클럽이 {org}의 승인을 기다리고 있습니다. 이메일을 확인하면 승인 요청이 전달되며, 결정되면 이메일로 알려 드립니다."
     },
     "register_org": {
       "title": "조직 등록",
@@ -450,7 +453,12 @@
       "quiet": "대기 중인 항목이 없습니다.",
       "pill_urgent": "곧 마감",
       "pill_overdue": "기한 초과",
-      "chip_aria_tab": "{title}. 이 대시보드의 해당 탭을 엽니다."
+      "chip_aria_tab": "{title}. 이 대시보드의 해당 탭을 엽니다.",
+      "chip_clubs": "새 클럽",
+      "clubs_pending_meta": "클럽 페이지에서 승인하거나 거절하세요",
+      "chip_my_club": "승인 대기 중인 클럽",
+      "my_club_pending": "{club} 클럽이 {org}의 승인을 기다리고 있습니다",
+      "my_club_pending_meta": "그동안에도 대회에 참가할 수 있습니다. 결정되면 이메일로 알려 드립니다."
     },
     "getting_started": {
       "title": "{club} 시작하기",
@@ -641,8 +649,8 @@
       },
       "club_admin": {
         "name": "클럽 관리자",
-        "desc": "클럽을 운영합니다. 국가 연맹이 아직 DivingHQ에 없으면 클럽이 직접 대회를 운영합니다. 대회를 만들고 <strong>컨트롤 룸</strong>에서 진행하며 회원의 역할 요청을 승인합니다. 연맹이 있으면 연맹이 임명합니다.",
-        "step_1": "가입 후 국가를 선택하고 클럽을 만들면 첫 번째 관리자가 됩니다",
+        "desc": "클럽을 운영합니다. 국가 연맹이 아직 DivingHQ에 없으면 클럽이 직접 대회를 운영합니다. 대회를 만들고 <strong>컨트롤 룸</strong>에서 진행하며 회원의 역할 요청을 승인합니다. 연맹이 있으면 연맹이 새 클럽을 승인하고 귀하를 관리자로 임명할 수 있습니다.",
+        "step_1": "가입 후 국가를 선택하고 클럽을 만들면 첫 번째 관리자가 됩니다 (연맹이 있으면 연맹이 클럽을 승인한 후)",
         "step_2": "<strong>대회 매니저</strong>를 열고 클럽이 주최하는 대회를 만듭니다",
         "step_3": "<strong>내 클럽</strong>에서 가입 신청자와 선수, 심판, 코치를 희망하는 회원을 승인합니다",
         "step_4": "대회 당일에는 <strong>컨트롤 룸</strong>에서 채점을 진행합니다",
@@ -665,7 +673,8 @@
         "step_2": "<strong>설정 마법사</strong>를 진행하십시오 — 클럽, 초대, 첫 종목",
         "step_3": "팀이 늘어나면 <strong>사용자 관리자</strong>에서 역할을 부여하십시오",
         "step_4": "연맹 전체 활동은 <strong>감사 로그</strong>에서 확인하십시오",
-        "cta": "빠른 시작 ↗"
+        "cta": "빠른 시작 ↗",
+        "step_5": "<strong>클럽</strong>에서 새 클럽을 승인하거나 거절하고, 또는 자동으로 가입하도록 설정합니다"
       },
       "spectator": {
         "name": "관중",
@@ -870,7 +879,9 @@
       "claim_review": "인수 신청",
       "claim_decided": "인수 신청",
       "club_change": "클럽 변경",
-      "region_request": "지역"
+      "region_request": "지역",
+      "club_pending": "새 클럽",
+      "club_decision": "클럽"
     }
   },
   "compare": {
@@ -1273,7 +1284,33 @@
     "col_billing": "청구",
     "col_actions": "작업",
     "admins_button": "관리자",
-    "rename": "이름 변경"
+    "rename": "이름 변경",
+    "pending_title": "승인 대기 중",
+    "pending_intro": "귀하의 국가에서 가입한 사람들이 만든 클럽입니다. 결정할 때까지 어떤 클럽 목록에도 표시되지 않으며 대회를 개최할 수 없습니다.",
+    "stat_pending": "대기 중",
+    "pending_started_by": "만든 사람: {name}",
+    "pending_waiting_since": "{date}부터 대기 중",
+    "pending_similar": "이미 DivingHQ에 있는 {club} 클럽과 비슷합니다",
+    "email_verified": "이메일 확인됨",
+    "approve": "승인",
+    "reject": "거절",
+    "approve_title": "클럽 승인",
+    "approve_body": "먼저 필요한 부분을 수정하세요. 승인되면 클럽이 클럽 목록에 표시되고 대회를 개최할 수 있습니다.",
+    "approve_make_admin": "{name} 님을 클럽 관리자로 지정",
+    "reject_title": "클럽 거절",
+    "reject_body": "{club} 클럽이 삭제됩니다. {name} 님의 계정은 유지되며 거절 사유가 담긴 이메일을 받습니다.",
+    "reject_reason": "사유 (선택 사항, 설립자에게 전송됨)",
+    "reject_move_to": "회원을 옮길 클럽",
+    "reject_move_none": "옮기지 않음 (클럽 없이 두기)",
+    "approved_toast": "{club} 클럽을 승인했습니다",
+    "rejected_toast": "{club} 클럽을 거절했습니다",
+    "setting_label": "가입 시 만들어진 새 클럽",
+    "setting_approval": "내 승인 대기",
+    "setting_auto": "자동 가입",
+    "setting_approval_hint": "가입 시 만들어진 클럽은 승인할 때까지 여기에서 대기합니다.",
+    "setting_auto_hint": "가입 시 만들어진 클럽은 바로 활성화됩니다. 관리자는 여전히 직접 임명합니다.",
+    "setting_approval_saved": "새 클럽은 승인을 기다리게 됩니다",
+    "setting_auto_saved": "새 클럽은 자동으로 가입됩니다"
   },
   "teams": {
     "title": "팀",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "구성원 {n}명 할당 해제",
       "member_unassigned_many": "구성원 {n}명 할당 해제",
       "members_count": "구성원 {n}명",
-      "events_count": "종목 {n}개"
+      "events_count": "종목 {n}개",
+      "label_club_approved": "클럽 승인됨",
+      "label_club_rejected": "클럽 거절됨",
+      "label_org_club_settings_changed": "새 클럽 설정 변경됨"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "신청 {n}건이 기다리고 있습니다",
     "claims_waiting_few": "신청 {n}건이 기다리고 있습니다",
     "claims_waiting_many": "신청 {n}건이 기다리고 있습니다",
-    "claims_waiting_other": "신청 {n}건이 기다리고 있습니다"
+    "claims_waiting_other": "신청 {n}건이 기다리고 있습니다",
+    "clubs_waiting_zero": "승인 대기 중인 새 클럽 {n}개",
+    "clubs_waiting_one": "승인 대기 중인 새 클럽 {n}개",
+    "clubs_waiting_two": "승인 대기 중인 새 클럽 {n}개",
+    "clubs_waiting_few": "승인 대기 중인 새 클럽 {n}개",
+    "clubs_waiting_many": "승인 대기 중인 새 클럽 {n}개",
+    "clubs_waiting_other": "승인 대기 중인 새 클럽 {n}개"
   },
   "admin_settings": {
     "title": "인수 신청 투표 규칙",

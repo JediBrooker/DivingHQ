@@ -15,7 +15,7 @@ Go to [Create an account](/register) and fill in your name, a username, your ema
 - **Club.** If your club is already listed, pick it: its admin approves you. If it isn't, choose **+ Create a new club** and give it a name and an optional short code (3 to 6 letters, e.g. `SYD`). The short code is the chip shown next to your divers on the scoreboard.
 - **I want to register as.** Diver is the default. Pick what you'll actually do; everyone starts as a spectator and gets more once approved.
 
-In a country with no federation on DivingHQ yet, **creating a club makes you its club admin** straight away. In a country whose federation already runs DivingHQ, the federation decides who admins each club.
+In a country with no federation on DivingHQ yet, **creating a club makes you its club admin** straight away. In a country whose federation already runs DivingHQ, a new club waits for the federation to approve it (unless it lets clubs join automatically). It asks them once you've confirmed your email, and you can sign in and dive while they decide. When they approve it they usually make you its admin; otherwise the federation decides who admins each club. Your dashboard shows the club as waiting until then, and you'll get an email either way.
 
 ## 2. Confirm your email
 

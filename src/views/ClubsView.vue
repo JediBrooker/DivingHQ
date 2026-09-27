@@ -11,6 +11,8 @@ import { showSuccess, showError } from '@/composables/useNotify'
 import { fmtDate } from '@/lib/format'
 import ClubAdminsModal from '@/components/ClubAdminsModal.vue'
 import RegionAdminsModal from '@/components/RegionAdminsModal.vue'
+import ClubApproveModal from '@/components/ClubApproveModal.vue'
+import ClubRejectModal from '@/components/ClubRejectModal.vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { usePlural } from '@/composables/usePlural'
 
@@ -40,7 +42,11 @@ const editBusy = ref(false)
 // Club whose admins dialog is open, null when it's closed.
 const adminsFor = ref(null)
 const regionAdminsFor = ref(null)
-useBodyScrollLock().lockWhile(computed(() => !!adminsFor.value || !!regionAdminsFor.value))
+// Pending club being approved / rejected (migration 096).
+const approving = ref(null)
+const rejecting = ref(null)
+useBodyScrollLock().lockWhile(computed(() =>
+  !!adminsFor.value || !!regionAdminsFor.value || !!approving.value || !!rejecting.value))
 
 const isSysAdmin = computed(() => !!auth.user?.is_system_admin)
 // Only the federation admin configures club fees. Meet managers can view
@@ -51,6 +57,9 @@ const isOrgAdmin = computed(() => (auth.user?.org_roles || []).includes('org_adm
 // being in arrears. Hide it (and the note pointing at hidden pages).
 const features = useFeaturesStore()
 const billingOn = computed(() => features.enabled('payments'))
+// Who decides clubs that signed up under the federation. The server only
+// sends pending rows to these two anyway.
+const canDecide = computed(() => isSysAdmin.value || isOrgAdmin.value)
 // Full-width rows (loading, empty, errors) span however many columns
 // are actually showing.
 const tableCols = computed(() =>
@@ -66,9 +75,60 @@ const clubOrgs = computed(() => {
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
 })
 
+// The registry proper is approved clubs. Ones still waiting on the
+// federation get their own panel above the table and stay out of it and
+// out of the counts, so an unvetted signup can't be renamed, deleted or
+// handed admins from the table by mistake.
+const activeClubs = computed(() => clubs.value.filter(c => c.status !== 'pending'))
+const pendingClubs = computed(() => clubs.value
+  .filter(c => c.status === 'pending' && (!orgFilter.value || c.org_id === orgFilter.value))
+  .sort((a, b) => +new Date(a.submitted_at || a.created_at) - +new Date(b.submitted_at || b.created_at)))
+
+// Founders often don't know their club is already here, so point out an
+// approved club in the same org with the same code or much the same name.
+// Accents, case and punctuation don't count; a name inside the other one
+// does, once it's long enough not to match everything.
+function normName(s) {
+  return String(s || '').toLowerCase().normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}]+/gu, '')
+}
+function lookalike(p) {
+  const n = normName(p.name)
+  const code = (p.short_code || '').toUpperCase()
+  return activeClubs.value.find((c) => {
+    if (c.org_id !== p.org_id) return false
+    if (code && (c.short_code || '').toUpperCase() === code) return true
+    const m = normName(c.name)
+    if (m === n) return true
+    return n.length >= 5 && m.length >= 5 && (m.includes(n) || n.includes(m))
+  }) || null
+}
+const lookalikes = computed(() => new Map(pendingClubs.value.map(p => [p.id, lookalike(p)])))
+
+// Where a rejected club's members can go: approved clubs in its org.
+function rejectCandidates(p) {
+  return activeClubs.value
+    .filter(c => c.org_id === p.org_id)
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+async function onApproved(out) {
+  const name = out?.name || approving.value?.name
+  approving.value = null
+  await Promise.all([loadClubs(), loadRegions()])
+  showSuccess(t('clubs.approved_toast', { club: name }))
+}
+
+async function onRejected() {
+  const name = rejecting.value?.name
+  rejecting.value = null
+  await loadClubs()
+  showSuccess(t('clubs.rejected_toast', { club: name }))
+}
+
 const filteredClubs = computed(() => {
   const term = searchTerm.value.trim().toLowerCase()
-  return clubs.value.filter(c => {
+  return activeClubs.value.filter(c => {
     if (orgFilter.value && c.org_id !== orgFilter.value) return false
     if (!term) return true
     return (
@@ -81,9 +141,10 @@ const filteredClubs = computed(() => {
 })
 
 const stats = computed(() => ({
-  clubs: clubs.value.length,
-  members: clubs.value.reduce((a, c) => a + (c.member_count || 0), 0),
-  empty: clubs.value.filter(c => !c.member_count).length,
+  clubs: activeClubs.value.length,
+  members: activeClubs.value.reduce((a, c) => a + (c.member_count || 0), 0),
+  empty: activeClubs.value.filter(c => !c.member_count).length,
+  pending: clubs.value.length - activeClubs.value.length,
 }))
 
 async function loadClubs() {
@@ -259,10 +320,45 @@ async function setClubRegion(club, regionId) {
   }
 }
 
-watch(regionOrgId, loadRegions)
+// "New clubs from signup": wait for approval, or join automatically.
+// Only a claimed org has the choice (an unclaimed country approves
+// nothing), so it shows once the settings say claimed. Same org as the
+// regions strip: your own, or the one a sysadmin picked in the filter.
+const clubSettings = ref(null)
+const settingBusy = ref(false)
+let settingsReq = 0
+const showClubSetting = computed(() => canDecide.value && clubSettings.value?.claim_state === 'claimed')
+
+async function loadClubSettings() {
+  const req = ++settingsReq
+  clubSettings.value = null
+  const orgId = regionOrgId.value
+  if (!orgId || !canDecide.value) return
+  try {
+    const body = await auth.apiFetch(`/api/orgs/${orgId}/club-settings`)
+    if (req === settingsReq) clubSettings.value = body
+  } catch { /* leave the control hidden */ }
+}
+
+async function setAutoApprove(value) {
+  settingBusy.value = true
+  try {
+    clubSettings.value = await auth.apiFetch(`/api/orgs/${regionOrgId.value}/club-settings`, {
+      method: 'PUT',
+      body: JSON.stringify({ auto_approve_clubs: value }),
+    })
+    showSuccess(t(value ? 'clubs.setting_auto_saved' : 'clubs.setting_approval_saved'))
+  } catch (err) {
+    showError(err.message)
+  } finally {
+    settingBusy.value = false
+  }
+}
+
+watch(regionOrgId, () => { loadRegions(); loadClubSettings() })
 
 onMounted(async () => {
-  await Promise.all([loadClubs(), loadOrgs(), loadRegions()])
+  await Promise.all([loadClubs(), loadOrgs(), loadRegions(), loadClubSettings()])
 })
 </script>
 
@@ -286,6 +382,10 @@ onMounted(async () => {
       <div :class="['stat', stats.empty ? 'stat-amber' : '']">
         <div class="stat-num">{{ stats.empty }}</div>
         <div class="stat-label">Empty</div>
+      </div>
+      <div v-if="canDecide" :class="['stat', stats.pending ? 'stat-amber' : '']" data-testid="clubs-stat-pending">
+        <div class="stat-num">{{ stats.pending }}</div>
+        <div class="stat-label">{{ $t('clubs.stat_pending') }}</div>
       </div>
       <span v-if="isSysAdmin" class="sys-badge" style="margin-inline-start:auto">System Admin · all orgs</span>
     </div>
@@ -312,6 +412,56 @@ onMounted(async () => {
       </template>
     </div>
 
+    <!-- New clubs from signup: the federation approves them, or lets them
+         straight in (migration 096). -->
+    <div v-if="showClubSetting" class="club-setting">
+      <label class="setting-label" for="club-join-setting">{{ $t('clubs.setting_label') }}</label>
+      <select id="club-join-setting" class="select select-sm"
+              :value="clubSettings.auto_approve_clubs ? 'auto' : 'approval'" :disabled="settingBusy"
+              @change="setAutoApprove($event.target.value === 'auto')">
+        <option value="approval">{{ $t('clubs.setting_approval') }}</option>
+        <option value="auto">{{ $t('clubs.setting_auto') }}</option>
+      </select>
+      <span class="setting-hint">
+        {{ clubSettings.auto_approve_clubs ? $t('clubs.setting_auto_hint') : $t('clubs.setting_approval_hint') }}
+      </span>
+    </div>
+
+    <!-- Clubs that signed up under the federation and are waiting on it.
+         Only the org admin and the sysadmin get these rows. -->
+    <section v-if="canDecide && pendingClubs.length" class="pending-panel" data-testid="pending-clubs">
+      <div class="pending-head">
+        {{ $t('clubs.pending_title') }} <span class="pending-count">{{ pendingClubs.length }}</span>
+      </div>
+      <p class="pending-intro">{{ $t('clubs.pending_intro') }}</p>
+      <ul class="pending-list">
+        <li v-for="p in pendingClubs" :key="p.id" class="pending-row" :data-club-id="p.id">
+          <div class="pending-main">
+            <div class="pending-name">
+              <span class="club-name">{{ p.name }}</span>
+              <span v-if="p.short_code" class="club-code">{{ p.short_code }}</span>
+              <span v-if="regionById.get(p.region_id)" class="dim">{{ regionById.get(p.region_id).name }}</span>
+              <span v-if="isSysAdmin" class="org-country">{{ p.org_name }}</span>
+            </div>
+            <div class="pending-meta">
+              <span v-if="p.founder_name">
+                {{ $t('clubs.pending_started_by', { name: p.founder_name }) }}<template v-if="p.founder_username"> · @{{ p.founder_username }}</template><template v-if="p.founder_email"> · {{ p.founder_email }}</template>
+              </span>
+              <span v-if="p.founder_email_verified" class="verified-pill">{{ $t('clubs.email_verified') }}</span>
+              <span>{{ $t('clubs.pending_waiting_since', { date: fmtDate(p.submitted_at || p.created_at) }) }}</span>
+            </div>
+            <div v-if="lookalikes.get(p.id)" class="pending-similar">
+              {{ $t('clubs.pending_similar', { club: lookalikes.get(p.id).name }) }}
+            </div>
+          </div>
+          <div class="pending-actions">
+            <button class="btn btn-ghost btn-sm" type="button" @click="rejecting = p">{{ $t('clubs.reject') }}</button>
+            <button class="btn btn-primary btn-sm" type="button" @click="approving = p">{{ $t('clubs.approve') }}</button>
+          </div>
+        </li>
+      </ul>
+    </section>
+
     <!-- Filters + create -->
     <div class="toolbar">
       <input class="input" type="text" v-model="searchTerm" :placeholder="$t('clubs.search')">
@@ -322,7 +472,7 @@ onMounted(async () => {
         </option>
       </select>
       <span class="result-count">
-        {{ filteredClubs.length.toLocaleString() }} of {{ clubs.length.toLocaleString() }}
+        {{ filteredClubs.length.toLocaleString() }} of {{ activeClubs.length.toLocaleString() }}
       </span>
       <button class="btn btn-primary btn-sm" @click="openCreate">{{ $t('clubs.new_club') }}</button>
     </div>
@@ -383,7 +533,7 @@ onMounted(async () => {
           <tr v-else-if="errorMsg">
             <td :colspan="tableCols" class="empty-state">{{ errorMsg }}</td>
           </tr>
-          <tr v-else-if="!filteredClubs.length && !clubs.length">
+          <tr v-else-if="!filteredClubs.length && !activeClubs.length">
             <td :colspan="tableCols">
               <div class="empty-state-card">
                 <div class="empty-state-icon">🏢</div>
@@ -476,6 +626,10 @@ onMounted(async () => {
 
   <ClubAdminsModal v-if="adminsFor" :club="adminsFor" @close="adminsFor = null" />
   <RegionAdminsModal v-if="regionAdminsFor" :region="regionAdminsFor" @close="regionAdminsFor = null" />
+  <ClubApproveModal v-if="approving" :club="approving" @close="approving = null" @done="onApproved" />
+  <ClubRejectModal v-if="rejecting" :club="rejecting" :candidates="rejectCandidates(rejecting)"
+                   :suggested="lookalikes.get(rejecting.id)?.id || ''"
+                   @close="rejecting = null" @done="onRejected" />
 </template>
 
 <style scoped>
@@ -592,6 +746,44 @@ onMounted(async () => {
 }
 
 .club-row-editing { background: var(--cyan-dim); }
+
+/* New clubs from signup setting */
+.club-setting {
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+  padding: 0.6rem 0.85rem; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.setting-label { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-3); }
+.setting-hint { font-size: 12px; color: var(--text-3); flex: 1 1 220px; }
+.club-setting .select-sm { width: auto; flex: 0 1 240px; min-width: 180px; }
+
+/* Clubs waiting for approval */
+.pending-panel {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--amber); border-radius: var(--radius-lg);
+  background: var(--surface);
+  display: flex; flex-direction: column; gap: 0.6rem;
+}
+.pending-head {
+  font-family: var(--font-display); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.25em; text-transform: uppercase; color: var(--amber);
+}
+.pending-count { font-family: var(--font-mono); margin-inline-start: 0.35rem; }
+.pending-intro { margin: 0; font-size: 13px; color: var(--text-3); }
+.pending-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.pending-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
+  padding: 0.65rem 0.85rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.pending-main { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; flex: 1 1 280px; }
+.pending-name { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.pending-meta { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; font-size: 12px; color: var(--text-3); overflow-wrap: anywhere; }
+.pending-similar { font-size: 12px; font-weight: 600; color: var(--amber); }
+.pending-actions { display: flex; gap: 0.4rem; }
+.verified-pill {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--green);
+  border: 1px solid var(--green); border-radius: 3px; padding: 0.05rem 0.35rem;
+}
 .input-sm { padding: 0.3rem 0.5rem; font-size: 13px; }
 /* Avoid iOS Safari's focus-zoom on <input> with font-size < 16px. */
 @media (max-width: 720px) {

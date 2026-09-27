@@ -78,7 +78,10 @@
       "failed": "Rekisteröinti epäonnistui",
       "success": "Rekisteröinti onnistui. Etsi sähköpostistasi vahvistuslinkki ennen kirjautumista.",
       "new_club_placeholder": "esim. Sydney Springboard",
-      "short_code_placeholder": "esim. SYD"
+      "short_code_placeholder": "esim. SYD",
+      "club_needs_approval": "{org} hyväksyy uudet seurat ennen kuin ne tulevat näkyviin. Kysymme sitä heti, kun olet vahvistanut sähköpostiosoitteesi, ja sillä välin voit kirjautua sisään ja kilpailla.",
+      "club_joins_now": "Uudet seurat liittyvät organisaatioon {org} heti. {org} nimeää kunkin seuran ylläpitäjät.",
+      "success_club_pending": "{club} odottaa organisaation {org} hyväksyntää. He näkevät sen, kun olet vahvistanut sähköpostiosoitteesi, ja lähetämme sinulle sähköpostia, kun päätös on tehty."
     },
     "register_org": {
       "title": "Rekisteröi organisaatio",
@@ -450,7 +453,12 @@
       "quiet": "Kaikki hiljaista, mikään ei odota.",
       "pill_urgent": "sulkeutuu pian",
       "pill_overdue": "myöhässä",
-      "chip_aria_tab": "{title}. Avaa sen välilehden tässä hallintapaneelissa."
+      "chip_aria_tab": "{title}. Avaa sen välilehden tässä hallintapaneelissa.",
+      "chip_clubs": "Uudet seurat",
+      "clubs_pending_meta": "Hyväksy tai hylkää ne Seurat-sivulla",
+      "chip_my_club": "seura odottaa hyväksyntää",
+      "my_club_pending": "{club} odottaa organisaation {org} hyväksyntää",
+      "my_club_pending_meta": "Voit kilpailla sillä välin. Lähetämme sinulle sähköpostia, kun päätös on tehty."
     },
     "getting_started": {
       "title": "Pane {club} alulle",
@@ -652,8 +660,8 @@
       },
       "club_admin": {
         "name": "Seuran ylläpitäjä",
-        "desc": "Johdat seuraasi. Jos maasi liitto ei vielä ole DivingHQ:ssa, seura järjestää kilpailunsa itse: luo ne, ohjaa niitä <strong>Ohjaamosta</strong> ja hyväksy jäsenten roolipyynnöt. Liiton alaisuudessa liitto nimeää sinut.",
-        "step_1": "Rekisteröidy, valitse maasi ja luo seurasi, sinusta tulee sen ensimmäinen ylläpitäjä",
+        "desc": "Johdat seuraasi. Jos maasi liitto ei vielä ole DivingHQ:ssa, seura järjestää kilpailunsa itse: luo ne, ohjaa niitä <strong>Ohjaamosta</strong> ja hyväksy jäsenten roolipyynnöt. Liiton alaisuudessa liitto hyväksyy uuden seurasi ja voi nimetä sinut sen ylläpitäjäksi.",
+        "step_1": "Rekisteröidy, valitse maasi ja luo seurasi; sinusta tulee sen ensimmäinen ylläpitäjä (liiton alaisuudessa, kun liitto on hyväksynyt seuran)",
         "step_2": "Avaa <strong>Kilpailun hallinta</strong> ja luo seurasi järjestämä kilpailu",
         "step_3": "Hyväksy <strong>Oma seura</strong> -sivulla liittymistä pyytävät sekä jäsenet, jotka haluavat hypätä, tuomita tai valmentaa",
         "step_4": "Kilpailupäivänä ohjaat pisteytystä <strong>Ohjaamosta</strong>",
@@ -676,7 +684,8 @@
         "step_2": "Käy läpi <strong>Asennusvelho</strong> — seurat, kutsut, ensimmäinen tapahtuma",
         "step_3": "Myönnä rooleja <strong>Käyttäjähallinnassa</strong> joukkueesi kasvaessa",
         "step_4": "Tarkista <strong>Auditointiloki</strong> nähdäksesi koko liiton toiminnan",
-        "cta": "Pika-aloitus ↗"
+        "cta": "Pika-aloitus ↗",
+        "step_5": "Hyväksy tai hylkää uudet seurat <strong>Seurat</strong>-sivulla tai anna niiden liittyä automaattisesti"
       },
       "spectator": {
         "name": "Katsoja",
@@ -881,7 +890,9 @@
       "claim_review": "Vaatimus",
       "claim_decided": "Vaatimus",
       "club_change": "Seuran vaihto",
-      "region_request": "Alue"
+      "region_request": "Alue",
+      "club_pending": "Uusi seura",
+      "club_decision": "Seura"
     }
   },
   "compare": {
@@ -1284,7 +1295,33 @@
     "col_billing": "Laskutus",
     "col_actions": "Toiminnot",
     "admins_button": "Ylläpitäjät",
-    "rename": "Nimeä uudelleen"
+    "rename": "Nimeä uudelleen",
+    "pending_title": "Odottaa hyväksyntää",
+    "pending_intro": "Seuroja, jotka ihmiset ovat perustaneet rekisteröityessään maassasi. Kunnes päätät, ne eivät näy missään seuraluettelossa eivätkä voi järjestää kilpailuja.",
+    "stat_pending": "Odottaa",
+    "pending_started_by": "Perustaja: {name}",
+    "pending_waiting_since": "Odottanut {date} alkaen",
+    "pending_similar": "Muistuttaa seuraa {club}, joka on jo DivingHQ:ssa",
+    "email_verified": "Sähköposti vahvistettu",
+    "approve": "Hyväksy",
+    "reject": "Hylkää",
+    "approve_title": "Hyväksy seura",
+    "approve_body": "Korjaa ensin tarvittavat tiedot. Hyväksytty seura näkyy seuraluetteloissa ja voi järjestää kilpailuja.",
+    "approve_make_admin": "Tee käyttäjästä {name} seuran ylläpitäjä",
+    "reject_title": "Hylkää seura",
+    "reject_body": "Tämä poistaa seuran {club}. {name} säilyttää tilinsä ja saa sähköpostin, jossa on perustelusi.",
+    "reject_reason": "Perustelu (valinnainen, lähetetään perustajalle)",
+    "reject_move_to": "Siirrä jäsenet seuraan",
+    "reject_move_none": "Ei mihinkään, jätä heidät ilman seuraa",
+    "approved_toast": "{club} hyväksytty",
+    "rejected_toast": "{club} hylätty",
+    "setting_label": "Rekisteröitymisessä perustetut seurat",
+    "setting_approval": "Odota hyväksyntääni",
+    "setting_auto": "Liity automaattisesti",
+    "setting_approval_hint": "Rekisteröitymisessä perustetut seurat odottavat täällä, kunnes hyväksyt ne.",
+    "setting_auto_hint": "Rekisteröitymisessä perustetut seurat ovat heti aktiivisia. Nimeät silti itse niiden ylläpitäjät.",
+    "setting_approval_saved": "Uudet seurat odottavat hyväksyntääsi",
+    "setting_auto_saved": "Uudet seurat liittyvät automaattisesti"
   },
   "teams": {
     "title": "Joukkueet",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} jäsenen liitos poistettu",
       "member_unassigned_many": "{n} jäsenen liitokset poistettu",
       "members_count": "{n} jäsentä",
-      "events_count": "{n} kisalajia"
+      "events_count": "{n} kisalajia",
+      "label_club_approved": "Seura hyväksytty",
+      "label_club_rejected": "Seura hylätty",
+      "label_org_club_settings_changed": "Uusien seurojen asetus muutettu"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "{n} vaatimusta odottaa sinua",
     "claims_waiting_few": "{n} vaatimusta odottaa sinua",
     "claims_waiting_many": "{n} vaatimusta odottaa sinua",
-    "claims_waiting_other": "{n} vaatimusta odottaa sinua"
+    "claims_waiting_other": "{n} vaatimusta odottaa sinua",
+    "clubs_waiting_zero": "{n} uutta seuraa odottaa hyväksyntää",
+    "clubs_waiting_one": "{n} uusi seura odottaa hyväksyntää",
+    "clubs_waiting_two": "{n} uutta seuraa odottaa hyväksyntää",
+    "clubs_waiting_few": "{n} uutta seuraa odottaa hyväksyntää",
+    "clubs_waiting_many": "{n} uutta seuraa odottaa hyväksyntää",
+    "clubs_waiting_other": "{n} uutta seuraa odottaa hyväksyntää"
   },
   "admin_settings": {
     "title": "Vaatimusten äänestyssäännöt",

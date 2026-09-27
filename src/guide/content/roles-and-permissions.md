@@ -55,6 +55,7 @@ Top of the food chain inside one country, the person whose name is on the record
 - Set `entries_close_at` on events to enforce registration deadlines
 - Claim the country's account so its national record book reads as official (records themselves are automatic, there's nothing to sign off)
 - Manage clubs and teams within the federation, and appoint each club's and region's admins from **Clubs & teams**
+- Approve or reject the clubs people start when they sign up in the country, or let new clubs join automatically (**Clubs & teams**)
 - Approve role requests from every member in the country
 - Decide a state body's claim on one of its regions
 
@@ -89,7 +90,7 @@ For cross-org transfers the Requests tab shows which of the three approvals have
 
 ## Club admin
 
-Runs one club. In a country whose federation isn't on DivingHQ yet, a club admin is the person who created the club, plus the co-admins they add on **My club**. Under a federation, the federation appoints club admins.
+Runs one club. In a country whose federation isn't on DivingHQ yet, a club admin is the person who created the club, plus the co-admins they add on **My club**. Under a federation, the federation appoints club admins. A club someone creates at signup there waits for the federation to approve it first, and approving it normally makes the founder its admin.
 
 **Can:**
 - Create meets hosted by their club and run them end to end: events, entries, judging panels, the schedule and the Control Room

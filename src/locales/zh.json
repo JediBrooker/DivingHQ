@@ -78,7 +78,10 @@
       "failed": "注册失败",
       "success": "注册成功。登录前请在邮箱中查收验证链接。",
       "new_club_placeholder": "例如 Sydney Springboard",
-      "short_code_placeholder": "例如 SYD"
+      "short_code_placeholder": "例如 SYD",
+      "club_needs_approval": "{org} 会在新俱乐部公开前进行审批。您确认邮箱后，我们会立即向其提交申请；在此期间，您可以登录并参赛。",
+      "club_joins_now": "新俱乐部会立即加入 {org}。各俱乐部的管理员由 {org} 任命。",
+      "success_club_pending": "{club} 正在等待 {org} 审批。您确认邮箱后对方即可看到，审批结果出来后我们会通过邮件通知您。"
     },
     "register_org": {
       "title": "注册机构",
@@ -450,7 +453,12 @@
       "quiet": "一切平静，没有待处理事项。",
       "pill_urgent": "即将截止",
       "pill_overdue": "已逾期",
-      "chip_aria_tab": "{title}。打开此控制台上的对应标签页。"
+      "chip_aria_tab": "{title}。打开此控制台上的对应标签页。",
+      "chip_clubs": "新俱乐部",
+      "clubs_pending_meta": "请在俱乐部页面批准或拒绝",
+      "chip_my_club": "待审批的俱乐部",
+      "my_club_pending": "{club} 正在等待 {org} 审批",
+      "my_club_pending_meta": "在此期间您可以参赛。审批结果出来后我们会通过邮件通知您。"
     },
     "getting_started": {
       "title": "开始运营 {club}",
@@ -641,8 +649,8 @@
       },
       "club_admin": {
         "name": "俱乐部管理员",
-        "desc": "您负责管理俱乐部。如果您所在国家的联合会尚未加入 DivingHQ，俱乐部可自行组织比赛：创建比赛、在<strong>控制室</strong>中主持，并审批会员的角色申请。若有联合会，则由联合会任命您。",
-        "step_1": "注册并选择国家，创建您的俱乐部，您将成为首位管理员",
+        "desc": "您负责管理俱乐部。如果您所在国家的联合会尚未加入 DivingHQ，俱乐部可自行组织比赛：创建比赛、在<strong>控制室</strong>中主持，并审批会员的角色申请。若有联合会，则由联合会审批您的新俱乐部，并可任命您为管理员。",
+        "step_1": "注册并选择国家，创建您的俱乐部，您将成为首位管理员（若有联合会，则在联合会批准俱乐部后）",
         "step_2": "打开<strong>赛事经理</strong>，创建由您的俱乐部主办的比赛",
         "step_3": "在<strong>我的俱乐部</strong>中审批申请入会的人，以及希望成为运动员、裁判或教练的会员",
         "step_4": "比赛当天，在<strong>控制室</strong>中主持评分",
@@ -665,7 +673,8 @@
         "step_2": "完成 <strong>设置向导</strong> — 俱乐部、邀请、第一场赛事",
         "step_3": "随着团队增长,在 <strong>用户管理</strong> 中授予角色",
         "step_4": "查看 <strong>审计日志</strong> 了解联合会范围内的所有活动",
-        "cta": "快速开始 ↗"
+        "cta": "快速开始 ↗",
+        "step_5": "在<strong>俱乐部</strong>中批准或拒绝新俱乐部，或让它们自动加入"
       },
       "spectator": {
         "name": "观众",
@@ -870,7 +879,9 @@
       "claim_review": "接管申请",
       "claim_decided": "接管申请",
       "club_change": "俱乐部变更",
-      "region_request": "地区"
+      "region_request": "地区",
+      "club_pending": "新俱乐部",
+      "club_decision": "俱乐部"
     }
   },
   "compare": {
@@ -1273,7 +1284,33 @@
     "col_billing": "账单",
     "col_actions": "操作",
     "admins_button": "管理员",
-    "rename": "重命名"
+    "rename": "重命名",
+    "pending_title": "等待审批",
+    "pending_intro": "由在您国家注册的用户创建的俱乐部。在您做出决定之前，它们不会出现在任何俱乐部列表中，也无法主办比赛。",
+    "stat_pending": "待审批",
+    "pending_started_by": "创建者：{name}",
+    "pending_waiting_since": "自 {date} 起等待",
+    "pending_similar": "与 DivingHQ 上已有的 {club} 相似",
+    "email_verified": "邮箱已验证",
+    "approve": "批准",
+    "reject": "拒绝",
+    "approve_title": "批准俱乐部",
+    "approve_body": "请先修正需要修改的内容。批准后，该俱乐部会出现在俱乐部列表中，并可以主办比赛。",
+    "approve_make_admin": "将 {name} 设为俱乐部管理员",
+    "reject_title": "拒绝俱乐部",
+    "reject_body": "这将删除 {club}。{name} 的账户会保留，并会收到一封包含您理由的邮件。",
+    "reject_reason": "理由（可选，将发送给创建者）",
+    "reject_move_to": "将成员移至",
+    "reject_move_none": "不移动，让他们暂无俱乐部",
+    "approved_toast": "已批准 {club}",
+    "rejected_toast": "已拒绝 {club}",
+    "setting_label": "注册时创建的新俱乐部",
+    "setting_approval": "等待我审批",
+    "setting_auto": "自动加入",
+    "setting_approval_hint": "注册时创建的俱乐部会在此等待，直到您批准。",
+    "setting_auto_hint": "注册时创建的俱乐部会立即生效。管理员仍由您任命。",
+    "setting_approval_saved": "新俱乐部将等待您的审批",
+    "setting_auto_saved": "新俱乐部将自动加入"
   },
   "teams": {
     "title": "队伍",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} 名成员已解除分配",
       "member_unassigned_many": "{n} 名成员已解除分配",
       "members_count": "{n} 名成员",
-      "events_count": "{n} 项赛事"
+      "events_count": "{n} 项赛事",
+      "label_club_approved": "俱乐部已批准",
+      "label_club_rejected": "俱乐部已拒绝",
+      "label_org_club_settings_changed": "新俱乐部设置已更改"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "有 {n} 个申请等待您处理",
     "claims_waiting_few": "有 {n} 个申请等待您处理",
     "claims_waiting_many": "有 {n} 个申请等待您处理",
-    "claims_waiting_other": "有 {n} 个申请等待您处理"
+    "claims_waiting_other": "有 {n} 个申请等待您处理",
+    "clubs_waiting_zero": "有 {n} 个新俱乐部等待审批",
+    "clubs_waiting_one": "有 {n} 个新俱乐部等待审批",
+    "clubs_waiting_two": "有 {n} 个新俱乐部等待审批",
+    "clubs_waiting_few": "有 {n} 个新俱乐部等待审批",
+    "clubs_waiting_many": "有 {n} 个新俱乐部等待审批",
+    "clubs_waiting_other": "有 {n} 个新俱乐部等待审批"
   },
   "admin_settings": {
     "title": "接管申请投票规则",

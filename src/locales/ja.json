@@ -78,7 +78,10 @@
       "failed": "登録に失敗しました",
       "success": "登録が完了しました。サインインする前に、メールに届いた確認リンクを開いてください。",
       "new_club_placeholder": "例: Sydney Springboard",
-      "short_code_placeholder": "例: SYD"
+      "short_code_placeholder": "例: SYD",
+      "club_needs_approval": "{org} は新しいクラブを公開前に承認します。メールアドレスを確認するとすぐに承認を依頼します。それまでの間もサインインして競技に参加できます。",
+      "club_joins_now": "新しいクラブはすぐに {org} に参加します。各クラブの管理者は {org} が任命します。",
+      "success_club_pending": "{club} は {org} の承認待ちです。メールアドレスを確認すると先方に届き、決定したらメールでお知らせします。"
     },
     "register_org": {
       "title": "組織を登録",
@@ -450,7 +453,12 @@
       "quiet": "保留中の項目はありません。",
       "pill_urgent": "まもなく締切",
       "pill_overdue": "期限超過",
-      "chip_aria_tab": "{title}。このダッシュボードの該当タブを開きます。"
+      "chip_aria_tab": "{title}。このダッシュボードの該当タブを開きます。",
+      "chip_clubs": "新しいクラブ",
+      "clubs_pending_meta": "クラブページで承認または却下してください",
+      "chip_my_club": "承認待ちのクラブ",
+      "my_club_pending": "{club} は {org} の承認待ちです",
+      "my_club_pending_meta": "その間も競技に参加できます。決定したらメールでお知らせします。"
     },
     "getting_started": {
       "title": "{club} を始めましょう",
@@ -641,8 +649,8 @@
       },
       "club_admin": {
         "name": "クラブ管理者",
-        "desc": "クラブを運営します。国の連盟がまだ DivingHQ にない場合、クラブが自ら大会を運営します。大会を作成し、<strong>コントロールルーム</strong>で進行し、メンバーの役割申請を承認します。連盟がある場合は連盟があなたを任命します。",
-        "step_1": "登録して国を選び、クラブを作成すると最初の管理者になります",
+        "desc": "クラブを運営します。国の連盟がまだ DivingHQ にない場合、クラブが自ら大会を運営します。大会を作成し、<strong>コントロールルーム</strong>で進行し、メンバーの役割申請を承認します。連盟がある場合は、連盟が新しいクラブを承認し、あなたを管理者に任命できます。",
+        "step_1": "登録して国を選び、クラブを作成すると最初の管理者になります (連盟がある場合は、連盟がクラブを承認した後)",
         "step_2": "<strong>大会マネージャー</strong>を開き、クラブ主催の大会を作成します",
         "step_3": "<strong>マイクラブ</strong>で、入会希望者と、選手・審判・コーチを希望するメンバーを承認します",
         "step_4": "当日は<strong>コントロールルーム</strong>で採点を進行します",
@@ -665,7 +673,8 @@
         "step_2": "<strong>セットアップウィザード</strong> を進めてください — クラブ、招待、最初の種目",
         "step_3": "チームが拡大したら、<strong>ユーザーマネージャー</strong> でロールを付与してください",
         "step_4": "連盟全体のアクティビティについては <strong>監査ログ</strong> を確認してください",
-        "cta": "クイックスタート ↗"
+        "cta": "クイックスタート ↗",
+        "step_5": "<strong>クラブ</strong>で新しいクラブを承認または却下するか、自動で参加させます"
       },
       "spectator": {
         "name": "観客",
@@ -870,7 +879,9 @@
       "claim_review": "引き継ぎ申請",
       "claim_decided": "引き継ぎ申請",
       "club_change": "クラブ変更",
-      "region_request": "地域"
+      "region_request": "地域",
+      "club_pending": "新しいクラブ",
+      "club_decision": "クラブ"
     }
   },
   "compare": {
@@ -1273,7 +1284,33 @@
     "col_billing": "請求",
     "col_actions": "操作",
     "admins_button": "管理者",
-    "rename": "名前を変更"
+    "rename": "名前を変更",
+    "pending_title": "承認待ち",
+    "pending_intro": "あなたの国で登録した人が作成したクラブです。決定するまでクラブ一覧には表示されず、大会を主催することもできません。",
+    "stat_pending": "承認待ち",
+    "pending_started_by": "作成者: {name}",
+    "pending_waiting_since": "{date} から待機中",
+    "pending_similar": "既に DivingHQ にある {club} と似ています",
+    "email_verified": "メール確認済み",
+    "approve": "承認",
+    "reject": "却下",
+    "approve_title": "クラブを承認",
+    "approve_body": "必要な箇所を先に修正してください。承認されるとクラブ一覧に表示され、大会を主催できるようになります。",
+    "approve_make_admin": "{name} をクラブの管理者にする",
+    "reject_title": "クラブを却下",
+    "reject_body": "{club} を削除します。{name} のアカウントは残り、あなたの理由がメールで届きます。",
+    "reject_reason": "理由 (任意、作成者に送信されます)",
+    "reject_move_to": "メンバーの移動先",
+    "reject_move_none": "移動しない (クラブなしにする)",
+    "approved_toast": "{club} を承認しました",
+    "rejected_toast": "{club} を却下しました",
+    "setting_label": "登録時に作成される新しいクラブ",
+    "setting_approval": "承認を待つ",
+    "setting_auto": "自動で参加",
+    "setting_approval_hint": "登録時に作成されたクラブは、承認されるまでここで待機します。",
+    "setting_auto_hint": "登録時に作成されたクラブはすぐに有効になります。管理者は引き続きあなたが任命します。",
+    "setting_approval_saved": "新しいクラブはあなたの承認を待ちます",
+    "setting_auto_saved": "新しいクラブは自動で参加します"
   },
   "teams": {
     "title": "チーム",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} 名のメンバーの割り当て解除",
       "member_unassigned_many": "{n} 名のメンバーの割り当て解除",
       "members_count": "{n} 名のメンバー",
-      "events_count": "{n} 件の種目"
+      "events_count": "{n} 件の種目",
+      "label_club_approved": "クラブを承認",
+      "label_club_rejected": "クラブを却下",
+      "label_org_club_settings_changed": "新しいクラブの設定を変更"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "{n} 件の申請があなたを待っています",
     "claims_waiting_few": "{n} 件の申請があなたを待っています",
     "claims_waiting_many": "{n} 件の申請があなたを待っています",
-    "claims_waiting_other": "{n} 件の申請があなたを待っています"
+    "claims_waiting_other": "{n} 件の申請があなたを待っています",
+    "clubs_waiting_zero": "承認待ちの新しいクラブが {n} 件あります",
+    "clubs_waiting_one": "承認待ちの新しいクラブが {n} 件あります",
+    "clubs_waiting_two": "承認待ちの新しいクラブが {n} 件あります",
+    "clubs_waiting_few": "承認待ちの新しいクラブが {n} 件あります",
+    "clubs_waiting_many": "承認待ちの新しいクラブが {n} 件あります",
+    "clubs_waiting_other": "承認待ちの新しいクラブが {n} 件あります"
   },
   "admin_settings": {
     "title": "引き継ぎ申請の投票ルール",

@@ -290,6 +290,7 @@ onBeforeUnmount(() => observer?.disconnect())
                 <li v-html="$t('guide.role.org_admin.step_2')"></li>
                 <li v-html="$t('guide.role.org_admin.step_3')"></li>
                 <li v-html="$t('guide.role.org_admin.step_4')"></li>
+                <li v-html="$t('guide.role.org_admin.step_5')"></li>
               </ol>
               <RouterLink to="/guide/quick-start" class="role-cta">{{ $t('guide.role.org_admin.cta') }}</RouterLink>
             </article>

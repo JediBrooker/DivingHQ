@@ -78,7 +78,10 @@
       "failed": "O registo falhou",
       "success": "Registo concluído. Procure no seu e-mail a ligação de verificação antes de iniciar sessão.",
       "new_club_placeholder": "p. ex. Sydney Springboard",
-      "short_code_placeholder": "p. ex. SYD"
+      "short_code_placeholder": "p. ex. SYD",
+      "club_needs_approval": "{org} aprova os novos clubes antes de ficarem ativos. Enviamos o pedido assim que confirmar o seu e-mail; entretanto, pode iniciar sessão e competir.",
+      "club_joins_now": "Os novos clubes entram em {org} de imediato. {org} nomeia os administradores de cada clube.",
+      "success_club_pending": "{club} aguarda a aprovação de {org}. O pedido chega-lhes assim que confirmar o seu e-mail, e enviamos-lhe um e-mail quando decidirem."
     },
     "register_org": {
       "title": "Registar Organização",
@@ -450,7 +453,12 @@
       "quiet": "Tudo calmo, nada pendente.",
       "pill_urgent": "encerra em breve",
       "pill_overdue": "em atraso",
-      "chip_aria_tab": "{title}. Abre o separador correspondente neste painel."
+      "chip_aria_tab": "{title}. Abre o separador correspondente neste painel.",
+      "chip_clubs": "Novos clubes",
+      "clubs_pending_meta": "Aprove-os ou rejeite-os em Clubes",
+      "chip_my_club": "clube a aguardar aprovação",
+      "my_club_pending": "{club} aguarda a aprovação de {org}",
+      "my_club_pending_meta": "Entretanto pode competir. Enviamos-lhe um e-mail quando decidirem."
     },
     "getting_started": {
       "title": "Ponha {club} a funcionar",
@@ -652,8 +660,8 @@
       },
       "club_admin": {
         "name": "Administrador do clube",
-        "desc": "Gere o seu clube. Onde a federação do seu país ainda não está no DivingHQ, o clube organiza as suas próprias provas: crie-as, conduza-as a partir da <strong>Sala de Controlo</strong> e aprove os pedidos de função dos membros. Sob uma federação, é ela que o nomeia.",
-        "step_1": "Registe-se, escolha o país e crie o seu clube; será o primeiro administrador",
+        "desc": "Gere o seu clube. Onde a federação do seu país ainda não está no DivingHQ, o clube organiza as suas próprias provas: crie-as, conduza-as a partir da <strong>Sala de Controlo</strong> e aprove os pedidos de função dos membros. Sob uma federação, é ela que aprova o seu novo clube e pode nomeá-lo administrador.",
+        "step_1": "Registe-se, escolha o país e crie o seu clube; será o primeiro administrador (sob uma federação, depois de esta aprovar o clube)",
         "step_2": "Abra o <strong>Gestor de Competições</strong> e crie uma prova organizada pelo seu clube",
         "step_3": "Aprove em <strong>O meu clube</strong> quem pede para aderir e os membros que querem saltar, julgar ou treinar",
         "step_4": "No dia da prova, conduza a pontuação a partir da <strong>Sala de Controlo</strong>",
@@ -676,7 +684,8 @@
         "step_2": "Percorre o <strong>Assistente de Configuração</strong> — clubes, convites, primeira prova",
         "step_3": "Concede papéis no <strong>Gestor de Utilizadores</strong> à medida que a tua equipa cresce",
         "step_4": "Consulta o <strong>Registo de Auditoria</strong> para qualquer atividade ao nível da federação",
-        "cta": "Início rápido ↗"
+        "cta": "Início rápido ↗",
+        "step_5": "Aprove ou rejeite novos clubes em <strong>Clubes</strong>, ou deixe-os entrar automaticamente"
       },
       "spectator": {
         "name": "Espectador",
@@ -881,7 +890,9 @@
       "claim_review": "Reivindicação",
       "claim_decided": "Reivindicação",
       "club_change": "Mudança de clube",
-      "region_request": "Região"
+      "region_request": "Região",
+      "club_pending": "Novo clube",
+      "club_decision": "Clube"
     }
   },
   "compare": {
@@ -1284,7 +1295,33 @@
     "col_billing": "Faturação",
     "col_actions": "Ações",
     "admins_button": "Administradores",
-    "rename": "Mudar o nome"
+    "rename": "Mudar o nome",
+    "pending_title": "A aguardar aprovação",
+    "pending_intro": "Clubes criados por quem se registou no seu país. Até decidir, não aparecem em nenhuma lista de clubes e não podem organizar provas.",
+    "stat_pending": "A aguardar",
+    "pending_started_by": "Criado por {name}",
+    "pending_waiting_since": "A aguardar desde {date}",
+    "pending_similar": "Parece-se com {club}, que já está no DivingHQ",
+    "email_verified": "E-mail verificado",
+    "approve": "Aprovar",
+    "reject": "Rejeitar",
+    "approve_title": "Aprovar clube",
+    "approve_body": "Corrija primeiro o que for preciso. Depois de aprovado, o clube aparece nas listas de clubes e pode organizar provas.",
+    "approve_make_admin": "Tornar {name} administrador do clube",
+    "reject_title": "Rejeitar clube",
+    "reject_body": "Isto elimina {club}. {name} mantém a conta e recebe um e-mail com o seu motivo.",
+    "reject_reason": "Motivo (opcional, enviado ao fundador)",
+    "reject_move_to": "Mover os membros para",
+    "reject_move_none": "Para nenhum, deixá-los sem clube",
+    "approved_toast": "{club} aprovado",
+    "rejected_toast": "{club} rejeitado",
+    "setting_label": "Novos clubes criados no registo",
+    "setting_approval": "Aguardar a minha aprovação",
+    "setting_auto": "Entrar automaticamente",
+    "setting_approval_hint": "Os clubes criados no registo aguardam aqui até os aprovar.",
+    "setting_auto_hint": "Os clubes criados no registo ficam ativos de imediato. Os administradores continuam a ser nomeados por si.",
+    "setting_approval_saved": "Os novos clubes vão aguardar a sua aprovação",
+    "setting_auto_saved": "Os novos clubes vão entrar automaticamente"
   },
   "teams": {
     "title": "Equipas",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} membro desafetado",
       "member_unassigned_many": "{n} membros desafetados",
       "members_count": "{n} membros",
-      "events_count": "{n} provas"
+      "events_count": "{n} provas",
+      "label_club_approved": "Clube aprovado",
+      "label_club_rejected": "Clube rejeitado",
+      "label_org_club_settings_changed": "Definição de novos clubes alterada"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "{n} reivindicações à sua espera",
     "claims_waiting_few": "{n} reivindicações à sua espera",
     "claims_waiting_many": "{n} de reivindicações à sua espera",
-    "claims_waiting_other": "{n} reivindicações à sua espera"
+    "claims_waiting_other": "{n} reivindicações à sua espera",
+    "clubs_waiting_zero": "{n} novos clubes a aguardar aprovação",
+    "clubs_waiting_one": "{n} novo clube a aguardar aprovação",
+    "clubs_waiting_two": "{n} novos clubes a aguardar aprovação",
+    "clubs_waiting_few": "{n} novos clubes a aguardar aprovação",
+    "clubs_waiting_many": "{n} de novos clubes a aguardar aprovação",
+    "clubs_waiting_other": "{n} novos clubes a aguardar aprovação"
   },
   "admin_settings": {
     "title": "Regras de votação das reivindicações",

@@ -105,6 +105,7 @@ const roleRequests       = ref([])     // /api/role-requests
 const pendingOrgs        = ref([])     // /api/orgs filtered to pending (sysadmin)
 const claimsToAct        = ref(0)      // claims waiting on my vote / decision (phase 3)
 const myClaims           = ref([])     // claims I filed that are still being decided
+const clubsPending       = ref(0)      // new clubs waiting for my approval (migration 096)
 const recentActivity     = ref([])     // /api/audit/recent
 const judgeEvents        = ref([])     // /api/judge/my-events
 const coachData          = ref(null)   // /api/coach/dashboard
@@ -335,6 +336,48 @@ const pulseChips = computed(() => {
         to:    '/claims',
         urgency: null,
       })),
+    })
+  }
+
+  // New clubs waiting on the federation (org admin, or the sysadmin
+  // across every org). They're decided on /clubs, not on a dashboard
+  // tab, so like the claims chip this one links straight there.
+  if (clubsPending.value) {
+    const n = clubsPending.value
+    const title = tn('counts.clubs_waiting', n)
+    chips.push({
+      id:           'clubs-pending',
+      kind:         'pending',
+      glyph:        '🏛',
+      number:       n,
+      label:        t('dashboard.attention.chip_clubs'),
+      layout:       'count-first',
+      to:           '/clubs',
+      popoverTitle: title,
+      items: [{ id: 'clubs-pending', title, meta: t('dashboard.attention.clubs_pending_meta'), to: '/clubs', urgency: null }],
+    })
+  }
+
+  // A founder whose club is waiting on the federation. Until it's
+  // decided they're a plain member with nothing else here to say so.
+  if (auth.pendingClub) {
+    const pc = auth.pendingClub
+    chips.push({
+      id:           'my-club-pending',
+      kind:         'pending',
+      glyph:        '🏛',
+      number:       1,
+      label:        t('dashboard.attention.chip_my_club'),
+      layout:       'count-first',
+      to:           '/profile',
+      popoverTitle: t('dashboard.attention.chip_my_club'),
+      items: [{
+        id:    'my-club-pending',
+        title: t('dashboard.attention.my_club_pending', { club: pc.name, org: pc.org_name }),
+        meta:  t('dashboard.attention.my_club_pending_meta'),
+        to:    '/profile',
+        urgency: null,
+      }],
     })
   }
 
@@ -677,6 +720,7 @@ async function loadDashboardBundle() {
   if (Array.isArray(bundle.pending_orgs))     pendingOrgs.value     = bundle.pending_orgs
   if (typeof bundle.claims_to_act === 'number') claimsToAct.value  = bundle.claims_to_act
   if (Array.isArray(bundle.my_claims))        myClaims.value        = bundle.my_claims
+  if (typeof bundle.clubs_pending === 'number') clubsPending.value = bundle.clubs_pending
   if (Array.isArray(bundle.recent_activity))  recentActivity.value  = bundle.recent_activity
   if (Array.isArray(bundle.judge_events))     judgeEvents.value     = bundle.judge_events
   if (Array.isArray(bundle.workflow_actions)) workflowActions.value = bundle.workflow_actions
@@ -832,6 +876,17 @@ const attentionCards = computed(() => {
       to:    '/claims',
     })
   }
+  if (clubsPending.value) {
+    const n = clubsPending.value
+    cards.push({
+      id:    'clubs-pending',
+      kind:  'pending',
+      icon:  Building2,
+      title: tn('counts.clubs_waiting', n),
+      meta:  t('dashboard.attention.clubs_pending_meta'),
+      to:    '/clubs',
+    })
+  }
   if (auth.user?.is_system_admin && pendingOrgs.value.length) {
     const n = pendingOrgs.value.length
     cards.push({
@@ -950,6 +1005,8 @@ onMounted(async () => {
         let clubCount = 0
         try {
           const clubs = await auth.apiFetch('/api/clubs')
+          // Clubs waiting on approval count too (migration 096): the
+          // dashboard is where their chip is, the wizard would hide it.
           clubCount = (clubs || []).length
         } catch { /* leave 0 */ }
         if (clubCount === 0) {

@@ -78,7 +78,10 @@
       "failed": "A regisztráció nem sikerült",
       "success": "Sikeres regisztráció. Bejelentkezés előtt keresse meg e-mailjében a megerősítő linket.",
       "new_club_placeholder": "pl. Sydney Springboard",
-      "short_code_placeholder": "pl. SYD"
+      "short_code_placeholder": "pl. SYD",
+      "club_needs_approval": "Az új klubokat a szövetség ({org}) hagyja jóvá, mielőtt megjelennek. Amint megerősítette e-mail-címét, továbbítjuk nekik a kérést; addig is bejelentkezhet és versenyezhet.",
+      "club_joins_now": "Az új klubok azonnal csatlakoznak ehhez: {org}. Az egyes klubok adminisztrátorait a szövetség ({org}) nevezi ki.",
+      "success_club_pending": "A klub ({club}) a szövetség ({org}) jóváhagyására vár. Amint megerősítette e-mail-címét, látni fogják, és e-mailben értesítjük a döntésről."
     },
     "register_org": {
       "title": "Szervezet regisztrációja",
@@ -450,7 +453,12 @@
       "quiet": "Minden csendes, nincs függőben semmi.",
       "pill_urgent": "hamarosan zárul",
       "pill_overdue": "lejárt",
-      "chip_aria_tab": "{title}. Megnyitja a hozzá tartozó lapot ezen a vezérlőpulton."
+      "chip_aria_tab": "{title}. Megnyitja a hozzá tartozó lapot ezen a vezérlőpulton.",
+      "chip_clubs": "Új klubok",
+      "clubs_pending_meta": "Hagyja jóvá vagy utasítsa el őket a Klubok oldalon",
+      "chip_my_club": "jóváhagyásra váró klub",
+      "my_club_pending": "A klub ({club}) a szövetség ({org}) jóváhagyására vár",
+      "my_club_pending_meta": "Addig is versenyezhet. E-mailben értesítjük a döntésről."
     },
     "getting_started": {
       "title": "Indítsd el: {club}",
@@ -652,8 +660,8 @@
       },
       "club_admin": {
         "name": "Klubadminisztrátor",
-        "desc": "Ön vezeti a klubját. Ahol országa szövetsége még nincs a DivingHQ-n, a klub maga rendezi a versenyeit: hozza létre őket, irányítsa a <strong>Vezérlőszobából</strong>, és hagyja jóvá a tagok szerepkör-kérelmeit. Szövetség alatt a szövetség nevezi ki.",
-        "step_1": "Regisztráljon, válassza ki az országát és hozza létre a klubját, Ön lesz az első adminisztrátora",
+        "desc": "Ön vezeti a klubját. Ahol országa szövetsége még nincs a DivingHQ-n, a klub maga rendezi a versenyeit: hozza létre őket, irányítsa a <strong>Vezérlőszobából</strong>, és hagyja jóvá a tagok szerepkör-kérelmeit. Szövetség alatt a szövetség hagyja jóvá az új klubot, és kinevezheti Önt az adminisztrátorává.",
+        "step_1": "Regisztráljon, válassza ki az országát és hozza létre a klubját; Ön lesz az első adminisztrátora (szövetség alatt, miután az jóváhagyta a klubot)",
         "step_2": "Nyissa meg a <strong>Versenymenedzsert</strong>, és hozzon létre a klubja által rendezett versenyt",
         "step_3": "A <strong>Saját klubom</strong> oldalon hagyja jóvá a csatlakozni kívánókat és a műugrani, bíráskodni vagy edzősködni kívánó tagokat",
         "step_4": "A versenynapon a <strong>Vezérlőszobából</strong> irányítja a pontozást",
@@ -676,7 +684,8 @@
         "step_2": "Végigvezetjük a <strong>Beállítási varázslón</strong> — klubok, meghívások, első esemény",
         "step_3": "Adjon szerepköröket a <strong>Felhasználókezelőben</strong>, ahogy csapata nő",
         "step_4": "Ellenőrizze az <strong>Audit naplót</strong> a szövetség egészét érintő tevékenységekért",
-        "cta": "Gyors kezdés ↗"
+        "cta": "Gyors kezdés ↗",
+        "step_5": "Hagyja jóvá vagy utasítsa el az új klubokat a <strong>Klubok</strong> oldalon, vagy engedje, hogy automatikusan csatlakozzanak"
       },
       "spectator": {
         "name": "Néző",
@@ -881,7 +890,9 @@
       "claim_review": "Igény",
       "claim_decided": "Igény",
       "club_change": "Klubváltás",
-      "region_request": "Régió"
+      "region_request": "Régió",
+      "club_pending": "Új klub",
+      "club_decision": "Klub"
     }
   },
   "compare": {
@@ -1284,7 +1295,33 @@
     "col_billing": "Számlázás",
     "col_actions": "Műveletek",
     "admins_button": "Adminisztrátorok",
-    "rename": "Átnevezés"
+    "rename": "Átnevezés",
+    "pending_title": "Jóváhagyásra vár",
+    "pending_intro": "Klubok, amelyeket az Ön országában regisztrálók hoztak létre. Amíg nem dönt, egyetlen klublistában sem jelennek meg, és nem rendezhetnek versenyt.",
+    "stat_pending": "Várakozik",
+    "pending_started_by": "Létrehozta: {name}",
+    "pending_waiting_since": "Várakozik ekkor óta: {date}",
+    "pending_similar": "Hasonlít erre a klubra, amely már a DivingHQ-n van: {club}",
+    "email_verified": "E-mail megerősítve",
+    "approve": "Jóváhagyás",
+    "reject": "Elutasítás",
+    "approve_title": "Klub jóváhagyása",
+    "approve_body": "Előbb javítsa ki, amit kell. Jóváhagyás után a klub megjelenik a klublistákban, és rendezhet versenyeket.",
+    "approve_make_admin": "{name} legyen a klub adminisztrátora",
+    "reject_title": "Klub elutasítása",
+    "reject_body": "Ez törli a klubot ({club}). {name} megtartja a fiókját, és e-mailt kap az Ön indoklásával.",
+    "reject_reason": "Indoklás (nem kötelező, az alapító kapja meg)",
+    "reject_move_to": "Tagok áthelyezése ide",
+    "reject_move_none": "Sehova, maradjanak klub nélkül",
+    "approved_toast": "Klub jóváhagyva: {club}",
+    "rejected_toast": "Klub elutasítva: {club}",
+    "setting_label": "Regisztrációkor létrehozott új klubok",
+    "setting_approval": "Várjanak a jóváhagyásomra",
+    "setting_auto": "Automatikus csatlakozás",
+    "setting_approval_hint": "A regisztrációkor létrehozott klubok itt várnak, amíg jóvá nem hagyja őket.",
+    "setting_auto_hint": "A regisztrációkor létrehozott klubok azonnal aktívak. Adminisztrátoraikat továbbra is Ön nevezi ki.",
+    "setting_approval_saved": "Az új klubok az Ön jóváhagyására várnak majd",
+    "setting_auto_saved": "Az új klubok automatikusan csatlakoznak"
   },
   "teams": {
     "title": "Csapatok",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} tag hozzárendelése visszavonva",
       "member_unassigned_many": "{n} tag hozzárendelése visszavonva",
       "members_count": "{n} tag",
-      "events_count": "{n} esemény"
+      "events_count": "{n} esemény",
+      "label_club_approved": "Klub jóváhagyva",
+      "label_club_rejected": "Klub elutasítva",
+      "label_org_club_settings_changed": "Új klubokra vonatkozó beállítás módosítva"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "{n} igény vár Önre",
     "claims_waiting_few": "{n} igény vár Önre",
     "claims_waiting_many": "{n} igény vár Önre",
-    "claims_waiting_other": "{n} igény vár Önre"
+    "claims_waiting_other": "{n} igény vár Önre",
+    "clubs_waiting_zero": "{n} új klub vár jóváhagyásra",
+    "clubs_waiting_one": "{n} új klub vár jóváhagyásra",
+    "clubs_waiting_two": "{n} új klub vár jóváhagyásra",
+    "clubs_waiting_few": "{n} új klub vár jóváhagyásra",
+    "clubs_waiting_many": "{n} új klub vár jóváhagyásra",
+    "clubs_waiting_other": "{n} új klub vár jóváhagyásra"
   },
   "admin_settings": {
     "title": "Az igényekről szóló szavazás szabályai",

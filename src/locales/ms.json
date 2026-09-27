@@ -78,7 +78,10 @@
       "failed": "Pendaftaran gagal",
       "success": "Pendaftaran berjaya. Semak e-mel anda untuk pautan pengesahan sebelum log masuk.",
       "new_club_placeholder": "cth. Sydney Springboard",
-      "short_code_placeholder": "cth. SYD"
+      "short_code_placeholder": "cth. SYD",
+      "club_needs_approval": "{org} meluluskan kelab baharu sebelum ia dipaparkan. Kami akan memohon kelulusan sebaik sahaja anda mengesahkan e-mel, dan sementara itu anda boleh log masuk dan bertanding.",
+      "club_joins_now": "Kelab baharu terus menyertai {org}. {org} melantik pentadbir setiap kelab.",
+      "success_club_pending": "{club} sedang menunggu kelulusan {org}. Mereka akan melihatnya sebaik sahaja anda mengesahkan e-mel, dan kami akan menghantar e-mel kepada anda apabila mereka membuat keputusan."
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -450,7 +453,12 @@
       "quiet": "Semua tenang, tiada yang menunggu.",
       "pill_urgent": "ditutup tidak lama lagi",
       "pill_overdue": "tertunggak",
-      "chip_aria_tab": "{title}. Membuka tabnya pada papan pemuka ini."
+      "chip_aria_tab": "{title}. Membuka tabnya pada papan pemuka ini.",
+      "chip_clubs": "Kelab baharu",
+      "clubs_pending_meta": "Luluskan atau tolak di halaman Kelab",
+      "chip_my_club": "kelab menunggu kelulusan",
+      "my_club_pending": "{club} sedang menunggu kelulusan {org}",
+      "my_club_pending_meta": "Anda boleh bertanding sementara itu. Kami akan menghantar e-mel apabila mereka membuat keputusan."
     },
     "getting_started": {
       "title": "Mulakan {club}",
@@ -641,8 +649,8 @@
       },
       "club_admin": {
         "name": "Pentadbir kelab",
-        "desc": "Anda mengurus kelab anda. Jika persekutuan negara anda belum berada di DivingHQ, kelab menganjurkan pertandingannya sendiri: ciptanya, jalankan dari <strong>Bilik Kawalan</strong>, dan luluskan permintaan peranan ahli. Di bawah persekutuan, persekutuan yang melantik anda.",
-        "step_1": "Daftar, pilih negara dan cipta kelab anda; anda menjadi pentadbir pertamanya",
+        "desc": "Anda mengurus kelab anda. Jika persekutuan negara anda belum berada di DivingHQ, kelab menganjurkan pertandingannya sendiri: ciptanya, jalankan dari <strong>Bilik Kawalan</strong>, dan luluskan permintaan peranan ahli. Di bawah persekutuan, persekutuan yang meluluskan kelab baharu anda dan boleh melantik anda sebagai pentadbirnya.",
+        "step_1": "Daftar, pilih negara dan cipta kelab anda; anda menjadi pentadbir pertamanya (di bawah persekutuan, selepas persekutuan meluluskan kelab)",
         "step_2": "Buka <strong>Pengurus Pertandingan</strong> dan cipta pertandingan anjuran kelab anda",
         "step_3": "Di <strong>Kelab saya</strong>, luluskan orang yang ingin menyertai dan ahli yang mahu menerjun, menghakimi atau melatih",
         "step_4": "Pada hari pertandingan, kendalikan pemarkahan dari <strong>Bilik Kawalan</strong>",
@@ -665,7 +673,8 @@
         "step_2": "Ikuti <strong>Wizard Penyediaan</strong> — kelab, jemputan, acara pertama",
         "step_3": "Berikan peranan di <strong>Pengurus Pengguna</strong> seiring pasukan anda berkembang",
         "step_4": "Semak <strong>Log Audit</strong> untuk aktiviti di seluruh persekutuan",
-        "cta": "Permulaan pantas ↗"
+        "cta": "Permulaan pantas ↗",
+        "step_5": "Luluskan atau tolak kelab baharu di <strong>Kelab</strong>, atau biarkan ia menyertai secara automatik"
       },
       "spectator": {
         "name": "Penonton",
@@ -870,7 +879,9 @@
       "claim_review": "Tuntutan",
       "claim_decided": "Tuntutan",
       "club_change": "Tukar kelab",
-      "region_request": "Rantau"
+      "region_request": "Rantau",
+      "club_pending": "Kelab baharu",
+      "club_decision": "Kelab"
     }
   },
   "compare": {
@@ -1273,7 +1284,33 @@
     "col_billing": "Bil",
     "col_actions": "Tindakan",
     "admins_button": "Pentadbir",
-    "rename": "Namakan semula"
+    "rename": "Namakan semula",
+    "pending_title": "Menunggu kelulusan",
+    "pending_intro": "Kelab yang dicipta oleh orang yang mendaftar di negara anda. Sehingga anda membuat keputusan, kelab ini tidak dipaparkan dalam mana-mana senarai kelab dan tidak boleh menganjurkan pertandingan.",
+    "stat_pending": "Menunggu",
+    "pending_started_by": "Dicipta oleh {name}",
+    "pending_waiting_since": "Menunggu sejak {date}",
+    "pending_similar": "Mirip {club}, yang sudah ada di DivingHQ",
+    "email_verified": "E-mel disahkan",
+    "approve": "Luluskan",
+    "reject": "Tolak",
+    "approve_title": "Luluskan kelab",
+    "approve_body": "Betulkan dahulu apa yang perlu. Selepas diluluskan, kelab dipaparkan dalam senarai kelab dan boleh menganjurkan pertandingan.",
+    "approve_make_admin": "Jadikan {name} pentadbir kelab",
+    "reject_title": "Tolak kelab",
+    "reject_body": "Ini memadam {club}. {name} mengekalkan akaunnya dan menerima e-mel dengan sebab anda.",
+    "reject_reason": "Sebab (pilihan, dihantar kepada pengasas)",
+    "reject_move_to": "Pindahkan ahlinya ke",
+    "reject_move_none": "Tiada, biarkan mereka tanpa kelab",
+    "approved_toast": "{club} diluluskan",
+    "rejected_toast": "{club} ditolak",
+    "setting_label": "Kelab baharu daripada pendaftaran",
+    "setting_approval": "Tunggu kelulusan saya",
+    "setting_auto": "Sertai secara automatik",
+    "setting_approval_hint": "Kelab yang dicipta semasa pendaftaran menunggu di sini sehingga anda meluluskannya.",
+    "setting_auto_hint": "Kelab yang dicipta semasa pendaftaran terus aktif. Anda masih yang melantik pentadbirnya.",
+    "setting_approval_saved": "Kelab baharu akan menunggu kelulusan anda",
+    "setting_auto_saved": "Kelab baharu akan menyertai secara automatik"
   },
   "teams": {
     "title": "Pasukan",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} ahli ditarik tugas",
       "member_unassigned_many": "{n} ahli ditarik tugas",
       "members_count": "{n} ahli",
-      "events_count": "{n} acara"
+      "events_count": "{n} acara",
+      "label_club_approved": "Kelab diluluskan",
+      "label_club_rejected": "Kelab ditolak",
+      "label_org_club_settings_changed": "Tetapan kelab baharu ditukar"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "{n} tuntutan menunggu anda",
     "claims_waiting_few": "{n} tuntutan menunggu anda",
     "claims_waiting_many": "{n} tuntutan menunggu anda",
-    "claims_waiting_other": "{n} tuntutan menunggu anda"
+    "claims_waiting_other": "{n} tuntutan menunggu anda",
+    "clubs_waiting_zero": "{n} kelab baharu menunggu kelulusan",
+    "clubs_waiting_one": "{n} kelab baharu menunggu kelulusan",
+    "clubs_waiting_two": "{n} kelab baharu menunggu kelulusan",
+    "clubs_waiting_few": "{n} kelab baharu menunggu kelulusan",
+    "clubs_waiting_many": "{n} kelab baharu menunggu kelulusan",
+    "clubs_waiting_other": "{n} kelab baharu menunggu kelulusan"
   },
   "admin_settings": {
     "title": "Peraturan undian tuntutan",
