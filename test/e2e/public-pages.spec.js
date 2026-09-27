@@ -159,3 +159,43 @@ test.describe("titles and link previews", () => {
     expect(await sitemap.text()).toContain("<loc>https://divinghq.app/privacy</loc>");
   });
 });
+
+test.describe("guide", () => {
+  test("Quick Start is written for divinghq.app, with no bootstrap login", async ({ page }) => {
+    await page.goto("/guide/quick-start");
+    const article = page.locator(".md-article");
+    await expect(page.getByRole("heading", { name: "1. Create your account and your club" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Federations and state bodies" })).toBeVisible();
+    await expect(article).not.toContainText("fresh DivingHQ install");
+    await expect(article).not.toContainText(/password\s+admin/i);
+
+    await page.goto("/guide/faq");
+    await expect(page.locator(".md-article")).not.toContainText("gen_salt");
+    await expect(page.getByRole("heading", { name: "Clubs and federations" })).toBeVisible();
+  });
+
+  // marked stopped writing heading ids, so every "#section" link in the
+  // guide went nowhere. src/lib/markdown.js puts them back.
+  test("links to a heading land on it, across topics and within one", async ({ page }) => {
+    await page.goto("/guide/quick-start");
+    await page.locator(".md-article a[href='/guide/roles-and-permissions#claims']").click();
+    await expect(page).toHaveURL(/\/guide\/roles-and-permissions#claims$/);
+    await expect(page.locator("h2#claims")).toBeInViewport();
+
+    await page.goto("/guide/faq");
+    await page.locator(".md-article a[href='#authentication']").first().click();
+    await expect(page.locator("h2#authentication")).toBeInViewport();
+  });
+
+  test("a shared link with a heading opens scrolled to it", async ({ page }) => {
+    await page.goto("/guide/roles-and-permissions#divers-represent");
+    await expect(page.locator("h2#divers-represent")).toBeInViewport();
+  });
+
+  test("the primer's FAQ names the support address", async ({ page }) => {
+    await page.goto("/guide");
+    const account = page.locator(".guide-faq-item").filter({ hasText: "delete my account" });
+    await account.locator("summary").click();
+    await expect(account.locator(".guide-faq-body")).toContainText("support@divinghq.app");
+  });
+});
