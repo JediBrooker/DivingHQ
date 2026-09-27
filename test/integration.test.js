@@ -1017,3 +1017,82 @@ test("regions: built-in lists, signup, club moves and region admins", async (t) 
     await wipe();
   }
 });
+
+// Phase 2: what a region admin can reach. Ontario's admin runs Ontario's
+// meets (region-hosted and its clubs'), reviews its clubs' requests, and
+// can't touch Quebec.
+test("region admins run their region's meets and nothing across the border", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CAN";
+  const wipe = async () => {
+    const orgs = await pool.query("SELECT id FROM organisations WHERE country_code = $1 AND claim_state = 'unclaimed'", [CODE]);
+    for (const { id } of orgs.rows) {
+      await pool.query("DELETE FROM events WHERE org_id = $1", [id]);
+      await pool.query("DELETE FROM meets WHERE org_id = $1", [id]);
+      await teardownFixture({ orgId: id });
+    }
+  };
+  await wipe();
+  const signUp = async (body) => {
+    const username = `int-ra-${crypto.randomBytes(4).toString("hex")}`;
+    const r = await fetchJson("POST", "/api/auth/register", {
+      body: { username, full_name: username, password: TEST_PASSWORD, email: `${username}@example.test`, country_code: CODE, ...body },
+    });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1", [username]);
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username, password: TEST_PASSWORD } });
+    return { username, token: login.body.token, id: login.body.id, clubs: login.body.club_admin_of };
+  };
+  const relogin = async (u) => (await fetchJson("POST", "/api/auth/login", { body: { username: u.username, password: TEST_PASSWORD } })).body;
+  try {
+    const A = await signUp({ new_club_name: "Ottawa Divers", region_code: "ON" });
+    const B = await signUp({ new_club_name: "Montreal Divers", region_code: "QC" });
+    const R = await signUp({ club_id: A.clubs[0].id });
+    const org = (await pool.query("SELECT id FROM organisations WHERE country_code = $1 AND claim_state = 'unclaimed'", [CODE])).rows[0];
+    const on = (await pool.query("SELECT id FROM regions WHERE org_id = $1 AND short_code = 'ON'", [org.id])).rows[0].id;
+    // The sysadmin appoints region admins here (no federation, no claims yet).
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [on, R.id, org.id]);
+    const rBody = await relogin(R);
+    assert.deepEqual(rBody.region_admin_of.map((r) => r.short_code), ["ON"]);
+    R.token = rBody.token;
+
+    // Region-hosted meet: defaulted, since R only admins one region.
+    const champs = await fetchJson("POST", "/api/meets", { token: R.token, body: { name: "Ontario Championships" } });
+    assert.equal(champs.status, 201, JSON.stringify(champs.body));
+    assert.equal(champs.body.host_region_id, on);
+    // Hosting as a club in the region is fine, a Quebec club isn't.
+    assert.equal((await fetchJson("POST", "/api/meets", { token: R.token, body: { name: "Ottawa Invitational", host_club_id: A.clubs[0].id } })).status, 201);
+    assert.equal((await fetchJson("POST", "/api/meets", { token: R.token, body: { name: "Nope", host_club_id: B.clubs[0].id } })).status, 400);
+    assert.equal((await fetchJson("POST", "/api/meets", { token: R.token, body: { name: "Nope", host_club_id: A.clubs[0].id, host_region_id: on } })).status, 400);
+
+    // One level down: R can run Ottawa's own meet; Ottawa can't run the
+    // state's; neither reaches Montreal's.
+    const aMeet = (await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Ottawa Club Night" } })).body;
+    const bMeet = (await fetchJson("POST", "/api/meets", { token: B.token, body: { name: "Montreal Club Night" } })).body;
+    assert.equal((await fetchJson("PUT", `/api/meets/${aMeet.id}`, { token: R.token, body: { venue: "Ottawa Pool" } })).status, 200);
+    assert.equal((await fetchJson("PUT", `/api/meets/${champs.body.id}`, { token: A.token, body: { venue: "x" } })).status, 403);
+    assert.equal((await fetchJson("PUT", `/api/meets/${bMeet.id}`, { token: R.token, body: { venue: "x" } })).status, 403);
+
+    const evBody = { name: "Ottawa 3m", gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 5, event_type: "individual", meet_id: aMeet.id };
+    const ev = await fetchJson("POST", "/api/events", { token: A.token, body: evBody });
+    assert.equal(ev.status, 201);
+    assert.equal((await fetchJson("GET", `/api/events/${ev.body.id}/roster`, { token: R.token })).status, 200);
+    assert.equal((await fetchJson("GET", `/api/events/${ev.body.id}/roster`, { token: B.token })).status, 403);
+
+    // Requests from Ottawa's members reach the Ontario admin, not Montreal.
+    const judge = await signUp({ club_id: A.clubs[0].id, requested_role: "judge" });
+    const rList = await fetchJson("GET", "/api/role-requests", { token: R.token });
+    const rq = rList.body.find((x) => x.user_id === judge.id);
+    assert.ok(rq, "region admin sees the club's request");
+    assert.ok(!(await fetchJson("GET", "/api/role-requests", { token: B.token })).body.some((x) => x.user_id === judge.id));
+    assert.equal((await fetchJson("POST", `/api/role-requests/${rq.id}/review`, { token: B.token, body: { decision: "approved" } })).status, 403);
+    assert.equal((await fetchJson("POST", `/api/role-requests/${rq.id}/review`, { token: R.token, body: { decision: "approved" } })).status, 200);
+
+    // And R can appoint a club admin in their region, but not in Quebec.
+    assert.equal((await fetchJson("POST", `/api/clubs/${A.clubs[0].id}/admins`, { token: R.token, body: { user_id: judge.id } })).status, 201);
+    assert.equal((await fetchJson("GET", `/api/clubs/${B.clubs[0].id}/admins`, { token: R.token })).status, 403);
+  } finally {
+    await wipe();
+  }
+});

@@ -322,8 +322,8 @@ module.exports = function createMeetsRouter({
       res.status(403).json({ error: "Cannot manage meets in other organisations" });
       return null;
     }
-    // Got past meetEditorGate as a club admin: only their own club's
-    // meets, never a neighbouring club's or the org's.
+    // Got past meetEditorGate as a club or region admin: only the meets
+    // they host, never a neighbour's or the org's.
     if (!req.user?.is_system_admin && !isOrgEditor(req.user)) {
       if (!isMeetHostAdmin || !(await isMeetHostAdmin(meet.id, req.user.id))) {
         res.status(403).json({ error: "You can only manage meets your club hosts" });
@@ -378,6 +378,9 @@ module.exports = function createMeetsRouter({
     try {
       const r = await pool.query(
         `SELECT m.*,
+                -- The host club's region, so the SPA can tell a region
+                -- admin which club-hosted meets fall under them.
+                (SELECT hc.region_id FROM clubs hc WHERE hc.id = m.host_club_id) AS host_club_region_id,
                 COUNT(e.id)::int AS event_count,
                 COUNT(e.id) FILTER (WHERE e.status = 'Live')::int      AS live_count,
                 COUNT(e.id) FILTER (WHERE e.status = 'Completed')::int AS completed_count
@@ -562,17 +565,39 @@ module.exports = function createMeetsRouter({
     if (!name || !name.trim()) {
       return res.status(400).json({ error: "Meet name is required" });
     }
-    // Which club hosts it. Org editors may leave it off (the org hosts,
-    // as always) or name any club in their org, e.g. setting a meet up
-    // on a club's behalf. A club admin can only host as their own club,
-    // and with just one club we don't make them say which.
+    // Who hosts it: a club, a region, or neither (the org, as always).
+    // Org editors may name any club or region in their org, e.g. setting
+    // a meet up on a club's behalf. A club admin hosts as their own club;
+    // a region admin as their region or any club in it. With a single
+    // club or region we don't make them say which.
     let hostClubId = req.body?.host_club_id || null;
+    let hostRegionId = req.body?.host_region_id || null;
+    if (hostClubId && hostRegionId) {
+      return res.status(400).json({ error: "A meet has one host: a club or a region" });
+    }
     const editor = req.user.is_system_admin || isOrgEditor(req.user);
     if (!editor) {
-      const mine = req.clubAdminOf || [];
-      if (!hostClubId && mine.length === 1) hostClubId = mine[0];
-      if (!hostClubId || !mine.includes(hostClubId)) {
-        return res.status(400).json({ error: "Pick which of your clubs is hosting this meet" });
+      const clubs = req.clubAdminOf || [];
+      const regions = req.regionAdminOf || [];
+      if (!hostClubId && !hostRegionId) {
+        if (clubs.length === 1 && !regions.length) hostClubId = clubs[0];
+        else if (regions.length === 1 && !clubs.length) hostRegionId = regions[0];
+      }
+      let ok = false;
+      if (hostRegionId) {
+        ok = regions.includes(hostRegionId);
+      } else if (hostClubId) {
+        ok = clubs.includes(hostClubId);
+        if (!ok && regions.length) {
+          const c = await pool.query(
+            "SELECT 1 FROM clubs WHERE id = $1 AND region_id = ANY($2::uuid[])",
+            [hostClubId, regions],
+          ).catch(() => ({ rows: [] }));
+          ok = c.rows.length > 0;
+        }
+      }
+      if (!ok) {
+        return res.status(400).json({ error: "Pick which of your clubs or regions is hosting this meet" });
       }
     }
     if (hostClubId) {
@@ -582,6 +607,13 @@ module.exports = function createMeetsRouter({
       ).catch(() => ({ rows: [] }));
       if (!c.rows.length) return res.status(400).json({ error: "Host club not found in your organisation" });
     }
+    if (hostRegionId) {
+      const rg = await pool.query(
+        "SELECT org_id FROM regions WHERE id = $1 AND ($2::boolean OR org_id = $3)",
+        [hostRegionId, !!req.user.is_system_admin, req.user.org_id],
+      ).catch(() => ({ rows: [] }));
+      if (!rg.rows.length) return res.status(400).json({ error: "Host region not found in your organisation" });
+    }
     const safeLogo = rejectIfUnsafeUrl(res, "sponsor_logo_url", sponsor_logo_url);
     if (safeLogo === false) return;
     const safeLink = rejectIfUnsafeUrl(res, "sponsor_link_url", sponsor_link_url);
@@ -590,12 +622,12 @@ module.exports = function createMeetsRouter({
       const r = await pool.query(
         `INSERT INTO meets
            (org_id, name, venue, start_date, end_date, description,
-            sponsor_name, sponsor_logo_url, sponsor_link_url, host_club_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+            sponsor_name, sponsor_logo_url, sponsor_link_url, host_club_id, host_region_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
         [
           req.user.org_id, name.trim(), venue || null,
           start_date || null, end_date || null, description || null,
-          sponsor_name || null, safeLogo, safeLink, hostClubId,
+          sponsor_name || null, safeLogo, safeLink, hostClubId, hostRegionId,
         ],
       );
       res.status(201).json(r.rows[0]);

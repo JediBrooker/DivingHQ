@@ -402,7 +402,8 @@ module.exports = function createOrgsRouter({
   // this, it's a trust decision about who runs a club's money.
   //
   // In a country with no federation yet (claim_state 'unclaimed') there's
-  // no org_admin to ask, so a club's own admins manage their co-admins.
+  // no org_admin to ask, so a club's own admins (or its region's admins)
+  // manage who admins the club.
   // They can't remove the last one, a club with no admin has nobody to
   // run it but the sysadmin.
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -417,7 +418,9 @@ module.exports = function createOrgsRouter({
     const c = await pool.query(
       `SELECT c.id, c.org_id, c.name, o.claim_state,
               EXISTS (SELECT 1 FROM club_admins ca
-                       WHERE ca.club_id = c.id AND ca.user_id = $2) AS caller_is_admin
+                       WHERE ca.club_id = c.id AND ca.user_id = $2) AS caller_is_admin,
+              EXISTS (SELECT 1 FROM region_admins ra
+                       WHERE ra.region_id = c.region_id AND ra.user_id = $2) AS caller_is_region_admin
          FROM clubs c JOIN organisations o ON o.id = c.org_id
         WHERE c.id = $1`,
       [req.params.id, req.user.id],
@@ -430,7 +433,8 @@ module.exports = function createOrgsRouter({
     if (req.user.is_system_admin) return club;
     const isOrgAdmin = (req.user.org_roles || []).includes("org_admin");
     if (isOrgAdmin && club.org_id === req.user.org_id) return club;
-    if (club.claim_state === "unclaimed" && club.caller_is_admin) {
+    // The club's own admins, or its region's admins one level up.
+    if (club.claim_state === "unclaimed" && (club.caller_is_admin || club.caller_is_region_admin)) {
       club.viaClubAdmin = true;
       return club;
     }

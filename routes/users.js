@@ -203,9 +203,9 @@ module.exports = function createUsersRouter({
     }
   });
 
-  // Org admins review everything in their org, as before. Club admins
-  // in a country with no federation yet review their own members'
-  // everyday role requests (lib/role-requests.js has the rules). Both
+  // Org admins review everything in their org, as before. Club and
+  // region admins in a country with no federation yet review their own
+  // members' everyday role requests (lib/role-requests.js has the rules). Both
   // get through this gate; each handler then scopes to what they may see.
   const isOrgAdminUser = (user) =>
     !!user.is_system_admin || (user.org_roles || []).includes("org_admin");
@@ -213,7 +213,11 @@ module.exports = function createUsersRouter({
     (req, res, next) => verifyToken(req, res, async () => {
       if (isOrgAdminUser(req.user)) return next();
       try {
-        const r = await pool.query("SELECT 1 FROM club_admins WHERE user_id = $1 LIMIT 1", [req.user.id]);
+        const r = await pool.query(
+          `SELECT 1 FROM club_admins WHERE user_id = $1
+           UNION ALL SELECT 1 FROM region_admins WHERE user_id = $1 LIMIT 1`,
+          [req.user.id],
+        );
         if (r.rows.length) return next();
       } catch (err) {
         console.error("[requireRequestReviewer]", err.message);
@@ -229,7 +233,7 @@ module.exports = function createUsersRouter({
     try {
       const rows = isOrgAdminUser(req.user)
         ? await roleRequests.listForOrgAdmin(pool, req.user)
-        : await roleRequests.listForClubAdmin(pool, req.user.id);
+        : await roleRequests.listForDelegate(pool, req.user.id);
       res.json(rows);
     } catch (err) {
       res.status(500).json({ error: "Internal server error" });
@@ -265,7 +269,7 @@ module.exports = function createUsersRouter({
           .status(403)
           .json({ error: "Cannot review requests in other organisations" });
       }
-      if (!isOrgAdminUser(req.user) && !(await roleRequests.clubAdminCanReview(client, req.user.id, rq))) {
+      if (!isOrgAdminUser(req.user) && !(await roleRequests.delegateCanReview(client, req.user.id, rq))) {
         await client.query("ROLLBACK");
         return res.status(403).json({ error: "Only your own club members' requests" });
       }

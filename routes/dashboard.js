@@ -185,8 +185,8 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
     if (has("org_admin")) {
       tasks.role_requests = roleRequests.listForOrgAdmin(pool, user).catch(() => []);
     } else {
-      // Empty for anyone who isn't a club admin, so no pre-check needed.
-      tasks.role_requests = roleRequests.listForClubAdmin(pool, user.id).catch(() => []);
+      // Empty for anyone who isn't a club or region admin, so no pre-check.
+      tasks.role_requests = roleRequests.listForDelegate(pool, user.id).catch(() => []);
     }
 
     // ---- Pending org registrations (sysadmin only) ----
