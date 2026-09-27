@@ -16,7 +16,9 @@
 //   app.use(require('./routes/archive')({ pool }))
 
 const express = require("express");
-const { perDiveSelect, perDivePointsCte, teamStandingsCte } = require("../lib/scoring-sql");
+const {
+  perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte, PUBLIC_PANEL_SQL,
+} = require("../lib/scoring-sql");
 const { eventRecordMarks } = require("../lib/records");
 
 // Short-TTL cache for the two unbounded all-time aggregations
@@ -254,39 +256,10 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
            /* Team rows carry the code their divers share (migration
               095), so team events get chips and a medal table too. */
            ${teamStandingsCte()},
-           comp_standings AS (
-             /* Group by u.id (not just u.full_name): two divers
-                sharing a name would otherwise merge into one
-                inflated row, gotcha we hit early on. u.id is the
-                competitor_id the SPA uses to deep-link a standings
-                row → /profile/<id>. partner_id is exposed alongside
-                partner_name so the synchro partner gets the same
-                /profile/<id> link. */
-             SELECT u.id AS competitor_id,
-                    u.full_name,
-                    /* Migration 090: the meet's representation code
-                       (country / state / club), in the country slot. */
-                    event_rep_code($1, u.id, o.country_code) AS country_code,
-                    cl.name AS club_name,
-                    p.partner_id AS partner_id,
-                    pu.full_name AS partner_name,
-                    event_rep_code($1, p.partner_id, pl.country_code) AS partner_country,
-                    SUM(pd.dive_points) AS total
-             FROM per_dive pd
-             JOIN users u ON u.id = pd.competitor_id
-             JOIN organisations o ON o.id = u.org_id
-             ${PUBLIC_CLUB_JOIN}
-             LEFT JOIN LATERAL (
-               SELECT DISTINCT cdl.partner_id FROM competitor_dive_lists cdl
-               WHERE cdl.event_id = $1 AND cdl.competitor_id = pd.competitor_id
-                 AND cdl.partner_id IS NOT NULL LIMIT 1
-             ) p ON true
-             LEFT JOIN users pu ON pu.id = p.partner_id
-             LEFT JOIN organisations pl ON pl.id = pu.org_id
-             WHERE (SELECT event_type FROM events WHERE id = $1) <> 'team'
-             GROUP BY u.id, u.full_name, o.country_code, cl.name,
-                      p.partner_id, pu.full_name, pl.country_code
-           ),
+           /* competitor_id is what the SPA deep-links a standings row
+              to (/profile/<id>), and partner_id gives the synchro
+              partner the same link. */
+           ${compStandingsCte()},
            merged AS (
              /* Columns by name, not *: team rows have no individual
                 competitor, so competitor_id is NULL, and team_id stays
@@ -364,21 +337,7 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
         // chip to /judge-profile/<id>. Same shape across both
         // endpoints so the SPAs panel-by-number map can be built
         // the same way for live + archived events.
-        reads.query(
-          `SELECT ej.judge_id, ej.judge_number,
-                  u.full_name,
-                  o.country_code  AS country_code,
-                  o.name          AS org_name,
-                  cl.name         AS club_name,
-                  cl.short_code   AS club_code
-           FROM event_judges ej
-           JOIN users u         ON u.id = ej.judge_id
-           JOIN organisations o ON o.id = u.org_id
-           ${PUBLIC_CLUB_JOIN}
-           WHERE ej.event_id = $1
-           ORDER BY ej.judge_number ASC`,
-          [req.params.eventId],
-        ),
+        reads.query(PUBLIC_PANEL_SQL, [req.params.eventId]),
         // Same record marks the live scoreboard carries, so a record set
         // at this meet still wears its chip on the recap.
         eventRecordMarks(reads, req.params.eventId).catch((err) => {

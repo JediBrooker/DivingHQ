@@ -19,7 +19,9 @@
 
 const express = require("express");
 const { publicId } = require("../lib/public-id");
-const { perDiveSelect, perDivePointsCte, teamStandingsCte } = require("../lib/scoring-sql");
+const {
+  perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte, PUBLIC_PANEL_SQL,
+} = require("../lib/scoring-sql");
 const { eventRecordMarks } = require("../lib/records");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
@@ -112,36 +114,7 @@ module.exports = function createScoreboardRouter({
             partner_id is exposed on the row so the spectator
             scoreboard can render the synchro partner's name as
             a profile link (parallels the lead diver's link). */
-         comp_standings AS (
-           SELECT u.id AS competitor_id,
-                  u.full_name,
-                  /* Migration 090: the meet's representation (country,
-                     state or club code), from the entry snapshot.
-                     Emitted as country_code so every chip, and the
-                     medal table, follow it. */
-                  event_rep_code($1, u.id, o.country_code) AS country_code,
-                  cl.name AS club_name,
-                  p.partner_id AS partner_id,
-                  pu.full_name AS partner_name,
-                  event_rep_code($1, p.partner_id, pl.country_code) AS partner_country,
-                  SUM(pd.dive_points) AS total
-           FROM per_dive pd
-           JOIN users u ON u.id = pd.competitor_id
-           JOIN organisations o ON o.id = u.org_id
-           ${PUBLIC_CLUB_JOIN}
-           LEFT JOIN LATERAL (
-             SELECT DISTINCT cdl.partner_id
-             FROM competitor_dive_lists cdl
-             WHERE cdl.event_id = $1 AND cdl.competitor_id = pd.competitor_id
-               AND cdl.partner_id IS NOT NULL
-             LIMIT 1
-           ) p ON true
-           LEFT JOIN users pu ON pu.id = p.partner_id
-           LEFT JOIN organisations pl ON pl.id = pu.org_id
-           WHERE (SELECT event_type FROM events WHERE id = $1) <> 'team'
-           GROUP BY u.id, u.full_name, o.country_code, cl.name,
-                    p.partner_id, pu.full_name, pl.country_code
-         ),
+         ${compStandingsCte()},
          merged AS (
            SELECT competitor_id, NULL::uuid AS team_id,
                   full_name, country_code, club_name,
@@ -282,21 +255,7 @@ module.exports = function createScoreboardRouter({
       // (the scoreboard is anonymous-accessible, so the panel
       // identities have to be too, and judge profiles are
       // already public, so there's no new disclosure here).
-      pool.query(
-        `SELECT ej.judge_id, ej.judge_number,
-                u.full_name,
-                o.country_code  AS country_code,
-                o.name          AS org_name,
-                cl.name         AS club_name,
-                cl.short_code   AS club_code
-         FROM event_judges ej
-         JOIN users u         ON u.id = ej.judge_id
-         JOIN organisations o ON o.id = u.org_id
-         ${PUBLIC_CLUB_JOIN}
-         WHERE ej.event_id = $1
-         ORDER BY ej.judge_number ASC`,
-        [eventId],
-      ),
+      pool.query(PUBLIC_PANEL_SQL, [eventId]),
       // Record marks this event's dives hold, for the quiet record
       // chip on history cards (see eventRecordMarks for what's left
       // out and why). A records hiccup shouldn't cost spectators the

@@ -25,7 +25,7 @@
 const express = require("express");
 const PDFDocument = require("pdfkit");
 const { t: serverTranslate } = require("../lib/server-i18n");
-const { perDiveSelect, perDivePointsCte, teamStandingsCte } = require("../lib/scoring-sql");
+const { perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte } = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // CSV escaping + spreadsheet-formula-injection guard.
@@ -1223,30 +1223,10 @@ module.exports = function createPdfRouter({ pool }) {
               team name, the code its divers share, team short code
               underneath. This used to list every member separately. */
            ${teamStandingsCte()},
-           /* Group by u.id (not u.full_name) so two divers with the
-              same full name don't collapse into one row with summed
-              totals. Prior versions of this query merged "Sarah
-              Williams" + "Sarah Williams" into a single PDF line
-              with double points. */
-           comp_standings AS (
-             SELECT u.full_name,
-                    event_rep_code($1, u.id, o.country_code) AS country_code,
-                    cl.name AS club_name,
-                    pu.full_name AS partner_name,
-                    SUM(pd.dive_points) AS total
-             FROM per_dive pd
-             JOIN users u ON u.id = pd.competitor_id
-             JOIN organisations o ON o.id = u.org_id
-             ${PUBLIC_CLUB_JOIN}
-             LEFT JOIN LATERAL (
-               SELECT DISTINCT cdl.partner_id FROM competitor_dive_lists cdl
-               WHERE cdl.event_id = $1 AND cdl.competitor_id = pd.competitor_id
-                 AND cdl.partner_id IS NOT NULL LIMIT 1
-             ) p ON true
-             LEFT JOIN users pu ON pu.id = p.partner_id
-             WHERE (SELECT event_type FROM events WHERE id = $1) <> 'team'
-             GROUP BY u.id, u.full_name, o.country_code, cl.name, pu.full_name
-           ),
+           /* Same per-diver standings as the scoreboard (grouped by
+              u.id, so two Sarah Williamses stay two lines). The PDF
+              only prints the columns merged picks out below. */
+           ${compStandingsCte()},
            merged AS (
              SELECT team_id, full_name, country_code, club_name, partner_name, total
              FROM team_standings
