@@ -6475,6 +6475,57 @@ test("org transfer: the mover's admin seats in the old federation go with the mo
   }
 });
 
+// clubs.name runs to 255 characters and notifications.title to 160. The
+// "has no admin now" notice used to go in uncut, from inside the
+// transfer's transaction, and one failed insert there aborted the whole
+// thing: the reviewer was told it went through and nothing had moved.
+test("org transfer: a long club name can't sink the move with its notice", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const X = await setupFixture({ withEvent: false });
+  const Y = await setupFixture({ withEvent: false });
+  const longName = `Long Name Divers ${"of the Far Northern Coast ".repeat(9)}`.trim();
+  assert.ok(longName.length > 160 && longName.length <= 255);
+  try {
+    const club = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, $2) RETURNING id", [X.orgId, longName],
+    )).rows[0].id;
+    const mover = await insertUser({ orgId: X.orgId, username: `int-lm-${X.slug}`, fullName: "Long Mover", role: "diver" });
+    await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, mover, X.orgId]);
+    const token = (await fetchJson("POST", "/api/auth/login", {
+      body: { username: `int-lm-${X.slug}`, password: "not-used-here" },
+    })).body.token;
+
+    const ask = await fetchJson("POST", "/api/club-change-requests", { token, body: { to_org_id: Y.orgId } });
+    assert.equal(ask.status, 201, JSON.stringify(ask.body));
+    const review = (tok) => fetchJson("POST", `/api/club-change-requests/${ask.body.id}/review`, { token: tok, body: { decision: "approved" } });
+    assert.equal((await review(X.adminToken)).body.status, "pending");
+    const done = await review(Y.adminToken);
+    assert.equal(done.status, 200, JSON.stringify(done.body));
+    assert.equal(done.body.status, "approved");
+
+    // The move committed, not just the response...
+    assert.equal((await pool.query("SELECT org_id FROM users WHERE id = $1", [mover])).rows[0].org_id, Y.orgId);
+    assert.equal((await pool.query(
+      "SELECT status FROM club_change_requests WHERE id = $1", [ask.body.id],
+    )).rows[0].status, "approved");
+    assert.equal((await pool.query("SELECT 1 FROM club_admins WHERE user_id = $1", [mover])).rows.length, 0);
+    // ...and X's admin still hears the club has nobody left, cut to fit.
+    const notes = (await pool.query(
+      "SELECT title FROM notifications WHERE user_id = $1 AND data->>'club_id' = $2", [X.adminId, club],
+    )).rows;
+    assert.equal(notes.length, 1);
+    assert.ok(Array.from(notes[0].title).length <= 160);
+    assert.ok(notes[0].title.startsWith("Long Name Divers of the Far Northern Coast"));
+  } finally {
+    await pool.query("DELETE FROM club_change_requests WHERE from_org_id = $1 OR to_org_id = $1", [X.orgId]).catch(() => {});
+    await pool.query("UPDATE users SET org_id = $1 WHERE username = $2", [X.orgId, `int-lm-${X.slug}`]).catch(() => {});
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [X.orgId]).catch(() => {});
+    await teardownFixture(Y);
+    await teardownFixture(X);
+  }
+});
+
 // Signup used to store a new club's code as typed, cut to 8: no upper
 // case, no format check, no clash check, and a club that goes live at once
 // (no federation) never met the rule club setup and approval apply. The

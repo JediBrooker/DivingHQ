@@ -22,6 +22,7 @@
 // =============================================================
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
+const { NOTICE_TITLE_MAX } = require("../lib/notices");
 
 module.exports = function createClubChangesRouter({ pool, verifyToken, bumpTokenVersion }) {
   if (!pool) throw new Error("createClubChangesRouter requires { pool }");
@@ -72,14 +73,25 @@ module.exports = function createClubChangesRouter({ pool, verifyToken, bumpToken
   // 'club_change' is the outcome (approved, declined, a link closed) and
   // files under Operations in the inbox; 'club_join_request' is someone
   // waiting on the reader to decide, and lands under Action required.
+  //
+  // Most calls run on the request's transaction client, and there a
+  // try/catch alone isn't enough: one failed INSERT aborts the whole
+  // transaction, and the COMMIT after it quietly rolls back instead. A
+  // transfer used to report "approved" while nothing had moved. Hence the
+  // savepoint. The title is cut to fit notifications.title as well, since
+  // a club's name on its own can be longer than that.
   async function notify(db, userId, { title, body, action_url, data, category = "club_change" }) {
+    const inTx = db !== pool;
     try {
+      if (inTx) await db.query("SAVEPOINT club_change_notify");
       await db.query(
         `INSERT INTO notifications (user_id, category, title, body, data, action_url, status)
          VALUES ($1, $6, $2, $3, $4::jsonb, $5, 'sent')`,
-        [userId, title, body || null, data ? JSON.stringify(data) : "{}", action_url || null, category],
+        [userId, String(title).slice(0, NOTICE_TITLE_MAX), body || null, data ? JSON.stringify(data) : "{}", action_url || null, category],
       );
+      if (inTx) await db.query("RELEASE SAVEPOINT club_change_notify");
     } catch (err) {
+      if (inTx) await db.query("ROLLBACK TO SAVEPOINT club_change_notify");
       console.error("[club-change] notify failed:", err.message);
     }
   }
