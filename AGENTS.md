@@ -239,12 +239,15 @@ revoke has to undo exactly that.
 is alpha-3, and signups find their org by it (`resolveCountryOrg` in
 `routes/auth.js`, `/api/orgs/by-country`), matching the alpha-2 form too for
 rows the backfill hasn't reached. `register-org` needs a country; for any
-code in `lib/countries.json` it always opens a claim (on the clubs' account,
-a region, or a country account it starts for the purpose, reviewed by the
-sysadmin) and never creates a pending org. The legacy pending org is only
-for codes outside the catalogue, which is what the `TST` test fixtures use.
-A pending org for a country makes `resolveCountryOrg` refuse
+code in `lib/countries.json` it opens a claim (on the clubs' account, a
+region, or a country account it starts for the purpose, reviewed by the
+sysadmin) or refuses (`409 already_claimed` when a federation already runs
+the country), and never creates a pending org. The legacy pending org is
+only for codes outside the catalogue, which is what the `TST` test fixtures
+use. A pending org for a country makes `resolveCountryOrg` refuse
 (`409 federation_pending`) rather than start an unclaimed account beside it.
+When you read a code back off an org row, use `countryFromStored` (it takes
+the padded / alpha-2 forms); `countryByCode` is for input and is alpha-3 only.
 Don't add another path that creates an org for a real country.
 
 **`country_code` on a diver row is the representation code** (migration
@@ -311,7 +314,7 @@ above it.
 | Meet routes open to club admins (then pin with `isMeetHostAdmin`) | `requireMeetEditorOrClubAdmin` / server.js `requireMeetOrClubEditor` | `lib/middleware.js` |
 | Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForClubAdmin` / `clubAdminCanReview` / `reviewersFor` | `lib/role-requests.js` |
 | Narrow a meet screen to a club admin's own meets | `useClubScope()` | `src/composables/useClubScope.js` |
-| ISO country list (server validation + signup picker) | `countryByCode(a3)` / `countries.json` | `lib/countries.js` |
+| ISO country list (server validation + signup picker) | `countryByCode(a3)` / `countryFromStored(dbCode)` / `countries.json` | `lib/countries.js` |
 | What a diver represents in an event (country / state / club code) | `event_rep_code(event_id, user_id, home_country)` SQL function | `migrations/090_representation.sql` |
 | Built-in regions per country, copy them into an org | `catalogFor(a3)` / `materializeRegions(db, orgId, a3)` / `regions.json` | `lib/regions.js` |
 | Approve/reject list for club and region admin pages | `<RoleRequestQueue>` | `src/components/RoleRequestQueue.vue` |
