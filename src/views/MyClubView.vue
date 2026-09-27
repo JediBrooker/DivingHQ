@@ -199,7 +199,16 @@ async function removeAdmin(club, admin) {
     if (self) await refreshAfterLosingClub(club)
     else await loadClub(club)
   } catch (err) {
-    showError(err.message)
+    // 409 means the page was out of date: the other live admin stepped
+    // down or got suspended after we loaded. Give the reason in the
+    // reader's language, not the server's English, and reload so the
+    // button greys out the way it would have.
+    if (err.status === 409) {
+      showError(t('my_club.last_admin_tip'))
+      await loadClub(club)
+    } else {
+      showError(err.message)
+    }
   } finally {
     busyId.value = null
   }

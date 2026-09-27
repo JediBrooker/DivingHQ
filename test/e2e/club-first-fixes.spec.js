@@ -106,6 +106,19 @@ test("a club admin sees members' requests on the dashboard, and can step down cl
   await page.getByRole("button", { name: "Add", exact: true }).click();
   await expect(removeMe).toBeEnabled();
   await expect(removeMe).not.toHaveAttribute("data-tip", /./);
+
+  // The page goes stale: the co-admin is suspended behind its back. The
+  // server still refuses, and the page says why in the reader's words
+  // (not the server's English) and greys the button out.
+  await setup.pool.query("UPDATE users SET suspended_at = now() WHERE username = $1", [memberName]);
+  await removeMe.click();
+  await page.getByRole("button", { name: "Remove me" }).click();
+  await expect(page.getByText("A club needs at least one admin. Add a co-admin before removing this one.")).toBeVisible();
+  await expect(removeMe).toBeDisabled();
+  await setup.pool.query("UPDATE users SET suspended_at = NULL WHERE username = $1", [memberName]);
+  await page.reload();
+  await expect(removeMe).toBeEnabled();
+
   await removeMe.click();
   await page.getByRole("button", { name: "Remove me" }).click();
 

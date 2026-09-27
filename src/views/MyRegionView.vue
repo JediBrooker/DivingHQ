@@ -129,7 +129,14 @@ async function removeAdmin(region, admin) {
     if (admin.id === auth.user?.id) await auth.fetchMe()
     else await load(region)
   } catch (err) {
-    showError(err.message)
+    // Stale page, same as My club: someone else left first. Translated
+    // reason, then reload so Remove shows up greyed out.
+    if (err.status === 409) {
+      showError(t('my_region.last_admin_tip'))
+      await load(region)
+    } else {
+      showError(err.message)
+    }
   } finally {
     busyId.value = null
   }
