@@ -943,8 +943,9 @@ module.exports = function createUsersRouter({
         }
 
         // FK references to users.id that carry sporting-record
-        // value. Grep `REFERENCES public.users` over init.sql +
-        // migrations/* to keep this list current when new FKs land.
+        // value. Grep
+        // `REFERENCES public.users` over init.sql + migrations/* to
+        // keep this list current when new FKs land.
         // Tables NOT touched here are either ON DELETE CASCADE (row
         // goes away when we hard-delete below) or ON DELETE SET
         // NULL (they survive with a null pointer, which is the
@@ -952,12 +953,22 @@ module.exports = function createUsersRouter({
         //
         // Tables we explicitly migrate so the historical entry
         // reads under the new account:
-        const moveDives = await client.query(
-          `UPDATE competitor_dive_lists
-              SET competitor_id = $2
-            WHERE competitor_id = $1`,
+        // Dive list rows and the competitor's scores move in ONE statement.
+        // scores has a foreign key onto competitor_dive_lists(event_id,
+        // competitor_id, round_number) with no ON UPDATE, so moving either
+        // side on its own orphans the other and the claim died with a 500
+        // for anyone who'd ever been scored. Within one statement the
+        // check runs once both have moved.
+        const moved = (await client.query(
+          `WITH dives AS (
+             UPDATE competitor_dive_lists SET competitor_id = $2 WHERE competitor_id = $1 RETURNING 1
+           ), comp AS (
+             UPDATE scores SET competitor_id = $2 WHERE competitor_id = $1 RETURNING 1
+           )
+           SELECT (SELECT count(*) FROM dives)::int AS dives, (SELECT count(*) FROM comp)::int AS scores`,
           [oldId, me.id],
-        );
+        )).rows[0];
+        const moveDives = { rowCount: moved.dives };
         counts.dives += moveDives.rowCount || 0;
 
         // Changing partner_id normally re-snapshots the partner's club
@@ -973,10 +984,7 @@ module.exports = function createUsersRouter({
           [oldId, me.id],
         );
 
-        const moveScoresComp = await client.query(
-          `UPDATE scores SET competitor_id = $2 WHERE competitor_id = $1`,
-          [oldId, me.id],
-        );
+        const moveScoresComp = { rowCount: moved.scores };
         const moveScoresJudge = await client.query(
           `UPDATE scores SET judge_id = $2 WHERE judge_id = $1`,
           [oldId, me.id],

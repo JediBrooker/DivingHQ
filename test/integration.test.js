@@ -6662,3 +6662,30 @@ test("records: a changed dive's books are replayed, down as well as up", async (
     await teardownFixture(st);
   }
 });
+
+// scores reference competitor_dive_lists(event, competitor, round) with no
+// ON UPDATE, so moving the dive lists and the scores in two statements
+// failed the whole claim for anyone who had ever been scored.
+test("claiming a past account with scored dives moves them", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const old = await recordKit.diver(st.orgId, null, "female", "Mo Scored");
+    const meName = `int-me-${crypto.randomBytes(3).toString("hex")}`;
+    const me = await insertUser({ orgId: st.orgId, role: "diver", username: meName, fullName: "Mo Scored" });
+    const women = await recordKit.event(st.orgId, { gender: "Female" });
+    await recordKit.dive(women, old, 1, await recordKit.threeMetreDive(), 6);
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [old]);
+    const login = await fetchJson("POST", "/api/auth/login", { body: { username: meName, password: "not-used-here" } });
+    const claim = await fetchJson("POST", "/api/users/me/claim", {
+      token: login.body.token, body: { old_user_ids: [old], password: "not-used-here" },
+    });
+    assert.equal(claim.status, 200, JSON.stringify(claim.body));
+    assert.equal(claim.body.counts.dives, 1);
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM scores WHERE competitor_id = $1", [me])).rows[0].n, 5);
+  } finally {
+    await recordKit.cleanup(st.orgId);
+    await teardownFixture(st);
+  }
+});
