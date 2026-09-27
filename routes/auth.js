@@ -16,6 +16,7 @@ const crypto  = require("node:crypto");
 const totp    = require("../lib/totp");
 const { SESSION_COOKIE, cookieOptions } = require("../lib/session-cookie");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
+const { countryByCode } = require("../lib/countries");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -104,6 +105,48 @@ async function loadHasDependents(pool, userId) {
     if (err.code === "42P01") return false;
     throw err;
   }
+}
+
+// Club-first signup (migration 087): find the org a registrant from this
+// country joins, starting an unclaimed country account if there's none.
+//
+// Returns { id, claim_state, created } or { choose: true } when several
+// active orgs share the country and the registrant has to pick one.
+// Runs inside the caller's transaction. The partial unique index on
+// (country_code) WHERE unclaimed is what stops two first-signups racing
+// into two accounts: the loser's insert DOs NOTHING and it reads back the
+// winner's row.
+async function resolveCountryOrg(client, country) {
+  const existing = await client.query(
+    `SELECT id, claim_state FROM organisations
+      WHERE country_code = $1 AND status = 'active' AND id <> $2`,
+    [country.a3, ADMIN_ORG_ID],
+  );
+  if (existing.rows.length > 1) return { choose: true };
+  if (existing.rows.length === 1) return { ...existing.rows[0], created: false };
+
+  let slug = `country-${country.a3.toLowerCase()}`;
+  const taken = await client.query("SELECT 1 FROM organisations WHERE slug = $1", [slug]);
+  if (taken.rows.length) slug += `-${crypto.randomBytes(2).toString("hex")}`;
+  const ins = await client.query(
+    `INSERT INTO organisations (name, country_code, slug, status, claim_state)
+     VALUES ($1, $2, $3, 'active', 'unclaimed')
+     ON CONFLICT (country_code) WHERE claim_state = 'unclaimed' DO NOTHING
+     RETURNING id, claim_state`,
+    [country.name, country.a3, slug],
+  );
+  if (ins.rows.length) return { ...ins.rows[0], created: true };
+
+  // Lost the race, or a sysadmin suspended this country's account. The
+  // second case has to stop here, joining it would just lock them out.
+  const again = await client.query(
+    `SELECT id, claim_state, status FROM organisations
+      WHERE country_code = $1 AND claim_state = 'unclaimed'`,
+    [country.a3],
+  );
+  const row = again.rows[0];
+  if (!row || row.status !== "active") return { closed: true };
+  return { id: row.id, claim_state: row.claim_state, created: false };
 }
 
 module.exports = function createAuthRouter({
@@ -636,14 +679,45 @@ module.exports = function createAuthRouter({
     res.json({ enabled: signupsOpen() });
   });
 
+  // Best-effort in-app heads-up to every sysadmin. Fire and forget.
+  function notifySysadminsOfClub({ clubName, orgId, countryName, startedCountry }) {
+    if (!push || typeof push.sendNotification !== "function") return;
+    (async () => {
+      try {
+        const admins = await pool.query("SELECT id FROM users WHERE is_system_admin = true");
+        const adminIds = admins.rows.map((r) => r.id);
+        if (!adminIds.length) return;
+        const where = countryName || "an unclaimed country";
+        await push.sendNotification(adminIds, {
+          category:   "club_created",
+          title:      `New club: ${clubName}`,
+          body:       startedCountry
+            ? `First club on DivingHQ from ${where}. The country account was created unclaimed.`
+            : `A new club joined ${where}, which has no federation on DivingHQ yet.`,
+          data:       { org_id: orgId, club_name: clubName },
+          action_url: "/clubs",
+        });
+      } catch (err) {
+        console.error("[Club Created Notification Skipped]", err.message);
+      }
+    })();
+  }
+
   router.post("/api/auth/register", authLimiter, async (req, res) => {
     if (!signupsOpen()) {
       return res.status(403).json({ error: "Account creation is coming soon.", code: "signups_disabled" });
     }
     const {
-      username, password, email, org_id, requested_role, note,
+      username, password, email, org_id, country_code, requested_role, note,
       club_id, new_club_name, new_club_short_code,
     } = req.body || {};
+    // Club-first signup (migration 087) sends a country instead of an org.
+    // org_id still wins when both are present: that's the form telling us
+    // which of several federations in one country the registrant picked.
+    const country = org_id ? null : countryByCode(country_code);
+    if (!org_id && !country) {
+      return res.status(400).json({ error: "Pick your country" });
+    }
 
     const fullName = safeText(req.body?.full_name, 100);
     const cleanClubName = safeText(new_club_name, 80);
@@ -676,25 +750,60 @@ module.exports = function createAuthRouter({
     try {
       await client.query("BEGIN");
 
-      // The Administration org is active but never open to the public,
-      // same filter as /api/orgs/active so a hand-crafted POST can't
-      // get round the missing dropdown entry.
-      const org = await client.query(
-        "SELECT id FROM organisations WHERE id = $1 AND status = 'active' AND id <> $2",
-        [org_id, ADMIN_ORG_ID],
-      );
-      if (!org.rows.length) {
+      let orgId;
+      let orgClaimState;
+      let orgName = country ? country.name : null;
+      let startedCountry = false;
+      if (country) {
+        const found = await resolveCountryOrg(client, country);
+        if (found.closed) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({ error: `Signups from ${country.name} are paused. Contact support.` });
+        }
+        if (found.choose) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            error: "More than one organisation runs diving in that country, pick yours",
+            code: "org_choice_required",
+          });
+        }
+        ({ id: orgId, claim_state: orgClaimState, created: startedCountry } = found);
+      } else {
+        // The Administration org is active but never open to the public,
+        // same filter as /api/orgs/active so a hand-crafted POST can't
+        // get round the missing dropdown entry.
+        const org = await client.query(
+          "SELECT id, name, claim_state FROM organisations WHERE id = $1 AND status = 'active' AND id <> $2",
+          [org_id, ADMIN_ORG_ID],
+        );
+        if (!org.rows.length) {
+          await client.query("ROLLBACK");
+          return res
+            .status(400)
+            .json({ error: "Organisation not found or not yet active" });
+        }
+        orgId = org.rows[0].id;
+        orgClaimState = org.rows[0].claim_state;
+        orgName = org.rows[0].name;
+      }
+      const unclaimed = orgClaimState === "unclaimed";
+
+      // Nobody holds org_admin in an unclaimed country, and an org-wide
+      // meet_manager there could run every club's meets. Clubs appoint
+      // per-meet managers instead, so the request isn't on offer.
+      if (unclaimed && requested_role === "meet_manager") {
         await client.query("ROLLBACK");
-        return res
-          .status(400)
-          .json({ error: "Organisation not found or not yet active" });
+        return res.status(400).json({
+          error: "Meet managers are appointed by club admins in countries without a federation on DivingHQ yet",
+        });
       }
 
       let resolvedClubId = null;
+      let createdClubId = null;
       if (club_id) {
         const club = await client.query(
           "SELECT id FROM clubs WHERE id = $1 AND org_id = $2",
-          [club_id, org_id],
+          [club_id, orgId],
         );
         if (!club.rows.length) {
           await client.query("ROLLBACK");
@@ -708,9 +817,10 @@ module.exports = function createAuthRouter({
           `INSERT INTO clubs (org_id, name, short_code)
            VALUES ($1, $2, $3)
            RETURNING id`,
-          [org_id, cleanClubName, safeText(new_club_short_code, 8) || null],
+          [orgId, cleanClubName, safeText(new_club_short_code, 8) || null],
         );
         resolvedClubId = cnew.rows[0].id;
+        createdClubId = resolvedClubId;
       }
 
       const hash = await bcrypt.hash(password, 12);
@@ -718,20 +828,34 @@ module.exports = function createAuthRouter({
       // the user clicks the verification link.
       const uRes = await client.query(
         "INSERT INTO users (username, password, full_name, email, org_id, club_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id",
-        [cleanUsername, hash, fullName, email, org_id, resolvedClubId],
+        [cleanUsername, hash, fullName, email, orgId, resolvedClubId],
       );
       newUserId = uRes.rows[0].id;
 
+      if (createdClubId) {
+        await client.query("UPDATE clubs SET created_by = $1 WHERE id = $2", [newUserId, createdClubId]);
+        // In an unclaimed country the founder runs their club, there's
+        // nobody above them to appoint anyone. Under a real federation
+        // it stays the federation's call (Clubs -> Admins), same as
+        // before club-first signup existed.
+        if (unclaimed) {
+          await client.query(
+            "INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)",
+            [createdClubId, newUserId, orgId],
+          );
+        }
+      }
+
       await client.query(
         "INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1,$2,'spectator')",
-        [newUserId, org_id],
+        [newUserId, orgId],
       );
 
       const validRoles = ["meet_manager", "referee", "judge", "diver"];
       if (requested_role && validRoles.includes(requested_role)) {
         await client.query(
           "INSERT INTO role_requests (user_id, org_id, requested_role, note) VALUES ($1,$2,$3,$4)",
-          [newUserId, org_id, requested_role, safeText(note, 500)],
+          [newUserId, orgId, requested_role, safeText(note, 500)],
         );
         requestedRoleSaved = requested_role;
         // Real-time push for the dashboard pulse strip, lets any
@@ -740,7 +864,7 @@ module.exports = function createAuthRouter({
         if (io && typeof io.emit === "function") {
           try {
             io.emit("role_request_created", {
-              org_id,
+              org_id: orgId,
               requested_role,
             });
           } catch (_e) { /* ignore */ }
@@ -773,8 +897,18 @@ module.exports = function createAuthRouter({
       }
       sendWelcomeEmail(newUserId).catch(() => {});
       if (requestedRoleSaved) {
-        sendNewRoleRequestEmail(newUserId, org_id, requestedRoleSaved,
+        sendNewRoleRequestEmail(newUserId, orgId, requestedRoleSaved,
                                  safeText(note, 500)).catch(() => {});
+      }
+      // Nobody approves a club in an unclaimed country, so the sysadmin
+      // at least hears about it and can suspend a junk one after the fact.
+      if (createdClubId && unclaimed) {
+        notifySysadminsOfClub({
+          clubName:  cleanClubName,
+          orgId,
+          countryName: orgName,
+          startedCountry,
+        });
       }
 
       res.status(201).json({
@@ -873,6 +1007,24 @@ module.exports = function createAuthRouter({
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
+
+      // Clubs from this country already share an unclaimed account. A
+      // second, separate federation org would split the country in two,
+      // and there's no merge. Claiming it properly is phase 3 of
+      // docs/club-first-onboarding.md; until then a person sorts it out.
+      if (country_code) {
+        const unclaimed = await client.query(
+          "SELECT name FROM organisations WHERE country_code = $1 AND claim_state = 'unclaimed'",
+          [country_code],
+        );
+        if (unclaimed.rows.length) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({
+            error: `Clubs in ${unclaimed.rows[0].name} are already on DivingHQ. Contact support and we'll hand the country's account over to your federation.`,
+            code: "country_has_clubs",
+          });
+        }
+      }
 
       const orgRes = await client.query(
         "INSERT INTO organisations (name, country_code, slug, status) VALUES ($1,$2,$3,'pending') RETURNING id",

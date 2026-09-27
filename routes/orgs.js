@@ -2,6 +2,7 @@
 //
 //   GET    /api/orgs                    every org (sysadmin only)
 //   GET    /api/orgs/active             public list for register-form
+//   GET    /api/orgs/by-country/:code   public, the org(s) a signup in that country joins
 //   PUT    /api/orgs/:id/status         sysadmin approves / suspends
 //                                       (emails + notifies the org's
 //                                       own admin(s) of the decision)
@@ -59,6 +60,29 @@ module.exports = function createOrgsRouter({
       res.json(r.rows);
     } catch (err) {
       console.error("[Orgs Active Error]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // What a registrant in this country would join. Usually zero rows (they
+  // start the country account) or one (the federation, or the unclaimed
+  // account an earlier club started). More than one only happens where
+  // several federations already share a country code, and then the form
+  // asks them to pick.
+  router.get("/api/orgs/by-country/:code", async (req, res) => {
+    const code = String(req.params.code || "").toUpperCase();
+    if (!/^[A-Z]{3}$/.test(code)) return res.json([]);
+    try {
+      const r = await pool.query(
+        `SELECT id, name, country_code, claim_state
+           FROM organisations
+          WHERE country_code = $1 AND status = 'active' AND id <> $2
+          ORDER BY claim_state = 'unclaimed', name ASC`,
+        [code, ADMIN_ORG_ID],
+      );
+      res.json(r.rows);
+    } catch (err) {
+      console.error("[Orgs By Country Error]", err.message);
       res.status(500).json({ error: "Internal server error" });
     }
   });

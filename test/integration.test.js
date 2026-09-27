@@ -669,3 +669,97 @@ test("a federation admin can appoint and remove club admins", async (t) => {
     await teardownFixture(state);
   }
 });
+
+// Club-first signup (migration 087). Uses two small countries nobody
+// else in the suite touches, and clears them first so a crashed earlier
+// run can't leave an account behind that changes the outcome.
+test("club-first signup starts an unclaimed country account", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODES = ["NRU", "TUV"];
+  const wipe = async () => {
+    for (const code of CODES) {
+      const orgs = await pool.query("SELECT id FROM organisations WHERE country_code = $1", [code]);
+      for (const { id } of orgs.rows) await teardownFixture({ orgId: id });
+    }
+  };
+  await wipe();
+  const reg = (body) => fetchJson("POST", "/api/auth/register", {
+    body: {
+      username:  `int-cf-${crypto.randomBytes(4).toString("hex")}`,
+      full_name: "Club Founder",
+      email:     `cf-${crypto.randomBytes(4).toString("hex")}@example.test`,
+      password:  TEST_PASSWORD,
+      ...body,
+    },
+  });
+  const state = await setupFixture({ withEvent: false });
+  try {
+    const first = await reg({ country_code: "NRU", new_club_name: "Nauru Divers" });
+    assert.equal(first.status, 201, JSON.stringify(first.body));
+    const org = (await pool.query(
+      "SELECT id, name, claim_state, status FROM organisations WHERE country_code = 'NRU'",
+    )).rows;
+    assert.equal(org.length, 1);
+    assert.equal(org[0].claim_state, "unclaimed");
+    assert.equal(org[0].status, "active");
+    assert.equal(org[0].name, "Nauru");
+    const club = (await pool.query(
+      `SELECT c.id, c.created_by, u.username,
+              EXISTS (SELECT 1 FROM club_admins ca WHERE ca.club_id = c.id AND ca.user_id = c.created_by) AS is_admin
+         FROM clubs c JOIN users u ON u.id = c.created_by WHERE c.org_id = $1`, [org[0].id],
+    )).rows[0];
+    assert.ok(club, "club was created with a founder");
+    assert.equal(club.is_admin, true, "founder of a club in an unclaimed country becomes its admin");
+
+    // A second person from the same country lands in the same account.
+    const lookup = await fetchJson("GET", "/api/orgs/by-country/NRU");
+    assert.deepEqual(lookup.body.map((o) => o.id), [org[0].id]);
+    const second = await reg({ country_code: "NRU", club_id: club.id });
+    assert.equal(second.status, 201, JSON.stringify(second.body));
+    const count = await pool.query("SELECT count(*)::int AS n FROM organisations WHERE country_code = 'NRU'");
+    assert.equal(count.rows[0].n, 1);
+
+    // No federation there, so no org-wide meet managers either.
+    const mm = await reg({ country_code: "NRU", requested_role: "meet_manager" });
+    assert.equal(mm.status, 400);
+
+    // A federation can't open a parallel account next to the clubs.
+    const fed = await fetchJson("POST", "/api/auth/register-org", {
+      body: {
+        org_name: "Nauru Diving Federation", country_code: "NRU", slug: `int-nru-${state.slug}`,
+        username: `int-nrufed-${state.slug}`, password: TEST_PASSWORD, full_name: "Fed Person",
+        email: `nrufed-${state.slug}@example.test`,
+      },
+    });
+    assert.equal(fed.status, 409);
+    assert.equal(fed.body.code, "country_has_clubs");
+
+    // Two first-signups racing from a brand-new country: one account.
+    const [a, b] = await Promise.all([
+      reg({ country_code: "TUV", new_club_name: "Funafuti A" }),
+      reg({ country_code: "TUV", new_club_name: "Funafuti B" }),
+    ]);
+    assert.equal(a.status, 201, JSON.stringify(a.body));
+    assert.equal(b.status, 201, JSON.stringify(b.body));
+    const tuv = await pool.query("SELECT count(*)::int AS n FROM organisations WHERE country_code = 'TUV'");
+    assert.equal(tuv.rows[0].n, 1);
+
+    // Under a real (claimed) federation nothing changes: founding a club
+    // doesn't make you its admin, the federation decides that.
+    const claimed = await reg({ org_id: state.orgId, new_club_name: "Claimed Fed Club" });
+    assert.equal(claimed.status, 201, JSON.stringify(claimed.body));
+    const cc = await pool.query(
+      `SELECT EXISTS (SELECT 1 FROM club_admins ca WHERE ca.club_id = c.id) AS has_admin
+         FROM clubs c WHERE c.org_id = $1 AND c.name = 'Claimed Fed Club'`, [state.orgId],
+    );
+    assert.equal(cc.rows[0].has_admin, false);
+
+    const bogus = await reg({ country_code: "ZZZ" });
+    assert.equal(bogus.status, 400);
+  } finally {
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [state.orgId]).catch(() => {});
+    await teardownFixture(state);
+    await wipe();
+  }
+});

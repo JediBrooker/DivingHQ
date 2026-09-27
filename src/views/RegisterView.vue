@@ -1,22 +1,49 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+// Same file the server validates against (lib/countries.js), so the
+// picker can't offer a code the API then refuses.
+import COUNTRIES from '../../lib/countries.json'
 
 const router = useRouter()
+const { locale } = useI18n()
 
 const fullName = ref('')
 const username = ref('')
 const email = ref('')
 const password = ref('')
-const orgId = ref('')
 // Default to "diver", the most common public-registration use case.
 // Spectator-only sign-ups will pick "Spectator" explicitly.
 const requestedRole = ref('diver')
 const note = ref('')
-const orgs = ref([])
-// Flips once /api/orgs/active has answered, so the "nothing set up yet"
-// hint doesn't flash up while the list is still loading.
-const orgsLoaded = ref(false)
+
+// Club-first signup: country first, then whichever org runs that
+// country on DivingHQ. Zero orgs means this registrant starts the
+// country's account; one is the usual case; several only happens where
+// federations already share a country code, and then they pick.
+const countryCode = ref('')
+const countryOrgs = ref([])
+const countryLoaded = ref(false)
+const orgId = ref('')
+
+// Country names in the reader's own language where the browser knows
+// them, falling back to the English name stored in the JSON.
+const countryOptions = computed(() => {
+  let dn = null
+  try { dn = new Intl.DisplayNames([locale.value, 'en'], { type: 'region' }) } catch { /* old browser */ }
+  return COUNTRIES
+    .map(c => ({ code: c.a3, name: (dn && dn.of(c.a2)) || c.name }))
+    .sort((a, b) => a.name.localeCompare(b.name, locale.value))
+})
+const countryName = computed(() =>
+  countryOptions.value.find(c => c.code === countryCode.value)?.name || '')
+
+const selectedOrg = computed(() => countryOrgs.value.find(o => o.id === orgId.value) || null)
+// No org yet (they'd create it) or an unclaimed one: no federation above
+// the clubs, so club admins run things and meet_manager isn't on offer.
+const noFederation = computed(() =>
+  countryLoaded.value && (!countryOrgs.value.length || selectedOrg.value?.claim_state === 'unclaimed'))
 
 // Club state, populated whenever an org is picked. The club
 // dropdown has three modes: pick an existing one, "I want to create
@@ -34,6 +61,13 @@ const loading = ref(false)
 // still checking, true is open (show the form), false is closed (show the notice).
 const signupsEnabled = ref(null)
 
+// Best guess at the registrant's country from the browser locale
+// ("en-AU" -> AUS). Only a starting value, the select is theirs.
+function guessCountry() {
+  const region = (navigator.language || '').split('-')[1]?.toUpperCase()
+  return COUNTRIES.find(c => c.a2 === region)?.a3 || ''
+}
+
 onMounted(async () => {
   try {
     const res = await fetch('/api/auth/signups-status')
@@ -42,11 +76,28 @@ onMounted(async () => {
     signupsEnabled.value = false
   }
   if (!signupsEnabled.value) return
+  countryCode.value = guessCountry()
+})
+
+watch(countryCode, async (code) => {
+  countryOrgs.value = []
+  countryLoaded.value = false
+  orgId.value = ''
+  if (!code) return
   try {
-    const res = await fetch('/api/orgs/active')
-    orgs.value = await res.json()
-  } catch { /* leave empty */ }
-  orgsLoaded.value = true
+    const r = await fetch(`/api/orgs/by-country/${code}`)
+    const body = await r.json()
+    if (code !== countryCode.value) return   // they changed it again mid-fetch
+    countryOrgs.value = Array.isArray(body) ? body : []
+  } catch {
+    countryOrgs.value = []
+  }
+  if (countryOrgs.value.length === 1) orgId.value = countryOrgs.value[0].id
+  countryLoaded.value = true
+})
+
+watch(noFederation, (none) => {
+  if (none && requestedRole.value === 'meet_manager') requestedRole.value = 'diver'
 })
 
 watch(orgId, async (id) => {
@@ -65,6 +116,10 @@ watch(orgId, async (id) => {
   }
 })
 
+// A brand-new country has no clubs to load but still offers "create".
+const showClubPicker = computed(() =>
+  countryLoaded.value && (orgId.value || !countryOrgs.value.length))
+
 async function handleSubmit() {
   msg.value = ''
   msgType.value = ''
@@ -75,8 +130,9 @@ async function handleSubmit() {
       username: username.value,
       email:    email.value || undefined,
       password: password.value,
-      org_id:   orgId.value,
     }
+    if (orgId.value) body.org_id = orgId.value
+    else body.country_code = countryCode.value
     if (requestedRole.value) body.requested_role = requestedRole.value
     if (note.value) body.note = note.value
     if (clubChoice.value === 'new' && newClubName.value.trim()) {
@@ -154,28 +210,37 @@ async function handleSubmit() {
         <input class="input" type="password" v-model="password" autocomplete="new-password" required>
       </div>
       <div class="field">
-        <label class="label">{{ $t('auth.register.organisation') }}</label>
-        <select class="select" v-model="orgId" required>
-          <option value="">{{ $t('auth.register.org_placeholder') }}</option>
-          <option v-for="org in orgs" :key="org.id" :value="org.id">
-            {{ org.name }}{{ org.country_code ? ` (${org.country_code})` : '' }}
-          </option>
+        <label class="label">{{ $t('auth.register.country') }}</label>
+        <select class="select" v-model="countryCode" required>
+          <option value="">{{ $t('auth.register.country_placeholder') }}</option>
+          <option v-for="c in countryOptions" :key="c.code" :value="c.code">{{ c.name }}</option>
         </select>
-        <!-- Without this an empty list is a dead end: the select is
-             required, so the form just won't submit and nobody says why. -->
-        <p v-if="orgsLoaded && !orgs.length" class="hint-line">
-          {{ $t('auth.register.no_orgs') }}
-          <RouterLink to="/register-org">{{ $t('auth.login.register_federation_action') }}</RouterLink>
+        <p v-if="countryLoaded && !countryOrgs.length" class="hint-line">
+          {{ $t('auth.register.country_first', { country: countryName }) }}
         </p>
-        <p v-else-if="orgsLoaded" class="hint-line">
-          {{ $t('auth.register.org_missing') }}
+        <p v-else-if="selectedOrg && selectedOrg.claim_state === 'unclaimed'" class="hint-line">
+          {{ $t('auth.register.country_unclaimed', { country: countryName }) }}
+        </p>
+        <p v-else-if="selectedOrg && countryOrgs.length === 1" class="hint-line">
+          {{ $t('auth.register.country_joins', { org: selectedOrg.name }) }}
+        </p>
+        <p class="hint-line">
+          {{ $t('auth.login.register_federation') }}
           <RouterLink to="/register-org">{{ $t('auth.login.register_federation_action') }}</RouterLink>
         </p>
       </div>
 
-      <!-- Club, only meaningful once an org is picked. Lets you
-           pick an existing club, create a new one inline, or skip. -->
-      <div class="field" v-if="orgId">
+      <!-- Only where several federations share the country. -->
+      <div class="field" v-if="countryOrgs.length > 1">
+        <label class="label">{{ $t('auth.register.organisation') }}</label>
+        <select class="select" v-model="orgId" required>
+          <option value="">{{ $t('auth.register.org_placeholder') }}</option>
+          <option v-for="org in countryOrgs" :key="org.id" :value="org.id">{{ org.name }}</option>
+        </select>
+      </div>
+
+      <!-- Club: pick an existing one, create a new one inline, or skip. -->
+      <div class="field" v-if="showClubPicker">
         <label class="label">{{ $t('auth.register.club') }}</label>
         <select class="select" v-model="clubChoice">
           <option value="">{{ $t('auth.register.club_independent') }}</option>
@@ -190,7 +255,7 @@ async function handleSubmit() {
       </div>
 
       <!-- Inline new-club form, only shows when "Create a new club" is picked -->
-      <div v-if="orgId && clubChoice === 'new'" class="field new-club-block">
+      <div v-if="showClubPicker && clubChoice === 'new'" class="field new-club-block">
         <div class="field">
           <label class="label">{{ $t('auth.register.new_club_name') }}</label>
           <input class="input" type="text" v-model="newClubName" placeholder="e.g. Sydney Springboard" required>
@@ -199,6 +264,7 @@ async function handleSubmit() {
           <label class="label">{{ $t('auth.register.short_code_optional') }}</label>
           <input class="input" type="text" v-model="newClubCode" placeholder="e.g. SYD" maxlength="20">
         </div>
+        <p v-if="noFederation" class="hint-line founder-note">{{ $t('auth.register.founder_note') }}</p>
       </div>
 
       <div class="field">
@@ -207,7 +273,7 @@ async function handleSubmit() {
           <option value="diver">{{ $t('auth.register.role_default') }}</option>
           <option value="judge">{{ $t('role.judge') }}</option>
           <option value="referee">{{ $t('role.referee') }}</option>
-          <option value="meet_manager">{{ $t('role.manager') }}</option>
+          <option v-if="!noFederation" value="meet_manager">{{ $t('role.manager') }}</option>
           <option value="">{{ $t('auth.register.role_spectator') }}</option>
         </select>
       </div>
@@ -215,7 +281,7 @@ async function handleSubmit() {
         <label class="label">{{ $t('auth.register.note_label') }}</label>
         <input class="input" type="text" v-model="note" :placeholder="$t('auth.register.note_placeholder')">
       </div>
-      <p class="note">{{ $t('auth.register.spectator_note') }}</p>
+      <p class="note">{{ noFederation ? $t('auth.register.spectator_note_club') : $t('auth.register.spectator_note') }}</p>
       <div v-if="msg" :class="['msg', msgType === 'success' ? 'msg-success' : 'msg-error']">{{ msg }}</div>
       <button type="submit" class="btn btn-primary-lg" style="margin-top:0.25rem" :disabled="loading">
         {{ loading ? $t('auth.register.submit_loading') : $t('auth.register.submit_idle') }}
@@ -255,6 +321,7 @@ h1 { font-size: 48px; font-style: italic; margin-bottom: 0.25rem; }
 .footer-link a { color: var(--cyan); text-decoration: none; }
 .note { font-size: 11px; color: var(--text-3); line-height: 1.6; padding: 0.75rem; background: var(--bg-3); border-radius: var(--radius-sm); border: 1px solid var(--border); }
 .hint-line { margin-top: 0.4rem; font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
+.founder-note { margin-top: 0; color: var(--text-2); }
 .new-club-block {
   display: flex; flex-direction: column; gap: 0.75rem;
   padding: 0.85rem;
