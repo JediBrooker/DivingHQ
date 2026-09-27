@@ -1994,5 +1994,24 @@
     "reject": "Hylkää",
     "revoke": "Peru",
     "revoke_body": "{body} ei enää hallinnoi kohdetta {target}, joka palaa vaatimusta edeltäneeseen tilaan."
+  },
+  "request_role": {
+    "button": "Pyydä roolia",
+    "title": "Pyydä roolia",
+    "intro_claimed": "Liittosi ylläpitäjät käsittelevät roolipyynnöt. Saat sähköpostin, kun he ovat päättäneet.",
+    "intro_unclaimed": "Koska täällä ei vielä ole liittoa, seurasi ylläpitäjät käsittelevät hyppääjän, tuomarin ja valmentajan pyynnöt ja DivingHQ muut. Saat sähköpostin, kun päätös on tehty.",
+    "no_club_hint": "Et kuulu mihinkään seuraan, joten DivingHQ käsittelee tämän. Jos haluat mieluummin seuran päättävän, pyydä ensin pääsyä johonkin seuraan.",
+    "you_have": "Roolisi: {roles}",
+    "role_label": "Rooli",
+    "pick_role": "— Valitse rooli —",
+    "note_label": "Viesti käsittelijälle (valinnainen)",
+    "submit": "Lähetä pyyntö",
+    "sending": "Lähetetään…",
+    "sent": "Pyyntö lähetetty",
+    "nothing_left": "Sinulla on jo tai olet jo pyytänyt kaikki roolit, joita täällä voi pyytää.",
+    "your_requests": "Pyyntösi",
+    "status_pending": "Odottaa",
+    "status_approved": "Hyväksytty",
+    "status_rejected": "Hylätty"
   }
 }

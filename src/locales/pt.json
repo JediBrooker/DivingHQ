@@ -1994,5 +1994,24 @@
     "reject": "Rejeitar",
     "revoke": "Revogar",
     "revoke_body": "{body} deixa de gerir {target}, que volta ao que era antes da reivindicação."
+  },
+  "request_role": {
+    "button": "Pedir uma função",
+    "title": "Pedir uma função",
+    "intro_claimed": "Os administradores da sua federação analisam os pedidos de função. Receberá um e-mail quando decidirem.",
+    "intro_unclaimed": "Enquanto não houver aqui uma federação, os administradores do seu clube analisam os pedidos de saltador, juiz e treinador, e a DivingHQ analisa os restantes. Receberá um e-mail quando houver decisão.",
+    "no_club_hint": "Não pertence a nenhum clube, por isso será a DivingHQ a analisar este pedido. Se preferir que seja um clube a decidir, peça primeiro para aderir a um.",
+    "you_have": "As suas funções: {roles}",
+    "role_label": "Função",
+    "pick_role": "— Escolha uma função —",
+    "note_label": "Nota para quem analisa (opcional)",
+    "submit": "Enviar pedido",
+    "sending": "A enviar…",
+    "sent": "Pedido enviado",
+    "nothing_left": "Já tem, ou já pediu, todas as funções que pode pedir aqui.",
+    "your_requests": "Os seus pedidos",
+    "status_pending": "Pendente",
+    "status_approved": "Aprovado",
+    "status_rejected": "Recusado"
   }
 }

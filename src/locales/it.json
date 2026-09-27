@@ -1994,5 +1994,24 @@
     "reject": "Respingi",
     "revoke": "Revoca",
     "revoke_body": "{body} non gestisce più {target}, che torna com'era prima della rivendicazione."
+  },
+  "request_role": {
+    "button": "Richiedi un ruolo",
+    "title": "Richiedi un ruolo",
+    "intro_claimed": "Gli amministratori della tua federazione esaminano le richieste di ruolo. Riceverai un'email quando avranno deciso.",
+    "intro_unclaimed": "Finché qui non c'è una federazione, gli amministratori del tuo club esaminano le richieste di tuffatore, giudice e allenatore, e DivingHQ esamina le altre. Riceverai un'email quando avranno deciso.",
+    "no_club_hint": "Non fai parte di nessun club, quindi la richiesta la esaminerà DivingHQ. Se preferisci che decida un club, chiedi prima di entrare in uno.",
+    "you_have": "I tuoi ruoli: {roles}",
+    "role_label": "Ruolo",
+    "pick_role": "— Scegli un ruolo —",
+    "note_label": "Nota per chi esamina (facoltativa)",
+    "submit": "Invia richiesta",
+    "sending": "Invio…",
+    "sent": "Richiesta inviata",
+    "nothing_left": "Hai già, o hai già richiesto, tutti i ruoli che puoi chiedere qui.",
+    "your_requests": "Le tue richieste",
+    "status_pending": "In attesa",
+    "status_approved": "Approvata",
+    "status_rejected": "Rifiutata"
   }
 }

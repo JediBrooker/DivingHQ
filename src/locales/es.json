@@ -1994,5 +1994,24 @@
     "reject": "Rechazar",
     "revoke": "Revocar",
     "revoke_body": "{body} deja de gestionar {target}, que vuelve a como estaba antes de la reclamación."
+  },
+  "request_role": {
+    "button": "Solicitar un rol",
+    "title": "Solicitar un rol",
+    "intro_claimed": "Los administradores de tu federación revisan las solicitudes de rol. Recibirás un correo cuando decidan.",
+    "intro_unclaimed": "Mientras no haya federación aquí, los administradores de tu club revisan las solicitudes de saltador, juez y entrenador, y DivingHQ revisa el resto. Recibirás un correo cuando decidan.",
+    "no_club_hint": "No perteneces a ningún club, así que lo revisará DivingHQ. Si prefieres que decida un club, pide primero unirte a uno.",
+    "you_have": "Tus roles: {roles}",
+    "role_label": "Rol",
+    "pick_role": "— Elige un rol —",
+    "note_label": "Nota para quien lo revise (opcional)",
+    "submit": "Enviar solicitud",
+    "sending": "Enviando…",
+    "sent": "Solicitud enviada",
+    "nothing_left": "Ya tienes, o has solicitado, todos los roles que puedes pedir aquí.",
+    "your_requests": "Tus solicitudes",
+    "status_pending": "En espera",
+    "status_approved": "Aprobada",
+    "status_rejected": "Rechazada"
   }
 }

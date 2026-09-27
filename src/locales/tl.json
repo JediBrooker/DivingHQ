@@ -1994,5 +1994,24 @@
     "reject": "Tanggihan",
     "revoke": "Bawiin",
     "revoke_body": "Hindi na pamamahalaan ng {body} ang {target}, babalik ito sa dati bago ang claim."
+  },
+  "request_role": {
+    "button": "Humiling ng role",
+    "title": "Humiling ng role",
+    "intro_claimed": "Ang mga admin ng iyong federation ang sumusuri sa mga kahilingan sa role. Makakatanggap ka ng email kapag nakapagpasya na sila.",
+    "intro_unclaimed": "Habang wala pang federation dito, ang mga admin ng iyong club ang sumusuri sa mga kahilingan para sa maninisid, hukom at tagasanay, at ang DivingHQ sa iba pa. Makakatanggap ka ng email kapag may desisyon na.",
+    "no_club_hint": "Wala ka sa anumang club, kaya DivingHQ ang susuri nito. Kung mas gusto mong isang club ang magpasya, humiling munang sumali sa isa.",
+    "you_have": "Iyong mga role: {roles}",
+    "role_label": "Role",
+    "pick_role": "— Pumili ng role —",
+    "note_label": "Tala para sa susuri (opsyonal)",
+    "submit": "Ipadala ang kahilingan",
+    "sending": "Ipinapadala…",
+    "sent": "Naipadala ang kahilingan",
+    "nothing_left": "Nasa iyo na, o nahiling mo na, ang lahat ng role na puwedeng hilingin dito.",
+    "your_requests": "Iyong mga kahilingan",
+    "status_pending": "Naghihintay",
+    "status_approved": "Naaprubahan",
+    "status_rejected": "Tinanggihan"
   }
 }

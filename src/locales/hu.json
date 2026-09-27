@@ -1994,5 +1994,24 @@
     "reject": "Elutasítás",
     "revoke": "Visszavonás",
     "revoke_body": "{body} többé nem vezeti ezt: {target}, minden visszaáll az igény előtti állapotra."
+  },
+  "request_role": {
+    "button": "Szerepkör kérése",
+    "title": "Szerepkör kérése",
+    "intro_claimed": "A szerepkör-kérelmeket a szövetsége adminisztrátorai bírálják el. E-mailt kap, amikor döntöttek.",
+    "intro_unclaimed": "Amíg itt nincs szövetség, a műugró, bíró és edző kérelmeket a klubja adminisztrátorai bírálják el, a többit a DivingHQ. E-mailt kap, amikor döntöttek.",
+    "no_club_hint": "Nem tagja egyetlen klubnak sem, ezért ezt a DivingHQ bírálja el. Ha inkább egy klub döntene, előbb kérje a felvételét valamelyikbe.",
+    "you_have": "Az Ön szerepkörei: {roles}",
+    "role_label": "Szerepkör",
+    "pick_role": "— Válasszon szerepkört —",
+    "note_label": "Megjegyzés az elbírálónak (nem kötelező)",
+    "submit": "Kérelem elküldése",
+    "sending": "Küldés…",
+    "sent": "Kérelem elküldve",
+    "nothing_left": "Minden itt kérhető szerepkörrel rendelkezik már, vagy már kérte.",
+    "your_requests": "Az Ön kérelmei",
+    "status_pending": "Függőben",
+    "status_approved": "Jóváhagyva",
+    "status_rejected": "Elutasítva"
   }
 }

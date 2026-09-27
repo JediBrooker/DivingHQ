@@ -1994,5 +1994,24 @@
     "reject": "Ablehnen",
     "revoke": "Widerrufen",
     "revoke_body": "{body} führt {target} nicht mehr, alles wird wie vor dem Anspruch."
+  },
+  "request_role": {
+    "button": "Rolle anfragen",
+    "title": "Rolle anfragen",
+    "intro_claimed": "Die Admins Ihres Verbands prüfen Rollenanfragen. Sie erhalten eine E-Mail, sobald entschieden ist.",
+    "intro_unclaimed": "Solange es hier keinen Verband gibt, prüfen die Admins Ihres Vereins Anfragen für Springer, Kampfrichter und Trainer, alle anderen prüft DivingHQ. Sie erhalten eine E-Mail, sobald entschieden ist.",
+    "no_club_hint": "Sie sind in keinem Verein, daher prüft DivingHQ diese Anfrage. Wenn lieber ein Verein entscheiden soll, beantragen Sie zuerst den Beitritt zu einem.",
+    "you_have": "Ihre Rollen: {roles}",
+    "role_label": "Rolle",
+    "pick_role": "— Rolle auswählen —",
+    "note_label": "Hinweis für die prüfende Person (optional)",
+    "submit": "Anfrage senden",
+    "sending": "Wird gesendet…",
+    "sent": "Anfrage gesendet",
+    "nothing_left": "Sie haben bereits jede Rolle, die Sie hier anfragen können, oder haben sie angefragt.",
+    "your_requests": "Ihre Anfragen",
+    "status_pending": "Ausstehend",
+    "status_approved": "Genehmigt",
+    "status_rejected": "Abgelehnt"
   }
 }

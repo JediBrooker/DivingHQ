@@ -1994,5 +1994,24 @@
     "reject": "Tolak",
     "revoke": "Cabut",
     "revoke_body": "{body} tidak lagi mengelola {target}, semuanya kembali seperti sebelum klaim."
+  },
+  "request_role": {
+    "button": "Minta peran",
+    "title": "Minta peran",
+    "intro_claimed": "Admin federasi Anda meninjau permintaan peran. Anda akan menerima email setelah mereka memutuskan.",
+    "intro_unclaimed": "Selama belum ada federasi di sini, admin klub Anda meninjau permintaan atlet, juri, dan pelatih, sedangkan DivingHQ meninjau sisanya. Anda akan menerima email setelah ada keputusan.",
+    "no_club_hint": "Anda belum tergabung di klub, jadi DivingHQ yang akan meninjau ini. Jika Anda lebih suka klub yang memutuskan, minta bergabung dengan klub terlebih dahulu.",
+    "you_have": "Peran Anda: {roles}",
+    "role_label": "Peran",
+    "pick_role": "— Pilih peran —",
+    "note_label": "Catatan untuk peninjau (opsional)",
+    "submit": "Kirim permintaan",
+    "sending": "Mengirim…",
+    "sent": "Permintaan terkirim",
+    "nothing_left": "Anda sudah memiliki, atau sudah meminta, semua peran yang bisa diminta di sini.",
+    "your_requests": "Permintaan Anda",
+    "status_pending": "Menunggu",
+    "status_approved": "Disetujui",
+    "status_rejected": "Ditolak"
   }
 }

@@ -1994,5 +1994,24 @@
     "reject": "拒绝",
     "revoke": "撤销",
     "revoke_body": "{body} 将不再管理 {target}，一切恢复到申请之前的状态。"
+  },
+  "request_role": {
+    "button": "申请角色",
+    "title": "申请角色",
+    "intro_claimed": "角色申请由您所在协会的管理员审核。审核结果出来后会发邮件通知您。",
+    "intro_unclaimed": "此地尚无协会，因此运动员、裁判和教练的申请由您的俱乐部管理员审核，其他申请由 DivingHQ 审核。有结果后会发邮件通知您。",
+    "no_club_hint": "您尚未加入任何俱乐部，因此将由 DivingHQ 审核此申请。如果希望由俱乐部决定，请先申请加入一个俱乐部。",
+    "you_have": "您的角色：{roles}",
+    "role_label": "角色",
+    "pick_role": "— 选择角色 —",
+    "note_label": "给审核人的备注（可选）",
+    "submit": "发送申请",
+    "sending": "发送中…",
+    "sent": "申请已发送",
+    "nothing_left": "您已拥有或已申请此处可申请的所有角色。",
+    "your_requests": "您的申请",
+    "status_pending": "等待中",
+    "status_approved": "已批准",
+    "status_rejected": "已拒绝"
   }
 }

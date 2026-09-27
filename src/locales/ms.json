@@ -1994,5 +1994,24 @@
     "reject": "Tolak",
     "revoke": "Batalkan",
     "revoke_body": "{body} tidak lagi mengurus {target}, semuanya kembali seperti sebelum tuntutan."
+  },
+  "request_role": {
+    "button": "Minta peranan",
+    "title": "Minta peranan",
+    "intro_claimed": "Pentadbir persekutuan anda menyemak permintaan peranan. Anda akan menerima e-mel apabila mereka membuat keputusan.",
+    "intro_unclaimed": "Selagi belum ada persekutuan di sini, pentadbir kelab anda menyemak permintaan penerjun, hakim dan jurulatih, manakala DivingHQ menyemak yang lain. Anda akan menerima e-mel apabila keputusan dibuat.",
+    "no_club_hint": "Anda tidak berada dalam mana-mana kelab, jadi DivingHQ akan menyemak ini. Jika anda lebih suka kelab yang memutuskan, minta untuk menyertai kelab dahulu.",
+    "you_have": "Peranan anda: {roles}",
+    "role_label": "Peranan",
+    "pick_role": "— Pilih peranan —",
+    "note_label": "Nota untuk penyemak (pilihan)",
+    "submit": "Hantar permintaan",
+    "sending": "Menghantar…",
+    "sent": "Permintaan dihantar",
+    "nothing_left": "Anda sudah mempunyai, atau sudah meminta, semua peranan yang boleh diminta di sini.",
+    "your_requests": "Permintaan anda",
+    "status_pending": "Menunggu",
+    "status_approved": "Diluluskan",
+    "status_rejected": "Ditolak"
   }
 }

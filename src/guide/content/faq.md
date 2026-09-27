@@ -48,6 +48,10 @@ The `EMAIL_FROM` domain must be onboarded to Cloudflare Email Sending.
 
 `APP_BASE_URL` also needs to be set so reset-password links point at the right host.
 
+### "I signed up as a diver, now I want to judge (or coach)"
+
+Open **My Profile** and press **Request a role**. Pick the role, add a note for whoever reviews it if you like, and send. Your federation's admins decide, or where there's no federation on DivingHQ yet, your club's admins (DivingHQ for referee). [Roles & Permissions → Asking for a role](/guide/roles-and-permissions#asking-for-a-role) has the full table.
+
 ## Running a meet
 
 ### "I can't find the Start Event button"

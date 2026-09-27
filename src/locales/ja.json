@@ -1994,5 +1994,24 @@
     "reject": "却下",
     "revoke": "取り消す",
     "revoke_body": "{body} は {target} の運営をやめ、申請前の状態に戻ります。"
+  },
+  "request_role": {
+    "button": "役割を申請",
+    "title": "役割を申請",
+    "intro_claimed": "役割の申請は連盟の管理者が審査します。決定するとメールでお知らせします。",
+    "intro_unclaimed": "この国にはまだ連盟がないため、選手・審判・コーチの申請はクラブの管理者が、それ以外はDivingHQが審査します。決定するとメールでお知らせします。",
+    "no_club_hint": "クラブに所属していないため、この申請はDivingHQが審査します。クラブに判断してほしい場合は、先にクラブへの入会を申請してください。",
+    "you_have": "あなたの役割: {roles}",
+    "role_label": "役割",
+    "pick_role": "— 役割を選択 —",
+    "note_label": "審査する人へのメモ（任意）",
+    "submit": "申請を送信",
+    "sending": "送信中…",
+    "sent": "申請を送信しました",
+    "nothing_left": "ここで申請できる役割はすべて保有済みか申請済みです。",
+    "your_requests": "あなたの申請",
+    "status_pending": "審査待ち",
+    "status_approved": "承認済み",
+    "status_rejected": "却下"
   }
 }

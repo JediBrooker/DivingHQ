@@ -1994,5 +1994,24 @@
     "reject": "Avslå",
     "revoke": "Tilbakekall",
     "revoke_body": "{body} driver ikke lenger {target}, som går tilbake til slik det var før kravet."
+  },
+  "request_role": {
+    "button": "Be om en rolle",
+    "title": "Be om en rolle",
+    "intro_claimed": "Forbundets administratorer vurderer rolleforespørsler. Du får en e-post når de har bestemt seg.",
+    "intro_unclaimed": "Så lenge det ikke finnes et forbund her, vurderer klubbens administratorer forespørsler om stuper, dommer og trener, og DivingHQ vurderer resten. Du får en e-post når det er avgjort.",
+    "no_club_hint": "Du er ikke med i noen klubb, så DivingHQ vurderer dette. Vil du heller at en klubb avgjør, ber du først om å bli med i en.",
+    "you_have": "Dine roller: {roles}",
+    "role_label": "Rolle",
+    "pick_role": "— Velg en rolle —",
+    "note_label": "Merknad til den som vurderer (valgfritt)",
+    "submit": "Send forespørsel",
+    "sending": "Sender…",
+    "sent": "Forespørselen er sendt",
+    "nothing_left": "Du har allerede, eller har bedt om, alle rollene du kan be om her.",
+    "your_requests": "Dine forespørsler",
+    "status_pending": "Venter",
+    "status_approved": "Godkjent",
+    "status_rejected": "Avslått"
   }
 }

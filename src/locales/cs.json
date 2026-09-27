@@ -1994,5 +1994,24 @@
     "reject": "Zamítnout",
     "revoke": "Odvolat",
     "revoke_body": "{body} přestane spravovat {target}, vše se vrátí do stavu před nárokem."
+  },
+  "request_role": {
+    "button": "Požádat o roli",
+    "title": "Požádat o roli",
+    "intro_claimed": "Žádosti o role posuzují správci vaší federace. Až rozhodnou, dostanete e-mail.",
+    "intro_unclaimed": "Dokud tu není federace, žádosti o roli skokana, rozhodčího a trenéra posuzují správci vašeho klubu a ostatní DivingHQ. Až rozhodnou, dostanete e-mail.",
+    "no_club_hint": "Nejste v žádném klubu, takže žádost posoudí DivingHQ. Pokud byste raději, aby rozhodl klub, nejdřív požádejte o vstup do některého z nich.",
+    "you_have": "Vaše role: {roles}",
+    "role_label": "Role",
+    "pick_role": "— Vyberte roli —",
+    "note_label": "Poznámka pro posuzovatele (nepovinné)",
+    "submit": "Odeslat žádost",
+    "sending": "Odesílání…",
+    "sent": "Žádost odeslána",
+    "nothing_left": "Všechny role, o které tu lze požádat, už máte nebo jste o ně požádali.",
+    "your_requests": "Vaše žádosti",
+    "status_pending": "Čeká",
+    "status_approved": "Schváleno",
+    "status_rejected": "Zamítnuto"
   }
 }

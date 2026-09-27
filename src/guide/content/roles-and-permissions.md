@@ -165,3 +165,18 @@ Friends, family, sponsors. Often anonymous — no account, no token. Frequently 
 ## Multiple roles per user
 
 A user can hold more than one `org_role` at the same time — e.g. a person who's a `meet_manager` for one event and a `judge` on the panel of another. The dashboard merges the tiles they have access to. Org admins (and the system administrator) manage role assignments from the **User Manager** drawer (see [Admin Tasks](/guide/admin-tasks)).
+
+## Asking for a role
+
+Everyone starts as a spectator. You can ask for a role when you sign up (diver, coach, judge, referee, or meet manager under a federation), and any time after that from your own profile: open **My Profile** and press **Request a role**. The dialog lists what you can still ask for, what you already hold, and how your earlier requests went.
+
+Who says yes depends on where you are:
+
+| Your country | Diver, judge, coach | Referee | Meet manager |
+|---|---|---|---|
+| Has a federation on DivingHQ | The org admins | The org admins | The org admins |
+| No federation yet (clubs run themselves) | Your club's admins, or its region's if the club has none | DivingHQ | Not requestable: clubs appoint a manager per meet |
+
+A referee can act at any club's meet in the country, which is why a club can't hand it out. Nobody approves their own request for anything but diver, so a club founder asking to coach goes to the region or to DivingHQ. If you're not in a club yet, DivingHQ reviews it; ask to join a club first (Change Club on your profile) if you'd rather your club decided.
+
+You get an email when it's decided. One open request per role at a time, and if a request is turned down you can ask again the next day.

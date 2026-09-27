@@ -1994,5 +1994,24 @@
     "reject": "Reject",
     "revoke": "Revoke",
     "revoke_body": "{body} stops running {target}, and it goes back to how it was before the claim."
+  },
+  "request_role": {
+    "button": "Request a role",
+    "title": "Request a role",
+    "intro_claimed": "Your federation's admins review role requests. You'll get an email when they decide.",
+    "intro_unclaimed": "With no federation here yet, your club's admins review diver, judge and coach requests, and DivingHQ reviews the rest. You'll get an email when they decide.",
+    "no_club_hint": "You're not in a club, so DivingHQ will review this. If you'd rather a club decided, ask to join one first.",
+    "you_have": "Your roles: {roles}",
+    "role_label": "Role",
+    "pick_role": "— Pick a role —",
+    "note_label": "Note for the reviewer (optional)",
+    "submit": "Send request",
+    "sending": "Sending…",
+    "sent": "Request sent",
+    "nothing_left": "You already have, or have asked for, every role you can request here.",
+    "your_requests": "Your requests",
+    "status_pending": "Waiting",
+    "status_approved": "Approved",
+    "status_rejected": "Declined"
   }
 }

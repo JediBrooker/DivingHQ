@@ -1994,5 +1994,24 @@
     "reject": "Afvis",
     "revoke": "Tilbagekald",
     "revoke_body": "{body} driver ikke længere {target}, som vender tilbage til, som det var før kravet."
+  },
+  "request_role": {
+    "button": "Anmod om en rolle",
+    "title": "Anmod om en rolle",
+    "intro_claimed": "Dit forbunds administratorer gennemgår rolleanmodninger. Du får en e-mail, når de har besluttet sig.",
+    "intro_unclaimed": "Så længe der ikke er noget forbund her, gennemgår din klubs administratorer anmodninger om udspringer, dommer og træner, og DivingHQ gennemgår resten. Du får en e-mail, når de har besluttet sig.",
+    "no_club_hint": "Du er ikke i en klub, så DivingHQ gennemgår dette. Hvis du hellere vil have, at en klub beslutter, så bed først om at blive medlem af en.",
+    "you_have": "Dine roller: {roles}",
+    "role_label": "Rolle",
+    "pick_role": "— Vælg en rolle —",
+    "note_label": "Besked til den, der gennemgår (valgfrit)",
+    "submit": "Send anmodning",
+    "sending": "Sender…",
+    "sent": "Anmodning sendt",
+    "nothing_left": "Du har allerede, eller har anmodet om, alle de roller, du kan anmode om her.",
+    "your_requests": "Dine anmodninger",
+    "status_pending": "Venter",
+    "status_approved": "Godkendt",
+    "status_rejected": "Afvist"
   }
 }

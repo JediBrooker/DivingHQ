@@ -11,6 +11,7 @@ import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 // Migration 053 surfaces: self-delete + reunite-on-return.
 import DeleteAccountDialog   from '@/components/DeleteAccountDialog.vue'
 import ClaimCandidatesModal  from '@/components/ClaimCandidatesModal.vue'
+import RequestRoleDialog     from '@/components/RequestRoleDialog.vue'
 // Preferences (own profile): appearance + language, per the redesign.
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
@@ -231,6 +232,8 @@ const clubChoice = ref('')           // selected club_id or ''
 const savingClub = ref(false)
 const saveError = ref('')
 const clubRequestSent = ref(false)    // a join / switch went off as a request
+// Asking for a role after signup (RequestRoleDialog).
+const requestRoleOpen = ref(false)
 
 // Password change state
 const pwEditing  = ref(false)
@@ -329,7 +332,8 @@ const tfaOpen   = ref(false)
 // counter means double-locking is safe.
 useBodyScrollLock().lockWhile(computed(() =>
   customizing.value || editing.value ||
-  pwEditing.value || emEditing.value || tfaOpen.value
+  pwEditing.value || emEditing.value || tfaOpen.value ||
+  requestRoleOpen.value
 ))
 const tfaStage  = ref('idle')               // idle | setup | disable
 const tfaStatus = ref(null)                  // { enabled, recovery_codes_remaining }
@@ -737,6 +741,10 @@ function onClaimed() {
         <button v-if="profile && isSelf" class="btn btn-ghost btn-sm" @click="openClubEditor">
           Change Club
         </button>
+        <button v-if="profile && isSelf" class="btn btn-ghost btn-sm" data-test-id="request-role-button"
+                @click="requestRoleOpen = true">
+          {{ $t('request_role.button') }}
+        </button>
         <button v-if="profile && isSelf" class="btn btn-ghost btn-sm" @click="openEmailEditor">
           Change Email
         </button>
@@ -902,6 +910,12 @@ function onClaimed() {
     v-if="deleteOpen"
     @close="deleteOpen = false"
     @deleted="onAccountDeleted"
+  />
+
+  <RequestRoleDialog
+    v-if="requestRoleOpen"
+    :has-club="!!profile?.diver?.club_id"
+    @close="requestRoleOpen = false"
   />
 
   <ClaimCandidatesModal

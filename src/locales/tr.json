@@ -1994,5 +1994,24 @@
     "reject": "Reddet",
     "revoke": "İptal et",
     "revoke_body": "{body} artık {target} yönetmiyor, her şey talepten önceki haline döner."
+  },
+  "request_role": {
+    "button": "Rol talep et",
+    "title": "Rol talep et",
+    "intro_claimed": "Rol taleplerini federasyonunuzun yöneticileri inceler. Karar verildiğinde e-posta alırsınız.",
+    "intro_unclaimed": "Burada henüz federasyon olmadığından atlayıcı, hakem ve antrenör taleplerini kulübünüzün yöneticileri, diğerlerini DivingHQ inceler. Karar verildiğinde e-posta alırsınız.",
+    "no_club_hint": "Bir kulübe üye değilsiniz, bu yüzden bunu DivingHQ inceleyecek. Kararı bir kulübün vermesini tercih ederseniz önce bir kulübe katılmak için talepte bulunun.",
+    "you_have": "Rolleriniz: {roles}",
+    "role_label": "Rol",
+    "pick_role": "— Bir rol seçin —",
+    "note_label": "İnceleyen kişiye not (isteğe bağlı)",
+    "submit": "Talebi gönder",
+    "sending": "Gönderiliyor…",
+    "sent": "Talep gönderildi",
+    "nothing_left": "Burada talep edebileceğiniz tüm rollere zaten sahipsiniz ya da talep ettiniz.",
+    "your_requests": "Talepleriniz",
+    "status_pending": "Bekliyor",
+    "status_approved": "Onaylandı",
+    "status_rejected": "Reddedildi"
   }
 }

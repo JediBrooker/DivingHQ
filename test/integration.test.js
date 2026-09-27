@@ -2114,3 +2114,94 @@ test("coach: requestable at signup, a club grants it, a founder can't grant it t
     await claimKit.wipe(CODE);
   }
 });
+
+test("request a role after signup: routed like signup, one pending per role, a decline can be asked again later", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "GRD";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  try {
+    // Under a federation: a diver who now wants to judge.
+    const username = `int-rr-${crypto.randomBytes(4).toString("hex")}`;
+    const dId = (await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+       VALUES ($1, $2, $1, $3, now()) RETURNING id`,
+      [username, await bcrypt.hash(TEST_PASSWORD, 4), state.orgId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'diver')", [dId, state.orgId]);
+    const D = await claimKit.login(username);
+
+    // Signed-out is refused (by the CSRF gate or verifyToken, whichever runs first).
+    assert.ok([401, 403].includes((await fetchJson("POST", "/api/role-requests", { body: { role: "judge" } })).status));
+    const mine = await fetchJson("GET", "/api/role-requests/mine", { token: D.token });
+    assert.equal(mine.status, 200);
+    assert.equal(mine.body.claim_state, "claimed");
+    assert.ok(mine.body.requestable.includes("meet_manager"));
+    assert.ok(mine.body.held.includes("diver"));
+
+    for (const [role, status, code] of [
+      ["org_admin", 400, "role_not_requestable"],
+      ["spectator", 400, "role_not_requestable"],
+      ["diver", 409, "already_held"],
+    ]) {
+      const r = await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role } });
+      assert.equal(r.status, status, `${role}: ${JSON.stringify(r.body)}`);
+      assert.equal(r.body.code, code);
+    }
+    const ask = await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role: "judge", note: "Level 2\u0007 judge" } });
+    assert.equal(ask.status, 201, JSON.stringify(ask.body));
+    assert.equal(ask.body.note, "Level 2  judge");
+    assert.equal((await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role: "judge" } })).body.code, "already_pending");
+
+    // The org admin sees it where signup's requests land, and says no.
+    const list = (await fetchJson("GET", "/api/role-requests", { token: state.adminToken })).body;
+    assert.ok(list.some((r) => r.id === ask.body.id));
+    const decide = (id, decision) => fetchJson("POST", `/api/role-requests/${id}/review`, {
+      token: state.adminToken, body: { decision },
+    });
+    assert.equal((await decide(ask.body.id, "rejected")).status, 200);
+
+    // Not straight back in, but the next day is fine. Turning down a
+    // second one used to trip the old UNIQUE(..., status) and 500.
+    assert.equal((await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role: "judge" } })).body.code, "recently_declined");
+    await pool.query("UPDATE role_requests SET reviewed_at = now() - interval '25 hours' WHERE id = $1", [ask.body.id]);
+    const again = await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role: "judge" } });
+    assert.equal(again.status, 201, JSON.stringify(again.body));
+    assert.equal((await decide(again.body.id, "rejected")).status, 200);
+    await pool.query("UPDATE role_requests SET reviewed_at = now() - interval '25 hours' WHERE user_id = $1", [dId]);
+    const third = await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role: "judge" } });
+    assert.equal((await decide(third.body.id, "approved")).status, 200);
+    // Approval bumps token_version, so sign in again to read it back.
+    const D2 = await claimKit.login(username);
+    const history = (await fetchJson("GET", "/api/role-requests/mine", { token: D2.token })).body;
+    assert.deepEqual(history.requests.map((r) => r.status), ["approved", "rejected", "rejected"]);
+    assert.ok(history.held.includes("judge"));
+
+    // Where there's no federation: the club decides judge, DivingHQ
+    // referee, and org-wide meet manager isn't on offer at all.
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "St George's Divers" });
+    const M = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
+    const mMine = (await fetchJson("GET", "/api/role-requests/mine", { token: M.token })).body;
+    assert.equal(mMine.claim_state, "unclaimed");
+    assert.ok(!mMine.requestable.includes("meet_manager"));
+    assert.equal((await fetchJson("POST", "/api/role-requests", { token: M.token, body: { role: "meet_manager" } })).status, 400);
+    const j = await fetchJson("POST", "/api/role-requests", { token: M.token, body: { role: "judge" } });
+    const ref = await fetchJson("POST", "/api/role-requests", { token: M.token, body: { role: "referee" } });
+    assert.equal(j.status, 201);
+    assert.equal(ref.status, 201);
+    const aList = (await fetchJson("GET", "/api/role-requests", { token: A.token })).body;
+    assert.ok(aList.some((r) => r.id === j.body.id));
+    assert.ok(!aList.some((r) => r.id === ref.body.id));
+    assert.equal((await fetchJson("POST", `/api/role-requests/${j.body.id}/review`, {
+      token: A.token, body: { decision: "approved" },
+    })).status, 200);
+
+    // Platform staff have nothing to ask for.
+    const sys = await claimKit.login("admin", "admin");
+    assert.deepEqual((await fetchJson("GET", "/api/role-requests/mine", { token: sys.token })).body.requestable, []);
+  } finally {
+    await teardownFixture(state);
+    await claimKit.wipe(CODE);
+  }
+});

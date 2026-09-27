@@ -60,6 +60,20 @@
  */
 
 /**
+ * @typedef {Object} MyRoleRequests
+ * GET /api/role-requests/mine, for the "Request a role" dialog on your
+ * own profile. POST /api/role-requests answers 201 with one `requests`
+ * row, or 400 role_not_requestable / 409 already_held, already_pending,
+ * recently_declined.
+ *
+ * @property {?('claimed'|'unclaimed')} claim_state  your org's
+ * @property {string[]} requestable  roles your org lets you ask for (no meet_manager where unclaimed, nothing in the Administration org)
+ * @property {string[]} held         roles you already have in your org, spectator included
+ * @property {{id: string, requested_role: string, status: 'pending'|'approved'|'rejected', note: ?string, created_at: string, reviewed_at: ?string}[]} requests
+ *   your 20 most recent, newest first
+ */
+
+/**
  * @typedef {Object} DiverSummary
  * The lightweight diver row returned from the cross-org search and
  * browse endpoints. Used for autocomplete + filterable lists.

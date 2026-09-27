@@ -1994,5 +1994,24 @@
     "reject": "Odrzuć",
     "revoke": "Cofnij",
     "revoke_body": "{body} przestaje prowadzić {target}, wszystko wraca do stanu sprzed roszczenia."
+  },
+  "request_role": {
+    "button": "Poproś o rolę",
+    "title": "Poproś o rolę",
+    "intro_claimed": "Prośby o role rozpatrują administratorzy twojej federacji. Dostaniesz e-mail, gdy podejmą decyzję.",
+    "intro_unclaimed": "Dopóki nie ma tu federacji, prośby o rolę skoczka, sędziego i trenera rozpatrują administratorzy twojego klubu, a pozostałe DivingHQ. Dostaniesz e-mail, gdy zapadnie decyzja.",
+    "no_club_hint": "Nie należysz do żadnego klubu, więc rozpatrzy to DivingHQ. Jeśli wolisz, by zdecydował klub, najpierw poproś o dołączenie do jakiegoś.",
+    "you_have": "Twoje role: {roles}",
+    "role_label": "Rola",
+    "pick_role": "— Wybierz rolę —",
+    "note_label": "Uwaga dla rozpatrującego (opcjonalnie)",
+    "submit": "Wyślij prośbę",
+    "sending": "Wysyłanie…",
+    "sent": "Prośba wysłana",
+    "nothing_left": "Masz już lub poprosiłeś o każdą rolę, o którą można tu poprosić.",
+    "your_requests": "Twoje prośby",
+    "status_pending": "Oczekuje",
+    "status_approved": "Zatwierdzona",
+    "status_rejected": "Odrzucona"
   }
 }

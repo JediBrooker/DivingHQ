@@ -1994,5 +1994,24 @@
     "reject": "Odbij",
     "revoke": "Opozovi",
     "revoke_body": "{body} više ne vodi {target}, sve se vraća kako je bilo prije zahtjeva."
+  },
+  "request_role": {
+    "button": "Zatraži ulogu",
+    "title": "Zatraži ulogu",
+    "intro_claimed": "Zahtjeve za uloge pregledavaju administratori vašeg saveza. Dobit ćete e-poruku kad odluče.",
+    "intro_unclaimed": "Dok ovdje nema saveza, zahtjeve za skakača, suca i trenera pregledavaju administratori vašeg kluba, a ostale DivingHQ. Dobit ćete e-poruku kad odluče.",
+    "no_club_hint": "Niste ni u jednom klubu pa će ovo pregledati DivingHQ. Ako biste radije da odluči klub, najprije zatražite učlanjenje u neki.",
+    "you_have": "Vaše uloge: {roles}",
+    "role_label": "Uloga",
+    "pick_role": "— Odaberite ulogu —",
+    "note_label": "Napomena za onoga tko pregledava (neobavezno)",
+    "submit": "Pošalji zahtjev",
+    "sending": "Slanje…",
+    "sent": "Zahtjev je poslan",
+    "nothing_left": "Već imate, ili ste zatražili, svaku ulogu koju ovdje možete zatražiti.",
+    "your_requests": "Vaši zahtjevi",
+    "status_pending": "Na čekanju",
+    "status_approved": "Odobreno",
+    "status_rejected": "Odbijeno"
   }
 }

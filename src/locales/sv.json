@@ -1994,5 +1994,24 @@
     "reject": "Avslå",
     "revoke": "Återkalla",
     "revoke_body": "{body} driver inte längre {target}, som återgår till hur det var före anspråket."
+  },
+  "request_role": {
+    "button": "Begär en roll",
+    "title": "Begär en roll",
+    "intro_claimed": "Förbundets administratörer granskar rollförfrågningar. Du får ett mejl när de har bestämt sig.",
+    "intro_unclaimed": "Så länge det inte finns något förbund här granskar din klubbs administratörer förfrågningar om hoppare, domare och tränare, och DivingHQ granskar resten. Du får ett mejl när det är avgjort.",
+    "no_club_hint": "Du är inte med i någon klubb, så DivingHQ granskar det här. Vill du hellre att en klubb avgör ber du först om att få gå med i en.",
+    "you_have": "Dina roller: {roles}",
+    "role_label": "Roll",
+    "pick_role": "— Välj en roll —",
+    "note_label": "Meddelande till den som granskar (valfritt)",
+    "submit": "Skicka förfrågan",
+    "sending": "Skickar…",
+    "sent": "Förfrågan skickad",
+    "nothing_left": "Du har redan, eller har begärt, alla roller du kan begära här.",
+    "your_requests": "Dina förfrågningar",
+    "status_pending": "Väntar",
+    "status_approved": "Godkänd",
+    "status_rejected": "Avslagen"
   }
 }
