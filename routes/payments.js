@@ -3,9 +3,10 @@
 // Fee configuration, diver/member/club checkout, refunds, and the payout
 // ledger. Every charge lands on the PLATFORM's own Stripe account (PR #94
 // retired the earlier Connect direct-charge model); who is owed what is
-// tracked in our own ledger (lib/payout-ledger.js) and paid out by the
-// platform operator via the /api/admin/payouts back-office below. See
-// migration 075 and lib/stripe.js for the fund-flow model and
+// tracked in our own ledger (lib/payout-ledger.js) and paid out as Stripe
+// Connect transfers to each federation's or club's recipient account
+// (PR #105). /api/admin/payouts below is the operator's read-only view of
+// that. See migration 075 and lib/stripe.js for the fund-flow model and
 // lib/fee-pricing.js for the price + fee math.
 //
 // Factory pattern (matches the other route modules). The Stripe webhook
@@ -451,8 +452,9 @@ module.exports = function createPaymentsRouter({
   }
 
   // Shared checkout core. Resolves the price for the payer, records a
-  // pending payment, and opens a Checkout Session on the federation's
-  // connected account. An optional `surchargeCents` (the late-entry fee)
+  // pending payment, and opens a Checkout Session on the platform account
+  // (the money is owed to the federation in our ledger). An optional
+  // `surchargeCents` (the late-entry fee)
   // is added to the resolved base price before the platform-fee math, so
   // the whole charge (base + surcharge) flows through one payment and
   // DivingHQ's cut applies to the total. Returns { url, paymentId } or throws.
@@ -566,8 +568,8 @@ module.exports = function createPaymentsRouter({
   // Club-payer checkout core. A CLUB (not an individual) pays the
   // federation an affiliation/accreditation fee. payer_type='club' with
   // no payer_user_id, so this can't reuse startCheckout (which is the
-  // member-aware individual path). The connected account is still the
-  // federation's, the club pays the federation and DivingHQ skims its cut.
+  // member-aware individual path). The platform collects it and the ledger
+  // owes the federation, less DivingHQ's cut.
   async function startClubCheckout({ req, org, club, fee, prices, kind }) {
     const chosen = resolvePrice(prices, { isMember: false });
     if (!chosen) {
@@ -663,7 +665,7 @@ module.exports = function createPaymentsRouter({
   // Official self-pays the federation for a role accreditation. payer_type
   // 'official_role' carries the role on the payment (payer_role_type), and the
   // one-live-official index blocks a second live payment for the same
-  // user+role+fee. Connected account is the federation's.
+  // user+role+fee. The ledger owes it to the federation.
   async function startOfficialCheckout({ req, org, fee, prices, roleType }) {
     const userId = req.user.id;
     const chosen = resolvePrice(prices, { isMember: false });
@@ -869,10 +871,11 @@ module.exports = function createPaymentsRouter({
   }
 
   // ---- Payout setup (platform is merchant of record) --------------
-  // Federations/clubs don't onboard with Stripe. They give us payout bank
-  // details; the platform collects on its own account and pays them out. The
-  // balance owed = net (amount - our 15%) of their paid payments, minus what
-  // we've already paid out.
+  // The platform collects on its own account; federations and clubs get
+  // paid by Connect transfer to a receive-only Stripe account they set up
+  // once through hosted onboarding (bank details stay at Stripe). The
+  // balance owed = net (amount - the platform fee) of their paid payments,
+  // minus what's already been withdrawn.
 
   // Payout status + balance owed for a federation. Refreshes the cached
   // Connect readiness flag from Stripe so the UI reflects onboarding
@@ -2530,8 +2533,8 @@ module.exports = function createPaymentsRouter({
   });
 
   // A club admin pays the federation's affiliation/accreditation fee on
-  // behalf of the club. payer_type='club'; the connected account is the
-  // federation's.
+  // behalf of the club. payer_type='club'; the ledger owes it to the
+  // federation.
   router.post("/api/clubs/:id/affiliation/checkout", requireClubAdmin(), async (req, res) => {
     if (!ensurePayments(res)) return;
     const clubId = req.params.id;

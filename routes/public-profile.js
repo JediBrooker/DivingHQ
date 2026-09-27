@@ -10,7 +10,8 @@
 //       to the SPA's index.html.
 //
 //   GET /api/public/divers/:public_slug/og-card.png
-//       (left as a TODO, static fallback used for now)
+//       per-diver og:image, rendered with sharp and cached for
+//       an hour
 //
 // Permission model: completely public. The profile shows only
 // data already visible on the live scoreboard / archive: name,

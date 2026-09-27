@@ -1,8 +1,8 @@
-// Results archive: public listing of every Live or Completed
-// event across the platform. Powers the unified Scoreboard
-// "browse all meets" page and the per-event recap.
+// Results archive: public listing of every Live, Upcoming or
+// Completed event across the platform. Powers the unified
+// Scoreboard "browse all meets" page and the per-event recap.
 //
-//   GET /api/archive                 list (Live + Completed)
+//   GET /api/archive                 list (Live + Upcoming + Completed)
 //   GET /api/archive/clubs           distinct clubs in the archive
 //   GET /api/archive/:eventId/results  per-event recap payload
 //

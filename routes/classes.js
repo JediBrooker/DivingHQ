@@ -8,9 +8,11 @@
 //     own club's classes. They never see anyone else's enrolment.
 //
 // Pricing is flexible: each class has price OPTIONS a diver picks from; the
-// club may apply a manual per-enrolment discount. Enrolment PAYMENT + club
-// payouts arrive in a later change; here enrolment is the roster model and
-// works while payments are dormant.
+// club may apply a manual per-enrolment discount. A diver (or their
+// guardian) pays for a pending enrolment through the checkout below; that
+// money is owed to the CLUB (recipient_type 'club') and paid out to the
+// club's own Stripe recipient account. With payments switched off,
+// enrolment still works as a plain roster.
 //
 // Mounted via:
 //   app.use(require('./routes/classes')({ pool, verifyToken, requireClubAdminOnly, logger }))
