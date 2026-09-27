@@ -10,8 +10,8 @@
 //     Edit meet not mounting (or fetching) the federation-only fee panels
 //   * the check-inbox panel's resend cooldown after signing up
 //   * with the payments flag off: no fee panels, no Billing column, no
-//     Payments / Classes guide pages (the flag is faked per page, since
-//     the e2e server forces payments on)
+//     payouts in the club admin blurb, no Payments / Classes guide pages
+//     (the flag is faked per page, since the e2e server forces payments on)
 //
 // The API rules behind these are in test/integration.test.js.
 
@@ -227,6 +227,13 @@ test("with payments off an org admin sees no fee panels, billing or payment guid
     await expect(page.locator("th", { hasText: "Billing" })).toHaveCount(0);
     await expect(page.locator(".billing-note")).toHaveCount(0);
     await expect(page.locator(".affil-pill")).toHaveCount(0);
+    // Appointing a club admin doesn't promise them payouts or classes.
+    await page.locator("tr", { hasText: "Dark Payments Club" }).getByRole("button", { name: "Admins" }).click();
+    const adminsDialog = page.getByRole("dialog");
+    await expect(adminsDialog).toContainText("Club admins run the meets their club hosts.");
+    await expect(adminsDialog).not.toContainText(/payouts|classes/);
+    await page.keyboard.press("Escape");
+    await expect(adminsDialog).toHaveCount(0);
 
     await page.goto("/manager");
     await page.locator(".mgr-acc-header", { hasText: "Dark Payments Meet" }).click();
@@ -265,6 +272,9 @@ test("with payments on an org admin still gets the fee panels and billing column
     await page.goto("/clubs");
     await expect(page.getByText("Live Payments Club")).toBeVisible();
     await expect(page.locator("th", { hasText: "Billing" })).toBeVisible();
+    await page.locator("tr", { hasText: "Live Payments Club" }).getByRole("button", { name: "Admins" }).click();
+    await expect(page.getByRole("dialog")).toContainText("plus its classes and its payouts and affiliation payments");
+    await page.keyboard.press("Escape");
 
     await page.goto("/manager");
     await page.locator(".mgr-acc-header", { hasText: "Live Payments Meet" }).click();

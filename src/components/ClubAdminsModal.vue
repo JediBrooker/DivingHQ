@@ -1,13 +1,15 @@
 <script setup>
-// Who admins a club. Club admins are the people who run a club's
-// classes, its Stripe payouts and its affiliation payments, and before
-// this dialog there was no way to appoint one outside the database.
+// Who admins a club. Club admins run the meets their club hosts, and
+// its classes, Stripe payouts and affiliation payments where those are
+// switched on. Before this dialog there was no way to appoint one
+// outside the database.
 // Opened from the Clubs screen by the federation's org_admin (or a
 // sysadmin); the server enforces the same rule.
 import { ref, computed, onMounted } from 'vue'
 import BaseModal from '@/components/BaseModal.vue'
 import ModalHeader from '@/components/control/ModalHeader.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useFeaturesStore } from '@/stores/features'
 import { showError } from '@/composables/useNotify'
 
 const props = defineProps({
@@ -16,6 +18,20 @@ const props = defineProps({
 defineEmits(['close'])
 
 const auth = useAuthStore()
+
+// What the job involves. Hosting the club's own meets always is; classes
+// and the money side only while those areas are switched on, otherwise
+// we'd be describing screens the new admin can't find.
+const features = useFeaturesStore()
+const duties = computed(() => {
+  const extra = [
+    features.classes && 'its classes',
+    features.payments && 'its payouts and affiliation payments',
+  ].filter(Boolean)
+  return extra.length
+    ? `Club admins run the meets their club hosts, plus ${extra.join(' and ')}.`
+    : 'Club admins run the meets their club hosts.'
+})
 const admins = ref([])
 const members = ref([])
 const loading = ref(true)
@@ -79,7 +95,7 @@ onMounted(load)
       <ModalHeader :title-id="titleId" title="Club admins" :subtitle="club.name" @close="$emit('close')" />
       <div class="lb-body">
         <p class="hint-line intro">
-          Club admins run the club's classes, payouts and affiliation payments.
+          {{ duties }}
           They don't get any federation-wide access.
         </p>
 
