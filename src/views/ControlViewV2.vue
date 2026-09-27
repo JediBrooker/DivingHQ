@@ -8,7 +8,7 @@
 // controllers + meet-day tools; the mode gets chosen by the shared
 // useControlStage derivation. Same /control URL, ?event= deep-link, role
 // gate + AppShell as before.
-import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick, defineAsyncComponent } from 'vue'
 import { useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useClubScope, CONTROL_ROOM_ROLES } from '@/composables/useClubScope'
@@ -18,7 +18,14 @@ import SetupStage from '@/components/control/SetupStage.vue'
 import ReviewStage from '@/components/control/ReviewStage.vue'
 import LivePoolCard from '@/components/control/LivePoolCard.vue'
 import ScoreCorrectionModal from '@/components/control/ScoreCorrectionModal.vue'
-import DrawerPanel from '@/components/control/DrawerPanel.vue'
+// The Tools drawer (broadcast chooser, overlay picker, sponsors, reserves,
+// audit) only mounts on a click and needs the network to do anything, so
+// it's split into its own chunk rather than riding along on every live
+// board load. It's about half of this view's JS and CSS. The meet-day
+// modals (score correction, check-in, draw, sign-off) stay static on
+// purpose: a Control Room tab lives for hours, and a chunk that went
+// missing after a deploy would make those buttons silently do nothing.
+const DrawerPanel = defineAsyncComponent(() => import('@/components/control/DrawerPanel.vue'))
 import EmptyState from '@/components/EmptyState.vue'
 import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
