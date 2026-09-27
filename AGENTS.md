@@ -300,7 +300,7 @@ above it.
 | "Does this person run this event?" (event_managers row, or admin of the club / region hosting its meet, or of the host club's region) | `isEventDelegate(eventId, userId)` | `lib/middleware.js` |
 | Role gate that also lets the event's delegates in | `requireRoleOrEventDelegate(roles, eventIdOf)` | `lib/middleware.js` |
 | Meet routes open to club admins (then pin with `isMeetHostAdmin`) | `requireMeetEditorOrClubAdmin` / server.js `requireMeetOrClubEditor` | `lib/middleware.js` |
-| Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForClubAdmin` / `clubAdminCanReview` / `reviewersFor` | `lib/role-requests.js` |
+| Who reviews a role request (federation vs club-first) | `listForOrgAdmin` / `listForDelegate` / `delegateCanReview` / `reviewersFor` | `lib/role-requests.js` |
 | Narrow a meet screen to a club admin's own meets (pass the org roles the screen admits on its own, e.g. `CONTROL_ROOM_ROLES`, so a referee who also admins a club isn't narrowed) | `useClubScope(screenRoles)` | `src/composables/useClubScope.js` + `club-scope-core.js` |
 | Count-aware UI string (`counts.<base>_zero` … `_other`, one key per CLDR category; locale values can't use vue-i18n's `\|` plurals) | `usePlural().tn(base, n)` | `src/composables/usePlural.js` + `src/lib/plural.js` |
 | "Couldn't load this" + Try again, for a failed fetch that must not read as an empty list or a permission refusal | `<LoadError @retry>` | `src/components/LoadError.vue` |
