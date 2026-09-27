@@ -846,9 +846,6 @@ onBeforeUnmount(() => observer?.disconnect())
   margin-top: 1rem;
 }
 
-/* Narrow viewports: collapse the TOC into a horizontal scroll
-   strip pinned above the content. The strip is still sticky
-   but slimmer, and the link spacing turns horizontal. */
 .guide-footer {
   display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem;
   margin-top: 3rem; padding-top: 1.25rem;
@@ -859,6 +856,9 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 .guide-footer a:hover { color: var(--accent); }
 
+/* Narrow viewports: collapse the TOC into a horizontal scroll
+   strip pinned above the content. The strip is still sticky
+   but slimmer, and the link spacing turns horizontal. */
 @media (max-width: 860px) {
   .guide-shell {
     grid-template-columns: 1fr;

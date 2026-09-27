@@ -34,9 +34,12 @@ watch([slug, () => route.hash], ([newSlug, hash], old) => nextTick(() => {
 
 // The route only knows it's "User Guide"; the tab should say which topic.
 // flush 'post' so this lands after the router's own title hook, which also
-// re-runs on a language switch.
+// re-runs on a language switch. fullPath is in the list because a jump to a
+// heading (or Back from one) is a navigation too: the hook resets the title
+// while the topic stays the same, so watching the topic alone left the tab
+// saying "User Guide".
 const { locale } = useI18n()
-watch([topic, locale], ([t]) => {
+watch([topic, locale, () => route.fullPath], ([t]) => {
   if (t) setPageTitle(t.title)
 }, { immediate: true, flush: 'post' })
 </script>

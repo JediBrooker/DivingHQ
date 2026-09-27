@@ -127,6 +127,20 @@ test.describe("titles and link previews", () => {
     await expect(page).toHaveTitle("Quick Start · DivingHQ");
   });
 
+  // Jumping to a heading, or Back from one, is a navigation too, so the
+  // router's afterEach fires with the route's generic "User Guide" title.
+  // The topic has to put its own name back each time.
+  test("a guide topic keeps its title when you jump to a heading and back", async ({ page }) => {
+    await page.goto("/guide/faq");
+    await expect(page).toHaveTitle("FAQ & Troubleshooting · DivingHQ");
+    await page.locator(".md-article a[href='#authentication']").first().click();
+    await expect(page).toHaveURL(/#authentication$/);
+    await expect(page).toHaveTitle("FAQ & Troubleshooting · DivingHQ");
+    await page.goBack();
+    await expect(page).toHaveURL(/\/guide\/faq$/);
+    await expect(page).toHaveTitle("FAQ & Troubleshooting · DivingHQ");
+  });
+
   test("titles follow the language", async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem("locale", "de"));
     await page.goto("/login");
