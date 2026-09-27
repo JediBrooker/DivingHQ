@@ -52,7 +52,6 @@ const { Pool } = require("pg");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
-const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const rateLimit = require("express-rate-limit");
 const { limitRoutes } = require("./lib/scoped-limiter");
@@ -170,8 +169,8 @@ app.use((req, res, next) =>
   req.path === "/webhooks/stripe" ? next() : jsonBodyParser(req, res, next),
 );
 
-// Migration 052: server-side i18n. Attaches req.t + req.locale so
-// any downstream handler can produce localized error messages,
+// Migration 052: server-side i18n. Attaches req.t so any
+// downstream handler can produce localized error messages,
 // email subjects, and PDF column headers. Resolution order:
 //   1. req.user.locale  (decoded by verifyToken further down the chain)
 //   2. Accept-Language header
@@ -445,7 +444,6 @@ const {
   isValidScore,
   parseDateRange,
   bumpTokenVersion,
-  invalidateTokenVersion,
   isTokenVersionCurrent,
   loadEventForEntries,
   requireTotpForPrivilegedRoles,
