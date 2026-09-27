@@ -5804,8 +5804,13 @@ test("club approval: rejecting deletes the club and can move its founder into an
     assert.equal(login.pending_club, null);
     const told = await approvalKit.notices(B.id, "club_decision");
     assert.match(told[0].title, /didn't approve Monte Carlo Divers/);
-    // Nothing left to decide.
-    assert.equal((await fetchJson("POST", `/api/clubs/${B.clubId}/reject`, { token: fx.adminToken, body: {} })).status, 404);
+    // Nothing left to decide, and the federation is told that rather than
+    // "not found". Another org's admin still just gets not found.
+    const redo = await fetchJson("POST", `/api/clubs/${B.clubId}/reject`, { token: fx.adminToken, body: {} });
+    assert.equal(redo.status, 409, JSON.stringify(redo.body));
+    assert.equal(redo.body.code, "club_not_pending");
+    assert.equal((await fetchJson("POST", `/api/clubs/${B.clubId}/approve`, { token: fx.adminToken, body: {} })).status, 409);
+    assert.equal((await fetchJson("POST", `/api/clubs/${B.clubId}/approve`, { token: other.adminToken, body: {} })).status, 404);
   } finally {
     await claimKit.wipe(CODE);
     await pool.query("DELETE FROM clubs WHERE org_id = $1", [other.orgId]).catch(() => {});
@@ -5941,6 +5946,64 @@ test("club approval: unclaimed countries are unchanged, and a revoked claim lets
     assert.equal(act.metadata.via, "claim_revoked");
     // And new clubs join straight away again.
     assert.equal((await approvalKit.signUp(CODE, "Turkmenbashi Divers")).res.club_status, "active");
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("club approval: whoever loses a race to decide is told it's decided, whichever way it went", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  // The earlier race test fires both at once and takes whatever order the
+  // server picks. Here the order is pinned: something else holds the row,
+  // the first decision queues on it, then the second, then it's let go.
+  // A reject deletes the row, so the one queued behind it used to come
+  // back 404 instead of 409.
+  const CODE = "GNB";
+  await claimKit.wipe(CODE);
+  try {
+    const fx = await approvalKit.federation(CODE);
+    const second = await approvalKit.member(fx.orgId, "org_admin");
+    const waiting = async (n) => {
+      for (let i = 0; i < 100; i++) {
+        const r = await pool.query(
+          `SELECT count(*)::int AS n FROM pg_stat_activity
+            WHERE datname = current_database() AND wait_event_type = 'Lock'
+              AND query LIKE '%FOR UPDATE OF c%'`,
+        );
+        if (r.rows[0].n >= n) return;
+        await new Promise((res) => setTimeout(res, 20));
+      }
+      throw new Error(`never saw ${n} decisions queued on the lock`);
+    };
+    const race = async (clubId, first, then) => {
+      const holder = await pool.connect();
+      try {
+        await holder.query("BEGIN");
+        await holder.query("SELECT 1 FROM clubs WHERE id = $1 FOR UPDATE", [clubId]);
+        const a = fetchJson("POST", `/api/clubs/${clubId}/${first}`, { token: fx.adminToken, body: {} });
+        await waiting(1);
+        const b = fetchJson("POST", `/api/clubs/${clubId}/${then}`, { token: second.token, body: {} });
+        await waiting(2);
+        await holder.query("ROLLBACK");
+        return [await a, await b];
+      } finally {
+        holder.release();
+      }
+    };
+
+    const A = await approvalKit.signUp(CODE, "Bissau Divers", {}, { verify: true });
+    const [rejected, lateApprove] = await race(A.clubId, "reject", "approve");
+    assert.equal(rejected.status, 200, JSON.stringify(rejected.body));
+    assert.equal(lateApprove.status, 409, JSON.stringify(lateApprove.body));
+    assert.equal(lateApprove.body.code, "club_not_pending");
+    assert.equal(await approvalKit.club(A.clubId), undefined);
+
+    const B = await approvalKit.signUp(CODE, "Bafata Divers", {}, { verify: true });
+    const [approved, lateReject] = await race(B.clubId, "approve", "reject");
+    assert.equal(approved.status, 200, JSON.stringify(approved.body));
+    assert.equal(lateReject.status, 409, JSON.stringify(lateReject.body));
+    assert.equal((await approvalKit.club(B.clubId)).status, "active", "the late reject didn't delete it");
   } finally {
     await claimKit.wipe(CODE);
   }
