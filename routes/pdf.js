@@ -27,29 +27,9 @@ const PDFDocument = require("pdfkit");
 const { t: serverTranslate } = require("../lib/server-i18n");
 const { perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte } = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
-
-// CSV escaping + spreadsheet-formula-injection guard.
-//
-// RFC 4180 quoting handles commas, quotes, newlines. The
-// leading-character guard handles the Excel/Google Sheets
-// "if the cell starts with =, +, -, @, tab, or CR, evaluate
-// it as a formula" foot-gun. A diver registering with
-// full_name = "=cmd|'/c calc'!A0" would otherwise execute on
-// every operator's machine when they open the exported CSV.
-// Prepending a single quote forces Excel to treat the cell as
-// literal text; the apostrophe doesn't render in the cell but
-// is still valid CSV.
-function csvCell(s) {
-  if (s == null) return "";
-  let text = String(s);
-  const dangerous = /^[=+\-@\t\r]/.test(text);
-  if (dangerous) text = "'" + text;
-  if (/[",\n\r]/.test(text) || dangerous) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
-}
-function csvRow(cells) { return cells.map(csvCell).join(",") + "\n"; }
+// RFC 4180 quoting plus the spreadsheet formula-injection guard, see
+// lib/csv.js.
+const { csvRow, slugify } = require("../lib/csv");
 
 module.exports = function createPdfRouter({ pool }) {
   if (!pool) throw new Error("createPdfRouter requires { pool }");
@@ -260,6 +240,43 @@ module.exports = function createPdfRouter({ pool }) {
     return { totalDives, totalSeconds, minutes, seconds, label };
   }
 
+  // The meet header and its schedule, for program.pdf and program.csv.
+  // meetCols is the meet side of the SELECT (always a literal from this
+  // file: the PDF wants m.*, the CSV just id and name). meet comes back
+  // undefined when there's no such meet. Events are in schedule order
+  // with a live competitor count.
+  async function loadProgram(meetId, meetCols) {
+    const [meetRes, eventsRes] = await Promise.all([
+      pool.query(
+        `SELECT ${meetCols}, o.name AS org_name, o.country_code
+         FROM meets m
+         JOIN organisations o ON o.id = m.org_id
+         WHERE m.id = $1`,
+        [meetId],
+      ),
+      pool.query(
+        `SELECT e.id, e.name, e.gender, e.age_group, e.height,
+                e.total_rounds, e.number_of_judges, e.event_type,
+                e.event_format, e.parent_event_id, e.scheduled_at,
+                e.dd_limit_rounds, e.dd_limit_value, e.status,
+                COALESCE(stat.competitor_count, 0)::int AS competitor_count
+         FROM events e
+         LEFT JOIN LATERAL (
+           SELECT COUNT(DISTINCT cdl.competitor_id) AS competitor_count
+           FROM competitor_dive_lists cdl
+           WHERE cdl.event_id = e.id AND cdl.withdrawn_at IS NULL
+         ) stat ON true
+         WHERE e.meet_id = $1
+         ORDER BY
+           e.scheduled_at NULLS LAST,
+           CASE e.event_format WHEN 'preliminary' THEN 0 ELSE 1 END,
+           e.created_at ASC`,
+        [meetId],
+      ),
+    ]);
+    return { meet: meetRes.rows[0], events: eventsRes.rows };
+  }
+
   // -------------------------------------------------------------
   // Public meet program PDF: full schedule, every event in the
   // bundle, competitor count per event, sponsor strip on the
@@ -273,40 +290,10 @@ module.exports = function createPdfRouter({ pool }) {
   router.get("/api/meets/:id/program.pdf", async (req, res) => {
     try {
       const { include, secondsPerDive } = parseProgramOptions(req.query);
-      const [meetRes, eventsRes] = await Promise.all([
-        pool.query(
-          `SELECT m.*, o.name AS org_name, o.country_code
-           FROM meets m
-           JOIN organisations o ON o.id = m.org_id
-           WHERE m.id = $1`,
-          [req.params.id],
-        ),
-        pool.query(
-          `SELECT e.id, e.name, e.gender, e.age_group, e.height,
-                  e.total_rounds, e.number_of_judges, e.event_type,
-                  e.event_format, e.parent_event_id, e.scheduled_at,
-                  e.dd_limit_rounds, e.dd_limit_value, e.status,
-                  COALESCE(stat.competitor_count, 0)::int AS competitor_count
-           FROM events e
-           LEFT JOIN LATERAL (
-             SELECT COUNT(DISTINCT cdl.competitor_id) AS competitor_count
-             FROM competitor_dive_lists cdl
-             WHERE cdl.event_id = e.id AND cdl.withdrawn_at IS NULL
-           ) stat ON true
-           WHERE e.meet_id = $1
-           ORDER BY
-             e.scheduled_at NULLS LAST,
-             CASE e.event_format WHEN 'preliminary' THEN 0 ELSE 1 END,
-             e.created_at ASC`,
-          [req.params.id],
-        ),
-      ]);
-
-      if (!meetRes.rows.length) {
+      const { meet, events } = await loadProgram(req.params.id, "m.*");
+      if (!meet) {
         return res.status(404).json({ error: "Meet not found" });
       }
-      const meet = meetRes.rows[0];
-      const events = eventsRes.rows;
 
       // Pre-fetch every per-event enrichment the operator asked
       // for so the schedule loop can stream sections inline. The
@@ -314,10 +301,7 @@ module.exports = function createPdfRouter({ pool }) {
       // running one-per-event inside the loop.
       const enrichments = await loadProgramEnrichments(events, include);
 
-      const slug = (meet.name || "meet")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "");
+      const slug = slugify(meet.name, "meet");
       const doc = new PDFDocument({ margin: 50, size: "A4" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_program.pdf"`);
@@ -544,45 +528,13 @@ module.exports = function createPdfRouter({ pool }) {
   router.get("/api/meets/:id/program.csv", async (req, res) => {
     try {
       const { include, secondsPerDive } = parseProgramOptions(req.query);
-      const [meetRes, eventsRes] = await Promise.all([
-        pool.query(
-          `SELECT m.id, m.name, o.name AS org_name, o.country_code
-             FROM meets m
-             JOIN organisations o ON o.id = m.org_id
-            WHERE m.id = $1`,
-          [req.params.id],
-        ),
-        pool.query(
-          `SELECT e.id, e.name, e.gender, e.age_group, e.height,
-                  e.total_rounds, e.number_of_judges, e.event_type,
-                  e.event_format, e.parent_event_id, e.scheduled_at,
-                  e.dd_limit_rounds, e.dd_limit_value, e.status,
-                  COALESCE(stat.competitor_count, 0)::int AS competitor_count
-             FROM events e
-             LEFT JOIN LATERAL (
-               SELECT COUNT(DISTINCT cdl.competitor_id) AS competitor_count
-                 FROM competitor_dive_lists cdl
-                WHERE cdl.event_id = e.id AND cdl.withdrawn_at IS NULL
-             ) stat ON true
-            WHERE e.meet_id = $1
-            ORDER BY
-              e.scheduled_at NULLS LAST,
-              CASE e.event_format WHEN 'preliminary' THEN 0 ELSE 1 END,
-              e.created_at ASC`,
-          [req.params.id],
-        ),
-      ]);
-      if (!meetRes.rows.length) {
+      const { meet, events } = await loadProgram(req.params.id, "m.id, m.name");
+      if (!meet) {
         return res.status(404).json({ error: "Meet not found" });
       }
-      const meet = meetRes.rows[0];
-      const events = eventsRes.rows;
       const enrichments = await loadProgramEnrichments(events, include);
 
-      const slug = (meet.name || "meet")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "");
+      const slug = slugify(meet.name, "meet");
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader(
         "Content-Disposition",
@@ -762,8 +714,7 @@ module.exports = function createPdfRouter({ pool }) {
       }
       const divers = [...byDiver.values()];
 
-      const slug = (event.name || "event")
-        .toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      const slug = slugify(event.name, "event");
       const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_start_list.pdf"`);
@@ -998,8 +949,7 @@ module.exports = function createPdfRouter({ pool }) {
         return flagged;
       }
 
-      const slug = (diver.full_name || "diver").toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      const slug = slugify(diver.full_name, "diver");
       const doc = new PDFDocument({ margin: 50, size: "A4" });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_score_sheet.pdf"`);
@@ -1146,8 +1096,7 @@ module.exports = function createPdfRouter({ pool }) {
       ]);
       if (!evRes.rows.length) return res.status(404).json({ error: "Event not found" });
       const event = evRes.rows[0];
-      const slug = (event.name || "event").toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      const slug = slugify(event.name, "event");
 
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="${slug}_results.csv"`);

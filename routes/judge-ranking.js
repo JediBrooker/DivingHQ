@@ -62,30 +62,9 @@
 const express = require("express");
 const PDFDocument = require("pdfkit");
 const { perDivePointsCte } = require("../lib/scoring-sql");
-
-// CSV escaping + spreadsheet-formula-injection guard. Identical to
-// the helpers in routes/pdf.js, kept inline rather than extracted
-// into a shared module so this file stays self-contained until the
-// pattern crops up a third time.
-function csvCell(s) {
-  if (s == null) return "";
-  let text = String(s);
-  const dangerous = /^[=+\-@\t\r]/.test(text);
-  if (dangerous) text = "'" + text;
-  if (/[",\n\r]/.test(text) || dangerous) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
-}
-function csvRow(cells) { return cells.map(csvCell).join(",") + "\n"; }
-
-// Filename slug, matches the existing PDF/CSV exports.
-function slugify(s) {
-  return String(s || "event")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
+// CSV escaping + formula-injection guard, and the filename slug the
+// PDF/CSV exports share.
+const { csvRow, slugify } = require("../lib/csv");
 
 // Build the analysis payload. Extracted so the JSON, CSV, and PDF
 // endpoints can share a single source of truth, adding a column
