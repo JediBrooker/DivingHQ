@@ -1015,6 +1015,19 @@
       "roster_import_section_label": "Importér startliste",
       "roster_import_submit": "Importér",
       "roster_importing": "Importerer…"
+    },
+    "club_mode": {
+      "pick_meet": "Vælg hvilket af klubbens stævner øvelsen hører til",
+      "create_meet_first": "Opret først et stævne for klubben, øvelserne ligger i det",
+      "hosted_by": "Arrangør",
+      "pick_host": "— Vælg din klub eller region —"
+    },
+    "represent": {
+      "label": "Udspringerne repræsenterer",
+      "country": "Deres land (internationale stævner)",
+      "region": "Deres stat / provins (nationale mesterskaber)",
+      "club": "Deres klub (klub- og mellemklubstævner)",
+      "hint": "Vises ved hver udspringer på resultattavlen, i resultater og PDF’er og bestemmer, hvordan medaljetabellen grupperes. En udspringer uden stats- eller klubkode vises med sit land."
     }
   },
   "user_manager": {

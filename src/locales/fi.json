@@ -1015,6 +1015,19 @@
       "roster_import_section_label": "Tuo osallistujat",
       "roster_import_submit": "Tuo",
       "roster_importing": "Tuodaan…"
+    },
+    "club_mode": {
+      "pick_meet": "Valitse, mihin seurasi kilpailuun tämä laji kuuluu",
+      "create_meet_first": "Luo ensin kilpailu seurallesi, lajit kuuluvat sen alle",
+      "hosted_by": "Järjestäjä",
+      "pick_host": "— Valitse seurasi tai alueesi —"
+    },
+    "represent": {
+      "label": "Hyppääjät edustavat",
+      "country": "Maataan (kansainväliset kilpailut)",
+      "region": "Osavaltiotaan / provinssiaan (kansalliset mestaruudet)",
+      "club": "Seuraansa (seura- ja seurojen väliset kilpailut)",
+      "hint": "Näytetään jokaisen hyppääjän vieressä tulostaululla, tuloksissa ja PDF-tiedostoissa, ja sen mukaan mitalitaulukko ryhmitellään. Hyppääjä ilman osavaltio- tai seuratunnusta näytetään maansa mukaan."
     }
   },
   "user_manager": {

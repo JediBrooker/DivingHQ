@@ -1004,6 +1004,19 @@
       "roster_import_section_label": "Impor Daftar Peserta",
       "roster_import_submit": "Impor",
       "roster_importing": "Mengimpor…"
+    },
+    "club_mode": {
+      "pick_meet": "Pilih kompetisi klub Anda yang menjadi tempat nomor ini",
+      "create_meet_first": "Buat kompetisi untuk klub Anda terlebih dahulu, nomor lomba ada di dalamnya",
+      "hosted_by": "Tuan rumah",
+      "pick_host": "— Pilih klub atau wilayah Anda —"
+    },
+    "represent": {
+      "label": "Penyelam mewakili",
+      "country": "Negaranya (kompetisi internasional)",
+      "region": "Negara bagian / provinsinya (kejuaraan nasional)",
+      "club": "Klubnya (kompetisi klub dan antarklub)",
+      "hint": "Ditampilkan di samping setiap penyelam pada papan skor, hasil, dan PDF, serta menjadi dasar pengelompokan tabel medali. Penyelam tanpa kode negara bagian atau klub ditampilkan dengan negaranya."
     }
   },
   "user_manager": {

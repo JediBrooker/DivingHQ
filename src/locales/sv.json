@@ -1015,6 +1015,19 @@
       "roster_import_section_label": "Importera startlista",
       "roster_import_submit": "Importera",
       "roster_importing": "Importerar…"
+    },
+    "club_mode": {
+      "pick_meet": "Välj vilken av klubbens tävlingar grenen hör till",
+      "create_meet_first": "Skapa först en tävling för klubben, grenarna ligger i den",
+      "hosted_by": "Arrangör",
+      "pick_host": "— Välj din klubb eller region —"
+    },
+    "represent": {
+      "label": "Hopparna representerar",
+      "country": "Sitt land (internationella tävlingar)",
+      "region": "Sin delstat / provins (nationella mästerskap)",
+      "club": "Sin klubb (klubb- och klubbmötestävlingar)",
+      "hint": "Visas bredvid varje hoppare på resultattavlan, i resultat och PDF:er och styr hur medaljtabellen grupperas. En hoppare utan delstats- eller klubbkod visas med sitt land."
     }
   },
   "user_manager": {

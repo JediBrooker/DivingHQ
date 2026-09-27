@@ -1004,6 +1004,19 @@
       "roster_import_section_label": "Mag-import ng Roster",
       "roster_import_submit": "I-import",
       "roster_importing": "Nag-iimport…"
+    },
+    "club_mode": {
+      "pick_meet": "Piliin kung aling kompetisyon ng iyong club kabilang ang event na ito",
+      "create_meet_first": "Gumawa muna ng kompetisyon para sa iyong club, doon napapasok ang mga event",
+      "hosted_by": "Host",
+      "pick_host": "— Piliin ang iyong club o rehiyon —"
+    },
+    "represent": {
+      "label": "Kinakatawan ng mga diver ang",
+      "country": "Kanilang bansa (mga internasyonal na kompetisyon)",
+      "region": "Kanilang estado / lalawigan (mga pambansang kampeonato)",
+      "club": "Kanilang club (mga kompetisyon ng club at inter-club)",
+      "hint": "Ipinapakita sa tabi ng bawat diver sa scoreboard, mga resulta at PDF, at ito ang batayan ng pagpapangkat sa medal table. Ang diver na walang code ng estado o club ay ipinapakita sa kanyang bansa."
     }
   },
   "user_manager": {

@@ -1015,6 +1015,19 @@
       "roster_import_section_label": "Importer le Roster",
       "roster_import_submit": "Importer",
       "roster_importing": "Import en cours…"
+    },
+    "club_mode": {
+      "pick_meet": "Choisissez à quelle compétition de votre club appartient cet événement",
+      "create_meet_first": "Créez d'abord une compétition pour votre club, les événements s'y rattachent",
+      "hosted_by": "Organisé par",
+      "pick_host": "— Choisissez votre club ou votre région —"
+    },
+    "represent": {
+      "label": "Les plongeurs représentent",
+      "country": "Leur pays (compétitions internationales)",
+      "region": "Leur État / province (championnats nationaux)",
+      "club": "Leur club (compétitions de club et interclubs)",
+      "hint": "Affiché à côté de chaque plongeur sur le tableau d'affichage, dans les résultats et les PDF, et sert à regrouper le tableau des médailles. Un plongeur sans code d'État ou de club apparaît avec son pays."
     }
   },
   "user_manager": {

@@ -1004,6 +1004,19 @@
       "roster_import_section_label": "Importovat soupisku",
       "roster_import_submit": "Importovat",
       "roster_importing": "Importování…"
+    },
+    "club_mode": {
+      "pick_meet": "Vyberte, do kterých závodů vašeho klubu tato disciplína patří",
+      "create_meet_first": "Nejdřív vytvořte závody svého klubu, disciplíny patří do nich",
+      "hosted_by": "Pořadatel",
+      "pick_host": "— Vyberte svůj klub nebo kraj —"
+    },
+    "represent": {
+      "label": "Skokani reprezentují",
+      "country": "Svou zemi (mezinárodní závody)",
+      "region": "Svůj stát / provincii (národní mistrovství)",
+      "club": "Svůj klub (klubové a meziklubové závody)",
+      "hint": "Zobrazuje se u každého skokana na výsledkové tabuli, ve výsledcích a v PDF a podle toho se sestavuje medailová tabulka. Skokan bez kódu státu nebo klubu se zobrazí se svou zemí."
     }
   },
   "user_manager": {

@@ -1004,6 +1004,19 @@
       "roster_import_section_label": "選手リストをインポート",
       "roster_import_submit": "インポート",
       "roster_importing": "インポート中…"
+    },
+    "club_mode": {
+      "pick_meet": "この種目を入れるクラブの大会を選んでください",
+      "create_meet_first": "まずクラブの大会を作成してください。種目はその中に入ります",
+      "hosted_by": "主催",
+      "pick_host": "— クラブまたは地域を選択 —"
+    },
+    "represent": {
+      "label": "選手の所属表示",
+      "country": "国（国際大会）",
+      "region": "州・県（全国選手権）",
+      "club": "クラブ（クラブ内・クラブ対抗大会）",
+      "hint": "スコアボード、結果、PDF で各選手の横に表示され、メダル表のグループ分けにも使われます。州やクラブのコードがない選手は国で表示されます。"
     }
   },
   "user_manager": {

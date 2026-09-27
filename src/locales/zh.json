@@ -1004,6 +1004,19 @@
       "roster_import_section_label": "导入名单",
       "roster_import_submit": "导入",
       "roster_importing": "导入中…"
+    },
+    "club_mode": {
+      "pick_meet": "请选择该项目所属的俱乐部比赛",
+      "create_meet_first": "请先为您的俱乐部创建比赛，项目放在比赛之下",
+      "hosted_by": "主办方",
+      "pick_host": "— 选择您的俱乐部或地区 —"
+    },
+    "represent": {
+      "label": "运动员代表",
+      "country": "所属国家（国际比赛）",
+      "region": "所属州 / 省（全国锦标赛）",
+      "club": "所属俱乐部（俱乐部及俱乐部间比赛）",
+      "hint": "显示在记分牌、成绩和 PDF 中每位运动员旁边，奖牌榜也按此分组。没有州或俱乐部代码的运动员显示其国家。"
     }
   },
   "user_manager": {

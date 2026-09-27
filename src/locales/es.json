@@ -1004,6 +1004,19 @@
       "roster_import_section_label": "Importar Roster",
       "roster_import_submit": "Importar",
       "roster_importing": "Importando…"
+    },
+    "club_mode": {
+      "pick_meet": "Elige en qué competición de tu club va este evento",
+      "create_meet_first": "Crea primero una competición para tu club; los eventos van dentro",
+      "hosted_by": "Organizador",
+      "pick_host": "— Elige tu club o región —"
+    },
+    "represent": {
+      "label": "Los saltadores representan a",
+      "country": "Su país (competiciones internacionales)",
+      "region": "Su estado / provincia (campeonatos nacionales)",
+      "club": "Su club (competiciones de club e interclubes)",
+      "hint": "Se muestra junto a cada saltador en el marcador, los resultados y los PDF, y es lo que agrupa el medallero. Un saltador sin código de estado o club aparece con su país."
     }
   },
   "user_manager": {

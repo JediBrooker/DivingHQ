@@ -1004,6 +1004,19 @@
       "roster_import_section_label": "Uvezi popis",
       "roster_import_submit": "Uvezi",
       "roster_importing": "Uvoz…"
+    },
+    "club_mode": {
+      "pick_meet": "Odaberite kojem natjecanju vašeg kluba pripada ova disciplina",
+      "create_meet_first": "Najprije stvorite natjecanje za svoj klub, discipline idu unutar njega",
+      "hosted_by": "Domaćin",
+      "pick_host": "— Odaberite svoj klub ili regiju —"
+    },
+    "represent": {
+      "label": "Skakači predstavljaju",
+      "country": "Svoju zemlju (međunarodna natjecanja)",
+      "region": "Svoju državu / pokrajinu (nacionalna prvenstva)",
+      "club": "Svoj klub (klupska i međuklupska natjecanja)",
+      "hint": "Prikazuje se uz svakog skakača na semaforu, u rezultatima i PDF-ovima te određuje grupiranje tablice medalja. Skakač bez oznake države ili kluba prikazuje se sa svojom zemljom."
     }
   },
   "user_manager": {

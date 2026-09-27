@@ -1015,6 +1015,19 @@
       "roster_import_section_label": "Roster importieren",
       "roster_import_submit": "Importieren",
       "roster_importing": "Import läuft…"
+    },
+    "club_mode": {
+      "pick_meet": "Wählen Sie, zu welchem Wettkampf Ihres Vereins dieses Event gehört",
+      "create_meet_first": "Legen Sie zuerst einen Wettkampf für Ihren Verein an, Events gehören dort hinein",
+      "hosted_by": "Veranstalter",
+      "pick_host": "— Ihren Verein oder Ihre Region wählen —"
+    },
+    "represent": {
+      "label": "Springer vertreten",
+      "country": "Ihr Land (internationale Wettkämpfe)",
+      "region": "Ihr Bundesland / ihre Provinz (nationale Meisterschaften)",
+      "club": "Ihren Verein (Vereins- und Vergleichswettkämpfe)",
+      "hint": "Wird neben jedem Springer auf der Anzeigetafel, in den Ergebnissen und PDFs angezeigt und bestimmt die Gruppierung im Medaillenspiegel. Springer ohne Landes- oder Vereinskürzel erscheinen mit ihrem Land."
     }
   },
   "user_manager": {

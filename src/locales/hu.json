@@ -1015,6 +1015,19 @@
       "roster_import_section_label": "Nevezés importálása",
       "roster_import_submit": "Importálás",
       "roster_importing": "Importálás…"
+    },
+    "club_mode": {
+      "pick_meet": "Válassza ki, a klubja melyik versenyéhez tartozik ez a versenyszám",
+      "create_meet_first": "Előbb hozzon létre egy versenyt a klubjának, a versenyszámok abba kerülnek",
+      "hosted_by": "Rendező",
+      "pick_host": "— Válassza ki a klubját vagy régióját —"
+    },
+    "represent": {
+      "label": "A műugrók képviselik",
+      "country": "Az országukat (nemzetközi versenyek)",
+      "region": "Az államukat / tartományukat (országos bajnokságok)",
+      "club": "A klubjukat (klub- és klubközi versenyek)",
+      "hint": "Minden műugró mellett megjelenik az eredményjelzőn, az eredményekben és a PDF-ekben, és ez alapján csoportosul az éremtáblázat. Akinek nincs állam- vagy klubkódja, az országával jelenik meg."
     }
   },
   "user_manager": {

@@ -1004,6 +1004,19 @@
       "roster_import_section_label": "Kadroyu İçe Aktar",
       "roster_import_submit": "İçe Aktar",
       "roster_importing": "İçe aktarılıyor…"
+    },
+    "club_mode": {
+      "pick_meet": "Bu branşın kulübünüzün hangi yarışmasına ait olduğunu seçin",
+      "create_meet_first": "Önce kulübünüz için bir yarışma oluşturun, branşlar onun içinde yer alır",
+      "hosted_by": "Ev sahibi",
+      "pick_host": "— Kulübünüzü veya bölgenizi seçin —"
+    },
+    "represent": {
+      "label": "Atlayıcılar şunu temsil eder",
+      "country": "Ülkelerini (uluslararası yarışmalar)",
+      "region": "Eyaletlerini / illerini (ulusal şampiyonalar)",
+      "club": "Kulüplerini (kulüp ve kulüpler arası yarışmalar)",
+      "hint": "Skor tablosunda, sonuçlarda ve PDF’lerde her atlayıcının yanında gösterilir ve madalya tablosu buna göre gruplanır. Eyalet veya kulüp kodu olmayan atlayıcı ülkesiyle gösterilir."
     }
   },
   "user_manager": {

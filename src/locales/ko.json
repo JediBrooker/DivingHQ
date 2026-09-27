@@ -1004,6 +1004,19 @@
       "roster_import_section_label": "명단 가져오기",
       "roster_import_submit": "가져오기",
       "roster_importing": "가져오는 중…"
+    },
+    "club_mode": {
+      "pick_meet": "이 종목이 속할 클럽 대회를 선택하세요",
+      "create_meet_first": "먼저 클럽 대회를 만드세요. 종목은 대회 안에 들어갑니다",
+      "hosted_by": "주최",
+      "pick_host": "— 클럽 또는 지역 선택 —"
+    },
+    "represent": {
+      "label": "선수 소속 표시",
+      "country": "국가 (국제 대회)",
+      "region": "주 / 도 (전국 선수권)",
+      "club": "클럽 (클럽 및 클럽 대항 대회)",
+      "hint": "스코어보드, 결과, PDF에서 각 선수 옆에 표시되며 메달 집계의 기준이 됩니다. 주 또는 클럽 코드가 없는 선수는 국가로 표시됩니다."
     }
   },
   "user_manager": {

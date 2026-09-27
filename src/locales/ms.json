@@ -1004,6 +1004,19 @@
       "roster_import_section_label": "Import Senarai Peserta",
       "roster_import_submit": "Import senarai",
       "roster_importing": "Mengimport…"
+    },
+    "club_mode": {
+      "pick_meet": "Pilih pertandingan kelab anda yang mengandungi acara ini",
+      "create_meet_first": "Cipta pertandingan untuk kelab anda dahulu, acara diletakkan di dalamnya",
+      "hosted_by": "Dihoskan oleh",
+      "pick_host": "— Pilih kelab atau wilayah anda —"
+    },
+    "represent": {
+      "label": "Penerjun mewakili",
+      "country": "Negara mereka (pertandingan antarabangsa)",
+      "region": "Negeri / wilayah mereka (kejohanan kebangsaan)",
+      "club": "Kelab mereka (pertandingan kelab dan antara kelab)",
+      "hint": "Dipaparkan di sebelah setiap penerjun pada papan skor, keputusan dan PDF, dan menjadi asas pengumpulan jadual pingat. Penerjun tanpa kod negeri atau kelab dipaparkan dengan negaranya."
     }
   },
   "user_manager": {

@@ -1078,8 +1078,8 @@ async function createEvent() {
   // club's meets. Say so here rather than surface a bare 403.
   if (clubMode.value && !createMeetId.value) {
     formErr.value = meets.value.length
-      ? "Pick which of your club's meets this event is in"
-      : "Create a meet for your club first, events go inside it"
+      ? t('manager.club_mode.pick_meet')
+      : t('manager.club_mode.create_meet_first')
     createStep.value = 0
     return
   }
@@ -2534,9 +2534,9 @@ onUnmounted(() => {
           </div>
         </div>
         <div v-if="clubMode && hostOptions.length > 1" class="field">
-          <label class="label">Hosted by</label>
-          <select class="select" v-model="meetForm.host" required>
-            <option value="">— Pick your club or region —</option>
+          <label class="label" for="meet-host">{{ $t('manager.club_mode.hosted_by') }}</label>
+          <select id="meet-host" class="select" v-model="meetForm.host" required>
+            <option value="">{{ $t('manager.club_mode.pick_host') }}</option>
             <option v-for="h in hostOptions" :key="h.value" :value="h.value">{{ h.label }}</option>
           </select>
         </div>
