@@ -1980,6 +1980,9 @@
     "send_objection": "Pošalji prigovor",
     "reject": "Odbij",
     "revoke": "Opozovi",
-    "revoke_body": "{body} više ne vodi {target}, sve se vraća kako je bilo prije zahtjeva."
+    "revoke_body": "{body} više ne vodi {target}, sve se vraća kako je bilo prije zahtjeva. Uklanjaju se i pristupi administratora i voditelja natjecanja dodijeljeni od odobrenja.",
+    "status_withdrawn": "Povučeno",
+    "status_open_review": "Čeka odluku",
+    "revoked_summary": "Zahtjev opozvan. Uklonjena ovlaštenja: {count}"
   }
 }

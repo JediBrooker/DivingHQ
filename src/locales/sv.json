@@ -1980,6 +1980,9 @@
     "send_objection": "Skicka invändning",
     "reject": "Avslå",
     "revoke": "Återkalla",
-    "revoke_body": "{body} driver inte längre {target}, som återgår till hur det var före anspråket."
+    "revoke_body": "{body} driver inte längre {target}, som återgår till hur det var före anspråket. Administratörs- och tävlingsledaråtkomst som delats ut där sedan godkännandet tas också bort.",
+    "status_withdrawn": "Tillbakadraget",
+    "status_open_review": "Väntar på beslut",
+    "revoked_summary": "Anspråket återkallat. Borttagna behörigheter: {count}"
   }
 }

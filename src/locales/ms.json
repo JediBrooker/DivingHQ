@@ -1980,6 +1980,9 @@
     "send_objection": "Hantar bantahan",
     "reject": "Tolak",
     "revoke": "Batalkan",
-    "revoke_body": "{body} tidak lagi mengurus {target}, semuanya kembali seperti sebelum tuntutan."
+    "revoke_body": "{body} tidak lagi mengurus {target}, semuanya kembali seperti sebelum tuntutan. Akses pentadbir dan pengurus pertandingan yang diberikan di sana sejak ia diluluskan juga dibuang.",
+    "status_withdrawn": "Ditarik balik",
+    "status_open_review": "Menunggu keputusan",
+    "revoked_summary": "Tuntutan dibatalkan. Akses yang dibuang: {count}"
   }
 }

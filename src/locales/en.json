@@ -1980,6 +1980,9 @@
     "send_objection": "Send objection",
     "reject": "Reject",
     "revoke": "Revoke",
-    "revoke_body": "{body} stops running {target}, and it goes back to how it was before the claim."
+    "revoke_body": "{body} stops running {target}, and it goes back to how it was before the claim. Admin and meet manager access handed out there since it was approved is removed too.",
+    "status_withdrawn": "Withdrawn",
+    "status_open_review": "Awaiting decision",
+    "revoked_summary": "Claim revoked. Grants removed: {count}"
   }
 }

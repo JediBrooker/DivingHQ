@@ -1980,6 +1980,9 @@
     "send_objection": "Invia obiezione",
     "reject": "Respingi",
     "revoke": "Revoca",
-    "revoke_body": "{body} non gestisce più {target}, che torna com'era prima della rivendicazione."
+    "revoke_body": "{body} non gestisce più {target}, che torna com'era prima della rivendicazione. Vengono rimossi anche gli accessi di amministratore e di direttore di gara concessi da quando è stata approvata.",
+    "status_withdrawn": "Ritirata",
+    "status_open_review": "In attesa di decisione",
+    "revoked_summary": "Rivendicazione revocata. Accessi rimossi: {count}"
   }
 }

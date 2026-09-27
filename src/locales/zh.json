@@ -1980,6 +1980,9 @@
     "send_objection": "发送反对意见",
     "reject": "拒绝",
     "revoke": "撤销",
-    "revoke_body": "{body} 将不再管理 {target}，一切恢复到申请之前的状态。"
+    "revoke_body": "{body} 将不再管理 {target}，一切恢复到申请之前的状态。自批准以来在此授予的管理员和赛事经理权限也会一并移除。",
+    "status_withdrawn": "已撤回",
+    "status_open_review": "等待决定",
+    "revoked_summary": "申请已撤销。已移除的权限：{count}"
   }
 }

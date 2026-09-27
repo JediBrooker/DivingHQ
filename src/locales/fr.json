@@ -1980,6 +1980,9 @@
     "send_objection": "Envoyer l'objection",
     "reject": "Rejeter",
     "revoke": "Révoquer",
-    "revoke_body": "{body} ne gère plus {target}, qui revient à l'état d'avant la revendication."
+    "revoke_body": "{body} ne gère plus {target}, qui revient à l'état d'avant la revendication. Les accès administrateur et gestionnaire de compétition accordés depuis son approbation sont aussi retirés.",
+    "status_withdrawn": "Retirée",
+    "status_open_review": "En attente de décision",
+    "revoked_summary": "Revendication révoquée. Accès retirés : {count}"
   }
 }

@@ -1980,6 +1980,9 @@
     "send_objection": "Kifogás küldése",
     "reject": "Elutasítás",
     "revoke": "Visszavonás",
-    "revoke_body": "{body} többé nem vezeti ezt: {target}, minden visszaáll az igény előtti állapotra."
+    "revoke_body": "{body} többé nem vezeti ezt: {target}, minden visszaáll az igény előtti állapotra. A jóváhagyás óta ott kiosztott adminisztrátori és versenyvezetői hozzáférések is megszűnnek.",
+    "status_withdrawn": "Lezárva",
+    "status_open_review": "Döntésre vár",
+    "revoked_summary": "Igény visszavonva. Eltávolított jogosultságok: {count}"
   }
 }

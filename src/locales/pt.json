@@ -1980,6 +1980,9 @@
     "send_objection": "Enviar objeção",
     "reject": "Rejeitar",
     "revoke": "Revogar",
-    "revoke_body": "{body} deixa de gerir {target}, que volta ao que era antes da reivindicação."
+    "revoke_body": "{body} deixa de gerir {target}, que volta ao que era antes da reivindicação. Os acessos de administrador e de diretor de prova atribuídos desde a aprovação também são removidos.",
+    "status_withdrawn": "Retirada",
+    "status_open_review": "A aguardar decisão",
+    "revoked_summary": "Reivindicação revogada. Acessos removidos: {count}"
   }
 }
