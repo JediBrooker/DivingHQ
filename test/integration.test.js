@@ -6240,3 +6240,72 @@ test("robots.txt and sitemap.xml name APP_BASE_URL's origin when it's set", asyn
     else process.env.APP_BASE_URL = saved;
   }
 });
+
+// ---------------------------------------------------------------------
+// Release review fixes (track/review).
+// ---------------------------------------------------------------------
+
+// Referee runs any meet in the org, same as org_admin, so a revoked
+// federation can't leave its referees behind. A sysadmin's grant and one
+// made before the claim stay put.
+test("claims: a national revoke also takes back referees the federation appointed", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "AFG";
+  await claimKit.wipe(CODE);
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+    const A = await claimKit.founder(CODE, "Kabul Divers");
+    const B = await claimKit.founder(CODE, "Herat Divers");
+    const C = await claimKit.founder(CODE, "Mazar Divers");
+    const D = await claimKit.founder(CODE, "Kandahar Divers");
+    for (const x of [A, B]) await claimKit.makeEligible(x.clubId);
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    // Before any claim: DivingHQ made C a referee, and D has an old grant.
+    await pool.query(
+      "INSERT INTO user_org_roles (user_id, org_id, role, granted_by) VALUES ($1, $2, 'referee', $3)",
+      [C.id, orgId, sys.id],
+    );
+    await pool.query(
+      "INSERT INTO user_org_roles (user_id, org_id, role, granted_at) VALUES ($1, $2, 'referee', now() - interval '30 days')",
+      [D.id, orgId],
+    );
+
+    const fed = await claimKit.claim({ org_name: "Afghan Diving Federation", country_code: CODE });
+    assert.equal(fed.res.body.approver, "clubs");
+    await claimKit.verify(fed.id);
+    const id = fed.res.body.claim_id;
+    for (const x of [A, B]) await fetchJson("POST", `/api/claims/${id}/vote`, { token: x.token, body: { vote: "approve" } });
+    assert.equal((await claimStatus(id)).status, "approved");
+
+    // Running the country, it makes an accomplice and itself referees.
+    const fedToken = (await claimKit.login(fed.username)).token;
+    const put = async (userId, roles) => (await fetchJson("PUT", `/api/users/${userId}/roles`, { token: fedToken, body: { roles } })).status;
+    assert.equal(await put(A.id, ["referee", "spectator"]), 200);
+    assert.equal(await put(fed.id, ["org_admin", "referee"]), 200);
+    const versionOf = async (u) => (await pool.query("SELECT token_version FROM users WHERE id = $1", [u])).rows[0].token_version;
+    const aBefore = await versionOf(A.id);
+
+    const rv = await fetchJson("POST", `/api/claims/${id}/revoke`, { token: sys.token, body: { reason: "Not the federation" } });
+    assert.equal(rv.status, 200, JSON.stringify(rv.body));
+
+    const referees = (await pool.query(
+      "SELECT user_id FROM user_org_roles WHERE org_id = $1 AND role = 'referee'", [orgId],
+    )).rows.map((r) => r.user_id).sort();
+    assert.deepEqual(referees, [C.id, D.id].sort(), "only the sysadmin's and the pre-claim referee are left");
+    const pairs = rv.body.removed.org_roles.map((r) => `${r.user_id}:${r.role}`).sort();
+    assert.ok(pairs.includes(`${A.id}:referee`), JSON.stringify(pairs));
+    assert.ok(pairs.includes(`${fed.id}:referee`), JSON.stringify(pairs));
+    assert.ok(!pairs.includes(`${C.id}:referee`) && !pairs.includes(`${D.id}:referee`));
+    const audit = (await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'claim.revoked'", [id],
+    )).rows[0].metadata;
+    assert.ok(audit.removed.org_roles.some((r) => r.user_id === A.id && r.role === "referee"));
+    // The JWT carries org_roles, so A has to sign in again to lose it.
+    assert.ok((await versionOf(A.id)) > aBefore, "token_version bumped");
+    assert.ok((await pool.query("SELECT 1 FROM user_org_roles WHERE user_id = $1 AND org_id = $2", [A.id, orgId])).rows.length);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

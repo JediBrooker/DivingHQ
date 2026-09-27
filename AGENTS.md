@@ -244,10 +244,11 @@ An unclaimed org or region becomes claimed through `lib/claims.js`
 (migration 089), never by editing `claim_state` by hand: approval also
 grants the claimant their role, audit-logs it and notifies the clubs, and a
 revoke has to undo it. A national revoke goes further than the claimant's
-own role: every org_admin and meet_manager in the org, club / region admin
-rows created since the approval, event manager seats those people handed
-out, and region claims the federation approved (migration 092,
-`unwindOrgClaim`). If you add a new way to hand out
+own role: every org_admin and meet_manager in the org, referee grants made
+since the approval by anyone but a sysadmin (referee reaches every meet in
+the org, same as the other two), club / region admin rows created since the
+approval, event manager seats those people handed out, and region claims
+the federation approved (migration 092, `unwindOrgClaim`). If you add a new way to hand out
 authority inside an org, check that revoke still takes it back.
 
 **One org per country at signup** (migration 093). `organisations.country_code`

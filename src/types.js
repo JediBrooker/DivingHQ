@@ -855,7 +855,8 @@
  *
  * @property {true} ok
  * @property {Object} removed
- * @property {{user_id: string, full_name: string, role: 'org_admin'|'meet_manager'}[]} removed.org_roles
+ * @property {{user_id: string, full_name: string, role: 'org_admin'|'meet_manager'|'referee'}[]} removed.org_roles
+ *   referee only when granted since the approval by someone other than a sysadmin
  * @property {{user_id: string, full_name: string, club_id: string, club_name: string}[]} removed.club_admins
  * @property {{user_id: string, full_name: string, region_id: string, region_name: string}[]} removed.region_admins
  * @property {{user_id: string, full_name: string, event_id: string, event_name: string}[]} removed.event_managers

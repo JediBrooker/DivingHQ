@@ -652,7 +652,10 @@ That reverts the target, and a national org gets its country name back.
 Revoking also takes back what was handed out under the claim, because the
 claimant could grant access to anyone while they ran it:
 - a national claim removes **every** `org_admin` and `meet_manager` grant in
-  the org (unclaimed means none of either), club and region admin rows
+  the org (unclaimed means none of either), every `referee` grant made since
+  the approval by anyone other than a sysadmin, plus the claimant's own
+  (referee runs any meet in the org, which is why unclaimed countries send
+  those requests to DivingHQ), club and region admin rows
   created since the approval (under a federation, only its admins or
   DivingHQ can make those), and region claims the federation itself
   approved, which are revoked with it. Region claims still waiting on the
