@@ -1885,7 +1885,29 @@ test("last club admin: only live admins count, and co-admins can't remove each o
         fetchJson("DELETE", `/api/clubs/${club}/admins/${C.id}`, { token: keepTok }),
         fetchJson("DELETE", `/api/clubs/${club}/admins/${keep.id}`, { token: C.token }),
       ]);
-      assert.deepEqual([x.status, y.status].sort(), [200, 409], `round ${round}: ${x.status} ${y.status}`);
+      // The loser gets 409 if it was already past its permission check when
+      // the winner committed, or 403 if the winner had already taken its
+      // admin row away. Either way only one removal lands.
+      const statuses = [x.status, y.status].sort();
+      assert.equal(statuses[0], 200, `round ${round}: ${x.status} ${y.status}`);
+      assert.ok([403, 409].includes(statuses[1]), `round ${round}: ${x.status} ${y.status}`);
+      assert.equal(await liveAdmins(), 1);
+    }
+
+    // The HTTP race above can settle at the permission check, before the
+    // lock matters. Straight at the helper, both removals are always past
+    // that point, so this is the lock on its own.
+    const { removeAdmin } = require("../lib/admin-rows");
+    for (let round = 0; round < 5; round++) {
+      const keep = (await pool.query(
+        `SELECT u.id FROM club_admins ca JOIN users u ON u.id = ca.user_id
+          WHERE ca.club_id = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`, [club],
+      )).rows[0];
+      const C = await delegateSignUp({ country_code: CODE, club_id: club });
+      await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, C.id, A.orgId]);
+      const outs = await Promise.all([keep.id, C.id].map((userId) =>
+        removeAdmin(pool, { scope: "club", scopeId: club, userId, keepOneLive: true })));
+      assert.deepEqual(outs.map((o) => o.status).sort(), [200, 409], `helper round ${round}`);
       assert.equal(await liveAdmins(), 1);
     }
   } finally {
