@@ -138,23 +138,45 @@ async function loadHasDependents(pool, userId) {
   }
 }
 
+// Orgs in this country with the given status, skipping the sysadmin's
+// Administration org. Matches the alpha-2 code as well as the alpha-3:
+// register-org used to take either, and until migration 093 has run on a
+// box a federation stored as 'WS' would otherwise be invisible here and
+// its clubs would start a second Samoa next to it.
+async function countryOrgs(client, country, status) {
+  const r = await client.query(
+    `SELECT id, name, claim_state FROM organisations
+      WHERE country_code IN ($1, $2) AND status = $3 AND id <> $4
+      ORDER BY created_at`,
+    [country.a3, country.a2, status, ADMIN_ORG_ID],
+  );
+  return r.rows;
+}
+
 // Club-first signup (migration 087): find the org a registrant from this
 // country joins, starting an unclaimed country account if there's none.
 //
-// Returns { id, claim_state, created } or { choose: true } when several
-// active orgs share the country and the registrant has to pick one.
+// Returns { id, claim_state, created }, or { choose: true } when several
+// active orgs share the country and the registrant has to pick one, or
+// { pending: true } when the country's federation registered the old way
+// and is still waiting on the sysadmin (callers turn that into a 409).
 // Runs inside the caller's transaction. The partial unique index on
 // (country_code) WHERE unclaimed is what stops two first-signups racing
 // into two accounts: the loser's insert DOs NOTHING and it reads back the
 // winner's row.
 async function resolveCountryOrg(client, country) {
-  const existing = await client.query(
-    `SELECT id, claim_state FROM organisations
-      WHERE country_code = $1 AND status = 'active' AND id <> $2`,
-    [country.a3, ADMIN_ORG_ID],
-  );
-  if (existing.rows.length > 1) return { choose: true };
-  if (existing.rows.length === 1) return { ...existing.rows[0], created: false };
+  const existing = await countryOrgs(client, country, "active");
+  if (existing.length > 1) return { choose: true };
+  if (existing.length === 1) {
+    return { id: existing[0].id, claim_state: existing[0].claim_state, created: false };
+  }
+
+  // A pending federation is the country's org being set up. Starting an
+  // unclaimed account beside it is how a country ended up with two once
+  // the sysadmin approved the federation. Nobody can join the pending one
+  // either (its members can't sign in yet), so the signup waits.
+  const pending = await countryOrgs(client, country, "pending");
+  if (pending.length) return { pending: true };
 
   // Bare ON CONFLICT DO NOTHING on purpose. Two racing signups collide
   // on the slug as readily as on the one-per-country index, and naming
@@ -188,6 +210,31 @@ async function resolveCountryOrg(client, country) {
   // Joining a suspended one would just lock them out.
   if (!row || row.status !== "active") return { closed: true };
   return { id: row.id, claim_state: row.claim_state, created: false };
+}
+
+// The 409 body for a signup that hits a pending federation.
+function federationPendingBody(country) {
+  return {
+    error: `${country.name}'s federation has registered on DivingHQ and is waiting for approval. `
+      + "Try again once it's approved, or contact DivingHQ support.",
+    code: "federation_pending",
+  };
+}
+
+// URL-safe slug from an organisation's name: "Fédération Française de
+// Natation" becomes "federation-francaise-de-natation". A name that
+// doesn't survive the trip (Cyrillic, Arabic, CJK...) gets the caller's
+// fallback. Capped at 50 so a clash suffix still fits inside the 60-char
+// shape register-org has always required of a slug.
+function slugFromName(name, fallback) {
+  const s = String(name || "")
+    .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50)
+    .replace(/-+$/, "");
+  return s.length >= 2 ? s : fallback;
 }
 
 module.exports = function createAuthRouter({
@@ -807,6 +854,10 @@ module.exports = function createAuthRouter({
       let startedCountry = false;
       if (country) {
         const found = await resolveCountryOrg(client, country);
+        if (found.pending) {
+          await client.query("ROLLBACK");
+          return res.status(409).json(federationPendingBody(country));
+        }
         if (found.closed) {
           await client.query("ROLLBACK");
           return res.status(400).json({ error: `Signups from ${country.name} are paused. Contact support.` });
@@ -1101,12 +1152,12 @@ module.exports = function createAuthRouter({
     const cleanUsername = safeText(username, 50);
     if (!cleanOrgName)  return res.status(400).json({ error: "Organisation name is required" });
     if (!cleanFullName) return res.status(400).json({ error: "Full name is required" });
-    if (!cleanSlug)     return res.status(400).json({ error: "Slug is required" });
-    // Slug shows up in public URLs (organisations.slug). Require
-    // a URL-safe shape so `/`, `..`, percent-bytes, and HTML-ish
-    // payloads can't smuggle through the SPA's escaping in some
-    // future deep-link.
-    if (!/^[a-z0-9-]{2,60}$/.test(cleanSlug)) {
+    // The slug is made from the name further down, the form stopped
+    // asking for it. Older clients (and the test fixtures) still send one,
+    // and that's fine as long as it's URL-safe: slugs end up in public
+    // URLs, so no `/`, `..`, percent-bytes or HTML-ish payloads that some
+    // future deep-link might not escape.
+    if (cleanSlug && !/^[a-z0-9-]{2,60}$/.test(cleanSlug)) {
       return res.status(400).json({
         error: "slug must be 2-60 chars of lowercase letters, digits, or hyphens",
       });
@@ -1127,107 +1178,143 @@ module.exports = function createAuthRouter({
         || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: "A valid email address is required" });
     }
-    if (country_code != null && !/^[A-Z]{2,3}$/.test(country_code)) {
-      return res.status(400).json({ error: "country_code must be a 2-3 letter ISO code" });
+    // Country is required, alpha-3 only. Signups find their federation by
+    // country (/api/orgs/by-country), so an org registered without one, or
+    // with a 2-letter code, was an org nobody could ever join.
+    if (typeof country_code !== "string" || !/^[A-Z]{3}$/.test(country_code)) {
+      return res.status(400).json({
+        error: "Pick your organisation's country (a 3-letter ISO code such as AUS)",
+        code: "country_required",
+      });
     }
 
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
 
-      // Phase 3 (migration 089): where clubs already started this country,
-      // or the body is a state / province naming its region, this is a
-      // claim on what's there rather than a second, parallel org (there's
-      // no merge). The claimant gets an ordinary account in that org and
-      // takes over only once the claim passes. lib/claims.js has the rules.
+      // Phase 3 (migration 089): a federation or state body from a real
+      // country always claims what's there rather than starting a second,
+      // parallel org (there's no merge). That's the country account clubs
+      // started, a region of it, or, when nobody from the country is on
+      // DivingHQ yet, a country account started right here for them to
+      // claim (DivingHQ reviews that one, there's nobody else to vote). The
+      // claimant gets an ordinary account in that org and takes over only
+      // once the claim passes. lib/claims.js has the rules.
+      //
+      // Only a code that isn't in the catalogue still gets the old pending
+      // org below. Signups can't reach it by country, so it can't split one.
       const country = countryByCode(country_code);
       const regionCode = typeof region_code === "string" ? region_code.trim().toUpperCase() : "";
       if (country) {
-        const orgs = (await client.query(
-          `SELECT id, name, claim_state FROM organisations
-            WHERE country_code = $1 AND status = 'active' AND id <> $2`,
-          [country.a3, ADMIN_ORG_ID],
-        )).rows;
+        const orgs = await countryOrgs(client, country, "active");
         const unclaimedOrg = orgs.find((o) => o.claim_state === "unclaimed");
         const claimedOrgs = orgs.filter((o) => o.claim_state === "claimed");
-        if (unclaimedOrg || regionCode) {
+        const refuse = async (status, body) => {
+          await client.query("ROLLBACK");
+          return res.status(status).json(body);
+        };
+        let target;
+        if (regionCode) {
           let orgRow = unclaimedOrg || (claimedOrgs.length === 1 ? claimedOrgs[0] : null);
-          let target;
-          if (regionCode) {
-            if (!orgRow) {
-              if (claimedOrgs.length > 1) {
-                await client.query("ROLLBACK");
-                return res.status(409).json({ error: "Several federations share this country on DivingHQ. Contact support to claim your region.", code: "claim_needs_support" });
-              }
-              // Nobody from this country is here yet. Start its account so
-              // the state body has something to claim a region of.
-              const found = await resolveCountryOrg(client, country);
-              if (found.closed || found.choose) {
-                await client.query("ROLLBACK");
-                return res.status(409).json({ error: "Contact support to claim your region.", code: "claim_needs_support" });
-              }
-              orgRow = { id: found.id, claim_state: found.claim_state };
+          if (!orgRow) {
+            if (claimedOrgs.length > 1) {
+              return refuse(409, { error: "Several federations share this country on DivingHQ. Contact support to claim your region.", code: "claim_needs_support" });
             }
-            if (orgRow.claim_state === "unclaimed") await materializeRegions(client, orgRow.id, country.a3);
-            const rg = (await client.query(
-              "SELECT id, claim_state FROM regions WHERE org_id = $1 AND short_code = $2",
-              [orgRow.id, regionCode],
-            )).rows[0];
-            if (!rg) {
-              await client.query("ROLLBACK");
-              return res.status(400).json({ error: "That region isn't set up on DivingHQ for this country", code: "region_unknown" });
+            // Nobody from this country is here yet. Start its account so
+            // the state body has something to claim a region of.
+            const found = await resolveCountryOrg(client, country);
+            if (found.pending) return refuse(409, federationPendingBody(country));
+            if (found.closed || found.choose) {
+              return refuse(409, { error: "Contact support to claim your region.", code: "claim_needs_support" });
             }
-            if (rg.claim_state === "claimed") {
-              await client.query("ROLLBACK");
-              return res.status(409).json({ error: "That region already has its body on DivingHQ. Contact support if that's wrong.", code: "already_claimed" });
-            }
-            target = { kind: "region", id: rg.id, orgId: orgRow.id };
-          } else {
-            target = { kind: "org", id: unclaimedOrg.id, orgId: unclaimedOrg.id };
+            orgRow = { id: found.id, claim_state: found.claim_state };
           }
-
-          const hash = await bcrypt.hash(password, 12);
-          const claimant = (await client.query(
-            "INSERT INTO users (username, password, full_name, email, org_id) VALUES ($1,$2,$3,$4,$5) RETURNING id",
-            [cleanUsername, hash, cleanFullName, email, target.orgId],
-          )).rows[0].id;
-          await client.query(
-            "INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1,$2,'spectator')",
-            [claimant, target.orgId],
-          );
-          const claim = await claims.openClaim(client, {
-            targetKind: target.kind, targetId: target.id, orgId: target.orgId,
-            claimantId: claimant, claimantEmail: email, bodyName: cleanOrgName,
-            website: safeText(website, 255),
-          });
-          await client.query("COMMIT");
-
-          // The claim goes live (and voters hear about it) when this link
-          // is clicked, see the verify-email handler.
-          const verifyLink = jwt.sign({ sub: claimant, type: "email_verify" }, JWT_SECRET, { expiresIn: "24h" });
-          if (typeof sendVerifyEmailEmail === "function") {
-            sendVerifyEmailEmail(claimant, verifyLink, { req }).catch(() => {});
+          if (orgRow.claim_state === "unclaimed") await materializeRegions(client, orgRow.id, country.a3);
+          const rg = (await client.query(
+            "SELECT id, claim_state FROM regions WHERE org_id = $1 AND short_code = $2",
+            [orgRow.id, regionCode],
+          )).rows[0];
+          if (!rg) {
+            return refuse(400, { error: "That region isn't set up on DivingHQ for this country", code: "region_unknown" });
           }
-          const who = {
-            clubs:    "the clubs already on DivingHQ there vote on it",
-            regions:  "the states and provinces already on DivingHQ vote on it",
-            parent:   "your federation decides",
-            sysadmin: "DivingHQ reviews it",
-          }[claim.approver];
-          return res.status(201).json({
-            message: `Verify your email to open your claim. Then ${who}.`,
-            claim_id: claim.id,
-            approver: claim.approver,
-            target_kind: target.kind,
-          });
+          if (rg.claim_state === "claimed") {
+            return refuse(409, { error: "That region already has its body on DivingHQ. Contact support if that's wrong.", code: "already_claimed" });
+          }
+          target = { kind: "region", id: rg.id, orgId: orgRow.id };
+        } else {
+          let orgId = unclaimedOrg?.id;
+          if (!orgId && claimedOrgs.length) {
+            return refuse(409, {
+              error: `${claimedOrgs[0].name} already runs ${country.name} on DivingHQ. `
+                + "A state or regional body can claim its region instead. Otherwise, contact DivingHQ support.",
+              code: "already_claimed",
+            });
+          }
+          if (!orgId) {
+            const found = await resolveCountryOrg(client, country);
+            if (found.pending) return refuse(409, federationPendingBody(country));
+            if (found.closed || found.choose || found.claim_state !== "unclaimed") {
+              return refuse(409, { error: `Contact DivingHQ support to register for ${country.name}.`, code: "claim_needs_support" });
+            }
+            orgId = found.id;
+          }
+          target = { kind: "org", id: orgId, orgId };
         }
+
+        const hash = await bcrypt.hash(password, 12);
+        const claimant = (await client.query(
+          "INSERT INTO users (username, password, full_name, email, org_id) VALUES ($1,$2,$3,$4,$5) RETURNING id",
+          [cleanUsername, hash, cleanFullName, email, target.orgId],
+        )).rows[0].id;
+        await client.query(
+          "INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1,$2,'spectator')",
+          [claimant, target.orgId],
+        );
+        const claim = await claims.openClaim(client, {
+          targetKind: target.kind, targetId: target.id, orgId: target.orgId,
+          claimantId: claimant, claimantEmail: email, bodyName: cleanOrgName,
+          website: safeText(website, 255),
+        });
+        await client.query("COMMIT");
+
+        // The claim goes live (and voters hear about it) when this link
+        // is clicked, see the verify-email handler.
+        const verifyLink = jwt.sign({ sub: claimant, type: "email_verify" }, JWT_SECRET, { expiresIn: "24h" });
+        if (typeof sendVerifyEmailEmail === "function") {
+          sendVerifyEmailEmail(claimant, verifyLink, { req }).catch(() => {});
+        }
+        const who = {
+          clubs:    "the clubs already on DivingHQ there vote on it",
+          regions:  "the states and provinces already on DivingHQ vote on it",
+          parent:   "your federation decides",
+          sysadmin: "DivingHQ reviews it",
+        }[claim.approver];
+        return res.status(201).json({
+          message: `Verify your email to open your claim. Then ${who}.`,
+          claim_id: claim.id,
+          approver: claim.approver,
+          target_kind: target.kind,
+        });
       }
 
-      const orgRes = await client.query(
-        "INSERT INTO organisations (name, country_code, slug, status) VALUES ($1,$2,$3,'pending') RETURNING id",
-        [cleanOrgName, country_code || null, cleanSlug],
-      );
-      const orgId = orgRes.rows[0].id;
+      // A slug the client sent is theirs to keep, so a clash is their 400.
+      // One we made up just gets a short suffix until it's free.
+      const baseSlug = cleanSlug || slugFromName(cleanOrgName, `org-${country_code.toLowerCase()}`);
+      let orgId = null;
+      for (let attempt = 0; attempt < 5 && !orgId; attempt++) {
+        const candidate = attempt === 0 ? baseSlug : `${baseSlug}-${crypto.randomBytes(2).toString("hex")}`;
+        const ins = await client.query(
+          `INSERT INTO organisations (name, country_code, slug, status) VALUES ($1,$2,$3,'pending')
+           ON CONFLICT (slug) DO NOTHING RETURNING id`,
+          [cleanOrgName, country_code, candidate],
+        );
+        orgId = ins.rows[0]?.id || null;
+        if (cleanSlug) break;
+      }
+      if (!orgId) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "That organisation slug is already taken" });
+      }
 
       const hash = await bcrypt.hash(password, 12);
       const uRes = await client.query(
@@ -1769,3 +1856,4 @@ module.exports = function createAuthRouter({
 // Exposed for unit testing the response-token content-negotiation
 // (same pattern as lib/idempotency.js's helper export).
 module.exports.includeBodyToken = includeBodyToken;
+module.exports.slugFromName = slugFromName;

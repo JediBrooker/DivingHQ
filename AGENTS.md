@@ -235,6 +235,18 @@ An unclaimed org or region becomes claimed through `lib/claims.js`
 grants the claimant their role, audit-logs it and notifies the clubs, and a
 revoke has to undo exactly that.
 
+**One org per country at signup** (migration 093). `organisations.country_code`
+is alpha-3, and signups find their org by it (`resolveCountryOrg` in
+`routes/auth.js`, `/api/orgs/by-country`), matching the alpha-2 form too for
+rows the backfill hasn't reached. `register-org` needs a country; for any
+code in `lib/countries.json` it always opens a claim (on the clubs' account,
+a region, or a country account it starts for the purpose, reviewed by the
+sysadmin) and never creates a pending org. The legacy pending org is only
+for codes outside the catalogue, which is what the `TST` test fixtures use.
+A pending org for a country makes `resolveCountryOrg` refuse
+(`409 federation_pending`) rather than start an unclaimed account beside it.
+Don't add another path that creates an org for a real country.
+
 **`country_code` on a diver row is the representation code** (migration
 090): the scoreboard, recap, Control Room, PDF and venue queries emit
 `event_rep_code(event, user, home_country)` in that slot, which is the

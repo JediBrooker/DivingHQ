@@ -22,6 +22,7 @@
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
+const { countryByCode } = require("../lib/countries");
 
 module.exports = function createOrgsRouter({
   pool,
@@ -69,16 +70,19 @@ module.exports = function createOrgsRouter({
   // account an earlier club started). More than one only happens where
   // several federations already share a country code, and then the form
   // asks them to pick.
+  //
+  // Same lookup resolveCountryOrg in routes/auth.js does, alpha-2 included,
+  // so the form shows the org the server is actually going to pick.
   router.get("/api/orgs/by-country/:code", async (req, res) => {
-    const code = String(req.params.code || "").toUpperCase();
-    if (!/^[A-Z]{3}$/.test(code)) return res.json([]);
+    const country = countryByCode(String(req.params.code || ""));
+    if (!country) return res.json([]);
     try {
       const r = await pool.query(
         `SELECT id, name, country_code, claim_state
            FROM organisations
-          WHERE country_code = $1 AND status = 'active' AND id <> $2
+          WHERE country_code IN ($1, $2) AND status = 'active' AND id <> $3
           ORDER BY claim_state = 'unclaimed', name ASC`,
-        [code, ADMIN_ORG_ID],
+        [country.a3, country.a2, ADMIN_ORG_ID],
       );
       res.json(r.rows);
     } catch (err) {
