@@ -12,10 +12,13 @@ import { validateDiveList } from '@/lib/round-rules'
 import EmptyState from '@/components/EmptyState.vue'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 import EntryCheckoutButton from '@/components/payments/EntryCheckoutButton.vue'
+import { useFeaturesStore } from '@/stores/features'
 
 const { t } = useI18n()
 const router = useRouter()
 const auth = useAuthStore()
+// Entry-fee checkout only exists while payments are switched on.
+const features = useFeaturesStore()
 
 const events = ref([])
 const diveDirectory = ref([])
@@ -1197,7 +1200,7 @@ watch(currentEvent, async (ev) => {
             </div>
           </div>
         </div>
-        <EntryCheckoutButton v-if="currentEvent" :event-id="currentEvent.id" />
+        <EntryCheckoutButton v-if="currentEvent && features.payments" :event-id="currentEvent.id" />
         <!-- Round-rules summary strip, only shown when the event
              carries a structured round_rules object (migration
              038). Shows each section's running totals so the
