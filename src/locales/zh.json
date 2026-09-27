@@ -33,7 +33,8 @@
       "new_here": "初次使用？",
       "new_here_action": "阅读用户指南",
       "found_bug": "发现错误？",
-      "found_bug_action": "🐛 在 GitHub 上报告"
+      "found_bug_action": "🐛 在 GitHub 上报告",
+      "resend_verification": "重新发送验证链接"
     },
     "register": {
       "title": "注册",
@@ -133,6 +134,22 @@
       "success": "邮箱已更新。正在将您重定向至使用新地址登录…",
       "fallback_error": "确认失败。",
       "back_to_sign_in": "返回登录"
+    },
+    "verify_email": {
+      "title": "验证邮箱",
+      "subtitle": "正在确认你的邮箱地址",
+      "missing_token": "请通过验证邮件中的链接打开此页面。",
+      "verifying": "验证中…",
+      "failed": "此链接无效或已过期。",
+      "success_sign_in": "你的邮箱已验证，现在可以登录了。",
+      "success_claim": "你的邮箱已验证，认领申请已开启。审核期间你也可以登录。",
+      "success_org_pending": "你的邮箱已验证。你的组织正在等待审批，审核完成后我们会发邮件通知你。",
+      "sign_in": "登录",
+      "back_to_sign_in": "返回登录",
+      "resend_prompt": "需要新链接？请输入你的用户名或邮箱地址。",
+      "resend_label": "用户名或邮箱",
+      "resend_button": "发送新链接",
+      "resend_sent": "如果该账户正在等待验证，新链接已发出。请查看收件箱。"
     }
   },
   "coach": {

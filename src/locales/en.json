@@ -33,7 +33,8 @@
       "new_here": "New here?",
       "new_here_action": "Read the user guide",
       "found_bug": "Found a bug?",
-      "found_bug_action": "🐛 Report it on GitHub"
+      "found_bug_action": "🐛 Report it on GitHub",
+      "resend_verification": "Send a new verification link"
     },
     "register": {
       "title": "Register",
@@ -133,6 +134,22 @@
       "success": "Email updated. Redirecting you to sign in with the new address…",
       "fallback_error": "Confirmation failed.",
       "back_to_sign_in": "Back to sign in"
+    },
+    "verify_email": {
+      "title": "Verify Email",
+      "subtitle": "Confirming your address",
+      "missing_token": "Open this page from the link in your verification email.",
+      "verifying": "Verifying…",
+      "failed": "This link is invalid or has expired.",
+      "success_sign_in": "Your email is verified. You can sign in now.",
+      "success_claim": "Your email is verified and your claim is open. You can sign in while it's reviewed.",
+      "success_org_pending": "Your email is verified. Your organisation is waiting for approval, and we'll email you when it's reviewed.",
+      "sign_in": "Sign in",
+      "back_to_sign_in": "Back to sign in",
+      "resend_prompt": "Need a new link? Enter your username or email address.",
+      "resend_label": "Username or email",
+      "resend_button": "Send a new link",
+      "resend_sent": "If that account is waiting for verification, a new link is on its way. Check your inbox."
     }
   },
   "coach": {

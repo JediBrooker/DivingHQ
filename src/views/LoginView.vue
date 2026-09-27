@@ -25,6 +25,10 @@ const totpCode = ref('')
 const errorMsg = ref('')
 const noticeMsg = ref('')
 const loading = ref(false)
+// Set when the server says the account's email isn't verified yet, so
+// the page can offer a fresh link instead of a dead end.
+const unverified = ref(false)
+const resent = ref(false)
 
 // Post-login destination, defaults to the dashboard, but if
 // the router guard bounced the user here from a protected
@@ -124,9 +128,29 @@ function onClaimDone() {
   router.push(safeNextPath())
 }
 
+async function resendVerification() {
+  loading.value = true
+  try {
+    await fetch('/api/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username.value }),
+    })
+  } catch {
+    // Answered ok whatever happened, nothing more to say.
+  } finally {
+    loading.value = false
+    resent.value = true
+    errorMsg.value = ''
+    noticeMsg.value = t('auth.verify_email.resend_sent')
+  }
+}
+
 async function handleSubmit() {
   errorMsg.value = ''
   noticeMsg.value = ''
+  unverified.value = false
+  resent.value = false
   loading.value = true
   try {
     const res = await fetch('/api/auth/login', {
@@ -135,7 +159,10 @@ async function handleSubmit() {
       body: JSON.stringify({ username: username.value, password: password.value }),
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.error || t('auth.login.submit_failed'))
+    if (!res.ok) {
+      unverified.value = data.code === 'email_not_verified'
+      throw new Error(data.error || t('auth.login.submit_failed'))
+    }
     if (data.needs_totp) {
       if (!data.totp_token) throw new Error('Second-factor challenge was missing. Try signing in again.')
       totpToken.value = data.totp_token
@@ -221,6 +248,16 @@ async function handleTotpSubmit() {
       </template>
       <div v-if="noticeMsg" class="msg login-info">{{ noticeMsg }}</div>
       <div v-if="errorMsg" class="msg msg-error">{{ errorMsg }}</div>
+      <button
+        v-if="unverified && !resent"
+        type="button"
+        class="btn btn-ghost"
+        data-testid="resend-verification"
+        :disabled="loading"
+        @click="resendVerification"
+      >
+        {{ $t('auth.login.resend_verification') }}
+      </button>
       <button type="submit" class="btn btn-primary-lg" style="margin-top:0.5rem" :disabled="loading">
         {{ loading ? $t('auth.login.submit_loading') : (totpToken ? 'Verify code' : $t('auth.login.submit_idle')) }}
       </button>

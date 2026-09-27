@@ -39,6 +39,11 @@ const routes = [
     component: () => import('@/views/ResetPasswordView.vue'),
   },
   {
+    // The link in the sign-up email. Public, the token is the credential.
+    path: '/verify-email',
+    component: () => import('@/views/VerifyEmailView.vue'),
+  },
+  {
     // Step 2 of the self-service email change (Migration 044).
     // Public route, the token in the query string is the
     // credential. The view auto-posts on mount, swaps the user's

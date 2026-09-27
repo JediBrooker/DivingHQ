@@ -33,7 +33,8 @@
       "new_here": "Novi ste ovdje?",
       "new_here_action": "Pročitajte vodič",
       "found_bug": "Pronašli ste grešku?",
-      "found_bug_action": "🐛 Prijavi na GitHub-u"
+      "found_bug_action": "🐛 Prijavi na GitHub-u",
+      "resend_verification": "Pošalji novu poveznicu za potvrdu"
     },
     "register": {
       "title": "Registracija",
@@ -133,6 +134,22 @@
       "success": "E-mail je ažuriran. Preusmjeravamo vas na prijavu s novom adresom…",
       "fallback_error": "Potvrda nije uspjela.",
       "back_to_sign_in": "Natrag na prijavu"
+    },
+    "verify_email": {
+      "title": "Potvrda e-pošte",
+      "subtitle": "Potvrđujemo vašu adresu",
+      "missing_token": "Otvorite ovu stranicu putem poveznice iz e-poruke za potvrdu.",
+      "verifying": "Potvrđivanje…",
+      "failed": "Ova poveznica nije valjana ili je istekla.",
+      "success_sign_in": "Vaša e-pošta je potvrđena. Sada se možete prijaviti.",
+      "success_claim": "Vaša e-pošta je potvrđena i vaš je zahtjev otvoren. Možete se prijaviti dok se razmatra.",
+      "success_org_pending": "Vaša e-pošta je potvrđena. Vaša organizacija čeka odobrenje, a javit ćemo vam se e-poštom kad bude razmotrena.",
+      "sign_in": "Prijava",
+      "back_to_sign_in": "Natrag na prijavu",
+      "resend_prompt": "Trebate novu poveznicu? Unesite korisničko ime ili adresu e-pošte.",
+      "resend_label": "Korisničko ime ili e-pošta",
+      "resend_button": "Pošalji novu poveznicu",
+      "resend_sent": "Ako taj račun čeka potvrdu, nova poveznica je na putu. Provjerite svoj sandučić."
     }
   },
   "coach": {

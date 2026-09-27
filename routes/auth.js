@@ -964,7 +964,8 @@ module.exports = function createAuthRouter({
         // row doesn't have a locale yet).
         sendVerifyEmailEmail(newUserId, verifyToken, { req }).catch(() => {});
       }
-      sendWelcomeEmail(newUserId).catch(() => {});
+      // The welcome mail waits for the verify click (see verify-email),
+      // it says "you can sign in now" and that isn't true yet.
       if (requestedRoleSaved) {
         sendNewRoleRequestEmail(newUserId, orgId, requestedRoleSaved,
                                  safeText(note, 500)).catch(() => {});
@@ -1010,22 +1011,74 @@ module.exports = function createAuthRouter({
     }
     try {
       const r = await pool.query(
-        `UPDATE users SET email_verified_at = COALESCE(email_verified_at, now())
-         WHERE id = $1 RETURNING email_verified_at`,
+        `UPDATE users u SET email_verified_at = COALESCE(u.email_verified_at, now())
+           FROM users prev
+          WHERE u.id = $1 AND prev.id = u.id AND u.deleted_at IS NULL
+          RETURNING prev.email_verified_at IS NULL AS fresh,
+                    (SELECT o.status FROM organisations o WHERE o.id = u.org_id) AS org_status`,
         [decoded.sub],
       );
       if (!r.rows.length) {
         return res.status(400).json({ error: "Verification link is invalid" });
       }
+      const { fresh, org_status: orgStatus } = r.rows[0];
       // A federation / state body's claim goes live now (lib/claims.js).
       // Best-effort: a hiccup here mustn't fail the verification itself,
       // and the next verify-email click (or support) can redo it.
-      await claims.activateForUser(pool, decoded.sub, { push, email: { sendClaimEmail } }).catch((err) =>
-        console.error("[Claim Activate Error]", err.message));
-      res.json({ ok: true });
+      const opened = await claims.activateForUser(pool, decoded.sub, { push, email: { sendClaimEmail } })
+        .catch((err) => { console.error("[Claim Activate Error]", err.message); return 0; });
+      // Welcome mail only once, and only when they can actually sign in.
+      // A pending federation hears from us when it's approved instead.
+      if (fresh && orgStatus === "active") sendWelcomeEmail(decoded.sub).catch(() => {});
+      // Tells the page what to say next. A claimant can sign in straight
+      // away (as a spectator) while their claim runs.
+      const next = orgStatus !== "active" ? "org_pending" : opened ? "claim_open" : "sign_in";
+      res.json({ ok: true, next });
     } catch (err) {
       console.error("[Verify Email Error]", err.message);
       res.status(500).json({ error: "Verification failed" });
+    }
+  });
+
+  // Send a fresh verification link. The one from sign-up lasts 24 hours
+  // and mail gets lost, and before this the only way back in was to
+  // register again (which the unique username/email then refused).
+  //
+  // Takes a username or an email, answers ok either way so it can't be
+  // used to find out who's registered, and only ever mails the address
+  // already on the account. The per-account cooldown stops someone
+  // using it to flood an inbox from lots of IPs.
+  const resendCooldown = new Map();
+  const RESEND_COOLDOWN_MS = 60 * 1000;
+  router.post("/api/auth/resend-verification", authLimiter, async (req, res) => {
+    const { username, email } = req.body || {};
+    try {
+      const who = typeof username === "string" && username.trim() ? username.trim()
+        : typeof email === "string" && email.trim() ? email.trim() : "";
+      if (!who || who.length > 320) return res.json({ ok: true });
+      const u = await pool.query(
+        `SELECT id FROM users
+          WHERE (username = $1 OR lower(email) = lower($1))
+            AND email_verified_at IS NULL AND deleted_at IS NULL AND email IS NOT NULL
+          LIMIT 1`,
+        [who],
+      );
+      const id = u.rows[0]?.id;
+      const last = id && resendCooldown.get(id);
+      if (id && !(last && Date.now() - last < RESEND_COOLDOWN_MS)) {
+        resendCooldown.set(id, Date.now());
+        if (resendCooldown.size > 5000) resendCooldown.clear();
+        const link = jwt.sign({ sub: id, type: "email_verify" }, JWT_SECRET, { expiresIn: "24h" });
+        setImmediate(() => {
+          if (typeof sendVerifyEmailEmail === "function") {
+            sendVerifyEmailEmail(id, link, { req }).catch(() => {});
+          }
+        });
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[Resend Verification Error]", err.message);
+      res.json({ ok: true });
     }
   });
 
@@ -1683,7 +1736,12 @@ module.exports = function createAuthRouter({
       const client2 = await pool.connect();
       try {
         await client2.query("BEGIN");
-        await client2.query("UPDATE users SET password = $1 WHERE id = $2", [hash, user.id]);
+        // Following a reset link proves the inbox as well as a verify
+        // link does, so someone who lost the sign-up mail isn't stuck.
+        await client2.query(
+          "UPDATE users SET password = $1, email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $2",
+          [hash, user.id],
+        );
         if (typeof bumpTokenVersion === "function") {
           await bumpTokenVersion(client2, user.id);
         }
@@ -1695,6 +1753,9 @@ module.exports = function createAuthRouter({
         client2.release();
       }
       sendPasswordChangedEmail(user.id).catch(() => {});
+      // Same as verify-email: a claim waiting on the inbox goes live.
+      await claims.activateForUser(pool, user.id, { push, email: { sendClaimEmail } }).catch((err) =>
+        console.error("[Claim Activate Error]", err.message));
       res.json({ ok: true });
     } catch (err) {
       console.error("[Reset Password Error]", err.message);

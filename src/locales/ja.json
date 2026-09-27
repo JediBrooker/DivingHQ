@@ -33,7 +33,8 @@
       "new_here": "はじめてですか？",
       "new_here_action": "ユーザーガイドを読む",
       "found_bug": "バグを見つけましたか？",
-      "found_bug_action": "🐛 GitHub で報告"
+      "found_bug_action": "🐛 GitHub で報告",
+      "resend_verification": "確認リンクを再送信"
     },
     "register": {
       "title": "新規登録",
@@ -133,6 +134,22 @@
       "success": "メールアドレスを更新しました。新しいアドレスでのサインインに移動します…",
       "fallback_error": "確認に失敗しました。",
       "back_to_sign_in": "サインインに戻る"
+    },
+    "verify_email": {
+      "title": "メール確認",
+      "subtitle": "メールアドレスを確認しています",
+      "missing_token": "確認メールに記載のリンクからこのページを開いてください。",
+      "verifying": "確認中…",
+      "failed": "このリンクは無効か、有効期限が切れています。",
+      "success_sign_in": "メールアドレスが確認されました。今すぐサインインできます。",
+      "success_claim": "メールアドレスが確認され、申請が開始されました。審査中もサインインできます。",
+      "success_org_pending": "メールアドレスが確認されました。組織は承認待ちです。審査が終わり次第メールでお知らせします。",
+      "sign_in": "サインイン",
+      "back_to_sign_in": "サインインに戻る",
+      "resend_prompt": "新しいリンクが必要ですか？ユーザー名またはメールアドレスを入力してください。",
+      "resend_label": "ユーザー名またはメールアドレス",
+      "resend_button": "新しいリンクを送信",
+      "resend_sent": "そのアカウントが確認待ちの場合、新しいリンクを送信しました。受信トレイをご確認ください。"
     }
   },
   "coach": {

@@ -33,7 +33,8 @@
       "new_here": "Yeni mi geldiniz?",
       "new_here_action": "Kullanıcı kılavuzunu okuyun",
       "found_bug": "Bir hata mı buldunuz?",
-      "found_bug_action": "🐛 GitHub üzerinden bildirin"
+      "found_bug_action": "🐛 GitHub üzerinden bildirin",
+      "resend_verification": "Yeni doğrulama bağlantısı gönder"
     },
     "register": {
       "title": "Kayıt Ol",
@@ -133,6 +134,22 @@
       "success": "E-posta güncellendi. Sizi yeni adresle giriş yapmaya yönlendiriyoruz…",
       "fallback_error": "Onay başarısız oldu.",
       "back_to_sign_in": "Girişe geri dön"
+    },
+    "verify_email": {
+      "title": "E-postayı Doğrula",
+      "subtitle": "Adresiniz doğrulanıyor",
+      "missing_token": "Bu sayfayı doğrulama e-postanızdaki bağlantıdan açın.",
+      "verifying": "Doğrulanıyor…",
+      "failed": "Bu bağlantı geçersiz veya süresi dolmuş.",
+      "success_sign_in": "E-postanız doğrulandı. Artık giriş yapabilirsiniz.",
+      "success_claim": "E-postanız doğrulandı ve talebiniz açıldı. İncelenirken giriş yapabilirsiniz.",
+      "success_org_pending": "E-postanız doğrulandı. Kuruluşunuz onay bekliyor, incelendiğinde size e-posta göndereceğiz.",
+      "sign_in": "Giriş yap",
+      "back_to_sign_in": "Girişe dön",
+      "resend_prompt": "Yeni bir bağlantıya mı ihtiyacınız var? Kullanıcı adınızı veya e-posta adresinizi girin.",
+      "resend_label": "Kullanıcı adı veya e-posta",
+      "resend_button": "Yeni bağlantı gönder",
+      "resend_sent": "Bu hesap doğrulama bekliyorsa yeni bir bağlantı yolda. Gelen kutunuzu kontrol edin."
     }
   },
   "coach": {

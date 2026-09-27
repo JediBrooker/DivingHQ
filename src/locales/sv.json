@@ -33,7 +33,8 @@
       "new_here": "Ny här?",
       "new_here_action": "Läs guiden",
       "found_bug": "Hittade ett fel?",
-      "found_bug_action": "🐛 Rapportera på GitHub"
+      "found_bug_action": "🐛 Rapportera på GitHub",
+      "resend_verification": "Skicka en ny verifieringslänk"
     },
     "register": {
       "title": "Registrera dig",
@@ -133,6 +134,22 @@
       "success": "E-posten uppdaterad. Skickar dig till inloggningen med den nya adressen…",
       "fallback_error": "Bekräftelsen misslyckades.",
       "back_to_sign_in": "Tillbaka till inloggning"
+    },
+    "verify_email": {
+      "title": "Bekräfta e-post",
+      "subtitle": "Bekräftar din adress",
+      "missing_token": "Öppna den här sidan från länken i ditt verifieringsmejl.",
+      "verifying": "Bekräftar…",
+      "failed": "Länken är ogiltig eller har gått ut.",
+      "success_sign_in": "Din e-post är bekräftad. Du kan logga in nu.",
+      "success_claim": "Din e-post är bekräftad och ditt anspråk är öppnat. Du kan logga in medan det granskas.",
+      "success_org_pending": "Din e-post är bekräftad. Din organisation väntar på godkännande, vi mejlar dig när den har granskats.",
+      "sign_in": "Logga in",
+      "back_to_sign_in": "Tillbaka till inloggningen",
+      "resend_prompt": "Behöver du en ny länk? Ange ditt användarnamn eller din e-postadress.",
+      "resend_label": "Användarnamn eller e-post",
+      "resend_button": "Skicka en ny länk",
+      "resend_sent": "Om kontot väntar på verifiering är en ny länk på väg. Kolla din inkorg."
     }
   },
   "coach": {

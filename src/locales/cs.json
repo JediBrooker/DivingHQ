@@ -33,7 +33,8 @@
       "new_here": "Jste tu noví?",
       "new_here_action": "Přečtěte si uživatelskou příručku",
       "found_bug": "Našli jste chybu?",
-      "found_bug_action": "🐛 Nahlaste ji na GitHubu"
+      "found_bug_action": "🐛 Nahlaste ji na GitHubu",
+      "resend_verification": "Poslat nový ověřovací odkaz"
     },
     "register": {
       "title": "Registrace",
@@ -133,6 +134,22 @@
       "success": "E-mail byl aktualizován. Přesměrováváme vás na přihlášení s novou adresou…",
       "fallback_error": "Potvrzení se nezdařilo.",
       "back_to_sign_in": "Zpět na přihlášení"
+    },
+    "verify_email": {
+      "title": "Ověření e-mailu",
+      "subtitle": "Potvrzujeme vaši adresu",
+      "missing_token": "Otevřete tuto stránku z odkazu v ověřovacím e-mailu.",
+      "verifying": "Ověřování…",
+      "failed": "Tento odkaz je neplatný nebo vypršel.",
+      "success_sign_in": "Váš e-mail je ověřen. Nyní se můžete přihlásit.",
+      "success_claim": "Váš e-mail je ověřen a vaše žádost je otevřena. Během jejího posuzování se můžete přihlásit.",
+      "success_org_pending": "Váš e-mail je ověřen. Vaše organizace čeká na schválení, jakmile bude posouzena, pošleme vám e-mail.",
+      "sign_in": "Přihlásit se",
+      "back_to_sign_in": "Zpět na přihlášení",
+      "resend_prompt": "Potřebujete nový odkaz? Zadejte uživatelské jméno nebo e-mailovou adresu.",
+      "resend_label": "Uživatelské jméno nebo e-mail",
+      "resend_button": "Poslat nový odkaz",
+      "resend_sent": "Pokud tento účet čeká na ověření, nový odkaz je na cestě. Zkontrolujte svou schránku."
     }
   },
   "coach": {

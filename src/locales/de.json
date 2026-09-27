@@ -33,7 +33,8 @@
       "new_here": "Neu hier?",
       "new_here_action": "Anleitung lesen",
       "found_bug": "Bug gefunden?",
-      "found_bug_action": "🐛 Auf GitHub melden"
+      "found_bug_action": "🐛 Auf GitHub melden",
+      "resend_verification": "Neuen Bestätigungslink senden"
     },
     "register": {
       "title": "Registrieren",
@@ -133,6 +134,22 @@
       "success": "E-Mail aktualisiert. Sie werden zur Anmeldung mit der neuen Adresse weitergeleitet…",
       "fallback_error": "Bestätigung fehlgeschlagen.",
       "back_to_sign_in": "Zurück zur Anmeldung"
+    },
+    "verify_email": {
+      "title": "E-Mail bestätigen",
+      "subtitle": "Ihre Adresse wird bestätigt",
+      "missing_token": "Öffnen Sie diese Seite über den Link in Ihrer Bestätigungs-E-Mail.",
+      "verifying": "Wird bestätigt…",
+      "failed": "Dieser Link ist ungültig oder abgelaufen.",
+      "success_sign_in": "Ihre E-Mail ist bestätigt. Sie können sich jetzt anmelden.",
+      "success_claim": "Ihre E-Mail ist bestätigt und Ihr Anspruch ist eröffnet. Sie können sich anmelden, während er geprüft wird.",
+      "success_org_pending": "Ihre E-Mail ist bestätigt. Ihre Organisation wartet auf Freigabe, wir schreiben Ihnen, sobald sie geprüft ist.",
+      "sign_in": "Anmelden",
+      "back_to_sign_in": "Zurück zur Anmeldung",
+      "resend_prompt": "Neuen Link benötigt? Geben Sie Ihren Benutzernamen oder Ihre E-Mail-Adresse ein.",
+      "resend_label": "Benutzername oder E-Mail",
+      "resend_button": "Neuen Link senden",
+      "resend_sent": "Falls dieses Konto auf Bestätigung wartet, ist ein neuer Link unterwegs. Sehen Sie in Ihrem Posteingang nach."
     }
   },
   "coach": {

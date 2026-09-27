@@ -33,7 +33,8 @@
       "new_here": "Baru di sini?",
       "new_here_action": "Baca panduan pengguna",
       "found_bug": "Menemukan bug?",
-      "found_bug_action": "🐛 Laporkan di GitHub"
+      "found_bug_action": "🐛 Laporkan di GitHub",
+      "resend_verification": "Kirim tautan verifikasi baru"
     },
     "register": {
       "title": "Daftar",
@@ -133,6 +134,22 @@
       "success": "Email diperbarui. Mengarahkan Anda untuk masuk dengan alamat baru…",
       "fallback_error": "Konfirmasi gagal.",
       "back_to_sign_in": "Kembali ke halaman masuk"
+    },
+    "verify_email": {
+      "title": "Verifikasi Email",
+      "subtitle": "Mengonfirmasi alamat Anda",
+      "missing_token": "Buka halaman ini dari tautan di email verifikasi Anda.",
+      "verifying": "Memverifikasi…",
+      "failed": "Tautan ini tidak valid atau sudah kedaluwarsa.",
+      "success_sign_in": "Email Anda sudah terverifikasi. Anda bisa masuk sekarang.",
+      "success_claim": "Email Anda sudah terverifikasi dan klaim Anda telah dibuka. Anda bisa masuk selama klaim ditinjau.",
+      "success_org_pending": "Email Anda sudah terverifikasi. Organisasi Anda menunggu persetujuan, dan kami akan mengirim email setelah ditinjau.",
+      "sign_in": "Masuk",
+      "back_to_sign_in": "Kembali ke halaman masuk",
+      "resend_prompt": "Perlu tautan baru? Masukkan nama pengguna atau alamat email Anda.",
+      "resend_label": "Nama pengguna atau email",
+      "resend_button": "Kirim tautan baru",
+      "resend_sent": "Jika akun itu menunggu verifikasi, tautan baru sedang dikirim. Periksa kotak masuk Anda."
     }
   },
   "coach": {

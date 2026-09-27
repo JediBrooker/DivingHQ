@@ -33,7 +33,8 @@
       "new_here": "처음이십니까?",
       "new_here_action": "사용자 가이드 읽기",
       "found_bug": "버그를 발견하셨습니까?",
-      "found_bug_action": "🐛 GitHub에 신고"
+      "found_bug_action": "🐛 GitHub에 신고",
+      "resend_verification": "새 인증 링크 보내기"
     },
     "register": {
       "title": "회원가입",
@@ -133,6 +134,22 @@
       "success": "이메일이 업데이트되었습니다. 새 주소로 로그인하도록 이동합니다…",
       "fallback_error": "확인에 실패했습니다.",
       "back_to_sign_in": "로그인으로 돌아가기"
+    },
+    "verify_email": {
+      "title": "이메일 인증",
+      "subtitle": "주소를 확인하는 중",
+      "missing_token": "인증 이메일에 있는 링크로 이 페이지를 여세요.",
+      "verifying": "인증 중…",
+      "failed": "이 링크는 유효하지 않거나 만료되었습니다.",
+      "success_sign_in": "이메일이 인증되었습니다. 이제 로그인할 수 있습니다.",
+      "success_claim": "이메일이 인증되었고 신청이 시작되었습니다. 검토 중에도 로그인할 수 있습니다.",
+      "success_org_pending": "이메일이 인증되었습니다. 조직이 승인을 기다리고 있으며, 검토가 끝나면 이메일로 알려 드립니다.",
+      "sign_in": "로그인",
+      "back_to_sign_in": "로그인으로 돌아가기",
+      "resend_prompt": "새 링크가 필요하신가요? 사용자 이름이나 이메일 주소를 입력하세요.",
+      "resend_label": "사용자 이름 또는 이메일",
+      "resend_button": "새 링크 보내기",
+      "resend_sent": "해당 계정이 인증을 기다리고 있다면 새 링크가 발송되었습니다. 받은편지함을 확인하세요."
     }
   },
   "coach": {

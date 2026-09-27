@@ -1507,3 +1507,71 @@ test("claims: voters, claimant and clubs get the right emails", async (t) => {
     await claimKit.wipe(CODE);
   }
 });
+
+test("email verification: the link signs you in, a lost one can be resent", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "KIR";
+  await claimKit.wipe(CODE);
+  await claimKit.wipe("FSM");
+  const link = (sub) => claimKit.jwt.sign({ sub, type: "email_verify" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  try {
+    const username = `int-cl-${crypto.randomBytes(4).toString("hex")}`;
+    const reg = await fetchJson("POST", "/api/auth/register", {
+      body: { username, full_name: "Tarawa Admin", password: TEST_PASSWORD,
+              email: `${username}@example.test`, country_code: CODE, new_club_name: "Tarawa Divers" },
+    });
+    assert.equal(reg.status, 201, JSON.stringify(reg.body));
+    const blocked = await fetchJson("POST", "/api/auth/login", { body: { username, password: TEST_PASSWORD } });
+    assert.equal(blocked.status, 403);
+    assert.equal(blocked.body.code, "email_not_verified");
+
+    // Resend answers the same whoever you are, so it can't enumerate.
+    for (const body of [{ username }, { email: `${username}@example.test` }, { username: "nobody-here-at-all" }, {}]) {
+      const r = await fetchJson("POST", "/api/auth/resend-verification", { body });
+      assert.equal(r.status, 200);
+      assert.deepEqual(r.body, { ok: true });
+    }
+
+    const id = (await pool.query("SELECT id FROM users WHERE username = $1", [username])).rows[0].id;
+    assert.equal((await fetchJson("POST", "/api/auth/verify-email", { body: { token: "junk" } })).status, 400);
+    const ok = await fetchJson("POST", "/api/auth/verify-email", { body: { token: link(id) } });
+    assert.equal(ok.status, 200);
+    assert.equal(ok.body.next, "sign_in");
+    // Clicking it twice is harmless.
+    assert.equal((await fetchJson("POST", "/api/auth/verify-email", { body: { token: link(id) } })).status, 200);
+    assert.equal((await fetchJson("POST", "/api/auth/login", { body: { username, password: TEST_PASSWORD } })).status, 200);
+
+    // A claimant can sign in while the claim runs; the page says so.
+    const fed = await claimKit.claim({ org_name: "Kiribati Aquatics", country_code: CODE });
+    const cl = await fetchJson("POST", "/api/auth/verify-email", { body: { token: link(fed.id) } });
+    assert.equal(cl.body.next, "claim_open");
+
+    // A brand new federation waits for approval.
+    const pendingUser = `int-cf-${crypto.randomBytes(4).toString("hex")}`;
+    const pend = await fetchJson("POST", "/api/auth/register-org", {
+      body: { org_name: "Micronesia Diving", country_code: "FSM", slug: `fsm-${crypto.randomBytes(3).toString("hex")}`,
+              username: pendingUser, password: TEST_PASSWORD, full_name: "FSM Admin", email: `${pendingUser}@example.test` },
+    });
+    assert.equal(pend.status, 201, JSON.stringify(pend.body));
+    const pid = (await pool.query("SELECT id FROM users WHERE username = $1", [pendingUser])).rows[0].id;
+    assert.equal((await fetchJson("POST", "/api/auth/verify-email", { body: { token: link(pid) } })).body.next, "org_pending");
+
+    // A password reset proves the inbox too.
+    const u2 = `int-cl-${crypto.randomBytes(4).toString("hex")}`;
+    await fetchJson("POST", "/api/auth/register", {
+      body: { username: u2, full_name: "Betio Admin", password: TEST_PASSWORD,
+              email: `${u2}@example.test`, country_code: CODE, new_club_name: "Betio Divers" },
+    });
+    const row = (await pool.query("SELECT id, password FROM users WHERE username = $1", [u2])).rows[0];
+    const fp = crypto.createHash("sha256").update(row.password).digest("hex").slice(0, 16);
+    const resetTok = claimKit.jwt.sign({ sub: row.id, type: "password_reset", fp }, process.env.JWT_SECRET, { expiresIn: "30m" });
+    const reset = await fetchJson("POST", "/api/auth/reset-password", { body: { token: resetTok, new_password: TEST_PASSWORD + "x" } });
+    // (fp mirrors hashFingerprint in lib/email.js)
+    assert.equal(reset.status, 200, JSON.stringify(reset.body));
+    assert.equal((await fetchJson("POST", "/api/auth/login", { body: { username: u2, password: TEST_PASSWORD + "x" } })).status, 200);
+  } finally {
+    await claimKit.wipe(CODE);
+    await claimKit.wipe("FSM");
+  }
+});

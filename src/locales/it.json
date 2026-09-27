@@ -33,7 +33,8 @@
       "new_here": "Sei nuovo?",
       "new_here_action": "Leggi la guida",
       "found_bug": "Hai trovato un bug?",
-      "found_bug_action": "🐛 Segnalalo su GitHub"
+      "found_bug_action": "🐛 Segnalalo su GitHub",
+      "resend_verification": "Invia un nuovo link di verifica"
     },
     "register": {
       "title": "Registrati",
@@ -133,6 +134,22 @@
       "success": "E-mail aggiornata. Reindirizzamento all'accesso con il nuovo indirizzo…",
       "fallback_error": "Conferma non riuscita.",
       "back_to_sign_in": "Torna all'accesso"
+    },
+    "verify_email": {
+      "title": "Verifica email",
+      "subtitle": "Conferma del tuo indirizzo",
+      "missing_token": "Apri questa pagina dal link nell'email di verifica.",
+      "verifying": "Verifica in corso…",
+      "failed": "Questo link non è valido o è scaduto.",
+      "success_sign_in": "La tua email è verificata. Ora puoi accedere.",
+      "success_claim": "La tua email è verificata e la tua richiesta è aperta. Puoi accedere mentre viene esaminata.",
+      "success_org_pending": "La tua email è verificata. La tua organizzazione è in attesa di approvazione, ti scriveremo quando sarà esaminata.",
+      "sign_in": "Accedi",
+      "back_to_sign_in": "Torna all'accesso",
+      "resend_prompt": "Ti serve un nuovo link? Inserisci il tuo nome utente o indirizzo email.",
+      "resend_label": "Nome utente o email",
+      "resend_button": "Invia un nuovo link",
+      "resend_sent": "Se quell'account è in attesa di verifica, un nuovo link è in arrivo. Controlla la tua casella di posta."
     }
   },
   "coach": {

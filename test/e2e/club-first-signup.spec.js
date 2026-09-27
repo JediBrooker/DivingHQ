@@ -66,10 +66,26 @@ test("a founder signs up by country and runs their club's first meet", async ({ 
   expect(org.rows).toHaveLength(1);
   expect(org.rows[0].claim_state).toBe("unclaimed");
 
-  // No inbox in e2e, so stand in for the verification click.
-  await setup.pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1", [world.username]);
-
+  // Signing in before verifying offers a fresh link rather than a dead end.
   await page.goto("/login");
+  await page.locator('input[autocomplete="username"]').fill(world.username);
+  await page.locator('input[autocomplete="current-password"]').fill(setup.TEST_PASSWORD);
+  await page.getByRole("button", { name: /Sign In/i }).click();
+  await page.getByTestId("resend-verification").click();
+  await expect(page.getByText(/a new link is on its way/)).toBeVisible();
+
+  // A dead link on the verify page offers the same.
+  await page.goto("/verify-email?token=not-a-real-token");
+  await expect(page.getByTestId("verify-failed")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Send a new link/ })).toBeVisible();
+
+  // No inbox in e2e, so mint the link the email would carry and follow it.
+  const { id } = (await setup.pool.query("SELECT id FROM users WHERE username = $1", [world.username])).rows[0];
+  const token = require("jsonwebtoken").sign({ sub: id, type: "email_verify" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  await page.goto(`/verify-email?token=${encodeURIComponent(token)}`);
+  await expect(page.getByTestId("verify-done")).toContainText(/You can sign in now/);
+  await page.getByRole("link", { name: /^Sign in$/ }).click();
+  await page.waitForURL(/\/login$/);
   await page.locator('input[autocomplete="username"]').fill(world.username);
   await page.locator('input[autocomplete="current-password"]').fill(setup.TEST_PASSWORD);
   await page.getByRole("button", { name: /Sign In/i }).click();

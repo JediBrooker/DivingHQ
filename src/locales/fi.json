@@ -33,7 +33,8 @@
       "new_here": "Uusi täällä?",
       "new_here_action": "Lue opas",
       "found_bug": "Löysitkö virheen?",
-      "found_bug_action": "🐛 Ilmoita GitHubissa"
+      "found_bug_action": "🐛 Ilmoita GitHubissa",
+      "resend_verification": "Lähetä uusi vahvistuslinkki"
     },
     "register": {
       "title": "Rekisteröidy",
@@ -133,6 +134,22 @@
       "success": "Sähköposti päivitetty. Ohjataan sinut kirjautumaan uudella osoitteella…",
       "fallback_error": "Vahvistus epäonnistui.",
       "back_to_sign_in": "Takaisin kirjautumiseen"
+    },
+    "verify_email": {
+      "title": "Vahvista sähköposti",
+      "subtitle": "Vahvistetaan osoitettasi",
+      "missing_token": "Avaa tämä sivu vahvistussähköpostin linkistä.",
+      "verifying": "Vahvistetaan…",
+      "failed": "Linkki on virheellinen tai vanhentunut.",
+      "success_sign_in": "Sähköpostisi on vahvistettu. Voit nyt kirjautua sisään.",
+      "success_claim": "Sähköpostisi on vahvistettu ja vaateesi on avattu. Voit kirjautua sisään sen käsittelyn aikana.",
+      "success_org_pending": "Sähköpostisi on vahvistettu. Organisaatiosi odottaa hyväksyntää, ja lähetämme sinulle sähköpostia, kun se on käsitelty.",
+      "sign_in": "Kirjaudu sisään",
+      "back_to_sign_in": "Takaisin kirjautumiseen",
+      "resend_prompt": "Tarvitsetko uuden linkin? Anna käyttäjätunnuksesi tai sähköpostiosoitteesi.",
+      "resend_label": "Käyttäjätunnus tai sähköposti",
+      "resend_button": "Lähetä uusi linkki",
+      "resend_sent": "Jos tili odottaa vahvistusta, uusi linkki on matkalla. Tarkista saapuneet viestisi."
     }
   },
   "coach": {

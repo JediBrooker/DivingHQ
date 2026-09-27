@@ -33,7 +33,8 @@
       "new_here": "Új itt?",
       "new_here_action": "Olvassa el az útmutatót",
       "found_bug": "Hibát talált?",
-      "found_bug_action": "🐛 Jelentse GitHubon"
+      "found_bug_action": "🐛 Jelentse GitHubon",
+      "resend_verification": "Új megerősítő hivatkozás küldése"
     },
     "register": {
       "title": "Regisztráció",
@@ -133,6 +134,22 @@
       "success": "E-mail-cím frissítve. Átirányítás az új címmel való bejelentkezéshez…",
       "fallback_error": "A megerősítés sikertelen.",
       "back_to_sign_in": "Vissza a bejelentkezéshez"
+    },
+    "verify_email": {
+      "title": "E-mail megerősítése",
+      "subtitle": "A címed megerősítése",
+      "missing_token": "Nyisd meg ezt az oldalt a megerősítő e-mailben kapott hivatkozásról.",
+      "verifying": "Megerősítés…",
+      "failed": "Ez a hivatkozás érvénytelen vagy lejárt.",
+      "success_sign_in": "Az e-mail-címed megerősítve. Most már bejelentkezhetsz.",
+      "success_claim": "Az e-mail-címed megerősítve, az igénylésed megnyílt. Bejelentkezhetsz, amíg elbírálják.",
+      "success_org_pending": "Az e-mail-címed megerősítve. A szervezeted jóváhagyásra vár, e-mailben értesítünk, amint elbírálták.",
+      "sign_in": "Bejelentkezés",
+      "back_to_sign_in": "Vissza a bejelentkezéshez",
+      "resend_prompt": "Új hivatkozásra van szükséged? Add meg a felhasználóneved vagy az e-mail-címed.",
+      "resend_label": "Felhasználónév vagy e-mail",
+      "resend_button": "Új hivatkozás küldése",
+      "resend_sent": "Ha a fiók megerősítésre vár, az új hivatkozás úton van. Nézd meg a beérkezett üzeneteidet."
     }
   },
   "coach": {

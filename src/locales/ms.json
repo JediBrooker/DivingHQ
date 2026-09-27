@@ -33,7 +33,8 @@
       "new_here": "Baru di sini?",
       "new_here_action": "Baca panduan pengguna",
       "found_bug": "Jumpa pepijat?",
-      "found_bug_action": "🐛 Laporkan di GitHub"
+      "found_bug_action": "🐛 Laporkan di GitHub",
+      "resend_verification": "Hantar pautan pengesahan baharu"
     },
     "register": {
       "title": "Daftar",
@@ -133,6 +134,22 @@
       "success": "E-mel dikemas kini. Mengarahkan anda untuk log masuk dengan alamat baharu…",
       "fallback_error": "Pengesahan gagal.",
       "back_to_sign_in": "Kembali ke log masuk"
+    },
+    "verify_email": {
+      "title": "Sahkan E-mel",
+      "subtitle": "Mengesahkan alamat anda",
+      "missing_token": "Buka halaman ini melalui pautan dalam e-mel pengesahan anda.",
+      "verifying": "Mengesahkan…",
+      "failed": "Pautan ini tidak sah atau telah tamat tempoh.",
+      "success_sign_in": "E-mel anda telah disahkan. Anda boleh log masuk sekarang.",
+      "success_claim": "E-mel anda telah disahkan dan tuntutan anda telah dibuka. Anda boleh log masuk semasa ia disemak.",
+      "success_org_pending": "E-mel anda telah disahkan. Organisasi anda sedang menunggu kelulusan, dan kami akan menghantar e-mel apabila ia disemak.",
+      "sign_in": "Log masuk",
+      "back_to_sign_in": "Kembali ke log masuk",
+      "resend_prompt": "Perlukan pautan baharu? Masukkan nama pengguna atau alamat e-mel anda.",
+      "resend_label": "Nama pengguna atau e-mel",
+      "resend_button": "Hantar pautan baharu",
+      "resend_sent": "Jika akaun itu menunggu pengesahan, pautan baharu sedang dihantar. Semak peti masuk anda."
     }
   },
   "coach": {

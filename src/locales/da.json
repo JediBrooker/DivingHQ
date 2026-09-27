@@ -33,7 +33,8 @@
       "new_here": "Ny her?",
       "new_here_action": "Læs guiden",
       "found_bug": "Fundet en fejl?",
-      "found_bug_action": "🐛 Rapportér på GitHub"
+      "found_bug_action": "🐛 Rapportér på GitHub",
+      "resend_verification": "Send et nyt bekræftelseslink"
     },
     "register": {
       "title": "Tilmeld dig",
@@ -133,6 +134,22 @@
       "success": "E-mailen er opdateret. Sender dig til login med den nye adresse…",
       "fallback_error": "Bekræftelsen mislykkedes.",
       "back_to_sign_in": "Tilbage til login"
+    },
+    "verify_email": {
+      "title": "Bekræft e-mail",
+      "subtitle": "Bekræfter din adresse",
+      "missing_token": "Åbn denne side fra linket i din bekræftelsesmail.",
+      "verifying": "Bekræfter…",
+      "failed": "Dette link er ugyldigt eller udløbet.",
+      "success_sign_in": "Din e-mail er bekræftet. Du kan logge ind nu.",
+      "success_claim": "Din e-mail er bekræftet, og dit krav er åbent. Du kan logge ind, mens det bliver gennemgået.",
+      "success_org_pending": "Din e-mail er bekræftet. Din organisation venter på godkendelse, og vi sender dig en e-mail, når den er gennemgået.",
+      "sign_in": "Log ind",
+      "back_to_sign_in": "Tilbage til log ind",
+      "resend_prompt": "Brug for et nyt link? Indtast dit brugernavn eller din e-mailadresse.",
+      "resend_label": "Brugernavn eller e-mail",
+      "resend_button": "Send et nyt link",
+      "resend_sent": "Hvis kontoen venter på bekræftelse, er et nyt link på vej. Tjek din indbakke."
     }
   },
   "coach": {

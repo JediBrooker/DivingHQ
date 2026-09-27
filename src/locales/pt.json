@@ -33,7 +33,8 @@
       "new_here": "É novo por aqui?",
       "new_here_action": "Leia o guia",
       "found_bug": "Encontrou um erro?",
-      "found_bug_action": "🐛 Reporte no GitHub"
+      "found_bug_action": "🐛 Reporte no GitHub",
+      "resend_verification": "Enviar nova ligação de verificação"
     },
     "register": {
       "title": "Registar",
@@ -133,6 +134,22 @@
       "success": "Email atualizado. A redirecionar para o início de sessão com o novo endereço…",
       "fallback_error": "A confirmação falhou.",
       "back_to_sign_in": "Voltar ao início de sessão"
+    },
+    "verify_email": {
+      "title": "Verificar e-mail",
+      "subtitle": "A confirmar o seu endereço",
+      "missing_token": "Abra esta página a partir da ligação no e-mail de verificação.",
+      "verifying": "A verificar…",
+      "failed": "Esta ligação é inválida ou expirou.",
+      "success_sign_in": "O seu e-mail está verificado. Já pode iniciar sessão.",
+      "success_claim": "O seu e-mail está verificado e a sua reivindicação está aberta. Pode iniciar sessão enquanto é analisada.",
+      "success_org_pending": "O seu e-mail está verificado. A sua organização aguarda aprovação e enviaremos um e-mail quando for analisada.",
+      "sign_in": "Iniciar sessão",
+      "back_to_sign_in": "Voltar ao início de sessão",
+      "resend_prompt": "Precisa de uma nova ligação? Introduza o seu nome de utilizador ou endereço de e-mail.",
+      "resend_label": "Nome de utilizador ou e-mail",
+      "resend_button": "Enviar nova ligação",
+      "resend_sent": "Se essa conta aguarda verificação, uma nova ligação está a caminho. Verifique a sua caixa de entrada."
     }
   },
   "coach": {

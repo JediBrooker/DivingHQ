@@ -33,7 +33,8 @@
       "new_here": "Jesteś tu nowy?",
       "new_here_action": "Przeczytaj przewodnik",
       "found_bug": "Znalazłeś błąd?",
-      "found_bug_action": "🐛 Zgłoś na GitHub"
+      "found_bug_action": "🐛 Zgłoś na GitHub",
+      "resend_verification": "Wyślij nowy link weryfikacyjny"
     },
     "register": {
       "title": "Rejestracja",
@@ -133,6 +134,22 @@
       "success": "E-mail zaktualizowany. Przekierowywanie do logowania z nowym adresem…",
       "fallback_error": "Potwierdzenie nie powiodło się.",
       "back_to_sign_in": "Powrót do logowania"
+    },
+    "verify_email": {
+      "title": "Weryfikacja e-maila",
+      "subtitle": "Potwierdzamy Twój adres",
+      "missing_token": "Otwórz tę stronę z linku w wiadomości weryfikacyjnej.",
+      "verifying": "Weryfikacja…",
+      "failed": "Ten link jest nieprawidłowy lub wygasł.",
+      "success_sign_in": "Twój e-mail został zweryfikowany. Możesz się teraz zalogować.",
+      "success_claim": "Twój e-mail został zweryfikowany, a Twoje zgłoszenie jest otwarte. Możesz się zalogować w trakcie jego rozpatrywania.",
+      "success_org_pending": "Twój e-mail został zweryfikowany. Twoja organizacja czeka na zatwierdzenie, napiszemy do Ciebie, gdy zostanie rozpatrzona.",
+      "sign_in": "Zaloguj się",
+      "back_to_sign_in": "Wróć do logowania",
+      "resend_prompt": "Potrzebujesz nowego linku? Podaj nazwę użytkownika lub adres e-mail.",
+      "resend_label": "Nazwa użytkownika lub e-mail",
+      "resend_button": "Wyślij nowy link",
+      "resend_sent": "Jeśli to konto czeka na weryfikację, nowy link jest w drodze. Sprawdź skrzynkę odbiorczą."
     }
   },
   "coach": {

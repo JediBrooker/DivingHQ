@@ -33,7 +33,8 @@
       "new_here": "Bago dito?",
       "new_here_action": "Basahin ang user guide",
       "found_bug": "May nakitang bug?",
-      "found_bug_action": "🐛 Iulat sa GitHub"
+      "found_bug_action": "🐛 Iulat sa GitHub",
+      "resend_verification": "Magpadala ng bagong verification link"
     },
     "register": {
       "title": "Magrehistro",
@@ -133,6 +134,22 @@
       "success": "Na-update ang email. Ire-redirect ka para mag-sign in gamit ang bagong address…",
       "fallback_error": "Hindi nagtagumpay ang pagkumpirma.",
       "back_to_sign_in": "Bumalik sa sign in"
+    },
+    "verify_email": {
+      "title": "I-verify ang Email",
+      "subtitle": "Kinukumpirma ang iyong address",
+      "missing_token": "Buksan ang pahinang ito mula sa link sa iyong verification email.",
+      "verifying": "Nive-verify…",
+      "failed": "Hindi wasto o expired na ang link na ito.",
+      "success_sign_in": "Na-verify na ang iyong email. Maaari ka nang mag-sign in.",
+      "success_claim": "Na-verify na ang iyong email at bukas na ang iyong claim. Maaari kang mag-sign in habang sinusuri ito.",
+      "success_org_pending": "Na-verify na ang iyong email. Naghihintay ng pag-apruba ang iyong organisasyon, at mag-e-email kami kapag nasuri na ito.",
+      "sign_in": "Mag-sign in",
+      "back_to_sign_in": "Bumalik sa pag-sign in",
+      "resend_prompt": "Kailangan ng bagong link? Ilagay ang iyong username o email address.",
+      "resend_label": "Username o email",
+      "resend_button": "Magpadala ng bagong link",
+      "resend_sent": "Kung naghihintay ng verification ang account na iyon, papunta na ang bagong link. Tingnan ang iyong inbox."
     }
   },
   "coach": {
