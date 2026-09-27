@@ -82,7 +82,7 @@ test("supportEmail ignores values that aren't a plain address", async () => {
 // Build lib/email with a stubbed Cloudflare API and capture every request
 // body it sends. The CF_* vars are read when the factory runs, so they have
 // to be in place before createEmail() is called.
-async function captureMail(run) {
+async function captureMail(run, row = {}) {
   const sent = [];
   const realFetch = global.fetch;
   global.fetch = async (url, opts) => {
@@ -94,7 +94,7 @@ async function captureMail(run) {
       const pool = {
         async query(sql) {
           if (/FROM organisations/.test(sql)) return { rows: [{ name: "Test Aquatics" }] };
-          return { rows: [{ email: "someone@example.test", full_name: "Some One" }] };
+          return { rows: [{ email: "someone@example.test", full_name: "Some One", ...row }] };
         },
       };
       const email = require("../lib/email")({ pool });
@@ -128,4 +128,43 @@ test("SUPPORT_EMAIL changes the Reply-To and the suspension notice", async () =>
   assert.equal(sent.length, 1);
   assert.equal(sent[0].body.reply_to, "help@club.example.test");
   assert.match(sent[0].body.text, /reply to this email or contact DivingHQ support at help@club\.example\.test/);
+});
+
+// The account notices told people to "contact your organisation admin",
+// which in a country the clubs started (no federation yet) is nobody. The
+// two security ones matter most: whoever gets them may have just lost the
+// account, and only DivingHQ can lock it.
+test("security and role notices point at support, not an admin who may not exist", async () => {
+  const sent = await withEnv({ SUPPORT_EMAIL: "help@club.example.test" }, () => captureMail(async (email) => {
+    await email.sendPasswordChangedEmail("00000000-0000-0000-0000-000000000003");
+    await email.sendEmailChangedNotice("00000000-0000-0000-0000-000000000003", "old@example.test", "new@example.test");
+    await email.sendRoleDecisionEmail("00000000-0000-0000-0000-000000000003", "rejected", "judge");
+  }));
+  assert.equal(sent.length, 3);
+  const [pw, changed, rejected] = sent.map((m) => m.body.text);
+  for (const text of [pw, changed, rejected]) assert.doesNotMatch(text, /organisation admin/);
+  assert.match(pw, /DivingHQ support at help@club\.example\.test/);
+  assert.match(changed, /DivingHQ support at help@club\.example\.test/);
+  assert.match(changed, /Reply to this email/);
+  // The old address gets this one, and the reset link would go to the new
+  // one, so it mustn't tell them to reset the password themselves.
+  assert.doesNotMatch(changed, /reset your password/);
+  assert.equal(sent[1].body.to, "old@example.test");
+  assert.match(rejected, /club or federation admin/);
+});
+
+// Only a founder in a country with no federation is a club admin from the
+// start. Under a federation, telling them "you're its admin already" sent
+// them looking for powers they didn't have.
+test("the welcome email only says 'you're its admin' to a club admin", async () => {
+  const founder = await captureMail(async (email) => {
+    await email.sendWelcomeEmail("00000000-0000-0000-0000-000000000004");
+  }, { is_club_admin: true });
+  assert.match(founder[0].body.text, /you're its admin already/);
+
+  const member = await captureMail(async (email) => {
+    await email.sendWelcomeEmail("00000000-0000-0000-0000-000000000004");
+  }, { is_club_admin: false });
+  assert.doesNotMatch(member[0].body.text, /admin already/);
+  assert.match(member[0].body.text, /\n\nDivingHQ$/);
 });
