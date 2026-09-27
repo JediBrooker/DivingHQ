@@ -77,15 +77,23 @@ test("a dive that beats a standing record wears a quiet chip, a first mark doesn
       baseURL, judges, eventId: event.id, competitorId: second.userId, roundNumber: 1, diveId,
       scores: [7, 7, 7, 7, 7],
     });
+    // Wait for the server's ack, and announce again if the card hasn't
+    // come: under a loaded full-suite run the page's socket can still be
+    // joining the event room when the first announcement goes out, and a
+    // fire-and-forget emit then lands on nobody.
+    const sinaCard = cards.filter({ hasText: "Sina Breaker" });
     const announcer = await setup.openSocket(baseURL, admin.adminToken);
     try {
-      announcer.emit("announce_score", { event_id: event.id, competitor_id: second.userId, round_number: 1 });
+      await expect(async () => {
+        const ack = await announcer.timeout(5000).emitWithAck("announce_score", {
+          event_id: event.id, competitor_id: second.userId, round_number: 1,
+        });
+        expect(ack?.ok).toBe(true);
+        await expect(sinaCard).toHaveCount(1, { timeout: 3000 });
+      }).toPass({ timeout: 30_000 });
     } finally {
-      setTimeout(() => announcer.disconnect(), 500);
+      announcer.disconnect();
     }
-
-    const sinaCard = cards.filter({ hasText: "Sina Breaker" });
-    await expect(sinaCard).toHaveCount(1);
     const chip = sinaCard.getByTestId("record-chip");
     // National beats club, so the chip names the country and the club
     // record waits in the tooltip. The personal best was her first go at
