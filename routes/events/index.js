@@ -674,7 +674,7 @@ module.exports = function createEventsRouter({
     let currentEvent;
     try {
       const current = await pool.query(
-        "SELECT event_type, number_of_judges, total_rounds FROM events WHERE id = $1",
+        "SELECT event_type, number_of_judges, total_rounds, parent_event_id FROM events WHERE id = $1",
         [req.params.id],
       );
       currentEvent = current.rows[0];
@@ -730,14 +730,37 @@ module.exports = function createEventsRouter({
       // notifications at Org B divers. Sysadmin bypass intact via
       // the is_system_admin flag.
       if (parent_event_id !== undefined && parent_event_id !== null) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(parent_event_id))
+            || parent_event_id === req.params.id) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({ error: "Parent event not found in this org" });
+        }
         const p = await client.query(
           "SELECT id, org_id FROM events WHERE id = $1",
           [parent_event_id],
         );
         if (
           !p.rows.length ||
+          p.rows[0].org_id !== req.event.org_id ||
           (!req.user.is_system_admin && p.rows[0].org_id !== req.user.org_id)
         ) {
+          await client.query("ROLLBACK");
+          return res
+            .status(400)
+            .json({ error: "Parent event not found in this org" });
+        }
+        // Same rule the POST applies. Everyone past requireEventManager
+        // who isn't an org admin is here as a delegate of THIS event
+        // (event_managers row, or admin of the club / region hosting its
+        // meet), and that says nothing about the parent. childEvent()
+        // hands advance/seed the oldest child, so pointing an older event
+        // at a neighbour's prelim would hijack their final's qualifiers.
+        // An unchanged parent is left alone so a plain edit still saves.
+        const orgAdminHere = req.user.is_system_admin
+          || ((req.user.org_roles || []).includes("org_admin") && req.event.org_id === req.user.org_id);
+        const changing = parent_event_id !== currentEvent?.parent_event_id;
+        if (!orgAdminHere && changing
+            && !(isEventDelegate && await isEventDelegate(parent_event_id, req.user.id))) {
           await client.query("ROLLBACK");
           return res
             .status(400)

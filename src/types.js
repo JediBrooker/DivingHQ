@@ -70,8 +70,47 @@
  * GET /api/orgs/:id/regions and GET /api/countries/:code/regions.
  *
  * @property {?('state'|'province'|'home_nation'|'region')} label  null = no regions
- * @property {{id?: string, name: string, short_code: string, club_count?: number}[]} regions
- *   id and club_count only on the per-org list (the country list is the built-in catalogue).
+ * @property {{id?: string, name: string, short_code: string, club_count?: number, claim_state?: 'claimed'|'unclaimed', claimed_name?: ?string, has_live_admin?: boolean}[]} regions
+ *   id, club_count, claim_state, claimed_name and has_live_admin only on the
+ *   per-org list (the country list is the built-in catalogue). has_live_admin
+ *   is false for a claimed region whose admins have all been deleted or
+ *   suspended: it can be claimed again, and its clubs can leave it.
+ */
+
+/**
+ * @typedef {Object} MyRoleRequests
+ * GET /api/role-requests/mine, for the "Request a role" dialog on your
+ * own profile. POST /api/role-requests answers 201 with one `requests`
+ * row, or 400 role_not_requestable / 409 already_held, already_pending,
+ * recently_declined.
+ *
+ * @property {?('claimed'|'unclaimed')} claim_state  your org's
+ * @property {string[]} requestable  roles your org lets you ask for (no meet_manager where unclaimed, nothing in the Administration org)
+ * @property {string[]} held         roles you already have in your org, spectator included
+ * @property {{id: string, requested_role: string, status: 'pending'|'approved'|'rejected', note: ?string, created_at: string, reviewed_at: ?string}[]} requests
+ *   your 20 most recent, newest first
+ */
+
+/**
+ * @typedef {Object} ClubAdmins
+ * GET /api/clubs/:id/admins (org admin, or the club's / its region's
+ * admins where there's no federation).
+ *
+ * @property {{id: string, full_name: string, username: string, created_at: string}[]} admins  deleted accounts left out (suspended ones stay, so they can be removed)
+ * @property {{id: string, full_name: string, username: string}[]} members
+ * @property {?{region_id: string, requested_at: string}} region_request
+ *   a claimed region this club has asked to join and is waiting on (PUT
+ *   /api/clubs/:id/region answered 202 {requested: true})
+ */
+
+/**
+ * @typedef {Object} RegionOverview
+ * GET /api/regions/:id/overview (the region's admins, or the org admin).
+ *
+ * @property {{id: string, name: string, short_code: string, claim_state: 'claimed'|'unclaimed', claimed_name: ?string, label: ?string, org_id: string}} region
+ * @property {{id: string, name: string, short_code: ?string, member_count: number, admins: {id: string, full_name: string}[]}[]} clubs
+ * @property {{id: string, name: string, short_code: ?string, member_count: number, requested_at: string, current_region_name: ?string}[]} join_requests
+ *   clubs asking to join; accept with PUT /api/clubs/:id/region, decline with DELETE /api/clubs/:id/region-request
  */
 
 /**

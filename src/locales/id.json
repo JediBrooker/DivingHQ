@@ -69,7 +69,8 @@
       "submit_idle": "Buat akun",
       "submit_loading": "Membuat...",
       "already_have_account": "Sudah punya akun?",
-      "sign_in_link": "Masuk"
+      "sign_in_link": "Masuk",
+      "referee_note_unclaimed": "Selama belum ada federasi di sini, DivingHQ yang meninjau permintaan wasit kepala, bukan klub Anda: wasit kepala dapat bertindak di kompetisi klub mana pun."
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -467,7 +468,8 @@
       "password_placeholder": "Kata sandi Anda saat ini",
       "conflict": "Tidak dapat digabungkan: akun lama dan akun Anda saat ini sama-sama memiliki entri untuk acara dan ronde yang sama. Hapus centang pada kandidat yang bertabrakan atau hubungi admin federasi Anda untuk menggabungkan secara manual.",
       "success_toast": "Hasil sebelumnya kembali ditautkan ke profil Anda."
-    }
+    },
+    "club_request_sent": "Permintaan terkirim. Anda akan pindah setelah disetujui: oleh federasi Anda, atau jika belum ada, oleh admin klub yang baru."
   },
   "diver_profile": {
     "back": "← Kembali",
@@ -571,17 +573,17 @@
         "desc": "Anda mengelola klub Anda. Jika federasi negara Anda belum ada di DivingHQ, klub menyelenggarakan kompetisinya sendiri: buat, jalankan dari <strong>Ruang Kontrol</strong>, dan setujui permintaan peran anggota. Di bawah federasi, federasilah yang menunjuk Anda.",
         "step_1": "Daftar, pilih negara, dan buat klub Anda; Anda menjadi admin pertamanya",
         "step_2": "Buka <strong>Pengelola Kompetisi</strong> dan buat kompetisi yang diselenggarakan klub Anda",
-        "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau wasit di <strong>Klub saya</strong>",
+        "step_3": "Di <strong>Klub saya</strong>, setujui orang yang ingin bergabung dan anggota yang ingin menjadi atlet, juri, atau pelatih",
         "step_4": "Pada hari kompetisi, jalankan penilaian dari <strong>Ruang Kontrol</strong>",
         "step_5": "Saat federasi atau badan wilayah Anda bergabung, beri suara atas klaimnya di <strong>Klaim</strong>",
         "cta": "Menyelenggarakan kompetisi ↗"
       },
       "region_admin": {
         "name": "Admin wilayah",
-        "desc": "Anda mengurus negara bagian, provinsi, atau bangsa: menyelenggarakan kejuaraannya, dapat turun tangan di kompetisi klub mana pun di dalamnya, dan menyetujui permintaan peran anggota klubnya. Federasi Anda menunjuk Anda, atau DivingHQ jika belum ada federasi.",
+        "desc": "Anda mengurus negara bagian, provinsi, atau bangsa: menyelenggarakan kejuaraannya, dapat turun tangan di kompetisi klub mana pun di dalamnya, dan menyetujui permintaan peran anggota klubnya. Federasi Anda menunjuk Anda. Jika belum ada federasi, badan wilayah Anda mengklaim wilayah itu dan Anda sendiri yang menambahkan rekan admin.",
         "step_1": "Buka <strong>Wilayah saya</strong> untuk melihat klub dan pengelolanya",
         "step_2": "Buat kejuaraan Anda di <strong>Pengelola kompetisi</strong> dengan wilayah Anda sebagai tuan rumah",
-        "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau wasit",
+        "step_3": "Setujui anggota yang ingin menjadi atlet, juri, atau pelatih, serta klub yang ingin bergabung ke wilayah Anda",
         "cta": "Menyelenggarakan kompetisi ↗"
       },
       "org_admin": {
@@ -792,7 +794,9 @@
       "generic": "Pemberitahuan",
       "claim_vote": "Pemungutan suara",
       "claim_review": "Klaim",
-      "claim_decided": "Klaim"
+      "claim_decided": "Klaim",
+      "club_change": "Pindah klub",
+      "region_request": "Wilayah"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Kelola kompetisi Anda",
     "requests": "Permintaan peran",
     "no_requests_title": "Tidak ada permintaan tertunda",
-    "no_requests_body": "Saat anggota meminta menjadi atlet, juri, atau wasit, permintaannya muncul di sini.",
+    "no_requests_body": "Saat anggota meminta menjadi atlet, juri, atau pelatih, permintaannya muncul di sini.",
     "wants_role": "ingin menjadi: {role}",
     "approve": "Setujui",
     "reject": "Tolak",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Pilih anggota klub —",
     "add": "Tambah",
     "remove": "Hapus",
-    "federation_appoints": "Federasi Anda menunjuk admin klub ini."
+    "federation_appoints": "Federasi Anda menunjuk admin klub ini.",
+    "region_claimed_note": "Wilayah yang sudah diklaim badan pengelolanya memutuskan sendiri klub mana yang diterima. Memilihnya akan mengirim permintaan ke admin wilayah itu, dan hanya mereka yang nantinya dapat mengeluarkan klub.",
+    "join_requests": "Permintaan bergabung",
+    "no_join_requests_title": "Tidak ada yang menunggu bergabung",
+    "no_join_requests_body": "Saat seseorang meminta bergabung dengan klub Anda dari profilnya, permintaan itu muncul di sini.",
+    "wants_to_join": "ingin bergabung dengan {club}",
+    "currently_at": "saat ini di {club}",
+    "region_request_pending": "Menunggu {region} menerima klub Anda.",
+    "region_request_cancel": "Tarik permintaan",
+    "region_request_sent": "Permintaan terkirim. {region} akan memutuskan apakah klub Anda diterima."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "Klub muncul di sini setelah memilih wilayah Anda saat mendaftar atau di halaman klubnya.",
     "members": "{n} anggota",
     "no_admin": "Belum ada admin",
-    "region_admins": "Admin wilayah"
+    "region_admins": "Admin wilayah",
+    "pick_member": "— Pilih anggota klub di wilayah Anda —",
+    "no_candidates": "Belum ada yang bisa ditambahkan. Anggota klub di wilayah Anda muncul di sini.",
+    "release_club": "Keluarkan dari wilayah",
+    "club_requests": "Klub yang ingin bergabung",
+    "currently_in": "saat ini di {region}"
   },
   "claims": {
     "title": "Klaim",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Ditarik",
     "status_open_review": "Menunggu keputusan",
     "revoked_summary": "Klaim dicabut. Akses yang dihapus: {count}"
+  },
+  "request_role": {
+    "button": "Minta peran",
+    "title": "Minta peran",
+    "intro_claimed": "Admin federasi Anda meninjau permintaan peran. Anda akan menerima email setelah mereka memutuskan.",
+    "intro_unclaimed": "Selama belum ada federasi di sini, admin klub Anda meninjau permintaan atlet, juri, dan pelatih, sedangkan DivingHQ meninjau sisanya. Anda akan menerima email setelah ada keputusan.",
+    "no_club_hint": "Anda belum tergabung di klub, jadi DivingHQ yang akan meninjau ini. Jika Anda lebih suka klub yang memutuskan, minta bergabung dengan klub terlebih dahulu.",
+    "you_have": "Peran Anda: {roles}",
+    "role_label": "Peran",
+    "pick_role": "— Pilih peran —",
+    "note_label": "Catatan untuk peninjau (opsional)",
+    "submit": "Kirim permintaan",
+    "sending": "Mengirim…",
+    "sent": "Permintaan terkirim",
+    "nothing_left": "Anda sudah memiliki, atau sudah meminta, semua peran yang bisa diminta di sini.",
+    "your_requests": "Permintaan Anda",
+    "status_pending": "Menunggu",
+    "status_approved": "Disetujui",
+    "status_rejected": "Ditolak"
   }
 }

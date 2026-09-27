@@ -48,6 +48,10 @@ The `EMAIL_FROM` domain must be onboarded to Cloudflare Email Sending.
 
 `APP_BASE_URL` also needs to be set so reset-password links point at the right host.
 
+### "I signed up as a diver, now I want to judge (or coach)"
+
+Open **My Profile** and press **Request a role**. Pick the role, add a note for whoever reviews it if you like, and send. Your federation's admins decide, or where there's no federation on DivingHQ yet, your club's admins (DivingHQ for referee). [Roles & Permissions → Asking for a role](/guide/roles-and-permissions#asking-for-a-role) has the full table.
+
 ## Running a meet
 
 ### "I can't find the Start Event button"
@@ -134,7 +138,7 @@ Yes. The URL updates to `/judge-analysis?event=<id>` when you pick an event — 
 
 ### "How do I request a club change?"
 
-Open your **Dive Sheets** page (`/competitor`). The **My club** card at the top shows your current club. Click **Request club change**, pick the new club, add an optional note, and submit. Your org admin reviews and approves or rejects the request in **User Manager → Requests**.
+Open your **Dive Sheets** page (`/competitor`). The **My club** card at the top shows your current club. Click **Request club change**, pick the new club, add an optional note, and submit. (**Change Club** on **My Profile** does the same.) Your org admin reviews and approves or rejects the request in **User Manager → Requests**. If your country has no federation on DivingHQ yet, the club you're joining decides: its admins approve it on **My club**.
 
 ### "I'm transferring to a club in a different federation — why does it say 'Pending' for so long?"
 

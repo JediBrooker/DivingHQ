@@ -69,7 +69,8 @@
       "submit_idle": "Utwórz konto",
       "submit_loading": "Tworzenie...",
       "already_have_account": "Masz już konto?",
-      "sign_in_link": "Zaloguj się"
+      "sign_in_link": "Zaloguj się",
+      "referee_note_unclaimed": "Dopóki nie ma tu federacji, prośby o rolę sędziego głównego rozpatruje DivingHQ, a nie Twój klub: sędzia główny może działać na zawodach każdego klubu."
     },
     "register_org": {
       "title": "Rejestracja organizacji",
@@ -478,7 +479,8 @@
       "password_placeholder": "Twoje aktualne hasło",
       "conflict": "Nie można scalić: stare konto i Twoje obecne konto mają wpisy dla tego samego wydarzenia i rundy. Odznacz kolidującego kandydata lub skontaktuj się z administratorem federacji, aby scalić ręcznie.",
       "success_toast": "Wcześniejsze wyniki ponownie powiązane z Twoim profilem."
-    }
+    },
+    "club_request_sent": "Prośba wysłana. Przeniesienie nastąpi po jej zatwierdzeniu: przez twoją federację lub, tam gdzie jej jeszcze nie ma, przez administratorów nowego klubu."
   },
   "diver_profile": {
     "back": "← Wstecz",
@@ -582,17 +584,17 @@
         "desc": "Prowadzisz swój klub. Tam, gdzie federacji twojego kraju nie ma jeszcze w DivingHQ, klub sam organizuje zawody: twórz je, prowadź z <strong>Pokoju kontroli</strong> i zatwierdzaj prośby członków o role. W ramach federacji to ona cię wyznacza.",
         "step_1": "Zarejestruj się, wybierz kraj i utwórz klub, zostaniesz jego pierwszym administratorem",
         "step_2": "Otwórz <strong>Menedżer zawodów</strong> i utwórz zawody organizowane przez twój klub",
-        "step_3": "Na stronie <strong>Mój klub</strong> zatwierdzaj członków, którzy chcą skakać, sędziować lub być sędzią głównym",
+        "step_3": "Na stronie <strong>Mój klub</strong> zatwierdzaj chętnych do dołączenia i członków, którzy chcą skakać, sędziować lub trenować",
         "step_4": "W dniu zawodów prowadź punktację z <strong>Pokoju kontroli</strong>",
         "step_5": "Gdy dołączy twoja federacja lub organ regionalny, zagłosuj nad jej roszczeniem w <strong>Roszczeniach</strong>",
         "cta": "Organizacja zawodów ↗"
       },
       "region_admin": {
         "name": "Administrator regionu",
-        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa, możesz wkroczyć w zawody każdego z klubów i zatwierdzasz prośby członków klubów o role. Wyznacza cię federacja, a dopóki jej nie ma, DivingHQ.",
+        "desc": "Opiekujesz się stanem, prowincją lub krajem: organizujesz ich mistrzostwa, możesz wkroczyć w zawody każdego z klubów i zatwierdzasz prośby członków klubów o role. Wyznacza cię federacja. Dopóki jej nie ma, region przejmuje twój organ regionalny, a kolejnych administratorów dodajesz sam.",
         "step_1": "Otwórz <strong>Mój region</strong>, aby zobaczyć kluby i kto je prowadzi",
         "step_2": "Utwórz mistrzostwa w <strong>Menedżerze zawodów</strong>, organizowane przez twój region",
-        "step_3": "Zatwierdzaj członków, którzy chcą skakać, sędziować lub być sędzią głównym",
+        "step_3": "Zatwierdzaj członków, którzy chcą skakać, sędziować lub trenować, oraz kluby proszące o dołączenie do twojego regionu",
         "cta": "Organizacja zawodów ↗"
       },
       "org_admin": {
@@ -803,7 +805,9 @@
       "generic": "Powiadomienie",
       "claim_vote": "Głosowanie",
       "claim_review": "Roszczenie",
-      "claim_decided": "Roszczenie"
+      "claim_decided": "Roszczenie",
+      "club_change": "Zmiana klubu",
+      "region_request": "Region"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Organizuj zawody",
     "requests": "Prośby o role",
     "no_requests_title": "Brak oczekujących próśb",
-    "no_requests_body": "Gdy członek poprosi o rolę skoczka, sędziego lub sędziego głównego, pojawi się to tutaj.",
+    "no_requests_body": "Gdy członek poprosi o rolę skoczka, sędziego lub trenera, pojawi się to tutaj.",
     "wants_role": "chce być: {role}",
     "approve": "Zatwierdź",
     "reject": "Odrzuć",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Wybierz członka klubu —",
     "add": "Dodaj",
     "remove": "Usuń",
-    "federation_appoints": "Administratorów tego klubu wyznacza twoja federacja."
+    "federation_appoints": "Administratorów tego klubu wyznacza twoja federacja.",
+    "region_claimed_note": "Region przejęty przez swój organ zarządzający sam decyduje, które kluby przyjmuje. Wybranie go wysyła prośbę do jego administratorów i tylko oni mogą później usunąć z niego klub.",
+    "join_requests": "Prośby o dołączenie",
+    "no_join_requests_title": "Nikt nie czeka na dołączenie",
+    "no_join_requests_body": "Gdy ktoś poprosi ze swojego profilu o dołączenie do twojego klubu, pojawi się to tutaj.",
+    "wants_to_join": "chce dołączyć do {club}",
+    "currently_at": "obecnie w {club}",
+    "region_request_pending": "Czekamy, aż region {region} przyjmie twój klub.",
+    "region_request_cancel": "Wycofaj prośbę",
+    "region_request_sent": "Prośba wysłana. Region {region} zdecyduje, czy przyjąć twój klub."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "Kluby pojawią się tutaj, gdy wybiorą twój region przy rejestracji lub na stronie klubu.",
     "members": "{n} członków",
     "no_admin": "Brak administratora",
-    "region_admins": "Administratorzy regionu"
+    "region_admins": "Administratorzy regionu",
+    "pick_member": "— Wybierz członka klubu z twojego regionu —",
+    "no_candidates": "Na razie nie ma kogo dodać. Tutaj pojawiają się członkowie klubów z twojego regionu.",
+    "release_club": "Usuń z regionu",
+    "club_requests": "Kluby proszące o dołączenie",
+    "currently_in": "obecnie w regionie {region}"
   },
   "claims": {
     "title": "Roszczenia",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Wycofane",
     "status_open_review": "Czeka na decyzję",
     "revoked_summary": "Roszczenie cofnięte. Usunięte uprawnienia: {count}"
+  },
+  "request_role": {
+    "button": "Poproś o rolę",
+    "title": "Poproś o rolę",
+    "intro_claimed": "Prośby o role rozpatrują administratorzy twojej federacji. Dostaniesz e-mail, gdy podejmą decyzję.",
+    "intro_unclaimed": "Dopóki nie ma tu federacji, prośby o rolę skoczka, sędziego i trenera rozpatrują administratorzy twojego klubu, a pozostałe DivingHQ. Dostaniesz e-mail, gdy zapadnie decyzja.",
+    "no_club_hint": "Nie należysz do żadnego klubu, więc rozpatrzy to DivingHQ. Jeśli wolisz, by zdecydował klub, najpierw poproś o dołączenie do jakiegoś.",
+    "you_have": "Twoje role: {roles}",
+    "role_label": "Rola",
+    "pick_role": "— Wybierz rolę —",
+    "note_label": "Uwaga dla rozpatrującego (opcjonalnie)",
+    "submit": "Wyślij prośbę",
+    "sending": "Wysyłanie…",
+    "sent": "Prośba wysłana",
+    "nothing_left": "Masz już lub poprosiłeś o każdą rolę, o którą można tu poprosić.",
+    "your_requests": "Twoje prośby",
+    "status_pending": "Oczekuje",
+    "status_approved": "Zatwierdzona",
+    "status_rejected": "Odrzucona"
   }
 }

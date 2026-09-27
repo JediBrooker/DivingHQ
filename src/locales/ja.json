@@ -69,7 +69,8 @@
       "submit_idle": "アカウントを作成",
       "submit_loading": "作成中...",
       "already_have_account": "すでにアカウントをお持ちですか？",
-      "sign_in_link": "サインイン"
+      "sign_in_link": "サインイン",
+      "referee_note_unclaimed": "この国にはまだ連盟がないため、主審の申請はクラブではなくDivingHQが審査します。主審はどのクラブの大会にも関与できるためです。"
     },
     "register_org": {
       "title": "組織を登録",
@@ -467,7 +468,8 @@
       "password_placeholder": "現在のパスワード",
       "conflict": "統合できません: 古いアカウントと現在のアカウントの両方に、同じイベント・同じラウンドのエントリーがあります。競合する候補のチェックを外すか、連盟の管理者に連絡して手動で統合してください。",
       "success_toast": "過去の結果をプロフィールに再リンクしました。"
-    }
+    },
+    "club_request_sent": "申請を送信しました。承認されると移籍します。承認するのは連盟、まだ連盟がない場合は新しいクラブの管理者です。"
   },
   "diver_profile": {
     "back": "← 戻る",
@@ -571,17 +573,17 @@
         "desc": "クラブを運営します。国の連盟がまだ DivingHQ にない場合、クラブが自ら大会を運営します。大会を作成し、<strong>コントロールルーム</strong>で進行し、メンバーの役割申請を承認します。連盟がある場合は連盟があなたを任命します。",
         "step_1": "登録して国を選び、クラブを作成すると最初の管理者になります",
         "step_2": "<strong>大会マネージャー</strong>を開き、クラブ主催の大会を作成します",
-        "step_3": "<strong>マイクラブ</strong>で、選手・審判・レフェリー希望のメンバーを承認します",
+        "step_3": "<strong>マイクラブ</strong>で、入会希望者と、選手・審判・コーチを希望するメンバーを承認します",
         "step_4": "当日は<strong>コントロールルーム</strong>で採点を進行します",
         "step_5": "連盟や地域団体が参加したら、<strong>引き継ぎ申請</strong>で投票します",
         "cta": "大会の運営 ↗"
       },
       "region_admin": {
         "name": "地域管理者",
-        "desc": "州・県・構成国を担当します。選手権を運営し、所属クラブの大会にも対応でき、クラブメンバーの役割申請を承認します。連盟、または連盟がまだない場合は DivingHQ が任命します。",
+        "desc": "州・県・構成国を担当します。選手権を運営し、所属クラブの大会にも対応でき、クラブメンバーの役割申請を承認します。連盟が任命します。連盟がまだない場合は、地域団体がその地域を申請し、ほかの管理者はあなたが追加します。",
         "step_1": "<strong>マイ地域</strong>でクラブと運営者を確認します",
         "step_2": "<strong>大会マネージャー</strong>で地域主催の選手権を作成します",
-        "step_3": "選手・審判・レフェリー希望のメンバーを承認します",
+        "step_3": "選手・審判・コーチを希望するメンバーと、地域への加入を希望するクラブを承認します",
         "cta": "大会の運営 ↗"
       },
       "org_admin": {
@@ -792,7 +794,9 @@
       "generic": "お知らせ",
       "claim_vote": "申請の投票",
       "claim_review": "引き継ぎ申請",
-      "claim_decided": "引き継ぎ申請"
+      "claim_decided": "引き継ぎ申請",
+      "club_change": "クラブ変更",
+      "region_request": "地域"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "大会を運営する",
     "requests": "役割申請",
     "no_requests_title": "保留中の申請はありません",
-    "no_requests_body": "メンバーが選手・審判・レフェリーを申請すると、ここに表示されます。",
+    "no_requests_body": "メンバーが選手・審判・コーチを申請すると、ここに表示されます。",
     "wants_role": "希望する役割: {role}",
     "approve": "承認",
     "reject": "却下",
@@ -1939,7 +1943,16 @@
     "pick_member": "— クラブメンバーを選択 —",
     "add": "追加",
     "remove": "削除",
-    "federation_appoints": "このクラブの管理者は連盟が任命します。"
+    "federation_appoints": "このクラブの管理者は連盟が任命します。",
+    "region_claimed_note": "統括団体が申請して承認された地域は、どのクラブを受け入れるかを自ら決めます。その地域を選ぶと管理者に申請が送られ、あとからクラブを外せるのも管理者だけです。",
+    "join_requests": "入会申請",
+    "no_join_requests_title": "入会待ちの人はいません",
+    "no_join_requests_body": "誰かがプロフィールからあなたのクラブへの入会を申請すると、ここに表示されます。",
+    "wants_to_join": "{club}への入会を希望",
+    "currently_at": "現在の所属: {club}",
+    "region_request_pending": "{region}がクラブを受け入れるのを待っています。",
+    "region_request_cancel": "申請を取り下げる",
+    "region_request_sent": "申請を送信しました。クラブを受け入れるかどうかは{region}が決めます。"
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "登録時やクラブページで地域を選ぶと、クラブがここに表示されます。",
     "members": "メンバー {n} 人",
     "no_admin": "管理者未設定",
-    "region_admins": "地域の管理者"
+    "region_admins": "地域の管理者",
+    "pick_member": "— 地域内のクラブのメンバーを選択 —",
+    "no_candidates": "まだ追加できる人がいません。地域内のクラブのメンバーがここに表示されます。",
+    "release_club": "地域から外す",
+    "club_requests": "加入を希望するクラブ",
+    "currently_in": "現在の地域: {region}"
   },
   "claims": {
     "title": "引き継ぎ申請",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "取り下げ",
     "status_open_review": "判断待ち",
     "revoked_summary": "申請を取り消しました。削除された権限: {count}"
+  },
+  "request_role": {
+    "button": "役割を申請",
+    "title": "役割を申請",
+    "intro_claimed": "役割の申請は連盟の管理者が審査します。決定するとメールでお知らせします。",
+    "intro_unclaimed": "この国にはまだ連盟がないため、選手・審判・コーチの申請はクラブの管理者が、それ以外はDivingHQが審査します。決定するとメールでお知らせします。",
+    "no_club_hint": "クラブに所属していないため、この申請はDivingHQが審査します。クラブに判断してほしい場合は、先にクラブへの入会を申請してください。",
+    "you_have": "あなたの役割: {roles}",
+    "role_label": "役割",
+    "pick_role": "— 役割を選択 —",
+    "note_label": "審査する人へのメモ（任意）",
+    "submit": "申請を送信",
+    "sending": "送信中…",
+    "sent": "申請を送信しました",
+    "nothing_left": "ここで申請できる役割はすべて保有済みか申請済みです。",
+    "your_requests": "あなたの申請",
+    "status_pending": "審査待ち",
+    "status_approved": "承認済み",
+    "status_rejected": "却下"
   }
 }

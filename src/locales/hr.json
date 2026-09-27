@@ -69,7 +69,8 @@
       "submit_idle": "Stvori račun",
       "submit_loading": "Stvaranje...",
       "already_have_account": "Već imate račun?",
-      "sign_in_link": "Prijava"
+      "sign_in_link": "Prijava",
+      "referee_note_unclaimed": "Dok ovdje nema saveza, zahtjeve za ulogu glavnog suca pregledava DivingHQ, a ne vaš klub: glavni sudac može djelovati na natjecanjima bilo kojeg kluba."
     },
     "register_org": {
       "title": "Registracija organizacije",
@@ -467,7 +468,8 @@
       "password_placeholder": "Tvoja trenutna lozinka",
       "conflict": "Spajanje nije moguće: stari račun i tvoj trenutni račun imaju zapise za isti događaj i krug. Odznači sukobljenog kandidata ili se obrati administratoru svoje federacije za ručno spajanje.",
       "success_toast": "Prošli rezultati ponovno povezani s tvojim profilom."
-    }
+    },
+    "club_request_sent": "Zahtjev je poslan. Premjestit ćete se kad bude odobren: od vašeg saveza ili, gdje ga još nema, od administratora novog kluba."
   },
   "diver_profile": {
     "back": "← Natrag",
@@ -571,17 +573,17 @@
         "desc": "Vodite svoj klub. Gdje savez vaše države još nije na DivingHQ-u, klub sam organizira natjecanja: stvorite ih, vodite iz <strong>Kontrolne sobe</strong> i odobravajte zahtjeve članova za uloge. Pod savezom vas imenuje savez.",
         "step_1": "Registrirajte se, odaberite državu i stvorite klub, bit ćete njegov prvi administrator",
         "step_2": "Otvorite <strong>Menadžer natjecanja</strong> i stvorite natjecanje koje organizira vaš klub",
-        "step_3": "Na stranici <strong>Moj klub</strong> odobrite članove koji žele skakati, suditi ili biti glavni sudac",
+        "step_3": "Na stranici <strong>Moj klub</strong> odobrite one koji traže učlanjenje i članove koji žele skakati, suditi ili trenirati druge",
         "step_4": "Na dan natjecanja vodite bodovanje iz <strong>Kontrolne sobe</strong>",
         "step_5": "Kad stigne vaš savez ili regionalno tijelo, glasajte o njegovu zahtjevu u <strong>Zahtjevima</strong>",
         "cta": "Organizacija natjecanja ↗"
       },
       "region_admin": {
         "name": "Administrator regije",
-        "desc": "Brinete se o saveznoj državi, provinciji ili naciji: organizirate njezina prvenstva, možete uskočiti u natjecanja bilo kojeg njezinog kluba i odobravate zahtjeve članova klubova za uloge. Imenuje vas savez, ili DivingHQ dok saveza nema.",
+        "desc": "Brinete se o saveznoj državi, provinciji ili naciji: organizirate njezina prvenstva, možete uskočiti u natjecanja bilo kojeg njezinog kluba i odobravate zahtjeve članova klubova za uloge. Imenuje vas savez. Dok saveza nema, vaše regionalno tijelo preuzima regiju, a ostale administratore dodajete sami.",
         "step_1": "Otvorite <strong>Moja regija</strong> za svoje klubove i tko ih vodi",
         "step_2": "Stvorite prvenstva u <strong>Menadžeru natjecanja</strong> s regijom kao organizatorom",
-        "step_3": "Odobrite članove koji žele skakati, suditi ili biti glavni sudac",
+        "step_3": "Odobrite članove koji žele skakati, suditi ili trenirati druge te klubove koji traže ulazak u vašu regiju",
         "cta": "Organizacija natjecanja ↗"
       },
       "org_admin": {
@@ -792,7 +794,9 @@
       "generic": "Obavijest",
       "claim_vote": "Glasanje",
       "claim_review": "Zahtjev",
-      "claim_decided": "Zahtjev"
+      "claim_decided": "Zahtjev",
+      "club_change": "Promjena kluba",
+      "region_request": "Regija"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Organizirajte natjecanja",
     "requests": "Zahtjevi za uloge",
     "no_requests_title": "Nema zahtjeva na čekanju",
-    "no_requests_body": "Kad član zatraži ulogu skakača, suca ili glavnog suca, zahtjev se pojavljuje ovdje.",
+    "no_requests_body": "Kad član zatraži ulogu skakača, suca ili trenera, zahtjev se pojavljuje ovdje.",
     "wants_role": "želi biti: {role}",
     "approve": "Odobri",
     "reject": "Odbij",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Odaberite člana kluba —",
     "add": "Dodaj",
     "remove": "Ukloni",
-    "federation_appoints": "Administratore ovog kluba imenuje vaš savez."
+    "federation_appoints": "Administratore ovog kluba imenuje vaš savez.",
+    "region_claimed_note": "Regija koju je preuzelo njezino upravno tijelo sama odlučuje koje klubove prima. Kad je odaberete, njezinim administratorima šalje se zahtjev i samo oni poslije mogu izvaditi klub iz nje.",
+    "join_requests": "Zahtjevi za učlanjenje",
+    "no_join_requests_title": "Nitko ne čeka učlanjenje",
+    "no_join_requests_body": "Kad netko sa svog profila zatraži učlanjenje u vaš klub, pojavit će se ovdje.",
+    "wants_to_join": "želi se učlaniti u {club}",
+    "currently_at": "trenutačno u {club}",
+    "region_request_pending": "Čeka se da regija {region} primi vaš klub.",
+    "region_request_cancel": "Povuci zahtjev",
+    "region_request_sent": "Zahtjev je poslan. Regija {region} odlučuje hoće li primiti vaš klub."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "Klubovi se ovdje pojavljuju kad odaberu vašu regiju, pri registraciji ili na stranici kluba.",
     "members": "{n} članova",
     "no_admin": "Još nema administratora",
-    "region_admins": "Administratori regije"
+    "region_admins": "Administratori regije",
+    "pick_member": "— Odaberite člana nekog kluba iz vaše regije —",
+    "no_candidates": "Još nema koga dodati. Ovdje se prikazuju članovi klubova iz vaše regije.",
+    "release_club": "Izvadi iz regije",
+    "club_requests": "Klubovi koji traže ulazak",
+    "currently_in": "trenutačno u regiji {region}"
   },
   "claims": {
     "title": "Zahtjevi",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Povučeno",
     "status_open_review": "Čeka odluku",
     "revoked_summary": "Zahtjev opozvan. Uklonjena ovlaštenja: {count}"
+  },
+  "request_role": {
+    "button": "Zatraži ulogu",
+    "title": "Zatraži ulogu",
+    "intro_claimed": "Zahtjeve za uloge pregledavaju administratori vašeg saveza. Dobit ćete e-poruku kad odluče.",
+    "intro_unclaimed": "Dok ovdje nema saveza, zahtjeve za skakača, suca i trenera pregledavaju administratori vašeg kluba, a ostale DivingHQ. Dobit ćete e-poruku kad odluče.",
+    "no_club_hint": "Niste ni u jednom klubu pa će ovo pregledati DivingHQ. Ako biste radije da odluči klub, najprije zatražite učlanjenje u neki.",
+    "you_have": "Vaše uloge: {roles}",
+    "role_label": "Uloga",
+    "pick_role": "— Odaberite ulogu —",
+    "note_label": "Napomena za onoga tko pregledava (neobavezno)",
+    "submit": "Pošalji zahtjev",
+    "sending": "Slanje…",
+    "sent": "Zahtjev je poslan",
+    "nothing_left": "Već imate, ili ste zatražili, svaku ulogu koju ovdje možete zatražiti.",
+    "your_requests": "Vaši zahtjevi",
+    "status_pending": "Na čekanju",
+    "status_approved": "Odobreno",
+    "status_rejected": "Odbijeno"
   }
 }

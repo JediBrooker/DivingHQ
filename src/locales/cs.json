@@ -69,7 +69,8 @@
       "submit_idle": "Vytvořit účet",
       "submit_loading": "Vytváření...",
       "already_have_account": "Už máte účet?",
-      "sign_in_link": "Přihlaste se"
+      "sign_in_link": "Přihlaste se",
+      "referee_note_unclaimed": "Dokud tu není federace, žádosti o roli vrchního rozhodčího posuzuje DivingHQ, ne váš klub: vrchní rozhodčí může zasahovat do závodů kteréhokoli klubu."
     },
     "register_org": {
       "title": "Registrace organizace",
@@ -467,7 +468,8 @@
       "password_placeholder": "Vaše současné heslo",
       "conflict": "Nelze sloučit: starý účet i váš současný účet mají záznamy pro stejnou disciplínu a kolo. Odškrtněte kolidujícího kandidáta nebo kontaktujte administrátora federace, aby provedl sloučení ručně.",
       "success_toast": "Minulé výsledky byly znovu propojeny s vaším profilem."
-    }
+    },
+    "club_request_sent": "Žádost odeslána. Přesun proběhne po schválení: vaší federací, nebo tam, kde zatím není, správci nového klubu."
   },
   "diver_profile": {
     "back": "← Zpět",
@@ -571,17 +573,17 @@
         "desc": "Řídíte svůj klub. Kde federace vaší země na DivingHQ zatím není, klub pořádá závody sám: vytvořte je, řiďte z <strong>Řídicí místnosti</strong> a schvalujte žádosti členů o role. Pod federací vás jmenuje ona.",
         "step_1": "Zaregistrujte se, vyberte zemi a založte klub, stanete se jeho prvním správcem",
         "step_2": "Otevřete <strong>Správa závodů</strong> a vytvořte závod pořádaný vaším klubem",
-        "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo řídit, na stránce <strong>Můj klub</strong>",
+        "step_3": "Na stránce <strong>Můj klub</strong> schvalujte zájemce o vstup a členy, kteří chtějí skákat, soudit nebo trénovat",
         "step_4": "V den závodu řiďte bodování z <strong>Řídicí místnosti</strong>",
         "step_5": "Až dorazí vaše federace nebo krajský svaz, hlasujte o jejím nároku na stránce <strong>Nároky</strong>",
         "cta": "Pořádání závodu ↗"
       },
       "region_admin": {
         "name": "Správce regionu",
-        "desc": "Staráte se o stát, provincii či zemi: pořádáte její mistrovství, můžete zasáhnout do závodů kteréhokoli jejího klubu a schvalujete žádosti členů jejích klubů o role. Jmenuje vás federace, nebo DivingHQ, pokud federace zatím není.",
+        "desc": "Staráte se o stát, provincii či zemi: pořádáte její mistrovství, můžete zasáhnout do závodů kteréhokoli jejího klubu a schvalujete žádosti členů jejích klubů o role. Jmenuje vás federace. Pokud federace zatím není, převezme region váš krajský svaz a další správce si přidáváte sami.",
         "step_1": "Otevřete <strong>Můj region</strong> a uvidíte své kluby a jejich vedení",
         "step_2": "Vytvořte mistrovství ve <strong>Správě závodů</strong> pořádané vaším regionem",
-        "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo řídit",
+        "step_3": "Schvalujte členy, kteří chtějí skákat, soudit nebo trénovat, a kluby, které žádají o vstup do vašeho regionu",
         "cta": "Pořádání závodu ↗"
       },
       "org_admin": {
@@ -792,7 +794,9 @@
       "generic": "Upozornění",
       "claim_vote": "Hlasování",
       "claim_review": "Nárok",
-      "claim_decided": "Nárok"
+      "claim_decided": "Nárok",
+      "club_change": "Změna klubu",
+      "region_request": "Region"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Pořádat závody",
     "requests": "Žádosti o role",
     "no_requests_title": "Žádné čekající žádosti",
-    "no_requests_body": "Když člen požádá o roli skokana, rozhodčího nebo vrchního rozhodčího, objeví se to zde.",
+    "no_requests_body": "Když člen požádá o roli skokana, rozhodčího nebo trenéra, objeví se to zde.",
     "wants_role": "chce být: {role}",
     "approve": "Schválit",
     "reject": "Zamítnout",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Vyberte člena klubu —",
     "add": "Přidat",
     "remove": "Odebrat",
-    "federation_appoints": "Správce tohoto klubu jmenuje vaše federace."
+    "federation_appoints": "Správce tohoto klubu jmenuje vaše federace.",
+    "region_claimed_note": "Region, který si převzal jeho řídící orgán, sám rozhoduje, které kluby přijme. Když ho vyberete, odešle se žádost jeho správcům a jen oni mohou klub z regionu zase vyjmout.",
+    "join_requests": "Žádosti o vstup",
+    "no_join_requests_title": "Nikdo nečeká na přijetí",
+    "no_join_requests_body": "Když někdo ze svého profilu požádá o vstup do vašeho klubu, objeví se to tady.",
+    "wants_to_join": "chce vstoupit do {club}",
+    "currently_at": "nyní v {club}",
+    "region_request_pending": "Čeká se, až váš klub přijme region {region}.",
+    "region_request_cancel": "Stáhnout žádost",
+    "region_request_sent": "Žádost odeslána. Region {region} rozhodne, zda váš klub přijme."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "Kluby se tu objeví, jakmile si váš region vyberou při registraci nebo na stránce klubu.",
     "members": "{n} členů",
     "no_admin": "Zatím bez správce",
-    "region_admins": "Správci regionu"
+    "region_admins": "Správci regionu",
+    "pick_member": "— Vyberte člena některého klubu ve vašem regionu —",
+    "no_candidates": "Zatím není koho přidat. Zobrazí se tu členové klubů ve vašem regionu.",
+    "release_club": "Vyjmout z regionu",
+    "club_requests": "Kluby, které žádají o vstup",
+    "currently_in": "nyní v regionu {region}"
   },
   "claims": {
     "title": "Nároky",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Staženo",
     "status_open_review": "Čeká na rozhodnutí",
     "revoked_summary": "Nárok odvolán. Odebraná oprávnění: {count}"
+  },
+  "request_role": {
+    "button": "Požádat o roli",
+    "title": "Požádat o roli",
+    "intro_claimed": "Žádosti o role posuzují správci vaší federace. Až rozhodnou, dostanete e-mail.",
+    "intro_unclaimed": "Dokud tu není federace, žádosti o roli skokana, rozhodčího a trenéra posuzují správci vašeho klubu a ostatní DivingHQ. Až rozhodnou, dostanete e-mail.",
+    "no_club_hint": "Nejste v žádném klubu, takže žádost posoudí DivingHQ. Pokud byste raději, aby rozhodl klub, nejdřív požádejte o vstup do některého z nich.",
+    "you_have": "Vaše role: {roles}",
+    "role_label": "Role",
+    "pick_role": "— Vyberte roli —",
+    "note_label": "Poznámka pro posuzovatele (nepovinné)",
+    "submit": "Odeslat žádost",
+    "sending": "Odesílání…",
+    "sent": "Žádost odeslána",
+    "nothing_left": "Všechny role, o které tu lze požádat, už máte nebo jste o ně požádali.",
+    "your_requests": "Vaše žádosti",
+    "status_pending": "Čeká",
+    "status_approved": "Schváleno",
+    "status_rejected": "Zamítnuto"
   }
 }

@@ -2705,3 +2705,922 @@ test("claims: a state body made org_admin still can't approve its own claim", as
     await claimKit.wipe(CODE);
   }
 });
+
+// ---------------------------------------------------------------------
+// Delegate permissions (track c). Each test owns one country code nobody
+// else in test/ uses, and wipes it before and after.
+// ---------------------------------------------------------------------
+
+// Sign up in a country (or org), verify, sign in. Returns the login body
+// bits the tests below lean on.
+async function delegateSignUp(body) {
+  const username = `int-dg-${crypto.randomBytes(4).toString("hex")}`;
+  const r = await fetchJson("POST", "/api/auth/register", {
+    body: { username, full_name: body.full_name || username, password: TEST_PASSWORD,
+            email: `${username}@example.test`, ...body },
+  });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  await pool.query("UPDATE users SET email_verified_at = now() WHERE username = $1", [username]);
+  const login = await fetchJson("POST", "/api/auth/login", { body: { username, password: TEST_PASSWORD } });
+  assert.equal(login.status, 200, JSON.stringify(login.body));
+  return {
+    username, id: login.body.id, token: login.body.token,
+    clubId: login.body.club_admin_of?.[0]?.id || null,
+    orgId: (await pool.query("SELECT org_id FROM users WHERE id = $1", [login.body.id])).rows[0].org_id,
+  };
+}
+
+test("unclaimed country: referee requests go to the sysadmin, judge stays with the club", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "STP";
+  await claimKit.wipe(CODE);
+  const roleRequests = require("../lib/role-requests");
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Sao Tome Divers" });
+    const ref = await delegateSignUp({ country_code: CODE, club_id: A.clubId, requested_role: "referee" });
+    const judge = await delegateSignUp({ country_code: CODE, club_id: A.clubId, requested_role: "judge" });
+
+    // Who gets told: the club for a judge, the sysadmin for a referee.
+    assert.equal((await roleRequests.reviewersFor(pool, ref.id, A.orgId, "referee")).via, "sysadmin");
+    assert.equal((await roleRequests.reviewersFor(pool, judge.id, A.orgId, "judge")).via, "club");
+
+    const aList = (await fetchJson("GET", "/api/role-requests", { token: A.token })).body;
+    assert.ok(aList.some((r) => r.user_id === judge.id), "the club still reviews judges");
+    assert.ok(!aList.some((r) => r.user_id === ref.id), "but never sees the referee request");
+    const refRq = (await pool.query(
+      "SELECT id FROM role_requests WHERE user_id = $1 AND status = 'pending'", [ref.id],
+    )).rows[0].id;
+    assert.equal((await fetchJson("POST", `/api/role-requests/${refRq}/review`, {
+      token: A.token, body: { decision: "approved" },
+    })).status, 403);
+    const dash = await fetchJson("GET", "/api/dashboard", { token: A.token });
+    assert.ok(!(dash.body.role_requests || []).some((r) => r.user_id === ref.id), "dashboard feed agrees");
+
+    // A region admin one level up can't grant it either.
+    const reg = await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Principe', 'PRI') RETURNING id", [A.orgId],
+    );
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [reg.rows[0].id, A.clubId]);
+    const R = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [reg.rows[0].id, R.id, A.orgId]);
+    assert.equal((await fetchJson("POST", `/api/role-requests/${refRq}/review`, {
+      token: R.token, body: { decision: "approved" },
+    })).status, 403);
+
+    // The sysadmin sees it and decides.
+    const sys = await claimKit.login("admin", "admin");
+    const sysList = (await fetchJson("GET", "/api/role-requests", { token: sys.token })).body;
+    assert.ok(sysList.some((r) => r.id === refRq));
+    assert.equal((await fetchJson("POST", `/api/role-requests/${refRq}/review`, {
+      token: sys.token, body: { decision: "approved" },
+    })).status, 200);
+    const judgeRq = aList.find((r) => r.user_id === judge.id).id;
+    assert.equal((await fetchJson("POST", `/api/role-requests/${judgeRq}/review`, {
+      token: A.token, body: { decision: "approved" },
+    })).status, 200);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("referee credential sign-off: eligibility before bcrypt, one answer for every failure, throttled", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "COM";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  const pw = "referee-password-9876";
+  const hash = await bcrypt.hash(pw, 4);
+  const mkUser = async (orgId, { role, verified = true } = {}) => {
+    const username = `int-so-${crypto.randomBytes(4).toString("hex")}`;
+    const id = (await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+       VALUES ($1, $2, $1, $3, ${verified ? "now()" : "NULL"}) RETURNING id`,
+      [username, hash, orgId],
+    )).rows[0].id;
+    if (role) await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, $3)", [id, orgId, role]);
+    return { id, username };
+  };
+  try {
+    // A self-serve founder, which is exactly who could reach this before.
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Moroni Divers" });
+    const meet = await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Moroni Open" } });
+    const ev = await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name: "1m", gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 5, event_type: "individual", meet_id: meet.body.id },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const url = `/api/events/${ev.body.id}/dive-order/sign-off/credential`;
+    const ref = await mkUser(A.orgId, { role: "referee" });
+    const plain = await mkUser(A.orgId, { role: "diver" });
+    const unverified = await mkUser(A.orgId, { role: "referee", verified: false });
+    const outsider = await mkUser(state.orgId, { role: "referee" });
+
+    // Right password for the wrong person looks exactly like a wrong one.
+    const wrong = await fetchJson("POST", url, { token: A.token, body: { username: ref.username, password: "nope-nope-nope" } });
+    assert.equal(wrong.status, 401);
+    for (const who of [plain, unverified, outsider, { username: "nobody-at-all-here" }]) {
+      const r = await fetchJson("POST", url, { token: A.token, body: { username: who.username, password: pw } });
+      assert.equal(r.status, 401, `${who.username}: ${JSON.stringify(r.body)}`);
+      assert.deepEqual(r.body, wrong.body);
+    }
+    assert.equal((await fetchJson("POST", url, { token: A.token, body: { username: ["x"], password: pw } })).status, 400);
+
+    const ok = await fetchJson("POST", url, { token: A.token, body: { username: ref.username, password: pw } });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    const signed = await pool.query("SELECT dive_order_signed_off_by FROM events WHERE id = $1", [ev.body.id]);
+    assert.equal(signed.rows[0].dive_order_signed_off_by, ref.id);
+
+    // With the limiter on (the suite runs with it off), five misses on one
+    // referee and the sixth try is refused before any password check.
+    process.env.RATE_LIMIT_DISABLED = "false";
+    try {
+      const target = await mkUser(A.orgId, { role: "referee" });
+      for (let i = 0; i < 5; i++) {
+        const r = await fetchJson("POST", url, { token: A.token, body: { username: target.username, password: `guess-${i}` } });
+        assert.equal(r.status, 401);
+      }
+      const blocked = await fetchJson("POST", url, { token: A.token, body: { username: target.username, password: pw } });
+      assert.equal(blocked.status, 429, JSON.stringify(blocked.body));
+      // Another referee isn't caught by that one's budget.
+      const other = await mkUser(A.orgId, { role: "referee" });
+      assert.equal((await fetchJson("POST", url, { token: A.token, body: { username: other.username, password: "x" } })).status, 401);
+    } finally {
+      process.env.RATE_LIMIT_DISABLED = "true";
+    }
+  } finally {
+    await teardownFixture(state);
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("editing an event can't chain it onto a neighbouring club's stage", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "DMA";
+  await claimKit.wipe(CODE);
+  const mkEvent = async (token, meetId, name, extra = {}) => {
+    const r = await fetchJson("POST", "/api/events", {
+      token,
+      body: { name, gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 5,
+              event_type: "individual", meet_id: meetId, ...extra },
+    });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    return r.body.id;
+  };
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Roseau Divers" });
+    const B = await delegateSignUp({ country_code: CODE, new_club_name: "Portsmouth Divers" });
+    const aMeet = (await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "Roseau Open" } })).body.id;
+    const bMeet = (await fetchJson("POST", "/api/meets", { token: B.token, body: { name: "Portsmouth Open" } })).body.id;
+    // A's event is the older one, which is what made the hijack work.
+    const x = await mkEvent(A.token, aMeet, "Roseau 3m Final", { event_format: "final" });
+    const bPrelim = await mkEvent(B.token, bMeet, "Portsmouth 3m Prelim", { event_format: "preliminary" });
+    await mkEvent(B.token, bMeet, "Portsmouth 3m Final", { event_format: "final", parent_event_id: bPrelim });
+
+    const hijack = await fetchJson("PUT", `/api/events/${x}`, { token: A.token, body: { parent_event_id: bPrelim } });
+    assert.equal(hijack.status, 400, JSON.stringify(hijack.body));
+    const after = await pool.query("SELECT parent_event_id FROM events WHERE id = $1", [x]);
+    assert.equal(after.rows[0].parent_event_id, null);
+
+    // Chaining onto their own prelim is fine, and saving again with the
+    // parent unchanged still works.
+    const aPrelim = await mkEvent(A.token, aMeet, "Roseau 3m Prelim", { event_format: "preliminary" });
+    assert.equal((await fetchJson("PUT", `/api/events/${x}`, { token: A.token, body: { parent_event_id: aPrelim } })).status, 200);
+    assert.equal((await fetchJson("PUT", `/api/events/${x}`, { token: A.token, body: { parent_event_id: aPrelim, name: "Roseau 3m F" } })).status, 200);
+    // Nor can an event feed from itself, or from junk.
+    assert.equal((await fetchJson("PUT", `/api/events/${x}`, { token: A.token, body: { parent_event_id: x } })).status, 400);
+    assert.equal((await fetchJson("PUT", `/api/events/${x}`, { token: A.token, body: { parent_event_id: "not-a-uuid" } })).status, 400);
+
+    // A plain event manager of X (no club role) is held to the same rule.
+    const helper = await delegateSignUp({ country_code: CODE });
+    await pool.query("INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2)", [x, helper.id]);
+    assert.equal((await fetchJson("PUT", `/api/events/${x}`, { token: helper.token, body: { parent_event_id: bPrelim } })).status, 400);
+    assert.equal((await fetchJson("PUT", `/api/events/${x}`, { token: helper.token, body: { name: "Roseau 3m Final" } })).status, 200);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("moving an event between meets: managers keep their reach, club admins can't pull events in", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const state = await setupFixture({ withEvent: true });
+  const mkMember = async (clubId = null) => {
+    const username = `int-mv-${crypto.randomBytes(4).toString("hex")}`;
+    await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, club_id, email_verified_at)
+       VALUES ($1, $2, $1, $3, $4, now())`,
+      [username, await bcrypt.hash(TEST_PASSWORD, 4), state.orgId, clubId],
+    );
+    const login = await claimKit.login(username);
+    return { id: login.id, token: login.token };
+  };
+  const adm = state.adminToken;
+  const meet = async (body) => {
+    const r = await fetchJson("POST", "/api/meets", { token: adm, body });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    return r.body.id;
+  };
+  try {
+    // A federation with a club whose admin also helps run Nationals.
+    const club = (await fetchJson("POST", `/api/orgs/${state.orgId}/clubs`, { token: adm, body: { name: "Mover Club" } })).body.id;
+    const C = await mkMember(club);
+    assert.equal((await fetchJson("POST", `/api/clubs/${club}/admins`, { token: adm, body: { user_id: C.id } })).status, 201);
+    const nationals = await meet({ name: "Nationals" });
+    const nationals2 = await meet({ name: "Nationals Day 2" });
+    const clubMeet = await meet({ name: "Mover Club Night", host_club_id: club });
+    const clubMeet2 = await meet({ name: "Mover Club Night 2", host_club_id: club });
+    const E = state.eventId;
+    assert.equal((await fetchJson("PUT", `/api/events/${E}/meet`, { token: adm, body: { meet_id: nationals } })).status, 200);
+    await pool.query("INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2)", [E, C.id]);
+
+    // C can't pull the federation's event into their club's meet (and so
+    // can't go on to delete it).
+    const pull = await fetchJson("PUT", `/api/events/${E}/meet`, { token: C.token, body: { meet_id: clubMeet } });
+    assert.equal(pull.status, 403, JSON.stringify(pull.body));
+    assert.equal((await pool.query("SELECT meet_id FROM events WHERE id = $1", [E])).rows[0].meet_id, nationals);
+    assert.equal((await fetchJson("DELETE", `/api/events/${E}`, { token: C.token })).status, 403);
+    // As its manager they can still move it around the federation's meets.
+    assert.equal((await fetchJson("PUT", `/api/events/${E}/meet`, { token: C.token, body: { meet_id: nationals2 } })).status, 200);
+
+    // A plain event manager keeps the old behaviour, including detaching.
+    const M = await mkMember();
+    await pool.query("INSERT INTO event_managers (event_id, user_id) VALUES ($1, $2)", [E, M.id]);
+    assert.equal((await fetchJson("PUT", `/api/events/${E}/meet`, { token: M.token, body: { meet_id: nationals } })).status, 200);
+    assert.equal((await fetchJson("PUT", `/api/events/${E}/meet`, { token: M.token, body: { meet_id: null } })).status, 200);
+    assert.equal((await fetchJson("PUT", `/api/events/${E}/meet`, { token: M.token, body: { meet_id: "junk" } })).status, 400);
+
+    // A club admin with no manager row moves their own event between
+    // their own meets, and nowhere else.
+    const own = await fetchJson("POST", "/api/events", {
+      token: C.token,
+      body: { name: "Club 1m", gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 5, event_type: "individual", meet_id: clubMeet },
+    });
+    assert.equal(own.status, 201, JSON.stringify(own.body));
+    assert.equal((await fetchJson("PUT", `/api/events/${own.body.id}/meet`, { token: C.token, body: { meet_id: clubMeet2 } })).status, 200);
+    assert.equal((await fetchJson("PUT", `/api/events/${own.body.id}/meet`, { token: C.token, body: { meet_id: nationals } })).status, 403);
+    assert.equal((await fetchJson("PUT", `/api/events/${own.body.id}/meet`, { token: C.token, body: { meet_id: null } })).status, 403);
+  } finally {
+    await pool.query("DELETE FROM events WHERE org_id = $1", [state.orgId]);
+    await pool.query("DELETE FROM meets WHERE org_id = $1", [state.orgId]);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [state.orgId]).catch(() => {});
+    await teardownFixture(state);
+  }
+});
+
+test("last club admin: only live admins count, and co-admins can't remove each other at once", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "KNA";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Basseterre Divers" });
+    const club = A.clubId;
+    const promote = async (u) => assert.equal(
+      (await fetchJson("POST", `/api/clubs/${club}/admins`, { token: A.token, body: { user_id: u.id } })).status, 201);
+    const liveAdmins = async () => (await pool.query(
+      `SELECT count(*)::int AS n FROM club_admins ca JOIN users u ON u.id = ca.user_id
+        WHERE ca.club_id = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`, [club],
+    )).rows[0].n;
+
+    // A deleted co-admin's row is left behind; it doesn't count.
+    const B = await delegateSignUp({ country_code: CODE, club_id: club });
+    await promote(B);
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [B.id]);
+    const alone = await fetchJson("DELETE", `/api/clubs/${club}/admins/${A.id}`, { token: A.token });
+    assert.equal(alone.status, 409, JSON.stringify(alone.body));
+    // Nor does a suspended one.
+    const S = await delegateSignUp({ country_code: CODE, club_id: club });
+    await promote(S);
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [S.id]);
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${club}/admins/${A.id}`, { token: A.token })).status, 409);
+    // Clearing out a dead account's row is fine, uppercase id and all.
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${club}/admins/${B.id.toUpperCase()}`, { token: A.token })).status, 200);
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${club}/admins/${B.id}`, { token: A.token })).status, 404);
+
+    // Two live co-admins removing each other at the same moment: exactly
+    // one wins, and the club keeps a live admin. A few rounds, since it's
+    // a race.
+    for (let round = 0; round < 3; round++) {
+      const keep = round === 0 ? A : (await pool.query(
+        `SELECT u.id, u.username FROM club_admins ca JOIN users u ON u.id = ca.user_id
+          WHERE ca.club_id = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`, [club],
+      )).rows[0];
+      const keepTok = keep.token || (await claimKit.login(keep.username)).token;
+      const C = await delegateSignUp({ country_code: CODE, club_id: club });
+      assert.equal((await fetchJson("POST", `/api/clubs/${club}/admins`, { token: keepTok, body: { user_id: C.id } })).status, 201);
+      const [x, y] = await Promise.all([
+        fetchJson("DELETE", `/api/clubs/${club}/admins/${C.id}`, { token: keepTok }),
+        fetchJson("DELETE", `/api/clubs/${club}/admins/${keep.id}`, { token: C.token }),
+      ]);
+      // The loser gets 409 if it was already past its permission check when
+      // the winner committed, or 403 if the winner had already taken its
+      // admin row away. Either way only one removal lands.
+      const statuses = [x.status, y.status].sort();
+      assert.equal(statuses[0], 200, `round ${round}: ${x.status} ${y.status}`);
+      assert.ok([403, 409].includes(statuses[1]), `round ${round}: ${x.status} ${y.status}`);
+      assert.equal(await liveAdmins(), 1);
+    }
+
+    // The HTTP race above can settle at the permission check, before the
+    // lock matters. Straight at the helper, both removals are always past
+    // that point, so this is the lock on its own.
+    const { removeAdmin } = require("../lib/admin-rows");
+    for (let round = 0; round < 5; round++) {
+      const keep = (await pool.query(
+        `SELECT u.id FROM club_admins ca JOIN users u ON u.id = ca.user_id
+          WHERE ca.club_id = $1 AND u.deleted_at IS NULL AND u.suspended_at IS NULL`, [club],
+      )).rows[0];
+      const C = await delegateSignUp({ country_code: CODE, club_id: club });
+      await pool.query("INSERT INTO club_admins (club_id, user_id, org_id) VALUES ($1, $2, $3)", [club, C.id, A.orgId]);
+      const outs = await Promise.all([keep.id, C.id].map((userId) =>
+        removeAdmin(pool, { scope: "club", scopeId: club, userId, keepOneLive: true })));
+      assert.deepEqual(outs.map((o) => o.status).sort(), [200, 409], `helper round ${round}`);
+      assert.equal(await liveAdmins(), 1);
+    }
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("region co-admins: a region's own admins manage them, and an orphaned region can be claimed again", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CAN";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Kingston Tritons", region_code: "ON" });
+    const M = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
+    const Q = await delegateSignUp({ country_code: CODE, new_club_name: "Quebec Tritons", region_code: "QC" });
+    const on = (await pool.query("SELECT id FROM regions WHERE org_id = $1 AND short_code = 'ON'", [A.orgId])).rows[0].id;
+    // Ontario's body won its claim: claimed, with one admin.
+    const R = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
+    await pool.query("UPDATE regions SET claim_state = 'claimed', claimed_name = 'Diving Ontario' WHERE id = $1", [on]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [on, R.id, A.orgId]);
+    const url = `/api/regions/${on}/admins`;
+
+    const list = await fetchJson("GET", url, { token: R.token });
+    assert.equal(list.status, 200);
+    assert.equal(list.body.can_manage, true);
+    assert.ok(list.body.candidates.some((c) => c.id === M.id));
+
+    // Their own clubs' members only; a club admin can't appoint here.
+    assert.equal((await fetchJson("POST", url, { token: R.token, body: { user_id: Q.id } })).status, 400);
+    assert.equal((await fetchJson("POST", url, { token: A.token, body: { user_id: M.id } })).status, 403);
+    assert.equal((await fetchJson("POST", url, { token: R.token, body: { user_id: M.id } })).status, 201);
+    assert.equal((await fetchJson("DELETE", `${url}/${M.id}`, { token: A.token })).status, 403);
+    assert.equal((await fetchJson("DELETE", `${url}/${M.id}`, { token: R.token })).status, 200);
+    // Never down to nobody, and a dead co-admin doesn't count.
+    assert.equal((await fetchJson("DELETE", `${url}/${R.id}`, { token: R.token })).status, 409);
+    assert.equal((await fetchJson("POST", url, { token: R.token, body: { user_id: M.id } })).status, 201);
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [M.id]);
+    assert.equal((await fetchJson("DELETE", `${url}/${R.id}`, { token: R.token })).status, 409);
+
+    // Under a federation it's the org admin's call, as before.
+    await pool.query("UPDATE organisations SET claim_state = 'claimed' WHERE id = $1", [A.orgId]);
+    assert.equal((await fetchJson("POST", url, { token: R.token, body: { user_id: A.id } })).status, 403);
+    assert.equal((await fetchJson("GET", url, { token: R.token })).body.can_manage, false);
+    await pool.query("UPDATE organisations SET claim_state = 'unclaimed' WHERE id = $1", [A.orgId]);
+
+    // While Ontario has a live admin a second body can't claim it...
+    const early = await claimKit.claim({ org_name: "Ontario Diving Two", country_code: CODE, region_code: "ON" });
+    assert.equal(early.res.status, 409);
+    assert.equal(early.res.body.code, "already_claimed");
+    // ...but once its last admin has gone, the region is open again.
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [R.id]);
+    const again = await claimKit.claim({ org_name: "Ontario Diving Two", country_code: CODE, region_code: "ON" });
+    assert.equal(again.res.status, 201, JSON.stringify(again.res.body));
+    assert.equal(again.res.body.target_kind, "region");
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("club region moves: self-serve between unclaimed regions, both sides agree on a claimed one", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CAN";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Sudbury Divers", region_code: "ON" });
+    const B = await delegateSignUp({ country_code: CODE, new_club_name: "Gatineau Divers", region_code: "QC" });
+    const rid = async (code) => (await pool.query(
+      "SELECT id FROM regions WHERE org_id = $1 AND short_code = $2", [A.orgId, code])).rows[0].id;
+    const [on, qc, nb] = [await rid("ON"), await rid("QC"), await rid("NB")];
+    const move = (tok, clubId, regionId) =>
+      fetchJson("PUT", `/api/clubs/${clubId}/region`, { token: tok, body: { region_id: regionId } });
+    const regionOf = async (clubId) => (await pool.query("SELECT region_id FROM clubs WHERE id = $1", [clubId])).rows[0].region_id;
+    const askedFor = async (clubId) => (await pool.query("SELECT requested_region_id FROM clubs WHERE id = $1", [clubId])).rows[0].requested_region_id;
+
+    // Nobody's claimed anything yet: the club decides.
+    assert.equal((await move(A.token, A.clubId, qc)).status, 200);
+    assert.equal((await move(A.token, A.clubId, on.toUpperCase())).status, 200);
+    assert.equal(await regionOf(A.clubId), on);
+
+    // Ontario's body claims it.
+    const R = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
+    await pool.query("UPDATE regions SET claim_state = 'claimed', claimed_name = 'Diving Ontario' WHERE id = $1", [on]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [on, R.id, A.orgId]);
+
+    // Sudbury can't walk out on its own.
+    const out = await move(A.token, A.clubId, null);
+    assert.equal(out.status, 403, JSON.stringify(out.body));
+    assert.equal(out.body.code, "region_admin_required");
+    assert.equal((await move(A.token, A.clubId, qc)).status, 403);
+    assert.equal(await regionOf(A.clubId), on);
+    // Moves that don't touch Ontario stay self-serve.
+    assert.equal((await move(B.token, B.clubId, nb)).status, 200);
+
+    // Ontario can't annex a club that never asked...
+    const annex = await move(R.token, B.clubId, on);
+    assert.equal(annex.status, 403, JSON.stringify(annex.body));
+    assert.equal(annex.body.code, "club_request_required");
+    assert.equal(await regionOf(B.clubId), nb);
+
+    // ...but Gatineau can ask, which moves nothing yet and tells Ontario.
+    const ask = await move(B.token, B.clubId, on);
+    assert.equal(ask.status, 202, JSON.stringify(ask.body));
+    assert.equal(ask.body.requested, true);
+    assert.equal(await regionOf(B.clubId), nb);
+    assert.equal(await askedFor(B.clubId), on);
+    const told = await pool.query(
+      "SELECT action_url FROM notifications WHERE user_id = $1 AND category = 'region_request'", [R.id]);
+    assert.equal(told.rows[0]?.action_url, "/region");
+    const overview = (await fetchJson("GET", `/api/regions/${on}/overview`, { token: R.token })).body;
+    assert.deepEqual(overview.join_requests.map((c) => c.id), [B.clubId]);
+    const mine = (await fetchJson("GET", `/api/clubs/${B.clubId}/admins`, { token: B.token })).body;
+    assert.equal(mine.region_request.region_id, on);
+
+    // Only the asking club's admin or Ontario can withdraw or decline it.
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${B.clubId}/region-request`, { token: A.token })).status, 403);
+    assert.equal((await fetchJson("DELETE", `/api/clubs/${B.clubId}/region-request`, { token: R.token })).status, 200);
+    assert.equal(await askedFor(B.clubId), null);
+    assert.equal((await move(R.token, B.clubId, on)).body.code, "club_request_required");
+
+    // Asked again, Ontario accepts, and Gatineau hears about it.
+    assert.equal((await move(B.token, B.clubId, on)).status, 202);
+    assert.equal((await move(R.token, B.clubId, on)).status, 200);
+    assert.equal(await regionOf(B.clubId), on);
+    assert.equal(await askedFor(B.clubId), null);
+    const heard = await pool.query(
+      "SELECT title FROM notifications WHERE user_id = $1 AND category = 'region_decision'", [B.id]);
+    assert.match(heard.rows[0]?.title || "", /now in Diving Ontario/);
+
+    // Ontario lets clubs go, but can't pick where they land.
+    assert.equal((await move(R.token, B.clubId, qc)).status, 403);
+    assert.equal((await move(R.token, B.clubId, null)).status, 200);
+    assert.equal(await regionOf(B.clubId), null);
+    assert.equal((await move(R.token, B.clubId, qc)).status, 403);
+
+    // Nor can it take a club out of another body's claimed region, even
+    // one that asked to join Ontario.
+    await move(B.token, B.clubId, qc);
+    const R2 = await delegateSignUp({ country_code: CODE, club_id: B.clubId });
+    await pool.query("UPDATE regions SET claim_state = 'claimed' WHERE id = $1", [qc]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [qc, R2.id, A.orgId]);
+    assert.equal((await move(B.token, B.clubId, on)).body.code, "region_admin_required");
+    assert.equal((await move(R.token, B.clubId, on)).status, 403);
+    assert.equal(await regionOf(B.clubId), qc);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("unclaimed country: people ask to join a club and its admins say yes", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "LCA";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Castries Divers" });
+    const B = await delegateSignUp({ country_code: CODE, new_club_name: "Soufriere Divers" });
+    // Signed up Independent, and asked to dive.
+    const D = await delegateSignUp({ country_code: CODE, requested_role: "diver" });
+    const clubOf = async (id) => (await pool.query("SELECT club_id FROM users WHERE id = $1", [id])).rows[0].club_id;
+
+    // Setting a club directly is still not theirs (or a club admin's) to do.
+    assert.equal((await fetchJson("PUT", `/api/users/${D.id}/club`, { token: D.token, body: { club_id: A.clubId } })).status, 403);
+    assert.equal((await fetchJson("PUT", `/api/users/${D.id}/club`, { token: A.token, body: { club_id: A.clubId } })).status, 403);
+
+    // A club admin can't sign someone up; the person asks.
+    assert.equal((await fetchJson("POST", "/api/club-change-requests", {
+      token: A.token, body: { user_id: D.id, to_club_id: A.clubId } })).status, 403);
+    const ask = await fetchJson("POST", "/api/club-change-requests", { token: D.token, body: { to_club_id: A.clubId, note: "Training at Castries" } });
+    assert.equal(ask.status, 201, JSON.stringify(ask.body));
+    assert.equal(ask.body.finalised, false);
+    const note = await pool.query(
+      "SELECT action_url FROM notifications WHERE user_id = $1 AND category = 'club_join_request'", [A.id]);
+    assert.equal(note.rows[0]?.action_url, "/club", "A is told");
+
+    // A sees it, B doesn't and can't decide it.
+    const aInbox = (await fetchJson("GET", "/api/club-change-requests", { token: A.token })).body;
+    assert.ok(aInbox.some((r) => r.id === ask.body.id));
+    const bInbox = (await fetchJson("GET", "/api/club-change-requests", { token: B.token })).body;
+    assert.ok(!bInbox.some((r) => r.id === ask.body.id));
+    assert.equal((await fetchJson("POST", `/api/club-change-requests/${ask.body.id}/review`, {
+      token: B.token, body: { decision: "approved" } })).status, 403);
+    assert.equal((await fetchJson("POST", `/api/club-change-requests/${ask.body.id}/review`, {
+      token: D.token, body: { decision: "approved" } })).status, 403);
+
+    assert.equal((await fetchJson("POST", `/api/club-change-requests/${ask.body.id}/review`, {
+      token: A.token, body: { decision: "approved" } })).status, 200);
+    assert.equal(await clubOf(D.id), A.clubId);
+    const audit = await pool.query(
+      "SELECT 1 FROM audit_log WHERE entity_id = $1 AND action = 'user.club_changed'", [D.id]);
+    assert.equal(audit.rows.length, 1);
+    // The ask was for A to act on; the answer is only news for D.
+    const dNotes = await pool.query("SELECT category FROM notifications WHERE user_id = $1", [D.id]);
+    assert.deepEqual(dNotes.rows.map((r) => r.category), ["club_change"]);
+
+    // Now a member: their diver request is A's to review, and A can make
+    // them a co-admin.
+    assert.ok((await fetchJson("GET", "/api/role-requests", { token: A.token })).body.some((r) => r.user_id === D.id));
+    assert.equal((await fetchJson("POST", `/api/clubs/${A.clubId}/admins`, { token: A.token, body: { user_id: D.id } })).status, 201);
+
+    // Switching to B goes to B, and B can turn it down.
+    const sw = await fetchJson("POST", "/api/club-change-requests", { token: D.token, body: { to_club_id: B.clubId } });
+    assert.equal(sw.status, 201);
+    assert.ok(!(await fetchJson("GET", "/api/club-change-requests", { token: A.token })).body
+      .some((r) => r.id === sw.body.id && r.user_id !== A.id && r.to_club_id === A.clubId));
+    assert.equal((await fetchJson("POST", `/api/club-change-requests/${sw.body.id}/review`, {
+      token: A.token, body: { decision: "approved" } })).status, 403);
+    assert.equal((await fetchJson("POST", `/api/club-change-requests/${sw.body.id}/review`, {
+      token: B.token, body: { decision: "rejected" } })).status, 200);
+    assert.equal(await clubOf(D.id), A.clubId);
+
+    // Under a real federation this stays the org admin's call.
+    await pool.query("UPDATE organisations SET claim_state = 'claimed' WHERE id = $1", [A.orgId]);
+    const fed = await fetchJson("POST", "/api/club-change-requests", { token: D.token, body: { to_club_id: B.clubId } });
+    assert.equal(fed.status, 201);
+    assert.equal((await fetchJson("POST", `/api/club-change-requests/${fed.body.id}/review`, {
+      token: B.token, body: { decision: "approved" } })).status, 403);
+  } finally {
+    await pool.query(
+      "DELETE FROM club_change_requests WHERE from_org_id IN (SELECT id FROM organisations WHERE country_code = $1)", [CODE],
+    ).catch(() => {});
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("coach: requestable at signup, a club grants it, a founder can't grant it to themselves", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "VCT";
+  await claimKit.wipe(CODE);
+  const roleRequests = require("../lib/role-requests");
+  const pendingFor = async (userId) => (await pool.query(
+    "SELECT id, requested_role FROM role_requests WHERE user_id = $1 AND status = 'pending'", [userId],
+  )).rows;
+  try {
+    // The founder brings the club in as its coach.
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Kingstown Divers", requested_role: "coach" });
+    const coach = await delegateSignUp({ country_code: CODE, club_id: A.clubId, requested_role: "coach" });
+    // Signup used to drop 'coach' on the floor.
+    assert.deepEqual((await pendingFor(coach.id)).map((r) => r.requested_role), ["coach"]);
+
+    // A member's coach request is the club's to decide...
+    assert.equal((await roleRequests.reviewersFor(pool, coach.id, A.orgId, "coach")).via, "club");
+    const list = (await fetchJson("GET", "/api/role-requests", { token: A.token })).body;
+    assert.ok(list.some((r) => r.user_id === coach.id && r.requested_role === "coach"));
+
+    // ...but not the founder's own: that goes up to DivingHQ.
+    const own = (await pendingFor(A.id))[0];
+    assert.equal(own.requested_role, "coach");
+    assert.ok(!list.some((r) => r.id === own.id), "never offered to approve their own");
+    assert.equal((await roleRequests.reviewersFor(pool, A.id, A.orgId, "coach")).via, "sysadmin");
+    assert.equal((await fetchJson("POST", `/api/role-requests/${own.id}/review`, {
+      token: A.token, body: { decision: "approved" },
+    })).status, 403);
+
+    const rq = list.find((r) => r.user_id === coach.id).id;
+    assert.equal((await fetchJson("POST", `/api/role-requests/${rq}/review`, {
+      token: A.token, body: { decision: "approved" },
+    })).status, 200);
+    const held = await pool.query(
+      "SELECT 1 FROM user_org_roles WHERE user_id = $1 AND org_id = $2 AND role = 'coach'", [coach.id, A.orgId],
+    );
+    assert.equal(held.rows.length, 1);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("request a role after signup: routed like signup, one pending per role, a decline can be asked again later", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "GRD";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: false });
+  try {
+    // Under a federation: a diver who now wants to judge.
+    const username = `int-rr-${crypto.randomBytes(4).toString("hex")}`;
+    const dId = (await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+       VALUES ($1, $2, $1, $3, now()) RETURNING id`,
+      [username, await bcrypt.hash(TEST_PASSWORD, 4), state.orgId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'diver')", [dId, state.orgId]);
+    const D = await claimKit.login(username);
+
+    // Signed-out is refused (by the CSRF gate or verifyToken, whichever runs first).
+    assert.ok([401, 403].includes((await fetchJson("POST", "/api/role-requests", { body: { role: "judge" } })).status));
+    const mine = await fetchJson("GET", "/api/role-requests/mine", { token: D.token });
+    assert.equal(mine.status, 200);
+    assert.equal(mine.body.claim_state, "claimed");
+    assert.ok(mine.body.requestable.includes("meet_manager"));
+    assert.ok(mine.body.held.includes("diver"));
+
+    for (const [role, status, code] of [
+      ["org_admin", 400, "role_not_requestable"],
+      ["spectator", 400, "role_not_requestable"],
+      ["diver", 409, "already_held"],
+    ]) {
+      const r = await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role } });
+      assert.equal(r.status, status, `${role}: ${JSON.stringify(r.body)}`);
+      assert.equal(r.body.code, code);
+    }
+    const ask = await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role: "judge", note: "Level 2\u0007 judge" } });
+    assert.equal(ask.status, 201, JSON.stringify(ask.body));
+    assert.equal(ask.body.note, "Level 2  judge");
+    assert.equal((await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role: "judge" } })).body.code, "already_pending");
+
+    // The org admin sees it where signup's requests land, and says no.
+    const list = (await fetchJson("GET", "/api/role-requests", { token: state.adminToken })).body;
+    assert.ok(list.some((r) => r.id === ask.body.id));
+    const decide = (id, decision) => fetchJson("POST", `/api/role-requests/${id}/review`, {
+      token: state.adminToken, body: { decision },
+    });
+    assert.equal((await decide(ask.body.id, "rejected")).status, 200);
+
+    // Not straight back in, but the next day is fine. Turning down a
+    // second one used to trip the old UNIQUE(..., status) and 500.
+    assert.equal((await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role: "judge" } })).body.code, "recently_declined");
+    await pool.query("UPDATE role_requests SET reviewed_at = now() - interval '25 hours' WHERE id = $1", [ask.body.id]);
+    const again = await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role: "judge" } });
+    assert.equal(again.status, 201, JSON.stringify(again.body));
+    assert.equal((await decide(again.body.id, "rejected")).status, 200);
+    await pool.query("UPDATE role_requests SET reviewed_at = now() - interval '25 hours' WHERE user_id = $1", [dId]);
+    const third = await fetchJson("POST", "/api/role-requests", { token: D.token, body: { role: "judge" } });
+    assert.equal((await decide(third.body.id, "approved")).status, 200);
+    // Approval bumps token_version, so sign in again to read it back.
+    const D2 = await claimKit.login(username);
+    const history = (await fetchJson("GET", "/api/role-requests/mine", { token: D2.token })).body;
+    assert.deepEqual(history.requests.map((r) => r.status), ["approved", "rejected", "rejected"]);
+    assert.ok(history.held.includes("judge"));
+
+    // Where there's no federation: the club decides judge, DivingHQ
+    // referee, and org-wide meet manager isn't on offer at all.
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "St George's Divers" });
+    const M = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
+    const mMine = (await fetchJson("GET", "/api/role-requests/mine", { token: M.token })).body;
+    assert.equal(mMine.claim_state, "unclaimed");
+    assert.ok(!mMine.requestable.includes("meet_manager"));
+    assert.equal((await fetchJson("POST", "/api/role-requests", { token: M.token, body: { role: "meet_manager" } })).status, 400);
+    const j = await fetchJson("POST", "/api/role-requests", { token: M.token, body: { role: "judge" } });
+    const ref = await fetchJson("POST", "/api/role-requests", { token: M.token, body: { role: "referee" } });
+    assert.equal(j.status, 201);
+    assert.equal(ref.status, 201);
+    const aList = (await fetchJson("GET", "/api/role-requests", { token: A.token })).body;
+    assert.ok(aList.some((r) => r.id === j.body.id));
+    assert.ok(!aList.some((r) => r.id === ref.body.id));
+    assert.equal((await fetchJson("POST", `/api/role-requests/${j.body.id}/review`, {
+      token: A.token, body: { decision: "approved" },
+    })).status, 200);
+
+    // Platform staff have nothing to ask for.
+    const sys = await claimKit.login("admin", "admin");
+    assert.deepEqual((await fetchJson("GET", "/api/role-requests/mine", { token: sys.token })).body.requestable, []);
+  } finally {
+    await teardownFixture(state);
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("referee credential sign-off: the 2FA prompt doesn't use up the lockout budget", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "ATG";
+  await claimKit.wipe(CODE);
+  const speakeasy = require("speakeasy");
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "St John's Divers" });
+    const meet = (await fetchJson("POST", "/api/meets", { token: A.token, body: { name: "St John's Open" } })).body.id;
+    const mkEvent = async (name) => (await fetchJson("POST", "/api/events", {
+      token: A.token,
+      body: { name, gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 5, event_type: "individual", meet_id: meet },
+    })).body.id;
+
+    const pw = "referee-2fa-password";
+    const secret = speakeasy.generateSecret({ length: 20 }).base32;
+    const username = `int-so2-${crypto.randomBytes(4).toString("hex")}`;
+    const refId = (await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, email_verified_at, totp_enabled_at, totp_secret)
+       VALUES ($1, $2, $1, $3, now(), now(), $4) RETURNING id`,
+      [username, await bcrypt.hash(pw, 4), A.orgId, secret],
+    )).rows[0].id;
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'referee')", [refId, A.orgId]);
+
+    process.env.RATE_LIMIT_DISABLED = "false";
+    try {
+      // A morning's worth of events: each one asks for the code first.
+      const events = [];
+      for (let i = 0; i < 6; i++) events.push(await mkEvent(`1m heat ${i}`));
+      for (const id of events) {
+        const r = await fetchJson("POST", `/api/events/${id}/dive-order/sign-off/credential`, {
+          token: A.token, body: { username, password: pw },
+        });
+        assert.equal(r.status, 401, JSON.stringify(r.body));
+        assert.equal(r.body.needs_totp, true);
+      }
+      // Still let in with the code, well past five prompts.
+      await pool.query("UPDATE users SET totp_last_used_step = NULL WHERE id = $1", [refId]);
+      const ok = await fetchJson("POST", `/api/events/${events[5]}/dive-order/sign-off/credential`, {
+        token: A.token, body: { username, password: pw, code: speakeasy.totp({ secret, encoding: "base32" }) },
+      });
+      assert.equal(ok.status, 200, JSON.stringify(ok.body));
+
+      // Wrong passwords still count.
+      for (let i = 0; i < 5; i++) {
+        const r = await fetchJson("POST", `/api/events/${events[0]}/dive-order/sign-off/credential`, {
+          token: A.token, body: { username, password: `nope-${i}` },
+        });
+        assert.equal(r.status, 401);
+      }
+      assert.equal((await fetchJson("POST", `/api/events/${events[0]}/dive-order/sign-off/credential`, {
+        token: A.token, body: { username, password: pw },
+      })).status, 429);
+    } finally {
+      process.env.RATE_LIMIT_DISABLED = "true";
+    }
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("unclaimed country: a region admin can't approve their own request to join a club", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "BRB";
+  await claimKit.wipe(CODE);
+  try {
+    const X = await delegateSignUp({ country_code: CODE, new_club_name: "Bridgetown Divers" });
+    const Y = await delegateSignUp({ country_code: CODE, new_club_name: "Oistins Divers" });
+    const R = await delegateSignUp({ country_code: CODE, club_id: X.clubId });
+    const region = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Christ Church', 'CC') RETURNING id", [X.orgId],
+    )).rows[0].id;
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = ANY($2::uuid[])", [region, [X.clubId, Y.clubId]]);
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [region, R.id, X.orgId]);
+
+    const ask = await fetchJson("POST", "/api/club-change-requests", { token: R.token, body: { to_club_id: Y.clubId } });
+    assert.equal(ask.status, 201, JSON.stringify(ask.body));
+    const review = (tok, decision) => fetchJson("POST", `/api/club-change-requests/${ask.body.id}/review`, {
+      token: tok, body: { decision },
+    });
+    assert.equal((await review(R.token, "approved")).status, 403);
+    assert.equal((await pool.query("SELECT club_id FROM users WHERE id = $1", [R.id])).rows[0].club_id, X.clubId);
+    // Y's own admin decides it.
+    assert.equal((await review(Y.token, "approved")).status, 200);
+    assert.equal((await pool.query("SELECT club_id FROM users WHERE id = $1", [R.id])).rows[0].club_id, Y.clubId);
+  } finally {
+    await pool.query(
+      "DELETE FROM club_change_requests WHERE from_org_id IN (SELECT id FROM organisations WHERE country_code = $1)", [CODE],
+    ).catch(() => {});
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("referee credential sign-off: guesses from another org can't lock a federation's referee out", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "CUW";
+  await claimKit.wipe(CODE);
+  const state = await setupFixture({ withEvent: true });
+  try {
+    const pw = "federation-referee-pw-42";
+    const username = `int-xo-${crypto.randomBytes(4).toString("hex")}`;
+    const refId = (await pool.query(
+      `INSERT INTO users (username, password, full_name, org_id, email_verified_at)
+       VALUES ($1, $2, $1, $3, now()) RETURNING id`,
+      [username, await bcrypt.hash(pw, 4), state.orgId],
+    )).rows[0].id;
+    await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, 'referee')", [refId, state.orgId]);
+
+    // Anyone can found a club in a country with no federation and run
+    // an event, which is all this route asks of the caller.
+    const X = await delegateSignUp({ country_code: CODE, new_club_name: "Willemstad Divers" });
+    const meet = (await fetchJson("POST", "/api/meets", { token: X.token, body: { name: "Willemstad Open" } })).body.id;
+    const ev = (await fetchJson("POST", "/api/events", {
+      token: X.token,
+      body: { name: "1m", gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 5, event_type: "individual", meet_id: meet },
+    })).body.id;
+
+    // Each side from its own address, so the per-IP limiter (which other
+    // tests in this process have been feeding) stays out of it and only
+    // the per-referee one is under test. server.js trusts one proxy hop.
+    const from = (ip, path, token, body) => new Promise((resolve, reject) => {
+      const url = new URL(baseUrl + path);
+      const data = JSON.stringify(body);
+      const req = http.request({
+        method: "POST", host: url.hostname, port: url.port, path: url.pathname,
+        headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data),
+                   Authorization: `Bearer ${token}`, "X-Forwarded-For": ip },
+      }, (res) => {
+        const chunks = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(Buffer.concat(chunks).toString() || "null") }));
+      });
+      req.on("error", reject);
+      req.end(data);
+    });
+    const attackerIp = `10.97.${crypto.randomInt(256)}.${crypto.randomInt(256)}`;
+    const venueIp = `10.98.${crypto.randomInt(256)}.${crypto.randomInt(256)}`;
+
+    process.env.RATE_LIMIT_DISABLED = "false";
+    try {
+      // Five tries of junk at the federation referee's username, from the
+      // attacker's own event: exactly what used to use up that referee's
+      // budget. None of it can ever match (the lookup is pinned to the
+      // event's org).
+      for (let i = 0; i < 5; i++) {
+        const r = await from(attackerIp, `/api/events/${ev}/dive-order/sign-off/credential`, X.token,
+          { username, password: `junk-${i}` });
+        assert.equal(r.status, 401, JSON.stringify(r.body));
+      }
+      // The federation's own sign-off still goes through...
+      const legit = await from(venueIp, `/api/events/${state.eventId}/dive-order/sign-off/credential`,
+        state.adminToken, { username, password: pw });
+      assert.equal(legit.status, 200, JSON.stringify(legit.body));
+      // ...while the attacker has used up their own tries at that name.
+      const sixth = await from(attackerIp, `/api/events/${ev}/dive-order/sign-off/credential`, X.token,
+        { username, password: "junk-6" });
+      assert.equal(sixth.status, 429, JSON.stringify(sixth.body));
+    } finally {
+      process.env.RATE_LIMIT_DISABLED = "true";
+    }
+  } finally {
+    await teardownFixture(state);
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("club region moves: a claimed region with nobody left running it doesn't hold its clubs", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MAF";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await delegateSignUp({ country_code: CODE, new_club_name: "Marigot Divers" });
+    const B = await delegateSignUp({ country_code: CODE, new_club_name: "Grand Case Divers" });
+    const mkRegion = async (name, code) => (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code, claim_state, claimed_name) VALUES ($1, $2, $3, 'claimed', $4) RETURNING id",
+      [A.orgId, name, code, `${name} Diving`],
+    )).rows[0].id;
+    const north = await mkRegion("North", "NTH");
+    const south = await mkRegion("South", "STH");
+    await pool.query("UPDATE clubs SET region_id = $1 WHERE id = $2", [north, A.clubId]);
+    const R = await delegateSignUp({ country_code: CODE, club_id: A.clubId });
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [north, R.id, A.orgId]);
+    const Rs = await delegateSignUp({ country_code: CODE, club_id: B.clubId });
+    await pool.query("INSERT INTO region_admins (region_id, user_id, org_id) VALUES ($1, $2, $3)", [south, Rs.id, A.orgId]);
+    const move = (tok, clubId, regionId) =>
+      fetchJson("PUT", `/api/clubs/${clubId}/region`, { token: tok, body: { region_id: regionId } });
+    const regionOf = async (clubId) => (await pool.query("SELECT region_id FROM clubs WHERE id = $1", [clubId])).rows[0].region_id;
+    const listed = async () => Object.fromEntries(
+      (await fetchJson("GET", `/api/orgs/${A.orgId}/regions`)).body.regions.map((r) => [r.id, r.has_live_admin]));
+
+    // While North's admin is around, it decides.
+    assert.equal((await move(A.token, A.clubId, null)).body.code, "region_admin_required");
+    assert.deepEqual(await listed(), { [north]: true, [south]: true });
+
+    // North's only admin deletes their account. Nobody is left to say yes,
+    // so the club's own admin can take it out again...
+    await pool.query("UPDATE users SET deleted_at = now() WHERE id = $1", [R.id]);
+    assert.equal((await listed())[north], false);
+    assert.equal((await move(A.token, A.clubId, null)).status, 200);
+    assert.equal(await regionOf(A.clubId), null);
+    // ...and back in, with nobody there to ask.
+    assert.equal((await move(A.token, A.clubId, north)).status, 200);
+    assert.equal(await regionOf(A.clubId), north);
+
+    // A region with a live admin still decides for itself: South hears
+    // an ask, and the club doesn't move until it says yes.
+    const ask = await move(A.token, A.clubId, south);
+    assert.equal(ask.status, 202, JSON.stringify(ask.body));
+    assert.equal(await regionOf(A.clubId), north);
+    // Picking it again is the same ask, not a second ping.
+    assert.equal((await move(A.token, A.clubId, south)).status, 202);
+    const told = await pool.query(
+      "SELECT category FROM notifications WHERE user_id = $1", [Rs.id]);
+    assert.deepEqual(told.rows.map((r) => r.category), ["region_request"]);
+    assert.equal((await move(Rs.token, A.clubId, south)).status, 200);
+    assert.equal(await regionOf(A.clubId), south);
+    const heard = await pool.query(
+      "SELECT category FROM notifications WHERE user_id = $1", [A.id]);
+    assert.deepEqual(heard.rows.map((r) => r.category), ["region_decision"]);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});

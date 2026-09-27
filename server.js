@@ -849,6 +849,9 @@ app.use(require("./routes/users")({
   sendPasswordResetEmail,
   hashFingerprint,
   JWT_SECRET,
+  // Signed-in role requests (POST /api/role-requests).
+  sendNewRoleRequestEmail,
+  io,
 }));
 
 // Club-change requests + cross-org transfers (Migration 057).

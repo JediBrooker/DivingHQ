@@ -69,7 +69,8 @@
       "submit_idle": "创建账户",
       "submit_loading": "创建中...",
       "already_have_account": "已有账户？",
-      "sign_in_link": "登录"
+      "sign_in_link": "登录",
+      "referee_note_unclaimed": "此地尚无协会，因此主裁判申请由 DivingHQ 而非您的俱乐部审核：主裁判可以在任何俱乐部的比赛中行使职权。"
     },
     "register_org": {
       "title": "注册机构",
@@ -467,7 +468,8 @@
       "password_placeholder": "你当前的密码",
       "conflict": "无法合并：旧账户与你当前账户均对同一赛事和同一轮次有记录。请取消勾选冲突的候选项，或联系你的联合会管理员手动合并。",
       "success_toast": "过往成绩已重新关联到你的个人资料。"
-    }
+    },
+    "club_request_sent": "申请已发送。获批后即完成转会：由您的协会审批，尚无协会的地区则由新俱乐部的管理员审批。"
   },
   "diver_profile": {
     "back": "← 返回",
@@ -571,17 +573,17 @@
         "desc": "您负责管理俱乐部。如果您所在国家的联合会尚未加入 DivingHQ，俱乐部可自行组织比赛：创建比赛、在<strong>控制室</strong>中主持，并审批会员的角色申请。若有联合会，则由联合会任命您。",
         "step_1": "注册并选择国家，创建您的俱乐部，您将成为首位管理员",
         "step_2": "打开<strong>赛事经理</strong>，创建由您的俱乐部主办的比赛",
-        "step_3": "在<strong>我的俱乐部</strong>中审批希望成为运动员、裁判或裁判长的会员",
+        "step_3": "在<strong>我的俱乐部</strong>中审批申请入会的人，以及希望成为运动员、裁判或教练的会员",
         "step_4": "比赛当天，在<strong>控制室</strong>中主持评分",
         "step_5": "当您的联合会或地区机构加入时，请在<strong>接管申请</strong>中对其申请投票",
         "cta": "组织比赛 ↗"
       },
       "region_admin": {
         "name": "地区管理员",
-        "desc": "您负责一个州、省或构成国：组织其锦标赛，可介入其任何俱乐部的比赛，并审批俱乐部会员的角色申请。由您的联合会任命，尚无联合会时由 DivingHQ 任命。",
+        "desc": "您负责一个州、省或构成国：组织其锦标赛，可介入其任何俱乐部的比赛，并审批俱乐部会员的角色申请。由您的联合会任命。尚无联合会时，由您的地区机构认领该地区，其他管理员由您自行添加。",
         "step_1": "打开<strong>我的地区</strong>查看俱乐部及其负责人",
         "step_2": "在<strong>赛事经理</strong>中创建由您所在地区主办的锦标赛",
-        "step_3": "审批希望成为运动员、裁判或裁判长的会员",
+        "step_3": "审批希望成为运动员、裁判或教练的会员，以及申请加入您所在地区的俱乐部",
         "cta": "组织比赛 ↗"
       },
       "org_admin": {
@@ -792,7 +794,9 @@
       "generic": "通知",
       "claim_vote": "接管投票",
       "claim_review": "接管申请",
-      "claim_decided": "接管申请"
+      "claim_decided": "接管申请",
+      "club_change": "俱乐部变更",
+      "region_request": "地区"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "组织比赛",
     "requests": "角色申请",
     "no_requests_title": "没有待处理的申请",
-    "no_requests_body": "当会员申请成为运动员、裁判或裁判长时，会显示在这里。",
+    "no_requests_body": "当会员申请成为运动员、裁判或教练时，会显示在这里。",
     "wants_role": "申请成为：{role}",
     "approve": "批准",
     "reject": "拒绝",
@@ -1939,7 +1943,16 @@
     "pick_member": "— 选择俱乐部会员 —",
     "add": "添加",
     "remove": "移除",
-    "federation_appoints": "本俱乐部的管理员由您的联合会任命。"
+    "federation_appoints": "本俱乐部的管理员由您的联合会任命。",
+    "region_claimed_note": "已被管理机构认领的地区自行决定接收哪些俱乐部。选择该地区会向其管理员发送申请，之后也只有他们能将俱乐部移出。",
+    "join_requests": "入会申请",
+    "no_join_requests_title": "暂无待加入的人",
+    "no_join_requests_body": "有人从个人资料页申请加入您的俱乐部时，会显示在这里。",
+    "wants_to_join": "希望加入 {club}",
+    "currently_at": "目前在 {club}",
+    "region_request_pending": "正在等待{region}接收您的俱乐部。",
+    "region_request_cancel": "撤回申请",
+    "region_request_sent": "申请已发送。是否接收您的俱乐部由{region}决定。"
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "俱乐部在注册时或在俱乐部页面选择您的地区后会显示在这里。",
     "members": "{n} 名会员",
     "no_admin": "尚无管理员",
-    "region_admins": "地区管理员"
+    "region_admins": "地区管理员",
+    "pick_member": "— 选择您所在地区俱乐部的会员 —",
+    "no_candidates": "暂时没有可添加的人。您所在地区各俱乐部的会员会显示在这里。",
+    "release_club": "移出地区",
+    "club_requests": "申请加入的俱乐部",
+    "currently_in": "当前所在地区：{region}"
   },
   "claims": {
     "title": "接管申请",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "已撤回",
     "status_open_review": "等待决定",
     "revoked_summary": "申请已撤销。已移除的权限：{count}"
+  },
+  "request_role": {
+    "button": "申请角色",
+    "title": "申请角色",
+    "intro_claimed": "角色申请由您所在协会的管理员审核。审核结果出来后会发邮件通知您。",
+    "intro_unclaimed": "此地尚无协会，因此运动员、裁判和教练的申请由您的俱乐部管理员审核，其他申请由 DivingHQ 审核。有结果后会发邮件通知您。",
+    "no_club_hint": "您尚未加入任何俱乐部，因此将由 DivingHQ 审核此申请。如果希望由俱乐部决定，请先申请加入一个俱乐部。",
+    "you_have": "您的角色：{roles}",
+    "role_label": "角色",
+    "pick_role": "— 选择角色 —",
+    "note_label": "给审核人的备注（可选）",
+    "submit": "发送申请",
+    "sending": "发送中…",
+    "sent": "申请已发送",
+    "nothing_left": "您已拥有或已申请此处可申请的所有角色。",
+    "your_requests": "您的申请",
+    "status_pending": "等待中",
+    "status_approved": "已批准",
+    "status_rejected": "已拒绝"
   }
 }

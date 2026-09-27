@@ -25,6 +25,7 @@ const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { countryByCode, countryFromStored } = require("../lib/countries");
+const { removeAdmin } = require("../lib/admin-rows");
 
 module.exports = function createOrgsRouter({
   pool,
@@ -522,8 +523,8 @@ module.exports = function createOrgsRouter({
   // In a country with no federation yet (claim_state 'unclaimed') there's
   // no org_admin to ask, so a club's own admins (or its region's admins)
   // manage who admins the club.
-  // They can't remove the last one, a club with no admin has nobody to
-  // run it but the sysadmin.
+  // They can't remove the last live one, a club with no admin has nobody
+  // to run it but the sysadmin.
 
   async function loadClubForAdminGrant(req, res) {
     // A malformed id would reach postgres as a uuid cast error and come
@@ -533,7 +534,7 @@ module.exports = function createOrgsRouter({
       return null;
     }
     const c = await pool.query(
-      `SELECT c.id, c.org_id, c.name, o.claim_state,
+      `SELECT c.id, c.org_id, c.name, o.claim_state, c.requested_region_id, c.region_requested_at,
               EXISTS (SELECT 1 FROM club_admins ca
                        WHERE ca.club_id = c.id AND ca.user_id = $2) AS caller_is_admin,
               EXISTS (SELECT 1 FROM region_admins ra
@@ -581,7 +582,12 @@ module.exports = function createOrgsRouter({
           ORDER BY lower(full_name)`,
         [club.id],
       );
-      res.json({ admins: admins.rows, members: members.rows });
+      // A claimed region the club has asked to join and is waiting on
+      // (routes/regions.js), so My club can say so and offer to withdraw.
+      const regionRequest = club.requested_region_id
+        ? { region_id: club.requested_region_id, requested_at: club.region_requested_at }
+        : null;
+      res.json({ admins: admins.rows, members: members.rows, region_request: regionRequest });
     } catch (err) {
       console.error("[Club Admins List Error]", err.message);
       res.status(500).json({ error: "Internal server error" });
@@ -636,17 +642,18 @@ module.exports = function createOrgsRouter({
       if (!club) return;
       if (!UUID_RE.test(req.params.userId))
         return res.status(404).json({ error: "Not a club admin" });
-      if (club.viaClubAdmin) {
-        const n = await pool.query("SELECT count(*)::int AS n FROM club_admins WHERE club_id = $1", [club.id]);
-        if (n.rows[0].n <= 1) {
-          return res.status(409).json({ error: "A club needs at least one admin. Add someone else first." });
-        }
+      // Club and region admins can't take the club down to no live admin
+      // (lib/admin-rows.js has why the count and the lock matter).
+      const out = await removeAdmin(pool, {
+        scope: "club",
+        scopeId: club.id,
+        userId: req.params.userId,
+        keepOneLive: !!club.viaClubAdmin,
+      });
+      if (out.status === 404) return res.status(404).json({ error: "Not a club admin" });
+      if (out.status === 409) {
+        return res.status(409).json({ error: "A club needs at least one admin. Add someone else first." });
       }
-      const del = await pool.query(
-        "DELETE FROM club_admins WHERE club_id = $1 AND user_id = $2 RETURNING id",
-        [club.id, req.params.userId],
-      );
-      if (!del.rows.length) return res.status(404).json({ error: "Not a club admin" });
       await recordAudit(pool, {
         ...auditFromReq(req),
         org_id:      club.org_id,

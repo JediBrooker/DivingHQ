@@ -69,7 +69,8 @@
       "submit_idle": "Cipta akaun",
       "submit_loading": "Mencipta...",
       "already_have_account": "Sudah ada akaun?",
-      "sign_in_link": "Log masuk"
+      "sign_in_link": "Log masuk",
+      "referee_note_unclaimed": "Selagi belum ada persekutuan di sini, DivingHQ yang menyemak permintaan hakim utama, bukan kelab anda: hakim utama boleh bertindak di pertandingan mana-mana kelab."
     },
     "register_org": {
       "title": "Daftarkan organisasi",
@@ -467,7 +468,8 @@
       "password_placeholder": "Kata laluan semasa anda",
       "conflict": "Tidak boleh digabungkan: akaun lama dan akaun semasa anda kedua-duanya mempunyai entri untuk acara dan pusingan yang sama. Buang tandakan calon yang bercanggah atau hubungi pentadbir persekutuan anda untuk menggabungkan secara manual.",
       "success_toast": "Keputusan lampau dipautkan semula ke profil anda."
-    }
+    },
+    "club_request_sent": "Permintaan dihantar. Anda akan berpindah selepas ia diluluskan: oleh persekutuan anda, atau jika belum ada, oleh pentadbir kelab baharu."
   },
   "diver_profile": {
     "back": "← Kembali",
@@ -571,17 +573,17 @@
         "desc": "Anda mengurus kelab anda. Jika persekutuan negara anda belum berada di DivingHQ, kelab menganjurkan pertandingannya sendiri: ciptanya, jalankan dari <strong>Bilik Kawalan</strong>, dan luluskan permintaan peranan ahli. Di bawah persekutuan, persekutuan yang melantik anda.",
         "step_1": "Daftar, pilih negara dan cipta kelab anda; anda menjadi pentadbir pertamanya",
         "step_2": "Buka <strong>Pengurus Pertandingan</strong> dan cipta pertandingan anjuran kelab anda",
-        "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau menjadi pengadil di <strong>Kelab saya</strong>",
+        "step_3": "Di <strong>Kelab saya</strong>, luluskan orang yang ingin menyertai dan ahli yang mahu menerjun, menghakimi atau melatih",
         "step_4": "Pada hari pertandingan, kendalikan pemarkahan dari <strong>Bilik Kawalan</strong>",
         "step_5": "Apabila persekutuan atau badan wilayah anda tiba, undi tuntutannya di <strong>Tuntutan</strong>",
         "cta": "Menganjurkan pertandingan ↗"
       },
       "region_admin": {
         "name": "Pentadbir rantau",
-        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya, boleh campur tangan dalam pertandingan mana-mana kelabnya, dan meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda, atau DivingHQ jika belum ada persekutuan.",
+        "desc": "Anda menjaga negeri, wilayah atau negara: menganjurkan kejohanannya, boleh campur tangan dalam pertandingan mana-mana kelabnya, dan meluluskan permintaan peranan ahli kelabnya. Persekutuan anda melantik anda. Jika belum ada persekutuan, badan wilayah anda menuntut rantau itu dan anda sendiri menambah rakan pentadbir.",
         "step_1": "Buka <strong>Rantau saya</strong> untuk melihat kelab dan pengurusnya",
         "step_2": "Cipta kejohanan anda dalam <strong>Pengurus pertandingan</strong> dengan rantau anda sebagai tuan rumah",
-        "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau menjadi pengadil",
+        "step_3": "Luluskan ahli yang mahu menerjun, menghakimi atau melatih, serta kelab yang ingin menyertai rantau anda",
         "cta": "Menganjurkan pertandingan ↗"
       },
       "org_admin": {
@@ -792,7 +794,9 @@
       "generic": "Notis",
       "claim_vote": "Undian",
       "claim_review": "Tuntutan",
-      "claim_decided": "Tuntutan"
+      "claim_decided": "Tuntutan",
+      "club_change": "Tukar kelab",
+      "region_request": "Rantau"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Anjurkan pertandingan anda",
     "requests": "Permintaan peranan",
     "no_requests_title": "Tiada permintaan menunggu",
-    "no_requests_body": "Apabila ahli meminta menjadi penerjun, hakim atau pengadil, ia dipaparkan di sini.",
+    "no_requests_body": "Apabila ahli meminta menjadi penerjun, hakim atau jurulatih, ia dipaparkan di sini.",
     "wants_role": "mahu menjadi: {role}",
     "approve": "Luluskan",
     "reject": "Tolak",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Pilih ahli kelab —",
     "add": "Tambah",
     "remove": "Alih keluar",
-    "federation_appoints": "Persekutuan anda melantik pentadbir kelab ini."
+    "federation_appoints": "Persekutuan anda melantik pentadbir kelab ini.",
+    "region_claimed_note": "Rantau yang telah dituntut oleh badan pentadbirnya memutuskan sendiri kelab mana yang diterima. Memilihnya akan menghantar permintaan kepada pentadbir rantau itu, dan hanya mereka boleh mengeluarkan kelab kemudian.",
+    "join_requests": "Permintaan menyertai",
+    "no_join_requests_title": "Tiada sesiapa menunggu untuk menyertai",
+    "no_join_requests_body": "Apabila seseorang meminta untuk menyertai kelab anda dari profil mereka, ia dipaparkan di sini.",
+    "wants_to_join": "mahu menyertai {club}",
+    "currently_at": "kini di {club}",
+    "region_request_pending": "Menunggu {region} menerima kelab anda.",
+    "region_request_cancel": "Tarik balik permintaan",
+    "region_request_sent": "Permintaan dihantar. {region} akan memutuskan sama ada menerima kelab anda."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "Kelab dipaparkan di sini selepas memilih rantau anda semasa pendaftaran atau di halaman kelab.",
     "members": "{n} ahli",
     "no_admin": "Belum ada pentadbir",
-    "region_admins": "Pentadbir rantau"
+    "region_admins": "Pentadbir rantau",
+    "pick_member": "— Pilih ahli kelab dalam rantau anda —",
+    "no_candidates": "Belum ada sesiapa untuk ditambah. Ahli kelab dalam rantau anda dipaparkan di sini.",
+    "release_club": "Keluarkan dari rantau",
+    "club_requests": "Kelab yang ingin menyertai",
+    "currently_in": "kini di {region}"
   },
   "claims": {
     "title": "Tuntutan",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Ditarik balik",
     "status_open_review": "Menunggu keputusan",
     "revoked_summary": "Tuntutan dibatalkan. Akses yang dibuang: {count}"
+  },
+  "request_role": {
+    "button": "Minta peranan",
+    "title": "Minta peranan",
+    "intro_claimed": "Pentadbir persekutuan anda menyemak permintaan peranan. Anda akan menerima e-mel apabila mereka membuat keputusan.",
+    "intro_unclaimed": "Selagi belum ada persekutuan di sini, pentadbir kelab anda menyemak permintaan penerjun, hakim dan jurulatih, manakala DivingHQ menyemak yang lain. Anda akan menerima e-mel apabila keputusan dibuat.",
+    "no_club_hint": "Anda tidak berada dalam mana-mana kelab, jadi DivingHQ akan menyemak ini. Jika anda lebih suka kelab yang memutuskan, minta untuk menyertai kelab dahulu.",
+    "you_have": "Peranan anda: {roles}",
+    "role_label": "Peranan",
+    "pick_role": "— Pilih peranan —",
+    "note_label": "Nota untuk penyemak (pilihan)",
+    "submit": "Hantar permintaan",
+    "sending": "Menghantar…",
+    "sent": "Permintaan dihantar",
+    "nothing_left": "Anda sudah mempunyai, atau sudah meminta, semua peranan yang boleh diminta di sini.",
+    "your_requests": "Permintaan anda",
+    "status_pending": "Menunggu",
+    "status_approved": "Diluluskan",
+    "status_rejected": "Ditolak"
   }
 }

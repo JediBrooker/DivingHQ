@@ -477,10 +477,26 @@ international invitations, the audit log, and the 2FA requirement.
 
 **Role requests.** `lib/role-requests.js` decides who reviews: org admins
 under a federation; in an unclaimed country the requester's club admins
-(diver/judge/referee only, never self-approving an official role); the
-sysadmin as fallback. Club admins review on `/club` (My club), where in an
-unclaimed country they also manage co-admins (members only, never the
-last one).
+(diver/judge/coach only, never self-approving anything but diver); the
+sysadmin as fallback. Referee went to the sysadmin after launch: it's an
+org-wide controller role (`socketCanManageEvent` and every
+`requireRoleOrEventDelegate([... 'referee'])` gate), so a club-minted
+referee could drive any other club's live meet in the country. Judge and
+coach aren't controller roles anywhere: a judge only scores events whose
+panel (`event_judges`) the host picked, and a coach only reaches divers
+an org admin linked (`coach_diver_links`) and their own club's classes.
+Coach is on the signup form too, and it's the default for someone
+founding a club. Club
+admins review on `/club` (My club), where in an unclaimed country they
+also manage co-admins (members only, never the last live one).
+
+**Joining a club.** Setting `users.club_id` directly stays org-admin only.
+Everyone else asks: Change Club on the profile files a `club_change`
+request (`routes/club-changes.js`), which the org admin approves under a
+federation and, in an unclaimed country, the admins of the club being
+joined (or its region's). They get an inbox notice and a Join requests
+list on `/club` / `/region`. Without this, anyone who signed up
+Independent or left their club could never get into one.
 
 **Frontend.** `auth.clubAdminOf` / `auth.isClubAdmin` come from the login
 and `/api/auth/me` bodies (not the JWT). `useClubScope` narrows the
@@ -516,11 +532,36 @@ falls back to the catalogue for a country nobody has started yet.
 
 **Putting clubs in regions.** Under a federation, the federation decides
 (Region column on the Clubs screen). Where there's no federation, the
-club's own admin picks, on My club (`PUT /api/clubs/:id/region`).
+club's own admin picks, on My club (`PUT /api/clubs/:id/region`), as
+long as neither side of the move is a claimed region. Once a state body
+has claimed a region, the region decides who can step in on the club's
+meets, review its requests and appoint or remove its admins, so neither
+side moves a club alone:
+
+- **Joining** takes both. The club's admin picks the region, which only
+  records the ask (`202`, `clubs.requested_region_id`, migration 097) and
+  tells the region's admins; they accept on My region with the same PUT
+  (`403 club_request_required` if the club never asked). Either side can
+  drop the ask with `DELETE /api/clubs/:id/region-request`.
+- **Leaving** is the region's call: its admin takes the club out (to no
+  region) on My region. The club's admin gets `403 region_admin_required`.
+  The region can let a club go but not pick where it lands.
+- A claimed region with **no live admin** (all deleted or suspended) gets
+  no say: its clubs come and go as if it were unclaimed until someone
+  claims it again. `GET /api/orgs/:id/regions` carries `has_live_admin`
+  so My club only locks the picker while somebody is there to decide.
+
+The notices follow the inbox's ask/outcome split: `region_request` and
+`club_join_request` go to whoever has to decide (Action required);
+`region_decision` and `club_change` tell the other side how it went.
 
 **Region admins** are appointed by the federation's org admin or the
 sysadmin (a region chip on the Clubs screen opens `RegionAdminsModal`).
-State bodies appointing themselves via claims is phase 3. A region admin:
+State bodies appointing themselves via claims is phase 3. Where there's
+no federation, a region's own admins add and remove co-admins on
+`/region` (members of the region's clubs only, never down to no live
+admin, via `lib/admin-rows.js`). A claimed region whose admins have all
+gone can be claimed again through `/register-org`. A region admin:
 - runs meets hosted by their region or by any club in it: the
   `isEventDelegate` / `isMeetHostAdmin` checks now include the host region
   and the host club's region, so every phase-1 gate follows;

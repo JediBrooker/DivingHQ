@@ -69,7 +69,8 @@
       "submit_idle": "Hesap Oluştur",
       "submit_loading": "Oluşturuluyor...",
       "already_have_account": "Zaten hesabınız var mı?",
-      "sign_in_link": "Giriş yapın"
+      "sign_in_link": "Giriş yapın",
+      "referee_note_unclaimed": "Burada henüz bir federasyon olmadığından baş hakem taleplerini kulübünüz değil DivingHQ inceler: baş hakem her kulübün yarışmasında yetki kullanabilir."
     },
     "register_org": {
       "title": "Kuruluş Kaydı",
@@ -467,7 +468,8 @@
       "password_placeholder": "Mevcut şifreniz",
       "conflict": "Birleştirilemez: eski hesap ve mevcut hesabınızın ikisinde de aynı etkinlik ve tur için kayıtlar var. Çakışan adayın işaretini kaldırın veya manuel birleştirme için federasyon yöneticinizle iletişime geçin.",
       "success_toast": "Geçmiş sonuçlar profilinize yeniden bağlandı."
-    }
+    },
+    "club_request_sent": "Talep gönderildi. Onaylandığında geçiş yapılır: federasyonunuz tarafından ya da henüz federasyon yoksa yeni kulübün yöneticileri tarafından."
   },
   "diver_profile": {
     "back": "← Geri",
@@ -571,17 +573,17 @@
         "desc": "Kulübünüzü yönetirsiniz. Ülkenizin federasyonu henüz DivingHQ'da değilse kulüp kendi yarışmalarını düzenler: oluşturun, <strong>Kontrol Odası</strong>'ndan yönetin ve üyelerinizin rol taleplerini onaylayın. Bir federasyon varsa sizi o atar.",
         "step_1": "Kaydolun, ülkenizi seçin ve kulübünüzü oluşturun; ilk yöneticisi siz olursunuz",
         "step_2": "<strong>Yarışma Yöneticisi</strong>'ni açın ve kulübünüzün ev sahipliği yaptığı bir yarışma oluşturun",
-        "step_3": "<strong>Kulübüm</strong> sayfasında atlamak, hakemlik yapmak veya başhakem olmak isteyen üyeleri onaylayın",
+        "step_3": "<strong>Kulübüm</strong> sayfasında katılmak isteyenleri ve atlamak, hakemlik yapmak veya antrenörlük yapmak isteyen üyeleri onaylayın",
         "step_4": "Yarışma günü puanlamayı <strong>Kontrol Odası</strong>'ndan yönetin",
         "step_5": "Federasyonunuz veya bölgesel kurumunuz geldiğinde, talebini <strong>Devralma talepleri</strong> sayfasında oylayın",
         "cta": "Yarışma düzenlemek ↗"
       },
       "region_admin": {
         "name": "Bölge yöneticisi",
-        "desc": "Bir eyalet, il ya da ülkeden sorumlusunuz: şampiyonalarını düzenler, kulüplerinden herhangi birinin yarışmalarına müdahale edebilir ve kulüp üyelerinin rol taleplerini onaylarsınız. Sizi federasyonunuz, federasyon yoksa DivingHQ atar.",
+        "desc": "Bir eyalet, il ya da ülkeden sorumlusunuz: şampiyonalarını düzenler, kulüplerinden herhangi birinin yarışmalarına müdahale edebilir ve kulüp üyelerinin rol taleplerini onaylarsınız. Sizi federasyonunuz atar. Federasyon henüz yoksa bölgeyi bölgesel kurumunuz üstlenir ve diğer yöneticileri siz eklersiniz.",
         "step_1": "Kulüplerinizi ve yöneticilerini görmek için <strong>Bölgem</strong>'i açın",
         "step_2": "Şampiyonalarınızı bölgenizin ev sahipliğinde <strong>Yarışma Yöneticisi</strong>'nde oluşturun",
-        "step_3": "Atlamak, hakemlik yapmak veya başhakem olmak isteyen üyeleri onaylayın",
+        "step_3": "Atlamak, hakemlik yapmak veya antrenörlük yapmak isteyen üyeleri ve bölgenize katılmak isteyen kulüpleri onaylayın",
         "cta": "Yarışma düzenlemek ↗"
       },
       "org_admin": {
@@ -792,7 +794,9 @@
       "generic": "Duyuru",
       "claim_vote": "Oylama",
       "claim_review": "Talep",
-      "claim_decided": "Talep"
+      "claim_decided": "Talep",
+      "club_change": "Kulüp değişikliği",
+      "region_request": "Bölge"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Yarışmalarınızı düzenleyin",
     "requests": "Rol talepleri",
     "no_requests_title": "Bekleyen talep yok",
-    "no_requests_body": "Bir üye atlayıcı, hakem veya başhakem olmak istediğinde burada görünür.",
+    "no_requests_body": "Bir üye atlayıcı, hakem veya antrenör olmak istediğinde burada görünür.",
     "wants_role": "olmak istiyor: {role}",
     "approve": "Onayla",
     "reject": "Reddet",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Bir kulüp üyesi seçin —",
     "add": "Ekle",
     "remove": "Kaldır",
-    "federation_appoints": "Bu kulübün yöneticilerini federasyonunuz atar."
+    "federation_appoints": "Bu kulübün yöneticilerini federasyonunuz atar.",
+    "region_claimed_note": "Yönetim organının üstlendiği bir bölge, hangi kulüpleri alacağına kendisi karar verir. Bölgeyi seçtiğinizde yöneticilerine bir talep gider ve bir kulübü sonradan bölgeden yalnızca onlar çıkarabilir.",
+    "join_requests": "Katılım talepleri",
+    "no_join_requests_title": "Katılmayı bekleyen kimse yok",
+    "no_join_requests_body": "Biri profilinden kulübünüze katılmak istediğinde burada görünür.",
+    "wants_to_join": "{club} kulübüne katılmak istiyor",
+    "currently_at": "şu anda {club} kulübünde",
+    "region_request_pending": "{region} bölgesinin kulübünüzü kabul etmesi bekleniyor.",
+    "region_request_cancel": "Talebi geri çek",
+    "region_request_sent": "Talep gönderildi. Kulübünüzü kabul edip etmeyeceğine {region} bölgesi karar verecek."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "Kulüpler, kayıt sırasında veya kulüp sayfasında bölgenizi seçtiklerinde burada görünür.",
     "members": "{n} üye",
     "no_admin": "Henüz yönetici yok",
-    "region_admins": "Bölge yöneticileri"
+    "region_admins": "Bölge yöneticileri",
+    "pick_member": "— Bölgenizdeki kulüplerden bir üye seçin —",
+    "no_candidates": "Henüz eklenecek kimse yok. Bölgenizdeki kulüplerin üyeleri burada görünür.",
+    "release_club": "Bölgeden çıkar",
+    "club_requests": "Katılmak isteyen kulüpler",
+    "currently_in": "şu anki bölge: {region}"
   },
   "claims": {
     "title": "Devralma talepleri",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Geri çekildi",
     "status_open_review": "Karar bekleniyor",
     "revoked_summary": "Talep iptal edildi. Kaldırılan yetkiler: {count}"
+  },
+  "request_role": {
+    "button": "Rol talep et",
+    "title": "Rol talep et",
+    "intro_claimed": "Rol taleplerini federasyonunuzun yöneticileri inceler. Karar verildiğinde e-posta alırsınız.",
+    "intro_unclaimed": "Burada henüz federasyon olmadığından atlayıcı, hakem ve antrenör taleplerini kulübünüzün yöneticileri, diğerlerini DivingHQ inceler. Karar verildiğinde e-posta alırsınız.",
+    "no_club_hint": "Bir kulübe üye değilsiniz, bu yüzden bunu DivingHQ inceleyecek. Kararı bir kulübün vermesini tercih ederseniz önce bir kulübe katılmak için talepte bulunun.",
+    "you_have": "Rolleriniz: {roles}",
+    "role_label": "Rol",
+    "pick_role": "— Bir rol seçin —",
+    "note_label": "İnceleyen kişiye not (isteğe bağlı)",
+    "submit": "Talebi gönder",
+    "sending": "Gönderiliyor…",
+    "sent": "Talep gönderildi",
+    "nothing_left": "Burada talep edebileceğiniz tüm rollere zaten sahipsiniz ya da talep ettiniz.",
+    "your_requests": "Talepleriniz",
+    "status_pending": "Bekliyor",
+    "status_approved": "Onaylandı",
+    "status_rejected": "Reddedildi"
   }
 }

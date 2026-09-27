@@ -3,6 +3,10 @@
 // runs each one, and the pending role requests from those clubs'
 // members. Region admins sit one level above club admins, so they can
 // act on any of these requests, not just ones whose club has no admin.
+// Where there's no federation they also add and remove their own
+// co-admins here (the server says so with can_manage), and once their
+// body has claimed the region they accept or turn down clubs asking to
+// join it and can let a club go.
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
@@ -10,13 +14,15 @@ import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 import EmptyState from '@/components/EmptyState.vue'
 import RoleRequestQueue from '@/components/RoleRequestQueue.vue'
+import JoinRequestQueue from '@/components/JoinRequestQueue.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 
 const regions = computed(() => auth.regionAdminOf)
-// Per region id: { region, clubs, admins }
+// Per region id: { region, clubs, admins, candidates, canManage, toAdd }
 const detail = ref({})
+const busyId = ref(null)
 
 function labelFor(key) {
   return key ? t(`regions.label.${key}`) : ''
@@ -28,15 +34,100 @@ async function load(region) {
       auth.apiFetch(`/api/regions/${region.id}/overview`),
       auth.apiFetch(`/api/regions/${region.id}/admins`),
     ])
-    detail.value[region.id] = { ...overview, admins: admins.admins || [] }
+    detail.value[region.id] = {
+      ...overview,
+      admins: admins.admins || [],
+      candidates: admins.candidates || [],
+      canManage: !!admins.can_manage,
+      toAdd: '',
+    }
   } catch (err) {
     showError(err.message)
   }
 }
 
-onMounted(() => {
+// A state body that has claimed its region decides which clubs it takes
+// and lets go: clubs ask to join (PUT /api/clubs/:id/region answers 202),
+// the region accepts or declines here, and can take a club back out.
+// It can't pull in a club that never asked.
+function placesClubs(regionId) {
+  const d = detail.value[regionId]
+  return !!d && d.canManage && d.region?.claim_state === 'claimed'
+}
+
+async function moveClub(region, clubId, regionId) {
+  busyId.value = region.id
+  try {
+    await auth.apiFetch(`/api/clubs/${clubId}/region`, {
+      method: 'PUT',
+      body: JSON.stringify({ region_id: regionId }),
+    })
+    await load(region)
+  } catch (err) {
+    showError(err.message)
+  } finally {
+    busyId.value = null
+  }
+}
+
+async function declineClub(region, clubId) {
+  busyId.value = region.id
+  try {
+    await auth.apiFetch(`/api/clubs/${clubId}/region-request`, { method: 'DELETE' })
+    await load(region)
+  } catch (err) {
+    showError(err.message)
+  } finally {
+    busyId.value = null
+  }
+}
+
+function addable(regionId) {
+  const d = detail.value[regionId]
+  if (!d) return []
+  const taken = new Set(d.admins.map(a => a.id))
+  return d.candidates.filter(c => !taken.has(c.id))
+}
+
+async function addAdmin(region) {
+  const d = detail.value[region.id]
+  if (!d?.toAdd) return
+  busyId.value = region.id
+  try {
+    await auth.apiFetch(`/api/regions/${region.id}/admins`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: d.toAdd }),
+    })
+    await load(region)
+  } catch (err) {
+    showError(err.message)
+  } finally {
+    busyId.value = null
+  }
+}
+
+async function removeAdmin(region, admin) {
+  busyId.value = region.id
+  try {
+    await auth.apiFetch(`/api/regions/${region.id}/admins/${admin.id}`, { method: 'DELETE' })
+    // Taking yourself off loses you the page, so re-read who you are.
+    if (admin.id === auth.user?.id) await auth.fetchMe()
+    else await load(region)
+  } catch (err) {
+    showError(err.message)
+  } finally {
+    busyId.value = null
+  }
+}
+
+// can_manage from the admins endpoint means "no federation here".
+const selfRun = computed(() => regions.value.some(r => detail.value[r.id]?.canManage))
+
+function reloadAll() {
   for (const r of regions.value) load(r)
-})
+}
+
+onMounted(reloadAll)
 </script>
 
 <template>
@@ -52,6 +143,13 @@ onMounted(() => {
     <section class="block">
       <h2 class="block-title">{{ $t('my_club.requests') }}</h2>
       <RoleRequestQueue show-club />
+    </section>
+
+    <!-- Only where there's no federation: that's when a region admin can
+         approve someone into one of its clubs. -->
+    <section v-if="selfRun" class="block">
+      <h2 class="block-title">{{ $t('my_club.join_requests') }}</h2>
+      <JoinRequestQueue show-club @decided="reloadAll" />
     </section>
 
     <section v-for="r in regions" :key="r.id" class="block">
@@ -77,11 +175,57 @@ onMounted(() => {
               <template v-if="c.admins.length">{{ c.admins.map(a => a.full_name).join(', ') }}</template>
               <template v-else>{{ $t('my_region.no_admin') }}</template>
             </span>
+            <button v-if="placesClubs(r.id)" class="btn btn-ghost btn-sm" :disabled="busyId === r.id"
+                    @click="moveClub(r, c.id, null)">{{ $t('my_region.release_club') }}</button>
           </li>
         </ul>
+        <template v-if="placesClubs(r.id) && detail[r.id].join_requests?.length">
+          <h3 class="sub-title">{{ $t('my_region.club_requests') }}</h3>
+          <ul class="rows" data-test-id="region-club-requests">
+            <li v-for="c in detail[r.id].join_requests" :key="c.id" class="row card-sm">
+              <div class="who">
+                <span class="name">{{ c.name }}<template v-if="c.short_code"> · {{ c.short_code }}</template></span>
+                <span class="meta">
+                  {{ $t('my_region.members', { n: c.member_count }) }}
+                  <template v-if="c.current_region_name"> · {{ $t('my_region.currently_in', { region: c.current_region_name }) }}</template>
+                </span>
+              </div>
+              <div class="actions">
+                <button class="btn btn-ghost btn-sm" :disabled="busyId === r.id"
+                        @click="declineClub(r, c.id)">{{ $t('my_club.reject') }}</button>
+                <button class="btn btn-primary btn-sm" :disabled="busyId === r.id"
+                        @click="moveClub(r, c.id, r.id)">{{ $t('my_club.approve') }}</button>
+              </div>
+            </li>
+          </ul>
+        </template>
 
         <h3 class="sub-title">{{ $t('my_region.region_admins') }}</h3>
-        <p class="meta">{{ detail[r.id].admins.map(a => a.full_name).join(', ') }}</p>
+        <template v-if="detail[r.id].canManage">
+          <ul class="rows" data-test-id="region-admins">
+            <li v-for="a in detail[r.id].admins" :key="a.id" class="row card-sm">
+              <div class="who">
+                <span class="name">{{ a.full_name }}</span>
+                <span class="meta">@{{ a.username }}</span>
+              </div>
+              <button class="btn btn-ghost btn-sm" :disabled="busyId === r.id"
+                      @click="removeAdmin(r, a)">{{ $t('my_club.remove') }}</button>
+            </li>
+          </ul>
+          <div class="add-row">
+            <select class="select" v-model="detail[r.id].toAdd" :disabled="!addable(r.id).length"
+                    :aria-label="$t('my_club.add_admin')">
+              <option value="">{{ $t('my_region.pick_member') }}</option>
+              <option v-for="m in addable(r.id)" :key="m.id" :value="m.id">
+                {{ m.full_name }} (@{{ m.username }}) · {{ m.club_name }}
+              </option>
+            </select>
+            <button class="btn btn-primary btn-sm" :disabled="!detail[r.id].toAdd || busyId === r.id"
+                    @click="addAdmin(r)">{{ $t('my_club.add') }}</button>
+          </div>
+          <p v-if="!addable(r.id).length" class="meta">{{ $t('my_region.no_candidates') }}</p>
+        </template>
+        <p v-else class="meta">{{ detail[r.id].admins.map(a => a.full_name).join(', ') }}</p>
       </template>
     </section>
   </div>
@@ -105,6 +249,9 @@ onMounted(() => {
 .name { font-weight: 600; color: var(--fg); }
 .meta { font-size: var(--text-xs); color: var(--fg-3); margin: 0; }
 .admins { text-align: end; }
+.add-row { display: flex; gap: var(--space-2); align-items: center; }
+.actions { display: flex; gap: var(--space-2); flex-shrink: 0; }
+.add-row .select { flex: 1; min-width: 0; }
 @media (max-width: 720px) {
   .main { padding: var(--space-4); }
   .row { flex-direction: column; align-items: flex-start; }

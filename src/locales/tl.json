@@ -69,7 +69,8 @@
       "submit_idle": "Gumawa ng account",
       "submit_loading": "Ginagawa...",
       "already_have_account": "May account ka na?",
-      "sign_in_link": "Mag-sign in"
+      "sign_in_link": "Mag-sign in",
+      "referee_note_unclaimed": "Habang wala pang federation dito, ang DivingHQ ang sumusuri sa mga kahilingan para sa pangunahing hukom, hindi ang iyong club: puwedeng kumilos ang pangunahing hukom sa meet ng anumang club."
     },
     "register_org": {
       "title": "Irehistro ang organisasyon",
@@ -467,7 +468,8 @@
       "password_placeholder": "Ang kasalukuyang password mo",
       "conflict": "Hindi pwedeng i-merge: ang lumang account at ang kasalukuyang account mo ay parehong may entry para sa parehong event at round. I-untick ang nag-conflict na candidate o makipag-ugnayan sa federation admin mo para mano-manong i-merge.",
       "success_toast": "Naka-link ulit sa profile mo ang nakaraang resulta."
-    }
+    },
+    "club_request_sent": "Naipadala ang kahilingan. Lilipat ka kapag naaprubahan na ito: ng iyong federation, o kung wala pa, ng mga admin ng bagong club."
   },
   "diver_profile": {
     "back": "← Bumalik",
@@ -571,17 +573,17 @@
         "desc": "Ikaw ang nagpapatakbo ng iyong club. Kung wala pa sa DivingHQ ang pederasyon ng iyong bansa, ang club ang nagpapatakbo ng sariling kompetisyon: gawin ang mga ito, patakbuhin mula sa <strong>Control Room</strong>, at aprubahan ang mga hiling na role ng mga miyembro. Kung may pederasyon, ito ang magtatalaga sa iyo.",
         "step_1": "Mag-sign up, piliin ang iyong bansa at gawin ang iyong club; ikaw ang magiging unang admin nito",
         "step_2": "Buksan ang <strong>Tagapamahala ng meet</strong> at gumawa ng kompetisyong hino-host ng iyong club",
-        "step_3": "Aprubahan sa <strong>Aking club</strong> ang mga miyembrong gustong mag-dive, humusga o maging referee",
+        "step_3": "Sa <strong>Aking club</strong>, aprubahan ang mga humihiling na sumali at ang mga miyembrong gustong mag-dive, humusga o maging tagasanay",
         "step_4": "Sa araw ng kompetisyon, patakbuhin ang pagmamarka mula sa <strong>Control Room</strong>",
         "step_5": "Kapag dumating ang iyong pederasyon o panrehiyong lupon, bumoto sa claim nito sa <strong>Mga claim</strong>",
         "cta": "Pagpapatakbo ng kompetisyon ↗"
       },
       "region_admin": {
         "name": "Admin ng rehiyon",
-        "desc": "Ikaw ang nangangalaga sa isang estado, lalawigan o bansa: pinapatakbo ang mga kampeonato nito, maaaring tumulong sa mga kompetisyon ng alinman sa mga club nito, at inaaprubahan ang mga hiling na role ng mga miyembro. Itinatalaga ka ng iyong pederasyon, o ng DivingHQ kung wala pa.",
+        "desc": "Ikaw ang nangangalaga sa isang estado, lalawigan o bansa: pinapatakbo ang mga kampeonato nito, maaaring tumulong sa mga kompetisyon ng alinman sa mga club nito, at inaaprubahan ang mga hiling na role ng mga miyembro. Itinatalaga ka ng iyong pederasyon. Kung wala pa, kine-claim ng iyong panrehiyong lupon ang rehiyon at ikaw mismo ang nagdaragdag ng mga kapwa admin.",
         "step_1": "Buksan ang <strong>Aking rehiyon</strong> para makita ang mga club at kung sino ang nagpapatakbo",
         "step_2": "Gumawa ng mga kampeonato sa <strong>Tagapamahala ng meet</strong> na hino-host ng iyong rehiyon",
-        "step_3": "Aprubahan ang mga miyembrong gustong mag-dive, humusga o maging referee",
+        "step_3": "Aprubahan ang mga miyembrong gustong mag-dive, humusga o maging tagasanay, at ang mga club na humihiling na sumali sa iyong rehiyon",
         "cta": "Pagpapatakbo ng kompetisyon ↗"
       },
       "org_admin": {
@@ -792,7 +794,9 @@
       "generic": "Pabatid",
       "claim_vote": "Botohan",
       "claim_review": "Claim",
-      "claim_decided": "Claim"
+      "claim_decided": "Claim",
+      "club_change": "Paglipat ng club",
+      "region_request": "Rehiyon"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Patakbuhin ang iyong mga kompetisyon",
     "requests": "Mga hiling na role",
     "no_requests_title": "Walang naghihintay na hiling",
-    "no_requests_body": "Kapag humiling ang isang miyembro na maging diver, hurado o referee, lalabas ito rito.",
+    "no_requests_body": "Kapag humiling ang isang miyembro na maging diver, hukom o tagasanay, lalabas ito rito.",
     "wants_role": "gustong maging: {role}",
     "approve": "Aprubahan",
     "reject": "Tanggihan",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Pumili ng miyembro ng club —",
     "add": "Idagdag",
     "remove": "Alisin",
-    "federation_appoints": "Ang iyong pederasyon ang nagtatalaga ng mga admin ng club na ito."
+    "federation_appoints": "Ang iyong pederasyon ang nagtatalaga ng mga admin ng club na ito.",
+    "region_claimed_note": "Ang rehiyong na-claim na ng namamahalang lupon nito ang nagpapasya kung aling mga club ang tatanggapin. Kapag pinili mo ito, may hiling na ipapadala sa mga admin nito, at sila lang ang makapag-aalis ng club dito pagkatapos.",
+    "join_requests": "Mga kahilingang sumali",
+    "no_join_requests_title": "Walang naghihintay na sumali",
+    "no_join_requests_body": "Kapag may humiling na sumali sa iyong club mula sa kanilang profile, lalabas ito dito.",
+    "wants_to_join": "gustong sumali sa {club}",
+    "currently_at": "kasalukuyang nasa {club}",
+    "region_request_pending": "Hinihintay na tanggapin ng {region} ang iyong club.",
+    "region_request_cancel": "Bawiin ang hiling",
+    "region_request_sent": "Naipadala ang hiling. Ang {region} ang magpapasya kung tatanggapin ang iyong club."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "Lalabas dito ang mga club kapag napili na nila ang iyong rehiyon, sa pag-sign up o sa kanilang club page.",
     "members": "{n} miyembro",
     "no_admin": "Wala pang admin",
-    "region_admins": "Mga admin ng rehiyon"
+    "region_admins": "Mga admin ng rehiyon",
+    "pick_member": "— Pumili ng miyembro ng mga club sa iyong rehiyon —",
+    "no_candidates": "Wala pang maidadagdag. Lalabas dito ang mga miyembro ng mga club sa iyong rehiyon.",
+    "release_club": "Alisin sa rehiyon",
+    "club_requests": "Mga club na gustong sumali",
+    "currently_in": "kasalukuyang nasa {region}"
   },
   "claims": {
     "title": "Mga claim",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Iniurong",
     "status_open_review": "Naghihintay ng desisyon",
     "revoked_summary": "Binawi ang claim. Mga inalis na access: {count}"
+  },
+  "request_role": {
+    "button": "Humiling ng role",
+    "title": "Humiling ng role",
+    "intro_claimed": "Ang mga admin ng iyong federation ang sumusuri sa mga kahilingan sa role. Makakatanggap ka ng email kapag nakapagpasya na sila.",
+    "intro_unclaimed": "Habang wala pang federation dito, ang mga admin ng iyong club ang sumusuri sa mga kahilingan para sa maninisid, hukom at tagasanay, at ang DivingHQ sa iba pa. Makakatanggap ka ng email kapag may desisyon na.",
+    "no_club_hint": "Wala ka sa anumang club, kaya DivingHQ ang susuri nito. Kung mas gusto mong isang club ang magpasya, humiling munang sumali sa isa.",
+    "you_have": "Iyong mga role: {roles}",
+    "role_label": "Role",
+    "pick_role": "— Pumili ng role —",
+    "note_label": "Tala para sa susuri (opsyonal)",
+    "submit": "Ipadala ang kahilingan",
+    "sending": "Ipinapadala…",
+    "sent": "Naipadala ang kahilingan",
+    "nothing_left": "Nasa iyo na, o nahiling mo na, ang lahat ng role na puwedeng hilingin dito.",
+    "your_requests": "Iyong mga kahilingan",
+    "status_pending": "Naghihintay",
+    "status_approved": "Naaprubahan",
+    "status_rejected": "Tinanggihan"
   }
 }

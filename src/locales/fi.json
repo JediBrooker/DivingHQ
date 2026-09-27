@@ -69,7 +69,8 @@
       "submit_idle": "Luo tili",
       "submit_loading": "Luodaan...",
       "already_have_account": "Onko sinulla jo tili?",
-      "sign_in_link": "Kirjaudu sisään"
+      "sign_in_link": "Kirjaudu sisään",
+      "referee_note_unclaimed": "Koska täällä ei vielä ole liittoa, DivingHQ käsittelee ylituomaripyynnöt eikä seurasi: ylituomari voi toimia minkä tahansa seuran kilpailuissa."
     },
     "register_org": {
       "title": "Rekisteröi organisaatio",
@@ -478,7 +479,8 @@
       "password_placeholder": "Nykyinen salasanasi",
       "conflict": "Yhdistäminen ei onnistu: sekä vanhalla tilillä että nykyisellä tililläsi on merkintöjä samasta tapahtumasta ja erästä. Poista rasti ristiriitaiselta ehdokkaalta tai ota yhteyttä liiton ylläpitäjään yhdistääksesi manuaalisesti.",
       "success_toast": "Aiemmat tulokset uudelleenliitetty profiiliisi."
-    }
+    },
+    "club_request_sent": "Pyyntö lähetetty. Siirryt, kun se on hyväksytty: liittosi tai, jos liittoa ei vielä ole, uuden seuran ylläpitäjät hyväksyvät sen."
   },
   "diver_profile": {
     "back": "← Takaisin",
@@ -582,17 +584,17 @@
         "desc": "Johdat seuraasi. Jos maasi liitto ei vielä ole DivingHQ:ssa, seura järjestää kilpailunsa itse: luo ne, ohjaa niitä <strong>Ohjaamosta</strong> ja hyväksy jäsenten roolipyynnöt. Liiton alaisuudessa liitto nimeää sinut.",
         "step_1": "Rekisteröidy, valitse maasi ja luo seurasi, sinusta tulee sen ensimmäinen ylläpitäjä",
         "step_2": "Avaa <strong>Kilpailun hallinta</strong> ja luo seurasi järjestämä kilpailu",
-        "step_3": "Hyväksy <strong>Oma seura</strong> -sivulla jäsenet, jotka haluavat hypätä, tuomita tai toimia päätuomarina",
+        "step_3": "Hyväksy <strong>Oma seura</strong> -sivulla liittymistä pyytävät sekä jäsenet, jotka haluavat hypätä, tuomita tai valmentaa",
         "step_4": "Kilpailupäivänä ohjaat pisteytystä <strong>Ohjaamosta</strong>",
         "step_5": "Kun liittosi tai alueellinen elin liittyy, äänestä sen vaatimuksesta sivulla <strong>Vaatimukset</strong>",
         "cta": "Kilpailun järjestäminen ↗"
       },
       "region_admin": {
         "name": "Alueen ylläpitäjä",
-        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut, voit tarttua minkä tahansa sen seuran kilpailuihin ja hyväksyt seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut, tai DivingHQ, jos liittoa ei vielä ole.",
+        "desc": "Hoidat osavaltiota, provinssia tai kansakuntaa: järjestät sen mestaruuskilpailut, voit tarttua minkä tahansa sen seuran kilpailuihin ja hyväksyt seurojen jäsenten roolipyynnöt. Liittosi nimeää sinut. Jos liittoa ei vielä ole, alueellinen elimesi ottaa alueen hoitaakseen ja lisäät muut ylläpitäjät itse.",
         "step_1": "Avaa <strong>Oma alue</strong> nähdäksesi seurasi ja niiden vetäjät",
         "step_2": "Luo mestaruuskilpailusi <strong>Kilpailun hallinnassa</strong> alueesi järjestämänä",
-        "step_3": "Hyväksy jäsenet, jotka haluavat hypätä, tuomita tai toimia päätuomarina",
+        "step_3": "Hyväksy jäsenet, jotka haluavat hypätä, tuomita tai valmentaa, sekä seurat, jotka pyytävät liittymistä alueellesi",
         "cta": "Kilpailun järjestäminen ↗"
       },
       "org_admin": {
@@ -803,7 +805,9 @@
       "generic": "Ilmoitus",
       "claim_vote": "Äänestys",
       "claim_review": "Vaatimus",
-      "claim_decided": "Vaatimus"
+      "claim_decided": "Vaatimus",
+      "club_change": "Seuran vaihto",
+      "region_request": "Alue"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Järjestä kilpailuja",
     "requests": "Roolipyynnöt",
     "no_requests_title": "Ei odottavia pyyntöjä",
-    "no_requests_body": "Kun jäsen pyytää hyppääjän, tuomarin tai päätuomarin roolia, pyyntö näkyy tässä.",
+    "no_requests_body": "Kun jäsen pyytää hyppääjän, tuomarin tai valmentajan roolia, pyyntö näkyy tässä.",
     "wants_role": "haluaa olla: {role}",
     "approve": "Hyväksy",
     "reject": "Hylkää",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Valitse seuran jäsen —",
     "add": "Lisää",
     "remove": "Poista",
-    "federation_appoints": "Liittosi nimeää tämän seuran ylläpitäjät."
+    "federation_appoints": "Liittosi nimeää tämän seuran ylläpitäjät.",
+    "region_claimed_note": "Alue, jonka hallintoelin on ottanut hoitaakseen, päättää itse, mitkä seurat se ottaa mukaan. Kun valitset sen, sen ylläpitäjille lähtee pyyntö, ja vain he voivat myöhemmin poistaa seuran alueelta.",
+    "join_requests": "Liittymispyynnöt",
+    "no_join_requests_title": "Kukaan ei odota liittymistä",
+    "no_join_requests_body": "Kun joku pyytää profiilistaan liittymistä seuraasi, pyyntö näkyy tässä.",
+    "wants_to_join": "haluaa liittyä seuraan {club}",
+    "currently_at": "nyt seurassa {club}",
+    "region_request_pending": "Odotetaan, että alue {region} hyväksyy seurasi.",
+    "region_request_cancel": "Peru pyyntö",
+    "region_request_sent": "Pyyntö lähetetty. Alue {region} päättää, otetaanko seurasi mukaan."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "Seurat näkyvät tässä, kun ne ovat valinneet alueesi rekisteröityessä tai seurasivullaan.",
     "members": "{n} jäsentä",
     "no_admin": "Ei vielä ylläpitäjää",
-    "region_admins": "Alueen ylläpitäjät"
+    "region_admins": "Alueen ylläpitäjät",
+    "pick_member": "— Valitse alueesi seuran jäsen —",
+    "no_candidates": "Lisättäviä ei vielä ole. Alueesi seurojen jäsenet näkyvät tässä.",
+    "release_club": "Poista alueelta",
+    "club_requests": "Seurat, jotka pyytävät liittymistä",
+    "currently_in": "nyt alueella {region}"
   },
   "claims": {
     "title": "Vaatimukset",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Vedetty pois",
     "status_open_review": "Odottaa päätöstä",
     "revoked_summary": "Vaatimus peruttu. Poistetut oikeudet: {count}"
+  },
+  "request_role": {
+    "button": "Pyydä roolia",
+    "title": "Pyydä roolia",
+    "intro_claimed": "Liittosi ylläpitäjät käsittelevät roolipyynnöt. Saat sähköpostin, kun he ovat päättäneet.",
+    "intro_unclaimed": "Koska täällä ei vielä ole liittoa, seurasi ylläpitäjät käsittelevät hyppääjän, tuomarin ja valmentajan pyynnöt ja DivingHQ muut. Saat sähköpostin, kun päätös on tehty.",
+    "no_club_hint": "Et kuulu mihinkään seuraan, joten DivingHQ käsittelee tämän. Jos haluat mieluummin seuran päättävän, pyydä ensin pääsyä johonkin seuraan.",
+    "you_have": "Roolisi: {roles}",
+    "role_label": "Rooli",
+    "pick_role": "— Valitse rooli —",
+    "note_label": "Viesti käsittelijälle (valinnainen)",
+    "submit": "Lähetä pyyntö",
+    "sending": "Lähetetään…",
+    "sent": "Pyyntö lähetetty",
+    "nothing_left": "Sinulla on jo tai olet jo pyytänyt kaikki roolit, joita täällä voi pyytää.",
+    "your_requests": "Pyyntösi",
+    "status_pending": "Odottaa",
+    "status_approved": "Hyväksytty",
+    "status_rejected": "Hylätty"
   }
 }

@@ -69,7 +69,8 @@
       "submit_idle": "Fiók létrehozása",
       "submit_loading": "Létrehozás...",
       "already_have_account": "Már van fiókja?",
-      "sign_in_link": "Bejelentkezés"
+      "sign_in_link": "Bejelentkezés",
+      "referee_note_unclaimed": "Amíg itt nincs szövetség, a versenybírói kérelmeket a DivingHQ bírálja el, nem a klubja: a versenybíró bármely klub versenyén eljárhat."
     },
     "register_org": {
       "title": "Szervezet regisztrációja",
@@ -478,7 +479,8 @@
       "password_placeholder": "A jelenlegi jelszavad",
       "conflict": "Nem egyesíthető: a régi fiók és a jelenlegi fiókod is rendelkezik bejegyzésekkel ugyanarra az eseményre és fordulóra. Vedd ki a pipát az ütköző jelöltről, vagy kérd a szövetséged adminisztrátorát a kézi egyesítéshez.",
       "success_toast": "Korábbi eredmények újra a profilodhoz kapcsolva."
-    }
+    },
+    "club_request_sent": "Kérelem elküldve. Az átlépés a jóváhagyás után történik meg: a szövetsége, vagy ahol még nincs ilyen, az új klub adminisztrátorai hagyják jóvá."
   },
   "diver_profile": {
     "back": "← Vissza",
@@ -582,17 +584,17 @@
         "desc": "Ön vezeti a klubját. Ahol országa szövetsége még nincs a DivingHQ-n, a klub maga rendezi a versenyeit: hozza létre őket, irányítsa a <strong>Vezérlőszobából</strong>, és hagyja jóvá a tagok szerepkör-kérelmeit. Szövetség alatt a szövetség nevezi ki.",
         "step_1": "Regisztráljon, válassza ki az országát és hozza létre a klubját, Ön lesz az első adminisztrátora",
         "step_2": "Nyissa meg a <strong>Versenymenedzsert</strong>, és hozzon létre a klubja által rendezett versenyt",
-        "step_3": "A <strong>Saját klubom</strong> oldalon hagyja jóvá a műugrani, bíráskodni vagy vezetőbíró lenni kívánó tagokat",
+        "step_3": "A <strong>Saját klubom</strong> oldalon hagyja jóvá a csatlakozni kívánókat és a műugrani, bíráskodni vagy edzősködni kívánó tagokat",
         "step_4": "A versenynapon a <strong>Vezérlőszobából</strong> irányítja a pontozást",
         "step_5": "Amikor szövetsége vagy regionális testülete csatlakozik, szavazzon az igényéről az <strong>Igények</strong> oldalon",
         "cta": "Verseny rendezése ↗"
       },
       "region_admin": {
         "name": "Régió-adminisztrátor",
-        "desc": "Egy államért, tartományért vagy országért felel: rendezi a bajnokságait, beavatkozhat bármely klubja versenyeibe, és jóváhagyja a klubtagok szerepkör-kérelmeit. A szövetsége nevezi ki, vagy a DivingHQ, amíg nincs szövetség.",
+        "desc": "Egy államért, tartományért vagy országért felel: rendezi a bajnokságait, beavatkozhat bármely klubja versenyeibe, és jóváhagyja a klubtagok szerepkör-kérelmeit. A szövetsége nevezi ki. Amíg nincs szövetség, a regionális testülete veszi át a régiót, és a további adminisztrátorokat Ön adja hozzá.",
         "step_1": "Nyissa meg a <strong>Saját régióm</strong> oldalt a klubokért és vezetőikért",
         "step_2": "Hozza létre bajnokságait a <strong>Versenymenedzserben</strong> a régió rendezésében",
-        "step_3": "Hagyja jóvá a műugrani, bíráskodni vagy vezetőbíró lenni kívánó tagokat",
+        "step_3": "Hagyja jóvá a műugrani, bíráskodni vagy edzősködni kívánó tagokat és a régiójához csatlakozni kívánó klubokat",
         "cta": "Verseny rendezése ↗"
       },
       "org_admin": {
@@ -803,7 +805,9 @@
       "generic": "Értesítés",
       "claim_vote": "Szavazás",
       "claim_review": "Igény",
-      "claim_decided": "Igény"
+      "claim_decided": "Igény",
+      "club_change": "Klubváltás",
+      "region_request": "Régió"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Versenyek rendezése",
     "requests": "Szerepkör-kérelmek",
     "no_requests_title": "Nincs függőben lévő kérelem",
-    "no_requests_body": "Ha egy tag műugró, bíró vagy vezetőbíró szeretne lenni, itt jelenik meg.",
+    "no_requests_body": "Ha egy tag műugró, bíró vagy edző szeretne lenni, itt jelenik meg.",
     "wants_role": "szeretne lenni: {role}",
     "approve": "Jóváhagyás",
     "reject": "Elutasítás",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Válasszon klubtagot —",
     "add": "Hozzáadás",
     "remove": "Eltávolítás",
-    "federation_appoints": "A klub adminisztrátorait a szövetsége nevezi ki."
+    "federation_appoints": "A klub adminisztrátorait a szövetsége nevezi ki.",
+    "region_claimed_note": "Az a régió, amelyet már átvett az irányító szerve, maga dönti el, mely klubokat fogadja be. Ha kiválasztja, kérelem megy a régió adminisztrátorainak, és később csak ők vehetnek ki klubot a régióból.",
+    "join_requests": "Csatlakozási kérelmek",
+    "no_join_requests_title": "Senki sem vár csatlakozásra",
+    "no_join_requests_body": "Ha valaki a profiljáról kéri a csatlakozást a klubjához, itt jelenik meg.",
+    "wants_to_join": "csatlakozna ide: {club}",
+    "currently_at": "jelenleg: {club}",
+    "region_request_pending": "Várakozás arra, hogy a(z) {region} régió befogadja a klubját.",
+    "region_request_cancel": "Kérelem visszavonása",
+    "region_request_sent": "Kérelem elküldve. A(z) {region} régió dönti el, befogadja-e a klubját."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "A klubok akkor jelennek meg itt, ha regisztrációkor vagy a klub oldalán az Ön régióját választják.",
     "members": "{n} tag",
     "no_admin": "Még nincs adminisztrátor",
-    "region_admins": "Régió-adminisztrátorok"
+    "region_admins": "Régió-adminisztrátorok",
+    "pick_member": "— Válasszon tagot a régiója klubjaiból —",
+    "no_candidates": "Még nincs kit hozzáadni. Itt jelennek meg a régiója klubjainak tagjai.",
+    "release_club": "Kivétel a régióból",
+    "club_requests": "Csatlakozni kívánó klubok",
+    "currently_in": "jelenleg: {region}"
   },
   "claims": {
     "title": "Igények",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Lezárva",
     "status_open_review": "Döntésre vár",
     "revoked_summary": "Igény visszavonva. Eltávolított jogosultságok: {count}"
+  },
+  "request_role": {
+    "button": "Szerepkör kérése",
+    "title": "Szerepkör kérése",
+    "intro_claimed": "A szerepkör-kérelmeket a szövetsége adminisztrátorai bírálják el. E-mailt kap, amikor döntöttek.",
+    "intro_unclaimed": "Amíg itt nincs szövetség, a műugró, bíró és edző kérelmeket a klubja adminisztrátorai bírálják el, a többit a DivingHQ. E-mailt kap, amikor döntöttek.",
+    "no_club_hint": "Nem tagja egyetlen klubnak sem, ezért ezt a DivingHQ bírálja el. Ha inkább egy klub döntene, előbb kérje a felvételét valamelyikbe.",
+    "you_have": "Az Ön szerepkörei: {roles}",
+    "role_label": "Szerepkör",
+    "pick_role": "— Válasszon szerepkört —",
+    "note_label": "Megjegyzés az elbírálónak (nem kötelező)",
+    "submit": "Kérelem elküldése",
+    "sending": "Küldés…",
+    "sent": "Kérelem elküldve",
+    "nothing_left": "Minden itt kérhető szerepkörrel rendelkezik már, vagy már kérte.",
+    "your_requests": "Az Ön kérelmei",
+    "status_pending": "Függőben",
+    "status_approved": "Jóváhagyva",
+    "status_rejected": "Elutasítva"
   }
 }

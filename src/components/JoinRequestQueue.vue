@@ -1,38 +1,33 @@
 <script setup>
-// Pending role requests with approve / reject, for the club and region
-// admin pages. GET /api/role-requests already scopes the list to what
-// this person may review (lib/role-requests.js), so the component just
-// shows it and posts decisions.
+// People asking to join a club, for the club and region admin pages in a
+// country with no federation (routes/club-changes.js lets those admins
+// approve a club_change into a club they run). GET
+// /api/club-change-requests already scopes the inbox to what this
+// person may decide; the caller's own requests come back too, so they're
+// dropped here.
 import { ref, onMounted } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { showError } from '@/composables/useNotify'
 import EmptyState from '@/components/EmptyState.vue'
 
 defineProps({
-  // Show which club each request comes from (region admins, or a club
-  // admin with several clubs).
+  // Say which club each request is for (region admins, or a club admin
+  // with several clubs).
   showClub: { type: Boolean, default: false },
 })
+const emit = defineEmits(['decided'])
 
-const { t } = useI18n()
 const auth = useAuthStore()
 const requests = ref([])
 const loading = ref(true)
 const busyId = ref(null)
 
-// user_manager.role_* has every role, coach and meet manager included.
-function roleLabel(role) {
-  return ['diver', 'coach', 'judge', 'referee', 'meet_manager'].includes(role)
-    ? t(`user_manager.role_${role}`)
-    : role
-}
-
 async function load() {
   loading.value = true
   try {
-    const rows = await auth.apiFetch('/api/role-requests')
-    requests.value = Array.isArray(rows) ? rows : []
+    const rows = await auth.apiFetch('/api/club-change-requests')
+    requests.value = (Array.isArray(rows) ? rows : []).filter(r =>
+      r.status === 'pending' && r.kind === 'club_change' && r.to_club_id && r.user_id !== auth.user?.id)
   } catch (err) {
     showError(err.message)
   } finally {
@@ -43,11 +38,13 @@ async function load() {
 async function decide(rq, decision) {
   busyId.value = rq.id
   try {
-    await auth.apiFetch(`/api/role-requests/${rq.id}/review`, {
+    await auth.apiFetch(`/api/club-change-requests/${rq.id}/review`, {
       method: 'POST',
       body: JSON.stringify({ decision }),
     })
     requests.value = requests.value.filter(r => r.id !== rq.id)
+    // A new member shows up in the co-admin picker, so let the page reload it.
+    emit('decided', { request: rq, decision })
   } catch (err) {
     showError(err.message)
   } finally {
@@ -63,16 +60,17 @@ onMounted(load)
   <EmptyState
     v-else-if="!requests.length"
     icon="✓"
-    :title="$t('my_club.no_requests_title')"
-    :body="$t('my_club.no_requests_body')"
+    :title="$t('my_club.no_join_requests_title')"
+    :body="$t('my_club.no_join_requests_body')"
   />
-  <ul v-else class="rows">
+  <ul v-else class="rows" data-test-id="join-requests">
     <li v-for="rq in requests" :key="rq.id" class="row card-sm">
       <div class="who">
-        <span class="name">{{ rq.full_name || rq.username }}</span>
+        <span class="name">{{ rq.diver_name || rq.diver_username }}</span>
         <span class="meta">
-          {{ $t('my_club.wants_role', { role: roleLabel(rq.requested_role) }) }}
-          <template v-if="showClub && rq.club_name"> · {{ rq.club_name }}</template>
+          @{{ rq.diver_username }}
+          <template v-if="showClub"> · {{ $t('my_club.wants_to_join', { club: rq.to_club_name }) }}</template>
+          <template v-if="rq.from_club_name"> · {{ $t('my_club.currently_at', { club: rq.from_club_name }) }}</template>
         </span>
         <span v-if="rq.note" class="note">“{{ rq.note }}”</span>
       </div>

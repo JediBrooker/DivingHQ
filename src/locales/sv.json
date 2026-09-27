@@ -69,7 +69,8 @@
       "submit_idle": "Skapa konto",
       "submit_loading": "Skapar...",
       "already_have_account": "Har du redan ett konto?",
-      "sign_in_link": "Logga in"
+      "sign_in_link": "Logga in",
+      "referee_note_unclaimed": "Så länge det inte finns något förbund här granskar DivingHQ förfrågningar om att bli överdomare, inte din klubb: en överdomare kan agera vid alla klubbars tävlingar."
     },
     "register_org": {
       "title": "Registrera organisation",
@@ -478,7 +479,8 @@
       "password_placeholder": "Ditt nuvarande lösenord",
       "conflict": "Kan inte slå samman: både det gamla kontot och ditt nuvarande konto har anmälningar för samma tävling och omgång. Bocka av den krockande kandidaten eller kontakta din förbundsadministratör för att slå samman manuellt.",
       "success_toast": "Tidigare resultat omkopplade till din profil."
-    }
+    },
+    "club_request_sent": "Förfrågan skickad. Du flyttas när den godkänts: av ditt förbund, eller där det ännu inte finns något, av den nya klubbens administratörer."
   },
   "diver_profile": {
     "back": "← Tillbaka",
@@ -582,17 +584,17 @@
         "desc": "Du driver din klubb. Där ditt lands förbund ännu inte finns på DivingHQ arrangerar klubben sina egna tävlingar: skapa dem, styr dem från <strong>Kontrollrummet</strong> och godkänn medlemmarnas rollförfrågningar. Under ett förbund utser förbundet dig.",
         "step_1": "Registrera dig, välj land och skapa din klubb, du blir dess första administratör",
         "step_2": "Öppna <strong>Tävlingshanteraren</strong> och skapa en tävling som din klubb arrangerar",
-        "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara överdomare på <strong>Min klubb</strong>",
+        "step_3": "Godkänn på <strong>Min klubb</strong> dem som ber om att gå med och medlemmar som vill hoppa, döma eller vara tränare",
         "step_4": "På tävlingsdagen styr du poängsättningen från <strong>Kontrollrummet</strong>",
         "step_5": "När ditt förbund eller regionala organ ansluter röstar du om dess anspråk under <strong>Anspråk</strong>",
         "cta": "Arrangera en tävling ↗"
       },
       "region_admin": {
         "name": "Regionadministratör",
-        "desc": "Du ansvarar för en delstat, provins eller nation: arrangerar mästerskapen, kan kliva in på alla klubbars tävlingar och godkänner rollförfrågningar från klubbarnas medlemmar. Ditt förbund utser dig, eller DivingHQ om det inte finns något ännu.",
+        "desc": "Du ansvarar för en delstat, provins eller nation: arrangerar mästerskapen, kan kliva in på alla klubbars tävlingar och godkänner rollförfrågningar från klubbarnas medlemmar. Ditt förbund utser dig. Finns det inget ännu gör ditt regionala organ anspråk på regionen, och du lägger själv till dina medadministratörer.",
         "step_1": "Öppna <strong>Min region</strong> för att se dina klubbar och vem som driver dem",
         "step_2": "Skapa mästerskapen i <strong>Tävlingshanterare</strong> med regionen som arrangör",
-        "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara överdomare",
+        "step_3": "Godkänn medlemmar som vill hoppa, döma eller vara tränare, och klubbar som vill gå med i din region",
         "cta": "Arrangera en tävling ↗"
       },
       "org_admin": {
@@ -803,7 +805,9 @@
       "generic": "Meddelande",
       "claim_vote": "Omröstning",
       "claim_review": "Anspråk",
-      "claim_decided": "Anspråk"
+      "claim_decided": "Anspråk",
+      "club_change": "Klubbyte",
+      "region_request": "Region"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Arrangera dina tävlingar",
     "requests": "Rollförfrågningar",
     "no_requests_title": "Inga väntande förfrågningar",
-    "no_requests_body": "När en medlem ber om att bli hoppare, domare eller överdomare visas det här.",
+    "no_requests_body": "När en medlem ber om att bli hoppare, domare eller tränare visas det här.",
     "wants_role": "vill vara: {role}",
     "approve": "Godkänn",
     "reject": "Avslå",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Välj en klubbmedlem —",
     "add": "Lägg till",
     "remove": "Ta bort",
-    "federation_appoints": "Ditt förbund utser klubbens administratörer."
+    "federation_appoints": "Ditt förbund utser klubbens administratörer.",
+    "region_claimed_note": "En region som dess styrande organ har gjort anspråk på bestämmer själv vilka klubbar den tar in. Väljer du den skickas en förfrågan till dess administratörer, och bara de kan ta ut en klubb igen.",
+    "join_requests": "Förfrågningar om medlemskap",
+    "no_join_requests_title": "Ingen väntar på att gå med",
+    "no_join_requests_body": "När någon ber om att gå med i din klubb från sin profil visas det här.",
+    "wants_to_join": "vill gå med i {club}",
+    "currently_at": "just nu i {club}",
+    "region_request_pending": "Väntar på att {region} tar in din klubb.",
+    "region_request_cancel": "Dra tillbaka förfrågan",
+    "region_request_sent": "Förfrågan skickad. {region} avgör om din klubb tas in."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "Klubbar visas här när de har valt din region vid registrering eller på sin klubbsida.",
     "members": "{n} medlemmar",
     "no_admin": "Ingen administratör ännu",
-    "region_admins": "Regionadministratörer"
+    "region_admins": "Regionadministratörer",
+    "pick_member": "— Välj en medlem i en klubb i din region —",
+    "no_candidates": "Ingen att lägga till än. Medlemmar i klubbarna i din region visas här.",
+    "release_club": "Ta bort ur regionen",
+    "club_requests": "Klubbar som vill gå med",
+    "currently_in": "just nu i {region}"
   },
   "claims": {
     "title": "Anspråk",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Tillbakadraget",
     "status_open_review": "Väntar på beslut",
     "revoked_summary": "Anspråket återkallat. Borttagna behörigheter: {count}"
+  },
+  "request_role": {
+    "button": "Begär en roll",
+    "title": "Begär en roll",
+    "intro_claimed": "Förbundets administratörer granskar rollförfrågningar. Du får ett mejl när de har bestämt sig.",
+    "intro_unclaimed": "Så länge det inte finns något förbund här granskar din klubbs administratörer förfrågningar om hoppare, domare och tränare, och DivingHQ granskar resten. Du får ett mejl när det är avgjort.",
+    "no_club_hint": "Du är inte med i någon klubb, så DivingHQ granskar det här. Vill du hellre att en klubb avgör ber du först om att få gå med i en.",
+    "you_have": "Dina roller: {roles}",
+    "role_label": "Roll",
+    "pick_role": "— Välj en roll —",
+    "note_label": "Meddelande till den som granskar (valfritt)",
+    "submit": "Skicka förfrågan",
+    "sending": "Skickar…",
+    "sent": "Förfrågan skickad",
+    "nothing_left": "Du har redan, eller har begärt, alla roller du kan begära här.",
+    "your_requests": "Dina förfrågningar",
+    "status_pending": "Väntar",
+    "status_approved": "Godkänd",
+    "status_rejected": "Avslagen"
   }
 }

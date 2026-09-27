@@ -69,7 +69,8 @@
       "submit_idle": "Crear Cuenta",
       "submit_loading": "Creando...",
       "already_have_account": "¿Ya tienes una cuenta?",
-      "sign_in_link": "Iniciar sesión"
+      "sign_in_link": "Iniciar sesión",
+      "referee_note_unclaimed": "Mientras no haya federación aquí, DivingHQ revisa las solicitudes de árbitro, no tu club: un árbitro puede intervenir en las competiciones de cualquier club."
     },
     "register_org": {
       "title": "Registrar Organización",
@@ -467,7 +468,8 @@
       "password_placeholder": "Tu contraseña actual",
       "conflict": "No se puede fusionar: la cuenta antigua y tu cuenta actual tienen ambas inscripciones para el mismo evento y ronda. Desmarca el candidato en conflicto o contacta con el admin de tu federación para fusionar manualmente.",
       "success_toast": "Resultados anteriores re-vinculados a tu perfil."
-    }
+    },
+    "club_request_sent": "Solicitud enviada. Te cambiarás cuando se apruebe: por tu federación o, donde aún no la haya, por los administradores del nuevo club."
   },
   "diver_profile": {
     "back": "← Volver",
@@ -571,17 +573,17 @@
         "desc": "Diriges tu club. Donde la federación de tu país aún no está en DivingHQ, el club organiza sus propias competiciones: créalas, dirígelas desde la <strong>Sala de control</strong> y aprueba las solicitudes de rol de tus miembros. Bajo una federación, es ella quien te nombra.",
         "step_1": "Regístrate, elige tu país y crea tu club; serás su primer administrador",
         "step_2": "Abre el <strong>Gestor de competiciones</strong> y crea una competición organizada por tu club",
-        "step_3": "Aprueba en <strong>Mi club</strong> a los miembros que quieren saltar, juzgar o arbitrar",
+        "step_3": "Aprueba en <strong>Mi club</strong> a quienes piden unirse y a los miembros que quieren saltar, juzgar o entrenar",
         "step_4": "El día de la competición, dirige la puntuación desde la <strong>Sala de control</strong>",
         "step_5": "Cuando llegue tu federación u organismo regional, vota su reclamación en <strong>Reclamaciones</strong>",
         "cta": "Organizar una competición ↗"
       },
       "region_admin": {
         "name": "Administrador regional",
-        "desc": "Te ocupas de un estado, provincia o nación: organizas sus campeonatos, puedes intervenir en las competiciones de cualquiera de sus clubes y apruebas las solicitudes de rol de sus miembros. Te nombra tu federación, o DivingHQ si aún no la hay.",
+        "desc": "Te ocupas de un estado, provincia o nación: organizas sus campeonatos, puedes intervenir en las competiciones de cualquiera de sus clubes y apruebas las solicitudes de rol de sus miembros. Te nombra tu federación. Si aún no la hay, tu organismo regional reclama la región y tú añades a tus coadministradores.",
         "step_1": "Abre <strong>Mi región</strong> para ver tus clubes y quién los gestiona",
         "step_2": "Crea tus campeonatos en el <strong>Gestor de competiciones</strong>, organizados por tu región",
-        "step_3": "Aprueba a los miembros que quieren saltar, juzgar o arbitrar",
+        "step_3": "Aprueba a los miembros que quieren saltar, juzgar o entrenar, y a los clubes que piden unirse a tu región",
         "cta": "Organizar una competición ↗"
       },
       "org_admin": {
@@ -792,7 +794,9 @@
       "generic": "Aviso",
       "claim_vote": "Votación",
       "claim_review": "Reclamación",
-      "claim_decided": "Reclamación"
+      "claim_decided": "Reclamación",
+      "club_change": "Cambio de club",
+      "region_request": "Región"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Organizar competiciones",
     "requests": "Solicitudes de rol",
     "no_requests_title": "No hay solicitudes pendientes",
-    "no_requests_body": "Cuando un miembro pide ser saltador, juez o árbitro, aparece aquí.",
+    "no_requests_body": "Cuando un miembro pide ser saltador, juez o entrenador, aparece aquí.",
     "wants_role": "quiere ser: {role}",
     "approve": "Aprobar",
     "reject": "Rechazar",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Elige un miembro del club —",
     "add": "Añadir",
     "remove": "Quitar",
-    "federation_appoints": "Tu federación nombra a los administradores de este club."
+    "federation_appoints": "Tu federación nombra a los administradores de este club.",
+    "region_claimed_note": "Una región que ha reclamado su organismo rector decide qué clubes acepta. Al elegirla se envía una solicitud a sus administradores, y solo ellos pueden sacar después un club.",
+    "join_requests": "Solicitudes de ingreso",
+    "no_join_requests_title": "Nadie esperando para unirse",
+    "no_join_requests_body": "Cuando alguien pida unirse a tu club desde su perfil, aparecerá aquí.",
+    "wants_to_join": "quiere unirse a {club}",
+    "currently_at": "ahora en {club}",
+    "region_request_pending": "Esperando a que {region} acepte a tu club.",
+    "region_request_cancel": "Retirar solicitud",
+    "region_request_sent": "Solicitud enviada. {region} decidirá si acepta a tu club."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "Los clubes aparecen aquí cuando eligen tu región, al registrarse o en la página del club.",
     "members": "{n} miembros",
     "no_admin": "Aún sin administrador",
-    "region_admins": "Administradores de la región"
+    "region_admins": "Administradores de la región",
+    "pick_member": "— Elige a un miembro de los clubes de tu región —",
+    "no_candidates": "Todavía no hay nadie que añadir. Aquí aparecen los miembros de los clubes de tu región.",
+    "release_club": "Sacar de la región",
+    "club_requests": "Clubes que piden unirse",
+    "currently_in": "ahora en {region}"
   },
   "claims": {
     "title": "Reclamaciones",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Retirada",
     "status_open_review": "Pendiente de decisión",
     "revoked_summary": "Reclamación revocada. Permisos retirados: {count}"
+  },
+  "request_role": {
+    "button": "Solicitar un rol",
+    "title": "Solicitar un rol",
+    "intro_claimed": "Los administradores de tu federación revisan las solicitudes de rol. Recibirás un correo cuando decidan.",
+    "intro_unclaimed": "Mientras no haya federación aquí, los administradores de tu club revisan las solicitudes de saltador, juez y entrenador, y DivingHQ revisa el resto. Recibirás un correo cuando decidan.",
+    "no_club_hint": "No perteneces a ningún club, así que lo revisará DivingHQ. Si prefieres que decida un club, pide primero unirte a uno.",
+    "you_have": "Tus roles: {roles}",
+    "role_label": "Rol",
+    "pick_role": "— Elige un rol —",
+    "note_label": "Nota para quien lo revise (opcional)",
+    "submit": "Enviar solicitud",
+    "sending": "Enviando…",
+    "sent": "Solicitud enviada",
+    "nothing_left": "Ya tienes, o has solicitado, todos los roles que puedes pedir aquí.",
+    "your_requests": "Tus solicitudes",
+    "status_pending": "En espera",
+    "status_approved": "Aprobada",
+    "status_rejected": "Rechazada"
   }
 }

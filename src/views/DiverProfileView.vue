@@ -11,6 +11,7 @@ import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 // Migration 053 surfaces: self-delete + reunite-on-return.
 import DeleteAccountDialog   from '@/components/DeleteAccountDialog.vue'
 import ClaimCandidatesModal  from '@/components/ClaimCandidatesModal.vue'
+import RequestRoleDialog     from '@/components/RequestRoleDialog.vue'
 // Preferences (own profile): appearance + language, per the redesign.
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
@@ -230,6 +231,9 @@ const clubs = ref([])
 const clubChoice = ref('')           // selected club_id or ''
 const savingClub = ref(false)
 const saveError = ref('')
+const clubRequestSent = ref(false)    // a join / switch went off as a request
+// Asking for a role after signup (RequestRoleDialog).
+const requestRoleOpen = ref(false)
 
 // Password change state
 const pwEditing  = ref(false)
@@ -328,7 +332,8 @@ const tfaOpen   = ref(false)
 // counter means double-locking is safe.
 useBodyScrollLock().lockWhile(computed(() =>
   customizing.value || editing.value ||
-  pwEditing.value || emEditing.value || tfaOpen.value
+  pwEditing.value || emEditing.value || tfaOpen.value ||
+  requestRoleOpen.value
 ))
 const tfaStage  = ref('idle')               // idle | setup | disable
 const tfaStatus = ref(null)                  // { enabled, recovery_codes_remaining }
@@ -538,6 +543,7 @@ async function loadAnalytics() {
 
 async function openClubEditor() {
   saveError.value = ''
+  clubRequestSent.value = false
   editing.value = true
   clubChoice.value = profile.value?.diver?.club_id ?? ''
   // Lazy-load clubs only when the editor opens
@@ -556,10 +562,31 @@ function closeClubEditor() {
   saveError.value = ''
 }
 
+// Leaving a club is yours to do. Joining or switching one needs whoever
+// runs it to say yes (the federation, or where there's none yet the
+// club's own admins), so that files a club change request instead of
+// trying the direct PUT, which would only answer 403. An org admin (or
+// the sysadmin) is the one who'd approve it anyway, so they still set
+// their own club in one go.
 async function saveClub() {
   savingClub.value = true
   saveError.value = ''
+  clubRequestSent.value = false
+  const current = profile.value?.diver?.club_id || ''
+  const setsDirectly = auth.hasRole('org_admin')
   try {
+    if (clubChoice.value && clubChoice.value !== current && !setsDirectly) {
+      await auth.apiFetch('/api/club-change-requests', {
+        method: 'POST',
+        body: JSON.stringify({ to_club_id: clubChoice.value }),
+      })
+      clubRequestSent.value = true
+      return
+    }
+    if (clubChoice.value === current) {
+      editing.value = false
+      return
+    }
     await auth.apiFetch(`/api/users/${targetId.value}/club`, {
       method: 'PUT',
       body: JSON.stringify({ club_id: clubChoice.value || null }),
@@ -716,6 +743,10 @@ function onClaimed() {
         </button>
         <button v-if="profile && isSelf" class="btn btn-ghost btn-sm" @click="openClubEditor">
           Change Club
+        </button>
+        <button v-if="profile && isSelf" class="btn btn-ghost btn-sm" data-test-id="request-role-button"
+                @click="requestRoleOpen = true">
+          {{ $t('request_role.button') }}
         </button>
         <button v-if="profile && isSelf" class="btn btn-ghost btn-sm" @click="openEmailEditor">
           Change Email
@@ -884,6 +915,12 @@ function onClaimed() {
     @deleted="onAccountDeleted"
   />
 
+  <RequestRoleDialog
+    v-if="requestRoleOpen"
+    :has-club="!!profile?.diver?.club_id"
+    @close="requestRoleOpen = false"
+  />
+
   <ClaimCandidatesModal
     v-if="claimOpen"
     variant="manual"
@@ -959,9 +996,12 @@ function onClaimed() {
           </p>
         </div>
         <div v-if="saveError" class="msg msg-error">{{ saveError }}</div>
+        <div v-if="clubRequestSent" class="msg msg-success" data-test-id="club-request-sent">
+          {{ $t('profile.club_request_sent') }}
+        </div>
         <div class="modal-actions">
           <button class="btn btn-ghost btn-sm" @click="closeClubEditor">Cancel</button>
-          <button class="btn btn-primary btn-sm" :disabled="savingClub" @click="saveClub">
+          <button v-if="!clubRequestSent" class="btn btn-primary btn-sm" :disabled="savingClub" @click="saveClub">
             {{ savingClub ? 'Saving…' : 'Save' }}
           </button>
         </div>

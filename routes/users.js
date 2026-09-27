@@ -5,6 +5,8 @@
 //   PUT  /api/users/:id/roles        replace user's role set
 //                                    (atomically diffs + audits)
 //   GET  /api/role-requests          pending requests
+//   GET  /api/role-requests/mine     what I can ask for + my requests
+//   POST /api/role-requests          ask for a role after signup
 //   POST /api/role-requests/:id/review  approve / reject
 //   PUT  /api/users/:id/club         self-clear OR admin-set club
 //   GET  /api/users/:id/role-audit   per-user audit history
@@ -25,6 +27,7 @@ const claimsLib = require("../lib/claims");
 const bcrypt  = require("bcrypt");
 const jwt     = require("jsonwebtoken");
 const { recordAudit, auditFromReq } = require("../lib/audit");
+const { ADMIN_ORG_ID } = require("../lib/admin-org");
 
 // Enum values from init.sql's CREATE TYPE org_role. system_admin is
 // intentionally NOT in this set, it's a column on users, not a role
@@ -54,6 +57,10 @@ module.exports = function createUsersRouter({
   hashFingerprint,
   JWT_SECRET,
   requireMeetOrClubEditor,   // optional, migration 087
+  // Signed-in role requests: who to tell, and the dashboard pulse.
+  // Both optional so older test mounts keep working.
+  sendNewRoleRequestEmail,
+  io,
 }) {
   if (!pool) throw new Error("createUsersRouter requires { pool, … }");
   const router = express.Router();
@@ -318,11 +325,124 @@ module.exports = function createUsersRouter({
     }
   });
 
+  // -------------------------------------------------------------
+  // Asking for a role after signup.
+  //
+  // Signup was the only place a role request could start, so a diver
+  // who later wanted to judge, or a coach who signed up as a spectator,
+  // had nowhere to go but the sysadmin. These two let a signed-in user
+  // see what they can ask for and ask. Routing is exactly signup's:
+  // lib/role-requests.js decides who reviews, and the same email goes
+  // out. One pending request per role (migration 097 enforces it too).
+  // -------------------------------------------------------------
+  const RECENT_DECLINE_HOURS = 24;
+
+  async function requestContext(userId) {
+    const r = await pool.query(
+      `SELECT u.org_id, o.claim_state,
+              COALESCE(ARRAY(SELECT r.role::text FROM user_org_roles r
+                              WHERE r.user_id = u.id AND r.org_id = u.org_id), ARRAY[]::text[]) AS held
+         FROM users u JOIN organisations o ON o.id = u.org_id
+        WHERE u.id = $1 AND u.deleted_at IS NULL`,
+      [userId],
+    );
+    const row = r.rows[0];
+    if (!row) return null;
+    // The Administration org is platform staff, nothing to ask for there.
+    const requestable = row.org_id === ADMIN_ORG_ID ? [] : roleRequests.requestableRoles(row.claim_state);
+    return { orgId: row.org_id, claimState: row.claim_state, held: row.held, requestable };
+  }
+
+  router.get("/api/role-requests/mine", verifyToken, async (req, res) => {
+    try {
+      const ctx = await requestContext(req.user.id);
+      if (!ctx) return res.status(404).json({ error: "User not found" });
+      const mine = await pool.query(
+        `SELECT id, requested_role::text AS requested_role, status::text AS status,
+                note, created_at, reviewed_at
+           FROM role_requests
+          WHERE user_id = $1 AND org_id = $2
+          ORDER BY created_at DESC
+          LIMIT 20`,
+        [req.user.id, ctx.orgId],
+      );
+      res.json({
+        claim_state: ctx.claimState,
+        requestable: ctx.requestable,
+        held: ctx.held,
+        requests: mine.rows,
+      });
+    } catch (err) {
+      console.error("[My Role Requests Error]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  router.post("/api/role-requests", writeLimiter, verifyToken, async (req, res) => {
+    const { role, note } = req.body || {};
+    const cleanNote = typeof note === "string"
+      ? note.replace(/[\x00-\x1f\x7f]/g, " ").trim().slice(0, 500) || null
+      : null;
+    try {
+      const ctx = await requestContext(req.user.id);
+      if (!ctx) return res.status(404).json({ error: "User not found" });
+      if (typeof role !== "string" || !ctx.requestable.includes(role)) {
+        return res.status(400).json({ error: "That role can't be requested here", code: "role_not_requestable" });
+      }
+      if (ctx.held.includes(role)) {
+        return res.status(409).json({ error: "You already have that role", code: "already_held" });
+      }
+      // Someone told no yesterday gets a day before asking again, so a
+      // club admin's inbox can't be flooded by one person re-asking.
+      const recent = await pool.query(
+        `SELECT 1 FROM role_requests
+          WHERE user_id = $1 AND org_id = $2 AND requested_role = $3 AND status = 'rejected'
+            AND reviewed_at > now() - make_interval(hours => $4::int)
+          LIMIT 1`,
+        [req.user.id, ctx.orgId, role, RECENT_DECLINE_HOURS],
+      );
+      if (recent.rows.length) {
+        return res.status(409).json({
+          error: "That request was declined recently. You can ask again tomorrow.",
+          code: "recently_declined",
+        });
+      }
+      let created;
+      try {
+        created = (await pool.query(
+          `INSERT INTO role_requests (user_id, org_id, requested_role, note)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id, requested_role::text AS requested_role, status::text AS status, note, created_at`,
+          [req.user.id, ctx.orgId, role, cleanNote],
+        )).rows[0];
+      } catch (err) {
+        // role_requests_one_pending (migration 097): already waiting.
+        if (err.code === "23505") {
+          return res.status(409).json({ error: "You've already asked for that role", code: "already_pending" });
+        }
+        throw err;
+      }
+      // Same pulse signup sends, so a reviewer's open dashboard refetches.
+      if (io && typeof io.emit === "function") {
+        try { io.emit("role_request_created", { org_id: ctx.orgId, requested_role: role }); } catch { /* best effort */ }
+      }
+      if (typeof sendNewRoleRequestEmail === "function") {
+        sendNewRoleRequestEmail(req.user.id, ctx.orgId, role, cleanNote).catch(() => {});
+      }
+      res.status(201).json(created);
+    } catch (err) {
+      console.error("[Create Role Request Error]", err.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Update a user's club. Two flows are allowed:
   //   * Self-edit can ONLY clear the club. A club matters for
   //     visibility scoping (rosters, coach links), so a malicious
   //     diver self-assigning into a rival club would be a tenancy
-  //     gap. Switching club is org_admin-only.
+  //     gap. Joining one goes through /api/club-change-requests,
+  //     approved by the org admin or, with no federation, by the
+  //     club's own admins (routes/club-changes.js).
   //   * Admin (org_admin in target's org / system_admin) can set or
   //     clear any user's club to one in the target's own org.
   router.put("/api/users/:id/club", verifyToken, async (req, res) => {
@@ -354,7 +474,7 @@ module.exports = function createUsersRouter({
       // Foo divers" could get polluted by anyone in the org.
       if (isSelf && !isAdmin && club_id) {
         return res.status(403).json({
-          error: "Switching clubs requires an org admin. You can clear your club yourself.",
+          error: "Joining or switching clubs needs approval: send a club change request (Change Club on your profile). You can clear your club yourself.",
         });
       }
 

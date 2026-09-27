@@ -19,6 +19,8 @@ const { ADMIN_ORG_ID } = require("../lib/admin-org");
 const { countryByCode } = require("../lib/countries");
 const { materializeRegions } = require("../lib/regions");
 const claims = require("../lib/claims");
+const { liveAdminCount } = require("../lib/admin-rows");
+const roleRequests = require("../lib/role-requests");
 
 // Plant the JWT in the httpOnly session cookie. This is the SPA's
 // session of record, browser JS can neither read nor exfiltrate it.
@@ -971,8 +973,8 @@ module.exports = function createAuthRouter({
         [newUserId, orgId],
       );
 
-      const validRoles = ["meet_manager", "referee", "judge", "diver"];
-      if (requested_role && validRoles.includes(requested_role)) {
+      // Same list the signed-in request path uses (lib/role-requests.js).
+      if (requested_role && roleRequests.REQUESTABLE_ROLES.includes(requested_role)) {
         await client.query(
           "INSERT INTO role_requests (user_id, org_id, requested_role, note) VALUES ($1,$2,$3,$4)",
           [newUserId, orgId, requested_role, safeText(note, 500)],
@@ -1240,7 +1242,12 @@ module.exports = function createAuthRouter({
           if (!rg) {
             return await refuse(400, { error: "That region isn't set up on DivingHQ for this country", code: "region_unknown" });
           }
-          if (rg.claim_state === "claimed") {
+          // A claimed region whose admins have all gone (removed by the
+          // sysadmin, or every one of them deleted their account) has
+          // nobody who can run it or add anyone, so it's open to a fresh
+          // claim rather than stuck until support steps in. Approval
+          // just stamps claimed_name again and adds the new admin.
+          if (rg.claim_state === "claimed" && (await liveAdminCount(client, "region", rg.id)) > 0) {
             return await refuse(409, { error: "That region already has its body on DivingHQ. Contact support if that's wrong.", code: "already_claimed" });
           }
           target = { kind: "region", id: rg.id, orgId: orgRow.id };

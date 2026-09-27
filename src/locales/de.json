@@ -69,7 +69,8 @@
       "submit_idle": "Konto erstellen",
       "submit_loading": "Erstellen...",
       "already_have_account": "Sie haben bereits ein Konto?",
-      "sign_in_link": "Anmelden"
+      "sign_in_link": "Anmelden",
+      "referee_note_unclaimed": "Solange es hier noch keinen Verband gibt, prüft DivingHQ Anfragen für die Schiedsrichterrolle, nicht Ihr Verein: Ein Schiedsrichter kann bei den Wettkämpfen jedes Vereins eingreifen."
     },
     "register_org": {
       "title": "Organisation registrieren",
@@ -478,7 +479,8 @@
       "password_placeholder": "Dein aktuelles Passwort",
       "conflict": "Zusammenführen nicht möglich: Sowohl das alte Konto als auch dein aktuelles Konto haben Einträge für dieselbe Veranstaltung und Runde. Hake den kollidierenden Kandidaten ab oder wende dich an deinen Verbandsadministrator, um manuell zusammenzuführen.",
       "success_toast": "Frühere Ergebnisse mit deinem Profil neu verknüpft."
-    }
+    },
+    "club_request_sent": "Anfrage gesendet. Der Wechsel erfolgt, sobald sie genehmigt ist: von Ihrem Verband oder, wo es noch keinen gibt, von den Admins des neuen Vereins."
   },
   "diver_profile": {
     "back": "← Zurück",
@@ -582,17 +584,17 @@
         "desc": "Sie führen Ihren Verein. Wo der Verband Ihres Landes noch nicht auf DivingHQ ist, richtet der Verein seine Wettkämpfe selbst aus: anlegen, aus dem <strong>Kontrollraum</strong> steuern und die Rollenanfragen Ihrer Mitglieder genehmigen. Unter einem Verband ernennt dieser Sie.",
         "step_1": "Registrieren Sie sich, wählen Sie Ihr Land und legen Sie Ihren Verein an, Sie werden sein erster Admin",
         "step_2": "Öffnen Sie den <strong>Wettkampf-Manager</strong> und legen Sie einen Wettkampf Ihres Vereins an",
-        "step_3": "Genehmigen Sie auf <strong>Mein Verein</strong> Mitglieder, die springen, werten oder Schiedsrichter sein möchten",
+        "step_3": "Genehmigen Sie auf <strong>Mein Verein</strong> Beitrittsanfragen und Mitglieder, die springen, werten oder trainieren möchten",
         "step_4": "Am Wettkampftag steuern Sie die Wertung aus dem <strong>Kontrollraum</strong>",
         "step_5": "Kommt Ihr Verband oder Landesverband dazu, stimmen Sie unter <strong>Ansprüche</strong> über seinen Anspruch ab",
         "cta": "Einen Wettkampf ausrichten ↗"
       },
       "region_admin": {
         "name": "Regionsadmin",
-        "desc": "Sie betreuen einen Bundesstaat, eine Provinz oder einen Landesteil: Sie richten die Meisterschaften aus, können bei den Wettkämpfen aller Vereine einspringen und genehmigen Rollenanfragen der Vereinsmitglieder. Ihr Verband ernennt Sie, oder DivingHQ, solange es noch keinen gibt.",
+        "desc": "Sie betreuen einen Bundesstaat, eine Provinz oder einen Landesteil: Sie richten die Meisterschaften aus, können bei den Wettkämpfen aller Vereine einspringen und genehmigen Rollenanfragen der Vereinsmitglieder. Ihr Verband ernennt Sie. Solange es keinen gibt, übernimmt Ihr Landesverband die Region, und weitere Admins fügen Sie selbst hinzu.",
         "step_1": "Öffnen Sie <strong>Meine Region</strong> für Ihre Vereine und deren Leitung",
         "step_2": "Legen Sie Ihre Meisterschaften im <strong>Wettkampf-Manager</strong> mit Ihrer Region als Ausrichter an",
-        "step_3": "Genehmigen Sie Mitglieder, die springen, werten oder Schiedsrichter sein möchten",
+        "step_3": "Genehmigen Sie Mitglieder, die springen, werten oder trainieren möchten, und Vereine, die Ihrer Region beitreten wollen",
         "cta": "Einen Wettkampf ausrichten ↗"
       },
       "org_admin": {
@@ -803,7 +805,9 @@
       "generic": "Hinweis",
       "claim_vote": "Abstimmung",
       "claim_review": "Anspruch",
-      "claim_decided": "Anspruch"
+      "claim_decided": "Anspruch",
+      "club_change": "Vereinswechsel",
+      "region_request": "Region"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Wettkämpfe ausrichten",
     "requests": "Rollenanfragen",
     "no_requests_title": "Keine offenen Anfragen",
-    "no_requests_body": "Wenn ein Mitglied Springer, Kampfrichter oder Schiedsrichter werden möchte, erscheint die Anfrage hier.",
+    "no_requests_body": "Wenn ein Mitglied Springer, Kampfrichter oder Trainer werden möchte, erscheint die Anfrage hier.",
     "wants_role": "möchte werden: {role}",
     "approve": "Genehmigen",
     "reject": "Ablehnen",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Vereinsmitglied auswählen —",
     "add": "Hinzufügen",
     "remove": "Entfernen",
-    "federation_appoints": "Ihr Verband ernennt die Admins dieses Vereins."
+    "federation_appoints": "Ihr Verband ernennt die Admins dieses Vereins.",
+    "region_claimed_note": "Eine Region, die ihr zuständiger Verband übernommen hat, entscheidet selbst, welche Vereine sie aufnimmt. Wenn Sie sie auswählen, geht eine Anfrage an ihre Admins, und nur diese können einen Verein wieder herausnehmen.",
+    "join_requests": "Beitrittsanfragen",
+    "no_join_requests_title": "Niemand wartet auf Aufnahme",
+    "no_join_requests_body": "Wenn jemand über sein Profil den Beitritt zu Ihrem Verein anfragt, erscheint das hier.",
+    "wants_to_join": "möchte {club} beitreten",
+    "currently_at": "derzeit bei {club}",
+    "region_request_pending": "Wartet darauf, dass {region} Ihren Verein aufnimmt.",
+    "region_request_cancel": "Anfrage zurückziehen",
+    "region_request_sent": "Anfrage gesendet. {region} entscheidet, ob Ihr Verein aufgenommen wird."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "Vereine erscheinen hier, sobald sie Ihre Region bei der Registrierung oder auf ihrer Vereinsseite gewählt haben.",
     "members": "{n} Mitglieder",
     "no_admin": "Noch kein Admin",
-    "region_admins": "Regionsadmins"
+    "region_admins": "Regionsadmins",
+    "pick_member": "— Mitglied eines Vereins Ihrer Region auswählen —",
+    "no_candidates": "Noch niemand zum Hinzufügen. Mitglieder der Vereine Ihrer Region erscheinen hier.",
+    "release_club": "Aus der Region nehmen",
+    "club_requests": "Vereine mit Beitrittsanfrage",
+    "currently_in": "derzeit in {region}"
   },
   "claims": {
     "title": "Ansprüche",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Zurückgezogen",
     "status_open_review": "Wartet auf Entscheidung",
     "revoked_summary": "Anspruch widerrufen. Entzogene Berechtigungen: {count}"
+  },
+  "request_role": {
+    "button": "Rolle anfragen",
+    "title": "Rolle anfragen",
+    "intro_claimed": "Die Admins Ihres Verbands prüfen Rollenanfragen. Sie erhalten eine E-Mail, sobald entschieden ist.",
+    "intro_unclaimed": "Solange es hier keinen Verband gibt, prüfen die Admins Ihres Vereins Anfragen für Springer, Kampfrichter und Trainer, alle anderen prüft DivingHQ. Sie erhalten eine E-Mail, sobald entschieden ist.",
+    "no_club_hint": "Sie sind in keinem Verein, daher prüft DivingHQ diese Anfrage. Wenn lieber ein Verein entscheiden soll, beantragen Sie zuerst den Beitritt zu einem.",
+    "you_have": "Ihre Rollen: {roles}",
+    "role_label": "Rolle",
+    "pick_role": "— Rolle auswählen —",
+    "note_label": "Hinweis für die prüfende Person (optional)",
+    "submit": "Anfrage senden",
+    "sending": "Wird gesendet…",
+    "sent": "Anfrage gesendet",
+    "nothing_left": "Sie haben bereits jede Rolle, die Sie hier anfragen können, oder haben sie angefragt.",
+    "your_requests": "Ihre Anfragen",
+    "status_pending": "Ausstehend",
+    "status_approved": "Genehmigt",
+    "status_rejected": "Abgelehnt"
   }
 }

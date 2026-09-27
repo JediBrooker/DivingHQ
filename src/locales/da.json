@@ -69,7 +69,8 @@
       "submit_idle": "Opret konto",
       "submit_loading": "Opretter...",
       "already_have_account": "Har du allerede en konto?",
-      "sign_in_link": "Log ind"
+      "sign_in_link": "Log ind",
+      "referee_note_unclaimed": "Så længe der ikke er noget forbund her, gennemgår DivingHQ anmodninger om at blive overdommer, ikke din klub: en overdommer kan handle ved enhver klubs stævne."
     },
     "register_org": {
       "title": "Registrér organisation",
@@ -478,7 +479,8 @@
       "password_placeholder": "Din nuværende adgangskode",
       "conflict": "Kan ikke flette: både den gamle konto og din nuværende konto har poster for samme stævne og runde. Fjern fluebenet fra den kolliderende kandidat, eller kontakt din forbundsadministrator for at flette manuelt.",
       "success_toast": "Tidligere resultater igen knyttet til din profil."
-    }
+    },
+    "club_request_sent": "Anmodningen er sendt. Du flytter, når den er godkendt: af dit forbund, eller hvor der endnu ikke er et, af den nye klubs administratorer."
   },
   "diver_profile": {
     "back": "← Tilbage",
@@ -582,17 +584,17 @@
         "desc": "Du driver din klub. Hvor dit lands forbund endnu ikke er på DivingHQ, afvikler klubben sine egne stævner: opret dem, styr dem fra <strong>Kontrolrummet</strong>, og godkend medlemmernes rolleanmodninger. Under et forbund udpeger forbundet dig.",
         "step_1": "Tilmeld dig, vælg dit land og opret din klub, så bliver du dens første administrator",
         "step_2": "Åbn <strong>Stævnehåndtering</strong> og opret et stævne, som din klub er vært for",
-        "step_3": "Godkend medlemmer, der vil springe, dømme eller være overdommer, på <strong>Min klub</strong>",
+        "step_3": "Godkend på <strong>Min klub</strong> dem, der beder om at blive medlem, og medlemmer, der vil springe, dømme eller være træner",
         "step_4": "På dagen styrer du pointgivningen fra <strong>Kontrolrummet</strong>",
         "step_5": "Når dit forbund eller regionale organ kommer til, stemmer du om dets krav under <strong>Krav</strong>",
         "cta": "Afvikling af et stævne ↗"
       },
       "region_admin": {
         "name": "Regionsadministrator",
-        "desc": "Du tager dig af en delstat, provins eller nation: afvikler dens mesterskaber, træder til ved alle dens klubbers stævner og godkender rolleanmodninger fra klubbernes medlemmer. Dit forbund udpeger dig, eller DivingHQ hvis der ikke er et endnu.",
+        "desc": "Du tager dig af en delstat, provins eller nation: afvikler dens mesterskaber, træder til ved alle dens klubbers stævner og godkender rolleanmodninger fra klubbernes medlemmer. Dit forbund udpeger dig. Hvis der ikke er et endnu, gør dit regionale organ krav på regionen, og du tilføjer selv dine medadministratorer.",
         "step_1": "Åbn <strong>Min region</strong> for at se dine klubber og hvem der driver dem",
         "step_2": "Opret dine mesterskaber i <strong>Stævnehåndtering</strong> med din region som vært",
-        "step_3": "Godkend medlemmer, der vil springe, dømme eller være overdommer",
+        "step_3": "Godkend medlemmer, der vil springe, dømme eller være træner, og klubber, der beder om optagelse i din region",
         "cta": "Afvikling af et stævne ↗"
       },
       "org_admin": {
@@ -803,7 +805,9 @@
       "generic": "Besked",
       "claim_vote": "Afstemning",
       "claim_review": "Krav",
-      "claim_decided": "Krav"
+      "claim_decided": "Krav",
+      "club_change": "Klubskifte",
+      "region_request": "Region"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Afvikl dine stævner",
     "requests": "Rolleanmodninger",
     "no_requests_title": "Ingen ventende anmodninger",
-    "no_requests_body": "Når et medlem beder om at blive udspringer, dommer eller overdommer, vises det her.",
+    "no_requests_body": "Når et medlem beder om at blive udspringer, dommer eller træner, vises det her.",
     "wants_role": "vil være: {role}",
     "approve": "Godkend",
     "reject": "Afvis",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Vælg et klubmedlem —",
     "add": "Tilføj",
     "remove": "Fjern",
-    "federation_appoints": "Dit forbund udpeger klubbens administratorer."
+    "federation_appoints": "Dit forbund udpeger klubbens administratorer.",
+    "region_claimed_note": "En region, som dens styrende organ har gjort krav på, bestemmer selv, hvilke klubber den optager. Vælger du den, sendes en anmodning til dens administratorer, og kun de kan tage en klub ud igen.",
+    "join_requests": "Anmodninger om medlemskab",
+    "no_join_requests_title": "Ingen venter på at blive optaget",
+    "no_join_requests_body": "Når nogen beder om at blive medlem af din klub fra deres profil, vises det her.",
+    "wants_to_join": "vil være medlem af {club}",
+    "currently_at": "i øjeblikket i {club}",
+    "region_request_pending": "Venter på, at {region} optager din klub.",
+    "region_request_cancel": "Træk anmodningen tilbage",
+    "region_request_sent": "Anmodning sendt. {region} beslutter, om din klub optages."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "Klubber vises her, når de har valgt din region ved tilmelding eller på deres klubside.",
     "members": "{n} medlemmer",
     "no_admin": "Ingen administrator endnu",
-    "region_admins": "Regionsadministratorer"
+    "region_admins": "Regionsadministratorer",
+    "pick_member": "— Vælg et medlem af en klub i din region —",
+    "no_candidates": "Der er ingen at tilføje endnu. Medlemmer af klubberne i din region vises her.",
+    "release_club": "Tag ud af regionen",
+    "club_requests": "Klubber, der beder om optagelse",
+    "currently_in": "i øjeblikket i {region}"
   },
   "claims": {
     "title": "Krav",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Trukket tilbage",
     "status_open_review": "Afventer afgørelse",
     "revoked_summary": "Kravet er tilbagekaldt. Fjernede rettigheder: {count}"
+  },
+  "request_role": {
+    "button": "Anmod om en rolle",
+    "title": "Anmod om en rolle",
+    "intro_claimed": "Dit forbunds administratorer gennemgår rolleanmodninger. Du får en e-mail, når de har besluttet sig.",
+    "intro_unclaimed": "Så længe der ikke er noget forbund her, gennemgår din klubs administratorer anmodninger om udspringer, dommer og træner, og DivingHQ gennemgår resten. Du får en e-mail, når de har besluttet sig.",
+    "no_club_hint": "Du er ikke i en klub, så DivingHQ gennemgår dette. Hvis du hellere vil have, at en klub beslutter, så bed først om at blive medlem af en.",
+    "you_have": "Dine roller: {roles}",
+    "role_label": "Rolle",
+    "pick_role": "— Vælg en rolle —",
+    "note_label": "Besked til den, der gennemgår (valgfrit)",
+    "submit": "Send anmodning",
+    "sending": "Sender…",
+    "sent": "Anmodning sendt",
+    "nothing_left": "Du har allerede, eller har anmodet om, alle de roller, du kan anmode om her.",
+    "your_requests": "Dine anmodninger",
+    "status_pending": "Venter",
+    "status_approved": "Godkendt",
+    "status_rejected": "Afvist"
   }
 }

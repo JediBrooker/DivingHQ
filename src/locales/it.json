@@ -69,7 +69,8 @@
       "submit_idle": "Crea account",
       "submit_loading": "Creazione...",
       "already_have_account": "Hai già un account?",
-      "sign_in_link": "Accedi"
+      "sign_in_link": "Accedi",
+      "referee_note_unclaimed": "Finché qui non c'è una federazione, le richieste di arbitro le esamina DivingHQ, non il tuo club: un arbitro può intervenire nelle gare di qualsiasi club."
     },
     "register_org": {
       "title": "Registra organizzazione",
@@ -478,7 +479,8 @@
       "password_placeholder": "La tua password attuale",
       "conflict": "Impossibile unire: l’account vecchio e quello attuale hanno entrambi iscrizioni per lo stesso evento e turno. Deseleziona il candidato in conflitto o contatta l’amministratore della tua federazione per unire manualmente.",
       "success_toast": "Risultati passati ricollegati al tuo profilo."
-    }
+    },
+    "club_request_sent": "Richiesta inviata. Il passaggio avverrà dopo l'approvazione: della tua federazione o, dove non c'è ancora, degli amministratori del nuovo club."
   },
   "diver_profile": {
     "back": "← Indietro",
@@ -582,17 +584,17 @@
         "desc": "Gestisci il tuo club. Dove la federazione del tuo paese non è ancora su DivingHQ, il club organizza le proprie gare: creale, dirigile dalla <strong>Sala Controllo</strong> e approva le richieste di ruolo dei membri. Sotto una federazione, è lei a nominarti.",
         "step_1": "Registrati, scegli il paese e crea il tuo club: ne sarai il primo amministratore",
         "step_2": "Apri il <strong>Gestore gare</strong> e crea una gara organizzata dal tuo club",
-        "step_3": "Approva in <strong>Il mio club</strong> i membri che vogliono tuffarsi, giudicare o arbitrare",
+        "step_3": "In <strong>Il mio club</strong> approva chi chiede di entrare e i membri che vogliono tuffarsi, giudicare o allenare",
         "step_4": "Il giorno della gara, dirigi i punteggi dalla <strong>Sala Controllo</strong>",
         "step_5": "Quando arriva la tua federazione o l'ente regionale, vota la sua rivendicazione in <strong>Rivendicazioni</strong>",
         "cta": "Organizzare una gara ↗"
       },
       "region_admin": {
         "name": "Amministratore regionale",
-        "desc": "Ti occupi di uno stato, una provincia o una nazione: organizzi i suoi campionati, puoi intervenire sulle gare di qualsiasi suo club e approvi le richieste di ruolo dei membri dei club. Ti nomina la tua federazione, o DivingHQ finché non c'è.",
+        "desc": "Ti occupi di uno stato, una provincia o una nazione: organizzi i suoi campionati, puoi intervenire sulle gare di qualsiasi suo club e approvi le richieste di ruolo dei membri dei club. Ti nomina la tua federazione. Finché non c'è, il tuo ente regionale rivendica la regione e aggiungi tu gli altri amministratori.",
         "step_1": "Apri <strong>La mia regione</strong> per vedere i tuoi club e chi li gestisce",
         "step_2": "Crea i tuoi campionati nel <strong>Gestore gare</strong>, organizzati dalla tua regione",
-        "step_3": "Approva i membri che vogliono tuffarsi, giudicare o arbitrare",
+        "step_3": "Approva i membri che vogliono tuffarsi, giudicare o allenare, e i club che chiedono di entrare nella tua regione",
         "cta": "Organizzare una gara ↗"
       },
       "org_admin": {
@@ -803,7 +805,9 @@
       "generic": "Avviso",
       "claim_vote": "Votazione",
       "claim_review": "Rivendicazione",
-      "claim_decided": "Rivendicazione"
+      "claim_decided": "Rivendicazione",
+      "club_change": "Cambio club",
+      "region_request": "Regione"
     }
   },
   "compare": {
@@ -1930,7 +1934,7 @@
     "run_meets": "Organizza le tue gare",
     "requests": "Richieste di ruolo",
     "no_requests_title": "Nessuna richiesta in attesa",
-    "no_requests_body": "Quando un membro chiede di diventare tuffatore, giudice o arbitro, la richiesta compare qui.",
+    "no_requests_body": "Quando un membro chiede di diventare tuffatore, giudice o allenatore, la richiesta compare qui.",
     "wants_role": "vuole essere: {role}",
     "approve": "Approva",
     "reject": "Rifiuta",
@@ -1939,7 +1943,16 @@
     "pick_member": "— Scegli un membro del club —",
     "add": "Aggiungi",
     "remove": "Rimuovi",
-    "federation_appoints": "Gli amministratori di questo club sono nominati dalla tua federazione."
+    "federation_appoints": "Gli amministratori di questo club sono nominati dalla tua federazione.",
+    "region_claimed_note": "Una regione rivendicata dal suo ente di governo decide da sé quali club accogliere. Sceglierla invia una richiesta ai suoi amministratori, e solo loro possono poi togliere un club.",
+    "join_requests": "Richieste di iscrizione",
+    "no_join_requests_title": "Nessuno in attesa di entrare",
+    "no_join_requests_body": "Quando qualcuno chiede di entrare nel tuo club dal proprio profilo, la richiesta compare qui.",
+    "wants_to_join": "vuole entrare in {club}",
+    "currently_at": "attualmente in {club}",
+    "region_request_pending": "In attesa che {region} accetti il tuo club.",
+    "region_request_cancel": "Ritira la richiesta",
+    "region_request_sent": "Richiesta inviata. {region} deciderà se accogliere il tuo club."
   },
   "regions": {
     "label": {
@@ -1959,7 +1972,12 @@
     "no_clubs_body": "I club compaiono qui quando scelgono la tua regione, all'iscrizione o nella pagina del club.",
     "members": "{n} membri",
     "no_admin": "Ancora nessun amministratore",
-    "region_admins": "Amministratori della regione"
+    "region_admins": "Amministratori della regione",
+    "pick_member": "— Scegli un membro dei club della tua regione —",
+    "no_candidates": "Ancora nessuno da aggiungere. Qui compaiono i membri dei club della tua regione.",
+    "release_club": "Togli dalla regione",
+    "club_requests": "Club che chiedono di entrare",
+    "currently_in": "ora in {region}"
   },
   "claims": {
     "title": "Rivendicazioni",
@@ -1996,5 +2014,24 @@
     "status_withdrawn": "Ritirata",
     "status_open_review": "In attesa di decisione",
     "revoked_summary": "Rivendicazione revocata. Accessi rimossi: {count}"
+  },
+  "request_role": {
+    "button": "Richiedi un ruolo",
+    "title": "Richiedi un ruolo",
+    "intro_claimed": "Gli amministratori della tua federazione esaminano le richieste di ruolo. Riceverai un'email quando avranno deciso.",
+    "intro_unclaimed": "Finché qui non c'è una federazione, gli amministratori del tuo club esaminano le richieste di tuffatore, giudice e allenatore, e DivingHQ esamina le altre. Riceverai un'email quando avranno deciso.",
+    "no_club_hint": "Non fai parte di nessun club, quindi la richiesta la esaminerà DivingHQ. Se preferisci che decida un club, chiedi prima di entrare in uno.",
+    "you_have": "I tuoi ruoli: {roles}",
+    "role_label": "Ruolo",
+    "pick_role": "— Scegli un ruolo —",
+    "note_label": "Nota per chi esamina (facoltativa)",
+    "submit": "Invia richiesta",
+    "sending": "Invio…",
+    "sent": "Richiesta inviata",
+    "nothing_left": "Hai già, o hai già richiesto, tutti i ruoli che puoi chiedere qui.",
+    "your_requests": "Le tue richieste",
+    "status_pending": "In attesa",
+    "status_approved": "Approvata",
+    "status_rejected": "Rifiutata"
   }
 }

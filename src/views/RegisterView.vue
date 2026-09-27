@@ -118,6 +118,16 @@ watch(noFederation, (none) => {
   if (none && requestedRole.value === 'meet_manager') requestedRole.value = 'diver'
 })
 
+// Whoever brings a new club in is usually its coach, not a diver, so
+// founding one flips the untouched default. Anything they picked
+// themselves is left alone.
+const roleTouched = ref(false)
+watch(() => clubChoice.value, (choice, prev) => {
+  if (roleTouched.value) return
+  if (choice === 'new' && requestedRole.value === 'diver') requestedRole.value = 'coach'
+  else if (prev === 'new' && requestedRole.value === 'coach') requestedRole.value = 'diver'
+})
+
 watch(orgId, async (id) => {
   // Reset club state whenever the user changes org
   clubs.value = []
@@ -309,13 +319,19 @@ async function handleSubmit() {
 
       <div class="field">
         <label class="label">{{ $t('auth.register.requested_role') }}</label>
-        <select class="select" v-model="requestedRole">
+        <select class="select" v-model="requestedRole" @change="roleTouched = true">
           <option value="diver">{{ $t('auth.register.role_default') }}</option>
+          <option value="coach">{{ $t('user_manager.role_coach') }}</option>
           <option value="judge">{{ $t('role.judge') }}</option>
           <option value="referee">{{ $t('role.referee') }}</option>
           <option v-if="!noFederation" value="meet_manager">{{ $t('role.manager') }}</option>
           <option value="">{{ $t('auth.register.role_spectator') }}</option>
         </select>
+        <!-- A club can't hand out referee where there's no federation
+             (lib/role-requests.js), so say who will look at it. -->
+        <p v-if="noFederation && requestedRole === 'referee'" class="hint-line" data-test-id="referee-note">
+          {{ $t('auth.register.referee_note_unclaimed') }}
+        </p>
       </div>
       <div class="field" v-if="requestedRole">
         <label class="label">{{ $t('auth.register.note_label') }}</label>
