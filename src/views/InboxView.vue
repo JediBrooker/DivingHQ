@@ -53,6 +53,10 @@ const CATEGORY_LANES = {
   role_request:             'action',
   org_pending:              'action',
   club_created:             'ops',
+  // A new club waiting on the federation is the reader's to decide; the
+  // founder hearing how it went is news (migration 096).
+  club_pending:             'action',
+  club_decision:            'ops',
   // Asking to join a club or a region waits on the reader to decide. How
   // one went (club_change, region_decision) is just news.
   club_join_request:        'action',
@@ -188,6 +192,8 @@ const CATEGORY_LABEL_KEYS = {
   org_pending:                 'org_pending',
   org_decision:                'org_decision',
   club_created:                'club_created',
+  club_pending:                'club_pending',
+  club_decision:               'club_decision',
   club_change:                 'club_change',
   club_join_request:           'club_change',
   region_request:              'region_request',

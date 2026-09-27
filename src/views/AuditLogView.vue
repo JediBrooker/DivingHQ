@@ -269,6 +269,9 @@ const ACTIVITY_LABEL_KEYS = {
   'club.deleted':            'audit.activity.label_club_deleted',
   'club.admin_added':        'audit.activity.label_club_admin_added',
   'club.admin_removed':      'audit.activity.label_club_admin_removed',
+  'club.approved':           'audit.activity.label_club_approved',
+  'club.rejected':           'audit.activity.label_club_rejected',
+  'org.club_settings_changed': 'audit.activity.label_org_club_settings_changed',
   'team.deleted':            'audit.activity.label_team_deleted',
   'roster.withdrew':         'audit.activity.label_roster_withdrew',
   'roster.reinstated':       'audit.activity.label_roster_reinstated',
@@ -292,6 +295,8 @@ function actionClass(a) {
   // negative (deleted / withdrew / unfinalised).
   if (a === 'club.admin_added')   return 'act-pos'
   if (a === 'club.admin_removed') return 'act-neg'
+  if (a === 'club.approved')      return 'act-pos'
+  if (a === 'club.rejected')      return 'act-neg'
   if (a.endsWith('.created'))    return 'act-pos'
   if (a.endsWith('.started'))    return 'act-pos'
   if (a.endsWith('.finalised'))  return 'act-pos'
@@ -339,6 +344,13 @@ function activitySummary(r) {
     return n === 1
       ? t('audit.activity.member_unassigned_one', { n })
       : t('audit.activity.member_unassigned_many', { n })
+  }
+  // Club approval (migration 096): the reason a club was turned down,
+  // and which way the "new clubs from signup" setting went.
+  if (r.action === 'club.rejected') return m.reason || ''
+  if (r.action === 'org.club_settings_changed') {
+    const to = m.auto_approve_clubs?.to
+    return to == null ? '' : t(to ? 'clubs.setting_auto' : 'clubs.setting_approval')
   }
   if (r.action === 'team.deleted') {
     return [m.members_unbound && t('audit.activity.members_count', { n: m.members_unbound }),

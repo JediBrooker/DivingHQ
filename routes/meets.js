@@ -599,7 +599,7 @@ module.exports = function createMeetsRouter({
         ok = clubs.includes(hostClubId);
         if (!ok && regions.length) {
           const c = await pool.query(
-            "SELECT 1 FROM clubs WHERE id = $1 AND region_id = ANY($2::uuid[])",
+            "SELECT 1 FROM clubs WHERE id = $1 AND region_id = ANY($2::uuid[]) AND status = 'active'",
             [hostClubId, regions],
           ).catch(() => ({ rows: [] }));
           ok = c.rows.length > 0;
@@ -609,9 +609,12 @@ module.exports = function createMeetsRouter({
         return res.status(400).json({ error: "Pick which of your clubs or regions is hosting this meet" });
       }
     }
+    // A club waiting on its federation (migration 096) can't host yet:
+    // it hasn't been vetted, and hosting is what makes its admins
+    // delegates for the meet's events.
     if (hostClubId) {
       const c = await pool.query(
-        "SELECT org_id FROM clubs WHERE id = $1 AND ($2::boolean OR org_id = $3)",
+        "SELECT org_id FROM clubs WHERE id = $1 AND ($2::boolean OR org_id = $3) AND status = 'active'",
         [hostClubId, !!req.user.is_system_admin, req.user.org_id],
       ).catch(() => ({ rows: [] }));
       if (!c.rows.length) return res.status(400).json({ error: "Host club not found in your organisation" });

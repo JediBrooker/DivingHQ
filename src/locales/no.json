@@ -78,7 +78,10 @@
       "failed": "Registreringen mislyktes",
       "success": "Registreringen er fullført. Finn bekreftelseslenken i e-posten din før du logger inn.",
       "new_club_placeholder": "f.eks. Sydney Springboard",
-      "short_code_placeholder": "f.eks. SYD"
+      "short_code_placeholder": "f.eks. SYD",
+      "club_needs_approval": "{org} godkjenner nye klubber før de blir synlige. Vi spør dem så snart du har bekreftet e-posten din, og i mellomtiden kan du logge inn og stupe.",
+      "club_joins_now": "Nye klubber blir med i {org} med en gang. {org} utnevner administratorene for hver klubb.",
+      "success_club_pending": "{club} venter på godkjenning fra {org}. De ser den så snart du har bekreftet e-posten din, og vi sender deg en e-post når de har bestemt seg."
     },
     "register_org": {
       "title": "Registrer organisasjon",
@@ -450,7 +453,12 @@
       "quiet": "Alt er rolig, ingenting venter.",
       "pill_urgent": "stenger snart",
       "pill_overdue": "forsinket",
-      "chip_aria_tab": "{title}. Åpner den tilhørende fanen i denne oversikten."
+      "chip_aria_tab": "{title}. Åpner den tilhørende fanen i denne oversikten.",
+      "chip_clubs": "Nye klubber",
+      "clubs_pending_meta": "Godkjenn eller avvis dem under Klubber",
+      "chip_my_club": "klubb venter på godkjenning",
+      "my_club_pending": "{club} venter på godkjenning fra {org}",
+      "my_club_pending_meta": "Du kan stupe i mellomtiden. Vi sender deg en e-post når de har bestemt seg."
     },
     "getting_started": {
       "title": "Kom i gang med {club}",
@@ -652,8 +660,8 @@
       },
       "club_admin": {
         "name": "Klubbadministrator",
-        "desc": "Du driver klubben din. Der landets forbund ennå ikke er på DivingHQ, arrangerer klubben sine egne stevner: opprett dem, styr dem fra <strong>Kontrollrommet</strong> og godkjenn medlemmenes rolleforespørsler. Under et forbund utnevner forbundet deg.",
-        "step_1": "Registrer deg, velg land og opprett klubben, så blir du dens første administrator",
+        "desc": "Du driver klubben din. Der landets forbund ennå ikke er på DivingHQ, arrangerer klubben sine egne stevner: opprett dem, styr dem fra <strong>Kontrollrommet</strong> og godkjenn medlemmenes rolleforespørsler. Under et forbund godkjenner forbundet den nye klubben din og kan gjøre deg til administrator.",
+        "step_1": "Registrer deg, velg land og opprett klubben; du blir dens første administrator (under et forbund når det har godkjent klubben)",
         "step_2": "Åpne <strong>Stevneadministrator</strong> og opprett et stevne klubben din arrangerer",
         "step_3": "Godkjenn på <strong>Min klubb</strong> dem som ber om å bli med, og medlemmer som vil stupe, dømme eller være trener",
         "step_4": "På stevnedagen styrer du poenggivningen fra <strong>Kontrollrommet</strong>",
@@ -676,7 +684,8 @@
         "step_2": "Gå gjennom <strong>Oppsettsveiviseren</strong> — klubber, invitasjoner, første konkurranse",
         "step_3": "Tildel roller i <strong>Brukerhåndtering</strong> etter hvert som teamet vokser",
         "step_4": "Sjekk <strong>Revisjonsloggen</strong> for aktivitet i hele forbundet",
-        "cta": "Hurtigstart ↗"
+        "cta": "Hurtigstart ↗",
+        "step_5": "Godkjenn eller avvis nye klubber under <strong>Klubber</strong>, eller la dem bli med automatisk"
       },
       "spectator": {
         "name": "Tilskuer",
@@ -881,7 +890,9 @@
       "claim_review": "Krav",
       "claim_decided": "Krav",
       "club_change": "Klubbytte",
-      "region_request": "Region"
+      "region_request": "Region",
+      "club_pending": "Ny klubb",
+      "club_decision": "Klubb"
     }
   },
   "compare": {
@@ -1284,7 +1295,33 @@
     "col_billing": "Fakturering",
     "col_actions": "Handlinger",
     "admins_button": "Administratorer",
-    "rename": "Gi nytt navn"
+    "rename": "Gi nytt navn",
+    "pending_title": "Venter på godkjenning",
+    "pending_intro": "Klubber som folk opprettet da de registrerte seg i landet ditt. Til du bestemmer deg, vises de ikke i noen klubbliste og kan ikke arrangere stevner.",
+    "stat_pending": "Venter",
+    "pending_started_by": "Opprettet av {name}",
+    "pending_waiting_since": "Venter siden {date}",
+    "pending_similar": "Ligner {club}, som allerede er på DivingHQ",
+    "email_verified": "E-post bekreftet",
+    "approve": "Godkjenn",
+    "reject": "Avvis",
+    "approve_title": "Godkjenn klubb",
+    "approve_body": "Rett først opp det som trengs. Når klubben er godkjent, vises den i klubblistene og kan arrangere stevner.",
+    "approve_make_admin": "Gjør {name} til klubbens administrator",
+    "reject_title": "Avvis klubb",
+    "reject_body": "Dette sletter {club}. {name} beholder kontoen sin og får en e-post med begrunnelsen din.",
+    "reject_reason": "Begrunnelse (valgfritt, sendes til stifteren)",
+    "reject_move_to": "Flytt medlemmene til",
+    "reject_move_none": "Ingen steder, la dem være uten klubb",
+    "approved_toast": "{club} godkjent",
+    "rejected_toast": "{club} avvist",
+    "setting_label": "Nye klubber fra registrering",
+    "setting_approval": "Vent på min godkjenning",
+    "setting_auto": "Bli med automatisk",
+    "setting_approval_hint": "Klubber som opprettes ved registrering, venter her til du godkjenner dem.",
+    "setting_auto_hint": "Klubber som opprettes ved registrering, er aktive med en gang. Du utnevner fortsatt administratorene deres.",
+    "setting_approval_saved": "Nye klubber venter på godkjenningen din",
+    "setting_auto_saved": "Nye klubber blir med automatisk"
   },
   "teams": {
     "title": "Lag",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} medlem frigjort",
       "member_unassigned_many": "{n} medlemmer frigjort",
       "members_count": "{n} medlemmer",
-      "events_count": "{n} konkurranser"
+      "events_count": "{n} konkurranser",
+      "label_club_approved": "Klubb godkjent",
+      "label_club_rejected": "Klubb avvist",
+      "label_org_club_settings_changed": "Innstilling for nye klubber endret"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "{n} krav venter på deg",
     "claims_waiting_few": "{n} krav venter på deg",
     "claims_waiting_many": "{n} krav venter på deg",
-    "claims_waiting_other": "{n} krav venter på deg"
+    "claims_waiting_other": "{n} krav venter på deg",
+    "clubs_waiting_zero": "{n} nye klubber venter på godkjenning",
+    "clubs_waiting_one": "{n} ny klubb venter på godkjenning",
+    "clubs_waiting_two": "{n} nye klubber venter på godkjenning",
+    "clubs_waiting_few": "{n} nye klubber venter på godkjenning",
+    "clubs_waiting_many": "{n} nye klubber venter på godkjenning",
+    "clubs_waiting_other": "{n} nye klubber venter på godkjenning"
   },
   "admin_settings": {
     "title": "Stemmeregler for krav",

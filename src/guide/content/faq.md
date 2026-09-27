@@ -48,6 +48,10 @@ Still nothing, or the address was mistyped at sign-up? Write to [support@divingh
 
 Yes. Clubs can start before their federation. [Create an account](/register), pick your country and choose **+ Create a new club**; in a country with no federation on DivingHQ yet, that makes you the club's admin. You can run your own meets, approve your members and add co-admins from **My club**. See the [Quick Start](/guide/quick-start).
 
+### "I created a club and it says it's waiting for approval"
+
+Your country's federation is on DivingHQ, and it approves new clubs before they go live. It hears about your club once you've confirmed your email. Until then (and until it decides) the club doesn't show in anyone's club list and can't host meets, but you can sign in, follow meets and enter as an individual. You'll get an email when it's decided: approved, usually with you as the club's admin, or not, in which case your account stays and you may be moved into a club that's already on DivingHQ.
+
 ### "Who approves my role request?"
 
 It depends on who runs your country on DivingHQ:

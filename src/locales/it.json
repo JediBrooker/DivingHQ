@@ -78,7 +78,10 @@
       "failed": "Registrazione non riuscita",
       "success": "Registrazione completata. Prima di accedere, cerca nella tua email il link di verifica.",
       "new_club_placeholder": "es. Sydney Springboard",
-      "short_code_placeholder": "es. SYD"
+      "short_code_placeholder": "es. SYD",
+      "club_needs_approval": "{org} approva i nuovi club prima che vengano pubblicati. Glielo chiederemo appena confermi la tua email; nel frattempo puoi accedere e gareggiare.",
+      "club_joins_now": "I nuovi club entrano subito in {org}. {org} nomina gli amministratori di ogni club.",
+      "success_club_pending": "{club} è in attesa dell'approvazione di {org}. Lo vedranno appena confermi la tua email, e ti scriveremo quando avranno deciso."
     },
     "register_org": {
       "title": "Registra organizzazione",
@@ -450,7 +453,12 @@
       "quiet": "Tutto tranquillo, niente in sospeso.",
       "pill_urgent": "chiude a breve",
       "pill_overdue": "in ritardo",
-      "chip_aria_tab": "{title}. Apre la scheda corrispondente in questo pannello."
+      "chip_aria_tab": "{title}. Apre la scheda corrispondente in questo pannello.",
+      "chip_clubs": "Nuovi club",
+      "clubs_pending_meta": "Approvali o rifiutali in Club",
+      "chip_my_club": "club in attesa di approvazione",
+      "my_club_pending": "{club} è in attesa dell'approvazione di {org}",
+      "my_club_pending_meta": "Nel frattempo puoi gareggiare. Ti scriveremo quando avranno deciso."
     },
     "getting_started": {
       "title": "Avvia {club}",
@@ -652,8 +660,8 @@
       },
       "club_admin": {
         "name": "Amministratore del club",
-        "desc": "Gestisci il tuo club. Dove la federazione del tuo paese non è ancora su DivingHQ, il club organizza le proprie gare: creale, dirigile dalla <strong>Sala Controllo</strong> e approva le richieste di ruolo dei membri. Sotto una federazione, è lei a nominarti.",
-        "step_1": "Registrati, scegli il paese e crea il tuo club: ne sarai il primo amministratore",
+        "desc": "Gestisci il tuo club. Dove la federazione del tuo paese non è ancora su DivingHQ, il club organizza le proprie gare: creale, dirigile dalla <strong>Sala Controllo</strong> e approva le richieste di ruolo dei membri. Sotto una federazione, è lei ad approvare il tuo nuovo club e può nominarti amministratore.",
+        "step_1": "Registrati, scegli il paese e crea il tuo club: ne sarai il primo amministratore (sotto una federazione, dopo che l'avrà approvato)",
         "step_2": "Apri il <strong>Gestore gare</strong> e crea una gara organizzata dal tuo club",
         "step_3": "In <strong>Il mio club</strong> approva chi chiede di entrare e i membri che vogliono tuffarsi, giudicare o allenare",
         "step_4": "Il giorno della gara, dirigi i punteggi dalla <strong>Sala Controllo</strong>",
@@ -676,7 +684,8 @@
         "step_2": "Segua la <strong>Procedura Guidata di Configurazione</strong> — club, inviti, primo evento",
         "step_3": "Assegni ruoli nel <strong>Gestore Utenti</strong> man mano che il team cresce",
         "step_4": "Controlli il <strong>Registro di Audit</strong> per qualsiasi attività a livello di federazione",
-        "cta": "Avvio rapido ↗"
+        "cta": "Avvio rapido ↗",
+        "step_5": "Approva o rifiuta i nuovi club in <strong>Club</strong>, oppure lasciali entrare automaticamente"
       },
       "spectator": {
         "name": "Spettatore",
@@ -881,7 +890,9 @@
       "claim_review": "Rivendicazione",
       "claim_decided": "Rivendicazione",
       "club_change": "Cambio club",
-      "region_request": "Regione"
+      "region_request": "Regione",
+      "club_pending": "Nuovo club",
+      "club_decision": "Club"
     }
   },
   "compare": {
@@ -1284,7 +1295,33 @@
     "col_billing": "Fatturazione",
     "col_actions": "Azioni",
     "admins_button": "Amministratori",
-    "rename": "Rinomina"
+    "rename": "Rinomina",
+    "pending_title": "In attesa di approvazione",
+    "pending_intro": "Club creati da chi si è registrato nel tuo paese. Finché non decidi, non compaiono in nessun elenco di club e non possono organizzare gare.",
+    "stat_pending": "In attesa",
+    "pending_started_by": "Creato da {name}",
+    "pending_waiting_since": "In attesa dal {date}",
+    "pending_similar": "Sembra {club}, già presente su DivingHQ",
+    "email_verified": "Email verificata",
+    "approve": "Approva",
+    "reject": "Rifiuta",
+    "approve_title": "Approva il club",
+    "approve_body": "Correggi prima ciò che serve. Una volta approvato, il club compare negli elenchi dei club e può organizzare gare.",
+    "approve_make_admin": "Nomina {name} amministratore del club",
+    "reject_title": "Rifiuta il club",
+    "reject_body": "Questo elimina {club}. {name} mantiene il proprio account e riceve un'email con la tua motivazione.",
+    "reject_reason": "Motivazione (facoltativa, inviata al fondatore)",
+    "reject_move_to": "Sposta i membri in",
+    "reject_move_none": "Da nessuna parte, lasciali senza club",
+    "approved_toast": "{club} approvato",
+    "rejected_toast": "{club} rifiutato",
+    "setting_label": "Nuovi club dalla registrazione",
+    "setting_approval": "Attendi la mia approvazione",
+    "setting_auto": "Ingresso automatico",
+    "setting_approval_hint": "I club creati durante la registrazione aspettano qui finché non li approvi.",
+    "setting_auto_hint": "I club creati durante la registrazione sono attivi subito. Gli amministratori li nomini comunque tu.",
+    "setting_approval_saved": "I nuovi club attenderanno la tua approvazione",
+    "setting_auto_saved": "I nuovi club entreranno automaticamente"
   },
   "teams": {
     "title": "Squadre",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} membro disassegnato",
       "member_unassigned_many": "{n} membri disassegnati",
       "members_count": "{n} membri",
-      "events_count": "{n} gare"
+      "events_count": "{n} gare",
+      "label_club_approved": "Club approvato",
+      "label_club_rejected": "Club rifiutato",
+      "label_org_club_settings_changed": "Impostazione nuovi club modificata"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "{n} rivendicazioni ti aspettano",
     "claims_waiting_few": "{n} rivendicazioni ti aspettano",
     "claims_waiting_many": "{n} di rivendicazioni ti aspettano",
-    "claims_waiting_other": "{n} rivendicazioni ti aspettano"
+    "claims_waiting_other": "{n} rivendicazioni ti aspettano",
+    "clubs_waiting_zero": "{n} nuovi club in attesa di approvazione",
+    "clubs_waiting_one": "{n} nuovo club in attesa di approvazione",
+    "clubs_waiting_two": "{n} nuovi club in attesa di approvazione",
+    "clubs_waiting_few": "{n} nuovi club in attesa di approvazione",
+    "clubs_waiting_many": "{n} di nuovi club in attesa di approvazione",
+    "clubs_waiting_other": "{n} nuovi club in attesa di approvazione"
   },
   "admin_settings": {
     "title": "Regole di voto sulle rivendicazioni",

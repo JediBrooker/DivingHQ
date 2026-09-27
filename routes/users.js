@@ -480,10 +480,12 @@ module.exports = function createUsersRouter({
       }
 
       // Only allow assigning a club that belongs to the target's
-      // org; empty/null just clears it.
+      // org, and that its federation has approved (a waiting one gets
+      // members by being approved, or reject-and-move); empty/null just
+      // clears it.
       if (club_id) {
         const club = await pool.query(
-          "SELECT id FROM clubs WHERE id = $1 AND org_id = $2",
+          "SELECT id FROM clubs WHERE id = $1 AND org_id = $2 AND status = 'active'",
           [club_id, targetOrgId],
         );
         if (!club.rows.length)

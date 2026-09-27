@@ -78,7 +78,10 @@
       "failed": "Registreringen misslyckades",
       "success": "Registreringen lyckades. Leta upp verifieringslänken i din e-post innan du loggar in.",
       "new_club_placeholder": "t.ex. Sydney Springboard",
-      "short_code_placeholder": "t.ex. SYD"
+      "short_code_placeholder": "t.ex. SYD",
+      "club_needs_approval": "{org} godkänner nya klubbar innan de syns. Vi frågar dem så snart du har bekräftat din e-post, och under tiden kan du logga in och hoppa.",
+      "club_joins_now": "Nya klubbar går med i {org} direkt. {org} utser varje klubbs administratörer.",
+      "success_club_pending": "{club} väntar på godkännande från {org}. De ser den så snart du har bekräftat din e-post, och vi mejlar dig när de har bestämt sig."
     },
     "register_org": {
       "title": "Registrera organisation",
@@ -450,7 +453,12 @@
       "quiet": "Allt lugnt, inget väntar.",
       "pill_urgent": "stänger snart",
       "pill_overdue": "försenad",
-      "chip_aria_tab": "{title}. Öppnar tillhörande flik i den här översikten."
+      "chip_aria_tab": "{title}. Öppnar tillhörande flik i den här översikten.",
+      "chip_clubs": "Nya klubbar",
+      "clubs_pending_meta": "Godkänn eller avslå dem under Klubbar",
+      "chip_my_club": "klubb väntar på godkännande",
+      "my_club_pending": "{club} väntar på godkännande från {org}",
+      "my_club_pending_meta": "Du kan hoppa under tiden. Vi mejlar dig när de har bestämt sig."
     },
     "getting_started": {
       "title": "Kom igång med {club}",
@@ -652,8 +660,8 @@
       },
       "club_admin": {
         "name": "Klubbadministratör",
-        "desc": "Du driver din klubb. Där ditt lands förbund ännu inte finns på DivingHQ arrangerar klubben sina egna tävlingar: skapa dem, styr dem från <strong>Kontrollrummet</strong> och godkänn medlemmarnas rollförfrågningar. Under ett förbund utser förbundet dig.",
-        "step_1": "Registrera dig, välj land och skapa din klubb, du blir dess första administratör",
+        "desc": "Du driver din klubb. Där ditt lands förbund ännu inte finns på DivingHQ arrangerar klubben sina egna tävlingar: skapa dem, styr dem från <strong>Kontrollrummet</strong> och godkänn medlemmarnas rollförfrågningar. Under ett förbund godkänner förbundet din nya klubb och kan göra dig till dess administratör.",
+        "step_1": "Registrera dig, välj land och skapa din klubb; du blir dess första administratör (under ett förbund när det har godkänt klubben)",
         "step_2": "Öppna <strong>Tävlingshanteraren</strong> och skapa en tävling som din klubb arrangerar",
         "step_3": "Godkänn på <strong>Min klubb</strong> dem som ber om att gå med och medlemmar som vill hoppa, döma eller vara tränare",
         "step_4": "På tävlingsdagen styr du poängsättningen från <strong>Kontrollrummet</strong>",
@@ -676,7 +684,8 @@
         "step_2": "Gå igenom <strong>Installationsguiden</strong> — klubbar, inbjudningar, första tävlingsgrenen",
         "step_3": "Tilldela roller i <strong>Användarhantering</strong> efterhand som teamet växer",
         "step_4": "Kolla <strong>Granskningsloggen</strong> för aktivitet i hela förbundet",
-        "cta": "Snabbstart ↗"
+        "cta": "Snabbstart ↗",
+        "step_5": "Godkänn eller avslå nya klubbar under <strong>Klubbar</strong>, eller låt dem gå med automatiskt"
       },
       "spectator": {
         "name": "Åskådare",
@@ -881,7 +890,9 @@
       "claim_review": "Anspråk",
       "claim_decided": "Anspråk",
       "club_change": "Klubbyte",
-      "region_request": "Region"
+      "region_request": "Region",
+      "club_pending": "Ny klubb",
+      "club_decision": "Klubb"
     }
   },
   "compare": {
@@ -1284,7 +1295,33 @@
     "col_billing": "Fakturering",
     "col_actions": "Åtgärder",
     "admins_button": "Administratörer",
-    "rename": "Byt namn"
+    "rename": "Byt namn",
+    "pending_title": "Väntar på godkännande",
+    "pending_intro": "Klubbar som skapats av personer som registrerat sig i ditt land. Tills du bestämmer dig syns de inte i någon klubblista och kan inte arrangera tävlingar.",
+    "stat_pending": "Väntar",
+    "pending_started_by": "Skapad av {name}",
+    "pending_waiting_since": "Väntar sedan {date}",
+    "pending_similar": "Liknar {club}, som redan finns på DivingHQ",
+    "email_verified": "E-post verifierad",
+    "approve": "Godkänn",
+    "reject": "Avslå",
+    "approve_title": "Godkänn klubb",
+    "approve_body": "Rätta först det som behövs. När klubben är godkänd syns den i klubblistorna och kan arrangera tävlingar.",
+    "approve_make_admin": "Gör {name} till klubbens administratör",
+    "reject_title": "Avslå klubb",
+    "reject_body": "Det här raderar {club}. {name} behåller sitt konto och får ett mejl med din motivering.",
+    "reject_reason": "Motivering (valfri, skickas till grundaren)",
+    "reject_move_to": "Flytta medlemmarna till",
+    "reject_move_none": "Ingenstans, lämna dem utan klubb",
+    "approved_toast": "{club} godkänd",
+    "rejected_toast": "{club} avslagen",
+    "setting_label": "Nya klubbar från registrering",
+    "setting_approval": "Vänta på mitt godkännande",
+    "setting_auto": "Gå med automatiskt",
+    "setting_approval_hint": "Klubbar som skapas vid registrering väntar här tills du godkänner dem.",
+    "setting_auto_hint": "Klubbar som skapas vid registrering blir aktiva direkt. Du utser fortfarande deras administratörer.",
+    "setting_approval_saved": "Nya klubbar väntar på ditt godkännande",
+    "setting_auto_saved": "Nya klubbar går med automatiskt"
   },
   "teams": {
     "title": "Lag",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} medlem avknuten",
       "member_unassigned_many": "{n} medlemmar avknutna",
       "members_count": "{n} medlemmar",
-      "events_count": "{n} grenar"
+      "events_count": "{n} grenar",
+      "label_club_approved": "Klubb godkänd",
+      "label_club_rejected": "Klubb avslagen",
+      "label_org_club_settings_changed": "Inställning för nya klubbar ändrad"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "{n} anspråk väntar på dig",
     "claims_waiting_few": "{n} anspråk väntar på dig",
     "claims_waiting_many": "{n} anspråk väntar på dig",
-    "claims_waiting_other": "{n} anspråk väntar på dig"
+    "claims_waiting_other": "{n} anspråk väntar på dig",
+    "clubs_waiting_zero": "{n} nya klubbar väntar på godkännande",
+    "clubs_waiting_one": "{n} ny klubb väntar på godkännande",
+    "clubs_waiting_two": "{n} nya klubbar väntar på godkännande",
+    "clubs_waiting_few": "{n} nya klubbar väntar på godkännande",
+    "clubs_waiting_many": "{n} nya klubbar väntar på godkännande",
+    "clubs_waiting_other": "{n} nya klubbar väntar på godkännande"
   },
   "admin_settings": {
     "title": "Omröstningsregler för anspråk",

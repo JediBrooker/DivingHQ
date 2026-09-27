@@ -78,7 +78,10 @@
       "failed": "Hindi nagtagumpay ang pagrehistro",
       "success": "Matagumpay ang pagrehistro. Tingnan ang iyong email para sa link ng beripikasyon bago mag-sign in.",
       "new_club_placeholder": "hal. Sydney Springboard",
-      "short_code_placeholder": "hal. SYD"
+      "short_code_placeholder": "hal. SYD",
+      "club_needs_approval": "Inaaprubahan ng {org} ang mga bagong club bago lumabas ang mga ito. Hihingi kami ng pag-apruba sa kanila kapag nakumpirma mo na ang iyong email, at habang naghihintay ay puwede kang mag-sign in at makipagkumpitensya.",
+      "club_joins_now": "Agad na sumasali sa {org} ang mga bagong club. Ang {org} ang nagtatalaga ng mga admin ng bawat club.",
+      "success_club_pending": "Naghihintay ang {club} ng pag-apruba ng {org}. Makikita nila ito kapag nakumpirma mo na ang iyong email, at mag-e-email kami sa iyo kapag nakapagpasya na sila."
     },
     "register_org": {
       "title": "Irehistro ang organisasyon",
@@ -450,7 +453,12 @@
       "quiet": "Tahimik, walang nakabinbin.",
       "pill_urgent": "malapit nang magsara",
       "pill_overdue": "lampas na",
-      "chip_aria_tab": "{title}. Binubuksan ang tab nito sa dashboard na ito."
+      "chip_aria_tab": "{title}. Binubuksan ang tab nito sa dashboard na ito.",
+      "chip_clubs": "Mga bagong club",
+      "clubs_pending_meta": "Aprubahan o tanggihan sila sa Mga Club",
+      "chip_my_club": "club na naghihintay ng pag-apruba",
+      "my_club_pending": "Naghihintay ang {club} ng pag-apruba ng {org}",
+      "my_club_pending_meta": "Puwede kang makipagkumpitensya habang naghihintay. Mag-e-email kami kapag nakapagpasya na sila."
     },
     "getting_started": {
       "title": "Simulan ang {club}",
@@ -641,8 +649,8 @@
       },
       "club_admin": {
         "name": "Admin ng club",
-        "desc": "Ikaw ang nagpapatakbo ng iyong club. Kung wala pa sa DivingHQ ang pederasyon ng iyong bansa, ang club ang nagpapatakbo ng sariling kompetisyon: gawin ang mga ito, patakbuhin mula sa <strong>Control Room</strong>, at aprubahan ang mga hiling na role ng mga miyembro. Kung may pederasyon, ito ang magtatalaga sa iyo.",
-        "step_1": "Mag-sign up, piliin ang iyong bansa at gawin ang iyong club; ikaw ang magiging unang admin nito",
+        "desc": "Ikaw ang nagpapatakbo ng iyong club. Kung wala pa sa DivingHQ ang pederasyon ng iyong bansa, ang club ang nagpapatakbo ng sariling kompetisyon: gawin ang mga ito, patakbuhin mula sa <strong>Control Room</strong>, at aprubahan ang mga hiling na role ng mga miyembro. Kung may pederasyon, ito ang mag-aapruba sa bago mong club at puwede ka nitong gawing admin.",
+        "step_1": "Mag-sign up, piliin ang iyong bansa at gawin ang iyong club; ikaw ang magiging unang admin nito (kung may pederasyon, kapag naaprubahan na nito ang club)",
         "step_2": "Buksan ang <strong>Tagapamahala ng meet</strong> at gumawa ng kompetisyong hino-host ng iyong club",
         "step_3": "Sa <strong>Aking club</strong>, aprubahan ang mga humihiling na sumali at ang mga miyembrong gustong mag-dive, humusga o maging tagasanay",
         "step_4": "Sa araw ng kompetisyon, patakbuhin ang pagmamarka mula sa <strong>Control Room</strong>",
@@ -665,7 +673,8 @@
         "step_2": "Dumaan sa <strong>Setup Wizard</strong> — clubs, invites, unang event",
         "step_3": "Magbigay ng roles sa <strong>User Manager</strong> habang lumalago ang iyong team",
         "step_4": "Tingnan ang <strong>Audit Log</strong> para sa mga aktibidad sa buong federation",
-        "cta": "Mabilis na Panimula ↗"
+        "cta": "Mabilis na Panimula ↗",
+        "step_5": "Aprubahan o tanggihan ang mga bagong club sa <strong>Mga Club</strong>, o hayaan silang awtomatikong sumali"
       },
       "spectator": {
         "name": "Manonood",
@@ -870,7 +879,9 @@
       "claim_review": "Claim",
       "claim_decided": "Claim",
       "club_change": "Paglipat ng club",
-      "region_request": "Rehiyon"
+      "region_request": "Rehiyon",
+      "club_pending": "Bagong club",
+      "club_decision": "Club"
     }
   },
   "compare": {
@@ -1273,7 +1284,33 @@
     "col_billing": "Pagsingil",
     "col_actions": "Mga aksyon",
     "admins_button": "Mga admin",
-    "rename": "Palitan ang pangalan"
+    "rename": "Palitan ang pangalan",
+    "pending_title": "Naghihintay ng pag-apruba",
+    "pending_intro": "Mga club na ginawa ng mga taong nag-sign up sa iyong bansa. Hangga't hindi ka nagpapasya, hindi sila lumalabas sa anumang listahan ng club at hindi sila puwedeng mag-host ng kompetisyon.",
+    "stat_pending": "Naghihintay",
+    "pending_started_by": "Ginawa ni {name}",
+    "pending_waiting_since": "Naghihintay mula {date}",
+    "pending_similar": "Kahawig ng {club}, na nasa DivingHQ na",
+    "email_verified": "Na-verify ang email",
+    "approve": "Aprubahan",
+    "reject": "Tanggihan",
+    "approve_title": "Aprubahan ang club",
+    "approve_body": "Ayusin muna ang kailangang ayusin. Kapag naaprubahan, lalabas ang club sa mga listahan ng club at puwede na itong mag-host ng kompetisyon.",
+    "approve_make_admin": "Gawing admin ng club si {name}",
+    "reject_title": "Tanggihan ang club",
+    "reject_body": "Buburahin nito ang {club}. Mananatili ang account ni {name} at makakatanggap siya ng email na may dahilan mo.",
+    "reject_reason": "Dahilan (opsyonal, ipapadala sa nagtatag)",
+    "reject_move_to": "Ilipat ang mga miyembro nito sa",
+    "reject_move_none": "Wala, hayaan silang walang club",
+    "approved_toast": "Naaprubahan ang {club}",
+    "rejected_toast": "Tinanggihan ang {club}",
+    "setting_label": "Mga bagong club mula sa sign-up",
+    "setting_approval": "Hintayin ang pag-apruba ko",
+    "setting_auto": "Awtomatikong sumali",
+    "setting_approval_hint": "Naghihintay dito ang mga club na ginawa sa sign-up hanggang aprubahan mo sila.",
+    "setting_auto_hint": "Aktibo agad ang mga club na ginawa sa sign-up. Ikaw pa rin ang nagtatalaga ng kanilang mga admin.",
+    "setting_approval_saved": "Maghihintay ng pag-apruba mo ang mga bagong club",
+    "setting_auto_saved": "Awtomatikong sasali ang mga bagong club"
   },
   "teams": {
     "title": "Mga Team",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} member ang na-unassign",
       "member_unassigned_many": "{n} members ang na-unassign",
       "members_count": "{n} mga miyembro",
-      "events_count": "{n} mga kaganapan"
+      "events_count": "{n} mga kaganapan",
+      "label_club_approved": "Naaprubahan ang club",
+      "label_club_rejected": "Tinanggihan ang club",
+      "label_org_club_settings_changed": "Binago ang setting para sa mga bagong club"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "May {n} claim na naghihintay sa iyo",
     "claims_waiting_few": "May {n} claim na naghihintay sa iyo",
     "claims_waiting_many": "May {n} claim na naghihintay sa iyo",
-    "claims_waiting_other": "May {n} claim na naghihintay sa iyo"
+    "claims_waiting_other": "May {n} claim na naghihintay sa iyo",
+    "clubs_waiting_zero": "May {n} bagong club na naghihintay ng pag-apruba",
+    "clubs_waiting_one": "May {n} bagong club na naghihintay ng pag-apruba",
+    "clubs_waiting_two": "May {n} bagong club na naghihintay ng pag-apruba",
+    "clubs_waiting_few": "May {n} bagong club na naghihintay ng pag-apruba",
+    "clubs_waiting_many": "May {n} bagong club na naghihintay ng pag-apruba",
+    "clubs_waiting_other": "May {n} bagong club na naghihintay ng pag-apruba"
   },
   "admin_settings": {
     "title": "Mga patakaran sa botohan ng claim",

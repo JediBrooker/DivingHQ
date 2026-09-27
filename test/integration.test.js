@@ -697,6 +697,8 @@ test("club-first signup starts an unclaimed country account", async (t) => {
   try {
     const first = await reg({ country_code: "NRU", new_club_name: "Nauru Divers" });
     assert.equal(first.status, 201, JSON.stringify(first.body));
+    // Nobody to approve it there, so it's live straight away (migration 096).
+    assert.equal(first.body.club_status, "active");
     const org = (await pool.query(
       "SELECT id, name, claim_state, status FROM organisations WHERE country_code = 'NRU'",
     )).rows;
@@ -749,15 +751,20 @@ test("club-first signup starts an unclaimed country account", async (t) => {
     const tuv = await pool.query("SELECT count(*)::int AS n FROM organisations WHERE country_code = 'TUV'");
     assert.equal(tuv.rows[0].n, 1);
 
-    // Under a real (claimed) federation nothing changes: founding a club
-    // doesn't make you its admin, the federation decides that.
+    // Under a real (claimed) federation founding a club doesn't make you
+    // its admin, and the club waits for the federation to approve it
+    // (migration 096, the club approval tests further down).
     const claimed = await reg({ org_id: state.orgId, new_club_name: "Claimed Fed Club" });
     assert.equal(claimed.status, 201, JSON.stringify(claimed.body));
+    assert.equal(claimed.body.club_status, "pending");
     const cc = await pool.query(
-      `SELECT EXISTS (SELECT 1 FROM club_admins ca WHERE ca.club_id = c.id) AS has_admin
+      `SELECT c.status, EXISTS (SELECT 1 FROM club_admins ca WHERE ca.club_id = c.id) AS has_admin
          FROM clubs c WHERE c.org_id = $1 AND c.name = 'Claimed Fed Club'`, [state.orgId],
     );
     assert.equal(cc.rows[0].has_admin, false);
+    assert.equal(cc.rows[0].status, "pending");
+    const nru = (await pool.query("SELECT status FROM clubs WHERE id = $1", [club.id])).rows[0];
+    assert.equal(nru.status, "active");
 
     const bogus = await reg({ country_code: "ZZZ" });
     assert.equal(bogus.status, 400);
@@ -5280,5 +5287,793 @@ test("club setup: a founder's progress, invite parts and short code", async (t) 
     await claimKit.wipe(CODE);
     await pool.query("DELETE FROM clubs WHERE org_id = $1", [state.orgId]).catch(() => {});
     await teardownFixture(state);
+  }
+});
+
+// ---------------------------------------------------------------------
+// Federation approval of new clubs (migration 096, lib/club-approvals.js).
+// ---------------------------------------------------------------------
+
+const clubApprovals = require("../lib/club-approvals");
+
+const approvalKit = {
+  // A claimed federation in `code`, with its org admin signed in.
+  async federation(code) {
+    const fx = await setupFixture({ withEvent: false });
+    await pool.query("UPDATE organisations SET country_code = $2 WHERE id = $1", [fx.orgId, code]);
+    fx.name = (await pool.query("SELECT name FROM organisations WHERE id = $1", [fx.orgId])).rows[0].name;
+    return fx;
+  },
+  // Sign up by country with a brand-new club. Left unverified unless asked,
+  // since verifying is what puts the club in front of the federation.
+  async signUp(code, clubName, extra = {}, { verify = false } = {}) {
+    const username = `int-ap-${crypto.randomBytes(4).toString("hex")}`;
+    const r = await fetchJson("POST", "/api/auth/register", {
+      body: { username, full_name: `${clubName} Founder`, password: TEST_PASSWORD,
+              email: `${username}@example.test`, country_code: code, new_club_name: clubName, ...extra },
+    });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    const row = (await pool.query("SELECT id, club_id FROM users WHERE username = $1", [username])).rows[0];
+    if (verify) await claimKit.verify(row.id);
+    return { username, id: row.id, clubId: row.club_id, res: r.body };
+  },
+  // A signed-in user with one org role, straight into the table.
+  async member(orgId, role, clubId = null) {
+    const username = `int-apm-${crypto.randomBytes(4).toString("hex")}`;
+    const id = await insertUser({ orgId, username, fullName: `A ${role}`, role });
+    await pool.query("UPDATE users SET password = $1, club_id = $3 WHERE id = $2",
+      [await bcrypt.hash(TEST_PASSWORD, 4), id, clubId]);
+    const login = await claimKit.login(username);
+    return { id, username, token: login.token };
+  },
+  async club(id) {
+    return (await pool.query("SELECT * FROM clubs WHERE id = $1", [id])).rows[0];
+  },
+  async isAdmin(clubId, userId) {
+    return (await pool.query("SELECT 1 FROM club_admins WHERE club_id = $1 AND user_id = $2", [clubId, userId])).rows.length > 0;
+  },
+  async notices(userId, category) {
+    return (await pool.query(
+      "SELECT title, body, action_url, data FROM notifications WHERE user_id = $1 AND category = $2 ORDER BY created_at",
+      [userId, category],
+    )).rows;
+  },
+  // Stands in for push + email when a test drives lib/club-approvals.
+  inbox() {
+    const mail = [];
+    const inApp = [];
+    return {
+      mail,
+      inApp,
+      deps: {
+        email: { sendNoticeEmail: async (userIds, msg) => { mail.push({ userIds: [...userIds].sort(), ...msg }); } },
+        push: { sendNotification: async (userIds, p) => { inApp.push({ userIds: [...userIds].sort(), ...p }); } },
+      },
+    };
+  },
+};
+
+test("club approval: a new club under a federation waits, unseen, until its founder verifies", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "BTN";
+  await claimKit.wipe(CODE);
+  try {
+    const fx = await approvalKit.federation(CODE);
+    const A = await approvalKit.signUp(CODE, "Thimphu Divers", { new_club_short_code: "thi" });
+    assert.equal(A.res.club_status, "pending");
+    assert.equal(A.res.org_name, fx.name, "the federation's own name, not the country's");
+    const row = await approvalKit.club(A.clubId);
+    assert.equal(row.status, "pending");
+    assert.equal(row.submitted_at, null);
+    assert.equal(row.approved_at, null);
+    assert.equal(row.created_by, A.id);
+    assert.equal(await approvalKit.isAdmin(A.clubId, A.id), false, "the federation decides who runs it");
+    assert.deepEqual(await approvalKit.notices(fx.adminId, "club_pending"), [], "nobody hears before the email is verified");
+
+    // Hidden from every picker, and not joinable by hand either.
+    const pub = await fetchJson("GET", `/api/orgs/${fx.orgId}/clubs`);
+    assert.ok(!pub.body.some((c) => c.id === A.clubId), "not in the public club list");
+    const by = await fetchJson("GET", `/api/orgs/by-country/${CODE}`);
+    assert.equal(by.body[0].auto_approve_clubs, false);
+    const joiner = await fetchJson("POST", "/api/auth/register", {
+      body: { username: `int-apj-${crypto.randomBytes(3).toString("hex")}`, full_name: "Joiner", password: TEST_PASSWORD,
+              email: `j-${crypto.randomBytes(3).toString("hex")}@example.test`, country_code: CODE, club_id: A.clubId },
+    });
+    assert.equal(joiner.status, 400, JSON.stringify(joiner.body));
+
+    // An unverified founder's club isn't in the federation's queue yet.
+    let grid = (await fetchJson("GET", "/api/clubs", { token: fx.adminToken })).body;
+    assert.ok(!grid.some((c) => c.id === A.clubId));
+    assert.equal((await fetchJson("GET", "/api/dashboard", { token: fx.adminToken })).body.clubs_pending, 0);
+
+    // Verifying asks the federation, once, however often the link is used.
+    await claimKit.verify(A.id);
+    await claimKit.verify(A.id);
+    const asked = await approvalKit.notices(fx.adminId, "club_pending");
+    assert.equal(asked.length, 1, JSON.stringify(asked));
+    assert.match(asked[0].title, /Thimphu Divers/);
+    assert.equal(asked[0].action_url, "/clubs");
+    assert.ok((await approvalKit.club(A.clubId)).submitted_at, "submitted_at stamped");
+
+    grid = (await fetchJson("GET", "/api/clubs", { token: fx.adminToken })).body;
+    const pending = grid.find((c) => c.id === A.clubId);
+    assert.ok(pending, "the org admin sees it now");
+    assert.equal(pending.status, "pending");
+    assert.equal(pending.founder_id, A.id);
+    assert.equal(pending.founder_username, A.username);
+    assert.equal(pending.founder_email, `${A.username}@example.test`);
+    assert.equal(pending.founder_email_verified, true);
+    assert.ok(pending.submitted_at);
+    // Founder details ride on pending rows only.
+    const active = await pool.query("INSERT INTO clubs (org_id, name) VALUES ($1, 'Paro Divers') RETURNING id", [fx.orgId]);
+    grid = (await fetchJson("GET", "/api/clubs", { token: fx.adminToken })).body;
+    const paro = grid.find((c) => c.id === active.rows[0].id);
+    assert.equal(paro.status, "active");
+    assert.equal(paro.founder_email, null);
+
+    // A meet manager sees the clubs grid but never the queue.
+    const mm = await approvalKit.member(fx.orgId, "meet_manager");
+    const mmGrid = (await fetchJson("GET", "/api/clubs", { token: mm.token })).body;
+    assert.ok(mmGrid.some((c) => c.id === active.rows[0].id));
+    assert.ok(!mmGrid.some((c) => c.id === A.clubId), "meet managers don't see waiting clubs");
+    assert.equal((await fetchJson("GET", "/api/dashboard", { token: mm.token })).body.clubs_pending, 0);
+
+    // The dashboard counts it for the org admin and the sysadmin.
+    assert.equal((await fetchJson("GET", "/api/dashboard", { token: fx.adminToken })).body.clubs_pending, 1);
+    const sys = await claimKit.login("admin", "admin");
+    if (sys?.token) {
+      assert.ok((await fetchJson("GET", "/api/dashboard", { token: sys.token })).body.clubs_pending >= 1);
+    }
+
+    // The founder can sign in, and the session says what's waiting.
+    const login = await claimKit.login(A.username);
+    assert.deepEqual(login.pending_club, { id: A.clubId, name: "Thimphu Divers", org_name: fx.name });
+    assert.deepEqual(login.club_admin_of, []);
+    const me = await fetchJson("GET", "/api/auth/me", { token: login.token });
+    assert.equal(me.body.user.pending_club.id, A.clubId);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("club approval: the federation hears by email, and the sysadmin does when there's no org admin", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MDV";
+  await claimKit.wipe(CODE);
+  try {
+    const fx = await approvalKit.federation(CODE);
+    const rg = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Kaafu', 'KAF') RETURNING id", [fx.orgId],
+    )).rows[0].id;
+    const A = await approvalKit.signUp(CODE, "Male Divers", { region_code: "kaf", new_club_short_code: "MLE" });
+    assert.equal((await approvalKit.club(A.clubId)).region_id, rg);
+    // Stand in for the click without going through the route, so the
+    // notices land in a fake inbox we can read.
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [A.id]);
+    const box = approvalKit.inbox();
+    assert.equal(await clubApprovals.submitForUser(pool, A.id, box.deps), 1);
+    assert.equal(box.mail.length, 1);
+    const m = box.mail[0];
+    assert.deepEqual(m.userIds, [fx.adminId]);
+    assert.equal(m.path, "/clubs");
+    assert.match(m.subject, /New club waiting for your approval: Male Divers/);
+    for (const bit of ["Club: Male Divers", "Code: MLE", "Region: Kaafu", `@${A.username}`,
+                       `${A.username}@example.test`, "can't host meets", "join automatically"]) {
+      assert.ok(m.body.includes(bit), `email mentions ${bit}: ${m.body}`);
+    }
+    assert.equal(box.inApp[0].category, "club_pending");
+    // A second go sends nothing: the club was already put forward.
+    assert.equal(await clubApprovals.submitForUser(pool, A.id, box.deps), 0);
+    assert.equal(box.mail.length, 1);
+
+    // A claimed org with no live org admin: the sysadmins hear instead.
+    const sysIds = (await pool.query(
+      "SELECT id FROM users WHERE is_system_admin AND deleted_at IS NULL",
+    )).rows.map((r) => r.id).sort();
+    await pool.query("DELETE FROM user_org_roles WHERE user_id = $1 AND role = 'org_admin'", [fx.adminId]);
+    assert.deepEqual((await clubApprovals.reviewerIds(pool, fx.orgId)).sort(), sysIds);
+    const B = await approvalKit.signUp(CODE, "Hulhumale Divers", { region_code: "KAF" });
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [B.id]);
+    const box2 = approvalKit.inbox();
+    await clubApprovals.submitForUser(pool, B.id, box2.deps);
+    assert.deepEqual(box2.mail[0].userIds, sysIds);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("club approval: a waiting club can't host, be joined, be managed or be paid for", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "DJI";
+  await claimKit.wipe(CODE);
+  let paymentId = null;
+  try {
+    const fx = await approvalKit.federation(CODE);
+    const tadj = (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, 'Tadjourah', 'TA') RETURNING id", [fx.orgId],
+    )).rows[0].id;
+    const A = await approvalKit.signUp(CODE, "Tadjourah Divers", { region_code: "TA", new_club_short_code: "TAD" }, { verify: true });
+    const P = A.clubId;
+    const diver = await approvalKit.member(fx.orgId, "diver");
+    const founder = await claimKit.login(A.username);
+
+    // Hosting a meet.
+    const meet = await fetchJson("POST", "/api/meets", { token: fx.adminToken, body: { name: "Gulf Open", host_club_id: P } });
+    assert.equal(meet.status, 400, JSON.stringify(meet.body));
+    // Joining it, by request or by the federation setting it.
+    const ask = await fetchJson("POST", "/api/club-change-requests", { token: diver.token, body: { to_club_id: P } });
+    assert.equal(ask.status, 400, JSON.stringify(ask.body));
+    const set = await fetchJson("PUT", `/api/users/${diver.id}/club`, { token: fx.adminToken, body: { club_id: P } });
+    assert.equal(set.status, 400, JSON.stringify(set.body));
+    // Editing or deleting it outside approve / reject.
+    for (const [method, path, body] of [
+      ["PUT", `/api/clubs/${P}`, { name: "Renamed" }],
+      ["DELETE", `/api/clubs/${P}`],
+      ["PUT", `/api/clubs/${P}/short-code`, { short_code: "NEW" }],
+      ["GET", `/api/clubs/${P}/setup`],
+      ["PUT", `/api/clubs/${P}/region`, { region_id: null }],
+      ["GET", `/api/clubs/${P}/admins`],
+      ["POST", `/api/clubs/${P}/admins`, { user_id: A.id }],
+    ]) {
+      const r = await fetchJson(method, path, { token: fx.adminToken, body });
+      assert.equal(r.status, 409, `${method} ${path}: ${r.status} ${JSON.stringify(r.body)}`);
+      assert.equal(r.body.code, "club_pending");
+    }
+    // ...and somebody with no say gets a plain 403, not a hint it's waiting.
+    assert.equal((await fetchJson("POST", `/api/clubs/${P}/admins`, { token: diver.token, body: { user_id: diver.id } })).status, 403);
+    assert.equal((await fetchJson("PUT", `/api/clubs/${P}/region`, { token: founder.token, body: { region_id: null } })).status, 403);
+    // Club-admin surfaces: affiliation (federation or club admin) and the
+    // club-private payouts page, even for the sysadmin.
+    const aff = await fetchJson("GET", `/api/clubs/${P}/affiliation`, { token: fx.adminToken });
+    assert.equal(aff.status, 409, JSON.stringify(aff.body));
+    assert.equal(aff.body.code, "club_pending");
+    const sys = await claimKit.login("admin", "admin");
+    if (sys?.token) {
+      const pay = await fetchJson("GET", `/api/clubs/${P}/payments/status`, { token: sys.token });
+      assert.equal(pay.status, 409, JSON.stringify(pay.body));
+      const list = (await fetchJson("GET", "/api/me/club-admin-clubs", { token: sys.token })).body;
+      assert.ok(!list.some((c) => c.id === P), "not in the sysadmin's club list");
+    }
+    // Not counted as one of the region's clubs, nor in its overview.
+    const regions = (await fetchJson("GET", `/api/orgs/${fx.orgId}/regions`)).body.regions;
+    assert.equal(regions.find((r) => r.id === tadj).club_count, 0);
+    const overview = (await fetchJson("GET", `/api/regions/${tadj}/overview`, { token: fx.adminToken })).body;
+    assert.deepEqual(overview.clubs, []);
+
+    // The founder can still dive. Their club's code stays off the
+    // scoreboard, and the club gets no record book, until it's approved.
+    const ev = await fetchJson("POST", "/api/events", {
+      token: fx.adminToken,
+      body: { name: "1m", gender: "Mixed", height: "1m", number_of_judges: 5, total_rounds: 1, event_type: "individual" },
+    });
+    assert.equal(ev.status, 201, JSON.stringify(ev.body));
+    const clubMeet = await fetchJson("POST", "/api/meets", { token: fx.adminToken, body: { name: "Club Night", represent_as: "club" } });
+    await pool.query("UPDATE events SET status = 'Live', meet_id = $2 WHERE id = $1", [ev.body.id, clubMeet.body.id]);
+    const dive = (await pool.query("SELECT id FROM dive_directory WHERE height = 1 LIMIT 1")).rows[0].id;
+    await pool.query(
+      "INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number) VALUES ($1, $2, $3, 1)",
+      [ev.body.id, A.id, dive],
+    );
+    for (let i = 1; i <= 5; i++) {
+      const j = await insertUser({ orgId: fx.orgId, role: "judge", username: `int-apj${i}-${crypto.randomBytes(3).toString("hex")}`, fullName: `Judge ${i}` });
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)", [ev.body.id, j, i]);
+      await pool.query(
+        "INSERT INTO scores (event_id, competitor_id, judge_id, dive_id, round_number, score) VALUES ($1, $2, $3, $4, 1, 6.5)",
+        [ev.body.id, A.id, j, dive],
+      );
+    }
+    const rep = async () => (await pool.query("SELECT event_rep_code($1, $2, 'DJI') AS code", [ev.body.id, A.id])).rows[0].code;
+    assert.equal(await rep(), "DJI", "a waiting club's code isn't shown");
+    await pool.query("UPDATE users SET gender = 'male' WHERE id = $1", [A.id]);
+    const records = require("../lib/records")({ pool, verifyToken: (_req, _res, next) => next() });
+    const broken = await records.checkAndApplyRecords({ eventId: ev.body.id, competitorId: A.id, roundNumber: 1 });
+    assert.ok(broken.some((b) => b.scope === "personal"), "the diver's own best still counts");
+    assert.ok(!broken.some((b) => b.scope === "club"), "no club record for a waiting club");
+    assert.equal((await pool.query("SELECT count(*)::int AS n FROM records_club WHERE club_id = $1", [P])).rows[0].n, 0);
+    const archive = (await fetchJson("GET", "/api/archive/clubs?limit=500")).body;
+    assert.ok(!archive.some((c) => c.id === P), "not in the public archive's club list");
+
+    // Payments RESTRICT a club's deletion. Shouldn't happen to a waiting
+    // club, but if it does, reject says so instead of a 500.
+    paymentId = (await pool.query(
+      `INSERT INTO payments (org_id, subject_type, amount_cents, currency, payer_type, payer_club_id, status)
+       VALUES ($1, 'club_affiliation', 100, 'aud', 'club', $2, 'failed') RETURNING id`,
+      [fx.orgId, P],
+    )).rows[0].id;
+    const blocked = await fetchJson("POST", `/api/clubs/${P}/reject`, { token: fx.adminToken, body: {} });
+    assert.equal(blocked.status, 409, JSON.stringify(blocked.body));
+    assert.equal(blocked.body.code, "club_has_payments");
+    assert.equal((await approvalKit.club(P)).status, "pending", "rolled back, still waiting");
+    await pool.query("DELETE FROM payments WHERE id = $1", [paymentId]);
+    paymentId = null;
+
+    // Once approved, all of that opens up.
+    assert.equal((await fetchJson("POST", `/api/clubs/${P}/approve`, { token: fx.adminToken, body: {} })).status, 200);
+    assert.equal(await rep(), "TAD", "the entry snapshot picks the code up by itself");
+    const hosted = await fetchJson("POST", "/api/meets", { token: fx.adminToken, body: { name: "Gulf Open", host_club_id: P } });
+    assert.equal(hosted.status, 201, JSON.stringify(hosted.body));
+    assert.equal((await fetchJson("POST", "/api/club-change-requests", { token: diver.token, body: { to_club_id: P } })).status, 201);
+  } finally {
+    if (paymentId) await pool.query("DELETE FROM payments WHERE id = $1", [paymentId]).catch(() => {});
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("club approval: nobody runs a waiting club, even with a stray admin row", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  // Only reachable by hand today (pending clubs only exist under a
+  // federation, where club admins don't review anything), so force one
+  // into an unclaimed country and check the club-admin paths still say no.
+  const CODE = "ERI";
+  await claimKit.wipe(CODE);
+  try {
+    const A = await claimKit.founder(CODE, "Asmara Divers");
+    const B = await claimKit.founder(CODE, "Massawa Divers");
+    for (const x of [A, B]) await claimKit.makeEligible(x.clubId);
+    const orgId = (await pool.query("SELECT org_id FROM users WHERE id = $1", [A.id])).rows[0].org_id;
+    const member = await approvalKit.member(orgId, "spectator", A.clubId);
+    await fetchJson("POST", "/api/role-requests", { token: member.token, body: { role: "judge" } });
+    const roleRequests = require("../lib/role-requests");
+    const claims = require("../lib/claims");
+    const rq = (await pool.query("SELECT * FROM role_requests WHERE user_id = $1", [member.id])).rows[0];
+    assert.ok(rq, "the request exists");
+    assert.equal(await roleRequests.delegateCanReview(pool, A.id, rq), true);
+    const settings = await require("../lib/platform-settings").getAll(pool);
+    const voters = await claims.eligibleClubs(pool, { orgId, regionId: null, claimantId: null, claimantEmail: "x@elsewhere.example.org", settings });
+    assert.deepEqual(voters.ids.sort(), [A.clubId, B.clubId].sort());
+
+    await pool.query("UPDATE clubs SET status = 'pending' WHERE id = $1", [A.clubId]);
+    assert.equal(await roleRequests.delegateCanReview(pool, A.id, rq), false);
+    assert.ok(!(await roleRequests.listForDelegate(pool, A.id)).some((r) => r.id === rq.id));
+    assert.equal((await roleRequests.reviewersFor(pool, member.id, orgId, "judge")).via, "sysadmin");
+    const after = await claims.eligibleClubs(pool, { orgId, regionId: null, claimantId: null, claimantEmail: "x@elsewhere.example.org", settings });
+    assert.deepEqual(after.ids, [B.clubId], "a waiting club never counts as a claim voter");
+    // Age runs from approval, not creation.
+    await pool.query("UPDATE clubs SET approved_at = now() WHERE id = $1", [B.clubId]);
+    const fresh = await claims.eligibleClubs(pool, { orgId, regionId: null, claimantId: null, claimantEmail: "x@elsewhere.example.org", settings });
+    assert.deepEqual(fresh.ids, []);
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("club approval: the federation approves, fixing details and making the founder admin", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "GNQ";
+  await claimKit.wipe(CODE);
+  const other = await setupFixture({ withEvent: false });
+  try {
+    const fx = await approvalKit.federation(CODE);
+    const region = async (name, code, orgId = fx.orgId) => (await pool.query(
+      "INSERT INTO regions (org_id, name, short_code) VALUES ($1, $2, $3) RETURNING id", [orgId, name, code],
+    )).rows[0].id;
+    const bioko = await region("Bioko Norte", "BN");
+    const litoral = await region("Litoral", "LI");
+    const elsewhere = await region("Elsewhere", "EL", other.orgId);
+    await pool.query("INSERT INTO clubs (org_id, name, short_code) VALUES ($1, 'Bata Divers', 'BAT')", [fx.orgId]);
+    const A = await approvalKit.signUp(CODE, "malabo divers", { region_code: "BN", new_club_short_code: "mal" }, { verify: true });
+
+    // Only this federation's admins (or DivingHQ) decide.
+    const mm = await approvalKit.member(fx.orgId, "meet_manager");
+    const founder = await claimKit.login(A.username);
+    for (const token of [other.adminToken, mm.token, founder.token]) {
+      const r = await fetchJson("POST", `/api/clubs/${A.clubId}/approve`, { token, body: {} });
+      assert.equal(r.status, 403, JSON.stringify(r.body));
+    }
+    assert.equal((await fetchJson("POST", "/api/clubs/not-a-uuid/approve", { token: fx.adminToken, body: {} })).status, 404);
+
+    // Edits are checked before anything changes.
+    const tries = [
+      [{ short_code: "WAY-TOO-LONG" }, 400],
+      [{ short_code: "bat" }, 409],
+      [{ region_id: elsewhere }, 400],
+      [{ region_id: "nope" }, 400],
+      [{ name: "   " }, 400],
+    ];
+    for (const [body, status] of tries) {
+      const r = await fetchJson("POST", `/api/clubs/${A.clubId}/approve`, { token: fx.adminToken, body });
+      assert.equal(r.status, status, `${JSON.stringify(body)}: ${JSON.stringify(r.body)}`);
+    }
+    assert.equal((await approvalKit.club(A.clubId)).status, "pending");
+
+    const ok = await fetchJson("POST", `/api/clubs/${A.clubId}/approve`, {
+      token: fx.adminToken,
+      body: { name: "Malabo Divers", short_code: "mlb", region_id: litoral },
+    });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.equal(ok.body.founder_admin, true, "ticked by default");
+    const row = await approvalKit.club(A.clubId);
+    assert.equal(row.status, "active");
+    assert.ok(row.approved_at);
+    assert.deepEqual([row.name, row.short_code, row.region_id], ["Malabo Divers", "MLB", litoral]);
+    assert.equal(await approvalKit.isAdmin(A.clubId, A.id), true);
+    const audit = (await pool.query(
+      "SELECT actor_id, metadata FROM audit_log WHERE entity_id = $1 AND action = 'club.approved'", [A.clubId],
+    )).rows;
+    assert.equal(audit.length, 1);
+    assert.equal(audit[0].actor_id, fx.adminId);
+    assert.deepEqual(audit[0].metadata.edits, {
+      name: { from: "malabo divers", to: "Malabo Divers" },
+      short_code: { from: "mal", to: "MLB" },
+      region_id: { from: bioko, to: litoral },
+    });
+    assert.equal(audit[0].metadata.founder_admin, true);
+    const told = await approvalKit.notices(A.id, "club_decision");
+    assert.equal(told.length, 1);
+    assert.match(told[0].title, /approved Malabo Divers/);
+    assert.equal(told[0].action_url, "/club");
+
+    // Decided is decided.
+    const again = await fetchJson("POST", `/api/clubs/${A.clubId}/approve`, { token: fx.adminToken, body: {} });
+    assert.equal(again.status, 409);
+    assert.equal(again.body.code, "club_not_pending");
+
+    // The founder's session catches up without signing in again.
+    const me = (await fetchJson("GET", "/api/auth/me", { token: founder.token })).body.user;
+    assert.equal(me.pending_club, null);
+    assert.deepEqual(me.club_admin_of.map((c) => c.id), [A.clubId]);
+    assert.ok((await fetchJson("GET", `/api/orgs/${fx.orgId}/clubs`)).body.some((c) => c.id === A.clubId));
+
+    // Two admins deciding at once: one wins, the other is told.
+    const second = await approvalKit.member(fx.orgId, "org_admin");
+    const B = await approvalKit.signUp(CODE, "Luba Divers", { region_code: "BN" }, { verify: true });
+    const race = await Promise.all([
+      fetchJson("POST", `/api/clubs/${B.clubId}/approve`, { token: fx.adminToken, body: {} }),
+      fetchJson("POST", `/api/clubs/${B.clubId}/reject`, { token: second.token, body: {} }),
+    ]);
+    assert.deepEqual(race.map((r) => r.status).sort(), [200, 409], JSON.stringify(race.map((r) => r.body)));
+    const decided = (await pool.query(
+      "SELECT count(*)::int AS n FROM audit_log WHERE entity_id = $1 AND action IN ('club.approved', 'club.rejected')", [B.clubId],
+    )).rows[0].n;
+    assert.equal(decided, 1);
+
+    // Without the box ticked, the federation keeps the admin seat to itself,
+    // and the founder is told so, by email too.
+    const C = await approvalKit.signUp(CODE, "Ebebiyin Divers", { region_code: "BN" }, { verify: true });
+    const box = approvalKit.inbox();
+    const out = await clubApprovals.approve(pool, {
+      clubId: C.clubId, user: await claimActor(fx.adminId), makeFounderAdmin: false,
+    }, box.deps);
+    assert.equal(out.founder_admin, false);
+    assert.equal(await approvalKit.isAdmin(C.clubId, C.id), false);
+    assert.deepEqual(box.mail[0].userIds, [C.id]);
+    assert.match(box.mail[0].subject, /Ebebiyin Divers is on DivingHQ/);
+    assert.match(box.mail[0].body, /appoints club admins/);
+    assert.equal(box.mail[0].path, "/dashboard");
+    assert.equal((await fetchJson("GET", "/api/dashboard", { token: fx.adminToken })).body.clubs_pending, 0);
+  } finally {
+    await claimKit.wipe(CODE);
+    await teardownFixture(other);
+  }
+});
+
+test("club approval: rejecting deletes the club and can move its founder into an existing one", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "MCO";
+  await claimKit.wipe(CODE);
+  const other = await setupFixture({ withEvent: false });
+  try {
+    const fx = await approvalKit.federation(CODE);
+    const real = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, 'Monaco Diving Club', 'MDC') RETURNING id", [fx.orgId],
+    )).rows[0].id;
+    const foreign = (await pool.query(
+      "INSERT INTO clubs (org_id, name) VALUES ($1, 'Somewhere Else') RETURNING id", [other.orgId],
+    )).rows[0].id;
+    const A = await approvalKit.signUp(CODE, "Monaco DC", {}, { verify: true });
+    const B = await approvalKit.signUp(CODE, "Monte Carlo Divers", {}, { verify: true });
+
+    // Only somewhere real to move them to: an approved club in the same org.
+    for (const target of [B.clubId, foreign, "not-a-club"]) {
+      const r = await fetchJson("POST", `/api/clubs/${A.clubId}/reject`, { token: fx.adminToken, body: { move_members_to: target } });
+      assert.equal(r.status, 400, `${target}: ${JSON.stringify(r.body)}`);
+    }
+
+    const box = approvalKit.inbox();
+    const out = await clubApprovals.reject(pool, {
+      clubId: A.clubId, user: await claimActor(fx.adminId), reason: "  You're already with Monaco Diving Club.  ", moveMembersTo: real,
+    }, box.deps);
+    assert.deepEqual(out, { id: A.clubId, moved_to: real, members: 1 });
+    assert.equal(await approvalKit.club(A.clubId), undefined, "the club is gone");
+    assert.equal((await pool.query("SELECT club_id FROM users WHERE id = $1", [A.id])).rows[0].club_id, real);
+    const audit = (await pool.query(
+      "SELECT metadata, note FROM audit_log WHERE entity_id = $1 AND action = 'club.rejected'", [A.clubId],
+    )).rows[0];
+    assert.deepEqual(audit.metadata, {
+      name: "Monaco DC", short_code: null, founder_id: A.id,
+      reason: "You're already with Monaco Diving Club.", moved_to: real, members: 1,
+    });
+    assert.deepEqual(box.mail[0].userIds, [A.id]);
+    assert.match(box.mail[0].body, /The reason they gave: You're already with Monaco Diving Club\./);
+    assert.match(box.mail[0].body, /We've put you in Monaco Diving Club/);
+    assert.equal(box.inApp[0].category, "club_decision");
+
+    // Without a move the founder keeps their account, with no club.
+    const r = await fetchJson("POST", `/api/clubs/${B.clubId}/reject`, { token: fx.adminToken, body: {} });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const b = (await pool.query("SELECT club_id, deleted_at FROM users WHERE id = $1", [B.id])).rows[0];
+    assert.deepEqual(b, { club_id: null, deleted_at: null });
+    const login = await claimKit.login(B.username);
+    assert.ok(login.token, "still signs in");
+    assert.equal(login.pending_club, null);
+    const told = await approvalKit.notices(B.id, "club_decision");
+    assert.match(told[0].title, /didn't approve Monte Carlo Divers/);
+    // Nothing left to decide, and the federation is told that rather than
+    // "not found". Another org's admin still just gets not found.
+    const redo = await fetchJson("POST", `/api/clubs/${B.clubId}/reject`, { token: fx.adminToken, body: {} });
+    assert.equal(redo.status, 409, JSON.stringify(redo.body));
+    assert.equal(redo.body.code, "club_not_pending");
+    assert.equal((await fetchJson("POST", `/api/clubs/${B.clubId}/approve`, { token: fx.adminToken, body: {} })).status, 409);
+    assert.equal((await fetchJson("POST", `/api/clubs/${B.clubId}/approve`, { token: other.adminToken, body: {} })).status, 404);
+  } finally {
+    await claimKit.wipe(CODE);
+    await pool.query("DELETE FROM clubs WHERE org_id = $1", [other.orgId]).catch(() => {});
+    await teardownFixture(other);
+  }
+});
+
+test("club approval: a federation can let new clubs join automatically", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "SWZ";
+  const LOOSE = "LSO";
+  await claimKit.wipe(CODE);
+  await claimKit.wipe(LOOSE);
+  const other = await setupFixture({ withEvent: false });
+  try {
+    const fx = await approvalKit.federation(CODE);
+    const waiting = await approvalKit.signUp(CODE, "Mbabane Divers", {}, { verify: true });
+    const path = `/api/orgs/${fx.orgId}/club-settings`;
+    assert.deepEqual((await fetchJson("GET", path, { token: fx.adminToken })).body,
+      { auto_approve_clubs: false, claim_state: "claimed" });
+
+    const mm = await approvalKit.member(fx.orgId, "meet_manager");
+    assert.equal((await fetchJson("PUT", path, { token: mm.token, body: { auto_approve_clubs: true } })).status, 403);
+    assert.equal((await fetchJson("PUT", path, { token: other.adminToken, body: { auto_approve_clubs: true } })).status, 403);
+    assert.equal((await fetchJson("GET", path, { token: other.adminToken })).status, 403);
+    assert.equal((await fetchJson("PUT", path, { token: fx.adminToken, body: { auto_approve_clubs: "yes" } })).status, 400);
+    const on = await fetchJson("PUT", path, { token: fx.adminToken, body: { auto_approve_clubs: true } });
+    assert.equal(on.status, 200, JSON.stringify(on.body));
+    assert.equal(on.body.auto_approve_clubs, true);
+    const audit = (await pool.query(
+      "SELECT actor_id, metadata FROM audit_log WHERE entity_id = $1 AND action = 'org.club_settings_changed'", [fx.orgId],
+    )).rows;
+    assert.deepEqual(audit, [{ actor_id: fx.adminId, metadata: { auto_approve_clubs: { from: false, to: true } } }]);
+    assert.equal((await fetchJson("GET", `/api/orgs/by-country/${CODE}`)).body[0].auto_approve_clubs, true);
+    // Switching it on doesn't wave through the ones already waiting.
+    assert.equal((await approvalKit.club(waiting.clubId)).status, "pending");
+
+    const A = await approvalKit.signUp(CODE, "Manzini Divers");
+    assert.equal(A.res.club_status, "active");
+    const row = await approvalKit.club(A.clubId);
+    assert.equal(row.status, "active");
+    assert.equal(row.approved_at, null, "it never waited");
+    assert.equal(await approvalKit.isAdmin(A.clubId, A.id), false, "the federation still appoints admins");
+    assert.ok((await fetchJson("GET", `/api/orgs/${fx.orgId}/clubs`)).body.some((c) => c.id === A.clubId));
+    // The heads-up is fire-and-forget, so give it a moment.
+    let heads = [];
+    for (let i = 0; i < 20 && !heads.length; i++) {
+      heads = (await approvalKit.notices(fx.adminId, "club_created")).filter((n) => n.data?.club_id === A.clubId);
+      if (!heads.length) await new Promise((r) => setTimeout(r, 50));
+    }
+    assert.equal(heads.length, 1);
+    assert.match(heads[0].title, /New club joined: Manzini Divers/);
+
+    // The sysadmin can change it too, and turn it back off.
+    const sys = await claimKit.login("admin", "admin");
+    if (sys?.token) {
+      const off = await fetchJson("PUT", path, { token: sys.token, body: { auto_approve_clubs: false } });
+      assert.equal(off.status, 200, JSON.stringify(off.body));
+      assert.equal((await approvalKit.signUp(CODE, "Siteki Divers")).res.club_status, "pending");
+
+      // In a country the clubs started nobody approves anything, so the
+      // setting isn't there to change.
+      const founder = await claimKit.founder(LOOSE, "Maseru Divers");
+      const looseOrg = (await pool.query("SELECT org_id FROM users WHERE id = $1", [founder.id])).rows[0].org_id;
+      const r = await fetchJson("PUT", `/api/orgs/${looseOrg}/club-settings`, { token: sys.token, body: { auto_approve_clubs: true } });
+      assert.equal(r.status, 409, JSON.stringify(r.body));
+      assert.equal(r.body.code, "org_unclaimed");
+    }
+  } finally {
+    await claimKit.wipe(CODE);
+    await claimKit.wipe(LOOSE);
+    await teardownFixture(other);
+  }
+});
+
+test("club approval: unclaimed countries are unchanged, and a revoked claim lets waiting clubs in", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "TKM";
+  await claimKit.wipe(CODE);
+  try {
+    const sys = await claimKit.login("admin", "admin");
+    if (!sys?.token) return t.skip("no seeded sysadmin (admin/admin) in this DB");
+    // No federation: the club is live and the founder runs it, as before.
+    const A = await approvalKit.signUp(CODE, "Ashgabat Divers");
+    assert.equal(A.res.club_status, "active");
+    assert.equal((await approvalKit.club(A.clubId)).status, "active");
+    assert.equal(await approvalKit.isAdmin(A.clubId, A.id), true);
+    await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [A.id]);
+    const B = await claimKit.founder(CODE, "Mary Divers");
+    for (const clubId of [A.clubId, B.clubId]) await claimKit.makeEligible(clubId);
+    const Atoken = (await claimKit.login(A.username)).token;
+
+    // A federation claims the country and the clubs vote it in.
+    const fed = await claimKit.claim({ org_name: "Turkmen Aquatics", country_code: CODE });
+    await claimKit.verify(fed.id);
+    const claimId = fed.res.body.claim_id;
+    for (const token of [Atoken, B.token]) {
+      await fetchJson("POST", `/api/claims/${claimId}/vote`, { token, body: { vote: "approve" } });
+    }
+    assert.equal((await claimStatus(claimId)).status, "approved");
+    const fedToken = (await claimKit.login(fed.username)).token;
+
+    // Now new clubs wait. One gets approved with its founder as admin,
+    // one is still waiting when DivingHQ revokes the claim.
+    const P = await approvalKit.signUp(CODE, "Balkanabat Divers", {}, { verify: true });
+    const Q = await approvalKit.signUp(CODE, "Dashoguz Divers", {}, { verify: true });
+    assert.equal(P.res.club_status, "pending");
+    assert.equal((await fetchJson("POST", `/api/clubs/${Q.clubId}/approve`, { token: fedToken, body: {} })).status, 200);
+    assert.equal(await approvalKit.isAdmin(Q.clubId, Q.id), true);
+
+    const rv = await fetchJson("POST", `/api/claims/${claimId}/revoke`, { token: sys.token, body: { reason: "Test" } });
+    assert.equal(rv.status, 200, JSON.stringify(rv.body));
+    assert.deepEqual(rv.body.activated_clubs, [{ id: P.clubId, name: "Balkanabat Divers" }]);
+    const p = await approvalKit.club(P.clubId);
+    assert.equal(p.status, "active");
+    assert.ok(p.approved_at);
+    assert.equal(await approvalKit.isAdmin(P.clubId, P.id), true, "a founder runs their club where there's no federation");
+    // A founder the federation made admin of their own club keeps it too:
+    // in an unclaimed country they'd have had it from the start.
+    assert.equal(await approvalKit.isAdmin(Q.clubId, Q.id), true);
+    const told = await approvalKit.notices(P.id, "club_decision");
+    assert.equal(told.length, 1, JSON.stringify(told));
+    assert.match(told[0].title, /Balkanabat Divers is active/);
+    const audit = (await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'claim.revoked'", [claimId],
+    )).rows[0].metadata;
+    assert.deepEqual(audit.activated_clubs, [P.clubId]);
+    const act = (await pool.query(
+      "SELECT actor_id, metadata FROM audit_log WHERE entity_id = $1 AND action = 'club.approved'", [P.clubId],
+    )).rows[0];
+    assert.equal(act.metadata.via, "claim_revoked");
+    // And new clubs join straight away again.
+    assert.equal((await approvalKit.signUp(CODE, "Turkmenbashi Divers")).res.club_status, "active");
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("club approval: whoever loses a race to decide is told it's decided, whichever way it went", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  // The earlier race test fires both at once and takes whatever order the
+  // server picks. Here the order is pinned: something else holds the row,
+  // the first decision queues on it, then the second, then it's let go.
+  // A reject deletes the row, so the one queued behind it used to come
+  // back 404 instead of 409.
+  const CODE = "GNB";
+  await claimKit.wipe(CODE);
+  try {
+    const fx = await approvalKit.federation(CODE);
+    const second = await approvalKit.member(fx.orgId, "org_admin");
+    const waiting = async (n) => {
+      for (let i = 0; i < 100; i++) {
+        const r = await pool.query(
+          `SELECT count(*)::int AS n FROM pg_stat_activity
+            WHERE datname = current_database() AND wait_event_type = 'Lock'
+              AND query LIKE '%FOR UPDATE OF c%'`,
+        );
+        if (r.rows[0].n >= n) return;
+        await new Promise((res) => setTimeout(res, 20));
+      }
+      throw new Error(`never saw ${n} decisions queued on the lock`);
+    };
+    const race = async (clubId, first, then) => {
+      const holder = await pool.connect();
+      try {
+        await holder.query("BEGIN");
+        await holder.query("SELECT 1 FROM clubs WHERE id = $1 FOR UPDATE", [clubId]);
+        const a = fetchJson("POST", `/api/clubs/${clubId}/${first}`, { token: fx.adminToken, body: {} });
+        await waiting(1);
+        const b = fetchJson("POST", `/api/clubs/${clubId}/${then}`, { token: second.token, body: {} });
+        await waiting(2);
+        await holder.query("ROLLBACK");
+        return [await a, await b];
+      } finally {
+        holder.release();
+      }
+    };
+
+    const A = await approvalKit.signUp(CODE, "Bissau Divers", {}, { verify: true });
+    const [rejected, lateApprove] = await race(A.clubId, "reject", "approve");
+    assert.equal(rejected.status, 200, JSON.stringify(rejected.body));
+    assert.equal(lateApprove.status, 409, JSON.stringify(lateApprove.body));
+    assert.equal(lateApprove.body.code, "club_not_pending");
+    assert.equal(await approvalKit.club(A.clubId), undefined);
+
+    const B = await approvalKit.signUp(CODE, "Bafata Divers", {}, { verify: true });
+    const [approved, lateReject] = await race(B.clubId, "approve", "reject");
+    assert.equal(approved.status, 200, JSON.stringify(approved.body));
+    assert.equal(lateReject.status, 409, JSON.stringify(lateReject.body));
+    assert.equal((await approvalKit.club(B.clubId)).status, "active", "the late reject didn't delete it");
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("club approval: a waiting club's code doesn't block an approved club from taking it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  // Approve ignores other waiting clubs' codes; club setup has to agree,
+  // or an unvetted signup could squat on a code a real club wants.
+  const CODE = "TCD";
+  await claimKit.wipe(CODE);
+  try {
+    const fx = await approvalKit.federation(CODE);
+    const real = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code) VALUES ($1, 'Club de Plongeon de N''Djamena', 'NDJ') RETURNING id",
+      [fx.orgId],
+    )).rows[0].id;
+    const P = await approvalKit.signUp(CODE, "Chari Divers", { new_club_short_code: "chr" }, { verify: true });
+
+    const set = await fetchJson("PUT", `/api/clubs/${real}/short-code`, { token: fx.adminToken, body: { short_code: "CHR" } });
+    assert.equal(set.status, 200, JSON.stringify(set.body));
+    assert.equal(set.body.short_code, "CHR");
+
+    // Now it's the waiting club that has to pick something else.
+    const clash = await fetchJson("POST", `/api/clubs/${P.clubId}/approve`, { token: fx.adminToken, body: {} });
+    assert.equal(clash.status, 409, JSON.stringify(clash.body));
+    assert.equal(clash.body.code, "short_code_taken");
+    const ok = await fetchJson("POST", `/api/clubs/${P.clubId}/approve`, { token: fx.adminToken, body: { short_code: "CHA" } });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    // And an approved club's code still can't be taken twice.
+    const taken = await fetchJson("PUT", `/api/clubs/${real}/short-code`, { token: fx.adminToken, body: { short_code: "cha" } });
+    assert.equal(taken.status, 409, JSON.stringify(taken.body));
+  } finally {
+    await claimKit.wipe(CODE);
+  }
+});
+
+test("club approval: a revoke activates waiting clubs but doesn't make a suspended founder admin", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const CODE = "BDI";
+  await claimKit.wipe(CODE);
+  try {
+    const fx = await approvalKit.federation(CODE);
+    const P = await approvalKit.signUp(CODE, "Bujumbura Divers", {}, { verify: true });
+    const Q = await approvalKit.signUp(CODE, "Gitega Divers", {}, { verify: true });
+    await pool.query("UPDATE users SET suspended_at = now() WHERE id = $1", [P.id]);
+
+    const client = await pool.connect();
+    let out;
+    try {
+      await client.query("BEGIN");
+      out = await clubApprovals.activateAllPending(client, fx.orgId, { actorId: fx.adminId });
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+    assert.deepEqual(out.clubs.map((c) => c.id).sort(), [P.clubId, Q.clubId].sort());
+    assert.equal((await approvalKit.club(P.clubId)).status, "active");
+    assert.equal(await approvalKit.isAdmin(P.clubId, P.id), false, "suspended, so no admin seat");
+    assert.equal(await approvalKit.isAdmin(Q.clubId, Q.id), true);
+    const audit = (await pool.query(
+      "SELECT metadata FROM audit_log WHERE entity_id = $1 AND action = 'club.approved'", [P.clubId],
+    )).rows[0].metadata;
+    assert.equal(audit.founder_admin, false);
+  } finally {
+    await claimKit.wipe(CODE);
   }
 });

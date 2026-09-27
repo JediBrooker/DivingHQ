@@ -287,6 +287,17 @@ reaches meets hosted by the region or by any club in it, never another
 region's. Same helpers, same rule. `region_admin_of` rides alongside
 `club_admin_of`.
 
+**`clubs.status` is `'active'` or `'pending'`** (migration 096,
+`docs/club-first-onboarding.md` §20). A club founded at signup under a
+claimed federation waits for its org admin unless the org has
+`auto_approve_clubs` on; everything else is `'active'`, and so is any insert
+that doesn't say, so the default fails open to the old behaviour. A pending
+club is nobody's to pick or run: when you add a club picker, a "which club"
+check on the wire, or an authority path that goes through a club (hosting,
+club admins, payments, records, rep codes), filter on `status = 'active'` or
+answer 409 `club_pending`, and add a test. Deciding lives in
+`lib/club-approvals.js`, never a hand-written `UPDATE clubs SET status`.
+
 ### Schema migrations
 
 Every change goes in **two** places:
@@ -350,6 +361,8 @@ above it.
 | Built-in regions per country, copy them into an org | `catalogFor(a3)` / `materializeRegions(db, orgId, a3)` / `regions.json` | `lib/regions.js` |
 | Approve/reject list for club and region admin pages | `<RoleRequestQueue>` | `src/components/RoleRequestQueue.vue` |
 | Claims lifecycle (open, activate, vote, decide, revoke, sweep) | `lib/claims.js` | `lib/claims.js` |
+| New clubs under a federation: needs approval?, put forward, approve / reject, activate on claim revoke, the auto-join setting | `needsApproval` / `submitForUser` / `approve` / `reject` / `activateAllPending` / `setAutoApprove` | `lib/club-approvals.js` |
+| Send a notice in-app and by email in one go (claims, club approvals) | `deliver(deps, notes, { path })` + `sendNoticeEmail` | `lib/notices.js` + `lib/email.js` |
 | Sysadmin-tunable numeric settings (claim vote rules) | `getAll` / `describeAll` / `set` | `lib/platform-settings.js` |
 | The support address (Reply-To on mail, "contact support" in messages; SPA reads `GET /api/public-config`) | `supportEmail()` / `supportContact()` | `lib/support.js` |
 | What a suspended account is told (login and verifyToken; club admin in unclaimed countries) | `suspendedAccountMessage(claimState)` | `lib/support.js` |

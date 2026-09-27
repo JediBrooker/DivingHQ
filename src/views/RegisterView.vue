@@ -106,7 +106,9 @@ const msgType = ref('')
 const loading = ref(false)
 // Set once the account exists: the form gives way to the check-your-inbox
 // panel, which stays until they leave (no timed bounce to /login).
-const registered = ref(null)   // { email, username }
+// clubPending is { club, org } when the club they started waits for the
+// federation to approve it (migration 096).
+const registered = ref(null)   // { email, username, clubPending }
 
 // Public signups are gated off by default (coming-soon launch). null means
 // still checking, true is open (show the form), false is closed (show the notice).
@@ -255,7 +257,13 @@ async function handleSubmit() {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || t('auth.register.failed'))
-    registered.value = { email: email.value.trim(), username: username.value.trim() }
+    registered.value = {
+      email: email.value.trim(),
+      username: username.value.trim(),
+      clubPending: data.club_status === 'pending'
+        ? { club: newClubName.value.trim(), org: data.org_name || selectedOrg.value?.name || '' }
+        : null,
+    }
   } catch (err) {
     msg.value = err.message
     msgType.value = 'error'
@@ -280,7 +288,12 @@ async function handleSubmit() {
     <h1>{{ $t('auth.register.title') }}</h1>
     <p class="subtitle">{{ $t('auth.register.subtitle') }}</p>
 
-    <CheckInboxPanel v-if="registered" :email="registered.email" :username="registered.username" />
+    <template v-if="registered">
+      <CheckInboxPanel :email="registered.email" :username="registered.username" />
+      <p v-if="registered.clubPending" class="note club-pending-note" data-testid="club-pending-note">
+        {{ $t('auth.register.success_club_pending', registered.clubPending) }}
+      </p>
+    </template>
     <form v-else @submit.prevent="handleSubmit" class="form-stack">
       <div class="field">
         <label class="label">{{ $t('auth.register.full_name') }}</label>
@@ -379,6 +392,14 @@ async function handleSubmit() {
           <input class="input" type="text" v-model="newClubCode" :placeholder="$t('auth.register.short_code_placeholder')" maxlength="20">
         </div>
         <p v-if="noFederation" class="hint-line founder-note">{{ $t('auth.register.founder_note') }}</p>
+        <!-- Under a federation a new club either waits for it or, where it
+             lets clubs straight in, joins without an admin (migration 096). -->
+        <p v-else-if="selectedOrg?.auto_approve_clubs" class="hint-line founder-note" data-testid="club-joins-now">
+          {{ $t('auth.register.club_joins_now', { org: selectedOrg.name }) }}
+        </p>
+        <p v-else-if="selectedOrg" class="hint-line founder-note" data-testid="club-needs-approval">
+          {{ $t('auth.register.club_needs_approval', { org: selectedOrg.name }) }}
+        </p>
       </div>
 
       <div class="field">
@@ -443,6 +464,7 @@ h1 { font-size: 48px; font-style: italic; margin-bottom: 0.25rem; }
 .note { font-size: 11px; color: var(--text-3); line-height: 1.6; padding: 0.75rem; background: var(--bg-3); border-radius: var(--radius-sm); border: 1px solid var(--border); }
 .hint-line { margin-top: 0.4rem; font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
 .founder-note { margin-top: 0; color: var(--text-2); }
+.club-pending-note { margin-top: 1rem; color: var(--text-2); }
 .new-club-block {
   display: flex; flex-direction: column; gap: 0.75rem;
   padding: 0.85rem;

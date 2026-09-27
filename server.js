@@ -714,6 +714,7 @@ app.use(
     sendEmailChangeVerify,
     sendEmailChangedNotice,
     sendClaimEmail: email.sendClaimEmail,
+    sendNoticeEmail: email.sendNoticeEmail,
     bumpTokenVersion,
     JWT_SECRET,
     JWT_EXPIRY,
@@ -730,9 +731,11 @@ app.use(
 app.use(require("./routes/orgs")({
   pool,
   push,
+  email,
   verifyToken,
   requireSystemAdmin,
   requireMeetEditor,
+  requireOrgAdmin,
   isInSameOrg,
   sendOrgDecisionEmail,
 }));

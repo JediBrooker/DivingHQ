@@ -78,7 +78,10 @@
       "failed": "Registration failed",
       "success": "Registration successful. Check your email for a verification link before signing in.",
       "new_club_placeholder": "e.g. Sydney Springboard",
-      "short_code_placeholder": "e.g. SYD"
+      "short_code_placeholder": "e.g. SYD",
+      "club_needs_approval": "{org} approves new clubs before they go live. We'll ask them once you've confirmed your email, and you can sign in and dive meanwhile.",
+      "club_joins_now": "New clubs join {org} straight away. {org} appoints each club's admins.",
+      "success_club_pending": "{club} is waiting for {org} to approve it. They'll see it once you've confirmed your email, and we'll email you when they decide."
     },
     "register_org": {
       "title": "Register Organisation",
@@ -450,7 +453,12 @@
       "quiet": "All quiet, nothing pending.",
       "pill_urgent": "closing soon",
       "pill_overdue": "overdue",
-      "chip_aria_tab": "{title}. Opens its tab on this dashboard."
+      "chip_aria_tab": "{title}. Opens its tab on this dashboard.",
+      "chip_clubs": "New clubs",
+      "clubs_pending_meta": "Approve or reject them on Clubs",
+      "chip_my_club": "club awaiting approval",
+      "my_club_pending": "{club} is waiting for {org} to approve it",
+      "my_club_pending_meta": "You can dive meanwhile. We'll email you when they decide."
     },
     "getting_started": {
       "title": "Get {club} started",
@@ -641,8 +649,8 @@
       },
       "club_admin": {
         "name": "Club Admin",
-        "desc": "You run your club. Where your country's federation isn't on DivingHQ yet, the club runs its own meets: create them, run them from the <strong>Control Room</strong>, and approve your members' role requests. Under a federation, it appoints you.",
-        "step_1": "Sign up, pick your country and create your club, you'll be its first admin",
+        "desc": "You run your club. Where your country's federation isn't on DivingHQ yet, the club runs its own meets: create them, run them from the <strong>Control Room</strong>, and approve your members' role requests. Under a federation, it approves your new club and can make you its admin.",
+        "step_1": "Sign up, pick your country and create your club; you'll be its first admin (under a federation, once it approves the club)",
         "step_2": "Open <strong>Meet Manager</strong> and create a meet hosted by your club",
         "step_3": "On <strong>My club</strong>, approve people asking to join and members who want to dive, judge or coach",
         "step_4": "On the day, drive scoring from <strong>Control Room</strong>",
@@ -665,7 +673,8 @@
         "step_2": "Walk through the <strong>Setup Wizard</strong> — clubs, invites, first event",
         "step_3": "Grant roles in <strong>User Manager</strong> as your team grows",
         "step_4": "Check the <strong>Audit Log</strong> for any federation-wide activity",
-        "cta": "Quick start ↗"
+        "cta": "Quick start ↗",
+        "step_5": "Approve or reject new clubs on <strong>Clubs</strong>, or let them join automatically"
       },
       "spectator": {
         "name": "Spectator",
@@ -870,7 +879,9 @@
       "claim_review": "Claim",
       "claim_decided": "Claim",
       "club_change": "Club change",
-      "region_request": "Region"
+      "region_request": "Region",
+      "club_pending": "New club",
+      "club_decision": "Club"
     }
   },
   "compare": {
@@ -1305,7 +1316,10 @@
       "member_unassigned_one": "{n} member unassigned",
       "member_unassigned_many": "{n} members unassigned",
       "members_count": "{n} members",
-      "events_count": "{n} events"
+      "events_count": "{n} events",
+      "label_club_approved": "Club approved",
+      "label_club_rejected": "Club rejected",
+      "label_org_club_settings_changed": "New-club setting changed"
     }
   },
   "setup": {
@@ -1371,7 +1385,33 @@
     "col_billing": "Billing",
     "col_actions": "Actions",
     "admins_button": "Admins",
-    "rename": "Rename"
+    "rename": "Rename",
+    "pending_title": "Waiting for approval",
+    "pending_intro": "Clubs people started when they signed up in your country. Until you decide, they're hidden from club lists and can't host meets.",
+    "stat_pending": "Waiting",
+    "pending_started_by": "Started by {name}",
+    "pending_waiting_since": "Waiting since {date}",
+    "pending_similar": "Looks like {club}, which is already on DivingHQ",
+    "email_verified": "Email verified",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approve_title": "Approve club",
+    "approve_body": "Fix anything that needs it first. Once approved, the club shows up in club lists and can host meets.",
+    "approve_make_admin": "Make {name} the club's admin",
+    "reject_title": "Reject club",
+    "reject_body": "This deletes {club}. {name} keeps their account and gets an email with your reason.",
+    "reject_reason": "Reason (optional, sent to the founder)",
+    "reject_move_to": "Move its members to",
+    "reject_move_none": "Nowhere, leave them without a club",
+    "approved_toast": "{club} approved",
+    "rejected_toast": "{club} rejected",
+    "setting_label": "New clubs from signup",
+    "setting_approval": "Wait for my approval",
+    "setting_auto": "Join automatically",
+    "setting_approval_hint": "Clubs people start when they sign up wait here until you approve them.",
+    "setting_auto_hint": "Clubs people start when they sign up go live straight away. You still appoint their admins.",
+    "setting_approval_saved": "New clubs will wait for your approval",
+    "setting_auto_saved": "New clubs will join automatically"
   },
   "teams": {
     "title": "Teams",
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "{n} claims waiting on you",
     "claims_waiting_few": "{n} claims waiting on you",
     "claims_waiting_many": "{n} claims waiting on you",
-    "claims_waiting_other": "{n} claims waiting on you"
+    "claims_waiting_other": "{n} claims waiting on you",
+    "clubs_waiting_zero": "{n} new clubs waiting for approval",
+    "clubs_waiting_one": "{n} new club waiting for approval",
+    "clubs_waiting_two": "{n} new clubs waiting for approval",
+    "clubs_waiting_few": "{n} new clubs waiting for approval",
+    "clubs_waiting_many": "{n} new clubs waiting for approval",
+    "clubs_waiting_other": "{n} new clubs waiting for approval"
   },
   "admin_settings": {
     "title": "Claim voting rules",

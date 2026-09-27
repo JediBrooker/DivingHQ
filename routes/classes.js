@@ -135,10 +135,13 @@ module.exports = function createClassesRouter({ pool, verifyToken, requireClubAd
       // through each club endpoint, without this the SPA never shows the
       // Manage tab because they hold no club_admins rows). Labelled with the
       // federation since a platform operator sees clubs across all orgs.
+      // Clubs still waiting on their federation have nothing to manage
+      // (requireClubAdminOnly answers 409 club_pending), so they're left out.
       const r = req.user.is_system_admin
         ? await pool.query(
             `SELECT cl.id, cl.name || ' — ' || o.name AS name
                FROM clubs cl JOIN organisations o ON o.id = cl.org_id
+              WHERE cl.status = 'active'
               ORDER BY lower(o.name), lower(cl.name)`,
           )
         : await pool.query(

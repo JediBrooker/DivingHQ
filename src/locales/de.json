@@ -78,7 +78,10 @@
       "failed": "Registrierung fehlgeschlagen",
       "success": "Registrierung erfolgreich. Bitte bestätigen Sie vor der Anmeldung den Link in Ihrer E-Mail.",
       "new_club_placeholder": "z. B. Sydney Springboard",
-      "short_code_placeholder": "z. B. SYD"
+      "short_code_placeholder": "z. B. SYD",
+      "club_needs_approval": "{org} genehmigt neue Vereine, bevor sie freigeschaltet werden. Wir fragen dort nach, sobald Sie Ihre E-Mail-Adresse bestätigt haben, und bis dahin können Sie sich anmelden und springen.",
+      "club_joins_now": "Neue Vereine treten {org} sofort bei. {org} ernennt die Admins jedes Vereins.",
+      "success_club_pending": "{club} wartet auf die Genehmigung durch {org}. Dort sieht man ihn, sobald Sie Ihre E-Mail-Adresse bestätigt haben, und wir benachrichtigen Sie per E-Mail über die Entscheidung."
     },
     "register_org": {
       "title": "Organisation registrieren",
@@ -450,7 +453,12 @@
       "quiet": "Alles ruhig, nichts ausstehend.",
       "pill_urgent": "schließt bald",
       "pill_overdue": "überfällig",
-      "chip_aria_tab": "{title}. Öffnet die zugehörige Registerkarte in dieser Übersicht."
+      "chip_aria_tab": "{title}. Öffnet die zugehörige Registerkarte in dieser Übersicht.",
+      "chip_clubs": "Neue Vereine",
+      "clubs_pending_meta": "Unter Vereine genehmigen oder ablehnen",
+      "chip_my_club": "Verein wartet auf Genehmigung",
+      "my_club_pending": "{club} wartet auf die Genehmigung durch {org}",
+      "my_club_pending_meta": "Sie können so lange springen. Wir benachrichtigen Sie per E-Mail über die Entscheidung."
     },
     "getting_started": {
       "title": "Legen Sie mit {club} los",
@@ -652,8 +660,8 @@
       },
       "club_admin": {
         "name": "Vereinsadmin",
-        "desc": "Sie führen Ihren Verein. Wo der Verband Ihres Landes noch nicht auf DivingHQ ist, richtet der Verein seine Wettkämpfe selbst aus: anlegen, aus dem <strong>Kontrollraum</strong> steuern und die Rollenanfragen Ihrer Mitglieder genehmigen. Unter einem Verband ernennt dieser Sie.",
-        "step_1": "Registrieren Sie sich, wählen Sie Ihr Land und legen Sie Ihren Verein an, Sie werden sein erster Admin",
+        "desc": "Sie führen Ihren Verein. Wo der Verband Ihres Landes noch nicht auf DivingHQ ist, richtet der Verein seine Wettkämpfe selbst aus: anlegen, aus dem <strong>Kontrollraum</strong> steuern und die Rollenanfragen Ihrer Mitglieder genehmigen. Unter einem Verband genehmigt dieser Ihren neuen Verein und kann Sie zum Admin machen.",
+        "step_1": "Registrieren Sie sich, wählen Sie Ihr Land und legen Sie Ihren Verein an; Sie werden sein erster Admin (unter einem Verband, sobald dieser den Verein genehmigt)",
         "step_2": "Öffnen Sie den <strong>Wettkampf-Manager</strong> und legen Sie einen Wettkampf Ihres Vereins an",
         "step_3": "Genehmigen Sie auf <strong>Mein Verein</strong> Beitrittsanfragen und Mitglieder, die springen, werten oder trainieren möchten",
         "step_4": "Am Wettkampftag steuern Sie die Wertung aus dem <strong>Kontrollraum</strong>",
@@ -676,7 +684,8 @@
         "step_2": "Gehen Sie den <strong>Einrichtungsassistenten</strong> durch — Vereine, Einladungen, erster Wettbewerb",
         "step_3": "Vergeben Sie Rollen in der <strong>Benutzerverwaltung</strong>, wenn Ihr Team wächst",
         "step_4": "Prüfen Sie das <strong>Audit-Log</strong> auf verbandsweite Aktivitäten",
-        "cta": "Schnellstart ↗"
+        "cta": "Schnellstart ↗",
+        "step_5": "Genehmigen oder lehnen Sie neue Vereine unter <strong>Vereine</strong> ab, oder lassen Sie sie automatisch beitreten"
       },
       "spectator": {
         "name": "Zuschauer",
@@ -881,7 +890,9 @@
       "claim_review": "Anspruch",
       "claim_decided": "Anspruch",
       "club_change": "Vereinswechsel",
-      "region_request": "Region"
+      "region_request": "Region",
+      "club_pending": "Neuer Verein",
+      "club_decision": "Verein"
     }
   },
   "compare": {
@@ -1284,7 +1295,33 @@
     "col_billing": "Abrechnung",
     "col_actions": "Aktionen",
     "admins_button": "Vereinsadmins",
-    "rename": "Umbenennen"
+    "rename": "Umbenennen",
+    "pending_title": "Wartet auf Genehmigung",
+    "pending_intro": "Vereine, die bei der Registrierung in Ihrem Land gegründet wurden. Bis Sie entscheiden, erscheinen sie in keiner Vereinsliste und können keine Wettkämpfe ausrichten.",
+    "stat_pending": "Wartend",
+    "pending_started_by": "Gegründet von {name}",
+    "pending_waiting_since": "Wartet seit {date}",
+    "pending_similar": "Ähnelt {club}, der bereits auf DivingHQ ist",
+    "email_verified": "E-Mail bestätigt",
+    "approve": "Genehmigen",
+    "reject": "Ablehnen",
+    "approve_title": "Verein genehmigen",
+    "approve_body": "Korrigieren Sie zuerst, was nötig ist. Nach der Genehmigung erscheint der Verein in den Vereinslisten und kann Wettkämpfe ausrichten.",
+    "approve_make_admin": "{name} zum Admin des Vereins machen",
+    "reject_title": "Verein ablehnen",
+    "reject_body": "Dadurch wird {club} gelöscht. {name} behält das Konto und erhält eine E-Mail mit Ihrer Begründung.",
+    "reject_reason": "Begründung (optional, geht an die Gründerin oder den Gründer)",
+    "reject_move_to": "Mitglieder verschieben nach",
+    "reject_move_none": "Nirgendwohin, ohne Verein lassen",
+    "approved_toast": "{club} genehmigt",
+    "rejected_toast": "{club} abgelehnt",
+    "setting_label": "Neue Vereine aus der Registrierung",
+    "setting_approval": "Auf meine Genehmigung warten",
+    "setting_auto": "Automatisch beitreten",
+    "setting_approval_hint": "Vereine, die bei der Registrierung gegründet werden, warten hier, bis Sie sie genehmigen.",
+    "setting_auto_hint": "Vereine, die bei der Registrierung gegründet werden, sind sofort aktiv. Die Admins ernennen weiterhin Sie.",
+    "setting_approval_saved": "Neue Vereine warten auf Ihre Genehmigung",
+    "setting_auto_saved": "Neue Vereine treten automatisch bei"
   },
   "teams": {
     "title": "Mannschaften",
@@ -1581,7 +1618,10 @@
       "member_unassigned_one": "{n} Mitglied entfernt",
       "member_unassigned_many": "{n} Mitglieder entfernt",
       "members_count": "{n} Mitglieder",
-      "events_count": "{n} Wettbewerbe"
+      "events_count": "{n} Wettbewerbe",
+      "label_club_approved": "Verein genehmigt",
+      "label_club_rejected": "Verein abgelehnt",
+      "label_org_club_settings_changed": "Einstellung für neue Vereine geändert"
     }
   },
   "payments": {
@@ -2218,7 +2258,13 @@
     "claims_waiting_two": "{n} Ansprüche warten auf Sie",
     "claims_waiting_few": "{n} Ansprüche warten auf Sie",
     "claims_waiting_many": "{n} Ansprüche warten auf Sie",
-    "claims_waiting_other": "{n} Ansprüche warten auf Sie"
+    "claims_waiting_other": "{n} Ansprüche warten auf Sie",
+    "clubs_waiting_zero": "{n} neue Vereine warten auf Genehmigung",
+    "clubs_waiting_one": "{n} neuer Verein wartet auf Genehmigung",
+    "clubs_waiting_two": "{n} neue Vereine warten auf Genehmigung",
+    "clubs_waiting_few": "{n} neue Vereine warten auf Genehmigung",
+    "clubs_waiting_many": "{n} neue Vereine warten auf Genehmigung",
+    "clubs_waiting_other": "{n} neue Vereine warten auf Genehmigung"
   },
   "admin_settings": {
     "title": "Abstimmungsregeln für Ansprüche",
