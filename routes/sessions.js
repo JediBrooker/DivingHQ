@@ -1321,9 +1321,14 @@ module.exports = function createSessionsRouter({
       // would inherit any DST offset between the source and target
       // date if one of them straddled a transition, so reading both as
       // YYYY-MM-DD strings keeps the arithmetic at calendar-day grain.
-      const srcDateStr = (src.session_date instanceof Date
-        ? src.session_date.toISOString().slice(0, 10)
-        : String(src.session_date).slice(0, 10));
+      // node-pg hands a DATE back as local midnight, so read it with the
+      // local getters. toISOString() converts to UTC first, which on a
+      // host ahead of UTC (AEST) is the previous day, and the clone
+      // landed a day further on than asked.
+      const d = src.session_date;
+      const srcDateStr = d instanceof Date
+        ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+        : String(d).slice(0, 10);
       const srcDay = Date.UTC(
         Number(srcDateStr.slice(0, 4)),
         Number(srcDateStr.slice(5, 7)) - 1,

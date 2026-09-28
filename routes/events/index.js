@@ -37,6 +37,7 @@ const {
   stampDiveListLock,
   refuseIfScoresExist,
 } = require("./stage-helpers");
+const { canSeeEvent } = require("./visibility");
 
 // Migration 039: shape-check operator-prescribed round_dives. We
 // only validate structure here (round numbering 1..N contiguous,
@@ -989,21 +990,16 @@ module.exports = function createEventsRouter({
           if (status === "Live")      notifyEventLive(event).catch(() => {});
         }
 
-        // Real-time push for the dashboard pulse strip. Emit
-        // globally so any connected dashboard tab can refetch
-        // its pulse data and update the LIVE / UPCOMING /
-        // COMPLETED counts immediately. Cheap broadcast (no
-        // sensitive data); recipients filter by what they're
-        // authorised to see via their existing API gates.
-        if (io && typeof io.emit === "function") {
-          try {
-            io.emit("event_status_changed", {
-              event_id: event.id,
-              org_id:   event.org_id,
-              from:     previousStatus,
-              to:       status,
-            });
-          } catch (_e) { /* ignore, best-effort */ }
+        // Real-time push for the dashboard pulse strip, so a
+        // dashboard tab refetches its LIVE / UPCOMING / COMPLETED
+        // counts straight away. It goes to the people whose pulse
+        // lists this event (the host org, federations on its
+        // participating list, sysadmins) and anyone watching the
+        // event itself. It used to be io.emit to every socket on the
+        // box, anonymous ones too, private and rehearsal events
+        // included. Best-effort, never blocks the response.
+        if (io && typeof io.to === "function") {
+          notifyStatusFlip(event, previousStatus, status).catch(() => {});
         }
 
         // Audit the status flip. Specific actions for the
@@ -1096,6 +1092,23 @@ module.exports = function createEventsRouter({
     }
   });
 
+  async function notifyStatusFlip(event, from, to) {
+    const guests = await pool.query(
+      "SELECT org_id FROM event_participating_orgs WHERE event_id = $1",
+      [event.id],
+    );
+    const rooms = [
+      `event:${event.id}`, "sysadmins", `org:${event.org_id}`,
+      ...guests.rows.map((g) => `org:${g.org_id}`),
+    ];
+    io.to(rooms).emit("event_status_changed", {
+      event_id: event.id,
+      org_id:   event.org_id,
+      from,
+      to,
+    });
+  }
+
   // -------------------------------------------------------------
   // GET /api/events/:id/round-dives: operator-prescribed round
   // dives for a single event (migration 039). Returned as an
@@ -1103,28 +1116,23 @@ module.exports = function createEventsRouter({
   // the diver portal can render the locked rows without a second
   // round-trip. Empty array when no rows exist.
   //
-  // Public for Live/Completed events; authed scope for Upcoming
-  // (mirrors the GET /api/events visibility contract, operators
-  // shouldn't have their pre-meet bulletin leaked).
+  // Public for Live/Completed events; before that, the host org, a
+  // sysadmin, or a federation on the participating list (the same
+  // people GET /api/events lists it for, see ./visibility.js).
   // -------------------------------------------------------------
   router.get("/api/events/:id/round-dives", optionalAuth, async (req, res) => {
     try {
       // optionalAuth: a bad/revoked/suspended token reads as
       // anonymous, same floor as the old inline peek, but the
       // token-version / deleted_at / suspended_at checks now apply.
-      const callerOrgId = req.user?.org_id || null;
-      const callerIsSys = !!req.user?.is_system_admin;
       const ev = await pool.query(
-        "SELECT org_id, status FROM events WHERE id = $1",
+        "SELECT id, org_id, status FROM events WHERE id = $1",
         [req.params.id],
       );
-      if (!ev.rows.length) {
-        return res.status(404).json({ error: "Event not found" });
-      }
-      const evRow = ev.rows[0];
-      const isAuthScope =
-        callerIsSys || (callerOrgId && callerOrgId === evRow.org_id);
-      if (!isAuthScope && !["Live", "Completed"].includes(evRow.status)) {
+      // Pre-meet, a visiting federation on the participating list sees
+      // it too: its divers can enter, and without the prescribed slots
+      // their list just fails validation with no hint which dive.
+      if (!ev.rows.length || !(await canSeeEvent(pool, ev.rows[0], req.user))) {
         return res.status(404).json({ error: "Event not found" });
       }
       const rows = await pool.query(
@@ -1193,6 +1201,13 @@ module.exports = function createEventsRouter({
          SELECT competitor_id,
                 SUM(round_total) AS total
          FROM dive_totals
+         /* Only divers still in the stage. A diver withdrawn after
+            scoring (coach withdraw marks every row) keeps their scores
+            but mustn't take a place in the next stage, WA 4.1.12: the
+            next-ranked diver goes through instead. */
+         WHERE competitor_id IN (
+           SELECT competitor_id FROM competitor_dive_lists
+            WHERE event_id = $1 AND withdrawn_at IS NULL AND is_reserve = FALSE)
          GROUP BY competitor_id
        ),
        ranked AS (
@@ -1202,6 +1217,10 @@ module.exports = function createEventsRouter({
        )
        SELECT r.competitor_id, r.total, r.rnk,
               u.full_name, u.username,
+              /* A synchro pair is one row per round, lead in
+                 competitor_id, so the partner rides along here and
+                 into the next stage. Same on every round. */
+              MIN(cdl.partner_id::text)::uuid AS partner_id,
               MIN(cdl.display_order) AS parent_display_order,
               array_agg(json_build_object(
                 'round_number', cdl.round_number,
@@ -1306,7 +1325,7 @@ module.exports = function createEventsRouter({
       try {
         await client.query("BEGIN");
         const parentRes = await client.query(
-          "SELECT id, event_format, status, total_rounds FROM events WHERE id = $1",
+          "SELECT id, event_format, event_type, status, total_rounds FROM events WHERE id = $1",
           [req.params.id],
         );
         if (!parentRes.rows.length) {
@@ -1317,6 +1336,15 @@ module.exports = function createEventsRouter({
         if (!['preliminary', 'semifinal'].includes(parent.event_format)) {
           await client.query("ROLLBACK");
           return res.status(400).json({ error: "Only preliminary or semifinal events advance" });
+        }
+        // The ranking below is per diver. For a team event that would
+        // pull individual members through and drop the team they dive
+        // for, so refuse rather than seed a final of loose divers.
+        if (parent.event_type === 'team') {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            error: "Team events can't be advanced diver by diver. Enter the teams on the next stage from its team lists.",
+          });
         }
         if (parent.status !== 'Completed') {
           await client.query("ROLLBACK");
@@ -1356,9 +1384,13 @@ module.exports = function createEventsRouter({
         const primaries = boundaryRank == null
           ? ranked.slice(0, topN)
           : ranked.filter((r) => Number(r.rnk) <= Number(boundaryRank));
-        const reserveRows = ranked
-          .filter((r) => boundaryRank == null || Number(r.rnk) > Number(boundaryRank))
-          .slice(0, resN);
+        // No boundary means the field is smaller than top_n and every
+        // diver is already a primary, so there's nobody left to hold in
+        // reserve. Filtering on a null boundary used to pick the same
+        // divers again and the second insert hit the unique key (500).
+        const reserveRows = boundaryRank == null
+          ? []
+          : ranked.filter((r) => Number(r.rnk) > Number(boundaryRank)).slice(0, resN);
 
         // Compute display_order for primaries per the chosen mode.
         // 'inherit': copy parent_display_order, then re-number 1..N
@@ -1426,6 +1458,7 @@ module.exports = function createEventsRouter({
           for (let r = 1; r <= childRounds; r++) {
             seedRows.push({
               competitor_id: diver.competitor_id,
+              partner_id: diver.partner_id || null,
               dive_id: prescribedByRound.has(r)
                 ? prescribedByRound.get(r)
                 : (byRound.get(r) || null),

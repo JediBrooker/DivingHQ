@@ -39,17 +39,19 @@ test("parseLockMinutes: the Super Final final's own floor and default", () => {
 test("insertDiveListRows: one INSERT, columns aligned, gaps as NULL / FALSE", async () => {
   const db = fakeDb();
   await insertDiveListRows(db, "ev-1", [
-    { competitor_id: "a", dive_id: "d1", round_number: 1, display_order: 2, group_number: 1 },
+    { competitor_id: "a", dive_id: "d1", round_number: 1, display_order: 2, group_number: 1, partner_id: "p" },
     { competitor_id: "b", dive_id: null, round_number: 1, is_reserve: true, reserve_position: 1 },
-    { competitor_id: "c", round_number: 2, display_order: undefined },
+    { competitor_id: "c", round_number: 2, display_order: undefined, team_id: "t" },
   ]);
   assert.equal(db.calls.length, 1);
   const { sql, params } = db.calls[0];
   assert.match(sql, /INSERT INTO competitor_dive_lists/);
-  assert.match(sql, /FROM UNNEST\(\$2::uuid\[\], \$3::uuid\[\], \$4::int\[\], \$5::int\[\],\s+\$6::int\[\], \$7::boolean\[\], \$8::int\[\]\)/);
+  assert.match(sql, /FROM UNNEST\(\$2::uuid\[\], \$3::uuid\[\], \$4::uuid\[\], \$5::uuid\[\], \$6::int\[\],\s+\$7::int\[\], \$8::int\[\], \$9::boolean\[\], \$10::int\[\]\)/);
   assert.deepEqual(params, [
     "ev-1",
     ["a", "b", "c"],          // competitor_id
+    ["p", null, null],        // partner_id, a synchro pair carried along
+    [null, null, "t"],        // team_id
     ["d1", null, null],       // dive_id
     [1, 1, 2],                // round_number
     [2, null, null],          // display_order

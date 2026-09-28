@@ -14,11 +14,13 @@
 //      writes NO competitor_dive_lists rows, and fires a push.
 //   2. Reciprocal invite: when the OTHER side already invited us,
 //      the helper auto-confirms, pending row flipped to 'accepted'
-//      and competitor_dive_lists rows inserted for both divers.
+//      and the pair's competitor_dive_lists rows inserted, one per
+//      round with the inviter as competitor and us as partner.
 //   3. Self-pairing (partner_id === competitor_id) is rejected
 //      before any SQL runs.
 //   4. writeSynchroBothSides (used by the accept endpoint) emits
-//      one UPSERT per dive PER diver (i.e. 2N inserts for N dives).
+//      one UPSERT per dive for the pair (N inserts for N dives, no
+//      mirror row), and clears the divers' other unscored entries.
 //   5. Decline path lives in the route, we cover it via direct SQL
 //      assertions on the fake client. The helper itself isn't
 //      involved on decline, so this test just pins the SQL we
@@ -156,7 +158,7 @@ test("fresh synchro submit creates a pending row and skips competitor_dive_lists
 // --------------------------------------------------------------------
 // 2. Auto-confirm path: reciprocal pending row from the other side.
 // --------------------------------------------------------------------
-test("reciprocal pending row triggers auto-confirm with dive-list writes for both", async () => {
+test("reciprocal pending row triggers auto-confirm with one dive-list row per round", async () => {
   const reciprocalDives = [
     { dive_id: "dive-aaa", round_number: 1 },
     { dive_id: "dive-bbb", round_number: 2 },
@@ -185,18 +187,17 @@ test("reciprocal pending row triggers auto-confirm with dive-list writes for bot
   const update = client.calls.find((c) => /UPDATE pending_partner_pairings/i.test(c.sql));
   assert.ok(update, "Expected the pending row to be flipped to accepted");
 
-  // Two rows per dive (one per side), so 4 inserts for 2 dives.
+  // One row per dive for the pair: a mirror row would put the pair in
+  // the Control Room queue twice.
   const cdlInserts = client.calls.filter(
     (c) => /INSERT INTO competitor_dive_lists/i.test(c.sql),
   );
-  assert.equal(cdlInserts.length, 4, "Expected 2 dives × 2 divers = 4 dive-list inserts");
-
-  // First insert is the requester's row (partner-1 in our shape).
-  assert.equal(cdlInserts[0].params[0], "partner-1");
-  assert.equal(cdlInserts[0].params[1], "diver-B");
-  // Second insert mirrors it for the accepter.
-  assert.equal(cdlInserts[1].params[0], "diver-B");
-  assert.equal(cdlInserts[1].params[1], "partner-1");
+  assert.equal(cdlInserts.length, 2, "Expected one row per dive for the pair");
+  for (const ins of cdlInserts) {
+    // The requester (partner-1 in our shape) leads, we're the partner.
+    assert.equal(ins.params[0], "partner-1");
+    assert.equal(ins.params[1], "diver-B");
+  }
 
   // Push fires at the original requester, announcing confirmation.
   assert.equal(push.calls.length, 1);
@@ -242,7 +243,7 @@ test("self-pairing is rejected before any SQL fires the partner check", async ()
 // 4. writeSynchroBothSides (re-exported), driven by the accept route.
 //    For N dives we expect 2N UPSERTs into competitor_dive_lists.
 // --------------------------------------------------------------------
-test("writeSynchroBothSides issues 2 inserts per dive (one per diver)", async () => {
+test("writeSynchroBothSides writes one row per dive for the pair", async () => {
   const client = makeFakeClient([]);
   const dives = [
     { dive_id: "dive-aaa", round_number: 1 },
@@ -258,19 +259,18 @@ test("writeSynchroBothSides issues 2 inserts per dive (one per diver)", async ()
   });
 
   const inserts = client.calls.filter((c) => /INSERT INTO competitor_dive_lists/i.test(c.sql));
-  assert.equal(inserts.length, 6, "Expected 3 dives × 2 divers = 6 inserts");
+  assert.equal(inserts.length, 3, "Expected one insert per dive");
+  assert.deepEqual(inserts.map((i) => [i.params[0], i.params[1], i.params[4]]),
+    [["diver-A", "diver-B", 1], ["diver-A", "diver-B", 2], ["diver-A", "diver-B", 3]]);
 
-  // First two inserts are for round 1: requester then partner.
-  assert.equal(inserts[0].params[0], "diver-A");
-  assert.equal(inserts[0].params[1], "diver-B");
-  assert.equal(inserts[0].params[4], 1);
-  assert.equal(inserts[1].params[0], "diver-B");
-  assert.equal(inserts[1].params[1], "diver-A");
-  assert.equal(inserts[1].params[4], 1);
-
-  // Stale-row cleanup ran first.
-  const del = client.calls.find((c) => /DELETE FROM competitor_dive_lists/i.test(c.sql));
-  assert.ok(del, "Expected the stale-rounds DELETE before the upserts");
+  // Stale-row cleanup ran first: the pair's ghost rounds, then the
+  // divers' other entries, which never touches a scored row.
+  const firstInsert = client.calls.findIndex((c) => /INSERT INTO competitor_dive_lists/i.test(c.sql));
+  const dels = client.calls.slice(0, firstInsert).filter((c) => /DELETE FROM competitor_dive_lists/i.test(c.sql));
+  assert.equal(dels.length, 2, "Expected both cleanup DELETEs before the upserts");
+  assert.equal(dels[1].params[1], "diver-B", "the accepter's own rows go");
+  assert.deepEqual(dels[1].params[2], ["diver-A", "diver-B"]);
+  assert.match(dels[1].sql, /NOT EXISTS[\s\S]*FROM scores/i);
 });
 
 // --------------------------------------------------------------------

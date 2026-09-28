@@ -32,6 +32,9 @@ const { recordAudit, auditFromReq } = require("../lib/audit");
 const createIdempotency = require("../lib/idempotency");
 const { perDiveSelect, eventRepCodesCte } = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
+const { canSeeEvent } = require("./events/visibility");
+
+const EVENT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Mirrors init.sql's dive_position enum. Heads up: pre-validating
 // each CSV cell keeps a bad value from ever reaching the
@@ -126,11 +129,16 @@ module.exports = function createControlRoomRouter({
   // keep working; without it the gates are the plain role check.
   requireRoleOrEventDelegate,
   requireTotpForPrivilegedRoles,
+  optionalAuth,
 }) {
   if (!pool || !ensureEventPreMeet) {
     throw new Error("createControlRoomRouter requires { pool, ensureEventPreMeet, … }");
   }
   const router = express.Router();
+  // Decodes a token when there is one; the history route needs to know
+  // who's asking for an event that isn't public yet. Mounts without it
+  // (test harnesses) read every caller as anonymous.
+  const maybeAuth = optionalAuth || ((_req, _res, next) => next());
 
   // Tuple repeated 7× across the original section. Build it once
   // here so a typo can't drift one route's role gate.
@@ -408,7 +416,10 @@ module.exports = function createControlRoomRouter({
                    scoring queue, so it must never multiply rows. */
                 EXISTS (
                   SELECT 1 FROM payments p
-                   WHERE p.payer_user_id = cdl.competitor_id
+                   /* Whose entry it is: subject_user_id when a guardian
+                      paid for a dependent (the parent is the payer),
+                      otherwise the diver who paid for themselves. */
+                   WHERE COALESCE(p.subject_user_id, p.payer_user_id) = cdl.competitor_id
                      AND p.subject_type = 'event_entry'
                      AND p.status = 'paid'
                      /* per-event entry OR a meet-level registration
@@ -1150,12 +1161,23 @@ module.exports = function createControlRoomRouter({
   );
 
   // -------------------------------------------------------------
-  // GET /api/events/:id/history: public dive-by-dive recap. Used
-  // by the live scoreboard and the post-meet recap. No auth needed,
-  // the data is already public via the scoreboard endpoint.
+  // GET /api/events/:id/history: dive-by-dive recap. Used by the
+  // live scoreboard, the post-meet recap and the Control Room. Public
+  // once the event is Live or Completed, the same as the scoreboard.
+  // Before that (an event flipped back to Upcoming after a dry run
+  // keeps its scores) only the host, a sysadmin or a participating
+  // federation sees it; this used to hand the try-out's judge scores
+  // to anyone who asked.
   // -------------------------------------------------------------
-  router.get("/api/events/:id/history", async (req, res) => {
+  router.get("/api/events/:id/history", maybeAuth, async (req, res) => {
+    if (!EVENT_ID_RE.test(String(req.params.id))) {
+      return res.status(400).json({ error: "Invalid event id" });
+    }
     try {
+      const ev = await pool.query("SELECT id, org_id, status FROM events WHERE id = $1", [req.params.id]);
+      if (!ev.rows.length || !(await canSeeEvent(pool, ev.rows[0], req.user))) {
+        return res.status(404).json({ error: "Event not found" });
+      }
       // Dive-by-dive scope: d.dd is a grouping column, so it
       // feeds the UDF directly (no MAX() wrapper).
       // Rep codes come from the reps CTE, once per person rather than

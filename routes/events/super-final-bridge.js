@@ -33,6 +33,9 @@ const {
 } = require("../../lib/super-final-helpers");
 const { perDivePointsCte } = require("../../lib/scoring-sql");
 const { insertDiveListRows } = require("./stage-helpers");
+// This endpoint is public (no auth): a club still waiting on its
+// federation stays off it, the same as the scoreboard and recap.
+const { PUBLIC_CLUB_JOIN } = require("../../lib/club-approvals");
 
 // World Aquatics Art 4.1.5 / Diving World Cup §3.1.2: within a Super-
 // Final tier (finalists at positions 1-4, SF non-finalists 5-6, H2H
@@ -277,7 +280,7 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         await client.query("BEGIN");
 
         const evRes = await client.query(
-          `SELECT id, event_format, status, meet_id FROM events WHERE id = $1`,
+          `SELECT id, event_format, status, meet_id, gender FROM events WHERE id = $1`,
           [eventId],
         );
         if (!evRes.rows.length) {
@@ -386,9 +389,14 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
           });
         }
 
-        // Verify replacement is in the meet's synchro pool. We
-        // do this by checking they're on a synchro_pair event
-        // at the same meet.
+        // Verify replacement is in the meet's synchro pool: on a
+        // synchro_pair event of the H2H's gender at the same meet,
+        // as either diver of the pair. The pool lists both divers,
+        // but a pair is one row a round with the second diver in
+        // partner_id, so matching competitor_id alone refused the
+        // partner. The gender filter is the one the pool has (Audit
+        // Strong-5); without it a direct call could put a Male
+        // synchro diver into a Female H2H.
         if (!ev.meet_id) {
           await client.query("ROLLBACK");
           return res.status(400).json({
@@ -401,14 +409,15 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
              JOIN events e ON e.id = cdl.event_id
             WHERE e.meet_id = $1
               AND e.event_type = 'synchro_pair'
-              AND cdl.competitor_id = $2
+              AND e.gender = $3
+              AND (cdl.competitor_id = $2 OR cdl.partner_id = $2)
             LIMIT 1`,
-          [ev.meet_id, replacement_competitor_id],
+          [ev.meet_id, replacement_competitor_id, ev.gender],
         );
         if (!synchroCheckRes.rows.length) {
           await client.query("ROLLBACK");
           return res.status(400).json({
-            error: "Replacement is not on any synchro_pair event at this meet",
+            error: `Replacement is not on any ${ev.gender} synchro_pair event at this meet`,
           });
         }
 
@@ -559,12 +568,14 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
                FROM per_dive
               GROUP BY competitor_id
            )
-           SELECT cdl.competitor_id, u.full_name, o.country_code, cl.name AS club_name,
+           SELECT cdl.competitor_id, u.full_name,
+                  event_rep_code($1, cdl.competitor_id, o.country_code) AS country_code,
+                  cl.name AS club_name,
                   COALESCE(MAX(pc.total), 0) AS total
              FROM competitor_dive_lists cdl
              JOIN users u ON u.id = cdl.competitor_id
              JOIN organisations o ON o.id = u.org_id
-             LEFT JOIN clubs cl ON cl.id = u.club_id
+             ${PUBLIC_CLUB_JOIN}
              LEFT JOIN per_competitor pc ON pc.competitor_id = cdl.competitor_id
             WHERE cdl.event_id = $1
               AND cdl.withdrawn_at IS NULL
@@ -621,12 +632,13 @@ module.exports = function createSuperFinalBridgeRoutes({ pool, requireEventManag
         let loserMeta = new Map();
         if (loserIds.length) {
           const metaRes = await client.query(
-            `SELECT u.id, o.country_code, cl.name AS club_name
+            `SELECT u.id, event_rep_code($2, u.id, o.country_code) AS country_code,
+                    cl.name AS club_name
                FROM users u
                JOIN organisations o ON o.id = u.org_id
-               LEFT JOIN clubs cl ON cl.id = u.club_id
+               ${PUBLIC_CLUB_JOIN}
               WHERE u.id = ANY($1::uuid[])`,
-            [loserIds],
+            [loserIds, h2hId],
           );
           loserMeta = new Map(metaRes.rows.map((r) => [r.id, r]));
         }

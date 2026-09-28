@@ -21,6 +21,7 @@
 
 const express = require("express");
 const { recordAudit, auditFromReq } = require("../lib/audit");
+const { legacyDdCapError } = require("../lib/dive-list-submit");
 
 // Every route on an existing team checks it exists and belongs to the
 // caller's org (sysadmins anywhere) first. requireMeetEditor only
@@ -143,13 +144,16 @@ module.exports = function createTeamsRouter({
       }
     }
 
+    // Each member's own list: round rules and the DD cap are per diver,
+    // not summed across the team.
+    const grouped = new Map();
+    for (const d of rows) {
+      if (!grouped.has(d.competitor_id)) grouped.set(d.competitor_id, []);
+      grouped.get(d.competitor_id).push(d);
+    }
+
     if (event.round_rules) {
       const { validateDiveList } = require("../lib/round-rules");
-      const grouped = new Map();
-      for (const d of rows) {
-        if (!grouped.has(d.competitor_id)) grouped.set(d.competitor_id, []);
-        grouped.get(d.competitor_id).push(d);
-      }
       for (const list of grouped.values()) {
         const enriched = list.map((d) => {
           const dir = okMap.get(d.dive_id);
@@ -164,6 +168,15 @@ module.exports = function createTeamsRouter({
         if (!check.valid) {
           throw httpErr(400, "Dive list violates the event's round rules", check.errors);
         }
+      }
+    } else {
+      // The older flat voluntary DD cap (dd_limit_rounds /
+      // dd_limit_value). The diver portal and the coach path enforce
+      // it, a team sheet skipped it, so the same list got in one way
+      // and was refused the other. Same helper, once per member.
+      for (const list of grouped.values()) {
+        const capErr = legacyDdCapError(event, list, okMap);
+        if (capErr) throw capErr;
       }
     }
 

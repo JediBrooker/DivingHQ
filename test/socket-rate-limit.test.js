@@ -50,7 +50,7 @@ function makeHarness(opts = {}) {
       io,
       pool: { query: async () => ({ rows: [] }) },
       JWT_SECRET: "test-secret",
-      socketRequireRole: () => {},
+      socketRequireRole: (socket) => !!socket.userId,
       socketCanManageEvent: async () => canManage(),
       isValidScore: () => true,
       isTokenVersionCurrent: async () => true,
@@ -208,4 +208,15 @@ test("meet_hold and meet_resume send the hold state to the venue board", async (
   assert.deepEqual(await c.ask("meet_resume", { event_id: VALID_ID }), { ok: true });
   assert.equal(h.venueCalls.at(-1).onHoldReason, null);
   assert.equal(meetHolds[VALID_ID], undefined);
+});
+
+test("a DB error in the Control Room authz check answers server_error instead of throwing", async () => {
+  const h = makeHarness({ canManage: () => { throw new Error("sorry, too many clients already"); } });
+  const c = await h.connect("198.51.100.22", token("user-dbdown"));
+  for (const ev of ["set_active_diver", "meet_hold", "referee_failed_dive"]) {
+    assert.deepEqual(await c.ask(ev, { event_id: VALID_ID, competitor_id: VALID_ID, round_number: 1 }),
+      { ok: false, error: "server_error" }, ev);
+  }
+  // A junk id never reaches the lookup at all.
+  assert.deepEqual(await c.ask("meet_hold", { event_id: "not-a-uuid" }), { ok: false, error: "unauthorized" });
 });

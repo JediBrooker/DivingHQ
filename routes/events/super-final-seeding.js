@@ -20,6 +20,7 @@ const {
   loadResolvedDiveOffs,
   compareSfFinalists,
   diveOffPairKey,
+  sameTotal,
 } = require("../../lib/super-final-helpers");
 const { perDivePointsCte } = require("../../lib/scoring-sql");
 const {
@@ -114,6 +115,12 @@ module.exports = function createSuperFinalSeedingRoutes({
          SELECT competitor_id,
                 SUM(round_total) AS total
          FROM dive_totals
+         /* A diver who withdrew from the Stop-1 stage keeps their
+            scores but can't be seeded into the H2H, same rule as
+            advance. */
+         WHERE competitor_id IN (
+           SELECT competitor_id FROM competitor_dive_lists
+            WHERE event_id = $1 AND withdrawn_at IS NULL AND is_reserve = FALSE)
          GROUP BY competitor_id
        ),
        ranked AS (
@@ -131,7 +138,10 @@ module.exports = function createSuperFinalSeedingRoutes({
        )
        SELECT r.competitor_id, r.total, r.rnk,
               u.org_id, u.full_name, u.username,
-              o.country_code,
+              /* Shown in the bracket preview, so the meet's
+                 representation code (migration 090). The per-org cap
+                 still keys on org_id. */
+              event_rep_code($1, r.competitor_id, o.country_code) AS country_code,
               MIN(cdl.display_order) AS parent_display_order,
               array_agg(json_build_object(
                 'round_number', cdl.round_number,
@@ -935,7 +945,7 @@ module.exports = function createSuperFinalSeedingRoutes({
             .sort((a, b) => compareSfFinalists(a, b, sfDiveOffs));
           if (
             inGroup.length > 2 &&
-            inGroup[1].cumulative_total === inGroup[2].cumulative_total &&
+            sameTotal(inGroup[1].cumulative_total, inGroup[2].cumulative_total) &&
             !sfDiveOffs.get(diveOffPairKey(inGroup[1].competitor_id, inGroup[2].competitor_id))
           ) {
             unresolvedGroups.push(g);
@@ -1005,7 +1015,9 @@ module.exports = function createSuperFinalSeedingRoutes({
         // SF and F, change-of-dives must be made up to "5
         // minutes before the Final" → effective lock = NOW() +
         // (lock_minutes - 5), already folded into lockMin above.
-        const lockAtIso = await stampDiveListLock(client, ev.id, lockMin);
+        // The body's minimum is 5, so 0 here means the window has
+        // already closed: lock now, don't clear it.
+        const lockAtIso = await stampDiveListLock(client, ev.id, lockMin, { lockNowAtZero: true });
 
         await recordAudit(client, {
           ...auditFromReq(req),

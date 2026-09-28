@@ -362,10 +362,12 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
     // the ids, the SPA already has the full event row from
     // `events` and intersects.
     if (has("diver")) {
+      // partner_id too: a synchro pair is one row per round, and the
+      // partner is in the event as much as the lead.
       tasks.diver_event_ids = pool.query(
         `SELECT DISTINCT event_id
            FROM competitor_dive_lists
-          WHERE competitor_id = $1
+          WHERE (competitor_id = $1 OR partner_id = $1)
             AND withdrawn_at IS NULL
             AND is_reserve = FALSE`,
         [user.id],
@@ -379,7 +381,7 @@ module.exports = function createDashboardRouter({ pool, verifyToken }) {
       tasks.diver_reserve_event_ids = pool.query(
         `SELECT DISTINCT event_id, MIN(reserve_position) AS reserve_position
            FROM competitor_dive_lists
-          WHERE competitor_id = $1
+          WHERE (competitor_id = $1 OR partner_id = $1)
             AND withdrawn_at IS NULL
             AND is_reserve = TRUE
           GROUP BY event_id`,

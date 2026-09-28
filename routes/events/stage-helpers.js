@@ -18,29 +18,33 @@ function parseLockMinutes(raw, { def = 30, min = 0 } = {}) {
 }
 
 // Seed a stage's roster in one statement. `rows` are
-//   { competitor_id, dive_id, round_number, display_order,
-//     group_number, is_reserve, reserve_position }
+//   { competitor_id, partner_id, team_id, dive_id, round_number,
+//     display_order, group_number, is_reserve, reserve_position }
 // with anything left out written as NULL (is_reserve as FALSE), which
 // is what the per-stage inserts wrote explicitly or by column default
 // (group_number and reserve_position have none, is_reserve defaults to
-// FALSE). Rows go in in array order, so the per-row cdl_snapshot_rep
-// trigger sees them in the same order a row-at-a-time loop would.
+// FALSE). partner_id is how a synchro pair carries from stage to stage;
+// leaving it out seeded the pair's lead alone, and the partner's
+// representation snapshot (cdl_snapshot_rep) was never taken. Rows go
+// in in array order, so the per-row cdl_snapshot_rep trigger sees them
+// in the same order a row-at-a-time loop would.
 async function insertDiveListRows(db, eventId, rows) {
   if (!rows.length) return;
   const col = (key, empty = null) => rows.map((r) => r[key] ?? empty);
   await db.query(
     `INSERT INTO competitor_dive_lists
-       (event_id, competitor_id, dive_id, round_number,
+       (event_id, competitor_id, partner_id, team_id, dive_id, round_number,
         display_order, group_number, is_reserve, reserve_position)
-     SELECT $1::uuid, t.competitor_id, t.dive_id, t.round_number,
+     SELECT $1::uuid, t.competitor_id, t.partner_id, t.team_id, t.dive_id, t.round_number,
             t.display_order, t.group_number, t.is_reserve, t.reserve_position
-     FROM UNNEST($2::uuid[], $3::uuid[], $4::int[], $5::int[],
-                 $6::int[], $7::boolean[], $8::int[])
-       AS t(competitor_id, dive_id, round_number, display_order,
-            group_number, is_reserve, reserve_position)`,
+     FROM UNNEST($2::uuid[], $3::uuid[], $4::uuid[], $5::uuid[], $6::int[],
+                 $7::int[], $8::int[], $9::boolean[], $10::int[])
+       AS t(competitor_id, partner_id, team_id, dive_id, round_number,
+            display_order, group_number, is_reserve, reserve_position)`,
     [
       eventId,
-      col("competitor_id"), col("dive_id"), col("round_number"), col("display_order"),
+      col("competitor_id"), col("partner_id"), col("team_id"), col("dive_id"),
+      col("round_number"), col("display_order"),
       col("group_number"), col("is_reserve", false), col("reserve_position"),
     ],
   );
@@ -96,14 +100,20 @@ async function insertRoundDives(db, eventId, slots) {
 // stale value left by a prior advance/seed. Runs on the caller's
 // open transaction client. Returns the new lock as an ISO
 // string, or null when cleared.
-async function stampDiveListLock(client, eventId, lockMin) {
-  if (lockMin > 0) {
+//
+// `lockNowAtZero` is for a caller whose window has already run out
+// rather than one asking for no lock: seed-final takes 5 minutes off
+// the operator's figure (Appendix 3 §4.1), so their minimum of 5
+// comes out as 0 and means "lock now". Clearing the lock there let
+// finalists keep changing dives right up to the F.
+async function stampDiveListLock(client, eventId, lockMin, { lockNowAtZero = false } = {}) {
+  if (lockMin > 0 || lockNowAtZero) {
     const lockRes = await client.query(
       `UPDATE events
           SET dive_list_locks_at = NOW() + ($2::int || ' minutes')::interval
         WHERE id = $1
         RETURNING dive_list_locks_at`,
-      [eventId, lockMin],
+      [eventId, Math.max(0, lockMin)],
     );
     return lockRes.rows[0]?.dive_list_locks_at?.toISOString() || null;
   }

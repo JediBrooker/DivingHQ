@@ -73,26 +73,40 @@ module.exports = function createScoreCorrectionRouter({
       const scoreErr = scoreBodyError(score, "Score");
       if (scoreErr) return res.status(400).json({ error: scoreErr });
       const newScore = Number(score);
+      // Read, update and audit in one transaction, with the score row
+      // locked, the same as every other score path: the audit row is
+      // durable iff the score is. This used to UPDATE on the pool and
+      // write the audit in a separate try that only logged a failure,
+      // so a correction could stick with no audit record, and two
+      // operators correcting the same score at once both logged the
+      // same old_score.
+      let existing, oldScore;
+      const client = await pool.connect();
       try {
-        const prior = await pool.query(
-          "SELECT id, score, event_id, competitor_id, judge_id, round_number FROM scores WHERE id = $1",
+        await client.query("BEGIN");
+        const prior = await client.query(
+          `SELECT id, score, event_id, competitor_id, judge_id, round_number
+             FROM scores WHERE id = $1 FOR UPDATE`,
           [req.params.id],
         );
         if (!prior.rows.length) {
+          await client.query("ROLLBACK");
           return res.status(404).json({ error: "Score not found" });
         }
-        const existing = prior.rows[0];
+        existing = prior.rows[0];
 
         // Org guard: the score must belong to an event in the
         // caller's org. sysadmin can correct scores in any org.
-        const ev = await pool.query(
+        const ev = await client.query(
           "SELECT org_id FROM events WHERE id = $1",
           [existing.event_id],
         );
         if (!ev.rows.length) {
+          await client.query("ROLLBACK");
           return res.status(404).json({ error: "Event not found" });
         }
         if (!req.user.is_system_admin && ev.rows[0].org_id !== req.user.org_id) {
+          await client.query("ROLLBACK");
           return res.status(403).json({ error: "Cannot correct scores in other organisations" });
         }
 
@@ -108,79 +122,87 @@ module.exports = function createScoreCorrectionRouter({
           // the meet. Falls back to the plain row check for old mounts.
           const ok = isEventDelegate
             ? await isEventDelegate(existing.event_id, req.user.id)
-            : (await pool.query(
+            : (await client.query(
                 "SELECT 1 FROM event_managers WHERE event_id = $1 AND user_id = $2",
                 [existing.event_id, req.user.id],
               )).rows.length > 0;
           if (!ok) {
+            await client.query("ROLLBACK");
             return res.status(403).json({
               error: "You are not a manager of this event",
             });
           }
         }
 
-        const oldScore = Number(existing.score);
+        oldScore = Number(existing.score);
         if (oldScore === newScore) {
+          await client.query("ROLLBACK");
           return res.json({ ok: true, unchanged: true });
         }
 
-        await pool.query("UPDATE scores SET score = $1 WHERE id = $2", [newScore, existing.id]);
-        try {
-          // The `reason` column was added in migration 018. Cap the
-          // free-text length so a malicious / accidentally-pasted
-          // multi-MB blob can't bloat the audit table.
-          const trimmedReason = typeof reason === "string"
-            ? reason.trim().slice(0, 500)
-            : null;
-          // No committedNow here: this path has never stamped
-          // server_committed_at (reported separately, not changed in
-          // passing).
-          await insertScoreAudit(pool, {
-            scoreId: existing.id, eventId: existing.event_id,
-            competitorId: existing.competitor_id, judgeId: existing.judge_id,
-            round: existing.round_number, action: "update",
-            oldScore, newScore,
-            actorId: req.user.id, ip: req.ip, userAgent: req.headers["user-agent"] || null,
-            reason: trimmedReason || null,
-          });
-        } catch (auditErr) {
-          console.error("[Score Correction Audit Skipped]", auditErr.message);
-        }
-
-        // Flush the cached scoreboard payload so the next
-        // re-pull rebuilds with the corrected score. Without this
-        // the broadcast below tells viewers to re-fetch but the
-        // first ~5s of those fetches would hit the stale cache.
-        if (scoreboardCache) scoreboardCache.invalidate(existing.event_id);
-
-        // Broadcast so live consumers re-pull standings. Spectators
-        // viewing the recap or live scoreboard will see the
-        // corrected total without a manual refresh.
-        io.to(`event:${existing.event_id}`).emit("score_corrected", {
-          event_id: existing.event_id,
-          competitor_id: existing.competitor_id,
-          round_number: existing.round_number,
-          score_id: existing.id,
-          old_score: oldScore,
-          new_score: newScore,
-          reason: reason || null,
-          actor_user_id: req.user.id,
+        await client.query("UPDATE scores SET score = $1 WHERE id = $2", [newScore, existing.id]);
+        // The `reason` column was added in migration 018. Cap the
+        // free-text length so a malicious / accidentally-pasted
+        // multi-MB blob can't bloat the audit table.
+        const trimmedReason = typeof reason === "string"
+          ? reason.trim().slice(0, 500)
+          : null;
+        await insertScoreAudit(client, {
+          scoreId: existing.id, eventId: existing.event_id,
+          competitorId: existing.competitor_id, judgeId: existing.judge_id,
+          round: existing.round_number, action: "update",
+          oldScore, newScore,
+          actorId: req.user.id, ip: req.ip, userAgent: req.headers["user-agent"] || null,
+          reason: trimmedReason || null, committedNow: true,
         });
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("[Score Correction Error]", err.message);
+        return res.status(500).json({ error: "Internal server error" });
+      } finally {
+        client.release();
+      }
 
-        // The dive's total moved, so its record books might have too:
-        // lowered below a record it set, or raised past one.
-        if (recomputeRecordKeys) {
+      // Everything below runs after COMMIT, so nobody is told about a
+      // correction that didn't stick.
+      //
+      // Flush the cached scoreboard payload so the next re-pull
+      // rebuilds with the corrected score. Without this the broadcast
+      // below tells viewers to re-fetch but the first ~5s of those
+      // fetches would hit the stale cache.
+      if (scoreboardCache) scoreboardCache.invalidate(existing.event_id);
+
+      // Broadcast so live consumers re-pull standings. Spectators
+      // viewing the recap or live scoreboard will see the corrected
+      // total without a manual refresh.
+      io.to(`event:${existing.event_id}`).emit("score_corrected", {
+        event_id: existing.event_id,
+        competitor_id: existing.competitor_id,
+        round_number: existing.round_number,
+        score_id: existing.id,
+        old_score: oldScore,
+        new_score: newScore,
+        reason: reason || null,
+        actor_user_id: req.user.id,
+      });
+
+      // The dive's total moved, so its record books might have too:
+      // lowered below a record it set, or raised past one. The
+      // correction itself is in by now, so a failure here is logged,
+      // not reported as a failed correction.
+      if (recomputeRecordKeys) {
+        try {
           await announceRecords({
             recomputeRecordKeys, io, scoreboardCache,
             eventId: existing.event_id, competitorId: existing.competitor_id, roundNumber: existing.round_number,
           });
+        } catch (err) {
+          console.error("[Score Correction] record replay failed", err.message);
         }
-
-        res.json({ ok: true, old_score: oldScore, new_score: newScore });
-      } catch (err) {
-        console.error("[Score Correction Error]", err.message);
-        res.status(500).json({ error: "Internal server error" });
       }
+
+      res.json({ ok: true, old_score: oldScore, new_score: newScore });
     },
   );
 

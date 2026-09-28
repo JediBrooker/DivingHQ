@@ -16,9 +16,9 @@ that's intentional, but every privileged event must call
 
 | Event | Payload | Sent when |
 |---|---|---|
-| `state_update`            | `{ event_id, diverName, country_code, club_name, club_code, diveCode, description, round_number, status, … }` | A diver becomes active in the Control Room, or a new client connects (rebroadcast on demand). |
-| `score_received`          | The full score-submit payload + `judge_id`, `judge_number` | A judge submits a score. Broadcast to everyone watching the meet. |
-| `score_rejected`          | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'maintenance' \| 'token_revoked' \| 'not_on_panel' \| 'event_not_live' \| 'bad_payload' \| 'bad_round' \| 'bad_score' \| 'rate_limited' \| 'server_error', message?: string }` | A submit_score from this socket failed validation. Sent only to the offending socket; the submit's ack carries the same `reason` as `error`. `maintenance` means the platform is in maintenance mode (non-sysadmins can't score until it's lifted; the judge's outbox keeps the mark, retries a few times, then holds it as failed for a manual resend). `bad_score` covers anything that isn't a number or numeric string in 0-10 half points, `null` and `""` included. |
+| `state_update`            | `{ event_id, diverName, country_code, club_name, club_code, diveCode, description, round_number, status, … }` | A diver becomes active in the Control Room (to room `event:<id>`), or in reply to `get_active_diver`. On connect, a signed-in socket also gets the current diver of each event it judges on (`event_judges`) or drives (a meet_manager / referee / org_admin role in the host org), all of them for a sysadmin; nobody else gets a replay. |
+| `score_received`          | The full score-submit payload + `judge_id`, `judge_number`; `score` is the value stored, which a referee Failed or cap call on the dive may have brought down | A judge submits a score. Broadcast to everyone watching the meet. |
+| `score_rejected`          | `{ reason: 'not_authenticated' \| 'insufficient_role' \| 'maintenance' \| 'token_revoked' \| 'not_on_panel' \| 'event_not_live' \| 'bad_payload' \| 'bad_round' \| 'bad_score' \| 'rate_limited' \| 'server_error', message?: string }` | A submit_score from this socket failed validation. Sent only to the offending socket; the submit's ack carries the same `reason` as `error`. `maintenance` means the platform is in maintenance mode (non-sysadmins can't score until it's lifted; the judge's outbox keeps the mark, retries a few times, then holds it as failed for a manual resend). `bad_score` covers anything that isn't a number or a plain numeric string in 0-10 half points, `null` and `""` included. |
 | `score_corrected`         | The new score row from `PUT /api/scores/:id` | A referee corrects a score via HTTP (the socket bus rebroadcasts so other operators see it live). |
 | `final_score_announced`   | Whatever the announcer sent | Announcer presses "Announce" in the Control Room. |
 | `referee_action_failed`   | `{ event_id, competitor_id, round_number, … }` | Referee marks a dive failed. |
@@ -33,6 +33,7 @@ that's intentional, but every privileged event must call
 | `schedule:block_updated`      | `{ meet_id, session_id, block_id?, created?, session_updated? }` | A Phase 3 manual edit landed (`PUT /api/blocks/:id`, `POST /api/sessions/:sessionId/blocks`, or `PUT /api/sessions/:id`). Other timeline tabs refetch `/sessions` and update inline. The broadcast is intentionally minimal; conflict details stay behind `/api/meets/:id/conflicts`. |
 | `schedule:block_deleted`      | `{ meet_id, session_id, block_id }` | A schedule block was deleted via `DELETE /api/blocks/:id`. Other tabs refetch the schedule. |
 | `schedule:session_duplicated` | `{ meet_id, source_session_id, session_id }` | A session was cloned forward via `POST /api/sessions/:id/duplicate`. Other tabs refetch `/sessions`. |
+| `event_status_changed`        | `{ event_id, org_id, from, to }` | `PUT /api/events/:id/status` flipped an event. Sent to rooms `event:<id>`, `org:<host org>`, `org:<each participating org>` and `sysadmins` (every signed-in socket joins `org:<its org>`, and a sysadmin also `sysadmins`, on connect), the people whose dashboard pulse lists the event. The dashboard refetches its pulse. |
 | `role_request_created`        | `{ org_id, requested_role }` | Someone asked for a role: at signup (`POST /api/auth/register`) or later from their profile (`POST /api/role-requests`). The dashboard's pulse strip refetches its pending count. Public broadcast, no names; who may see the request is decided by the REST fetch. |
 | `schedule:shifted`            | `{ meet_id, shifted_block_ids: [...], delta_seconds }` | Phase 4 live re-flow committed — `POST /api/blocks/reflow` shifted every listed block forward by `delta_seconds` and appended a `schedule_block_shifts` ledger row per block. Timeline tabs refetch `/api/meets/:id/sessions` so the new windows appear. Public broadcast, with no personnel labels. |
 
@@ -47,21 +48,31 @@ event: an `event_managers` row, or admin of the club hosting the event's
 meet (`meets.host_club_id`, migration 087). That second path is how a club
 in a country with no federation on DivingHQ runs its own meets.
 
+Every async handler runs through a small wrapper in `routes/socket.js`
+(`on(name, handler)`): a throw is logged and, when the client passed an
+ack callback, answered with `{ ok: false, error: 'server_error' }`. A
+rejected socket listener used to be an unhandled rejection, which ends a
+Node 20 process. A malformed `event_id` (not a UUID) is refused before
+any DB work: `unauthorized` with reason `bad_event_id` on the Control
+Room events, `bad_payload` on `submit_score`.
+
 Maintenance mode (the `maintenance` feature flag) refuses every socket
-write from a non-sysadmin: the Control Room events through
-`socketCanManageEvent`, `submit_score`, `judge_signal` and
-`notification:ack` through `socketMaintenanceBlocked`. `socketCanManageEvent` never rejects; a
-non-UUID `event_id` or a DB error is answered as `unauthorized`.
+write from a non-sysadmin. `socketRequireRole(socket)` checks it at the
+top of the Control Room events (through `socketCanManageEvent`),
+`submit_score`, `judge_signal` and `claim_event_control`, and
+`notification:ack`, which needs no role, asks `socketMaintenanceBlocked`
+directly. A refused write gets ack `{ ok: false, error: 'maintenance' }`
+(`score_rejected` reason `maintenance` for a score).
 
 | Event | Required role | Payload | Notes |
 |---|---|---|---|
-| `set_active_diver`        | meet_manager / referee / org_admin / sysadmin | Roster row + status | Persists to in-memory `activeDivers[event_id]` so late-joiners see it. |
+| `set_active_diver`        | meet_manager / referee / org_admin / sysadmin | Roster row + status | The server keeps and broadcasts a public copy: `paid_entry`, `competitor_org_id`, `competitor_org_name` and `dive_list_id` are dropped, and `club_name` / `club_code` are nulled unless the diver's club is approved (`clubs.status = 'active'`). That copy goes in `activeDivers[event_id]` (and `event_live_state`) so late-joiners see it. |
 | `get_active_diver`        | none (any socket)             | `{ event_id }` | Read-only — returns the current state to the asking socket only. |
-| `submit_score`            | judge / referee / sysadmin    | `{ event_id, competitor_id, round_number, score, dive_id?, judge_number? }` | Server-trusted `judge_id = socket.userId`. Rate-limited (60/min/judge). Validates 0–10 in 0.5 steps, confirms event_judges membership. |
+| `submit_score`            | judge / referee / sysadmin    | `{ event_id, competitor_id, round_number, score, dive_id?, judge_number? }` | Server-trusted `judge_id = socket.userId`. Rate-limited (60/min/judge). Validates 0–10 in 0.5 steps, confirms event_judges membership. A sync that differs from an operator's manual entry is refused but still acked, `{ ok: true, superseded_by: 'manual_entry', response }` with the operator's value, and cached under its `idempotency_key` so a retry replays it. |
 | `announce_score`          | meet_manager / referee / org_admin / sysadmin | Free-form announce payload | Re-broadcast as `final_score_announced`. |
-| `referee_failed_dive`     | referee / meet_manager / org_admin / sysadmin | `{ event_id, competitor_id, round_number }` | Logged to `score_audit_log`. The dive's record books are replayed (`recomputeRecordKeys`), so a record it set goes back to whoever held it before. |
-| `referee_cap_scores`      | referee / meet_manager / org_admin / sysadmin | `{ event_id, competitor_id, round_number, cap_value }` | Logged. Record books replayed, as for a failed dive. |
-| `referee_redive`          | referee / meet_manager / org_admin / sysadmin | `{ event_id, competitor_id, round_number }` | Logged. Marks the round's score rows `status = 'redive'` until each judge scores again, so records don't count the dive until the whole panel is fresh; any record the old total held is replayed away. |
+| `referee_failed_dive`     | referee / meet_manager / org_admin / sysadmin | `{ event_id, competitor_id, round_number }` | Zeroes the scores already in, and stores the call on the dive-list row (`referee_call = 'failed'`, migration 102) so every award that lands afterwards is stored as 0 too (WA 8.6.6). Logged to `score_audit_log`, one row per score, or a single row with no judge when nobody has scored yet. The dive's record books are replayed (`recomputeRecordKeys`), so a record it set goes back to whoever held it before. |
+| `referee_cap_scores`      | referee / meet_manager / org_admin / sysadmin | `{ event_id, competitor_id, round_number, cap_value }` | Caps the scores already in and stores the cap on the dive (`referee_call = 'cap'`, `referee_cap`), so a later award above it is stored as the cap (WA 8.4.7). Logged the same way as a failed dive. Record books replayed, as for a failed dive. |
+| `referee_redive`          | referee / meet_manager / org_admin / sysadmin | `{ event_id, competitor_id, round_number }` | Logged. Clears any Failed or cap call on the dive. Marks the round's score rows `status = 'redive'` until each judge scores again, so records don't count the dive until the whole panel is fresh; any record the old total held is replayed away. |
 | `meet_hold`               | meet_manager / referee / org_admin / sysadmin | `{ event_id, reason? }` | Updates in-memory `meetHolds[event_id]`. |
 | `meet_resume`             | meet_manager / referee / org_admin / sysadmin | `{ event_id }` | Clears the hold. |
 | `get_meet_hold`           | none (any socket)             | `{ event_id }` | Read-only — returns the current hold state to the asking socket. |

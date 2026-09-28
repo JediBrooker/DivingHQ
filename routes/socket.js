@@ -7,8 +7,9 @@
 //   * io.use(handshake)          : soft JWT verify, stash userId,
 //                                   org_id, roles, sysadmin flag,
 //                                   honour token_version (Migration 021)
-//   * connection                 : broadcast current activeDivers,
-//                                   join event rooms, register events
+//   * connection                 : replay the live diver of events
+//                                   this user judges or drives, join
+//                                   user/org rooms, register events
 //   * subscribe_event            : explicit room join
 //   * set_active_diver           : driven by Control Room
 //   * get_active_diver           : on-demand pull for late joiners
@@ -31,7 +32,7 @@ const createIdempotency = require("../lib/idempotency");
 const { readSessionCookie } = require("../lib/session-cookie");
 const { trustProxyHops } = require("../lib/trust-proxy");
 const { announceRecords } = require("../lib/records");
-const { insertScoreAudit } = require("../lib/score-audit");
+const { insertScoreAudit, isValidScore } = require("../lib/score-audit");
 // Held as the module object and called through it, never destructured:
 // test/socket-rate-limit.test.js swaps emitVenueState on this cached
 // module to keep the DB out of the unit tests.
@@ -68,16 +69,17 @@ module.exports = function attachSocket({
   io,
   pool,
   JWT_SECRET,
-  // From lib/middleware. socketRequireRole is passed in but nothing
-  // here calls it: submit_score and judge_signal do their own role
-  // checks and the Control Room events go through socketCanManageEvent.
-  // Maintenance mode still covers all of them: socketCanManageEvent
-  // checks it, and the two with their own checks ask
-  // socketMaintenanceBlocked directly.
+  // From lib/middleware. socketRequireRole (no roles) is the auth +
+  // maintenance gate every write below passes first; the role checks
+  // proper are socketCanManageEvent for the Control Room events and
+  // submit_score's own panel check. socketMaintenanceBlocked is the bare
+  // maintenance check, for notification:ack, which needs no role.
   socketRequireRole,
   socketCanManageEvent,
   socketMaintenanceBlocked = () => false,
-  isValidScore,
+  // isValidScore is still handed in by server.js and ignored: the rule
+  // comes from lib/score-audit (required above), the one the HTTP
+  // routes use, so the two paths can't disagree.
   isTokenVersionCurrent,
   // From lib/records:
   checkAndApplyRecords,
@@ -113,10 +115,6 @@ module.exports = function attachSocket({
   if (!io || !pool || !JWT_SECRET) {
     throw new Error("attachSocket requires { io, pool, JWT_SECRET, … }");
   }
-  // Not called yet (see the note on the parameter), void keeps lint
-  // quiet without dropping it from the mount.
-  void socketRequireRole;
-
   // Idempotency layer (migration 054 + lib/idempotency.js).
   // Socket handlers that accept writes call `idem.socketCheck`
   // on the incoming payload's `idempotency_key` and replay the
@@ -281,7 +279,30 @@ module.exports = function attachSocket({
   // answered in its own words, hence `errors`.
   const GUARD_ERRORS = { unauthorized: "unauthorized", rateLimited: "rate_limited" };
   async function guardControl(socket, data, ack, action, errors = GUARD_ERRORS) {
-    if (!(await socketCanManageEvent(socket, data?.event_id, CONTROL_ROLES))) {
+    // Signed in, and not in maintenance (sysadmins pass). It emits its
+    // own 'unauthorized' event; the ack says which of the two it was.
+    if (!socketRequireRole(socket)) {
+      ackWith(ack, { ok: false, error: socket.userId ? "maintenance" : errors.unauthorized });
+      return false;
+    }
+    // A junk id used to go straight into the events lookup, and the
+    // uuid cast error it threw took the whole process down (nothing
+    // catches a rejected socket listener). Refuse it up front.
+    if (!EVENT_UUID_RE.test(String(data?.event_id ?? ""))) {
+      ackWith(ack, { ok: false, error: errors.unauthorized });
+      return false;
+    }
+    let allowed;
+    try {
+      allowed = await socketCanManageEvent(socket, data.event_id, CONTROL_ROLES);
+    } catch (err) {
+      // DB trouble (pool exhausted, say) mid-meet: refuse this one
+      // action rather than let it bubble up and kill the server.
+      console.error(`[${action}] authz check failed`, err.message);
+      ackWith(ack, { ok: false, error: "server_error" });
+      return false;
+    }
+    if (!allowed) {
       ackWith(ack, { ok: false, error: errors.unauthorized });
       return false;
     }
@@ -290,6 +311,34 @@ module.exports = function attachSocket({
       return false;
     }
     return true;
+  }
+
+  // The Control Room sends its roster row as the active diver, and the
+  // roster is staff data: whether the entry is paid, the diver's org
+  // ids, the dive-list row id, and the club name even while that club
+  // is still waiting for its federation (lib/club-approvals.js keeps
+  // those private until approved). This payload goes to every
+  // spectator in the event room, so those come off here, server-side,
+  // whatever a client sends.
+  const PRIVATE_ACTIVE_FIELDS = ["paid_entry", "competitor_org_id", "competitor_org_name", "dive_list_id"];
+  async function publicActivePayload(data) {
+    const out = { ...data };
+    for (const k of PRIVATE_ACTIVE_FIELDS) delete out[k];
+    if (out.club_name != null || out.club_code != null) {
+      let clubPublic = false;
+      if (EVENT_UUID_RE.test(String(out.competitor_id ?? ""))) {
+        const r = await pool.query(
+          `SELECT cl.status FROM users u JOIN clubs cl ON cl.id = u.club_id WHERE u.id = $1`,
+          [out.competitor_id],
+        );
+        clubPublic = r.rows[0]?.status === "active";
+      }
+      if (!clubPublic) {
+        out.club_name = null;
+        out.club_code = null;
+      }
+    }
+    return out;
   }
 
   // Push the event's current scoreboard_state to any venue bridge.
@@ -312,6 +361,31 @@ module.exports = function attachSocket({
   // Connection
   // -----------------------------------------------------------
   io.on("connection", (socket) => {
+    // Every async listener below goes through this. socket.io drops the
+    // promise a listener returns, so a throw anywhere in a handler
+    // (a DB error, a bad cast) became an unhandled rejection, and on
+    // Node 20 that ends the process: every judge and Control Room
+    // dropped at once. Now it's logged, and a caller that sent an ack
+    // callback hears server_error instead of waiting for a timeout.
+    // The ack is wrapped so a handler that already answered can't be
+    // answered twice.
+    function on(name, handler) {
+      socket.on(name, async (data, ack) => {
+        let answered = false;
+        const once = typeof ack === "function"
+          ? (body) => { if (answered) return; answered = true; ack(body); }
+          : undefined;
+        try {
+          await handler(data, once);
+        } catch (err) {
+          console.error(`[socket ${name}]`, err.message);
+          if (once && !answered) {
+            try { once({ ok: false, error: "server_error" }); } catch { /* client gone */ }
+          }
+        }
+      });
+    }
+
     // Per-IP concurrent connection cap (defence-in-depth; 0 disables).
     // Count + reject before any wiring so a flood can't accumulate
     // handlers/rooms. The symmetric inc-here / dec-on-disconnect keeps
@@ -351,6 +425,10 @@ module.exports = function attachSocket({
     // user broadcast (judge calls, dive-on-deck nudges, etc.).
     if (socket.userId) {
       socket.join(`user:${socket.userId}`);
+      // Org-wide notices (event_status_changed for the dashboard pulse)
+      // go to the org's room rather than to every socket on the box.
+      if (socket.userOrgId) socket.join(`org:${socket.userOrgId}`);
+      if (socket.userIsSystemAdmin) socket.join("sysadmins");
     }
 
     // SPA banner click → mark the notifications row 'acknowledged'
@@ -359,7 +437,7 @@ module.exports = function attachSocket({
     //
     // It's still a write, so maintenance mode drops it the way the
     // HTTP twin (POST /api/notifications/:id/acknowledge) gets a 503.
-    socket.on("notification:ack", async (data) => {
+    on("notification:ack", async (data) => {
       if (!socket.userId || !data?.id || !push) return;
       if (socketMaintenanceBlocked(socket)) return;
       try {
@@ -385,9 +463,9 @@ module.exports = function attachSocket({
     // is also driving the same event, so set_active_diver clobbering is
     // surfaced instead of silent. First claim wins; the claimant is the
     // one warned. Both sides are notified so neither drives blind.
-    socket.on("claim_event_control", async (data) => {
+    on("claim_event_control", async (data) => {
       const eventId = data?.event_id;
-      if (!eventId || !socket.userId) return;
+      if (!EVENT_UUID_RE.test(String(eventId ?? "")) || !socketRequireRole(socket)) return;
       // Only real controllers can hold a lease (same gate as the actions).
       if (!(await socketCanManageEvent(socket, eventId, CONTROL_ROLES))) return;
       if (typeof getEventController !== "function") return;
@@ -419,7 +497,7 @@ module.exports = function attachSocket({
       if (!eventId) return;
       socket.join(`venue:${eventId}`);
     }
-    socket.on("subscribe_venue", async (data) => {
+    on("subscribe_venue", async (data) => {
       const eventId = data?.event_id;
       // Validate shape before any work: events.id is a UUID, so a
       // malformed id is junk, reject it without joining a room or
@@ -439,25 +517,48 @@ module.exports = function attachSocket({
       await emitVenue(eventId, "subscribe_venue");
     });
 
-    // Bring late-arriving clients up to speed with whatever's
-    // currently live.
-    if (Object.keys(activeDivers).length > 0) {
-      Object.values(activeDivers).forEach((state) => {
-        socket.emit("state_update", state);
-      });
+    // Bring a reconnecting Control Room or judge back up to speed with
+    // the events they're running. This used to replay every event's
+    // live diver to every socket, anonymous ones included: all orgs,
+    // rehearsals too, and a judge's keypad flipped through other meets'
+    // divers on every reconnect. Now it's the events this user judges
+    // on, or drives (a control role in the host org), or everything for
+    // a sysadmin. Anyone else asks per event with get_active_diver,
+    // which the scoreboard and the other views already do.
+    replayOwnActiveDivers().catch((err) =>
+      console.error("[connection] active-diver replay failed", err.message));
+    async function replayOwnActiveDivers() {
+      if (!socket.userId) return;
+      const ids = Object.keys(activeDivers).filter((id) => EVENT_UUID_RE.test(id));
+      if (!ids.length) return;
+      const drives = CONTROL_ROLES.some((r) => (socket.userOrgRoles || []).includes(r));
+      const r = await pool.query(
+        `SELECT e.id FROM events e
+          WHERE e.id = ANY($1::uuid[])
+            AND ($2::boolean
+                 OR ($3::boolean AND e.org_id = $4)
+                 OR EXISTS (SELECT 1 FROM event_judges ej
+                             WHERE ej.event_id = e.id AND ej.judge_id = $5))`,
+        [ids, !!socket.userIsSystemAdmin, drives, socket.userOrgId || null, socket.userId],
+      );
+      for (const row of r.rows) {
+        if (activeDivers[row.id]) socket.emit("state_update", activeDivers[row.id]);
+      }
     }
 
-    socket.on("set_active_diver", async (data, ack) => {
+    on("set_active_diver", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "set_active_diver"))) return;
-      if (data.event_id) {
-        activeDivers[data.event_id] = data;
-        // Write-through to event_live_state so a server
-        // restart picks the same diver back up on rehydrate.
-        if (typeof persistActiveDiver === "function") {
-          persistActiveDiver(data.event_id, data);
-        }
+      // What goes out, gets replayed to late joiners and is kept in
+      // event_live_state is the public copy, not the Control Room's
+      // roster row as sent.
+      const payload = await publicActivePayload(data);
+      activeDivers[payload.event_id] = payload;
+      // Write-through to event_live_state so a server
+      // restart picks the same diver back up on rehydrate.
+      if (typeof persistActiveDiver === "function") {
+        persistActiveDiver(payload.event_id, payload);
       }
-      io.to(`event:${data.event_id}`).emit("state_update", data);
+      io.to(`event:${payload.event_id}`).emit("state_update", payload);
 
       // Fire-and-forget coach alerts. The fan-out helper looks
       // ahead N=dives_ahead slots from this new active diver and
@@ -465,10 +566,10 @@ module.exports = function attachSocket({
       // divers land in the window. Per-process in-memory dedupe
       // prevents double-fires when the operator re-emits state.
       // Errors logged but never propagate, score path stays clean.
-      if (data.event_id && push) {
+      if (push) {
         try {
           require("../lib/coach-alerts")
-            .maybeNotifyCoachesOfNextDivers({ pool, push }, data.event_id, data);
+            .maybeNotifyCoachesOfNextDivers({ pool, push }, payload.event_id, payload);
         } catch (err) {
           console.error("[set_active_diver] coach alert hook failed", err.message);
         }
@@ -477,8 +578,8 @@ module.exports = function attachSocket({
       // Venue scoreboard state: fan out to any connected
       // hardware bridge in this event's venue room. See
       // lib/venue-state.js for the wire shape. activeDivers now holds
-      // `data`, so that's the active payload it sends.
-      if (data.event_id) emitVenue(data.event_id, "set_active_diver");
+      // the payload, so that's the active diver it sends.
+      emitVenue(payload.event_id, "set_active_diver");
       ackWith(ack, { ok: true });
     });
 
@@ -505,7 +606,7 @@ module.exports = function attachSocket({
     // and the audit row records both clocks (migration 054). See
     // docs/offline-p1-design.md §2 for the full design.
     // -----------------------------------------------------------
-    socket.on("submit_score", async (data, ack) => {
+    on("submit_score", async (data, ack) => {
       // Socket.IO ack callback (3rd argument). When the client
       // uses the outbox drain protocol, it provides a callback to
       // correlate "my submit" with "the server confirmed mine",
@@ -532,6 +633,12 @@ module.exports = function attachSocket({
 
       if (!socket.userId) {
         reject("not_authenticated", { message: "You must be signed in to submit scores." });
+        return;
+      }
+      // Maintenance lockdown: the socket side of maintenanceGate. The
+      // outbox gets a real answer so it doesn't sit out its timeout.
+      if (!socketRequireRole(socket)) {
+        reject("maintenance", { message: "DivingHQ is in maintenance mode, scores can't be saved right now." });
         return;
       }
       const judgeId = socket.userId;
@@ -563,7 +670,10 @@ module.exports = function attachSocket({
         socket.disconnect(true);
         return;
       }
-      if (!data?.event_id || !data?.competitor_id) {
+      // Both ids are uuids; a malformed one is a bad payload, not a
+      // server_error out of the cast inside the transaction.
+      if (!EVENT_UUID_RE.test(String(data?.event_id ?? ""))
+          || !EVENT_UUID_RE.test(String(data?.competitor_id ?? ""))) {
         reject("bad_payload");
         return;
       }
@@ -581,7 +691,11 @@ module.exports = function attachSocket({
         reject("rate_limited", { message: "Slow down — too many submissions in the last minute." });
         return;
       }
-      const score = Number(data.score);
+      // The judge's award as sent. `score` is what gets stored, which a
+      // referee call on the dive can bring down (see below).
+      const award = Number(data.score);
+      let score = award;
+      let refereeNote = null;
 
       // Idempotency check. When the client sends an idempotency_key
       // (outbox mode), look up any cached response BEFORE doing DB
@@ -606,7 +720,13 @@ module.exports = function attachSocket({
           // The original room broadcast already fired on the first
           // submission; replaying it would double-broadcast.
           socket.emit("score_received", cached.response_body);
-          safeAck({ ok: true, response: cached.response_body, replay: true });
+          // A sync that lost to a manual entry was acked with
+          // superseded_by up top, so the replay says it the same way.
+          const supersededBy = cached.response_body?.superseded_by;
+          safeAck({
+            ok: true, response: cached.response_body, replay: true,
+            ...(supersededBy ? { superseded_by: supersededBy } : {}),
+          });
           return;
         }
       }
@@ -641,9 +761,13 @@ module.exports = function attachSocket({
         }
         judgeNumber = jnRes.rows[0].judge_number;
 
+        // FOR SHARE so a referee call on this dive can't commit between
+        // this read and our write: applyRefereeAction updates this row
+        // first, so one of the two always waits for the other.
         const dvRes = await client.query(
-          `SELECT dive_id FROM competitor_dive_lists
-           WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
+          `SELECT dive_id, referee_call, referee_cap FROM competitor_dive_lists
+           WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3
+           FOR SHARE`,
           [data.event_id, data.competitor_id, round],
         );
         // dive_id comes from the server-side dive list ONLY. When
@@ -652,6 +776,23 @@ module.exports = function attachSocket({
         // value would let a stale client smuggle in the wrong
         // dive's DD.
         const resolvedDiveId = dvRes.rows[0]?.dive_id ?? null;
+
+        // A referee call made before this award landed still holds it
+        // (migration 102). WA 8.6.6: a failed dive gets 0 points. WA
+        // 8.4.7: after a declared maximum, a higher award counts as the
+        // maximum. The referee usually calls it before the panel has
+        // scored, so this is the normal path, not a race.
+        const call = dvRes.rows[0]?.referee_call || null;
+        if (call === "failed") {
+          score = 0;
+        } else if (call === "cap") {
+          const cap = Number(dvRes.rows[0].referee_cap);
+          if (Number.isFinite(cap) && score > cap) score = cap;
+        }
+        if (score !== award) {
+          const label = call === "cap" ? `referee:cap(${Number(dvRes.rows[0].referee_cap)})` : `referee:${call}`;
+          refereeNote = `${label}: award of ${award} held to ${score}`;
+        }
 
         const prior = await client.query(
           `SELECT id, score, score_source FROM scores
@@ -722,10 +863,14 @@ module.exports = function attachSocket({
               resolution_required_by: "operator",
               created_at: new Date().toISOString(),
             });
-            // Tell the judge their sync landed but was superseded.
-            // The outbox will mark this entry as synced (no retry
-            // needed); the operator decides via the review tray.
-            socket.emit("score_received", {
+            // Tell the judge their sync landed but was superseded, and
+            // ack it: the outbox only marks an entry synced on an ack,
+            // so without one it timed out and retried up to five times,
+            // each retry logging another rejected_duplicate and another
+            // conflict_pending. The idempotency cache makes a retry
+            // replay this answer instead. The operator decides via the
+            // review tray.
+            const supersededBody = {
               event_id: data.event_id,
               competitor_id: data.competitor_id,
               round_number: round,
@@ -734,7 +879,15 @@ module.exports = function attachSocket({
               judge_number: judgeNumber,
               score: oldScore,            // canonical = operator value
               superseded_by: "manual_entry",
-            });
+            };
+            socket.emit("score_received", supersededBody);
+            safeAck({ ok: true, response: supersededBody, superseded_by: "manual_entry" });
+            if (idempotencyKey && payloadHash) {
+              idem.socketStore(
+                idempotencyKey, judgeId, "submit_score",
+                payloadHash, 200, supersededBody,
+              );
+            }
             metrics?.scoresSubmitted.inc();
             return;
           }
@@ -779,6 +932,7 @@ module.exports = function attachSocket({
             oldScore, newScore: score,
             actorId: socket.userId, ip: clientIp(socket),
             userAgent: socket.handshake.headers["user-agent"] || null,
+            reason: refereeNote,
             actorLocalTime, committedNow: true,
           });
         }
@@ -809,6 +963,7 @@ module.exports = function attachSocket({
         idempotency_key: undefined,  // never leak it back
         actor_local_time: undefined,
         dive_id: undefined,           // don't leak whatever the client sent
+        score,                        // what was stored, after any referee call
         judge_id: judgeId,
         judge_number: judgeNumber,
       };
@@ -847,7 +1002,7 @@ module.exports = function attachSocket({
       });
     });
 
-    socket.on("announce_score", async (data, ack) => {
+    on("announce_score", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "announce_score",
                                { unauthorized: "not authorised", rateLimited: "rate limited" }))) return;
       io.to(`event:${data.event_id}`).emit("final_score_announced", data);
@@ -870,9 +1025,8 @@ module.exports = function attachSocket({
     // event_judges, never from the wire, same posture as
     // submit_score.
     // -----------------------------------------------------------
-    socket.on("judge_signal", async (data) => {
-      if (!socket.userId) return;
-      if (socketMaintenanceBlocked(socket)) return;
+    on("judge_signal", async (data) => {
+      if (!socketRequireRole(socket)) return;
       if (socketActionRateLimited("judge_signal", socket.userId)) return;
       if (typeof socket.userTokenVersion === "number"
           && !(await isTokenVersionCurrent(socket.userId, socket.userTokenVersion))) {
@@ -942,8 +1096,24 @@ module.exports = function attachSocket({
       try {
         await client.query("BEGIN");
         const auditReason = `referee:${action}` + (action === "cap" ? `(${capValue})` : "");
+        // Keep the call on the dive (migration 102) so awards that land
+        // after it are held to it as well, in submit_score. A redive
+        // clears it: that's a fresh dive. This goes first, before the
+        // scores, so a judge's submit reading the row FOR SHARE either
+        // waits for this call or is already in when we update below.
+        await client.query(
+          `UPDATE competitor_dive_lists
+              SET referee_call = $4, referee_cap = $5
+            WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
+          [
+            data.event_id, data.competitor_id, data.round_number,
+            action === "redive" ? null : action,
+            action === "cap" ? capValue : null,
+          ],
+        );
+        let audited;
         if (action === "failed") {
-          await client.query(
+          audited = await client.query(
             `WITH prior AS (
                SELECT id, score AS old_score
                FROM scores
@@ -974,7 +1144,7 @@ module.exports = function attachSocket({
             ],
           );
         } else if (action === "cap") {
-          await client.query(
+          audited = await client.query(
             `WITH prior AS (
                SELECT id, score AS old_score
                FROM scores
@@ -1019,7 +1189,7 @@ module.exports = function attachSocket({
               WHERE event_id = $1 AND competitor_id = $2 AND round_number = $3`,
             [data.event_id, data.competitor_id, data.round_number],
           );
-          await client.query(
+          audited = await client.query(
             `INSERT INTO score_audit_log
                (score_id, event_id, competitor_id, judge_id, round_number,
                 action, old_score, new_score, actor_user_id, ip_address, user_agent, reason)
@@ -1037,9 +1207,21 @@ module.exports = function attachSocket({
             ],
           );
         }
+        // The audit rows above hang off the scores. A call made before
+        // any judge has scored (the usual order under WA 8.4.7) would
+        // leave no trace at all, so it gets one row of its own.
+        if (!audited?.rowCount) {
+          await insertScoreAudit(client, {
+            scoreId: null, eventId: data.event_id, competitorId: data.competitor_id,
+            judgeId: null, round: data.round_number, action: "update",
+            actorId: actorUserId || null, ip: clientIp(socket),
+            userAgent: socket.handshake.headers["user-agent"] || null,
+            reason: auditReason,
+          });
+        }
         await client.query("COMMIT");
       } catch (err) {
-        await client.query("ROLLBACK");
+        await client.query("ROLLBACK").catch(() => {});
         console.error("[Referee Action Failed]", err.message);
         socket.emit("referee_action_rejected", { reason: "server_error" });
         return;
@@ -1062,7 +1244,7 @@ module.exports = function attachSocket({
       return true;
     }
 
-    socket.on("referee_failed_dive", async (data, ack) => {
+    on("referee_failed_dive", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
       if (!(await applyRefereeAction("failed", data, socket.userId))) {
         ackWith(ack, { ok: false, error: "action_failed" });
@@ -1077,7 +1259,7 @@ module.exports = function attachSocket({
       });
       ackWith(ack, { ok: true });
     });
-    socket.on("referee_cap_scores", async (data, ack) => {
+    on("referee_cap_scores", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
       if (!(await applyRefereeAction("cap", data, socket.userId))) {
         ackWith(ack, { ok: false, error: "action_failed" });
@@ -1092,7 +1274,7 @@ module.exports = function attachSocket({
       });
       ackWith(ack, { ok: true });
     });
-    socket.on("referee_redive", async (data, ack) => {
+    on("referee_redive", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "referee_action"))) return;
       if (!(await applyRefereeAction("redive", data, socket.userId))) {
         ackWith(ack, { ok: false, error: "action_failed" });
@@ -1105,7 +1287,7 @@ module.exports = function attachSocket({
     // -----------------------------------------------------------
     // Hold / resume the meet
     // -----------------------------------------------------------
-    socket.on("meet_hold", async (data, ack) => {
+    on("meet_hold", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "meet_hold"))) return;
       meetHolds[data.event_id] = {
         reason: data.reason || null,
@@ -1124,7 +1306,7 @@ module.exports = function attachSocket({
       emitVenue(data.event_id, "meet_hold");
       ackWith(ack, { ok: true });
     });
-    socket.on("meet_resume", async (data, ack) => {
+    on("meet_resume", async (data, ack) => {
       if (!(await guardControl(socket, data, ack, "meet_resume"))) return;
       delete meetHolds[data.event_id];
       if (typeof persistClearMeetHold === "function") {

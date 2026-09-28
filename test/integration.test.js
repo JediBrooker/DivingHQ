@@ -7947,3 +7947,981 @@ test("event live and results emails skip withdrawn divers and reserves", async (
     await teardownFixture(st);
   }
 });
+
+// =====================================================================
+// Competition fixtures (Control Room, sockets, stages). One BRN org
+// per test, built straight in SQL with signed tokens, so the socket
+// tests don't spend the login limiter or wait on bcrypt. BRN isn't
+// used by any other suite, so a stray row can't leak into someone
+// else's country lookups.
+// =====================================================================
+const compKit = {
+  jwt: require("jsonwebtoken"),
+  ioClient: require("socket.io-client").io,
+  async org(tag) {
+    const slug = `brn-${tag}-${crypto.randomBytes(3).toString("hex")}`;
+    const r = await pool.query(
+      `INSERT INTO organisations (name, country_code, slug, status, claim_state)
+       VALUES ($1, 'BRN', $2, 'active', 'claimed') RETURNING id`,
+      [`Brunei ${slug}`, slug],
+    );
+    return r.rows[0].id;
+  },
+  async user(orgId, name, roles, { sysadmin = false, clubId = null } = {}) {
+    const r = await pool.query(
+      `INSERT INTO users (username, full_name, org_id, email_verified_at, is_system_admin, club_id)
+       VALUES ($1, $2, $3, now(), $4, $5) RETURNING id, token_version`,
+      [`${name}-${crypto.randomBytes(4).toString("hex")}`.slice(0, 50), name, orgId, sysadmin, clubId],
+    );
+    for (const role of roles) {
+      await pool.query("INSERT INTO user_org_roles (user_id, org_id, role) VALUES ($1, $2, $3)", [r.rows[0].id, orgId, role]);
+    }
+    const u = { id: r.rows[0].id, full_name: name, org_id: orgId, org_roles: roles, is_system_admin: sysadmin, tv: r.rows[0].token_version };
+    u.token = compKit.jwt.sign(
+      { id: u.id, username: name, full_name: name, org_id: orgId, org_roles: roles, is_system_admin: sysadmin, tv: u.tv },
+      process.env.JWT_SECRET, { algorithm: "HS256", expiresIn: "1h" },
+    );
+    return u;
+  },
+  async event(orgId, fields = {}) {
+    const f = {
+      name: "BRN event", gender: "Mixed", height: "3m", number_of_judges: 5, total_rounds: 3,
+      event_type: "individual", event_format: "final", status: "Upcoming", ...fields,
+    };
+    const cols = Object.keys(f);
+    const r = await pool.query(
+      `INSERT INTO events (org_id, ${cols.join(", ")})
+       VALUES ($1, ${cols.map((_, i) => `$${i + 2}`).join(", ")}) RETURNING id`,
+      [orgId, ...cols.map((c) => f[c])],
+    );
+    return r.rows[0].id;
+  },
+  async dives(n) {
+    return (await pool.query("SELECT id FROM dive_directory WHERE height = 3 ORDER BY dive_code, id LIMIT $1", [n]))
+      .rows.map((r) => r.id);
+  },
+  // One competitor_dive_lists row per round.
+  async enter(eventId, competitorId, diveIds, extra = {}) {
+    for (let i = 0; i < diveIds.length; i++) {
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, round_number, dive_id, display_order, partner_id, team_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [eventId, competitorId, i + 1, diveIds[i], extra.display_order ?? null, extra.partner_id ?? null, extra.team_id ?? null],
+      );
+    }
+  },
+  async panel(eventId, judges) {
+    for (let i = 0; i < judges.length; i++) {
+      await pool.query("INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)",
+        [eventId, judges[i].id, i + 1]);
+    }
+  },
+  async score(eventId, competitorId, round, judge, score) {
+    await pool.query(
+      `INSERT INTO scores (event_id, competitor_id, judge_id, round_number, score)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [eventId, competitorId, judge.id, round, score],
+    );
+  },
+  socket(token) {
+    const s = compKit.ioClient(baseUrl, {
+      auth: { token: token || "spectator" }, transports: ["websocket"], reconnection: false, forceNew: true,
+    });
+    return new Promise((resolve, reject) => {
+      s.once("connect", () => resolve(s));
+      s.once("connect_error", reject);
+    });
+  },
+  // Emit and resolve with the ack, or "timeout" if none comes.
+  ask(sock, name, data, ms = 3000) {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve("timeout"), ms);
+      sock.emit(name, data, (reply) => { clearTimeout(timer); resolve(reply); });
+    });
+  },
+  // Collect every payload of one event a socket hears for `ms`.
+  listen(sock, name, ms = 400) {
+    const got = [];
+    const fn = (p) => got.push(p);
+    sock.on(name, fn);
+    return new Promise((resolve) => setTimeout(() => { sock.off(name, fn); resolve(got); }, ms));
+  },
+  async cleanup(...orgIds) {
+    const ids = orgIds.filter(Boolean);
+    if (!ids.length) return;
+    try {
+      await pool.query("DELETE FROM events WHERE org_id = ANY($1::uuid[])", [ids]);
+      await pool.query("DELETE FROM meets WHERE org_id = ANY($1::uuid[])", [ids]);
+      await pool.query("DELETE FROM users WHERE org_id = ANY($1::uuid[])", [ids]);
+      await pool.query("DELETE FROM clubs WHERE org_id = ANY($1::uuid[])", [ids]);
+      await pool.query("DELETE FROM organisations WHERE id = ANY($1::uuid[])", [ids]);
+    } catch (err) {
+      console.warn(`[cleanup] BRN orgs: ${err.message}`);
+    }
+  },
+};
+
+test("sockets: a junk event id is refused and the server stays up", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("junk");
+  const socks = [];
+  try {
+    // A plain diver, no Control Room role at all.
+    const diver = await compKit.user(orgId, "Junk Diver", ["diver"]);
+    const s = await compKit.socket(diver.token);
+    socks.push(s);
+    for (const ev of ["set_active_diver", "meet_hold", "meet_resume", "announce_score",
+      "referee_failed_dive", "referee_cap_scores", "referee_redive"]) {
+      const reply = await compKit.ask(s, ev, { event_id: "not-a-uuid", competitor_id: "x", round_number: 1 });
+      assert.equal(reply?.ok, false, `${ev} answers, and says no`);
+    }
+    s.emit("claim_event_control", { event_id: "not-a-uuid" });
+    await new Promise((r) => setTimeout(r, 200));
+    assert.ok(s.connected, "still connected after every junk emit");
+    // The server's still there to answer an ordinary request.
+    const health = await fetchJson("GET", "/api/health");
+    assert.equal(health.status, 200);
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("sockets: maintenance mode refuses every live write except a sysadmin's", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { features } = require("../server.js");
+  const realEnabled = features.enabled;
+  const orgId = await compKit.org("maint");
+  const socks = [];
+  try {
+    const manager = await compKit.user(orgId, "Maint Manager", ["meet_manager"]);
+    const judge = await compKit.user(orgId, "Maint Judge", ["judge"]);
+    const diver = await compKit.user(orgId, "Maint Diver", ["diver"]);
+    const sys = await compKit.user(orgId, "Maint Sysadmin", [], { sysadmin: true });
+    const eventId = await compKit.event(orgId, { status: "Live" });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(eventId, [judge]);
+    const [ms, js, ss] = await Promise.all([manager, judge, sys].map((u) => compKit.socket(u.token)));
+    socks.push(ms, js, ss);
+    js.emit("subscribe_event", { event_id: eventId });
+
+    // Only this process sees the flag, so no other suite's server is
+    // locked down while this runs.
+    features.enabled = (k) => (k === "maintenance" ? true : realEnabled.call(features, k));
+    const payload = { event_id: eventId, competitor_id: diver.id, round_number: 1 };
+    for (const ev of ["meet_hold", "set_active_diver", "announce_score", "referee_failed_dive", "meet_resume"]) {
+      assert.deepEqual(await compKit.ask(ms, ev, payload), { ok: false, error: "maintenance" }, ev);
+    }
+    const sub = await compKit.ask(js, "submit_score", { ...payload, score: 6.5 });
+    assert.equal(sub.ok, false);
+    assert.equal(sub.error, "maintenance");
+    const signals = compKit.listen(js, "judge_signal");
+    js.emit("judge_signal", { ...payload, signaled: true });
+    assert.equal((await signals).length, 0, "no judge signal goes out");
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM scores WHERE event_id = $1", [eventId])).rows[0].n, 0);
+    // A sysadmin keeps working, on purpose.
+    assert.deepEqual(await compKit.ask(ss, "meet_hold", payload), { ok: true });
+    assert.deepEqual(await compKit.ask(ss, "meet_resume", payload), { ok: true });
+
+    features.enabled = realEnabled;
+    const after = await compKit.ask(js, "submit_score", { ...payload, score: 6.5 });
+    assert.equal(after.ok, true, "back to normal once it's off");
+  } finally {
+    features.enabled = realEnabled;
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("referee calls hold the awards that land after them (WA 8.6.6, 8.4.7)", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("ref");
+  const socks = [];
+  try {
+    const referee = await compKit.user(orgId, "Ref Referee", ["referee"]);
+    const j1 = await compKit.user(orgId, "Ref Judge One", ["judge"]);
+    const j2 = await compKit.user(orgId, "Ref Judge Two", ["judge"]);
+    const diver = await compKit.user(orgId, "Ref Diver", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live" });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(eventId, [j1, j2]);
+    const [rs, s1, s2] = await Promise.all([referee, j1, j2].map((u) => compKit.socket(u.token)));
+    socks.push(rs, s1, s2);
+    const dive = (round) => ({ event_id: eventId, competitor_id: diver.id, round_number: round });
+    const stored = async (round) => Object.fromEntries((await pool.query(
+      "SELECT judge_id, score::float AS score FROM scores WHERE event_id = $1 AND round_number = $2",
+      [eventId, round],
+    )).rows.map((r) => [r.judge_id, r.score]));
+
+    // Round 1: one award in, Failed, then the rest of the panel.
+    assert.equal((await compKit.ask(s1, "submit_score", { ...dive(1), score: 7.5 })).ok, true);
+    assert.deepEqual(await compKit.ask(rs, "referee_failed_dive", dive(1)), { ok: true });
+    const late = await compKit.ask(s2, "submit_score", { ...dive(1), score: 8 });
+    assert.equal(late.ok, true);
+    assert.equal(late.response.score, 0, "the judge is told what was stored");
+    assert.deepEqual(await stored(1), { [j1.id]: 0, [j2.id]: 0 });
+
+    // Round 2: the cap goes in before anyone scores, which is the
+    // order WA 8.4.7 describes. It's still on the record.
+    assert.deepEqual(await compKit.ask(rs, "referee_cap_scores", { ...dive(2), cap_value: 2 }), { ok: true });
+    const callRow = (await pool.query(
+      "SELECT judge_id, reason FROM score_audit_log WHERE event_id = $1 AND round_number = 2",
+      [eventId],
+    )).rows;
+    assert.deepEqual(callRow, [{ judge_id: null, reason: "referee:cap(2)" }]);
+    await compKit.ask(s1, "submit_score", { ...dive(2), score: 6 });
+    await compKit.ask(s2, "submit_score", { ...dive(2), score: 1.5 });
+    assert.deepEqual(await stored(2), { [j1.id]: 2, [j2.id]: 1.5 });
+    // Scoring again after the call doesn't get round it either.
+    await compKit.ask(s1, "submit_score", { ...dive(2), score: 9 });
+    assert.deepEqual(await stored(2), { [j1.id]: 2, [j2.id]: 1.5 });
+    const heldReason = (await pool.query(
+      `SELECT reason FROM score_audit_log
+        WHERE event_id = $1 AND round_number = 2 AND judge_id = $2 AND action = 'insert'`,
+      [eventId, j1.id],
+    )).rows[0]?.reason;
+    assert.match(heldReason || "", /referee:cap\(2\).*6.*2/);
+
+    // Round 3: Failed, then a redive. The new dive is scored as it comes.
+    await compKit.ask(rs, "referee_failed_dive", dive(3));
+    await compKit.ask(rs, "referee_redive", dive(3));
+    await compKit.ask(s1, "submit_score", { ...dive(3), score: 7 });
+    assert.deepEqual(await stored(3), { [j1.id]: 7 });
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("synchro pairs entered through the portal are one entry per round", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("sync");
+  try {
+    const manager = await compKit.user(orgId, "Sync Manager", ["meet_manager"]);
+    const a = await compKit.user(orgId, "Sync Diver A", ["diver"]);
+    const b = await compKit.user(orgId, "Sync Diver B", ["diver"]);
+    const c = await compKit.user(orgId, "Sync Diver C", ["diver"]);
+    const eventId = await compKit.event(orgId, { event_type: "synchro_pair", number_of_judges: 9 });
+    const list = (await compKit.dives(3)).map((dive_id, i) => ({ dive_id, round_number: i + 1 }));
+    const submit = (u, partner) => fetchJson("POST", "/api/competitor/submit-list", {
+      token: u.token, body: { event_id: eventId, dives: list, partner_id: partner.id },
+    });
+
+    // B invites A, A answers with B: the pair is confirmed.
+    assert.equal((await submit(b, a)).body.pairing.status, "pending");
+    assert.equal((await submit(a, b)).body.pairing.status, "auto_confirmed");
+    const rows = async () => (await pool.query(
+      `SELECT competitor_id, partner_id, round_number FROM competitor_dive_lists
+        WHERE event_id = $1 ORDER BY round_number`, [eventId])).rows;
+    assert.deepEqual((await rows()).map((r) => [r.competitor_id, r.partner_id]),
+      [[b.id, a.id], [b.id, a.id], [b.id, a.id]], "the inviter leads, one row a round");
+
+    // The Control Room queue has the pair once per round.
+    const roster = await fetchJson("GET", `/api/events/${eventId}/roster`, { token: manager.token });
+    assert.equal(roster.status, 200);
+    assert.equal(roster.body.length, 3);
+
+    // The partner still finds the entry from their side.
+    const status = await fetchJson("GET", `/api/competitor/list-status?event_id=${eventId}`, { token: a.token });
+    assert.equal(status.body.entered, true);
+    assert.equal(status.body.dives.length, 3);
+    const dash = await fetchJson("GET", "/api/dashboard", { token: a.token });
+    assert.ok(dash.body.diver_event_ids.includes(eventId));
+
+    // A re-pairs with C. B's old pair goes; A's new one is one row a round.
+    assert.equal((await submit(a, c)).body.pairing.status, "pending");
+    const pending = await fetchJson("GET", "/api/competitor/pending-pairings", { token: c.token });
+    const invite = (pending.body.incoming || pending.body).find((p) => p.event_id === eventId);
+    assert.ok(invite, "C sees A's invite");
+    const acc = await fetchJson("POST", `/api/competitor/pairings/${invite.id}/accept`, { token: c.token });
+    assert.equal(acc.status, 200);
+    assert.deepEqual((await rows()).map((r) => [r.competitor_id, r.partner_id]),
+      [[a.id, c.id], [a.id, c.id], [a.id, c.id]]);
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
+
+// A Completed preliminary with a final hanging off it, and `divers`
+// scored by a 3-judge panel: `totals[i]` is what each judge gave
+// diver i in every round. Returns ids for the advance tests.
+compKit.stage = async function stage(orgId, tag, { divers, totals, eventType = "individual", partners = [] }) {
+  const manager = await compKit.user(orgId, `${tag} Manager`, ["org_admin"]);
+  const judges = [];
+  for (let i = 0; i < 3; i++) judges.push(await compKit.user(orgId, `${tag} Judge ${i + 1}`, ["judge"]));
+  const prelim = await compKit.event(orgId, {
+    name: `${tag} prelim`, event_format: "preliminary", event_type: eventType,
+    number_of_judges: 3, total_rounds: 2,
+  });
+  const final = await compKit.event(orgId, {
+    name: `${tag} final`, event_format: "final", event_type: eventType,
+    number_of_judges: 3, total_rounds: 2, parent_event_id: prelim,
+  });
+  await compKit.panel(prelim, judges);
+  const dives = await compKit.dives(2);
+  for (let i = 0; i < divers.length; i++) {
+    await compKit.enter(prelim, divers[i].id, dives, { display_order: i + 1, partner_id: partners[i]?.id ?? null });
+    for (const round of [1, 2]) {
+      for (const j of judges) await compKit.score(prelim, divers[i].id, round, j, totals[i]);
+    }
+  }
+  await pool.query("UPDATE events SET status = 'Completed' WHERE id = $1", [prelim]);
+  return { manager, prelim, final };
+};
+
+test("advance: a field smaller than top_n takes everyone, with no reserves to spare", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("adv");
+  try {
+    const divers = [];
+    for (let i = 0; i < 4; i++) divers.push(await compKit.user(orgId, `Adv Diver ${i + 1}`, ["diver"]));
+    const { manager, prelim, final } = await compKit.stage(orgId, "Adv", { divers, totals: [8, 7, 6, 5] });
+    // The usual WA final shape, 12 plus 2 reserves, on a club-sized field.
+    const r = await fetchJson("POST", `/api/events/${prelim}/advance`, {
+      token: manager.token, body: { top_n: 12, reserves: 2, dive_order: "reverse" },
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const seeded = (await pool.query(
+      `SELECT competitor_id, bool_or(is_reserve) AS reserve FROM competitor_dive_lists
+        WHERE event_id = $1 GROUP BY competitor_id`, [final])).rows;
+    assert.equal(seeded.length, 4);
+    assert.ok(seeded.every((s) => !s.reserve), "nobody's left over to be a reserve");
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("advance and H2H seeding leave a withdrawn diver out", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("wd");
+  try {
+    const divers = [];
+    for (let i = 0; i < 3; i++) divers.push(await compKit.user(orgId, `Wd Diver ${i + 1}`, ["diver"]));
+    const { manager, prelim, final } = await compKit.stage(orgId, "Wd", { divers, totals: [8, 7, 6] });
+    // The second diver pulled out injured after scoring (coach withdraw
+    // marks every row).
+    await pool.query(
+      "UPDATE competitor_dive_lists SET withdrawn_at = now() WHERE event_id = $1 AND competitor_id = $2",
+      [prelim, divers[1].id],
+    );
+    const r = await fetchJson("POST", `/api/events/${prelim}/advance`, {
+      token: manager.token, body: { top_n: 3, reserves: 0 },
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const seeded = (await pool.query(
+      "SELECT DISTINCT competitor_id FROM competitor_dive_lists WHERE event_id = $1", [final])).rows
+      .map((row) => row.competitor_id).sort();
+    assert.deepEqual(seeded, [divers[0].id, divers[2].id].sort());
+
+    const h2h = await compKit.event(orgId, {
+      name: "Wd H2H", event_format: "super_final_h2h", number_of_judges: 3, total_rounds: 3,
+      parent_event_id: prelim,
+    });
+    const preview = await fetchJson("GET", `/api/events/${h2h}/seed-h2h/preview?max_per_org=12`, { token: manager.token });
+    assert.equal(preview.status, 200, JSON.stringify(preview.body));
+    assert.deepEqual(preview.body.ranked.map((row) => row.competitor_id).sort(), [divers[0].id, divers[2].id].sort());
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("advance carries a synchro pair's partner, and won't split up a team event", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("advsync");
+  try {
+    const leads = [];
+    const partners = [];
+    for (let i = 0; i < 2; i++) {
+      leads.push(await compKit.user(orgId, `AdvSync Lead ${i + 1}`, ["diver"]));
+      partners.push(await compKit.user(orgId, `AdvSync Partner ${i + 1}`, ["diver"]));
+    }
+    const { manager, prelim, final } = await compKit.stage(orgId, "AdvSync", {
+      divers: leads, partners, totals: [8, 7], eventType: "synchro_pair",
+    });
+    const r = await fetchJson("POST", `/api/events/${prelim}/advance`, {
+      token: manager.token, body: { top_n: 2, reserves: 0 },
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const pairs = (await pool.query(
+      `SELECT DISTINCT competitor_id, partner_id FROM competitor_dive_lists WHERE event_id = $1`, [final])).rows;
+    assert.deepEqual(
+      pairs.map((p) => `${p.competitor_id}|${p.partner_id}`).sort(),
+      [0, 1].map((i) => `${leads[i].id}|${partners[i].id}`).sort(),
+    );
+
+    // A team event ranks its members one by one, which isn't how teams
+    // go through. Refuse rather than seed a final of loose divers.
+    const team = await compKit.stage(orgId, "AdvTeam", { divers: partners, totals: [6, 5], eventType: "team" });
+    const tr = await fetchJson("POST", `/api/events/${team.prelim}/advance`, {
+      token: team.manager.token, body: { top_n: 2, reserves: 0 },
+    });
+    assert.equal(tr.status, 400);
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM competitor_dive_lists WHERE event_id = $1", [team.final])).rows[0].n, 0);
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("a visiting federation's divers see an Upcoming event's prescribed dives", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const hostOrg = await compKit.org("host");
+  const guestOrg = await compKit.org("guest");
+  const otherOrg = await compKit.org("other");
+  try {
+    const guest = await compKit.user(guestOrg, "Guest Diver", ["diver"]);
+    const outsider = await compKit.user(otherOrg, "Outside Diver", ["diver"]);
+    const eventId = await compKit.event(hostOrg, { name: "BRN International" });
+    await pool.query("INSERT INTO event_participating_orgs (event_id, org_id) VALUES ($1, $2)", [eventId, guestOrg]);
+    const [dive] = await compKit.dives(1);
+    await pool.query("INSERT INTO event_round_dives (event_id, round_number, dive_id) VALUES ($1, 1, $2)", [eventId, dive]);
+
+    const rd = await fetchJson("GET", `/api/events/${eventId}/round-dives`, { token: guest.token });
+    assert.equal(rd.status, 200, JSON.stringify(rd.body));
+    assert.equal(rd.body.length, 1);
+    assert.equal(rd.body[0].dive_id, dive);
+    const po = await fetchJson("GET", `/api/events/${eventId}/participating-orgs`, { token: guest.token });
+    assert.deepEqual(po.body.map((o) => o.org_id), [guestOrg]);
+
+    // A federation that isn't on the list still sees nothing.
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/round-dives`, { token: outsider.token })).status, 404);
+    assert.deepEqual((await fetchJson("GET", `/api/events/${eventId}/participating-orgs`, { token: outsider.token })).body, []);
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/round-dives`)).status, 404);
+  } finally {
+    await compKit.cleanup(hostOrg, guestOrg, otherOrg);
+  }
+});
+
+test("an event's dive-by-dive history is hidden while the scoreboard hides it", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("hist");
+  const otherOrg = await compKit.org("histx");
+  try {
+    const manager = await compKit.user(orgId, "Hist Manager", ["meet_manager"]);
+    const outsider = await compKit.user(otherOrg, "Hist Outsider", ["meet_manager"]);
+    const judge = await compKit.user(orgId, "Hist Judge", ["judge"]);
+    const diver = await compKit.user(orgId, "Hist Diver", ["diver"]);
+    // A dry run: scored while Live, then flipped back to Upcoming.
+    const eventId = await compKit.event(orgId, { number_of_judges: 3 });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(eventId, [judge]);
+    await compKit.score(eventId, diver.id, 1, judge, 7);
+
+    assert.equal((await fetchJson("GET", `/api/scoreboard/${eventId}`)).status, 404, "the scoreboard hides it");
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/history`)).status, 404);
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/history`, { token: outsider.token })).status, 404);
+    const own = await fetchJson("GET", `/api/events/${eventId}/history`, { token: manager.token });
+    assert.equal(own.status, 200);
+    assert.equal(own.body.length, 1, "the host's staff still see the dry run");
+
+    await pool.query("UPDATE events SET status = 'Live' WHERE id = $1", [eventId]);
+    assert.equal((await fetchJson("GET", `/api/events/${eventId}/history`)).body.length, 1, "public once Live");
+    assert.equal((await fetchJson("GET", "/api/events/not-a-uuid/history")).status, 400);
+  } finally {
+    await compKit.cleanup(orgId, otherOrg);
+  }
+});
+
+test("sockets: the live diver goes out without payment or pending-club details", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("pay");
+  const socks = [];
+  try {
+    const manager = await compKit.user(orgId, "Pay Manager", ["meet_manager"]);
+    const club = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code, status) VALUES ($1, 'Waiting Club', $2, 'pending') RETURNING id",
+      [orgId, `W${crypto.randomBytes(2).toString("hex")}`.toUpperCase()],
+    )).rows[0].id;
+    const diver = await compKit.user(orgId, "Pay Diver", ["diver"], { clubId: club });
+    const eventId = await compKit.event(orgId, { status: "Live" });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    const roster = await fetchJson("GET", `/api/events/${eventId}/roster`, { token: manager.token });
+    const row = roster.body[0];
+    assert.equal(row.club_name, "Waiting Club", "staff see the pending club, on purpose");
+
+    const [ms, spectator] = await Promise.all([compKit.socket(manager.token), compKit.socket()]);
+    socks.push(ms, spectator);
+    spectator.emit("subscribe_event", { event_id: eventId });
+    await new Promise((r) => setTimeout(r, 100));
+    const heard = compKit.listen(spectator, "state_update");
+    // What ControlViewV2 sends: the roster row as it came.
+    assert.deepEqual(await compKit.ask(ms, "set_active_diver", { ...row, status: "ready" }), { ok: true });
+    const [payload] = await heard;
+    assert.ok(payload, "the spectator hears the new diver");
+    assert.equal(payload.competitor_id, diver.id);
+    assert.equal(payload.full_name, "Pay Diver");
+    for (const k of ["paid_entry", "competitor_org_id", "competitor_org_name", "dive_list_id"]) {
+      assert.ok(!(k in payload), `${k} stays in the Control Room`);
+    }
+    assert.equal(payload.club_name, null);
+    assert.equal(payload.club_code, null);
+    // Same on the copy kept for late joiners (and event_live_state).
+    const late = await compKit.socket();
+    socks.push(late);
+    const replay = compKit.listen(late, "state_update");
+    late.emit("get_active_diver", { event_id: eventId });
+    const [kept] = await replay;
+    assert.ok(kept && !("paid_entry" in kept));
+    assert.equal(kept.club_name, null);
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("sockets: a new connection only hears its own events' live state", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("scope");
+  const otherOrg = await compKit.org("scopex");
+  const socks = [];
+  const open = async (token) => { const s = await compKit.socket(token); socks.push(s); return s; };
+  // Listening from before the handshake, so a replay sent straight on
+  // connect is caught.
+  const connectAndHear = (token, name) => new Promise((resolve) => {
+    const s = compKit.ioClient(baseUrl, {
+      auth: { token: token || "spectator" }, transports: ["websocket"], reconnection: false, forceNew: true,
+    });
+    socks.push(s);
+    const got = [];
+    s.on(name, (p) => got.push(p));
+    s.once("connect", () => setTimeout(() => resolve(got), 500));
+  });
+  try {
+    const manager = await compKit.user(orgId, "Scope Manager", ["meet_manager"]);
+    const judge = await compKit.user(orgId, "Scope Judge", ["judge"]);
+    const clubDiver = await compKit.user(orgId, "Scope Fan", ["diver"]);
+    const stranger = await compKit.user(otherOrg, "Scope Stranger", ["meet_manager"]);
+    const diver = await compKit.user(orgId, "Scope Diver", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live" });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(eventId, [judge]);
+    const ms = await open(manager.token);
+    const row = (await fetchJson("GET", `/api/events/${eventId}/roster`, { token: manager.token })).body[0];
+    assert.deepEqual(await compKit.ask(ms, "set_active_diver", { ...row, status: "ready" }), { ok: true });
+
+    const mine = (got) => got.filter((p) => p.event_id === eventId);
+    assert.equal(mine(await connectAndHear(null, "state_update")).length, 0, "an anonymous socket hears nothing unasked");
+    assert.equal(mine(await connectAndHear(stranger.token, "state_update")).length, 0, "nor does another federation");
+    assert.equal(mine(await connectAndHear(clubDiver.token, "state_update")).length, 0, "nor a diver who isn't running it");
+    assert.equal(mine(await connectAndHear(judge.token, "state_update")).length, 1, "the panel judge gets it back on reconnect");
+    assert.equal(mine(await connectAndHear(manager.token, "state_update")).length, 1, "so does the Control Room");
+    // Anyone can still ask for one event by id, the scoreboard does.
+    const asker = await open(null);
+    const asked = compKit.listen(asker, "state_update");
+    asker.emit("get_active_diver", { event_id: eventId });
+    assert.equal(mine(await asked).length, 1);
+
+    // Status flips go to the host's people, not to every socket.
+    const flipId = await compKit.event(orgId, { name: "Scope flip" });
+    const [anon, other, same] = await Promise.all([open(null), open(stranger.token), open(clubDiver.token)]);
+    const heard = [anon, other, same].map((s) => compKit.listen(s, "event_status_changed", 600));
+    const flip = await fetchJson("PUT", `/api/events/${flipId}/status`, {
+      token: (await compKit.user(orgId, "Scope Admin", ["org_admin"])).token, body: { status: "Live" },
+    });
+    assert.equal(flip.status, 200, JSON.stringify(flip.body));
+    const [a, o, s] = await Promise.all(heard);
+    assert.equal(a.filter((p) => p.event_id === flipId).length, 0, "not to anonymous sockets");
+    assert.equal(o.filter((p) => p.event_id === flipId).length, 0, "not to another federation");
+    assert.equal(s.filter((p) => p.event_id === flipId).length, 1, "the host org's dashboards hear it");
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId, otherOrg);
+  }
+});
+
+test("score correction: the new score and its audit row land together", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("corr");
+  try {
+    const admin = await compKit.user(orgId, "Corr Admin", ["org_admin"]);
+    const judge = await compKit.user(orgId, "Corr Judge", ["judge"]);
+    const diver = await compKit.user(orgId, "Corr Diver", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live", number_of_judges: 3 });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(eventId, [judge]);
+    await compKit.score(eventId, diver.id, 1, judge, 7);
+    const scoreId = (await pool.query("SELECT id FROM scores WHERE event_id = $1", [eventId])).rows[0].id;
+
+    // A half-filled form's null isn't a zero.
+    const bad = await fetchJson("PUT", `/api/scores/${scoreId}`, { token: admin.token, body: { score: null } });
+    assert.equal(bad.status, 400);
+
+    const r = await fetchJson("PUT", `/api/scores/${scoreId}`, {
+      token: admin.token, body: { score: 6.5, reason: "judge typo" },
+    });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.deepEqual([r.body.old_score, r.body.new_score], [7, 6.5]);
+    const audit = (await pool.query(
+      `SELECT old_score::float AS old_score, new_score::float AS new_score, reason,
+              server_committed_at IS NOT NULL AS committed
+         FROM score_audit_log WHERE score_id = $1`, [scoreId])).rows;
+    assert.deepEqual(audit, [{ old_score: 7, new_score: 6.5, reason: "judge typo", committed: true }]);
+    assert.equal((await pool.query("SELECT score::float AS s FROM scores WHERE id = $1", [scoreId])).rows[0].s, 6.5);
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("sockets: a judge's sync that loses to a manual entry is acked once", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("manual");
+  const socks = [];
+  try {
+    const manager = await compKit.user(orgId, "Manual Manager", ["meet_manager"]);
+    const judge = await compKit.user(orgId, "Manual Judge", ["judge"]);
+    const diver = await compKit.user(orgId, "Manual Diver", ["diver"]);
+    const eventId = await compKit.event(orgId, { status: "Live", number_of_judges: 3 });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    await compKit.panel(eventId, [judge]);
+    // Typed in by the operator during an outage.
+    const me = await fetchJson("POST", "/api/scores/manual-entry", {
+      token: manager.token,
+      body: { event_id: eventId, competitor_id: diver.id, round_number: 1, judge_id: judge.id, score: 7, reason: "outage" },
+    });
+    assert.ok([200, 201].includes(me.status), JSON.stringify(me.body));
+
+    const js = await compKit.socket(judge.token);
+    socks.push(js);
+    // The judge's outbox catches up with a different award.
+    const entry = {
+      event_id: eventId, competitor_id: diver.id, round_number: 1, score: 8,
+      idempotency_key: crypto.randomUUID(), actor_local_time: new Date().toISOString(),
+    };
+    const first = await compKit.ask(js, "submit_score", entry);
+    assert.notEqual(first, "timeout", "the outbox hears back instead of retrying");
+    assert.equal(first.ok, true);
+    assert.equal(first.superseded_by, "manual_entry");
+    assert.equal(first.response.score, 7, "the operator's value stands");
+    // A retry replays that answer rather than logging the clash again.
+    // (The cache write is fire-and-forget; a real outbox retry comes
+    // well after it.)
+    await new Promise((r) => setTimeout(r, 300));
+    const again = await compKit.ask(js, "submit_score", entry);
+    assert.equal(again.ok, true);
+    assert.equal(again.replay, true);
+    assert.equal(again.superseded_by, "manual_entry", "the replay reads like the first answer");
+    const rejected = (await pool.query(
+      "SELECT COUNT(*)::int AS n FROM score_audit_log WHERE event_id = $1 AND action = 'rejected_duplicate'",
+      [eventId])).rows[0].n;
+    assert.equal(rejected, 1);
+    assert.equal((await pool.query("SELECT score::float AS s FROM scores WHERE event_id = $1", [eventId])).rows[0].s, 7);
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
+// A meet whose divers represent their club, with one approved club.
+compKit.clubMeet = async function clubMeet(orgId, tag) {
+  const code = `C${crypto.randomBytes(2).toString("hex")}`.toUpperCase();
+  const club = (await pool.query(
+    "INSERT INTO clubs (org_id, name, short_code, status) VALUES ($1, $2, $3, 'active') RETURNING id",
+    [orgId, `${tag} Club`, code],
+  )).rows[0].id;
+  const meet = (await pool.query(
+    "INSERT INTO meets (org_id, name, represent_as) VALUES ($1, $2, 'club') RETURNING id",
+    [orgId, `${tag} Meet`],
+  )).rows[0].id;
+  return { club, code, meet };
+};
+
+test("venue board: the diver on the board carries the meet's representation code", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("venue");
+  const socks = [];
+  try {
+    const { club, code, meet } = await compKit.clubMeet(orgId, "Venue");
+    const manager = await compKit.user(orgId, "Venue Manager", ["meet_manager"]);
+    const diver = await compKit.user(orgId, "Venue Diver", ["diver"], { clubId: club });
+    const eventId = await compKit.event(orgId, { status: "Live", meet_id: meet });
+    await compKit.enter(eventId, diver.id, await compKit.dives(3), { display_order: 1 });
+    const ms = await compKit.socket(manager.token);
+    socks.push(ms);
+    const row = (await fetchJson("GET", `/api/events/${eventId}/roster`, { token: manager.token })).body[0];
+    assert.equal(row.country_code, code, "the roster already speaks club");
+    assert.deepEqual(await compKit.ask(ms, "set_active_diver", { ...row, status: "ready" }), { ok: true });
+    const state = await fetchJson("GET", `/api/venue/scoreboard-state/${eventId}`);
+    assert.equal(state.status, 200);
+    assert.equal(state.body.active_diver.country_code, code);
+  } finally {
+    socks.forEach((s) => s.close());
+    await compKit.cleanup(orgId);
+  }
+});
+
+// A Super Final chain, H2H -> SF -> F, all Completed and scored on one
+// round by a 3-judge panel, over 12 divers d0..d11 (Appendix 3 §2):
+// H2H pairs (0,1) (2,3) (4,5) in group 1 and (6,7) (8,9) (10,11) in
+// group 2, evens win; the SF puts d0, d2 through in group 1 and d6, d8
+// in group 2. `final: 'upcoming'` leaves F Upcoming and empty, with a
+// Stop-1 event under the H2H, for seed-final.
+compKit.superFinal = async function superFinal(orgId, tag, { meet = null, clubOf = () => null, final = "scored" } = {}) {
+  const judges = [];
+  for (let i = 0; i < 3; i++) judges.push(await compKit.user(orgId, `${tag} Judge ${i}`, ["judge"]));
+  const d = [];
+  for (let i = 0; i < 12; i++) {
+    d.push(await compKit.user(orgId, `${tag} Diver ${String(i).padStart(2, "0")}`, ["diver"], { clubId: clubOf(i) }));
+  }
+  const [dive] = await compKit.dives(1);
+  const mk = (format, parent, carry, extra = {}) => compKit.event(orgId, {
+    name: `${tag} ${format}`, event_format: format, number_of_judges: 3, total_rounds: 1,
+    status: "Completed", meet_id: meet, parent_event_id: parent, score_carry_from: carry, ...extra,
+  });
+  const stageRows = async (eventId, entries) => {
+    await compKit.panel(eventId, judges);
+    for (const [i, group, order, pts] of entries) {
+      await pool.query(
+        `INSERT INTO competitor_dive_lists (event_id, competitor_id, round_number, dive_id, display_order, group_number)
+         VALUES ($1, $2, 1, $3, $4, $5)`, [eventId, d[i].id, dive, order, group]);
+      for (const j of judges) await compKit.score(eventId, d[i].id, 1, j, pts);
+    }
+  };
+  const stop1 = final === "upcoming" ? await mk("final", null, null) : null;
+  const h2h = await mk("super_final_h2h", stop1, null);
+  await stageRows(h2h, d.map((_, i) => [i, i < 6 ? 1 : 2, (i % 6) + 1, i % 2 === 0 ? 8 : 5]));
+  const sf = await mk("super_final_semi", h2h, h2h);
+  await stageRows(sf, [[0, 1, 1, 9], [2, 1, 2, 8], [4, 1, 3, 7], [6, 2, 1, 9], [8, 2, 2, 8], [10, 2, 3, 7]]);
+  if (final === "upcoming") {
+    const fin = await mk("super_final_final", sf, null, { status: "Upcoming", total_rounds: 5 });
+    return { d, h2h, sf, fin, stop1 };
+  }
+  const fin = await mk("super_final_final", sf, null);
+  await stageRows(fin, [[0, null, 1, 9], [2, null, 2, 8], [6, null, 3, 7], [8, null, 4, 6]]);
+  return { d, h2h, sf, fin };
+};
+
+test("Super Final rankings: representation codes, and no pending club names in public", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("sfrank");
+  try {
+    const { club, code, meet } = await compKit.clubMeet(orgId, "SfRank");
+    const pending = (await pool.query(
+      "INSERT INTO clubs (org_id, name, short_code, status) VALUES ($1, 'Unvetted Club', $2, 'pending') RETURNING id",
+      [orgId, `P${crypto.randomBytes(2).toString("hex")}`.toUpperCase()],
+    )).rows[0].id;
+    const { d, fin } = await compKit.superFinal(orgId, "SfRank", {
+      meet,
+      // d0 in the approved club; d2 and d1 (an H2H loser) in the pending one.
+      clubOf: (i) => (i === 0 ? club : (i === 1 || i === 2) ? pending : null),
+    });
+    const r = await fetchJson("GET", `/api/events/${fin}/super-final/rankings`);
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const by = Object.fromEntries(r.body.rankings.map((row) => [row.competitor_id, row]));
+    assert.equal(r.body.rankings.length, 12);
+    assert.equal(by[d[0].id].country_code, code, "a club meet shows the club code");
+    assert.equal(by[d[0].id].club_name, "SfRank Club");
+    assert.equal(by[d[2].id].club_name, null, "a club still waiting on its federation isn't published");
+    assert.equal(by[d[1].id].club_name, null, "nor for an H2H loser");
+    assert.equal(by[d[4].id].country_code, "BRN", "no club, the country it is");
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("roster: an entry a guardian paid for counts as paid", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("paid");
+  try {
+    const manager = await compKit.user(orgId, "Paid Manager", ["meet_manager"]);
+    const parent = await compKit.user(orgId, "Paid Parent", ["spectator"]);
+    const junior = await compKit.user(orgId, "Paid Junior", ["diver"]);
+    const self = await compKit.user(orgId, "Paid Senior", ["diver"]);
+    const unpaid = await compKit.user(orgId, "Paid Not", ["diver"]);
+    const eventId = await compKit.event(orgId);
+    const dives = await compKit.dives(3);
+    for (const [i, u] of [junior, self, unpaid].entries()) await compKit.enter(eventId, u.id, dives, { display_order: i + 1 });
+    const pay = (payer, subject) => pool.query(
+      `INSERT INTO payments (org_id, subject_type, amount_cents, currency, status, payer_user_id, subject_user_id, event_id)
+       VALUES ($1, 'event_entry', 2500, 'AUD', 'paid', $2, $3, $4)`, [orgId, payer.id, subject?.id ?? null, eventId]);
+    await pay(parent, junior);   // guardian checkout: payer is the parent
+    await pay(self, null);       // a diver paying their own way
+
+    const roster = await fetchJson("GET", `/api/events/${eventId}/roster`, { token: manager.token });
+    const paid = Object.fromEntries(roster.body.map((r) => [r.competitor_id, r.paid_entry]));
+    assert.deepEqual([paid[junior.id], paid[self.id], paid[unpaid.id]], [true, true, false]);
+  } finally {
+    await pool.query("DELETE FROM payments WHERE org_id = $1", [orgId]);
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("team dive lists are held to the event's voluntary DD cap, per member", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("ddcap");
+  try {
+    const manager = await compKit.user(orgId, "Cap Manager", ["meet_manager"]);
+    const m1 = await compKit.user(orgId, "Cap Member One", ["diver"]);
+    const m2 = await compKit.user(orgId, "Cap Member Two", ["diver"]);
+    const eventId = await compKit.event(orgId, {
+      event_type: "team", total_rounds: 2, dd_limit_rounds: 2, dd_limit_value: 5.0,
+    });
+    const team = (await pool.query("INSERT INTO teams (org_id, name) VALUES ($1, 'Cap Team') RETURNING id", [orgId])).rows[0].id;
+    await pool.query("INSERT INTO team_members (team_id, user_id) VALUES ($1, $2), ($1, $3)", [team, m1.id, m2.id]);
+    const dd = async (limit) => (await pool.query(
+      "SELECT id FROM dive_directory WHERE height = 3 AND dd = $1 ORDER BY dive_code, id LIMIT 2", [limit])).rows.map((r) => r.id);
+    const [easyA, easyB] = await dd(2.0);
+    const hard = (await pool.query(
+      "SELECT id FROM dive_directory WHERE height = 3 AND dd >= 4.0 ORDER BY dive_code, id LIMIT 2")).rows.map((r) => r.id);
+    const post = (lists) => fetchJson("POST", `/api/teams/${team}/dive-lists`, {
+      token: manager.token,
+      body: { event_id: eventId, dives: lists.flatMap(([member, ids]) => ids.map((dive_id, i) => ({ competitor_id: member.id, dive_id, round_number: i + 1 }))) },
+    });
+    // 4.0 each: fine, though the team adds up to 8.0.
+    const ok = await post([[m1, [easyA, easyB]], [m2, [easyA, easyB]]]);
+    assert.ok(ok.status < 300, JSON.stringify(ok.body));
+    // One member over the cap: the same list the diver portal refuses.
+    const over = await post([[m1, [easyA, easyB]], [m2, hard]]);
+    assert.equal(over.status, 400, JSON.stringify(over.body));
+    assert.match(over.body.error, /exceeds the 5\.0 limit/);
+  } finally {
+    await pool.query("DELETE FROM events WHERE org_id = $1", [orgId]).catch(() => {});
+    await pool.query("DELETE FROM teams WHERE org_id = $1", [orgId]).catch(() => {});
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("duplicating a session moves its blocks by exactly the days asked, east of UTC too", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("dup");
+  // node-pg reads a DATE as local midnight, so the bug only shows on a
+  // host ahead of UTC. Run this one as if the box were in Sydney.
+  const savedTz = process.env.TZ;
+  process.env.TZ = "Australia/Sydney";
+  try {
+    const manager = await compKit.user(orgId, "Dup Manager", ["meet_manager"]);
+    const meet = (await pool.query("INSERT INTO meets (org_id, name) VALUES ($1, 'Dup Meet') RETURNING id", [orgId])).rows[0].id;
+    const sess = (await pool.query(
+      "INSERT INTO sessions (meet_id, name, session_date) VALUES ($1, 'Day 1', '2026-06-02') RETURNING id", [meet])).rows[0].id;
+    await pool.query(
+      `INSERT INTO schedule_blocks (session_id, block_type, starts_at, ends_at)
+       VALUES ($1, 'break', '2026-06-02 09:42:00+10', '2026-06-02 10:00:00+10')`, [sess]);
+    const r = await fetchJson("POST", `/api/sessions/${sess}/duplicate`, {
+      token: manager.token, body: { target_date: "2026-06-03" },
+    });
+    assert.ok(r.status < 300, JSON.stringify(r.body));
+    const moved = (await pool.query(
+      `SELECT b.starts_at = '2026-06-03 09:42:00+10'::timestamptz AS on_the_day
+         FROM schedule_blocks b JOIN sessions s ON s.id = b.session_id
+        WHERE s.meet_id = $1 AND s.id <> $2`, [meet, sess])).rows;
+    assert.deepEqual(moved, [{ on_the_day: true }], "one day on, not two");
+  } finally {
+    if (savedTz === undefined) delete process.env.TZ; else process.env.TZ = savedTz;
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("synchro reserve swap takes either diver of a pair, never the other gender's", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("swap");
+  const guestOrg = await compKit.org("swapg");
+  try {
+    const admin = await compKit.user(orgId, "Swap Admin", ["org_admin"]);
+    const meet = (await pool.query("INSERT INTO meets (org_id, name) VALUES ($1, 'Swap Meet') RETURNING id", [orgId])).rows[0].id;
+    const withdrawing = await compKit.user(orgId, "Swap Withdrawing", ["diver"]);
+    const lead = await compKit.user(guestOrg, "Swap Lead", ["diver"]);
+    const partner = await compKit.user(guestOrg, "Swap Partner", ["diver"]);
+    const manLead = await compKit.user(guestOrg, "Swap Man Lead", ["diver"]);
+    const manPartner = await compKit.user(guestOrg, "Swap Man Partner", ["diver"]);
+    const dives = await compKit.dives(3);
+    const h2h = await compKit.event(orgId, {
+      name: "Swap H2H", gender: "Female", event_format: "super_final_h2h", meet_id: meet, number_of_judges: 5,
+    });
+    await compKit.enter(h2h, withdrawing.id, dives, { display_order: 1 });
+    const women = await compKit.event(orgId, { name: "Swap W synchro", gender: "Female", event_type: "synchro_pair", meet_id: meet, number_of_judges: 9 });
+    const men = await compKit.event(orgId, { name: "Swap M synchro", gender: "Male", event_type: "synchro_pair", meet_id: meet, number_of_judges: 9 });
+    // A pair is one row a round, the partner in partner_id.
+    await compKit.enter(women, lead.id, dives, { partner_id: partner.id });
+    await compKit.enter(men, manLead.id, dives, { partner_id: manPartner.id });
+    const swap = (replacement) => fetchJson("POST", `/api/events/${h2h}/replace-from-synchro`, {
+      token: admin.token,
+      body: { withdraw_competitor_id: withdrawing.id, replacement_competitor_id: replacement.id },
+    });
+    // A Male synchro diver can't take a slot in a Female H2H.
+    const wrong = await swap(manLead);
+    assert.equal(wrong.status, 400, JSON.stringify(wrong.body));
+    // The pair's second diver, listed by the reserve pool, is accepted.
+    const ok = await swap(partner);
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    const inH2h = (await pool.query(
+      "SELECT DISTINCT competitor_id FROM competitor_dive_lists WHERE event_id = $1 AND withdrawn_at IS NULL", [h2h])).rows;
+    assert.deepEqual(inH2h.map((r) => r.competitor_id), [partner.id]);
+  } finally {
+    await compKit.cleanup(orgId, guestOrg);
+  }
+});
+
+test("seed-final with the minimum lock window locks the lists now, not never", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const orgId = await compKit.org("flock");
+  try {
+    const admin = await compKit.user(orgId, "Flock Admin", ["org_admin"]);
+    const { fin } = await compKit.superFinal(orgId, "Flock", { final: "upcoming" });
+    const lock = async () => (await pool.query(
+      `SELECT dive_list_locks_at IS NOT NULL AS locked,
+              dive_list_locks_at <= now() + interval '1 minute' AS soon
+         FROM events WHERE id = $1`, [fin])).rows[0];
+    // The F starts in 5 minutes: change of dives closes 5 minutes before
+    // it (Appendix 3 §4.1), which is right now.
+    const r = await fetchJson("POST", `/api/events/${fin}/seed-final`, { token: admin.token, body: { lock_minutes: 5 } });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.deepEqual(await lock(), { locked: true, soon: true });
+    // A longer window still lands 5 minutes before the F.
+    const r2 = await fetchJson("POST", `/api/events/${fin}/seed-final`, { token: admin.token, body: { lock_minutes: 15 } });
+    assert.equal(r2.status, 200, JSON.stringify(r2.body));
+    assert.deepEqual(await lock(), { locked: true, soon: false });
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
+
+test("coach up-next pushes skip rehearsal events", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const { maybeNotifyCoachesOfNextDivers, resetDedupeForTest } = require("../lib/coach-alerts");
+  const orgId = await compKit.org("rehearse");
+  try {
+    const coach = await compKit.user(orgId, "Rehearse Coach", ["coach"]);
+    const divers = [];
+    for (let i = 0; i < 3; i++) divers.push(await compKit.user(orgId, `Rehearse Diver ${i + 1}`, ["diver"]));
+    await pool.query(
+      "INSERT INTO coach_diver_links (coach_id, diver_id, org_id) SELECT $1, unnest($2::uuid[]), $3",
+      [coach.id, divers.map((d) => d.id), orgId],
+    );
+    const dives = await compKit.dives(3);
+    const run = async (isRehearsal) => {
+      const eventId = await compKit.event(orgId, { status: "Live", is_rehearsal: isRehearsal });
+      for (const [i, d] of divers.entries()) await compKit.enter(eventId, d.id, dives, { display_order: i + 1 });
+      const sent = [];
+      resetDedupeForTest();
+      await maybeNotifyCoachesOfNextDivers(
+        { pool, push: { sendNotification: async (ids, p) => { sent.push({ ids, p }); } } },
+        eventId, { event_id: eventId, competitor_id: divers[0].id, round_number: 1 },
+      );
+      return sent;
+    };
+    // Diver 3 is two dives away, the default heads-up distance.
+    assert.equal((await run(false)).length, 1, "a real meet pushes");
+    assert.equal((await run(true)).length, 0, "a dry run doesn't");
+  } finally {
+    await compKit.cleanup(orgId);
+  }
+});
