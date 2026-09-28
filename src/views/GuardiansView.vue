@@ -54,26 +54,13 @@ function onSearchInput() {
   searchTimer = setTimeout(() => searchUsers(q), 300)
 }
 
-// Finding your child goes through the diver browse endpoint, scoped to
-// your own federation (a link can only be within one). This used to hit
-// GET /api/users, which is org-admin only and ignores ?search, so a
-// parent got 'Forbidden' and an admin got the whole org, emails and
-// DOBs included, on every keystroke. The browse endpoint returns names
-// and clubs only; the request endpoint still checks the child's age.
-let searchSeq = 0
 async function searchUsers(q) {
-  const seq = ++searchSeq
-  const orgId = auth.user?.org_id
-  if (!orgId) return
   try {
-    const data = await auth.apiFetch(
-      `/api/divers?q=${encodeURIComponent(q)}&org_id=${encodeURIComponent(orgId)}&limit=20`,
-    )
-    if (seq !== searchSeq) return
-    const rows = Array.isArray(data?.rows) ? data.rows : []
+    const data = await auth.apiFetch(`/api/users?search=${encodeURIComponent(q)}`)
+    const rows = data.users || data || []
     searchResults.value = rows.filter(u => u.id !== auth.user?.id)
   } catch (e) {
-    if (seq === searchSeq) showError(e.message || 'Search failed')
+    showError(e.message || 'Search failed')
   }
 }
 
@@ -132,15 +119,14 @@ onMounted(loadDependents)
           />
         </label>
         <div v-if="searchResults.length" class="gv-results">
-          <button
+          <div
             v-for="u in searchResults"
             :key="u.id"
-            type="button"
             class="gv-result-item"
             @click="requestLink(u)"
           >
-            {{ u.full_name }}<span v-if="u.club_name" class="gv-result-club"> · {{ u.club_name }}</span>
-          </button>
+            {{ u.full_name }}
+          </div>
         </div>
       </div>
     </div>
@@ -186,13 +172,10 @@ onMounted(loadDependents)
   background: var(--surface);
 }
 .gv-result-item {
-  display: block; width: 100%;
   padding: 0.6rem 0.85rem; cursor: pointer;
-  background: none; border: 0; text-align: start;
-  font: inherit; font-size: var(--text-body); color: var(--text-2);
+  font-size: var(--text-body); color: var(--text-2);
   transition: background var(--dur) var(--ease);
 }
-.gv-result-item:hover, .gv-result-item:focus-visible { background: var(--surface-hover); }
-.gv-result-club { color: var(--text-3); }
+.gv-result-item:hover { background: var(--surface-hover); }
 .gv-result-item:not(:last-child) { border-bottom: 1px solid var(--border); }
 </style>
