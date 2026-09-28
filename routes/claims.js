@@ -77,7 +77,7 @@ module.exports = function createClaimsRouter({ pool, push, email, verifyToken, r
     }
   });
 
-  router.get("/api/admin/settings", verifyToken, requireSystemAdmin, async (_req, res) => {
+  router.get("/api/admin/settings", requireSystemAdmin, async (_req, res) => {
     try {
       res.json(await settingsLib.describeAll(pool));
     } catch (err) {
@@ -85,7 +85,7 @@ module.exports = function createClaimsRouter({ pool, push, email, verifyToken, r
     }
   });
 
-  router.put("/api/admin/settings/:key", verifyToken, requireSystemAdmin, async (req, res) => {
+  router.put("/api/admin/settings/:key", requireSystemAdmin, async (req, res) => {
     try {
       const value = await settingsLib.set(pool, req.params.key, req.body?.value, req.user.id);
       await recordAudit(pool, {
