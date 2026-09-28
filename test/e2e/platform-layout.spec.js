@@ -141,3 +141,24 @@ test("RTL: the .select chevron sits on the side the padding leaves free", async 
     expect(anchoredRight ? "right" : "left").toBe(side);
   }
 });
+
+test("public pages keep their sticky header while scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 700 });
+  await page.goto("/");
+  const nav = page.locator("nav.nav").first();
+  await expect(nav).toBeVisible();
+  await page.evaluate(() => { document.scrollingElement.scrollTop = 600; });
+  await expect.poll(() => page.evaluate(() => document.scrollingElement.scrollTop)).toBeGreaterThan(300);
+  expect(await nav.evaluate((el) => Math.round(el.getBoundingClientRect().top))).toBe(0);
+
+  await page.goto("/guide/running-a-meet");
+  const side = page.locator("nav.gt-sidebar").first();
+  await expect(side).toBeVisible();
+  const before = await side.evaluate((el) => el.getBoundingClientRect().top);
+  await page.evaluate(() => { document.scrollingElement.scrollTop = 1200; });
+  await expect.poll(() => page.evaluate(() => document.scrollingElement.scrollTop)).toBeGreaterThan(600);
+  const after = await side.evaluate((el) => el.getBoundingClientRect().top);
+  // Stuck at its top offset, not scrolled away with the page.
+  expect(after).toBeGreaterThanOrEqual(0);
+  expect(after).toBeLessThanOrEqual(before);
+});
