@@ -487,3 +487,39 @@ test("the entry price on a guardian's card is the dependent's, not the guardian'
   const amount = (await pool.query("SELECT amount_cents FROM payments WHERE id = $1", [co.body.payment_id])).rows[0].amount_cents;
   assert.equal(amount, 3000);
 });
+
+// B4-12: refunding one child's bundle un-grants that child's per-event
+// entries, not every entry the same guardian bought with that bundle fee.
+test("a full refund of one dependent's bundle leaves the sibling's entries alone", async (t) => {
+  if (!ready) return t.skip();
+  const meet = (await pool.query(
+    "INSERT INTO meets (org_id, name) VALUES ($1, $2) RETURNING id", [orgId, `Bundle refund ${suffix}`],
+  )).rows[0].id;
+  const e1 = await newEvent("Bundle 1m", meet);
+  const e2 = await newEvent("Bundle 3m", meet);
+  acting = admin;
+  assert.equal((await api("PUT", `/api/meets/${meet}/bundle`, {
+    event_ids: [e1, e2], prices: [{ amount_cents: 4000 }], currency: "GBP",
+  })).status, 200);
+  const bought = {};
+  for (const who of [A, B, G]) {
+    acting = as(G);
+    const co = await api("POST", `/api/meets/${meet}/bundle/checkout`, who === G ? {} : { subject_user_id: who });
+    assert.equal(co.status, 200, JSON.stringify(co.body));
+    await completeWebhook(co.body.payment_id);
+    bought[who] = co.body.payment_id;
+  }
+  const entries = async () => (await pool.query(
+    `SELECT COALESCE(subject_user_id, payer_user_id) AS who, status FROM payments
+      WHERE event_id = ANY($1::uuid[]) AND subject_type = 'event_entry' AND amount_cents = 0`,
+    [[e1, e2]],
+  )).rows.reduce((m, r) => ({ ...m, [r.who]: [...(m[r.who] || []), r.status].sort() }), {});
+  assert.deepEqual(await entries(), { [A]: ["paid", "paid"], [B]: ["paid", "paid"], [G]: ["paid", "paid"] });
+
+  acting = admin;
+  const rf = await api("POST", `/api/payments/${bought[A]}/refund`, {});
+  assert.equal(rf.status, 200, JSON.stringify(rf.body));
+  assert.deepEqual(await entries(), {
+    [A]: ["refunded", "refunded"], [B]: ["paid", "paid"], [G]: ["paid", "paid"],
+  });
+});
