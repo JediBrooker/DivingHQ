@@ -367,17 +367,45 @@ async function advancePool(ev) {
   }
 }
 
-// Referee call for the FOCUSED pool's active diver, the keyboard path
-// (per-card buttons emit the same events from LivePoolCard). Acts only
-// on currentEvent so a hotkey never touches a background pool.
+// Pool cards by event id, so a hotkey can go through the focused card's
+// own handlers (see LivePoolCard's defineExpose).
+const poolCards = {}
+function setPoolCard(eventId, el) {
+  if (el) poolCards[eventId] = el
+  else delete poolCards[eventId]
+}
+
+// Referee call for the FOCUSED pool's active diver, the keyboard path.
+// It goes through the card, which cancels its auto-next countdown before
+// queueing the call; the view can't reach that timer, and queueing it
+// from here let the countdown run on and advance mid-review. Acts only on
+// currentEvent so a hotkey never touches a background pool.
 function refActionFocused(type) {
   const ev = currentEvent.value
   const a = ev && pools[ev.id]?.currentActive
   if (!a) return
+  const card = poolCards[ev.id]
+  if (card) {
+    card.refAction(type)
+    return
+  }
+  // No card on screen (Recovery mode), so no countdown to cancel either.
   const payload = { event_id: a.event_id, competitor_id: a.competitor_id, round_number: a.round_number }
   if (type === 'failed') queueSocketAction('referee_failed_dive', payload)
   else if (type === 'cap') queueSocketAction('referee_cap_scores', { ...payload, cap_value: 2.0 })
   else if (type === 'redive') queueSocketAction('referee_redive', payload)
+}
+
+// Hold / resume the focused pool through its card too (same store as the
+// banner, and the card's own hold watcher stops its clock and countdown).
+// Recovery mode has no card on screen, so fall back to the view's own.
+function toggleHoldFocused() {
+  const ev = currentEvent.value
+  if (!ev) return
+  const card = poolCards[ev.id]
+  if (card) card.toggleHold()
+  else if (isHeld.value) resumeMeet()
+  else confirmHold()
 }
 
 // Per-pool keyboard control. One window listener: controlKeyIntent
@@ -397,7 +425,7 @@ function onKeydown(e) {
   e.preventDefault()
   if (intent.action === 'advance') advancePool(currentEvent.value)
   else if (intent.action === 'announce') announceFocused()
-  else if (intent.action === 'hold') isHeld.value ? resumeMeet() : confirmHold()
+  else if (intent.action === 'hold') toggleHoldFocused()
   else if (intent.action === 'ref') refActionFocused(intent.arg)
 }
 
@@ -804,6 +832,7 @@ function onBeforeUnload(e) {
             <LivePoolCard
               v-for="lp in livePools"
               :key="lp.event.id"
+              :ref="(el) => setPoolCard(lp.event.id, el)"
               :event="lp.event"
               :pool="lp.pool"
               :focused="String(lp.event.id) === String(selectedEventId)"

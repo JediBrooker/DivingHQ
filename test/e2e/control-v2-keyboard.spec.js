@@ -170,3 +170,33 @@ test("the hold banner and 'h' follow the focused pool", async ({ request, page, 
   await expect(page.locator(".cv2-hold-banner")).toBeVisible();
   await setup.deleteOrg(orgId);
 });
+
+// The card's referee buttons cancel its auto-next countdown before acting;
+// the f / r / c hotkeys queued the same call from the view and couldn't
+// reach the card's timer, so the countdown ran on and moved to the next
+// diver mid-review.
+test("a referee hotkey stops the focused pool's auto-next countdown", async ({ request, page, baseURL }) => {
+  test.setTimeout(120_000);
+  const { orgId, username, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Keyboard Referee Diving" });
+  const A = await liveEvent(request, { orgId, adminToken, name: "Referee Pool", diverNames: ["AAA RF", "ZZZ RF"] });
+  const room = await roomWatcher(baseURL, A.event.id);
+
+  await signIn(page, username);
+  await page.goto(`/control?event=${A.event.id}`);
+  const cardA = page.locator(`.cv2-pool[data-event-id="${A.event.id}"]`);
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA RF", { timeout: 10_000 });
+  await expect.poll(() => room.seen.state.length, { timeout: 8_000 }).toBeGreaterThan(0);
+  room.close();
+
+  await cardA.locator(".cv2-split-aside").click();
+  await cardA.locator(".cv2-autonext-item").filter({ hasText: /^\s*5 seconds/ }).click();
+
+  await setup.submitPanelScores({ baseURL, judges: A.judges, eventId: A.event.id, competitorId: A.divers[0].userId, roundNumber: 1, diveId: A.diveId });
+  await expect(cardA.locator(".cv2-autopill")).toBeVisible({ timeout: 6_000 });
+  await cardA.locator(".cv2-live-diver").click();
+  await page.keyboard.press("f");
+  await expect(cardA.locator(".cv2-autopill")).toHaveCount(0);
+  await page.waitForTimeout(6_500);
+  await expect(cardA.locator(".cv2-live-diver")).toContainText("AAA RF");
+  await setup.deleteOrg(orgId);
+});

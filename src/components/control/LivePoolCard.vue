@@ -181,6 +181,11 @@ function toggleHold() {
   if (isHeld.value) resumeMeet()
   else confirmHold()
 }
+
+// The Control Room's hotkeys for the focused pool come through here, so
+// the keyboard and the buttons share one path: a referee key cancels this
+// card's auto-next countdown first, exactly like the button does.
+defineExpose({ refAction, toggleHold })
 </script>
 
 <template>
