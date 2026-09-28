@@ -7,6 +7,9 @@ const auth = useAuthStore()
 
 const events = ref([])
 const allJudges = ref([])
+// The org's own judges from /api/judges. allJudges is swapped for an
+// event's eligible list on each pick, so keep the base to fall back to.
+let baseJudges = []
 const selectedEventId = ref('')
 const currentEvent = ref(null)
 const panel = ref([]) // array of judge objects or null
@@ -71,16 +74,27 @@ async function onEventChange() {
 
   panel.value = Array(panelSize.value).fill(null)
   originalPanel.value = Array(panelSize.value).fill(null)
+  // Start from the org's judges every time. This used to keep whatever
+  // the previous event loaded when this one's eligible list came back
+  // empty or failed, so a domestic event offered the last international
+  // event's foreign judges.
+  allJudges.value = baseJudges
 
+  // Responses belong to the event that asked. Switch quickly and event
+  // X's late reply used to land after Y was picked, writing X's panel
+  // into both panel and originalPanel for Y, so the review diff showed
+  // nothing and Save posted X's judges under Y.
+  const eventId = selectedEventId.value
   try {
     // Use the event-scoped picker so participating federations'
     // judges show up too. Falls back to the org-scoped /api/judges
     // (which the page initialised from) if the event endpoint
     // 4xxs, keeps domestic-only flows working unchanged.
     const [assigned, eligible] = await Promise.all([
-      auth.apiFetch(`/api/events/${selectedEventId.value}/judges`),
-      auth.apiFetch(`/api/events/${selectedEventId.value}/eligible-judges`).catch(() => null),
+      auth.apiFetch(`/api/events/${eventId}/judges`),
+      auth.apiFetch(`/api/events/${eventId}/eligible-judges`).catch(() => null),
     ])
+    if (selectedEventId.value !== eventId) return
     if (Array.isArray(eligible) && eligible.length) {
       allJudges.value = eligible
     }
@@ -92,6 +106,7 @@ async function onEventChange() {
       }
     })
   } catch {
+    if (selectedEventId.value !== eventId) return
     panel.value = Array(panelSize.value).fill(null)
     originalPanel.value = Array(panelSize.value).fill(null)
   }
@@ -151,7 +166,8 @@ onMounted(async () => {
       auth.apiFetch('/api/judges'),
     ])
     events.value = evs
-    allJudges.value = jdgs
+    baseJudges = Array.isArray(jdgs) ? jdgs : []
+    allJudges.value = baseJudges
   } finally {
     loading.value = false
   }
