@@ -110,3 +110,31 @@ test("a re-dive reopens the judges' keypads and resets the operator's tiles", as
   await cctx.close(); await jctx.close();
   await setup.deleteOrg(orgId);
 });
+
+// synchroRole only knew 9 and 11 judges, and the Manager allows 7.
+test("a judge on a 7-judge synchro panel is told what they're scoring", async ({ browser, request, baseURL }) => {
+  test.setTimeout(90_000);
+  const { orgId, adminToken } = await setup.createOrgAndAdmin(request, { countryCode: "AUS", orgName: "Judge Synchro Seven" });
+  const { event, divers, judges } = await liveEvent(request, {
+    orgId, adminToken, name: "Seven Synchro", diverNames: ["AAA Seven"], judges: 7, eventType: "synchro_pair",
+  });
+  expect(await emitAck(baseURL, adminToken, "set_active_diver", {
+    event_id: event.id, competitor_id: divers[0].userId, full_name: "AAA Seven", diverName: "AAA Seven",
+    round_number: 1, dive_code: "101", position: "B", dd: 1.5, number_of_judges: 7,
+    event_type: "synchro_pair", status: "ready",
+  })).toMatchObject({ ok: true });
+
+  const roles = {};
+  for (const [i, want] of [[0, "EXEC A"], [2, "EXEC B"], [4, "SYNCHRONISATION"]]) {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await signIn(page, judges[i].username);
+    await page.goto(`/judge?event=${event.id}`);
+    await expect(page.locator(".diver-name")).toContainText("AAA Seven", { timeout: 8_000 });
+    await expect(page.locator(".synchro-role")).toContainText(want, { timeout: 6_000 });
+    roles[i] = want;
+    await ctx.close();
+  }
+  expect(Object.keys(roles)).toHaveLength(3);
+  await setup.deleteOrg(orgId);
+});

@@ -7,6 +7,7 @@ import { useSocket } from '@/composables/useSocket'
 import { useSocketEvent } from '@/composables/useSocketEvent'
 import { diveDescription } from '@/composables/useDiveLabel'
 import { normaliseActiveDiver } from '@/lib/activeDiver'
+import { synchroRoleForJudge } from '@/composables/useScoreCategories'
 import { showInfo } from '@/composables/useNotify'
 import OfflineBanner from '@/components/OfflineBanner.vue'
 import SyncStatusBadge from '@/components/SyncStatusBadge.vue'
@@ -212,22 +213,21 @@ const panelInCount = computed(() => Object.keys(panelScores.value).length)
 
 // Synchro role, derived from this judge's position in the panel.
 // Lets the judge see whether they should be scoring Diver A's
-// execution, Diver B's execution, or the synchronisation.
+// execution, Diver B's execution, or the synchronisation. The seat map
+// is the shared synchroRoleForJudge (the same one scoring uses), so the
+// 7-judge panel the Manager allows gets a role too; this used to know
+// only 9 and 11.
+const SYNCHRO_ROLE_LABELS = {
+  a: { label: 'EXEC A', tone: 'a' },
+  b: { label: 'EXEC B', tone: 'b' },
+  sync: { label: 'SYNCHRONISATION', tone: 'sync' },
+}
 const synchroRole = computed(() => {
   if (activeDiver.value?.event_type !== 'synchro_pair') return null
-  const n = judgeNumber.value
-  const total = activeDiver.value?.number_of_judges
+  const n = Number(judgeNumber.value)
+  const total = Number(activeDiver.value?.number_of_judges)
   if (!n || !total) return null
-  if (total === 9) {
-    if (n <= 2) return { label: 'EXEC A', tone: 'a' }
-    if (n <= 4) return { label: 'EXEC B', tone: 'b' }
-    if (n <= 9) return { label: 'SYNCHRONISATION', tone: 'sync' }
-  } else if (total === 11) {
-    if (n <= 3) return { label: 'EXEC A', tone: 'a' }
-    if (n <= 6) return { label: 'EXEC B', tone: 'b' }
-    if (n <= 11) return { label: 'SYNCHRONISATION', tone: 'sync' }
-  }
-  return null
+  return SYNCHRO_ROLE_LABELS[synchroRoleForJudge(n, total)] || null
 })
 
 function joinEventRoom() {
