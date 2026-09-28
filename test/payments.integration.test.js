@@ -1791,3 +1791,43 @@ test("a pending payout Stripe has no record of is retried under the same key", a
   assert.equal(key, id);
   assert.equal((await pool.query("SELECT status FROM payouts WHERE id = $1", [id])).rows[0].status, "paid");
 });
+
+// Stripe only remembers an idempotency key for about a day. Past that a
+// resend under the payout id is a brand new transfer, and "no transfer in
+// this group" can't be trusted for a payout booked before transfers
+// carried a transfer_group. So an old pending payout Stripe shows nothing
+// for stays pending (its balance still held) instead of being paid again.
+test("a pending payout past the idempotency window is never sent again blind", async (t) => {
+  if (!ready) return t.skip();
+  const { retryPendingPayouts } = require("../lib/payout-ledger");
+  const id = (await pool.query(
+    `INSERT INTO payouts (org_id, amount_cents, currency, status, note, created_at)
+     VALUES ($1, 4321, 'GBP', 'pending', 'ancient', now() - interval '30 hours') RETURNING id`,
+    [orgId],
+  )).rows[0].id;
+  const prev = createTransferImpl;
+  const prevFind = fakePayments.findTransfer;
+  const sent = [];
+  fakePayments.findTransfer = async () => null;
+  createTransferImpl = async (args) => { sent.push(args.idempotencyKey); return { id: "tr_blind_" + suffix }; };
+  try {
+    const settled = await retryPendingPayouts({ pool, payments: fakePayments, logger: silentLogger });
+    assert.ok(!settled.some((p) => p.id === id));
+  } finally {
+    createTransferImpl = prev;
+    fakePayments.findTransfer = prevFind;
+  }
+  assert.ok(!sent.includes(id), "no second transfer under an expired key");
+  assert.equal((await pool.query("SELECT status FROM payouts WHERE id = $1", [id])).rows[0].status, "pending");
+  // It still settles if Stripe turns out to have the transfer.
+  fakePayments.findTransfer = async ({ payoutId }) => (payoutId === id ? { id: "tr_late_" + suffix } : null);
+  try {
+    await retryPendingPayouts({ pool, payments: fakePayments, logger: silentLogger });
+  } finally {
+    fakePayments.findTransfer = prevFind;
+  }
+  assert.deepEqual(
+    (await pool.query("SELECT status, stripe_transfer_id FROM payouts WHERE id = $1", [id])).rows[0],
+    { status: "paid", stripe_transfer_id: "tr_late_" + suffix },
+  );
+});
