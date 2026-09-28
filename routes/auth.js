@@ -822,7 +822,9 @@ module.exports = function createAuthRouter({
     }
     const pwErr = validatePassword(password);
     if (pwErr) return res.status(400).json({ error: pwErr });
-    if (typeof email !== "string" || !EMAIL_RE.test(email)) {
+    // 254 like register-org and the email change: users.email is
+    // varchar(255), and anything longer died in the INSERT as a 500.
+    if (typeof email !== "string" || !EMAIL_RE.test(email) || email.length > 254) {
       return res.status(400).json({ error: "A valid email address is required for verification" });
     }
 

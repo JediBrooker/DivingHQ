@@ -7635,3 +7635,22 @@ test("fee cards: already_paid only for yourself or your dependant", async (t) =>
     await teardownFixture(st);
   }
 });
+
+// users.email is varchar(255). register-org and the email change cap it
+// at 254; self-registration didn't, so a long address died as a 500.
+test("self-registration refuses an over-long email with a 400", async (t) => {
+  if (!dbReachable) return t.skip("DB not reachable");
+  if (!serverReady) return t.skip("server didn't boot — see warning above");
+  const st = await setupFixture({ withEvent: false });
+  try {
+    const r = await fetchJson("POST", "/api/auth/register", {
+      body: {
+        username: `int-sw-long-${st.slug}`, password: TEST_PASSWORD, full_name: "Long Address",
+        email: `${"a".repeat(250)}@example.test`, org_id: st.orgId,
+      },
+    });
+    assert.equal(r.status, 400, JSON.stringify(r.body));
+  } finally {
+    await teardownFixture(st);
+  }
+});
