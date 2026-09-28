@@ -4,35 +4,19 @@
 // screens via a CSS media query, full mode (flag + label) on wider ones.
 //
 // Drop the component into any header. Persists the choice via
-// setLocale() in src/i18n/index.js (localStorage + <html lang>), and
-// for a signed-in user on the account too.
+// setLocale() in src/i18n/index.js (localStorage + <html lang>).
 
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { SUPPORTED_LOCALES, setLocale } from '@/i18n'
-import { useAuthStore } from '@/stores/auth'
 
 const { locale } = useI18n()
-const auth = useAuthStore()
 
 const current = computed(() =>
   SUPPORTED_LOCALES.find(l => l.code === locale.value) || SUPPORTED_LOCALES[0])
 
 async function onChange(e) {
-  const code = e.target.value
-  await setLocale(code)
-  // localStorage only reaches this browser. Emails sent outside a request
-  // (receipts, refunds, decisions) go by users.locale, which nothing in
-  // the app ever set, so they all came out in English. Best effort: the
-  // UI has already switched either way.
-  if (auth.isLoggedIn && auth.user?.locale !== code) {
-    auth.apiFetch('/api/users/me/locale', {
-      method: 'POST',
-      body: JSON.stringify({ locale: code }),
-    }).then(() => {
-      if (auth.user) auth.user.locale = code
-    }).catch(() => {})
-  }
+  await setLocale(e.target.value)
 }
 </script>
 

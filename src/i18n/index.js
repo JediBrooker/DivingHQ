@@ -141,18 +141,6 @@ export async function setLocale(code) {
   applyHtmlAttrs(code)
 }
 
-// The language saved on the account (users.locale), applied once it's
-// known, but only on a device that hasn't picked one itself. So a user
-// who chose Español on their laptop gets Español on a fresh phone too,
-// while a device-level choice still wins on that device.
-export function adoptAccountLocale(code) {
-  if (!code || code === i18n.global.locale.value) return
-  try {
-    if (localStorage.getItem('locale')) return
-  } catch { /* storage blocked, nothing stored to respect */ }
-  return setLocale(code)
-}
-
 // Awaited by main.js before app.mount(), guarantees the detected
 // locale's messages are in memory at first paint.
 export async function initI18n() {

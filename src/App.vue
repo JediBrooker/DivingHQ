@@ -3,10 +3,9 @@
 // shell. It only wraps the authenticated routes that opt in via
 // `meta.appShell` (migrated screen-by-screen); every other route
 // still renders standalone with its own header.
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { adoptAccountLocale } from '@/i18n'
 import AppShell from '@/components/AppShell.vue'
 // Global maintenance-mode notice. Sits above every route so it shows on the
 // dashboard and the standalone screens alike. Deliberately suppressed in the
@@ -52,9 +51,6 @@ const route = useRoute()
 const auth = useAuthStore()
 
 useOutboxSync()
-// Follow the language saved on the account onto a device that has no
-// choice of its own yet (see adoptAccountLocale).
-watch(() => auth.user?.locale, (code) => { adoptAccountLocale(code) }, { immediate: true })
 // The Scoreboard's broadcast/kiosk and stream-overlay modes are deliberately
 // chromeless: no shell, and no maintenance banner either, since either would
 // paint over a live scoreboard or broadcast.
