@@ -362,6 +362,7 @@ until the operator has switched maintenance mode on and passed
 | "Couldn't load this" + Try again, for a failed fetch that must not read as an empty list or a permission refusal | `<LoadError @retry>` | `src/components/LoadError.vue` |
 | ISO country list (server validation + signup picker) | `countryByCode(a3)` / `countryFromStored(dbCode)` / `countries.json` | `lib/countries.js` |
 | What a diver represents in an event (country / state / club code) | `event_rep_code(event_id, user_id, home_country)` SQL function | `migrations/090_representation.sql`, `095_team_rep_code.sql` |
+| Those codes for everyone on an event, one call per person (for lists that repeat a diver per round or per dive) | `eventRepCodesCte()` | `lib/scoring-sql.js` |
 | The club / region / country ids an entry resolves to (snapshot first, partner snapshot next) | `event_rep_ids(event_id, user_id)` SQL function | `migrations/095_team_rep_code.sql` |
 | What a team represents in an event (the code its divers share, else the team org's country) | `event_team_rep_code(event_id, team_id)` SQL function | `migrations/095_team_rep_code.sql` |
 | Team-event standings rows (scoreboard, recap, results.pdf) | `teamStandingsCte()` | `lib/scoring-sql.js` |
@@ -403,8 +404,10 @@ know X":
 1. **`recent_form` / `placings` / `streak` / `year_over_year` rank against
    the FULL field of competitors, not the diver alone.** The temptation
    is to feed `RANK()` a CTE that's already filtered to the diver, which
-   silently makes every meet rank 1st-of-1. Use the
-   `analyticsRankingCTE(eventIdsSubquery)` helper.
+   silently makes every meet rank 1st-of-1. Use `FULL_FIELD_RANKING`
+   from `db/queries.js` and filter to the diver only after `ranked`.
+   The analytics endpoint reads it once (the `ranked_events` query) and
+   cuts all four widgets from that read, so don't add a second copy.
 2. **The World Aquatics category boundaries are duplicated.** Source of truth is
    `src/composables/useScoreCategories.js`; the test mirror at
    `test/syntax.test.js` is intentional and detects drift in the

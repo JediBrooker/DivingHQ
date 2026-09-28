@@ -84,6 +84,32 @@ function streakFrom(rows) {
   return { kind, length };
 }
 
+// The analytics ranked_events read returns the diver's events ('event'
+// rows, newest first) and the per-year rollup ('year' rows, newest year
+// first) in one result set, with the other kind's columns NULL. This
+// splits them back into the row shapes the two separate queries used to
+// return: same keys, same order, same pg types (total and rank arrive as
+// strings, the counts as ints).
+function splitRankedRows(rows) {
+  const ranked = [];
+  const yearOverYear = [];
+  for (const r of rows) {
+    if (r.kind === "event") {
+      ranked.push({
+        event_id: r.event_id, event_name: r.event_name, created_at: r.created_at,
+        total: r.total, rank: r.rank, field_size: r.field_size,
+      });
+    } else if (r.kind === "year") {
+      yearOverYear.push({
+        year: r.year, meets: r.meets,
+        avg_meet_total: r.avg_meet_total, best_meet_total: r.best_meet_total,
+        wins: r.wins, podiums: r.podiums,
+      });
+    }
+  }
+  return { ranked, yearOverYear };
+}
+
 // True when the viewer can see diver-private fields (UI
 // preferences, dashboard layout, etc.) on top of the public
 // competitive history. Applied inline in the handler to redact
@@ -358,24 +384,49 @@ module.exports = function createDiverProfileRouter({
         }
       };
 
-      const [ranked, heights, rounds, quality, ddRisk, frequent,
-             comparePeers, eventTypeSplits, yearOverYear] = await Promise.all([
-        // The diver's row from FULL_FIELD_RANKING for every event, newest
-        // first. recent_form, placings and streak are all cut from this
-        // one read below; they used to be three queries that each
-        // rebuilt the whole field ranking.
+      const [rankedRows, heights, rounds, quality, ddRisk, frequent,
+             comparePeers, eventTypeSplits] = await Promise.all([
+        // The diver's row from FULL_FIELD_RANKING for every event, plus
+        // the per-year rollup of those same rows. recent_form, placings,
+        // streak and year_over_year are all cut from this one read below
+        // (splitRankedRows). year_over_year used to be its own query that
+        // built the whole field ranking a second time, which is most of
+        // the endpoint's DB time for a long career. The year rows stay
+        // aggregated in SQL so the numeric(8,2) averages round exactly as
+        // they did. Events come newest first with event_id breaking
+        // created_at ties, so recent_form and the streak don't hang on
+        // plan order.
         runQuery("ranked_events",
-          `WITH ${FULL_FIELD_RANKING}
-           SELECT e.id AS event_id, e.name AS event_name, e.created_at,
-                  r.total, r.rank,
-                  /* field_size precomputed inside FULL_FIELD_RANKING.ranked.
-                     The outer WHERE clause filters to one diver, so a
-                     window in this SELECT would see only one row. */
-                  r.field_size
-           FROM ranked r
-           JOIN events e ON e.id = r.event_id
-           WHERE r.competitor_id = $1
-           ORDER BY e.created_at DESC`,
+          `WITH ${FULL_FIELD_RANKING},
+           mine AS MATERIALIZED (
+             SELECT e.id AS event_id, e.name AS event_name, e.created_at,
+                    r.total, r.rank,
+                    /* field_size precomputed inside FULL_FIELD_RANKING.ranked.
+                       This CTE filters to one diver, so a window here
+                       would see only one row. */
+                    r.field_size
+             FROM ranked r
+             JOIN events e ON e.id = r.event_id
+             WHERE r.competitor_id = $1
+           )
+           SELECT 'event' AS kind,
+                  event_id, event_name, created_at, total, rank, field_size,
+                  NULL::int AS year, NULL::int AS meets,
+                  NULL::numeric AS avg_meet_total, NULL::numeric AS best_meet_total,
+                  NULL::int AS wins, NULL::int AS podiums
+           FROM mine
+           UNION ALL
+           SELECT 'year',
+                  NULL, NULL, NULL, NULL, NULL, NULL,
+                  EXTRACT(YEAR FROM created_at)::int,
+                  COUNT(DISTINCT event_id)::int,
+                  AVG(total)::numeric(8,2),
+                  MAX(total)::numeric(8,2),
+                  COUNT(*) FILTER (WHERE rank = 1)::int,
+                  COUNT(*) FILTER (WHERE rank <= 3)::int
+           FROM mine
+           GROUP BY EXTRACT(YEAR FROM created_at)
+           ORDER BY kind, created_at DESC, event_id DESC, year DESC`,
           [id, fromDate, toDate],
         ),
 
@@ -510,28 +561,9 @@ module.exports = function createDiverProfileRouter({
            ORDER BY m.meets DESC`,
           [id, fromDate, toDate],
         ),
-
-        runQuery("year_over_year",
-          `WITH ${FULL_FIELD_RANKING},
-           my_events AS (
-             SELECT r.event_id, r.total, r.rank, e.created_at
-             FROM ranked r
-             JOIN events e ON e.id = r.event_id
-             WHERE r.competitor_id = $1
-           )
-           SELECT EXTRACT(YEAR FROM created_at)::int    AS year,
-                  COUNT(DISTINCT event_id)::int         AS meets,
-                  AVG(total)::numeric(8,2)              AS avg_meet_total,
-                  MAX(total)::numeric(8,2)              AS best_meet_total,
-                  COUNT(*) FILTER (WHERE rank = 1)::int  AS wins,
-                  COUNT(*) FILTER (WHERE rank <= 3)::int AS podiums
-           FROM my_events
-           GROUP BY EXTRACT(YEAR FROM created_at)
-           ORDER BY year DESC`,
-          [id, fromDate, toDate],
-        ),
       ]);
 
+      const { ranked, yearOverYear } = splitRankedRows(rankedRows);
       const recent = ranked.slice(0, 5);
 
       // Recent Form expansion: for each meet returned, fetch
@@ -646,4 +678,4 @@ module.exports = function createDiverProfileRouter({
   return router;
 };
 
-module.exports.__test__ = { placingsFrom, streakFrom };
+module.exports.__test__ = { placingsFrom, streakFrom, splitRankedRows };

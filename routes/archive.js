@@ -17,7 +17,8 @@
 
 const express = require("express");
 const {
-  perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte, PUBLIC_PANEL_SQL,
+  perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte,
+  eventRepCodesCte, PUBLIC_PANEL_SQL,
 } = require("../lib/scoring-sql");
 const { eventRecordMarks } = require("../lib/records");
 
@@ -295,14 +296,17 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
              position), not judge_id (random UUID), so the chip
              order matches the actual panel layout the audience saw. */
           // Dive-by-dive scope: d.dd is a grouping column, so it
-          // feeds straight into the UDF (no MAX() wrapper needed).
-          `${perDiveSelect({
+          // feeds straight into the UDF (no MAX() wrapper needed). Rep
+          // codes come from reps, once per diver rather than once (or
+          // twice, with a partner) per dive.
+          `WITH ${eventRepCodesCte()}
+          ${perDiveSelect({
             select: [
               "u.id AS competitor_id", "u.full_name",
-              "event_rep_code($1, u.id, o.country_code) AS country_code",
+              "rc.code AS country_code",
               "cl.name AS club_name",
               "pu.id AS partner_id", "pu.full_name AS partner_name",
-              "event_rep_code($1, pu.id, pl.country_code) AS partner_country",
+              "rp.code AS partner_country",
               "t.id AS team_id", "t.name AS team_name",
               "s.round_number",
               "d.dive_code", "d.position", "d.description", "d.dd",
@@ -320,17 +324,17 @@ module.exports = function createArchiveRouter({ pool, readPool }) {
             ],
             extraJoins: [
               "JOIN users u ON s.competitor_id = u.id",
-              "JOIN organisations o ON u.org_id = o.id",
               PUBLIC_CLUB_JOIN,
               "LEFT JOIN users pu ON pu.id = cdl.partner_id",
-              "LEFT JOIN organisations pl ON pl.id = pu.org_id",
               "LEFT JOIN teams t ON t.id = cdl.team_id",
+              "LEFT JOIN reps rc ON rc.id = u.id",
+              "LEFT JOIN reps rp ON rp.id = pu.id",
             ],
             where: `s.event_id = $1
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
             groupBy: [
-              "u.id", "u.full_name", "o.country_code", "cl.name",
-              "pu.id", "pu.full_name", "pl.country_code",
+              "u.id", "u.full_name", "rc.code", "cl.name",
+              "pu.id", "pu.full_name", "rp.code",
               "t.id", "t.name",
               "s.round_number", "d.dive_code", "d.position", "d.description", "d.dd",
             ],

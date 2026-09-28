@@ -30,7 +30,7 @@ const express = require("express");
 const { publicId } = require("../lib/public-id");
 const { recordAudit, auditFromReq } = require("../lib/audit");
 const createIdempotency = require("../lib/idempotency");
-const { perDiveSelect } = require("../lib/scoring-sql");
+const { perDiveSelect, eventRepCodesCte } = require("../lib/scoring-sql");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
 
 // Mirrors init.sql's dive_position enum. Heads up: pre-validating
@@ -74,28 +74,6 @@ function parseCsv(text) {
   }
   if (field.length || row.length) { row.push(field); rows.push(row); }
   return rows.filter((r) => r.some((c) => c.trim() !== ""));
-}
-
-// Representation codes (migration 090) for everyone in event $1, one
-// event_rep_code() call per person. The function is plain SQL but it
-// can't be inlined, and each call probes events, meets and the entry
-// snapshot, so calling it per dive row (twice, with the partner) was
-// most of the roster and history cost. Partners are in here too.
-// Home is the person's own org country either way, which is what the
-// per-row calls passed, and a NULL partner simply doesn't join (the
-// function gave NULL for that as well). LEFT JOINs because the partner
-// side of the old calls was LEFT JOINed; `competitorsFrom` is the
-// table whose competitor_id column says who's in.
-function repCodesCte(competitorsFrom) {
-  return `reps AS MATERIALIZED (
-           SELECT x.id, event_rep_code($1, x.id, ro.country_code) AS code
-             FROM (SELECT competitor_id AS id FROM ${competitorsFrom} WHERE event_id = $1
-                   UNION
-                   SELECT partner_id FROM competitor_dive_lists
-                    WHERE event_id = $1 AND partner_id IS NOT NULL) x
-             LEFT JOIN users ru ON ru.id = x.id
-             LEFT JOIN organisations ro ON ro.id = ru.org_id
-         )`;
 }
 
 // The pre-meet gate the workflow and sign-off routes share: event :id
@@ -381,7 +359,7 @@ module.exports = function createControlRoomRouter({
        //      round_order skips them so spectators don't see
        //      "Diver 1 · Diver 3 · Diver 4" with no #2.
       const r = await pool.query(
-        `WITH ${repCodesCte("competitor_dive_lists")},
+        `WITH ${eventRepCodesCte()},
          ordered AS (
            SELECT cdl.id, cdl.event_id, cdl.competitor_id,
                   cdl.round_number, cdl.display_order, cdl.dive_id,
@@ -1184,7 +1162,7 @@ module.exports = function createControlRoomRouter({
       // once per dive, since ControlViewV2 refetches this after every
       // completed dive.
       const r = await pool.query(
-        `WITH ${repCodesCte("scores")}
+        `WITH ${eventRepCodesCte({ competitorsFrom: "scores" })}
          ${perDiveSelect({
           select: [
             `u.full_name AS "diverName"`,

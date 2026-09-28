@@ -1,11 +1,14 @@
-// Control Room roster + history representation codes.
+// Representation codes on the per-round lists: the Control Room roster
+// and history, the scoreboard's up-next queue and leaderboard, and the
+// archive recap's dives.
 //
-// Both endpoints used to call event_rep_code() once per dive row (twice
-// with the partner). They now look each person up once in a CTE, which
-// is a lot cheaper, but only worth it if every row still carries the
-// exact code the per-row call gave. This pins that: each row's
-// country_code / partner_country is checked against a direct
-// event_rep_code(event, person, their org's country) call, on
+// All five used to call event_rep_code() once per output row (twice
+// with the partner). They now look each person up once in the
+// eventRepCodesCte (lib/scoring-sql.js), which is a lot cheaper, but
+// only worth it if every row still carries the exact code the per-row
+// call gave. This pins that: each row's country_code / partner_country
+// is checked against a direct event_rep_code(event, person, their org's
+// country) call, on
 //
 //   * a synchro event in a club-represented meet, with a pending club
 //     (falls back to the home country), an active club, no club, and a
@@ -145,6 +148,9 @@ before(async () => {
     ensureEventPreMeet: async () => true,
     requireRoleOrEventDelegate: () => pass,
   }));
+  // No scoreboard cache, so every request builds from the database.
+  app.use(require("../routes/scoreboard")({ pool, scoreboardCache: null, optionalAuth: pass }));
+  app.use(require("../routes/archive")({ pool }));
   server = http.createServer(app);
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   port = server.address().port;
@@ -201,6 +207,29 @@ async function checkEvent(eventId) {
     assert.equal(row.country_code, await expectedCode(eventId, row.competitor_id), "history country_code");
     assert.equal(row.partner_country, await expectedCode(eventId, partnerOf.get(row.competitor_id)),
       "history partner_country");
+  }
+
+  // Scoreboard: round 2 is unscored, so it's all in the up-next queue,
+  // and round 1 is the leaderboard.
+  const board = await getJson(`/api/scoreboard/${eventId}`);
+  assert.ok(board.upcoming.length > 0);
+  for (const row of board.upcoming) {
+    assert.equal(row.country_code, await expectedCode(eventId, row.competitor_id), "up-next country_code");
+    assert.equal(row.partner_country, await expectedCode(eventId, row.partner_id), "up-next partner_country");
+  }
+  const leaderboard = await getJson(`/api/scoreboard/${eventId}/leaderboard`);
+  const ranked = leaderboard.rounds.flatMap((r) => r.rankings);
+  assert.ok(ranked.length > 0);
+  for (const row of ranked) {
+    assert.equal(row.country_code, await expectedCode(eventId, row.competitor_id), "leaderboard country_code");
+  }
+
+  // Archive recap, dive by dive.
+  const recap = await getJson(`/api/archive/${eventId}/results`);
+  assert.ok(recap.dives.length > 0);
+  for (const row of recap.dives) {
+    assert.equal(row.country_code, await expectedCode(eventId, row.competitor_id), "recap country_code");
+    assert.equal(row.partner_country, await expectedCode(eventId, row.partner_id), "recap partner_country");
   }
   return seen;
 }

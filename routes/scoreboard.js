@@ -20,7 +20,8 @@
 const express = require("express");
 const { publicId } = require("../lib/public-id");
 const {
-  perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte, PUBLIC_PANEL_SQL,
+  perDiveSelect, perDivePointsCte, teamStandingsCte, compStandingsCte,
+  eventRepCodesCte, PUBLIC_PANEL_SQL,
 } = require("../lib/scoring-sql");
 const { eventRecordMarks } = require("../lib/records");
 const { PUBLIC_CLUB_JOIN } = require("../lib/club-approvals");
@@ -78,6 +79,14 @@ module.exports = function createScoreboardRouter({
   // The main scoreboard payload. Only takes the event id, never req:
   // one build can end up answering several requests at once.
   async function buildScoreboard(eventId) {
+    // Standings roster filter, shared by both per_dive branches below.
+    const onRoster = `s.competitor_id IN (
+               SELECT competitor_id FROM competitor_dive_lists
+                WHERE event_id = $1
+                  AND withdrawn_at IS NULL
+                  AND is_reserve = FALSE
+             )`;
+    const standingsCols = ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"];
     const [st, hi, up, panel, records] = await Promise.all([
       // Standings: per-dive points (trimmed × DD × scaling) summed
       // across all of a competitor's dives in the event.
@@ -91,18 +100,25 @@ module.exports = function createScoreboardRouter({
       // to competitors on the CURRENT event's roster so the H2H
       // losers (who aren't on the SF roster) don't pollute the
       // SF standings.
+      //
+      // The two stages are two branches of a UNION, not one
+      // `event_id = $1 OR event_id = carry_from` filter. With the OR
+      // the planner can't push the event id down into the cdl and
+      // event_judges joins, so it hashed both tables whole and this
+      // query got slower as the archive grew, whatever the event's
+      // size. Plain UNION rather than ALL: each branch's rows are
+      // already unique, so the only thing it can merge is a
+      // carry_from pointing at the event itself, which the OR
+      // counted once as well.
       pool.query(
-        `WITH ${perDivePointsCte({
-           select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
-           where: `(s.event_id = $1
-                  OR s.event_id = (SELECT score_carry_from FROM events WHERE id = $1))
-             AND s.competitor_id IN (
-               SELECT competitor_id FROM competitor_dive_lists
-                WHERE event_id = $1
-                  AND withdrawn_at IS NULL
-                  AND is_reserve = FALSE
-             )`,
-         })},
+        `WITH per_dive AS (
+${perDiveSelect({ select: standingsCols, where: `s.event_id = $1\n  AND ${onRoster}` })}
+UNION
+${perDiveSelect({
+  select: standingsCols,
+  where: `s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)\n  AND ${onRoster}`,
+})}
+         ),
          /* Team-event branch: aggregate by team. public_id is
             computed in Node from team_id below, we expose team_id
             here so the router can hash it. The spectator-facing
@@ -220,24 +236,27 @@ module.exports = function createScoreboardRouter({
              /* Migration 040: reserves don't appear in the
                 upcoming-dives queue. */
              AND cdl.is_reserve = FALSE
-         )
+         ),
+         ${eventRepCodesCte()}
          SELECT ordered.round_number, ordered.round_order::int AS round_order,
                 ordered.competitor_id, ordered.partner_id,
                 u.full_name,
-                event_rep_code($1, ordered.competitor_id, o.country_code) AS country_code,
+                rc.code AS country_code,
                 cl.name AS club_name,
                 pu.full_name AS partner_name,
-                event_rep_code($1, ordered.partner_id, pl.country_code) AS partner_country,
+                rp.code AS partner_country,
                 t.name AS team_name,
                 d.dive_code, d.position, d.description, d.dd
          FROM ordered
          JOIN users u ON u.id = ordered.competitor_id
-         JOIN organisations o ON o.id = u.org_id
          ${PUBLIC_CLUB_JOIN}
          LEFT JOIN users pu ON pu.id = ordered.partner_id
-         LEFT JOIN organisations pl ON pl.id = pu.org_id
          LEFT JOIN teams t ON t.id = ordered.team_id
          LEFT JOIN dive_directory d ON d.id = ordered.dive_id
+         /* The queue repeats each diver once per round left, so the
+            rep codes come from reps, one call per person. */
+         LEFT JOIN reps rc ON rc.id = ordered.competitor_id
+         LEFT JOIN reps rp ON rp.id = ordered.partner_id
          WHERE NOT EXISTS (
            SELECT 1 FROM scores s
            WHERE s.event_id = $1
@@ -372,9 +391,10 @@ module.exports = function createScoreboardRouter({
          SELECT r.*,
                 LAG(r.rnk) OVER (PARTITION BY r.competitor_id ORDER BY r.round_number) AS prev_rnk
          FROM ranked r
-       )
+       ),
+       ${eventRepCodesCte()}
        SELECT wp.competitor_id, u.full_name,
-              event_rep_code($1, wp.competitor_id, o.country_code) AS country_code,
+              rc.code AS country_code,
               cl.name AS club_name,
               wp.round_number,
               wp.round_total,
@@ -385,8 +405,11 @@ module.exports = function createScoreboardRouter({
                    ELSE (wp.prev_rnk - wp.rnk) END AS movement
        FROM with_prev wp
        JOIN users u ON u.id = wp.competitor_id
-       JOIN organisations o ON o.id = u.org_id
        ${PUBLIC_CLUB_JOIN}
+       /* One row per diver per round, so rep codes come from reps,
+          once per diver. Carried rounds are limited to this event's
+          roster above, so every diver here is in it. */
+       LEFT JOIN reps rc ON rc.id = wp.competitor_id
        /* Filter the synthetic carry-row (round_number=0) out of
           the rendered leaderboard. Its contribution survives in
           cumulative_total via the SUM OVER above. */

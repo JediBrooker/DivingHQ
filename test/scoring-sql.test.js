@@ -25,6 +25,7 @@ const {
   perDivePointsCte,
   teamStandingsCte,
   compStandingsCte,
+  eventRepCodesCte,
   PUBLIC_PANEL_SQL,
 } = require("../lib/scoring-sql");
 
@@ -170,23 +171,47 @@ const CALL_SITES = [
     expect: (sql) =>
       assert.ok(sql.includes("GROUP BY e.number_of_judges, e.event_type")),
   },
+  // The scoreboard standings per_dive is a UNION of these two branches
+  // (own stage, then the super-final carry-forward stage). One OR'd
+  // event filter kept the planner from pushing the event id into the
+  // cdl/event_judges joins.
   {
-    site: "routes/scoreboard.js standings (super-final carry-forward)",
-    sql: () => perDivePointsCte({
+    site: "routes/scoreboard.js standings, own-stage branch",
+    sql: () => perDiveSelect({
       select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
-      where: `(s.event_id = $1
-                    OR s.event_id = (SELECT score_carry_from FROM events WHERE id = $1))
-               AND s.competitor_id IN (
-                 SELECT competitor_id FROM competitor_dive_lists
-                  WHERE event_id = $1
-                    AND withdrawn_at IS NULL
-                    AND is_reserve = FALSE
-               )`,
+      where: `s.event_id = $1
+  AND s.competitor_id IN (
+               SELECT competitor_id FROM competitor_dive_lists
+                WHERE event_id = $1
+                  AND withdrawn_at IS NULL
+                  AND is_reserve = FALSE
+             )`,
     }),
     pointsAlias: "dive_points",
-    where: "score_carry_from",
+    where: "s.event_id = $1\n  AND s.competitor_id IN (",
     expect: (sql) => assert.ok(sql.includes(
       "GROUP BY s.competitor_id, cdl.team_id, s.event_id, s.round_number, e.number_of_judges, e.event_type")),
+  },
+  {
+    site: "routes/scoreboard.js standings, carry-forward branch",
+    sql: () => perDiveSelect({
+      select: ["s.competitor_id", "cdl.team_id", "s.event_id", "s.round_number"],
+      where: `s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)
+  AND s.competitor_id IN (
+               SELECT competitor_id FROM competitor_dive_lists
+                WHERE event_id = $1
+                  AND withdrawn_at IS NULL
+                  AND is_reserve = FALSE
+             )`,
+    }),
+    pointsAlias: "dive_points",
+    where: "s.event_id = (SELECT score_carry_from FROM events WHERE id = $1)",
+    expect: (sql) => {
+      // No OR left in the filter, each branch pins one event id.
+      assert.ok(!/\bOR\b/.test(sql.slice(sql.indexOf("WHERE"))));
+      assert.ok(sql.includes(
+        "GROUP BY s.competitor_id, cdl.team_id, s.event_id, s.round_number, e.number_of_judges, e.event_type"));
+    },
   },
   {
     site: "routes/scoreboard.js carry_rounds (synthetic round 0)",
@@ -317,9 +342,9 @@ const CALL_SITES = [
     site: "routes/control-room.js history",
     sql: () => perDiveSelect({
       select: [
-        `u.full_name AS "diverName"`, "o.country_code",
+        `u.full_name AS "diverName"`, "rc.code AS country_code",
         "cl.name AS club_name", "cl.short_code AS club_code",
-        "pu.full_name AS partner_name", "po.country_code AS partner_country",
+        "pu.full_name AS partner_name", "rp.code AS partner_country",
         "t.name AS team_name", "t.short_code AS team_code",
         "s.competitor_id", "s.event_id", "s.round_number",
         "d.dive_code", "d.position", "d.dd", "d.description",
@@ -334,14 +359,15 @@ const CALL_SITES = [
       extraJoins: [
         "JOIN users u ON s.competitor_id = u.id",
         "JOIN organisations o ON u.org_id = o.id",
-        "LEFT JOIN clubs cl ON cl.id = u.club_id",
+        "LEFT JOIN clubs cl ON cl.id = u.club_id AND cl.status = 'active'",
         "LEFT JOIN users pu ON pu.id = cdl.partner_id",
-        "LEFT JOIN organisations po ON po.id = pu.org_id",
         "LEFT JOIN teams t ON t.id = cdl.team_id",
+        "LEFT JOIN reps rc ON rc.id = s.competitor_id",
+        "LEFT JOIN reps rp ON rp.id = pu.id",
       ],
       groupBy: [
-        "u.full_name", "o.country_code", "cl.name", "cl.short_code",
-        "pu.full_name", "po.country_code", "t.name", "t.short_code",
+        "u.full_name", "rc.code", "cl.name", "cl.short_code",
+        "pu.id", "pu.full_name", "rp.code", "t.name", "t.short_code",
         "s.competitor_id", "s.event_id", "s.round_number",
         "d.dive_code", "d.position", "d.dd", "d.description",
       ],
@@ -352,6 +378,10 @@ const CALL_SITES = [
     expect: (sql) => {
       assert.ok(sql.includes("AS judge_scores"));
       assert.ok(sql.includes("LEFT JOIN users pu ON pu.id = cdl.partner_id"));
+      // Rep codes come from the reps CTE (eventRepCodesCte), not a
+      // per-dive function call.
+      assert.ok(!sql.includes("event_rep_code("));
+      assert.ok(/GROUP BY .*rc\.code.*rp\.code/.test(sql));
     },
   },
   {
@@ -428,16 +458,22 @@ const CALL_SITES = [
       select:      ["s.event_id", "s.competitor_id", "s.round_number"],
       pointsAlias: "pts",
       where: `s.event_id IN (
-             SELECT DISTINCT s0.event_id
-             FROM scores s0
-             JOIN events e0 ON e0.id = s0.event_id
-             WHERE s0.competitor_id = $1
-               AND COALESCE(e0.is_rehearsal, FALSE) = FALSE
+             SELECT e0.id
+             FROM events e0
+             WHERE COALESCE(e0.is_rehearsal, FALSE) = FALSE
+               AND EXISTS (SELECT 1 FROM scores s0
+                            WHERE s0.event_id = e0.id AND s0.competitor_id = $1)
+             ORDER BY e0.created_at DESC, e0.id DESC
+             LIMIT 5
            )`,
     }),
     pointsAlias: "pts",
-    where: "SELECT DISTINCT s0.event_id",
-    expect: (sql) => assert.ok(sql.startsWith("per_dive AS (")),
+    where: "ORDER BY e0.created_at DESC, e0.id DESC\n             LIMIT 5",
+    expect: (sql) => {
+      assert.ok(sql.startsWith("per_dive AS ("));
+      // Ranks only the 5 events the page shows, not the whole career.
+      assert.ok(!sql.includes("SELECT DISTINCT s0.event_id"));
+    },
   },
   {
     site: "routes/diver-profile.js personal bests dive_totals",
@@ -651,8 +687,8 @@ const CALL_SITES = [
     site: "routes/archive.js results history",
     sql: () => perDiveSelect({
       select: [
-        "u.id AS competitor_id", "u.full_name", "o.country_code", "cl.name AS club_name",
-        "pu.id AS partner_id", "pu.full_name AS partner_name", "pl.country_code AS partner_country",
+        "u.id AS competitor_id", "u.full_name", "rc.code AS country_code", "cl.name AS club_name",
+        "pu.id AS partner_id", "pu.full_name AS partner_name", "rp.code AS partner_country",
         "t.id AS team_id", "t.name AS team_name",
         "s.round_number",
         "d.dive_code", "d.position", "d.description", "d.dd",
@@ -665,17 +701,17 @@ const CALL_SITES = [
       ],
       extraJoins: [
         "JOIN users u ON s.competitor_id = u.id",
-        "JOIN organisations o ON u.org_id = o.id",
-        "LEFT JOIN clubs cl ON cl.id = u.club_id",
+        "LEFT JOIN clubs cl ON cl.id = u.club_id AND cl.status = 'active'",
         "LEFT JOIN users pu ON pu.id = cdl.partner_id",
-        "LEFT JOIN organisations pl ON pl.id = pu.org_id",
         "LEFT JOIN teams t ON t.id = cdl.team_id",
+        "LEFT JOIN reps rc ON rc.id = u.id",
+        "LEFT JOIN reps rp ON rp.id = pu.id",
       ],
       where: `s.event_id = $1
              AND COALESCE(e.is_rehearsal, FALSE) = FALSE`,
       groupBy: [
-        "u.id", "u.full_name", "o.country_code", "cl.name",
-        "pu.id", "pu.full_name", "pl.country_code",
+        "u.id", "u.full_name", "rc.code", "cl.name",
+        "pu.id", "pu.full_name", "rp.code",
         "t.id", "t.name",
         "s.round_number", "d.dive_code", "d.position", "d.description", "d.dd",
       ],
@@ -683,7 +719,13 @@ const CALL_SITES = [
     pointsAlias: "total_dive_score",
     dd: "d.dd",
     where: "s.event_id = $1",
-    expect: (sql) => assert.ok(sql.includes("AS judge_numbers")),
+    expect: (sql) => {
+      assert.ok(sql.includes("AS judge_numbers"));
+      // Rep codes come from the reps CTE, so they're grouping columns
+      // rather than a per-dive function call.
+      assert.ok(!sql.includes("event_rep_code("));
+      assert.ok(/GROUP BY .*rc\.code.*rp\.code/.test(sql));
+    },
   },
   {
     site: "routes/coach.js dashboard per_dive",
@@ -882,4 +924,48 @@ test("PUBLIC_PANEL_SQL: judge chips, approved clubs only, panel order", () => {
   for (const col of ["judge_id", "judge_number", "full_name", "country_code", "org_name", "club_name", "club_code"]) {
     assert.ok(new RegExp(`\\b${col}\\b`).test(PUBLIC_PANEL_SQL), `panel keeps ${col}`);
   }
+});
+
+// ---------------------------------------------------------------
+// 6. Per-event representation codes (Control Room roster and history,
+//    scoreboard up-next and leaderboard, archive recap dives).
+// ---------------------------------------------------------------
+
+test("snapshot: eventRepCodesCte default", () => {
+  assert.equal(
+    eventRepCodesCte(),
+    `reps AS MATERIALIZED (
+SELECT x.id, event_rep_code($1, x.id, ro.country_code) AS code
+FROM (
+  SELECT competitor_id AS id FROM competitor_dive_lists WHERE event_id = $1
+  UNION
+  SELECT partner_id FROM competitor_dive_lists
+   WHERE event_id = $1 AND partner_id IS NOT NULL
+) x
+LEFT JOIN users ru ON ru.id = x.id
+LEFT JOIN organisations ro ON ro.id = ru.org_id
+)`,
+  );
+});
+
+test("eventRepCodesCte: one call per person, leads and partners both", () => {
+  const sql = eventRepCodesCte();
+  // A single function call, run once per row of the deduped set.
+  assert.equal(sql.split("event_rep_code(").length - 1, 1);
+  // UNION, not ALL, so a diver on six rounds is one row, not six.
+  assert.ok(/\n  UNION\n/.test(sql));
+  assert.ok(sql.includes("partner_id IS NOT NULL"));
+  // Materialised: callers join it twice (diver and partner), and an
+  // inlined CTE would put the per-row calls back.
+  assert.ok(sql.startsWith("reps AS MATERIALIZED ("));
+});
+
+test("eventRepCodesCte: name, event placeholder and competitor source are the caller's", () => {
+  const sql = eventRepCodesCte({ name: "codes", eventId: "$2", competitorsFrom: "scores" });
+  assert.ok(sql.startsWith("codes AS MATERIALIZED (\n"));
+  assert.ok(sql.includes("event_rep_code($2, x.id, ro.country_code)"));
+  assert.ok(sql.includes("SELECT competitor_id AS id FROM scores WHERE event_id = $2"));
+  // Partners always come off the dive list.
+  assert.ok(sql.includes("SELECT partner_id FROM competitor_dive_lists"));
+  assert.ok(!sql.includes("$1"));
 });

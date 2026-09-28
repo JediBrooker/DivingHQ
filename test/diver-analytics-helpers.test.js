@@ -5,7 +5,7 @@
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { placingsFrom, streakFrom } =
+const { placingsFrom, streakFrom, splitRankedRows } =
   require("../routes/diver-profile").__test__;
 
 // pg returns RANK() (bigint) as a string, so the fixtures do too.
@@ -29,4 +29,27 @@ test("streak counts wins, then podiums, newest first", () => {
   assert.deepEqual(streakFrom(rows(3, 2, 1, 9)), { kind: "podium", length: 3 });
   assert.deepEqual(streakFrom(rows(4, 1, 1)), { kind: null, length: 0 });
   assert.deepEqual(streakFrom([]), { kind: null, length: 0 });
+});
+
+test("splitRankedRows gives back the two old row shapes, in order", () => {
+  const nulls = { year: null, meets: null, avg_meet_total: null, best_meet_total: null, wins: null, podiums: null };
+  const ev = (id, rank) => ({
+    kind: "event", event_id: id, event_name: `Meet ${id}`, created_at: new Date(0),
+    total: "250.50", rank: String(rank), field_size: 12, ...nulls,
+  });
+  const yr = (year, meets) => ({
+    kind: "year", event_id: null, event_name: null, created_at: null, total: null, rank: null, field_size: null,
+    year, meets, avg_meet_total: "240.10", best_meet_total: "250.50", wins: 1, podiums: 2,
+  });
+  const { ranked, yearOverYear } = splitRankedRows([ev("b", 1), ev("a", 3), yr(2026, 1), yr(2025, 1)]);
+  assert.deepEqual(ranked.map((r) => r.event_id), ["b", "a"]);
+  assert.deepEqual(Object.keys(ranked[0]),
+    ["event_id", "event_name", "created_at", "total", "rank", "field_size"]);
+  assert.equal(ranked[1].rank, "3");
+  assert.deepEqual(yearOverYear.map((r) => r.year), [2026, 2025]);
+  assert.deepEqual(Object.keys(yearOverYear[0]),
+    ["year", "meets", "avg_meet_total", "best_meet_total", "wins", "podiums"]);
+  // The widgets still read the same ranks off the event rows.
+  assert.deepEqual(placingsFrom(ranked), { gold: 1, silver: 0, bronze: 1, finalist: 0, further: 0, total_meets: 2 });
+  assert.deepEqual(splitRankedRows([]), { ranked: [], yearOverYear: [] });
 });

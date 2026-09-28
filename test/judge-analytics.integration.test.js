@@ -5,7 +5,8 @@
 // queries, each one re-materialising the JUDGE_PER_DIVE CTE. It now runs
 // ONE statement (JUDGE_ANALYTICS_BUNDLE) that materialises per_dive
 // once and fans the 13 date-free widgets out as jsonb columns, plus
-// 3 native date-bearing widgets. Output has to stay byte-identical to
+// 3 native date-bearing widgets from 2 queries (recent_meets and
+// panel_deviation.per_event share one). Output has to stay byte-identical to
 // the per-query version, since node-postgres returns numeric as a STRING
 // so the bundle casts every numeric ::text (raw jsonb would coerce
 // it to a JS number and drop the trailing zeros).
@@ -187,6 +188,7 @@ after(async () => {
   if (pool && ready) {
     try {
       if (ids.eventId) await pool.query(`DELETE FROM events WHERE id = $1`, [ids.eventId]);
+      if (ids.olderEventId) await pool.query(`DELETE FROM events WHERE id = $1`, [ids.olderEventId]);
       for (const id of [...(ids.judges || []), ids.diverA, ids.diverB]) {
         if (id) await pool.query(`DELETE FROM users WHERE id = $1`, [id]);
       }
@@ -312,4 +314,122 @@ test("bundle: date-bearing widgets (native) intact", async (t) => {
   assert.equal(a.score_trend.length, 1); // one week
   assert.equal(a.score_trend[0].dives, 6);
   assert.equal(a.panel_deviation.per_event.length, 1);
+});
+
+// recent_meets and panel_deviation.per_event used to be two queries with
+// the same WHERE / GROUP BY / ORDER BY / LIMIT. They're one query now,
+// split in Node. Add an older meet so there's more than one row to order,
+// then hold both widgets to the standalone queries they replaced.
+// Keep this test last: the extra meet would shift the counts above.
+test("recent_meets + panel_deviation.per_event match the old separate queries", async (t) => {
+  if (!ready) return t.skip("Postgres / catalog unavailable");
+
+  // Older meet, Diver A only. J1 gives 9.5 against a kept slice of
+  // [7.5, 8.0, 8.5], so every J1 score is dropped high and is a tight
+  // differ (+1.5 vs the kept-mean of 8.0).
+  const OLDER_SCORES = { 1: 9.5, 2: 8.0, 3: 7.5, 4: 7.0, 5: 8.5 };
+  const ev = await pool.query(
+    `INSERT INTO events (
+       org_id, name, gender, status, height, event_type, total_rounds,
+       number_of_judges, created_at
+     ) VALUES ($1, $2, 'Male', 'Completed', '3m', 'individual', 3, 5,
+               now() - INTERVAL '30 days')
+     RETURNING id`,
+    [ids.orgA, `ja-int-older-${crypto.randomBytes(4).toString("hex")}`],
+  );
+  ids.olderEventId = ev.rows[0].id;
+  for (let n = 1; n <= 5; n++) {
+    await pool.query(
+      `INSERT INTO event_judges (event_id, judge_id, judge_number) VALUES ($1, $2, $3)`,
+      [ids.olderEventId, ids.judges[n - 1], n],
+    );
+  }
+  for (const round of ROUNDS) {
+    await pool.query(
+      `INSERT INTO competitor_dive_lists (event_id, competitor_id, dive_id, round_number)
+       VALUES ($1, $2, $3, $4)`,
+      [ids.olderEventId, ids.diverA, ids.diveId, round],
+    );
+    for (let n = 1; n <= 5; n++) {
+      await pool.query(
+        `INSERT INTO scores (event_id, competitor_id, round_number, judge_id, score)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [ids.olderEventId, ids.diverA, round, ids.judges[n - 1], OLDER_SCORES[n]],
+      );
+    }
+  }
+
+  const a = await analytics();
+
+  // The two queries as they were before they were merged, verbatim.
+  const { JUDGE_PER_DIVE } = require("../db/queries");
+  const params = [ids.targetJudge, null, null];
+  const recentRef = (await pool.query(
+    `WITH per_dive AS (${JUDGE_PER_DIVE})
+     SELECT
+       p.event_id,
+       e.name AS event_name,
+       e.created_at,
+       COUNT(*)::int                                              AS dives,
+       AVG(p.my_score - p.panel_kept_mean)::numeric(5,3)          AS signed_deviation,
+       AVG(ABS(p.my_score - p.panel_kept_mean))::numeric(5,3)     AS abs_deviation,
+       (COUNT(*) FILTER (WHERE p.is_dropped IS TRUE)::numeric
+        / NULLIF(COUNT(*) FILTER (WHERE p.is_dropped IS NOT NULL),0)
+       )::numeric(4,3)                                            AS drop_rate
+     FROM per_dive p
+     JOIN events e ON e.id = p.event_id
+     WHERE p.event_type <> 'synchro_pair'
+       AND p.panel_kept_mean IS NOT NULL
+     GROUP BY p.event_id, e.name, e.created_at
+     ORDER BY e.created_at DESC
+     LIMIT 10`,
+    params,
+  )).rows;
+  const perEventRef = (await pool.query(
+    `WITH per_dive AS (${JUDGE_PER_DIVE}),
+     per_event AS (
+       SELECT pd.event_id, e.name AS event_name, e.created_at,
+              COUNT(*)::int AS dives,
+              COUNT(*) FILTER (
+                WHERE ABS(pd.my_score - pd.panel_kept_mean) >= 1.0
+              )::int AS differ_tight,
+              (
+                COUNT(*) FILTER (WHERE ABS(pd.my_score - pd.panel_kept_mean) >= 1.0)::numeric
+                / NULLIF(COUNT(*), 0)
+              )::numeric(4,3) AS tight_rate,
+              AVG(pd.my_score - pd.panel_kept_mean)::numeric(5,3) AS signed_deviation
+         FROM per_dive pd
+         JOIN events e ON e.id = pd.event_id
+        WHERE pd.event_type <> 'synchro_pair' AND pd.panel_kept_mean IS NOT NULL
+        GROUP BY pd.event_id, e.name, e.created_at
+     )
+     SELECT *
+       FROM per_event
+      ORDER BY created_at DESC
+      LIMIT 10`,
+    params,
+  )).rows;
+
+  // pg hands back Dates; the endpoint hands back their JSON form. deepEqual
+  // on the parsed JSON also pins key order via the stringify below.
+  const asJson = (v) => JSON.parse(JSON.stringify(v));
+  assert.equal(recentRef.length, 2);
+  assert.deepEqual(a.recent_meets, asJson(recentRef));
+  assert.equal(JSON.stringify(a.recent_meets), JSON.stringify(recentRef));
+  assert.deepEqual(a.panel_deviation.per_event, asJson(perEventRef));
+  assert.equal(JSON.stringify(a.panel_deviation.per_event), JSON.stringify(perEventRef));
+
+  // And the hand-checked numbers, newest meet first.
+  assert.deepEqual(a.recent_meets.map((r) => r.event_id), [ids.eventId, ids.olderEventId]);
+  const [, older] = a.recent_meets;
+  assert.equal(older.dives, 3);
+  assert.equal(older.signed_deviation, "1.500");
+  assert.equal(older.abs_deviation, "1.500");
+  assert.equal(older.drop_rate, "1.000");
+  const [newerPe, olderPe] = a.panel_deviation.per_event;
+  assert.equal(newerPe.differ_tight, 0);
+  assert.equal(newerPe.tight_rate, "0.000");
+  assert.equal(olderPe.differ_tight, 3);
+  assert.equal(olderPe.tight_rate, "1.000");
+  assert.equal(olderPe.signed_deviation, "1.500");
 });
